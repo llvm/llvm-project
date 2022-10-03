@@ -5,58 +5,58 @@
 
 @s10 = constant [11 x i8] c"0123456789\00"
 
-declare i8* @strrchr(i8*, i32)
+declare ptr @strrchr(ptr, i32)
 
 ; Fold strrchr(s + 10, c) to (unsigned char)c ? 0 : s + 10.
 
-define i8* @fold_strrchr_sp10_x(i32 %c) {
+define ptr @fold_strrchr_sp10_x(i32 %c) {
 ; CHECK-LABEL: @fold_strrchr_sp10_x(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
 ; CHECK-NEXT:    [[MEMRCHR_CHAR0CMP:%.*]] = icmp eq i8 [[TMP1]], 0
-; CHECK-NEXT:    [[MEMRCHR_SEL:%.*]] = select i1 [[MEMRCHR_CHAR0CMP]], i8* getelementptr inbounds ([11 x i8], [11 x i8]* @s10, i64 0, i64 10), i8* null
-; CHECK-NEXT:    ret i8* [[MEMRCHR_SEL]]
+; CHECK-NEXT:    [[MEMRCHR_SEL:%.*]] = select i1 [[MEMRCHR_CHAR0CMP]], ptr getelementptr inbounds ([11 x i8], ptr @s10, i64 0, i64 10), ptr null
+; CHECK-NEXT:    ret ptr [[MEMRCHR_SEL]]
 ;
-  %psp10 = getelementptr [11 x i8], [11 x i8]* @s10, i32 0, i32 10
-  %pc = call i8* @strrchr(i8* %psp10, i32 %c)
-  ret i8* %pc
+  %psp10 = getelementptr [11 x i8], ptr @s10, i32 0, i32 10
+  %pc = call ptr @strrchr(ptr %psp10, i32 %c)
+  ret ptr %pc
 }
 
 
 ; Transform strrchr(s + 9, c) to [the equivalent of] memrchr(s + 9, c, 2).
 
-define i8* @call_strrchr_sp9_x(i32 %c) {
+define ptr @call_strrchr_sp9_x(i32 %c) {
 ; CHECK-LABEL: @call_strrchr_sp9_x(
-; CHECK-NEXT:    [[MEMRCHR:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(2) getelementptr inbounds ([11 x i8], [11 x i8]* @s10, i64 0, i64 9), i32 [[C:%.*]], i64 2)
-; CHECK-NEXT:    ret i8* [[MEMRCHR]]
+; CHECK-NEXT:    [[MEMRCHR:%.*]] = call ptr @memrchr(ptr noundef nonnull dereferenceable(2) getelementptr inbounds ([11 x i8], ptr @s10, i64 0, i64 9), i32 [[C:%.*]], i64 2)
+; CHECK-NEXT:    ret ptr [[MEMRCHR]]
 ;
-  %psp9 = getelementptr [11 x i8], [11 x i8]* @s10, i32 0, i32 9
-  %pc = call i8* @strrchr(i8* %psp9, i32 %c)
-  ret i8* %pc
+  %psp9 = getelementptr [11 x i8], ptr @s10, i32 0, i32 9
+  %pc = call ptr @strrchr(ptr %psp9, i32 %c)
+  ret ptr %pc
 }
 
 
 ; Do not transform strrchr(s + 2, c) (for short strings this could be
 ; folded into a chain of OR expressions ala D128011).
 
-define i8* @call_strrchr_sp2_x(i32 %c) {
+define ptr @call_strrchr_sp2_x(i32 %c) {
 ; CHECK-LABEL: @call_strrchr_sp2_x(
-; CHECK-NEXT:    [[MEMRCHR:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(9) getelementptr inbounds ([11 x i8], [11 x i8]* @s10, i64 0, i64 2), i32 [[C:%.*]], i64 9)
-; CHECK-NEXT:    ret i8* [[MEMRCHR]]
+; CHECK-NEXT:    [[MEMRCHR:%.*]] = call ptr @memrchr(ptr noundef nonnull dereferenceable(9) getelementptr inbounds ([11 x i8], ptr @s10, i64 0, i64 2), i32 [[C:%.*]], i64 9)
+; CHECK-NEXT:    ret ptr [[MEMRCHR]]
 ;
-  %psp2 = getelementptr [11 x i8], [11 x i8]* @s10, i32 0, i32 2
-  %pc = call i8* @strrchr(i8* %psp2, i32 %c)
-  ret i8* %pc
+  %psp2 = getelementptr [11 x i8], ptr @s10, i32 0, i32 2
+  %pc = call ptr @strrchr(ptr %psp2, i32 %c)
+  ret ptr %pc
 }
 
 
 ; Do not transform strrchr(s + 1, c).
 
-define i8* @call_strrchr_sp1_x(i32 %c) {
+define ptr @call_strrchr_sp1_x(i32 %c) {
 ; CHECK-LABEL: @call_strrchr_sp1_x(
-; CHECK-NEXT:    [[MEMRCHR:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(10) getelementptr inbounds ([11 x i8], [11 x i8]* @s10, i64 0, i64 1), i32 [[C:%.*]], i64 10)
-; CHECK-NEXT:    ret i8* [[MEMRCHR]]
+; CHECK-NEXT:    [[MEMRCHR:%.*]] = call ptr @memrchr(ptr noundef nonnull dereferenceable(10) getelementptr inbounds ([11 x i8], ptr @s10, i64 0, i64 1), i32 [[C:%.*]], i64 10)
+; CHECK-NEXT:    ret ptr [[MEMRCHR]]
 ;
-  %psp1 = getelementptr [11 x i8], [11 x i8]* @s10, i32 0, i32 1
-  %pc = call i8* @strrchr(i8* %psp1, i32 %c)
-  ret i8* %pc
+  %psp1 = getelementptr [11 x i8], ptr @s10, i32 0, i32 1
+  %pc = call ptr @strrchr(ptr %psp1, i32 %c)
+  ret ptr %pc
 }

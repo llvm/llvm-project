@@ -4,7 +4,7 @@
 ; Verify that the result of memrchr calls with past-the-end pointers used
 ; don't cause trouble and are optimally folded.
 
-declare i32 @memcmp(i8*, i8*, i64)
+declare i32 @memcmp(ptr, ptr, i64)
 
 
 @a5 = constant [5 x i8] c"12345";
@@ -17,9 +17,8 @@ define i32 @fold_memcmp_a5_a5p5_n(i64 %n) {
 ; CHECK-LABEL: @fold_memcmp_a5_a5p5_n(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %pa5_p0 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 0
-  %pa5_p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %cmp = call i32 @memcmp(i8* %pa5_p0, i8* %pa5_p5, i64 %n)
+  %pa5_p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %cmp = call i32 @memcmp(ptr @a5, ptr %pa5_p5, i64 %n)
   ret i32 %cmp
 }
 
@@ -30,9 +29,9 @@ define i32 @fold_memcmp_a5p5_a5p5_n(i64 %n) {
 ; CHECK-LABEL: @fold_memcmp_a5p5_a5p5_n(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %pa5_p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %qa5_p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %cmp = call i32 @memcmp(i8* %pa5_p5, i8* %qa5_p5, i64 %n)
+  %pa5_p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %qa5_p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %cmp = call i32 @memcmp(ptr %pa5_p5, ptr %qa5_p5, i64 %n)
   ret i32 %cmp
 }
 
@@ -42,12 +41,12 @@ define i32 @fold_memcmp_a5p5_a5p5_n(i64 %n) {
 define i32 @fold_memcmp_a5pi_a5p5_n(i32 %i, i64 %n) {
 ; CHECK-LABEL: @fold_memcmp_a5pi_a5p5_n(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
-; CHECK-NEXT:    [[PA5_PI:%.*]] = getelementptr [5 x i8], [5 x i8]* @a5, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[CMP:%.*]] = call i32 @memcmp(i8* [[PA5_PI]], i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 1, i64 0), i64 [[N:%.*]])
+; CHECK-NEXT:    [[PA5_PI:%.*]] = getelementptr [5 x i8], ptr @a5, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[CMP:%.*]] = call i32 @memcmp(ptr [[PA5_PI]], ptr getelementptr inbounds ([5 x i8], ptr @a5, i64 1, i64 0), i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i32 [[CMP]]
 ;
-  %pa5_pi = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 %i
-  %pa5_p5 = getelementptr [5 x i8], [5 x i8]* @a5, i32 0, i32 5
-  %cmp = call i32 @memcmp(i8* %pa5_pi, i8* %pa5_p5, i64 %n)
+  %pa5_pi = getelementptr [5 x i8], ptr @a5, i32 0, i32 %i
+  %pa5_p5 = getelementptr [5 x i8], ptr @a5, i32 0, i32 5
+  %cmp = call i32 @memcmp(ptr %pa5_pi, ptr %pa5_p5, i64 %n)
   ret i32 %cmp
 }

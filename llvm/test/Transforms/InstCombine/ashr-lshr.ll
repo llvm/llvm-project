@@ -474,15 +474,15 @@ define i32 @lshr_sub(i32 %x, i32 %y) {
 
 ; negative test - one-use
 
-define i32 @lshr_sub_nsw_extra_use(i32 %x, i32 %y, i32* %p) {
+define i32 @lshr_sub_nsw_extra_use(i32 %x, i32 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_sub_nsw_extra_use(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    store i32 [[SUB]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[SUB]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[SUB]], 31
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %sub = sub nsw i32 %x, %y
-  store i32 %sub, i32* %p
+  store i32 %sub, ptr %p
   %shr = lshr i32 %sub, 31
   ret i32 %shr
 }
@@ -548,15 +548,15 @@ define i32 @ashr_sub(i32 %x, i32 %y) {
 
 ; negative test - one-use
 
-define i32 @ashr_sub_nsw_extra_use(i32 %x, i32 %y, i32* %p) {
+define i32 @ashr_sub_nsw_extra_use(i32 %x, i32 %y, ptr %p) {
 ; CHECK-LABEL: @ashr_sub_nsw_extra_use(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    store i32 [[SUB]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[SUB]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[SUB]], 31
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %sub = sub nsw i32 %x, %y
-  store i32 %sub, i32* %p
+  store i32 %sub, ptr %p
   %shr = ashr i32 %sub, 31
   ret i32 %shr
 }

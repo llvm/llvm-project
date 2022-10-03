@@ -20,7 +20,7 @@ declare double @__cospi(double %x) #0
 
 define float @test_instbased_f32() {
 ; CHECK-FLOAT-IN-VEC-LABEL: @test_instbased_f32(
-; CHECK-FLOAT-IN-VEC-NEXT:    [[VAL:%.*]] = load float, float* @var32, align 4
+; CHECK-FLOAT-IN-VEC-NEXT:    [[VAL:%.*]] = load float, ptr @var32, align 4
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SINCOSPI:%.*]] = call <2 x float> @__sincospif_stret(float [[VAL]])
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SINPI:%.*]] = extractelement <2 x float> [[SINCOSPI]], i64 0
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[COSPI:%.*]] = extractelement <2 x float> [[SINCOSPI]], i64 1
@@ -30,7 +30,7 @@ define float @test_instbased_f32() {
 ; CHECK-FLOAT-IN-VEC-NEXT:    ret float [[RES]]
 ;
 ; CHECK-LABEL: @test_instbased_f32(
-; CHECK-NEXT:    [[VAL:%.*]] = load float, float* @var32, align 4
+; CHECK-NEXT:    [[VAL:%.*]] = load float, ptr @var32, align 4
 ; CHECK-NEXT:    [[SINCOSPI:%.*]] = call { float, float } @__sincospif_stret(float [[VAL]])
 ; CHECK-NEXT:    [[SINPI:%.*]] = extractvalue { float, float } [[SINCOSPI]], 0
 ; CHECK-NEXT:    [[COSPI:%.*]] = extractvalue { float, float } [[SINCOSPI]], 1
@@ -40,13 +40,13 @@ define float @test_instbased_f32() {
 ; CHECK-NEXT:    ret float [[RES]]
 ;
 ; CHECK-NO-SINCOS-LABEL: @test_instbased_f32(
-; CHECK-NO-SINCOS-NEXT:    [[VAL:%.*]] = load float, float* @var32, align 4
+; CHECK-NO-SINCOS-NEXT:    [[VAL:%.*]] = load float, ptr @var32, align 4
 ; CHECK-NO-SINCOS-NEXT:    [[SIN:%.*]] = call float @__sinpif(float [[VAL]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NO-SINCOS-NEXT:    [[COS:%.*]] = call float @__cospif(float [[VAL]]) #[[ATTR0]]
 ; CHECK-NO-SINCOS-NEXT:    [[RES:%.*]] = fadd float [[SIN]], [[COS]]
 ; CHECK-NO-SINCOS-NEXT:    ret float [[RES]]
 ;
-  %val = load float, float* @var32
+  %val = load float, ptr @var32
   %sin = call float @__sinpif(float %val) #0
   %cos = call float @__cospif(float %val) #0
   %res = fadd float %sin, %cos
@@ -90,7 +90,7 @@ define float @test_constant_f32() {
 
 define double @test_instbased_f64() {
 ; CHECK-FLOAT-IN-VEC-LABEL: @test_instbased_f64(
-; CHECK-FLOAT-IN-VEC-NEXT:    [[VAL:%.*]] = load double, double* @var64, align 8
+; CHECK-FLOAT-IN-VEC-NEXT:    [[VAL:%.*]] = load double, ptr @var64, align 8
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SINCOSPI:%.*]] = call { double, double } @__sincospi_stret(double [[VAL]])
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SINPI:%.*]] = extractvalue { double, double } [[SINCOSPI]], 0
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[COSPI:%.*]] = extractvalue { double, double } [[SINCOSPI]], 1
@@ -100,7 +100,7 @@ define double @test_instbased_f64() {
 ; CHECK-FLOAT-IN-VEC-NEXT:    ret double [[RES]]
 ;
 ; CHECK-LABEL: @test_instbased_f64(
-; CHECK-NEXT:    [[VAL:%.*]] = load double, double* @var64, align 8
+; CHECK-NEXT:    [[VAL:%.*]] = load double, ptr @var64, align 8
 ; CHECK-NEXT:    [[SINCOSPI:%.*]] = call { double, double } @__sincospi_stret(double [[VAL]])
 ; CHECK-NEXT:    [[SINPI:%.*]] = extractvalue { double, double } [[SINCOSPI]], 0
 ; CHECK-NEXT:    [[COSPI:%.*]] = extractvalue { double, double } [[SINCOSPI]], 1
@@ -110,13 +110,13 @@ define double @test_instbased_f64() {
 ; CHECK-NEXT:    ret double [[RES]]
 ;
 ; CHECK-NO-SINCOS-LABEL: @test_instbased_f64(
-; CHECK-NO-SINCOS-NEXT:    [[VAL:%.*]] = load double, double* @var64, align 8
+; CHECK-NO-SINCOS-NEXT:    [[VAL:%.*]] = load double, ptr @var64, align 8
 ; CHECK-NO-SINCOS-NEXT:    [[SIN:%.*]] = call double @__sinpi(double [[VAL]]) #[[ATTR0]]
 ; CHECK-NO-SINCOS-NEXT:    [[COS:%.*]] = call double @__cospi(double [[VAL]]) #[[ATTR0]]
 ; CHECK-NO-SINCOS-NEXT:    [[RES:%.*]] = fadd double [[SIN]], [[COS]]
 ; CHECK-NO-SINCOS-NEXT:    ret double [[RES]]
 ;
-  %val = load double, double* @var64
+  %val = load double, ptr @var64
   %sin = call double @__sinpi(double %val) #0
   %cos = call double @__cospi(double %val) #0
   %res = fadd double %sin, %cos
@@ -158,7 +158,7 @@ define double @test_constant_f64() {
 
 }
 
-define double @test_fptr(double (double)* %fptr, double %p1) {
+define double @test_fptr(ptr %fptr, double %p1) {
 ; CHECK-FLOAT-IN-VEC-LABEL: @test_fptr(
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[SIN:%.*]] = call double @__sinpi(double [[P1:%.*]]) #[[ATTR0]]
 ; CHECK-FLOAT-IN-VEC-NEXT:    [[COS:%.*]] = call double [[FPTR:%.*]](double [[P1]])

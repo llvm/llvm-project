@@ -434,15 +434,15 @@ define <2 x i7> @negative_and_odd_vec(<2 x i7> %x) {
 
 ; Negative test - this is still worth trying to avoid srem?
 
-define i32 @negative_and_odd_uses(i32 %x, i32* %p) {
+define i32 @negative_and_odd_uses(i32 %x, ptr %p) {
 ; CHECK-LABEL: @negative_and_odd_uses(
 ; CHECK-NEXT:    [[S:%.*]] = srem i32 [[X:%.*]], 2
-; CHECK-NEXT:    store i32 [[S]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[S]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[S]], 31
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %s = srem i32 %x, 2
-  store i32 %s, i32* %p
+  store i32 %s, ptr %p
   %r = lshr i32 %s, 31
   ret i32 %r
 }

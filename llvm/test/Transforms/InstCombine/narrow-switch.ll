@@ -189,23 +189,23 @@ entry:
   ]
 
 sw.bb:                                            ; preds = %entry
-  store i32 90, i32* %retval, align 4
+  store i32 90, ptr %retval, align 4
   br label %return
 
 sw.bb1:                                           ; preds = %entry
-  store i32 91, i32* %retval, align 4
+  store i32 91, ptr %retval, align 4
   br label %return
 
 sw.bb2:                                           ; preds = %entry
-  store i32 92, i32* %retval, align 4
+  store i32 92, ptr %retval, align 4
   br label %return
 
 sw.epilog:                                        ; preds = %entry
-  store i32 113, i32* %retval, align 4
+  store i32 113, ptr %retval, align 4
   br label %return
 
 return:                                           ; preds = %sw.epilog, %sw.bb2,
-  %rval = load i32, i32* %retval, align 4
+  %rval = load i32, ptr %retval, align 4
   ret i32 %rval
 }
 
@@ -229,7 +229,7 @@ define void @PR29009() {
   br label %1
 
 ; <label>:1:                                      ; preds = %10, %0
-  %2 = load volatile i32, i32* @njob, align 4
+  %2 = load volatile i32, ptr @njob, align 4
   %3 = icmp ne i32 %2, 0
   br i1 %3, label %4, label %11
 
@@ -242,15 +242,15 @@ define void @PR29009() {
   ]
 
 ; <label>:7:                                      ; preds = %4
-  store i32 6, i32* @a, align 4
+  store i32 6, ptr @a, align 4
   br label %10
 
 ; <label>:8:                                      ; preds = %4
-  store i32 1, i32* @a, align 4
+  store i32 1, ptr @a, align 4
   br label %10
 
 ; <label>:9:                                      ; preds = %4
-  store i32 2, i32* @a, align 4
+  store i32 2, ptr @a, align 4
   br label %10
 
 ; <label>:10:                                     ; preds = %13, %12, %11, %10, %9, %8, %7

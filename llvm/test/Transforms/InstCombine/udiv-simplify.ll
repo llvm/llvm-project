@@ -55,11 +55,11 @@ define i64 @test2_PR2274(i32 %x, i32 %v) nounwind {
 define i32 @PR30366(i1 %a) {
 ; CHECK-LABEL: @PR30366(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[A:%.*]] to i32
-; CHECK-NEXT:    [[D:%.*]] = lshr i32 [[Z]], zext (i16 ptrtoint ([1 x i16]* @b to i16) to i32)
+; CHECK-NEXT:    [[D:%.*]] = lshr i32 [[Z]], zext (i16 ptrtoint (ptr @b to i16) to i32)
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
   %z = zext i1 %a to i32
-  %d = udiv i32 %z, zext (i16 shl (i16 1, i16 ptrtoint ([1 x i16]* @b to i16)) to i32)
+  %d = udiv i32 %z, zext (i16 shl (i16 1, i16 ptrtoint (ptr @b to i16)) to i32)
   ret i32 %d
 }
 
@@ -79,7 +79,7 @@ define i177 @ossfuzz_4857(i177 %X, i177 %Y) {
   %B22 = add i177 %B9, %B13
   %B1 = udiv i177 %B5, %B6
   %C9 = icmp ult i177 %Y, %B22
-  store i1 %C9, i1* undef
+  store i1 %C9, ptr undef
   ret i177 %B1
 }
 

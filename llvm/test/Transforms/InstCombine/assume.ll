@@ -10,22 +10,22 @@ declare void @llvm.assume(i1) #1
 ; Check that the alignment has been upgraded and that the assume has not
 ; been removed:
 
-define i32 @foo1(i32* %a) #0 {
+define i32 @foo1(ptr %a) #0 {
 ; DEFAULT-LABEL: @foo1(
-; DEFAULT-NEXT:    [[T0:%.*]] = load i32, i32* [[A:%.*]], align 32
-; DEFAULT-NEXT:    [[PTRINT:%.*]] = ptrtoint i32* [[A]] to i64
+; DEFAULT-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 32
+; DEFAULT-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[A]] to i64
 ; DEFAULT-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
 ; DEFAULT-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
 ; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
 ; DEFAULT-NEXT:    ret i32 [[T0]]
 ;
 ; BUNDLES-LABEL: @foo1(
-; BUNDLES-NEXT:    [[T0:%.*]] = load i32, i32* [[A:%.*]], align 32
-; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[A]], i64 32) ]
+; BUNDLES-NEXT:    [[T0:%.*]] = load i32, ptr [[A:%.*]], align 32
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
 ; BUNDLES-NEXT:    ret i32 [[T0]]
 ;
-  %t0 = load i32, i32* %a, align 4
-  %ptrint = ptrtoint i32* %a to i64
+  %t0 = load i32, ptr %a, align 4
+  %ptrint = ptrtoint ptr %a to i64
   %maskedptr = and i64 %ptrint, 31
   %maskcond = icmp eq i64 %maskedptr, 0
   tail call void @llvm.assume(i1 %maskcond)
@@ -34,25 +34,25 @@ define i32 @foo1(i32* %a) #0 {
 
 ; Same check as in @foo1, but make sure it works if the assume is first too.
 
-define i32 @foo2(i32* %a) #0 {
+define i32 @foo2(ptr %a) #0 {
 ; DEFAULT-LABEL: @foo2(
-; DEFAULT-NEXT:    [[PTRINT:%.*]] = ptrtoint i32* [[A:%.*]] to i64
+; DEFAULT-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[A:%.*]] to i64
 ; DEFAULT-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
 ; DEFAULT-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
 ; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
-; DEFAULT-NEXT:    [[T0:%.*]] = load i32, i32* [[A]], align 32
+; DEFAULT-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 32
 ; DEFAULT-NEXT:    ret i32 [[T0]]
 ;
 ; BUNDLES-LABEL: @foo2(
-; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[A:%.*]], i64 32) ]
-; BUNDLES-NEXT:    [[T0:%.*]] = load i32, i32* [[A]], align 32
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A:%.*]], i64 32) ]
+; BUNDLES-NEXT:    [[T0:%.*]] = load i32, ptr [[A]], align 32
 ; BUNDLES-NEXT:    ret i32 [[T0]]
 ;
-  %ptrint = ptrtoint i32* %a to i64
+  %ptrint = ptrtoint ptr %a to i64
   %maskedptr = and i64 %ptrint, 31
   %maskcond = icmp eq i64 %maskedptr, 0
   tail call void @llvm.assume(i1 %maskcond)
-  %t0 = load i32, i32* %a, align 4
+  %t0 = load i32, ptr %a, align 4
   ret i32 %t0
 }
 
@@ -238,56 +238,56 @@ define i1 @assume_not(i1 %cond) {
   ret i1 %cond
 }
 
-declare void @escape(i32* %a)
+declare void @escape(ptr %a)
 
 ; Canonicalize a nonnull assumption on a load into metadata form.
 
-define i32 @bundle1(i32* %P) {
+define i32 @bundle1(ptr %P) {
 ; CHECK-LABEL: @bundle1(
-; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "nonnull"(i32* [[P:%.*]]) ]
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[P]], align 4
+; CHECK-NEXT:    tail call void @llvm.assume(i1 true) [ "nonnull"(ptr [[P:%.*]]) ]
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
-  tail call void @llvm.assume(i1 true) ["nonnull"(i32* %P)]
-  %load = load i32, i32* %P
+  tail call void @llvm.assume(i1 true) ["nonnull"(ptr %P)]
+  %load = load i32, ptr %P
   ret i32 %load
 }
 
-define i32 @bundle2(i32* %P) {
+define i32 @bundle2(ptr %P) {
 ; CHECK-LABEL: @bundle2(
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
-  tail call void @llvm.assume(i1 true) ["ignore"(i32* undef)]
-  %load = load i32, i32* %P
+  tail call void @llvm.assume(i1 true) ["ignore"(ptr undef)]
+  %load = load i32, ptr %P
   ret i32 %load
 }
 
-define i1 @nonnull1(i32** %a) {
+define i1 @nonnull1(ptr %a) {
 ; CHECK-LABEL: @nonnull1(
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8, !nonnull !6
-; CHECK-NEXT:    tail call void @escape(i32* nonnull [[LOAD]])
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8, !nonnull !6
+; CHECK-NEXT:    tail call void @escape(ptr nonnull [[LOAD]])
 ; CHECK-NEXT:    ret i1 false
 ;
-  %load = load i32*, i32** %a
-  %cmp = icmp ne i32* %load, null
+  %load = load ptr, ptr %a
+  %cmp = icmp ne ptr %load, null
   tail call void @llvm.assume(i1 %cmp)
-  tail call void @escape(i32* %load)
-  %rval = icmp eq i32* %load, null
+  tail call void @escape(ptr %load)
+  %rval = icmp eq ptr %load, null
   ret i1 %rval
 }
 
 ; Make sure the above canonicalization applies only
 ; to pointer types.  Doing otherwise would be illegal.
 
-define i1 @nonnull2(i32* %a) {
+define i1 @nonnull2(ptr %a) {
 ; CHECK-LABEL: @nonnull2(
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[A:%.*]], align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LOAD]], 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret i1 false
 ;
-  %load = load i32, i32* %a
+  %load = load i32, ptr %a
   %cmp = icmp ne i32 %load, 0
   tail call void @llvm.assume(i1 %cmp)
   %rval = icmp eq i32 %load, 0
@@ -297,18 +297,18 @@ define i1 @nonnull2(i32* %a) {
 ; Make sure the above canonicalization does not trigger
 ; if the assume is control dependent on something else
 
-define i1 @nonnull3(i32** %a, i1 %control) {
+define i1 @nonnull3(ptr %a, i1 %control) {
 ; FIXME: in the BUNDLES version we could duplicate the load and keep the assume nonnull.
 ; DEFAULT-LABEL: @nonnull3(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
-; DEFAULT-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
+; DEFAULT-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; DEFAULT-NEXT:    [[CMP:%.*]] = icmp ne ptr [[LOAD]], null
 ; DEFAULT-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
 ; DEFAULT:       taken:
 ; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; DEFAULT-NEXT:    ret i1 false
 ; DEFAULT:       not_taken:
-; DEFAULT-NEXT:    [[RVAL_2:%.*]] = icmp sgt i32* [[LOAD]], null
+; DEFAULT-NEXT:    [[RVAL_2:%.*]] = icmp sgt ptr [[LOAD]], null
 ; DEFAULT-NEXT:    ret i1 [[RVAL_2]]
 ;
 ; BUNDLES-LABEL: @nonnull3(
@@ -317,20 +317,20 @@ define i1 @nonnull3(i32** %a, i1 %control) {
 ; BUNDLES:       taken:
 ; BUNDLES-NEXT:    ret i1 false
 ; BUNDLES:       not_taken:
-; BUNDLES-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
-; BUNDLES-NEXT:    [[RVAL_2:%.*]] = icmp sgt i32* [[LOAD]], null
+; BUNDLES-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; BUNDLES-NEXT:    [[RVAL_2:%.*]] = icmp sgt ptr [[LOAD]], null
 ; BUNDLES-NEXT:    ret i1 [[RVAL_2]]
 ;
 entry:
-  %load = load i32*, i32** %a
-  %cmp = icmp ne i32* %load, null
+  %load = load ptr, ptr %a
+  %cmp = icmp ne ptr %load, null
   br i1 %control, label %taken, label %not_taken
 taken:
   tail call void @llvm.assume(i1 %cmp)
-  %rval = icmp eq i32* %load, null
+  %rval = icmp eq ptr %load, null
   ret i1 %rval
 not_taken:
-  %rval.2 = icmp sgt i32* %load, null
+  %rval.2 = icmp sgt ptr %load, null
   ret i1 %rval.2
 }
 
@@ -338,43 +338,43 @@ not_taken:
 ; if the path from the load to the assume is potentially
 ; interrupted by an exception being thrown
 
-define i1 @nonnull4(i32** %a) {
+define i1 @nonnull4(ptr %a) {
 ; DEFAULT-LABEL: @nonnull4(
-; DEFAULT-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
-; DEFAULT-NEXT:    tail call void @escape(i32* [[LOAD]])
-; DEFAULT-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
+; DEFAULT-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; DEFAULT-NEXT:    tail call void @escape(ptr [[LOAD]])
+; DEFAULT-NEXT:    [[CMP:%.*]] = icmp ne ptr [[LOAD]], null
 ; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; DEFAULT-NEXT:    ret i1 false
 ;
 ; BUNDLES-LABEL: @nonnull4(
-; BUNDLES-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
-; BUNDLES-NEXT:    tail call void @escape(i32* [[LOAD]])
-; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[LOAD]]) ]
+; BUNDLES-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; BUNDLES-NEXT:    tail call void @escape(ptr [[LOAD]])
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[LOAD]]) ]
 ; BUNDLES-NEXT:    ret i1 false
 ;
-  %load = load i32*, i32** %a
+  %load = load ptr, ptr %a
   ;; This call may throw!
-  tail call void @escape(i32* %load)
-  %cmp = icmp ne i32* %load, null
+  tail call void @escape(ptr %load)
+  %cmp = icmp ne ptr %load, null
   tail call void @llvm.assume(i1 %cmp)
-  %rval = icmp eq i32* %load, null
+  %rval = icmp eq ptr %load, null
   ret i1 %rval
 }
-define i1 @nonnull5(i32** %a) {
+define i1 @nonnull5(ptr %a) {
 ; CHECK-LABEL: @nonnull5(
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
-; CHECK-NEXT:    tail call void @escape(i32* [[LOAD]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32* [[LOAD]], null
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    tail call void @escape(ptr [[LOAD]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt ptr [[LOAD]], null
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
 ; CHECK-NEXT:    ret i1 false
 ;
-  %load = load i32*, i32** %a
+  %load = load ptr, ptr %a
   ;; This call may throw!
-  tail call void @escape(i32* %load)
-  %integral = ptrtoint i32* %load to i64
+  tail call void @escape(ptr %load)
+  %integral = ptrtoint ptr %load to i64
   %cmp = icmp slt i64 %integral, 0
   tail call void @llvm.assume(i1 %cmp) ; %load has at least highest bit set
-  %rval = icmp eq i32* %load, null
+  %rval = icmp eq ptr %load, null
   ret i1 %rval
 }
 
@@ -443,17 +443,17 @@ define i32 @PR40940(<4 x i8> %x) {
   ret i32 %t2
 }
 
-define i1 @nonnull3A(i32** %a, i1 %control) {
+define i1 @nonnull3A(ptr %a, i1 %control) {
 ; DEFAULT-LABEL: @nonnull3A(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
+; DEFAULT-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
 ; DEFAULT-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
 ; DEFAULT:       taken:
-; DEFAULT-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
+; DEFAULT-NEXT:    [[CMP:%.*]] = icmp ne ptr [[LOAD]], null
 ; DEFAULT-NEXT:    call void @llvm.assume(i1 [[CMP]])
 ; DEFAULT-NEXT:    ret i1 true
 ; DEFAULT:       not_taken:
-; DEFAULT-NEXT:    [[RVAL_2:%.*]] = icmp sgt i32* [[LOAD]], null
+; DEFAULT-NEXT:    [[RVAL_2:%.*]] = icmp sgt ptr [[LOAD]], null
 ; DEFAULT-NEXT:    ret i1 [[RVAL_2]]
 ;
 ; BUNDLES-LABEL: @nonnull3A(
@@ -462,56 +462,56 @@ define i1 @nonnull3A(i32** %a, i1 %control) {
 ; BUNDLES:       taken:
 ; BUNDLES-NEXT:    ret i1 true
 ; BUNDLES:       not_taken:
-; BUNDLES-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
-; BUNDLES-NEXT:    [[RVAL_2:%.*]] = icmp sgt i32* [[LOAD]], null
+; BUNDLES-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; BUNDLES-NEXT:    [[RVAL_2:%.*]] = icmp sgt ptr [[LOAD]], null
 ; BUNDLES-NEXT:    ret i1 [[RVAL_2]]
 ;
 entry:
-  %load = load i32*, i32** %a
-  %cmp = icmp ne i32* %load, null
+  %load = load ptr, ptr %a
+  %cmp = icmp ne ptr %load, null
   br i1 %control, label %taken, label %not_taken
 taken:
   call void @llvm.assume(i1 %cmp)
   ret i1 %cmp
 not_taken:
   call void @llvm.assume(i1 %cmp)
-  %rval.2 = icmp sgt i32* %load, null
+  %rval.2 = icmp sgt ptr %load, null
   ret i1 %rval.2
 }
 
-define i1 @nonnull3B(i32** %a, i1 %control) {
+define i1 @nonnull3B(ptr %a, i1 %control) {
 ; CHECK-LABEL: @nonnull3B(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
 ; CHECK:       taken:
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]]) [ "nonnull"(i32* [[LOAD]]) ]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[LOAD]], null
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]]) [ "nonnull"(ptr [[LOAD]]) ]
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       not_taken:
 ; CHECK-NEXT:    ret i1 [[CONTROL]]
 ;
 entry:
-  %load = load i32*, i32** %a
-  %cmp = icmp ne i32* %load, null
+  %load = load ptr, ptr %a
+  %cmp = icmp ne ptr %load, null
   br i1 %control, label %taken, label %not_taken
 taken:
-  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load)]
+  call void @llvm.assume(i1 %cmp) ["nonnull"(ptr %load)]
   ret i1 %cmp
 not_taken:
-  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load)]
+  call void @llvm.assume(i1 %cmp) ["nonnull"(ptr %load)]
   ret i1 %control
 }
 
 declare i1 @tmp1(i1)
 
-define i1 @nonnull3C(i32** %a, i1 %control) {
+define i1 @nonnull3C(ptr %a, i1 %control) {
 ; CHECK-LABEL: @nonnull3C(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
 ; CHECK:       taken:
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[LOAD]], null
 ; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @tmp1(i1 [[CMP]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -520,28 +520,28 @@ define i1 @nonnull3C(i32** %a, i1 %control) {
 ; CHECK-NEXT:    ret i1 [[CONTROL]]
 ;
 entry:
-  %load = load i32*, i32** %a
-  %cmp = icmp ne i32* %load, null
+  %load = load ptr, ptr %a
+  %cmp = icmp ne ptr %load, null
   br i1 %control, label %taken, label %not_taken
 taken:
   %cmp2 = call i1 @tmp1(i1 %cmp)
   br label %exit
 exit:
   ; FIXME: this shouldn't be dropped because it is still dominated by the new position of %load
-  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load)]
+  call void @llvm.assume(i1 %cmp) ["nonnull"(ptr %load)]
   ret i1 %cmp2
 not_taken:
   call void @llvm.assume(i1 %cmp)
   ret i1 %control
 }
 
-define i1 @nonnull3D(i32** %a, i1 %control) {
+define i1 @nonnull3D(ptr %a, i1 %control) {
 ; CHECK-LABEL: @nonnull3D(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[CONTROL:%.*]], label [[TAKEN:%.*]], label [[NOT_TAKEN:%.*]]
 ; CHECK:       taken:
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32*, i32** [[A:%.*]], align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32* [[LOAD]], null
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[A:%.*]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[LOAD]], null
 ; CHECK-NEXT:    [[CMP2:%.*]] = call i1 @tmp1(i1 [[CMP]])
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       exit:
@@ -550,8 +550,8 @@ define i1 @nonnull3D(i32** %a, i1 %control) {
 ; CHECK-NEXT:    ret i1 [[CONTROL]]
 ;
 entry:
-  %load = load i32*, i32** %a
-  %cmp = icmp ne i32* %load, null
+  %load = load ptr, ptr %a
+  %cmp = icmp ne ptr %load, null
   br i1 %control, label %taken, label %not_taken
 taken:
   %cmp2 = call i1 @tmp1(i1 %cmp)
@@ -559,7 +559,7 @@ taken:
 exit:
   ret i1 %cmp2
 not_taken:
-  call void @llvm.assume(i1 %cmp) ["nonnull"(i32* %load)]
+  call void @llvm.assume(i1 %cmp) ["nonnull"(ptr %load)]
   ret i1 %control
 }
 
@@ -578,12 +578,12 @@ define void @always_true_assumption() {
 define i64 @PR31809() {
 ; CHECK-LABEL: @PR31809(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[T1:%.*]] = ptrtoint i32* [[A]] to i64
+; CHECK-NEXT:    [[T1:%.*]] = ptrtoint ptr [[A]] to i64
 ; CHECK-NEXT:    call void @llvm.assume(i1 false)
 ; CHECK-NEXT:    ret i64 [[T1]]
 ;
   %a = alloca i32
-  %t1 = ptrtoint i32* %a to i64
+  %t1 = ptrtoint ptr %a to i64
   %cond = icmp eq i64 %t1, 3
   call void @llvm.assume(i1 %cond)
   ret i64 %t1
@@ -700,7 +700,7 @@ exit:
   unreachable
 }
 
-define i32 @unreachable_assumes_and_store(i32 %x, i32 %y, i32* %p) {
+define i32 @unreachable_assumes_and_store(i32 %x, i32 %y, ptr %p) {
 ; CHECK-LABEL: @unreachable_assumes_and_store(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp sgt i32 [[X:%.*]], 1
@@ -736,11 +736,11 @@ exit:
   tail call void @llvm.assume(i1 %cmp4)
   %cmp5 = icmp ugt i32 %y, 42
   tail call void @llvm.assume(i1 %cmp5)
-  store i32 %x, i32* %p
+  store i32 %x, ptr %p
   unreachable
 }
 
-define i32 @unreachable_assumes_and_store_logical(i32 %x, i32 %y, i32* %p) {
+define i32 @unreachable_assumes_and_store_logical(i32 %x, i32 %y, ptr %p) {
 ; CHECK-LABEL: @unreachable_assumes_and_store_logical(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP0:%.*]] = icmp sgt i32 [[X:%.*]], 1
@@ -776,24 +776,22 @@ exit:
   tail call void @llvm.assume(i1 %cmp4)
   %cmp5 = icmp ugt i32 %y, 42
   tail call void @llvm.assume(i1 %cmp5)
-  store i32 %x, i32* %p
+  store i32 %x, ptr %p
   unreachable
 }
 
-define void @canonicalize_assume(i32* %0) {
+define void @canonicalize_assume(ptr %0) {
 ; DEFAULT-LABEL: @canonicalize_assume(
-; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, i32* [[TMP0:%.*]], i64 2
-; DEFAULT-NEXT:    [[TMP3:%.*]] = bitcast i32* [[TMP2]] to i8*
-; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(i8* [[TMP3]], i64 16) ]
+; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0:%.*]], i64 2
+; DEFAULT-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP2]], i64 16) ]
 ; DEFAULT-NEXT:    ret void
 ;
 ; BUNDLES-LABEL: @canonicalize_assume(
-; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(i32* [[TMP0:%.*]], i64 8) ]
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[TMP0:%.*]], i64 8) ]
 ; BUNDLES-NEXT:    ret void
 ;
-  %2 = getelementptr inbounds i32, i32* %0, i64 2
-  %3 = bitcast i32* %2 to i8*
-  call void @llvm.assume(i1 true) [ "align"(i8* %3, i64 16) ]
+  %2 = getelementptr inbounds i32, ptr %0, i64 2
+  call void @llvm.assume(i1 true) [ "align"(ptr %2, i64 16) ]
   ret void
 }
 

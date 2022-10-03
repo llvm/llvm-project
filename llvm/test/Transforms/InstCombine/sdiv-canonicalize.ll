@@ -85,10 +85,10 @@ define i64 @test_sdiv_canonicalize_constexpr(i64 %L1) {
 ; currently opt folds (sub nsw i64 0, constexpr) -> (sub i64, 0, constexpr).
 ; sdiv canonicalize requires a nsw sub.
 ; CHECK-LABEL: @test_sdiv_canonicalize_constexpr(
-; CHECK-NEXT:    [[B4:%.*]] = sdiv i64 [[L1:%.*]], sub (i64 0, i64 ptrtoint (i32* @X to i64))
+; CHECK-NEXT:    [[B4:%.*]] = sdiv i64 [[L1:%.*]], sub (i64 0, i64 ptrtoint (ptr @X to i64))
 ; CHECK-NEXT:    ret i64 [[B4]]
 ;
-  %v1 = ptrtoint i32* @X to i64
+  %v1 = ptrtoint ptr @X to i64
   %B8 = sub nsw i64 0, %v1
   %B4 = sdiv i64 %L1, %B8
   ret i64 %B4
