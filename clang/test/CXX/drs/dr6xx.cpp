@@ -1083,13 +1083,23 @@ namespace dr692 { // dr692: no
   // Also see dr1395.
 
   namespace temp_func_order_example2 {
-    template <typename T, typename U> struct A {};
-    template <typename T, typename U> void f(U, A<U, T> *p = 0); // expected-note {{candidate}}
-    template <typename U> int &f(U, A<U, U> *p = 0); // expected-note {{candidate}}
+    template <typename... T> struct A1 {}; // expected-error 0-1{{C++11}}
+    template <typename U, typename... T> struct A2 {}; // expected-error 0-1{{C++11}}
+    template <class T1, class... U> void e1(A1<T1, U...>) = delete; // expected-error 0-2{{C++11}}
+    template <class T1> void e1(A1<T1>);
+    template <class T1, class... U> void e2(A2<T1, U...>) = delete; // expected-error 0-2{{C++11}}
+    template <class T1> void e2(A2<T1>);
+    template <typename T, typename U> void f(U, A1<U, T> *p = 0) = delete; // expected-note {{candidate}} expected-error 0-1{{C++11}}
+    template <typename U> int &f(U, A1<U, U> *p = 0); // expected-note {{candidate}}
     template <typename T> void g(T, T = T()); // expected-note {{candidate}}
     template <typename T, typename... U> void g(T, U...); // expected-note {{candidate}} expected-error 0-1{{C++11}}
     void h() {
-      int &r = f<int>(42, (A<int, int> *)0);
+      A1<int, int> a;
+      int &r = f<int>(42, &a);
+      A1<int> b1;
+      e1(b1);
+      A2<int> b2;
+      e2(b2);
       f<int>(42); // expected-error {{ambiguous}}
       g(42); // expected-error {{ambiguous}}
     }
