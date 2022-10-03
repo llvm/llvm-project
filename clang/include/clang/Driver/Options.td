@@ -833,7 +833,7 @@ def Xopenmp_target_EQ : JoinedAndSeparate<["-"], "Xopenmp-target=">, Group<Compi
 def z : Separate<["-"], "z">, Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass -z <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
-def offload_link : Flag<["--"], "offload-link">, Group<Link_Group>,
+def offload_link : Flag<["--", "-"], "offload-link">, Group<Link_Group>,
   HelpText<"Use the new offloading linker to perform the link job.">;
 def Xlinker : Separate<["-"], "Xlinker">, Flags<[LinkerInput, RenderAsInput]>,
   HelpText<"Pass <arg> to the linker">, MetaVarName<"<arg>">,
@@ -933,7 +933,7 @@ def cuda_include_ptx_EQ : Joined<["--"], "cuda-include-ptx=">, Flags<[NoXarchOpt
   HelpText<"Include PTX for the following GPU architecture (e.g. sm_35) or 'all'. May be specified more than once.">;
 def no_cuda_include_ptx_EQ : Joined<["--"], "no-cuda-include-ptx=">, Flags<[NoXarchOption]>,
   HelpText<"Do not include PTX for the following GPU architecture (e.g. sm_35) or 'all'. May be specified more than once.">;
-def offload_arch_EQ : Joined<["--"], "offload-arch=">, Flags<[NoXarchOption]>,
+def offload_arch_EQ : Joined<["--", "-"], "offload-arch=">, Flags<[NoXarchOption]>,
   HelpText<"CUDA offloading device architecture (e.g. sm_35), or HIP offloading target ID in the form of a "
            "device architecture followed by target ID features delimited by a colon. Each target ID feature "
            "is a pre-defined string followed by a plus or minus sign (e.g. gfx908:xnack+:sramecc-).  May be "
@@ -945,7 +945,7 @@ def hip_link : Flag<["--"], "hip-link">,
   HelpText<"Link clang-offload-bundler bundles for HIP">;
 def no_hip_rt: Flag<["-"], "no-hip-rt">,
   HelpText<"Do not link against HIP runtime libraries">;
-def no_offload_arch_EQ : Joined<["--"], "no-offload-arch=">, Flags<[NoXarchOption]>,
+def no_offload_arch_EQ : Joined<["--", "-"], "no-offload-arch=">, Flags<[NoXarchOption]>,
   HelpText<"Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. "
            "'all' resets the list to its default value.">;
 def emit_static_lib : Flag<["--"], "emit-static-lib">,
@@ -1187,7 +1187,7 @@ defm autolink : BoolFOption<"autolink",
 // In the future this option will be supported by other offloading
 // languages and accept other values such as CPU/GPU architectures,
 // offload kinds and target aliases.
-def offload_EQ : CommaJoined<["--"], "offload=">, Flags<[NoXarchOption]>,
+def offload_EQ : CommaJoined<["--", "-"], "offload=">, Flags<[NoXarchOption]>,
   HelpText<"Specify comma-separated list of offloading target triples (CUDA and HIP only)">;
 
 // C++ Coroutines TS
@@ -2626,15 +2626,15 @@ defm openmp_optimistic_collapse : BoolFOption<"openmp-optimistic-collapse",
   PosFlag<SetTrue, [CC1Option]>, NegFlag<SetFalse>, BothFlags<[NoArgumentUnused, HelpHidden]>>;
 def static_openmp: Flag<["-"], "static-openmp">,
   HelpText<"Use the static host OpenMP runtime while linking.">;
-def offload_new_driver : Flag<["--"], "offload-new-driver">, Flags<[CC1Option]>, Group<f_Group>,
+def offload_new_driver : Flag<["--", "-"], "offload-new-driver">, Flags<[CC1Option]>, Group<f_Group>,
   MarshallingInfoFlag<LangOpts<"OffloadingNewDriver">>, HelpText<"Use the new driver for offloading compilation.">;
-def no_offload_new_driver : Flag<["--"], "no-offload-new-driver">, Flags<[CC1Option]>, Group<f_Group>,
+def no_offload_new_driver : Flag<["--", "-"], "no-offload-new-driver">, Flags<[CC1Option]>, Group<f_Group>,
   HelpText<"Don't Use the new driver for offloading compilation.">;
-def offload_device_only : Flag<["--"], "offload-device-only">,
+def offload_device_only : Flag<["--", "-"], "offload-device-only">,
   HelpText<"Only compile for the offloading device.">;
-def offload_host_only : Flag<["--"], "offload-host-only">,
+def offload_host_only : Flag<["--", "-"], "offload-host-only">,
   HelpText<"Only compile for the offloading host.">;
-def offload_host_device : Flag<["--"], "offload-host-device">,
+def offload_host_device : Flag<["--", "-"], "offload-host-device">,
   HelpText<"Only compile for the offloading host.">;
 def cuda_device_only : Flag<["--"], "cuda-device-only">, Alias<offload_device_only>,
   HelpText<"Compile CUDA code for device only">;
