@@ -10,6 +10,7 @@ config.python_executable = "@Python3_EXECUTABLE@"
 config.clang_tools_dir = lit_config.substitute("@CURRENT_TOOLS_DIR@")
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
 config.llvm_libs_dir = lit_config.substitute("@LLVM_LIBS_DIR@")
+config.llvm_shlib_dir = "@SHLIBDIR@"
 
 config.clangd_source_dir = "@CMAKE_CURRENT_SOURCE_DIR@/.."
 config.clangd_binary_dir = "@CMAKE_CURRENT_BINARY_DIR@/.."
