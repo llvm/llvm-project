@@ -32,7 +32,9 @@
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/Support/Debug.h"
@@ -327,6 +329,40 @@ static void applySplitStoreZero128(MachineInstr &MI, MachineRegisterInfo &MRI,
   B.buildStore(Zero, PtrReg, *LowMMO);
   B.buildStore(Zero, HighPtr, *HighMMO);
   Store.eraseFromParent();
+}
+
+// Match a legalized vector sext of a vector compare. Vector compares always
+// sign-extend the low bit anyway. Unfortunately we have to match the G_SEXT
+// after it's been legalized to shifts since this is after legalization.
+static bool matchSextViaShiftsOfVCmp(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                     Register &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_ASHR && "Expected G_ASHR");
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  if (!DstTy.isVector())
+    return false;
+
+  Register ShlLHS;
+  int64_t ShlRHS;
+  if (!mi_match(MI.getOperand(1).getReg(), MRI,
+                m_GShl(m_Reg(ShlLHS), m_ICstOrSplat(ShlRHS))))
+    return false;
+
+  // Check the shift amount is correct for a sext.
+  if (ShlRHS != DstTy.getScalarSizeInBits() - 1)
+    return false;
+  if (!mi_match(MI.getOperand(2).getReg(), MRI, m_SpecificICstSplat(ShlRHS)))
+    return false;
+
+  // Check we're trying to extend a vector compare.
+  if (auto *Cmp = getOpcodeDef<GFCmp>(ShlLHS, MRI)) {
+    MatchInfo = Cmp->getReg(0);
+    return true;
+  }
+  if (auto *Cmp = getOpcodeDef<GICmp>(ShlLHS, MRI)) {
+    MatchInfo = Cmp->getReg(0);
+    return true;
+  }
+  return false;
 }
 
 #define AARCH64POSTLEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS

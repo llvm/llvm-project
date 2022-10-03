@@ -203,6 +203,13 @@ def split_store_zero_128 : GICombineRule<
   (apply [{ applySplitStoreZero128(*${d}, MRI, B, Observer); }])
 >;
 
+def sext_via_shifts_of_vcmp : GICombineRule<
+  (defs root:$d, register_matchinfo:$info),
+  (match (wip_match_opcode G_ASHR):$d,
+          [{ return matchSextViaShiftsOfVCmp(*${d}, MRI, ${info}); }]),
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${d}, ${info}); }])
+>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
@@ -229,6 +236,6 @@ def AArch64PostLegalizerCombinerHelper
                         constant_fold, identity_combines,
                         ptr_add_immed_chain, overlapping_and,
                         split_store_zero_128, undef_combines,
-                        select_to_minmax]> {
+                        select_to_minmax, sext_via_shifts_of_vcmp]> {
   let DisableRuleOption = "aarch64postlegalizercombiner-disable-rule";
 }
