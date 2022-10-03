@@ -195,8 +195,6 @@ protected:
   bool HasGFX11FullVGPRs = false;
   bool HasVOPDInsts = false;
 
-  bool HasGetPcStallHazard = false;
-
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
 
@@ -1059,8 +1057,6 @@ public:
   }
 
   bool hasVALUTransUseHazard() const { return getGeneration() >= GFX11; }
-
-  bool hasGetPcStallHazard() const { return HasGetPcStallHazard; }
 
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts; }

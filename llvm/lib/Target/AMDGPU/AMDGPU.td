@@ -717,12 +717,6 @@ def FeatureVOPD : SubtargetFeature<"vopd",
   "Has VOPD dual issue wave32 instructions"
 >;
 
-def FeatureGetPcStallHazard : SubtargetFeature<"getpc-stall-hazard",
-  "HasGetPcStallHazard",
-  "true",
-  "S_GETPC can be stalled by VALU access to same register"
->;
-
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -941,8 +935,7 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureVOP3Literal, FeatureDPP8, FeatureExtendedImageInsts,
    FeatureNoDataDepHazard, FeaturePkFmacF16Inst,
    FeatureGFX10A16, FeatureFastDenormalF32, FeatureG16,
-   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess,
-   FeatureGetPcStallHazard
+   FeatureUnalignedBufferAccess, FeatureUnalignedDSAccess
   ]
 >;
 

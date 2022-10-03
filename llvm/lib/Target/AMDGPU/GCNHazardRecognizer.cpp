@@ -1101,7 +1101,6 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
   fixVALUPartialForwardingHazard(MI);
   fixVALUTransUseHazard(MI);
   fixWMMAHazards(MI);
-  fixGetPcStallHazard(MI);
   fixShift64HighRegBug(MI);
 }
 
@@ -2709,58 +2708,4 @@ bool GCNHazardRecognizer::ShouldPreferAnother(SUnit *SU) {
   }
 
   return false;
-}
-
-bool GCNHazardRecognizer::fixGetPcStallHazard(MachineInstr *MI) {
-  if (!ST.isWave64())
-    return false;
-  if (!ST.hasGetPcStallHazard())
-    return false;
-  if (MI->getOpcode() != AMDGPU::S_GETPC_B64)
-    return false;
-
-  const Register SrcReg = MI->getOperand(0).getReg();
-
-  auto IsHazardFn = [SrcReg](const MachineInstr &I) {
-    if (I.getOpcode() != AMDGPU::V_CNDMASK_B32_e64 &&
-        I.getOpcode() != AMDGPU::V_CNDMASK_B16_e64)
-      return false;
-
-    return I.readsRegister(SrcReg);
-  };
-
-  auto IsExpiredFn = [](const MachineInstr &I, int WaitStates) {
-    // s_waitcnt 0 does not mitigate hazard, but hazard should not exist if
-    // s_waitcnt_depctr va_vdst(0) occurs as this implies all VALUs creating
-    // hazard have completed.
-    //
-    // FIXME: WaitStates limit is an arbitrary number to avoid excessive search.
-    return (I.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-            !(I.getOperand(0).getImm() & 0xf000)) ||
-           I.getOpcode() == AMDGPU::S_WAIT_IDLE ||
-           WaitStates > 255;
-  };
-
-  if (::getWaitStatesSince(IsHazardFn, MI, IsExpiredFn) ==
-      std::numeric_limits<int>::max())
-    return false;
-
-  auto NextMI = std::next(MI->getIterator());
-
-  // Add s_waitcnt_depctr sa_sdst(0) after s_getpc to ensure completion.
-  BuildMI(*MI->getParent(), NextMI, MI->getDebugLoc(),
-          TII.get(AMDGPU::S_WAITCNT_DEPCTR))
-    .addImm(0xfffe);
-
-  // Update offsets of any references in the bundle with this s_getpc.
-  while (NextMI != MI->getParent()->end() &&
-         NextMI->isBundledWithPred()) {
-    for (auto &Operand : NextMI->operands()) {
-      if (Operand.isGlobal())
-        Operand.setOffset(Operand.getOffset() + 4);
-    }
-    NextMI++;
-  }
-
-  return true;
 }
