@@ -658,6 +658,10 @@ def warn_drv_fjmc_for_elf_only : Warning<
   "-fjmc works only for ELF; option ignored">,
   InGroup<OptionIgnored>;
 
+def warn_target_override_arm64ec : Warning<
+  "/arm64EC has been overridden by specified target: %0; option ignored">,
+  InGroup<OptionIgnored>;
+
 def err_drv_target_variant_invalid : Error<
   "unsupported '%0' value '%1'; use 'ios-macabi' instead">;
 
