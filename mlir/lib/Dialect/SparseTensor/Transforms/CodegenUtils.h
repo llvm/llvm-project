@@ -313,6 +313,15 @@ constantDimLevelTypeEncoding(OpBuilder &builder, Location loc,
                     static_cast<uint8_t>(dimLevelTypeEncoding(dlt)));
 }
 
+/// Computes the shape of destination tensor of a reshape operator. This is only
+/// used when operands have dynamic shape. The shape of the destination is
+/// stored into dstShape.
+void genReshapeDstShape(Location loc, PatternRewriter &rewriter,
+                        SmallVector<Value, 4> &dstShape,
+                        ArrayRef<Value> srcShape,
+                        ArrayRef<int64_t> staticDstShape,
+                        ArrayRef<ReassociationIndices> reassociation);
+
 /// Helper method to translate indices during a reshaping operation.
 void translateIndicesArray(OpBuilder &builder, Location loc,
                            ArrayRef<ReassociationIndices> reassociation,
