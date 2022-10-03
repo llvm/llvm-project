@@ -579,10 +579,17 @@ if (SANITIZER_CXX_ABI_LIBNAME STREQUAL "libc++")
     # because we added -nodefaultlibs there earlier, and adding would result in
     # a warning, but if we switch to -nostdlib++, we would need to add it here.
     # append_list_if(CXX_SUPPORTS_UNWINDLIB_NONE_FLAG --unwindlib=none SANITIZER_COMMON_LINK_FLAGS)
-    if(SANITIZER_USE_STATIC_CXX_ABI)
-      set(SANITIZER_CXX_ABI_LIBRARIES "$<TARGET_LINKER_FILE:libcxx-abi-static>")
-    else()
-      set(SANITIZER_CXX_ABI_LIBRARIES "$<TARGET_LINKER_FILE:$<IF:$<TARGET_EXISTS:libcxx-abi-shared>,libcxx-abi-shared,libcxx-abi-static>>")
+
+    if (SANITIZER_USE_STATIC_LLVM_UNWINDER AND (TARGET unwind_static OR HAVE_LIBUNWIND))
+      list(APPEND SANITIZER_CXX_ABI_LIBRARIES unwind_static)
+    elseif (TARGET unwind_shared OR HAVE_LIBUNWIND)
+      list(APPEND SANITIZER_CXX_ABI_LIBRARIES unwind_shared)
+    endif()
+
+    if (SANITIZER_USE_STATIC_CXX_ABI AND (TARGET cxxabi_static OR HAVE_LIBCXXABI))
+      list(APPEND SANITIZER_CXX_ABI_LIBRARIES cxxabi_static)
+    elseif (TARGET cxxabi_shared OR HAVE_LIBCXXABI)
+      list(APPEND SANITIZER_CXX_ABI_LIBRARIES cxxabi_shared)
     endif()
   else()
     append_list_if(COMPILER_RT_HAS_LIBCXX c++ SANITIZER_CXX_ABI_LIBRARIES)
