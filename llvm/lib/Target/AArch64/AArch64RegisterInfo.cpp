@@ -933,6 +933,7 @@ unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
   case AArch64::FPR128RegClassID:
     return 32;
 
+  case AArch64::MatrixIndexGPR32_8_11RegClassID:
   case AArch64::MatrixIndexGPR32_12_15RegClassID:
     return 4;
 

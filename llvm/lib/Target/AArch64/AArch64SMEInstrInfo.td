@@ -242,3 +242,37 @@ defm UCLAMP_ZZZ : sve2_clamp<"uclamp", 0b1, int_aarch64_sve_uclamp>;
 defm PSEL_PPPRI : sve2_int_perm_sel_p<"psel", int_aarch64_sve_psel>;
 
 } // End let Predicates = [HasSME]
+
+//===----------------------------------------------------------------------===//
+// SME2 Instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasSME2] in {
+defm ADD_VG2_M2ZZ_S : sme2_mla_add_sub_array_vg2_single_S<"add", 0b10>;
+defm ADD_VG4_M4ZZ_S : sme2_mla_add_sub_array_vg4_single_S<"add", 0b10>;
+
+defm SUB_VG2_M2ZZ_S : sme2_mla_add_sub_array_vg2_single_S<"sub", 0b11>;
+defm SUB_VG4_M4ZZ_S : sme2_mla_add_sub_array_vg4_single_S<"sub", 0b11>;
+
+defm FMLA_VG2_M2ZZ_S : sme2_mla_add_sub_array_vg2_single_S<"fmla", 0b00>;
+defm FMLA_VG4_M4ZZ_S : sme2_mla_add_sub_array_vg4_single_S<"fmla", 0b00>;
+
+defm FMLS_VG2_M2ZZ_S : sme2_mla_add_sub_array_vg2_single_S<"fmls", 0b01>;
+defm FMLS_VG4_M4ZZ_S : sme2_mla_add_sub_array_vg4_single_S<"fmls", 0b01>;
+}
+
+
+let Predicates = [HasSME2, HasSMEI16I64] in {
+defm ADD_VG2_M2ZZ_D : sme2_mla_add_sub_array_vg2_single_D<"add", 0b10>;
+defm ADD_VG4_M4ZZ_D : sme2_mla_add_sub_array_vg4_single_D<"add", 0b10>;
+
+defm SUB_VG2_M2ZZ_D : sme2_mla_add_sub_array_vg2_single_D<"sub", 0b11>;
+defm SUB_VG4_M4ZZ_D : sme2_mla_add_sub_array_vg4_single_D<"sub", 0b11>;
+}
+
+let Predicates = [HasSME2, HasSMEF64F64] in {
+defm FMLA_VG2_M2ZZ_D : sme2_mla_add_sub_array_vg2_single_D<"fmla", 0b00>;
+defm FMLA_VG4_M4ZZ_D : sme2_mla_add_sub_array_vg4_single_D<"fmla", 0b00>;
+
+defm FMLS_VG2_M2ZZ_D : sme2_mla_add_sub_array_vg2_single_D<"fmls", 0b01>;
+defm FMLS_VG4_M4ZZ_D : sme2_mla_add_sub_array_vg4_single_D<"fmls", 0b01>;
+}
