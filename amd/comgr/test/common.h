@@ -81,7 +81,7 @@ int setBuf(const char *infile, char **buf) {
   if (fseek(fp, 0, SEEK_SET) != 0)
     fail("fseek");
 
-  *buf = malloc(size + 1);
+  *buf = (char *) malloc(size + 1);
   if (!*buf)
     fail("malloc");
   if (fread(*buf, size, 1, fp) != 1)
@@ -291,18 +291,17 @@ void checkLogs(const char *id, amd_comgr_data_set_t dataSet,
 // FIXME: This should probably be defined by Comgr
 const char *dataKindString(amd_comgr_data_kind_t dataKind) {
   static const char *strings[AMD_COMGR_DATA_KIND_FATBIN + 1] = {
-      [AMD_COMGR_DATA_KIND_UNDEF] = "AMD_COMGR_DATA_KIND_UNDEF",
-      [AMD_COMGR_DATA_KIND_SOURCE] = "AMD_COMGR_DATA_KIND_SOURCE",
-      [AMD_COMGR_DATA_KIND_INCLUDE] = "AMD_COMGR_DATA_KIND_INCLUDE",
-      [AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER] =
-          "AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER",
-      [AMD_COMGR_DATA_KIND_DIAGNOSTIC] = "AMD_COMGR_DATA_KIND_DIAGNOSTIC",
-      [AMD_COMGR_DATA_KIND_LOG] = "AMD_COMGR_DATA_KIND_LOG",
-      [AMD_COMGR_DATA_KIND_BC] = "AMD_COMGR_DATA_KIND_BC",
-      [AMD_COMGR_DATA_KIND_RELOCATABLE] = "AMD_COMGR_DATA_KIND_RELOCATABLE",
-      [AMD_COMGR_DATA_KIND_EXECUTABLE] = "AMD_COMGR_DATA_KIND_EXECUTABLE",
-      [AMD_COMGR_DATA_KIND_BYTES] = "AMD_COMGR_DATA_KIND_BYTES",
-      [AMD_COMGR_DATA_KIND_FATBIN] = "AMD_COMGR_DATA_KIND_FATBIN",
+      "AMD_COMGR_DATA_KIND_UNDEF",
+      "AMD_COMGR_DATA_KIND_SOURCE",
+      "AMD_COMGR_DATA_KIND_INCLUDE",
+      "AMD_COMGR_DATA_KIND_PRECOMPILED_HEADER",
+      "AMD_COMGR_DATA_KIND_DIAGNOSTIC",
+      "AMD_COMGR_DATA_KIND_LOG",
+      "AMD_COMGR_DATA_KIND_BC",
+      "AMD_COMGR_DATA_KIND_RELOCATABLE",
+      "AMD_COMGR_DATA_KIND_EXECUTABLE",
+      "AMD_COMGR_DATA_KIND_BYTES",
+      "AMD_COMGR_DATA_KIND_FATBIN",
   };
   return strings[dataKind];
 }
