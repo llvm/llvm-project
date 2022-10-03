@@ -1997,7 +1997,15 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
       // version (Darwin only) is missing.
       LOG_PRINTF(GetLog(LLDBLog::Types), "Underspecified target triple %s.",
                  target_triple.str().c_str());
+      llvm::VersionTuple platform_version;
       PlatformSP platform_sp(target.GetPlatform());
+      if (platform_sp)
+        platform_version =
+            platform_sp->GetOSVersion(target.GetProcessSP().get());
+      LOG_PRINTF(GetLog(LLDBLog::Types), "Platform version is %s",
+                 platform_version.empty()
+                     ? "<empty>"
+                     : platform_version.getAsString().c_str());
       // Try to fill in the platform OS version. The idea behind using
       // the platform version is to let the expression evaluator mark
       // the expressions with the highest supported availability
@@ -2005,19 +2013,17 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
       // present, since there might be some ambiguity about the
       // plaform (e.g., ios-macabi runs on the macOS, but uses iOS
       // version numbers).
-      if (platform_sp &&
+      if (!platform_version.empty() &&
           target_triple.getEnvironment() == llvm::Triple::UnknownEnvironment) {
         LOG_PRINTF(GetLog(LLDBLog::Types), "Completing triple based on platform.");
 
-        llvm::VersionTuple version =
-            platform_sp->GetOSVersion(target.GetProcessSP().get());
         llvm::SmallString<32> buffer;
         {
           llvm::raw_svector_ostream os(buffer);
           os << target_triple.getArchName() << '-';
           os << target_triple.getVendorName() << '-';
           os << llvm::Triple::getOSTypeName(target_triple.getOS());
-          os << version.getAsString();
+          os << platform_version.getAsString();
         }
         computed_triple = llvm::Triple(buffer);
       } else {
