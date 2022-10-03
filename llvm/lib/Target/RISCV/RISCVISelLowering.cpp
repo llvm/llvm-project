@@ -9022,12 +9022,13 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (TrueV == FalseV)
       return TrueV;
 
-    // (select (and (x , 0x1) == 0), y, (z ^ y) ) -> (-(and (x , 0x1)) & z ) ^ y
-    // (select (and (x , 0x1) != 0), (z ^ y) ), y -> (-(and (x , 0x1)) & z ) ^ y
-    // (select (and (x , 0x1) == 0), y, (z | y) ) -> (-(and (x , 0x1)) & z ) | y
-    // (select (and (x , 0x1) != 0), (z | y) ), y -> (-(and (x , 0x1)) & z ) | y
+    // (select (x in [0,1] == 0), y, (z ^ y) ) -> (-x & z ) ^ y
+    // (select (x in [0,1] != 0), (z ^ y) ), y -> (-x & z ) ^ y
+    // (select (x in [0,1] == 0), y, (z | y) ) -> (-x & z ) | y
+    // (select (x in [0,1] != 0), (z | y) ), y -> (-x & z ) | y
+    APInt Mask = APInt::getBitsSetFrom(LHS.getValueSizeInBits(), 1);
     if (isNullConstant(RHS) && ISD::isIntEqualitySetCC(CCVal) &&
-        LHS.getOpcode() == ISD::AND && isOneConstant(LHS.getOperand(1))) {
+        DAG.MaskedValueIsZero(LHS, Mask)) {
       unsigned Opcode;
       SDValue Src1, Src2;
       // true if FalseV is XOR or OR operator and one of its operands
