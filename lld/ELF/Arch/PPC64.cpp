@@ -614,7 +614,7 @@ int PPC64::getTlsGdRelaxSkip(RelType type) const {
 }
 
 static uint32_t getEFlags(InputFile *file) {
-  if (config->ekind == ELF64BEKind)
+  if (file->ekind == ELF64BEKind)
     return cast<ObjFile<ELF64BE>>(file)->getObj().getHeader().e_flags;
   return cast<ObjFile<ELF64LE>>(file)->getObj().getHeader().e_flags;
 }

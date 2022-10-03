@@ -2424,7 +2424,7 @@ static uint32_t getAndFeatures() {
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
-  switch (config->ekind) {
+  switch (file->ekind) {
   case ELF32LEKind:
     cast<ObjFile<ELF32LE>>(file)->initSectionsAndLocalSyms(ignoreComdats);
     break;
@@ -2443,7 +2443,7 @@ static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
 }
 
 static void postParseObjectFile(ELFFileBase *file) {
-  switch (config->ekind) {
+  switch (file->ekind) {
   case ELF32LEKind:
     cast<ObjFile<ELF32LE>>(file)->postParse();
     break;

@@ -324,7 +324,7 @@ std::string InputFile::getSrcMsg(const Symbol &sym, InputSectionBase &sec,
                                  uint64_t offset) {
   if (kind() != ObjKind)
     return "";
-  switch (config->ekind) {
+  switch (ekind) {
   default:
     llvm_unreachable("Invalid kind");
   case ELF32LEKind:
@@ -561,9 +561,9 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
           check(this->getObj().getSectionContents(sec));
       StringRef name = check(obj.getSectionName(sec, shstrtab));
       this->sections[i] = &InputSection::discarded;
-      if (Error e = attributes.parse(contents, config->ekind == ELF32LEKind
-                                                   ? support::little
-                                                   : support::big)) {
+      if (Error e =
+              attributes.parse(contents, ekind == ELF32LEKind ? support::little
+                                                              : support::big)) {
         InputSection isec(*this, sec, name);
         warn(toString(&isec) + ": " + llvm::toString(std::move(e)));
       } else {
