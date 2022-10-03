@@ -163,6 +163,7 @@ public:
   ELFFileBase(Kind k, ELFKind ekind, MemoryBufferRef m);
   static bool classof(const InputFile *f) { return f->isElf(); }
 
+  void init();
   template <typename ELFT> llvm::object::ELFFile<ELFT> getObj() const {
     return check(llvm::object::ELFFile<ELFT>::create(mb.getBuffer()));
   }
