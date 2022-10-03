@@ -1695,9 +1695,7 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
       else
         Op = DAG.getConstant(0, getCurSDLoc(), EltVT);
 
-      if (isa<ScalableVectorType>(VecTy))
-        return NodeMap[V] = DAG.getSplatVector(VT, getCurSDLoc(), Op);
-      return NodeMap[V] = DAG.getSplatBuildVector(VT, getCurSDLoc(), Op);
+      return NodeMap[V] = DAG.getSplat(VT, getCurSDLoc(), Op);
     }
 
     llvm_unreachable("Unknown vector constant");
@@ -3904,10 +3902,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
   if (IsVectorGEP && !N.getValueType().isVector()) {
     LLVMContext &Context = *DAG.getContext();
     EVT VT = EVT::getVectorVT(Context, N.getValueType(), VectorElementCount);
-    if (VectorElementCount.isScalable())
-      N = DAG.getSplatVector(VT, dl, N);
-    else
-      N = DAG.getSplatBuildVector(VT, dl, N);
+    N = DAG.getSplat(VT, dl, N);
   }
 
   for (gep_type_iterator GTI = gep_type_begin(&I), E = gep_type_end(&I);
@@ -3979,10 +3974,7 @@ void SelectionDAGBuilder::visitGetElementPtr(const User &I) {
       if (!IdxN.getValueType().isVector() && IsVectorGEP) {
         EVT VT = EVT::getVectorVT(*Context, IdxN.getValueType(),
                                   VectorElementCount);
-        if (VectorElementCount.isScalable())
-          IdxN = DAG.getSplatVector(VT, dl, IdxN);
-        else
-          IdxN = DAG.getSplatBuildVector(VT, dl, IdxN);
+        IdxN = DAG.getSplat(VT, dl, IdxN);
       }
 
       // If the index is smaller or larger than intptr_t, truncate or extend
@@ -7247,14 +7239,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue TripCount = getValue(I.getOperand(1));
     auto VecTy = CCVT.changeVectorElementType(ElementVT);
 
-    SDValue VectorIndex, VectorTripCount;
-    if (VecTy.isScalableVector()) {
-      VectorIndex = DAG.getSplatVector(VecTy, sdl, Index);
-      VectorTripCount = DAG.getSplatVector(VecTy, sdl, TripCount);
-    } else {
-      VectorIndex = DAG.getSplatBuildVector(VecTy, sdl, Index);
-      VectorTripCount = DAG.getSplatBuildVector(VecTy, sdl, TripCount);
-    }
+    SDValue VectorIndex = DAG.getSplat(VecTy, sdl, Index);
+    SDValue VectorTripCount = DAG.getSplat(VecTy, sdl, TripCount);
     SDValue VectorStep = DAG.getStepVector(sdl, VecTy);
     SDValue VectorInduction = DAG.getNode(
         ISD::UADDSAT, sdl, VecTy, VectorIndex, VectorStep);
