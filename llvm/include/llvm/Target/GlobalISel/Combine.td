@@ -950,6 +950,17 @@ def trunc_buildvector_fold : GICombineRule<
       [{ return Helper.matchTruncBuildVectorFold(*${op}, ${matchinfo}); }]),
   (apply [{ Helper.replaceSingleDefInstWithReg(*${op}, ${matchinfo}); }])>;
 
+// Transform:
+//   (x + y) - y -> x
+//   (x + y) - x -> y
+//   x - (y + x) -> 0 - y
+//   x - (x + z) -> 0 - z
+def sub_add_reg: GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_SUB):$root,
+         [{ return Helper.matchSubAddSameReg(*${root}, ${matchinfo}); }]),
+  (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
+
 def select_to_minmax: GICombineRule<
   (defs root:$root, build_fn_matchinfo:$info),
   (match (wip_match_opcode G_SELECT):$root,
@@ -1019,7 +1030,8 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     truncstore_merge, div_rem_to_divrem, funnel_shift_combines,
     form_bitfield_extract, constant_fold, fabs_fneg_fold,
     intdiv_combines, mulh_combines, redundant_neg_operands,
-    and_or_disjoint_mask, fma_combines, fold_binop_into_select]>;
+    and_or_disjoint_mask, fma_combines, fold_binop_into_select,
+    sub_add_reg]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and
