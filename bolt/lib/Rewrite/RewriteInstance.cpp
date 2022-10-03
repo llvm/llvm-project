@@ -4730,26 +4730,28 @@ void RewriteInstance::updateELFSymbolTable(
     Expected<StringRef> SymbolName = Symbol.getName(StringSection);
     assert(SymbolName && "cannot get symbol name");
 
-    auto updateSymbolValue = [&](const StringRef Name, unsigned &IsUpdated) {
-      NewSymbol.st_value = getNewValueForSymbol(Name);
+    auto updateSymbolValue = [&](const StringRef Name,
+                                 Optional<uint64_t> Value = NoneType()) {
+      NewSymbol.st_value = Value ? *Value : getNewValueForSymbol(Name);
       NewSymbol.st_shndx = ELF::SHN_ABS;
       outs() << "BOLT-INFO: setting " << Name << " to 0x"
              << Twine::utohexstr(NewSymbol.st_value) << '\n';
-      ++IsUpdated;
     };
 
     if (opts::HotText &&
-        (*SymbolName == "__hot_start" || *SymbolName == "__hot_end"))
-      updateSymbolValue(*SymbolName, NumHotTextSymsUpdated);
-
-    if (opts::HotData &&
-        (*SymbolName == "__hot_data_start" || *SymbolName == "__hot_data_end"))
-      updateSymbolValue(*SymbolName, NumHotDataSymsUpdated);
-
-    if (*SymbolName == "_end") {
-      unsigned Ignored;
-      updateSymbolValue(*SymbolName, Ignored);
+        (*SymbolName == "__hot_start" || *SymbolName == "__hot_end")) {
+      updateSymbolValue(*SymbolName);
+      ++NumHotTextSymsUpdated;
     }
+
+    if (opts::HotData && (*SymbolName == "__hot_data_start" ||
+                          *SymbolName == "__hot_data_end")) {
+      updateSymbolValue(*SymbolName);
+      ++NumHotDataSymsUpdated;
+    }
+
+    if (*SymbolName == "_end")
+      updateSymbolValue(*SymbolName, NextAvailableAddress);
 
     if (IsDynSym)
       Write((&Symbol - cantFail(Obj.symbols(&SymTabSection)).begin()) *
