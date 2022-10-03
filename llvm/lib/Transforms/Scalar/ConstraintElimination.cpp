@@ -852,25 +852,13 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
       continue;
     }
 
-    // Set up a function to restore the predicate at the end of the scope if it
-    // has been negated. Negate the predicate in-place, if required.
-    auto *CI = dyn_cast<ICmpInst>(CB.Condition);
-    auto PredicateRestorer = make_scope_exit([CI, &CB]() {
-      if (CB.Not && CI)
-        CI->setPredicate(CI->getInversePredicate());
-    });
-    if (CB.Not) {
-      if (CI) {
-        CI->setPredicate(CI->getInversePredicate());
-      } else {
-        LLVM_DEBUG(dbgs() << "Can only negate compares so far.\n");
-        continue;
-      }
-    }
-
     ICmpInst::Predicate Pred;
     Value *A, *B;
     if (match(CB.Condition, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
+      // Use the inverse predicate if required.
+      if (CB.Not)
+        Pred = CmpInst::getInversePredicate(Pred);
+
       Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
       Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
     }
