@@ -286,6 +286,24 @@ libc++ specific options
   Path where target-specific libc++ headers should be installed. If a relative
   path, relative to ``CMAKE_INSTALL_PREFIX``.
 
+.. option:: LIBCXX_SHARED_OUTPUT_NAME:STRING
+
+  **Default**: ``c++``
+
+  Output name for the shared libc++ runtime library.
+
+.. option:: LIBCXX_ADDITIONAL_COMPILE_FLAGS:STRING
+
+  **Default**: ``""``
+
+  Additional Compile only flags which can be provided in cache.
+
+.. option:: LIBCXX_ADDITIONAL_LIBRARIES:STRING
+
+  **Default**: ``""``
+
+  Additional libraries libc++ is linked to which can be provided in cache.
+
 
 .. _ABI Library Specific Options:
 
@@ -328,6 +346,18 @@ ABI Library Specific Options
 
   Build and use the LLVM unwinder. Note: This option can only be used when
   libc++abi is the C++ ABI library used.
+
+.. option:: LIBCXXABI_ADDITIONAL_COMPILE_FLAGS:STRING
+
+  **Default**: ``""``
+
+  Additional Compile only flags which can be provided in cache.
+
+.. option:: LIBCXXABI_ADDITIONAL_LIBRARIES:STRING
+
+  **Default**: ``""``
+
+  Additional libraries libc++abi is linked to which can be provided in cache.
 
 
 libc++ Feature Options
