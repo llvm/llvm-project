@@ -397,6 +397,11 @@ bool Decl::isInStdNamespace() const {
   return DC && DC->isStdNamespace();
 }
 
+bool Decl::isFileContextDecl() const {
+  const auto *DC = dyn_cast<DeclContext>(this);
+  return DC && DC->isFileContext();
+}
+
 TranslationUnitDecl *Decl::getTranslationUnitDecl() {
   if (auto *TUD = dyn_cast<TranslationUnitDecl>(this))
     return TUD;
