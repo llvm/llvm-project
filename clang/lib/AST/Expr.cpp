@@ -204,7 +204,8 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
 }
 
 bool Expr::isFlexibleArrayMemberLike(
-    ASTContext &Context, unsigned StrictFlexArraysLevel,
+    ASTContext &Context,
+    LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
     bool IgnoreTemplateOrMacroSubstitution) const {
 
   // For compatibility with existing code, we treat arrays of length 0 or
@@ -219,7 +220,8 @@ bool Expr::isFlexibleArrayMemberLike(
     // FIXME: While the default -fstrict-flex-arrays=0 permits Size>1 trailing
     // arrays to be treated as flexible-array-members, we still emit diagnostics
     // as if they are not. Pending further discussion...
-    if (StrictFlexArraysLevel >= 2 || Size.uge(2))
+    using FAMKind = LangOptions::StrictFlexArraysLevelKind;
+    if (StrictFlexArraysLevel == FAMKind::ZeroOrIncomplete || Size.uge(2))
       return false;
 
   } else if (!Context.getAsIncompleteArrayType(getType()))
