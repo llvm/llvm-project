@@ -7,6 +7,9 @@
 
 #include "oclc.h"
 
+#define AL(P, O) __opencl_atomic_load(P, O, memory_scope_device)
+#define ACE(P, E, V, O) __opencl_atomic_compare_exchange_strong(P, E, V, O, O, memory_scope_device)
+
 #ifndef NULL
 #define NULL 0
 #endif
@@ -25,13 +28,13 @@ __printf_alloc(uint bytes)
     }
 
     uint size = ((__global uint *)ptr)[1];
-    uint offset = atomic_load_explicit((__global atomic_uint *)ptr, memory_order_relaxed, memory_scope_device);
+    uint offset = AL((__global atomic_uint *)ptr, memory_order_relaxed);
 
     for (;;) {
         if (OFFSET + offset + bytes > size)
             return NULL;
 
-        if (atomic_compare_exchange_strong_explicit((__global atomic_uint *)ptr, &offset, offset+bytes, memory_order_relaxed, memory_order_relaxed, memory_scope_device))
+        if (ACE((__global atomic_uint *)ptr, &offset, offset+bytes, memory_order_relaxed))
             break;
     }
 
