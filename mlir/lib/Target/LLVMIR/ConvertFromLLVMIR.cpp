@@ -26,6 +26,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
@@ -159,9 +160,7 @@ namespace {
 class Importer {
 public:
   Importer(MLIRContext *context, ModuleOp module)
-      : b(context), context(context), module(module),
-        unknownLoc(FileLineColLoc::get(context, "imported-bitcode", 0, 0)),
-        typeTranslator(*context) {
+      : b(context), context(context), module(module), typeTranslator(*context) {
     b.setInsertionPointToStart(module.getBody());
   }
 
@@ -188,11 +187,9 @@ private:
   /// placeholder that will be remapped later if this is an instruction that
   /// has not yet been visited.
   Value processValue(llvm::Value *value);
-  /// Create the most accurate Location possible using a llvm::DebugLoc and
-  /// possibly an llvm::Instruction to narrow the Location if debug information
-  /// is unavailable.
-  Location processDebugLoc(const llvm::DebugLoc &loc,
-                           llvm::Instruction *inst = nullptr);
+  /// Translate the debug location to a FileLineColLoc, if `loc` is non-null.
+  /// Otherwise, return UnknownLoc.
+  Location processDebugLoc(llvm::DILocation *loc);
   /// `br` branches to `target`. Append the block arguments to attach to the
   /// generated branch op to `blockArguments`. These should be in the same order
   /// as the PHIs in `target`.
@@ -242,21 +239,17 @@ private:
   DenseMap<llvm::Value *, Operation *> unknownInstMap;
   /// Uniquing map of GlobalVariables.
   DenseMap<llvm::GlobalVariable *, GlobalOp> globals;
-  /// Cached FileLineColLoc::get("imported-bitcode", 0, 0).
-  Location unknownLoc;
   /// The stateful type translator (contains named structs).
   LLVM::TypeFromLLVMIRTranslator typeTranslator;
 };
 } // namespace
 
-Location Importer::processDebugLoc(const llvm::DebugLoc &loc,
-                                   llvm::Instruction *inst) {
+Location Importer::processDebugLoc(llvm::DILocation *loc) {
   if (!loc)
-    return unknownLoc;
+    return UnknownLoc::get(context);
 
-  // FIXME: Obtain the filename from DILocationInfo.
-  return FileLineColLoc::get(context, "imported-bitcode", loc.getLine(),
-                             loc.getCol());
+  return FileLineColLoc::get(context, loc->getFilename(), loc->getLine(),
+                             loc->getColumn());
 }
 
 Type Importer::processType(llvm::Type *type) {
@@ -268,7 +261,7 @@ Type Importer::processType(llvm::Type *type) {
   std::string s;
   llvm::raw_string_ostream os(s);
   os << *type;
-  emitError(unknownLoc) << "unhandled type: " << os.str();
+  emitError(UnknownLoc::get(context)) << "unhandled type: " << os.str();
   return nullptr;
 }
 
@@ -288,7 +281,7 @@ Type Importer::getStdTypeForAttr(Type type) {
   if (LLVM::isCompatibleVectorType(type)) {
     auto numElements = LLVM::getVectorNumElements(type);
     if (numElements.isScalable()) {
-      emitError(unknownLoc) << "scalable vectors not supported";
+      emitError(UnknownLoc::get(context)) << "scalable vectors not supported";
       return nullptr;
     }
     Type elementType = getStdTypeForAttr(LLVM::getVectorElementType(type));
@@ -312,7 +305,7 @@ Type Importer::getStdTypeForAttr(Type type) {
     if (LLVM::isCompatibleVectorType(arrayType.getElementType())) {
       auto numElements = LLVM::getVectorNumElements(arrayType.getElementType());
       if (numElements.isScalable()) {
-        emitError(unknownLoc) << "scalable vectors not supported";
+        emitError(UnknownLoc::get(context)) << "scalable vectors not supported";
         return nullptr;
       }
       shape.push_back(numElements.getKnownMinValue());
@@ -467,14 +460,15 @@ Value Importer::processConstant(llvm::Constant *c) {
     if (!type)
       return nullptr;
     if (auto symbolRef = attr.dyn_cast<FlatSymbolRefAttr>())
-      return bEntry.create<AddressOfOp>(unknownLoc, type, symbolRef.getValue());
-    return bEntry.create<ConstantOp>(unknownLoc, type, attr);
+      return bEntry.create<AddressOfOp>(UnknownLoc::get(context), type,
+                                        symbolRef.getValue());
+    return bEntry.create<ConstantOp>(UnknownLoc::get(context), type, attr);
   }
   if (auto *cn = dyn_cast<llvm::ConstantPointerNull>(c)) {
     Type type = processType(cn->getType());
     if (!type)
       return nullptr;
-    return bEntry.create<NullOp>(unknownLoc, type);
+    return bEntry.create<NullOp>(UnknownLoc::get(context), type);
   }
   if (auto *gv = dyn_cast<llvm::GlobalVariable>(c))
     return bEntry.create<AddressOfOp>(UnknownLoc::get(context),
@@ -533,7 +527,7 @@ Value Importer::processConstant(llvm::Constant *c) {
     bool useInsertValue = rootType.isa<LLVMArrayType, LLVMStructType>();
     assert((useInsertValue || LLVM::isCompatibleVectorType(rootType)) &&
            "unrecognized aggregate type");
-    Value root = bEntry.create<UndefOp>(unknownLoc, rootType);
+    Value root = bEntry.create<UndefOp>(UnknownLoc::get(context), rootType);
     for (unsigned i = 0; i < numElements; ++i) {
       llvm::Constant *element = getElement(i);
       Value elementValue = processConstant(element);
@@ -545,7 +539,7 @@ Value Importer::processConstant(llvm::Constant *c) {
       } else {
         Attribute indexAttr = bEntry.getI32IntegerAttr(static_cast<int32_t>(i));
         Value indexValue = bEntry.create<ConstantOp>(
-            unknownLoc, bEntry.getI32Type(), indexAttr);
+            UnknownLoc::get(context), bEntry.getI32Type(), indexAttr);
         if (!indexValue)
           return nullptr;
         root = bEntry.create<InsertElementOp>(
@@ -555,7 +549,7 @@ Value Importer::processConstant(llvm::Constant *c) {
     return root;
   }
 
-  emitError(unknownLoc) << "unhandled constant: " << diag(*c);
+  emitError(UnknownLoc::get(context)) << "unhandled constant: " << diag(*c);
   return nullptr;
 }
 
@@ -579,7 +573,7 @@ Value Importer::processValue(llvm::Value *value) {
   if (auto *c = dyn_cast<llvm::Constant>(value))
     return processConstant(c);
 
-  emitError(unknownLoc) << "unhandled value: " << diag(*value);
+  emitError(UnknownLoc::get(context)) << "unhandled value: " << diag(*value);
   return nullptr;
 }
 
@@ -812,7 +806,7 @@ Importer::processBranchArgs(llvm::Instruction *br, llvm::BasicBlock *target,
 LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
   // FIXME: Support uses of SubtargetData. Currently inbounds GEPs, fast-math
   // flags and call / operand attributes are not supported.
-  Location loc = processDebugLoc(inst->getDebugLoc(), inst);
+  Location loc = processDebugLoc(inst->getDebugLoc());
   assert(!instMap.count(inst) &&
          "processInstruction must be called only once per instruction!");
   switch (inst->getOpcode()) {
@@ -993,7 +987,7 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     if (!type)
       return failure();
     instMap[inst] = b.getInsertionBlock()->addArgument(
-        type, processDebugLoc(inst->getDebugLoc(), inst));
+        type, processDebugLoc(inst->getDebugLoc()));
     return success();
   }
   case llvm::Instruction::Call: {
