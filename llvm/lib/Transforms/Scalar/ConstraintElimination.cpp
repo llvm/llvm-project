@@ -871,8 +871,6 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
     ICmpInst::Predicate Pred;
     Value *A, *B;
     if (match(CB.Condition, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
-      // Otherwise, add the condition to the system and stack, if we can
-      // transform it into a constraint.
       Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
       Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
     }
