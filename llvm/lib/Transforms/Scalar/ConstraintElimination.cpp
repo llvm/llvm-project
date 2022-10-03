@@ -629,7 +629,9 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
   if (!R.isValid(*this))
     return;
 
-  //LLVM_DEBUG(dbgs() << "Adding " << *Condition << " " << IsNegated << "\n");
+  LLVM_DEBUG(dbgs() << "Adding '" << CmpInst::getPredicateName(Pred) << " ";
+             A->printAsOperand(dbgs(), false); dbgs() << ", ";
+             B->printAsOperand(dbgs(), false); dbgs() << "'\n");
   bool Added = false;
   assert(CmpInst::isSigned(Pred) == R.IsSigned &&
          "condition and constraint signs must match");
@@ -651,6 +653,7 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
     LLVM_DEBUG({
       dbgs() << "  constraint: ";
       dumpWithNames(R.Coefficients, getValue2Index(R.IsSigned));
+      dbgs() << "\n";
     });
 
     DFSInStack.emplace_back(NumIn, NumOut, R.IsSigned, ValuesToRelease);
@@ -797,6 +800,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
         if (!Cmp)
           continue;
 
+        LLVM_DEBUG(dbgs() << "Checking " << *Cmp << "\n");
         DenseMap<Value *, unsigned> NewIndices;
         auto R = Info.getConstraint(Cmp, NewIndices);
         if (R.IsEq || R.empty() || !NewIndices.empty() || !R.isValid(Info))
