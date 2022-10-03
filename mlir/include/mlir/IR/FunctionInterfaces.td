@@ -136,7 +136,7 @@ def FunctionOpInterface : OpInterface<"FunctionOpInterface"> {
     /// given argument types.
     static void buildWithEntryBlock(
         OpBuilder &builder, OperationState &state, StringRef name, Type type,
-        ArrayRef<NamedAttribute> attrs, ArrayRef<Type> inputTypes) {
+        ArrayRef<NamedAttribute> attrs, TypeRange inputTypes) {
       state.addAttribute(SymbolTable::getSymbolAttrName(),
                         builder.getStringAttr(name));
       state.addAttribute(function_interface_impl::getTypeAttrName(),
