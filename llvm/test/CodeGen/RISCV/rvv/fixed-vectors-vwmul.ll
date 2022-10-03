@@ -21,16 +21,14 @@ define <2 x i16> @vwmul_v2i16(<2 x i8>* %x, <2 x i8>* %y) {
 define <2 x i16> @vwmul_v2i16_multiple_users(<2 x i8>* %x, <2 x i8>* %y, <2 x i8> *%z) {
 ; CHECK-LABEL: vwmul_v2i16_multiple_users:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vle8.v v9, (a1)
 ; CHECK-NEXT:    vle8.v v10, (a2)
-; CHECK-NEXT:    vsext.vf2 v11, v8
-; CHECK-NEXT:    vsext.vf2 v8, v9
-; CHECK-NEXT:    vsext.vf2 v9, v10
-; CHECK-NEXT:    vmul.vv v8, v11, v8
-; CHECK-NEXT:    vmul.vv v9, v11, v9
-; CHECK-NEXT:    vor.vv v8, v8, v9
+; CHECK-NEXT:    vwmul.vv v11, v8, v9
+; CHECK-NEXT:    vwmul.vv v9, v8, v10
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vor.vv v8, v11, v9
 ; CHECK-NEXT:    ret
   %a = load <2 x i8>, <2 x i8>* %x
   %b = load <2 x i8>, <2 x i8>* %y
