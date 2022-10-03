@@ -1,9 +1,10 @@
-// RUN: mlir-opt -outline-shape-computation -test-print-shape-mapping -split-input-file %s 2>&1 | FileCheck %s
+// RUN: mlir-opt -outline-shape-computation -test-print-shape-mapping -split-input-file %s 2>%t | FileCheck %s
+// RUN: cat %t | FileCheck %s --check-prefix SHAPE
 
 // Two dynamic shapes: one of direct shape.shape_of(arg) and the other.
 func.func @two_dynamic_one_direct_shape(%arg0: tensor<?x4x?xf32>, %arg1: tensor<2x4x?xf32>) -> tensor<?x4x?xf32> {
-  // CHECK-DAG: Shape for {{.*}} = "test.abs"({{.*}}> :: @shape_cal_0(<block argument> of type 'tensor<?x4x?xf32>' at index: 0)
-  // CHECK-DAG: Shape for {{.*}} = "test.concat"({{.*}}> :: @shape_cal_1(<block argument> of type 'tensor<?x4x?xf32>' at index: 0)
+  // SHAPE-DAG: Shape for {{.*}} = "test.abs"({{.*}}> :: @shape_cal_0(<block argument> of type 'tensor<?x4x?xf32>' at index: 0)
+  // SHAPE-DAG: Shape for {{.*}} = "test.concat"({{.*}}> :: @shape_cal_1(<block argument> of type 'tensor<?x4x?xf32>' at index: 0)
   %c2 = arith.constant 2 : index
   %c0 = arith.constant 0 : index
   %c4 = arith.constant 4 : index
