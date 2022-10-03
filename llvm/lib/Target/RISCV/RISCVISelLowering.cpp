@@ -5967,7 +5967,6 @@ SDValue RISCVTargetLowering::lowerSTEP_VECTOR(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
   MVT VT = Op.getSimpleValueType();
-  assert(VT.isScalableVector() && "Expected scalable vector");
   MVT XLenVT = Subtarget.getXLenVT();
   auto [Mask, VL] = getDefaultScalableVLOps(VT, DL, DAG, Subtarget);
   SDValue StepVec = DAG.getNode(RISCVISD::VID_VL, DL, VT, Mask, VL);
@@ -5976,7 +5975,7 @@ SDValue RISCVTargetLowering::lowerSTEP_VECTOR(SDValue Op,
     if (isPowerOf2_64(StepValImm)) {
       SDValue StepVal =
           DAG.getNode(RISCVISD::VMV_V_X_VL, DL, VT, DAG.getUNDEF(VT),
-                      DAG.getConstant(Log2_64(StepValImm), DL, XLenVT), VL);
+                      DAG.getConstant(Log2_64(StepValImm), DL, XLenVT));
       StepVec = DAG.getNode(ISD::SHL, DL, VT, StepVec, StepVal);
     } else {
       SDValue StepVal = lowerScalarSplat(
@@ -6362,7 +6361,7 @@ SDValue RISCVTargetLowering::lowerABS(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue SplatZero = DAG.getNode(
       RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
-      DAG.getConstant(0, DL, Subtarget.getXLenVT()), VL);
+      DAG.getConstant(0, DL, Subtarget.getXLenVT()));
   SDValue NegX = DAG.getNode(RISCVISD::SUB_VL, DL, ContainerVT, SplatZero, X,
                              DAG.getUNDEF(ContainerVT), Mask, VL);
   SDValue Max = DAG.getNode(RISCVISD::SMAX_VL, DL, ContainerVT, X, NegX,
@@ -6712,7 +6711,7 @@ SDValue RISCVTargetLowering::lowerVPFPIntConvOp(SDValue Op, SelectionDAG &DAG,
         MVT XLenVT = Subtarget.getXLenVT();
         SDValue SplatZero = DAG.getConstant(0, DL, XLenVT);
         SplatZero = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, InterimIVT,
-                                DAG.getUNDEF(InterimIVT), SplatZero, VL);
+                                DAG.getUNDEF(InterimIVT), SplatZero);
         Result = DAG.getNode(RISCVISD::SETCC_VL, DL, DstVT,
                              {Result, SplatZero, DAG.getCondCode(ISD::SETNE),
                               DAG.getUNDEF(DstVT), Mask, VL});
