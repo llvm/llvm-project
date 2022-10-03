@@ -9543,7 +9543,10 @@ cc_library(
 cc_library(
     name = "MlirReduceLib",
     srcs = ["lib/Tools/mlir-reduce/MlirReduceMain.cpp"],
-    hdrs = ["include/mlir/Tools/mlir-reduce/MlirReduceMain.h"],
+    hdrs = [
+      "include/mlir/Tools/mlir-reduce/MlirReduceMain.h",
+      "include/mlir/Tools/ParseUtilties.h",
+    ],
     includes = ["include"],
     deps = [
         ":IR",
