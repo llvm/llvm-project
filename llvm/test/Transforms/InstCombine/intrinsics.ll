@@ -23,29 +23,29 @@ declare double @llvm.trunc.f64(double %Val) nounwind readonly
 declare double @llvm.rint.f64(double %Val) nounwind readonly
 declare double @llvm.nearbyint.f64(double %Val) nounwind readonly
 
-define void @powi(double %V, double *%P) {
+define void @powi(double %V, ptr %P) {
 ; CHECK-LABEL: @powi(
 ; CHECK-NEXT:    [[A:%.*]] = fdiv fast double 1.000000e+00, [[V:%.*]]
-; CHECK-NEXT:    store volatile double [[A]], double* [[P:%.*]], align 8
+; CHECK-NEXT:    store volatile double [[A]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[D:%.*]] = fmul nnan double [[V]], [[V]]
-; CHECK-NEXT:    store volatile double [[D]], double* [[P]], align 8
+; CHECK-NEXT:    store volatile double [[D]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[A2:%.*]] = fdiv fast double 1.000000e+00, [[V]]
-; CHECK-NEXT:    store volatile double [[A2]], double* [[P]], align 8
+; CHECK-NEXT:    store volatile double [[A2]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[D2:%.*]] = fmul nnan double [[V]], [[V]]
-; CHECK-NEXT:    store volatile double [[D2]], double* [[P]], align 8
+; CHECK-NEXT:    store volatile double [[D2]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %A = tail call fast double @llvm.powi.f64.i32(double %V, i32 -1) nounwind
-  store volatile double %A, double* %P
+  store volatile double %A, ptr %P
 
   %D = tail call nnan double @llvm.powi.f64.i32(double %V, i32 2) nounwind
-  store volatile double %D, double* %P
+  store volatile double %D, ptr %P
 
   %A2 = tail call fast double @llvm.powi.f64.i16(double %V, i16 -1) nounwind
-  store volatile double %A2, double* %P
+  store volatile double %A2, ptr %P
 
   %D2 = tail call nnan double @llvm.powi.f64.i16(double %V, i16 2) nounwind
-  store volatile double %D2, double* %P
+  store volatile double %D2, ptr %P
   ret void
 }
 
@@ -403,90 +403,90 @@ define <2 x i32> @cttz_select_vec(<2 x i32> %Value) nounwind {
   ret <2 x i32> %s
 }
 
-define void @cos(double *%P) {
+define void @cos(ptr %P) {
 ; CHECK-LABEL: @cos(
-; CHECK-NEXT:    store volatile double 1.000000e+00, double* [[P:%.*]], align 8
+; CHECK-NEXT:    store volatile double 1.000000e+00, ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %B = tail call double @llvm.cos.f64(double 0.0) nounwind
-  store volatile double %B, double* %P
+  store volatile double %B, ptr %P
 
   ret void
 }
 
-define void @sin(double *%P) {
+define void @sin(ptr %P) {
 ; CHECK-LABEL: @sin(
-; CHECK-NEXT:    store volatile double 0.000000e+00, double* [[P:%.*]], align 8
+; CHECK-NEXT:    store volatile double 0.000000e+00, ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %B = tail call double @llvm.sin.f64(double 0.0) nounwind
-  store volatile double %B, double* %P
+  store volatile double %B, ptr %P
 
   ret void
 }
 
-define void @floor(double *%P) {
+define void @floor(ptr %P) {
 ; CHECK-LABEL: @floor(
-; CHECK-NEXT:    store volatile double 1.000000e+00, double* [[P:%.*]], align 8
-; CHECK-NEXT:    store volatile double -2.000000e+00, double* [[P]], align 8
+; CHECK-NEXT:    store volatile double 1.000000e+00, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    store volatile double -2.000000e+00, ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %B = tail call double @llvm.floor.f64(double 1.5) nounwind
-  store volatile double %B, double* %P
+  store volatile double %B, ptr %P
   %C = tail call double @llvm.floor.f64(double -1.5) nounwind
-  store volatile double %C, double* %P
+  store volatile double %C, ptr %P
   ret void
 }
 
-define void @ceil(double *%P) {
+define void @ceil(ptr %P) {
 ; CHECK-LABEL: @ceil(
-; CHECK-NEXT:    store volatile double 2.000000e+00, double* [[P:%.*]], align 8
-; CHECK-NEXT:    store volatile double -1.000000e+00, double* [[P]], align 8
+; CHECK-NEXT:    store volatile double 2.000000e+00, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    store volatile double -1.000000e+00, ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %B = tail call double @llvm.ceil.f64(double 1.5) nounwind
-  store volatile double %B, double* %P
+  store volatile double %B, ptr %P
   %C = tail call double @llvm.ceil.f64(double -1.5) nounwind
-  store volatile double %C, double* %P
+  store volatile double %C, ptr %P
   ret void
 }
 
-define void @trunc(double *%P) {
+define void @trunc(ptr %P) {
 ; CHECK-LABEL: @trunc(
-; CHECK-NEXT:    store volatile double 1.000000e+00, double* [[P:%.*]], align 8
-; CHECK-NEXT:    store volatile double -1.000000e+00, double* [[P]], align 8
+; CHECK-NEXT:    store volatile double 1.000000e+00, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    store volatile double -1.000000e+00, ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %B = tail call double @llvm.trunc.f64(double 1.5) nounwind
-  store volatile double %B, double* %P
+  store volatile double %B, ptr %P
   %C = tail call double @llvm.trunc.f64(double -1.5) nounwind
-  store volatile double %C, double* %P
+  store volatile double %C, ptr %P
   ret void
 }
 
-define void @rint(double *%P) {
+define void @rint(ptr %P) {
 ; CHECK-LABEL: @rint(
-; CHECK-NEXT:    store volatile double 2.000000e+00, double* [[P:%.*]], align 8
-; CHECK-NEXT:    store volatile double -2.000000e+00, double* [[P]], align 8
+; CHECK-NEXT:    store volatile double 2.000000e+00, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    store volatile double -2.000000e+00, ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %B = tail call double @llvm.rint.f64(double 1.5) nounwind
-  store volatile double %B, double* %P
+  store volatile double %B, ptr %P
   %C = tail call double @llvm.rint.f64(double -1.5) nounwind
-  store volatile double %C, double* %P
+  store volatile double %C, ptr %P
   ret void
 }
 
-define void @nearbyint(double *%P) {
+define void @nearbyint(ptr %P) {
 ; CHECK-LABEL: @nearbyint(
-; CHECK-NEXT:    store volatile double 2.000000e+00, double* [[P:%.*]], align 8
-; CHECK-NEXT:    store volatile double -2.000000e+00, double* [[P]], align 8
+; CHECK-NEXT:    store volatile double 2.000000e+00, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    store volatile double -2.000000e+00, ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %B = tail call double @llvm.nearbyint.f64(double 1.5) nounwind
-  store volatile double %B, double* %P
+  store volatile double %B, ptr %P
   %C = tail call double @llvm.nearbyint.f64(double -1.5) nounwind
-  store volatile double %C, double* %P
+  store volatile double %C, ptr %P
   ret void
 }
 

@@ -7,7 +7,7 @@
 ; targets with 16-bit int.
 
 declare i16 @putchar(i16)
-declare i16 @puts(i8*)
+declare i16 @puts(ptr)
 
 @empty = constant [1 x i8] c"\00"
 
@@ -17,8 +17,7 @@ define void @xform_puts(i16 %c) {
 ; CHECK-NEXT:    ret void
 ;
 ; Transform puts("") to putchar("\n").
-  %s = getelementptr [1 x i8], [1 x i8]* @empty, i32 0, i32 0
-  call i16 @puts(i8* %s)
+  call i16 @puts(ptr @empty)
 
   ret void
 }

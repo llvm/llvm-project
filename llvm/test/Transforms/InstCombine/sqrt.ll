@@ -29,15 +29,15 @@ define float @test2(float %x) nounwind readnone ssp {
 ; Can't fold (fptrunc (sqrt (fpext x))) -> (sqrtf x) since there is another
 ; use of sqrt result.
 
-define float @test3(float* %v) nounwind uwtable ssp {
+define float @test3(ptr %v) nounwind uwtable ssp {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[CALL34:%.*]] = call double @sqrt(double 0x7FF8000000000000) #[[ATTR4]]
 ; CHECK-NEXT:    [[CALL36:%.*]] = call i32 @foo(double [[CALL34]]) #[[ATTR5:[0-9]+]]
 ; CHECK-NEXT:    [[CONV38:%.*]] = fptrunc double [[CALL34]] to float
 ; CHECK-NEXT:    ret float [[CONV38]]
 ;
-  %arrayidx13 = getelementptr inbounds float, float* %v, i64 2
-  %tmp14 = load float, float* %arrayidx13
+  %arrayidx13 = getelementptr inbounds float, ptr %v, i64 2
+  %tmp14 = load float, ptr %arrayidx13
   %mul18 = fmul float %tmp14, %tmp14
   %add19 = fadd float undef, %mul18
   %conv = fpext float %add19 to double

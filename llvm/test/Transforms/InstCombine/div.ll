@@ -602,10 +602,10 @@ define <2 x i32> @test36vec(<2 x i32> %A) {
   ret <2 x i32> %mul
 }
 
-define i32 @test37(i32* %b, i1 %c1) {
+define i32 @test37(ptr %b, i1 %c1) {
 ; CHECK-LABEL: @test37(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, i32* [[B:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[B:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    br label [[LOR_END]]
@@ -613,8 +613,8 @@ define i32 @test37(i32* %b, i1 %c1) {
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  store i32 0, i32* %b, align 4
-  %0 = load i32, i32* %b, align 4
+  store i32 0, ptr %b, align 4
+  %0 = load i32, ptr %b, align 4
   br i1 %c1, label %lor.rhs, label %lor.end
 
 lor.rhs:                                          ; preds = %entry

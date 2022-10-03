@@ -264,14 +264,13 @@ define i4 @shuf_4bits(<4 x i1> %x) {
   ret i4 %cast
 }
 
-define i4 @shuf_load_4bits(<4 x i1> * %p) {
+define i4 @shuf_load_4bits(ptr %p) {
 ; CHECK-LABEL: @shuf_load_4bits(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i1>* [[P:%.*]] to i4*
-; CHECK-NEXT:    [[X1:%.*]] = load i4, i4* [[TMP1]], align 1
+; CHECK-NEXT:    [[X1:%.*]] = load i4, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[CAST:%.*]] = call i4 @llvm.bitreverse.i4(i4 [[X1]])
 ; CHECK-NEXT:    ret i4 [[CAST]]
 ;
-  %x = load <4 x i1>, <4 x i1>* %p
+  %x = load <4 x i1>, ptr %p
   %bitreverse = shufflevector <4 x i1> %x, <4 x i1> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %cast = bitcast <4 x i1> %bitreverse to i4
   ret i4 %cast

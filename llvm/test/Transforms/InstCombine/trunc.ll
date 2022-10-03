@@ -727,18 +727,18 @@ define <2 x i32> @trunc_shl_nosplat_v2i32_v2i64(<2 x i64> %val) {
   ret <2 x i32> %trunc
 }
 
-define void @trunc_shl_31_i32_i64_multi_use(i64 %val, i32 addrspace(1)* %ptr0, i64 addrspace(1)* %ptr1) {
+define void @trunc_shl_31_i32_i64_multi_use(i64 %val, ptr addrspace(1) %ptr0, ptr addrspace(1) %ptr1) {
 ; CHECK-LABEL: @trunc_shl_31_i32_i64_multi_use(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[VAL:%.*]], 31
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[SHL]] to i32
-; CHECK-NEXT:    store volatile i32 [[TRUNC]], i32 addrspace(1)* [[PTR0:%.*]], align 4
-; CHECK-NEXT:    store volatile i64 [[SHL]], i64 addrspace(1)* [[PTR1:%.*]], align 8
+; CHECK-NEXT:    store volatile i32 [[TRUNC]], ptr addrspace(1) [[PTR0:%.*]], align 4
+; CHECK-NEXT:    store volatile i64 [[SHL]], ptr addrspace(1) [[PTR1:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %shl = shl i64 %val, 31
   %trunc = trunc i64 %shl to i32
-  store volatile i32 %trunc, i32 addrspace(1)* %ptr0
-  store volatile i64 %shl, i64 addrspace(1)* %ptr1
+  store volatile i32 %trunc, ptr addrspace(1) %ptr0
+  store volatile i64 %shl, ptr addrspace(1) %ptr1
   ret void
 }
 
