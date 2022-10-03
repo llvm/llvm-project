@@ -1,4 +1,4 @@
-//===-- C standard library header sched.h ---------------------------------===//
+//===-- Macros defined in sched.h header file -----------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SCHED_H
-#define LLVM_LIBC_SCHED_H
+#ifndef __LLVM_LIBC_MACROS_SCHED_MACROS_H
+#define __LLVM_LIBC_MACROS_SCHED_MACROS_H
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/sched-macros.h>
+#ifdef __unix__
+#include "linux/sched-macros.h"
+#endif
 
-%%public_api()
-
-#endif // LLVM_LIBC_SCHED_H 
+#endif // __LLVM_LIBC_MACROS_SCHED_MACROS_H
