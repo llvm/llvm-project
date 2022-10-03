@@ -30,6 +30,8 @@ public:
   bool isEmpty();
 };
 
+void createShaderModelMD(Module &M);
+
 } // namespace dxil
 } // namespace llvm
 
