@@ -5,7 +5,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -fno-signed-zeros -emit-llvm -o - %s | FileCheck -check-prefix CHECK-NO-SIGNED-ZEROS %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -mreassociate -emit-llvm -o - %s | FileCheck -check-prefix CHECK-REASSOC %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -freciprocal-math -emit-llvm -o - %s | FileCheck -check-prefix CHECK-RECIP %s
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -menable-unsafe-fp-math -emit-llvm -o - %s | FileCheck -check-prefix CHECK-UNSAFE %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -funsafe-math-optimizations -emit-llvm -o - %s | FileCheck -check-prefix CHECK-UNSAFE %s
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -ffast-math -emit-llvm -o - %s | FileCheck -check-prefix CHECK-FAST %s
 
 float fn(float);

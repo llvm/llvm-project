@@ -42,7 +42,7 @@ void check_stack() {
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fdenormal-fp-math=preserve-sign,preserve-sign -fsyntax-only %s -DDEFAULT -verify
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only %s -ffp-contract=fast -DPRECISE -verify
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsyntax-only %s -ffp-contract=off -frounding-math -ffp-exception-behavior=strict -DSTRICT -verify
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -menable-no-infs -menable-no-nans -menable-unsafe-fp-math -fno-signed-zeros -mreassociate -freciprocal-math -ffp-contract=fast -ffast-math -ffinite-math-only -fsyntax-only %s -DFAST -verify
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -menable-no-infs -menable-no-nans -funsafe-math-optimizations -fno-signed-zeros -mreassociate -freciprocal-math -ffp-contract=fast -ffast-math -ffinite-math-only -fsyntax-only %s -DFAST -verify
 double a = 0.0;
 double b = 1.0;
 
