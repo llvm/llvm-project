@@ -979,6 +979,13 @@ td_library(
 )
 
 td_library(
+    name = "ShapedOpInterfacesTdFiles",
+    srcs = ["include/mlir/Interfaces/ShapedOpInterfaces.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+td_library(
     name = "ParallelCombiningOpInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/ParallelCombiningOpInterface.td"],
     includes = ["include"],
@@ -2372,8 +2379,8 @@ cc_library(
         ":IR",
         ":LoopLikeInterface",
         ":MemRefDialect",
+        ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
-        ":TensorDialect",
         "//llvm:Support",
     ],
 )
@@ -2786,6 +2793,18 @@ cc_library(
     deps = [
         ":IR",
         ":LoopLikeInterfaceIncGen",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "ShapedOpInterfaces",
+    srcs = ["lib/Interfaces/ShapedOpInterfaces.cpp"],
+    hdrs = ["include/mlir/Interfaces/ShapedOpInterfaces.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":ShapedOpInterfacesIncGen",
         "//llvm:Support",
     ],
 )
@@ -4963,6 +4982,7 @@ td_library(
         ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":ParallelCombiningOpInterfaceTdFiles",
+        ":ShapedOpInterfacesTdFiles",
         ":SideEffectInterfacesTdFiles",
         ":TilingInterfaceTdFiles",
         ":ViewLikeInterfaceTdFiles",
@@ -5020,6 +5040,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":ParallelCombiningOpInterface",
+        ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
         ":TensorOpsIncGen",
         ":TilingInterface",
@@ -5286,6 +5307,24 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Interfaces/LoopLikeInterface.td",
     deps = [":LoopLikeInterfaceTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "ShapedOpInterfacesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Interfaces/ShapedOpInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Interfaces/ShapedOpInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Interfaces/ShapedOpInterfaces.td",
+    deps = [":ShapedOpInterfacesTdFiles"],
 )
 
 gentbl_cc_library(
@@ -8870,6 +8909,7 @@ td_library(
         ":ControlFlowInterfacesTdFiles",
         ":CopyOpInterfaceTdFiles",
         ":OpBaseTdFiles",
+        ":ShapedOpInterfacesTdFiles",
         ":SideEffectInterfacesTdFiles",
         ":ViewLikeInterfaceTdFiles",
     ],
@@ -8914,7 +8954,9 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/MemRef/IR/MemRefOps.td",
-    deps = [":MemRefOpsTdFiles"],
+    deps = [
+        ":MemRefOpsTdFiles",
+    ],
 )
 
 cc_library(
@@ -8941,6 +8983,7 @@ cc_library(
         ":InferTypeOpInterface",
         ":MemRefBaseIncGen",
         ":MemRefOpsIncGen",
+        ":ShapedOpInterfaces",
         ":ViewLikeInterface",
         "//llvm:Support",
     ],

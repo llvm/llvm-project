@@ -14,6 +14,7 @@ include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/ParallelCombiningOpInterface.td"
+include "mlir/Interfaces/ShapedOpInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/TilingInterface.td"
 include "mlir/Interfaces/ViewLikeInterface.td"
@@ -81,7 +82,7 @@ def Tensor_CastOp : Tensor_Op<"cast", [
 // DimOp
 //===----------------------------------------------------------------------===//
 
-def Tensor_DimOp : Tensor_Op<"dim", [NoSideEffect]> {
+def Tensor_DimOp : Tensor_Op<"dim", [NoSideEffect, ShapedDimOpInterface]> {
   let summary = "dimension index operation";
   let description = [{
     The `tensor.dim` operation takes a tensor and a dimension operand of type
@@ -122,6 +123,12 @@ def Tensor_DimOp : Tensor_Op<"dim", [NoSideEffect]> {
   let extraClassDeclaration = [{
     /// Helper function to get the index as a simple integer if it is constant.
     Optional<int64_t> getConstantIndex();
+
+    /// Interface method of ShapedDimOpInterface: Return the source tensor.
+    Value getShapedValue() { return getSource(); }
+
+    /// Interface method of ShapedDimOpInterface: Return the dimension.
+    OpFoldResult getDimension() { return getIndex(); }
   }];
 
   let hasCanonicalizer = 1;

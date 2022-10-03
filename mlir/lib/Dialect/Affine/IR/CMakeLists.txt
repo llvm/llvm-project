@@ -16,6 +16,6 @@ add_mlir_dialect_library(MLIRAffineDialect
   MLIRIR
   MLIRLoopLikeInterface
   MLIRMemRefDialect
+  MLIRShapedOpInterfaces
   MLIRSideEffectInterfaces
-  MLIRTensorDialect
   )
