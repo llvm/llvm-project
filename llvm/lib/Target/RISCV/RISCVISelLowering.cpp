@@ -1937,7 +1937,7 @@ static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
 
   SDValue SplatZero = DAG.getNode(
       RISCVISD::VMV_V_X_VL, DL, DstContainerVT, DAG.getUNDEF(DstContainerVT),
-      DAG.getConstant(0, DL, Subtarget.getXLenVT()));
+      DAG.getConstant(0, DL, Subtarget.getXLenVT()), VL);
   Res = DAG.getNode(RISCVISD::VSELECT_VL, DL, DstContainerVT, IsNan, SplatZero,
                     Res, VL);
 
@@ -3047,7 +3047,7 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
     // Create 2^eltbits - 1 copies of V2 by multiplying by the largest integer.
     SDValue Multiplier = DAG.getNode(RISCVISD::VMV_V_X_VL, DL, IntHalfVT,
                                      DAG.getUNDEF(IntHalfVT),
-                                     DAG.getAllOnesConstant(DL, XLenVT));
+                                     DAG.getAllOnesConstant(DL, XLenVT), VL);
     SDValue WidenMul =
         DAG.getNode(RISCVISD::VWMULU_VL, DL, WideIntContainerVT, V2, Multiplier,
                     DAG.getUNDEF(WideIntContainerVT), TrueMask, VL);
