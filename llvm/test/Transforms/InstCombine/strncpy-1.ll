@@ -11,36 +11,31 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @a = common global [32 x i8] zeroinitializer, align 1
 @b = common global [32 x i8] zeroinitializer, align 1
 
-declare i8* @strncpy(i8*, i8*, i32)
-declare i32 @puts(i8*)
+declare ptr @strncpy(ptr, ptr, i32)
+declare i32 @puts(ptr)
 
 ; Check a bunch of strncpy invocations together.
 
 define i32 @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
 ; CHECK-NEXT:    [[TARGET:%.*]] = alloca [1024 x i8], align 1
-; CHECK-NEXT:    [[ARG1:%.*]] = getelementptr inbounds [1024 x i8], [1024 x i8]* [[TARGET]], i32 0, i32 0
-; CHECK-NEXT:    store i8 0, i8* [[ARG1]], align 1
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(6) [[ARG1]], i8* noundef nonnull align 1 dereferenceable(6) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i32 6, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(42) [[ARG1]], i8 0, i32 42, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(42) [[ARG1]], i8 0, i32 42, i1 false)
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @puts(i8* noundef nonnull [[ARG1]])
+; CHECK-NEXT:    store i8 0, ptr [[TARGET]], align 1
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) [[TARGET]], ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(42) [[TARGET]], i8 0, i32 42, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(42) [[TARGET]], i8 0, i32 42, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @puts(ptr noundef nonnull [[TARGET]])
 ; CHECK-NEXT:    ret i32 0
 ;
   %target = alloca [1024 x i8]
-  %arg1 = getelementptr [1024 x i8], [1024 x i8]* %target, i32 0, i32 0
-  store i8 0, i8* %arg1
+  store i8 0, ptr %target
 
-  %arg2 = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  %rslt1 = call i8* @strncpy(i8* %arg1, i8* %arg2, i32 6)
+  %rslt1 = call ptr @strncpy(ptr %target, ptr @hello, i32 6)
 
-  %arg3 = getelementptr [1 x i8], [1 x i8]* @null, i32 0, i32 0
-  %rslt2 = call i8* @strncpy(i8* %rslt1, i8* %arg3, i32 42)
+  %rslt2 = call ptr @strncpy(ptr %rslt1, ptr @null, i32 42)
 
-  %arg4 = getelementptr [7 x i8], [7 x i8]* @null_hello, i32 0, i32 0
-  %rslt3 = call i8* @strncpy(i8* %rslt2, i8* %arg4, i32 42)
+  %rslt3 = call ptr @strncpy(ptr %rslt2, ptr @null_hello, i32 42)
 
-  call i32 @puts( i8* %rslt3 )
+  call i32 @puts( ptr %rslt3 )
   ret i32 0
 }
 
@@ -48,66 +43,58 @@ define i32 @test_simplify1() {
 
 define void @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(32) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0), i8 0, i32 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(32) @a, i8 0, i32 32, i1 false)
 ; CHECK-NEXT:    ret void
 ;
-  %dst = getelementptr [32 x i8], [32 x i8]* @a, i32 0, i32 0
-  %src = getelementptr [1 x i8], [1 x i8]* @null, i32 0, i32 0
 
-  call i8* @strncpy(i8* %dst, i8* %src, i32 32)
+  call ptr @strncpy(ptr @a, ptr @null, i32 32)
   ret void
 }
 
 ; Check strncpy(x, y, 0) -> x.
 
-define i8* @test_simplify3() {
+define ptr @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    ret i8* getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0)
+; CHECK-NEXT:    ret ptr @a
 ;
-  %dst = getelementptr [32 x i8], [32 x i8]* @a, i32 0, i32 0
-  %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
 
-  %ret = call i8* @strncpy(i8* %dst, i8* %src, i32 0)
-  ret i8* %ret
+  %ret = call ptr @strncpy(ptr @a, ptr @hello, i32 0)
+  ret ptr %ret
 }
 
 ; Check  strncpy(x, s, c) -> memcpy(x, s, c, 1) [s and c are constant].
 
 define void @test_simplify4() {
 ; CHECK-LABEL: @test_simplify4(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(6) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0), i8* noundef nonnull align 1 dereferenceable(6) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i32 6, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) @a, ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i1 false)
 ; CHECK-NEXT:    ret void
 ;
-  %dst = getelementptr [32 x i8], [32 x i8]* @a, i32 0, i32 0
-  %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
 
-  call i8* @strncpy(i8* %dst, i8* %src, i32 6)
+  call ptr @strncpy(ptr @a, ptr @hello, i32 6)
   ret void
 }
 
-define void @test_simplify5(i8* %dst) {
+define void @test_simplify5(ptr %dst) {
 ; CHECK-LABEL: @test_simplify5(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(32) [[DST:%.*]], i8* noundef nonnull align 1 dereferenceable(32) getelementptr inbounds ([33 x i8], [33 x i8]* @str, i32 0, i32 0), i32 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(32) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(32) @str, i32 32, i1 false)
 ; CHECK-NEXT:    ret void
 ;
-  %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  call i8* @strncpy(i8* dereferenceable(8) %dst, i8* %src, i32 32)
+  call ptr @strncpy(ptr dereferenceable(8) %dst, ptr @hello, i32 32)
   ret void
 }
 
-define void @test_simplify6(i8* %dst) {
+define void @test_simplify6(ptr %dst) {
 ; CHECK-LABEL: @test_simplify6(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(80) [[DST:%.*]], i8* noundef nonnull align 1 dereferenceable(32) getelementptr inbounds ([33 x i8], [33 x i8]* @str.1, i32 0, i32 0), i32 32, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(80) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(32) @str.1, i32 32, i1 false)
 ; CHECK-NEXT:    ret void
 ;
-  %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  call i8* @strncpy(i8* dereferenceable(80) %dst, i8* %src, i32 32)
+  call ptr @strncpy(ptr dereferenceable(80) %dst, ptr @hello, i32 32)
   ret void
 }
 
-define void @test_simplify7(i8* %dst, i32 %n) {
+define void @test_simplify7(ptr %dst, i32 %n) {
 ; CHECK-LABEL: @test_simplify7(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 dereferenceable(80) [[DST:%.*]], i8 0, i32 [[N:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 dereferenceable(80) [[DST:%.*]], i8 0, i32 [[N:%.*]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
 ; Unless N is known to be nonzero, strncpy(D, "", N) need not access any
@@ -115,110 +102,98 @@ define void @test_simplify7(i8* %dst, i32 %n) {
 ; TODO: The argument, already annotated dereferenceable, should be
 ; annotated noundef and nonnull by the transformation.  See
 ; https://reviews.llvm.org/D124633.
-;
-  %src = getelementptr [1 x i8], [1 x i8]* @null, i32 0, i32 0
-  call i8* @strncpy(i8* dereferenceable(80) %dst, i8* %src, i32 %n)
+  call ptr @strncpy(ptr dereferenceable(80) %dst, ptr @null, i32 %n)
   ret void
 }
 
-define i8* @test1(i8* %dst, i8* %src, i32 %n) {
+define ptr @test1(ptr %dst, ptr %src, i32 %n) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @strncpy(i8* nonnull [[DST:%.*]], i8* nonnull [[SRC:%.*]], i32 [[N:%.*]])
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = call ptr @strncpy(ptr nonnull [[DST:%.*]], ptr nonnull [[SRC:%.*]], i32 [[N:%.*]])
+; CHECK-NEXT:    ret ptr [[RET]]
 ;
 ; Unless N is known to be nonzero, strncpy(D, S, N) need not access any
 ; bytes in either D or S.  Verify that the call isn't annotated with
 ; the dereferenceable attribute.
 ; TODO: Both arguments should be annotated noundef in addition to nonnull.
 ; See https://reviews.llvm.org/D124633.
-;
-  %ret = call i8* @strncpy(i8* nonnull %dst, i8* nonnull %src, i32 %n)
-  ret i8* %ret
+  %ret = call ptr @strncpy(ptr nonnull %dst, ptr nonnull %src, i32 %n)
+  ret ptr %ret
 }
 
-define i8* @test2(i8* %dst) {
+define ptr @test2(ptr %dst) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(5) [[DST:%.*]], i8* noundef nonnull align 1 dereferenceable(6) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i32 5, i1 false)
-; CHECK-NEXT:    ret i8* [[DST]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(5) [[DST:%.*]], ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 5, i1 false)
+; CHECK-NEXT:    ret ptr [[DST]]
 ;
-  %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  %ret = call i8* @strncpy(i8* nonnull %dst, i8* nonnull %src, i32 5)
-  ret i8* %ret
+  %ret = call ptr @strncpy(ptr nonnull %dst, ptr nonnull @hello, i32 5)
+  ret ptr %ret
 }
 
-define i8* @test3(i8* %dst, i32 %n) {
+define ptr @test3(ptr %dst, i32 %n) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* noalias noundef nonnull align 1 dereferenceable(5) [[DST:%.*]], i8 0, i32 5, i1 false)
-; CHECK-NEXT:    ret i8* [[DST]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr noalias noundef nonnull align 1 dereferenceable(5) [[DST:%.*]], i8 0, i32 5, i1 false)
+; CHECK-NEXT:    ret ptr [[DST]]
 ;
-  %src = getelementptr [1 x i8], [1 x i8]* @null, i32 0, i32 0
-  %ret = call i8* @strncpy(i8* noalias nonnull %dst, i8* nonnull %src, i32 5);
-  ret i8* %ret
+  %ret = call ptr @strncpy(ptr noalias nonnull %dst, ptr nonnull @null, i32 5);
+  ret ptr %ret
 }
 
-define i8* @test4(i8* %dst, i32 %n) {
+define ptr @test4(ptr %dst, i32 %n) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* noalias noundef nonnull align 16 dereferenceable(5) [[DST:%.*]], i8 0, i32 5, i1 false)
-; CHECK-NEXT:    ret i8* [[DST]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr noalias noundef nonnull align 16 dereferenceable(5) [[DST:%.*]], i8 0, i32 5, i1 false)
+; CHECK-NEXT:    ret ptr [[DST]]
 ;
-  %src = getelementptr [1 x i8], [1 x i8]* @null, i32 0, i32 0
-  %ret = call i8* @strncpy(i8* align(16) noalias nonnull %dst, i8* nonnull %src, i32 5);
-  ret i8* %ret
+  %ret = call ptr @strncpy(ptr align(16) noalias nonnull %dst, ptr nonnull @null, i32 5);
+  ret ptr %ret
 }
 
 ; Check cases that shouldn't be simplified.
 
 define void @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @strncpy(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([32 x i8], [32 x i8]* @b, i32 0, i32 0), i32 32)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @strncpy(ptr noundef nonnull @a, ptr noundef nonnull @b, i32 32)
 ; CHECK-NEXT:    ret void
 ;
-  %dst = getelementptr [32 x i8], [32 x i8]* @a, i32 0, i32 0
-  %src = getelementptr [32 x i8], [32 x i8]* @b, i32 0, i32 0
 
-  call i8* @strncpy(i8* %dst, i8* %src, i32 32)
+  call ptr @strncpy(ptr @a, ptr @b, i32 32)
   ret void
 }
 
 define void @test_no_simplify2() {
 ; CHECK-LABEL: @test_no_simplify2(
-; CHECK-NEXT:    store i64 478560413032, i64* bitcast ([32 x i8]* @a to i64*), align 1
+; CHECK-NEXT:    store i64 478560413032, ptr @a, align 1
 ; CHECK-NEXT:    ret void
 ;
-  %dst = getelementptr [32 x i8], [32 x i8]* @a, i32 0, i32 0
-  %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
 
-  call i8* @strncpy(i8* %dst, i8* %src, i32 8)
+  call ptr @strncpy(ptr @a, ptr @hello, i32 8)
   ret void
 }
 
-define i8* @test_no_simplify3(i8* %dst, i8* %src, i32 %count) {
+define ptr @test_no_simplify3(ptr %dst, ptr %src, i32 %count) {
 ; CHECK-LABEL: @test_no_simplify3(
-; CHECK-NEXT:    [[RET:%.*]] = musttail call i8* @strncpy(i8* [[DST:%.*]], i8* [[SRC:%.*]], i32 32)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = musttail call ptr @strncpy(ptr [[DST:%.*]], ptr [[SRC:%.*]], i32 32)
+; CHECK-NEXT:    ret ptr [[RET]]
 ;
-  %ret = musttail call i8* @strncpy(i8* %dst, i8* %src, i32 32)
-  ret i8* %ret
+  %ret = musttail call ptr @strncpy(ptr %dst, ptr %src, i32 32)
+  ret ptr %ret
 }
 
-define i8* @test_no_simplify4(i8* %dst, i8* %src, i32 %count) {
+define ptr @test_no_simplify4(ptr %dst, ptr %src, i32 %count) {
 ; CHECK-LABEL: @test_no_simplify4(
-; CHECK-NEXT:    [[RET:%.*]] = musttail call i8* @strncpy(i8* [[DST:%.*]], i8* [[SRC:%.*]], i32 6)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = musttail call ptr @strncpy(ptr [[DST:%.*]], ptr [[SRC:%.*]], i32 6)
+; CHECK-NEXT:    ret ptr [[RET]]
 ;
-  %ret = musttail call i8* @strncpy(i8* %dst, i8* %src, i32 6)
-  ret i8* %ret
+  %ret = musttail call ptr @strncpy(ptr %dst, ptr %src, i32 6)
+  ret ptr %ret
 }
 
 
 define void @test_no_incompatible_attr() {
 ; CHECK-LABEL: @test_no_incompatible_attr(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(6) getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0), i8* noundef nonnull align 1 dereferenceable(6) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i32 6, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) @a, ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i1 false)
 ; CHECK-NEXT:    ret void
 ;
-  %dst = getelementptr [32 x i8], [32 x i8]* @a, i32 0, i32 0
-  %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
 
-  call i8* @strncpy(i8* %dst, i8* %src, i32 6)
+  call ptr @strncpy(ptr @a, ptr @hello, i32 6)
   ret void
 }
