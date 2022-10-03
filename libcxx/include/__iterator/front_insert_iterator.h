@@ -56,6 +56,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 front_insert_iterator& operator++()    {return *this;}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 front_insert_iterator  operator++(int) {return *this;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(front_insert_iterator);
 
 template <class _Container>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20

@@ -75,6 +75,9 @@ struct ParentView : std::ranges::view_base {
   constexpr const_sentinel end() const { return const_sentinel(const_iterator(ptr_ + size_)); }
 };
 
+template <class T>
+ParentView(T*) -> ParentView<T>;
+
 struct CopyableChild : std::ranges::view_base {
   int* ptr_;
   unsigned size_;

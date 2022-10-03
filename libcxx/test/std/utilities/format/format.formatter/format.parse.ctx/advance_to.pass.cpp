@@ -35,7 +35,7 @@ constexpr void test(const CharT* fmt) {
   }
   {
     std::basic_string_view view{fmt};
-    std::basic_format_parse_context context(view);
+    std::basic_format_parse_context<CharT> context(view);
 
     context.advance_to(context.begin() + 1);
     assert(std::to_address(context.begin()) == fmt + 1);
