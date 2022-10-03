@@ -860,6 +860,8 @@ typedef struct kmp_affinity_t {
 
 extern enum affinity_top_method __kmp_affinity_top_method;
 extern kmp_affinity_t __kmp_affinity;
+extern kmp_affinity_t __kmp_hh_affinity;
+extern kmp_affinity_t *__kmp_affinities[2];
 
 extern void __kmp_affinity_bind_thread(int which);
 
@@ -4256,6 +4258,9 @@ extern void __kmp_hidden_helper_main_thread_release();
 
 #define KMP_HIDDEN_HELPER_WORKER_THREAD(gtid)                                  \
   ((gtid) > 1 && (gtid) <= __kmp_hidden_helper_threads_num)
+
+#define KMP_HIDDEN_HELPER_MAIN_THREAD(gtid)                                    \
+  ((gtid) == 1 && (gtid) <= __kmp_hidden_helper_threads_num)
 
 #define KMP_HIDDEN_HELPER_TEAM(team)                                           \
   (team->t.t_threads[0] == __kmp_hidden_helper_main_thread)
