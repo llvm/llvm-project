@@ -1031,7 +1031,7 @@ def all_combines : GICombineGroup<[trivial_combines, insert_vec_elt_combines,
     form_bitfield_extract, constant_fold, fabs_fneg_fold,
     intdiv_combines, mulh_combines, redundant_neg_operands,
     and_or_disjoint_mask, fma_combines, fold_binop_into_select,
-    sub_add_reg]>;
+    sub_add_reg, select_to_minmax]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

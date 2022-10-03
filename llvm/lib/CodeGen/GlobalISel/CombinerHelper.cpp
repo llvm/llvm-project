@@ -5985,8 +5985,7 @@ bool CombinerHelper::matchFPSelectToMinMax(Register Dst, Register Cond,
   // And turn it into fminnum/fmaxnum or fmin/fmax based off of the condition.
   LLT DstTy = MRI.getType(Dst);
   // Bail out early on pointers, since we'll never want to fold to a min/max.
-  // TODO: Handle vectors.
-  if (DstTy.isPointer() || DstTy.isVector())
+  if (DstTy.isPointer())
     return false;
   // Match a floating point compare with a less-than/greater-than predicate.
   // TODO: Allow multiple users of the compare if they are all selects.
