@@ -771,8 +771,9 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     // TODO: reevalute the need for a cast when a better mechanism exists.
     //========================================================================//
 
-    ValueRange inputs() {
-      return cast<DestinationStyleOpInterface>(*this->getOperation()).inputs();
+    ValueRange getInputs() {
+      return cast<DestinationStyleOpInterface>(*this->getOperation())
+          .getInputs();
     }
 
     int64_t getNumInputs() {
@@ -780,7 +781,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
           .getNumInputs();
     }
 
-    ValueRange outputs() {
+    ValueRange getOutputs() {
       return cast<DestinationStyleOpInterface>(*this->getOperation())
           .getOutputs();
     }
@@ -922,7 +923,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
 // The 'DestinationStyleOpInterface' provides access to the methods relevant
 // for destination-style ops. A destination-style operation has 'n' input
 // arguments and 'm' output arguments. Each op that wants to implement
-// DestinationStyleOpInterface needs to define inputs() and getOutputs()
+// DestinationStyleOpInterface needs to define getInputs() and getOutputs()
 // methods.
 def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
   let cppNamespace = "::mlir::linalg";
@@ -930,18 +931,18 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
     //===------------------------------------------------------------------===//
     // Num input/output arguments handling.
     //===------------------------------------------------------------------===//
-    // `inputs` must be defined by each op that wants to implement the
+    // `getInputs` must be defined by each op that wants to implement the
     // DestinationStyleOpInterface.
     InterfaceMethod<
       /*desc=*/[{
         Return the input shape operands.
       }],
       /*retTy=*/"ValueRange",
-      /*methodName=*/"inputs",
+      /*methodName=*/"getInputs",
       /*args=*/(ins)
     >,
-    // These special methods rely on `inputs` and `outputs` being defined by
-    // each op that wants to implement the DestinationStyleOpInterface.
+    // These special methods rely on `getInputs` and `getOutputs` being defined
+    // by each op that wants to implement the DestinationStyleOpInterface.
     InterfaceMethod<
       /*desc=*/[{
         Return the number of inputs.

@@ -1334,9 +1334,9 @@ struct Conv1DGenerator : public StructuredGenerator<LinalgOp> {
     // Determine whether `linalgOp` can be generated with this generator
     if (linalgOp.getNumInputs() != 2 || linalgOp.getNumOutputs() != 1)
       return;
-    lhsShaped = linalgOp.inputs()[0];
-    rhsShaped = linalgOp.inputs()[1];
-    resShaped = linalgOp.outputs()[0];
+    lhsShaped = linalgOp.getInputs()[0];
+    rhsShaped = linalgOp.getInputs()[1];
+    resShaped = linalgOp.getOutputs()[0];
     lhsShapedType = lhsShaped.getType().dyn_cast<ShapedType>();
     rhsShapedType = rhsShaped.getType().dyn_cast<ShapedType>();
     resShapedType = resShaped.getType().dyn_cast<ShapedType>();
