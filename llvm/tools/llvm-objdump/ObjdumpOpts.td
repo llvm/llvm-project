@@ -1,5 +1,10 @@
 include "llvm/Option/OptParser.td"
 
+multiclass B<string name, string help1, string help2> {
+  def NAME: Flag<["--"], name>, HelpText<help1>;
+  def no_ # NAME: Flag<["--"], "no-" # name>, HelpText<help2>;
+}
+
 multiclass Eq<string name, string help> {
   def NAME : Separate<["--"], name>;
   def NAME #_eq : Joined<["--"], name #"=">,
@@ -38,6 +43,12 @@ def : Flag<["-"], "a">, Alias<archive_headers>,
 
 def demangle : Flag<["--"], "demangle">, HelpText<"Demangle symbol names">;
 def : Flag<["-"], "C">, Alias<demangle>, HelpText<"Alias for --demangle">;
+
+defm debug_file_directory :
+  Eq<"debug-file-directory", "Path to directory where to look for debug files">,
+  MetaVarName<"<dir>">;
+
+defm debuginfod : B<"debuginfod", "Use debuginfod to find debug files", "Don't use debuginfod to find debug files">;
 
 def disassemble : Flag<["--"], "disassemble">,
   HelpText<"Disassemble all executable sections found in the input files">;

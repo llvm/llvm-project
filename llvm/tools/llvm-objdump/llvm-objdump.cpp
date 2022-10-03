@@ -36,6 +36,9 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
+#include "llvm/Debuginfod/BuildIDFetcher.h"
+#include "llvm/Debuginfod/Debuginfod.h"
+#include "llvm/Debuginfod/HTTPClient.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -51,6 +54,7 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Object/ELFObjectFile.h"
@@ -232,6 +236,9 @@ int objdump::DbgIndent = 52;
 static StringSet<> DisasmSymbolSet;
 StringSet<> objdump::FoundSectionSet;
 static StringRef ToolName;
+
+std::unique_ptr<BuildIDFetcher> BIDFetcher;
+ExitOnError ExitOnErr;
 
 namespace {
 struct FilterResult {
@@ -1258,6 +1265,24 @@ static void createFakeELFSections(ObjectFile &Obj) {
     llvm_unreachable("Unsupported binary format");
 }
 
+// Tries to fetch a more complete version of the given object file using its
+// Build ID. Returns None if nothing was found.
+static Optional<OwningBinary<Binary>>
+fetchBinaryByBuildID(const ObjectFile &Obj) {
+  Optional<object::BuildIDRef> BuildID = getBuildID(&Obj);
+  if (!BuildID)
+    return None;
+  Optional<std::string> Path = BIDFetcher->fetch(*BuildID);
+  if (!Path)
+    return None;
+  Expected<OwningBinary<Binary>> DebugBinary = createBinary(*Path);
+  if (!DebugBinary) {
+    reportWarning(toString(DebugBinary.takeError()), *Path);
+    return None;
+  }
+  return std::move(*DebugBinary);
+}
+
 static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
                               MCContext &Ctx, MCDisassembler *PrimaryDisAsm,
                               MCDisassembler *SecondaryDisAsm,
@@ -2043,7 +2068,21 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
   IP->setMCInstrAnalysis(MIA.get());
 
   PrettyPrinter &PIP = selectPrettyPrinter(Triple(TripleName));
-  SourcePrinter SP(Obj, TheTarget->getName());
+  ObjectFile *DbgObj = Obj;
+  OwningBinary<Binary> DebugBinary;
+  if (!Obj->hasDebugInfo()) {
+    if (Optional<OwningBinary<Binary>> DebugBinaryOpt =
+            fetchBinaryByBuildID(*Obj)) {
+      if (ObjectFile *FetchedObj =
+              dyn_cast<ObjectFile>(DebugBinaryOpt->getBinary())) {
+        if (FetchedObj->hasDebugInfo()) {
+          DebugBinary = std::move(*DebugBinaryOpt);
+          DbgObj = FetchedObj;
+        }
+      }
+    }
+  }
+  SourcePrinter SP(DbgObj, TheTarget->getName());
 
   for (StringRef Opt : DisassemblerOptions)
     if (!IP->applyTargetSpecificCLOption(Opt))
@@ -3078,6 +3117,22 @@ int main(int argc, char **argv) {
       TargetRegistry::printRegisteredTargetsForVersion(outs());
     }
     return 0;
+  }
+
+  // Initialize debuginfod.
+  const bool ShouldUseDebuginfodByDefault =
+      HTTPClient::isAvailable() &&
+      !ExitOnErr(getDefaultDebuginfodUrls()).empty();
+  std::vector<std::string> DebugFileDirectories =
+      InputArgs.getAllArgValues(OBJDUMP_debug_file_directory);
+  if (InputArgs.hasFlag(OBJDUMP_debuginfod, OBJDUMP_no_debuginfod,
+                        ShouldUseDebuginfodByDefault)) {
+    HTTPClient::initialize();
+    BIDFetcher =
+        std::make_unique<DebuginfodFetcher>(std::move(DebugFileDirectories));
+  } else {
+    BIDFetcher =
+        std::make_unique<BuildIDFetcher>(std::move(DebugFileDirectories));
   }
 
   if (Is("otool"))
