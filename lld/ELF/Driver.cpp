@@ -281,7 +281,7 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
       ++InputFile::nextGroupId;
     return;
   }
-  case file_magic::elf_shared_object:
+  case file_magic::elf_shared_object: {
     if (config->isStatic || config->relocatable) {
       error("attempted static link of dynamic object " + path);
       return;
@@ -292,9 +292,12 @@ void LinkerDriver::addFile(StringRef path, bool withLOption) {
     // the directory part is ignored. Note that path may be a temporary and
     // cannot be stored into SharedFile::soName.
     path = mbref.getBufferIdentifier();
-    files.push_back(
-        make<SharedFile>(mbref, withLOption ? path::filename(path) : path));
+    auto *f =
+        make<SharedFile>(mbref, withLOption ? path::filename(path) : path);
+    f->init();
+    files.push_back(f);
     return;
+  }
   case file_magic::bitcode:
     files.push_back(make<BitcodeFile>(mbref, "", 0, inLib));
     break;
