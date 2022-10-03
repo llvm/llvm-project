@@ -392,19 +392,17 @@ exit:
   ret i32 %l
 }
 
-declare i1 @cond() readnone
+declare i1 @cond() readnone nounwind
 
-; TODO: We can eliminate the store in for.header, but we currently hit a MemoryPhi.
 define void @loop_multiple_def_uses(ptr noalias %P) {
 ; CHECK-LABEL: @loop_multiple_def_uses(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_HEADER:%.*]]
 ; CHECK:       for.header:
-; CHECK-NEXT:    store i32 1, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[FOR_BODY:%.*]], label [[END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    store i32 2, ptr [[P]], align 4
+; CHECK-NEXT:    store i32 2, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[FOR_HEADER]]
 ; CHECK:       end:
@@ -436,11 +434,10 @@ define void @loop_multiple_def_uses_partial_write(ptr noalias %p) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_HEADER:%.*]]
 ; CHECK:       for.header:
-; CHECK-NEXT:    store i32 1239491, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 1239297, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[FOR_BODY:%.*]], label [[END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    store i8 1, ptr [[P]], align 4
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[FOR_HEADER]]
 ; CHECK:       end:
