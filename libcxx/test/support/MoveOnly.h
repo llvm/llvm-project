@@ -23,7 +23,7 @@ public:
     MoveOnly(const MoveOnly&) = delete;
     MoveOnly& operator=(const MoveOnly&) = delete;
 
-    TEST_CONSTEXPR_CXX14 MoveOnly(MoveOnly&& x) TEST_NOEXCEPT
+    TEST_CONSTEXPR_CXX14 MoveOnly(MoveOnly&& x)
         : data_(x.data_) {x.data_ = 0;}
     TEST_CONSTEXPR_CXX14 MoveOnly& operator=(MoveOnly&& x)
         {data_ = x.data_; x.data_ = 0; return *this;}

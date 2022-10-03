@@ -115,10 +115,10 @@ struct G
 {
     static bool constructed;
 
-    typedef std::scoped_allocator_adaptor<std::allocator<G>> allocator_type;
+    typedef std::allocator<G> allocator_type;
 
     G(std::allocator_arg_t, allocator_type&&) { assert(false); }
-    G(const allocator_type&) { constructed = true; }
+    G(allocator_type&) { constructed = true; }
 };
 
 bool G::constructed = false;
@@ -202,7 +202,7 @@ int main(int, char**)
     // Test that is_constructible uses an lvalue ref so the correct constructor
     // is picked.
     {
-        G::allocator_type sa;
+        std::scoped_allocator_adaptor<G::allocator_type> sa;
         G* ptr = sa.allocate(1);
         sa.construct(ptr);
         assert(G::constructed);

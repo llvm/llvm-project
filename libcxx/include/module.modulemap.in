@@ -878,7 +878,6 @@ module std [system] {
       module uninitialized_algorithms        { private header "__memory/uninitialized_algorithms.h" }
       module unique_ptr                      { private header "__memory/unique_ptr.h" }
       module uses_allocator                  { private header "__memory/uses_allocator.h" }
-      module uses_allocator_construction     { private header "__memory/uses_allocator_construction.h" }
       module voidify                         { private header "__memory/voidify.h" }
     }
   }
