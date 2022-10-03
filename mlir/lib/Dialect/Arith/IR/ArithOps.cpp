@@ -1308,7 +1308,7 @@ OpFoldResult arith::IndexCastUIOp::fold(ArrayRef<Attribute> operands) {
   // A little hack because we go through int. Otherwise, the size of the
   // constant might need to change.
   if (auto value = operands[0].dyn_cast_or_null<IntegerAttr>())
-    return IntegerAttr::get(getType(), value.getUInt());
+    return IntegerAttr::get(getType(), value.getValue().getZExtValue());
 
   return {};
 }

@@ -317,6 +317,24 @@ func.func @indexCastUIOfUnsignedExtend(%arg0: i8) -> index {
   return %idx : index
 }
 
+// CHECK-LABEL: @indexCastFold
+//       CHECK:   %[[res:.*]] = arith.constant -2 : index
+//       CHECK:   return %[[res]]
+func.func @indexCastFold(%arg0: i8) -> index {
+  %c-2 = arith.constant -2 : i8
+  %idx = arith.index_cast %c-2 : i8 to index
+  return %idx : index
+}
+
+// CHECK-LABEL: @indexCastUIFold
+//       CHECK:   %[[res:.*]] = arith.constant 254 : index
+//       CHECK:   return %[[res]]
+func.func @indexCastUIFold(%arg0: i8) -> index {
+  %c-2 = arith.constant -2 : i8
+  %idx = arith.index_castui %c-2 : i8 to index
+  return %idx : index
+}
+
 // CHECK-LABEL: @signExtendConstant
 //       CHECK:   %[[cres:.+]] = arith.constant -2 : i16
 //       CHECK:   return %[[cres]]
