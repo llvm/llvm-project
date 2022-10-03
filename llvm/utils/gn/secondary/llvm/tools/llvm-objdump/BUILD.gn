@@ -46,6 +46,7 @@ executable("llvm-objdump") {
     "//llvm/lib/DebugInfo/DWARF",
     "//llvm/lib/DebugInfo/PDB",
     "//llvm/lib/DebugInfo/Symbolize",
+    "//llvm/lib/Debuginfod",
     "//llvm/lib/Demangle",
     "//llvm/lib/MC",
     "//llvm/lib/MC/MCDisassembler",
