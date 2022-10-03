@@ -1998,12 +1998,17 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
       LOG_PRINTF(GetLog(LLDBLog::Types), "Underspecified target triple %s.",
                  target_triple.str().c_str());
       PlatformSP platform_sp(target.GetPlatform());
-      // Try to fill in the platform OS version. Don't do this when an
-      // environment is present, since there might be some ambiguity
-      // about the plaform (e.g., ios-macabi runs on the macOS, but
-      // uses iOS version numbers).
+      // Try to fill in the platform OS version. The idea behind using
+      // the platform version is to let the expression evaluator mark
+      // the expressions with the highest supported availability
+      // attribute. Don't use the platform when an environment is
+      // present, since there might be some ambiguity about the
+      // plaform (e.g., ios-macabi runs on the macOS, but uses iOS
+      // version numbers).
       if (platform_sp &&
           target_triple.getEnvironment() == llvm::Triple::UnknownEnvironment) {
+        LOG_PRINTF(GetLog(LLDBLog::Types), "Completing triple based on platform.");
+
         llvm::VersionTuple version =
             platform_sp->GetOSVersion(target.GetProcessSP().get());
         llvm::SmallString<32> buffer;
@@ -2016,6 +2021,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
         }
         computed_triple = llvm::Triple(buffer);
       } else {
+        LOG_PRINTF(GetLog(LLDBLog::Types),
+                   "Completing triple based on main binary load commands.");
         computed_triple = get_executable_triple();
       }
     }
