@@ -637,3 +637,30 @@ loop:
 exit:
   ret void
 }
+
+; Make sure LLVM doesn't generate wrong data in SinkAfter, and causes crash in
+; loop vectorizer.
+define void @test_crash(ptr %p) {
+; CHECK-LABEL: @test_crash
+; CHECK-NOT:   vector.body:
+; CHECK:       ret
+Entry:
+  br label %Loop
+
+Loop:
+  %for.1 = phi double [ %iv1, %Loop ], [ 0.000000e+00, %Entry ]
+  %for.2 = phi double [ %iv2, %Loop ], [ 0.000000e+00, %Entry ]
+  %for.3 = phi double [ %for.2, %Loop ], [ 0.000000e+00, %Entry ]
+  %for.4 = phi i64 [ %count, %Loop ], [ 0, %Entry ]
+  %USE_2_INDVARS = fdiv double %for.3, %for.1
+  %div = fdiv double 0.000000e+00, %for.1
+  %iv1 = load double, ptr null, align 8
+  %count = add nuw nsw i64 %for.4, 1
+  %iv2 = load double, ptr null, align 8
+  store double %div, ptr %p, align 8
+  %cond = icmp eq i64 %count, 0
+  br i1 %cond, label %End, label %Loop
+
+End:
+  ret void
+}

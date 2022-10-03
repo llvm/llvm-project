@@ -1025,6 +1025,16 @@ bool RecurrenceDescriptor::isFixedOrderRecurrence(
       // Previous. Nothing left to do.
       if (DT->dominates(Previous, OtherPrev) || Previous == OtherPrev)
         return true;
+
+      // If there are other instructions to be sunk after SinkCandidate, remove
+      // and re-insert SinkCandidate can break those instructions. Bail out for
+      // simplicity.
+      if (any_of(SinkAfter,
+          [SinkCandidate](const std::pair<Instruction *, Instruction *> &P) {
+            return P.second == SinkCandidate;
+          }))
+        return false;
+
       // Otherwise, Previous comes after OtherPrev and SinkCandidate needs to be
       // re-sunk to Previous, instead of sinking to OtherPrev. Remove
       // SinkCandidate from SinkAfter to ensure it's insert position is updated.
