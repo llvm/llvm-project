@@ -824,6 +824,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   // TODO: s16 support.
   getActionDefinitionsBuilder(G_FCOPYSIGN).customFor({{s32, s32}, {s64, s64}});
 
+  getActionDefinitionsBuilder(G_FMAD).lower();
+
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
 }
