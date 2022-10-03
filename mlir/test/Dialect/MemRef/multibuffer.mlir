@@ -1,19 +1,19 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -test-multi-buffering=multiplier=5 -cse -split-input-file | FileCheck %s
 
-// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> (((d0 - d1) floordiv d2) mod 5)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0) -> (((d0 - 1) floordiv 3) mod 5)>
 
 // CHECK-LABEL: func @multi_buffer
 func.func @multi_buffer(%a: memref<1024x1024xf32>) {
-// CHECK-DAG: %[[A:.*]] = memref.alloc() : memref<5x4x128xf32>
+// CHECK-DAG: %[[A:.*]] = memref.alloc() {someAttribute} : memref<5x4x128xf32>
 // CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
 // CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
-  %0 = memref.alloc() : memref<4x128xf32>
+  %0 = memref.alloc() {someAttribute} : memref<4x128xf32>
   %c1024 = arith.constant 1024 : index
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
 // CHECK: scf.for %[[IV:.*]] = %[[C1]]
   scf.for %arg2 = %c1 to %c1024 step %c3 {
-// CHECK: %[[I:.*]] = affine.apply #[[$MAP1]](%[[IV]], %[[C1]], %[[C3]])
+// CHECK: %[[I:.*]] = affine.apply #[[$MAP1]](%[[IV]])
 // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0, 0] [1, 4, 128] [1, 1, 1] : memref<5x4x128xf32> to memref<4x128xf32, strided<[128, 1], offset: ?>>
    %1 = memref.subview %a[%arg2, 0] [4, 128] [1, 1] :
     memref<1024x1024xf32> to memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>>
@@ -32,15 +32,13 @@ func.func @multi_buffer(%a: memref<1024x1024xf32>) {
 // CHECK-LABEL: func @multi_buffer_affine
 func.func @multi_buffer_affine(%a: memref<1024x1024xf32>) {
 // CHECK-DAG: %[[A:.*]] = memref.alloc() : memref<5x4x128xf32>
-// CHECK-DAG: %[[C1:.*]] = arith.constant 1 : index
-// CHECK-DAG: %[[C3:.*]] = arith.constant 3 : index
   %0 = memref.alloc() : memref<4x128xf32>
   %c1024 = arith.constant 1024 : index
   %c1 = arith.constant 1 : index
   %c3 = arith.constant 3 : index
 // CHECK: affine.for %[[IV:.*]] = 1
   affine.for %arg2 = 1 to 1024 step 3 {
-// CHECK: %[[I:.*]] = affine.apply #[[$MAP1]](%[[IV]], %[[C1]], %[[C3]])
+// CHECK: %[[I:.*]] = affine.apply #[[$MAP1]](%[[IV]])
 // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0, 0] [1, 4, 128] [1, 1, 1] : memref<5x4x128xf32> to memref<4x128xf32, strided<[128, 1], offset: ?>>
    %1 = memref.subview %a[%arg2, 0] [4, 128] [1, 1] :
     memref<1024x1024xf32> to memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>>
@@ -56,7 +54,7 @@ func.func @multi_buffer_affine(%a: memref<1024x1024xf32>) {
 
 // -----
 
-// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> (((d0 - d1) floordiv d2) mod 5)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0) -> (((d0 - 1) floordiv 3) mod 5)>
 
 // CHECK-LABEL: func @multi_buffer_subview_use
 func.func @multi_buffer_subview_use(%a: memref<1024x1024xf32>) {
@@ -69,7 +67,7 @@ func.func @multi_buffer_subview_use(%a: memref<1024x1024xf32>) {
   %c3 = arith.constant 3 : index
 // CHECK: scf.for %[[IV:.*]] = %[[C1]]
   scf.for %arg2 = %c1 to %c1024 step %c3 {
-// CHECK: %[[I:.*]] = affine.apply #[[$MAP1]](%[[IV]], %[[C1]], %[[C3]])
+// CHECK: %[[I:.*]] = affine.apply #[[$MAP1]](%[[IV]])
 // CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0, 0] [1, 4, 128] [1, 1, 1] : memref<5x4x128xf32> to memref<4x128xf32, strided<[128, 1], offset: ?>>
    %1 = memref.subview %a[%arg2, 0] [4, 128] [1, 1] :
     memref<1024x1024xf32> to memref<4x128xf32, affine_map<(d0, d1)[s0] -> (d0 * 1024 + s0 + d1)>>
