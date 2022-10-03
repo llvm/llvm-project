@@ -14,7 +14,6 @@ algorithm limits
 algorithm memory
 algorithm new
 algorithm stdexcept
-algorithm tuple
 algorithm type_traits
 algorithm utility
 algorithm version
@@ -32,7 +31,6 @@ any limits
 any memory
 any new
 any stdexcept
-any tuple
 any type_traits
 any typeinfo
 any variant
@@ -74,7 +72,6 @@ barrier memory
 barrier new
 barrier ratio
 barrier stdexcept
-barrier tuple
 barrier type_traits
 barrier variant
 bit cstdint
@@ -132,7 +129,6 @@ codecvt mutex
 codecvt new
 codecvt stdexcept
 codecvt string
-codecvt tuple
 codecvt type_traits
 codecvt typeinfo
 codecvt version
@@ -164,7 +160,6 @@ condition_variable new
 condition_variable ratio
 condition_variable stdexcept
 condition_variable system_error
-condition_variable tuple
 condition_variable type_traits
 condition_variable typeinfo
 condition_variable version
@@ -196,7 +191,6 @@ deque iterator
 deque limits
 deque new
 deque stdexcept
-deque tuple
 deque type_traits
 deque typeinfo
 deque version
@@ -306,7 +300,6 @@ ext/hash_map limits
 ext/hash_map new
 ext/hash_map stdexcept
 ext/hash_map string
-ext/hash_map tuple
 ext/hash_map type_traits
 ext/hash_set algorithm
 ext/hash_set cmath
@@ -320,7 +313,6 @@ ext/hash_set iterator
 ext/hash_set limits
 ext/hash_set new
 ext/hash_set string
-ext/hash_set tuple
 ext/hash_set type_traits
 filesystem cerrno
 filesystem compare
@@ -372,7 +364,6 @@ forward_list iterator
 forward_list limits
 forward_list new
 forward_list stdexcept
-forward_list tuple
 forward_list type_traits
 forward_list typeinfo
 forward_list version
@@ -394,7 +385,6 @@ fstream new
 fstream ostream
 fstream stdexcept
 fstream string
-fstream tuple
 fstream type_traits
 fstream typeinfo
 fstream version
@@ -448,7 +438,6 @@ ios new
 ios stdexcept
 ios string
 ios system_error
-ios tuple
 ios type_traits
 ios typeinfo
 ios version
@@ -498,7 +487,6 @@ list iterator
 list limits
 list new
 list stdexcept
-list tuple
 list type_traits
 list typeinfo
 list version
@@ -522,7 +510,6 @@ locale new
 locale stdexcept
 locale streambuf
 locale string
-locale tuple
 locale type_traits
 locale typeinfo
 locale version
@@ -625,7 +612,6 @@ ostream limits
 ostream locale
 ostream new
 ostream streambuf
-ostream tuple
 ostream type_traits
 ostream version
 queue compare
@@ -689,7 +675,6 @@ regex mutex
 regex new
 regex stdexcept
 regex string
-regex tuple
 regex type_traits
 regex typeinfo
 regex utility
@@ -780,7 +765,6 @@ string limits
 string new
 string stdexcept
 string string_view
-string tuple
 string type_traits
 string typeinfo
 string utility
@@ -851,6 +835,7 @@ typeindex utility
 typeindex version
 typeinfo cstddef
 typeinfo cstdint
+typeinfo cstdlib
 typeinfo exception
 typeinfo type_traits
 unordered_map algorithm
@@ -885,7 +870,6 @@ unordered_set limits
 unordered_set new
 unordered_set optional
 unordered_set stdexcept
-unordered_set tuple
 unordered_set type_traits
 unordered_set version
 utility compare
@@ -936,7 +920,6 @@ vector iosfwd
 vector limits
 vector new
 vector stdexcept
-vector tuple
 vector type_traits
 vector typeinfo
 vector utility
