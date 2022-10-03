@@ -3006,6 +3006,7 @@ cc_library(
         "lib/Dialect/Shape/Transforms/*.h",
     ]),
     hdrs = [
+        "include/mlir/Dialect/Shape/Analysis/ShapeMappingAnalysis.h",
         "include/mlir/Dialect/Shape/Transforms/BufferizableOpInterfaceImpl.h",
         "include/mlir/Dialect/Shape/Transforms/Passes.h",
     ],
@@ -3020,7 +3021,9 @@ cc_library(
         ":Pass",
         ":ShapeDialect",
         ":ShapeTransformsPassIncGen",
+        ":TensorDialect",
         ":Transforms",
+        "//llvm:Support",
     ],
 )
 
