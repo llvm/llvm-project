@@ -815,8 +815,21 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
   if (!didEncounterError)
     return failure();
 
-  rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(op, resultTy,
-                                               linalgOp.getResults());
+  SmallVector<ReassociationExprs, 4> reassociationMap;
+  uint64_t expandInputRank =
+      linalgOp.getResults()[0].getType().cast<ShapedType>().getRank();
+  reassociationMap.resize(expandInputRank);
+
+  for (uint64_t i = 0; i < expandInputRank; i++) {
+    int32_t dimToPush = i > axis ? i + 1 : i;
+    reassociationMap[i].push_back(rewriter.getAffineDimExpr(dimToPush));
+  }
+  int32_t expandedDim = axis < expandInputRank ? axis : expandInputRank - 1;
+  reassociationMap[expandedDim].push_back(
+      rewriter.getAffineDimExpr(expandedDim + 1));
+
+  rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
+      op, resultTy, linalgOp.getResults()[0], reassociationMap);
   return success();
 }
 
