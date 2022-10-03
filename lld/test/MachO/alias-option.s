@@ -21,7 +21,9 @@
 # MAIN: [[#%x,FOO_ADDR:]] T _foo
 # MAIN: [[#FOO_ADDR]]     T _main
 
-# RUN: %lld -alias _foo _bar -alias _main _fake_main %t/main.o %t/foo.o -o %t/multiple.o
+## Verify dead stripping doesn't remove the aliased symbol. This behavior differs
+## from ld64 where it actually does dead strip only the alias, not the original symbol.
+# RUN: %lld -dead_strip -alias _foo _bar -alias _main _fake_main %t/main.o %t/foo.o -o %t/multiple.o
 # RUN: llvm-nm %t/multiple.o | FileCheck %s --check-prefix=MULTIPLE
 
 # MULTIPLE: [[#%x,FOO_ADDR:]]  T _bar
@@ -30,11 +32,13 @@
 # MULTIPLE: [[#MAIN_ADDR]]     T _main
 
 #--- foo.s
+.subsections_via_symbols
 .globl _foo
 _foo:
   ret
 
 #--- main.s
+.subsections_via_symbols
 .globl _main
 _main:
   ret
