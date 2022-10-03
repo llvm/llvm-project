@@ -19781,9 +19781,7 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
     if (InVec.isUndef() && TLI.shouldSplatInsEltVarIndex(VT)) {
       if (VT.isScalableVector())
         return DAG.getSplatVector(VT, DL, InVal);
-
-      SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(), InVal);
-      return DAG.getBuildVector(VT, DL, Ops);
+      return DAG.getSplatBuildVector(VT, DL, InVal);
     }
     return SDValue();
   }
@@ -23821,8 +23819,7 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   // bo (splat X, Index), (splat Y, Index) --> splat (bo X, Y), Index
   if (VT.isScalableVector())
     return DAG.getSplatVector(VT, DL, ScalarBO);
-  SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(), ScalarBO);
-  return DAG.getBuildVector(VT, DL, Ops);
+  return DAG.getSplatBuildVector(VT, DL, ScalarBO);
 }
 
 /// Visit a binary vector operation, like ADD.
