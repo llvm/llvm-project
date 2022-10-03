@@ -84,13 +84,8 @@ void test_bullet_two() {
         int const& cx = x;
         A.construct(ptr, x, cx, std::move(x));
         assert((checkConstruct<int&, int const&, int&&>(*ptr, UA_AllocArg, I)));
-#if TEST_STD_VER >= 20
-        assert((POuter.checkConstruct<std::allocator_arg_t&&,
-                   const SA::inner_allocator_type&, int&, int const&, int&&>(O, ptr)));
-#else
         assert((POuter.checkConstruct<std::allocator_arg_t const&,
                    SA::inner_allocator_type&, int&, int const&, int&&>(O, ptr)));
-#endif
         A.destroy(ptr);
         ::operator delete((void*)ptr);
     }
@@ -122,15 +117,9 @@ void test_bullet_three() {
         int const& cx = x;
         A.construct(ptr, x, cx, std::move(x));
         assert((checkConstruct<int&, int const&, int&&>(*ptr, UA_AllocLast, I)));
-#if TEST_STD_VER >= 20
-        assert((POuter.checkConstruct<
-                   int&, int const&, int&&,
-                   const SA::inner_allocator_type&>(O, ptr)));
-#else
         assert((POuter.checkConstruct<
                    int&, int const&, int&&,
                    SA::inner_allocator_type&>(O, ptr)));
-#endif
         A.destroy(ptr);
         ::operator delete((void*)ptr);
     }

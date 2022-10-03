@@ -4,7 +4,7 @@ Section,Description,Dependencies,Assignee,Complete
 | `[utility.syn] <https://wg21.link/utility.syn>`_, "[pair] basic_common_reference, common_type", None, Nikolas Klauser, |Complete|
 | `[pairs.pair] <https://wg21.link/pairs.pair>`_, "`[pair] constructor, assignment and swap overloads <https://reviews.llvm.org/D131495>`_", None, Hui Xie, |Complete|
 "| `[memory.syn] <https://wg21.link/memory.syn>`_
-| `[allocator.uses.construction] <https://wg21.link/allocator.uses.construction>`_", "[pair] uses_allocator_construction_args overloads", None, Nikolas Klauser, |Complete|
+| `[allocator.uses.construction] <https://wg21.link/allocator.uses.construction>`_", "[pair] uses_allocator_construction_args overloads", None, Unassigned, |Not Started|
 | `[vector.bool] <https://wg21.link/vector.bool>`_, "[vector<bool>::reference] add const operator= overload", None, Hui Xie, |Not Started|
 | `[iterator.concept.winc] <https://wg21.link/iterator.concept.winc>`_, "Update weakly_comparable", None, Hui Xie, |Not Started|
 | `[range.zip] <https://wg21.link/ranges.syn>`_, "`zip_view <https://reviews.llvm.org/D122806>`_", "| `zip_view::iterator`
