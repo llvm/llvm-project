@@ -379,8 +379,7 @@ visit(const ObjCImplementationDecl *ImplD) const {
   IvarToPropMapTy IvarToPopertyMap;
 
   ObjCInterfaceDecl::PropertyMap PropMap;
-  ObjCInterfaceDecl::PropertyDeclOrder PropOrder;
-  InterfaceD->collectPropertiesToImplement(PropMap, PropOrder);
+  InterfaceD->collectPropertiesToImplement(PropMap);
 
   for (ObjCInterfaceDecl::PropertyMap::iterator
       I = PropMap.begin(), E = PropMap.end(); I != E; ++I) {
