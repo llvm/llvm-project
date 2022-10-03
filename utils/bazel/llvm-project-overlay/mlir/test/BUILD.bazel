@@ -641,6 +641,7 @@ cc_library(
     name = "TestShapeDialect",
     srcs = [
         "lib/Dialect/Shape/TestShapeFunctions.cpp",
+        "lib/Dialect/Shape/TestShapeMappingAnalysis.cpp",
     ],
     deps = [
         "//llvm:Support",
@@ -649,6 +650,7 @@ cc_library(
         "//mlir:InferTypeOpInterface",
         "//mlir:Pass",
         "//mlir:ShapeDialect",
+        "//mlir:ShapeTransforms",
     ],
 )
 
