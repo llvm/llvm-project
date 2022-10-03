@@ -811,6 +811,12 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   // New load can be generated
   Value *Load1Ptr = LI1->getPointerOperand();
   Builder.SetInsertPoint(LI1);
+  if (!cast<PointerType>(Load1Ptr->getType())->isOpaque()) {
+    // We require an extra bitcast for non-opaque cases
+    unsigned Load1AS = cast<PointerType>(Load1Ptr->getType())->getAddressSpace();
+    Load1Ptr = Builder.CreateBitCast(Load1Ptr,
+                                    PointerType::get(IntegerType::get(Load1Ptr->getContext(), LOps.LoadSize), Load1AS));
+  }
   NewLoad = Builder.CreateAlignedLoad(
       IntegerType::get(Load1Ptr->getContext(), LOps.LoadSize), Load1Ptr,
       LI1->getAlign(), LI1->isVolatile(), "");
