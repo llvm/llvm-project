@@ -446,9 +446,9 @@ Optional<DILineInfo> ObjFile<ELFT>::getDILineInfo(InputSectionBase *s,
   return getDwarf()->getDILineInfo(offset, sectionIndex);
 }
 
-ELFFileBase::ELFFileBase(Kind k, MemoryBufferRef mb) : InputFile(k, mb) {
-  ekind = getELFKind(mb, "");
-
+ELFFileBase::ELFFileBase(Kind k, ELFKind ekind, MemoryBufferRef mb)
+    : InputFile(k, mb) {
+  this->ekind = ekind;
   switch (ekind) {
   case ELF32LEKind:
     init<ELF32LE>(k);
@@ -1230,9 +1230,9 @@ static bool isBitcodeNonCommonDef(MemoryBufferRef mb, StringRef symName,
 }
 
 template <class ELFT>
-static bool isNonCommonDef(MemoryBufferRef mb, StringRef symName,
+static bool isNonCommonDef(ELFKind ekind, MemoryBufferRef mb, StringRef symName,
                            StringRef archiveName) {
-  ObjFile<ELFT> *obj = make<ObjFile<ELFT>>(mb, archiveName);
+  ObjFile<ELFT> *obj = make<ObjFile<ELFT>>(ekind, mb, archiveName);
   StringRef stringtable = obj->getStringTable();
 
   for (auto sym : obj->template getGlobalELFSyms<ELFT>()) {
@@ -1248,19 +1248,23 @@ static bool isNonCommonDef(MemoryBufferRef mb, StringRef symName,
                            StringRef archiveName) {
   switch (getELFKind(mb, archiveName)) {
   case ELF32LEKind:
-    return isNonCommonDef<ELF32LE>(mb, symName, archiveName);
+    return isNonCommonDef<ELF32LE>(ELF32LEKind, mb, symName, archiveName);
   case ELF32BEKind:
-    return isNonCommonDef<ELF32BE>(mb, symName, archiveName);
+    return isNonCommonDef<ELF32BE>(ELF32BEKind, mb, symName, archiveName);
   case ELF64LEKind:
-    return isNonCommonDef<ELF64LE>(mb, symName, archiveName);
+    return isNonCommonDef<ELF64LE>(ELF64LEKind, mb, symName, archiveName);
   case ELF64BEKind:
-    return isNonCommonDef<ELF64BE>(mb, symName, archiveName);
+    return isNonCommonDef<ELF64BE>(ELF64BEKind, mb, symName, archiveName);
   default:
     llvm_unreachable("getELFKind");
   }
 }
 
 unsigned SharedFile::vernauxNum;
+
+SharedFile::SharedFile(MemoryBufferRef m, StringRef defaultSoName)
+    : ELFFileBase(SharedKind, getELFKind(m, ""), m), soName(defaultSoName),
+      isNeeded(!config->asNeeded) {}
 
 // Parse the version definitions in the object file if present, and return a
 // vector whose nth element contains a pointer to the Elf_Verdef for version
@@ -1736,16 +1740,16 @@ ELFFileBase *elf::createObjFile(MemoryBufferRef mb, StringRef archiveName,
   ELFFileBase *f;
   switch (getELFKind(mb, archiveName)) {
   case ELF32LEKind:
-    f = make<ObjFile<ELF32LE>>(mb, archiveName);
+    f = make<ObjFile<ELF32LE>>(ELF32LEKind, mb, archiveName);
     break;
   case ELF32BEKind:
-    f = make<ObjFile<ELF32BE>>(mb, archiveName);
+    f = make<ObjFile<ELF32BE>>(ELF32BEKind, mb, archiveName);
     break;
   case ELF64LEKind:
-    f = make<ObjFile<ELF64LE>>(mb, archiveName);
+    f = make<ObjFile<ELF64LE>>(ELF64LEKind, mb, archiveName);
     break;
   case ELF64BEKind:
-    f = make<ObjFile<ELF64BE>>(mb, archiveName);
+    f = make<ObjFile<ELF64BE>>(ELF64BEKind, mb, archiveName);
     break;
   default:
     llvm_unreachable("getELFKind");
