@@ -44,6 +44,7 @@
 #include "comgr-symbol.h"
 #include "comgr-symbolizer.h"
 
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
@@ -393,6 +394,7 @@ amd_comgr_status_t DataObject::setData(std::unique_ptr<llvm::MemoryBuffer> MB) {
   Buffer = std::move(MB);
   Data = const_cast<char *>(Buffer->getBufferStart());
   Size = Buffer->getBufferSize();
+  MangledNames.clear();
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
@@ -405,6 +407,7 @@ void DataObject::clearData() {
 
   Data = nullptr;
   Size = 0;
+  MangledNames.clear();
 }
 
 DataSet::DataSet() : DataObjects() {}
@@ -1760,6 +1763,109 @@ amd_comgr_demangle_symbol_name(amd_comgr_data_t MangledSymbolName,
   DemangledDataP->setData(
       llvm::demangle(std::string(DataP->Data, DataP->Size)));
   *DemangledSymbolName = DataObject::convert(DemangledDataP);
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_COMGR_API
+// NOLINTNEXTLINE(readability-identifier-naming)
+amd_comgr_populate_mangled_names(amd_comgr_data_t Data,
+                               size_t *Count) {
+  DataObject *DataP = DataObject::convert(Data);
+  if (!DataP || !DataP->Data || (DataP->DataKind != AMD_COMGR_DATA_KIND_BC &&
+      DataP->DataKind != AMD_COMGR_DATA_KIND_EXECUTABLE)) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  DataP->MangledNames.clear();
+
+  LLVMContext Context;
+
+  if (DataP->DataKind == AMD_COMGR_DATA_KIND_BC) {
+
+    MemoryBufferRef BcMemBufRef =
+      MemoryBufferRef(StringRef(DataP->Data, DataP->Size),
+                      StringRef(DataP->Name));
+
+    auto BcModVecOrErr = getBitcodeModuleList(BcMemBufRef);
+    if (!BcModVecOrErr) {
+      llvm::logAllUnhandledErrors(BcModVecOrErr.takeError(),
+                                  llvm::errs(), "Bitcode Contents error: ");
+      return AMD_COMGR_STATUS_ERROR;
+    }
+
+    std::vector<BitcodeModule> BcModVec = BcModVecOrErr.get();
+    for (BitcodeModule BcMod : BcModVec) {
+
+      Expected<std::unique_ptr<Module>> ModOrError =
+        BcMod.getLazyModule(Context, true, true);
+      if (!ModOrError) {
+        llvm::logAllUnhandledErrors(ModOrError.takeError(),
+                                    llvm::errs(), "Bitcode Contents error: ");
+        return AMD_COMGR_STATUS_ERROR;
+      }
+
+      std::unique_ptr<Module> M = std::move(ModOrError.get());
+      for (llvm::GlobalVariable &global_var : M->getGlobalList())
+        DataP->MangledNames.push_back(global_var.getName().str());
+      for (llvm::Function &function : M->getFunctionList())
+        DataP->MangledNames.push_back(function.getName().str());
+    }
+  }
+
+  if (DataP->DataKind == AMD_COMGR_DATA_KIND_EXECUTABLE) {
+    // Callback to iterate_symbols that error checks and appends lowered names
+    // to "data"
+    auto callback = [](amd_comgr_symbol_t symbol, void *data) {
+      size_t len = 0;
+      if (auto res =
+          amd_comgr_symbol_get_info(symbol,
+                                    AMD_COMGR_SYMBOL_INFO_NAME_LENGTH, &len);
+          res != AMD_COMGR_STATUS_SUCCESS)
+        return res;
+      std::string name(len, 0);
+      if (auto res =
+          amd_comgr_symbol_get_info(symbol,
+                                    AMD_COMGR_SYMBOL_INFO_NAME, &name[0]);
+          res != AMD_COMGR_STATUS_SUCCESS)
+        return res;
+      auto rv = reinterpret_cast<std::vector<std::string>*>(data);
+      rv->push_back(name);
+      return AMD_COMGR_STATUS_SUCCESS;
+    };
+
+    if (auto res =
+        amd_comgr_iterate_symbols(Data, callback,
+            reinterpret_cast<void*>(&(DataP->MangledNames)));
+        res != AMD_COMGR_STATUS_SUCCESS) {
+      return AMD_COMGR_STATUS_ERROR;
+    }
+  }
+
+  *Count = DataP->MangledNames.size();
+
+  return AMD_COMGR_STATUS_SUCCESS;
+}
+
+amd_comgr_status_t AMD_COMGR_API
+// NOLINTNEXTLINE(readability-identifier-naming)
+amd_comgr_get_mangled_name(amd_comgr_data_t Data,
+                           size_t Index,
+                           size_t *Size,
+                           char *MangledName) {
+  DataObject *DataP = DataObject::convert(Data);
+  if (!DataP || !DataP->Data || (DataP->DataKind != AMD_COMGR_DATA_KIND_BC &&
+      DataP->DataKind != AMD_COMGR_DATA_KIND_EXECUTABLE)) {
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  }
+
+  if (Index >= DataP->MangledNames.size())
+    return AMD_COMGR_STATUS_ERROR;
+
+  if (MangledName == NULL)
+    *Size = DataP->MangledNames[Index].length();
+  else
+    memcpy(MangledName, DataP->MangledNames[Index].c_str(), *Size);
+
   return AMD_COMGR_STATUS_SUCCESS;
 }
 

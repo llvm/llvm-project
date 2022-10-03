@@ -129,6 +129,7 @@ struct DataObject {
   size_t Size;
   int RefCount;
   DataSymbol *DataSym;
+  std::vector<std::string> MangledNames;
 
 private:
   std::unique_ptr<llvm::MemoryBuffer> Buffer;
