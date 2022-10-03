@@ -78,7 +78,11 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
     defaultRealKind, // is also the default COMPLEX kind
     doublePrecision, defaultCharKind, defaultLogicalKind,
     any, // matches any kind value; each instance is independent
-    same, // match any kind, but all "same" kinds must be equal
+    // match any kind, but all "same" kinds must be equal. For characters, also
+    // implies that lengths must be equal.
+    same,
+    // for character results, take "same" argument kind but not length
+    sameKindButNotLength,
     operand, // match any kind, with promotion (non-standard)
     typeless, // BOZ literals are INTEGER with this kind
     teamType, // TEAM_TYPE from module ISO_FORTRAN_ENV (for coarrays)
@@ -149,6 +153,8 @@ static constexpr TypePattern SameComplex{ComplexType, KindCode::same};
 static constexpr TypePattern SameFloating{FloatingType, KindCode::same};
 static constexpr TypePattern SameNumeric{NumericType, KindCode::same};
 static constexpr TypePattern SameChar{CharType, KindCode::same};
+static constexpr TypePattern SameCharNewLen{
+    CharType, KindCode::sameKindButNotLength};
 static constexpr TypePattern SameLogical{LogicalType, KindCode::same};
 static constexpr TypePattern SameRelatable{RelatableType, KindCode::same};
 static constexpr TypePattern SameIntrinsic{IntrinsicType, KindCode::same};
@@ -702,7 +708,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"ordered", AnyLogical, Rank::scalar, Optionality::optional}},
         SameType, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"repeat", {{"string", SameChar, Rank::scalar}, {"ncopies", AnyInt}},
-        SameChar, Rank::scalar, IntrinsicClass::transformationalFunction},
+        SameCharNewLen, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"reshape",
         {{"source", SameType, Rank::array}, {"shape", AnyInt, Rank::shape},
             {"pad", SameType, Rank::array, Optionality::optional},
@@ -799,7 +805,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         SameType, Rank::vector, IntrinsicClass::transformationalFunction},
     {"transpose", {{"matrix", SameType, Rank::matrix}}, SameType, Rank::matrix,
         IntrinsicClass::transformationalFunction},
-    {"trim", {{"string", SameChar, Rank::scalar}}, SameChar, Rank::scalar,
+    {"trim", {{"string", SameChar, Rank::scalar}}, SameCharNewLen, Rank::scalar,
         IntrinsicClass::transformationalFunction},
     {"ubound",
         {{"array", AnyData, Rank::anyOrAssumedRank}, RequiredDIM,
@@ -1782,6 +1788,12 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         } else {
           resultType = DynamicType{*category, aType->kind()};
         }
+      }
+      break;
+    case KindCode::sameKindButNotLength:
+      CHECK(sameArg);
+      if (std::optional<DynamicType> aType{sameArg->GetType()}) {
+        resultType = DynamicType{*category, aType->kind()};
       }
       break;
     case KindCode::operand:
