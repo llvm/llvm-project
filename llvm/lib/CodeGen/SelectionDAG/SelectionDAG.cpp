@@ -12029,7 +12029,11 @@ void SelectionDAG::copyExtraInfo(SDNode *From, SDNode *To) {
   auto I = SDEI.find(From);
   if (I == SDEI.end())
     return;
-  SDEI[To] = I->second;
+
+  // Use of operator[] on the DenseMap may cause an insertion, which invalidates
+  // the iterator, hence the need to make a copy to prevent a use-after-free.
+  NodeExtraInfo Copy = I->second;
+  SDEI[To] = std::move(Copy);
 }
 
 #ifndef NDEBUG
