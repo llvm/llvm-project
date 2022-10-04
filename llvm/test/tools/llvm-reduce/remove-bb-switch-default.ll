@@ -16,14 +16,12 @@
 ; RESULT0-NEXT: br i1 %arg0, label %bb1, label %bb2
 
 ; RESULT0: bb1:
-; RESULT0-NEXT: %bb1.phi = phi i32 [ %bb.load, %bb ], [ %bb2.phi, %bb2 ], [ %bb2.phi, %bb2 ]
 ; RESULT0-NEXT: store i32 1, ptr null, align 4
 ; RESULT0-NEXT: ret void
 
 ; RESULT0: bb2: ; preds = %bb
-; RESULT0-NEXT: %bb2.phi = phi i32 [ %bb.load, %bb ]
 ; RESULT0-NEXT: store i32 2, ptr null, align 4
-; RESULT0-NEXT: switch i32 %bb2.phi, label %bb1 [
+; RESULT0-NEXT: switch i32 %bb.load, label %bb1 [
 ; RESULT0-NEXT: i32 0, label %bb1
 ; RESULT0-NEXT: ]
 
@@ -34,7 +32,6 @@
 ; RESULT1-NEXT: br label %bb2
 
 ; RESULT1: bb2:
-; RESULT1-NEXT: %bb2.phi = phi i32 [ %bb.load, %bb ]
 ; RESULT1-NEXT: store i32 2, ptr null, align 4
 ; RESULT1-NEXT: ret void
 define void @main(i1 %arg0) {
