@@ -179,11 +179,11 @@ Response HandleFunction(const FunctionDecl *Function,
         (ForConstraintInstantiation || Result.getNumSubstitutedLevels() == 0) &&
         "Outer template not instantiated?");
   }
-  // If this is a friend declaration and it declares an entity at
+  // If this is a friend or local declaration and it declares an entity at
   // namespace scope, take arguments from its lexical parent
   // instead of its semantic parent, unless of course the pattern we're
   // instantiating actually comes from the file's context!
-  if (Function->getFriendObjectKind() &&
+  if ((Function->getFriendObjectKind() || Function->isLocalExternDecl()) &&
       Function->getNonTransparentDeclContext()->isFileContext() &&
       (!Pattern || !Pattern->getLexicalDeclContext()->isFileContext())) {
     return Response::ChangeDecl(Function->getLexicalDeclContext());
@@ -320,6 +320,7 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
     return true;
 
   case RequirementInstantiation:
+  case RequirementParameterInstantiation:
   case DefaultTemplateArgumentChecking:
   case DeclaringSpecialMember:
   case DeclaringImplicitEqualityComparison:
@@ -505,6 +506,13 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
           PointOfInstantiation, InstantiationRange, /*Entity=*/nullptr,
           /*Template=*/nullptr, /*TemplateArgs=*/None) {}
 
+Sema::InstantiatingTemplate::InstantiatingTemplate(
+    Sema &SemaRef, SourceLocation PointOfInstantiation, const RequiresExpr *RE,
+    sema::TemplateDeductionInfo &DeductionInfo, SourceRange InstantiationRange)
+    : InstantiatingTemplate(
+          SemaRef, CodeSynthesisContext::RequirementParameterInstantiation,
+          PointOfInstantiation, InstantiationRange, /*Entity=*/nullptr,
+          /*Template=*/nullptr, /*TemplateArgs=*/None, &DeductionInfo) {}
 
 Sema::InstantiatingTemplate::InstantiatingTemplate(
     Sema &SemaRef, SourceLocation PointOfInstantiation,
@@ -539,6 +547,7 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     : InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::ParameterMappingSubstitution,
           PointOfInstantiation, InstantiationRange, Template) {}
+
 
 void Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
   Ctx.SavedInNonInstantiationSFINAEContext = InNonInstantiationSFINAEContext;
@@ -845,6 +854,11 @@ void Sema::PrintInstantiationStack() {
                    diag::note_template_requirement_instantiation_here)
         << Active->InstantiationRange;
       break;
+    case CodeSynthesisContext::RequirementParameterInstantiation:
+      Diags.Report(Active->PointOfInstantiation,
+                   diag::note_template_requirement_params_instantiation_here)
+          << Active->InstantiationRange;
+      break;
 
     case CodeSynthesisContext::NestedRequirementConstraintsCheck:
       Diags.Report(Active->PointOfInstantiation,
@@ -1003,6 +1017,7 @@ Optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
     case CodeSynthesisContext::DeducedTemplateArgumentSubstitution:
     case CodeSynthesisContext::ConstraintSubstitution:
     case CodeSynthesisContext::RequirementInstantiation:
+    case CodeSynthesisContext::RequirementParameterInstantiation:
       // We're either substituting explicitly-specified template arguments,
       // deduced template arguments, a constraint expression or a requirement
       // in a requires expression, so SFINAE applies.
@@ -1270,8 +1285,30 @@ namespace {
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
       LocalInstantiationScope Scope(SemaRef, /*CombineWithOuterScope=*/true);
       Sema::ConstraintEvalRAII<TemplateInstantiator> RAII(*this);
-      ExprResult Res = inherited::TransformLambdaExpr(E);
-      return Res;
+      ExprResult Result = inherited::TransformLambdaExpr(E);
+      if (Result.isInvalid())
+        return Result;
+
+      CXXMethodDecl *MD = Result.getAs<LambdaExpr>()->getCallOperator();
+      for (ParmVarDecl *PVD : MD->parameters()) {
+        if (!PVD->hasDefaultArg())
+          continue;
+        Expr *UninstExpr = PVD->getUninstantiatedDefaultArg();
+        // FIXME: Obtain the source location for the '=' token.
+        SourceLocation EqualLoc = UninstExpr->getBeginLoc();
+        if (SemaRef.SubstDefaultArgument(EqualLoc, PVD, TemplateArgs)) {
+          // If substitution fails, the default argument is set to a
+          // RecoveryExpr that wraps the uninstantiated default argument so
+          // that downstream diagnostics are omitted.
+          ExprResult ErrorResult = SemaRef.CreateRecoveryExpr(
+              UninstExpr->getBeginLoc(), UninstExpr->getEndLoc(),
+              { UninstExpr }, UninstExpr->getType());
+          if (ErrorResult.isUsable())
+            PVD->setDefaultArg(ErrorResult.get());
+        }
+      }
+
+      return Result;
     }
 
     ExprResult TransformRequiresExpr(RequiresExpr *E) {
@@ -1326,6 +1363,12 @@ namespace {
     TransformExprRequirement(concepts::ExprRequirement *Req);
     concepts::NestedRequirement *
     TransformNestedRequirement(concepts::NestedRequirement *Req);
+    ExprResult TransformRequiresTypeParams(
+        SourceLocation KWLoc, SourceLocation RBraceLoc, const RequiresExpr *RE,
+        RequiresExprBodyDecl *Body, ArrayRef<ParmVarDecl *> Params,
+        SmallVectorImpl<QualType> &PTypes,
+        SmallVectorImpl<ParmVarDecl *> &TransParams,
+        Sema::ExtParameterInfoBuilder &PInfos);
 
   private:
     ExprResult transformNonTypeTemplateParmRef(NonTypeTemplateParmDecl *parm,
@@ -2043,6 +2086,37 @@ createSubstDiag(Sema &S, TemplateDeductionInfo &Info, EntityPrinter Printer) {
       StringRef(MessageBuf, Message.size())};
 }
 
+ExprResult TemplateInstantiator::TransformRequiresTypeParams(
+    SourceLocation KWLoc, SourceLocation RBraceLoc, const RequiresExpr *RE,
+    RequiresExprBodyDecl *Body, ArrayRef<ParmVarDecl *> Params,
+    SmallVectorImpl<QualType> &PTypes,
+    SmallVectorImpl<ParmVarDecl *> &TransParams,
+    Sema::ExtParameterInfoBuilder &PInfos) {
+
+  TemplateDeductionInfo Info(KWLoc);
+  Sema::InstantiatingTemplate TypeInst(SemaRef, KWLoc,
+                                       RE, Info,
+                                       SourceRange{KWLoc, RBraceLoc});
+  Sema::SFINAETrap Trap(SemaRef);
+
+  unsigned ErrorIdx;
+  if (getDerived().TransformFunctionTypeParams(
+          KWLoc, Params, /*ParamTypes=*/nullptr, /*ParamInfos=*/nullptr, PTypes,
+          &TransParams, PInfos, &ErrorIdx) ||
+      Trap.hasErrorOccurred()) {
+    SmallVector<concepts::Requirement *, 4> TransReqs;
+    ParmVarDecl *FailedDecl = Params[ErrorIdx];
+    // Add a 'failed' Requirement to contain the error that caused the failure
+    // here.
+    TransReqs.push_back(RebuildTypeRequirement(createSubstDiag(
+        SemaRef, Info, [&](llvm::raw_ostream &OS) { OS << *FailedDecl; })));
+    return getDerived().RebuildRequiresExpr(KWLoc, Body, TransParams, TransReqs,
+                                            RBraceLoc);
+  }
+
+  return ExprResult{};
+}
+
 concepts::TypeRequirement *
 TemplateInstantiator::TransformTypeRequirement(concepts::TypeRequirement *Req) {
   if (!Req->isDependent() && !AlwaysRebuild())
@@ -2595,29 +2669,17 @@ Sema::SubstParmVarDecl(ParmVarDecl *OldParm,
     NewParm->setUnparsedDefaultArg();
     UnparsedDefaultArgInstantiations[OldParm].push_back(NewParm);
   } else if (Expr *Arg = OldParm->getDefaultArg()) {
-    FunctionDecl *OwningFunc = cast<FunctionDecl>(OldParm->getDeclContext());
-    if (OwningFunc->isInLocalScopeForInstantiation()) {
-      // Instantiate default arguments for methods of local classes (DR1484)
-      // and non-defining declarations.
-      Sema::ContextRAII SavedContext(*this, OwningFunc);
-      LocalInstantiationScope Local(*this, true);
-      ExprResult NewArg = SubstExpr(Arg, TemplateArgs);
-      if (NewArg.isUsable()) {
-        // It would be nice if we still had this.
-        SourceLocation EqualLoc = NewArg.get()->getBeginLoc();
-        ExprResult Result =
-            ConvertParamDefaultArgument(NewParm, NewArg.get(), EqualLoc);
-        if (Result.isInvalid())
-          return nullptr;
-
-        SetParamDefaultArgument(NewParm, Result.getAs<Expr>(), EqualLoc);
-      }
-    } else {
-      // FIXME: if we non-lazily instantiated non-dependent default args for
-      // non-dependent parameter types we could remove a bunch of duplicate
-      // conversion warnings for such arguments.
-      NewParm->setUninstantiatedDefaultArg(Arg);
-    }
+    // Default arguments cannot be substituted until the declaration context
+    // for the associated function or lambda capture class is available.
+    // This is necessary for cases like the following where construction of
+    // the lambda capture class for the outer lambda is dependent on the
+    // parameter types but where the default argument is dependent on the
+    // outer lambda's declaration context.
+    //   template <typename T>
+    //   auto f() {
+    //     return [](T = []{ return T{}; }()) { return 0; };
+    //   }
+    NewParm->setUninstantiatedDefaultArg(Arg);
   }
 
   NewParm->setHasInheritedDefaultArg(OldParm->hasInheritedDefaultArg());
@@ -2660,6 +2722,88 @@ bool Sema::SubstParmTypes(
                                     DeclarationName());
   return Instantiator.TransformFunctionTypeParams(
       Loc, Params, nullptr, ExtParamInfos, ParamTypes, OutParams, ParamInfos);
+}
+
+/// Substitute the given template arguments into the default argument.
+bool Sema::SubstDefaultArgument(
+    SourceLocation Loc,
+    ParmVarDecl *Param,
+    const MultiLevelTemplateArgumentList &TemplateArgs,
+    bool ForCallExpr) {
+  FunctionDecl *FD = cast<FunctionDecl>(Param->getDeclContext());
+  Expr *PatternExpr = Param->getUninstantiatedDefaultArg();
+
+  EnterExpressionEvaluationContext EvalContext(
+      *this, ExpressionEvaluationContext::PotentiallyEvaluated, Param);
+
+  InstantiatingTemplate Inst(*this, Loc, Param, TemplateArgs.getInnermost());
+  if (Inst.isInvalid())
+    return true;
+  if (Inst.isAlreadyInstantiating()) {
+    Diag(Param->getBeginLoc(), diag::err_recursive_default_argument) << FD;
+    Param->setInvalidDecl();
+    return true;
+  }
+
+  ExprResult Result;
+  {
+    // C++ [dcl.fct.default]p5:
+    //   The names in the [default argument] expression are bound, and
+    //   the semantic constraints are checked, at the point where the
+    //   default argument expression appears.
+    ContextRAII SavedContext(*this, FD);
+    std::unique_ptr<LocalInstantiationScope> LIS;
+
+    if (ForCallExpr) {
+      // When instantiating a default argument due to use in a call expression,
+      // an instantiation scope that includes the parameters of the callee is
+      // required to satisfy references from the default argument. For example:
+      //   template<typename T> void f(T a, int = decltype(a)());
+      //   void g() { f(0); }
+      LIS = std::make_unique<LocalInstantiationScope>(*this);
+      FunctionDecl *PatternFD = FD->getTemplateInstantiationPattern(
+          /*ForDefinition*/ false);
+      if (addInstantiatedParametersToScope(FD, PatternFD, *LIS, TemplateArgs))
+        return true;
+    }
+
+    runWithSufficientStackSpace(Loc, [&] {
+      Result = SubstInitializer(PatternExpr, TemplateArgs,
+                                /*DirectInit*/false);
+    });
+  }
+  if (Result.isInvalid())
+    return true;
+
+  if (ForCallExpr) {
+    // Check the expression as an initializer for the parameter.
+    InitializedEntity Entity
+      = InitializedEntity::InitializeParameter(Context, Param);
+    InitializationKind Kind = InitializationKind::CreateCopy(
+        Param->getLocation(),
+        /*FIXME:EqualLoc*/ PatternExpr->getBeginLoc());
+    Expr *ResultE = Result.getAs<Expr>();
+
+    InitializationSequence InitSeq(*this, Entity, Kind, ResultE);
+    Result = InitSeq.Perform(*this, Entity, Kind, ResultE);
+    if (Result.isInvalid())
+      return true;
+
+    Result =
+        ActOnFinishFullExpr(Result.getAs<Expr>(), Param->getOuterLocStart(),
+                            /*DiscardedValue*/ false);
+  } else {
+    // FIXME: Obtain the source location for the '=' token.
+    SourceLocation EqualLoc = PatternExpr->getBeginLoc();
+    Result = ConvertParamDefaultArgument(Param, Result.getAs<Expr>(), EqualLoc);
+  }
+  if (Result.isInvalid())
+      return true;
+
+  // Remember the instantiated default argument.
+  Param->setDefaultArg(Result.getAs<Expr>());
+
+  return false;
 }
 
 /// Perform substitution on the base class specifiers of the
