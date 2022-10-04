@@ -509,6 +509,14 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(Plugin));
   }
 
+  // Note, this solution is far from perfect, better to encode it into IR
+  // metadata, but this may not be worth it, since it looks like aranges is on
+  // the way out.
+  if (Args.hasArg(options::OPT_gdwarf_aranges)) {
+    CmdArgs.push_back(
+        Args.MakeArgString("--plugin-opt=-generate-arange-section"));
+  }
+
   // Try to pass driver level flags relevant to LTO code generation down to
   // the plugin.
 
