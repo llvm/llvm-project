@@ -60,7 +60,8 @@ public:
   /// Constructor: take an array of tensors inputs, on which the generated loops
   /// will iterate on. The index of the tensor in the array is also the
   /// tensor id (tid) used in related functions.
-  explicit SparseTensorLoopEmitter(ValueRange tensors);
+  explicit SparseTensorLoopEmitter(ValueRange tensors,
+                                   bool isLastOutput = false);
 
   ///
   /// Core functions.
@@ -140,6 +141,7 @@ private:
   std::vector<std::vector<Value>> idxBuffer; // to_indices
   std::vector<Value> valBuffer;              // to_value
 
+  bool isLastOutput; // Is the last tensor output tensor
   std::vector<LoopLevelInfo> loopStack;
   // TODO: not yet used, it should track the current level for each tensor
   // to help eliminate `dim` paramters from above APIs.
