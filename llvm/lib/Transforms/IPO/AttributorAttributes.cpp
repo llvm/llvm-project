@@ -44,6 +44,7 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -9665,10 +9666,12 @@ struct AACallEdgesCallSite : public AACallEdgesImpl {
 
     CallBase *CB = cast<CallBase>(getCtxI());
 
-    if (CB->isInlineAsm()) {
-      if (!hasAssumption(*CB->getCaller(), "ompx_no_call_asm") &&
-          !hasAssumption(*CB, "ompx_no_call_asm"))
+    if (auto *IA = dyn_cast<InlineAsm>(CB->getCalledOperand())) {
+      if (IA->hasSideEffects() &&
+          !hasAssumption(*CB->getCaller(), "ompx_no_call_asm") &&
+          !hasAssumption(*CB, "ompx_no_call_asm")) {
         setHasUnknownCallee(false, Change);
+      }
       return Change;
     }
 
