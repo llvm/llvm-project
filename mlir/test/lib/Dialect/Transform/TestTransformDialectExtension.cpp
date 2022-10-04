@@ -171,9 +171,13 @@ mlir::test::TestCheckIfTestExtensionPresentOp::apply(
                             << "extension present, " << extension->getMessage();
   for (Operation *payload : state.getPayloadOps(getOperand())) {
     diag.attachNote(payload->getLoc()) << "associated payload op";
-    assert(state.getHandleForPayloadOp(payload) == getOperand() &&
+#ifndef NDEBUG
+    SmallVector<Value> handles;
+    assert(succeeded(state.getHandlesForPayloadOp(payload, handles)));
+    assert(llvm::is_contained(handles, getOperand()) &&
            "inconsistent mapping between transform IR handles and payload IR "
            "operations");
+#endif // NDEBUG
   }
 
   return DiagnosedSilenceableFailure::success();
@@ -295,6 +299,13 @@ mlir::test::TestPrintNumberOfAssociatedPayloadIROps::apply(
 void mlir::test::TestPrintNumberOfAssociatedPayloadIROps::getEffects(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   transform::onlyReadsHandle(getHandle(), effects);
+}
+
+DiagnosedSilenceableFailure
+mlir::test::TestCopyPayloadOp::apply(transform::TransformResults &results,
+                                     transform::TransformState &state) {
+  results.set(getCopy().cast<OpResult>(), state.getPayloadOps(getHandle()));
+  return DiagnosedSilenceableFailure::success();
 }
 
 namespace {
