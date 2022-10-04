@@ -10,7 +10,7 @@
 # RUN: echo '__Z3fooi: call _foo' | llvm-mc -filetype=obj -triple=x86_64-apple-macos - -o %t2.o
 # RUN: not %lld %t2.o -demangle -o /dev/null 2>&1 | FileCheck %s
 
-# CHECK:      error: undefined symbol: _foo
+# CHECK:      error: undefined symbol: foo
 # CHECK-NEXT: >>> referenced by {{.*}}
 # CHECK-NEXT: >>> did you mean to declare foo(int) as extern "C"?
 
