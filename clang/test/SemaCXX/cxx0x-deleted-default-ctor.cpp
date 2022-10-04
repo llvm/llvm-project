@@ -113,7 +113,7 @@ has_friend hf;
 
 struct defaulted_delete {
   no_default nd; // expected-note 2{{because field 'nd' has a deleted default constructor}}
-  defaulted_delete() = default; // expected-note{{implicitly deleted here}} expected-warning {{implicitly deleted}}
+  defaulted_delete() = default; // expected-note{{implicitly deleted here}} expected-warning {{implicitly deleted}} expected-note{{replace 'default'}}
 };
 defaulted_delete dd; // expected-error {{call to implicitly-deleted default constructor}}
 
