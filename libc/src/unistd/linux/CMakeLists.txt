@@ -91,6 +91,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fork
+  SRCS
+    fork.cpp
+  HDRS
+    ../fork.h
+  DEPENDS
+    libc.include.errno
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.threads.thread
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   fsync
   SRCS
     fsync.cpp

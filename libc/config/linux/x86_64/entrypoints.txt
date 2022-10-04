@@ -129,6 +129,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/utsname.h entrypoints
     libc.src.sys.utsname.uname
 
+    # sys/wait.h entrypoints
+    libc.src.sys.wait.wait
+
     # unistd.h entrypoints
     libc.src.unistd.access
     libc.src.unistd.chdir
@@ -401,6 +404,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.mktime
     libc.src.time.nanosleep
     libc.src.time.clock_gettime
+
+    # unistd.h entrypoints
+    libc.src.unistd.fork
   )
 endif()
 
