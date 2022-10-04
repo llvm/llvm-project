@@ -58,6 +58,7 @@
 #include "SuspiciousMemoryComparisonCheck.h"
 #include "SuspiciousMemsetUsageCheck.h"
 #include "SuspiciousMissingCommaCheck.h"
+#include "SuspiciousReallocUsageCheck.h"
 #include "SuspiciousSemicolonCheck.h"
 #include "SuspiciousStringCompareCheck.h"
 #include "SwappedArgumentsCheck.h"
@@ -173,6 +174,8 @@ public:
         "bugprone-suspicious-memset-usage");
     CheckFactories.registerCheck<SuspiciousMissingCommaCheck>(
         "bugprone-suspicious-missing-comma");
+    CheckFactories.registerCheck<SuspiciousReallocUsageCheck>(
+        "bugprone-suspicious-realloc-usage");
     CheckFactories.registerCheck<SuspiciousSemicolonCheck>(
         "bugprone-suspicious-semicolon");
     CheckFactories.registerCheck<SuspiciousStringCompareCheck>(
