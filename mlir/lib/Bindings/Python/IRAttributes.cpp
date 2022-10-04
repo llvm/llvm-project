@@ -1050,6 +1050,19 @@ public:
         },
         py::arg("offset"), py::arg("strides"), py::arg("context") = py::none(),
         "Gets a strided layout attribute.");
+    c.def_static(
+        "get_fully_dynamic",
+        [](int64_t rank, DefaultingPyMlirContext ctx) {
+          auto dynamic = mlirShapedTypeGetDynamicStrideOrOffset();
+          std::vector<int64_t> strides(rank);
+          std::fill(strides.begin(), strides.end(), dynamic);
+          MlirAttribute attr = mlirStridedLayoutAttrGet(
+              ctx->get(), dynamic, strides.size(), strides.data());
+          return PyStridedLayoutAttribute(ctx->getRef(), attr);
+        },
+        py::arg("rank"), py::arg("context") = py::none(),
+        "Gets a strided layout attribute with dynamic offset and strides of a "
+        "given rank.");
     c.def_property_readonly(
         "offset",
         [](PyStridedLayoutAttribute &self) {
