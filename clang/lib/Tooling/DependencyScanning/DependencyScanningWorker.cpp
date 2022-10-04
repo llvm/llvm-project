@@ -660,9 +660,8 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
   // Ignore result; we're just collecting dependencies.
   //
   // FIXME: will clients other than -cc1scand care?
-  IntrusiveRefCntPtr<FileManager> ActiveFiles = Files;
-  if (!ActiveFiles) // Pass in RealFS via the file manager.
-    ActiveFiles = new FileManager(Invocation->getFileSystemOpts(), RealFS);
+  IntrusiveRefCntPtr<FileManager> ActiveFiles =
+      new FileManager(Invocation->getFileSystemOpts(), RealFS);
   (void)Action.runInvocation(std::move(Invocation), ActiveFiles.get(),
                              PCHContainerOps, &DiagsConsumer);
 }
