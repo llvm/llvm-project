@@ -6,9 +6,9 @@ declare void @llvm.sideeffect()
 
 ; CHECK-LABEL: s2l
 ; CHECK-NOT: load
-define float @s2l(float* %p) {
-    store float 0.0, float* %p
+define float @s2l(ptr %p) {
+    store float 0.0, ptr %p
     call void @llvm.sideeffect()
-    %t = load float, float* %p
+    %t = load float, ptr %p
     ret float %t
 }

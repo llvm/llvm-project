@@ -32,7 +32,7 @@ struct ARM : TargetInfo {
   void relocateOne(uint8_t *loc, const Reloc &, uint64_t va,
                    uint64_t pc) const override;
 
-  void writeStub(uint8_t *buf, const Symbol &) const override;
+  void writeStub(uint8_t *buf, const Symbol &, uint64_t) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
   void writeStubHelperEntry(uint8_t *buf, const Symbol &,
                             uint64_t entryAddr) const override;
@@ -140,7 +140,7 @@ void ARM::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
   }
 }
 
-void ARM::writeStub(uint8_t *buf, const Symbol &sym) const {
+void ARM::writeStub(uint8_t *buf, const Symbol &sym, uint64_t) const {
   fatal("TODO: implement this");
 }
 

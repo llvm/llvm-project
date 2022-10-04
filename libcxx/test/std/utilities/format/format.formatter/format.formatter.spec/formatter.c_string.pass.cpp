@@ -43,7 +43,7 @@ void test(StringT expected, StringViewT fmt, const CharT* a) {
   using FormatCtxT = std::basic_format_context<decltype(out), CharT>;
 
   auto* arg = const_cast<T>(a);
-  std::basic_format_context format_ctx =
+  FormatCtxT format_ctx =
       test_format_context_create<decltype(out), CharT>(out, std::make_format_args<FormatCtxT>(arg));
   formatter.format(arg, format_ctx);
   assert(result == expected);

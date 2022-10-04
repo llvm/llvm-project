@@ -60,26 +60,26 @@ define void @test_guard_adjacent_diff_cond2(i32 %V1, i32 %V2) {
 
 ; Might not be legal to hoist the load above the first guard since the
 ; guard might control dereferenceability
-define void @negative_load(i32 %V1, i32* %P) {
+define void @negative_load(i32 %V1, ptr %P) {
 ; CHECK-LABEL: @negative_load(
 ; CHECK-NEXT:    [[A:%.*]] = icmp slt i32 [[V1:%.*]], 0
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[A]], i32 123) [ "deopt"() ]
-; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[B:%.*]] = icmp slt i32 [[V2]], 0
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[B]], i32 456) [ "deopt"() ]
 ; CHECK-NEXT:    ret void
 ;
   %A = icmp slt i32 %V1, 0
   call void(i1, ...) @llvm.experimental.guard( i1 %A, i32 123 )[ "deopt"() ]
-  %V2 = load i32, i32* %P
+  %V2 = load i32, ptr %P
   %B = icmp slt i32 %V2, 0
   call void(i1, ...) @llvm.experimental.guard( i1 %B, i32 456 )[ "deopt"() ]
   ret void
 }
 
-define void @deref_load(i32 %V1, i32* dereferenceable(4) align 4 %P) nofree nosync {
+define void @deref_load(i32 %V1, ptr dereferenceable(4) align 4 %P) nofree nosync {
 ; CHECK-LABEL: @deref_load(
-; CHECK-NEXT:    [[V2:%.*]] = load i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[V2]], [[V1:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 123) [ "deopt"() ]
@@ -87,7 +87,7 @@ define void @deref_load(i32 %V1, i32* dereferenceable(4) align 4 %P) nofree nosy
 ;
   %A = icmp slt i32 %V1, 0
   call void(i1, ...) @llvm.experimental.guard( i1 %A, i32 123 )[ "deopt"() ]
-  %V2 = load i32, i32* %P
+  %V2 = load i32, ptr %P
   %B = icmp slt i32 %V2, 0
   call void(i1, ...) @llvm.experimental.guard( i1 %B, i32 456 )[ "deopt"() ]
   ret void

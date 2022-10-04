@@ -10,8 +10,8 @@ entry:
 
 unreach:
     ; CHECK: token undef
-    %token_call = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token undef, i32 0, i32 0)
+    %token_call = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token undef, i32 0, i32 0)
     ret i32 1
 }
 
-declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
+declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32)

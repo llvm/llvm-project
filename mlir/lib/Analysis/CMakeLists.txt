@@ -17,7 +17,6 @@ set(LLVM_OPTIONAL_SOURCES
 add_mlir_library(MLIRAnalysis
   AliasAnalysis.cpp
   CallGraph.cpp
-  DataFlowAnalysis.cpp
   DataFlowFramework.cpp
   DataLayoutAnalysis.cpp
   Liveness.cpp

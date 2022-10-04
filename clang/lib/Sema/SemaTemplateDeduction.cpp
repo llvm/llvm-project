@@ -2876,9 +2876,9 @@ CheckDeducedArgumentConstraints(Sema& S, TemplateDeclT *Template,
   TemplateArgumentList DeducedTAL{TemplateArgumentList::OnStack, DeducedArgs};
 
   MLTAL = S.getTemplateInstantiationArgs(
-      Template, /*InnerMost*/ NeedsReplacement ? nullptr : &DeducedTAL,
-      /*RelativeToPrimary*/ true, /*Pattern*/
-      nullptr, /*LookBeyondLambda*/ true);
+      Template, /*InnerMost=*/NeedsReplacement ? nullptr : &DeducedTAL,
+      /*RelativeToPrimary=*/true, /*Pattern=*/
+      nullptr, /*ForConstraintInstantiation=*/true);
 
   // getTemplateInstantiationArgs picks up the non-deduced version of the
   // template args when this is a variable template partial specialization and
@@ -5222,6 +5222,39 @@ FunctionTemplateDecl *Sema::getMoreSpecializedTemplate(
       return FT1;
   }
 
+  // This a speculative fix for CWG1432 (Similar to the fix for CWG1395) that
+  // there is no wording or even resolution for this issue.
+  bool ClangABICompat15 =
+      Context.getLangOpts().getClangABICompat() <= LangOptions::ClangABI::Ver15;
+  if (!ClangABICompat15) {
+    for (int i = 0, e = std::min(NumParams1, NumParams2); i < e; ++i) {
+      QualType T1 = FD1->getParamDecl(i)->getType().getCanonicalType();
+      QualType T2 = FD2->getParamDecl(i)->getType().getCanonicalType();
+      auto *TST1 = dyn_cast<TemplateSpecializationType>(T1);
+      auto *TST2 = dyn_cast<TemplateSpecializationType>(T2);
+      if (!TST1 || !TST2)
+        continue;
+      const TemplateArgument &TA1 = TST1->template_arguments().back();
+      if (TA1.getKind() == TemplateArgument::Pack) {
+        assert(TST1->getNumArgs() == TST2->getNumArgs());
+        const TemplateArgument &TA2 = TST2->template_arguments().back();
+        assert(TA2.getKind() == TemplateArgument::Pack);
+        unsigned PackSize1 = TA1.pack_size();
+        unsigned PackSize2 = TA2.pack_size();
+        bool IsPackExpansion1 =
+            PackSize1 && TA1.pack_elements().back().isPackExpansion();
+        bool IsPackExpansion2 =
+            PackSize2 && TA2.pack_elements().back().isPackExpansion();
+        if (PackSize1 != PackSize2 && IsPackExpansion1 != IsPackExpansion2) {
+          if (PackSize1 > PackSize2 && IsPackExpansion1)
+            return FT2;
+          if (PackSize1 < PackSize2 && IsPackExpansion2)
+            return FT1;
+        }
+      }
+    }
+  }
+
   return JudgeByConstraints();
 }
 
@@ -5457,30 +5490,29 @@ getMoreSpecialized(Sema &S, QualType T1, QualType T2, TemplateLikeDecl *P1,
     return nullptr;
 
   if (Better1 && Better2) {
+    // This a speculative fix for CWG1432 (Similar to the fix for CWG1395) that
+    // there is no wording or even resolution for this issue.
     bool ClangABICompat15 = S.Context.getLangOpts().getClangABICompat() <=
                             LangOptions::ClangABI::Ver15;
     if (!ClangABICompat15) {
-      // Consider this a fix for CWG1432. Similar to the fix for CWG1395.
-      auto *TST1 = T1->castAs<TemplateSpecializationType>();
-      auto *TST2 = T2->castAs<TemplateSpecializationType>();
-      if (TST1->getNumArgs()) {
-        const TemplateArgument &TA1 = TST1->template_arguments().back();
-        if (TA1.getKind() == TemplateArgument::Pack) {
-          assert(TST1->getNumArgs() == TST2->getNumArgs());
-          const TemplateArgument &TA2 = TST2->template_arguments().back();
-          assert(TA2.getKind() == TemplateArgument::Pack);
-          unsigned PackSize1 = TA1.pack_size();
-          unsigned PackSize2 = TA2.pack_size();
-          bool IsPackExpansion1 =
-              PackSize1 && TA1.pack_elements().back().isPackExpansion();
-          bool IsPackExpansion2 =
-              PackSize2 && TA2.pack_elements().back().isPackExpansion();
-          if (PackSize1 != PackSize2 && IsPackExpansion1 != IsPackExpansion2) {
-            if (PackSize1 > PackSize2 && IsPackExpansion1)
-              return GetP2()(P1, P2);
-            if (PackSize1 < PackSize2 && IsPackExpansion2)
-              return P1;
-          }
+      auto *TST1 = cast<TemplateSpecializationType>(T1);
+      auto *TST2 = cast<TemplateSpecializationType>(T2);
+      const TemplateArgument &TA1 = TST1->template_arguments().back();
+      if (TA1.getKind() == TemplateArgument::Pack) {
+        assert(TST1->getNumArgs() == TST2->getNumArgs());
+        const TemplateArgument &TA2 = TST2->template_arguments().back();
+        assert(TA2.getKind() == TemplateArgument::Pack);
+        unsigned PackSize1 = TA1.pack_size();
+        unsigned PackSize2 = TA2.pack_size();
+        bool IsPackExpansion1 =
+            PackSize1 && TA1.pack_elements().back().isPackExpansion();
+        bool IsPackExpansion2 =
+            PackSize2 && TA2.pack_elements().back().isPackExpansion();
+        if (PackSize1 != PackSize2 && IsPackExpansion1 != IsPackExpansion2) {
+          if (PackSize1 > PackSize2 && IsPackExpansion1)
+            return GetP2()(P1, P2);
+          if (PackSize1 < PackSize2 && IsPackExpansion2)
+            return P1;
         }
       }
     }

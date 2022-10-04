@@ -405,19 +405,19 @@ define <2 x i1> @op_ugt_sum_vec_commute2(<2 x i8> %p1, <2 x i8> %p2) {
   ret <2 x i1> %c
 }
 
-define i1 @sum_ugt_op_uses(i8 %p1, i8 %p2, i8* %p3) {
+define i1 @sum_ugt_op_uses(i8 %p1, i8 %p2, ptr %p3) {
 ; CHECK-LABEL: @sum_ugt_op_uses(
 ; CHECK-NEXT:    [[X:%.*]] = sdiv i8 42, [[P1:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = sdiv i8 42, [[P2:%.*]]
 ; CHECK-NEXT:    [[A:%.*]] = add nsw i8 [[X]], [[Y]]
-; CHECK-NEXT:    store i8 [[A]], i8* [[P3:%.*]], align 1
+; CHECK-NEXT:    store i8 [[A]], ptr [[P3:%.*]], align 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[X]], [[A]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %x = sdiv i8 42, %p1
   %y = sdiv i8 42, %p2
   %a = add i8 %x, %y
-  store i8 %a, i8* %p3
+  store i8 %a, ptr %p3
   %c = icmp ugt i8 %x, %a
   ret i1 %c
 }
@@ -452,15 +452,15 @@ define i1 @sum_ult_op_commute2(i8 %p1, i8 %p2) {
   ret i1 %c
 }
 
-define i1 @sum_ult_op_uses(i8 %x, i8 %y, i8* %p) {
+define i1 @sum_ult_op_uses(i8 %x, i8 %y, ptr %p) {
 ; CHECK-LABEL: @sum_ult_op_uses(
 ; CHECK-NEXT:    [[A:%.*]] = add i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    store i8 [[A]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    store i8 [[A]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[A]], [[X]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %a = add i8 %y, %x
-  store i8 %a, i8* %p
+  store i8 %a, ptr %p
   %c = icmp ult i8 %a, %x
   ret i1 %c
 }

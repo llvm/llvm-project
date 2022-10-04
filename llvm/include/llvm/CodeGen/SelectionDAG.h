@@ -862,6 +862,16 @@ public:
     return getNode(ISD::SPLAT_VECTOR, DL, VT, Op);
   }
 
+  /// Returns a node representing a splat of one value into all lanes
+  /// of the provided vector type.  This is a utility which returns
+  /// either a BUILD_VECTOR or SPLAT_VECTOR depending on the
+  /// scalability of the desired vector type.
+  SDValue getSplat(EVT VT, const SDLoc &DL, SDValue Op) {
+    assert(VT.isVector() && "Can't splat to non-vector type");
+    return VT.isScalableVector() ?
+      getSplatVector(VT, DL, Op) : getSplatBuildVector(VT, DL, Op);
+  }
+
   /// Returns a vector of type ResVT whose elements contain the linear sequence
   ///   <0, Step, Step * 2, Step * 3, ...>
   SDValue getStepVector(const SDLoc &DL, EVT ResVT, APInt StepVal);

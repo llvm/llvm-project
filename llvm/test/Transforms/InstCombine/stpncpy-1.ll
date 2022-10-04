@@ -23,6 +23,11 @@ declare void @sink(i8*, i8*)
 @str.5 = private unnamed_addr constant [10 x i8] c"1234\00\00\00\00\00\00", align 1
 
 ; Verify that the generated constants have the expected contents.
+
+; Verify that exactly overlapping stpncpy(D, D, N) calls are transformed
+; to D + strnlen(D, N) or, equivalently, D + (*D != '\0'), when N < 2.
+
+;.
 ; ANY: @[[A4:[a-zA-Z0-9_$"\\.-]+]] = constant [4 x i8] c"1234"
 ; ANY: @[[S4:[a-zA-Z0-9_$"\\.-]+]] = constant [5 x i8] c"1234\00"
 ; ANY: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private constant [4 x i8] c"4\00\00\00"
@@ -35,10 +40,7 @@ declare void @sink(i8*, i8*)
 ; ANY: @[[STR_7:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [10 x i8] c"4\00\00\00\00\00\00\00\00\00", align 1
 ; ANY: @[[STR_8:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [10 x i8] c"1234\00\00\00\00\00\00", align 1
 ; ANY: @[[STR_9:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr constant [10 x i8] c"1234\00\00\00\00\00\00", align 1
-
-; Verify that exactly overlapping stpncpy(D, D, N) calls are transformed
-; to D + strnlen(D, N) or, equivalently, D + (*D != '\0'), when N < 2.
-
+;.
 define void @fold_stpncpy_overlap(i8* %dst, i64 %n) {
 ; ANY-LABEL: @fold_stpncpy_overlap(
 ; ANY-NEXT:    call void @sink(i8* [[DST:%.*]], i8* [[DST]])
@@ -279,13 +281,13 @@ define void @fold_stpncpy_s4(i8* %dst, i64 %n) {
 
 define void @call_stpncpy_xx_n(i8* %dst, i64 %n) {
 ; ANY-LABEL: @call_stpncpy_xx_n(
-; ANY-NEXT:    [[EA1_N:%.*]] = call i8* @stpncpy(i8* [[DST:%.*]], i8* dereferenceable(2) getelementptr inbounds ([4 x i8], [4 x i8]* @a4, i64 0, i64 3), i64 [[N:%.*]])
+; ANY-NEXT:    [[EA1_N:%.*]] = call i8* @stpncpy(i8* [[DST:%.*]], i8* nonnull dereferenceable(2) getelementptr inbounds ([4 x i8], [4 x i8]* @a4, i64 0, i64 3), i64 [[N:%.*]])
 ; ANY-NEXT:    call void @sink(i8* [[DST]], i8* [[EA1_N]])
-; ANY-NEXT:    [[EA4_N:%.*]] = call i8* @stpncpy(i8* [[DST]], i8* dereferenceable(5) getelementptr inbounds ([4 x i8], [4 x i8]* @a4, i64 0, i64 0), i64 [[N]])
+; ANY-NEXT:    [[EA4_N:%.*]] = call i8* @stpncpy(i8* [[DST]], i8* nonnull dereferenceable(5) getelementptr inbounds ([4 x i8], [4 x i8]* @a4, i64 0, i64 0), i64 [[N]])
 ; ANY-NEXT:    call void @sink(i8* [[DST]], i8* [[EA4_N]])
-; ANY-NEXT:    [[ES1_N:%.*]] = call i8* @stpncpy(i8* [[DST]], i8* dereferenceable(2) getelementptr inbounds ([5 x i8], [5 x i8]* @s4, i64 0, i64 3), i64 [[N]])
+; ANY-NEXT:    [[ES1_N:%.*]] = call i8* @stpncpy(i8* [[DST]], i8* nonnull dereferenceable(2) getelementptr inbounds ([5 x i8], [5 x i8]* @s4, i64 0, i64 3), i64 [[N]])
 ; ANY-NEXT:    call void @sink(i8* [[DST]], i8* [[ES1_N]])
-; ANY-NEXT:    [[ES4_N:%.*]] = call i8* @stpncpy(i8* [[DST]], i8* dereferenceable(5) getelementptr inbounds ([5 x i8], [5 x i8]* @s4, i64 0, i64 0), i64 [[N]])
+; ANY-NEXT:    [[ES4_N:%.*]] = call i8* @stpncpy(i8* [[DST]], i8* nonnull dereferenceable(5) getelementptr inbounds ([5 x i8], [5 x i8]* @s4, i64 0, i64 0), i64 [[N]])
 ; ANY-NEXT:    call void @sink(i8* [[DST]], i8* [[ES4_N]])
 ; ANY-NEXT:    ret void
 ;

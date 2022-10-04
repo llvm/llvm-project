@@ -129,6 +129,19 @@ OPTIONS
 
   Demangle symbol names in the output.
 
+.. option:: --debug-file-directory <path>
+
+  Provide a path to a directory with a `.build-id` subdirectory to search for
+  debug information for stripped binaries. Multiple instances of this argument
+  are searched in the order given.
+
+.. option:: --debuginfod, --no-debuginfod
+
+  Whether or not to try debuginfod lookups for debug binaries. Unless specified,
+  debuginfod is only enabled if libcurl was compiled in (``LLVM_ENABLE_CURL``)
+  and at least one server URL was provided by the environment variable
+  ``DEBUGINFOD_URLS``.
+
 .. option:: --debug-vars=<format>
 
   Print the locations (in registers or memory) of source-level variables

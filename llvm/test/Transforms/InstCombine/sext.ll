@@ -90,7 +90,7 @@ define i64 @test7(i32 %x) {
   ret i64 %s
 }
 
-define i32 @test8(i8 %a, i32 %f, i1 %p, i32* %z) {
+define i32 @test8(i8 %a, i32 %f, i1 %p, ptr %z) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[D:%.*]] = lshr i32 [[F:%.*]], 24
 ; CHECK-NEXT:    [[N:%.*]] = select i1 [[P:%.*]], i32 [[D]], i32 0
@@ -204,17 +204,17 @@ define <2 x i32> @test10_vec_undef2(<2 x i32> %i) {
   ret <2 x i32> %D
 }
 
-define void @test11(<2 x i16> %srcA, <2 x i16> %srcB, <2 x i16>* %dst) {
+define void @test11(<2 x i16> %srcA, <2 x i16> %srcB, ptr %dst) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i16> [[SRCB:%.*]], [[SRCA:%.*]]
 ; CHECK-NEXT:    [[SEXT:%.*]] = sext <2 x i1> [[CMP]] to <2 x i16>
-; CHECK-NEXT:    store <2 x i16> [[SEXT]], <2 x i16>* [[DST:%.*]], align 4
+; CHECK-NEXT:    store <2 x i16> [[SEXT]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %cmp = icmp eq <2 x i16> %srcB, %srcA
   %sext = sext <2 x i1> %cmp to <2 x i16>
   %tmask = ashr <2 x i16> %sext, <i16 15, i16 15>
-  store <2 x i16> %tmask, <2 x i16>* %dst
+  store <2 x i16> %tmask, ptr %dst
   ret void
 }
 

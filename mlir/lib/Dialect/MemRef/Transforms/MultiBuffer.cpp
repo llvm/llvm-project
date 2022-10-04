@@ -104,11 +104,11 @@ FailureOr<memref::AllocOp> mlir::memref::multiBuffer(memref::AllocOp allocOp,
   llvm::Optional<OpFoldResult> singleStep = candidateLoop.getSingleStep();
   if (!inductionVar || !lowerBound || !singleStep)
     return failure();
+
+  if (!dom.dominates(allocOp.getOperation(), candidateLoop))
+    return failure();
+
   OpBuilder builder(candidateLoop);
-  Value stepValue =
-      getOrCreateValue(*singleStep, builder, candidateLoop->getLoc());
-  Value lowerBoundValue =
-      getOrCreateValue(*lowerBound, builder, candidateLoop->getLoc());
   SmallVector<int64_t, 4> newShape(1, multiplier);
   ArrayRef<int64_t> oldShape = allocOp.getType().getShape();
   newShape.append(oldShape.begin(), oldShape.end());
@@ -117,15 +117,28 @@ FailureOr<memref::AllocOp> mlir::memref::multiBuffer(memref::AllocOp allocOp,
                                    allocOp.getType().getMemorySpace());
   builder.setInsertionPoint(allocOp);
   Location loc = allocOp->getLoc();
-  auto newAlloc = builder.create<memref::AllocOp>(loc, newMemref);
+  auto newAlloc = builder.create<memref::AllocOp>(loc, newMemref, ValueRange{},
+                                                  allocOp->getAttrs());
   builder.setInsertionPoint(&candidateLoop.getLoopBody().front(),
                             candidateLoop.getLoopBody().front().begin());
+
+  SmallVector<Value> operands = {*inductionVar};
   AffineExpr induc = getAffineDimExpr(0, allocOp.getContext());
-  AffineExpr init = getAffineDimExpr(1, allocOp.getContext());
-  AffineExpr step = getAffineDimExpr(2, allocOp.getContext());
+  unsigned dimCount = 1;
+  auto getAffineExpr = [&](OpFoldResult e) -> AffineExpr {
+    if (Optional<int64_t> constValue = getConstantIntValue(e)) {
+      return getAffineConstantExpr(*constValue, allocOp.getContext());
+    } else {
+      auto value = getOrCreateValue(e, builder, candidateLoop->getLoc());
+      operands.push_back(value);
+      return getAffineDimExpr(dimCount++, allocOp.getContext());
+    }
+  };
+  auto init = getAffineExpr(*lowerBound);
+  auto step = getAffineExpr(*singleStep);
+
   AffineExpr expr = ((induc - init).floorDiv(step)) % multiplier;
-  auto map = AffineMap::get(3, 0, expr);
-  std::array<Value, 3> operands = {*inductionVar, lowerBoundValue, stepValue};
+  auto map = AffineMap::get(dimCount, 0, expr);
   Value bufferIndex = builder.create<AffineApplyOp>(loc, map, operands);
   SmallVector<OpFoldResult> offsets, sizes, strides;
   offsets.push_back(bufferIndex);

@@ -61,8 +61,8 @@ createConvertLinalgToParallelLoopsPass();
 std::unique_ptr<OperationPass<func::FuncOp>>
 createConvertLinalgToAffineLoopsPass();
 
-/// Create a pass that rewrites init_tensor to alloc_tensor.
-std::unique_ptr<Pass> createLinalgInitTensorToAllocTensorPass();
+/// Create a pass that rewrites tensor.empty to bufferization.alloc_tensor.
+std::unique_ptr<Pass> createEmptyTensorToAllocTensorPass();
 
 /// Create a pass to convert Linalg operations which work on tensors to use
 /// buffers instead.

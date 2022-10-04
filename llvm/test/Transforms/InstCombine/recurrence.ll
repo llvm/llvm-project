@@ -59,13 +59,13 @@ loop:                                             ; preds = %loop, %entry
   br label %loop
 }
 
-define i64 @test_or4(i64 %a, i64* %p) {
+define i64 @test_or4(i64 %a, ptr %p) {
 ; CHECK-LABEL: @test_or4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[A:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP:%.*]] = load volatile i64, i64* [[P:%.*]], align 4
+; CHECK-NEXT:    [[STEP:%.*]] = load volatile i64, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = or i64 [[IV]], [[STEP]]
 ; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT]])
 ; CHECK-NEXT:    br label [[LOOP]]
@@ -75,7 +75,7 @@ entry:
 
 loop:                                             ; preds = %loop, %entry
   %iv = phi i64 [ %a, %entry ], [ %iv.next, %loop ]
-  %step = load volatile i64, i64* %p
+  %step = load volatile i64, ptr %p
   %iv.next = or i64 %iv, %step
   tail call void @use(i64 %iv.next)
   br label %loop
@@ -140,13 +140,13 @@ loop:                                             ; preds = %loop, %entry
 }
 
 
-define i64 @test_and4(i64 %a, i64* %p) {
+define i64 @test_and4(i64 %a, ptr %p) {
 ; CHECK-LABEL: @test_and4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[A:%.*]], [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[STEP:%.*]] = load volatile i64, i64* [[P:%.*]], align 4
+; CHECK-NEXT:    [[STEP:%.*]] = load volatile i64, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = and i64 [[IV]], [[STEP]]
 ; CHECK-NEXT:    tail call void @use(i64 [[IV_NEXT]])
 ; CHECK-NEXT:    br label [[LOOP]]
@@ -156,7 +156,7 @@ entry:
 
 loop:                                             ; preds = %loop, %entry
   %iv = phi i64 [ %a, %entry ], [ %iv.next, %loop ]
-  %step = load volatile i64, i64* %p
+  %step = load volatile i64, ptr %p
   %iv.next = and i64 %iv, %step
   tail call void @use(i64 %iv.next)
   br label %loop

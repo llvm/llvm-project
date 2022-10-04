@@ -84,10 +84,9 @@ define i32 @load_2xi16_combine(i16 addrspace(1)* %p) #0 {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    global_load_dword v0, v[0:1], off
-; GCN-NEXT:    v_mov_b32_e32 v1, 0xffff
 ; GCN-NEXT:    s_mov_b32 s4, 0xffff
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_bfi_b32 v1, v1, 0, v0
+; GCN-NEXT:    v_and_b32_e32 v1, 0xffff0000, v0
 ; GCN-NEXT:    v_and_or_b32 v0, v0, s4, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %gep.p = getelementptr i16, i16 addrspace(1)* %p, i32 1

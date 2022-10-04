@@ -17,14 +17,13 @@ transform.test_consume_operand_if_matches_param_or_fail %0[21]
 
 // -----
 
-// expected-error @below {{operation tracked by two handles}}
-%0 = transform.test_produce_param_or_forward_operand 42
-// expected-note @below {{handle}}
-%1 = transform.test_produce_param_or_forward_operand from %0
-// expected-note @below {{handle}}
-%2 = transform.test_produce_param_or_forward_operand from %0
-transform.test_consume_operand_if_matches_param_or_fail %1[42]
-transform.test_consume_operand_if_matches_param_or_fail %2[42]
+// It is okay to have multiple handles to the same payload op as long
+// as only one of them is consumed. The expensive checks mode is necessary
+// to detect double-consumption.
+%0 = transform.test_produce_param_or_forward_operand 42 { foo = "bar" }
+%1 = transform.test_copy_payload %0
+// expected-remark @below {{succeeded}}
+transform.test_consume_operand_if_matches_param_or_fail %0[42]
 
 // -----
 

@@ -152,6 +152,15 @@ void Decl::setInvalidDecl(bool Invalid) {
   }
 }
 
+bool DeclContext::hasValidDeclKind() const {
+  switch (getDeclKind()) {
+#define DECL(DERIVED, BASE) case Decl::DERIVED: return true;
+#define ABSTRACT_DECL(DECL)
+#include "clang/AST/DeclNodes.inc"
+  }
+  return false;
+}
+
 const char *DeclContext::getDeclKindName() const {
   switch (getDeclKind()) {
 #define DECL(DERIVED, BASE) case Decl::DERIVED: return #DERIVED;
@@ -395,6 +404,11 @@ bool Decl::isInAnonymousNamespace() const {
 bool Decl::isInStdNamespace() const {
   const DeclContext *DC = getDeclContext();
   return DC && DC->isStdNamespace();
+}
+
+bool Decl::isFileContextDecl() const {
+  const auto *DC = dyn_cast<DeclContext>(this);
+  return DC && DC->isFileContext();
 }
 
 TranslationUnitDecl *Decl::getTranslationUnitDecl() {

@@ -9,14 +9,22 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos -o %t/foo.o %t/foo.s
 # RUN: %lld -lSystem -flat_namespace -o %t/foo %t/foo.o
+# RUN: %lld -lSystem -flat_namespace -fixup_chains -o %t/chained %t/foo.o
 # RUN: %lld -lSystem -dylib -flat_namespace -o %t/foo.dylib %t/foo.o
+# RUN: %lld -lSystem -dylib -flat_namespace -fixup_chains -o %t/chained.dylib %t/foo.o
 # RUN: %lld -lSystem -bundle -flat_namespace -o %t/foo.bundle %t/foo.o
+# RUN: %lld -lSystem -bundle -flat_namespace -fixup_chains -o %t/chained.bundle %t/foo.o
 # RUN: llvm-objdump --macho --syms --rebase --bind --lazy-bind --weak-bind %t/foo | \
 # RUN:   FileCheck %s --check-prefixes=SYMS,EXEC --implicit-check-not=_private_extern
-# RUN: llvm-objdump --macho --syms --rebase --bind --lazy-bind --weak-bind %t/foo.dylib | \
-# RUN:   FileCheck %s --check-prefixes=SYMS,DYLIB --implicit-check-not=_private_extern
-# RUN: llvm-objdump --macho --syms --rebase --bind --lazy-bind --weak-bind %t/foo.bundle | \
-# RUN:   FileCheck %s --check-prefixes=SYMS,DYLIB --implicit-check-not=_private_extern
+# RUN: llvm-objdump --macho --syms %t/chained >> %t/chained.objdump
+# RUN: llvm-objdump --macho --dyld-info %t/chained >> %t/chained.objdump
+# RUN: FileCheck %s --check-prefixes=SYMS,CHAINED-EXEC < %t/chained.objdump
+# RUN: llvm-objdump --macho --syms %t/chained.dylib >> %t/dylib.objdump
+# RUN: llvm-objdump --macho --dyld-info %t/chained.dylib >> %t/dylib.objdump
+# RUN: FileCheck %s --check-prefixes=SYMS,CHAINED-DYLIB < %t/dylib.objdump
+# RUN: llvm-objdump --macho --syms %t/chained.bundle >> %t/bundle.objdump
+# RUN: llvm-objdump --macho --dyld-info %t/chained.bundle >> %t/bundle.objdump
+# RUN: FileCheck %s --check-prefixes=SYMS,CHAINED-DYLIB < %t/bundle.objdump
 
 # SYMS: SYMBOL TABLE:
 # SYMS-DAG: [[#%x, EXTERN_REF:]] l     O __DATA,__data _extern_ref
@@ -44,6 +52,14 @@
 # EXEC-NEXT:  __DATA   __data           0x[[#%.8X, WEAK_REF]]  pointer       0   _weak_extern
 # EXEC-EMPTY:
 
+# CHAINED-EXEC:      dyld information:
+# CHAINED-EXEC-NEXT: segment      section  address               pointer type   addend dylib  symbol/vm address
+# CHAINED-EXEC-DAG:  __DATA_CONST __got    {{.*}}                {{.*}}  bind   0x0    weak   _weak_extern
+# CHAINED-EXEC-DAG: __DATA       __data    0x[[#%x, EXTERN_REF]] {{.*}}  rebase               {{.*}}
+# CHAINED-EXEC-DAG: __DATA       __data    0x[[#%x, WEAK_REF]]   {{.*}}  bind   0x0    weak   _weak_extern
+# CHAINED-EXEC-DAG: __DATA       __data    0x[[#%x, LOCAL_REF]]  {{.*}}  rebase               {{.*}}
+# CHAINED-EXEC-EMPTY:
+
 # DYLIB:       Rebase table:
 # DYLIB-NEXT:  segment      section          address                  type
 # DYLIB-DAG:   __DATA       __la_symbol_ptr  0x[[#%X, WEAK_LAZY:]]    pointer
@@ -68,6 +84,16 @@
 # DYLIB-NEXT:  __DATA   __la_symbol_ptr    0x[[#%.8X, WEAK_LAZY]]   pointer      0   _weak_extern
 # DYLIB-NEXT:  __DATA   __data             0x[[#%.8X, WEAK_REF]]    pointer      0   _weak_extern
 # DYLIB-EMPTY:
+
+# CHAINED-DYLIB: dyld information:
+# CHAINED-DYLIB-NEXT: segment      section      address               pointer type  addend dylib           symbol/vm address
+# CHAINED-DYLIB-DAG: __DATA_CONST __got         {{.*}}                {{.*}}  bind  0x0    weak            _weak_extern
+# CHAINED-DYLIB-DAG: __DATA_CONST __got         {{.*}}                {{.*}}  bind  0x0    flat-namespace  _extern
+# CHAINED-DYLIB-DAG: __DATA       __data        0x[[#%x, EXTERN_REF]] {{.*}}  bind  0x0    flat-namespace  _extern
+# CHAINED-DYLIB-DAG: __DATA       __data        0x[[#%x, WEAK_REF]]   {{.*}}  bind  0x0    weak            _weak_extern
+# CHAINED-DYLIB-DAG: __DATA       __data        0x[[#%x, LOCAL_REF]]  {{.*}}  rebase                       {{.*}}
+# CHAINED-DYLIB-DAG: __DATA       __thread_ptrs 0x[[#%x, TLV_REF]]    {{.*}}  bind  0x0    flat-namespace  _tlv
+# CHAINED-DYLIB-EMPTY:
 
 #--- foo.s
 

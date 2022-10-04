@@ -320,7 +320,7 @@ mlir::Value
 fir::factory::createUnallocatedBox(fir::FirOpBuilder &builder,
                                    mlir::Location loc, mlir::Type boxType,
                                    mlir::ValueRange nonDeferredParams) {
-  auto baseAddrType = boxType.dyn_cast<fir::BoxType>().getEleTy();
+  auto baseAddrType = boxType.dyn_cast<fir::BaseBoxType>().getEleTy();
   if (!fir::isa_ref_type(baseAddrType))
     baseAddrType = builder.getRefType(baseAddrType);
   auto type = fir::unwrapRefType(baseAddrType);

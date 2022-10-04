@@ -14,7 +14,6 @@ define i32 @exchange_and_cmp(i32* %mem) nounwind {
   %tmppair = cmpxchg i32* %mem, i32 0, i32 1 monotonic monotonic
   %tmp = extractvalue { i32, i1 } %tmppair, 0
 ; CHECK: stwcx.
-; CHECK: stwcx.
   ret i32 %tmp
 }
 

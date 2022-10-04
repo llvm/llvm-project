@@ -13,6 +13,7 @@ import re
 _warningFlags = [
   '-Werror',
   '-Wall',
+  '-Wctad-maybe-unsupported',
   '-Wextra',
   '-Wshadow',
   '-Wundef',

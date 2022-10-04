@@ -111,6 +111,16 @@ static uint32_t cpuSubtype() {
   return subtype;
 }
 
+static bool hasWeakBinding() {
+  return config->emitChainedFixups ? in.chainedFixups->hasWeakBinding()
+                                   : in.weakBinding->hasEntry();
+}
+
+static bool hasNonWeakDefinition() {
+  return config->emitChainedFixups ? in.chainedFixups->hasNonWeakDefinition()
+                                   : in.weakBinding->hasNonWeakDefinition();
+}
+
 void MachHeaderSection::writeTo(uint8_t *buf) const {
   auto *hdr = reinterpret_cast<mach_header *>(buf);
   hdr->magic = target->magic;
@@ -136,10 +146,10 @@ void MachHeaderSection::writeTo(uint8_t *buf) const {
   if (config->outputType == MH_DYLIB && config->applicationExtension)
     hdr->flags |= MH_APP_EXTENSION_SAFE;
 
-  if (in.exports->hasWeakSymbol || in.weakBinding->hasNonWeakDefinition())
+  if (in.exports->hasWeakSymbol || hasNonWeakDefinition())
     hdr->flags |= MH_WEAK_DEFINES;
 
-  if (in.exports->hasWeakSymbol || in.weakBinding->hasEntry())
+  if (in.exports->hasWeakSymbol || hasWeakBinding())
     hdr->flags |= MH_BINDS_TO_WEAK;
 
   for (const OutputSegment *seg : outputSegments) {
@@ -304,6 +314,16 @@ NonLazyPointerSectionBase::NonLazyPointerSectionBase(const char *segname,
 void macho::addNonLazyBindingEntries(const Symbol *sym,
                                      const InputSection *isec, uint64_t offset,
                                      int64_t addend) {
+  if (config->emitChainedFixups) {
+    if (needsBinding(sym))
+      in.chainedFixups->addBinding(sym, isec, offset, addend);
+    else if (isa<Defined>(sym))
+      in.chainedFixups->addRebase(isec, offset);
+    else
+      llvm_unreachable("cannot bind to an undefined symbol");
+    return;
+  }
+
   if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
     in.binding->addEntry(dysym, isec, offset, addend);
     if (dysym->isWeakDef())
@@ -330,10 +350,52 @@ void NonLazyPointerSectionBase::addEntry(Symbol *sym) {
   }
 }
 
+void macho::writeChainedRebase(uint8_t *buf, uint64_t targetVA) {
+  assert(config->emitChainedFixups);
+  assert(target->wordSize == 8 && "Only 64-bit platforms are supported");
+  auto *rebase = reinterpret_cast<dyld_chained_ptr_64_rebase *>(buf);
+  rebase->target = targetVA & 0xf'ffff'ffff;
+  rebase->high8 = (targetVA >> 56);
+  rebase->reserved = 0;
+  rebase->next = 0;
+  rebase->bind = 0;
+
+  // The fixup format places a 64 GiB limit on the output's size.
+  // Should we handle this gracefully?
+  uint64_t encodedVA = rebase->target | ((uint64_t)rebase->high8 << 56);
+  if (encodedVA != targetVA)
+    error("rebase target address 0x" + Twine::utohexstr(targetVA) +
+          " does not fit into chained fixup. Re-link with -no_fixup_chains");
+}
+
+static void writeChainedBind(uint8_t *buf, const Symbol *sym, int64_t addend) {
+  assert(config->emitChainedFixups);
+  assert(target->wordSize == 8 && "Only 64-bit platforms are supported");
+  auto *bind = reinterpret_cast<dyld_chained_ptr_64_bind *>(buf);
+  auto [ordinal, inlineAddend] = in.chainedFixups->getBinding(sym, addend);
+  bind->ordinal = ordinal;
+  bind->addend = inlineAddend;
+  bind->reserved = 0;
+  bind->next = 0;
+  bind->bind = 1;
+}
+
+void macho::writeChainedFixup(uint8_t *buf, const Symbol *sym, int64_t addend) {
+  if (needsBinding(sym))
+    writeChainedBind(buf, sym, addend);
+  else
+    writeChainedRebase(buf, sym->getVA() + addend);
+}
+
 void NonLazyPointerSectionBase::writeTo(uint8_t *buf) const {
-  for (size_t i = 0, n = entries.size(); i < n; ++i)
-    if (auto *defined = dyn_cast<Defined>(entries[i]))
-      write64le(&buf[i * target->wordSize], defined->getVA());
+  if (config->emitChainedFixups) {
+    for (size_t i = 0, n = entries.size(); i < n; ++i)
+      writeChainedFixup(&buf[i * target->wordSize], entries[i], 0);
+  } else {
+    for (size_t i = 0, n = entries.size(); i < n; ++i)
+      if (auto *defined = dyn_cast<Defined>(entries[i]))
+        write64le(&buf[i * target->wordSize], defined->getVA());
+  }
 }
 
 GotSection::GotSection()
@@ -652,7 +714,9 @@ uint64_t StubsSection::getSize() const {
 void StubsSection::writeTo(uint8_t *buf) const {
   size_t off = 0;
   for (const Symbol *sym : entries) {
-    target->writeStub(buf + off, *sym);
+    uint64_t pointerVA =
+        config->emitChainedFixups ? sym->getGotVA() : sym->getLazyPtrVA();
+    target->writeStub(buf + off, *sym, pointerVA);
     off += target->stubSize;
   }
 }
@@ -660,6 +724,7 @@ void StubsSection::writeTo(uint8_t *buf) const {
 void StubsSection::finalize() { isFinal = true; }
 
 static void addBindingsForStub(Symbol *sym) {
+  assert(!config->emitChainedFixups);
   if (auto *dysym = dyn_cast<DylibSymbol>(sym)) {
     if (sym->isWeakDef()) {
       in.binding->addEntry(dysym, in.lazyPointers->isec,
@@ -689,7 +754,11 @@ void StubsSection::addEntry(Symbol *sym) {
   bool inserted = entries.insert(sym);
   if (inserted) {
     sym->stubsIndex = entries.size() - 1;
-    addBindingsForStub(sym);
+
+    if (config->emitChainedFixups)
+      in.got->addEntry(sym);
+    else
+      addBindingsForStub(sym);
   }
 }
 
@@ -864,6 +933,7 @@ void LazyBindingSection::writeTo(uint8_t *buf) const {
 }
 
 void LazyBindingSection::addEntry(Symbol *sym) {
+  assert(!config->emitChainedFixups && "Chained fixups always bind eagerly");
   if (entries.insert(sym)) {
     sym->stubsHelperIndex = entries.size() - 1;
     in.rebase->addEntry(in.lazyPointers->isec,
@@ -1188,8 +1258,8 @@ void SymtabSection::finalizeContents() {
 
   // __dyld_private is a local symbol too. It's linker-created and doesn't
   // exist in any object file.
-  if (Defined *dyldPrivate = in.stubHelper->dyldPrivate)
-    localSymbolsHandler(dyldPrivate);
+  if (in.stubHelper && in.stubHelper->dyldPrivate)
+    localSymbolsHandler(in.stubHelper->dyldPrivate);
 
   for (Symbol *sym : symtab->getSymbols()) {
     if (!sym->isLive())
@@ -1311,8 +1381,12 @@ IndirectSymtabSection::IndirectSymtabSection()
                       section_names::indirectSymbolTable) {}
 
 uint32_t IndirectSymtabSection::getNumSymbols() const {
-  return in.got->getEntries().size() + in.tlvPointers->getEntries().size() +
-         2 * in.stubs->getEntries().size();
+  uint32_t size = in.got->getEntries().size() +
+                  in.tlvPointers->getEntries().size() +
+                  in.stubs->getEntries().size();
+  if (!config->emitChainedFixups)
+    size += in.stubs->getEntries().size();
+  return size;
 }
 
 bool IndirectSymtabSection::isNeeded() const {
@@ -1327,8 +1401,10 @@ void IndirectSymtabSection::finalizeContents() {
   in.tlvPointers->reserved1 = off;
   off += in.tlvPointers->getEntries().size();
   in.stubs->reserved1 = off;
-  off += in.stubs->getEntries().size();
-  in.lazyPointers->reserved1 = off;
+  if (in.lazyPointers) {
+    off += in.stubs->getEntries().size();
+    in.lazyPointers->reserved1 = off;
+  }
 }
 
 static uint32_t indirectValue(const Symbol *sym) {
@@ -1354,14 +1430,17 @@ void IndirectSymtabSection::writeTo(uint8_t *buf) const {
     write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
     ++off;
   }
-  // There is a 1:1 correspondence between stubs and LazyPointerSection
-  // entries. But giving __stubs and __la_symbol_ptr the same reserved1
-  // (the offset into the indirect symbol table) so that they both refer
-  // to the same range of offsets confuses `strip`, so write the stubs
-  // symbol table offsets a second time.
-  for (const Symbol *sym : in.stubs->getEntries()) {
-    write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
-    ++off;
+
+  if (in.lazyPointers) {
+    // There is a 1:1 correspondence between stubs and LazyPointerSection
+    // entries. But giving __stubs and __la_symbol_ptr the same reserved1
+    // (the offset into the indirect symbol table) so that they both refer
+    // to the same range of offsets confuses `strip`, so write the stubs
+    // symbol table offsets a second time.
+    for (const Symbol *sym : in.stubs->getEntries()) {
+      write32le(buf + off * sizeof(uint32_t), indirectValue(sym));
+      ++off;
+    }
   }
 }
 
@@ -1930,6 +2009,247 @@ void macho::createSyntheticSymbols() {
   // segments, but in practice ld64 seems to set it to point to the header,
   // so that's what's implemented here.
   addHeaderSymbol("___dso_handle");
+}
+
+ChainedFixupsSection::ChainedFixupsSection()
+    : LinkEditSection(segment_names::linkEdit, section_names::chainFixups) {}
+
+bool ChainedFixupsSection::isNeeded() const {
+  assert(config->emitChainedFixups);
+  // dyld always expects LC_DYLD_CHAINED_FIXUPS to point to a valid
+  // dyld_chained_fixups_header, so we create this section even if there aren't
+  // any fixups.
+  return true;
+}
+
+static bool needsWeakBind(const Symbol &sym) {
+  if (auto *dysym = dyn_cast<DylibSymbol>(&sym))
+    return dysym->isWeakDef();
+  if (auto *defined = dyn_cast<Defined>(&sym))
+    return defined->isExternalWeakDef();
+  return false;
+}
+
+void ChainedFixupsSection::addBinding(const Symbol *sym,
+                                      const InputSection *isec, uint64_t offset,
+                                      int64_t addend) {
+  locations.emplace_back(isec, offset);
+  int64_t outlineAddend = (addend < 0 || addend > 0xFF) ? addend : 0;
+  auto [it, inserted] = bindings.insert(
+      {{sym, outlineAddend}, static_cast<uint32_t>(bindings.size())});
+
+  if (inserted) {
+    symtabSize += sym->getName().size() + 1;
+    hasWeakBind = hasWeakBind || needsWeakBind(*sym);
+    if (!isInt<23>(outlineAddend))
+      needsLargeAddend = true;
+    else if (outlineAddend != 0)
+      needsAddend = true;
+  }
+}
+
+std::pair<uint32_t, uint8_t>
+ChainedFixupsSection::getBinding(const Symbol *sym, int64_t addend) const {
+  int64_t outlineAddend = (addend < 0 || addend > 0xFF) ? addend : 0;
+  auto it = bindings.find({sym, outlineAddend});
+  assert(it != bindings.end() && "binding not found in the imports table");
+  if (outlineAddend == 0)
+    return {it->second, addend};
+  return {it->second, 0};
+}
+
+static size_t writeImport(uint8_t *buf, int format, uint32_t libOrdinal,
+                          bool weakRef, uint32_t nameOffset, int64_t addend) {
+  switch (format) {
+  case DYLD_CHAINED_IMPORT: {
+    auto *import = reinterpret_cast<dyld_chained_import *>(buf);
+    import->lib_ordinal = libOrdinal;
+    import->weak_import = weakRef;
+    import->name_offset = nameOffset;
+    return sizeof(dyld_chained_import);
+  }
+  case DYLD_CHAINED_IMPORT_ADDEND: {
+    auto *import = reinterpret_cast<dyld_chained_import_addend *>(buf);
+    import->lib_ordinal = libOrdinal;
+    import->weak_import = weakRef;
+    import->name_offset = nameOffset;
+    import->addend = addend;
+    return sizeof(dyld_chained_import_addend);
+  }
+  case DYLD_CHAINED_IMPORT_ADDEND64: {
+    auto *import = reinterpret_cast<dyld_chained_import_addend64 *>(buf);
+    import->lib_ordinal = libOrdinal;
+    import->weak_import = weakRef;
+    import->name_offset = nameOffset;
+    import->addend = addend;
+    return sizeof(dyld_chained_import_addend64);
+  }
+  default:
+    llvm_unreachable("Unknown import format");
+  }
+}
+
+size_t ChainedFixupsSection::SegmentInfo::getSize() const {
+  assert(pageStarts.size() > 0 && "SegmentInfo for segment with no fixups?");
+  return alignTo<8>(sizeof(dyld_chained_starts_in_segment) +
+                    pageStarts.back().first * sizeof(uint16_t));
+}
+
+size_t ChainedFixupsSection::SegmentInfo::writeTo(uint8_t *buf) const {
+  auto *segInfo = reinterpret_cast<dyld_chained_starts_in_segment *>(buf);
+  segInfo->size = getSize();
+  segInfo->page_size = target->getPageSize();
+  // FIXME: Use DYLD_CHAINED_PTR_64_OFFSET on newer OS versions.
+  segInfo->pointer_format = DYLD_CHAINED_PTR_64;
+  segInfo->segment_offset = oseg->addr - in.header->addr;
+  segInfo->max_valid_pointer = 0; // not used on 64-bit
+  segInfo->page_count = pageStarts.back().first + 1;
+
+  uint16_t *starts = segInfo->page_start;
+  for (size_t i = 0; i < segInfo->page_count; ++i)
+    starts[i] = DYLD_CHAINED_PTR_START_NONE;
+
+  for (auto [pageIdx, startAddr] : pageStarts)
+    starts[pageIdx] = startAddr;
+  return segInfo->size;
+}
+
+static size_t importEntrySize(int format) {
+  switch (format) {
+  case DYLD_CHAINED_IMPORT:
+    return sizeof(dyld_chained_import);
+  case DYLD_CHAINED_IMPORT_ADDEND:
+    return sizeof(dyld_chained_import_addend);
+  case DYLD_CHAINED_IMPORT_ADDEND64:
+    return sizeof(dyld_chained_import_addend64);
+  default:
+    llvm_unreachable("Unknown import format");
+  }
+}
+
+// This is step 3 of the algorithm described in the class comment of
+// ChainedFixupsSection.
+//
+// LC_DYLD_CHAINED_FIXUPS data consists of (in this order):
+// * A dyld_chained_fixups_header
+// * A dyld_chained_starts_in_image
+// * One dyld_chained_starts_in_segment per segment
+// * List of all imports (dyld_chained_import, dyld_chained_import_addend, or
+//   dyld_chained_import_addend64)
+// * Names of imported symbols
+void ChainedFixupsSection::writeTo(uint8_t *buf) const {
+  auto *header = reinterpret_cast<dyld_chained_fixups_header *>(buf);
+  header->fixups_version = 0;
+  header->imports_count = bindings.size();
+  header->imports_format = importFormat;
+  header->symbols_format = 0;
+
+  buf += alignTo<8>(sizeof(*header));
+
+  auto curOffset = [&buf, &header]() -> uint32_t {
+    return buf - reinterpret_cast<uint8_t *>(header);
+  };
+
+  header->starts_offset = curOffset();
+
+  auto *imageInfo = reinterpret_cast<dyld_chained_starts_in_image *>(buf);
+  imageInfo->seg_count = outputSegments.size();
+  uint32_t *segStarts = imageInfo->seg_info_offset;
+
+  // dyld_chained_starts_in_image ends in a flexible array member containing an
+  // uint32_t for each segment. Leave room for it, and fill it via segStarts.
+  buf += alignTo<8>(offsetof(dyld_chained_starts_in_image, seg_info_offset) +
+                    outputSegments.size() * sizeof(uint32_t));
+
+  // Initialize all offsets to 0, which indicates that the segment does not have
+  // fixups. Those that do have them will be filled in below.
+  for (size_t i = 0; i < outputSegments.size(); ++i)
+    segStarts[i] = 0;
+
+  for (const SegmentInfo &seg : fixupSegments) {
+    segStarts[seg.oseg->index] = curOffset() - header->starts_offset;
+    buf += seg.writeTo(buf);
+  }
+
+  // Write imports table.
+  header->imports_offset = curOffset();
+  uint64_t nameOffset = 0;
+  for (auto [import, idx] : bindings) {
+    const Symbol &sym = *import.first;
+    int16_t libOrdinal = needsWeakBind(sym) ? BIND_SPECIAL_DYLIB_WEAK_LOOKUP
+                                            : ordinalForSymbol(sym);
+    buf += writeImport(buf, importFormat, libOrdinal, sym.isWeakRef(),
+                       nameOffset, import.second);
+    nameOffset += sym.getName().size() + 1;
+  }
+
+  // Write imported symbol names.
+  header->symbols_offset = curOffset();
+  for (auto [import, idx] : bindings) {
+    StringRef name = import.first->getName();
+    memcpy(buf, name.data(), name.size());
+    buf += name.size() + 1; // account for null terminator
+  }
+
+  assert(curOffset() == getRawSize());
+}
+
+// This is step 2 of the algorithm described in the class comment of
+// ChainedFixupsSection.
+void ChainedFixupsSection::finalizeContents() {
+  assert(target->wordSize == 8 && "Only 64-bit platforms are supported");
+  assert(config->emitChainedFixups);
+
+  if (!isUInt<32>(symtabSize))
+    error("cannot encode chained fixups: imported symbols table size " +
+          Twine(symtabSize) + " exceeds 4 GiB");
+
+  if (needsLargeAddend || !isUInt<23>(symtabSize))
+    importFormat = DYLD_CHAINED_IMPORT_ADDEND64;
+  else if (needsAddend)
+    importFormat = DYLD_CHAINED_IMPORT_ADDEND;
+  else
+    importFormat = DYLD_CHAINED_IMPORT;
+
+  for (Location &loc : locations)
+    loc.offset =
+        loc.isec->parent->getSegmentOffset() + loc.isec->getOffset(loc.offset);
+
+  llvm::sort(locations, [](const Location &a, const Location &b) {
+    const OutputSegment *segA = a.isec->parent->parent;
+    const OutputSegment *segB = b.isec->parent->parent;
+    if (segA == segB)
+      return a.offset < b.offset;
+    return segA->addr < segB->addr;
+  });
+
+  auto sameSegment = [](const Location &a, const Location &b) {
+    return a.isec->parent->parent == b.isec->parent->parent;
+  };
+
+  const uint64_t pageSize = target->getPageSize();
+  for (size_t i = 0, count = locations.size(); i < count;) {
+    const Location &firstLoc = locations[i];
+    fixupSegments.emplace_back(firstLoc.isec->parent->parent);
+    while (i < count && sameSegment(locations[i], firstLoc)) {
+      uint32_t pageIdx = locations[i].offset / pageSize;
+      fixupSegments.back().pageStarts.emplace_back(
+          pageIdx, locations[i].offset % pageSize);
+      ++i;
+      while (i < count && sameSegment(locations[i], firstLoc) &&
+             locations[i].offset / pageSize == pageIdx)
+        ++i;
+    }
+  }
+
+  // Compute expected encoded size.
+  size = alignTo<8>(sizeof(dyld_chained_fixups_header));
+  size += alignTo<8>(offsetof(dyld_chained_starts_in_image, seg_info_offset) +
+                     outputSegments.size() * sizeof(uint32_t));
+  for (const SegmentInfo &seg : fixupSegments)
+    size += seg.getSize();
+  size += importEntrySize(importFormat) * bindings.size();
+  size += symtabSize;
 }
 
 template SymtabSection *macho::makeSymtabSection<LP64>(StringTableSection &);

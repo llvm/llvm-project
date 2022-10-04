@@ -13,6 +13,7 @@
 #include "flang/Optimizer/CodeGen/CodeGen.h"
 
 #include "CGOps.h"
+#include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -84,6 +85,8 @@ public:
     // If the embox does not include a shape, then do not convert it
     if (auto shapeVal = embox.getShape())
       return rewriteDynamicShape(embox, rewriter, shapeVal);
+    if (embox.getType().isa<fir::ClassType>())
+      TODO(embox.getLoc(), "embox conversion for fir.class type");
     if (auto boxTy = embox.getType().dyn_cast<fir::BoxType>())
       if (auto seqTy = boxTy.getEleTy().dyn_cast<fir::SequenceType>())
         if (!seqTy.hasDynamicExtents())
@@ -274,6 +277,8 @@ public:
     target.addIllegalOp<fir::ArrayCoorOp>();
     target.addIllegalOp<fir::ReboxOp>();
     target.addDynamicallyLegalOp<fir::EmboxOp>([](fir::EmboxOp embox) {
+      if (embox.getType().isa<fir::ClassType>())
+        TODO(embox.getLoc(), "fir.class type CodeGenRewrite");
       return !(embox.getShape() || embox.getType()
                                        .cast<fir::BoxType>()
                                        .getEleTy()

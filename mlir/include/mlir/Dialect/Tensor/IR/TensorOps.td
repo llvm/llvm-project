@@ -137,6 +137,65 @@ def Tensor_DimOp : Tensor_Op<"dim", [NoSideEffect, ShapedDimOpInterface]> {
 }
 
 //===----------------------------------------------------------------------===//
+// EmptyOp
+//===----------------------------------------------------------------------===//
+
+def Tensor_EmptyOp : Tensor_Op<"empty",
+    [NoSideEffect,
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+  let summary = "empty tensor operation";
+
+  let description = [{
+    `tensor.empty` is an operation that defines a tensor of a particular shape.
+    The shape could be dynamic or static. The contents of the tensor are
+    unspecified and the only purpose of the op result is to materialize the
+    specified shape in IR and make it available to other transformations.
+
+    `tensor.empty` is useful in transformations that expect destination style
+    ops. I.e., ops that implement `DestinationStyleOpInterface`. Ops that are
+    not in destination style can be made compatible with such transformations
+    with a `tensor.empty` destination.
+
+    Note: This op can be lowered to a `bufferization.alloc_tensor`, at which
+    point it turns into an explicit buffer allocation.
+  }];
+
+  let arguments = (ins Variadic<Index>:$dynamicSizes);
+
+  let results = (outs AnyRankedTensor:$result);
+
+  let assemblyFormat = "`(`$dynamicSizes`)` attr-dict `:` type($result)";
+
+  let extraClassDeclaration = [{
+    RankedTensorType getType() {
+      return getResult().getType().cast<RankedTensorType>();
+    }
+
+    // Return both static and dynamic sizes as a list of `OpFoldResult`.
+    SmallVector<OpFoldResult> getMixedSizes();
+
+    // Return the Value of the dynamic size of the tensor at dimension `idx`.
+    // Asserts that the shape is dynamic at that `idx`.
+    Value getDynamicSize(unsigned idx);
+  }];
+
+  let builders = [
+    // Build with fully static sizes.
+    OpBuilder<(ins "ArrayRef<int64_t>":$staticShape, "Type":$elementType)>,
+
+    // Build with mixed static/dynamic sizes.
+    OpBuilder<(ins "ArrayRef<int64_t>":$staticShape, "Type":$elementType,
+                   "ValueRange":$dynamicSizes)>,
+
+    // Build with mixed static/dynamic sizes.
+    OpBuilder<(ins "ArrayRef<OpFoldResult>":$sizes, "Type":$elementType)>
+  ];
+
+  let hasCanonicalizer = 1;
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ExtractOp
 //===----------------------------------------------------------------------===//
 

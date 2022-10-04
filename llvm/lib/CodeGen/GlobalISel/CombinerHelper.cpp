@@ -4825,6 +4825,50 @@ bool CombinerHelper::matchAddEToAddO(MachineInstr &MI, BuildFnTy &MatchInfo) {
   return true;
 }
 
+bool CombinerHelper::matchSubAddSameReg(MachineInstr &MI,
+                                        BuildFnTy &MatchInfo) {
+  assert(MI.getOpcode() == TargetOpcode::G_SUB);
+  Register Dst = MI.getOperand(0).getReg();
+  // (x + y) - z -> x (if y == z)
+  // (x + y) - z -> y (if x == z)
+  Register X, Y, Z;
+  if (mi_match(Dst, MRI, m_GSub(m_GAdd(m_Reg(X), m_Reg(Y)), m_Reg(Z)))) {
+    Register ReplaceReg;
+    int64_t CstX, CstY;
+    if (Y == Z || (mi_match(Y, MRI, m_ICstOrSplat(CstY)) &&
+                   mi_match(Z, MRI, m_SpecificICstOrSplat(CstY))))
+      ReplaceReg = X;
+    else if (X == Z || (mi_match(X, MRI, m_ICstOrSplat(CstX)) &&
+                        mi_match(Z, MRI, m_SpecificICstOrSplat(CstX))))
+      ReplaceReg = Y;
+    if (ReplaceReg) {
+      MatchInfo = [=](MachineIRBuilder &B) { B.buildCopy(Dst, ReplaceReg); };
+      return true;
+    }
+  }
+
+  // x - (y + z) -> 0 - y (if x == z)
+  // x - (y + z) -> 0 - z (if x == y)
+  if (mi_match(Dst, MRI, m_GSub(m_Reg(X), m_GAdd(m_Reg(Y), m_Reg(Z))))) {
+    Register ReplaceReg;
+    int64_t CstX;
+    if (X == Z || (mi_match(X, MRI, m_ICstOrSplat(CstX)) &&
+                   mi_match(Z, MRI, m_SpecificICstOrSplat(CstX))))
+      ReplaceReg = Y;
+    else if (X == Y || (mi_match(X, MRI, m_ICstOrSplat(CstX)) &&
+                        mi_match(Y, MRI, m_SpecificICstOrSplat(CstX))))
+      ReplaceReg = Z;
+    if (ReplaceReg) {
+      MatchInfo = [=](MachineIRBuilder &B) {
+        auto Zero = B.buildConstant(MRI.getType(Dst), 0);
+        B.buildSub(Dst, Zero, ReplaceReg);
+      };
+      return true;
+    }
+  }
+  return false;
+}
+
 MachineInstr *CombinerHelper::buildUDivUsingMul(MachineInstr &MI) {
   assert(MI.getOpcode() == TargetOpcode::G_UDIV);
   auto &UDiv = cast<GenericMachineInstr>(MI);
@@ -5941,8 +5985,7 @@ bool CombinerHelper::matchFPSelectToMinMax(Register Dst, Register Cond,
   // And turn it into fminnum/fmaxnum or fmin/fmax based off of the condition.
   LLT DstTy = MRI.getType(Dst);
   // Bail out early on pointers, since we'll never want to fold to a min/max.
-  // TODO: Handle vectors.
-  if (DstTy.isPointer() || DstTy.isVector())
+  if (DstTy.isPointer())
     return false;
   // Match a floating point compare with a less-than/greater-than predicate.
   // TODO: Allow multiple users of the compare if they are all selects.

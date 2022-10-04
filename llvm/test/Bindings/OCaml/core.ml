@@ -41,6 +41,10 @@ let test_contained_types () =
   insist (i32_type = (Array.get (subtypes ar)) 0);
   insist (i8_type = (Array.get (subtypes ar)) 1)
 
+(*===-- Pointer types  ----------------------------------------------------===*)
+let test_pointer_types () =
+  insist (address_space (pointer_type_in_context context 0) = 0);
+  insist (address_space (pointer_type_in_context context 1) = 1)
 
 (*===-- Conversion --------------------------------------------------------===*)
 
@@ -1502,6 +1506,7 @@ let test_writer () =
 
 let _ =
   suite "contained types"  test_contained_types;
+  suite "pointer types"    test_pointer_types;
   suite "conversion"       test_conversion;
   suite "target"           test_target;
   suite "constants"        test_constants;

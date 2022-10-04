@@ -11,7 +11,9 @@ target datalayout = "e-m:o-p:40:64:64:32-i64:64-f80:128-n8:16:32:64-S128"
 ; Check fwrite is generated with arguments of ptr size, not index size
 define internal void @fputs_test_custom_dl() {
 ; CHECK-LABEL: @fputs_test_custom_dl(
-; CHECK-NEXT:    [[TMP1:%.*]] = call %struct._IO_FILE* @fopen(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i32 0, i32 0), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i32 0, i32 0))
+; CHECK-NEXT:    [[CALL:%.*]] = call %struct._IO_FILE* @fopen(i8* nonnull getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i32 0, i32 0), i8* nonnull getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i32 0, i32 0))
+; CHECK-NEXT:    [[TMP1:%.*]] = call i40 @fwrite(i8* nonnull getelementptr inbounds ([4 x i8], [4 x i8]* @.str.2, i32 0, i32 0), i40 3, i40 1, %struct._IO_FILE* [[CALL]])
+; CHECK-NEXT:    ret void
 ;
   %call = call %struct._IO_FILE* @fopen(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0))
   %call1 = call i32 @fputs(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.2, i64 0, i64 0), %struct._IO_FILE* %call)

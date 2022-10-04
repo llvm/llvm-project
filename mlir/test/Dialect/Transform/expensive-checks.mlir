@@ -60,3 +60,42 @@ transform.with_pdl_patterns {
     test_print_remark_at_operand %0, "remark"
   }
 }
+
+
+// -----
+
+// expected-note @below {{ancestor payload op}}
+// expected-note @below {{nested payload op}}
+module {
+
+  transform.sequence failures(propagate) {
+  ^bb0(%0: !pdl.operation):
+    %1 = transform.test_copy_payload %0
+    // expected-note @below {{handle to invalidated ops}}
+    %2 = transform.test_copy_payload %0
+    // expected-note @below {{invalidated by this transform op that consumes its operand #0}}
+    transform.test_consume_operand %1
+    // expected-error @below {{op uses a handle invalidated by a previously executed transform op}}
+    transform.test_consume_operand %2
+  }
+}
+
+// -----
+
+// expected-note @below {{ancestor payload op}}
+// expected-note @below {{nested payload op}}
+module {
+
+  transform.sequence failures(propagate) {
+  ^bb0(%0: !pdl.operation):
+    %1 = transform.test_copy_payload %0
+    // expected-note @below {{handle to invalidated ops}}
+    %2 = transform.test_copy_payload %0
+    // Consuming two handles in the same operation is invalid if they point
+    // to overlapping sets of payload IR ops.
+    //
+    // expected-error @below {{op uses a handle invalidated by a previously executed transform op}}
+    // expected-note @below {{invalidated by this transform op that consumes its operand #0 and invalidates handles}}
+    transform.test_consume_operand %1, %2
+  }
+}

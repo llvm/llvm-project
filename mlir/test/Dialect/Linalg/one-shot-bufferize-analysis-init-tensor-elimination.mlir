@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -eliminate-alloc-tensors -one-shot-bufferize="bufferize-function-boundaries test-analysis-only allow-return-allocs" -split-input-file | FileCheck %s
 
 //===----------------------------------------------------------------------===//
-// InitTensorOp elimination
+// AllocTensorOp elimination
 //===----------------------------------------------------------------------===//
 
 // CHECK-LABEL: func @buffer_forwarding_conflict

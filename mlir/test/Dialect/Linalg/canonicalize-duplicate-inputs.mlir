@@ -131,8 +131,8 @@ func.func @drop_dead_results(%arg0 : tensor<?x?x?xf32>) -> (tensor<?x?x?xf32>, t
 #map0 = affine_map<(d0) -> (d0)>
 #map1 = affine_map<(d0) -> ()>
 func.func @argmax_lowering(%arg0 : tensor<?xf32>) -> tensor<i32> {
-  %init0 = linalg.init_tensor [] : tensor<f32>
-  %init1 = linalg.init_tensor [] : tensor<i32>
+  %init0 = tensor.empty() : tensor<f32>
+  %init1 = tensor.empty() : tensor<i32>
   %0:2 = linalg.generic {
     indexing_maps = [#map0, #map1, #map1],
     iterator_types = ["reduction"]}
@@ -153,8 +153,8 @@ func.func @argmax_lowering(%arg0 : tensor<?xf32>) -> tensor<i32> {
 }
 //      CHECK: func @argmax_lowering(
 // CHECK-SAME:     %[[ARG0:.+]]: tensor<?xf32>
-//  CHECK-DAG:   %[[INIT0:.+]] = linalg.init_tensor [] : tensor<f32>
-//  CHECK-DAG:   %[[INIT1:.+]] = linalg.init_tensor [] : tensor<i32>
+//  CHECK-DAG:   %[[INIT0:.+]] = tensor.empty() : tensor<f32>
+//  CHECK-DAG:   %[[INIT1:.+]] = tensor.empty() : tensor<i32>
 //      CHECK:   %[[GENERIC:.+]]:2 = linalg.generic
 // CHECK-SAME:       outs(%[[INIT0]], %[[INIT1]] :
 //      CHECK:   return %[[GENERIC]]#1
@@ -164,7 +164,7 @@ func.func @argmax_lowering(%arg0 : tensor<?xf32>) -> tensor<i32> {
 // Do not remove operand needed for loop dim.
 func.func @loop_dim_operand(%arg0 : tensor<?xf32>) -> tensor<i32> {
   %cst = arith.constant 0 : i32
-  %init = linalg.init_tensor [] : tensor<i32>
+  %init = tensor.empty() : tensor<i32>
   %fill = linalg.fill ins(%cst : i32) outs(%init : tensor<i32>) -> tensor<i32>
   %0 = linalg.generic {
       indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>],
@@ -188,8 +188,8 @@ func.func @loop_dim_operand(%arg0 : tensor<?xf32>) -> tensor<i32> {
 // Do not remove outs operand needed for loop bound computation.
 func.func @loop_dim_outs_operand(%arg0 : index) -> tensor<i32> {
   %cst = arith.constant 0 : i32
-  %init1 = linalg.init_tensor [%arg0] : tensor<?xi32>
-  %init = linalg.init_tensor [] : tensor<i32>
+  %init1 = tensor.empty(%arg0) : tensor<?xi32>
+  %init = tensor.empty() : tensor<i32>
   %fill = linalg.fill ins(%cst : i32) outs(%init : tensor<i32>) -> tensor<i32>
   %0:2 = linalg.generic {
       indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>],
@@ -205,7 +205,7 @@ func.func @loop_dim_outs_operand(%arg0 : index) -> tensor<i32> {
 }
 //      CHECK: func @loop_dim_outs_operand(
 // CHECK-SAME:     %[[ARG0:.+]]: index
-//      CHECK:   %[[INIT:.+]] = linalg.init_tensor [%[[ARG0]]]
+//      CHECK:   %[[INIT:.+]] = tensor.empty(%[[ARG0]])
 //      CHECK:   linalg.generic
 // CHECK-SAME:       outs(%[[INIT]]
 

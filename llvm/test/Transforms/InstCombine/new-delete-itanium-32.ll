@@ -12,47 +12,47 @@ target datalayout = "p:32:32"
 
 
 ; operator new(size_t = unsigned int)
-declare i8* @_Znwj(%size_t)
+declare ptr @_Znwj(%size_t)
 
 ; operator new[](size_t = unsigned int)
-declare i8* @_Znaj(%size_t)
+declare ptr @_Znaj(%size_t)
 
 ; operator new(size_t = unsigned int, std::align_val_t)
-declare i8* @_ZnwjSt11align_val_t(%size_t, %size_t)
+declare ptr @_ZnwjSt11align_val_t(%size_t, %size_t)
 
 ; operator new[](size_t = unsigned int, std::align_val_t)
-declare i8* @_ZnajSt11align_val_t(%size_t, %size_t)
+declare ptr @_ZnajSt11align_val_t(%size_t, %size_t)
 
 ; operator new(size_t = unsigned int, std::align_val_t, const std::nothrow_t&)
-declare i8* @_ZnwjSt11align_val_tRKSt9nothrow_t(%size_t, %size_t, %nothrow_t*)
+declare ptr @_ZnwjSt11align_val_tRKSt9nothrow_t(%size_t, %size_t, ptr)
 
 ; operator new[](size_t = unsigned int, std::align_val_t, const std::nothrow_t&)
-declare i8* @_ZnajSt11align_val_tRKSt9nothrow_t(%size_t, %size_t, %nothrow_t*)
+declare ptr @_ZnajSt11align_val_tRKSt9nothrow_t(%size_t, %size_t, ptr)
 
 
-; operator delete(void*, size_t = unsigned int)
-declare void @_ZdlPvj(i8*, %size_t)
+; operator delete(ptr, size_t = unsigned int)
+declare void @_ZdlPvj(ptr, %size_t)
 
-; operator delete[](void*, size_t = unsigned int)
-declare void @_ZdaPvj(i8*, %size_t)
+; operator delete[](ptr, size_t = unsigned int)
+declare void @_ZdaPvj(ptr, %size_t)
 
-; operator delete(void*, std::align_val_t)
-declare void @_ZdlPvSt11align_val_t(i8*, %align_val_t)
+; operator delete(ptr, std::align_val_t)
+declare void @_ZdlPvSt11align_val_t(ptr, %align_val_t)
 
-; operator delete[](void*, std::align_val_t)
-declare void @_ZdaPvSt11align_val_t(i8*, %align_val_t)
+; operator delete[](ptr, std::align_val_t)
+declare void @_ZdaPvSt11align_val_t(ptr, %align_val_t)
 
-; operator delete(void*, size_t = unsigned int, std::align_val_t)
-declare void @_ZdlPvjSt11align_val_t(i8*, %size_t, %align_val_t)
+; operator delete(ptr, size_t = unsigned int, std::align_val_t)
+declare void @_ZdlPvjSt11align_val_t(ptr, %size_t, %align_val_t)
 
-; operator delete[](void*, size_t = unsigned int, std::align_val_t)
-declare void @_ZdaPvjSt11align_val_t(i8*, %size_t, %align_val_t)
+; operator delete[](ptr, size_t = unsigned int, std::align_val_t)
+declare void @_ZdaPvjSt11align_val_t(ptr, %size_t, %align_val_t)
 
-; operator delete(void*, std::align_val_t, const std::nothrow_t&)
-declare void @_ZdlPvSt11align_val_tRKSt9nothrow_t(i8*, %align_val_t, %nothrow_t*)
+; operator delete(ptr, std::align_val_t, const std::nothrow_t&)
+declare void @_ZdlPvSt11align_val_tRKSt9nothrow_t(ptr, %align_val_t, ptr)
 
-; operator delete[](void*, std::align_val_t, const std::nothrow_t&)
-declare void @_ZdaPvSt11align_val_tRKSt9nothrow_t(i8*, %align_val_t, %nothrow_t*)
+; operator delete[](ptr, std::align_val_t, const std::nothrow_t&)
+declare void @_ZdaPvSt11align_val_tRKSt9nothrow_t(ptr, %align_val_t, ptr)
 
 declare void @llvm.assume(i1)
 
@@ -65,36 +65,36 @@ define void @elim_new_delete_pairs() {
 ;
   %nt = alloca %nothrow_t
 
-  %nwj = call i8* @_Znwj(%size_t 32)
-  call void @_ZdlPvj(i8* %nwj, %size_t 32)
+  %nwj = call ptr @_Znwj(%size_t 32)
+  call void @_ZdlPvj(ptr %nwj, %size_t 32)
 
-  %naj = call i8* @_Znaj(%size_t 32)
-  call void @_ZdaPvj(i8* %naj, %size_t 32)
+  %naj = call ptr @_Znaj(%size_t 32)
+  call void @_ZdaPvj(ptr %naj, %size_t 32)
 
-  %nwja = call i8* @_ZnwjSt11align_val_t(%size_t 32, %size_t 8)
-  call void @_ZdlPvSt11align_val_t(i8* %nwja, %size_t 8)
+  %nwja = call ptr @_ZnwjSt11align_val_t(%size_t 32, %size_t 8)
+  call void @_ZdlPvSt11align_val_t(ptr %nwja, %size_t 8)
 
-  %naja = call i8* @_ZnajSt11align_val_t(%size_t 32, %size_t 8)
-  call void @_ZdaPvSt11align_val_t(i8* %naja, i32 8)
+  %naja = call ptr @_ZnajSt11align_val_t(%size_t 32, %size_t 8)
+  call void @_ZdaPvSt11align_val_t(ptr %naja, i32 8)
 
-  %nwjat = call i8* @_ZnwjSt11align_val_tRKSt9nothrow_t(%size_t 32, %size_t 8, %nothrow_t* %nt)
-  call void @_ZdlPvSt11align_val_tRKSt9nothrow_t(i8* %nwjat, %size_t 8, %nothrow_t* %nt)
+  %nwjat = call ptr @_ZnwjSt11align_val_tRKSt9nothrow_t(%size_t 32, %size_t 8, ptr %nt)
+  call void @_ZdlPvSt11align_val_tRKSt9nothrow_t(ptr %nwjat, %size_t 8, ptr %nt)
 
-  %najat = call i8* @_ZnajSt11align_val_tRKSt9nothrow_t(%size_t 32, %size_t 8, %nothrow_t* %nt)
-  call void @_ZdaPvSt11align_val_tRKSt9nothrow_t(i8* %najat, i32 8, %nothrow_t* %nt)
+  %najat = call ptr @_ZnajSt11align_val_tRKSt9nothrow_t(%size_t 32, %size_t 8, ptr %nt)
+  call void @_ZdaPvSt11align_val_tRKSt9nothrow_t(ptr %najat, i32 8, ptr %nt)
 
-  %nwja2 = call i8* @_ZnwjSt11align_val_t(%size_t 32, %size_t 8)
-  call void @_ZdlPvjSt11align_val_t(i8* %nwja2, %size_t 32, %size_t 8)
+  %nwja2 = call ptr @_ZnwjSt11align_val_t(%size_t 32, %size_t 8)
+  call void @_ZdlPvjSt11align_val_t(ptr %nwja2, %size_t 32, %size_t 8)
 
-  %naja2 = call i8* @_ZnajSt11align_val_t(%size_t 32, %size_t 8)
-  call void @_ZdaPvjSt11align_val_t(i8* %naja2, %size_t 32, %size_t 8)
+  %naja2 = call ptr @_ZnajSt11align_val_t(%size_t 32, %size_t 8)
+  call void @_ZdaPvjSt11align_val_t(ptr %naja2, %size_t 32, %size_t 8)
 
   ; Check that the alignment assume does not prevent the removal.
-  %nwa3 = call i8* @_ZnajSt11align_val_t(%size_t 32, %size_t 16)
+  %nwa3 = call ptr @_ZnajSt11align_val_t(%size_t 32, %size_t 16)
 
-  call void @llvm.assume(i1 true) [ "align"(i8* %nwa3, i32 16) ]
+  call void @llvm.assume(i1 true) [ "align"(ptr %nwa3, i32 16) ]
 
-  call void @_ZdaPvjSt11align_val_t(i8* %nwa3, %size_t 32, %size_t 16)
+  call void @_ZdaPvjSt11align_val_t(ptr %nwa3, %size_t 32, %size_t 16)
 
   ret void
 }

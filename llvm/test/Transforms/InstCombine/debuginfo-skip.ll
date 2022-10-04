@@ -4,10 +4,10 @@
 define i32 @foo(i32 %j) #0 !dbg !7 {
 entry:
   %j.addr = alloca i32, align 4
-  store i32 %j, i32* %j.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %j.addr, metadata !11, metadata !12), !dbg !13
+  store i32 %j, ptr %j.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %j.addr, metadata !11, metadata !12), !dbg !13
   call void @llvm.dbg.value(metadata i32 10, metadata !16, metadata !12), !dbg !15
-  %0 = load i32, i32* %j.addr, align 4, !dbg !14
+  %0 = load i32, ptr %j.addr, align 4, !dbg !14
   ret i32 %0, !dbg !15
 }
 

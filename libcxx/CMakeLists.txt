@@ -407,6 +407,9 @@ set(LIBCXX_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}/c++/v1" CACHE PATH
 set(LIBCXX_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
     "Path where built libc++ runtime libraries should be installed.")
 
+set(LIBCXX_SHARED_OUTPUT_NAME "c++" CACHE STRING
+    "Output name for the shared libc++ runtime library.")
+
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(LIBCXX_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
   set(LIBCXX_GENERATED_INCLUDE_DIR "${LLVM_BINARY_DIR}/include/c++/v1")
@@ -449,6 +452,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBCXX_LIBRARY_DIR})
 set(LIBCXX_COMPILE_FLAGS "")
 set(LIBCXX_LINK_FLAGS "")
 set(LIBCXX_LIBRARIES "")
+set(LIBCXX_ADDITIONAL_COMPILE_FLAGS "" CACHE STRING
+    "Additional Compile only flags which can be provided in cache")
+set(LIBCXX_ADDITIONAL_LIBRARIES "" CACHE STRING
+    "Additional libraries libc++ is linked to which can be provided in cache")
 
 # Include macros for adding and removing libc++ flags.
 include(HandleLibcxxFlags)
@@ -457,9 +464,6 @@ include(HandleLibcxxFlags)
 # These flags get added to CMAKE_CXX_FLAGS and CMAKE_C_FLAGS so that
 # 'config-ix' use them during feature checks. It also adds them to both
 # 'LIBCXX_COMPILE_FLAGS' and 'LIBCXX_LINK_FLAGS'
-if(ZOS)
-  add_target_flags_if_supported("-fzos-le-char-mode=ebcdic")
-endif()
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   add_target_flags_if_supported("-mdefault-visibility-export-mapping=explicit")
@@ -563,6 +567,7 @@ function(cxx_add_basic_build_flags target)
       target_compile_definitions(${target} PRIVATE -D_LIBCPP_LINK_RT_LIB)
     endif()
   endif()
+  target_compile_options(${target} PUBLIC "${LIBCXX_ADDITIONAL_COMPILE_FLAGS}")
 endfunction()
 
 # Warning flags ===============================================================
@@ -584,7 +589,6 @@ function(cxx_add_warning_flags target)
       -Wno-user-defined-literals
       -Wno-covered-switch-default
       -Wno-suggest-override
-      -Wno-ctad-maybe-unsupported
     )
     if (LIBCXX_TARGETING_CLANG_CL)
       target_add_compile_flags_if_supported(${target} PRIVATE
@@ -800,6 +804,7 @@ function(cxx_link_system_libraries target)
   if (ANDROID AND ANDROID_PLATFORM_LEVEL LESS 21)
     target_link_libraries(${target} PUBLIC android_support)
   endif()
+  target_link_libraries(${target} PUBLIC "${LIBCXX_ADDITIONAL_LIBRARIES}")
 endfunction()
 
 # Windows-related flags =======================================================

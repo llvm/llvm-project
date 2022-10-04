@@ -8,11 +8,11 @@ target triple = "i686-unknown-linux-gnu"
 ; Helper to generate branch conditions.
 declare i1 @cond()
 
-declare i32* @use_and_return(i32*)
+declare ptr @use_and_return(ptr)
 
-declare i8* @llvm.stacksave() #0
+declare ptr @llvm.stacksave() #0
 
-declare void @llvm.stackrestore(i8*) #0
+declare void @llvm.stackrestore(ptr) #0
 
 define void @foo(i32 %x) {
 entry:
@@ -21,16 +21,16 @@ entry:
 
 nonentry:                                         ; preds = %entry
   %argmem = alloca i32, i32 %x, align 4
-  %sp = call i8* @llvm.stacksave()
+  %sp = call ptr @llvm.stacksave()
   %c2 = call i1 @cond()
   br i1 %c2, label %ret, label %sinktarget
 
 sinktarget:                                       ; preds = %nonentry
   ; Arrange for there to be a single use of %argmem by returning it.
-  %p = call i32* @use_and_return(i32* nonnull %argmem)
-  store i32 13, i32* %p, align 4
-  call void @llvm.stackrestore(i8* %sp)
-  %0 = call i32* @use_and_return(i32* %p)
+  %p = call ptr @use_and_return(ptr nonnull %argmem)
+  store i32 13, ptr %p, align 4
+  call void @llvm.stackrestore(ptr %sp)
+  %0 = call ptr @use_and_return(ptr %p)
   br label %ret
 
 ret:                                              ; preds = %sinktarget, %nonentry, %entry
@@ -40,13 +40,13 @@ ret:                                              ; preds = %sinktarget, %nonent
 ; CHECK-LABEL: define void @foo(i32 %x)
 ; CHECK: nonentry:
 ; CHECK:   %argmem = alloca i32, i32 %x
-; CHECK:   %sp = call i8* @llvm.stacksave()
+; CHECK:   %sp = call ptr @llvm.stacksave()
 ; CHECK:   %c2 = call i1 @cond()
 ; CHECK:   br i1 %c2, label %ret, label %sinktarget
 ; CHECK: sinktarget:
-; CHECK:   %p = call i32* @use_and_return(i32* nonnull %argmem)
-; CHECK:   store i32 13, i32* %p
-; CHECK:   call void @llvm.stackrestore(i8* %sp)
-; CHECK:   %0 = call i32* @use_and_return(i32* nonnull %p)
+; CHECK:   %p = call ptr @use_and_return(ptr nonnull %argmem)
+; CHECK:   store i32 13, ptr %p
+; CHECK:   call void @llvm.stackrestore(ptr %sp)
+; CHECK:   %0 = call ptr @use_and_return(ptr nonnull %p)
 
 attributes #0 = { nounwind }

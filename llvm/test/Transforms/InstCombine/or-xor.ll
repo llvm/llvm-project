@@ -106,50 +106,50 @@ define i64 @test5_commuted_x_y(i64 %x, i64 %y) {
 }
 
 
-define i8 @test5_extra_use_not(i8 %x, i8 %y, i8* %dst) {
+define i8 @test5_extra_use_not(i8 %x, i8 %y, ptr %dst) {
 ; CHECK-LABEL: @test5_extra_use_not(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    store i8 [[NOTX]], i8* [[DST:%.*]], align 1
+; CHECK-NEXT:    store i8 [[NOTX]], ptr [[DST:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[Z:%.*]] = xor i8 [[TMP1]], -1
 ; CHECK-NEXT:    ret i8 [[Z]]
 ;
   %xor = xor i8 %x, %y
   %notx = xor i8 %x, -1
-  store i8 %notx, i8* %dst
+  store i8 %notx, ptr %dst
   %z = or i8 %notx, %xor
   ret i8 %z
 }
 
 
-define i65 @test5_extra_use_xor(i65 %x, i65 %y, i65* %dst) {
+define i65 @test5_extra_use_xor(i65 %x, i65 %y, ptr %dst) {
 ; CHECK-LABEL: @test5_extra_use_xor(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i65 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    store i65 [[XOR]], i65* [[DST:%.*]], align 4
+; CHECK-NEXT:    store i65 [[XOR]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i65 [[X]], [[Y]]
 ; CHECK-NEXT:    [[Z:%.*]] = xor i65 [[TMP1]], -1
 ; CHECK-NEXT:    ret i65 [[Z]]
 ;
   %xor = xor i65 %x, %y
-  store i65 %xor, i65* %dst
+  store i65 %xor, ptr %dst
   %notx = xor i65 %x, -1
   %z = or i65 %notx, %xor
   ret i65 %z
 }
 
-define i16 @test5_extra_use_not_xor(i16 %x, i16 %y, i16* %dst_not, i16* %dst_xor) {
+define i16 @test5_extra_use_not_xor(i16 %x, i16 %y, ptr %dst_not, ptr %dst_xor) {
 ; CHECK-LABEL: @test5_extra_use_not_xor(
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i16 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    store i16 [[XOR]], i16* [[DST_XOR:%.*]], align 2
+; CHECK-NEXT:    store i16 [[XOR]], ptr [[DST_XOR:%.*]], align 2
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i16 [[X]], -1
-; CHECK-NEXT:    store i16 [[NOTX]], i16* [[DST_NOT:%.*]], align 2
+; CHECK-NEXT:    store i16 [[NOTX]], ptr [[DST_NOT:%.*]], align 2
 ; CHECK-NEXT:    [[Z:%.*]] = or i16 [[XOR]], [[NOTX]]
 ; CHECK-NEXT:    ret i16 [[Z]]
 ;
   %xor = xor i16 %x, %y
-  store i16 %xor, i16* %dst_xor
+  store i16 %xor, ptr %dst_xor
   %notx = xor i16 %x, -1
-  store i16 %notx, i16* %dst_not
+  store i16 %notx, ptr %dst_not
   %z = or i16 %notx, %xor
   ret i16 %z
 }
@@ -259,29 +259,29 @@ define i32 @test10_commuted(i32 %A, i32 %B) {
   ret i32 %or
 }
 
-define i32 @test10_extrause(i32 %A, i32 %B, i32* %dst) {
+define i32 @test10_extrause(i32 %A, i32 %B, ptr %dst) {
 ; CHECK-LABEL: @test10_extrause(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    store i32 [[NOT]], i32* [[DST:%.*]], align 4
+; CHECK-NEXT:    store i32 [[NOT]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret i32 -1
 ;
   %xor1 = xor i32 %B, %A
   %not = xor i32 %A, -1
-  store i32 %not, i32* %dst
+  store i32 %not, ptr %dst
   %xor2 = xor i32 %not, %B
   %or = or i32 %xor1, %xor2
   ret i32 %or
 }
 
-define i32 @test10_commuted_extrause(i32 %A, i32 %B, i32* %dst) {
+define i32 @test10_commuted_extrause(i32 %A, i32 %B, ptr %dst) {
 ; CHECK-LABEL: @test10_commuted_extrause(
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i32 [[A:%.*]], -1
-; CHECK-NEXT:    store i32 [[NOT]], i32* [[DST:%.*]], align 4
+; CHECK-NEXT:    store i32 [[NOT]], ptr [[DST:%.*]], align 4
 ; CHECK-NEXT:    ret i32 -1
 ;
   %xor1 = xor i32 %B, %A
   %not = xor i32 %A, -1
-  store i32 %not, i32* %dst
+  store i32 %not, ptr %dst
   %xor2 = xor i32 %not, %B
   %or = or i32 %xor2, %xor1
   ret i32 %or
