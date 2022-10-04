@@ -158,19 +158,17 @@ contains
 ! Test assumed type argument types
 ! ------------------------------------------------------------------------------
 
-  ! Follow up patch will add a `fir.assumed_type` attribute to the types in the
-  ! two tests below.
   subroutine assumed_type_dummy(a) bind(c)
     type(*) :: a
   end subroutine assumed_type_dummy
 
   ! CHECK-LABEL: func.func @assumed_type_dummy(
-  ! CHECK-SAME: %{{.*}}: !fir.class<none>
+  ! CHECK-SAME: %{{.*}}: !fir.box<none>
 
   subroutine assumed_type_dummy_array(a) bind(c)
     type(*) :: a(:)
   end subroutine assumed_type_dummy_array
 
   ! CHECK-LABEL: func.func @assumed_type_dummy_array(
-  ! CHECK-SAME: %{{.*}}: !fir.class<!fir.array<?xnone>>
+  ! CHECK-SAME: %{{.*}}: !fir.box<!fir.array<?xnone>>
 end module

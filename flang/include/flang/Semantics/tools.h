@@ -183,6 +183,7 @@ std::optional<parser::Message> WhyNotModifiable(SourceName, const SomeExpr &,
     const Scope &, bool vectorSubscriptIsOk = false);
 const Symbol *IsExternalInPureContext(const Symbol &, const Scope &);
 bool HasCoarray(const parser::Expr &);
+bool IsAssumedType(const Symbol &);
 bool IsPolymorphic(const Symbol &);
 bool IsPolymorphicAllocatable(const Symbol &);
 // Return an error if component symbol is not accessible from scope (7.5.4.8(2))
