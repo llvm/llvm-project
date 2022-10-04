@@ -14276,8 +14276,10 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
       if (FMul.getOpcode() == ISD::FMUL && FMul.hasOneUse()) {
         SDValue C = FMul.getOperand(0);
         SDValue D = FMul.getOperand(1);
-        SDValue CDE = DAG.getNode(PreferredFusedOpcode, SL, VT, C, D, E);
-        DAG.ReplaceAllUsesOfValueWith(FMul, CDE);
+
+        DAG.MorphNodeTo(FMul.getNode(), PreferredFusedOpcode, FMul->getVTList(),
+                        {C, D, E});
+
         return FMA;
       }
 
