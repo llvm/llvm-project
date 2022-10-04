@@ -506,7 +506,7 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
     ```
       %cst = arith.constant 0.000000e+00 : f32
       %0 = tensor.expand_shape %in [[0, 1]] : tensor<32xf32> into tensor<4x8xf32>
-      %1 = linalg.init_tensor [4] : tensor<4xf32>
+      %1 = tensor.empty() : tensor<4xf32>
       %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<4xf32>) -> tensor<4xf32>
       %3 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                             affine_map<(d0, d1) -> (d0)>],
@@ -557,11 +557,11 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
      #map3 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
      #map4 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
      #map5 = affine_map<(d0, d1, d2) -> (d0, d1)>
-     %0 = linalg.init_tensor [16, 32, 64] : tensor<16x32x64xf32>
+     %0 = tensor.empty() : tensor<16x32x64xf32>
      %cst = arith.constant 0.000000e+00 : f32
      %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<16x32x64xf32>) ->
         tensor<16x32x64xf32>
-     %2 = linalg.init_tensor [64, 4] : tensor<64x4xi1>
+     %2 = tensor.empty() : tensor<64x4xi1>
 
      %3 = linalg.generic {indexing_maps = [#map0, #map1, #map2, #map3],
        iterator_types = ["parallel", "parallel", "parallel", "reduction"]}

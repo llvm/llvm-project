@@ -142,7 +142,7 @@ func.func @reshape_as_consumer_permutation
 func.func @generic_op_reshape_consumer_static(%arg0: tensor<264x4xf32>)
                                             -> tensor<8x33x4xf32> {
   %cst = arith.constant dense<2.000000e+00> : tensor<264x4xf32>
-  %0 = linalg.init_tensor [264, 4] : tensor<264x4xf32>
+  %0 = tensor.empty() : tensor<264x4xf32>
   %1 = linalg.generic {
      indexing_maps = [#map0, #map0, #map0],
      iterator_types = ["parallel", "parallel"]}
@@ -162,7 +162,7 @@ func.func @generic_op_reshape_consumer_static(%arg0: tensor<264x4xf32>)
 // CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<264x4xf32>
 //  CHECK-DAG:   %[[CST:.+]] = arith.constant
 // CHECK-SAME:     : tensor<8x33x4xf32>
-//  CHECK-DAG:   %[[INIT:.+]] = linalg.init_tensor [264, 4]
+//  CHECK-DAG:   %[[INIT:.+]] = tensor.empty()
 //      CHECK:   %[[T0:.+]] = tensor.expand_shape %[[ARG0]]
 // CHECK-SAME:     [0, 1], [2]
 // CHECK-SAME:     tensor<264x4xf32> into tensor<8x33x4xf32>
@@ -281,7 +281,7 @@ func.func @indexed_producer_reshape_consumer_fusion(%arg0 : tensor<?x?xi32>,
 func.func @reshape_as_consumer_permutation
   (%a : tensor<210x6x4xi32>, %b : tensor<210x4xi32>)
     -> tensor<2x3x4x5x6x7xi32> {
-  %shape = linalg.init_tensor [6, 4, 210] : tensor<6x4x210xi32>
+  %shape = tensor.empty() : tensor<6x4x210xi32>
   %c = linalg.generic {
          indexing_maps = [affine_map<(d0, d1, d2) -> (d1, d0, d2)>,
                           affine_map<(d0, d1, d2) -> (d1, d2)>,
@@ -318,7 +318,7 @@ func.func @reshape_as_consumer_permutation
 //       CHECK: func @reshape_as_consumer_permutation
 //  CHECK-SAME:   %[[ARG0:.+]]: tensor<210x6x4xi32>
 //  CHECK-SAME:   %[[ARG1:.+]]: tensor<210x4xi32>
-//   CHECK-DAG:   %[[INIT:.+]] = linalg.init_tensor [6, 4, 210]
+//   CHECK-DAG:   %[[INIT:.+]] = tensor.empty()
 //   CHECK-DAG:   %[[T1:.+]] = tensor.expand_shape %[[ARG0]]
 //  CHECK-SAME:     [0, 1, 2], [3, 4], [5]
 //   CHECK-DAG:   %[[T2:.+]] = tensor.expand_shape %[[ARG1]]
@@ -455,7 +455,7 @@ func.func @no_fuse_dynamic_dims(%arg0: tensor<?x?xf32>) -> tensor<?xf32> {
   %c0 = arith.constant 0 : index
   %0 = tensor.collapse_shape %arg0 [[0, 1]] : tensor<?x?xf32> into tensor<?xf32>
   %1 = tensor.dim %0, %c0 : tensor<?xf32>
-  %2 = linalg.init_tensor [%1] : tensor<?xf32>
+  %2 = tensor.empty(%1) : tensor<?xf32>
   %3 = linalg.generic {
     indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>],
     iterator_types = ["parallel"]}
@@ -477,7 +477,7 @@ func.func @no_fuse_dynamic_dims(%arg0: tensor<?x?xf32>) -> tensor<?xf32> {
 
 func.func @no_fuse_mismatched_dynamism(%arg0: tensor<2x1xi64>, %arg1: tensor<?xi64>) -> tensor<2xi64> {
   %0 = tensor.collapse_shape %arg0 [[0, 1]] : tensor<2x1xi64> into tensor<2xi64>
-  %1 = linalg.init_tensor [2] : tensor<2xi64>
+  %1 = tensor.empty() : tensor<2xi64>
   %2 = linalg.generic
     {indexing_maps = [affine_map<(d0) -> (d0)>,
                       affine_map<(d0) -> (d0)>,

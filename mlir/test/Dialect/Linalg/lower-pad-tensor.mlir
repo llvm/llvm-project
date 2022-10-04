@@ -52,7 +52,7 @@ func.func @pad_tensor_detailed(%arg0: tensor<1x28x28x1xf32>) -> tensor<1x32x32x1
 
 // CHECK:      %[[ARG0:[a-zA-Z0-9_]+]]: tensor<1x28x28x1xf32>) -> tensor<1x32x32x1xf32>
 // CHECK:      %[[CTE:.+]] = arith.constant 0.000000e+00 : f32
-// CHECK:      %[[TMP:.+]] = linalg.init_tensor [1, 32, 32, 1] : tensor<1x32x32x1xf32>
+// CHECK:      %[[TMP:.+]] = tensor.empty() : tensor<1x32x32x1xf32>
 // CHECK:      %[[R1c:.+]] = linalg.fill
 // CHECK:      %[[R2c:.+]] = linalg.generic
 // CHECK-SAME:   indexing_maps = [#[[$MAP4]], #[[$MAP5]]]

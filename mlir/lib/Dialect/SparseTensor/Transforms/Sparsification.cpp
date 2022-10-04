@@ -338,7 +338,7 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
 
 /// Returns true if tensor materializes uninitialized into the computation.
 static bool isMaterializing(Value val) {
-  return val.getDefiningOp<linalg::InitTensorOp>() ||
+  return val.getDefiningOp<tensor::EmptyOp>() ||
          val.getDefiningOp<bufferization::AllocTensorOp>();
 }
 

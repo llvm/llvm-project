@@ -62,7 +62,7 @@ namespace tensor {
 /// We can construct %2 by generating the following, which only uses `%0`:
 ///
 /// ```
-/// %dest = linalg.init_tensor [%size0, %size1] : tensor<?x?xf32>
+/// %dest = tensor.empty(%size0, %size1) : tensor<?x?xf32>
 /// %1 = tensor.dim %0, %c1 : tensor<3x?x?x11x?xf32>
 /// %2 = tensor.dim %0, %c2 : tensor<3x?x?x11x?xf32>
 /// %3 = tensor.dim %0, %c4 : tensor<3x?x?x11x?xf32>
