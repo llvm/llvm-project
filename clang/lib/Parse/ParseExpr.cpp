@@ -1067,8 +1067,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
           REVERTIBLE_TYPE_TRAIT(__is_arithmetic);
           REVERTIBLE_TYPE_TRAIT(__is_array);
           REVERTIBLE_TYPE_TRAIT(__is_assignable);
-          REVERTIBLE_TYPE_TRAIT(__is_bounded_array);
           REVERTIBLE_TYPE_TRAIT(__is_base_of);
+          REVERTIBLE_TYPE_TRAIT(__is_bounded_array);
           REVERTIBLE_TYPE_TRAIT(__is_class);
           REVERTIBLE_TYPE_TRAIT(__is_complete_type);
           REVERTIBLE_TYPE_TRAIT(__is_compound);
@@ -1094,15 +1094,18 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
           REVERTIBLE_TYPE_TRAIT(__is_nothrow_assignable);
           REVERTIBLE_TYPE_TRAIT(__is_nothrow_constructible);
           REVERTIBLE_TYPE_TRAIT(__is_nothrow_destructible);
+          REVERTIBLE_TYPE_TRAIT(__is_nullptr);
           REVERTIBLE_TYPE_TRAIT(__is_object);
           REVERTIBLE_TYPE_TRAIT(__is_pod);
           REVERTIBLE_TYPE_TRAIT(__is_pointer);
           REVERTIBLE_TYPE_TRAIT(__is_polymorphic);
           REVERTIBLE_TYPE_TRAIT(__is_reference);
+          REVERTIBLE_TYPE_TRAIT(__is_referenceable);
           REVERTIBLE_TYPE_TRAIT(__is_rvalue_expr);
           REVERTIBLE_TYPE_TRAIT(__is_rvalue_reference);
           REVERTIBLE_TYPE_TRAIT(__is_same);
           REVERTIBLE_TYPE_TRAIT(__is_scalar);
+          REVERTIBLE_TYPE_TRAIT(__is_scoped_enum);
           REVERTIBLE_TYPE_TRAIT(__is_sealed);
           REVERTIBLE_TYPE_TRAIT(__is_signed);
           REVERTIBLE_TYPE_TRAIT(__is_standard_layout);

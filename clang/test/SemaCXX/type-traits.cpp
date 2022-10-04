@@ -345,11 +345,19 @@ void is_union()
 }
 
 typedef Enum EnumType;
+typedef EnumClass EnumClassType;
 
 void is_enum()
 {
   { int arr[T(__is_enum(Enum))]; }
   { int arr[T(__is_enum(EnumType))]; }
+  { int arr[T(__is_enum(SignedEnum))]; }
+  { int arr[T(__is_enum(UnsignedEnum))]; }
+
+  { int arr[T(__is_enum(EnumClass))]; }
+  { int arr[T(__is_enum(EnumClassType))]; }
+  { int arr[T(__is_enum(SignedEnumClass))]; }
+  { int arr[T(__is_enum(UnsignedEnumClass))]; }
 
   { int arr[F(__is_enum(int))]; }
   { int arr[F(__is_enum(Union))]; }
@@ -361,6 +369,37 @@ void is_enum()
   { int arr[F(__is_enum(cvoid))]; }
   { int arr[F(__is_enum(IntArNB))]; }
   { int arr[F(__is_enum(HasAnonymousUnion))]; }
+  { int arr[F(__is_enum(AnIncompleteType))]; }
+  { int arr[F(__is_enum(AnIncompleteTypeAr))]; }
+  { int arr[F(__is_enum(AnIncompleteTypeArMB))]; }
+  { int arr[F(__is_enum(AnIncompleteTypeArNB))]; }
+}
+
+void is_scoped_enum() {
+  static_assert(!__is_scoped_enum(Enum), "");
+  static_assert(!__is_scoped_enum(EnumType), "");
+  static_assert(!__is_scoped_enum(SignedEnum), "");
+  static_assert(!__is_scoped_enum(UnsignedEnum), "");
+
+  static_assert(__is_scoped_enum(EnumClass), "");
+  static_assert(__is_scoped_enum(EnumClassType), "");
+  static_assert(__is_scoped_enum(SignedEnumClass), "");
+  static_assert(__is_scoped_enum(UnsignedEnumClass), "");
+
+  static_assert(!__is_scoped_enum(int), "");
+  static_assert(!__is_scoped_enum(Union), "");
+  static_assert(!__is_scoped_enum(Int), "");
+  static_assert(!__is_scoped_enum(IntAr), "");
+  static_assert(!__is_scoped_enum(UnionAr), "");
+  static_assert(!__is_scoped_enum(Derives), "");
+  static_assert(!__is_scoped_enum(ClassType), "");
+  static_assert(!__is_scoped_enum(cvoid), "");
+  static_assert(!__is_scoped_enum(IntArNB), "");
+  static_assert(!__is_scoped_enum(HasAnonymousUnion), "");
+  static_assert(!__is_scoped_enum(AnIncompleteType), "");
+  static_assert(!__is_scoped_enum(AnIncompleteTypeAr), "");
+  static_assert(!__is_scoped_enum(AnIncompleteTypeArMB), "");
+  static_assert(!__is_scoped_enum(AnIncompleteTypeArNB), "");
 }
 
 struct FinalClass final {
@@ -766,6 +805,36 @@ void is_unbounded_array(int n) {
   (void)__is_unbounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported for '__is_unbounded_array'}}
 }
 
+void is_referenceable() {
+  static_assert(__is_referenceable(int), "");
+  static_assert(__is_referenceable(const int), "");
+  static_assert(__is_referenceable(volatile int), "");
+  static_assert(__is_referenceable(const volatile int), "");
+  static_assert(__is_referenceable(int *), "");
+  static_assert(__is_referenceable(int &), "");
+  static_assert(__is_referenceable(int &&), "");
+  static_assert(__is_referenceable(int (*)()), "");
+  static_assert(__is_referenceable(int (&)()), "");
+  static_assert(__is_referenceable(int(&&)()), "");
+  static_assert(__is_referenceable(IntAr), "");
+  static_assert(__is_referenceable(IntArNB), "");
+  static_assert(__is_referenceable(decltype(nullptr)), "");
+  static_assert(__is_referenceable(Empty), "");
+  static_assert(__is_referenceable(Union), "");
+  static_assert(__is_referenceable(Derives), "");
+  static_assert(__is_referenceable(Enum), "");
+  static_assert(__is_referenceable(EnumClass), "");
+  static_assert(__is_referenceable(int Empty::*), "");
+  static_assert(__is_referenceable(int(Empty::*)()), "");
+  static_assert(__is_referenceable(AnIncompleteType), "");
+  static_assert(__is_referenceable(struct AnIncompleteType), "");
+
+  using function_type = void(int);
+  static_assert(__is_referenceable(function_type), "");
+
+  static_assert(!__is_referenceable(void), "");
+}
+
 template <typename T> void tmpl_func(T&) {}
 
 template <typename T> struct type_wrapper {
@@ -996,6 +1065,42 @@ void is_pointer()
   int t32[F(__is_pointer(StructWithMembers))];
   int t33[F(__is_pointer(int StructWithMembers::*))];
   int t34[F(__is_pointer(void (StructWithMembers::*) ()))];
+}
+
+void is_null_pointer() {
+  StructWithMembers x;
+
+  static_assert(__is_nullptr(decltype(nullptr)), "");
+  static_assert(!__is_nullptr(void *), "");
+  static_assert(!__is_nullptr(cvoid *), "");
+  static_assert(!__is_nullptr(cvoid *), "");
+  static_assert(!__is_nullptr(char *), "");
+  static_assert(!__is_nullptr(int *), "");
+  static_assert(!__is_nullptr(int **), "");
+  static_assert(!__is_nullptr(ClassType *), "");
+  static_assert(!__is_nullptr(Derives *), "");
+  static_assert(!__is_nullptr(Enum *), "");
+  static_assert(!__is_nullptr(IntArNB *), "");
+  static_assert(!__is_nullptr(Union *), "");
+  static_assert(!__is_nullptr(UnionAr *), "");
+  static_assert(!__is_nullptr(StructWithMembers *), "");
+  static_assert(!__is_nullptr(void (*)()), "");
+
+  static_assert(!__is_nullptr(void), "");
+  static_assert(!__is_nullptr(cvoid), "");
+  static_assert(!__is_nullptr(cvoid), "");
+  static_assert(!__is_nullptr(char), "");
+  static_assert(!__is_nullptr(int), "");
+  static_assert(!__is_nullptr(int), "");
+  static_assert(!__is_nullptr(ClassType), "");
+  static_assert(!__is_nullptr(Derives), "");
+  static_assert(!__is_nullptr(Enum), "");
+  static_assert(!__is_nullptr(IntArNB), "");
+  static_assert(!__is_nullptr(Union), "");
+  static_assert(!__is_nullptr(UnionAr), "");
+  static_assert(!__is_nullptr(StructWithMembers), "");
+  static_assert(!__is_nullptr(int StructWithMembers::*), "");
+  static_assert(!__is_nullptr(void(StructWithMembers::*)()), "");
 }
 
 void is_member_object_pointer()
@@ -3299,7 +3404,6 @@ void check_remove_cvref() {
 }
 
 template <class T> using decay_t = __decay(T);
-template <class T> struct dne;
 
 void check_decay() {
   static_assert(__is_same(decay_t<void>, void), "");
@@ -3359,6 +3463,8 @@ struct CheckAbominableFunction<M S::*> {
     static_assert(__is_same(remove_cvref_t<M>, M), "");
     static_assert(__is_same(remove_pointer_t<M>, M), "");
     static_assert(__is_same(remove_reference_t<M>, M), "");
+
+    static_assert(!__is_referenceable(M), "");
   }
 };
 
