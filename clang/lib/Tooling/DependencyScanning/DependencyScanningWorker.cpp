@@ -191,7 +191,6 @@ public:
     ScanInstance.getFrontendOpts().UseGlobalModuleIndex = false;
     ScanInstance.getFrontendOpts().ModulesShareFileManager = false;
 
-    FileMgr->getFileSystemOpts().WorkingDir = std::string(WorkingDirectory);
     ScanInstance.setFileManager(FileMgr);
     ScanInstance.createSourceManager(*FileMgr);
 
@@ -370,12 +369,6 @@ static bool forEachDriverJob(
   for (const std::string &Arg : Args)
     Argv.push_back(Arg.c_str());
 
-  // The "input file not found" diagnostics from the driver are useful.
-  // The driver is only aware of the VFS working directory, but some clients
-  // change this at the FileManager level instead.
-  // In this case the checks have false positives, so skip them.
-  if (!FM.getFileSystemOpts().WorkingDir.empty())
-    Driver->setCheckInputsExist(false);
   const std::unique_ptr<driver::Compilation> Compilation(
       Driver->BuildCompilation(llvm::makeArrayRef(Argv)));
   if (!Compilation)
@@ -395,8 +388,9 @@ bool DependencyScanningWorker::computeDependencies(
   // Reset what might have been modified in the previous worker invocation.
   RealFS->setCurrentWorkingDirectory(WorkingDirectory);
 
-  auto FileMgr =
-      llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(), RealFS);
+  FileSystemOptions FSOpts;
+  FSOpts.WorkingDir = WorkingDirectory.str();
+  auto FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(FSOpts, RealFS);
 
   Optional<std::vector<std::string>> ModifiedCommandLine;
   if (ModuleName) {
