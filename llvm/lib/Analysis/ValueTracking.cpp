@@ -2737,10 +2737,9 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
     }
     break;
   case Instruction::Freeze:
-    if (isKnownNonZero(I->getOperand(0), Depth, Q) &&
-        isGuaranteedNotToBePoison(I->getOperand(0), Q.AC, Q.CxtI, Q.DT, Depth))
-      return true;
-    break;
+    return isKnownNonZero(I->getOperand(0), Depth, Q) &&
+           isGuaranteedNotToBePoison(I->getOperand(0), Q.AC, Q.CxtI, Q.DT,
+                                     Depth);
   case Instruction::Call:
     if (cast<CallInst>(I)->getIntrinsicID() == Intrinsic::vscale)
       return true;
