@@ -604,8 +604,8 @@ func.func @test_reshape_downrank_6D(%arg0: tensor<1x2x3x5x7x11xf32>) -> tensor<6
 
 // CHECK-LABEL: @test_reshape_downrank_6D_dyn
 func.func @test_reshape_downrank_6D_dyn(%arg0: tensor<1x2x?x5x7x11xf32>) -> tensor<?x5x77xf32> {
-  // CHECK: tensor.collapse_shape %arg0 {{\[}}[0, 1, 2, 3, 4, 5]]
-  // CHECK: tensor.expand_shape %0 {{\[}}[0, 1, 2]]
+  // CHECK: tensor.collapse_shape {{.*}}[0, 1, 2, 3, 4, 5]
+  // CHECK: tensor.expand_shape {{.*}}[0, 1, 2]
   %0 = "tosa.reshape"(%arg0) {new_shape = [-1, 5, 77]} : (tensor<1x2x?x5x7x11xf32>) -> tensor<?x5x77xf32>
   return %0 : tensor<?x5x77xf32>
 }
