@@ -133,7 +133,8 @@ static RankedTensorType getUnorderedCOOFromType(RankedTensorType src) {
   // largest one among them) in the original operation instead of using the
   // default value.
   auto enc = SparseTensorEncodingAttr::get(
-      ctx, dims, AffineMap::getMultiDimIdentityMap(rank, ctx), 0, 0);
+      ctx, dims, AffineMap::getMultiDimIdentityMap(rank, ctx), AffineMap(), 0,
+      0);
   return RankedTensorType::get(src.getShape(), src.getElementType(), enc);
 }
 

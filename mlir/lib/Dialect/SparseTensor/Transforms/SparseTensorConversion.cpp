@@ -525,7 +525,7 @@ genSparse2SparseReshape(ReshapeOp op, typename ReshapeOp::Adaptor adaptor,
          "reshape should not change element type");
   // Start an iterator over the source tensor (in original index order).
   auto noPerm = SparseTensorEncodingAttr::get(
-      op->getContext(), encSrc.getDimLevelType(), AffineMap(),
+      op->getContext(), encSrc.getDimLevelType(), AffineMap(), AffineMap(),
       encSrc.getPointerBitWidth(), encSrc.getIndexBitWidth());
   SmallVector<Value, 4> srcSizes;
   SmallVector<Value, 8> params;
@@ -595,7 +595,7 @@ static void genSparseCOOIterationLoop(
 
   // Start an iterator over the tensor (in original index order).
   auto noPerm = SparseTensorEncodingAttr::get(
-      rewriter.getContext(), enc.getDimLevelType(), AffineMap(),
+      rewriter.getContext(), enc.getDimLevelType(), AffineMap(), AffineMap(),
       enc.getPointerBitWidth(), enc.getIndexBitWidth());
   SmallVector<Value, 4> sizes;
   SmallVector<Value, 8> params;
@@ -857,7 +857,8 @@ public:
         // the correct sparsity information to either of them.
         auto enc = SparseTensorEncodingAttr::get(
             op->getContext(), encDst.getDimLevelType(), encDst.getDimOrdering(),
-            encSrc.getPointerBitWidth(), encSrc.getIndexBitWidth());
+            encDst.getHigherOrdering(), encSrc.getPointerBitWidth(),
+            encSrc.getIndexBitWidth());
         newParams(rewriter, params, loc, stp, enc, Action::kToCOO, sizes, src);
         Value coo = genNewCall(rewriter, loc, params);
         params[3] = constantPointerTypeEncoding(rewriter, loc, encDst);
@@ -889,7 +890,8 @@ public:
           op->getContext(),
           SmallVector<SparseTensorEncodingAttr::DimLevelType>(
               rank, SparseTensorEncodingAttr::DimLevelType::Dense),
-          AffineMap(), encSrc.getPointerBitWidth(), encSrc.getIndexBitWidth());
+          AffineMap(), AffineMap(), encSrc.getPointerBitWidth(),
+          encSrc.getIndexBitWidth());
       SmallVector<Value, 4> sizes;
       SmallVector<Value, 8> params;
       sizesFromPtr(rewriter, sizes, loc, encSrc, srcTensorTp, src);
@@ -1373,7 +1375,7 @@ public:
     SmallVector<Value, 8> params;
     sizesFromPtr(rewriter, sizes, loc, encSrc, srcType, src);
     auto enc = SparseTensorEncodingAttr::get(
-        op->getContext(), encSrc.getDimLevelType(), AffineMap(),
+        op->getContext(), encSrc.getDimLevelType(), AffineMap(), AffineMap(),
         encSrc.getPointerBitWidth(), encSrc.getIndexBitWidth());
     newParams(rewriter, params, loc, srcType, enc, Action::kToCOO, sizes, src);
     Value coo = genNewCall(rewriter, loc, params);

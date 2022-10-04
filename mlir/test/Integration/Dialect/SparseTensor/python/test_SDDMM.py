@@ -148,7 +148,8 @@ def main():
             for vec in vec_strategy:
               for e in [True]:
                 vl = 1 if vec == 0 else 16
-                attr = st.EncodingAttr.get(level, ordering, pwidth, iwidth)
+                attr = st.EncodingAttr.get(level, ordering, None, pwidth,
+                                           iwidth)
                 opt = (f'parallelization-strategy=none '
                        f'vectorization-strategy={vec} '
                        f'vl={vl} enable-simd-index32={e}')

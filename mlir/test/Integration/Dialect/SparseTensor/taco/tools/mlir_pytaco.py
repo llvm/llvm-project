@@ -366,7 +366,8 @@ class Format:
     mlir_storage_format = [f.value for f in self.format_pack.formats]
     return sparse_tensor.EncodingAttr.get(mlir_storage_format,
                                           ir.AffineMap.get_permutation(order),
-                                          _POINTER_BIT_WIDTH, _INDEX_BIT_WIDTH)
+                                          None, _POINTER_BIT_WIDTH,
+                                          _INDEX_BIT_WIDTH)
 
 
 def _make_format(formats: List[ModeFormat],
