@@ -8,7 +8,7 @@
 
 # CHECK:      error: undefined symbol: foo(int)
 # CHECK-NEXT: >>> referenced by {{.*}}
-# CHECK-NEXT: >>> did you mean: extern "C" _foo
+# CHECK-NEXT: >>> did you mean: extern "C" foo
 
 ## Don't suggest for nested names like F::foo() and foo::foo().
 # RUN: echo 'call __ZN1F3fooEv; call __ZN3fooC1Ev' | llvm-mc -filetype=obj -triple=x86_64-apple-macos - -o %t2.o
