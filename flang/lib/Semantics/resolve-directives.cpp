@@ -1677,7 +1677,9 @@ void OmpAttributeVisitor::ResolveOmpObject(
               // 2.15.3 When a named common block appears in a list, it has the
               // same meaning as if every explicit member of the common block
               // appeared in the list
-              for (auto &object : symbol->get<CommonBlockDetails>().objects()) {
+              auto &details{symbol->get<CommonBlockDetails>()};
+              unsigned index{0};
+              for (auto &object : details.objects()) {
                 if (auto *resolvedObject{
                         ResolveOmp(*object, ompFlag, currScope())}) {
                   if (dataCopyingAttributeFlags.test(ompFlag)) {
@@ -1685,7 +1687,9 @@ void OmpAttributeVisitor::ResolveOmpObject(
                   } else {
                     AddToContextObjectWithDSA(*resolvedObject, ompFlag);
                   }
+                  details.replace_object(*resolvedObject, index);
                 }
+                index++;
               }
             } else {
               context_.Say(name.source, // 2.15.3

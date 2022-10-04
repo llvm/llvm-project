@@ -10,7 +10,7 @@
 #include "TestAttributes.h"
 #include "TestInterfaces.h"
 #include "TestTypes.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -1028,6 +1028,26 @@ void PolyForOp::getAsmBlockArgumentNames(Region &region,
     if (auto strAttr = arrayAttr[i].dyn_cast<StringAttr>())
       setNameFn(args[i], strAttr.getValue());
   }
+}
+
+//===----------------------------------------------------------------------===//
+// TestAttrWithLoc - parse/printOptionalLocationSpecifier
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseOptionalLoc(OpAsmParser &p, Attribute &loc) {
+  Optional<Location> result;
+  SMLoc sourceLoc = p.getCurrentLocation();
+  if (p.parseOptionalLocationSpecifier(result))
+    return failure();
+  if (result)
+    loc = *result;
+  else
+    loc = p.getEncodedSourceLoc(sourceLoc);
+  return success();
+}
+
+static void printOptionalLoc(OpAsmPrinter &p, Operation *op, Attribute loc) {
+  p.printOptionalLocationSpecifier(loc.cast<LocationAttr>());
 }
 
 //===----------------------------------------------------------------------===//

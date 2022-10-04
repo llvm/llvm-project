@@ -302,9 +302,9 @@ add_entrypoint_object(
     .atexit
 )
 
-# add_entrypoint_object(
-#   abort
-#   ALIAS
-#   DEPENDS
-#     .${LIBC_TARGET_OS}.abort
-# )
+add_entrypoint_object(
+  abort
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.abort
+)

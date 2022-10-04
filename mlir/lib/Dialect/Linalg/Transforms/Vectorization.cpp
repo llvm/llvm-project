@@ -13,7 +13,7 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -190,14 +190,8 @@ static Operation *buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
 }
 
 static SmallVector<bool> getReductionMask(LinalgOp linalgOp) {
-  unsigned idx = 0;
-  SmallVector<bool> reductionMask(linalgOp.iterator_types().size(), false);
-  for (auto attr : linalgOp.iterator_types()) {
-    if (isReductionIterator(attr))
-      reductionMask[idx] = true;
-    ++idx;
-  }
-  return reductionMask;
+  return llvm::to_vector(
+      llvm::map_range(linalgOp.getIteratorTypesArray(), isReductionIterator));
 }
 
 /// Build a vector.transfer_write of `value` into `outputOperand` at indices set
@@ -215,7 +209,7 @@ static Value buildVectorWrite(OpBuilder &b, Value value,
   if (vectorType.getRank() > 0) {
     // 0-d case is still special: do not invert the reindexing map.
     AffineMap map =
-        reindexIndexingMap(linalgOp.getTiedIndexingMap(outputOperand));
+        reindexIndexingMap(linalgOp.getMatchingIndexingMap(outputOperand));
     SmallVector<int64_t> transposeShape =
         applyPermutationMap(inversePermutation(map), vectorType.getShape());
     assert(!transposeShape.empty() && "unexpected empty transpose shape");
@@ -479,12 +473,12 @@ vectorizeAsLinalgGeneric(OpBuilder &b, LinalgOp linalgOp,
     // } else {
     if (opOperand->getOperandNumber() < linalgOp.getNumInputs()) {
       map = inverseAndBroadcastProjectedPermutation(
-          linalgOp.getTiedIndexingMap(opOperand));
+          linalgOp.getMatchingIndexingMap(opOperand));
       readType = VectorType::get(commonVectorShape,
                                  getElementTypeOrSelf(opOperand->get()));
     } else {
       map = inversePermutation(
-          reindexIndexingMap(linalgOp.getTiedIndexingMap(opOperand)));
+          reindexIndexingMap(linalgOp.getMatchingIndexingMap(opOperand)));
       readType = VectorType::get(map.compose(linalgOp.getShape(opOperand)),
                                  getElementTypeOrSelf(opOperand->get()));
     }
@@ -540,12 +534,12 @@ vectorizeAsLinalgGeneric(OpBuilder &b, LinalgOp linalgOp,
 // TODO: probably need some extra checks for reduction followed by consumer
 // ops that may not commute (e.g. linear reduction + non-linear instructions).
 static LogicalResult reductionPreconditions(LinalgOp op) {
-  if (llvm::none_of(op.iterator_types(), isReductionIterator)) {
+  if (llvm::none_of(op.getIteratorTypesArray(), isReductionIterator)) {
     LDBG("reduction precondition failed: no reduction iterator");
     return failure();
   }
   for (OpOperand *opOperand : op.getOutputOperands()) {
-    AffineMap indexingMap = op.getTiedIndexingMap(opOperand);
+    AffineMap indexingMap = op.getMatchingIndexingMap(opOperand);
     if (indexingMap.isPermutation())
       continue;
 
@@ -1340,9 +1334,9 @@ struct Conv1DGenerator : public StructuredGenerator<LinalgOp> {
     // Determine whether `linalgOp` can be generated with this generator
     if (linalgOp.getNumInputs() != 2 || linalgOp.getNumOutputs() != 1)
       return;
-    lhsShaped = linalgOp.inputs()[0];
-    rhsShaped = linalgOp.inputs()[1];
-    resShaped = linalgOp.outputs()[0];
+    lhsShaped = linalgOp.getInputs()[0];
+    rhsShaped = linalgOp.getInputs()[1];
+    resShaped = linalgOp.getOutputs()[0];
     lhsShapedType = lhsShaped.getType().dyn_cast<ShapedType>();
     rhsShapedType = rhsShaped.getType().dyn_cast<ShapedType>();
     resShapedType = resShaped.getType().dyn_cast<ShapedType>();

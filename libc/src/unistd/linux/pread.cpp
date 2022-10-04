@@ -18,7 +18,7 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(ssize_t, pread,
                    (int fd, void *buf, size_t count, off_t offset)) {
-  long ret = __llvm_libc::syscall(SYS_pread64, fd, buf, count, offset);
+  long ret = __llvm_libc::syscall_impl(SYS_pread64, fd, buf, count, offset);
   if (ret < 0) {
     errno = -ret;
     return -1;

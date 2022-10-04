@@ -28,20 +28,7 @@ class AffineForOp;
 /// producer-consumer and sibling fusion.
 enum FusionMode { Greedy, ProducerConsumer, Sibling };
 
-#define GEN_PASS_DECL_AFFINEDATACOPYGENERATION
-#define GEN_PASS_DECL_AFFINELOOPFUSION
-#define GEN_PASS_DECL_AFFINELOOPINVARIANTCODEMOTION
-#define GEN_PASS_DECL_AFFINELOOPTILING
-#define GEN_PASS_DECL_AFFINELOOPUNROLL
-#define GEN_PASS_DECL_AFFINELOOPUNROLLANDJAM
-#define GEN_PASS_DECL_AFFINEPIPELINEDATATRANSFER
-#define GEN_PASS_DECL_AFFINESCALARREPLACEMENT
-#define GEN_PASS_DECL_AFFINEVECTORIZE
-#define GEN_PASS_DECL_AFFINEPARALLELIZE
-#define GEN_PASS_DECL_AFFINELOOPNORMALIZE
-#define GEN_PASS_DECL_LOOPCOALESCING
-#define GEN_PASS_DECL_SIMPLIFYAFFINESTRUCTURES
-#define GEN_PASS_DECL_AFFINEEXPANDINDEXOPS
+#define GEN_PASS_DECL
 #include "mlir/Dialect/Affine/Passes.h.inc"
 
 /// Creates a simplification pass for affine structures (maps and sets). In
@@ -118,13 +105,6 @@ createLoopUnrollAndJamPass(int unrollJamFactor = -1);
 /// Creates a pass to pipeline explicit movement of data across levels of the
 /// memory hierarchy.
 std::unique_ptr<OperationPass<func::FuncOp>> createPipelineDataTransferPass();
-
-/// Creates a pass to vectorize loops, operations and data types using a
-/// target-independent, n-D super-vector abstraction.
-std::unique_ptr<OperationPass<func::FuncOp>>
-createSuperVectorizePass(ArrayRef<int64_t> virtualVectorSize);
-/// Overload relying on pass options for initialization.
-std::unique_ptr<OperationPass<func::FuncOp>> createSuperVectorizePass();
 
 /// Populate patterns that expand affine index operations into more fundamental
 /// operations (not necessarily restricted to Affine dialect).

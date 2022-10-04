@@ -108,6 +108,8 @@ template <class T, class Container>
 #include <version>
 
 // standard-mandated includes
+
+// [stack.syn]
 #include <compare>
 #include <initializer_list>
 

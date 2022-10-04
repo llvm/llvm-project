@@ -13,18 +13,23 @@ namespace memory {
 namespace testing {
 
 template <typename T>
-bool equals(const cpp::span<T> &Span1, const cpp::span<T> &Span2) {
-  if (Span1.size() != Span2.size())
+bool equals(const cpp::span<T> &Span1, const cpp::span<T> &Span2,
+            bool &mismatch_size, size_t &mismatch_index) {
+  if (Span1.size() != Span2.size()) {
+    mismatch_size = true;
     return false;
+  }
   for (size_t Index = 0; Index < Span1.size(); ++Index)
-    if (Span1[Index] != Span2[Index])
+    if (Span1[Index] != Span2[Index]) {
+      mismatch_index = Index;
       return false;
+    }
   return true;
 }
 
 bool MemoryMatcher::match(MemoryView actualValue) {
   actual = actualValue;
-  return equals(expected, actual);
+  return equals(expected, actual, mismatch_size, mismatch_index);
 }
 
 void display(testutils::StreamWrapper &Stream, char C) {
@@ -43,12 +48,27 @@ void display(testutils::StreamWrapper &Stream, MemoryView View) {
 }
 
 void MemoryMatcher::explainError(testutils::StreamWrapper &Stream) {
-  Stream << "expected :";
-  display(Stream, expected);
-  Stream << '\n';
-  Stream << "actual   :";
-  display(Stream, actual);
-  Stream << '\n';
+  if (mismatch_size) {
+    Stream << "Size mismatch :";
+    Stream << "expected : ";
+    Stream << expected.size();
+    Stream << '\n';
+    Stream << "actual   : ";
+    Stream << actual.size();
+    Stream << '\n';
+  } else {
+    Stream << "Mismatch at position : ";
+    Stream << mismatch_index;
+    Stream << " / ";
+    Stream << expected.size();
+    Stream << "\n";
+    Stream << "expected :";
+    display(Stream, expected);
+    Stream << '\n';
+    Stream << "actual   :";
+    display(Stream, actual);
+    Stream << '\n';
+  }
 }
 
 } // namespace testing

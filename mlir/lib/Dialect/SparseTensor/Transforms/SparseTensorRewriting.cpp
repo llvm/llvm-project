@@ -12,9 +12,10 @@
 
 #include "CodegenUtils.h"
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -110,6 +111,32 @@ static bool isZeroYield(GenericOp op) {
   return isZeroValue(yieldOp.getOperand(0));
 }
 
+// TODO: The dim level property of the COO type relies on input tensors, the
+// shape relies on the output tensor
+// Helpers to setup a COO type.
+static RankedTensorType getUnorderedCOOFromType(RankedTensorType src) {
+  auto *ctx = src.getContext();
+  auto rank = src.getRank();
+  SmallVector<SparseTensorEncodingAttr::DimLevelType, 4> dims;
+
+  // An unordered and non-unique compressed dim at beginning.
+  dims.push_back(SparseTensorEncodingAttr::DimLevelType::CompressedNuNo);
+  // TODO: it is actually ordered at the level for ordered input.
+  // Followed by unordered non-unique n-2 singleton levels.
+  std::fill_n(std::back_inserter(dims), rank - 2,
+              SparseTensorEncodingAttr::DimLevelType::SingletonNuNo);
+  // TODO: only if all the inputs (for concatentate) are unique at the last
+  // level should the COO has a unique level at the end. Ends by a unordered
+  // unique singleton level.
+  dims.push_back(SparseTensorEncodingAttr::DimLevelType::SingletonNo);
+  // TODO: Maybe pick the bitwidth based on input/output tensors (probably the
+  // largest one among them) in the original operation instead of using the
+  // default value.
+  auto enc = SparseTensorEncodingAttr::get(
+      ctx, dims, AffineMap::getMultiDimIdentityMap(rank, ctx), 0, 0);
+  return RankedTensorType::get(src.getShape(), src.getElementType(), enc);
+}
+
 //===---------------------------------------------------------------------===//
 // The actual sparse tensor rewriting rules.
 //===---------------------------------------------------------------------===//
@@ -170,9 +197,9 @@ public:
     if (!op.hasTensorSemantics() || op.getNumInputs() != 2 ||
         op.getNumResults() != 1 ||
         op.getNumParallelLoops() != op.getNumLoops() ||
-        !op.getTiedIndexingMap(op.getOutputOperand(0)).isIdentity() ||
-        !op.getTiedIndexingMap(op.getInputOperand(0)).isIdentity() ||
-        !op.getTiedIndexingMap(op.getInputOperand(1)).isIdentity())
+        !op.getMatchingIndexingMap(op.getOutputOperand(0)).isIdentity() ||
+        !op.getMatchingIndexingMap(op.getInputOperand(0)).isIdentity() ||
+        !op.getMatchingIndexingMap(op.getInputOperand(1)).isIdentity())
       return failure();
     // Find consuming OP2(sparse, other) or OP2(other, sparse). The other
     // operand can be sparse or dense, since the point of this rewriting rule
@@ -279,7 +306,8 @@ public:
       auto convert = rewriter.create<ConvertOp>(loc, denseTp, op.getSrc());
       op->setOperand(0, convert);
       return success();
-    } else if (encDst) {
+    }
+    if (encDst) {
       RankedTensorType rtp =
           op.getResult().getType().template cast<RankedTensorType>();
       auto denseTp =
@@ -294,6 +322,115 @@ public:
   }
 };
 
+struct ConcatenateRewriter : public OpRewritePattern<ConcatenateOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(ConcatenateOp op,
+                                PatternRewriter &rewriter) const override {
+    auto loc = op.getLoc();
+    auto rtp = op.getType().cast<RankedTensorType>();
+    // TODO: Build the output shape if needed.
+    assert(rtp.hasStaticShape());
+    auto rank = rtp.getRank();
+    size_t conDim = op.getDimension().getZExtValue();
+    // %t = concatenate %s1, %s2, %s3 {dim = 1}
+    // ==>
+    // %tmp = bufferization.alloc_tensor : unordered COO
+    // foreach in %s1 : insert d0, d1, %tmp
+    // foreach in %s2 : insert d0, d1 + size(s1), %tmp
+    // foreach in %s3 : insert d0, d1 + size(s1) + size(s2), %tmp
+    // %t = sparse_tensor.cast %tmp
+    auto cooTp = getUnorderedCOOFromType(rtp);
+    auto cooBuffer =
+        rewriter.create<AllocTensorOp>(loc, cooTp, ValueRange()).getResult();
+
+    Value offset = constantIndex(rewriter, loc, 0);
+    for (Value input : op.getInputs()) {
+      // Builds the indexing map.
+
+      // Build a for op for each input tensor to append new values into the
+      // output tensor.
+      rewriter.create<ForeachOp>(
+          loc, input, [&](OpBuilder &builder, Location loc, ValueRange args) {
+            SmallVector<Value, 4> indices;
+            for (int64_t i = 0; i < rank; i++) {
+              uint64_t dim =
+                  toStoredDim(getSparseTensorEncoding(input.getType()), i);
+              Value idx = args[dim];
+              if (i == static_cast<int64_t>(conDim))
+                // transform coordinates on matching dim
+                idx = builder.create<arith::AddIOp>(loc, idx, offset);
+              indices.push_back(idx);
+            }
+            builder.create<InsertOp>(loc, args.back(), cooBuffer, indices);
+            builder.create<sparse_tensor::YieldOp>(loc);
+          });
+      // Accumulates the offset. Note that only static-shaped inputs are allowed
+      // by concatenate op verifier, which saves us from computing the offset
+      // dynamically.
+      auto d = input.getType().cast<RankedTensorType>().getShape()[conDim];
+      assert(!ShapedType::isDynamic(d));
+      offset = rewriter.create<arith::AddIOp>(loc, offset,
+                                              constantIndex(rewriter, loc, d));
+    }
+    rewriter.replaceOpWithNewOp<ConvertOp>(op, rtp, cooBuffer);
+    return success();
+  }
+};
+
+/// Sparse rewriting rule for the foreach operator.
+struct ForeachRewriter : public OpRewritePattern<ForeachOp> {
+public:
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ForeachOp op,
+                                PatternRewriter &rewriter) const override {
+
+    auto loc = op.getLoc();
+    Value input = op.getTensor();
+    auto rtp = input.getType().cast<RankedTensorType>();
+    int64_t rank = rtp.getRank();
+    auto enc = getSparseTensorEncoding(rtp);
+
+    // 1. Generates loop for the sparse input.
+    SparseTensorLoopEmitter loopEmitter(ValueRange{input});
+    loopEmitter.initializeLoopEmit(rewriter, loc);
+    for (int64_t i = 0; i < rank; i++)
+      loopEmitter.enterLoopOverTensorAtDim(rewriter, loc, 0, i);
+
+    Value vals = loopEmitter.getTensorValueBuffer(0);
+    Value idx = loopEmitter.getLastLevelTensorPointerIndex(0);
+    Value val = rewriter.create<memref::LoadOp>(op.getLoc(), vals, idx);
+
+    SmallVector<Value, 4> coords;
+    coords.reserve(rank);
+    loopEmitter.getCoordinateArray(coords);
+
+    for (int64_t i = 0; i < rank; i++)
+      loopEmitter.exitCurrentLoop();
+
+    // 2. Inline the block in the foreach operator.
+    Block::iterator inlinePos = rewriter.getInsertionPoint();
+    Block *srcBlock = op.getBody();
+    // Remove sparse_tensor.yield.
+    rewriter.eraseOp(srcBlock->getTerminator());
+
+    SmallVector<Value, 4> args;
+    // Remap coordinates.
+    for (int64_t i = 0; i < rank; i++) {
+      Value actual = coords[toOrigDim(enc, i)];
+      args.push_back(actual);
+    }
+    // Remap value.
+    args.push_back(val);
+
+    // Inline body.
+    rewriter.mergeBlockBefore(srcBlock, &*inlinePos, args);
+    // delete the foreach operator.
+    rewriter.eraseOp(op);
+    return success();
+  }
+};
+
 } // namespace
 
 //===---------------------------------------------------------------------===//
@@ -301,9 +438,12 @@ public:
 //===---------------------------------------------------------------------===//
 
 void mlir::populateSparseTensorRewriting(RewritePatternSet &patterns,
-                                         bool /*enableRT*/) {
+                                         bool enableRT) {
   patterns.add<FoldInvariantYield, FuseSparseMultiplyOverAdd,
                ReshapeRewriter<tensor::ExpandShapeOp>,
-               ReshapeRewriter<tensor::CollapseShapeOp>>(patterns.getContext());
+               ReshapeRewriter<tensor::CollapseShapeOp>, ForeachRewriter>(
+      patterns.getContext());
   // TODO: If RT not enabled, rewrite concatenate ops, etc here.
+  if (!enableRT)
+    patterns.add<ConcatenateRewriter>(patterns.getContext());
 }

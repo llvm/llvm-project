@@ -177,6 +177,23 @@ def AttrD : TestAttr<"TestG"> {
   let assemblyFormat = "$a";
 }
 
+// Check that the self-type parameter can be referenced without being bound.
+
+// ATTR-LABEL: Attribute TestHAttr::parse
+// ATTR: _result_type = reqType
+// ATTR: parseUseType(odsParser,
+// ATTR-NEXT: *_result_type
+
+// ATTR-LABEL: void TestHAttr::print
+// ATTR: printUseType(odsPrinter,
+// ATTR-NEXT: getType()
+
+def AttrE : TestAttr<"TestH"> {
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type);
+  let mnemonic = "attr_e";
+  let assemblyFormat = "custom<UseType>(ref($type))";
+}
+
 /// Test type parser and printer that mix variables and struct are generated
 /// correctly.
 

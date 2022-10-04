@@ -60,12 +60,11 @@ entry:
   ret void
 }
 
-; Note: stpncpy is not handled by SimplifyLibcalls yet, so this should not be changed.
 define void @test_stpncpy_to_memcpy(i8 addrspace(200)* %dst) addrspace(200) nounwind {
 ; CHECK-LABEL: define {{[^@]+}}@test_stpncpy_to_memcpy
 ; CHECK-SAME: (i8 addrspace(200)* [[DST:%.*]]) addrspace(200) #[[ATTR1]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call addrspace(200) i8 addrspace(200)* @stpncpy(i8 addrspace(200)* [[DST]], i8 addrspace(200)* getelementptr inbounds ([17 x i8], [17 x i8] addrspace(200)* @str, i64 0, i64 0), i64 17)
+; CHECK-NEXT:    call addrspace(200) void @llvm.memcpy.p200i8.p200i8.i128(i8 addrspace(200)* noundef align 1 dereferenceable(17) [[DST]], i8 addrspace(200)* noundef align 1 dereferenceable(17) getelementptr inbounds ([17 x i8], [17 x i8] addrspace(200)* @str, i64 0, i64 0), i128 17, i1 false)
 ; CHECK-NEXT:    ret void
 ;
 entry:

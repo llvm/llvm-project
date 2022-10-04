@@ -1,5 +1,4 @@
 ; REQUIRES: x86-registered-target
-; RUN: opt %s %loadbye -goodbye -wave-goodbye -disable-output -enable-new-pm=0 2>&1 | FileCheck %s
 ; RUN: opt %s %loadnewpmbye %loadbye -passes="goodbye" -wave-goodbye -disable-output 2>&1 | FileCheck %s
 ; RUN: opt %s %loadnewpmbye -passes="goodbye" -wave-goodbye -disable-output 2>&1 | FileCheck %s
 ; RUN: opt -module-summary %s -o %t.o

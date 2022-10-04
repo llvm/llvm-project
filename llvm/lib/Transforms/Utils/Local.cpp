@@ -1090,6 +1090,80 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     }
   }
 
+  // 'BB' and 'BB->Pred' are loop latches, bail out to presrve inner loop
+  // metadata.
+  //
+  // FIXME: This is a stop-gap solution to preserve inner-loop metadata given
+  // current status (that loop metadata is implemented as metadata attached to
+  // the branch instruction in the loop latch block). To quote from review
+  // comments, "the current representation of loop metadata (using a loop latch
+  // terminator attachment) is known to be fundamentally broken. Loop latches
+  // are not uniquely associated with loops (both in that a latch can be part of
+  // multiple loops and a loop may have multiple latches). Loop headers are. The
+  // solution to this problem is also known: Add support for basic block
+  // metadata, and attach loop metadata to the loop header."
+  //
+  // Why bail out:
+  // In this case, we expect 'BB' is the latch for outer-loop and 'BB->Pred' is
+  // the latch for inner-loop (see reason below), so bail out to prerserve
+  // inner-loop metadata rather than eliminating 'BB' and attaching its metadata
+  // to this inner-loop.
+  // - The reason we believe 'BB' and 'BB->Pred' have different inner-most
+  // loops: assuming 'BB' and 'BB->Pred' are from the same inner-most loop L,
+  // then 'BB' is the header and latch of 'L' and thereby 'L' must consist of
+  // one self-looping basic block, which is contradictory with the assumption.
+  //
+  // To illustrate how inner-loop metadata is dropped:
+  //
+  // CFG Before
+  //
+  // BB is while.cond.exit, attached with loop metdata md2.
+  // BB->Pred is for.body, attached with loop metadata md1.
+  //
+  //      entry
+  //        |
+  //        v
+  // ---> while.cond   ------------->  while.end
+  // |       |
+  // |       v
+  // |   while.body
+  // |       |
+  // |       v
+  // |    for.body <---- (md1)
+  // |       |  |______|
+  // |       v
+  // |    while.cond.exit (md2)
+  // |       |
+  // |_______|
+  //
+  // CFG After
+  //
+  // while.cond1 is the merge of while.cond.exit and while.cond above.
+  // for.body is attached with md2, and md1 is dropped.
+  // If LoopSimplify runs later (as a part of loop pass), it could create
+  // dedicated exits for inner-loop (essentially adding `while.cond.exit`
+  // back), but won't it won't see 'md1' nor restore it for the inner-loop.
+  //
+  //       entry
+  //         |
+  //         v
+  // ---> while.cond1  ------------->  while.end
+  // |       |
+  // |       v
+  // |   while.body
+  // |       |
+  // |       v
+  // |    for.body <---- (md2)
+  // |_______|  |______|
+  if (Instruction *TI = BB->getTerminator())
+    if (MDNode *LoopMD = TI->getMetadata(LLVMContext::MD_loop)) {
+      for (BasicBlock *Pred : predecessors(BB)) {
+        if (Instruction *PredTI = Pred->getTerminator())
+          if (MDNode *PredLoopMD = PredTI->getMetadata(LLVMContext::MD_loop))
+            return false;
+      }
+    }
+
   LLVM_DEBUG(dbgs() << "Killing Trivial BB: \n" << *BB);
 
   SmallVector<DominatorTree::UpdateType, 32> Updates;

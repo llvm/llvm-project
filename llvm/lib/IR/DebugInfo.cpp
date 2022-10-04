@@ -823,7 +823,14 @@ void Instruction::dropLocation() {
 
   // If this isn't a call, drop the location to allow a location from a
   // preceding instruction to propagate.
-  if (!isa<CallBase>(this)) {
+  bool MayLowerToCall = false;
+  if (isa<CallBase>(this)) {
+    auto *II = dyn_cast<IntrinsicInst>(this);
+    MayLowerToCall =
+        !II || IntrinsicInst::mayLowerToFunctionCall(II->getIntrinsicID());
+  }
+
+  if (!MayLowerToCall) {
     setDebugLoc(DebugLoc());
     return;
   }

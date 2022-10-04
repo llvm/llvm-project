@@ -85,7 +85,7 @@ TEST(MDGeneratorTest, emitRecordMD) {
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  I.Members.emplace_back("int", "X", AccessSpecifier::AS_private);
+  I.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
   I.TagType = TagTypeKind::TTK_Class;
   I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
@@ -154,8 +154,8 @@ TEST(MDGeneratorTest, emitFunctionMD) {
 
   I.Access = AccessSpecifier::AS_none;
 
-  I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
-  I.Params.emplace_back("int", "P");
+  I.ReturnType = TypeInfo("void");
+  I.Params.emplace_back(TypeInfo("int"), "P");
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
 
@@ -211,9 +211,9 @@ TEST(MDGeneratorTest, emitCommentMD) {
   FunctionInfo I;
   I.Name = "f";
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
-  I.Params.emplace_back("int", "I");
-  I.Params.emplace_back("int", "J");
+  I.ReturnType = TypeInfo("void");
+  I.Params.emplace_back(TypeInfo("int"), "I");
+  I.Params.emplace_back(TypeInfo("int"), "J");
   I.Access = AccessSpecifier::AS_none;
 
   CommentInfo Top;

@@ -1381,8 +1381,6 @@ DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
 
 DenseElementsAttr DenseIntOrFPElementsAttr::getRaw(ShapedType type,
                                                    ArrayRef<char> data) {
-  assert((type.isa<RankedTensorType, VectorType>()) &&
-         "type must be ranked tensor or vector");
   assert(type.hasStaticShape() && "type must have static shape");
   bool isSplat = false;
   bool isValid = isValidRawBuffer(type, data, isSplat);
@@ -1498,16 +1496,7 @@ static ShapedType mappingHelper(Fn mapping, Attr &attr, ShapedType inType,
   size_t bitWidth = getDenseElementBitWidth(newElementType);
   size_t storageBitWidth = getDenseElementStorageWidth(bitWidth);
 
-  ShapedType newArrayType;
-  if (inType.isa<RankedTensorType>())
-    newArrayType = RankedTensorType::get(inType.getShape(), newElementType);
-  else if (inType.isa<UnrankedTensorType>())
-    newArrayType = RankedTensorType::get(inType.getShape(), newElementType);
-  else if (auto vType = inType.dyn_cast<VectorType>())
-    newArrayType = VectorType::get(vType.getShape(), newElementType,
-                                   vType.getNumScalableDims());
-  else
-    assert(newArrayType && "Unhandled tensor type");
+  ShapedType newArrayType = inType.cloneWith(inType.getShape(), newElementType);
 
   size_t numRawElements = attr.isSplat() ? 1 : newArrayType.getNumElements();
   data.resize(llvm::divideCeil(storageBitWidth * numRawElements, CHAR_BIT));

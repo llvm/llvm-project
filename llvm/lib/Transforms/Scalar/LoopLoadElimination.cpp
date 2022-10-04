@@ -109,8 +109,8 @@ struct StoreToLoadForwardingCandidate {
     // Currently we only support accesses with unit stride.  FIXME: we should be
     // able to handle non unit stirde as well as long as the stride is equal to
     // the dependence distance.
-    if (getPtrStride(PSE, LoadType, LoadPtr, L) != 1 ||
-        getPtrStride(PSE, LoadType, StorePtr, L) != 1)
+    if (getPtrStride(PSE, LoadType, LoadPtr, L).value_or(0) != 1 ||
+        getPtrStride(PSE, LoadType, StorePtr, L).value_or(0) != 1)
       return false;
 
     unsigned TypeByteSize = DL.getTypeAllocSize(const_cast<Type *>(LoadType));
@@ -728,23 +728,17 @@ PreservedAnalyses LoopLoadEliminationPass::run(Function &F,
   if (LI.empty())
     return PreservedAnalyses::all();
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
-  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
-  auto &AA = AM.getResult<AAManager>(F);
   auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
   auto *PSI = MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
   auto *BFI = (PSI && PSI->hasProfileSummary()) ?
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
+  LoopAccessInfoManager &LAIs = AM.getResult<LoopAccessAnalysis>(F);
 
-  auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
   bool Changed = eliminateLoadsAcrossLoops(
-      F, LI, DT, BFI, PSI, &SE, &AC, [&](Loop &L) -> const LoopAccessInfo & {
-        LoopStandardAnalysisResults AR = {AA,  AC,  DT,      LI,      SE,
-                                          TLI, TTI, nullptr, nullptr, nullptr};
-        return LAM.getResult<LoopAccessAnalysis>(L, AR);
-      });
+      F, LI, DT, BFI, PSI, &SE, &AC,
+      [&](Loop &L) -> const LoopAccessInfo & { return LAIs.getInfo(L); });
 
   if (!Changed)
     return PreservedAnalyses::all();

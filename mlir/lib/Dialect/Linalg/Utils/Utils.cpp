@@ -17,8 +17,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -180,7 +180,7 @@ bool isElementwise(LinalgOp op) {
 
   // TODO: relax the restrictions on indexing map.
   for (OpOperand *opOperand : op.getOutputOperands()) {
-    if (!op.getTiedIndexingMap(opOperand).isPermutation())
+    if (!op.getMatchingIndexingMap(opOperand).isPermutation())
       return false;
   }
   return hasOnlyScalarElementwiseOp(op->getRegion(0));
@@ -199,14 +199,12 @@ bool isPermutation(ArrayRef<int64_t> permutation) {
   return count(indexCounts, 1) == static_cast<int64_t>(permutation.size());
 }
 
-bool isParallelIterator(Attribute attr) {
-  auto strAttr = attr.dyn_cast_or_null<StringAttr>();
-  return strAttr && strAttr.getValue() == getParallelIteratorTypeName();
+bool isParallelIterator(StringRef iteratorType) {
+  return iteratorType == getParallelIteratorTypeName();
 }
 
-bool isReductionIterator(Attribute attr) {
-  auto strAttr = attr.dyn_cast_or_null<StringAttr>();
-  return strAttr && strAttr.getValue() == getReductionIteratorTypeName();
+bool isReductionIterator(StringRef iteratorType) {
+  return iteratorType == getReductionIteratorTypeName();
 }
 
 /// Helper function that creates a memref::DimOp or tensor::DimOp depending on
@@ -484,7 +482,7 @@ GenericOp makeMemRefCopyOp(OpBuilder &b, Location loc, Value from, Value to) {
 template <>
 void GenerateLoopNest<scf::ForOp>::doit(
     OpBuilder &b, Location loc, ArrayRef<Range> loopRanges, LinalgOp linalgOp,
-    ArrayRef<Attribute> iteratorTypes,
+    ArrayRef<StringRef> iteratorTypes,
     function_ref<scf::ValueVector(OpBuilder &, Location, ValueRange,
                                   ValueRange)>
         bodyBuilderFn,
@@ -527,7 +525,7 @@ void GenerateLoopNest<scf::ForOp>::doit(
 template <>
 void GenerateLoopNest<AffineForOp>::doit(
     OpBuilder &b, Location loc, ArrayRef<Range> loopRanges, LinalgOp linalgOp,
-    ArrayRef<Attribute> iteratorTypes,
+    ArrayRef<StringRef> iteratorTypes,
     function_ref<scf::ValueVector(OpBuilder &, Location, ValueRange,
                                   ValueRange)>
         bodyBuilderFn,
@@ -577,7 +575,7 @@ void updateBoundsForCyclicDistribution(OpBuilder &b, Location loc, Value procId,
 // exceeds 10.
 static void generateParallelLoopNest(
     OpBuilder &b, Location loc, ValueRange lbs, ValueRange ubs,
-    ValueRange steps, ArrayRef<Attribute> iteratorTypes,
+    ValueRange steps, ArrayRef<StringRef> iteratorTypes,
     ArrayRef<linalg::ProcInfo> procInfo,
     function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilderFn,
     SmallVectorImpl<Value> &ivStorage) {
@@ -692,7 +690,7 @@ static void generateParallelLoopNest(
 template <>
 void GenerateLoopNest<scf::ParallelOp>::doit(
     OpBuilder &b, Location loc, ArrayRef<Range> loopRanges, LinalgOp linalgOp,
-    ArrayRef<Attribute> iteratorTypes,
+    ArrayRef<StringRef> iteratorTypes,
     function_ref<scf::ValueVector(OpBuilder &, Location, ValueRange,
                                   ValueRange)>
         bodyBuilderFn,
@@ -967,7 +965,7 @@ computeAllSliceParameters(OpBuilder &builder, Location loc, LinalgOp linalgOp,
   for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
     Value shapedOp = valuesToTile[opOperand->getOperandNumber()];
     LLVM_DEBUG(llvm::dbgs() << "makeTiledShapes: for operand " << shapedOp);
-    AffineMap map = linalgOp.getTiedIndexingMap(opOperand);
+    AffineMap map = linalgOp.getMatchingIndexingMap(opOperand);
     // Use `opOperand` as is if it is not tiled and not an output tensor. Having
     // an extract/insert slice pair for all output tensors simplifies follow up
     // transformations such as padding and bufferization since the

@@ -351,6 +351,10 @@ public:
   MutableSymbolVector &objects() { return objects_; }
   const MutableSymbolVector &objects() const { return objects_; }
   void add_object(Symbol &object) { objects_.emplace_back(object); }
+  void replace_object(Symbol &object, unsigned index) {
+    CHECK(index < (unsigned)objects_.size());
+    objects_[index] = object;
+  }
   std::size_t alignment() const { return alignment_; }
   void set_alignment(std::size_t alignment) { alignment_ = alignment; }
 

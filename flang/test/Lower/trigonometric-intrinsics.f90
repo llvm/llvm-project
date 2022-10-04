@@ -1,6 +1,34 @@
 ! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s
 ! RUN: %flang_fc1 -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s
 
+! CHECK-LABEL: tan_testr
+subroutine tan_testr(a, b)
+  real :: a, b
+! CHECK: fir.call @fir.tan.f32.f32
+  b = tan(a)
+end subroutine
+
+! CHECK-LABEL: tan_testd
+subroutine tan_testd(a, b)
+  real(kind=8) :: a, b
+! CHECK: fir.call @fir.tan.f64.f64
+  b = tan(a)
+end subroutine
+
+! CHECK-LABEL: tan_testc
+subroutine tan_testc(z)
+  complex :: z
+! CHECK: fir.call @fir.tan.z4.z4
+  z = tan(z)
+end subroutine
+
+! CHECK-LABEL: tan_testcd
+subroutine tan_testcd(z)
+  complex(kind=8) :: z
+! CHECK: fir.call @fir.tan.z8.z8
+  z = tan(z)
+end subroutine
+
 ! CHECK-LABEL: atan_testr
 subroutine atan_testr(a, b)
   real :: a, b
@@ -141,6 +169,18 @@ subroutine sinh_testcd(z)
   z = sinh(z)
 end subroutine
 
+! CHECK-LABEL: @fir.tan.f32.f32
+! CHECK: math.tan %{{.*}} : f32
+
+! CHECK-LABEL: @fir.tan.f64.f64
+! CHECK: math.tan %{{.*}} : f64
+
+! CHECK-LABEL: @fir.tan.z4.z4
+! CHECK: fir.call @ctanf
+
+! CHECK-LABEL: @fir.tan.z8.z8
+! CHECK: fir.call @ctan
+
 ! CHECK-LABEL: @fir.atan.f32.f32
 ! CHECK: math.atan %{{.*}} : f32
 
@@ -148,10 +188,10 @@ end subroutine
 ! CHECK: math.atan %{{.*}} : f64
 
 ! CHECK-LABEL: @fir.atan.z4.z4
-! CHECK: fir.call {{.*}}atan
+! CHECK: fir.call @catanf
 
 ! CHECK-LABEL: @fir.atan.z8.z8
-! CHECK: fir.call {{.*}}atan
+! CHECK: fir.call @catan
 
 ! CHECK-LABEL: @fir.cos.f32.f32
 ! CHECK: math.cos %{{.*}} : f32
@@ -160,10 +200,10 @@ end subroutine
 ! CHECK: math.cos %{{.*}} : f64
 
 ! CHECK-LABEL: @fir.cos.z4.z4
-! CHECK: fir.call {{.*}}cos
+! CHECK: fir.call @ccosf
 
 ! CHECK-LABEL: @fir.cos.z8.z8
-! CHECK: fir.call {{.*}}cos
+! CHECK: fir.call @ccos
 
 ! CHECK-LABEL: @fir.cosh.f32.f32
 ! CHECK: fir.call {{.*}}cosh
@@ -172,10 +212,10 @@ end subroutine
 ! CHECK: fir.call {{.*}}cosh
 
 ! CHECK-LABEL: @fir.cosh.z4.z4
-! CHECK: fir.call {{.*}}cosh
+! CHECK: fir.call @ccoshf
 
 ! CHECK-LABEL: @fir.cosh.z8.z8
-! CHECK: fir.call {{.*}}cosh
+! CHECK: fir.call @ccosh
 
 ! CHECK-LABEL: @fir.sin.f32.f32
 ! CHECK: math.sin %{{.*}} : f32
@@ -184,10 +224,10 @@ end subroutine
 ! CHECK: math.sin %{{.*}} : f64
 
 ! CHECK-LABEL: @fir.sin.z4.z4
-! CHECK: fir.call {{.*}}sin
+! CHECK: fir.call @csinf
 
 ! CHECK-LABEL: @fir.sin.z8.z8
-! CHECK: fir.call {{.*}}sin
+! CHECK: fir.call @csin
 
 ! CHECK-LABEL: @fir.sinh.f32.f32
 ! CHECK: fir.call {{.*}}sinh
@@ -196,7 +236,7 @@ end subroutine
 ! CHECK: fir.call {{.*}}sinh
 
 ! CHECK-LABEL: @fir.sinh.z4.z4
-! CHECK: fir.call {{.*}}sinh
+! CHECK: fir.call @csinhf
 
 ! CHECK-LABEL: @fir.sinh.z8.z8
-! CHECK: fir.call {{.*}}sinh
+! CHECK: fir.call @csinh

@@ -94,10 +94,8 @@ end subroutine
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.complex<4>>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f32>{{.*}}) {
 subroutine abs_testzr(a, b)
 ! CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.complex<4>>
-! CHECK:  %[[VAL_3:.*]] = fir.extract_value %[[VAL_2]], [0 : index] : (!fir.complex<4>) -> f32
-! CHECK:  %[[VAL_4:.*]] = fir.extract_value %[[VAL_2]], [1 : index] : (!fir.complex<4>) -> f32
-! CHECK:  %[[VAL_5:.*]] = fir.call @hypotf(%[[VAL_3]], %[[VAL_4]]) : (f32, f32) -> f32
-! CHECK:  fir.store %[[VAL_5]] to %[[VAL_1]] : !fir.ref<f32>
+! CHECK:  %[[VAL_3:.*]] = fir.call @cabsf(%[[VAL_2]]) : (!fir.complex<4>) -> f32
+! CHECK:  fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<f32>
 ! CHECK:  return
   complex :: a
   real :: b
@@ -108,10 +106,8 @@ end subroutine abs_testzr
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.complex<8>>{{.*}}, %[[VAL_1:.*]]: !fir.ref<f64>{{.*}}) {
 subroutine abs_testzd(a, b)
 ! CHECK:  %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.complex<8>>
-! CHECK:  %[[VAL_3:.*]] = fir.extract_value %[[VAL_2]], [0 : index] : (!fir.complex<8>) -> f64
-! CHECK:  %[[VAL_4:.*]] = fir.extract_value %[[VAL_2]], [1 : index] : (!fir.complex<8>) -> f64
-! CHECK:  %[[VAL_5:.*]] = fir.call @hypot(%[[VAL_3]], %[[VAL_4]]) : (f64, f64) -> f64
-! CHECK:  fir.store %[[VAL_5]] to %[[VAL_1]] : !fir.ref<f64>
+! CHECK:  %[[VAL_3:.*]] = fir.call @cabs(%[[VAL_2]]) : (!fir.complex<8>) -> f64
+! CHECK:  fir.store %[[VAL_3]] to %[[VAL_1]] : !fir.ref<f64>
 ! CHECK:  return
   complex(kind=8) :: a
   real(kind=8) :: b

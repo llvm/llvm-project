@@ -114,13 +114,20 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
       OS.write_zeros(PadBytes);
     }
     DXContainerYAML::Part P = std::get<0>(I);
+    RollingOffset = std::get<1>(I) + sizeof(dxbc::PartHeader);
+    uint32_t PartSize = P.Size;
+
     OS.write(P.Name.c_str(), 4);
     if (sys::IsBigEndianHost)
       sys::swapByteOrder(P.Size);
     OS.write(reinterpret_cast<const char *>(&P.Size), sizeof(uint32_t));
-    RollingOffset = std::get<1>(I) + sizeof(dxbc::PartHeader);
 
-    if (P.Name == "DXIL" && P.Program) {
+    dxbc::PartType PT = dxbc::parsePartType(P.Name);
+
+    uint64_t DataStart = OS.tell();
+    if (PT == dxbc::PartType::DXIL) {
+      if (!P.Program)
+        continue;
       dxbc::ProgramHeader Header;
       Header.MajorVersion = P.Program->MajorVersion;
       Header.MinorVersion = P.Program->MinorVersion;
@@ -160,7 +167,21 @@ void DXContainerWriter::writeParts(raw_ostream &OS) {
         OS.write(reinterpret_cast<char *>(P.Program->DXIL->data()),
                  P.Program->DXIL->size());
       }
+    } else if (PT == dxbc::PartType::SFI0) {
+      // If we don't have any flags we can continue here and the data will be
+      // zeroed out.
+      if (!P.Flags.has_value())
+        continue;
+      uint64_t Flags = P.Flags->getEncodedFlags();
+      if (sys::IsBigEndianHost)
+        sys::swapByteOrder(Flags);
+      OS.write(reinterpret_cast<char *>(&Flags), sizeof(uint64_t));
     }
+    uint64_t BytesWritten = OS.tell() - DataStart;
+    RollingOffset += BytesWritten;
+    if (BytesWritten < PartSize)
+      OS.write_zeros(PartSize - BytesWritten);
+    RollingOffset += PartSize;
   }
 }
 

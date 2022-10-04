@@ -1509,6 +1509,21 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S,
 
   llvm::ConstantInt *CaseVal =
     Builder.getInt(S.getLHS()->EvaluateKnownConstInt(getContext()));
+
+  // Emit debuginfo for the case value if it is an enum value.
+  const ConstantExpr *CE;
+  if (auto ICE = dyn_cast<ImplicitCastExpr>(S.getLHS()))
+    CE = dyn_cast<ConstantExpr>(ICE->getSubExpr());
+  else
+    CE = dyn_cast<ConstantExpr>(S.getLHS());
+  if (CE) {
+    if (auto DE = dyn_cast<DeclRefExpr>(CE->getSubExpr()))
+      if (CGDebugInfo *Dbg = getDebugInfo())
+        if (CGM.getCodeGenOpts().hasReducedDebugInfo())
+          Dbg->EmitGlobalVariable(DE->getDecl(),
+              APValue(llvm::APSInt(CaseVal->getValue())));
+  }
+
   if (SwitchLikelihood)
     SwitchLikelihood->push_back(Stmt::getLikelihood(Attrs));
 

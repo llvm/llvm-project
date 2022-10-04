@@ -51,8 +51,7 @@ _OutputIterator
 merge(_InputIterator1 __first1, _InputIterator1 __last1,
       _InputIterator2 __first2, _InputIterator2 __last2, _OutputIterator __result, _Compare __comp)
 {
-    typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
-    return _VSTD::__merge<_Comp_ref>(__first1, __last1, __first2, __last2, __result, __comp);
+    return _VSTD::__merge<__comp_ref_type<_Compare> >(__first1, __last1, __first2, __last2, __result, __comp);
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator>

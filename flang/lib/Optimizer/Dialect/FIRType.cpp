@@ -377,35 +377,9 @@ static bool cannotBePointerOrHeapElementType(mlir::Type eleTy) {
 // BoxType
 //===----------------------------------------------------------------------===//
 
-// `box` `<` type (',' affine-map)? `>`
-mlir::Type fir::BoxType::parse(mlir::AsmParser &parser) {
-  mlir::Type ofTy;
-  if (parser.parseLess() || parser.parseType(ofTy))
-    return {};
-
-  mlir::AffineMapAttr map;
-  if (!parser.parseOptionalComma()) {
-    if (parser.parseAttribute(map)) {
-      parser.emitError(parser.getCurrentLocation(), "expected affine map");
-      return {};
-    }
-  }
-  if (parser.parseGreater())
-    return {};
-  return get(ofTy, map);
-}
-
-void fir::BoxType::print(mlir::AsmPrinter &printer) const {
-  printer << "<" << getEleTy();
-  if (auto map = getLayoutMap()) {
-    printer << ", " << map;
-  }
-  printer << '>';
-}
-
 mlir::LogicalResult
 fir::BoxType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
-                     mlir::Type eleTy, mlir::AffineMapAttr map) {
+                     mlir::Type eleTy) {
   // TODO
   return mlir::success();
 }
@@ -464,6 +438,19 @@ void fir::CharacterType::print(mlir::AsmPrinter &printer) const {
       printer << len;
   }
   printer << '>';
+}
+
+//===----------------------------------------------------------------------===//
+// ClassType
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult
+fir::ClassType::verify(llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
+                       mlir::Type eleTy) {
+  if (eleTy.isa<fir::RecordType, fir::SequenceType, fir::HeapType,
+                fir::PointerType, mlir::NoneType>())
+    return mlir::success();
+  return emitError() << "invalid element type\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -951,15 +938,25 @@ mlir::Type fir::fromRealTypeID(mlir::MLIRContext *context,
 }
 
 //===----------------------------------------------------------------------===//
+// BaseBoxType
+//===----------------------------------------------------------------------===//
+
+mlir::Type BaseBoxType::getEleTy() const {
+  return llvm::TypeSwitch<fir::BaseBoxType, mlir::Type>(*this)
+      .Case<fir::BoxType, fir::ClassType>(
+          [](auto type) { return type.getEleTy(); });
+}
+
+//===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//
 
 void FIROpsDialect::registerTypes() {
-  addTypes<BoxType, BoxCharType, BoxProcType, CharacterType, fir::ComplexType,
-           FieldType, HeapType, fir::IntegerType, LenType, LogicalType,
-           LLVMPointerType, PointerType, RealType, RecordType, ReferenceType,
-           SequenceType, ShapeType, ShapeShiftType, ShiftType, SliceType,
-           TypeDescType, fir::VectorType>();
+  addTypes<BoxType, BoxCharType, BoxProcType, CharacterType, ClassType,
+           fir::ComplexType, FieldType, HeapType, fir::IntegerType, LenType,
+           LogicalType, LLVMPointerType, PointerType, RealType, RecordType,
+           ReferenceType, SequenceType, ShapeType, ShapeShiftType, ShiftType,
+           SliceType, TypeDescType, fir::VectorType>();
   fir::ReferenceType::attachInterface<PointerLikeModel<fir::ReferenceType>>(
       *getContext());
 

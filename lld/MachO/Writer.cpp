@@ -902,10 +902,10 @@ static void sortSegmentsAndSections() {
 
       if (!isecPriorities.empty()) {
         if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
-          llvm::stable_sort(merged->inputs,
-                            [&](InputSection *a, InputSection *b) {
-                              return isecPriorities[a] > isecPriorities[b];
-                            });
+          llvm::stable_sort(
+              merged->inputs, [&](InputSection *a, InputSection *b) {
+                return isecPriorities.lookup(a) > isecPriorities.lookup(b);
+              });
         }
       }
     }
@@ -1185,8 +1185,9 @@ template <class LP> void Writer::run() {
   if (in.initOffsets->isNeeded())
     in.initOffsets->setUp();
 
-  // Do not proceed if there was an undefined symbol.
+  // Do not proceed if there were undefined or duplicate symbols.
   reportPendingUndefinedSymbols();
+  reportPendingDuplicateSymbols();
   if (errorCount())
     return;
 

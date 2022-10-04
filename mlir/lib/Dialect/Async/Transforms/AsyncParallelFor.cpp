@@ -13,7 +13,7 @@
 #include "mlir/Dialect/Async/Passes.h"
 
 #include "PassDetail.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/Async/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -555,7 +555,7 @@ createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
     // Create async.execute operation to dispatch half of the block range.
     auto execute = b.create<ExecuteOp>(TypeRange(), ValueRange(), ValueRange(),
                                        executeBodyBuilder);
-    b.create<AddToGroupOp>(indexTy, execute.token(), group);
+    b.create<AddToGroupOp>(indexTy, execute.getToken(), group);
     b.create<scf::YieldOp>(ValueRange({start, midIndex}));
   }
 
@@ -702,7 +702,7 @@ doSequentialDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
     // Create async.execute operation to launch parallel computate function.
     auto execute = b.create<ExecuteOp>(TypeRange(), ValueRange(), ValueRange(),
                                        executeBodyBuilder);
-    b.create<AddToGroupOp>(rewriter.getIndexType(), execute.token(), group);
+    b.create<AddToGroupOp>(rewriter.getIndexType(), execute.getToken(), group);
     b.create<scf::YieldOp>();
   };
 

@@ -83,6 +83,9 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
   KMP_PUSH_PARTITIONED_TIMER(OMP_loop_static);
   KMP_PUSH_PARTITIONED_TIMER(OMP_loop_static_scheduling);
 
+  // Clear monotonic/nonmonotonic bits (ignore it)
+  schedtype = SCHEDULE_WITHOUT_MODIFIERS(schedtype);
+
   typedef typename traits_t<T>::unsigned_t UT;
   typedef typename traits_t<T>::signed_t ST;
   /*  this all has to be changed back to TID and such.. */

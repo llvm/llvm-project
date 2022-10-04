@@ -202,7 +202,10 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
       pint_t cfa = getCFA(addressSpace, prolog, registers);
 
       (void)stage2;
-#if defined(_LIBUNWIND_TARGET_AARCH64)
+      // __unw_step_stage2 is not used for cross unwinding, so we use
+      // __aarch64__ rather than LIBUNWIND_TARGET_AARCH64 to make sure we are
+      // building for AArch64 natively.
+#if defined(__aarch64__)
       if (stage2 && cieInfo.mteTaggedFrame) {
         pint_t sp = registers.getSP();
         pint_t p = sp;

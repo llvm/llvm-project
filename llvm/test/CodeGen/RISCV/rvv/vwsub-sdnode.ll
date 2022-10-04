@@ -62,8 +62,7 @@ define <vscale x 1 x i64> @vwsub_wv_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 
 ; CHECK-LABEL: vwsub_wv_nxv1i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
-; CHECK-NEXT:    vwsub.wv v10, v8, v9
-; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vwsub.wv v8, v8, v9
 ; CHECK-NEXT:    ret
   %vc = sext <vscale x 1 x i32> %vb to <vscale x 1 x i64>
   %vd = sub <vscale x 1 x i64> %va, %vc
@@ -74,8 +73,7 @@ define <vscale x 1 x i64> @vwsubu_wv_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1
 ; CHECK-LABEL: vwsubu_wv_nxv1i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
-; CHECK-NEXT:    vwsubu.wv v10, v8, v9
-; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vwsubu.wv v8, v8, v9
 ; CHECK-NEXT:    ret
   %vc = zext <vscale x 1 x i32> %vb to <vscale x 1 x i64>
   %vd = sub <vscale x 1 x i64> %va, %vc
@@ -168,8 +166,7 @@ define <vscale x 2 x i64> @vwsub_wv_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 
 ; CHECK-LABEL: vwsub_wv_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
-; CHECK-NEXT:    vwsub.wv v12, v8, v10
-; CHECK-NEXT:    vmv2r.v v8, v12
+; CHECK-NEXT:    vwsub.wv v8, v8, v10
 ; CHECK-NEXT:    ret
   %vc = sext <vscale x 2 x i32> %vb to <vscale x 2 x i64>
   %vd = sub <vscale x 2 x i64> %va, %vc
@@ -180,8 +177,7 @@ define <vscale x 2 x i64> @vwsubu_wv_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2
 ; CHECK-LABEL: vwsubu_wv_nxv2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
-; CHECK-NEXT:    vwsubu.wv v12, v8, v10
-; CHECK-NEXT:    vmv2r.v v8, v12
+; CHECK-NEXT:    vwsubu.wv v8, v8, v10
 ; CHECK-NEXT:    ret
   %vc = zext <vscale x 2 x i32> %vb to <vscale x 2 x i64>
   %vd = sub <vscale x 2 x i64> %va, %vc
@@ -274,8 +270,7 @@ define <vscale x 4 x i64> @vwsub_wv_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 
 ; CHECK-LABEL: vwsub_wv_nxv4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
-; CHECK-NEXT:    vwsub.wv v16, v8, v12
-; CHECK-NEXT:    vmv4r.v v8, v16
+; CHECK-NEXT:    vwsub.wv v8, v8, v12
 ; CHECK-NEXT:    ret
   %vc = sext <vscale x 4 x i32> %vb to <vscale x 4 x i64>
   %vd = sub <vscale x 4 x i64> %va, %vc
@@ -286,8 +281,7 @@ define <vscale x 4 x i64> @vwsubu_wv_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4
 ; CHECK-LABEL: vwsubu_wv_nxv4i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
-; CHECK-NEXT:    vwsubu.wv v16, v8, v12
-; CHECK-NEXT:    vmv4r.v v8, v16
+; CHECK-NEXT:    vwsubu.wv v8, v8, v12
 ; CHECK-NEXT:    ret
   %vc = zext <vscale x 4 x i32> %vb to <vscale x 4 x i64>
   %vd = sub <vscale x 4 x i64> %va, %vc
@@ -380,8 +374,7 @@ define <vscale x 8 x i64> @vwsub_wv_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 
 ; CHECK-LABEL: vwsub_wv_nxv8i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vwsub.wv v24, v8, v16
-; CHECK-NEXT:    vmv8r.v v8, v24
+; CHECK-NEXT:    vwsub.wv v8, v8, v16
 ; CHECK-NEXT:    ret
   %vc = sext <vscale x 8 x i32> %vb to <vscale x 8 x i64>
   %vd = sub <vscale x 8 x i64> %va, %vc
@@ -392,8 +385,7 @@ define <vscale x 8 x i64> @vwsubu_wv_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8
 ; CHECK-LABEL: vwsubu_wv_nxv8i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vwsubu.wv v24, v8, v16
-; CHECK-NEXT:    vmv8r.v v8, v24
+; CHECK-NEXT:    vwsubu.wv v8, v8, v16
 ; CHECK-NEXT:    ret
   %vc = zext <vscale x 8 x i32> %vb to <vscale x 8 x i64>
   %vd = sub <vscale x 8 x i64> %va, %vc

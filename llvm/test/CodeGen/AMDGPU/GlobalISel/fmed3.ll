@@ -146,7 +146,6 @@ define amdgpu_kernel void @v_test_no_global_nnans_med3_f32_pat0_srcmod0(float ad
 ; SI-NEXT:    buffer_load_dword v4, v[0:1], s[8:11], 0 addr64 glc
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_sub_f32_e32 v2, 0x80000000, v2
-; SI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
 ; SI-NEXT:    v_mul_f32_e32 v3, 1.0, v3
 ; SI-NEXT:    v_min_f32_e32 v5, v2, v3
 ; SI-NEXT:    v_max_f32_e32 v2, v2, v3
@@ -186,7 +185,6 @@ define amdgpu_kernel void @v_test_no_global_nnans_med3_f32_pat0_srcmod0(float ad
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; VI-NEXT:    v_sub_f32_e32 v4, 0x80000000, v7
 ; VI-NEXT:    v_mul_f32_e32 v2, 1.0, v2
-; VI-NEXT:    v_mul_f32_e32 v4, 1.0, v4
 ; VI-NEXT:    v_min_f32_e32 v5, v4, v2
 ; VI-NEXT:    v_max_f32_e32 v2, v4, v2
 ; VI-NEXT:    v_mul_f32_e32 v3, 1.0, v3
@@ -208,7 +206,6 @@ define amdgpu_kernel void @v_test_no_global_nnans_med3_f32_pat0_srcmod0(float ad
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_sub_f32_e32 v1, 0x80000000, v1
 ; GFX9-NEXT:    v_max_f32_e32 v2, v2, v2
-; GFX9-NEXT:    v_max_f32_e32 v1, v1, v1
 ; GFX9-NEXT:    v_min_f32_e32 v4, v1, v2
 ; GFX9-NEXT:    v_max_f32_e32 v1, v1, v2
 ; GFX9-NEXT:    v_max_f32_e32 v2, v3, v3
@@ -231,7 +228,6 @@ define amdgpu_kernel void @v_test_no_global_nnans_med3_f32_pat0_srcmod0(float ad
 ; GFX10-NEXT:    v_sub_f32_e32 v1, 0x80000000, v1
 ; GFX10-NEXT:    v_max_f32_e32 v2, v2, v2
 ; GFX10-NEXT:    v_max_f32_e32 v3, v3, v3
-; GFX10-NEXT:    v_max_f32_e32 v1, v1, v1
 ; GFX10-NEXT:    v_max_f32_e32 v4, v1, v2
 ; GFX10-NEXT:    v_min_f32_e32 v1, v1, v2
 ; GFX10-NEXT:    v_min_f32_e32 v2, v4, v3
@@ -251,11 +247,9 @@ define amdgpu_kernel void @v_test_no_global_nnans_med3_f32_pat0_srcmod0(float ad
 ; GFX11-NEXT:    global_load_b32 v3, v0, s[6:7] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_dual_sub_f32 v1, 0x80000000, v1 :: v_dual_max_f32 v2, v2, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_max_f32_e32 v1, v1, v1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_min_f32_e32 v4, v1, v2
 ; GFX11-NEXT:    v_dual_max_f32 v1, v1, v2 :: v_dual_max_f32 v2, v3, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_minmax_f32 v1, v1, v2, v4
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)

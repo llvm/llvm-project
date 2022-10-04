@@ -22,7 +22,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "inline-order"
 
-enum class InlinePriorityMode : int { Size, Cost, OptRatio };
+enum class InlinePriorityMode : int { Size, Cost, CostBenefit };
 
 static cl::opt<InlinePriorityMode> UseInlinePriority(
     "inline-priority-mode", cl::init(InlinePriorityMode::Size), cl::Hidden,
@@ -30,7 +30,14 @@ static cl::opt<InlinePriorityMode> UseInlinePriority(
     cl::values(clEnumValN(InlinePriorityMode::Size, "size",
                           "Use callee size priority."),
                clEnumValN(InlinePriorityMode::Cost, "cost",
-                          "Use inline cost priority.")));
+                          "Use inline cost priority."),
+               clEnumValN(InlinePriorityMode::CostBenefit, "cost-benefit",
+                          "Use cost-benefit ratio.")));
+
+static cl::opt<int> ModuleInlinerTopPriorityThreshold(
+    "moudle-inliner-top-priority-threshold", cl::Hidden, cl::init(0),
+    cl::desc("The cost threshold for call sites that get inlined without the "
+             "cost-benefit analysis"));
 
 namespace {
 
@@ -98,6 +105,74 @@ public:
 
 private:
   int Cost;
+};
+
+class CostBenefitPriority {
+public:
+  CostBenefitPriority() = default;
+  CostBenefitPriority(const CallBase *CB, FunctionAnalysisManager &FAM,
+                      const InlineParams &Params) {
+    auto IC = getInlineCostWrapper(const_cast<CallBase &>(*CB), FAM, Params);
+    Cost = IC.getCost();
+    StaticBonusApplied = IC.getStaticBonusApplied();
+    CostBenefit = IC.getCostBenefit();
+  }
+
+  static bool isMoreDesirable(const CostBenefitPriority &P1,
+                              const CostBenefitPriority &P2) {
+    // We prioritize call sites in the dictionary order of the following
+    // priorities:
+    //
+    // 1. Those call sites that are expected to reduce the caller size when
+    //    inlined.  Within them, we prioritize those call sites with bigger
+    //    reduction.
+    //
+    // 2. Those call sites that have gone through the cost-benefit analysis.
+    //    Currently, they are limited to hot call sites.  Within them, we
+    //    prioritize those call sites with higher benefit-to-cost ratios.
+    //
+    // 3. Remaining call sites are prioritized according to their costs.
+
+    // We add back StaticBonusApplied to determine whether we expect the caller
+    // to shrink (even if we don't delete the callee).
+    bool P1ReducesCallerSize =
+        P1.Cost + P1.StaticBonusApplied < ModuleInlinerTopPriorityThreshold;
+    bool P2ReducesCallerSize =
+        P2.Cost + P2.StaticBonusApplied < ModuleInlinerTopPriorityThreshold;
+    if (P1ReducesCallerSize || P2ReducesCallerSize) {
+      // If one reduces the caller size while the other doesn't, then return
+      // true iff P1 reduces the caller size.
+      if (P1ReducesCallerSize != P2ReducesCallerSize)
+        return P1ReducesCallerSize;
+
+      // If they both reduce the caller size, pick the one with the smaller
+      // cost.
+      return P1.Cost < P2.Cost;
+    }
+
+    bool P1HasCB = P1.CostBenefit.has_value();
+    bool P2HasCB = P2.CostBenefit.has_value();
+    if (P1HasCB || P2HasCB) {
+      // If one has undergone the cost-benefit analysis while the other hasn't,
+      // then return true iff P1 has.
+      if (P1HasCB != P2HasCB)
+        return P1HasCB;
+
+      // If they have undergone the cost-benefit analysis, then pick the one
+      // with a higher benefit-to-cost ratio.
+      APInt LHS = P1.CostBenefit->getBenefit() * P2.CostBenefit->getCost();
+      APInt RHS = P2.CostBenefit->getBenefit() * P1.CostBenefit->getCost();
+      return LHS.ugt(RHS);
+    }
+
+    // Remaining call sites are ordered according to their costs.
+    return P1.Cost < P2.Cost;
+  }
+
+private:
+  int Cost;
+  int StaticBonusApplied;
+  Optional<CostBenefitPair> CostBenefit;
 };
 
 template <typename PriorityT>
@@ -195,9 +270,10 @@ llvm::getInlineOrder(FunctionAnalysisManager &FAM, const InlineParams &Params) {
     LLVM_DEBUG(dbgs() << "    Current used priority: Cost priority ---- \n");
     return std::make_unique<PriorityInlineOrder<CostPriority>>(FAM, Params);
 
-  default:
-    llvm_unreachable("Unsupported Inline Priority Mode");
-    break;
+  case InlinePriorityMode::CostBenefit:
+    LLVM_DEBUG(
+        dbgs() << "    Current used priority: cost-benefit priority ---- \n");
+    return std::make_unique<PriorityInlineOrder<CostBenefitPriority>>(FAM, Params);
   }
   return nullptr;
 }

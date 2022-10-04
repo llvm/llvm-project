@@ -17,7 +17,6 @@
 #include "test_macros.h"
 
 // locale names
-#define LOCALE_en_US           "en_US"
 #define LOCALE_en_US_UTF_8     "en_US.UTF-8"
 #define LOCALE_fr_FR_UTF_8     "fr_FR.UTF-8"
 #ifdef __linux__

@@ -38,23 +38,37 @@ dumpDXContainer(MemoryBufferRef Source) {
   Obj->Header.PartOffsets = std::vector<uint32_t>();
   for (const auto P : Container) {
     Obj->Header.PartOffsets->push_back(P.Offset);
-    if (P.Part.getName() == "DXIL") {
+    Obj->Parts.push_back(
+        DXContainerYAML::Part(P.Part.getName().str(), P.Part.Size));
+    DXContainerYAML::Part &NewPart = Obj->Parts.back();
+    dxbc::PartType PT = dxbc::parsePartType(P.Part.getName());
+    switch (PT) {
+    case dxbc::PartType::DXIL: {
       Optional<DXContainer::DXILData> DXIL = Container.getDXIL();
       assert(DXIL && "Since we are iterating and found a DXIL part, "
                      "this should never not have a value");
-      Obj->Parts.push_back(DXContainerYAML::Part{
-          P.Part.getName().str(), P.Part.Size,
-          DXContainerYAML::DXILProgram{
-              DXIL->first.MajorVersion, DXIL->first.MinorVersion,
-              DXIL->first.ShaderKind, DXIL->first.Size,
-              DXIL->first.Bitcode.MajorVersion,
-              DXIL->first.Bitcode.MinorVersion, DXIL->first.Bitcode.Offset,
-              DXIL->first.Bitcode.Size,
-              std::vector<llvm::yaml::Hex8>(
-                  DXIL->second, DXIL->second + DXIL->first.Bitcode.Size)}});
-    } else {
-      Obj->Parts.push_back(
-          DXContainerYAML::Part{P.Part.getName().str(), P.Part.Size, None});
+      NewPart.Program = DXContainerYAML::DXILProgram{
+          DXIL->first.MajorVersion,
+          DXIL->first.MinorVersion,
+          DXIL->first.ShaderKind,
+          DXIL->first.Size,
+          DXIL->first.Bitcode.MajorVersion,
+          DXIL->first.Bitcode.MinorVersion,
+          DXIL->first.Bitcode.Offset,
+          DXIL->first.Bitcode.Size,
+          std::vector<llvm::yaml::Hex8>(
+              DXIL->second, DXIL->second + DXIL->first.Bitcode.Size)};
+      break;
+    }
+    case dxbc::PartType::SFI0: {
+      Optional<uint64_t> Flags = Container.getShaderFlags();
+      // Omit the flags in the YAML if they are missing or zero.
+      if (Flags && *Flags > 0)
+        NewPart.Flags = DXContainerYAML::ShaderFlags(*Flags);
+      break;
+    }
+    case dxbc::PartType::Unknown:
+      break;
     }
   }
 

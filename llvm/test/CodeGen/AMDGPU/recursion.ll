@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -verify-machineinstrs --amdhsa-code-object-version=5 < %s | FileCheck -check-prefixes=V5 %s
 
 ; CHECK-LABEL: {{^}}recursive:
 ; CHECK: ScratchSize: 16
@@ -28,9 +29,13 @@ define void @tail_recursive_with_stack() {
   ret void
 }
 
-; For an arbitrary recursive call, report a large number for unknown stack usage.
+; For an arbitrary recursive call, report a large number for unknown stack
+; usage for code object v4 and older
 ; CHECK-LABEL: {{^}}calls_recursive:
 ; CHECK: .amdhsa_private_segment_fixed_size 16400{{$}}
+;
+; V5-LABEL: {{^}}calls_recursive:
+; V5: .amdhsa_private_segment_fixed_size 0{{$}}
 define amdgpu_kernel void @calls_recursive() {
   call void @recursive()
   ret void
@@ -51,6 +56,9 @@ define amdgpu_kernel void @kernel_indirectly_calls_tail_recursive() {
 
 ; CHECK-LABEL: {{^}}kernel_calls_tail_recursive:
 ; CHECK: .amdhsa_private_segment_fixed_size 16384{{$}}
+;
+; V5-LABEL: {{^}}kernel_calls_tail_recursive:
+; V5: .amdhsa_private_segment_fixed_size 0{{$}}
 define amdgpu_kernel void @kernel_calls_tail_recursive() {
   call void @tail_recursive()
   ret void
@@ -58,6 +66,9 @@ define amdgpu_kernel void @kernel_calls_tail_recursive() {
 
 ; CHECK-LABEL: {{^}}kernel_calls_tail_recursive_with_stack:
 ; CHECK: .amdhsa_private_segment_fixed_size 16384{{$}}
+;
+; V5-LABEL: {{^}}kernel_calls_tail_recursive_with_stack:
+; V5: .amdhsa_private_segment_fixed_size 8{{$}}
 define amdgpu_kernel void @kernel_calls_tail_recursive_with_stack() {
   call void @tail_recursive_with_stack()
   ret void

@@ -1,0 +1,65 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s 
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       7
+Parts:
+  - Name:            SFI0
+    Size:            8
+    Flags:
+      Doubles:         false
+      ComputeShadersPlusRawAndStructuredBuffers: false
+      UAVsAtEveryStage: false
+      Max64UAVs:       false
+      MinimumPrecision: false
+      DX11_1_DoubleExtensions: false
+      DX11_1_ShaderExtensions: false
+      LEVEL9ComparisonFiltering: false
+      TiledResources:  false
+      StencilRef:      false
+      InnerCoverage:   false
+      TypedUAVLoadAdditionalFormats: false
+      ROVs:            false
+      ViewportAndRTArrayIndexFromAnyShaderFeedingRasterizer: false
+      WaveOps:         false
+      Int64Ops:        false
+      ViewID:          false
+      Barycentrics:    false
+      NativeLowPrecision: false
+      ShadingRate:     false
+      Raytracing_Tier_1_1: false
+      SamplerFeedback: false
+      AtomicInt64OnTypedResource: false
+      AtomicInt64OnGroupShared: false
+      DerivativesInMeshAndAmpShaders: false
+      ResourceDescriptorHeapIndexing: false
+      SamplerDescriptorHeapIndexing: false
+      RESERVED:        false
+      AtomicInt64OnHeapResource: false
+      AdvancedTextureOps: false
+      WriteableMSAATextures: false
+      NextUnusedBit:   false
+  - Name:            ISG1
+    Size:            8
+  - Name:            OSG1
+    Size:            8
+  - Name:            PSV0
+    Size:            8
+  - Name:            STAT
+    Size:            8
+  - Name:            HASH
+    Size:            8
+  - Name:            CXIL
+    Size:            8
+...
+
+# CHECK: Parts:
+# CHECK-NEXT:   - Name:            SFI0
+# CHECK-NEXT:     Size:            8
+# CHECK-NOT:      Flags:
+# CHECK-NEXT:   - Name:            ISG1

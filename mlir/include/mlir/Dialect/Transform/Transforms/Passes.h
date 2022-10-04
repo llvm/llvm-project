@@ -16,7 +16,7 @@ namespace mlir {
 class Pass;
 
 namespace transform {
-#define GEN_PASS_DECL_CHECKUSESPASS
+#define GEN_PASS_DECL
 #include "mlir/Dialect/Transform/Transforms/Passes.h.inc"
 
 #define GEN_PASS_REGISTRATION

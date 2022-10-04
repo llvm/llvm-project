@@ -15,7 +15,7 @@
 #define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_BUFFERUTILS_H
 
 #include "mlir/Analysis/Liveness.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/Transforms/BufferViewFlowAnalysis.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"

@@ -73,8 +73,8 @@ inline int statx(int dirfd, const char *__restrict path, int flags,
                  struct stat *__restrict statbuf) {
   // We make a statx syscall and copy out the result into the |statbuf|.
   ::statx_buf xbuf;
-  long ret =
-      syscall(SYS_statx, dirfd, path, flags, ::STATX_BASIC_STATS_MASK, &xbuf);
+  long ret = __llvm_libc::syscall_impl(SYS_statx, dirfd, path, flags,
+                                       ::STATX_BASIC_STATS_MASK, &xbuf);
   if (ret < 0) {
     errno = -ret;
     return -1;

@@ -162,16 +162,16 @@ define i4 @func4(i4 %x, i4 %y) nounwind {
 ; X64-NEXT:    shlb $4, %dil
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shlb %cl, %al
-; X64-NEXT:    movzbl %al, %esi
-; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    movzbl %al, %edx
+; X64-NEXT:    movl %edx, %esi
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    sarb %cl, %dl
+; X64-NEXT:    sarb %cl, %sil
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testb %dil, %dil
 ; X64-NEXT:    sets %al
 ; X64-NEXT:    addl $127, %eax
-; X64-NEXT:    cmpb %dl, %dil
-; X64-NEXT:    cmovel %esi, %eax
+; X64-NEXT:    cmpb %sil, %dil
+; X64-NEXT:    cmovel %edx, %eax
 ; X64-NEXT:    sarb $4, %al
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
@@ -357,16 +357,16 @@ define i8 @func8(i8 %x, i8 %y) nounwind {
 ; X64-NEXT:    movl %esi, %ecx
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shlb %cl, %al
-; X64-NEXT:    movzbl %al, %esi
-; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    movzbl %al, %edx
+; X64-NEXT:    movl %edx, %esi
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    sarb %cl, %dl
+; X64-NEXT:    sarb %cl, %sil
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testb %dil, %dil
 ; X64-NEXT:    sets %al
 ; X64-NEXT:    addl $127, %eax
-; X64-NEXT:    cmpb %dl, %dil
-; X64-NEXT:    cmovel %esi, %eax
+; X64-NEXT:    cmpb %sil, %dil
+; X64-NEXT:    cmovel %edx, %eax
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq
 ;

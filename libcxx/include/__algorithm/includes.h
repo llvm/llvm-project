@@ -48,10 +48,14 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
   static_assert(__is_callable<_Compare, decltype(*__first1), decltype(*__first2)>::value,
       "Comparator has to be callable");
 
-  typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
   return std::__includes(
-      std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2),
-      static_cast<_Comp_ref>(__comp), __identity(), __identity());
+      std::move(__first1),
+      std::move(__last1),
+      std::move(__first2),
+      std::move(__last2),
+      static_cast<__comp_ref_type<_Compare> >(__comp),
+      __identity(),
+      __identity());
 }
 
 template <class _InputIterator1, class _InputIterator2>

@@ -194,7 +194,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return getNumIterators(getParallelIteratorTypeName(),
-                               $_op.iterator_types());
+                                $_op.getIteratorTypesArray());
       }]
     >,
     InterfaceMethod<
@@ -206,7 +206,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins "SmallVectorImpl<unsigned> &":$res),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return findPositionsOfType($_op.iterator_types(),
+        return findPositionsOfType($_op.getIteratorTypesArray(),
                                    getParallelIteratorTypeName(), res);
       }]
     >,
@@ -220,7 +220,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return getNumIterators(getReductionIteratorTypeName(),
-                               $_op.iterator_types());
+                               $_op.getIteratorTypesArray());
       }]
     >,
     InterfaceMethod<
@@ -232,7 +232,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins "SmallVectorImpl<unsigned> &":$res),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return findPositionsOfType($_op.iterator_types(),
+        return findPositionsOfType($_op.getIteratorTypesArray(),
                                    getReductionIteratorTypeName(), res);
       }]
     >,
@@ -246,7 +246,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return getNumIterators(getWindowIteratorTypeName(),
-                               $_op.iterator_types());
+                               $_op.getIteratorTypesArray());
       }]
     >,
     InterfaceMethod<
@@ -258,7 +258,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins "SmallVectorImpl<unsigned> &":$res),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return findPositionsOfType($_op.iterator_types(),
+        return findPositionsOfType($_op.getIteratorTypesArray(),
                                    getWindowIteratorTypeName(), res);
       }]
     >,
@@ -271,7 +271,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return getNumIterators($_op.iterator_types());
+        return getNumIterators($_op.getIteratorTypesArray());
       }]
     >,
     InterfaceMethod<
@@ -284,7 +284,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        auto iters = $_op.iterator_types();
+        auto iters = $_op.getIteratorTypesArray();
         return iters.size() == 1 &&
                getNumIterators(getReductionIteratorTypeName(), iters) == 1;
       }]>,
@@ -377,7 +377,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         Return the block argument for an `opOperand`.
       }],
       /*retTy=*/"BlockArgument",
-      /*methodName=*/"getTiedBlockArgument",
+      /*methodName=*/"getMatchingBlockArgument",
       /*args=*/(ins "OpOperand *":$opOperand),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -390,7 +390,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         Return the operand for a `blockArgument`.
       }],
       /*retTy=*/"OpOperand *",
-      /*methodName=*/"getTiedOpOperand",
+      /*methodName=*/"getMatchingOpOperand",
       /*args=*/(ins "BlockArgument":$blockArgument),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -404,7 +404,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         Return the input or output indexing map for `opOperand`.
       }],
       /*retTy=*/"AffineMap",
-      /*methodName=*/"getTiedIndexingMap",
+      /*methodName=*/"getMatchingIndexingMap",
       /*args=*/(ins "OpOperand*":$opOperand),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -419,7 +419,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         Return the indexing map for a `result`.
       }],
       /*retTy=*/"AffineMap",
-      /*methodName=*/"getTiedIndexingMapForResult",
+      /*methodName=*/"getIndexingMapMatchingResult",
       /*args=*/(ins "OpResult":$result),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -442,7 +442,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
         `opOperand`.
       }],
       /*retTy=*/"OpOperand *",
-      /*methodName=*/"getTiedYieldValue",
+      /*methodName=*/"getMatchingYieldValue",
       /*args=*/(ins "OpOperand*":$opOperand),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
@@ -488,7 +488,20 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return $_op.iterator_types();
+        return $_op.getIteratorTypes();
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return iterator types in the current operation.
+      }],
+      /*retTy=*/"SmallVector<StringRef>",
+      /*methodName=*/"getIteratorTypesArray",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        auto range = $_op.iterator_types().template getAsValueRange<StringAttr>();
+        return {range.begin(), range.end()};
       }]
     >,
     InterfaceMethod<
@@ -746,7 +759,7 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     ArrayAttr getIteratorTypes() { return iterator_types(); }
 
     SmallVector<StringRef> getIteratorTypeNames() {
-      return llvm::to_vector(getIteratorTypes().getAsValueRange<StringAttr>());
+      return getIteratorTypesArray();
     }
 
     //========================================================================//
@@ -758,8 +771,9 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     // TODO: reevalute the need for a cast when a better mechanism exists.
     //========================================================================//
 
-    ValueRange inputs() {
-      return cast<DestinationStyleOpInterface>(*this->getOperation()).inputs();
+    ValueRange getInputs() {
+      return cast<DestinationStyleOpInterface>(*this->getOperation())
+          .getInputs();
     }
 
     int64_t getNumInputs() {
@@ -767,8 +781,9 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
           .getNumInputs();
     }
 
-    ValueRange outputs() {
-      return cast<DestinationStyleOpInterface>(*this->getOperation()).outputs();
+    ValueRange getOutputs() {
+      return cast<DestinationStyleOpInterface>(*this->getOperation())
+          .getOutputs();
     }
 
     int64_t getNumOutputs() {
@@ -908,25 +923,26 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
 // The 'DestinationStyleOpInterface' provides access to the methods relevant
 // for destination-style ops. A destination-style operation has 'n' input
 // arguments and 'm' output arguments. Each op that wants to implement
-// DestinationStyleOpInterface needs to define inputs() and outputs() methods.
+// DestinationStyleOpInterface needs to define getInputs() and getOutputs()
+// methods.
 def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
   let cppNamespace = "::mlir::linalg";
   let methods = [
     //===------------------------------------------------------------------===//
     // Num input/output arguments handling.
     //===------------------------------------------------------------------===//
-    // `inputs` must be defined by each op that wants to implement the
+    // `getInputs` must be defined by each op that wants to implement the
     // DestinationStyleOpInterface.
     InterfaceMethod<
       /*desc=*/[{
         Return the input shape operands.
       }],
       /*retTy=*/"ValueRange",
-      /*methodName=*/"inputs",
+      /*methodName=*/"getInputs",
       /*args=*/(ins)
     >,
-    // These special methods rely on `inputs` and `outputs` being defined by
-    // each op that wants to implement the DestinationStyleOpInterface.
+    // These special methods rely on `getInputs` and `getOutputs` being defined
+    // by each op that wants to implement the DestinationStyleOpInterface.
     InterfaceMethod<
       /*desc=*/[{
         Return the number of inputs.
@@ -939,14 +955,14 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
         return $_op.getInputs().size();
       }]
     >,
-    // `outputs` must be defined by each op that wants to implement the
+    // `getOutputs` must be defined by each op that wants to implement the
     // DestinationStyleOpInterface.
     InterfaceMethod<
       /*desc=*/[{
         Return the output shape operands.
       }],
       /*retTy=*/"ValueRange",
-      /*methodName=*/"outputs",
+      /*methodName=*/"getOutputs",
       /*args=*/(ins)
     >,
     InterfaceMethod<
@@ -958,7 +974,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return $_op.outputs().size();
+        return $_op.getOutputs().size();
       }]
     >,
     InterfaceMethod<

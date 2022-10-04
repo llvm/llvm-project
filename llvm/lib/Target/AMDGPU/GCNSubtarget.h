@@ -1069,6 +1069,8 @@ public:
 
   bool hasVALUTransUseHazard() const { return getGeneration() >= GFX11; }
 
+  bool hasVALUMaskWriteHazard() const { return getGeneration() >= GFX11; }
+
   /// Return if operations acting on VGPR tuples require even alignment.
   bool needsAlignedVGPRs() const { return GFX90AInsts; }
 
@@ -1324,6 +1326,10 @@ public:
   // \returns true if it's beneficial on this subtarget for the scheduler to
   // cluster stores as well as loads.
   bool shouldClusterStores() const { return getGeneration() >= GFX11; }
+
+  // \returns the number of address arguments from which to enable MIMG NSA
+  // on supported architectures.
+  unsigned getNSAThreshold(const MachineFunction &MF) const;
 };
 
 } // end namespace llvm

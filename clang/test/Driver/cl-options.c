@@ -719,7 +719,6 @@
 // RUN:     -fimplicit-modules \
 // RUN:     -fno-implicit-modules \
 // RUN:     -ftrivial-auto-var-init=zero \
-// RUN:     -enable-trivial-auto-var-init-zero-knowing-it-will-be-removed-from-clang \
 // RUN:     --version \
 // RUN:     -Werror /Zs -- %s 2>&1
 
@@ -782,5 +781,9 @@
 // RUN: %clang_cl /external:W4 /c -### -- %s 2>&1 | FileCheck -check-prefix=EXTERNAL_Wn %s
 // EXTERNAL_W0: "-Wno-system-headers"
 // EXTERNAL_Wn: "-Wsystem-headers"
+
+// RUN: %clang_cl -vctoolsdir "" /arm64EC /c -### -- %s 2>&1 | FileCheck %s --check-prefix ARM64EC
+// ARM64EC: "-triple" "arm64ec-pc-windows-msvc19.20.0"
+// ARM64EC-NOT: /arm64EC has been overridden by specified target
 
 void f(void) { }

@@ -235,7 +235,7 @@ void UseEqualsDefaultCheck::registerMatchers(MatchFinder *Finder) {
           anyOf(
               // Default constructor.
               allOf(unless(hasAnyConstructorInitializer(isWritten())),
-                    parameterCountIs(0)),
+                    unless(isVariadic()), parameterCountIs(0)),
               // Copy constructor.
               allOf(isCopyConstructor(),
                     // Discard constructors that can be used as a copy

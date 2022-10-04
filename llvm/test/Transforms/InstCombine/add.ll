@@ -2254,18 +2254,16 @@ define { i64, i64 } @PR57576(i64 noundef %x, i64 noundef %y, i64 noundef %z, i64
 ; CHECK-LABEL: @PR57576(
 ; CHECK-NEXT:    [[ZX:%.*]] = zext i64 [[X:%.*]] to i128
 ; CHECK-NEXT:    [[ZY:%.*]] = zext i64 [[Y:%.*]] to i128
-; CHECK-NEXT:    [[ZW:%.*]] = zext i64 [[W:%.*]] to i128
 ; CHECK-NEXT:    [[ZZ:%.*]] = zext i64 [[Z:%.*]] to i128
 ; CHECK-NEXT:    [[SHY:%.*]] = shl nuw i128 [[ZY]], 64
 ; CHECK-NEXT:    [[XY:%.*]] = or i128 [[SHY]], [[ZX]]
-; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i128 [[ZW]], 64
-; CHECK-NEXT:    [[TMP2:%.*]] = or i128 [[TMP1]], [[ZZ]]
-; CHECK-NEXT:    [[ADD:%.*]] = sub i128 [[XY]], [[TMP2]]
-; CHECK-NEXT:    [[T:%.*]] = trunc i128 [[ADD]] to i64
-; CHECK-NEXT:    [[H:%.*]] = lshr i128 [[ADD]], 64
-; CHECK-NEXT:    [[T2:%.*]] = trunc i128 [[H]] to i64
+; CHECK-NEXT:    [[SUB:%.*]] = sub i128 [[XY]], [[ZZ]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i128 [[SUB]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i128 [[SUB]], 64
+; CHECK-NEXT:    [[DOTTR:%.*]] = trunc i128 [[TMP1]] to i64
+; CHECK-NEXT:    [[DOTNARROW:%.*]] = sub i64 [[DOTTR]], [[W:%.*]]
 ; CHECK-NEXT:    [[R1:%.*]] = insertvalue { i64, i64 } poison, i64 [[T]], 0
-; CHECK-NEXT:    [[R2:%.*]] = insertvalue { i64, i64 } [[R1]], i64 [[T2]], 1
+; CHECK-NEXT:    [[R2:%.*]] = insertvalue { i64, i64 } [[R1]], i64 [[DOTNARROW]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[R2]]
 ;
   %zx = zext i64 %x to i128

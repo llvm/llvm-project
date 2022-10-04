@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 class TestDbgInfoContentDeque(TestBase):
 
     @add_test_categories(["libc++"])
-    @expectedFailureDarwin # FIXME: May need to force system libcxx here.
     @skipIf(compiler=no_match("clang"))
     def test(self):
         self.build()
@@ -33,7 +32,7 @@ class TestDbgInfoContentDeque(TestBase):
 
         riterator_type = "reverse_iterator"
         riterator_children = [
-            ValueCheck(name="__t"),
+            ValueCheck(), # Deprecated __t_ member; no need to check
             ValueCheck(name="current")
         ]
 

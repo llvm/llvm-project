@@ -74,3 +74,23 @@ static_assert(1, "1 is nonzero"); // ms-warning {{use of 'static_assert' without
 
 _Static_assert(1 , "") // expected-error {{expected ';' after '_Static_assert'}} \
                       // ext-warning {{'_Static_assert' is a C11 extension}}
+
+static int static_var;
+_Static_assert(&static_var != 0, "");  // ext-warning {{'_Static_assert' is a C11 extension}} \
+                                       // expected-warning {{comparison of address of 'static_var' not equal to a null pointer is always true}}
+_Static_assert("" != 0, "");           // ext-warning {{'_Static_assert' is a C11 extension}}
+_Static_assert(("" != 0), "");         // ext-warning {{'_Static_assert' is a C11 extension}}
+_Static_assert(*"1", "");              // ext-warning {{'_Static_assert' is a C11 extension}}
+_Static_assert("1"[0], "");            // ext-warning {{'_Static_assert' is a C11 extension}}
+_Static_assert(1.0 != 0, "");          // ext-warning {{'_Static_assert' is a C11 extension}}
+_Static_assert(__builtin_strlen("1"), "");  // ext-warning {{'_Static_assert' is a C11 extension}}
+#ifndef __cplusplus
+// ext-warning@-9 {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+// ext-warning@-8 {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+// ext-warning@-8 {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+// ext-warning@-8 {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+// ext-warning@-8 {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+// ext-warning@-8 {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+// __builtin_strlen(literal) is considered an integer constant expression
+// and doesn't cause a pedantic warning
+#endif

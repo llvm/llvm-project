@@ -68,26 +68,26 @@ define void @foo() local_unnamed_addr {
 ;
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    movsbl var_27(%rip), %r9d
-; X64-NEXT:    movzwl var_2(%rip), %r8d
+; X64-NEXT:    movsbl var_27(%rip), %eax
+; X64-NEXT:    movzwl var_2(%rip), %edx
 ; X64-NEXT:    movl var_310(%rip), %ecx
-; X64-NEXT:    imull %r9d, %ecx
+; X64-NEXT:    imull %eax, %ecx
 ; X64-NEXT:    addl var_24(%rip), %ecx
 ; X64-NEXT:    movl $4194303, %esi # imm = 0x3FFFFF
 ; X64-NEXT:    andl obj(%rip), %esi
 ; X64-NEXT:    leal (%rsi,%rsi), %edi
-; X64-NEXT:    subl %r9d, %edi
-; X64-NEXT:    movl %edi, %edx
-; X64-NEXT:    subl %r8d, %edx
-; X64-NEXT:    imull %edx, %ecx
+; X64-NEXT:    subl %eax, %edi
+; X64-NEXT:    movl %edi, %r8d
+; X64-NEXT:    subl %edx, %r8d
+; X64-NEXT:    imull %r8d, %ecx
 ; X64-NEXT:    addb $113, %cl
-; X64-NEXT:    movl $9, %eax
+; X64-NEXT:    movl $9, %edx
 ; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
-; X64-NEXT:    shlq %cl, %rax
-; X64-NEXT:    movq %rax, var_50(%rip)
-; X64-NEXT:    cmpl %esi, %edx
+; X64-NEXT:    shlq %cl, %rdx
+; X64-NEXT:    movq %rdx, var_50(%rip)
+; X64-NEXT:    cmpl %esi, %r8d
 ; X64-NEXT:    setge var_205(%rip)
-; X64-NEXT:    imull %r9d, %edi
+; X64-NEXT:    imull %eax, %edi
 ; X64-NEXT:    movb %dil, var_218(%rip)
 ; X64-NEXT:    retq
   entry:

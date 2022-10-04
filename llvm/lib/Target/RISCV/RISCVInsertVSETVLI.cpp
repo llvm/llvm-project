@@ -52,6 +52,21 @@ static unsigned getSEWOpNum(const MachineInstr &MI) {
   return RISCVII::getSEWOpNum(MI.getDesc());
 }
 
+static bool isVectorConfigInstr(const MachineInstr &MI) {
+  return MI.getOpcode() == RISCV::PseudoVSETVLI ||
+         MI.getOpcode() == RISCV::PseudoVSETVLIX0 ||
+         MI.getOpcode() == RISCV::PseudoVSETIVLI;
+}
+
+/// Return true if this is 'vsetvli x0, x0, vtype' which preserves
+/// VL and only sets VTYPE.
+static bool isVLPreservingConfig(const MachineInstr &MI) {
+  if (MI.getOpcode() != RISCV::PseudoVSETVLIX0)
+    return false;
+  assert(RISCV::X0 == MI.getOperand(1).getReg());
+  return RISCV::X0 == MI.getOperand(0).getReg();
+}
+
 static bool isScalarMoveInstr(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
@@ -274,12 +289,11 @@ static Optional<unsigned> getEEWForLoadStore(const MachineInstr &MI) {
 /// Return true if this is an operation on mask registers.  Note that
 /// this includes both arithmetic/logical ops and load/store (vlm/vsm).
 static bool isMaskRegOp(const MachineInstr &MI) {
-  if (RISCVII::hasSEWOp(MI.getDesc().TSFlags)) {
-    const unsigned Log2SEW = MI.getOperand(getSEWOpNum(MI)).getImm();
-    // A Log2SEW of 0 is an operation on mask registers only.
-    return Log2SEW == 0;
-  }
-  return false;
+  if (!RISCVII::hasSEWOp(MI.getDesc().TSFlags))
+    return false;
+  const unsigned Log2SEW = MI.getOperand(getSEWOpNum(MI)).getImm();
+  // A Log2SEW of 0 is an operation on mask registers only.
+  return Log2SEW == 0;
 }
 
 static unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul) {
@@ -757,21 +771,6 @@ char RISCVInsertVSETVLI::ID = 0;
 
 INITIALIZE_PASS(RISCVInsertVSETVLI, DEBUG_TYPE, RISCV_INSERT_VSETVLI_NAME,
                 false, false)
-
-static bool isVectorConfigInstr(const MachineInstr &MI) {
-  return MI.getOpcode() == RISCV::PseudoVSETVLI ||
-         MI.getOpcode() == RISCV::PseudoVSETVLIX0 ||
-         MI.getOpcode() == RISCV::PseudoVSETIVLI;
-}
-
-/// Return true if this is 'vsetvli x0, x0, vtype' which preserves
-/// VL and only sets VTYPE.
-static bool isVLPreservingConfig(const MachineInstr &MI) {
-  if (MI.getOpcode() != RISCV::PseudoVSETVLIX0)
-    return false;
-  assert(RISCV::X0 == MI.getOperand(1).getReg());
-  return RISCV::X0 == MI.getOperand(0).getReg();
-}
 
 static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
                                        const MachineRegisterInfo *MRI) {

@@ -104,4 +104,71 @@ TEST(LlvmLibcUtilsTest, OffsetToNextCacheLine) {
   EXPECT_EQ(offset_to_next_cache_line(forge(LLVM_LIBC_CACHELINE_SIZE - 1)),
             I(1));
 }
+
+TEST(LlvmLibcUtilsTest, Adjust1) {
+  char a;
+  const size_t base_size = 10;
+  for (size_t I = -2; I < 2; ++I) {
+    auto *ptr = &a;
+    size_t size = base_size;
+    adjust(I, ptr, size);
+    EXPECT_EQ(intptr_t(ptr), intptr_t(&a + I));
+    EXPECT_EQ(size, base_size - I);
+  }
+}
+
+TEST(LlvmLibcUtilsTest, Adjust2) {
+  char a, b;
+  const size_t base_size = 10;
+  for (size_t I = -2; I < 2; ++I) {
+    auto *p1 = &a;
+    auto *p2 = &b;
+    size_t size = base_size;
+    adjust(I, p1, p2, size);
+    EXPECT_EQ(intptr_t(p1), intptr_t(&a + I));
+    EXPECT_EQ(intptr_t(p2), intptr_t(&b + I));
+    EXPECT_EQ(size, base_size - I);
+  }
+}
+
+TEST(LlvmLibcUtilsTest, Align1) {
+  char a;
+  const size_t base_size = 10;
+  {
+    auto *ptr = &a;
+    size_t size = base_size;
+    align<128>(ptr, size);
+    EXPECT_TRUE(uintptr_t(ptr) % 128 == 0);
+    EXPECT_GE(ptr, &a);
+    EXPECT_EQ(size_t(ptr - &a), base_size - size);
+  }
+}
+
+TEST(LlvmLibcUtilsTest, Align2) {
+  char a, b;
+  const size_t base_size = 10;
+  {
+    auto *p1 = &a;
+    auto *p2 = &b;
+    size_t size = base_size;
+    align<128, Arg::_1>(p1, p2, size);
+    EXPECT_TRUE(uintptr_t(p1) % 128 == 0);
+    EXPECT_GE(p1, &a);
+    EXPECT_GE(p2, &b);
+    EXPECT_EQ(size_t(p1 - &a), base_size - size);
+    EXPECT_EQ(size_t(p2 - &b), base_size - size);
+  }
+  {
+    auto *p1 = &a;
+    auto *p2 = &b;
+    size_t size = base_size;
+    align<128, Arg::_2>(p1, p2, size);
+    EXPECT_TRUE(uintptr_t(p2) % 128 == 0);
+    EXPECT_GE(p1, &a);
+    EXPECT_GE(p2, &b);
+    EXPECT_EQ(size_t(p1 - &a), base_size - size);
+    EXPECT_EQ(size_t(p2 - &b), base_size - size);
+  }
+}
+
 } // namespace __llvm_libc

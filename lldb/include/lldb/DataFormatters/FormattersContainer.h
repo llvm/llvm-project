@@ -78,6 +78,14 @@ public:
   TypeMatcher(RegularExpression regex)
       : m_type_name_regex(std::move(regex)),
         m_match_type(lldb::eFormatterMatchRegex) {}
+  /// Creates a matcher using the matching type and string from the given type
+  /// name specifier.
+  TypeMatcher(lldb::TypeNameSpecifierImplSP type_specifier)
+      : m_type_name(type_specifier->GetName()),
+        m_match_type(type_specifier->GetMatchType()) {
+    if (m_match_type == lldb::eFormatterMatchRegex)
+      m_type_name_regex = RegularExpression(type_specifier->GetName());
+  }
 
   /// True iff this matches the given type name.
   bool Matches(ConstString type_name) const {
@@ -158,6 +166,20 @@ public:
     return false;
   }
 
+  bool Get(const FormattersMatchVector &candidates, ValueSP &entry) {
+    for (const FormattersMatchCandidate &candidate : candidates) {
+      if (Get(candidate.GetTypeName(), entry)) {
+        if (candidate.IsMatch(entry) == false) {
+          entry.reset();
+          continue;
+        } else {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   bool GetExact(TypeMatcher matcher, ValueSP &entry) {
     std::lock_guard<std::recursive_mutex> guard(m_map_mutex);
     for (const auto &pos : m_map)
@@ -218,20 +240,6 @@ public:
 protected:
   FormattersContainer(const FormattersContainer &) = delete;
   const FormattersContainer &operator=(const FormattersContainer &) = delete;
-
-  bool Get(const FormattersMatchVector &candidates, ValueSP &entry) {
-    for (const FormattersMatchCandidate &candidate : candidates) {
-      if (Get(candidate.GetTypeName(), entry)) {
-        if (candidate.IsMatch(entry) == false) {
-          entry.reset();
-          continue;
-        } else {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
 
   MapType m_map;
   std::recursive_mutex m_map_mutex;

@@ -464,8 +464,8 @@ func.func @dyn_shape_fold(%L : index, %M : index) -> (memref<4 x ? x 8 x ? x ? x
   affine.for %i = 0 to %L {
     // CHECK-NEXT: affine.for
     affine.for %j = 0 to 10 {
-      // CHECK-NEXT: memref.load %0[%arg2, %arg3] : memref<?x1024xf32>
-      // CHECK-NEXT: memref.store %{{.*}}, %1[%c0, %c0, %arg2, %arg3, %c0] : memref<4x1024x8x512x?xf32>
+      // CHECK-NEXT: memref.load %{{.*}}[%arg2, %arg3] : memref<?x1024xf32>
+      // CHECK-NEXT: memref.store %{{.*}}, %{{.*}}[%c0, %c0, %arg2, %arg3, %c0] : memref<4x1024x8x512x?xf32>
       %v = memref.load %a[%i, %j] : memref<?x?xf32>
       memref.store %v, %b[%zero, %zero, %i, %j, %zero] : memref<4x?x8x?x?xf32>
     }
