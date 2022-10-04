@@ -17,7 +17,7 @@
 ;; which needs -lSystem from LC_LINKER_OPTION to get resolved.
 ;; The reference to __cxa_allocate_exception will require -lc++ from
 ;; LC_LINKER_OPTION to get resolved.
-; RUN: %lld %t/l.o -o %t/l -framework CoreFoundation
+; RUN: %no-lsystem-lld %t/l.o -o %t/l -framework CoreFoundation
 ; RUN: llvm-otool -l %t/l | FileCheck --check-prefix=LIB %s \
 ; RUN:  --implicit-check-not LC_LOAD_DYLIB
 ; LIB:          cmd LC_LOAD_DYLIB
@@ -31,7 +31,7 @@
 ; LIB-NEXT:    name /usr/lib/libc++abi.dylib
 
 ;; Check that we don't create duplicate LC_LOAD_DYLIBs.
-; RUN: %lld -lSystem %t/l.o -o %t/l -framework CoreFoundation
+; RUN: %no-lsystem-lld -lSystem %t/l.o -o %t/l -framework CoreFoundation
 ; RUN: llvm-otool -l %t/l | FileCheck --check-prefix=LIB2 %s \
 ; RUN:  --implicit-check-not LC_LOAD_DYLIB
 ; LIB2:          cmd LC_LOAD_DYLIB
@@ -75,6 +75,7 @@
 ; SYMS:       SYMBOL TABLE:
 ; SYMS-NEXT:  g     F __TEXT,__text _main
 ; SYMS-NEXT:  g     F __TEXT,__text __mh_execute_header
+; SYMS-NEXT:  *UND* dyld_stub_binder
 ; SYMS-EMPTY:
 
 ;; Make sure -all_load has effect when libraries are loaded via LC_LINKER_OPTION flags and explicitly passed as well
@@ -86,6 +87,7 @@
 ; SYMS_ALL_LOAD-NEXT:  g     F __TEXT,__text _main
 ; SYMS_ALL_LOAD-NEXT:  g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
 ; SYMS_ALL_LOAD-NEXT:  g     F __TEXT,__text __mh_execute_header
+; SYMS_ALL_LOAD-NEXT:  *UND* dyld_stub_binder
 ; SYMS_ALL_LOAD-EMPTY:
 
 ;; Make sure -force_load has effect when libraries are loaded via LC_LINKER_OPTION flags and explicitly passed as well
@@ -97,6 +99,7 @@
 ; SYMS_FORCE_LOAD-NEXT:  g     F __TEXT,__text _main
 ; SYMS_FORCE_LOAD-NEXT:  g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
 ; SYMS_FORCE_LOAD-NEXT:  g     F __TEXT,__text __mh_execute_header
+; SYMS_FORCE_LOAD-NEXT:  *UND* dyld_stub_binder
 ; SYMS_FORCE_LOAD-EMPTY:
 
 ;; Make sure -ObjC has effect when frameworks are loaded via LC_LINKER_OPTION flags and explicitly passed as well
@@ -108,6 +111,7 @@
 ; SYMS_OBJC_LOAD-NEXT:  g     F __TEXT,__text _main
 ; SYMS_OBJC_LOAD-NEXT:  g     O __DATA,__objc_data _OBJC_CLASS_$_TestClass
 ; SYMS_OBJC_LOAD-NEXT:  g     F __TEXT,__text __mh_execute_header
+; SYMS_OBJC_LOAD-NEXT:  *UND* dyld_stub_binder
 ; SYMS_OBJC_LOAD-EMPTY:
 
 ;; Make sure that frameworks containing object files or bitcode instead of
