@@ -14275,7 +14275,9 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
         SDValue D = FMul.getOperand(1);
         SDValue CDE = DAG.getNode(PreferredFusedOpcode, SL, VT, C, D, E);
         DAG.ReplaceAllUsesOfValueWith(FMul, CDE);
-        return FMA;
+        // Replacing the inner FMul could cause the outer FMA to be simplified
+        // away.
+        return FMA.getOpcode() == ISD::DELETED_NODE ? SDValue() : FMA;
       }
 
       TmpFMA = TmpFMA->getOperand(2);
