@@ -2257,9 +2257,8 @@ public:
   }
 
   void setDefaultLoc(SourceLocation NewLoc) {
-    assert(NewLoc.isInvalid() ||
-           isExplicitlyDefaulted() &&
-               "Can't set default loc is function isn't explicitly defaulted");
+    assert((NewLoc.isInvalid() || isExplicitlyDefaulted()) &&
+           "Can't set default loc is function isn't explicitly defaulted");
     DefaultKWLoc = NewLoc;
   }
 
