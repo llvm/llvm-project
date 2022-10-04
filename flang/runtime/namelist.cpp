@@ -383,7 +383,11 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
         next = io.GetNextNonBlank(byteCount);
       }
     }
-    if (!next || *next != '&') {
+    if (!next) {
+      handler.SignalEnd();
+      return false;
+    }
+    if (*next != '&') {
       handler.SignalError(
           "NAMELIST input group does not begin with '&' (at '%lc')", *next);
       return false;
