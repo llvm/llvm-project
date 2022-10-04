@@ -1392,6 +1392,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_array`` (C++, Embarcadero)
 * ``__is_assignable`` (C++, MSVC 2015)
 * ``__is_base_of`` (C++, GNU, Microsoft, Embarcadero)
+* ``__is_bounded_array`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_class`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_complete_type(type)`` (Embarcadero):
   Return ``true`` if ``type`` is a complete type.
@@ -1454,6 +1455,7 @@ The following type trait primitives are supported by Clang. Those traits marked
   functionally equivalent to copying the underlying bytes and then dropping the
   source object on the floor. This is true of trivial types and types which
   were made trivially relocatable via the ``clang::trivial_abi`` attribute.
+* ``__is_unbounded_array`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_union`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_unsigned`` (C++, Embarcadero):
   Returns false for enumeration types. Note, before Clang 13, returned true for
@@ -4245,7 +4247,7 @@ The ``__declspec`` style syntax is also supported:
 
   #pragma clang attribute pop
 
-A single push directive can contain multiple attributes, however, 
+A single push directive can contain multiple attributes, however,
 only one syntax style can be used within a single directive:
 
 .. code-block:: c++
@@ -4255,7 +4257,7 @@ only one syntax style can be used within a single directive:
   void function1(); // The function now has the [[noreturn]] and [[noinline]] attributes
 
   #pragma clang attribute pop
-  
+
   #pragma clang attribute push (__attribute((noreturn, noinline)), apply_to = function)
 
   void function2(); // The function now has the __attribute((noreturn)) and __attribute((noinline)) attributes

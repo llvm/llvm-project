@@ -1067,6 +1067,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
           REVERTIBLE_TYPE_TRAIT(__is_arithmetic);
           REVERTIBLE_TYPE_TRAIT(__is_array);
           REVERTIBLE_TYPE_TRAIT(__is_assignable);
+          REVERTIBLE_TYPE_TRAIT(__is_bounded_array);
           REVERTIBLE_TYPE_TRAIT(__is_base_of);
           REVERTIBLE_TYPE_TRAIT(__is_class);
           REVERTIBLE_TYPE_TRAIT(__is_complete_type);
@@ -1109,6 +1110,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
           REVERTIBLE_TYPE_TRAIT(__is_trivially_assignable);
           REVERTIBLE_TYPE_TRAIT(__is_trivially_constructible);
           REVERTIBLE_TYPE_TRAIT(__is_trivially_copyable);
+          REVERTIBLE_TYPE_TRAIT(__is_unbounded_array);
           REVERTIBLE_TYPE_TRAIT(__is_union);
           REVERTIBLE_TYPE_TRAIT(__is_unsigned);
           REVERTIBLE_TYPE_TRAIT(__is_void);

@@ -702,6 +702,70 @@ void is_array()
   int t31[F(__is_array(cvoid*))];
 }
 
+void is_bounded_array(int n) {
+  static_assert(__is_bounded_array(IntAr), "");
+  static_assert(!__is_bounded_array(IntArNB), "");
+  static_assert(__is_bounded_array(UnionAr), "");
+
+  static_assert(!__is_bounded_array(void), "");
+  static_assert(!__is_bounded_array(cvoid), "");
+  static_assert(!__is_bounded_array(float), "");
+  static_assert(!__is_bounded_array(double), "");
+  static_assert(!__is_bounded_array(long double), "");
+  static_assert(!__is_bounded_array(bool), "");
+  static_assert(!__is_bounded_array(char), "");
+  static_assert(!__is_bounded_array(signed char), "");
+  static_assert(!__is_bounded_array(unsigned char), "");
+  static_assert(!__is_bounded_array(wchar_t), "");
+  static_assert(!__is_bounded_array(short), "");
+  static_assert(!__is_bounded_array(unsigned short), "");
+  static_assert(!__is_bounded_array(int), "");
+  static_assert(!__is_bounded_array(unsigned int), "");
+  static_assert(!__is_bounded_array(long), "");
+  static_assert(!__is_bounded_array(unsigned long), "");
+  static_assert(!__is_bounded_array(Union), "");
+  static_assert(!__is_bounded_array(Derives), "");
+  static_assert(!__is_bounded_array(ClassType), "");
+  static_assert(!__is_bounded_array(Enum), "");
+  static_assert(!__is_bounded_array(void *), "");
+  static_assert(!__is_bounded_array(cvoid *), "");
+
+  int t32[n];
+  (void)__is_bounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported for '__is_bounded_array'}}
+}
+
+void is_unbounded_array(int n) {
+  static_assert(!__is_unbounded_array(IntAr), "");
+  static_assert(__is_unbounded_array(IntArNB), "");
+  static_assert(!__is_unbounded_array(UnionAr), "");
+
+  static_assert(!__is_unbounded_array(void), "");
+  static_assert(!__is_unbounded_array(cvoid), "");
+  static_assert(!__is_unbounded_array(float), "");
+  static_assert(!__is_unbounded_array(double), "");
+  static_assert(!__is_unbounded_array(long double), "");
+  static_assert(!__is_unbounded_array(bool), "");
+  static_assert(!__is_unbounded_array(char), "");
+  static_assert(!__is_unbounded_array(signed char), "");
+  static_assert(!__is_unbounded_array(unsigned char), "");
+  static_assert(!__is_unbounded_array(wchar_t), "");
+  static_assert(!__is_unbounded_array(short), "");
+  static_assert(!__is_unbounded_array(unsigned short), "");
+  static_assert(!__is_unbounded_array(int), "");
+  static_assert(!__is_unbounded_array(unsigned int), "");
+  static_assert(!__is_unbounded_array(long), "");
+  static_assert(!__is_unbounded_array(unsigned long), "");
+  static_assert(!__is_unbounded_array(Union), "");
+  static_assert(!__is_unbounded_array(Derives), "");
+  static_assert(!__is_unbounded_array(ClassType), "");
+  static_assert(!__is_unbounded_array(Enum), "");
+  static_assert(!__is_unbounded_array(void *), "");
+  static_assert(!__is_unbounded_array(cvoid *), "");
+
+  int t32[n];
+  (void)__is_unbounded_array(decltype(t32)); // expected-error{{variable length arrays are not supported for '__is_unbounded_array'}}
+}
+
 template <typename T> void tmpl_func(T&) {}
 
 template <typename T> struct type_wrapper {
