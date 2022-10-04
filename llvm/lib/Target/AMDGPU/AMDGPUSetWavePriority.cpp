@@ -122,13 +122,13 @@ bool AMDGPUSetWavePriority::runOnMachineFunction(MachineFunction &MF) {
   // executed provided no backedge is ever taken.
   MBBInfoSet MBBInfos;
   for (MachineBasicBlock *MBB : post_order(&MF)) {
-    MBBInfo &Info = MBBInfos[MBB];
     bool AtStart = true;
     unsigned MaxNumVALUInstsInMiddle = 0;
     unsigned NumVALUInstsAtEnd = 0;
     for (MachineInstr &MI : *MBB) {
       if (isVMEMLoad(MI)) {
         AtStart = false;
+        MBBInfo &Info = MBBInfos[MBB];
         Info.NumVALUInstsAtStart = 0;
         MaxNumVALUInstsInMiddle = 0;
         NumVALUInstsAtEnd = 0;
@@ -140,7 +140,7 @@ bool AMDGPUSetWavePriority::runOnMachineFunction(MachineFunction &MF) {
         NumVALUInstsAtEnd = 0;
       } else if (SIInstrInfo::isVALU(MI)) {
         if (AtStart)
-          ++Info.NumVALUInstsAtStart;
+          ++MBBInfos[MBB].NumVALUInstsAtStart;
         ++NumVALUInstsAtEnd;
       }
     }
@@ -152,6 +152,7 @@ bool AMDGPUSetWavePriority::runOnMachineFunction(MachineFunction &MF) {
       NumFollowingVALUInsts =
           std::max(NumFollowingVALUInsts, MBBInfos[Succ].NumVALUInstsAtStart);
     }
+    MBBInfo &Info = MBBInfos[MBB];
     if (AtStart)
       Info.NumVALUInstsAtStart += NumFollowingVALUInsts;
     NumVALUInstsAtEnd += NumFollowingVALUInsts;

@@ -58,13 +58,13 @@ func.func @loop_nest_1d() {
 
 // CHECK-LABEL: func @loop_nest_high_d
 // CHECK:      %{{.*}} = arith.constant 16384 : index
-// CHECK-DAG:  [[BUFB:%[0-9]+]] = memref.alloc() : memref<512x32xf32, 2>
-// CHECK-DAG:  [[BUFA:%[0-9]+]] = memref.alloc() : memref<512x32xf32, 2>
-// CHECK-DAG:  [[BUFC:%[0-9]+]] = memref.alloc() : memref<512x32xf32, 2>
-// CHECK-DAG:  [[TAGB:%[0-9]+]] = memref.alloc() : memref<1xi32>
-// CHECK-DAG:  [[TAGA:%[0-9]+]] = memref.alloc() : memref<1xi32>
-// CHECK-DAG:  [[TAGC:%[0-9]+]] = memref.alloc() : memref<1xi32>
-// CHECK-DAG:  [[TAGC_W:%[0-9]+]] = memref.alloc() : memref<1xi32>
+// CHECK-DAG:  [[BUFB:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<512x32xf32, 2>
+// CHECK-DAG:  [[BUFA:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<512x32xf32, 2>
+// CHECK-DAG:  [[BUFC:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<512x32xf32, 2>
+// CHECK-DAG:  [[TAGB:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<1xi32>
+// CHECK-DAG:  [[TAGA:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<1xi32>
+// CHECK-DAG:  [[TAGC:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<1xi32>
+// CHECK-DAG:  [[TAGC_W:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<1xi32>
 // INCOMING DMA for B
 // CHECK-DAG:  affine.dma_start %{{.*}}[%{{.*}}, %{{.*}}], [[BUFB]][%{{.*}}, %{{.*}}], [[TAGB]][%{{.*}}], %{{.*}} : memref<512x32xf32>, memref<512x32xf32, 2>, memref<1xi32>
 // CHECK-DAG:  affine.dma_wait [[TAGB]][%{{.*}}], %{{.*}} : memref<1xi32>
@@ -419,9 +419,9 @@ func.func @dma_mixed_loop_blocks() {
   }
   return
 }
-// CHECK-DAG:   [[MEM:%[0-9]+]] = memref.alloc() : memref<256x256xvector<8xf32>>
-// CHECK-DAG:   [[BUF:%[0-9]+]] = memref.alloc() : memref<256x256xvector<8xf32>, 2>
-// CHECK-DAG:   [[TAG:%[0-9]+]] = memref.alloc() : memref<1xi32>
+// CHECK-DAG:   [[MEM:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<256x256xvector<8xf32>>
+// CHECK-DAG:   [[BUF:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<256x256xvector<8xf32>, 2>
+// CHECK-DAG:   [[TAG:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<1xi32>
 // CHECK:       affine.dma_start [[MEM]][%{{.*}}, %{{.*}}], [[BUF]][%{{.*}}, %{{.*}}], [[TAG]][%{{.*}}], %{{.*}} : memref<256x256xvector<8xf32>>, memref<256x256xvector<8xf32>, 2>, memref<1xi32>
 // CHECK-NEXT:  affine.dma_wait [[TAG]][%{{.*}}], %{{.*}} : memref<1xi32>
 // CHECK-NEXT:  affine.for %{{.*}} = 0 to 256 {
@@ -441,10 +441,10 @@ func.func @relative_loop_bounds(%arg0: memref<1027xf32>) {
   }
   return
 }
-// CHECK:      [[BUF:%[0-9]+]] = memref.alloc() : memref<1027xf32, 2>
-// CHECK-NEXT: [[MEM:%[0-9]+]] = memref.alloc() : memref<1xi32>
+// CHECK:      [[BUF:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<1027xf32, 2>
+// CHECK-NEXT: [[MEM:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<1xi32>
 // CHECK-NEXT: affine.for %{{.*}} = 0 to 1024 {
-// CHECK-NEXT:    affine.for %[[I2:.*]] = {{#map[0-9]+}}(%{{.*}}) to {{#map[0-9]+}}(%{{.*}}) {
+// CHECK-NEXT:    affine.for %[[I2:.*]] = {{#map[0-9a-zA-Z_]+}}(%{{.*}}) to {{#map[0-9a-zA-Z_]+}}(%{{.*}}) {
 // CHECK:           affine.store %{{.*}}, [[BUF]][%[[I2]]] : memref<1027xf32, 2>
 // CHECK-NEXT:    }
 // CHECK-NEXT:  }
@@ -508,7 +508,7 @@ func.func @test_analysis_util(%arg0: memref<4x4x16x1xf32>, %arg1: memref<144x9xf
   return %arg1, %arg2 : memref<144x9xf32>, memref<2xf32>
 }
 // CHECK:       affine.for %{{.*}} = 0 to 9 step 3 {
-// CHECK:         [[BUF:%[0-9]+]] = memref.alloc() : memref<2xf32, 2>
+// CHECK:         [[BUF:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<2xf32, 2>
 // CHECK:         affine.dma_start %{{.*}}[%{{.*}} floordiv 8], [[BUF]]
 // CHECK:         affine.dma_wait %{{.*}}[%{{.*}}], %{{.*}} : memref<1xi32>
 // CHECK:         affine.for %{{.*}} =
@@ -551,7 +551,7 @@ func.func @test_memref_bounds(%arg0: memref<4x4x16x1xvector<8x128xf32>>, %arg1: 
 func.func @load_store_same_memref(%arg0: memref<256x1024xf32>) {
   // FAST-MEM-16KB:  affine.for %{{.*}} = 0 to 256 step 4
   affine.for %i0 = 0 to 256 step 4 {
-    // FAST-MEM-16KB: [[BUF:%[0-9]+]] = memref.alloc() : memref<4x1024xf32, 2>
+    // FAST-MEM-16KB: [[BUF:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<4x1024xf32, 2>
     // FAST-MEM-16KB:    affine.dma_start %{{.*}}
     // FAST-MEM-16KB-NEXT: affine.dma_wait
     // FAST-MEM-16KB:  affine.for %{{.*}}
@@ -614,9 +614,9 @@ func.func @simple_matmul(%arg0: memref<8x8xvector<64xf32>>, %arg1: memref<8x8xve
 // FAST-MEM-16KB:       affine.dma_wait
 // FAST-MEM-16KB:       affine.dma_start %{{.*}}
 // FAST-MEM-16KB:       affine.dma_wait
-// FAST-MEM-16KB:       affine.for %{{.*}} = #map{{[0-9]+}}(%{{.*}}) to #map{{[0-9]+}}(%{{.*}}) {
-// FAST-MEM-16KB-NEXT:    affine.for %{{.*}} = #map{{[0-9]+}}(%{{.*}}) to #map{{[0-9]+}}(%{{.*}}) {
-// FAST-MEM-16KB-NEXT:      affine.for %{{.*}} = #map{{[0-9]+}}(%{{.*}}) to #map{{[0-9]+}}(%{{.*}}) {
+// FAST-MEM-16KB:       affine.for %{{.*}} = #map{{[0-9a-zA-Z_]+}}(%{{.*}}) to #map{{[0-9a-zA-Z_]+}}(%{{.*}}) {
+// FAST-MEM-16KB-NEXT:    affine.for %{{.*}} = #map{{[0-9a-zA-Z_]+}}(%{{.*}}) to #map{{[0-9a-zA-Z_]+}}(%{{.*}}) {
+// FAST-MEM-16KB-NEXT:      affine.for %{{.*}} = #map{{[0-9a-zA-Z_]+}}(%{{.*}}) to #map{{[0-9a-zA-Z_]+}}(%{{.*}}) {
 // FAST-MEM-16KB:           }
 // FAST-MEM-16KB:         }
 // FAST-MEM-16KB:       }

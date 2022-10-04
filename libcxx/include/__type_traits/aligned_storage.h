@@ -54,21 +54,13 @@ template <class _TL, size_t _Align> struct __find_pod;
 template <class _Hp, size_t _Align>
 struct __find_pod<__type_list<_Hp, __nat>, _Align>
 {
-    typedef typename conditional<
-                             _Align == _Hp::value,
-                             typename _Hp::type,
-                             __fallback_overaligned<_Align>
-                         >::type type;
+    typedef __conditional_t<_Align == _Hp::value, typename _Hp::type, __fallback_overaligned<_Align> > type;
 };
 
 template <class _Hp, class _Tp, size_t _Align>
 struct __find_pod<__type_list<_Hp, _Tp>, _Align>
 {
-    typedef typename conditional<
-                             _Align == _Hp::value,
-                             typename _Hp::type,
-                             typename __find_pod<_Tp, _Align>::type
-                         >::type type;
+    typedef __conditional_t<_Align == _Hp::value, typename _Hp::type, typename __find_pod<_Tp, _Align>::type> type;
 };
 
 template <class _TL, size_t _Len> struct __find_max_align;

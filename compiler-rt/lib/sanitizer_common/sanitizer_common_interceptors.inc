@@ -6727,7 +6727,7 @@ INTERCEPTOR(int, sem_init, __sanitizer_sem_t *s, int pshared, unsigned value) {
   COMMON_INTERCEPTOR_ENTER(ctx, sem_init, s, pshared, value);
   // Workaround a bug in glibc's "old" semaphore implementation by
   // zero-initializing the sem_t contents. This has to be done here because
-  // interceptors bind to the lowest symbols version by default, hitting the
+  // interceptors bind to the lowest version before glibc 2.36, hitting the
   // buggy code path while the non-sanitized build of the same code works fine.
   REAL(memset)(s, 0, sizeof(*s));
   int res = REAL(sem_init)(s, pshared, value);

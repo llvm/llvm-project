@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -target-feature +neon -target-feature +fullfp16 -target-feature +v8.6a -target-feature +i8mm \
-// RUN: -fallow-half-arguments-and-returns -S -disable-O0-optnone -emit-llvm -o - %s \
+// RUN: -S -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -mem2reg -sroa \
 // RUN: | FileCheck %s
 

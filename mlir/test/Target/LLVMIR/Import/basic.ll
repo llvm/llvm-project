@@ -2,7 +2,6 @@
 ; RUN: mlir-translate -import-llvm -mlir-print-debuginfo %s | FileCheck %s --check-prefix=CHECK-DBG
 
 ; CHECK-DBG: #[[UNKNOWNLOC:.+]] = loc(unknown)
-; CHECK-DBG: #[[ZEROLOC:.+]] = loc("imported-bitcode":0:0)
 
 %struct.t = type {}
 %struct.s = type { %struct.t, i64 }
@@ -151,7 +150,7 @@ entry:
   %bb = ptrtoint double* @g2 to i64
   %cc = getelementptr double, double* @g2, i32 2
 ; CHECK: %[[b:[0-9]+]] = llvm.trunc %arg0 : i64 to i32
-; CHECK-DBG: llvm.trunc %arg0 : i64 to i32 loc(#[[ZEROLOC]])
+; CHECK-DBG: llvm.trunc %arg0 : i64 to i32 loc(#[[UNKNOWNLOC]])
   %b = trunc i64 %a to i32
 ; CHECK: %[[c:[0-9]+]] = llvm.call @fe(%[[b]]) : (i32) -> f32
   %c = call float @fe(i32 %b)

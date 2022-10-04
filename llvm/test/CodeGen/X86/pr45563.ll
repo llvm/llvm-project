@@ -26,33 +26,33 @@ define <16 x double> @bug45563(ptr %addr, <16 x double> %dst, <16 x i64> %e, <16
 ; CHECK-NEXT:    vmovdqa 128(%rbp), %xmm10
 ; CHECK-NEXT:    vpcmpgtq %xmm8, %xmm10, %xmm8
 ; CHECK-NEXT:    vpcmpgtq %xmm7, %xmm9, %xmm7
-; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm7, %ymm8
-; CHECK-NEXT:    vextractf128 $1, %ymm6, %xmm10
+; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm7, %ymm7
+; CHECK-NEXT:    vextractf128 $1, %ymm6, %xmm8
 ; CHECK-NEXT:    vmovdqa 80(%rbp), %xmm9
-; CHECK-NEXT:    vmovdqa 96(%rbp), %xmm7
-; CHECK-NEXT:    vpcmpgtq %xmm10, %xmm7, %xmm7
+; CHECK-NEXT:    vmovdqa 96(%rbp), %xmm10
+; CHECK-NEXT:    vpcmpgtq %xmm8, %xmm10, %xmm8
 ; CHECK-NEXT:    vpcmpgtq %xmm6, %xmm9, %xmm6
-; CHECK-NEXT:    vinsertf128 $1, %xmm7, %ymm6, %ymm10
-; CHECK-NEXT:    vextractf128 $1, %ymm5, %xmm7
+; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm6, %ymm6
+; CHECK-NEXT:    vextractf128 $1, %ymm5, %xmm8
 ; CHECK-NEXT:    vmovdqa 48(%rbp), %xmm9
-; CHECK-NEXT:    vmovdqa 64(%rbp), %xmm6
-; CHECK-NEXT:    vpcmpgtq %xmm7, %xmm6, %xmm6
+; CHECK-NEXT:    vmovdqa 64(%rbp), %xmm10
+; CHECK-NEXT:    vpcmpgtq %xmm8, %xmm10, %xmm8
 ; CHECK-NEXT:    vpcmpgtq %xmm5, %xmm9, %xmm5
-; CHECK-NEXT:    vinsertf128 $1, %xmm6, %ymm5, %ymm5
-; CHECK-NEXT:    vextractf128 $1, %ymm4, %xmm6
+; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm5, %ymm5
+; CHECK-NEXT:    vextractf128 $1, %ymm4, %xmm8
 ; CHECK-NEXT:    vmovdqa 16(%rbp), %xmm9
-; CHECK-NEXT:    vmovdqa 32(%rbp), %xmm7
-; CHECK-NEXT:    vpcmpgtq %xmm6, %xmm7, %xmm6
+; CHECK-NEXT:    vmovdqa 32(%rbp), %xmm10
+; CHECK-NEXT:    vpcmpgtq %xmm8, %xmm10, %xmm8
 ; CHECK-NEXT:    vpcmpgtq %xmm4, %xmm9, %xmm4
-; CHECK-NEXT:    vinsertf128 $1, %xmm6, %ymm4, %ymm4
-; CHECK-NEXT:    vmaskmovpd (%rdi), %ymm4, %ymm6
-; CHECK-NEXT:    vblendvpd %ymm4, %ymm6, %ymm0, %ymm0
+; CHECK-NEXT:    vinsertf128 $1, %xmm8, %ymm4, %ymm4
+; CHECK-NEXT:    vmaskmovpd (%rdi), %ymm4, %ymm8
+; CHECK-NEXT:    vblendvpd %ymm4, %ymm8, %ymm0, %ymm0
 ; CHECK-NEXT:    vmaskmovpd 32(%rdi), %ymm5, %ymm4
 ; CHECK-NEXT:    vblendvpd %ymm5, %ymm4, %ymm1, %ymm1
-; CHECK-NEXT:    vmaskmovpd 64(%rdi), %ymm10, %ymm4
-; CHECK-NEXT:    vblendvpd %ymm10, %ymm4, %ymm2, %ymm2
-; CHECK-NEXT:    vmaskmovpd 96(%rdi), %ymm8, %ymm4
-; CHECK-NEXT:    vblendvpd %ymm8, %ymm4, %ymm3, %ymm3
+; CHECK-NEXT:    vmaskmovpd 64(%rdi), %ymm6, %ymm4
+; CHECK-NEXT:    vblendvpd %ymm6, %ymm4, %ymm2, %ymm2
+; CHECK-NEXT:    vmaskmovpd 96(%rdi), %ymm7, %ymm4
+; CHECK-NEXT:    vblendvpd %ymm7, %ymm4, %ymm3, %ymm3
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8

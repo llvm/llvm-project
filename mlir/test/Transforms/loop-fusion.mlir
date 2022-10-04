@@ -73,9 +73,9 @@ func.func @should_fuse_reduction_to_pointwise() {
 
 // -----
 
-// CHECK-DAG: [[$MAP_SHIFT_MINUS_ONE_R1:#map[0-9]+]] = affine_map<(d0) -> (d0 - 1)>
-// CHECK-DAG: [[$MAP_SHIFT_D0_BY_ONE:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 + 1)>
-// CHECK-DAG: [[$MAP_SHIFT_D1_BY_ONE:#map[0-9]+]] = affine_map<(d0, d1) -> (d1 + 1)>
+// CHECK-DAG: [[$MAP_SHIFT_MINUS_ONE_R1:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0 - 1)>
+// CHECK-DAG: [[$MAP_SHIFT_D0_BY_ONE:#map[0-9a-zA-Z_]+]] = affine_map<(d0, d1) -> (d0 + 1)>
+// CHECK-DAG: [[$MAP_SHIFT_D1_BY_ONE:#map[0-9a-zA-Z_]+]] = affine_map<(d0, d1) -> (d1 + 1)>
 
 // CHECK-LABEL: func @should_fuse_loop_nests_with_shifts() {
 func.func @should_fuse_loop_nests_with_shifts() {
@@ -140,8 +140,8 @@ func.func @should_fuse_loop_nest() {
     }
   }
   // Expecting private memref for '%a' first, then private memref for '%b'.
-  // CHECK-DAG:  [[NEWA:%[0-9]+]] = memref.alloc() : memref<1x1xf32>
-  // CHECK-DAG:  [[NEWB:%[0-9]+]] = memref.alloc() : memref<1x1xf32>
+  // CHECK-DAG:  [[NEWA:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<1x1xf32>
+  // CHECK-DAG:  [[NEWB:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<1x1xf32>
   // CHECK:      affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:   affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:     affine.store %{{.*}}, [[NEWA]][0, 0] : memref<1x1xf32>
@@ -211,8 +211,8 @@ func.func @should_fuse_all_loops() {
 
   // Should fuse first and second loops into third.
   // Expecting private memref for '%a' first, then private memref for '%b'.
-  // CHECK-DAG: [[NEWA:%[0-9]+]] = memref.alloc() : memref<1xf32>
-  // CHECK-DAG: [[NEWB:%[0-9]+]] = memref.alloc() : memref<1xf32>
+  // CHECK-DAG: [[NEWA:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<1xf32>
+  // CHECK-DAG: [[NEWB:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<1xf32>
   // CHECK:      affine.for %{{.*}} = 0 to 10 {
   // CHECK-NEXT:   affine.store %{{.*}}, [[NEWA]][0] : memref<1xf32>
   // CHECK-NEXT:   affine.store %{{.*}}, [[NEWB]][0] : memref<1xf32>
@@ -618,9 +618,9 @@ func.func @permute_and_fuse() {
 
 // -----
 
-// CHECK-DAG: [[$MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 4 + d1)>
-// CHECK-DAG: [[$MAP1:#map[0-9]+]] = affine_map<(d0) -> (d0 floordiv 4)>
-// CHECK-DAG: [[$MAP2:#map[0-9]+]] = affine_map<(d0) -> (d0 mod 4)>
+// CHECK-DAG: [[$MAP0:#map[0-9a-zA-Z_]+]] = affine_map<(d0, d1) -> (d0 * 4 + d1)>
+// CHECK-DAG: [[$MAP1:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0 floordiv 4)>
+// CHECK-DAG: [[$MAP2:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0 mod 4)>
 
 // Reshape from a 64 x f32 to 16 x 4 x f32.
 // CHECK-LABEL: func @fuse_reshape_64_16_4
@@ -648,9 +648,9 @@ func.func @fuse_reshape_64_16_4(%in : memref<64xf32>) {
 }
 
 // -----
-// CHECK-DAG: [[$MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0 floordiv 4)>
-// CHECK-DAG: [[$MAP1:#map[0-9]+]] = affine_map<(d0) -> (d0 mod 4)>
-// CHECK-DAG: [[$MAP2:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 4 + d1)>
+// CHECK-DAG: [[$MAP0:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0 floordiv 4)>
+// CHECK-DAG: [[$MAP1:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0 mod 4)>
+// CHECK-DAG: [[$MAP2:#map[0-9a-zA-Z_]+]] = affine_map<(d0, d1) -> (d0 * 4 + d1)>
 
 // Reshape a 16x4xf32 to 64xf32.
 // CHECK-LABEL: func @fuse_reshape_16_4_64
@@ -735,18 +735,18 @@ func.func @R6_to_R2_reshape_square() -> memref<64x9xi32> {
 // Everything above is fused to a single 2-d loop nest, and the 6-d tensor %in
 // is eliminated if -memref-dataflow-opt is also supplied.
 //
-// CHECK-DAG: [[$MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> ((d0 * 9 + d1) floordiv 288)>
-// CHECK-DAG: [[$MAP1:#map[0-9]+]] = affine_map<(d0, d1) -> (((d0 * 9 + d1) mod 288) floordiv 144)>
-// CHECK-DAG: [[$MAP2:#map[0-9]+]] = affine_map<(d0, d1) -> (((d0 * 9 + d1) mod 144) floordiv 48)>
-// CHECK-DAG: [[$MAP3:#map[0-9]+]] = affine_map<(d0, d1) -> (((d0 * 9 + d1) mod 48) floordiv 16)>
-// CHECK-DAG: [[$MAP4:#map[0-9]+]] = affine_map<(d0, d1) -> ((d0 * 9 + d1) mod 16)>
-// CHECK-DAG: [[$MAP11:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 9 + d1)>
-// CHECK-DAG: [[$MAP12:#map[0-9]+]] = affine_map<(d0) -> (d0 floordiv 288)>
-// CHECK-DAG: [[$MAP13:#map[0-9]+]] = affine_map<(d0) -> ((d0 mod 288) floordiv 144)>
-// CHECK-DAG: [[$MAP14:#map[0-9]+]] = affine_map<(d0) -> ((d0 mod 144) floordiv 48)>
-// CHECK-DAG: [[$MAP15:#map[0-9]+]] = affine_map<(d0) -> ((d0 mod 48) floordiv 16)>
-// CHECK-DAG: [[$MAP16:#map[0-9]+]] = affine_map<(d0) -> (d0 mod 16)>
-// CHECK-DAG: [[$MAP17:#map[0-9]+]] = affine_map<(d0) -> (0)>
+// CHECK-DAG: [[$MAP0:#map[0-9a-zA-Z_]+]] = affine_map<(d0, d1) -> ((d0 * 9 + d1) floordiv 288)>
+// CHECK-DAG: [[$MAP1:#map[0-9a-zA-Z_]+]] = affine_map<(d0, d1) -> (((d0 * 9 + d1) mod 288) floordiv 144)>
+// CHECK-DAG: [[$MAP2:#map[0-9a-zA-Z_]+]] = affine_map<(d0, d1) -> (((d0 * 9 + d1) mod 144) floordiv 48)>
+// CHECK-DAG: [[$MAP3:#map[0-9a-zA-Z_]+]] = affine_map<(d0, d1) -> (((d0 * 9 + d1) mod 48) floordiv 16)>
+// CHECK-DAG: [[$MAP4:#map[0-9a-zA-Z_]+]] = affine_map<(d0, d1) -> ((d0 * 9 + d1) mod 16)>
+// CHECK-DAG: [[$MAP11:#map[0-9a-zA-Z_]+]] = affine_map<(d0, d1) -> (d0 * 9 + d1)>
+// CHECK-DAG: [[$MAP12:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0 floordiv 288)>
+// CHECK-DAG: [[$MAP13:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> ((d0 mod 288) floordiv 144)>
+// CHECK-DAG: [[$MAP14:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> ((d0 mod 144) floordiv 48)>
+// CHECK-DAG: [[$MAP15:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> ((d0 mod 48) floordiv 16)>
+// CHECK-DAG: [[$MAP16:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0 mod 16)>
+// CHECK-DAG: [[$MAP17:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (0)>
 
 //
 // CHECK-LABEL: func @R6_to_R2_reshape
@@ -1324,9 +1324,9 @@ func.func @R3_to_R2_reshape() {
   }
   return
 }
-// CHECK-DAG: [[$MAP0:#map[0-9]+]] = affine_map<(d0, d1) -> ((d0 * 3 + d1) floordiv 48)>
-// CHECK-DAG: [[$MAP1:#map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 3 + d1)>
-// CHECK-DAG: [[$MAP2:#map[0-9]+]] = affine_map<(d0) -> (d0 floordiv 48)>
+// CHECK-DAG: [[$MAP0:#map[0-9a-zA-Z_]+]] = affine_map<(d0, d1) -> ((d0 * 3 + d1) floordiv 48)>
+// CHECK-DAG: [[$MAP1:#map[0-9a-zA-Z_]+]] = affine_map<(d0, d1) -> (d0 * 3 + d1)>
+// CHECK-DAG: [[$MAP2:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0 floordiv 48)>
 
 // CHECK-LABEL: func @R3_to_R2_reshape()
 // CHECK-DAG:    memref.alloc() : memref<1x1x1xi32>

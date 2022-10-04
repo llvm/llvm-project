@@ -10,7 +10,7 @@ add_mlir_dialect_library(MLIRComplexDialect
   MLIRComplexAttributesIncGen
 
   LINK_LIBS PUBLIC
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRDialect
   MLIRInferTypeOpInterface
   MLIRIR

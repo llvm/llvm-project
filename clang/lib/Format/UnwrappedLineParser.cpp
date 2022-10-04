@@ -964,6 +964,8 @@ FormatToken *UnwrappedLineParser::parseBlock(
   if (MacroBlock && FormatTok->is(tok::l_paren))
     parseParens();
 
+  Line->Level = InitialLevel;
+
   if (FormatTok->is(tok::kw_noexcept)) {
     // A noexcept in a requires expression.
     nextToken();
@@ -978,8 +980,6 @@ FormatToken *UnwrappedLineParser::parseBlock(
 
   if (MunchSemi && FormatTok->is(tok::semi))
     nextToken();
-
-  Line->Level = InitialLevel;
 
   if (PPStartHash == PPEndHash) {
     Line->MatchingOpeningBlockLineIndex = OpeningLineIndex;
@@ -1634,10 +1634,18 @@ void UnwrappedLineParser::parseStructuralElement(
       parseJavaScriptEs6ImportExport();
       return;
     }
-    if (!Style.isCpp())
-      break;
-    // Handle C++ "(inline|export) namespace".
-    [[fallthrough]];
+    if (Style.isCpp()) {
+      nextToken();
+      if (FormatTok->is(Keywords.kw_import)) {
+        parseModuleImport();
+        return;
+      }
+      if (FormatTok->is(tok::kw_namespace)) {
+        parseNamespace();
+        return;
+      }
+    }
+    break;
   case tok::kw_inline:
     nextToken();
     if (FormatTok->is(tok::kw_namespace)) {

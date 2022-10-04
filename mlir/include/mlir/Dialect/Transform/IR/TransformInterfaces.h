@@ -125,14 +125,14 @@ public:
     return result;
   }
 
-  /// Take the diagnostic and silence.
-  SmallVector<Diagnostic> &&takeDiagnostics() {
+  /// Take the diagnostics and silence.
+  void takeDiagnostics(SmallVectorImpl<Diagnostic> &diags) {
     assert(!diagnostics.empty() && "expected a diagnostic to be present");
-    auto guard = llvm::make_scope_exit([&]() { diagnostics.clear(); });
-    return std::move(diagnostics);
+    diags.append(std::make_move_iterator(diagnostics.begin()),
+                 std::make_move_iterator(diagnostics.end()));
   }
 
-  /// Streams the given values into the last diagnotic.
+  /// Streams the given values into the last diagnostic.
   /// Expects this object to be a silenceable failure.
   template <typename T>
   DiagnosedSilenceableFailure &operator<<(T &&value) & {
@@ -820,8 +820,7 @@ DiagnosedSilenceableFailure applyTransformToEach(
     if (result.isDefiniteFailure())
       return result;
     if (result.isSilenceableFailure())
-      for (auto &&diag : result.takeDiagnostics())
-        silenceableStack.push_back(std::move(diag));
+      result.takeDiagnostics(silenceableStack);
   }
   if (!silenceableStack.empty()) {
     return DiagnosedSilenceableFailure::silenceableFailure(

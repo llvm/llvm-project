@@ -524,6 +524,25 @@ define i1 @shl2_trunc_eq8_i32(i32 %a) {
   ret i1 %r
 }
 
+define i1 @shl2_trunc_ne8_i32(i32 %a) {
+; DL64-LABEL: @shl2_trunc_ne8_i32(
+; DL64-NEXT:    [[SHL:%.*]] = shl i32 2, [[A:%.*]]
+; DL64-NEXT:    [[TMP1:%.*]] = and i32 [[SHL]], 65534
+; DL64-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP1]], 8
+; DL64-NEXT:    ret i1 [[R]]
+;
+; DL8-LABEL: @shl2_trunc_ne8_i32(
+; DL8-NEXT:    [[SHL:%.*]] = shl i32 2, [[A:%.*]]
+; DL8-NEXT:    [[T:%.*]] = trunc i32 [[SHL]] to i16
+; DL8-NEXT:    [[R:%.*]] = icmp ne i16 [[T]], 8
+; DL8-NEXT:    ret i1 [[R]]
+;
+  %shl = shl i32 2, %a
+  %t = trunc i32 %shl to i16
+  %r = icmp ne i16 %t, 8
+  ret i1 %r
+}
+
 define i1 @shl1_trunc_sgt4(i32 %a) {
 ; CHECK-LABEL: @shl1_trunc_sgt4(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 1, [[A:%.*]]

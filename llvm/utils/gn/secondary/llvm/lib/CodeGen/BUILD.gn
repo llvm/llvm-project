@@ -104,6 +104,7 @@ static_library("CodeGen") {
     "MIRVRegNamerUtils.cpp",
     "MIRYamlMapping.cpp",
     "MLRegallocEvictAdvisor.cpp",
+    "MLRegallocPriorityAdvisor.cpp",
     "MachineBasicBlock.cpp",
     "MachineBlockFrequencyInfo.cpp",
     "MachineBlockPlacement.cpp",

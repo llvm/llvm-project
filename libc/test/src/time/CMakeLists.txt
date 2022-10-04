@@ -31,6 +31,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  clock_gettime
+  SUITE
+    libc_time_unittests
+  SRCS
+  clock_gettime_test.cpp
+  DEPENDS
+    libc.src.time.clock_gettime
+)
+
+add_libc_unittest(
   gmtime
   SUITE
     libc_time_unittests

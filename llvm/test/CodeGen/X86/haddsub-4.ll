@@ -314,20 +314,19 @@ define <8 x double> @hadd_reverse2_v8f64(<8 x double> %a0, <8 x double> %a1) nou
 define <16 x float> @hadd_reverse_v16f32(<16 x float> %a0, <16 x float> %a1) nounwind {
 ; SSE-LABEL: hadd_reverse_v16f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps %xmm4, %xmm8
-; SSE-NEXT:    movaps %xmm0, %xmm4
+; SSE-NEXT:    movaps %xmm0, %xmm8
 ; SSE-NEXT:    haddps %xmm3, %xmm2
 ; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[3,2,1,0]
 ; SSE-NEXT:    haddps %xmm7, %xmm6
 ; SSE-NEXT:    shufps {{.*#+}} xmm6 = xmm6[3,2,1,0]
-; SSE-NEXT:    haddps %xmm1, %xmm4
-; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[3,2,1,0]
-; SSE-NEXT:    haddps %xmm5, %xmm8
+; SSE-NEXT:    haddps %xmm1, %xmm8
 ; SSE-NEXT:    shufps {{.*#+}} xmm8 = xmm8[3,2,1,0]
+; SSE-NEXT:    haddps %xmm5, %xmm4
+; SSE-NEXT:    shufps {{.*#+}} xmm4 = xmm4[3,2,1,0]
 ; SSE-NEXT:    movaps %xmm2, %xmm0
 ; SSE-NEXT:    movaps %xmm6, %xmm1
-; SSE-NEXT:    movaps %xmm4, %xmm2
-; SSE-NEXT:    movaps %xmm8, %xmm3
+; SSE-NEXT:    movaps %xmm8, %xmm2
+; SSE-NEXT:    movaps %xmm4, %xmm3
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: hadd_reverse_v16f32:

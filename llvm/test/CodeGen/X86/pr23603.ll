@@ -9,14 +9,14 @@ define void @f(ptr %x, i32 %c32, ptr %y) nounwind {
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    movq %rdx, %r14
+; CHECK-NEXT:    movq %rdx, %rbx
 ; CHECK-NEXT:    movl %esi, %ebp
-; CHECK-NEXT:    movl (%rdi), %ebx
+; CHECK-NEXT:    movl (%rdi), %r14d
 ; CHECK-NEXT:    callq free_v@PLT
 ; CHECK-NEXT:    testl %ebp, %ebp
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %left
-; CHECK-NEXT:    movl %ebx, (%r14)
+; CHECK-NEXT:    movl %r14d, (%rbx)
 ; CHECK-NEXT:  .LBB0_2: # %merge
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14

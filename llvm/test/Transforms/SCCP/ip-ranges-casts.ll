@@ -112,9 +112,9 @@ define i1 @caller.zext() {
 ; x = [100, 301)
 define internal i1 @f.sext(i32 %x, i32 %y) {
 ; CHECK-LABEL: @f.sext(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i64 [[TMP1]], 299
-; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i64 [[TMP1]], 101
+; CHECK-NEXT:    [[T_1:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i64 [[T_1]], 299
+; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i64 [[T_1]], 101
 ; CHECK-NEXT:    [[RES_1:%.*]] = add i1 false, [[C_2]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = add i1 [[RES_1]], false
 ; CHECK-NEXT:    [[RES_3:%.*]] = add i1 [[RES_2]], [[C_4]]
@@ -286,16 +286,16 @@ define i1 @caller.inttoptr.ptrtoint() {
 define i1 @int_range_to_double_cast(i32 %a) {
 ; CHECK-LABEL: @int_range_to_double_cast(
 ; CHECK-NEXT:    [[R:%.*]] = and i32 [[A:%.*]], 255
-; CHECK-NEXT:    [[TMP4:%.*]] = sitofp i32 [[R]] to double
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd double 0.000000e+00, [[TMP4]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fcmp olt double [[TMP4]], [[TMP10]]
-; CHECK-NEXT:    ret i1 [[TMP11]]
+; CHECK-NEXT:    [[T4:%.*]] = sitofp i32 [[R]] to double
+; CHECK-NEXT:    [[T10:%.*]] = fadd double 0.000000e+00, [[T4]]
+; CHECK-NEXT:    [[T11:%.*]] = fcmp olt double [[T4]], [[T10]]
+; CHECK-NEXT:    ret i1 [[T11]]
 ;
   %r = and i32 %a, 255
-  %tmp4 = sitofp i32 %r to double
-  %tmp10 = fadd double 0.000000e+00, %tmp4
-  %tmp11 = fcmp olt double %tmp4, %tmp10
-  ret i1 %tmp11
+  %t4 = sitofp i32 %r to double
+  %t10 = fadd double 0.000000e+00, %t4
+  %t11 = fcmp olt double %t4, %t10
+  ret i1 %t11
 }
 
 ; Make sure we do not use ranges to propagate info from vectors.
@@ -318,8 +318,8 @@ entry:
 
 define internal i64 @f.sext_to_zext(i32 %t) {
 ; CHECK-LABEL: @f.sext_to_zext(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[T:%.*]] to i64
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = zext i32 [[T:%.*]] to i64
+; CHECK-NEXT:    ret i64 [[A]]
 ;
   %a = sext i32 %t to i64
   ret i64 %a

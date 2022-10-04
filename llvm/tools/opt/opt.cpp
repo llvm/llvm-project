@@ -455,7 +455,8 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "replace-with-veclib",  "jmc-instrument",
       "dot-regions",          "dot-regions-only",
       "view-regions",         "view-regions-only",
-      "select-optimize",      "expand-large-div-rem"};
+      "select-optimize",      "expand-large-div-rem",
+      "structurizecfg",       "fix-irreducible"};
   for (const auto &P : PassNamePrefix)
     if (Pass.startswith(P))
       return true;

@@ -1966,8 +1966,8 @@ template <typename Ty, typename Enable = void> struct GetBodyMatcher {
 };
 
 template <typename Ty>
-struct GetBodyMatcher<Ty, typename std::enable_if<
-                              std::is_base_of<FunctionDecl, Ty>::value>::type> {
+struct GetBodyMatcher<
+    Ty, std::enable_if_t<std::is_base_of<FunctionDecl, Ty>::value>> {
   static const Stmt *get(const Ty &Node) {
     return Node.doesThisDeclarationHaveABody() ? Node.getBody() : nullptr;
   }

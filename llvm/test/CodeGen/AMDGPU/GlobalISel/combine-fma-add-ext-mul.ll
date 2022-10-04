@@ -50,10 +50,6 @@ define amdgpu_vs float @test_f16_f32_add_ext_mul_rhs(half inreg %x, half inreg %
 define amdgpu_vs <5 x float> @test_5xf16_5xf32_add_ext_mul(<5 x half> inreg %x, <5 x half> inreg %y, <5 x float> inreg %z) {
 ; GFX9-FAST-DENORM-LABEL: test_5xf16_5xf32_add_ext_mul:
 ; GFX9-FAST-DENORM:       ; %bb.0: ; %.entry
-; GFX9-FAST-DENORM-NEXT:    s_pack_lh_b32_b16 s3, s3, s3
-; GFX9-FAST-DENORM-NEXT:    s_pack_lh_b32_b16 s4, s4, s4
-; GFX9-FAST-DENORM-NEXT:    s_pack_lh_b32_b16 s0, s0, s0
-; GFX9-FAST-DENORM-NEXT:    s_pack_lh_b32_b16 s1, s1, s1
 ; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v0, s3
 ; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v1, s4
 ; GFX9-FAST-DENORM-NEXT:    v_mov_b32_e32 v2, s5

@@ -247,18 +247,11 @@ struct __list_node_pointer_traits {
 #if defined(_LIBCPP_ABI_LIST_REMOVE_NODE_POINTER_UB)
   typedef __base_pointer __link_pointer;
 #else
-  typedef typename conditional<
-          is_pointer<_VoidPtr>::value,
-          __base_pointer,
-          __node_pointer
-  >::type __link_pointer;
+  typedef __conditional_t<is_pointer<_VoidPtr>::value, __base_pointer, __node_pointer> __link_pointer;
 #endif
 
-  typedef typename conditional<
-          is_same<__link_pointer, __node_pointer>::value,
-          __base_pointer,
-          __node_pointer
-  >::type __non_link_pointer;
+  typedef __conditional_t<is_same<__link_pointer, __node_pointer>::value, __base_pointer, __node_pointer>
+      __non_link_pointer;
 
   static _LIBCPP_INLINE_VISIBILITY
   __link_pointer __unsafe_link_pointer_cast(__link_pointer __p) {

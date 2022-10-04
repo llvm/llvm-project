@@ -15,6 +15,8 @@
 #include "lldb/Utility/StreamString.h"
 #include "llvm/Testing/Support/Error.h"
 
+#include <cmath>
+
 using namespace lldb_private;
 using llvm::APFloat;
 using llvm::APInt;

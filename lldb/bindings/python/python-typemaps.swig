@@ -435,7 +435,7 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
 
 %typemap(out) lldb::FileSP {
   $result = nullptr;
-  lldb::FileSP &sp = $1;
+  const lldb::FileSP &sp = $1;
   if (sp) {
     PythonFile pyfile = unwrapOrSetPythonException(PythonFile::FromFile(*sp));
     if (!pyfile.IsValid())

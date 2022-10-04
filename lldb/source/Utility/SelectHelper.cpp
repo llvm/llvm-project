@@ -138,15 +138,15 @@ lldb_private::Status SelectHelper::Select() {
   llvm::SmallVector<fd_set, 1> write_fdset;
   llvm::SmallVector<fd_set, 1> error_fdset;
 
-  if (max_read_fd.hasValue()) {
+  if (max_read_fd.has_value()) {
     read_fdset.resize((nfds / FD_SETSIZE) + 1);
     read_fdset_ptr = read_fdset.data();
   }
-  if (max_write_fd.hasValue()) {
+  if (max_write_fd.has_value()) {
     write_fdset.resize((nfds / FD_SETSIZE) + 1);
     write_fdset_ptr = write_fdset.data();
   }
-  if (max_error_fd.hasValue()) {
+  if (max_error_fd.has_value()) {
     error_fdset.resize((nfds / FD_SETSIZE) + 1);
     error_fdset_ptr = error_fdset.data();
   }

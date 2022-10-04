@@ -17,8 +17,8 @@
 namespace __llvm_libc {
 
 static inline void write_to_stderr(const char *msg) {
-  __llvm_libc::syscall(SYS_write, 2 /* stderr */, msg,
-                       internal::string_length(msg));
+  __llvm_libc::syscall_impl(SYS_write, 2 /* stderr */, msg,
+                            internal::string_length(msg));
 }
 
 } // namespace __llvm_libc

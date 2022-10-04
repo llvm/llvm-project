@@ -36,7 +36,7 @@ public:
     auto loc = op->getLoc();
     MLIRContext *context = rewriter.getContext();
     Value newOp;
-    switch (op.dimension()) {
+    switch (op.getDimension()) {
     case gpu::Dimension::x:
       newOp = rewriter.create<XOp>(loc, IntegerType::get(context, 32));
       break;

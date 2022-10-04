@@ -91,7 +91,9 @@ add_gen_header(
   GEN_HDR time.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.time_macros
     .llvm-libc-types.time_t
+    .llvm-libc-types.clockid_t
     .llvm-libc-types.struct_tm
     .llvm-libc-types.struct_timespec
 )
@@ -131,8 +133,10 @@ add_gen_header(
   DATA_FILES
     ../config/${LIBC_TARGET_OS}/signal.h.in
   DEPENDS
+    .llvm-libc-macros.signal_macros
     .llvm-libc-types.struct_sigaction
     .llvm-libc-types.__sighandler_t
+    .llvm-libc-types.sigset_t
 )
 
 add_gen_header(
@@ -188,7 +192,18 @@ add_gen_header(
     .llvm-libc-types.pthread_key_t
     .llvm-libc-types.pthread_mutex_t
     .llvm-libc-types.pthread_mutexattr_t
+    .llvm-libc-types.pthread_once_t
+    .llvm-libc-types.__pthread_once_func_t
     .llvm-libc-types.pthread_t
+)
+
+add_gen_header(
+  sched
+  DEF_FILE sched.h.def
+  GEN_HDR sched.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.cpu_set_t
 )
 
 # TODO: Not all platforms will have a include/sys directory. Add the sys

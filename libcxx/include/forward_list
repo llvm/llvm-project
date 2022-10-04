@@ -252,18 +252,12 @@ struct __forward_node_traits {
 #if defined(_LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB)
   typedef __begin_node_pointer __iter_node_pointer;
 #else
-  typedef typename conditional<
-          is_pointer<__void_pointer>::value,
-          __begin_node_pointer,
-          __node_pointer
-    >::type __iter_node_pointer;
+  typedef __conditional_t<is_pointer<__void_pointer>::value, __begin_node_pointer, __node_pointer>
+      __iter_node_pointer;
 #endif
 
-  typedef typename conditional<
-          is_same<__iter_node_pointer, __node_pointer>::value,
-          __begin_node_pointer,
-          __node_pointer
-    >::type __non_iter_node_pointer;
+  typedef __conditional_t<is_same<__iter_node_pointer, __node_pointer>::value, __begin_node_pointer, __node_pointer>
+      __non_iter_node_pointer;
 
   _LIBCPP_INLINE_VISIBILITY
   static __iter_node_pointer __as_iter_node(__iter_node_pointer __p) {
@@ -292,16 +286,11 @@ struct __forward_begin_node
 };
 
 template <class _Tp, class _VoidPtr>
-struct _LIBCPP_HIDDEN __begin_node_of
-{
-    typedef __forward_begin_node<
-        __rebind_pointer_t<_VoidPtr, __forward_list_node<_Tp, _VoidPtr> >
-    > type;
-};
+using __begin_node_of = __forward_begin_node<__rebind_pointer_t<_VoidPtr, __forward_list_node<_Tp, _VoidPtr> > >;
 
 template <class _Tp, class _VoidPtr>
 struct _LIBCPP_STANDALONE_DEBUG __forward_list_node
-    : public __begin_node_of<_Tp, _VoidPtr>::type
+    : public __begin_node_of<_Tp, _VoidPtr>
 {
     typedef _Tp value_type;
 
@@ -483,7 +472,7 @@ protected:
 
     typedef typename allocator_traits<allocator_type>::void_pointer  void_pointer;
     typedef __forward_list_node<value_type, void_pointer>            __node;
-    typedef typename __begin_node_of<value_type, void_pointer>::type __begin_node;
+    typedef __begin_node_of<value_type, void_pointer>                __begin_node;
     typedef typename __rebind_alloc_helper<allocator_traits<allocator_type>, __node>::type __node_allocator;
     typedef allocator_traits<__node_allocator>        __node_traits;
     typedef typename __node_traits::pointer           __node_pointer;

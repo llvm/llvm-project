@@ -423,8 +423,6 @@ template <typename T, typename TailT = T> struct Loop {
   }
 };
 
-enum class Arg { _1, _2, Dst = _1, Src = _2, Lhs = _1, Rhs = _2 };
-
 namespace internal {
 
 template <Arg arg> struct ArgSelector {};
@@ -454,10 +452,7 @@ template <Arg arg, size_t Alignment> struct Align {
                    int additional_bumps = 0) {
     auto &aligned_ptr = ArgSelector<arg>::Select(p1ref, p2ref);
     auto offset = offset_to_next_aligned<Alignment>(aligned_ptr);
-    offset += additional_bumps * Alignment;
-    p1ref += offset;
-    p2ref += offset;
-    size -= offset;
+    adjust(offset + additional_bumps * Alignment, p1ref, p2ref, size);
     aligned_ptr = assume_aligned<Alignment>(aligned_ptr);
   }
 };

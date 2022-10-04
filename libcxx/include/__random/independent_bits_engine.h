@@ -51,12 +51,8 @@ private:
     static_assert(__w <= _Dt, "independent_bits_engine invalid parameters");
 
     typedef typename _Engine::result_type _Engine_result_type;
-    typedef typename conditional
-        <
-            sizeof(_Engine_result_type) <= sizeof(result_type),
-                result_type,
-                _Engine_result_type
-        >::type _Working_result_type;
+    typedef __conditional_t<sizeof(_Engine_result_type) <= sizeof(result_type), result_type, _Engine_result_type>
+        _Working_result_type;
 #ifdef _LIBCPP_CXX03_LANG
     static const _Working_result_type _Rp = _Engine::_Max - _Engine::_Min
                                           + _Working_result_type(1);

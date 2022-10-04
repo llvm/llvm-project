@@ -19,7 +19,7 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, fchmodat,
                    (int dirfd, const char *path, mode_t mode, int flags)) {
-  long ret = __llvm_libc::syscall(SYS_fchmodat, dirfd, path, mode, flags);
+  long ret = __llvm_libc::syscall_impl(SYS_fchmodat, dirfd, path, mode, flags);
   if (ret < 0) {
     errno = -ret;
     return -1;

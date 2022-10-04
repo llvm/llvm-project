@@ -521,8 +521,8 @@ void TypeOfTypeLoc::initializeLocal(ASTContext &Context,
                                        SourceLocation Loc) {
   TypeofLikeTypeLoc<TypeOfTypeLoc, TypeOfType, TypeOfTypeLocInfo>
       ::initializeLocal(Context, Loc);
-  this->getLocalData()->UnderlyingTInfo = Context.getTrivialTypeSourceInfo(
-      getUnderlyingType(), Loc);
+  this->getLocalData()->UnmodifiedTInfo =
+      Context.getTrivialTypeSourceInfo(getUnmodifiedType(), Loc);
 }
 
 void UnaryTransformTypeLoc::initializeLocal(ASTContext &Context,

@@ -487,3 +487,13 @@ def testOpaqueType():
     print("dialect namespace:", opaque.dialect_namespace)
     # CHECK: data: type
     print("data:", opaque.data)
+
+
+# CHECK-LABEL: TEST: testShapedTypeConstants
+# Tests that ShapedType exposes magic value constants.
+@run
+def testShapedTypeConstants():
+  # CHECK: <class 'int'>
+  print(type(ShapedType.get_dynamic_size()))
+  # CHECK: <class 'int'>
+  print(type(ShapedType.get_dynamic_stride_or_offset()))

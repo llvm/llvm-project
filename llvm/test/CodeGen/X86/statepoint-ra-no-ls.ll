@@ -30,27 +30,27 @@ define void @test(ptr addrspace(1) %b) gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_offset %r14, -32
 ; CHECK-NEXT:    .cfi_offset %r15, -24
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
-; CHECK-NEXT:    movq (%rdi), %r14
+; CHECK-NEXT:    movq (%rdi), %rbx
 ; CHECK-NEXT:    movq 8(%rdi), %rax
 ; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movq 16(%rdi), %r15
-; CHECK-NEXT:    movq 24(%rdi), %r12
-; CHECK-NEXT:    movq 32(%rdi), %r13
-; CHECK-NEXT:    movq 40(%rdi), %rbx
+; CHECK-NEXT:    movq 16(%rdi), %r14
+; CHECK-NEXT:    movq 24(%rdi), %r15
+; CHECK-NEXT:    movq 32(%rdi), %r12
+; CHECK-NEXT:    movq 40(%rdi), %r13
 ; CHECK-NEXT:    movq 48(%rdi), %rbp
-; CHECK-NEXT:    movq %r14, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movq %rbx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    callq foo@PLT # 8-byte Folded Reload
 ; CHECK-NEXT:  .Ltmp0:
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r14 # 8-byte Reload
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
 ; CHECK-NEXT:    movq %rbp, %rdi
-; CHECK-NEXT:    callq bar@PLT
-; CHECK-NEXT:    movq %rbx, %rdi
 ; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    movq %r13, %rdi
 ; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    movq %r12, %rdi
 ; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    movq %r15, %rdi
+; CHECK-NEXT:    callq bar@PLT
+; CHECK-NEXT:    movq %r14, %rdi
 ; CHECK-NEXT:    callq bar@PLT
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
 ; CHECK-NEXT:    callq bar@PLT

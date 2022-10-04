@@ -38,9 +38,6 @@ def AsyncDialect : Dialect {
     static constexpr StringRef kAllowedToBlockAttrName =
         "async.allowed_to_block";
   }];
-
-  // TODO: Prefixed form overlaps with generated names, update before flipping.
-  let emitAccessorPrefix = kEmitAccessorPrefix_Both;
 }
 
 #endif // ASYNC_DIALECT_TD

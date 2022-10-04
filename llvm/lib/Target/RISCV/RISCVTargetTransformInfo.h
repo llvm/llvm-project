@@ -51,11 +51,10 @@ public:
       : BaseT(TM, F.getParent()->getDataLayout()), ST(TM->getSubtargetImpl(F)),
         TLI(ST->getTargetLowering()) {}
 
-  /// Return the cost of materializing a vector immediate, assuming it does
-  /// not get folded into the using instruction(s).
-  InstructionCost getVectorImmCost(VectorType *VecTy,
-                                   TTI::OperandValueInfo OpInfo,
-                                   TTI::TargetCostKind CostKind);
+  /// Return the cost of materializing an immediate for a value operand of
+  /// a store instruction.
+  InstructionCost getStoreImmCost(Type *VecTy, TTI::OperandValueInfo OpInfo,
+                                  TTI::TargetCostKind CostKind);
 
   InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
                                 TTI::TargetCostKind CostKind);

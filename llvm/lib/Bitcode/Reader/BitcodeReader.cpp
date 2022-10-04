@@ -1298,6 +1298,9 @@ static FastMathFlags getDecodedFastMathFlags(unsigned Val) {
 }
 
 static void upgradeDLLImportExportLinkage(GlobalValue *GV, unsigned Val) {
+  // A GlobalValue with local linkage cannot have a DLL storage class.
+  if (GV->hasLocalLinkage())
+    return;
   switch (Val) {
   case 5: GV->setDLLStorageClass(GlobalValue::DLLImportStorageClass); break;
   case 6: GV->setDLLStorageClass(GlobalValue::DLLExportStorageClass); break;
@@ -3764,10 +3767,14 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
   NewGV->setVisibility(Visibility);
   NewGV->setUnnamedAddr(UnnamedAddr);
 
-  if (Record.size() > 10)
-    NewGV->setDLLStorageClass(getDecodedDLLStorageClass(Record[10]));
-  else
+  if (Record.size() > 10) {
+    // A GlobalValue with local linkage cannot have a DLL storage class.
+    if (!NewGV->hasLocalLinkage()) {
+      NewGV->setDLLStorageClass(getDecodedDLLStorageClass(Record[10]));
+    }
+  } else {
     upgradeDLLImportExportLinkage(NewGV, RawLinkage);
+  }
 
   ValueList.push_back(NewGV, getVirtualTypeID(NewGV->getType(), TyID));
 
@@ -3928,10 +3935,14 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   if (Record.size() > 10)
     OperandInfo.Prologue = Record[10];
 
-  if (Record.size() > 11)
-    Func->setDLLStorageClass(getDecodedDLLStorageClass(Record[11]));
-  else
+  if (Record.size() > 11) {
+    // A GlobalValue with local linkage cannot have a DLL storage class.
+    if (!Func->hasLocalLinkage()) {
+      Func->setDLLStorageClass(getDecodedDLLStorageClass(Record[11]));
+    }
+  } else {
     upgradeDLLImportExportLinkage(Func, RawLinkage);
+  }
 
   if (Record.size() > 12) {
     if (unsigned ComdatID = Record[12]) {
@@ -4034,8 +4045,12 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
   }
   if (BitCode == bitc::MODULE_CODE_ALIAS ||
       BitCode == bitc::MODULE_CODE_ALIAS_OLD) {
-    if (OpNum != Record.size())
-      NewGA->setDLLStorageClass(getDecodedDLLStorageClass(Record[OpNum++]));
+    if (OpNum != Record.size()) {
+      auto S = Record[OpNum++];
+      // A GlobalValue with local linkage cannot have a DLL storage class.
+      if (!NewGA->hasLocalLinkage())
+        NewGA->setDLLStorageClass(getDecodedDLLStorageClass(S));
+    }
     else
       upgradeDLLImportExportLinkage(NewGA, Linkage);
     if (OpNum != Record.size())

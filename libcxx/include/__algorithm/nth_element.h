@@ -231,8 +231,7 @@ void __nth_element_impl(_RandomAccessIterator __first, _RandomAccessIterator __n
 
   std::__debug_randomize_range<_AlgPolicy>(__first, __last);
 
-  using _Comp_ref = typename __comp_ref_type<_Compare>::type;
-  std::__nth_element<_AlgPolicy, _Comp_ref>(__first, __nth, __last, __comp);
+  std::__nth_element<_AlgPolicy, __comp_ref_type<_Compare> >(__first, __nth, __last, __comp);
 
   std::__debug_randomize_range<_AlgPolicy>(__first, __nth);
   if (__nth != __last) {

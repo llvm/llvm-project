@@ -118,6 +118,7 @@ struct ModuleStats {
   bool debug_info_index_saved_to_cache = false;
   bool debug_info_enabled = true;
   bool symtab_stripped = false;
+  bool debug_info_had_variable_errors = false;
 };
 
 struct ConstStringStats {

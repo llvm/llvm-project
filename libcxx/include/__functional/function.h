@@ -676,8 +676,7 @@ struct __policy
 // Used to choose between perfect forwarding or pass-by-value. Pass-by-value is
 // faster for types that can be passed in registers.
 template <typename _Tp>
-using __fast_forward =
-    typename conditional<is_scalar<_Tp>::value, _Tp, _Tp&&>::type;
+using __fast_forward = __conditional_t<is_scalar<_Tp>::value, _Tp, _Tp&&>;
 
 // __policy_invoker calls an instance of __alloc_func held in __policy_storage.
 

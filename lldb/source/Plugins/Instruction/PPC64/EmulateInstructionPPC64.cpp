@@ -239,14 +239,15 @@ bool EmulateInstructionPPC64::EmulateLD(uint32_t opcode) {
   Log *log = GetLog(LLDBLog::Unwind);
   LLDB_LOG(log, "EmulateLD: {0:X+8}: ld r{1}, {2}(r{3})", m_addr, rt, ids, ra);
 
-  RegisterInfo r1_info;
-  if (!GetRegisterInfo(eRegisterKindLLDB, gpr_r1_ppc64le, r1_info))
+  llvm::Optional<RegisterInfo> r1_info =
+      GetRegisterInfo(eRegisterKindLLDB, gpr_r1_ppc64le);
+  if (!r1_info)
     return false;
 
   // restore SP
   Context ctx;
   ctx.type = eContextRestoreStackPointer;
-  ctx.SetRegisterToRegisterPlusOffset(r1_info, r1_info, 0);
+  ctx.SetRegisterToRegisterPlusOffset(*r1_info, *r1_info, 0);
 
   WriteRegisterUnsigned(ctx, eRegisterKindLLDB, gpr_r1_ppc64le, 0);
   LLDB_LOG(log, "EmulateLD: success!");
@@ -289,16 +290,17 @@ bool EmulateInstructionPPC64::EmulateSTD(uint32_t opcode) {
   }
 
   // set context
-  RegisterInfo rs_info;
-  if (!GetRegisterInfo(eRegisterKindLLDB, rs_num, rs_info))
+  llvm::Optional<RegisterInfo> rs_info =
+      GetRegisterInfo(eRegisterKindLLDB, rs_num);
+  if (!rs_info)
     return false;
-  RegisterInfo ra_info;
-  if (!GetRegisterInfo(eRegisterKindLLDB, ra, ra_info))
+  llvm::Optional<RegisterInfo> ra_info = GetRegisterInfo(eRegisterKindLLDB, ra);
+  if (!ra_info)
     return false;
 
   Context ctx;
   ctx.type = eContextPushRegisterOnStack;
-  ctx.SetRegisterToRegisterPlusOffset(rs_info, ra_info, ids);
+  ctx.SetRegisterToRegisterPlusOffset(*rs_info, *ra_info, ids);
 
   // store
   uint64_t ra_val = ReadRegisterUnsigned(eRegisterKindLLDB, ra, 0, &success);
@@ -334,13 +336,13 @@ bool EmulateInstructionPPC64::EmulateOR(uint32_t opcode) {
   LLDB_LOG(log, "EmulateOR: {0:X+8}: mr r{1}, r{2}", m_addr, ra, rb);
 
   // set context
-  RegisterInfo ra_info;
-  if (!GetRegisterInfo(eRegisterKindLLDB, ra, ra_info))
+  llvm::Optional<RegisterInfo> ra_info = GetRegisterInfo(eRegisterKindLLDB, ra);
+  if (!ra_info)
     return false;
 
   Context ctx;
   ctx.type = eContextSetFramePointer;
-  ctx.SetRegister(ra_info);
+  ctx.SetRegister(*ra_info);
 
   // move
   bool success;
@@ -369,13 +371,14 @@ bool EmulateInstructionPPC64::EmulateADDI(uint32_t opcode) {
   LLDB_LOG(log, "EmulateADDI: {0:X+8}: addi r1, r1, {1}", m_addr, si_val);
 
   // set context
-  RegisterInfo r1_info;
-  if (!GetRegisterInfo(eRegisterKindLLDB, gpr_r1_ppc64le, r1_info))
+  llvm::Optional<RegisterInfo> r1_info =
+      GetRegisterInfo(eRegisterKindLLDB, gpr_r1_ppc64le);
+  if (!r1_info)
     return false;
 
   Context ctx;
   ctx.type = eContextRestoreStackPointer;
-  ctx.SetRegisterToRegisterPlusOffset(r1_info, r1_info, 0);
+  ctx.SetRegisterToRegisterPlusOffset(*r1_info, *r1_info, 0);
 
   // adjust SP
   bool success;

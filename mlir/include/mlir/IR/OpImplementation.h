@@ -327,6 +327,9 @@ public:
   using AsmPrinter::AsmPrinter;
   ~OpAsmPrinter() override;
 
+  /// Print a loc(...) specifier if printing debug info is enabled.
+  virtual void printOptionalLocationSpecifier(Location loc) = 0;
+
   /// Print a newline and indent the printer to the start of the current
   /// operation.
   virtual void printNewline() = 0;
@@ -353,13 +356,8 @@ public:
   /// Print a comma separated list of operands.
   template <typename IteratorType>
   void printOperands(IteratorType it, IteratorType end) {
-    if (it == end)
-      return;
-    printOperand(*it);
-    for (++it; it != end; ++it) {
-      getStream() << ", ";
-      printOperand(*it);
-    }
+    llvm::interleaveComma(llvm::make_range(it, end), getStream(),
+                          [this](Value value) { printOperand(value); });
   }
 
   /// Print the given successor.

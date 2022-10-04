@@ -670,7 +670,7 @@ ParseResult {0}::parse(OpAsmParser &parser, OperationState &result) {{
     {0}::getNumRegionArgs(), {0}::getRegionBuilder());
 }
 void {0}::print(OpAsmPrinter &p) {{
-  ::printNamedStructuredOp(p, getOperation(), inputs(), outputs());
+  ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs());
 }
 )FMT";
 
@@ -857,7 +857,7 @@ static SmallVector<AffineExpr> getSymbolBindings({0} self) {
         // {1}: Symbol position
         // {2}: Attribute index
         static const char structuredOpAccessAttrFormat[] = R"FMT(
-int64_t cst{1} = self.{0}().getValues<int64_t>()[{2}];
+int64_t cst{1} = self.get{0}().getValues<int64_t>()[{2}];
 exprs.push_back(getAffineConstantExpr(cst{1}, context));
 )FMT";
         // Update all symbol bindings mapped to an attribute.
@@ -868,8 +868,10 @@ exprs.push_back(getAffineConstantExpr(cst{1}, context));
           for (auto &en :
                llvm::enumerate(arg.indexAttrMap->affineMap().getResults())) {
             if (auto symbol = en.value().dyn_cast<AffineSymbolExpr>()) {
+              std::string argName = arg.name;
+              argName[0] = toupper(argName[0]);
               symbolBindings[symbol.getPosition()] =
-                  llvm::formatv(structuredOpAccessAttrFormat, arg.name,
+                  llvm::formatv(structuredOpAccessAttrFormat, argName,
                                 symbol.getPosition(), en.index());
             }
           }
