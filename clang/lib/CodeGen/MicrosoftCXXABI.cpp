@@ -1086,8 +1086,8 @@ bool MicrosoftCXXABI::hasMostDerivedReturn(GlobalDecl GD) const {
   return isDeletingDtor(GD);
 }
 
-static bool isTrivialForAArch64MSVC(const CXXRecordDecl *RD) {
-  // For AArch64, we use the C++14 definition of an aggregate, so we also
+static bool isTrivialForMSVC(const CXXRecordDecl *RD) {
+  // We use the C++14 definition of an aggregate, so we also
   // check for:
   //   No private or protected non static data members.
   //   No base classes
@@ -1115,15 +1115,7 @@ bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
   if (!RD)
     return false;
 
-  // Normally, the C++ concept of "is trivially copyable" is used to determine
-  // if a struct can be returned directly. However, as MSVC and the language
-  // have evolved, the definition of "trivially copyable" has changed, while the
-  // ABI must remain stable. AArch64 uses the C++14 concept of an "aggregate",
-  // while other ISAs use the older concept of "plain old data".
-  bool isTrivialForABI = RD->isPOD();
-  bool isAArch64 = CGM.getTarget().getTriple().isAArch64();
-  if (isAArch64)
-    isTrivialForABI = RD->canPassInRegisters() && isTrivialForAArch64MSVC(RD);
+  bool isTrivialForABI = RD->canPassInRegisters() && isTrivialForMSVC(RD);
 
   // MSVC always returns structs indirectly from C++ instance methods.
   bool isIndirectReturn = !isTrivialForABI || FI.isInstanceMethod();
@@ -1137,7 +1129,7 @@ bool MicrosoftCXXABI::classifyReturnType(CGFunctionInfo &FI) const {
 
     // On AArch64, use the `inreg` attribute if the object is considered to not
     // be trivially copyable, or if this is an instance method struct return.
-    FI.getReturnInfo().setInReg(isAArch64);
+    FI.getReturnInfo().setInReg(CGM.getTarget().getTriple().isAArch64());
 
     return true;
   }
