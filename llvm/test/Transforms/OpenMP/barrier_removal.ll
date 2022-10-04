@@ -9,6 +9,7 @@ declare i32 @llvm.nvvm.barrier0.and(i32)
 declare i32 @llvm.nvvm.barrier0.or(i32)
 declare i32 @llvm.nvvm.barrier0.popc(i32)
 declare void @llvm.amdgcn.s.barrier()
+declare void @llvm.assume(i1)
 
 ;.
 ; CHECK: @[[GC1:[a-zA-Z0-9_$"\\.-]+]] = constant i32 42
@@ -27,7 +28,9 @@ define void @pos_empty_1() {
 ; CHECK-LABEL: define {{[^@]+}}@pos_empty_1() {
 ; CHECK-NEXT:    ret void
 ;
+  call void @llvm.assume(i1 true)
   call void @unknown() "llvm.assume"="ompx_aligned_barrier"
+  call void @llvm.assume(i1 true)
   ret void
 }
 define void @pos_empty_2() {
