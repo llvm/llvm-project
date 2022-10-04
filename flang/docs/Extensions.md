@@ -343,6 +343,13 @@ end
   This Fortran 2008 feature might as well be viewed like an
   extension; no other compiler that we've tested can handle
   it yet.
+* According to 11.1.3.3p1, if a selector of an `ASSOCIATE` or
+  related construct is defined by a variable, it has the `TARGET`
+  attribute if the variable was a `POINTER` or `TARGET`.
+  We read this to include the case of the variable being a
+  pointer-valued function reference.
+  No other Fortran compiler seems to handle this correctly for
+  `ASSOCIATE`, though NAG gets it right for `SELECT TYPE`.
 
 ## Behavior in cases where the standard is ambiguous or indefinite
 
