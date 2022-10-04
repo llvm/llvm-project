@@ -38,7 +38,7 @@ static DWORD getWindowsProtectionFlags(MemProt MP) {
     return PAGE_EXECUTE_READ;
   if (MP == (MemProt::Read | MemProt::Write | MemProt::Exec))
     return PAGE_EXECUTE_READWRITE;
-  if (MP == MpmProt::Exec)
+  if (MP == MemProt::Exec)
     return PAGE_EXECUTE;
 
   return PAGE_NOACCESS;
