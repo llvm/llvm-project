@@ -239,7 +239,7 @@ define void @call_strlcpy_s0_n(ptr %dst, ptr %s, i64 %n) {
 ; ANY-NEXT:    call void @sink(ptr [[DST]], i64 [[NS0_N]])
 ; ANY-NEXT:    [[NS1_N:%.*]] = call i64 @strlcpy(ptr [[DST]], ptr noundef nonnull dereferenceable(1) getelementptr inbounds ([5 x i8], ptr @s4, i64 0, i64 3), i64 [[N]])
 ; ANY-NEXT:    call void @sink(ptr [[DST]], i64 [[NS1_N]])
-; ANY-NEXT:    [[NS4_N:%.*]] = call i64 @strlcpy(ptr [[DST]], ptr noundef nonnull @s4, i64 [[N]])
+; ANY-NEXT:    [[NS4_N:%.*]] = call i64 @strlcpy(ptr [[DST]], ptr noundef nonnull dereferenceable(1) @s4, i64 [[N]])
 ; ANY-NEXT:    call void @sink(ptr [[DST]], i64 [[NS4_N]])
 ; ANY-NEXT:    ret void
 ;

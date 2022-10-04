@@ -16,7 +16,7 @@ declare ptr @memchr(ptr, i32, i64)
 
 define ptr @call_memchr_ax_2_uimax_p1() {
 ; CHECK-LABEL: @call_memchr_ax_2_uimax_p1(
-; CHECK-NEXT:    [[RES:%.*]] = call ptr @memchr(ptr noundef nonnull @ax, i32 1, i64 4294967296)
+; CHECK-NEXT:    [[RES:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) @ax, i32 1, i64 4294967296)
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
 
@@ -30,7 +30,7 @@ define ptr @call_memchr_ax_2_uimax_p1() {
 
 define ptr @call_memchr_ax_2_uimax_p2() {
 ; CHECK-LABEL: @call_memchr_ax_2_uimax_p2(
-; CHECK-NEXT:    [[RES:%.*]] = call ptr @memchr(ptr noundef nonnull @ax, i32 1, i64 4294967296)
+; CHECK-NEXT:    [[RES:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) @ax, i32 1, i64 4294967296)
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
 
@@ -56,7 +56,7 @@ define ptr @fold_memchr_a12345_3_uimax_p2() {
 
 define ptr @fold_memchr_a12345_c_uimax_p2(i32 %0) {
 ; CHECK-LABEL: @fold_memchr_a12345_c_uimax_p2(
-; CHECK-NEXT:    [[RES:%.*]] = call ptr @memchr(ptr noundef nonnull @a12345, i32 [[TMP0:%.*]], i64 4294967297)
+; CHECK-NEXT:    [[RES:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) @a12345, i32 [[TMP0:%.*]], i64 4294967297)
 ; CHECK-NEXT:    ret ptr [[RES]]
 ;
 

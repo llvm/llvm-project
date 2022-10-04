@@ -38,7 +38,7 @@ define void @test_simplify1() {
 
 define void @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
-; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull @str)
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull dereferenceable(1) @str)
 ; CHECK-NEXT:    ret void
 ;
   call i32 (ptr, ...) @printf(ptr @hello_world)
@@ -47,7 +47,7 @@ define void @test_simplify2() {
 
 define void @test_simplify6() {
 ; CHECK-LABEL: @test_simplify6(
-; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull @hello_world)
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull dereferenceable(1) @hello_world)
 ; CHECK-NEXT:    ret void
 ;
   call i32 (ptr, ...) @printf(ptr @percent_s, ptr @hello_world)
@@ -77,7 +77,7 @@ define void @test_simplify8() {
 
 define void @test_simplify9() {
 ; CHECK-LABEL: @test_simplify9(
-; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull @str.1)
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull dereferenceable(1) @str.1)
 ; CHECK-NEXT:    ret void
 ;
   call i32 (ptr, ...) @printf(ptr @format_str, ptr @hello_world)
@@ -91,7 +91,7 @@ define void @test_simplify9() {
 define void @test_simplify10() {
 ; CHECK-LABEL: @test_simplify10(
 ; CHECK-NEXT:    [[PUTCHAR:%.*]] = call i32 @putchar(i32 97)
-; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull @str.2)
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull dereferenceable(1) @str.2)
 ; CHECK-NEXT:    ret void
 ;
   call i32 (ptr, ...) @printf(ptr @format_str, ptr @empty, i32 42, double 0x40091EB860000000)

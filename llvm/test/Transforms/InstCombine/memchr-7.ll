@@ -9,7 +9,7 @@ declare ptr @memchr(ptr, i32, i64)
 
 define zeroext i1 @strchr_to_memchr_n_equals_len(i32 %c) {
 ; CHECK-LABEL: @strchr_to_memchr_n_equals_len(
-; CHECK-NEXT:    [[MEMCHR:%.*]] = tail call ptr @memchr(ptr noundef nonnull @.str, i32 [[C:%.*]], i64 27)
+; CHECK-NEXT:    [[MEMCHR:%.*]] = tail call ptr @memchr(ptr noundef nonnull dereferenceable(1) @.str, i32 [[C:%.*]], i64 27)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[MEMCHR]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -33,7 +33,7 @@ define zeroext i1 @memchr_n_equals_len(i32 %c) {
 
 define zeroext i1 @memchr_n_less_than_len(i32 %c) {
 ; CHECK-LABEL: @memchr_n_less_than_len(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @memchr(ptr noundef nonnull @.str, i32 [[C:%.*]], i64 15)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @memchr(ptr noundef nonnull dereferenceable(1) @.str, i32 [[C:%.*]], i64 15)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[CALL]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -45,7 +45,7 @@ define zeroext i1 @memchr_n_less_than_len(i32 %c) {
 
 define zeroext i1 @memchr_n_more_than_len(i32 %c) {
 ; CHECK-LABEL: @memchr_n_more_than_len(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @memchr(ptr noundef nonnull @.str, i32 [[C:%.*]], i64 30)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @memchr(ptr noundef nonnull dereferenceable(1) @.str, i32 [[C:%.*]], i64 30)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[CALL]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -58,7 +58,7 @@ define zeroext i1 @memchr_n_more_than_len(i32 %c) {
 
 define ptr @memchr_no_zero_cmp(i32 %c) {
 ; CHECK-LABEL: @memchr_no_zero_cmp(
-; CHECK-NEXT:    [[MEMCHR:%.*]] = tail call ptr @memchr(ptr noundef nonnull @.str, i32 [[C:%.*]], i64 27)
+; CHECK-NEXT:    [[MEMCHR:%.*]] = tail call ptr @memchr(ptr noundef nonnull dereferenceable(1) @.str, i32 [[C:%.*]], i64 27)
 ; CHECK-NEXT:    ret ptr [[MEMCHR]]
 ;
   %call = tail call ptr @strchr(ptr nonnull dereferenceable(27) @.str, i32 %c)
@@ -82,7 +82,7 @@ define ptr @memchr_no_zero_cmp2(i32 %c) {
 
 define zeroext i1 @memchr_n_equals_len_minsize(i32 %c) minsize {
 ; CHECK-LABEL: @memchr_n_equals_len_minsize(
-; CHECK-NEXT:    [[MEMCHR:%.*]] = tail call ptr @memchr(ptr noundef nonnull @.str, i32 [[C:%.*]], i64 27)
+; CHECK-NEXT:    [[MEMCHR:%.*]] = tail call ptr @memchr(ptr noundef nonnull dereferenceable(1) @.str, i32 [[C:%.*]], i64 27)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[MEMCHR]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

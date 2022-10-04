@@ -247,13 +247,14 @@ static void annotateNonNullNoUndefBasedOnAccess(CallInst *CI,
     if (!CI->paramHasAttr(ArgNo, Attribute::NoUndef))
       CI->addParamAttr(ArgNo, Attribute::NoUndef);
 
-    if (CI->paramHasAttr(ArgNo, Attribute::NonNull))
-      continue;
-    unsigned AS = CI->getArgOperand(ArgNo)->getType()->getPointerAddressSpace();
-    if (llvm::NullPointerIsDefined(F, AS))
-      continue;
+    if (!CI->paramHasAttr(ArgNo, Attribute::NonNull)) {
+      unsigned AS =
+          CI->getArgOperand(ArgNo)->getType()->getPointerAddressSpace();
+      if (llvm::NullPointerIsDefined(F, AS))
+        continue;
+      CI->addParamAttr(ArgNo, Attribute::NonNull);
+    }
 
-    CI->addParamAttr(ArgNo, Attribute::NonNull);
     annotateDereferenceableBytes(CI, ArgNo, 1);
   }
 }

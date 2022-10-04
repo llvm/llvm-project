@@ -23,7 +23,7 @@ define i32 @test_simplify1() {
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) [[TARGET]], ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i1 false)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(42) [[TARGET]], i8 0, i32 42, i1 false)
 ; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(42) [[TARGET]], i8 0, i32 42, i1 false)
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @puts(ptr noundef nonnull [[TARGET]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @puts(ptr noundef nonnull dereferenceable(1) [[TARGET]])
 ; CHECK-NEXT:    ret i32 0
 ;
   %target = alloca [1024 x i8]
@@ -151,7 +151,7 @@ define ptr @test4(ptr %dst, i32 %n) {
 
 define void @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @strncpy(ptr noundef nonnull @a, ptr noundef nonnull @b, i32 32)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @strncpy(ptr noundef nonnull dereferenceable(1) @a, ptr noundef nonnull dereferenceable(1) @b, i32 32)
 ; CHECK-NEXT:    ret void
 ;
 
