@@ -6200,12 +6200,10 @@ QualType TreeTransform<Derived>::TransformTypeOfExprType(TypeLocBuilder &TLB,
     return QualType();
 
   QualType Result = TL.getType();
-  bool IsUnqual = Result->getAs<TypeOfExprType>()->isUnqual();
-  if (getDerived().AlwaysRebuild() ||
-      E.get() != TL.getUnderlyingExpr()) {
-    Result = getDerived().RebuildTypeOfExprType(
-        E.get(), TL.getTypeofLoc(),
-        IsUnqual ? TypeOfKind::Unqualified : TypeOfKind::Qualified);
+  TypeOfKind Kind = Result->getAs<TypeOfExprType>()->getKind();
+  if (getDerived().AlwaysRebuild() || E.get() != TL.getUnderlyingExpr()) {
+    Result =
+        getDerived().RebuildTypeOfExprType(E.get(), TL.getTypeofLoc(), Kind);
     if (Result.isNull())
       return QualType();
   }
@@ -6227,11 +6225,9 @@ QualType TreeTransform<Derived>::TransformTypeOfType(TypeLocBuilder &TLB,
     return QualType();
 
   QualType Result = TL.getType();
-  bool IsUnqual = Result->getAs<TypeOfType>()->isUnqual();
+  TypeOfKind Kind = Result->getAs<TypeOfType>()->getKind();
   if (getDerived().AlwaysRebuild() || New_Under_TI != Old_Under_TI) {
-    Result = getDerived().RebuildTypeOfType(New_Under_TI->getType(),
-                                            IsUnqual ? TypeOfKind::Unqualified
-                                                     : TypeOfKind::Qualified);
+    Result = getDerived().RebuildTypeOfType(New_Under_TI->getType(), Kind);
     if (Result.isNull())
       return QualType();
   }

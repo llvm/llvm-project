@@ -12963,16 +12963,17 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
       return QualType();
     return Ctx.getTypedefType(CD, Ctx.getQualifiedType(Underlying));
   }
-  case Type::TypeOf:
+  case Type::TypeOf: {
     // The common sugar between two typeof expressions, where one is
     // potentially a typeof_unqual and the other is not, we unify to the
     // qualified type as that retains the most information along with the type.
     // We only return a typeof_unqual type when both types are unqual types.
-    return Ctx.getTypeOfType(Ctx.getQualifiedType(Underlying),
-                             cast<TypeOfType>(X)->isUnqual() &&
-                                     cast<TypeOfType>(Y)->isUnqual()
-                                 ? TypeOfKind::Unqualified
-                                 : TypeOfKind::Qualified);
+    TypeOfKind Kind = TypeOfKind::Qualified;
+    if (cast<TypeOfType>(X)->getKind() == cast<TypeOfType>(Y)->getKind() &&
+        cast<TypeOfType>(X)->getKind() == TypeOfKind::Unqualified)
+      Kind = TypeOfKind::Unqualified;
+    return Ctx.getTypeOfType(Ctx.getQualifiedType(Underlying), Kind);
+  }
   case Type::TypeOfExpr:
     return QualType();
 

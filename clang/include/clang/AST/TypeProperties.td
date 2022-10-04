@@ -394,8 +394,7 @@ let Class = TypeOfExprType in {
   }
 
   def : Property<"kind", TypeOfKind> {
-    let Read = [{ node->isUnqual() ? TypeOfKind::Unqualified
-                                   : TypeOfKind::Qualified }];
+    let Read = [{ node->getKind() }];
   }
 
   def : Creator<[{
@@ -409,8 +408,7 @@ let Class = TypeOfType in {
   }
 
   def : Property<"kind", TypeOfKind> {
-    let Read = [{ node->isUnqual() ? TypeOfKind::Unqualified
-                                   : TypeOfKind::Qualified }];
+    let Read = [{ node->getKind() }];
   }
 
   def : Creator<[{
