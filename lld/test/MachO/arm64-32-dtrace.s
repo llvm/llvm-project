@@ -1,8 +1,8 @@
 # REQUIRES: aarch64
 # RUN: rm -rf %t; split-file %s %t
 
-# RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-darwin %t/arm64-32-dtrace.s -o %t/arm64-32-dtrace.o
-# RUN: %lld -arch arm64_32 -o %t/arm64-32-dtrace %t/arm64-32-dtrace.o
+# RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-watchos %t/arm64-32-dtrace.s -o %t/arm64-32-dtrace.o
+# RUN: %lld-watchos -arch arm64_32 -o %t/arm64-32-dtrace %t/arm64-32-dtrace.o
 
 ## If references of dtrace symbols are handled by lld, their relocation should be replaced with the following instructions
 # RUN: llvm-objdump --macho -D %t/arm64-32-dtrace | FileCheck %s --check-prefix=CHECK

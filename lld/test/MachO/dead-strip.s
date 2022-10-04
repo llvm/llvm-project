@@ -265,13 +265,13 @@
 # UNWIND-NEXT:   l O __DATA,__data __dyld_private
 # UNWIND-NEXT:   g F __TEXT,__text _main
 # UNWIND-NEXT:   g F __TEXT,__text __mh_execute_header
+# UNWIND-NEXT:   *UND* dyld_stub_binder
 # UNWIND-NEXT:   *UND* ___cxa_allocate_exception
 # UNWIND-NEXT:   *UND* ___cxa_end_catch
 # UNWIND-NEXT:   *UND* __ZTIi
 # UNWIND-NEXT:   *UND* ___cxa_throw
 # UNWIND-NEXT:   *UND* ___gxx_personality_v0
 # UNWIND-NEXT:   *UND* ___cxa_begin_catch
-# UNWIND-NEXT:   *UND* dyld_stub_binder
 # UNWIND-NOT:    GCC_except_table0
 
 ## If a dead stripped function has a strong ref to a dylib symbol but
