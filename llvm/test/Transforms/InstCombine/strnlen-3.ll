@@ -47,7 +47,7 @@ define i64 @call_strnlen_sx_pi_n(i64 %i, i64 %n) {
 define i64 @call_strnlen_a3_pi_2(i64 %i) {
 ; CHECK-LABEL: @call_strnlen_a3_pi_2(
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [3 x i8], ptr @a3, i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull [[PTR]], i64 2)
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[PTR]], i64 2)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
@@ -62,7 +62,7 @@ define i64 @call_strnlen_a3_pi_2(i64 %i) {
 define i64 @call_strnlen_a3_pi_3(i64 %i) {
 ; CHECK-LABEL: @call_strnlen_a3_pi_3(
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [3 x i8], ptr @a3, i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull [[PTR]], i64 3)
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[PTR]], i64 3)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
@@ -152,7 +152,7 @@ define i64 @fold_strnlen_s3_n(i64 %n) {
 define i64 @fold_strnlen_a3_pi_2(i64 %i) {
 ; CHECK-LABEL: @fold_strnlen_a3_pi_2(
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [3 x i8], ptr @a3, i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull [[PTR]], i64 2)
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[PTR]], i64 2)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
@@ -167,7 +167,7 @@ define i64 @fold_strnlen_a3_pi_2(i64 %i) {
 define i64 @fold_strnlen_s3_pi_2(i64 %i) {
 ; CHECK-LABEL: @fold_strnlen_s3_pi_2(
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [4 x i8], ptr @s3, i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull [[PTR]], i64 2)
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[PTR]], i64 2)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
@@ -182,7 +182,7 @@ define i64 @fold_strnlen_s3_pi_2(i64 %i) {
 define i64 @fold_strnlen_s3_pi_3(i64 %i) {
 ; CHECK-LABEL: @fold_strnlen_s3_pi_3(
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [4 x i8], ptr @s3, i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull [[PTR]], i64 3)
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[PTR]], i64 3)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
@@ -213,7 +213,7 @@ define i64 @fold_strnlen_s3_pi_n(i64 %i, i64 %n) {
 define i64 @call_strnlen_s5_3_pi_2(i64 %i) {
 ; CHECK-LABEL: @call_strnlen_s5_3_pi_2(
 ; CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds [10 x i8], ptr @s5_3, i64 0, i64 [[I:%.*]]
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull [[PTR]], i64 2)
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[PTR]], i64 2)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 

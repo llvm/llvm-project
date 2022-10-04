@@ -18,7 +18,7 @@ declare i32 @strncmp(ptr, ptr, i64)
 
 define i32 @call_strncmp_ax_bx_uimax_p1() {
 ; CHECK-LABEL: @call_strncmp_ax_bx_uimax_p1(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @strncmp(ptr noundef nonnull @ax, ptr noundef nonnull @bx, i64 4294967296)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @strncmp(ptr noundef nonnull dereferenceable(1) @ax, ptr noundef nonnull dereferenceable(1) @bx, i64 4294967296)
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 
@@ -31,7 +31,7 @@ define i32 @call_strncmp_ax_bx_uimax_p1() {
 
 define i32 @call_strncmp_ax_bx_uimax_p2() {
 ; CHECK-LABEL: @call_strncmp_ax_bx_uimax_p2(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @strncmp(ptr noundef nonnull @ax, ptr noundef nonnull @bx, i64 4294967296)
+; CHECK-NEXT:    [[RES:%.*]] = call i32 @strncmp(ptr noundef nonnull dereferenceable(1) @ax, ptr noundef nonnull dereferenceable(1) @bx, i64 4294967296)
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
 

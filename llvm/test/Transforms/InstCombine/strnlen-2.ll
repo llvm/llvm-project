@@ -44,7 +44,7 @@ define i64 @fold_strnlen_s3_s5_1(i1 %C) {
 define i64 @fold_strnlen_s3_s5_3(i1 %C) {
 ; CHECK-LABEL: @fold_strnlen_s3_s5_3(
 ; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], ptr @s3, ptr @s6
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull [[PTR]], i64 3)
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[PTR]], i64 3)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
   %ptr = select i1 %C, ptr @s3, ptr @s6
@@ -59,7 +59,7 @@ define i64 @fold_strnlen_s3_s5_3(i1 %C) {
 define i64 @fold_strnlen_s3_s5_4(i1 %C) {
 ; CHECK-LABEL: @fold_strnlen_s3_s5_4(
 ; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], ptr @s3, ptr @s6
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull [[PTR]], i64 4)
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[PTR]], i64 4)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
   %ptr = select i1 %C, ptr @s3, ptr @s6
@@ -74,7 +74,7 @@ define i64 @fold_strnlen_s3_s5_4(i1 %C) {
 define i64 @fold_strnlen_s3_s5_5(i1 %C) {
 ; CHECK-LABEL: @fold_strnlen_s3_s5_5(
 ; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], ptr @s3, ptr @s6
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull [[PTR]], i64 5)
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[PTR]], i64 5)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
   %ptr = select i1 %C, ptr @s3, ptr @s6
@@ -89,7 +89,7 @@ define i64 @fold_strnlen_s3_s5_5(i1 %C) {
 define i64 @fold_strnlen_s5_6(i1 %C) {
 ; CHECK-LABEL: @fold_strnlen_s5_6(
 ; CHECK-NEXT:    [[PTR:%.*]] = select i1 [[C:%.*]], ptr @s5, ptr @s6
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull [[PTR]], i64 6)
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[PTR]], i64 6)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
@@ -109,7 +109,7 @@ define i64 @fold_strnlen_s3_s5_s7_4(i32 %X) {
 ; CHECK-NEXT:    [[X_EQ_5:%.*]] = icmp eq i32 [[X]], 5
 ; CHECK-NEXT:    [[SEL_X_EQ_5:%.*]] = select i1 [[X_EQ_5]], ptr @s5, ptr @s7
 ; CHECK-NEXT:    [[SEL_X_EQ_3:%.*]] = select i1 [[X_EQ_3]], ptr @s3, ptr [[SEL_X_EQ_5]]
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strnlen(ptr noundef nonnull [[SEL_X_EQ_3]], i64 4)
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[SEL_X_EQ_3]], i64 4)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
@@ -132,7 +132,7 @@ define i64 @fold_strnlen_s3_s5_s7_6(i32 %X) {
 ; CHECK-NEXT:    [[X_EQ_5:%.*]] = icmp eq i32 [[X]], 5
 ; CHECK-NEXT:    [[SEL_X_EQ_5:%.*]] = select i1 [[X_EQ_5]], ptr @s5, ptr @s7
 ; CHECK-NEXT:    [[SEL_X_EQ_3:%.*]] = select i1 [[X_EQ_3]], ptr @s3, ptr [[SEL_X_EQ_5]]
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strnlen(ptr noundef nonnull [[SEL_X_EQ_3]], i64 6)
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[SEL_X_EQ_3]], i64 6)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
@@ -155,7 +155,7 @@ define i64 @fold_strnlen_s3_s5_s7_8(i32 %X) {
 ; CHECK-NEXT:    [[X_EQ_5:%.*]] = icmp eq i32 [[X]], 5
 ; CHECK-NEXT:    [[SEL_X_EQ_5:%.*]] = select i1 [[X_EQ_5]], ptr @s5, ptr @s7
 ; CHECK-NEXT:    [[SEL_X_EQ_3:%.*]] = select i1 [[X_EQ_3]], ptr @s3, ptr [[SEL_X_EQ_5]]
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strnlen(ptr noundef nonnull [[SEL_X_EQ_3]], i64 8)
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[SEL_X_EQ_3]], i64 8)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 

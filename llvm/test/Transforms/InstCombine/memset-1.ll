@@ -33,8 +33,8 @@ define ptr @test_simplify1_tail(ptr %mem, i32 %val, i32 %size) {
 
 define ptr @test_simplify1_musttail(ptr %mem, i32 %val, i32 %size) {
 ; CHECK-LABEL: @test_simplify1_musttail(
-; CHECK-NEXT:    %ret = musttail call ptr @memset(ptr %mem, i32 %val, i32 %size)
-; CHECK-NEXT:    ret ptr %ret
+; CHECK-NEXT:    [[RET:%.*]] = musttail call ptr @memset(ptr [[MEM:%.*]], i32 [[VAL:%.*]], i32 [[SIZE:%.*]])
+; CHECK-NEXT:    ret ptr [[RET]]
 ;
   %ret = musttail call ptr @memset(ptr %mem, i32 %val, i32 %size)
   ret ptr %ret
@@ -44,8 +44,9 @@ define ptr @test_simplify1_musttail(ptr %mem, i32 %val, i32 %size) {
 
 define ptr @pr25892_lite(i32 %size) #0 {
 ; CHECK-LABEL: @pr25892_lite(
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i32 [[SIZE:%.*]])
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[CALL]], i8 0, i32 [[SIZE]], i1 false)
+; CHECK-NEXT:    [[CALL1:%.*]] = call ptr @malloc(i32 [[SIZE:%.*]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[CALL1]], i8 0, i32 [[SIZE]], i1 false) #[[ATTR0]]
+; CHECK-NEXT:    ret ptr [[CALL1]]
 ;
   %call1 = call ptr @malloc(i32 %size) #1
   %call2 = call ptr @memset(ptr %call1, i32 0, i32 %size) #1
@@ -71,8 +72,8 @@ define ptr @malloc_and_memset_intrinsic(i32 %n) #0 {
 
 define ptr @notmalloc_memset(i32 %size, ptr %notmalloc) {
 ; CHECK-LABEL: @notmalloc_memset(
-; CHECK-NEXT:    [[CALL1:%.*]] = call ptr [[NOTMALLOC:%.*]](i32 [[SIZE:%.*]]) [[ATTR0:#.*]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[CALL1]], i8 0, i32 [[SIZE]], i1 false) [[ATTR0]]
+; CHECK-NEXT:    [[CALL1:%.*]] = call ptr [[NOTMALLOC:%.*]](i32 [[SIZE:%.*]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[CALL1]], i8 0, i32 [[SIZE]], i1 false) #[[ATTR0]]
 ; CHECK-NEXT:    ret ptr [[CALL1]]
 ;
   %call1 = call ptr %notmalloc(i32 %size) #1
@@ -86,11 +87,11 @@ define ptr @notmalloc_memset(i32 %size, ptr %notmalloc) {
 define ptr @pr25892(i32 %size) #0 {
 ; CHECK-LABEL: @pr25892(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i32 [[SIZE:%.*]]) [[ATTR0]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i32 [[SIZE:%.*]]) #[[ATTR0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[CALL]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CLEANUP:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr nonnull align 1 [[CALL]], i8 0, i32 [[SIZE]], i1 false) [[ATTR0]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr nonnull align 1 [[CALL]], i8 0, i32 [[SIZE]], i1 false) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ [[CALL]], [[IF_END]] ], [ null, [[ENTRY:%.*]] ]
@@ -112,9 +113,9 @@ cleanup:
 
 define ptr @buffer_is_modified_then_memset(i32 %size) {
 ; CHECK-LABEL: @buffer_is_modified_then_memset(
-; CHECK-NEXT:    [[PTR:%.*]] = tail call ptr @malloc(i32 [[SIZE:%.*]]) [[ATTR0]]
+; CHECK-NEXT:    [[PTR:%.*]] = tail call ptr @malloc(i32 [[SIZE:%.*]]) #[[ATTR0]]
 ; CHECK-NEXT:    store i8 1, ptr [[PTR]], align 1
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr nonnull align 1 [[PTR]], i8 0, i32 [[SIZE]], i1 false) [[ATTR0]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr nonnull align 1 [[PTR]], i8 0, i32 [[SIZE]], i1 false) #[[ATTR0]]
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %ptr = tail call ptr @malloc(i32 %size) #1
@@ -126,7 +127,7 @@ define ptr @buffer_is_modified_then_memset(i32 %size) {
 define ptr @memset_size_select(i1 %b, ptr %ptr) {
 ; CHECK-LABEL: @memset_size_select(
 ; CHECK-NEXT:    [[SIZE:%.*]] = select i1 [[B:%.*]], i32 10, i32 50
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(10) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false) [[ATTR0]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(10) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false) #[[ATTR0]]
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %size = select i1 %b, i32 10, i32 50
@@ -138,7 +139,7 @@ define ptr @memset_size_select(i1 %b, ptr %ptr) {
 define ptr @memset_size_select2(i1 %b, ptr %ptr) {
 ; CHECK-LABEL: @memset_size_select2(
 ; CHECK-NEXT:    [[SIZE:%.*]] = select i1 [[B:%.*]], i32 10, i32 50
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(80) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false) [[ATTR0]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(80) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false) #[[ATTR0]]
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %size = select i1 %b, i32 10, i32 50
@@ -149,7 +150,7 @@ define ptr @memset_size_select2(i1 %b, ptr %ptr) {
 define ptr @memset_size_select3(i1 %b, ptr %ptr) {
 ; CHECK-LABEL: @memset_size_select3(
 ; CHECK-NEXT:    [[SIZE:%.*]] = select i1 [[B:%.*]], i32 10, i32 50
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(40) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false)
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(40) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false)
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %size = select i1 %b, i32 10, i32 50
@@ -160,7 +161,7 @@ define ptr @memset_size_select3(i1 %b, ptr %ptr) {
 define ptr @memset_size_select4(i1 %b, ptr %ptr) {
 ; CHECK-LABEL: @memset_size_select4(
 ; CHECK-NEXT:    [[SIZE:%.*]] = select i1 [[B:%.*]], i32 10, i32 50
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(40) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false) [[ATTR0]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(40) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false) #[[ATTR0]]
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %size = select i1 %b, i32 10, i32 50
@@ -171,7 +172,7 @@ define ptr @memset_size_select4(i1 %b, ptr %ptr) {
 define ptr @memset_size_ashr(i1 %b, ptr %ptr, i32 %v) {
 ; CHECK-LABEL: @memset_size_ashr(
 ; CHECK-NEXT:    [[SIZE:%.*]] = ashr i32 -2, [[V:%.*]]
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false) [[ATTR0]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(1) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false) #[[ATTR0]]
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %size = ashr i32 -2, %v
@@ -181,7 +182,7 @@ define ptr @memset_size_ashr(i1 %b, ptr %ptr, i32 %v) {
 
 define ptr @memset_attrs1(i1 %b, ptr %ptr, i32 %size) {
 ; CHECK-LABEL: @memset_attrs1(
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 dereferenceable_or_null(40) [[PTR:%.*]], i8 0, i32 [[SIZE:%.*]], i1 false) [[ATTR0]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr align 1 dereferenceable_or_null(40) [[PTR:%.*]], i8 0, i32 [[SIZE:%.*]], i1 false) #[[ATTR0]]
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %memset = tail call ptr @memset(ptr dereferenceable_or_null(40) %ptr, i32 0, i32 %size) #1
@@ -192,7 +193,7 @@ define ptr @memset_attrs1(i1 %b, ptr %ptr, i32 %size) {
 ; do not change dereferenceable attribute
 define ptr @memset_attrs2(i1 %b, ptr %ptr, i32 %size) {
 ; CHECK-LABEL: @memset_attrs2(
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr nonnull align 1 dereferenceable(40) [[PTR:%.*]], i8 0, i32 [[SIZE:%.*]], i1 false) [[ATTR0]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr nonnull align 1 dereferenceable(40) [[PTR:%.*]], i8 0, i32 [[SIZE:%.*]], i1 false) #[[ATTR0]]
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %memset = tail call ptr @memset(ptr nonnull dereferenceable(40) %ptr, i32 0, i32 %size) #1
@@ -202,7 +203,7 @@ define ptr @memset_attrs2(i1 %b, ptr %ptr, i32 %size) {
 ; size is unknown, just copy attrs, no changes in attrs
 define ptr @memset_attrs3(i1 %b, ptr %ptr, i32 %size) {
 ; CHECK-LABEL: @memset_attrs3(
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr nonnull align 1 dereferenceable_or_null(40) [[PTR:%.*]], i8 0, i32 [[SIZE:%.*]], i1 false) [[ATTR0]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr nonnull align 1 dereferenceable_or_null(40) [[PTR:%.*]], i8 0, i32 [[SIZE:%.*]], i1 false) #[[ATTR0]]
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %memset = tail call ptr @memset(ptr nonnull dereferenceable_or_null(40) %ptr, i32 0, i32 %size) #1
@@ -212,7 +213,7 @@ define ptr @memset_attrs3(i1 %b, ptr %ptr, i32 %size) {
 ; be sure to drop nonnull since size is unknown and can be 0
 define ptr @memset_attrs4(i1 %b, ptr %ptr, i32 %size) {
 ; CHECK-LABEL: @memset_attrs4(
-; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr nonnull align 1 [[PTR:%.*]], i8 0, i32 [[SIZE:%.*]], i1 false) [[ATTR0]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr nonnull align 1 [[PTR:%.*]], i8 0, i32 [[SIZE:%.*]], i1 false) #[[ATTR0]]
 ; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %memset = tail call ptr @memset(ptr nonnull %ptr, i32 0, i32 %size) #1

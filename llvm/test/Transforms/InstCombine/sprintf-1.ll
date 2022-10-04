@@ -83,7 +83,7 @@ define void @test_simplify6(ptr %dst) {
 ; CHECK-IPRINTF-NEXT:    ret void
 ;
 ; WIN-LABEL: @test_simplify6(
-; WIN-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ptr, ...) @sprintf(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull @percent_d, i32 187)
+; WIN-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ptr, ...) @sprintf(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) @percent_d, i32 187)
 ; WIN-NEXT:    ret void
 ;
   call i32 (ptr, ptr, ...) @sprintf(ptr %dst, ptr @percent_d, i32 187)
@@ -142,7 +142,7 @@ define i32 @test_simplify9(ptr %dst, ptr %str) {
 
 define void @test_no_simplify1(ptr %dst) {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ptr, ...) @sprintf(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull @percent_f, double 1.870000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ptr, ...) @sprintf(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) @percent_f, double 1.870000e+00)
 ; CHECK-NEXT:    ret void
 ;
   call i32 (ptr, ptr, ...) @sprintf(ptr %dst, ptr @percent_f, double 1.87)
@@ -167,7 +167,7 @@ define i32 @test_no_simplify3(ptr %dst, ptr %str) minsize {
 ; CHECK-IPRINTF-NEXT:    ret i32 [[TMP3]]
 ;
 ; WIN-LABEL: @test_no_simplify3(
-; WIN-NEXT:    [[R:%.*]] = call i32 (ptr, ptr, ...) @sprintf(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull @percent_s, ptr [[STR:%.*]])
+; WIN-NEXT:    [[R:%.*]] = call i32 (ptr, ptr, ...) @sprintf(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) @percent_s, ptr [[STR:%.*]])
 ; WIN-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 (ptr, ptr, ...) @sprintf(ptr %dst, ptr @percent_s, ptr %str)
