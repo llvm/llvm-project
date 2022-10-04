@@ -1628,17 +1628,21 @@ let TargetPrefix = "ppc" in {
                       Intrinsic<[],[],[]>;
   def int_ppc_iospace_eieio : ClangBuiltin<"__builtin_ppc_iospace_eieio">,
                               Intrinsic<[],[],[]>;
-  def int_ppc_stdcx : ClangBuiltin<"__builtin_ppc_stdcx">,
-                      Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i64_ty],
-                                [IntrWriteMem]>;
-  def int_ppc_stwcx : ClangBuiltin<"__builtin_ppc_stwcx">,
-                      Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty],
-                                [IntrWriteMem]>;
-  def int_ppc_sthcx
-      : Intrinsic<[llvm_i32_ty], [ llvm_ptr_ty, llvm_i32_ty ], [IntrWriteMem]>;
-  def int_ppc_stbcx : ClangBuiltin<"__builtin_ppc_stbcx">,
-                      Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty],
-                                [IntrWriteMem]>;
+  def int_ppc_stdcx :
+    ClangBuiltin<"__builtin_ppc_stdcx">,
+    Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i64_ty],
+              [IntrWriteMem, IntrArgMemOnly, IntrNoDuplicate]>;
+  def int_ppc_stwcx :
+    ClangBuiltin<"__builtin_ppc_stwcx">,
+    Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty],
+              [IntrWriteMem, IntrArgMemOnly]>;
+  def int_ppc_sthcx :
+    Intrinsic<[llvm_i32_ty], [ llvm_ptr_ty, llvm_i32_ty ],
+              [IntrWriteMem, IntrArgMemOnly, IntrNoDuplicate]>;
+  def int_ppc_stbcx :
+    ClangBuiltin<"__builtin_ppc_stbcx">,
+    Intrinsic<[llvm_i32_ty], [llvm_ptr_ty, llvm_i32_ty],
+              [IntrWriteMem, IntrArgMemOnly, IntrNoDuplicate]>;
   def int_ppc_dcbtstt : ClangBuiltin<"__builtin_ppc_dcbtstt">,
                         Intrinsic<[], [llvm_ptr_ty],
                                   [IntrArgMemOnly, NoCapture<ArgIndex<0>>]>;
