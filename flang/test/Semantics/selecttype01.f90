@@ -50,6 +50,8 @@ contains
     select type ( a )
       !ERROR: The type specification statement must have LEN type parameter as assumed
       type is ( character(len=10) ) !<-- assumed length-type
+      !ERROR: The type specification statement must have LEN type parameter as assumed
+      type is ( character )
       ! OK
       type is ( character(len=*) )
       !ERROR: The type specification statement must have LEN type parameter as assumed
