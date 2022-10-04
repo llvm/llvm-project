@@ -57,6 +57,8 @@ enum ProfileFormat {
   PF_Binary
 };
 
+enum class OutputFormat { None, Json, Yaml };
+
 static void warn(Twine Message, std::string Whence = "",
                  std::string Hint = "") {
   WithColor::warning();
@@ -2252,7 +2254,12 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
                             uint64_t ValueCutoff, bool OnlyListBelow,
                             const std::string &ShowFunction, bool TextFormat,
                             bool ShowBinaryIds, bool ShowCovered,
-                            bool ShowProfileVersion, raw_fd_ostream &OS) {
+                            bool ShowProfileVersion, OutputFormat OFormat,
+                            raw_fd_ostream &OS) {
+  if (OFormat == OutputFormat::Json)
+    exitWithError("JSON output is not supported for instr profiles");
+  if (OFormat == OutputFormat::Yaml)
+    exitWithError("YAML output is not supported for instr profiles");
   auto ReaderOrErr = InstrProfReader::create(Filename);
   std::vector<uint32_t> Cutoffs = std::move(DetailedSummaryCutoffs);
   if (ShowDetailedSummary && Cutoffs.empty()) {
@@ -2618,7 +2625,9 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
                              const std::string &ShowFunction,
                              bool ShowProfileSymbolList,
                              bool ShowSectionInfoOnly, bool ShowHotFuncList,
-                             bool JsonFormat, raw_fd_ostream &OS) {
+                             OutputFormat OFormat, raw_fd_ostream &OS) {
+  if (OFormat == OutputFormat::Yaml)
+    exitWithError("YAML output is not supported for sample profiles");
   using namespace sampleprof;
   LLVMContext Context;
   auto ReaderOrErr =
@@ -2636,12 +2645,12 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
     exitWithErrorCode(EC, Filename);
 
   if (ShowAllFunctions || ShowFunction.empty()) {
-    if (JsonFormat)
+    if (OFormat == OutputFormat::Json)
       Reader->dumpJson(OS);
     else
       Reader->dump(OS);
   } else {
-    if (JsonFormat)
+    if (OFormat == OutputFormat::Json)
       exitWithError(
           "the JSON format is supported only when all functions are to "
           "be printed");
@@ -2670,7 +2679,9 @@ static int showSampleProfile(const std::string &Filename, bool ShowCounts,
 
 static int showMemProfProfile(const std::string &Filename,
                               const std::string &ProfiledBinary,
-                              raw_fd_ostream &OS) {
+                              OutputFormat OFormat, raw_fd_ostream &OS) {
+  if (OFormat == OutputFormat::Json)
+    exitWithError("JSON output is not supported for MemProf");
   auto ReaderOr = llvm::memprof::RawMemProfReader::create(
       Filename, ProfiledBinary, /*KeepNames=*/true);
   if (Error E = ReaderOr.takeError())
@@ -2689,10 +2700,15 @@ static int showMemProfProfile(const std::string &Filename,
 static int showDebugInfoCorrelation(const std::string &Filename,
                                     bool ShowDetailedSummary,
                                     bool ShowProfileSymbolList,
-                                    raw_fd_ostream &OS) {
+                                    OutputFormat OFormat, raw_fd_ostream &OS) {
+  if (OFormat == OutputFormat::Json)
+    exitWithError("JSON output is not supported for debug info correlation");
+  if (OFormat == OutputFormat::Yaml)
+    exitWithError("YAML output is not supported for debug info correlation");
   std::unique_ptr<InstrProfCorrelator> Correlator;
   if (auto Err = InstrProfCorrelator::get(Filename).moveInto(Correlator))
     exitWithError(std::move(Err), Filename);
+
   if (auto Err = Correlator->correlateProfileData())
     exitWithError(std::move(Err), Filename);
 
@@ -2718,12 +2734,17 @@ static int show_main(int argc, const char *argv[]) {
 
   cl::opt<bool> ShowCounts("counts", cl::init(false),
                            cl::desc("Show counter values for shown functions"));
+  cl::opt<OutputFormat> OFormat(
+      "output-format", cl::init(OutputFormat::None),
+      cl::desc("Emit output in the selected format if supported"),
+      cl::values(clEnumValN(OutputFormat::Json, "json", "emit JSON"),
+                 clEnumValN(OutputFormat::Yaml, "yaml", "emit YAML")));
   cl::opt<bool> TextFormat(
       "text", cl::init(false),
       cl::desc("Show instr profile data in text dump format"));
   cl::opt<bool> JsonFormat(
-      "json", cl::init(false),
-      cl::desc("Show sample profile data in the JSON format"));
+      "json", cl::desc("Show sample profile data in the JSON format "
+                       "(deprecated, please use --output-format=json)"));
   cl::opt<bool> ShowIndirectCallTargets(
       "ic-targets", cl::init(false),
       cl::desc("Show indirect call site target values for shown functions"));
@@ -2802,6 +2823,8 @@ static int show_main(int argc, const char *argv[]) {
            << ": Input file name cannot be the same as the output file name!\n";
     return 1;
   }
+  if (JsonFormat)
+    OFormat = OutputFormat::Json;
 
   std::error_code EC;
   raw_fd_ostream OS(OutputFilename.data(), EC, sys::fs::OF_TextWithCRLF);
@@ -2813,20 +2836,21 @@ static int show_main(int argc, const char *argv[]) {
 
   if (!DebugInfoFilename.empty())
     return showDebugInfoCorrelation(DebugInfoFilename, ShowDetailedSummary,
-                                    ShowProfileSymbolList, OS);
+                                    ShowProfileSymbolList, OFormat, OS);
 
   if (ProfileKind == instr)
     return showInstrProfile(
         Filename, ShowCounts, TopNFunctions, ShowIndirectCallTargets,
         ShowMemOPSizes, ShowDetailedSummary, DetailedSummaryCutoffs,
         ShowAllFunctions, ShowCS, ValueCutoff, OnlyListBelow, ShowFunction,
-        TextFormat, ShowBinaryIds, ShowCovered, ShowProfileVersion, OS);
+        TextFormat, ShowBinaryIds, ShowCovered, ShowProfileVersion, OFormat,
+        OS);
   if (ProfileKind == sample)
-    return showSampleProfile(
-        Filename, ShowCounts, TopNFunctions, ShowAllFunctions,
-        ShowDetailedSummary, ShowFunction, ShowProfileSymbolList,
-        ShowSectionInfoOnly, ShowHotFuncList, JsonFormat, OS);
-  return showMemProfProfile(Filename, ProfiledBinary, OS);
+    return showSampleProfile(Filename, ShowCounts, TopNFunctions,
+                             ShowAllFunctions, ShowDetailedSummary,
+                             ShowFunction, ShowProfileSymbolList,
+                             ShowSectionInfoOnly, ShowHotFuncList, OFormat, OS);
+  return showMemProfProfile(Filename, ProfiledBinary, OFormat, OS);
 }
 
 int llvm_profdata_main(int argc, char **argvNonConst) {

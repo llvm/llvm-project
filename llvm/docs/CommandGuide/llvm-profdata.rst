@@ -253,6 +253,10 @@ OPTIONS
 
  Print the counter values for the displayed functions.
 
+.. option:: --output-format=<json|yaml>
+
+ Emit output in the selected format if supported by the provided profile type.
+
 .. option:: --function=<string>
 
  Print details for a function if the function's name contains the given string.
