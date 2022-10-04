@@ -256,8 +256,8 @@ void LoopVersioning::annotateInstWithNoAlias(Instruction *VersionedInst,
 }
 
 namespace {
-bool runImpl(LoopInfo *LI, function_ref<const LoopAccessInfo &(Loop &)> GetLAA,
-             DominatorTree *DT, ScalarEvolution *SE) {
+bool runImpl(LoopInfo *LI, LoopAccessInfoManager &LAIs, DominatorTree *DT,
+             ScalarEvolution *SE) {
   // Build up a worklist of inner-loops to version. This is necessary as the
   // act of versioning a loop creates new loops and can invalidate iterators
   // across the loops.
@@ -275,7 +275,7 @@ bool runImpl(LoopInfo *LI, function_ref<const LoopAccessInfo &(Loop &)> GetLAA,
     if (!L->isLoopSimplifyForm() || !L->isRotatedForm() ||
         !L->getExitingBlock())
       continue;
-    const LoopAccessInfo &LAI = GetLAA(*L);
+    const LoopAccessInfo &LAI = LAIs.getInfo(*L);
     if (!LAI.hasConvergentOp() &&
         (LAI.getNumRuntimePointerChecks() ||
          !LAI.getPSE().getPredicate().isAlwaysTrue())) {
@@ -301,14 +301,11 @@ public:
 
   bool runOnFunction(Function &F) override {
     auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
-      return getAnalysis<LoopAccessLegacyAnalysis>().getInfo(&L);
-    };
-
+    auto &LAIs = getAnalysis<LoopAccessLegacyAnalysis>().getLAIs();
     auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
-    return runImpl(LI, GetLAA, DT, SE);
+    return runImpl(LI, LAIs, DT, SE);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -348,14 +345,10 @@ PreservedAnalyses LoopVersioningPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
+  LoopAccessInfoManager &LAIs = AM.getResult<LoopAccessAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
 
-  LoopAccessInfoManager &LAIs = AM.getResult<LoopAccessAnalysis>(F);
-  auto GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
-    return LAIs.getInfo(L);
-  };
-
-  if (runImpl(&LI, GetLAA, &DT, &SE))
+  if (runImpl(&LI, LAIs, &DT, &SE))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }
