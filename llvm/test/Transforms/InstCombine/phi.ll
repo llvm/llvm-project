@@ -697,10 +697,10 @@ ret:
 define i32 @test23(i32 %A, i1 %pb, ptr %P) {
 ; CHECK-LABEL: @test23(
 ; CHECK-NEXT:  BB0:
-; CHECK-NEXT:    [[PHI_BO:%.*]] = add i32 [[A:%.*]], 19
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[A:%.*]], 19
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       Loop:
-; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[PHI_BO]], [[BB0:%.*]] ], [ 61, [[LOOP]] ]
+; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[TMP0]], [[BB0:%.*]] ], [ 61, [[LOOP]] ]
 ; CHECK-NEXT:    store i32 [[B]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[PB:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       Exit:
@@ -1280,14 +1280,12 @@ define i1 @pr57488_icmp_of_phi(ptr %ptr.base, i64 %len) {
 ; CHECK-NEXT:    [[LEN_ZERO:%.*]] = icmp eq i64 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_ZERO]], label [[EXIT:%.*]], label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[ACCUM:%.*]] = phi i8 [ [[ACCUM_NEXT:%.*]], [[LOOP]] ], [ 1, [[START:%.*]] ]
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi i1 [ [[AND:%.*]], [[LOOP]] ], [ true, [[START:%.*]] ]
 ; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], [[LOOP]] ], [ [[PTR_BASE]], [[START]] ]
 ; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i64, ptr [[PTR]], i64 1
-; CHECK-NEXT:    [[ACCUM_BOOL:%.*]] = icmp ne i8 [[ACCUM]], 0
 ; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR]], align 8
 ; CHECK-NEXT:    [[VAL_ZERO:%.*]] = icmp eq i64 [[VAL]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ACCUM_BOOL]], [[VAL_ZERO]]
-; CHECK-NEXT:    [[ACCUM_NEXT]] = zext i1 [[AND]] to i8
+; CHECK-NEXT:    [[AND]] = and i1 [[ACCUM]], [[VAL_ZERO]]
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq ptr [[PTR_NEXT]], [[END]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
@@ -1323,10 +1321,7 @@ define i32 @phi_op_self_simplify() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[IV_ADD2:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_ADD:%.*]] = xor i32 [[IV]], -1
-; CHECK-NEXT:    call void @use(i32 [[IV_ADD]])
-; CHECK-NEXT:    [[IV_ADD2]] = xor i32 [[IV]], -1
+; CHECK-NEXT:    call void @use(i32 -2)
 ; CHECK-NEXT:    br label [[LOOP]]
 ;
 entry:
