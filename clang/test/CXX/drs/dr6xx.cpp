@@ -776,7 +776,7 @@ namespace dr666 { // dr666: yes
 #if __cplusplus >= 201103L
 namespace dr667 { // dr667: yes
   struct A {
-    A() = default; // expected-warning {{explicitly defaulted default constructor is implicitly deleted}}
+    A() = default; // expected-warning {{explicitly defaulted default constructor is implicitly deleted}} expected-note{{replace 'default'}}
     int &r; // expected-note {{because field 'r' of reference type 'int &' would not be initialized}}
   };
   static_assert(!__is_trivially_constructible(A), "");

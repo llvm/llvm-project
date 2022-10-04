@@ -9261,6 +9261,8 @@ def err_incorrect_defaulted_consteval : Error<
 def warn_defaulted_method_deleted : Warning<
   "explicitly defaulted %sub{select_special_member_kind}0 is implicitly "
   "deleted">, InGroup<DefaultedFunctionDeleted>;
+def note_replace_equals_default_to_delete : Note<
+  "replace 'default' with 'delete'">;
 def err_out_of_line_default_deletes : Error<
   "defaulting this %sub{select_special_member_kind}0 "
   "would delete it after its first declaration">;

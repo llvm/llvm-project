@@ -229,6 +229,8 @@ Improvements to Clang's diagnostics
   doesn't generate strange cascading errors, particularly in cases where a
   subsuming constraint fails, which would result in a less-specific overload to
   be selected.
+- Add a fix-it hint for the ``-Wdefaulted-function-deleted`` warning to
+  explicitly delete the function.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------

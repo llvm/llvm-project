@@ -47,6 +47,14 @@ add_header(
 )
 
 add_header(
+  sys_wait_macros
+  HDR
+    sys-wait-macros.h
+  DEPENDS
+    .linux.sys_wait_macros
+)
+
+add_header(
   time_macros
   HDR
     time-macros.h

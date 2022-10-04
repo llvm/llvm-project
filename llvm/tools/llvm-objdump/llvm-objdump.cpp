@@ -1287,7 +1287,8 @@ fetchBinaryByBuildID(const ObjectFile &Obj) {
 }
 
 static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
-                              MCContext &Ctx, MCDisassembler *PrimaryDisAsm,
+                              const ObjectFile &DbgObj, MCContext &Ctx,
+                              MCDisassembler *PrimaryDisAsm,
                               MCDisassembler *SecondaryDisAsm,
                               const MCInstrAnalysis *MIA, MCInstPrinter *IP,
                               const MCSubtargetInfo *PrimarySTI,
@@ -1412,7 +1413,7 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
   LiveVariablePrinter LVP(*Ctx.getRegisterInfo(), *STI);
 
   if (DbgVariables != DVDisabled) {
-    DICtx = DWARFContext::create(Obj);
+    DICtx = DWARFContext::create(DbgObj);
     for (const std::unique_ptr<DWARFUnit> &CU : DICtx->compile_units())
       LVP.addCompileUnit(CU->getUnitDIE(false));
   }
@@ -1969,6 +1970,22 @@ static void disassembleObject(const Target *TheTarget, ObjectFile &Obj,
 }
 
 static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
+  // If information useful for showing the disassembly is missing, try to find a
+  // more complete binary and disassemble that instead.
+  OwningBinary<Binary> FetchedBinary;
+  if (Obj->symbols().empty()) {
+    if (Optional<OwningBinary<Binary>> FetchedBinaryOpt =
+            fetchBinaryByBuildID(*Obj)) {
+      if (auto *O = dyn_cast<ObjectFile>(FetchedBinaryOpt->getBinary())) {
+        if (!O->symbols().empty() ||
+            (!O->sections().empty() && Obj->sections().empty())) {
+          FetchedBinary = std::move(*FetchedBinaryOpt);
+          Obj = O;
+        }
+      }
+    }
+  }
+
   const Target *TheTarget = getTarget(Obj);
 
   // Package up features to be passed to target/subtarget
@@ -2071,20 +2088,32 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
   IP->setMCInstrAnalysis(MIA.get());
 
   PrettyPrinter &PIP = selectPrettyPrinter(Triple(TripleName));
-  ObjectFile *DbgObj = Obj;
-  OwningBinary<Binary> DebugBinary;
-  if (!Obj->hasDebugInfo()) {
+
+  const ObjectFile *DbgObj = Obj;
+  if (!FetchedBinary.getBinary() && !Obj->hasDebugInfo()) {
     if (Optional<OwningBinary<Binary>> DebugBinaryOpt =
             fetchBinaryByBuildID(*Obj)) {
-      if (ObjectFile *FetchedObj =
-              dyn_cast<ObjectFile>(DebugBinaryOpt->getBinary())) {
+      if (auto *FetchedObj =
+              dyn_cast<const ObjectFile>(DebugBinaryOpt->getBinary())) {
         if (FetchedObj->hasDebugInfo()) {
-          DebugBinary = std::move(*DebugBinaryOpt);
+          FetchedBinary = std::move(*DebugBinaryOpt);
           DbgObj = FetchedObj;
         }
       }
     }
   }
+
+  std::unique_ptr<object::Binary> DSYMBinary;
+  std::unique_ptr<MemoryBuffer> DSYMBuf;
+  if (!DbgObj->hasDebugInfo()) {
+    if (const MachOObjectFile *MachOOF = dyn_cast<MachOObjectFile>(&*Obj)) {
+      DbgObj = objdump::getMachODSymObject(MachOOF, Obj->getFileName(),
+                                           DSYMBinary, DSYMBuf);
+      if (!DbgObj)
+        return;
+    }
+  }
+
   SourcePrinter SP(DbgObj, TheTarget->getName());
 
   for (StringRef Opt : DisassemblerOptions)
@@ -2092,9 +2121,9 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
       reportError(Obj->getFileName(),
                   "Unrecognized disassembler option: " + Opt);
 
-  disassembleObject(TheTarget, *Obj, Ctx, DisAsm.get(), SecondaryDisAsm.get(),
-                    MIA.get(), IP.get(), STI.get(), SecondarySTI.get(), PIP, SP,
-                    InlineRelocs);
+  disassembleObject(TheTarget, *Obj, *DbgObj, Ctx, DisAsm.get(),
+                    SecondaryDisAsm.get(), MIA.get(), IP.get(), STI.get(),
+                    SecondarySTI.get(), PIP, SP, InlineRelocs);
 }
 
 void objdump::printRelocations(const ObjectFile *Obj) {

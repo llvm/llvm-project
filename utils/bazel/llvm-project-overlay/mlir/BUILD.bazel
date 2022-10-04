@@ -6701,7 +6701,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":mlir_float16_utils",
-        "//third_party/llvm/llvm-project/llvm:Support",
+        "//llvm:Support",
     ],
 )
 

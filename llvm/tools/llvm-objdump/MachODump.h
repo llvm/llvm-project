@@ -16,12 +16,14 @@ namespace llvm {
 
 class Error;
 class StringRef;
+class MemoryBuffer;
 
 namespace object {
 class MachOObjectFile;
 class MachOUniversalBinary;
 class ObjectFile;
 class RelocationRef;
+class Binary;
 } // namespace object
 
 namespace opt {
@@ -60,6 +62,11 @@ extern bool WeakBind;
 Error getMachORelocationValueString(const object::MachOObjectFile *Obj,
                                     const object::RelocationRef &RelRef,
                                     llvm::SmallVectorImpl<char> &Result);
+
+const object::MachOObjectFile *
+getMachODSymObject(const object::MachOObjectFile *O, StringRef Filename,
+                   std::unique_ptr<object::Binary> &DSYMBinary,
+                   std::unique_ptr<MemoryBuffer> &DSYMBuf);
 
 void parseInputMachO(StringRef Filename);
 void parseInputMachO(object::MachOUniversalBinary *UB);

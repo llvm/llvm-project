@@ -1944,6 +1944,8 @@ private:
   /// EndRangeLoc.
   SourceLocation EndRangeLoc;
 
+  SourceLocation DefaultKWLoc;
+
   /// The template or declaration that this declaration
   /// describes or was instantiated from, respectively.
   ///
@@ -2248,6 +2250,17 @@ public:
   /// State that this function is explicitly defaulted.
   void setExplicitlyDefaulted(bool ED = true) {
     FunctionDeclBits.IsExplicitlyDefaulted = ED;
+  }
+
+  SourceLocation getDefaultLoc() const {
+    return isExplicitlyDefaulted() ? DefaultKWLoc : SourceLocation();
+  }
+
+  void setDefaultLoc(SourceLocation NewLoc) {
+    assert(NewLoc.isInvalid() ||
+           isExplicitlyDefaulted() &&
+               "Can't set default loc is function isn't explicitly defaulted");
+    DefaultKWLoc = NewLoc;
   }
 
   /// True if this method is user-declared and was not

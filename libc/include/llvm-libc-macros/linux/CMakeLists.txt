@@ -17,6 +17,12 @@ add_header(
 )
 
 add_header(
+  sys_wait_macros
+  HDR
+    sys-wait-macros.h
+)
+
+add_header(
   time_macros
   HDR
     time-macros.h
