@@ -1791,6 +1791,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case TargetOpcode::G_FFLOOR:
     return legalizeFFloor(MI, MRI, B);
   case TargetOpcode::G_BUILD_VECTOR:
+  case TargetOpcode::G_BUILD_VECTOR_TRUNC:
     return legalizeBuildVector(MI, MRI, B);
   case TargetOpcode::G_MUL:
     return legalizeMul(Helper, MI);
@@ -2859,11 +2860,17 @@ bool AMDGPULegalizerInfo::legalizeBuildVector(
   MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &B) const {
   Register Dst = MI.getOperand(0).getReg();
   const LLT S32 = LLT::scalar(32);
+  const LLT S16 = LLT::scalar(16);
   assert(MRI.getType(Dst) == LLT::fixed_vector(2, 16));
 
   Register Src0 = MI.getOperand(1).getReg();
   Register Src1 = MI.getOperand(2).getReg();
-  assert(MRI.getType(Src0) == LLT::scalar(16));
+
+  if (MI.getOpcode() == AMDGPU::G_BUILD_VECTOR_TRUNC) {
+    assert(MRI.getType(Src0) == S32);
+    Src0 = B.buildTrunc(S16, MI.getOperand(1).getReg()).getReg(0);
+    Src1 = B.buildTrunc(S16, MI.getOperand(2).getReg()).getReg(0);
+  }
 
   auto Merge = B.buildMerge(S32, {Src0, Src1});
   B.buildBitcast(Dst, Merge);
