@@ -6699,7 +6699,10 @@ cc_library(
     ],
     copts = ["-Dmlir_sparse_tensor_utils_EXPORTS"],
     includes = ["include"],
-    deps = [":mlir_float16_utils"],
+    deps = [
+        ":mlir_float16_utils",
+        "//third_party/llvm/llvm-project/llvm:Support",
+    ],
 )
 
 # We relist Enums.h because SparseTensorUtils.h includes/reexports it
