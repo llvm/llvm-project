@@ -243,9 +243,6 @@ private:
     return emitConst(*Ctx.classify(Ty), NumBits, WrappedValue, E);
   }
 
-  /// Returns a pointer to a variable declaration.
-  bool getPtrVarDecl(const VarDecl *VD, const Expr *E);
-
   /// Returns the index of a global.
   llvm::Optional<unsigned> getGlobalIdx(const VarDecl *VD);
 
