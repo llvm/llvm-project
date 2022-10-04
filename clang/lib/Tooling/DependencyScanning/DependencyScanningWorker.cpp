@@ -375,8 +375,6 @@ public:
 
     const bool Result = ScanInstance.ExecuteAction(*Action);
     Consumer.finalize(ScanInstance);
-    if (!getDepScanFS())
-      FileMgr->clearStatCache();
 
     if (CacheFS) {
       auto Tree = CacheFS->createTreeFromNewAccesses(RemapPath);
@@ -481,8 +479,6 @@ DependencyScanningWorker::DependencyScanningWorker(
       DepFS = new DependencyScanningWorkerFilesystem(Service.getSharedCache(),
                                                      RealFS);
   }
-  if (Service.canReuseFileManager())
-    Files = new FileManager(FileSystemOptions(), RealFS);
 }
 
 llvm::IntrusiveRefCntPtr<FileManager>
@@ -550,11 +546,9 @@ bool DependencyScanningWorker::computeDependencies(
     llvm::Optional<StringRef> ModuleName) {
   // Reset what might have been modified in the previous worker invocation.
   RealFS->setCurrentWorkingDirectory(WorkingDirectory);
-  if (Files)
-    Files->setVirtualFileSystem(RealFS);
 
-  llvm::IntrusiveRefCntPtr<FileManager> CurrentFiles =
-      Files ? Files : new FileManager(FileSystemOptions(), RealFS);
+  auto FileMgr =
+      llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOptions(), RealFS);
 
   Optional<std::vector<std::string>> ModifiedCommandLine;
   if (ModuleName) {
@@ -578,7 +572,7 @@ bool DependencyScanningWorker::computeDependencies(
 
   // Although `Diagnostics` are used only for command-line parsing, the
   // custom `DiagConsumer` might expect a `SourceManager` to be present.
-  SourceManager SrcMgr(*Diags, *CurrentFiles);
+  SourceManager SrcMgr(*Diags, *FileMgr);
   Diags->setSourceManager(&SrcMgr);
   // DisableFree is modified by Tooling for running
   // in-process; preserve the original value, which is
@@ -591,7 +585,7 @@ bool DependencyScanningWorker::computeDependencies(
       /*DiagGenerationAsCompilation=*/false, getCASOpts(),
       /*RemapPath=*/nullptr, ModuleName);
   bool Success = forEachDriverJob(
-      FinalCommandLine, *Diags, *CurrentFiles, [&](const driver::Command &Cmd) {
+      FinalCommandLine, *Diags, *FileMgr, [&](const driver::Command &Cmd) {
         if (StringRef(Cmd.getCreator().getName()) != "clang") {
           // Non-clang command. Just pass through to the dependency
           // consumer.
@@ -610,7 +604,7 @@ bool DependencyScanningWorker::computeDependencies(
         // system to ensure that any file system requests that
         // are made by the driver do not go through the
         // dependency scanning filesystem.
-        ToolInvocation Invocation(std::move(Argv), &Action, &*CurrentFiles,
+        ToolInvocation Invocation(std::move(Argv), &Action, &*FileMgr,
                                   PCHContainerOps);
         Invocation.setDiagnosticConsumer(Diags->getClient());
         Invocation.setDiagnosticOptions(&Diags->getDiagnosticOptions());

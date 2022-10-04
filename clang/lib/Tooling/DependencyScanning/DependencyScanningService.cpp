@@ -20,10 +20,10 @@ DependencyScanningService::DependencyScanningService(
     ScanningMode Mode, ScanningOutputFormat Format, CASOptions CASOpts,
     std::shared_ptr<llvm::cas::ActionCache> Cache,
     IntrusiveRefCntPtr<llvm::cas::CachingOnDiskFileSystem> SharedFS,
-    bool ReuseFileManager, bool OptimizeArgs, bool EagerLoadModules)
+    bool OptimizeArgs, bool EagerLoadModules)
     : Mode(Mode), Format(Format), CASOpts(std::move(CASOpts)), Cache(Cache),
-      ReuseFileManager(ReuseFileManager), OptimizeArgs(OptimizeArgs),
-      SharedFS(std::move(SharedFS)), EagerLoadModules(EagerLoadModules) {
+      OptimizeArgs(OptimizeArgs), SharedFS(std::move(SharedFS)),
+      EagerLoadModules(EagerLoadModules) {
   if (!this->SharedFS)
     SharedCache.emplace();
 
