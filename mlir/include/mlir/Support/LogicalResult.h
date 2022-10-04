@@ -34,14 +34,14 @@ public:
   /// If isFailure is true a `failure` result is generated, otherwise a
   /// 'success' result is generated.
   static LogicalResult failure(bool isFailure = true) {
-    return success(!isFailure);
+    return LogicalResult(!isFailure);
   }
 
   /// Returns true if the provided LogicalResult corresponds to a success value.
   bool succeeded() const { return isSuccess; }
 
   /// Returns true if the provided LogicalResult corresponds to a failure value.
-  bool failed() const { return !succeeded(); }
+  bool failed() const { return !isSuccess; }
 
 private:
   LogicalResult(bool isSuccess) : isSuccess(isSuccess) {}
