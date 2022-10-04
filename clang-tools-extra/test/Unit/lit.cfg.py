@@ -35,3 +35,8 @@ if sys.platform in ['win32', 'cygwin'] and os.path.isdir(config.shlibdir):
     shlibpath = os.path.pathsep.join((config.shlibdir, shlibpath))
 
 config.environment[shlibpath_var] = shlibpath
+
+# It is not realistically possible to account for all options that could
+# possibly be present in system and user configuration files, so disable
+# default configs for the test runs.
+config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"
