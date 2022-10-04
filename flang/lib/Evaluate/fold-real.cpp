@@ -257,11 +257,18 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           byExpr->u);
     }
   } else if (name == "set_exponent") {
-    return FoldElementalIntrinsic<T, T, Int4>(context, std::move(funcRef),
-        ScalarFunc<T, T, Int4>(
-            [&](const Scalar<T> &x, const Scalar<Int4> &i) -> Scalar<T> {
-              return x.SET_EXPONENT(i.ToInt64());
-            }));
+    if (const auto *iExpr{UnwrapExpr<Expr<SomeInteger>>(args[1])}) {
+      return common::visit(
+          [&](const auto &iVal) {
+            using TY = ResultType<decltype(iVal)>;
+            return FoldElementalIntrinsic<T, T, TY>(context, std::move(funcRef),
+                ScalarFunc<T, T, TY>(
+                    [&](const Scalar<T> &x, const Scalar<TY> &i) -> Scalar<T> {
+                      return x.SET_EXPONENT(i.ToInt64());
+                    }));
+          },
+          iExpr->u);
+    }
   } else if (name == "sign") {
     return FoldElementalIntrinsic<T, T, T>(
         context, std::move(funcRef), &Scalar<T>::SIGN);
