@@ -7233,8 +7233,8 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
   Symbol *existing{nullptr};
   // Check all variants of names, e.g. "operator(.ne.)" for "operator(/=)"
   for (const std::string &n : GetAllNames(context(), symbolName)) {
-    if (auto iter{currScope().find(n)}; iter != currScope().end()) {
-      existing = &*iter->second;
+    existing = currScope().FindSymbol(SourceName{n});
+    if (existing) {
       break;
     }
   }
@@ -7249,24 +7249,28 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
           genericDetails.set_specific(*existingGeneric->specific());
         }
         AddGenericUse(genericDetails, existing->name(), existingUse->symbol());
-      } else if (existing == &ultimate) {
-        // Extending an extant generic in the same scope
-        info.Resolve(existing);
-        return;
-      } else {
-        // Host association of a generic is handled in ResolveGeneric()
-        CHECK(existing->has<HostAssocDetails>());
+      } else if (&existing->owner() == &currScope()) {
+        if (existing == &ultimate) {
+          // Extending an extant generic in the same scope
+          info.Resolve(existing);
+          return;
+        } else {
+          // Host association of a generic is handled elsewhere
+          CHECK(existing->has<HostAssocDetails>());
+        }
       }
     } else if (ultimate.has<SubprogramDetails>() ||
         ultimate.has<SubprogramNameDetails>()) {
       genericDetails.set_specific(*existing);
     } else if (ultimate.has<DerivedTypeDetails>()) {
       genericDetails.set_derivedType(*existing);
-    } else {
+    } else if (&existing->owner() == &currScope()) {
       SayAlreadyDeclared(symbolName, *existing);
       return;
     }
-    EraseSymbol(*existing);
+    if (&existing->owner() == &currScope()) {
+      EraseSymbol(*existing);
+    }
   }
   info.Resolve(&MakeSymbol(symbolName, Attrs{}, std::move(genericDetails)));
 }
