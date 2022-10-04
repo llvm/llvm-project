@@ -298,11 +298,8 @@ body: |
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF]](s8)
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(<2 x s64>) = G_ANYEXT [[BUILD_VECTOR]](<2 x s8>)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 63
-    ; CHECK-NEXT: [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<2 x s64>) = G_SHL [[ANYEXT]], [[BUILD_VECTOR1]](<2 x s64>)
-    ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<2 x s64>) = G_ASHR [[SHL]], [[BUILD_VECTOR1]](<2 x s64>)
-    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(<2 x s64>) = G_SITOFP [[ASHR]](<2 x s64>)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(<2 x s64>) = G_SEXT_INREG [[ANYEXT]], 1
+    ; CHECK-NEXT: [[SITOFP:%[0-9]+]]:_(<2 x s64>) = G_SITOFP [[SEXT_INREG]](<2 x s64>)
     ; CHECK-NEXT: $q0 = COPY [[SITOFP]](<2 x s64>)
     %0:_(<2 x s1>) = G_IMPLICIT_DEF
     %1:_(<2 x s64>) = G_SITOFP %0

@@ -457,7 +457,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       })
       .alwaysLegal();
 
-  getActionDefinitionsBuilder(G_SEXT_INREG).legalFor({s32, s64}).lower();
+  getActionDefinitionsBuilder(G_SEXT_INREG)
+      .legalFor({s32, s64})
+      .legalFor(PackedVectorAllTypeList)
+      .lower();
 
   // FP conversions
   getActionDefinitionsBuilder(G_FPTRUNC)
