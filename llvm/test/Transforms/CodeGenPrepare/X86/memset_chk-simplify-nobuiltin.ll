@@ -11,7 +11,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @test_nobuiltin(i8* %dst, i64 %len) {
 ; CHECK-LABEL: @test_nobuiltin(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* [[DST:%.*]], i8 0, i64 [[LEN:%.*]], i1 false) #1
+; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 1 [[DST:%.*]], i8 0, i64 [[LEN:%.*]], i1 false)
 ; CHECK-NEXT:    ret void
 ;
   call i8* @__memset_chk(i8* %dst, i32 0, i64 %len, i64 -1) nobuiltin

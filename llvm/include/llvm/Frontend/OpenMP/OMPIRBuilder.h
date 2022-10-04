@@ -619,10 +619,11 @@ public:
   ///
   /// \param Loop    The loop to simd-ize.
   /// \param IfCond  The value which corresponds to the if clause condition.
+  /// \param Order   The enum to map order clause
   /// \param Simdlen The Simdlen length to apply to the simd loop.
   /// \param Safelen The Safelen length to apply to the simd loop.
-  void applySimd(CanonicalLoopInfo *Loop, Value *IfCond, ConstantInt *Simdlen,
-                 ConstantInt *Safelen);
+  void applySimd(CanonicalLoopInfo *Loop, Value *IfCond, omp::OrderKind Order,
+                 ConstantInt *Simdlen, ConstantInt *Safelen);
 
   /// Generator for '#omp flush'
   ///
