@@ -22,26 +22,21 @@
 #endif
 
 #if defined(_WIN32)
-static DWORD getWindowsProtectionFlags(unsigned Flags) {
-  switch (Flags & llvm::sys::Memory::MF_RWE_MASK) {
-  case llvm::sys::Memory::MF_READ:
+static DWORD getWindowsProtectionFlags(MemProt MP) {
+  if (MP == MemProt::Read)
     return PAGE_READONLY;
-  case llvm::sys::Memory::MF_WRITE:
+  if (MP == MemProt::Write ||
+      MP == (MemProt::Write | MemProt::Read)) {
     // Note: PAGE_WRITE is not supported by VirtualProtect
     return PAGE_READWRITE;
-  case llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_WRITE:
-    return PAGE_READWRITE;
-  case llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_EXEC:
-    return PAGE_EXECUTE_READ;
-  case llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_WRITE |
-      llvm::sys::Memory::MF_EXEC:
-    return PAGE_EXECUTE_READWRITE;
-  case llvm::sys::Memory::MF_EXEC:
-    return PAGE_EXECUTE;
-  default:
-    llvm_unreachable("Illegal memory protection flag specified!");
   }
-  // Provide a default return value as required by some compilers.
+  if (MP == (MemProt::Read | MemProt::Exec))
+    return PAGE_EXECUTE_READ;
+  if (MP == (MemProt::Read | MemProt::Write | MemProt::Exec))
+    return PAGE_EXECUTE_READWRITE;
+  if (MP == MpmProt::Exec)
+    return PAGE_EXECUTE;
+
   return PAGE_NOACCESS;
 }
 #endif
@@ -150,7 +145,7 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
 #elif defined(_WIN32)
 
     DWORD NativeProt =
-        getWindowsProtectionFlags(fromWireProtectionFlags(Segment.Prot));
+        getWindowsProtectionFlags(Segment.AG.getMemProt());
 
     if (!VirtualProtect(Segment.Addr.toPtr<void *>(), Segment.Size, NativeProt,
                         &NativeProt))
