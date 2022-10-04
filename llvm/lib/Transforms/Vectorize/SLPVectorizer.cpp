@@ -934,6 +934,18 @@ public:
   /// Construct a vectorizable tree that starts at \p Roots.
   void buildTree(ArrayRef<Value *> Roots);
 
+  /// Checks if the very first tree node is going to be vectorized.
+  bool isVectorizedFirstNode() const {
+    return !VectorizableTree.empty() &&
+           VectorizableTree.front()->State == TreeEntry::Vectorize;
+  }
+
+  /// Returns the main instruction for the very first node.
+  Instruction *getFirstNodeMainOp() const {
+    assert(!VectorizableTree.empty() && "No tree to get the first node from");
+    return VectorizableTree.front()->getMainOp();
+  }
+
   /// Builds external uses of the vectorized scalars, i.e. the list of
   /// vectorized scalars to be extracted, their lanes and their scalar users. \p
   /// ExternallyUsedValues contains additional list of external uses to handle
@@ -6630,8 +6642,20 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       InstructionCost ScalarLdCost = VecTy->getNumElements() * ScalarEltCost;
       InstructionCost VecLdCost;
       if (E->State == TreeEntry::Vectorize) {
-        VecLdCost = TTI->getMemoryOpCost(Instruction::Load, VecTy, Alignment, 0,
-                                         CostKind, {TTI::OK_AnyValue, TTI::OP_None}, VL0);
+        VecLdCost =
+            TTI->getMemoryOpCost(Instruction::Load, VecTy, Alignment, 0,
+                                 CostKind, TTI::OperandValueInfo(), VL0);
+        for (Value *V : VL) {
+          auto *VI = cast<LoadInst>(V);
+          // Add the costs of scalar GEP pointers, to be removed from the code.
+          if (VI == VL0)
+            continue;
+          auto *Ptr = dyn_cast<GetElementPtrInst>(VI->getPointerOperand());
+          if (!Ptr || !Ptr->hasOneUse() || Ptr->hasAllConstantIndices())
+            continue;
+          ScalarLdCost += TTI->getArithmeticInstrCost(Instruction::Add,
+                                                      Ptr->getType(), CostKind);
+        }
       } else {
         assert(E->State == TreeEntry::ScatterVectorize && "Unknown EntryState");
         Align CommonAlignment = Alignment;
@@ -6653,11 +6677,19 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       Align Alignment = SI->getAlign();
       InstructionCost ScalarStCost = 0;
       for (auto *V : VL) {
-        auto *VI = cast<Instruction>(V);
+        auto *VI = cast<StoreInst>(V);
         TTI::OperandValueInfo OpInfo = TTI::getOperandInfo(VI->getOperand(0));
         ScalarStCost +=
           TTI->getMemoryOpCost(Instruction::Store, ScalarTy, Alignment, 0,
                                CostKind, OpInfo, VI);
+        // Add the costs of scalar GEP pointers, to be removed from the code.
+        if (VI == SI)
+          continue;
+        auto *Ptr = dyn_cast<GetElementPtrInst>(VI->getPointerOperand());
+        if (!Ptr || !Ptr->hasOneUse() || Ptr->hasAllConstantIndices())
+          continue;
+        ScalarStCost += TTI->getArithmeticInstrCost(Instruction::Add,
+                                                    Ptr->getType(), CostKind);
       }
       TTI::OperandValueInfo OpInfo = getOperandInfo(VL, 0);
       InstructionCost VecStCost =
@@ -11499,6 +11531,21 @@ public:
         InstructionCost TreeCost = V.getTreeCost(VL);
         InstructionCost ReductionCost =
             getReductionCost(TTI, VL, ReduxWidth, RdxFMF);
+        if (V.isVectorizedFirstNode() && isa<LoadInst>(VL.front())) {
+          Instruction *MainOp = V.getFirstNodeMainOp();
+          for (Value *V : VL) {
+            auto *VI = dyn_cast<LoadInst>(V);
+            // Add the costs of scalar GEP pointers, to be removed from the
+            // code.
+            if (!VI || VI == MainOp)
+              continue;
+            auto *Ptr = dyn_cast<GetElementPtrInst>(VI->getPointerOperand());
+            if (!Ptr || !Ptr->hasOneUse() || Ptr->hasAllConstantIndices())
+              continue;
+            TreeCost -= TTI->getArithmeticInstrCost(
+                Instruction::Add, Ptr->getType(), TTI::TCK_RecipThroughput);
+          }
+        }
         InstructionCost Cost = TreeCost + ReductionCost;
         LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost << " for reduction\n");
         if (!Cost.isValid()) {
