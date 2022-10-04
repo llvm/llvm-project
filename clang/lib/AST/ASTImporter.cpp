@@ -1374,9 +1374,7 @@ ExpectedType ASTNodeImporter::VisitTypeOfExprType(const TypeOfExprType *T) {
   ExpectedExpr ToExprOrErr = import(T->getUnderlyingExpr());
   if (!ToExprOrErr)
     return ToExprOrErr.takeError();
-  return Importer.getToContext().getTypeOfExprType(
-      *ToExprOrErr,
-      T->isUnqual() ? TypeOfKind::Unqualified : TypeOfKind::Qualified);
+  return Importer.getToContext().getTypeOfExprType(*ToExprOrErr, T->getKind());
 }
 
 ExpectedType ASTNodeImporter::VisitTypeOfType(const TypeOfType *T) {
@@ -1384,7 +1382,7 @@ ExpectedType ASTNodeImporter::VisitTypeOfType(const TypeOfType *T) {
   if (!ToUnderlyingTypeOrErr)
     return ToUnderlyingTypeOrErr.takeError();
   return Importer.getToContext().getTypeOfType(*ToUnderlyingTypeOrErr,
-      T->isUnqual() ? TypeOfKind::Unqualified : TypeOfKind::Qualified);
+                                               T->getKind());
 }
 
 ExpectedType ASTNodeImporter::VisitUsingType(const UsingType *T) {
