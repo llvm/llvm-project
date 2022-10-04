@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
+#include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/STLExtras.h"
@@ -60,14 +61,22 @@ LogicalResult transform::TransformState::getHandlesForPayloadOp(
   return success(found);
 }
 
-void transform::TransformState::setPayloadOps(Value value,
-                                              ArrayRef<Operation *> targets) {
+LogicalResult
+transform::TransformState::setPayloadOps(Value value,
+                                         ArrayRef<Operation *> targets) {
   assert(value != kTopLevelValue &&
          "attempting to reset the transformation root");
 
   // TODO: this may go now
   if (value.use_empty())
-    return;
+    return success();
+
+  if (auto iface = value.getType().dyn_cast<TransformTypeInterface>()) {
+    DiagnosedSilenceableFailure result =
+        iface.checkPayload(value.getLoc(), targets);
+    if (failed(result.checkAndReport()))
+      return failure();
+  }
 
   // Setting new payload for the value without cleaning it first is a misuse of
   // the API, assert here.
@@ -80,6 +89,8 @@ void transform::TransformState::setPayloadOps(Value value,
 
   for (Operation *op : targets)
     mappings.reverse[op].push_back(value);
+
+  return success();
 }
 
 void transform::TransformState::dropReverseMapping(Mappings &mappings,
@@ -100,7 +111,7 @@ void transform::TransformState::removePayloadOps(Value value) {
   mappings.direct.erase(value);
 }
 
-void transform::TransformState::updatePayloadOps(
+LogicalResult transform::TransformState::updatePayloadOps(
     Value value, function_ref<Operation *(Operation *)> callback) {
   Mappings &mappings = getMapping(value);
   auto it = mappings.direct.find(value);
@@ -117,7 +128,15 @@ void transform::TransformState::updatePayloadOps(
     }
   }
 
+  if (auto iface = value.getType().dyn_cast<TransformTypeInterface>()) {
+    DiagnosedSilenceableFailure result =
+        iface.checkPayload(value.getLoc(), updated);
+    if (failed(result.checkAndReport()))
+      return failure();
+  }
+
   std::swap(association, updated);
+  return success();
 }
 
 void transform::TransformState::recordHandleInvalidationOne(
@@ -253,7 +272,8 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     assert(result.getDefiningOp() == transform.getOperation() &&
            "payload IR association for a value other than the result of the "
            "current transform op");
-    setPayloadOps(result, results.get(result.getResultNumber()));
+    if (failed(setPayloadOps(result, results.get(result.getResultNumber()))))
+      return DiagnosedSilenceableFailure::definiteFailure();
   }
 
   printOnFailureRAII.release();
@@ -278,9 +298,12 @@ transform::TransformState::Extension::replacePayloadOp(Operation *op,
     return failure();
 
   for (Value handle : handles) {
-    state.updatePayloadOps(handle, [&](Operation *current) {
-      return current == op ? replacement : current;
-    });
+    LogicalResult result =
+        state.updatePayloadOps(handle, [&](Operation *current) {
+          return current == op ? replacement : current;
+        });
+    if (failed(result))
+      return failure();
   }
   return success();
 }
@@ -317,7 +340,7 @@ transform::TransformResults::get(unsigned resultNumber) const {
 // Utilities for PossibleTopLevelTransformOpTrait.
 //===----------------------------------------------------------------------===//
 
-void transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
+LogicalResult transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
     TransformState &state, Operation *op, Region &region) {
   SmallVector<Operation *> targets;
   if (op->getNumOperands() != 0)
@@ -325,7 +348,7 @@ void transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
   else
     targets.push_back(state.getTopLevel());
 
-  state.mapBlockArguments(region.front().getArgument(0), targets);
+  return state.mapBlockArguments(region.front().getArgument(0), targets);
 }
 
 LogicalResult

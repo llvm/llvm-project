@@ -15,6 +15,7 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Rewrite/PatternApplicator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
 
@@ -226,7 +227,8 @@ transform::AlternativesOp::apply(transform::TransformResults &results,
       for (Operation *clone : clones)
         clone->erase();
     });
-    state.mapBlockArguments(reg.front().getArgument(0), clones);
+    if (failed(state.mapBlockArguments(reg.front().getArgument(0), clones)))
+      return DiagnosedSilenceableFailure::definiteFailure();
 
     bool failed = false;
     for (Operation &transform : reg.front().without_terminator()) {
@@ -292,6 +294,35 @@ LogicalResult transform::AlternativesOp::verify() {
 //===----------------------------------------------------------------------===//
 
 DiagnosedSilenceableFailure
+transform::CastOp::applyToOne(Operation *target,
+                              SmallVectorImpl<Operation *> &results,
+                              transform::TransformState &state) {
+  results.push_back(target);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::CastOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsPayload(effects);
+  consumesHandle(getInput(), effects);
+  producesHandle(getOutput(), effects);
+}
+
+bool transform::CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
+  assert(inputs.size() == 1 && "expected one input");
+  assert(outputs.size() == 1 && "expected one output");
+  return llvm::all_of(
+      std::initializer_list<Type>{inputs.front(), outputs.front()},
+      [](Type ty) {
+        return ty.isa<pdl::OperationType, transform::TransformTypeInterface>();
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// ForeachOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
 transform::ForeachOp::apply(transform::TransformResults &results,
                             transform::TransformState &state) {
   ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
@@ -299,7 +330,8 @@ transform::ForeachOp::apply(transform::TransformResults &results,
 
   for (Operation *op : payloadOps) {
     auto scope = state.make_region_scope(getBody());
-    state.mapBlockArguments(getIterationVariable(), {op});
+    if (failed(state.mapBlockArguments(getIterationVariable(), {op})))
+      return DiagnosedSilenceableFailure::definiteFailure();
 
     // Execute loop body.
     for (Operation &transform : getBody().front().without_terminator()) {
@@ -572,7 +604,8 @@ transform::SequenceOp::apply(transform::TransformResults &results,
                              transform::TransformState &state) {
   // Map the entry block argument to the list of operations.
   auto scope = state.make_region_scope(*getBodyBlock()->getParent());
-  mapBlockArguments(state);
+  if (failed(mapBlockArguments(state)))
+    return DiagnosedSilenceableFailure::definiteFailure();
 
   // Apply the sequenced ops one by one.
   for (Operation &transform : getBodyBlock()->without_terminator()) {
@@ -766,7 +799,8 @@ transform::WithPDLPatternsOp::apply(transform::TransformResults &results,
       [&]() { state.removeExtension<PatternApplicatorExtension>(); });
 
   auto scope = state.make_region_scope(getBody());
-  mapBlockArguments(state);
+  if (failed(mapBlockArguments(state)))
+    return DiagnosedSilenceableFailure::definiteFailure();
   return state.applyTransform(transformOp);
 }
 

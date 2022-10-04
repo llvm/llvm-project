@@ -798,5 +798,46 @@ transform.sequence failures(suppress) {
   // Silenceable failure and all handles are now empty.
   %h_2:3 = split_handles %muli_2 in [3]
   // expected-remark @below {{0}}
- transform.test_print_number_of_associated_payload_ir_ops %h_2#0
+  transform.test_print_number_of_associated_payload_ir_ops %h_2#0
+}
+
+// -----
+
+"test.some_op"() : () -> ()
+"other_dialect.other_op"() : () -> ()
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @some : benefit(1) {
+    %0 = pdl.operation "test.some_op"
+    pdl.rewrite %0 with "transform.dialect"
+  }
+
+  sequence %arg0 failures(propagate) {
+  ^bb1(%arg1: !pdl.operation):
+    %0 = pdl_match @some in %arg1
+    %2 = transform.cast %0 : !pdl.operation to !transform.test_dialect_op
+    transform.cast %2 : !transform.test_dialect_op to !pdl.operation
+  }
+}
+
+// -----
+
+"test.some_op"() : () -> ()
+"other_dialect.other_op"() : () -> ()
+
+transform.with_pdl_patterns {
+^bb0(%arg0: !pdl.operation):
+  pdl.pattern @other : benefit(1) {
+    %0 = pdl.operation "other_dialect.other_op"
+    pdl.rewrite %0 with "transform.dialect"
+  }
+
+  sequence %arg0 failures(propagate) {
+  ^bb1(%arg1: !pdl.operation):
+    %0 = pdl_match @other in %arg1
+    // expected-error @below {{expected the payload operation to belong to the 'test' dialect}}
+    %2 = transform.cast %0 : !pdl.operation to !transform.test_dialect_op
+    transform.cast %2 : !transform.test_dialect_op to !pdl.operation
+  }
 }

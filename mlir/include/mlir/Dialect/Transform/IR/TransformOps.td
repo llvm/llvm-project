@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_TRANSFORM_IR_TRANSFORMOPS
 #define MLIR_DIALECT_TRANSFORM_IR_TRANSFORMOPS
 
+include "mlir/Interfaces/CastInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -94,6 +95,23 @@ def AlternativesOp : TransformDialectOp<"alternatives",
   let assemblyFormat =
     "($scope^)? (`->` type($results)^)? attr-dict-with-keyword regions";
   let hasVerifier = 1;
+}
+
+def CastOp : TransformDialectOp<"cast",
+    [TransformOpInterface, TransformEachOpTrait,
+     DeclareOpInterfaceMethods<CastOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  // TODO: temporarily fallback support for casting from PDL_Operation type.
+  let arguments = (ins AnyType:$input);
+  let results = (outs AnyType:$output);
+  let assemblyFormat = "$input attr-dict `:` type($input) `to` type($output)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+      ::mlir::Operation *target,
+      ::llvm::SmallVectorImpl<::mlir::Operation *> &results,
+      ::mlir::transform::TransformState &state);
+  }];
 }
 
 def ForeachOp : TransformDialectOp<"foreach",
