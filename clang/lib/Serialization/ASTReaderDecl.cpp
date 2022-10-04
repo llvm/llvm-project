@@ -934,6 +934,7 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
 
   FD->setCachedLinkage(static_cast<Linkage>(Record.readInt()));
   FD->EndRangeLoc = readSourceLocation();
+  FD->setDefaultLoc(readSourceLocation());
 
   FD->ODRHash = Record.readInt();
   FD->setHasODRHash(true);

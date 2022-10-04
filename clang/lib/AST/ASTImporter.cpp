@@ -3587,6 +3587,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   auto TInfo = importChecked(Err, FromTSI);
   auto ToInnerLocStart = importChecked(Err, D->getInnerLocStart());
   auto ToEndLoc = importChecked(Err, D->getEndLoc());
+  auto ToDefaultLoc = importChecked(Err, D->getDefaultLoc());
   auto ToQualifierLoc = importChecked(Err, D->getQualifierLoc());
   auto TrailingRequiresClause =
       importChecked(Err, D->getTrailingRequiresClause());
@@ -3707,6 +3708,7 @@ ExpectedDecl ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
   ToFunction->setFriendConstraintRefersToEnclosingTemplate(
       D->FriendConstraintRefersToEnclosingTemplate());
   ToFunction->setRangeEnd(ToEndLoc);
+  ToFunction->setDefaultLoc(ToDefaultLoc);
 
   // Set the parameters.
   for (auto *Param : Parameters) {

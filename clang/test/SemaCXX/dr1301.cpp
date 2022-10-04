@@ -17,7 +17,7 @@ struct C {
 int c = C().b.n; // expected-error {{call to implicitly-deleted default}}
 
 struct D {
-  D() = default; // expected-note {{here}} expected-warning {{implicitly deleted}}
+  D() = default; // expected-note {{here}} expected-warning {{implicitly deleted}} expected-note{{replace 'default'}}
   B b; // expected-note 2{{'b' has a deleted default constructor}}
 };
 int d = D().b.n; // expected-error {{call to implicitly-deleted default}}
