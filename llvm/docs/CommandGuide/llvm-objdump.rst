@@ -184,7 +184,7 @@ OPTIONS
   Enable/disable target-specific attributes. Specify ``--mattr=help`` to display
   the available attributes.
 
-.. option:: --no-leading-addr
+.. option:: --no-leading-addr, --no-addresses
 
   When disassembling, do not print leading addresses for instructions or inline
   relocations.
