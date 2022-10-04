@@ -344,7 +344,7 @@ static Value deriveStaticUpperBound(Value upperBound,
                   .getDefiningOp())) {
         // Assumptions about the upper bound of minimum computations no longer
         // work if multiplied by mixed signs, so abort in this case.
-        if (lhs.value() < 0 != rhs.value() < 0)
+        if ((lhs.value() < 0) != (rhs.value() < 0))
           return {};
 
         return rewriter.create<arith::ConstantIndexOp>(
