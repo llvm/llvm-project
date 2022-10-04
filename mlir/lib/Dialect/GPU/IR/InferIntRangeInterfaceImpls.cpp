@@ -83,7 +83,7 @@ void LaunchOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
     setResultRange(idxResult, idxRange);
   };
 
-  argRanges = argRanges.drop_front(asyncDependencies().size());
+  argRanges = argRanges.drop_front(getAsyncDependencies().size());
   KernelDim3 gridDims = getGridSize();
   KernelDim3 blockIds = getBlockIds();
   setRange(argRanges[0], gridDims.x, blockIds.x);

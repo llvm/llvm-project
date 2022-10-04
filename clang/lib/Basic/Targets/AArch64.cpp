@@ -79,6 +79,7 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
 
   // All AArch64 implementations support ARMv8 FP, which makes half a legal type.
   HasLegalHalfType = true;
+  HalfArgsAndReturns = true;
   HasFloat16 = true;
 
   if (Triple.isArch64Bit())
@@ -529,6 +530,22 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
     .Default(false);
 }
 
+void AArch64TargetInfo::setFeatureEnabled(llvm::StringMap<bool> &Features,
+                                          StringRef Name, bool Enabled) const {
+  Features[Name] = Enabled;
+  llvm::AArch64::ArchKind AK = llvm::AArch64::getSubArchArchKind(Name);
+  // Add all previous architecture versions.
+  // In case of v9.x the v8.x counterparts are added too.
+  if ("9" == getArchVersionString(AK))
+    for (llvm::AArch64::ArchKind I = llvm::AArch64::convertV9toV8(AK);
+         I != llvm::AArch64::ArchKind::INVALID; --I)
+      Features[llvm::AArch64::getSubArch(I)] = Enabled;
+
+  for (llvm::AArch64::ArchKind I = --AK; I != llvm::AArch64::ArchKind::INVALID;
+       --I)
+    Features[llvm::AArch64::getSubArch(I)] = Enabled;
+}
+
 bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                                              DiagnosticsEngine &Diags) {
   FPU = FPUMode;
@@ -620,31 +637,32 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSM4 = true;
     if (Feature == "+strict-align")
       HasUnaligned = false;
-    if (Feature == "+v8a")
+    // All predecessor archs are added but select the latest one for ArchKind.
+    if (Feature == "+v8a" && ArchKind < llvm::AArch64::ArchKind::ARMV8A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8A;
-    if (Feature == "+v8.1a")
+    if (Feature == "+v8.1a" && ArchKind < llvm::AArch64::ArchKind::ARMV8_1A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8_1A;
-    if (Feature == "+v8.2a")
+    if (Feature == "+v8.2a" && ArchKind < llvm::AArch64::ArchKind::ARMV8_2A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8_2A;
-    if (Feature == "+v8.3a")
+    if (Feature == "+v8.3a" && ArchKind < llvm::AArch64::ArchKind::ARMV8_3A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8_3A;
-    if (Feature == "+v8.4a")
+    if (Feature == "+v8.4a" && ArchKind < llvm::AArch64::ArchKind::ARMV8_4A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8_4A;
-    if (Feature == "+v8.5a")
+    if (Feature == "+v8.5a" && ArchKind < llvm::AArch64::ArchKind::ARMV8_5A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8_5A;
-    if (Feature == "+v8.6a")
+    if (Feature == "+v8.6a" && ArchKind < llvm::AArch64::ArchKind::ARMV8_6A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8_6A;
-    if (Feature == "+v8.7a")
+    if (Feature == "+v8.7a" && ArchKind < llvm::AArch64::ArchKind::ARMV8_7A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8_7A;
-    if (Feature == "+v8.8a")
+    if (Feature == "+v8.8a" && ArchKind < llvm::AArch64::ArchKind::ARMV8_8A)
       ArchKind = llvm::AArch64::ArchKind::ARMV8_8A;
-    if (Feature == "+v9a")
+    if (Feature == "+v9a" && ArchKind < llvm::AArch64::ArchKind::ARMV9A)
       ArchKind = llvm::AArch64::ArchKind::ARMV9A;
-    if (Feature == "+v9.1a")
+    if (Feature == "+v9.1a" && ArchKind < llvm::AArch64::ArchKind::ARMV9_1A)
       ArchKind = llvm::AArch64::ArchKind::ARMV9_1A;
-    if (Feature == "+v9.2a")
+    if (Feature == "+v9.2a" && ArchKind < llvm::AArch64::ArchKind::ARMV9_2A)
       ArchKind = llvm::AArch64::ArchKind::ARMV9_2A;
-    if (Feature == "+v9.3a")
+    if (Feature == "+v9.3a" && ArchKind < llvm::AArch64::ArchKind::ARMV9_3A)
       ArchKind = llvm::AArch64::ArchKind::ARMV9_3A;
     if (Feature == "+v8r")
       ArchKind = llvm::AArch64::ArchKind::ARMV8R;
@@ -679,6 +697,108 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
   setDataLayout();
 
   return true;
+}
+
+bool AArch64TargetInfo::initFeatureMap(
+    llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
+    const std::vector<std::string> &FeaturesVec) const {
+  // Parse the CPU and add any implied features.
+  llvm::AArch64::ArchKind Arch = llvm::AArch64::parseCPUArch(CPU);
+  if (Arch != llvm::AArch64::ArchKind::INVALID) {
+    uint64_t Exts = llvm::AArch64::getDefaultExtensions(CPU, Arch);
+    std::vector<StringRef> CPUFeats;
+    llvm::AArch64::getExtensionFeatures(Exts, CPUFeats);
+    for (auto F : CPUFeats) {
+      assert((F[0] == '+' || F[0] == '-') && "Expected +/- in target feature!");
+      setFeatureEnabled(Features, F.drop_front(), F[0] == '+');
+    }
+  }
+
+  return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
+}
+
+// Parse AArch64 Target attributes, which are a comma separated list of:
+//  "arch=<arch>" - parsed to features as per -march=..
+//  "cpu=<cpu>" - parsed to features as per -mcpu=.., with CPU set to <cpu>
+//  "tune=<cpu>" - TuneCPU set to <cpu>
+//  "feature", "no-feature" - Add (or remove) feature.
+//  "+feature", "+nofeature" - Add (or remove) feature.
+ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
+  ParsedTargetAttr Ret;
+  if (Features == "default")
+    return Ret;
+  SmallVector<StringRef, 1> AttrFeatures;
+  Features.split(AttrFeatures, ",");
+  bool FoundArch = false;
+
+  auto SplitAndAddFeatures = [](StringRef FeatString,
+                                std::vector<std::string> &Features) {
+    SmallVector<StringRef, 8> SplitFeatures;
+    FeatString.split(SplitFeatures, StringRef("+"), -1, false);
+    for (StringRef Feature : SplitFeatures) {
+      StringRef FeatureName = llvm::AArch64::getArchExtFeature(Feature);
+      if (!FeatureName.empty())
+        Features.push_back(FeatureName.str());
+      else
+        // Pushing the original feature string to give a sema error later on
+        // when they get checked.
+        Features.push_back(Feature.str());
+    }
+  };
+
+  for (auto &Feature : AttrFeatures) {
+    Feature = Feature.trim();
+    if (Feature.startswith("fpmath="))
+      continue;
+
+    if (Feature.startswith("branch-protection=")) {
+      Ret.BranchProtection = Feature.split('=').second.trim();
+      continue;
+    }
+
+    if (Feature.startswith("arch=")) {
+      if (FoundArch)
+        Ret.Duplicate = "arch=";
+      FoundArch = true;
+      std::pair<StringRef, StringRef> Split =
+          Feature.split("=").second.trim().split("+");
+      llvm::AArch64::ArchKind ArchKind = llvm::AArch64::parseArch(Split.first);
+
+      // Parse the architecture version, adding the required features to
+      // Ret.Features.
+      std::vector<StringRef> FeatureStrs;
+      if (ArchKind == llvm::AArch64::ArchKind::INVALID ||
+          !llvm::AArch64::getArchFeatures(ArchKind, FeatureStrs))
+        continue;
+      for (auto R : FeatureStrs)
+        Ret.Features.push_back(R.str());
+      // Add any extra features, after the +
+      SplitAndAddFeatures(Split.second, Ret.Features);
+    } else if (Feature.startswith("cpu=")) {
+      if (!Ret.CPU.empty())
+        Ret.Duplicate = "cpu=";
+      else {
+        // Split the cpu string into "cpu=", "cortex-a710" and any remaining
+        // "+feat" features.
+        std::pair<StringRef, StringRef> Split =
+            Feature.split("=").second.trim().split("+");
+        Ret.CPU = Split.first;
+        SplitAndAddFeatures(Split.second, Ret.Features);
+      }
+    } else if (Feature.startswith("tune=")) {
+      if (!Ret.Tune.empty())
+        Ret.Duplicate = "tune=";
+      else
+        Ret.Tune = Feature.split("=").second.trim();
+    } else if (Feature.startswith("no-"))
+      Ret.Features.push_back("-" + Feature.split("-").second.str());
+    else if (Feature.startswith("+")) {
+      SplitAndAddFeatures(Feature, Ret.Features);
+    }
+    else
+      Ret.Features.push_back("+" + Feature.str());
+  }
+  return Ret;
 }
 
 bool AArch64TargetInfo::hasBFloat16Type() const {

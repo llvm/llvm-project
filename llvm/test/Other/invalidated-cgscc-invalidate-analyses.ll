@@ -1,4 +1,5 @@
 ; RUN: opt -passes='require<no-op-module>,inline' < %s -S -debug-pass-manager 2>&1 | FileCheck %s
+; RUN: opt -passes='require<no-op-module>,cgscc(devirt<1>(inline))' < %s -S -debug-pass-manager 2>&1 | FileCheck %s
 
 ; CHECK: Invalidating analysis: NoOpModuleAnalysis
 

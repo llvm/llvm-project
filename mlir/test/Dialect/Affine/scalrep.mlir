@@ -185,7 +185,7 @@ func.func @store_load_no_fwd() {
     affine.store %cf7, %m[%i0] : memref<10xf32>
     affine.for %i1 = 0 to 10 {
       affine.for %i2 = 0 to 10 {
-        // CHECK: affine.load %{{[0-9]+}}
+        // CHECK: affine.load
         %v0 = affine.load %m[%i2] : memref<10xf32>
         %v1 = arith.addf %v0, %v0 : f32
       }

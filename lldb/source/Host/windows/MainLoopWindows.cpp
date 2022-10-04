@@ -30,6 +30,7 @@ MainLoopWindows::~MainLoopWindows() {
   assert(m_read_fds.empty());
   BOOL result = WSACloseEvent(m_trigger_event);
   assert(result == TRUE);
+  (void)result;
 }
 
 llvm::Expected<size_t> MainLoopWindows::Poll() {

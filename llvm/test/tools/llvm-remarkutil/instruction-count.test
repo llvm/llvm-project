@@ -1,0 +1,7 @@
+RUN: llvm-remarkutil instruction-count --parser=yaml %p/Inputs/instruction-count.yaml | FileCheck %s
+RUN: llvm-remarkutil yaml2bitstream %p/Inputs/instruction-count.yaml | llvm-remarkutil instruction-count --parser=bitstream | FileCheck %s
+
+; CHECK-LABEL: Function,InstructionCount
+; CHECK: func1,1
+; CHECK: func2,2
+; CHECK: func3,3

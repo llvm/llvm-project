@@ -68,8 +68,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator set_union(
     _InputIterator2 __last2,
     _OutputIterator __result,
     _Compare __comp) {
-  typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
-  return std::__set_union<_Comp_ref>(
+  return std::__set_union<__comp_ref_type<_Compare> >(
              std::move(__first1),
              std::move(__last1),
              std::move(__first2),

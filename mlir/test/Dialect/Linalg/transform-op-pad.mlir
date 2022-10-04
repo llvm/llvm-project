@@ -93,7 +93,7 @@ func.func @pad(%arg0: tensor<24x12xf32>,
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 failures(suppress) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     // This error is silenceable and is not reported by this transform

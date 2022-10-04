@@ -379,16 +379,6 @@ def OpWithBitEnumVerticalBar : TEST_Op<"op_with_bit_enum_vbar"> {
 }
 
 //===----------------------------------------------------------------------===//
-// Test Attribute Constraints
-//===----------------------------------------------------------------------===//
-
-def SymbolRefOp : TEST_Op<"symbol_ref_attr"> {
-  let arguments = (ins
-    ConfinedAttr<FlatSymbolRefAttr, [ReferToOp<"func::FuncOp">]>:$symbol
-  );
-}
-
-//===----------------------------------------------------------------------===//
 // Test Regions
 //===----------------------------------------------------------------------===//
 
@@ -1909,6 +1899,12 @@ def PolyForOp : TEST_Op<"polyfor", [OpAsmOpInterface]> {
   }];
   let regions = (region SizedRegion<1>:$region);
   let hasCustomAssemblyFormat = 1;
+}
+
+def TestAttrWithLoc : TEST_Op<"attr_with_loc"> {
+  let summary = "op's attribute has a location";
+  let arguments = (ins AnyAttr:$loc, AnyAttr:$value);
+  let assemblyFormat = "`(` $value `` custom<OptionalLoc>($loc) `)` attr-dict";
 }
 
 //===----------------------------------------------------------------------===//

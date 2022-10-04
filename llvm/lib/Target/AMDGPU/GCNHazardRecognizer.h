@@ -105,8 +105,8 @@ private:
   bool fixVALUPartialForwardingHazard(MachineInstr *MI);
   bool fixVALUTransUseHazard(MachineInstr *MI);
   bool fixWMMAHazards(MachineInstr *MI);
-  bool fixGetPcStallHazard(MachineInstr *MI);
   bool fixShift64HighRegBug(MachineInstr *MI);
+  bool fixVALUMaskWriteHazard(MachineInstr *MI);
 
   int checkMAIHazards(MachineInstr *MI);
   int checkMAIHazards908(MachineInstr *MI);

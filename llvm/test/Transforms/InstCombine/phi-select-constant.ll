@@ -158,3 +158,40 @@ inf_loop:
 unreachable:   ; No predecessors!
   ret i16 %s
 }
+
+define i32 @phi_trans(i1 %c, i1 %c2, i32 %v) {
+; CHECK-LABEL: @phi_trans(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[V2:%.*]] = add i32 [[V:%.*]], 1
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    [[V3:%.*]] = mul i32 [[V]], 3
+; CHECK-NEXT:    [[V5:%.*]] = lshr i32 [[V]], 1
+; CHECK-NEXT:    [[PHI_SEL:%.*]] = select i1 [[C2:%.*]], i32 [[V3]], i32 [[V5]]
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[PHI1:%.*]] = phi i32 [ [[V2]], [[IF]] ], [ [[PHI_SEL]], [[ELSE]] ]
+; CHECK-NEXT:    ret i32 [[PHI1]]
+;
+entry:
+  br i1 %c, label %if, label %else
+
+if:
+  %v2 = add i32 %v, 1
+  %v4 = shl i32 %v, 1
+  br label %join
+
+else:
+  %v3 = mul i32 %v, 3
+  %v5 = lshr i32 %v, 1
+  br label %join
+
+join:
+  %phi1 = phi i1 [ true, %if ], [ %c2, %else ]
+  %phi2 = phi i32 [ %v2, %if ], [ %v3, %else ]
+  %phi3 = phi i32 [ %v4, %if ], [ %v5, %else ]
+  %sel = select i1 %phi1, i32 %phi2, i32 %phi3
+  ret i32 %sel
+}

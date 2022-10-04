@@ -153,7 +153,7 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
-  TD_FILE dialects/ArithmeticOps.td
+  TD_FILE dialects/ArithOps.td
   SOURCES
     dialects/arith.py
     dialects/_arith_ops_ext.py

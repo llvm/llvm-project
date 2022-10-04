@@ -397,18 +397,28 @@ let Class = TypeOfExprType in {
     let Read = [{ node->getUnderlyingExpr() }];
   }
 
+  def : Property<"kind", TypeOfKind> {
+    let Read = [{ node->isUnqual() ? TypeOfKind::Unqualified
+                                   : TypeOfKind::Qualified }];
+  }
+
   def : Creator<[{
-    return ctx.getTypeOfExprType(expression);
+    return ctx.getTypeOfExprType(expression, kind);
   }]>;
 }
 
 let Class = TypeOfType in {
-  def : Property<"underlyingType", QualType> {
-    let Read = [{ node->getUnderlyingType() }];
+  def : Property<"unmodifiedType", QualType> {
+    let Read = [{ node->getUnmodifiedType() }];
+  }
+
+  def : Property<"kind", TypeOfKind> {
+    let Read = [{ node->isUnqual() ? TypeOfKind::Unqualified
+                                   : TypeOfKind::Qualified }];
   }
 
   def : Creator<[{
-    return ctx.getTypeOfType(underlyingType);
+    return ctx.getTypeOfType(unmodifiedType, kind);
   }]>;
 }
 

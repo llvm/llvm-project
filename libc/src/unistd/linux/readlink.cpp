@@ -21,10 +21,10 @@ LLVM_LIBC_FUNCTION(ssize_t, readlink,
                    (const char *__restrict path, char *__restrict buf,
                     size_t bufsize)) {
 #ifdef SYS_readlink
-  ssize_t ret = __llvm_libc::syscall(SYS_readlink, path, buf, bufsize);
+  ssize_t ret = __llvm_libc::syscall_impl(SYS_readlink, path, buf, bufsize);
 #elif defined(SYS_readlinkat)
   ssize_t ret =
-      __llvm_libc::syscall(SYS_readlinkat, AT_FDCWD, path, buf, bufsize);
+      __llvm_libc::syscall_impl(SYS_readlinkat, AT_FDCWD, path, buf, bufsize);
 #else
 #error "SYS_readlink or SYS_readlinkat not available."
 #endif

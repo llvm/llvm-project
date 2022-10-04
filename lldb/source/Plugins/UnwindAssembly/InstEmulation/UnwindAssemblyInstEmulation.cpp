@@ -84,10 +84,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
       const bool show_address = true;
       const bool show_bytes = true;
       const bool show_control_flow_kind = true;
-      m_inst_emulator_up->GetRegisterInfo(unwind_plan.GetRegisterKind(),
-                                          unwind_plan.GetInitialCFARegister(),
-                                          m_cfa_reg_info);
-
+      m_cfa_reg_info = *m_inst_emulator_up->GetRegisterInfo(
+          unwind_plan.GetRegisterKind(), unwind_plan.GetInitialCFARegister());
       m_fp_is_cfa = false;
       m_register_values.clear();
       m_pushed_regs.clear();
@@ -130,9 +128,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
         // cache the stack pointer register number (in whatever register
         // numbering this UnwindPlan uses) for quick reference during
         // instruction parsing.
-        RegisterInfo sp_reg_info;
-        m_inst_emulator_up->GetRegisterInfo(
-            eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP, sp_reg_info);
+        RegisterInfo sp_reg_info = *m_inst_emulator_up->GetRegisterInfo(
+            eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
 
         // The architecture dependent condition code of the last processed
         // instruction.
@@ -172,8 +169,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
                 lldb::RegisterKind row_kind =
                     m_unwind_plan_ptr->GetRegisterKind();
                 // set m_cfa_reg_info to the row's CFA reg.
-                m_inst_emulator_up->GetRegisterInfo(row_kind, row_cfa_regnum,
-                                                    m_cfa_reg_info);
+                m_cfa_reg_info = *m_inst_emulator_up->GetRegisterInfo(
+                    row_kind, row_cfa_regnum);
                 // set m_fp_is_cfa.
                 if (sp_reg_info.kinds[row_kind] == row_cfa_regnum)
                   m_fp_is_cfa = false;
@@ -219,8 +216,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
                   lldb::RegisterKind row_kind =
                       m_unwind_plan_ptr->GetRegisterKind();
                   // set m_cfa_reg_info to the row's CFA reg.
-                  m_inst_emulator_up->GetRegisterInfo(row_kind, row_cfa_regnum,
-                                                      m_cfa_reg_info);
+                  m_cfa_reg_info = *m_inst_emulator_up->GetRegisterInfo(
+                      row_kind, row_cfa_regnum);
                   // set m_fp_is_cfa.
                   if (sp_reg_info.kinds[row_kind] == row_cfa_regnum)
                     m_fp_is_cfa = false;
@@ -623,11 +620,10 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
           // to using SP to calculate the CFA.
           if (m_fp_is_cfa) {
             m_fp_is_cfa = false;
-            RegisterInfo sp_reg_info;
             lldb::RegisterKind sp_reg_kind = eRegisterKindGeneric;
             uint32_t sp_reg_num = LLDB_REGNUM_GENERIC_SP;
-            m_inst_emulator_up->GetRegisterInfo(sp_reg_kind, sp_reg_num,
-                                                sp_reg_info);
+            RegisterInfo sp_reg_info =
+                *m_inst_emulator_up->GetRegisterInfo(sp_reg_kind, sp_reg_num);
             RegisterValue sp_reg_val;
             if (GetRegisterValue(sp_reg_info, sp_reg_val)) {
               m_cfa_reg_info = sp_reg_info;

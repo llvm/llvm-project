@@ -99,7 +99,9 @@ STATISTIC(NumSunk, "Number of instructions sunk out of loop");
 STATISTIC(NumHoisted, "Number of instructions hoisted out of loop");
 STATISTIC(NumMovedLoads, "Number of load insts hoisted or sunk");
 STATISTIC(NumMovedCalls, "Number of call insts hoisted or sunk");
-STATISTIC(NumPromoted, "Number of memory locations promoted to registers");
+STATISTIC(NumPromotionCandidates, "Number of promotion candidates");
+STATISTIC(NumLoadPromoted, "Number of load-only promotions");
+STATISTIC(NumLoadStorePromoted, "Number of load and store promotions");
 
 /// Memory promotion is enabled by default.
 static cl::opt<bool>
@@ -1948,6 +1950,7 @@ bool llvm::promoteLoopAccessesToScalars(
     for (Value *Ptr : PointerMustAliases)
       dbgs() << "  " << *Ptr << "\n";
   });
+  ++NumPromotionCandidates;
 
   Value *SomePtr = *PointerMustAliases.begin();
   BasicBlock *Preheader = CurLoop->getLoopPreheader();
@@ -2158,19 +2161,21 @@ bool llvm::promoteLoopAccessesToScalars(
     return false;
 
   // Lets do the promotion!
-  if (StoreSafety == StoreSafe)
+  if (StoreSafety == StoreSafe) {
     LLVM_DEBUG(dbgs() << "LICM: Promoting load/store of the value: " << *SomePtr
                       << '\n');
-  else
+    ++NumLoadStorePromoted;
+  } else {
     LLVM_DEBUG(dbgs() << "LICM: Promoting load of the value: " << *SomePtr
                       << '\n');
+    ++NumLoadPromoted;
+  }
 
   ORE->emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "PromoteLoopAccessesToScalar",
                               LoopUses[0])
            << "Moving accesses to memory location out of the loop";
   });
-  ++NumPromoted;
 
   // Look at all the loop uses, and try to merge their locations.
   std::vector<const DILocation *> LoopUsesLocs;

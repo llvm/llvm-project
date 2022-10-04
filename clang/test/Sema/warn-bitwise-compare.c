@@ -91,6 +91,8 @@ void f(int x) {
   if ((x | mydefine2) == 4) {}
 
   if ((x & 1) == 1L) {}
+
+  if (0 != (x | !0LL)) {} // expected-warning {{bitwise comparison always evaluates to true}}
 }
 
 void g(int x) {

@@ -342,8 +342,6 @@ llvm::Error parseRecord(const Record &R, unsigned ID, llvm::StringRef Blob,
     return decodeRecord(R, I->RefType, Blob);
   case REFERENCE_PATH:
     return decodeRecord(R, I->Path, Blob);
-  case REFERENCE_IS_IN_GLOBAL_NAMESPACE:
-    return decodeRecord(R, I->IsInGlobalNamespace, Blob);
   case REFERENCE_FIELD:
     return decodeRecord(R, F, Blob);
   default:

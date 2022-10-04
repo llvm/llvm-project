@@ -56,13 +56,13 @@ static constexpr unsigned CLONE_SYSCALL_FLAGS =
 
 static inline cpp::ErrorOr<void *> alloc_stack(size_t size) {
   long mmap_result =
-      __llvm_libc::syscall(MMAP_SYSCALL_NUMBER,
-                           0, // No special address
-                           size,
-                           PROT_READ | PROT_WRITE,      // Read and write stack
-                           MAP_ANONYMOUS | MAP_PRIVATE, // Process private
-                           -1, // Not backed by any file
-                           0   // No offset
+      __llvm_libc::syscall_impl(MMAP_SYSCALL_NUMBER,
+                                0, // No special address
+                                size,
+                                PROT_READ | PROT_WRITE, // Read and write stack
+                                MAP_ANONYMOUS | MAP_PRIVATE, // Process private
+                                -1, // Not backed by any file
+                                0   // No offset
       );
   if (mmap_result < 0 && (uintptr_t(mmap_result) >= UINTPTR_MAX - size))
     return cpp::Error{int(-mmap_result)};
@@ -70,7 +70,7 @@ static inline cpp::ErrorOr<void *> alloc_stack(size_t size) {
 }
 
 static inline void free_stack(void *stack, size_t size) {
-  __llvm_libc::syscall(SYS_munmap, stack, size);
+  __llvm_libc::syscall_impl(SYS_munmap, stack, size);
 }
 
 struct Thread;
@@ -192,7 +192,7 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   // variables from this function will not be availalbe to the child thread.
 #ifdef LLVM_LIBC_ARCH_X86_64
   long register clone_result asm("rax");
-  clone_result = __llvm_libc::syscall(
+  clone_result = __llvm_libc::syscall_impl(
       SYS_clone, CLONE_SYSCALL_FLAGS, adjusted_stack,
       &attrib->tid,    // The address where the child tid is written
       &clear_tid->val, // The futex where the child thread status is signalled
@@ -200,7 +200,7 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
   );
 #elif defined(LLVM_LIBC_ARCH_AARCH64)
   long register clone_result asm("x0");
-  clone_result = __llvm_libc::syscall(
+  clone_result = __llvm_libc::syscall_impl(
       SYS_clone, CLONE_SYSCALL_FLAGS, adjusted_stack,
       &attrib->tid,   // The address where the child tid is written
       tls.tp,         // The thread pointer value for the new thread.
@@ -264,8 +264,8 @@ void Thread::wait() {
   while (clear_tid->load() != 0) {
     // We cannot do a FUTEX_WAIT_PRIVATE here as the kernel does a
     // FUTEX_WAKE and not a FUTEX_WAKE_PRIVATE.
-    __llvm_libc::syscall(SYS_futex, &clear_tid->val, FUTEX_WAIT,
-                         CLEAR_TID_VALUE, nullptr);
+    __llvm_libc::syscall_impl(SYS_futex, &clear_tid->val, FUTEX_WAIT,
+                              CLEAR_TID_VALUE, nullptr);
   }
 }
 
@@ -293,7 +293,7 @@ int Thread::set_name(const cpp::string_view &name) {
   if (*this == self) {
     // If we are setting the name of the current thread, then we can
     // use the syscall to set the name.
-    int retval = __llvm_libc::syscall(SYS_prctl, PR_SET_NAME, name.data());
+    int retval = __llvm_libc::syscall_impl(SYS_prctl, PR_SET_NAME, name.data());
     if (retval < 0)
       return -retval;
     else
@@ -304,15 +304,17 @@ int Thread::set_name(const cpp::string_view &name) {
   cpp::StringStream path_stream(path_name_buffer);
   construct_thread_name_file_path(path_stream, attrib->tid);
 #ifdef SYS_open
-  int fd = __llvm_libc::syscall(SYS_open, path_name_buffer, O_RDWR);
+  int fd = __llvm_libc::syscall_impl(SYS_open, path_name_buffer, O_RDWR);
 #else
-  int fd = __llvm_libc::syscall(SYS_openat, AT_FDCWD, path_name_buffer, O_RDWR);
+  int fd =
+      __llvm_libc::syscall_impl(SYS_openat, AT_FDCWD, path_name_buffer, O_RDWR);
 #endif
   if (fd < 0)
     return -fd;
 
-  int retval = __llvm_libc::syscall(SYS_write, fd, name.data(), name.size());
-  __llvm_libc::syscall(SYS_close, fd);
+  int retval =
+      __llvm_libc::syscall_impl(SYS_write, fd, name.data(), name.size());
+  __llvm_libc::syscall_impl(SYS_close, fd);
 
   if (retval < 0)
     return -retval;
@@ -331,7 +333,7 @@ int Thread::get_name(cpp::StringStream &name) const {
   if (*this == self) {
     // If we are getting the name of the current thread, then we can
     // use the syscall to get the name.
-    int retval = __llvm_libc::syscall(SYS_prctl, PR_GET_NAME, name_buffer);
+    int retval = __llvm_libc::syscall_impl(SYS_prctl, PR_GET_NAME, name_buffer);
     if (retval < 0)
       return -retval;
     name << name_buffer;
@@ -342,16 +344,17 @@ int Thread::get_name(cpp::StringStream &name) const {
   cpp::StringStream path_stream(path_name_buffer);
   construct_thread_name_file_path(path_stream, attrib->tid);
 #ifdef SYS_open
-  int fd = __llvm_libc::syscall(SYS_open, path_name_buffer, O_RDONLY);
+  int fd = __llvm_libc::syscall_impl(SYS_open, path_name_buffer, O_RDONLY);
 #else
-  int fd =
-      __llvm_libc::syscall(SYS_openat, AT_FDCWD, path_name_buffer, O_RDONLY);
+  int fd = __llvm_libc::syscall_impl(SYS_openat, AT_FDCWD, path_name_buffer,
+                                     O_RDONLY);
 #endif
   if (fd < 0)
     return -fd;
 
-  int retval = __llvm_libc::syscall(SYS_read, fd, name_buffer, NAME_SIZE_MAX);
-  __llvm_libc::syscall(SYS_close, fd);
+  int retval =
+      __llvm_libc::syscall_impl(SYS_read, fd, name_buffer, NAME_SIZE_MAX);
+  __llvm_libc::syscall_impl(SYS_close, fd);
   if (retval < 0)
     return -retval;
   if (retval == NAME_SIZE_MAX)
@@ -385,13 +388,13 @@ void thread_exit(ThreadReturnValue retval, ThreadStyle style) {
 
     // Set the CLEAR_TID address to nullptr to prevent the kernel
     // from signalling at a non-existent futex location.
-    __llvm_libc::syscall(SYS_set_tid_address, 0);
+    __llvm_libc::syscall_impl(SYS_set_tid_address, 0);
   }
 
   if (style == ThreadStyle::POSIX)
-    __llvm_libc::syscall(SYS_exit, retval.posix_retval);
+    __llvm_libc::syscall_impl(SYS_exit, retval.posix_retval);
   else
-    __llvm_libc::syscall(SYS_exit, retval.stdc_retval);
+    __llvm_libc::syscall_impl(SYS_exit, retval.stdc_retval);
 }
 
 } // namespace __llvm_libc

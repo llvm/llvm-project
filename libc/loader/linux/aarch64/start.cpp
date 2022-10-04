@@ -68,13 +68,13 @@ void init_tls(TLSDescriptor &tls_descriptor) {
   // We cannot call the mmap function here as the functions set errno on
   // failure. Since errno is implemented via a thread local variable, we cannot
   // use errno before TLS is setup.
-  long mmap_ret_val = __llvm_libc::syscall(MMAP_SYSCALL_NUMBER, nullptr,
-                                           alloc_size, PROT_READ | PROT_WRITE,
-                                           MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+  long mmap_ret_val = __llvm_libc::syscall_impl(
+      MMAP_SYSCALL_NUMBER, nullptr, alloc_size, PROT_READ | PROT_WRITE,
+      MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   // We cannot check the return value with MAP_FAILED as that is the return
   // of the mmap function and not the mmap syscall.
   if (mmap_ret_val < 0 && static_cast<uintptr_t>(mmap_ret_val) > -app.pageSize)
-    __llvm_libc::syscall(SYS_exit, 1);
+    __llvm_libc::syscall_impl(SYS_exit, 1);
   uintptr_t thread_ptr = uintptr_t(reinterpret_cast<uintptr_t *>(mmap_ret_val));
   uintptr_t tls_addr = thread_ptr + size_of_pointers + padding;
   __llvm_libc::inline_memcpy(reinterpret_cast<char *>(tls_addr),
@@ -88,7 +88,7 @@ void init_tls(TLSDescriptor &tls_descriptor) {
 void cleanup_tls(uintptr_t addr, uintptr_t size) {
   if (size == 0)
     return;
-  __llvm_libc::syscall(SYS_munmap, addr, size);
+  __llvm_libc::syscall_impl(SYS_munmap, addr, size);
 }
 
 static void set_thread_ptr(uintptr_t val) { __arm_wsr64("tpidr_el0", val); }
@@ -133,9 +133,9 @@ struct AuxEntry {
 };
 
 __attribute__((noinline)) static void do_start() {
-  auto tid = __llvm_libc::syscall(SYS_gettid);
+  auto tid = __llvm_libc::syscall_impl(SYS_gettid);
   if (tid <= 0)
-    __llvm_libc::syscall(SYS_exit, 1);
+    __llvm_libc::syscall_impl(SYS_exit, 1);
   __llvm_libc::main_thread_attrib.tid = tid;
 
   // After the argv array, is a 8-byte long NULL value before the array of env

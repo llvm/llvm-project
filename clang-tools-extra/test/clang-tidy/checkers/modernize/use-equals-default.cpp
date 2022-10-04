@@ -53,6 +53,11 @@ struct SU {
   };
 };
 
+// Skip variadic constructors.
+struct VA {
+  VA(...) {}
+};
+
 // Initializer or arguments.
 class IA {
 public:

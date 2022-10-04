@@ -1368,9 +1368,12 @@
 // RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=x86_64-sie-ps5 < /dev/null | FileCheck --match-full-lines --check-prefix PS4-CXX %s
 // PS4-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 32UL
 //
-// RUN: %clang_cc1 -E -dM -triple=x86_64-pc-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix X86-64-DECLSPEC %s
-// RUN: %clang_cc1 -E -dM -fms-extensions -triple=x86_64-unknown-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix X86-64-DECLSPEC %s
-// X86-64-DECLSPEC: #define __declspec{{.*}}
+// RUN: %clang_cc1 -E -dM -triple=x86_64-pc-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix X86-64-DECLSPEC-GNU %s
+// X86-64-DECLSPEC-GNU: #define __declspec{{.*}} __attribute__{{.*}}
+//
+// RUN: %clang_cc1 -E -dM -fms-extensions -triple=x86_64-unknown-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix X86-64-DECLSPEC-MS %s
+// RUN: %clang_cc1 -E -dM -fdeclspec -triple=x86_64-unknown-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix X86-64-DECLSPEC-MS %s
+// X86-64-DECLSPEC-MS: #define __declspec{{.*}} __declspec{{.*}}
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc64-none-none < /dev/null | FileCheck -match-full-lines -check-prefix SPARCV9 %s
 // SPARCV9:#define __BIGGEST_ALIGNMENT__ 16

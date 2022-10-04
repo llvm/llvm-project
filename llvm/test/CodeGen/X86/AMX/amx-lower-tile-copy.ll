@@ -22,14 +22,14 @@ define dso_local void @test1(ptr%buf) nounwind {
 ; CHECK-NEXT:    movw $8, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl $64, %eax
-; CHECK-NEXT:    movw $8, %r14w
+; CHECK-NEXT:    movw $8, %bp
 ; CHECK-NEXT:    tileloadd (%rdi,%rax), %tmm3
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %loop.header.preheader
 ; CHECK-NEXT:    movq %rdi, %rbx
-; CHECK-NEXT:    xorl %ebp, %ebp
+; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    movl $32, %r15d
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # %loop.header
@@ -51,8 +51,8 @@ define dso_local void @test1(ptr%buf) nounwind {
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
 ; CHECK-NEXT:    tdpbssd %tmm1, %tmm0, %tmm2
 ; CHECK-NEXT:    tilestored %tmm2, (%rbx,%r15)
-; CHECK-NEXT:    incl %ebp
-; CHECK-NEXT:    cmpw $100, %bp
+; CHECK-NEXT:    incl %r14d
+; CHECK-NEXT:    cmpw $100, %r14w
 ; CHECK-NEXT:    jl .LBB0_2
 ; CHECK-NEXT:  .LBB0_3: # %exit
 ; CHECK-NEXT:    addq $4056, %rsp # imm = 0xFD8
@@ -112,8 +112,8 @@ define dso_local void @test2(ptr%buf) nounwind {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB1_3
 ; CHECK-NEXT:  # %bb.1: # %loop.header.preheader
-; CHECK-NEXT:    movq %rdi, %r14
-; CHECK-NEXT:    xorl %ebx, %ebx
+; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    xorl %r14d, %r14d
 ; CHECK-NEXT:    movl $32, %r15d
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_2: # %loop.header
@@ -123,12 +123,12 @@ define dso_local void @test2(ptr%buf) nounwind {
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    tilezero %tmm2
-; CHECK-NEXT:    tileloadd (%r14,%r15), %tmm0
-; CHECK-NEXT:    tileloadd (%r14,%r15), %tmm1
+; CHECK-NEXT:    tileloadd (%rbx,%r15), %tmm0
+; CHECK-NEXT:    tileloadd (%rbx,%r15), %tmm1
 ; CHECK-NEXT:    tdpbssd %tmm1, %tmm0, %tmm2
-; CHECK-NEXT:    tilestored %tmm2, (%r14,%r15)
-; CHECK-NEXT:    incl %ebx
-; CHECK-NEXT:    cmpw $100, %bx
+; CHECK-NEXT:    tilestored %tmm2, (%rbx,%r15)
+; CHECK-NEXT:    incl %r14d
+; CHECK-NEXT:    cmpw $100, %r14w
 ; CHECK-NEXT:    jl .LBB1_2
 ; CHECK-NEXT:  .LBB1_3: # %exit
 ; CHECK-NEXT:    addq $72, %rsp

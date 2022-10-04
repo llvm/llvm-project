@@ -18,7 +18,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, getrlimit, (int res, struct rlimit *limits)) {
-  long ret = __llvm_libc::syscall(SYS_prlimit64, 0, res, nullptr, limits);
+  long ret = __llvm_libc::syscall_impl(SYS_prlimit64, 0, res, nullptr, limits);
   if (ret < 0) {
     errno = -ret;
     return -1;

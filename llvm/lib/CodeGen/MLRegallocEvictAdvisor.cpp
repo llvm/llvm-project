@@ -198,7 +198,11 @@ static const std::vector<int64_t> PerLiveRangeShape{1, NumberOfInterferences};
 
 #define RA_EVICT_REST_DEVELOPMENT_FEATURES(M)                                  \
   M(int64_t, instructions_mapping, InstructionsMappingShape,                   \
-    "A binary matrix mapping LRs to instruction opcodes")
+    "A binary matrix mapping LRs to instruction opcodes")                      \
+  M(float, mbb_frequencies, MBBFrequencyShape,                                 \
+    "A vector of machine basic block frequencies")                             \
+  M(int64_t, mbb_mapping, InstructionsShape,                                   \
+    "A vector of indicies mapping instructions to MBBs")
 #else
 #define RA_EVICT_FIRST_DEVELOPMENT_FEATURE(M)
 #define RA_EVICT_REST_DEVELOPMENT_FEATURES(M)
@@ -729,7 +733,19 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
           }
           return CurrentMachineInstruction->getOpcode();
         },
+        [this](SlotIndex InputIndex) -> float {
+          auto *CurrentMachineInstruction =
+              LIS->getInstructionFromIndex(InputIndex);
+          return MBFI.getBlockFreqRelativeToEntryBlock(
+              CurrentMachineInstruction->getParent());
+        },
+        [this](SlotIndex InputIndex) -> MachineBasicBlock * {
+          auto *CurrentMachineInstruction =
+              LIS->getInstructionFromIndex(InputIndex);
+          return CurrentMachineInstruction->getParent();
+        },
         FeatureIDs::instructions, FeatureIDs::instructions_mapping,
+        FeatureIDs::mbb_frequencies, FeatureIDs::mbb_mapping,
         LIS->getSlotIndexes()->getLastIndex());
   }
 #endif // #ifdef LLVM_HAVE_TF_API
@@ -914,12 +930,14 @@ void MLEvictAdvisor::extractFeatures(
 #undef SET
 }
 
-void extractInstructionFeatures(SmallVectorImpl<LRStartEndInfo> &LRPosInfo,
-                                MLModelRunner *RegallocRunner,
-                                function_ref<int(SlotIndex)> GetOpcode,
-                                const int InstructionsIndex,
-                                const int InstructionsMappingIndex,
-                                const SlotIndex LastIndex) {
+void extractInstructionFeatures(
+    SmallVectorImpl<LRStartEndInfo> &LRPosInfo, MLModelRunner *RegallocRunner,
+    function_ref<int(SlotIndex)> GetOpcode,
+    function_ref<float(SlotIndex)> GetMBBFreq,
+    function_ref<MachineBasicBlock *(SlotIndex)> GetMBBReference,
+    const int InstructionsIndex, const int InstructionsMappingIndex,
+    const int MBBFreqIndex, const int MBBMappingIndex,
+    const SlotIndex LastIndex) {
   // This function extracts instruction based features relevant to the eviction
   // problem currently being solved. This function ends up extracting two
   // tensors.
@@ -929,6 +947,10 @@ void extractInstructionFeatures(SmallVectorImpl<LRStartEndInfo> &LRPosInfo,
   // 2 - A binary mapping matrix of size (LR count * max
   // instruction count) which maps where the LRs are live to the actual opcodes
   // for which they are live.
+  // 3 - A vector of size max supported MBB count storing MBB frequencies,
+  // encompassing all of the MBBs covered by the eviction problem.
+  // 4 - A vector of size max instruction count of indices to members of the MBB
+  // frequency vector, mapping each instruction to its associated MBB.
 
   // Start off by sorting the segments based on the beginning slot index.
   std::sort(
@@ -937,6 +959,8 @@ void extractInstructionFeatures(SmallVectorImpl<LRStartEndInfo> &LRPosInfo,
   size_t InstructionIndex = 0;
   size_t CurrentSegmentIndex = 0;
   SlotIndex CurrentIndex = LRPosInfo[0].Begin;
+  std::map<MachineBasicBlock *, size_t> VisitedMBBs;
+  size_t CurrentMBBIndex = 0;
   // This loop processes all the segments sequentially by starting at the
   // beginning slot index of the first segment, iterating through all the slot
   // indices before the end slot index of that segment (while checking for
@@ -961,6 +985,14 @@ void extractInstructionFeatures(SmallVectorImpl<LRStartEndInfo> &LRPosInfo,
         CurrentIndex = CurrentIndex.getNextIndex();
         continue;
       }
+      MachineBasicBlock *CurrentMBBReference = GetMBBReference(CurrentIndex);
+      if (VisitedMBBs.count(CurrentMBBReference) == 0) {
+        VisitedMBBs[CurrentMBBReference] = CurrentMBBIndex;
+        ++CurrentMBBIndex;
+      }
+      extractMBBFrequency(CurrentIndex, InstructionIndex, VisitedMBBs,
+                          GetMBBFreq, CurrentMBBReference, RegallocRunner,
+                          MBBFreqIndex, MBBMappingIndex);
       // Current code assumes we're not going to get any disjointed segments
       assert(LRPosInfo[CurrentSegmentIndex].Begin <= CurrentIndex);
       RegallocRunner->getTensor<int64_t>(InstructionsIndex)[InstructionIndex] =
@@ -1012,6 +1044,23 @@ void extractInstructionFeatures(SmallVectorImpl<LRStartEndInfo> &LRPosInfo,
       CurrentIndex = LRPosInfo[CurrentSegmentIndex + 1].Begin;
     }
     ++CurrentSegmentIndex;
+  }
+}
+
+void extractMBBFrequency(const SlotIndex CurrentIndex,
+                         const size_t CurrentInstructionIndex,
+                         std::map<MachineBasicBlock *, size_t> &VisitedMBBs,
+                         function_ref<float(SlotIndex)> GetMBBFreq,
+                         MachineBasicBlock *CurrentMBBReference,
+                         MLModelRunner *RegallocRunner, const int MBBFreqIndex,
+                         const int MBBMappingIndex) {
+  size_t CurrentMBBIndex = VisitedMBBs[CurrentMBBReference];
+  float CurrentMBBFreq = GetMBBFreq(CurrentIndex);
+  if (CurrentMBBIndex < ModelMaxSupportedMBBCount) {
+    RegallocRunner->getTensor<float>(MBBFreqIndex)[CurrentMBBIndex] =
+        CurrentMBBFreq;
+    RegallocRunner->getTensor<int64_t>(
+        MBBMappingIndex)[CurrentInstructionIndex] = CurrentMBBIndex;
   }
 }
 

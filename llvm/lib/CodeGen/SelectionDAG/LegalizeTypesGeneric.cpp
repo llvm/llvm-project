@@ -208,7 +208,7 @@ void DAGTypeLegalizer::ExpandRes_EXTRACT_ELEMENT(SDNode *N, SDValue &Lo,
 void DAGTypeLegalizer::ExpandRes_EXTRACT_VECTOR_ELT(SDNode *N, SDValue &Lo,
                                                     SDValue &Hi) {
   SDValue OldVec = N->getOperand(0);
-  unsigned OldElts = OldVec.getValueType().getVectorNumElements();
+  ElementCount OldEltCount = OldVec.getValueType().getVectorElementCount();
   EVT OldEltVT = OldVec.getValueType().getVectorElementType();
   SDLoc dl(N);
 
@@ -222,14 +222,13 @@ void DAGTypeLegalizer::ExpandRes_EXTRACT_VECTOR_ELT(SDNode *N, SDValue &Lo,
     // the input vector.  If so, extend the elements of the input vector to the
     // same bitwidth as the result before expanding.
     assert(OldEltVT.bitsLT(OldVT) && "Result type smaller then element type!");
-    EVT NVecVT = EVT::getVectorVT(*DAG.getContext(), OldVT, OldElts);
+    EVT NVecVT = EVT::getVectorVT(*DAG.getContext(), OldVT, OldEltCount);
     OldVec = DAG.getNode(ISD::ANY_EXTEND, dl, NVecVT, N->getOperand(0));
   }
 
-  SDValue NewVec = DAG.getNode(ISD::BITCAST, dl,
-                               EVT::getVectorVT(*DAG.getContext(),
-                                                NewVT, 2*OldElts),
-                               OldVec);
+  SDValue NewVec = DAG.getNode(
+      ISD::BITCAST, dl,
+      EVT::getVectorVT(*DAG.getContext(), NewVT, OldEltCount * 2), OldVec);
 
   // Extract the elements at 2 * Idx and 2 * Idx + 1 from the new vector.
   SDValue Idx = N->getOperand(1);

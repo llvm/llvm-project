@@ -407,6 +407,17 @@
 // HIP-AR-906-DAG: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx906
 // HIP-AR-906-DAG: hip_bundle2-hip-amdgcn-amd-amdhsa--gfx906
 
+// Check clang-offload-bundler reporting an error when trying to unbundle an archive but
+// the input file is not an archive.
+//
+// RUN: echo 'This is not an archive file.' > %t.non-archive
+// RUN: not clang-offload-bundler -unbundle -type=a -targets=hip-amdgcn-amd-amdhsa--gfx900 \
+// RUN:   -output=%t.res.a -input=%t.non-archive --allow-missing-bundles 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=INVARCHIVE
+// RUN: not clang-offload-bundler -unbundle -type=a -targets=hip-amdgcn-amd-amdhsa--gfx900 \
+// RUN:   -output=%t.res.a -input=%t.non-archive 2>&1 | FileCheck %s -check-prefix=INVARCHIVE
+// INVARCHIVE: error: file too small to be an archive
+
 //
 // Check bundling without host target is allowed for HIP.
 //

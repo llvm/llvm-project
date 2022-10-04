@@ -1,84 +1,9 @@
-macro(pythonize_bool var)
-  if (${var})
-    set(${var} True)
-  else()
-    set(${var} False)
-  endif()
-endmacro()
-
-set(LIBCXX_LIT_VARIANT "libcxx" CACHE STRING
-    "Configuration variant to use for LIT.")
-
-set(LIBCXX_TEST_LINKER_FLAGS "" CACHE STRING
-    "Additonal linker flags to pass when compiling the tests")
-set(LIBCXX_TEST_COMPILER_FLAGS "" CACHE STRING
-    "Additonal linker flags to pass when compiling the tests")
-
-# The tests shouldn't link to any ABI library when it has been linked into
-# libc++ statically or via a linker script.
-if (LIBCXX_ENABLE_STATIC_ABI_LIBRARY OR LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
-  set(LIBCXX_CXXABI_FOR_TESTS "none")
-else()
-  set(LIBCXX_CXXABI_FOR_TESTS "${LIBCXX_CXX_ABI}")
-endif()
-
-# The tests shouldn't link to libunwind if we have a linker script which
-# already does so.
-if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
-  set(LIBCXXABI_USE_LLVM_UNWINDER OFF)
-endif()
-
-# TODO: Clients using those options should switch to from-scratch Lit configuration files.
-option(LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXXABI
-       "Whether the libc++ tests should link with the shared libc++abi library"
-       ${LIBCXXABI_ENABLE_SHARED})
-
-option(LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXX
-       "Whether the libc++ tests should link with the shared libc++ library"
-       ${LIBCXX_ENABLE_SHARED})
-
-if(DEFINED LIBCXXABI_ENABLE_SHARED
-   AND LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXXABI
-   AND NOT LIBCXXABI_ENABLE_SHARED)
-  message(FATAL_ERROR "LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXXABI being ON requires LIBCXXABI_ENABLE_SHARED to be ON")
-endif()
-
-if(DEFINED LIBCXXABI_ENABLE_STATIC
-   AND NOT LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXXABI
-   AND NOT LIBCXXABI_ENABLE_STATIC)
-  message(FATAL_ERROR "LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXXABI being OFF requires LIBCXXABI_ENABLE_STATIC to be ON")
-endif()
-
-if(LIBCXX_INCLUDE_TESTS AND LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXX AND NOT LIBCXX_ENABLE_SHARED)
-  message(FATAL_ERROR "LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXX being ON requires LIBCXX_ENABLE_SHARED to be ON")
-endif()
-
-if(LIBCXX_INCLUDE_TESTS AND NOT LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXX AND NOT LIBCXX_ENABLE_STATIC)
-  message(FATAL_ERROR "LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXX being OFF requires LIBCXX_ENABLE_STATIC to be ON")
-endif()
-
-pythonize_bool(LIBCXX_ENABLE_SHARED)
-pythonize_bool(LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXX)
-pythonize_bool(LIBCXX_LINK_TESTS_WITH_SHARED_LIBCXXABI)
-pythonize_bool(LIBCXX_ENABLE_FILESYSTEM)
-pythonize_bool(LIBCXX_GENERATE_COVERAGE)
-pythonize_bool(LIBCXXABI_ENABLE_SHARED)
-pythonize_bool(LIBCXXABI_USE_LLVM_UNWINDER)
-pythonize_bool(LIBCXX_USE_COMPILER_RT)
-pythonize_bool(LIBCXX_HAS_ATOMIC_LIB)
-pythonize_bool(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB)
-pythonize_bool(LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY)
-pythonize_bool(LIBCXX_DEBUG_BUILD)
-pythonize_bool(LIBCXX_ENABLE_PARALLEL_ALGORITHMS)
-
 # By default, libcxx and libcxxabi share a library directory.
 if (NOT LIBCXX_CXX_ABI_LIBRARY_PATH)
   set(LIBCXX_CXX_ABI_LIBRARY_PATH "${LIBCXX_LIBRARY_DIR}" CACHE PATH
       "The path to libc++abi library.")
 endif()
 
-set(LIBCXX_TARGET_INFO "libcxx.test.target_info.LocalTI" CACHE STRING
-    "TargetInfo to use when setting up test environment.")
 set(LIBCXX_EXECUTOR "\\\"${Python3_EXECUTABLE}\\\" ${CMAKE_CURRENT_LIST_DIR}/../utils/run.py" CACHE STRING
     "Executor to use when running tests.")
 

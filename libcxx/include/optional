@@ -178,6 +178,8 @@ template<class T>
 #include <version>
 
 // standard-mandated includes
+
+// [optional.syn]
 #include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

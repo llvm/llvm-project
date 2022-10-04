@@ -3533,10 +3533,10 @@ define <2 x i64> @test_mm_set_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a
 ;
 ; X64-AVX1-LABEL: test_mm_set_epi8:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d # encoding: [0x44,0x0f,0xb6,0x54,0x24,0x48]
-; X64-AVX1-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x50]
-; X64-AVX1-NEXT:    vmovd %eax, %xmm0 # encoding: [0xc5,0xf9,0x6e,0xc0]
-; X64-AVX1-NEXT:    vpinsrb $1, %r10d, %xmm0, %xmm0 # encoding: [0xc4,0xc3,0x79,0x20,0xc2,0x01]
+; X64-AVX1-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x48]
+; X64-AVX1-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d # encoding: [0x44,0x0f,0xb6,0x54,0x24,0x50]
+; X64-AVX1-NEXT:    vmovd %r10d, %xmm0 # encoding: [0xc4,0xc1,0x79,0x6e,0xc2]
+; X64-AVX1-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x01]
 ; X64-AVX1-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x40]
 ; X64-AVX1-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x02]
 ; X64-AVX1-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x38]
@@ -3569,10 +3569,10 @@ define <2 x i64> @test_mm_set_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a
 ;
 ; X64-AVX512-LABEL: test_mm_set_epi8:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d # encoding: [0x44,0x0f,0xb6,0x54,0x24,0x48]
-; X64-AVX512-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x50]
-; X64-AVX512-NEXT:    vmovd %eax, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc0]
-; X64-AVX512-NEXT:    vpinsrb $1, %r10d, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xc3,0x79,0x20,0xc2,0x01]
+; X64-AVX512-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x48]
+; X64-AVX512-NEXT:    movzbl {{[0-9]+}}(%rsp), %r10d # encoding: [0x44,0x0f,0xb6,0x54,0x24,0x50]
+; X64-AVX512-NEXT:    vmovd %r10d, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xc1,0x79,0x6e,0xc2]
+; X64-AVX512-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x01]
 ; X64-AVX512-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x40]
 ; X64-AVX512-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x02]
 ; X64-AVX512-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax # encoding: [0x0f,0xb6,0x44,0x24,0x38]
@@ -3671,10 +3671,10 @@ define <2 x i64> @test_mm_set_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a
 ;
 ; X32-AVX1-LABEL: test_mm_set_epi8:
 ; X32-AVX1:       # %bb.0:
-; X32-AVX1-NEXT:    movzbl {{[0-9]+}}(%esp), %r10d # encoding: [0x67,0x44,0x0f,0xb6,0x54,0x24,0x48]
-; X32-AVX1-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x67,0x0f,0xb6,0x44,0x24,0x50]
-; X32-AVX1-NEXT:    vmovd %eax, %xmm0 # encoding: [0xc5,0xf9,0x6e,0xc0]
-; X32-AVX1-NEXT:    vpinsrb $1, %r10d, %xmm0, %xmm0 # encoding: [0xc4,0xc3,0x79,0x20,0xc2,0x01]
+; X32-AVX1-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x67,0x0f,0xb6,0x44,0x24,0x48]
+; X32-AVX1-NEXT:    movzbl {{[0-9]+}}(%esp), %r10d # encoding: [0x67,0x44,0x0f,0xb6,0x54,0x24,0x50]
+; X32-AVX1-NEXT:    vmovd %r10d, %xmm0 # encoding: [0xc4,0xc1,0x79,0x6e,0xc2]
+; X32-AVX1-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x01]
 ; X32-AVX1-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x67,0x0f,0xb6,0x44,0x24,0x40]
 ; X32-AVX1-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0 # encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x02]
 ; X32-AVX1-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x67,0x0f,0xb6,0x44,0x24,0x38]
@@ -3707,10 +3707,10 @@ define <2 x i64> @test_mm_set_epi8(i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4, i8 %a
 ;
 ; X32-AVX512-LABEL: test_mm_set_epi8:
 ; X32-AVX512:       # %bb.0:
-; X32-AVX512-NEXT:    movzbl {{[0-9]+}}(%esp), %r10d # encoding: [0x67,0x44,0x0f,0xb6,0x54,0x24,0x48]
-; X32-AVX512-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x67,0x0f,0xb6,0x44,0x24,0x50]
-; X32-AVX512-NEXT:    vmovd %eax, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc0]
-; X32-AVX512-NEXT:    vpinsrb $1, %r10d, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xc3,0x79,0x20,0xc2,0x01]
+; X32-AVX512-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x67,0x0f,0xb6,0x44,0x24,0x48]
+; X32-AVX512-NEXT:    movzbl {{[0-9]+}}(%esp), %r10d # encoding: [0x67,0x44,0x0f,0xb6,0x54,0x24,0x50]
+; X32-AVX512-NEXT:    vmovd %r10d, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xc1,0x79,0x6e,0xc2]
+; X32-AVX512-NEXT:    vpinsrb $1, %eax, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x01]
 ; X32-AVX512-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x67,0x0f,0xb6,0x44,0x24,0x40]
 ; X32-AVX512-NEXT:    vpinsrb $2, %eax, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe3,0x79,0x20,0xc0,0x02]
 ; X32-AVX512-NEXT:    movzbl {{[0-9]+}}(%esp), %eax # encoding: [0x67,0x0f,0xb6,0x44,0x24,0x38]
@@ -3837,8 +3837,8 @@ define <2 x i64> @test_mm_set_epi16(i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4,
 ;
 ; X64-SSE-LABEL: test_mm_set_epi16:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movzwl {{[0-9]+}}(%rsp), %r10d # encoding: [0x44,0x0f,0xb7,0x54,0x24,0x10]
-; X64-SSE-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # encoding: [0x0f,0xb7,0x44,0x24,0x08]
+; X64-SSE-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # encoding: [0x0f,0xb7,0x44,0x24,0x10]
+; X64-SSE-NEXT:    movzwl {{[0-9]+}}(%rsp), %r10d # encoding: [0x44,0x0f,0xb7,0x54,0x24,0x08]
 ; X64-SSE-NEXT:    movd %edi, %xmm0 # encoding: [0x66,0x0f,0x6e,0xc7]
 ; X64-SSE-NEXT:    movd %esi, %xmm1 # encoding: [0x66,0x0f,0x6e,0xce]
 ; X64-SSE-NEXT:    punpcklwd %xmm0, %xmm1 # encoding: [0x66,0x0f,0x61,0xc8]
@@ -3853,8 +3853,8 @@ define <2 x i64> @test_mm_set_epi16(i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4,
 ; X64-SSE-NEXT:    movd %r9d, %xmm1 # encoding: [0x66,0x41,0x0f,0x6e,0xc9]
 ; X64-SSE-NEXT:    punpcklwd %xmm0, %xmm1 # encoding: [0x66,0x0f,0x61,0xc8]
 ; X64-SSE-NEXT:    # xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X64-SSE-NEXT:    movd %eax, %xmm3 # encoding: [0x66,0x0f,0x6e,0xd8]
-; X64-SSE-NEXT:    movd %r10d, %xmm0 # encoding: [0x66,0x41,0x0f,0x6e,0xc2]
+; X64-SSE-NEXT:    movd %r10d, %xmm3 # encoding: [0x66,0x41,0x0f,0x6e,0xda]
+; X64-SSE-NEXT:    movd %eax, %xmm0 # encoding: [0x66,0x0f,0x6e,0xc0]
 ; X64-SSE-NEXT:    punpcklwd %xmm3, %xmm0 # encoding: [0x66,0x0f,0x61,0xc3]
 ; X64-SSE-NEXT:    # xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
 ; X64-SSE-NEXT:    punpckldq %xmm1, %xmm0 # encoding: [0x66,0x0f,0x62,0xc1]
@@ -3893,8 +3893,8 @@ define <2 x i64> @test_mm_set_epi16(i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4,
 ;
 ; X32-SSE-LABEL: test_mm_set_epi16:
 ; X32-SSE:       # %bb.0:
-; X32-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %r10d # encoding: [0x67,0x44,0x0f,0xb7,0x54,0x24,0x10]
-; X32-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # encoding: [0x67,0x0f,0xb7,0x44,0x24,0x08]
+; X32-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # encoding: [0x67,0x0f,0xb7,0x44,0x24,0x10]
+; X32-SSE-NEXT:    movzwl {{[0-9]+}}(%esp), %r10d # encoding: [0x67,0x44,0x0f,0xb7,0x54,0x24,0x08]
 ; X32-SSE-NEXT:    movd %edi, %xmm0 # encoding: [0x66,0x0f,0x6e,0xc7]
 ; X32-SSE-NEXT:    movd %esi, %xmm1 # encoding: [0x66,0x0f,0x6e,0xce]
 ; X32-SSE-NEXT:    punpcklwd %xmm0, %xmm1 # encoding: [0x66,0x0f,0x61,0xc8]
@@ -3909,8 +3909,8 @@ define <2 x i64> @test_mm_set_epi16(i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4,
 ; X32-SSE-NEXT:    movd %r9d, %xmm1 # encoding: [0x66,0x41,0x0f,0x6e,0xc9]
 ; X32-SSE-NEXT:    punpcklwd %xmm0, %xmm1 # encoding: [0x66,0x0f,0x61,0xc8]
 ; X32-SSE-NEXT:    # xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
-; X32-SSE-NEXT:    movd %eax, %xmm3 # encoding: [0x66,0x0f,0x6e,0xd8]
-; X32-SSE-NEXT:    movd %r10d, %xmm0 # encoding: [0x66,0x41,0x0f,0x6e,0xc2]
+; X32-SSE-NEXT:    movd %r10d, %xmm3 # encoding: [0x66,0x41,0x0f,0x6e,0xda]
+; X32-SSE-NEXT:    movd %eax, %xmm0 # encoding: [0x66,0x0f,0x6e,0xc0]
 ; X32-SSE-NEXT:    punpcklwd %xmm3, %xmm0 # encoding: [0x66,0x0f,0x61,0xc3]
 ; X32-SSE-NEXT:    # xmm0 = xmm0[0],xmm3[0],xmm0[1],xmm3[1],xmm0[2],xmm3[2],xmm0[3],xmm3[3]
 ; X32-SSE-NEXT:    punpckldq %xmm1, %xmm0 # encoding: [0x66,0x0f,0x62,0xc1]
@@ -5282,30 +5282,30 @@ define <2 x i64> @test_mm_setr_epi16(i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4
 ;
 ; X64-AVX1-LABEL: test_mm_setr_epi16:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    movzwl {{[0-9]+}}(%rsp), %r10d # encoding: [0x44,0x0f,0xb7,0x54,0x24,0x10]
-; X64-AVX1-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # encoding: [0x0f,0xb7,0x44,0x24,0x08]
+; X64-AVX1-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # encoding: [0x0f,0xb7,0x44,0x24,0x10]
+; X64-AVX1-NEXT:    movzwl {{[0-9]+}}(%rsp), %r10d # encoding: [0x44,0x0f,0xb7,0x54,0x24,0x08]
 ; X64-AVX1-NEXT:    vmovd %edi, %xmm0 # encoding: [0xc5,0xf9,0x6e,0xc7]
 ; X64-AVX1-NEXT:    vpinsrw $1, %esi, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc4,0xc6,0x01]
 ; X64-AVX1-NEXT:    vpinsrw $2, %edx, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc4,0xc2,0x02]
 ; X64-AVX1-NEXT:    vpinsrw $3, %ecx, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc4,0xc1,0x03]
 ; X64-AVX1-NEXT:    vpinsrw $4, %r8d, %xmm0, %xmm0 # encoding: [0xc4,0xc1,0x79,0xc4,0xc0,0x04]
 ; X64-AVX1-NEXT:    vpinsrw $5, %r9d, %xmm0, %xmm0 # encoding: [0xc4,0xc1,0x79,0xc4,0xc1,0x05]
-; X64-AVX1-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc4,0xc0,0x06]
-; X64-AVX1-NEXT:    vpinsrw $7, %r10d, %xmm0, %xmm0 # encoding: [0xc4,0xc1,0x79,0xc4,0xc2,0x07]
+; X64-AVX1-NEXT:    vpinsrw $6, %r10d, %xmm0, %xmm0 # encoding: [0xc4,0xc1,0x79,0xc4,0xc2,0x06]
+; X64-AVX1-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc4,0xc0,0x07]
 ; X64-AVX1-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX512-LABEL: test_mm_setr_epi16:
 ; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    movzwl {{[0-9]+}}(%rsp), %r10d # encoding: [0x44,0x0f,0xb7,0x54,0x24,0x10]
-; X64-AVX512-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # encoding: [0x0f,0xb7,0x44,0x24,0x08]
+; X64-AVX512-NEXT:    movzwl {{[0-9]+}}(%rsp), %eax # encoding: [0x0f,0xb7,0x44,0x24,0x10]
+; X64-AVX512-NEXT:    movzwl {{[0-9]+}}(%rsp), %r10d # encoding: [0x44,0x0f,0xb7,0x54,0x24,0x08]
 ; X64-AVX512-NEXT:    vmovd %edi, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc7]
 ; X64-AVX512-NEXT:    vpinsrw $1, %esi, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc4,0xc6,0x01]
 ; X64-AVX512-NEXT:    vpinsrw $2, %edx, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc4,0xc2,0x02]
 ; X64-AVX512-NEXT:    vpinsrw $3, %ecx, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc4,0xc1,0x03]
 ; X64-AVX512-NEXT:    vpinsrw $4, %r8d, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xc1,0x79,0xc4,0xc0,0x04]
 ; X64-AVX512-NEXT:    vpinsrw $5, %r9d, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xc1,0x79,0xc4,0xc1,0x05]
-; X64-AVX512-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc4,0xc0,0x06]
-; X64-AVX512-NEXT:    vpinsrw $7, %r10d, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xc1,0x79,0xc4,0xc2,0x07]
+; X64-AVX512-NEXT:    vpinsrw $6, %r10d, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xc1,0x79,0xc4,0xc2,0x06]
+; X64-AVX512-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc4,0xc0,0x07]
 ; X64-AVX512-NEXT:    retq # encoding: [0xc3]
 ;
 ; X32-SSE-LABEL: test_mm_setr_epi16:
@@ -5338,30 +5338,30 @@ define <2 x i64> @test_mm_setr_epi16(i16 %a0, i16 %a1, i16 %a2, i16 %a3, i16 %a4
 ;
 ; X32-AVX1-LABEL: test_mm_setr_epi16:
 ; X32-AVX1:       # %bb.0:
-; X32-AVX1-NEXT:    movzwl {{[0-9]+}}(%esp), %r10d # encoding: [0x67,0x44,0x0f,0xb7,0x54,0x24,0x10]
-; X32-AVX1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # encoding: [0x67,0x0f,0xb7,0x44,0x24,0x08]
+; X32-AVX1-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # encoding: [0x67,0x0f,0xb7,0x44,0x24,0x10]
+; X32-AVX1-NEXT:    movzwl {{[0-9]+}}(%esp), %r10d # encoding: [0x67,0x44,0x0f,0xb7,0x54,0x24,0x08]
 ; X32-AVX1-NEXT:    vmovd %edi, %xmm0 # encoding: [0xc5,0xf9,0x6e,0xc7]
 ; X32-AVX1-NEXT:    vpinsrw $1, %esi, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc4,0xc6,0x01]
 ; X32-AVX1-NEXT:    vpinsrw $2, %edx, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc4,0xc2,0x02]
 ; X32-AVX1-NEXT:    vpinsrw $3, %ecx, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc4,0xc1,0x03]
 ; X32-AVX1-NEXT:    vpinsrw $4, %r8d, %xmm0, %xmm0 # encoding: [0xc4,0xc1,0x79,0xc4,0xc0,0x04]
 ; X32-AVX1-NEXT:    vpinsrw $5, %r9d, %xmm0, %xmm0 # encoding: [0xc4,0xc1,0x79,0xc4,0xc1,0x05]
-; X32-AVX1-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc4,0xc0,0x06]
-; X32-AVX1-NEXT:    vpinsrw $7, %r10d, %xmm0, %xmm0 # encoding: [0xc4,0xc1,0x79,0xc4,0xc2,0x07]
+; X32-AVX1-NEXT:    vpinsrw $6, %r10d, %xmm0, %xmm0 # encoding: [0xc4,0xc1,0x79,0xc4,0xc2,0x06]
+; X32-AVX1-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0 # encoding: [0xc5,0xf9,0xc4,0xc0,0x07]
 ; X32-AVX1-NEXT:    retq # encoding: [0xc3]
 ;
 ; X32-AVX512-LABEL: test_mm_setr_epi16:
 ; X32-AVX512:       # %bb.0:
-; X32-AVX512-NEXT:    movzwl {{[0-9]+}}(%esp), %r10d # encoding: [0x67,0x44,0x0f,0xb7,0x54,0x24,0x10]
-; X32-AVX512-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # encoding: [0x67,0x0f,0xb7,0x44,0x24,0x08]
+; X32-AVX512-NEXT:    movzwl {{[0-9]+}}(%esp), %eax # encoding: [0x67,0x0f,0xb7,0x44,0x24,0x10]
+; X32-AVX512-NEXT:    movzwl {{[0-9]+}}(%esp), %r10d # encoding: [0x67,0x44,0x0f,0xb7,0x54,0x24,0x08]
 ; X32-AVX512-NEXT:    vmovd %edi, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6e,0xc7]
 ; X32-AVX512-NEXT:    vpinsrw $1, %esi, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc4,0xc6,0x01]
 ; X32-AVX512-NEXT:    vpinsrw $2, %edx, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc4,0xc2,0x02]
 ; X32-AVX512-NEXT:    vpinsrw $3, %ecx, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc4,0xc1,0x03]
 ; X32-AVX512-NEXT:    vpinsrw $4, %r8d, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xc1,0x79,0xc4,0xc0,0x04]
 ; X32-AVX512-NEXT:    vpinsrw $5, %r9d, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xc1,0x79,0xc4,0xc1,0x05]
-; X32-AVX512-NEXT:    vpinsrw $6, %eax, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc4,0xc0,0x06]
-; X32-AVX512-NEXT:    vpinsrw $7, %r10d, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xc1,0x79,0xc4,0xc2,0x07]
+; X32-AVX512-NEXT:    vpinsrw $6, %r10d, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xc1,0x79,0xc4,0xc2,0x06]
+; X32-AVX512-NEXT:    vpinsrw $7, %eax, %xmm0, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0xc4,0xc0,0x07]
 ; X32-AVX512-NEXT:    retq # encoding: [0xc3]
   %res0  = insertelement <8 x i16> undef, i16 %a0, i32 0
   %res1  = insertelement <8 x i16> %res0, i16 %a1, i32 1

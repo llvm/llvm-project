@@ -39,6 +39,26 @@
 #error "wrong value for __cpp_size_t_suffix"
 #endif
 
+#if check(if_consteval, 0, 0, 0, 0, 0, 202106)
+#error "wrong value for __cpp_if_consteval"
+#endif
+
+#if check(multidimensional_subscript, 0, 0, 0, 0, 0, 202110)
+#error "wrong value for __cpp_multidimensional_subscript"
+#endif
+
+#if check(static_call_operator, 0, 202207, 202207, 202207, 202207, 202207)
+#error "wrong value for __cpp_static_call_operator"
+#endif
+
+#if check(named_character_escapes, 202207, 202207, 202207, 202207, 202207, 202207)
+#error "wrong value for __cpp_named_character_escapes"
+#endif
+
+#if check(explicit_this_parameter, 0, 0, 0, 0, 0, 0)
+#error "wrong value for __cpp_explicit_this_parameter"
+#endif
+
 // --- C++20 features ---
 
 #if check(aggregate_paren_init, 0, 0, 0, 0, 0, 0)

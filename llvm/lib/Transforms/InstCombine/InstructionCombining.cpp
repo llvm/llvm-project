@@ -4239,7 +4239,9 @@ bool InstCombinerImpl::run() {
     // Return the UserBlock if successful.
     auto getOptionalSinkBlockForInst =
         [this](Instruction *I) -> Optional<BasicBlock *> {
-      if (!EnableCodeSinking)
+      if (EnableCodeSinking.getNumOccurrences()
+              ? !EnableCodeSinking
+              : I->getFunction()->hasFnAttribute("disable-code-sinking"))
         return None;
 
       BasicBlock *BB = I->getParent();

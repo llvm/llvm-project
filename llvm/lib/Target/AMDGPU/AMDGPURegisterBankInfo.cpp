@@ -2614,69 +2614,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     break;
   }
-  case AMDGPU::G_BUILD_VECTOR:
-  case AMDGPU::G_BUILD_VECTOR_TRUNC: {
-    Register DstReg = MI.getOperand(0).getReg();
-    LLT DstTy = MRI.getType(DstReg);
-    if (DstTy != LLT::fixed_vector(2, 16))
-      break;
-
-    assert(MI.getNumOperands() == 3 && OpdMapper.getVRegs(0).empty());
-    substituteSimpleCopyRegs(OpdMapper, 1);
-    substituteSimpleCopyRegs(OpdMapper, 2);
-
-    const RegisterBank *DstBank =
-      OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
-    if (DstBank == &AMDGPU::SGPRRegBank)
-      break; // Can use S_PACK_* instructions.
-
-    MachineIRBuilder B(MI);
-
-    Register Lo = MI.getOperand(1).getReg();
-    Register Hi = MI.getOperand(2).getReg();
-    const LLT S32 = LLT::scalar(32);
-
-    const RegisterBank *BankLo =
-      OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
-    const RegisterBank *BankHi =
-      OpdMapper.getInstrMapping().getOperandMapping(2).BreakDown[0].RegBank;
-
-    Register ZextLo;
-    Register ShiftHi;
-
-    if (Opc == AMDGPU::G_BUILD_VECTOR) {
-      ZextLo = B.buildZExt(S32, Lo).getReg(0);
-      MRI.setRegBank(ZextLo, *BankLo);
-
-      Register ZextHi = B.buildZExt(S32, Hi).getReg(0);
-      MRI.setRegBank(ZextHi, *BankHi);
-
-      auto ShiftAmt = B.buildConstant(S32, 16);
-      MRI.setRegBank(ShiftAmt.getReg(0), *BankHi);
-
-      ShiftHi = B.buildShl(S32, ZextHi, ShiftAmt).getReg(0);
-      MRI.setRegBank(ShiftHi, *BankHi);
-    } else {
-      Register MaskLo = B.buildConstant(S32, 0xffff).getReg(0);
-      MRI.setRegBank(MaskLo, *BankLo);
-
-      auto ShiftAmt = B.buildConstant(S32, 16);
-      MRI.setRegBank(ShiftAmt.getReg(0), *BankHi);
-
-      ShiftHi = B.buildShl(S32, Hi, ShiftAmt).getReg(0);
-      MRI.setRegBank(ShiftHi, *BankHi);
-
-      ZextLo = B.buildAnd(S32, Lo, MaskLo).getReg(0);
-      MRI.setRegBank(ZextLo, *BankLo);
-    }
-
-    auto Or = B.buildOr(S32, ZextLo, ShiftHi);
-    MRI.setRegBank(Or.getReg(0), *DstBank);
-
-    B.buildBitcast(DstReg, Or);
-    MI.eraseFromParent();
-    return;
-  }
   case AMDGPU::G_EXTRACT_VECTOR_ELT: {
     SmallVector<Register, 2> DstRegs(OpdMapper.getVRegs(0));
 

@@ -642,43 +642,43 @@ __jcvt(double __a) {
 /* Armv8.5-A FP rounding intrinsics */
 #if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE && defined(__ARM_FEATURE_FRINT)
 static __inline__ float __attribute__((__always_inline__, __nodebug__))
-__frint32zf(float __a) {
-  return __builtin_arm_frint32zf(__a);
+__rint32zf(float __a) {
+  return __builtin_arm_rint32zf(__a);
 }
 
 static __inline__ double __attribute__((__always_inline__, __nodebug__))
-__frint32z(double __a) {
-  return __builtin_arm_frint32z(__a);
+__rint32z(double __a) {
+  return __builtin_arm_rint32z(__a);
 }
 
 static __inline__ float __attribute__((__always_inline__, __nodebug__))
-__frint64zf(float __a) {
-  return __builtin_arm_frint64zf(__a);
+__rint64zf(float __a) {
+  return __builtin_arm_rint64zf(__a);
 }
 
 static __inline__ double __attribute__((__always_inline__, __nodebug__))
-__frint64z(double __a) {
-  return __builtin_arm_frint64z(__a);
+__rint64z(double __a) {
+  return __builtin_arm_rint64z(__a);
 }
 
 static __inline__ float __attribute__((__always_inline__, __nodebug__))
-__frint32xf(float __a) {
-  return __builtin_arm_frint32xf(__a);
+__rint32xf(float __a) {
+  return __builtin_arm_rint32xf(__a);
 }
 
 static __inline__ double __attribute__((__always_inline__, __nodebug__))
-__frint32x(double __a) {
-  return __builtin_arm_frint32x(__a);
+__rint32x(double __a) {
+  return __builtin_arm_rint32x(__a);
 }
 
 static __inline__ float __attribute__((__always_inline__, __nodebug__))
-__frint64xf(float __a) {
-  return __builtin_arm_frint64xf(__a);
+__rint64xf(float __a) {
+  return __builtin_arm_rint64xf(__a);
 }
 
 static __inline__ double __attribute__((__always_inline__, __nodebug__))
-__frint64x(double __a) {
-  return __builtin_arm_frint64x(__a);
+__rint64x(double __a) {
+  return __builtin_arm_rint64x(__a);
 }
 #endif
 

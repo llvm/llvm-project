@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -45,9 +45,9 @@ struct TensorBufferizePass
   }
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<bufferization::BufferizationDialect, memref::MemRefDialect,
-                    tensor::TensorDialect, scf::SCFDialect,
-                    arith::ArithmeticDialect>();
+    registry
+        .insert<bufferization::BufferizationDialect, memref::MemRefDialect,
+                tensor::TensorDialect, scf::SCFDialect, arith::ArithDialect>();
     tensor::registerBufferizableOpInterfaceExternalModels(registry);
   }
 };

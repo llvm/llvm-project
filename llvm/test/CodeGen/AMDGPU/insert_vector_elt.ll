@@ -382,18 +382,10 @@ define <4 x float> @insertelement_to_sgpr() nounwind {
 ; GCN-LABEL: insertelement_to_sgpr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_load_dwordx4 s[12:15], s[4:5], 0x0
+; GCN-NEXT:    s_load_dwordx4 s[4:7], s[4:5], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s12, 0
-; GCN-NEXT:    s_mov_b32 s4, s12
-; GCN-NEXT:    s_mov_b32 s5, s12
-; GCN-NEXT:    s_mov_b32 s6, s12
-; GCN-NEXT:    s_mov_b32 s7, s12
-; GCN-NEXT:    s_mov_b32 s8, s12
-; GCN-NEXT:    s_mov_b32 s9, s12
-; GCN-NEXT:    s_mov_b32 s10, s12
-; GCN-NEXT:    s_mov_b32 s11, s12
-; GCN-NEXT:    image_gather4_lz v[0:3], v[0:1], s[4:11], s[12:15] dmask:0x1
+; GCN-NEXT:    s_mov_b32 s4, 0
+; GCN-NEXT:    image_gather4_lz v[0:3], v[0:1], s[4:11], s[4:7] dmask:0x1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %tmp = load <4 x i32>, <4 x i32> addrspace(4)* undef

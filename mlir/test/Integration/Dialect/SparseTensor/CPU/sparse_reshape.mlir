@@ -120,6 +120,11 @@ module {
     return %0 : tensor<?x2x?xf64, #Sparse3dTensor>
   }
 
+  func.func @expand_sparse2sparse_dyn(%arg0: tensor<?x?xf64, #SparseMatrix>) -> tensor<?x2x?xf64, #Sparse3dTensor> {
+    %0 = tensor.expand_shape %arg0 [[0], [1, 2]] : tensor<?x?xf64, #SparseMatrix> into tensor<?x2x?xf64, #Sparse3dTensor>
+    return %0 : tensor<?x2x?xf64, #Sparse3dTensor>
+  }
+
   func.func @collapse_dense_dyn(%arg0: tensor<?x?x?x?xf64>) -> tensor<?x?xf64> {
     %0 = tensor.collapse_shape %arg0 [[0, 1], [2, 3]] : tensor<?x?x?x?xf64> into tensor<?x?xf64>
     return %0 : tensor<?x?xf64>
@@ -132,6 +137,11 @@ module {
 
   func.func @collapse_to_sparse_dyn(%arg0: tensor<?x?x?x?xf64>) -> tensor<?x?xf64, #SparseMatrix> {
     %0 = tensor.collapse_shape %arg0 [[0, 1], [2, 3]] : tensor<?x?x?x?xf64> into tensor<?x?xf64, #SparseMatrix>
+    return %0 : tensor<?x?xf64, #SparseMatrix>
+  }
+
+  func.func @collapse_sparse2sparse_dyn(%arg0: tensor<?x?x?x?xf64, #Sparse4dTensor>) -> tensor<?x?xf64, #SparseMatrix> {
+    %0 = tensor.collapse_shape %arg0 [[0, 1], [2, 3]] : tensor<?x?x?x?xf64, #Sparse4dTensor> into tensor<?x?xf64, #SparseMatrix>
     return %0 : tensor<?x?xf64, #SparseMatrix>
   }
 
@@ -177,6 +187,7 @@ module {
     %expand8 = call @expand_dense_dyn(%dm) : (tensor<?x?xf64>) -> tensor<?x2x?xf64>
     %expand9 = call @expand_from_sparse_dyn(%sdm) : (tensor<?x?xf64, #SparseMatrix>) -> tensor<?x2x?xf64>
     %expand10 = call @expand_to_sparse_dyn(%dm) : (tensor<?x?xf64>) -> tensor<?x2x?xf64, #Sparse3dTensor>
+    %expand11 = call @expand_sparse2sparse_dyn(%sdm) : (tensor<?x?xf64, #SparseMatrix>) -> tensor<?x2x?xf64, #Sparse3dTensor>
 
     %collapse0 = call @collapse_dense(%m) : (tensor<3x4xf64>) -> tensor<12xf64>
     %collapse1 = call @collapse_from_sparse(%sm) : (tensor<3x4xf64, #SparseMatrix>) -> tensor<12xf64>
@@ -189,6 +200,7 @@ module {
     %collapse8 = call @collapse_dense_dyn(%dn) : (tensor<?x?x?x?xf64>) -> tensor<?x?xf64>
     %collapse9 = call @collapse_from_sparse_dyn(%sdn) : (tensor<?x?x?x?xf64, #Sparse4dTensor>) -> tensor<?x?xf64>
     %collapse10 = call @collapse_to_sparse_dyn(%dn) : (tensor<?x?x?x?xf64>) -> tensor<?x?xf64, #SparseMatrix>
+    %collapse11 = call @collapse_sparse2sparse_dyn(%sdn) : (tensor<?x?x?x?xf64, #Sparse4dTensor>) -> tensor<?x?xf64, #SparseMatrix>
 
     //
     // Verify results of expand
@@ -203,6 +215,7 @@ module {
     // CHECK-NEXT: ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, -1, -1, -1, -1 )
     // CHECK-NEXT: ( ( ( 1.1, 1.2 ), ( 1.3, 1.4 ) ), ( ( 2.1, 2.2 ), ( 2.3, 2.4 ) ), ( ( 3.1, 3.2 ), ( 3.3, 3.4 ) ) )
     // CHECK-NEXT: ( ( ( 1.1, 1.2 ), ( 1.3, 1.4 ) ), ( ( 2.1, 2.2 ), ( 2.3, 2.4 ) ), ( ( 3.1, 3.2 ), ( 3.3, 3.4 ) ) )
+    // CHECK-NEXT: ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, -1, -1, -1, -1 )
     // CHECK-NEXT: ( 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, -1, -1, -1, -1 )
     //
 
@@ -235,6 +248,10 @@ module {
     %a10 = sparse_tensor.values %expand10 : tensor<?x2x?xf64, #Sparse3dTensor> to memref<?xf64>
     %m10 = vector.transfer_read %a10[%c0], %df: memref<?xf64>, vector<16xf64>
     vector.print %m10 : vector<16xf64>
+    %a11 = sparse_tensor.values %expand11 : tensor<?x2x?xf64, #Sparse3dTensor> to memref<?xf64>
+    %m11 = vector.transfer_read %a11[%c0], %df: memref<?xf64>, vector<16xf64>
+    vector.print %m11 : vector<16xf64>
+
 
     // 
     // Verify results of collapse
@@ -249,6 +266,7 @@ module {
     // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 26, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, -1, -1, -1, -1 )
     // CHECK-NEXT: ( ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ), ( 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 ), ( 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 ), ( 31, 32, 33, 34, 35, 36, 37, 38, 39, 40 ), ( 41, 42, 43, 44, 45, 26, 47, 48, 49, 50 ), ( 51, 52, 53, 54, 55, 56, 57, 58, 59, 60 ) )
     // CHECK-NEXT: ( ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 ), ( 11, 12, 13, 14, 15, 16, 17, 18, 19, 20 ), ( 21, 22, 23, 24, 25, 26, 27, 28, 29, 30 ), ( 31, 32, 33, 34, 35, 36, 37, 38, 39, 40 ), ( 41, 42, 43, 44, 45, 26, 47, 48, 49, 50 ), ( 51, 52, 53, 54, 55, 56, 57, 58, 59, 60 ) )
+    // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 26, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, -1, -1, -1, -1 )
     // CHECK-NEXT: ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 26, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, -1, -1, -1, -1 )
     //
 
@@ -281,6 +299,10 @@ module {
     %b10 = sparse_tensor.values %collapse10 : tensor<?x?xf64, #SparseMatrix> to memref<?xf64>
     %v10 = vector.transfer_read %b10[%c0], %df: memref<?xf64>, vector<64xf64>
     vector.print %v10 : vector<64xf64>
+    %b11 = sparse_tensor.values %collapse11 : tensor<?x?xf64, #SparseMatrix> to memref<?xf64>
+    %v11 = vector.transfer_read %b11[%c0], %df: memref<?xf64>, vector<64xf64>
+    vector.print %v11 : vector<64xf64>
+
 
     // Release sparse resources.
     bufferization.dealloc_tensor %sv : tensor<12xf64, #SparseVector>
@@ -293,11 +315,13 @@ module {
     bufferization.dealloc_tensor %expand6 : tensor<3x2x2xf64, #Sparse3dTensor>
     bufferization.dealloc_tensor %expand7 : tensor<3x2x2xf64, #Sparse3dTensor>
     bufferization.dealloc_tensor %expand10 : tensor<?x2x?xf64, #Sparse3dTensor>
+    bufferization.dealloc_tensor %expand11 : tensor<?x2x?xf64, #Sparse3dTensor>
     bufferization.dealloc_tensor %collapse2 : tensor<12xf64, #SparseVector>
     bufferization.dealloc_tensor %collapse3 : tensor<12xf64, #SparseVector>
     bufferization.dealloc_tensor %collapse6 : tensor<6x10xf64, #SparseMatrix>
     bufferization.dealloc_tensor %collapse7 : tensor<6x10xf64, #SparseMatrix>
     bufferization.dealloc_tensor %collapse10 : tensor<?x?xf64, #SparseMatrix>
+    bufferization.dealloc_tensor %collapse11 : tensor<?x?xf64, #SparseMatrix>
 
     // Release dense resources.
     bufferization.dealloc_tensor %expand1 : tensor<3x4xf64>

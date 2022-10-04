@@ -5067,8 +5067,9 @@ struct AAPointerInfo : public AbstractAttribute {
              OAS.getOffset() < getOffset() + getSize();
     }
 
-    /// Constant used to represent unknown offset or sizes.
-    static constexpr int64_t Unknown = 1 << 31;
+    /// Constants used to represent special offsets or sizes.
+    static constexpr int64_t Unassigned = -1;
+    static constexpr int64_t Unknown = -2;
   };
 
   /// Call \p CB on all accesses that might interfere with \p OAS and return

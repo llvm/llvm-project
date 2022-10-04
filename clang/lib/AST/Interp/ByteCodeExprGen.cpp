@@ -281,7 +281,29 @@ bool ByteCodeExprGen<Emitter>::VisitConstantExpr(const ConstantExpr *E) {
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
+bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
+    const UnaryExprOrTypeTraitExpr *E) {
+
+  if (E->getKind() == UETT_SizeOf) {
+    QualType ArgType = E->getTypeOfArgument();
+
+    CharUnits Size;
+    if (ArgType->isVoidType() || ArgType->isFunctionType())
+      Size = CharUnits::One();
+    else {
+      if (ArgType->isDependentType() || !ArgType->isConstantSizeType())
+        return false;
+
+      Size = Ctx.getASTContext().getTypeSizeInChars(ArgType);
+    }
+
+    return this->emitConst(E, Size.getQuantity());
+  }
+
+  return false;
+}
+
+template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   OptionScope<Emitter> Scope(this, /*NewDiscardResult=*/true);
   return this->Visit(E);
 }
@@ -513,18 +535,22 @@ ByteCodeExprGen<Emitter>::allocateLocal(DeclTy &&Src, bool IsExtended) {
   QualType Ty;
 
   const ValueDecl *Key = nullptr;
+  const Expr *Init = nullptr;
   bool IsTemporary = false;
-  if (auto *VD = dyn_cast_or_null<ValueDecl>(Src.dyn_cast<const Decl *>())) {
+  if (auto *VD = dyn_cast_if_present<ValueDecl>(Src.dyn_cast<const Decl *>())) {
     Key = VD;
     Ty = VD->getType();
+
+    if (const auto *VarD = dyn_cast<VarDecl>(VD))
+      Init = VarD->getInit();
   }
   if (auto *E = Src.dyn_cast<const Expr *>()) {
     IsTemporary = true;
     Ty = E->getType();
   }
 
-  Descriptor *D = P.createDescriptor(Src, Ty.getTypePtr(),
-                                     Ty.isConstQualified(), IsTemporary);
+  Descriptor *D = P.createDescriptor(
+      Src, Ty.getTypePtr(), Ty.isConstQualified(), IsTemporary, false, Init);
   if (!D)
     return {};
 
@@ -657,7 +683,7 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::visitDecl(const VarDecl *VD) {
   const Expr *Init = VD->getInit();
 
-  if (Optional<unsigned> I = P.createGlobal(VD)) {
+  if (Optional<unsigned> I = P.createGlobal(VD, Init)) {
     if (Optional<PrimType> T = classify(VD->getType())) {
       {
         // Primitive declarations - compute the value and set it.
@@ -835,6 +861,11 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
 
       FoundDecl = true;
     }
+  } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(Decl)) {
+    PrimType T = *classify(ECD->getType());
+
+    return this->emitConst(T, getIntWidth(ECD->getType()), ECD->getInitVal(),
+                           E);
   }
 
   // References are implemented using pointers, so when we get here,

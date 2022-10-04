@@ -591,7 +591,7 @@ void PatternLowering::generate(SuccessNode *successNode, Block *&currentBlock) {
   builder.setInsertionPointToEnd(currentBlock);
   builder.create<pdl_interp::RecordMatchOp>(
       pattern.getLoc(), mappedMatchValues, locOps.getArrayRef(),
-      rewriterFuncRef, rootKindAttr, generatedOpsAttr, pattern.benefitAttr(),
+      rewriterFuncRef, rootKindAttr, generatedOpsAttr, pattern.getBenefitAttr(),
       failureBlockStack.back());
 }
 
@@ -616,7 +616,7 @@ SymbolRefAttr PatternLowering::generateRewriter(
     // Prefer materializing constants directly when possible.
     Operation *oldOp = oldValue.getDefiningOp();
     if (pdl::AttributeOp attrOp = dyn_cast<pdl::AttributeOp>(oldOp)) {
-      if (Attribute value = attrOp.valueAttr()) {
+      if (Attribute value = attrOp.getValueAttr()) {
         return newValue = builder.create<pdl_interp::CreateAttributeOp>(
                    attrOp.getLoc(), value);
       }
@@ -643,11 +643,12 @@ SymbolRefAttr PatternLowering::generateRewriter(
   // If this is a custom rewriter, simply dispatch to the registered rewrite
   // method.
   pdl::RewriteOp rewriter = pattern.getRewriter();
-  if (StringAttr rewriteName = rewriter.nameAttr()) {
+  if (StringAttr rewriteName = rewriter.getNameAttr()) {
     SmallVector<Value> args;
-    if (rewriter.root())
-      args.push_back(mapRewriteValue(rewriter.root()));
-    auto mappedArgs = llvm::map_range(rewriter.externalArgs(), mapRewriteValue);
+    if (rewriter.getRoot())
+      args.push_back(mapRewriteValue(rewriter.getRoot()));
+    auto mappedArgs =
+        llvm::map_range(rewriter.getExternalArgs(), mapRewriteValue);
     args.append(mappedArgs.begin(), mappedArgs.end());
     builder.create<pdl_interp::ApplyRewriteOp>(
         rewriter.getLoc(), /*resultTypes=*/TypeRange(), rewriteName, args);
@@ -679,10 +680,10 @@ void PatternLowering::generateRewriter(
     pdl::ApplyNativeRewriteOp rewriteOp, DenseMap<Value, Value> &rewriteValues,
     function_ref<Value(Value)> mapRewriteValue) {
   SmallVector<Value, 2> arguments;
-  for (Value argument : rewriteOp.args())
+  for (Value argument : rewriteOp.getArgs())
     arguments.push_back(mapRewriteValue(argument));
   auto interpOp = builder.create<pdl_interp::ApplyRewriteOp>(
-      rewriteOp.getLoc(), rewriteOp.getResultTypes(), rewriteOp.nameAttr(),
+      rewriteOp.getLoc(), rewriteOp.getResultTypes(), rewriteOp.getNameAttr(),
       arguments);
   for (auto it : llvm::zip(rewriteOp.getResults(), interpOp.getResults()))
     rewriteValues[std::get<0>(it)] = std::get<1>(it);
@@ -692,7 +693,7 @@ void PatternLowering::generateRewriter(
     pdl::AttributeOp attrOp, DenseMap<Value, Value> &rewriteValues,
     function_ref<Value(Value)> mapRewriteValue) {
   Value newAttr = builder.create<pdl_interp::CreateAttributeOp>(
-      attrOp.getLoc(), attrOp.valueAttr());
+      attrOp.getLoc(), attrOp.getValueAttr());
   rewriteValues[attrOp] = newAttr;
 }
 
@@ -724,7 +725,7 @@ void PatternLowering::generateRewriter(
   Value createdOp = builder.create<pdl_interp::CreateOperationOp>(
       loc, *operationOp.getOpName(), types, hasInferredResultTypes, operands,
       attributes, operationOp.getAttributeValueNames());
-  rewriteValues[operationOp.op()] = createdOp;
+  rewriteValues[operationOp.getOp()] = createdOp;
 
   // Generate accesses for any results that have their types constrained.
   // Handle the case where there is a single range representing all of the
@@ -771,7 +772,7 @@ void PatternLowering::generateRewriter(
   // If the replacement was another operation, get its results. `pdl` allows
   // for using an operation for simplicitly, but the interpreter isn't as
   // user facing.
-  if (Value replOp = replaceOp.replOperation()) {
+  if (Value replOp = replaceOp.getReplOperation()) {
     // Don't use replace if we know the replaced operation has no results.
     auto opOp = replaceOp.getOpValue().getDefiningOp<pdl::OperationOp>();
     if (!opOp || !opOp.getTypeValues().empty()) {
@@ -779,7 +780,7 @@ void PatternLowering::generateRewriter(
           replOp.getLoc(), mapRewriteValue(replOp)));
     }
   } else {
-    for (Value operand : replaceOp.replValues())
+    for (Value operand : replaceOp.getReplValues())
       replOperands.push_back(mapRewriteValue(operand));
   }
 
@@ -800,15 +801,15 @@ void PatternLowering::generateRewriter(
     function_ref<Value(Value)> mapRewriteValue) {
   rewriteValues[resultOp] = builder.create<pdl_interp::GetResultOp>(
       resultOp.getLoc(), builder.getType<pdl::ValueType>(),
-      mapRewriteValue(resultOp.parent()), resultOp.index());
+      mapRewriteValue(resultOp.getParent()), resultOp.getIndex());
 }
 
 void PatternLowering::generateRewriter(
     pdl::ResultsOp resultOp, DenseMap<Value, Value> &rewriteValues,
     function_ref<Value(Value)> mapRewriteValue) {
   rewriteValues[resultOp] = builder.create<pdl_interp::GetResultsOp>(
-      resultOp.getLoc(), resultOp.getType(), mapRewriteValue(resultOp.parent()),
-      resultOp.index());
+      resultOp.getLoc(), resultOp.getType(),
+      mapRewriteValue(resultOp.getParent()), resultOp.getIndex());
 }
 
 void PatternLowering::generateRewriter(
@@ -878,7 +879,7 @@ void PatternLowering::generateOperationResultTypeRewriter(
 
   // Look for an operation that was replaced by `op`. The result types will be
   // inferred from the results that were replaced.
-  for (OpOperand &use : op.op().getUses()) {
+  for (OpOperand &use : op.getOp().getUses()) {
     // Check that the use corresponds to a ReplaceOp and that it is the
     // replacement value, not the operation being replaced.
     pdl::ReplaceOp replOpUser = dyn_cast<pdl::ReplaceOp>(use.getOwner());
@@ -907,9 +908,9 @@ void PatternLowering::generateOperationResultTypeRewriter(
   if (resultTypeValues.empty())
     return;
 
-  // The verifier asserts that the result types of each pdl.operation can be
+  // The verifier asserts that the result types of each pdl.getOperation can be
   // inferred. If we reach here, there is a bug either in the logic above or
-  // in the verifier for pdl.operation.
+  // in the verifier for pdl.getOperation.
   op->emitOpError() << "unable to infer result type for operation";
   llvm_unreachable("unable to infer result type for operation");
 }

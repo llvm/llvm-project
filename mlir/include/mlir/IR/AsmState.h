@@ -456,16 +456,21 @@ private:
 class ParserConfig {
 public:
   /// Construct a parser configuration with the given context.
+  /// `verifyAfterParse` indicates if the IR should be verified after parsing.
   /// `fallbackResourceMap` is an optional fallback handler that can be used to
   /// parse external resources not explicitly handled by another parser.
-  ParserConfig(MLIRContext *context,
+  ParserConfig(MLIRContext *context, bool verifyAfterParse = true,
                FallbackAsmResourceMap *fallbackResourceMap = nullptr)
-      : context(context), fallbackResourceMap(fallbackResourceMap) {
+      : context(context), verifyAfterParse(verifyAfterParse),
+        fallbackResourceMap(fallbackResourceMap) {
     assert(context && "expected valid MLIR context");
   }
 
   /// Return the MLIRContext to be used when parsing.
   MLIRContext *getContext() const { return context; }
+
+  /// Returns if the parser should verify the IR after parsing.
+  bool shouldVerifyAfterParse() const { return verifyAfterParse; }
 
   /// Return the resource parser registered to the given name, or nullptr if no
   /// parser with `name` is registered.
@@ -498,6 +503,7 @@ public:
 
 private:
   MLIRContext *context;
+  bool verifyAfterParse;
   DenseMap<StringRef, std::unique_ptr<AsmResourceParser>> resourceParsers;
   FallbackAsmResourceMap *fallbackResourceMap;
 };

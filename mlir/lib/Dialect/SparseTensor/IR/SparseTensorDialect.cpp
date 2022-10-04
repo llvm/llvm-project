@@ -8,6 +8,7 @@
 
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
@@ -215,11 +216,141 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// Convenience Methods.
+//===----------------------------------------------------------------------===//
+
 SparseTensorEncodingAttr
 mlir::sparse_tensor::getSparseTensorEncoding(Type type) {
   if (auto ttp = type.dyn_cast<RankedTensorType>())
     return ttp.getEncoding().dyn_cast_or_null<SparseTensorEncodingAttr>();
   return nullptr;
+}
+
+bool mlir::sparse_tensor::isDenseDim(
+    SparseTensorEncodingAttr::DimLevelType dltp) {
+  return dltp == SparseTensorEncodingAttr::DimLevelType::Dense;
+}
+
+bool mlir::sparse_tensor::isCompressedDim(
+    SparseTensorEncodingAttr::DimLevelType dltp) {
+  switch (dltp) {
+  case SparseTensorEncodingAttr::DimLevelType::Compressed:
+  case SparseTensorEncodingAttr::DimLevelType::CompressedNu:
+  case SparseTensorEncodingAttr::DimLevelType::CompressedNo:
+  case SparseTensorEncodingAttr::DimLevelType::CompressedNuNo:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool mlir::sparse_tensor::isSingletonDim(
+    SparseTensorEncodingAttr::DimLevelType dltp) {
+  switch (dltp) {
+  case SparseTensorEncodingAttr::DimLevelType::Singleton:
+  case SparseTensorEncodingAttr::DimLevelType::SingletonNu:
+  case SparseTensorEncodingAttr::DimLevelType::SingletonNo:
+  case SparseTensorEncodingAttr::DimLevelType::SingletonNuNo:
+    return true;
+  default:
+    return false;
+  }
+}
+
+bool mlir::sparse_tensor::isDenseDim(RankedTensorType type, uint64_t d) {
+  assert(d < static_cast<uint64_t>(type.getRank()));
+  if (auto enc = getSparseTensorEncoding(type))
+    return isDenseDim(enc.getDimLevelType()[d]);
+  return true; // unannotated tensor is dense
+}
+
+bool mlir::sparse_tensor::isCompressedDim(RankedTensorType type, uint64_t d) {
+  assert(d < static_cast<uint64_t>(type.getRank()));
+  if (auto enc = getSparseTensorEncoding(type))
+    return isCompressedDim(enc.getDimLevelType()[d]);
+  return false; // unannotated tensor is dense
+}
+
+bool mlir::sparse_tensor::isSingletonDim(RankedTensorType type, uint64_t d) {
+  assert(d < static_cast<uint64_t>(type.getRank()));
+  if (auto enc = getSparseTensorEncoding(type))
+    return isSingletonDim(enc.getDimLevelType()[d]);
+  return false; // unannotated tensor is dense
+}
+
+bool mlir::sparse_tensor::isOrderedDim(
+    SparseTensorEncodingAttr::DimLevelType dltp) {
+  switch (dltp) {
+  case SparseTensorEncodingAttr::DimLevelType::CompressedNo:
+  case SparseTensorEncodingAttr::DimLevelType::CompressedNuNo:
+  case SparseTensorEncodingAttr::DimLevelType::SingletonNo:
+  case SparseTensorEncodingAttr::DimLevelType::SingletonNuNo:
+    return false;
+  default:
+    return true;
+  }
+}
+
+bool mlir::sparse_tensor::isUniqueDim(
+    SparseTensorEncodingAttr::DimLevelType dltp) {
+  switch (dltp) {
+  case SparseTensorEncodingAttr::DimLevelType::CompressedNu:
+  case SparseTensorEncodingAttr::DimLevelType::CompressedNuNo:
+  case SparseTensorEncodingAttr::DimLevelType::SingletonNu:
+  case SparseTensorEncodingAttr::DimLevelType::SingletonNuNo:
+    return false;
+  default:
+    return true;
+  }
+}
+
+bool mlir::sparse_tensor::isOrderedDim(RankedTensorType type, uint64_t d) {
+  assert(d < static_cast<uint64_t>(type.getRank()));
+  if (auto enc = getSparseTensorEncoding(type))
+    return isOrderedDim(enc.getDimLevelType()[d]);
+  return true; // unannotated tensor is dense (and thus ordered)
+}
+
+bool mlir::sparse_tensor::isUniqueDim(RankedTensorType type, uint64_t d) {
+  assert(d < static_cast<uint64_t>(type.getRank()));
+  if (auto enc = getSparseTensorEncoding(type))
+    return isUniqueDim(enc.getDimLevelType()[d]);
+  return true; // unannotated tensor is dense (and thus unique)
+}
+
+uint64_t mlir::sparse_tensor::toOrigDim(const SparseTensorEncodingAttr &enc,
+                                        uint64_t d) {
+  if (enc) {
+    auto order = enc.getDimOrdering();
+    if (order) {
+      assert(order.isPermutation());
+      return order.getDimPosition(d);
+    }
+  }
+  return d;
+}
+
+uint64_t mlir::sparse_tensor::toStoredDim(const SparseTensorEncodingAttr &enc,
+                                          uint64_t d) {
+  if (enc) {
+    auto order = enc.getDimOrdering();
+    if (order) {
+      assert(order.isPermutation());
+      return order.getPermutedPosition(d);
+    }
+  }
+  return d;
+}
+
+uint64_t mlir::sparse_tensor::toOrigDim(RankedTensorType type, uint64_t d) {
+  assert(d < static_cast<uint64_t>(type.getRank()));
+  return toOrigDim(getSparseTensorEncoding(type), d);
+}
+
+uint64_t mlir::sparse_tensor::toStoredDim(RankedTensorType type, uint64_t d) {
+  assert(d < static_cast<uint64_t>(type.getRank()));
+  return toStoredDim(getSparseTensorEncoding(type), d);
 }
 
 //===----------------------------------------------------------------------===//
@@ -452,6 +583,46 @@ LogicalResult ConcatenateOp::verify() {
   return success();
 }
 
+LogicalResult InsertOp::verify() {
+  RankedTensorType ttp = getTensor().getType().cast<RankedTensorType>();
+  if (ttp.getRank() != static_cast<int64_t>(getIndices().size()))
+    return emitOpError("incorrect number of indices");
+  return success();
+}
+
+LogicalResult CompressOp::verify() {
+  RankedTensorType ttp = getTensor().getType().cast<RankedTensorType>();
+  if (ttp.getRank() != 1 + static_cast<int64_t>(getIndices().size()))
+    return emitOpError("incorrect number of indices");
+  return success();
+}
+
+void ForeachOp::build(
+    OpBuilder &builder, OperationState &result, Value tensor,
+    function_ref<void(OpBuilder &, Location, ValueRange)> bodyBuilder) {
+  build(builder, result, tensor);
+  if (!bodyBuilder)
+    return;
+
+  auto rtp = tensor.getType().cast<RankedTensorType>();
+  int64_t rank = rtp.getRank();
+
+  SmallVector<Type, 4> blockArgTypes;
+  // Starts with n index.
+  std::fill_n(std::back_inserter(blockArgTypes), rank, builder.getIndexType());
+  // Followed by one value.
+  blockArgTypes.push_back(rtp.getElementType());
+
+  SmallVector<Location, 4> blockArgLocs;
+  std::fill_n(std::back_inserter(blockArgLocs), rank + 1, tensor.getLoc());
+
+  OpBuilder::InsertionGuard guard(builder);
+  auto &region = *result.regions.front();
+  Block *bodyBlock =
+      builder.createBlock(&region, region.end(), blockArgTypes, blockArgLocs);
+  bodyBuilder(builder, result.location, bodyBlock->getArguments());
+}
+
 LogicalResult ForeachOp::verify() {
   auto t = getTensor().getType().cast<RankedTensorType>();
   auto args = getBody()->getArguments();
@@ -470,7 +641,6 @@ LogicalResult ForeachOp::verify() {
     emitError(llvm::formatv("Unmatched element type between input tensor and "
                             "block argument, expected:{0}, got: {1}",
                             elemTp, valueTp));
-
   return success();
 }
 
@@ -501,6 +671,41 @@ LogicalResult SelectOp::verify() {
                                     TypeRange{inputType}, boolType);
   if (failed(regionResult))
     return regionResult;
+
+  return success();
+}
+
+LogicalResult SortOp::verify() {
+  if (getXs().empty())
+    return emitError("need at least one xs buffer.");
+
+  auto n = getN().getDefiningOp<arith::ConstantIndexOp>();
+
+  Type xtp = getXs().front().getType().cast<MemRefType>().getElementType();
+  auto checkTypes = [&](ValueRange operands,
+                        bool checkEleType = true) -> LogicalResult {
+    for (Value opnd : operands) {
+      MemRefType mtp = opnd.getType().cast<MemRefType>();
+      int64_t dim = mtp.getShape()[0];
+      // We can't check the size of dynamic dimension at compile-time, but all
+      // xs and ys should have a dimension not less than n at runtime.
+      if (n && dim != ShapedType::kDynamicSize && dim < n.value())
+        return emitError(llvm::formatv("xs and ys need to have a dimension >= n"
+                                       ": {0} < {1}",
+                                       dim, n.value()));
+
+      if (checkEleType && xtp != mtp.getElementType())
+        return emitError("mismatch xs element types");
+    }
+    return success();
+  };
+
+  LogicalResult result = checkTypes(getXs());
+  if (failed(result))
+    return result;
+
+  if (n)
+    return checkTypes(getYs(), false);
 
   return success();
 }
