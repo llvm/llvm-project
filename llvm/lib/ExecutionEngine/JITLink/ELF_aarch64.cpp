@@ -413,7 +413,7 @@ public:
 private:
   Section &getTLSInfoSection(LinkGraph &G) {
     if (!TLSInfoTable)
-      TLSInfoTable = &G.createSection(getSectionName(), MemProt::Read);
+      TLSInfoTable = &G.createSection(getSectionName(), orc::MemProt::Read);
     return *TLSInfoTable;
   }
 
@@ -481,7 +481,7 @@ public:
 private:
   Section &getTLSDescSection(LinkGraph &G) {
     if (!GOTSection)
-      GOTSection = &G.createSection(getSectionName(), MemProt::Read);
+      GOTSection = &G.createSection(getSectionName(), orc::MemProt::Read);
     return *GOTSection;
   }
 

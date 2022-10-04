@@ -37,8 +37,8 @@ protected:
 
   Section &getCommonSection() {
     if (!CommonSection)
-      CommonSection =
-          &G->createSection(CommonSectionName, MemProt::Read | MemProt::Write);
+      CommonSection = &G->createSection(
+          CommonSectionName, orc::MemProt::Read | orc::MemProt::Write);
     return *CommonSection;
   }
 
@@ -310,11 +310,11 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
     });
 
     // Get the section's memory protection flags.
-    MemProt Prot;
+    orc::MemProt Prot;
     if (Sec.sh_flags & ELF::SHF_EXECINSTR)
-      Prot = MemProt::Read | MemProt::Exec;
+      Prot = orc::MemProt::Read | orc::MemProt::Exec;
     else
-      Prot = MemProt::Read | MemProt::Write;
+      Prot = orc::MemProt::Read | orc::MemProt::Write;
 
     // Look for existing sections first.
     auto *GraphSec = G->findSectionByName(*Name);
