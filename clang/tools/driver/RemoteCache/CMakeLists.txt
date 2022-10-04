@@ -1,17 +1,18 @@
 include_directories($<TARGET_PROPERTY:llvmRemoteCacheKVProto,BINARY_DIR>)
 include_directories($<TARGET_PROPERTY:llvmRemoteCacheCASProto,BINARY_DIR>)
 
-# Create an object library instead of a whole static archive.
-add_library(clangRemoteCache OBJECT EXCLUDE_FROM_ALL
+set(LLVM_LINK_COMPONENTS
+  RemoteCacheCASProto
+  RemoteCacheKVProto
+)
+
+add_clang_library(clangRemoteCache
   Client.cpp
 )
-llvm_update_compile_flags(clangRemoteCache)
-
-target_link_libraries(clangRemoteCache
-  llvmRemoteCacheCASProto
-  llvmRemoteCacheKVProto
-)
-add_dependencies(clangRemoteCache
-  llvmRemoteCacheCASProto
-  llvmRemoteCacheKVProto
-)
+if (TARGET obj.clangRemoteCache)
+  # Needed so that the grpc headers are generated ahead of compiling the files of the library.
+  add_dependencies(obj.clangRemoteCache
+    llvmRemoteCacheCASProto
+    llvmRemoteCacheKVProto
+  )
+endif()
