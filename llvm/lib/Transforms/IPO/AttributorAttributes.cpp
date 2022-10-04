@@ -3642,7 +3642,8 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
     }
   }
 
-  bool isDeadStore(Attributor &A, StoreInst &SI) {
+  bool isDeadStore(Attributor &A, StoreInst &SI,
+                   SmallSetVector<Instruction *, 8> *AssumeOnlyInst = nullptr) {
     // Lang ref now states volatile store is not UB/dead, let's skip them.
     if (SI.isVolatile())
       return false;
@@ -3658,10 +3659,23 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
     }
     LLVM_DEBUG(dbgs() << "[AAIsDead] Store has " << PotentialCopies.size()
                       << " potential copies.\n");
+
+    InformationCache &InfoCache = A.getInfoCache();
     return llvm::all_of(PotentialCopies, [&](Value *V) {
       if (A.isAssumedDead(IRPosition::value(*V), this, nullptr,
                           UsedAssumedInformation))
         return true;
+      if (auto *LI = dyn_cast<LoadInst>(V)) {
+        if (llvm::all_of(LI->uses(), [&](const Use &U) {
+              return InfoCache.isOnlyUsedByAssume(
+                         cast<Instruction>(*U.getUser())) ||
+                     A.isAssumedDead(U, this, nullptr, UsedAssumedInformation);
+            })) {
+          if (AssumeOnlyInst)
+            AssumeOnlyInst->insert(LI);
+          return true;
+        }
+      }
       LLVM_DEBUG(dbgs() << "[AAIsDead] Potential copy " << *V
                         << " is assumed live!\n");
       return false;
@@ -3704,8 +3718,20 @@ struct AAIsDeadFloating : public AAIsDeadValueImpl {
       // isAssumedSideEffectFree returns true here again because it might not be
       // the case and only the users are dead but the instruction (=call) is
       // still needed.
-      if (isa<StoreInst>(I) ||
-          (isAssumedSideEffectFree(A, I) && !isa<InvokeInst>(I))) {
+      if (auto *SI = dyn_cast<StoreInst>(I)) {
+        SmallSetVector<Instruction *, 8> AssumeOnlyInst;
+        bool IsDead = isDeadStore(A, *SI, &AssumeOnlyInst);
+        assert(IsDead && "Store was assumed to be dead!");
+        A.deleteAfterManifest(*I);
+        for (size_t i = 0; i < AssumeOnlyInst.size(); ++i) {
+          Instruction *AOI = AssumeOnlyInst[i];
+          for (auto *Usr : AOI->users())
+            AssumeOnlyInst.insert(cast<Instruction>(Usr));
+          A.deleteAfterManifest(*AOI);
+        }
+        return ChangeStatus::CHANGED;
+      }
+      if (isAssumedSideEffectFree(A, I) && !isa<InvokeInst>(I)) {
         A.deleteAfterManifest(*I);
         return ChangeStatus::CHANGED;
       }

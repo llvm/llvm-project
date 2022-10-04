@@ -2823,6 +2823,7 @@ void InformationCache::initializeInformationCache(const Function &CF,
       // For `llvm.assume` calls we also fill the KnowledgeMap as we find them.
       // For `must-tail` calls we remember the caller and callee.
       if (auto *Assume = dyn_cast<AssumeInst>(&I)) {
+        AssumeOnlyValues.insert(Assume);
         fillMapFromAssume(*Assume, KnowledgeMap);
         AddToAssumeUsesMap(*Assume->getArgOperand(0));
       } else if (cast<CallInst>(I).isMustTailCall()) {
