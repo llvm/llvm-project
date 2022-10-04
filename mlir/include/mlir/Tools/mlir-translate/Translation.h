@@ -71,20 +71,21 @@ using TranslateFunction = std::function<LogicalResult(
 ///
 /// \{
 struct TranslateToMLIRRegistration {
-  TranslateToMLIRRegistration(llvm::StringRef name,
+  TranslateToMLIRRegistration(llvm::StringRef name, llvm::StringRef description,
                               const TranslateSourceMgrToMLIRFunction &function);
-  TranslateToMLIRRegistration(llvm::StringRef name,
+  TranslateToMLIRRegistration(llvm::StringRef name, llvm::StringRef description,
                               const TranslateStringRefToMLIRFunction &function);
 };
 
 struct TranslateFromMLIRRegistration {
   TranslateFromMLIRRegistration(
-      llvm::StringRef name, const TranslateFromMLIRFunction &function,
+      llvm::StringRef name, llvm::StringRef description,
+      const TranslateFromMLIRFunction &function,
       const std::function<void(DialectRegistry &)> &dialectRegistration =
           [](DialectRegistry &) {});
 };
 struct TranslateRegistration {
-  TranslateRegistration(llvm::StringRef name,
+  TranslateRegistration(llvm::StringRef name, llvm::StringRef description,
                         const TranslateFunction &function);
 };
 /// \}
