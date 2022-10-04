@@ -1428,16 +1428,25 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_nothrow_constructible`` (C++, MSVC 2013)
 * ``__is_nothrow_destructible`` (C++, MSVC 2013)
   Only available in ``-fms-extensions`` mode.
+* ``__is_nullptr`` (C++, GNU, Microsoft, Embarcadero):
+  Returns true for ``std::nullptr_t`` and false for everything else. The
+  corresponding standard library feature is ``std::is_null_pointer``, but
+  ``__is_null_pointer`` is already in use by some implementations.
 * ``__is_object`` (C++, Embarcadero)
 * ``__is_pod`` (C++, GNU, Microsoft, Embarcadero):
   Note, the corresponding standard trait was deprecated in C++20.
 * ``__is_pointer`` (C++, Embarcadero)
 * ``__is_polymorphic`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_reference`` (C++, Embarcadero)
+* ``__is_referenceable`` (C++, GNU, Microsoft, Embarcadero):
+  Returns true if a type is referenceable, and false otherwise. A referenceable
+  type is a type that's either an object type, a reference type, or an unqualified
+  function type.
 * ``__is_rvalue_reference`` (C++, Embarcadero)
 * ``__is_same`` (C++, Embarcadero)
 * ``__is_same_as`` (GCC): Synonym for ``__is_same``.
 * ``__is_scalar`` (C++, Embarcadero)
+* ``__is_scoped_enum`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_sealed`` (Microsoft):
   Synonym for ``__is_final``.
 * ``__is_signed`` (C++, Embarcadero):
