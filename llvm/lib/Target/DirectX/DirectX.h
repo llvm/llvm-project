@@ -38,6 +38,10 @@ void initializeDXILTranslateMetadataPass(PassRegistry &);
 
 /// Pass to emit metadata for DXIL.
 ModulePass *createDXILTranslateMetadataPass();
+
+/// Initializer for DXILTranslateMetadata.
+void initializeDXILResourceWrapperPass(PassRegistry &);
+
 } // namespace llvm
 
 #endif // LLVM_LIB_TARGET_DIRECTX_DIRECTX_H

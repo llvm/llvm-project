@@ -17,6 +17,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Metadata.h"
+#include "llvm/Support/Compiler.h"
 #include <cstdint>
 
 namespace llvm {
@@ -53,6 +54,8 @@ protected:
 
   void write(LLVMContext &Ctx, MutableArrayRef<Metadata *> Entries);
 
+  void print(raw_ostream &O, StringRef IDPrefix, StringRef BindingPrefix) const;
+
   // The value ordering of this enumeration is part of the DXIL ABI. Elements
   // can only be added to the end, and not removed.
   enum class Kinds : uint32_t {
@@ -78,6 +81,11 @@ protected:
     NumEntries,
   };
 
+  static StringRef getKindName(Kinds Kind);
+  static void printKind(Kinds Kind, unsigned alignment, raw_ostream &OS,
+                        bool SRV = false, bool HasCounter = false,
+                        uint32_t SampleCount = 0);
+
   // The value ordering of this enumeration is part of the DXIL ABI. Elements
   // can only be added to the end, and not removed.
   enum class ComponentType : uint32_t {
@@ -102,6 +110,10 @@ protected:
     PackedU8x32,
     LastEntry
   };
+
+  static StringRef getComponentTypeName(ComponentType CompType);
+  static void printComponentType(Kinds Kind, ComponentType CompType,
+                                 unsigned alignment, raw_ostream &OS);
 
 public:
   struct ExtendedProperties {
@@ -133,6 +145,7 @@ public:
   UAVResource(uint32_t I, FrontendResource R);
 
   MDNode *write();
+  void print(raw_ostream &O) const;
 };
 
 // FIXME: Fully computing the resource structures requires analyzing the IR
@@ -140,15 +153,16 @@ public:
 // resource. This partial patch handles some of the leg work, but not all of it.
 // See issue https://github.com/llvm/llvm-project/issues/57936.
 class Resources {
-  Module &Mod;
   llvm::SmallVector<UAVResource> UAVs;
 
-  void collectUAVs();
+  void collectUAVs(Module &M);
 
 public:
-  Resources(Module &M) : Mod(M) { collectUAVs(); }
+  void collect(Module &M);
 
-  void write();
+  void write(Module &M);
+  void print(raw_ostream &O) const;
+  LLVM_DUMP_METHOD void dump() const;
 };
 
 } // namespace dxil
