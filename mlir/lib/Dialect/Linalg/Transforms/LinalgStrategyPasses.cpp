@@ -181,71 +181,6 @@ struct LinalgStrategyDecomposePass
 };
 
 /// Configurable pass to lower vector operations.
-struct LinalgStrategyLowerVectorsPass
-    : public impl::LinalgStrategyLowerVectorsPassBase<
-          LinalgStrategyLowerVectorsPass> {
-
-  LinalgStrategyLowerVectorsPass(LinalgVectorLoweringOptions opt,
-                                 LinalgTransformationFilter filt)
-      : options(opt), filter(std::move(filt)) {}
-
-  void runOnOperation() override {
-    auto funcOp = getOperation();
-    if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
-      return;
-
-    MLIRContext *context = funcOp.getContext();
-    RewritePatternSet patterns(context);
-    vector::populateVectorToVectorCanonicalizationPatterns(patterns);
-    // In a progressive lowering of vectors, this would be the 1st step.
-    if (options.contractionLowering) {
-      patterns.add<ContractionOpToOuterProductOpLowering,
-                   ContractionOpToMatmulOpLowering, ContractionOpLowering>(
-          options.vectorTransformOptions, context);
-      vector::populateVectorTransferPermutationMapLoweringPatterns(patterns);
-    }
-    // In a progressive lowering of vectors, this would be the 2nd step.
-    if (options.multiReductionLowering) {
-      vector::populateVectorMultiReductionLoweringPatterns(
-          patterns,
-          options.vectorTransformOptions.vectorMultiReductionLowering);
-    }
-    // In a progressive lowering of vectors, this would be the 3rd step.
-    if (options.transferPartialRewrite) {
-      patterns.add<vector::VectorTransferFullPartialRewriter>(
-          context, options.vectorTransformOptions);
-    }
-    // In a progressive lowering of vectors, this would be the 4th step.
-    if (options.transferLowering) {
-      vector::populateVectorTransferLoweringPatterns(patterns,
-                                                     options.maxTransferRank);
-    }
-    // In a progressive lowering of vectors, this would be the 5th step.
-    if (options.transferToSCFConversion) {
-      populateVectorToSCFConversionPatterns(
-          patterns, options.vectorTransferToSCFOptions.setTargetRank(
-                        options.maxTransferRank));
-    }
-    // In a progressive lowering of vectors, this would be the 6th step.
-    if (options.shapeCastLowering) {
-      vector::populateVectorShapeCastLoweringPatterns(patterns);
-    }
-    // In a progressive lowering of vectors, this would be the 7th step.
-    if (options.transposeLowering) {
-      vector::populateVectorTransposeLoweringPatterns(
-          patterns, options.vectorTransformOptions);
-      if (options.avx2Lowering)
-        x86vector::avx2::populateSpecializedTransposeLoweringPatterns(
-            patterns, options.avx2LoweringOptions, /*benefit=*/10);
-    }
-    (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-  }
-
-  LinalgVectorLoweringOptions options;
-  LinalgTransformationFilter filter;
-};
-
-/// Configurable pass to lower vector operations.
 struct LinalgStrategyRemoveMarkersPass
     : public impl::LinalgStrategyRemoveMarkersPassBase<
           LinalgStrategyRemoveMarkersPass> {
@@ -292,13 +227,6 @@ std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::createLinalgStrategyDecomposePass(
     const LinalgTransformationFilter &filter) {
   return std::make_unique<LinalgStrategyDecomposePass>(filter);
-}
-
-/// Create a LinalgStrategyLowerVectorsPass.
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createLinalgStrategyLowerVectorsPass(
-    LinalgVectorLoweringOptions opt, const LinalgTransformationFilter &filter) {
-  return std::make_unique<LinalgStrategyLowerVectorsPass>(opt, filter);
 }
 
 /// Create a LinalgStrategyRemoveMarkersPass.
