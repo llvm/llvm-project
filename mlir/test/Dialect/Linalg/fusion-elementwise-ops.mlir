@@ -663,7 +663,7 @@ func.func @generic_index_op2(%arg0: tensor<1x8xf64>, %arg1: tensor<1x8xi32>) -> 
   } -> tensor<1x8xf64>
 
   // CHECK-NEXT:   %[[R:.*]]:2 = linalg.generic
-  //      CHECK:     bb0(%[[BBA:[0-9a-z]*]]: f64, %[[BBB:[0-9a-z]*]]: i32):
+  //      CHECK:     bb0(%[[BBA:[0-9a-zA-Z_]*]]: f64, %[[BBB:[0-9a-zA-Z_]*]]: i32):
   // CHECK-NEXT:       %[[A:.*]] = func.call @compute1(%[[BBA]]) : (f64) -> f64
   // CHECK-NEXT:       %[[B:.*]] = func.call @compute2(%[[A]], %[[BBB]]) : (f64, i32) -> i32
   // CHECK-NEXT:       linalg.yield %[[A]], %[[B]] : f64, i32
@@ -1071,15 +1071,15 @@ module {
   }
 }
 // CHECK-LABEL: func.func @fuse_multi_result_producer
-//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<f32>
-//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<f32>
+//  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]+]]: tensor<f32>
+//  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]+]]: tensor<f32>
 //       CHECK:   %[[INIT:.+]] = tensor.empty
 //       CHECK:   %[[GENERIC:.+]] = linalg.generic
 //  CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]] :
 //  CHECK-SAME:       outs(%[[INIT]] :
 //  CHECK-NEXT:     ^bb0
-//  CHECK-SAME:         %[[B0:[a-zA-Z0-9]+]]: f32
-//  CHECK-SAME:         %[[B1:[a-zA-Z0-9]+]]: f32
+//  CHECK-SAME:         %[[B0:[a-zA-Z0-9_]+]]: f32
+//  CHECK-SAME:         %[[B1:[a-zA-Z0-9_]+]]: f32
 //   CHECK-DAG:     %[[T0:.+]] = arith.addf %[[B0]], %[[B1]]
 //   CHECK-DAG:     %[[T1:.+]] = arith.addf %[[T0]], %[[B1]]
 //   CHECK-DAG:     %[[T2:.+]] = arith.addf %[[T1]], %[[B1]]
