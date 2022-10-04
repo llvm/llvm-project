@@ -284,6 +284,7 @@ bool runImpl(LoopInfo *LI, LoopAccessInfoManager &LAIs, DominatorTree *DT,
       LVer.versionLoop();
       LVer.annotateLoopWithNoAlias();
       Changed = true;
+      LAIs.clear();
     }
   }
 
