@@ -1,4 +1,4 @@
-@echo off
+@echo on
 setlocal enabledelayedexpansion
 
 if "%1"=="" goto usage
@@ -66,14 +66,13 @@ echo Revision: %revision%
 echo Package version: %package_version%
 echo Build dir: %build_dir%
 echo.
-pause
 
 if exist %build_dir% (
   echo Build directory already exists: %build_dir%
   exit /b 1
 )
 mkdir %build_dir%
-cd %build_dir%
+cd %build_dir% || exit /b 1
 
 echo Checking out %revision%
 curl -L https://github.com/llvm/llvm-project/archive/%revision%.zip -o src.zip || exit /b 1
@@ -122,9 +121,11 @@ REM TODO: Run the "check-all" tests.
 REM Set Python environment
 set PYTHONHOME=%python32_dir%
 set PATH=%PYTHONHOME%;%PATH%
+%python32_dir%/python.exe --version || exit /b 1
 
 set "VSCMD_START_DIR=%build_dir%"
-call "%vsdevcmd%" -arch=x86
+call "%vsdevcmd%" -arch=x86 || exit /b 1
+@echo on
 mkdir build32_stage0
 cd build32_stage0
 
@@ -191,9 +192,11 @@ set PATH=%OLDPATH%
 REM Set Python environment
 set PYTHONHOME=%python64_dir%
 set PATH=%PYTHONHOME%;%PATH%
+%python64_dir%/python.exe --version || exit /b 1
 
 set "VSCMD_START_DIR=%build_dir%"
-call "%vsdevcmd%" -arch=amd64
+call "%vsdevcmd%" -arch=amd64 || exit /b 1
+@echo on
 mkdir build64_stage0
 cd build64_stage0
 
