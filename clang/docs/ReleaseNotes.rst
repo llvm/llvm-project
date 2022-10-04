@@ -363,7 +363,9 @@ C2x Feature Support
 C++ Language Changes in Clang
 -----------------------------
 - Implemented DR692, DR1395 and DR1432. Use the ``-fclang-abi-compat=15`` option
-  to get the old partial ordering behavior regarding packs.
+  to get the old partial ordering behavior regarding packs. Note that the fix for
+  DR1432 is speculative that there is no wording or even resolution for this issue.
+  A speculative fix for DR1432 is needed because it fixes regressions caused by DR692.
 - Clang's default C++/ObjC++ standard is now ``gnu++17`` instead of ``gnu++14``.
   This means Clang will by default accept code using features from C++17 and
   conforming GNU extensions. Projects incompatible with C++17 can add
