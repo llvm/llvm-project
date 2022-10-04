@@ -8666,10 +8666,11 @@ bool Sema::CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *FD,
   // C++2a [class.spaceship]p2 [P2002R0]:
   //   Let R be the declared return type [...]. If R is auto, [...]. Otherwise,
   //   R shall not contain a placeholder type.
-  if (DCK == DefaultedComparisonKind::ThreeWay &&
-      FD->getDeclaredReturnType()->getContainedDeducedType() &&
-      !Context.hasSameType(FD->getDeclaredReturnType(),
-                           Context.getAutoDeductType())) {
+  if (QualType RT = FD->getDeclaredReturnType();
+      DCK == DefaultedComparisonKind::ThreeWay &&
+      RT->getContainedDeducedType() &&
+      (!Context.hasSameType(RT, Context.getAutoDeductType()) ||
+       RT->getContainedAutoType()->isConstrained())) {
     Diag(FD->getLocation(),
          diag::err_defaulted_comparison_deduced_return_type_not_auto)
         << (int)DCK << FD->getDeclaredReturnType() << Context.AutoDeductTy
