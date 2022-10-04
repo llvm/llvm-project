@@ -25,7 +25,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sched.h entrypoints
     libc.src.sched.sched_getaffinity
     libc.src.sched.sched_setaffinity
-    libc.src.sched.sched_getcpucount
 
     # string.h entrypoints
     libc.src.string.bcmp
@@ -160,7 +159,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.rmdir
     libc.src.unistd.symlink
     libc.src.unistd.symlinkat
-    libc.src.unistd.__llvm_libc_syscall
     libc.src.unistd.truncate
     libc.src.unistd.unlink
     libc.src.unistd.unlinkat
@@ -335,6 +333,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_once
     libc.src.pthread.pthread_setspecific
 
+    # sched.h entrypoints
+    libc.src.sched.sched_getcpucount
+
     # stdio.h entrypoints
     libc.src.stdio.clearerr
     libc.src.stdio.clearerr_unlocked
@@ -410,6 +411,7 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # unistd.h entrypoints
     libc.src.unistd.fork
+    libc.src.unistd.__llvm_libc_syscall
   )
 endif()
 
