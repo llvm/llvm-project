@@ -206,6 +206,7 @@ add_gen_header(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-types.cpu_set_t
+    .llvm-libc-macros.sched_macros
 )
 
 # TODO: Not all platforms will have a include/sys directory. Add the sys

@@ -74,9 +74,9 @@ bool WebAssemblyAsmTypeCheck::typeError(SMLoc ErrorLoc, const Twine &Msg) {
   // which are mostly not helpful.
   if (TypeErrorThisFunction)
     return true;
-  // If we're currently in unreachable code, we surpress errors as well.
+  // If we're currently in unreachable code, we suppress errors completely.
   if (Unreachable)
-    return true;
+    return false;
   TypeErrorThisFunction = true;
   dumpTypeStack("current stack: ");
   return Parser.Error(ErrorLoc, Msg);

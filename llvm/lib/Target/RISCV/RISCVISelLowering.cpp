@@ -10697,6 +10697,7 @@ static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDValue Val,
 // passed with CCValAssign::Indirect.
 static SDValue unpackFromRegLoc(SelectionDAG &DAG, SDValue Chain,
                                 const CCValAssign &VA, const SDLoc &DL,
+                                const ISD::InputArg &In,
                                 const RISCVTargetLowering &TLI) {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
@@ -10706,6 +10707,20 @@ static SDValue unpackFromRegLoc(SelectionDAG &DAG, SDValue Chain,
   Register VReg = RegInfo.createVirtualRegister(RC);
   RegInfo.addLiveIn(VA.getLocReg(), VReg);
   Val = DAG.getCopyFromReg(Chain, DL, VReg, LocVT);
+
+  // If input is sign extended from 32 bits, note it for the SExtWRemoval pass.
+  if (In.isOrigArg()) {
+    Argument *OrigArg = MF.getFunction().getArg(In.getOrigArgIndex());
+    if (OrigArg->getType()->isIntegerTy()) {
+      unsigned BitWidth = OrigArg->getType()->getIntegerBitWidth();
+      // An input zero extended from i31 can also be considered sign extended.
+      if ((BitWidth <= 32 && In.Flags.isSExt()) ||
+          (BitWidth < 32 && In.Flags.isZExt())) {
+        RISCVMachineFunctionInfo *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+        RVFI->addSExt32Register(VReg);
+      }
+    }
+  }
 
   if (VA.getLocInfo() == CCValAssign::Indirect)
     return Val;
@@ -11019,7 +11034,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
     if (VA.getLocVT() == MVT::i32 && VA.getValVT() == MVT::f64)
       ArgValue = unpackF64OnRV32DSoftABI(DAG, Chain, VA, DL);
     else if (VA.isRegLoc())
-      ArgValue = unpackFromRegLoc(DAG, Chain, VA, DL, *this);
+      ArgValue = unpackFromRegLoc(DAG, Chain, VA, DL, Ins[i], *this);
     else
       ArgValue = unpackFromMemLoc(DAG, Chain, VA, DL);
 

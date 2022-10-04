@@ -711,6 +711,18 @@ unsigned GISelKnownBits::computeNumSignBits(Register R,
 
     break;
   }
+  case TargetOpcode::G_FCMP:
+  case TargetOpcode::G_ICMP: {
+    bool IsFP = Opcode == TargetOpcode::G_FCMP;
+    if (TyBits == 1)
+      break;
+    auto BC = TL.getBooleanContents(DstTy.isVector(), IsFP);
+    if (BC == TargetLoweringBase::ZeroOrNegativeOneBooleanContent)
+      return TyBits; // All bits are sign bits.
+    if (BC == TargetLowering::ZeroOrOneBooleanContent)
+      return TyBits - 1; // Every always-zero bit is a sign bit.
+    break;
+  }
   case TargetOpcode::G_INTRINSIC:
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
   default: {

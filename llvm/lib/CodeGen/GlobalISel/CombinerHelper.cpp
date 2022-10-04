@@ -2749,9 +2749,9 @@ bool CombinerHelper::matchAshrShlToSextInreg(
   assert(MI.getOpcode() == TargetOpcode::G_ASHR);
   int64_t ShlCst, AshrCst;
   Register Src;
-  // FIXME: detect splat constant vectors.
   if (!mi_match(MI.getOperand(0).getReg(), MRI,
-                m_GAShr(m_GShl(m_Reg(Src), m_ICst(ShlCst)), m_ICst(AshrCst))))
+                m_GAShr(m_GShl(m_Reg(Src), m_ICstOrSplat(ShlCst)),
+                        m_ICstOrSplat(AshrCst))))
     return false;
   if (ShlCst != AshrCst)
     return false;
