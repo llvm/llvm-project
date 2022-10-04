@@ -340,6 +340,24 @@ def LinalgStructuredInterface : OpInterface<"LinalgOp"> {
     >,
     InterfaceMethod<
       /*desc=*/[{
+        Return the input block arguments of the region.
+      }],
+      /*retTy=*/"Block::BlockArgListType",
+      /*methodName=*/"getRegionInputArgs",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        // MLIR currently does not support dependent interfaces or interface
+        // inheritance. By construction all ops with StructuredOpInterface must
+        // implement DestinationStyleOpInterface.
+        // TODO: reevalute the need for a cast when a better mechanism exists.
+        return getBlock()->getArguments().take_front(
+            cast<DestinationStyleOpInterface>(*this->getOperation())
+                .getNumInputs());
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
         Return the output block arguments of the region.
       }],
       /*retTy=*/"Block::BlockArgListType",
