@@ -221,29 +221,15 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     FrameRegIsKill = true;
   }
 
-  if (!Offset.getScalable()) {
-    // Offset = (fixed offset, 0)
-    MI.getOperand(FIOperandNum)
-        .ChangeToRegister(FrameReg, false, false, FrameRegIsKill);
-    if (!IsRVVSpill)
-      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset.getFixed());
-    else {
-      if (Offset.getFixed()) {
-        Register ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-        BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), ScratchReg)
-          .addReg(FrameReg, getKillRegState(FrameRegIsKill))
-          .addImm(Offset.getFixed());
-        MI.getOperand(FIOperandNum)
-          .ChangeToRegister(ScratchReg, false, false, true);
-      }
-    }
-  } else {
-    // Offset = (fixed offset, scalable offset)
-    // Step 1, the scalable offset, has already been computed.
+  Register ScratchReg;
+
+  // Add in the scalable offset which has already been computed in
+  // ScalableFactorRegister.
+  if (Offset.getScalable()) {
     assert(ScalableFactorRegister &&
            "Expected pre-computation of scalable factor in earlier step");
 
-    // 2. Calculate address: FrameReg + result of multiply
+    // Calculate address: FrameReg + ScalableFactorRegister.
     if (MI.getOpcode() == RISCV::ADDI && !Offset.getFixed()) {
       BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), MI.getOperand(0).getReg())
           .addReg(FrameReg, getKillRegState(FrameRegIsKill))
@@ -251,24 +237,38 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       MI.eraseFromParent();
       return;
     }
-    Register VL = MRI.createVirtualRegister(&RISCV::GPRRegClass);
-    BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), VL)
+
+    assert(!ScratchReg && "Already populated ScratchReg?");
+    ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+    BuildMI(MBB, II, DL, TII->get(ScalableAdjOpc), ScratchReg)
         .addReg(FrameReg, getKillRegState(FrameRegIsKill))
         .addReg(ScalableFactorRegister, RegState::Kill);
-
-    if (IsRVVSpill && Offset.getFixed()) {
-      // Scalable load/store has no immediate argument. We need to add the
-      // fixed part into the load/store base address.
-      BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), VL)
-          .addReg(VL)
-          .addImm(Offset.getFixed());
-    }
-
-    // 3. Replace address register with calculated address register
-    MI.getOperand(FIOperandNum).ChangeToRegister(VL, false, false, true);
-    if (!IsRVVSpill)
-      MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset.getFixed());
+    FrameReg = ScratchReg;
+    FrameRegIsKill = true;
   }
+
+  // Handle the fixed offset which might be zero.
+  if (IsRVVSpill) {
+    // RVVSpills don't have an immediate. Add an ADDI if the fixed offset is
+    // needed.
+    if (Offset.getFixed()) {
+      // Reuse ScratchReg if it exists, otherwise create a new register.
+      if (!ScratchReg)
+        ScratchReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
+      BuildMI(MBB, II, DL, TII->get(RISCV::ADDI), ScratchReg)
+        .addReg(FrameReg, getKillRegState(FrameRegIsKill))
+        .addImm(Offset.getFixed());
+      FrameReg = ScratchReg;
+      FrameRegIsKill = true;
+    }
+  } else {
+    // Otherwise we can replace the original immediate.
+    MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset.getFixed());
+  }
+
+  // Finally, replace the frame index operand.
+  MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false, false,
+                                               FrameRegIsKill);
 
   auto ZvlssegInfo = RISCV::isRVVSpillForZvlsseg(MI.getOpcode());
   if (ZvlssegInfo) {
