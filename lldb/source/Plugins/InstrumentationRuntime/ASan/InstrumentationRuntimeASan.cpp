@@ -299,14 +299,15 @@ void InstrumentationRuntimeASan::Activate() {
   if (symbol_address == LLDB_INVALID_ADDRESS)
     return;
 
-  bool internal = true;
-  bool hardware = false;
+  const bool internal = true;
+  const bool hardware = false;
+  const bool sync = false;
   Breakpoint *breakpoint =
       process_sp->GetTarget()
           .CreateBreakpoint(symbol_address, internal, hardware)
           .get();
   breakpoint->SetCallback(InstrumentationRuntimeASan::NotifyBreakpointHit, this,
-                          true);
+                          sync);
   breakpoint->SetBreakpointKind("address-sanitizer-report");
   SetBreakpointID(breakpoint->GetID());
 

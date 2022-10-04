@@ -382,7 +382,10 @@ public:
   /// \param[in] is_synchronous
   ///    If \b true the callback will be run on the private event thread
   ///    before the stop event gets reported.  If false, the callback will get
-  ///    handled on the public event thread after the stop has been posted.
+  ///    handled on the public event thread while the stop event is being
+  ///    pulled off the event queue.
+  ///    Note: synchronous callbacks cannot cause the target to run, in
+  ///    particular, they should not try to run the expression evaluator.
   void SetCallback(BreakpointHitCallback callback, void *baton,
                    bool is_synchronous = false);
 
