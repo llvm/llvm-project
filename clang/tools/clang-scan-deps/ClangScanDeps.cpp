@@ -167,11 +167,6 @@ llvm::cl::opt<std::string>
                   llvm::cl::desc("Compilation database"), llvm::cl::Required,
                   llvm::cl::cat(DependencyScannerCategory));
 
-llvm::cl::opt<bool> ReuseFileManager(
-    "reuse-filemanager",
-    llvm::cl::desc("Reuse the file manager and its cache between invocations."),
-    llvm::cl::init(true), llvm::cl::cat(DependencyScannerCategory));
-
 llvm::cl::opt<std::string> ModuleName(
     "module-name", llvm::cl::Optional,
     llvm::cl::desc("the module of which the dependencies are to be computed"),
@@ -529,8 +524,8 @@ int main(int argc, const char **argv) {
   // Print out the dependency results to STDOUT by default.
   SharedStream DependencyOS(llvm::outs());
 
-  DependencyScanningService Service(ScanMode, Format, ReuseFileManager,
-                                    OptimizeArgs, EagerLoadModules);
+  DependencyScanningService Service(ScanMode, Format, OptimizeArgs,
+                                    EagerLoadModules);
   llvm::ThreadPool Pool(llvm::hardware_concurrency(NumThreads));
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
   for (unsigned I = 0; I < Pool.getThreadCount(); ++I)
