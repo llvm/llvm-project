@@ -201,6 +201,36 @@ add_entrypoint_object(
     libc.include.stdlib
 )
 
+add_object_library(
+  rand_util
+  SRCS
+    rand_util.cpp
+  HDRS
+    rand_util.h
+)
+
+add_entrypoint_object(
+  rand
+  SRCS
+    rand.cpp
+  HDRS
+    rand.h
+  DEPENDS
+    .rand_util
+    libc.include.stdlib
+)
+
+add_entrypoint_object(
+  srand
+  SRCS
+    srand.cpp
+  HDRS
+    srand.h
+  DEPENDS
+    .rand_util
+    libc.include.stdlib
+)
+
 if(LLVM_LIBC_INCLUDE_SCUDO)
   set(SCUDO_DEPS "")
 
