@@ -161,7 +161,7 @@ public:
 
       // Setup and run CIR pipeline.
       bool passOptParsingFailure = false;
-      if (runCIRToCIRPasses(mlirMod, mlirCtx.get(),
+      if (runCIRToCIRPasses(mlirMod, mlirCtx.get(), C,
                             !feOptions.ClangIRDisableCIRVerifier,
                             feOptions.ClangIRLifetimeCheck, lifetimeOpts,
                             passOptParsingFailure)

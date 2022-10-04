@@ -16,6 +16,10 @@
 
 #include <memory>
 
+namespace clang {
+class ASTContext;
+}
+
 namespace mlir {
 class MLIRContext;
 class ModuleOp;
@@ -26,6 +30,7 @@ namespace cir {
 // Run set of cleanup/prepare/etc passes CIR <-> CIR.
 mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
                                       mlir::MLIRContext *mlirCtx,
+                                      clang::ASTContext &astCtx,
                                       bool enableVerifier, bool enableLifetime,
                                       llvm::StringRef lifetimeOpts,
                                       bool &passOptParsingFailure);

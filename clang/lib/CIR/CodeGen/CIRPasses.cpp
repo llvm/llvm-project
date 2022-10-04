@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/ASTContext.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 
@@ -20,6 +21,7 @@
 namespace cir {
 mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
                                       mlir::MLIRContext *mlirCtx,
+                                      clang::ASTContext &astCtx,
                                       bool enableVerifier, bool enableLifetime,
                                       llvm::StringRef lifetimeOpts,
                                       bool &passOptParsingFailure) {
@@ -35,7 +37,7 @@ mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
   };
 
   if (enableLifetime) {
-    auto lifetimePass = mlir::createLifetimeCheckPass();
+    auto lifetimePass = mlir::createLifetimeCheckPass(&astCtx);
     if (lifetimePass->initializeOptions(lifetimeOpts, errorHandler).failed()) {
       passOptParsingFailure = true;
       return mlir::failure();
