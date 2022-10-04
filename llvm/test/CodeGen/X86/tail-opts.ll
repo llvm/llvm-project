@@ -95,22 +95,22 @@ declare ptr @choose(ptr, ptr)
 define dso_local void @tail_duplicate_me() nounwind {
 ; CHECK-LABEL: tail_duplicate_me:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    callq qux@PLT
 ; CHECK-NEXT:    movl $.Ltmp0, %edi
 ; CHECK-NEXT:    movl $.Ltmp1, %esi
-; CHECK-NEXT:    movl %eax, %ebx
+; CHECK-NEXT:    movl %eax, %ebp
 ; CHECK-NEXT:    callq choose@PLT
-; CHECK-NEXT:    movq %rax, %r14
-; CHECK-NEXT:    testb $1, %bl
+; CHECK-NEXT:    movq %rax, %rbx
+; CHECK-NEXT:    testb $1, %bpl
 ; CHECK-NEXT:    je .LBB1_1
 ; CHECK-NEXT:  # %bb.7: # %A
 ; CHECK-NEXT:    xorl %edi, %edi
 ; CHECK-NEXT:    callq bar
 ; CHECK-NEXT:    movl $0, GHJK(%rip)
-; CHECK-NEXT:    jmpq *%r14
+; CHECK-NEXT:    jmpq *%rbx
 ; CHECK-NEXT:  .Ltmp0: # Block address taken
 ; CHECK-NEXT:  .LBB1_4: # %return
 ; CHECK-NEXT:    movl $1000, %edi # imm = 0x3E8
@@ -124,7 +124,7 @@ define dso_local void @tail_duplicate_me() nounwind {
 ; CHECK-NEXT:    movl $1, %edi
 ; CHECK-NEXT:    callq car
 ; CHECK-NEXT:    movl $0, GHJK(%rip)
-; CHECK-NEXT:    jmpq *%r14
+; CHECK-NEXT:    jmpq *%rbx
 ; CHECK-NEXT:  .Ltmp1: # Block address taken
 ; CHECK-NEXT:  .LBB1_6: # %altret
 ; CHECK-NEXT:    movl $1001, %edi # imm = 0x3E9
@@ -132,13 +132,13 @@ define dso_local void @tail_duplicate_me() nounwind {
 ; CHECK-NEXT:  .LBB1_5: # %return
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB1_3: # %C
 ; CHECK-NEXT:    movl $2, %edi
 ; CHECK-NEXT:    callq dar
 ; CHECK-NEXT:    movl $0, GHJK(%rip)
-; CHECK-NEXT:    jmpq *%r14
+; CHECK-NEXT:    jmpq *%rbx
 entry:
   %a = call i1 @qux()
   %c = call ptr @choose(ptr blockaddress(@tail_duplicate_me, %return),

@@ -231,18 +231,18 @@ if(LLVM_LIBC_FULL_BUILD)
       libc.src.__support.CPP.utility
   )
 
-  # add_libc_unittest(
-  #   abort_test
-  #   SUITE
-  #     libc_stdlib_unittests
-  #   SRCS
-  #     abort_test.cpp
-  #   DEPENDS
-  #     libc.include.stdlib
-  #     libc.include.signal
-  #     libc.src.stdlib.abort
-  #     libc.src.stdlib._Exit
-  #     libc.src.signal.raise
-  # )
+  add_libc_unittest(
+    abort_test
+    SUITE
+      libc_stdlib_unittests
+    SRCS
+      abort_test.cpp
+    DEPENDS
+      libc.include.stdlib
+      libc.include.signal
+      libc.src.stdlib.abort
+      libc.src.stdlib._Exit
+      libc.src.signal.raise
+  )
 
 endif()

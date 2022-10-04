@@ -19,7 +19,7 @@
 #include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
@@ -616,16 +616,12 @@ namespace {
 /// Base state for the vectorize pass.
 /// Command line arguments are preempted by non-empty pass arguments.
 struct Vectorize : public impl::AffineVectorizeBase<Vectorize> {
-  Vectorize() = default;
-  Vectorize(ArrayRef<int64_t> virtualVectorSize);
+  using Base::Base;
+
   void runOnOperation() override;
 };
 
 } // namespace
-
-Vectorize::Vectorize(ArrayRef<int64_t> virtualVectorSize) {
-  vectorSizes = virtualVectorSize;
-}
 
 static void vectorizeLoopIfProfitable(Operation *loop, unsigned depthInPattern,
                                       unsigned patternDepth,
@@ -1717,14 +1713,6 @@ static void vectorizeLoops(Operation *parentOp, DenseSet<Operation *> &loops,
   LLVM_DEBUG(dbgs() << "\n");
 }
 
-std::unique_ptr<OperationPass<func::FuncOp>>
-createSuperVectorizePass(ArrayRef<int64_t> virtualVectorSize) {
-  return std::make_unique<Vectorize>(virtualVectorSize);
-}
-std::unique_ptr<OperationPass<func::FuncOp>> createSuperVectorizePass() {
-  return std::make_unique<Vectorize>();
-}
-
 /// Applies vectorization to the current function by searching over a bunch of
 /// predetermined patterns.
 void Vectorize::runOnOperation() {
@@ -1870,14 +1858,6 @@ vectorizeAffineLoopNest(std::vector<SmallVector<AffineForOp, 2>> &loops,
   if (failed(verifyLoopNesting(loops)))
     return failure();
   return vectorizeLoopNest(loops, strategy);
-}
-
-std::unique_ptr<OperationPass<func::FuncOp>>
-createSuperVectorizePass(ArrayRef<int64_t> virtualVectorSize) {
-  return std::make_unique<Vectorize>(virtualVectorSize);
-}
-std::unique_ptr<OperationPass<func::FuncOp>> createSuperVectorizePass() {
-  return std::make_unique<Vectorize>();
 }
 
 } // namespace mlir

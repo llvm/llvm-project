@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cmath>
+
 #include "DurationRewriter.h"
 #include "clang/Tooling/FixIt.h"
 #include "llvm/ADT/IndexedMap.h"

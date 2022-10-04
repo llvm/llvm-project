@@ -239,7 +239,7 @@ static RecordDecl *getRecordDeclForType(const QualType &T) {
 TypeInfo getTypeInfoForType(const QualType &T) {
   const TagDecl *TD = getTagDeclForType(T);
   if (!TD)
-    return TypeInfo(Reference(T.getAsString()));
+    return TypeInfo(Reference(SymbolID(), T.getAsString()));
 
   InfoType IT;
   if (dyn_cast<EnumDecl>(TD)) {
@@ -360,7 +360,7 @@ static void parseBases(RecordInfo &I, const CXXRecordDecl *D) {
       I.Parents.emplace_back(getUSRForDecl(P), P->getNameAsString(),
                              InfoType::IT_record, getInfoRelativePath(P));
     else
-      I.Parents.emplace_back(B.getType().getAsString());
+      I.Parents.emplace_back(SymbolID(), B.getType().getAsString());
   }
   for (const CXXBaseSpecifier &B : D->vbases()) {
     if (const RecordDecl *P = getRecordDeclForType(B.getType()))
@@ -368,7 +368,7 @@ static void parseBases(RecordInfo &I, const CXXRecordDecl *D) {
                                     InfoType::IT_record,
                                     getInfoRelativePath(P));
     else
-      I.VirtualParents.emplace_back(B.getType().getAsString());
+      I.VirtualParents.emplace_back(SymbolID(), B.getType().getAsString());
   }
 }
 

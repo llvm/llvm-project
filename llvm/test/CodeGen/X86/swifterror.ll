@@ -530,25 +530,25 @@ bb_end:
 define void @foo_sret(ptr sret(%struct.S) %agg.result, i32 %val1, ptr swifterror %error_ptr_ref) {
 ; CHECK-APPLE-LABEL: foo_sret:
 ; CHECK-APPLE:       ## %bb.0: ## %entry
-; CHECK-APPLE-NEXT:    pushq %rbp
+; CHECK-APPLE-NEXT:    pushq %r14
 ; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-APPLE-NEXT:    pushq %rbx
 ; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 24
 ; CHECK-APPLE-NEXT:    pushq %rax
 ; CHECK-APPLE-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-APPLE-NEXT:    .cfi_offset %rbx, -24
-; CHECK-APPLE-NEXT:    .cfi_offset %rbp, -16
-; CHECK-APPLE-NEXT:    movl %esi, %ebp
-; CHECK-APPLE-NEXT:    movq %rdi, %rbx
+; CHECK-APPLE-NEXT:    .cfi_offset %r14, -16
+; CHECK-APPLE-NEXT:    movl %esi, %ebx
+; CHECK-APPLE-NEXT:    movq %rdi, %r14
 ; CHECK-APPLE-NEXT:    movl $16, %edi
 ; CHECK-APPLE-NEXT:    callq _malloc
 ; CHECK-APPLE-NEXT:    movb $1, 8(%rax)
-; CHECK-APPLE-NEXT:    movl %ebp, 4(%rbx)
+; CHECK-APPLE-NEXT:    movl %ebx, 4(%r14)
 ; CHECK-APPLE-NEXT:    movq %rax, %r12
-; CHECK-APPLE-NEXT:    movq %rbx, %rax
+; CHECK-APPLE-NEXT:    movq %r14, %rax
 ; CHECK-APPLE-NEXT:    addq $8, %rsp
 ; CHECK-APPLE-NEXT:    popq %rbx
-; CHECK-APPLE-NEXT:    popq %rbp
+; CHECK-APPLE-NEXT:    popq %r14
 ; CHECK-APPLE-NEXT:    retq
 ;
 ; CHECK-O0-LABEL: foo_sret:
@@ -736,8 +736,8 @@ define float @caller_with_multiple_swifterror_values(ptr %error_ref, ptr %error_
 ; CHECK-APPLE-NEXT:    .cfi_offset %rbx, -40
 ; CHECK-APPLE-NEXT:    .cfi_offset %r12, -32
 ; CHECK-APPLE-NEXT:    .cfi_offset %r14, -24
-; CHECK-APPLE-NEXT:    movq %rsi, %r14
-; CHECK-APPLE-NEXT:    movq %rdi, %rbx
+; CHECK-APPLE-NEXT:    movq %rsi, %rbx
+; CHECK-APPLE-NEXT:    movq %rdi, %r14
 ; CHECK-APPLE-NEXT:    xorl %r12d, %r12d
 ; CHECK-APPLE-NEXT:    callq _foo
 ; CHECK-APPLE-NEXT:    movq %r12, %rdi
@@ -745,7 +745,7 @@ define float @caller_with_multiple_swifterror_values(ptr %error_ref, ptr %error_
 ; CHECK-APPLE-NEXT:    jne LBB7_2
 ; CHECK-APPLE-NEXT:  ## %bb.1: ## %cont
 ; CHECK-APPLE-NEXT:    movzbl 8(%rdi), %eax
-; CHECK-APPLE-NEXT:    movb %al, (%rbx)
+; CHECK-APPLE-NEXT:    movb %al, (%r14)
 ; CHECK-APPLE-NEXT:  LBB7_2: ## %handler
 ; CHECK-APPLE-NEXT:    callq _free
 ; CHECK-APPLE-NEXT:    movq %rsp, %rax
@@ -758,7 +758,7 @@ define float @caller_with_multiple_swifterror_values(ptr %error_ref, ptr %error_
 ; CHECK-APPLE-NEXT:    jne LBB7_4
 ; CHECK-APPLE-NEXT:  ## %bb.3: ## %cont2
 ; CHECK-APPLE-NEXT:    movzbl 8(%rdi), %eax
-; CHECK-APPLE-NEXT:    movb %al, (%r14)
+; CHECK-APPLE-NEXT:    movb %al, (%rbx)
 ; CHECK-APPLE-NEXT:  LBB7_4: ## %handler2
 ; CHECK-APPLE-NEXT:    callq _free
 ; CHECK-APPLE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -1400,9 +1400,9 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, ptr swiftself, 
 ; CHECK-APPLE-NEXT:    movq %r13, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-APPLE-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-APPLE-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-APPLE-NEXT:    movq %rcx, %r14
-; CHECK-APPLE-NEXT:    movq %rdx, %r15
-; CHECK-APPLE-NEXT:    movq %rsi, %rbx
+; CHECK-APPLE-NEXT:    movq %rcx, %rbx
+; CHECK-APPLE-NEXT:    movq %rdx, %r14
+; CHECK-APPLE-NEXT:    movq %rsi, %r15
 ; CHECK-APPLE-NEXT:    movq %rdi, %rbp
 ; CHECK-APPLE-NEXT:    movl $1, %edi
 ; CHECK-APPLE-NEXT:    movl $2, %esi
@@ -1414,9 +1414,9 @@ define swiftcc void @params_in_reg(i64, i64, i64, i64, i64, i64, ptr swiftself, 
 ; CHECK-APPLE-NEXT:    xorl %r12d, %r12d
 ; CHECK-APPLE-NEXT:    callq _params_in_reg2
 ; CHECK-APPLE-NEXT:    movq %rbp, %rdi
-; CHECK-APPLE-NEXT:    movq %rbx, %rsi
-; CHECK-APPLE-NEXT:    movq %r15, %rdx
-; CHECK-APPLE-NEXT:    movq %r14, %rcx
+; CHECK-APPLE-NEXT:    movq %r15, %rsi
+; CHECK-APPLE-NEXT:    movq %r14, %rdx
+; CHECK-APPLE-NEXT:    movq %rbx, %rcx
 ; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 ## 8-byte Reload
 ; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 ## 8-byte Reload
 ; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 ## 8-byte Reload
@@ -1566,13 +1566,13 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-APPLE-NEXT:    .cfi_offset %r14, -32
 ; CHECK-APPLE-NEXT:    .cfi_offset %r15, -24
 ; CHECK-APPLE-NEXT:    .cfi_offset %rbp, -16
-; CHECK-APPLE-NEXT:    movq %r12, %r14
+; CHECK-APPLE-NEXT:    movq %r12, %rbx
 ; CHECK-APPLE-NEXT:    movq %r13, (%rsp) ## 8-byte Spill
 ; CHECK-APPLE-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-APPLE-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-APPLE-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-APPLE-NEXT:    movq %rdx, %r15
-; CHECK-APPLE-NEXT:    movq %rsi, %rbx
+; CHECK-APPLE-NEXT:    movq %rdx, %r14
+; CHECK-APPLE-NEXT:    movq %rsi, %r15
 ; CHECK-APPLE-NEXT:    movq %rdi, %rbp
 ; CHECK-APPLE-NEXT:    movl $1, %edi
 ; CHECK-APPLE-NEXT:    movl $2, %esi
@@ -1585,18 +1585,18 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-APPLE-NEXT:    callq _params_in_reg2
 ; CHECK-APPLE-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-APPLE-NEXT:    movq %rbp, %rdi
-; CHECK-APPLE-NEXT:    movq %rbx, %rsi
-; CHECK-APPLE-NEXT:    movq %r15, %rdx
+; CHECK-APPLE-NEXT:    movq %r15, %rsi
+; CHECK-APPLE-NEXT:    movq %r14, %rdx
 ; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx ## 8-byte Reload
 ; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 ## 8-byte Reload
 ; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 ## 8-byte Reload
 ; CHECK-APPLE-NEXT:    movq (%rsp), %r13 ## 8-byte Reload
-; CHECK-APPLE-NEXT:    movq %r14, %r12
+; CHECK-APPLE-NEXT:    movq %rbx, %r12
 ; CHECK-APPLE-NEXT:    callq _params_and_return_in_reg2
-; CHECK-APPLE-NEXT:    movq %rax, %rbx
-; CHECK-APPLE-NEXT:    movq %rdx, %rbp
-; CHECK-APPLE-NEXT:    movq %rcx, %r15
-; CHECK-APPLE-NEXT:    movq %r8, %r14
+; CHECK-APPLE-NEXT:    movq %rax, %r14
+; CHECK-APPLE-NEXT:    movq %rdx, %r15
+; CHECK-APPLE-NEXT:    movq %rcx, %rbp
+; CHECK-APPLE-NEXT:    movq %r8, %rbx
 ; CHECK-APPLE-NEXT:    movq %r12, (%rsp) ## 8-byte Spill
 ; CHECK-APPLE-NEXT:    movl $1, %edi
 ; CHECK-APPLE-NEXT:    movl $2, %esi
@@ -1607,10 +1607,10 @@ define swiftcc { i64, i64, i64, i64} @params_and_return_in_reg(i64, i64, i64, i6
 ; CHECK-APPLE-NEXT:    xorl %r13d, %r13d
 ; CHECK-APPLE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 ## 8-byte Reload
 ; CHECK-APPLE-NEXT:    callq _params_in_reg2
-; CHECK-APPLE-NEXT:    movq %rbx, %rax
-; CHECK-APPLE-NEXT:    movq %rbp, %rdx
-; CHECK-APPLE-NEXT:    movq %r15, %rcx
-; CHECK-APPLE-NEXT:    movq %r14, %r8
+; CHECK-APPLE-NEXT:    movq %r14, %rax
+; CHECK-APPLE-NEXT:    movq %r15, %rdx
+; CHECK-APPLE-NEXT:    movq %rbp, %rcx
+; CHECK-APPLE-NEXT:    movq %rbx, %r8
 ; CHECK-APPLE-NEXT:    movq (%rsp), %r12 ## 8-byte Reload
 ; CHECK-APPLE-NEXT:    addq $48, %rsp
 ; CHECK-APPLE-NEXT:    popq %rbx

@@ -112,6 +112,7 @@ subroutine len_test(a,b, c, d, e, n, m)
   external d
   integer, intent(in) :: n, m
   character(n), intent(in) :: e
+  character(5), parameter :: cparam = "abc  "
   interface
      function fun1(L)
        character(L) :: fun1
@@ -155,6 +156,14 @@ subroutine len_test(a,b, c, d, e, n, m)
   print *, len(fun1(n-m))
   !CHECK: PRINT *, len(mofun(m+1_4))
   print *, len(mofun(m+1))
+  !CHECK: PRINT *, 3_4
+  print *, len(trim(cparam))
+  !CHECK: PRINT *, len(trim(c))
+  print *, len(trim(c))
+  !CHECK: PRINT *, 40_4
+  print *, len(repeat(c, 4))
+  !CHECK: PRINT *, len(repeat(c,int(i,kind=8)))
+  print *, len(repeat(c, i))
 end subroutine len_test
 
 !CHECK-LABEL: associate_tests

@@ -263,8 +263,9 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
 
     /// Returns the number of buffers located in the workgroup memory.
     unsigned getNumWorkgroupAttributions() {
-      return (*this)->getAttrOfType<IntegerAttr>(
-          getNumWorkgroupAttributionsAttrName()).getInt();
+      auto attr = (*this)->getAttrOfType<IntegerAttr>(
+          getNumWorkgroupAttributionsAttrName());
+      return attr ? attr.getInt() : 0;
     }
 
     /// Returns a list of block arguments that correspond to buffers located in
@@ -931,7 +932,7 @@ def GPU_AllocOp : GPU_Op<"alloc", [
                  Optional<GPU_AsyncToken>:$asyncToken);
 
   let extraClassDeclaration = [{
-    MemRefType getType() { return memref().getType().cast<MemRefType>(); }
+    MemRefType getType() { return getMemref().getType().cast<MemRefType>(); }
   }];
 
   let assemblyFormat = [{
@@ -1208,7 +1209,7 @@ def GPU_SubgroupMmaConstantMatrixOp : GPU_Op<"subgroup_mma_constant_matrix",
 
   let extraClassDeclaration = [{
     gpu::MMAMatrixType getType() {
-      return res().getType().cast<gpu::MMAMatrixType>();
+      return getRes().getType().cast<gpu::MMAMatrixType>();
     }
   }];
 
@@ -1269,7 +1270,7 @@ def GPU_SubgroupMmaElementwiseOp : GPU_Op<"subgroup_mma_elementwise",
 
   let extraClassDeclaration = [{
     gpu::MMAMatrixType getType() {
-      return res().getType().cast<gpu::MMAMatrixType>();
+      return getRes().getType().cast<gpu::MMAMatrixType>();
     }
   }];
 

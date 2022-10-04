@@ -237,9 +237,8 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
 template <class _BidirectionalIterator, class _Compare>
 inline _LIBCPP_HIDE_FROM_ABI void inplace_merge(
     _BidirectionalIterator __first, _BidirectionalIterator __middle, _BidirectionalIterator __last, _Compare __comp) {
-  typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
   std::__inplace_merge<_ClassicAlgPolicy>(
-      std::move(__first), std::move(__middle), std::move(__last), static_cast<_Comp_ref>(__comp));
+      std::move(__first), std::move(__middle), std::move(__last), static_cast<__comp_ref_type<_Compare> >(__comp));
 }
 
 template <class _BidirectionalIterator>

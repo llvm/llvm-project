@@ -48,15 +48,15 @@ static constexpr uint16_t MXCSR_ROUNDING_CONTROL_BIT_POSITION = 13;
 // The exception flags in the x87 status register and the MXCSR have the same
 // encoding as well as the same bit positions.
 struct ExceptionFlags {
-  static constexpr uint16_t INVALID = 0x1;
+  static constexpr uint16_t INVALID_F = 0x1;
   // Some libcs define __FE_DENORM corresponding to the denormal input
   // exception and include it in FE_ALL_EXCEPTS. We define and use it to
   // support compiling against headers provided by such libcs.
-  static constexpr uint16_t DENORMAL = 0x2;
-  static constexpr uint16_t DIV_BY_ZERO = 0x4;
-  static constexpr uint16_t OVERFLOW = 0x8;
-  static constexpr uint16_t UNDERFLOW = 0x10;
-  static constexpr uint16_t INEXACT = 0x20;
+  static constexpr uint16_t DENORMAL_F = 0x2;
+  static constexpr uint16_t DIV_BY_ZERO_F = 0x4;
+  static constexpr uint16_t OVERFLOW_F = 0x8;
+  static constexpr uint16_t UNDERFLOW_F = 0x10;
+  static constexpr uint16_t INEXACT_F = 0x20;
 };
 
 // The exception control bits occupy six bits, one bit for each exception.
@@ -71,25 +71,25 @@ static constexpr uint16_t MXCSR_EXCEPTION_CONTOL_BIT_POISTION = 7;
 static inline uint16_t get_status_value_for_except(int excepts) {
   // We will make use of the fact that exception control bits are single
   // bit flags in the control registers.
-  return (excepts & FE_INVALID ? ExceptionFlags::INVALID : 0) |
+  return (excepts & FE_INVALID ? ExceptionFlags::INVALID_F : 0) |
 #ifdef __FE_DENORM
-         (excepts & __FE_DENORM ? ExceptionFlags::DENORMAL : 0) |
+         (excepts & __FE_DENORM ? ExceptionFlags::DENORMAL_F : 0) |
 #endif // __FE_DENORM
-         (excepts & FE_DIVBYZERO ? ExceptionFlags::DIV_BY_ZERO : 0) |
-         (excepts & FE_OVERFLOW ? ExceptionFlags::OVERFLOW : 0) |
-         (excepts & FE_UNDERFLOW ? ExceptionFlags::UNDERFLOW : 0) |
-         (excepts & FE_INEXACT ? ExceptionFlags::INEXACT : 0);
+         (excepts & FE_DIVBYZERO ? ExceptionFlags::DIV_BY_ZERO_F : 0) |
+         (excepts & FE_OVERFLOW ? ExceptionFlags::OVERFLOW_F : 0) |
+         (excepts & FE_UNDERFLOW ? ExceptionFlags::UNDERFLOW_F : 0) |
+         (excepts & FE_INEXACT ? ExceptionFlags::INEXACT_F : 0);
 }
 
 static inline int exception_status_to_macro(uint16_t status) {
-  return (status & ExceptionFlags::INVALID ? FE_INVALID : 0) |
+  return (status & ExceptionFlags::INVALID_F ? FE_INVALID : 0) |
 #ifdef __FE_DENORM
-         (status & ExceptionFlags::DENORMAL ? __FE_DENORM : 0) |
+         (status & ExceptionFlags::DENORMAL_F ? __FE_DENORM : 0) |
 #endif // __FE_DENORM
-         (status & ExceptionFlags::DIV_BY_ZERO ? FE_DIVBYZERO : 0) |
-         (status & ExceptionFlags::OVERFLOW ? FE_OVERFLOW : 0) |
-         (status & ExceptionFlags::UNDERFLOW ? FE_UNDERFLOW : 0) |
-         (status & ExceptionFlags::INEXACT ? FE_INEXACT : 0);
+         (status & ExceptionFlags::DIV_BY_ZERO_F ? FE_DIVBYZERO : 0) |
+         (status & ExceptionFlags::OVERFLOW_F ? FE_OVERFLOW : 0) |
+         (status & ExceptionFlags::UNDERFLOW_F ? FE_UNDERFLOW : 0) |
+         (status & ExceptionFlags::INEXACT_F ? FE_INEXACT : 0);
 }
 
 struct X87StateDescriptor {
@@ -263,19 +263,19 @@ static inline int raise_except(int excepts) {
     internal::fwait();
   };
 
-  if (status_value & internal::ExceptionFlags::INVALID)
-    raise_helper(internal::ExceptionFlags::INVALID);
-  if (status_value & internal::ExceptionFlags::DIV_BY_ZERO)
-    raise_helper(internal::ExceptionFlags::DIV_BY_ZERO);
-  if (status_value & internal::ExceptionFlags::OVERFLOW)
-    raise_helper(internal::ExceptionFlags::OVERFLOW);
-  if (status_value & internal::ExceptionFlags::UNDERFLOW)
-    raise_helper(internal::ExceptionFlags::UNDERFLOW);
-  if (status_value & internal::ExceptionFlags::INEXACT)
-    raise_helper(internal::ExceptionFlags::INEXACT);
+  if (status_value & internal::ExceptionFlags::INVALID_F)
+    raise_helper(internal::ExceptionFlags::INVALID_F);
+  if (status_value & internal::ExceptionFlags::DIV_BY_ZERO_F)
+    raise_helper(internal::ExceptionFlags::DIV_BY_ZERO_F);
+  if (status_value & internal::ExceptionFlags::OVERFLOW_F)
+    raise_helper(internal::ExceptionFlags::OVERFLOW_F);
+  if (status_value & internal::ExceptionFlags::UNDERFLOW_F)
+    raise_helper(internal::ExceptionFlags::UNDERFLOW_F);
+  if (status_value & internal::ExceptionFlags::INEXACT_F)
+    raise_helper(internal::ExceptionFlags::INEXACT_F);
 #ifdef __FE_DENORM
-  if (status_value & internal::ExceptionFlags::DENORMAL) {
-    raise_helper(internal::ExceptionFlags::DENORMAL);
+  if (status_value & internal::ExceptionFlags::DENORMAL_F) {
+    raise_helper(internal::ExceptionFlags::DENORMAL_F);
   }
 #endif // __FE_DENORM
 
@@ -371,24 +371,24 @@ static_assert(
 // The exception flags in the Windows FEnv struct and the MXCSR have almost
 // reversed bit positions.
 struct WinExceptionFlags {
-  static constexpr uint32_t INEXACT = 0x01;
-  static constexpr uint32_t UNDERFLOW = 0x02;
-  static constexpr uint32_t OVERFLOW = 0x04;
-  static constexpr uint32_t DIV_BY_ZERO = 0x08;
-  static constexpr uint32_t INVALID = 0x10;
-  static constexpr uint32_t DENORMAL = 0x20;
+  static constexpr uint32_t INEXACT_WIN = 0x01;
+  static constexpr uint32_t UNDERFLOW_WIN = 0x02;
+  static constexpr uint32_t OVERFLOW_WIN = 0x04;
+  static constexpr uint32_t DIV_BY_ZERO_WIN = 0x08;
+  static constexpr uint32_t INVALID_WIN = 0x10;
+  static constexpr uint32_t DENORMAL_WIN = 0x20;
 
   // The Windows FEnv struct has a second copy of all of these bits in the high
   // byte of the 32 bit control word. These are used as the source of truth when
   // calling fesetenv.
   static constexpr uint32_t HIGH_OFFSET = 24;
 
-  static constexpr uint32_t HIGH_INEXACT = INEXACT << HIGH_OFFSET;
-  static constexpr uint32_t HIGH_UNDERFLOW = UNDERFLOW << HIGH_OFFSET;
-  static constexpr uint32_t HIGH_OVERFLOW = OVERFLOW << HIGH_OFFSET;
-  static constexpr uint32_t HIGH_DIV_BY_ZERO = DIV_BY_ZERO << HIGH_OFFSET;
-  static constexpr uint32_t HIGH_INVALID = INVALID << HIGH_OFFSET;
-  static constexpr uint32_t HIGH_DENORMAL = DENORMAL << HIGH_OFFSET;
+  static constexpr uint32_t HIGH_INEXACT = INEXACT_WIN << HIGH_OFFSET;
+  static constexpr uint32_t HIGH_UNDERFLOW = UNDERFLOW_WIN << HIGH_OFFSET;
+  static constexpr uint32_t HIGH_OVERFLOW = OVERFLOW_WIN << HIGH_OFFSET;
+  static constexpr uint32_t HIGH_DIV_BY_ZERO = DIV_BY_ZERO_WIN << HIGH_OFFSET;
+  static constexpr uint32_t HIGH_INVALID = INVALID_WIN << HIGH_OFFSET;
+  static constexpr uint32_t HIGH_DENORMAL = DENORMAL_WIN << HIGH_OFFSET;
 };
 
 /*
@@ -470,25 +470,24 @@ static inline int get_env(fenv_t *envp) {
   uint32_t mxcsr = internal::get_mxcsr();
 
   // Set exception flags in the status word
-  status_word |= (mxcsr & (internal::ExceptionFlags::INVALID |
-                           internal::ExceptionFlags::DENORMAL))
+  status_word |= (mxcsr & (internal::ExceptionFlags::INVALID_F |
+                           internal::ExceptionFlags::DENORMAL_F))
                  << 4;
-  status_word |= (mxcsr & internal::ExceptionFlags::DIV_BY_ZERO) << 1;
-  status_word |= (mxcsr & internal::ExceptionFlags::OVERFLOW) >> 1;
-  status_word |= (mxcsr & internal::ExceptionFlags::UNDERFLOW) >> 3;
-  status_word |= (mxcsr & internal::ExceptionFlags::INEXACT) >> 5;
+  status_word |= (mxcsr & internal::ExceptionFlags::DIV_BY_ZERO_F) << 1;
+  status_word |= (mxcsr & internal::ExceptionFlags::OVERFLOW_F) >> 1;
+  status_word |= (mxcsr & internal::ExceptionFlags::UNDERFLOW_F) >> 3;
+  status_word |= (mxcsr & internal::ExceptionFlags::INEXACT_F) >> 5;
   status_word |= status_word << WinExceptionFlags::HIGH_OFFSET;
 
   // Set exception masks in bits 0-5 and 24-29
-  control_word |=
-      (mxcsr &
-       ((internal::ExceptionFlags::INVALID | internal::ExceptionFlags::DENORMAL)
-        << 7)) >>
-      3;
-  control_word |= (mxcsr & (internal::ExceptionFlags::DIV_BY_ZERO << 7)) >> 6;
-  control_word |= (mxcsr & (internal::ExceptionFlags::OVERFLOW << 7)) >> 8;
-  control_word |= (mxcsr & (internal::ExceptionFlags::UNDERFLOW << 7)) >> 10;
-  control_word |= (mxcsr & (internal::ExceptionFlags::INEXACT << 7)) >> 12;
+  control_word |= (mxcsr & ((internal::ExceptionFlags::INVALID_F |
+                             internal::ExceptionFlags::DENORMAL_F)
+                            << 7)) >>
+                  3;
+  control_word |= (mxcsr & (internal::ExceptionFlags::DIV_BY_ZERO_F << 7)) >> 6;
+  control_word |= (mxcsr & (internal::ExceptionFlags::OVERFLOW_F << 7)) >> 8;
+  control_word |= (mxcsr & (internal::ExceptionFlags::UNDERFLOW_F << 7)) >> 10;
+  control_word |= (mxcsr & (internal::ExceptionFlags::INEXACT_F << 7)) >> 12;
   control_word |= control_word << WinExceptionFlags::HIGH_OFFSET;
 
   // Set rounding in bits 8-9 and 30-31

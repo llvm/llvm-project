@@ -2,8 +2,8 @@
 
 // -----
 
-// CHECK-DAG: [[$MOD_2:#map[0-9]+]] = affine_map<(d0) -> (d0 mod 2)>
-// CHECK-DAG: [[$MAP_MINUS_1:#map[0-9]+]] = affine_map<(d0) -> (d0 - 1)>
+// CHECK-DAG: [[$MOD_2:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0 mod 2)>
+// CHECK-DAG: [[$MAP_MINUS_1:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0 - 1)>
 
 // CHECK-LABEL: func @loop_nest_dma() {
 func.func @loop_nest_dma() {
@@ -64,8 +64,8 @@ func.func @loop_nest_dma() {
 
 // -----
 
-// CHECK-DAG: [[$FLOOR_MOD_2:#map[0-9]+]] = affine_map<(d0) -> ((d0 floordiv 4) mod 2)>
-// CHECK-DAG: [[$REMAP_SHIFT_MINUS_4:#map[0-9]+]] = affine_map<(d0) -> (d0 - 4)>
+// CHECK-DAG: [[$FLOOR_MOD_2:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> ((d0 floordiv 4) mod 2)>
+// CHECK-DAG: [[$REMAP_SHIFT_MINUS_4:#map[0-9a-zA-Z_]+]] = affine_map<(d0) -> (d0 - 4)>
 
 // CHECK-LABEL: @loop_step
 func.func @loop_step(%arg0: memref<512xf32>,
@@ -84,8 +84,8 @@ func.func @loop_step(%arg0: memref<512xf32>,
   }
   return
 }
-// CHECK:        [[BUF:%[0-9]+]] = memref.alloc() : memref<2x4xf32, 1>
-// CHECK:        [[TAG:%[0-9]+]] = memref.alloc() : memref<2x1xi32>
+// CHECK:        [[BUF:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<2x4xf32, 1>
+// CHECK:        [[TAG:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<2x1xi32>
 // CHECK-NEXT:   affine.dma_start %{{.*}}[%{{.*}}], %{{.*}}[(%{{.*}} floordiv 4) mod 2, 0], [[TAG]][(%{{.*}} floordiv 4) mod 2, 0], %{{.*}} : memref<512xf32>, memref<2x4xf32, 1>, memref<2x1xi32>
 // CHECK-NEXT:   affine.for %{{.*}} = 4 to 512 step 4 {
 // CHECK-NEXT:     affine.dma_start %{{.*}}[%{{.*}}], %{{.*}}[(%{{.*}} floordiv 4) mod 2, 0], [[TAG]][(%{{.*}} floordiv 4) mod 2, 0], %{{.*}} : memref<512xf32>, memref<2x4xf32, 1>, memref<2x1xi32>
@@ -94,7 +94,7 @@ func.func @loop_step(%arg0: memref<512xf32>,
 // CHECK:          affine.dma_wait [[TAG]][(%{{.*}} floordiv 4) mod 2, 0], %{{.*}} : memref<2x1xi32>
 // CHECK-NEXT:     "compute"(%{{.*}}) : (index) -> ()
 // CHECK-NEXT:   }
-// CHECK-NEXT:   [[SHIFTED:%[0-9]+]] = affine.apply [[$REMAP_SHIFT_MINUS_4]](%{{.*}})
+// CHECK-NEXT:   [[SHIFTED:%[0-9a-zA-Z_]+]] = affine.apply [[$REMAP_SHIFT_MINUS_4]](%{{.*}})
 // CHECK-NEXT:   %{{.*}} = affine.apply [[$FLOOR_MOD_2]]([[SHIFTED]])
 // CHECK:        affine.dma_wait [[TAG]][(%{{.*}} floordiv 4) mod 2, 0], %{{.*}} : memref<2x1xi32>
 // CHECK-NEXT:   "compute"(%{{.*}}) : (index) -> ()
@@ -118,8 +118,8 @@ func.func @loop_dma_nested(%arg0: memref<512x32xvector<8xf32>>, %arg1: memref<51
   %4 = memref.alloc() : memref<2xi32>
   %5 = memref.alloc() : memref<2xi32>
   // Prologue for DMA overlap on arg2.
-  // CHECK-DAG: [[BUF_ARG2:%[0-9]+]] = memref.alloc() : memref<2x64x4xvector<8xf32>, 2>
-  // CHECK-DAG: [[TAG_ARG2:%[0-9]+]] = memref.alloc() : memref<2x2xi32>
+  // CHECK-DAG: [[BUF_ARG2:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<2x64x4xvector<8xf32>, 2>
+  // CHECK-DAG: [[TAG_ARG2:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<2x2xi32>
   // CHECK: affine.dma_start %{{.*}}[
   // CHECK: affine.for %{{.*}} = 1 to 8 {
   affine.for %i0 = 0 to 8 {
@@ -130,10 +130,10 @@ func.func @loop_dma_nested(%arg0: memref<512x32xvector<8xf32>>, %arg1: memref<51
     // CHECK: affine.dma_start %{{.*}}[
     // CHECK: affine.dma_wait [[TAG_ARG2]]
     // Prologue for DMA overlap on arg0, arg1 nested within i0
-    // CHECK: [[BUF_ARG0:%[0-9]+]] = memref.alloc() : memref<2x64x4xvector<8xf32>, 2>
-    // CHECK: [[BUF_ARG1:%[0-9]+]] = memref.alloc() : memref<2x64x4xvector<8xf32>, 2>
-    // CHECK: [[TAG_ARG0:%[0-9]+]] = memref.alloc() : memref<2x2xi32>
-    // CHECK: [[TAG_ARG1:%[0-9]+]] = memref.alloc() : memref<2x2xi32>
+    // CHECK: [[BUF_ARG0:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<2x64x4xvector<8xf32>, 2>
+    // CHECK: [[BUF_ARG1:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<2x64x4xvector<8xf32>, 2>
+    // CHECK: [[TAG_ARG0:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<2x2xi32>
+    // CHECK: [[TAG_ARG1:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<2x2xi32>
     // CHECK: affine.dma_start %{{.*}}[
     // CHECK: affine.dma_start %{{.*}}[
     // CHECK-NEXT: affine.for %{{.*}} = 1 to 8 {
@@ -164,10 +164,10 @@ func.func @loop_dma_nested(%arg0: memref<512x32xvector<8xf32>>, %arg1: memref<51
   // epilogue for DMA overlap on %arg2
   // CHECK:  affine.dma_wait [[TAG_ARG2]]
   // Within the epilogue for arg2's DMA, we have the DMAs on %arg1, %arg2 nested.
-  // CHECK: [[BUF_ARG0_NESTED:%[0-9]+]] = memref.alloc() : memref<2x64x4xvector<8xf32>, 2>
-  // CHECK: [[BUF_ARG1_NESTED:%[0-9]+]] = memref.alloc() : memref<2x64x4xvector<8xf32>, 2>
-  // CHECK: [[TAG_ARG0_NESTED:%[0-9]+]] = memref.alloc() : memref<2x2xi32>
-  // CHECK: [[TAG_ARG1_NESTED:%[0-9]+]] = memref.alloc() : memref<2x2xi32>
+  // CHECK: [[BUF_ARG0_NESTED:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<2x64x4xvector<8xf32>, 2>
+  // CHECK: [[BUF_ARG1_NESTED:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<2x64x4xvector<8xf32>, 2>
+  // CHECK: [[TAG_ARG0_NESTED:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<2x2xi32>
+  // CHECK: [[TAG_ARG1_NESTED:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<2x2xi32>
   // CHECK:  affine.dma_start %{{.*}}[
   // CHECK:  affine.dma_start %{{.*}}[
   // CHECK:  affine.for %{{.*}} = 1 to 8 {
@@ -256,7 +256,7 @@ func.func @escaping_use(%arg0: memref<512 x 32 x f32>) {
   memref.dealloc %tag : memref<1 x i32>
   memref.dealloc %Av : memref<32 x 32 x f32, 2>
   return
-// CHECK:        "foo"(%{{[0-9]+}}) : (memref<32x32xf32, 2>) -> ()
+// CHECK:        "foo"(%{{[0-9a-zA-Z_]+}}) : (memref<32x32xf32, 2>) -> ()
 // CHECK:      }
 // CHECK:      return
 }
@@ -284,7 +284,7 @@ func.func @escaping_tag(%arg0: memref<512 x 32 x f32>) {
   memref.dealloc %tag : memref<1 x i32>
   memref.dealloc %Av : memref<32 x 32 x f32, 2>
   return
-// CHECK:        "foo"(%{{[0-9]+}}) : (memref<1xi32>) -> ()
+// CHECK:        "foo"(%{{[0-9a-zA-Z_]+}}) : (memref<1xi32>) -> ()
 // CHECK:      }
 // CHECK:      return
 }
@@ -313,7 +313,7 @@ func.func @live_out_use(%arg0: memref<512 x 32 x f32>) -> f32 {
   memref.dealloc %tag : memref<1 x i32>
   memref.dealloc %Av : memref<32 x 32 x f32, 2>
   return %v : f32
-// CHECK:      affine.load %{{[0-9]+}}[%{{.*}}, %{{.*}}] : memref<32x32xf32, 2>
+// CHECK:      affine.load %{{[0-9a-zA-Z_]+}}[%{{.*}}, %{{.*}}] : memref<32x32xf32, 2>
 // CHECK:      return
 }
 
@@ -376,5 +376,5 @@ func.func @escaping_and_indexed_use_mix() {
 // CHECK-NEXT:   affine.dma_start %{{.*}}[%{{.*}}], %{{.*}}[%{{.*}}], %{{.*}}[%{{.*}}], %{{.*}}
 // CHECK-NEXT:   affine.dma_wait %{{.*}}[%{{.*}}], %{{.*}} : memref<1xf32>
 // CHECK-NEXT:   "compute"(%{{.*}}) : (memref<32xf32, 1>) -> ()
-// CHECK-NEXT:   [[VAL:%[0-9]+]] = affine.load %{{.*}}[%{{.*}}] : memref<32xf32, 1>
+// CHECK-NEXT:   [[VAL:%[0-9a-zA-Z_]+]] = affine.load %{{.*}}[%{{.*}}] : memref<32xf32, 1>
 // CHECK-NEXT:   "foo"([[VAL]]) : (f32) -> ()

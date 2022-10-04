@@ -10,7 +10,7 @@
 
 #include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -1001,8 +1001,9 @@ transform::SplitReductionOp::applyToOne(linalg::LinalgOp target,
                                         SmallVectorImpl<Operation *> &results,
                                         transform::TransformState &state) {
   ControlSplitReductionFn splitFn = [&](LinalgOp) {
-    return std::pair<int64_t, unsigned>(getSplitFactor(),
-                                        getInsertSplitDimension());
+    return linalg::SplitReductionOptions{int64_t(getSplitFactor()),
+                                         unsigned(getInsertSplitDimension()),
+                                         /*innerParallel=*/false};
   };
   SimpleRewriter rewriter(getContext());
   rewriter.setInsertionPoint(target);
@@ -1324,17 +1325,20 @@ static LogicalResult alterGpuLaunch(SimpleRewriter &rewriter,
   };
 
   if (gridDimX.has_value())
-    gpuLaunch.gridSizeXMutable().assign(createConstValue(gridDimX.value()));
+    gpuLaunch.getGridSizeXMutable().assign(createConstValue(gridDimX.value()));
   if (gridDimY.has_value())
-    gpuLaunch.gridSizeYMutable().assign(createConstValue(gridDimY.value()));
+    gpuLaunch.getGridSizeYMutable().assign(createConstValue(gridDimY.value()));
   if (gridDimZ.has_value())
-    gpuLaunch.gridSizeZMutable().assign(createConstValue(gridDimZ.value()));
+    gpuLaunch.getGridSizeZMutable().assign(createConstValue(gridDimZ.value()));
   if (blockDimX.has_value())
-    gpuLaunch.blockSizeXMutable().assign(createConstValue(blockDimX.value()));
+    gpuLaunch.getBlockSizeXMutable().assign(
+        createConstValue(blockDimX.value()));
   if (blockDimY.has_value())
-    gpuLaunch.blockSizeYMutable().assign(createConstValue(blockDimY.value()));
+    gpuLaunch.getBlockSizeYMutable().assign(
+        createConstValue(blockDimY.value()));
   if (blockDimZ.has_value())
-    gpuLaunch.blockSizeZMutable().assign(createConstValue(blockDimZ.value()));
+    gpuLaunch.getBlockSizeZMutable().assign(
+        createConstValue(blockDimZ.value()));
   return success();
 }
 
@@ -1374,7 +1378,7 @@ transform::MapNestedForeachThreadToGpuThreads::applyToOne(
 
 LogicalResult mlir::linalg::rewriteTopLevelForeachThreadToGpuBlocks(
     RewriterBase &rewriter, scf::ForeachThreadOp foreachThreadOp,
-    function_ref<void(Operation *, const SmallVector<int64_t> &, IndexType,
+    function_ref<void(RewriterBase &, scf::ForeachThreadOp,
                       SmallVector<Value> &)>
         blockIdGenerator,
     SmallVector<int64_t> &gridDims) {
@@ -1397,9 +1401,8 @@ LogicalResult mlir::linalg::rewriteTopLevelForeachThreadToGpuBlocks(
   for (OpFoldResult ofr : *potentialGridDim)
     gridDims.push_back(getConstantIntValue(ofr).value());
 
-  IndexType indexType = rewriter.getIndexType();
   SmallVector<Value> blockOps;
-  blockIdGenerator(foreachThreadOp, gridDims, indexType, blockOps);
+  blockIdGenerator(rewriter, foreachThreadOp, blockOps);
 
   // Step 1. Move the body of foreachThreadOp.
   // Erase the terminator first, it will not be used since we are on buffers.
@@ -1480,9 +1483,26 @@ createGpuLaunch(RewriterBase &rewriter, Location loc,
       blockDimZ.has_value() ? createConstant(blockDimZ.value()) : one;
   auto launchOp = rewriter.create<gpu::LaunchOp>(
       loc, gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ);
-  rewriter.setInsertionPointToEnd(&launchOp.body().front());
+  rewriter.setInsertionPointToEnd(&launchOp.getBody().front());
   rewriter.create<gpu::TerminatorOp>(loc);
   return launchOp;
+}
+
+/// This is an helper that is only used in
+/// rewriteTopLevelForeachThreadToGpuBlocks. It generates GPU dialects block_id
+static void generateGpuBlockIds(RewriterBase &rewriter,
+                                scf::ForeachThreadOp foreachOp,
+                                SmallVector<Value> &blockOps) {
+  Location loc = foreachOp->getLoc();
+  OpBuilder::InsertionGuard guard(rewriter);
+  rewriter.setInsertionPoint(foreachOp);
+  IndexType indexType = rewriter.getIndexType();
+  SmallVector<gpu::Dimension> gpuDims{gpu::Dimension::x, gpu::Dimension::y,
+                                      gpu::Dimension::z};
+  for (int64_t idx : llvm::seq<int64_t>(0, gpuDims.size())) {
+    blockOps.push_back(
+        rewriter.create<gpu::BlockIdOp>(loc, indexType, gpuDims[idx]));
+  }
 }
 
 DiagnosedSilenceableFailure
@@ -1513,29 +1533,16 @@ transform::MapNestedForeachThreadToGpuBlocks::applyToOne(
     if (failed(maybeGpuLaunch))
       return DiagnosedSilenceableFailure(reportUnknownTransformError(target));
     gpuLaunch = *maybeGpuLaunch;
-    rewriter.setInsertionPointToStart(&gpuLaunch.body().front());
+    rewriter.setInsertionPointToStart(&gpuLaunch.getBody().front());
     Operation *newForeachThreadOp = rewriter.clone(*topLevelForeachThreadOp);
     rewriter.eraseOp(topLevelForeachThreadOp);
     topLevelForeachThreadOp =
         dyn_cast<scf::ForeachThreadOp>(newForeachThreadOp);
   }
 
-  auto generateBlocks = [&](Operation *op, const SmallVector<int64_t> &gridDims,
-                            IndexType indexType, SmallVector<Value> &blockOps) {
-    Location loc = op->getLoc();
-    OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPoint(op);
-    SmallVector<gpu::Dimension> gpuDims{gpu::Dimension::x, gpu::Dimension::y,
-                                        gpu::Dimension::z};
-    for (int64_t idx : llvm::seq<int64_t>(0, gridDims.size())) {
-      blockOps.push_back(
-          rewriter.create<gpu::BlockIdOp>(loc, indexType, gpuDims[idx]));
-    }
-  };
-
   SmallVector<int64_t> gridDim = extractFromI64ArrayAttr(getGridDim());
   if (failed(mlir::linalg::rewriteTopLevelForeachThreadToGpuBlocks(
-          rewriter, topLevelForeachThreadOp, generateBlocks, gridDim)))
+          rewriter, topLevelForeachThreadOp, generateGpuBlockIds, gridDim)))
     return DiagnosedSilenceableFailure(reportUnknownTransformError(target));
 
   if (failed(alterGpuLaunch(rewriter, gpuLaunch, gridDim[0], gridDim[1],
@@ -1770,7 +1777,7 @@ public:
     declareDependentDialect<pdl::PDLDialect>();
     declareDependentDialect<LinalgDialect>();
     declareGeneratedDialect<AffineDialect>();
-    declareGeneratedDialect<arith::ArithmeticDialect>();
+    declareGeneratedDialect<arith::ArithDialect>();
     declareGeneratedDialect<scf::SCFDialect>();
     declareGeneratedDialect<vector::VectorDialect>();
     declareGeneratedDialect<gpu::GPUDialect>();

@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-macosx -verify-machineinstrs -o - %s | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=x86_64-windows-msvc -verify-machineinstrs -o - %s | FileCheck --check-prefix=WINABI %s
 
 ; TODO: support marker generation with GlobalISel
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
@@ -32,6 +33,12 @@ define ptr @rv_marker_1_retain() {
 ; CHECK-NEXT:    callq   _objc_retainAutoreleasedReturnValue
 ; CHECK-NEXT:    popq    %rcx
 ; CHECK-NEXT:    retq
+;
+; WINABI-LABEL: rv_marker_1_retain:
+; WINABI:        callq   foo1
+; WINABI-NEXT:   movq    %rax, %rcx
+; WINABI-NEXT:   callq   objc_retainAutoreleasedReturnValue
+; WINABI-NEXT:   nop
 ;
 entry:
   %call = call ptr @foo1() [ "clang.arc.attachedcall"(ptr @objc_retainAutoreleasedReturnValue) ]

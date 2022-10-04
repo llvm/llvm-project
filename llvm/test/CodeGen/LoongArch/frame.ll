@@ -3,6 +3,9 @@
 
 %struct.key_t = type { i32, [16 x i8] }
 
+declare void @llvm.memset.p0i8.i64(ptr, i8, i64, i1)
+declare void @test1(ptr)
+
 define i32 @test() nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0:
@@ -24,6 +27,58 @@ define i32 @test() nounwind {
   ret i32 0
 }
 
-declare void @llvm.memset.p0i8.i64(ptr, i8, i64, i1)
+;; Should involve only one SP-adjusting addi per adjustment.
+define void @test_large_frame_size_2032() {
+; CHECK-LABEL: test_large_frame_size_2032:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -2032
+; CHECK-NEXT:    .cfi_def_cfa_offset 2032
+; CHECK-NEXT:    addi.d $sp, $sp, 2032
+; CHECK-NEXT:    ret
+  %1 = alloca i8, i32 2032
+  ret void
+}
 
-declare void @test1(ptr)
+;; Should involve two SP-adjusting addi's when adjusting SP up, but only one
+;; when adjusting down.
+define void @test_large_frame_size_2048() {
+; CHECK-LABEL: test_large_frame_size_2048:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -2048
+; CHECK-NEXT:    .cfi_def_cfa_offset 2048
+; CHECK-NEXT:    addi.d $sp, $sp, 2032
+; CHECK-NEXT:    addi.d $sp, $sp, 16
+; CHECK-NEXT:    ret
+  %1 = alloca i8, i32 2048
+  ret void
+}
+
+;; Should involve two SP-adjusting addi's per adjustment.
+define void @test_large_frame_size_2064() {
+; CHECK-LABEL: test_large_frame_size_2064:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi.d $sp, $sp, -2048
+; CHECK-NEXT:    addi.d $sp, $sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 2064
+; CHECK-NEXT:    addi.d $sp, $sp, 2032
+; CHECK-NEXT:    addi.d $sp, $sp, 32
+; CHECK-NEXT:    ret
+  %1 = alloca i8, i32 2064
+  ret void
+}
+
+;; SP should be adjusted with help of a scratch register.
+define void @test_large_frame_size_1234576() {
+; CHECK-LABEL: test_large_frame_size_1234576:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lu12i.w $a0, 301
+; CHECK-NEXT:    ori $a0, $a0, 1680
+; CHECK-NEXT:    sub.d $sp, $sp, $a0
+; CHECK-NEXT:    .cfi_def_cfa_offset 1234576
+; CHECK-NEXT:    lu12i.w $a0, 301
+; CHECK-NEXT:    ori $a0, $a0, 1680
+; CHECK-NEXT:    add.d $sp, $sp, $a0
+; CHECK-NEXT:    ret
+  %1 = alloca i8, i32 1234567
+  ret void
+}

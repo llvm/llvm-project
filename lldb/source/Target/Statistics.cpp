@@ -63,6 +63,8 @@ json::Value ModuleStats::ToJSON() const {
   module.try_emplace("debugInfoIndexSavedToCache",
                      debug_info_index_saved_to_cache);
   module.try_emplace("debugInfoEnabled", debug_info_enabled);
+  module.try_emplace("debugInfoHadVariableErrors",
+                     debug_info_had_variable_errors);
   module.try_emplace("symbolTableStripped", symtab_stripped);
   if (!symfile_path.empty())
     module.try_emplace("symbolFilePath", symfile_path);
@@ -242,6 +244,8 @@ llvm::json::Value DebuggerStats::ReportStatistics(Debugger &debugger,
         ++num_stripped_modules;
       module_stat.debug_info_enabled = sym_file->GetLoadDebugInfoEnabled() &&
                                        module_stat.debug_info_size > 0;
+      module_stat.debug_info_had_variable_errors =
+          sym_file->GetDebugInfoHadFrameVariableErrors();
       if (module_stat.debug_info_enabled)
         ++num_debug_info_enabled_modules;
       if (module_stat.debug_info_size > 0)

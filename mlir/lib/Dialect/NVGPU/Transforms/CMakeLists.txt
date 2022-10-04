@@ -9,7 +9,7 @@ add_mlir_dialect_library(MLIRNVGPUTransforms
   MLIRNVGPUPassIncGen
 
   LINK_LIBS PUBLIC
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRGPUOps
   MLIRIR
   MLIRMemRefDialect

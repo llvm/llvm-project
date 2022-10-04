@@ -1420,12 +1420,15 @@ bool Parser::AnnotateTemplateIdToken(TemplateTy Template, TemplateNameKind TNK,
 ///
 /// \param SS The scope specifier appearing before the template-id, if any.
 ///
+/// \param AllowImplicitTypename whether this is a context where T::type
+/// denotes a dependent type.
 /// \param IsClassName Is this template-id appearing in a context where we
 /// know it names a class, such as in an elaborated-type-specifier or
 /// base-specifier? ('typename' and 'template' are unneeded and disallowed
 /// in those contexts.)
-void Parser::AnnotateTemplateIdTokenAsType(CXXScopeSpec &SS,
-                                           bool IsClassName) {
+void Parser::AnnotateTemplateIdTokenAsType(
+    CXXScopeSpec &SS, ImplicitTypenameContext AllowImplicitTypename,
+    bool IsClassName) {
   assert(Tok.is(tok::annot_template_id) && "Requires template-id tokens");
 
   TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
@@ -1443,7 +1446,7 @@ void Parser::AnnotateTemplateIdTokenAsType(CXXScopeSpec &SS,
                 TemplateId->Template, TemplateId->Name,
                 TemplateId->TemplateNameLoc, TemplateId->LAngleLoc,
                 TemplateArgsPtr, TemplateId->RAngleLoc,
-                /*IsCtorOrDtorName*/ false, IsClassName);
+                /*IsCtorOrDtorName=*/false, IsClassName, AllowImplicitTypename);
   // Create the new "type" annotation token.
   Tok.setKind(tok::annot_typename);
   setTypeAnnotation(Tok, Type);

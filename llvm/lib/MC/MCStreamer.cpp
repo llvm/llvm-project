@@ -1190,6 +1190,15 @@ void MCStreamer::emitXCOFFRefDirective(StringRef Name) {
   llvm_unreachable("emitXCOFFRefDirective is only supported on XCOFF targets");
 }
 
+void MCStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
+                                          MCSymbol *Trap, unsigned Lang,
+                                          unsigned Reason,
+                                          unsigned FunctionSize,
+                                          bool hasDebug) {
+  report_fatal_error("emitXCOFFExceptDirective is only supported on "
+                     "XCOFF targets");
+}
+
 void MCStreamer::emitELFSize(MCSymbol *Symbol, const MCExpr *Value) {}
 void MCStreamer::emitELFSymverDirective(const MCSymbol *OriginalSym,
                                         StringRef Name, bool KeepOriginalSym) {}

@@ -155,3 +155,27 @@ module attributes {
     return
   }
 }
+
+// -----
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Kernel], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+  }
+{
+  func.func @alloc_dealloc_workgroup_mem(%arg0 : index, %arg1 : index) {
+    %0 = memref.alloc() : memref<4x5xf32, #spirv.storage_class<Workgroup>>
+    %1 = memref.load %0[%arg0, %arg1] : memref<4x5xf32, #spirv.storage_class<Workgroup>>
+    memref.store %1, %0[%arg0, %arg1] : memref<4x5xf32, #spirv.storage_class<Workgroup>>
+    memref.dealloc %0 : memref<4x5xf32, #spirv.storage_class<Workgroup>>
+    return
+  }
+}
+//     CHECK: spirv.GlobalVariable @[[VAR:.+]] : !spirv.ptr<!spirv.array<20 x f32>, Workgroup>
+//     CHECK: func @alloc_dealloc_workgroup_mem
+// CHECK-NOT:   memref.alloc
+//     CHECK:   %[[PTR:.+]] = spirv.mlir.addressof @[[VAR]]
+//     CHECK:   %[[LOADPTR:.+]] = spirv.AccessChain %[[PTR]]
+//     CHECK:   %[[VAL:.+]] = spirv.Load "Workgroup" %[[LOADPTR]] : f32
+//     CHECK:   %[[STOREPTR:.+]] = spirv.AccessChain %[[PTR]]
+//     CHECK:   spirv.Store "Workgroup" %[[STOREPTR]], %[[VAL]] : f32
+// CHECK-NOT:   memref.dealloc

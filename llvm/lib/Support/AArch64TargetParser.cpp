@@ -59,6 +59,15 @@ AArch64::ArchKind AArch64::getCPUArchKind(StringRef CPU) {
   .Default(ArchKind::INVALID);
 }
 
+AArch64::ArchKind AArch64::getSubArchArchKind(StringRef SubArch) {
+  return StringSwitch<AArch64::ArchKind>(SubArch)
+#define AARCH64_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU,        \
+                     ARCH_BASE_EXT)                                            \
+  .Case(SUB_ARCH, ArchKind::ID)
+#include "../../include/llvm/Support/AArch64TargetParser.def"
+  .Default(ArchKind::INVALID);
+}
+
 bool AArch64::getExtensionFeatures(uint64_t Extensions,
                                    std::vector<StringRef> &Features) {
   if (Extensions == AArch64::AEK_INVALID)
@@ -121,6 +130,19 @@ StringRef AArch64::getArchExtFeature(StringRef ArchExt) {
     if (AE.Feature && ArchExt == AE.getName())
       return StringRef(AE.Feature);
   return StringRef();
+}
+
+AArch64::ArchKind AArch64::convertV9toV8(AArch64::ArchKind AK) {
+  if (AK == AArch64::ArchKind::INVALID)
+    return AK;
+  if (AK < AArch64::ArchKind::ARMV9A)
+    return AK;
+  if (AK >= AArch64::ArchKind::ARMV8R)
+    return AArch64::ArchKind::INVALID;
+  unsigned AK_v8 = static_cast<unsigned>(AArch64::ArchKind::ARMV8_5A);
+  AK_v8 += static_cast<unsigned>(AK) -
+           static_cast<unsigned>(AArch64::ArchKind::ARMV9A);
+  return static_cast<AArch64::ArchKind>(AK_v8);
 }
 
 StringRef AArch64::getDefaultCPU(StringRef Arch) {

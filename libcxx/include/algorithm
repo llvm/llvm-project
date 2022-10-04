@@ -1899,6 +1899,8 @@ template <class BidirectionalIterator, class Compare>
 #include <__algorithm/upper_bound.h>
 
 // standard-mandated includes
+
+// [algorithm.syn]
 #include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

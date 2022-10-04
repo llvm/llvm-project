@@ -16,7 +16,7 @@ add_mlir_dialect_library(MLIRMemRefTransforms
   LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRAffineUtils
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRFuncDialect
   MLIRInferTypeOpInterface
   MLIRLoopLikeInterface

@@ -135,7 +135,6 @@ public:
   bool TestEmulation(Stream *out_stream, ArchSpec &arch,
                      OptionValueDictionary *test_data) override;
 
-  using EmulateInstruction::GetRegisterInfo;
   llvm::Optional<RegisterInfo> GetRegisterInfo(lldb::RegisterKind reg_kind,
                                                uint32_t reg_num) override;
 

@@ -86,3 +86,59 @@ exit:
   %res.lcssa2 = phi i64 [ %res.lcssa, %loop1.latch ]
   ret i64 %res.lcssa2
 }
+
+; Check that it does not crash because the incoming values of an LCSSA phi are
+; equal.
+define void @pr57000(i64 %a) {
+; CHECK-LABEL: @pr57000(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_1_OUTER:%.*]]
+; CHECK:       loop.1.loopexit:
+; CHECK-NEXT:    br label [[LOOP_1_OUTER]]
+; CHECK:       loop.1.outer:
+; CHECK-NEXT:    br label [[LOOP_1:%.*]]
+; CHECK:       loop.1:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i64 [[A:%.*]], 2546175499358690212
+; CHECK-NEXT:    [[CMP_EXT:%.*]] = zext i1 [[CMP]] to i8
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP_1]], label [[LOOP_2_HEADER_PREHEADER:%.*]]
+; CHECK:       loop.2.header.preheader:
+; CHECK-NEXT:    [[CMP_LCSSA:%.*]] = phi i1 [ [[CMP]], [[LOOP_1]] ]
+; CHECK-NEXT:    [[CMP_EXT_LCSSA:%.*]] = phi i8 [ [[CMP_EXT]], [[LOOP_1]] ]
+; CHECK-NEXT:    br label [[LOOP_2_HEADER_OUTER:%.*]]
+; CHECK:       loop.2.header.outer:
+; CHECK-NEXT:    br label [[LOOP_2_HEADER:%.*]]
+; CHECK:       loop.2.header:
+; CHECK-NEXT:    switch i8 [[CMP_EXT_LCSSA]], label [[LOOP_1_LOOPEXIT:%.*]] [
+; CHECK-NEXT:    i8 -1, label [[LOOP_2_LATCH:%.*]]
+; CHECK-NEXT:    i8 1, label [[LOOP_2_LATCH]]
+; CHECK-NEXT:    i8 4, label [[LOOP_2_HEADER]]
+; CHECK-NEXT:    ]
+; CHECK:       loop.2.latch:
+; CHECK-NEXT:    [[CMP_TRUNC_LCSSA1:%.*]] = phi i1 [ [[CMP_LCSSA]], [[LOOP_2_HEADER]] ], [ [[CMP_LCSSA]], [[LOOP_2_HEADER]] ]
+; CHECK-NEXT:    call void @use(i1 [[CMP_TRUNC_LCSSA1]])
+; CHECK-NEXT:    br label [[LOOP_2_HEADER_OUTER]]
+;
+entry:
+  br label %loop.1
+
+loop.1:
+  %p.1 = phi i1 [ 0 , %entry ], [ %p.1, %loop.1 ], [ %p.2, %loop.2.header ]
+  %cmp = icmp sle i64 %a, 2546175499358690212
+  %cmp.ext = zext i1 %cmp to i8
+  br i1 %cmp, label %loop.1, label %loop.2.header
+
+loop.2.header:
+  %p.2 = phi i1 [ %p.1, %loop.1 ], [ %p.2, %loop.2.header ], [ %cmp, %loop.2.latch ]
+  %cmp.trunc = trunc i8 %cmp.ext to i1
+  switch i8 %cmp.ext, label %loop.1 [
+  i8 -1, label %loop.2.latch
+  i8 1, label %loop.2.latch
+  i8 4, label %loop.2.header
+  ]
+
+loop.2.latch:
+  call void @use(i1 %cmp.trunc)
+  br label %loop.2.header
+}
+
+declare void @use(i1)

@@ -6,7 +6,7 @@ declare <4 x float> @llvm.amdgcn.wmma.f32.16x16x16.f16(<16 x half>, <16 x half>,
 
 define amdgpu_cs void @xyz () {
 ; CHECK-LABEL: xyz:
-; CHECK: v_wmma_f32_16x16x16_f16 v[0:3], v[4:11], v[4:11], v[0:3]
+; CHECK: v_wmma_f32_16x16x16_f16 v[0:3], v[0:7], v[0:7], v[0:3]
 
 .entry:
   br label %loop

@@ -19,9 +19,9 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, unlink, (const char *path)) {
 #ifdef SYS_unlink
-  long ret = __llvm_libc::syscall(SYS_unlink, path);
+  long ret = __llvm_libc::syscall_impl(SYS_unlink, path);
 #elif defined(SYS_unlinkat)
-  long ret = __llvm_libc::syscall(SYS_unlinkat, AT_FDCWD, path, 0);
+  long ret = __llvm_libc::syscall_impl(SYS_unlinkat, AT_FDCWD, path, 0);
 #else
 #error "Unlink syscalls not available."
 #endif

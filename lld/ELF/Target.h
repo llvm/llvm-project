@@ -13,6 +13,7 @@
 #include "InputSection.h"
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <array>
 
@@ -238,7 +239,7 @@ public:
                        uint64_t secAddr, uint8_t *buf) const;
 };
 
-extern const TargetInfo *target;
+LLVM_LIBRARY_VISIBILITY extern const TargetInfo *target;
 TargetInfo *getTarget();
 
 template <class ELFT> bool isMipsPIC(const Defined *sym);

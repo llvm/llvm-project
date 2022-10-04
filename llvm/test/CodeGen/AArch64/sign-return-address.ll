@@ -79,6 +79,13 @@ define i32 @non_leaf_sign_non_leaf(i32 %x) "sign-return-address"="non-leaf"  {
   ret i32 %call
 }
 
+; CHECK-LABEL: @non_leaf_scs
+; CHECK-NOT:   retaa
+define i32 @non_leaf_scs(i32 %x) "sign-return-address"="non-leaf" shadowcallstack "target-features"="+v8.3a,+reserve-x18"  {
+  %call = call i32 @foo(i32 %x)
+  ret i32 %call
+}
+
 ; CHECK-LABEL: @leaf_sign_all_v83
 ; CHECK:        pacia x30, sp
 ; CHECK-NEXT:  .cfi_negate_ra_state

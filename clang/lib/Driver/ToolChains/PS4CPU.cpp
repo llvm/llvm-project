@@ -158,34 +158,32 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const bool IsPS4 = TC.getTriple().isPS4();
   const bool IsPS5 = TC.getTriple().isPS5();
   assert(IsPS4 || IsPS5);
-  (void)IsPS5;
 
-  ArgStringList DbgOpts;
+  auto AddCodeGenFlag = [&](Twine Flag) {
+    const char *Prefix = nullptr;
+    if (IsPS4 && D.getLTOMode() == LTOK_Thin)
+      Prefix = "-lto-thin-debug-options=";
+    else if (IsPS4 && D.getLTOMode() == LTOK_Full)
+      Prefix = "-lto-debug-options=";
+    else if (IsPS5)
+      Prefix = "-plugin-opt=";
+    else
+      llvm_unreachable("new LTO mode?");
 
-  // This tells LTO to perform JustMyCode instrumentation.
-  if (UseLTO && UseJMC)
-    DbgOpts.push_back("-enable-jmc-instrument");
-
-  // We default to creating the arange section, but LTO does not. Enable it
-  // here.
-  if (UseLTO)
-    DbgOpts.push_back("-generate-arange-section");
+    CmdArgs.push_back(Args.MakeArgString(Twine(Prefix) + Flag));
+  };
 
   if (UseLTO) {
-    if (IsPS4) {
-      StringRef F = (D.getLTOMode() == LTOK_Thin) ?
-                      "-lto-thin-debug-options=" : "-lto-debug-options=";
-      F = makeArgString(Args, F.data(), DbgOpts.front(), "");
-      DbgOpts.erase(DbgOpts.begin());
-      for (auto X : DbgOpts)
-        F = makeArgString(Args, F.data(), " ", X);
-      CmdArgs.push_back(F.data());
-    } else {
-      for (auto D : DbgOpts) {
-        CmdArgs.push_back("-mllvm");
-        CmdArgs.push_back(D);
-      }
-    }
+    // We default to creating the arange section, but LTO does not. Enable it
+    // here.
+    AddCodeGenFlag("-generate-arange-section");
+
+    // This tells LTO to perform JustMyCode instrumentation.
+    if (UseJMC)
+      AddCodeGenFlag("-enable-jmc-instrument");
+
+    if (Arg *A = Args.getLastArg(options::OPT_fcrash_diagnostics_dir))
+      AddCodeGenFlag(Twine("-crash-diagnostics-dir=") + A->getValue());
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))

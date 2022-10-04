@@ -330,8 +330,8 @@ public:
 protected:
   class AddressForDWOCU {
   public:
-    AddressToIndexMap::iterator find(uint64_t Adddress) {
-      return AddressToIndex.find(Adddress);
+    AddressToIndexMap::iterator find(uint64_t Address) {
+      return AddressToIndex.find(Address);
     }
     AddressToIndexMap::iterator end() { return AddressToIndex.end(); }
     AddressToIndexMap::iterator begin() { return AddressToIndex.begin(); }

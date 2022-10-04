@@ -683,7 +683,7 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20
 void __sort_impl(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp& __comp) {
   std::__debug_randomize_range<_AlgPolicy>(__first, __last);
 
-  using _Comp_ref = typename __comp_ref_type<_Comp>::type;
+  using _Comp_ref = __comp_ref_type<_Comp>;
   if (__libcpp_is_constant_evaluated()) {
     std::__partial_sort<_AlgPolicy>(__first, __last, __last, __comp);
 

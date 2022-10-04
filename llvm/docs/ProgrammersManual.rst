@@ -2314,6 +2314,18 @@ itself to avoid allocations.
 The IntervalMap iterators are quite big, so they should not be passed around as
 STL iterators.  The heavyweight iterators allow a smaller data structure.
 
+.. _dss_intervaltree:
+
+llvm/ADT/IntervalTree.h
+^^^^^^^^^^^^^^^^^^^^^^^
+
+``llvm::IntervalTree`` is a light tree data structure to hold intervals. It
+allows finding all intervals that overlap with any given point. At this time,
+it does not support any deletion or rebalancing operations.
+
+The IntervalTree is designed to be set up once, and then queried without any
+further additions.
+
 .. _dss_map:
 
 <map>

@@ -13,14 +13,15 @@
 #ifndef LLVM_CLANG_AST_INTERP_RECORD_H
 #define LLVM_CLANG_AST_INTERP_RECORD_H
 
-#include "Pointer.h"
+#include "clang/AST/Decl.h"
+#include "Descriptor.h"
 
 namespace clang {
 namespace interp {
 class Program;
 
 /// Structure/Class descriptor.
-class Record {
+class Record final {
 public:
   /// Describes a record field.
   struct Field {
@@ -65,7 +66,7 @@ public:
     return llvm::make_range(Fields.begin(), Fields.end());
   }
 
-  unsigned getNumFields() { return Fields.size(); }
+  unsigned getNumFields() const { return Fields.size(); }
   Field *getField(unsigned I) { return &Fields[I]; }
 
   using const_base_iter = BaseList::const_iterator;
@@ -73,7 +74,7 @@ public:
     return llvm::make_range(Bases.begin(), Bases.end());
   }
 
-  unsigned getNumBases() { return Bases.size(); }
+  unsigned getNumBases() const { return Bases.size(); }
   Base *getBase(unsigned I) { return &Bases[I]; }
 
   using const_virtual_iter = VirtualBaseList::const_iterator;
@@ -81,7 +82,7 @@ public:
     return llvm::make_range(VirtualBases.begin(), VirtualBases.end());
   }
 
-  unsigned getNumVirtualBases() { return VirtualBases.size(); }
+  unsigned getNumVirtualBases() const { return VirtualBases.size(); }
   Base *getVirtualBase(unsigned I) { return &VirtualBases[I]; }
 
 private:

@@ -293,6 +293,16 @@ public:
           AMDGPU::findLDSVariablesToLower(M, &F);
 
       if (!KernelUsedVariables.empty()) {
+        // The association between kernel function and LDS struct is done by
+        // symbol name, which only works if the function in question has a name
+        // This is not expected to be a problem in practice as kernels are
+        // called by name making anonymous ones (which are named by the backend)
+        // difficult to use. This does mean that llvm test cases need
+        // to name the kernels.
+        if (!F.hasName()) {
+          report_fatal_error("Anonymous kernels cannot use LDS variables");
+        }
+
         std::string VarName =
             (Twine("llvm.amdgcn.kernel.") + F.getName() + ".lds").str();
         GlobalVariable *SGV;

@@ -8,6 +8,8 @@
 
 #include "Symbol.h"
 
+#include <cmath>
+
 namespace clang {
 namespace clangd {
 

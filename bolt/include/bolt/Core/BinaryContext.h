@@ -615,6 +615,9 @@ public:
   /// Number of functions with profile information
   uint64_t NumProfiledFuncs{0};
 
+  /// Number of functions with stale profile information
+  uint64_t NumStaleProfileFuncs{0};
+
   /// Number of objects in profile whose profile was ignored.
   uint64_t NumUnusedProfiledObjects{0};
 

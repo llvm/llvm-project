@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
 // FIXME: This is included to avoid a diagnostic with no source location
 // pointing at the implicit operator new. We can't match such a diagnostic
@@ -228,8 +229,12 @@ namespace dr526 { // dr526: yes
   template<int N> struct X {
     typedef int type;
     X<N>::type v1;
-    X<(N)>::type v2; // expected-error {{missing 'typename'}}
-    X<+N>::type v3; // expected-error {{missing 'typename'}}
+    X<(N)>::type v2;
+    X<+N>::type v3;
+#if __cplusplus <= 201703L
+    // expected-error@-3 {{implicit 'typename' is a C++20 extension}}
+    // expected-error@-3 {{implicit 'typename' is a C++20 extension}}
+#endif
   };
 }
 
@@ -345,12 +350,15 @@ namespace dr531 { // dr531: partial
     template<> template<typename U> template<typename V> void A<int>::B<U>::h() {}
     template<typename U> template<typename V> void A<int>::B<U>::i() {} // expected-error {{should be empty}}
 
+#if __cplusplus <= 201703L
+    // FIXME: All of those declarations shouldn't crash in C++20 mode.
     template<> template<> void A<int>::B<int>::f() {}
     template<> template<> template<typename V> void A<int>::B<int>::h() {}
     template<> template<> template<> void A<int>::B<int>::h<int>() {}
 
     template<> void A<int>::B<char>::f() {} // expected-error {{requires 'template<>'}}
     template<> template<typename V> void A<int>::B<char>::h() {} // expected-error {{should be empty}}
+#endif
   }
 }
 
@@ -478,8 +486,15 @@ namespace dr541 { // dr541: yes
 
 namespace dr542 { // dr542: yes
 #if __cplusplus >= 201103L
+  // In C++20 A and B are no longer aggregates and thus the constructor is
+  // called, which fails.
   struct A { A() = delete; int n; };
   A a[32] = {}; // ok, constructor not called
+#if __cplusplus > 201703L
+  // expected-error@-2 {{call to deleted constructor}}
+  // expected-note@-3 {{in implicit initialization}}
+  // expected-note@-5 {{marked deleted here}}
+#endif
 
   struct B {
     int n;
@@ -487,6 +502,10 @@ namespace dr542 { // dr542: yes
     B() = default;
   };
   B b[32] = {}; // ok, constructor not called
+#if __cplusplus > 201703L
+  // expected-error@-2 {{calling a private constructor}}
+  // expected-note@-5 {{declared private here}}
+#endif
 #endif
 }
 

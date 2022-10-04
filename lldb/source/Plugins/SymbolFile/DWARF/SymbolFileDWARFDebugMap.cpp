@@ -1453,7 +1453,7 @@ ModuleList SymbolFileDWARFDebugMap::GetDebugInfoModules() {
   return oso_modules;
 }
 
-Status SymbolFileDWARFDebugMap::GetFrameVariableError(StackFrame &frame) {
+Status SymbolFileDWARFDebugMap::CalculateFrameVariableError(StackFrame &frame) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
 
   // We need to make sure that our PC value from the frame matches the module

@@ -14,7 +14,7 @@ func.func @slice_depth1_loop_nest() {
   // CHECK:      affine.for %[[IV0:.*]] = 0 to 5 {
   // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[%[[IV0]]] : memref<100xf32>
   // CHECK-NEXT:   affine.load %{{.*}}[%[[IV0]]] : memref<100xf32>
-  // CHECK-NEXT:   "prevent.dce"(%1) : (f32) -> ()
+  // CHECK-NEXT:   "prevent.dce"(%{{.*}}) : (f32) -> ()
   // CHECK-NEXT: }
   // CHECK-NEXT: return
   return

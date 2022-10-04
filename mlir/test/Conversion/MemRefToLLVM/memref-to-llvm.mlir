@@ -1143,3 +1143,16 @@ func.func @memref_copy_unranked() {
   // CHECK: llvm.call @memrefCopy([[SIZE]], [[ALLOCA2]], [[ALLOCA3]]) : (i64, !llvm.ptr<struct<(i64, ptr<i8>)>>, !llvm.ptr<struct<(i64, ptr<i8>)>>) -> ()
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @extract_aligned_pointer_as_index
+func.func @extract_aligned_pointer_as_index(%m: memref<?xf32>) -> index {
+  %0 = memref.extract_aligned_pointer_as_index %m: memref<?xf32> -> index
+  // CHECK: %[[E:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<f32>, ptr<f32>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: %[[I64:.*]] = llvm.ptrtoint %[[E]] : !llvm.ptr<f32> to i64
+  // CHECK: %[[R:.*]] = builtin.unrealized_conversion_cast %[[I64]] : i64 to index
+
+  // CHECK: return %[[R:.*]] : index
+  return %0: index
+}

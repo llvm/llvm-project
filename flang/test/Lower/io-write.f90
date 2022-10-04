@@ -6,8 +6,8 @@
   character(3) string
   write(string,getstring(6))
 ! CHECK:  %[[Val_0:.*]] = fir.alloca i32 {adapt.valuebyref}
-! CHECK:  %[[Val_1:.*]] = fir.address_of(@_QFEstring) : !fir.ref<!fir.char<1,3>>
 ! CHECK:  %[[Const_3:.*]] = arith.constant 3 : index
+! CHECK:  %[[Val_1:.*]] = fir.alloca !fir.char<1,3> {bindc_name = "string", uniq_name = "_QFEstring"}
 ! CHECK:  %[[Val_2:.*]] = fir.convert %[[Val_1]] : (!fir.ref<!fir.char<1,3>>) -> !fir.ref<i8>
 ! CHECK:  %[[Val_3:.*]] = fir.convert %[[Const_3]] : (index) -> i64
 ! CHECK:  %[[Const_6:.*]] = arith.constant 6 : i32

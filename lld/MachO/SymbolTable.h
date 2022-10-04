@@ -72,6 +72,7 @@ private:
 };
 
 void reportPendingUndefinedSymbols();
+void reportPendingDuplicateSymbols();
 
 // Call reportPendingUndefinedSymbols() to emit diagnostics.
 void treatUndefinedSymbol(const Undefined &, StringRef source);

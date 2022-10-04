@@ -5577,14 +5577,15 @@ public:
     if (TA == nullptr)
       return;
 
-    ParsedTargetAttr Attr = TA->parse();
+    ParsedTargetAttr Attr =
+        CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
     if (Attr.BranchProtection.empty())
       return;
 
     TargetInfo::BranchProtectionInfo BPI;
     StringRef Error;
-    (void)CGM.getTarget().validateBranchProtection(
-        Attr.BranchProtection, Attr.Architecture, BPI, Error);
+    (void)CGM.getTarget().validateBranchProtection(Attr.BranchProtection,
+                                                   Attr.CPU, BPI, Error);
     assert(Error.empty());
 
     auto *Fn = cast<llvm::Function>(GV);
@@ -6405,13 +6406,13 @@ public:
     auto *Fn = cast<llvm::Function>(GV);
 
     if (const auto *TA = FD->getAttr<TargetAttr>()) {
-      ParsedTargetAttr Attr = TA->parse();
+      ParsedTargetAttr Attr =
+          CGM.getTarget().parseTargetAttr(TA->getFeaturesStr());
       if (!Attr.BranchProtection.empty()) {
         TargetInfo::BranchProtectionInfo BPI;
         StringRef DiagMsg;
-        StringRef Arch = Attr.Architecture.empty()
-                             ? CGM.getTarget().getTargetOpts().CPU
-                             : Attr.Architecture;
+        StringRef Arch =
+            Attr.CPU.empty() ? CGM.getTarget().getTargetOpts().CPU : Attr.CPU;
         if (!CGM.getTarget().validateBranchProtection(Attr.BranchProtection,
                                                       Arch, BPI, DiagMsg)) {
           CGM.getDiags().Report(
@@ -6434,11 +6435,11 @@ public:
         // If the Branch Protection attribute is missing, validate the target
         // Architecture attribute against Branch Protection command line
         // settings.
-        if (!CGM.getTarget().isBranchProtectionSupportedArch(Attr.Architecture))
+        if (!CGM.getTarget().isBranchProtectionSupportedArch(Attr.CPU))
           CGM.getDiags().Report(
               D->getLocation(),
               diag::warn_target_unsupported_branch_protection_attribute)
-              << Attr.Architecture;
+              << Attr.CPU;
       }
     }
 

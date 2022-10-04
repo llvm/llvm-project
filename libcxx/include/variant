@@ -228,6 +228,8 @@ namespace std {
 #include <version>
 
 // standard-mandated includes
+
+// [variant.syn]
 #include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

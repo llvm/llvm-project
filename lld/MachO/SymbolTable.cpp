@@ -45,6 +45,21 @@ std::pair<Symbol *, bool> SymbolTable::insert(StringRef name,
   return {sym, p.second};
 }
 
+namespace {
+struct DuplicateSymbolDiag {
+  // Pair containing source location and source file
+  const std::pair<std::string, std::string> src1;
+  const std::pair<std::string, std::string> src2;
+  const Symbol *sym;
+
+  DuplicateSymbolDiag(const std::pair<std::string, std::string> src1,
+                      const std::pair<std::string, std::string> src2,
+                      const Symbol *sym)
+      : src1(src1), src2(src2), sym(sym) {}
+};
+SmallVector<DuplicateSymbolDiag> dupSymDiags;
+} // namespace
+
 Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                                  InputSection *isec, uint64_t value,
                                  uint64_t size, bool isWeakDef,
@@ -80,17 +95,13 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
           concatIsec->symbols.erase(llvm::find(concatIsec->symbols, defined));
         }
       } else {
-        std::string src1 = defined->getSourceLocation();
-        std::string src2 = isec ? isec->getSourceLocation(value) : "";
+        std::string srcLoc1 = defined->getSourceLocation();
+        std::string srcLoc2 = isec ? isec->getSourceLocation(value) : "";
+        std::string srcFile1 = toString(defined->getFile());
+        std::string srcFile2 = toString(file);
 
-        std::string message =
-            "duplicate symbol: " + toString(*defined) + "\n>>> defined in ";
-        if (!src1.empty())
-          message += src1 + "\n>>>            ";
-        message += toString(defined->getFile()) + "\n>>> defined in ";
-        if (!src2.empty())
-          message += src2 + "\n>>>            ";
-        error(message + toString(file));
+        dupSymDiags.push_back({make_pair(srcLoc1, srcFile1),
+                               make_pair(srcLoc2, srcFile2), defined});
       }
 
     } else if (auto *dysym = dyn_cast<DylibSymbol>(s)) {
@@ -366,52 +377,67 @@ struct UndefinedDiag {
 MapVector<const Undefined *, UndefinedDiag> undefs;
 }
 
-void macho::reportPendingUndefinedSymbols() {
-  for (const auto &undef : undefs) {
-    const UndefinedDiag &locations = undef.second;
-
-    std::string message = "undefined symbol";
-    if (config->archMultiple)
-      message += (" for arch " + getArchitectureName(config->arch())).str();
-    message += ": " + toString(*undef.first);
-
-    const size_t maxUndefinedReferences = 3;
-    size_t i = 0;
-    for (const std::string &loc : locations.otherReferences) {
-      if (i >= maxUndefinedReferences)
-        break;
-      message += "\n>>> referenced by " + loc;
-      ++i;
+void macho::reportPendingDuplicateSymbols() {
+  for (const auto &duplicate : dupSymDiags) {
+    if (!config->deadStripDuplicates || duplicate.sym->isLive()) {
+      std::string message =
+          "duplicate symbol: " + toString(*duplicate.sym) + "\n>>> defined in ";
+      if (!duplicate.src1.first.empty())
+        message += duplicate.src1.first + "\n>>>            ";
+      message += duplicate.src1.second + "\n>>> defined in ";
+      if (!duplicate.src2.first.empty())
+        message += duplicate.src2.first + "\n>>>            ";
+      error(message + duplicate.src2.second);
     }
-
-    for (const UndefinedDiag::SectionAndOffset &loc :
-         locations.codeReferences) {
-      if (i >= maxUndefinedReferences)
-        break;
-      message += "\n>>> referenced by ";
-      std::string src = loc.isec->getSourceLocation(loc.offset);
-      if (!src.empty())
-        message += src + "\n>>>               ";
-      message += loc.isec->getLocation(loc.offset);
-      ++i;
-    }
-
-    size_t totalReferences =
-        locations.otherReferences.size() + locations.codeReferences.size();
-    if (totalReferences > i)
-      message +=
-          ("\n>>> referenced " + Twine(totalReferences - i) + " more times")
-              .str();
-
-    if (config->undefinedSymbolTreatment == UndefinedSymbolTreatment::error)
-      error(message);
-    else if (config->undefinedSymbolTreatment ==
-             UndefinedSymbolTreatment::warning)
-      warn(message);
-    else
-      assert(false &&
-             "diagnostics make sense for -undefined error|warning only");
   }
+}
+
+static void reportUndefinedSymbol(const Undefined &sym,
+                                  const UndefinedDiag &locations) {
+  std::string message = "undefined symbol";
+  if (config->archMultiple)
+    message += (" for arch " + getArchitectureName(config->arch())).str();
+  message += ": " + toString(sym);
+
+  const size_t maxUndefinedReferences = 3;
+  size_t i = 0;
+  for (const std::string &loc : locations.otherReferences) {
+    if (i >= maxUndefinedReferences)
+      break;
+    message += "\n>>> referenced by " + loc;
+    ++i;
+  }
+
+  for (const UndefinedDiag::SectionAndOffset &loc : locations.codeReferences) {
+    if (i >= maxUndefinedReferences)
+      break;
+    message += "\n>>> referenced by ";
+    std::string src = loc.isec->getSourceLocation(loc.offset);
+    if (!src.empty())
+      message += src + "\n>>>               ";
+    message += loc.isec->getLocation(loc.offset);
+    ++i;
+  }
+
+  size_t totalReferences =
+      locations.otherReferences.size() + locations.codeReferences.size();
+  if (totalReferences > i)
+    message +=
+        ("\n>>> referenced " + Twine(totalReferences - i) + " more times")
+            .str();
+
+  if (config->undefinedSymbolTreatment == UndefinedSymbolTreatment::error)
+    error(message);
+  else if (config->undefinedSymbolTreatment ==
+           UndefinedSymbolTreatment::warning)
+    warn(message);
+  else
+    assert(false && "diagnostics make sense for -undefined error|warning only");
+}
+
+void macho::reportPendingUndefinedSymbols() {
+  for (const auto &undef : undefs)
+    reportUndefinedSymbol(*undef.first, undef.second);
 
   // This function is called multiple times during execution. Clear the printed
   // diagnostics to avoid printing the same things again the next time.

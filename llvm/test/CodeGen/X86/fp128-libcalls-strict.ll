@@ -1175,12 +1175,12 @@ define i64 @cmp(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movq %rsi, %r14
-; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rsi, %rbx
+; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    callq __eqtf2@PLT
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    cmovneq %r14, %rbx
-; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    cmovneq %rbx, %r14
+; CHECK-NEXT:    movq %r14, %rax
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
@@ -1221,12 +1221,12 @@ define i64 @cmps(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; CHECK-NEXT:    pushq %r14
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movq %rsi, %r14
-; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rsi, %rbx
+; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    callq __eqtf2@PLT
 ; CHECK-NEXT:    testl %eax, %eax
-; CHECK-NEXT:    cmovneq %r14, %rbx
-; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    cmovneq %rbx, %r14
+; CHECK-NEXT:    movq %r14, %rax
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
@@ -1270,8 +1270,8 @@ define i64 @cmp_ueq_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; CHECK-NEXT:    subq $32, %rsp
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movq %rsi, %r14
-; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rsi, %rbx
+; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    callq __eqtf2@PLT
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    sete %bpl
@@ -1281,8 +1281,8 @@ define i64 @cmp_ueq_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    orb %bpl, %al
-; CHECK-NEXT:    cmoveq %r14, %rbx
-; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    cmoveq %rbx, %r14
+; CHECK-NEXT:    movq %r14, %rax
 ; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14
@@ -1353,8 +1353,8 @@ define i64 @cmp_one_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; CHECK-NEXT:    subq $32, %rsp
 ; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movq %rsi, %r14
-; CHECK-NEXT:    movq %rdi, %rbx
+; CHECK-NEXT:    movq %rsi, %rbx
+; CHECK-NEXT:    movq %rdi, %r14
 ; CHECK-NEXT:    callq __eqtf2@PLT
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    setne %bpl
@@ -1364,8 +1364,8 @@ define i64 @cmp_one_q(i64 %a, i64 %b, fp128 %x, fp128 %y) #0 {
 ; CHECK-NEXT:    testl %eax, %eax
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    testb %bpl, %al
-; CHECK-NEXT:    cmoveq %r14, %rbx
-; CHECK-NEXT:    movq %rbx, %rax
+; CHECK-NEXT:    cmoveq %rbx, %r14
+; CHECK-NEXT:    movq %r14, %rax
 ; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r14

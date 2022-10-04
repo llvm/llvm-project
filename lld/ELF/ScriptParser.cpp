@@ -294,7 +294,7 @@ void ScriptParser::addFile(StringRef s) {
     SmallString<128> pathData;
     StringRef path = (config->sysroot + s).toStringRef(pathData);
     if (sys::fs::exists(path))
-      driver->addFile(saver().save(path), /*withLOption=*/false);
+      ctx.driver.addFile(saver().save(path), /*withLOption=*/false);
     else
       setError("cannot find " + s + " inside " + config->sysroot);
     return;
@@ -302,17 +302,17 @@ void ScriptParser::addFile(StringRef s) {
 
   if (s.startswith("/")) {
     // Case 1: s is an absolute path. Just open it.
-    driver->addFile(s, /*withLOption=*/false);
+    ctx.driver.addFile(s, /*withLOption=*/false);
   } else if (s.startswith("=")) {
     // Case 2: relative to the sysroot.
     if (config->sysroot.empty())
-      driver->addFile(s.substr(1), /*withLOption=*/false);
+      ctx.driver.addFile(s.substr(1), /*withLOption=*/false);
     else
-      driver->addFile(saver().save(config->sysroot + "/" + s.substr(1)),
-                      /*withLOption=*/false);
+      ctx.driver.addFile(saver().save(config->sysroot + "/" + s.substr(1)),
+                         /*withLOption=*/false);
   } else if (s.startswith("-l")) {
     // Case 3: search in the list of library paths.
-    driver->addLibrary(s.substr(2));
+    ctx.driver.addLibrary(s.substr(2));
   } else {
     // Case 4: s is a relative path. Search in the directory of the script file.
     std::string filename = std::string(getCurrentMB().getBufferIdentifier());
@@ -321,17 +321,17 @@ void ScriptParser::addFile(StringRef s) {
       SmallString<0> path(directory);
       sys::path::append(path, s);
       if (sys::fs::exists(path)) {
-        driver->addFile(path, /*withLOption=*/false);
+        ctx.driver.addFile(path, /*withLOption=*/false);
         return;
       }
     }
     // Then search in the current working directory.
     if (sys::fs::exists(s)) {
-      driver->addFile(s, /*withLOption=*/false);
+      ctx.driver.addFile(s, /*withLOption=*/false);
     } else {
       // Finally, search in the list of library paths.
       if (Optional<std::string> path = findFromSearchPaths(s))
-        driver->addFile(saver().save(*path), /*withLOption=*/true);
+        ctx.driver.addFile(saver().save(*path), /*withLOption=*/true);
       else
         setError("unable to find " + s);
     }
@@ -1449,7 +1449,7 @@ Expr ScriptParser::readPrimary() {
   if (tok == "DEFINED") {
     StringRef name = unquote(readParenLiteral());
     return [=] {
-      Symbol *b = symtab->find(name);
+      Symbol *b = symtab.find(name);
       return (b && b->isDefined()) ? 1 : 0;
     };
   }

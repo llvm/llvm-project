@@ -1864,8 +1864,9 @@ static void InsertReturnAddressAuth(MachineFunction &MF,
   // From v8.3a onwards there are optimised authenticate LR and return
   // instructions, namely RETA{A,B}, that can be used instead. In this case the
   // DW_CFA_AARCH64_negate_ra_state can't be emitted.
-  if (Subtarget.hasPAuth() && MBBI != MBB.end() &&
-      MBBI->getOpcode() == AArch64::RET_ReallyLR) {
+  if (Subtarget.hasPAuth() &&
+      !MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack) &&
+      MBBI != MBB.end() && MBBI->getOpcode() == AArch64::RET_ReallyLR) {
     BuildMI(MBB, MBBI, DL,
             TII->get(MFI.shouldSignWithBKey() ? AArch64::RETAB : AArch64::RETAA))
         .copyImplicitOps(*MBBI);

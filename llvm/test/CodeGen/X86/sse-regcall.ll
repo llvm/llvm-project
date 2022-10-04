@@ -243,11 +243,8 @@ define x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a
 ;
 ; WIN64-LABEL: testi32_inp:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    pushq %r13
-; WIN64-NEXT:    pushq %rbp
 ; WIN64-NEXT:    pushq %rbx
 ; WIN64-NEXT:    # kill: def $edx killed $edx def $rdx
-; WIN64-NEXT:    movl %ecx, %ebx
 ; WIN64-NEXT:    # kill: def $esi killed $esi def $rsi
 ; WIN64-NEXT:    # kill: def $r15d killed $r15d def $r15
 ; WIN64-NEXT:    # kill: def $r14d killed $r14d def $r14
@@ -257,45 +254,40 @@ define x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a
 ; WIN64-NEXT:    # kill: def $r9d killed $r9d def $r9
 ; WIN64-NEXT:    # kill: def $r8d killed $r8d def $r8
 ; WIN64-NEXT:    # kill: def $edi killed $edi def $rdi
-; WIN64-NEXT:    leal (%rdx,%rdi), %r13d
+; WIN64-NEXT:    leal (%rdx,%rdi), %ebx
 ; WIN64-NEXT:    # kill: def $edx killed $edx killed $rdx
 ; WIN64-NEXT:    subl %edi, %edx
-; WIN64-NEXT:    leal (%rsi,%r8), %ecx
+; WIN64-NEXT:    leal (%rsi,%r8), %edi
 ; WIN64-NEXT:    # kill: def $esi killed $esi killed $rsi
 ; WIN64-NEXT:    subl %r8d, %esi
 ; WIN64-NEXT:    leal (%r9,%r10), %r8d
-; WIN64-NEXT:    movl %r9d, %ebp
-; WIN64-NEXT:    subl %r10d, %ebp
-; WIN64-NEXT:    movl %eax, %edi
-; WIN64-NEXT:    movl %ebx, %r9d
-; WIN64-NEXT:    subl %ebx, %edi
-; WIN64-NEXT:    imull %edi, %ebp
-; WIN64-NEXT:    leal (%r11,%r12), %edi
-; WIN64-NEXT:    movl %r11d, %ebx
-; WIN64-NEXT:    subl %r12d, %ebx
-; WIN64-NEXT:    imull %edx, %ebx
-; WIN64-NEXT:    addl %ebp, %ebx
+; WIN64-NEXT:    # kill: def $r9d killed $r9d killed $r9
+; WIN64-NEXT:    subl %r10d, %r9d
+; WIN64-NEXT:    movl %eax, %r10d
+; WIN64-NEXT:    subl %ecx, %r10d
+; WIN64-NEXT:    imull %r10d, %r9d
+; WIN64-NEXT:    leal (%r11,%r12), %r10d
+; WIN64-NEXT:    # kill: def $r11d killed $r11d killed $r11
+; WIN64-NEXT:    subl %r12d, %r11d
+; WIN64-NEXT:    imull %edx, %r11d
+; WIN64-NEXT:    addl %r9d, %r11d
 ; WIN64-NEXT:    leal (%r14,%r15), %edx
-; WIN64-NEXT:    movl %r14d, %ebp
-; WIN64-NEXT:    subl %r15d, %ebp
-; WIN64-NEXT:    imull %esi, %ebp
-; WIN64-NEXT:    addl %ebx, %ebp
-; WIN64-NEXT:    addl %r9d, %eax
+; WIN64-NEXT:    movl %r14d, %r9d
+; WIN64-NEXT:    subl %r15d, %r9d
+; WIN64-NEXT:    imull %esi, %r9d
+; WIN64-NEXT:    addl %r11d, %r9d
+; WIN64-NEXT:    addl %ecx, %eax
 ; WIN64-NEXT:    imull %r8d, %eax
-; WIN64-NEXT:    imull %r13d, %edi
-; WIN64-NEXT:    addl %edi, %eax
-; WIN64-NEXT:    imull %ecx, %edx
+; WIN64-NEXT:    imull %ebx, %r10d
+; WIN64-NEXT:    addl %r10d, %eax
+; WIN64-NEXT:    imull %edi, %edx
 ; WIN64-NEXT:    addl %edx, %eax
-; WIN64-NEXT:    addl %ebp, %eax
+; WIN64-NEXT:    addl %r9d, %eax
 ; WIN64-NEXT:    popq %rbx
-; WIN64-NEXT:    popq %rbp
-; WIN64-NEXT:    popq %r13
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX-LABEL: testi32_inp:
 ; LINUXOSX:       # %bb.0:
-; LINUXOSX-NEXT:    pushq %rbp
-; LINUXOSX-NEXT:    pushq %rbx
 ; LINUXOSX-NEXT:    # kill: def $edx killed $edx def $rdx
 ; LINUXOSX-NEXT:    # kill: def $esi killed $esi def $rsi
 ; LINUXOSX-NEXT:    # kill: def $r14d killed $r14d def $r14
@@ -305,37 +297,35 @@ define x86_regcallcc i32 @testi32_inp(i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a
 ; LINUXOSX-NEXT:    # kill: def $r8d killed $r8d def $r8
 ; LINUXOSX-NEXT:    # kill: def $edi killed $edi def $rdi
 ; LINUXOSX-NEXT:    leal (%rdx,%rdi), %r10d
-; LINUXOSX-NEXT:    movl %edx, %ebp
-; LINUXOSX-NEXT:    subl %edi, %ebp
-; LINUXOSX-NEXT:    leal (%rsi,%r8), %r11d
+; LINUXOSX-NEXT:    # kill: def $edx killed $edx killed $rdx
+; LINUXOSX-NEXT:    subl %edi, %edx
+; LINUXOSX-NEXT:    leal (%rsi,%r8), %edi
 ; LINUXOSX-NEXT:    # kill: def $esi killed $esi killed $rsi
 ; LINUXOSX-NEXT:    subl %r8d, %esi
 ; LINUXOSX-NEXT:    leal (%r9,%r12), %r8d
-; LINUXOSX-NEXT:    movl %r9d, %edi
-; LINUXOSX-NEXT:    subl %r12d, %edi
-; LINUXOSX-NEXT:    movl %eax, %edx
-; LINUXOSX-NEXT:    subl %ecx, %edx
-; LINUXOSX-NEXT:    imull %edx, %edi
-; LINUXOSX-NEXT:    leal (%r13,%r14), %edx
-; LINUXOSX-NEXT:    movl %r13d, %ebx
-; LINUXOSX-NEXT:    subl %r14d, %ebx
-; LINUXOSX-NEXT:    imull %ebp, %ebx
-; LINUXOSX-NEXT:    movl {{[0-9]+}}(%rsp), %ebp
-; LINUXOSX-NEXT:    addl %edi, %ebx
-; LINUXOSX-NEXT:    movl %r15d, %edi
-; LINUXOSX-NEXT:    subl %ebp, %edi
-; LINUXOSX-NEXT:    imull %esi, %edi
-; LINUXOSX-NEXT:    addl %ebx, %edi
+; LINUXOSX-NEXT:    # kill: def $r9d killed $r9d killed $r9
+; LINUXOSX-NEXT:    subl %r12d, %r9d
+; LINUXOSX-NEXT:    movl %eax, %r11d
+; LINUXOSX-NEXT:    subl %ecx, %r11d
+; LINUXOSX-NEXT:    imull %r11d, %r9d
+; LINUXOSX-NEXT:    leal (%r13,%r14), %r11d
+; LINUXOSX-NEXT:    movl %r13d, %r12d
+; LINUXOSX-NEXT:    subl %r14d, %r12d
+; LINUXOSX-NEXT:    imull %edx, %r12d
+; LINUXOSX-NEXT:    movl {{[0-9]+}}(%rsp), %edx
+; LINUXOSX-NEXT:    addl %r9d, %r12d
+; LINUXOSX-NEXT:    movl %r15d, %r9d
+; LINUXOSX-NEXT:    subl %edx, %r9d
+; LINUXOSX-NEXT:    imull %esi, %r9d
+; LINUXOSX-NEXT:    addl %r12d, %r9d
 ; LINUXOSX-NEXT:    addl %ecx, %eax
 ; LINUXOSX-NEXT:    imull %r8d, %eax
-; LINUXOSX-NEXT:    imull %r10d, %edx
+; LINUXOSX-NEXT:    imull %r10d, %r11d
+; LINUXOSX-NEXT:    addl %r11d, %eax
+; LINUXOSX-NEXT:    addl %r15d, %edx
+; LINUXOSX-NEXT:    imull %edi, %edx
 ; LINUXOSX-NEXT:    addl %edx, %eax
-; LINUXOSX-NEXT:    addl %r15d, %ebp
-; LINUXOSX-NEXT:    imull %r11d, %ebp
-; LINUXOSX-NEXT:    addl %ebp, %eax
-; LINUXOSX-NEXT:    addl %edi, %eax
-; LINUXOSX-NEXT:    popq %rbx
-; LINUXOSX-NEXT:    popq %rbp
+; LINUXOSX-NEXT:    addl %r9d, %eax
 ; LINUXOSX-NEXT:    retq
                                       i32 %b1, i32 %b2, i32 %b3, i32 %b4, i32 %b5, i32 %b6) nounwind {
   %x1 = sub i32 %a1, %a2

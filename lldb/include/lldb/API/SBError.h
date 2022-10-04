@@ -27,6 +27,10 @@ public:
 
   const SBError &operator=(const lldb::SBError &rhs);
 
+  /// Get the error string as a NULL terminated UTF8 c-string.
+  ///
+  /// This SBError object owns the returned string and this object must be kept
+  /// around long enough to use the returned string.
   const char *GetCString() const;
 
   void Clear();

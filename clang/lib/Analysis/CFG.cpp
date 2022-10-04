@@ -1002,7 +1002,7 @@ private:
         if (BuildOpts.Observer)
           BuildOpts.Observer->compareBitwiseEquality(B,
                                                      B->getOpcode() != BO_EQ);
-        TryResult(B->getOpcode() != BO_EQ);
+        return TryResult(B->getOpcode() != BO_EQ);
       }
     } else if (BoolExpr->isKnownToHaveBooleanValue()) {
       if ((*IntLiteral1 == 1) || (*IntLiteral1 == 0)) {
@@ -1041,7 +1041,7 @@ private:
         case UO_Not:
           return ~Value;
         case UO_LNot:
-          return llvm::APInt(Value.getBitWidth(), !Value);
+          return llvm::APInt(Context->getTypeSize(Context->IntTy), !Value);
         default:
           assert(false && "Unexpected unary operator!");
           return llvm::None;

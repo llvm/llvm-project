@@ -108,11 +108,11 @@ struct __has_iterator_typedefs
 {
 private:
     template <class _Up> static false_type __test(...);
-    template <class _Up> static true_type __test(typename __void_t<typename _Up::iterator_category>::type* = 0,
-                                                 typename __void_t<typename _Up::difference_type>::type* = 0,
-                                                 typename __void_t<typename _Up::value_type>::type* = 0,
-                                                 typename __void_t<typename _Up::reference>::type* = 0,
-                                                 typename __void_t<typename _Up::pointer>::type* = 0);
+    template <class _Up> static true_type __test(__void_t<typename _Up::iterator_category>* = nullptr,
+                                                 __void_t<typename _Up::difference_type>* = nullptr,
+                                                 __void_t<typename _Up::value_type>* = nullptr,
+                                                 __void_t<typename _Up::reference>* = nullptr,
+                                                 __void_t<typename _Up::pointer>* = nullptr);
 public:
     static const bool value = decltype(__test<_Tp>(0,0,0,0,0))::value;
 };

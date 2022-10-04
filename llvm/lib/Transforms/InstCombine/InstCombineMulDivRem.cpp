@@ -158,7 +158,8 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     return replaceInstUsesWith(I, V);
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
-  unsigned BitWidth = I.getType()->getScalarSizeInBits();
+  Type *Ty = I.getType();
+  unsigned BitWidth = Ty->getScalarSizeInBits();
 
   // X * -1 == 0 - X
   if (match(Op1, m_AllOnes())) {
@@ -212,6 +213,25 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
     if (Value *NegOp0 = Negator::Negate(/*IsNegation*/ true, Op0, *this))
       return BinaryOperator::CreateMul(
           NegOp0, ConstantExpr::getNeg(cast<Constant>(Op1)), I.getName());
+
+    // Try to convert multiply of extended operand to narrow negate and shift
+    // for better analysis.
+    // This is valid if the shift amount (trailing zeros in the multiplier
+    // constant) clears more high bits than the bitwidth difference between
+    // source and destination types:
+    // ({z/s}ext X) * (-1<<C) --> (zext (-X)) << C
+    const APInt *NegPow2C;
+    Value *X;
+    if (match(Op0, m_ZExtOrSExt(m_Value(X))) &&
+        match(Op1, m_APIntAllowUndef(NegPow2C))) {
+      unsigned SrcWidth = X->getType()->getScalarSizeInBits();
+      unsigned ShiftAmt = NegPow2C->countTrailingZeros();
+      if (ShiftAmt >= BitWidth - SrcWidth) {
+        Value *N = Builder.CreateNeg(X, X->getName() + ".neg");
+        Value *Z = Builder.CreateZExt(N, Ty, N->getName() + ".z");
+        return BinaryOperator::CreateShl(Z, ConstantInt::get(Ty, ShiftAmt));
+      }
+    }
   }
 
   if (Instruction *FoldedMul = foldBinOpIntoSelectOrPhi(I))
@@ -320,7 +340,6 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   //   2) X * Y --> X & Y, iff X, Y can be only {0,1}.
   // Note: We could use known bits to generalize this and related patterns with
   // shifts/truncs
-  Type *Ty = I.getType();
   if (Ty->isIntOrIntVectorTy(1) ||
       (match(Op0, m_And(m_Value(), m_One())) &&
        match(Op1, m_And(m_Value(), m_One()))))

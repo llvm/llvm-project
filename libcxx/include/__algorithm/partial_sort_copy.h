@@ -68,9 +68,8 @@ partial_sort_copy(_InputIterator __first, _InputIterator __last,
   static_assert(__is_callable<_Compare, decltype(*__first), decltype(*__result_first)>::value,
                 "Comparator has to be callable");
 
-  using _Comp_ref = typename __comp_ref_type<_Compare>::type;
   auto __result = std::__partial_sort_copy<_ClassicAlgPolicy>(__first, __last, __result_first, __result_last,
-      static_cast<_Comp_ref>(__comp), __identity(), __identity());
+      static_cast<__comp_ref_type<_Compare> >(__comp), __identity(), __identity());
   return __result.second;
 }
 

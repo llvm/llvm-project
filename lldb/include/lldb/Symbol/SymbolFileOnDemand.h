@@ -216,6 +216,12 @@ public:
   void SetDebugInfoIndexWasSavedToCache() override {
     m_sym_file_impl->SetDebugInfoIndexWasSavedToCache();
   }
+  bool GetDebugInfoHadFrameVariableErrors() const override {
+    return m_sym_file_impl->GetDebugInfoHadFrameVariableErrors();
+  }
+  void SetDebugInfoHadFrameVariableErrors() override {
+    return m_sym_file_impl->SetDebugInfoHadFrameVariableErrors();
+  }
 
 private:
   Log *GetLog() const { return ::lldb_private::GetLog(LLDBLog::OnDemand); }

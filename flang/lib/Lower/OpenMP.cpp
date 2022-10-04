@@ -112,7 +112,8 @@ static bool privatizeVars(Op &op, Fortran::lower::AbstractConverter &converter,
       // TODO: Add lastprivate support for sections construct, simd construct
       if (std::is_same_v<Op, omp::WsLoopOp>) {
         omp::WsLoopOp *wsLoopOp = dyn_cast<omp::WsLoopOp>(&op);
-        mlir::Operation *lastOper = wsLoopOp->region().back().getTerminator();
+        mlir::Operation *lastOper =
+            wsLoopOp->getRegion().back().getTerminator();
         firOpBuilder.setInsertionPoint(lastOper);
 
         // Our goal here is to introduce the following control flow
@@ -150,7 +151,7 @@ static bool privatizeVars(Op &op, Fortran::lower::AbstractConverter &converter,
           cmpOp = firOpBuilder.create<mlir::arith::CmpIOp>(
               wsLoopOp->getLoc(), mlir::arith::CmpIPredicate::eq,
               wsLoopOp->getRegion().front().getArguments()[0],
-              wsLoopOp->upperBound()[0]);
+              wsLoopOp->getUpperBound()[0]);
         }
         mlir::scf::IfOp ifOp = firOpBuilder.create<mlir::scf::IfOp>(
             wsLoopOp->getLoc(), cmpOp, /*else*/ false);
@@ -286,7 +287,7 @@ static void threadPrivatizeVars(Fortran::lower::AbstractConverter &converter,
     assert(mlir::isa<mlir::omp::ThreadprivateOp>(op) &&
            "The threadprivate operation not created");
     mlir::Value symValue =
-        mlir::dyn_cast<mlir::omp::ThreadprivateOp>(op).sym_addr();
+        mlir::dyn_cast<mlir::omp::ThreadprivateOp>(op).getSymAddr();
     return firOpBuilder.create<mlir::omp::ThreadprivateOp>(
         currentLocation, symValue.getType(), symValue);
   };
@@ -908,17 +909,18 @@ static omp::ReductionDeclareOp createReductionDecl(
         modBuilder.create<omp::ReductionDeclareOp>(loc, reductionOpName, type);
   else
     return decl;
-  builder.createBlock(&decl.initializerRegion(), decl.initializerRegion().end(),
-                      {type}, {loc});
-  builder.setInsertionPointToEnd(&decl.initializerRegion().back());
+  builder.createBlock(&decl.getInitializerRegion(),
+                      decl.getInitializerRegion().end(), {type}, {loc});
+  builder.setInsertionPointToEnd(&decl.getInitializerRegion().back());
   Value init = getReductionInitValue(loc, type, reductionOpName, builder);
   builder.create<omp::YieldOp>(loc, init);
 
-  builder.createBlock(&decl.reductionRegion(), decl.reductionRegion().end(),
-                      {type, type}, {loc, loc});
-  builder.setInsertionPointToEnd(&decl.reductionRegion().back());
-  mlir::Value op1 = decl.reductionRegion().front().getArgument(0);
-  mlir::Value op2 = decl.reductionRegion().front().getArgument(1);
+  builder.createBlock(&decl.getReductionRegion(),
+                      decl.getReductionRegion().end(), {type, type},
+                      {loc, loc});
+  builder.setInsertionPointToEnd(&decl.getReductionRegion().back());
+  mlir::Value op1 = decl.getReductionRegion().front().getArgument(0);
+  mlir::Value op2 = decl.getReductionRegion().front().getArgument(1);
 
   Value reductionOp;
   switch (intrinsicOp) {
@@ -1156,7 +1158,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
                      "Reduction of some types is not supported");
               }
               reductionDeclSymbols.push_back(SymbolRefAttr::get(
-                  firOpBuilder.getContext(), decl.sym_name()));
+                  firOpBuilder.getContext(), decl.getSymName()));
             }
           }
         }
@@ -1232,10 +1234,10 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         const auto *expr = Fortran::semantics::GetExpr(orderedClause->v);
         const std::optional<std::int64_t> orderedClauseValue =
             Fortran::evaluate::ToInt64(*expr);
-        wsLoopOp.ordered_valAttr(
+        wsLoopOp.setOrderedValAttr(
             firOpBuilder.getI64IntegerAttr(*orderedClauseValue));
       } else {
-        wsLoopOp.ordered_valAttr(firOpBuilder.getI64IntegerAttr(0));
+        wsLoopOp.setOrderedValAttr(firOpBuilder.getI64IntegerAttr(0));
       }
     } else if (const auto &scheduleClause =
                    std::get_if<Fortran::parser::OmpClause::Schedule>(
@@ -1247,34 +1249,34 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
               scheduleType.t);
       switch (scheduleKind) {
       case Fortran::parser::OmpScheduleClause::ScheduleType::Static:
-        wsLoopOp.schedule_valAttr(omp::ClauseScheduleKindAttr::get(
+        wsLoopOp.setScheduleValAttr(omp::ClauseScheduleKindAttr::get(
             context, omp::ClauseScheduleKind::Static));
         break;
       case Fortran::parser::OmpScheduleClause::ScheduleType::Dynamic:
-        wsLoopOp.schedule_valAttr(omp::ClauseScheduleKindAttr::get(
+        wsLoopOp.setScheduleValAttr(omp::ClauseScheduleKindAttr::get(
             context, omp::ClauseScheduleKind::Dynamic));
         break;
       case Fortran::parser::OmpScheduleClause::ScheduleType::Guided:
-        wsLoopOp.schedule_valAttr(omp::ClauseScheduleKindAttr::get(
+        wsLoopOp.setScheduleValAttr(omp::ClauseScheduleKindAttr::get(
             context, omp::ClauseScheduleKind::Guided));
         break;
       case Fortran::parser::OmpScheduleClause::ScheduleType::Auto:
-        wsLoopOp.schedule_valAttr(omp::ClauseScheduleKindAttr::get(
+        wsLoopOp.setScheduleValAttr(omp::ClauseScheduleKindAttr::get(
             context, omp::ClauseScheduleKind::Auto));
         break;
       case Fortran::parser::OmpScheduleClause::ScheduleType::Runtime:
-        wsLoopOp.schedule_valAttr(omp::ClauseScheduleKindAttr::get(
+        wsLoopOp.setScheduleValAttr(omp::ClauseScheduleKindAttr::get(
             context, omp::ClauseScheduleKind::Runtime));
         break;
       }
       mlir::omp::ScheduleModifier scheduleModifier =
           getScheduleModifier(scheduleClause->v);
       if (scheduleModifier != mlir::omp::ScheduleModifier::none)
-        wsLoopOp.schedule_modifierAttr(
+        wsLoopOp.setScheduleModifierAttr(
             omp::ScheduleModifierAttr::get(context, scheduleModifier));
       if (getSIMDModifier(scheduleClause->v) !=
           mlir::omp::ScheduleModifier::none)
-        wsLoopOp.simd_modifierAttr(firOpBuilder.getUnitAttr());
+        wsLoopOp.setSimdModifierAttr(firOpBuilder.getUnitAttr());
     }
   }
   // In FORTRAN `nowait` clause occur at the end of `omp do` directive.
@@ -1289,7 +1291,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
         std::get<Fortran::parser::OmpClauseList>((*endClauseList).t);
     for (const Fortran::parser::OmpClause &clause : clauseList.v)
       if (std::get_if<Fortran::parser::OmpClause::Nowait>(&clause.u))
-        wsLoopOp.nowaitAttr(firOpBuilder.getUnitAttr());
+        wsLoopOp.setNowaitAttr(firOpBuilder.getUnitAttr());
   }
 
   createBodyOfOp<omp::WsLoopOp>(wsLoopOp, converter, currentLocation, eval,
@@ -1333,7 +1335,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
             currentLocation, name, hint);
       return firOpBuilder.create<mlir::omp::CriticalOp>(
           currentLocation, mlir::FlatSymbolRefAttr::get(
-                               firOpBuilder.getContext(), global.sym_name()));
+                               firOpBuilder.getContext(), global.getSymName()));
     }
   }();
   createBodyOfOp<omp::CriticalOp>(criticalOp, converter, currentLocation, eval);

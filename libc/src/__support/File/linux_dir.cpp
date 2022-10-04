@@ -19,9 +19,9 @@ namespace __llvm_libc {
 int platform_opendir(const char *name) {
   int open_flags = O_RDONLY | O_DIRECTORY | O_CLOEXEC;
 #ifdef SYS_open
-  int fd = __llvm_libc::syscall(SYS_open, name, open_flags);
+  int fd = __llvm_libc::syscall_impl(SYS_open, name, open_flags);
 #elif defined(SYS_openat)
-  int fd = __llvm_libc::syscall(SYS_openat, AT_FDCWD, name, open_flags);
+  int fd = __llvm_libc::syscall_impl(SYS_openat, AT_FDCWD, name, open_flags);
 #else
 #error                                                                         \
     "SYS_open and SYS_openat syscalls not available to perform an open operation."
@@ -36,7 +36,7 @@ int platform_opendir(const char *name) {
 
 size_t platform_fetch_dirents(int fd, cpp::span<uint8_t> buffer) {
   long size =
-      __llvm_libc::syscall(SYS_getdents, fd, buffer.data(), buffer.size());
+      __llvm_libc::syscall_impl(SYS_getdents, fd, buffer.data(), buffer.size());
   if (size < 0) {
     errno = -size;
     return 0;
@@ -45,7 +45,7 @@ size_t platform_fetch_dirents(int fd, cpp::span<uint8_t> buffer) {
 }
 
 bool platform_closedir(int fd) {
-  long ret = __llvm_libc::syscall(SYS_close, fd);
+  long ret = __llvm_libc::syscall_impl(SYS_close, fd);
   if (ret < 0) {
     errno = -ret;
     return false;

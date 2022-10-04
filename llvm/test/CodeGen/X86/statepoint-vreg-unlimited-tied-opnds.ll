@@ -77,13 +77,13 @@ define i32 @test_spill(
   ; CHECK-PREG-NEXT:   MOV64mr %stack.1, 1, $noreg, 0, $noreg, killed renamable $rax :: (store (s64) into %stack.1)
   ; CHECK-PREG-NEXT:   renamable $rax = MOV64rm %fixed-stack.5, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.5, align 16)
   ; CHECK-PREG-NEXT:   MOV64mr %stack.0, 1, $noreg, 0, $noreg, killed renamable $rax :: (store (s64) into %stack.0)
-  ; CHECK-PREG-NEXT:   renamable $rbx = MOV64rm %fixed-stack.4, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.4)
-  ; CHECK-PREG-NEXT:   renamable $r13 = MOV64rm %fixed-stack.3, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.3, align 16)
-  ; CHECK-PREG-NEXT:   renamable $r12 = MOV64rm %fixed-stack.2, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.2)
-  ; CHECK-PREG-NEXT:   renamable $r14 = MOV64rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.1, align 16)
-  ; CHECK-PREG-NEXT:   renamable $r15 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0)
+  ; CHECK-PREG-NEXT:   renamable $r13 = MOV64rm %fixed-stack.4, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.4)
+  ; CHECK-PREG-NEXT:   renamable $r12 = MOV64rm %fixed-stack.3, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.3, align 16)
+  ; CHECK-PREG-NEXT:   renamable $r15 = MOV64rm %fixed-stack.2, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.2)
+  ; CHECK-PREG-NEXT:   renamable $rbx = MOV64rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.1, align 16)
+  ; CHECK-PREG-NEXT:   renamable $r14 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0)
   ; CHECK-PREG-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; CHECK-PREG-NEXT:   renamable $r15, renamable $r14, renamable $r12, renamable $r13, renamable $rbx, renamable $rbp = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 18, killed renamable $r15(tied-def 0), killed renamable $r14(tied-def 1), killed renamable $r12(tied-def 2), killed renamable $r13(tied-def 3), killed renamable $rbx(tied-def 4), 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 1, 8, %stack.3, 0, 1, 8, %stack.4, 0, 1, 8, %stack.5, 0, 1, 8, %stack.7, 0, 1, 8, %stack.8, 0, 1, 8, %stack.2, 0, 1, 8, %stack.6, 0, 1, 8, %stack.9, 0, 1, 8, %stack.10, 0, 1, 8, %stack.11, 0, killed renamable $rbp(tied-def 5), 2, 0, 2, 18, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, csr_64, implicit-def $rsp, implicit-def $ssp :: (load store (s64) on %stack.0), (load store (s64) on %stack.1), (load store (s64) on %stack.2), (load store (s64) on %stack.3), (load store (s64) on %stack.4), (load store (s64) on %stack.5), (load store (s64) on %stack.6), (load store (s64) on %stack.7), (load store (s64) on %stack.8), (load store (s64) on %stack.9), (load store (s64) on %stack.10), (load store (s64) on %stack.11)
+  ; CHECK-PREG-NEXT:   renamable $r14, renamable $rbx, renamable $r15, renamable $r12, renamable $r13, renamable $rbp = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 18, killed renamable $r14(tied-def 0), killed renamable $rbx(tied-def 1), killed renamable $r15(tied-def 2), killed renamable $r12(tied-def 3), killed renamable $r13(tied-def 4), 1, 8, %stack.0, 0, 1, 8, %stack.1, 0, 1, 8, %stack.3, 0, 1, 8, %stack.4, 0, 1, 8, %stack.5, 0, 1, 8, %stack.7, 0, 1, 8, %stack.8, 0, 1, 8, %stack.2, 0, 1, 8, %stack.6, 0, 1, 8, %stack.9, 0, 1, 8, %stack.10, 0, 1, 8, %stack.11, 0, killed renamable $rbp(tied-def 5), 2, 0, 2, 18, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 14, 14, 15, 15, 16, 16, 17, 17, csr_64, implicit-def $rsp, implicit-def $ssp :: (load store (s64) on %stack.0), (load store (s64) on %stack.1), (load store (s64) on %stack.2), (load store (s64) on %stack.3), (load store (s64) on %stack.4), (load store (s64) on %stack.5), (load store (s64) on %stack.6), (load store (s64) on %stack.7), (load store (s64) on %stack.8), (load store (s64) on %stack.9), (load store (s64) on %stack.10), (load store (s64) on %stack.11)
   ; CHECK-PREG-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-PREG-NEXT:   renamable $eax = MOV32rm killed renamable $rbp, 1, $noreg, 4, $noreg :: (load (s32) from %ir.gep00, addrspace 1)
   ; CHECK-PREG-NEXT:   renamable $rdi = MOV64rm %stack.11, 1, $noreg, 0, $noreg :: (load (s64) from %stack.11)
@@ -110,11 +110,11 @@ define i32 @test_spill(
   ; CHECK-PREG-NEXT:   renamable $eax = ADD32rm killed renamable $eax, killed renamable $rdi, 1, $noreg, 48, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep11, addrspace 1)
   ; CHECK-PREG-NEXT:   renamable $rdi = MOV64rm %stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %stack.0)
   ; CHECK-PREG-NEXT:   renamable $eax = ADD32rm killed renamable $eax, killed renamable $rdi, 1, $noreg, 52, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep12, addrspace 1)
-  ; CHECK-PREG-NEXT:   renamable $eax = ADD32rm killed renamable $eax, killed renamable $rbx, 1, $noreg, 56, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep13, addrspace 1)
-  ; CHECK-PREG-NEXT:   renamable $eax = ADD32rm killed renamable $eax, killed renamable $r13, 1, $noreg, 60, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep14, addrspace 1)
-  ; CHECK-PREG-NEXT:   renamable $eax = ADD32rm killed renamable $eax, killed renamable $r12, 1, $noreg, 64, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep15, addrspace 1)
-  ; CHECK-PREG-NEXT:   renamable $eax = ADD32rm killed renamable $eax, killed renamable $r14, 1, $noreg, 68, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep16, addrspace 1)
-  ; CHECK-PREG-NEXT:   renamable $eax = ADD32rm killed renamable $eax, killed renamable $r15, 1, $noreg, 72, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep17, addrspace 1)
+  ; CHECK-PREG-NEXT:   renamable $eax = ADD32rm killed renamable $eax, killed renamable $r13, 1, $noreg, 56, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep13, addrspace 1)
+  ; CHECK-PREG-NEXT:   renamable $eax = ADD32rm killed renamable $eax, killed renamable $r12, 1, $noreg, 60, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep14, addrspace 1)
+  ; CHECK-PREG-NEXT:   renamable $eax = ADD32rm killed renamable $eax, killed renamable $r15, 1, $noreg, 64, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep15, addrspace 1)
+  ; CHECK-PREG-NEXT:   renamable $eax = ADD32rm killed renamable $eax, killed renamable $rbx, 1, $noreg, 68, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep16, addrspace 1)
+  ; CHECK-PREG-NEXT:   renamable $eax = ADD32rm killed renamable $eax, killed renamable $r14, 1, $noreg, 72, $noreg, implicit-def dead $eflags :: (load (s32) from %ir.gep17, addrspace 1)
   ; CHECK-PREG-NEXT:   RET 0, $eax
     ptr addrspace(1) %arg00, ptr addrspace(1) %arg01, ptr addrspace(1) %arg02, ptr addrspace(1) %arg03, ptr addrspace(1) %arg04, ptr addrspace(1) %arg05,
     ptr addrspace(1) %arg06, ptr addrspace(1) %arg07, ptr addrspace(1) %arg08, ptr addrspace(1) %arg09, ptr addrspace(1) %arg10, ptr addrspace(1) %arg11,

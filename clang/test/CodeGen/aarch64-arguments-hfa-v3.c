@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +neon -target-abi darwinpcs -fallow-half-arguments-and-returns -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios -target-feature +neon -target-abi darwinpcs -emit-llvm -o - %s | FileCheck %s
 
 typedef __attribute__((__ext_vector_type__(16))) signed char int8x16_t;
 typedef __attribute__((__ext_vector_type__(3))) float float32x3_t;

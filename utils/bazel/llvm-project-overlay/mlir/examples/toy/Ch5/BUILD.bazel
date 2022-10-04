@@ -100,7 +100,7 @@ cc_binary(
         "//mlir:AffineTransforms",
         "//mlir:AllPassesAndDialects",
         "//mlir:Analysis",
-        "//mlir:ArithmeticDialect",
+        "//mlir:ArithDialect",
         "//mlir:CastOpInterfaces",
         "//mlir:FuncDialect",
         "//mlir:IR",

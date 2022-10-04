@@ -752,7 +752,7 @@ This phase currently supports all the intrinsic procedures listed above but the 
 | Non-standard intrinsic functions | AND, OR, XOR, LSHIFT, RSHIFT, SHIFT, ZEXT, IZEXT, COSD, SIND, TAND, ACOSD, ASIND, ATAND, ATAN2D, COMPL, DCMPLX, EQV, NEQV, INT8, JINT, JNINT, KNINT, LOC, QCMPLX, DREAL, DFLOAT, QEXT, QFLOAT, QREAL, DNUM, NUM, JNUM, KNUM, QNUM, RNUM, RAN, RANF, ILEN, SIZEOF, MCLOCK, SECNDS, COTAN, IBCHNG, ISHA, ISHC, ISHL, IXOR, IARG, IARGC, NARGS, NUMARG, BADDRESS, IADDR, CACHESIZE, EOF, FP_CLASS, INT_PTR_KIND, ISNAN, MALLOC |
 | Intrinsic subroutines |MVBITS (elemental), CPU_TIME, DATE_AND_TIME, EVENT_QUERY, EXECUTE_COMMAND_LINE, GET_COMMAND, GET_COMMAND_ARGUMENT, GET_ENVIRONMENT_VARIABLE, MOVE_ALLOC, RANDOM_INIT, RANDOM_NUMBER, RANDOM_SEED, SYSTEM_CLOCK |
 | Atomic intrinsic subroutines | ATOMIC_ADD &al. |
-| Collective intrinsic subroutines | CO_BROADCAST &al. |
+| Collective intrinsic subroutines | CO_REDUCE |
 
 
 ### Intrinsic Function Folding

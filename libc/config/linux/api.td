@@ -171,7 +171,7 @@ def StdlibAPI : PublicAPI<"stdlib.h"> {
 }
 
 def TimeAPI : PublicAPI<"time.h"> {
-  let Types = ["time_t", "struct tm", "struct timespec"];
+  let Types = ["time_t", "struct tm", "struct timespec", "clockid_t",];
 }
 
 def ErrnoAPI : PublicAPI<"errno.h"> {
@@ -193,6 +193,10 @@ def ErrnoAPI : PublicAPI<"errno.h"> {
   ];
 }
 
+def SchedAPI : PublicAPI<"sched.h"> {
+  let Types = ["pid_t", "size_t", "cpu_set_t"];
+}
+
 def SysMManAPI : PublicAPI<"sys/mman.h"> {
   let Types = ["off_t", "size_t"];
   let Macros = [
@@ -201,7 +205,7 @@ def SysMManAPI : PublicAPI<"sys/mman.h"> {
 }
 
 def SignalAPI : PublicAPI<"signal.h"> {
-  let Types = ["struct sigaction", "__sighandler_t"];
+  let Types = ["sigset_t", "struct sigaction", "union sigval", "siginfo_t"];
 }
 
 def ThreadsAPI : PublicAPI<"threads.h"> {
@@ -234,6 +238,7 @@ def ThreadsAPI : PublicAPI<"threads.h"> {
 
 def PThreadAPI : PublicAPI<"pthread.h"> {
   let Types = [
+      "__pthread_once_func_t",
       "__pthread_start_t",
       "__pthread_tss_dtor_t",
       "pthread_attr_t",
@@ -241,6 +246,7 @@ def PThreadAPI : PublicAPI<"pthread.h"> {
       "pthread_mutexattr_t",
       "pthread_t",
       "pthread_key_t",
+      "pthread_once_t",
   ];
 }
 

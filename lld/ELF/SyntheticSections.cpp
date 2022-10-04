@@ -960,12 +960,12 @@ void MipsGotSection::build() {
   // Update SymbolAux::gotIdx field to use this
   // value later in the `sortMipsSymbols` function.
   for (auto &p : primGot->global) {
-    if (p.first->auxIdx == uint32_t(-1))
+    if (p.first->auxIdx == 0)
       p.first->allocateAux();
     symAux.back().gotIdx = p.second;
   }
   for (auto &p : primGot->relocs) {
-    if (p.first->auxIdx == uint32_t(-1))
+    if (p.first->auxIdx == 0)
       p.first->allocateAux();
     symAux.back().gotIdx = p.second;
   }
@@ -1306,7 +1306,7 @@ DynamicSection<ELFT>::computeContents() {
     addInt(config->enableNewDtags ? DT_RUNPATH : DT_RPATH,
            part.dynStrTab->addString(config->rpath));
 
-  for (SharedFile *file : ctx->sharedFiles)
+  for (SharedFile *file : ctx.sharedFiles)
     if (file->isNeeded)
       addInt(DT_NEEDED, part.dynStrTab->addString(file->soName));
 
@@ -1458,10 +1458,10 @@ DynamicSection<ELFT>::computeContents() {
       addInt(DT_FINI_ARRAYSZ, Out::finiArray->size);
     }
 
-    if (Symbol *b = symtab->find(config->init))
+    if (Symbol *b = symtab.find(config->init))
       if (b->isDefined())
         addInt(DT_INIT, b->getVA());
-    if (Symbol *b = symtab->find(config->fini))
+    if (Symbol *b = symtab.find(config->fini))
       if (b->isDefined())
         addInt(DT_FINI, b->getVA());
   }
@@ -1475,7 +1475,7 @@ DynamicSection<ELFT>::computeContents() {
   if (part.verNeed && part.verNeed->isNeeded()) {
     addInSec(DT_VERNEED, *part.verNeed);
     unsigned needNum = 0;
-    for (SharedFile *f : ctx->sharedFiles)
+    for (SharedFile *f : ctx.sharedFiles)
       if (!f->vernauxs.empty())
         ++needNum;
     addInt(DT_VERNEEDNUM, needNum);
@@ -1779,8 +1779,7 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
     r.r_offset = rel.getOffset();
     r.setSymbolAndType(rel.getSymIndex(getPartition().dynSymTab.get()),
                        rel.type, false);
-    if (config->isRela)
-      r.r_addend = rel.computeAddend();
+    r.r_addend = config->isRela ? rel.computeAddend() : 0;
 
     if (r.getType(config->isMips64EL) == target->relativeRel)
       relatives.push_back(r);
@@ -1824,12 +1823,12 @@ bool AndroidPackedRelocationSection<ELFT>::updateAllocSize() {
   //
   // For Rela, we also want to sort by r_addend when r_info is the same. This
   // enables us to group by r_addend as well.
-  llvm::stable_sort(nonRelatives, [](const Elf_Rela &a, const Elf_Rela &b) {
+  llvm::sort(nonRelatives, [](const Elf_Rela &a, const Elf_Rela &b) {
     if (a.r_info != b.r_info)
       return a.r_info < b.r_info;
-    if (config->isRela)
+    if (a.r_addend != b.r_addend)
       return a.r_addend < b.r_addend;
-    return false;
+    return a.r_offset < b.r_offset;
   });
 
   // Group relocations with the same r_info. Note that each group emits a group
@@ -3128,7 +3127,7 @@ VersionNeedSection<ELFT>::VersionNeedSection()
                        ".gnu.version_r") {}
 
 template <class ELFT> void VersionNeedSection<ELFT>::finalizeContents() {
-  for (SharedFile *f : ctx->sharedFiles) {
+  for (SharedFile *f : ctx.sharedFiles) {
     if (f->vernauxs.empty())
       continue;
     verneeds.emplace_back();
@@ -3296,7 +3295,7 @@ template <class ELFT> void elf::splitSections() {
   llvm::TimeTraceScope timeScope("Split sections");
   // splitIntoPieces needs to be called on each MergeInputSection
   // before calling finalizeContents().
-  parallelForEach(ctx->objectFiles, [](ELFFileBase *file) {
+  parallelForEach(ctx.objectFiles, [](ELFFileBase *file) {
     for (InputSectionBase *sec : file->getSections()) {
       if (!sec)
         continue;
@@ -3687,9 +3686,9 @@ static uint8_t getAbiVersion() {
     return 0;
   }
 
-  if (config->emachine == EM_AMDGPU && !ctx->objectFiles.empty()) {
-    uint8_t ver = ctx->objectFiles[0]->abiVersion;
-    for (InputFile *file : makeArrayRef(ctx->objectFiles).slice(1))
+  if (config->emachine == EM_AMDGPU && !ctx.objectFiles.empty()) {
+    uint8_t ver = ctx.objectFiles[0]->abiVersion;
+    for (InputFile *file : makeArrayRef(ctx.objectFiles).slice(1))
       if (file->abiVersion != ver)
         error("incompatible ABI version: " + toString(file));
     return ver;

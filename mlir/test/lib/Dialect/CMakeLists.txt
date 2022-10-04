@@ -1,5 +1,5 @@
 add_subdirectory(Affine)
-add_subdirectory(Arithmetic)
+add_subdirectory(Arith)
 add_subdirectory(DLTI)
 add_subdirectory(Func)
 add_subdirectory(GPU)

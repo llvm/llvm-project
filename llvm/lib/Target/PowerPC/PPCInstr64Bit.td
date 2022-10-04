@@ -1973,9 +1973,6 @@ def SLBSYNC : XForm_0<31, 338, (outs), (ins), "slbsync", IIC_SprSLBSYNC, []>;
 def : Pat<(int_ppc_stdcx ForceXForm:$dst, g8rc:$A),
           (STDCX g8rc:$A, ForceXForm:$dst)>;
 
-// trapd
-def : Pat<(int_ppc_trapd g8rc:$A),
-          (TDI 24, $A, 0)>;
 def : Pat<(i64 (int_ppc_mfspr timm:$SPR)),
           (MFSPR8 $SPR)>;
 def : Pat<(int_ppc_mtspr timm:$SPR, g8rc:$RT),

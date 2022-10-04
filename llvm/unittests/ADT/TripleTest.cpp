@@ -1990,6 +1990,16 @@ TEST(TripleTest, ParseARMArch) {
     EXPECT_EQ(Triple::aarch64, T.getArch());
     EXPECT_EQ(Triple::AArch64SubArch_arm64e, T.getSubArch());
   }
+  {
+    Triple T = Triple("arm64ec");
+    EXPECT_EQ(Triple::aarch64, T.getArch());
+    EXPECT_EQ(Triple::AArch64SubArch_arm64ec, T.getSubArch());
+  }
+  {
+    Triple T;
+    T.setArch(Triple::aarch64, Triple::AArch64SubArch_arm64ec);
+    EXPECT_EQ("arm64ec", T.getArchName());
+  }
 }
 
 TEST(TripleTest, isArmT32) {

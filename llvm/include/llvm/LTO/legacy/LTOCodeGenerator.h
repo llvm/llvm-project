@@ -213,6 +213,9 @@ private:
   bool determineTarget();
   std::unique_ptr<TargetMachine> createTargetMachine();
 
+  bool useAIXSystemAssembler();
+  bool runAIXSystemAssembler(SmallString<128> &AssemblyFile);
+
   void emitError(const std::string &ErrMsg);
   void emitWarning(const std::string &ErrMsg);
 

@@ -2623,17 +2623,17 @@ typedef atomic<uintmax_t> atomic_uintmax_t;
 #endif
 
 #if ATOMIC_LLONG_LOCK_FREE == 2
-typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, long long>::type          __libcpp_signed_lock_free;
-typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned long long>::type __libcpp_unsigned_lock_free;
+typedef __conditional_t<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, long long>          __libcpp_signed_lock_free;
+typedef __conditional_t<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned long long> __libcpp_unsigned_lock_free;
 #elif ATOMIC_INT_LOCK_FREE == 2
-typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, int>::type                __libcpp_signed_lock_free;
-typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned int>::type       __libcpp_unsigned_lock_free;
+typedef __conditional_t<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, int>                __libcpp_signed_lock_free;
+typedef __conditional_t<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned int>       __libcpp_unsigned_lock_free;
 #elif ATOMIC_SHORT_LOCK_FREE == 2
-typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, short>::type              __libcpp_signed_lock_free;
-typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned short>::type     __libcpp_unsigned_lock_free;
+typedef __conditional_t<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, short>              __libcpp_signed_lock_free;
+typedef __conditional_t<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned short>     __libcpp_unsigned_lock_free;
 #elif ATOMIC_CHAR_LOCK_FREE == 2
-typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, char>::type               __libcpp_signed_lock_free;
-typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned char>::type      __libcpp_unsigned_lock_free;
+typedef __conditional_t<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, char>               __libcpp_signed_lock_free;
+typedef __conditional_t<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned char>      __libcpp_unsigned_lock_free;
 #else
     // No signed/unsigned lock-free types
 #define _LIBCPP_NO_LOCK_FREE_TYPES

@@ -14,6 +14,15 @@ some programs which have (incorrectly) relied on string deduplication always
 occurring. In particular, programs which compare string literals via pointer
 equality must be fixed to use value equality instead.
 
+Dead Stripping Duplicate Symbols
+********************************
+ld64 strips dead code before reporting duplicate symbols. By default, LLD does
+the opposite. ld64's behavior hides ODR violations, so we have chosen not
+to follow it. But, to make adoption easy, LLD can mimic this behavior via
+the ``--dead-strip-duplicates`` flag. Usage of this flag is discouraged, and
+this behavior should be fixed in the source. However, for sources that are not
+within the user's control, this will mitigate users for adoption.
+
 ``-no_deduplicate`` Flag
 ************************
 - ld64: This turns off ICF (deduplication pass) in the linker.

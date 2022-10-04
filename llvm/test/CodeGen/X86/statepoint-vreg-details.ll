@@ -59,15 +59,15 @@ define void @test_mixed(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(
 ; CHECK-VREG:    CALL64pcrel32 @consume5, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit $rcx, implicit $r8, implicit-def $rsp, implicit-def $ssp
 
 ; CHECK-PREG-LABEL: name:            test_mixed
-; CHECK-PREG:    renamable $r14 = COPY $rdx
-; CHECK-PREG:    renamable $r15 = COPY $rsi
-; CHECK-PREG:    renamable $rbx = COPY $rdi
-; CHECK-PREG:    renamable $r14, renamable $r15, renamable $rbx = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 4, killed renamable $r14(tied-def 0), 2, 0, killed renamable $r15(tied-def 1), killed renamable $rbx(tied-def 2), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_64, implicit-def $rsp, implicit-def $ssp
-; CHECK-PREG:    $rdi = COPY killed renamable $rbx
+; CHECK-PREG:    renamable $rbx = COPY $rdx
+; CHECK-PREG:    renamable $r14 = COPY $rsi
+; CHECK-PREG:    renamable $r15 = COPY $rdi
+; CHECK-PREG:    renamable $rbx, renamable $r14, renamable $r15 = STATEPOINT 0, 0, 0, @func, 2, 0, 2, 0, 2, 0, 2, 4, killed renamable $rbx(tied-def 0), 2, 0, killed renamable $r14(tied-def 1), killed renamable $r15(tied-def 2), 2, 0, 2, 4, 0, 0, 1, 1, 2, 2, 3, 3, csr_64, implicit-def $rsp, implicit-def $ssp
+; CHECK-PREG:    $rdi = COPY killed renamable $r15
 ; CHECK-PREG:    dead $esi = MOV32r0 implicit-def dead $eflags, implicit-def $rsi
-; CHECK-PREG:    $rdx = COPY killed renamable $r15
+; CHECK-PREG:    $rdx = COPY killed renamable $r14
 ; CHECK-PREG:    dead $ecx = MOV32r0 implicit-def dead $eflags, implicit-def $rcx
-; CHECK-PREG:    $r8 = COPY killed renamable $r14
+; CHECK-PREG:    $r8 = COPY killed renamable $rbx
 ; CHECK-PREG:    CALL64pcrel32 @consume5, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx, implicit killed $rcx, implicit killed $r8, implicit-def $rsp, implicit-def $ssp
 
 entry:

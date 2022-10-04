@@ -48,7 +48,7 @@ using BlockMoveFn = void (*)(Block *Storage, char *SrcFieldPtr,
 using InterpSize = unsigned;
 
 /// Describes a memory block created by an allocation site.
-struct Descriptor {
+struct Descriptor final {
 private:
   /// Original declaration, used to emit the error message.
   const DeclTy Source;
