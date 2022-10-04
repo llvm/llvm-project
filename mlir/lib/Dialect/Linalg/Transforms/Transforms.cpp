@@ -561,35 +561,6 @@ mlir::linalg::LinalgGeneralizationPattern::returningMatchAndRewrite(
   return genericOp;
 }
 
-mlir::linalg::LinalgPeelingPattern::LinalgPeelingPattern(
-    MLIRContext *context, LinalgTransformationFilter f,
-    LinalgPeelOptions options, PatternBenefit benefit)
-    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
-      filter(std::move(f)), options(std::move(options)) {}
-
-mlir::linalg::LinalgPeelingPattern::LinalgPeelingPattern(
-    StringRef opName, MLIRContext *context, LinalgPeelOptions options,
-    LinalgTransformationFilter f, PatternBenefit benefit)
-    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
-      filter(f.addOpNameFilter(opName)), options(std::move(options)) {}
-
-LogicalResult mlir::linalg::LinalgPeelingPattern::matchAndRewrite(
-    LinalgOp linalgOp, PatternRewriter &rewriter) const {
-  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
-    return failure();
-
-  // Increase marker counter even if peeling doesn't happen for this op.
-  filter.replaceLinalgTransformationFilter(rewriter, linalgOp);
-
-  if (!options.loopsToPeelComputationFunction)
-    return failure();
-
-  SmallVector<scf::ForOp, 4> loopsToPeel;
-  options.loopsToPeelComputationFunction(rewriter, linalgOp, loopsToPeel);
-  peelLoops(rewriter, loopsToPeel);
-  return success();
-}
-
 LogicalResult mlir::linalg::CopyVectorizationPattern::matchAndRewrite(
     memref::CopyOp copyOp, PatternRewriter &rewriter) const {
   return vectorizeCopy(rewriter, copyOp);
