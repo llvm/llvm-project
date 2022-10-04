@@ -47,15 +47,19 @@ class TimePassesHandler {
   /// to all the instance of a given pass) + sequential invocation counter.
   using PassInvocationID = std::pair<StringRef, unsigned>;
 
-  /// A group of all pass-timing timers.
-  TimerGroup TG;
+  /// Groups of timers for passes and analyses.
+  TimerGroup PassTG;
+  TimerGroup AnalysisTG;
 
   using TimerVector = llvm::SmallVector<std::unique_ptr<Timer>, 4>;
   /// Map of timers for pass invocations
   StringMap<TimerVector> TimingData;
 
-  /// Stack of currently active timers.
-  SmallVector<Timer *, 8> TimerStack;
+  /// Currently active pass timer.
+  Timer *ActivePassTimer = nullptr;
+  /// Stack of currently active analysis timers. Analyses can request other
+  /// analyses.
+  SmallVector<Timer *, 8> AnalysisActiveTimerStack;
 
   /// Custom output stream to print timing information into.
   /// By default (== nullptr) we emit time report into the stream created by
@@ -89,14 +93,12 @@ private:
   LLVM_DUMP_METHOD void dump() const;
 
   /// Returns the new timer for each new run of the pass.
-  Timer &getPassTimer(StringRef PassID);
+  Timer &getPassTimer(StringRef PassID, bool IsPass);
 
-  void startTimer(StringRef PassID);
-  void stopTimer(StringRef PassID);
-
-  // Implementation of pass instrumentation callbacks.
-  void runBeforePass(StringRef PassID);
-  void runAfterPass(StringRef PassID);
+  void startAnalysisTimer(StringRef PassID);
+  void stopAnalysisTimer(StringRef PassID);
+  void startPassTimer(StringRef PassID);
+  void stopPassTimer(StringRef PassID);
 };
 
 } // namespace llvm
