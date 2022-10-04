@@ -3762,6 +3762,65 @@ cc_library(
 )
 
 td_library(
+    name = "GPUTransformOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/GPU/TransformOps/GPUTransformOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":PDLDialectTdFiles",
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "GPUTransformOpsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/GPU/TransformOps/GPUTransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/GPU/TransformOps/GPUTransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/GPU/TransformOps/GPUTransformOps.td",
+    deps = [
+        ":GPUTransformOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "GPUTransformOps",
+    srcs = [
+        "lib/Dialect/GPU/TransformOps/GPUTransformOps.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/GPU/TransformOps/GPUTransformOps.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":AsmParser",
+        ":ControlFlowDialect",
+        ":GPUDialect",
+        ":GPUTransformOpsIncGen",
+        ":GPUTransforms",
+        ":IR",
+        ":PDLDialect",
+        ":Parser",
+        ":SCFDialect",
+        ":SideEffectInterfaces",
+        ":TransformDialect",
+        ":TransformUtils",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
     name = "LLVMOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/LLVMIR/LLVMIntrinsicOps.td",
@@ -6401,6 +6460,7 @@ cc_library(
         ":GPUToROCDLTransforms",
         ":GPUToSPIRV",
         ":GPUToVulkanTransforms",
+        ":GPUTransformOps",
         ":GPUTransforms",
         ":IR",
         ":LLVMDialect",
