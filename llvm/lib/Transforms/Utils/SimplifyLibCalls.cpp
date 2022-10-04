@@ -433,14 +433,16 @@ Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
 
     Function *Callee = CI->getCalledFunction();
     FunctionType *FT = Callee->getFunctionType();
-    if (!FT->getParamType(1)->isIntegerTy(32)) // memchr needs i32.
+    unsigned IntBits = TLI->getIntSize();
+    if (!FT->getParamType(1)->isIntegerTy(IntBits)) // memchr needs 'int'.
       return nullptr;
 
-    return copyFlags(
-        *CI,
-        emitMemChr(SrcStr, CharVal, // include nul.
-                   ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len), B,
-                   DL, TLI));
+    unsigned SizeTBits = TLI->getSizeTSize(*CI->getModule());
+    Type *SizeTTy = IntegerType::get(CI->getContext(), SizeTBits);
+    return copyFlags(*CI,
+                     emitMemChr(SrcStr, CharVal, // include nul.
+                                ConstantInt::get(SizeTTy, Len), B,
+                                DL, TLI));
   }
 
   if (CharC->isZero()) {
@@ -487,11 +489,13 @@ Value *LibCallSimplifier::optimizeStrRChr(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
   }
 
+  unsigned SizeTBits = TLI->getSizeTSize(*CI->getModule());
+  Type *SizeTTy = IntegerType::get(CI->getContext(), SizeTBits);
+
   // Try to expand strrchr to the memrchr nonstandard extension if it's
   // available, or simply fail otherwise.
   uint64_t NBytes = Str.size() + 1;   // Include the terminating nul.
-  Type *IntPtrType = DL.getIntPtrType(CI->getContext());
-  Value *Size = ConstantInt::get(IntPtrType, NBytes);
+  Value *Size = ConstantInt::get(SizeTTy, NBytes);
   return copyFlags(*CI, emitMemRChr(SrcStr, CharVal, Size, B, DL, TLI));
 }
 
@@ -3190,10 +3194,11 @@ Value *LibCallSimplifier::optimizeFPrintFString(CallInst *CI,
     if (FormatStr.contains('%'))
       return nullptr; // We found a format specifier.
 
+    unsigned SizeTBits = TLI->getSizeTSize(*CI->getModule());
+    Type *SizeTTy = IntegerType::get(CI->getContext(), SizeTBits);
     return copyFlags(
         *CI, emitFWrite(CI->getArgOperand(1),
-                        ConstantInt::get(DL.getIntPtrType(CI->getContext()),
-                                         FormatStr.size()),
+                        ConstantInt::get(SizeTTy, FormatStr.size()),
                         CI->getArgOperand(0), B, DL, TLI));
   }
 
@@ -3304,10 +3309,12 @@ Value *LibCallSimplifier::optimizeFPuts(CallInst *CI, IRBuilderBase &B) {
     return nullptr;
 
   // Known to have no uses (see above).
+  unsigned SizeTBits = TLI->getSizeTSize(*CI->getModule());
+  Type *SizeTTy = IntegerType::get(CI->getContext(), SizeTBits);
   return copyFlags(
       *CI,
       emitFWrite(CI->getArgOperand(0),
-                 ConstantInt::get(DL.getIntPtrType(CI->getContext()), Len - 1),
+                 ConstantInt::get(SizeTTy, Len - 1),
                  CI->getArgOperand(1), B, DL, TLI));
 }
 

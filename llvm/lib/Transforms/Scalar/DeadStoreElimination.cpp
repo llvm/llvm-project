@@ -1788,10 +1788,9 @@ struct DSEState {
         !memoryIsNotModifiedBetween(Malloc, MemSet, BatchAA, DL, &DT))
       return false;
     IRBuilder<> IRB(Malloc);
-    const auto &DL = Malloc->getModule()->getDataLayout();
-    auto *Calloc =
-      emitCalloc(ConstantInt::get(IRB.getIntPtrTy(DL), 1),
-                 Malloc->getArgOperand(0), IRB, TLI);
+    Type *SizeTTy = Malloc->getArgOperand(0)->getType();
+    auto *Calloc = emitCalloc(ConstantInt::get(SizeTTy, 1),
+                              Malloc->getArgOperand(0), IRB, TLI);
     if (!Calloc)
       return false;
     MemorySSAUpdater Updater(&MSSA);
