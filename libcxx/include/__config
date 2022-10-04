@@ -10,7 +10,16 @@
 #ifndef _LIBCPP___CONFIG
 #define _LIBCPP___CONFIG
 
-#include <__config_site>
+/*
+ * ClickHouse specific options.
+ * Unstable ABI to provide better performance
+ * Availability annotations are not supported.
+ * _LIBCPP_ABI_NAMESPACE to preserve namespace compatibility
+ */
+#define _LIBCPP_ABI_VERSION 999
+#define _LIBCPP_ABI_UNSTABLE
+#define _LIBCPP_HAS_NO_VENDOR_AVAILABILITY_ANNOTATIONS
+#define _LIBCPP_ABI_NAMESPACE __1
 
 #if defined(_MSC_VER) && !defined(__clang__)
 #  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -263,6 +272,9 @@
 #  if !defined(_LIBCPP_ENABLE_EXPERIMENTAL) && !defined(_LIBCPP_BUILDING_LIBRARY)
 #    define _LIBCPP_HAS_NO_INCOMPLETE_FORMAT
 #  endif
+
+#undef _LIBCPP_HAS_NO_INCOMPLETE_FORMAT
+#undef _LIBCPP_HAS_NO_INCOMPLETE_RANGES
 
 // Need to detect which libc we're using if we're on Linux.
 #  if defined(__linux__)
@@ -1122,6 +1134,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION
 #  endif // _LIBCPP_ENABLE_CXX17_REMOVED_FEATURES
 
+#define _LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION
+
 #  if defined(_LIBCPP_ENABLE_CXX20_REMOVED_FEATURES)
 #    define _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
 #    define _LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_VOID_SPECIALIZATION
@@ -1162,11 +1176,15 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    define _LIBCPP_HAS_NO_FGETPOS_FSETPOS
 #  endif
 
+    
+#ifndef _LIBCPP_INIT_PRIORITY_MAX
 #  if __has_attribute(__init_priority__)
 #    define _LIBCPP_INIT_PRIORITY_MAX __attribute__((__init_priority__(100)))
 #  else
 #    define _LIBCPP_INIT_PRIORITY_MAX
 #  endif
+#endif
+
 
 #  if __has_attribute(__format__)
 // The attribute uses 1-based indices for ordinary and static member functions.

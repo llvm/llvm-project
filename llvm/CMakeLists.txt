@@ -13,6 +13,10 @@ set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 include(${LLVM_COMMON_CMAKE_UTILS}/Modules/CMakePolicy.cmake
   NO_POLICY_SCOPE)
 
+if (OMIT_HEAVY_DEBUG_SYMBOLS)
+  add_definitions(-g0) # Lower object size
+endif()
+
 set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)

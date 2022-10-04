@@ -162,7 +162,7 @@ private:
   void *reserveGuardedPool(size_t Size);
   // allocateInGuardedPool() Ptr and Size must be a subrange of the previously
   // reserved pool range.
-  void allocateInGuardedPool(void *Ptr, size_t Size) const;
+  bool allocateInGuardedPool(void *Ptr, size_t Size) const;
   // deallocateInGuardedPool() Ptr and Size must be an exact pair previously
   // passed to allocateInGuardedPool().
   void deallocateInGuardedPool(void *Ptr, size_t Size) const;

@@ -12,10 +12,8 @@
 
 /*
     exception synopsis
-
 namespace std
 {
-
 class exception
 {
 public:
@@ -25,7 +23,6 @@ public:
     virtual ~exception() noexcept;
     virtual const char* what() const noexcept;
 };
-
 class bad_exception
     : public exception
 {
@@ -36,26 +33,20 @@ public:
     virtual ~bad_exception() noexcept;
     virtual const char* what() const noexcept;
 };
-
 typedef void (*unexpected_handler)();
 unexpected_handler set_unexpected(unexpected_handler  f ) noexcept;
 unexpected_handler get_unexpected() noexcept;
 [[noreturn]] void unexpected();
-
 typedef void (*terminate_handler)();
 terminate_handler set_terminate(terminate_handler  f ) noexcept;
 terminate_handler get_terminate() noexcept;
 [[noreturn]] void terminate() noexcept;
-
 bool uncaught_exception()  noexcept;
 int  uncaught_exceptions() noexcept;  // C++17
-
 typedef unspecified exception_ptr;
-
 exception_ptr current_exception() noexcept;
 void rethrow_exception [[noreturn]] (exception_ptr p);
 template<class E> exception_ptr make_exception_ptr(E e) noexcept;
-
 class nested_exception
 {
 public:
@@ -63,17 +54,13 @@ public:
     nested_exception(const nested_exception&) noexcept = default;
     nested_exception& operator=(const nested_exception&) noexcept = default;
     virtual ~nested_exception() = default;
-
     // access functions
     [[noreturn]] void rethrow_nested() const;
     exception_ptr nested_ptr() const noexcept;
 };
-
 template <class T> [[noreturn]] void throw_with_nested(T&& t);
 template <class E> void rethrow_if_nested(const E& e);
-
 }  // std
-
 */
 
 #include <__assert> // all public C++ headers provide the assertion handler
@@ -101,6 +88,10 @@ template <class E> void rethrow_if_nested(const E& e);
 #  pragma GCC system_header
 #endif
 
+#ifdef STD_EXCEPTION_HAS_STACK_TRACE
+extern "C" int unw_backtrace(void **, int);
+#endif
+
 namespace std  // purposefully not using versioning namespace
 {
 
@@ -122,7 +113,12 @@ struct __std_exception_data {
 
 class exception { // base of all library exceptions
 public:
-  exception() _NOEXCEPT : __data_() {}
+  exception() _NOEXCEPT : __data()
+  {
+#ifdef STD_EXCEPTION_HAS_STACK_TRACE
+    capture();
+#endif
+  }
 
   explicit exception(char const* __message) _NOEXCEPT : __data_() {
     __data_._What = __message;
@@ -137,8 +133,30 @@ public:
 
   virtual char const* what() const _NOEXCEPT { return __data_._What ? __data_._What : "Unknown exception"; }
 
+#ifdef STD_EXCEPTION_HAS_STACK_TRACE
+    /// This is ClickHouse patch to libc++. It breaks ABI, so you cannot link your code with any C++ library
+    /// that has any std::exception-related symbols exported and was built without this patch.
+    void ** const get_stack_trace_frames() const _NOEXCEPT { return const_cast<void**>(frames); }
+    int get_stack_trace_size() const _NOEXCEPT { return size; }
+    void set_stack_trace(void ** frames_, int size_) _NOEXCEPT
+    {
+        size = size_;
+        for (int i = 0; i < size; ++i)
+            frames[i] = frames_[i];
+    }
+#endif
+
 private:
   __std_exception_data __data_;
+#ifdef STD_EXCEPTION_HAS_STACK_TRACE
+    static constexpr int capacity = 32;
+    void * frames[capacity];
+    int size = 0;
+    void capture() _NOEXCEPT
+    {
+        size = unw_backtrace(frames, capacity);
+    }
+#endif
 };
 
 class bad_exception : public exception {
