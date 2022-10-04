@@ -440,3 +440,34 @@ end subroutine
   The precedent among the most commonly used compilers
   agrees with f18's interpretation: a `DATA` statement without any other
   specification of the name refers to the host-associated object.
+
+* Many Fortran compilers allow a non-generic procedure to be `USE`-associated
+  into a scope that also contains a generic interface of the same name
+  but does not have the `USE`-associated non-generic procedure as a
+  specific procedure.
+```
+module m1
+ contains
+  subroutine foo(n)
+    integer, intent(in) :: n
+  end subroutine
+end module
+
+module m2
+  use m1, only: foo
+  interface foo
+    module procedure noargs
+  end interface
+ contains
+  subroutine noargs
+  end subroutine
+end module
+```
+
+  This case elicits a warning from f18, as it should not be treated
+  any differently than the same case with the non-generic procedure of
+  the same name being defined in the same scope rather than being
+  `USE`-associated into it, which is explicitly non-conforming in the
+  standard and not allowed by most other compilers.
+  If the `USE`-associated entity of the same name is not a procedure,
+  most compilers disallow it as well.
