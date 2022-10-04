@@ -9,6 +9,11 @@
 #ifndef __LLVM_LIBC_MACROS_LINUX_SYS_WAIT_MACROS_H
 #define __LLVM_LIBC_MACROS_LINUX_SYS_WAIT_MACROS_H
 
+// Wait flags
+#define WNOHANG 1    // Do not block
+#define WUNTRACED 2  // Report is a child has stopped even if untraced
+#define WCONTINUED 8 // Report if a stopped child has been resumed by SIGCONT
+
 // Wait status info macros
 #define WTERMSIG(status) (((status)&0x7F))
 #define WIFEXITED(status) (WTERMSIG(status) == 0)
