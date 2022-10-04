@@ -266,6 +266,20 @@ gentbl_cc_library(
             ["-gen-op-defs"],
             "lib/Dialect/Transform/TestTransformDialectExtension.cpp.inc",
         ),
+        (
+            [
+                "-gen-typedef-decls",
+                "-typedefs-dialect=transform",
+            ],
+            "lib/Dialect/Transform/TestTransformDialectExtensionTypes.h.inc",
+        ),
+        (
+            [
+                "-gen-typedef-defs",
+                "-typedefs-dialect=transform",
+            ],
+            "lib/Dialect/Transform/TestTransformDialectExtensionTypes.cpp.inc",
+        ),
     ],
     tblgen = "//mlir:mlir-tblgen",
     td_file = "lib/Dialect/Transform/TestTransformDialectExtension.td",
@@ -284,6 +298,7 @@ cc_library(
     includes = ["lib/Dialect/Transform"],
     deps = [
         ":TestTransformDialectExtensionIncGen",
+        "//llvm:Support",
         "//mlir:IR",
         "//mlir:PDLDialect",
         "//mlir:Pass",

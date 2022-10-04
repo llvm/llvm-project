@@ -315,6 +315,23 @@ def Transform_Dialect : Dialect {
       const ::llvm::StringMap<::mlir::PDLConstraintFunction> &
       getPDLConstraintHooks() const;
 
+      /// Parses a type registered by this dialect or one of its extensions.
+      ::mlir::Type parseType(::mlir::DialectAsmParser &parser) const override;
+
+      /// Prints a type registered by this dialect or one of its extensions.
+      void printType(::mlir::Type type,
+                     ::mlir::DialectAsmPrinter &printer) const override;
+
+      /// Parser callback for an individual type registered by this dialect or
+      /// its extensions.
+      using ExtensionTypeParsingHook =
+          std::function<::mlir::Type (::mlir::AsmParser &)>;
+
+      /// Printer callback for an individual type registered by this dialect or
+      /// its extensions.
+      using ExtensionTypePrintingHook =
+          std::function<void (::mlir::Type, ::mlir::AsmPrinter &)>;
+
     private:
       template <typename OpTy>
       void addOperationIfNotRegistered() {
@@ -344,6 +361,28 @@ def Transform_Dialect : Dialect {
         #endif // NDEBUG
       }
 
+      /// Registers the types specified as template parameters with the
+      /// Transform dialect. Checks that they meet the requirements for
+      /// Transform IR types.
+      template <typename... TypeTys>
+      void addTypesChecked() {
+        (addTypeIfNotRegistered<TypeTys>(), ...);
+
+        #ifndef NDEBUG
+        (detail::checkImplementsTransformTypeInterface(
+            TypeID::get<TypeTys>(), getContext()), ...);
+        #endif // NDEBUG
+      }
+
+      /// Implementation of the type registration for a single type, should
+      /// not be called directly, use addTypesChecked instead.
+      template <typename Type>
+      void addTypeIfNotRegistered();
+
+      /// Reports a repeated registration error of a type with the given
+      /// mnemonic.
+      [[noreturn]] void reportDuplicateTypeRegistration(StringRef mnemonic);
+
       template <typename, typename...>
       friend class TransformDialectExtension;
 
@@ -352,9 +391,23 @@ def Transform_Dialect : Dialect {
       void mergeInPDLMatchHooks(
           ::llvm::StringMap<::mlir::PDLConstraintFunction> &&constraintFns);
 
+      //===----------------------------------------------------------------===//
+      // Data fields
+      //===----------------------------------------------------------------===//
+
       /// A container for PDL constraint function that can be used by
       /// operations in this dialect.
-      PDLPatternModule pdlMatchHooks;
+      ::mlir::PDLPatternModule pdlMatchHooks;
+
+      /// A map from type mnemonic to its parsing function for the remainder of
+      /// the syntax. The parser has access to the mnemonic, so it is used for
+      /// further dispatch.
+      ::llvm::StringMap<ExtensionTypeParsingHook> typeParsingHooks;
+
+      /// A map from type TypeID to its printing function. No need to do string
+      /// lookups when the type is fully constructed.
+      ::llvm::DenseMap<::mlir::TypeID, ExtensionTypePrintingHook>
+      typePrintingHooks;
   }];
 }
 
