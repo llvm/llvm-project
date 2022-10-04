@@ -64,6 +64,10 @@ public:
       // procedure pointer feature is implemented.
       return llvm::None;
     });
+    addConversion([&](fir::ClassType classTy) {
+      TODO_NOLOC("fir.class type conversion");
+      return llvm::None;
+    });
     addConversion(
         [&](fir::CharacterType charTy) { return convertCharType(charTy); });
     addConversion(
