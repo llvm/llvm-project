@@ -127,6 +127,7 @@ void Component::CreatePointerDescriptor(Descriptor &descriptor,
   EstablishDescriptor(descriptor, container, terminator);
   if (subscripts) {
     descriptor.set_base_addr(container.Element<char>(subscripts) + offset_);
+    descriptor.raw().rank = 0;
   } else {
     descriptor.set_base_addr(container.OffsetElement<char>() + offset_);
   }
