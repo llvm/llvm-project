@@ -45,8 +45,7 @@ entry:
 ; addrspacecasted' alloca.
 ; CHECK-LABEL: @test_inliner_flat_ptr(
 ; CHECK: call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NOT: call
-; CHECK-NOT: call
+; CHECK-NOT: call {{[.*]}}@
 define amdgpu_kernel void @test_inliner_flat_ptr(float addrspace(1)* nocapture %a, i32 %n) {
 entry:
   %pvt_arr = alloca [64 x float], align 4, addrspace(5)
