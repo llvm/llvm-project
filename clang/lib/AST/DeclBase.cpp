@@ -261,12 +261,12 @@ const TemplateParameterList *Decl::getDescribedTemplateParams() const {
 
 bool Decl::isTemplated() const {
   // A declaration is templated if it is a template or a template pattern, or
-  // is within (lexcially for a friend, semantically otherwise) a dependent
-  // context.
-  // FIXME: Should local extern declarations be treated like friends?
+  // is within (lexcially for a friend or local function declaration,
+  // semantically otherwise) a dependent context.
   if (auto *AsDC = dyn_cast<DeclContext>(this))
     return AsDC->isDependentContext();
-  auto *DC = getFriendObjectKind() ? getLexicalDeclContext() : getDeclContext();
+  auto *DC = getFriendObjectKind() || isLocalExternDecl()
+      ? getLexicalDeclContext() : getDeclContext();
   return DC->isDependentContext() || isTemplateDecl() ||
          getDescribedTemplateParams();
 }
