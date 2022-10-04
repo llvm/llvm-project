@@ -412,7 +412,7 @@ void SharedMemoryMapper::release(ArrayRef<ExecutorAddr> Bases,
 }
 
 SharedMemoryMapper::~SharedMemoryMapper() {
-  for (const auto R : Reservations) {
+  for (const auto &R : Reservations) {
 
 #if defined(LLVM_ON_UNIX) && !defined(__ANDROID__)
 
