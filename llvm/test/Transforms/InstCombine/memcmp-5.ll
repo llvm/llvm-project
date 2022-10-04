@@ -86,7 +86,7 @@ define void @fold_memcmp_a_b_n(i32* %pcmp, i64 %n) {
 
 define void @call_memcmp_a_ax_n(i32* %pcmp, i64 %n) {
 ; CHECK-LABEL: @call_memcmp_a_ax_n(
-; CHECK-NEXT:    [[C0_0:%.*]] = call i32 @memcmp(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @a01230123, i64 0, i64 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @ax, i64 0, i64 0), i64 [[N:%.*]])
+; CHECK-NEXT:    [[C0_0:%.*]] = call i32 @memcmp(i8* nonnull getelementptr inbounds ([8 x i8], [8 x i8]* @a01230123, i64 0, i64 0), i8* nonnull getelementptr inbounds ([8 x i8], [8 x i8]* @ax, i64 0, i64 0), i64 [[N:%.*]])
 ; CHECK-NEXT:    store i32 [[C0_0]], i32* [[PCMP:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;

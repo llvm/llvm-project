@@ -159,7 +159,7 @@ define void @call_strtoul(ptr %ps) {
 ; CHECK-NEXT:    [[NWS:%.*]] = call i32 @strtoul(ptr nonnull @ws, ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i32, ptr [[PS]], i64 2
 ; CHECK-NEXT:    store i32 [[NWS]], ptr [[PS2]], align 4
-; CHECK-NEXT:    [[NWSP6:%.*]] = call i32 @strtoul(ptr getelementptr inbounds ([7 x i8], ptr @ws, i64 0, i64 6), ptr nonnull @endptr, i32 10)
+; CHECK-NEXT:    [[NWSP6:%.*]] = call i32 @strtoul(ptr nonnull getelementptr inbounds ([7 x i8], ptr @ws, i64 0, i64 6), ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i32, ptr [[PS]], i64 3
 ; CHECK-NEXT:    store i32 [[NWSP6]], ptr [[PS3]], align 4
 ; CHECK-NEXT:    ret void
@@ -298,7 +298,7 @@ define void @call_strtoull(ptr %ps) {
 ; CHECK-NEXT:    [[NWS:%.*]] = call i64 @strtoull(ptr nonnull @ws, ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i64, ptr [[PS]], i64 2
 ; CHECK-NEXT:    store i64 [[NWS]], ptr [[PS2]], align 4
-; CHECK-NEXT:    [[NWSP6:%.*]] = call i64 @strtoull(ptr getelementptr inbounds ([7 x i8], ptr @ws, i64 0, i64 6), ptr nonnull @endptr, i32 10)
+; CHECK-NEXT:    [[NWSP6:%.*]] = call i64 @strtoull(ptr nonnull getelementptr inbounds ([7 x i8], ptr @ws, i64 0, i64 6), ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i64, ptr [[PS]], i64 3
 ; CHECK-NEXT:    store i64 [[NWSP6]], ptr [[PS3]], align 4
 ; CHECK-NEXT:    ret void
