@@ -855,7 +855,6 @@ void Sema::PrintInstantiationStack() {
         << Active->InstantiationRange;
       break;
     case CodeSynthesisContext::RequirementParameterInstantiation:
-      assert("how do we get here?!");
       Diags.Report(Active->PointOfInstantiation,
                    diag::note_template_requirement_params_instantiation_here)
           << Active->InstantiationRange;
