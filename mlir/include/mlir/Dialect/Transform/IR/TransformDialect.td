@@ -333,33 +333,17 @@ def Transform_Dialect : Dialect {
           std::function<void (::mlir::Type, ::mlir::AsmPrinter &)>;
 
     private:
-      template <typename OpTy>
-      void addOperationIfNotRegistered() {
-        Optional<RegisteredOperationName> opName =
-            RegisteredOperationName::lookup(OpTy::getOperationName(),
-                                            getContext());
-        if (!opName)
-          return addOperations<OpTy>();
-
-        if (opName->getTypeID() == TypeID::get<OpTy>())
-          return;
-
-        llvm::errs() << "error: extensible dialect operation '"
-                     << OpTy::getOperationName()
-                     << "' is already registered with a mismatching TypeID";
-        abort();
-      }
-
       /// Registers operations specified as template parameters with this
       /// dialect. Checks that they implement the required interfaces.
       template <typename... OpTys>
       void addOperationsChecked() {
-        (addOperationIfNotRegistered<OpTys>(),...);
-
-        #ifndef NDEBUG
-        (detail::checkImplementsTransformInterface<OpTys>(getContext()),...);
-        #endif // NDEBUG
+        (addOperationIfNotRegistered<OpTys>(), ...);
       }
+      template <typename OpTy>
+      void addOperationIfNotRegistered();
+
+      /// Reports a repeated registration error of an op with the given name.
+      [[noreturn]] void reportDuplicateOpRegistration(StringRef opName);
 
       /// Registers the types specified as template parameters with the
       /// Transform dialect. Checks that they meet the requirements for
@@ -367,15 +351,7 @@ def Transform_Dialect : Dialect {
       template <typename... TypeTys>
       void addTypesChecked() {
         (addTypeIfNotRegistered<TypeTys>(), ...);
-
-        #ifndef NDEBUG
-        (detail::checkImplementsTransformTypeInterface(
-            TypeID::get<TypeTys>(), getContext()), ...);
-        #endif // NDEBUG
       }
-
-      /// Implementation of the type registration for a single type, should
-      /// not be called directly, use addTypesChecked instead.
       template <typename Type>
       void addTypeIfNotRegistered();
 
