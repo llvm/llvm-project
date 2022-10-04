@@ -226,8 +226,8 @@ namespace llvm {
   /// Emit a call to the puts function. This assumes that Str is some pointer.
   Value *emitPutS(Value *Str, IRBuilderBase &B, const TargetLibraryInfo *TLI);
 
-  /// Emit a call to the fputc function. This assumes that Char can be casted to
-  /// int (currently assuming int is i32), and File is a pointer to FILE.
+  /// Emit a call to the fputc function. This assumes that Char is an 'int', and
+  /// File is a pointer to FILE.
   Value *emitFPutC(Value *Char, Value *File, IRBuilderBase &B,
                    const TargetLibraryInfo *TLI);
 

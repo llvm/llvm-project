@@ -1841,8 +1841,6 @@ Value *llvm::emitFPutC(Value *Char, Value *File, IRBuilderBase &B,
                                         IntTy, File->getType());
   if (File->getType()->isPointerTy())
     inferNonMandatoryLibFuncAttrs(M, FPutcName, *TLI);
-  Char = B.CreateIntCast(Char, IntTy, /*isSigned*/true,
-                         "chari");
   CallInst *CI = B.CreateCall(F, {Char, File}, FPutcName);
 
   if (const Function *Fn =
