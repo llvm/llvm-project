@@ -11,8 +11,8 @@ define i16 @SEXTParam(i16 signext %0) #0 {
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 5, 0, 4
 ; CHECK-NEXT:    extsh 5, 5
-; CHECK-NEXT:    cmpw 3, 5
-; CHECK-NEXT:    bge 0, .LBB0_3
+; CHECK-NEXT:    cmpw 5, 3
+; CHECK-NEXT:    blt 0, .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %top
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    sthcx. 3, 0, 4
@@ -45,8 +45,8 @@ define i16 @noSEXTParam(i16 %0) #0 {
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 5, 0, 4
 ; CHECK-NEXT:    extsh 5, 5
-; CHECK-NEXT:    cmpw 3, 5
-; CHECK-NEXT:    bge 0, .LBB1_3
+; CHECK-NEXT:    cmpw 5, 3
+; CHECK-NEXT:    blt 0, .LBB1_3
 ; CHECK-NEXT:  # %bb.2: # %top
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    sthcx. 3, 0, 4
@@ -79,8 +79,8 @@ define i16 @noSEXTLoad(i16 *%p) #0 {
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 5, 0, 4
 ; CHECK-NEXT:    extsh 5, 5
-; CHECK-NEXT:    cmpw 3, 5
-; CHECK-NEXT:    bge 0, .LBB2_3
+; CHECK-NEXT:    cmpw 5, 3
+; CHECK-NEXT:    blt 0, .LBB2_3
 ; CHECK-NEXT:  # %bb.2: # %top
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    sthcx. 3, 0, 4

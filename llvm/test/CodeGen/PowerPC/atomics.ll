@@ -143,27 +143,24 @@ define i8 @cas_strong_i8_sc_sc(i8* %mem) {
 ; PPC32-NEXT:    li r7, 255
 ; PPC32-NEXT:    rlwinm r4, r3, 0, 0, 29
 ; PPC32-NEXT:    xori r3, r8, 24
-; PPC32-NEXT:    slw r5, r5, r3
-; PPC32-NEXT:    slw r8, r6, r3
-; PPC32-NEXT:    slw r6, r7, r3
-; PPC32-NEXT:    and r7, r5, r6
-; PPC32-NEXT:    and r8, r8, r6
+; PPC32-NEXT:    slw r8, r5, r3
+; PPC32-NEXT:    slw r9, r6, r3
+; PPC32-NEXT:    slw r5, r7, r3
+; PPC32-NEXT:    and r6, r8, r5
+; PPC32-NEXT:    and r7, r9, r5
 ; PPC32-NEXT:    sync
 ; PPC32-NEXT:  .LBB8_1:
 ; PPC32-NEXT:    lwarx r9, 0, r4
-; PPC32-NEXT:    and r5, r9, r6
-; PPC32-NEXT:    cmpw r5, r8
+; PPC32-NEXT:    and r8, r9, r5
+; PPC32-NEXT:    cmpw r8, r7
 ; PPC32-NEXT:    bne cr0, .LBB8_3
 ; PPC32-NEXT:  # %bb.2:
-; PPC32-NEXT:    andc r9, r9, r6
-; PPC32-NEXT:    or r9, r9, r7
+; PPC32-NEXT:    andc r9, r9, r5
+; PPC32-NEXT:    or r9, r9, r6
 ; PPC32-NEXT:    stwcx. r9, 0, r4
 ; PPC32-NEXT:    bne cr0, .LBB8_1
-; PPC32-NEXT:    b .LBB8_4
 ; PPC32-NEXT:  .LBB8_3:
-; PPC32-NEXT:    stwcx. r9, 0, r4
-; PPC32-NEXT:  .LBB8_4:
-; PPC32-NEXT:    srw r3, r5, r3
+; PPC32-NEXT:    srw r3, r8, r3
 ; PPC32-NEXT:    lwsync
 ; PPC32-NEXT:    blr
 ;
@@ -175,27 +172,24 @@ define i8 @cas_strong_i8_sc_sc(i8* %mem) {
 ; PPC64-NEXT:    li r7, 255
 ; PPC64-NEXT:    rldicr r4, r3, 0, 61
 ; PPC64-NEXT:    xori r3, r8, 24
-; PPC64-NEXT:    slw r5, r5, r3
-; PPC64-NEXT:    slw r8, r6, r3
-; PPC64-NEXT:    slw r6, r7, r3
-; PPC64-NEXT:    and r7, r5, r6
-; PPC64-NEXT:    and r8, r8, r6
+; PPC64-NEXT:    slw r8, r5, r3
+; PPC64-NEXT:    slw r9, r6, r3
+; PPC64-NEXT:    slw r5, r7, r3
+; PPC64-NEXT:    and r6, r8, r5
+; PPC64-NEXT:    and r7, r9, r5
 ; PPC64-NEXT:    sync
 ; PPC64-NEXT:  .LBB8_1:
 ; PPC64-NEXT:    lwarx r9, 0, r4
-; PPC64-NEXT:    and r5, r9, r6
-; PPC64-NEXT:    cmpw r5, r8
+; PPC64-NEXT:    and r8, r9, r5
+; PPC64-NEXT:    cmpw r8, r7
 ; PPC64-NEXT:    bne cr0, .LBB8_3
 ; PPC64-NEXT:  # %bb.2:
-; PPC64-NEXT:    andc r9, r9, r6
-; PPC64-NEXT:    or r9, r9, r7
+; PPC64-NEXT:    andc r9, r9, r5
+; PPC64-NEXT:    or r9, r9, r6
 ; PPC64-NEXT:    stwcx. r9, 0, r4
 ; PPC64-NEXT:    bne cr0, .LBB8_1
-; PPC64-NEXT:    b .LBB8_4
 ; PPC64-NEXT:  .LBB8_3:
-; PPC64-NEXT:    stwcx. r9, 0, r4
-; PPC64-NEXT:  .LBB8_4:
-; PPC64-NEXT:    srw r3, r5, r3
+; PPC64-NEXT:    srw r3, r8, r3
 ; PPC64-NEXT:    lwsync
 ; PPC64-NEXT:    blr
   %val = cmpxchg i8* %mem, i8 0, i8 1 seq_cst seq_cst
@@ -215,22 +209,19 @@ define i16 @cas_weak_i16_acquire_acquire(i16* %mem) {
 ; PPC32-NEXT:    slw r5, r7, r4
 ; PPC32-NEXT:    rlwinm r3, r3, 0, 0, 29
 ; PPC32-NEXT:    and r6, r8, r5
-; PPC32-NEXT:    and r8, r9, r5
+; PPC32-NEXT:    and r7, r9, r5
 ; PPC32-NEXT:  .LBB9_1:
 ; PPC32-NEXT:    lwarx r9, 0, r3
-; PPC32-NEXT:    and r7, r9, r5
-; PPC32-NEXT:    cmpw r7, r8
+; PPC32-NEXT:    and r8, r9, r5
+; PPC32-NEXT:    cmpw r8, r7
 ; PPC32-NEXT:    bne cr0, .LBB9_3
 ; PPC32-NEXT:  # %bb.2:
 ; PPC32-NEXT:    andc r9, r9, r5
 ; PPC32-NEXT:    or r9, r9, r6
 ; PPC32-NEXT:    stwcx. r9, 0, r3
 ; PPC32-NEXT:    bne cr0, .LBB9_1
-; PPC32-NEXT:    b .LBB9_4
 ; PPC32-NEXT:  .LBB9_3:
-; PPC32-NEXT:    stwcx. r9, 0, r3
-; PPC32-NEXT:  .LBB9_4:
-; PPC32-NEXT:    srw r3, r7, r4
+; PPC32-NEXT:    srw r3, r8, r4
 ; PPC32-NEXT:    lwsync
 ; PPC32-NEXT:    blr
 ;
@@ -246,22 +237,19 @@ define i16 @cas_weak_i16_acquire_acquire(i16* %mem) {
 ; PPC64-NEXT:    slw r5, r7, r4
 ; PPC64-NEXT:    rldicr r3, r3, 0, 61
 ; PPC64-NEXT:    and r6, r8, r5
-; PPC64-NEXT:    and r8, r9, r5
+; PPC64-NEXT:    and r7, r9, r5
 ; PPC64-NEXT:  .LBB9_1:
 ; PPC64-NEXT:    lwarx r9, 0, r3
-; PPC64-NEXT:    and r7, r9, r5
-; PPC64-NEXT:    cmpw r7, r8
+; PPC64-NEXT:    and r8, r9, r5
+; PPC64-NEXT:    cmpw r8, r7
 ; PPC64-NEXT:    bne cr0, .LBB9_3
 ; PPC64-NEXT:  # %bb.2:
 ; PPC64-NEXT:    andc r9, r9, r5
 ; PPC64-NEXT:    or r9, r9, r6
 ; PPC64-NEXT:    stwcx. r9, 0, r3
 ; PPC64-NEXT:    bne cr0, .LBB9_1
-; PPC64-NEXT:    b .LBB9_4
 ; PPC64-NEXT:  .LBB9_3:
-; PPC64-NEXT:    stwcx. r9, 0, r3
-; PPC64-NEXT:  .LBB9_4:
-; PPC64-NEXT:    srw r3, r7, r4
+; PPC64-NEXT:    srw r3, r8, r4
 ; PPC64-NEXT:    lwsync
 ; PPC64-NEXT:    blr
   %val = cmpxchg weak i16* %mem, i16 0, i16 1 acquire acquire
@@ -272,19 +260,15 @@ define i32 @cas_strong_i32_acqrel_acquire(i32* %mem) {
 ; CHECK-LABEL: cas_strong_i32_acqrel_acquire:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li r5, 1
-; CHECK-NEXT:    li r6, 0
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:  .LBB10_1:
 ; CHECK-NEXT:    lwarx r4, 0, r3
-; CHECK-NEXT:    cmpw r6, r4
+; CHECK-NEXT:    cmpwi r4, 0
 ; CHECK-NEXT:    bne cr0, .LBB10_3
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    stwcx. r5, 0, r3
 ; CHECK-NEXT:    bne cr0, .LBB10_1
-; CHECK-NEXT:    b .LBB10_4
 ; CHECK-NEXT:  .LBB10_3:
-; CHECK-NEXT:    stwcx. r4, 0, r3
-; CHECK-NEXT:  .LBB10_4:
 ; CHECK-NEXT:    mr r3, r4
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    blr
@@ -319,20 +303,15 @@ define i64 @cas_weak_i64_release_monotonic(i64* %mem) {
 ; PPC64-LABEL: cas_weak_i64_release_monotonic:
 ; PPC64:       # %bb.0:
 ; PPC64-NEXT:    li r5, 1
-; PPC64-NEXT:    li r6, 0
 ; PPC64-NEXT:    lwsync
 ; PPC64-NEXT:  .LBB11_1:
 ; PPC64-NEXT:    ldarx r4, 0, r3
-; PPC64-NEXT:    cmpd r6, r4
-; PPC64-NEXT:    bne cr0, .LBB11_4
+; PPC64-NEXT:    cmpdi r4, 0
+; PPC64-NEXT:    bne cr0, .LBB11_3
 ; PPC64-NEXT:  # %bb.2:
 ; PPC64-NEXT:    stdcx. r5, 0, r3
 ; PPC64-NEXT:    bne cr0, .LBB11_1
-; PPC64-NEXT:  # %bb.3:
-; PPC64-NEXT:    mr r3, r4
-; PPC64-NEXT:    blr
-; PPC64-NEXT:  .LBB11_4:
-; PPC64-NEXT:    stdcx. r4, 0, r3
+; PPC64-NEXT:  .LBB11_3:
 ; PPC64-NEXT:    mr r3, r4
 ; PPC64-NEXT:    blr
   %val = cmpxchg weak i64* %mem, i64 0, i64 1 release monotonic
