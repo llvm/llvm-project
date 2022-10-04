@@ -8,23 +8,23 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; gets folded. The dbg.value should be duplicated in the block its sunk
 ; into, to maximise liveness.
 ;
-; CHECK-LABEL: define i32 @foo(i32*
-; CHECK:       call void @llvm.dbg.value(metadata i32* %a, metadata !{{[0-9]+}},
+; CHECK-LABEL: define i32 @foo(ptr
+; CHECK:       call void @llvm.dbg.value(metadata ptr %a, metadata !{{[0-9]+}},
 ; CHECK-SAME:  metadata !DIExpression(DW_OP_plus_uconst, 4, DW_OP_stack_value))
 ; CHECK-NEXT:  br label %sink1
 
-define i32 @foo(i32 *%a) !dbg !7 {
+define i32 @foo(ptr %a) !dbg !7 {
 entry:
-  %gep = getelementptr i32, i32 *%a, i32 1
-  call void @llvm.dbg.value(metadata i32 *%gep, metadata !16, metadata !12), !dbg !15
+  %gep = getelementptr i32, ptr %a, i32 1
+  call void @llvm.dbg.value(metadata ptr %gep, metadata !16, metadata !12), !dbg !15
   br label %sink1
 
 sink1:
 ; CHECK-LABEL: sink1:
-; CHECK:       call void @llvm.dbg.value(metadata i32* %gep,
+; CHECK:       call void @llvm.dbg.value(metadata ptr %gep,
 ; CHECK-SAME:                    metadata !{{[0-9]+}}, metadata !DIExpression())
 ; CHECK-NEXT:  load
-  %0 = load i32, i32* %gep, align 4, !dbg !15
+  %0 = load i32, ptr %gep, align 4, !dbg !15
   ret i32 %0, !dbg !15
 }
 
@@ -33,23 +33,23 @@ sink1:
 ; value range.
 
 ; CHECK-LABEL: define i32 @bar(
-; CHECK:       call void @llvm.dbg.value(metadata <vscale x 4 x i32>* undef,
+; CHECK:       call void @llvm.dbg.value(metadata ptr undef,
 ; CHECK-NEXT:  br label %sink2
 
-define i32 @bar(<vscale x 4 x i32>* %a, i32 %b) !dbg !70 {
+define i32 @bar(ptr %a, i32 %b) !dbg !70 {
 entry:
-  %gep = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %a, i32 %b
-  call void @llvm.dbg.value(metadata <vscale x 4 x i32>* %gep, metadata !73, metadata !12), !dbg !74
+  %gep = getelementptr <vscale x 4 x i32>, ptr %a, i32 %b
+  call void @llvm.dbg.value(metadata ptr %gep, metadata !73, metadata !12), !dbg !74
   br label %sink2
 
 sink2:
 ; CHECK-LABEL: sink2:
-; CHECK:       call void @llvm.dbg.value(metadata <vscale x 4 x i32>* %gep,
+; CHECK:       call void @llvm.dbg.value(metadata ptr %gep,
 ; CHECK-SAME:                    metadata !{{[0-9]+}}, metadata !DIExpression())
 ; CHECK-NEXT:  load
 ; CHECK-NEXT:  extractelement
 ; CHECK-NEXT:  ret
-  %0 = load <vscale x 4 x i32>, <vscale x 4 x i32>* %gep
+  %0 = load <vscale x 4 x i32>, ptr %gep
   %extract = extractelement <vscale x 4 x i32> %0, i32 1
   ret i32 %extract
 }
@@ -58,26 +58,26 @@ sink2:
 ; only the last use is cloned into the sunk block, and that both of the
 ; original dbg.values are salvaged.
 ;
-; CHECK-LABEL: define i32 @baz(i32*
-; CHECK:       call void @llvm.dbg.value(metadata i32* %a, metadata !{{[0-9]+}},
+; CHECK-LABEL: define i32 @baz(ptr
+; CHECK:       call void @llvm.dbg.value(metadata ptr %a, metadata !{{[0-9]+}},
 ; CHECK-SAME:  metadata !DIExpression(DW_OP_plus_uconst, 4, DW_OP_stack_value))
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i32* %a, metadata !{{[0-9]+}},
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata ptr %a, metadata !{{[0-9]+}},
 ; CHECK-SAME:  metadata !DIExpression(DW_OP_plus_uconst, 4, DW_OP_plus_uconst, 5, DW_OP_stack_value))
 ; CHECK-NEXT:  br label %sink1
 
-define i32 @baz(i32 *%a) !dbg !80 {
+define i32 @baz(ptr %a) !dbg !80 {
 entry:
-  %gep = getelementptr i32, i32 *%a, i32 1
-  call void @llvm.dbg.value(metadata i32 *%gep, metadata !83, metadata !12), !dbg !84
-  call void @llvm.dbg.value(metadata i32 *%gep, metadata !83, metadata !DIExpression(DW_OP_plus_uconst, 5)), !dbg !85
+  %gep = getelementptr i32, ptr %a, i32 1
+  call void @llvm.dbg.value(metadata ptr %gep, metadata !83, metadata !12), !dbg !84
+  call void @llvm.dbg.value(metadata ptr %gep, metadata !83, metadata !DIExpression(DW_OP_plus_uconst, 5)), !dbg !85
   br label %sink1
 
 sink1:
 ; CHECK-LABEL: sink1:
-; CHECK:       call void @llvm.dbg.value(metadata i32* %gep,
+; CHECK:       call void @llvm.dbg.value(metadata ptr %gep,
 ; CHECK-SAME:  metadata !{{[0-9]+}}, metadata !DIExpression(DW_OP_plus_uconst, 5))
 ; CHECK-NEXT:  load
-  %0 = load i32, i32* %gep, align 4, !dbg !85
+  %0 = load i32, ptr %gep, align 4, !dbg !85
   ret i32 %0, !dbg !85
 }
 

@@ -64,17 +64,10 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16(i32 %node_ptr, float %
 ;
 ; GFX11-LABEL: image_bvh_intersect_ray_a16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshrrev_b32_e32 v9, 16, v7
-; GFX11-NEXT:    v_lshrrev_b32_e32 v10, 16, v5
-; GFX11-NEXT:    v_and_b32_e32 v7, 0xffff, v7
-; GFX11-NEXT:    v_and_b32_e32 v11, 0xffff, v8
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_and_b32_e32 v9, 0xffff, v9
-; GFX11-NEXT:    v_lshl_or_b32 v7, v5, 16, v7
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-NEXT:    v_lshl_or_b32 v8, v10, 16, v9
-; GFX11-NEXT:    v_lshl_or_b32 v9, v6, 16, v11
-; GFX11-NEXT:    image_bvh_intersect_ray v[0:3], [v0, v1, v[2:4], v[7:9]], s[0:3] a16
+; GFX11-NEXT:    v_perm_b32 v9, v5, v7, 0x5040100
+; GFX11-NEXT:    v_perm_b32 v10, v5, v7, 0x7060302
+; GFX11-NEXT:    v_perm_b32 v11, v6, v8, 0x5040100
+; GFX11-NEXT:    image_bvh_intersect_ray v[0:3], [v0, v1, v[2:4], v[9:11]], s[0:3] a16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
@@ -131,17 +124,10 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16(i64 %node_ptr, float
 ;
 ; GFX11-LABEL: image_bvh64_intersect_ray_a16:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_lshrrev_b32_e32 v10, 16, v8
-; GFX11-NEXT:    v_lshrrev_b32_e32 v11, 16, v6
-; GFX11-NEXT:    v_and_b32_e32 v8, 0xffff, v8
-; GFX11-NEXT:    v_and_b32_e32 v12, 0xffff, v9
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_and_b32_e32 v10, 0xffff, v10
-; GFX11-NEXT:    v_lshl_or_b32 v8, v6, 16, v8
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-NEXT:    v_lshl_or_b32 v9, v11, 16, v10
-; GFX11-NEXT:    v_lshl_or_b32 v10, v7, 16, v12
-; GFX11-NEXT:    image_bvh64_intersect_ray v[0:3], [v[0:1], v2, v[3:5], v[8:10]], s[0:3] a16
+; GFX11-NEXT:    v_perm_b32 v10, v6, v8, 0x5040100
+; GFX11-NEXT:    v_perm_b32 v11, v6, v8, 0x7060302
+; GFX11-NEXT:    v_perm_b32 v12, v7, v9, 0x5040100
+; GFX11-NEXT:    image_bvh64_intersect_ray v[0:3], [v[0:1], v2, v[3:5], v[10:12]], s[0:3] a16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    ; return to shader part epilog
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
@@ -344,19 +330,13 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16_vgpr_descr(i32 %node_p
 ;
 ; GFX11-LABEL: image_bvh_intersect_ray_a16_vgpr_descr:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_dual_mov_b32 v13, v0 :: v_dual_mov_b32 v14, v1
-; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v7
-; GFX11-NEXT:    v_dual_mov_b32 v15, v2 :: v_dual_mov_b32 v16, v3
-; GFX11-NEXT:    v_dual_mov_b32 v17, v4 :: v_dual_and_b32 v2, 0xffff, v7
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v5
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_3) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    v_and_b32_e32 v3, 0xffff, v8
+; GFX11-NEXT:    v_dual_mov_b32 v16, v0 :: v_dual_mov_b32 v17, v1
+; GFX11-NEXT:    v_dual_mov_b32 v13, v2 :: v_dual_mov_b32 v14, v3
+; GFX11-NEXT:    v_mov_b32_e32 v15, v4
+; GFX11-NEXT:    v_perm_b32 v4, v5, v7, 0x5040100
+; GFX11-NEXT:    v_perm_b32 v5, v5, v7, 0x7060302
+; GFX11-NEXT:    v_perm_b32 v6, v6, v8, 0x5040100
 ; GFX11-NEXT:    s_mov_b32 s1, exec_lo
-; GFX11-NEXT:    v_lshl_or_b32 v4, v5, 16, v2
-; GFX11-NEXT:    v_lshl_or_b32 v5, v1, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
-; GFX11-NEXT:    v_lshl_or_b32 v6, v6, 16, v3
 ; GFX11-NEXT:  .LBB7_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    v_readfirstlane_b32 s4, v9
 ; GFX11-NEXT:    v_readfirstlane_b32 s5, v10
@@ -368,11 +348,11 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_a16_vgpr_descr(i32 %node_p
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX11-NEXT:    image_bvh_intersect_ray v[0:3], [v13, v14, v[15:17], v[4:6]], s[4:7] a16
+; GFX11-NEXT:    image_bvh_intersect_ray v[0:3], [v16, v17, v[13:15], v[4:6]], s[4:7] a16
 ; GFX11-NEXT:    ; implicit-def: $vgpr9
-; GFX11-NEXT:    ; implicit-def: $vgpr13
-; GFX11-NEXT:    ; implicit-def: $vgpr14
-; GFX11-NEXT:    ; implicit-def: $vgpr15_vgpr16_vgpr17
+; GFX11-NEXT:    ; implicit-def: $vgpr16
+; GFX11-NEXT:    ; implicit-def: $vgpr17
+; GFX11-NEXT:    ; implicit-def: $vgpr13_vgpr14_vgpr15
 ; GFX11-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6
 ; GFX11-NEXT:    ; implicit-def: $vgpr9_vgpr10_vgpr11_vgpr12
 ; GFX11-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
@@ -589,19 +569,12 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16_vgpr_descr(i64 %node
 ;
 ; GFX11-LABEL: image_bvh64_intersect_ray_a16_vgpr_descr:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    v_dual_mov_b32 v14, v0 :: v_dual_mov_b32 v15, v1
-; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v8
-; GFX11-NEXT:    v_dual_mov_b32 v16, v2 :: v_dual_mov_b32 v17, v3
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v6
-; GFX11-NEXT:    v_and_b32_e32 v2, 0xffff, v8
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_4)
-; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    v_dual_mov_b32 v18, v4 :: v_dual_and_b32 v3, 0xffff, v9
-; GFX11-NEXT:    v_mov_b32_e32 v19, v5
-; GFX11-NEXT:    v_lshl_or_b32 v4, v6, 16, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-NEXT:    v_lshl_or_b32 v5, v1, 16, v0
-; GFX11-NEXT:    v_lshl_or_b32 v6, v7, 16, v3
+; GFX11-NEXT:    v_dual_mov_b32 v17, v0 :: v_dual_mov_b32 v18, v1
+; GFX11-NEXT:    v_dual_mov_b32 v19, v2 :: v_dual_mov_b32 v14, v3
+; GFX11-NEXT:    v_dual_mov_b32 v15, v4 :: v_dual_mov_b32 v16, v5
+; GFX11-NEXT:    v_perm_b32 v4, v6, v8, 0x5040100
+; GFX11-NEXT:    v_perm_b32 v5, v6, v8, 0x7060302
+; GFX11-NEXT:    v_perm_b32 v6, v7, v9, 0x5040100
 ; GFX11-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX11-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    v_readfirstlane_b32 s4, v10
@@ -614,11 +587,11 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_a16_vgpr_descr(i64 %node
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
-; GFX11-NEXT:    image_bvh64_intersect_ray v[0:3], [v[14:15], v16, v[17:19], v[4:6]], s[4:7] a16
+; GFX11-NEXT:    image_bvh64_intersect_ray v[0:3], [v[17:18], v19, v[14:16], v[4:6]], s[4:7] a16
 ; GFX11-NEXT:    ; implicit-def: $vgpr10
-; GFX11-NEXT:    ; implicit-def: $vgpr14_vgpr15
-; GFX11-NEXT:    ; implicit-def: $vgpr16
-; GFX11-NEXT:    ; implicit-def: $vgpr17_vgpr18_vgpr19
+; GFX11-NEXT:    ; implicit-def: $vgpr17_vgpr18
+; GFX11-NEXT:    ; implicit-def: $vgpr19
+; GFX11-NEXT:    ; implicit-def: $vgpr14_vgpr15_vgpr16
 ; GFX11-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6
 ; GFX11-NEXT:    ; implicit-def: $vgpr10_vgpr11_vgpr12_vgpr13
 ; GFX11-NEXT:    s_xor_b32 exec_lo, exec_lo, s0

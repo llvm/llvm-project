@@ -26,7 +26,7 @@ define i32 @pat(i32 %x) {
 ; CHECK:       patatino:
 ; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
-  %y = icmp eq i32 27, ptrtoint(i8* @global to i32)
+  %y = icmp eq i32 27, ptrtoint(ptr @global to i32)
   br i1 %y, label %patatino, label %patatino
 patatino:
   ret i32 %x

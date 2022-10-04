@@ -2876,9 +2876,9 @@ CheckDeducedArgumentConstraints(Sema& S, TemplateDeclT *Template,
   TemplateArgumentList DeducedTAL{TemplateArgumentList::OnStack, DeducedArgs};
 
   MLTAL = S.getTemplateInstantiationArgs(
-      Template, /*InnerMost*/ NeedsReplacement ? nullptr : &DeducedTAL,
-      /*RelativeToPrimary*/ true, /*Pattern*/
-      nullptr, /*LookBeyondLambda*/ true);
+      Template, /*InnerMost=*/NeedsReplacement ? nullptr : &DeducedTAL,
+      /*RelativeToPrimary=*/true, /*Pattern=*/
+      nullptr, /*ForConstraintInstantiation=*/true);
 
   // getTemplateInstantiationArgs picks up the non-deduced version of the
   // template args when this is a variable template partial specialization and

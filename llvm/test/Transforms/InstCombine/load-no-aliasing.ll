@@ -2,17 +2,17 @@
 ; RUN: opt -tbaa -instcombine -S < %s | FileCheck %s
 
 ; Check that load to load forwarding works with non aliasing store inbetween.
-define i32 @test_load_store_load_combine(i32*, float*) {
+define i32 @test_load_store_load_combine(ptr, ptr) {
 ; CHECK-LABEL: @test_load_store_load_combine(
-; CHECK-NEXT:    [[A:%.*]] = load i32, i32* [[TMP0:%.*]], align 4, !tbaa [[TBAA0:![0-9]+]]
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[TMP0:%.*]], align 4, !tbaa [[TBAA0:![0-9]+]]
 ; CHECK-NEXT:    [[F:%.*]] = sitofp i32 [[A]] to float
-; CHECK-NEXT:    store float [[F]], float* [[TMP1:%.*]], align 4, !tbaa [[TBAA4:![0-9]+]]
+; CHECK-NEXT:    store float [[F]], ptr [[TMP1:%.*]], align 4, !tbaa [[TBAA4:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
-  %a = load i32, i32* %0, align 4, !tbaa !0
+  %a = load i32, ptr %0, align 4, !tbaa !0
   %f = sitofp i32 %a to float
-  store float %f, float* %1, align 4, !tbaa !4
-  %b = load i32, i32* %0, align 4, !tbaa !0
+  store float %f, ptr %1, align 4, !tbaa !4
+  %b = load i32, ptr %0, align 4, !tbaa !0
   ret i32 %b
 }
 

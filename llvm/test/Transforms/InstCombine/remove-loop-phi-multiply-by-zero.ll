@@ -274,7 +274,7 @@ end:                                              ; preds = %for.body
   ret double %f_prod.0.lcssa
 }
 
-define i32 @test_int_phi_operands(i32* %arr_d) {
+define i32 @test_int_phi_operands(ptr %arr_d) {
 ; CHECK-LABEL: @test_int_phi_operands(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -296,8 +296,8 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %i.02 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %f_prod.01 = phi i32 [ 0, %entry ], [ %mul, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %arr_d, i64 %i.02
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr_d, i64 %i.02
+  %0 = load i32, ptr %arrayidx, align 4
   %mul = mul nsw i32 %f_prod.01, %0
   %inc = add i64 %i.02, 1
   %cmp = icmp ult i64 %inc, 1000
@@ -308,7 +308,7 @@ end:                                 ; preds = %for.body
   ret i32 %f_prod.0.lcssa
 }
 
-define i32 @test_int_phi_operands_initalise_to_non_zero(i32* %arr_d) {
+define i32 @test_int_phi_operands_initalise_to_non_zero(ptr %arr_d) {
 ; CHECK-LABEL: @test_int_phi_operands_initalise_to_non_zero(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
@@ -330,8 +330,8 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %i.02 = phi i64 [ 0, %entry ], [ %inc, %for.body ]
   %f_prod.01 = phi i32 [ 1, %entry ], [ %mul, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %arr_d, i64 %i.02
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr_d, i64 %i.02
+  %0 = load i32, ptr %arrayidx, align 4
   %mul = mul i32 %f_prod.01, %0
   %inc = add i64 %i.02, 1
   %cmp = icmp ult i64 %inc, 1000
@@ -342,7 +342,7 @@ end:                                 ; preds = %for.body
   ret i32 %f_prod.0.lcssa
 }
 
-define i32 @test_multiple_int_phi_operands(i32* %arr_d, i1 %entry_cond) {
+define i32 @test_multiple_int_phi_operands(ptr %arr_d, i1 %entry_cond) {
 ; CHECK-LABEL: @test_multiple_int_phi_operands(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[ENTRY_COND:%.*]], label [[FOR_BODY:%.*]], label [[ENTRY_2:%.*]]
@@ -369,8 +369,8 @@ entry_2:
 for.body:                                         ; preds = %entry, %for.body
   %i.02 = phi i64 [ 0, %entry ], [0, %entry_2], [ %inc, %for.body ]
   %f_prod.01 = phi i32 [ 0, %entry ], [0, %entry_2], [ %mul, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %arr_d, i64 %i.02
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr_d, i64 %i.02
+  %0 = load i32, ptr %arrayidx, align 4
   %mul = mul i32 %f_prod.01, %0
   %inc = add i64 %i.02, 1
   %cmp = icmp ult i64 %inc, 1000
@@ -381,7 +381,7 @@ end:                                              ; preds = %for.body
   ret i32 %f_prod.0.lcssa
 }
 
-define i32 @test_multiple_int_phi_operands_initalise_to_non_zero(i32* %arr_d, i1 %entry_cond) {
+define i32 @test_multiple_int_phi_operands_initalise_to_non_zero(ptr %arr_d, i1 %entry_cond) {
 ; CHECK-LABEL: @test_multiple_int_phi_operands_initalise_to_non_zero(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[ENTRY_COND:%.*]], label [[FOR_BODY:%.*]], label [[ENTRY_2:%.*]]
@@ -408,8 +408,8 @@ entry_2:
 for.body:                                         ; preds = %entry, %for.body
   %i.02 = phi i64 [ 0, %entry ], [0, %entry_2], [ %inc, %for.body ]
   %f_prod.01 = phi i32 [ 0, %entry ], [1, %entry_2], [ %mul, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %arr_d, i64 %i.02
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %arr_d, i64 %i.02
+  %0 = load i32, ptr %arrayidx, align 4
   %mul = mul i32 %f_prod.01, %0
   %inc = add i64 %i.02, 1
   %cmp = icmp ult i64 %inc, 1000

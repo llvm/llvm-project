@@ -328,6 +328,9 @@ private:
   }
 };
 
+template <class _CharT>
+__extended_grapheme_cluster_view(const _CharT*, const _CharT*) -> __extended_grapheme_cluster_view<_CharT>;
+
 } // namespace __unicode
 
 #  endif //  _LIBCPP_HAS_NO_UNICODE

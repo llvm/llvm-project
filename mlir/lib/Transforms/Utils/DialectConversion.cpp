@@ -3077,8 +3077,8 @@ struct FunctionOpInterfaceSignatureConversion : public ConversionPattern {
     SmallVector<Type, 1> newResults;
     if (failed(typeConverter->convertSignatureArgs(type.getInputs(), result)) ||
         failed(typeConverter->convertTypes(type.getResults(), newResults)) ||
-        failed(rewriter.convertRegionTypes(&funcOp.getBody(), *typeConverter,
-                                           &result)))
+        failed(rewriter.convertRegionTypes(&funcOp.getFunctionBody(),
+                                           *typeConverter, &result)))
       return failure();
 
     // Update the function signature in-place.

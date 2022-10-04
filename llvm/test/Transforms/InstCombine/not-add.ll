@@ -171,15 +171,15 @@ define void @pr50370(i32 %x) {
 ; CHECK-LABEL: @pr50370(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[B15:%.*]] = srem i32 ashr (i32 65536, i32 or (i32 zext (i1 icmp eq (i32* @g, i32* null) to i32), i32 65537)), [[XOR]]
-; CHECK-NEXT:    [[B12:%.*]] = add nuw nsw i32 [[B15]], ashr (i32 65536, i32 or (i32 zext (i1 icmp eq (i32* @g, i32* null) to i32), i32 65537))
+; CHECK-NEXT:    [[B15:%.*]] = srem i32 ashr (i32 65536, i32 or (i32 zext (i1 icmp eq (ptr @g, ptr null) to i32), i32 65537)), [[XOR]]
+; CHECK-NEXT:    [[B12:%.*]] = add nuw nsw i32 [[B15]], ashr (i32 65536, i32 or (i32 zext (i1 icmp eq (ptr @g, ptr null) to i32), i32 65537))
 ; CHECK-NEXT:    [[B:%.*]] = xor i32 [[B12]], -1
-; CHECK-NEXT:    store i32 [[B]], i32* undef, align 4
+; CHECK-NEXT:    store i32 [[B]], ptr undef, align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %xor = xor i32 %x, 1
-  %or4 = or i32 or (i32 zext (i1 icmp eq (i32* @g, i32* null) to i32), i32 1), 65536
+  %or4 = or i32 or (i32 zext (i1 icmp eq (ptr @g, ptr null) to i32), i32 1), 65536
   %B6 = ashr i32 65536, %or4
   %B15 = srem i32 %B6, %xor
   %B20 = sdiv i32 %or4, 2147483647
@@ -190,6 +190,6 @@ entry:
   %B2 = xor i32 %B12, %B8
   %B3 = or i32 %B12, undef
   %B = xor i32 %B2, %B3
-  store i32 %B, i32* undef, align 4
+  store i32 %B, ptr undef, align 4
   ret void
 }

@@ -4,8 +4,8 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-apple-macosx"
 define void @f(i32) !dbg !8 {
 entry:
-  %p_x = inttoptr i32 %0 to i8*
-  %i_x = ptrtoint i8* %p_x to i32
+  %p_x = inttoptr i32 %0 to ptr
+  %i_x = ptrtoint ptr %p_x to i32
   ; CHECK: call void @llvm.dbg.value(metadata i32 %0,
   ; CHECK-SAME: !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_unsigned,
   ; CHECK-SAME:               DW_OP_LLVM_convert, 64, DW_ATE_unsigned,

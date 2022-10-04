@@ -190,11 +190,6 @@ protected:
   PacketResult ReadPacket(StringExtractorGDBRemote &response,
                           Timeout<std::micro> timeout, bool sync_on_timeout);
 
-  PacketResult ReadPacketWithOutputSupport(
-      StringExtractorGDBRemote &response, Timeout<std::micro> timeout,
-      bool sync_on_timeout,
-      llvm::function_ref<void(llvm::StringRef)> output_callback);
-
   PacketResult WaitForPacketNoLock(StringExtractorGDBRemote &response,
                                    Timeout<std::micro> timeout,
                                    bool sync_on_timeout);

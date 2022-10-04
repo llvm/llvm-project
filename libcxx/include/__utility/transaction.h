@@ -85,6 +85,7 @@ private:
     _Rollback __rollback_;
     bool __completed_;
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__transaction);
 
 template <class _Rollback>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __transaction<_Rollback> __make_transaction(_Rollback __rollback) {

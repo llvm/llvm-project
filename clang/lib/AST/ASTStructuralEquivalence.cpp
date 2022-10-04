@@ -957,11 +957,17 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
     if (!IsStructurallyEquivalent(Context, cast<UsingType>(T1)->getFoundDecl(),
                                   cast<UsingType>(T2)->getFoundDecl()))
       return false;
+    if (!IsStructurallyEquivalent(Context,
+                                  cast<UsingType>(T1)->getUnderlyingType(),
+                                  cast<UsingType>(T2)->getUnderlyingType()))
+      return false;
     break;
 
   case Type::Typedef:
     if (!IsStructurallyEquivalent(Context, cast<TypedefType>(T1)->getDecl(),
-                                  cast<TypedefType>(T2)->getDecl()))
+                                  cast<TypedefType>(T2)->getDecl()) ||
+        !IsStructurallyEquivalent(Context, cast<TypedefType>(T1)->desugar(),
+                                  cast<TypedefType>(T2)->desugar()))
       return false;
     break;
 

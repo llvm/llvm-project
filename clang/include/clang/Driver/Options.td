@@ -838,7 +838,7 @@ def Xopenmp_target : Separate<["-"], "Xopenmp-target">, Group<CompileOnly_Group>
 def Xopenmp_target_EQ : JoinedAndSeparate<["-"], "Xopenmp-target=">, Group<CompileOnly_Group>,
   HelpText<"Pass <arg> to the target offloading toolchain identified by <triple>.">,
   MetaVarName<"<triple> <arg>">;
-def z : Separate<["-"], "z">, Flags<[LinkerInput, RenderAsInput]>,
+def z : Separate<["-"], "z">, Flags<[LinkerInput]>,
   HelpText<"Pass -z <arg> to the linker">, MetaVarName<"<arg>">,
   Group<Link_Group>;
 def offload_link : Flag<["--"], "offload-link">, Group<Link_Group>,
@@ -863,8 +863,8 @@ def autocomplete : Joined<["--"], "autocomplete=">;
 def bind__at__load : Flag<["-"], "bind_at_load">;
 def bundle__loader : Separate<["-"], "bundle_loader">;
 def bundle : Flag<["-"], "bundle">;
-def b : JoinedOrSeparate<["-"], "b">, Flags<[LinkerInput, RenderAsInput]>,
-  HelpText<"Pass -b <arg> to the linker on AIX (only).">, MetaVarName<"<arg>">,
+def b : JoinedOrSeparate<["-"], "b">, Flags<[LinkerInput]>,
+  HelpText<"Pass -b <arg> to the linker on AIX">, MetaVarName<"<arg>">,
   Group<Link_Group>;
 // OpenCL-only Options
 def cl_opt_disable : Flag<["-"], "cl-opt-disable">, Group<opencl_Group>, Flags<[CC1Option]>,
@@ -4115,7 +4115,7 @@ def nostdincxx : Flag<["-"], "nostdinc++">, Flags<[CC1Option]>,
 def nostdlib : Flag<["-"], "nostdlib">, Group<Link_Group>;
 def nostdlibxx : Flag<["-"], "nostdlib++">;
 def object : Flag<["-"], "object">;
-def o : JoinedOrSeparate<["-"], "o">, Flags<[NoXarchOption, RenderAsInput,
+def o : JoinedOrSeparate<["-"], "o">, Flags<[NoXarchOption,
   CC1Option, CC1AsOption, FC1Option, FlangOption]>,
   HelpText<"Write output to <file>">, MetaVarName<"<file>">,
   MarshallingInfoString<FrontendOpts<"OutputFile">>;
@@ -5791,6 +5791,11 @@ def ehcontguard : Flag<["-"], "ehcontguard">,
 def fdenormal_fp_math_f32_EQ : Joined<["-"], "fdenormal-fp-math-f32=">,
    Group<f_Group>;
 
+def fctor_dtor_return_this : Flag<["-"], "fctor-dtor-return-this">,
+  HelpText<"Change the C++ ABI to returning `this` pointer from constructors "
+           "and non-deleting destructors. (No effect on Microsoft ABI)">,
+  MarshallingInfoFlag<CodeGenOpts<"CtorDtorReturnThis">>;
+
 } // let Flags = [CC1Option, NoDriverOption]
 
 //===----------------------------------------------------------------------===//
@@ -6886,6 +6891,8 @@ def _SLASH_tune : CLCompileJoined<"tune:">,
 def _SLASH_QIntel_jcc_erratum : CLFlag<"QIntel-jcc-erratum">,
   HelpText<"Align branches within 32-byte boundaries to mitigate the performance impact of the Intel JCC erratum.">,
   Alias<mbranches_within_32B_boundaries>;
+def _SLASH_arm64EC : CLFlag<"arm64EC">,
+  HelpText<"Set build target to arm64ec">;
 
 // Non-aliases:
 

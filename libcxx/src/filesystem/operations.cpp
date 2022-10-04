@@ -1408,6 +1408,7 @@ struct scope_exit {
 private:
   Cleanup cleanup_;
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(scope_exit);
 
 uintmax_t remove_all_impl(int parent_directory, const path& p, error_code& ec) {
   // First, try to open the path as a directory.

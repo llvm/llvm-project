@@ -793,6 +793,55 @@ func.func @test_index_cast_scalable_vector1(%arg0 : vector<[8]xindex>) -> vector
   return %0 : vector<[8]xi64>
 }
 
+
+// CHECK-LABEL: test_index_castui0
+func.func @test_index_castui0(%arg0 : i32) -> index {
+  %0 = arith.index_castui %arg0 : i32 to index
+  return %0 : index
+}
+
+// CHECK-LABEL: test_index_castui_tensor0
+func.func @test_index_castui_tensor0(%arg0 : tensor<8x8xi32>) -> tensor<8x8xindex> {
+  %0 = arith.index_castui %arg0 : tensor<8x8xi32> to tensor<8x8xindex>
+  return %0 : tensor<8x8xindex>
+}
+
+// CHECK-LABEL: test_index_castui_vector0
+func.func @test_index_castui_vector0(%arg0 : vector<8xi32>) -> vector<8xindex> {
+  %0 = arith.index_castui %arg0 : vector<8xi32> to vector<8xindex>
+  return %0 : vector<8xindex>
+}
+
+// CHECK-LABEL: test_index_castui_scalable_vector0
+func.func @test_index_castui_scalable_vector0(%arg0 : vector<[8]xi32>) -> vector<[8]xindex> {
+  %0 = arith.index_castui %arg0 : vector<[8]xi32> to vector<[8]xindex>
+  return %0 : vector<[8]xindex>
+}
+
+// CHECK-LABEL: test_indexui_cast1
+func.func @test_indexui_cast1(%arg0 : index) -> i64 {
+  %0 = arith.index_castui %arg0 : index to i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: test_index_castui_tensor1
+func.func @test_index_castui_tensor1(%arg0 : tensor<8x8xindex>) -> tensor<8x8xi64> {
+  %0 = arith.index_castui %arg0 : tensor<8x8xindex> to tensor<8x8xi64>
+  return %0 : tensor<8x8xi64>
+}
+
+// CHECK-LABEL: test_index_castui_vector1
+func.func @test_index_castui_vector1(%arg0 : vector<8xindex>) -> vector<8xi64> {
+  %0 = arith.index_castui %arg0 : vector<8xindex> to vector<8xi64>
+  return %0 : vector<8xi64>
+}
+
+// CHECK-LABEL: test_index_castui_scalable_vector1
+func.func @test_index_castui_scalable_vector1(%arg0 : vector<[8]xindex>) -> vector<[8]xi64> {
+  %0 = arith.index_castui %arg0 : vector<[8]xindex> to vector<[8]xi64>
+  return %0 : vector<[8]xi64>
+}
+
 // CHECK-LABEL: test_bitcast0
 func.func @test_bitcast0(%arg0 : i64) -> f64 {
   %0 = arith.bitcast %arg0 : i64 to f64

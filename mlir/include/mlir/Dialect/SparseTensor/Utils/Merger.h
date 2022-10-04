@@ -76,6 +76,7 @@ enum Kind {
   kBitCast,
   kBinaryBranch, // semiring unary branch created from a binary op
   kUnary,        // semiring unary op
+  kSelect,       // custom selection criteria
   // Binary operations.
   kMulF,
   kMulC,
@@ -129,8 +130,8 @@ struct TensorExp {
   /// this field may be used to cache "hoisted" loop invariant tensor loads.
   Value val;
 
-  /// Code blocks used by semirings. For the case of kUnary, kBinary, and
-  /// kReduce, this holds the original operation with all regions. For
+  /// Code blocks used by semirings. For the case of kUnary, kBinary, kReduce,
+  /// and kSelect, this holds the original operation with all regions. For
   /// kBinaryBranch, this holds the YieldOp for the left or right half
   /// to be merged into a nested scf loop.
   Operation *op;

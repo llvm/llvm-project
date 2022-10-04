@@ -83,11 +83,11 @@ define <2 x i1> @xor_and2(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
 define <2 x i1> @xor_and3(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
 ; CHECK-LABEL: @xor_and3(
 ; CHECK-NEXT:    [[COMP:%.*]] = icmp uge <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[COMP]], <2 x i1> <i1 icmp ne (i8* inttoptr (i64 1234 to i8*), i8* @glb), i1 true>
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> [[COMP]], <2 x i1> <i1 icmp ne (ptr inttoptr (i64 1234 to ptr), ptr @glb), i1 true>
 ; CHECK-NEXT:    ret <2 x i1> [[SEL]]
 ;
   %comp = icmp ult <2 x i32> %X, %Y
-  %sel = select <2 x i1> %c, <2 x i1> %comp, <2 x i1> <i1 icmp eq (i8* @glb, i8* inttoptr (i64 1234 to i8*)), i1 false>
+  %sel = select <2 x i1> %c, <2 x i1> %comp, <2 x i1> <i1 icmp eq (ptr @glb, ptr inttoptr (i64 1234 to ptr)), i1 false>
   %res = xor <2 x i1> %sel, <i1 true, i1 true>
   ret <2 x i1> %res
 }
@@ -120,11 +120,11 @@ define <2 x i1> @xor_or2(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
 define <2 x i1> @xor_or3(<2 x i1> %c, <2 x i32> %X, <2 x i32> %Y) {
 ; CHECK-LABEL: @xor_or3(
 ; CHECK-NEXT:    [[COMP:%.*]] = icmp uge <2 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> <i1 icmp ne (i8* inttoptr (i64 1234 to i8*), i8* @glb), i1 true>, <2 x i1> [[COMP]]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[C:%.*]], <2 x i1> <i1 icmp ne (ptr inttoptr (i64 1234 to ptr), ptr @glb), i1 true>, <2 x i1> [[COMP]]
 ; CHECK-NEXT:    ret <2 x i1> [[SEL]]
 ;
   %comp = icmp ult <2 x i32> %X, %Y
-  %sel = select <2 x i1> %c, <2 x i1> <i1 icmp eq (i8* @glb, i8* inttoptr (i64 1234 to i8*)), i1 false>, <2 x i1> %comp
+  %sel = select <2 x i1> %c, <2 x i1> <i1 icmp eq (ptr @glb, ptr inttoptr (i64 1234 to ptr)), i1 false>, <2 x i1> %comp
   %res = xor <2 x i1> %sel, <i1 true, i1 true>
   ret <2 x i1> %res
 }

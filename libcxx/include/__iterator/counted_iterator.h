@@ -288,6 +288,7 @@ public:
     return ranges::iter_swap(__x.__current_, __y.__current_);
   }
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(counted_iterator);
 
 template<input_iterator _Iter>
   requires same_as<_ITER_TRAITS<_Iter>, iterator_traits<_Iter>>

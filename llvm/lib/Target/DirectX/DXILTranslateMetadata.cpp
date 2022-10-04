@@ -37,6 +37,7 @@ bool DXILTranslateMetadata::runOnModule(Module &M) {
   dxil::ValidatorVersionMD ValVerMD(M);
   if (ValVerMD.isEmpty())
     ValVerMD.update(VersionTuple(1, 0));
+  dxil::createShaderModelMD(M);
   return false;
 }
 

@@ -6103,9 +6103,9 @@ bool Sema::CheckTemplateArgumentList(
     CXXThisScopeRAII(*this, RD, ThisQuals, RD != nullptr);
 
     MultiLevelTemplateArgumentList MLTAL = getTemplateInstantiationArgs(
-        Template, &StackTemplateArgs, /*RelativeToPrimary*/ true,
-        /*Pattern*/ nullptr,
-        /*LookBeyondLambda*/ true, /*IncludeContainingStruct*/ true);
+        Template, &StackTemplateArgs, /*RelativeToPrimary=*/true,
+        /*Pattern=*/nullptr,
+        /*ForConceptInstantiation=*/true);
     if (EnsureTemplateArgumentListConstraints(
             Template, MLTAL,
             SourceRange(TemplateLoc, TemplateArgs.getRAngleLoc()))) {

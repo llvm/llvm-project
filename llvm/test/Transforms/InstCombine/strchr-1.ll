@@ -7,82 +7,77 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @hello = constant [14 x i8] c"hello world\5Cn\00"
 @null = constant [1 x i8] zeroinitializer
 @newlines = constant [3 x i8] c"\0D\0A\00"
-@chp = global i8* zeroinitializer
+@chp = global ptr zeroinitializer
 
-declare i8* @strchr(i8*, i32)
+declare ptr @strchr(ptr, i32)
 
 define void @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    store i8* getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 6), i8** @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hello, i32 0, i32 6), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %str = getelementptr [14 x i8], [14 x i8]* @hello, i32 0, i32 0
-  %dst = call i8* @strchr(i8* %str, i32 119)
-  store i8* %dst, i8** @chp
+  %dst = call ptr @strchr(ptr @hello, i32 119)
+  store ptr %dst, ptr @chp
   ret void
 }
 
 define void @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
-; CHECK-NEXT:    store i8* null, i8** @chp, align 4
+; CHECK-NEXT:    store ptr null, ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %str = getelementptr [1 x i8], [1 x i8]* @null, i32 0, i32 0
-  %dst = call i8* @strchr(i8* %str, i32 119)
-  store i8* %dst, i8** @chp
+  %dst = call ptr @strchr(ptr @null, i32 119)
+  store ptr %dst, ptr @chp
   ret void
 }
 
 define void @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    store i8* getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 13), i8** @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hello, i32 0, i32 13), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %src = getelementptr [14 x i8], [14 x i8]* @hello, i32 0, i32 0
-  %dst = call i8* @strchr(i8* %src, i32 0)
-  store i8* %dst, i8** @chp
+  %dst = call ptr @strchr(ptr @hello, i32 0)
+  store ptr %dst, ptr @chp
   ret void
 }
 
 define void @test_simplify4(i32 %chr) {
 ; CHECK-LABEL: @test_simplify4(
-; CHECK-NEXT:    [[MEMCHR:%.*]] = call i8* @memchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 0), i32 [[CHR:%.*]], i32 14)
-; CHECK-NEXT:    store i8* [[MEMCHR]], i8** @chp, align 4
+; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr noundef nonnull @hello, i32 [[CHR:%.*]], i32 14)
+; CHECK-NEXT:    store ptr [[MEMCHR]], ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %src = getelementptr [14 x i8], [14 x i8]* @hello, i32 0, i32 0
-  %dst = call i8* @strchr(i8* %src, i32 %chr)
-  store i8* %dst, i8** @chp
+  %dst = call ptr @strchr(ptr @hello, i32 %chr)
+  store ptr %dst, ptr @chp
   ret void
 }
 
 define void @test_simplify5() {
 ; CHECK-LABEL: @test_simplify5(
-; CHECK-NEXT:    store i8* getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 13), i8** @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hello, i32 0, i32 13), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %src = getelementptr [14 x i8], [14 x i8]* @hello, i32 0, i32 0
-  %dst = call i8* @strchr(i8* %src, i32 65280)
-  store i8* %dst, i8** @chp
+  %dst = call ptr @strchr(ptr @hello, i32 65280)
+  store ptr %dst, ptr @chp
   ret void
 }
 
 ; Check transformation strchr(p, 0) -> p + strlen(p)
-define void @test_simplify6(i8* %str) {
+define void @test_simplify6(ptr %str) {
 ; CHECK-LABEL: @test_simplify6(
-; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(i8* noundef nonnull dereferenceable(1) [[STR:%.*]])
-; CHECK-NEXT:    [[STRCHR:%.*]] = getelementptr inbounds i8, i8* [[STR]], i32 [[STRLEN]]
-; CHECK-NEXT:    store i8* [[STRCHR]], i8** @chp, align 4
+; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(ptr noundef nonnull dereferenceable(1) [[STR:%.*]])
+; CHECK-NEXT:    [[STRCHR:%.*]] = getelementptr inbounds i8, ptr [[STR]], i32 [[STRLEN]]
+; CHECK-NEXT:    store ptr [[STRCHR]], ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %dst = call i8* @strchr(i8* %str, i32 0)
-  store i8* %dst, i8** @chp
+  %dst = call ptr @strchr(ptr %str, i32 0)
+  store ptr %dst, ptr @chp
   ret void
 }
 
@@ -99,27 +94,27 @@ define i1 @test_simplify7(i32 %C) {
 ; CHECK-NEXT:    ret i1 [[MEMCHR1]]
 ;
 
-  %dst = call i8* @strchr(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @newlines, i64 0, i64 0), i32 %C)
-  %cmp = icmp ne i8* %dst, null
+  %dst = call ptr @strchr(ptr @newlines, i32 %C)
+  %cmp = icmp ne ptr %dst, null
   ret i1 %cmp
 }
 
-define i8* @test1(i8* %str, i32 %c) {
+define ptr @test1(ptr %str, i32 %c) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @strchr(i8* noundef nonnull dereferenceable(1) [[STR:%.*]], i32 [[C:%.*]])
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = call ptr @strchr(ptr noundef nonnull dereferenceable(1) [[STR:%.*]], i32 [[C:%.*]])
+; CHECK-NEXT:    ret ptr [[RET]]
 ;
 
-  %ret = call i8* @strchr(i8* %str, i32 %c)
-  ret i8* %ret
+  %ret = call ptr @strchr(ptr %str, i32 %c)
+  ret ptr %ret
 }
 
-define i8* @test2(i8* %str, i32 %c) null_pointer_is_valid {
+define ptr @test2(ptr %str, i32 %c) null_pointer_is_valid {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @strchr(i8* noundef [[STR:%.*]], i32 [[C:%.*]])
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = call ptr @strchr(ptr noundef [[STR:%.*]], i32 [[C:%.*]])
+; CHECK-NEXT:    ret ptr [[RET]]
 ;
 
-  %ret = call i8* @strchr(i8* %str, i32 %c)
-  ret i8* %ret
+  %ret = call ptr @strchr(ptr %str, i32 %c)
+  ret ptr %ret
 }

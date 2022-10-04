@@ -9,16 +9,14 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @empty = constant [1 x i8] c"\00"
 @a = common global [32 x i8] zeroinitializer, align 1
 
-; Expected type: i8* @strcat(i8*, i8*).
-declare i16 @strcat(i8*, i8*)
+; Expected type: ptr @strcat(ptr, ptr).
+declare i16 @strcat(ptr, ptr)
 
 define void @test_nosimplify1() {
 ; CHECK-LABEL: @test_nosimplify1(
 ; CHECK: call i16 @strcat
 ; CHECK: ret void
 
-  %dst = getelementptr [32 x i8], [32 x i8]* @a, i32 0, i32 0
-  %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  call i16 @strcat(i8* %dst, i8* %src)
+  call i16 @strcat(ptr @a, ptr @hello)
   ret void
 }

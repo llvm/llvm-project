@@ -7,7 +7,7 @@
 ; targets with 16-bit int.
 
 declare i16 @putchar(i16)
-declare i16 @puts(i8*)
+declare i16 @puts(ptr)
 
 @s1 = constant [2 x i8] c"\01\00"
 @s7f = constant [2 x i8] c"\7f\00"
@@ -17,7 +17,7 @@ declare i16 @puts(i8*)
 @pcnt_c = constant [3 x i8] c"%c\00"
 @pcnt_s = constant [3 x i8] c"%s\00"
 
-declare i16 @printf(i8*, ...)
+declare i16 @printf(ptr, ...)
 
 ; Verfify that the three printf to putchar transformations all result
 ; in the same output for calls with equivalent arguments.
@@ -41,32 +41,26 @@ define void @xform_printf(i8 %c8, i16 %c16) {
 ; CHECK-NEXT:    [[PUTCHAR13:%.*]] = call i16 @putchar(i16 [[C16:%.*]])
 ; CHECK-NEXT:    ret void
 ;
-  %ppcnt_c = getelementptr [3 x i8], [3 x i8]* @pcnt_c, i32 0, i32 0
-  %ppcnt_s = getelementptr [3 x i8], [3 x i8]* @pcnt_s, i32 0, i32 0
 
-  %ps1 = getelementptr [2 x i8], [2 x i8]* @s1, i32 0, i32 0
-  call i16 (i8*, ...) @printf(i8* %ps1)
-  call i16 (i8*, ...) @printf(i8* %ppcnt_c, i16 1)
-  call i16 (i8*, ...) @printf(i8* %ppcnt_s, i8* %ps1)
+  call i16 (ptr, ...) @printf(ptr @s1)
+  call i16 (ptr, ...) @printf(ptr @pcnt_c, i16 1)
+  call i16 (ptr, ...) @printf(ptr @pcnt_s, ptr @s1)
 
-  %ps7f = getelementptr [2 x i8], [2 x i8]* @s7f, i32 0, i32 0
-  call i16 (i8*, ...) @printf(i8* %ps7f)
-  call i16 (i8*, ...) @printf(i8* %ppcnt_c, i16 127)
-  call i16 (i8*, ...) @printf(i8* %ppcnt_s, i8* %ps7f)
+  call i16 (ptr, ...) @printf(ptr @s7f)
+  call i16 (ptr, ...) @printf(ptr @pcnt_c, i16 127)
+  call i16 (ptr, ...) @printf(ptr @pcnt_s, ptr @s7f)
 
-  %ps80 = getelementptr [2 x i8], [2 x i8]* @s80, i32 0, i32 0
-  call i16 (i8*, ...) @printf(i8* %ps80)
-  call i16 (i8*, ...) @printf(i8* %ppcnt_c, i16 128)
-  call i16 (i8*, ...) @printf(i8* %ppcnt_s, i8* %ps80)
+  call i16 (ptr, ...) @printf(ptr @s80)
+  call i16 (ptr, ...) @printf(ptr @pcnt_c, i16 128)
+  call i16 (ptr, ...) @printf(ptr @pcnt_s, ptr @s80)
 
-  %psff = getelementptr [2 x i8], [2 x i8]* @sff, i32 0, i32 0
-  call i16 (i8*, ...) @printf(i8* %psff)
-  call i16 (i8*, ...) @printf(i8* %ppcnt_c, i16 255)
-  call i16 (i8*, ...) @printf(i8* %ppcnt_s, i8* %psff)
+  call i16 (ptr, ...) @printf(ptr @sff)
+  call i16 (ptr, ...) @printf(ptr @pcnt_c, i16 255)
+  call i16 (ptr, ...) @printf(ptr @pcnt_s, ptr @sff)
 
 ; The i8 argument to printf can be either zero-extended or sign-extended
 ; when passed to putchar which then converts it to unsigned char.
-  call i16 (i8*, ...) @printf(i8* %ppcnt_c, i8 %c8)
-  call i16 (i8*, ...) @printf(i8* %ppcnt_c, i16 %c16)
+  call i16 (ptr, ...) @printf(ptr @pcnt_c, i8 %c8)
+  call i16 (ptr, ...) @printf(ptr @pcnt_c, i16 %c16)
   ret void
 }
