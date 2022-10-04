@@ -1,4 +1,4 @@
-; RUN: opt -passes='loop-vectorize,loop-versioning' %s | FileCheck %s
+; RUN: opt -passes='loop-vectorize,loop-versioning' -S %s | FileCheck %s
 
 ; REQUIRES: asserts
 ; XFAIL: *
