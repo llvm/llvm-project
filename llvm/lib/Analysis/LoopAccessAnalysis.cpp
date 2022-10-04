@@ -2683,34 +2683,14 @@ LoopAccessLegacyAnalysis::LoopAccessLegacyAnalysis() : FunctionPass(ID) {
   initializeLoopAccessLegacyAnalysisPass(*PassRegistry::getPassRegistry());
 }
 
-const LoopAccessInfo &LoopAccessLegacyAnalysis::getInfo(Loop *L) {
-  auto &LAI = LoopAccessInfoMap[L];
-
-  if (!LAI)
-    LAI = std::make_unique<LoopAccessInfo>(L, SE, TLI, AA, DT, LI);
-
-  return *LAI;
-}
-
-void LoopAccessLegacyAnalysis::print(raw_ostream &OS, const Module *M) const {
-  LoopAccessLegacyAnalysis &LAA = *const_cast<LoopAccessLegacyAnalysis *>(this);
-
-  for (Loop *TopLevelLoop : *LI)
-    for (Loop *L : depth_first(TopLevelLoop)) {
-      OS.indent(2) << L->getHeader()->getName() << ":\n";
-      auto &LAI = LAA.getInfo(L);
-      LAI.print(OS, 4);
-    }
-}
-
 bool LoopAccessLegacyAnalysis::runOnFunction(Function &F) {
-  SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+  auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-  TLI = TLIP ? &TLIP->getTLI(F) : nullptr;
-  AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-
+  auto *TLI = TLIP ? &TLIP->getTLI(F) : nullptr;
+  auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
+  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  LAIs = std::make_unique<LoopAccessInfoManager>(SE, AA, DT, LI, TLI);
   return false;
 }
 
