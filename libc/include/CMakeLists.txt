@@ -157,6 +157,7 @@ add_gen_header(
   GEN_HDR stdlib.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-macros.stdlib_macros
     .llvm-libc-types.__bsearchcompare_t
     .llvm-libc-types.__qsortcompare_t
     .llvm-libc-types.div_t

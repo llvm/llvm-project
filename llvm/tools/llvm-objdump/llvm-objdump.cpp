@@ -2916,6 +2916,17 @@ static void parseIntArg(const llvm::opt::InputArgList &InputArgs, int ID,
   }
 }
 
+static object::BuildID parseBuildIDArg(const opt::Arg *A) {
+  StringRef V(A->getValue());
+  std::string Bytes;
+  if (!tryGetFromHex(V, Bytes))
+    reportCmdLineError(A->getSpelling() + ": expected a build ID, but got '" +
+                       V + "'");
+  ArrayRef<uint8_t> BuildID(reinterpret_cast<const uint8_t *>(Bytes.data()),
+                            Bytes.size());
+  return object::BuildID(BuildID.begin(), BuildID.end());
+}
+
 static void invalidArgValue(const opt::Arg *A) {
   reportCmdLineError("'" + StringRef(A->getValue()) +
                      "' is not a valid value for '" + A->getSpelling() + "'");
@@ -3084,6 +3095,17 @@ static void parseObjdumpOptions(const llvm::opt::InputArgList &InputArgs) {
     llvm::cl::ParseCommandLineOptions(2, Argv);
   }
 
+  // Look up any provided build IDs, then append them to the input filenames.
+  for (const opt::Arg *A : InputArgs.filtered(OBJDUMP_build_id)) {
+    object::BuildID BuildID = parseBuildIDArg(A);
+    Optional<std::string> Path = BIDFetcher->fetch(BuildID);
+    if (!Path) {
+      reportCmdLineError(A->getSpelling() + ": could not find build ID '" +
+                         A->getValue() + "'");
+    }
+    InputFilenames.push_back(std::move(*Path));
+  }
+
   // objdump defaults to a.out if no filenames specified.
   if (InputFilenames.empty())
     InputFilenames.push_back("a.out");
@@ -3153,8 +3175,9 @@ int main(int argc, char **argv) {
 
   // Initialize debuginfod.
   const bool ShouldUseDebuginfodByDefault =
-      HTTPClient::isAvailable() &&
-      !ExitOnErr(getDefaultDebuginfodUrls()).empty();
+      InputArgs.hasArg(OBJDUMP_build_id) ||
+      (HTTPClient::isAvailable() &&
+       !ExitOnErr(getDefaultDebuginfodUrls()).empty());
   std::vector<std::string> DebugFileDirectories =
       InputArgs.getAllArgValues(OBJDUMP_debug_file_directory);
   if (InputArgs.hasFlag(OBJDUMP_debuginfod, OBJDUMP_no_debuginfod,

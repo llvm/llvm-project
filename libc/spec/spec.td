@@ -39,6 +39,7 @@ class RestrictedPtrType<Type type> : Type {
 def VarArgType : NamedType<"...">;
 def VoidType : NamedType<"void">;
 def IntType : NamedType<"int">;
+def UnsignedIntType : NamedType<"unsigned int">;
 def LongType : NamedType<"long">;
 def UnsignedLongType : NamedType<"unsigned long">;
 def LongLongType : NamedType<"long long">;

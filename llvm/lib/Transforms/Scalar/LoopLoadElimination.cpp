@@ -652,6 +652,8 @@ static bool eliminateLoadsAcrossLoops(Function &F, LoopInfo &LI,
     // The actual work is performed by LoadEliminationForLoop.
     LoadEliminationForLoop LEL(L, &LI, LAIs.getInfo(*L), &DT, BFI, PSI);
     Changed |= LEL.processLoop();
+    if (Changed)
+      LAIs.clear();
   }
   return Changed;
 }
