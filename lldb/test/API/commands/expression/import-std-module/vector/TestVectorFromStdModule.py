@@ -11,6 +11,7 @@ class TestBasicVector(TestBase):
 
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
+    @skipIf(bugnumber="rdar://100741983")
     def test(self):
         self.build()
 
