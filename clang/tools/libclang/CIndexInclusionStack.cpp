@@ -59,8 +59,8 @@ void getInclusions(bool IsLocal, unsigned n, CXTranslationUnit TU,
 
     // Callback to the client.
     // FIXME: We should have a function to construct CXFiles.
-    CB(static_cast<CXFile>(
-           const_cast<FileEntry *>(FI.getContentCache().OrigEntry)),
+    CB(static_cast<CXFile>(const_cast<FileEntry *>(
+           static_cast<const FileEntry *>(FI.getContentCache().OrigEntry))),
        InclusionStack.data(), InclusionStack.size(), clientData);
   }
 }

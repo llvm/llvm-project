@@ -399,8 +399,7 @@ ContentCache &SourceManager::getOrCreateContentCache(FileEntryRef FileEnt,
   if (OverriddenFilesInfo) {
     // If the file contents are overridden with contents from another file,
     // pass that file to ContentCache.
-    llvm::DenseMap<const FileEntry *, const FileEntry *>::iterator
-        overI = OverriddenFilesInfo->OverriddenFiles.find(FileEnt);
+    auto overI = OverriddenFilesInfo->OverriddenFiles.find(FileEnt);
     if (overI == OverriddenFilesInfo->OverriddenFiles.end())
       new (Entry) ContentCache(FileEnt);
     else
@@ -695,14 +694,18 @@ void SourceManager::overrideFileContents(
 }
 
 void SourceManager::overrideFileContents(const FileEntry *SourceFile,
-                                         const FileEntry *NewFile) {
-  assert(SourceFile->getSize() == NewFile->getSize() &&
+                                         FileEntryRef NewFile) {
+  assert(SourceFile->getSize() == NewFile.getSize() &&
          "Different sizes, use the FileManager to create a virtual file with "
          "the correct size");
   assert(FileInfos.count(SourceFile) == 0 &&
          "This function should be called at the initialization stage, before "
          "any parsing occurs.");
-  getOverriddenFilesInfo().OverriddenFiles[SourceFile] = NewFile;
+  // FileEntryRef is not default-constructible.
+  auto Pair = getOverriddenFilesInfo().OverriddenFiles.insert(
+      std::make_pair(SourceFile, NewFile));
+  if (!Pair.second)
+    Pair.first->second = NewFile;
 }
 
 Optional<FileEntryRef>

@@ -3919,7 +3919,8 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
     Module *M =
         PP.getHeaderSearchInfo().lookupModule(F.ModuleName, F.ImportLoc);
     auto &Map = PP.getHeaderSearchInfo().getModuleMap();
-    const FileEntry *ModMap = M ? Map.getModuleMapFileForUniquing(M) : nullptr;
+    Optional<FileEntryRef> ModMap =
+        M ? Map.getModuleMapFileForUniquing(M) : None;
     // Don't emit module relocation error if we have -fno-validate-pch
     if (!bool(PP.getPreprocessorOpts().DisablePCHOrModuleValidation &
               DisableValidationForModuleKind::Module) &&
