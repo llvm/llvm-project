@@ -1315,3 +1315,27 @@ exit:
   %res = phi i1 [ true, %start ], [ %and, %loop ]
   ret i1 %res
 }
+
+declare void @use(i32)
+
+define i32 @phi_op_self_simplify() {
+; CHECK-LABEL: @phi_op_self_simplify(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[IV_ADD2:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_ADD:%.*]] = xor i32 [[IV]], -1
+; CHECK-NEXT:    call void @use(i32 [[IV_ADD]])
+; CHECK-NEXT:    [[IV_ADD2]] = xor i32 [[IV]], -1
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 1, %entry ], [ %iv.add2, %loop ]
+  %iv.add = xor i32 %iv, -1
+  call void @use(i32 %iv.add)
+  %iv.add2 = xor i32 %iv, -1
+  br label %loop
+}
