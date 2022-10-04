@@ -272,7 +272,7 @@ def SysStatAPI : PublicAPI<"sys/stat.h"> {
 }
 
 def SysWaitAPI : PublicAPI<"sys/wait.h"> {
-  let Types = ["pid_t"];
+  let Types = ["pid_t", "struct rusage"];
 }
 
 def SysSendfileAPI : PublicAPI<"sys/sendfile.h"> {

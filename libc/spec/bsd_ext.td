@@ -18,7 +18,22 @@ def BsdExtensions : StandardSpec<"BSDExtensions"> {
       ]
   >;
 
+  HeaderSpec SysWait = HeaderSpec<
+      "sys/wait.h",
+      [], // Macros
+      [StructRUsage], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+            "wait4",
+            RetValSpec<PidT>,
+            [ArgSpec<PidT>, ArgSpec<IntPtr>, ArgSpec<IntType>, ArgSpec<StructRUsagePtr>]
+        >
+      ]
+  >;
+
   let Headers = [
     String,
+    SysWait,
   ];
 }

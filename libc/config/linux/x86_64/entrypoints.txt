@@ -133,6 +133,8 @@ set(TARGET_LIBC_ENTRYPOINTS
 
     # sys/wait.h entrypoints
     libc.src.sys.wait.wait
+    libc.src.sys.wait.wait4
+    libc.src.sys.wait.waitpid
 
     # unistd.h entrypoints
     libc.src.unistd.access

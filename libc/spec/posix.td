@@ -971,13 +971,18 @@ def POSIX : StandardSpec<"POSIX"> {
   HeaderSpec SysWait = HeaderSpec<
     "sys/wait.h",
     [], // Macros
-    [PidT],
+    [PidT, StructRUsage],
     [], // Enumerations
     [
       FunctionSpec<
         "wait",
         RetValSpec<PidT>,
         [ArgSpec<IntPtr>]
+      >,
+      FunctionSpec<
+        "waitpid",
+        RetValSpec<PidT>,
+        [ArgSpec<PidT>, ArgSpec<IntPtr>, ArgSpec<IntType>]
       >
     ]
   >;
