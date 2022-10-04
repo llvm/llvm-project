@@ -802,10 +802,11 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-  /// Query the result of the loop access information for the loop \p L.
+  /// Return the proxy object for retrieving LoopAccessInfo for individual
+  /// loops.
   ///
   /// If there is no cached result available run the analysis.
-  const LoopAccessInfo &getInfo(Loop *L) { return LAIs->getInfo(*L); }
+  LoopAccessInfoManager &getLAIs() { return *LAIs; }
 
   void releaseMemory() override {
     // Invalidate the cache when the pass is freed.

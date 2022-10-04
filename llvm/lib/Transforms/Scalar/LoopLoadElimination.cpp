@@ -621,11 +621,12 @@ private:
 
 } // end anonymous namespace
 
-static bool
-eliminateLoadsAcrossLoops(Function &F, LoopInfo &LI, DominatorTree &DT,
-                          BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI,
-                          ScalarEvolution *SE, AssumptionCache *AC,
-                          function_ref<const LoopAccessInfo &(Loop &)> GetLAI) {
+static bool eliminateLoadsAcrossLoops(Function &F, LoopInfo &LI,
+                                      DominatorTree &DT,
+                                      BlockFrequencyInfo *BFI,
+                                      ProfileSummaryInfo *PSI,
+                                      ScalarEvolution *SE, AssumptionCache *AC,
+                                      LoopAccessInfoManager &LAIs) {
   // Build up a worklist of inner-loops to transform to avoid iterator
   // invalidation.
   // FIXME: This logic comes from other passes that actually change the loop
@@ -649,7 +650,7 @@ eliminateLoadsAcrossLoops(Function &F, LoopInfo &LI, DominatorTree &DT,
     if (!L->isRotatedForm() || !L->getExitingBlock())
       continue;
     // The actual work is performed by LoadEliminationForLoop.
-    LoadEliminationForLoop LEL(L, &LI, GetLAI(*L), &DT, BFI, PSI);
+    LoadEliminationForLoop LEL(L, &LI, LAIs.getInfo(*L), &DT, BFI, PSI);
     Changed |= LEL.processLoop();
   }
   return Changed;
@@ -672,7 +673,7 @@ public:
       return false;
 
     auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto &LAA = getAnalysis<LoopAccessLegacyAnalysis>();
+    auto &LAIs = getAnalysis<LoopAccessLegacyAnalysis>().getLAIs();
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
     auto *BFI = (PSI && PSI->hasProfileSummary()) ?
@@ -681,9 +682,8 @@ public:
     auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
     // Process each loop nest in the function.
-    return eliminateLoadsAcrossLoops(
-        F, LI, DT, BFI, PSI, SE, /*AC*/ nullptr,
-        [&LAA](Loop &L) -> const LoopAccessInfo & { return LAA.getInfo(&L); });
+    return eliminateLoadsAcrossLoops(F, LI, DT, BFI, PSI, SE, /*AC*/ nullptr,
+                                     LAIs);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -736,9 +736,7 @@ PreservedAnalyses LoopLoadEliminationPass::run(Function &F,
       &AM.getResult<BlockFrequencyAnalysis>(F) : nullptr;
   LoopAccessInfoManager &LAIs = AM.getResult<LoopAccessAnalysis>(F);
 
-  bool Changed = eliminateLoadsAcrossLoops(
-      F, LI, DT, BFI, PSI, &SE, &AC,
-      [&](Loop &L) -> const LoopAccessInfo & { return LAIs.getInfo(L); });
+  bool Changed = eliminateLoadsAcrossLoops(F, LI, DT, BFI, PSI, &SE, &AC, LAIs);
 
   if (!Changed)
     return PreservedAnalyses::all();
