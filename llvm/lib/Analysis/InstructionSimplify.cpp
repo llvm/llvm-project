@@ -5333,9 +5333,16 @@ static Value *simplifyFMAFMul(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (match(Op1, m_FPOne()))
     return Op0;
 
-  // X * 0.0 --> 0.0 (with nnan and nsz)
-  if (FMF.noNaNs() && FMF.noSignedZeros() && match(Op1, m_AnyZeroFP()))
-    return ConstantFP::getNullValue(Op0->getType());
+  if (match(Op1, m_AnyZeroFP())) {
+    // X * 0.0 --> 0.0 (with nnan and nsz)
+    if (FMF.noNaNs() && FMF.noSignedZeros())
+      return ConstantFP::getNullValue(Op0->getType());
+
+    // +normal number * (-)0.0 --> (-)0.0
+    if (isKnownNeverInfinity(Op0, Q.TLI) && isKnownNeverNaN(Op0, Q.TLI) &&
+        SignBitMustBeZero(Op0, Q.TLI))
+      return Op1;
+  }
 
   // sqrt(X) * sqrt(X) --> X, if we can:
   // 1. Remove the intermediate rounding (reassociate).
