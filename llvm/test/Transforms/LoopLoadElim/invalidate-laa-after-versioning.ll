@@ -1,4 +1,4 @@
-; RUN: opt -passes='loop-vectorize,loop-load-elim' %s | FileCheck %s
+; RUN: opt -passes='loop-vectorize,loop-load-elim' -S %s | FileCheck %s
 
 ; REQUIRES: asserts
 ; XFAIL: *
