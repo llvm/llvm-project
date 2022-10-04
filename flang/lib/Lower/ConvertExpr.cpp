@@ -2390,10 +2390,10 @@ public:
                                   llvm::ArrayRef<mlir::Value> extents,
                                   llvm::ArrayRef<mlir::Value> lengths) {
     mlir::Type type = base.getType();
-    if (type.isa<fir::BoxType>())
+    if (type.isa<fir::BaseBoxType>())
       return fir::BoxValue(base, /*lbounds=*/{}, lengths, extents);
     type = fir::unwrapRefType(type);
-    if (type.isa<fir::BoxType>())
+    if (type.isa<fir::BaseBoxType>())
       return fir::MutableBoxValue(base, lengths, /*mutableProperties*/ {});
     if (auto seqTy = type.dyn_cast<fir::SequenceType>()) {
       if (seqTy.getDimension() != extents.size())
