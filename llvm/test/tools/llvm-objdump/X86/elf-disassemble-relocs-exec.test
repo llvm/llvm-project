@@ -3,6 +3,7 @@
 # RUN: yaml2obj --docnum=1 %s -o %t
 # RUN: llvm-objdump -dr %t | FileCheck %s --match-full-lines --strict-whitespace
 # RUN: llvm-objdump -dr --no-leading-addr %t | FileCheck %s --check-prefix=NOADDR --match-full-lines --strict-whitespace
+# RUN: llvm-objdump -dr --no-addresses %t | FileCheck %s --check-prefix=NOADDR --match-full-lines --strict-whitespace
 
 # RUN: yaml2obj -DBITS=32 %s -o %t.32
 # RUN: llvm-objdump -dr --no-leading-addr %t.32 | FileCheck %s --check-prefix=NOADDR --match-full-lines --strict-whitespace
