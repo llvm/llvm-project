@@ -6936,8 +6936,11 @@ def err_typecheck_unary_expr : Error<
 def err_typecheck_indirection_requires_pointer : Error<
   "indirection requires pointer operand (%0 invalid)">;
 def ext_typecheck_indirection_through_void_pointer : ExtWarn<
-  "ISO %select{C|C++}0 does not allow indirection on operand of type %1">,
-  InGroup<DiagGroup<"void-ptr-dereference">>;
+  "ISO C does not allow indirection on operand of type %0">,
+  InGroup<VoidPointerDeref>;
+def ext_typecheck_indirection_through_void_pointer_cpp
+    : ExtWarn<"ISO C++ does not allow indirection on operand of type %0">,
+      InGroup<VoidPointerDeref>, DefaultError, SFINAEFailure;
 def warn_indirection_through_null : Warning<
   "indirection of non-volatile null pointer will be deleted, not trap">,
   InGroup<NullDereference>;
