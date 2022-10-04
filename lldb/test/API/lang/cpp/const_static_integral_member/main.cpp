@@ -79,8 +79,13 @@ struct ClassWithEnumAlias {
       ScopedEnum::scoped_enum_case1;
 };
 
+struct StaticBoolStruct {
+  static const bool value = false;
+};
+
 int main() {
   A a;
+  StaticBoolStruct sbs;
 
   auto char_max = A::char_max;
   auto uchar_max = A::uchar_max;
