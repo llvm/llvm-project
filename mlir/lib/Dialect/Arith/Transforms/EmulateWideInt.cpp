@@ -627,6 +627,9 @@ arith::WideIntEmulationConverter::WideIntEmulationConverter(
          "Only power-of-two integers with are supported");
   assert(widestIntSupportedByTarget >= 2 && "Integer type too narrow");
 
+  // Allow unknown types.
+  addConversion([](Type ty) -> Optional<Type> { return ty; });
+
   // Scalar case.
   addConversion([this](IntegerType ty) -> Optional<Type> {
     unsigned width = ty.getWidth();
