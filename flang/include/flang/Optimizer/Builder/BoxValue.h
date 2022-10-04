@@ -194,11 +194,11 @@ public:
                 llvm::ArrayRef<mlir::Value> extents)
       : AbstractBox{addr}, AbstractArrayBox(extents, lbounds) {}
   /// Get the fir.box<type> part of the address type.
-  fir::BoxType getBoxTy() const {
+  fir::BaseBoxType getBoxTy() const {
     auto type = getAddr().getType();
     if (auto pointedTy = fir::dyn_cast_ptrEleTy(type))
       type = pointedTy;
-    return type.cast<fir::BoxType>();
+    return type.cast<fir::BaseBoxType>();
   }
   /// Return the part of the address type after memory and box types. That is
   /// the element type, maybe wrapped in a fir.array type.

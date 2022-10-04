@@ -797,9 +797,8 @@ private:
     Fortran::common::TypeCategory cat = dynamicType.category();
     // DERIVED
     if (cat == Fortran::common::TypeCategory::Derived) {
-      if (dynamicType.IsPolymorphic())
-        TODO(interface.converter.getCurrentLocation(),
-             "support for polymorphic types");
+      if (dynamicType.IsUnlimitedPolymorphic())
+        return mlir::NoneType::get(&mlirContext);
       return getConverter().genType(dynamicType.GetDerivedTypeSpec());
     }
     // CHARACTER with compile time constant length.
@@ -860,16 +859,17 @@ private:
       type = fir::HeapType::get(type);
     if (obj.attrs.test(Attrs::Pointer))
       type = fir::PointerType::get(type);
-    mlir::Type boxType = fir::BoxType::get(type);
+    mlir::Type boxType =
+        fir::wrapInClassOrBoxType(type, obj.type.type().IsPolymorphic());
 
     if (obj.attrs.test(Attrs::Allocatable) || obj.attrs.test(Attrs::Pointer)) {
-      // Pass as fir.ref<fir.box>
+      // Pass as fir.ref<fir.box> or fir.ref<fir.class>
       mlir::Type boxRefType = fir::ReferenceType::get(boxType);
       addFirOperand(boxRefType, nextPassedArgPosition(), Property::MutableBox,
                     attrs);
       addPassedArg(PassEntityBy::MutableBox, entity, characteristics);
     } else if (dummyRequiresBox(obj)) {
-      // Pass as fir.box
+      // Pass as fir.box or fir.class
       if (isValueAttr)
         TODO(loc, "assumed shape dummy argument with VALUE attribute");
       addFirOperand(boxType, nextPassedArgPosition(), Property::Box, attrs);
@@ -954,12 +954,17 @@ private:
     assert(typeAndShape && "expect type for non proc pointer result");
     mlir::Type mlirType = translateDynamicType(typeAndShape->type());
     fir::SequenceType::Shape bounds = getBounds(typeAndShape->shape());
+    const auto *resTypeAndShape{result.GetTypeAndShape()};
+    bool resIsPolymorphic =
+        resTypeAndShape && resTypeAndShape->type().IsPolymorphic();
     if (!bounds.empty())
       mlirType = fir::SequenceType::get(bounds, mlirType);
     if (result.attrs.test(Attr::Allocatable))
-      mlirType = fir::BoxType::get(fir::HeapType::get(mlirType));
+      mlirType = fir::wrapInClassOrBoxType(fir::HeapType::get(mlirType),
+                                           resIsPolymorphic);
     if (result.attrs.test(Attr::Pointer))
-      mlirType = fir::BoxType::get(fir::PointerType::get(mlirType));
+      mlirType = fir::wrapInClassOrBoxType(fir::PointerType::get(mlirType),
+                                           resIsPolymorphic);
 
     if (fir::isa_char(mlirType)) {
       // Character scalar results must be passed as arguments in lowering so

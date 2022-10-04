@@ -87,7 +87,7 @@ inline bool isa_ref_type(mlir::Type t) {
 
 /// Is `t` a boxed type?
 inline bool isa_box_type(mlir::Type t) {
-  return t.isa<fir::BoxType, fir::BoxCharType, fir::BoxProcType>();
+  return t.isa<fir::BaseBoxType, fir::BoxCharType, fir::BoxProcType>();
 }
 
 /// Is `t` a type that is always trivially pass-by-reference? Specifically, this
@@ -305,6 +305,14 @@ mlir::Type fromRealTypeID(mlir::MLIRContext *context, llvm::Type::TypeID typeID,
 
 inline bool BaseBoxType::classof(mlir::Type type) {
   return type.isa<fir::BoxType, fir::ClassType>();
+}
+
+/// Return a fir.box<T> or fir.class<T> if the type is polymorphic.
+inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
+                                       bool isPolymorphic = false) {
+  if (isPolymorphic)
+    return fir::ClassType::get(eleTy);
+  return fir::BoxType::get(eleTy);
 }
 
 } // namespace fir

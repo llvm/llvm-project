@@ -209,7 +209,7 @@ mlir::Type dyn_cast_ptrOrBoxEleTy(mlir::Type t) {
   return llvm::TypeSwitch<mlir::Type, mlir::Type>(t)
       .Case<fir::ReferenceType, fir::PointerType, fir::HeapType,
             fir::LLVMPointerType>([](auto p) { return p.getEleTy(); })
-      .Case<fir::BoxType>([](auto p) {
+      .Case<fir::BaseBoxType>([](auto p) {
         auto eleTy = p.getEleTy();
         if (auto ty = fir::dyn_cast_ptrEleTy(eleTy))
           return ty;
@@ -249,7 +249,7 @@ bool hasDynamicSize(mlir::Type t) {
 bool isPointerType(mlir::Type ty) {
   if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
     ty = refTy;
-  if (auto boxTy = ty.dyn_cast<fir::BoxType>())
+  if (auto boxTy = ty.dyn_cast<fir::BaseBoxType>())
     return boxTy.getEleTy().isa<fir::PointerType>();
   return false;
 }
@@ -257,7 +257,7 @@ bool isPointerType(mlir::Type ty) {
 bool isAllocatableType(mlir::Type ty) {
   if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
     ty = refTy;
-  if (auto boxTy = ty.dyn_cast<fir::BoxType>())
+  if (auto boxTy = ty.dyn_cast<fir::BaseBoxType>())
     return boxTy.getEleTy().isa<fir::HeapType>();
   return false;
 }
@@ -265,8 +265,8 @@ bool isAllocatableType(mlir::Type ty) {
 bool isUnlimitedPolymorphicType(mlir::Type ty) {
   if (auto refTy = fir::dyn_cast_ptrEleTy(ty))
     ty = refTy;
-  if (auto boxTy = ty.dyn_cast<fir::BoxType>())
-    return boxTy.getEleTy().isa<mlir::NoneType>();
+  if (auto clTy = ty.dyn_cast<fir::ClassType>())
+    return clTy.getEleTy().isa<mlir::NoneType>();
   return false;
 }
 
