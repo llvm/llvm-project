@@ -144,7 +144,7 @@ define i64 @test_simplify11(i32 %x) {
 
 define i64 @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[A_L:%.*]] = call i64 @wcslen(i32* getelementptr inbounds ([32 x i32], [32 x i32]* @a, i64 0, i64 0))
+; CHECK-NEXT:    [[A_L:%.*]] = call i64 @wcslen(i32* nonnull getelementptr inbounds ([32 x i32], [32 x i32]* @a, i64 0, i64 0))
 ; CHECK-NEXT:    ret i64 [[A_L]]
 ;
   %a_p = getelementptr [32 x i32], [32 x i32]* @a, i64 0, i64 0

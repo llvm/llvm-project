@@ -66,7 +66,7 @@ define void @fold_atoi_member(ptr %pi) {
 
 define void @fold_atoi_offset_out_of_bounds(ptr %pi) {
 ; CHECK-LABEL: @fold_atoi_offset_out_of_bounds(
-; CHECK-NEXT:    [[IA_0_0_32:%.*]] = call i32 @atoi(ptr nocapture getelementptr inbounds ([2 x %struct.A], ptr @a, i64 1, i64 0, i32 0, i64 0))
+; CHECK-NEXT:    [[IA_0_0_32:%.*]] = call i32 @atoi(ptr nocapture nonnull getelementptr inbounds ([2 x %struct.A], ptr @a, i64 1, i64 0, i32 0, i64 0))
 ; CHECK-NEXT:    store i32 [[IA_0_0_32]], ptr [[PI:%.*]], align 4
 ; CHECK-NEXT:    [[IA_0_0_33:%.*]] = call i32 @atoi(ptr nocapture getelementptr ([2 x %struct.A], ptr @a, i64 1, i64 0, i32 0, i64 1))
 ; CHECK-NEXT:    store i32 [[IA_0_0_33]], ptr [[PI]], align 4

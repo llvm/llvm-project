@@ -41,7 +41,7 @@ define void @memccpy_to_memcpy3(i8* %dst) {
 
 define void @memccpy_to_memcpy3_tail(i8* %dst) {
 ; CHECK-LABEL: @memccpy_to_memcpy3_tail(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(5) [[DST:%.*]], i8* noundef nonnull align 1 dereferenceable(5) getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i64 5, i1 false)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(5) [[DST:%.*]], i8* noundef nonnull align 1 dereferenceable(5) getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i64 5, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %call = tail call i8* @memccpy(i8* %dst, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 111, i64 10) ; 111 is 'o'
@@ -50,8 +50,8 @@ define void @memccpy_to_memcpy3_tail(i8* %dst) {
 
 define i8* @memccpy_to_memcpy3_musttail(i8* %dst, i8* %x, i32 %y, i64 %z) {
 ; CHECK-LABEL: @memccpy_to_memcpy3_musttail(
-; CHECK-NEXT:    %call = musttail call i8* @memccpy(i8* %dst, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 111, i64 10)
-; CHECK-NEXT:    ret i8* %call
+; CHECK-NEXT:    [[CALL:%.*]] = musttail call i8* @memccpy(i8* [[DST:%.*]], i8* nonnull getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 111, i64 10)
+; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = musttail call i8* @memccpy(i8* %dst, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 111, i64 10) ; 111 is 'o'
   ret i8* %call
@@ -87,8 +87,8 @@ define i8* @memccpy_to_memcpy5_tail(i8* %dst) {
 
 define i8* @memccpy_to_memcpy5_musttail(i8* %dst, i8* %x, i32 %y, i64 %z) {
 ; CHECK-LABEL: @memccpy_to_memcpy5_musttail(
-; CHECK-NEXT:    %call = musttail call i8* @memccpy(i8* %dst, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 114, i64 7)
-; CHECK-NEXT:    ret i8* %call
+; CHECK-NEXT:    [[CALL:%.*]] = musttail call i8* @memccpy(i8* [[DST:%.*]], i8* nonnull getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 114, i64 7)
+; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = musttail call i8* @memccpy(i8* %dst, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 114, i64 7)
   ret i8* %call
@@ -189,7 +189,7 @@ define i8* @unknown_src(i8* %dst, i8* %src) {
 
 define i8* @unknown_stop_char(i8* %dst, i32 %c) {
 ; CHECK-LABEL: @unknown_stop_char(
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @memccpy(i8* [[DST:%.*]], i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 [[C:%.*]], i64 12)
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @memccpy(i8* [[DST:%.*]], i8* nonnull getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 [[C:%.*]], i64 12)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = call i8* @memccpy(i8* %dst, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 %c, i64 12)
@@ -198,7 +198,7 @@ define i8* @unknown_stop_char(i8* %dst, i32 %c) {
 
 define i8* @unknown_size_n(i8* %dst, i64 %n) {
 ; CHECK-LABEL: @unknown_size_n(
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @memccpy(i8* [[DST:%.*]], i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 114, i64 [[N:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @memccpy(i8* [[DST:%.*]], i8* nonnull getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 114, i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = call i8* @memccpy(i8* %dst, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 114, i64 %n)
@@ -207,7 +207,7 @@ define i8* @unknown_size_n(i8* %dst, i64 %n) {
 
 define i8* @no_nul_terminator(i8* %dst, i64 %n) {
 ; CHECK-LABEL: @no_nul_terminator(
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @memccpy(i8* [[DST:%.*]], i8* getelementptr inbounds ([12 x i8], [12 x i8]* @StopCharAfterNulTerminator, i64 0, i64 0), i32 120, i64 [[N:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @memccpy(i8* [[DST:%.*]], i8* nonnull getelementptr inbounds ([12 x i8], [12 x i8]* @StopCharAfterNulTerminator, i64 0, i64 0), i32 120, i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = call i8* @memccpy(i8* %dst, i8* getelementptr inbounds ([12 x i8], [12 x i8]* @StopCharAfterNulTerminator, i64 0, i64 0), i32 120, i64 %n) ; 120 is 'x'
@@ -216,7 +216,7 @@ define i8* @no_nul_terminator(i8* %dst, i64 %n) {
 
 define i8* @possibly_valid_data_after_array(i8* %dst, i64 %n) {
 ; CHECK-LABEL: @possibly_valid_data_after_array(
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @memccpy(i8* [[DST:%.*]], i8* getelementptr inbounds ([10 x i8], [10 x i8]* @NoNulTerminator, i64 0, i64 0), i32 115, i64 [[N:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @memccpy(i8* [[DST:%.*]], i8* nonnull getelementptr inbounds ([10 x i8], [10 x i8]* @NoNulTerminator, i64 0, i64 0), i32 115, i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = call i8* @memccpy(i8* %dst, i8* getelementptr inbounds ([10 x i8], [10 x i8]* @NoNulTerminator, i64 0, i64 0), i32 115, i64 %n) ; 115 is 's'
@@ -225,7 +225,7 @@ define i8* @possibly_valid_data_after_array(i8* %dst, i64 %n) {
 
 define i8* @possibly_valid_data_after_array2(i8* %dst, i64 %n) {
 ; CHECK-LABEL: @possibly_valid_data_after_array2(
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @memccpy(i8* [[DST:%.*]], i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 115, i64 [[N:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @memccpy(i8* [[DST:%.*]], i8* nonnull getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 115, i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = call i8* @memccpy(i8* %dst, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 115, i64 %n) ; 115 is 's'
@@ -234,7 +234,7 @@ define i8* @possibly_valid_data_after_array2(i8* %dst, i64 %n) {
 
 define i8* @possibly_valid_data_after_array3(i8* %dst) {
 ; CHECK-LABEL: @possibly_valid_data_after_array3(
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @memccpy(i8* [[DST:%.*]], i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 115, i64 12)
+; CHECK-NEXT:    [[CALL:%.*]] = call i8* @memccpy(i8* [[DST:%.*]], i8* nonnull getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 115, i64 12)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = call i8* @memccpy(i8* %dst, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 115, i64 12) ; 115 is 's'
@@ -252,8 +252,8 @@ define i8* @memccpy_dst_src_same_retval_used(i8* %dst, i32 %c, i64 %n) {
 
 define i8* @memccpy_to_memcpy_musttail(i8* %dst, i8* %x, i32 %y, i64 %z) {
 ; CHECK-LABEL: @memccpy_to_memcpy_musttail(
-; CHECK-NEXT:    %call = musttail call i8* @memccpy(i8* %dst, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 114, i64 12)
-; CHECK-NEXT:    ret i8* %call
+; CHECK-NEXT:    [[CALL:%.*]] = musttail call i8* @memccpy(i8* [[DST:%.*]], i8* nonnull getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 114, i64 12)
+; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = musttail call i8* @memccpy(i8* %dst, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 114, i64 12) ; 114 is 'r'
   ret i8* %call
@@ -261,8 +261,8 @@ define i8* @memccpy_to_memcpy_musttail(i8* %dst, i8* %x, i32 %y, i64 %z) {
 
 define i8* @memccpy_to_memcpy2_musttail(i8* %dst, i8* %x, i32 %y, i64 %z) {
 ; CHECK-LABEL: @memccpy_to_memcpy2_musttail(
-; CHECK-NEXT:    %call = musttail call i8* @memccpy(i8* %dst, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 114, i64 8)
-; CHECK-NEXT:    ret i8* %call
+; CHECK-NEXT:    [[CALL:%.*]] = musttail call i8* @memccpy(i8* [[DST:%.*]], i8* nonnull getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 114, i64 8)
+; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = musttail call i8* @memccpy(i8* %dst, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @hello, i64 0, i64 0), i32 114, i64 8) ; 114 is 'r'
   ret i8* %call

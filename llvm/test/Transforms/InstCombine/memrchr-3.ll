@@ -304,7 +304,7 @@ define i8* @fold_memrchr_a123123_0_n(i64 %n) {
 
 define i8* @call_memrchr_a123123_3_n(i64 %n) {
 ; CHECK-LABEL: @call_memrchr_a123123_3_n(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0), i32 3, i64 [[N:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* nonnull getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0), i32 3, i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 
@@ -318,7 +318,7 @@ define i8* @call_memrchr_a123123_3_n(i64 %n) {
 
 define i8* @call_memrchr_a123123_2_n(i64 %n) {
 ; CHECK-LABEL: @call_memrchr_a123123_2_n(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0), i32 2, i64 [[N:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* nonnull getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0), i32 2, i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 
@@ -332,7 +332,7 @@ define i8* @call_memrchr_a123123_2_n(i64 %n) {
 
 define i8* @call_memrchr_a123123_1_n(i64 %n) {
 ; CHECK-LABEL: @call_memrchr_a123123_1_n(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0), i32 1, i64 [[N:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* nonnull getelementptr inbounds ([6 x i8], [6 x i8]* @a123123, i64 0, i64 0), i32 1, i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 

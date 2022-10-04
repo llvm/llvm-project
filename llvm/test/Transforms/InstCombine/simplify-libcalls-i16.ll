@@ -29,7 +29,7 @@ define void @foo(ptr %P, ptr %X) {
 
 define ptr @test1() {
 ; CHECK32-LABEL: @test1(
-; CHECK32-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr getelementptr inbounds ([5 x i8], ptr @str, i32 0, i32 2), i16 103)
+; CHECK32-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds ([5 x i8], ptr @str, i32 0, i32 2), i16 103)
 ; CHECK32-NEXT:    ret ptr [[TMP3]]
 ;
 ; CHECK16-LABEL: @test1(
@@ -45,7 +45,7 @@ declare ptr @strchr(ptr, i16)
 
 define ptr @test2() {
 ; CHECK32-LABEL: @test2(
-; CHECK32-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr getelementptr inbounds ([8 x i8], ptr @str1, i32 0, i32 2), i16 0)
+; CHECK32-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds ([8 x i8], ptr @str1, i32 0, i32 2), i16 0)
 ; CHECK32-NEXT:    ret ptr [[TMP3]]
 ;
 ; CHECK16-LABEL: @test2(
@@ -58,7 +58,7 @@ define ptr @test2() {
 define ptr @test3() {
 ; CHECK32-LABEL: @test3(
 ; CHECK32-NEXT:  entry:
-; CHECK32-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr getelementptr inbounds ([5 x i8], ptr @str2, i32 0, i32 1), i16 80)
+; CHECK32-NEXT:    [[TMP3:%.*]] = tail call ptr @strchr(ptr nonnull getelementptr inbounds ([5 x i8], ptr @str2, i32 0, i32 1), i16 80)
 ; CHECK32-NEXT:    ret ptr [[TMP3]]
 ;
 ; CHECK16-LABEL: @test3(
