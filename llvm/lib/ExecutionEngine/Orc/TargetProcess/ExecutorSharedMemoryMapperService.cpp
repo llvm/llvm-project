@@ -21,6 +21,10 @@
 #include <unistd.h>
 #endif
 
+namespace llvm {
+namespace orc {
+namespace rt_bootstrap {
+
 #if defined(_WIN32)
 static DWORD getWindowsProtectionFlags(MemProt MP) {
   if (MP == MemProt::Read)
@@ -40,10 +44,6 @@ static DWORD getWindowsProtectionFlags(MemProt MP) {
   return PAGE_NOACCESS;
 }
 #endif
-
-namespace llvm {
-namespace orc {
-namespace rt_bootstrap {
 
 Expected<std::pair<ExecutorAddr, std::string>>
 ExecutorSharedMemoryMapperService::reserve(uint64_t Size) {
