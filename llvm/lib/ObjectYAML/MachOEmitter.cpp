@@ -56,6 +56,7 @@ private:
   void writeExportTrie(raw_ostream &OS);
   void writeDynamicSymbolTable(raw_ostream &OS);
   void writeFunctionStarts(raw_ostream &OS);
+  void writeDataInCode(raw_ostream &OS);
 
   void dumpExportEntry(raw_ostream &OS, MachOYAML::ExportEntry &Entry);
   void ZeroToOffset(raw_ostream &OS, size_t offset);
@@ -486,6 +487,7 @@ void MachOWriter::writeLinkEditData(raw_ostream &OS) {
   MachO::symtab_command *SymtabCmd = nullptr;
   MachO::dysymtab_command *DSymtabCmd = nullptr;
   MachO::linkedit_data_command *FunctionStartsCmd = nullptr;
+  MachO::linkedit_data_command *DataInCodeCmd = nullptr;
   for (auto &LC : Obj.LoadCommands) {
     switch (LC.Data.load_command_data.cmd) {
     case MachO::LC_SYMTAB:
@@ -517,6 +519,11 @@ void MachOWriter::writeLinkEditData(raw_ostream &OS) {
       FunctionStartsCmd = &LC.Data.linkedit_data_command_data;
       WriteQueue.push_back(std::make_pair(FunctionStartsCmd->dataoff,
                                           &MachOWriter::writeFunctionStarts));
+      break;
+    case MachO::LC_DATA_IN_CODE:
+      DataInCodeCmd = &LC.Data.linkedit_data_command_data;
+      WriteQueue.push_back(std::make_pair(DataInCodeCmd->dataoff,
+                                          &MachOWriter::writeDataInCode));
       break;
     }
   }
@@ -583,6 +590,16 @@ void MachOWriter::writeFunctionStarts(raw_ostream &OS) {
   }
 
   OS.write('\0');
+}
+
+void MachOWriter::writeDataInCode(raw_ostream &OS) {
+  for (const auto &Entry : Obj.LinkEdit.DataInCode) {
+    MachO::data_in_code_entry DICE{Entry.Offset, Entry.Length, Entry.Kind};
+    if (Obj.IsLittleEndian != sys::IsLittleEndianHost)
+      MachO::swapStruct(DICE);
+    OS.write(reinterpret_cast<const char *>(&DICE),
+             sizeof(MachO::data_in_code_entry));
+  }
 }
 
 class UniversalWriter {
