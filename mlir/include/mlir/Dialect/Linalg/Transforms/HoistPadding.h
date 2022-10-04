@@ -49,7 +49,7 @@ class GenericOp;
 ///
 /// ```
 ///    scf.for (%i) {
-///      %packed_init = linalg.init_tensor range(%j) : tensor<?x4x8xf32>
+///      %packed_init = tensor.empty range(%j) : tensor<?x4x8xf32>
 ///      %packed = scf.for (%k) iter_args(%p : %packed_init) {
 ///        %st0 = tensor.extract_slice f(%i, %k) : ... to tensor<?x?xf32>
 ///        %0 = tensor.pad %st0 low[0, 0] high[...] {

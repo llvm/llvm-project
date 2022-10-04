@@ -556,7 +556,7 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
     bodyArgTypes.emplace_back(getElementTypeOrSelf(in.getType()));
 
   SmallVector<Type> opResultTypes;
-  SmallVector<Value> initTensors;
+  SmallVector<Value> emptyTensors;
 
   SmallVector<Value> dynDims;
   dynDims.resize(results.front().getType().cast<ShapedType>().getRank());
@@ -573,13 +573,13 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
 
   for (auto result : results) {
     auto resultTy = result.getType().template cast<ShapedType>();
-    initTensors.push_back(rewriter.create<linalg::InitTensorOp>(
-        loc, filteredDims, resultTy.getShape(), resultTy.getElementType()));
+    emptyTensors.push_back(rewriter.create<tensor::EmptyOp>(
+        loc, resultTy.getShape(), resultTy.getElementType(), filteredDims));
     opResultTypes.push_back(result.getType());
   }
 
   auto bodyResultTypes = llvm::to_vector<4>(llvm::map_range(
-      initTensors, [](Value v) { return getElementTypeOrSelf(v); }));
+      emptyTensors, [](Value v) { return getElementTypeOrSelf(v); }));
 
   SmallVector<Value, 2> operands;
   SmallVector<AffineMap, 2> indexingMaps;
@@ -623,7 +623,7 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
 
   bool didEncounterError = false;
   auto linalgOp = rewriter.create<linalg::GenericOp>(
-      loc, opResultTypes, operands, initTensors, indexingMaps,
+      loc, opResultTypes, operands, emptyTensors, indexingMaps,
       getNParallelLoopsAttrs(rank),
       [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange blockArgs) {
         Value opResult = createLinalgBodyCalculationForElementwiseOp(
@@ -771,10 +771,11 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
   Type reduceTy = RankedTensorType::get(reduceShape, resultTy.getElementType());
 
   // First fill the output buffer with the init value.
-  auto initTensor = rewriter
-                        .create<linalg::InitTensorOp>(loc, dynDims, reduceShape,
-                                                      resultTy.getElementType())
-                        .getResult();
+  auto emptyTensor =
+      rewriter
+          .create<tensor::EmptyOp>(loc, reduceShape, resultTy.getElementType(),
+                                   dynDims)
+          .getResult();
 
   auto fillValueAttr = createInitialValueForReduceOp(op, elementTy, rewriter);
   if (!fillValueAttr)
@@ -784,7 +785,7 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
   auto fillValue = rewriter.create<arith::ConstantOp>(loc, fillValueAttr);
   auto filledTensor = rewriter
                           .create<linalg::FillOp>(loc, ValueRange{fillValue},
-                                                  ValueRange{initTensor})
+                                                  ValueRange{emptyTensor})
                           .result();
 
   SmallVector<AffineExpr, 2> srcExprs;
@@ -1104,8 +1105,8 @@ public:
 
     SmallVector<Value> filteredDims = condenseValues(dynDims);
 
-    auto initTensor = rewriter.create<linalg::InitTensorOp>(
-        loc, filteredDims, resultTy.getShape(), resultTy.getElementType());
+    auto emptyTensor = rewriter.create<tensor::EmptyOp>(
+        loc, resultTy.getShape(), resultTy.getElementType(), filteredDims);
 
     SmallVector<AffineMap, 2> affineMaps = {
         AffineMap::get(resultTy.getRank(), /*symbolCount=*/0, inputExprs,
@@ -1113,7 +1114,7 @@ public:
         rewriter.getMultiDimIdentityMap(resultTy.getRank())};
 
     rewriter.replaceOpWithNewOp<linalg::GenericOp>(
-        op, resultTy, op.getInput1(), ValueRange{initTensor}, affineMaps,
+        op, resultTy, op.getInput1(), ValueRange{emptyTensor}, affineMaps,
         getNParallelLoopsAttrs(resultTy.getRank()),
         [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
           nestedBuilder.create<linalg::YieldOp>(loc, *args.begin());
@@ -1219,12 +1220,12 @@ public:
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(rank));
 
     // Construct the indexing maps needed for linalg.generic ops.
-    Value initTensor = rewriter.create<linalg::InitTensorOp>(
-        loc, ArrayRef<Value>({dynDims}), outputTy.getShape(),
-        outputTy.getElementType());
+    Value emptyTensor = rewriter.create<tensor::EmptyOp>(
+        loc, outputTy.getShape(), outputTy.getElementType(),
+        ArrayRef<Value>({dynDims}));
 
     auto linalgOp = rewriter.create<linalg::GenericOp>(
-        loc, outputTy, genericInputs, ValueRange{initTensor}, indexingMaps,
+        loc, outputTy, genericInputs, ValueRange{emptyTensor}, indexingMaps,
         getNParallelLoopsAttrs(rank),
         [&](OpBuilder &nestedBuilder, Location nestedLoc,
             ValueRange blockArgs) {
@@ -1341,14 +1342,14 @@ public:
     if (op.getMode() != "NEAREST_NEIGHBOR" && op.getMode() != "BILINEAR")
       return failure();
 
-    auto initTensor = rewriter.create<linalg::InitTensorOp>(
-        loc, dynamicDims, resultTy.getShape(), resultElementTy);
+    auto emptyTensor = rewriter.create<tensor::EmptyOp>(
+        loc, resultTy.getShape(), resultElementTy, dynamicDims);
 
     SmallVector<AffineMap, 2> affineMaps = {
         rewriter.getMultiDimIdentityMap(resultTy.getRank())};
 
     auto genericOp = rewriter.create<linalg::GenericOp>(
-        loc, resultTy, ValueRange({}), ValueRange{initTensor}, affineMaps,
+        loc, resultTy, ValueRange({}), ValueRange{emptyTensor}, affineMaps,
         getNParallelLoopsAttrs(resultTy.getRank()));
     rewriter.replaceOp(op, genericOp.getResult(0));
 
@@ -1647,15 +1648,15 @@ struct ConcatConverter : public OpConversionPattern<tosa::ConcatOp> {
     }
     sizes[axis] = resultDimSize;
 
-    Value init = rewriter.create<linalg::InitTensorOp>(
-        loc, dynDims, resultType.getShape(), resultType.getElementType());
+    Value emptyTensor = rewriter.create<tensor::EmptyOp>(
+        loc, resultType.getShape(), resultType.getElementType(), dynDims);
 
     Value zeroVal = rewriter.createOrFold<arith::ConstantOp>(
         loc, rewriter.getZeroAttr(resultType.getElementType()));
-    Value result =
-        rewriter
-            .create<linalg::FillOp>(loc, ValueRange{zeroVal}, ValueRange{init})
-            .result();
+    Value result = rewriter
+                       .create<linalg::FillOp>(loc, ValueRange{zeroVal},
+                                               ValueRange{emptyTensor})
+                       .result();
 
     auto toOpFoldResult = [](Value v) -> OpFoldResult {
       auto op = v.getDefiningOp<arith::ConstantIndexOp>();
@@ -1700,16 +1701,16 @@ public:
     Value axisDimSize = rewriter.create<tensor::DimOp>(loc, input, axis);
 
     // First fill the output buffer with the init value.
-    auto initTensor = rewriter
-                          .create<linalg::InitTensorOp>(
-                              loc, ArrayRef<Value>({dynDims}),
-                              inputTy.getShape(), inputTy.getElementType())
-                          .getResult();
+    auto emptyTensor = rewriter
+                           .create<tensor::EmptyOp>(loc, inputTy.getShape(),
+                                                    inputTy.getElementType(),
+                                                    ArrayRef<Value>({dynDims}))
+                           .getResult();
     SmallVector<AffineMap, 2> affineMaps = {
         rewriter.getMultiDimIdentityMap(resultTy.getRank())};
 
     rewriter.replaceOpWithNewOp<linalg::GenericOp>(
-        op, resultTy, ArrayRef<Value>({}), ValueRange{initTensor}, affineMaps,
+        op, resultTy, ArrayRef<Value>({}), ValueRange{emptyTensor}, affineMaps,
         getNParallelLoopsAttrs(resultTy.getRank()),
         [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
           llvm::SmallVector<Value> indices;
@@ -1771,8 +1772,8 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
       }
     }
 
-    auto initTensor = rewriter.create<linalg::InitTensorOp>(
-        op.getLoc(), dynDims, genericShape, elementTy);
+    auto emptyTensor = rewriter.create<tensor::EmptyOp>(
+        op.getLoc(), genericShape, elementTy, dynDims);
 
     // We needs to map the input shape to the non-broadcasted dimensions.
     SmallVector<AffineExpr, 4> dimExprs;
@@ -1789,7 +1790,7 @@ struct TileConverter : public OpConversionPattern<tosa::TileOp> {
 
     auto genericOp = rewriter.create<linalg::GenericOp>(
         loc, RankedTensorType::get(genericShape, elementTy), input,
-        ValueRange{initTensor}, affineMaps,
+        ValueRange{emptyTensor}, affineMaps,
         getNParallelLoopsAttrs(genericShape.size()),
         [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
           nestedBuilder.create<linalg::YieldOp>(op.getLoc(), *args.begin());
@@ -1919,24 +1920,23 @@ public:
     }
 
     // First fill the output buffer for the index.
-    auto initTensorIdx =
-        rewriter
-            .create<linalg::InitTensorOp>(loc, dynDims, resultTy.getShape(),
-                                          outElementTy)
-            .getResult();
+    auto emptyTensorIdx = rewriter
+                              .create<tensor::EmptyOp>(loc, resultTy.getShape(),
+                                                       outElementTy, dynDims)
+                              .getResult();
     auto fillValueIdx = rewriter.create<arith::ConstantOp>(
         loc, rewriter.getIntegerAttr(outElementTy, 0));
     auto filledTensorIdx =
         rewriter
             .create<linalg::FillOp>(loc, ValueRange{fillValueIdx},
-                                    ValueRange{initTensorIdx})
+                                    ValueRange{emptyTensorIdx})
             .result();
 
     // Second fill the output buffer for the running max.
-    auto initTensorMax = rewriter
-                             .create<linalg::InitTensorOp>(
-                                 loc, dynDims, resultTy.getShape(), inElementTy)
-                             .getResult();
+    auto emptyTensorMax = rewriter
+                              .create<tensor::EmptyOp>(loc, resultTy.getShape(),
+                                                       inElementTy, dynDims)
+                              .getResult();
     auto fillValueMaxAttr =
         createInitialValueForReduceOp(argmaxOp, inElementTy, rewriter);
 
@@ -1949,7 +1949,7 @@ public:
     auto filledTensorMax =
         rewriter
             .create<linalg::FillOp>(loc, ValueRange{fillValueMax},
-                                    ValueRange{initTensorMax})
+                                    ValueRange{emptyTensorMax})
             .result();
 
     // We need to reduce along the arg-max axis, with parallel operations along
@@ -2031,10 +2031,10 @@ public:
 
     auto loc = op.getLoc();
 
-    auto initTensor =
+    auto emptyTensor =
         rewriter
-            .create<linalg::InitTensorOp>(loc, dynamicDims, resultTy.getShape(),
-                                          resultElementTy)
+            .create<tensor::EmptyOp>(loc, resultTy.getShape(), resultElementTy,
+                                     dynamicDims)
             .getResult();
 
     SmallVector<AffineMap, 2> affineMaps = {
@@ -2046,7 +2046,7 @@ public:
 
     auto genericOp = rewriter.create<linalg::GenericOp>(
         loc, ArrayRef<Type>({resultTy}), ValueRange{indices},
-        ValueRange{initTensor}, affineMaps,
+        ValueRange{emptyTensor}, affineMaps,
         getNParallelLoopsAttrs(resultTy.getRank()),
         [&](OpBuilder &b, Location loc, ValueRange args) {
           auto indexValue = args[0];
@@ -2091,18 +2091,17 @@ public:
       }
     }
 
-    auto initTensor =
-        rewriter
-            .create<linalg::InitTensorOp>(loc, dynDims, resultTy.getShape(),
-                                          resultElementTy)
-            .getResult();
+    auto emptyTensor = rewriter
+                           .create<tensor::EmptyOp>(loc, resultTy.getShape(),
+                                                    resultElementTy, dynDims)
+                           .getResult();
 
     SmallVector<AffineMap, 2> affineMaps = {
         rewriter.getMultiDimIdentityMap(resultTy.getRank()),
         rewriter.getMultiDimIdentityMap(resultTy.getRank())};
 
     auto genericOp = rewriter.create<linalg::GenericOp>(
-        loc, resultTy, ValueRange({input}), ValueRange{initTensor}, affineMaps,
+        loc, resultTy, ValueRange({input}), ValueRange{emptyTensor}, affineMaps,
         getNParallelLoopsAttrs(resultTy.getRank()));
     rewriter.replaceOp(op, genericOp.getResult(0));
 

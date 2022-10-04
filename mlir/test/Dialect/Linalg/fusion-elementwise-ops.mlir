@@ -10,7 +10,7 @@ func.func @add_mul_fusion(%arg0: tensor<?x?xf32>, %arg1 : tensor<?x?xf32>, %arg2
   %c1 = arith.constant 1 : index
   %0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
-  %2 = linalg.init_tensor [%0, %1] : tensor<?x?xf32>
+  %2 = tensor.empty(%0, %1) : tensor<?x?xf32>
   %3 = linalg.generic {indexing_maps = [#map0, #map0, #map0], iterator_types = ["parallel", "parallel"]}
       ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%2 : tensor<?x?xf32>) {
@@ -52,7 +52,7 @@ func.func @scalar_add_mul_fusion(%arg0: tensor<?x?xf32>, %arg1 : f32, %arg2 : f3
   %c1 = arith.constant 1 : index
   %0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
-  %2 = linalg.init_tensor [%0, %1] : tensor<?x?xf32>
+  %2 = tensor.empty(%0, %1) : tensor<?x?xf32>
   %3 = linalg.generic {indexing_maps = [#map0, #map1, #map0], iterator_types = ["parallel", "parallel"]}
       ins(%arg0, %arg1 : tensor<?x?xf32>, f32)
       outs(%2 : tensor<?x?xf32>) {
@@ -94,7 +94,7 @@ func.func @transpose_add_mul_fusion(%arg0: tensor<?x?xf32>, %arg1 : tensor<?x?xf
   %c1 = arith.constant 1 : index
   %0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
-  %2 = linalg.init_tensor [%0, %1] : tensor<?x?xf32>
+  %2 = tensor.empty(%0, %1) : tensor<?x?xf32>
   %3 = linalg.generic {indexing_maps = [#map0, #map1, #map0], iterator_types = ["parallel", "parallel"]}
       ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%2 : tensor<?x?xf32>) {
@@ -128,7 +128,7 @@ func.func @add_transpose_mul_fusion(%arg0: tensor<?x?xf32>, %arg1 : tensor<?x?xf
   %c1 = arith.constant 1 : index
   %0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
-  %2 = linalg.init_tensor [%0, %1] : tensor<?x?xf32>
+  %2 = tensor.empty(%0, %1) : tensor<?x?xf32>
   %3 = linalg.generic {indexing_maps = [#map0, #map1, #map0], iterator_types = ["parallel", "parallel"]}
       ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%2 : tensor<?x?xf32>) {
@@ -162,7 +162,7 @@ func.func @add_broadcast_mul_fusion(%arg0: tensor<?xf32>, %arg1 : tensor<?xf32>,
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %0 = tensor.dim %arg0, %c0 : tensor<?xf32>
-  %1 = linalg.init_tensor [%0] : tensor<?xf32>
+  %1 = tensor.empty(%0) : tensor<?xf32>
   %2 = linalg.generic {indexing_maps = [#map2, #map2, #map2], iterator_types = ["parallel"]}
       ins(%arg0, %arg1 : tensor<?xf32>, tensor<?xf32>)
       outs(%1 : tensor<?xf32>) {
@@ -173,7 +173,7 @@ func.func @add_broadcast_mul_fusion(%arg0: tensor<?xf32>, %arg1 : tensor<?xf32>,
   // CHECK: linalg.generic {
   // CHECK-SAME: indexing_maps = {{\[}}[[$MAP1]], [[$MAP1]], [[$MAP0]], [[$MAP0]]
   %3 = tensor.dim %arg2, %c1 : tensor<?x?xf32>
-  %4 = linalg.init_tensor [%0, %3] : tensor<?x?xf32>
+  %4 = tensor.empty(%0, %3) : tensor<?x?xf32>
   %5 = linalg.generic {indexing_maps = [#map1, #map0, #map0], iterator_types = ["parallel", "parallel"]}
       ins(%2, %arg2 : tensor<?xf32>, tensor<?x?xf32>)
       outs(%4 : tensor<?x?xf32>){
@@ -192,7 +192,7 @@ func.func @add_broadcast_mul_fusion(%arg0: tensor<?xf32>, %arg1 : tensor<?xf32>,
 // CHECK-LABEL: @add_mul_scalar_fusion
 func.func @add_mul_scalar_fusion(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<f32>) -> tensor<f32>
 {
-  %0 = linalg.init_tensor [] : tensor<f32>
+  %0 = tensor.empty() : tensor<f32>
   %1 = linalg.generic {indexing_maps = [#map0, #map0, #map0], iterator_types = []}
       ins(%arg0, %arg1 : tensor<f32>, tensor<f32>)
       outs(%0 : tensor<f32>) {
@@ -226,7 +226,7 @@ func.func @generic_op_constant_fusion(%arg0 : tensor<5x?x?xf32>) -> tensor<5x?x?
   %cst = arith.constant dense<42.0> : tensor<5xf32>
   %0 = tensor.dim %arg0, %c1 : tensor<5x?x?xf32>
   %1 = tensor.dim %arg0, %c2 : tensor<5x?x?xf32>
-  %2 = linalg.init_tensor [5, %0, %1] : tensor<5x?x?xf32>
+  %2 = tensor.empty(%0, %1) : tensor<5x?x?xf32>
   %3 = linalg.generic {
     indexing_maps = [#map0, #map1, #map1],
     iterator_types = ["parallel", "parallel", "parallel"]}
@@ -258,7 +258,7 @@ func.func @generic_op_zero_dim_constant_fusion(%arg0 : tensor<5x?x?xf32>)
   %cst = arith.constant dense<42.0> : tensor<f32>
   %0 = tensor.dim %arg0, %c1 : tensor<5x?x?xf32>
   %1 = tensor.dim %arg0, %c2 : tensor<5x?x?xf32>
-  %2 = linalg.init_tensor [5, %0, %1] : tensor<5x?x?xf32>
+  %2 = tensor.empty(%0, %1) : tensor<5x?x?xf32>
   %3 = linalg.generic {
     indexing_maps = [#map0, #map1, #map1],
     iterator_types = ["parallel", "parallel", "parallel"]}
@@ -286,7 +286,7 @@ func.func @producer_indexed_consumer_fusion(%arg0: tensor<?x?xi32>,
   %c1 = arith.constant 1 : index
   %0 = tensor.dim %arg0, %c0 : tensor<?x?xi32>
   %1 = tensor.dim %arg0, %c1 : tensor<?x?xi32>
-  %2 = linalg.init_tensor [%0, %1] : tensor<?x?xi32>
+  %2 = tensor.empty(%0, %1) : tensor<?x?xi32>
   %3 = linalg.generic {
     indexing_maps = [#map0, #map0, #map0],
     iterator_types = ["parallel", "parallel"] }
@@ -337,7 +337,7 @@ func.func @indexed_producer_consumer_fusion(%arg0: tensor<?x?xi32>) -> tensor<?x
   %c1 = arith.constant 1 : index
   %0 = tensor.dim %arg0, %c0 : tensor<?x?xi32>
   %1 = tensor.dim %arg0, %c1 : tensor<?x?xi32>
-  %2 = linalg.init_tensor [%0, %1] : tensor<?x?xi32>
+  %2 = tensor.empty(%0, %1) : tensor<?x?xi32>
   %3 = linalg.generic {
     indexing_maps = [#map0, #map0],
     iterator_types = ["parallel", "parallel"] }
@@ -391,7 +391,7 @@ func.func @indexed_producer_indexed_consumer_fusion(%arg0: tensor<?x?xi32>)
   %c1 = arith.constant 1 : index
   %0 = tensor.dim %arg0, %c0 : tensor<?x?xi32>
   %1 = tensor.dim %arg0, %c1 : tensor<?x?xi32>
-  %2 = linalg.init_tensor [%0, %1] : tensor<?x?xi32>
+  %2 = tensor.empty(%0, %1) : tensor<?x?xi32>
   %3 = linalg.generic {
     indexing_maps = [#map0, #map0],
     iterator_types = ["parallel", "parallel"] }
@@ -453,7 +453,7 @@ func.func @one_dim_indexed_producer_consumer_fusion(%arg0 : tensor<?xi32>,
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %d0 = tensor.dim %arg0, %c0 : tensor<?xi32>
-  %0 = linalg.init_tensor [%d0] : tensor<?xi32>
+  %0 = tensor.empty(%d0) : tensor<?xi32>
   %1 = linalg.generic
       {indexing_maps = [#map1, #map1],
        iterator_types = ["parallel"]}
@@ -466,7 +466,7 @@ func.func @one_dim_indexed_producer_consumer_fusion(%arg0 : tensor<?xi32>,
       } -> tensor<?xi32>
   %2 = tensor.dim %arg1, %c0 : tensor<?x?xi32>
   %3 = tensor.dim %arg1, %c1 : tensor<?x?xi32>
-  %4 = linalg.init_tensor [%2, %3] : tensor<?x?xi32>
+  %4 = tensor.empty(%2, %3) : tensor<?x?xi32>
   %5 = linalg.generic
       {indexing_maps = [#map2, #map3, #map2],
        iterator_types = ["parallel", "parallel"]}
@@ -499,7 +499,7 @@ func.func @scalar_generic_fusion
 {
   %c0 = arith.constant 0 : index
   %cst = arith.constant dense<1.000000e+00> : tensor<10xf32>
-  %0 = linalg.init_tensor [] : tensor<f32>
+  %0 = tensor.empty() : tensor<f32>
   %1 = linalg.generic
     {indexing_maps = [affine_map<() -> ()>, affine_map<() -> ()>],
      iterator_types = []}
@@ -509,7 +509,7 @@ func.func @scalar_generic_fusion
       %4 = tensor.extract %arg0[%3, %c0, %c0] : tensor<5x1x1xf32>
       linalg.yield %4 : f32
     } -> tensor<f32>
-  %2 = linalg.init_tensor [10] : tensor<10xf32>
+  %2 = tensor.empty() : tensor<10xf32>
   %3 = linalg.generic
    {indexing_maps = [affine_map<(d0) -> ()>, affine_map<(d0) -> (d0)>,
                      affine_map<(d0) -> (d0)>],
@@ -538,7 +538,7 @@ func.func @scalar_generic_fusion
 
 func.func @constant_fusion(%arg0 : tensor<4xf32>) -> (tensor<4xf32>) {
   %cst = arith.constant dense<1.0> : tensor<4xf32>
-  %1 = linalg.init_tensor [4] : tensor<4xf32>
+  %1 = tensor.empty() : tensor<4xf32>
   %2 = linalg.generic
     {indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>,
                       affine_map<(d0) -> (d0)>],
@@ -555,7 +555,7 @@ func.func @constant_fusion(%arg0 : tensor<4xf32>) -> (tensor<4xf32>) {
 //  CHECK-DAG: #[[MAP:.+]] = affine_map<(d0) -> (d0)>
 //      CHECK: func @constant_fusion(%[[ARG0:.+]]: tensor<4xf32>)
 //  CHECK-DAG:   %[[CST:.+]] = arith.constant 1.000000e+00 : f32
-//  CHECK-DAG:   %[[T0:.+]] = linalg.init_tensor [4] : tensor<4xf32>
+//  CHECK-DAG:   %[[T0:.+]] = tensor.empty() : tensor<4xf32>
 //      CHECK:   %[[T1:.+]] = linalg.generic
 // CHECK-SAME:     indexing_maps = [#[[MAP]], #[[MAP]]]
 // CHECK-SAME:     ins(%[[ARG0]] : tensor<4xf32>)
@@ -574,7 +574,7 @@ func.func @constant_fusion(%arg0 : tensor<4xf32>) -> (tensor<4xf32>) {
 func.func @consumer_with_reduction(%arg0: tensor<1x10xf32>,
                               %arg1: tensor<1x10xf32>,
                               %arg2: tensor<1xf32>) -> tensor<1xf32> {
-  %init = linalg.init_tensor [1, 10] : tensor<1x10xf32>
+  %init = tensor.empty() : tensor<1x10xf32>
   %0 = linalg.generic
     {indexing_maps = [#map0, #map0, #map0],
      iterator_types = ["parallel", "parallel"]}
@@ -620,7 +620,7 @@ func.func @sigmoid_dynamic_dim(%0: tensor<?x1xf32>) -> tensor<?x1xf32> {
   %shape = shape.shape_of %0 : tensor<?x1xf32> -> tensor<?xindex>
   %extend = shape.to_extent_tensor %shape : tensor<?xindex> -> tensor<2xindex>
   %extracted = tensor.extract %extend[%c0] : tensor<2xindex>
-  %init0 = linalg.init_tensor [%extracted, 1] : tensor<?x1xf32>
+  %init0 = tensor.empty(%extracted) : tensor<?x1xf32>
   %1 = linalg.generic {indexing_maps = [
     affine_map<(d0, d1) -> (d0, d1)>],
     iterator_types = ["parallel", "parallel"]
@@ -630,7 +630,7 @@ func.func @sigmoid_dynamic_dim(%0: tensor<?x1xf32>) -> tensor<?x1xf32> {
       linalg.yield %cp5 : f32
   } -> tensor<?x1xf32>
   %d0 = tensor.dim %0, %c0 : tensor<?x1xf32>
-  %init1 = linalg.init_tensor [%d0, 1] : tensor<?x1xf32>
+  %init1 = tensor.empty(%d0) : tensor<?x1xf32>
   %2 = linalg.generic {indexing_maps = [
     affine_map<(d0, d1) -> (d0, d1)>,
     affine_map<(d0, d1) -> (d0, d1)>,
@@ -692,7 +692,7 @@ func.func @no_fuse_constant_with_reduction() -> tensor<3xf32>
   // CHECK-SAME:   ins(%[[CONST]] : tensor<3x2xf32>)
   //      CHECK: return %[[RESULT]]
   %three = arith.constant dense<3.0> : tensor<3x2xf32>
-  %init = linalg.init_tensor [3] : tensor<3xf32>
+  %init = tensor.empty() : tensor<3xf32>
   %result = linalg.generic {
       indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                        affine_map<(d0, d1) -> (d0)>],
@@ -732,12 +732,12 @@ func.func @break_outs_dependency(%arg0 : tensor<?x?xf32>) -> tensor<?x?xf32>
 //  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
 //  CHECK-DAG:   %[[D0:.+]] = tensor.dim %[[ARG0]], %[[C0]]
 //  CHECK-DAG:   %[[D1:.+]] = tensor.dim %[[ARG0]], %[[C1]]
-//  CHECK-DAG:   %[[INIT:.+]] = linalg.init_tensor [%[[D0]], %[[D1]]]
+//  CHECK-DAG:   %[[INIT:.+]] = tensor.empty(%[[D0]], %[[D1]])
 //      CHECK:   %[[GENERIC1:.+]] = linalg.generic
 // CHECK-SAME:     outs(%[[INIT]] : tensor<?x?xf32>)
 //  CHECK-DAG:   %[[D0:.+]] = tensor.dim %[[GENERIC1]], %[[C0]]
 //  CHECK-DAG:   %[[D1:.+]] = tensor.dim %[[GENERIC1]], %[[C1]]
-//  CHECK-DAG:   %[[INIT:.+]] = linalg.init_tensor [%[[D0]], %[[D1]]]
+//  CHECK-DAG:   %[[INIT:.+]] = tensor.empty(%[[D0]], %[[D1]])
 //      CHECK:   %[[RESULT:.+]] = linalg.generic
 // CHECK-SAME:     outs(%[[INIT]] : tensor<?x?xf32>)
 
@@ -750,8 +750,8 @@ func.func @fuse_scalar_constant(%arg0 : tensor<?x?xf32>) -> (tensor<?x?xf32>, te
   %c1 = arith.constant 1 : index
   %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %d1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
-  %0 = linalg.init_tensor[%d0, %d1] : tensor<?x?xf32>
-  %1 = linalg.init_tensor[%d0, %d1] : tensor<?x?xi32>
+  %0 = tensor.empty(%d0, %d1) : tensor<?x?xf32>
+  %1 = tensor.empty(%d0, %d1) : tensor<?x?xi32>
   %2:2 = linalg.generic {
       indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                        affine_map<(d0, d1) -> ()>,
@@ -925,7 +925,7 @@ func.func @transpose_nofold_multi_ops_in_region(%init: tensor<3x2xf32>) -> tenso
 // CHECK: linalg.generic
 func.func @no_fusion_missing_reduction_shape(%arg0: tensor<f32>, %arg1: index) -> tensor<?xf32> {
   %cst = arith.constant 0xFF800000 : f32
-  %4 = linalg.init_tensor [%arg1, %arg1] : tensor<?x?xf32>
+  %4 = tensor.empty(%arg1, %arg1) : tensor<?x?xf32>
   %5 = linalg.generic {
     indexing_maps = [#map0, #map1],
     iterator_types = ["parallel", "parallel"]
@@ -933,7 +933,7 @@ func.func @no_fusion_missing_reduction_shape(%arg0: tensor<f32>, %arg1: index) -
   ^bb0(%arg2: f32, %arg3: f32):  
     linalg.yield %arg2 : f32
   } -> tensor<?x?xf32>
-  %6 = linalg.init_tensor [%arg1] : tensor<?xf32>
+  %6 = tensor.empty(%arg1) : tensor<?xf32>
   %7 = linalg.fill ins(%cst : f32) outs(%6 : tensor<?xf32>) -> tensor<?xf32>
   %8 = linalg.generic {
     indexing_maps = [#map2, #map3],
@@ -959,7 +959,7 @@ func.func @fusion_different_axes(%arg0 : tensor<5000xi64>, %arg1 : tensor<5000xi
           %23 = arith.index_cast %22 : index to i64
           linalg.yield %23 : i64
         } -> tensor<5000xi64>
-  %1 = linalg.init_tensor [5000] : tensor<5000xi32>
+  %1 = tensor.empty() : tensor<5000xi32>
   %2 = linalg.generic {
         indexing_maps = [affine_map<(d0, d1) -> (d0)>, affine_map<(d0, d1) -> (d1)>],
         iterator_types = ["parallel", "parallel"]}
@@ -976,8 +976,8 @@ func.func @fusion_different_axes(%arg0 : tensor<5000xi64>, %arg1 : tensor<5000xi
 //      CHECK: func @fusion_different_axes(
 // CHECK-SAME:     %[[ARG0:.+]]: tensor<5000xi64>
 // CHECK-SAME:     %[[ARG1:.+]]: tensor<5000xi32>
-//  CHECK-DAG:   %[[INIT0:.+]] = linalg.init_tensor [5000] : tensor<5000xi64>
-//  CHECK-DAG:   %[[INIT1:.+]] = linalg.init_tensor [5000] : tensor<5000xi32>
+//  CHECK-DAG:   %[[INIT0:.+]] = tensor.empty() : tensor<5000xi64>
+//  CHECK-DAG:   %[[INIT1:.+]] = tensor.empty() : tensor<5000xi32>
 //      CHECK:   %[[RESULT:.+]]:2 = linalg.generic
 // CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]]]
 // CHECK-SAME:       outs(%[[INIT0]], %[[INIT1]] :
@@ -1004,9 +1004,9 @@ func.func @fold_fill_generic_basic(%arg0: tensor<?xf32>) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant 7.0 : f32
   %0 = tensor.dim %arg0, %c0 : tensor<?xf32>
-  %1 = linalg.init_tensor [%0] : tensor<?xf32>
+  %1 = tensor.empty(%0) : tensor<?xf32>
   %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<?xf32>) -> tensor<?xf32>
-  %3 = linalg.init_tensor [%0] : tensor<?xf32>
+  %3 = tensor.empty(%0) : tensor<?xf32>
   %4 = linalg.generic {indexing_maps = [#map0, #map0, #map0], iterator_types=["parallel"]} ins(%arg0, %2 : tensor<?xf32>, tensor<?xf32>) outs (%3:tensor<?xf32>) {
   ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):
     %5 = arith.addf  %arg1, %arg2 : f32
@@ -1031,11 +1031,11 @@ func.func @fold_fill_generic_mixedaccess(%arg0: tensor<?x?xf32>) -> (tensor<?x?x
   %cst2 = arith.constant 6.0 : f32
   %0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %1 = tensor.dim %arg0, %c1 : tensor<?x?xf32>
-  %2 = linalg.init_tensor [%0, %1] : tensor<?x?xf32>
+  %2 = tensor.empty(%0, %1) : tensor<?x?xf32>
   %3 = linalg.fill ins(%cst1 : f32) outs(%2 : tensor<?x?xf32>) -> tensor<?x?xf32>
-  %4 = linalg.init_tensor [%1, %0] : tensor<?x?xf32>
+  %4 = tensor.empty(%1, %0) : tensor<?x?xf32>
   %5 = linalg.fill ins(%cst2 : f32) outs(%4 : tensor<?x?xf32>) -> tensor<?x?xf32>
-  %6 = linalg.init_tensor [%0, %1] : tensor<?x?xf32>
+  %6 = tensor.empty(%0, %1) : tensor<?x?xf32>
   %7 = linalg.generic {indexing_maps = [#map0, #map1, #map0], iterator_types=["parallel","parallel"]} ins(%3, %5 : tensor<?x?xf32>, tensor<?x?xf32>) outs (%6:tensor<?x?xf32>) {
   ^bb0(%arg1: f32, %arg2: f32, %arg3: f32):
     %8 = arith.divf  %arg1, %arg2 : f32
@@ -1049,8 +1049,8 @@ func.func @fold_fill_generic_mixedaccess(%arg0: tensor<?x?xf32>) -> (tensor<?x?x
 #map = affine_map<() -> ()>
 module {
   func.func @fuse_multi_result_producer(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<f32>, %arg3: tensor<f32>, %arg4: tensor<f32>) -> tensor<f32> {
-    %0 = linalg.init_tensor [] : tensor<f32>
-    %1 = linalg.init_tensor [] : tensor<f32>
+    %0 = tensor.empty() : tensor<f32>
+    %1 = tensor.empty() : tensor<f32>
     %2:2 = linalg.generic {
       indexing_maps = [#map, #map, #map, #map, #map], iterator_types = []}
       ins(%arg0, %arg1, %arg1 : tensor<f32>, tensor<f32>, tensor<f32>) outs(%0, %1 : tensor<f32>, tensor<f32>) {
@@ -1073,7 +1073,7 @@ module {
 // CHECK-LABEL: func.func @fuse_multi_result_producer
 //  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<f32>
 //  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<f32>
-//       CHECK:   %[[INIT:.+]] = linalg.init_tensor
+//       CHECK:   %[[INIT:.+]] = tensor.empty
 //       CHECK:   %[[GENERIC:.+]] = linalg.generic
 //  CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]] :
 //  CHECK-SAME:       outs(%[[INIT]] :

@@ -59,9 +59,9 @@ transform.with_pdl_patterns {
 //  CHECK-SAME: (%[[INPUT:.+]]: tensor<12x7x25xf32>)
 func.func @interchange_reduction(%input: tensor<12x7x25xf32>) -> tensor<12x25xf32> {
   %five = arith.constant 5.0 : f32
-  %init = linalg.init_tensor [12, 25] : tensor<12x25xf32>
+  %init = tensor.empty() : tensor<12x25xf32>
 
-//       CHECK: %[[INIT:.+]] = linalg.init_tensor [12, 25]
+//       CHECK: %[[INIT:.+]] = tensor.empty()
 //   CHECK-DAG: %[[C5:.+]] = arith.constant 5 : index
 //   CHECK-DAG: %[[C7:.+]] = arith.constant 7 : index
 //       CHECK: scf.for %[[IV0:.+]] = %{{.+}} to %{{.+}} step %[[C5]] iter_args(%[[FOR_ARG0:.+]] = %[[INIT]])

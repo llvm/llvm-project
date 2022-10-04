@@ -1523,3 +1523,108 @@ func.func @dont_fold_mismatched_parameters(%input: tensor<1x2x2x4xf32>) -> tenso
   %1 = tensor.insert_slice %0 into %input[%c0, 1, %c0, 0] [1, 1, 2, 4] [1, 1, 1, 1] : tensor<1x2x4xf32> into tensor<1x2x2x4xf32>
   return %1: tensor<1x2x2x4xf32>
 }
+
+// -----
+
+func.func @empty_canonicalize() -> (tensor<4x5x?xf32>) {
+  %c6 = arith.constant 6 : index
+  %0 = tensor.empty(%c6) : tensor<4x5x?xf32>
+  return %0 : tensor<4x5x?xf32>
+}
+// CHECK: func @empty_canonicalize
+// CHECK:   %[[T0:.+]] = tensor.empty() : tensor<4x5x6xf32>
+// CHECK:   %[[T1:.+]] = tensor.cast %[[T0]] : tensor<4x5x6xf32> to tensor<4x5x?xf32>
+// CHECK:   return %[[T1]]
+
+// -----
+
+func.func @empty_reshape_expansion(%arg0 : index) -> tensor<2x3x5x4x?x7xf32> {
+  %0 = tensor.empty(%arg0) : tensor<6x5x?xf32>
+  %1 = tensor.expand_shape %0 [[0, 1], [2], [3, 4, 5]]
+      : tensor<6x5x?xf32> into tensor<2x3x5x4x?x7xf32>
+  return %1 : tensor<2x3x5x4x?x7xf32>
+}
+//      CHECK: #[[MAP:.+]] = affine_map<()[s0] -> (s0 floordiv 28)>
+//      CHECK: func @empty_reshape_expansion
+// CHECK-SAME:     %[[ARG0:.+]]: index
+// CHECK-NEXT:   %[[D:.+]] = affine.apply #[[MAP]]()[%[[ARG0]]]
+// CHECK-NEXT:   %[[INIT:.+]] = tensor.empty(%[[D]])
+// CHECK-NEXT:   return %[[INIT]]
+
+// -----
+
+func.func @empty_reshape_collapse(%arg0 : index) -> tensor<6x5x?xf32> {
+  %0 = tensor.empty(%arg0) : tensor<2x3x5x4x?x7xf32>
+  %1 = tensor.collapse_shape %0 [[0, 1], [2], [3, 4, 5]]
+      : tensor<2x3x5x4x?x7xf32> into tensor<6x5x?xf32>
+  return %1 : tensor<6x5x?xf32>
+}
+//      CHECK: #[[MAP:.+]] = affine_map<()[s0] -> (s0 * 28)>
+//      CHECK: func @empty_reshape_collapse
+// CHECK-SAME:     %[[ARG0:.+]]: index
+// CHECK-NEXT:   %[[D:.+]] = affine.apply #[[MAP]]()[%[[ARG0]]]
+// CHECK-NEXT:   %[[INIT:.+]] = tensor.empty(%[[D]])
+// CHECK-NEXT:   return %[[INIT]]
+
+// -----
+
+func.func @fold_empty_tensor_with_slice
+  (%arg0 : index, %arg1 : index) -> tensor<5x?x20xf32>
+{
+  %0 = tensor.empty(%arg0) : tensor<?x10x40xf32>
+  %1 = tensor.extract_slice %0[0, 0, 0] [5, %arg1, 20] [1, 1, 1]
+    : tensor<?x10x40xf32> to tensor<5x?x20xf32>
+  return %1 : tensor<5x?x20xf32>
+}
+//      CHECK: func @fold_empty_tensor_with_slice
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//      CHECK:   %[[T0:.+]] = tensor.empty(%[[ARG1]])
+//      CHECK:   return %[[T0]]
+
+// -----
+
+func.func @fold_empty_tensor_with_cast(%arg0 : index) -> tensor<1x12xf32> {
+  %0 = tensor.empty(%arg0) : tensor<?x12xf32>
+  %1 = tensor.cast %0 : tensor<?x12xf32> to tensor<1x12xf32>
+  return %1 : tensor<1x12xf32>
+}
+//      CHECK: func @fold_empty_tensor_with_cast(%[[ARG0:.+]]: index)
+//      CHECK:   %[[T0:.+]] = tensor.empty() : tensor<1x12xf32>
+//      CHECK:   return %[[T0]] : tensor<1x12xf32>
+
+// -----
+
+func.func private @some_use(%i : index, %j : index)
+
+// CHECK-LABEL: func @empty_tensor_canonicalize
+//  CHECK-SAME:   %[[I:.*]]: index
+func.func @empty_tensor_canonicalize(%i : index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  // CHECK-NOT: tensor.empty
+  %0 = tensor.empty(%i) : tensor<?x42xf32>
+
+  // CHECK-NOT: tensor.dim
+  %1 = tensor.dim %0, %c0: tensor<?x42xf32>
+  %2 = tensor.dim %0, %c1: tensor<?x42xf32>
+
+  // CHECK: %[[c42:.*]] = arith.constant 42 : index
+  // CHECK: call @some_use(%[[I]], %[[c42]])
+  call @some_use(%1, %2) : (index, index) -> ()
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @rank_reducing_empty_tensor_extract
+func.func @rank_reducing_empty_tensor_extract(%sz : index, %idx : index) -> tensor<2xf32> {
+  // CHECK: tensor.empty() : tensor<2xf32>
+  %a = tensor.empty(%sz) : tensor<?x2xf32>
+
+  // CHECK-NOT: extract
+  %r = tensor.extract_slice %a[%idx, 0] [1, 2] [1, 1] : tensor<?x2xf32> to tensor<2xf32>
+  return %r: tensor<2xf32>
+}

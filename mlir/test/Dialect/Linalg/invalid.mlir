@@ -323,36 +323,9 @@ func.func @matching_inits(%m: memref<?x?xf32>, %t: tensor<?x?xf32>) {
 
 // -----
 
-func.func @init_tensor_err(%arg0 : index, %arg1 : index)
-{
-  // expected-error @+1 {{specified type 'tensor<4x?x?x5xf32>' does not match the inferred type 'tensor<4x5x?x?xf32>'}}
-  %1 = linalg.init_tensor [4, 5, %arg0, %arg1] : tensor<4x?x?x5xf32>
-  return
-}
-
-// -----
-
-func.func @init_tensor_err(%arg0 : index)
-{
-  // expected-error @+1 {{expected 4 sizes values}}
-  %1 = linalg.init_tensor [4, 5, %arg0] : tensor<4x?x?x5xf32>
-  return
-}
-
-// -----
-
-func.func @init_tensor_err(%arg0 : index)
-{
-  // expected-error @+1 {{expected 2 dynamic sizes values}}
-  %1 = "linalg.init_tensor"(%arg0) {static_sizes = [4, -1, -1, 5]} : (index) -> tensor<4x?x?x5xf32>
-  return
-}
-
-// -----
-
 func.func @illegal_fill_tensor_no_return(%arg0 : index, %arg1 : index, %arg2 : f32)
 {
-  %0 = linalg.init_tensor [%arg0, %arg1] : tensor<?x?xf32>
+  %0 = tensor.empty(%arg0, %arg1) : tensor<?x?xf32>
   // expected-error @+1 {{expected the number of results (0) to be equal to the number of output tensors (1)}}
   linalg.fill ins(%arg2 : f32) outs(%0 : tensor<?x?xf32>)
 }
