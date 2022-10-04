@@ -15,9 +15,13 @@
 
 #include "mlir/Pass/Pass.h"
 
+namespace clang {
+class ASTContext;
+}
 namespace mlir {
 
 std::unique_ptr<Pass> createLifetimeCheckPass();
+std::unique_ptr<Pass> createLifetimeCheckPass(clang::ASTContext *astCtx);
 std::unique_ptr<Pass> createMergeCleanupsPass();
 
 //===----------------------------------------------------------------------===//
