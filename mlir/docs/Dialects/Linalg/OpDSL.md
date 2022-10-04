@@ -318,8 +318,8 @@ extends to a multi-dimensional pointwise computation. As a result, we may use
 `fill` with arbitrary ranked output tensors:
 
 ```python
-tensor_2d = linalg.InitTensorOp([4, 8], f32)
-tensor_3d = linalg.InitTensorOp([4, 8, 16], f32)
+tensor_2d = tensor.EmptyOp([4, 8], f32)
+tensor_3d = tensor.EmptyOp([4, 8, 16], f32)
 fill(value, outs=[tensor_2d])
 fill(value, outs=[tensor_3d])
 ```

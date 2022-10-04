@@ -15,7 +15,7 @@ func.func @main() -> (tensor<i32>) attributes {} {
   cf.br ^bb1(%0 : tensor<i32>)
 
 ^bb1(%2: tensor<i32>):  // 2 preds: ^bb0, ^bb2
-  %3 = linalg.init_tensor [] : tensor<i1>
+  %3 = tensor.empty() : tensor<i1>
   %4 = linalg.generic #attrs
     ins(%2, %1 : tensor<i32>, tensor<i32>)
     outs(%3 : tensor<i1>) {
@@ -27,7 +27,7 @@ func.func @main() -> (tensor<i32>) attributes {} {
   cf.cond_br %5, ^bb2(%2 : tensor<i32>), ^bb3(%2 : tensor<i32>)
 
 ^bb2(%6: tensor<i32>):  // pred: ^bb1
-  %7 = linalg.init_tensor [] : tensor<i32>
+  %7 = tensor.empty() : tensor<i32>
   %8 = linalg.generic #attrs
     ins(%6, %6 : tensor<i32>, tensor<i32>)
     outs(%7 : tensor<i32>) {
@@ -76,7 +76,7 @@ func.func @main() -> (tensor<i32>) attributes {} {
   cf.br ^bb1(%0 : tensor<i32>)
 
 ^bb1(%2: tensor<i32>):  // 2 preds: ^bb0, ^bb2
-  %3 = linalg.init_tensor [] : tensor<i1>
+  %3 = tensor.empty() : tensor<i1>
   %4 = linalg.generic #attrs
     ins(%2, %1 : tensor<i32>, tensor<i32>)
     outs(%3 : tensor<i1>) {
@@ -88,7 +88,7 @@ func.func @main() -> (tensor<i32>) attributes {} {
   cf.cond_br %5, ^bb2(%2 : tensor<i32>), ^bb3(%2 : tensor<i32>)
 
 ^bb2(%6: tensor<i32>):  // pred: ^bb1
-  %7 = linalg.init_tensor [] : tensor<i32>
+  %7 = tensor.empty() : tensor<i32>
   %8 = linalg.generic #attrs
     ins(%6, %6 : tensor<i32>, tensor<i32>)
     outs(%7 : tensor<i32>) {
@@ -139,7 +139,7 @@ func.func @main() -> (tensor<i32>) attributes {} {
   cf.br ^bb1(%0 : tensor<i32>)
 
 ^bb1(%2: tensor<i32>):  // 2 preds: ^bb0, ^bb2
-  %3 = linalg.init_tensor [] : tensor<i1>
+  %3 = tensor.empty() : tensor<i1>
   %4 = linalg.generic #attrs
     ins(%2, %1 : tensor<i32>, tensor<i32>)
     outs(%3 : tensor<i1>) {
@@ -156,7 +156,7 @@ func.func @main() -> (tensor<i32>) attributes {} {
 
 ^bb2(%6: tensor<i32>):  // pred: ^bb1
   %12 = tensor.from_elements %c10 : tensor<i32>
-  %7 = linalg.init_tensor [] : tensor<i32>
+  %7 = tensor.empty() : tensor<i32>
   %8 = linalg.generic #attrs
     ins(%6, %12 : tensor<i32>, tensor<i32>)
     outs(%7 : tensor<i32>) {

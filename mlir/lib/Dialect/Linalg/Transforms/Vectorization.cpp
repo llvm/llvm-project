@@ -680,7 +680,7 @@ static SmallVector<Value> ofrToIndexValues(OpBuilder &builder, Location loc,
   return result;
 }
 
-/// Rewrite a tensor::PadOp into a sequence of InitTensorOp, FillOp and
+/// Rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp and
 /// InsertSliceOp. For now, only constant padding values are supported.
 /// If there is enough static type information, TransferReadOps and
 /// TransferWriteOps may be generated instead of InsertSliceOps.

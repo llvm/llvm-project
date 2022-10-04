@@ -13,6 +13,14 @@ func.func @cast(%arg0: tensor<*xf32>, %arg1 : tensor<4x4xf32>, %arg2: tensor<?x?
   return
 }
 
+// CHECK-LABEL: func @empty(
+//  CHECK-SAME:             %[[sz:.*]]: index
+func.func @empty(%sz: index) -> tensor<5x?x6xf32> {
+  // CHECK: tensor.empty(%[[sz]]) : tensor<5x?x6xf32>
+  %0 = tensor.empty(%sz) : tensor<5x?x6xf32>
+  return %0 : tensor<5x?x6xf32>
+}
+
 // CHECK-LABEL:   func @extract(
 // CHECK-SAME:                  %[[TENSOR:.*]]: tensor<?x?x?xf32>,
 // CHECK-SAME:                  %[[INDEX:.*]]: index) {

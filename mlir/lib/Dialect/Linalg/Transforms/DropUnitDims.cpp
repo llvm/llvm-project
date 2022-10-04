@@ -540,8 +540,8 @@ void mlir::linalg::populateFoldUnitExtentDimsPatterns(
                RankReducedInsertSliceOp<tensor::ParallelInsertSliceOp>>(
       context);
   linalg::FillOp::getCanonicalizationPatterns(patterns, context);
-  linalg::InitTensorOp::getCanonicalizationPatterns(patterns, context);
   tensor::CollapseShapeOp::getCanonicalizationPatterns(patterns, context);
+  tensor::EmptyOp::getCanonicalizationPatterns(patterns, context);
   tensor::ExpandShapeOp::getCanonicalizationPatterns(patterns, context);
 }
 

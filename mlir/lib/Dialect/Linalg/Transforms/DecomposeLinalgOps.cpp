@@ -46,7 +46,7 @@ namespace {
 /// gets split into
 ///
 /// ```mlir
-/// %init = linalg.init_tensor ...
+/// %init = tensor.empty ...
 /// %op0:3 = linalg.generic ... ins(%arg0, %arg1, %arg2 : ...)
 ///      outs(%init0, %init1, %init : ...)
 ///    ^bb0(%b0: ... , %b1: ... , %b2: ... , %b3: ..., %b4: ..., %b5: ...):
@@ -65,7 +65,7 @@ namespace {
 /// After canonicalization this is expected to be
 ///
 /// ```mlir
-/// %init = linalg.init_tensor ...
+/// %init = tensor.empty ...
 /// %op0 = linalg.generic ... ins(%arg0, %arg1, : ...)
 ///      outs(%init : ...)
 ///    ^bb0(%b0: ... , %b1: ... , %b2: ...):
@@ -186,10 +186,10 @@ DecomposeLinalgOp::createPeeledGenericOp(GenericOp genericOp,
 
     // Fall back path, use an `init_tensor` and identity indexing map.
     AffineMap indexingMap = rewriter.getMultiDimIdentityMap(domain.size());
-    Value initTensor = rewriter.create<linalg::InitTensorOp>(
-        loc, domain, scalarOpResult.getType());
-    newInitValues.push_back(initTensor);
-    newResultTypes.push_back(initTensor.getType());
+    Value emptyTensor =
+        rewriter.create<tensor::EmptyOp>(loc, domain, scalarOpResult.getType());
+    newInitValues.push_back(emptyTensor);
+    newResultTypes.push_back(emptyTensor.getType());
     peeledGenericOpIndexingMaps.push_back(indexingMap);
   }
 

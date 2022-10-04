@@ -6,7 +6,7 @@ func.func @if_true_test(%arg0: i1, %arg1: i32) -> tensor<i32> attributes {} {
   %arg1_t = tensor.from_elements %arg1 : tensor<i32>
 
   %cst = arith.constant dense<10> : tensor<i32>
-  %2 = linalg.init_tensor [] : tensor<i8>
+  %2 = tensor.empty() : tensor<i8>
   %3 = linalg.generic
     {indexing_maps = [affine_map<() -> ()>, affine_map<() -> ()>], iterator_types = []}
     ins(%arg0_t : tensor<i1>)
@@ -19,7 +19,7 @@ func.func @if_true_test(%arg0: i1, %arg1: i32) -> tensor<i32> attributes {} {
   %5 = arith.trunci %4 : i8 to i1
   cf.cond_br %5, ^bb1, ^bb2(%arg1_t : tensor<i32>)
 ^bb1:
-  %6 = linalg.init_tensor [] : tensor<i32>
+  %6 = tensor.empty() : tensor<i32>
   %7 = linalg.generic
     {indexing_maps = [affine_map<() -> ()>, affine_map<() -> ()>, affine_map<() -> ()>], iterator_types = []}
     ins(%arg1_t, %cst : tensor<i32>, tensor<i32>)
