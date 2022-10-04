@@ -16,6 +16,8 @@ namespace __llvm_libc {
 
 cpp::string_view get_error_string(int err_num);
 
+cpp::string_view get_error_string(int err_num, cpp::string_view buffer);
+
 } // namespace __llvm_libc
 
 #endif // LLVM_LIBC_SRC_SUPPORT_ERROR_TO_STRING
