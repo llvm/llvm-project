@@ -537,10 +537,10 @@ define fastcc <vscale x 32 x i32> @pass_vector_arg_indirect_stack(<vscale x 32 x
 ; RV32-NEXT:    li a5, 5
 ; RV32-NEXT:    li a6, 6
 ; RV32-NEXT:    li a7, 7
-; RV32-NEXT:    csrr t0, vlenb
-; RV32-NEXT:    slli t0, t0, 4
-; RV32-NEXT:    add t0, sp, t0
-; RV32-NEXT:    addi t2, t0, 128
+; RV32-NEXT:    csrr t2, vlenb
+; RV32-NEXT:    slli t2, t2, 4
+; RV32-NEXT:    add t2, sp, t2
+; RV32-NEXT:    addi t2, t2, 128
 ; RV32-NEXT:    addi t4, sp, 128
 ; RV32-NEXT:    li t6, 8
 ; RV32-NEXT:    vs8r.v v8, (a0)
@@ -585,10 +585,10 @@ define fastcc <vscale x 32 x i32> @pass_vector_arg_indirect_stack(<vscale x 32 x
 ; RV64-NEXT:    li a5, 5
 ; RV64-NEXT:    li a6, 6
 ; RV64-NEXT:    li a7, 7
-; RV64-NEXT:    csrr t0, vlenb
-; RV64-NEXT:    slli t0, t0, 4
-; RV64-NEXT:    add t0, sp, t0
-; RV64-NEXT:    addi t2, t0, 128
+; RV64-NEXT:    csrr t2, vlenb
+; RV64-NEXT:    slli t2, t2, 4
+; RV64-NEXT:    add t2, sp, t2
+; RV64-NEXT:    addi t2, t2, 128
 ; RV64-NEXT:    addi t4, sp, 128
 ; RV64-NEXT:    li t6, 8
 ; RV64-NEXT:    vs8r.v v8, (a0)
