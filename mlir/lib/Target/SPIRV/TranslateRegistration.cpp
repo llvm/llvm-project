@@ -67,7 +67,7 @@ static OwningOpRef<ModuleOp> deserializeModule(const llvm::MemoryBuffer *input,
 namespace mlir {
 void registerFromSPIRVTranslation() {
   TranslateToMLIRRegistration fromBinary(
-      "deserialize-spirv",
+      "deserialize-spirv", "deserializes the SPIR-V module",
       [](llvm::SourceMgr &sourceMgr, MLIRContext *context) {
         assert(sourceMgr.getNumBuffers() == 1 && "expected one buffer");
         return deserializeModule(
@@ -107,7 +107,7 @@ static LogicalResult serializeModule(ModuleOp module, raw_ostream &output) {
 namespace mlir {
 void registerToSPIRVTranslation() {
   TranslateFromMLIRRegistration toBinary(
-      "serialize-spirv",
+      "serialize-spirv", "serialize SPIR-V dialect",
       [](ModuleOp module, raw_ostream &output) {
         return serializeModule(module, output);
       },
@@ -162,7 +162,7 @@ static LogicalResult roundTripModule(ModuleOp srcModule, bool emitDebugInfo,
 namespace mlir {
 void registerTestRoundtripSPIRV() {
   TranslateFromMLIRRegistration roundtrip(
-      "test-spirv-roundtrip",
+      "test-spirv-roundtrip", "test roundtrip in SPIR-V dialect",
       [](ModuleOp module, raw_ostream &output) {
         return roundTripModule(module, /*emitDebugInfo=*/false, output);
       },
@@ -173,7 +173,7 @@ void registerTestRoundtripSPIRV() {
 
 void registerTestRoundtripDebugSPIRV() {
   TranslateFromMLIRRegistration roundtrip(
-      "test-spirv-roundtrip-debug",
+      "test-spirv-roundtrip-debug", "test roundtrip debug in SPIR-V",
       [](ModuleOp module, raw_ostream &output) {
         return roundTripModule(module, /*emitDebugInfo=*/true, output);
       },
