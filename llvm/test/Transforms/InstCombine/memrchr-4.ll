@@ -95,7 +95,7 @@ define i8* @call_memrchr_a1110111_c_7(i32 %C) {
 
 define i8* @call_memrchr_a1110111_c_n(i32 %C, i64 %N) {
 ; CHECK-LABEL: @call_memrchr_a1110111_c_n(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @a1110111, i64 0, i64 0), i32 [[C:%.*]], i64 [[N:%.*]])
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @memrchr(i8* nonnull getelementptr inbounds ([7 x i8], [7 x i8]* @a1110111, i64 0, i64 0), i32 [[C:%.*]], i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
 

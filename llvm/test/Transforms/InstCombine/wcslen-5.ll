@@ -21,7 +21,7 @@ define dso_local i64 @fold_wcslen_s3_pi_s5(i1 zeroext %0, i64 %1) {
 ; CHECK-LABEL: @fold_wcslen_s3_pi_s5(
 ; CHECK-NEXT:    [[PS3_PI:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* @ws3, i64 0, i64 [[TMP1:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP0:%.*]], i32* [[PS3_PI]], i32* getelementptr inbounds ([6 x i32], [6 x i32]* @ws5, i64 0, i64 0)
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(i32* [[SEL]])
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(i32* nonnull [[SEL]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
@@ -45,7 +45,7 @@ define dso_local i64 @fold_wcslen_s3_pi_p1_s5(i1 zeroext %0, i64 %1) {
 ; CHECK-NEXT:    [[PS3_PI:%.*]] = getelementptr inbounds [4 x i32], [4 x i32]* @ws3, i64 0, i64 [[TMP1:%.*]]
 ; CHECK-NEXT:    [[PS3_PI_P1:%.*]] = getelementptr inbounds i32, i32* [[PS3_PI]], i64 1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP0:%.*]], i32* [[PS3_PI_P1]], i32* getelementptr inbounds ([6 x i32], [6 x i32]* @ws5, i64 0, i64 0)
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(i32* [[SEL]])
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(i32* nonnull [[SEL]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
@@ -66,7 +66,7 @@ define dso_local i64 @call_wcslen_s5_3_pi_s5(i1 zeroext %0, i64 %1) {
 ; CHECK-LABEL: @call_wcslen_s5_3_pi_s5(
 ; CHECK-NEXT:    [[PS5_3_PI:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* @ws5_3, i64 0, i64 [[TMP1:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP0:%.*]], i32* [[PS5_3_PI]], i32* getelementptr inbounds ([6 x i32], [6 x i32]* @ws5, i64 0, i64 0)
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(i32* [[SEL]])
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(i32* nonnull [[SEL]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
@@ -84,7 +84,7 @@ define dso_local i64 @call_wcslen_s5_3_s5_pj(i1 zeroext %0, i64 %1) {
 ; CHECK-LABEL: @call_wcslen_s5_3_s5_pj(
 ; CHECK-NEXT:    [[PS5:%.*]] = getelementptr inbounds [6 x i32], [6 x i32]* @ws5, i64 0, i64 [[TMP1:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP0:%.*]], i32* getelementptr inbounds ([10 x i32], [10 x i32]* @ws5_3, i64 0, i64 0), i32* [[PS5]]
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(i32* [[SEL]])
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(i32* nonnull [[SEL]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
@@ -102,7 +102,7 @@ define dso_local i64 @fold_wcslen_s3_s5_pj(i1 zeroext %0, i64 %1) {
 ; CHECK-LABEL: @fold_wcslen_s3_s5_pj(
 ; CHECK-NEXT:    [[PS5_PJ:%.*]] = getelementptr inbounds [6 x i32], [6 x i32]* @ws5, i64 0, i64 [[TMP1:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP0:%.*]], i32* getelementptr inbounds ([4 x i32], [4 x i32]* @ws3, i64 0, i64 0), i32* [[PS5_PJ]]
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(i32* [[SEL]])
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(i32* nonnull [[SEL]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 
@@ -122,7 +122,7 @@ define dso_local i64 @call_wcslen_s3_s5_3_pj(i1 zeroext %0, i64 %1) {
 ; CHECK-LABEL: @call_wcslen_s3_s5_3_pj(
 ; CHECK-NEXT:    [[PS5_3_PJ:%.*]] = getelementptr inbounds [10 x i32], [10 x i32]* @ws5_3, i64 0, i64 [[TMP1:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[TMP0:%.*]], i32* getelementptr inbounds ([4 x i32], [4 x i32]* @ws3, i64 0, i64 0), i32* [[PS5_3_PJ]]
-; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(i32* [[SEL]])
+; CHECK-NEXT:    [[LEN:%.*]] = tail call i64 @wcslen(i32* nonnull [[SEL]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
 

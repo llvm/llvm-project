@@ -117,7 +117,7 @@ declare void @llvm.memset.element.unordered.atomic.p0i8.i32(i8* nocapture writeo
 ; Check that a memmove from a global constant is converted into a memcpy
 define void @test_memmove_to_memcpy(i8* %dest) {
 ; CHECK-LABEL: @test_memmove_to_memcpy(
-; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i32(i8* align 1 [[DEST:%.*]], i8* align 16 getelementptr inbounds ([32 x i8], [32 x i8]* @gconst, i64 0, i64 0), i32 32, i32 1)
+; CHECK-NEXT:    call void @llvm.memcpy.element.unordered.atomic.p0i8.p0i8.i32(i8* align 1 [[DEST:%.*]], i8* nonnull align 16 getelementptr inbounds ([32 x i8], [32 x i8]* @gconst, i64 0, i64 0), i32 32, i32 1)
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memmove.element.unordered.atomic.p0i8.p0i8.i32(i8* align 1 %dest, i8* align 1 getelementptr inbounds ([32 x i8], [32 x i8]* @gconst, i64 0, i64 0), i32 32, i32 1)

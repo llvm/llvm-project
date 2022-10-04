@@ -204,7 +204,7 @@ define void @test5(i16 *%idx, i8 **%in) #0 {
 ; CHECK-NEXT:    [[CMP23:%.*]] = icmp eq i8 [[TMP1]], 54
 ; CHECK-NEXT:    br i1 [[CMP23]], label [[WHILE_COND:%.*]], label [[IF_THEN_25:%.*]]
 ; CHECK:       if.then.25:
-; CHECK-NEXT:    call void @g(i8* getelementptr inbounds ([100 x i8], [100 x i8]* @.str.4, i64 0, i64 0))
+; CHECK-NEXT:    call void @g(i8* nonnull getelementptr inbounds ([100 x i8], [100 x i8]* @.str.4, i64 0, i64 0))
 ; CHECK-NEXT:    br label [[WHILE_COND]]
 ; CHECK:       while.cond:
 ; CHECK-NEXT:    [[PTR:%.*]] = phi i8* [ [[INCDEC_PTR]], [[ENTRY:%.*]] ], [ [[INCDEC_PTR32:%.*]], [[WHILE_BODY:%.*]] ], [ [[INCDEC_PTR]], [[IF_THEN_25]] ]
