@@ -186,7 +186,8 @@ OPTIONS
 
 .. option:: --no-leading-addr
 
-  When disassembling, do not print leading addresses.
+  When disassembling, do not print leading addresses for instructions or inline
+  relocations.
 
 .. option:: --no-print-imm-hex
 

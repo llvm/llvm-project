@@ -465,13 +465,16 @@ static bool hasMappingSymbols(const ObjectFile &Obj) {
 static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
                             const RelocationRef &Rel, uint64_t Address,
                             bool Is64Bits) {
-  StringRef Fmt = Is64Bits ? "\t\t%016" PRIx64 ":  " : "\t\t\t%08" PRIx64 ":  ";
+  StringRef Fmt = Is64Bits ? "%016" PRIx64 ":  " : "%08" PRIx64 ":  ";
   SmallString<16> Name;
   SmallString<32> Val;
   Rel.getTypeName(Name);
   if (Error E = getRelocationValueString(Rel, Val))
     reportError(std::move(E), FileName);
-  OS << format(Fmt.data(), Address) << Name << "\t" << Val;
+  OS << (Is64Bits || !LeadingAddr ? "\t\t" : "\t\t\t");
+  if (LeadingAddr)
+    OS << format(Fmt.data(), Address);
+  OS << Name << "\t" << Val;
 }
 
 static void AlignToInstStartColumn(size_t Start, const MCSubtargetInfo &STI,
