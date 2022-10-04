@@ -1,0 +1,13 @@
+add_entrypoint_object(
+  wait
+  SRCS
+    wait.cpp
+  HDRS
+    ../wait.h
+  DEPENDS
+    libc.include.errno
+    libc.include.sys_wait
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
