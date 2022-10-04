@@ -23,6 +23,12 @@ add_header(
 )
 
 add_header(
+  stdlib_macros
+  HDR
+    stdlib-macros.h
+)
+
+add_header(
   sys_stat_macros
   HDR
     sys-stat-macros.h

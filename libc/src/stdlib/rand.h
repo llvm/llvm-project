@@ -1,4 +1,4 @@
-//===-- C standard library header stdlib.h --------------------------------===//
+//===-- Implementation header for rand --------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_STDLIB_H
-#define LLVM_LIBC_STDLIB_H
+#include <stdlib.h>
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/stdlib-macros.h>
+#ifndef LLVM_LIBC_SRC_STDLIB_RAND_H
+#define LLVM_LIBC_SRC_STDLIB_RAND_H
 
-%%public_api()
+namespace __llvm_libc {
 
-#endif // LLVM_LIBC_STDLIB_H
+int rand(void);
+
+} // namespace __llvm_libc
+
+#endif // LLVM_LIBC_SRC_STDLIB_RAND_H
