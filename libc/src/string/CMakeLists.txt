@@ -136,7 +136,16 @@ add_entrypoint_object(
     strerror.h
   DEPENDS
     libc.src.__support.error_to_string
-    libc.src.__support.CPP.span
+)
+
+add_entrypoint_object(
+  strerror_r
+  SRCS
+    strerror_r.cpp
+  HDRS
+    strerror_r.h
+  DEPENDS
+    libc.src.__support.error_to_string
 )
 
 add_entrypoint_object(

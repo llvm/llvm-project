@@ -44,6 +44,8 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.string.strcmp
     libc.src.string.strcpy
     libc.src.string.strcspn
+    libc.src.string.strerror
+    libc.src.string.strerror_r
     libc.src.string.strlcat
     libc.src.string.strlcpy
     libc.src.string.strlen
@@ -61,7 +63,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     # string.h entrypoints that depend on malloc
     libc.src.string.strdup
     libc.src.string.strndup
-    libc.src.string.strerror
 
     # inttypes.h entrypoints
     libc.src.inttypes.imaxabs
