@@ -307,10 +307,19 @@ inline bool BaseBoxType::classof(mlir::Type type) {
   return type.isa<fir::BoxType, fir::ClassType>();
 }
 
-/// Return a fir.box<T> or fir.class<T> if the type is polymorphic.
+/// Return true iff `ty` is none or fir.array<none>.
+inline bool isNoneOrSeqNone(mlir::Type type) {
+  if (auto seqTy = type.dyn_cast<fir::SequenceType>())
+    return seqTy.getEleTy().isa<mlir::NoneType>();
+  return type.isa<mlir::NoneType>();
+}
+
+/// Return a fir.box<T> or fir.class<T> if the type is polymorphic. If the type
+/// is polymorphic and assumed shape return fir.box<T>.
 inline mlir::Type wrapInClassOrBoxType(mlir::Type eleTy,
-                                       bool isPolymorphic = false) {
-  if (isPolymorphic)
+                                       bool isPolymorphic = false,
+                                       bool isAssumedType = false) {
+  if (isPolymorphic && !isAssumedType)
     return fir::ClassType::get(eleTy);
   return fir::BoxType::get(eleTy);
 }
