@@ -38,6 +38,10 @@ def arch_name_EQ : Joined<["--"], "arch-name=">,
 def archive_headers : Flag<["--"], "archive-headers">,
   HelpText<"Display archive header information">;
 
+defm build_id :
+  Eq<"build-id", "Build ID to look up. Once found, added as an input file">,
+  MetaVarName<"<dir>">;
+
 def : Flag<["-"], "a">, Alias<archive_headers>,
   HelpText<"Alias for --archive-headers">;
 
