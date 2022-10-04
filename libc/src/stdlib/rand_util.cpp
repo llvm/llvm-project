@@ -1,4 +1,4 @@
-//===-- C standard library header stdlib.h --------------------------------===//
+//===-- Shared utility for rand -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_STDLIB_H
-#define LLVM_LIBC_STDLIB_H
+#include "src/stdlib/rand_util.h"
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/stdlib-macros.h>
+namespace __llvm_libc {
 
-%%public_api()
+thread_local unsigned long rand_next;
 
-#endif // LLVM_LIBC_STDLIB_H
+} // namespace __llvm_libc

@@ -1,4 +1,4 @@
-//===-- C standard library header stdlib.h --------------------------------===//
+//===-- Definition of macros to be used with stdlib functions ----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,12 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_STDLIB_H
-#define LLVM_LIBC_STDLIB_H
+#ifndef __LLVM_LIBC_MACROS_STDLIB_MACROS_H
+#define __LLVM_LIBC_MACROS_STDLIB_MACROS_H
 
-#include <__llvm-libc-common.h>
-#include <llvm-libc-macros/stdlib-macros.h>
+#define RAND_MAX 32767
 
-%%public_api()
-
-#endif // LLVM_LIBC_STDLIB_H
+#endif // __LLVM_LIBC_MACROS_STDLIB_MACROS_H

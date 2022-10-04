@@ -202,6 +202,18 @@ add_libc_unittest(
     libc.src.stdlib.qsort
 )
 
+add_libc_unittest(
+  rand_test
+  SUITE
+    libc_stdlib_unittests
+  SRCS
+    rand_test.cpp
+  DEPENDS
+    libc.include.stdlib
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+)
+
 if(LLVM_LIBC_FULL_BUILD)
 
   add_libc_unittest(
