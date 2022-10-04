@@ -435,24 +435,24 @@ void MachOWriter::writeBindOpcodes(
 
 void MachOWriter::dumpExportEntry(raw_ostream &OS,
                                   MachOYAML::ExportEntry &Entry) {
-  encodeSLEB128(Entry.TerminalSize, OS);
+  encodeULEB128(Entry.TerminalSize, OS);
   if (Entry.TerminalSize > 0) {
-    encodeSLEB128(Entry.Flags, OS);
+    encodeULEB128(Entry.Flags, OS);
     if (Entry.Flags & MachO::EXPORT_SYMBOL_FLAGS_REEXPORT) {
-      encodeSLEB128(Entry.Other, OS);
+      encodeULEB128(Entry.Other, OS);
       OS << Entry.ImportName;
       OS.write('\0');
     } else {
-      encodeSLEB128(Entry.Address, OS);
+      encodeULEB128(Entry.Address, OS);
       if (Entry.Flags & MachO::EXPORT_SYMBOL_FLAGS_STUB_AND_RESOLVER)
-        encodeSLEB128(Entry.Other, OS);
+        encodeULEB128(Entry.Other, OS);
     }
   }
   OS.write(static_cast<uint8_t>(Entry.Children.size()));
   for (auto EE : Entry.Children) {
     OS << EE.Name;
     OS.write('\0');
-    encodeSLEB128(EE.NodeOffset, OS);
+    encodeULEB128(EE.NodeOffset, OS);
   }
   for (auto EE : Entry.Children)
     dumpExportEntry(OS, EE);
