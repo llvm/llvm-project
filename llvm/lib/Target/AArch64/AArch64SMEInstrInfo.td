@@ -18,6 +18,10 @@ def AArch64_smstop  : SDNode<"AArch64ISD::SMSTOP", SDTypeProfile<0, 3,
                              [SDTCisInt<0>, SDTCisInt<0>, SDTCisInt<0>]>,
                              [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
                               SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64_restore_za : SDNode<"AArch64ISD::RESTORE_ZA", SDTypeProfile<0, 3,
+                             [SDTCisInt<0>, SDTCisPtrTy<1>]>,
+                             [SDNPHasChain, SDNPSideEffect, SDNPVariadic,
+                              SDNPOptInGlue]>;
 
 def AArch64ObscureCopy : SDNode<"AArch64ISD::OBSCURE_COPY", SDTypeProfile<1, 1, []>, []>;
 
@@ -163,6 +167,24 @@ def MSRpstatePseudo :
   Pseudo<(outs),
            (ins svcr_op:$pstatefield, timm0_1:$imm, GPR64:$rtpstate, timm0_1:$expected_pstate, variable_ops), []>,
     Sched<[WriteSys]>;
+
+// Pseudo to conditionally restore ZA state. This expands:
+//
+//   pseudonode tpidr2_el0, tpidr2obj, restore_routine
+//
+// Into:
+//
+//   if (tpidr2_el0 == 0)
+//     BL restore_routine, implicit-use tpidr2obj
+//
+def RestoreZAPseudo :
+  Pseudo<(outs),
+         (ins GPR64:$tpidr2_el0, GPR64sp:$tpidr2obj, i64imm:$restore_routine, variable_ops), []>,
+         Sched<[]>;
+
+def : Pat<(AArch64_restore_za
+            (i64 GPR64:$tpidr2_el0), (i64 GPR64sp:$tpidr2obj), (i64 texternalsym:$restore_routine)),
+          (RestoreZAPseudo GPR64:$tpidr2_el0, GPR64sp:$tpidr2obj, texternalsym:$restore_routine)>;
 
 // Scenario A:
 //
