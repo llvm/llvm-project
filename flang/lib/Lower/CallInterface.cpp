@@ -797,6 +797,12 @@ private:
     Fortran::common::TypeCategory cat = dynamicType.category();
     // DERIVED
     if (cat == Fortran::common::TypeCategory::Derived) {
+      // TODO is kept under experimental flag until feature is complete.
+      if (dynamicType.IsPolymorphic() &&
+          !getConverter().getLoweringOptions().isPolymorphicTypeImplEnabled())
+        TODO(interface.converter.getCurrentLocation(),
+             "support for polymorphic types");
+
       if (dynamicType.IsUnlimitedPolymorphic())
         return mlir::NoneType::get(&mlirContext);
       return getConverter().genType(dynamicType.GetDerivedTypeSpec());
