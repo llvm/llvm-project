@@ -12,6 +12,7 @@
 #include "Configuration.h"
 #include "Debug.h"
 #include "Interface.h"
+#include "Mapping.h"
 #include "Synchronization.h"
 #include "Types.h"
 #include "Utils.h"
@@ -221,10 +222,7 @@ void state::TeamStateTy::assertEqual(TeamStateTy &Other) const {
 }
 
 state::TeamStateTy SHARED(_OMP::state::TeamState);
-
-__attribute__((loader_uninitialized))
-state::ThreadStateTy *_OMP::state::ThreadStates[mapping::MaxThreadsPerTeam];
-#pragma omp allocate(_OMP::state::ThreadStates) allocator(omp_pteam_mem_alloc)
+state::ThreadStateTy **SHARED(_OMP::state::ThreadStates);
 
 namespace {
 
@@ -248,18 +246,32 @@ void state::init(bool IsSPMD) {
   if (mapping::isInitialThreadInLevel0(IsSPMD)) {
     TeamState.init(IsSPMD);
     DebugEntryRAII::init();
+    ThreadStates = nullptr;
   }
-
-  ThreadStates[mapping::getThreadIdInBlock()] = nullptr;
 }
 
 void state::enterDataEnvironment(IdentTy *Ident) {
   ASSERT(config::mayUseThreadStates() &&
          "Thread state modified while explicitly disabled!");
+  if (!config::mayUseThreadStates())
+    return;
 
   unsigned TId = mapping::getThreadIdInBlock();
   ThreadStateTy *NewThreadState =
       static_cast<ThreadStateTy *>(__kmpc_alloc_shared(sizeof(ThreadStateTy)));
+  uintptr_t *ThreadStatesBitsPtr = reinterpret_cast<uintptr_t *>(&ThreadStates);
+  if (!atomic::load(ThreadStatesBitsPtr, atomic::seq_cst)) {
+    uint32_t Bytes = sizeof(ThreadStates[0]) * mapping::getBlockSize();
+    void *ThreadStatesPtr =
+        memory::allocShared(Bytes, "Thread state array allocation");
+    if (!atomic::cas(ThreadStatesBitsPtr, uintptr_t(0),
+                     reinterpret_cast<uintptr_t>(ThreadStatesPtr),
+                     atomic::seq_cst, atomic::seq_cst))
+      memory::freeShared(ThreadStatesPtr, Bytes,
+                         "Thread state array allocated multiple times");
+    ASSERT(atomic::load(ThreadStatesBitsPtr, atomic::seq_cst) &&
+           "Expected valid thread states bit!");
+  }
   NewThreadState->init(ThreadStates[TId]);
   TeamState.HasThreadState = true;
   ThreadStates[TId] = NewThreadState;
@@ -274,6 +286,8 @@ void state::exitDataEnvironment() {
 }
 
 void state::resetStateForThread(uint32_t TId) {
+  if (!config::mayUseThreadStates())
+    return;
   if (OMP_LIKELY(!TeamState.HasThreadState || !ThreadStates[TId]))
     return;
 
@@ -295,7 +309,6 @@ void state::assumeInitialState(bool IsSPMD) {
   TeamStateTy InitialTeamState;
   InitialTeamState.init(IsSPMD);
   InitialTeamState.assertEqual(TeamState);
-  ASSERT(!ThreadStates[mapping::getThreadIdInBlock()]);
   ASSERT(mapping::isSPMDMode() == IsSPMD);
 }
 
