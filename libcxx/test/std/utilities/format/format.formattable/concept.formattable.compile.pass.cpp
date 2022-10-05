@@ -5,10 +5,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
 // UNSUPPORTED: libcpp-has-no-incomplete-format
-
-// TODO FMT Move to std after P2286 has been accepted.
 
 // <format>
 
@@ -53,7 +51,7 @@
 
 template <class T, class CharT>
 void assert_is_not_formattable() {
-  static_assert(!std::__formattable<T, CharT>);
+  static_assert(!std::formattable<T, CharT>);
 }
 
 template <class T, class CharT>
@@ -66,7 +64,7 @@ void assert_is_formattable() {
                 || std::same_as<CharT, wchar_t>
 #endif
   )
-    static_assert(std::__formattable<T, CharT>);
+    static_assert(std::formattable<T, CharT>);
   else
     assert_is_not_formattable<T, CharT>();
 }
