@@ -648,7 +648,7 @@ public:
   /// If an integer typed PHI has only one use which is an IntToPtr operation,
   /// replace the PHI with an existing pointer typed PHI if it exists. Otherwise
   /// insert a new pointer typed PHI and replace the original one.
-  Instruction *foldIntegerTypedPHI(PHINode &PN);
+  bool foldIntegerTypedPHI(PHINode &PN);
 
   /// Helper function for FoldPHIArgXIntoPHI() to set debug location for the
   /// folded operation.
