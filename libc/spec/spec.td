@@ -115,6 +115,8 @@ def FILERestrictedPtr : RestrictedPtrType<FILE>;
 def PThreadTType : NamedType<"pthread_t">;
 
 def PidT : NamedType<"pid_t">;
+def StructRUsage : NamedType<"struct rusage">;
+def StructRUsagePtr : PtrType<StructRUsage>;
 
 //added because __assert_fail needs it.
 def UnsignedType : NamedType<"unsigned">;

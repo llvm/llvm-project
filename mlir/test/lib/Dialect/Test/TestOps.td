@@ -303,6 +303,17 @@ def DenseArrayAttrOp : TEST_Op<"dense_array_attr"> {
   }];
 }
 
+def ConfinedDenseArrayAttrOp : TEST_Op<"confined_dense_array_attr"> {
+  let arguments = (ins
+      ConfinedAttr<DenseI16ArrayAttr,
+                   [DenseArrayStrictlySorted<DenseI16ArrayAttr>]>:$emptyattr,
+      ConfinedAttr<DenseI32ArrayAttr,
+                   [DenseArraySorted<DenseI32ArrayAttr>]>:$i32attr,
+      ConfinedAttr<DenseI64ArrayAttr,
+                   [DenseArrayStrictlySorted<DenseI64ArrayAttr>]>:$i64attr
+  );
+}
+
 //===----------------------------------------------------------------------===//
 // Test Enum Attributes
 //===----------------------------------------------------------------------===//

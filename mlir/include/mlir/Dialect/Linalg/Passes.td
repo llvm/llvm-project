@@ -212,22 +212,6 @@ def LinalgStrategyDecomposePass
   ];
 }
 
-def LinalgStrategyPeelPass
-    : Pass<"linalg-strategy-peel-pass", "func::FuncOp"> {
-  let summary = "Configurable pass to apply pattern-based linalg peeling.";
-  let constructor = "mlir::createLinalgStrategyPeelPass()";
-  let dependentDialects = [
-    "linalg::LinalgDialect",
-    "scf::SCFDialect"
-  ];
-  let options = [
-    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
-      "Which func op is the anchor to latch on.">,
-    Option<"anchorOpName", "anchor-op", "std::string", /*default=*/"",
-      "Which linalg op within the func is the anchor to latch on.">,
-  ];
-}
-
 def LinalgStrategyLowerVectorsPass
     : Pass<"linalg-strategy-lower-vectors-pass", "func::FuncOp"> {
   let summary = "Configurable pass to lower vector operations.";

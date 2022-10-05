@@ -284,6 +284,7 @@ add_gen_header(
     .llvm_libc_common_h
     .llvm-libc-macros.sys_wait_macros
     .llvm-libc-types.pid_t
+    .llvm-libc-types.struct_rusage
 )
 
 if(NOT LLVM_LIBC_FULL_BUILD)
