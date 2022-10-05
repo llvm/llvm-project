@@ -14,6 +14,7 @@
 #include "Interface.h"
 #include "Synchronization.h"
 #include "Types.h"
+#include "Utils.h"
 
 using namespace _OMP;
 
@@ -147,7 +148,7 @@ void *SharedMemorySmartStackTy::push(uint64_t Bytes) {
 
 void SharedMemorySmartStackTy::pop(void *Ptr, uint32_t Bytes) {
   uint64_t AlignedBytes = utils::align_up(Bytes, Alignment);
-  if (Ptr >= &Data[0] && Ptr < &Data[state::SharedScratchpadSize]) {
+  if (utils::isSharedMemPtr(Ptr)) {
     int TId = mapping::getThreadIdInBlock();
     Usage[TId] -= AlignedBytes;
     return;
