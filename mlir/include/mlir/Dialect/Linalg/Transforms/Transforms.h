@@ -344,6 +344,9 @@ FailureOr<LinalgLoops> linalgOpToAffineLoops(PatternRewriter &rewriter,
 LogicalResult promoteSubviewsPrecondition(Operation *op,
                                           LinalgPromotionOptions options);
 
+/// Return success if the operation can be vectorized.
+LogicalResult vectorizeLinalgOpPrecondition(LinalgOp linalgOp);
+
 //===----------------------------------------------------------------------===//
 // Transformations exposed as rewrite patterns.
 //===----------------------------------------------------------------------===//
