@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -sparsification | FileCheck %s
+// RUN: mlir-opt %s -sparse-tensor-rewrite | FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{
   dimLevelType = ["compressed"]
