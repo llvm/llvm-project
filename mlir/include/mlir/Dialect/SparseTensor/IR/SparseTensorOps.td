@@ -460,9 +460,6 @@ def SparseTensor_SortOp : SparseTensor_Op<"sort", [AttrSizedOperandSegments]>,
   let assemblyFormat = "(`stable` $stable^)? $n"
                        "`,`$xs (`jointly` $ys^)? attr-dict"
                        "`:` type($xs) (`jointly` type($ys)^)?";
-  let builders = [
-        OpBuilder<(ins "Value":$n, "ValueRange":$xs, "ValueRange":$ys)>
-  ];
   let hasVerifier = 1;
 }
 

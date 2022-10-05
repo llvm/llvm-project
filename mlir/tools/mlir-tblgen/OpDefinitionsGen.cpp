@@ -1635,9 +1635,9 @@ void OpEmitter::genUseOperandAsResultTypeCollectiveParamBuilder() {
 }
 
 void OpEmitter::genPopulateDefaultAttributes() {
-  // All done if no attributes have default values.
+  // All done if no attributes, except optional ones, have default values.
   if (llvm::all_of(op.getAttributes(), [](const NamedAttribute &named) {
-        return !named.attr.hasDefaultValue();
+        return !named.attr.hasDefaultValue() || named.attr.isOptional();
       }))
     return;
 
@@ -1667,8 +1667,8 @@ void OpEmitter::genPopulateDefaultAttributes() {
     fctx.withBuilder(odsBuilder);
     std::string defaultValue = std::string(
         tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
-    body.indent() << formatv(" attributes.append(attrNames[{0}], {1});\n",
-                             index, defaultValue);
+    body.indent() << formatv("attributes.append(attrNames[{0}], {1});\n", index,
+                             defaultValue);
     body.unindent() << "}\n";
   }
 }
@@ -2143,12 +2143,16 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
     if (attr.isDerivedAttr() || inferredAttributes.contains(namedAttr.name))
       continue;
 
-    // TODO(jpienaar): The wrapping of optional is different for default or not,
-    // so don't unwrap for default ones that would fail below.
-    bool emitNotNullCheck = (attr.isOptional() && !attr.hasDefaultValue()) ||
-                            (attr.hasDefaultValue() && !isRawValueAttr);
+    // TODO: The wrapping of optional is different for default or not, so don't
+    // unwrap for default ones that would fail below.
+    bool emitNotNullCheck =
+        (attr.isOptional() && !attr.hasDefaultValue()) ||
+        (attr.hasDefaultValue() && !isRawValueAttr) ||
+        // TODO: UnitAttr is optional, not wrapped, but needs to be guarded as
+        // the constant materialization is only for true case.
+        (isRawValueAttr && attr.getAttrDefName() == "UnitAttr");
     if (emitNotNullCheck)
-      body << formatv("  if ({0}) ", namedAttr.name) << "{\n";
+      body.indent() << formatv("if ({0}) ", namedAttr.name) << "{\n";
 
     if (isRawValueAttr && canUseUnwrappedRawValue(attr)) {
       // If this is a raw value, then we need to wrap it in an Attribute
@@ -2175,7 +2179,7 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
                       namedAttr.name);
     }
     if (emitNotNullCheck)
-      body << "  }\n";
+      body.unindent() << "  }\n";
   }
 
   // Create the correct number of regions.
@@ -2966,7 +2970,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
       // call. This should be set instead.
       std::string defaultValue = std::string(
           tgfmt(attr.getConstBuilderTemplate(), &fctx, attr.getDefaultValue()));
-      body << "  if (!attr)\n    attr = " << defaultValue << ";\n";
+      body << "if (!attr)\n  attr = " << defaultValue << ";\n";
     }
     body << "return attr;\n";
   };
