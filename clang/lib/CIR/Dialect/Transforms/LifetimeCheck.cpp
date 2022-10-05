@@ -730,6 +730,9 @@ void LifetimeCheckPass::runOnOperation() {
 }
 
 std::unique_ptr<Pass> mlir::createLifetimeCheckPass() {
+  // FIXME: MLIR requres a default "constructor", but should never
+  // be used.
+  llvm_unreachable("Check requires clang::ASTContext, use the other ctor");
   return std::make_unique<LifetimeCheckPass>();
 }
 

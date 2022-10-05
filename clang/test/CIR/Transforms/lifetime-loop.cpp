@@ -1,7 +1,4 @@
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
-// RUN: cir-tool %t.cir -cir-lifetime-check="history=invalid,null remarks=pset-invalid" -verify-diagnostics -o %t-out.cir
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -fclangir-lifetime-check="history=invalid,null;remarks=pset-invalid" -clangir-verify-diagnostics -emit-cir %s -o %t.cir
-// XFAIL: *
 
 void loop_basic_for() {
   int *p = nullptr; // expected-note {{invalidated here}}

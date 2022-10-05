@@ -1,9 +1,5 @@
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
-// RUN: cir-tool %t.cir -cir-lifetime-check="history=invalid,null remarks=pset-always" -verify-diagnostics -o %t-out.cir
 // RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -fclangir-lifetime-check="history=invalid,null;remarks=pset-always" -clangir-verify-diagnostics -emit-cir %s -o %t.cir
-// XFAIL: *
 
-//
 // Loops that do not change psets
 
 // p1179r1: 2.4.9.1
