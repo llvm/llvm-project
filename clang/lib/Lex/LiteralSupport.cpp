@@ -545,6 +545,7 @@ static bool ProcessNamedUCNEscape(const char *ThisTokBegin,
            diag::err_delimited_escape_missing_brace)
           << StringRef(&ThisTokBuf[-1], 1);
     }
+    ThisTokBuf++;
     return false;
   }
   ThisTokBuf++;

@@ -18,7 +18,6 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
-#include "clang/Lex/LiteralSupport.h"
 #include "clang/Lex/MacroArgs.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/ModuleLoader.h"
@@ -659,12 +658,5 @@ TEST_F(LexerTest, RawAndNormalLexSameForLineComments) {
     ToksView = ToksView.drop_front();
   }
   EXPECT_TRUE(ToksView.empty());
-}
-
-TEST_F(LexerTest, BrokenStringLiteral) {
-  const llvm::StringLiteral Source = R"cpp("\N")cpp";
-  // Make sure this isn't crashing.
-  StringLiteralParser P(Lex(Source), *PP);
-  EXPECT_TRUE(P.hadError);
 }
 } // anonymous namespace
