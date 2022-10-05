@@ -98,6 +98,15 @@ contains
 ! CHECK-LABEL: func.func @_QMpolymorphic_typesPunlimited_polymorphic_pointer(
 ! CHECK-SAME: %{{.*}}: !fir.ref<!fir.class<!fir.ptr<none>>>
 
+  subroutine unlimited_polymorphic_allocatable_intentout(p)
+    class(*), allocatable, intent(out) :: p
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_typesPunlimited_polymorphic_allocatable_intentout(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.class<!fir.heap<none>>>
+! CHECK: %[[BOX_NONE:.*]] = fir.convert %[[ARG0]] : (!fir.ref<!fir.class<!fir.heap<none>>>) -> !fir.ref<!fir.box<none>>
+! CHECK: %{{.*}} = fir.call @_FortranAAllocatableDeallocate(%[[BOX_NONE]], %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+
 ! ------------------------------------------------------------------------------
 ! Test polymorphic function return types
 ! ------------------------------------------------------------------------------
