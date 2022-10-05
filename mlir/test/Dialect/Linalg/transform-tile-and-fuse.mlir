@@ -42,7 +42,7 @@ module {
 
   transform.with_pdl_patterns {
   ^bb0(%arg0: !pdl.operation):
-    transform.sequence %arg0 failures(propagate) {
+    transform.sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb1(%arg1: !pdl.operation):
       // Find the root and all producers.
       %root = transform.structured.match attributes{"__root__"} in %arg1
@@ -102,7 +102,7 @@ module {
 
   transform.with_pdl_patterns {
   ^bb0(%arg0: !pdl.operation):
-    transform.sequence %arg0 failures(propagate) {
+    transform.sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb1(%arg1: !pdl.operation):
       // Find the root and all producers.
       %root = transform.structured.match attributes{"__root__"} in %arg1

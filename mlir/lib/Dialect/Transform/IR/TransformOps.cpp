@@ -10,6 +10,7 @@
 #include "mlir/Dialect/PDL/IR/PDLOps.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
+#include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -23,31 +24,6 @@
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "] ")
 
 using namespace mlir;
-
-/// Custom parser for ReplicateOp.
-static ParseResult parsePDLOpTypedResults(
-    OpAsmParser &parser, SmallVectorImpl<Type> &types,
-    const SmallVectorImpl<OpAsmParser::UnresolvedOperand> &handles) {
-  types.resize(handles.size(), pdl::OperationType::get(parser.getContext()));
-  return success();
-}
-
-/// Custom printer for ReplicateOp.
-static void printPDLOpTypedResults(OpAsmPrinter &, Operation *, TypeRange,
-                                   ValueRange) {}
-
-/// Custom parser for SplitHandlesOp.
-static ParseResult parseStaticNumPDLResults(OpAsmParser &parser,
-                                            SmallVectorImpl<Type> &types,
-                                            IntegerAttr numHandlesAttr) {
-  types.resize(numHandlesAttr.getInt(),
-               pdl::OperationType::get(parser.getContext()));
-  return success();
-}
-
-/// Custom printer for SplitHandlesOp.
-static void printStaticNumPDLResults(OpAsmPrinter &, Operation *, TypeRange,
-                                     IntegerAttr) {}
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
@@ -269,13 +245,6 @@ transform::AlternativesOp::apply(transform::TransformResults &results,
 LogicalResult transform::AlternativesOp::verify() {
   for (Region &alternative : getAlternatives()) {
     Block &block = alternative.front();
-    if (block.getNumArguments() != 1 ||
-        !block.getArgument(0).getType().isa<pdl::OperationType>()) {
-      return emitOpError()
-             << "expects region blocks to have one operand of type "
-             << pdl::OperationType::get(getContext());
-    }
-
     Operation *terminator = block.getTerminator();
     if (terminator->getOperands().getTypes() != getResults().getTypes()) {
       InFlightDiagnostic diag = emitOpError()
@@ -403,8 +372,9 @@ LogicalResult transform::ForeachOp::verify() {
     return emitOpError() << "expects the same number of results as the "
                             "terminator has operands";
   for (Value v : yieldOp.getOperands())
-    if (!v.getType().isa<pdl::OperationType>())
-      return yieldOp->emitOpError("expects only PDL_Operation operands");
+    if (!v.getType().isa<TransformTypeInterface>())
+      return yieldOp->emitOpError(
+          "expects operands to have types implementing TransformTypeInterface");
   return success();
 }
 
