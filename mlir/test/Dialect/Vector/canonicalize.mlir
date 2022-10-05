@@ -1348,6 +1348,31 @@ func.func @vector_multi_reduction_single_parallel(%arg0: vector<2xf32>, %acc: ve
 
 // -----
 
+// CHECK-LABEL: func @vector_multi_reduction_unit_dimensions(
+//  CHECK-SAME: %[[SOURCE:.+]]: vector<5x1x4x1x20xf32>, %[[ACC:.+]]: vector<5x4x20xf32>
+func.func @vector_multi_reduction_unit_dimensions(%source: vector<5x1x4x1x20xf32>, %acc: vector<5x4x20xf32>) -> vector<5x4x20xf32> {
+//       CHECK:   %[[CAST:.+]] = vector.shape_cast  %[[SOURCE]] : vector<5x1x4x1x20xf32> to vector<5x4x20xf32>
+//       CHECK:   %[[RESULT:.+]] = arith.mulf  %[[ACC]], %[[CAST]] : vector<5x4x20xf32>
+    %0 = vector.multi_reduction <mul>, %source, %acc [1, 3] : vector<5x1x4x1x20xf32> to vector<5x4x20xf32>
+
+//       CHECK:     return %[[RESULT]] : vector<5x4x20xf32>
+    return %0 : vector<5x4x20xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @vector_multi_reduction_unit_dimensions_fail(
+//  CHECK-SAME: %[[SRC:.+]]: vector<5x1x4x1x20xf32>, %[[ACCUM:.+]]: vector<5x1x1x20xf32>
+func.func @vector_multi_reduction_unit_dimensions_fail(%source: vector<5x1x4x1x20xf32>, %acc: vector<5x1x1x20xf32>) -> vector<5x1x1x20xf32> {
+//       CHECK:   %[[RES:.+]] = vector.multi_reduction  <mul>, %[[SRC]], %[[ACCUM]] [2] : vector<5x1x4x1x20xf32> to vector<5x1x1x20xf32>
+    %0 = vector.multi_reduction <mul>, %source, %acc [2] : vector<5x1x4x1x20xf32> to vector<5x1x1x20xf32>
+
+//       CHECK:     return %[[RES]] : vector<5x1x1x20xf32>
+    return %0 : vector<5x1x1x20xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @insert_strided_slice_full_range
 //  CHECK-SAME: %[[SOURCE:.+]]: vector<16x16xf16>, %{{.+}}: vector<16x16xf16>
 func.func @insert_strided_slice_full_range(%source: vector<16x16xf16>, %dest: vector<16x16xf16>) -> vector<16x16xf16> {
