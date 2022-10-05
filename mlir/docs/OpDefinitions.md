@@ -651,11 +651,11 @@ The available directives are as follows:
     -   See the [Custom Directives](#custom-directives) section below for more
         details.
 
-*   `functional-type` ( inputs , results )
+*   `functional-type` ( inputs , outputs )
 
-    -   Formats the `inputs` and `results` arguments as a
+    -   Formats the `inputs` and `outputs` arguments as a
         [function type](Dialects/Builtin.md/#functiontype).
-    -   The constraints on `inputs` and `results` are the same as the `input` of
+    -   The constraints on `inputs` and `outputs` are the same as the `input` of
         the `type` directive.
 
 *   `oilist` ( \`keyword\` elements | \`otherKeyword\` elements ...)
