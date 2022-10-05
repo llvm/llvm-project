@@ -39,10 +39,8 @@ constexpr void test(const CharT* fmt) {
   static_assert(
       !std::is_move_assignable_v<std::basic_format_parse_context<CharT> >);
 
-  ASSERT_NOEXCEPT(
-      std::basic_format_parse_context<CharT>{std::basic_string_view<CharT>{}});
-  ASSERT_NOEXCEPT(
-      std::basic_format_parse_context<CharT>{std::basic_string_view<CharT>{}, 42});
+  ASSERT_NOEXCEPT(std::basic_format_parse_context{std::basic_string_view<CharT>{}});
+  ASSERT_NOEXCEPT(std::basic_format_parse_context{std::basic_string_view<CharT>{}, 42});
 
   {
     std::basic_format_parse_context<CharT> context(fmt);
@@ -51,7 +49,7 @@ constexpr void test(const CharT* fmt) {
   }
   {
     std::basic_string_view view{fmt};
-    std::basic_format_parse_context<CharT> context(view);
+    std::basic_format_parse_context context(view);
     assert(context.begin() == view.begin());
     assert(context.end() == view.end());
   }
