@@ -72,7 +72,7 @@ FPMatcher<T, C> getMatcher(T expectedValue) {
   using UIntType = typename FPBits::UIntType;                                  \
   const T zero = T(FPBits::zero());                                            \
   const T neg_zero = T(FPBits::neg_zero());                                    \
-  const T aNaN = T(FPBits::build_quiet_nan(1));                                \
+  const T aNaN = T(FPBits::build_nan(1));                                      \
   const T inf = T(FPBits::inf());                                              \
   const T neg_inf = T(FPBits::neg_inf());
 
