@@ -448,7 +448,7 @@ func.func @test_scatter(%arg0: tensor<13x21x3xf32>, %arg1: tensor<13x26xi32>, %a
 // -----
 // CHECK-LABEL: resize
 func.func @test_resize(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32> {
-  %1 = "tosa.resize"(%arg0) {output_size = [64, 64], stride = [1024, 1024], offset = [0, 0], shift = 10 : i32, stride_fp = [0.0 : f32, 0.0 : f32], offset_fp = [0.0 : f32, 0.0 : f32], mode = "BILINEAR"} : (tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32>
+  %1 = "tosa.resize"(%arg0) { scale = [4, 2, 4, 2], offset = [-1, -1], border = [1, 1], mode = "BILINEAR"} : (tensor<1x32x32x8xf32>) -> tensor<1x64x64x8xf32>
   return %1 : tensor<1x64x64x8xf32>
 }
 
