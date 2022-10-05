@@ -224,6 +224,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeFalkorHWPFFixPass(*PR);
   initializeFalkorMarkStridedAccessesLegacyPass(*PR);
   initializeLDTLSCleanupPass(*PR);
+  initializeSMEABIPass(*PR);
   initializeSVEIntrinsicOptsPass(*PR);
   initializeAArch64SpeculationHardeningPass(*PR);
   initializeAArch64SLSHardeningPass(*PR);
@@ -587,6 +588,11 @@ void AArch64PassConfig::addIRPasses() {
     addPass(createInterleavedLoadCombinePass());
     addPass(createInterleavedAccessPass());
   }
+
+  // Expand any functions marked with SME attributes which require special
+  // changes for the calling convention or that require the lazy-saving
+  // mechanism specified in the SME ABI.
+  addPass(createSMEABIPass());
 
   // Add Control Flow Guard checks.
   if (TM->getTargetTriple().isOSWindows())
