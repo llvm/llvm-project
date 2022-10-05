@@ -14,7 +14,7 @@ func.func @extract_slice_static(%input: tensor<3x5x7x11xf32>) -> tensor<20x11xf3
 // CHECK-DAG: %[[c3:.+]] = arith.constant 3 : index
 // CHECK-DAG: %[[c5:.+]] = arith.constant 5 : index
 // CHECK-DAG: %[[c7:.+]] = arith.constant 7 : index
-// CHECK-DAG: %[[init:.+]] = linalg.init_tensor [20, 11] :
+// CHECK-DAG: %[[init:.+]] = tensor.empty() : tensor<20x11xf32>
 // CHECK-DAG: %[[tile:.+]] = scf.for %[[iv:.+]] = %[[c0]] to %[[c20]] step %[[c1]] iter_args(%[[iterArg:.+]] = %[[init]])
 //     CHECK:   %[[multiIndex:.+]]:3 = affine.delinearize_index %[[iv]] into (%[[c3]], %[[c5]], %[[c7]]
 //     CHECK:   %[[slice:.+]] = tensor.extract_slice %[[arg0]][%[[multiIndex]]#0, %[[multiIndex]]#1, %[[multiIndex]]#2, 0] [1, 1, 1, 11] [1, 1, 1, 1] : 
@@ -28,7 +28,7 @@ func.func @extract_slice_static(%input: tensor<3x5x7x11xf32>) -> tensor<20x11xf3
 // FOREACH-DAG: %[[c3:.+]] = arith.constant 3 : index
 // FOREACH-DAG: %[[c5:.+]] = arith.constant 5 : index
 // FOREACH-DAG: %[[c7:.+]] = arith.constant 7 : index
-// FOREACH-DAG: %[[init:.+]] = linalg.init_tensor [20, 11] :
+// FOREACH-DAG: %[[init:.+]] = tensor.empty() : tensor<20x11xf32>
 //     FOREACH: %[[tile:.+]] = scf.foreach_thread (%[[iv:.+]]) in (%[[c20]]) shared_outs(%[[dest:.+]] = %[[init]])
 //     FOREACH:   %[[multiIndex:.+]]:3 = affine.delinearize_index %[[iv]] into (%[[c3]], %[[c5]], %[[c7]]
 //     FOREACH:   %[[slice:.+]] = tensor.extract_slice %[[arg0]][%[[multiIndex]]#0, %[[multiIndex]]#1, %[[multiIndex]]#2, 0] [1, 1, 1, 11] [1, 1, 1, 1] : 
@@ -54,7 +54,7 @@ func.func @extract_slice_static_strided(%input: tensor<3x5x7x11xf32>) -> tensor<
 // CHECK-DAG: %[[c3:.+]] = arith.constant 3 : index
 // CHECK-DAG: %[[c5:.+]] = arith.constant 5 : index
 // CHECK-DAG: %[[c7:.+]] = arith.constant 7 : index
-//     CHECK: %[[init:.+]] = linalg.init_tensor [10, 5] :
+//     CHECK: %[[init:.+]] = tensor.empty() : tensor<10x5xf32>
 //     CHECK: %[[tile:.+]] = scf.for %[[iv:.+]] = %[[c0]] to %[[c10]] step %[[c1]] iter_args(%[[iterArg:.+]] = %[[init]])
 //     CHECK:   %[[inputIv:.+]] = affine.apply #[[$map0]](%[[iv]])
 //     CHECK:   %[[multiIndex:.+]]:3 = affine.delinearize_index %[[inputIv]] into (%[[c3]], %[[c5]], %[[c7]]
@@ -80,7 +80,7 @@ func.func @extract_slice_dynamic(%input: tensor<3x?x?x11xf32>, %offt: index, %si
 // CHECK-DAG:   %[[c1:.+]] = arith.constant 1 : index
 // CHECK-DAG:   %[[c2:.+]] = arith.constant 2 : index
 // CHECK-DAG:   %[[c3:.+]] = arith.constant 3 : index
-//     CHECK:   %[[init:.+]] = linalg.init_tensor [%[[sz]], 5] : tensor<?x5xf32>
+//     CHECK:   %[[init:.+]] = tensor.empty(%[[sz]]) : tensor<?x5xf32>
 // CHECK-DAG:   %[[d1:.+]] = tensor.dim %arg0, %[[c1]] : tensor<3x?x?x11xf32>
 // CHECK-DAG:   %[[d2:.+]] = tensor.dim %arg0, %[[c2]] : tensor<3x?x?x11xf32>
 //     CHECK:   %[[tile:.+]] = scf.for %[[iv:.+]] = %[[c0]] to %[[sz]] step %[[c1]] iter_args(%[[iterArg:.+]] = %[[init]])
@@ -109,7 +109,7 @@ func.func @extract_slice_dynamic_multidim(%input: tensor<3x?x?x11x?xf32>, %offt0
 // CHECK-DAG: %[[c3:.+]] = arith.constant 3 : index
 // CHECK-DAG: %[[c4:.+]] = arith.constant 4 : index
 // CHECK-DAG: %[[c11:.+]] = arith.constant 11 : index
-//     CHECK: %[[init:.+]] = linalg.init_tensor [%[[sz1]], %[[sz2]]] : tensor<?x?xf32>
+//     CHECK: %[[init:.+]] = tensor.empty(%[[sz1]], %[[sz2]]) : tensor<?x?xf32>
 // CHECK-DAG: %[[d1:.+]] = tensor.dim %[[arg0]], %[[c1]] : 
 // CHECK-DAG: %[[d2:.+]] = tensor.dim %[[arg0]], %[[c2]] : 
 // CHECK-DAG: %[[d4:.+]] = tensor.dim %[[arg0]], %[[c4]] :
@@ -133,7 +133,7 @@ func.func @extract_slice_dynamic_multidim(%input: tensor<3x?x?x11x?xf32>, %offt0
 // FOREACH-DAG: %[[c3:.+]] = arith.constant 3 : index
 // FOREACH-DAG: %[[c4:.+]] = arith.constant 4 : index
 // FOREACH-DAG: %[[c11:.+]] = arith.constant 11 : index
-//     FOREACH:     %[[init:.+]] = linalg.init_tensor [%[[sz1]], %[[sz2]]] : tensor<?x?xf32>
+//     FOREACH:     %[[init:.+]] = tensor.empty(%[[sz1]], %[[sz2]]) : tensor<?x?xf32>
 // FOREACH-DAG:     %[[d1:.+]] = tensor.dim %[[arg0]], %[[c1]] : 
 // FOREACH-DAG:     %[[d2:.+]] = tensor.dim %[[arg0]], %[[c2]] : 
 // FOREACH-DAG:     %[[d4:.+]] = tensor.dim %[[arg0]], %[[c4]] :
@@ -170,7 +170,7 @@ func.func @no_sliced_linearized_dims(%input: tensor<30x11x100xf32>, %offt: index
   %collapsed = tensor.collapse_shape %input [[0, 1], [2]] : tensor<30x11x100xf32> into tensor<330x100xf32>
   %slice = tensor.extract_slice %collapsed [0, %offt] [330, %size] [1, 1] : tensor<330x100xf32> to tensor<330x?xf32>
   // CHECK-NOT: scf.for  
-  // CHECK: %[[init:.+]] = linalg.init_tensor [330, %[[arg2]]]
+  // CHECK: %[[init:.+]] = tensor.empty(%[[arg2]])
   // CHECK: %[[e:.+]] = tensor.extract_slice %[[arg0]][0, 0, %[[arg1]]] [30, 11, %[[arg2]]] [1, 1, 1]
   // CHECK: %[[c:.+]] = tensor.collapse_shape %[[e]] {{\[}}[0, 1], [2]]
   // CHECK: %[[res:.+]] = tensor.insert_slice %[[c]] into %[[init]]

@@ -10,6 +10,24 @@ func.func @addi_same_i32(%a : i32) -> i32 {
     return %x : i32
 }
 
+// Expect no conversions, index is not sized.
+// CHECK-LABEL: func @addi_same_index
+// CHECK-SAME:    ([[ARG:%.+]]: index) -> index
+// CHECK-NEXT:    [[X:%.+]] = arith.addi [[ARG]], [[ARG]] : index
+// CHECK-NEXT:    return [[X]] : index
+func.func @addi_same_index(%a : index) -> index {
+    %x = arith.addi %a, %a : index
+    return %x : index
+}
+
+// Expect no conversions, f64 is not an integer type.
+// CHECK-LABEL: func @identity_f64
+// CHECK-SAME:    ([[ARG:%.+]]: f64) -> f64
+// CHECK-NEXT:    return [[ARG]] : f64
+func.func @identity_f64(%a : f64) -> f64 {
+    return %a : f64
+}
+
 // Expect no conversions, i32 is supported.
 // CHECK-LABEL: func @addi_same_vector_i32
 // CHECK-SAME:    ([[ARG:%.+]]: vector<2xi32>) -> vector<2xi32>

@@ -191,7 +191,6 @@ public:
     ScanInstance.getFrontendOpts().UseGlobalModuleIndex = false;
     ScanInstance.getFrontendOpts().ModulesShareFileManager = false;
 
-    FileMgr->getFileSystemOpts().WorkingDir = std::string(WorkingDirectory);
     ScanInstance.setFileManager(FileMgr);
     ScanInstance.createSourceManager(*FileMgr);
 
@@ -270,8 +269,6 @@ public:
       Action = std::make_unique<ReadPCHAndPreprocessAction>();
 
     const bool Result = ScanInstance.ExecuteAction(*Action);
-    if (!DepFS)
-      FileMgr->clearStatCache();
 
     if (Result)
       setLastCC1Arguments(std::move(OriginalInvocation));
@@ -336,8 +333,6 @@ DependencyScanningWorker::DependencyScanningWorker(
   if (Service.getMode() == ScanningMode::DependencyDirectivesScan)
     DepFS = new DependencyScanningWorkerFilesystem(Service.getSharedCache(),
                                                    RealFS);
-  if (Service.canReuseFileManager())
-    Files = new FileManager(FileSystemOptions(), RealFS);
 }
 
 llvm::Error DependencyScanningWorker::computeDependencies(
@@ -374,12 +369,6 @@ static bool forEachDriverJob(
   for (const std::string &Arg : Args)
     Argv.push_back(Arg.c_str());
 
-  // The "input file not found" diagnostics from the driver are useful.
-  // The driver is only aware of the VFS working directory, but some clients
-  // change this at the FileManager level instead.
-  // In this case the checks have false positives, so skip them.
-  if (!FM.getFileSystemOpts().WorkingDir.empty())
-    Driver->setCheckInputsExist(false);
   const std::unique_ptr<driver::Compilation> Compilation(
       Driver->BuildCompilation(llvm::makeArrayRef(Argv)));
   if (!Compilation)
@@ -398,11 +387,10 @@ bool DependencyScanningWorker::computeDependencies(
     llvm::Optional<StringRef> ModuleName) {
   // Reset what might have been modified in the previous worker invocation.
   RealFS->setCurrentWorkingDirectory(WorkingDirectory);
-  if (Files)
-    Files->setVirtualFileSystem(RealFS);
 
-  llvm::IntrusiveRefCntPtr<FileManager> CurrentFiles =
-      Files ? Files : new FileManager(FileSystemOptions(), RealFS);
+  FileSystemOptions FSOpts;
+  FSOpts.WorkingDir = WorkingDirectory.str();
+  auto FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(FSOpts, RealFS);
 
   Optional<std::vector<std::string>> ModifiedCommandLine;
   if (ModuleName) {
@@ -426,7 +414,7 @@ bool DependencyScanningWorker::computeDependencies(
 
   // Although `Diagnostics` are used only for command-line parsing, the
   // custom `DiagConsumer` might expect a `SourceManager` to be present.
-  SourceManager SrcMgr(*Diags, *CurrentFiles);
+  SourceManager SrcMgr(*Diags, *FileMgr);
   Diags->setSourceManager(&SrcMgr);
   // DisableFree is modified by Tooling for running
   // in-process; preserve the original value, which is
@@ -436,7 +424,7 @@ bool DependencyScanningWorker::computeDependencies(
                                   OptimizeArgs, EagerLoadModules, DisableFree,
                                   ModuleName);
   bool Success = forEachDriverJob(
-      FinalCommandLine, *Diags, *CurrentFiles, [&](const driver::Command &Cmd) {
+      FinalCommandLine, *Diags, *FileMgr, [&](const driver::Command &Cmd) {
         if (StringRef(Cmd.getCreator().getName()) != "clang") {
           // Non-clang command. Just pass through to the dependency
           // consumer.
@@ -455,7 +443,7 @@ bool DependencyScanningWorker::computeDependencies(
         // system to ensure that any file system requests that
         // are made by the driver do not go through the
         // dependency scanning filesystem.
-        ToolInvocation Invocation(std::move(Argv), &Action, &*CurrentFiles,
+        ToolInvocation Invocation(std::move(Argv), &Action, &*FileMgr,
                                   PCHContainerOps);
         Invocation.setDiagnosticConsumer(Diags->getClient());
         Invocation.setDiagnosticOptions(&Diags->getDiagnosticOptions());

@@ -2426,16 +2426,16 @@ define i1 @ashr_sle_noexact(i8 %x) {
   ret i1 %c
 }
 
-define i1 @ashr_00_00_ashr_extra_use(i8 %x, i8* %ptr) {
+define i1 @ashr_00_00_ashr_extra_use(i8 %x, ptr %ptr) {
 ; CHECK-LABEL: @ashr_00_00_ashr_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = ashr exact i8 [[X:%.*]], 3
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 88
-; CHECK-NEXT:    store i8 [[S]], i8* [[PTR:%.*]], align 1
+; CHECK-NEXT:    store i8 [[S]], ptr [[PTR:%.*]], align 1
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %s = ashr exact i8 %x, 3
   %c = icmp ule i8 %s, 10
-  store i8 %s, i8* %ptr
+  store i8 %s, ptr %ptr
   ret i1 %c
 }
 

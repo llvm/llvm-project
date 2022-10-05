@@ -82,6 +82,8 @@ add_mlir_dialect_library(MLIRGPUTransforms
   MLIRTransformUtils
   )
 
+add_subdirectory(TransformOps)
+
 if(MLIR_ENABLE_CUDA_RUNNER)
   if(NOT MLIR_ENABLE_CUDA_CONVERSIONS)
     message(SEND_ERROR

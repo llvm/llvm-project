@@ -54,7 +54,7 @@ __parse_arg_id(const _CharT* __begin, const _CharT* __end, auto& __parse_ctx) {
   if (__begin == __end)
     __throw_format_error("End of input while parsing format-spec arg-id");
 
-  __format::__parse_number_result __r =
+  __format::__parse_number_result<_CharT> __r =
       __format::__parse_arg_id(__begin, __end, __parse_ctx);
 
   if (__r.__ptr == __end || *__r.__ptr != _CharT('}'))
@@ -422,7 +422,7 @@ private:
       __throw_format_error("A format-spec width field shouldn't have a leading zero");
 
     if (*__begin == _CharT('{')) {
-      __format::__parse_number_result __r = __format_spec::__parse_arg_id(++__begin, __end, __parse_ctx);
+      __format::__parse_number_result<_CharT> __r = __format_spec::__parse_arg_id(++__begin, __end, __parse_ctx);
       __width_as_arg_ = true;
       __width_ = __r.__value;
       __begin = __r.__ptr;
@@ -432,7 +432,7 @@ private:
     if (*__begin < _CharT('0') || *__begin > _CharT('9'))
       return false;
 
-    __format::__parse_number_result __r = __format::__parse_number(__begin, __end);
+    __format::__parse_number_result<_CharT> __r = __format::__parse_number(__begin, __end);
     __width_ = __r.__value;
     _LIBCPP_ASSERT(__width_ != 0, "A zero value isn't allowed and should be impossible, "
                                   "due to validations in this function");
@@ -450,7 +450,7 @@ private:
       __throw_format_error("End of input while parsing format-spec precision");
 
     if (*__begin == _CharT('{')) {
-      __format::__parse_number_result __arg_id = __format_spec::__parse_arg_id(++__begin, __end, __parse_ctx);
+      __format::__parse_number_result<_CharT> __arg_id = __format_spec::__parse_arg_id(++__begin, __end, __parse_ctx);
       __precision_as_arg_ = true;
       __precision_ = __arg_id.__value;
       __begin = __arg_id.__ptr;
@@ -460,7 +460,7 @@ private:
     if (*__begin < _CharT('0') || *__begin > _CharT('9'))
       __throw_format_error("The format-spec precision field doesn't contain a value or arg-id");
 
-    __format::__parse_number_result __r = __format::__parse_number(__begin, __end);
+    __format::__parse_number_result<_CharT> __r = __format::__parse_number(__begin, __end);
     __precision_ = __r.__value;
     __precision_as_arg_ = false;
     __begin = __r.__ptr;
@@ -879,7 +879,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr __column_width_result<_CharT> __estimate_column_
   }
 
   ptrdiff_t __ascii_size = __it - __str.begin();
-  __column_width_result __result =
+  __column_width_result<_CharT> __result =
       __detail::__estimate_column_width_grapheme_clustering(__it, __str.end(), __maximum, __rounding);
 
   __result.__width_ += __ascii_size;

@@ -116,7 +116,7 @@ struct TestTileConsumerAndFuseProducersGreedilyUsingSCFForOp
     }
     // Replace the tiled op with replacements.
     SmallVector<Value> replacements(op->getNumResults());
-    for (auto result : llvm::enumerate(op->getResults())) {
+    for (const auto &result : llvm::enumerate(op->getResults())) {
       replacements[result.index()] =
           tileAndFuseResult->replacements.lookup(result.value());
     }

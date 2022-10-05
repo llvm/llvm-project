@@ -24,16 +24,6 @@ def ConvertElementwiseToLinalg : Pass<"convert-elementwise-to-linalg", ""> {
   let dependentDialects = ["linalg::LinalgDialect", "memref::MemRefDialect"];
 }
 
-def LinalgInitTensorToAllocTensor : Pass<"linalg-init-tensor-to-alloc-tensor"> {
-  let summary = "Replace all init_tensor ops by alloc_tensor ops.";
-  let description = [{
-    init_tensor ops return a tensor of unspecified contents who's only purpose
-    is to carry the tensor shape. This pass converts such ops to
-    bufferization.alloc_tensor ops, which bufferize to buffer allocations.
-  }];
-  let constructor = "mlir::createLinalgInitTensorToAllocTensorPass()";
-}
-
 def LinalgFoldUnitExtentDims : Pass<"linalg-fold-unit-extent-dims", ""> {
   let summary = "Remove unit-extent dimension in Linalg ops on tensors";
   let constructor = "mlir::createLinalgFoldUnitExtentDimsPass()";
@@ -215,33 +205,6 @@ def LinalgStrategyDecomposePass
     : Pass<"linalg-strategy-decompose-pass", "func::FuncOp"> {
   let summary = "Configurable pass to apply pattern-based generalization.";
   let constructor = "mlir::createLinalgStrategyDecomposePass()";
-  let dependentDialects = ["linalg::LinalgDialect"];
-  let options = [
-    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
-      "Which func op is the anchor to latch on.">,
-  ];
-}
-
-def LinalgStrategyPeelPass
-    : Pass<"linalg-strategy-peel-pass", "func::FuncOp"> {
-  let summary = "Configurable pass to apply pattern-based linalg peeling.";
-  let constructor = "mlir::createLinalgStrategyPeelPass()";
-  let dependentDialects = [
-    "linalg::LinalgDialect",
-    "scf::SCFDialect"
-  ];
-  let options = [
-    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
-      "Which func op is the anchor to latch on.">,
-    Option<"anchorOpName", "anchor-op", "std::string", /*default=*/"",
-      "Which linalg op within the func is the anchor to latch on.">,
-  ];
-}
-
-def LinalgStrategyLowerVectorsPass
-    : Pass<"linalg-strategy-lower-vectors-pass", "func::FuncOp"> {
-  let summary = "Configurable pass to lower vector operations.";
-  let constructor = "mlir::createLinalgStrategyLowerVectorsPass()";
   let dependentDialects = ["linalg::LinalgDialect"];
   let options = [
     Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",

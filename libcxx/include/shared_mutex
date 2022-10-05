@@ -432,6 +432,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     mutex_type* mutex() const _NOEXCEPT {return __m_;}
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(shared_lock);
 
 template <class _Mutex>
 void

@@ -42,6 +42,8 @@
 #include "llvm/Transforms/Utils/CodeLayout.h"
 #include "llvm/Support/CommandLine.h"
 
+#include <cmath>
+
 using namespace llvm;
 #define DEBUG_TYPE "code-layout"
 

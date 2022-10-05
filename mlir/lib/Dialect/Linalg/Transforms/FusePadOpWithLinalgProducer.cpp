@@ -76,14 +76,14 @@ struct FusePadOp : OpRewritePattern<tensor::PadOp> {
     // Create the tensor of same size as output of the pad op.
     RankedTensorType padResultType = padOp.getResultType();
     auto resultSizes = getAsOpFoldResult(resultShape[0]);
-    auto initTensor = rewriter.create<linalg::InitTensorOp>(
+    auto emptyTensor = rewriter.create<tensor::EmptyOp>(
         loc, resultSizes, padResultType.getElementType());
 
     // Fill the tensor with the pad value.
     // TODO: There is an option to fill only the boundaries. For now just
     // filling the whole tensor.
     auto fillTensor =
-        rewriter.create<linalg::FillOp>(loc, padValue, initTensor.getResult());
+        rewriter.create<linalg::FillOp>(loc, padValue, emptyTensor.getResult());
 
     // Construct a slice of the fill result that is to be replaced with the
     // result of the generic op. The low pad values are the offsets, the size of

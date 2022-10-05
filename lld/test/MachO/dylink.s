@@ -54,6 +54,9 @@
 
 # LOAD:                        cmd LC_LOAD_DYLIB
 # LOAD-NEXT:               cmdsize
+# LOAD-NEXT:                  name /usr/lib/libSystem.dylib
+# LOAD:                        cmd LC_LOAD_DYLIB
+# LOAD-NEXT:               cmdsize
 # LOAD-NEXT:                  name @executable_path/libhello.dylib
 # LOAD-NEXT:            time stamp
 # LOAD-NEXT:       current version 11.0.0

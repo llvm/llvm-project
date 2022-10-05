@@ -99,7 +99,7 @@ void MapperJITLinkMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
       SI.Offset = Seg.Addr - Result->Start;
       SI.ContentSize = Seg.ContentSize;
       SI.ZeroFillSize = Seg.ZeroFillSize;
-      SI.Prot = toSysMemoryProtectionFlags(AG.getMemProt());
+      SI.AG = AG;
       SI.WorkingMem = Seg.WorkingMem;
 
       SegInfos.push_back(SI);

@@ -2,7 +2,7 @@
 ; Check that no freeze instruction gets inserted before landingpad in a basic block
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
-define i32 @propagate_freeze_in_landingpad() personality i32* ()* null {
+define i32 @propagate_freeze_in_landingpad() personality ptr null {
 ; CHECK-LABEL: @propagate_freeze_in_landingpad(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[INVOKE_BB1:%.*]]
@@ -18,7 +18,7 @@ define i32 @propagate_freeze_in_landingpad() personality i32* ()* null {
 ; CHECK-NEXT:    br label [[INVOKE_BB1]]
 ; CHECK:       exceptional_return:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ [[X]], [[INVOKE_BB1]] ], [ 0, [[INVOKE_BB2]] ]
-; CHECK-NEXT:    [[LANDING_PAD:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[LANDING_PAD:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    [[FR:%.*]] = freeze i32 [[PHI]]
 ; CHECK-NEXT:    [[RES:%.*]] = shl i32 [[FR]], 1
@@ -42,7 +42,7 @@ normal_return:                                ; preds = %invoke.bb2
 
 exceptional_return:                             ; preds = %invoke.bb2, %invoke.bb1
   %phi = phi i32 [ %x, %invoke.bb1 ], [ 0, %invoke.bb2 ]
-  %landing_pad = landingpad { i8*, i32 }
+  %landing_pad = landingpad { ptr, i32 }
   cleanup
   %fr = freeze i32 %phi
   %res = add i32 %fr, %phi

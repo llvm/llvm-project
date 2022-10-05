@@ -781,6 +781,8 @@ public:
       : SE(SE), AA(AA), DT(DT), LI(LI), TLI(TLI) {}
 
   const LoopAccessInfo &getInfo(Loop &L);
+
+  void clear() { LoopAccessInfoMap.clear(); }
 };
 
 /// This analysis provides dependence information for the memory accesses
@@ -800,29 +802,19 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
-  /// Query the result of the loop access information for the loop \p L.
+  /// Return the proxy object for retrieving LoopAccessInfo for individual
+  /// loops.
   ///
   /// If there is no cached result available run the analysis.
-  const LoopAccessInfo &getInfo(Loop *L);
+  LoopAccessInfoManager &getLAIs() { return *LAIs; }
 
   void releaseMemory() override {
     // Invalidate the cache when the pass is freed.
-    LoopAccessInfoMap.clear();
+    LAIs->clear();
   }
 
-  /// Print the result of the analysis when invoked with -analyze.
-  void print(raw_ostream &OS, const Module *M = nullptr) const override;
-
 private:
-  /// The cache.
-  DenseMap<Loop *, std::unique_ptr<LoopAccessInfo>> LoopAccessInfoMap;
-
-  // The used analysis passes.
-  ScalarEvolution *SE = nullptr;
-  const TargetLibraryInfo *TLI = nullptr;
-  AAResults *AA = nullptr;
-  DominatorTree *DT = nullptr;
-  LoopInfo *LI = nullptr;
+  std::unique_ptr<LoopAccessInfoManager> LAIs;
 };
 
 /// This analysis provides dependence information for the memory

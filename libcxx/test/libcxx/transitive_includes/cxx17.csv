@@ -716,6 +716,12 @@ set optional
 set stdexcept
 set type_traits
 set version
+shared_mutex ctime
+shared_mutex iosfwd
+shared_mutex limits
+shared_mutex ratio
+shared_mutex system_error
+shared_mutex type_traits
 shared_mutex version
 span array
 span concepts

@@ -121,6 +121,8 @@ class Decoder {
                     bool Prologue);
   bool opcode_save_next(const uint8_t *Opcodes, unsigned &Offset,
                         unsigned Length, bool Prologue);
+  bool opcode_save_any_reg(const uint8_t *Opcodes, unsigned &Offset,
+                           unsigned Length, bool Prologue);
   bool opcode_trap_frame(const uint8_t *Opcodes, unsigned &Offset,
                          unsigned Length, bool Prologue);
   bool opcode_machine_frame(const uint8_t *Opcodes, unsigned &Offset,

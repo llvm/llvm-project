@@ -517,8 +517,8 @@ DLLImportDefinitionGenerator::createStubsGraph(const SymbolMap &Resolved) {
   auto G = std::make_unique<jitlink::LinkGraph>(
       "<DLLIMPORT_STUBS>", TT, *PointerSize, *Endianness,
       jitlink::getGenericEdgeKindName);
-  jitlink::Section &Sec = G->createSection(
-      getSectionName(), jitlink::MemProt::Read | jitlink::MemProt::Exec);
+  jitlink::Section &Sec =
+      G->createSection(getSectionName(), MemProt::Read | MemProt::Exec);
 
   for (auto &KV : Resolved) {
     jitlink::Symbol &Target = G->addAbsoluteSymbol(

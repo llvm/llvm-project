@@ -400,7 +400,7 @@ getLinearizedDimensions(ArrayRef<ReassociationIndices> reassociationIndices);
 /// ```
 /// This class helps build the below IR to replace %2:
 /// ```
-/// %dest = linalg.init_tensor() : tensor<10x10xf32>
+/// %dest = tensor.empty() : tensor<10x10xf32>
 /// %2 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%arg0) -> tensor<10x10xf32> {
 ///    %linear_index = affine.apply affine_map<(d0)[]->(d0*2 + 11)>(%iv)
 ///    %3:3 = arith.delinearize_index %iv into (3, 7, 11)

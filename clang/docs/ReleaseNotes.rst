@@ -172,7 +172,10 @@ Bug Fixes
 - The template arguments of a variable template being accessed as a
   member will now be represented in the AST.
 - Fix incorrect handling of inline builtins with asm labels.
-
+- Finished implementing C++ DR2565, which results in a requirement becoming
+  not satisfied in the event of an instantiation failures in a requires expression's
+  parameter list. We previously handled this correctly in a constraint evaluation
+  context, but not in a requires clause evaluated as a boolean.
 
 Improvements to Clang's diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -226,6 +229,8 @@ Improvements to Clang's diagnostics
   doesn't generate strange cascading errors, particularly in cases where a
   subsuming constraint fails, which would result in a less-specific overload to
   be selected.
+- Add a fix-it hint for the ``-Wdefaulted-function-deleted`` warning to
+  explicitly delete the function.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
@@ -363,7 +368,9 @@ C2x Feature Support
 C++ Language Changes in Clang
 -----------------------------
 - Implemented DR692, DR1395 and DR1432. Use the ``-fclang-abi-compat=15`` option
-  to get the old partial ordering behavior regarding packs.
+  to get the old partial ordering behavior regarding packs. Note that the fix for
+  DR1432 is speculative that there is no wording or even resolution for this issue.
+  A speculative fix for DR1432 is needed because it fixes regressions caused by DR692.
 - Clang's default C++/ObjC++ standard is now ``gnu++17`` instead of ``gnu++14``.
   This means Clang will by default accept code using features from C++17 and
   conforming GNU extensions. Projects incompatible with C++17 can add

@@ -8,51 +8,51 @@
 @.str.4 = private unnamed_addr constant [1 x i8] zeroinitializer, align 1
 
 
-declare i32 @snprintf(i8*, i64, i8*, ...) #1
+declare i32 @snprintf(ptr, i64, ptr, ...) #1
 
-define void @test_not_const_fmt(i8* %buf, i8* %fmt) #0 {
+define void @test_not_const_fmt(ptr %buf, ptr %fmt) #0 {
 ; CHECK-LABEL: @test_not_const_fmt(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* noundef nonnull dereferenceable(1) [[BUF:%.*]], i64 32, i8* [[FMT:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 (ptr, i64, ptr, ...) @snprintf(ptr noundef nonnull dereferenceable(1) [[BUF:%.*]], i64 32, ptr [[FMT:%.*]])
 ; CHECK-NEXT:    ret void
 ;
-  %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 32, i8* %fmt) #2
+  %call = call i32 (ptr, i64, ptr, ...) @snprintf(ptr %buf, i64 32, ptr %fmt) #2
   ret void
 }
 
 ; size is '0', do not add nonnull attribute
-define void @test_not_const_fmt_zero_size_return_value(i8* %buf, i8* %fmt) #0 {
+define void @test_not_const_fmt_zero_size_return_value(ptr %buf, ptr %fmt) #0 {
 ; CHECK-LABEL: @test_not_const_fmt_zero_size_return_value(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* [[BUF:%.*]], i64 0, i8* [[FMT:%.*]])
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 (ptr, i64, ptr, ...) @snprintf(ptr [[BUF:%.*]], i64 0, ptr [[FMT:%.*]])
 ; CHECK-NEXT:    ret void
 ;
-  %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 0, i8* %fmt) #2
+  %call = call i32 (ptr, i64, ptr, ...) @snprintf(ptr %buf, i64 0, ptr %fmt) #2
   ret void
 }
 
-define void @test_not_const_size(i8* %buf, i64 %size) #0 {
+define void @test_not_const_size(ptr %buf, i64 %size) #0 {
 ; CHECK-LABEL: @test_not_const_size(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* [[BUF:%.*]], i64 [[SIZE:%.*]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0))
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 (ptr, i64, ptr, ...) @snprintf(ptr [[BUF:%.*]], i64 [[SIZE:%.*]], ptr nonnull @.str)
 ; CHECK-NEXT:    ret void
 ;
-  %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 %size, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0)) #2
+  %call = call i32 (ptr, i64, ptr, ...) @snprintf(ptr %buf, i64 %size, ptr @.str) #2
   ret void
 }
 
 
-define i32 @test_return_value(i8* %buf) #0 {
+define i32 @test_return_value(ptr %buf) #0 {
 ; CHECK-LABEL: @test_return_value(
 ; CHECK-NEXT:    ret i32 3
 ;
-  %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 0, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0)) #2
+  %call = call i32 (ptr, i64, ptr, ...) @snprintf(ptr %buf, i64 0, ptr @.str) #2
   ret i32 %call
 }
 
-define void @test_percentage(i8* %buf) #0 {
+define void @test_percentage(ptr %buf) #0 {
 ; CHECK-LABEL: @test_percentage(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* noundef nonnull dereferenceable(1) [[BUF:%.*]], i64 32, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.1, i64 0, i64 0))
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 (ptr, i64, ptr, ...) @snprintf(ptr noundef nonnull dereferenceable(1) [[BUF:%.*]], i64 32, ptr nonnull @.str.1)
 ; CHECK-NEXT:    ret void
 ;
-  %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 32, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.1, i64 0, i64 0)) #2
+  %call = call i32 (ptr, i64, ptr, ...) @snprintf(ptr %buf, i64 32, ptr @.str.1) #2
   ret void
 }
 
@@ -60,120 +60,117 @@ define i32 @test_null_buf_return_value() #0 {
 ; CHECK-LABEL: @test_null_buf_return_value(
 ; CHECK-NEXT:    ret i32 3
 ;
-  %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0)) #2
+  %call = call i32 (ptr, i64, ptr, ...) @snprintf(ptr null, i64 0, ptr @.str) #2
   ret i32 %call
 }
 
 define i32 @test_percentage_return_value() #0 {
 ; CHECK-LABEL: @test_percentage_return_value(
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.1, i64 0, i64 0))
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 (ptr, i64, ptr, ...) @snprintf(ptr null, i64 0, ptr nonnull @.str.1)
 ; CHECK-NEXT:    ret i32 [[CALL]]
 ;
-  %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* null, i64 0, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.1, i64 0, i64 0)) #3
+  %call = call i32 (ptr, i64, ptr, ...) @snprintf(ptr null, i64 0, ptr @.str.1) #3
   ret i32 %call
 }
 
 
-define void @test_correct_copy(i8* %buf) #0 {
+define void @test_correct_copy(ptr %buf) #0 {
 ; CHECK-LABEL: @test_correct_copy(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[BUF:%.*]] to i32*
-; CHECK-NEXT:    store i32 7500915, i32* [[TMP1]], align 1
+; CHECK-NEXT:    store i32 7500915, ptr [[BUF:%.*]], align 1
 ; CHECK-NEXT:    ret void
 ;
-  %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 32, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0)) #2
+  %call = call i32 (ptr, i64, ptr, ...) @snprintf(ptr %buf, i64 32, ptr @.str) #2
   ret void
 }
 
-define i32 @test_char_zero_size(i8* %buf) #0 {
+define i32 @test_char_zero_size(ptr %buf) #0 {
 ; CHECK-LABEL: @test_char_zero_size(
 ; CHECK-NEXT:    ret i32 1
 ;
-  %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 0, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.2, i64 0, i64 0), i32 65) #2
+  %call = call i32 (ptr, i64, ptr, ...) @snprintf(ptr %buf, i64 0, ptr @.str.2, i32 65) #2
   ret i32 %call
 }
 
-define i32 @test_char_small_size(i8* %buf) #0 {
+define i32 @test_char_small_size(ptr %buf) #0 {
 ; CHECK-LABEL: @test_char_small_size(
-; CHECK-NEXT:    store i8 0, i8* [[BUF:%.*]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[BUF:%.*]], align 1
 ; CHECK-NEXT:    ret i32 1
 ;
-  %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.2, i64 0, i64 0), i32 65) #2
+  %call = call i32 (ptr, i64, ptr, ...) @snprintf(ptr %buf, i64 1, ptr @.str.2, i32 65) #2
   ret i32 %call
 }
 
-define i32 @test_char_ok_size(i8* %buf) #0 {
+define i32 @test_char_ok_size(ptr %buf) #0 {
 ; CHECK-LABEL: @test_char_ok_size(
-; CHECK-NEXT:    store i8 65, i8* [[BUF:%.*]], align 1
-; CHECK-NEXT:    [[NUL:%.*]] = getelementptr inbounds i8, i8* [[BUF]], i64 1
-; CHECK-NEXT:    store i8 0, i8* [[NUL]], align 1
+; CHECK-NEXT:    store i8 65, ptr [[BUF:%.*]], align 1
+; CHECK-NEXT:    [[NUL:%.*]] = getelementptr inbounds i8, ptr [[BUF]], i64 1
+; CHECK-NEXT:    store i8 0, ptr [[NUL]], align 1
 ; CHECK-NEXT:    ret i32 1
 ;
-  %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 32, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.2, i64 0, i64 0), i32 65) #2
+  %call = call i32 (ptr, i64, ptr, ...) @snprintf(ptr %buf, i64 32, ptr @.str.2, i32 65) #2
   ret i32 %call
 }
 
-define i32 @test_str_zero_size(i8* %buf) #0 {
+define i32 @test_str_zero_size(ptr %buf) #0 {
 ; CHECK-LABEL: @test_str_zero_size(
 ; CHECK-NEXT:    ret i32 3
 ;
-  %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 0, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.3, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0)) #2
+  %call = call i32 (ptr, i64, ptr, ...) @snprintf(ptr %buf, i64 0, ptr @.str.3, ptr @.str) #2
   ret i32 %call
 }
 
-define i32 @test_str_small_size(i8* %buf) #0 {
+define i32 @test_str_small_size(ptr %buf) #0 {
 ; CHECK-LABEL: @test_str_small_size(
-; CHECK-NEXT:    store i8 0, i8* [[BUF:%.*]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[BUF:%.*]], align 1
 ; CHECK-NEXT:    ret i32 3
 ;
-  %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 1, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.3, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0)) #2
+  %call = call i32 (ptr, i64, ptr, ...) @snprintf(ptr %buf, i64 1, ptr @.str.3, ptr @.str) #2
   ret i32 %call
 }
 
-define i32 @test_str_ok_size(i8* %buf) #0 {
+define i32 @test_str_ok_size(ptr %buf) #0 {
 ; CHECK-LABEL: @test_str_ok_size(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[BUF:%.*]] to i32*
-; CHECK-NEXT:    store i32 7500915, i32* [[TMP1]], align 1
+; CHECK-NEXT:    store i32 7500915, ptr [[BUF:%.*]], align 1
 ; CHECK-NEXT:    ret i32 3
 ;
-  %call = call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 32, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.3, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0)) #2
+  %call = call i32 (ptr, i64, ptr, ...) @snprintf(ptr %buf, i64 32, ptr @.str.3, ptr @.str) #2
   ret i32 %call
 }
 
 ; snprintf(buf, 32, "") -> memcpy -> store
-define i32 @test_str_ok_size_tail(i8* %buf) {
+define i32 @test_str_ok_size_tail(ptr %buf) {
 ; CHECK-LABEL: @test_str_ok_size_tail(
-; CHECK-NEXT:    store i8 0, i8* [[BUF:%.*]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[BUF:%.*]], align 1
 ; CHECK-NEXT:    ret i32 0
 ;
-  %1 = tail call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 8, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @.str.4, i64 0, i64 0))
+  %1 = tail call i32 (ptr, i64, ptr, ...) @snprintf(ptr %buf, i64 8, ptr @.str.4)
   ret i32 %1
 }
 
-define i32 @test_str_ok_size_musttail(i8* %buf, i64 %x, i8* %y, ...) {
+define i32 @test_str_ok_size_musttail(ptr %buf, i64 %x, ptr %y, ...) {
 ; CHECK-LABEL: @test_str_ok_size_musttail(
-; CHECK-NEXT:    [[TMP1:%.*]] = musttail call i32 (i8*, i64, i8*, ...) @snprintf(i8* [[BUF:%.*]], i64 8, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @.str.4, i64 0, i64 0), ...)
+; CHECK-NEXT:    [[TMP1:%.*]] = musttail call i32 (ptr, i64, ptr, ...) @snprintf(ptr [[BUF:%.*]], i64 8, ptr nonnull @.str.4, ...)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
-  %1 = musttail call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 8, i8* getelementptr inbounds ([1 x i8], [1 x i8]* @.str.4, i64 0, i64 0), ...)
+  %1 = musttail call i32 (ptr, i64, ptr, ...) @snprintf(ptr %buf, i64 8, ptr @.str.4, ...)
   ret i32 %1
 }
 
 ; snprintf(buf, 32, "%s", "str") -> memcpy -> store
-define i32 @test_str_ok_size_tail2(i8* %buf) {
+define i32 @test_str_ok_size_tail2(ptr %buf) {
 ; CHECK-LABEL: @test_str_ok_size_tail2(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[BUF:%.*]] to i32*
-; CHECK-NEXT:    store i32 7500915, i32* [[TMP1]], align 1
+; CHECK-NEXT:    store i32 7500915, ptr [[BUF:%.*]], align 1
 ; CHECK-NEXT:    ret i32 3
 ;
-  %1 = tail call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 8, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.3, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0))
+  %1 = tail call i32 (ptr, i64, ptr, ...) @snprintf(ptr %buf, i64 8, ptr @.str.3, ptr @.str)
   ret i32 %1
 }
 
-define i32 @test_str_ok_size_musttail2(i8* %buf, i64 %x, i8* %y, ...) {
+define i32 @test_str_ok_size_musttail2(ptr %buf, i64 %x, ptr %y, ...) {
 ; CHECK-LABEL: @test_str_ok_size_musttail2(
-; CHECK-NEXT:    [[TMP1:%.*]] = musttail call i32 (i8*, i64, i8*, ...) @snprintf(i8* [[BUF:%.*]], i64 8, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.3, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), ...)
+; CHECK-NEXT:    [[TMP1:%.*]] = musttail call i32 (ptr, i64, ptr, ...) @snprintf(ptr [[BUF:%.*]], i64 8, ptr nonnull @.str.3, ptr nonnull @.str, ...)
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
-  %1 = musttail call i32 (i8*, i64, i8*, ...) @snprintf(i8* %buf, i64 8, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @.str.3, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), ...)
+  %1 = musttail call i32 (ptr, i64, ptr, ...) @snprintf(ptr %buf, i64 8, ptr @.str.3, ptr @.str, ...)
   ret i32 %1
 }

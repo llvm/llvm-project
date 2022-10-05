@@ -395,11 +395,7 @@ public:
 
       // Pointer arguments need to use macros to avoid hiding aligned attributes
       // from the pointer type.
-
-      // It is not permitted to pass or return an __fp16 by value, so intrinsics
-      // taking a scalar float16_t must be implemented as macros.
-      if (Type.isImmediate() || Type.isPointer() ||
-          (Type.isScalar() && Type.isHalf()))
+      if (Type.isImmediate() || Type.isPointer())
         UseMacro = true;
     }
   }

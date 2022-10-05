@@ -1,0 +1,8 @@
+## This tests some flags are correctly parsed even when they're not handled
+
+# RUN: llvm-libtool-darwin -V -syslibroot foo | FileCheck %s
+# RUN: llvm-libtool-darwin -h | FileCheck --check-prefix=HELP %s
+
+# CHECK: Default target:
+
+# HELP-NOT: syslibroot

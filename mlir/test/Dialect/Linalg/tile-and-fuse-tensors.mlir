@@ -65,7 +65,7 @@ func.func @conv_tensors_static(%input: tensor<1x225x225x3xf32>, %filter: tensor<
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
 
-  %init = linalg.init_tensor [1, 112, 112, 32] : tensor<1x112x112x32xf32>
+  %init = tensor.empty() : tensor<1x112x112x32xf32>
   %fill = linalg.fill ins(%cst : f32) outs(%init : tensor<1x112x112x32xf32>) -> tensor<1x112x112x32xf32>
 
   %conv = linalg.conv_2d_nhwc_hwcf
@@ -109,7 +109,7 @@ func.func @conv_tensors_static(%input: tensor<1x225x225x3xf32>, %filter: tensor<
 //      CHECK: func @conv_tensors_static
 // CHECK-SAME: (%[[INPUT:.+]]: tensor<1x225x225x3xf32>, %[[FILTER:.+]]: tensor<3x3x3x32xf32>, %[[ELEM:.+]]: tensor<1x112x112x32xf32>)
 
-//      CHECK: %[[INIT:.+]] = linalg.init_tensor [1, 112, 112, 32] : tensor<1x112x112x32xf32>
+//      CHECK: %[[INIT:.+]] = tensor.empty() : tensor<1x112x112x32xf32>
 // CHECK-NEXT: %[[FILL:.+]] = linalg.fill ins(%cst : f32) outs(%[[INIT]] : tensor<1x112x112x32xf32>) -> tensor<1x112x112x32xf32>
 
 // CHECK-NEXT: scf.for %[[IV0:.+]] = %{{.+}} to %{{.+}} step %{{.+}} iter_args(%[[ARG0:.+]] = %[[FILL]])
@@ -147,7 +147,7 @@ func.func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?
   %ow = tensor.dim %elementwise, %c2 : tensor<?x?x?x?xf32>
   %oc = tensor.dim %elementwise, %c3 : tensor<?x?x?x?xf32>
 
-  %init = linalg.init_tensor [%n, %oh, %ow, %oc] : tensor<?x?x?x?xf32>
+  %init = tensor.empty(%n, %oh, %ow, %oc) : tensor<?x?x?x?xf32>
   %fill = linalg.fill ins(%cst : f32) outs(%init : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
 
   %conv = linalg.conv_2d_nhwc_hwcf
@@ -216,7 +216,7 @@ func.func @conv_tensors_dynamic(%input: tensor<?x?x?x?xf32>, %filter: tensor<?x?
 //  CHECK-DAG:   %[[ELEM_OW:.+]] = tensor.dim %[[ELEM]], %[[C2]] : tensor<?x?x?x?xf32>
 //  CHECK-DAG:   %[[ELEM_OC:.+]] = tensor.dim %[[ELEM]], %[[C3]] : tensor<?x?x?x?xf32>
 
-//      CHECK:   %[[INIT:.+]] = linalg.init_tensor [%[[ELEM_N]], %[[ELEM_OH]], %[[ELEM_OW]], %[[ELEM_OC]]] : tensor<?x?x?x?xf32>
+//      CHECK:   %[[INIT:.+]] = tensor.empty(%[[ELEM_N]], %[[ELEM_OH]], %[[ELEM_OW]], %[[ELEM_OC]]) : tensor<?x?x?x?xf32>
 //      CHECK:   %[[FILL:.+]] = linalg.fill ins(%cst : f32) outs(%[[INIT]] : tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf32>
 
 //  CHECK-DAG:   %[[FILTER_H:.+]] = tensor.dim %[[FILTER]], %[[C0]] : tensor<?x?x?x?xf32>

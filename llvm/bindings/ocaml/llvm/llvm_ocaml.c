@@ -581,6 +581,11 @@ LLVMTypeRef llvm_qualified_pointer_type(LLVMTypeRef ElementTy,
   return LLVMPointerType(ElementTy, Int_val(AddressSpace));
 }
 
+/* llcontext -> int -> lltype */
+LLVMTypeRef llvm_pointer_type_in_context(LLVMContextRef C, value AddressSpace) {
+  return LLVMPointerTypeInContext(C, Int_val(AddressSpace));
+}
+
 /* lltype -> int -> lltype */
 LLVMTypeRef llvm_vector_type(LLVMTypeRef ElementTy, value Count) {
   return LLVMVectorType(ElementTy, Int_val(Count));

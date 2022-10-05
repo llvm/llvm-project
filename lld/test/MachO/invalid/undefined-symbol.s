@@ -6,15 +6,15 @@
 # RUN: not %lld --icf=all -o /dev/null %t/main.o 2>&1 | \
 # RUN:     FileCheck %s -DSYM=__ZN3foo3barEi -DLOC='%t/main.o:(symbol _main+0x1)'
 # RUN: not %lld -demangle --icf=all -o /dev/null %t/main.o 2>&1 | \
-# RUN:     FileCheck %s -DSYM='foo::bar(int)' -DLOC='%t/main.o:(symbol _main+0x1)'
+# RUN:     FileCheck %s -DSYM='foo::bar(int)' -DLOC='%t/main.o:(symbol main+0x1)'
 # RUN: not %lld -o /dev/null %t/main.o %t/foo.a 2>&1 | \
 # RUN:     FileCheck %s -DSYM=_bar -DLOC='%t/foo.a(foo.o):(symbol __ZN3foo3barEi+0x1)'
 # RUN: not %lld -demangle -o /dev/null %t/main.o %t/foo.a 2>&1 | \
-# RUN:     FileCheck %s -DSYM=_bar -DLOC='%t/foo.a(foo.o):(symbol foo::bar(int)+0x1)'
+# RUN:     FileCheck %s -DSYM=bar -DLOC='%t/foo.a(foo.o):(symbol foo::bar(int)+0x1)'
 # RUN: not %lld -o /dev/null %t/main.o -force_load %t/foo.a 2>&1 | \
 # RUN:     FileCheck %s -DSYM=_bar -DLOC='%t/foo.a(foo.o):(symbol __ZN3foo3barEi+0x1)'
 # RUN: not %lld -demangle -o /dev/null %t/main.o -force_load %t/foo.a 2>&1 | \
-# RUN:     FileCheck %s -DSYM=_bar -DLOC='%t/foo.a(foo.o):(symbol foo::bar(int)+0x1)'
+# RUN:     FileCheck %s -DSYM=bar -DLOC='%t/foo.a(foo.o):(symbol foo::bar(int)+0x1)'
 # CHECK: error: undefined symbol: [[SYM]]
 # CHECK-NEXT: >>> referenced by [[LOC]]
 

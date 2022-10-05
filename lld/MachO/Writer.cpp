@@ -61,6 +61,7 @@ public:
   void openFile();
   void writeSections();
   void applyOptimizationHints();
+  void buildFixupChains();
   void writeUuid();
   void writeCodeSignature();
   void writeOutputFile();
@@ -579,6 +580,40 @@ public:
   CodeSignatureSection *section;
 };
 
+class LCExportsTrie final : public LoadCommand {
+public:
+  LCExportsTrie(ExportSection *section) : section(section) {}
+
+  uint32_t getSize() const override { return sizeof(linkedit_data_command); }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<linkedit_data_command *>(buf);
+    c->cmd = LC_DYLD_EXPORTS_TRIE;
+    c->cmdsize = getSize();
+    c->dataoff = section->fileOff;
+    c->datasize = section->getSize();
+  }
+
+  ExportSection *section;
+};
+
+class LCChainedFixups final : public LoadCommand {
+public:
+  LCChainedFixups(ChainedFixupsSection *section) : section(section) {}
+
+  uint32_t getSize() const override { return sizeof(linkedit_data_command); }
+
+  void writeTo(uint8_t *buf) const override {
+    auto *c = reinterpret_cast<linkedit_data_command *>(buf);
+    c->cmd = LC_DYLD_CHAINED_FIXUPS;
+    c->cmdsize = getSize();
+    c->dataoff = section->fileOff;
+    c->datasize = section->getSize();
+  }
+
+  ChainedFixupsSection *section;
+};
+
 } // namespace
 
 void Writer::treatSpecialUndefineds() {
@@ -657,13 +692,24 @@ void Writer::scanRelocations() {
         // too...
         auto *referentIsec = r.referent.get<InputSection *>();
         r.referent = referentIsec->canonical();
-        if (!r.pcrel)
-          in.rebase->addEntry(isec, r.offset);
+        if (!r.pcrel) {
+          if (config->emitChainedFixups)
+            in.chainedFixups->addRebase(isec, r.offset);
+          else
+            in.rebase->addEntry(isec, r.offset);
+        }
       }
     }
   }
 
   in.unwindInfo->prepareRelocations();
+}
+
+static void addNonWeakDefinition(const Defined *defined) {
+  if (config->emitChainedFixups)
+    in.chainedFixups->setHasNonWeakDefinition();
+  else
+    in.weakBinding->addNonWeakDefinition(defined);
 }
 
 void Writer::scanSymbols() {
@@ -674,7 +720,7 @@ void Writer::scanSymbols() {
         continue;
       defined->canonicalize();
       if (defined->overridesWeakDef)
-        in.weakBinding->addNonWeakDefinition(defined);
+        addNonWeakDefinition(defined);
       if (!defined->isAbsolute() && isCodeSection(defined->isec))
         in.unwindInfo->addSymbol(defined);
     } else if (const auto *dysym = dyn_cast<DylibSymbol>(sym)) {
@@ -727,8 +773,13 @@ template <class LP> void Writer::createLoadCommands() {
     seg->index = segIndex++;
   }
 
-  in.header->addLoadCommand(make<LCDyldInfo>(
-      in.rebase, in.binding, in.weakBinding, in.lazyBinding, in.exports));
+  if (config->emitChainedFixups) {
+    in.header->addLoadCommand(make<LCChainedFixups>(in.chainedFixups));
+    in.header->addLoadCommand(make<LCExportsTrie>(in.exports));
+  } else {
+    in.header->addLoadCommand(make<LCDyldInfo>(
+        in.rebase, in.binding, in.weakBinding, in.lazyBinding, in.exports));
+  }
   in.header->addLoadCommand(make<LCSymtab>(symtabSection, stringTableSection));
   in.header->addLoadCommand(
       make<LCDysymtab>(symtabSection, indirectSymtabSection));
@@ -1037,16 +1088,12 @@ void Writer::finalizeAddresses() {
 void Writer::finalizeLinkEditSegment() {
   TimeTraceScope timeScope("Finalize __LINKEDIT segment");
   // Fill __LINKEDIT contents.
-  std::vector<LinkEditSection *> linkEditSections{
-      in.rebase,
-      in.binding,
-      in.weakBinding,
-      in.lazyBinding,
-      in.exports,
-      symtabSection,
-      indirectSymtabSection,
-      dataInCodeSection,
-      functionStartsSection,
+  std::array<LinkEditSection *, 10> linkEditSections{
+      in.rebase,         in.binding,
+      in.weakBinding,    in.lazyBinding,
+      in.exports,        in.chainedFixups,
+      symtabSection,     indirectSymtabSection,
+      dataInCodeSection, functionStartsSection,
   };
   SmallVector<std::shared_future<void>> threadFutures;
   threadFutures.reserve(linkEditSections.size());
@@ -1147,6 +1194,53 @@ void Writer::writeUuid() {
   uuidCommand->writeUuid(digest);
 }
 
+// This is step 5 of the algorithm described in the class comment of
+// ChainedFixupsSection.
+void Writer::buildFixupChains() {
+  if (!config->emitChainedFixups)
+    return;
+
+  const std::vector<Location> &loc = in.chainedFixups->getLocations();
+  if (loc.empty())
+    return;
+
+  TimeTraceScope timeScope("Build fixup chains");
+
+  const uint64_t pageSize = target->getPageSize();
+  constexpr uint32_t stride = 4; // for DYLD_CHAINED_PTR_64
+
+  for (size_t i = 0, count = loc.size(); i < count;) {
+    const OutputSegment *oseg = loc[i].isec->parent->parent;
+    uint8_t *buf = buffer->getBufferStart() + oseg->fileOff;
+    uint64_t pageIdx = loc[i].offset / pageSize;
+    ++i;
+
+    while (i < count && loc[i].isec->parent->parent == oseg &&
+           (loc[i].offset / pageSize) == pageIdx) {
+      uint64_t offset = loc[i].offset - loc[i - 1].offset;
+
+      auto fail = [&](Twine message) {
+        error(loc[i].isec->getSegName() + "," + loc[i].isec->getName() +
+              ", offset " +
+              Twine(loc[i].offset - loc[i].isec->parent->getSegmentOffset()) +
+              ": " + message);
+      };
+
+      if (offset < target->wordSize)
+        return fail("fixups overlap");
+      if (offset % stride != 0)
+        return fail(
+            "fixups are unaligned (offset " + Twine(offset) +
+            " is not a multiple of the stride). Re-link with -no_fixup_chains");
+
+      // The "next" field is in the same location for bind and rebase entries.
+      reinterpret_cast<dyld_chained_ptr_64_bind *>(buf + loc[i - 1].offset)
+          ->next = offset / stride;
+      ++i;
+    }
+  }
+}
+
 void Writer::writeCodeSignature() {
   if (codeSignatureSection) {
     TimeTraceScope timeScope("Write code signature");
@@ -1162,6 +1256,7 @@ void Writer::writeOutputFile() {
     return;
   writeSections();
   applyOptimizationHints();
+  buildFixupChains();
   writeUuid();
   writeCodeSignature();
 
@@ -1191,7 +1286,7 @@ template <class LP> void Writer::run() {
   if (errorCount())
     return;
 
-  if (in.stubHelper->isNeeded())
+  if (in.stubHelper && in.stubHelper->isNeeded())
     in.stubHelper->setUp();
 
   if (in.objCImageInfo->isNeeded())
@@ -1235,16 +1330,20 @@ void macho::createSyntheticSections() {
       make<DeduplicatedCStringSection>(section_names::objcMethname);
   in.wordLiteralSection =
       config->dedupLiterals ? make<WordLiteralSection>() : nullptr;
-  in.rebase = make<RebaseSection>();
-  in.binding = make<BindingSection>();
-  in.weakBinding = make<WeakBindingSection>();
-  in.lazyBinding = make<LazyBindingSection>();
+  if (config->emitChainedFixups) {
+    in.chainedFixups = make<ChainedFixupsSection>();
+  } else {
+    in.rebase = make<RebaseSection>();
+    in.binding = make<BindingSection>();
+    in.weakBinding = make<WeakBindingSection>();
+    in.lazyBinding = make<LazyBindingSection>();
+    in.lazyPointers = make<LazyPointerSection>();
+    in.stubHelper = make<StubHelperSection>();
+  }
   in.exports = make<ExportSection>();
   in.got = make<GotSection>();
   in.tlvPointers = make<TlvPointerSection>();
-  in.lazyPointers = make<LazyPointerSection>();
   in.stubs = make<StubsSection>();
-  in.stubHelper = make<StubHelperSection>();
   in.objcStubs = make<ObjCStubsSection>();
   in.unwindInfo = makeUnwindInfoSection();
   in.objCImageInfo = make<ObjCImageInfoSection>();

@@ -182,7 +182,7 @@ transform.with_pdl_patterns {
 func.func @generic_interchanged_transpose(%arg0: tensor<12x128x32xf32>) -> tensor<128x12x32xf32> {
   // CHECK: %[[IN:.+]] = vector.transfer_read
   // CHECK: vector.transfer_write %[[IN]], {{.+}} permutation_map = #[[MAP]]
-  %0 = linalg.init_tensor [128, 12, 32] : tensor<128x12x32xf32>
+  %0 = tensor.empty() : tensor<128x12x32xf32>
   %1 = linalg.generic {indexing_maps = [#map0, #map1],
                        iterator_types = ["parallel", "parallel", "parallel"]}
     ins(%arg0 : tensor<12x128x32xf32>)
@@ -786,7 +786,7 @@ transform.with_pdl_patterns {
 //   CHECK-NOT:   tensor.pad
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
-//   CHECK-DAG:   %[[INIT:.*]] = linalg.init_tensor [2, 3, 4] : tensor<2x3x4xf32>
+//   CHECK-DAG:   %[[INIT:.*]] = tensor.empty() : tensor<2x3x4xf32>
 //   CHECK-DAG:   %[[VEC:.*]] = vector.broadcast %[[PAD]] : f32 to vector<2x3x4xf32>
 //       CHECK:   %[[FILL:.*]] = vector.transfer_write %[[VEC]], %[[INIT]]{{.*}} : vector<2x3x4xf32>, tensor<2x3x4xf32>
 //       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, false, true]} : tensor<2x?x2xf32>, vector<2x3x2xf32>
@@ -818,7 +818,7 @@ transform.with_pdl_patterns {
 //   CHECK-NOT:   tensor.pad
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C2:.*]] = arith.constant 2 : index
-//       CHECK:   %[[INIT:.*]] = linalg.init_tensor [2, 6, 4] : tensor<2x6x4xf32>
+//       CHECK:   %[[INIT:.*]] = tensor.empty() : tensor<2x6x4xf32>
 //       CHECK:   %[[VEC:.*]] =  vector.broadcast %[[PAD]] : f32 to vector<2x6x4xf32>
 //       CHECK:   %[[FILL:.*]] = vector.transfer_write %[[VEC]], %[[INIT]][%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<2x6x4xf32>, tensor<2x6x4xf32>
 //       CHECK:   %[[READ:.*]] = vector.transfer_read %[[ARG0]][%[[C0]], %[[C0]], %[[C0]]], %{{.*}} {in_bounds = [true, true, true]} : tensor<2x5x2xf32>, vector<2x5x2xf32>
@@ -858,7 +858,7 @@ transform.with_pdl_patterns {
 //       CHECK:   %[[DIM3:.*]] = tensor.dim %[[SRC]], %[[C3]] : tensor<1x2x2x?xf32>
 //       CHECK:   %[[V4:.*]] = arith.addi %[[DIM3]], %[[C3]] : index
 //       CHECK:   %[[V5:.*]] = arith.addi %[[V4]], %[[C2]] : index
-//       CHECK:   %[[INIT:.*]] = linalg.init_tensor [6, %[[V1]], %[[V2]], %[[V5]]] : tensor<6x?x?x?xf32>
+//       CHECK:   %[[INIT:.*]] = tensor.empty(%[[V1]], %[[V2]], %[[V5]]) : tensor<6x?x?x?xf32>
 //       CHECK:   %[[FILL:.*]] = linalg.fill ins(%{{.*}} : f32) outs(%[[INIT]] : tensor<6x?x?x?xf32>) -> tensor<6x?x?x?xf32>
 //       CHECK:   %[[SRCDIM:.*]] = tensor.dim %[[SRC]], %[[C3]] : tensor<1x2x2x?xf32>
 //       CHECK:   %[[RESULT:.*]] = tensor.insert_slice %[[SRC]] into %[[FILL]][2, %[[LOW]], 3, 3] [1, 2, 2, %[[SRCDIM]]] [1, 1, 1, 1] : tensor<1x2x2x?xf32> into tensor<6x?x?x?xf32>
@@ -1192,11 +1192,11 @@ transform.with_pdl_patterns {
 // CHECK-LABEL:   func @red_max_2d(
 func.func @red_max_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
   // CHECK: %[[CMINF:.+]] = arith.constant dense<-3.402820e+38> : vector<4xf32>
-  // CHECK: linalg.init_tensor [4] : tensor<4xf32>
+  // CHECK: tensor.empty() : tensor<4xf32>
   // CHECK: vector.multi_reduction <maxf>, {{.*}}, %[[CMINF]] [1] : vector<4x4xf32> to vector<4xf32>
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
   %ident = arith.constant -3.40282e+38 : f32
-  %init = linalg.init_tensor [4] : tensor<4xf32>
+  %init = tensor.empty() : tensor<4xf32>
   %fill = linalg.fill ins(%ident : f32) outs(%init : tensor<4xf32>) -> tensor<4xf32>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
@@ -1225,12 +1225,12 @@ transform.with_pdl_patterns {
 // CHECK-LABEL:   func @red_min_2d(
 func.func @red_min_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
   // CHECK: %[[CMAXF:.+]] = arith.constant dense<3.402820e+38> : vector<4xf32>
-  // CHECK: linalg.init_tensor [4] : tensor<4xf32>
+  // CHECK: tensor.empty() : tensor<4xf32>
   // CHECK: vector.transfer_read {{.*}} : tensor<4x4xf32>, vector<4x4xf32>
   // CHECK: vector.multi_reduction <minf>, {{.*}}, %[[CMAXF]] [1] : vector<4x4xf32> to vector<4xf32>
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
   %maxf32 = arith.constant 3.40282e+38 : f32
-  %init = linalg.init_tensor [4] : tensor<4xf32>
+  %init = tensor.empty() : tensor<4xf32>
   %fill = linalg.fill ins(%maxf32 : f32) outs(%init : tensor<4xf32>) -> tensor<4xf32>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
@@ -1258,12 +1258,12 @@ transform.with_pdl_patterns {
 
 // CHECK-LABEL:   func @red_mul_2d(
 func.func @red_mul_2d(%arg0: tensor<4x4xf32>) -> tensor<4xf32> {
-  // CHECK: linalg.init_tensor [4] : tensor<4xf32>
+  // CHECK: tensor.empty() : tensor<4xf32>
   // CHECK: vector.transfer_read {{.*}} : tensor<4x4xf32>, vector<4x4xf32>
   // CHECK: vector.multi_reduction <mul>, {{.*}}, {{.*}} [1] : vector<4x4xf32> to vector<4xf32>
   // CHECK: vector.transfer_write {{.*}} : vector<4xf32>, tensor<4xf32>
   %ident = arith.constant 1.0 : f32
-  %init = linalg.init_tensor [4] : tensor<4xf32>
+  %init = tensor.empty() : tensor<4xf32>
   %fill = linalg.fill ins(%ident : f32) outs(%init : tensor<4xf32>) -> tensor<4xf32>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
@@ -1291,12 +1291,12 @@ transform.with_pdl_patterns {
 
 // CHECK-LABEL:   func @red_or_2d(
 func.func @red_or_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
-  // CHECK: linalg.init_tensor [4] : tensor<4xi1>
+  // CHECK: tensor.empty() : tensor<4xi1>
   // CHECK: vector.transfer_read {{.*}} : tensor<4x4xi1>, vector<4x4xi1>
   // CHECK: vector.multi_reduction <or>, {{.*}}, {{.*}} [1] : vector<4x4xi1> to vector<4xi1>
   // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
   %ident = arith.constant false
-  %init = linalg.init_tensor [4] : tensor<4xi1>
+  %init = tensor.empty() : tensor<4xi1>
   %fill = linalg.fill ins(%ident : i1) outs(%init : tensor<4xi1>) -> tensor<4xi1>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
@@ -1324,12 +1324,12 @@ transform.with_pdl_patterns {
 
 // CHECK-LABEL:   func @red_and_2d(
 func.func @red_and_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
-  // CHECK: linalg.init_tensor [4] : tensor<4xi1>
+  // CHECK: tensor.empty() : tensor<4xi1>
   // CHECK: vector.transfer_read {{.*}} : tensor<4x4xi1>, vector<4x4xi1>
   // CHECK: vector.multi_reduction <and>, {{.*}}, {{.*}} [1] : vector<4x4xi1> to vector<4xi1>
   // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
   %ident = arith.constant true
-  %init = linalg.init_tensor [4] : tensor<4xi1>
+  %init = tensor.empty() : tensor<4xi1>
   %fill = linalg.fill ins(%ident : i1) outs(%init : tensor<4xi1>) -> tensor<4xi1>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
@@ -1357,12 +1357,12 @@ transform.with_pdl_patterns {
 
 // CHECK-LABEL:   func @red_xor_2d(
 func.func @red_xor_2d(%arg0: tensor<4x4xi1>) -> tensor<4xi1> {
-  // CHECK: linalg.init_tensor [4] : tensor<4xi1>
+  // CHECK: tensor.empty() : tensor<4xi1>
   // CHECK: vector.transfer_read {{.*}} : tensor<4x4xi1>, vector<4x4xi1>
   // CHECK: vector.multi_reduction <xor>, {{.*}}, {{.*}} [1] : vector<4x4xi1> to vector<4xi1>
   // CHECK: vector.transfer_write {{.*}} : vector<4xi1>, tensor<4xi1>
   %ident = arith.constant false
-  %init = linalg.init_tensor [4] : tensor<4xi1>
+  %init = tensor.empty() : tensor<4xi1>
   %fill = linalg.fill ins(%ident : i1) outs(%init : tensor<4xi1>) -> tensor<4xi1>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0)>],
@@ -1397,7 +1397,7 @@ func.func @explicit_broadcast(%arg0: tensor<4x4xf32>, %arg1: tensor<4x1xf32>) ->
   // CHECK: subf {{.*}} : vector<4x4xf32>
   // CHECK: vector.transfer_write {{.*}} {in_bounds = [true, true]} : vector<4x4xf32>, tensor<4x4xf32>
   %c0 = arith.constant 0.0 : f32
-  %init = linalg.init_tensor [4, 4] : tensor<4x4xf32>
+  %init = tensor.empty() : tensor<4x4xf32>
   %fill = linalg.fill ins(%c0 : f32) outs(%init : tensor<4x4xf32>) -> tensor<4x4xf32>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0, 0)>,
@@ -1436,7 +1436,7 @@ func.func @fused_broadcast_red_2d(%arg0: tensor<4x4xf32>, %arg1: tensor<4x1xf32>
   // CHECK: vector.multi_reduction <add>, {{.*}}, {{.*}} : vector<4x4xf32> to vector<4xf32>
   // CHECK: vector.transfer_write {{.*}} {in_bounds = [true]} : vector<4xf32>, tensor<4xf32>
   %c0 = arith.constant 0.0 : f32
-  %init = linalg.init_tensor [4] : tensor<4xf32>
+  %init = tensor.empty() : tensor<4xf32>
   %fill = linalg.fill ins(%c0 : f32) outs(%init : tensor<4xf32>) -> tensor<4xf32>
   %red = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                           affine_map<(d0, d1) -> (d0, 0)>,
@@ -1478,8 +1478,8 @@ func.func @reduce_1d(%arg0: tensor<32xf32>) -> tensor<f32> {
   //  CHECK-DAG: %[[C0:.*]] = arith.constant 0 : index
   %f0 = arith.constant 0.000000e+00 : f32
 
-  //      CHECK: %[[init:.*]] = linalg.init_tensor [] : tensor<f32>
-  %0 = linalg.init_tensor [] : tensor<f32>
+  //      CHECK: %[[init:.*]] = tensor.empty() : tensor<f32>
+  %0 = tensor.empty() : tensor<f32>
 
   %1 = linalg.fill ins(%f0 : f32) outs(%0 : tensor<f32>) -> tensor<f32>
   //      CHECK: %[[r:.*]] = vector.transfer_read %[[A]][%[[C0]]]
@@ -1524,7 +1524,7 @@ transform.with_pdl_patterns {
 // CHECK-LABEL:   func @not_projected_permutation
 func.func @not_projected_permutation(%arg0: tensor<8x8xf32>) -> tensor<6x6x3x3xf32> {
   %c0 = arith.constant 0.0 : f32
-  %init = linalg.init_tensor [6, 6, 3, 3] : tensor<6x6x3x3xf32>
+  %init = tensor.empty() : tensor<6x6x3x3xf32>
   %fill = linalg.fill ins(%c0 : f32) outs(%init : tensor<6x6x3x3xf32>) -> tensor<6x6x3x3xf32>
   // CHECK: linalg.generic
   %result = linalg.generic {indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0 + d2, d1 + d3)>,

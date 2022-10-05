@@ -415,7 +415,8 @@ def SparseTensor_SortOp : SparseTensor_Op<"sort", [AttrSizedOperandSegments]>,
     // and then use NonemptyVariadic<...>:$xs here.
     Arguments<(ins Index:$n,
                Variadic<StridedMemRefRankOf<[AnyInteger, Index], [1]>>:$xs,
-               Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys)>  {
+               Variadic<StridedMemRefRankOf<[AnyType], [1]>>:$ys,
+               UnitAttr:$stable)>  {
   string summary = "Sorts the arrays in xs and ys lexicographically on the "
                    "integral values found in the xs list";
   string description = [{
@@ -437,6 +438,9 @@ def SparseTensor_SortOp : SparseTensor_Op<"sort", [AttrSizedOperandSegments]>,
     is undefined if this condition is not met. The operator requires at least
     one buffer in `xs` while `ys` can be empty.
 
+    The `stable` attribute indicates whether a stable sorting algorithm should
+    be used to implement the operator.
+
     Note that this operation is "impure" in the sense that its behavior is
     solely defined by side-effects and not SSA values. The semantics may be
     refined over time as our sparse abstractions evolve.
@@ -447,10 +451,18 @@ def SparseTensor_SortOp : SparseTensor_Op<"sort", [AttrSizedOperandSegments]>,
     sparse_tensor.sort %n, %x1, %x2 jointly y1, %y2
       : memref<?xindex>, memref<?xindex> jointly memref<?xindex>, memref<?xf32>
     ```
-  }];
-  let assemblyFormat = "$n `,` $xs (`jointly` $ys^)? attr-dict"
-                       "`:` type($xs) (`jointly` type($ys)^)?";
 
+    ```mlir
+    sparse_tensor.sort stable %n, %x1, %x2 jointly y1, %y2
+      : memref<?xindex>, memref<?xindex> jointly memref<?xindex>, memref<?xf32>
+    ```
+  }];
+  let assemblyFormat = "(`stable` $stable^)? $n"
+                       "`,`$xs (`jointly` $ys^)? attr-dict"
+                       "`:` type($xs) (`jointly` type($ys)^)?";
+  let builders = [
+        OpBuilder<(ins "Value":$n, "ValueRange":$xs, "ValueRange":$ys)>
+  ];
   let hasVerifier = 1;
 }
 

@@ -109,3 +109,5 @@ ABI Affecting Changes
 
 Build System Changes
 --------------------
+- Support for ``libcxx``, ``libcxxabi`` and ``libunwind`` in ``LLVM_ENABLE_PROJECTS`` has officially
+  been removed. Instead, please build according to :ref:`these instructions <build instructions>`.

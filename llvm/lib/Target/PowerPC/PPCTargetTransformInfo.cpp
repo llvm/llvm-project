@@ -1371,6 +1371,15 @@ bool PPCTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
     Info.WriteMem = true;
     return true;
   }
+  case Intrinsic::ppc_stbcx:
+  case Intrinsic::ppc_sthcx:
+  case Intrinsic::ppc_stdcx:
+  case Intrinsic::ppc_stwcx: {
+    Info.PtrVal = Inst->getArgOperand(0);
+    Info.ReadMem = false;
+    Info.WriteMem = true;
+    return true;
+  }
   default:
     break;
   }

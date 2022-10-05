@@ -671,13 +671,49 @@ public:
   /// The result vectors should be kept in sync; null entries in the
   /// variables vector are acceptable.
   ///
+  /// LastParamTransformed, if non-null, will be set to the index of the last
+  /// parameter on which transfromation was started. In the event of an error,
+  /// this will contain the parameter which failed to instantiate.
+  ///
   /// Return true on error.
   bool TransformFunctionTypeParams(
       SourceLocation Loc, ArrayRef<ParmVarDecl *> Params,
       const QualType *ParamTypes,
       const FunctionProtoType::ExtParameterInfo *ParamInfos,
       SmallVectorImpl<QualType> &PTypes, SmallVectorImpl<ParmVarDecl *> *PVars,
-      Sema::ExtParameterInfoBuilder &PInfos);
+      Sema::ExtParameterInfoBuilder &PInfos, unsigned *LastParamTransformed);
+
+  bool TransformFunctionTypeParams(
+      SourceLocation Loc, ArrayRef<ParmVarDecl *> Params,
+      const QualType *ParamTypes,
+      const FunctionProtoType::ExtParameterInfo *ParamInfos,
+      SmallVectorImpl<QualType> &PTypes, SmallVectorImpl<ParmVarDecl *> *PVars,
+      Sema::ExtParameterInfoBuilder &PInfos) {
+    return getDerived().TransformFunctionTypeParams(
+        Loc, Params, ParamTypes, ParamInfos, PTypes, PVars, PInfos, nullptr);
+  }
+
+  /// Transforms the parameters of a requires expresison into the given vectors.
+  ///
+  /// The result vectors should be kept in sync; null entries in the
+  /// variables vector are acceptable.
+  ///
+  /// Returns an unset ExprResult on success.  Returns an ExprResult the 'not
+  /// satisfied' RequiresExpr if subsitution failed, OR an ExprError, both of
+  /// which are cases where transformation shouldn't continue.
+  ExprResult TransformRequiresTypeParams(
+      SourceLocation KWLoc, SourceLocation RBraceLoc, const RequiresExpr *RE,
+      RequiresExprBodyDecl *Body, ArrayRef<ParmVarDecl *> Params,
+      SmallVectorImpl<QualType> &PTypes,
+      SmallVectorImpl<ParmVarDecl *> &TransParams,
+      Sema::ExtParameterInfoBuilder &PInfos) {
+    if (getDerived().TransformFunctionTypeParams(
+            KWLoc, Params, /*ParamTypes=*/nullptr,
+            /*ParamInfos=*/nullptr, PTypes, &TransParams, PInfos))
+      return ExprError();
+
+    return ExprResult{};
+  }
 
   /// Transforms a single function-type parameter.  Return null
   /// on error.
@@ -5661,11 +5697,14 @@ bool TreeTransform<Derived>::TransformFunctionTypeParams(
     const FunctionProtoType::ExtParameterInfo *ParamInfos,
     SmallVectorImpl<QualType> &OutParamTypes,
     SmallVectorImpl<ParmVarDecl *> *PVars,
-    Sema::ExtParameterInfoBuilder &PInfos) {
+    Sema::ExtParameterInfoBuilder &PInfos,
+    unsigned *LastParamTransformed) {
   int indexAdjustment = 0;
 
   unsigned NumParams = Params.size();
   for (unsigned i = 0; i != NumParams; ++i) {
+    if (LastParamTransformed)
+      *LastParamTransformed = i;
     if (ParmVarDecl *OldParm = Params[i]) {
       assert(OldParm->getFunctionScopeIndex() == i);
 
@@ -5783,6 +5822,7 @@ bool TreeTransform<Derived>::TransformFunctionTypeParams(
 
     // Deal with the possibility that we don't have a parameter
     // declaration for this parameter.
+    assert(ParamTypes);
     QualType OldType = ParamTypes[i];
     bool IsPackExpansion = false;
     Optional<unsigned> NumExpansions;
@@ -6200,12 +6240,10 @@ QualType TreeTransform<Derived>::TransformTypeOfExprType(TypeLocBuilder &TLB,
     return QualType();
 
   QualType Result = TL.getType();
-  bool IsUnqual = Result->getAs<TypeOfExprType>()->isUnqual();
-  if (getDerived().AlwaysRebuild() ||
-      E.get() != TL.getUnderlyingExpr()) {
-    Result = getDerived().RebuildTypeOfExprType(
-        E.get(), TL.getTypeofLoc(),
-        IsUnqual ? TypeOfKind::Unqualified : TypeOfKind::Qualified);
+  TypeOfKind Kind = Result->getAs<TypeOfExprType>()->getKind();
+  if (getDerived().AlwaysRebuild() || E.get() != TL.getUnderlyingExpr()) {
+    Result =
+        getDerived().RebuildTypeOfExprType(E.get(), TL.getTypeofLoc(), Kind);
     if (Result.isNull())
       return QualType();
   }
@@ -6227,11 +6265,9 @@ QualType TreeTransform<Derived>::TransformTypeOfType(TypeLocBuilder &TLB,
     return QualType();
 
   QualType Result = TL.getType();
-  bool IsUnqual = Result->getAs<TypeOfType>()->isUnqual();
+  TypeOfKind Kind = Result->getAs<TypeOfType>()->getKind();
   if (getDerived().AlwaysRebuild() || New_Under_TI != Old_Under_TI) {
-    Result = getDerived().RebuildTypeOfType(New_Under_TI->getType(),
-                                            IsUnqual ? TypeOfKind::Unqualified
-                                                     : TypeOfKind::Qualified);
+    Result = getDerived().RebuildTypeOfType(New_Under_TI->getType(), Kind);
     if (Result.isNull())
       return QualType();
   }
@@ -12585,16 +12621,20 @@ TreeTransform<Derived>::TransformRequiresExpr(RequiresExpr *E) {
 
   Sema::ContextRAII SavedContext(getSema(), Body, /*NewThisContext*/false);
 
-  if (getDerived().TransformFunctionTypeParams(E->getRequiresKWLoc(),
-                                               E->getLocalParameters(),
-                                               /*ParamTypes=*/nullptr,
-                                               /*ParamInfos=*/nullptr,
-                                               TransParamTypes, &TransParams,
-                                               ExtParamInfos))
-    return ExprError();
+  ExprResult TypeParamResult = getDerived().TransformRequiresTypeParams(
+      E->getRequiresKWLoc(), E->getRBraceLoc(), E, Body,
+      E->getLocalParameters(), TransParamTypes, TransParams, ExtParamInfos);
 
   for (ParmVarDecl *Param : TransParams)
-    Param->setDeclContext(Body);
+    if (Param)
+      Param->setDeclContext(Body);
+
+  // On failure to transform, TransformRequiresTypeParams returns an expression
+  // in the event that the transformation of the type params failed in some way.
+  // It is expected that this will result in a 'not satisfied' Requires clause
+  // when instantiating.
+  if (!TypeParamResult.isUnset())
+    return TypeParamResult;
 
   SmallVector<concepts::Requirement *, 4> TransReqs;
   if (getDerived().TransformRequiresExprRequirements(E->getRequirements(),

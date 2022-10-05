@@ -69,7 +69,7 @@ public:
     auto G = std::make_unique<jitlink::LinkGraph>(
         "<COFFHeaderMU>", TT, PointerSize, Endianness,
         jitlink::getGenericEdgeKindName);
-    auto &HeaderSection = G->createSection("__header", jitlink::MemProt::Read);
+    auto &HeaderSection = G->createSection("__header", MemProt::Read);
     auto &HeaderBlock = createHeaderBlock(*G, HeaderSection);
 
     // Init symbol is __ImageBase symbol.

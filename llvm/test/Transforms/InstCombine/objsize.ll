@@ -112,7 +112,7 @@ define void @test3(i1 %c1, i8* %ptr1, i8* %ptr2, i8* %ptr3) nounwind {
 ; CHECK:       bb11:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @__inline_memcpy_chk(i8* bitcast (float* getelementptr inbounds ([480 x float], [480 x float]* @array, i32 0, i32 1) to i8*), i8* [[PTR3:%.*]], i32 512) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i8* @__inline_memcpy_chk(i8* nonnull bitcast (float* getelementptr inbounds ([480 x float], [480 x float]* @array, i32 0, i32 1) to i8*), i8* [[PTR3:%.*]], i32 512) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    unreachable
 ;
 entry:
@@ -227,7 +227,7 @@ declare noalias i8* @strndup(i8* nocapture, i32) nounwind
 
 define i32 @test9(i8** %esc) {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable_or_null(8) i8* @strdup(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0)) #[[ATTR0]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable_or_null(8) i8* @strdup(i8* nonnull getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0)) #[[ATTR0]]
 ; CHECK-NEXT:    store i8* [[CALL]], i8** [[ESC:%.*]], align 8
 ; CHECK-NEXT:    ret i32 8
 ;
@@ -239,7 +239,7 @@ define i32 @test9(i8** %esc) {
 
 define i32 @test10(i8** %esc) {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable_or_null(4) i8* @strndup(i8* dereferenceable(8) getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0), i32 3) #[[ATTR0]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call dereferenceable_or_null(4) i8* @strndup(i8* nonnull dereferenceable(8) getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0), i32 3) #[[ATTR0]]
 ; CHECK-NEXT:    store i8* [[CALL]], i8** [[ESC:%.*]], align 8
 ; CHECK-NEXT:    ret i32 4
 ;
@@ -251,7 +251,7 @@ define i32 @test10(i8** %esc) {
 
 define i32 @test11(i8** %esc) {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[STRDUP:%.*]] = tail call dereferenceable_or_null(8) i8* @strdup(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0))
+; CHECK-NEXT:    [[STRDUP:%.*]] = tail call dereferenceable_or_null(8) i8* @strdup(i8* nonnull getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0))
 ; CHECK-NEXT:    store i8* [[STRDUP]], i8** [[ESC:%.*]], align 8
 ; CHECK-NEXT:    ret i32 8
 ;
@@ -263,7 +263,7 @@ define i32 @test11(i8** %esc) {
 
 define i32 @test12(i8** %esc) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[STRDUP:%.*]] = tail call dereferenceable_or_null(8) i8* @strdup(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0))
+; CHECK-NEXT:    [[STRDUP:%.*]] = tail call dereferenceable_or_null(8) i8* @strdup(i8* nonnull getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0))
 ; CHECK-NEXT:    store i8* [[STRDUP]], i8** [[ESC:%.*]], align 8
 ; CHECK-NEXT:    ret i32 8
 ;
@@ -275,7 +275,7 @@ define i32 @test12(i8** %esc) {
 
 define i32 @test13(i8** %esc) {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    [[STRDUP:%.*]] = tail call dereferenceable_or_null(8) i8* @strdup(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0))
+; CHECK-NEXT:    [[STRDUP:%.*]] = tail call dereferenceable_or_null(8) i8* @strdup(i8* nonnull getelementptr inbounds ([8 x i8], [8 x i8]* @.str, i32 0, i32 0))
 ; CHECK-NEXT:    store i8* [[STRDUP]], i8** [[ESC:%.*]], align 8
 ; CHECK-NEXT:    ret i32 8
 ;

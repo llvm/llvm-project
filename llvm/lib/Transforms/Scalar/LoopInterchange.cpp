@@ -182,20 +182,6 @@ static void interChangeDependencies(CharMatrix &DepMatrix, unsigned FromIndx,
     std::swap(DepMatrix[I][ToIndx], DepMatrix[I][FromIndx]);
 }
 
-// Checks if outermost non '=','S'or'I' dependence in the dependence matrix is
-// '>'
-static bool isOuterMostDepPositive(CharMatrix &DepMatrix, unsigned Row,
-                                   unsigned Column) {
-  for (unsigned i = 0; i <= Column; ++i) {
-    if (DepMatrix[Row][i] == '<')
-      return false;
-    if (DepMatrix[Row][i] == '>')
-      return true;
-  }
-  // All dependencies were '=','S' or 'I'
-  return false;
-}
-
 // Checks if no dependence exist in the dependency matrix in Row before Column.
 static bool containsNoDependence(CharMatrix &DepMatrix, unsigned Row,
                                  unsigned Column) {
@@ -210,9 +196,6 @@ static bool containsNoDependence(CharMatrix &DepMatrix, unsigned Row,
 static bool validDepInterchange(CharMatrix &DepMatrix, unsigned Row,
                                 unsigned OuterLoopId, char InnerDep,
                                 char OuterDep) {
-  if (isOuterMostDepPositive(DepMatrix, Row, OuterLoopId))
-    return false;
-
   if (InnerDep == OuterDep)
     return true;
 

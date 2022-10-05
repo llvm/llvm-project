@@ -16,10 +16,10 @@ define void @_Z3fooi(i32 signext %n) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd, i64 0, i32 0, i32 0), align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd, i64 0, i32 0, i32 1), align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd2, i64 0, i32 0, i32 0), align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = load float, float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd2, i64 0, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr @dd, align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd, i64 0, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr @dd2, align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = load float, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd2, i64 0, i32 0, i32 1), align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[MUL4_I:%.*]] = fmul float [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[SUB_I:%.*]] = fsub float [[MUL_I]], [[MUL4_I]]
@@ -31,8 +31,8 @@ define void @_Z3fooi(i32 signext %n) {
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    store float [[TMP0]], float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd, i64 0, i32 0, i32 0), align 4
-; CHECK-NEXT:    store float [[TMP1]], float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd, i64 0, i32 0, i32 1), align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr @dd, align 4
+; CHECK-NEXT:    store float [[TMP1]], ptr getelementptr inbounds (%"struct.std::complex", ptr @dd, i64 0, i32 0, i32 1), align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -46,10 +46,10 @@ for.cond:
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:
-  %0 = load float, float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd, i64 0, i32 0, i32 0), align 4
-  %1 = load float, float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd, i64 0, i32 0, i32 1), align 4
-  %2 = load float, float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd2, i64 0, i32 0, i32 0), align 4
-  %3 = load float, float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd2, i64 0, i32 0, i32 1), align 4
+  %0 = load float, ptr @dd, align 4
+  %1 = load float, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd, i64 0, i32 0, i32 1), align 4
+  %2 = load float, ptr @dd2, align 4
+  %3 = load float, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd2, i64 0, i32 0, i32 1), align 4
   %mul.i = fmul float %0, %2
   %mul4.i = fmul float %1, %3
   %sub.i = fsub float %mul.i, %mul4.i
@@ -66,8 +66,8 @@ for.body:
   br label %for.cond
 
 for.end:
-  store i32 %ldd.sroa.0.0, i32* bitcast (%"struct.std::complex"* @dd to i32*), align 4
-  store i32 %ldd.sroa.6.0, i32* bitcast (float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd, i64 0, i32 0, i32 1) to i32*), align 4
+  store i32 %ldd.sroa.0.0, ptr @dd, align 4
+  store i32 %ldd.sroa.6.0, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd, i64 0, i32 0, i32 1), align 4
   ret void
 
 }
@@ -83,10 +83,10 @@ define void @multi_phi(i32 signext %n) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[I_0]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd, i64 0, i32 0, i32 0), align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd, i64 0, i32 0, i32 1), align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = load float, float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd2, i64 0, i32 0, i32 0), align 4
-; CHECK-NEXT:    [[TMP4:%.*]] = load float, float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd2, i64 0, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr @dd, align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd, i64 0, i32 0, i32 1), align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr @dd2, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = load float, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd2, i64 0, i32 0, i32 1), align 4
 ; CHECK-NEXT:    [[MUL_I:%.*]] = fmul float [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[MUL4_I:%.*]] = fmul float [[TMP2]], [[TMP4]]
 ; CHECK-NEXT:    [[SUB_I:%.*]] = fsub float [[MUL_I]], [[MUL4_I]]
@@ -102,7 +102,7 @@ define void @multi_phi(i32 signext %n) {
 ; CHECK-NEXT:    [[TMP6]] = phi float [ [[ADD_I]], [[FOR_BODY]] ], [ [[TMP5]], [[EVEN_BB]] ]
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    store float [[TMP0]], float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd, i64 0, i32 0, i32 0), align 4
+; CHECK-NEXT:    store float [[TMP0]], ptr @dd, align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -115,10 +115,10 @@ for.cond:
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:
-  %0 = load float, float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd, i64 0, i32 0, i32 0), align 4
-  %1 = load float, float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd, i64 0, i32 0, i32 1), align 4
-  %2 = load float, float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd2, i64 0, i32 0, i32 0), align 4
-  %3 = load float, float* getelementptr inbounds (%"struct.std::complex", %"struct.std::complex"* @dd2, i64 0, i32 0, i32 1), align 4
+  %0 = load float, ptr @dd, align 4
+  %1 = load float, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd, i64 0, i32 0, i32 1), align 4
+  %2 = load float, ptr @dd2, align 4
+  %3 = load float, ptr getelementptr inbounds (%"struct.std::complex", ptr @dd2, i64 0, i32 0, i32 1), align 4
   %mul.i = fmul float %0, %2
   %mul4.i = fmul float %1, %3
   %sub.i = fsub float %mul.i, %mul4.i
@@ -141,7 +141,7 @@ odd.bb:
   br label %for.cond
 
 for.end:
-  store i32 %ldd.sroa.0.0, i32* bitcast (%"struct.std::complex"* @dd to i32*), align 4
+  store i32 %ldd.sroa.0.0, ptr @dd, align 4
   ret void
 
 }

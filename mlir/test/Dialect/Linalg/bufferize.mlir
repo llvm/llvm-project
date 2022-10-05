@@ -41,18 +41,18 @@ func.func @basic(%arg0: tensor<4xf32>) -> tensor<4xf32> {
 
 #map0 = affine_map<(d0) -> (d0)>
 
-// Same as above but with linalg.init_tensor op.
+// Same as above but with tensor.empty op.
 
 // CHECK: #map = affine_map<(d0) -> (d0)>
-// CHECK-LABEL: func @init_tensor(
+// CHECK-LABEL: func @empty_tensor(
 // CHECK-SAME:      %[[IN:.*]]: tensor<?xf32>, %[[SIZE:.*]]: index)
 // CHECK-DAG:     %[[MEMREF:.*]] = bufferization.to_memref %[[IN]] : memref<?xf32>
 // CHECK-DAG:     %[[OUT_BUF:.*]] = memref.alloc(%[[SIZE]]) {{.*}} : memref<?xf32>
 // CHECK:         linalg.generic
 // CHECK-SAME:    ins(%[[MEMREF]] : memref<?xf32>)
 // CHECK-SAME:    outs(%[[OUT_BUF]] : memref<?xf32>) {
-func.func @init_tensor(%in : tensor<?xf32>, %size: index) -> tensor<?xf32> {
-  %init = linalg.init_tensor [%size] : tensor<?xf32>
+func.func @empty_tensor(%in : tensor<?xf32>, %size: index) -> tensor<?xf32> {
+  %init = tensor.empty(%size) : tensor<?xf32>
   %0 = linalg.generic {
     indexing_maps = [#map0, #map0],
     iterator_types = ["parallel"]
@@ -208,7 +208,7 @@ func.func private @csum(%arg0: tensor<6xi64>) -> tensor<6xi64>
 // CHECK:   return %[[call]]
 func.func public @main(%arg0: tensor<2x3xi1>) -> tensor<6xi64> {
   %0 = tensor.collapse_shape %arg0 [[0, 1]] : tensor<2x3xi1> into tensor<6xi1>
-  %1 = linalg.init_tensor [6] : tensor<6xi64>
+  %1 = tensor.empty() : tensor<6xi64>
   %2 = linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>], iterator_types = ["parallel"]} ins(%0 : tensor<6xi1>) outs(%1 : tensor<6xi64>) {
   ^bb0(%arg1: i1, %arg2: i64):
     %4 = arith.extui %arg1 : i1 to i64

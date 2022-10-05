@@ -67,7 +67,7 @@ define <vscale x 8 x i8> @add_stepvector_nxv8i8() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vsll.vi v8, v8, 1
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 8 x i8> @llvm.experimental.stepvector.nxv8i8()
@@ -232,7 +232,7 @@ define <vscale x 16 x i16> @add_stepvector_nxv16i16() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vsll.vi v8, v8, 1
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 16 x i16> @llvm.experimental.stepvector.nxv16i16()
@@ -361,7 +361,7 @@ define <vscale x 16 x i32> @add_stepvector_nxv16i32() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vsll.vi v8, v8, 1
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 16 x i32> @llvm.experimental.stepvector.nxv16i32()
@@ -466,7 +466,7 @@ define <vscale x 8 x i64> @add_stepvector_nxv8i64() {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
 ; CHECK-NEXT:    vid.v v8
-; CHECK-NEXT:    vsll.vi v8, v8, 1
+; CHECK-NEXT:    vadd.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
   %0 = call <vscale x 8 x i64> @llvm.experimental.stepvector.nxv8i64()
@@ -584,7 +584,7 @@ define <vscale x 16 x i64> @add_stepvector_nxv16i64() {
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    vid.v v8
-; RV32-NEXT:    vsll.vi v8, v8, 1
+; RV32-NEXT:    vadd.vv v8, v8, v8
 ; RV32-NEXT:    vadd.vv v16, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    ret
@@ -595,7 +595,7 @@ define <vscale x 16 x i64> @add_stepvector_nxv16i64() {
 ; RV64-NEXT:    slli a0, a0, 1
 ; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
 ; RV64-NEXT:    vid.v v8
-; RV64-NEXT:    vsll.vi v8, v8, 1
+; RV64-NEXT:    vadd.vv v8, v8, v8
 ; RV64-NEXT:    vadd.vx v16, v8, a0
 ; RV64-NEXT:    ret
 entry:

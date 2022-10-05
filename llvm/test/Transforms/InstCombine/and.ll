@@ -132,17 +132,17 @@ define i32 @test10(i32 %A) {
   ret i32 %D
 }
 
-define i32 @test11(i32 %A, i32* %P) {
+define i32 @test11(i32 %A, ptr %P) {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -4
 ; CHECK-NEXT:    [[C:%.*]] = xor i32 [[TMP1]], 15
-; CHECK-NEXT:    store i32 [[C]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[C]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 3
 ;
   %B = or i32 %A, 3
   %C = xor i32 %B, 12
   ; additional use of C
-  store i32 %C, i32* %P
+  store i32 %C, ptr %P
   ; %C = and uint %B, 3 --> 3
   %D = and i32 %C, 3
   ret i32 %D
@@ -416,15 +416,15 @@ define i32 @ashr_lowmask_use(i32 %x) {
   ret i32 %r
 }
 
-define <2 x i8> @ashr_lowmask_use_splat(<2 x i8> %x, <2 x i8>* %p) {
+define <2 x i8> @ashr_lowmask_use_splat(<2 x i8> %x, ptr %p) {
 ; CHECK-LABEL: @ashr_lowmask_use_splat(
 ; CHECK-NEXT:    [[A:%.*]] = ashr <2 x i8> [[X:%.*]], <i8 7, i8 7>
-; CHECK-NEXT:    store <2 x i8> [[A]], <2 x i8>* [[P:%.*]], align 2
+; CHECK-NEXT:    store <2 x i8> [[A]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> [[X]], <i8 7, i8 7>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = ashr <2 x i8> %x, <i8 7, i8 7>
-  store <2 x i8> %a, <2 x i8>* %p
+  store <2 x i8> %a, ptr %p
   %r = and <2 x i8> %a, <i8 1, i8 1>
   ret <2 x i8> %r
 }
@@ -1437,17 +1437,17 @@ define i32 @not_lowmask_sext_in_reg2(i32 %x) {
   ret i32 %and
 }
 
-define <2 x i32> @lowmask_sext_in_reg_splat(<2 x i32> %x, <2 x i32>* %p) {
+define <2 x i32> @lowmask_sext_in_reg_splat(<2 x i32> %x, ptr %p) {
 ; CHECK-LABEL: @lowmask_sext_in_reg_splat(
 ; CHECK-NEXT:    [[L:%.*]] = shl <2 x i32> [[X:%.*]], <i32 20, i32 20>
 ; CHECK-NEXT:    [[R:%.*]] = ashr exact <2 x i32> [[L]], <i32 20, i32 20>
-; CHECK-NEXT:    store <2 x i32> [[R]], <2 x i32>* [[P:%.*]], align 8
+; CHECK-NEXT:    store <2 x i32> [[R]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[X]], <i32 4095, i32 4095>
 ; CHECK-NEXT:    ret <2 x i32> [[AND]]
 ;
   %l = shl <2 x i32> %x, <i32 20, i32 20>
   %r = ashr <2 x i32> %l, <i32 20, i32 20>
-  store <2 x i32> %r, <2 x i32>* %p
+  store <2 x i32> %r, ptr %p
   %and = and <2 x i32> %r, <i32 4095, i32 4095>
   ret <2 x i32> %and
 }
@@ -1488,15 +1488,15 @@ define i8 @lowmask_add_2_uses(i8 %x) {
   ret i8 %r
 }
 
-define <2 x i8> @lowmask_add_2_splat(<2 x i8> %x, <2 x i8>* %p) {
+define <2 x i8> @lowmask_add_2_splat(<2 x i8> %x, ptr %p) {
 ; CHECK-LABEL: @lowmask_add_2_splat(
 ; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -64, i8 -64>
-; CHECK-NEXT:    store <2 x i8> [[A]], <2 x i8>* [[P:%.*]], align 2
+; CHECK-NEXT:    store <2 x i8> [[A]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X]], <i8 63, i8 63>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %x, <i8 -64, i8 -64> ; 0xc0
-  store <2 x i8> %a, <2 x i8>* %p
+  store <2 x i8> %a, ptr %p
   %r = and <2 x i8> %a, <i8 63, i8 63> ; 0x3f
   ret <2 x i8> %r
 }
@@ -1531,41 +1531,41 @@ define i8 @not_lowmask_add2(i8 %x) {
   ret i8 %r
 }
 
-define <2 x i8> @lowmask_add_splat(<2 x i8> %x, <2 x i8>* %p) {
+define <2 x i8> @lowmask_add_splat(<2 x i8> %x, ptr %p) {
 ; CHECK-LABEL: @lowmask_add_splat(
 ; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -64, i8 -64>
-; CHECK-NEXT:    store <2 x i8> [[A]], <2 x i8>* [[P:%.*]], align 2
+; CHECK-NEXT:    store <2 x i8> [[A]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[X]], <i8 32, i8 32>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %x, <i8 -64, i8 -64> ; 0xc0
-  store <2 x i8> %a, <2 x i8>* %p
+  store <2 x i8> %a, ptr %p
   %r = and <2 x i8> %a, <i8 32, i8 32> ; 0x20
   ret <2 x i8> %r
 }
 
-define <2 x i8> @lowmask_add_splat_undef(<2 x i8> %x, <2 x i8>* %p) {
+define <2 x i8> @lowmask_add_splat_undef(<2 x i8> %x, ptr %p) {
 ; CHECK-LABEL: @lowmask_add_splat_undef(
 ; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -64, i8 undef>
-; CHECK-NEXT:    store <2 x i8> [[A]], <2 x i8>* [[P:%.*]], align 2
+; CHECK-NEXT:    store <2 x i8> [[A]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[A]], <i8 undef, i8 32>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %x, <i8 -64, i8 undef> ; 0xc0
-  store <2 x i8> %a, <2 x i8>* %p
+  store <2 x i8> %a, ptr %p
   %r = and <2 x i8> %a, <i8 undef, i8 32> ; 0x20
   ret <2 x i8> %r
 }
 
-define <2 x i8> @lowmask_add_vec(<2 x i8> %x, <2 x i8>* %p) {
+define <2 x i8> @lowmask_add_vec(<2 x i8> %x, ptr %p) {
 ; CHECK-LABEL: @lowmask_add_vec(
 ; CHECK-NEXT:    [[A:%.*]] = add <2 x i8> [[X:%.*]], <i8 -96, i8 -64>
-; CHECK-NEXT:    store <2 x i8> [[A]], <2 x i8>* [[P:%.*]], align 2
+; CHECK-NEXT:    store <2 x i8> [[A]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[A]], <i8 16, i8 32>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %a = add <2 x i8> %x, <i8 -96, i8 -64> ; 0xe0, 0xc0
-  store <2 x i8> %a, <2 x i8>* %p
+  store <2 x i8> %a, ptr %p
   %r = and <2 x i8> %a, <i8 16, i8 32> ; 0x10, 0x20
   ret <2 x i8> %r
 }

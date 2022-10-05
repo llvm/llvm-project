@@ -3,100 +3,98 @@
 
 ; Passing select(cond, null, v) as nonnull should be optimized to passing v
 
-define nonnull i32* @pr48975(i32** %.0) {
+define nonnull ptr @pr48975(ptr %.0) {
 ; CHECK-LABEL: @pr48975(
-; CHECK-NEXT:    [[DOT1:%.*]] = load i32*, i32** [[DOT0:%.*]], align 8
-; CHECK-NEXT:    [[DOT2:%.*]] = icmp eq i32* [[DOT1]], null
-; CHECK-NEXT:    [[DOT3:%.*]] = bitcast i32** [[DOT0]] to i32*
-; CHECK-NEXT:    [[DOT4:%.*]] = select i1 [[DOT2]], i32* null, i32* [[DOT3]]
-; CHECK-NEXT:    ret i32* [[DOT4]]
+; CHECK-NEXT:    [[DOT1:%.*]] = load ptr, ptr [[DOT0:%.*]], align 8
+; CHECK-NEXT:    [[DOT2:%.*]] = icmp eq ptr [[DOT1]], null
+; CHECK-NEXT:    [[DOT4:%.*]] = select i1 [[DOT2]], ptr null, ptr [[DOT0]]
+; CHECK-NEXT:    ret ptr [[DOT4]]
 ;
-  %.1 = load i32*, i32** %.0, align 8
-  %.2 = icmp eq i32* %.1, null
-  %.3 = bitcast i32** %.0 to i32*
-  %.4 = select i1 %.2, i32* null, i32* %.3
-  ret i32* %.4
+  %.1 = load ptr, ptr %.0, align 8
+  %.2 = icmp eq ptr %.1, null
+  %.4 = select i1 %.2, ptr null, ptr %.0
+  ret ptr %.4
 }
 
-define nonnull i32* @nonnull_ret(i1 %cond, i32* %p) {
+define nonnull ptr @nonnull_ret(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_ret(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], i32* [[P:%.*]], i32* null
-; CHECK-NEXT:    ret i32* [[RES]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], ptr [[P:%.*]], ptr null
+; CHECK-NEXT:    ret ptr [[RES]]
 ;
-  %res = select i1 %cond, i32* %p, i32* null
-  ret i32* %res
+  %res = select i1 %cond, ptr %p, ptr null
+  ret ptr %res
 }
 
-define nonnull i32* @nonnull_ret2(i1 %cond, i32* %p) {
+define nonnull ptr @nonnull_ret2(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_ret2(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], i32* null, i32* [[P:%.*]]
-; CHECK-NEXT:    ret i32* [[RES]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], ptr null, ptr [[P:%.*]]
+; CHECK-NEXT:    ret ptr [[RES]]
 ;
-  %res = select i1 %cond, i32* null, i32* %p
-  ret i32* %res
+  %res = select i1 %cond, ptr null, ptr %p
+  ret ptr %res
 }
 
-define nonnull noundef i32* @nonnull_noundef_ret(i1 %cond, i32* %p) {
+define nonnull noundef ptr @nonnull_noundef_ret(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_noundef_ret(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], i32* [[P:%.*]], i32* null
-; CHECK-NEXT:    ret i32* [[RES]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], ptr [[P:%.*]], ptr null
+; CHECK-NEXT:    ret ptr [[RES]]
 ;
-  %res = select i1 %cond, i32* %p, i32* null
-  ret i32* %res
+  %res = select i1 %cond, ptr %p, ptr null
+  ret ptr %res
 }
 
-define nonnull noundef i32* @nonnull_noundef_ret2(i1 %cond, i32* %p) {
+define nonnull noundef ptr @nonnull_noundef_ret2(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_noundef_ret2(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], i32* null, i32* [[P:%.*]]
-; CHECK-NEXT:    ret i32* [[RES]]
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], ptr null, ptr [[P:%.*]]
+; CHECK-NEXT:    ret ptr [[RES]]
 ;
-  %res = select i1 %cond, i32* null, i32* %p
-  ret i32* %res
+  %res = select i1 %cond, ptr null, ptr %p
+  ret ptr %res
 }
 
 
-define void @nonnull_call(i1 %cond, i32* %p) {
+define void @nonnull_call(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_call(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], i32* [[P:%.*]], i32* null
-; CHECK-NEXT:    call void @f(i32* nonnull [[RES]])
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], ptr [[P:%.*]], ptr null
+; CHECK-NEXT:    call void @f(ptr nonnull [[RES]])
 ; CHECK-NEXT:    ret void
 ;
-  %res = select i1 %cond, i32* %p, i32* null
-  call void @f(i32* nonnull %res)
+  %res = select i1 %cond, ptr %p, ptr null
+  call void @f(ptr nonnull %res)
   ret void
 }
 
-define void @nonnull_call2(i1 %cond, i32* %p) {
+define void @nonnull_call2(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_call2(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], i32* null, i32* [[P:%.*]]
-; CHECK-NEXT:    call void @f(i32* nonnull [[RES]])
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], ptr null, ptr [[P:%.*]]
+; CHECK-NEXT:    call void @f(ptr nonnull [[RES]])
 ; CHECK-NEXT:    ret void
 ;
-  %res = select i1 %cond, i32* null, i32* %p
-  call void @f(i32* nonnull %res)
+  %res = select i1 %cond, ptr null, ptr %p
+  call void @f(ptr nonnull %res)
   ret void
 }
 
-define void @nonnull_noundef_call(i1 %cond, i32* %p) {
+define void @nonnull_noundef_call(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_noundef_call(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], i32* [[P:%.*]], i32* null
-; CHECK-NEXT:    call void @f(i32* noundef nonnull [[RES]])
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], ptr [[P:%.*]], ptr null
+; CHECK-NEXT:    call void @f(ptr noundef nonnull [[RES]])
 ; CHECK-NEXT:    ret void
 ;
-  %res = select i1 %cond, i32* %p, i32* null
-  call void @f(i32* nonnull noundef %res)
+  %res = select i1 %cond, ptr %p, ptr null
+  call void @f(ptr nonnull noundef %res)
   ret void
 }
 
-define void @nonnull_noundef_call2(i1 %cond, i32* %p) {
+define void @nonnull_noundef_call2(i1 %cond, ptr %p) {
 ; CHECK-LABEL: @nonnull_noundef_call2(
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], i32* null, i32* [[P:%.*]]
-; CHECK-NEXT:    call void @f(i32* noundef nonnull [[RES]])
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[COND:%.*]], ptr null, ptr [[P:%.*]]
+; CHECK-NEXT:    call void @f(ptr noundef nonnull [[RES]])
 ; CHECK-NEXT:    ret void
 ;
-  %res = select i1 %cond, i32* null, i32* %p
-  call void @f(i32* nonnull noundef %res)
+  %res = select i1 %cond, ptr null, ptr %p
+  call void @f(ptr nonnull noundef %res)
   ret void
 }
 
-declare void @f(i32*)
+declare void @f(ptr)

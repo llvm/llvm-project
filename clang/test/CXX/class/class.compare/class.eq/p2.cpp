@@ -17,19 +17,19 @@ struct G { bool operator==(G) const = delete; }; // expected-note {{deleted here
 
 struct H1 {
   bool operator==(const H1 &) const = default;
-  bool operator<(const H1 &) const = default; // expected-warning {{implicitly deleted}}
+  bool operator<(const H1 &) const = default; // expected-warning {{implicitly deleted}} expected-note{{replace 'default'}}
   // expected-note@-1 {{because there is no viable three-way comparison function for 'H1'}}
   void (*x)();
 };
 struct H2 {
   bool operator==(const H2 &) const = default;
-  bool operator<(const H2 &) const = default; // expected-warning {{implicitly deleted}}
+  bool operator<(const H2 &) const = default; // expected-warning {{implicitly deleted}} expected-note{{replace 'default'}}
   // expected-note@-1 {{because there is no viable three-way comparison function for 'H2'}}
   void (H2::*x)();
 };
 struct H3 {
   bool operator==(const H3 &) const = default;
-  bool operator<(const H3 &) const = default; // expected-warning {{implicitly deleted}}
+  bool operator<(const H3 &) const = default; // expected-warning {{implicitly deleted}} expected-note{{replace 'default'}}
   // expected-note@-1 {{because there is no viable three-way comparison function for 'H3'}}
   int H3::*x;
 };
@@ -72,8 +72,8 @@ namespace Access {
     bool operator==(const A &) const; // expected-note 2{{implicitly declared private here}}
   };
   struct B : A { // expected-note 2{{because it would invoke a private 'operator==' to compare base class 'A'}}
-    bool operator==(const B &) const = default; // expected-warning {{deleted}}
-    friend bool operator==(const B &, const B &) = default; // expected-warning {{deleted}}
+    bool operator==(const B &) const = default; // expected-warning {{deleted}} expected-note{{replace 'default'}}
+    friend bool operator==(const B &, const B &) = default; // expected-warning {{deleted}} expected-note{{replace 'default'}}
   };
 
   class C {
@@ -86,8 +86,8 @@ namespace Access {
   };
   struct E {
     C c; // expected-note 2{{because it would invoke a protected 'operator==' member of 'Access::C' to compare member 'c'}}
-    bool operator==(const E &) const = default; // expected-warning {{deleted}}
-    friend bool operator==(const E &, const E &) = default; // expected-warning {{deleted}}
+    bool operator==(const E &) const = default; // expected-warning {{deleted}} expected-note{{replace 'default'}}
+    friend bool operator==(const E &, const E &) = default; // expected-warning {{deleted}} expected-note{{replace 'default'}}
   };
 
   struct F : C {
@@ -103,8 +103,8 @@ namespace Access {
     using C::operator==; // expected-note 2{{declared private here}}
   };
   struct I : H { // expected-note 2{{private 'operator==' to compare base class 'H'}}
-    bool operator==(const I&) const = default; // expected-warning {{deleted}}
-    friend bool operator==(const I&, const I&) = default; // expected-warning {{deleted}}
+    bool operator==(const I&) const = default; // expected-warning {{deleted}} expected-note{{replace 'default'}}
+    friend bool operator==(const I&, const I&) = default; // expected-warning {{deleted}} expected-note{{replace 'default'}}
   };
 
   class J {

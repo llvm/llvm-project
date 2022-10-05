@@ -107,10 +107,10 @@ define void @test_srem(i64 %A) {
   ret void
 }
 
-define void @test_ptrtoint(i64* %P) {
+define void @test_ptrtoint(ptr %P) {
 ; CHECK-LABEL: @test_ptrtoint
-; CHECK-NEXT:  call void @llvm.dbg.value(metadata i64* %P, {{.*}}, metadata !DIExpression())
-  %1 = ptrtoint i64* %P to i64
+; CHECK-NEXT:  call void @llvm.dbg.value(metadata ptr %P, {{.*}}, metadata !DIExpression())
+  %1 = ptrtoint ptr %P to i64
   ret void
 }
 
