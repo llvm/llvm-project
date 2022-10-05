@@ -255,18 +255,11 @@ std::string HeaderSearch::getCachedModuleFileNameImpl(StringRef ModuleName,
     //
     // To avoid false-negatives, we form as canonical a path as we can, and map
     // to lower-case in case we're on a case-insensitive file system.
-    std::string Parent =
-        std::string(llvm::sys::path::parent_path(ModuleMapPath));
-    if (Parent.empty())
-      Parent = ".";
-    auto Dir = FileMgr.getDirectory(Parent);
-    if (!Dir)
+    SmallString<128> CanonicalPath(ModuleMapPath);
+    if (getModuleMap().canonicalizeModuleMapPath(CanonicalPath))
       return {};
-    auto DirName = FileMgr.getCanonicalName(*Dir);
-    auto FileName = llvm::sys::path::filename(ModuleMapPath);
 
-    llvm::hash_code Hash =
-      llvm::hash_combine(DirName.lower(), FileName.lower());
+    llvm::hash_code Hash = llvm::hash_combine(CanonicalPath.str().lower());
 
     SmallString<128> HashStr;
     llvm::APInt(64, size_t(Hash)).toStringUnsigned(HashStr, /*Radix*/36);
