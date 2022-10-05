@@ -550,4 +550,20 @@ namespace PR44978 {
   template<typename T> void f(T *p) { p->~U(); } // expected-error {{ambiguous}}
 }
 
+namespace crash_on_invalid_base_dtor {
+struct Test {
+  virtual ~Test();
+};
+struct Baz : public Test { // expected-warning {{non-virtual destructor}}
+  Baz() {}
+  ~Baz() = defaul; // expected-error {{undeclared identifier 'defaul'}} \
+                   // expected-error {{initializer on function}} \
+                   // expected-note {{overridden virtual function is here}}
+};
+struct Foo : public Baz { // expected-error {{cannot override a non-deleted function}} \
+                          // expected-note {{destructor of 'Foo' is implicitly deleted}}
+  Foo() {}
+};
+}
+
 #endif // BE_THE_HEADER
