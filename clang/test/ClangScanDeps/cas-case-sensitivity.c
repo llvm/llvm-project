@@ -5,8 +5,8 @@
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb1.json.template > %t/cdb1.json
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb2.json.template > %t/cdb2.json
 
-// RUN: clang-scan-deps -compilation-database %t/cdb1.json -cas-path %t/cas -format experimental-tree -reuse-filemanager=0 -mode preprocess-dependency-directives > %t/result1.txt
-// RUN: clang-scan-deps -compilation-database %t/cdb2.json -cas-path %t/cas -format experimental-tree -reuse-filemanager=0 -mode preprocess > %t/result2.txt
+// RUN: clang-scan-deps -compilation-database %t/cdb1.json -cas-path %t/cas -format experimental-tree -mode preprocess-dependency-directives > %t/result1.txt
+// RUN: clang-scan-deps -compilation-database %t/cdb2.json -cas-path %t/cas -format experimental-tree -mode preprocess > %t/result2.txt
 // RUN: sed -e 's/^.*llvmcas/llvmcas/' -e 's/ for.*$//' %t/result1.txt > %t/casid1
 // RUN: sed -e 's/^.*llvmcas/llvmcas/' -e 's/ for.*$//' %t/result2.txt > %t/casid2
 

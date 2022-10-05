@@ -42,8 +42,6 @@
 // FULL-TREE-NEXT:     }
 
 // RUN: clang-scan-deps -compilation-database %t/cdb.json -cas-path %t/cas -format experimental-tree -emit-cas-compdb | FileCheck %s -DPREFIX=%/t -check-prefix=COMPDB
-// Check without sharing FileManager.
-// RUN: clang-scan-deps -compilation-database %t/cdb.json -cas-path %t/cas -format experimental-tree -reuse-filemanager=0 -emit-cas-compdb | FileCheck %s -DPREFIX=%/t -check-prefix=COMPDB
 // COMPDB: [
 // COMPDB:   {
 // COMPDB:     "file": "[[PREFIX]]/t1.c",
