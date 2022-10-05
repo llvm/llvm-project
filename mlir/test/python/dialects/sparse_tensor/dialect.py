@@ -34,7 +34,7 @@ def testEncodingAttr1D():
     # CHECK: index_bit_width: 32
     print(f"index_bit_width: {casted.index_bit_width}")
 
-    created = st.EncodingAttr.get(casted.dim_level_types, None, 0, 0)
+    created = st.EncodingAttr.get(casted.dim_level_types, None, None, 0, 0)
     # CHECK: #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>
     print(created)
     # CHECK: created_equal: False
@@ -74,7 +74,7 @@ def testEncodingAttr2D():
     print(f"index_bit_width: {casted.index_bit_width}")
 
     created = st.EncodingAttr.get(casted.dim_level_types, casted.dim_ordering,
-                                  8, 32)
+                                  casted.higher_ordering, 8, 32)
     # CHECK: #sparse_tensor.encoding<{ dimLevelType = [ "dense", "compressed" ], dimOrdering = affine_map<(d0, d1) -> (d1, d0)>, pointerBitWidth = 8, indexBitWidth = 32 }>
     print(created)
     # CHECK: created_equal: True
