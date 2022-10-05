@@ -163,6 +163,10 @@ std::unique_ptr<Pass> createSparseTensorCodegenPass();
 
 void populateSparseTensorRewriting(RewritePatternSet &patterns, bool enableRT);
 
+std::unique_ptr<Pass> createSparseTensorRewritePass();
+std::unique_ptr<Pass>
+createSparseTensorRewritePass(const SparsificationOptions &options);
+
 std::unique_ptr<Pass> createDenseBufferizationPass(
     const bufferization::OneShotBufferizationOptions &options);
 

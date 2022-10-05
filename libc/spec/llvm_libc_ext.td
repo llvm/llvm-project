@@ -40,7 +40,7 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
       [], // Enumerations
       [
         FunctionSpec<
-            "sched_getcpucount",
+            "__sched_getcpucount",
             RetValSpec<IntType>,
             [ArgSpec<SizeTType>, ArgSpec<ConstCpuSetPtr>]
         >,

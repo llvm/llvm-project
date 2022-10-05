@@ -325,6 +325,11 @@ const uint32_t *AArch64RegisterInfo::getSMStartStopCallPreservedMask() const {
   return CSR_AArch64_SMStartStop_RegMask;
 }
 
+const uint32_t *
+AArch64RegisterInfo::SMEABISupportRoutinesCallPreservedMaskFromX0() const {
+  return CSR_AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0_RegMask;
+}
+
 const uint32_t *AArch64RegisterInfo::getNoPreservedMask() const {
   return CSR_AArch64_NoRegs_RegMask;
 }

@@ -412,6 +412,7 @@ void SharedMemoryMapper::release(ArrayRef<ExecutorAddr> Bases,
 }
 
 SharedMemoryMapper::~SharedMemoryMapper() {
+  std::lock_guard<std::mutex> Lock(Mutex);
   for (const auto &R : Reservations) {
 
 #if defined(LLVM_ON_UNIX) && !defined(__ANDROID__)

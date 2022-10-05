@@ -421,8 +421,9 @@ public:
                                       AliasInitializer &initializer)
       : printerFlags(printerFlags), initializer(initializer) {}
 
-  /// Print the given operation.
-  void print(Operation *op) {
+  /// Prints the entire operation with the custom assembly form, if available,
+  /// or the generic assembly form, otherwise.
+  void printCustomOrGenericOp(Operation *op) override {
     // Visit the operation location.
     if (printerFlags.shouldPrintDebugInfo())
       initializer.visit(op->getLoc(), /*canBeDeferred=*/true);
@@ -489,7 +490,7 @@ private:
         std::prev(block->end(),
                   (!hasTerminator || printBlockTerminator) ? 0 : 1));
     for (Operation &op : range)
-      print(&op);
+      printCustomOrGenericOp(&op);
   }
 
   /// Print the given region.
@@ -680,7 +681,7 @@ void AliasInitializer::initialize(
   // attributes/types that will actually be used during printing when
   // considering aliases.
   DummyAliasOperationPrinter aliasPrinter(printerFlags, *this);
-  aliasPrinter.print(op);
+  aliasPrinter.printCustomOrGenericOp(op);
 
   // Initialize the aliases sorted by name.
   initializeAliases(aliasToAttr, attrToAlias, &deferrableAttributes);
@@ -2660,11 +2661,16 @@ public:
   /// Print the given top-level operation.
   void printTopLevelOperation(Operation *op);
 
-  /// Print the given operation with its indent and location.
-  void print(Operation *op);
-  /// Print the bare location, not including indentation/location/etc.
-  void printOperation(Operation *op);
-  /// Print the given operation in the generic form.
+  /// Print the given operation, including its left-hand side and its right-hand
+  /// side, with its indent and location.
+  void printFullOpWithIndentAndLoc(Operation *op);
+  /// Print the given operation, including its left-hand side and its right-hand
+  /// side, but not including indentation and location.
+  void printFullOp(Operation *op);
+  /// Print the right-hand size of the given operation in the custom or generic
+  /// form.
+  void printCustomOrGenericOp(Operation *op) override;
+  /// Print the right-hand side of the given operation in the generic form.
   void printGenericOp(Operation *op, bool printOpName) override;
 
   /// Print the name of the given block.
@@ -2838,7 +2844,7 @@ void OperationPrinter::printTopLevelOperation(Operation *op) {
   state.getAliasState().printNonDeferredAliases(os, newLine);
 
   // Print the module.
-  print(op);
+  printFullOpWithIndentAndLoc(op);
   os << newLine;
 
   // Output the aliases at the top level that can be deferred.
@@ -2934,18 +2940,18 @@ void OperationPrinter::printRegionArgument(BlockArgument arg,
   printTrailingLocation(arg.getLoc(), /*allowAlias*/ false);
 }
 
-void OperationPrinter::print(Operation *op) {
+void OperationPrinter::printFullOpWithIndentAndLoc(Operation *op) {
   // Track the location of this operation.
   state.registerOperationLocation(op, newLine.curLine, currentIndent);
 
   os.indent(currentIndent);
-  printOperation(op);
+  printFullOp(op);
   printTrailingLocation(op->getLoc());
   if (printerFlags.shouldPrintValueUsers())
     printUsersComment(op);
 }
 
-void OperationPrinter::printOperation(Operation *op) {
+void OperationPrinter::printFullOp(Operation *op) {
   if (size_t numResults = op->getNumResults()) {
     auto printResultGroup = [&](size_t resultNo, size_t resultCount) {
       printValueID(op->getResult(resultNo), /*printResultNo=*/false);
@@ -2972,34 +2978,7 @@ void OperationPrinter::printOperation(Operation *op) {
     os << " = ";
   }
 
-  // If requested, always print the generic form.
-  if (!printerFlags.shouldPrintGenericOpForm()) {
-    // Check to see if this is a known operation. If so, use the registered
-    // custom printer hook.
-    if (auto opInfo = op->getRegisteredInfo()) {
-      opInfo->printAssembly(op, *this, defaultDialectStack.back());
-      return;
-    }
-    // Otherwise try to dispatch to the dialect, if available.
-    if (Dialect *dialect = op->getDialect()) {
-      if (auto opPrinter = dialect->getOperationPrinter(op)) {
-        // Print the op name first.
-        StringRef name = op->getName().getStringRef();
-        // Only drop the default dialect prefix when it cannot lead to
-        // ambiguities.
-        if (name.count('.') == 1)
-          name.consume_front((defaultDialectStack.back() + ".").str());
-        os << name;
-
-        // Print the rest of the op now.
-        opPrinter(op, *this);
-        return;
-      }
-    }
-  }
-
-  // Otherwise print with the generic assembly form.
-  printGenericOp(op, /*printOpName=*/true);
+  printCustomOrGenericOp(op);
 }
 
 void OperationPrinter::printUsersComment(Operation *op) {
@@ -3074,6 +3053,37 @@ void OperationPrinter::printUserIDs(Operation *user, bool prefixComma) {
     interleaveComma(user->getResults(),
                     [this](Value result) { printValueID(result); });
   }
+}
+
+void OperationPrinter::printCustomOrGenericOp(Operation *op) {
+  // If requested, always print the generic form.
+  if (!printerFlags.shouldPrintGenericOpForm()) {
+    // Check to see if this is a known operation. If so, use the registered
+    // custom printer hook.
+    if (auto opInfo = op->getRegisteredInfo()) {
+      opInfo->printAssembly(op, *this, defaultDialectStack.back());
+      return;
+    }
+    // Otherwise try to dispatch to the dialect, if available.
+    if (Dialect *dialect = op->getDialect()) {
+      if (auto opPrinter = dialect->getOperationPrinter(op)) {
+        // Print the op name first.
+        StringRef name = op->getName().getStringRef();
+        // Only drop the default dialect prefix when it cannot lead to
+        // ambiguities.
+        if (name.count('.') == 1)
+          name.consume_front((defaultDialectStack.back() + ".").str());
+        os << name;
+
+        // Print the rest of the op now.
+        opPrinter(op, *this);
+        return;
+      }
+    }
+  }
+
+  // Otherwise print with the generic assembly form.
+  printGenericOp(op, /*printOpName=*/true);
 }
 
 void OperationPrinter::printGenericOp(Operation *op, bool printOpName) {
@@ -3176,7 +3186,7 @@ void OperationPrinter::print(Block *block, bool printBlockArgs,
       std::prev(block->end(),
                 (!hasTerminator || printBlockTerminator) ? 0 : 1));
   for (auto &op : range) {
-    print(&op);
+    printFullOpWithIndentAndLoc(&op);
     os << newLine;
   }
   currentIndent -= indentWidth;
@@ -3418,7 +3428,7 @@ void Operation::print(raw_ostream &os, AsmState &state) {
     state.getImpl().initializeAliases(this);
     printer.printTopLevelOperation(this);
   } else {
-    printer.print(this);
+    printer.printFullOpWithIndentAndLoc(this);
   }
 }
 

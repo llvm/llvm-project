@@ -14,6 +14,7 @@
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SCCIterator.h"
@@ -720,7 +721,7 @@ struct DenseMapInfo<AAPointerInfo::Access> : DenseMapInfo<Instruction *> {
 
 /// Helper that allows OffsetAndSize as a key in a DenseMap.
 template <>
-struct DenseMapInfo<AAPointerInfo ::OffsetAndSize>
+struct DenseMapInfo<AA::OffsetAndSize>
     : DenseMapInfo<std::pair<int64_t, int64_t>> {};
 
 /// Helper for AA::PointerInfo::Access DenseMap/Set usage ignoring everythign
@@ -847,7 +848,7 @@ struct AA::PointerInfo::State : public AbstractState {
   };
 
   /// We store all accesses in bins denoted by their offset and size.
-  using AccessBinsTy = DenseMap<AAPointerInfo::OffsetAndSize, Accesses *>;
+  using AccessBinsTy = DenseMap<AA::OffsetAndSize, Accesses *>;
 
   AccessBinsTy::const_iterator begin() const { return AccessBins.begin(); }
   AccessBinsTy::const_iterator end() const { return AccessBins.end(); }
@@ -865,7 +866,7 @@ protected:
                          AAPointerInfo::AccessKind Kind, Type *Ty,
                          Instruction *RemoteI = nullptr,
                          Accesses *BinPtr = nullptr) {
-    AAPointerInfo::OffsetAndSize Key{Offset, Size};
+    AA::OffsetAndSize Key{Offset, Size};
     Accesses *&Bin = BinPtr ? BinPtr : AccessBins[Key];
     if (!Bin)
       Bin = new (A.Allocator) Accesses;
@@ -887,13 +888,13 @@ protected:
 
   /// See AAPointerInfo::forallInterferingAccesses.
   bool forallInterferingAccesses(
-      AAPointerInfo::OffsetAndSize OAS,
+      AA::OffsetAndSize OAS,
       function_ref<bool(const AAPointerInfo::Access &, bool)> CB) const {
     if (!isValidState())
       return false;
 
     for (const auto &It : AccessBins) {
-      AAPointerInfo::OffsetAndSize ItOAS = It.getFirst();
+      AA::OffsetAndSize ItOAS = It.getFirst();
       if (!OAS.mayOverlap(ItOAS))
         continue;
       bool IsExact = OAS == ItOAS && !OAS.offsetOrSizeAreUnknown();
@@ -907,12 +908,13 @@ protected:
   /// See AAPointerInfo::forallInterferingAccesses.
   bool forallInterferingAccesses(
       Instruction &I,
-      function_ref<bool(const AAPointerInfo::Access &, bool)> CB) const {
+      function_ref<bool(const AAPointerInfo::Access &, bool)> CB,
+      AA::OffsetAndSize *OASPtr) const {
     if (!isValidState())
       return false;
 
     // First find the offset and size of I.
-    AAPointerInfo::OffsetAndSize OAS(-1, -1);
+    AA::OffsetAndSize OAS = AA::OffsetAndSize::getUnassigned();
     for (const auto &It : AccessBins) {
       for (auto &Access : *It.getSecond()) {
         if (Access.getRemoteInst() == &I) {
@@ -920,11 +922,15 @@ protected:
           break;
         }
       }
-      if (OAS.getSize() != -1)
+      if (OAS.getSize() != AA::OffsetAndSize::Unassigned)
         break;
     }
+
+    if (OASPtr)
+      *OASPtr = OAS;
+
     // No access for I was found, we are done.
-    if (OAS.getSize() == -1)
+    if (OAS.getSize() == AA::OffsetAndSize::Unassigned)
       return true;
 
     // Now that we have an offset and size, find all overlapping ones and use
@@ -957,17 +963,16 @@ struct AAPointerInfoImpl
   }
 
   bool forallInterferingAccesses(
-      OffsetAndSize OAS,
+      AA::OffsetAndSize OAS,
       function_ref<bool(const AAPointerInfo::Access &, bool)> CB)
       const override {
     return State::forallInterferingAccesses(OAS, CB);
   }
 
-  bool
-  forallInterferingAccesses(Attributor &A, const AbstractAttribute &QueryingAA,
-                            Instruction &I,
-                            function_ref<bool(const Access &, bool)> UserCB,
-                            bool &HasBeenWrittenTo) const override {
+  bool forallInterferingAccesses(
+      Attributor &A, const AbstractAttribute &QueryingAA, Instruction &I,
+      function_ref<bool(const Access &, bool)> UserCB, bool &HasBeenWrittenTo,
+      AA::OffsetAndSize *OASPtr = nullptr) const override {
     HasBeenWrittenTo = false;
 
     SmallPtrSet<const Access *, 8> DominatingWrites;
@@ -1082,7 +1087,7 @@ struct AAPointerInfoImpl
       InterferingAccesses.push_back({&Acc, Exact});
       return true;
     };
-    if (!State::forallInterferingAccesses(I, AccessCB))
+    if (!State::forallInterferingAccesses(I, AccessCB, OASPtr))
       return false;
 
     if (HasBeenWrittenTo) {
@@ -1150,9 +1155,10 @@ struct AAPointerInfoImpl
     // Combine the accesses bin by bin.
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
     for (const auto &It : OtherAAImpl.getState()) {
-      OffsetAndSize OAS = OffsetAndSize::getUnknown();
-      if (Offset != OffsetAndSize::Unknown)
-        OAS = OffsetAndSize(It.first.getOffset() + Offset, It.first.getSize());
+      AA::OffsetAndSize OAS = AA::OffsetAndSize::getUnknown();
+      if (Offset != AA::OffsetAndSize::Unknown)
+        OAS = AA::OffsetAndSize(It.first.getOffset() + Offset,
+                                It.first.getSize());
       Accesses *Bin = AccessBins.lookup(OAS);
       for (const AAPointerInfo::Access &RAcc : *It.second) {
         if (IsByval && !RAcc.isRead())
@@ -1210,11 +1216,10 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
   bool handleAccess(Attributor &A, Instruction &I, Value &Ptr,
                     Optional<Value *> Content, AccessKind Kind, int64_t Offset,
                     ChangeStatus &Changed, Type *Ty,
-                    int64_t Size = OffsetAndSize::Unknown) {
+                    int64_t Size = AA::OffsetAndSize::Unknown) {
     using namespace AA::PointerInfo;
-    // No need to find a size if one is given or the offset is unknown.
-    if (Offset != OffsetAndSize::Unknown && Size == OffsetAndSize::Unknown &&
-        Ty) {
+    // No need to find a size if one is given.
+    if (Size == AA::OffsetAndSize::Unknown && Ty) {
       const DataLayout &DL = A.getDataLayout();
       TypeSize AccessSize = DL.getTypeStoreSize(Ty);
       if (!AccessSize.isScalable())
@@ -1226,7 +1231,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
   /// Helper struct, will support ranges eventually.
   struct OffsetInfo {
-    int64_t Offset = OffsetAndSize::Unassigned;
+    int64_t Offset = AA::OffsetAndSize::Unassigned;
 
     bool operator==(const OffsetInfo &OI) const { return Offset == OI.Offset; }
   };
@@ -1243,7 +1248,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
     auto HandlePassthroughUser = [&](Value *Usr, OffsetInfo PtrOI,
                                      bool &Follow) {
-      assert(PtrOI.Offset != OffsetAndSize::Unassigned &&
+      assert(PtrOI.Offset != AA::OffsetAndSize::Unassigned &&
              "Cannot pass through if the input Ptr was not visited!");
       OffsetInfo &UsrOI = OffsetInfoMap[Usr];
       UsrOI = PtrOI;
@@ -1283,11 +1288,11 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
         // TODO: Use range information.
         APInt GEPOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
-        if (PtrOI.Offset == OffsetAndSize::Unknown ||
+        if (PtrOI.Offset == AA::OffsetAndSize::Unknown ||
             !GEP->accumulateConstantOffset(DL, GEPOffset)) {
           LLVM_DEBUG(dbgs() << "[AAPointerInfo] GEP offset not constant "
                             << *GEP << "\n");
-          UsrOI.Offset = OffsetAndSize::Unknown;
+          UsrOI.Offset = AA::OffsetAndSize::Unknown;
           Follow = true;
           return true;
         }
@@ -1315,17 +1320,17 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
         // Check if the PHI operand has already an unknown offset as we can't
         // improve on that anymore.
-        if (PtrOI.Offset == OffsetAndSize::Unknown) {
+        if (PtrOI.Offset == AA::OffsetAndSize::Unknown) {
           LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI operand offset unknown "
                             << *CurPtr << " in " << *Usr << "\n");
-          Follow = UsrOI.Offset != OffsetAndSize::Unknown;
+          Follow = UsrOI.Offset != AA::OffsetAndSize::Unknown;
           UsrOI = PtrOI;
           return true;
         }
 
         // Check if the PHI is invariant (so far).
         if (UsrOI == PtrOI) {
-          assert(PtrOI.Offset != OffsetAndSize::Unassigned &&
+          assert(PtrOI.Offset != AA::OffsetAndSize::Unassigned &&
                  "Cannot assign if the current Ptr was not visited!");
           LLVM_DEBUG(dbgs() << "[AAPointerInfo] PHI is invariant (so far)");
           return true;
@@ -1352,7 +1357,7 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
 
         // TODO: Approximate in case we know the direction of the recurrence.
         UsrOI = PtrOI;
-        UsrOI.Offset = OffsetAndSize::Unknown;
+        UsrOI.Offset = AA::OffsetAndSize::Unknown;
         Follow = true;
         return true;
       }
@@ -1370,27 +1375,47 @@ struct AAPointerInfoFloating : public AAPointerInfoImpl {
                             LoadI->getType());
       }
 
-      if (auto *StoreI = dyn_cast<StoreInst>(Usr)) {
-        if (StoreI->getValueOperand() == CurPtr) {
-          LLVM_DEBUG(dbgs() << "[AAPointerInfo] Escaping use in store "
-                            << *StoreI << "\n");
-          return false;
+      auto HandleStoreLike = [&](Instruction &I, Value *ValueOp, Type &ValueTy,
+                                 ArrayRef<Value *> OtherOps, AccessKind AK) {
+        for (auto *OtherOp : OtherOps) {
+          if (OtherOp == CurPtr) {
+            LLVM_DEBUG(
+                dbgs()
+                << "[AAPointerInfo] Escaping use in store like instruction "
+                << I << "\n");
+            return false;
+          }
         }
+
         // If the access is to a pointer that may or may not be the associated
         // value, e.g. due to a PHI, we cannot assume it will be written.
-        AccessKind AK = AccessKind::AK_W;
         if (getUnderlyingObject(CurPtr) == &AssociatedValue)
           AK = AccessKind(AK | AccessKind::AK_MUST);
         else
           AK = AccessKind(AK | AccessKind::AK_MAY);
         bool UsedAssumedInformation = false;
-        Optional<Value *> Content =
-            A.getAssumedSimplified(*StoreI->getValueOperand(), *this,
-                                   UsedAssumedInformation, AA::Interprocedural);
-        return handleAccess(A, *StoreI, *CurPtr, Content, AK,
-                            OffsetInfoMap[CurPtr].Offset, Changed,
-                            StoreI->getValueOperand()->getType());
-      }
+        Optional<Value *> Content = nullptr;
+        if (ValueOp)
+          Content = A.getAssumedSimplified(
+              *ValueOp, *this, UsedAssumedInformation, AA::Interprocedural);
+        return handleAccess(A, I, *CurPtr, Content, AK,
+                            OffsetInfoMap[CurPtr].Offset, Changed, &ValueTy);
+      };
+
+      if (auto *StoreI = dyn_cast<StoreInst>(Usr))
+        return HandleStoreLike(*StoreI, StoreI->getValueOperand(),
+                               *StoreI->getValueOperand()->getType(),
+                               {StoreI->getValueOperand()}, AccessKind::AK_W);
+      if (auto *RMWI = dyn_cast<AtomicRMWInst>(Usr))
+        return HandleStoreLike(*RMWI, nullptr,
+                               *RMWI->getValOperand()->getType(),
+                               {RMWI->getValOperand()}, AccessKind::AK_RW);
+      if (auto *CXI = dyn_cast<AtomicCmpXchgInst>(Usr))
+        return HandleStoreLike(
+            *CXI, nullptr, *CXI->getNewValOperand()->getType(),
+            {CXI->getCompareOperand(), CXI->getNewValOperand()},
+            AccessKind::AK_RW);
+
       if (auto *CB = dyn_cast<CallBase>(Usr)) {
         if (CB->isLifetimeStartOrEnd())
           return true;
@@ -1495,7 +1520,7 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
     // accessed.
     if (auto *MI = dyn_cast_or_null<MemIntrinsic>(getCtxI())) {
       ConstantInt *Length = dyn_cast<ConstantInt>(MI->getLength());
-      int64_t LengthVal = OffsetAndSize::Unknown;
+      int64_t LengthVal = AA::OffsetAndSize::Unknown;
       if (Length)
         LengthVal = Length->getSExtValue();
       Value &Ptr = getAssociatedValue();
@@ -1526,13 +1551,35 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
     //       sense to specialize attributes for call sites arguments instead of
     //       redirecting requests to the callee argument.
     Argument *Arg = getAssociatedArgument();
-    if (!Arg)
+    if (Arg) {
+      const IRPosition &ArgPos = IRPosition::argument(*Arg);
+      auto &ArgAA =
+          A.getAAFor<AAPointerInfo>(*this, ArgPos, DepClassTy::REQUIRED);
+      if (ArgAA.getState().isValidState())
+        return translateAndAddState(A, ArgAA, 0, *cast<CallBase>(getCtxI()),
+                                    /* FromCallee */ true);
+      if (!Arg->getParent()->isDeclaration())
+        return indicatePessimisticFixpoint();
+    }
+
+    const auto &NoCaptureAA =
+        A.getAAFor<AANoCapture>(*this, getIRPosition(), DepClassTy::OPTIONAL);
+
+    if (!NoCaptureAA.isAssumedNoCapture())
       return indicatePessimisticFixpoint();
-    const IRPosition &ArgPos = IRPosition::argument(*Arg);
-    auto &ArgAA =
-        A.getAAFor<AAPointerInfo>(*this, ArgPos, DepClassTy::REQUIRED);
-    return translateAndAddState(A, ArgAA, 0, *cast<CallBase>(getCtxI()),
-                                /* FromCallee */ true);
+
+    bool IsKnown = false;
+    if (AA::isAssumedReadNone(A, getIRPosition(), *this, IsKnown))
+      return ChangeStatus::UNCHANGED;
+    bool ReadOnly = AA::isAssumedReadOnly(A, getIRPosition(), *this, IsKnown);
+
+    ChangeStatus Changed = ChangeStatus::UNCHANGED;
+    handleAccess(A, *getCtxI(), getAssociatedValue(), nullptr,
+                 ReadOnly ? AccessKind::AK_MAY_READ
+                          : AccessKind::AK_MAY_READ_WRITE,
+                 AA::OffsetAndSize::Unknown, Changed, nullptr,
+                 AA::OffsetAndSize::Unknown);
+    return Changed;
   }
 
   /// See AbstractAttribute::trackStatistics()

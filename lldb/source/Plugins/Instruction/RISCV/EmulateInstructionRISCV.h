@@ -9,6 +9,8 @@
 #ifndef LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_EMULATEINSTRUCTIONRISCV_H
 #define LLDB_SOURCE_PLUGINS_INSTRUCTION_RISCV_EMULATEINSTRUCTIONRISCV_H
 
+#include "RISCVInstructions.h"
+
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Interpreter/OptionValue.h"
 #include "lldb/Utility/Log.h"
@@ -16,22 +18,6 @@
 #include "lldb/Utility/Status.h"
 
 namespace lldb_private {
-
-constexpr uint32_t DecodeRD(uint32_t inst) { return (inst & 0xF80) >> 7; }
-constexpr uint32_t DecodeRS1(uint32_t inst) { return (inst & 0xF8000) >> 15; }
-constexpr uint32_t DecodeRS2(uint32_t inst) { return (inst & 0x1F00000) >> 20; }
-
-class EmulateInstructionRISCV;
-
-struct InstrPattern {
-  const char *name;
-  /// Bit mask to check the type of a instruction (B-Type, I-Type, J-Type, etc.)
-  uint32_t type_mask;
-  /// Characteristic value after bitwise-and with type_mask.
-  uint32_t eigen;
-  bool (*exec)(EmulateInstructionRISCV &emulator, uint32_t inst,
-               bool ignore_cond);
-};
 
 class EmulateInstructionRISCV : public EmulateInstruction {
 public:
@@ -79,31 +65,36 @@ public:
   llvm::Optional<RegisterInfo> GetRegisterInfo(lldb::RegisterKind reg_kind,
                                                uint32_t reg_num) override;
 
-  lldb::addr_t ReadPC(bool &success);
+  llvm::Optional<lldb::addr_t> ReadPC();
   bool WritePC(lldb::addr_t pc);
 
-  const InstrPattern *Decode(uint32_t inst);
-  bool DecodeAndExecute(uint32_t inst, bool ignore_cond);
+  llvm::Optional<DecodeResult> ReadInstructionAt(lldb::addr_t addr);
+  llvm::Optional<DecodeResult> Decode(uint32_t inst);
+  bool Execute(DecodeResult inst, bool ignore_cond);
 
   template <typename T>
-  static std::enable_if_t<std::is_integral_v<T>, T>
-  ReadMem(EmulateInstructionRISCV &emulator, uint64_t addr, bool *success) {
-
+  std::enable_if_t<std::is_integral_v<T>, llvm::Optional<T>>
+  ReadMem(uint64_t addr) {
     EmulateInstructionRISCV::Context ctx;
     ctx.type = EmulateInstruction::eContextRegisterLoad;
     ctx.SetNoArgs();
-    return T(emulator.ReadMemoryUnsigned(ctx, addr, sizeof(T), T(), success));
+    bool success = false;
+    T result = ReadMemoryUnsigned(ctx, addr, sizeof(T), T(), &success);
+    if (!success)
+      return {}; // aka return false
+    return result;
   }
 
-  template <typename T>
-  static bool WriteMem(EmulateInstructionRISCV &emulator, uint64_t addr,
-                       RegisterValue value) {
+  template <typename T> bool WriteMem(uint64_t addr, uint64_t value) {
     EmulateInstructionRISCV::Context ctx;
     ctx.type = EmulateInstruction::eContextRegisterStore;
     ctx.SetNoArgs();
-    return emulator.WriteMemoryUnsigned(ctx, addr, value.GetAsUInt64(),
-                                        sizeof(T));
+    return WriteMemoryUnsigned(ctx, addr, value, sizeof(T));
   }
+
+private:
+  /// Last decoded instruction from m_opcode
+  DecodeResult m_decoded;
 };
 
 } // namespace lldb_private

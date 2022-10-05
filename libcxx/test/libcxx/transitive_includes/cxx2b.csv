@@ -86,6 +86,7 @@ charconv type_traits
 chrono array
 chrono bit
 chrono charconv
+chrono cmath
 chrono compare
 chrono concepts
 chrono cstddef

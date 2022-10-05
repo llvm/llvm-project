@@ -792,6 +792,7 @@ multiclass VOPC_Class_Profile_t16<list<SchedReadWrite> sched> {
   def _t16 : VOPC_Class_Profile<sched, f16, i16> {
     let IsTrue16 = 1;
     let Src1RC32 = RegisterOperand<getVregSrcForVT_t16<Src1VT>.ret>;
+    let Src1RC64 = VSrc_b32;
     let Src0DPP = getVregSrcForVT_t16<Src0VT>.ret;
     let Src1DPP = getVregSrcForVT_t16<Src1VT>.ret;
     let Src2DPP = getVregSrcForVT_t16<Src2VT>.ret;
@@ -819,6 +820,7 @@ multiclass VOPC_Class_NoSdst_Profile_t16<list<SchedReadWrite> sched> {
   def _t16 : VOPC_Class_NoSdst_Profile<sched, f16, i16> {
     let IsTrue16 = 1;
     let Src1RC32 = RegisterOperand<getVregSrcForVT_t16<Src1VT>.ret>;
+    let Src1RC64 = VSrc_b32;
     let Src0DPP = getVregSrcForVT_t16<Src0VT>.ret;
     let Src1DPP = getVregSrcForVT_t16<Src1VT>.ret;
     let Src2DPP = getVregSrcForVT_t16<Src2VT>.ret;

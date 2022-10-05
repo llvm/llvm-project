@@ -123,15 +123,15 @@ attributes #0 = { inlinehint norecurse nounwind uwtable "target-features"="+avx2
 attributes #1 = { nounwind uwtable }
 attributes #2 = { argmemonly nounwind }
 ;.
-; TUNIT: attributes #[[ATTR0:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "target-features"="+avx2" }
-; TUNIT: attributes #[[ATTR1:[0-9]+]] = { argmemonly nofree norecurse nosync nounwind willreturn uwtable }
+; TUNIT: attributes #[[ATTR0]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "target-features"="+avx2" }
+; TUNIT: attributes #[[ATTR1]] = { argmemonly nofree norecurse nosync nounwind willreturn uwtable }
 ; TUNIT: attributes #[[ATTR2:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
-; TUNIT: attributes #[[ATTR3:[0-9]+]] = { willreturn writeonly }
-; TUNIT: attributes #[[ATTR4:[0-9]+]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR3]] = { willreturn writeonly }
+; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0:[0-9]+]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "target-features"="+avx2" }
-; CGSCC: attributes #[[ATTR1:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn uwtable }
+; CGSCC: attributes #[[ATTR0]] = { argmemonly inlinehint nofree norecurse nosync nounwind willreturn uwtable "target-features"="+avx2" }
+; CGSCC: attributes #[[ATTR1]] = { argmemonly nofree nosync nounwind willreturn uwtable }
 ; CGSCC: attributes #[[ATTR2:[0-9]+]] = { argmemonly nocallback nofree nounwind willreturn writeonly }
-; CGSCC: attributes #[[ATTR3:[0-9]+]] = { willreturn writeonly }
-; CGSCC: attributes #[[ATTR4:[0-9]+]] = { nounwind willreturn }
+; CGSCC: attributes #[[ATTR3]] = { willreturn writeonly }
+; CGSCC: attributes #[[ATTR4]] = { nounwind willreturn }
 ;.

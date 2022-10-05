@@ -13,26 +13,24 @@ target datalayout = "e-p:32:32:32"
 @.str = private constant [11 x i8] c"0123456789\00"
 @cell = external global %struct.s
 
-declare void @check(%struct.s* byval(%struct.s) %p) nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @check(ptr byval(%struct.s) %p) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
 
 define void @foo() nounwind {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[STRUCT_S:%.*]], align 4
-; CHECK-NEXT:    store i32 99, i32* getelementptr inbounds (%struct.s, %struct.s* @cell, i32 0, i32 1), align 4
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 getelementptr inbounds (%struct.s, %struct.s* @cell, i32 0, i32 0, i32 0), i8* align 1 getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i32 11, i1 false)
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.s* [[AGG_TMP]], i32 0, i32 0, i32 0
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 [[TMP]], i8* align 4 getelementptr inbounds (%struct.s, %struct.s* @cell, i32 0, i32 0, i32 0), i32 16, i1 false)
-; CHECK-NEXT:    call void @check(%struct.s* byval(%struct.s) [[AGG_TMP]])
+; CHECK-NEXT:    store i32 99, ptr getelementptr inbounds (%struct.s, ptr @cell, i32 0, i32 1), align 4
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 @cell, ptr align 1 @.str, i32 11, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[AGG_TMP]], ptr align 4 @cell, i32 16, i1 false)
+; CHECK-NEXT:    call void @check(ptr byval(%struct.s) [[AGG_TMP]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %agg.tmp = alloca %struct.s, align 4
-  store i32 99, i32* getelementptr inbounds (%struct.s, %struct.s* @cell, i32 0, i32 1), align 4
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 getelementptr inbounds (%struct.s, %struct.s* @cell, i32 0, i32 0, i32 0), i8* align 1 getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i32 11, i1 false)
-  %tmp = getelementptr inbounds %struct.s, %struct.s* %agg.tmp, i32 0, i32 0, i32 0
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %tmp, i8* align 4 getelementptr inbounds (%struct.s, %struct.s* @cell, i32 0, i32 0, i32 0), i32 16, i1 false)
-  call void @check(%struct.s* byval(%struct.s) %agg.tmp)
+  store i32 99, ptr getelementptr inbounds (%struct.s, ptr @cell, i32 0, i32 1), align 4
+  call void @llvm.memcpy.p0.p0.i32(ptr align 1 @cell, ptr align 1 @.str, i32 11, i1 false)
+  call void @llvm.memcpy.p0.p0.i32(ptr align 4 %agg.tmp, ptr align 4 @cell, i32 16, i1 false)
+  call void @check(ptr byval(%struct.s) %agg.tmp)
   ret void
 }

@@ -49,7 +49,8 @@ mlirAttributeIsASparseTensorEncodingAttr(MlirAttribute attr);
 MLIR_CAPI_EXPORTED MlirAttribute mlirSparseTensorEncodingAttrGet(
     MlirContext ctx, intptr_t numDimLevelTypes,
     enum MlirSparseTensorDimLevelType const *dimLevelTypes,
-    MlirAffineMap dimOrdering, int pointerBitWidth, int indexBitWidth);
+    MlirAffineMap dimOrdering, MlirAffineMap higherOrdering,
+    int pointerBitWidth, int indexBitWidth);
 
 /// Returns the number of dim level types in a sparse_tensor.encoding attribute.
 MLIR_CAPI_EXPORTED intptr_t
@@ -62,6 +63,10 @@ mlirSparseTensorEncodingAttrGetDimLevelType(MlirAttribute attr, intptr_t pos);
 /// Returns the dimension ordering in a sparse_tensor.encoding attribute.
 MLIR_CAPI_EXPORTED MlirAffineMap
 mlirSparseTensorEncodingAttrGetDimOrdering(MlirAttribute attr);
+
+/// Returns the higher ordering in a sparse_tensor.encoding attribute.
+MLIR_CAPI_EXPORTED MlirAffineMap
+mlirSparseTensorEncodingAttrGetHigherOrdering(MlirAttribute attr);
 
 /// Returns the pointer bit width in a sparse_tensor.encoding attribute.
 MLIR_CAPI_EXPORTED int
