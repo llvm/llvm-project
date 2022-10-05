@@ -604,6 +604,11 @@ def POSIX : StandardSpec<"POSIX"> {
              ArgSpec<ConstRestrictedCharPtr>,
              ArgSpec<CharRestrictedDoublePtr>]
         >,
+        FunctionSpec<
+            "strsignal",
+            RetValSpec<CharPtr>,
+            [ArgSpec<IntType>]
+        >,
     ]
   >;
 
