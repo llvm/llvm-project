@@ -216,7 +216,7 @@ def main():
       for ordering in orderings:
         for pwidth in bitwidths:
           for iwidth in bitwidths:
-            attr = st.EncodingAttr.get(level, ordering, pwidth, iwidth)
+            attr = st.EncodingAttr.get(level, ordering, None, pwidth, iwidth)
             types.append(ir.RankedTensorType.get(shape, f64, attr))
     #
     # For exhaustiveness we should have one or more StressTest, such

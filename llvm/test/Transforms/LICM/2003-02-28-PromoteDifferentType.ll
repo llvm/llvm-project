@@ -2,12 +2,11 @@
 ;
 ; RUN: opt < %s -licm
 
-define void @test(i32* %P) {
+define void @test(ptr %P) {
 	br label %Loop
 Loop:		; preds = %Loop, %0
-	store i32 5, i32* %P
-	%P2 = bitcast i32* %P to i8*		; <i8*> [#uses=1]
-	store i8 4, i8* %P2
+	store i32 5, ptr %P
+	store i8 4, ptr %P
 	br i1 true, label %Loop, label %Out
 Out:		; preds = %Loop
 	ret void

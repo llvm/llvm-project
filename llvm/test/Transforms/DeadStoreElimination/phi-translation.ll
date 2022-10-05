@@ -14,8 +14,8 @@ define void @memoryphi_translate_1(i1 %c) {
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi i8* [ [[A_1]], [[THEN]] ], [ [[A_2]], [[ELSE]] ]
-; CHECK-NEXT:    store i8 10, i8* [[P]], align 1
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[A_1]], [[THEN]] ], [ [[A_2]], [[ELSE]] ]
+; CHECK-NEXT:    store i8 10, ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -24,16 +24,16 @@ entry:
   br i1 %c, label %then, label %else
 
 then:
-  store i8 0, i8* %a.1
+  store i8 0, ptr %a.1
   br label %end
 
 else:
-  store i8 9, i8* %a.2
+  store i8 9, ptr %a.2
   br label %end
 
 end:
-  %p = phi i8* [ %a.1, %then ], [ %a.2, %else ]
-  store i8 10, i8* %p
+  %p = phi ptr [ %a.1, %then ], [ %a.2, %else ]
+  store i8 10, ptr %p
   ret void
 }
 
@@ -47,14 +47,14 @@ define i8 @memoryphi_translate_2(i1 %c) {
 ; CHECK-NEXT:    [[A_2:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    store i8 0, i8* [[A_1]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[A_1]], align 1
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi i8* [ [[A_1]], [[THEN]] ], [ [[A_2]], [[ELSE]] ]
-; CHECK-NEXT:    [[L:%.*]] = load i8, i8* [[A_1]], align 1
-; CHECK-NEXT:    store i8 10, i8* [[P]], align 1
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[A_1]], [[THEN]] ], [ [[A_2]], [[ELSE]] ]
+; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[A_1]], align 1
+; CHECK-NEXT:    store i8 10, ptr [[P]], align 1
 ; CHECK-NEXT:    ret i8 [[L]]
 ;
 entry:
@@ -63,17 +63,17 @@ entry:
   br i1 %c, label %then, label %else
 
 then:
-  store i8 0, i8* %a.1
+  store i8 0, ptr %a.1
   br label %end
 
 else:
-  store i8 9, i8* %a.2
+  store i8 9, ptr %a.2
   br label %end
 
 end:
-  %p = phi i8* [ %a.1, %then ], [ %a.2, %else ]
-  %l = load i8, i8* %a.1
-  store i8 10, i8* %p
+  %p = phi ptr [ %a.1, %then ], [ %a.2, %else ]
+  %l = load i8, ptr %a.1
+  store i8 10, ptr %p
   ret i8 %l
 }
 
@@ -89,12 +89,12 @@ define i8 @memoryphi_translate_3(i1 %c) {
 ; CHECK:       then:
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    store i8 9, i8* [[A_2]], align 1
+; CHECK-NEXT:    store i8 9, ptr [[A_2]], align 1
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi i8* [ [[A_1]], [[THEN]] ], [ [[A_2]], [[ELSE]] ]
-; CHECK-NEXT:    [[L:%.*]] = load i8, i8* [[A_2]], align 1
-; CHECK-NEXT:    store i8 10, i8* [[P]], align 1
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[A_1]], [[THEN]] ], [ [[A_2]], [[ELSE]] ]
+; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[A_2]], align 1
+; CHECK-NEXT:    store i8 10, ptr [[P]], align 1
 ; CHECK-NEXT:    ret i8 [[L]]
 ;
 entry:
@@ -103,17 +103,17 @@ entry:
   br i1 %c, label %then, label %else
 
 then:
-  store i8 0, i8* %a.1
+  store i8 0, ptr %a.1
   br label %end
 
 else:
-  store i8 9, i8* %a.2
+  store i8 9, ptr %a.2
   br label %end
 
 end:
-  %p = phi i8* [ %a.1, %then ], [ %a.2, %else ]
-  %l = load i8, i8* %a.2
-  store i8 10, i8* %p
+  %p = phi ptr [ %a.1, %then ], [ %a.2, %else ]
+  %l = load i8, ptr %a.2
+  store i8 10, ptr %p
   ret i8 %l
 }
 
@@ -125,15 +125,15 @@ define i8 @memoryphi_translate_4(i1 %c) {
 ; CHECK-NEXT:    [[A_2:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    store i8 0, i8* [[A_1]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[A_1]], align 1
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    store i8 9, i8* [[A_2]], align 1
+; CHECK-NEXT:    store i8 9, ptr [[A_2]], align 1
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[P:%.*]] = phi i8* [ [[A_1]], [[THEN]] ], [ [[A_2]], [[ELSE]] ]
-; CHECK-NEXT:    [[L:%.*]] = load i8, i8* [[P]], align 1
-; CHECK-NEXT:    store i8 10, i8* [[P]], align 1
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[A_1]], [[THEN]] ], [ [[A_2]], [[ELSE]] ]
+; CHECK-NEXT:    [[L:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    store i8 10, ptr [[P]], align 1
 ; CHECK-NEXT:    ret i8 [[L]]
 ;
 entry:
@@ -142,17 +142,17 @@ entry:
   br i1 %c, label %then, label %else
 
 then:
-  store i8 0, i8* %a.1
+  store i8 0, ptr %a.1
   br label %end
 
 else:
-  store i8 9, i8* %a.2
+  store i8 9, ptr %a.2
   br label %end
 
 end:
-  %p = phi i8* [ %a.1, %then ], [ %a.2, %else ]
-  %l = load i8, i8* %p
-  store i8 10, i8* %p
+  %p = phi ptr [ %a.1, %then ], [ %a.2, %else ]
+  %l = load i8, ptr %p
+  store i8 10, ptr %p
   ret i8 %l
 }
 
@@ -162,31 +162,31 @@ define void @memoryphi_translate_5(i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[B:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    store i8 0, i8* [[A]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[A]], align 1
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[P:%.*]] = phi i8* [ [[B]], [[COND_TRUE]] ], [ [[A]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    store i8 0, i8* [[P]], align 1
-; CHECK-NEXT:    call void @use(i8* [[P]])
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[B]], [[COND_TRUE]] ], [ [[A]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store i8 0, ptr [[P]], align 1
+; CHECK-NEXT:    call void @use(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %a = alloca i8
   %b = alloca i8
   %c = alloca i8
-  store i8 0, i8* %a
+  store i8 0, ptr %a
   br i1 %cond, label %cond.true, label %cond.end
 
 cond.true:
-  store i8 0, i8* %c
+  store i8 0, ptr %c
   br label %cond.end
 
 cond.end:
-  %p = phi i8* [ %b, %cond.true ], [ %a, %entry ]
-  store i8 0, i8* %p
-  call void @use(i8* %p)
+  %p = phi ptr [ %b, %cond.true ], [ %a, %entry ]
+  store i8 0, ptr %p
+  call void @use(ptr %p)
   ret void
 }
 
@@ -198,35 +198,35 @@ define void @translate_without_memoryphi_1(i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i8, align 1
 ; CHECK-NEXT:    [[B:%.*]] = alloca i8, align 1
-; CHECK-NEXT:    store i8 0, i8* [[A]], align 1
+; CHECK-NEXT:    store i8 0, ptr [[A]], align 1
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[COND_TRUE:%.*]], label [[COND_END:%.*]]
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    br label [[COND_END]]
 ; CHECK:       cond.end:
-; CHECK-NEXT:    [[P:%.*]] = phi i8* [ [[B]], [[COND_TRUE]] ], [ [[A]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    store i8 0, i8* [[P]], align 1
-; CHECK-NEXT:    call void @use(i8* [[P]])
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[B]], [[COND_TRUE]] ], [ [[A]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    store i8 0, ptr [[P]], align 1
+; CHECK-NEXT:    call void @use(ptr [[P]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %a = alloca i8
   %b = alloca i8
-  store i8 0, i8* %a
+  store i8 0, ptr %a
   br i1 %cond, label %cond.true, label %cond.end
 
 cond.true:
   br label %cond.end
 
 cond.end:
-  %p = phi i8* [ %b, %cond.true ], [ %a, %entry ]
-  store i8 0, i8* %p
-  call void @use(i8* %p)
+  %p = phi ptr [ %b, %cond.true ], [ %a, %entry ]
+  store i8 0, ptr %p
+  call void @use(ptr %p)
   ret void
 }
 
 ; In the test, translating through the phi results in a null address. Make sure
 ; this does not cause a crash.
-define void @test_trans_null(i1 %c, i16* %ptr) {
+define void @test_trans_null(i1 %c, ptr %ptr) {
 ; CHECK-LABEL: @test_trans_null(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[ELSE:%.*]]
@@ -234,14 +234,13 @@ define void @test_trans_null(i1 %c, i16* %ptr) {
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       else:
 ; CHECK-NEXT:    call void @fn()
-; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* undef to i16*
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i16, i16* [[BC]], i64 2
-; CHECK-NEXT:    store i16 8, i16* [[GEP_1]], align 2
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i16, ptr undef, i64 2
+; CHECK-NEXT:    store i16 8, ptr [[GEP_1]], align 2
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[P:%.*]] = phi i16* [ [[PTR:%.*]], [[THEN]] ], [ [[BC]], [[ELSE]] ]
-; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i16, i16* [[P]], i64 2
-; CHECK-NEXT:    store i16 8, i16* [[GEP_2]], align 2
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ [[PTR:%.*]], [[THEN]] ], [ undef, [[ELSE]] ]
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i16, ptr [[P]], i64 2
+; CHECK-NEXT:    store i16 8, ptr [[GEP_2]], align 2
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -252,18 +251,17 @@ then:
 
 else:
   call void @fn()
-  %bc = bitcast i8* undef to i16*
-  %gep.1 = getelementptr inbounds i16, i16* %bc, i64 2
-  store i16 8, i16* %gep.1, align 2
+  %gep.1 = getelementptr inbounds i16, ptr undef, i64 2
+  store i16 8, ptr %gep.1, align 2
   br label %exit
 
 exit:
-  %p = phi i16* [ %ptr, %then ], [ %bc, %else ]
-  %gep.2 = getelementptr inbounds i16, i16* %p, i64 2
-  store i16 8, i16* %gep.2, align 2
+  %p = phi ptr [ %ptr, %then ], [ undef, %else ]
+  %gep.2 = getelementptr inbounds i16, ptr %p, i64 2
+  store i16 8, ptr %gep.2, align 2
   ret void
 }
 
 
-declare void @use(i8*)
+declare void @use(ptr)
 declare void @fn()

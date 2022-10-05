@@ -184,8 +184,8 @@ void test_P1361() {
   assert_formatter_is_disabled<std::chrono::local_time<std::chrono::microseconds>, CharT>();
 
   assert_formatter_is_enabled<std::chrono::day, CharT>();
-  assert_formatter_is_disabled<std::chrono::month, CharT>();
-  assert_formatter_is_disabled<std::chrono::year, CharT>();
+  assert_formatter_is_enabled<std::chrono::month, CharT>();
+  assert_formatter_is_enabled<std::chrono::year, CharT>();
 
   assert_formatter_is_disabled<std::chrono::weekday, CharT>();
   assert_formatter_is_disabled<std::chrono::weekday_indexed, CharT>();

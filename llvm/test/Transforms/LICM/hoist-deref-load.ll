@@ -14,25 +14,25 @@ target triple = "x86_64-unknown-linux-gnu"
 ; and we want to hoist the load of %c out of the loop. This can be done only
 ; because the dereferenceable attribute is on %c.
 
-define void @test1(i32* noalias nocapture %a, i32* noalias nocapture readonly %b, i32* nocapture readonly nonnull dereferenceable(4) align 4 %c, i32 %n) #0 {
+define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, ptr nocapture readonly nonnull dereferenceable(4) align 4 %c, i32 %n) #0 {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C:%.*]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], [[TMP0]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -50,17 +50,17 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %1 = load i32, i32* %c, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
+  %1 = load i32, ptr %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -75,7 +75,7 @@ for.end:                                          ; preds = %for.inc, %entry
 
 ; This is the same as @test1, but without the dereferenceable attribute on %c.
 ; Without this attribute, we should not hoist the load of %c.
-define void @test2(i32* noalias nocapture %a, i32* noalias nocapture readonly %b, i32* nocapture readonly nonnull %c, i32 %n) #0 {
+define void @test2(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, ptr nocapture readonly nonnull %c, i32 %n) #0 {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -84,16 +84,16 @@ define void @test2(i32* noalias nocapture %a, i32* noalias nocapture readonly %b
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[C:%.*]], align 4
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[C:%.*]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -111,17 +111,17 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %1 = load i32, i32* %c, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
+  %1 = load i32, ptr %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -138,30 +138,30 @@ for.end:                                          ; preds = %for.inc, %entry
 ; void test3(int * restrict a, int * restrict b, int c[static 3], int n) {
 ;   for (int i = 0; i < n; ++i)
 ;     if (a[i] > 0)
-;       a[i] = c[2]*b[i];
+;       a[i] = cptr b[i];
 ; }
 ; and we want to hoist the load of c[2] out of the loop. This can be done only
 ; because the dereferenceable attribute is on %c.
-define void @test3(i32* noalias nocapture %a, i32* noalias nocapture readonly %b, i32* nocapture readonly dereferenceable(12) align 4 %c, i32 %n) #0 {
+define void @test3(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, ptr nocapture readonly dereferenceable(12) align 4 %c, i32 %n) #0 {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds i32, i32* [[C:%.*]], i64 2
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C2]], align 4
+; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 2
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C2]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], [[TMP0]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -179,18 +179,18 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %c2 = getelementptr inbounds i32, i32* %c, i64 2
-  %1 = load i32, i32* %c2, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
+  %c2 = getelementptr inbounds i32, ptr %c, i64 2
+  %1 = load i32, ptr %c2, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -205,26 +205,26 @@ for.end:                                          ; preds = %for.inc, %entry
 
 ; This is the same as @test3, but with a dereferenceable attribute on %c with a
 ; size too small to cover c[2] (and so we should not hoist it).
-define void @test4(i32* noalias nocapture %a, i32* noalias nocapture readonly %b, i32* nocapture readonly dereferenceable(11) %c, i32 %n) #0 {
+define void @test4(ptr noalias nocapture %a, ptr noalias nocapture readonly %b, ptr nocapture readonly dereferenceable(11) %c, i32 %n) #0 {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds i32, i32* [[C:%.*]], i64 2
+; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds i32, ptr [[C:%.*]], i64 2
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[C2]], align 4
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[C2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -242,18 +242,18 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %c2 = getelementptr inbounds i32, i32* %c, i64 2
-  %1 = load i32, i32* %c2, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
+  %c2 = getelementptr inbounds i32, ptr %c, i64 2
+  %1 = load i32, ptr %c2, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -276,28 +276,28 @@ for.end:                                          ; preds = %for.inc, %entry
 ; and we want to hoist the load of %c out of the loop. This can be done only
 ; because the dereferenceable_or_null attribute is on %c and there is a null
 ; check on %c.
-define void @test5(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) align 4 %c, i32 %n) #0 {
+define void @test5(ptr noalias %a, ptr %b, ptr dereferenceable_or_null(4) align 4 %c, i32 %n) #0 {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i32* [[C:%.*]], null
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne ptr [[C:%.*]], null
 ; CHECK-NEXT:    br i1 [[NOT_NULL]], label [[NOT_NULL:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       not.null:
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], [[TMP0]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -310,7 +310,7 @@ define void @test5(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) ali
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %not_null = icmp ne i32* %c, null
+  %not_null = icmp ne ptr %c, null
   br i1 %not_null, label %not.null, label %for.end
 
 not.null:
@@ -319,17 +319,17 @@ not.null:
 
 for.body:                                         ; preds = %not.null, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %not.null ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %1 = load i32, i32* %c, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
+  %1 = load i32, ptr %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -347,26 +347,26 @@ for.end:                                          ; preds = %for.inc, %entry, %n
 
 ; This test case has an icmp on c but the use of this comparison is
 ; not a branch.
-define i1 @test6(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) %c, i32 %n) #0 {
+define i1 @test6(ptr noalias %a, ptr %b, ptr dereferenceable_or_null(4) %c, i32 %n) #0 {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i32* [[C:%.*]], null
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne ptr [[C:%.*]], null
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[C]], align 4
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[C]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -379,23 +379,23 @@ define i1 @test6(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) %c, i
 ; CHECK-NEXT:    ret i1 [[NOT_NULL]]
 ;
 entry:
-  %not_null = icmp ne i32* %c, null
+  %not_null = icmp ne ptr %c, null
   %cmp11 = icmp sgt i32 %n, 0
   br i1 %cmp11, label %for.body, label %for.end
 
 for.body:                                         ; preds = %entry, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %1 = load i32, i32* %c, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
+  %1 = load i32, ptr %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -417,26 +417,26 @@ for.end:                                          ; preds = %for.inc, %entry
 ; }
 ; and we want to hoist the load of %c out of the loop. This can be done only
 ; because the dereferenceable meatdata on the c = *cptr load.
-define void @test7(i32* noalias %a, i32* %b, i32** %cptr, i32 %n) #0 {
+define void @test7(ptr noalias %a, ptr %b, ptr %cptr, i32 %n) #0 {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = load i32*, i32** [[CPTR:%.*]], align 8, !dereferenceable !0, !align !0
+; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[CPTR:%.*]], align 8, !dereferenceable !0, !align !0
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], [[TMP0]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -449,23 +449,23 @@ define void @test7(i32* noalias %a, i32* %b, i32** %cptr, i32 %n) #0 {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %c = load i32*, i32** %cptr, !dereferenceable !0, !align !{i64 4}
+  %c = load ptr, ptr %cptr, !dereferenceable !0, !align !{i64 4}
   %cmp11 = icmp sgt i32 %n, 0
   br i1 %cmp11, label %for.body, label %for.end
 
 for.body:                                         ; preds = %entry, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %1 = load i32, i32* %c, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
+  %1 = load i32, ptr %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -489,29 +489,29 @@ for.end:                                          ; preds = %for.inc, %entry
 ; and we want to hoist the load of %c out of the loop. This can be done only
 ; because the dereferenceable_or_null meatdata on the c = *cptr load and there
 ; is a null check on %c.
-define void @test8(i32* noalias %a, i32* %b, i32** %cptr, i32 %n) #0 {
+define void @test8(ptr noalias %a, ptr %b, ptr %cptr, i32 %n) #0 {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = load i32*, i32** [[CPTR:%.*]], align 8, !dereferenceable_or_null !0, !align !0
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i32* [[C]], null
+; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[CPTR:%.*]], align 8, !dereferenceable_or_null !0, !align !0
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne ptr [[C]], null
 ; CHECK-NEXT:    br i1 [[NOT_NULL]], label [[NOT_NULL:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       not.null:
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], [[TMP0]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -524,8 +524,8 @@ define void @test8(i32* noalias %a, i32* %b, i32** %cptr, i32 %n) #0 {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %c = load i32*, i32** %cptr, !dereferenceable_or_null !0, !align !{i64 4}
-  %not_null = icmp ne i32* %c, null
+  %c = load ptr, ptr %cptr, !dereferenceable_or_null !0, !align !{i64 4}
+  %not_null = icmp ne ptr %c, null
   br i1 %not_null, label %not.null, label %for.end
 
 not.null:
@@ -534,17 +534,17 @@ not.null:
 
 for.body:                                         ; preds = %not.null, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %not.null ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %1 = load i32, i32* %c, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
+  %1 = load i32, ptr %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -559,26 +559,26 @@ for.end:                                          ; preds = %for.inc, %entry, %n
 
 ; This is the same as @test8, but without the null check on %c.
 ; Without this check, we should not hoist the load of %c.
-define void @test9(i32* noalias %a, i32* %b, i32** %cptr, i32 %n) #0 {
+define void @test9(ptr noalias %a, ptr %b, ptr %cptr, i32 %n) #0 {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = load i32*, i32** [[CPTR:%.*]], align 8, !dereferenceable_or_null !0
+; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[CPTR:%.*]], align 8, !dereferenceable_or_null !0
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[C]], align 4
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[C]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -591,23 +591,23 @@ define void @test9(i32* noalias %a, i32* %b, i32** %cptr, i32 %n) #0 {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %c = load i32*, i32** %cptr, !dereferenceable_or_null !0
+  %c = load ptr, ptr %cptr, !dereferenceable_or_null !0
   %cmp11 = icmp sgt i32 %n, 0
   br i1 %cmp11, label %for.body, label %for.end
 
 for.body:                                         ; preds = %entry, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %1 = load i32, i32* %c, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
+  %1 = load i32, ptr %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -626,26 +626,26 @@ for.end:                                          ; preds = %for.inc, %entry
 ; on the dereferenceability anymore.
 ; In other words this test checks that we strip dereferenceability  metadata
 ; after hoisting an instruction.
-define void @test10(i32* noalias %a, i32* %b, i32** dereferenceable(8) align 8 %cptr, i32 %n) #0 {
+define void @test10(ptr noalias %a, ptr %b, ptr dereferenceable(8) align 8 %cptr, i32 %n) #0 {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[C:%.*]] = load i32*, i32** [[CPTR:%.*]], align 8
+; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[CPTR:%.*]], align 8
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[C]], align 4
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[C]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -663,18 +663,18 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %c = load i32*, i32** %cptr, !dereferenceable !0
-  %1 = load i32, i32* %c, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
+  %c = load ptr, ptr %cptr, !dereferenceable !0
+  %1 = load i32, ptr %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -687,26 +687,26 @@ for.end:                                          ; preds = %for.inc, %entry
   ret void
 }
 
-define void @test11(i32* noalias %a, i32* %b, i32** dereferenceable(8) %cptr, i32 %n) #0 {
+define void @test11(ptr noalias %a, ptr %b, ptr dereferenceable(8) %cptr, i32 %n) #0 {
 ; CHECK-LABEL: @test11(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[C:%.*]] = load i32*, i32** [[CPTR:%.*]], align 8, !dereferenceable !0
+; CHECK-NEXT:    [[C:%.*]] = load ptr, ptr [[CPTR:%.*]], align 8, !dereferenceable !0
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[D:%.*]] = load i32, i32* [[C]], align 4
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[E:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[D:%.*]] = load i32, ptr [[C]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[E:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[E]], [[D]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -726,18 +726,18 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
-  %c = load i32*, i32** %cptr, !dereferenceable !0
+  %c = load ptr, ptr %cptr, !dereferenceable !0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %d = load i32, i32* %c, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %e = load i32, i32* %arrayidx3, align 4
+  %d = load i32, ptr %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %e = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %e, %d
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -753,27 +753,27 @@ for.end:                                          ; preds = %for.inc, %entry
 declare void @llvm.experimental.guard(i1, ...)
 
 ; Prove non-null ness of %c via a guard, not a branch.
-define void @test12(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) align 4 %c, i32 %n) #0 {
+define void @test12(ptr noalias %a, ptr %b, ptr dereferenceable_or_null(4) align 4 %c, i32 %n) #0 {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i32* [[C:%.*]], null
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne ptr [[C:%.*]], null
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[NOT_NULL]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], [[TMP0]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -786,7 +786,7 @@ define void @test12(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) al
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %not_null = icmp ne i32* %c, null
+  %not_null = icmp ne ptr %c, null
   call void(i1, ...) @llvm.experimental.guard(i1 %not_null) [ "deopt"() ]
   %cmp11 = icmp sgt i32 %n, 0
   br i1 %cmp11, label %for.body, label %for.end
@@ -795,17 +795,17 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %1 = load i32, i32* %c, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
+  %1 = load i32, ptr %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -820,26 +820,26 @@ for.end:                                          ; preds = %for.inc, %entry, %e
 
 ; Like @test12, but has a post-dominating guard, which cannot be used
 ; to prove %c is nonnull at the point of the load.
-define void @test13(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) %c, i32 %n) #0 {
+define void @test13(ptr noalias %a, ptr %b, ptr dereferenceable_or_null(4) %c, i32 %n) #0 {
 ; CHECK-LABEL: @test13(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i32* [[C:%.*]], null
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne ptr [[C:%.*]], null
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[C]], align 4
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[C]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -853,24 +853,24 @@ define void @test13(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) %c
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %not_null = icmp ne i32* %c, null
+  %not_null = icmp ne ptr %c, null
   %cmp11 = icmp sgt i32 %n, 0
   br i1 %cmp11, label %for.body, label %for.end
 
 
 for.body:                                         ; preds = %entry, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %1 = load i32, i32* %c, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
+  %1 = load i32, ptr %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -886,29 +886,29 @@ for.end:                                          ; preds = %for.inc, %entry, %e
 
 ; Check that branch by condition "null check AND something" allows to hoist the
 ; load.
-define void @test14(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) align 4 %c, i32 %n, i1 %dummy_cond) #0 {
+define void @test14(ptr noalias %a, ptr %b, ptr dereferenceable_or_null(4) align 4 %c, i32 %n, i1 %dummy_cond) #0 {
 ; CHECK-LABEL: @test14(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i32* [[C:%.*]], null
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne ptr [[C:%.*]], null
 ; CHECK-NEXT:    [[DUMMY_AND:%.*]] = and i1 [[NOT_NULL]], [[DUMMY_COND:%.*]]
 ; CHECK-NEXT:    br i1 [[DUMMY_AND]], label [[NOT_NULL:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       not.null:
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], [[TMP0]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -922,7 +922,7 @@ define void @test14(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) al
 ;
 
 entry:
-  %not_null = icmp ne i32* %c, null
+  %not_null = icmp ne ptr %c, null
   %dummy_and = and i1 %not_null, %dummy_cond
   br i1 %dummy_and, label %not.null, label %for.end
 
@@ -932,17 +932,17 @@ not.null:
 
 for.body:                                         ; preds = %not.null, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %not.null ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %1 = load i32, i32* %c, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
+  %1 = load i32, ptr %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -957,28 +957,28 @@ for.end:                                          ; preds = %for.inc, %entry, %n
 
 ; Check that guard by condition "null check AND something" allows to hoist the
 ; load.
-define void @test15(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) align 4 %c, i32 %n, i1 %dummy_cond) #0 {
+define void @test15(ptr noalias %a, ptr %b, ptr dereferenceable_or_null(4) align 4 %c, i32 %n, i1 %dummy_cond) #0 {
 ; CHECK-LABEL: @test15(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i32* [[C:%.*]], null
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne ptr [[C:%.*]], null
 ; CHECK-NEXT:    [[DUMMY_AND:%.*]] = and i1 [[NOT_NULL]], [[DUMMY_COND:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[DUMMY_AND]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP11]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_END:%.*]]
 ; CHECK:       for.body.preheader:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[C]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[C]], align 4
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], [[TMP0]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -992,7 +992,7 @@ define void @test15(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) al
 ;
 
 entry:
-  %not_null = icmp ne i32* %c, null
+  %not_null = icmp ne ptr %c, null
   %dummy_and = and i1 %not_null, %dummy_cond
   call void(i1, ...) @llvm.experimental.guard(i1 %dummy_and) [ "deopt"() ]
   %cmp11 = icmp sgt i32 %n, 0
@@ -1000,17 +1000,17 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %1 = load i32, i32* %c, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
+  %1 = load i32, ptr %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -1026,10 +1026,10 @@ for.end:                                          ; preds = %for.inc, %entry
 ; Ensure that (c == null && other_cond) does not automatically mean that c is
 ; non-null in false branch. So the condition ((c == null && other_cond) == false)
 ; is not sufficient to conclude that c != null.
-define void @test16(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) %c, i32 %n, i1 %dummy_cond) #0 {
+define void @test16(ptr noalias %a, ptr %b, ptr dereferenceable_or_null(4) %c, i32 %n, i1 %dummy_cond) #0 {
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp eq i32* [[C:%.*]], null
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp eq ptr [[C:%.*]], null
 ; CHECK-NEXT:    [[DUMMY_AND:%.*]] = and i1 [[NOT_NULL]], [[DUMMY_COND:%.*]]
 ; CHECK-NEXT:    br i1 [[DUMMY_AND]], label [[FOR_END:%.*]], label [[NOT_NULL:%.*]]
 ; CHECK:       not.null:
@@ -1039,16 +1039,16 @@ define void @test16(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) %c
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[C]], align 4
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[C]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -1062,7 +1062,7 @@ define void @test16(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) %c
 ;
 
 entry:
-  %not_null = icmp eq i32* %c, null
+  %not_null = icmp eq ptr %c, null
   %dummy_and = and i1 %not_null, %dummy_cond
   br i1 %dummy_and, label %for.end, label %not.null
 
@@ -1072,17 +1072,17 @@ not.null:
 
 for.body:                                         ; preds = %not.null, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %not.null ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %1 = load i32, i32* %c, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
+  %1 = load i32, ptr %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then
@@ -1098,10 +1098,10 @@ for.end:                                          ; preds = %for.inc, %entry, %n
 ; Ensure that (c == null && other_cond) does not automatically mean that c is
 ; non-null in false branch. So the condition ((c == null && other_cond) == false)
 ; is not sufficient to conclude that c != null.
-define void @test17(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) %c, i32 %n, i1 %dummy_cond) #0 {
+define void @test17(ptr noalias %a, ptr %b, ptr dereferenceable_or_null(4) %c, i32 %n, i1 %dummy_cond) #0 {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp eq i32* [[C:%.*]], null
+; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp eq ptr [[C:%.*]], null
 ; CHECK-NEXT:    [[DUMMY_AND:%.*]] = and i1 [[NOT_NULL]], [[DUMMY_COND:%.*]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[DUMMY_AND]]) [ "deopt"() ]
 ; CHECK-NEXT:    [[CMP11:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -1110,16 +1110,16 @@ define void @test17(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) %c
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_INC:%.*]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN:%.*]], label [[FOR_INC]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[C]], align 4
-; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = load i32, i32* [[ARRAYIDX3]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[C]], align 4
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i64 [[INDVARS_IV]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX3]], align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[TMP2]], [[TMP1]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
@@ -1133,7 +1133,7 @@ define void @test17(i32* noalias %a, i32* %b, i32* dereferenceable_or_null(4) %c
 ;
 
 entry:
-  %not_null = icmp eq i32* %c, null
+  %not_null = icmp eq ptr %c, null
   %dummy_and = and i1 %not_null, %dummy_cond
   call void(i1, ...) @llvm.experimental.guard(i1 %dummy_and) [ "deopt"() ]
   %cmp11 = icmp sgt i32 %n, 0
@@ -1141,17 +1141,17 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.inc
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp1 = icmp sgt i32 %0, 0
   br i1 %cmp1, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  %1 = load i32, i32* %c, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %b, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx3, align 4
+  %1 = load i32, ptr %c, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %b, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx3, align 4
   %mul = mul nsw i32 %2, %1
-  store i32 %mul, i32* %arrayidx, align 4
+  store i32 %mul, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then

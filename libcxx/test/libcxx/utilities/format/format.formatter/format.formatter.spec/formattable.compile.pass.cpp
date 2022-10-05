@@ -142,8 +142,8 @@ void test_P1361() {
   assert_is_not_formattable<std::chrono::local_time<std::chrono::microseconds>, CharT>();
 
   assert_is_formattable<std::chrono::day, CharT>();
-  assert_is_not_formattable<std::chrono::month, CharT>();
-  assert_is_not_formattable<std::chrono::year, CharT>();
+  assert_is_formattable<std::chrono::month, CharT>();
+  assert_is_formattable<std::chrono::year, CharT>();
 
   assert_is_not_formattable<std::chrono::weekday, CharT>();
   assert_is_not_formattable<std::chrono::weekday_indexed, CharT>();

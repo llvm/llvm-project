@@ -69,20 +69,14 @@ struct TestStruct {
 };
 
 TEST(SanitizerCommon, IsTriviallyDestructible) {
-  // Causes undefined references to __sanitizer::integral_constant<bool,
-  // true>::value.
-#if !SANITIZER_DEBUG
   ASSERT_TRUE((is_trivially_destructible<int>::value));
   ASSERT_TRUE((is_trivially_destructible<TestStruct>::value));
-#endif
   ASSERT_FALSE((is_trivially_destructible<std::vector<int>>::value));
 }
 
 TEST(SanitizerCommon, IsTriviallyCopyable) {
-#if !SANITIZER_DEBUG
   ASSERT_TRUE((is_trivially_copyable<int>::value));
   ASSERT_TRUE((is_trivially_copyable<TestStruct>::value));
-#endif
   ASSERT_FALSE((is_trivially_copyable<std::vector<int>>::value));
 }
 
