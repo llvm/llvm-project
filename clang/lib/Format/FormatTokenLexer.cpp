@@ -312,36 +312,32 @@ bool FormatTokenLexer::tryMergeCSharpStringLiteral() {
     return false;
 
   // Look for @"aaaaaa" or $"aaaaaa".
-  auto &String = *(Tokens.end() - 1);
-  if (!String->is(tok::string_literal))
+  const auto String = *(Tokens.end() - 1);
+  if (String->isNot(tok::string_literal))
     return false;
 
-  auto &At = *(Tokens.end() - 2);
-  if (!(At->is(tok::at) || At->TokenText == "$"))
+  auto Prefix = *(Tokens.end() - 2);
+  if (Prefix->isNot(tok::at) && Prefix->TokenText != "$")
     return false;
 
-  if (Tokens.size() > 2 && At->is(tok::at)) {
-    auto &Dollar = *(Tokens.end() - 3);
-    if (Dollar->TokenText == "$") {
-      // This looks like $@"aaaaa" so we need to combine all 3 tokens.
-      Dollar->Tok.setKind(tok::string_literal);
-      Dollar->TokenText =
-          StringRef(Dollar->TokenText.begin(),
-                    String->TokenText.end() - Dollar->TokenText.begin());
-      Dollar->ColumnWidth += (At->ColumnWidth + String->ColumnWidth);
-      Dollar->setType(TT_CSharpStringLiteral);
+  if (Tokens.size() > 2) {
+    const auto Tok = *(Tokens.end() - 3);
+    if ((Tok->TokenText == "$" && Prefix->is(tok::at)) ||
+        (Tok->is(tok::at) && Prefix->TokenText == "$")) {
+      // This looks like $@"aaa" or @$"aaa" so we need to combine all 3 tokens.
+      Tok->ColumnWidth += Prefix->ColumnWidth;
       Tokens.erase(Tokens.end() - 2);
-      Tokens.erase(Tokens.end() - 1);
-      return true;
+      Prefix = Tok;
     }
   }
 
   // Convert back into just a string_literal.
-  At->Tok.setKind(tok::string_literal);
-  At->TokenText = StringRef(At->TokenText.begin(),
-                            String->TokenText.end() - At->TokenText.begin());
-  At->ColumnWidth += String->ColumnWidth;
-  At->setType(TT_CSharpStringLiteral);
+  Prefix->Tok.setKind(tok::string_literal);
+  Prefix->TokenText =
+      StringRef(Prefix->TokenText.begin(),
+                String->TokenText.end() - Prefix->TokenText.begin());
+  Prefix->ColumnWidth += String->ColumnWidth;
+  Prefix->setType(TT_CSharpStringLiteral);
   Tokens.erase(Tokens.end() - 1);
   return true;
 }
@@ -375,9 +371,11 @@ bool FormatTokenLexer::tryMergeNullishCoalescingEqual() {
 bool FormatTokenLexer::tryMergeCSharpKeywordVariables() {
   if (Tokens.size() < 2)
     return false;
-  auto &At = *(Tokens.end() - 2);
-  auto &Keyword = *(Tokens.end() - 1);
-  if (!At->is(tok::at))
+  const auto At = *(Tokens.end() - 2);
+  if (At->isNot(tok::at))
+    return false;
+  const auto Keyword = *(Tokens.end() - 1);
+  if (Keyword->TokenText == "$")
     return false;
   if (!Keywords.isCSharpKeyword(*Keyword))
     return false;
@@ -683,7 +681,7 @@ void FormatTokenLexer::handleCSharpVerbatimAndInterpolatedStrings() {
 
   bool Verbatim = false;
   bool Interpolated = false;
-  if (TokenText.startswith(R"($@")")) {
+  if (TokenText.startswith(R"($@")") || TokenText.startswith(R"(@$")")) {
     Verbatim = true;
     Interpolated = true;
   } else if (TokenText.startswith(R"(@")")) {

@@ -507,3 +507,28 @@ Lastly, if `ParseTree` modifications are performed, then it might be necessary
 to re-analyze expressions and modify scope or symbols. You can check
 [Semantics.md](Semantics.md) for more details on how `ParseTree` is edited
 e.g. during the semantic checks.
+
+# LLVM Pass Plugins
+
+Pass plugins are dynamic shared objects that consist of one or more LLVM IR
+passes. The `-fpass-plugin` option enables these passes to be passed to the 
+middle-end where they are added to the optimization pass pipeline and run after
+lowering to LLVM IR.The exact position of the pass in the pipeline will depend 
+on how it has been registered with the `llvm::PassBuilder`. See the 
+documentation for 
+[`llvm::PassBuilder`](https://llvm.org/doxygen/classllvm_1_1PassBuilder.html)
+for details. 
+
+The framework to enable pass plugins in `flang-new` uses the exact same 
+machinery as that used by `clang` and thus has the same capabilities and
+limitations. 
+
+In order to use a pass plugin, the pass(es) must be compiled into a dynamic 
+shared object which is then loaded using the `-fpass-plugin` option. 
+
+```
+flang-new -fpass-plugin=/path/to/plugin.so <file.f90>
+```
+
+This option is available in both the compiler driver and the frontend driver. 
+Note that LLVM plugins are not officially supported on Windows.

@@ -114,26 +114,22 @@ define signext i32 @foo(i32 signext %a, i32 *%b) nounwind {
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:  .LBB0_12:
 ; RV64I-NEXT:    lw a2, 0(a1)
-; RV64I-NEXT:    sext.w a3, a0
-; RV64I-NEXT:    blt a2, a3, .LBB0_14
+; RV64I-NEXT:    blt a2, a0, .LBB0_14
 ; RV64I-NEXT:  # %bb.13:
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:  .LBB0_14:
 ; RV64I-NEXT:    lw a2, 0(a1)
-; RV64I-NEXT:    sext.w a3, a0
-; RV64I-NEXT:    bge a3, a2, .LBB0_16
+; RV64I-NEXT:    bge a0, a2, .LBB0_16
 ; RV64I-NEXT:  # %bb.15:
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:  .LBB0_16:
 ; RV64I-NEXT:    lw a2, 0(a1)
-; RV64I-NEXT:    sext.w a3, a0
-; RV64I-NEXT:    blt a3, a2, .LBB0_18
+; RV64I-NEXT:    blt a0, a2, .LBB0_18
 ; RV64I-NEXT:  # %bb.17:
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:  .LBB0_18:
 ; RV64I-NEXT:    lw a2, 0(a1)
-; RV64I-NEXT:    sext.w a3, a0
-; RV64I-NEXT:    bge a2, a3, .LBB0_20
+; RV64I-NEXT:    bge a2, a0, .LBB0_20
 ; RV64I-NEXT:  # %bb.19:
 ; RV64I-NEXT:    mv a0, a2
 ; RV64I-NEXT:  .LBB0_20:
@@ -159,7 +155,6 @@ define signext i32 @foo(i32 signext %a, i32 *%b) nounwind {
 ; RV64I-NEXT:  # %bb.27:
 ; RV64I-NEXT:    mv a0, a1
 ; RV64I-NEXT:  .LBB0_28:
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    ret
   %val1 = load volatile i32, i32* %b
   %tst1 = icmp eq i32 %a, %val1
