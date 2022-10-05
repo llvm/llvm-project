@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/span.h"
 #include "src/__support/CPP/string_view.h"
-#include "src/__support/integer_to_string.h"
 
 #ifndef LLVM_LIBC_SRC_SUPPORT_ERROR_TO_STRING
 #define LLVM_LIBC_SRC_SUPPORT_ERROR_TO_STRING
@@ -16,7 +16,7 @@ namespace __llvm_libc {
 
 cpp::string_view get_error_string(int err_num);
 
-cpp::string_view get_error_string(int err_num, cpp::string_view buffer);
+cpp::string_view get_error_string(int err_num, cpp::span<char> buffer);
 
 } // namespace __llvm_libc
 

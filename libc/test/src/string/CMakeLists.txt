@@ -246,6 +246,16 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  strsignal_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strsignal_test.cpp
+  DEPENDS
+    libc.src.string.strsignal
+)
+
+add_libc_unittest(
   strspn_test
   SUITE
     libc_string_unittests
