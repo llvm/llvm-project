@@ -15,6 +15,14 @@ add_header(
 )
 
 add_header(
+  sched_macros
+  HDR
+    sched-macros.h
+  DEPENDS
+    .linux.sched_macros
+)
+
+add_header(
   signal_macros
   HDR
     signal-macros.h

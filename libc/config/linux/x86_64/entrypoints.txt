@@ -25,6 +25,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sched.h entrypoints
     libc.src.sched.sched_getaffinity
     libc.src.sched.sched_setaffinity
+    libc.src.sched.sched_getcpucount
 
     # string.h entrypoints
     libc.src.string.bcmp
