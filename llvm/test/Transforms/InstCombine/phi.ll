@@ -1339,3 +1339,37 @@ loop:
   %iv.add2 = xor i32 %iv, -1
   br label %loop
 }
+
+; Caused an infinite loop with D134954.
+define i64 @inttoptr_of_phi(i1 %c, ptr %arg.ptr, ptr %arg.ptr2) {
+; CHECK-LABEL: @inttoptr_of_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[ARG_PTR2_VAL:%.*]] = load i64, ptr [[ARG_PTR2:%.*]], align 8
+; CHECK-NEXT:    [[ARG_PTR2_VAL_PTR:%.*]] = inttoptr i64 [[ARG_PTR2_VAL]] to ptr
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[INT_PTR_PTR:%.*]] = phi ptr [ [[ARG_PTR2_VAL_PTR]], [[IF]] ], [ [[ARG_PTR:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[INT_PTR_PTR]], align 8
+; CHECK-NEXT:    ret i64 [[V]]
+;
+entry:
+  br i1 %c, label %if, label %else
+
+if:
+  %arg.ptr2.val = load i64, ptr %arg.ptr2, align 8
+  br label %join
+
+else:
+  %arg.int.ptr = ptrtoint ptr %arg.ptr to i64
+  br label %join
+
+join:
+  %int.ptr = phi i64 [ %arg.ptr2.val, %if ], [ %arg.int.ptr, %else ]
+  %ptr = inttoptr i64 %int.ptr to ptr
+  %v = load i64, ptr %ptr, align 8
+  ret i64 %v
+}
