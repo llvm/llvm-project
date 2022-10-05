@@ -193,13 +193,13 @@ std::set<const FileEntry *> GetAllModuleMaps(const HeaderSearch &HS,
     auto *CurrentModule = ModulesToProcess.pop_back_val();
     ProcessedModules.insert(CurrentModule);
 
-    auto *ModuleMapFile =
+    Optional<FileEntryRef> ModuleMapFile =
         HS.getModuleMap().getModuleMapFileForUniquing(CurrentModule);
     if (!ModuleMapFile) {
       continue;
     }
 
-    ModuleMaps.insert(ModuleMapFile);
+    ModuleMaps.insert(*ModuleMapFile);
 
     for (auto *ImportedModule : (CurrentModule)->Imports) {
       if (!ImportedModule ||
