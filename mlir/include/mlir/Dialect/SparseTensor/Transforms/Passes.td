@@ -11,6 +11,27 @@
 
 include "mlir/Pass/PassBase.td"
 
+def SparseTensorRewrite : Pass<"sparse-tensor-rewrite", "ModuleOp"> {
+  let summary = "Applies sparse tensor rewriting rules prior to sparsification";
+  let description = [{
+    A pass that applies rewriting rules to sparse tensor operations prior
+    to running the actual sparsification pass.
+  }];
+  let constructor = "mlir::createSparseTensorRewritePass()";
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "bufferization::BufferizationDialect",
+    "linalg::LinalgDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+  let options = [
+    Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
+           "true", "Enable runtime library for manipulating sparse tensors">
+  ];
+}
+
 def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
   let summary = "Automatically generate sparse tensor code from sparse tensor types";
   let description = [{
@@ -57,6 +78,7 @@ def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
     "arith::ArithDialect",
     "bufferization::BufferizationDialect",
     "LLVM::LLVMDialect",
+    "linalg::LinalgDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",
@@ -193,4 +215,5 @@ def SparseBufferRewrite : Pass<"sparse-buffer-rewrite", "ModuleOp"> {
     "sparse_tensor::SparseTensorDialect",
   ];
 }
+
 #endif // MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_PASSES
