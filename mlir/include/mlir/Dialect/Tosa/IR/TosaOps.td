@@ -1616,19 +1616,18 @@ def Tosa_ResizeOp : Tosa_Op<"resize", [
 
   let description = [{
     Resizes a tensor. Resize is only allowed in the H and W dimensions. In
-    expected use, stride_y is approximately (IH<<shift)/OH and stride_x is
-    approximately (IW<<shift)/OW.  OH and OW are also supplied as inputs since
-    there may be off by one errors if calculating OH and OW from the strides.
+    expected use, The height dimension is scaled by factor (scale_y_n/scale_y_d).
+    And the width dimension is scaled by factor (scale_x_n/scale_x_d). Thus the
+    output dimensions can be derived from the input dimensions by inverting the
+    scale. And the [order_y, border_x] values adjust the output size to allow
+    fractional sampling beyond integer input position (IH-1,IW-1).
   }];
 
   let arguments = (ins
     Tosa_Tensor4D:$input,
-    Tosa_IntArrayAttr2:$output_size,
-    Tosa_IntArrayAttr2:$stride,
+    Tosa_IntArrayAttr4:$scale,
     Tosa_IntArrayAttr2:$offset,
-    I32Attr:$shift,
-    Tosa_Fp32ArrayAttr2:$stride_fp,
-    Tosa_Fp32ArrayAttr2:$offset_fp,
+    Tosa_IntArrayAttr2:$border,
     Tosa_ResizeTypeAttr:$mode
   );
 

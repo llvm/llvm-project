@@ -46,6 +46,12 @@ using namespace llvm;
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 
+static cl::opt<unsigned> ExtensionMaxWebSize(
+    DEBUG_TYPE "-ext-max-web-size", cl::Hidden,
+    cl::desc("Give the maximum size (in number of nodes) of the web of "
+             "instructions that we will consider for VW expansion"),
+    cl::init(18));
+
 static cl::opt<bool>
     AllowSplatInVW_W(DEBUG_TYPE "-form-vw-w-with-splat", cl::Hidden,
                      cl::desc("Allow the formation of VW_W operations (e.g., "
@@ -8472,6 +8478,7 @@ struct NodeExtensionHelper {
             Opc == RISCVISD::VWADDU_W_VL || Opc == RISCVISD::VWSUBU_W_VL;
         SupportsSExt = !SupportsZExt;
         std::tie(Mask, VL) = getMaskAndVL(Root);
+        CheckMask = true;
         // There's no existing extension here, so we don't have to worry about
         // making sure it gets removed.
         EnforceOneUse = false;
@@ -8485,11 +8492,13 @@ struct NodeExtensionHelper {
   }
 
   /// Check if this operand is compatible with the given vector length \p VL.
-  bool isVLCompatible(SDValue VL) const { return this->VL && this->VL == VL; }
+  bool isVLCompatible(SDValue VL) const {
+    return this->VL != SDValue() && this->VL == VL;
+  }
 
   /// Check if this operand is compatible with the given \p Mask.
   bool isMaskCompatible(SDValue Mask) const {
-    return !CheckMask || (this->Mask && this->Mask == Mask);
+    return !CheckMask || (this->Mask != SDValue() && this->Mask == Mask);
   }
 
   /// Helper function to get the Mask and VL from \p Root.
@@ -8547,9 +8556,9 @@ struct CombineResult {
   /// Root of the combine.
   SDNode *Root;
   /// LHS of the TargetOpcode.
-  const NodeExtensionHelper &LHS;
+  NodeExtensionHelper LHS;
   /// RHS of the TargetOpcode.
-  const NodeExtensionHelper &RHS;
+  NodeExtensionHelper RHS;
 
   CombineResult(unsigned TargetOpcode, SDNode *Root,
                 const NodeExtensionHelper &LHS, Optional<bool> SExtLHS,
@@ -8728,31 +8737,83 @@ combineBinOp_VLToVWBinOp_VL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 
   assert(NodeExtensionHelper::isSupportedRoot(N) &&
          "Shouldn't have called this method");
+  SmallVector<SDNode *> Worklist;
+  SmallSet<SDNode *, 8> Inserted;
+  Worklist.push_back(N);
+  Inserted.insert(N);
+  SmallVector<CombineResult> CombinesToApply;
 
-  NodeExtensionHelper LHS(N, 0, DAG);
-  NodeExtensionHelper RHS(N, 1, DAG);
+  while (!Worklist.empty()) {
+    SDNode *Root = Worklist.pop_back_val();
+    if (!NodeExtensionHelper::isSupportedRoot(Root))
+      return SDValue();
 
-  if (LHS.needToPromoteOtherUsers() && !LHS.OrigOperand.hasOneUse())
-    return SDValue();
+    NodeExtensionHelper LHS(N, 0, DAG);
+    NodeExtensionHelper RHS(N, 1, DAG);
+    auto AppendUsersIfNeeded = [&Worklist,
+                                &Inserted](const NodeExtensionHelper &Op) {
+      if (Op.needToPromoteOtherUsers()) {
+        for (SDNode *TheUse : Op.OrigOperand->uses()) {
+          if (Inserted.insert(TheUse).second)
+            Worklist.push_back(TheUse);
+        }
+      }
+    };
+    AppendUsersIfNeeded(LHS);
+    AppendUsersIfNeeded(RHS);
 
-  if (RHS.needToPromoteOtherUsers() && !RHS.OrigOperand.hasOneUse())
-    return SDValue();
+    // Control the compile time by limiting the number of node we look at in
+    // total.
+    if (Inserted.size() > ExtensionMaxWebSize)
+      return SDValue();
 
-  SmallVector<NodeExtensionHelper::CombineToTry> FoldingStrategies =
-      NodeExtensionHelper::getSupportedFoldings(N);
+    SmallVector<NodeExtensionHelper::CombineToTry> FoldingStrategies =
+        NodeExtensionHelper::getSupportedFoldings(N);
 
-  assert(!FoldingStrategies.empty() && "Nothing to be folded");
-  for (int Attempt = 0; Attempt != 1 + NodeExtensionHelper::isCommutative(N);
-       ++Attempt) {
-    for (NodeExtensionHelper::CombineToTry FoldingStrategy :
-         FoldingStrategies) {
-      Optional<CombineResult> Res = FoldingStrategy(N, LHS, RHS);
-      if (Res)
-        return Res->materialize(DAG);
+    assert(!FoldingStrategies.empty() && "Nothing to be folded");
+    bool Matched = false;
+    for (int Attempt = 0;
+         (Attempt != 1 + NodeExtensionHelper::isCommutative(N)) && !Matched;
+         ++Attempt) {
+
+      for (NodeExtensionHelper::CombineToTry FoldingStrategy :
+           FoldingStrategies) {
+        Optional<CombineResult> Res = FoldingStrategy(N, LHS, RHS);
+        if (Res) {
+          Matched = true;
+          CombinesToApply.push_back(*Res);
+          break;
+        }
+      }
+      std::swap(LHS, RHS);
     }
-    std::swap(LHS, RHS);
+    // Right now we do an all or nothing approach.
+    if (!Matched)
+      return SDValue();
   }
-  return SDValue();
+  // Store the value for the replacement of the input node separately.
+  SDValue InputRootReplacement;
+  // We do the RAUW after we materialize all the combines, because some replaced
+  // nodes may be feeding some of the yet-to-be-replaced nodes. Put differently,
+  // some of these nodes may appear in the NodeExtensionHelpers of some of the
+  // yet-to-be-visited CombinesToApply roots.
+  SmallVector<std::pair<SDValue, SDValue>> ValuesToReplace;
+  ValuesToReplace.reserve(CombinesToApply.size());
+  for (CombineResult Res : CombinesToApply) {
+    SDValue NewValue = Res.materialize(DAG);
+    if (!InputRootReplacement) {
+      assert(Res.Root == N &&
+             "First element is expected to be the current node");
+      InputRootReplacement = NewValue;
+    } else {
+      ValuesToReplace.emplace_back(SDValue(Res.Root, 0), NewValue);
+    }
+  }
+  for (std::pair<SDValue, SDValue> OldNewValues : ValuesToReplace) {
+    DAG.ReplaceAllUsesOfValueWith(OldNewValues.first, OldNewValues.second);
+    DCI.AddToWorklist(OldNewValues.second.getNode());
+  }
+  return InputRootReplacement;
 }
 
 // Fold

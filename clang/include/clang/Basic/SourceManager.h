@@ -139,8 +139,9 @@ public:
   /// It is possible for this to be NULL if the ContentCache encapsulates
   /// an imaginary text buffer.
   ///
-  /// FIXME: Turn this into a FileEntryRef and remove Filename.
-  const FileEntry *OrigEntry;
+  /// FIXME: Make non-optional using a virtual file as needed, remove \c
+  /// Filename and use \c OrigEntry.getNameAsRequested() instead.
+  OptionalFileEntryRefDegradesToFileEntryPtr OrigEntry;
 
   /// References the file which the contents were actually loaded from.
   ///
@@ -177,9 +178,13 @@ public:
 
   mutable unsigned IsBufferInvalid : 1;
 
-  ContentCache(const FileEntry *Ent = nullptr) : ContentCache(Ent, Ent) {}
+  ContentCache()
+      : OrigEntry(None), ContentsEntry(nullptr), BufferOverridden(false),
+        IsFileVolatile(false), IsTransient(false), IsBufferInvalid(false) {}
 
-  ContentCache(const FileEntry *Ent, const FileEntry *contentEnt)
+  ContentCache(FileEntryRef Ent) : ContentCache(Ent, Ent) {}
+
+  ContentCache(FileEntryRef Ent, const FileEntry *contentEnt)
       : OrigEntry(Ent), ContentsEntry(contentEnt), BufferOverridden(false),
         IsFileVolatile(false), IsTransient(false), IsBufferInvalid(false) {}
 
@@ -660,7 +665,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   struct OverriddenFilesInfoTy {
     /// Files that have been overridden with the contents from another
     /// file.
-    llvm::DenseMap<const FileEntry *, const FileEntry *> OverriddenFiles;
+    llvm::DenseMap<const FileEntry *, FileEntryRef> OverriddenFiles;
 
     /// Files that were overridden with a memory buffer.
     llvm::DenseSet<const FileEntry *> OverriddenFilesWithBuffer;
@@ -978,8 +983,7 @@ public:
   ///
   /// \param NewFile the file whose contents will be used as the
   /// data instead of the contents of the given source file.
-  void overrideFileContents(const FileEntry *SourceFile,
-                            const FileEntry *NewFile);
+  void overrideFileContents(const FileEntry *SourceFile, FileEntryRef NewFile);
 
   /// Returns true if the file contents have been overridden.
   bool isFileOverridden(const FileEntry *File) const {
@@ -1044,8 +1048,8 @@ public:
 
   /// Returns the FileEntryRef for the provided FileID.
   Optional<FileEntryRef> getFileEntryRefForID(FileID FID) const {
-    if (auto *Entry = getFileEntryForID(FID))
-      return Entry->getLastRef();
+    if (auto *Entry = getSLocEntryForFile(FID))
+      return Entry->getFile().getContentCache().OrigEntry;
     return None;
   }
 

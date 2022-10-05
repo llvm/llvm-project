@@ -21,12 +21,21 @@ class LoweringOptions {
   /// If true, lower transpose without a runtime call.
   unsigned optimizeTranspose : 1;
 
+  /// If true, enable polymorphic type lowering feature. Off by default.
+  unsigned polymorphicTypeImpl : 1;
+
 public:
-  LoweringOptions() : optimizeTranspose(true) {}
+  LoweringOptions() : optimizeTranspose(true), polymorphicTypeImpl(false) {}
 
   bool getOptimizeTranspose() const { return optimizeTranspose; }
   LoweringOptions &setOptimizeTranspose(bool v) {
     optimizeTranspose = v;
+    return *this;
+  }
+
+  bool isPolymorphicTypeImplEnabled() const { return polymorphicTypeImpl; }
+  LoweringOptions &setPolymorphicTypeImpl(bool v) {
+    polymorphicTypeImpl = v;
     return *this;
   }
 };
