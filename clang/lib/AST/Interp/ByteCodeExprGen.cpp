@@ -1063,7 +1063,6 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   const auto *Decl = E->getDecl();
-  bool IsReference = Decl->getType()->isReferenceType();
   bool FoundDecl = false;
 
   if (auto It = Locals.find(Decl); It != Locals.end()) {
@@ -1094,7 +1093,7 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   // References are implemented using pointers, so when we get here,
   // we have a pointer to a pointer, which we need to de-reference once.
   if (FoundDecl) {
-    if (IsReference) {
+    if (Decl->getType()->isReferenceType()) {
       if (!this->emitLoadPopPtr(E))
         return false;
     }
