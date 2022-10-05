@@ -167,7 +167,7 @@ private:
   /// Declaration this function was compiled from.
   const FunctionDecl *F;
   /// Local area size: storage + metadata.
-  unsigned FrameSize;
+  unsigned FrameSize = 0;
   /// Size of the argument stack.
   unsigned ArgSize;
   /// Program code.
