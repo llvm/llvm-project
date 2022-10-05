@@ -455,6 +455,8 @@ inline static bool isMaskAgnostic(unsigned VType) { return VType & 0x80; }
 
 void printVType(unsigned VType, raw_ostream &OS);
 
+unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul);
+
 } // namespace RISCVVType
 
 } // namespace llvm

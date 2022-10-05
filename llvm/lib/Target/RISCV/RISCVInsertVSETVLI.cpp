@@ -296,18 +296,6 @@ static bool isMaskRegOp(const MachineInstr &MI) {
   return Log2SEW == 0;
 }
 
-static unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul) {
-  unsigned LMul;
-  bool Fractional;
-  std::tie(LMul, Fractional) = RISCVVType::decodeVLMUL(VLMul);
-
-  // Convert LMul to a fixed point value with 3 fractional bits.
-  LMul = Fractional ? (8 / LMul) : (LMul * 8);
-
-  assert(SEW >= 8 && "Unexpected SEW value");
-  return (SEW * 8) / LMul;
-}
-
 /// Which subfields of VL or VTYPE have values we need to preserve?
 struct DemandedFields {
   bool VL = false;
@@ -347,10 +335,10 @@ static bool areCompatibleVTYPEs(uint64_t VType1,
     return false;
 
   if (Used.SEWLMULRatio) {
-    auto Ratio1 = getSEWLMULRatio(RISCVVType::getSEW(VType1),
-                                  RISCVVType::getVLMUL(VType1));
-    auto Ratio2 = getSEWLMULRatio(RISCVVType::getSEW(VType2),
-                                  RISCVVType::getVLMUL(VType2));
+    auto Ratio1 = RISCVVType::getSEWLMULRatio(RISCVVType::getSEW(VType1),
+                                              RISCVVType::getVLMUL(VType1));
+    auto Ratio2 = RISCVVType::getSEWLMULRatio(RISCVVType::getSEW(VType2),
+                                              RISCVVType::getVLMUL(VType2));
     if (Ratio1 != Ratio2)
       return false;
   }
@@ -548,7 +536,7 @@ public:
   unsigned getSEWLMULRatio() const {
     assert(isValid() && !isUnknown() &&
            "Can't use VTYPE for uninitialized or unknown");
-    return ::getSEWLMULRatio(SEW, VLMul);
+    return RISCVVType::getSEWLMULRatio(SEW, VLMul);
   }
 
   // Check if the VTYPE for these two VSETVLIInfos produce the same VLMAX.
