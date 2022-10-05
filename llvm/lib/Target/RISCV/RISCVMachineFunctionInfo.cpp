@@ -35,3 +35,11 @@ void RISCVMachineFunctionInfo::initializeBaseYamlFields(
   VarArgsFrameIndex = YamlMFI.VarArgsFrameIndex;
   VarArgsSaveSize = YamlMFI.VarArgsSaveSize;
 }
+
+void RISCVMachineFunctionInfo::addSExt32Register(Register Reg) {
+  SExt32Registers.push_back(Reg);
+}
+
+bool RISCVMachineFunctionInfo::isSExt32Register(Register Reg) const {
+  return is_contained(SExt32Registers, Reg);
+}
