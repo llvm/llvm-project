@@ -50,8 +50,7 @@ __format_context_create(
     _OutIt __out_it,
     basic_format_args<basic_format_context<_OutIt, _CharT>> __args,
     optional<_VSTD::locale>&& __loc = nullopt) {
-  return _VSTD::basic_format_context<_OutIt, _CharT>(_VSTD::move(__out_it), __args,
-                                                     _VSTD::move(__loc));
+  return _VSTD::basic_format_context(_VSTD::move(__out_it), __args, _VSTD::move(__loc));
 }
 #else
 template <class _OutIt, class _CharT>
@@ -59,7 +58,7 @@ _LIBCPP_HIDE_FROM_ABI basic_format_context<_OutIt, _CharT>
 __format_context_create(
     _OutIt __out_it,
     basic_format_args<basic_format_context<_OutIt, _CharT>> __args) {
-  return _VSTD::basic_format_context<_OutIt, _CharT>(_VSTD::move(__out_it), __args);
+  return _VSTD::basic_format_context(_VSTD::move(__out_it), __args);
 }
 #endif
 
@@ -143,6 +142,7 @@ private:
       : __out_it_(_VSTD::move(__out_it)), __args_(__args) {}
 #endif
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(basic_format_context);
 
 #endif //_LIBCPP_STD_VER > 17
 
