@@ -288,6 +288,40 @@ struct ConvertAddI final : OpConversionPattern<arith::AddIOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertBitwiseBinary
+//===----------------------------------------------------------------------===//
+
+/// Conversion pattern template for bitwise binary ops, e.g., `arith.andi`.
+template <typename BinaryOp>
+struct ConvertBitwiseBinary final : OpConversionPattern<BinaryOp> {
+  using OpConversionPattern<BinaryOp>::OpConversionPattern;
+  using OpAdaptor = typename OpConversionPattern<BinaryOp>::OpAdaptor;
+
+  LogicalResult
+  matchAndRewrite(BinaryOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    auto newTy = this->getTypeConverter()
+                     ->convertType(op.getType())
+                     .template dyn_cast_or_null<VectorType>();
+    if (!newTy)
+      return rewriter.notifyMatchFailure(loc, "unsupported type");
+
+    auto [lhsElem0, lhsElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getLhs());
+    auto [rhsElem0, rhsElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getRhs());
+
+    Value resElem0 = rewriter.create<BinaryOp>(loc, lhsElem0, rhsElem0);
+    Value resElem1 = rewriter.create<BinaryOp>(loc, lhsElem1, rhsElem1);
+    Value resultVec =
+        constructResultVector(rewriter, loc, newTy, {resElem0, resElem1});
+    rewriter.replaceOp(op, resultVec);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertMulI
 //===----------------------------------------------------------------------===//
 
@@ -694,6 +728,9 @@ void arith::populateWideIntEmulationPatterns(
       ConvertConstant, ConvertVectorPrint,
       // Binary ops.
       ConvertAddI, ConvertMulI, ConvertShRUI,
+      // Bitwise binary ops.
+      ConvertBitwiseBinary<arith::AndIOp>, ConvertBitwiseBinary<arith::OrIOp>,
+      ConvertBitwiseBinary<arith::XOrIOp>,
       // Extension and truncation ops.
       ConvertExtSI, ConvertExtUI, ConvertTruncI>(typeConverter,
                                                  patterns.getContext());
