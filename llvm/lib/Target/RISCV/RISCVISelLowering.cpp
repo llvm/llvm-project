@@ -8491,7 +8491,9 @@ struct NodeExtensionHelper {
   }
 
   /// Check if this operand is compatible with the given vector length \p VL.
-  bool isVLCompatible(SDValue VL) const { return this->VL && this->VL == VL; }
+  bool isVLCompatible(SDValue VL) const {
+    return this->VL != SDValue() && this->VL == VL;
+  }
 
   /// Check if this operand is compatible with the given \p Mask.
   bool isMaskCompatible(SDValue Mask) const {
