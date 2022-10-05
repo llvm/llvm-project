@@ -309,6 +309,40 @@ LogicalResult MultiDimReductionOp::verify() {
   return success();
 }
 
+namespace {
+// Only unit dimensions that are being reduced are folded. If the dimension is
+// unit, but not reduced, it is not folded, thereby keeping the output type the
+// same. If not all dimensions which are reduced are of unit dimension, this
+// transformation does nothing. This is just a generalization of
+// ElideSingleElementReduction for ReduceOp.
+struct ElideUnitDimsInMultiDimReduction
+    : public OpRewritePattern<MultiDimReductionOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(MultiDimReductionOp reductionOp,
+                                PatternRewriter &rewriter) const override {
+    ArrayRef<int64_t> shape = reductionOp.getSourceVectorType().getShape();
+    for (auto dim : enumerate(shape)) {
+      if (reductionOp.isReducedDim(dim.index()) && dim.value() != 1)
+        return failure();
+    }
+    Location loc = reductionOp.getLoc();
+    Value acc = reductionOp.getAcc();
+    Value cast = rewriter.create<vector::ShapeCastOp>(
+        loc, reductionOp.getDestType(), reductionOp.getSource());
+    Value result = vector::makeArithReduction(rewriter, loc,
+                                              reductionOp.getKind(), acc, cast);
+    rewriter.replaceOp(reductionOp, result);
+    return success();
+  }
+};
+} // namespace
+
+void MultiDimReductionOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<ElideUnitDimsInMultiDimReduction>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // ReductionOp
 //===----------------------------------------------------------------------===//
