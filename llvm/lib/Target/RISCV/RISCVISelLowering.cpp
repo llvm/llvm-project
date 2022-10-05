@@ -8478,6 +8478,7 @@ struct NodeExtensionHelper {
             Opc == RISCVISD::VWADDU_W_VL || Opc == RISCVISD::VWSUBU_W_VL;
         SupportsSExt = !SupportsZExt;
         std::tie(Mask, VL) = getMaskAndVL(Root);
+        CheckMask = true;
         // There's no existing extension here, so we don't have to worry about
         // making sure it gets removed.
         EnforceOneUse = false;
@@ -8497,7 +8498,7 @@ struct NodeExtensionHelper {
 
   /// Check if this operand is compatible with the given \p Mask.
   bool isMaskCompatible(SDValue Mask) const {
-    return !CheckMask || (this->Mask && this->Mask == Mask);
+    return !CheckMask || (this->Mask != SDValue() && this->Mask == Mask);
   }
 
   /// Helper function to get the Mask and VL from \p Root.
