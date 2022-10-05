@@ -924,6 +924,36 @@ TEST_F(AArch64GISelMITest, TestNumSignBitsTrunc) {
   EXPECT_EQ(5u, Info.computeNumSignBits(CopyTrunc7));
 }
 
+TEST_F(AArch64GISelMITest, TestNumSignBitsCmp) {
+  StringRef MIRString =
+      "  %v1:_(<4 x s32>) = G_IMPLICIT_DEF\n"
+      "  %v2:_(<4 x s32>) = G_IMPLICIT_DEF\n"
+      "  %s1:_(s64) = G_IMPLICIT_DEF\n"
+      "  %s2:_(s64) = G_IMPLICIT_DEF\n"
+      "  %cmp:_(<4 x s32>) = G_FCMP floatpred(ogt), %v1, %v2\n"
+      "  %cpy1:_(<4 x s32>) = COPY %cmp\n"
+      "  %cmp2:_(<4 x s32>) = G_ICMP intpred(eq), %v1, %v2\n"
+      "  %cpy2:_(<4 x s32>) = COPY %cmp2\n"
+      "  %cmp3:_(s32) = G_FCMP floatpred(ogt), %s1, %s2\n"
+      "  %cpy3:_(s32) = COPY %cmp3\n"
+      "  %cmp4:_(s32) = G_ICMP intpred(eq), %s1, %s2\n"
+      "  %cpy4:_(s32) = COPY %cmp4\n";
+
+  setUp(MIRString);
+  if (!TM)
+    return;
+  Register CopyVecFCMP = Copies[Copies.size() - 4];
+  Register CopyVecICMP = Copies[Copies.size() - 3];
+  Register CopyScalarFCMP = Copies[Copies.size() - 2];
+  Register CopyScalarICMP = Copies[Copies.size() - 1];
+
+  GISelKnownBits Info(*MF);
+  EXPECT_EQ(32u, Info.computeNumSignBits(CopyVecFCMP));
+  EXPECT_EQ(32u, Info.computeNumSignBits(CopyVecICMP));
+  EXPECT_EQ(31u, Info.computeNumSignBits(CopyScalarFCMP));
+  EXPECT_EQ(31u, Info.computeNumSignBits(CopyScalarICMP));
+}
+
 TEST_F(AMDGPUGISelMITest, TestNumSignBitsTrunc) {
   StringRef MIRString =
     "  %3:_(<4 x s32>) = G_IMPLICIT_DEF\n"
