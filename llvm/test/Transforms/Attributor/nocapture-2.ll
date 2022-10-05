@@ -259,7 +259,7 @@ cond.end:                                         ; preds = %cond.false, %cond.t
 define i8* @scc_C(i16* dereferenceable_or_null(2) %a) {
 ; CHECK: Function Attrs: nofree nosync nounwind readnone
 ; CHECK-LABEL: define {{[^@]+}}@scc_C
-; CHECK-SAME: (i16* nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: (i16* nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[A:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast i16* [[A]] to i32*
 ; CHECK-NEXT:    [[CALL:%.*]] = call dereferenceable_or_null(4) float* @scc_A(i32* noalias nofree readnone dereferenceable_or_null(4) "no-capture-maybe-returned" [[BC]]) #[[ATTR2]]
