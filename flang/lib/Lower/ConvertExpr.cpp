@@ -1625,6 +1625,9 @@ public:
     mlir::IndexType idxTy = builder.getIndexType();
     Fortran::evaluate::ConstantSubscript size =
         Fortran::evaluate::GetSize(con.shape());
+    if (size > std::numeric_limits<std::uint32_t>::max())
+      // llvm::SmallVector has limited size
+      TODO(getLoc(), "Creation of very large array constants");
     fir::SequenceType::Shape shape(con.shape().begin(), con.shape().end());
     mlir::Type eleTy;
     if constexpr (TC == Fortran::common::TypeCategory::Character)
