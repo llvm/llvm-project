@@ -22,3 +22,16 @@ float foo() {
 // CHECK-NEXT: DeclRefExpr 0x{{[0-9a-f]+}} <col:14> 'float' lvalue Var 0x[[B]] 'b' 'float'
   return a + b;
 }
+
+// CHECK: VarDecl 0x{{[0-9a-f]+}} <{{.*}}> col:17 UAV 'RWBuffer<float>':'hlsl::RWBuffer<>' callinit
+// CHECK-NEXT:-CXXConstructExpr 0x{{[0-9a-f]+}} <col:17> 'RWBuffer<float>':'hlsl::RWBuffer<>' 'void ()'
+// CHECK-NEXT:-HLSLResourceBindingAttr 0x{{[0-9a-f]+}} <col:23> "u3" "space0"
+RWBuffer<float> UAV : register(u3);
+
+// CHECK: -VarDecl 0x{{[0-9a-f]+}} <{{.*}}> col:17 UAV1 'RWBuffer<float>':'hlsl::RWBuffer<>' callinit
+// CHECK-NEXT:-CXXConstructExpr 0x{{[0-9a-f]+}} <col:17> 'RWBuffer<float>':'hlsl::RWBuffer<>' 'void ()'
+// CHECK-NEXT:-HLSLResourceBindingAttr 0x{{[0-9a-f]+}} <col:24> "u2" "space0"
+// CHECK-NEXT:-VarDecl 0x{{[0-9a-f]+}} <col:1, col:38> col:38 UAV2 'RWBuffer<float>':'hlsl::RWBuffer<>' callinit
+// CHECK-NEXT:-CXXConstructExpr 0x{{[0-9a-f]+}} <col:38> 'RWBuffer<float>':'hlsl::RWBuffer<>' 'void ()'
+// CHECK-NEXT:-HLSLResourceBindingAttr 0x{{[0-9a-f]+}} <col:45> "u4" "space0"
+RWBuffer<float> UAV1 : register(u2), UAV2 : register(u4);

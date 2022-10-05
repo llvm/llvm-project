@@ -59,6 +59,10 @@ v_cmp_class_f16_e64 ttmp15, src_scc, vcc_lo
 // W32: encoding: [0x7b,0x00,0x7d,0xd4,0xfd,0xd4,0x00,0x00]
 // W64-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
+v_cmp_class_f16_e64 s[10:11], v1, 0.5
+// W64: encoding: [0x0a,0x00,0x7d,0xd4,0x01,0xe1,0x01,0x00]
+// W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
+
 v_cmp_class_f16_e64 s[10:11], v1, v2
 // W64: encoding: [0x0a,0x00,0x7d,0xd4,0x01,0x05,0x02,0x00]
 // W32-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction

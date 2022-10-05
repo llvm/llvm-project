@@ -185,4 +185,16 @@ void RISCVVType::printVType(unsigned VType, raw_ostream &OS) {
     OS << ", mu";
 }
 
+unsigned RISCVVType::getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul) {
+  unsigned LMul;
+  bool Fractional;
+  std::tie(LMul, Fractional) = decodeVLMUL(VLMul);
+
+  // Convert LMul to a fixed point value with 3 fractional bits.
+  LMul = Fractional ? (8 / LMul) : (LMul * 8);
+
+  assert(SEW >= 8 && "Unexpected SEW value");
+  return (SEW * 8) / LMul;
+}
+
 } // namespace llvm

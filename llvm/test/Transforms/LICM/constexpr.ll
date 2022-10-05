@@ -5,12 +5,12 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc"
 
-@in = internal unnamed_addr global i32* null, align 8
-@out = internal unnamed_addr global i32* null, align 8
+@in = internal unnamed_addr global ptr null, align 8
+@out = internal unnamed_addr global ptr null, align 8
 
 ; CHECK-LABEL: @bar
 ; CHECK: entry:
-; CHECK: load i64, i64* bitcast (i32** @in to i64*)
+; CHECK: load i64, ptr @in
 ; CHECK: do.body:
 ; CHECK-NOT: load
 
@@ -25,18 +25,18 @@ do.body:                                          ; preds = %l2, %entry
   br i1 %c, label %l1, label %do.body.l2_crit_edge
 
 do.body.l2_crit_edge:                             ; preds = %do.body
-  %inval.pre = load i32*, i32** @in, align 8
+  %inval.pre = load ptr, ptr @in, align 8
   br label %l2
 
 l1:                                               ; preds = %do.body
-  %v1 = load i64, i64* bitcast (i32** @in to i64*), align 8
-  store i64 %v1, i64* bitcast (i32** @out to i64*), align 8
-  %0 = inttoptr i64 %v1 to i32*
+  %v1 = load i64, ptr @in, align 8
+  store i64 %v1, ptr @out, align 8
+  %0 = inttoptr i64 %v1 to ptr
   br label %l2
 
 l2:                                               ; preds = %do.body.l2_crit_edge, %l1
-  %inval = phi i32* [ %inval.pre, %do.body.l2_crit_edge ], [ %0, %l1 ]
-  %int = ptrtoint i32* %inval to i64
+  %inval = phi ptr [ %inval.pre, %do.body.l2_crit_edge ], [ %0, %l1 ]
+  %int = ptrtoint ptr %inval to i64
   %next = add i64 %total, %int
   %inc = add nsw i32 %i.0, 1
   %cmp = icmp slt i32 %inc, %N

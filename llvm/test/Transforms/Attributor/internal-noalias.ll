@@ -187,7 +187,7 @@ define i32 @visible_local_3() {
 ;
 ; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@visible_local_3
-; CGSCC-SAME: () #[[ATTR3:[0-9]+]] {
+; CGSCC-SAME: () #[[ATTR3]] {
 ; CGSCC-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    store i32 5, i32* [[B]], align 4
 ; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_rn(i32* noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[B]]) #[[ATTR7:[0-9]+]]
@@ -214,6 +214,6 @@ attributes #1 = { argmemonly noinline nounwind uwtable willreturn}
 ; CGSCC: attributes #[[ATTR3]] = { nofree nosync nounwind readnone willreturn }
 ; CGSCC: attributes #[[ATTR4]] = { argmemonly nofree noinline norecurse nosync nounwind willreturn uwtable }
 ; CGSCC: attributes #[[ATTR5]] = { readonly }
-; CGSCC: attributes #[[ATTR6:[0-9]+]] = { readonly willreturn }
+; CGSCC: attributes #[[ATTR6]] = { readonly willreturn }
 ; CGSCC: attributes #[[ATTR7]] = { nounwind willreturn }
 ;.

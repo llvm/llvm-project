@@ -706,8 +706,24 @@ TEST(SelectionTest, MacroArgExpansion) {
   Test = Annotations(Case);
   AST = TestTU::withCode(Test.code()).build();
   T = makeSelectionTree(Case, AST);
-
   EXPECT_EQ("IntegerLiteral", T.commonAncestor()->kind());
+
+  // Reduced from private bug involving RETURN_IF_ERROR.
+  // Due to >>-splitting and a bug in isBeforeInTranslationUnit, the inner
+  // S<int> would claim way too many tokens.
+  Case = R"cpp(
+    #define ID(x) x
+    template <typename T> class S {};
+    ID(
+      ID(S<S<int>> x);
+      int ^y;
+    )
+  )cpp";
+  Test = Annotations(Case);
+  AST = TestTU::withCode(Test.code()).build();
+  T = makeSelectionTree(Case, AST);
+  // not TemplateSpecializationTypeLoc!
+  EXPECT_EQ("VarDecl", T.commonAncestor()->kind());
 }
 
 TEST(SelectionTest, Implicit) {

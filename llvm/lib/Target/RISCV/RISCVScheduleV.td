@@ -12,6 +12,11 @@
 // 3.6 Vector Byte Length vlenb
 def WriteRdVLENB      : SchedWrite;
 
+// 6. Configuration-Setting Instructions
+def WriteVSETVLI      : SchedWrite;
+def WriteVSETIVLI     : SchedWrite;
+def WriteVSETVL       : SchedWrite;
+
 // 7. Vector Loads and Stores
 // 7.4. Vector Unit-Stride Instructions
 def WriteVLDE8        : SchedWrite;
@@ -272,6 +277,10 @@ def WriteVMov8V       : SchedWrite;
 //===----------------------------------------------------------------------===//
 /// Define scheduler resources associated with use operands.
 
+// 6. Configuration-Setting Instructions
+def ReadVSETVLI       : SchedRead;
+def ReadVSETVL        : SchedRead;
+
 // 7. Vector Loads and Stores
 def ReadVLDX          : SchedRead;
 def ReadVSTX          : SchedRead;
@@ -499,6 +508,11 @@ let Unsupported = true in {
 // 3.6 Vector Byte Length vlenb
 def : WriteRes<WriteRdVLENB, []>;
 
+// 6. Configuration-Setting Instructions
+def : WriteRes<WriteVSETVLI, []>;
+def : WriteRes<WriteVSETIVLI, []>;
+def : WriteRes<WriteVSETVL, []>;
+
 // 7. Vector Loads and Stores
 def : WriteRes<WriteVLDE8, []>;
 def : WriteRes<WriteVLDE16, []>;
@@ -692,6 +706,10 @@ def : WriteRes<WriteVMov1V, []>;
 def : WriteRes<WriteVMov2V, []>;
 def : WriteRes<WriteVMov4V, []>;
 def : WriteRes<WriteVMov8V, []>;
+
+// 6. Configuration-Setting Instructions
+def : ReadAdvance<ReadVSETVLI, 0>;
+def : ReadAdvance<ReadVSETVL, 0>;
 
 // 7. Vector Loads and Stores
 def : ReadAdvance<ReadVLDX, 0>;

@@ -298,11 +298,11 @@ void namedBarrier() {
                : "memory");
 }
 
-void fenceTeam(int) { __nvvm_membar_cta(); }
+void fenceTeam(atomic::OrderingTy) { __nvvm_membar_cta(); }
 
-void fenceKernel(int) { __nvvm_membar_gl(); }
+void fenceKernel(atomic::OrderingTy) { __nvvm_membar_gl(); }
 
-void fenceSystem(int) { __nvvm_membar_sys(); }
+void fenceSystem(atomic::OrderingTy) { __nvvm_membar_sys(); }
 
 void syncWarp(__kmpc_impl_lanemask_t Mask) { __nvvm_bar_warp_sync(Mask); }
 

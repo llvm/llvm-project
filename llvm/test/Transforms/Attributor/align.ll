@@ -1110,7 +1110,7 @@ define i8* @aligned_8_return_caller(i8* align(16) %a, i1 %c1, i1 %c2) {
 ; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@aligned_8_return_caller
 ; CGSCC-SAME: (i8* nofree readnone align 16 [[A:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) #[[ATTR12:[0-9]+]] {
-; CGSCC-NEXT:    [[R:%.*]] = call align 8 i8* @aligned_8_return(i8* noalias nofree readnone align 16 [[A]], i1 [[C1]], i1 [[C2]]) #[[ATTR13:[0-9]+]]
+; CGSCC-NEXT:    [[R:%.*]] = call align 8 i8* @aligned_8_return(i8* noalias nofree readnone align 16 [[A]], i1 [[C1]], i1 [[C2]]) #[[ATTR13]]
 ; CGSCC-NEXT:    ret i8* [[R]]
 ;
   %r = call i8* @aligned_8_return(i8* %a, i1 %c1, i1 %c2)

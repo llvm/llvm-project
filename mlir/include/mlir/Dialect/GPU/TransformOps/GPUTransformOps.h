@@ -41,17 +41,17 @@ namespace gpu {
 /// predication. Dynamic, `scf.foreach_thread` trip counts are currently not
 /// supported. Dynamic block dim sizes are currently not supported.
 DiagnosedSilenceableFailure
-mapNestedForeachToThreadsImp(RewriterBase &rewriter, Operation *target,
-                             const SmallVectorImpl<int64_t> &blockDim,
-                             bool syncAfterDistribute,
-                             llvm::Optional<TransformOpInterface> transformOp);
+mapNestedForeachToThreadsImpl(RewriterBase &rewriter, Operation *target,
+                              const SmallVectorImpl<int64_t> &blockDim,
+                              bool syncAfterDistribute,
+                              llvm::Optional<TransformOpInterface> transformOp);
 
 /// Maps the top level `scf.foreach_thread` op to GPU Thread Blocks. Mapping is
 /// one-to-one and the induction variables of `scf.foreach_thread` are rewritten
 /// to gpu.block_id according to the thread_dim_apping attribute. Dynamic,
 /// `scf.foreach_thread` trip counts are currently not supported. Dynamic block
 /// dim sizes are currently not supported.
-DiagnosedSilenceableFailure mapForeachToBlocksImp(
+DiagnosedSilenceableFailure mapForeachToBlocksImpl(
     RewriterBase &rewriter, scf::ForeachThreadOp foreachThreadOp,
     function_ref<void(RewriterBase &, scf::ForeachThreadOp,
                       SmallVectorImpl<Value> &)>

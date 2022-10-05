@@ -28,4 +28,31 @@ TEST(MLIRParser, ParseInvalidIR) {
   ASSERT_TRUE(module);
   ASSERT_TRUE(failed(verify(*module)));
 }
+
+TEST(MLIRParser, ParseAtEnd) {
+  std::string firstModuleStr = R"mlir(
+    "test.first"() : () -> ()
+  )mlir";
+  std::string secondModuleStr = R"mlir(
+    "test.second"() : () -> ()
+  )mlir";
+
+  MLIRContext context;
+  context.allowUnregisteredDialects();
+  Block block;
+
+  // Parse the first module string.
+  LogicalResult firstParse =
+      parseSourceString(firstModuleStr, &block, &context);
+  EXPECT_TRUE(succeeded(firstParse));
+
+  // Parse the second module string.
+  LogicalResult secondParse =
+      parseSourceString(secondModuleStr, &block, &context);
+  EXPECT_TRUE(succeeded(secondParse));
+
+  // Check the we parse at the end.
+  EXPECT_EQ(block.front().getName().getStringRef(), "test.first");
+  EXPECT_EQ(block.back().getName().getStringRef(), "test.second");
+}
 } // namespace

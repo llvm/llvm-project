@@ -4,7 +4,8 @@ set(LIBFUZZER_UNITTEST_CFLAGS
   ${COMPILER_RT_UNITTEST_CFLAGS}
   ${COMPILER_RT_GTEST_CFLAGS}
   -I${COMPILER_RT_SOURCE_DIR}/lib/fuzzer
-  -fno-rtti)
+  -fno-rtti
+  -O2)
 
 if (APPLE)
   set(FUZZER_SUPPORTED_OS osx)

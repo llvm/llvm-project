@@ -61,7 +61,7 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 ; CGSCC: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C, file: !1, isOptimized: false, runtimeVersion: 0, emissionKind: NoDebug)
 ; CGSCC: [[META1:![0-9]+]] = !DIFile(filename: "test.c", directory: "")
 ; CGSCC: [[META2:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
-; CGSCC: [[META3:![0-9]+]] = !DILocalVariable(name: "p", scope: !4)
+; CGSCC: [[META3]] = !DILocalVariable(name: "p", scope: !4)
 ; CGSCC: [[META4:![0-9]+]] = distinct !DISubprogram(name: "bar", scope: null, spFlags: DISPFlagDefinition, unit: !0)
-; CGSCC: [[META5:![0-9]+]] = !DILocation(line: 1, column: 1, scope: !4)
+; CGSCC: [[DBG5]] = !DILocation(line: 1, column: 1, scope: !4)
 ;.

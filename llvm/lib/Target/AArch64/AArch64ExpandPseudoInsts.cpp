@@ -89,6 +89,8 @@ private:
   bool expandCALL_BTI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool expandStoreSwiftAsyncContext(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MBBI);
+  MachineBasicBlock *expandRestoreZA(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator MBBI);
   MachineBasicBlock *expandCondSMToggle(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI);
 };
@@ -852,6 +854,48 @@ bool AArch64ExpandPseudo::expandStoreSwiftAsyncContext(
 }
 
 MachineBasicBlock *
+AArch64ExpandPseudo::expandRestoreZA(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator MBBI) {
+  MachineInstr &MI = *MBBI;
+  assert((std::next(MBBI) != MBB.end() ||
+          MI.getParent()->successors().begin() !=
+              MI.getParent()->successors().end()) &&
+         "Unexpected unreachable in block that restores ZA");
+
+  // Compare TPIDR2_EL0 value against 0.
+  DebugLoc DL = MI.getDebugLoc();
+  MachineInstrBuilder Cbz = BuildMI(MBB, MBBI, DL, TII->get(AArch64::CBZX))
+                                .add(MI.getOperand(0));
+
+  // Split MBB and create two new blocks:
+  //  - MBB now contains all instructions before RestoreZAPseudo.
+  //  - SMBB contains the RestoreZAPseudo instruction only.
+  //  - EndBB contains all instructions after RestoreZAPseudo.
+  MachineInstr &PrevMI = *std::prev(MBBI);
+  MachineBasicBlock *SMBB = MBB.splitAt(PrevMI, /*UpdateLiveIns*/ true);
+  MachineBasicBlock *EndBB = std::next(MI.getIterator()) == SMBB->end()
+                                 ? *SMBB->successors().begin()
+                                 : SMBB->splitAt(MI, /*UpdateLiveIns*/ true);
+
+  // Add the SMBB label to the TB[N]Z instruction & create a branch to EndBB.
+  Cbz.addMBB(SMBB);
+  BuildMI(&MBB, DL, TII->get(AArch64::B))
+      .addMBB(EndBB);
+  MBB.addSuccessor(EndBB);
+
+  // Replace the pseudo with a call (BL).
+  MachineInstrBuilder MIB =
+      BuildMI(*SMBB, SMBB->end(), DL, TII->get(AArch64::BL));
+  MIB.addReg(MI.getOperand(1).getReg(), RegState::Implicit);
+  for (unsigned I = 2; I < MI.getNumOperands(); ++I)
+    MIB.add(MI.getOperand(I));
+  BuildMI(SMBB, DL, TII->get(AArch64::B)).addMBB(EndBB);
+
+  MI.eraseFromParent();
+  return EndBB;
+}
+
+MachineBasicBlock *
 AArch64ExpandPseudo::expandCondSMToggle(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI) {
   MachineInstr &MI = *MBBI;
@@ -1371,6 +1415,12 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      return expandCALL_BTI(MBB, MBBI);
    case AArch64::StoreSwiftAsyncContext:
      return expandStoreSwiftAsyncContext(MBB, MBBI);
+   case AArch64::RestoreZAPseudo: {
+     auto *NewMBB = expandRestoreZA(MBB, MBBI);
+     if (NewMBB != &MBB)
+       NextMBBI = MBB.end(); // The NextMBBI iterator is invalidated.
+     return true;
+   }
    case AArch64::MSRpstatePseudo: {
      auto *NewMBB = expandCondSMToggle(MBB, MBBI);
      if (NewMBB != &MBB)

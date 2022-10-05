@@ -250,9 +250,12 @@ public:
     return fir::isRecordWithTypeParameters(getEleTy());
   }
 
-  /// Is this a CLASS(*)/TYPE(*) ?
+  /// Is this a polymorphic entity?
+  bool isPolymorphic() const { return fir::isPolymorphicType(getBoxTy()); }
+
+  /// Is this a CLASS(*)/TYPE(*)?
   bool isUnlimitedPolymorphic() const {
-    return fir::isUnlimitedPolymorphicType(getBaseTy());
+    return fir::isUnlimitedPolymorphicType(getBoxTy());
   }
 };
 

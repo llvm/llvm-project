@@ -786,7 +786,7 @@ define internal i8 @callee(i8 %a) {
 define void @user_as3() {
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn writeonly
 ; TUNIT-LABEL: define {{[^@]+}}@user_as3
-; TUNIT-SAME: () #[[ATTR4:[0-9]+]] {
+; TUNIT-SAME: () #[[ATTR4]] {
 ; TUNIT-NEXT:    store i32 0, i32 addrspace(3)* @ConstAS3Ptr, align 4
 ; TUNIT-NEXT:    ret void
 ;
@@ -839,7 +839,7 @@ define i1 @test_merge_with_undef_values_ptr(i1 %c) {
 define internal i1 @undef_then_null(i1 %c, i32* %i32Aptr, i32* %i32Bptr) {
 ; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@undef_then_null
-; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR2:[0-9]+]] {
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR2]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
 ; CGSCC:       a:
 ; CGSCC-NEXT:    ret i1 false

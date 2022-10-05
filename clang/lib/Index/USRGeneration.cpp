@@ -179,10 +179,11 @@ public:
 //===----------------------------------------------------------------------===//
 
 bool USRGenerator::EmitDeclName(const NamedDecl *D) {
-  const unsigned startSize = Buf.size();
-  D->printName(Out);
-  const unsigned endSize = Buf.size();
-  return startSize == endSize;
+  DeclarationName N = D->getDeclName();
+  if (N.isEmpty())
+    return true;
+  Out << N;
+  return false;
 }
 
 bool USRGenerator::ShouldGenerateLocation(const NamedDecl *D) {

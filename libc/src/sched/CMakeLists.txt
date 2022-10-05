@@ -17,8 +17,8 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  sched_getcpucount
+  __sched_getcpucount
   ALIAS
   DEPENDS
-    .${LIBC_TARGET_OS}.sched_getcpucount
+    .${LIBC_TARGET_OS}.__sched_getcpucount
 )
