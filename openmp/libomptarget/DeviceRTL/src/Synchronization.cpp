@@ -32,21 +32,79 @@ namespace impl {
 uint32_t atomicInc(uint32_t *Address, uint32_t Val,
                    atomic::OrderingTy Ordering);
 
-uint32_t atomicLoad(uint32_t *Address, atomic::OrderingTy Ordering) {
-  return __atomic_fetch_add(Address, 0U, Ordering);
+template <typename Ty>
+Ty atomicAdd(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
+  return __atomic_fetch_add(Address, Val, Ordering);
 }
 
-void atomicStore(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering) {
+template <typename Ty>
+Ty atomicMul(Ty *Address, Ty V, atomic::OrderingTy Ordering) {
+  Ty TypedCurrentVal, TypedResultVal, TypedNewVal;
+  bool Success;
+  do {
+    TypedCurrentVal = atomic::load(Address, Ordering);
+    TypedNewVal = TypedCurrentVal * V;
+    Success = atomic::cas(Address, TypedCurrentVal, TypedNewVal, Ordering,
+                          atomic::relaxed);
+  } while (!Success);
+  return TypedResultVal;
+}
+
+template <typename Ty> Ty atomicLoad(Ty *Address, atomic::OrderingTy Ordering) {
+  return atomicAdd(Address, Ty(0), Ordering);
+}
+
+template <typename Ty>
+void atomicStore(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
   __atomic_store_n(Address, Val, Ordering);
 }
 
-uint32_t atomicAdd(uint32_t *Address, uint32_t Val,
-                   atomic::OrderingTy Ordering) {
-  return __atomic_fetch_add(Address, Val, Ordering);
+template <typename Ty>
+bool atomicCAS(Ty *Address, Ty ExpectedV, Ty DesiredV,
+               atomic::OrderingTy OrderingSucc,
+               atomic::OrderingTy OrderingFail) {
+  return __atomic_compare_exchange(Address, &ExpectedV, &DesiredV, false,
+                                   OrderingSucc, OrderingFail);
 }
-uint32_t atomicMax(uint32_t *Address, uint32_t Val,
-                   atomic::OrderingTy Ordering) {
+
+template <typename Ty>
+Ty atomicMin(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
+  return __atomic_fetch_min(Address, Val, Ordering);
+}
+
+template <typename Ty>
+Ty atomicMax(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
   return __atomic_fetch_max(Address, Val, Ordering);
+}
+
+// TODO: Implement this with __atomic_fetch_max and remove the duplication.
+template <typename Ty, typename STy, typename UTy>
+Ty atomicMinFP(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
+  if (Val >= 0)
+    return atomicMin((STy *)Address, utils::convertViaPun<STy>(Val), Ordering);
+  return atomicMax((UTy *)Address, utils::convertViaPun<UTy>(Val), Ordering);
+}
+
+template <typename Ty, typename STy, typename UTy>
+Ty atomicMaxFP(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
+  if (Val >= 0)
+    return atomicMax((STy *)Address, utils::convertViaPun<STy>(Val), Ordering);
+  return atomicMin((UTy *)Address, utils::convertViaPun<UTy>(Val), Ordering);
+}
+
+template <typename Ty>
+Ty atomicOr(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
+  return __atomic_fetch_or(Address, Val, Ordering);
+}
+
+template <typename Ty>
+Ty atomicAnd(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
+  return __atomic_fetch_and(Address, Val, Ordering);
+}
+
+template <typename Ty>
+Ty atomicXOr(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
+  return __atomic_fetch_xor(Address, Val, Ordering);
 }
 
 uint32_t atomicExchange(uint32_t *Address, uint32_t Val,
@@ -54,17 +112,6 @@ uint32_t atomicExchange(uint32_t *Address, uint32_t Val,
   uint32_t R;
   __atomic_exchange(Address, &Val, &R, Ordering);
   return R;
-}
-uint32_t atomicCAS(uint32_t *Address, uint32_t Compare, uint32_t Val,
-                   atomic::OrderingTy Ordering) {
-  (void)__atomic_compare_exchange(Address, &Compare, &Val, false, Ordering,
-                                  Ordering);
-  return Compare;
-}
-
-uint64_t atomicAdd(uint64_t *Address, uint64_t Val,
-                   atomic::OrderingTy Ordering) {
-  return __atomic_fetch_add(Address, Val, Ordering);
 }
 ///}
 
@@ -287,7 +334,8 @@ void destroyLock(omp_lock_t *Lock) { unsetLock(Lock); }
 
 void setLock(omp_lock_t *Lock) {
   // TODO: not sure spinning is a good idea here..
-  while (atomicCAS((uint32_t *)Lock, UNSET, SET, atomic::seq_cst) != UNSET) {
+  while (atomicCAS((uint32_t *)Lock, UNSET, SET, atomic::seq_cst,
+                   atomic::seq_cst) != UNSET) {
     int32_t start = __nvvm_read_ptx_sreg_clock();
     int32_t now;
     for (;;) {
@@ -322,24 +370,84 @@ void fence::kernel(atomic::OrderingTy Ordering) { impl::fenceKernel(Ordering); }
 
 void fence::system(atomic::OrderingTy Ordering) { impl::fenceSystem(Ordering); }
 
-uint32_t atomic::load(uint32_t *Addr, atomic::OrderingTy Ordering) {
-  return impl::atomicLoad(Addr, Ordering);
-}
+#define ATOMIC_COMMON_OP(TY)                                                   \
+  TY atomic::add(TY *Addr, TY V, atomic::OrderingTy Ordering) {                \
+    return impl::atomicAdd(Addr, V, Ordering);                                 \
+  }                                                                            \
+  TY atomic::mul(TY *Addr, TY V, atomic::OrderingTy Ordering) {                \
+    return impl::atomicMul(Addr, V, Ordering);                                 \
+  }                                                                            \
+  TY atomic::load(TY *Addr, atomic::OrderingTy Ordering) {                     \
+    return impl::atomicLoad(Addr, Ordering);                                   \
+  }                                                                            \
+  bool atomic::cas(TY *Addr, TY ExpectedV, TY DesiredV,                        \
+                   atomic::OrderingTy OrderingSucc,                            \
+                   atomic::OrderingTy OrderingFail) {                          \
+    return impl::atomicCAS(Addr, ExpectedV, DesiredV, OrderingSucc,            \
+                           OrderingFail);                                      \
+  }
 
-void atomic::store(uint32_t *Addr, uint32_t V, atomic::OrderingTy Ordering) {
-  impl::atomicStore(Addr, V, Ordering);
-}
+#define ATOMIC_FP_ONLY_OP(TY, STY, UTY)                                        \
+  TY atomic::min(TY *Addr, TY V, atomic::OrderingTy Ordering) {                \
+    return impl::atomicMinFP<TY, STY, UTY>(Addr, V, Ordering);                 \
+  }                                                                            \
+  TY atomic::max(TY *Addr, TY V, atomic::OrderingTy Ordering) {                \
+    return impl::atomicMaxFP<TY, STY, UTY>(Addr, V, Ordering);                 \
+  }                                                                            \
+  void atomic::store(TY *Addr, TY V, atomic::OrderingTy Ordering) {            \
+    impl::atomicStore(reinterpret_cast<UTY *>(Addr),                           \
+                      utils::convertViaPun<UTY>(V), Ordering);                 \
+  }
+
+#define ATOMIC_INT_ONLY_OP(TY)                                                 \
+  TY atomic::min(TY *Addr, TY V, atomic::OrderingTy Ordering) {                \
+    return impl::atomicMin<TY>(Addr, V, Ordering);                             \
+  }                                                                            \
+  TY atomic::max(TY *Addr, TY V, atomic::OrderingTy Ordering) {                \
+    return impl::atomicMax<TY>(Addr, V, Ordering);                             \
+  }                                                                            \
+  TY atomic::bit_or(TY *Addr, TY V, atomic::OrderingTy Ordering) {             \
+    return impl::atomicOr(Addr, V, Ordering);                                  \
+  }                                                                            \
+  TY atomic::bit_and(TY *Addr, TY V, atomic::OrderingTy Ordering) {            \
+    return impl::atomicAnd(Addr, V, Ordering);                                 \
+  }                                                                            \
+  TY atomic::bit_xor(TY *Addr, TY V, atomic::OrderingTy Ordering) {            \
+    return impl::atomicXOr(Addr, V, Ordering);                                 \
+  }                                                                            \
+  void atomic::store(TY *Addr, TY V, atomic::OrderingTy Ordering) {            \
+    impl::atomicStore(Addr, V, Ordering);                                      \
+  }
+
+#define ATOMIC_FP_OP(TY, STY, UTY)                                             \
+  ATOMIC_FP_ONLY_OP(TY, STY, UTY)                                              \
+  ATOMIC_COMMON_OP(TY)
+
+#define ATOMIC_INT_OP(TY)                                                      \
+  ATOMIC_INT_ONLY_OP(TY)                                                       \
+  ATOMIC_COMMON_OP(TY)
+
+// This needs to be kept in sync with the header. Also the reason we don't use
+// templates here.
+ATOMIC_INT_OP(int8_t)
+ATOMIC_INT_OP(int16_t)
+ATOMIC_INT_OP(int32_t)
+ATOMIC_INT_OP(int64_t)
+ATOMIC_INT_OP(uint8_t)
+ATOMIC_INT_OP(uint16_t)
+ATOMIC_INT_OP(uint32_t)
+ATOMIC_INT_OP(uint64_t)
+ATOMIC_FP_OP(float, int32_t, uint32_t)
+ATOMIC_FP_OP(double, int64_t, uint64_t)
+
+#undef ATOMIC_INT_ONLY_OP
+#undef ATOMIC_FP_ONLY_OP
+#undef ATOMIC_COMMON_OP
+#undef ATOMIC_INT_OP
+#undef ATOMIC_FP_OP
 
 uint32_t atomic::inc(uint32_t *Addr, uint32_t V, atomic::OrderingTy Ordering) {
   return impl::atomicInc(Addr, V, Ordering);
-}
-
-uint32_t atomic::add(uint32_t *Addr, uint32_t V, atomic::OrderingTy Ordering) {
-  return impl::atomicAdd(Addr, V, Ordering);
-}
-
-uint64_t atomic::add(uint64_t *Addr, uint64_t V, atomic::OrderingTy Ordering) {
-  return impl::atomicAdd(Addr, V, Ordering);
 }
 
 extern "C" {
