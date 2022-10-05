@@ -108,6 +108,8 @@ bool SparseTensorFile::canReadAs(PrimaryType valTy) const {
     // integer and floating primary-types.
     return isRealPrimaryType(valTy);
   }
+  MLIR_SPARSETENSOR_FATAL("Unknown ValueKind: %d\n",
+                          static_cast<uint8_t>(valueKind_));
 }
 
 /// Helper to convert C-style strings (i.e., '\0' terminated) to lower case.
