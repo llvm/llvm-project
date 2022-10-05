@@ -5914,6 +5914,21 @@ bool CombinerHelper::matchTruncBuildVectorFold(MachineInstr &MI,
   return MRI.getType(MatchInfo) == MRI.getType(MI.getOperand(0).getReg());
 }
 
+bool CombinerHelper::matchTruncLshrBuildVectorFold(MachineInstr &MI,
+                                                   Register &MatchInfo) {
+  // Replace (G_TRUNC (G_LSHR (G_BITCAST (G_BUILD_VECTOR x, y)), K)) with
+  //    y if K == size of vector element type
+  Optional<ValueAndVReg> ShiftAmt;
+  if (!mi_match(MI.getOperand(1).getReg(), MRI,
+                m_GLShr(m_GBitcast(m_GBuildVector(m_Reg(), m_Reg(MatchInfo))),
+                        m_GCst(ShiftAmt))))
+    return false;
+
+  LLT MatchTy = MRI.getType(MatchInfo);
+  return ShiftAmt->Value.getZExtValue() == MatchTy.getSizeInBits() &&
+         MatchTy == MRI.getType(MI.getOperand(0).getReg());
+}
+
 unsigned CombinerHelper::getFPMinMaxOpcForSelect(
     CmpInst::Predicate Pred, LLT DstTy,
     SelectPatternNaNBehaviour VsNaNRetVal) const {
