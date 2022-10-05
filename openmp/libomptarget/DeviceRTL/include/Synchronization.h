@@ -44,37 +44,45 @@ __attribute__((noinline)) void threadsAligned();
 
 } // namespace synchronize
 
+namespace atomic {
+
+enum OrderingTy {
+  relaxed = __ATOMIC_RELAXED,
+  aquire = __ATOMIC_ACQUIRE,
+  release = __ATOMIC_RELEASE,
+  acq_rel = __ATOMIC_ACQ_REL,
+  seq_cst = __ATOMIC_SEQ_CST,
+};
+
+/// Atomically load \p Addr with \p Ordering semantics.
+uint32_t load(uint32_t *Addr, atomic::OrderingTy Ordering);
+
+/// Atomically store \p V to \p Addr with \p Ordering semantics.
+void store(uint32_t *Addr, uint32_t V, atomic::OrderingTy Ordering);
+
+/// Atomically increment \p *Addr and wrap at \p V with \p Ordering semantics.
+uint32_t inc(uint32_t *Addr, uint32_t V, atomic::OrderingTy Ordering);
+
+/// Atomically add \p V to \p *Addr with \p Ordering semantics.
+uint32_t add(uint32_t *Addr, uint32_t V, atomic::OrderingTy Ordering);
+
+/// Atomically add \p V to \p *Addr with \p Ordering semantics.
+uint64_t add(uint64_t *Addr, uint64_t V, atomic::OrderingTy Ordering);
+
+} // namespace atomic
+
 namespace fence {
 
 /// Memory fence with \p Ordering semantics for the team.
-void team(int Ordering);
+void team(atomic::OrderingTy Ordering);
 
 /// Memory fence with \p Ordering semantics for the contention group.
-void kernel(int Ordering);
+void kernel(atomic::OrderingTy Ordering);
 
 /// Memory fence with \p Ordering semantics for the system.
-void system(int Ordering);
+void system(atomic::OrderingTy Ordering);
 
 } // namespace fence
-
-namespace atomic {
-
-/// Atomically load \p Addr with \p Ordering semantics.
-uint32_t load(uint32_t *Addr, int Ordering);
-
-/// Atomically store \p V to \p Addr with \p Ordering semantics.
-void store(uint32_t *Addr, uint32_t V, int Ordering);
-
-/// Atomically increment \p *Addr and wrap at \p V with \p Ordering semantics.
-uint32_t inc(uint32_t *Addr, uint32_t V, int Ordering);
-
-/// Atomically add \p V to \p *Addr with \p Ordering semantics.
-uint32_t add(uint32_t *Addr, uint32_t V, int Ordering);
-
-/// Atomically add \p V to \p *Addr with \p Ordering semantics.
-uint64_t add(uint64_t *Addr, uint64_t V, int Ordering);
-
-} // namespace atomic
 
 } // namespace _OMP
 
