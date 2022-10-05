@@ -247,20 +247,20 @@ define i32 addrspace(1)* @test13_addrspacecast() {
 ; CHECK-LABEL: @test13_addrspacecast(
 ; CHECK-NEXT:    [[P:%.*]] = tail call i8* @malloc(i64 4)
 ; CHECK-NEXT:    [[P_BC:%.*]] = bitcast i8* [[P]] to i32*
-; CHECK-NEXT:    [[P:%.*]] = addrspacecast i32* [[P_BC]] to i32 addrspace(1)*
+; CHECK-NEXT:    [[P_AC:%.*]] = addrspacecast i32* [[P_BC]] to i32 addrspace(1)*
 ; CHECK-NEXT:    call void @may_unwind()
-; CHECK-NEXT:    store i32 0, i32 addrspace(1)* [[P]], align 4
-; CHECK-NEXT:    ret i32 addrspace(1)* [[P]]
+; CHECK-NEXT:    store i32 0, i32 addrspace(1)* [[P_AC]], align 4
+; CHECK-NEXT:    ret i32 addrspace(1)* [[P_AC]]
 ;
   %p = tail call i8* @malloc(i64 4)
   %p.bc = bitcast i8* %p to i32*
-  %P = addrspacecast i32* %p.bc to i32 addrspace(1)*
-  %DEAD = load i32, i32 addrspace(1)* %P
+  %p.ac = addrspacecast i32* %p.bc to i32 addrspace(1)*
+  %DEAD = load i32, i32 addrspace(1)* %p.ac
   %DEAD2 = add i32 %DEAD, 1
-  store i32 %DEAD2, i32 addrspace(1)* %P
+  store i32 %DEAD2, i32 addrspace(1)* %p.ac
   call void @may_unwind()
-  store i32 0, i32 addrspace(1)* %P
-  ret i32 addrspace(1)* %P
+  store i32 0, i32 addrspace(1)* %p.ac
+  ret i32 addrspace(1)* %p.ac
 }
 
 
@@ -391,7 +391,7 @@ define i8* @test25(i8* %p) nounwind {
 ; CHECK-NEXT:    [[P_4:%.*]] = getelementptr i8, i8* [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP:%.*]] = load i8, i8* [[P_4]], align 1
 ; CHECK-NEXT:    store i8 0, i8* [[P_4]], align 1
-; CHECK-NEXT:    [[Q:%.*]] = call i8* @strdup(i8* [[P]]) #[[ATTR10:[0-9]+]]
+; CHECK-NEXT:    [[Q:%.*]] = call i8* @strdup(i8* [[P]]) #[[ATTR13:[0-9]+]]
 ; CHECK-NEXT:    store i8 [[TMP]], i8* [[P_4]], align 1
 ; CHECK-NEXT:    ret i8* [[Q]]
 ;
