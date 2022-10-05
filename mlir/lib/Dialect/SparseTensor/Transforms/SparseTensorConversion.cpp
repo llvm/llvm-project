@@ -449,17 +449,18 @@ static bool canUseDirectConversion(
     ArrayRef<SparseTensorEncodingAttr::DimLevelType> dimTypes) {
   bool alreadyCompressed = false;
   for (uint64_t rank = dimTypes.size(), r = 0; r < rank; r++) {
-    switch (dimTypes[r]) {
-    case SparseTensorEncodingAttr::DimLevelType::Compressed:
+    const DimLevelType dlt = dimLevelTypeEncoding(dimTypes[r]);
+    if (isCompressedDLT(dlt)) {
       if (alreadyCompressed)
         return false; // Multiple compressed dimensions not yet supported.
       alreadyCompressed = true;
-      break;
-    case SparseTensorEncodingAttr::DimLevelType::Dense:
+    } else if (isDenseDLT(dlt)) {
       if (alreadyCompressed)
         return false; // Dense after Compressed not yet supported.
-      break;
-    default: // TODO: investigate
+    } else if (isSingletonDLT(dlt)) {
+      // Direct conversion doesn't have any particular problems with
+      // singleton after compressed.
+    } else { // TODO: investigate
       return false;
     }
   }
