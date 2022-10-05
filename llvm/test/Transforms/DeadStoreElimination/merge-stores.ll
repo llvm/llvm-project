@@ -2,152 +2,135 @@
 ; RUN: opt -dse -enable-dse-partial-store-merging -S < %s | FileCheck %s
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-f128:128:128-n8:16:32:64"
 
-define void @byte_by_byte_replacement(i32 *%ptr) {
+define void @byte_by_byte_replacement(ptr %ptr) {
 ; CHECK-LABEL: @byte_by_byte_replacement(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 202050057, i32* [[PTR:%.*]]
+; CHECK-NEXT:    store i32 202050057, ptr [[PTR:%.*]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
   ;; This store's value should be modified as it should be better to use one
   ;; larger store than several smaller ones.
   ;; store will turn into 0x0C0B0A09 == 202050057
-  store i32 305419896, i32* %ptr  ; 0x12345678
-  %bptr = bitcast i32* %ptr to i8*
-  %bptr1 = getelementptr inbounds i8, i8* %bptr, i64 1
-  %bptr2 = getelementptr inbounds i8, i8* %bptr, i64 2
-  %bptr3 = getelementptr inbounds i8, i8* %bptr, i64 3
+  store i32 305419896, ptr %ptr  ; 0x12345678
+  %bptr1 = getelementptr inbounds i8, ptr %ptr, i64 1
+  %bptr2 = getelementptr inbounds i8, ptr %ptr, i64 2
+  %bptr3 = getelementptr inbounds i8, ptr %ptr, i64 3
 
   ;; We should be able to merge these four stores with the i32 above
   ; value (and bytes) stored before  ; 0x12345678
-  store i8 9, i8* %bptr              ;         09
-  store i8 10, i8* %bptr1            ;       0A
-  store i8 11, i8* %bptr2            ;     0B
-  store i8 12, i8* %bptr3            ;   0C
+  store i8 9, ptr %ptr              ;         09
+  store i8 10, ptr %bptr1            ;       0A
+  store i8 11, ptr %bptr2            ;     0B
+  store i8 12, ptr %bptr3            ;   0C
   ;                                    0x0C0B0A09
   ret void
 }
 
-define void @word_replacement(i64 *%ptr) {
+define void @word_replacement(ptr %ptr) {
 ; CHECK-LABEL: @word_replacement(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 8106482645252179720, i64* [[PTR:%.*]]
+; CHECK-NEXT:    store i64 8106482645252179720, ptr [[PTR:%.*]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  store i64 72623859790382856, i64* %ptr  ; 0x0102030405060708
+  store i64 72623859790382856, ptr %ptr  ; 0x0102030405060708
 
-  %wptr = bitcast i64* %ptr to i16*
-  %wptr1 = getelementptr inbounds i16, i16* %wptr, i64 1
-  %wptr3 = getelementptr inbounds i16, i16* %wptr, i64 3
+  %wptr1 = getelementptr inbounds i16, ptr %ptr, i64 1
+  %wptr3 = getelementptr inbounds i16, ptr %ptr, i64 3
 
   ;; We should be able to merge these two stores with the i64 one above
   ; value (not bytes) stored before  ; 0x0102030405060708
-  store i16  4128, i16* %wptr1       ;           1020
-  store i16 28800, i16* %wptr3       ;   7080
+  store i16  4128, ptr %wptr1       ;           1020
+  store i16 28800, ptr %wptr3       ;   7080
   ;                                    0x7080030410200708
   ret void
 }
 
 
-define void @differently_sized_replacements(i64 *%ptr) {
+define void @differently_sized_replacements(ptr %ptr) {
 ; CHECK-LABEL: @differently_sized_replacements(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 578437695752307201, i64* [[PTR:%.*]]
+; CHECK-NEXT:    store i64 578437695752307201, ptr [[PTR:%.*]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  store i64 579005069656919567, i64* %ptr  ; 0x08090a0b0c0d0e0f
+  store i64 579005069656919567, ptr %ptr  ; 0x08090a0b0c0d0e0f
 
-  %bptr = bitcast i64* %ptr to i8*
-  %bptr6 = getelementptr inbounds i8, i8* %bptr, i64 6
-  %wptr = bitcast i64* %ptr to i16*
-  %wptr2 = getelementptr inbounds i16, i16* %wptr, i64 2
-  %dptr = bitcast i64* %ptr to i32*
+  %bptr6 = getelementptr inbounds i8, ptr %ptr, i64 6
+  %wptr2 = getelementptr inbounds i16, ptr %ptr, i64 2
 
   ;; We should be able to merge all these stores with the i64 one above
   ; value (not bytes) stored before  ; 0x08090a0b0c0d0e0f
-  store i8         7, i8*  %bptr6    ;     07
-  store i16     1541, i16* %wptr2    ;       0605
-  store i32 67305985, i32* %dptr     ;           04030201
+  store i8         7, ptr  %bptr6    ;     07
+  store i16     1541, ptr %wptr2    ;       0605
+  store i32 67305985, ptr %ptr     ;           04030201
   ;                                    0x0807060504030201
   ret void
 }
 
 
-define void @multiple_replacements_to_same_byte(i64 *%ptr) {
+define void @multiple_replacements_to_same_byte(ptr %ptr) {
 ; CHECK-LABEL: @multiple_replacements_to_same_byte(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 579005069522043393, i64* [[PTR:%.*]]
+; CHECK-NEXT:    store i64 579005069522043393, ptr [[PTR:%.*]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  store i64 579005069656919567, i64* %ptr  ; 0x08090a0b0c0d0e0f
+  store i64 579005069656919567, ptr %ptr  ; 0x08090a0b0c0d0e0f
 
-  %bptr = bitcast i64* %ptr to i8*
-  %bptr3 = getelementptr inbounds i8, i8* %bptr, i64 3
-  %wptr = bitcast i64* %ptr to i16*
-  %wptr1 = getelementptr inbounds i16, i16* %wptr, i64 1
-  %dptr = bitcast i64* %ptr to i32*
+  %bptr3 = getelementptr inbounds i8, ptr %ptr, i64 3
+  %wptr1 = getelementptr inbounds i16, ptr %ptr, i64 1
 
   ;; We should be able to merge all these stores with the i64 one above
   ; value (not bytes) stored before  ; 0x08090a0b0c0d0e0f
-  store i8         7, i8*  %bptr3    ;           07
-  store i16     1541, i16* %wptr1    ;           0605
-  store i32 67305985, i32* %dptr     ;           04030201
+  store i8         7, ptr  %bptr3    ;           07
+  store i16     1541, ptr %wptr1    ;           0605
+  store i32 67305985, ptr %ptr     ;           04030201
   ;                                    0x08090a0b04030201
   ret void
 }
 
-define void @merged_merges(i64 *%ptr) {
+define void @merged_merges(ptr %ptr) {
 ; CHECK-LABEL: @merged_merges(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i64 579005069572506113, i64* [[PTR:%.*]]
+; CHECK-NEXT:    store i64 579005069572506113, ptr [[PTR:%.*]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  store i64 579005069656919567, i64* %ptr  ; 0x08090a0b0c0d0e0f
+  store i64 579005069656919567, ptr %ptr  ; 0x08090a0b0c0d0e0f
 
-  %bptr = bitcast i64* %ptr to i8*
-  %bptr3 = getelementptr inbounds i8, i8* %bptr, i64 3
-  %wptr = bitcast i64* %ptr to i16*
-  %wptr1 = getelementptr inbounds i16, i16* %wptr, i64 1
-  %dptr = bitcast i64* %ptr to i32*
+  %bptr3 = getelementptr inbounds i8, ptr %ptr, i64 3
+  %wptr1 = getelementptr inbounds i16, ptr %ptr, i64 1
 
   ;; We should be able to merge all these stores with the i64 one above
   ; value (not bytes) stored before  ; 0x08090a0b0c0d0e0f
-  store i32 67305985, i32* %dptr     ;           04030201
-  store i16     1541, i16* %wptr1    ;           0605
-  store i8         7, i8*  %bptr3    ;           07
+  store i32 67305985, ptr %ptr     ;           04030201
+  store i16     1541, ptr %wptr1    ;           0605
+  store i8         7, ptr  %bptr3    ;           07
   ;                                    0x08090a0b07050201
   ret void
 }
 
-define signext i8 @shouldnt_merge_since_theres_a_full_overlap(i64 *%ptr) {
+define signext i8 @shouldnt_merge_since_theres_a_full_overlap(ptr %ptr) {
 ; CHECK-LABEL: @shouldnt_merge_since_theres_a_full_overlap(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BPTR:%.*]] = bitcast i64* [[PTR:%.*]] to i8*
-; CHECK-NEXT:    [[BPTRM1:%.*]] = getelementptr inbounds i8, i8* [[BPTR]], i64 -1
-; CHECK-NEXT:    [[BPTR3:%.*]] = getelementptr inbounds i8, i8* [[BPTR]], i64 3
-; CHECK-NEXT:    [[DPTR:%.*]] = bitcast i8* [[BPTRM1]] to i32*
-; CHECK-NEXT:    [[QPTR:%.*]] = bitcast i8* [[BPTR3]] to i64*
-; CHECK-NEXT:    store i32 1234, i32* [[DPTR]], align 1
-; CHECK-NEXT:    store i64 5678, i64* [[QPTR]], align 1
+; CHECK-NEXT:    [[BPTRM1:%.*]] = getelementptr inbounds i8, ptr [[PTR:%.*]], i64 -1
+; CHECK-NEXT:    [[BPTR3:%.*]] = getelementptr inbounds i8, ptr [[PTR]], i64 3
+; CHECK-NEXT:    store i32 1234, ptr [[BPTRM1]], align 1
+; CHECK-NEXT:    store i64 5678, ptr [[BPTR3]], align 1
 ; CHECK-NEXT:    ret i8 0
 ;
 entry:
 
   ; Also check that alias.scope metadata doesn't get dropped
-  store i64 0, i64* %ptr, !alias.scope !32
+  store i64 0, ptr %ptr, !alias.scope !32
 
-  %bptr = bitcast i64* %ptr to i8*
-  %bptrm1 = getelementptr inbounds i8, i8* %bptr, i64 -1
-  %bptr3 = getelementptr inbounds i8, i8* %bptr, i64 3
-  %dptr = bitcast i8* %bptrm1 to i32*
-  %qptr = bitcast i8* %bptr3 to i64*
+  %bptrm1 = getelementptr inbounds i8, ptr %ptr, i64 -1
+  %bptr3 = getelementptr inbounds i8, ptr %ptr, i64 3
 
-  store i32 1234, i32* %dptr, align 1
-  store i64 5678, i64* %qptr, align 1
+  store i32 1234, ptr %bptrm1, align 1
+  store i64 5678, ptr %bptr3, align 1
 
   ret i8 0
 }
@@ -155,50 +138,44 @@ entry:
 ;; Test case from PR31777
 %union.U = type { i64 }
 
-define void @foo(%union.U* nocapture %u) {
+define void @foo(ptr nocapture %u) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I:%.*]] = getelementptr inbounds [[UNION_U:%.*]], %union.U* [[U:%.*]], i64 0, i32 0
-; CHECK-NEXT:    store i64 42, i64* [[I]], align 8
+; CHECK-NEXT:    store i64 42, ptr [[U:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %i = getelementptr inbounds %union.U, %union.U* %u, i64 0, i32 0
-  store i64 0, i64* %i, align 8, !dbg !22, !tbaa !26, !noalias !32, !nontemporal !29
-  %s = bitcast %union.U* %u to i16*
-  store i16 42, i16* %s, align 8
+  store i64 0, ptr %u, align 8, !dbg !22, !tbaa !26, !noalias !32, !nontemporal !29
+  store i16 42, ptr %u, align 8
   ret void
 }
 
 ; Don't crash by operating on stale data if we merge (kill) the last 2 stores.
 
-define void @PR34074(i32* %x, i64* %y) {
+define void @PR34074(ptr %x, ptr %y) {
 ; CHECK-LABEL: @PR34074(
-; CHECK-NEXT:    store i64 42, i64* %y
-; CHECK-NEXT:    store i32 4, i32* %x
+; CHECK-NEXT:    store i64 42, ptr %y
+; CHECK-NEXT:    store i32 4, ptr %x
 ; CHECK-NEXT:    ret void
 ;
-  store i64 42, i64* %y          ; independent store
-  %xbc = bitcast i32* %x to i8*
-  store i32 0, i32* %x           ; big store of constant
-  store i8 4, i8* %xbc           ; small store with mergeable constant
+  store i64 42, ptr %y          ; independent store
+  store i32 0, ptr %x           ; big store of constant
+  store i8 4, ptr %x           ; small store with mergeable constant
   ret void
 }
 
 ; We can't eliminate the last store because P and Q may alias.
 
-define void @PR36129(i32* %P, i32* %Q) {
+define void @PR36129(ptr %P, ptr %Q) {
 ; CHECK-LABEL: @PR36129(
-; CHECK-NEXT:    store i32 1, i32* [[P:%.*]], align 4
-; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P]] to i8*
-; CHECK-NEXT:    store i32 2, i32* [[Q:%.*]], align 4
-; CHECK-NEXT:    store i8 3, i8* [[P2]], align 1
+; CHECK-NEXT:    store i32 1, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 2, ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    store i8 3, ptr [[P]], align 1
 ; CHECK-NEXT:    ret void
 ;
-  store i32 1, i32* %P, align 4
-  %P2 = bitcast i32* %P to i8*
-  store i32 2, i32* %Q, align 4
-  store i8 3, i8* %P2, align 1
+  store i32 1, ptr %P, align 4
+  store i32 2, ptr %Q, align 4
+  store i8 3, ptr %P, align 1
   ret void
 }
 
