@@ -11,6 +11,7 @@
 #include "EmulateInstructionRISCV.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
 #include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
+#include "RISCVInstructions.h"
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/PluginManager.h"
@@ -31,6 +32,17 @@ LLDB_PLUGIN_DEFINE_ADV(EmulateInstructionRISCV, InstructionRISCV)
 
 namespace lldb_private {
 
+/// Returns all values wrapped in Optional, or None if any of the values is
+/// None.
+template <typename... Ts>
+static llvm::Optional<std::tuple<Ts...>> zipOpt(llvm::Optional<Ts> &&...ts) {
+  if ((ts.has_value() && ...))
+    return llvm::Optional<std::tuple<Ts...>>(
+        std::make_tuple(std::move(*ts)...));
+  else
+    return llvm::None;
+}
+
 // The funct3 is the type of compare in B<CMP> instructions.
 // funct3 means "3-bits function selector", which RISC-V ISA uses as minor
 // opcode. It reuses the major opcode encoding space.
@@ -40,12 +52,6 @@ constexpr uint32_t BLT = 0b100;
 constexpr uint32_t BGE = 0b101;
 constexpr uint32_t BLTU = 0b110;
 constexpr uint32_t BGEU = 0b111;
-
-constexpr uint32_t DecodeSHAMT5(uint32_t inst) { return DecodeRS2(inst); }
-constexpr uint32_t DecodeSHAMT7(uint32_t inst) {
-  return (inst & 0x7F00000) >> 20;
-}
-constexpr uint32_t DecodeFunct3(uint32_t inst) { return (inst & 0x7000) >> 12; }
 
 // used in decoder
 constexpr int32_t SignExt(uint32_t imm) { return int32_t(imm); }
@@ -96,45 +102,38 @@ static uint32_t GPREncodingToLLDB(uint32_t reg_encode) {
   return LLDB_INVALID_REGNUM;
 }
 
-static bool ReadRegister(EmulateInstructionRISCV &emulator, uint32_t reg_encode,
-                         RegisterValue &value) {
-  uint32_t lldb_reg = GPREncodingToLLDB(reg_encode);
-  return emulator.ReadRegister(eRegisterKindLLDB, lldb_reg, value);
-}
-
-static bool WriteRegister(EmulateInstructionRISCV &emulator,
-                          uint32_t reg_encode, const RegisterValue &value) {
-  uint32_t lldb_reg = GPREncodingToLLDB(reg_encode);
+bool Rd::Write(EmulateInstructionRISCV &emulator, uint64_t value) {
+  uint32_t lldb_reg = GPREncodingToLLDB(rd);
   EmulateInstruction::Context ctx;
   ctx.type = EmulateInstruction::eContextRegisterStore;
   ctx.SetNoArgs();
-  return emulator.WriteRegister(ctx, eRegisterKindLLDB, lldb_reg, value);
+  RegisterValue registerValue;
+  registerValue.SetUInt64(value);
+  return emulator.WriteRegister(ctx, eRegisterKindLLDB, lldb_reg,
+                                registerValue);
 }
 
-static bool ExecJAL(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  bool success = false;
-  int64_t offset = SignExt(DecodeJImm(inst));
-  int64_t pc = emulator.ReadPC(success);
-  return success && emulator.WritePC(pc + offset) &&
-         WriteRegister(emulator, DecodeRD(inst),
-                       RegisterValue(uint64_t(pc + 4)));
-}
-
-static bool ExecJALR(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  int64_t offset = SignExt(DecodeIImm(inst));
+llvm::Optional<uint64_t> Rs::Read(EmulateInstructionRISCV &emulator) {
+  uint32_t lldbReg = GPREncodingToLLDB(rs);
   RegisterValue value;
-  if (!ReadRegister(emulator, DecodeRS1(inst), value))
-    return false;
-  bool success = false;
-  int64_t pc = emulator.ReadPC(success);
-  int64_t rs1 = int64_t(value.GetAsUInt64());
-  // JALR clears the bottom bit. According to riscv-spec:
-  // "The JALR instruction now clears the lowest bit of the calculated target
-  // address, to simplify hardware and to allow auxiliary information to be
-  // stored in function pointers."
-  return emulator.WritePC((rs1 + offset) & ~1) &&
-         WriteRegister(emulator, DecodeRD(inst),
-                       RegisterValue(uint64_t(pc + 4)));
+  return emulator.ReadRegister(eRegisterKindLLDB, lldbReg, value)
+             ? llvm::Optional<uint64_t>(value.GetAsUInt64())
+             : llvm::None;
+}
+
+llvm::Optional<int32_t> Rs::ReadI32(EmulateInstructionRISCV &emulator) {
+  return Read(emulator).transform(
+      [](uint64_t value) { return int32_t(uint32_t(value)); });
+}
+
+llvm::Optional<int64_t> Rs::ReadI64(EmulateInstructionRISCV &emulator) {
+  return Read(emulator).transform(
+      [](uint64_t value) { return int64_t(value); });
+}
+
+llvm::Optional<uint32_t> Rs::ReadU32(EmulateInstructionRISCV &emulator) {
+  return Read(emulator).transform(
+      [](uint64_t value) { return uint32_t(value); });
 }
 
 static bool CompareB(uint64_t rs1, uint64_t rs2, uint32_t funct3) {
@@ -156,786 +155,144 @@ static bool CompareB(uint64_t rs1, uint64_t rs2, uint32_t funct3) {
   }
 }
 
-struct Wrapped {
-  RegisterValue value;
-
-  template <typename T>
-  [[nodiscard]] std::enable_if_t<std::is_unsigned_v<T>, T> trunc() const {
-    return T(value.GetAsUInt64());
-  }
-
-  template <typename T> T sext() const = delete;
-};
-
-template <> int32_t Wrapped::sext<int32_t>() const {
-  return int32_t(trunc<uint32_t>());
-}
-
-template <> int64_t Wrapped::sext<int64_t>() const {
-  return int64_t(trunc<uint64_t>());
-}
-
-template <bool hasRS2> struct RSRegs {
-private:
-  Wrapped rs1_value;
-
-public:
-  bool valid;
-
-  Wrapped &rs1() { return rs1_value; }
-};
-
-template <> struct RSRegs<true> : RSRegs<false> {
-private:
-  Wrapped rs2_value;
-
-public:
-  Wrapped &rs2() { return rs2_value; }
-};
-
-RSRegs<true> readRS1RS2(EmulateInstructionRISCV &emulator, uint32_t inst) {
-  RSRegs<true> value{};
-  value.valid = ReadRegister(emulator, DecodeRS1(inst), value.rs1().value) &&
-                ReadRegister(emulator, DecodeRS2(inst), value.rs2().value);
-  return value;
-}
-
-RSRegs<false> readRS1(EmulateInstructionRISCV &emulator, uint32_t inst) {
-  RSRegs<false> value{};
-  value.valid = ReadRegister(emulator, DecodeRS1(inst), value.rs1().value);
-  return value;
-}
-
-static bool ExecB(EmulateInstructionRISCV &emulator, uint32_t inst,
-                  bool ignore_cond) {
-  bool success = false;
-  uint64_t pc = emulator.ReadPC(success);
-  if (!success)
-    return false;
-
-  uint64_t offset = SignExt(DecodeBImm(inst));
-  uint64_t target = pc + offset;
-  if (ignore_cond)
-    return emulator.WritePC(target);
-
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint32_t funct3 = DecodeFunct3(inst);
-  if (CompareB(rs.rs1().trunc<uint64_t>(), rs.rs2().trunc<uint64_t>(), funct3))
-    return emulator.WritePC(target);
-
-  return true;
-}
-
-static bool ExecLUI(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  uint32_t imm = DecodeUImm(inst);
-  RegisterValue value;
-  value.SetUInt64(SignExt(imm));
-  return WriteRegister(emulator, DecodeRD(inst), value);
-}
-
-static bool ExecAUIPC(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  uint32_t imm = DecodeUImm(inst);
-  RegisterValue value;
-  bool success = false;
-  value.SetUInt64(SignExt(imm) + emulator.ReadPC(success));
-  return success && WriteRegister(emulator, DecodeRD(inst), value);
-}
+template <typename T>
+constexpr bool is_load =
+    std::is_same_v<T, LB> || std::is_same_v<T, LH> || std::is_same_v<T, LW> ||
+    std::is_same_v<T, LD> || std::is_same_v<T, LBU> || std::is_same_v<T, LHU> ||
+    std::is_same_v<T, LWU>;
 
 template <typename T>
-static std::enable_if_t<std::is_integral_v<T>, llvm::Optional<T>>
-ReadMem(EmulateInstructionRISCV &emulator, uint64_t addr) {
-  EmulateInstructionRISCV::Context ctx;
-  ctx.type = EmulateInstruction::eContextRegisterLoad;
-  ctx.SetNoArgs();
-  bool success = false;
-  T result = emulator.ReadMemoryUnsigned(ctx, addr, sizeof(T), T(), &success);
-  if (!success)
-    return {}; // aka return false
-  return result;
-}
+constexpr bool is_store = std::is_same_v<T, SB> || std::is_same_v<T, SH> ||
+                          std::is_same_v<T, SW> || std::is_same_v<T, SD>;
 
 template <typename T>
-static bool WriteMem(EmulateInstructionRISCV &emulator, uint64_t addr,
-                     RegisterValue value) {
-  EmulateInstructionRISCV::Context ctx;
-  ctx.type = EmulateInstruction::eContextRegisterStore;
-  ctx.SetNoArgs();
-  return emulator.WriteMemoryUnsigned(ctx, addr, value.GetAsUInt64(),
-                                      sizeof(T));
-}
-
-static uint64_t LoadStoreAddr(EmulateInstructionRISCV &emulator,
-                              uint32_t inst) {
-  int32_t imm = SignExt(DecodeSImm(inst));
-  auto rs = readRS1(emulator, inst);
-  if (!rs.valid)
-    return LLDB_INVALID_ADDRESS;
-  uint64_t addr = rs.rs1().trunc<uint64_t>() + uint64_t(imm);
-  return addr;
-}
-
-// Read T from memory, then load its sign-extended value E to register.
-template <typename T, typename E>
-static bool Load(EmulateInstructionRISCV &emulator, uint32_t inst,
-                 uint64_t (*extend)(E)) {
-  uint64_t addr = LoadStoreAddr(emulator, inst);
-  if (addr == LLDB_INVALID_ADDRESS)
-    return false;
-  E value = E(ReadMem<T>(emulator, addr).value());
-  if (!value)
-    return false;
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(extend(value)));
-}
+constexpr bool is_amo_add =
+    std::is_same_v<T, AMOADD_W> || std::is_same_v<T, AMOADD_D>;
 
 template <typename T>
-static bool Store(EmulateInstructionRISCV &emulator, uint32_t inst) {
-  uint64_t addr = LoadStoreAddr(emulator, inst);
-  if (addr == LLDB_INVALID_ADDRESS)
-    return false;
-  RegisterValue value;
-  if (!ReadRegister(emulator, DecodeRS2(inst), value))
-    return false;
-  return WriteMem<T>(emulator, addr, value);
-}
-
-// RV32I & RV64I (The base integer ISA) //
-static bool ExecLB(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  return Load<uint8_t, int8_t>(emulator, inst, SextW);
-}
-
-static bool ExecLH(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  return Load<uint16_t, int16_t>(emulator, inst, SextW);
-}
-
-static bool ExecLW(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  return Load<uint32_t, int32_t>(emulator, inst, SextW);
-}
-
-static bool ExecLD(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  return Load<uint64_t, uint64_t>(emulator, inst, ZextD);
-}
-
-static bool ExecLBU(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  return Load<uint8_t, uint8_t>(emulator, inst, ZextD);
-}
-
-static bool ExecLHU(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  return Load<uint16_t, uint16_t>(emulator, inst, ZextD);
-}
-
-static bool ExecLWU(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  return Load<uint32_t, uint32_t>(emulator, inst, ZextD);
-}
-
-static bool ExecSB(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  return Store<uint8_t>(emulator, inst);
-}
-
-static bool ExecSH(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  return Store<uint16_t>(emulator, inst);
-}
-
-static bool ExecSW(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  return Store<uint32_t>(emulator, inst);
-}
-
-static bool ExecSD(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  return Store<uint64_t>(emulator, inst);
-}
-
-static bool ExecADDI(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  int32_t imm = SignExt(DecodeIImm(inst));
-
-  auto rs = readRS1(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().sext<int64_t>() + int64_t(imm);
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSLTI(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  int32_t imm = SignExt(DecodeIImm(inst));
-
-  auto rs = readRS1(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().sext<int64_t>() < int64_t(imm);
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSLTIU(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  int32_t imm = SignExt(DecodeIImm(inst));
-
-  auto rs = readRS1(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().trunc<uint64_t>() < uint64_t(imm);
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecXORI(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  int32_t imm = SignExt(DecodeIImm(inst));
-
-  auto rs = readRS1(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().trunc<uint64_t>() ^ uint64_t(imm);
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecORI(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  int32_t imm = SignExt(DecodeIImm(inst));
-
-  auto rs = readRS1(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().trunc<uint64_t>() | uint64_t(imm);
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecANDI(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  int32_t imm = SignExt(DecodeIImm(inst));
-
-  auto rs = readRS1(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().trunc<uint64_t>() & uint64_t(imm);
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSLLI(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().trunc<uint64_t>() << DecodeSHAMT7(inst);
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSRLI(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().trunc<uint64_t>() >> DecodeSHAMT7(inst);
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSRAI(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().sext<int64_t>() >> DecodeSHAMT7(inst);
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecADD(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().trunc<uint64_t>() + rs.rs2().trunc<uint64_t>();
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSUB(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().trunc<uint64_t>() - rs.rs2().trunc<uint64_t>();
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSLL(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().trunc<uint64_t>()
-                    << (rs.rs2().trunc<uint64_t>() & 0b111111);
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSLT(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().sext<int64_t>() < rs.rs2().sext<int64_t>();
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSLTU(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().trunc<uint64_t>() < rs.rs2().trunc<uint64_t>();
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecXOR(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().trunc<uint64_t>() ^ rs.rs2().trunc<uint64_t>();
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSRL(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result =
-      rs.rs1().trunc<uint64_t>() >> (rs.rs2().trunc<uint64_t>() & 0b111111);
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSRA(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result =
-      rs.rs1().sext<int64_t>() >> (rs.rs2().trunc<uint64_t>() & 0b111111);
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecOR(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().trunc<uint64_t>() | rs.rs2().trunc<uint64_t>();
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecAND(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().trunc<uint64_t>() & rs.rs2().trunc<uint64_t>();
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecADDIW(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  int32_t imm = SignExt(DecodeIImm(inst));
-
-  auto rs = readRS1(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = SextW(rs.rs1().sext<int32_t>() + imm);
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSLLIW(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = SextW(rs.rs1().trunc<uint32_t>() << DecodeSHAMT5(inst));
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSRLIW(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = SextW(rs.rs1().trunc<uint32_t>() >> DecodeSHAMT5(inst));
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSRAIW(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = SextW(rs.rs1().sext<int32_t>() >> DecodeSHAMT5(inst));
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecADDW(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result =
-      SextW(uint32_t(rs.rs1().trunc<uint64_t>() + rs.rs2().trunc<uint64_t>()));
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSUBW(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result =
-      SextW(uint32_t(rs.rs1().trunc<uint64_t>() - rs.rs2().trunc<uint64_t>()));
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSLLW(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = SextW(rs.rs1().trunc<uint32_t>()
-                          << (rs.rs2().trunc<uint32_t>() & 0b11111));
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSRLW(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = SextW(rs.rs1().trunc<uint32_t>() >>
-                          (rs.rs2().trunc<uint32_t>() & 0b11111));
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecSRAW(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = SextW(rs.rs1().sext<int32_t>() >>
-                          (rs.rs2().trunc<uint64_t>() & 0b111111));
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-// RV32M & RV64M (The standard integer multiplication and division extension) //
-static bool ExecMUL(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = rs.rs1().trunc<uint64_t>() * rs.rs2().trunc<uint64_t>();
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecMULH(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  llvm::APInt mul = llvm::APInt(128, rs.rs1().trunc<uint64_t>(), true) *
-                    llvm::APInt(128, rs.rs2().trunc<uint64_t>(), true);
-
-  // signed * signed
-  auto result = mul.ashr(64).trunc(64).getZExtValue();
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecMULHSU(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  // signed * unsigned
-  llvm::APInt mul =
-      llvm::APInt(128, rs.rs1().trunc<uint64_t>(), true).zext(128) *
-      llvm::APInt(128, rs.rs2().trunc<uint64_t>(), false);
-
-  auto result = mul.lshr(64).trunc(64).getZExtValue();
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecMULHU(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  // unsigned * unsigned
-  llvm::APInt mul = llvm::APInt(128, rs.rs1().trunc<uint64_t>(), false) *
-                    llvm::APInt(128, rs.rs2().trunc<uint64_t>(), false);
-  auto result = mul.lshr(64).trunc(64).getZExtValue();
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecDIV(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  int64_t dividend = rs.rs1().sext<int64_t>();
-  int64_t divisor = rs.rs2().sext<int64_t>();
-
-  if (divisor == 0)
-    return WriteRegister(emulator, DecodeRD(inst), RegisterValue(UINT64_MAX));
-
-  if (dividend == INT64_MIN && divisor == -1)
-    return WriteRegister(emulator, DecodeRD(inst),
-                         RegisterValue(uint64_t(dividend)));
-
-  return WriteRegister(emulator, DecodeRD(inst),
-                       RegisterValue(uint64_t(dividend / divisor)));
-}
-
-static bool ExecDIVU(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t dividend = rs.rs1().trunc<uint64_t>();
-  uint64_t divisor = rs.rs2().trunc<uint64_t>();
-
-  if (divisor == 0)
-    return WriteRegister(emulator, DecodeRD(inst), RegisterValue(UINT64_MAX));
-
-  return WriteRegister(emulator, DecodeRD(inst),
-                       RegisterValue(dividend / divisor));
-}
-
-static bool ExecREM(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  int64_t dividend = rs.rs1().sext<int64_t>();
-  int64_t divisor = rs.rs2().sext<int64_t>();
-
-  if (divisor == 0)
-    return WriteRegister(emulator, DecodeRD(inst),
-                         RegisterValue(uint64_t(dividend)));
-
-  if (dividend == INT64_MIN && divisor == -1)
-    return WriteRegister(emulator, DecodeRD(inst), RegisterValue(uint64_t(0)));
-
-  return WriteRegister(emulator, DecodeRD(inst),
-                       RegisterValue(uint64_t(dividend % divisor)));
-}
-
-static bool ExecREMU(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t dividend = rs.rs1().trunc<uint64_t>();
-  uint64_t divisor = rs.rs2().trunc<uint64_t>();
-
-  if (divisor == 0)
-    return WriteRegister(emulator, DecodeRD(inst), RegisterValue(dividend));
-
-  return WriteRegister(emulator, DecodeRD(inst),
-                       RegisterValue(dividend % divisor));
-}
-
-static bool ExecMULW(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint64_t result = SextW(rs.rs1().sext<int32_t>() * rs.rs2().sext<int32_t>());
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(result));
-}
-
-static bool ExecDIVW(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  int32_t dividend = rs.rs1().sext<int32_t>();
-  int32_t divisor = rs.rs2().sext<int32_t>();
-
-  if (divisor == 0)
-    return WriteRegister(emulator, DecodeRD(inst), RegisterValue(UINT64_MAX));
-
-  if (dividend == INT32_MIN && divisor == -1)
-    return WriteRegister(emulator, DecodeRD(inst),
-                         RegisterValue(SextW(dividend)));
-
-  return WriteRegister(emulator, DecodeRD(inst),
-                       RegisterValue(SextW(dividend / divisor)));
-}
-
-static bool ExecDIVUW(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint32_t dividend = rs.rs1().trunc<uint32_t>();
-  uint32_t divisor = rs.rs2().trunc<uint32_t>();
-
-  if (divisor == 0)
-    return WriteRegister(emulator, DecodeRD(inst), RegisterValue(UINT64_MAX));
-
-  return WriteRegister(emulator, DecodeRD(inst),
-                       RegisterValue(SextW(dividend / divisor)));
-}
-
-static bool ExecREMW(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  int32_t dividend = rs.rs1().sext<int32_t>();
-  int32_t divisor = rs.rs2().sext<int32_t>();
-
-  if (divisor == 0)
-    return WriteRegister(emulator, DecodeRD(inst),
-                         RegisterValue(SextW(dividend)));
-
-  if (dividend == INT32_MIN && divisor == -1)
-    return WriteRegister(emulator, DecodeRD(inst), RegisterValue(uint64_t(0)));
-
-  return WriteRegister(emulator, DecodeRD(inst),
-                       RegisterValue(SextW(dividend % divisor)));
-}
-
-static bool ExecREMUW(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  auto rs = readRS1RS2(emulator, inst);
-  if (!rs.valid)
-    return false;
-
-  uint32_t dividend = rs.rs1().trunc<uint32_t>();
-  uint32_t divisor = rs.rs2().trunc<uint32_t>();
-
-  if (divisor == 0)
-    return WriteRegister(emulator, DecodeRD(inst),
-                         RegisterValue(SextW(dividend)));
-
-  return WriteRegister(emulator, DecodeRD(inst),
-                       RegisterValue(SextW(dividend % divisor)));
-}
-
-// RV32A & RV64A (The standard atomic instruction extension) //
-static uint64_t AtomicAddr(EmulateInstructionRISCV &emulator, uint32_t reg,
-                           unsigned int align) {
-  RegisterValue value;
-  if (!ReadRegister(emulator, reg, value))
-    return LLDB_INVALID_ADDRESS;
-
-  uint64_t addr = value.GetAsUInt64();
-  return addr % align == 0 ? addr : LLDB_INVALID_ADDRESS;
-}
+constexpr bool is_amo_bit_op =
+    std::is_same_v<T, AMOXOR_W> || std::is_same_v<T, AMOXOR_D> ||
+    std::is_same_v<T, AMOAND_W> || std::is_same_v<T, AMOAND_D> ||
+    std::is_same_v<T, AMOOR_W> || std::is_same_v<T, AMOOR_D>;
 
 template <typename T>
-static bool AtomicSwap(EmulateInstructionRISCV &emulator, uint32_t inst,
-                       int align, uint64_t (*extend)(T)) {
-  RegisterValue rs2;
-  if (!ReadRegister(emulator, DecodeRS2(inst), rs2))
-    return false;
-
-  uint64_t addr = AtomicAddr(emulator, DecodeRS1(inst), align);
-  if (addr == LLDB_INVALID_ADDRESS)
-    return false;
-
-  T tmp = ReadMem<T>(emulator, addr).value();
-  if (!tmp)
-    return false;
-
-  bool success =
-      WriteMem<T>(emulator, addr, RegisterValue(T(rs2.GetAsUInt64())));
-  if (!success)
-    return false;
-
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(extend(tmp)));
-}
+constexpr bool is_amo_swap =
+    std::is_same_v<T, AMOSWAP_W> || std::is_same_v<T, AMOSWAP_D>;
 
 template <typename T>
-static bool AtomicADD(EmulateInstructionRISCV &emulator, uint32_t inst,
-                      int align, uint64_t (*extend)(T)) {
-  RegisterValue rs2;
-  if (!ReadRegister(emulator, DecodeRS2(inst), rs2))
-    return false;
+constexpr bool is_amo_cmp =
+    std::is_same_v<T, AMOMIN_W> || std::is_same_v<T, AMOMIN_D> ||
+    std::is_same_v<T, AMOMAX_W> || std::is_same_v<T, AMOMAX_D> ||
+    std::is_same_v<T, AMOMINU_W> || std::is_same_v<T, AMOMINU_D> ||
+    std::is_same_v<T, AMOMAXU_W> || std::is_same_v<T, AMOMAXU_D>;
 
-  uint64_t addr = AtomicAddr(emulator, DecodeRS1(inst), align);
-  if (addr == LLDB_INVALID_ADDRESS)
-    return false;
-
-  T value = ReadMem<T>(emulator, addr).value();
-  if (!value)
-    return false;
-
-  bool success =
-      WriteMem<T>(emulator, addr, RegisterValue(value + T(rs2.GetAsUInt64())));
-  if (!success)
-    return false;
-
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(extend(value)));
+template <typename I>
+static std::enable_if_t<is_load<I> || is_store<I>, llvm::Optional<uint64_t>>
+LoadStoreAddr(EmulateInstructionRISCV &emulator, I inst) {
+  return inst.rs1.Read(emulator).transform(
+      [&](uint64_t rs1) { return rs1 + uint64_t(SignExt(inst.imm)); });
 }
 
-template <typename T>
-static bool AtomicBitOperate(EmulateInstructionRISCV &emulator, uint32_t inst,
-                             int align, uint64_t (*extend)(T),
-                             T (*operate)(T, T)) {
-  RegisterValue rs2;
-  if (!ReadRegister(emulator, DecodeRS2(inst), rs2))
+// Read T from memory, then load its sign-extended value m_emu to register.
+template <typename I, typename T, typename m_emu>
+static std::enable_if_t<is_load<I>, bool>
+Load(EmulateInstructionRISCV &emulator, I inst, uint64_t (*extend)(m_emu)) {
+  auto addr = LoadStoreAddr(emulator, inst);
+  if (!addr)
     return false;
-
-  uint64_t addr = AtomicAddr(emulator, DecodeRS1(inst), align);
-  if (addr == LLDB_INVALID_ADDRESS)
-    return false;
-
-  T value = ReadMem<T>(emulator, addr).value();
-  if (!value)
-    return false;
-
-  bool success = WriteMem<T>(
-      emulator, addr, RegisterValue(operate(value, T(rs2.GetAsUInt64()))));
-  if (!success)
-    return false;
-
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(extend(value)));
+  return emulator.ReadMem<T>(*addr)
+      .transform([&](T t) { return inst.rd.Write(emulator, extend(m_emu(t))); })
+      .value_or(false);
 }
 
-template <typename T>
-static bool AtomicCmp(EmulateInstructionRISCV &emulator, uint32_t inst,
-                      int align, uint64_t (*extend)(T), T (*cmp)(T, T)) {
-  RegisterValue rs2;
-  if (!ReadRegister(emulator, DecodeRS2(inst), rs2))
+template <typename I, typename T>
+static std::enable_if_t<is_store<I>, bool>
+Store(EmulateInstructionRISCV &emulator, I inst) {
+  auto addr = LoadStoreAddr(emulator, inst);
+  if (!addr)
     return false;
-
-  uint64_t addr = AtomicAddr(emulator, DecodeRS1(inst), align);
-  if (addr == LLDB_INVALID_ADDRESS)
-    return false;
-
-  T value = ReadMem<T>(emulator, addr).value();
-  if (!value)
-    return false;
-
-  bool success = WriteMem<T>(emulator, addr,
-                             RegisterValue(cmp(value, T(rs2.GetAsUInt64()))));
-  if (!success)
-    return false;
-
-  return WriteRegister(emulator, DecodeRD(inst), RegisterValue(extend(value)));
+  return inst.rs2.Read(emulator)
+      .transform([&](uint64_t rs2) { return emulator.WriteMem<T>(*addr, rs2); })
+      .value_or(false);
 }
 
-// 00010 aq[1] rl[1] 00000 rs1[5] 010 rd[5] 0101111 LR.D
-// 00010 aq[1] rl[1] 00000 rs1[5] 011 rd[5] 0101111 LR.W
-static bool IsLR(uint32_t inst) {
-  return (inst & 0xF9F0707F) == 0x1000202F || (inst & 0xF9F0707F) == 0x1000302F;
+template <typename I>
+static std::enable_if_t<is_amo_add<I> || is_amo_bit_op<I> || is_amo_swap<I> ||
+                            is_amo_cmp<I>,
+                        llvm::Optional<uint64_t>>
+AtomicAddr(EmulateInstructionRISCV &emulator, I inst, unsigned int align) {
+  return inst.rs1.Read(emulator)
+      .transform([&](uint64_t rs1) {
+        return rs1 % align == 0 ? llvm::Optional<uint64_t>(rs1) : llvm::None;
+      })
+      .value_or(llvm::None);
 }
 
-// 00011 aq[1] rl[1] rs2[5] rs1[5] 010 rd[5] 0101111 SC.W
-// 00011 aq[1] rl[1] rs2[5] rs1[5] 011 rd[5] 0101111 SC.D
-static bool IsSC(uint32_t inst) {
-  return (inst & 0xF800707F) == 0x1800202F || (inst & 0xF800707F) == 0x1800302F;
+template <typename I, typename T>
+static std::enable_if_t<is_amo_swap<I>, bool>
+AtomicSwap(EmulateInstructionRISCV &emulator, I inst, int align,
+           uint64_t (*extend)(T)) {
+  auto addr = AtomicAddr(emulator, inst, align);
+  if (!addr)
+    return false;
+  return zipOpt(emulator.ReadMem<T>(*addr), inst.rs2.Read(emulator))
+      .transform([&](auto &&tup) {
+        auto [tmp, rs2] = tup;
+        return emulator.WriteMem<T>(*addr, T(rs2)) &&
+               inst.rd.Write(emulator, extend(tmp));
+      })
+      .value_or(false);
 }
 
-// imm[7] rs2[5] rs1[5] 001 imm[5] 1100011 BNE
-static bool IsBNE(uint32_t inst) { return (inst & 0x707F) == 0x1063; }
+template <typename I, typename T>
+static std::enable_if_t<is_amo_add<I>, bool>
+AtomicADD(EmulateInstructionRISCV &emulator, I inst, int align,
+          uint64_t (*extend)(T)) {
+  auto addr = AtomicAddr(emulator, inst, align);
+  if (!addr)
+    return false;
+  return zipOpt(emulator.ReadMem<T>(*addr), inst.rs2.Read(emulator))
+      .transform([&](auto &&tup) {
+        auto [tmp, rs2] = tup;
+        return emulator.WriteMem<T>(*addr, T(tmp + rs2)) &&
+               inst.rd.Write(emulator, extend(tmp));
+      })
+      .value_or(false);
+}
 
-static bool ExecAtomicSequence(EmulateInstructionRISCV &emulator, uint32_t inst,
-                               bool) {
+template <typename I, typename T>
+static std::enable_if_t<is_amo_bit_op<I>, bool>
+AtomicBitOperate(EmulateInstructionRISCV &emulator, I inst, int align,
+                 uint64_t (*extend)(T), T (*operate)(T, T)) {
+  auto addr = AtomicAddr(emulator, inst, align);
+  if (!addr)
+    return false;
+  return zipOpt(emulator.ReadMem<T>(*addr), inst.rs2.Read(emulator))
+      .transform([&](auto &&tup) {
+        auto [value, rs2] = tup;
+        return emulator.WriteMem<T>(*addr, operate(value, T(rs2))) &&
+               inst.rd.Write(emulator, extend(value));
+      })
+      .value_or(false);
+}
+
+template <typename I, typename T>
+static std::enable_if_t<is_amo_cmp<I>, bool>
+AtomicCmp(EmulateInstructionRISCV &emulator, I inst, int align,
+          uint64_t (*extend)(T), T (*cmp)(T, T)) {
+  auto addr = AtomicAddr(emulator, inst, align);
+  if (!addr)
+    return false;
+  return zipOpt(emulator.ReadMem<T>(*addr), inst.rs2.Read(emulator))
+      .transform([&](auto &&tup) {
+        auto [value, rs2] = tup;
+        return emulator.WriteMem<T>(*addr, cmp(value, T(rs2))) &&
+               inst.rd.Write(emulator, extend(value));
+      })
+      .value_or(false);
+}
+
+bool AtomicSequence(EmulateInstructionRISCV &emulator) {
   // The atomic sequence is always 4 instructions long:
   // example:
   //   110cc:	100427af          	lr.w	a5,(s0)
@@ -943,339 +300,781 @@ static bool ExecAtomicSequence(EmulateInstructionRISCV &emulator, uint32_t inst,
   //   110d4:	1ce426af          	sc.w.aq	a3,a4,(s0)
   //   110d8:	fe069ae3          	bnez	a3,110cc
   //   110dc:   ........          	<next instruction>
-  bool success = false;
-  llvm::Optional<lldb::addr_t> pc = emulator.ReadPC(success);
-  if (!success || !pc)
+  const auto pc = emulator.ReadPC();
+  if (!pc)
     return false;
-  lldb::addr_t current_pc = pc.value();
-  lldb::addr_t start_pc = current_pc;
-  llvm::Optional<uint32_t> value = inst;
+  auto current_pc = pc.value();
+  const auto entry_pc = current_pc;
 
-  // inst must be LR
-  if (!value || !IsLR(value.value()))
+  // The first instruction should be LR.W or LR.D
+  auto inst = emulator.ReadInstructionAt(current_pc);
+  if (!inst || (!std::holds_alternative<LR_W>(inst->decoded) &&
+                !std::holds_alternative<LR_D>(inst->decoded)))
     return false;
-  value = ReadMem<uint32_t>(emulator, current_pc += 4).value();
 
-  // inst must be BNE to exit
-  if (!value || !IsBNE(value.value()))
+  // The second instruction should be BNE to exit address
+  inst = emulator.ReadInstructionAt(current_pc += 4);
+  if (!inst || !std::holds_alternative<B>(inst->decoded))
     return false;
-  auto exit_pc = current_pc + SextW(DecodeBImm(value.value()));
-  value = ReadMem<uint32_t>(emulator, current_pc += 4).value();
+  auto bne_exit = std::get<B>(inst->decoded);
+  if (bne_exit.funct3 != BNE)
+    return false;
+  // save the exit address to check later
+  const auto exit_pc = current_pc + SextW(bne_exit.imm);
 
-  // inst must be SC
-  if (!value || !IsSC(value.value()))
+  // The third instruction should be SC.W or SC.D
+  inst = emulator.ReadInstructionAt(current_pc += 4);
+  if (!inst || (!std::holds_alternative<SC_W>(inst->decoded) &&
+                !std::holds_alternative<SC_D>(inst->decoded)))
     return false;
-  value = ReadMem<uint32_t>(emulator, current_pc += 4).value();
 
-  // inst must be BNE to restart
-  if (!value || !IsBNE(value.value()))
+  // The fourth instruction should be BNE to entry address
+  inst = emulator.ReadInstructionAt(current_pc += 4);
+  if (!inst || !std::holds_alternative<B>(inst->decoded))
     return false;
-  if (current_pc + SextW(DecodeBImm(value.value())) != start_pc)
+  auto bne_start = std::get<B>(inst->decoded);
+  if (bne_start.funct3 != BNE)
     return false;
+  if (entry_pc != current_pc + SextW(bne_start.imm))
+    return false;
+
   current_pc += 4;
-
-  if (exit_pc != current_pc)
-    return false;
-
-  return emulator.WritePC(current_pc);
+  // check the exit address and jump to it
+  return exit_pc == current_pc && emulator.WritePC(current_pc);
 }
 
-static bool ExecLR_W(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  return ExecAtomicSequence(emulator, inst, false);
+template <typename T> static RISCVInst DecodeUType(uint32_t inst) {
+  return T{Rd{DecodeRD(inst)}, DecodeUImm(inst)};
 }
 
-static bool ExecAMOSWAP_W(EmulateInstructionRISCV &emulator, uint32_t inst,
-                          bool) {
-  return AtomicSwap<uint32_t>(emulator, inst, 4, SextW);
+template <typename T> static RISCVInst DecodeJType(uint32_t inst) {
+  return T{Rd{DecodeRD(inst)}, DecodeJImm(inst)};
 }
 
-static bool ExecAMOADD_W(EmulateInstructionRISCV &emulator, uint32_t inst,
-                         bool) {
-  return AtomicADD<uint32_t>(emulator, inst, 4, SextW);
+template <typename T> static RISCVInst DecodeIType(uint32_t inst) {
+  return T{Rd{DecodeRD(inst)}, Rs{DecodeRS1(inst)}, DecodeIImm(inst)};
 }
 
-static bool ExecAMOXOR_W(EmulateInstructionRISCV &emulator, uint32_t inst,
-                         bool) {
-  return AtomicBitOperate<uint32_t>(
-      emulator, inst, 4, SextW, [](uint32_t a, uint32_t b) { return a ^ b; });
+template <typename T> static RISCVInst DecodeBType(uint32_t inst) {
+  return T{Rs{DecodeRS1(inst)}, Rs{DecodeRS2(inst)}, DecodeBImm(inst),
+           (inst & 0x7000) >> 12};
 }
 
-static bool ExecAMOAND_W(EmulateInstructionRISCV &emulator, uint32_t inst,
-                         bool) {
-  return AtomicBitOperate<uint32_t>(
-      emulator, inst, 4, SextW, [](uint32_t a, uint32_t b) { return a & b; });
+template <typename T> static RISCVInst DecodeSType(uint32_t inst) {
+  return T{Rs{DecodeRS1(inst)}, Rs{DecodeRS2(inst)}, DecodeSImm(inst)};
 }
 
-static bool ExecAMOOR_W(EmulateInstructionRISCV &emulator, uint32_t inst,
-                        bool) {
-  return AtomicBitOperate<uint32_t>(
-      emulator, inst, 4, SextW, [](uint32_t a, uint32_t b) { return a | b; });
+template <typename T> static RISCVInst DecodeRType(uint32_t inst) {
+  return T{Rd{DecodeRD(inst)}, Rs{DecodeRS1(inst)}, Rs{DecodeRS2(inst)}};
 }
 
-static bool ExecAMOMIN_W(EmulateInstructionRISCV &emulator, uint32_t inst,
-                         bool) {
-  return AtomicCmp<uint32_t>(
-      emulator, inst, 4, SextW, [](uint32_t a, uint32_t b) {
-        return uint32_t(std::min(int32_t(a), int32_t(b)));
-      });
+template <typename T> static RISCVInst DecodeRShamtType(uint32_t inst) {
+  return T{Rd{DecodeRD(inst)}, Rs{DecodeRS1(inst)}, DecodeRS2(inst)};
 }
 
-static bool ExecAMOMAX_W(EmulateInstructionRISCV &emulator, uint32_t inst,
-                         bool) {
-  return AtomicCmp<uint32_t>(
-      emulator, inst, 4, SextW, [](uint32_t a, uint32_t b) {
-        return uint32_t(std::max(int32_t(a), int32_t(b)));
-      });
-}
-
-static bool ExecAMOMINU_W(EmulateInstructionRISCV &emulator, uint32_t inst,
-                          bool) {
-  return AtomicCmp<uint32_t>(
-      emulator, inst, 4, SextW,
-      [](uint32_t a, uint32_t b) { return std::min(a, b); });
-}
-
-static bool ExecAMOMAXU_W(EmulateInstructionRISCV &emulator, uint32_t inst,
-                          bool) {
-  return AtomicCmp<uint32_t>(
-      emulator, inst, 4, SextW,
-      [](uint32_t a, uint32_t b) { return std::max(a, b); });
-}
-
-static bool ExecLR_D(EmulateInstructionRISCV &emulator, uint32_t inst, bool) {
-  return ExecAtomicSequence(emulator, inst, false);
-}
-
-static bool ExecAMOSWAP_D(EmulateInstructionRISCV &emulator, uint32_t inst,
-                          bool) {
-  return AtomicSwap<uint64_t>(emulator, inst, 8, ZextD);
-}
-
-static bool ExecAMOADD_D(EmulateInstructionRISCV &emulator, uint32_t inst,
-                         bool) {
-  return AtomicADD<uint64_t>(emulator, inst, 8, ZextD);
-}
-
-static bool ExecAMOXOR_D(EmulateInstructionRISCV &emulator, uint32_t inst,
-                         bool) {
-  return AtomicBitOperate<uint64_t>(
-      emulator, inst, 8, ZextD, [](uint64_t a, uint64_t b) { return a ^ b; });
-}
-
-static bool ExecAMOAND_D(EmulateInstructionRISCV &emulator, uint32_t inst,
-                         bool) {
-  return AtomicBitOperate<uint64_t>(
-      emulator, inst, 8, ZextD, [](uint64_t a, uint64_t b) { return a & b; });
-}
-
-static bool ExecAMOOR_D(EmulateInstructionRISCV &emulator, uint32_t inst,
-                        bool) {
-  return AtomicBitOperate<uint64_t>(
-      emulator, inst, 8, ZextD, [](uint64_t a, uint64_t b) { return a | b; });
-}
-
-static bool ExecAMOMIN_D(EmulateInstructionRISCV &emulator, uint32_t inst,
-                         bool) {
-  return AtomicCmp<uint64_t>(
-      emulator, inst, 8, ZextD, [](uint64_t a, uint64_t b) {
-        return uint64_t(std::min(int64_t(a), int64_t(b)));
-      });
-}
-
-static bool ExecAMOMAX_D(EmulateInstructionRISCV &emulator, uint32_t inst,
-                         bool) {
-  return AtomicCmp<uint64_t>(
-      emulator, inst, 8, ZextD, [](uint64_t a, uint64_t b) {
-        return uint64_t(std::max(int64_t(a), int64_t(b)));
-      });
-}
-
-static bool ExecAMOMINU_D(EmulateInstructionRISCV &emulator, uint32_t inst,
-                          bool) {
-  return AtomicCmp<uint64_t>(
-      emulator, inst, 8, ZextD,
-      [](uint64_t a, uint64_t b) { return std::min(a, b); });
-}
-
-static bool ExecAMOMAXU_D(EmulateInstructionRISCV &emulator, uint32_t inst,
-                          bool) {
-  return AtomicCmp<uint64_t>(
-      emulator, inst, 8, ZextD,
-      [](uint64_t a, uint64_t b) { return std::max(a, b); });
+template <typename T> static RISCVInst DecodeRRS1Type(uint32_t inst) {
+  return T{Rd{DecodeRD(inst)}, Rs{DecodeRS1(inst)}};
 }
 
 static const InstrPattern PATTERNS[] = {
     // RV32I & RV64I (The base integer ISA) //
-    {"LUI", 0x7F, 0x37, ExecLUI},
-    {"AUIPC", 0x7F, 0x17, ExecAUIPC},
-    {"JAL", 0x7F, 0x6F, ExecJAL},
-    {"JALR", 0x707F, 0x67, ExecJALR},
-    {"B<CMP>", 0x7F, 0x63, ExecB},
-    {"LB", 0x707F, 0x3, ExecLB},
-    {"LH", 0x707F, 0x1003, ExecLH},
-    {"LW", 0x707F, 0x2003, ExecLW},
-    {"LBU", 0x707F, 0x4003, ExecLBU},
-    {"LHU", 0x707F, 0x5003, ExecLHU},
-    {"SB", 0x707F, 0x23, ExecSB},
-    {"SH", 0x707F, 0x1023, ExecSH},
-    {"SW", 0x707F, 0x2023, ExecSW},
-    {"ADDI", 0x707F, 0x13, ExecADDI},
-    {"SLTI", 0x707F, 0x2013, ExecSLTI},
-    {"SLTIU", 0x707F, 0x3013, ExecSLTIU},
-    {"XORI", 0x707F, 0x4013, ExecXORI},
-    {"ORI", 0x707F, 0x6013, ExecORI},
-    {"ANDI", 0x707F, 0x7013, ExecANDI},
-    {"SLLI", 0xF800707F, 0x1013, ExecSLLI},
-    {"SRLI", 0xF800707F, 0x5013, ExecSRLI},
-    {"SRAI", 0xF800707F, 0x40005013, ExecSRAI},
-    {"ADD", 0xFE00707F, 0x33, ExecADD},
-    {"SUB", 0xFE00707F, 0x40000033, ExecSUB},
-    {"SLL", 0xFE00707F, 0x1033, ExecSLL},
-    {"SLT", 0xFE00707F, 0x2033, ExecSLT},
-    {"SLTU", 0xFE00707F, 0x3033, ExecSLTU},
-    {"XOR", 0xFE00707F, 0x4033, ExecXOR},
-    {"SRL", 0xFE00707F, 0x5033, ExecSRL},
-    {"SRA", 0xFE00707F, 0x40005033, ExecSRA},
-    {"OR", 0xFE00707F, 0x6033, ExecOR},
-    {"AND", 0xFE00707F, 0x7033, ExecAND},
-    {"LWU", 0x707F, 0x6003, ExecLWU},
-    {"LD", 0x707F, 0x3003, ExecLD},
-    {"SD", 0x707F, 0x3023, ExecSD},
-    {"ADDIW", 0x707F, 0x1B, ExecADDIW},
-    {"SLLIW", 0xFE00707F, 0x101B, ExecSLLIW},
-    {"SRLIW", 0xFE00707F, 0x501B, ExecSRLIW},
-    {"SRAIW", 0xFE00707F, 0x4000501B, ExecSRAIW},
-    {"ADDW", 0xFE00707F, 0x3B, ExecADDW},
-    {"SUBW", 0xFE00707F, 0x4000003B, ExecSUBW},
-    {"SLLW", 0xFE00707F, 0x103B, ExecSLLW},
-    {"SRLW", 0xFE00707F, 0x503B, ExecSRLW},
-    {"SRAW", 0xFE00707F, 0x4000503B, ExecSRAW},
+    {"LUI", 0x7F, 0x37, DecodeUType<LUI>},
+    {"AUIPC", 0x7F, 0x17, DecodeUType<AUIPC>},
+    {"JAL", 0x7F, 0x6F, DecodeJType<JAL>},
+    {"JALR", 0x707F, 0x67, DecodeIType<JALR>},
+    {"B", 0x7F, 0x63, DecodeBType<B>},
+    {"LB", 0x707F, 0x3, DecodeIType<LB>},
+    {"LH", 0x707F, 0x1003, DecodeIType<LH>},
+    {"LW", 0x707F, 0x2003, DecodeIType<LW>},
+    {"LBU", 0x707F, 0x4003, DecodeIType<LBU>},
+    {"LHU", 0x707F, 0x5003, DecodeIType<LHU>},
+    {"SB", 0x707F, 0x23, DecodeSType<SB>},
+    {"SH", 0x707F, 0x1023, DecodeSType<SH>},
+    {"SW", 0x707F, 0x2023, DecodeSType<SW>},
+    {"ADDI", 0x707F, 0x13, DecodeIType<ADDI>},
+    {"SLTI", 0x707F, 0x2013, DecodeIType<SLTI>},
+    {"SLTIU", 0x707F, 0x3013, DecodeIType<SLTIU>},
+    {"XORI", 0x707F, 0x4013, DecodeIType<XORI>},
+    {"ORI", 0x707F, 0x6013, DecodeIType<ORI>},
+    {"ANDI", 0x707F, 0x7013, DecodeIType<ANDI>},
+    {"SLLI", 0xF800707F, 0x1013, DecodeRShamtType<SLLI>},
+    {"SRLI", 0xF800707F, 0x5013, DecodeRShamtType<SRLI>},
+    {"SRAI", 0xF800707F, 0x40005013, DecodeRShamtType<SRAI>},
+    {"ADD", 0xFE00707F, 0x33, DecodeRType<ADD>},
+    {"SUB", 0xFE00707F, 0x40000033, DecodeRType<SUB>},
+    {"SLL", 0xFE00707F, 0x1033, DecodeRType<SLL>},
+    {"SLT", 0xFE00707F, 0x2033, DecodeRType<SLT>},
+    {"SLTU", 0xFE00707F, 0x3033, DecodeRType<SLTU>},
+    {"XOR", 0xFE00707F, 0x4033, DecodeRType<XOR>},
+    {"SRL", 0xFE00707F, 0x5033, DecodeRType<SRL>},
+    {"SRA", 0xFE00707F, 0x40005033, DecodeRType<SRA>},
+    {"OR", 0xFE00707F, 0x6033, DecodeRType<OR>},
+    {"AND", 0xFE00707F, 0x7033, DecodeRType<AND>},
+    {"LWU", 0x707F, 0x6003, DecodeIType<LWU>},
+    {"LD", 0x707F, 0x3003, DecodeIType<LD>},
+    {"SD", 0x707F, 0x3023, DecodeSType<SD>},
+    {"ADDIW", 0x707F, 0x1B, DecodeIType<ADDIW>},
+    {"SLLIW", 0xFE00707F, 0x101B, DecodeRShamtType<SLLIW>},
+    {"SRLIW", 0xFE00707F, 0x501B, DecodeRShamtType<SRLIW>},
+    {"SRAIW", 0xFE00707F, 0x4000501B, DecodeRShamtType<SRAIW>},
+    {"ADDW", 0xFE00707F, 0x3B, DecodeRType<ADDW>},
+    {"SUBW", 0xFE00707F, 0x4000003B, DecodeRType<SUBW>},
+    {"SLLW", 0xFE00707F, 0x103B, DecodeRType<SLLW>},
+    {"SRLW", 0xFE00707F, 0x503B, DecodeRType<SRLW>},
+    {"SRAW", 0xFE00707F, 0x4000503B, DecodeRType<SRAW>},
 
     // RV32M & RV64M (The integer multiplication and division extension) //
-    {"MUL", 0xFE00707F, 0x2000033, ExecMUL},
-    {"MULH", 0xFE00707F, 0x2001033, ExecMULH},
-    {"MULHSU", 0xFE00707F, 0x2002033, ExecMULHSU},
-    {"MULHU", 0xFE00707F, 0x2003033, ExecMULHU},
-    {"DIV", 0xFE00707F, 0x2004033, ExecDIV},
-    {"DIVU", 0xFE00707F, 0x2005033, ExecDIVU},
-    {"REM", 0xFE00707F, 0x2006033, ExecREM},
-    {"REMU", 0xFE00707F, 0x2007033, ExecREMU},
-    {"MULW", 0xFE00707F, 0x200003B, ExecMULW},
-    {"DIVW", 0xFE00707F, 0x200403B, ExecDIVW},
-    {"DIVUW", 0xFE00707F, 0x200503B, ExecDIVUW},
-    {"REMW", 0xFE00707F, 0x200603B, ExecREMW},
-    {"REMUW", 0xFE00707F, 0x200703B, ExecREMUW},
+    {"MUL", 0xFE00707F, 0x2000033, DecodeRType<MUL>},
+    {"MULH", 0xFE00707F, 0x2001033, DecodeRType<MULH>},
+    {"MULHSU", 0xFE00707F, 0x2002033, DecodeRType<MULHSU>},
+    {"MULHU", 0xFE00707F, 0x2003033, DecodeRType<MULHU>},
+    {"DIV", 0xFE00707F, 0x2004033, DecodeRType<DIV>},
+    {"DIVU", 0xFE00707F, 0x2005033, DecodeRType<DIVU>},
+    {"REM", 0xFE00707F, 0x2006033, DecodeRType<REM>},
+    {"REMU", 0xFE00707F, 0x2007033, DecodeRType<REMU>},
+    {"MULW", 0xFE00707F, 0x200003B, DecodeRType<MULW>},
+    {"DIVW", 0xFE00707F, 0x200403B, DecodeRType<DIVW>},
+    {"DIVUW", 0xFE00707F, 0x200503B, DecodeRType<DIVUW>},
+    {"REMW", 0xFE00707F, 0x200603B, DecodeRType<REMW>},
+    {"REMUW", 0xFE00707F, 0x200703B, DecodeRType<REMUW>},
 
     // RV32A & RV64A (The standard atomic instruction extension) //
-    {"LR_W", 0xF9F0707F, 0x1000202F, ExecLR_W},
-    {"AMOSWAP_W", 0xF800707F, 0x800202F, ExecAMOSWAP_W},
-    {"AMOADD_W", 0xF800707F, 0x202F, ExecAMOADD_W},
-    {"AMOXOR_W", 0xF800707F, 0x2000202F, ExecAMOXOR_W},
-    {"AMOAND_W", 0xF800707F, 0x6000202F, ExecAMOAND_W},
-    {"AMOOR_W", 0xF800707F, 0x4000202F, ExecAMOOR_W},
-    {"AMOMIN_W", 0xF800707F, 0x8000202F, ExecAMOMIN_W},
-    {"AMOMAX_W", 0xF800707F, 0xA000202F, ExecAMOMAX_W},
-    {"AMOMINU_W", 0xF800707F, 0xC000202F, ExecAMOMINU_W},
-    {"AMOMAXU_W", 0xF800707F, 0xE000202F, ExecAMOMAXU_W},
-    {"LR_D", 0xF9F0707F, 0x1000302F, ExecLR_D},
-    {"AMOSWAP_D", 0xF800707F, 0x800302F, ExecAMOSWAP_D},
-    {"AMOADD_D", 0xF800707F, 0x302F, ExecAMOADD_D},
-    {"AMOXOR_D", 0xF800707F, 0x2000302F, ExecAMOXOR_D},
-    {"AMOAND_D", 0xF800707F, 0x6000302F, ExecAMOAND_D},
-    {"AMOOR_D", 0xF800707F, 0x4000302F, ExecAMOOR_D},
-    {"AMOMIN_D", 0xF800707F, 0x8000302F, ExecAMOMIN_D},
-    {"AMOMAX_D", 0xF800707F, 0xA000302F, ExecAMOMAX_D},
-    {"AMOMINU_D", 0xF800707F, 0xC000302F, ExecAMOMINU_D},
-    {"AMOMAXU_D", 0xF800707F, 0xE000302F, ExecAMOMAXU_D},
+    {"LR_W", 0xF9F0707F, 0x1000202F, DecodeRRS1Type<LR_W>},
+    {"LR_D", 0xF9F0707F, 0x1000302F, DecodeRRS1Type<LR_D>},
+    {"SC_W", 0xF800707F, 0x1800202F, DecodeRType<SC_W>},
+    {"SC_D", 0xF800707F, 0x1800302F, DecodeRType<SC_D>},
+    {"AMOSWAP_W", 0xF800707F, 0x800202F, DecodeRType<AMOSWAP_W>},
+    {"AMOADD_W", 0xF800707F, 0x202F, DecodeRType<AMOADD_W>},
+    {"AMOXOR_W", 0xF800707F, 0x2000202F, DecodeRType<AMOXOR_W>},
+    {"AMOAND_W", 0xF800707F, 0x6000202F, DecodeRType<AMOAND_W>},
+    {"AMOOR_W", 0xF800707F, 0x4000202F, DecodeRType<AMOOR_W>},
+    {"AMOMIN_W", 0xF800707F, 0x8000202F, DecodeRType<AMOMIN_W>},
+    {"AMOMAX_W", 0xF800707F, 0xA000202F, DecodeRType<AMOMAX_W>},
+    {"AMOMINU_W", 0xF800707F, 0xC000202F, DecodeRType<AMOMINU_W>},
+    {"AMOMAXU_W", 0xF800707F, 0xE000202F, DecodeRType<AMOMAXU_W>},
+    {"AMOSWAP_D", 0xF800707F, 0x800302F, DecodeRType<AMOSWAP_D>},
+    {"AMOADD_D", 0xF800707F, 0x302F, DecodeRType<AMOADD_D>},
+    {"AMOXOR_D", 0xF800707F, 0x2000302F, DecodeRType<AMOXOR_D>},
+    {"AMOAND_D", 0xF800707F, 0x6000302F, DecodeRType<AMOAND_D>},
+    {"AMOOR_D", 0xF800707F, 0x4000302F, DecodeRType<AMOOR_D>},
+    {"AMOMIN_D", 0xF800707F, 0x8000302F, DecodeRType<AMOMIN_D>},
+    {"AMOMAX_D", 0xF800707F, 0xA000302F, DecodeRType<AMOMAX_D>},
+    {"AMOMINU_D", 0xF800707F, 0xC000302F, DecodeRType<AMOMINU_D>},
+    {"AMOMAXU_D", 0xF800707F, 0xE000302F, DecodeRType<AMOMAXU_D>},
 };
 
-const InstrPattern *EmulateInstructionRISCV::Decode(uint32_t inst) {
-  for (const InstrPattern &pat : PATTERNS) {
-    if ((inst & pat.type_mask) == pat.eigen)
-      return &pat;
-  }
-  return nullptr;
-}
-
-/// This function only determines the next instruction address for software
-/// single stepping by emulating instructions
-bool EmulateInstructionRISCV::DecodeAndExecute(uint32_t inst,
-                                               bool ignore_cond) {
+llvm::Optional<DecodeResult> EmulateInstructionRISCV::Decode(uint32_t inst) {
   Log *log = GetLog(LLDBLog::Unwind);
-  const InstrPattern *pattern = this->Decode(inst);
-  if (pattern) {
-    LLDB_LOGF(log, "EmulateInstructionRISCV::%s: inst(%x) was decoded to %s",
-              __FUNCTION__, inst, pattern->name);
-    return pattern->exec(*this, inst, ignore_cond);
-  }
 
-  LLDB_LOGF(log, "EmulateInstructionRISCV::%s: inst(0x%x) was unsupported",
-            __FUNCTION__, inst);
-  return false;
-}
-
-bool EmulateInstructionRISCV::EvaluateInstruction(uint32_t options) {
-  uint32_t inst_size = m_opcode.GetByteSize();
-  uint32_t inst = m_opcode.GetOpcode32();
-  bool increase_pc = options & eEmulateInstructionOptionAutoAdvancePC;
-  bool ignore_cond = options & eEmulateInstructionOptionIgnoreConditions;
-  bool success = false;
-
-  lldb::addr_t old_pc = LLDB_INVALID_ADDRESS;
-  if (increase_pc) {
-    old_pc = ReadPC(success);
-    if (!success)
-      return false;
-  }
-
-  if (inst_size == 2) {
-    // TODO: execute RVC
-    return false;
-  }
-
-  success = DecodeAndExecute(inst, ignore_cond);
-  if (!success)
-    return false;
-
-  if (increase_pc) {
-    lldb::addr_t new_pc = ReadPC(success);
-    if (!success)
-      return false;
-
-    if (new_pc == old_pc) {
-      if (!WritePC(old_pc + inst_size))
-        return false;
-    }
-  }
-  return true;
-}
-
-bool EmulateInstructionRISCV::ReadInstruction() {
-  bool success = false;
-  m_addr = ReadPC(success);
-  if (!success) {
-    m_addr = LLDB_INVALID_ADDRESS;
-    return false;
-  }
-
-  Context ctx;
-  ctx.type = eContextReadOpcode;
-  ctx.SetNoArgs();
-  uint32_t inst = uint32_t(ReadMemoryUnsigned(ctx, m_addr, 4, 0, &success));
   uint16_t try_rvc = uint16_t(inst & 0x0000ffff);
   // check whether the compressed encode could be valid
   uint16_t mask = try_rvc & 0b11;
-  if (try_rvc != 0 && mask != 3)
-    m_opcode.SetOpcode16(try_rvc, GetByteOrder());
-  else
-    m_opcode.SetOpcode32(inst, GetByteOrder());
+  bool is_rvc = try_rvc != 0 && mask != 3;
 
+  for (const InstrPattern &pat : PATTERNS) {
+    if ((inst & pat.type_mask) == pat.eigen) {
+      LLDB_LOGF(log, "EmulateInstructionRISCV::%s: inst(%x) was decoded to %s",
+                __FUNCTION__, inst, pat.name);
+      auto decoded = pat.decode(inst);
+      return DecodeResult{decoded, inst, is_rvc, pat};
+    }
+  }
+  LLDB_LOGF(log, "EmulateInstructionRISCV::%s: inst(0x%x) was unsupported",
+            __FUNCTION__, inst);
+  return llvm::None;
+}
+
+class Executor {
+  EmulateInstructionRISCV &m_emu;
+  bool m_ignore_cond;
+  bool m_is_rvc;
+
+public:
+  // also used in EvaluateInstruction()
+  static uint64_t size(bool is_rvc) { return is_rvc ? 2 : 4; }
+
+private:
+  uint64_t delta() { return size(m_is_rvc); }
+
+public:
+  Executor(EmulateInstructionRISCV &emulator, bool ignoreCond, bool is_rvc)
+      : m_emu(emulator), m_ignore_cond(ignoreCond), m_is_rvc(is_rvc) {}
+
+  bool operator()(LUI inst) { return inst.rd.Write(m_emu, SignExt(inst.imm)); }
+  bool operator()(AUIPC inst) {
+    return m_emu.ReadPC()
+        .transform([&](uint64_t pc) {
+          return inst.rd.Write(m_emu, SignExt(inst.imm) + pc);
+        })
+        .value_or(false);
+  }
+  bool operator()(JAL inst) {
+    return m_emu.ReadPC()
+        .transform([&](uint64_t pc) {
+          return inst.rd.Write(m_emu, pc + delta()) &&
+                 m_emu.WritePC(SignExt(inst.imm) + pc);
+        })
+        .value_or(false);
+  }
+  bool operator()(JALR inst) {
+    return zipOpt(m_emu.ReadPC(), inst.rs1.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [pc, rs1] = tup;
+          return inst.rd.Write(m_emu, pc + delta()) &&
+                 m_emu.WritePC((SignExt(inst.imm) + rs1) & ~1);
+        })
+        .value_or(false);
+  }
+  bool operator()(B inst) {
+    return zipOpt(m_emu.ReadPC(), inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [pc, rs1, rs2] = tup;
+          if (m_ignore_cond || CompareB(rs1, rs2, inst.funct3))
+            return m_emu.WritePC(SignExt(inst.imm) + pc);
+          return true;
+        })
+        .value_or(false);
+  }
+  bool operator()(LB inst) {
+    return Load<LB, uint8_t, int8_t>(m_emu, inst, SextW);
+  }
+  bool operator()(LH inst) {
+    return Load<LH, uint16_t, int16_t>(m_emu, inst, SextW);
+  }
+  bool operator()(LW inst) {
+    return Load<LW, uint32_t, int32_t>(m_emu, inst, SextW);
+  }
+  bool operator()(LBU inst) {
+    return Load<LBU, uint8_t, uint8_t>(m_emu, inst, ZextD);
+  }
+  bool operator()(LHU inst) {
+    return Load<LHU, uint16_t, uint16_t>(m_emu, inst, ZextD);
+  }
+  bool operator()(SB inst) { return Store<SB, uint8_t>(m_emu, inst); }
+  bool operator()(SH inst) { return Store<SH, uint16_t>(m_emu, inst); }
+  bool operator()(SW inst) { return Store<SW, uint32_t>(m_emu, inst); }
+  bool operator()(ADDI inst) {
+    return inst.rs1.ReadI64(m_emu)
+        .transform([&](int64_t rs1) {
+          return inst.rd.Write(m_emu, rs1 + int64_t(SignExt(inst.imm)));
+        })
+        .value_or(false);
+  }
+  bool operator()(SLTI inst) {
+    return inst.rs1.ReadI64(m_emu)
+        .transform([&](int64_t rs1) {
+          return inst.rd.Write(m_emu, rs1 < int64_t(SignExt(inst.imm)));
+        })
+        .value_or(false);
+  }
+  bool operator()(SLTIU inst) {
+    return inst.rs1.Read(m_emu)
+        .transform([&](uint64_t rs1) {
+          return inst.rd.Write(m_emu, rs1 < uint64_t(SignExt(inst.imm)));
+        })
+        .value_or(false);
+  }
+  bool operator()(XORI inst) {
+    return inst.rs1.Read(m_emu)
+        .transform([&](uint64_t rs1) {
+          return inst.rd.Write(m_emu, rs1 ^ uint64_t(SignExt(inst.imm)));
+        })
+        .value_or(false);
+  }
+  bool operator()(ORI inst) {
+    return inst.rs1.Read(m_emu)
+        .transform([&](uint64_t rs1) {
+          return inst.rd.Write(m_emu, rs1 | uint64_t(SignExt(inst.imm)));
+        })
+        .value_or(false);
+  }
+  bool operator()(ANDI inst) {
+    return inst.rs1.Read(m_emu)
+        .transform([&](uint64_t rs1) {
+          return inst.rd.Write(m_emu, rs1 & uint64_t(SignExt(inst.imm)));
+        })
+        .value_or(false);
+  }
+  bool operator()(ADD inst) {
+    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, rs1 + rs2);
+        })
+        .value_or(false);
+  }
+  bool operator()(SUB inst) {
+    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, rs1 - rs2);
+        })
+        .value_or(false);
+  }
+  bool operator()(SLL inst) {
+    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, rs1 << (rs2 & 0b111111));
+        })
+        .value_or(false);
+  }
+  bool operator()(SLT inst) {
+    return zipOpt(inst.rs1.ReadI64(m_emu), inst.rs2.ReadI64(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, rs1 < rs2);
+        })
+        .value_or(false);
+  }
+  bool operator()(SLTU inst) {
+    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, rs1 < rs2);
+        })
+        .value_or(false);
+  }
+  bool operator()(XOR inst) {
+    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, rs1 ^ rs2);
+        })
+        .value_or(false);
+  }
+  bool operator()(SRL inst) {
+    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, rs1 >> (rs2 & 0b111111));
+        })
+        .value_or(false);
+  }
+  bool operator()(SRA inst) {
+    return zipOpt(inst.rs1.ReadI64(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, rs1 >> (rs2 & 0b111111));
+        })
+        .value_or(false);
+  }
+  bool operator()(OR inst) {
+    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, rs1 | rs2);
+        })
+        .value_or(false);
+  }
+  bool operator()(AND inst) {
+    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, rs1 & rs2);
+        })
+        .value_or(false);
+  }
+  bool operator()(LWU inst) {
+    return Load<LWU, uint32_t, uint32_t>(m_emu, inst, ZextD);
+  }
+  bool operator()(LD inst) {
+    return Load<LD, uint64_t, uint64_t>(m_emu, inst, ZextD);
+  }
+  bool operator()(SD inst) { return Store<SD, uint64_t>(m_emu, inst); }
+  bool operator()(SLLI inst) {
+    return inst.rs1.Read(m_emu)
+        .transform([&](uint64_t rs1) {
+          return inst.rd.Write(m_emu, rs1 << inst.shamt);
+        })
+        .value_or(false);
+  }
+  bool operator()(SRLI inst) {
+    return inst.rs1.Read(m_emu)
+        .transform([&](uint64_t rs1) {
+          return inst.rd.Write(m_emu, rs1 >> inst.shamt);
+        })
+        .value_or(false);
+  }
+  bool operator()(SRAI inst) {
+    return inst.rs1.ReadI64(m_emu)
+        .transform([&](int64_t rs1) {
+          return inst.rd.Write(m_emu, rs1 >> inst.shamt);
+        })
+        .value_or(false);
+  }
+  bool operator()(ADDIW inst) {
+    return inst.rs1.ReadI32(m_emu)
+        .transform([&](int32_t rs1) {
+          return inst.rd.Write(m_emu, SextW(rs1 + SignExt(inst.imm)));
+        })
+        .value_or(false);
+  }
+  bool operator()(SLLIW inst) {
+    return inst.rs1.ReadU32(m_emu)
+        .transform([&](uint32_t rs1) {
+          return inst.rd.Write(m_emu, SextW(rs1 << inst.shamt));
+        })
+        .value_or(false);
+  }
+  bool operator()(SRLIW inst) {
+    return inst.rs1.ReadU32(m_emu)
+        .transform([&](uint32_t rs1) {
+          return inst.rd.Write(m_emu, SextW(rs1 >> inst.shamt));
+        })
+        .value_or(false);
+  }
+  bool operator()(SRAIW inst) {
+    return inst.rs1.ReadI32(m_emu)
+        .transform([&](int32_t rs1) {
+          return inst.rd.Write(m_emu, SextW(rs1 >> inst.shamt));
+        })
+        .value_or(false);
+  }
+  bool operator()(ADDW inst) {
+    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, SextW(uint32_t(rs1 + rs2)));
+        })
+        .value_or(false);
+  }
+  bool operator()(SUBW inst) {
+    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, SextW(uint32_t(rs1 - rs2)));
+        })
+        .value_or(false);
+  }
+  bool operator()(SLLW inst) {
+    return zipOpt(inst.rs1.ReadU32(m_emu), inst.rs2.ReadU32(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, SextW(rs1 << (rs2 & 0b11111)));
+        })
+        .value_or(false);
+  }
+  bool operator()(SRLW inst) {
+    return zipOpt(inst.rs1.ReadU32(m_emu), inst.rs2.ReadU32(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, SextW(rs1 >> (rs2 & 0b11111)));
+        })
+        .value_or(false);
+  }
+  bool operator()(SRAW inst) {
+    return zipOpt(inst.rs1.ReadI32(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, SextW(rs1 >> (rs2 & 0b11111)));
+        })
+        .value_or(false);
+  }
+  // RV32M & RV64M (Integer Multiplication and Division Extension) //
+  bool operator()(MUL inst) {
+    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, rs1 * rs2);
+        })
+        .value_or(false);
+  }
+  bool operator()(MULH inst) {
+    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          // signed * signed
+          auto mul = llvm::APInt(128, rs1, true) * llvm::APInt(128, rs2, true);
+          return inst.rd.Write(m_emu, mul.ashr(64).trunc(64).getZExtValue());
+        })
+        .value_or(false);
+  }
+  bool operator()(MULHSU inst) {
+    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          // signed * unsigned
+          auto mul = llvm::APInt(128, rs1, true).zext(128) *
+                     llvm::APInt(128, rs2, false);
+          return inst.rd.Write(m_emu, mul.lshr(64).trunc(64).getZExtValue());
+        })
+        .value_or(false);
+  }
+  bool operator()(MULHU inst) {
+    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          // unsigned * unsigned
+          auto mul =
+              llvm::APInt(128, rs1, false) * llvm::APInt(128, rs2, false);
+          return inst.rd.Write(m_emu, mul.lshr(64).trunc(64).getZExtValue());
+        })
+        .value_or(false);
+  }
+  bool operator()(DIV inst) {
+    return zipOpt(inst.rs1.ReadI64(m_emu), inst.rs2.ReadI64(m_emu))
+        .transform([&](auto &&tup) {
+          auto [dividend, divisor] = tup;
+
+          if (divisor == 0)
+            return inst.rd.Write(m_emu, UINT64_MAX);
+
+          if (dividend == INT64_MIN && divisor == -1)
+            return inst.rd.Write(m_emu, dividend);
+
+          return inst.rd.Write(m_emu, dividend / divisor);
+        })
+        .value_or(false);
+  }
+  bool operator()(DIVU inst) {
+    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [dividend, divisor] = tup;
+
+          if (divisor == 0)
+            return inst.rd.Write(m_emu, UINT64_MAX);
+
+          return inst.rd.Write(m_emu, dividend / divisor);
+        })
+        .value_or(false);
+  }
+  bool operator()(REM inst) {
+    return zipOpt(inst.rs1.ReadI64(m_emu), inst.rs2.ReadI64(m_emu))
+        .transform([&](auto &&tup) {
+          auto [dividend, divisor] = tup;
+
+          if (divisor == 0)
+            return inst.rd.Write(m_emu, dividend);
+
+          if (dividend == INT64_MIN && divisor == -1)
+            return inst.rd.Write(m_emu, 0);
+
+          return inst.rd.Write(m_emu, dividend % divisor);
+        })
+        .value_or(false);
+  }
+  bool operator()(REMU inst) {
+    return zipOpt(inst.rs1.Read(m_emu), inst.rs2.Read(m_emu))
+        .transform([&](auto &&tup) {
+          auto [dividend, divisor] = tup;
+
+          if (divisor == 0)
+            return inst.rd.Write(m_emu, dividend);
+
+          return inst.rd.Write(m_emu, dividend % divisor);
+        })
+        .value_or(false);
+  }
+  bool operator()(MULW inst) {
+    return zipOpt(inst.rs1.ReadI32(m_emu), inst.rs2.ReadI32(m_emu))
+        .transform([&](auto &&tup) {
+          auto [rs1, rs2] = tup;
+          return inst.rd.Write(m_emu, SextW(rs1 * rs2));
+        })
+        .value_or(false);
+  }
+  bool operator()(DIVW inst) {
+    return zipOpt(inst.rs1.ReadI32(m_emu), inst.rs2.ReadI32(m_emu))
+        .transform([&](auto &&tup) {
+          auto [dividend, divisor] = tup;
+
+          if (divisor == 0)
+            return inst.rd.Write(m_emu, UINT64_MAX);
+
+          if (dividend == INT32_MIN && divisor == -1)
+            return inst.rd.Write(m_emu, SextW(dividend));
+
+          return inst.rd.Write(m_emu, SextW(dividend / divisor));
+        })
+        .value_or(false);
+  }
+  bool operator()(DIVUW inst) {
+    return zipOpt(inst.rs1.ReadU32(m_emu), inst.rs2.ReadU32(m_emu))
+        .transform([&](auto &&tup) {
+          auto [dividend, divisor] = tup;
+
+          if (divisor == 0)
+            return inst.rd.Write(m_emu, UINT64_MAX);
+
+          return inst.rd.Write(m_emu, SextW(dividend / divisor));
+        })
+        .value_or(false);
+  }
+  bool operator()(REMW inst) {
+    return zipOpt(inst.rs1.ReadI32(m_emu), inst.rs2.ReadI32(m_emu))
+        .transform([&](auto &&tup) {
+          auto [dividend, divisor] = tup;
+
+          if (divisor == 0)
+            return inst.rd.Write(m_emu, SextW(dividend));
+
+          if (dividend == INT32_MIN && divisor == -1)
+            return inst.rd.Write(m_emu, 0);
+
+          return inst.rd.Write(m_emu, SextW(dividend % divisor));
+        })
+        .value_or(false);
+  }
+  bool operator()(REMUW inst) {
+    return zipOpt(inst.rs1.ReadU32(m_emu), inst.rs2.ReadU32(m_emu))
+        .transform([&](auto &&tup) {
+          auto [dividend, divisor] = tup;
+
+          if (divisor == 0)
+            return inst.rd.Write(m_emu, SextW(dividend));
+
+          return inst.rd.Write(m_emu, SextW(dividend % divisor));
+        })
+        .value_or(false);
+  }
+  // RV32A & RV64A (The standard atomic instruction extension) //
+  bool operator()(LR_W) { return AtomicSequence(m_emu); }
+  bool operator()(LR_D) { return AtomicSequence(m_emu); }
+  bool operator()(SC_W) {
+    llvm_unreachable("should be handled in AtomicSequence");
+  }
+  bool operator()(SC_D) {
+    llvm_unreachable("should be handled in AtomicSequence");
+  }
+  bool operator()(AMOSWAP_W inst) {
+    return AtomicSwap<AMOSWAP_W, uint32_t>(m_emu, inst, 4, SextW);
+  }
+  bool operator()(AMOADD_W inst) {
+    return AtomicADD<AMOADD_W, uint32_t>(m_emu, inst, 4, SextW);
+  }
+  bool operator()(AMOXOR_W inst) {
+    return AtomicBitOperate<AMOXOR_W, uint32_t>(
+        m_emu, inst, 4, SextW, [](uint32_t a, uint32_t b) { return a ^ b; });
+  }
+  bool operator()(AMOAND_W inst) {
+    return AtomicBitOperate<AMOAND_W, uint32_t>(
+        m_emu, inst, 4, SextW, [](uint32_t a, uint32_t b) { return a & b; });
+  }
+  bool operator()(AMOOR_W inst) {
+    return AtomicBitOperate<AMOOR_W, uint32_t>(
+        m_emu, inst, 4, SextW, [](uint32_t a, uint32_t b) { return a | b; });
+  }
+  bool operator()(AMOMIN_W inst) {
+    return AtomicCmp<AMOMIN_W, uint32_t>(
+        m_emu, inst, 4, SextW, [](uint32_t a, uint32_t b) {
+          return uint32_t(std::min(int32_t(a), int32_t(b)));
+        });
+  }
+  bool operator()(AMOMAX_W inst) {
+    return AtomicCmp<AMOMAX_W, uint32_t>(
+        m_emu, inst, 4, SextW, [](uint32_t a, uint32_t b) {
+          return uint32_t(std::max(int32_t(a), int32_t(b)));
+        });
+  }
+  bool operator()(AMOMINU_W inst) {
+    return AtomicCmp<AMOMINU_W, uint32_t>(
+        m_emu, inst, 4, SextW,
+        [](uint32_t a, uint32_t b) { return std::min(a, b); });
+  }
+  bool operator()(AMOMAXU_W inst) {
+    return AtomicCmp<AMOMAXU_W, uint32_t>(
+        m_emu, inst, 4, SextW,
+        [](uint32_t a, uint32_t b) { return std::max(a, b); });
+  }
+  bool operator()(AMOSWAP_D inst) {
+    return AtomicSwap<AMOSWAP_D, uint64_t>(m_emu, inst, 8, ZextD);
+  }
+  bool operator()(AMOADD_D inst) {
+    return AtomicADD<AMOADD_D, uint64_t>(m_emu, inst, 8, ZextD);
+  }
+  bool operator()(AMOXOR_D inst) {
+    return AtomicBitOperate<AMOXOR_D, uint64_t>(
+        m_emu, inst, 8, ZextD, [](uint64_t a, uint64_t b) { return a ^ b; });
+  }
+  bool operator()(AMOAND_D inst) {
+    return AtomicBitOperate<AMOAND_D, uint64_t>(
+        m_emu, inst, 8, ZextD, [](uint64_t a, uint64_t b) { return a & b; });
+  }
+  bool operator()(AMOOR_D inst) {
+    return AtomicBitOperate<AMOOR_D, uint64_t>(
+        m_emu, inst, 8, ZextD, [](uint64_t a, uint64_t b) { return a | b; });
+  }
+  bool operator()(AMOMIN_D inst) {
+    return AtomicCmp<AMOMIN_D, uint64_t>(
+        m_emu, inst, 8, ZextD, [](uint64_t a, uint64_t b) {
+          return uint64_t(std::min(int64_t(a), int64_t(b)));
+        });
+  }
+  bool operator()(AMOMAX_D inst) {
+    return AtomicCmp<AMOMAX_D, uint64_t>(
+        m_emu, inst, 8, ZextD, [](uint64_t a, uint64_t b) {
+          return uint64_t(std::max(int64_t(a), int64_t(b)));
+        });
+  }
+  bool operator()(AMOMINU_D inst) {
+    return AtomicCmp<AMOMINU_D, uint64_t>(
+        m_emu, inst, 8, ZextD,
+        [](uint64_t a, uint64_t b) { return std::min(a, b); });
+  }
+  bool operator()(AMOMAXU_D inst) {
+    return AtomicCmp<AMOMAXU_D, uint64_t>(
+        m_emu, inst, 8, ZextD,
+        [](uint64_t a, uint64_t b) { return std::max(a, b); });
+  }
+};
+
+bool EmulateInstructionRISCV::Execute(DecodeResult inst, bool ignore_cond) {
+  return std::visit(Executor(*this, ignore_cond, inst.is_rvc), inst.decoded);
+}
+
+bool EmulateInstructionRISCV::EvaluateInstruction(uint32_t options) {
+  bool increase_pc = options & eEmulateInstructionOptionAutoAdvancePC;
+  bool ignore_cond = options & eEmulateInstructionOptionIgnoreConditions;
+
+  if (!increase_pc)
+    return Execute(m_decoded, ignore_cond);
+
+  auto old_pc = ReadPC();
+  if (!old_pc)
+    return false;
+
+  bool success = Execute(m_decoded, ignore_cond);
+  if (!success)
+    return false;
+
+  auto new_pc = ReadPC();
+  if (!new_pc)
+    return false;
+
+  // If the pc is not updated during execution, we do it here.
+  return new_pc != old_pc ||
+         WritePC(*old_pc + Executor::size(m_decoded.is_rvc));
+}
+
+llvm::Optional<DecodeResult>
+EmulateInstructionRISCV::ReadInstructionAt(lldb::addr_t addr) {
+  return ReadMem<uint32_t>(addr)
+      .transform([&](uint32_t inst) { return Decode(inst); })
+      .value_or(llvm::None);
+}
+
+bool EmulateInstructionRISCV::ReadInstruction() {
+  auto addr = ReadPC();
+  m_addr = addr.value_or(LLDB_INVALID_ADDRESS);
+  if (!addr)
+    return false;
+  auto inst = ReadInstructionAt(*addr);
+  if (!inst)
+    return false;
+  m_decoded = *inst;
+  if (inst->is_rvc)
+    m_opcode.SetOpcode16(inst->inst, GetByteOrder());
+  else
+    m_opcode.SetOpcode32(inst->inst, GetByteOrder());
   return true;
 }
 
-lldb::addr_t EmulateInstructionRISCV::ReadPC(bool &success) {
-  return ReadRegisterUnsigned(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC,
-                              LLDB_INVALID_ADDRESS, &success);
+llvm::Optional<lldb::addr_t> EmulateInstructionRISCV::ReadPC() {
+  bool success = false;
+  auto addr = ReadRegisterUnsigned(eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC,
+                                   LLDB_INVALID_ADDRESS, &success);
+  return success ? llvm::Optional<lldb::addr_t>(addr) : llvm::None;
 }
 
 bool EmulateInstructionRISCV::WritePC(lldb::addr_t pc) {
