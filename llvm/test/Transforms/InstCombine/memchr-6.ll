@@ -18,7 +18,7 @@ declare ptr @memchr(ptr, i32, i64)
 
 define ptr @fold_memchr_a00000_c_5(i32 %C) {
 ; CHECK-LABEL: @fold_memchr_a00000_c_5(
-; CHECK-NEXT:    [[RET:%.*]] = call ptr @memchr(ptr noundef nonnull @a00000, i32 [[C:%.*]], i64 5)
+; CHECK-NEXT:    [[RET:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) @a00000, i32 [[C:%.*]], i64 5)
 ; CHECK-NEXT:    ret ptr [[RET]]
 ;
 
@@ -118,7 +118,7 @@ define ptr @call_memchr_a1110111_c_4(i32 %C) {
 
 define ptr @call_memchr_a1110111_c_7(i32 %C) {
 ; CHECK-LABEL: @call_memchr_a1110111_c_7(
-; CHECK-NEXT:    [[RET:%.*]] = call ptr @memchr(ptr noundef nonnull @a1110111, i32 [[C:%.*]], i64 7)
+; CHECK-NEXT:    [[RET:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) @a1110111, i32 [[C:%.*]], i64 7)
 ; CHECK-NEXT:    ret ptr [[RET]]
 ;
 

@@ -89,13 +89,13 @@ body:             |
   ; CHECK-NEXT:   $x2 = frame-setup ANDI $x2, -128
   ; CHECK-NEXT:   dead renamable $x15 = PseudoVSETIVLI 1, 72 /* e16, m1, ta, mu */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   renamable $v25 = PseudoVMV_V_X_M1 killed renamable $x12, $noreg, 4 /* e16 */, implicit $vl, implicit $vtype
-  ; CHECK-NEXT:   $x11 = PseudoReadVLENB
-  ; CHECK-NEXT:   $x10 = ADDI killed $x0, 50
-  ; CHECK-NEXT:   $x11 = MUL killed $x11, killed $x10
-  ; CHECK-NEXT:   $x10 = LUI 1
-  ; CHECK-NEXT:   $x10 = ADDIW killed $x10, -1888
-  ; CHECK-NEXT:   $x10 = ADD $x2, killed $x10
-  ; CHECK-NEXT:   $x10 = ADD killed $x10, killed $x11
+  ; CHECK-NEXT:   $x10 = PseudoReadVLENB
+  ; CHECK-NEXT:   $x11 = ADDI killed $x0, 50
+  ; CHECK-NEXT:   $x10 = MUL killed $x10, killed $x11
+  ; CHECK-NEXT:   $x11 = LUI 1
+  ; CHECK-NEXT:   $x11 = ADDIW killed $x11, -1888
+  ; CHECK-NEXT:   $x11 = ADD $x2, killed $x11
+  ; CHECK-NEXT:   $x10 = ADD killed $x11, killed $x10
   ; CHECK-NEXT:   PseudoVSPILL_M1 killed renamable $v25, killed $x10 :: (store unknown-size into %stack.1, align 8)
   ; CHECK-NEXT:   renamable $x1 = ADDI $x0, 255
   ; CHECK-NEXT:   renamable $x5 = nuw ADDI $x2, 384
@@ -111,11 +111,9 @@ body:             |
   ; CHECK-NEXT:   renamable $x21 = ADDI $x2, 1664
   ; CHECK-NEXT:   renamable $x22 = ADDI $x2, 1792
   ; CHECK-NEXT:   renamable $x23 = ADDI $x2, 1920
-  ; CHECK-NEXT:   SD killed $x1, $x2, 8 :: (store (s64) into %stack.15)
-  ; CHECK-NEXT:   SD killed $x5, $x2, 0 :: (store (s64) into %stack.16)
-  ; CHECK-NEXT:   $x11 = LUI 1
-  ; CHECK-NEXT:   $x11 = ADDIW killed $x11, -2048
-  ; CHECK-NEXT:   $x24 = ADD $x2, killed $x11
+  ; CHECK-NEXT:   $x24 = LUI 1
+  ; CHECK-NEXT:   $x24 = ADDIW killed $x24, -2048
+  ; CHECK-NEXT:   $x24 = ADD $x2, killed $x24
   ; CHECK-NEXT:   renamable $x25 = ADDI $x2, 128
   ; CHECK-NEXT:   renamable $x26 = ADDI $x2, 128
   ; CHECK-NEXT:   renamable $x27 = ADDI $x0, 2
@@ -131,16 +129,18 @@ body:             |
   ; CHECK-NEXT:   renamable $x16 = SUB killed renamable $x13, renamable $x13
   ; CHECK-NEXT:   dead renamable $x13 = PseudoVSETIVLI 1, 64 /* e8, m1, ta, mu */, implicit-def $vl, implicit-def $vtype
   ; CHECK-NEXT:   renamable $x13 = nsw ADDI renamable $x16, -2
-  ; CHECK-NEXT:   $x5 = PseudoReadVLENB
-  ; CHECK-NEXT:   $x1 = ADDI killed $x0, 50
-  ; CHECK-NEXT:   $x5 = MUL killed $x5, killed $x1
-  ; CHECK-NEXT:   $x1 = LUI 1
-  ; CHECK-NEXT:   $x1 = ADDIW killed $x1, -1888
-  ; CHECK-NEXT:   $x1 = ADD $x2, killed $x1
-  ; CHECK-NEXT:   $x1 = ADD killed $x1, killed $x5
-  ; CHECK-NEXT:   $x5 = LD $x2, 0 :: (load (s64) from %stack.16)
-  ; CHECK-NEXT:   renamable $v0 = PseudoVRELOAD_M1 killed $x1 :: (load unknown-size from %stack.1, align 8)
-  ; CHECK-NEXT:   $x1 = LD $x2, 8 :: (load (s64) from %stack.15)
+  ; CHECK-NEXT:   SD killed $x10, $x2, 8 :: (store (s64) into %stack.15)
+  ; CHECK-NEXT:   $x10 = PseudoReadVLENB
+  ; CHECK-NEXT:   SD killed $x12, $x2, 0 :: (store (s64) into %stack.16)
+  ; CHECK-NEXT:   $x12 = ADDI killed $x0, 50
+  ; CHECK-NEXT:   $x10 = MUL killed $x10, killed $x12
+  ; CHECK-NEXT:   $x12 = LUI 1
+  ; CHECK-NEXT:   $x12 = ADDIW killed $x12, -1888
+  ; CHECK-NEXT:   $x12 = ADD $x2, killed $x12
+  ; CHECK-NEXT:   $x10 = ADD killed $x12, killed $x10
+  ; CHECK-NEXT:   $x12 = LD $x2, 0 :: (load (s64) from %stack.16)
+  ; CHECK-NEXT:   renamable $v0 = PseudoVRELOAD_M1 killed $x10 :: (load unknown-size from %stack.1, align 8)
+  ; CHECK-NEXT:   $x10 = LD $x2, 8 :: (load (s64) from %stack.15)
   ; CHECK-NEXT:   renamable $v0 = PseudoVSLIDEDOWN_VX_M1 undef renamable $v0, killed renamable $v0, killed renamable $x13, $noreg, 3 /* e8 */, 1 /* ta, mu */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   renamable $x13 = PseudoVMV_X_S_M1 killed renamable $v0, 3 /* e8 */, implicit $vl, implicit $vtype
   ; CHECK-NEXT:   BLT killed renamable $x16, renamable $x27, %bb.2

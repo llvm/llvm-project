@@ -125,32 +125,6 @@ bool areElementwiseOpsFusable(OpOperand *fusedOperand);
 FailureOr<Operation *> fuseElementwiseOps(RewriterBase &rewriter,
                                           OpOperand *fusedOperand);
 
-/// Maps the top level `scf.foreach_thread` op to GPU Thread Blocks. Mapping is
-/// one-to-one and the induction variables of `scf.foreach_thread` are rewritten
-/// to gpu.block_id according to the thread_dim_apping attribute. Dynamic,
-/// `scf.foreach_thread` trip counts are currently not supported. Dynamic block
-/// dim sizes are currently not supported.
-LogicalResult rewriteTopLevelForeachThreadToGpuBlocks(
-    RewriterBase &rewriter, scf::ForeachThreadOp foreachThreadOp,
-    function_ref<void(RewriterBase &, scf::ForeachThreadOp,
-                      SmallVector<Value> &)>
-        blockIdGenerator,
-    SmallVector<int64_t> &gridDims);
-
-/// Finds the top level scf::ForeachThreadOp of given target.
-FailureOr<scf::ForeachThreadOp> findTopLevelForeachThreadOp(Operation *target);
-
-/// Searches `scf.foreach_thread` ops nested under `target` and maps each such
-/// op to GPU threads. Mapping is one-to-one and the induction variables of
-/// `scf.foreach_thread` are rewritten to gpu.thread_id according to the
-/// thread_dim_apping attribute. Sibling `scf.foreach_thread` are supported in
-/// which case, the union of the number of threads is computed and may result in
-/// predication. Dynamic, `scf.foreach_thread` trip counts are currently not
-/// supported. Dynamic block dim sizes are currently not supported.
-mlir::WalkResult rewriteMapNestedForeachThreadToGpuThreads(
-    RewriterBase &rewriter, Operation *target,
-    const SmallVector<int64_t> &blockDim, bool syncAfterDistribute);
-
 /// Split the given `op` into two parts along the given iteration space
 /// `dimension` at the specified `splitPoint`, and return the two parts.
 ///
@@ -1196,7 +1170,7 @@ rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
 using OptimizeCopyFn =
     std::function<LogicalResult(PatternRewriter &, tensor::PadOp, Value)>;
 
-/// Rewrite a tensor::PadOp into a sequence of InitTensorOp, FillOp and
+/// Rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp and
 /// InsertSliceOp. For now, only constant padding values are supported.
 /// `OptimizeCopyFn` can be used to customize copying step optimization.
 struct GeneralizePadOpPattern : public OpRewritePattern<tensor::PadOp> {
@@ -1407,7 +1381,7 @@ void populateSplitReductionPattern(
 /// ```
 ///  %cst = arith.constant 0.000000e+00 : f32
 ///  %0 = tensor.expand_shape %in [[0, 1]] : tensor<32xf32> into tensor<4x8xf32>
-///  %1 = linalg.init_tensor [4] : tensor<4xf32>
+///  %1 = tensor.empty [4] : tensor<4xf32>
 ///  %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<4xf32>) -> tensor<4xf32>
 ///  %3 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
 ///                                        affine_map<(d0, d1) -> (d0)>],
@@ -1464,11 +1438,11 @@ splitReduction(PatternRewriter &b, LinalgOp op,
 ///  #map3 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
 ///  #map4 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 ///  #map5 = affine_map<(d0, d1, d2) -> (d0, d1)>
-///  %0 = linalg.init_tensor [16, 32, 64] : tensor<16x32x64xf32>
+///  %0 = tensor.empty [16, 32, 64] : tensor<16x32x64xf32>
 ///  %cst = arith.constant 0.000000e+00 : f32
 ///  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<16x32x64xf32>) ->
 ///     tensor<16x32x64xf32>
-///  %2 = linalg.init_tensor [64, 4] : tensor<64x4xi1>
+///  %2 = tensor.empty [64, 4] : tensor<64x4xi1>
 ///
 ///  %3 = linalg.generic {indexing_maps = [#map0, #map1, #map2, #map3],
 ///    iterator_types = ["parallel", "parallel", "parallel", "reduction"]}

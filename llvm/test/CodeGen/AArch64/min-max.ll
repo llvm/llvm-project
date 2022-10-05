@@ -224,11 +224,19 @@ define <1 x i64> @smax1i64(<1 x i64> %a, <1 x i64> %b) {
 declare <2 x i64> @llvm.smax.v2i64(<2 x i64> %a, <2 x i64> %b) readnone
 
 define <2 x i64> @smax2i64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-LABEL: smax2i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmgt v2.2d, v0.2d, v1.2d
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-ISEL-LABEL: smax2i64:
+; CHECK-ISEL:       // %bb.0:
+; CHECK-ISEL-NEXT:    cmgt v2.2d, v0.2d, v1.2d
+; CHECK-ISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-ISEL-NEXT:    ret
+;
+; CHECK-GLOBAL-LABEL: smax2i64:
+; CHECK-GLOBAL:       // %bb.0:
+; CHECK-GLOBAL-NEXT:    cmgt v2.2d, v0.2d, v1.2d
+; CHECK-GLOBAL-NEXT:    shl v2.2d, v2.2d, #63
+; CHECK-GLOBAL-NEXT:    sshr v2.2d, v2.2d, #63
+; CHECK-GLOBAL-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-GLOBAL-NEXT:    ret
   %c = call <2 x i64> @llvm.smax.v2i64(<2 x i64> %a, <2 x i64> %b)
   ret <2 x i64> %c
 }
@@ -249,6 +257,10 @@ define void @smax4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %p) {
 ; CHECK-GLOBAL:       // %bb.0:
 ; CHECK-GLOBAL-NEXT:    cmgt v4.2d, v0.2d, v2.2d
 ; CHECK-GLOBAL-NEXT:    cmgt v5.2d, v1.2d, v3.2d
+; CHECK-GLOBAL-NEXT:    shl v4.2d, v4.2d, #63
+; CHECK-GLOBAL-NEXT:    shl v5.2d, v5.2d, #63
+; CHECK-GLOBAL-NEXT:    sshr v4.2d, v4.2d, #63
+; CHECK-GLOBAL-NEXT:    sshr v5.2d, v5.2d, #63
 ; CHECK-GLOBAL-NEXT:    bif v0.16b, v2.16b, v4.16b
 ; CHECK-GLOBAL-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
@@ -476,11 +488,19 @@ define <1 x i64> @umax1i64(<1 x i64> %a, <1 x i64> %b) {
 declare <2 x i64> @llvm.umax.v2i64(<2 x i64> %a, <2 x i64> %b) readnone
 
 define <2 x i64> @umax2i64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-LABEL: umax2i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmhi v2.2d, v0.2d, v1.2d
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-ISEL-LABEL: umax2i64:
+; CHECK-ISEL:       // %bb.0:
+; CHECK-ISEL-NEXT:    cmhi v2.2d, v0.2d, v1.2d
+; CHECK-ISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-ISEL-NEXT:    ret
+;
+; CHECK-GLOBAL-LABEL: umax2i64:
+; CHECK-GLOBAL:       // %bb.0:
+; CHECK-GLOBAL-NEXT:    cmhi v2.2d, v0.2d, v1.2d
+; CHECK-GLOBAL-NEXT:    shl v2.2d, v2.2d, #63
+; CHECK-GLOBAL-NEXT:    sshr v2.2d, v2.2d, #63
+; CHECK-GLOBAL-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-GLOBAL-NEXT:    ret
   %c = call <2 x i64> @llvm.umax.v2i64(<2 x i64> %a, <2 x i64> %b)
   ret <2 x i64> %c
 }
@@ -501,6 +521,10 @@ define void @umax4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %p) {
 ; CHECK-GLOBAL:       // %bb.0:
 ; CHECK-GLOBAL-NEXT:    cmhi v4.2d, v0.2d, v2.2d
 ; CHECK-GLOBAL-NEXT:    cmhi v5.2d, v1.2d, v3.2d
+; CHECK-GLOBAL-NEXT:    shl v4.2d, v4.2d, #63
+; CHECK-GLOBAL-NEXT:    shl v5.2d, v5.2d, #63
+; CHECK-GLOBAL-NEXT:    sshr v4.2d, v4.2d, #63
+; CHECK-GLOBAL-NEXT:    sshr v5.2d, v5.2d, #63
 ; CHECK-GLOBAL-NEXT:    bif v0.16b, v2.16b, v4.16b
 ; CHECK-GLOBAL-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
@@ -728,11 +752,19 @@ define <1 x i64> @smin1i64(<1 x i64> %a, <1 x i64> %b) {
 declare <2 x i64> @llvm.smin.v2i64(<2 x i64> %a, <2 x i64> %b) readnone
 
 define <2 x i64> @smin2i64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-LABEL: smin2i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmgt v2.2d, v1.2d, v0.2d
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-ISEL-LABEL: smin2i64:
+; CHECK-ISEL:       // %bb.0:
+; CHECK-ISEL-NEXT:    cmgt v2.2d, v1.2d, v0.2d
+; CHECK-ISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-ISEL-NEXT:    ret
+;
+; CHECK-GLOBAL-LABEL: smin2i64:
+; CHECK-GLOBAL:       // %bb.0:
+; CHECK-GLOBAL-NEXT:    cmgt v2.2d, v1.2d, v0.2d
+; CHECK-GLOBAL-NEXT:    shl v2.2d, v2.2d, #63
+; CHECK-GLOBAL-NEXT:    sshr v2.2d, v2.2d, #63
+; CHECK-GLOBAL-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-GLOBAL-NEXT:    ret
   %c = call <2 x i64> @llvm.smin.v2i64(<2 x i64> %a, <2 x i64> %b)
   ret <2 x i64> %c
 }
@@ -753,6 +785,10 @@ define void @smin4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %p) {
 ; CHECK-GLOBAL:       // %bb.0:
 ; CHECK-GLOBAL-NEXT:    cmgt v4.2d, v2.2d, v0.2d
 ; CHECK-GLOBAL-NEXT:    cmgt v5.2d, v3.2d, v1.2d
+; CHECK-GLOBAL-NEXT:    shl v4.2d, v4.2d, #63
+; CHECK-GLOBAL-NEXT:    shl v5.2d, v5.2d, #63
+; CHECK-GLOBAL-NEXT:    sshr v4.2d, v4.2d, #63
+; CHECK-GLOBAL-NEXT:    sshr v5.2d, v5.2d, #63
 ; CHECK-GLOBAL-NEXT:    bif v0.16b, v2.16b, v4.16b
 ; CHECK-GLOBAL-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]
@@ -980,11 +1016,19 @@ define <1 x i64> @umin1i64(<1 x i64> %a, <1 x i64> %b) {
 declare <2 x i64> @llvm.umin.v2i64(<2 x i64> %a, <2 x i64> %b) readnone
 
 define <2 x i64> @umin2i64(<2 x i64> %a, <2 x i64> %b) {
-; CHECK-LABEL: umin2i64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmhi v2.2d, v1.2d, v0.2d
-; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
-; CHECK-NEXT:    ret
+; CHECK-ISEL-LABEL: umin2i64:
+; CHECK-ISEL:       // %bb.0:
+; CHECK-ISEL-NEXT:    cmhi v2.2d, v1.2d, v0.2d
+; CHECK-ISEL-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-ISEL-NEXT:    ret
+;
+; CHECK-GLOBAL-LABEL: umin2i64:
+; CHECK-GLOBAL:       // %bb.0:
+; CHECK-GLOBAL-NEXT:    cmhi v2.2d, v1.2d, v0.2d
+; CHECK-GLOBAL-NEXT:    shl v2.2d, v2.2d, #63
+; CHECK-GLOBAL-NEXT:    sshr v2.2d, v2.2d, #63
+; CHECK-GLOBAL-NEXT:    bif v0.16b, v1.16b, v2.16b
+; CHECK-GLOBAL-NEXT:    ret
   %c = call <2 x i64> @llvm.umin.v2i64(<2 x i64> %a, <2 x i64> %b)
   ret <2 x i64> %c
 }
@@ -1005,6 +1049,10 @@ define void @umin4i64(<4 x i64> %a, <4 x i64> %b, <4 x i64>* %p) {
 ; CHECK-GLOBAL:       // %bb.0:
 ; CHECK-GLOBAL-NEXT:    cmhi v4.2d, v2.2d, v0.2d
 ; CHECK-GLOBAL-NEXT:    cmhi v5.2d, v3.2d, v1.2d
+; CHECK-GLOBAL-NEXT:    shl v4.2d, v4.2d, #63
+; CHECK-GLOBAL-NEXT:    shl v5.2d, v5.2d, #63
+; CHECK-GLOBAL-NEXT:    sshr v4.2d, v4.2d, #63
+; CHECK-GLOBAL-NEXT:    sshr v5.2d, v5.2d, #63
 ; CHECK-GLOBAL-NEXT:    bif v0.16b, v2.16b, v4.16b
 ; CHECK-GLOBAL-NEXT:    bif v1.16b, v3.16b, v5.16b
 ; CHECK-GLOBAL-NEXT:    stp q0, q1, [x0]

@@ -2023,7 +2023,7 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   Mask =
       DAG.getNode(RISCVISD::SETCC_VL, DL, SetccVT,
                   {Abs, MaxValSplat, DAG.getCondCode(ISD::SETOLT),
-                   DAG.getUNDEF(SetccVT), Mask, VL});
+                   Mask, Mask, VL});
 
   // Truncate to integer and convert back to FP.
   MVT IntVT = ContainerVT.changeVectorElementTypeToInteger();

@@ -12,8 +12,8 @@ define i8 @atomic_min_i8() {
 ; CHECK-LABEL: atomic_min_i8
 ; CHECK: lbarx [[DST:[0-9]+]],
 ; CHECK-NEXT: extsb [[EXT:[0-9]+]], [[DST]]
-; CHECK-NEXT: cmpw {{[0-9]+}}, [[EXT]]
-; CHECK-NEXT: bge 0
+; CHECK-NEXT: cmpw [[EXT]], {{[0-9]+}}
+; CHECK-NEXT: blt 0
 }
 define i16 @atomic_min_i16() {
     top:
@@ -28,8 +28,8 @@ define i16 @atomic_min_i16() {
 ; CHECK-LABEL: atomic_min_i16
 ; CHECK: lharx [[DST:[0-9]+]],
 ; CHECK-NEXT: extsh [[EXT:[0-9]+]], [[DST]]
-; CHECK-NEXT: cmpw {{[0-9]+}}, [[EXT]]
-; CHECK-NEXT: bge 0
+; CHECK-NEXT: cmpw [[EXT]], {{[0-9]+}}
+; CHECK-NEXT: blt 0
 }
 
 define i8 @atomic_max_i8() {
@@ -45,8 +45,8 @@ define i8 @atomic_max_i8() {
 ; CHECK-LABEL: atomic_max_i8
 ; CHECK: lbarx [[DST:[0-9]+]],
 ; CHECK-NEXT: extsb [[EXT:[0-9]+]], [[DST]]
-; CHECK-NEXT: cmpw {{[0-9]+}}, [[EXT]]
-; CHECK-NEXT: ble 0
+; CHECK-NEXT: cmpw [[EXT]], {{[0-9]+}}
+; CHECK-NEXT: bgt 0
 }
 define i16 @atomic_max_i16() {
     top:
@@ -61,8 +61,8 @@ define i16 @atomic_max_i16() {
 ; CHECK-LABEL: atomic_max_i16
 ; CHECK: lharx [[DST:[0-9]+]],
 ; CHECK-NEXT: extsh [[EXT:[0-9]+]], [[DST]]
-; CHECK-NEXT: cmpw {{[0-9]+}}, [[EXT]]
-; CHECK-NEXT: ble 0
+; CHECK-NEXT: cmpw [[EXT]], {{[0-9]+}}
+; CHECK-NEXT: bgt 0
 }
 
 declare void @llvm.lifetime.start.p0i8(i64, i8*)

@@ -1005,7 +1005,7 @@ static bool isDimSequencePreserved(AffineMap indexingMap,
 // ```mlir
 // #map = affine_map<(d0, d1) -> (d0, d1)>
 // %1 = tensor.expand_shape %0 [[0, 1]] : tensor<?xf32> into tensor<?x4xf32>
-// %2 = linalg.init_tensor [..] : tensor<?x4xf32>
+// %2 = tensor.empty [..] : tensor<?x4xf32>
 // %3 = linalg.generic {
 //     indexing_maps = [#map, #map],
 //     iterator_types = ["parallel" ,"parallel"]}
@@ -1016,7 +1016,7 @@ static bool isDimSequencePreserved(AffineMap indexingMap,
 //
 // ```mlir
 // #map = affine_map<(d0) -> (d0)>
-// %2 = linalg.init_tensor [..] : tensor<?xf32>
+// %2 = tensor.empty [..] : tensor<?xf32>
 // %3 = linalg.generic {
 //     indexing_maps = [#map, #map],
 //     iterator_types = ["parallel"]}
@@ -1030,7 +1030,7 @@ static bool isDimSequencePreserved(AffineMap indexingMap,
 // #map0 = affine_map<(d0, d1) -> (d0, d1)>
 // #map1 = affine_map<(d0, d1) -> (d1, d0)>
 // %1 = tensor.expand_shape %0 [[0, 1]] : tensor<?xf32> into tensor<?x4xf32>
-// %2 = linalg.init_tensor [..] : tensor<4x?xf32>
+// %2 = tensor.empty [..] : tensor<4x?xf32>
 // %2 = linalg.generic {
 //     indexing_maps = [#map0, #map1],
 //     iterator_types = ["parallel" ,"parallel"]}
@@ -1643,8 +1643,8 @@ public:
 //===---------------------------------------------------------------------===//
 
 namespace {
-/// Forces `outs` operands of linalg operations to use `linalg.init_tensor` if
-/// the value of the `outs` operand is not used within the op.  This is only
+/// Forces `outs` operands of linalg operations to use `tensor.empty` if the
+/// value of the `outs` operand is not used within the op.  This is only
 /// implemented for `linalg.generic` operations for now, but should hold for all
 /// linalg structured ops.
 struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
@@ -1666,8 +1666,8 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
         if (sparse_tensor::getSparseTensorEncoding(operandVal.getType()))
           continue;
 
-        // If outs is already an `init_tensor` operation, nothing to do.
-        auto definingOp = operandVal.getDefiningOp<InitTensorOp>();
+        // If outs is already an `empty` operation, nothing to do.
+        auto definingOp = operandVal.getDefiningOp<tensor::EmptyOp>();
         if (definingOp)
           continue;
         modifiedOutput = true;
@@ -1678,10 +1678,10 @@ struct RemoveOutsDependency : public OpRewritePattern<GenericOp> {
           dynamicDims.push_back(rewriter.createOrFold<tensor::DimOp>(
               loc, operandVal, dim.index()));
         }
-        Value initTensor = rewriter.create<InitTensorOp>(
-            loc, dynamicDims, operandType.getShape(),
-            operandType.getElementType());
-        op->setOperand(opOperand->getOperandNumber(), initTensor);
+        Value emptyTensor = rewriter.create<tensor::EmptyOp>(
+            loc, operandType.getShape(), operandType.getElementType(),
+            dynamicDims);
+        op->setOperand(opOperand->getOperandNumber(), emptyTensor);
       }
     }
     if (!modifiedOutput) {

@@ -88,7 +88,7 @@ using r7i1 = r7<int>;
 // C++ [expr.prim.req.simple] Example
 namespace std_example {
   template<typename T> concept C =
-    requires (T a, T b) { // expected-note{{because substituted constraint expression is ill-formed: argument may not have 'void' type}}
+    requires (T a, T b) { // expected-note{{because 'a' would be invalid: argument may not have 'void' type}}
       a + b; // expected-note{{because 'a + b' would be invalid: invalid operands to binary expression ('int *' and 'int *')}}
     };
 

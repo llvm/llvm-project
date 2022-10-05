@@ -39,6 +39,7 @@ from mlir.dialects import builtin
 from mlir.dialects import func
 from mlir.dialects import linalg
 from mlir.dialects import sparse_tensor
+from mlir.dialects import tensor
 from mlir.dialects.linalg.opdsl import lang
 
 from . import mlir_pytaco_utils as utils
@@ -899,9 +900,9 @@ class _StructOpInfo:
     if self.dst_format is None or self.dst_format.rank() == 0:
       # Initialize the dense tensor.
       ir_type = _mlir_type_from_taco_type(self.dst_dtype)
-      tensor = linalg.InitTensorOp(self.dst_dims, ir_type).result
+      empty = tensor.EmptyOp(self.dst_dims, ir_type).result
       zero = arith.ConstantOp(ir_type, 0.0)
-      return linalg.fill(zero, outs=[tensor])
+      return linalg.fill(zero, outs=[empty])
 
     # Initialize the sparse tensor.
     mlir_type = _mlir_tensor_type(self.dst_dtype, self.dst_dims,
@@ -1194,12 +1195,12 @@ class Tensor:
     """
     if array.dtype != np.float32 and array.dtype != np.float64:
       raise ValueError(f"Expected floating point value type: {array.dtype}.")
-    tensor = Tensor(
+    t = Tensor(
         array.shape,
         dtype=_nptype_to_taco_type(array.dtype.type),
         is_dense=True)
-    tensor._dense_storage = np.copy(array)
-    return tensor
+    t._dense_storage = np.copy(array)
+    return t
 
   @staticmethod
   def from_coo(
@@ -1234,9 +1235,9 @@ class Tensor:
     # The size of each dimension is one more that such a maximum coordinate
     # value.
     shape = [c + 1 for c in max_coordinate]
-    tensor = Tensor(shape, fmt, dtype=dtype)
-    tensor._coords = coordinates
-    tensor._values = values
+    t = Tensor(shape, fmt, dtype=dtype)
+    t._coords = coordinates
+    t._values = values
 
     return tensor
 
@@ -1261,10 +1262,10 @@ class Tensor:
     sparse_tensor, shape = utils.create_sparse_tensor(filename,
                                                       fmt.format_pack.formats,
                                                       _dtype_to_mlir_str(dtype))
-    tensor = Tensor(shape.tolist(), fmt, dtype=dtype)
-    tensor._set_packed_sparse_tensor(sparse_tensor)
+    t = Tensor(shape.tolist(), fmt, dtype=dtype)
+    t._set_packed_sparse_tensor(sparse_tensor)
 
-    return tensor
+    return t
 
   def to_file(self, filename: str) -> None:
     """Output the tensor value to a file.

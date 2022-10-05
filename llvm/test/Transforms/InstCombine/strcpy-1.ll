@@ -48,7 +48,7 @@ define void @test_simplify3(ptr %dst) {
 
 define ptr @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[RET:%.*]] = call ptr @strcpy(ptr noundef nonnull @a, ptr noundef nonnull @b)
+; CHECK-NEXT:    [[RET:%.*]] = call ptr @strcpy(ptr noundef nonnull dereferenceable(1) @a, ptr noundef nonnull dereferenceable(1) @b)
 ; CHECK-NEXT:    ret ptr [[RET]]
 ;
 

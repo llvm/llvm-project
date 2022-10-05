@@ -37,7 +37,7 @@ func.func @generic_op_tensors(
   %0 = tensor.dim %arg0, %c0 : tensor<?x?x?xf32>
   %1 = tensor.dim %arg0, %c1 : tensor<?x?x?xf32>
   %2 = tensor.dim %arg0, %c2 : tensor<?x?x?xf32>
-  %3 = linalg.init_tensor [%0, %1, %2] : tensor<?x?x?xf32>
+  %3 = tensor.empty(%0, %1, %2) : tensor<?x?x?xf32>
   %4 = linalg.generic
     {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
                       affine_map<(d0, d1, d2) -> (d0, d2, d1)>,
@@ -55,7 +55,7 @@ func.func @generic_op_tensors(
 // CHECK-LABEL: func @generic_op_tensors
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
-//       CHECK:   %[[INIT:.+]] = linalg.init_tensor
+//       CHECK:   %[[INIT:.+]] = tensor.empty
 //       CHECK:   %[[TD0:.+]] = scf.for %{{.+}} to %{{.+}} step %{{.+}} iter_args(%[[TC0:.+]] = %[[INIT]]) -> (tensor<?x?x?xf32>) {
 //       CHECK:     %[[TD1:.+]] = scf.for %{{.+}} to %{{.+}} step %{{.+}} iter_args(%[[TC1:.+]] = %[[TC0]]) -> (tensor<?x?x?xf32>) {
 //       CHECK:       %[[TD2:.+]] = scf.for %{{.+}} to %{{.+}} step %{{.+}} iter_args(%[[TC2:.+]] = %[[TC1]]) -> (tensor<?x?x?xf32>) {

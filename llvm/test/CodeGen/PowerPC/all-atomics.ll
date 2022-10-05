@@ -4366,330 +4366,282 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB3_1: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lbarx 7, 0, 0
-; CHECK-NEXT:    cmpw 5, 7
+; CHECK-NEXT:    cmpw 7, 5
 ; CHECK-NEXT:    bne 0, .LBB3_3
 ; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    stbcx. 8, 0, 0
 ; CHECK-NEXT:    bne 0, .LBB3_1
-; CHECK-NEXT:    b .LBB3_4
 ; CHECK-NEXT:  .LBB3_3: # %entry
-; CHECK-NEXT:    stbcx. 7, 0, 0
-; CHECK-NEXT:  .LBB3_4: # %entry
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    stb 7, sc@toc@l(4)
 ; CHECK-NEXT:    lbz 8, uc@toc@l(3)
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_5: # %entry
+; CHECK-NEXT:  .LBB3_4: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lbarx 5, 0, 6
-; CHECK-NEXT:    cmpw 8, 5
-; CHECK-NEXT:    bne 0, .LBB3_7
-; CHECK-NEXT:  # %bb.6: # %entry
+; CHECK-NEXT:    cmpw 5, 8
+; CHECK-NEXT:    bne 0, .LBB3_6
+; CHECK-NEXT:  # %bb.5: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    stbcx. 7, 0, 6
-; CHECK-NEXT:    bne 0, .LBB3_5
-; CHECK-NEXT:    b .LBB3_8
-; CHECK-NEXT:  .LBB3_7: # %entry
-; CHECK-NEXT:    stbcx. 5, 0, 6
-; CHECK-NEXT:  .LBB3_8: # %entry
+; CHECK-NEXT:    bne 0, .LBB3_4
+; CHECK-NEXT:  .LBB3_6: # %entry
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    addis 7, 2, ss@toc@ha
 ; CHECK-NEXT:    stb 5, uc@toc@l(3)
 ; CHECK-NEXT:    lbz 8, sc@toc@l(4)
 ; CHECK-NEXT:    addi 12, 7, ss@toc@l
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:    extsb 9, 8
-; CHECK-NEXT:  .LBB3_9: # %entry
+; CHECK-NEXT:    extsb 8, 8
+; CHECK-NEXT:  .LBB3_7: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lharx 8, 0, 12
-; CHECK-NEXT:    cmpw 5, 8
-; CHECK-NEXT:    bne 0, .LBB3_11
-; CHECK-NEXT:  # %bb.10: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    sthcx. 9, 0, 12
+; CHECK-NEXT:    lharx 9, 0, 12
+; CHECK-NEXT:    cmpw 9, 5
 ; CHECK-NEXT:    bne 0, .LBB3_9
-; CHECK-NEXT:    b .LBB3_12
-; CHECK-NEXT:  .LBB3_11: # %entry
+; CHECK-NEXT:  # %bb.8: # %entry
+; CHECK-NEXT:    #
 ; CHECK-NEXT:    sthcx. 8, 0, 12
+; CHECK-NEXT:    bne 0, .LBB3_7
+; CHECK-NEXT:  .LBB3_9: # %entry
+; CHECK-NEXT:    lwsync
+; CHECK-NEXT:    sth 9, ss@toc@l(7)
+; CHECK-NEXT:    addis 7, 2, us@toc@ha
+; CHECK-NEXT:    lbz 8, sc@toc@l(4)
+; CHECK-NEXT:    lbz 5, uc@toc@l(3)
+; CHECK-NEXT:    addi 11, 7, us@toc@l
+; CHECK-NEXT:    sync
+; CHECK-NEXT:    extsb 8, 8
+; CHECK-NEXT:  .LBB3_10: # %entry
+; CHECK-NEXT:    #
+; CHECK-NEXT:    lharx 9, 0, 11
+; CHECK-NEXT:    cmpw 9, 5
+; CHECK-NEXT:    bne 0, .LBB3_12
+; CHECK-NEXT:  # %bb.11: # %entry
+; CHECK-NEXT:    #
+; CHECK-NEXT:    sthcx. 8, 0, 11
+; CHECK-NEXT:    bne 0, .LBB3_10
 ; CHECK-NEXT:  .LBB3_12: # %entry
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    sth 8, ss@toc@l(7)
-; CHECK-NEXT:    addis 5, 2, us@toc@ha
+; CHECK-NEXT:    sth 9, us@toc@l(7)
+; CHECK-NEXT:    addis 7, 2, si@toc@ha
 ; CHECK-NEXT:    lbz 8, sc@toc@l(4)
-; CHECK-NEXT:    lbz 7, uc@toc@l(3)
-; CHECK-NEXT:    addi 11, 5, us@toc@l
+; CHECK-NEXT:    lbz 5, uc@toc@l(3)
+; CHECK-NEXT:    addi 10, 7, si@toc@l
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:    extsb 9, 8
+; CHECK-NEXT:    extsb 8, 8
 ; CHECK-NEXT:  .LBB3_13: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lharx 8, 0, 11
-; CHECK-NEXT:    cmpw 7, 8
+; CHECK-NEXT:    lwarx 9, 0, 10
+; CHECK-NEXT:    cmpw 9, 5
 ; CHECK-NEXT:    bne 0, .LBB3_15
 ; CHECK-NEXT:  # %bb.14: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    sthcx. 9, 0, 11
-; CHECK-NEXT:    bne 0, .LBB3_13
-; CHECK-NEXT:    b .LBB3_16
-; CHECK-NEXT:  .LBB3_15: # %entry
-; CHECK-NEXT:    sthcx. 8, 0, 11
-; CHECK-NEXT:  .LBB3_16: # %entry
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    sth 8, us@toc@l(5)
-; CHECK-NEXT:    addis 5, 2, si@toc@ha
-; CHECK-NEXT:    lbz 8, sc@toc@l(4)
-; CHECK-NEXT:    lbz 7, uc@toc@l(3)
-; CHECK-NEXT:    addi 10, 5, si@toc@l
-; CHECK-NEXT:    sync
-; CHECK-NEXT:    extsb 9, 8
-; CHECK-NEXT:  .LBB3_17: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lwarx 8, 0, 10
-; CHECK-NEXT:    cmpw 7, 8
-; CHECK-NEXT:    bne 0, .LBB3_19
-; CHECK-NEXT:  # %bb.18: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    stwcx. 9, 0, 10
-; CHECK-NEXT:    bne 0, .LBB3_17
-; CHECK-NEXT:    b .LBB3_20
-; CHECK-NEXT:  .LBB3_19: # %entry
 ; CHECK-NEXT:    stwcx. 8, 0, 10
-; CHECK-NEXT:  .LBB3_20: # %entry
+; CHECK-NEXT:    bne 0, .LBB3_13
+; CHECK-NEXT:  .LBB3_15: # %entry
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    stw 8, si@toc@l(5)
+; CHECK-NEXT:    stw 9, si@toc@l(7)
 ; CHECK-NEXT:    addis 5, 2, ui@toc@ha
 ; CHECK-NEXT:    lbz 8, sc@toc@l(4)
 ; CHECK-NEXT:    lbz 7, uc@toc@l(3)
 ; CHECK-NEXT:    addi 9, 5, ui@toc@l
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:    extsb 30, 8
-; CHECK-NEXT:  .LBB3_21: # %entry
+; CHECK-NEXT:    extsb 8, 8
+; CHECK-NEXT:  .LBB3_16: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lwarx 8, 0, 9
-; CHECK-NEXT:    cmpw 7, 8
-; CHECK-NEXT:    bne 0, .LBB3_23
-; CHECK-NEXT:  # %bb.22: # %entry
+; CHECK-NEXT:    lwarx 30, 0, 9
+; CHECK-NEXT:    cmpw 30, 7
+; CHECK-NEXT:    bne 0, .LBB3_18
+; CHECK-NEXT:  # %bb.17: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    stwcx. 30, 0, 9
-; CHECK-NEXT:    bne 0, .LBB3_21
-; CHECK-NEXT:    b .LBB3_24
-; CHECK-NEXT:  .LBB3_23: # %entry
 ; CHECK-NEXT:    stwcx. 8, 0, 9
-; CHECK-NEXT:  .LBB3_24: # %entry
+; CHECK-NEXT:    bne 0, .LBB3_16
+; CHECK-NEXT:  .LBB3_18: # %entry
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    stw 8, ui@toc@l(5)
-; CHECK-NEXT:    addis 7, 2, sll@toc@ha
+; CHECK-NEXT:    stw 30, ui@toc@l(5)
+; CHECK-NEXT:    addis 30, 2, sll@toc@ha
 ; CHECK-NEXT:    lbz 8, sc@toc@l(4)
+; CHECK-NEXT:    lbz 7, uc@toc@l(3)
+; CHECK-NEXT:    sync
+; CHECK-NEXT:    extsb 29, 8
+; CHECK-NEXT:    addi 8, 30, sll@toc@l
+; CHECK-NEXT:  .LBB3_19: # %entry
+; CHECK-NEXT:    #
+; CHECK-NEXT:    ldarx 28, 0, 8
+; CHECK-NEXT:    cmpd 28, 7
+; CHECK-NEXT:    bne 0, .LBB3_21
+; CHECK-NEXT:  # %bb.20: # %entry
+; CHECK-NEXT:    #
+; CHECK-NEXT:    stdcx. 29, 0, 8
+; CHECK-NEXT:    bne 0, .LBB3_19
+; CHECK-NEXT:  .LBB3_21: # %entry
+; CHECK-NEXT:    lwsync
+; CHECK-NEXT:    std 28, sll@toc@l(30)
+; CHECK-NEXT:    addis 29, 2, ull@toc@ha
+; CHECK-NEXT:    lbz 7, sc@toc@l(4)
 ; CHECK-NEXT:    lbz 30, uc@toc@l(3)
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:    extsb 28, 8
-; CHECK-NEXT:    addi 8, 7, sll@toc@l
+; CHECK-NEXT:    extsb 28, 7
+; CHECK-NEXT:    addi 7, 29, ull@toc@l
+; CHECK-NEXT:  .LBB3_22: # %entry
+; CHECK-NEXT:    #
+; CHECK-NEXT:    ldarx 27, 0, 7
+; CHECK-NEXT:    cmpd 27, 30
+; CHECK-NEXT:    bne 0, .LBB3_24
+; CHECK-NEXT:  # %bb.23: # %entry
+; CHECK-NEXT:    #
+; CHECK-NEXT:    stdcx. 28, 0, 7
+; CHECK-NEXT:    bne 0, .LBB3_22
+; CHECK-NEXT:  .LBB3_24: # %entry
+; CHECK-NEXT:    lwsync
+; CHECK-NEXT:    std 27, ull@toc@l(29)
+; CHECK-NEXT:    lbz 30, uc@toc@l(3)
+; CHECK-NEXT:    lbz 29, sc@toc@l(4)
+; CHECK-NEXT:    sync
 ; CHECK-NEXT:  .LBB3_25: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ldarx 29, 0, 8
-; CHECK-NEXT:    cmpd 30, 29
+; CHECK-NEXT:    lbarx 28, 0, 0
+; CHECK-NEXT:    cmpw 28, 30
 ; CHECK-NEXT:    bne 0, .LBB3_27
 ; CHECK-NEXT:  # %bb.26: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    stdcx. 28, 0, 8
-; CHECK-NEXT:    bne 0, .LBB3_25
-; CHECK-NEXT:    b .LBB3_28
-; CHECK-NEXT:  .LBB3_27: # %entry
-; CHECK-NEXT:    stdcx. 29, 0, 8
-; CHECK-NEXT:  .LBB3_28: # %entry
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    std 29, sll@toc@l(7)
-; CHECK-NEXT:    addis 30, 2, ull@toc@ha
-; CHECK-NEXT:    lbz 7, sc@toc@l(4)
-; CHECK-NEXT:    lbz 29, uc@toc@l(3)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:    extsb 27, 7
-; CHECK-NEXT:    addi 7, 30, ull@toc@l
-; CHECK-NEXT:  .LBB3_29: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    ldarx 28, 0, 7
-; CHECK-NEXT:    cmpd 29, 28
-; CHECK-NEXT:    bne 0, .LBB3_31
-; CHECK-NEXT:  # %bb.30: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    stdcx. 27, 0, 7
-; CHECK-NEXT:    bne 0, .LBB3_29
-; CHECK-NEXT:    b .LBB3_32
-; CHECK-NEXT:  .LBB3_31: # %entry
-; CHECK-NEXT:    stdcx. 28, 0, 7
-; CHECK-NEXT:  .LBB3_32: # %entry
-; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    std 28, ull@toc@l(30)
-; CHECK-NEXT:    lbz 30, uc@toc@l(3)
-; CHECK-NEXT:    lbz 28, sc@toc@l(4)
-; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_33: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    lbarx 29, 0, 0
-; CHECK-NEXT:    cmpw 30, 29
-; CHECK-NEXT:    bne 0, .LBB3_35
-; CHECK-NEXT:  # %bb.34: # %entry
-; CHECK-NEXT:    #
-; CHECK-NEXT:    stbcx. 28, 0, 0
-; CHECK-NEXT:    bne 0, .LBB3_33
-; CHECK-NEXT:    b .LBB3_36
-; CHECK-NEXT:  .LBB3_35: # %entry
 ; CHECK-NEXT:    stbcx. 29, 0, 0
-; CHECK-NEXT:  .LBB3_36: # %entry
-; CHECK-NEXT:    xor 0, 29, 30
+; CHECK-NEXT:    bne 0, .LBB3_25
+; CHECK-NEXT:  .LBB3_27: # %entry
+; CHECK-NEXT:    xor 0, 28, 30
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    cntlzw 0, 0
-; CHECK-NEXT:    lbz 29, sc@toc@l(4)
+; CHECK-NEXT:    lbz 30, sc@toc@l(4)
 ; CHECK-NEXT:    srwi 0, 0, 5
 ; CHECK-NEXT:    stw 0, ui@toc@l(5)
 ; CHECK-NEXT:    lbz 0, uc@toc@l(3)
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_37: # %entry
+; CHECK-NEXT:  .LBB3_28: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lbarx 30, 0, 6
-; CHECK-NEXT:    cmpw 0, 30
-; CHECK-NEXT:    bne 0, .LBB3_39
-; CHECK-NEXT:  # %bb.38: # %entry
+; CHECK-NEXT:    lbarx 29, 0, 6
+; CHECK-NEXT:    cmpw 29, 0
+; CHECK-NEXT:    bne 0, .LBB3_30
+; CHECK-NEXT:  # %bb.29: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    stbcx. 29, 0, 6
-; CHECK-NEXT:    bne 0, .LBB3_37
-; CHECK-NEXT:    b .LBB3_40
-; CHECK-NEXT:  .LBB3_39: # %entry
 ; CHECK-NEXT:    stbcx. 30, 0, 6
-; CHECK-NEXT:  .LBB3_40: # %entry
-; CHECK-NEXT:    xor 6, 30, 0
+; CHECK-NEXT:    bne 0, .LBB3_28
+; CHECK-NEXT:  .LBB3_30: # %entry
+; CHECK-NEXT:    xor 6, 29, 0
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    cntlzw 6, 6
 ; CHECK-NEXT:    lbz 0, sc@toc@l(4)
 ; CHECK-NEXT:    srwi 6, 6, 5
 ; CHECK-NEXT:    stw 6, ui@toc@l(5)
 ; CHECK-NEXT:    lbz 6, uc@toc@l(3)
-; CHECK-NEXT:    extsb 30, 0
+; CHECK-NEXT:    extsb 0, 0
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_41: # %entry
+; CHECK-NEXT:  .LBB3_31: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lharx 0, 0, 12
-; CHECK-NEXT:    cmpw 6, 0
-; CHECK-NEXT:    bne 0, .LBB3_43
-; CHECK-NEXT:  # %bb.42: # %entry
+; CHECK-NEXT:    lharx 30, 0, 12
+; CHECK-NEXT:    cmpw 30, 6
+; CHECK-NEXT:    bne 0, .LBB3_33
+; CHECK-NEXT:  # %bb.32: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    sthcx. 30, 0, 12
-; CHECK-NEXT:    bne 0, .LBB3_41
-; CHECK-NEXT:    b .LBB3_44
-; CHECK-NEXT:  .LBB3_43: # %entry
 ; CHECK-NEXT:    sthcx. 0, 0, 12
-; CHECK-NEXT:  .LBB3_44: # %entry
-; CHECK-NEXT:    xor 6, 0, 6
+; CHECK-NEXT:    bne 0, .LBB3_31
+; CHECK-NEXT:  .LBB3_33: # %entry
+; CHECK-NEXT:    xor 6, 30, 6
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    cntlzw 6, 6
 ; CHECK-NEXT:    lbz 12, sc@toc@l(4)
 ; CHECK-NEXT:    srwi 6, 6, 5
 ; CHECK-NEXT:    stw 6, ui@toc@l(5)
 ; CHECK-NEXT:    lbz 6, uc@toc@l(3)
-; CHECK-NEXT:    extsb 0, 12
+; CHECK-NEXT:    extsb 12, 12
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_45: # %entry
+; CHECK-NEXT:  .LBB3_34: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lharx 12, 0, 11
-; CHECK-NEXT:    cmpw 6, 12
-; CHECK-NEXT:    bne 0, .LBB3_47
-; CHECK-NEXT:  # %bb.46: # %entry
+; CHECK-NEXT:    lharx 0, 0, 11
+; CHECK-NEXT:    cmpw 0, 6
+; CHECK-NEXT:    bne 0, .LBB3_36
+; CHECK-NEXT:  # %bb.35: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    sthcx. 0, 0, 11
-; CHECK-NEXT:    bne 0, .LBB3_45
-; CHECK-NEXT:    b .LBB3_48
-; CHECK-NEXT:  .LBB3_47: # %entry
 ; CHECK-NEXT:    sthcx. 12, 0, 11
-; CHECK-NEXT:  .LBB3_48: # %entry
-; CHECK-NEXT:    xor 6, 12, 6
+; CHECK-NEXT:    bne 0, .LBB3_34
+; CHECK-NEXT:  .LBB3_36: # %entry
+; CHECK-NEXT:    xor 6, 0, 6
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    cntlzw 6, 6
 ; CHECK-NEXT:    lbz 11, sc@toc@l(4)
 ; CHECK-NEXT:    srwi 6, 6, 5
 ; CHECK-NEXT:    stw 6, ui@toc@l(5)
 ; CHECK-NEXT:    lbz 6, uc@toc@l(3)
-; CHECK-NEXT:    extsb 12, 11
+; CHECK-NEXT:    extsb 11, 11
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_49: # %entry
+; CHECK-NEXT:  .LBB3_37: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lwarx 11, 0, 10
-; CHECK-NEXT:    cmpw 6, 11
-; CHECK-NEXT:    bne 0, .LBB3_51
-; CHECK-NEXT:  # %bb.50: # %entry
+; CHECK-NEXT:    lwarx 12, 0, 10
+; CHECK-NEXT:    cmpw 12, 6
+; CHECK-NEXT:    bne 0, .LBB3_39
+; CHECK-NEXT:  # %bb.38: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    stwcx. 12, 0, 10
-; CHECK-NEXT:    bne 0, .LBB3_49
-; CHECK-NEXT:    b .LBB3_52
-; CHECK-NEXT:  .LBB3_51: # %entry
 ; CHECK-NEXT:    stwcx. 11, 0, 10
-; CHECK-NEXT:  .LBB3_52: # %entry
-; CHECK-NEXT:    xor 6, 11, 6
+; CHECK-NEXT:    bne 0, .LBB3_37
+; CHECK-NEXT:  .LBB3_39: # %entry
+; CHECK-NEXT:    xor 6, 12, 6
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    cntlzw 6, 6
 ; CHECK-NEXT:    lbz 10, sc@toc@l(4)
 ; CHECK-NEXT:    srwi 6, 6, 5
 ; CHECK-NEXT:    stw 6, ui@toc@l(5)
 ; CHECK-NEXT:    lbz 6, uc@toc@l(3)
-; CHECK-NEXT:    extsb 11, 10
+; CHECK-NEXT:    extsb 10, 10
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_53: # %entry
+; CHECK-NEXT:  .LBB3_40: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lwarx 10, 0, 9
-; CHECK-NEXT:    cmpw 6, 10
-; CHECK-NEXT:    bne 0, .LBB3_55
-; CHECK-NEXT:  # %bb.54: # %entry
+; CHECK-NEXT:    lwarx 11, 0, 9
+; CHECK-NEXT:    cmpw 11, 6
+; CHECK-NEXT:    bne 0, .LBB3_42
+; CHECK-NEXT:  # %bb.41: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    stwcx. 11, 0, 9
-; CHECK-NEXT:    bne 0, .LBB3_53
-; CHECK-NEXT:    b .LBB3_56
-; CHECK-NEXT:  .LBB3_55: # %entry
 ; CHECK-NEXT:    stwcx. 10, 0, 9
-; CHECK-NEXT:  .LBB3_56: # %entry
-; CHECK-NEXT:    xor 6, 10, 6
+; CHECK-NEXT:    bne 0, .LBB3_40
+; CHECK-NEXT:  .LBB3_42: # %entry
+; CHECK-NEXT:    xor 6, 11, 6
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    cntlzw 6, 6
 ; CHECK-NEXT:    lbz 9, sc@toc@l(4)
 ; CHECK-NEXT:    srwi 6, 6, 5
 ; CHECK-NEXT:    stw 6, ui@toc@l(5)
 ; CHECK-NEXT:    lbz 6, uc@toc@l(3)
-; CHECK-NEXT:    extsb 10, 9
+; CHECK-NEXT:    extsb 9, 9
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_57: # %entry
+; CHECK-NEXT:  .LBB3_43: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ldarx 9, 0, 8
-; CHECK-NEXT:    cmpd 6, 9
-; CHECK-NEXT:    bne 0, .LBB3_59
-; CHECK-NEXT:  # %bb.58: # %entry
+; CHECK-NEXT:    ldarx 10, 0, 8
+; CHECK-NEXT:    cmpd 10, 6
+; CHECK-NEXT:    bne 0, .LBB3_45
+; CHECK-NEXT:  # %bb.44: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    stdcx. 10, 0, 8
-; CHECK-NEXT:    bne 0, .LBB3_57
-; CHECK-NEXT:    b .LBB3_60
-; CHECK-NEXT:  .LBB3_59: # %entry
 ; CHECK-NEXT:    stdcx. 9, 0, 8
-; CHECK-NEXT:  .LBB3_60: # %entry
-; CHECK-NEXT:    xor 6, 9, 6
+; CHECK-NEXT:    bne 0, .LBB3_43
+; CHECK-NEXT:  .LBB3_45: # %entry
+; CHECK-NEXT:    xor 6, 10, 6
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    cntlzd 6, 6
 ; CHECK-NEXT:    lbz 4, sc@toc@l(4)
 ; CHECK-NEXT:    lbz 3, uc@toc@l(3)
 ; CHECK-NEXT:    rldicl 6, 6, 58, 63
 ; CHECK-NEXT:    stw 6, ui@toc@l(5)
-; CHECK-NEXT:    extsb 6, 4
+; CHECK-NEXT:    extsb 4, 4
 ; CHECK-NEXT:    sync
-; CHECK-NEXT:  .LBB3_61: # %entry
+; CHECK-NEXT:  .LBB3_46: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ldarx 4, 0, 7
-; CHECK-NEXT:    cmpd 3, 4
-; CHECK-NEXT:    bne 0, .LBB3_63
-; CHECK-NEXT:  # %bb.62: # %entry
+; CHECK-NEXT:    ldarx 6, 0, 7
+; CHECK-NEXT:    cmpd 6, 3
+; CHECK-NEXT:    bne 0, .LBB3_48
+; CHECK-NEXT:  # %bb.47: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    stdcx. 6, 0, 7
-; CHECK-NEXT:    bne 0, .LBB3_61
-; CHECK-NEXT:    b .LBB3_64
-; CHECK-NEXT:  .LBB3_63: # %entry
 ; CHECK-NEXT:    stdcx. 4, 0, 7
-; CHECK-NEXT:  .LBB3_64: # %entry
-; CHECK-NEXT:    xor 3, 4, 3
+; CHECK-NEXT:    bne 0, .LBB3_46
+; CHECK-NEXT:  .LBB3_48: # %entry
+; CHECK-NEXT:    xor 3, 6, 3
 ; CHECK-NEXT:    lwsync
 ; CHECK-NEXT:    cntlzd 3, 3
 ; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
@@ -4720,7 +4672,7 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; AIX32-NEXT:    xori 23, 4, 24
 ; AIX32-NEXT:    li 4, 255
 ; AIX32-NEXT:    slw 6, 3, 23
-; AIX32-NEXT:    slw 7, 5, 23
+; AIX32-NEXT:    slw 5, 5, 23
 ; AIX32-NEXT:    slw 3, 4, 23
 ; AIX32-NEXT:    stw 20, 80(1) # 4-byte Folded Spill
 ; AIX32-NEXT:    stw 21, 84(1) # 4-byte Folded Spill
@@ -4731,28 +4683,25 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; AIX32-NEXT:    stw 27, 108(1) # 4-byte Folded Spill
 ; AIX32-NEXT:    stw 30, 120(1) # 4-byte Folded Spill
 ; AIX32-NEXT:    stw 31, 124(1) # 4-byte Folded Spill
-; AIX32-NEXT:    and 5, 6, 3
-; AIX32-NEXT:    and 6, 7, 3
+; AIX32-NEXT:    and 4, 6, 3
+; AIX32-NEXT:    and 5, 5, 3
 ; AIX32-NEXT:    sync
 ; AIX32-NEXT:  L..BB3_1: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    lwarx 7, 0, 19
-; AIX32-NEXT:    and 4, 7, 3
-; AIX32-NEXT:    cmpw 4, 6
+; AIX32-NEXT:    and 6, 7, 3
+; AIX32-NEXT:    cmpw 6, 5
 ; AIX32-NEXT:    bne 0, L..BB3_3
 ; AIX32-NEXT:  # %bb.2: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    andc 7, 7, 3
-; AIX32-NEXT:    or 7, 7, 5
+; AIX32-NEXT:    or 7, 7, 4
 ; AIX32-NEXT:    stwcx. 7, 0, 19
 ; AIX32-NEXT:    bne 0, L..BB3_1
-; AIX32-NEXT:    b L..BB3_4
 ; AIX32-NEXT:  L..BB3_3: # %entry
-; AIX32-NEXT:    stwcx. 7, 0, 19
-; AIX32-NEXT:  L..BB3_4: # %entry
-; AIX32-NEXT:    srw 3, 4, 23
 ; AIX32-NEXT:    lwsync
 ; AIX32-NEXT:    rlwinm 4, 29, 3, 27, 28
+; AIX32-NEXT:    srw 3, 6, 23
 ; AIX32-NEXT:    lbz 5, 0(29)
 ; AIX32-NEXT:    xori 25, 4, 24
 ; AIX32-NEXT:    stb 3, 0(28)
@@ -4764,22 +4713,19 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; AIX32-NEXT:    rlwinm 22, 29, 0, 0, 29
 ; AIX32-NEXT:    and 5, 4, 3
 ; AIX32-NEXT:    and 6, 6, 3
-; AIX32-NEXT:  L..BB3_5: # %entry
+; AIX32-NEXT:  L..BB3_4: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    lwarx 7, 0, 22
 ; AIX32-NEXT:    and 4, 7, 3
 ; AIX32-NEXT:    cmpw 4, 6
-; AIX32-NEXT:    bne 0, L..BB3_7
-; AIX32-NEXT:  # %bb.6: # %entry
+; AIX32-NEXT:    bne 0, L..BB3_6
+; AIX32-NEXT:  # %bb.5: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    andc 7, 7, 3
 ; AIX32-NEXT:    or 7, 7, 5
 ; AIX32-NEXT:    stwcx. 7, 0, 22
-; AIX32-NEXT:    bne 0, L..BB3_5
-; AIX32-NEXT:    b L..BB3_8
-; AIX32-NEXT:  L..BB3_7: # %entry
-; AIX32-NEXT:    stwcx. 7, 0, 22
-; AIX32-NEXT:  L..BB3_8: # %entry
+; AIX32-NEXT:    bne 0, L..BB3_4
+; AIX32-NEXT:  L..BB3_6: # %entry
 ; AIX32-NEXT:    lwz 3, L..C2(2) # @ss
 ; AIX32-NEXT:    lwsync
 ; AIX32-NEXT:    li 7, 0
@@ -4797,22 +4743,19 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; AIX32-NEXT:    rlwinm 20, 3, 0, 0, 29
 ; AIX32-NEXT:    and 6, 5, 4
 ; AIX32-NEXT:    and 7, 7, 4
-; AIX32-NEXT:  L..BB3_9: # %entry
+; AIX32-NEXT:  L..BB3_7: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    lwarx 8, 0, 20
 ; AIX32-NEXT:    and 5, 8, 4
 ; AIX32-NEXT:    cmpw 5, 7
-; AIX32-NEXT:    bne 0, L..BB3_11
-; AIX32-NEXT:  # %bb.10: # %entry
+; AIX32-NEXT:    bne 0, L..BB3_9
+; AIX32-NEXT:  # %bb.8: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    andc 8, 8, 4
 ; AIX32-NEXT:    or 8, 8, 6
 ; AIX32-NEXT:    stwcx. 8, 0, 20
-; AIX32-NEXT:    bne 0, L..BB3_9
-; AIX32-NEXT:    b L..BB3_12
-; AIX32-NEXT:  L..BB3_11: # %entry
-; AIX32-NEXT:    stwcx. 8, 0, 20
-; AIX32-NEXT:  L..BB3_12: # %entry
+; AIX32-NEXT:    bne 0, L..BB3_7
+; AIX32-NEXT:  L..BB3_9: # %entry
 ; AIX32-NEXT:    lwz 4, L..C3(2) # @us
 ; AIX32-NEXT:    lwsync
 ; AIX32-NEXT:    srw 5, 5, 24
@@ -4825,72 +4768,63 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; AIX32-NEXT:    extsb 6, 6
 ; AIX32-NEXT:    xori 21, 3, 16
 ; AIX32-NEXT:    ori 3, 5, 65535
-; AIX32-NEXT:    slw 6, 6, 21
+; AIX32-NEXT:    slw 5, 6, 21
 ; AIX32-NEXT:    slw 7, 7, 21
-; AIX32-NEXT:    slw 5, 3, 21
+; AIX32-NEXT:    slw 3, 3, 21
 ; AIX32-NEXT:    rlwinm 18, 4, 0, 0, 29
-; AIX32-NEXT:    and 6, 6, 5
-; AIX32-NEXT:    and 7, 7, 5
-; AIX32-NEXT:  L..BB3_13: # %entry
+; AIX32-NEXT:    and 6, 5, 3
+; AIX32-NEXT:    and 7, 7, 3
+; AIX32-NEXT:  L..BB3_10: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    lwarx 8, 0, 18
-; AIX32-NEXT:    and 3, 8, 5
-; AIX32-NEXT:    cmpw 3, 7
-; AIX32-NEXT:    bne 0, L..BB3_15
-; AIX32-NEXT:  # %bb.14: # %entry
+; AIX32-NEXT:    and 5, 8, 3
+; AIX32-NEXT:    cmpw 5, 7
+; AIX32-NEXT:    bne 0, L..BB3_12
+; AIX32-NEXT:  # %bb.11: # %entry
 ; AIX32-NEXT:    #
-; AIX32-NEXT:    andc 8, 8, 5
+; AIX32-NEXT:    andc 8, 8, 3
 ; AIX32-NEXT:    or 8, 8, 6
 ; AIX32-NEXT:    stwcx. 8, 0, 18
-; AIX32-NEXT:    bne 0, L..BB3_13
-; AIX32-NEXT:    b L..BB3_16
-; AIX32-NEXT:  L..BB3_15: # %entry
-; AIX32-NEXT:    stwcx. 8, 0, 18
-; AIX32-NEXT:  L..BB3_16: # %entry
+; AIX32-NEXT:    bne 0, L..BB3_10
+; AIX32-NEXT:  L..BB3_12: # %entry
 ; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    srw 3, 3, 21
+; AIX32-NEXT:    srw 3, 5, 21
 ; AIX32-NEXT:    lwz 17, L..C4(2) # @si
 ; AIX32-NEXT:    lbz 5, 0(28)
 ; AIX32-NEXT:    sth 3, 0(4)
 ; AIX32-NEXT:    lbz 3, 0(29)
 ; AIX32-NEXT:    sync
-; AIX32-NEXT:    extsb 5, 5
-; AIX32-NEXT:  L..BB3_17: # %entry
+; AIX32-NEXT:    extsb 4, 5
+; AIX32-NEXT:  L..BB3_13: # %entry
 ; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 4, 0, 17
-; AIX32-NEXT:    cmpw 3, 4
-; AIX32-NEXT:    bne 0, L..BB3_19
-; AIX32-NEXT:  # %bb.18: # %entry
+; AIX32-NEXT:    lwarx 5, 0, 17
+; AIX32-NEXT:    cmpw 5, 3
+; AIX32-NEXT:    bne 0, L..BB3_15
+; AIX32-NEXT:  # %bb.14: # %entry
 ; AIX32-NEXT:    #
-; AIX32-NEXT:    stwcx. 5, 0, 17
-; AIX32-NEXT:    bne 0, L..BB3_17
-; AIX32-NEXT:    b L..BB3_20
-; AIX32-NEXT:  L..BB3_19: # %entry
 ; AIX32-NEXT:    stwcx. 4, 0, 17
-; AIX32-NEXT:  L..BB3_20: # %entry
+; AIX32-NEXT:    bne 0, L..BB3_13
+; AIX32-NEXT:  L..BB3_15: # %entry
 ; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    stw 4, 0(17)
 ; AIX32-NEXT:    lwz 27, L..C5(2) # @ui
+; AIX32-NEXT:    stw 5, 0(17)
 ; AIX32-NEXT:    lbz 4, 0(28)
 ; AIX32-NEXT:    lbz 3, 0(29)
 ; AIX32-NEXT:    sync
-; AIX32-NEXT:    extsb 5, 4
-; AIX32-NEXT:  L..BB3_21: # %entry
+; AIX32-NEXT:    extsb 4, 4
+; AIX32-NEXT:  L..BB3_16: # %entry
 ; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 4, 0, 27
-; AIX32-NEXT:    cmpw 3, 4
-; AIX32-NEXT:    bne 0, L..BB3_23
-; AIX32-NEXT:  # %bb.22: # %entry
+; AIX32-NEXT:    lwarx 5, 0, 27
+; AIX32-NEXT:    cmpw 5, 3
+; AIX32-NEXT:    bne 0, L..BB3_18
+; AIX32-NEXT:  # %bb.17: # %entry
 ; AIX32-NEXT:    #
-; AIX32-NEXT:    stwcx. 5, 0, 27
-; AIX32-NEXT:    bne 0, L..BB3_21
-; AIX32-NEXT:    b L..BB3_24
-; AIX32-NEXT:  L..BB3_23: # %entry
 ; AIX32-NEXT:    stwcx. 4, 0, 27
-; AIX32-NEXT:  L..BB3_24: # %entry
+; AIX32-NEXT:    bne 0, L..BB3_16
+; AIX32-NEXT:  L..BB3_18: # %entry
 ; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    stw 4, 0(27)
 ; AIX32-NEXT:    lwz 31, L..C6(2) # @sll
+; AIX32-NEXT:    stw 5, 0(27)
 ; AIX32-NEXT:    li 26, 0
 ; AIX32-NEXT:    li 7, 5
 ; AIX32-NEXT:    lbz 4, 0(28)
@@ -4929,28 +4863,25 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; AIX32-NEXT:    li 3, 255
 ; AIX32-NEXT:    stw 5, 0(30)
 ; AIX32-NEXT:    slw 5, 6, 23
-; AIX32-NEXT:    slw 7, 4, 23
+; AIX32-NEXT:    slw 6, 4, 23
 ; AIX32-NEXT:    slw 3, 3, 23
 ; AIX32-NEXT:    sync
-; AIX32-NEXT:    and 6, 5, 3
-; AIX32-NEXT:    and 7, 7, 3
-; AIX32-NEXT:  L..BB3_25: # %entry
+; AIX32-NEXT:    and 5, 5, 3
+; AIX32-NEXT:    and 6, 6, 3
+; AIX32-NEXT:  L..BB3_19: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    lwarx 8, 0, 19
-; AIX32-NEXT:    and 5, 8, 3
-; AIX32-NEXT:    cmpw 5, 7
-; AIX32-NEXT:    bne 0, L..BB3_27
-; AIX32-NEXT:  # %bb.26: # %entry
+; AIX32-NEXT:    and 7, 8, 3
+; AIX32-NEXT:    cmpw 7, 6
+; AIX32-NEXT:    bne 0, L..BB3_21
+; AIX32-NEXT:  # %bb.20: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    andc 8, 8, 3
-; AIX32-NEXT:    or 8, 8, 6
+; AIX32-NEXT:    or 8, 8, 5
 ; AIX32-NEXT:    stwcx. 8, 0, 19
-; AIX32-NEXT:    bne 0, L..BB3_25
-; AIX32-NEXT:    b L..BB3_28
-; AIX32-NEXT:  L..BB3_27: # %entry
-; AIX32-NEXT:    stwcx. 8, 0, 19
-; AIX32-NEXT:  L..BB3_28: # %entry
-; AIX32-NEXT:    srw 5, 5, 23
+; AIX32-NEXT:    bne 0, L..BB3_19
+; AIX32-NEXT:  L..BB3_21: # %entry
+; AIX32-NEXT:    srw 5, 7, 23
 ; AIX32-NEXT:    lwsync
 ; AIX32-NEXT:    li 3, 1
 ; AIX32-NEXT:    li 7, 255
@@ -4965,22 +4896,19 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; AIX32-NEXT:    sync
 ; AIX32-NEXT:    and 7, 5, 6
 ; AIX32-NEXT:    and 8, 8, 6
-; AIX32-NEXT:  L..BB3_29: # %entry
+; AIX32-NEXT:  L..BB3_22: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    lwarx 9, 0, 22
 ; AIX32-NEXT:    and 5, 9, 6
 ; AIX32-NEXT:    cmpw 5, 8
-; AIX32-NEXT:    bne 0, L..BB3_31
-; AIX32-NEXT:  # %bb.30: # %entry
+; AIX32-NEXT:    bne 0, L..BB3_24
+; AIX32-NEXT:  # %bb.23: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    andc 9, 9, 6
 ; AIX32-NEXT:    or 9, 9, 7
 ; AIX32-NEXT:    stwcx. 9, 0, 22
-; AIX32-NEXT:    bne 0, L..BB3_29
-; AIX32-NEXT:    b L..BB3_32
-; AIX32-NEXT:  L..BB3_31: # %entry
-; AIX32-NEXT:    stwcx. 9, 0, 22
-; AIX32-NEXT:  L..BB3_32: # %entry
+; AIX32-NEXT:    bne 0, L..BB3_22
+; AIX32-NEXT:  L..BB3_24: # %entry
 ; AIX32-NEXT:    lwsync
 ; AIX32-NEXT:    srw 5, 5, 25
 ; AIX32-NEXT:    lbz 6, 0(28)
@@ -4997,22 +4925,19 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; AIX32-NEXT:    slw 6, 5, 24
 ; AIX32-NEXT:    and 7, 7, 6
 ; AIX32-NEXT:    and 8, 8, 6
-; AIX32-NEXT:  L..BB3_33: # %entry
+; AIX32-NEXT:  L..BB3_25: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    lwarx 9, 0, 20
 ; AIX32-NEXT:    and 5, 9, 6
 ; AIX32-NEXT:    cmpw 5, 8
-; AIX32-NEXT:    bne 0, L..BB3_35
-; AIX32-NEXT:  # %bb.34: # %entry
+; AIX32-NEXT:    bne 0, L..BB3_27
+; AIX32-NEXT:  # %bb.26: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    andc 9, 9, 6
 ; AIX32-NEXT:    or 9, 9, 7
 ; AIX32-NEXT:    stwcx. 9, 0, 20
-; AIX32-NEXT:    bne 0, L..BB3_33
-; AIX32-NEXT:    b L..BB3_36
-; AIX32-NEXT:  L..BB3_35: # %entry
-; AIX32-NEXT:    stwcx. 9, 0, 20
-; AIX32-NEXT:  L..BB3_36: # %entry
+; AIX32-NEXT:    bne 0, L..BB3_25
+; AIX32-NEXT:  L..BB3_27: # %entry
 ; AIX32-NEXT:    lwsync
 ; AIX32-NEXT:    srw 5, 5, 24
 ; AIX32-NEXT:    lbz 6, 0(28)
@@ -5023,77 +4948,66 @@ define dso_local void @test_compare_and_swap() local_unnamed_addr #0 {
 ; AIX32-NEXT:    ori 5, 5, 65535
 ; AIX32-NEXT:    extsb 6, 6
 ; AIX32-NEXT:    stw 7, 0(27)
-; AIX32-NEXT:    slw 7, 6, 21
-; AIX32-NEXT:    slw 8, 4, 21
+; AIX32-NEXT:    slw 6, 6, 21
+; AIX32-NEXT:    slw 7, 4, 21
 ; AIX32-NEXT:    sync
-; AIX32-NEXT:    slw 6, 5, 21
-; AIX32-NEXT:    and 7, 7, 6
-; AIX32-NEXT:    and 8, 8, 6
-; AIX32-NEXT:  L..BB3_37: # %entry
+; AIX32-NEXT:    slw 5, 5, 21
+; AIX32-NEXT:    and 6, 6, 5
+; AIX32-NEXT:    and 7, 7, 5
+; AIX32-NEXT:  L..BB3_28: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    lwarx 9, 0, 18
-; AIX32-NEXT:    and 5, 9, 6
-; AIX32-NEXT:    cmpw 5, 8
-; AIX32-NEXT:    bne 0, L..BB3_39
-; AIX32-NEXT:  # %bb.38: # %entry
+; AIX32-NEXT:    and 8, 9, 5
+; AIX32-NEXT:    cmpw 8, 7
+; AIX32-NEXT:    bne 0, L..BB3_30
+; AIX32-NEXT:  # %bb.29: # %entry
 ; AIX32-NEXT:    #
-; AIX32-NEXT:    andc 9, 9, 6
-; AIX32-NEXT:    or 9, 9, 7
+; AIX32-NEXT:    andc 9, 9, 5
+; AIX32-NEXT:    or 9, 9, 6
 ; AIX32-NEXT:    stwcx. 9, 0, 18
-; AIX32-NEXT:    bne 0, L..BB3_37
-; AIX32-NEXT:    b L..BB3_40
-; AIX32-NEXT:  L..BB3_39: # %entry
-; AIX32-NEXT:    stwcx. 9, 0, 18
-; AIX32-NEXT:  L..BB3_40: # %entry
-; AIX32-NEXT:    srw 5, 5, 21
+; AIX32-NEXT:    bne 0, L..BB3_28
+; AIX32-NEXT:  L..BB3_30: # %entry
+; AIX32-NEXT:    srw 5, 8, 21
 ; AIX32-NEXT:    lwsync
 ; AIX32-NEXT:    cmpw 5, 4
 ; AIX32-NEXT:    lbz 5, 0(28)
 ; AIX32-NEXT:    iseleq 4, 3, 26
 ; AIX32-NEXT:    stw 4, 0(27)
 ; AIX32-NEXT:    lbz 4, 0(29)
-; AIX32-NEXT:    extsb 6, 5
+; AIX32-NEXT:    extsb 5, 5
 ; AIX32-NEXT:    sync
-; AIX32-NEXT:  L..BB3_41: # %entry
+; AIX32-NEXT:  L..BB3_31: # %entry
 ; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 5, 0, 17
-; AIX32-NEXT:    cmpw 4, 5
-; AIX32-NEXT:    bne 0, L..BB3_43
-; AIX32-NEXT:  # %bb.42: # %entry
+; AIX32-NEXT:    lwarx 6, 0, 17
+; AIX32-NEXT:    cmpw 1, 6, 4
+; AIX32-NEXT:    bne 1, L..BB3_33
+; AIX32-NEXT:  # %bb.32: # %entry
 ; AIX32-NEXT:    #
-; AIX32-NEXT:    stwcx. 6, 0, 17
-; AIX32-NEXT:    bne 0, L..BB3_41
-; AIX32-NEXT:    b L..BB3_44
-; AIX32-NEXT:  L..BB3_43: # %entry
 ; AIX32-NEXT:    stwcx. 5, 0, 17
-; AIX32-NEXT:  L..BB3_44: # %entry
-; AIX32-NEXT:    cmpw 5, 4
+; AIX32-NEXT:    bne 0, L..BB3_31
+; AIX32-NEXT:  L..BB3_33: # %entry
 ; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    iseleq 4, 3, 26
+; AIX32-NEXT:    isel 4, 3, 26, 6
 ; AIX32-NEXT:    lbz 5, 0(28)
 ; AIX32-NEXT:    stw 4, 0(27)
 ; AIX32-NEXT:    lbz 4, 0(29)
-; AIX32-NEXT:    extsb 6, 5
 ; AIX32-NEXT:    sync
-; AIX32-NEXT:  L..BB3_45: # %entry
+; AIX32-NEXT:    extsb 5, 5
+; AIX32-NEXT:  L..BB3_34: # %entry
 ; AIX32-NEXT:    #
-; AIX32-NEXT:    lwarx 5, 0, 27
-; AIX32-NEXT:    cmpw 4, 5
-; AIX32-NEXT:    bne 0, L..BB3_47
-; AIX32-NEXT:  # %bb.46: # %entry
+; AIX32-NEXT:    lwarx 6, 0, 27
+; AIX32-NEXT:    cmpw 1, 6, 4
+; AIX32-NEXT:    bne 1, L..BB3_36
+; AIX32-NEXT:  # %bb.35: # %entry
 ; AIX32-NEXT:    #
-; AIX32-NEXT:    stwcx. 6, 0, 27
-; AIX32-NEXT:    bne 0, L..BB3_45
-; AIX32-NEXT:    b L..BB3_48
-; AIX32-NEXT:  L..BB3_47: # %entry
 ; AIX32-NEXT:    stwcx. 5, 0, 27
-; AIX32-NEXT:  L..BB3_48: # %entry
+; AIX32-NEXT:    bne 0, L..BB3_34
+; AIX32-NEXT:  L..BB3_36: # %entry
 ; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    cmpw 5, 4
+; AIX32-NEXT:    isel 3, 3, 26, 6
 ; AIX32-NEXT:    li 7, 5
 ; AIX32-NEXT:    li 8, 5
 ; AIX32-NEXT:    lbz 4, 0(28)
-; AIX32-NEXT:    iseleq 3, 3, 26
 ; AIX32-NEXT:    lbz 9, 0(29)
 ; AIX32-NEXT:    stw 3, 0(27)
 ; AIX32-NEXT:    mr 3, 31
@@ -5583,8 +5497,8 @@ define dso_local void @test_atomic() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB5_1: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx 5, 0, 6
-; CHECK-NEXT:    cmplw 3, 5
-; CHECK-NEXT:    bge 0, .LBB5_3
+; CHECK-NEXT:    cmplwi 5, 5
+; CHECK-NEXT:    blt 0, .LBB5_3
 ; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    stwcx. 3, 0, 6
@@ -5597,8 +5511,8 @@ define dso_local void @test_atomic() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB5_4: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx 8, 0, 7
-; CHECK-NEXT:    cmpw 3, 8
-; CHECK-NEXT:    bge 0, .LBB5_6
+; CHECK-NEXT:    cmpwi 8, 5
+; CHECK-NEXT:    blt 0, .LBB5_6
 ; CHECK-NEXT:  # %bb.5: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    stwcx. 3, 0, 7
@@ -5609,8 +5523,8 @@ define dso_local void @test_atomic() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB5_7: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx 8, 0, 6
-; CHECK-NEXT:    cmplw 3, 8
-; CHECK-NEXT:    ble 0, .LBB5_9
+; CHECK-NEXT:    cmplwi 8, 5
+; CHECK-NEXT:    bgt 0, .LBB5_9
 ; CHECK-NEXT:  # %bb.8: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    stwcx. 3, 0, 6
@@ -5622,8 +5536,8 @@ define dso_local void @test_atomic() local_unnamed_addr #0 {
 ; CHECK-NEXT:  .LBB5_10: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx 4, 0, 7
-; CHECK-NEXT:    cmpw 3, 4
-; CHECK-NEXT:    ble 0, .LBB5_12
+; CHECK-NEXT:    cmpwi 4, 5
+; CHECK-NEXT:    bgt 0, .LBB5_12
 ; CHECK-NEXT:  # %bb.11: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    stwcx. 3, 0, 7
@@ -5639,8 +5553,8 @@ define dso_local void @test_atomic() local_unnamed_addr #0 {
 ; AIX32-NEXT:  L..BB5_1: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    lwarx 5, 0, 4
-; AIX32-NEXT:    cmplw 3, 5
-; AIX32-NEXT:    bge 0, L..BB5_3
+; AIX32-NEXT:    cmplwi 5, 5
+; AIX32-NEXT:    blt 0, L..BB5_3
 ; AIX32-NEXT:  # %bb.2: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    stwcx. 3, 0, 4
@@ -5652,8 +5566,8 @@ define dso_local void @test_atomic() local_unnamed_addr #0 {
 ; AIX32-NEXT:  L..BB5_4: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    lwarx 6, 0, 5
-; AIX32-NEXT:    cmpw 3, 6
-; AIX32-NEXT:    bge 0, L..BB5_6
+; AIX32-NEXT:    cmpwi 6, 5
+; AIX32-NEXT:    blt 0, L..BB5_6
 ; AIX32-NEXT:  # %bb.5: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    stwcx. 3, 0, 5
@@ -5664,8 +5578,8 @@ define dso_local void @test_atomic() local_unnamed_addr #0 {
 ; AIX32-NEXT:  L..BB5_7: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    lwarx 6, 0, 4
-; AIX32-NEXT:    cmplw 3, 6
-; AIX32-NEXT:    ble 0, L..BB5_9
+; AIX32-NEXT:    cmplwi 6, 5
+; AIX32-NEXT:    bgt 0, L..BB5_9
 ; AIX32-NEXT:  # %bb.8: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    stwcx. 3, 0, 4
@@ -5677,8 +5591,8 @@ define dso_local void @test_atomic() local_unnamed_addr #0 {
 ; AIX32-NEXT:  L..BB5_10: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    lwarx 4, 0, 5
-; AIX32-NEXT:    cmpw 3, 4
-; AIX32-NEXT:    ble 0, L..BB5_12
+; AIX32-NEXT:    cmpwi 4, 5
+; AIX32-NEXT:    bgt 0, L..BB5_12
 ; AIX32-NEXT:  # %bb.11: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    stwcx. 3, 0, 5
@@ -5701,24 +5615,20 @@ entry:
 define dso_local i64 @cmpswplp(ptr noundef %ptr, ptr nocapture noundef readnone %oldval, i64 noundef %newval) local_unnamed_addr #0 {
 ; CHECK-LABEL: cmpswplp:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi 6, 5, 1
+; CHECK-NEXT:    addi 4, 5, 1
 ; CHECK-NEXT:  .LBB6_1: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    ldarx 4, 0, 3
-; CHECK-NEXT:    cmpd 5, 4
-; CHECK-NEXT:    bne 0, .LBB6_3
+; CHECK-NEXT:    ldarx 6, 0, 3
+; CHECK-NEXT:    cmpd 1, 6, 5
+; CHECK-NEXT:    bne 1, .LBB6_3
 ; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    stdcx. 6, 0, 3
-; CHECK-NEXT:    bne 0, .LBB6_1
-; CHECK-NEXT:    b .LBB6_4
-; CHECK-NEXT:  .LBB6_3: # %entry
 ; CHECK-NEXT:    stdcx. 4, 0, 3
-; CHECK-NEXT:  .LBB6_4: # %entry
-; CHECK-NEXT:    cmpd 4, 5
+; CHECK-NEXT:    bne 0, .LBB6_1
+; CHECK-NEXT:  .LBB6_3: # %entry
 ; CHECK-NEXT:    li 3, 66
 ; CHECK-NEXT:    li 4, 55
-; CHECK-NEXT:    iseleq 3, 4, 3
+; CHECK-NEXT:    isel 3, 4, 3, 6
 ; CHECK-NEXT:    blr
 ;
 ; AIX32-LABEL: cmpswplp:
@@ -5761,18 +5671,17 @@ define dso_local i64 @atommax8(ptr nocapture noundef %ptr, i64 noundef %val) loc
 ; CHECK-NEXT:  .LBB7_1: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    ldarx 5, 0, 3
-; CHECK-NEXT:    cmpd 4, 5
-; CHECK-NEXT:    ble 0, .LBB7_3
+; CHECK-NEXT:    cmpd 1, 5, 4
+; CHECK-NEXT:    bgt 1, .LBB7_3
 ; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    stdcx. 4, 0, 3
 ; CHECK-NEXT:    bne 0, .LBB7_1
 ; CHECK-NEXT:  .LBB7_3: # %entry
-; CHECK-NEXT:    cmpd 5, 4
 ; CHECK-NEXT:    li 3, 55
 ; CHECK-NEXT:    li 4, 66
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    iselgt 3, 4, 3
+; CHECK-NEXT:    isel 3, 4, 3, 5
 ; CHECK-NEXT:    blr
 ;
 ; AIX32-LABEL: atommax8:
@@ -5846,18 +5755,17 @@ define dso_local signext i32 @atommax4(ptr nocapture noundef %ptr, i32 noundef s
 ; CHECK-NEXT:  .LBB8_1: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lwarx 5, 0, 3
-; CHECK-NEXT:    cmpw 4, 5
-; CHECK-NEXT:    ble 0, .LBB8_3
+; CHECK-NEXT:    cmpw 1, 5, 4
+; CHECK-NEXT:    bgt 1, .LBB8_3
 ; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    stwcx. 4, 0, 3
 ; CHECK-NEXT:    bne 0, .LBB8_1
 ; CHECK-NEXT:  .LBB8_3: # %entry
-; CHECK-NEXT:    cmpw 5, 4
 ; CHECK-NEXT:    li 3, 55
 ; CHECK-NEXT:    li 4, 66
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    iselgt 3, 4, 3
+; CHECK-NEXT:    isel 3, 4, 3, 5
 ; CHECK-NEXT:    blr
 ;
 ; AIX32-LABEL: atommax4:
@@ -5866,18 +5774,17 @@ define dso_local signext i32 @atommax4(ptr nocapture noundef %ptr, i32 noundef s
 ; AIX32-NEXT:  L..BB8_1: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    lwarx 5, 0, 3
-; AIX32-NEXT:    cmpw 4, 5
-; AIX32-NEXT:    ble 0, L..BB8_3
+; AIX32-NEXT:    cmpw 1, 5, 4
+; AIX32-NEXT:    bgt 1, L..BB8_3
 ; AIX32-NEXT:  # %bb.2: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    stwcx. 4, 0, 3
 ; AIX32-NEXT:    bne 0, L..BB8_1
 ; AIX32-NEXT:  L..BB8_3: # %entry
-; AIX32-NEXT:    cmpw 5, 4
 ; AIX32-NEXT:    li 3, 55
 ; AIX32-NEXT:    li 4, 66
 ; AIX32-NEXT:    lwsync
-; AIX32-NEXT:    iselgt 3, 4, 3
+; AIX32-NEXT:    isel 3, 4, 3, 5
 ; AIX32-NEXT:    blr
 entry:
   %0 = atomicrmw max ptr %ptr, i32 %val seq_cst, align 4
@@ -5894,18 +5801,17 @@ define dso_local signext i16 @atommax2(ptr nocapture noundef %ptr, i16 noundef s
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lharx 5, 0, 3
 ; CHECK-NEXT:    extsh 5, 5
-; CHECK-NEXT:    cmpw 4, 5
-; CHECK-NEXT:    ble 0, .LBB9_3
+; CHECK-NEXT:    cmpw 1, 5, 4
+; CHECK-NEXT:    bgt 1, .LBB9_3
 ; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    sthcx. 4, 0, 3
 ; CHECK-NEXT:    bne 0, .LBB9_1
 ; CHECK-NEXT:  .LBB9_3: # %entry
-; CHECK-NEXT:    cmpw 5, 4
 ; CHECK-NEXT:    li 3, 55
 ; CHECK-NEXT:    li 4, 66
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    iselgt 3, 4, 3
+; CHECK-NEXT:    isel 3, 4, 3, 5
 ; CHECK-NEXT:    blr
 ;
 ; AIX32-LABEL: atommax2:
@@ -5925,8 +5831,8 @@ define dso_local signext i16 @atommax2(ptr nocapture noundef %ptr, i16 noundef s
 ; AIX32-NEXT:    and 9, 8, 6
 ; AIX32-NEXT:    srw 9, 9, 5
 ; AIX32-NEXT:    extsh 9, 9
-; AIX32-NEXT:    cmpw 4, 9
-; AIX32-NEXT:    ble 0, L..BB9_3
+; AIX32-NEXT:    cmpw 9, 4
+; AIX32-NEXT:    bgt 0, L..BB9_3
 ; AIX32-NEXT:  # %bb.2: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    andc 9, 8, 6
@@ -5957,18 +5863,17 @@ define dso_local zeroext i8 @atommax1(ptr nocapture noundef %ptr, i8 noundef zer
 ; CHECK-NEXT:  .LBB10_1: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    lbarx 5, 0, 3
-; CHECK-NEXT:    cmplw 4, 5
-; CHECK-NEXT:    ble 0, .LBB10_3
+; CHECK-NEXT:    cmplw 1, 5, 4
+; CHECK-NEXT:    bgt 1, .LBB10_3
 ; CHECK-NEXT:  # %bb.2: # %entry
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    stbcx. 4, 0, 3
 ; CHECK-NEXT:    bne 0, .LBB10_1
 ; CHECK-NEXT:  .LBB10_3: # %entry
-; CHECK-NEXT:    cmplw 5, 4
 ; CHECK-NEXT:    li 3, 55
 ; CHECK-NEXT:    li 4, 66
 ; CHECK-NEXT:    lwsync
-; CHECK-NEXT:    iselgt 3, 4, 3
+; CHECK-NEXT:    isel 3, 4, 3, 5
 ; CHECK-NEXT:    blr
 ;
 ; AIX32-LABEL: atommax1:
@@ -5985,8 +5890,8 @@ define dso_local zeroext i8 @atommax1(ptr nocapture noundef %ptr, i8 noundef zer
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    lwarx 9, 0, 3
 ; AIX32-NEXT:    and 10, 9, 7
-; AIX32-NEXT:    cmplw 6, 10
-; AIX32-NEXT:    ble 0, L..BB10_3
+; AIX32-NEXT:    cmplw 10, 6
+; AIX32-NEXT:    bgt 0, L..BB10_3
 ; AIX32-NEXT:  # %bb.2: # %entry
 ; AIX32-NEXT:    #
 ; AIX32-NEXT:    andc 10, 9, 7

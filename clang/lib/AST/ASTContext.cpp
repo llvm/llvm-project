@@ -698,7 +698,11 @@ ASTContext::CanonicalTemplateTemplateParm::Profile(llvm::FoldingSetNodeID &ID,
     if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(*P)) {
       ID.AddInteger(1);
       ID.AddBoolean(NTTP->isParameterPack());
+      const Expr *TC = NTTP->getPlaceholderTypeConstraint();
+      ID.AddBoolean(TC != nullptr);
       ID.AddPointer(NTTP->getType().getCanonicalType().getAsOpaquePtr());
+      if (TC)
+        TC->Profile(ID, C, /*Canonical=*/true);
       if (NTTP->isExpandedParameterPack()) {
         ID.AddBoolean(true);
         ID.AddInteger(NTTP->getNumExpansionTypes());
@@ -5754,9 +5758,6 @@ QualType ASTContext::getAutoTypeInternal(
       !TypeConstraintConcept && !IsDependent)
     return getAutoDeductType();
 
-  if (TypeConstraintConcept)
-    TypeConstraintConcept = TypeConstraintConcept->getCanonicalDecl();
-
   // Look in the folding set for an existing type.
   void *InsertPos = nullptr;
   llvm::FoldingSetNodeID ID;
@@ -5767,20 +5768,15 @@ QualType ASTContext::getAutoTypeInternal(
 
   QualType Canon;
   if (!IsCanon) {
-    if (DeducedType.isNull()) {
-      SmallVector<TemplateArgument, 4> CanonArgs;
-      bool AnyNonCanonArgs =
-          ::getCanonicalTemplateArguments(*this, TypeConstraintArgs, CanonArgs);
-      if (AnyNonCanonArgs) {
-        Canon = getAutoTypeInternal(QualType(), Keyword, IsDependent, IsPack,
-                                    TypeConstraintConcept, CanonArgs, true);
-        // Find the insert position again.
-        [[maybe_unused]] auto *Nothing =
-            AutoTypes.FindNodeOrInsertPos(ID, InsertPos);
-        assert(!Nothing && "canonical type broken");
-      }
-    } else {
+    if (!DeducedType.isNull()) {
       Canon = DeducedType.getCanonicalType();
+    } else if (TypeConstraintConcept) {
+      Canon = getAutoTypeInternal(QualType(), Keyword, IsDependent, IsPack,
+                                  nullptr, {}, true);
+      // Find the insert position again.
+      [[maybe_unused]] auto *Nothing =
+          AutoTypes.FindNodeOrInsertPos(ID, InsertPos);
+      assert(!Nothing && "canonical type broken");
     }
   }
 
@@ -6336,7 +6332,9 @@ bool ASTContext::isSameTemplateParameter(const NamedDecl *X,
   if (auto *TX = dyn_cast<NonTypeTemplateParmDecl>(X)) {
     auto *TY = cast<NonTypeTemplateParmDecl>(Y);
     return TX->isParameterPack() == TY->isParameterPack() &&
-           TX->getASTContext().hasSameType(TX->getType(), TY->getType());
+           TX->getASTContext().hasSameType(TX->getType(), TY->getType()) &&
+           isSameConstraintExpr(TX->getPlaceholderTypeConstraint(),
+                                TY->getPlaceholderTypeConstraint());
   }
 
   auto *TX = cast<TemplateTemplateParmDecl>(X);
@@ -12966,16 +12964,17 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
       return QualType();
     return Ctx.getTypedefType(CD, Ctx.getQualifiedType(Underlying));
   }
-  case Type::TypeOf:
+  case Type::TypeOf: {
     // The common sugar between two typeof expressions, where one is
     // potentially a typeof_unqual and the other is not, we unify to the
     // qualified type as that retains the most information along with the type.
     // We only return a typeof_unqual type when both types are unqual types.
-    return Ctx.getTypeOfType(Ctx.getQualifiedType(Underlying),
-                             cast<TypeOfType>(X)->isUnqual() &&
-                                     cast<TypeOfType>(Y)->isUnqual()
-                                 ? TypeOfKind::Unqualified
-                                 : TypeOfKind::Qualified);
+    TypeOfKind Kind = TypeOfKind::Qualified;
+    if (cast<TypeOfType>(X)->getKind() == cast<TypeOfType>(Y)->getKind() &&
+        cast<TypeOfType>(X)->getKind() == TypeOfKind::Unqualified)
+      Kind = TypeOfKind::Unqualified;
+    return Ctx.getTypeOfType(Ctx.getQualifiedType(Underlying), Kind);
+  }
   case Type::TypeOfExpr:
     return QualType();
 

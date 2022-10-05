@@ -271,6 +271,10 @@ def SysStatAPI : PublicAPI<"sys/stat.h"> {
                "struct timespec", "blksize_t", "blkcnt_t", "struct stat"];
 }
 
+def SysWaitAPI : PublicAPI<"sys/wait.h"> {
+  let Types = ["pid_t"];
+}
+
 def SysSendfileAPI : PublicAPI<"sys/sendfile.h"> {
   let Types = ["off_t", "size_t", "ssize_t"];
 }

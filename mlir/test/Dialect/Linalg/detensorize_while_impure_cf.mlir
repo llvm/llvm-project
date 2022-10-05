@@ -25,7 +25,7 @@ func.func @main(%farg0: tensor<10xi32>, %farg1: tensor<i32>) -> tensor<i32> attr
   cf.br ^bb1(%farg0 : tensor<10xi32>)
 
 ^bb1(%0: tensor<10xi32>):  // 2 preds: ^bb0, ^bb2
-  %1 = linalg.init_tensor [] : tensor<i32>
+  %1 = tensor.empty() : tensor<i32>
   %2 = linalg.generic #sum_reduction_attrs
     ins(%0: tensor<10xi32>)
     outs(%1: tensor<i32>) {
@@ -34,7 +34,7 @@ func.func @main(%farg0: tensor<10xi32>, %farg1: tensor<i32>) -> tensor<i32> attr
         linalg.yield %b : i32
   } -> tensor<i32>
 
-  %3 = linalg.init_tensor [] : tensor<i1>
+  %3 = tensor.empty() : tensor<i1>
   %4 = linalg.generic #attrs
     ins(%2, %farg1 : tensor<i32>, tensor<i32>)
     outs(%3 : tensor<i1>) {
@@ -46,7 +46,7 @@ func.func @main(%farg0: tensor<10xi32>, %farg1: tensor<i32>) -> tensor<i32> attr
   cf.cond_br %5, ^bb2(%2 : tensor<i32>), ^bb3(%2 : tensor<i32>)
 
 ^bb2(%6: tensor<i32>):  // pred: ^bb1
-  %7 = linalg.init_tensor [10] : tensor<10xi32>
+  %7 = tensor.empty() : tensor<10xi32>
   %9 = linalg.generic #broadcast_attrs
        ins(%6: tensor<i32>)
       outs(%7: tensor<10xi32>) {
@@ -66,7 +66,7 @@ func.func @main(%farg0: tensor<10xi32>, %farg1: tensor<i32>) -> tensor<i32> attr
 // DET-ALL-SAME:    (%{{.*}}: tensor<10xi32>, %{{.*}}: tensor<i32>)
 // DET-ALL:         cf.br ^[[bb1:.*]](%{{.*}} : tensor<10xi32>)
 // DET-ALL:       ^[[bb1]](%{{.*}}: tensor<10xi32>)
-// DET-ALL:         linalg.init_tensor [] : tensor<i32>
+// DET-ALL:         tensor.empty() : tensor<i32>
 // DET-ALL:         linalg.generic {{{.*}}} ins(%{{.*}} : tensor<10xi32>) outs(%{{.*}} : tensor<i32>) {
 // DET-ALL:         ^bb0(%{{.*}}: i32, %{{.*}}: i32):  
 // DET-ALL:           %{{.*}} = arith.addi %{{.*}}, %{{.*}}
@@ -77,7 +77,7 @@ func.func @main(%farg0: tensor<10xi32>, %farg1: tensor<i32>) -> tensor<i32> attr
 // DET-ALL:         cf.cond_br %{{.*}}, ^[[bb2:.*]](%{{.*}} : i32), ^[[bb3:.*]](%{{.*}} : i32)
 // DET-ALL:       ^[[bb2]](%{{.*}}: i32)
 // DET-ALL:         tensor.from_elements %{{.*}} : tensor<i32>
-// DET-ALL:         linalg.init_tensor [10] : tensor<10xi32>
+// DET-ALL:         tensor.empty() : tensor<10xi32>
 // DET-ALL:         linalg.generic {{{.*}}} ins(%{{.*}} : tensor<i32>) outs(%{{.*}} : tensor<10xi32>) {
 // DET-ALL:         ^bb0(%{{.*}}: i32, %{{.*}}: i32):
 // DET-ALL:           linalg.yield %{{.*}} : i32

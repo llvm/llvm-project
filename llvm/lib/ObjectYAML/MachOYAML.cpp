@@ -29,7 +29,8 @@ bool MachOYAML::LinkEditData::isEmpty() const {
   return 0 == RebaseOpcodes.size() + BindOpcodes.size() +
                   WeakBindOpcodes.size() + LazyBindOpcodes.size() +
                   ExportTrie.Children.size() + NameList.size() +
-                  StringTable.size() + FunctionStarts.size();
+                  StringTable.size() + FunctionStarts.size() +
+                  DataInCode.size();
 }
 
 namespace yaml {
@@ -166,6 +167,7 @@ void MappingTraits<MachOYAML::LinkEditData>::mapping(
   IO.mapOptional("StringTable", LinkEditData.StringTable);
   IO.mapOptional("IndirectSymbols", LinkEditData.IndirectSymbols);
   IO.mapOptional("FunctionStarts", LinkEditData.FunctionStarts);
+  IO.mapOptional("DataInCode", LinkEditData.DataInCode);
 }
 
 void MappingTraits<MachOYAML::RebaseOpcode>::mapping(
@@ -203,6 +205,13 @@ void MappingTraits<MachOYAML::NListEntry>::mapping(
   IO.mapRequired("n_sect", NListEntry.n_sect);
   IO.mapRequired("n_desc", NListEntry.n_desc);
   IO.mapRequired("n_value", NListEntry.n_value);
+}
+
+void MappingTraits<MachOYAML::DataInCodeEntry>::mapping(
+    IO &IO, MachOYAML::DataInCodeEntry &DataInCodeEntry) {
+  IO.mapRequired("Offset", DataInCodeEntry.Offset);
+  IO.mapRequired("Length", DataInCodeEntry.Length);
+  IO.mapRequired("Kind", DataInCodeEntry.Kind);
 }
 
 template <typename StructType>

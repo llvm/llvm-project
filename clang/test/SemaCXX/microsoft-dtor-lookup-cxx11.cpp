@@ -7,7 +7,7 @@ struct S {
 } s; // expected-error {{attempt to use a deleted function}}
 
 struct T { // expected-note 2{{virtual destructor requires an unambiguous, accessible 'operator delete'}}
-  virtual ~T() = default; // expected-note {{explicitly defaulted function was implicitly deleted here}} expected-warning {{implicitly deleted}}
+  virtual ~T() = default; // expected-note {{explicitly defaulted function was implicitly deleted here}} expected-warning {{implicitly deleted}} expected-note{{replace 'default'}}
   void operator delete(void*, int);
   void operator delete(void*, double);
 } t; // expected-error {{attempt to use a deleted function}}

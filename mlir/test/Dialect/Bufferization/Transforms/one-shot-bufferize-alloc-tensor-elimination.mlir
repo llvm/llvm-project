@@ -47,7 +47,8 @@ func.func @buffer_forwarding_no_conflict(
   %f0 = arith.constant 0.0: f32
 
   // alloc_tensor itself does not alloc but forwards to the insert_slice.
-  // InitTensorOp replaces the alloc_tensor with an inplace extract_slice.
+  // AllocTensorOpElimination replaces the alloc_tensor with an inplace
+  // extract_slice.
   // CHECK: %[[T_SUBVIEW:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
   %a = bufferization.alloc_tensor(%sz) : tensor<?xf32>
 

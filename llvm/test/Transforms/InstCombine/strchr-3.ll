@@ -81,7 +81,7 @@ define ptr @fold_strchr_s000_C(i32 %C) {
 
 define ptr @xform_strchr_s21111_C(i32 %C) {
 ; CHECK-LABEL: @xform_strchr_s21111_C(
-; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr noundef nonnull @s21111, i32 [[C:%.*]], i64 6)
+; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) @s21111, i32 [[C:%.*]], i64 6)
 ; CHECK-NEXT:    ret ptr [[MEMCHR]]
 ;
   %ret = call ptr @strchr(ptr @s21111, i32 %C)

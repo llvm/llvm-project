@@ -68,7 +68,8 @@ public:
 private:
   Section &getTLSInfoSection(LinkGraph &G) {
     if (!TLSInfoTable)
-      TLSInfoTable = &G.createSection(ELFTLSInfoSectionName, MemProt::Read);
+      TLSInfoTable =
+          &G.createSection(ELFTLSInfoSectionName, orc::MemProt::Read);
     return *TLSInfoTable;
   }
 

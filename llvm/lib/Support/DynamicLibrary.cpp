@@ -42,13 +42,16 @@ public:
     return Handle == Process || Find(Handle) != Handles.end();
   }
 
-  bool AddLibrary(void *Handle, bool IsProcess = false, bool CanClose = true) {
+  bool AddLibrary(void *Handle, bool IsProcess = false, bool CanClose = true,
+                  bool AllowDuplicates = false) {
 #ifdef _WIN32
     assert((Handle == this ? IsProcess : !IsProcess) && "Bad Handle.");
 #endif
+    assert((!AllowDuplicates || !CanClose) &&
+           "CanClose must be false if AllowDuplicates is true.");
 
     if (LLVM_LIKELY(!IsProcess)) {
-      if (Find(Handle) != Handles.end()) {
+      if (!AllowDuplicates && Find(Handle) != Handles.end()) {
         if (CanClose)
           DLClose(Handle);
         return false;
@@ -66,6 +69,14 @@ public:
       Process = Handle;
     }
     return true;
+  }
+
+  void CloseLibrary(void *Handle) {
+    DLClose(Handle);
+    HandleList::iterator it = Find(Handle);
+    if (it != Handles.end()) {
+      Handles.erase(it);
+    }
   }
 
   void *LibLookup(const char *Symbol, DynamicLibrary::SearchOrdering Order) {
@@ -113,6 +124,23 @@ static llvm::ManagedStatic<llvm::StringMap<void *>> ExplicitSymbols;
 static llvm::ManagedStatic<DynamicLibrary::HandleSet> OpenedHandles;
 // Lock for ExplicitSymbols and OpenedHandles.
 static llvm::ManagedStatic<llvm::sys::SmartMutex<true>> SymbolsMutex;
+
+struct Globals {
+  // Collection of symbol name/value pairs to be searched prior to any
+  // libraries.
+  llvm::StringMap<void *> ExplicitSymbols;
+  // Collections of known library handles.
+  DynamicLibrary::HandleSet OpenedHandles;
+  DynamicLibrary::HandleSet OpenedTemporaryHandles;
+  // Lock for ExplicitSymbols, OpenedHandles, and OpenedTemporaryHandles.
+  llvm::sys::SmartMutex<true> SymbolsMutex;
+};
+
+Globals &getGlobals() {
+  static Globals G;
+  return G;
+}
+
 } // namespace
 
 #ifdef _WIN32
@@ -163,6 +191,29 @@ DynamicLibrary DynamicLibrary::addPermanentLibrary(void *Handle,
     *Err = "Library already loaded";
 
   return DynamicLibrary(Handle);
+}
+
+DynamicLibrary DynamicLibrary::getLibrary(const char *FileName,
+                                          std::string *Err) {
+  assert(FileName && "Use getPermanentLibrary() for opening process handle");
+  void *Handle = HandleSet::DLOpen(FileName, Err);
+  if (Handle != &Invalid) {
+    auto &G = getGlobals();
+    SmartScopedLock<true> Lock(G.SymbolsMutex);
+    G.OpenedTemporaryHandles.AddLibrary(Handle, /*IsProcess*/ false,
+                                        /*CanClose*/ false,
+                                        /*AllowDuplicates*/ true);
+  }
+  return DynamicLibrary(Handle);
+}
+
+void DynamicLibrary::closeLibrary(DynamicLibrary &Lib) {
+  auto &G = getGlobals();
+  SmartScopedLock<true> Lock(G.SymbolsMutex);
+  if (Lib.isValid()) {
+    G.OpenedTemporaryHandles.CloseLibrary(Lib.Data);
+    Lib.Data = &Invalid;
+  }
 }
 
 void *DynamicLibrary::getAddressOfSymbol(const char *SymbolName) {

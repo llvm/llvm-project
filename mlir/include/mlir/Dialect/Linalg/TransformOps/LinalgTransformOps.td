@@ -506,7 +506,7 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
     ```
       %cst = arith.constant 0.000000e+00 : f32
       %0 = tensor.expand_shape %in [[0, 1]] : tensor<32xf32> into tensor<4x8xf32>
-      %1 = linalg.init_tensor [4] : tensor<4xf32>
+      %1 = tensor.empty() : tensor<4xf32>
       %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<4xf32>) -> tensor<4xf32>
       %3 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                                             affine_map<(d0, d1) -> (d0)>],
@@ -557,11 +557,11 @@ def SplitReductionOp : Op<Transform_Dialect, "structured.split_reduction",
      #map3 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
      #map4 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
      #map5 = affine_map<(d0, d1, d2) -> (d0, d1)>
-     %0 = linalg.init_tensor [16, 32, 64] : tensor<16x32x64xf32>
+     %0 = tensor.empty() : tensor<16x32x64xf32>
      %cst = arith.constant 0.000000e+00 : f32
      %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<16x32x64xf32>) ->
         tensor<16x32x64xf32>
-     %2 = linalg.init_tensor [64, 4] : tensor<64x4xi1>
+     %2 = tensor.empty() : tensor<64x4xi1>
 
      %3 = linalg.generic {indexing_maps = [#map0, #map1, #map2, #map3],
        iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
@@ -748,161 +748,6 @@ def TileToForeachThreadOp :
 
     ::llvm::SmallVector<::mlir::OpFoldResult> getMixedNumThreads();
     ::llvm::SmallVector<::mlir::OpFoldResult> getMixedTileSizes();
-  }];
-}
-
-def MapNestedForeachThreadToGpuThreads : 
-  Op<Transform_Dialect, "structured.map_nested_foreach_thread_to_gpu_threads",
-    [FunctionalStyleTransformOpTrait, 
-     MemoryEffectsOpInterface,
-     TransformEachOpTrait,
-     TransformOpInterface]> {
-  let description = [{
-      Target the gpu_launch op and rewrite all scf.foreach_thread
-      to distributed gpu.thread_id attribute.
-
-      The operation searches `scf.foreach_thread` ops nested under `target` 
-      and maps each such op to GPU threads. Mapping is one-to-one and the 
-      induction variables of `scf.foreach_thread` are rewritten to 
-      gpu.thread_id according to the thread_dim_apping attribute. 
-      
-      Sibling `scf.foreach_thread` are supported in which case, the union of 
-      the number of threads is computed and may result in predication.
-
-      Multiple scf.foreach_thread are supported per function in which case, the
-      max of all the threads is computed and taken for the global gpu.thread_id.
-      If necessary, scf.foreach_thread that do not use the whole thread range 
-      result in predicated computations.
-
-      Dynamic, `scf.foreach_thread` trip counts are currently not supported. 
-      Dynamic block dim sizes are currently not supported.
-
-      Only **bufferized** scf.foreach_thread are currently supported.
-      Only scf.foreach_thread distributed to **at most 3 dimensions** are 
-      currently supported.
-    
-      Barriers are inserted after each scf.foreach_thread op for now.
-
-      The operation alters the block size of the given gpu_launch using 
-      blockDim argument.
-
-      #### Return modes:
-      
-      This operation ignores non-gpu_launch ops and drops them in the return.
-
-      If any scf.foreach_thread with tensors is found, the transform definitely 
-      fails.    
-
-      If all the scf.foreach_thread operations contained within the LaunchOp 
-      referred to by the `target` PDLOperation lower to GPU properly, the 
-      transform succeeds. Otherwise the transform definitely fails.
-      
-      The returned handle points to the same LaunchOp operand, consuming it and
-      producing a new SSA value to satisfy chaining and linearity of the IR 
-      properties.
-
-      #### Example:
-
-      ```
-      gpu.launch blocks(%bx, %by, %bz) in (%x = %0, %y = %1, %z = %2)
-                 threads(%tx, %ty, %tz) in (%tx = %3, %ty = %4, %tz = %5) {
-        scf.foreach_thread (%i, %j) in (7, 9) {
-          ... // body 1
-        } {thread_dim_mapping = [1, 0, 2]}
-        scf.foreach_thread (%i) in (12) {
-          ... // body 2
-        }
-        gpu.terminator
-      }
-      ```
-      is translated to:
-
-      ```
-      %bdimX = arith.constant 12 : index
-      %bdimY = arith.constant 9 : index
-      gpu.launch blocks(%bx, %by, %bz) in (%x = %0, %y = %1, %z = %2)
-             threads(%tx, %ty, %tz) in (%tx = %bdimX, %ty = %bdimY, %tz = %5) {
-        if (threadIdx.x < 9 && threadIdx.y < 7) {
-          ... // body 1
-        }
-        gpu.barrier
-        if (threadIdx.y < 1) {
-          ... // body 2
-        }
-        gpu.barrier
-        gpu.terminator
-      }      
-      ```
-    }];
-
-  let arguments = (ins PDL_Operation:$target,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$blockDim,
-                   DefaultValuedAttr<BoolAttr, "true">:$syncAfterDistribute);
-  let results = (outs PDL_Operation:$result);
-
-  let assemblyFormat = "$target attr-dict";
-  let extraClassDeclaration = [{
-    ::mlir::DiagnosedSilenceableFailure applyToOne(
-        ::mlir::Operation *target, 
-        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
-        ::mlir::transform::TransformState &state);
-  }];
-}
-
-def MapNestedForeachThreadToGpuBlocks : Op<Transform_Dialect, 
-    "structured.map_nested_foreach_thread_to_gpu_blocks",
-    [FunctionalStyleTransformOpTrait,
-     MemoryEffectsOpInterface,
-     TransformOpInterface,
-     TransformEachOpTrait]> {
-  let description = [{
-    Target the gpu_launch op and rewrite the top level `scf.foreach_thread`
-    to distributed gpu.block_id attribute. If `generate_gpu_launch` attribute 
-    is set, then first generates `gpu_launch` and moves the top level 
-    `scf.foreach_thread` inside.
-
-    The operation searches top level `scf.foreach_thread` ops under 
-    `gpu_launch` and maps each such op to GPU blocks. Mapping is 
-    one-to-one and the induction variables of `scf.foreach_thread` are 
-    rewritten to gpu.block_id according to the `thread_dim_apping` attribute.
-
-    Dynamic, `scf.foreach_thread` trip counts are currently not supported. 
-    Dynamic block dim sizes are currently not supported.
-
-    Only **bufferized** scf.foreach_thread are currently supported.
-    Only scf.foreach_thread distributed to **at most 3 dimensions** are 
-    currently supported.
-
-    The operation alters the block size of the given gpu_launch using 
-    gridDim argument.
-
-    #### Return modes:
-    
-    This operation ignores non-gpu_launch ops and drops them in the return.
-
-    If any scf.foreach_thread with tensors is found, the transform definitely 
-    fails.    
-
-    If all the scf.foreach_thread operations contained within the LaunchOp 
-    referred to by the `target` PDLOperation lower to GPU properly, the 
-    transform succeeds. Otherwise the transform definitely fails.
-
-    The returned handle points to the same LaunchOp operand, consuming it and
-    producing a new SSA value to satisfy chaining and linearity of the IR 
-    properties.
-  }];
-
-  let arguments = (ins PDL_Operation:$target,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$gridDim,
-                   UnitAttr:$generate_gpu_launch);
-  let results = (outs PDL_Operation:$result);
-
-  let assemblyFormat = "$target attr-dict";
-  let extraClassDeclaration = [{
-    ::mlir::DiagnosedSilenceableFailure applyToOne(
-        ::mlir::Operation *target, 
-        ::llvm::SmallVectorImpl<::mlir::Operation *> &results, 
-        ::mlir::transform::TransformState &state);
   }];
 }
 

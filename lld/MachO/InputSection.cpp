@@ -181,6 +181,9 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
     const Reloc &r = relocs[i];
     uint8_t *loc = buf + r.offset;
     uint64_t referentVA = 0;
+
+    const bool needsFixup = config->emitChainedFixups &&
+                            target->hasAttr(r.type, RelocAttrBits::UNSIGNED);
     if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
       const Symbol *fromSym = r.referent.get<Symbol *>();
       const Reloc &minuend = relocs[++i];
@@ -205,17 +208,24 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       }
       referentVA = resolveSymbolVA(referentSym, r.type) + r.addend;
 
-      if (isThreadLocalVariables(getFlags())) {
+      if (isThreadLocalVariables(getFlags()) && isa<Defined>(referentSym)) {
         // References from thread-local variable sections are treated as offsets
         // relative to the start of the thread-local data memory area, which
         // is initialized via copying all the TLV data sections (which are all
         // contiguous).
-        if (isa<Defined>(referentSym))
-          referentVA -= firstTLVDataSection->addr;
+        referentVA -= firstTLVDataSection->addr;
+      } else if (needsFixup) {
+        writeChainedFixup(loc, referentSym, r.addend);
+        continue;
       }
     } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
       assert(!::shouldOmitFromOutput(referentIsec));
       referentVA = referentIsec->getVA(r.addend);
+
+      if (needsFixup) {
+        writeChainedRebase(loc, referentVA);
+        continue;
+      }
     }
     target->relocateOne(loc, r, referentVA, getVA() + r.offset);
   }

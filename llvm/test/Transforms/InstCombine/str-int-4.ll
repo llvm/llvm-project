@@ -181,7 +181,7 @@ define void @call_strtol(ptr %ps) {
 ; CHECK-NEXT:    [[NWS:%.*]] = call i32 @strtol(ptr nonnull @ws, ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS11:%.*]] = getelementptr i32, ptr [[PS]], i64 11
 ; CHECK-NEXT:    store i32 [[NWS]], ptr [[PS11]], align 4
-; CHECK-NEXT:    [[NWSP6:%.*]] = call i32 @strtol(ptr getelementptr inbounds ([7 x i8], ptr @ws, i64 0, i64 6), ptr nonnull @endptr, i32 10)
+; CHECK-NEXT:    [[NWSP6:%.*]] = call i32 @strtol(ptr nonnull getelementptr inbounds ([7 x i8], ptr @ws, i64 0, i64 6), ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS12:%.*]] = getelementptr i32, ptr [[PS]], i64 12
 ; CHECK-NEXT:    store i32 [[NWSP6]], ptr [[PS12]], align 4
 ; CHECK-NEXT:    [[I0B1:%.*]] = call i32 @strtol(ptr nonnull @i0, ptr nonnull @endptr, i32 1)
@@ -335,7 +335,7 @@ define void @call_strtoll(ptr %ps) {
 ; CHECK-NEXT:    [[NWS:%.*]] = call i64 @strtoll(ptr nonnull @ws, ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i64, ptr [[PS]], i64 2
 ; CHECK-NEXT:    store i64 [[NWS]], ptr [[PS2]], align 4
-; CHECK-NEXT:    [[NWSP6:%.*]] = call i64 @strtoll(ptr getelementptr inbounds ([7 x i8], ptr @ws, i64 0, i64 6), ptr nonnull @endptr, i32 10)
+; CHECK-NEXT:    [[NWSP6:%.*]] = call i64 @strtoll(ptr nonnull getelementptr inbounds ([7 x i8], ptr @ws, i64 0, i64 6), ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i64, ptr [[PS]], i64 3
 ; CHECK-NEXT:    store i64 [[NWSP6]], ptr [[PS3]], align 4
 ; CHECK-NEXT:    ret void
@@ -375,10 +375,10 @@ define void @call_strtol_trailing_space(ptr %ps) {
 ; CHECK-NEXT:    [[N1:%.*]] = call i32 @strtol(ptr nonnull @i_1_2_3_, ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS1:%.*]] = getelementptr i32, ptr [[PS:%.*]], i64 1
 ; CHECK-NEXT:    store i32 [[N1]], ptr [[PS1]], align 4
-; CHECK-NEXT:    [[N2:%.*]] = call i32 @strtol(ptr getelementptr inbounds ([9 x i8], ptr @i_1_2_3_, i64 0, i64 2), ptr nonnull @endptr, i32 10)
+; CHECK-NEXT:    [[N2:%.*]] = call i32 @strtol(ptr nonnull getelementptr inbounds ([9 x i8], ptr @i_1_2_3_, i64 0, i64 2), ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS2:%.*]] = getelementptr i32, ptr [[PS]], i64 2
 ; CHECK-NEXT:    store i32 [[N2]], ptr [[PS2]], align 4
-; CHECK-NEXT:    [[N3:%.*]] = call i32 @strtol(ptr getelementptr inbounds ([9 x i8], ptr @i_1_2_3_, i64 0, i64 4), ptr nonnull @endptr, i32 10)
+; CHECK-NEXT:    [[N3:%.*]] = call i32 @strtol(ptr nonnull getelementptr inbounds ([9 x i8], ptr @i_1_2_3_, i64 0, i64 4), ptr nonnull @endptr, i32 10)
 ; CHECK-NEXT:    [[PS3:%.*]] = getelementptr i32, ptr [[PS]], i64 3
 ; CHECK-NEXT:    store i32 [[N3]], ptr [[PS3]], align 4
 ; CHECK-NEXT:    ret void

@@ -33,7 +33,7 @@ void registerToCppTranslation() {
       llvm::cl::init(false));
 
   TranslateFromMLIRRegistration reg(
-      "mlir-to-cpp",
+      "mlir-to-cpp", "translate from mlir to cpp",
       [](ModuleOp module, raw_ostream &output) {
         return emitc::translateToCpp(
             module, output,

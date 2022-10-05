@@ -47,7 +47,7 @@ define void @test_simplify3(i8* %dst) {
 
 define i8* @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @stpcpy(i8* getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0), i8* getelementptr inbounds ([32 x i8], [32 x i8]* @b, i32 0, i32 0))
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @stpcpy(i8* nonnull getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0), i8* nonnull getelementptr inbounds ([32 x i8], [32 x i8]* @b, i32 0, i32 0))
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
   %dst = getelementptr [32 x i8], [32 x i8]* @a, i32 0, i32 0

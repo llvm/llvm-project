@@ -86,4 +86,9 @@ class UbsanBasicTestCase(TestBase):
         self.assertEqual(os.path.basename(data["filename"]), "main.c")
         self.assertEqual(data["line"], self.line_align)
 
-        self.runCmd("continue")
+        for count in range(0,8):
+            process.Continue()
+            stop_reason = thread.GetStopReason()
+            self.assertEqual(stop_reason, lldb.eStopReasonInstrumentation,
+                             "Round {0} wasn't instrumentation".format(count))
+

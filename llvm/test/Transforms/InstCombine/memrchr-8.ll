@@ -34,7 +34,7 @@ define i1 @call_memrchr_a_c_9_eq_a(i32 %c) {
 
 define i1 @call_memrchr_a_c_n_eq_a(i32 %c, i64 %n) {
 ; CHECK-LABEL: @call_memrchr_a_c_n_eq_a(
-; CHECK-NEXT:    [[Q:%.*]] = call i8* @memrchr(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 0, i64 0), i32 [[C:%.*]], i64 [[N:%.*]])
+; CHECK-NEXT:    [[Q:%.*]] = call i8* @memrchr(i8* nonnull getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 0, i64 0), i32 [[C:%.*]], i64 [[N:%.*]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[Q]], getelementptr inbounds ([5 x i8], [5 x i8]* @a5, i64 0, i64 0)
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

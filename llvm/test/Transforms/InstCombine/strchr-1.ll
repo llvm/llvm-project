@@ -46,7 +46,7 @@ define void @test_simplify3() {
 
 define void @test_simplify4(i32 %chr) {
 ; CHECK-LABEL: @test_simplify4(
-; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr noundef nonnull @hello, i32 [[CHR:%.*]], i32 14)
+; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) @hello, i32 [[CHR:%.*]], i32 14)
 ; CHECK-NEXT:    store ptr [[MEMCHR]], ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;

@@ -4608,8 +4608,11 @@ protected:
 public:
   Expr *getUnderlyingExpr() const { return TOExpr; }
 
-  /// Returns true if this is a typeof_unqual type.
-  bool isUnqual() const { return TypeOfBits.IsUnqual; }
+  /// Returns the kind of 'typeof' type this is.
+  TypeOfKind getKind() const {
+    return TypeOfBits.IsUnqual ? TypeOfKind::Unqualified
+                               : TypeOfKind::Qualified;
+  }
 
   /// Remove a single level of sugar.
   QualType desugar() const;
@@ -4635,7 +4638,8 @@ public:
       : TypeOfExprType(E, Kind), Context(Context) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) {
-    Profile(ID, Context, getUnderlyingExpr(), isUnqual());
+    Profile(ID, Context, getUnderlyingExpr(),
+            getKind() == TypeOfKind::Unqualified);
   }
 
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context,
@@ -4664,14 +4668,17 @@ public:
   /// Remove a single level of sugar.
   QualType desugar() const {
     QualType QT = getUnmodifiedType();
-    return isUnqual() ? QT.getAtomicUnqualifiedType() : QT;
+    return TypeOfBits.IsUnqual ? QT.getAtomicUnqualifiedType() : QT;
   }
 
   /// Returns whether this type directly provides sugar.
   bool isSugared() const { return true; }
 
-  /// Returns true if this is a typeof_unqual type.
-  bool isUnqual() const { return TypeOfBits.IsUnqual; }
+  /// Returns the kind of 'typeof' type this is.
+  TypeOfKind getKind() const {
+    return TypeOfBits.IsUnqual ? TypeOfKind::Unqualified
+                               : TypeOfKind::Qualified;
+  }
 
   static bool classof(const Type *T) { return T->getTypeClass() == TypeOf; }
 };

@@ -210,6 +210,84 @@ inline int testVarargsLambdaNumbering() {
 }
 int k = testVarargsLambdaNumbering();
 
+
+template<typename = int>
+void ft1(int = [](int p = [] { return 42; } ()) {
+                 return p;
+               } ());
+void test_ft1() {
+  // CHECK: call noundef i32 @"_ZZZ3ft1IiEviENK3$_4clEiEd_NKUlvE_clEv"
+  // CHECK: call noundef i32 @"_ZZ3ft1IiEviENK3$_4clEi"
+  ft1();
+}
+// CHECK-LABEL: define internal noundef i32 @"_ZZ3ft1IiEviENK3$_4clEi"
+// CHECK-LABEL: define internal noundef i32 @"_ZZZ3ft1IiEviENK3$_4clEiEd_NKUlvE_clEv"
+
+struct c1 {
+  template<typename = int>
+  void mft1(int = [](int p = [] { return 42; } ()) {
+                    return p;
+                  } ());
+};
+void test_c1_mft1() {
+  // CHECK: call noundef i32 @_ZZZN2c14mft1IiEEviEd_NKUliE_clEiEd_NKUlvE_clEv
+  // CHECK: call noundef i32 @_ZZN2c14mft1IiEEviEd_NKUliE_clEi
+  c1{}.mft1();
+}
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZN2c14mft1IiEEviEd_NKUliE_clEi
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZZN2c14mft1IiEEviEd_NKUliE_clEiEd_NKUlvE_clEv
+
+template<typename = int>
+struct ct1 {
+  void mf1(int = [](int p = [] { return 42; } ()) {
+                   return p;
+                 } ());
+  friend void ff(ct1, int = [](int p = [] { return 0; }()) { return p; }()) {}
+};
+void test_ct1_mft1() {
+  // CHECK: call noundef i32 @_ZZZN3ct1IiE3mf1EiEd_NKUliE_clEiEd_NKUlvE_clEv
+  // CHECK: call noundef i32 @_ZZN3ct1IiE3mf1EiEd_NKUliE_clEi
+  ct1<>{}.mf1();
+  // CHECK: call noundef i32 @_ZZZ2ff3ct1IiEiEd_NKUliE_clEiEd_NKUlvE_clEv
+  // CHECK: call noundef i32 @_ZZ2ff3ct1IiEiEd_NKUliE_clEi
+  ff(ct1<>{});
+}
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZN3ct1IiE3mf1EiEd_NKUliE_clEi
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZZN3ct1IiE3mf1EiEd_NKUliE_clEiEd_NKUlvE_clEv
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZ2ff3ct1IiEiEd_NKUliE_clEi
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZZ2ff3ct1IiEiEd_NKUliE_clEiEd_NKUlvE_clEv
+
+template<typename = int>
+void ft2() {
+  [](int p = [] { return 42; } ()) { return p; } ();
+}
+template void ft2<>();
+// CHECK: call noundef i32 @_ZZZ3ft2IiEvvENKUliE_clEiEd_NKUlvE_clEv
+// CHECK: call noundef i32 @_ZZ3ft2IiEvvENKUliE_clEi
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZ3ft2IiEvvENKUliE_clEi
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZZ3ft2IiEvvENKUliE_clEiEd_NKUlvE_clEv
+
+template<typename>
+void ft3() {
+  void f(int = []{ return 0; }());
+  f();
+}
+template void ft3<int>();
+// CHECK: call noundef i32 @"_ZZ1fiENK3$_5clEv"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ1fiENK3$_5clEv"
+
+template<typename>
+void ft4() {
+  struct lc {
+    void mf(int = []{ return 0; }()) {}
+  };
+  lc().mf();
+}
+template void ft4<int>();
+// CHECK: call noundef i32 @_ZZZ3ft4IiEvvEN2lc2mfEiEd_NKUlvE_clEv
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZZ3ft4IiEvvEN2lc2mfEiEd_NKUlvE_clEv
+
+
 // Check linkage of the various lambdas.
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZZ11inline_funciENKUlvE_clEv
 // CHECK: ret i32 1

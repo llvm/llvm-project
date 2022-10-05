@@ -66,11 +66,11 @@ def Transform_Dialect : Dialect {
 
     A Transform IR value such as `%0` may be associated with multiple payload
     operations. This is conceptually a set of operations and no assumptions
-    should be made about the order of ops. Most Transform IR ops support
-    operand values that are mapped to multiple operations. They usually apply
-    the respective transformation for every mapped op ("batched execution").
-    Deviations from this convention are described in the documentation of
-    Transform IR ops.
+    should be made about the order of ops unless specified otherwise by the
+    operation. Most Transform IR ops support operand values that are mapped to
+    multiple operations. They usually apply the respective transformation for
+    every mapped op ("batched execution"). Deviations from this convention are
+    described in the documentation of Transform IR ops.
 
     Overall, Transform IR ops are expected to be contained in a single top-level
     op. Such top-level ops specify how to apply the transformations described
@@ -161,17 +161,18 @@ def Transform_Dialect : Dialect {
 
     ## Execution Model
 
-    The transformation starts at the specifed top-level transform IR operation
-    and applies to some payload IR scope, identified by the payload IR op that
-    contains the IR to transform. It is the responsibility of the user to
-    properly select the scope and/or to avoid the transformations to modify the
-    IR outside of the given scope. The top-level transform IR operation may
-    contain further transform operations and execute them in the desired order.
+    The transformation starts at the user-specified top-level transform IR
+    operation and applies to some user-specified payload IR scope, identified by
+    the payload IR op that contains the IR to transform. It is the
+    responsibility of the user to properly select the scope and/or to avoid the
+    transformations to modify the IR outside of the given scope. The top-level
+    transform IR operation may contain further transform operations and execute
+    them in the desired order.
 
     Transformation application functions produce a tri-state status:
 
     - success;
-    - recoverable (silencable) failure;
+    - recoverable (silenceable) failure;
     - irrecoverable failure.
 
     Transformation container operations may intercept recoverable failures and
@@ -180,9 +181,9 @@ def Transform_Dialect : Dialect {
     failures, the diagnostics are emitted immediately whereas their emission is
     postponed for recoverable failures. Transformation container operations may
     also fail to recover from a theoretically recoverable failure, in which case
-    they are expected to emit the diagnostic and turn the failure into an
-    irrecoverable one. A recoverable failure produced by applying the top-level
-    transform IR operation is considered irrecoverable.
+    they can either propagate it to their parent or emit the diagnostic and turn
+    the failure into an irrecoverable one. A recoverable failure produced by
+    applying the top-level transform IR operation is considered irrecoverable.
 
     Transformation container operations are allowed to "step over" some nested
     operations if the application of some previous operation produced a failure.
@@ -193,26 +194,18 @@ def Transform_Dialect : Dialect {
 
     ## Handle Invalidation
 
-    The execution model of the transform dialect expects that a payload IR
-    operation is associated with _at most one_ transform IR handle. This avoids
-    the situation when a handle to an operation outlives the operation itself
-    that can be erased during a transformation triggered through another handle.
-
-    Handles pointing to operations nested in each other are allowed to co-exist
-    in the transform IR. However, a transform IR operation that consumes such a
-    handle automatically _invalidates_ all the other handles that are associated
-    with operations nested in the operations associated with the consumed
-    handle. Any use of the invalidated handle results in undefined behavior
-    since the payload IR operations associated with it are likely to have been
-    mutated or erased. The mere fact of the handle being invalidated does _not_
-    trigger undefined behavior, only its appearance as an operand does.
-    Invalidation applies to the entire handle, even if some of the payload IR
-    operations associated with it are not nested in payload IR operations
-    associated with another, consumed handle.
-
-    Note: the restriction on two handles not pointing to the same operation may
-    be relaxed in the future to follow the invalidation model for nested
-    operation.
+    The execution model of the transform dialect allows a payload IR operation
+    to be associated with _multiple_ handles as well as nested payload IR
+    operations to be associated with different handles. A transform IR operation
+    that consumes a handle automatically _invalidates_ all the other handles
+    associated with the same payload IR operations, or with any of their
+    descendants, as the consumed handle. Note that the _entire_ handle is
+    invalidated, even if some of the payload IR operations associated with it
+    or their ancestors were not associated with the consumed handle. Any use of
+    the invalidated handle results in undefined behavior since the payload IR
+    operations associated with it are likely to have been mutated or erased. The
+    mere fact of the handle being invalidated does _not_ trigger undefined
+    behavior, only its appearance as an operand does.
 
     The Transform dialect infrastructure has the capability of checking whether
     the transform IR op operand is invalidated before applying the

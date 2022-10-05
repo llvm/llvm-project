@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_MEMORYMAPPER_H
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 #include "llvm/Support/Process.h"
 
 #include <mutex>
@@ -32,7 +33,7 @@ public:
       const char *WorkingMem;
       size_t ContentSize;
       size_t ZeroFillSize;
-      unsigned Prot;
+      AllocGroup AG;
     };
 
     ExecutorAddr MappingBase;

@@ -40,8 +40,8 @@ func.func @conv_2d_nchw_fchw(%input: tensor<?x?x1x?xf32>, %filter: tensor<?x?x1x
 // CHECK-SAME: %[[ARG0:.+]]: tensor<1x1x113x96xf32>
 // CHECK-SAME: %[[ARG1:.+]]: tensor<1x3x96xf32>
 func.func @depthwise_conv_2d_nhwc_hwc(%input: tensor<1x1x113x96xf32>, %filter: tensor<1x3x96xf32>) -> tensor<1x1x56x96xf32> {
-  // CHECK: %[[RES:.+]] = linalg.init_tensor
-  %init = linalg.init_tensor [1, 1, 56, 96] : tensor<1x1x56x96xf32>
+  // CHECK: %[[RES:.+]] = tensor.empty
+  %init = tensor.empty() : tensor<1x1x56x96xf32>
   // CHECK: %[[SLICE0:.+]] = tensor.extract_slice %[[ARG0]]
   // CHECK: %[[SLICE1:.+]] = tensor.extract_slice %[[ARG1]]
   // CHECK: %[[SLICERES:.+]] = tensor.extract_slice %[[RES]]

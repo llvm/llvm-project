@@ -529,6 +529,9 @@ static void ProfileTemplateParameterList(ASTContext &C,
       ID.AddInteger(0);
       ID.AddBoolean(NTTP->isParameterPack());
       NTTP->getType().getCanonicalType().Profile(ID);
+      ID.AddBoolean(NTTP->hasPlaceholderTypeConstraint());
+      if (const Expr *E = NTTP->getPlaceholderTypeConstraint())
+        E->Profile(ID, C, /*Canonical=*/true);
       continue;
     }
     if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(D)) {

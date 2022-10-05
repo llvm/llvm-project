@@ -15,7 +15,6 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @percent_f = constant [3 x i8] c"%f\00"
 @percent_s = constant [4 x i8] c"%s\0A\00"
 @empty = constant [1 x i8] c"\00"
-; CHECK: [[$STR:@[a-z0-9]+]] = private unnamed_addr constant [12 x i8] c"hello world\00", align 1
 
 declare i32 @printf(ptr, ...)
 
@@ -79,11 +78,11 @@ define void @test_simplify3() {
 
 define void @test_simplify4() {
 ; CHECK-LABEL: @test_simplify4(
-; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull @str)
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull dereferenceable(1) @str)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-IPRINTF-LABEL: @test_simplify4(
-; CHECK-IPRINTF-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull @str)
+; CHECK-IPRINTF-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull dereferenceable(1) @str)
 ; CHECK-IPRINTF-NEXT:    ret void
 ;
   call i32 (ptr, ...) @printf(ptr @hello_world)
@@ -109,11 +108,11 @@ define void @test_simplify5() {
 
 define void @test_simplify6() {
 ; CHECK-LABEL: @test_simplify6(
-; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull @hello_world)
+; CHECK-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull dereferenceable(1) @hello_world)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-IPRINTF-LABEL: @test_simplify6(
-; CHECK-IPRINTF-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull @hello_world)
+; CHECK-IPRINTF-NEXT:    [[PUTS:%.*]] = call i32 @puts(ptr nonnull dereferenceable(1) @hello_world)
 ; CHECK-IPRINTF-NEXT:    ret void
 ;
   call i32 (ptr, ...) @printf(ptr @percent_s, ptr @hello_world)
@@ -124,7 +123,7 @@ define void @test_simplify6() {
 
 define void @test_simplify7() {
 ; CHECK-LABEL: @test_simplify7(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull @percent_d, i32 187)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @percent_d, i32 187)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-IPRINTF-LABEL: @test_simplify7(
@@ -137,11 +136,11 @@ define void @test_simplify7() {
 
 define void @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull @percent_f, double 1.870000e+00)
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @percent_f, double 1.870000e+00)
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-IPRINTF-LABEL: @test_no_simplify1(
-; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull @percent_f, double 1.870000e+00)
+; CHECK-IPRINTF-NEXT:    [[TMP1:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @percent_f, double 1.870000e+00)
 ; CHECK-IPRINTF-NEXT:    ret void
 ;
   call i32 (ptr, ...) @printf(ptr @percent_f, double 1.87)
@@ -163,7 +162,7 @@ define void @test_no_simplify2(ptr %fmt, double %d) {
 
 define i32 @test_no_simplify3() {
 ; CHECK-LABEL: @test_no_simplify3(
-; CHECK-NEXT:    [[RET:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull @h)
+; CHECK-NEXT:    [[RET:%.*]] = call i32 (ptr, ...) @printf(ptr noundef nonnull dereferenceable(1) @h)
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
 ; CHECK-IPRINTF-LABEL: @test_no_simplify3(

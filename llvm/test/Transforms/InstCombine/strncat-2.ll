@@ -12,7 +12,7 @@ declare ptr @strncat(ptr, ptr, i32)
 
 define void @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(ptr noundef nonnull @a)
+; CHECK-NEXT:    [[STRLEN:%.*]] = call i32 @strlen(ptr noundef nonnull dereferenceable(1) @a)
 ; CHECK-NEXT:    [[ENDPTR:%.*]] = getelementptr inbounds i8, ptr @a, i32 [[STRLEN]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(6) [[ENDPTR]], ptr noundef nonnull align 1 dereferenceable(6) @hello, i32 6, i1 false)
 ; CHECK-NEXT:    ret void
@@ -42,7 +42,7 @@ define void @test_simplify3() {
 
 define void @test_nosimplify1() {
 ; CHECK-LABEL: @test_nosimplify1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @strncat(ptr noundef nonnull @a, ptr noundef nonnull dereferenceable(6) @hello, i32 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = call ptr @strncat(ptr noundef nonnull dereferenceable(1) @a, ptr noundef nonnull dereferenceable(6) @hello, i32 1)
 ; CHECK-NEXT:    ret void
 ;
 
@@ -53,7 +53,7 @@ define void @test_nosimplify1() {
 ; strncat(nonnull x, nonnull y, n)  -> strncat(nonnull x, y, n)
 define ptr @test1(ptr %str1, ptr %str2, i32 %n) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[TEMP1:%.*]] = call ptr @strncat(ptr noundef nonnull [[STR1:%.*]], ptr nonnull [[STR2:%.*]], i32 [[N:%.*]])
+; CHECK-NEXT:    [[TEMP1:%.*]] = call ptr @strncat(ptr noundef nonnull dereferenceable(1) [[STR1:%.*]], ptr nonnull [[STR2:%.*]], i32 [[N:%.*]])
 ; CHECK-NEXT:    ret ptr [[TEMP1]]
 ;
 

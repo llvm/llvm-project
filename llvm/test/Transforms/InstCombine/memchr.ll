@@ -47,7 +47,7 @@ define void @test3() {
 
 define void @test4(i32 %chr) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[DST:%.*]] = call ptr @memchr(ptr noundef nonnull @hello, i32 [[CHR:%.*]], i32 14)
+; CHECK-NEXT:    [[DST:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) @hello, i32 [[CHR:%.*]], i32 14)
 ; CHECK-NEXT:    store ptr [[DST]], ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -139,7 +139,7 @@ define i1 @test11(i32 %C) {
 ; No 64 bits here
 define i1 @test12(i32 %C) {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    [[DST:%.*]] = call ptr @memchr(ptr noundef nonnull @spaces, i32 [[C:%.*]], i32 3)
+; CHECK-NEXT:    [[DST:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) @spaces, i32 [[C:%.*]], i32 3)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[DST]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -174,7 +174,7 @@ define i1 @test14(i32 %C) {
 
 define i1 @test15(i32 %C) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    [[DST:%.*]] = call ptr @memchr(ptr noundef nonnull @negative, i32 [[C:%.*]], i32 3)
+; CHECK-NEXT:    [[DST:%.*]] = call ptr @memchr(ptr noundef nonnull dereferenceable(1) @negative, i32 [[C:%.*]], i32 3)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[DST]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

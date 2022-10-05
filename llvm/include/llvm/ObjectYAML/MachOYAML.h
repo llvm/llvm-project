@@ -113,6 +113,12 @@ struct ExportEntry {
   std::vector<MachOYAML::ExportEntry> Children;
 };
 
+struct DataInCodeEntry {
+  llvm::yaml::Hex32 Offset;
+  uint16_t Length;
+  llvm::yaml::Hex16 Kind;
+};
+
 struct LinkEditData {
   std::vector<MachOYAML::RebaseOpcode> RebaseOpcodes;
   std::vector<MachOYAML::BindOpcode> BindOpcodes;
@@ -123,6 +129,7 @@ struct LinkEditData {
   std::vector<StringRef> StringTable;
   std::vector<yaml::Hex32> IndirectSymbols;
   std::vector<yaml::Hex64> FunctionStarts;
+  std::vector<DataInCodeEntry> DataInCode;
 
   bool isEmpty() const;
 };
@@ -169,6 +176,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::ExportEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::NListEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::Object)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::FatArch)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::DataInCodeEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachO::build_tool_version)
 
 namespace llvm {
@@ -232,6 +240,10 @@ template <> struct MappingTraits<MachOYAML::NListEntry> {
 
 template <> struct MappingTraits<MachO::build_tool_version> {
   static void mapping(IO &IO, MachO::build_tool_version &tool);
+};
+
+template <> struct MappingTraits<MachOYAML::DataInCodeEntry> {
+  static void mapping(IO &IO, MachOYAML::DataInCodeEntry &DataInCodeEntry);
 };
 
 #define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct)                         \
