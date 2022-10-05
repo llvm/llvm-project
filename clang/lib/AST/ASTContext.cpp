@@ -12672,7 +12672,13 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
   }
   case Type::ObjCObject: {
     const auto *OX = cast<ObjCObjectType>(X), *OY = cast<ObjCObjectType>(Y);
-    assert(llvm::equal(OX->getProtocols(), OY->getProtocols()));
+    assert(
+        std::equal(OX->getProtocols().begin(), OX->getProtocols().end(),
+                   OY->getProtocols().begin(), OY->getProtocols().end(),
+                   [](const ObjCProtocolDecl *P0, const ObjCProtocolDecl *P1) {
+                     return P0->getCanonicalDecl() == P1->getCanonicalDecl();
+                   }) &&
+        "protocol lists must be the same");
     auto TAs = getCommonTypes(Ctx, OX->getTypeArgsAsWritten(),
                               OY->getTypeArgsAsWritten());
     return Ctx.getObjCObjectType(
