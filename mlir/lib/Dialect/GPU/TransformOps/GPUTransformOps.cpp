@@ -365,8 +365,9 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
        llvm::zip(threadOps, blockDim, globalBlockDims)) {
     if (blockDim > globalBlockDim) {
       return failureHelper(
-          "The GPU threads are fewer than the loop trip counts. "
-          "Try to tile scf.foreach_thread before mapping.");
+          "The requested GPU threads are fewer than the number of loop trip "
+          "counts. Try to tile scf.foreach_thread before mapping or set small "
+          "blockDim.");
     }
     if (blockDim == globalBlockDim)
       continue;
@@ -464,7 +465,7 @@ DiagnosedSilenceableFailure transform::MapNestedForeachToThreads::applyToOne(
   rewriter.setInsertionPoint(target);
 
   diag = mlir::transform::gpu::mapNestedForeachToThreadsImpl(
-      rewriter, target, blockDim, getSyncAfterDistribute(), llvm::None);
+      rewriter, target, blockDim, getSyncAfterDistribute(), transformOp);
   if (diag.succeeded()) {
     diag =
         alterGpuLaunch(rewriter, gpuLaunch, transformOp, llvm::None, llvm::None,
