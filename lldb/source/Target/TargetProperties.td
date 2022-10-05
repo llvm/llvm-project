@@ -22,6 +22,9 @@ let Definition = "target_experimental" in {
   def SwiftEnableBareSlashRegex: Property<"swift-enable-bare-slash-regex", "Boolean">,
     DefaultFalse,
     Desc<"Passes the -enable-bare-slash-regex compiler flag to the swift compiler.">;
+  def SwiftEnableCxxInterop: Property<"swift-enable-cxx-interop", "Boolean">,
+    DefaultFalse,
+    Desc<"Passes the -enable-cxx-interop flag to the swift compiler.">;
 }
 
 let Definition = "target" in {

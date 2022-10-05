@@ -1491,6 +1491,8 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
   swift_ast_sp->GetLanguageOptions().EnableAccessControl = false;
   swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
 
+  swift_ast_sp->GetLanguageOptions().EnableCXXInterop =
+      Target::GetGlobalProperties().GetSwiftEnableCxxInterop();
   bool found_swift_modules = false;
   SymbolFile *sym_file = module.GetSymbolFile();
 
@@ -1911,7 +1913,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   swift_ast_sp->m_is_scratch_context = true;
 
   swift_ast_sp->GetLanguageOptions().EnableTargetOSChecking = false;
-
+  swift_ast_sp->GetLanguageOptions().EnableCXXInterop =
+      target.GetSwiftEnableCxxInterop();
   bool handled_sdk_path = false;
   const size_t num_images = target.GetImages().GetSize();
 

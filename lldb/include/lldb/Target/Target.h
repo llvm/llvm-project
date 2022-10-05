@@ -184,6 +184,8 @@ public:
 
   bool GetSwiftEnableBareSlashRegex() const;
 
+  bool GetSwiftEnableCxxInterop() const;
+
   bool GetSwiftAutoImportFrameworks() const;
 
   bool GetEnableAutoImportClangModules() const;
