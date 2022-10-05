@@ -40,6 +40,9 @@ level ACLE attributes:
 ``aarch64_pstate_za_preserved``
   is used for functions with ``__attribute__((arm_preserves_za))``
 
+``aarch64_expanded_pstate_za``
+  is used for functions with ``__attribute__((arm_new_za))``
+
 Clang must ensure that the above attributes are added both to the
 function's declaration/definition as well as to their call-sites. This is
 important for calls to attributed function pointers, where there is no
@@ -423,8 +426,10 @@ to toggle PSTATE.ZA using intrinsics. This also makes it simpler to setup a
 lazy-save mechanism for calls to private-ZA functions (i.e. functions that may
 either directly or indirectly clobber ZA state).
 
-For this purpose, we'll introduce a new LLVM IR pass that is run just before
-SelectionDAG.
+For the purpose of handling functions marked with ``aarch64_pstate_za_new``,
+we have introduced a new LLVM IR pass (SMEABIPass) that is run just before
+SelectionDAG. Any such functions dealt with by this pass are marked with
+``aarch64_expanded_pstate_za``.
 
 Setting up a lazy-save
 ----------------------
