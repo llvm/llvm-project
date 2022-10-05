@@ -103,14 +103,6 @@ std::unique_ptr<OperationPass<func::FuncOp>> createLinalgStrategyDecomposePass(
     const linalg::LinalgTransformationFilter &filter =
         linalg::LinalgTransformationFilter());
 
-/// Create a LinalgStrategyLowerVectorsPass.
-std::unique_ptr<OperationPass<func::FuncOp>>
-createLinalgStrategyLowerVectorsPass(
-    linalg::LinalgVectorLoweringOptions opt =
-        linalg::LinalgVectorLoweringOptions(),
-    const linalg::LinalgTransformationFilter &filter =
-        linalg::LinalgTransformationFilter());
-
 /// Create a LinalgStrategyRemoveMarkersPass.
 std::unique_ptr<OperationPass<func::FuncOp>>
 createLinalgStrategyRemoveMarkersPass();

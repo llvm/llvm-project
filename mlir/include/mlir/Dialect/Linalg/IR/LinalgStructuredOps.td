@@ -58,7 +58,9 @@ class LinalgStructuredBase_Op<string mnemonic, list<Trait> props>
 // Generic Linalg ops.
 //===----------------------------------------------------------------------===//
 
-def GenericOp : LinalgStructuredBase_Op<"generic", [AttrSizedOperandSegments]> {
+def GenericOp : LinalgStructuredBase_Op<"generic", [
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmBlockArgumentNames"]>,
+    AttrSizedOperandSegments]> {
   let description = [{
     Generic Linalg op form where the key properties of the computation are
     specified as attributes. In pretty form, a `linalg.generic` op is written

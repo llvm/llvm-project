@@ -58,6 +58,13 @@ enum NodeType : unsigned {
 
   CALL_BTI, // Function call followed by a BTI instruction.
 
+  // Essentially like a normal COPY that works on GPRs, but cannot be
+  // rematerialised by passes like the simple register coalescer. It's
+  // required for SME when lowering calls because we cannot allow frame
+  // index calculations using addvl to slip in between the smstart/smstop
+  // and the bl instruction. The scalable vector length may change across
+  // the smstart/smstop boundary.
+  OBSCURE_COPY,
   SMSTART,
   SMSTOP,
 

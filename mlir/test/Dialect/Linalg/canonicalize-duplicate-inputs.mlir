@@ -239,21 +239,21 @@ func.func @multiple_redundant_args(%arg0 : tensor<?x?xi32>, %arg1 : tensor<?xi32
 //  CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1) -> (d0)>
 //  CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1) -> (d1, d0)>
 //      CHECK: func @multiple_redundant_args(
-// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xi32>
-// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?xi32>
-// CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<?xi32>
-// CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: tensor<?x?xi32>
-// CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: tensor<?xi32>)
+// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xi32>
+// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?xi32>
+// CHECK-SAME:     %[[ARG2:[a-zA-Z0-9_]+]]: tensor<?xi32>
+// CHECK-SAME:     %[[ARG3:[a-zA-Z0-9_]+]]: tensor<?x?xi32>
+// CHECK-SAME:     %[[ARG4:[a-zA-Z0-9_]+]]: tensor<?xi32>)
 //      CHECK:   %[[RETURN:.+]] = linalg.generic
 // CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]], #[[MAP2]], #[[MAP3]], #[[MAP2]]]
 // CHECK-SAME:       iterator_types = ["parallel", "reduction"]
 // CHECK-SAME:       ins(%[[ARG4]], %[[ARG0]], %[[ARG1]], %[[ARG3]] :
 // CHECK-SAME:       outs(%[[ARG2]] :
 //      CHECK:   ^{{.+}}(%[[B0:[a-zA-Z0-9]+]]: i32
-// CHECK-SAME:       %[[B1:[a-zA-Z0-9]+]]: i32
-// CHECK-SAME:       %[[B2:[a-zA-Z0-9]+]]: i32
-// CHECK-SAME:       %[[B3:[a-zA-Z0-9]+]]: i32
-// CHECK-SAME:       %[[B4:[a-zA-Z0-9]+]]: i32)
+// CHECK-SAME:       %[[B1:[a-zA-Z0-9_]+]]: i32
+// CHECK-SAME:       %[[B2:[a-zA-Z0-9_]+]]: i32
+// CHECK-SAME:       %[[B3:[a-zA-Z0-9_]+]]: i32
+// CHECK-SAME:       %[[B4:[a-zA-Z0-9_]+]]: i32)
 //      CHECK:     %[[T0:.+]] = arith.addi %[[B0]], %[[B1]]
 //      CHECK:     %[[T1:.+]] = arith.addi %[[T0]], %[[B1]]
 //      CHECK:     %[[T2:.+]] = arith.addi %[[T1]], %[[B2]]

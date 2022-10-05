@@ -212,17 +212,6 @@ def LinalgStrategyDecomposePass
   ];
 }
 
-def LinalgStrategyLowerVectorsPass
-    : Pass<"linalg-strategy-lower-vectors-pass", "func::FuncOp"> {
-  let summary = "Configurable pass to lower vector operations.";
-  let constructor = "mlir::createLinalgStrategyLowerVectorsPass()";
-  let dependentDialects = ["linalg::LinalgDialect"];
-  let options = [
-    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
-      "Which func op is the anchor to latch on.">,
-  ];
-}
-
 def LinalgStrategyRemoveMarkersPass
     : Pass<"linalg-strategy-remove-markers-pass", "func::FuncOp"> {
   let summary = "Cleanup pass that drops markers.";
