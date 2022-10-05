@@ -19,6 +19,20 @@
   dimOrdering = affine_map<(i,j,k) -> (i,k,j)>
 }>
 
+#SingletonTensor1 = #sparse_tensor.encoding<{
+  dimLevelType = [ "dense", "compressed", "singleton" ]
+}>
+
+// This also checks the compressed->dense conversion (when there are zeros).
+#SingletonTensor2 = #sparse_tensor.encoding<{
+  dimLevelType = [ "dense", "dense", "singleton" ]
+}>
+
+// This also checks the singleton->compressed conversion.
+#SingletonTensor3 = #sparse_tensor.encoding<{
+  dimLevelType = [ "dense", "dense", "compressed" ]
+}>
+
 module {
   //
   // Utilities for output and releasing memory.
@@ -36,9 +50,9 @@ module {
   }
 
   //
-  // Main driver.
+  // The first test suite (for non-singleton DimLevelTypes).
   //
-  func.func @entry() {
+  func.func @testNonSingleton() {
     //
     // Initialize a 3-dim dense tensor.
     //
@@ -95,6 +109,83 @@ module {
     bufferization.dealloc_tensor %s2 : tensor<2x3x4xf64, #Tensor2>
     bufferization.dealloc_tensor %s3 : tensor<2x3x4xf64, #Tensor3>
 
+    return
+  }
+
+  //
+  // The second test suite (for singleton DimLevelTypes).
+  //
+  func.func @testSingleton() {
+    //
+    // Initialize a 3-dim dense tensor with the 3rd dim being singleton.
+    //
+    %src = arith.constant dense<[
+       [  [  1.0,  0.0,  0.0,  0.0 ],
+          [  0.0,  6.0,  0.0,  0.0 ],
+          [  0.0,  0.0, 11.0,  0.0 ] ],
+       [  [  0.0, 14.0,  0.0,  0.0 ],
+          [  0.0,  0.0,  0.0, 20.0 ],
+          [ 21.0,  0.0,  0.0,  0.0 ] ]
+    ]> : tensor<2x3x4xf64>
+
+    //
+    // Convert dense tensor directly to various sparse tensors.
+    //
+    %s1 = sparse_tensor.convert %src : tensor<2x3x4xf64> to tensor<2x3x4xf64, #SingletonTensor1>
+    %s2 = sparse_tensor.convert %src : tensor<2x3x4xf64> to tensor<2x3x4xf64, #SingletonTensor2>
+    %s3 = sparse_tensor.convert %src : tensor<2x3x4xf64> to tensor<2x3x4xf64, #SingletonTensor3>
+
+    //
+    // Convert sparse tensor directly to another sparse format.
+    //
+    %t12 = sparse_tensor.convert %s1 : tensor<2x3x4xf64, #SingletonTensor1> to tensor<2x3x4xf64, #SingletonTensor2>
+    %t13 = sparse_tensor.convert %s1 : tensor<2x3x4xf64, #SingletonTensor1> to tensor<2x3x4xf64, #SingletonTensor3>
+    %t21 = sparse_tensor.convert %s2 : tensor<2x3x4xf64, #SingletonTensor2> to tensor<2x3x4xf64, #SingletonTensor1>
+    %t23 = sparse_tensor.convert %s2 : tensor<2x3x4xf64, #SingletonTensor2> to tensor<2x3x4xf64, #SingletonTensor3>
+    %t31 = sparse_tensor.convert %s3 : tensor<2x3x4xf64, #SingletonTensor3> to tensor<2x3x4xf64, #SingletonTensor1>
+    %t32 = sparse_tensor.convert %s3 : tensor<2x3x4xf64, #SingletonTensor3> to tensor<2x3x4xf64, #SingletonTensor2>
+
+    //
+    // Convert sparse tensor back to dense.
+    //
+    %d12 = sparse_tensor.convert %t12 : tensor<2x3x4xf64, #SingletonTensor2> to tensor<2x3x4xf64>
+    %d13 = sparse_tensor.convert %t13 : tensor<2x3x4xf64, #SingletonTensor3> to tensor<2x3x4xf64>
+    %d21 = sparse_tensor.convert %t21 : tensor<2x3x4xf64, #SingletonTensor1> to tensor<2x3x4xf64>
+    %d23 = sparse_tensor.convert %t23 : tensor<2x3x4xf64, #SingletonTensor3> to tensor<2x3x4xf64>
+    %d31 = sparse_tensor.convert %t31 : tensor<2x3x4xf64, #SingletonTensor1> to tensor<2x3x4xf64>
+    %d32 = sparse_tensor.convert %t32 : tensor<2x3x4xf64, #SingletonTensor2> to tensor<2x3x4xf64>
+
+    //
+    // Check round-trip equality.  And release dense tensors.
+    //
+    // CHECK-COUNT-7: ( ( ( 1, 0, 0, 0 ), ( 0, 6, 0, 0 ), ( 0, 0, 11, 0 ) ), ( ( 0, 14, 0, 0 ), ( 0, 0, 0, 20 ), ( 21, 0, 0, 0 ) ) )
+    call @dump(%src) : (tensor<2x3x4xf64>) -> ()
+    call @dumpAndRelease_234(%d12) : (tensor<2x3x4xf64>) -> ()
+    call @dumpAndRelease_234(%d13) : (tensor<2x3x4xf64>) -> ()
+    call @dumpAndRelease_234(%d21) : (tensor<2x3x4xf64>) -> ()
+    call @dumpAndRelease_234(%d23) : (tensor<2x3x4xf64>) -> ()
+    call @dumpAndRelease_234(%d31) : (tensor<2x3x4xf64>) -> ()
+    call @dumpAndRelease_234(%d32) : (tensor<2x3x4xf64>) -> ()
+
+    //
+    // Release sparse tensors.
+    //
+    bufferization.dealloc_tensor %t12 : tensor<2x3x4xf64, #SingletonTensor2>
+    bufferization.dealloc_tensor %t13 : tensor<2x3x4xf64, #SingletonTensor3>
+    bufferization.dealloc_tensor %t21 : tensor<2x3x4xf64, #SingletonTensor1>
+    bufferization.dealloc_tensor %t23 : tensor<2x3x4xf64, #SingletonTensor3>
+    bufferization.dealloc_tensor %t31 : tensor<2x3x4xf64, #SingletonTensor1>
+    bufferization.dealloc_tensor %t32 : tensor<2x3x4xf64, #SingletonTensor2>
+
+    return
+  }
+
+  //
+  // Main driver.
+  //
+  func.func @entry() {
+    call @testNonSingleton() : () -> ()
+    call @testSingleton() : () -> ()
     return
   }
 }
