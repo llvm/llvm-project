@@ -44,6 +44,9 @@ int main(int Argc, const char **Argv) {
   cl::opt<std::string> CachePath("cache-path", cl::desc("Cache data path"),
                                  cl::Required, cl::value_desc("path"),
                                  cl::cat(OptCategory));
+  cl::opt<std::string> OptSocketPath(
+      "socket-path", cl::desc("Socket path (default is '<cache-path>/sock')"),
+      cl::value_desc("path"), cl::cat(OptCategory));
   // This is here only to improve the help message (for "USAGE:" line).
   cl::list<std::string> Inputs(cl::Positional, cl::desc("[-- command ...]"));
 
@@ -55,8 +58,11 @@ int main(int Argc, const char **Argv) {
   cl::HideUnrelatedOptions(OptCategory);
   cl::ParseCommandLineOptions(Sep - Argv, Argv, "llvm-remote-cache-test");
 
-  SmallString<128> SocketPath{CachePath};
-  sys::path::append(SocketPath, "sock");
+  SmallString<128> SocketPath{OptSocketPath};
+  if (SocketPath.empty()) {
+    SocketPath = CachePath;
+    sys::path::append(SocketPath, "sock");
+  }
 
   static ExitOnError ExitOnErr("llvm-remote-cache-test: ");
 
