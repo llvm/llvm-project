@@ -566,6 +566,26 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPIMLProgram",
+    srcs = [
+        "lib/CAPI/Dialect/MLProgram.cpp",
+    ],
+    hdrs = [
+        "include/mlir-c/Dialect/MLProgram.h",
+    ],
+    header_deps = [
+        ":CAPIIRHeaders",
+    ],
+    includes = ["include"],
+    deps = [
+        ":CAPIIR",
+        ":MLProgramDialect",
+        ":MLProgramOpsIncGen",
+        ":MLProgramTypesIncGen",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPIConversion",
     srcs = ["lib/CAPI/Conversion/Passes.cpp"],
     hdrs = ["include/mlir-c/Conversion.h"],
