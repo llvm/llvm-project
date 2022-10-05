@@ -22,9 +22,17 @@
 namespace clang {
 namespace clangd {
 
-const char IWYUPragmaKeep[] = "// IWYU pragma: keep";
-const char IWYUPragmaExport[] = "// IWYU pragma: export";
-const char IWYUPragmaBeginExports[] = "// IWYU pragma: begin_exports";
+llvm::Optional<StringRef> parseIWYUPragma(const char *Text) {
+  // This gets called for every comment seen in the preamble, so it's quite hot.
+  constexpr llvm::StringLiteral IWYUPragma = "// IWYU pragma: ";
+  if (strncmp(Text, IWYUPragma.data(), IWYUPragma.size()))
+    return llvm::None;
+  Text += IWYUPragma.size();
+  const char *End = Text;
+  while (*End != 0 && *End != '\n')
+    ++End;
+  return StringRef(Text, End - Text);
+}
 
 class IncludeStructure::RecordHeaders : public PPCallbacks,
                                         public CommentHandler {
@@ -129,10 +137,10 @@ public:
   }
 
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
-    bool Err = false;
-    llvm::StringRef Text = SM.getCharacterData(Range.getBegin(), &Err);
-    if (Err)
+    auto Pragma = parseIWYUPragma(SM.getCharacterData(Range.getBegin()));
+    if (!Pragma)
       return false;
+
     if (inMainFile()) {
       // Given:
       //
@@ -150,8 +158,7 @@ public:
       // will know that the next inclusion is behind the IWYU pragma.
       // FIXME: Support "IWYU pragma: begin_exports" and "IWYU pragma:
       // end_exports".
-      if (!Text.startswith(IWYUPragmaExport) &&
-          !Text.startswith(IWYUPragmaKeep))
+      if (!Pragma->startswith("export") && !Pragma->startswith("keep"))
         return false;
       unsigned Offset = SM.getFileOffset(Range.getBegin());
       LastPragmaKeepInMainFileLine =
@@ -161,8 +168,7 @@ public:
       // does not support them properly yet, so they will be not marked as
       // unused.
       // FIXME: Once IncludeCleaner supports export pragmas, remove this.
-      if (!Text.startswith(IWYUPragmaExport) &&
-          !Text.startswith(IWYUPragmaBeginExports))
+      if (!Pragma->startswith("export") && !Pragma->startswith("begin_exports"))
         return false;
       Out->HasIWYUExport.insert(
           *Out->getID(SM.getFileEntryForID(SM.getFileID(Range.getBegin()))));

@@ -17,8 +17,6 @@
 namespace clang {
 namespace clangd {
 namespace {
-const char IWYUPragma[] = "// IWYU pragma: private, include ";
-
 const std::pair<llvm::StringRef, llvm::StringRef> IncludeMappings[] = {
     {"include/__stddef_max_align_t.h", "<cstddef>"},
     {"include/__wmmintrin_aes.h", "<wmmintrin.h>"},
@@ -712,17 +710,17 @@ collectIWYUHeaderMaps(CanonicalIncludes *Includes) {
     PragmaCommentHandler(CanonicalIncludes *Includes) : Includes(Includes) {}
 
     bool HandleComment(Preprocessor &PP, SourceRange Range) override {
-      llvm::StringRef Text =
-          Lexer::getSourceText(CharSourceRange::getCharRange(Range),
-                               PP.getSourceManager(), PP.getLangOpts());
-      if (!Text.consume_front(IWYUPragma))
+      auto Pragma = parseIWYUPragma(
+          PP.getSourceManager().getCharacterData(Range.getBegin()));
+      if (!Pragma || !Pragma->consume_front("private, include "))
         return false;
       auto &SM = PP.getSourceManager();
       // We always insert using the spelling from the pragma.
       if (auto *FE = SM.getFileEntryForID(SM.getFileID(Range.getBegin())))
-        Includes->addMapping(
-            FE->getLastRef(),
-            isLiteralInclude(Text) ? Text.str() : ("\"" + Text + "\"").str());
+        Includes->addMapping(FE->getLastRef(),
+                             isLiteralInclude(*Pragma)
+                                 ? Pragma->str()
+                                 : ("\"" + *Pragma + "\"").str());
       return false;
     }
 
