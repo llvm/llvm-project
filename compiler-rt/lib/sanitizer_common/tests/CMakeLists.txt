@@ -67,6 +67,7 @@ set(SANITIZER_TEST_CFLAGS_COMMON
   -I${COMPILER_RT_SOURCE_DIR}/lib
   -I${COMPILER_RT_SOURCE_DIR}/lib/sanitizer_common
   -fno-rtti
+  -O2
   -Werror=sign-compare
   -Wno-gnu-zero-variadic-macro-arguments
   )
@@ -75,6 +76,16 @@ set(SANITIZER_TEST_LINK_FLAGS_COMMON
   ${COMPILER_RT_UNITTEST_LINK_FLAGS}
   ${COMPILER_RT_UNWINDER_LINK_LIBS}
   ${SANITIZER_TEST_CXX_LIBRARIES})
+
+# -gline-tables-only must be enough for these tests, so use it if possible.
+if(COMPILER_RT_TEST_COMPILER_ID MATCHES "Clang")
+  list(APPEND SANITIZER_TEST_CFLAGS_COMMON -gline-tables-only)
+else()
+  list(APPEND SANITIZER_TEST_CFLAGS_COMMON -g)
+endif()
+if(MSVC)
+  list(APPEND SANITIZER_TEST_CFLAGS_COMMON -gcodeview)
+endif()
 list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON -g)
 
 if(NOT MSVC)
