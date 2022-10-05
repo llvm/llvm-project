@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Quant/QuantOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
+#include "mlir/Dialect/Tosa/Utils/CoversionUtils.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -844,6 +845,38 @@ OpFoldResult PadOp::fold(ArrayRef<Attribute> operands) {
   }
 
   return {};
+}
+
+// Fold away cases where a tosa.resize operation returns a copy
+// of the input image.
+OpFoldResult ResizeOp::fold(ArrayRef<Attribute> operands) {
+  SmallVector<int32_t> scale, offset, border;
+  getValuesFromIntArrayAttribute(getScale(), scale);
+  getValuesFromIntArrayAttribute(getOffset(), offset);
+  getValuesFromIntArrayAttribute(getBorder(), border);
+
+  // Check unit scaling.
+  if (scale[0] != scale[1] || scale[2] != scale[3]) {
+    return {};
+  }
+
+  // There should be no offset.
+  if (offset[0] != 0 || offset[1] != 0) {
+    return {};
+  }
+
+  // There should be no border.
+  if (border[0] != 0 || border[1] != 0) {
+    return {};
+  }
+
+  auto input = getInput();
+  auto inputTy = input.getType().cast<RankedTensorType>();
+  auto resultTy = getType().cast<RankedTensorType>();
+  if (inputTy != resultTy)
+    return {};
+
+  return input;
 }
 
 OpFoldResult ReverseOp::fold(ArrayRef<Attribute> operands) {
