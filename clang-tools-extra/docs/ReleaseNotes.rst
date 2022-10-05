@@ -159,6 +159,11 @@ Changes in existing checks
   <clang-tidy/checks/readability/avoid-const-params-in-decls>` to not
   warn about `const` value parameters of declarations inside macros.
 
+- Fixed crashes in :doc:`readability-braces-around-statements
+  <clang-tidy/checks/readability/braces-around-statements>` and
+  :doc:`readability-simplify-boolean-expr <clang-tidy/checks/readability/simplify-boolean-expr>`
+  when using a C++23 ``if consteval`` statement.
+
 Removed checks
 ^^^^^^^^^^^^^^
 

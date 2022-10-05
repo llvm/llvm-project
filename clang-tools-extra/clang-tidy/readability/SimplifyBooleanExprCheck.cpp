@@ -354,8 +354,9 @@ public:
   }
 
   bool VisitIfStmt(IfStmt *If) {
-    // Skip any if's that have a condition var or an init statement.
-    if (If->hasInitStorage() || If->hasVarStorage())
+    // Skip any if's that have a condition var or an init statement, or are
+    // "if consteval" statements.
+    if (If->hasInitStorage() || If->hasVarStorage() || If->isConsteval())
       return true;
     /*
      * if (true) ThenStmt(); -> ThenStmt();
@@ -467,7 +468,8 @@ public:
          * if (Cond) return false; return true; -> return !Cond;
          */
         auto *If = cast<IfStmt>(*First);
-        if (!If->hasInitStorage() && !If->hasVarStorage()) {
+        if (!If->hasInitStorage() && !If->hasVarStorage() &&
+            !If->isConsteval()) {
           ExprAndBool ThenReturnBool =
               checkSingleStatement(If->getThen(), parseReturnLiteralBool);
           if (ThenReturnBool &&
@@ -491,7 +493,7 @@ public:
                                     : cast<DefaultStmt>(*First)->getSubStmt();
         auto *SubIf = dyn_cast<IfStmt>(SubStmt);
         if (SubIf && !SubIf->getElse() && !SubIf->hasInitStorage() &&
-            !SubIf->hasVarStorage()) {
+            !SubIf->hasVarStorage() && !SubIf->isConsteval()) {
           ExprAndBool ThenReturnBool =
               checkSingleStatement(SubIf->getThen(), parseReturnLiteralBool);
           if (ThenReturnBool &&
