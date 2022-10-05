@@ -22,7 +22,7 @@ outer.preheader:
 ; CHECK: br label %outer.header
 
 outer.header:
-  store i32 0, i32* @x, align 4
+  store i32 0, ptr @x, align 4
   br i1 undef, label %outer.latch, label %inner.preheader
 ; CHECK: outer.header:
 ; CHECK-NEXT: br i1 undef, label %outer.latch, label %inner.preheader
@@ -39,13 +39,13 @@ inner.header:
 ; CHECK-NEXT: br i1 undef, label %inner.body.rhs, label %inner.latch
 
 inner.body.rhs:
-  store i32 0, i32* @x, align 4
+  store i32 0, ptr @x, align 4
   br label %inner.latch
 ; CHECK: inner.body.rhs:
 ; CHECK-NEXT: br label %inner.latch
 
 inner.latch:
-  %y_val = load i32, i32* @y, align 4
+  %y_val = load i32, ptr @y, align 4
   %icmp = icmp eq i32 %y_val, 0
   br i1 %icmp, label %inner.exit, label %inner.header
 ; CHECK: inner.latch:
