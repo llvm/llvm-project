@@ -166,29 +166,27 @@ struct CachingVPExpander {
   /// length of the operation.
   void discardEVLParameter(VPIntrinsic &PI);
 
-  /// \brief Lower this VP binary operator to a unpredicated binary operator.
+  /// Lower this VP binary operator to a unpredicated binary operator.
   Value *expandPredicationInBinaryOperator(IRBuilder<> &Builder,
                                            VPIntrinsic &PI);
 
-  /// \brief Lower this VP reduction to a call to an unpredicated reduction
-  /// intrinsic.
+  /// Lower this VP reduction to a call to an unpredicated reduction intrinsic.
   Value *expandPredicationInReduction(IRBuilder<> &Builder,
                                       VPReductionIntrinsic &PI);
 
-  /// \brief Lower this VP memory operation to a non-VP intrinsic.
+  /// Lower this VP memory operation to a non-VP intrinsic.
   Value *expandPredicationInMemoryIntrinsic(IRBuilder<> &Builder,
                                             VPIntrinsic &VPI);
 
-  /// \brief Lower this VP comparison to a call to an unpredicated comparison.
+  /// Lower this VP comparison to a call to an unpredicated comparison.
   Value *expandPredicationInComparison(IRBuilder<> &Builder,
                                        VPCmpIntrinsic &PI);
 
-  /// \brief Query TTI and expand the vector predication in \p P accordingly.
+  /// Query TTI and expand the vector predication in \p P accordingly.
   Value *expandPredication(VPIntrinsic &PI);
 
-  /// \brief  Determine how and whether the VPIntrinsic \p VPI shall be
-  /// expanded. This overrides TTI with the cl::opts listed at the top of this
-  /// file.
+  /// Determine how and whether the VPIntrinsic \p VPI shall be expanded. This
+  /// overrides TTI with the cl::opts listed at the top of this file.
   VPLegalization getVPLegalizationStrategy(const VPIntrinsic &VPI) const;
   bool UsingTTIOverrides;
 
@@ -623,7 +621,7 @@ CachingVPExpander::getVPLegalizationStrategy(const VPIntrinsic &VPI) const {
   return VPStrat;
 }
 
-/// \brief Expand llvm.vp.* intrinsics as requested by \p TTI.
+/// Expand llvm.vp.* intrinsics as requested by \p TTI.
 bool CachingVPExpander::expandVectorPredication() {
   SmallVector<TransformJob, 16> Worklist;
 
