@@ -698,7 +698,7 @@ define i1 @potential_test16(i1 %c0, i1 %c1) {
 ; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
 ; CGSCC: attributes #[[ATTR2]] = { readnone willreturn }
 ;.
-; TUNIT: [[META0:![0-9]+]] = !{i32 0, i32 2}
-; TUNIT: [[META1:![0-9]+]] = !{i32 0, i32 3}
-; TUNIT: [[META2:![0-9]+]] = !{i32 -1, i32 1}
+; TUNIT: [[RNG0]] = !{i32 0, i32 2}
+; TUNIT: [[RNG1]] = !{i32 0, i32 3}
+; TUNIT: [[RNG2]] = !{i32 -1, i32 1}
 ;.

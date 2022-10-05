@@ -481,7 +481,7 @@ define double @t4(ptr %this, ptr %this.addr, ptr %this1) {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    [[THIS_ADDR1:%.*]] = alloca ptr, i32 0, align 8
 ; TUNIT-NEXT:    store ptr [[THIS]], ptr [[THIS]], align 8
-; TUNIT-NEXT:    [[CALL:%.*]] = call [[S:%.*]] @t4a(ptr nofree noundef nonnull writeonly align 8 dereferenceable(8) [[THIS]]) #[[ATTR5:[0-9]+]]
+; TUNIT-NEXT:    [[CALL:%.*]] = call [[S:%.*]] @t4a(ptr nofree noundef nonnull writeonly align 8 dereferenceable(8) [[THIS]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret double 0.000000e+00
 ;
 ; CGSCC: Function Attrs: argmemonly nofree nosync nounwind willreturn
@@ -613,7 +613,7 @@ entry:
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
 ; TUNIT: attributes #[[ATTR1]] = { argmemonly nofree norecurse nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR2:[0-9]+]] = { nofree norecurse noreturn nosync nounwind readnone }
+; TUNIT: attributes #[[ATTR2]] = { nofree norecurse noreturn nosync nounwind readnone }
 ; TUNIT: attributes #[[ATTR3]] = { nofree norecurse nosync nounwind willreturn writeonly }
 ; TUNIT: attributes #[[ATTR4]] = { nofree nosync nounwind willreturn }
 ; TUNIT: attributes #[[ATTR5]] = { nofree nosync nounwind willreturn writeonly }
@@ -623,7 +623,7 @@ entry:
 ; CGSCC: attributes #[[ATTR2]] = { argmemonly nofree nosync nounwind willreturn }
 ; CGSCC: attributes #[[ATTR3]] = { argmemonly nofree norecurse nosync nounwind willreturn writeonly }
 ; CGSCC: attributes #[[ATTR4]] = { argmemonly nofree norecurse nosync nounwind willreturn }
-; CGSCC: attributes #[[ATTR5:[0-9]+]] = { nofree norecurse noreturn nosync nounwind readnone }
+; CGSCC: attributes #[[ATTR5]] = { nofree norecurse noreturn nosync nounwind readnone }
 ; CGSCC: attributes #[[ATTR6]] = { nounwind willreturn writeonly }
 ; CGSCC: attributes #[[ATTR7]] = { readnone willreturn }
 ; CGSCC: attributes #[[ATTR8]] = { nounwind willreturn }

@@ -344,8 +344,8 @@ define void @f1() #0 {
 define void @f2() #0 {
 ; CHECK: Function Attrs: noinline nounwind willreturn uwtable
 ; CHECK-LABEL: define {{[^@]+}}@f2
-; CHECK-SAME: () #[[ATTR10:[0-9]+]] {
-; CHECK-NEXT:    tail call void @f1() #[[ATTR12:[0-9]+]]
+; CHECK-SAME: () #[[ATTR10]] {
+; CHECK-NEXT:    tail call void @f1() #[[ATTR12]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @f1()
