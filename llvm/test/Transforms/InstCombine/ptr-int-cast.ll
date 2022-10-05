@@ -2,29 +2,29 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
-define i1 @test1(i32 *%x) nounwind {
+define i1 @test1(ptr %x) nounwind {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint i32* [[X:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[X:%.*]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
 entry:
-  %0 = ptrtoint i32* %x to i1
+  %0 = ptrtoint ptr %x to i1
   ret i1 %0
 }
 
-define i32* @test2(i128 %x) nounwind {
+define ptr @test2(i128 %x) nounwind {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i128 [[X:%.*]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to i32*
-; CHECK-NEXT:    ret i32* [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = inttoptr i64 [[TMP0]] to ptr
+; CHECK-NEXT:    ret ptr [[TMP1]]
 ;
 entry:
-  %0 = inttoptr i128 %x to i32*
-  ret i32* %0
+  %0 = inttoptr i128 %x to ptr
+  ret ptr %0
 }
 
 ; PR3574
@@ -33,57 +33,57 @@ define i64 @f0(i32 %a0) nounwind {
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[A0:%.*]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
-  %t0 = inttoptr i32 %a0 to i8*
-  %t1 = ptrtoint i8* %t0 to i64
+  %t0 = inttoptr i32 %a0 to ptr
+  %t1 = ptrtoint ptr %t0 to i64
   ret i64 %t1
 }
 
-define <4 x i32> @test4(<4 x i8*> %arg) nounwind {
+define <4 x i32> @test4(<4 x ptr> %arg) nounwind {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <4 x i8*> [[ARG:%.*]] to <4 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <4 x ptr> [[ARG:%.*]] to <4 x i64>
 ; CHECK-NEXT:    [[P1:%.*]] = trunc <4 x i64> [[TMP1]] to <4 x i32>
 ; CHECK-NEXT:    ret <4 x i32> [[P1]]
 ;
-  %p1 = ptrtoint <4 x i8*> %arg to <4 x i32>
+  %p1 = ptrtoint <4 x ptr> %arg to <4 x i32>
   ret <4 x i32> %p1
 }
 
-define <vscale x 4 x i32> @testvscale4(<vscale x 4 x i8*> %arg) nounwind {
+define <vscale x 4 x i32> @testvscale4(<vscale x 4 x ptr> %arg) nounwind {
 ; CHECK-LABEL: @testvscale4(
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <vscale x 4 x i8*> [[ARG:%.*]] to <vscale x 4 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <vscale x 4 x ptr> [[ARG:%.*]] to <vscale x 4 x i64>
 ; CHECK-NEXT:    [[P1:%.*]] = trunc <vscale x 4 x i64> [[TMP1]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    ret <vscale x 4 x i32> [[P1]]
 ;
-  %p1 = ptrtoint <vscale x 4 x i8*> %arg to <vscale x 4 x i32>
+  %p1 = ptrtoint <vscale x 4 x ptr> %arg to <vscale x 4 x i32>
   ret <vscale x 4 x i32> %p1
 }
 
-define <4 x i128> @test5(<4 x i8*> %arg) nounwind {
+define <4 x i128> @test5(<4 x ptr> %arg) nounwind {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <4 x i8*> [[ARG:%.*]] to <4 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <4 x ptr> [[ARG:%.*]] to <4 x i64>
 ; CHECK-NEXT:    [[P1:%.*]] = zext <4 x i64> [[TMP1]] to <4 x i128>
 ; CHECK-NEXT:    ret <4 x i128> [[P1]]
 ;
-  %p1 = ptrtoint <4 x i8*> %arg to <4 x i128>
+  %p1 = ptrtoint <4 x ptr> %arg to <4 x i128>
   ret <4 x i128> %p1
 }
 
-define <4 x i8*> @test6(<4 x i32> %arg) nounwind {
+define <4 x ptr> @test6(<4 x i32> %arg) nounwind {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i32> [[ARG:%.*]] to <4 x i64>
-; CHECK-NEXT:    [[P1:%.*]] = inttoptr <4 x i64> [[TMP1]] to <4 x i8*>
-; CHECK-NEXT:    ret <4 x i8*> [[P1]]
+; CHECK-NEXT:    [[P1:%.*]] = inttoptr <4 x i64> [[TMP1]] to <4 x ptr>
+; CHECK-NEXT:    ret <4 x ptr> [[P1]]
 ;
-  %p1 = inttoptr <4 x i32> %arg to <4 x i8*>
-  ret <4 x i8*> %p1
+  %p1 = inttoptr <4 x i32> %arg to <4 x ptr>
+  ret <4 x ptr> %p1
 }
 
-define <4 x i8*> @test7(<4 x i128> %arg) nounwind {
+define <4 x ptr> @test7(<4 x i128> %arg) nounwind {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc <4 x i128> [[ARG:%.*]] to <4 x i64>
-; CHECK-NEXT:    [[P1:%.*]] = inttoptr <4 x i64> [[TMP1]] to <4 x i8*>
-; CHECK-NEXT:    ret <4 x i8*> [[P1]]
+; CHECK-NEXT:    [[P1:%.*]] = inttoptr <4 x i64> [[TMP1]] to <4 x ptr>
+; CHECK-NEXT:    ret <4 x ptr> [[P1]]
 ;
-  %p1 = inttoptr <4 x i128> %arg to <4 x i8*>
-  ret <4 x i8*> %p1
+  %p1 = inttoptr <4 x i128> %arg to <4 x ptr>
+  ret <4 x ptr> %p1
 }

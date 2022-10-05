@@ -61,8 +61,8 @@ define i1 @PR52260(i32 %x) {
 ; CHECK-NEXT:    ret i1 true
 ;
   %idxprom = sext i32 %x to i64
-  %idx = getelementptr inbounds [3 x i32], [3 x i32]* @a, i64 0, i64 %idxprom
-  %t1 = load i32, i32* %idx, align 4
+  %idx = getelementptr inbounds [3 x i32], ptr @a, i64 0, i64 %idxprom
+  %t1 = load i32, ptr %idx, align 4
   %conv1 = lshr i32 %t1, 1
   %t2 = trunc i32 %conv1 to i8
   %conv2 = and i8 %t2, 127

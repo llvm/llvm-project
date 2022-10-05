@@ -3,12 +3,12 @@
 
 define dso_local i32 @_Z6answeri(i32 %0) {
 ; CHECK-LABEL: @_Z6answeri(
-; CHECK-NEXT:    [[TMP2:%.*]] = call noalias nonnull dereferenceable(80) i8* @_Znam(i64 80) #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    call void @free(i8* [[TMP2]])
+; CHECK-NEXT:    [[TMP2:%.*]] = call noalias nonnull dereferenceable(80) ptr @_Znam(i64 80) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    call void @free(ptr [[TMP2]])
 ; CHECK-NEXT:    ret i32 42
 ;
-  %2 = call noalias nonnull i8* @_Znam(i64 80) #0
-  call void @free(i8* %2)
+  %2 = call noalias nonnull ptr @_Znam(i64 80) #0
+  call void @free(ptr %2)
   ret i32 42
 }
 
@@ -16,15 +16,15 @@ define dso_local i32 @_Z6answeri(i32 %0) {
 ; when optimizing it.
 define void @test_alloca() {
   %1 = alloca i8
-  call void @free(i8* %1)
+  call void @free(ptr %1)
   ret void
 }
 
 ; Function Attrs: nobuiltin allocsize(0)
-declare dso_local nonnull i8* @_Znam(i64) #1
+declare dso_local nonnull ptr @_Znam(i64) #1
 
 ; Function Attrs: nounwind
-declare dso_local void @free(i8*) allockind("free") "alloc-family"="malloc"
+declare dso_local void @free(ptr) allockind("free") "alloc-family"="malloc"
 
 attributes #0 = { builtin allocsize(0) }
 attributes #1 = { nobuiltin allocsize(0) allockind("alloc,uninitialized") "alloc-family"="_Znam" }

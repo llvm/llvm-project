@@ -229,7 +229,7 @@ void markLive() {
       // FIXME: When we implement these flags, make symbols from them GC
       // roots:
       // * -reexported_symbol(s_list)
-      // * -alias(-list)
+      // * -alias_list
       // * -init
 
       // In dylibs and bundles and in executables with -export_dynamic,

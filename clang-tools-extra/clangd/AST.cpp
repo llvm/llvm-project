@@ -189,6 +189,9 @@ std::string printQualifiedName(const NamedDecl &ND) {
   // include them, but at query time it's hard to find all the inline
   // namespaces to query: the preamble doesn't have a dedicated list.
   Policy.SuppressUnwrittenScope = true;
+  // (unnamed struct), not (unnamed struct at /path/to/foo.cc:42:1).
+  // In clangd, context is usually available and paths are mostly noise.
+  Policy.AnonymousTagLocations = false;
   ND.printQualifiedName(OS, Policy);
   OS.flush();
   assert(!StringRef(QName).startswith("::"));

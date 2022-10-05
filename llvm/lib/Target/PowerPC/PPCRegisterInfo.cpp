@@ -566,6 +566,7 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
   // want to allocate the corresponding physical subreg for the source.
   // The copy into ACC will be a BUILD_UACC so we want to allocate
   // the same number UACC for the source.
+  const TargetRegisterClass *RegClass = MRI->getRegClass(VirtReg);
   for (MachineInstr &Use : MRI->reg_nodbg_instructions(VirtReg)) {
     const MachineOperand *ResultOp = nullptr;
     Register ResultReg;
@@ -577,10 +578,17 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
           MRI->getRegClass(ResultReg)->contains(PPC::UACC0) &&
           VRM->hasPhys(ResultReg)) {
         Register UACCPhys = VRM->getPhys(ResultReg);
-        Register HintReg = getSubReg(UACCPhys, ResultOp->getSubReg());
-        // Ensure that the hint is a VSRp register.
-        if (HintReg >= PPC::VSRp0 && HintReg <= PPC::VSRp31)
-          Hints.push_back(HintReg);
+        Register HintReg;
+        if (RegClass->contains(PPC::VSRp0)) {
+          HintReg = getSubReg(UACCPhys, ResultOp->getSubReg());
+          // Ensure that the hint is a VSRp register.
+          if (HintReg >= PPC::VSRp0 && HintReg <= PPC::VSRp31)
+            Hints.push_back(HintReg);
+        } else if (RegClass->contains(PPC::ACC0)) {
+          HintReg = PPC::ACC0 + (UACCPhys - PPC::UACC0);
+          if (HintReg >= PPC::ACC0 && HintReg <= PPC::ACC7)
+            Hints.push_back(HintReg);
+        }
       }
       break;
     }

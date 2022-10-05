@@ -139,7 +139,7 @@ void test2(FunctionOpInterface f) {
       m_Op<arith::MulFOp>(a, m_Op<arith::AddFOp>(a, m_Constant(&floatAttr)));
   auto p1 = m_Op<arith::MulFOp>(a, m_Op<arith::AddFOp>(a, m_Constant()));
   // Last operation that is not the terminator.
-  Operation *lastOp = f.getBody().front().back().getPrevNode();
+  Operation *lastOp = f.getFunctionBody().front().back().getPrevNode();
   if (p.match(lastOp))
     llvm::outs()
         << "Pattern add(add(a, constant), a) matched and bound constant to: "

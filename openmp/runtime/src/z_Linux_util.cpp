@@ -2242,8 +2242,9 @@ int __kmp_get_load_balance(int max) {
   int stat_file = -1;
   int stat_path_fixed_len;
 
+#ifdef KMP_DEBUG
   int total_processes = 0; // Total number of processes in system.
-  int total_threads = 0; // Total number of threads in system.
+#endif
 
   double call_time = 0.0;
 
@@ -2290,7 +2291,9 @@ int __kmp_get_load_balance(int max) {
     // process' directory.
     if (proc_entry->d_type == DT_DIR && isdigit(proc_entry->d_name[0])) {
 
+#ifdef KMP_DEBUG
       ++total_processes;
+#endif
       // Make sure init process is the very first in "/proc", so we can replace
       // strcmp( proc_entry->d_name, "1" ) == 0 with simpler total_processes ==
       // 1. We are going to check that total_processes == 1 => d_name == "1" is
@@ -2331,7 +2334,6 @@ int __kmp_get_load_balance(int max) {
         while (task_entry != NULL) {
           // It is a directory and name starts with a digit.
           if (proc_entry->d_type == DT_DIR && isdigit(task_entry->d_name[0])) {
-            ++total_threads;
 
             // Construct complete stat file path. Easiest way would be:
             //  __kmp_str_buf_print( & stat_path, "%s/%s/stat", task_path.str,

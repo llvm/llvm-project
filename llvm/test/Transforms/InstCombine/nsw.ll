@@ -32,15 +32,15 @@ define i1 @shl_icmp(i64 %X) {
   ret i1 %B
 }
 
-define i64 @shl1(i64 %X, i64* %P) {
+define i64 @shl1(i64 %X, ptr %P) {
 ; CHECK-LABEL: @shl1(
 ; CHECK-NEXT:    [[A:%.*]] = and i64 [[X:%.*]], 312
-; CHECK-NEXT:    store i64 [[A]], i64* [[P:%.*]], align 4
+; CHECK-NEXT:    store i64 [[A]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[B:%.*]] = shl nuw nsw i64 [[A]], 8
 ; CHECK-NEXT:    ret i64 [[B]]
 ;
   %A = and i64 %X, 312
-  store i64 %A, i64* %P  ; multiple uses of A.
+  store i64 %A, ptr %P  ; multiple uses of A.
   %B = shl i64 %A, 8
   ret i64 %B
 }

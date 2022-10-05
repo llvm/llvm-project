@@ -1,5 +1,5 @@
-; RUN: llc < %s -march=nvptx -mcpu=sm_75 -verify-machineinstrs
-; RUN: %if ptxas %{ llc < %s -march=nvptx -mcpu=sm_75 | %ptxas-verify %}
+; RUN: llc < %s -march=nvptx -verify-machineinstrs
+; RUN: %if ptxas %{ llc < %s -march=nvptx | %ptxas-verify %}
 
 ; Check that llc will not crash even when first MBB doesn't contain
 ; any instruction.

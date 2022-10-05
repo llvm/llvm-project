@@ -338,7 +338,7 @@ static bool computeIterationGraph(Merger &merger, linalg::GenericOp op,
 
 /// Returns true if tensor materializes uninitialized into the computation.
 static bool isMaterializing(Value val) {
-  return val.getDefiningOp<linalg::InitTensorOp>() ||
+  return val.getDefiningOp<tensor::EmptyOp>() ||
          val.getDefiningOp<bufferization::AllocTensorOp>();
 }
 
@@ -878,6 +878,15 @@ static void genTensorStore(Merger &merger, CodeGen &codegen, OpBuilder &builder,
       // Only unary and binary are allowed to return uninitialized rhs
       // to indicate missing output.
       assert(merger.exp(exp).kind == kUnary || merger.exp(exp).kind == kBinary);
+    } else if (merger.exp(exp).kind == kSelect) {
+      scf::IfOp ifOp = builder.create<scf::IfOp>(loc, rhs);
+      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+      // Existing value was preserved to be used here.
+      assert(merger.exp(exp).val);
+      Value v0 = merger.exp(exp).val;
+      genInsertionStore(codegen, builder, op, t, v0);
+      merger.exp(exp).val = Value();
+      builder.setInsertionPointAfter(ifOp);
     } else {
       genInsertionStore(codegen, builder, op, t, rhs);
     }
@@ -1037,8 +1046,14 @@ static Value genExp(Merger &merger, CodeGen &codegen, RewriterBase &rewriter,
   if (ee && (merger.exp(exp).kind == Kind::kUnary ||
              merger.exp(exp).kind == Kind::kBinary ||
              merger.exp(exp).kind == Kind::kBinaryBranch ||
-             merger.exp(exp).kind == Kind::kReduce))
+             merger.exp(exp).kind == Kind::kReduce ||
+             merger.exp(exp).kind == Kind::kSelect))
     ee = relinkBranch(codegen, rewriter, ee.getParentBlock(), ee, ldx);
+
+  if (merger.exp(exp).kind == kSelect) {
+    assert(!merger.exp(exp).val);
+    merger.exp(exp).val = v0; // Preserve value for later use.
+  }
 
   if (merger.exp(exp).kind == Kind::kReduce) {
     assert(codegen.redCustom != -1u);
@@ -1839,7 +1854,8 @@ public:
                                 PatternRewriter &rewriter) const override {
     // Detects sparse annotations and translate the per-dimension sparsity
     // information for all tensors to loop indices in the kernel.
-    assert(op.getNumOutputs() == 1);
+    if (op.getNumOutputs() != 1)
+      return failure();
     unsigned numTensors = op.getNumInputsAndOutputs();
     unsigned numLoops = op.iterator_types().getValue().size();
     Merger merger(numTensors, numLoops);

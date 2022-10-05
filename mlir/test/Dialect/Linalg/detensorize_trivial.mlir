@@ -12,7 +12,7 @@
 func.func @main(%farg0 : tensor<i32>) -> (tensor<i1>) attributes {} {
   %c10 = arith.constant 10 : i32
   %1 = tensor.from_elements %c10 : tensor<i32>
-  %3 = linalg.init_tensor [] : tensor<i1>
+  %3 = tensor.empty() : tensor<i1>
   %4 = linalg.generic #attrs
     ins(%farg0, %1 : tensor<i32>, tensor<i32>)
     outs(%3 : tensor<i1>) {
@@ -34,7 +34,7 @@ func.func @main(%farg0 : tensor<i32>) -> (tensor<i1>) attributes {} {
 
 // DET-CF-LABEL: func @main(%{{.*}}: tensor<i32>)
 // DET-CF-NEXT:    arith.constant dense<10> : tensor<i32>
-// DET-CF-NEXT:    linalg.init_tensor [] : tensor<i1>
+// DET-CF-NEXT:    tensor.empty() : tensor<i1>
 // DET-CF-NEXT:    linalg.generic
 // DET-CF-NEXT:    ^{{.*}}(%{{.*}}: i32, %{{.*}}: i32, %{{.*}}: i1)
 // DET-CF-NEXT:      arith.cmpi slt, %{{.*}}, %{{.*}}

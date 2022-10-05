@@ -594,6 +594,11 @@ namespace llvm {
     ATOMIC_CMP_SWAP_8,
     ATOMIC_CMP_SWAP_16,
 
+    /// CHAIN,Glue = STORE_COND CHAIN, GPR, Ptr
+    /// The store conditional instruction ST[BHWD]ARX that produces a glue
+    /// result to attach it to a conditional branch.
+    STORE_COND,
+
     /// GPRC = TOC_ENTRY GA, TOC
     /// Loads the entry for GA from the TOC, where the TOC base is given by
     /// the last operand.

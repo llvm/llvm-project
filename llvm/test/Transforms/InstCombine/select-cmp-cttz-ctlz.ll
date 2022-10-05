@@ -536,89 +536,89 @@ define <2 x i32> @test_cttz_not_bw_vec(<2 x i32> %x) {
   ret <2 x i32> %res
 }
 
-define i32 @test_multiuse_def(i32 %x, i32* %p) {
+define i32 @test_multiuse_def(i32 %x, ptr %p) {
 ; CHECK-LABEL: @test_multiuse_def(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false), !range [[RNG1]]
-; CHECK-NEXT:    store i32 [[CT]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[CT]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[CT]]
 ;
   %ct = tail call i32 @llvm.ctlz.i32(i32 %x, i1 false)
   %tobool = icmp ne i32 %x, 0
   %cond = select i1 %tobool, i32 %ct, i32 32
-  store i32 %ct, i32* %p
+  store i32 %ct, ptr %p
   ret i32 %cond
 }
 
-define i32 @test_multiuse_undef(i32 %x, i32* %p) {
+define i32 @test_multiuse_undef(i32 %x, ptr %p) {
 ; CHECK-LABEL: @test_multiuse_undef(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[X:%.*]], i1 false), !range [[RNG1]]
-; CHECK-NEXT:    store i32 [[CT]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[CT]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[CT]]
 ;
   %ct = tail call i32 @llvm.ctlz.i32(i32 %x, i1 true)
   %tobool = icmp ne i32 %x, 0
   %cond = select i1 %tobool, i32 %ct, i32 32
-  store i32 %ct, i32* %p
+  store i32 %ct, ptr %p
   ret i32 %cond
 }
 
-define i64 @test_multiuse_zext_def(i32 %x, i64* %p) {
+define i64 @test_multiuse_zext_def(i32 %x, ptr %p) {
 ; CHECK-LABEL: @test_multiuse_zext_def(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false), !range [[RNG1]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[CT]] to i64
-; CHECK-NEXT:    store i64 [[CONV]], i64* [[P:%.*]], align 4
+; CHECK-NEXT:    store i64 [[CONV]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i64 [[CONV]]
 ;
   %ct = tail call i32 @llvm.cttz.i32(i32 %x, i1 false)
   %conv = zext i32 %ct to i64
   %tobool = icmp ne i32 %x, 0
   %cond = select i1 %tobool, i64 %conv, i64 32
-  store i64 %conv, i64* %p
+  store i64 %conv, ptr %p
   ret i64 %cond
 }
 
-define i64 @test_multiuse_zext_undef(i32 %x, i64* %p) {
+define i64 @test_multiuse_zext_undef(i32 %x, ptr %p) {
 ; CHECK-LABEL: @test_multiuse_zext_undef(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false), !range [[RNG1]]
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[CT]] to i64
-; CHECK-NEXT:    store i64 [[CONV]], i64* [[P:%.*]], align 4
+; CHECK-NEXT:    store i64 [[CONV]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i64 [[CONV]]
 ;
   %ct = tail call i32 @llvm.cttz.i32(i32 %x, i1 true)
   %conv = zext i32 %ct to i64
   %tobool = icmp ne i32 %x, 0
   %cond = select i1 %tobool, i64 %conv, i64 32
-  store i64 %conv, i64* %p
+  store i64 %conv, ptr %p
   ret i64 %cond
 }
 
-define i16 @test_multiuse_trunc_def(i64 %x, i16 *%p) {
+define i16 @test_multiuse_trunc_def(i64 %x, ptr %p) {
 ; CHECK-LABEL: @test_multiuse_trunc_def(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 false), !range [[RNG2]]
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[CT]] to i16
-; CHECK-NEXT:    store i16 [[CONV]], i16* [[P:%.*]], align 2
+; CHECK-NEXT:    store i16 [[CONV]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    ret i16 [[CONV]]
 ;
   %ct = tail call i64 @llvm.cttz.i64(i64 %x, i1 false)
   %conv = trunc i64 %ct to i16
   %tobool = icmp ne i64 %x, 0
   %cond = select i1 %tobool, i16 %conv, i16 64
-  store i16 %conv, i16* %p
+  store i16 %conv, ptr %p
   ret i16 %cond
 }
 
-define i16 @test_multiuse_trunc_undef(i64 %x, i16 *%p) {
+define i16 @test_multiuse_trunc_undef(i64 %x, ptr %p) {
 ; CHECK-LABEL: @test_multiuse_trunc_undef(
 ; CHECK-NEXT:    [[CT:%.*]] = tail call i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 false), !range [[RNG2]]
 ; CHECK-NEXT:    [[CONV:%.*]] = trunc i64 [[CT]] to i16
-; CHECK-NEXT:    store i16 [[CONV]], i16* [[P:%.*]], align 2
+; CHECK-NEXT:    store i16 [[CONV]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    ret i16 [[CONV]]
 ;
   %ct = tail call i64 @llvm.cttz.i64(i64 %x, i1 true)
   %conv = trunc i64 %ct to i16
   %tobool = icmp ne i64 %x, 0
   %cond = select i1 %tobool, i16 %conv, i16 64
-  store i16 %conv, i16* %p
+  store i16 %conv, ptr %p
   ret i16 %cond
 }
 

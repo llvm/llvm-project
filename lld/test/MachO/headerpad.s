@@ -24,9 +24,9 @@
 # PADx-NEXT: offset [[#%u, CMDSIZE + 0x20 + 0x20]]
 
 ################ Zero pad, no LCDylibs
-# RUN: %lld -o %t/test %t/test.o -headerpad 0
+# RUN: %no-lsystem-lld -o %t/test %t/test.o -headerpad 0
 # RUN: llvm-objdump --macho --all-headers %t/test | FileCheck %s --check-prefix=PAD0
-# RUN: %lld -o %t/test %t/test.o -headerpad 0 -headerpad_max_install_names
+# RUN: %no-lsystem-lld -o %t/test %t/test.o -headerpad 0 -headerpad_max_install_names
 # RUN: llvm-objdump --macho --all-headers %t/test | FileCheck %s --check-prefix=PAD0
 #
 # PAD0:      magic        {{.+}}  ncmds  sizeofcmds         flags
@@ -38,11 +38,11 @@
 # PAD0-NEXT: offset [[#%u, CMDSIZE + 0x20 + 0]]
 
 ################ Each lexical form of a hex number, no LCDylibs
-# RUN: %lld -o %t/test %t/test.o -headerpad 11
+# RUN: %no-lsystem-lld -o %t/test %t/test.o -headerpad 11
 # RUN: llvm-objdump --macho --all-headers %t/test | FileCheck %s --check-prefix=PAD11
-# RUN: %lld -o %t/test %t/test.o -headerpad 0x11
+# RUN: %no-lsystem-lld -o %t/test %t/test.o -headerpad 0x11
 # RUN: llvm-objdump --macho --all-headers %t/test | FileCheck %s --check-prefix=PAD11
-# RUN: %lld -o %t/test %t/test.o -headerpad 0X11 -headerpad_max_install_names
+# RUN: %no-lsystem-lld -o %t/test %t/test.o -headerpad 0X11 -headerpad_max_install_names
 # RUN: llvm-objdump --macho --all-headers %t/test | FileCheck %s --check-prefix=PAD11
 #
 # PAD11:      magic        {{.+}}  ncmds  sizeofcmds         flags

@@ -37,7 +37,7 @@ static bool isElementwiseMappableOpOnRankedTensors(Operation *op) {
 ///   1. `v.getType() == t`
 ///   2. If an operand of `op` has type `t`, let `operand_first` be the first
 ///      such operand. Then`v == operand_first`.
-///   3. Otherwise, v is a newly created `linalg::InitTensorOp` with:
+///   3. Otherwise, v is a newly created `tensor::EmptyOp` with:
 ///        a. Static and dynamic dims extracted from the first operand of `op`.
 ///        b. Elemental type equal to the elemental type of `t`.
 ///
@@ -71,8 +71,8 @@ getOrCreateOperandsMatchingResultTypes(OpBuilder &b, Operation *op) {
     auto staticShape = llvm::to_vector<4>(rankedTensorType.getShape());
     auto dynamicShape = linalg::getDynOperands(loc, firstOperand, b);
 
-    res.push_back(b.create<linalg::InitTensorOp>(
-        loc, dynamicShape, staticShape, rankedTensorType.getElementType()));
+    res.push_back(b.create<tensor::EmptyOp>(
+        loc, staticShape, rankedTensorType.getElementType(), dynamicShape));
   }
   return res;
 }

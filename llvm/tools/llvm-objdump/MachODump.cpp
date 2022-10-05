@@ -7387,6 +7387,108 @@ static void emitComments(raw_svector_ostream &CommentStream,
   CommentsToEmit.clear();
 }
 
+const MachOObjectFile *
+objdump::getMachODSymObject(const MachOObjectFile *MachOOF, StringRef Filename,
+                            std::unique_ptr<Binary> &DSYMBinary,
+                            std::unique_ptr<MemoryBuffer> &DSYMBuf) {
+  const MachOObjectFile *DbgObj = MachOOF;
+  std::string DSYMPath;
+
+  // Auto-detect w/o --dsym.
+  if (DSYMFile.empty()) {
+    sys::fs::file_status DSYMStatus;
+    Twine FilenameDSYM = Filename + ".dSYM";
+    if (!status(FilenameDSYM, DSYMStatus)) {
+      if (sys::fs::is_directory(DSYMStatus)) {
+        SmallString<1024> Path;
+        FilenameDSYM.toVector(Path);
+        sys::path::append(Path, "Contents", "Resources", "DWARF",
+                          sys::path::filename(Filename));
+        DSYMPath = std::string(Path);
+      } else if (sys::fs::is_regular_file(DSYMStatus)) {
+        DSYMPath = FilenameDSYM.str();
+      }
+    }
+  }
+
+  if (DSYMPath.empty() && !DSYMFile.empty()) {
+    // If DSYMPath is a .dSYM directory, append the Mach-O file.
+    if (sys::fs::is_directory(DSYMFile) &&
+        sys::path::extension(DSYMFile) == ".dSYM") {
+      SmallString<128> ShortName(sys::path::filename(DSYMFile));
+      sys::path::replace_extension(ShortName, "");
+      SmallString<1024> FullPath(DSYMFile);
+      sys::path::append(FullPath, "Contents", "Resources", "DWARF", ShortName);
+      DSYMPath = FullPath.str();
+    } else {
+      DSYMPath = DSYMFile;
+    }
+  }
+
+  if (!DSYMPath.empty()) {
+    // Load the file.
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+        MemoryBuffer::getFileOrSTDIN(DSYMPath);
+    if (std::error_code EC = BufOrErr.getError()) {
+      reportError(errorCodeToError(EC), DSYMPath);
+      return nullptr;
+    }
+
+    // We need to keep the file alive, because we're replacing DbgObj with it.
+    DSYMBuf = std::move(BufOrErr.get());
+
+    Expected<std::unique_ptr<Binary>> BinaryOrErr =
+        createBinary(DSYMBuf.get()->getMemBufferRef());
+    if (!BinaryOrErr) {
+      reportError(BinaryOrErr.takeError(), DSYMPath);
+      return nullptr;
+    }
+
+    // We need to keep the Binary alive with the buffer
+    DSYMBinary = std::move(BinaryOrErr.get());
+    if (ObjectFile *O = dyn_cast<ObjectFile>(DSYMBinary.get())) {
+      // this is a Mach-O object file, use it
+      if (MachOObjectFile *MachDSYM = dyn_cast<MachOObjectFile>(&*O)) {
+        DbgObj = MachDSYM;
+      } else {
+        WithColor::error(errs(), "llvm-objdump")
+            << DSYMPath << " is not a Mach-O file type.\n";
+        return nullptr;
+      }
+    } else if (auto *UB = dyn_cast<MachOUniversalBinary>(DSYMBinary.get())) {
+      // this is a Universal Binary, find a Mach-O for this architecture
+      uint32_t CPUType, CPUSubType;
+      const char *ArchFlag;
+      if (MachOOF->is64Bit()) {
+        const MachO::mach_header_64 H_64 = MachOOF->getHeader64();
+        CPUType = H_64.cputype;
+        CPUSubType = H_64.cpusubtype;
+      } else {
+        const MachO::mach_header H = MachOOF->getHeader();
+        CPUType = H.cputype;
+        CPUSubType = H.cpusubtype;
+      }
+      Triple T = MachOObjectFile::getArchTriple(CPUType, CPUSubType, nullptr,
+                                                &ArchFlag);
+      Expected<std::unique_ptr<MachOObjectFile>> MachDSYM =
+          UB->getMachOObjectForArch(ArchFlag);
+      if (!MachDSYM) {
+        reportError(MachDSYM.takeError(), DSYMPath);
+        return nullptr;
+      }
+
+      // We need to keep the Binary alive with the buffer
+      DbgObj = &*MachDSYM.get();
+      DSYMBinary = std::move(*MachDSYM);
+    } else {
+      WithColor::error(errs(), "llvm-objdump")
+          << DSYMPath << " is not a Mach-O or Universal file type.\n";
+      return nullptr;
+    }
+  }
+  return DbgObj;
+}
+
 static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                              StringRef DisSegName, StringRef DisSectName) {
   const char *McpuDefault = nullptr;
@@ -7561,90 +7663,15 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   std::unique_ptr<Binary> DSYMBinary;
   std::unique_ptr<MemoryBuffer> DSYMBuf;
   if (UseDbg) {
-    ObjectFile *DbgObj = MachOOF;
-
-    // A separate DSym file path was specified, parse it as a macho file,
+    // If separate DSym file path was specified, parse it as a macho file,
     // get the sections and supply it to the section name parsing machinery.
-    if (!DSYMFile.empty()) {
-      std::string DSYMPath(DSYMFile);
-
-      // If DSYMPath is a .dSYM directory, append the Mach-O file.
-      if (llvm::sys::fs::is_directory(DSYMPath) &&
-          llvm::sys::path::extension(DSYMPath) == ".dSYM") {
-        SmallString<128> ShortName(llvm::sys::path::filename(DSYMPath));
-        llvm::sys::path::replace_extension(ShortName, "");
-        SmallString<1024> FullPath(DSYMPath);
-        llvm::sys::path::append(FullPath, "Contents", "Resources", "DWARF",
-                                ShortName);
-        DSYMPath = std::string(FullPath.str());
-      }
-
-      // Load the file.
-      ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-          MemoryBuffer::getFileOrSTDIN(DSYMPath);
-      if (std::error_code EC = BufOrErr.getError()) {
-        reportError(errorCodeToError(EC), DSYMPath);
-        return;
-      }
-
-      // We need to keep the file alive, because we're replacing DbgObj with it.
-      DSYMBuf = std::move(BufOrErr.get());
-
-      Expected<std::unique_ptr<Binary>> BinaryOrErr =
-      createBinary(DSYMBuf.get()->getMemBufferRef());
-      if (!BinaryOrErr) {
-        reportError(BinaryOrErr.takeError(), DSYMPath);
-        return;
-      }
-
-      // We need to keep the Binary alive with the buffer
-      DSYMBinary = std::move(BinaryOrErr.get());
-      if (ObjectFile *O = dyn_cast<ObjectFile>(DSYMBinary.get())) {
-        // this is a Mach-O object file, use it
-        if (MachOObjectFile *MachDSYM = dyn_cast<MachOObjectFile>(&*O)) {
-          DbgObj = MachDSYM;
-        }
-        else {
-          WithColor::error(errs(), "llvm-objdump")
-            << DSYMPath << " is not a Mach-O file type.\n";
-          return;
-        }
-      }
-      else if (auto UB = dyn_cast<MachOUniversalBinary>(DSYMBinary.get())){
-        // this is a Universal Binary, find a Mach-O for this architecture
-        uint32_t CPUType, CPUSubType;
-        const char *ArchFlag;
-        if (MachOOF->is64Bit()) {
-          const MachO::mach_header_64 H_64 = MachOOF->getHeader64();
-          CPUType = H_64.cputype;
-          CPUSubType = H_64.cpusubtype;
-        } else {
-          const MachO::mach_header H = MachOOF->getHeader();
-          CPUType = H.cputype;
-          CPUSubType = H.cpusubtype;
-        }
-        Triple T = MachOObjectFile::getArchTriple(CPUType, CPUSubType, nullptr,
-                                                  &ArchFlag);
-        Expected<std::unique_ptr<MachOObjectFile>> MachDSYM =
-            UB->getMachOObjectForArch(ArchFlag);
-        if (!MachDSYM) {
-          reportError(MachDSYM.takeError(), DSYMPath);
-          return;
-        }
-
-        // We need to keep the Binary alive with the buffer
-        DbgObj = &*MachDSYM.get();
-        DSYMBinary = std::move(*MachDSYM);
-      }
-      else {
-        WithColor::error(errs(), "llvm-objdump")
-          << DSYMPath << " is not a Mach-O or Universal file type.\n";
-        return;
-      }
+    if (const ObjectFile *DbgObj =
+            getMachODSymObject(MachOOF, Filename, DSYMBinary, DSYMBuf)) {
+      // Setup the DIContext
+      diContext = DWARFContext::create(*DbgObj);
+    } else {
+      return;
     }
-
-    // Setup the DIContext
-    diContext = DWARFContext::create(*DbgObj);
   }
 
   if (FilterSections.empty())

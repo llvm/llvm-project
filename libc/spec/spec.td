@@ -39,6 +39,7 @@ class RestrictedPtrType<Type type> : Type {
 def VarArgType : NamedType<"...">;
 def VoidType : NamedType<"void">;
 def IntType : NamedType<"int">;
+def UnsignedIntType : NamedType<"unsigned int">;
 def LongType : NamedType<"long">;
 def UnsignedLongType : NamedType<"unsigned long">;
 def LongLongType : NamedType<"long long">;
@@ -114,6 +115,8 @@ def FILERestrictedPtr : RestrictedPtrType<FILE>;
 def PThreadTType : NamedType<"pthread_t">;
 
 def PidT : NamedType<"pid_t">;
+def StructRUsage : NamedType<"struct rusage">;
+def StructRUsagePtr : PtrType<StructRUsage>;
 
 //added because __assert_fail needs it.
 def UnsignedType : NamedType<"unsigned">;

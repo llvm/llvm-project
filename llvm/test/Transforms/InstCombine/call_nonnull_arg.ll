@@ -2,30 +2,30 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 ; InstCombine should mark null-checked argument as nonnull at callsite
-declare void @dummy(i32*, i32)
+declare void @dummy(ptr, i32)
 
-define void @test(i32* %a, i32 %b) {
+define void @test(ptr %a, i32 %b) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i32* [[A:%.*]], null
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq ptr [[A:%.*]], null
 ; CHECK-NEXT:    br i1 [[COND1]], label [[DEAD:%.*]], label [[NOT_NULL:%.*]]
 ; CHECK:       not_null:
 ; CHECK-NEXT:    [[COND2:%.*]] = icmp eq i32 [[B:%.*]], 0
 ; CHECK-NEXT:    br i1 [[COND2]], label [[DEAD]], label [[NOT_ZERO:%.*]]
 ; CHECK:       not_zero:
-; CHECK-NEXT:    call void @dummy(i32* nonnull [[A]], i32 [[B]])
+; CHECK-NEXT:    call void @dummy(ptr nonnull [[A]], i32 [[B]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       dead:
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  %cond1 = icmp eq i32* %a, null
+  %cond1 = icmp eq ptr %a, null
   br i1 %cond1, label %dead, label %not_null
 not_null:
   %cond2 = icmp eq i32 %b, 0
   br i1 %cond2, label %dead, label %not_zero
 not_zero:
-  call void @dummy(i32* %a, i32 %b)
+  call void @dummy(ptr %a, i32 %b)
   ret void
 dead:
   unreachable
@@ -34,30 +34,30 @@ dead:
 ; The nonnull attribute in the 'bar' declaration is
 ; propagated to the parameters of the 'baz' callsite.
 
-declare void @bar(i8*, i8* nonnull noundef)
-declare void @bar_without_noundef(i8*, i8* nonnull)
-declare void @baz(i8*, i8*)
+declare void @bar(ptr, ptr nonnull noundef)
+declare void @bar_without_noundef(ptr, ptr nonnull)
+declare void @baz(ptr, ptr)
 
-define void @deduce_nonnull_from_another_call(i8* %a, i8* %b) {
+define void @deduce_nonnull_from_another_call(ptr %a, ptr %b) {
 ; CHECK-LABEL: @deduce_nonnull_from_another_call(
-; CHECK-NEXT:    call void @bar(i8* [[A:%.*]], i8* [[B:%.*]])
-; CHECK-NEXT:    call void @baz(i8* nonnull [[B]], i8* nonnull [[B]])
+; CHECK-NEXT:    call void @bar(ptr [[A:%.*]], ptr [[B:%.*]])
+; CHECK-NEXT:    call void @baz(ptr nonnull [[B]], ptr nonnull [[B]])
 ; CHECK-NEXT:    ret void
 ;
-  call void @bar(i8* %a, i8* %b)
-  call void @baz(i8* %b, i8* %b)
+  call void @bar(ptr %a, ptr %b)
+  call void @baz(ptr %b, ptr %b)
   ret void
 }
 
 
-define void @deduce_nonnull_from_another_call2(i8* %a, i8* %b) {
+define void @deduce_nonnull_from_another_call2(ptr %a, ptr %b) {
 ; CHECK-LABEL: @deduce_nonnull_from_another_call2(
-; CHECK-NEXT:    call void @bar_without_noundef(i8* [[A:%.*]], i8* [[B:%.*]])
-; CHECK-NEXT:    call void @baz(i8* [[B]], i8* [[B]])
+; CHECK-NEXT:    call void @bar_without_noundef(ptr [[A:%.*]], ptr [[B:%.*]])
+; CHECK-NEXT:    call void @baz(ptr [[B]], ptr [[B]])
 ; CHECK-NEXT:    ret void
 ;
-  call void @bar_without_noundef(i8* %a, i8* %b)
-  call void @baz(i8* %b, i8* %b)
+  call void @bar_without_noundef(ptr %a, ptr %b)
+  call void @baz(ptr %b, ptr %b)
   ret void
 }
 

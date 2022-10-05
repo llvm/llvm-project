@@ -1012,7 +1012,7 @@ struct AAPointerInfoImpl
     const DominatorTree *DT =
         InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(Scope);
 
-    enum GPUAddressSpace : unsigned {
+    enum class GPUAddressSpace : unsigned {
       Generic = 0,
       Global = 1,
       Shared = 3,
@@ -1027,7 +1027,7 @@ struct AAPointerInfoImpl
       Triple T(M.getTargetTriple());
       if (!(T.isAMDGPU() || T.isNVPTX()))
         return false;
-      switch (V->getType()->getPointerAddressSpace()) {
+      switch (GPUAddressSpace(V->getType()->getPointerAddressSpace())) {
       case GPUAddressSpace::Shared:
       case GPUAddressSpace::Constant:
       case GPUAddressSpace::Local:

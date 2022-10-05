@@ -124,6 +124,7 @@ Clang-Tidy Checks
    `bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison.html>`_,
    `bugprone-suspicious-memset-usage <bugprone/suspicious-memset-usage.html>`_, "Yes"
    `bugprone-suspicious-missing-comma <bugprone/suspicious-missing-comma.html>`_,
+   `bugprone-suspicious-realloc-usage <bugprone/suspicious-realloc-usage.html>`_,
    `bugprone-suspicious-semicolon <bugprone/suspicious-semicolon.html>`_, "Yes"
    `bugprone-suspicious-string-compare <bugprone/suspicious-string-compare.html>`_, "Yes"
    `bugprone-swapped-arguments <bugprone/swapped-arguments.html>`_, "Yes"

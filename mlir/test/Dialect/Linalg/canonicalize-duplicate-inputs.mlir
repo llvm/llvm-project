@@ -131,8 +131,8 @@ func.func @drop_dead_results(%arg0 : tensor<?x?x?xf32>) -> (tensor<?x?x?xf32>, t
 #map0 = affine_map<(d0) -> (d0)>
 #map1 = affine_map<(d0) -> ()>
 func.func @argmax_lowering(%arg0 : tensor<?xf32>) -> tensor<i32> {
-  %init0 = linalg.init_tensor [] : tensor<f32>
-  %init1 = linalg.init_tensor [] : tensor<i32>
+  %init0 = tensor.empty() : tensor<f32>
+  %init1 = tensor.empty() : tensor<i32>
   %0:2 = linalg.generic {
     indexing_maps = [#map0, #map1, #map1],
     iterator_types = ["reduction"]}
@@ -153,8 +153,8 @@ func.func @argmax_lowering(%arg0 : tensor<?xf32>) -> tensor<i32> {
 }
 //      CHECK: func @argmax_lowering(
 // CHECK-SAME:     %[[ARG0:.+]]: tensor<?xf32>
-//  CHECK-DAG:   %[[INIT0:.+]] = linalg.init_tensor [] : tensor<f32>
-//  CHECK-DAG:   %[[INIT1:.+]] = linalg.init_tensor [] : tensor<i32>
+//  CHECK-DAG:   %[[INIT0:.+]] = tensor.empty() : tensor<f32>
+//  CHECK-DAG:   %[[INIT1:.+]] = tensor.empty() : tensor<i32>
 //      CHECK:   %[[GENERIC:.+]]:2 = linalg.generic
 // CHECK-SAME:       outs(%[[INIT0]], %[[INIT1]] :
 //      CHECK:   return %[[GENERIC]]#1
@@ -164,7 +164,7 @@ func.func @argmax_lowering(%arg0 : tensor<?xf32>) -> tensor<i32> {
 // Do not remove operand needed for loop dim.
 func.func @loop_dim_operand(%arg0 : tensor<?xf32>) -> tensor<i32> {
   %cst = arith.constant 0 : i32
-  %init = linalg.init_tensor [] : tensor<i32>
+  %init = tensor.empty() : tensor<i32>
   %fill = linalg.fill ins(%cst : i32) outs(%init : tensor<i32>) -> tensor<i32>
   %0 = linalg.generic {
       indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>],
@@ -188,8 +188,8 @@ func.func @loop_dim_operand(%arg0 : tensor<?xf32>) -> tensor<i32> {
 // Do not remove outs operand needed for loop bound computation.
 func.func @loop_dim_outs_operand(%arg0 : index) -> tensor<i32> {
   %cst = arith.constant 0 : i32
-  %init1 = linalg.init_tensor [%arg0] : tensor<?xi32>
-  %init = linalg.init_tensor [] : tensor<i32>
+  %init1 = tensor.empty(%arg0) : tensor<?xi32>
+  %init = tensor.empty() : tensor<i32>
   %fill = linalg.fill ins(%cst : i32) outs(%init : tensor<i32>) -> tensor<i32>
   %0:2 = linalg.generic {
       indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>],
@@ -205,7 +205,7 @@ func.func @loop_dim_outs_operand(%arg0 : index) -> tensor<i32> {
 }
 //      CHECK: func @loop_dim_outs_operand(
 // CHECK-SAME:     %[[ARG0:.+]]: index
-//      CHECK:   %[[INIT:.+]] = linalg.init_tensor [%[[ARG0]]]
+//      CHECK:   %[[INIT:.+]] = tensor.empty(%[[ARG0]])
 //      CHECK:   linalg.generic
 // CHECK-SAME:       outs(%[[INIT]]
 
@@ -239,21 +239,21 @@ func.func @multiple_redundant_args(%arg0 : tensor<?x?xi32>, %arg1 : tensor<?xi32
 //  CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1) -> (d0)>
 //  CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1) -> (d1, d0)>
 //      CHECK: func @multiple_redundant_args(
-// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xi32>
-// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?xi32>
-// CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<?xi32>
-// CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: tensor<?x?xi32>
-// CHECK-SAME:     %[[ARG4:[a-zA-Z0-9]+]]: tensor<?xi32>)
+// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xi32>
+// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?xi32>
+// CHECK-SAME:     %[[ARG2:[a-zA-Z0-9_]+]]: tensor<?xi32>
+// CHECK-SAME:     %[[ARG3:[a-zA-Z0-9_]+]]: tensor<?x?xi32>
+// CHECK-SAME:     %[[ARG4:[a-zA-Z0-9_]+]]: tensor<?xi32>)
 //      CHECK:   %[[RETURN:.+]] = linalg.generic
 // CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]], #[[MAP2]], #[[MAP3]], #[[MAP2]]]
 // CHECK-SAME:       iterator_types = ["parallel", "reduction"]
 // CHECK-SAME:       ins(%[[ARG4]], %[[ARG0]], %[[ARG1]], %[[ARG3]] :
 // CHECK-SAME:       outs(%[[ARG2]] :
 //      CHECK:   ^{{.+}}(%[[B0:[a-zA-Z0-9]+]]: i32
-// CHECK-SAME:       %[[B1:[a-zA-Z0-9]+]]: i32
-// CHECK-SAME:       %[[B2:[a-zA-Z0-9]+]]: i32
-// CHECK-SAME:       %[[B3:[a-zA-Z0-9]+]]: i32
-// CHECK-SAME:       %[[B4:[a-zA-Z0-9]+]]: i32)
+// CHECK-SAME:       %[[B1:[a-zA-Z0-9_]+]]: i32
+// CHECK-SAME:       %[[B2:[a-zA-Z0-9_]+]]: i32
+// CHECK-SAME:       %[[B3:[a-zA-Z0-9_]+]]: i32
+// CHECK-SAME:       %[[B4:[a-zA-Z0-9_]+]]: i32)
 //      CHECK:     %[[T0:.+]] = arith.addi %[[B0]], %[[B1]]
 //      CHECK:     %[[T1:.+]] = arith.addi %[[T0]], %[[B1]]
 //      CHECK:     %[[T2:.+]] = arith.addi %[[T1]], %[[B2]]

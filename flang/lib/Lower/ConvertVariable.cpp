@@ -217,7 +217,7 @@ mlir::Value Fortran::lower::genInitialDataTarget(
       fir::ExtendedValue exv =
           globalOpSymMap.lookupSymbol(sym).toExtendedValue();
       const auto *mold = exv.getBoxOf<fir::MutableBoxValue>();
-      fir::BoxType boxType = mold->getBoxTy();
+      fir::BaseBoxType boxType = mold->getBoxTy();
       mlir::Value box =
           fir::factory::createUnallocatedBox(builder, loc, boxType, {});
       return box;
@@ -1650,7 +1650,7 @@ void Fortran::lower::mapSymbolAttributes(
         mlir::Value argBox;
         mlir::Type castTy = builder.getRefType(varType);
         if (addr) {
-          if (auto boxTy = addr.getType().dyn_cast<fir::BoxType>()) {
+          if (auto boxTy = addr.getType().dyn_cast<fir::BaseBoxType>()) {
             argBox = addr;
             mlir::Type refTy = builder.getRefType(boxTy.getEleTy());
             addr = builder.create<fir::BoxAddrOp>(loc, refTy, argBox);

@@ -58,6 +58,11 @@ public:
       llvm::StringRef payload, StringExtractorGDBRemote &response,
       std::chrono::seconds interrupt_timeout = std::chrono::seconds(0));
 
+  PacketResult ReadPacketWithOutputSupport(
+      StringExtractorGDBRemote &response, Timeout<std::micro> timeout,
+      bool sync_on_timeout,
+      llvm::function_ref<void(llvm::StringRef)> output_callback);
+
   PacketResult SendPacketAndReceiveResponseWithOutputSupport(
       llvm::StringRef payload, StringExtractorGDBRemote &response,
       std::chrono::seconds interrupt_timeout,

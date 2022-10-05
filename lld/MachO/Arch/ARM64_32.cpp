@@ -29,7 +29,7 @@ namespace {
 
 struct ARM64_32 : ARM64Common {
   ARM64_32();
-  void writeStub(uint8_t *buf, const Symbol &) const override;
+  void writeStub(uint8_t *buf, const Symbol &, uint64_t) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
   void writeStubHelperEntry(uint8_t *buf, const Symbol &,
                             uint64_t entryAddr) const override;
@@ -70,8 +70,9 @@ static constexpr uint32_t stubCode[] = {
     0xd61f0200, // 08: br    x16
 };
 
-void ARM64_32::writeStub(uint8_t *buf8, const Symbol &sym) const {
-  ::writeStub<ILP32>(buf8, stubCode, sym);
+void ARM64_32::writeStub(uint8_t *buf8, const Symbol &sym,
+                         uint64_t pointerVA) const {
+  ::writeStub(buf8, stubCode, sym, pointerVA);
 }
 
 static constexpr uint32_t stubHelperHeaderCode[] = {

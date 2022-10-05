@@ -148,7 +148,7 @@ define i32 @fn3(i8* %obj) #0 {
 }
 
 ; CHECK-LABEL: define hidden void @__typeid_typeid1_0_branch_funnel(i8* nest %0, ...)
-; CHECK-NEXT: musttail call void (...) @llvm.icall.branch.funnel(i8* %0, i8* bitcast ([1 x i8*]* {{(nonnull )?}}@vt1_1 to i8*), i32 (i8*, i32)* {{(nonnull )?}}@vf1_1, i8* bitcast ([1 x i8*]* {{(nonnull )?}}@vt1_2 to i8*), i32 (i8*, i32)* {{(nonnull )?}}@vf1_2, ...)
+; CHECK-NEXT: musttail call void (...) @llvm.icall.branch.funnel(i8* %0, i8* {{(nonnull )?}}bitcast ([1 x i8*]* @vt1_1 to i8*), i32 (i8*, i32)* {{(nonnull )?}}@vf1_1, i8* {{(nonnull )?}}bitcast ([1 x i8*]* @vt1_2 to i8*), i32 (i8*, i32)* {{(nonnull )?}}@vf1_2, ...)
 
 ; CHECK: define internal void @branch_funnel(i8*
 

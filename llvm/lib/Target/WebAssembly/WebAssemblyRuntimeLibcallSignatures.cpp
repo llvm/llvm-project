@@ -71,6 +71,7 @@ enum RuntimeLibcallSignature {
   i64_i64_func_i64_i64_i64_i64_iPTR,
   i64_i64_i64_i64_func_i64_i64_i64_i64,
   i64_i64_func_i64_i64_i32,
+  iPTR_func_i32,
   iPTR_func_iPTR_i32_iPTR,
   iPTR_func_iPTR_iPTR_iPTR,
   f32_func_f32_f32_f32,
@@ -329,7 +330,7 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::STACKPROTECTOR_CHECK_FAIL] = func;
 
     // Return address handling
-    Table[RTLIB::RETURN_ADDRESS] = i32_func_i32;
+    Table[RTLIB::RETURN_ADDRESS] = iPTR_func_i32;
 
     // Element-wise Atomic memory
     // TODO: Fix these when we implement atomic support
@@ -783,6 +784,10 @@ void llvm::getLibcallSignature(const WebAssemblySubtarget &Subtarget,
 #endif
     Params.push_back(wasm::ValType::I64);
     Params.push_back(wasm::ValType::I64);
+    Params.push_back(wasm::ValType::I32);
+    break;
+  case iPTR_func_i32:
+    Rets.push_back(PtrTy);
     Params.push_back(wasm::ValType::I32);
     break;
   case iPTR_func_iPTR_i32_iPTR:

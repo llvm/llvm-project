@@ -4,7 +4,7 @@
 ;
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
-declare i64 @strnlen(i8*, i64)
+declare i64 @strnlen(ptr, i64)
 
 @ax = external global [0 x i8]
 @s5 = constant [6 x i8] c"12345\00"
@@ -14,12 +14,12 @@ declare i64 @strnlen(i8*, i64)
 ; Verify that the strnlen pointer argument is not annotated nonnull when
 ; nothing is known about the bound.
 
-define i64 @no_access_strnlen_p_n(i8* %ptr, i64 %n) {
+define i64 @no_access_strnlen_p_n(ptr %ptr, i64 %n) {
 ; CHECK-LABEL: @no_access_strnlen_p_n(
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* [[PTR:%.*]], i64 [[N:%.*]])
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr [[PTR:%.*]], i64 [[N:%.*]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
-  %len = call i64 @strnlen(i8* %ptr, i64 %n)
+  %len = call i64 @strnlen(ptr %ptr, i64 %n)
   ret i64 %len
 }
 
@@ -27,12 +27,12 @@ define i64 @no_access_strnlen_p_n(i8* %ptr, i64 %n) {
 ; Verify that the strnlen pointer argument is annotated dereferenceable(1)
 ; (and not more) when the constant bound is greater than 1.
 
-define i64 @access_strnlen_p_2(i8* %ptr) {
+define i64 @access_strnlen_p_2(ptr %ptr) {
 ; CHECK-LABEL: @access_strnlen_p_2(
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* noundef nonnull dereferenceable(1) [[PTR:%.*]], i64 2)
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[PTR:%.*]], i64 2)
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
-  %len = call i64 @strnlen(i8* noundef nonnull dereferenceable(1) %ptr, i64 2)
+  %len = call i64 @strnlen(ptr noundef nonnull dereferenceable(1) %ptr, i64 2)
   ret i64 %len
 }
 
@@ -40,14 +40,14 @@ define i64 @access_strnlen_p_2(i8* %ptr) {
 ; Verify that the strnlen pointer argument is annotated nonnull etc.,
 ; when the bound is known to be nonzero.
 
-define i64 @access_strnlen_p_nz(i8* %ptr, i64 %n) {
+define i64 @access_strnlen_p_nz(ptr %ptr, i64 %n) {
 ; CHECK-LABEL: @access_strnlen_p_nz(
 ; CHECK-NEXT:    [[NNZ:%.*]] = or i64 [[N:%.*]], 1
-; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(i8* noundef nonnull dereferenceable(1) [[PTR:%.*]], i64 [[NNZ]])
+; CHECK-NEXT:    [[LEN:%.*]] = call i64 @strnlen(ptr noundef nonnull dereferenceable(1) [[PTR:%.*]], i64 [[NNZ]])
 ; CHECK-NEXT:    ret i64 [[LEN]]
 ;
   %nnz = or i64 %n, 1
-  %len = call i64 @strnlen(i8* noundef nonnull dereferenceable(1) %ptr, i64 %nnz)
+  %len = call i64 @strnlen(ptr noundef nonnull dereferenceable(1) %ptr, i64 %nnz)
   ret i64 %len
 }
 
@@ -58,8 +58,7 @@ define i64 @fold_strnlen_ax_0() {
 ; CHECK-LABEL: @fold_strnlen_ax_0(
 ; CHECK-NEXT:    ret i64 0
 ;
-  %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i32 0, i32 0
-  %len = call i64 @strnlen(i8* %ptr, i64 0)
+  %len = call i64 @strnlen(ptr @ax, i64 0)
   ret i64 %len
 }
 
@@ -68,13 +67,12 @@ define i64 @fold_strnlen_ax_0() {
 
 define i64 @fold_strnlen_ax_1() {
 ; CHECK-LABEL: @fold_strnlen_ax_1(
-; CHECK-NEXT:    [[STRNLEN_CHAR0:%.*]] = load i8, i8* getelementptr inbounds ([0 x i8], [0 x i8]* @ax, i64 0, i64 0), align 1
+; CHECK-NEXT:    [[STRNLEN_CHAR0:%.*]] = load i8, ptr @ax, align 1
 ; CHECK-NEXT:    [[STRNLEN_CHAR0CMP:%.*]] = icmp ne i8 [[STRNLEN_CHAR0]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[STRNLEN_CHAR0CMP]] to i64
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
-  %ptr = getelementptr [0 x i8], [0 x i8]* @ax, i32 0, i32 0
-  %len = call i64 @strnlen(i8* %ptr, i64 1)
+  %len = call i64 @strnlen(ptr @ax, i64 1)
   ret i64 %len
 }
 
@@ -85,8 +83,7 @@ define i64 @fold_strnlen_s5_0() {
 ; CHECK-LABEL: @fold_strnlen_s5_0(
 ; CHECK-NEXT:    ret i64 0
 ;
-  %ptr = getelementptr [6 x i8], [6 x i8]* @s5, i32 0, i32 0
-  %len = call i64 @strnlen(i8* %ptr, i64 0)
+  %len = call i64 @strnlen(ptr @s5, i64 0)
   ret i64 %len
 }
 
@@ -97,8 +94,7 @@ define i64 @fold_strnlen_s5_4() {
 ; CHECK-LABEL: @fold_strnlen_s5_4(
 ; CHECK-NEXT:    ret i64 4
 ;
-  %ptr = getelementptr [6 x i8], [6 x i8]* @s5, i32 0, i32 0
-  %len = call i64 @strnlen(i8* %ptr, i64 4)
+  %len = call i64 @strnlen(ptr @s5, i64 4)
   ret i64 %len
 }
 
@@ -109,8 +105,7 @@ define i64 @fold_strnlen_s5_5() {
 ; CHECK-LABEL: @fold_strnlen_s5_5(
 ; CHECK-NEXT:    ret i64 5
 ;
-  %ptr = getelementptr [6 x i8], [6 x i8]* @s5, i32 0, i32 0
-  %len = call i64 @strnlen(i8* %ptr, i64 5)
+  %len = call i64 @strnlen(ptr @s5, i64 5)
   ret i64 %len
 }
 
@@ -121,8 +116,7 @@ define i64 @fold_strnlen_s5_m1() {
 ; CHECK-LABEL: @fold_strnlen_s5_m1(
 ; CHECK-NEXT:    ret i64 5
 ;
-  %ptr = getelementptr [6 x i8], [6 x i8]* @s5, i32 0, i32 0
-  %len = call i64 @strnlen(i8* %ptr, i64 -1)
+  %len = call i64 @strnlen(ptr @s5, i64 -1)
   ret i64 %len
 }
 
@@ -133,8 +127,8 @@ define i64 @fold_strnlen_s5_3_p4_5() {
 ; CHECK-LABEL: @fold_strnlen_s5_3_p4_5(
 ; CHECK-NEXT:    ret i64 1
 ;
-  %ptr = getelementptr [9 x i8], [9 x i8]* @s5_3, i32 0, i32 4
-  %len = call i64 @strnlen(i8* %ptr, i64 5)
+  %ptr = getelementptr [9 x i8], ptr @s5_3, i32 0, i32 4
+  %len = call i64 @strnlen(ptr %ptr, i64 5)
   ret i64 %len
 }
 
@@ -145,8 +139,8 @@ define i64 @fold_strnlen_s5_3_p5_5() {
 ; CHECK-LABEL: @fold_strnlen_s5_3_p5_5(
 ; CHECK-NEXT:    ret i64 0
 ;
-  %ptr = getelementptr [9 x i8], [9 x i8]* @s5_3, i32 0, i32 5
-  %len = call i64 @strnlen(i8* %ptr, i64 5)
+  %ptr = getelementptr [9 x i8], ptr @s5_3, i32 0, i32 5
+  %len = call i64 @strnlen(ptr %ptr, i64 5)
   ret i64 %len
 }
 
@@ -157,8 +151,8 @@ define i64 @fold_strnlen_s5_3_p6_3() {
 ; CHECK-LABEL: @fold_strnlen_s5_3_p6_3(
 ; CHECK-NEXT:    ret i64 3
 ;
-  %ptr = getelementptr [9 x i8], [9 x i8]* @s5_3, i32 0, i32 6
-  %len = call i64 @strnlen(i8* %ptr, i64 3)
+  %ptr = getelementptr [9 x i8], ptr @s5_3, i32 0, i32 6
+  %len = call i64 @strnlen(ptr %ptr, i64 3)
   ret i64 %len
 }
 
@@ -172,7 +166,7 @@ define i64 @call_strnlen_s5_3_p6_4() {
 ; CHECK-LABEL: @call_strnlen_s5_3_p6_4(
 ; CHECK-NEXT:    ret i64 3
 ;
-  %ptr = getelementptr [9 x i8], [9 x i8]* @s5_3, i32 0, i32 6
-  %len = call i64 @strnlen(i8* %ptr, i64 4)
+  %ptr = getelementptr [9 x i8], ptr @s5_3, i32 0, i32 6
+  %len = call i64 @strnlen(ptr %ptr, i64 4)
   ret i64 %len
 }

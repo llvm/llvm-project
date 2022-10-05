@@ -46,7 +46,7 @@ declare i32 @__gxx_personality_v0(...);
 !0 = !{i16 0, i16 32768} ; [0, 32767]
 !1 = !{i16 0, i16 32769} ; [0, 32768]
 
-define i16 @add_bounded_values(i16 %a, i16 %b) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i16 @add_bounded_values(i16 %a, i16 %b) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @add_bounded_values(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = call i16 @bounded(i16 [[A:%.*]]), !range [[RNG0:![0-9]+]]
@@ -56,8 +56,8 @@ define i16 @add_bounded_values(i16 %a, i16 %b) personality i8* bitcast (i32 (...
 ; CHECK-NEXT:    [[E:%.*]] = add nuw i16 [[C]], [[D]]
 ; CHECK-NEXT:    ret i16 [[E]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { i8*, i32 }
-; CHECK-NEXT:    filter [0 x i8*] zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    filter [0 x ptr] zeroinitializer
 ; CHECK-NEXT:    ret i16 42
 ;
 entry:
@@ -68,12 +68,12 @@ cont:
   %e = add i16 %c, %d
   ret i16 %e
 lpad:
-  %0 = landingpad { i8*, i32 }
-  filter [0 x i8*] zeroinitializer
+  %0 = landingpad { ptr, i32 }
+  filter [0 x ptr] zeroinitializer
   ret i16 42
 }
 
-define i16 @add_bounded_values_2(i16 %a, i16 %b) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i16 @add_bounded_values_2(i16 %a, i16 %b) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: @add_bounded_values_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = call i16 @bounded(i16 [[A:%.*]]), !range [[RNG1:![0-9]+]]
@@ -83,8 +83,8 @@ define i16 @add_bounded_values_2(i16 %a, i16 %b) personality i8* bitcast (i32 (.
 ; CHECK-NEXT:    [[E:%.*]] = add i16 [[C]], [[D]]
 ; CHECK-NEXT:    ret i16 [[E]]
 ; CHECK:       lpad:
-; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { i8*, i32 }
-; CHECK-NEXT:    filter [0 x i8*] zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:    filter [0 x ptr] zeroinitializer
 ; CHECK-NEXT:    ret i16 42
 ;
 entry:
@@ -96,8 +96,8 @@ cont:
   %e = add i16 %c, %d
   ret i16 %e
 lpad:
-  %0 = landingpad { i8*, i32 }
-  filter [0 x i8*] zeroinitializer
+  %0 = landingpad { ptr, i32 }
+  filter [0 x ptr] zeroinitializer
   ret i16 42
 }
 

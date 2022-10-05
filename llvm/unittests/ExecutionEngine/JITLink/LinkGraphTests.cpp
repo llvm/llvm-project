@@ -75,7 +75,8 @@ TEST(LinkGraphTest, AddressAccess) {
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
 
-  auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
+  auto &Sec1 =
+      G.createSection("__data.1", orc::MemProt::Read | orc::MemProt::Write);
   orc::ExecutorAddr B1Addr(0x1000);
   auto &B1 = G.createContentBlock(Sec1, BlockContent, B1Addr, 8, 0);
   auto &S1 = G.addDefinedSymbol(B1, 4, "S1", 4, Linkage::Strong, Scope::Default,
@@ -92,7 +93,8 @@ TEST(LinkGraphTest, BlockAndSymbolIteration) {
   // Check that we can iterate over blocks within Sections and across sections.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
+  auto &Sec1 =
+      G.createSection("__data.1", orc::MemProt::Read | orc::MemProt::Write);
   orc::ExecutorAddr B1Addr(0x1000);
   auto &B1 = G.createContentBlock(Sec1, BlockContent, B1Addr, 8, 0);
   orc::ExecutorAddr B2Addr(0x2000);
@@ -102,7 +104,8 @@ TEST(LinkGraphTest, BlockAndSymbolIteration) {
   auto &S2 = G.addDefinedSymbol(B2, 4, "S2", 4, Linkage::Strong, Scope::Default,
                                 false, false);
 
-  auto &Sec2 = G.createSection("__data.2", MemProt::Read | MemProt::Write);
+  auto &Sec2 =
+      G.createSection("__data.2", orc::MemProt::Read | orc::MemProt::Write);
   orc::ExecutorAddr B3Addr(0x3000);
   auto &B3 = G.createContentBlock(Sec2, BlockContent, B3Addr, 8, 0);
   orc::ExecutorAddr B4Addr(0x4000);
@@ -143,7 +146,8 @@ TEST(LinkGraphTest, ContentAccessAndUpdate) {
   // Check that we can make a defined symbol external.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
+  auto &Sec =
+      G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
 
   // Create an initial block.
   orc::ExecutorAddr BAddr(0x1000);
@@ -212,7 +216,8 @@ TEST(LinkGraphTest, MakeExternal) {
   // Check that we can make defined and absolute symbols external.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
+  auto &Sec =
+      G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
 
   // Create an initial block.
   auto &B1 =
@@ -281,7 +286,8 @@ TEST(LinkGraphTest, MakeAbsolute) {
   // Check that we can make defined and external symbols absolute.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
+  auto &Sec =
+      G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
 
   // Create an initial block.
   auto &B1 =
@@ -349,7 +355,8 @@ TEST(LinkGraphTest, MakeDefined) {
   // Check that we can make an external symbol defined.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
+  auto &Sec =
+      G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
 
   // Create an initial block.
   orc::ExecutorAddr B1Addr(0x1000);
@@ -396,7 +403,8 @@ TEST(LinkGraphTest, TransferDefinedSymbol) {
   // Check that we can transfer a defined symbol from one block to another.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
+  auto &Sec =
+      G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
 
   // Create initial blocks.
   orc::ExecutorAddr B1Addr(0x1000);
@@ -430,8 +438,10 @@ TEST(LinkGraphTest, TransferDefinedSymbolAcrossSections) {
   // section to another.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
-  auto &Sec2 = G.createSection("__data.2", MemProt::Read | MemProt::Write);
+  auto &Sec1 =
+      G.createSection("__data.1", orc::MemProt::Read | orc::MemProt::Write);
+  auto &Sec2 =
+      G.createSection("__data.2", orc::MemProt::Read | orc::MemProt::Write);
 
   // Create blocks in each section.
   orc::ExecutorAddr B1Addr(0x1000);
@@ -462,8 +472,10 @@ TEST(LinkGraphTest, TransferBlock) {
   // section to another.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
-  auto &Sec2 = G.createSection("__data.2", MemProt::Read | MemProt::Write);
+  auto &Sec1 =
+      G.createSection("__data.1", orc::MemProt::Read | orc::MemProt::Write);
+  auto &Sec2 =
+      G.createSection("__data.2", orc::MemProt::Read | orc::MemProt::Write);
 
   // Create an initial block.
   orc::ExecutorAddr B1Addr(0x1000);
@@ -508,9 +520,12 @@ TEST(LinkGraphTest, MergeSections) {
   // section to another.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec1 = G.createSection("__data.1", MemProt::Read | MemProt::Write);
-  auto &Sec2 = G.createSection("__data.2", MemProt::Read | MemProt::Write);
-  auto &Sec3 = G.createSection("__data.3", MemProt::Read | MemProt::Write);
+  auto &Sec1 =
+      G.createSection("__data.1", orc::MemProt::Read | orc::MemProt::Write);
+  auto &Sec2 =
+      G.createSection("__data.2", orc::MemProt::Read | orc::MemProt::Write);
+  auto &Sec3 =
+      G.createSection("__data.3", orc::MemProt::Read | orc::MemProt::Write);
 
   // Create an initial block.
   orc::ExecutorAddr B1Addr(0x1000);
@@ -591,7 +606,8 @@ TEST(LinkGraphTest, SplitBlock) {
   // Check that the LinkGraph::splitBlock test works as expected.
   LinkGraph G("foo", Triple("x86_64-apple-darwin"), 8, support::little,
               getGenericEdgeKindName);
-  auto &Sec = G.createSection("__data", MemProt::Read | MemProt::Write);
+  auto &Sec =
+      G.createSection("__data", orc::MemProt::Read | orc::MemProt::Write);
 
   // Create the block to split.
   orc::ExecutorAddr B1Addr(0x1000);

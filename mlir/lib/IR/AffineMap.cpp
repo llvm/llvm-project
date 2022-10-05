@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
+#include <numeric>
 
 using namespace mlir;
 
@@ -239,6 +240,17 @@ AffineMap::inferFromExprList(ArrayRef<ArrayRef<AffineExpr>> exprsList) {
 SmallVector<AffineMap, 4>
 AffineMap::inferFromExprList(ArrayRef<SmallVector<AffineExpr, 4>> exprsList) {
   return ::inferFromExprList(exprsList);
+}
+
+uint64_t AffineMap::getLargestKnownDivisorOfMapExprs() {
+  uint64_t gcd = 0;
+  for (AffineExpr resultExpr : getResults()) {
+    uint64_t thisGcd = resultExpr.getLargestKnownDivisor();
+    gcd = std::gcd(gcd, thisGcd);
+  }
+  if (gcd == 0)
+    gcd = std::numeric_limits<uint64_t>::max();
+  return gcd;
 }
 
 AffineMap AffineMap::getMultiDimIdentityMap(unsigned numDims,

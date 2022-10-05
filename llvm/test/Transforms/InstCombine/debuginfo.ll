@@ -9,41 +9,41 @@ target triple = "x86_64--linux"
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
-declare i64 @llvm.objectsize.i64.p0i8(i8*, i1) nounwind readnone
+declare i64 @llvm.objectsize.i64.p0(ptr, i1) nounwind readnone
 
-declare i8* @passthru_callee(i8*, i32, i64, i64)
+declare ptr @passthru_callee(ptr, i32, i64, i64)
 
-define i8* @passthru(i8* %a, i32 %b, i64 %c) !dbg !1 {
+define ptr @passthru(ptr %a, i32 %b, i64 %c) !dbg !1 {
 entry:
-  %a.addr = alloca i8*, align 8
+  %a.addr = alloca ptr, align 8
   %b.addr = alloca i32, align 4
   %c.addr = alloca i64, align 8
-  store i8* %a, i8** %a.addr, align 8
-  call void @llvm.dbg.declare(metadata i8** %a.addr, metadata !0, metadata !DIExpression()), !dbg !16
-  store i32 %b, i32* %b.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %b.addr, metadata !7, metadata !DIExpression()), !dbg !18
-  store i64 %c, i64* %c.addr, align 8
-  call void @llvm.dbg.declare(metadata i64* %c.addr, metadata !9, metadata !DIExpression()), !dbg !20
-  %tmp = load i8*, i8** %a.addr, align 8, !dbg !21
-  %tmp1 = load i32, i32* %b.addr, align 4, !dbg !21
-  %tmp2 = load i64, i64* %c.addr, align 8, !dbg !21
-  %tmp3 = load i8*, i8** %a.addr, align 8, !dbg !21
-  %0 = call i64 @llvm.objectsize.i64.p0i8(i8* %tmp3, i1 false), !dbg !21
-  %call = call i8* @passthru_callee(i8* %tmp, i32 %tmp1, i64 %tmp2, i64 %0), !dbg !21
-  ret i8* %call, !dbg !21
+  store ptr %a, ptr %a.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !0, metadata !DIExpression()), !dbg !16
+  store i32 %b, ptr %b.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %b.addr, metadata !7, metadata !DIExpression()), !dbg !18
+  store i64 %c, ptr %c.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %c.addr, metadata !9, metadata !DIExpression()), !dbg !20
+  %tmp = load ptr, ptr %a.addr, align 8, !dbg !21
+  %tmp1 = load i32, ptr %b.addr, align 4, !dbg !21
+  %tmp2 = load i64, ptr %c.addr, align 8, !dbg !21
+  %tmp3 = load ptr, ptr %a.addr, align 8, !dbg !21
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %tmp3, i1 false), !dbg !21
+  %call = call ptr @passthru_callee(ptr %tmp, i32 %tmp1, i64 %tmp2, i64 %0), !dbg !21
+  ret ptr %call, !dbg !21
 }
 
-; CHECK-LABEL: define i8* @passthru(i8* %a, i32 %b, i64 %c)
+; CHECK-LABEL: define ptr @passthru(ptr %a, i32 %b, i64 %c)
 ; CHECK-NOT: alloca
 ; CHECK-NOT: store
 ; CHECK-NOT: call void @llvm.dbg.declare
-; CHECK: call void @llvm.dbg.value(metadata i8* %a, {{.*}})
+; CHECK: call void @llvm.dbg.value(metadata ptr %a, {{.*}})
 ; CHECK-NOT: store
 ; CHECK: call void @llvm.dbg.value(metadata i32 %b, {{.*}})
 ; CHECK-NOT: store
 ; CHECK: call void @llvm.dbg.value(metadata i64 %c, {{.*}})
 ; CHECK-NOT: store
-; CHECK: call i8* @passthru_callee(i8* %a, i32 %b, i64 %c, i64 %{{.*}})
+; CHECK: call ptr @passthru_callee(ptr %a, i32 %b, i64 %c, i64 %{{.*}})
 
 declare void @tworegs_callee(i64, i64)
 
@@ -52,18 +52,16 @@ declare void @tworegs_callee(i64, i64)
 define void @tworegs(i64 %o.coerce0, i64 %o.coerce1) !dbg !31 {
 entry:
   %o = alloca %struct.TwoRegs, align 8
-  %0 = bitcast %struct.TwoRegs* %o to { i64, i64 }*
-  %1 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %0, i32 0, i32 0
-  store i64 %o.coerce0, i64* %1, align 8
-  %2 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %0, i32 0, i32 1
-  store i64 %o.coerce1, i64* %2, align 8
-  call void @llvm.dbg.declare(metadata %struct.TwoRegs* %o, metadata !35, metadata !DIExpression()), !dbg !32
-  %3 = bitcast %struct.TwoRegs* %o to { i64, i64 }*, !dbg !33
-  %4 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %3, i32 0, i32 0, !dbg !33
-  %5 = load i64, i64* %4, align 8, !dbg !33
-  %6 = getelementptr inbounds { i64, i64 }, { i64, i64 }* %3, i32 0, i32 1, !dbg !33
-  %7 = load i64, i64* %6, align 8, !dbg !33
-  call void @tworegs_callee(i64 %5, i64 %7), !dbg !33
+  %0 = getelementptr inbounds { i64, i64 }, ptr %o, i32 0, i32 0
+  store i64 %o.coerce0, ptr %0, align 8
+  %1 = getelementptr inbounds { i64, i64 }, ptr %o, i32 0, i32 1
+  store i64 %o.coerce1, ptr %1, align 8
+  call void @llvm.dbg.declare(metadata ptr %o, metadata !35, metadata !DIExpression()), !dbg !32
+  %2 = getelementptr inbounds { i64, i64 }, ptr %o, i32 0, i32 0, !dbg !33
+  %3 = load i64, ptr %2, align 8, !dbg !33
+  %4 = getelementptr inbounds { i64, i64 }, ptr %o, i32 0, i32 1, !dbg !33
+  %5 = load i64, ptr %4, align 8, !dbg !33
+  call void @tworegs_callee(i64 %3, i64 %5), !dbg !33
   ret void, !dbg !33
 }
 

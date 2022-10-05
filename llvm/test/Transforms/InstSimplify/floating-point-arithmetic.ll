@@ -170,6 +170,62 @@ define double @fmul_X_1(double %a) {
   ret double %b
 }
 
+define half @fmul_nnan_ninf_nneg_0.0(i15 %x) {
+; CHECK-LABEL: @fmul_nnan_ninf_nneg_0.0(
+; CHECK-NEXT:    ret half 0xH0000
+;
+  %f = uitofp i15 %x to half
+  %r = fmul half %f, 0.0
+  ret half %r
+}
+
+define half @fmul_nnan_ninf_nneg_n0.0(i15 %x) {
+; CHECK-LABEL: @fmul_nnan_ninf_nneg_n0.0(
+; CHECK-NEXT:    ret half 0xH8000
+;
+  %f = uitofp i15 %x to half
+  %r = fmul half %f, -0.0
+  ret half %r
+}
+
+; negative test - the int could be big enough to round to INF
+
+define half @fmul_nnan_nneg_0.0(i16 %x) {
+; CHECK-LABEL: @fmul_nnan_nneg_0.0(
+; CHECK-NEXT:    [[F:%.*]] = uitofp i16 [[X:%.*]] to half
+; CHECK-NEXT:    [[R:%.*]] = fmul half [[F]], 0xH0000
+; CHECK-NEXT:    ret half [[R]]
+;
+  %f = uitofp i16 %x to half
+  %r = fmul half %f, 0.0
+  ret half %r
+}
+
+define double @fmul_nnan_ninf_nneg_n0.0_commute(i127 %x) {
+; CHECK-LABEL: @fmul_nnan_ninf_nneg_n0.0_commute(
+; CHECK-NEXT:    ret double -0.000000e+00
+;
+  %f = uitofp i127 %x to float
+  %e = fpext float %f to double
+  %r = fmul double -0.0, %e
+  ret double %r
+}
+
+; negative test - the int could be big enough to round to INF
+
+define double @fmul_nnan_ninf_nneg_0.0_commute(i128 %x) {
+; CHECK-LABEL: @fmul_nnan_ninf_nneg_0.0_commute(
+; CHECK-NEXT:    [[F:%.*]] = uitofp i128 [[X:%.*]] to float
+; CHECK-NEXT:    [[E:%.*]] = fpext float [[F]] to double
+; CHECK-NEXT:    [[R:%.*]] = fmul double 0.000000e+00, [[E]]
+; CHECK-NEXT:    ret double [[R]]
+;
+  %f = uitofp i128 %x to float
+  %e = fpext float %f to double
+  %r = fmul double 0.0, %e
+  ret double %r
+}
+
 ; PR2642
 define <4 x float> @fmul_X_1_vec(<4 x float> %x) {
 ; CHECK-LABEL: @fmul_X_1_vec(

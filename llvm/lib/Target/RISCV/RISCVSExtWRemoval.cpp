@@ -11,6 +11,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "RISCV.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -315,9 +316,21 @@ static bool isSignExtendedW(MachineInstr &OrigMI, MachineRegisterInfo &MRI,
       // Unknown opcode, give up.
       return false;
     case RISCV::COPY: {
-      Register SrcReg = MI->getOperand(1).getReg();
+      const MachineFunction *MF = MI->getMF();
+      const RISCVMachineFunctionInfo *RVFI =
+          MF->getInfo<RISCVMachineFunctionInfo>();
 
-      // TODO: Handle arguments and returns from calls?
+      // If this is the entry block and the register is livein, see if we know
+      // it is sign extended.
+      if (MI->getParent() == &MF->front()) {
+        Register VReg = MI->getOperand(0).getReg();
+        if (MF->getRegInfo().isLiveIn(VReg))
+          return RVFI->isSExt32Register(VReg);
+      }
+
+      // TODO: Handle returns from calls?
+
+      Register SrcReg = MI->getOperand(1).getReg();
 
       // If this is a copy from another register, check its source instruction.
       if (!SrcReg.isVirtual())

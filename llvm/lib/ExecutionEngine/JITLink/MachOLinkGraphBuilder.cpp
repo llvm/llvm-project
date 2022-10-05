@@ -111,8 +111,8 @@ MachOLinkGraphBuilder::getEndianness(const object::MachOObjectFile &Obj) {
 
 Section &MachOLinkGraphBuilder::getCommonSection() {
   if (!CommonSection)
-    CommonSection =
-        &G->createSection(CommonSectionName, MemProt::Read | MemProt::Write);
+    CommonSection = &G->createSection(CommonSectionName,
+                                      orc::MemProt::Read | orc::MemProt::Write);
   return *CommonSection;
 }
 
@@ -177,11 +177,11 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
     // Get prot flags.
     // FIXME: Make sure this test is correct (it's probably missing cases
     // as-is).
-    MemProt Prot;
+    orc::MemProt Prot;
     if (NSec.Flags & MachO::S_ATTR_PURE_INSTRUCTIONS)
-      Prot = MemProt::Read | MemProt::Exec;
+      Prot = orc::MemProt::Read | orc::MemProt::Exec;
     else
-      Prot = MemProt::Read | MemProt::Write;
+      Prot = orc::MemProt::Read | orc::MemProt::Write;
 
     auto FullyQualifiedName =
         G->allocateString(StringRef(NSec.SegName) + "," + NSec.SectName);

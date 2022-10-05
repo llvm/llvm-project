@@ -14,7 +14,7 @@ func.func @fill_matmul_tensors(
 //  CHECK-DAG: %[[NBLOCKSY:.*]] = gpu.grid_dim y
 //  CHECK-DAG: %[[BIDX:.*]] = gpu.block_id x
 //  CHECK-DAG: %[[NBLOCKSX:.*]] = gpu.grid_dim x
-//  CHECK-DAG: %[[INIT:.+]] = linalg.init_tensor
+//  CHECK-DAG: %[[INIT:.+]] = tensor.empty
 //      CHECK: %[[MUL:.+]] = affine.apply #[[MULMAP]]()[%[[BIDY]], %[[C8]]]
 //      CHECK: %[[LBY:.+]] = affine.apply #[[ADDMAP]]()[%[[MUL]], %[[C0]]]
 //      CHECK: %[[STEPY:.+]] = affine.apply #[[MULMAP]]()[%[[NBLOCKSY]], %[[C8]]]
@@ -43,7 +43,7 @@ func.func @fill_matmul_tensors(
   %cst = arith.constant 0.0 : f32
   %0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %1 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
-  %2 = linalg.init_tensor [%0, %1] : tensor<?x?xf32>
+  %2 = tensor.empty(%0, %1) : tensor<?x?xf32>
   %3 = linalg.fill ins(%cst : f32) outs(%2 : tensor<?x?xf32>) -> tensor<?x?xf32>
   %4 = linalg.matmul {__internal_linalg_transform__ = "tensors_fuse_distribute1"}
        ins(%arg0, %arg1: tensor<?x?xf32>, tensor<?x?xf32>)

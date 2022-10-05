@@ -351,7 +351,7 @@ f:
 ; This used to infinite loop because of a conflict
 ; with min/max canonicalization.
 
-define i32 @PR48900(i32 %i, i1* %p) {
+define i32 @PR48900(i32 %i, ptr %p) {
 ; CHECK-LABEL: @PR48900(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[I:%.*]], i32 1)
 ; CHECK-NEXT:    [[I4:%.*]] = icmp sgt i32 [[TMP1]], 0
@@ -379,7 +379,7 @@ falselabel:
 ; This used to infinite loop because of a conflict
 ; with min/max canonicalization.
 
-define i8 @PR48900_alt(i8 %i, i1* %p) {
+define i8 @PR48900_alt(i8 %i, ptr %p) {
 ; CHECK-LABEL: @PR48900_alt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[I:%.*]], i8 -127)
 ; CHECK-NEXT:    [[I4:%.*]] = icmp ugt i8 [[TMP1]], -128

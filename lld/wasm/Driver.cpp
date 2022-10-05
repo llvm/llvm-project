@@ -279,26 +279,57 @@ void LinkerDriver::addFile(StringRef path) {
   }
 }
 
+static Optional<std::string> findFromSearchPaths(StringRef path) {
+  for (StringRef dir : config->searchPaths)
+    if (Optional<std::string> s = findFile(dir, path))
+      return s;
+  return None;
+}
+
+// This is for -l<basename>. We'll look for lib<basename>.a from
+// search paths.
+static Optional<std::string> searchLibraryBaseName(StringRef name) {
+  for (StringRef dir : config->searchPaths) {
+    // Currently we don't enable dyanmic linking at all unless -shared or -pie
+    // are used, so don't even look for .so files in that case..
+    if (config->isPic && !config->isStatic)
+      if (Optional<std::string> s = findFile(dir, "lib" + name + ".so"))
+        return s;
+    if (Optional<std::string> s = findFile(dir, "lib" + name + ".a"))
+      return s;
+  }
+  return None;
+}
+
+// This is for -l<namespec>.
+static Optional<std::string> searchLibrary(StringRef name) {
+  if (name.startswith(":"))
+    return findFromSearchPaths(name.substr(1));
+  return searchLibraryBaseName(name);
+}
+
 // Add a given library by searching it from input search paths.
 void LinkerDriver::addLibrary(StringRef name) {
-  for (StringRef dir : config->searchPaths) {
-    if (Optional<std::string> s = findFile(dir, "lib" + name + ".a")) {
-      addFile(*s);
-      return;
-    }
-  }
-
-  error("unable to find library -l" + name);
+  if (Optional<std::string> path = searchLibrary(name))
+    addFile(saver().save(*path));
+  else
+    error("unable to find library -l" + name, ErrorTag::LibNotFound, {name});
 }
 
 void LinkerDriver::createFiles(opt::InputArgList &args) {
   for (auto *arg : args) {
     switch (arg->getOption().getID()) {
-    case OPT_l:
+    case OPT_library:
       addLibrary(arg->getValue());
       break;
     case OPT_INPUT:
       addFile(arg->getValue());
+      break;
+    case OPT_Bstatic:
+      config->isStatic = true;
+      break;
+    case OPT_Bdynamic:
+      config->isStatic = false;
       break;
     case OPT_whole_archive:
       inWholeArchive = true;
@@ -382,7 +413,7 @@ static void readConfigs(opt::InputArgList &args) {
   config->printGcSections =
       args.hasFlag(OPT_print_gc_sections, OPT_no_print_gc_sections, false);
   config->saveTemps = args.hasArg(OPT_save_temps);
-  config->searchPaths = args::getStrings(args, OPT_L);
+  config->searchPaths = args::getStrings(args, OPT_library_path);
   config->shared = args.hasArg(OPT_shared);
   config->stripAll = args.hasArg(OPT_strip_all);
   config->stripDebug = args.hasArg(OPT_strip_debug);
@@ -898,12 +929,12 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   cl::ParseCommandLineOptions(v.size(), v.data());
 
   readConfigs(args);
+  setConfigs();
 
   createFiles(args);
   if (errorCount())
     return;
 
-  setConfigs();
   checkOptions(args);
   if (errorCount())
     return;

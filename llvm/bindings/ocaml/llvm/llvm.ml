@@ -508,6 +508,8 @@ external array_type : lltype -> int -> lltype = "llvm_array_type"
 external pointer_type : lltype -> lltype = "llvm_pointer_type"
 external qualified_pointer_type : lltype -> int -> lltype
                                 = "llvm_qualified_pointer_type"
+external pointer_type_in_context : llcontext -> int -> lltype
+                                 = "llvm_pointer_type_in_context"
 external vector_type : lltype -> int -> lltype = "llvm_vector_type"
 
 external element_type : lltype -> lltype = "LLVMGetElementType"

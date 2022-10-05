@@ -92,7 +92,7 @@ TEST(MemoryMapperTest, InitializeDeinitialize) {
       Seg1.Offset = 0;
       Seg1.ContentSize = HW.size();
       Seg1.ZeroFillSize = PageSize - Seg1.ContentSize;
-      Seg1.Prot = sys::Memory::MF_READ | sys::Memory::MF_WRITE;
+      Seg1.AG = MemProt::Read | MemProt::Write;
 
       Alloc1.MappingBase = Mem1->Start;
       Alloc1.Segments.push_back(Seg1);
@@ -116,7 +116,7 @@ TEST(MemoryMapperTest, InitializeDeinitialize) {
       Seg2.Offset = PageSize;
       Seg2.ContentSize = HW.size();
       Seg2.ZeroFillSize = PageSize - Seg2.ContentSize;
-      Seg2.Prot = sys::Memory::MF_READ | sys::Memory::MF_WRITE;
+      Seg2.AG = MemProt::Read | MemProt::Write;
 
       Alloc2.MappingBase = Mem1->Start;
       Alloc2.Segments.push_back(Seg2);
@@ -168,7 +168,7 @@ TEST(MemoryMapperTest, InitializeDeinitialize) {
         Seg3.Offset = 0;
         Seg3.ContentSize = HW.size();
         Seg3.ZeroFillSize = PageSize - Seg3.ContentSize;
-        Seg3.Prot = sys::Memory::MF_READ | sys::Memory::MF_WRITE;
+        Seg3.AG = MemProt::Read | MemProt::Write;
 
         Alloc3.MappingBase = Mem2->Start;
         Alloc3.Segments.push_back(Seg3);

@@ -104,8 +104,13 @@ func.func @bar(%x : !fir.class<none>)
 Assumed type is added in Fortran 2018 and it is available only for dummy
 arguments. It's mainly used for interfaces to non-Fortran code and is similar
 to C's `void`.
+An entity that is declared using the `TYPE(*)` type specifier is assumed-type
+and is an unlimited polymorphic entity. It is not declared to have a type, and
+is not considered to have the same declared type as any other entity,
+including another unlimited polymorphic entity. Its dynamic type and type
+parameters are assumed from its effective argument (7.3.2.2 - 3).
 
-Assumed-type is represented as `!fir.type<*>`.
+Assumed-type is represented in FIR as `!fir.box<none>`.
 
 ### SELECT TYPE construct
 

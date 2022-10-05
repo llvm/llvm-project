@@ -15,7 +15,7 @@
 // CHECK-NEXT:   br i1 [[isnull]], label %[[dynamic_cast_end:[a-z0-9._]+]], label %[[dynamic_cast_notnull:[a-z0-9._]+]]
 // CHECK:      [[dynamic_cast_notnull]]:
 // CHECK-NEXT:   [[a:%[0-9]+]] = bitcast %class.A* %a to i8*
-// CHECK-NEXT:   [[as_b:%[0-9]+]] = tail call i8* @__dynamic_cast(i8* nonnull [[a]], i8* bitcast ({ i8*, i8* }* @_ZTI1A to i8*), i8* bitcast ({ i8*, i8*, i8* }* @_ZTI1B to i8*), i64 0)
+// CHECK-NEXT:   [[as_b:%[0-9]+]] = tail call i8* @__dynamic_cast(i8* nonnull [[a]], i8* nonnull bitcast ({ i8*, i8* }* @_ZTI1A to i8*), i8* nonnull bitcast ({ i8*, i8*, i8* }* @_ZTI1B to i8*), i64 0)
 // CHECK-NEXT:   [[b:%[0-9]+]] = bitcast i8* [[as_b]] to %class.B*
 // CHECK-NEXT:   br label %[[dynamic_cast_end]]
 // CHECK:      [[dynamic_cast_end]]:

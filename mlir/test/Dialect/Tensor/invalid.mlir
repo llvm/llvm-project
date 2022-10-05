@@ -514,3 +514,11 @@ func.func @scatter_wrong_result_type(
     (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1xf32>
   return
 }
+
+// -----
+
+func.func @empty_wrong_number_of_operands(%sz : index) {
+  // expected-error@+1 {{incorrect number of dynamic sizes, has 1, expected 2}}
+  %out = tensor.empty(%sz) : tensor<2x?x?x5xf32>
+  return
+}

@@ -6,60 +6,60 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @G1 = global i8 zeroinitializer
 
-define <2 x i1> @test(<2 x i8*> %a, <2 x i8*> %b) {
+define <2 x i1> @test(<2 x ptr> %a, <2 x ptr> %b) {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8*> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x ptr> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
-  %c = icmp eq <2 x i8*> %a, %b
+  %c = icmp eq <2 x ptr> %a, %b
   ret <2 x i1> %c
 }
 
-define <2 x i1> @test2(<2 x i8*> %a) {
+define <2 x i1> @test2(<2 x ptr> %a) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
-  %c = inttoptr <2 x i32> <i32 1, i32 2> to <2 x i8*>
-  %d = icmp ult <2 x i8*> %c, zeroinitializer
+  %c = inttoptr <2 x i32> <i32 1, i32 2> to <2 x ptr>
+  %d = icmp ult <2 x ptr> %c, zeroinitializer
   ret <2 x i1> %d
 }
 
-define <2 x i1> @test3(<2 x i8*> %a) {
+define <2 x i1> @test3(<2 x ptr> %a) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
-  %g = getelementptr i8, <2 x i8*> %a, <2 x i32> <i32 1, i32 0>
-  %B = icmp ult <2 x i8*> %g, zeroinitializer
+  %g = getelementptr i8, <2 x ptr> %a, <2 x i32> <i32 1, i32 0>
+  %B = icmp ult <2 x ptr> %g, zeroinitializer
   ret <2 x i1> %B
 }
 
-define <1 x i1> @test4(<1 x i8*> %a) {
+define <1 x i1> @test4(<1 x ptr> %a) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    ret <1 x i1> zeroinitializer
 ;
-  %g = getelementptr i8, <1 x i8*> %a, <1 x i32> <i32 1>
-  %B = icmp ult <1 x i8*> %g, zeroinitializer
+  %g = getelementptr i8, <1 x ptr> %a, <1 x i32> <i32 1>
+  %B = icmp ult <1 x ptr> %g, zeroinitializer
   ret <1 x i1> %B
 }
 
-define <2 x i1> @test5(<2 x i8*> %a) {
+define <2 x i1> @test5(<2 x ptr> %a) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    ret <2 x i1> zeroinitializer
 ;
-  %w = getelementptr i8, <2 x i8*> %a, <2 x i32> zeroinitializer
-  %e = getelementptr i8, <2 x i8*> %w, <2 x i32> <i32 5, i32 9>
-  %g = getelementptr i8, <2 x i8*> %e, <2 x i32> <i32 1, i32 0>
-  %B = icmp ult <2 x i8*> %g, zeroinitializer
+  %w = getelementptr i8, <2 x ptr> %a, <2 x i32> zeroinitializer
+  %e = getelementptr i8, <2 x ptr> %w, <2 x i32> <i32 5, i32 9>
+  %g = getelementptr i8, <2 x ptr> %e, <2 x i32> <i32 1, i32 0>
+  %B = icmp ult <2 x ptr> %g, zeroinitializer
   ret <2 x i1> %B
 }
 
-define <2 x i32*> @test7(<2 x {i32, i32}*> %a) {
+define <2 x ptr> @test7(<2 x ptr> %a) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[W:%.*]] = getelementptr { i32, i32 }, <2 x { i32, i32 }*> [[A:%.*]], <2 x i64> <i64 5, i64 9>, <2 x i32> zeroinitializer
-; CHECK-NEXT:    ret <2 x i32*> [[W]]
+; CHECK-NEXT:    [[W:%.*]] = getelementptr { i32, i32 }, <2 x ptr> [[A:%.*]], <2 x i64> <i64 5, i64 9>, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x ptr> [[W]]
 ;
-  %w = getelementptr {i32, i32}, <2 x {i32, i32}*> %a, <2 x i32> <i32 5, i32 9>, <2 x i32> zeroinitializer
-  ret <2 x i32*> %w
+  %w = getelementptr {i32, i32}, <2 x ptr> %a, <2 x i32> <i32 5, i32 9>, <2 x i32> zeroinitializer
+  ret <2 x ptr> %w
 }
 
 define <vscale x 2 x i1> @test8() {
@@ -68,7 +68,7 @@ define <vscale x 2 x i1> @test8() {
 ;
   %ins = insertelement <vscale x 2 x i32> undef, i32 1, i32 0
   %b = shufflevector <vscale x 2 x i32> %ins, <vscale x 2 x i32> undef, <vscale x 2 x i32> zeroinitializer
-  %c = inttoptr <vscale x 2 x i32> %b to <vscale x 2 x i8*>
-  %d = icmp ult <vscale x 2 x i8*> %c, zeroinitializer
+  %c = inttoptr <vscale x 2 x i32> %b to <vscale x 2 x ptr>
+  %d = icmp ult <vscale x 2 x ptr> %c, zeroinitializer
   ret <vscale x 2 x i1> %d
 }

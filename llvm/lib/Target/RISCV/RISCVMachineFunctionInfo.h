@@ -66,6 +66,9 @@ private:
   /// Size of stack frame to save callee saved registers
   unsigned CalleeSavedStackSize = 0;
 
+  /// Registers that have been sign extended from i32.
+  SmallVector<Register, 8> SExt32Registers;
+
 public:
   RISCVMachineFunctionInfo(const MachineFunction &MF) {}
 
@@ -118,6 +121,9 @@ public:
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
 
   void initializeBaseYamlFields(const yaml::RISCVMachineFunctionInfo &YamlMFI);
+
+  void addSExt32Register(Register Reg);
+  bool isSExt32Register(Register Reg) const;
 };
 
 } // end namespace llvm

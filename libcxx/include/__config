@@ -1199,6 +1199,17 @@ _LIBCPP_BEGIN_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
 #    endif
 #  endif
 
+// There are a handful of standard library types that are intended to support CTAD but don't need any
+// explicit deduction guides to do so. This macro is used to mark them as such, which suppresses the
+// '-Wctad-maybe-unsupported' compiler warning when CTAD is used in user code with these classes.
+#if _LIBCPP_STD_VER >= 17
+#  define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName)                                                                  \
+    template <class _Tag = void>                                                                                       \
+    _ClassName(typename _Tag::__allow_ctad) -> _ClassName<_Tag>
+#else
+#  define _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(_ClassName) static_assert(true, "")
+#endif
+
 #endif // __cplusplus
 
 #endif // _LIBCPP___CONFIG

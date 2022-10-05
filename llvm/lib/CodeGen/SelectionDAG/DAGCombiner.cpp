@@ -2196,7 +2196,12 @@ static SDValue foldSelectWithIdentityConstant(SDNode *N, SelectionDAG &DAG,
   if (N1.getOpcode() != ISD::VSELECT || !N1.hasOneUse())
     return SDValue();
 
+  // We can't hoist div/rem because of immediate UB (not speculatable).
   unsigned Opcode = N->getOpcode();
+  if (Opcode == ISD::SDIV || Opcode == ISD::UDIV ||
+      Opcode == ISD::SREM || Opcode == ISD::UREM)
+    return SDValue();
+
   EVT VT = N->getValueType(0);
   SDValue Cond = N1.getOperand(0);
   SDValue TVal = N1.getOperand(1);
@@ -3469,11 +3474,8 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     if (VT.isVector()) {
       SDValue N1S = DAG.getSplatValue(N1, true);
       if (N1S && N1S.getOpcode() == ISD::SUB &&
-          isNullConstant(N1S.getOperand(0))) {
-        if (VT.isScalableVector())
-          return DAG.getSplatVector(VT, DL, N1S.getOperand(1));
-        return DAG.getSplatBuildVector(VT, DL, N1S.getOperand(1));
-      }
+          isNullConstant(N1S.getOperand(0)))
+        return DAG.getSplat(VT, DL, N1S.getOperand(1));
     }
   }
 
@@ -7788,25 +7790,28 @@ struct ByteProvider {
   // ByteOffset is the offset of the byte in the value produced by the load.
   LoadSDNode *Load = nullptr;
   unsigned ByteOffset = 0;
+  unsigned VectorOffset = 0;
 
   ByteProvider() = default;
 
-  static ByteProvider getMemory(LoadSDNode *Load, unsigned ByteOffset) {
-    return ByteProvider(Load, ByteOffset);
+  static ByteProvider getMemory(LoadSDNode *Load, unsigned ByteOffset,
+                                unsigned VectorOffset) {
+    return ByteProvider(Load, ByteOffset, VectorOffset);
   }
 
-  static ByteProvider getConstantZero() { return ByteProvider(nullptr, 0); }
+  static ByteProvider getConstantZero() { return ByteProvider(nullptr, 0, 0); }
 
   bool isConstantZero() const { return !Load; }
   bool isMemory() const { return Load; }
 
   bool operator==(const ByteProvider &Other) const {
-    return Other.Load == Load && Other.ByteOffset == ByteOffset;
+    return Other.Load == Load && Other.ByteOffset == ByteOffset &&
+           Other.VectorOffset == VectorOffset;
   }
 
 private:
-  ByteProvider(LoadSDNode *Load, unsigned ByteOffset)
-      : Load(Load), ByteOffset(ByteOffset) {}
+  ByteProvider(LoadSDNode *Load, unsigned ByteOffset, unsigned VectorOffset)
+      : Load(Load), ByteOffset(ByteOffset), VectorOffset(VectorOffset) {}
 };
 
 } // end anonymous namespace
@@ -7814,25 +7819,63 @@ private:
 /// Recursively traverses the expression calculating the origin of the requested
 /// byte of the given value. Returns None if the provider can't be calculated.
 ///
-/// For all the values except the root of the expression verifies that the value
-/// has exactly one use and if it's not true return None. This way if the origin
-/// of the byte is returned it's guaranteed that the values which contribute to
-/// the byte are not used outside of this expression.
+/// For all the values except the root of the expression, we verify that the
+/// value has exactly one use and if not then return None. This way if the
+/// origin of the byte is returned it's guaranteed that the values which
+/// contribute to the byte are not used outside of this expression.
+
+/// However, there is a special case when dealing with vector loads -- we allow
+/// more than one use if the load is a vector type.  Since the values that
+/// contribute to the byte ultimately come from the ExtractVectorElements of the
+/// Load, we don't care if the Load has uses other than ExtractVectorElements,
+/// because those operations are independent from the pattern to be combined.
+/// For vector loads, we simply care that the ByteProviders are adjacent
+/// positions of the same vector, and their index matches the byte that is being
+/// provided. This is captured by the \p VectorIndex algorithm. \p VectorIndex
+/// is the index used in an ExtractVectorElement, and \p StartingIndex is the
+/// byte position we are trying to provide for the LoadCombine. If these do
+/// not match, then we can not combine the vector loads. \p Index uses the
+/// byte position we are trying to provide for and is matched against the
+/// shl and load size. The \p Index algorithm ensures the requested byte is
+/// provided for by the pattern, and the pattern does not over provide bytes.
 ///
-/// Because the parts of the expression are not allowed to have more than one
-/// use this function iterates over trees, not DAGs. So it never visits the same
-/// node more than once.
+///
+/// The supported LoadCombine pattern for vector loads is as follows
+///                              or
+///                          /        \
+///                         or        shl
+///                       /     \      |
+///                     or      shl   zext
+///                   /    \     |     |
+///                 shl   zext  zext  EVE*
+///                  |     |     |     |
+///                 zext  EVE*  EVE*  LOAD
+///                  |     |     |
+///                 EVE*  LOAD  LOAD
+///                  |
+///                 LOAD
+///
+/// *ExtractVectorElement
 static const Optional<ByteProvider>
 calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
-                      bool Root = false) {
+                      Optional<uint64_t> VectorIndex,
+                      unsigned StartingIndex = 0) {
+
   // Typical i64 by i8 pattern requires recursion up to 8 calls depth
   if (Depth == 10)
     return None;
 
-  if (!Root && !Op.hasOneUse())
+  // Only allow multiple uses if the instruction is a vector load (in which
+  // case we will use the load for every ExtractVectorElement)
+  if (Depth && !Op.hasOneUse() &&
+      (Op.getOpcode() != ISD::LOAD || !Op.getValueType().isVector()))
     return None;
 
-  assert(Op.getValueType().isScalarInteger() && "can't handle other types");
+  // Fail to combine if we have encountered anything but a LOAD after handling
+  // an ExtractVectorElement.
+  if (Op.getOpcode() != ISD::LOAD && VectorIndex.has_value())
+    return None;
+
   unsigned BitWidth = Op.getValueSizeInBits();
   if (BitWidth % 8 != 0)
     return None;
@@ -7842,10 +7885,12 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
 
   switch (Op.getOpcode()) {
   case ISD::OR: {
-    auto LHS = calculateByteProvider(Op->getOperand(0), Index, Depth + 1);
+    auto LHS =
+        calculateByteProvider(Op->getOperand(0), Index, Depth + 1, VectorIndex);
     if (!LHS)
       return None;
-    auto RHS = calculateByteProvider(Op->getOperand(1), Index, Depth + 1);
+    auto RHS =
+        calculateByteProvider(Op->getOperand(1), Index, Depth + 1, VectorIndex);
     if (!RHS)
       return None;
 
@@ -7861,14 +7906,18 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
       return None;
 
     uint64_t BitShift = ShiftOp->getZExtValue();
+
     if (BitShift % 8 != 0)
       return None;
     uint64_t ByteShift = BitShift / 8;
 
+    // If we are shifting by an amount greater than the index we are trying to
+    // provide, then do not provide anything. Otherwise, subtract the index by
+    // the amount we shifted by.
     return Index < ByteShift
                ? ByteProvider::getConstantZero()
                : calculateByteProvider(Op->getOperand(0), Index - ByteShift,
-                                       Depth + 1);
+                                       Depth + 1, VectorIndex, Index);
   }
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
@@ -7883,11 +7932,39 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
       return Op.getOpcode() == ISD::ZERO_EXTEND
                  ? Optional<ByteProvider>(ByteProvider::getConstantZero())
                  : None;
-    return calculateByteProvider(NarrowOp, Index, Depth + 1);
+    return calculateByteProvider(NarrowOp, Index, Depth + 1, VectorIndex,
+                                 StartingIndex);
   }
   case ISD::BSWAP:
     return calculateByteProvider(Op->getOperand(0), ByteWidth - Index - 1,
-                                 Depth + 1);
+                                 Depth + 1, VectorIndex, StartingIndex);
+  case ISD::EXTRACT_VECTOR_ELT: {
+    auto OffsetOp = dyn_cast<ConstantSDNode>(Op->getOperand(1));
+    if (!OffsetOp)
+      return None;
+
+    VectorIndex = OffsetOp->getZExtValue();
+
+    SDValue NarrowOp = Op->getOperand(0);
+    unsigned NarrowBitWidth = NarrowOp.getScalarValueSizeInBits();
+    if (NarrowBitWidth % 8 != 0)
+      return None;
+    uint64_t NarrowByteWidth = NarrowBitWidth / 8;
+
+    // Check to see if the position of the element in the vector corresponds
+    // with the byte we are trying to provide for. In the case of a vector of
+    // i8, this simply means the VectorIndex == StartingIndex. For non i8 cases,
+    // the element will provide a range of bytes. For example, if we have a
+    // vector of i16s, each element provides two bytes (V[1] provides byte 2 and
+    // 3).
+    if (VectorIndex.value() * NarrowByteWidth > StartingIndex)
+      return None;
+    if ((VectorIndex.value() + 1) * NarrowByteWidth <= StartingIndex)
+      return None;
+
+    return calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
+                                 VectorIndex, StartingIndex);
+  }
   case ISD::LOAD: {
     auto L = cast<LoadSDNode>(Op.getNode());
     if (!L->isSimple() || L->isIndexed())
@@ -7898,11 +7975,16 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
       return None;
     uint64_t NarrowByteWidth = NarrowBitWidth / 8;
 
+    // If the width of the load does not reach byte we are trying to provide for
+    // and it is not a ZEXTLOAD, then the load does not provide for the byte in
+    // question
     if (Index >= NarrowByteWidth)
       return L->getExtensionType() == ISD::ZEXTLOAD
                  ? Optional<ByteProvider>(ByteProvider::getConstantZero())
                  : None;
-    return ByteProvider::getMemory(L, Index);
+
+    unsigned BPVectorIndex = VectorIndex.value_or(0U);
+    return ByteProvider::getMemory(L, Index, BPVectorIndex);
   }
   }
 
@@ -8194,7 +8276,8 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   bool IsBigEndianTarget = DAG.getDataLayout().isBigEndian();
   auto MemoryByteOffset = [&] (ByteProvider P) {
     assert(P.isMemory() && "Must be a memory byte provider");
-    unsigned LoadBitWidth = P.Load->getMemoryVT().getSizeInBits();
+    unsigned LoadBitWidth = P.Load->getMemoryVT().getScalarSizeInBits();
+
     assert(LoadBitWidth % 8 == 0 &&
            "can only analyze providers for individual bytes not bit");
     unsigned LoadByteWidth = LoadBitWidth / 8;
@@ -8215,7 +8298,8 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   SmallVector<int64_t, 8> ByteOffsets(ByteWidth);
   unsigned ZeroExtendedBytes = 0;
   for (int i = ByteWidth - 1; i >= 0; --i) {
-    auto P = calculateByteProvider(SDValue(N, 0), i, 0, /*Root=*/true);
+    auto P = calculateByteProvider(SDValue(N, 0), i, 0, /*VectorIndex*/ None,
+                                   /*StartingIndex*/ i);
     if (!P)
       return SDValue();
 
@@ -8229,10 +8313,6 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
     assert(P->isMemory() && "provenance should either be memory or zero");
 
     LoadSDNode *L = P->Load;
-    assert(L->hasNUsesOfValue(1, 0) && L->isSimple() &&
-           !L->isIndexed() &&
-           "Must be enforced by calculateByteProvider");
-    assert(L->getOffset().isUndef() && "Unindexed load must have undef offset");
 
     // All loads must share the same chain
     SDValue LChain = L->getChain();
@@ -8244,8 +8324,25 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
     // Loads must share the same base address
     BaseIndexOffset Ptr = BaseIndexOffset::match(L, DAG);
     int64_t ByteOffsetFromBase = 0;
+
+    // For vector loads, the expected load combine pattern will have an
+    // ExtractElement for each index in the vector. While each of these
+    // ExtractElements will be accessing the same base address as determined
+    // by the load instruction, the actual bytes they interact with will differ
+    // due to different ExtractElement indices. To accurately determine the
+    // byte position of an ExtractElement, we offset the base load ptr with
+    // the index multiplied by the byte size of each element in the vector.
+    if (L->getMemoryVT().isVector()) {
+      unsigned LoadWidthInBit = L->getMemoryVT().getScalarSizeInBits();
+      if (LoadWidthInBit % 8 != 0)
+        return SDValue();
+      unsigned ByteOffsetFromVector = P->VectorOffset * LoadWidthInBit / 8;
+      Ptr.addToOffset(ByteOffsetFromVector);
+    }
+
     if (!Base)
       Base = Ptr;
+
     else if (!Base->equalBaseIndex(Ptr, DAG, ByteOffsetFromBase))
       return SDValue();
 
@@ -8261,6 +8358,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
 
     Loads.insert(L);
   }
+
   assert(!Loads.empty() && "All the bytes of the value must be loaded from "
          "memory, so there must be at least one load which produces the value");
   assert(Base && "Base address of the accessed memory location must be set");
@@ -14278,7 +14376,9 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
         SDValue D = FMul.getOperand(1);
         SDValue CDE = DAG.getNode(PreferredFusedOpcode, SL, VT, C, D, E);
         DAG.ReplaceAllUsesOfValueWith(FMul, CDE);
-        return FMA;
+        // Replacing the inner FMul could cause the outer FMA to be simplified
+        // away.
+        return FMA.getOpcode() == ISD::DELETED_NODE ? SDValue() : FMA;
       }
 
       TmpFMA = TmpFMA->getOperand(2);
@@ -19778,13 +19878,8 @@ SDValue DAGCombiner::visitINSERT_VECTOR_ELT(SDNode *N) {
   if (!IndexC) {
     // If this is variable insert to undef vector, it might be better to splat:
     // inselt undef, InVal, EltNo --> build_vector < InVal, InVal, ... >
-    if (InVec.isUndef() && TLI.shouldSplatInsEltVarIndex(VT)) {
-      if (VT.isScalableVector())
-        return DAG.getSplatVector(VT, DL, InVal);
-
-      SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(), InVal);
-      return DAG.getBuildVector(VT, DL, Ops);
-    }
+    if (InVec.isUndef() && TLI.shouldSplatInsEltVarIndex(VT))
+      return DAG.getSplat(VT, DL, InVal);
     return SDValue();
   }
 
@@ -23819,10 +23914,7 @@ static SDValue scalarizeBinOpOfSplats(SDNode *N, SelectionDAG &DAG,
   }
 
   // bo (splat X, Index), (splat Y, Index) --> splat (bo X, Y), Index
-  if (VT.isScalableVector())
-    return DAG.getSplatVector(VT, DL, ScalarBO);
-  SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(), ScalarBO);
-  return DAG.getBuildVector(VT, DL, Ops);
+  return DAG.getSplat(VT, DL, ScalarBO);
 }
 
 /// Visit a binary vector operation, like ADD.

@@ -44,15 +44,19 @@ static Value genIndexLoad(OpBuilder &builder, Location loc, Value ptr,
 // Sparse tensor loop emitter class implementations
 //===----------------------------------------------------------------------===//
 
-SparseTensorLoopEmitter::SparseTensorLoopEmitter(ValueRange tensors)
+SparseTensorLoopEmitter::SparseTensorLoopEmitter(ValueRange tensors,
+                                                 bool isLastOutput)
     : tensors(tensors.begin(), tensors.end()), dims(tensors.size()),
       pidxs(tensors.size()), coord(tensors.size()), highs(tensors.size()),
       sizes(tensors.size()), ptrBuffer(tensors.size()),
-      idxBuffer(tensors.size()), valBuffer(tensors.size()), loopStack(),
-      curLv(tensors.size(), 0) {
+      idxBuffer(tensors.size()), valBuffer(tensors.size()),
+      isLastOutput(isLastOutput), loopStack(), curLv(tensors.size(), 0) {
   for (size_t i = 0, e = tensors.size(); i < e; i++) {
     auto t = tensors[i];
-    auto rtp = t.getType().cast<RankedTensorType>();
+    auto rtp = t.getType().dyn_cast<RankedTensorType>();
+    if (!rtp) // a scalar (0-dimension tensors)
+      continue;
+
     auto rank = static_cast<size_t>(rtp.getRank());
     auto enc = getSparseTensorEncoding(rtp);
     if (enc)
@@ -100,7 +104,14 @@ void SparseTensorLoopEmitter::initializeLoopEmit(OpBuilder &builder,
         ptrBuffer[t][d] = builder.create<ToPointersOp>(loc, ptrTp, tensor, dim);
         idxBuffer[t][d] = builder.create<ToIndicesOp>(loc, indTp, tensor, dim);
       } else if (isSingletonDim(dims[t][d])) {
-        llvm_unreachable("TODO: not implemented yet");
+        // Singleton dimension, fetch indices.
+        auto indTp =
+            MemRefType::get(dynShape, getIndexOverheadType(builder, enc));
+        auto dim = builder.getIndexAttr(d);
+        idxBuffer[t][d] = builder.create<ToIndicesOp>(loc, indTp, tensor, dim);
+      } else {
+        // Dense dimension, nothing to fetch.
+        assert(isDenseDim(dims[t][d]));
       }
 
       // Find upper bound in current dimension.
@@ -116,9 +127,11 @@ void SparseTensorLoopEmitter::initializeLoopEmit(OpBuilder &builder,
     if (!enc) {
       // Non-annotated dense tensors.
       auto denseTp = MemRefType::get(shape, elementType);
-      // This is not the output tensor
-      valBuffer[t] =
-          builder.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
+      if (isLastOutput && t == tensors.size() - 1)
+        llvm_unreachable("TODO: not yet handled");
+      else
+        valBuffer[t] =
+            builder.create<bufferization::ToMemrefOp>(loc, denseTp, tensor);
     } else {
       // Annotated sparse tensors.
       auto dynShape = {ShapedType::kDynamicSize};
@@ -137,10 +150,12 @@ Operation *SparseTensorLoopEmitter::enterLoopOverTensorAtDim(
   // We can not re-enter the same level.
   assert(!coord[tid][dim]);
   Value step = constantIndex(builder, loc, 1);
-  bool isCompressed = isCompressedDim(dims[tid][dim]);
-  assert(isDenseDim(dims[tid][dim]) || isCompressedDim(dims[tid][dim]));
+  auto dimType = dims[tid][dim];
+  bool isSparse = isCompressedDim(dimType) || isSingletonDim(dimType);
+  assert(isDenseDim(dimType) || isCompressedDim(dimType) ||
+         isSingletonDim(dimType));
 
-  Value lo = isCompressed ? pidxs[tid][dim] : constantIndex(builder, loc, 0);
+  Value lo = isSparse ? pidxs[tid][dim] : constantIndex(builder, loc, 0);
   Value hi = highs[tid][dim];
 
   // TODO: support reduction.
@@ -153,7 +168,7 @@ Operation *SparseTensorLoopEmitter::enterLoopOverTensorAtDim(
   Operation *loop = forOp;
 
   assert(iv);
-  if (isCompressed) {
+  if (isSparse) {
     pidxs[tid][dim] = iv;
     // Generating a load on the indices array yields the coordinate.
     Value ptr = idxBuffer[tid][dim];
@@ -191,26 +206,33 @@ bool SparseTensorLoopEmitter::prepareLoopOverTensorAtDim(OpBuilder &builder,
   // TODO: generate loop iteration on output tensor based on the shape
   // instead of pointer/indices arrays.
   assert(dims[tid].size() > dim);
+  auto dimType = dims[tid][dim];
 
-  if (isDenseDim(dims[tid][dim]))
+  if (isDenseDim(dimType))
     return false;
 
   // Either the first dimension, or the previous dimension has been set.
   assert(dim == 0 || pidxs[tid][dim - 1]);
-  if (isCompressedDim(dims[tid][dim])) {
+  Value c0 = constantIndex(builder, loc, 0);
+  Value c1 = constantIndex(builder, loc, 1);
+  if (isCompressedDim(dimType)) {
     Value ptr = ptrBuffer[tid][dim];
-    Value c1 = constantIndex(builder, loc, 1);
-    Value pLo = dim == 0 ? constantIndex(builder, loc, 0) : pidxs[tid][dim - 1];
+
+    Value pLo = dim == 0 ? c0 : pidxs[tid][dim - 1];
     Value pHi = builder.create<arith::AddIOp>(loc, pLo, c1);
 
     pidxs[tid][dim] = genIndexLoad(builder, loc, ptr, pLo);
     highs[tid][dim] = genIndexLoad(builder, loc, ptr, pHi);
-
     return true;
   }
+  if (isSingletonDim(dimType)) {
+    Value pLo = dim == 0 ? c0 : pidxs[tid][dim - 1];
+    Value pHi = builder.create<arith::AddIOp>(loc, pLo, c1);
 
-  if (isSingletonDim(dims[tid][dim]))
-    llvm_unreachable("TODO: not implemented yet");
+    pidxs[tid][dim] = pLo;
+    highs[tid][dim] = pHi;
+    return true;
+  }
 
   llvm_unreachable("Unrecognizable dimesion type!");
 }
@@ -423,6 +445,61 @@ Value mlir::sparse_tensor::genIsNonzero(OpBuilder &builder, mlir::Location loc,
   if (tp.dyn_cast<ComplexType>())
     return builder.create<complex::NotEqualOp>(loc, v, zero);
   llvm_unreachable("Non-numeric type");
+}
+
+void mlir::sparse_tensor::genReshapeDstShape(
+    Location loc, PatternRewriter &rewriter, SmallVector<Value, 4> &dstShape,
+    ArrayRef<Value> srcShape, ArrayRef<int64_t> staticDstShape,
+    ArrayRef<ReassociationIndices> reassociation) {
+  // Collapse shape.
+  if (reassociation.size() < srcShape.size()) {
+    unsigned start = 0;
+    for (const auto &map : llvm::enumerate(reassociation)) {
+      auto dstDim = constantIndex(rewriter, loc, 1);
+      for (unsigned i = start; i < start + map.value().size(); i++) {
+        dstDim = rewriter.create<arith::MulIOp>(loc, dstDim, srcShape[i]);
+      }
+      dstShape.push_back(dstDim);
+      start = start + map.value().size();
+    }
+    assert(start == srcShape.size());
+    return;
+  }
+
+  // Expand shape.
+  assert(reassociation.size() == srcShape.size());
+  unsigned start = 0;
+  // Expand the i-th dimension in srcShape.
+  for (unsigned i = 0, size = srcShape.size(); i < size; i++) {
+    auto map = reassociation[i];
+    auto srcDim = srcShape[i];
+    // Iterate through dimensions expanded from the i-th dimension.
+    for (unsigned j = start; j < start + map.size(); j++) {
+      // There can be only one dynamic sized dimension among dimensions expanded
+      // from the i-th dimension in srcShape. For example, if srcDim = 8, then
+      // the expanded shape could be <2x?x2>, but not <2x?x?>.
+      if (staticDstShape[j] == ShapedType::kDynamicSize) {
+        // The expanded dimension has dynamic size. We compute the dimension
+        // by dividing srcDim by the product of the static dimensions.
+        int64_t product = 1;
+        for (unsigned k = start; k < start + map.size(); k++) {
+          if (staticDstShape[k] != ShapedType::kDynamicSize) {
+            product *= staticDstShape[k];
+          }
+        }
+        // Compute the dynamic dimension size.
+        Value productVal = constantIndex(rewriter, loc, product);
+        Value dynamicSize =
+            rewriter.create<arith::DivUIOp>(loc, srcDim, productVal);
+        dstShape.push_back(dynamicSize);
+      } else {
+        // The expanded dimension is statically known.
+        dstShape.push_back(constantIndex(rewriter, loc, staticDstShape[j]));
+      }
+    }
+    start = start + map.size();
+  }
+  assert(start == staticDstShape.size());
 }
 
 void mlir::sparse_tensor::translateIndicesArray(

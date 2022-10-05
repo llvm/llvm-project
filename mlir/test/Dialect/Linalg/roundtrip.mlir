@@ -202,9 +202,9 @@ func.func @generic_with_multiple_tensor_outputs(
     %arg0: tensor<?xi32>, %arg1: tensor<?xi32>, %arg2: i32)
     -> (tensor<i32>, tensor<i32>) {
   %c0 = arith.constant 0 : index
-  %0 = linalg.init_tensor [] : tensor<i32>
+  %0 = tensor.empty() : tensor<i32>
   %1 = linalg.fill ins(%arg2 : i32) outs(%0 : tensor<i32>) -> tensor<i32>
-  %2 = linalg.init_tensor [] : tensor<i32>
+  %2 = tensor.empty() : tensor<i32>
   %3 = linalg.fill ins(%arg2 : i32) outs(%2 : tensor<i32>) -> tensor<i32>
   %4:2 = linalg.generic {
     indexing_maps = [affine_map<(d0) -> (d0)>, affine_map<(d0) -> (d0)>, affine_map<(d0) -> ()>, affine_map<(d0) -> ()>],
@@ -324,23 +324,8 @@ func.func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref
 
 // -----
 
-#attr = {"foo"}
-func.func @init_tensor(%arg0 : index, %arg1 : index)
-{
-  %0 = linalg.init_tensor [3, 42] : tensor<3x42xf32>
-  %1 = linalg.init_tensor [4, %arg0, %arg1, 5] : tensor<4x?x?x5xf32>
-  %2 = linalg.init_tensor [2, 2] : tensor<2x2xf32, #attr>
-  return
-}
-// CHECK-LABEL: func @init_tensor
-//       CHECK:   linalg.init_tensor [3, 42] : tensor<3x42xf32>
-//       CHECK:   linalg.init_tensor [4, %{{.*}}, %{{.*}}, 5] : tensor<4x?x?x5xf32>
-//       CHECK:   linalg.init_tensor [2, 2] : tensor<2x2xf32, {foo}>
-
-// -----
-
 func.func @fill_tensor(%arg0 : index, %arg1 : index, %arg2 : f32) -> tensor<?x?xf32> {
-  %0 = linalg.init_tensor [%arg0, %arg1] : tensor<?x?xf32>
+  %0 = tensor.empty(%arg0, %arg1) : tensor<?x?xf32>
   %1 = linalg.fill ins(%arg2 : f32) outs(%0 : tensor<?x?xf32>) -> tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
 }

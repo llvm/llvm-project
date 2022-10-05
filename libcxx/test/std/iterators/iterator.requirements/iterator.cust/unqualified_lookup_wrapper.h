@@ -43,6 +43,9 @@ private:
   I base_ = I{};
 };
 
+template <class It>
+unqualified_lookup_wrapper(It) -> unqualified_lookup_wrapper<It>;
+
 enum unscoped_enum { a, b, c };
 constexpr unscoped_enum iter_move(unscoped_enum& e) noexcept(false) { return e; }
 

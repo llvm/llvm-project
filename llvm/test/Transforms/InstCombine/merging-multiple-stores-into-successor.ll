@@ -12,60 +12,60 @@
 define void @_Z4testv() {
 ; CHECK-LABEL: @_Z4testv(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I:%.*]] = load i8, i8* @var_7, align 1
+; CHECK-NEXT:    [[I:%.*]] = load i8, ptr @var_7, align 1
 ; CHECK-NEXT:    [[I1:%.*]] = icmp eq i8 [[I]], -1
-; CHECK-NEXT:    [[I4:%.*]] = load i16, i16* @var_0, align 2
+; CHECK-NEXT:    [[I4:%.*]] = load i16, ptr @var_0, align 2
 ; CHECK-NEXT:    br i1 [[I1]], label [[BB10:%.*]], label [[BB9:%.*]]
 ; CHECK:       bb9:
 ; CHECK-NEXT:    br label [[BB12:%.*]]
 ; CHECK:       bb10:
-; CHECK-NEXT:    [[I2:%.*]] = load i32, i32* @var_1, align 4
+; CHECK-NEXT:    [[I2:%.*]] = load i32, ptr @var_1, align 4
 ; CHECK-NEXT:    [[I3:%.*]] = icmp eq i32 [[I2]], 0
-; CHECK-NEXT:    [[I6:%.*]] = load i64, i64* @var_5, align 8
+; CHECK-NEXT:    [[I6:%.*]] = load i64, ptr @var_5, align 8
 ; CHECK-NEXT:    [[I5:%.*]] = sext i16 [[I4]] to i64
 ; CHECK-NEXT:    [[I7:%.*]] = select i1 [[I3]], i64 [[I6]], i64 [[I5]]
 ; CHECK-NEXT:    [[I11:%.*]] = trunc i64 [[I7]] to i32
 ; CHECK-NEXT:    br label [[BB12]]
 ; CHECK:       bb12:
 ; CHECK-NEXT:    [[STOREMERGE1:%.*]] = phi i32 [ [[I11]], [[BB10]] ], [ 1, [[BB9]] ]
-; CHECK-NEXT:    store i32 [[STOREMERGE1]], i32* getelementptr inbounds ([0 x i32], [0 x i32]* @arr_2, i64 0, i64 0), align 4
-; CHECK-NEXT:    store i16 [[I4]], i16* getelementptr inbounds ([0 x i16], [0 x i16]* @arr_4, i64 0, i64 0), align 2
+; CHECK-NEXT:    store i32 [[STOREMERGE1]], ptr @arr_2, align 4
+; CHECK-NEXT:    store i16 [[I4]], ptr @arr_4, align 2
 ; CHECK-NEXT:    [[I8:%.*]] = sext i16 [[I4]] to i32
-; CHECK-NEXT:    store i32 [[I8]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @arr_3, i64 0, i64 0), align 16
-; CHECK-NEXT:    store i32 [[STOREMERGE1]], i32* getelementptr inbounds ([0 x i32], [0 x i32]* @arr_2, i64 0, i64 1), align 4
-; CHECK-NEXT:    store i16 [[I4]], i16* getelementptr inbounds ([0 x i16], [0 x i16]* @arr_4, i64 0, i64 1), align 2
-; CHECK-NEXT:    store i32 [[I8]], i32* getelementptr inbounds ([8 x i32], [8 x i32]* @arr_3, i64 0, i64 1), align 4
+; CHECK-NEXT:    store i32 [[I8]], ptr @arr_3, align 16
+; CHECK-NEXT:    store i32 [[STOREMERGE1]], ptr getelementptr inbounds ([0 x i32], ptr @arr_2, i64 0, i64 1), align 4
+; CHECK-NEXT:    store i16 [[I4]], ptr getelementptr inbounds ([0 x i16], ptr @arr_4, i64 0, i64 1), align 2
+; CHECK-NEXT:    store i32 [[I8]], ptr getelementptr inbounds ([8 x i32], ptr @arr_3, i64 0, i64 1), align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %i = load i8, i8* @var_7, align 1
+  %i = load i8, ptr @var_7, align 1
   %i1 = icmp eq i8 %i, -1
-  %i2 = load i32, i32* @var_1, align 4
+  %i2 = load i32, ptr @var_1, align 4
   %i3 = icmp eq i32 %i2, 0
-  %i4 = load i16, i16* @var_0, align 2
+  %i4 = load i16, ptr @var_0, align 2
   %i5 = sext i16 %i4 to i64
-  %i6 = load i64, i64* @var_5, align 8
+  %i6 = load i64, ptr @var_5, align 8
   %i7 = select i1 %i3, i64 %i6, i64 %i5
   %i8 = sext i16 %i4 to i32
   br i1 %i1, label %bb10, label %bb9
 
 bb9:                                              ; preds = %bb
-  store i32 1, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @arr_2, i64 0, i64 0), align 4
-  store i16 %i4, i16* getelementptr inbounds ([0 x i16], [0 x i16]* @arr_4, i64 0, i64 0), align 2
-  store i32 %i8, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @arr_3, i64 0, i64 0), align 4
-  store i32 1, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @arr_2, i64 0, i64 1), align 4
-  store i16 %i4, i16* getelementptr inbounds ([0 x i16], [0 x i16]* @arr_4, i64 0, i64 1), align 2
-  store i32 %i8, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @arr_3, i64 0, i64 1), align 4
+  store i32 1, ptr @arr_2, align 4
+  store i16 %i4, ptr @arr_4, align 2
+  store i32 %i8, ptr @arr_3, align 4
+  store i32 1, ptr getelementptr inbounds ([0 x i32], ptr @arr_2, i64 0, i64 1), align 4
+  store i16 %i4, ptr getelementptr inbounds ([0 x i16], ptr @arr_4, i64 0, i64 1), align 2
+  store i32 %i8, ptr getelementptr inbounds ([8 x i32], ptr @arr_3, i64 0, i64 1), align 4
   br label %bb12
 
 bb10:                                             ; preds = %bb
   %i11 = trunc i64 %i7 to i32
-  store i32 %i11, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @arr_2, i64 0, i64 0), align 4
-  store i16 %i4, i16* getelementptr inbounds ([0 x i16], [0 x i16]* @arr_4, i64 0, i64 0), align 2
-  store i32 %i8, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @arr_3, i64 0, i64 0), align 4
-  store i32 %i11, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @arr_2, i64 0, i64 1), align 4
-  store i16 %i4, i16* getelementptr inbounds ([0 x i16], [0 x i16]* @arr_4, i64 0, i64 1), align 2
-  store i32 %i8, i32* getelementptr inbounds ([8 x i32], [8 x i32]* @arr_3, i64 0, i64 1), align 4
+  store i32 %i11, ptr @arr_2, align 4
+  store i16 %i4, ptr @arr_4, align 2
+  store i32 %i8, ptr @arr_3, align 4
+  store i32 %i11, ptr getelementptr inbounds ([0 x i32], ptr @arr_2, i64 0, i64 1), align 4
+  store i16 %i4, ptr getelementptr inbounds ([0 x i16], ptr @arr_4, i64 0, i64 1), align 2
+  store i32 %i8, ptr getelementptr inbounds ([8 x i32], ptr @arr_3, i64 0, i64 1), align 4
   br label %bb12
 
 bb12:                                             ; preds = %bb10, %bb9

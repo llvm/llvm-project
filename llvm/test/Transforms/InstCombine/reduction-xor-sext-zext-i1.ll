@@ -77,13 +77,13 @@ define i8 @reduce_xor_zext_long_external_use(<128 x i1> %x) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw i8 0, [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <128 x i1> [[X]], i64 0
 ; CHECK-NEXT:    [[EXT:%.*]] = sext i1 [[TMP6]] to i8
-; CHECK-NEXT:    store i8 [[EXT]], i8* @glob, align 1
+; CHECK-NEXT:    store i8 [[EXT]], ptr @glob, align 1
 ; CHECK-NEXT:    ret i8 [[TMP5]]
 ;
   %sext = sext <128 x i1> %x to <128 x i8>
   %res = call i8 @llvm.vector.reduce.xor.v128i8(<128 x i8> %sext)
   %ext = extractelement <128 x i8> %sext, i32 0
-  store i8 %ext, i8* @glob, align 1
+  store i8 %ext, ptr @glob, align 1
   ret i8 %res
 }
 
@@ -96,13 +96,13 @@ define i64 @reduce_xor_zext_external_use(<8 x i1> %x) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i1> [[X]], i64 0
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[TMP5]] to i64
-; CHECK-NEXT:    store i64 [[EXT]], i64* @glob1, align 8
+; CHECK-NEXT:    store i64 [[EXT]], ptr @glob1, align 8
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
   %zext = zext <8 x i1> %x to <8 x i64>
   %res = call i64 @llvm.vector.reduce.xor.v8i64(<8 x i64> %zext)
   %ext = extractelement <8 x i64> %zext, i32 0
-  store i64 %ext, i64* @glob1, align 8
+  store i64 %ext, ptr @glob1, align 8
   ret i64 %res
 }
 

@@ -1620,6 +1620,7 @@ deleteDeadBlocksFromLoop(Loop &L,
                          SmallVectorImpl<BasicBlock *> &ExitBlocks,
                          DominatorTree &DT, LoopInfo &LI,
                          MemorySSAUpdater *MSSAU,
+                         ScalarEvolution *SE,
                          function_ref<void(Loop &, StringRef)> DestroyLoopCB) {
   // Find all the dead blocks tied to this loop, and remove them from their
   // successors.
@@ -1671,6 +1672,8 @@ deleteDeadBlocksFromLoop(Loop &L,
            "If the child loop header is dead all blocks in the child loop must "
            "be dead as well!");
     DestroyLoopCB(*ChildL, ChildL->getName());
+    if (SE)
+      SE->forgetBlockAndLoopDispositions();
     LI.destroy(ChildL);
     return true;
   });
@@ -1820,7 +1823,8 @@ static SmallPtrSet<const BasicBlock *, 16> recomputeLoopBlockSet(Loop &L,
 /// referenced).
 static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
                                      LoopInfo &LI,
-                                     SmallVectorImpl<Loop *> &HoistedLoops) {
+                                     SmallVectorImpl<Loop *> &HoistedLoops,
+                                     ScalarEvolution *SE) {
   auto *PH = L.getLoopPreheader();
 
   // Compute the actual parent loop from the exit blocks. Because we may have
@@ -2013,6 +2017,8 @@ static bool rebuildLoopAfterUnswitch(Loop &L, ArrayRef<BasicBlock *> ExitBlocks,
       LI.removeLoop(llvm::find(LI, &L));
     // markLoopAsDeleted for L should be triggered by the caller (it is typically
     // done by using the UnswitchCB callback).
+    if (SE)
+      SE->forgetBlockAndLoopDispositions();
     LI.destroy(&L);
     return false;
   }
@@ -2374,13 +2380,14 @@ static void unswitchNontrivialInvariants(
   // Now that our cloned loops have been built, we can update the original loop.
   // First we delete the dead blocks from it and then we rebuild the loop
   // structure taking these deletions into account.
-  deleteDeadBlocksFromLoop(L, ExitBlocks, DT, LI, MSSAU, DestroyLoopCB);
+  deleteDeadBlocksFromLoop(L, ExitBlocks, DT, LI, MSSAU, SE,DestroyLoopCB);
 
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
 
   SmallVector<Loop *, 4> HoistedLoops;
-  bool IsStillLoop = rebuildLoopAfterUnswitch(L, ExitBlocks, LI, HoistedLoops);
+  bool IsStillLoop =
+      rebuildLoopAfterUnswitch(L, ExitBlocks, LI, HoistedLoops, SE);
 
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();

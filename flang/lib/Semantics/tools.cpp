@@ -1059,6 +1059,13 @@ bool HasCoarray(const parser::Expr &expression) {
   return false;
 }
 
+bool IsAssumedType(const Symbol &symbol) {
+  if (const DeclTypeSpec * type{symbol.GetType()}) {
+    return type->IsAssumedType();
+  }
+  return false;
+}
+
 bool IsPolymorphic(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     return type->IsPolymorphic();
