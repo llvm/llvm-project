@@ -123,56 +123,56 @@ define <4 x i1> @vec_4xi32_shl_and_signbit_eq_undef3(<4 x i32> %x, <4 x i32> %y)
 ; Extra use
 
 ; Fold happened
-define i1 @scalar_shl_and_signbit_eq_extra_use_shl(i32 %x, i32 %y, i32 %z, i32* %p) {
+define i1 @scalar_shl_and_signbit_eq_extra_use_shl(i32 %x, i32 %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: @scalar_shl_and_signbit_eq_extra_use_shl(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i32 [[SHL]], [[Z:%.*]]
-; CHECK-NEXT:    store i32 [[XOR]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[XOR]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = icmp sgt i32 [[SHL]], -1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i32 %x, %y
   %xor = xor i32 %shl, %z  ; extra use of shl
-  store i32 %xor, i32* %p
+  store i32 %xor, ptr %p
   %and = and i32 %shl, 2147483648
   %r = icmp eq i32 %and, 0
   ret i1 %r
 }
 
 ; Not fold
-define i1 @scalar_shl_and_signbit_eq_extra_use_and(i32 %x, i32 %y, i32 %z, i32* %p) {
+define i1 @scalar_shl_and_signbit_eq_extra_use_and(i32 %x, i32 %y, i32 %z, ptr %p) {
 ; CHECK-LABEL: @scalar_shl_and_signbit_eq_extra_use_and(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], -2147483648
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[AND]], [[Z:%.*]]
-; CHECK-NEXT:    store i32 [[MUL]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[MUL]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i32 %x, %y
   %and = and i32 %shl, 2147483648
   %mul = mul i32 %and, %z  ; extra use of and
-  store i32 %mul, i32* %p
+  store i32 %mul, ptr %p
   %r = icmp eq i32 %and, 0
   ret i1 %r
 }
 
 ; Not fold
-define i1 @scalar_shl_and_signbit_eq_extra_use_shl_and(i32 %x, i32 %y, i32 %z, i32* %p, i32* %q) {
+define i1 @scalar_shl_and_signbit_eq_extra_use_shl_and(i32 %x, i32 %y, i32 %z, ptr %p, ptr %q) {
 ; CHECK-LABEL: @scalar_shl_and_signbit_eq_extra_use_shl_and(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHL]], -2147483648
-; CHECK-NEXT:    store i32 [[AND]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[AND]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[SHL]], [[Z:%.*]]
-; CHECK-NEXT:    store i32 [[ADD]], i32* [[Q:%.*]], align 4
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i32 %x, %y
   %and = and i32 %shl, 2147483648
-  store i32 %and, i32* %p  ; extra use of and
+  store i32 %and, ptr %p  ; extra use of and
   %add = add i32 %shl, %z  ; extra use of shl
-  store i32 %add, i32* %q
+  store i32 %add, ptr %q
   %r = icmp eq i32 %and, 0
   ret i1 %r
 }

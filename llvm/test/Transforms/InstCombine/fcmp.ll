@@ -439,7 +439,7 @@ define <2 x i1> @fabs_uno(<2 x float> %a) {
 }
 
 ; Don't crash.
-define i32 @test17(double %a, double (double)* %p) {
+define i32 @test17(double %a, ptr %p) {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call double [[P:%.*]](double [[A:%.*]])
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq double [[CALL]], 0.000000e+00
@@ -688,15 +688,15 @@ define i1 @is_signbit_clear_3(double %x) {
 
 ; Negative test - uses
 
-define i1 @is_signbit_set_extra_use(double %x, double* %p) {
+define i1 @is_signbit_set_extra_use(double %x, ptr %p) {
 ; CHECK-LABEL: @is_signbit_set_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 1.000000e+00, double [[X:%.*]])
-; CHECK-NEXT:    store double [[S]], double* [[P:%.*]], align 8
+; CHECK-NEXT:    store double [[S]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = fcmp olt double [[S]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double 1.0, double %x)
-  store double %s, double* %p
+  store double %s, ptr %p
   %r = fcmp olt double %s, 0.0
   ret i1 %r
 }
@@ -749,15 +749,15 @@ define <2 x i1> @lossy_oeq(<2 x float> %x) {
   ret <2 x i1> %r
 }
 
-define i1 @lossy_one(float %x, double* %p) {
+define i1 @lossy_one(float %x, ptr %p) {
 ; CHECK-LABEL: @lossy_one(
 ; CHECK-NEXT:    [[E:%.*]] = fpext float [[X:%.*]] to double
-; CHECK-NEXT:    store double [[E]], double* [[P:%.*]], align 8
+; CHECK-NEXT:    store double [[E]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = fcmp ord float [[X]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = fpext float %x to double
-  store double %e, double* %p
+  store double %e, ptr %p
   %r = fcmp one double %e, 0.1
   ret i1 %r
 }
@@ -792,15 +792,15 @@ define <2 x i1> @lossy_ogt(<2 x float> %x) {
   ret <2 x i1> %r
 }
 
-define i1 @lossy_oge(float %x, double* %p) {
+define i1 @lossy_oge(float %x, ptr %p) {
 ; CHECK-LABEL: @lossy_oge(
 ; CHECK-NEXT:    [[E:%.*]] = fpext float [[X:%.*]] to double
-; CHECK-NEXT:    store double [[E]], double* [[P:%.*]], align 8
+; CHECK-NEXT:    store double [[E]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = fcmp oge double [[E]], 1.000000e-01
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = fpext float %x to double
-  store double %e, double* %p
+  store double %e, ptr %p
   %r = fcmp oge double %e, 0.1
   ret i1 %r
 }
@@ -838,15 +838,15 @@ define <2 x i1> @lossy_ugt(<2 x float> %x) {
   ret <2 x i1> %r
 }
 
-define i1 @lossy_uge(float %x, double* %p) {
+define i1 @lossy_uge(float %x, ptr %p) {
 ; CHECK-LABEL: @lossy_uge(
 ; CHECK-NEXT:    [[E:%.*]] = fpext float [[X:%.*]] to double
-; CHECK-NEXT:    store double [[E]], double* [[P:%.*]], align 8
+; CHECK-NEXT:    store double [[E]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = fcmp uge double [[E]], 1.000000e-01
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = fpext float %x to double
-  store double %e, double* %p
+  store double %e, ptr %p
   %r = fcmp uge double %e, 0.1
   ret i1 %r
 }
@@ -923,15 +923,15 @@ define <2 x i1> @fneg_oge(<2 x float> %a) {
   ret <2 x i1> %cmp
 }
 
-define i1 @fneg_olt(float %a, float* %q) {
+define i1 @fneg_olt(float %a, ptr %q) {
 ; CHECK-LABEL: @fneg_olt(
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
-; CHECK-NEXT:    store float [[FNEG]], float* [[Q:%.*]], align 4
+; CHECK-NEXT:    store float [[FNEG]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[A]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fneg = fneg float %a
-  store float %fneg, float* %q
+  store float %fneg, ptr %q
   %cmp = fcmp olt float %fneg, %a
   ret i1 %cmp
 }
@@ -996,15 +996,15 @@ define <2 x i1> @fneg_ugt(<2 x float> %a) {
   ret <2 x i1> %cmp
 }
 
-define i1 @fneg_uge(float %a, float* %q) {
+define i1 @fneg_uge(float %a, ptr %q) {
 ; CHECK-LABEL: @fneg_uge(
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
-; CHECK-NEXT:    store float [[FNEG]], float* [[Q:%.*]], align 4
+; CHECK-NEXT:    store float [[FNEG]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[A]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fneg = fneg float %a
-  store float %fneg, float* %q
+  store float %fneg, ptr %q
   %cmp = fcmp uge float %fneg, %a
   ret i1 %cmp
 }
@@ -1075,17 +1075,17 @@ define <2 x i1> @fneg_oge_swap(<2 x float> %p) {
   ret <2 x i1> %cmp
 }
 
-define i1 @fneg_olt_swap(float %p, float* %q) {
+define i1 @fneg_olt_swap(float %p, ptr %q) {
 ; CHECK-LABEL: @fneg_olt_swap(
 ; CHECK-NEXT:    [[A:%.*]] = fadd float [[P:%.*]], [[P]]
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A]]
-; CHECK-NEXT:    store float [[FNEG]], float* [[Q:%.*]], align 4
+; CHECK-NEXT:    store float [[FNEG]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[A]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = fadd float %p, %p ; thwart complexity-based canonicalization
   %fneg = fneg float %a
-  store float %fneg, float* %q
+  store float %fneg, ptr %q
   %cmp = fcmp olt float %a, %fneg
   ret i1 %cmp
 }
@@ -1162,17 +1162,17 @@ define <2 x i1> @fneg_ugt_swap(<2 x float> %p) {
   ret <2 x i1> %cmp
 }
 
-define i1 @fneg_uge_swap(float %p, float* %q) {
+define i1 @fneg_uge_swap(float %p, ptr %q) {
 ; CHECK-LABEL: @fneg_uge_swap(
 ; CHECK-NEXT:    [[A:%.*]] = fadd float [[P:%.*]], [[P]]
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A]]
-; CHECK-NEXT:    store float [[FNEG]], float* [[Q:%.*]], align 4
+; CHECK-NEXT:    store float [[FNEG]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[A]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = fadd float %p, %p ; thwart complexity-based canonicalization
   %fneg = fneg float %a
-  store float %fneg, float* %q
+  store float %fneg, ptr %q
   %cmp = fcmp uge float %a, %fneg
   ret i1 %cmp
 }

@@ -48,6 +48,7 @@ private:
     _ForwardIterator __last_;
     _BinaryPredicate __pred_;
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(default_searcher);
 
 #endif // _LIBCPP_STD_VER > 14
 

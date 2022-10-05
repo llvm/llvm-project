@@ -3806,7 +3806,7 @@ IntrinsicLibrary::genNull(mlir::Type, llvm::ArrayRef<fir::ExtendedValue> args) {
          "MOLD argument required to lower NULL outside of any context");
   const auto *mold = args[0].getBoxOf<fir::MutableBoxValue>();
   assert(mold && "MOLD must be a pointer or allocatable");
-  fir::BoxType boxType = mold->getBoxTy();
+  fir::BaseBoxType boxType = mold->getBoxTy();
   mlir::Value boxStorage = builder.createTemporary(loc, boxType);
   mlir::Value box = fir::factory::createUnallocatedBox(
       builder, loc, boxType, mold->nonDeferredLenParams());

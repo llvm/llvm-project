@@ -211,8 +211,7 @@ transform::AlternativesOp::apply(transform::TransformResults &results,
       for (Operation *clone : clones)
         clone->erase();
     });
-    if (failed(state.mapBlockArguments(reg.front().getArgument(0), clones)))
-      return DiagnosedSilenceableFailure::definiteFailure();
+    state.mapBlockArguments(reg.front().getArgument(0), clones);
 
     bool failed = false;
     for (Operation &transform : reg.front().without_terminator()) {
@@ -285,8 +284,7 @@ transform::ForeachOp::apply(transform::TransformResults &results,
 
   for (Operation *op : payloadOps) {
     auto scope = state.make_region_scope(getBody());
-    if (failed(state.mapBlockArguments(getIterationVariable(), {op})))
-      return DiagnosedSilenceableFailure::definiteFailure();
+    state.mapBlockArguments(getIterationVariable(), {op});
 
     // Execute loop body.
     for (Operation &transform : getBody().front().without_terminator()) {
@@ -512,8 +510,7 @@ transform::SequenceOp::apply(transform::TransformResults &results,
                              transform::TransformState &state) {
   // Map the entry block argument to the list of operations.
   auto scope = state.make_region_scope(*getBodyBlock()->getParent());
-  if (failed(mapBlockArguments(state)))
-    return DiagnosedSilenceableFailure::definiteFailure();
+  mapBlockArguments(state);
 
   // Apply the sequenced ops one by one.
   for (Operation &transform : getBodyBlock()->without_terminator()) {
@@ -707,8 +704,7 @@ transform::WithPDLPatternsOp::apply(transform::TransformResults &results,
       [&]() { state.removeExtension<PatternApplicatorExtension>(); });
 
   auto scope = state.make_region_scope(getBody());
-  if (failed(mapBlockArguments(state)))
-    return DiagnosedSilenceableFailure::definiteFailure();
+  mapBlockArguments(state);
   return state.applyTransform(transformOp);
 }
 

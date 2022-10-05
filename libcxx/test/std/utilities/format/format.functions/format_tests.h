@@ -84,7 +84,7 @@ struct std::formatter<status, CharT> {
   }
 
   template <class Out>
-  auto format(status s, basic_format_context<Out, CharT>& ctx) -> decltype(ctx.out()) {
+  auto format(status s, basic_format_context<Out, CharT>& ctx) const -> decltype(ctx.out()) {
     const char* names[] = {"foo", "bar", "foobar"};
     char buffer[7];
     const char* begin = names[0];

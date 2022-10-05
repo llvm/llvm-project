@@ -9,6 +9,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILMetadata.h"
+#include "DXILResource.h"
 #include "DirectX.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Triple.h"
@@ -37,6 +38,10 @@ bool DXILTranslateMetadata::runOnModule(Module &M) {
   dxil::ValidatorVersionMD ValVerMD(M);
   if (ValVerMD.isEmpty())
     ValVerMD.update(VersionTuple(1, 0));
+  dxil::createShaderModelMD(M);
+
+  dxil::Resources Res(M);
+  Res.write();
   return false;
 }
 

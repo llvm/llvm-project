@@ -49,7 +49,7 @@ define i32 @foo() {
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0:[0-9]+]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
-; CGSCC: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind readnone willreturn }
-; CGSCC: attributes #[[ATTR2:[0-9]+]] = { readonly willreturn }
+; CGSCC: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind readonly willreturn }
+; CGSCC: attributes #[[ATTR1]] = { nofree nosync nounwind readnone willreturn }
+; CGSCC: attributes #[[ATTR2]] = { readonly willreturn }
 ;.

@@ -74,6 +74,14 @@ template <typename Ty1, typename Ty2> inline Ty1 align_down(Ty1 V, Ty2 Align) {
   return V - V % Align;
 }
 
+/// Return true iff \p Ptr is pointing into shared (local) memory (AS(3)).
+bool isSharedMemPtr(void *Ptr);
+
+/// Return \p V typed punned as \p DstTy.
+template <typename DstTy, typename SrcTy> inline DstTy convertViaPun(SrcTy V) {
+  return *((DstTy *)(&V));
+}
+
 /// A  pointer variable that has by design an `undef` value. Use with care.
 __attribute__((loader_uninitialized)) static void *const UndefPtr;
 

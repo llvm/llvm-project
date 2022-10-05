@@ -730,8 +730,8 @@ define void @static_global_simplifiable_1(%struct.S* noalias sret(%struct.S) ali
 ; TUNIT-SAME: (%struct.S* noalias nocapture nofree nonnull writeonly sret([[STRUCT_S:%.*]]) align 4 dereferenceable(24) [[AGG_RESULT:%.*]]) #[[ATTR5:[0-9]+]] {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree noundef nonnull writeonly align 4 dereferenceable(24) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i32 0, i32 0), i32 noundef 1) #[[ATTR16]]
-; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree writeonly align 4 dereferenceable_or_null(20) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 1), i32 noundef 2) #[[ATTR16]]
-; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree writeonly align 4 dereferenceable_or_null(16) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 2), i32 noundef 3) #[[ATTR16]]
+; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(20) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 1), i32 noundef 2) #[[ATTR16]]
+; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(16) getelementptr inbounds ([[STRUCT_S]], %struct.S* @Gs1, i64 0, i32 2), i32 noundef 3) #[[ATTR16]]
 ; TUNIT-NEXT:    [[F1:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 3
 ; TUNIT-NEXT:    store float 0x3FF19999A0000000, float* [[F1]], align 4, !tbaa [[TBAA7]]
 ; TUNIT-NEXT:    [[F2:%.*]] = getelementptr inbounds [[STRUCT_S]], %struct.S* [[AGG_RESULT]], i64 0, i32 4
@@ -883,7 +883,7 @@ define void @static_global_simplifiable_2() {
 ; TUNIT-NEXT:    [[INDVARS_IV_NEXT8]] = add nuw nsw i64 [[INDVARS_IV7]], 1
 ; TUNIT-NEXT:    br label [[FOR_COND13]], !llvm.loop [[LOOP23:![0-9]+]]
 ; TUNIT:       for.end23:
-; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree writeonly align 4 dereferenceable_or_null(524) bitcast (i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 500) to i32*), i32 noundef 0) #[[ATTR16]]
+; TUNIT-NEXT:    call void @write_arg(i32* nocapture nofree nonnull writeonly align 4 dereferenceable(524) bitcast (i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @GBytes, i64 0, i64 500) to i32*), i32 noundef 0) #[[ATTR16]]
 ; TUNIT-NEXT:    br label [[FOR_COND25:%.*]]
 ; TUNIT:       for.cond25:
 ; TUNIT-NEXT:    [[INDVARS_IV12:%.*]] = phi i64 [ [[INDVARS_IV_NEXT13:%.*]], [[FOR_INC33:%.*]] ], [ 0, [[FOR_END23]] ]
@@ -1909,14 +1909,6 @@ define void @static_global_not_simplifiable_2_helper() {
 
 ; Similiar to static_global_simplifiable_3 but with a may-store.
 define i32 @static_global_not_simplifiable_3(i1 %c, i32* %p) {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
-; CGSCC-LABEL: define {{[^@]+}}@static_global_not_simplifiable_3
-; CGSCC-SAME: (i1 [[C:%.*]], i32* nocapture nofree writeonly [[P:%.*]]) #[[ATTR5:[0-9]+]] {
-; CGSCC-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32* @Flag3, i32* [[P]]
-; CGSCC-NEXT:    store i32 1, i32* [[SEL]], align 4, !tbaa [[TBAA3]]
-; CGSCC-NEXT:    [[I:%.*]] = load i32, i32* @Flag3, align 4, !tbaa [[TBAA3]]
-; CGSCC-NEXT:    ret i32 [[I]]
-;
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@static_global_not_simplifiable_3
 ; TUNIT-SAME: (i1 [[C:%.*]], i32* nocapture nofree writeonly [[P:%.*]]) #[[ATTR3]] {
@@ -1924,6 +1916,14 @@ define i32 @static_global_not_simplifiable_3(i1 %c, i32* %p) {
 ; TUNIT-NEXT:    store i32 1, i32* [[SEL]], align 4, !tbaa [[TBAA3]]
 ; TUNIT-NEXT:    [[I:%.*]] = load i32, i32* @Flag3, align 4, !tbaa [[TBAA3]]
 ; TUNIT-NEXT:    ret i32 [[I]]
+;
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
+; CGSCC-LABEL: define {{[^@]+}}@static_global_not_simplifiable_3
+; CGSCC-SAME: (i1 [[C:%.*]], i32* nocapture nofree writeonly [[P:%.*]]) #[[ATTR5]] {
+; CGSCC-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32* @Flag3, i32* [[P]]
+; CGSCC-NEXT:    store i32 1, i32* [[SEL]], align 4, !tbaa [[TBAA3]]
+; CGSCC-NEXT:    [[I:%.*]] = load i32, i32* @Flag3, align 4, !tbaa [[TBAA3]]
+; CGSCC-NEXT:    ret i32 [[I]]
 ;
   %sel = select i1 %c, i32* @Flag3, i32* %p
   store i32 1, i32* %sel, align 4, !tbaa !3
@@ -1945,19 +1945,19 @@ define i32 @static_global_not_simplifiable_3(i1 %c, i32* %p) {
 ;
 ; FIXME: We could replace these loads.
 define i32 @write_read_global() {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
-; CGSCC-LABEL: define {{[^@]+}}@write_read_global
-; CGSCC-SAME: () #[[ATTR5]] {
-; CGSCC-NEXT:    store i32 7, i32* @Gint1, align 4
-; CGSCC-NEXT:    [[L:%.*]] = load i32, i32* @Gint1, align 4
-; CGSCC-NEXT:    ret i32 [[L]]
-;
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@write_read_global
 ; TUNIT-SAME: () #[[ATTR3]] {
 ; TUNIT-NEXT:    store i32 7, i32* @Gint1, align 4
 ; TUNIT-NEXT:    [[L:%.*]] = load i32, i32* @Gint1, align 4
 ; TUNIT-NEXT:    ret i32 [[L]]
+;
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
+; CGSCC-LABEL: define {{[^@]+}}@write_read_global
+; CGSCC-SAME: () #[[ATTR5]] {
+; CGSCC-NEXT:    store i32 7, i32* @Gint1, align 4
+; CGSCC-NEXT:    [[L:%.*]] = load i32, i32* @Gint1, align 4
+; CGSCC-NEXT:    ret i32 [[L]]
 ;
   store i32 7, i32* @Gint1
   %l = load i32, i32* @Gint1
@@ -2340,19 +2340,19 @@ end:
 }
 
 define i8 @cast_and_load_1() {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
-; CGSCC-LABEL: define {{[^@]+}}@cast_and_load_1
-; CGSCC-SAME: () #[[ATTR5]] {
-; CGSCC-NEXT:    store i32 42, i32* @bytes1, align 4
-; CGSCC-NEXT:    [[L:%.*]] = load i8, i8* bitcast (i32* @bytes1 to i8*), align 4
-; CGSCC-NEXT:    ret i8 [[L]]
-;
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@cast_and_load_1
 ; TUNIT-SAME: () #[[ATTR3]] {
 ; TUNIT-NEXT:    store i32 42, i32* @bytes1, align 4
 ; TUNIT-NEXT:    [[L:%.*]] = load i8, i8* bitcast (i32* @bytes1 to i8*), align 4
 ; TUNIT-NEXT:    ret i8 [[L]]
+;
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
+; CGSCC-LABEL: define {{[^@]+}}@cast_and_load_1
+; CGSCC-SAME: () #[[ATTR5]] {
+; CGSCC-NEXT:    store i32 42, i32* @bytes1, align 4
+; CGSCC-NEXT:    [[L:%.*]] = load i8, i8* bitcast (i32* @bytes1 to i8*), align 4
+; CGSCC-NEXT:    ret i8 [[L]]
 ;
   store i32 42, i32* @bytes1
   %bc = bitcast i32* @bytes1 to i8*
@@ -2361,19 +2361,19 @@ define i8 @cast_and_load_1() {
 }
 
 define i64 @cast_and_load_2() {
-; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
-; CGSCC-LABEL: define {{[^@]+}}@cast_and_load_2
-; CGSCC-SAME: () #[[ATTR5]] {
-; CGSCC-NEXT:    store i32 42, i32* @bytes2, align 4
-; CGSCC-NEXT:    [[L:%.*]] = load i64, i64* bitcast (i32* @bytes2 to i64*), align 4
-; CGSCC-NEXT:    ret i64 [[L]]
-;
 ; TUNIT: Function Attrs: nofree norecurse nosync nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@cast_and_load_2
 ; TUNIT-SAME: () #[[ATTR3]] {
 ; TUNIT-NEXT:    store i32 42, i32* @bytes2, align 4
 ; TUNIT-NEXT:    [[L:%.*]] = load i64, i64* bitcast (i32* @bytes2 to i64*), align 4
 ; TUNIT-NEXT:    ret i64 [[L]]
+;
+; CGSCC: Function Attrs: nofree norecurse nosync nounwind willreturn
+; CGSCC-LABEL: define {{[^@]+}}@cast_and_load_2
+; CGSCC-SAME: () #[[ATTR5]] {
+; CGSCC-NEXT:    store i32 42, i32* @bytes2, align 4
+; CGSCC-NEXT:    [[L:%.*]] = load i64, i64* bitcast (i32* @bytes2 to i64*), align 4
+; CGSCC-NEXT:    ret i64 [[L]]
 ;
   store i32 42, i32* @bytes2
   %bc = bitcast i32* @bytes2 to i64*
@@ -3083,7 +3083,7 @@ define i32 @scope_value_traversal(i32 %bad, i1 %c, i1 %c2) {
 define void @scope_value_traversal_helper(i32* %a, i1 %c) {
 ; TUNIT: Function Attrs: argmemonly nofree norecurse nosync nounwind willreturn
 ; TUNIT-LABEL: define {{[^@]+}}@scope_value_traversal_helper
-; TUNIT-SAME: (i32* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i1 [[C:%.*]]) #[[ATTR1:[0-9]+]] {
+; TUNIT-SAME: (i32* nocapture nofree noundef nonnull align 4 dereferenceable(4) [[A:%.*]], i1 [[C:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:    [[L:%.*]] = load i32, i32* [[A]], align 4
 ; TUNIT-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 [[L]], i32 42
 ; TUNIT-NEXT:    store i32 [[SEL]], i32* [[A]], align 4
@@ -3195,31 +3195,31 @@ define void @scope_value_traversal_helper(i32* %a, i1 %c) {
 ; TUNIT: [[META4:![0-9]+]] = !{!"int", !5, i64 0}
 ; TUNIT: [[META5:![0-9]+]] = !{!"omnipotent char", !6, i64 0}
 ; TUNIT: [[META6:![0-9]+]] = !{!"Simple C/C++ TBAA"}
-; TUNIT: [[META7:![0-9]+]] = !{!8, !9, i64 12}
+; TUNIT: [[TBAA7]] = !{!8, !9, i64 12}
 ; TUNIT: [[META8:![0-9]+]] = !{!"S", !4, i64 0, !4, i64 4, !4, i64 8, !9, i64 12, !9, i64 16, !9, i64 20}
 ; TUNIT: [[META9:![0-9]+]] = !{!"float", !5, i64 0}
-; TUNIT: [[META10:![0-9]+]] = !{!8, !9, i64 16}
-; TUNIT: [[META11:![0-9]+]] = !{!8, !9, i64 20}
-; TUNIT: [[META12:![0-9]+]] = !{!8, !4, i64 0}
-; TUNIT: [[META13:![0-9]+]] = !{!8, !4, i64 4}
-; TUNIT: [[META14:![0-9]+]] = !{!8, !4, i64 8}
-; TUNIT: [[META15:![0-9]+]] = distinct !{!15, !16}
+; TUNIT: [[TBAA10]] = !{!8, !9, i64 16}
+; TUNIT: [[TBAA11]] = !{!8, !9, i64 20}
+; TUNIT: [[TBAA12]] = !{!8, !4, i64 0}
+; TUNIT: [[TBAA13]] = !{!8, !4, i64 4}
+; TUNIT: [[TBAA14]] = !{!8, !4, i64 8}
+; TUNIT: [[LOOP15]] = distinct !{!15, !16}
 ; TUNIT: [[META16:![0-9]+]] = !{!"llvm.loop.mustprogress"}
-; TUNIT: [[META17:![0-9]+]] = distinct !{!17, !16}
-; TUNIT: [[META18:![0-9]+]] = distinct !{!18, !16}
-; TUNIT: [[META19:![0-9]+]] = !{!5, !5, i64 0}
-; TUNIT: [[META20:![0-9]+]] = distinct !{!20, !16}
-; TUNIT: [[META21:![0-9]+]] = distinct !{!21, !16}
-; TUNIT: [[META22:![0-9]+]] = distinct !{!22, !16}
-; TUNIT: [[META23:![0-9]+]] = distinct !{!23, !16}
-; TUNIT: [[META24:![0-9]+]] = distinct !{!24, !16}
-; TUNIT: [[META25:![0-9]+]] = distinct !{!25, !16}
-; TUNIT: [[META26:![0-9]+]] = !{!9, !9, i64 0}
-; TUNIT: [[META27:![0-9]+]] = distinct !{!27, !16}
-; TUNIT: [[META28:![0-9]+]] = !{!29, !29, i64 0}
+; TUNIT: [[LOOP17]] = distinct !{!17, !16}
+; TUNIT: [[LOOP18]] = distinct !{!18, !16}
+; TUNIT: [[TBAA19]] = !{!5, !5, i64 0}
+; TUNIT: [[LOOP20]] = distinct !{!20, !16}
+; TUNIT: [[LOOP21]] = distinct !{!21, !16}
+; TUNIT: [[LOOP22]] = distinct !{!22, !16}
+; TUNIT: [[LOOP23]] = distinct !{!23, !16}
+; TUNIT: [[LOOP24]] = distinct !{!24, !16}
+; TUNIT: [[LOOP25]] = distinct !{!25, !16}
+; TUNIT: [[TBAA26]] = !{!9, !9, i64 0}
+; TUNIT: [[LOOP27]] = distinct !{!27, !16}
+; TUNIT: [[TBAA28]] = !{!29, !29, i64 0}
 ; TUNIT: [[META29:![0-9]+]] = !{!"long long", !5, i64 0}
-; TUNIT: [[META30:![0-9]+]] = distinct !{!30, !16}
-; TUNIT: [[META31:![0-9]+]] = distinct !{!31, !16}
+; TUNIT: [[LOOP30]] = distinct !{!30, !16}
+; TUNIT: [[LOOP31]] = distinct !{!31, !16}
 ;.
 ; CGSCC: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 ; CGSCC: [[META1:![0-9]+]] = !{i32 7, !"uwtable", i32 1}
@@ -3228,29 +3228,29 @@ define void @scope_value_traversal_helper(i32* %a, i1 %c) {
 ; CGSCC: [[META4:![0-9]+]] = !{!"int", !5, i64 0}
 ; CGSCC: [[META5:![0-9]+]] = !{!"omnipotent char", !6, i64 0}
 ; CGSCC: [[META6:![0-9]+]] = !{!"Simple C/C++ TBAA"}
-; CGSCC: [[META7:![0-9]+]] = !{!8, !9, i64 12}
+; CGSCC: [[TBAA7]] = !{!8, !9, i64 12}
 ; CGSCC: [[META8:![0-9]+]] = !{!"S", !4, i64 0, !4, i64 4, !4, i64 8, !9, i64 12, !9, i64 16, !9, i64 20}
 ; CGSCC: [[META9:![0-9]+]] = !{!"float", !5, i64 0}
-; CGSCC: [[META10:![0-9]+]] = !{!8, !9, i64 16}
-; CGSCC: [[META11:![0-9]+]] = !{!8, !9, i64 20}
-; CGSCC: [[META12:![0-9]+]] = !{!8, !4, i64 0}
-; CGSCC: [[META13:![0-9]+]] = !{!8, !4, i64 4}
-; CGSCC: [[META14:![0-9]+]] = !{!8, !4, i64 8}
-; CGSCC: [[META15:![0-9]+]] = !{!5, !5, i64 0}
-; CGSCC: [[META16:![0-9]+]] = distinct !{!16, !17}
+; CGSCC: [[TBAA10]] = !{!8, !9, i64 16}
+; CGSCC: [[TBAA11]] = !{!8, !9, i64 20}
+; CGSCC: [[TBAA12]] = !{!8, !4, i64 0}
+; CGSCC: [[TBAA13]] = !{!8, !4, i64 4}
+; CGSCC: [[TBAA14]] = !{!8, !4, i64 8}
+; CGSCC: [[TBAA15]] = !{!5, !5, i64 0}
+; CGSCC: [[LOOP16]] = distinct !{!16, !17}
 ; CGSCC: [[META17:![0-9]+]] = !{!"llvm.loop.mustprogress"}
-; CGSCC: [[META18:![0-9]+]] = !{!9, !9, i64 0}
-; CGSCC: [[META19:![0-9]+]] = distinct !{!19, !17}
-; CGSCC: [[META20:![0-9]+]] = !{!21, !21, i64 0}
+; CGSCC: [[TBAA18]] = !{!9, !9, i64 0}
+; CGSCC: [[LOOP19]] = distinct !{!19, !17}
+; CGSCC: [[TBAA20]] = !{!21, !21, i64 0}
 ; CGSCC: [[META21:![0-9]+]] = !{!"long long", !5, i64 0}
-; CGSCC: [[META22:![0-9]+]] = distinct !{!22, !17}
-; CGSCC: [[META23:![0-9]+]] = distinct !{!23, !17}
-; CGSCC: [[META24:![0-9]+]] = distinct !{!24, !17}
-; CGSCC: [[META25:![0-9]+]] = distinct !{!25, !17}
-; CGSCC: [[META26:![0-9]+]] = distinct !{!26, !17}
-; CGSCC: [[META27:![0-9]+]] = distinct !{!27, !17}
-; CGSCC: [[META28:![0-9]+]] = distinct !{!28, !17}
-; CGSCC: [[META29:![0-9]+]] = distinct !{!29, !17}
-; CGSCC: [[META30:![0-9]+]] = distinct !{!30, !17}
-; CGSCC: [[META31:![0-9]+]] = distinct !{!31, !17}
+; CGSCC: [[LOOP22]] = distinct !{!22, !17}
+; CGSCC: [[LOOP23]] = distinct !{!23, !17}
+; CGSCC: [[LOOP24]] = distinct !{!24, !17}
+; CGSCC: [[LOOP25]] = distinct !{!25, !17}
+; CGSCC: [[LOOP26]] = distinct !{!26, !17}
+; CGSCC: [[LOOP27]] = distinct !{!27, !17}
+; CGSCC: [[LOOP28]] = distinct !{!28, !17}
+; CGSCC: [[LOOP29]] = distinct !{!29, !17}
+; CGSCC: [[LOOP30]] = distinct !{!30, !17}
+; CGSCC: [[LOOP31]] = distinct !{!31, !17}
 ;.

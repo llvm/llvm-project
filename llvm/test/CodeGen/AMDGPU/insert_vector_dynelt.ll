@@ -447,7 +447,7 @@ define amdgpu_kernel void @byte8_inselt(<8 x i8> addrspace(1)* %out, <8 x i8> %v
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    s_load_dword s6, s[0:1], 0x34
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
-; GCN-NEXT:    s_mov_b64 s[4:5], 0xffff
+; GCN-NEXT:    s_mov_b64 s[4:5], 0xff
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_lshl_b32 s6, s6, 3
 ; GCN-NEXT:    s_lshl_b64 s[4:5], s[4:5], s6

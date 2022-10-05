@@ -27,7 +27,7 @@ define double @fdiv_strict_sin_strict_cos_reassoc(double %a) {
   ret double %div
 }
 
-define double @fdiv_reassoc_sin_strict_cos_strict(double %a, i32* dereferenceable(2) %dummy) {
+define double @fdiv_reassoc_sin_strict_cos_strict(double %a, ptr dereferenceable(2) %dummy) {
 ; CHECK-LABEL: @fdiv_reassoc_sin_strict_cos_strict(
 ; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]]) #1
 ; CHECK-NEXT:    ret double [[TAN]]

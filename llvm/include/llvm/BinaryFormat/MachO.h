@@ -1022,7 +1022,7 @@ struct nlist_64 {
 };
 
 // Values for dyld_chained_fixups_header::imports_format.
-enum {
+enum ChainedImportFormat {
   DYLD_CHAINED_IMPORT = 1,
   DYLD_CHAINED_IMPORT_ADDEND = 2,
   DYLD_CHAINED_IMPORT_ADDEND64 = 3,

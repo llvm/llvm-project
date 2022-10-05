@@ -4,9 +4,9 @@ define void @f() !dbg !4 {
 entry:
   %i = alloca i32, align 4
   ; CHECK-NOT: llvm.dbg.{{addr|declare|value}}
-  call void @llvm.dbg.declare(metadata i32* %i, metadata !11, metadata !13), !dbg !14
-  call void @llvm.dbg.addr(metadata i32* %i, metadata !16, metadata !13), !dbg !14
-  store i32 42, i32* %i, align 4, !dbg !14
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !11, metadata !13), !dbg !14
+  call void @llvm.dbg.addr(metadata ptr %i, metadata !16, metadata !13), !dbg !14
+  store i32 42, ptr %i, align 4, !dbg !14
   call void @llvm.dbg.value(metadata i32 0, metadata !16, metadata !13), !dbg !15
   ret void, !dbg !15
 }

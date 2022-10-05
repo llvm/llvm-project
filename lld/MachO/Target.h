@@ -52,7 +52,8 @@ public:
 
   // Write code for lazy binding. See the comments on StubsSection for more
   // details.
-  virtual void writeStub(uint8_t *buf, const Symbol &) const = 0;
+  virtual void writeStub(uint8_t *buf, const Symbol &,
+                         uint64_t pointerVA) const = 0;
   virtual void writeStubHelperHeader(uint8_t *buf) const = 0;
   virtual void writeStubHelperEntry(uint8_t *buf, const Symbol &,
                                     uint64_t entryAddr) const = 0;

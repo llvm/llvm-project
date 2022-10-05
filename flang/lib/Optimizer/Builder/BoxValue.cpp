@@ -185,7 +185,7 @@ bool fir::MutableBoxValue::verify() const {
   mlir::Type type = fir::dyn_cast_ptrEleTy(getAddr().getType());
   if (!type)
     return false;
-  auto box = type.dyn_cast<fir::BoxType>();
+  auto box = type.dyn_cast<fir::BaseBoxType>();
   if (!box)
     return false;
   // A boxed value always takes a memory reference,

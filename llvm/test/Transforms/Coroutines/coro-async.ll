@@ -145,7 +145,7 @@ define void @my_async_function_pa(i8* %ctxt, %async.task* %task, %async.actor* %
 ; CHECK:   store i64 1, i64* [[ADDR2]]
 ; CHECK:   tail call void @some_may_write(i64* nonnull %proj.1)
 ; CHECK:   [[TASK:%.*]] = bitcast %async.task* %task to i8*
-; CHECK:   [[CALLEE_CTXT:%.*]] = tail call i8* @llvm.coro.async.context.alloc(i8* [[TASK]], i8* bitcast (<{ i32, i32 }>* @my_other_async_function_fp to i8*))
+; CHECK:   [[CALLEE_CTXT:%.*]] = tail call i8* @llvm.coro.async.context.alloc(i8* [[TASK]], i8* nonnull bitcast (<{ i32, i32 }>* @my_other_async_function_fp to i8*))
 ; CHECK:   [[CALLEE_CTXT_SPILL:%.*]] = getelementptr inbounds i8, i8* %async.ctxt, i64 160
 ; CHECK:   [[CAST2:%.*]] = bitcast i8* [[CALLEE_CTXT_SPILL]] to i8**
 ; CHECK:   store i8* [[CALLEE_CTXT]], i8** [[CAST2]]

@@ -511,7 +511,9 @@ static void genDeallocate(fir::FirOpBuilder &builder, mlir::Location loc,
                           const fir::MutableBoxValue &box,
                           ErrorManager &errorManager) {
   // Deallocate intrinsic types inline.
-  if (!box.isDerived() && !errorManager.hasStatSpec() && !useAllocateRuntime) {
+  if (!box.isDerived() && !box.isPolymorphic() &&
+      !box.isUnlimitedPolymorphic() && !errorManager.hasStatSpec() &&
+      !useAllocateRuntime) {
     fir::factory::genInlinedDeallocate(builder, loc, box);
     return;
   }

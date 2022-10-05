@@ -11,17 +11,17 @@ target triple = "s390x-ibm-linux"
 @g_18 = external dso_local global i64, align 8
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #1
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1) #1
 
 ; CHECK-LABEL: @func_94
 ; CHECK: bb:
-; CHECK: tail call void @llvm.memset.p0i8.i64
+; CHECK: tail call void @llvm.memset.p0.i64
 ; CHECK: load i32
 ; CHECK: bb6.licm:
 ; Function Attrs: noreturn nounwind
-define dso_local void @func_94(i16 %arg, i64* nocapture %arg1) local_unnamed_addr #3 {
+define dso_local void @func_94(i16 %arg, ptr nocapture %arg1) local_unnamed_addr #3 {
 bb:
-  tail call void @llvm.memset.p0i8.i64(i8* align 8 undef, i8 0, i64 80, i1 false)
+  tail call void @llvm.memset.p0.i64(ptr align 8 undef, i8 0, i64 80, i1 false)
   br label %bb3
 
 bb3:                                              ; preds = %bb13, %bb
@@ -29,11 +29,11 @@ bb3:                                              ; preds = %bb13, %bb
   br i1 %tmp5, label %bb6, label %bb13
 
 bb6:                                              ; preds = %bb3
-  %tmp7 = load i32, i32* getelementptr inbounds (%0, %0* @0, i64 0, i32 1, i32 2), align 1, !tbaa !11
+  %tmp7 = load i32, ptr getelementptr inbounds (%0, ptr @0, i64 0, i32 1, i32 2), align 1, !tbaa !11
   %tmp8 = zext i32 %tmp7 to i64
   %sext = shl i64 %tmp8, 56
   %tmp10 = ashr exact i64 %sext, 56
-  store i64 %tmp10, i64* %arg1, align 8, !tbaa !12
+  store i64 %tmp10, ptr %arg1, align 8, !tbaa !12
   br label %bb13
 
 bb13:                                             ; preds = %bb3, %bb6

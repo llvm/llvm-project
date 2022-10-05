@@ -99,6 +99,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-suspicious-realloc-usage
+  <clang-tidy/checks/bugprone/suspicious-realloc-usage>` check.
+
+  Finds usages of ``realloc`` where the return value is assigned to the
+  same expression as passed to the first argument.
+
 - New :doc:`cppcoreguidelines-avoid-const-or-ref-data-members
   <clang-tidy/checks/cppcoreguidelines/avoid-const-or-ref-data-members>` check.
 
@@ -152,6 +158,11 @@ Changes in existing checks
 - Change the default behavior of :doc:`readability-avoid-const-params-in-decls
   <clang-tidy/checks/readability/avoid-const-params-in-decls>` to not
   warn about `const` value parameters of declarations inside macros.
+
+- Fixed crashes in :doc:`readability-braces-around-statements
+  <clang-tidy/checks/readability/braces-around-statements>` and
+  :doc:`readability-simplify-boolean-expr <clang-tidy/checks/readability/simplify-boolean-expr>`
+  when using a C++23 ``if consteval`` statement.
 
 Removed checks
 ^^^^^^^^^^^^^^

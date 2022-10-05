@@ -18,6 +18,7 @@
 #include "flang/Lower/PFTDefs.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Semantics/symbol.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -103,8 +104,9 @@ public:
   virtual bool
   createHostAssociateVarClone(const Fortran::semantics::Symbol &sym) = 0;
 
-  virtual void copyHostAssociateVar(const Fortran::semantics::Symbol &sym,
-                                    mlir::Block *lastPrivBlock = nullptr) = 0;
+  virtual void copyHostAssociateVar(
+      const Fortran::semantics::Symbol &sym,
+      mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) = 0;
 
   /// Collect the set of symbols with \p flag in \p eval
   /// region if \p collectSymbols is true. Likewise, collect the

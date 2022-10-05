@@ -5,13 +5,13 @@ func.func @matmul_split(%A : tensor<16x256xf32>, %B: tensor<256x32xf32>, %C: ten
 
   //      CHECK: linalg.generic 
   // CHECK-SAME: iterator_types = ["parallel", "parallel", "parallel", "reduction"]
-  // CHECK-SAME: ins(%{{[a-zA-Z0-9]*}}, %{{[a-zA-Z0-9]*}} : tensor<16x4x64xf32>, tensor<4x64x32xf32>)
-  // CHECK-SAME: outs(%{{[a-zA-Z0-9]*}} : tensor<16x32x4xf32>) {
+  // CHECK-SAME: ins(%{{[a-zA-Z0-9_]*}}, %{{[a-zA-Z0-9_]*}} : tensor<16x4x64xf32>, tensor<4x64x32xf32>)
+  // CHECK-SAME: outs(%{{[a-zA-Z0-9_]*}} : tensor<16x32x4xf32>) {
 
   //      CHECK: linalg.generic 
   // CHECK-SAME: iterator_types = ["parallel", "parallel", "reduction"]
-  // CHECK-SAME: ins(%{{[a-zA-Z0-9]*}} : tensor<16x32x4xf32>)
-  // CHECK-SAME: outs(%{{[a-zA-Z0-9]*}} : tensor<16x32xf32>) {
+  // CHECK-SAME: ins(%{{[a-zA-Z0-9_]*}} : tensor<16x32x4xf32>)
+  // CHECK-SAME: outs(%{{[a-zA-Z0-9_]*}} : tensor<16x32xf32>) {
   %0 = linalg.matmul ins(%A, %B: tensor<16x256xf32>, tensor<256x32xf32>)
                     outs(%C: tensor<16x32xf32>) -> tensor<16x32xf32>
   return %0: tensor<16x32xf32>

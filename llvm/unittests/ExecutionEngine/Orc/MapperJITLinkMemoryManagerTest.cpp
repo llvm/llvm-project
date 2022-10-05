@@ -76,13 +76,13 @@ TEST(MapperJITLinkMemoryManagerTest, InProcess) {
 
   StringRef Hello = "hello";
   auto SSA1 = jitlink::SimpleSegmentAlloc::Create(
-      *MemMgr, nullptr, {{jitlink::MemProt::Read, {Hello.size(), Align(1)}}});
+      *MemMgr, nullptr, {{MemProt::Read, {Hello.size(), Align(1)}}});
   EXPECT_THAT_EXPECTED(SSA1, Succeeded());
 
   EXPECT_EQ(Counter->ReserveCount, 1);
   EXPECT_EQ(Counter->InitCount, 0);
 
-  auto SegInfo1 = SSA1->getSegInfo(jitlink::MemProt::Read);
+  auto SegInfo1 = SSA1->getSegInfo(MemProt::Read);
   memcpy(SegInfo1.WorkingMem.data(), Hello.data(), Hello.size());
 
   auto FA1 = SSA1->finalize();
@@ -92,14 +92,14 @@ TEST(MapperJITLinkMemoryManagerTest, InProcess) {
   EXPECT_EQ(Counter->InitCount, 1);
 
   auto SSA2 = jitlink::SimpleSegmentAlloc::Create(
-      *MemMgr, nullptr, {{jitlink::MemProt::Read, {Hello.size(), Align(1)}}});
+      *MemMgr, nullptr, {{MemProt::Read, {Hello.size(), Align(1)}}});
   EXPECT_THAT_EXPECTED(SSA2, Succeeded());
 
   // last reservation should be reused
   EXPECT_EQ(Counter->ReserveCount, 1);
   EXPECT_EQ(Counter->InitCount, 1);
 
-  auto SegInfo2 = SSA2->getSegInfo(jitlink::MemProt::Read);
+  auto SegInfo2 = SSA2->getSegInfo(MemProt::Read);
   memcpy(SegInfo2.WorkingMem.data(), Hello.data(), Hello.size());
   auto FA2 = SSA2->finalize();
   EXPECT_THAT_EXPECTED(FA2, Succeeded());
@@ -137,15 +137,15 @@ TEST(MapperJITLinkMemoryManagerTest, Coalescing) {
                                                              std::move(Mapper));
 
   auto SSA1 = jitlink::SimpleSegmentAlloc::Create(
-      *MemMgr, nullptr, {{jitlink::MemProt::Read, {1024, Align(1)}}});
+      *MemMgr, nullptr, {{MemProt::Read, {1024, Align(1)}}});
   EXPECT_THAT_EXPECTED(SSA1, Succeeded());
-  auto SegInfo1 = SSA1->getSegInfo(jitlink::MemProt::Read);
+  auto SegInfo1 = SSA1->getSegInfo(MemProt::Read);
   ExecutorAddr TargetAddr1(SegInfo1.Addr);
   auto FA1 = SSA1->finalize();
   EXPECT_THAT_EXPECTED(FA1, Succeeded());
 
   auto SSA2 = jitlink::SimpleSegmentAlloc::Create(
-      *MemMgr, nullptr, {{jitlink::MemProt::Read, {1024, Align(1)}}});
+      *MemMgr, nullptr, {{MemProt::Read, {1024, Align(1)}}});
   EXPECT_THAT_EXPECTED(SSA2, Succeeded());
   auto FA2 = SSA2->finalize();
   EXPECT_THAT_EXPECTED(FA2, Succeeded());
@@ -157,10 +157,10 @@ TEST(MapperJITLinkMemoryManagerTest, Coalescing) {
   EXPECT_THAT_ERROR(std::move(Err3), Succeeded());
 
   auto SSA3 = jitlink::SimpleSegmentAlloc::Create(
-      *MemMgr, nullptr, {{jitlink::MemProt::Read, {2048, Align(1)}}});
+      *MemMgr, nullptr, {{MemProt::Read, {2048, Align(1)}}});
   EXPECT_THAT_EXPECTED(SSA3, Succeeded());
 
-  auto SegInfo3 = SSA3->getSegInfo(jitlink::MemProt::Read);
+  auto SegInfo3 = SSA3->getSegInfo(MemProt::Read);
   ExecutorAddr TargetAddr3(SegInfo3.Addr);
 
   auto FA3 = SSA3->finalize();

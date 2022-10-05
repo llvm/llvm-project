@@ -56,7 +56,7 @@ define i8* @test_simplify3() {
 
 define i8* @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @__memmove_chk(i8* bitcast (%struct.T3* @t3 to i8*), i8* bitcast (%struct.T1* @t1 to i8*), i64 2848, i64 1824)
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @__memmove_chk(i8* nonnull bitcast (%struct.T3* @t3 to i8*), i8* nonnull bitcast (%struct.T1* @t1 to i8*), i64 2848, i64 1824)
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
   %dst = bitcast %struct.T3* @t3 to i8*
@@ -68,7 +68,7 @@ define i8* @test_no_simplify1() {
 
 define i8* @test_no_simplify2() {
 ; CHECK-LABEL: @test_no_simplify2(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @__memmove_chk(i8* bitcast (%struct.T1* @t1 to i8*), i8* bitcast (%struct.T2* @t2 to i8*), i64 1024, i64 0)
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @__memmove_chk(i8* nonnull bitcast (%struct.T1* @t1 to i8*), i8* nonnull bitcast (%struct.T2* @t2 to i8*), i64 1024, i64 0)
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
   %dst = bitcast %struct.T1* @t1 to i8*
@@ -80,8 +80,8 @@ define i8* @test_no_simplify2() {
 
 define i8* @test_no_simplify3(i8* %dst, i8* %src, i64 %a, i64 %b) {
 ; CHECK-LABEL: @test_no_simplify3(
-; CHECK-NEXT:    %ret = musttail call i8* @__memmove_chk(i8* %dst, i8* %src, i64 1824, i64 1824)
-; CHECK-NEXT:    ret i8* %ret
+; CHECK-NEXT:    [[RET:%.*]] = musttail call i8* @__memmove_chk(i8* [[DST:%.*]], i8* [[SRC:%.*]], i64 1824, i64 1824)
+; CHECK-NEXT:    ret i8* [[RET]]
 ;
   %ret = musttail call i8* @__memmove_chk(i8* %dst, i8* %src, i64 1824, i64 1824)
   ret i8* %ret

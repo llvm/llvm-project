@@ -301,7 +301,8 @@ static void thinLTOCreateEmptyIndexFiles() {
       continue;
     if (linkedBitCodeFiles.contains(f->getName()))
       continue;
-    std::string path = replaceThinLTOSuffix(getThinLTOOutputFile(f->getName()));
+    std::string path =
+        replaceThinLTOSuffix(getThinLTOOutputFile(f->obj->getName()));
     std::unique_ptr<raw_fd_ostream> os = openFile(path + ".thinlto.bc");
     if (!os)
       continue;

@@ -4,41 +4,41 @@
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc18.0.0"
 
-declare i32 @use(i8*)
+declare i32 @use(ptr)
 
 ; Should be able to sink %ptr load to %not.null block which is the NCD of %ptr users.
-define i32 @test1(i8** %addr, i1 %c) {
+define i32 @test1(ptr %addr, i1 %c) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PTR:%.*]] = load i8*, i8** [[ADDR:%.*]], align 8
+; CHECK-NEXT:    [[PTR:%.*]] = load ptr, ptr [[ADDR:%.*]], align 8
 ; CHECK-NEXT:    br i1 false, label [[NULL:%.*]], label [[NOT_NULL:%.*]]
 ; CHECK:       null:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       not.null:
-; CHECK-NEXT:    [[Y:%.*]] = call i32 @use(i8* [[PTR]])
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @use(ptr [[PTR]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[EXIT]], label [[NOT_NULL_2:%.*]]
 ; CHECK:       not.null.2:
-; CHECK-NEXT:    [[Z:%.*]] = call i32 @use(i8* [[PTR]])
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @use(ptr [[PTR]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[P:%.*]] = phi i32 [ poison, [[NULL]] ], [ [[Y]], [[NOT_NULL]] ], [ [[Z]], [[NOT_NULL_2]] ]
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
 entry:
-  %ptr = load i8*, i8** %addr
-  %cond = icmp eq i8** %addr, null
+  %ptr = load ptr, ptr %addr
+  %cond = icmp eq ptr %addr, null
   br i1 %cond, label %null, label %not.null
 
 null:
-  %x = call i32 @use(i8* null)
+  %x = call i32 @use(ptr null)
   br label %exit
 
 not.null:
-  %y = call i32 @use(i8* %ptr)
+  %y = call i32 @use(ptr %ptr)
   br i1 %c, label %exit, label %not.null.2
 
 not.null.2:
-  %z = call i32 @use(i8* %ptr)
+  %z = call i32 @use(ptr %ptr)
   br label %exit
 
 exit:
@@ -47,45 +47,45 @@ exit:
 }
 
 ; Should be able to sink %ptr load to %not.null block which is the NCD of %ptr users.
-define i32 @test2(i8** %addr, i1 %c) {
+define i32 @test2(ptr %addr, i1 %c) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i8** [[ADDR:%.*]], null
+; CHECK-NEXT:    [[COND:%.*]] = icmp eq ptr [[ADDR:%.*]], null
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[LOAD_BB:%.*]]
 ; CHECK:       load.bb:
-; CHECK-NEXT:    [[PTR:%.*]] = load i8*, i8** [[ADDR]], align 8
+; CHECK-NEXT:    [[PTR:%.*]] = load ptr, ptr [[ADDR]], align 8
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[LEFT:%.*]], label [[RIGHT:%.*]]
 ; CHECK:       left:
-; CHECK-NEXT:    [[X:%.*]] = call i32 @use(i8* null)
+; CHECK-NEXT:    [[X:%.*]] = call i32 @use(ptr null)
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       right:
-; CHECK-NEXT:    [[Y:%.*]] = call i32 @use(i8* [[PTR]])
+; CHECK-NEXT:    [[Y:%.*]] = call i32 @use(ptr [[PTR]])
 ; CHECK-NEXT:    br i1 [[C]], label [[EXIT]], label [[RIGHT_2:%.*]]
 ; CHECK:       right.2:
-; CHECK-NEXT:    [[Z:%.*]] = call i32 @use(i8* [[PTR]])
+; CHECK-NEXT:    [[Z:%.*]] = call i32 @use(ptr [[PTR]])
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[P:%.*]] = phi i32 [ [[X]], [[LEFT]] ], [ [[Y]], [[RIGHT]] ], [ [[Z]], [[RIGHT_2]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret i32 [[P]]
 ;
 entry:
-  %cond = icmp eq i8** %addr, null
+  %cond = icmp eq ptr %addr, null
   br i1 %cond, label %exit, label %load.bb
 
 load.bb:
-  %ptr = load i8*, i8** %addr
+  %ptr = load ptr, ptr %addr
   br i1 %c, label %left, label %right
 
 left:
-  %x = call i32 @use(i8* null)
+  %x = call i32 @use(ptr null)
   br label %exit
 
 right:
-  %y = call i32 @use(i8* %ptr)
+  %y = call i32 @use(ptr %ptr)
   br i1 %c, label %exit, label %right.2
 
 right.2:
-  %z = call i32 @use(i8* %ptr)
+  %z = call i32 @use(ptr %ptr)
   br label %exit
 
 exit:

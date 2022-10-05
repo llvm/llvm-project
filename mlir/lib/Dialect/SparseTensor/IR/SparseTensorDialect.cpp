@@ -51,6 +51,7 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
   // Process the data from the parsed dictionary value into struct-like data.
   SmallVector<SparseTensorEncodingAttr::DimLevelType, 4> dlt;
   AffineMap dimOrd = {};
+  AffineMap higherOrd = {};
   unsigned ptr = 0;
   unsigned ind = 0;
   for (const NamedAttribute &attr : dict) {
@@ -102,6 +103,14 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
         return {};
       }
       dimOrd = affineAttr.getValue();
+    } else if (attr.getName() == "higherOrdering") {
+      auto affineAttr = attr.getValue().dyn_cast<AffineMapAttr>();
+      if (!affineAttr) {
+        parser.emitError(parser.getNameLoc(),
+                         "expected an affine map for higher ordering");
+        return {};
+      }
+      higherOrd = affineAttr.getValue();
     } else if (attr.getName() == "pointerBitWidth") {
       auto intAttr = attr.getValue().dyn_cast<IntegerAttr>();
       if (!intAttr) {
@@ -125,8 +134,8 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
     }
   }
   // Construct struct-like storage for attribute.
-  return parser.getChecked<SparseTensorEncodingAttr>(parser.getContext(), dlt,
-                                                     dimOrd, ptr, ind);
+  return parser.getChecked<SparseTensorEncodingAttr>(
+      parser.getContext(), dlt, dimOrd, higherOrd, ptr, ind);
 }
 
 void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
@@ -169,6 +178,8 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
   // Print remaining members only for non-default values.
   if (getDimOrdering() && !getDimOrdering().isIdentity())
     printer << ", dimOrdering = affine_map<" << getDimOrdering() << ">";
+  if (getHigherOrdering())
+    printer << ", higherOrdering = affine_map<" << getHigherOrdering() << ">";
   if (getPointerBitWidth())
     printer << ", pointerBitWidth = " << getPointerBitWidth();
   if (getIndexBitWidth())
@@ -179,7 +190,8 @@ void SparseTensorEncodingAttr::print(AsmPrinter &printer) const {
 LogicalResult SparseTensorEncodingAttr::verify(
     function_ref<InFlightDiagnostic()> emitError,
     ArrayRef<DimLevelType> dimLevelType, AffineMap dimOrdering,
-    unsigned pointerBitWidth, unsigned indexBitWidth) {
+    AffineMap higherOrdering, unsigned pointerBitWidth,
+    unsigned indexBitWidth) {
   if (!acceptBitWidth(pointerBitWidth))
     return emitError() << "unexpected pointer bitwidth: " << pointerBitWidth;
   if (!acceptBitWidth(indexBitWidth))
@@ -192,6 +204,15 @@ LogicalResult SparseTensorEncodingAttr::verify(
       return emitError() << "unexpected mismatch in ordering and dimension "
                             "level types size";
   }
+  if (higherOrdering) {
+    if (higherOrdering.getNumDims() >= higherOrdering.getNumResults())
+      return emitError() << "unexpected higher ordering mapping from "
+                         << higherOrdering.getNumDims() << " to "
+                         << higherOrdering.getNumResults();
+    if (higherOrdering.getNumResults() != dimLevelType.size())
+      return emitError() << "unexpected mismatch in higher ordering and "
+                            "dimension level types size";
+  }
   return success();
 }
 
@@ -200,13 +221,23 @@ LogicalResult SparseTensorEncodingAttr::verifyEncoding(
     function_ref<InFlightDiagnostic()> emitError) const {
   // Check structural integrity.
   if (failed(verify(emitError, getDimLevelType(), getDimOrdering(),
-                    getPointerBitWidth(), getIndexBitWidth())))
+                    getHigherOrdering(), getPointerBitWidth(),
+                    getIndexBitWidth())))
     return failure();
   // Check integrity with tensor type specifics. Dimension ordering is optional,
   // but we always should have dimension level types for the full rank.
   unsigned size = shape.size();
   if (size == 0)
     return emitError() << "expected non-scalar sparse tensor";
+  if (getHigherOrdering()) {
+    if (getHigherOrdering().getNumDims() != size)
+      return emitError() << "expected an affine map of size " << size
+                         << " for higher ordering";
+
+    // TODO: verification of higher ordering contents
+
+    size = getHigherOrdering().getNumResults(); // higher-order size!
+  }
   if (getDimOrdering() && getDimOrdering().getNumResults() != size)
     return emitError() << "expected an affine map of size " << size
                        << " for dimension ordering";

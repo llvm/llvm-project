@@ -16,6 +16,15 @@
   dimOrdering = affine_map<(i,j) -> (j,i)>
 }>
 
+#SortedCOO = #sparse_tensor.encoding<{
+  dimLevelType = [ "compressed-nu", "singleton" ]
+}>
+
+#SortedCOOPerm = #sparse_tensor.encoding<{
+  dimLevelType = [ "compressed-nu", "singleton" ],
+  dimOrdering = affine_map<(i,j) -> (j,i)>
+}>
+
 module {
 
   /// uses foreach operator to print coords and values.
@@ -49,6 +58,26 @@ module {
      return
   }
 
+  func.func @foreach_print_4(%arg0: tensor<2x2xf64, #SortedCOO>) {
+    sparse_tensor.foreach in %arg0 : tensor<2x2xf64, #SortedCOO> do {
+      ^bb0(%1: index, %2: index, %v: f64) :
+        vector.print %1: index
+        vector.print %2: index
+        vector.print %v: f64
+     }
+     return
+  }
+
+  func.func @foreach_print_5(%arg0: tensor<2x2xf64, #SortedCOOPerm>) {
+    sparse_tensor.foreach in %arg0 : tensor<2x2xf64, #SortedCOOPerm> do {
+      ^bb0(%1: index, %2: index, %v: f64) :
+        vector.print %1: index
+        vector.print %2: index
+        vector.print %v: f64
+     }
+     return
+  }
+
   //
   // Main driver.
   //
@@ -67,6 +96,8 @@ module {
     %s1 = sparse_tensor.convert %src : tensor<2x2xf64> to tensor<2x2xf64, #Row>
     %s2 = sparse_tensor.convert %src : tensor<2x2xf64> to tensor<2x2xf64, #CSR>
     %s3 = sparse_tensor.convert %src : tensor<2x2xf64> to tensor<2x2xf64, #DCSC>
+    %s4 = sparse_tensor.convert %src : tensor<2x2xf64> to tensor<2x2xf64, #SortedCOO>
+    %s5 = sparse_tensor.convert %src : tensor<2x2xf64> to tensor<2x2xf64, #SortedCOOPerm>
     // CHECK: 0
     // CHECK-NEXT: 0
     // CHECK-NEXT: 1
@@ -106,10 +137,38 @@ module {
     // CHECK-NEXT: 1
     // CHECK-NEXT: 6
     call @foreach_print_3(%s3) : (tensor<2x2xf64, #DCSC>) -> ()
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 2
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: 5
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 6
+    call @foreach_print_4(%s4) : (tensor<2x2xf64, #SortedCOO>) -> ()
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: 5
+    // CHECK-NEXT: 0
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 2
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 1
+    // CHECK-NEXT: 6
+    call @foreach_print_5(%s5) : (tensor<2x2xf64, #SortedCOOPerm>) -> ()
     
     bufferization.dealloc_tensor %s1 : tensor<2x2xf64, #Row>
     bufferization.dealloc_tensor %s2 : tensor<2x2xf64, #CSR>
     bufferization.dealloc_tensor %s3 : tensor<2x2xf64, #DCSC>
+    bufferization.dealloc_tensor %s4 : tensor<2x2xf64, #SortedCOO>
+    bufferization.dealloc_tensor %s5 : tensor<2x2xf64, #SortedCOOPerm>
 
     return
   }

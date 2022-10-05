@@ -3,58 +3,58 @@
 target datalayout = "e-p:32:32:32-p1:64:64:64-p2:8:8:8-p3:16:16:16-p4:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:32"
 
 
-define i32 @test_as0(i32 addrspace(0)* %a) {
+define i32 @test_as0(ptr addrspace(0) %a) {
 ; CHECK-LABEL: @test_as0(
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, i32* [[A:%.*]], i32 1
-; CHECK-NEXT:    [[Y:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr [[A:%.*]], i32 1
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
-  %arrayidx = getelementptr i32, i32 addrspace(0)* %a, i64 1
-  %y = load i32, i32 addrspace(0)* %arrayidx, align 4
+  %arrayidx = getelementptr i32, ptr addrspace(0) %a, i64 1
+  %y = load i32, ptr addrspace(0) %arrayidx, align 4
   ret i32 %y
 }
 
-define i32 @test_as1(i32 addrspace(1)* %a) {
+define i32 @test_as1(ptr addrspace(1) %a) {
 ; CHECK-LABEL: @test_as1(
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, i32 addrspace(1)* [[A:%.*]], i64 1
-; CHECK-NEXT:    [[Y:%.*]] = load i32, i32 addrspace(1)* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr addrspace(1) [[A:%.*]], i64 1
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(1) [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
-  %arrayidx = getelementptr i32, i32 addrspace(1)* %a, i32 1
-  %y = load i32, i32 addrspace(1)* %arrayidx, align 4
+  %arrayidx = getelementptr i32, ptr addrspace(1) %a, i32 1
+  %y = load i32, ptr addrspace(1) %arrayidx, align 4
   ret i32 %y
 }
 
-define i32 @test_as2(i32 addrspace(2)* %a) {
+define i32 @test_as2(ptr addrspace(2) %a) {
 ; CHECK-LABEL: @test_as2(
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, i32 addrspace(2)* [[A:%.*]], i8 1
-; CHECK-NEXT:    [[Y:%.*]] = load i32, i32 addrspace(2)* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr addrspace(2) [[A:%.*]], i8 1
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(2) [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
-  %arrayidx = getelementptr i32, i32 addrspace(2)* %a, i32 1
-  %y = load i32, i32 addrspace(2)* %arrayidx, align 4
+  %arrayidx = getelementptr i32, ptr addrspace(2) %a, i32 1
+  %y = load i32, ptr addrspace(2) %arrayidx, align 4
   ret i32 %y
 }
 
-define i32 @test_as3(i32 addrspace(3)* %a) {
+define i32 @test_as3(ptr addrspace(3) %a) {
 ; CHECK-LABEL: @test_as3(
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, i32 addrspace(3)* [[A:%.*]], i16 1
-; CHECK-NEXT:    [[Y:%.*]] = load i32, i32 addrspace(3)* [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr i32, ptr addrspace(3) [[A:%.*]], i16 1
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(3) [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
-  %arrayidx = getelementptr i32, i32 addrspace(3)* %a, i32 1
-  %y = load i32, i32 addrspace(3)* %arrayidx, align 4
+  %arrayidx = getelementptr i32, ptr addrspace(3) %a, i32 1
+  %y = load i32, ptr addrspace(3) %arrayidx, align 4
   ret i32 %y
 }
 
-define i32 @test_combine_ptrtoint(i32 addrspace(2)* %a) {
+define i32 @test_combine_ptrtoint(ptr addrspace(2) %a) {
 ; CHECK-LABEL: @test_combine_ptrtoint(
-; CHECK-NEXT:    [[Y:%.*]] = load i32, i32 addrspace(2)* [[A:%.*]], align 4
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(2) [[A:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
-  %cast = ptrtoint i32 addrspace(2)* %a to i8
-  %castback = inttoptr i8 %cast to i32 addrspace(2)*
-  %y = load i32, i32 addrspace(2)* %castback, align 4
+  %cast = ptrtoint ptr addrspace(2) %a to i8
+  %castback = inttoptr i8 %cast to ptr addrspace(2)
+  %y = load i32, ptr addrspace(2) %castback, align 4
   ret i32 %y
 }
 
@@ -62,21 +62,21 @@ define i8 @test_combine_inttoptr(i8 %a) {
 ; CHECK-LABEL: @test_combine_inttoptr(
 ; CHECK-NEXT:    ret i8 [[A:%.*]]
 ;
-  %cast = inttoptr i8 %a to i32 addrspace(2)*
-  %castback = ptrtoint i32 addrspace(2)* %cast to i8
+  %cast = inttoptr i8 %a to ptr addrspace(2)
+  %castback = ptrtoint ptr addrspace(2) %cast to i8
   ret i8 %castback
 }
 
-define i32 @test_combine_vector_ptrtoint(<2 x i32 addrspace(2)*> %a) {
+define i32 @test_combine_vector_ptrtoint(<2 x ptr addrspace(2)> %a) {
 ; CHECK-LABEL: @test_combine_vector_ptrtoint(
-; CHECK-NEXT:    [[P:%.*]] = extractelement <2 x i32 addrspace(2)*> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[Y:%.*]] = load i32, i32 addrspace(2)* [[P]], align 4
+; CHECK-NEXT:    [[P:%.*]] = extractelement <2 x ptr addrspace(2)> [[A:%.*]], i64 0
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr addrspace(2) [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
-  %cast = ptrtoint <2 x i32 addrspace(2)*> %a to <2 x i8>
-  %castback = inttoptr <2 x i8> %cast to <2 x i32 addrspace(2)*>
-  %p = extractelement <2 x i32 addrspace(2)*> %castback, i32 0
-  %y = load i32, i32 addrspace(2)* %p, align 4
+  %cast = ptrtoint <2 x ptr addrspace(2)> %a to <2 x i8>
+  %castback = inttoptr <2 x i8> %cast to <2 x ptr addrspace(2)>
+  %p = extractelement <2 x ptr addrspace(2)> %castback, i32 0
+  %y = load i32, ptr addrspace(2) %p, align 4
   ret i32 %y
 }
 
@@ -84,56 +84,56 @@ define <2 x i8> @test_combine_vector_inttoptr(<2 x i8> %a) {
 ; CHECK-LABEL: @test_combine_vector_inttoptr(
 ; CHECK-NEXT:    ret <2 x i8> [[A:%.*]]
 ;
-  %cast = inttoptr <2 x i8> %a to <2 x i32 addrspace(2)*>
-  %castback = ptrtoint <2 x i32 addrspace(2)*> %cast to <2 x i8>
+  %cast = inttoptr <2 x i8> %a to <2 x ptr addrspace(2)>
+  %castback = ptrtoint <2 x ptr addrspace(2)> %cast to <2 x i8>
   ret <2 x i8> %castback
 }
 
 ; Check that the GEP index is changed to the address space integer type (i64 -> i8)
-define i32 addrspace(2)* @shrink_gep_constant_index_64_as2(i32 addrspace(2)* %p) {
+define ptr addrspace(2) @shrink_gep_constant_index_64_as2(ptr addrspace(2) %p) {
 ; CHECK-LABEL: @shrink_gep_constant_index_64_as2(
-; CHECK-NEXT:    [[RET:%.*]] = getelementptr i32, i32 addrspace(2)* [[P:%.*]], i8 1
-; CHECK-NEXT:    ret i32 addrspace(2)* [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = getelementptr i32, ptr addrspace(2) [[P:%.*]], i8 1
+; CHECK-NEXT:    ret ptr addrspace(2) [[RET]]
 ;
-  %ret = getelementptr i32, i32 addrspace(2)* %p, i64 1
-  ret i32 addrspace(2)* %ret
+  %ret = getelementptr i32, ptr addrspace(2) %p, i64 1
+  ret ptr addrspace(2) %ret
 }
 
-define i32 addrspace(2)* @shrink_gep_constant_index_32_as2(i32 addrspace(2)* %p) {
+define ptr addrspace(2) @shrink_gep_constant_index_32_as2(ptr addrspace(2) %p) {
 ; CHECK-LABEL: @shrink_gep_constant_index_32_as2(
-; CHECK-NEXT:    [[RET:%.*]] = getelementptr i32, i32 addrspace(2)* [[P:%.*]], i8 1
-; CHECK-NEXT:    ret i32 addrspace(2)* [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = getelementptr i32, ptr addrspace(2) [[P:%.*]], i8 1
+; CHECK-NEXT:    ret ptr addrspace(2) [[RET]]
 ;
-  %ret = getelementptr i32, i32 addrspace(2)* %p, i32 1
-  ret i32 addrspace(2)* %ret
+  %ret = getelementptr i32, ptr addrspace(2) %p, i32 1
+  ret ptr addrspace(2) %ret
 }
 
-define i32 addrspace(3)* @shrink_gep_constant_index_64_as3(i32 addrspace(3)* %p) {
+define ptr addrspace(3) @shrink_gep_constant_index_64_as3(ptr addrspace(3) %p) {
 ; CHECK-LABEL: @shrink_gep_constant_index_64_as3(
-; CHECK-NEXT:    [[RET:%.*]] = getelementptr i32, i32 addrspace(3)* [[P:%.*]], i16 1
-; CHECK-NEXT:    ret i32 addrspace(3)* [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = getelementptr i32, ptr addrspace(3) [[P:%.*]], i16 1
+; CHECK-NEXT:    ret ptr addrspace(3) [[RET]]
 ;
-  %ret = getelementptr i32, i32 addrspace(3)* %p, i64 1
-  ret i32 addrspace(3)* %ret
+  %ret = getelementptr i32, ptr addrspace(3) %p, i64 1
+  ret ptr addrspace(3) %ret
 }
 
-define i32 addrspace(2)* @shrink_gep_variable_index_64_as2(i32 addrspace(2)* %p, i64 %idx) {
+define ptr addrspace(2) @shrink_gep_variable_index_64_as2(ptr addrspace(2) %p, i64 %idx) {
 ; CHECK-LABEL: @shrink_gep_variable_index_64_as2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[IDX:%.*]] to i8
-; CHECK-NEXT:    [[RET:%.*]] = getelementptr i32, i32 addrspace(2)* [[P:%.*]], i8 [[TMP1]]
-; CHECK-NEXT:    ret i32 addrspace(2)* [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = getelementptr i32, ptr addrspace(2) [[P:%.*]], i8 [[TMP1]]
+; CHECK-NEXT:    ret ptr addrspace(2) [[RET]]
 ;
-  %ret = getelementptr i32, i32 addrspace(2)* %p, i64 %idx
-  ret i32 addrspace(2)* %ret
+  %ret = getelementptr i32, ptr addrspace(2) %p, i64 %idx
+  ret ptr addrspace(2) %ret
 }
 
-define i32 addrspace(1)* @grow_gep_variable_index_8_as1(i32 addrspace(1)* %p, i8 %idx) {
+define ptr addrspace(1) @grow_gep_variable_index_8_as1(ptr addrspace(1) %p, i8 %idx) {
 ; CHECK-LABEL: @grow_gep_variable_index_8_as1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i8 [[IDX:%.*]] to i64
-; CHECK-NEXT:    [[RET:%.*]] = getelementptr i32, i32 addrspace(1)* [[P:%.*]], i64 [[TMP1]]
-; CHECK-NEXT:    ret i32 addrspace(1)* [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = getelementptr i32, ptr addrspace(1) [[P:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    ret ptr addrspace(1) [[RET]]
 ;
-  %ret = getelementptr i32, i32 addrspace(1)* %p, i8 %idx
-  ret i32 addrspace(1)* %ret
+  %ret = getelementptr i32, ptr addrspace(1) %p, i8 %idx
+  ret ptr addrspace(1) %ret
 }
 

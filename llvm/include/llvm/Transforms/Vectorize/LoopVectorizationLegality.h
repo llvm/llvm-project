@@ -240,16 +240,18 @@ private:
 /// induction variable and the different reduction variables.
 class LoopVectorizationLegality {
 public:
-  LoopVectorizationLegality(
-      Loop *L, PredicatedScalarEvolution &PSE, DominatorTree *DT,
-      TargetTransformInfo *TTI, TargetLibraryInfo *TLI, AAResults *AA,
-      Function *F, std::function<const LoopAccessInfo &(Loop &)> *GetLAA,
-      LoopInfo *LI, OptimizationRemarkEmitter *ORE,
-      LoopVectorizationRequirements *R, LoopVectorizeHints *H, DemandedBits *DB,
-      AssumptionCache *AC, BlockFrequencyInfo *BFI, ProfileSummaryInfo *PSI)
-      : TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TLI(TLI), DT(DT),
-        GetLAA(GetLAA), ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC),
-        BFI(BFI), PSI(PSI) {}
+  LoopVectorizationLegality(Loop *L, PredicatedScalarEvolution &PSE,
+                            DominatorTree *DT, TargetTransformInfo *TTI,
+                            TargetLibraryInfo *TLI, AAResults *AA, Function *F,
+                            LoopAccessInfoManager &LAIs, LoopInfo *LI,
+                            OptimizationRemarkEmitter *ORE,
+                            LoopVectorizationRequirements *R,
+                            LoopVectorizeHints *H, DemandedBits *DB,
+                            AssumptionCache *AC, BlockFrequencyInfo *BFI,
+                            ProfileSummaryInfo *PSI)
+      : TheLoop(L), LI(LI), PSE(PSE), TTI(TTI), TLI(TLI), DT(DT), LAIs(LAIs),
+        ORE(ORE), Requirements(R), Hints(H), DB(DB), AC(AC), BFI(BFI),
+        PSI(PSI) {}
 
   /// ReductionList contains the reduction descriptors for all
   /// of the reductions that were found in the loop.
@@ -486,10 +488,8 @@ private:
   DominatorTree *DT;
 
   // LoopAccess analysis.
-  std::function<const LoopAccessInfo &(Loop &)> *GetLAA;
+  LoopAccessInfoManager &LAIs;
 
-  // And the loop-accesses info corresponding to this loop.  This pointer is
-  // null until canVectorizeMemory sets it up.
   const LoopAccessInfo *LAI = nullptr;
 
   /// Interface to emit optimization remarks.

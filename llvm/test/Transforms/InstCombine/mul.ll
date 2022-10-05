@@ -616,11 +616,11 @@ define <2 x i64> @test20(<2 x i64> %A) {
 define i32 @PR20079(i32 %a) {
 ; CHECK-LABEL: @PR20079(
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A:%.*]], -1
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[ADD]], ptrtoint (i32* @g to i32)
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[ADD]], ptrtoint (ptr @g to i32)
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %add = add i32 %a, -1
-  %mul = mul nsw i32 %add, ptrtoint (i32* @g to i32)
+  %mul = mul nsw i32 %add, ptrtoint (ptr @g to i32)
   ret i32 %mul
 }
 
@@ -944,10 +944,10 @@ define i64 @test30(i32 %A, i32 %B) {
 @PR22087 = external global i32
 define i32 @test31(i32 %V) {
 ; CHECK-LABEL: @test31(
-; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[V:%.*]], zext (i1 icmp ne (i32* inttoptr (i64 1 to i32*), i32* @PR22087) to i32)
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[V:%.*]], zext (i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32)
 ; CHECK-NEXT:    ret i32 [[MUL]]
 ;
-  %mul = mul i32 %V, shl (i32 1, i32 zext (i1 icmp ne (i32* inttoptr (i64 1 to i32*), i32* @PR22087) to i32))
+  %mul = mul i32 %V, shl (i32 1, i32 zext (i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr @PR22087) to i32))
   ret i32 %mul
 }
 
@@ -1060,11 +1060,11 @@ define i64 @test_mul_canonicalize_neg_is_not_undone(i64 %L1) {
 ; Check we do not undo the canonicalization of 0 - (X * Y), if Y is a constant
 ; expr.
 ; CHECK-LABEL: @test_mul_canonicalize_neg_is_not_undone(
-; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[L1:%.*]], ptrtoint (i32* @X to i64)
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[L1:%.*]], ptrtoint (ptr @X to i64)
 ; CHECK-NEXT:    [[B4:%.*]] = sub i64 0, [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[B4]]
 ;
-  %v1 = ptrtoint i32* @X to i64
+  %v1 = ptrtoint ptr @X to i64
   %B8 = sub i64 0, %v1
   %B4 = mul i64 %B8, %L1
   ret i64 %B4

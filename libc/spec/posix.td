@@ -343,6 +343,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<IntType>]
         >,
         FunctionSpec<
+          "fork",
+          RetValSpec<PidT>,
+          [ArgSpec<VoidType>]
+        >,
+        FunctionSpec<
           "fsync",
           RetValSpec<IntType>,
           [ArgSpec<IntType>]
@@ -963,6 +968,25 @@ def POSIX : StandardSpec<"POSIX"> {
       ]
   >;
 
+  HeaderSpec SysWait = HeaderSpec<
+    "sys/wait.h",
+    [], // Macros
+    [PidT, StructRUsage],
+    [], // Enumerations
+    [
+      FunctionSpec<
+        "wait",
+        RetValSpec<PidT>,
+        [ArgSpec<IntPtr>]
+      >,
+      FunctionSpec<
+        "waitpid",
+        RetValSpec<PidT>,
+        [ArgSpec<PidT>, ArgSpec<IntPtr>, ArgSpec<IntType>]
+      >
+    ]
+  >;
+
   let Headers = [
     CType,
     Dirent,
@@ -976,6 +1000,7 @@ def POSIX : StandardSpec<"POSIX"> {
     SysResource,
     SysStat,
     SysUtsName,
+    SysWait,
     Time,
     UniStd,
     String

@@ -222,6 +222,7 @@ private:
 
     _Iter __current_;
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(move_iterator);
 
 template <class _Iter1, class _Iter2>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17

@@ -236,7 +236,7 @@ for locale, alts in locales.items():
                                   when=lambda cfg, alts=alts: hasAnyLocale(cfg, alts)))
 
 
-# Add features representing the platform name: darwin, linux, windows, etc...
+# Add features representing the target platform name: darwin, linux, windows, etc...
 DEFAULT_FEATURES += [
   Feature(name='darwin', when=lambda cfg: '__APPLE__' in compilerMacros(cfg)),
   Feature(name='windows', when=lambda cfg: '_WIN32' in compilerMacros(cfg)),

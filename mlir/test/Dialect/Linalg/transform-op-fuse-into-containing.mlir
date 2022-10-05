@@ -66,12 +66,12 @@ module {
   //  CHECK-SAME:   %[[IN:[0-9a-z]+]]: tensor<64xf32>
   //  CHECK-SAME:   %[[OUT:[0-9a-z]+]]: tensor<64xf32>
   func.func @fuse_untileable_op(%arg0: index, %arg1: tensor<64xf32>, %arg2: tensor<64xf32>) -> tensor<64xf32> {
-    %0 = linalg.init_tensor [%arg0] : tensor<?xf32>
+    %0 = tensor.empty(%arg0) : tensor<?xf32>
     %1 = affine.apply #map0()[%arg0]
 
     // CHECK: scf.foreach_thread {{.*}} {
     %2 = scf.foreach_thread (%arg3) in (%1) shared_outs(%o = %arg2) -> (tensor<64xf32>) {
-      // CHECK: %[[INIT_TENSOR:.*]] = linalg.init_tensor
+      // CHECK: %[[INIT_TENSOR:.*]] = tensor.empty
       %3 = affine.apply #map1(%arg3)[%arg0]
       %4 = affine.min #map2(%arg3)[%arg0]
       %5 = tensor.extract_slice %o[%3] [%4] [1] : tensor<64xf32> to tensor<?xf32>
@@ -91,10 +91,10 @@ module {
   ^bb0(%arg0: !pdl.operation):
     transform.sequence %arg0 failures(propagate) {
     ^bb1(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.init_tensor"]} in %arg1
+      %0 = transform.structured.match ops{["tensor.empty"]} in %arg1
       %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1
 
-      // linalg.init_tensor is not tileable. The op is cloned and fused.
+      // tensor.empty is not tileable. The op is cloned and fused.
       transform.structured.fuse_into_containing_op %0 into %1
     }
   }

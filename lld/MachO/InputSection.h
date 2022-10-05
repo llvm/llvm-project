@@ -299,6 +299,7 @@ constexpr const char bitcodeBundle[] = "__bundle";
 constexpr const char cString[] = "__cstring";
 constexpr const char cfString[] = "__cfstring";
 constexpr const char cgProfile[] = "__cg_profile";
+constexpr const char chainFixups[] = "__chainfixups";
 constexpr const char codeSignature[] = "__code_signature";
 constexpr const char common[] = "__common";
 constexpr const char compactUnwind[] = "__compact_unwind";

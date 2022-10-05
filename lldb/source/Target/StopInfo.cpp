@@ -362,29 +362,21 @@ protected:
                            " not running commands to avoid recursion.");
             bool ignoring_breakpoints =
                 process->GetIgnoreBreakpointsInExpressions();
-            if (ignoring_breakpoints) {
-              m_should_stop = false;
-              // Internal breakpoints will always stop.
-              for (size_t j = 0; j < num_owners; j++) {
-                lldb::BreakpointLocationSP bp_loc_sp =
-                    bp_site_sp->GetOwnerAtIndex(j);
-                if (bp_loc_sp->GetBreakpoint().IsInternal()) {
-                  m_should_stop = true;
-                  break;
-                }
-              }
-            } else {
-              m_should_stop = true;
+            // Internal breakpoints should be allowed to do their job, we
+            // can make sure they don't do anything that would cause recursive
+            // command execution:
+            if (!m_was_all_internal) {
+              m_should_stop = !ignoring_breakpoints;
+              LLDB_LOGF(log,
+                        "StopInfoBreakpoint::PerformAction - in expression, "
+                        "continuing: %s.",
+                        m_should_stop ? "true" : "false");
+              Debugger::ReportWarning(
+                  "hit breakpoint while running function, skipping commands "
+                  "and conditions to prevent recursion",
+                    process->GetTarget().GetDebugger().GetID());
+              return;
             }
-            LLDB_LOGF(log,
-                      "StopInfoBreakpoint::PerformAction - in expression, "
-                      "continuing: %s.",
-                      m_should_stop ? "true" : "false");
-            Debugger::ReportWarning(
-                "hit breakpoint while running function, skipping commands and "
-                "conditions to prevent recursion",
-                process->GetTarget().GetDebugger().GetID());
-            return;
           }
 
           StoppointCallbackContext context(event_ptr, exe_ctx, false);

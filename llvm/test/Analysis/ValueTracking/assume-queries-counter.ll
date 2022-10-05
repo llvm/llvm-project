@@ -35,9 +35,8 @@ define dso_local i1 @test2(i32* readonly %0) {
 ; COUNTER1-NEXT:    ret i1 [[TMP2]]
 ;
 ; COUNTER2-LABEL: @test2(
-; COUNTER2-NEXT:    [[TMP2:%.*]] = icmp eq i32* [[TMP0:%.*]], null
-; COUNTER2-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[TMP0]]) ]
-; COUNTER2-NEXT:    ret i1 [[TMP2]]
+; COUNTER2-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[TMP0:%.*]]) ]
+; COUNTER2-NEXT:    ret i1 false
 ;
 ; COUNTER3-LABEL: @test2(
 ; COUNTER3-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(i32* [[TMP0:%.*]]) ]

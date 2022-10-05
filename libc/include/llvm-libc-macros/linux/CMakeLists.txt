@@ -5,6 +5,12 @@ add_header(
 )
 
 add_header(
+  sched_macros
+  HDR
+    sched-macros.h
+)
+
+add_header(
   sys_mman_macros
   HDR
     sys-mman-macros.h
@@ -14,6 +20,12 @@ add_header(
   sys_stat_macros
   HDR
     sys-stat-macros.h
+)
+
+add_header(
+  sys_wait_macros
+  HDR
+    sys-wait-macros.h
 )
 
 add_header(

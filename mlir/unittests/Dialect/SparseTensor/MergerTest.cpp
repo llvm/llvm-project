@@ -259,6 +259,7 @@ protected:
     case kCIm:
     case kCRe:
     case kBitCast:
+    case kSelect:
     case kBinaryBranch:
     case kUnary:
       return compareExpression(tensorExp.children.e0, pattern->e0);

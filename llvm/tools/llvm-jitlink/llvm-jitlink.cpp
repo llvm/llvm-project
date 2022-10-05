@@ -469,10 +469,19 @@ public:
         DeltaAddr(0) {}
 
   static Expected<std::unique_ptr<InProcessDeltaMapper>> Create() {
-    auto PageSize = sys::Process::getPageSize();
-    if (!PageSize)
-      return PageSize.takeError();
-    return std::make_unique<InProcessDeltaMapper>(*PageSize, SlabAddress);
+    size_t PageSize = SlabPageSize;
+    if (!PageSize) {
+      if (auto PageSizeOrErr = sys::Process::getPageSize())
+        PageSize = *PageSizeOrErr;
+      else
+        return PageSizeOrErr.takeError();
+    }
+
+    if (PageSize == 0)
+      return make_error<StringError>("Page size is zero",
+                                     inconvertibleErrorCode());
+
+    return std::make_unique<InProcessDeltaMapper>(PageSize, SlabAddress);
   }
 
   void reserve(size_t NumBytes, OnReservedFunction OnReserved) override {
@@ -497,8 +506,12 @@ public:
   }
 
   void initialize(AllocInfo &AI, OnInitializedFunction OnInitialized) override {
+    // Slide mapping based on delta and make all segments read-writable.
     auto FixedAI = AI;
     FixedAI.MappingBase -= DeltaAddr;
+    for (auto &Seg : FixedAI.Segments)
+      Seg.AG = AllocGroup(MemProt::Read | MemProt::Write,
+                          Seg.AG.getMemDeallocPolicy());
     InProcessMemoryMapper::initialize(
         FixedAI, [this, OnInitialized = std::move(OnInitialized)](
                      Expected<ExecutorAddr> Result) mutable {
@@ -557,23 +570,27 @@ Expected<uint64_t> getSlabAllocSize(StringRef SizeString) {
 }
 
 static std::unique_ptr<JITLinkMemoryManager> createInProcessMemoryManager() {
-  if (!SlabAllocateSizeString.empty()) {
-    auto SlabSize = ExitOnErr(getSlabAllocSize(SlabAllocateSizeString));
+  uint64_t SlabSize;
+#ifdef _WIN32
+  SlabSize = 1024 * 1024;
+#else
+  SlabSize = 1024 * 1024 * 1024;
+#endif
 
+  if (!SlabAllocateSizeString.empty())
+    SlabSize = ExitOnErr(getSlabAllocSize(SlabAllocateSizeString));
+
+  // If this is a -no-exec case and we're tweaking the slab address or size then
+  // use the delta mapper.
+  if (NoExec && (SlabAddress || SlabPageSize))
     return ExitOnErr(
         MapperJITLinkMemoryManager::CreateWithMapper<InProcessDeltaMapper>(
             SlabSize));
-  }
 
-#ifdef _WIN32
+  // Otherwise use the standard in-process mapper.
   return ExitOnErr(
       MapperJITLinkMemoryManager::CreateWithMapper<InProcessMemoryMapper>(
-          1024 * 1024));
-#else
-  return ExitOnErr(
-      MapperJITLinkMemoryManager::CreateWithMapper<InProcessMemoryMapper>(
-          1024 * 1024 * 1024));
-#endif
+          SlabSize));
 }
 
 Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>

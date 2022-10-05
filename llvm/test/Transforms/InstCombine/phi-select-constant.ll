@@ -10,7 +10,7 @@ define i32 @foo(i1 %which) {
 ; CHECK:       delay:
 ; CHECK-NEXT:    br label [[FINAL]]
 ; CHECK:       final:
-; CHECK-NEXT:    [[USE2:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ select (i1 icmp eq (i32* @A, i32* @B), i32 2, i32 1), [[DELAY]] ]
+; CHECK-NEXT:    [[USE2:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ select (i1 icmp eq (ptr @A, ptr @B), i32 2, i32 1), [[DELAY]] ]
 ; CHECK-NEXT:    ret i32 [[USE2]]
 ;
 entry:
@@ -20,7 +20,7 @@ delay:
   br label %final
 
 final:
-  %use2 = phi i1 [ false, %entry ], [ icmp eq (i32* @A, i32* @B), %delay ]
+  %use2 = phi i1 [ false, %entry ], [ icmp eq (ptr @A, ptr @B), %delay ]
   %value = select i1 %use2, i32 2, i32 1
   ret i32 %value
 }
@@ -77,17 +77,15 @@ final:
 define <2 x i8> @vec3(i1 %cond1, i1 %cond2, <2 x i1> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @vec3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PHI_SEL1:%.*]] = shufflevector <2 x i8> [[Z:%.*]], <2 x i8> [[Y:%.*]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    br i1 [[COND1:%.*]], label [[IF1:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if1:
-; CHECK-NEXT:    [[PHI_SEL2:%.*]] = shufflevector <2 x i8> [[Y]], <2 x i8> [[Z]], <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    br i1 [[COND2:%.*]], label [[IF2:%.*]], label [[ELSE]]
 ; CHECK:       if2:
-; CHECK-NEXT:    [[PHI_SEL:%.*]] = select <2 x i1> [[X:%.*]], <2 x i8> [[Y]], <2 x i8> [[Z]]
 ; CHECK-NEXT:    br label [[ELSE]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[PHI:%.*]] = phi <2 x i8> [ [[PHI_SEL]], [[IF2]] ], [ [[PHI_SEL1]], [[ENTRY:%.*]] ], [ [[PHI_SEL2]], [[IF1]] ]
-; CHECK-NEXT:    ret <2 x i8> [[PHI]]
+; CHECK-NEXT:    [[PHI:%.*]] = phi <2 x i1> [ [[X:%.*]], [[IF2]] ], [ <i1 false, i1 true>, [[ENTRY:%.*]] ], [ <i1 true, i1 false>, [[IF1]] ]
+; CHECK-NEXT:    [[SEL:%.*]] = select <2 x i1> [[PHI]], <2 x i8> [[Y:%.*]], <2 x i8> [[Z:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
 ;
 entry:
   br i1 %cond1, label %if1, label %else
@@ -106,7 +104,7 @@ else:
 
 ; Don't crash on unreachable IR.
 
-define void @PR48369(i32 %a, i32* %p) {
+define void @PR48369(i32 %a, ptr %p) {
 ; CHECK-LABEL: @PR48369(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[PHI_CMP:%.*]] = icmp sgt i32 [[A:%.*]], 0
@@ -114,7 +112,7 @@ define void @PR48369(i32 %a, i32* %p) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[CMP:%.*]] = phi i1 [ [[PHI_CMP]], [[DEADBB:%.*]] ], [ true, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[SHL:%.*]] = select i1 [[CMP]], i32 256, i32 0
-; CHECK-NEXT:    store i32 [[SHL]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[SHL]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       deadbb:
 ; CHECK-NEXT:    br label [[BB1]]
@@ -128,7 +126,7 @@ entry:
 bb1:
   %cmp = phi i1 [ %phi.cmp, %deadbb ], [ true, %entry ]
   %shl = select i1 %cmp, i32 256, i32 0
-  store i32 %shl, i32* %p
+  store i32 %shl, ptr %p
   br label %end
 
 deadbb:

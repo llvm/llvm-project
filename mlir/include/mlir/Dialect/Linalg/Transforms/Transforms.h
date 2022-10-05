@@ -125,32 +125,6 @@ bool areElementwiseOpsFusable(OpOperand *fusedOperand);
 FailureOr<Operation *> fuseElementwiseOps(RewriterBase &rewriter,
                                           OpOperand *fusedOperand);
 
-/// Maps the top level `scf.foreach_thread` op to GPU Thread Blocks. Mapping is
-/// one-to-one and the induction variables of `scf.foreach_thread` are rewritten
-/// to gpu.block_id according to the thread_dim_apping attribute. Dynamic,
-/// `scf.foreach_thread` trip counts are currently not supported. Dynamic block
-/// dim sizes are currently not supported.
-LogicalResult rewriteTopLevelForeachThreadToGpuBlocks(
-    RewriterBase &rewriter, scf::ForeachThreadOp foreachThreadOp,
-    function_ref<void(RewriterBase &, scf::ForeachThreadOp,
-                      SmallVector<Value> &)>
-        blockIdGenerator,
-    SmallVector<int64_t> &gridDims);
-
-/// Finds the top level scf::ForeachThreadOp of given target.
-FailureOr<scf::ForeachThreadOp> findTopLevelForeachThreadOp(Operation *target);
-
-/// Searches `scf.foreach_thread` ops nested under `target` and maps each such
-/// op to GPU threads. Mapping is one-to-one and the induction variables of
-/// `scf.foreach_thread` are rewritten to gpu.thread_id according to the
-/// thread_dim_apping attribute. Sibling `scf.foreach_thread` are supported in
-/// which case, the union of the number of threads is computed and may result in
-/// predication. Dynamic, `scf.foreach_thread` trip counts are currently not
-/// supported. Dynamic block dim sizes are currently not supported.
-mlir::WalkResult rewriteMapNestedForeachThreadToGpuThreads(
-    RewriterBase &rewriter, Operation *target,
-    const SmallVector<int64_t> &blockDim, bool syncAfterDistribute);
-
 /// Split the given `op` into two parts along the given iteration space
 /// `dimension` at the specified `splitPoint`, and return the two parts.
 ///
@@ -369,6 +343,9 @@ FailureOr<LinalgLoops> linalgOpToAffineLoops(PatternRewriter &rewriter,
 /// Promote memref.subviews feeding linalg-on-buffers operations.
 LogicalResult promoteSubviewsPrecondition(Operation *op,
                                           LinalgPromotionOptions options);
+
+/// Return success if the operation can be vectorized.
+LogicalResult vectorizeLinalgOpPrecondition(LinalgOp linalgOp);
 
 //===----------------------------------------------------------------------===//
 // Transformations exposed as rewrite patterns.
@@ -908,49 +885,6 @@ private:
 };
 
 ///
-/// Linalg peeling patterns.
-///
-
-/// Compute the loops to peel and return them in a SmallVector. Loops will be
-/// peeled in order of appearance in the SmallVector. This order will impact the
-/// output IR. If an inner-to-outer order is provided, the peeled iterations of
-/// the outer loops will also contain the peeled inner loops. If an
-/// outer-to-inner order is provided, the peeled iterations of the outer loops
-/// will not contain any peeled inner loops.
-using LoopsToPeelComputationFunction = std::function<void(
-    OpBuilder &, Operation *, SmallVectorImpl<scf::ForOp> &)>;
-
-struct LinalgPeelOptions {
-  LoopsToPeelComputationFunction loopsToPeelComputationFunction = nullptr;
-};
-
-/// `filter` controls LinalgTransformMarker matching and update when specified.
-struct LinalgPeelingPattern : public OpInterfaceRewritePattern<LinalgOp> {
-  /// Construct a generic pattern applied to all LinalgOp that verify `filter`.
-  LinalgPeelingPattern(
-      MLIRContext *context,
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      LinalgPeelOptions options = LinalgPeelOptions(),
-      PatternBenefit benefit = 1);
-
-  /// Construct a pattern specifically applied to `opName`.
-  LinalgPeelingPattern(
-      StringRef opName, MLIRContext *context,
-      LinalgPeelOptions options = LinalgPeelOptions(),
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      PatternBenefit benefit = 1);
-
-  LogicalResult matchAndRewrite(LinalgOp linalgOp,
-                                PatternRewriter &rewriter) const override;
-
-private:
-  /// LinalgTransformMarker handles special attribute manipulations.
-  const LinalgTransformationFilter filter;
-  /// Peeling options.
-  const LinalgPeelOptions options;
-};
-
-///
 /// Linalg vectorization patterns.
 ///
 /// Empty for now, used for SFINAE purposes only.
@@ -992,96 +926,6 @@ struct LinalgEnablingOptions {
   LinalgEnablingOptions &
   enableHoistRedundantVectorTransfersOnTensor(bool val = true) {
     hoistRedundantVectorTransfersOnTensor = val;
-    return *this;
-  }
-};
-
-/// Vector lowering options control how ops are lowered down to 1-D and scf.for
-/// form.
-struct LinalgVectorLoweringOptions {
-  /// Enable lowering of vector.contract.
-  /// In a progressive lowering of vectors, this would be the 1st step.
-  bool contractionLowering = false;
-  LinalgVectorLoweringOptions &enableContractionLowering(bool val = true) {
-    contractionLowering = val;
-    return *this;
-  }
-  /// Enable lowering of vector.multi_reduce.
-  /// In a progressive lowering of vectors, this would be the 2nd step.
-  bool multiReductionLowering = false;
-  LinalgVectorLoweringOptions &enableMultiReductionLowering(bool val = true) {
-    multiReductionLowering = val;
-    return *this;
-  }
-  /// Trigger full / partial vector.transfer splits.
-  /// In a progressive lowering of vectors, this would be the 3rd step.
-  bool transferPartialRewrite = false;
-  LinalgVectorLoweringOptions &enableTransferPartialRewrite(bool val = true) {
-    transferPartialRewrite = val;
-    return *this;
-  }
-  /// Enable lowering of vector.transfer to scf.
-  /// In a progressive lowering of vectors, this would be the 4th step.
-  bool transferToSCFConversion = false;
-  LinalgVectorLoweringOptions &enableTransferToSCFConversion(bool val = true) {
-    transferToSCFConversion = val;
-    return *this;
-  }
-  /// Maximal transfer rank under which we do not lower further.
-  int64_t maxTransferRank = 1;
-  LinalgVectorLoweringOptions &setMaxTransferRank(int64_t val) {
-    maxTransferRank = val;
-    return *this;
-  }
-  /// Vector lowering operations may result in surprising behavior when
-  /// composing multiple codegen strategies and must be enabled explicitly.
-  /// In a progressive lowering of vectors, this would be the 5th step.
-  bool transferLowering = true;
-  LinalgVectorLoweringOptions &enableTransferLowering(bool val = true) {
-    transferLowering = val;
-    return *this;
-  }
-  /// Enable lowering of vector.shape_cast to insert/extract.
-  /// In a progressive lowering of vectors, this would be the 6th step.
-  bool shapeCastLowering = true;
-  LinalgVectorLoweringOptions &enableShapeCastLowering(bool val = true) {
-    shapeCastLowering = val;
-    return *this;
-  }
-  /// Enable lowering of vector.transpose.
-  /// In a progressive lowering of vectors, this would be the 7th step.
-  bool transposeLowering = false;
-  LinalgVectorLoweringOptions &enableVectorTransposeLowering(bool val = true) {
-    transposeLowering = val;
-    return *this;
-  }
-  /// Enable AVX2-specific lowerings.
-  bool avx2Lowering = false;
-  LinalgVectorLoweringOptions &enableAVX2Lowering(bool val = true) {
-    avx2Lowering = val;
-    return *this;
-  }
-
-  /// Configure the post staged-patterns late vector.transfer to scf
-  /// conversion.
-  VectorTransferToSCFOptions vectorTransferToSCFOptions;
-  LinalgVectorLoweringOptions &
-  setVectorTransferToSCFOptions(VectorTransferToSCFOptions options) {
-    vectorTransferToSCFOptions = options;
-    return *this;
-  }
-  /// Configure late vector transformations.
-  vector::VectorTransformsOptions vectorTransformOptions;
-  LinalgVectorLoweringOptions &
-  setVectorTransformsOptions(vector::VectorTransformsOptions options) {
-    vectorTransformOptions = options;
-    return *this;
-  }
-  /// Configure specialized vector lowerings.
-  x86vector::avx2::LoweringOptions avx2LoweringOptions;
-  LinalgVectorLoweringOptions &
-  setAVX2LoweringOptions(x86vector::avx2::LoweringOptions options) {
-    avx2LoweringOptions = options;
     return *this;
   }
 };
@@ -1196,7 +1040,7 @@ rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
 using OptimizeCopyFn =
     std::function<LogicalResult(PatternRewriter &, tensor::PadOp, Value)>;
 
-/// Rewrite a tensor::PadOp into a sequence of InitTensorOp, FillOp and
+/// Rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp and
 /// InsertSliceOp. For now, only constant padding values are supported.
 /// `OptimizeCopyFn` can be used to customize copying step optimization.
 struct GeneralizePadOpPattern : public OpRewritePattern<tensor::PadOp> {
@@ -1407,7 +1251,7 @@ void populateSplitReductionPattern(
 /// ```
 ///  %cst = arith.constant 0.000000e+00 : f32
 ///  %0 = tensor.expand_shape %in [[0, 1]] : tensor<32xf32> into tensor<4x8xf32>
-///  %1 = linalg.init_tensor [4] : tensor<4xf32>
+///  %1 = tensor.empty [4] : tensor<4xf32>
 ///  %2 = linalg.fill ins(%cst : f32) outs(%1 : tensor<4xf32>) -> tensor<4xf32>
 ///  %3 = linalg.generic {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
 ///                                        affine_map<(d0, d1) -> (d0)>],
@@ -1464,11 +1308,11 @@ splitReduction(PatternRewriter &b, LinalgOp op,
 ///  #map3 = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
 ///  #map4 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 ///  #map5 = affine_map<(d0, d1, d2) -> (d0, d1)>
-///  %0 = linalg.init_tensor [16, 32, 64] : tensor<16x32x64xf32>
+///  %0 = tensor.empty [16, 32, 64] : tensor<16x32x64xf32>
 ///  %cst = arith.constant 0.000000e+00 : f32
 ///  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<16x32x64xf32>) ->
 ///     tensor<16x32x64xf32>
-///  %2 = linalg.init_tensor [64, 4] : tensor<64x4xi1>
+///  %2 = tensor.empty [64, 4] : tensor<64x4xi1>
 ///
 ///  %3 = linalg.generic {indexing_maps = [#map0, #map1, #map2, #map3],
 ///    iterator_types = ["parallel", "parallel", "parallel", "reduction"]}

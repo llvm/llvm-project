@@ -75,7 +75,7 @@ func.func @select(%arg0: tensor<i1>, %arg1: tensor<i32>, %arg2: tensor<i32>) -> 
 //  CHECK-SAME:   %[[ARG0:[0-9a-zA-Z]*]]: tensor<f32>
 //  CHECK-SAME:   %[[ARG1:[0-9a-zA-Z]*]]: tensor<f32>
 func.func @cmpf(%arg0: tensor<f32>, %arg1: tensor<f32>) -> tensor<i1> {
-  // CHECK: %[[INIT:.*]] = linalg.init_tensor [] : tensor<i1>
+  // CHECK: %[[INIT:.*]] = tensor.empty() : tensor<i1>
   // CHECK: linalg.generic
   // CHECK-SAME:  ins(%[[ARG0]], %[[ARG1]]
   // CHECK-SAME: outs(%[[INIT]]
@@ -98,7 +98,7 @@ func.func @cmpf(%arg0: tensor<4x?x?x8x2x?xf32>, %arg1: tensor<4x?x?x8x2x?xf32>) 
   // CHECK: %[[D2:.*]] = tensor.dim %[[ARG0]], %[[C2]] : tensor<4x?x?x8x2x?xf32>
   // CHECK: %[[C5:.*]] = arith.constant 5 : index
   // CHECK: %[[D5:.*]] = tensor.dim %[[ARG0]], %[[C5]] : tensor<4x?x?x8x2x?xf32>
-  // CHECK: %[[INIT:.*]] = linalg.init_tensor [4, %[[D1]], %[[D2]], 8, 2, %[[D5]]] : tensor<4x?x?x8x2x?xi1>
+  // CHECK: %[[INIT:.*]] = tensor.empty(%[[D1]], %[[D2]], %[[D5]]) : tensor<4x?x?x8x2x?xi1>
   // CHECK: linalg.generic
   // CHECK-SAME:  ins(%[[ARG0]], %[[ARG1]]
   // CHECK-SAME: outs(%[[INIT]]

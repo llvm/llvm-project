@@ -4,17 +4,17 @@
 @.str = private unnamed_addr constant [27 x i8] c"abcdefghijklmnopqrstuvwxyz\00", align 1
 @.str.1 = private unnamed_addr constant [2 x i8] c"\0D\0A", align 1
 
-declare i8* @strchr(i8*, i32)
-declare i8* @memchr(i8*, i32, i64)
+declare ptr @strchr(ptr, i32)
+declare ptr @memchr(ptr, i32, i64)
 
 define zeroext i1 @strchr_to_memchr_n_equals_len(i32 %c) {
 ; CHECK-LABEL: @strchr_to_memchr_n_equals_len(
-; CHECK-NEXT:    [[MEMCHR:%.*]] = tail call i8* @memchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([27 x i8], [27 x i8]* @.str, i64 0, i64 0), i32 [[C:%.*]], i64 27)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8* [[MEMCHR]], null
+; CHECK-NEXT:    [[MEMCHR:%.*]] = tail call ptr @memchr(ptr noundef nonnull dereferenceable(1) @.str, i32 [[C:%.*]], i64 27)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[MEMCHR]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %call = tail call i8* @strchr(i8* nonnull dereferenceable(27) getelementptr inbounds ([27 x i8], [27 x i8]* @.str, i64 0, i64 0), i32 %c)
-  %cmp = icmp ne i8* %call, null
+  %call = tail call ptr @strchr(ptr nonnull dereferenceable(27) @.str, i32 %c)
+  %cmp = icmp ne ptr %call, null
   ret i1 %cmp
 }
 
@@ -26,68 +26,68 @@ define zeroext i1 @memchr_n_equals_len(i32 %c) {
 ; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %call = tail call i8* @memchr(i8* nonnull dereferenceable(3) getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0), i32 %c, i64 2)
-  %cmp = icmp eq i8* %call, null
+  %call = tail call ptr @memchr(ptr nonnull dereferenceable(3) @.str.1, i32 %c, i64 2)
+  %cmp = icmp eq ptr %call, null
   ret i1 %cmp
 }
 
 define zeroext i1 @memchr_n_less_than_len(i32 %c) {
 ; CHECK-LABEL: @memchr_n_less_than_len(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @memchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([27 x i8], [27 x i8]* @.str, i64 0, i64 0), i32 [[C:%.*]], i64 15)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8* [[CALL]], null
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @memchr(ptr noundef nonnull dereferenceable(1) @.str, i32 [[C:%.*]], i64 15)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[CALL]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %call = tail call i8* @memchr(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @.str, i64 0, i64 0), i32 %c, i64 15)
-  %cmp = icmp ne i8* %call, null
+  %call = tail call ptr @memchr(ptr @.str, i32 %c, i64 15)
+  %cmp = icmp ne ptr %call, null
   ret i1 %cmp
 }
 
 
 define zeroext i1 @memchr_n_more_than_len(i32 %c) {
 ; CHECK-LABEL: @memchr_n_more_than_len(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @memchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([27 x i8], [27 x i8]* @.str, i64 0, i64 0), i32 [[C:%.*]], i64 30)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8* [[CALL]], null
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @memchr(ptr noundef nonnull dereferenceable(1) @.str, i32 [[C:%.*]], i64 30)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[CALL]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %call = tail call i8* @memchr(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @.str, i64 0, i64 0), i32 %c, i64 30)
-  %cmp = icmp ne i8* %call, null
+  %call = tail call ptr @memchr(ptr @.str, i32 %c, i64 30)
+  %cmp = icmp ne ptr %call, null
   ret i1 %cmp
 }
 
 ; Negative test - no comparison with zero
 
-define i8* @memchr_no_zero_cmp(i32 %c) {
+define ptr @memchr_no_zero_cmp(i32 %c) {
 ; CHECK-LABEL: @memchr_no_zero_cmp(
-; CHECK-NEXT:    [[MEMCHR:%.*]] = tail call i8* @memchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([27 x i8], [27 x i8]* @.str, i64 0, i64 0), i32 [[C:%.*]], i64 27)
-; CHECK-NEXT:    ret i8* [[MEMCHR]]
+; CHECK-NEXT:    [[MEMCHR:%.*]] = tail call ptr @memchr(ptr noundef nonnull dereferenceable(1) @.str, i32 [[C:%.*]], i64 27)
+; CHECK-NEXT:    ret ptr [[MEMCHR]]
 ;
-  %call = tail call i8* @strchr(i8* nonnull dereferenceable(27) getelementptr inbounds ([27 x i8], [27 x i8]* @.str, i64 0, i64 0), i32 %c)
-  ret i8* %call
+  %call = tail call ptr @strchr(ptr nonnull dereferenceable(27) @.str, i32 %c)
+  ret ptr %call
 }
 
-define i8* @memchr_no_zero_cmp2(i32 %c) {
+define ptr @memchr_no_zero_cmp2(i32 %c) {
 ; CHECK-LABEL: @memchr_no_zero_cmp2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[C:%.*]] to i8
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 10
-; CHECK-NEXT:    [[MEMCHR_SEL1:%.*]] = select i1 [[TMP2]], i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 1), i8* null
+; CHECK-NEXT:    [[MEMCHR_SEL1:%.*]] = select i1 [[TMP2]], ptr getelementptr inbounds ([2 x i8], ptr @.str.1, i64 0, i64 1), ptr null
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[TMP1]], 13
-; CHECK-NEXT:    [[MEMCHR_SEL2:%.*]] = select i1 [[TMP3]], i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0), i8* [[MEMCHR_SEL1]]
-; CHECK-NEXT:    ret i8* [[MEMCHR_SEL2]]
+; CHECK-NEXT:    [[MEMCHR_SEL2:%.*]] = select i1 [[TMP3]], ptr @.str.1, ptr [[MEMCHR_SEL1]]
+; CHECK-NEXT:    ret ptr [[MEMCHR_SEL2]]
 ;
-  %call = tail call i8* @strchr(i8* nonnull dereferenceable(3) getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0), i32 %c)
-  ret i8* %call
+  %call = tail call ptr @strchr(ptr nonnull dereferenceable(3) @.str.1, i32 %c)
+  ret ptr %call
 }
 
 ; Negative test - opt for size
 
 define zeroext i1 @memchr_n_equals_len_minsize(i32 %c) minsize {
 ; CHECK-LABEL: @memchr_n_equals_len_minsize(
-; CHECK-NEXT:    [[MEMCHR:%.*]] = tail call i8* @memchr(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([27 x i8], [27 x i8]* @.str, i64 0, i64 0), i32 [[C:%.*]], i64 27)
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8* [[MEMCHR]], null
+; CHECK-NEXT:    [[MEMCHR:%.*]] = tail call ptr @memchr(ptr noundef nonnull dereferenceable(1) @.str, i32 [[C:%.*]], i64 27)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[MEMCHR]], null
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %call = tail call i8* @strchr(i8* nonnull dereferenceable(27) getelementptr inbounds ([27 x i8], [27 x i8]* @.str, i64 0, i64 0), i32 %c)
-  %cmp = icmp ne i8* %call, null
+  %call = tail call ptr @strchr(ptr nonnull dereferenceable(27) @.str, i32 %c)
+  %cmp = icmp ne ptr %call, null
   ret i1 %cmp
 }
 
@@ -99,7 +99,7 @@ define zeroext i1 @memchr_n_equals_len2_minsize(i32 %c) minsize {
 ; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %call = tail call i8* @memchr(i8* nonnull dereferenceable(3) getelementptr inbounds ([2 x i8], [2 x i8]* @.str.1, i64 0, i64 0), i32 %c, i64 2)
-  %cmp = icmp eq i8* %call, null
+  %call = tail call ptr @memchr(ptr nonnull dereferenceable(3) @.str.1, i32 %c, i64 2)
+  %cmp = icmp eq ptr %call, null
   ret i1 %cmp
 }

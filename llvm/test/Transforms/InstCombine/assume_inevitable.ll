@@ -10,12 +10,12 @@ define i32 @assume_inevitable(i32* %a, i32* %b, i8* %c) {
 ; CHECK-NEXT:    [[M:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[A:%.*]], align 32
 ; CHECK-NEXT:    [[LOADRES:%.*]] = load i32, i32* [[B:%.*]], align 4
-; CHECK-NEXT:    [[LOADRES2:%.*]] = call i32 @llvm.annotation.i32(i32 [[LOADRES]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i32 2)
+; CHECK-NEXT:    [[LOADRES2:%.*]] = call i32 @llvm.annotation.i32(i32 [[LOADRES]], i8* nonnull getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i8* nonnull getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i32 2)
 ; CHECK-NEXT:    store i32 [[LOADRES2]], i32* [[A]], align 32
 ; CHECK-NEXT:    [[DUMMY_EQ:%.*]] = icmp ugt i32 [[LOADRES]], 42
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[DUMMY_EQ]])
 ; CHECK-NEXT:    [[M_I8:%.*]] = bitcast i64* [[M]] to i8*
-; CHECK-NEXT:    [[M_A:%.*]] = call i8* @llvm.ptr.annotation.p0i8(i8* nonnull [[M_I8]], i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i32 2, i8* null)
+; CHECK-NEXT:    [[M_A:%.*]] = call i8* @llvm.ptr.annotation.p0i8(i8* nonnull [[M_I8]], i8* nonnull getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i64 0, i64 0), i8* nonnull getelementptr inbounds ([4 x i8], [4 x i8]* @.str1, i64 0, i64 0), i32 2, i8* null)
 ; CHECK-NEXT:    [[M_X:%.*]] = bitcast i8* [[M_A]] to i64*
 ; CHECK-NEXT:    [[OBJSZ:%.*]] = call i64 @llvm.objectsize.i64.p0i8(i8* [[C:%.*]], i1 false, i1 false, i1 false)
 ; CHECK-NEXT:    store i64 [[OBJSZ]], i64* [[M_X]], align 4

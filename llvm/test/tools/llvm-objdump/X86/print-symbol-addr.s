@@ -24,6 +24,8 @@
 # RUN: llvm-objdump -d --no-leading-addr %t.64.o > %t.64.txt
 # RUN: FileCheck --input-file=%t.32.txt %s --check-prefix=NOADDR --match-full-lines --strict-whitespace
 # RUN: FileCheck --input-file=%t.64.txt %s --check-prefix=NOADDR --match-full-lines --strict-whitespace
+# RUN: llvm-objdump -d --no-addresses %t.32.o | diff %t.32.txt -
+# RUN: llvm-objdump -d --no-addresses %t.64.o | diff %t.64.txt -
 
 #      NOADDR:<foo>:
 # NOADDR-NEXT: 90{{ +}}	nop

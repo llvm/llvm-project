@@ -318,7 +318,7 @@ define noalias i8* @op_new_constant_zero_size() {
 
 define noalias i8* @strdup_constant_str() {
 ; CHECK-LABEL: @strdup_constant_str(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(6) i8* @strdup(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0))
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(6) i8* @strdup(i8* nonnull getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0))
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call noalias i8* @strdup(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0))

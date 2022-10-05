@@ -15,3 +15,10 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.sched_setaffinity
 )
+
+add_entrypoint_object(
+  __sched_getcpucount
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.__sched_getcpucount
+)

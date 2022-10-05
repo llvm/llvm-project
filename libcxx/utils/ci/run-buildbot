@@ -190,9 +190,10 @@ check-generated-output)
     ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test libcxx/benchmarks \
            --exclude '*.dat' \
            --exclude 'format_tests.h' \
-           --exclude 'formatter.day.pass.cpp' \
+           --exclude 'formatter.*.pass.cpp' \
            --exclude 'grep.pass.cpp' \
            --exclude 'locale-specific_form.pass.cpp' \
+           --exclude 'ostream.pass.cpp' \
            --exclude 'std_format_spec_string_unicode.bench.cpp' \
            || false
 
@@ -491,21 +492,6 @@ bootstrapping-build)
 
     echo "--- Installing libc++ and libc++abi to a fake location"
     ${NINJA} -C "${BUILD_DIR}" install-runtimes
-;;
-legacy-project-build)
-    clean
-
-    echo "--- Generating CMake"
-    ${CMAKE} \
-          -S "${MONOREPO_ROOT}/llvm" \
-          -B "${BUILD_DIR}" \
-          -DLLVM_ENABLE_PROJECTS="libcxx;libunwind;libcxxabi" \
-          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-          -DLLVM_LIT_ARGS="-sv --show-unsupported --xunit-xml-output test-results.xml --timeout=1500" \
-          -DLIBCXX_CXX_ABI=libcxxabi
-    check-runtimes
 ;;
 aarch64)
     clean

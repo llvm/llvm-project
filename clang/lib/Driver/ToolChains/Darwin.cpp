@@ -3103,6 +3103,8 @@ void Darwin::addPlatformVersionArgs(const llvm::opt::ArgList &Args,
 
         if (SDKInfo) {
           VersionTuple SDKVersion = SDKInfo->getVersion().withoutBuild();
+          if (!SDKVersion.getMinor())
+            SDKVersion = VersionTuple(SDKVersion.getMajor(), 0);
           CmdArgs.push_back(Args.MakeArgString(SDKVersion.getAsString()));
         } else {
           // Use an SDK version that's matching the deployment target if the SDK

@@ -41,7 +41,10 @@
 
 using namespace mlir;
 
-static LogicalResult runMLIRPasses(ModuleOp module) {
+static LogicalResult runMLIRPasses(Operation *op) {
+  auto module = dyn_cast<ModuleOp>(op);
+  if (!module)
+    return op->emitOpError("expected a 'builtin.module' op");
   PassManager passManager(module.getContext());
   applyPassManagerCLOptions(passManager);
 

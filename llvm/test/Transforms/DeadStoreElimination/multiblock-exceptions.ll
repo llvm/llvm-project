@@ -6,15 +6,15 @@ declare void @f()
 declare i32 @__CxxFrameHandler3(...)
 
 
-; Make sure we do not eliminate `store i32 20, i32* %sv`. Even though it is a store
+; Make sure we do not eliminate `store i32 20, ptr %sv`. Even though it is a store
 ; to a stack object, we can read it in the landing/catchpad.
-define void @test12(i32* %p) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test12(ptr %p) personality ptr @__CxxFrameHandler3 {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  block1:
 ; CHECK-NEXT:    [[SV:%.*]] = alloca i32
 ; CHECK-NEXT:    br label [[BLOCK2:%.*]]
 ; CHECK:       block2:
-; CHECK-NEXT:    store i32 20, i32* [[SV]]
+; CHECK-NEXT:    store i32 20, ptr [[SV]]
 ; CHECK-NEXT:    invoke void @f()
 ; CHECK-NEXT:    to label [[BLOCK3:%.*]] unwind label [[CATCH_DISPATCH:%.*]]
 ; CHECK:       block3:
@@ -23,7 +23,7 @@ define void @test12(i32* %p) personality i32 (...)* @__CxxFrameHandler3 {
 ; CHECK-NEXT:    [[CS1:%.*]] = catchswitch within none [label %catch] unwind label [[CLEANUP:%.*]]
 ; CHECK:       catch:
 ; CHECK-NEXT:    [[C:%.*]] = catchpad within [[CS1]] []
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[SV]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[SV]]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       cleanup:
 ; CHECK-NEXT:    [[C1:%.*]] = cleanuppad within none []
@@ -36,12 +36,12 @@ block1:
   br label %block2
 
 block2:
-  store i32 20, i32* %sv
+  store i32 20, ptr %sv
   invoke void @f()
   to label %block3 unwind label %catch.dispatch
 
 block3:
-  store i32 30, i32* %sv
+  store i32 30, ptr %sv
   br label %exit
 
 catch.dispatch:
@@ -49,7 +49,7 @@ catch.dispatch:
 
 catch:
   %c = catchpad within %cs1 []
-  %lv = load i32, i32* %sv
+  %lv = load i32, ptr %sv
   br label %exit
 
 cleanup:
@@ -57,6 +57,6 @@ cleanup:
   br label %exit
 
 exit:
-  store i32 40, i32* %sv
+  store i32 40, ptr %sv
   ret void
 }

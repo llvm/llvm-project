@@ -29,7 +29,9 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -1013,6 +1015,25 @@ static bool applyFormTruncstore(MachineInstr &MI, MachineRegisterInfo &MRI,
   MI.getOperand(0).setReg(SrcReg);
   Observer.changedInstr(MI);
   return true;
+}
+
+// Lower vector G_SEXT_INREG back to shifts for selection. We allowed them to
+// form in the first place for combine opportunities, so any remaining ones
+// at this stage need be lowered back.
+static bool matchVectorSextInReg(MachineInstr &MI, MachineRegisterInfo &MRI) {
+  assert(MI.getOpcode() == TargetOpcode::G_SEXT_INREG);
+  Register DstReg = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(DstReg);
+  return DstTy.isVector();
+}
+
+static void applyVectorSextInReg(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                 MachineIRBuilder &B,
+                                 GISelChangeObserver &Observer) {
+  assert(MI.getOpcode() == TargetOpcode::G_SEXT_INREG);
+  B.setInstrAndDebugLoc(MI);
+  LegalizerHelper Helper(*MI.getMF(), Observer, B);
+  Helper.lower(MI, 0, /* Unused hint type */ LLT());
 }
 
 #define AARCH64POSTLEGALIZERLOWERINGHELPER_GENCOMBINERHELPER_DEPS

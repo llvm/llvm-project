@@ -49,7 +49,7 @@ transform.with_pdl_patterns {
 #map1 = affine_map<(d0, d1, d2) -> (d1, d0, d2)>
 func.func @match_complex_attribute(%arg0: tensor<12x128x32xf32>)
     -> tensor<128x12x32xf32> {
-  %0 = linalg.init_tensor [128, 12, 32] : tensor<128x12x32xf32>
+  %0 = tensor.empty() : tensor<128x12x32xf32>
   // expected-remark @below {{matched complex attr}}
   %1 = linalg.generic {indexing_maps = [#map0, #map1],
                        iterator_types = ["parallel", "parallel", "parallel"]}
