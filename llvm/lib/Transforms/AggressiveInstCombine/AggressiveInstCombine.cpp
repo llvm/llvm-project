@@ -795,9 +795,9 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   IRBuilder<> Builder(&I);
   LoadInst *NewLoad = nullptr, *LI1 = LOps.Root;
 
+  IntegerType *WiderType = IntegerType::get(I.getContext(), LOps.LoadSize);
   // TTI based checks if we want to proceed with wider load
-  bool Allowed =
-      TTI.isTypeLegal(IntegerType::get(I.getContext(), LOps.LoadSize));
+  bool Allowed = TTI.isTypeLegal(WiderType);
   if (!Allowed)
     return false;
 
@@ -811,15 +811,9 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
   // New load can be generated
   Value *Load1Ptr = LI1->getPointerOperand();
   Builder.SetInsertPoint(LI1);
-  if (!cast<PointerType>(Load1Ptr->getType())->isOpaque()) {
-    // We require an extra bitcast for non-opaque cases
-    unsigned Load1AS = cast<PointerType>(Load1Ptr->getType())->getAddressSpace();
-    Load1Ptr = Builder.CreateBitCast(Load1Ptr,
-                                    PointerType::get(IntegerType::get(Load1Ptr->getContext(), LOps.LoadSize), Load1AS));
-  }
-  NewLoad = Builder.CreateAlignedLoad(
-      IntegerType::get(Load1Ptr->getContext(), LOps.LoadSize), Load1Ptr,
-      LI1->getAlign(), LI1->isVolatile(), "");
+  Value *NewPtr = Builder.CreateBitCast(Load1Ptr, WiderType->getPointerTo(AS));
+  NewLoad = Builder.CreateAlignedLoad(WiderType, NewPtr, LI1->getAlign(),
+                                      LI1->isVolatile(), "");
   NewLoad->takeName(LI1);
   // Set the New Load AATags Metadata.
   if (LOps.AATags)

@@ -350,6 +350,7 @@ define void @test11() {
 
 ; TEST 12
 define i32 @irreducible_cfg(i32 %0) {
+;
 ; CHECK-LABEL: define {{[^@]+}}@irreducible_cfg
 ; CHECK-SAME: (i32 [[TMP0:%.*]]) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call noalias i8* @malloc(i64 noundef 4)
@@ -625,7 +626,7 @@ define void @test17() {
 define void @test17b() {
 ; CHECK-LABEL: define {{[^@]+}}@test17b() {
 ; CHECK-NEXT:    [[TMP1:%.*]] = tail call noalias i8* @__kmpc_alloc_shared(i64 noundef 4)
-; CHECK-NEXT:    tail call void @usei8(i8* nofree [[TMP1]]) #[[ATTR6:[0-9]+]]
+; CHECK-NEXT:    tail call void @usei8(i8* nofree [[TMP1]]) #[[ATTR6]]
 ; CHECK-NEXT:    tail call void @__kmpc_free_shared(i8* nocapture [[TMP1]], i64 noundef 4)
 ; CHECK-NEXT:    ret void
 ;

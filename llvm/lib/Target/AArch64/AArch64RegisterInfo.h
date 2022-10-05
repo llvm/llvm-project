@@ -69,6 +69,7 @@ public:
   const uint32_t *getTLSCallPreservedMask() const;
 
   const uint32_t *getSMStartStopCallPreservedMask() const;
+  const uint32_t *SMEABISupportRoutinesCallPreservedMaskFromX0() const;
 
   // Funclets on ARM64 Windows don't preserve any registers.
   const uint32_t *getNoPreservedMask() const override;

@@ -547,32 +547,32 @@ private:
 
   bool funcRetrievesMultigridSyncArg(Attributor &A) {
     auto Pos = llvm::AMDGPU::getMultigridSyncArgImplicitArgPosition();
-    AAPointerInfo::OffsetAndSize OAS(Pos, 8);
+    AA::OffsetAndSize OAS(Pos, 8);
     return funcRetrievesImplicitKernelArg(A, OAS);
   }
 
   bool funcRetrievesHostcallPtr(Attributor &A) {
     auto Pos = llvm::AMDGPU::getHostcallImplicitArgPosition();
-    AAPointerInfo::OffsetAndSize OAS(Pos, 8);
+    AA::OffsetAndSize OAS(Pos, 8);
     return funcRetrievesImplicitKernelArg(A, OAS);
   }
 
   bool funcRetrievesHeapPtr(Attributor &A) {
     if (AMDGPU::getAmdhsaCodeObjectVersion() != 5)
       return false;
-    AAPointerInfo::OffsetAndSize OAS(AMDGPU::ImplicitArg::HEAP_PTR_OFFSET, 8);
+    AA::OffsetAndSize OAS(AMDGPU::ImplicitArg::HEAP_PTR_OFFSET, 8);
     return funcRetrievesImplicitKernelArg(A, OAS);
   }
 
   bool funcRetrievesQueuePtr(Attributor &A) {
     if (AMDGPU::getAmdhsaCodeObjectVersion() != 5)
       return false;
-    AAPointerInfo::OffsetAndSize OAS(AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET, 8);
+    AA::OffsetAndSize OAS(AMDGPU::ImplicitArg::QUEUE_PTR_OFFSET, 8);
     return funcRetrievesImplicitKernelArg(A, OAS);
   }
 
   bool funcRetrievesImplicitKernelArg(Attributor &A,
-                                      AAPointerInfo::OffsetAndSize OAS) {
+                                      AA::OffsetAndSize OAS) {
     // Check if this is a call to the implicitarg_ptr builtin and it
     // is used to retrieve the hostcall pointer. The implicit arg for
     // hostcall is not used only if every use of the implicitarg_ptr
