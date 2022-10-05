@@ -71,3 +71,42 @@ exit:                                             ; preds = %then.bb, %loop.head
 }
 
 declare i16 @foo() nounwind readnone
+
+define void @test_pr58158(i1 %c.1) {
+; CHECK-LABEL: @test_pr58158(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i16 @bar()
+; CHECK-NEXT:    br i1 [[C_1:%.*]], label [[ENTRY_SPLIT_US:%.*]], label [[ENTRY_SPLIT:%.*]]
+; CHECK:       entry.split.us:
+; CHECK-NEXT:    br label [[OUTER_US:%.*]]
+; CHECK:       outer.us:
+; CHECK-NEXT:    br label [[INNER_PREHEADER_US:%.*]]
+; CHECK:       inner.us:
+; CHECK-NEXT:    [[C_2_US:%.*]] = icmp eq i16 0, [[CALL]]
+; CHECK-NEXT:    br i1 [[C_2_US]], label [[OUTER_LOOPEXIT_US:%.*]], label [[INNER_US:%.*]]
+; CHECK:       inner.preheader.us:
+; CHECK-NEXT:    br label [[INNER_US]]
+; CHECK:       outer.loopexit.us:
+; CHECK-NEXT:    br label [[OUTER_BACKEDGE_US:%.*]]
+; CHECK:       outer.backedge.us:
+; CHECK-NEXT:    br label [[OUTER_US]]
+; CHECK:       entry.split:
+; CHECK-NEXT:    br label [[OUTER:%.*]]
+; CHECK:       outer:
+; CHECK-NEXT:    br label [[OUTER_BACKEDGE:%.*]]
+; CHECK:       outer.backedge:
+; CHECK-NEXT:    br label [[OUTER]]
+;
+entry:
+  %call = tail call i16 @bar()
+  br label %outer
+
+outer:
+  br i1 %c.1, label %inner, label %outer
+
+inner:
+  %c.2 = icmp eq i16 0, %call
+  br i1 %c.2, label %outer, label %inner
+}
+
+declare i16 @bar()
