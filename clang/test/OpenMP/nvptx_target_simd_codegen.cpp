@@ -16,10 +16,10 @@
 #define HEADER
 
 // Check that the execution mode of all 2 target regions on the gpu is set to NonSPMD Mode.
-// CHECK-DAG: {{@__omp_offloading_.+l32}}_exec_mode = weak constant i8 2
-// CHECK-DAG: {{@__omp_offloading_.+l37}}_exec_mode = weak constant i8 2
-// CHECK-DAG: {{@__omp_offloading_.+l42}}_exec_mode = weak constant i8 2
-// CHECK-DAG: {{@__omp_offloading_.+l47}}_exec_mode = weak constant i8 2
+// CHECK-DAG: {{@__omp_offloading_.+l32}}_exec_mode = weak protected constant i8 2
+// CHECK-DAG: {{@__omp_offloading_.+l37}}_exec_mode = weak protected constant i8 2
+// CHECK-DAG: {{@__omp_offloading_.+l42}}_exec_mode = weak protected constant i8 2
+// CHECK-DAG: {{@__omp_offloading_.+l47}}_exec_mode = weak protected constant i8 2
 
 #define N 1000
 
