@@ -151,7 +151,7 @@ alterGpuLaunch(SimpleRewriter &rewriter, LaunchOp gpuLaunch,
 // MapForeachToBlocks
 //===----------------------------------------------------------------------===//
 
-DiagnosedSilenceableFailure mlir::transform::gpu::mapForeachToBlocksImp(
+DiagnosedSilenceableFailure mlir::transform::gpu::mapForeachToBlocksImpl(
     RewriterBase &rewriter, scf::ForeachThreadOp foreachThreadOp,
     function_ref<void(RewriterBase &, scf::ForeachThreadOp,
                       SmallVectorImpl<Value> &)>
@@ -291,7 +291,7 @@ transform::MapForeachToBlocks::applyToOne(Operation *target,
   }
 
   SmallVector<int64_t> gridDim = extractFromI64ArrayAttr(getGridDim());
-  diag = mlir::transform::gpu::mapForeachToBlocksImp(
+  diag = mlir::transform::gpu::mapForeachToBlocksImpl(
       rewriter, topLevelForeachThreadOp, generateGpuBlockIds, gridDim,
       transformOp);
   if (diag.succeeded()) {
@@ -365,8 +365,9 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
        llvm::zip(threadOps, blockDim, globalBlockDims)) {
     if (blockDim > globalBlockDim) {
       return failureHelper(
-          "The GPU threads are fewer than the loop trip counts. "
-          "Try to tile scf.foreach_thread before mapping.");
+          "The requested GPU threads are fewer than the number of loop trip "
+          "counts. Try to tile scf.foreach_thread before mapping or set small "
+          "blockDim.");
     }
     if (blockDim == globalBlockDim)
       continue;
@@ -422,7 +423,7 @@ static DiagnosedSilenceableFailure rewriteOneForeachThreadToGpuThreads(
   return DiagnosedSilenceableFailure::success();
 }
 
-DiagnosedSilenceableFailure mlir::transform::gpu::mapNestedForeachToThreadsImp(
+DiagnosedSilenceableFailure mlir::transform::gpu::mapNestedForeachToThreadsImpl(
     RewriterBase &rewriter, Operation *target,
     const SmallVectorImpl<int64_t> &blockDim, bool syncAfterDistribute,
     llvm::Optional<TransformOpInterface> transformOp) {
@@ -463,8 +464,8 @@ DiagnosedSilenceableFailure transform::MapNestedForeachToThreads::applyToOne(
   SimpleRewriter rewriter(getContext());
   rewriter.setInsertionPoint(target);
 
-  diag = mlir::transform::gpu::mapNestedForeachToThreadsImp(
-      rewriter, target, blockDim, getSyncAfterDistribute(), llvm::None);
+  diag = mlir::transform::gpu::mapNestedForeachToThreadsImpl(
+      rewriter, target, blockDim, getSyncAfterDistribute(), transformOp);
   if (diag.succeeded()) {
     diag =
         alterGpuLaunch(rewriter, gpuLaunch, transformOp, llvm::None, llvm::None,

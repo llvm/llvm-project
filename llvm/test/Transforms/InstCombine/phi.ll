@@ -697,10 +697,10 @@ ret:
 define i32 @test23(i32 %A, i1 %pb, ptr %P) {
 ; CHECK-LABEL: @test23(
 ; CHECK-NEXT:  BB0:
-; CHECK-NEXT:    [[PHI_BO:%.*]] = add i32 [[A:%.*]], 19
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[A:%.*]], 19
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       Loop:
-; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[PHI_BO]], [[BB0:%.*]] ], [ 61, [[LOOP]] ]
+; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[TMP0]], [[BB0:%.*]] ], [ 61, [[LOOP]] ]
 ; CHECK-NEXT:    store i32 [[B]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[PB:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       Exit:
@@ -1280,14 +1280,12 @@ define i1 @pr57488_icmp_of_phi(ptr %ptr.base, i64 %len) {
 ; CHECK-NEXT:    [[LEN_ZERO:%.*]] = icmp eq i64 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_ZERO]], label [[EXIT:%.*]], label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[ACCUM:%.*]] = phi i8 [ [[ACCUM_NEXT:%.*]], [[LOOP]] ], [ 1, [[START:%.*]] ]
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi i1 [ [[AND:%.*]], [[LOOP]] ], [ true, [[START:%.*]] ]
 ; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], [[LOOP]] ], [ [[PTR_BASE]], [[START]] ]
 ; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i64, ptr [[PTR]], i64 1
-; CHECK-NEXT:    [[ACCUM_BOOL:%.*]] = icmp ne i8 [[ACCUM]], 0
 ; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR]], align 8
 ; CHECK-NEXT:    [[VAL_ZERO:%.*]] = icmp eq i64 [[VAL]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i1 [[ACCUM_BOOL]], [[VAL_ZERO]]
-; CHECK-NEXT:    [[ACCUM_NEXT]] = zext i1 [[AND]] to i8
+; CHECK-NEXT:    [[AND]] = and i1 [[ACCUM]], [[VAL_ZERO]]
 ; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq ptr [[PTR_NEXT]], [[END]]
 ; CHECK-NEXT:    br i1 [[EXIT_COND]], label [[EXIT]], label [[LOOP]]
 ; CHECK:       exit:
@@ -1338,4 +1336,38 @@ loop:
   call void @use(i32 %iv.add)
   %iv.add2 = xor i32 %iv, -1
   br label %loop
+}
+
+; Caused an infinite loop with D134954.
+define i64 @inttoptr_of_phi(i1 %c, ptr %arg.ptr, ptr %arg.ptr2) {
+; CHECK-LABEL: @inttoptr_of_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[ARG_PTR2_VAL:%.*]] = load i64, ptr [[ARG_PTR2:%.*]], align 8
+; CHECK-NEXT:    [[ARG_PTR2_VAL_PTR:%.*]] = inttoptr i64 [[ARG_PTR2_VAL]] to ptr
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[INT_PTR_PTR:%.*]] = phi ptr [ [[ARG_PTR2_VAL_PTR]], [[IF]] ], [ [[ARG_PTR:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[INT_PTR_PTR]], align 8
+; CHECK-NEXT:    ret i64 [[V]]
+;
+entry:
+  br i1 %c, label %if, label %else
+
+if:
+  %arg.ptr2.val = load i64, ptr %arg.ptr2, align 8
+  br label %join
+
+else:
+  %arg.int.ptr = ptrtoint ptr %arg.ptr to i64
+  br label %join
+
+join:
+  %int.ptr = phi i64 [ %arg.ptr2.val, %if ], [ %arg.int.ptr, %else ]
+  %ptr = inttoptr i64 %int.ptr to ptr
+  %v = load i64, ptr %ptr, align 8
+  ret i64 %v
 }

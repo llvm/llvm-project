@@ -25,13 +25,10 @@ define void @run() {
 ; TUNIT-NEXT:  entry:
 ; TUNIT-NEXT:    unreachable
 ;
-; CGSCC: Function Attrs: nofree nosync nounwind readonly willreturn
+; CGSCC: Function Attrs: nofree nosync nounwind readnone willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@run
 ; CGSCC-SAME: () #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, i32* getelementptr inbounds ([[STRUCT_FOO:%.*]], %struct.Foo* @a, i32 0, i32 0), align 8
-; CGSCC-NEXT:    [[A_0_1:%.*]] = getelementptr [[STRUCT_FOO]], %struct.Foo* @a, i64 0, i32 1
-; CGSCC-NEXT:    [[TMP1:%.*]] = load i64, i64* [[A_0_1]], align 8
 ; CGSCC-NEXT:    unreachable
 ;
 entry:
@@ -109,7 +106,7 @@ loop:
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { nofree norecurse nosync nounwind readnone willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind readonly willreturn }
+; CGSCC: attributes #[[ATTR0]] = { nofree nosync nounwind readnone willreturn }
 ; CGSCC: attributes #[[ATTR1]] = { nofree norecurse nosync nounwind readnone willreturn }
 ; CGSCC: attributes #[[ATTR2]] = { nofree norecurse noreturn nosync nounwind readnone }
 ;.

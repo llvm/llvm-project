@@ -63,6 +63,10 @@ def SparseTensor_Dialect : Dialect {
     * [Chou18] Stephen Chou, Fredrik Berg Kjolstad, and Saman Amarasinghe.
     Format Abstraction for Sparse Tensor Algebra Compilers. Proceedings of
     the ACM on Programming Languages, October 2018.
+    * [Chou20] Stephen Chou, Fredrik Berg Kjolstad, and Saman Amarasinghe.
+    Automatic Generation of Efficient Sparse Tensor Format Conversion Routines.
+    Proceedings of the 41st ACM SIGPLAN Conference on Programming Language
+    Design and Implementation, June, 2020.
     * [Gustavson72] Fred G. Gustavson. Some basic techniques for solving
     sparse systems of linear equations. In Sparse Matrices and Their
     Applications, pages 41–52. Plenum Press, New York, 1972.

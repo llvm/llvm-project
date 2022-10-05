@@ -41,20 +41,22 @@ concept __fmt_char_type =
 template <class _CharT>
 using __fmt_iter_for = _CharT*;
 
-// The concept is based on P2286R6
-// It lacks the const of __cf as required by, the not yet accepted, LWG-3636.
-// The current formatters can't be easily adapted, but that is WIP.
-// TODO FMT properly implement this concepts once accepted.
 template <class _Tp, class _CharT>
-concept __formattable = (semiregular<formatter<remove_cvref_t<_Tp>, _CharT>>) &&
-                        requires(formatter<remove_cvref_t<_Tp>, _CharT> __f,
-                                 formatter<remove_cvref_t<_Tp>, _CharT> __cf, _Tp __t,
-                                 basic_format_context<__fmt_iter_for<_CharT>, _CharT> __fc,
-                                 basic_format_parse_context<_CharT> __pc) {
-                          { __f.parse(__pc) } -> same_as<typename basic_format_parse_context<_CharT>::iterator>;
-                          { __cf.format(__t, __fc) } -> same_as<__fmt_iter_for<_CharT>>;
-                        };
+concept __formattable =
+    (semiregular<formatter<remove_cvref_t<_Tp>, _CharT>>) &&
+    requires(formatter<remove_cvref_t<_Tp>, _CharT> __f,
+             const formatter<remove_cvref_t<_Tp>, _CharT> __cf,
+             _Tp __t,
+             basic_format_context<__fmt_iter_for<_CharT>, _CharT> __fc,
+             basic_format_parse_context<_CharT> __pc) {
+      { __f.parse(__pc) } -> same_as<typename basic_format_parse_context<_CharT>::iterator>;
+      { __cf.format(__t, __fc) } -> same_as<__fmt_iter_for<_CharT>>;
+    };
 
+#  if _LIBCPP_STD_VER > 20
+template <class _Tp, class _CharT>
+concept formattable = __formattable<_Tp, _CharT>;
+#  endif //_LIBCPP_STD_VER > 20
 #endif //_LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD

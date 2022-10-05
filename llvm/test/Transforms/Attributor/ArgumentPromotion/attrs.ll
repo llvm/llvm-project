@@ -82,10 +82,10 @@ entry:
   ret i32 %c
 }
 ;.
-; TUNIT: attributes #[[ATTR0:[0-9]+]] = { argmemonly nofree norecurse nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR1:[0-9]+]] = { nofree nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn }
+; TUNIT: attributes #[[ATTR1]] = { nofree nosync nounwind willreturn }
 ;.
-; CGSCC: attributes #[[ATTR0:[0-9]+]] = { argmemonly nofree norecurse nosync nounwind willreturn }
-; CGSCC: attributes #[[ATTR1:[0-9]+]] = { argmemonly nofree nosync nounwind willreturn }
-; CGSCC: attributes #[[ATTR2:[0-9]+]] = { nounwind willreturn }
+; CGSCC: attributes #[[ATTR0]] = { argmemonly nofree norecurse nosync nounwind willreturn }
+; CGSCC: attributes #[[ATTR1]] = { argmemonly nofree nosync nounwind willreturn }
+; CGSCC: attributes #[[ATTR2]] = { nounwind willreturn }
 ;.

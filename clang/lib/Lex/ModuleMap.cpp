@@ -609,7 +609,7 @@ ModuleMap::findOrCreateModuleForHeaderInUmbrellaDir(const FileEntry *File) {
       UmbrellaModule = UmbrellaModule->Parent;
 
     if (UmbrellaModule->InferSubmodules) {
-      const FileEntry *UmbrellaModuleMap =
+      OptionalFileEntryRefDegradesToFileEntryPtr UmbrellaModuleMap =
           getModuleMapFileForUniquing(UmbrellaModule);
 
       // Infer submodules for each of the directories we found between
@@ -1023,9 +1023,11 @@ Module *ModuleMap::inferFrameworkModule(const DirectoryEntry *FrameworkDir,
     // If we're not allowed to infer a framework module, don't.
     if (!canInfer)
       return nullptr;
-  } else
-    ModuleMapFile = getModuleMapFileForUniquing(Parent);
-
+  } else {
+    OptionalFileEntryRefDegradesToFileEntryPtr ModuleMapRef =
+        getModuleMapFileForUniquing(Parent);
+    ModuleMapFile = ModuleMapRef;
+  }
 
   // Look for an umbrella header.
   SmallString<128> UmbrellaName = StringRef(FrameworkDir->getName());
@@ -1277,19 +1279,21 @@ void ModuleMap::excludeHeader(Module *Mod, Module::Header Header) {
   Mod->Headers[Module::HK_Excluded].push_back(std::move(Header));
 }
 
-const FileEntry *
+Optional<FileEntryRef>
 ModuleMap::getContainingModuleMapFile(const Module *Module) const {
   if (Module->DefinitionLoc.isInvalid())
-    return nullptr;
+    return None;
 
-  return SourceMgr.getFileEntryForID(
-           SourceMgr.getFileID(Module->DefinitionLoc));
+  return SourceMgr.getFileEntryRefForID(
+      SourceMgr.getFileID(Module->DefinitionLoc));
 }
 
-const FileEntry *ModuleMap::getModuleMapFileForUniquing(const Module *M) const {
+Optional<FileEntryRef>
+ModuleMap::getModuleMapFileForUniquing(const Module *M) const {
   if (M->IsInferred) {
     assert(InferredModuleAllowedBy.count(M) && "missing inferred module map");
-    return InferredModuleAllowedBy.find(M)->second;
+    // FIXME: Update InferredModuleAllowedBy to use FileEntryRef.
+    return InferredModuleAllowedBy.find(M)->second->getLastRef();
   }
   return getContainingModuleMapFile(M);
 }

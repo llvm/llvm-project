@@ -16,8 +16,8 @@ define i32 @test9() {
 ; CHECK-LABEL: test9
 ; CHECK-NOT: store i32 0
 ; CHECK: store i32 1
-  store i32 0, i32* @x
-  %x = load atomic i32, i32* @y monotonic, align 4
-  store i32 1, i32* @x
+  store i32 0, ptr @x
+  %x = load atomic i32, ptr @y monotonic, align 4
+  store i32 1, ptr @x
   ret i32 %x
 }

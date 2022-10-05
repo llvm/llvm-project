@@ -423,7 +423,7 @@ static void InitializeFileRemapping(DiagnosticsEngine &Diags,
   // Remap files in the source manager (with other files).
   for (const auto &RF : InitOpts.RemappedFiles) {
     // Find the file that we're mapping to.
-    auto ToFile = FileMgr.getFile(RF.second);
+    Optional<FileEntryRef> ToFile = FileMgr.getOptionalFileRef(RF.second);
     if (!ToFile) {
       Diags.Report(diag::err_fe_remap_missing_to_file) << RF.first << RF.second;
       continue;
@@ -431,7 +431,7 @@ static void InitializeFileRemapping(DiagnosticsEngine &Diags,
 
     // Create the file entry for the file that we're mapping from.
     const FileEntry *FromFile =
-        FileMgr.getVirtualFile(RF.first, (*ToFile)->getSize(), 0);
+        FileMgr.getVirtualFile(RF.first, ToFile->getSize(), 0);
     if (!FromFile) {
       Diags.Report(diag::err_fe_remap_missing_from_file) << RF.first;
       continue;
@@ -1278,19 +1278,17 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
          Instance.getFrontendOpts().AllowPCMWithCompilerErrors;
 }
 
-static const FileEntry *getPublicModuleMap(const FileEntry *File,
-                                           FileManager &FileMgr) {
-  StringRef Filename = llvm::sys::path::filename(File->getName());
-  SmallString<128> PublicFilename(File->getDir()->getName());
+static Optional<FileEntryRef> getPublicModuleMap(FileEntryRef File,
+                                                 FileManager &FileMgr) {
+  StringRef Filename = llvm::sys::path::filename(File.getName());
+  SmallString<128> PublicFilename(File.getDir().getName());
   if (Filename == "module_private.map")
     llvm::sys::path::append(PublicFilename, "module.map");
   else if (Filename == "module.private.modulemap")
     llvm::sys::path::append(PublicFilename, "module.modulemap");
   else
-    return nullptr;
-  if (auto FE = FileMgr.getFile(PublicFilename))
-    return *FE;
-  return nullptr;
+    return None;
+  return FileMgr.getOptionalFileRef(PublicFilename);
 }
 
 /// Compile a module file for the given module in a separate compiler instance,
@@ -1306,19 +1304,16 @@ static bool compileModule(CompilerInstance &ImportingInstance,
   ModuleMap &ModMap
     = ImportingInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
   bool Result;
-  if (const FileEntry *ModuleMapFile =
+  if (Optional<FileEntryRef> ModuleMapFile =
           ModMap.getContainingModuleMapFile(Module)) {
     // Canonicalize compilation to start with the public module map. This is
     // vital for submodules declarations in the private module maps to be
     // correctly parsed when depending on a top level module in the public one.
-    if (const FileEntry *PublicMMFile = getPublicModuleMap(
-            ModuleMapFile, ImportingInstance.getFileManager()))
+    if (Optional<FileEntryRef> PublicMMFile = getPublicModuleMap(
+            *ModuleMapFile, ImportingInstance.getFileManager()))
       ModuleMapFile = PublicMMFile;
 
-    // FIXME: Update header search to keep FileEntryRef rather than rely on
-    // getLastRef().
-    StringRef ModuleMapFilePath =
-        ModuleMapFile->getLastRef().getNameAsRequested();
+    StringRef ModuleMapFilePath = ModuleMapFile->getNameAsRequested();
 
     // Use the module map where this module resides.
     Result = compileModuleImpl(
@@ -1346,7 +1341,7 @@ static bool compileModule(CompilerInstance &ImportingInstance,
         [&](CompilerInstance &Instance) {
       std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
           llvm::MemoryBuffer::getMemBuffer(InferredModuleMapContent);
-      ModuleMapFile = Instance.getFileManager().getVirtualFile(
+      const FileEntry *ModuleMapFile = Instance.getFileManager().getVirtualFile(
           FakeModuleMapFile, InferredModuleMapContent.size(), 0);
       Instance.getSourceManager().overrideFileContents(
           ModuleMapFile, std::move(ModuleMapBuffer));

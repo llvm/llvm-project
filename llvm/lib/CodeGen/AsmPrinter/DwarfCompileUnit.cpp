@@ -547,11 +547,8 @@ void DwarfCompileUnit::constructScopeDIE(LexicalScope *Scope,
 
   // Emit inlined subprograms.
   if (Scope->getParent() && isa<DISubprogram>(DS)) {
-    DIE *ScopeDIE = constructInlinedScopeDIE(Scope);
-    if (!ScopeDIE)
-      return;
-
-    ParentScopeDIE.addChild(ScopeDIE);
+    DIE *ScopeDIE = constructInlinedScopeDIE(Scope, ParentScopeDIE);
+    assert(ScopeDIE && "Scope DIE should not be null.");
     createAndAddScopeChildren(Scope, *ScopeDIE);
     return;
   }
@@ -650,9 +647,8 @@ void DwarfCompileUnit::attachRangesOrLowHighPC(
   attachRangesOrLowHighPC(Die, std::move(List));
 }
 
-// This scope represents inlined body of a function. Construct DIE to
-// represent this concrete inlined copy of the function.
-DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope) {
+DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope,
+                                                DIE &ParentScopeDIE) {
   assert(Scope->getScopeNode());
   auto *DS = Scope->getScopeNode();
   auto *InlinedSP = getDISubprogram(DS);
@@ -662,6 +658,7 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope) {
   assert(OriginDIE && "Unable to find original DIE for an inlined subprogram.");
 
   auto ScopeDIE = DIE::get(DIEValueAllocator, dwarf::DW_TAG_inlined_subroutine);
+  ParentScopeDIE.addChild(ScopeDIE);
   addDIEEntry(*ScopeDIE, dwarf::DW_AT_abstract_origin, *OriginDIE);
 
   attachRangesOrLowHighPC(*ScopeDIE, Scope->getRanges());

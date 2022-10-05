@@ -5,25 +5,21 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin10.0.0"
 
-%"class.std::auto_ptr" = type { i32* }
+%"class.std::auto_ptr" = type { ptr }
 
-define void @_Z3foov(%"class.std::auto_ptr"* noalias nocapture sret(%"class.std::auto_ptr") %agg.result) ssp {
+define void @_Z3foov(ptr noalias nocapture sret(%"class.std::auto_ptr") %agg.result) ssp {
 ; CHECK-LABEL: @_Z3foov(
 ; CHECK-NEXT:  _ZNSt8auto_ptrIiED1Ev.exit:
 ; CHECK-NEXT:    [[TEMP_LVALUE:%.*]] = alloca %"class.std::auto_ptr", align 8
-; CHECK-NEXT:    call void @_Z3barv(%"class.std::auto_ptr"* sret(%"class.std::auto_ptr") [[AGG_RESULT:%.*]])
-; CHECK-NEXT:    [[TMP_I_I:%.*]] = getelementptr inbounds %"class.std::auto_ptr", %"class.std::auto_ptr"* [[TEMP_LVALUE]], i64 0, i32 0
-; CHECK-NEXT:    [[TMP_I_I4:%.*]] = getelementptr inbounds %"class.std::auto_ptr", %"class.std::auto_ptr"* [[AGG_RESULT]], i64 0, i32 0
+; CHECK-NEXT:    call void @_Z3barv(ptr sret(%"class.std::auto_ptr") [[AGG_RESULT:%.*]])
 ; CHECK-NEXT:    ret void
 ;
 _ZNSt8auto_ptrIiED1Ev.exit:
   %temp.lvalue = alloca %"class.std::auto_ptr", align 8
-  call void @_Z3barv(%"class.std::auto_ptr"* sret(%"class.std::auto_ptr") %temp.lvalue)
-  %tmp.i.i = getelementptr inbounds %"class.std::auto_ptr", %"class.std::auto_ptr"* %temp.lvalue, i64 0, i32 0
-  %tmp2.i.i = load i32*, i32** %tmp.i.i, align 8
-  %tmp.i.i4 = getelementptr inbounds %"class.std::auto_ptr", %"class.std::auto_ptr"* %agg.result, i64 0, i32 0
-  store i32* %tmp2.i.i, i32** %tmp.i.i4, align 8
+  call void @_Z3barv(ptr sret(%"class.std::auto_ptr") %temp.lvalue)
+  %tmp2.i.i = load ptr, ptr %temp.lvalue, align 8
+  store ptr %tmp2.i.i, ptr %agg.result, align 8
   ret void
 }
 
-declare void @_Z3barv(%"class.std::auto_ptr"* nocapture sret(%"class.std::auto_ptr")) nounwind
+declare void @_Z3barv(ptr nocapture sret(%"class.std::auto_ptr")) nounwind

@@ -16,6 +16,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
@@ -196,7 +197,7 @@ private:
   /// popped, these declarations are removed from the IdentifierTable's notion
   /// of current declaration.  It is up to the current Action implementation to
   /// implement these semantics.
-  using DeclSetTy = llvm::SmallPtrSet<Decl *, 32>;
+  using DeclSetTy = llvm::SmallSetVector<Decl *, 32>;
   DeclSetTy DeclsInScope;
 
   /// The DeclContext with which this scope is associated. For
@@ -321,9 +322,7 @@ public:
     DeclsInScope.insert(D);
   }
 
-  void RemoveDecl(Decl *D) {
-    DeclsInScope.erase(D);
-  }
+  void RemoveDecl(Decl *D) { DeclsInScope.remove(D); }
 
   void incrementMSManglingNumber() {
     if (Scope *MSLMP = getMSLastManglingParent()) {
@@ -351,7 +350,9 @@ public:
 
   /// isDeclScope - Return true if this is the scope that the specified decl is
   /// declared in.
-  bool isDeclScope(const Decl *D) const { return DeclsInScope.contains(D); }
+  bool isDeclScope(const Decl *D) const {
+    return DeclsInScope.contains(const_cast<Decl *>(D));
+  }
 
   /// Get the entity corresponding to this scope.
   DeclContext *getEntity() const {

@@ -516,10 +516,9 @@ public:
     return bindIfNewSymbol(sym, exv);
   }
 
-  // FIXME: Generalize this function, so that lastPrivBlock can be removed
-  void
-  copyHostAssociateVar(const Fortran::semantics::Symbol &sym,
-                       mlir::Block *lastPrivBlock = nullptr) override final {
+  void copyHostAssociateVar(
+      const Fortran::semantics::Symbol &sym,
+      mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) override final {
     // 1) Fetch the original copy of the variable.
     assert(sym.has<Fortran::semantics::HostAssocDetails>() &&
            "No host-association found");
@@ -537,13 +536,14 @@ public:
 
     // 3) Perform the assignment.
     mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
-    if (lastPrivBlock)
-      builder->setInsertionPointToStart(lastPrivBlock);
+    if (copyAssignIP && copyAssignIP->isSet())
+      builder->restoreInsertionPoint(*copyAssignIP);
     else
       builder->setInsertionPointAfter(fir::getBase(exv).getDefiningOp());
 
     fir::ExtendedValue lhs, rhs;
-    if (lastPrivBlock) {
+    if (copyAssignIP && copyAssignIP->isSet() &&
+        sym.test(Fortran::semantics::Symbol::Flag::OmpLastPrivate)) {
       // lastprivate case
       lhs = hexv;
       rhs = exv;
@@ -568,7 +568,8 @@ public:
       builder->create<fir::StoreOp>(loc, loadVal, fir::getBase(lhs));
     }
 
-    if (lastPrivBlock)
+    if (copyAssignIP && copyAssignIP->isSet() &&
+        sym.test(Fortran::semantics::Symbol::Flag::OmpLastPrivate))
       builder->restoreInsertionPoint(insPt);
   }
 

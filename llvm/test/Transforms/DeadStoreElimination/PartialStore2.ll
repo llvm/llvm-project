@@ -6,25 +6,21 @@
 ;
 ; Better safe than sorry, do not assume anything about the padding for the
 ; i28 store that has 32 bits as store size.
-define void @test1(i32* %p) {
+define void @test1(ptr %p) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32
-; CHECK-NEXT:    [[B:%.*]] = bitcast i32* [[A]] to i28*
-; CHECK-NEXT:    [[C:%.*]] = bitcast i32* [[A]] to { i16, i16 }*
-; CHECK-NEXT:    [[C1:%.*]] = getelementptr inbounds { i16, i16 }, { i16, i16 }* [[C]], i32 0, i32 1
-; CHECK-NEXT:    store i28 10, i28* [[B]]
-; CHECK-NEXT:    store i16 20, i16* [[C1]]
-; CHECK-NEXT:    call void @test1(i32* [[A]])
+; CHECK-NEXT:    [[C1:%.*]] = getelementptr inbounds { i16, i16 }, ptr [[A]], i32 0, i32 1
+; CHECK-NEXT:    store i28 10, ptr [[A]]
+; CHECK-NEXT:    store i16 20, ptr [[C1]]
+; CHECK-NEXT:    call void @test1(ptr [[A]])
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca i32
-  %b = bitcast i32* %a to i28*
-  %c = bitcast i32* %a to { i16, i16 }*
-  %c1 = getelementptr inbounds { i16, i16 }, { i16, i16 }* %c, i32 0, i32 1
-  store i28 10, i28* %b
-  store i16 20, i16* %c1
+  %c1 = getelementptr inbounds { i16, i16 }, ptr %a, i32 0, i32 1
+  store i28 10, ptr %a
+  store i16 20, ptr %c1
 
-  call void @test1(i32* %a)
+  call void @test1(ptr %a)
   ret void
 }
 
@@ -33,23 +29,19 @@ define void @test1(i32* %p) {
 ;
 ; Better safe than sorry, do not assume anything about the padding for the
 ; i12 store that has 16 bits as store size.
-define void @test2(i32* %p) {
+define void @test2(ptr %p) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[U:%.*]] = alloca i32
-; CHECK-NEXT:    [[A:%.*]] = bitcast i32* [[U]] to i32*
-; CHECK-NEXT:    [[B:%.*]] = bitcast i32* [[U]] to i12*
-; CHECK-NEXT:    store i32 -1, i32* [[A]]
-; CHECK-NEXT:    store i12 20, i12* [[B]]
-; CHECK-NEXT:    call void @test2(i32* [[U]])
+; CHECK-NEXT:    store i32 -1, ptr [[U]]
+; CHECK-NEXT:    store i12 20, ptr [[U]]
+; CHECK-NEXT:    call void @test2(ptr [[U]])
 ; CHECK-NEXT:    ret void
 ;
   %u = alloca i32
-  %a = bitcast i32* %u to i32*
-  %b = bitcast i32* %u to i12*
-  store i32 -1, i32* %a
-  store i12 20, i12* %b
+  store i32 -1, ptr %u
+  store i12 20, ptr %u
 
-  call void @test2(i32* %u)
+  call void @test2(ptr %u)
   ret void
 }
 

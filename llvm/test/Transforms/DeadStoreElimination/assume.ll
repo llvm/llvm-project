@@ -5,36 +5,36 @@
 
 define void @f() {
 ; CHECK-LABEL: @f(
-; CHECK-NEXT:    [[TMP1:%.*]] = call noalias i8* @_Znwm(i64 32)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i8* [[TMP1]], @global
+; CHECK-NEXT:    [[TMP1:%.*]] = call noalias ptr @_Znwm(i64 32)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt ptr [[TMP1]], @global
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP2]])
 ; CHECK-NEXT:    ret void
 ;
-  %tmp1 = call noalias i8* @_Znwm(i64 32)
-  %tmp2 = icmp ugt i8* %tmp1, @global
+  %tmp1 = call noalias ptr @_Znwm(i64 32)
+  %tmp2 = icmp ugt ptr %tmp1, @global
   call void @llvm.assume(i1 %tmp2)
-  store i8 0, i8* %tmp1, align 1
+  store i8 0, ptr %tmp1, align 1
   ret void
 }
 
 define void @f2() {
 ; CHECK-LABEL: @f2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call noalias i8* @_Znwm(i64 32)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i8* [[TMP1]], @global
+; CHECK-NEXT:    [[TMP1:%.*]] = call noalias ptr @_Znwm(i64 32)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt ptr [[TMP1]], @global
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP2]])
-; CHECK-NEXT:    call void @quux(i8* @global)
+; CHECK-NEXT:    call void @quux(ptr @global)
 ; CHECK-NEXT:    ret void
 ;
-  %tmp1 = call noalias i8* @_Znwm(i64 32)
-  %tmp2 = icmp ugt i8* %tmp1, @global
+  %tmp1 = call noalias ptr @_Znwm(i64 32)
+  %tmp2 = icmp ugt ptr %tmp1, @global
   call void @llvm.assume(i1 %tmp2)
-  store i8 0, i8* %tmp1, align 1
-  call void @quux(i8* @global)
+  store i8 0, ptr %tmp1, align 1
+  call void @quux(ptr @global)
   ret void
 }
 
-declare i8* @_Znwm(i64)
+declare ptr @_Znwm(i64)
 
 declare void @llvm.assume(i1)
 
-declare void @quux(i8*)
+declare void @quux(ptr)

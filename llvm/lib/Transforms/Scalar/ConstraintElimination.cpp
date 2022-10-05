@@ -137,17 +137,18 @@ public:
 
   /// Turn a comparison of the form \p Op0 \p Pred \p Op1 into a vector of
   /// constraints, using indices from the corresponding constraint system.
-  /// Additional indices for newly discovered values are added to \p NewIndices.
+  /// New variables that need to be added to the system are collected in
+  /// \p NewVariables.
   ConstraintTy getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
-                             DenseMap<Value *, unsigned> &NewIndices) const;
+                             SmallVectorImpl<Value *> &NewVariables) const;
 
   /// Turn a condition \p CmpI into a vector of constraints, using indices from
-  /// the corresponding constraint system. Additional indices for newly
-  /// discovered values are added to \p NewIndices.
+  /// the corresponding constraint system. New variables that need to be added
+  /// to the system are collected in \p NewVariables.
   ConstraintTy getConstraint(CmpInst *Cmp,
-                             DenseMap<Value *, unsigned> &NewIndices) const {
+                             SmallVectorImpl<Value *> &NewVariables) {
     return getConstraint(Cmp->getPredicate(), Cmp->getOperand(0),
-                         Cmp->getOperand(1), NewIndices);
+                         Cmp->getOperand(1), NewVariables);
   }
 
   /// Try to add information from \p A \p Pred \p B to the unsigned/signed
@@ -289,7 +290,8 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
 
 ConstraintTy
 ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
-                              DenseMap<Value *, unsigned> &NewIndices) const {
+                              SmallVectorImpl<Value *> &NewVariables) const {
+  assert(NewVariables.empty() && "NewVariables must be empty when passed in");
   bool IsEq = false;
   // Try to convert Pred to one of ULE/SLT/SLE/SLT.
   switch (Pred) {
@@ -343,25 +345,29 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   auto VariablesA = llvm::drop_begin(ADec);
   auto VariablesB = llvm::drop_begin(BDec);
 
-  // First try to look up \p V in Value2Index and NewIndices. Otherwise add a
-  // new entry to NewIndices.
-  auto GetOrAddIndex = [&Value2Index, &NewIndices](Value *V) -> unsigned {
+  // First try to look up \p V in Value2Index and NewVariables. Otherwise add a
+  // new entry to NewVariables.
+  DenseMap<Value *, unsigned> NewIndexMap;
+  auto GetOrAddIndex = [&Value2Index, &NewVariables,
+                        &NewIndexMap](Value *V) -> unsigned {
     auto V2I = Value2Index.find(V);
     if (V2I != Value2Index.end())
       return V2I->second;
     auto Insert =
-        NewIndices.insert({V, Value2Index.size() + NewIndices.size() + 1});
+        NewIndexMap.insert({V, Value2Index.size() + NewVariables.size() + 1});
+    if (Insert.second)
+      NewVariables.push_back(V);
     return Insert.first->second;
   };
 
-  // Make sure all variables have entries in Value2Index or NewIndices.
+  // Make sure all variables have entries in Value2Index or NewVariables.
   for (const auto &KV : concat<DecompEntry>(VariablesA, VariablesB))
     GetOrAddIndex(KV.Variable);
 
   // Build result constraint, by first adding all coefficients from A and then
   // subtracting all coefficients from B.
   ConstraintTy Res(
-      SmallVector<int64_t, 8>(Value2Index.size() + NewIndices.size() + 1, 0),
+      SmallVector<int64_t, 8>(Value2Index.size() + NewVariables.size() + 1, 0),
       IsSigned);
   // Collect variables that are known to be positive in all uses in the
   // constraint.
@@ -389,28 +395,23 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   R[0] = OffsetSum;
   Res.Preconditions = std::move(Preconditions);
 
-  // Remove any (Coefficient, Variable) entry where the Coefficient is 0 for the
-  // new variables that need to be added to the system. Set NewIndexNeeded to
-  // true if any of the new variables has a non-zero coefficient.
-  bool NewIndexNeeded = false;
-  for (unsigned I = 0; I < NewIndices.size(); ++I) {
+  // Remove any (Coefficient, Variable) entry where the Coefficient is 0 for new
+  // variables.
+  while (!NewVariables.empty()) {
     int64_t Last = R.back();
-    if (Last != 0) {
-      NewIndexNeeded = true;
+    if (Last != 0)
       break;
-    }
     R.pop_back();
+    Value *RemovedV = NewVariables.pop_back_val();
+    NewIndexMap.erase(RemovedV);
   }
-  // All new variables had Coefficients of 0, so no new variables are needed.
-  if (!NewIndexNeeded)
-    NewIndices.clear();
 
   // Add extra constraints for variables that are known positive.
   for (auto &KV : KnownPositiveVariables) {
     if (!KV.second || (Value2Index.find(KV.first) == Value2Index.end() &&
-                       NewIndices.find(KV.first) == NewIndices.end()))
+                       NewIndexMap.find(KV.first) == NewIndexMap.end()))
       continue;
-    SmallVector<int64_t, 8> C(Value2Index.size() + NewIndices.size() + 1, 0);
+    SmallVector<int64_t, 8> C(Value2Index.size() + NewVariables.size() + 1, 0);
     C[GetOrAddIndex(KV.first)] = -1;
     Res.ExtraInfo.push_back(C);
   }
@@ -426,14 +427,13 @@ bool ConstraintTy::isValid(const ConstraintInfo &Info) const {
 
 bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A,
                               Value *B) const {
-  DenseMap<Value *, unsigned> NewIndices;
-  auto R = getConstraint(Pred, A, B, NewIndices);
+  SmallVector<Value *> NewVariables;
+  auto R = getConstraint(Pred, A, B, NewVariables);
 
-  if (!NewIndices.empty())
+  if (!NewVariables.empty())
     return false;
 
-  // TODO: properly check NewIndices.
-  return NewIndices.empty() && R.Preconditions.empty() && !R.IsEq &&
+  return NewVariables.empty() && R.Preconditions.empty() && !R.IsEq &&
          !R.empty() &&
          getCS(CmpInst::isSigned(Pred)).isConditionImplied(R.Coefficients);
 }
@@ -624,8 +624,8 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
                              SmallVectorImpl<StackEntry> &DFSInStack) {
   // If the constraint has a pre-condition, skip the constraint if it does not
   // hold.
-  DenseMap<Value *, unsigned> NewIndices;
-  auto R = getConstraint(Pred, A, B, NewIndices);
+  SmallVector<Value *> NewVariables;
+  auto R = getConstraint(Pred, A, B, NewVariables);
   if (!R.isValid(*this))
     return;
 
@@ -641,13 +641,14 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
 
   Added |= CSToUse.addVariableRowFill(R.Coefficients);
 
-  // If R has been added to the system, queue it for removal once it goes
-  // out-of-scope.
+  // If R has been added to the system, add the new variables and queue it for
+  // removal once it goes out-of-scope.
   if (Added) {
     SmallVector<Value *, 2> ValuesToRelease;
-    for (auto &KV : NewIndices) {
-      getValue2Index(R.IsSigned).insert(KV);
-      ValuesToRelease.push_back(KV.first);
+    auto &Value2Index = getValue2Index(R.IsSigned);
+    for (Value *V : NewVariables) {
+      Value2Index.insert({V, Value2Index.size() + 1});
+      ValuesToRelease.push_back(V);
     }
 
     LLVM_DEBUG({
@@ -675,9 +676,9 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
                           SmallVectorImpl<Instruction *> &ToRemove) {
   auto DoesConditionHold = [](CmpInst::Predicate Pred, Value *A, Value *B,
                               ConstraintInfo &Info) {
-    DenseMap<Value *, unsigned> NewIndices;
-    auto R = Info.getConstraint(Pred, A, B, NewIndices);
-    if (R.size() < 2 || !NewIndices.empty() || !R.isValid(Info))
+    SmallVector<Value *> NewVariables;
+    auto R = Info.getConstraint(Pred, A, B, NewVariables);
+    if (R.size() < 2 || !NewVariables.empty() || !R.isValid(Info))
       return false;
 
     auto &CSToUse = Info.getCS(CmpInst::isSigned(Pred));
@@ -801,9 +802,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
           continue;
 
         LLVM_DEBUG(dbgs() << "Checking " << *Cmp << "\n");
-        DenseMap<Value *, unsigned> NewIndices;
-        auto R = Info.getConstraint(Cmp, NewIndices);
-        if (R.IsEq || R.empty() || !NewIndices.empty() || !R.isValid(Info))
+        SmallVector<Value *> NewVariables;
+        auto R = Info.getConstraint(Cmp, NewVariables);
+        if (R.IsEq || R.empty() || !NewVariables.empty() || !R.isValid(Info))
           continue;
 
         auto &CSToUse = Info.getCS(R.IsSigned);
