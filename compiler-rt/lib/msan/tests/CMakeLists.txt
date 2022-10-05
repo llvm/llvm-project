@@ -33,7 +33,6 @@ set(MSAN_UNITTEST_COMMON_CFLAGS
   -I${COMPILER_RT_SOURCE_DIR}/lib
   -I${COMPILER_RT_SOURCE_DIR}/lib/msan
   -g
-  -O2
   -fno-omit-frame-pointer
   -mno-omit-leaf-frame-pointer
   -Wno-deprecated-declarations
