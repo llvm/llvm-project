@@ -19,8 +19,8 @@
 //   CHECK-DAG: %[[I13:.*]] = arith.constant 13 : index
 //   CHECK-DAG: %[[AttrsS:.*]] = memref.alloca() : memref<1xi8>
 //   CHECK-DAG: %[[AttrsD:.*]] = memref.cast %[[AttrsS]] : memref<1xi8> to memref<?xi8>
-//   CHECK-DAG: %[[Attr0:.*]] = arith.constant 0 : i8
-//   CHECK-DAG: memref.store %[[Attr0]], %[[AttrsS]][%[[I0]]] : memref<1xi8>
+//   CHECK-DAG: %[[DenseDLT:.*]] = arith.constant 4 : i8
+//   CHECK-DAG: memref.store %[[DenseDLT]], %[[AttrsS]][%[[I0]]] : memref<1xi8>
 //   CHECK-DAG: %[[SizesS:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-DAG: %[[SizesD:.*]] = memref.cast %[[SizesS]] : memref<1xindex> to memref<?xindex>
 //   CHECK-DAG: memref.store %[[I13]], %[[SizesS]][%[[I0]]] : memref<1xindex>
@@ -56,8 +56,8 @@ func.func @sparse_convert_1d(%arg0: tensor<13xi32, #SparseVector>) -> tensor<13x
 //   CHECK-DAG: %[[I0:.*]] = arith.constant 0 : index
 //   CHECK-DAG: %[[AttrsS:.*]] = memref.alloca() : memref<1xi8>
 //   CHECK-DAG: %[[AttrsD:.*]] = memref.cast %[[AttrsS]] : memref<1xi8> to memref<?xi8>
-//   CHECK-DAG: %[[Attr0:.*]] = arith.constant 0 : i8
-//   CHECK-DAG: memref.store %[[Attr0]], %[[AttrsS]][%[[I0]]] : memref<1xi8>
+//   CHECK-DAG: %[[DenseDLT:.*]] = arith.constant 4 : i8
+//   CHECK-DAG: memref.store %[[DenseDLT]], %[[AttrsS]][%[[I0]]] : memref<1xi8>
 //   CHECK-DAG: %[[SizesS:.*]] = memref.alloca() : memref<1xindex>
 //   CHECK-DAG: %[[SizesD:.*]] = memref.cast %[[SizesS]] : memref<1xindex> to memref<?xindex>
 //   CHECK-DAG: %[[SizeI0:.*]] = call @sparseDimSize(%[[Arg]], %[[I0]]) : (!llvm.ptr<i8>, index) -> index
@@ -97,9 +97,9 @@ func.func @sparse_convert_1d_dyn(%arg0: tensor<?xi32, #SparseVector>) -> tensor<
 //   CHECK-DAG: %[[I4:.*]] = arith.constant 4 : index
 //   CHECK-DAG: %[[AttrsS:.*]] = memref.alloca() : memref<2xi8>
 //   CHECK-DAG: %[[AttrsD:.*]] = memref.cast %[[AttrsS]] : memref<2xi8> to memref<?xi8>
-//   CHECK-DAG: %[[Attr0:.*]] = arith.constant 0 : i8
-//   CHECK-DAG: memref.store %[[Attr0]], %[[AttrsS]][%[[I0]]] : memref<2xi8>
-//   CHECK-DAG: memref.store %[[Attr0]], %[[AttrsS]][%[[I1]]] : memref<2xi8>
+//   CHECK-DAG: %[[DenseDLT:.*]] = arith.constant 4 : i8
+//   CHECK-DAG: memref.store %[[DenseDLT]], %[[AttrsS]][%[[I0]]] : memref<2xi8>
+//   CHECK-DAG: memref.store %[[DenseDLT]], %[[AttrsS]][%[[I1]]] : memref<2xi8>
 //   CHECK-DAG: %[[SizesS:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[SizesD:.*]] = memref.cast %[[SizesS]] : memref<2xindex> to memref<?xindex>
 //   CHECK-DAG: memref.store %[[I2]], %[[SizesS]][%[[I0]]] : memref<2xindex>
@@ -140,9 +140,9 @@ func.func @sparse_convert_2d(%arg0: tensor<2x4xf64, #SparseMatrix>) -> tensor<2x
 //   CHECK-DAG: %[[I4:.*]] = arith.constant 4 : index
 //   CHECK-DAG: %[[AttrsS:.*]] = memref.alloca() : memref<2xi8>
 //   CHECK-DAG: %[[AttrsD:.*]] = memref.cast %[[AttrsS]] : memref<2xi8> to memref<?xi8>
-//   CHECK-DAG: %[[Attr0:.*]] = arith.constant 0 : i8
-//   CHECK-DAG: memref.store %[[Attr0]], %[[AttrsS]][%[[I0]]] : memref<2xi8>
-//   CHECK-DAG: memref.store %[[Attr0]], %[[AttrsS]][%[[I1]]] : memref<2xi8>
+//   CHECK-DAG: %[[DenseDLT:.*]] = arith.constant 4 : i8
+//   CHECK-DAG: memref.store %[[DenseDLT]], %[[AttrsS]][%[[I0]]] : memref<2xi8>
+//   CHECK-DAG: memref.store %[[DenseDLT]], %[[AttrsS]][%[[I1]]] : memref<2xi8>
 //   CHECK-DAG: %[[SizesS:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[SizesD:.*]] = memref.cast %[[SizesS]] : memref<2xindex> to memref<?xindex>
 //   CHECK-DAG: %[[SizeI0:.*]] = call @sparseDimSize(%[[Arg]], %[[I0]]) : (!llvm.ptr<i8>, index) -> index
@@ -184,9 +184,9 @@ func.func @sparse_convert_2d_dyn0(%arg0: tensor<?x4xf64, #SparseMatrix>) -> tens
 //   CHECK-DAG: %[[I2:.*]] = arith.constant 2 : index
 //   CHECK-DAG: %[[AttrsS:.*]] = memref.alloca() : memref<2xi8>
 //   CHECK-DAG: %[[AttrsD:.*]] = memref.cast %[[AttrsS]] : memref<2xi8> to memref<?xi8>
-//   CHECK-DAG: %[[Attr0:.*]] = arith.constant 0 : i8
-//   CHECK-DAG: memref.store %[[Attr0]], %[[AttrsS]][%[[I0]]] : memref<2xi8>
-//   CHECK-DAG: memref.store %[[Attr0]], %[[AttrsS]][%[[I1]]] : memref<2xi8>
+//   CHECK-DAG: %[[DenseDLT:.*]] = arith.constant 4 : i8
+//   CHECK-DAG: memref.store %[[DenseDLT]], %[[AttrsS]][%[[I0]]] : memref<2xi8>
+//   CHECK-DAG: memref.store %[[DenseDLT]], %[[AttrsS]][%[[I1]]] : memref<2xi8>
 //   CHECK-DAG: %[[SizesS:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[SizesD:.*]] = memref.cast %[[SizesS]] : memref<2xindex> to memref<?xindex>
 //   CHECK-DAG: %[[SizeI1:.*]] = call @sparseDimSize(%[[Arg]], %[[I1]]) : (!llvm.ptr<i8>, index) -> index
@@ -227,9 +227,9 @@ func.func @sparse_convert_2d_dyn1(%arg0: tensor<2x?xf64, #SparseMatrix>) -> tens
 //   CHECK-DAG: %[[I1:.*]] = arith.constant 1 : index
 //   CHECK-DAG: %[[AttrsS:.*]] = memref.alloca() : memref<2xi8>
 //   CHECK-DAG: %[[AttrsD:.*]] = memref.cast %[[AttrsS]] : memref<2xi8> to memref<?xi8>
-//   CHECK-DAG: %[[Attr0:.*]] = arith.constant 0 : i8
-//   CHECK-DAG: memref.store %[[Attr0]], %[[AttrsS]][%[[I0]]] : memref<2xi8>
-//   CHECK-DAG: memref.store %[[Attr0]], %[[AttrsS]][%[[I1]]] : memref<2xi8>
+//   CHECK-DAG: %[[DenseDLT:.*]] = arith.constant 4 : i8
+//   CHECK-DAG: memref.store %[[DenseDLT]], %[[AttrsS]][%[[I0]]] : memref<2xi8>
+//   CHECK-DAG: memref.store %[[DenseDLT]], %[[AttrsS]][%[[I1]]] : memref<2xi8>
 //   CHECK-DAG: %[[SizesS:.*]] = memref.alloca() : memref<2xindex>
 //   CHECK-DAG: %[[SizesD:.*]] = memref.cast %[[SizesS]] : memref<2xindex> to memref<?xindex>
 //   CHECK-DAG: %[[SizeI0:.*]] = call @sparseDimSize(%[[Arg]], %[[I0]]) : (!llvm.ptr<i8>, index) -> index
@@ -274,10 +274,10 @@ func.func @sparse_convert_2d_dyn2(%arg0: tensor<?x?xf64, #SparseMatrix>) -> tens
 //   CHECK-DAG: %[[I4:.*]] = arith.constant 4 : index
 //   CHECK-DAG: %[[AttrsS:.*]] = memref.alloca() : memref<3xi8>
 //   CHECK-DAG: %[[AttrsD:.*]] = memref.cast %[[AttrsS]] : memref<3xi8> to memref<?xi8>
-//   CHECK-DAG: %[[Attr0:.*]] = arith.constant 0 : i8
-//   CHECK-DAG: memref.store %[[Attr0]], %[[AttrsS]][%[[I0]]] : memref<3xi8>
-//   CHECK-DAG: memref.store %[[Attr0]], %[[AttrsS]][%[[I1]]] : memref<3xi8>
-//   CHECK-DAG: memref.store %[[Attr0]], %[[AttrsS]][%[[I2]]] : memref<3xi8>
+//   CHECK-DAG: %[[DenseDLT:.*]] = arith.constant 4 : i8
+//   CHECK-DAG: memref.store %[[DenseDLT]], %[[AttrsS]][%[[I0]]] : memref<3xi8>
+//   CHECK-DAG: memref.store %[[DenseDLT]], %[[AttrsS]][%[[I1]]] : memref<3xi8>
+//   CHECK-DAG: memref.store %[[DenseDLT]], %[[AttrsS]][%[[I2]]] : memref<3xi8>
 //   CHECK-DAG: %[[SizesS:.*]] = memref.alloca() : memref<3xindex>
 //   CHECK-DAG: %[[SizesD:.*]] = memref.cast %[[SizesS]] : memref<3xindex> to memref<?xindex>
 //   CHECK-DAG: memref.store %[[I2]], %[[SizesS]][%[[I0]]] : memref<3xindex>

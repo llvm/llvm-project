@@ -634,7 +634,10 @@ private:
              "Value position is out of bounds");
       // TODO: <https://github.com/llvm/llvm-project/issues/54179>
       yield(this->cursor, src.values[parentPos]);
-    } else if (src.isCompressedDim(d)) {
+      return;
+    }
+    const auto dlt = src.getDimType(d);
+    if (isCompressedDLT(dlt)) {
       // Look up the bounds of the `d`-level segment determined by the
       // `d-1`-level position `parentPos`.
       const std::vector<P> &pointersD = src.pointers[d];
@@ -650,11 +653,11 @@ private:
         cursorReordD = static_cast<uint64_t>(indicesD[pos]);
         forallElements(yield, pos, d + 1);
       }
-    } else if (src.isSingletonDim(d)) {
+    } else if (isSingletonDLT(dlt)) {
       this->cursor[this->reord[d]] = src.getIndex(d, parentPos);
       forallElements(yield, parentPos, d + 1);
-    } else { // Dense dimension.
-      assert(src.isDenseDim(d)); // TODO: reuse the ASSERT_DENSE_DIM message
+    } else {
+      assert(isDenseDLT(dlt)); // TODO: reuse the ASSERT_DENSE_DIM message
       const uint64_t sz = src.getDimSizes()[d];
       const uint64_t pstart = parentPos * sz;
       uint64_t &cursorReordD = this->cursor[this->reord[d]];
