@@ -1515,17 +1515,22 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
         }
       )cpp",
       },
-      // FIXME: triggers an assertion failure due to a bug in canonicalization.
-      // See https://reviews.llvm.org/D132797
-#if 0
       {
           // virtual templated method
           R"cpp(
         template <typename> class Foo { virtual void [[m]](); };
         class Bar : Foo<int> { void [[^m]]() override; };
-      )cpp", ""
+      )cpp",
+          R"cpp(
+          #include "foo.h"
+
+          template<typename T> void Foo<T>::[[m]]() {}
+          // FIXME: not renamed as the index doesn't see this as an override of
+          // the canonical Foo<T>::m().
+          // https://github.com/clangd/clangd/issues/1325
+          class Baz : Foo<float> { void m() override; };
+        )cpp"
       },
-#endif
       {
           // rename on constructor and destructor.
           R"cpp(

@@ -24,10 +24,6 @@ page](https://llvm.org/releases/).
 
 ## Major New Features
 
-* Flang now supports loading LLVM pass plugins with the `-fpass-plugin` option
-  which is also available in clang. The option mimics the behavior of the
-  corresponding option in clang and has the same capabilities and limitations.
-
 ## Bug Fixes
 
 ## Non-comprehensive list of changes in this release

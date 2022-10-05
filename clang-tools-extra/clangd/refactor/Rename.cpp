@@ -100,14 +100,13 @@ const NamedDecl *canonicalRenameDecl(const NamedDecl *D) {
       return canonicalRenameDecl(Method->getParent());
     if (const FunctionDecl *InstantiatedMethod =
             Method->getInstantiatedFromMemberFunction())
-      Method = cast<CXXMethodDecl>(InstantiatedMethod);
+      return canonicalRenameDecl(InstantiatedMethod);
     // FIXME(kirillbobyrev): For virtual methods with
     // size_overridden_methods() > 1, this will not rename all functions it
     // overrides, because this code assumes there is a single canonical
     // declaration.
-    while (Method->isVirtual() && Method->size_overridden_methods())
-      Method = *Method->overridden_methods().begin();
-    return Method->getCanonicalDecl();
+    if (Method->isVirtual() && Method->size_overridden_methods())
+      return canonicalRenameDecl(*Method->overridden_methods().begin());
   }
   if (const auto *Function = dyn_cast<FunctionDecl>(D))
     if (const FunctionTemplateDecl *Template = Function->getPrimaryTemplate())
@@ -132,8 +131,7 @@ const NamedDecl *canonicalRenameDecl(const NamedDecl *D) {
   }
   if (const auto *VD = dyn_cast<VarDecl>(D)) {
     if (const VarDecl *OriginalVD = VD->getInstantiatedFromStaticDataMember())
-      VD = OriginalVD;
-    return VD->getCanonicalDecl();
+      return canonicalRenameDecl(OriginalVD);
   }
   return dyn_cast<NamedDecl>(D->getCanonicalDecl());
 }

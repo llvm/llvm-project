@@ -19,16 +19,17 @@
 
 using namespace _OMP;
 
-namespace _OMP {
+extern "C" __attribute__((weak)) int IsSPMDMode;
+
 /// Helper to keep code alive without introducing a performance penalty.
-__attribute__((weak, optnone, cold)) KEEP_ALIVE void keepAlive() {
+extern "C" __attribute__((weak, optnone, cold, used, retain)) void
+__keep_alive() {
   __kmpc_get_hardware_thread_id_in_block();
   __kmpc_get_hardware_num_threads_in_block();
   __kmpc_get_warp_size();
-  __kmpc_barrier_simple_spmd(nullptr, 0);
-  __kmpc_barrier_simple_generic(nullptr, 0);
+  __kmpc_barrier_simple_spmd(nullptr, IsSPMDMode);
+  __kmpc_barrier_simple_generic(nullptr, IsSPMDMode);
 }
-} // namespace _OMP
 
 namespace impl {
 
