@@ -245,6 +245,10 @@ OPTIONS
 
  Print details for every function.
 
+.. option:: --binary-ids
+
+ Print embedded binary ids in a profile.
+
 .. option:: --counts
 
  Print the counter values for the displayed functions.
@@ -296,6 +300,10 @@ OPTIONS
 
  Only output names of functions whose max count value are below the cutoff
  value.
+
+.. option:: --profile-version
+
+ Print profile version.
 
 .. option:: --showcs
 
