@@ -92,22 +92,6 @@ struct Decompose : public Transformation {
   }
 };
 
-/// Represent one application of createLinalgStrategyLowerVectorsPass.
-struct VectorLowering : public Transformation {
-  explicit VectorLowering(
-      linalg::LinalgVectorLoweringOptions options,
-      LinalgTransformationFilter::FilterFunction f = nullptr)
-      : Transformation(std::move(f)), options(options) {}
-
-  void addToPassPipeline(OpPassManager &pm,
-                         LinalgTransformationFilter m) const override {
-    pm.addPass(createLinalgStrategyLowerVectorsPass(options, m));
-  }
-
-private:
-  linalg::LinalgVectorLoweringOptions options;
-};
-
 /// Codegen strategy controls how a Linalg op is progressively lowered.
 struct CodegenStrategy {
   /// Append a pattern to tile the Op `opName` and fuse its producers with
@@ -168,12 +152,6 @@ struct CodegenStrategy {
   CodegenStrategy &
   decomposeIf(bool b, LinalgTransformationFilter::FilterFunction f = nullptr) {
     return b ? decompose(std::move(f)) : *this;
-  }
-  /// Append a pattern to lower all vector operations.
-  CodegenStrategy &vectorLowering(LinalgVectorLoweringOptions options) {
-    transformationSequence.emplace_back(
-        std::make_unique<VectorLowering>(options));
-    return *this;
   }
   /// Configure the post staged-patterns global enabling passes options.
   CodegenStrategy &
