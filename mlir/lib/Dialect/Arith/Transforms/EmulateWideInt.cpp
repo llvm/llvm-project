@@ -486,6 +486,95 @@ struct ConvertExtUI final : OpConversionPattern<arith::ExtUIOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ConvertShLI
+//===----------------------------------------------------------------------===//
+
+struct ConvertShLI final : OpConversionPattern<arith::ShLIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::ShLIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+
+    Type oldTy = op.getType();
+    auto newTy =
+        getTypeConverter()->convertType(oldTy).dyn_cast_or_null<VectorType>();
+    if (!newTy)
+      return rewriter.notifyMatchFailure(loc, "unsupported type");
+
+    Type newOperandTy = reduceInnermostDim(newTy);
+    // `oldBitWidth` == `2 * newBitWidth`
+    unsigned newBitWidth = newTy.getElementTypeBitWidth();
+
+    auto [lhsElem0, lhsElem1] =
+        extractLastDimHalves(rewriter, loc, adaptor.getLhs());
+    Value rhsElem0 = extractLastDimSlice(rewriter, loc, adaptor.getRhs(), 0);
+
+    // Assume that the shift amount is < 2 * newBitWidth. Calculate the low and
+    // high halves of the results separately:
+    //   1. low := LHS.low shli RHS
+    //
+    //   2. high := a or b or c, where:
+    //     a) Bits from LHS.high, shifted by the RHS.
+    //     b) Bits from LHS.low, shifted right. These come into play when
+    //        RHS < newBitWidth, e.g.:
+    //         [0000][llll] shli 3 --> [0lll][l000]
+    //                                    ^
+    //                                    |
+    //                           [llll] shrui (4 - 3)
+    //     c) Bits from LHS.low, shifted left. These matter when
+    //        RHS > newBitWidth, e.g.:
+    //         [0000][llll] shli 7 --> [l000][0000]
+    //                                   ^
+    //                                   |
+    //                          [llll] shli (7 - 4)
+    //
+    // Because shifts by values >= newBitWidth are undefined, we ignore the high
+    // half of RHS, and introduce 'bounds checks' to account for
+    // RHS.low > newBitWidth.
+    //
+    // TODO: Explore possible optimizations.
+    Value zeroCst = createScalarOrSplatConstant(rewriter, loc, newOperandTy, 0);
+    Value elemBitWidth =
+        createScalarOrSplatConstant(rewriter, loc, newOperandTy, newBitWidth);
+
+    Value illegalElemShift = rewriter.create<arith::CmpIOp>(
+        loc, arith::CmpIPredicate::uge, rhsElem0, elemBitWidth);
+
+    Value shiftedElem0 =
+        rewriter.create<arith::ShLIOp>(loc, lhsElem0, rhsElem0);
+    Value resElem0 = rewriter.create<arith::SelectOp>(loc, illegalElemShift,
+                                                      zeroCst, shiftedElem0);
+
+    Value cappedShiftAmount = rewriter.create<arith::SelectOp>(
+        loc, illegalElemShift, elemBitWidth, rhsElem0);
+    Value rightShiftAmount =
+        rewriter.create<arith::SubIOp>(loc, elemBitWidth, cappedShiftAmount);
+    Value shiftedRight =
+        rewriter.create<arith::ShRUIOp>(loc, lhsElem0, rightShiftAmount);
+    Value overshotShiftAmount =
+        rewriter.create<arith::SubIOp>(loc, rhsElem0, elemBitWidth);
+    Value shiftedLeft =
+        rewriter.create<arith::ShLIOp>(loc, lhsElem0, overshotShiftAmount);
+
+    Value shiftedElem1 =
+        rewriter.create<arith::ShLIOp>(loc, lhsElem1, rhsElem0);
+    Value resElem1High = rewriter.create<arith::SelectOp>(
+        loc, illegalElemShift, zeroCst, shiftedElem1);
+    Value resElem1Low = rewriter.create<arith::SelectOp>(
+        loc, illegalElemShift, shiftedLeft, shiftedRight);
+    Value resElem1 =
+        rewriter.create<arith::OrIOp>(loc, resElem1Low, resElem1High);
+
+    Value resultVec =
+        constructResultVector(rewriter, loc, newTy, {resElem0, resElem1});
+    rewriter.replaceOp(op, resultVec);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertShRUI
 //===----------------------------------------------------------------------===//
 
@@ -498,8 +587,13 @@ struct ConvertShRUI final : OpConversionPattern<arith::ShRUIOp> {
     Location loc = op->getLoc();
 
     Type oldTy = op.getType();
-    auto newTy = getTypeConverter()->convertType(oldTy).cast<VectorType>();
+    auto newTy =
+        getTypeConverter()->convertType(oldTy).dyn_cast_or_null<VectorType>();
+    if (!newTy)
+      return rewriter.notifyMatchFailure(loc, "unsupported type");
+
     Type newOperandTy = reduceInnermostDim(newTy);
+    // `oldBitWidth` == `2 * newBitWidth`
     unsigned newBitWidth = newTy.getElementTypeBitWidth();
 
     auto [lhsElem0, lhsElem1] =
@@ -727,7 +821,7 @@ void arith::populateWideIntEmulationPatterns(
       // Misc ops.
       ConvertConstant, ConvertVectorPrint,
       // Binary ops.
-      ConvertAddI, ConvertMulI, ConvertShRUI,
+      ConvertAddI, ConvertMulI, ConvertShLI, ConvertShRUI,
       // Bitwise binary ops.
       ConvertBitwiseBinary<arith::AndIOp>, ConvertBitwiseBinary<arith::OrIOp>,
       ConvertBitwiseBinary<arith::XOrIOp>,
