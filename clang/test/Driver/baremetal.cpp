@@ -97,7 +97,7 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-SYSROOT-INC
 // CHECK-SYSROOT-INC-NOT: "-internal-isystem" "include"
 
-// RUN: %clang %s -### --target=aarch64-none-elf 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s -### --target=aarch64-none-elf 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-AARCH64-NO-HOST-INC %s
 // Verify that the bare metal driver does not include any host system paths:
 // CHECK-AARCH64-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
