@@ -177,21 +177,20 @@ void testAggregateNew() {
   clang_analyzer_eval(p.y == 2); // expected-warning{{TRUE}}
 }
 
-//--------------------------------
-// Incorrectly-modelled behavior
-//--------------------------------
-
 int testNoInitialization() {
   int *n = new int;
 
-  // Should warn that *n is uninitialized.
-  if (*n) { // no-warning
+  if (*n) { // expected-warning{{Branch condition evaluates to a garbage value [core.uninitialized.Branch]}}
     delete n;
     return 0;
   }
   delete n;
   return 1;
 }
+
+//===----------------------------------------------------------------------===//
+// Incorrectly-modelled behavior.
+//===----------------------------------------------------------------------===//
 
 int testNoInitializationPlacement() {
   int n;
