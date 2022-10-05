@@ -28,6 +28,6 @@ add_libc_unittest(
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.sched.sched_getaffinity
-    libc.src.sched.sched_getcpucount
+    libc.src.sched.__sched_getcpucount
     libc.test.errno_setter_matcher
 )
