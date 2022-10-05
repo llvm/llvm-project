@@ -53,6 +53,9 @@ class SparseTensorEnumeratorBase;
   assert(d < getRank() && "Dimension index is out of bounds");
 #define ASSERT_COMPRESSED_DIM(d)                                               \
   assert(isCompressedDim(d) && "Dimension is not compressed");
+#define ASSERT_COMPRESSED_OR_SINGLETON_DIM(d)                                  \
+  assert((isCompressedDim(d) || isSingletonDim(d)) &&                          \
+         "Dimension is neither compressed nor singleton");
 #define ASSERT_DENSE_DIM(d) assert(isDenseDim(d) && "Dimension is not dense");
 
 /// Abstract base class for `SparseTensorStorage<P,I,V>`.  This class
@@ -145,6 +148,7 @@ public:
   virtual void getIndices(std::vector<I> **, uint64_t);
   MLIR_SPARSETENSOR_FOREVERY_FIXED_O(DECL_GETINDICES)
 #undef DECL_GETINDICES
+  virtual uint64_t getIndex(uint64_t d, uint64_t pos) const = 0;
 
   /// Gets primary storage.
 #define DECL_GETVALUES(VNAME, V) virtual void getValues(std::vector<V> **);
@@ -253,6 +257,12 @@ public:
     *out = &indices[d];
   }
   void getValues(std::vector<V> **out) final { *out = &values; }
+
+  uint64_t getIndex(uint64_t d, uint64_t pos) const final {
+    ASSERT_COMPRESSED_OR_SINGLETON_DIM(d);
+    assert(pos < indices[d].size() && "Index position is out of bounds");
+    return indices[d][pos]; // Converts the stored `I` into `uint64_t`.
+  }
 
   /// Partially specialize lexicographical insertions based on template types.
   void lexInsert(const uint64_t *cursor, V val) final {
@@ -376,7 +386,7 @@ private:
   /// does not check that `i` is semantically valid (i.e., in bounds
   /// for `dimSizes[d]` and not elsewhere occurring in the same segment).
   void writeIndex(uint64_t d, uint64_t pos, uint64_t i) {
-    ASSERT_COMPRESSED_DIM(d);
+    ASSERT_COMPRESSED_OR_SINGLETON_DIM(d);
     // Subscript assignment to `std::vector` requires that the `pos`-th
     // entry has been initialized; thus we must be sure to check `size()`
     // here, instead of `capacity()` as would be ideal.
@@ -397,8 +407,11 @@ private:
   uint64_t assembledSize(uint64_t parentSz, uint64_t d) const {
     if (isCompressedDim(d))
       return pointers[d][parentSz];
-    // else if dense:
-    return parentSz * getDimSizes()[d];
+    if (isSingletonDim(d))
+      return parentSz; // New size is same as the parent.
+    if (isDenseDim(d))
+      return parentSz * getDimSizes()[d];
+    MLIR_SPARSETENSOR_FATAL("unsupported dimension level type");
   }
 
   /// Initializes sparse tensor storage scheme from a memory-resident sparse
@@ -446,7 +459,7 @@ private:
     if (isCompressedDim(d)) {
       appendPointer(d, indices[d].size(), count);
     } else if (isSingletonDim(d)) {
-      return;
+      return; // Nothing to finalize.
     } else { // Dense dimension.
       ASSERT_DENSE_DIM(d);
       const uint64_t sz = getDimSizes()[d];
@@ -475,8 +488,8 @@ private:
 
   /// Continues a single insertion path, outer to inner.
   void insPath(const uint64_t *cursor, uint64_t diff, uint64_t top, V val) {
-    ASSERT_VALID_DIM(diff);
     const uint64_t rank = getRank();
+    assert(diff <= rank && "Dimension-diff is out of bounds");
     for (uint64_t d = diff; d < rank; ++d) {
       const uint64_t i = cursor[d];
       appendIndex(d, top, i);
@@ -509,6 +522,7 @@ private:
   std::vector<uint64_t> idx; // index cursor for lexicographic insertion.
 };
 
+#undef ASSERT_COMPRESSED_OR_SINGLETON_DIM
 #undef ASSERT_COMPRESSED_DIM
 #undef ASSERT_VALID_DIM
 
@@ -637,7 +651,8 @@ private:
         forallElements(yield, pos, d + 1);
       }
     } else if (src.isSingletonDim(d)) {
-      MLIR_SPARSETENSOR_FATAL("unsupported dimension level type");
+      this->cursor[this->reord[d]] = src.getIndex(d, parentPos);
+      forallElements(yield, parentPos, d + 1);
     } else { // Dense dimension.
       assert(src.isDenseDim(d)); // TODO: reuse the ASSERT_DENSE_DIM message
       const uint64_t sz = src.getDimSizes()[d];
@@ -740,7 +755,6 @@ SparseTensorStorage<P, I, V> *SparseTensorStorage<P, I, V>::newSparseTensor(
 #endif
     return new SparseTensorStorage<P, I, V>(coosz, perm, sparsity, coo);
   }
-  // else
   std::vector<uint64_t> permsz(rank);
   for (uint64_t r = 0; r < rank; ++r) {
     assert(shape[r] > 0 && "Dimension size zero has trivial storage");
@@ -848,8 +862,10 @@ SparseTensorStorage<P, I, V>::SparseTensorStorage(
       // That is, in the yieldPos loop we need random-access assignment
       // to `indices[r]`; however, `std::vector`'s subscript-assignment
       // only allows assigning to already-initialized positions.
-      if (isCompressedDim(r))
+      if (isCompressedDim(r) || isSingletonDim(r))
         indices[r].resize(parentSz, 0);
+      else
+        ASSERT_DENSE_DIM(r); // Future-proofing.
     }
     values.resize(parentSz, 0); // Both allocate and zero-initialize.
   }
@@ -872,6 +888,7 @@ SparseTensorStorage<P, I, V>::SparseTensorStorage(
         writeIndex(r, currentPos, ind[r]);
         parentPos = currentPos;
       } else if (isSingletonDim(r)) {
+        writeIndex(r, parentPos, ind[r]);
         // the new parentPos equals the old parentPos.
       } else { // Dense dimension.
         ASSERT_DENSE_DIM(r);
@@ -898,14 +915,19 @@ SparseTensorStorage<P, I, V>::SparseTensorStorage(
         pointers[r][parentPos] = pointers[r][parentPos - 1];
       }
       pointers[r][0] = 0;
+    } else {
+      // Both dense and singleton are no-ops for the finalizeYieldPos loop.
+      // This assertion is for future-proofing.
+      assert((isDenseDim(r) || isSingletonDim(r)) &&
+             "Dimension is neither dense nor singleton");
     }
     parentSz = assembledSize(parentSz, r);
   }
 }
 
+#undef ASSERT_DENSE_DIM
+
 } // namespace sparse_tensor
 } // namespace mlir
-
-#undef ASSERT_DENSE_DIM
 
 #endif // MLIR_EXECUTIONENGINE_SPARSETENSOR_STORAGE_H
