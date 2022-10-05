@@ -850,6 +850,11 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   CI.getPreprocessor().addPPCallbacks(std::make_unique<MacroCallback>(
       CI.getSourceManager(), *LCF, *API, CI.getPreprocessor()));
 
+  // Do not include location in anonymous decls.
+  PrintingPolicy Policy = CI.getASTContext().getPrintingPolicy();
+  Policy.AnonymousTagLocations = false;
+  CI.getASTContext().setPrintingPolicy(Policy);
+
   return std::make_unique<ExtractAPIConsumer>(CI.getASTContext(),
                                               std::move(LCF), *API);
 }
