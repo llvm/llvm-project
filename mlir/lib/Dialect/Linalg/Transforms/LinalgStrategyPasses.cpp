@@ -180,40 +180,6 @@ struct LinalgStrategyDecomposePass
   LinalgTransformationFilter filter;
 };
 
-/// Configurable pass to apply pattern-based linalg peeling.
-struct LinalgStrategyPeelPass
-    : public impl::LinalgStrategyPeelPassBase<LinalgStrategyPeelPass> {
-
-  LinalgStrategyPeelPass() = default;
-
-  LinalgStrategyPeelPass(StringRef opName, LinalgPeelOptions opt,
-                         LinalgTransformationFilter filt)
-      : options(std::move(opt)), filter(std::move(filt)) {
-    this->anchorOpName.setValue(opName.str());
-  }
-
-  void runOnOperation() override {
-    auto funcOp = getOperation();
-    if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
-      return;
-
-    RewritePatternSet peelingPatterns(funcOp.getContext());
-    if (!anchorOpName.empty()) {
-      peelingPatterns.add<LinalgPeelingPattern>(
-          anchorOpName, funcOp.getContext(), options, filter);
-    } else {
-      peelingPatterns.add<LinalgPeelingPattern>(funcOp.getContext(), filter,
-                                                options);
-    }
-    if (failed(
-            applyPatternsAndFoldGreedily(funcOp, std::move(peelingPatterns))))
-      return signalPassFailure();
-  }
-
-  LinalgPeelOptions options;
-  LinalgTransformationFilter filter;
-};
-
 /// Configurable pass to lower vector operations.
 struct LinalgStrategyLowerVectorsPass
     : public impl::LinalgStrategyLowerVectorsPassBase<
@@ -326,14 +292,6 @@ std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::createLinalgStrategyDecomposePass(
     const LinalgTransformationFilter &filter) {
   return std::make_unique<LinalgStrategyDecomposePass>(filter);
-}
-
-/// Create a LinalgStrategyPeelPass.
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createLinalgStrategyPeelPass(StringRef opName,
-                                   const LinalgPeelOptions &opt,
-                                   const LinalgTransformationFilter &filter) {
-  return std::make_unique<LinalgStrategyPeelPass>(opName, opt, filter);
 }
 
 /// Create a LinalgStrategyLowerVectorsPass.

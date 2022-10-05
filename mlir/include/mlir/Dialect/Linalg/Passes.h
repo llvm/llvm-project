@@ -103,13 +103,6 @@ std::unique_ptr<OperationPass<func::FuncOp>> createLinalgStrategyDecomposePass(
     const linalg::LinalgTransformationFilter &filter =
         linalg::LinalgTransformationFilter());
 
-/// Create a LinalgStrategyPeelPass.
-std::unique_ptr<OperationPass<func::FuncOp>> createLinalgStrategyPeelPass(
-    StringRef opName = "",
-    const linalg::LinalgPeelOptions &opt = linalg::LinalgPeelOptions(),
-    const linalg::LinalgTransformationFilter &filter =
-        linalg::LinalgTransformationFilter());
-
 /// Create a LinalgStrategyLowerVectorsPass.
 std::unique_ptr<OperationPass<func::FuncOp>>
 createLinalgStrategyLowerVectorsPass(
