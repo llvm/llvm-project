@@ -706,11 +706,6 @@ LogicalResult SelectOp::verify() {
   return success();
 }
 
-void SortOp::build(OpBuilder &odsBuilder, OperationState &odsState, Value n,
-                   ValueRange xs, ValueRange ys) {
-  build(odsBuilder, odsState, n, xs, ys, /*stable=*/false);
-}
-
 LogicalResult SortOp::verify() {
   if (getXs().empty())
     return emitError("need at least one xs buffer.");

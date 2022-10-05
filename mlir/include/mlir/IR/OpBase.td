@@ -1246,9 +1246,10 @@ class TypeAttrOf<Type ty>
 // "true" if the attribute is present and "false" otherwise.
 def UnitAttr : Attr<CPred<"$_self.isa<::mlir::UnitAttr>()">, "unit attribute"> {
   let storageType = [{ ::mlir::UnitAttr }];
-  let constBuilderCall = "$_builder.getUnitAttr()";
+  let constBuilderCall = "(($0) ? $_builder.getUnitAttr() : nullptr)";
   let convertFromStorage = "$_self != nullptr";
   let returnType = "bool";
+  let defaultValue = "false";
   let valueType = NoneType;
   let isOptional = 1;
 }
@@ -1575,7 +1576,7 @@ class ConstantAttr<Attr attribute, string val> : AttrConstraint<
 class ConstF32Attr<string val> : ConstantAttr<F32Attr, val>;
 def ConstBoolAttrFalse : ConstantAttr<BoolAttr, "false">;
 def ConstBoolAttrTrue : ConstantAttr<BoolAttr, "true">;
-def ConstUnitAttr : ConstantAttr<UnitAttr, "unit">;
+def ConstUnitAttr : ConstantAttr<UnitAttr, "true">;
 
 // Constant string-based attribute. Wraps the desired string in escaped quotes.
 class ConstantStrAttr<Attr attribute, string val>
