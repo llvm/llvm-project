@@ -841,7 +841,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
                                   &opClauseList);
   } else if (blockDirective.v == llvm::omp::OMPD_ordered) {
     auto orderedOp = firOpBuilder.create<mlir::omp::OrderedRegionOp>(
-        currentLocation, /*simd=*/nullptr);
+        currentLocation, /*simd=*/false);
     createBodyOfOp<omp::OrderedRegionOp>(orderedOp, converter, currentLocation,
                                          eval);
   } else if (blockDirective.v == llvm::omp::OMPD_task) {
