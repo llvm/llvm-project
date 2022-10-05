@@ -566,8 +566,16 @@ static LogicalResult vectorizeStaticLinalgOpPrecondition(linalg::LinalgOp op) {
       return failure();
     }
   }
-  if (isElementwise(op))
+  if (isElementwise(op)) {
+    // Some operations in the body cannot be vectorized.
+    for (Operation &payloadOp : *op.getBlock()) {
+      if (isa<tensor::ExtractOp>(payloadOp)) {
+        LDBG("precondition failed: `tensor.extract` not vectorizable");
+        return failure();
+      }
+    }
     return success();
+  }
   // TODO: isaConvolutionOpInterface that can also infer from generic features.
   // But we will still need stride/dilation attributes that will be annoying to
   // reverse-engineer...
@@ -587,7 +595,7 @@ static LogicalResult vectorizeStaticLinalgOpPrecondition(linalg::LinalgOp op) {
   return success();
 }
 
-static LogicalResult vectorizeLinalgOpPrecondition(LinalgOp linalgOp) {
+LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(LinalgOp linalgOp) {
   // All types must be static shape to go to vector.
   if (linalgOp.hasDynamicShape()) {
     LDBG("precondition failed: dynamic shape");

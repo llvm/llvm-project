@@ -488,6 +488,11 @@ def UnitAttrOp : NS_Op<"unit_attr_op", []> {
 // DEF-NEXT:   (*this)->removeAttr(getAttrAttrName());
 
 // DEF: build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, /*optional*/::mlir::UnitAttr attr)
+// DEF: build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, /*optional*/bool attr)
+
+// DECL-LABEL: UnitAttrOp declarations
+// DECL-NOT: declarations
+// DECL: build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, /*optional*/bool attr = false)
 
 
 // Test elementAttr field of TypedArrayAttr.

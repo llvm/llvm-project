@@ -25,7 +25,7 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  sched_getcpucount
+  __sched_getcpucount
   SRCS
     sched_getcpucount.cpp
   HDRS
