@@ -87,8 +87,8 @@ func.func @simple_matmul_memref(%arg0 : memref<?x?xf32>, %arg1 : memref<?x?xf32>
 #map1 = affine_map<(d0, d1, d2) -> (d0, d2, d1)>
 #map2 = affine_map<(d0, d1, d2) -> (d2, d0, d1)>
 func.func @multi_result(%arg0 : tensor<128x200x300xf32>) -> (tensor<128x300x200xf32>, tensor<300x128x200xf32>) {
-  %init0 = linalg.init_tensor [128, 300, 200] : tensor<128x300x200xf32>
-  %init1 = linalg.init_tensor [300, 128, 200] : tensor<300x128x200xf32>
+  %init0 = tensor.empty() : tensor<128x300x200xf32>
+  %init1 = tensor.empty() : tensor<300x128x200xf32>
   %0:2 = linalg.generic {
       indexing_maps = [#map0, #map1, #map2],
       iterator_types = ["parallel", "parallel", "parallel"]}
@@ -108,8 +108,8 @@ func.func @multi_result(%arg0 : tensor<128x200x300xf32>) -> (tensor<128x300x200x
 //  CHECK-DAG:   %[[C20:.+]] = arith.constant 20 : index
 //  CHECK-DAG:   %[[C128:.+]] = arith.constant 128 : index
 //  CHECK-DAG:   %[[C300:.+]] = arith.constant 300 : index
-//  CHECK-DAG:   %[[INIT0:.+]] = linalg.init_tensor [128, 300, 200]
-//  CHECK-DAG:   %[[INIT1:.+]] = linalg.init_tensor [300, 128, 200]
+//  CHECK-DAG:   %[[INIT0:.+]] = tensor.empty()
+//  CHECK-DAG:   %[[INIT1:.+]] = tensor.empty()
 //      CHECK:   %[[OUTER:[a-zA-Z0-9]+]]:2 = scf.for %[[IV0:[a-zA-Z0-9]+]] = %[[C0]] to %[[C128]] step %[[C10]]
 // CHECK-SAME:       iter_args(%[[ARG1:[a-zA-Z0-9]+]] = %[[INIT0]], %[[ARG2:[a-zA-Z0-9]+]] = %[[INIT1]])
 //      CHECK:     %[[TS_Y:.+]] = affine.min #[[MAP0]](%[[IV0]])[%[[C10]], %[[C128]]]

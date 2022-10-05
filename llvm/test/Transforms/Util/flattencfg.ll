@@ -95,7 +95,7 @@ bb3:                                              ; preds = %bb2, %bb1
 ; CHECK-NEXT:    [[COND:%[a-z0-9]+]] = or i1 %cmp.x, %cmp.y
 ; CHECK-NEXT:    br i1 [[COND]], label %if.then.y, label %exit
 ; CHECK:       if.then.y:
-; CHECK-NEXT:    store i32 %z, i32* @g, align 4
+; CHECK-NEXT:    store i32 %z, ptr @g, align 4
 ; CHECK-NEXT:    br label %exit
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -105,7 +105,7 @@ entry.x:
   br i1 %cmp.x, label %if.then.x, label %entry.y
 
 if.then.x:
-  store i32 %z, i32* @g, align 4
+  store i32 %z, ptr @g, align 4
   br label %entry.y
 
 entry.y:
@@ -113,7 +113,7 @@ entry.y:
   br i1 %cmp.y, label %if.then.y, label %exit
 
 if.then.y:
-  store i32 %z, i32* @g, align 4
+  store i32 %z, ptr @g, align 4
   br label %exit
 
 exit:
@@ -127,7 +127,7 @@ exit:
 ; CHECK-NEXT:    [[COND:%[a-z0-9]+]] = and i1 %cmp.x, %cmp.y
 ; CHECK-NEXT:    br i1 [[COND]], label %exit, label %if.else.y
 ; CHECK:       if.else.y:
-; CHECK-NEXT:    store i32 %z, i32* @g, align 4
+; CHECK-NEXT:    store i32 %z, ptr @g, align 4
 ; CHECK-NEXT:    br label %exit
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -137,7 +137,7 @@ entry.x:
   br i1 %cmp.x, label %entry.y, label %if.else.x
 
 if.else.x:
-  store i32 %z, i32* @g, align 4
+  store i32 %z, ptr @g, align 4
   br label %entry.y
 
 entry.y:
@@ -145,7 +145,7 @@ entry.y:
   br i1 %cmp.y, label %exit, label %if.else.y
 
 if.else.y:
-  store i32 %z, i32* @g, align 4
+  store i32 %z, ptr @g, align 4
   br label %exit
 
 exit:
@@ -159,7 +159,7 @@ exit:
 ; CHECK-NEXT:    [[COND:%[a-z0-9]+]] = and i1 %cmp.x, %cmp.y
 ; CHECK-NEXT:    br i1 [[COND]], label %exit, label %if.then.y
 ; CHECK:       if.then.y:
-; CHECK-NEXT:    store i32 %z, i32* @g, align 4
+; CHECK-NEXT:    store i32 %z, ptr @g, align 4
 ; CHECK-NEXT:    br label %exit
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -169,7 +169,7 @@ entry.x:
   br i1 %cmp.x, label %entry.y, label %if.else.x
 
 if.else.x:
-  store i32 %z, i32* @g, align 4
+  store i32 %z, ptr @g, align 4
   br label %entry.y
 
 entry.y:
@@ -177,7 +177,7 @@ entry.y:
   br i1 %cmp.y, label %if.then.y, label %exit
 
 if.then.y:
-  store i32 %z, i32* @g, align 4
+  store i32 %z, ptr @g, align 4
   br label %exit
 
 exit:
@@ -191,7 +191,7 @@ exit:
 ; CHECK-NEXT:    [[COND:%[a-z0-9]+]] = or i1 %cmp.x, %cmp.y
 ; CHECK-NEXT:    br i1 [[COND]], label %if.else.y, label %exit
 ; CHECK:       if.else.y:
-; CHECK-NEXT:    store i32 %z, i32* @g, align 4
+; CHECK-NEXT:    store i32 %z, ptr @g, align 4
 ; CHECK-NEXT:    br label %exit
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -201,7 +201,7 @@ entry.x:
   br i1 %cmp.x, label %if.then.x, label %entry.y
 
 if.then.x:
-  store i32 %z, i32* @g, align 4
+  store i32 %z, ptr @g, align 4
   br label %entry.y
 
 entry.y:
@@ -209,7 +209,7 @@ entry.y:
   br i1 %cmp.y, label %exit, label %if.else.y
 
 if.else.y:
-  store i32 %z, i32* @g, align 4
+  store i32 %z, ptr @g, align 4
   br label %exit
 
 exit:

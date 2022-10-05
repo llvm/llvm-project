@@ -58,7 +58,6 @@ check_cxx_compiler_flag(-Wstringop-overflow=0 LIBOMP_HAVE_WSTRINGOP_OVERFLOW_FLA
 check_cxx_compiler_flag(-Wno-stringop-truncation LIBOMP_HAVE_WNO_STRINGOP_TRUNCATION_FLAG)
 check_cxx_compiler_flag(-Wno-switch LIBOMP_HAVE_WNO_SWITCH_FLAG)
 check_cxx_compiler_flag(-Wno-uninitialized LIBOMP_HAVE_WNO_UNINITIALIZED_FLAG)
-check_cxx_compiler_flag(-Wno-unused-but-set-variable LIBOMP_HAVE_WNO_UNUSED_BUT_SET_VARIABLE_FLAG)
 check_cxx_compiler_flag(-Wno-return-type-c-linkage LIBOMP_HAVE_WNO_RETURN_TYPE_C_LINKAGE_FLAG)
 check_cxx_compiler_flag(-Wno-cast-qual LIBOMP_HAVE_WNO_CAST_QUAL_FLAG)
 check_cxx_compiler_flag(-Wno-int-to-void-pointer-cast LIBOMP_HAVE_WNO_INT_TO_VOID_POINTER_CAST_FLAG)

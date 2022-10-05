@@ -5,7 +5,7 @@
 ; 		for (int j = 0; j <  n;j+=1)
 ; 			for (int k = 0; k < n; k += 1)
 ; 				for (int l = 0; l < n; l += 1) {
-; 					double *p = &A[i + j + k + l];
+; 					ptr p = &A[i + j + k + l];
 ; 					double x = *p;
 ; 					double y = *p;
 ; 					arg(x + y);
@@ -23,7 +23,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 declare void @arg(double)
 
-define void @func(i64 %n, double* noalias nonnull %A) {
+define void @func(i64 %n, ptr noalias nonnull %A) {
 entry:
   br label %for.cond
 
@@ -56,9 +56,9 @@ for.body19:
   %add20 = add nsw i32 %add, %k.0
   %add21 = add nsw i32 %add20, %l.0
   %idxprom = sext i32 %add21 to i64
-  %arrayidx = getelementptr inbounds double, double* %A, i64 %idxprom
-  %0 = load double, double* %arrayidx, align 8, !llvm.access.group !1
-  %1 = load double, double* %arrayidx, align 8, !llvm.access.group !2
+  %arrayidx = getelementptr inbounds double, ptr %A, i64 %idxprom
+  %0 = load double, ptr %arrayidx, align 8, !llvm.access.group !1
+  %1 = load double, ptr %arrayidx, align 8, !llvm.access.group !2
   %add22 = fadd double %0, %1
   call void @arg(double %add22), !llvm.access.group !3
   %add23 = add nsw i32 %l.0, 1

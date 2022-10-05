@@ -5,31 +5,31 @@
 ;
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
-declare i8* @strncpy(i8*, i8*, i64)
+declare ptr @strncpy(ptr, ptr, i64)
 
 ; A string of length 4 but size 9 to also verify that characters after
 ; the nul don't affect the transformation.
 @s4 = constant [9 x i8] c"1234\00567\00"
 
-declare void @sink(i8*, i8*)
+declare void @sink(ptr, ptr)
 
 
 ; Verify that exactly overlapping strncpy(D, D, N) calls are simplified
 ; only when N < 2.
 
-define void @fold_strncpy_overlap(i8* %dst, i64 %n) {
+define void @fold_strncpy_overlap(ptr %dst, i64 %n) {
 ; CHECK-LABEL: @fold_strncpy_overlap(
-; CHECK-NEXT:    call void @sink(i8* [[DST:%.*]], i8* [[DST]])
-; CHECK-NEXT:    call void @sink(i8* [[DST]], i8* [[DST]])
+; CHECK-NEXT:    call void @sink(ptr [[DST:%.*]], ptr [[DST]])
+; CHECK-NEXT:    call void @sink(ptr [[DST]], ptr [[DST]])
 ; CHECK-NEXT:    ret void
 ;
 ; Fold strncpy(D, D, 0) to D.
-  %ed_0 = call i8* @strncpy(i8* %dst, i8* %dst, i64 0)
-  call void @sink(i8* %dst, i8* %ed_0)
+  %ed_0 = call ptr @strncpy(ptr %dst, ptr %dst, i64 0)
+  call void @sink(ptr %dst, ptr %ed_0)
 
 ; Fold strncpy(D, D, 1) to D.
-  %ed_1 = call i8* @strncpy(i8* %dst, i8* %dst, i64 1)
-  call void @sink(i8* %dst, i8* %ed_1)
+  %ed_1 = call ptr @strncpy(ptr %dst, ptr %dst, i64 1)
+  call void @sink(ptr %dst, ptr %ed_1)
 
   ret void
 }
@@ -42,28 +42,28 @@ define void @fold_strncpy_overlap(i8* %dst, i64 %n) {
 ;   memset(D + strnlen(D, N), D, N - strnlen(D, N))
 ; there is little to gain from it.
 
-define void @call_strncpy_overlap(i8* %dst, i64 %n) {
+define void @call_strncpy_overlap(ptr %dst, i64 %n) {
 ; CHECK-LABEL: @call_strncpy_overlap(
-; CHECK-NEXT:    [[ED_2:%.*]] = call i8* @strncpy(i8* noundef nonnull dereferenceable(1) [[DST:%.*]], i8* noundef nonnull dereferenceable(1) [[DST]], i64 2)
-; CHECK-NEXT:    call void @sink(i8* [[DST]], i8* [[ED_2]])
-; CHECK-NEXT:    [[ED_3:%.*]] = call i8* @strncpy(i8* noundef nonnull dereferenceable(1) [[DST]], i8* noundef nonnull dereferenceable(1) [[DST]], i64 3)
-; CHECK-NEXT:    call void @sink(i8* [[DST]], i8* [[ED_3]])
-; CHECK-NEXT:    [[ED_N:%.*]] = call i8* @strncpy(i8* [[DST]], i8* [[DST]], i64 [[N:%.*]])
-; CHECK-NEXT:    call void @sink(i8* [[DST]], i8* [[ED_N]])
+; CHECK-NEXT:    [[ED_2:%.*]] = call ptr @strncpy(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) [[DST]], i64 2)
+; CHECK-NEXT:    call void @sink(ptr [[DST]], ptr [[ED_2]])
+; CHECK-NEXT:    [[ED_3:%.*]] = call ptr @strncpy(ptr noundef nonnull dereferenceable(1) [[DST]], ptr noundef nonnull dereferenceable(1) [[DST]], i64 3)
+; CHECK-NEXT:    call void @sink(ptr [[DST]], ptr [[ED_3]])
+; CHECK-NEXT:    [[ED_N:%.*]] = call ptr @strncpy(ptr [[DST]], ptr [[DST]], i64 [[N:%.*]])
+; CHECK-NEXT:    call void @sink(ptr [[DST]], ptr [[ED_N]])
 ; CHECK-NEXT:    ret void
 ;
 
 ; Do not transform strncpy(D, D, 2).
-  %ed_2 = call i8* @strncpy(i8* %dst, i8* %dst, i64 2)
-  call void @sink(i8* %dst, i8* %ed_2)
+  %ed_2 = call ptr @strncpy(ptr %dst, ptr %dst, i64 2)
+  call void @sink(ptr %dst, ptr %ed_2)
 
 ; Do not transform strncpy(D, D, 3).
-  %ed_3 = call i8* @strncpy(i8* %dst, i8* %dst, i64 3)
-  call void @sink(i8* %dst, i8* %ed_3)
+  %ed_3 = call ptr @strncpy(ptr %dst, ptr %dst, i64 3)
+  call void @sink(ptr %dst, ptr %ed_3)
 
 ; Do not transform strncpy(D, D, N).
-  %ed_n = call i8* @strncpy(i8* %dst, i8* %dst, i64 %n)
-  call void @sink(i8* %dst, i8* %ed_n)
+  %ed_n = call ptr @strncpy(ptr %dst, ptr %dst, i64 %n)
+  call void @sink(ptr %dst, ptr %ed_n)
 
   ret void
 }
@@ -71,41 +71,40 @@ define void @call_strncpy_overlap(i8* %dst, i64 %n) {
 
 ; Verify that strncpy(D, "", N) calls are transformed to memset(D, 0, N).
 
-define void @fold_strncpy_s0(i8* %dst, i64 %n) {
+define void @fold_strncpy_s0(ptr %dst, i64 %n) {
 ; CHECK-LABEL: @fold_strncpy_s0(
-; CHECK-NEXT:    call void @sink(i8* [[DST:%.*]], i8* [[DST]])
-; CHECK-NEXT:    store i8 0, i8* [[DST]], align 1
-; CHECK-NEXT:    call void @sink(i8* nonnull [[DST]], i8* nonnull [[DST]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i8* [[DST]] to i16*
-; CHECK-NEXT:    store i16 0, i16* [[TMP1]], align 1
-; CHECK-NEXT:    call void @sink(i8* nonnull [[DST]], i8* nonnull [[DST]])
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* noundef nonnull align 1 dereferenceable(9) [[DST]], i8 0, i64 9, i1 false)
-; CHECK-NEXT:    call void @sink(i8* nonnull [[DST]], i8* nonnull [[DST]])
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* nonnull align 1 [[DST]], i8 0, i64 [[N:%.*]], i1 false)
-; CHECK-NEXT:    call void @sink(i8* nonnull [[DST]], i8* nonnull [[DST]])
+; CHECK-NEXT:    call void @sink(ptr [[DST:%.*]], ptr [[DST]])
+; CHECK-NEXT:    store i8 0, ptr [[DST]], align 1
+; CHECK-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[DST]])
+; CHECK-NEXT:    store i16 0, ptr [[DST]], align 1
+; CHECK-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[DST]])
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(9) [[DST]], i8 0, i64 9, i1 false)
+; CHECK-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[DST]])
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr nonnull align 1 [[DST]], i8 0, i64 [[N:%.*]], i1 false)
+; CHECK-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[DST]])
 ; CHECK-NEXT:    ret void
 ;
-  %ps0 = getelementptr [9 x i8], [9 x i8]* @s4, i32 0, i32 4
+  %ps0 = getelementptr [9 x i8], ptr @s4, i32 0, i32 4
 
 ; Fold strncpy(D, "", 0) to just D.
-  %es0_0 = call i8* @strncpy(i8* %dst, i8* %ps0, i64 0)
-  call void @sink(i8* %dst, i8* %es0_0)
+  %es0_0 = call ptr @strncpy(ptr %dst, ptr %ps0, i64 0)
+  call void @sink(ptr %dst, ptr %es0_0)
 
 ; Transform strncpy(D, "", 1) to *D = '\0, D.
-  %es0_1 = call i8* @strncpy(i8* %dst, i8* %ps0, i64 1)
-  call void @sink(i8* %dst, i8* %es0_1)
+  %es0_1 = call ptr @strncpy(ptr %dst, ptr %ps0, i64 1)
+  call void @sink(ptr %dst, ptr %es0_1)
 
 ; Transform strncpy(D, "", 2) to memset(D, 0, 2), D.
-  %es0_2 = call i8* @strncpy(i8* %dst, i8* %ps0, i64 2)
-  call void @sink(i8* %dst, i8* %es0_2)
+  %es0_2 = call ptr @strncpy(ptr %dst, ptr %ps0, i64 2)
+  call void @sink(ptr %dst, ptr %es0_2)
 
 ; Transform strncpy(D, "", 9) to memset(D, 0, 9), D.
-  %es0_9 = call i8* @strncpy(i8* %dst, i8* %ps0, i64 9)
-  call void @sink(i8* %dst, i8* %es0_9)
+  %es0_9 = call ptr @strncpy(ptr %dst, ptr %ps0, i64 9)
+  call void @sink(ptr %dst, ptr %es0_9)
 
 ; Transform strncpy(D, "", n) to memset(D, 0, n), D.
-  %es0_n = call i8* @strncpy(i8* %dst, i8* %ps0, i64 %n)
-  call void @sink(i8* %dst, i8* %es0_n)
+  %es0_n = call ptr @strncpy(ptr %dst, ptr %ps0, i64 %n)
+  call void @sink(ptr %dst, ptr %es0_n)
 
   ret void
 }
@@ -114,21 +113,21 @@ define void @fold_strncpy_s0(i8* %dst, i64 %n) {
 ; Verify that strncpy(D, S, N) calls with nonconstant source S and constant
 ; size are simplified when N < 2.
 
-define void @fold_strncpy_s(i8* %dst, i8* %src, i64 %n) {
+define void @fold_strncpy_s(ptr %dst, ptr %src, i64 %n) {
 ; CHECK-LABEL: @fold_strncpy_s(
-; CHECK-NEXT:    call void @sink(i8* [[DST:%.*]], i8* [[DST]])
-; CHECK-NEXT:    [[STXNCPY_CHAR0:%.*]] = load i8, i8* [[SRC:%.*]], align 1
-; CHECK-NEXT:    store i8 [[STXNCPY_CHAR0]], i8* [[DST]], align 1
-; CHECK-NEXT:    call void @sink(i8* nonnull [[DST]], i8* nonnull [[DST]])
+; CHECK-NEXT:    call void @sink(ptr [[DST:%.*]], ptr [[DST]])
+; CHECK-NEXT:    [[STXNCPY_CHAR0:%.*]] = load i8, ptr [[SRC:%.*]], align 1
+; CHECK-NEXT:    store i8 [[STXNCPY_CHAR0]], ptr [[DST]], align 1
+; CHECK-NEXT:    call void @sink(ptr nonnull [[DST]], ptr nonnull [[DST]])
 ; CHECK-NEXT:    ret void
 ;
 ; Fold strncpy(D, S, 0) to just D.
-  %ed_0 = call i8* @strncpy(i8* %dst, i8* %src, i64 0)
-  call void @sink(i8* %dst, i8* %ed_0)
+  %ed_0 = call ptr @strncpy(ptr %dst, ptr %src, i64 0)
+  call void @sink(ptr %dst, ptr %ed_0)
 
 ; Transform strncpy(D, S, 1) to *D = '\0, D.
-  %ed_1 = call i8* @strncpy(i8* %dst, i8* %src, i64 1)
-  call void @sink(i8* %dst, i8* %ed_1)
+  %ed_1 = call ptr @strncpy(ptr %dst, ptr %src, i64 1)
+  call void @sink(ptr %dst, ptr %ed_1)
 
   ret void
 }
@@ -139,31 +138,31 @@ define void @fold_strncpy_s(i8* %dst, i8* %src, i64 %n) {
 ; Also verify that the arguments of the call are annotated with the right
 ; attributes.
 
-define void @call_strncpy_s(i8* %dst, i8* %src, i64 %n) {
+define void @call_strncpy_s(ptr %dst, ptr %src, i64 %n) {
 ; CHECK-LABEL: @call_strncpy_s(
-; CHECK-NEXT:    [[ED_2:%.*]] = call i8* @strncpy(i8* noundef nonnull dereferenceable(1) [[DST:%.*]], i8* noundef nonnull dereferenceable(1) [[SRC:%.*]], i64 2)
-; CHECK-NEXT:    call void @sink(i8* [[DST]], i8* [[ED_2]])
-; CHECK-NEXT:    [[ED_9:%.*]] = call i8* @strncpy(i8* noundef nonnull dereferenceable(1) [[DST]], i8* noundef nonnull dereferenceable(1) [[SRC]], i64 9)
-; CHECK-NEXT:    call void @sink(i8* [[DST]], i8* [[ED_9]])
-; CHECK-NEXT:    [[ED_N:%.*]] = call i8* @strncpy(i8* [[DST]], i8* [[SRC]], i64 [[N:%.*]])
-; CHECK-NEXT:    call void @sink(i8* [[DST]], i8* [[ED_N]])
+; CHECK-NEXT:    [[ED_2:%.*]] = call ptr @strncpy(ptr noundef nonnull dereferenceable(1) [[DST:%.*]], ptr noundef nonnull dereferenceable(1) [[SRC:%.*]], i64 2)
+; CHECK-NEXT:    call void @sink(ptr [[DST]], ptr [[ED_2]])
+; CHECK-NEXT:    [[ED_9:%.*]] = call ptr @strncpy(ptr noundef nonnull dereferenceable(1) [[DST]], ptr noundef nonnull dereferenceable(1) [[SRC]], i64 9)
+; CHECK-NEXT:    call void @sink(ptr [[DST]], ptr [[ED_9]])
+; CHECK-NEXT:    [[ED_N:%.*]] = call ptr @strncpy(ptr [[DST]], ptr [[SRC]], i64 [[N:%.*]])
+; CHECK-NEXT:    call void @sink(ptr [[DST]], ptr [[ED_N]])
 ; CHECK-NEXT:    ret void
 ;
 ; Do not transform strncpy(D, S, 2) when S is unknown.  Both *D and *S must
 ; be derefernceable but neither D[1] nor S[1] need be.
-  %ed_2 = call i8* @strncpy(i8* %dst, i8* %src, i64 2)
-  call void @sink(i8* %dst, i8* %ed_2)
+  %ed_2 = call ptr @strncpy(ptr %dst, ptr %src, i64 2)
+  call void @sink(ptr %dst, ptr %ed_2)
 
 ; Do not transform strncpy(D, S, 9) when S is unknown..
-  %ed_9 = call i8* @strncpy(i8* %dst, i8* %src, i64 9)
-  call void @sink(i8* %dst, i8* %ed_9)
+  %ed_9 = call ptr @strncpy(ptr %dst, ptr %src, i64 9)
+  call void @sink(ptr %dst, ptr %ed_9)
 
 ; Do not transform strncpy(D, S, N) when all arguments are unknown.  Both
 ; D and S must be nonnull but neither *D nor *S need be dereferenceable.
 ; TODO: Both D and S should be annotated nonnull and noundef regardless
 ; of the value of N.  See https://reviews.llvm.org/D124633.
-  %ed_n = call i8* @strncpy(i8* %dst, i8* %src, i64 %n)
-  call void @sink(i8* %dst, i8* %ed_n)
+  %ed_n = call ptr @strncpy(ptr %dst, ptr %src, i64 %n)
+  call void @sink(ptr %dst, ptr %ed_n)
 
   ret void
 }

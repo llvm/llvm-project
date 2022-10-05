@@ -1,3 +1,7 @@
+def CpuSetT : NamedType<"cpu_set_t">;
+def CpuSetPtr : PtrType<CpuSetT>;
+def ConstCpuSetPtr : ConstType<CpuSetPtr>;
+
 def GnuExtensions : StandardSpec<"GNUExtensions"> {
   NamedType CookieIOFunctionsT = NamedType<"cookie_io_functions_t">;
   HeaderSpec CType = HeaderSpec<
@@ -29,9 +33,6 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
       ]
   >;
  
-  NamedType CpuSetT = NamedType<"cpu_set_t">;
-  PtrType CpuSetPtr = PtrType<CpuSetT>;
-  ConstType ConstCpuSetPtr = ConstType<CpuSetPtr>;
   HeaderSpec Sched = HeaderSpec<
       "sched.h",
       [], // Macros

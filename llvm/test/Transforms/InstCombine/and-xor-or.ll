@@ -107,16 +107,16 @@ define i32 @and_xor_not_common_op(i32 %a, i32 %b) {
 
 ; a & (a ^ ~b) --> a & b
 
-define i32 @and_xor_not_common_op_extrause(i32 %a, i32 %b, i32* %dst) {
+define i32 @and_xor_not_common_op_extrause(i32 %a, i32 %b, ptr %dst) {
 ; CHECK-LABEL: define {{[^@]+}}@and_xor_not_common_op_extrause
-; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], i32* [[DST:%.*]]) {
+; CHECK-SAME: (i32 [[A:%.*]], i32 [[B:%.*]], ptr [[DST:%.*]]) {
 ; CHECK-NEXT:    [[B2:%.*]] = xor i32 [[B]], -1
-; CHECK-NEXT:    store i32 [[B2]], i32* [[DST]], align 4
+; CHECK-NEXT:    store i32 [[B2]], ptr [[DST]], align 4
 ; CHECK-NEXT:    [[T4:%.*]] = and i32 [[A]], [[B]]
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %b2 = xor i32 %b, -1
-  store i32 %b2, i32* %dst
+  store i32 %b2, ptr %dst
   %t2 = xor i32 %a, %b2
   %t4 = and i32 %t2, %a
   ret i32 %t4

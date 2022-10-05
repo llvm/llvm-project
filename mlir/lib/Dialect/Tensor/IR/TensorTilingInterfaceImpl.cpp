@@ -31,9 +31,9 @@ struct PadOpTiling : public TilingInterface::ExternalModel<PadOpTiling, PadOp> {
 
     auto padOp = cast<PadOp>(op);
     SmallVector<OpFoldResult> mixedSizes = getAsOpFoldResult(reifiedShapes[0]);
-    Value initTensor = b.create<linalg::InitTensorOp>(
+    Value emptyTensor = b.create<EmptyOp>(
         op->getLoc(), mixedSizes, padOp.getResultType().getElementType());
-    return {initTensor};
+    return {emptyTensor};
   }
 
   SmallVector<utils::IteratorType> getLoopIteratorTypes(Operation *op) const {

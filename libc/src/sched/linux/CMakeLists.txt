@@ -23,3 +23,13 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  sched_getcpucount
+  SRCS
+    sched_getcpucount.cpp
+  HDRS
+    ../sched_getcpucount.h
+  DEPENDS
+    libc.include.sched
+)

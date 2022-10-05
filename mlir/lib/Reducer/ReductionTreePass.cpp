@@ -217,7 +217,12 @@ void ReductionTreePass::runOnOperation() {
   Operation *topOperation = getOperation();
   while (topOperation->getParentOp() != nullptr)
     topOperation = topOperation->getParentOp();
-  ModuleOp module = cast<ModuleOp>(topOperation);
+  ModuleOp module = dyn_cast<ModuleOp>(topOperation);
+  if (!module) {
+    emitError(getOperation()->getLoc())
+        << "top-level op must be 'builtin.module'";
+    return signalPassFailure();
+  }
 
   SmallVector<Operation *, 8> workList;
   workList.push_back(getOperation());

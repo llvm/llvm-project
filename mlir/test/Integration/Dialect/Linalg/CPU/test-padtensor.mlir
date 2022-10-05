@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -test-linalg-transform-patterns=test-linalg-to-vector-patterns \
-// RUN: -linalg-init-tensor-to-alloc-tensor -linalg-bufferize -arith-bufferize \
+// RUN: -empty-tensor-to-alloc-tensor -linalg-bufferize -arith-bufferize \
 // RUN: -bufferization-bufferize -tensor-bufferize -func-bufferize \
 // RUN: -finalizing-bufferize -buffer-deallocation \
 // RUN: -convert-linalg-to-loops -convert-scf-to-cf -convert-linalg-to-llvm -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \

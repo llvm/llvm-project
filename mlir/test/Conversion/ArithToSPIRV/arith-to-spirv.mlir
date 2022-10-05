@@ -690,7 +690,35 @@ func.func @index_cast3(%arg0: i32) {
 
 // CHECK-LABEL: index_cast4
 func.func @index_cast4(%arg0: index) {
-  // CHECK-NOT: spirv.SConvert
+  // CHECK-NOT: spirv.UConvert
+  %0 = arith.index_cast %arg0 : index to i32
+  return
+}
+
+// CHECK-LABEL: index_castui1
+func.func @index_castui1(%arg0: i16) {
+  // CHECK: spirv.UConvert %{{.+}} : i16 to i32
+  %0 = arith.index_castui %arg0 : i16 to index
+  return
+}
+
+// CHECK-LABEL: index_castui2
+func.func @index_castui2(%arg0: index) {
+  // CHECK: spirv.UConvert %{{.+}} : i32 to i16
+  %0 = arith.index_castui %arg0 : index to i16
+  return
+}
+
+// CHECK-LABEL: index_castui3
+func.func @index_castui3(%arg0: i32) {
+  // CHECK-NOT: spirv.UConvert
+  %0 = arith.index_castui %arg0 : i32 to index
+  return
+}
+
+// CHECK-LABEL: index_castui4
+func.func @index_castui4(%arg0: index) {
+  // CHECK-NOT: spirv.UConvert
   %0 = arith.index_cast %arg0 : index to i32
   return
 }

@@ -555,11 +555,11 @@ define i8 @smin_of_umax_and_not(i8 %x, i8 %y, i8 %z) {
 define i8 @umin_of_not_and_nontrivial_const(i8 %x) {
 ; CHECK-LABEL: @umin_of_not_and_nontrivial_const(
 ; CHECK-NEXT:    [[NOTX:%.*]] = xor i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[NOTX]], i8 ptrtoint (i8 (i8)* @umin_of_not_and_nontrivial_const to i8))
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.umin.i8(i8 [[NOTX]], i8 ptrtoint (ptr @umin_of_not_and_nontrivial_const to i8))
 ; CHECK-NEXT:    ret i8 [[M]]
 ;
   %notx = xor i8 %x, -1
-  %m = call i8 @llvm.umin.i8(i8 ptrtoint (i8(i8)* @umin_of_not_and_nontrivial_const to i8), i8 %notx)
+  %m = call i8 @llvm.umin.i8(i8 ptrtoint (ptr @umin_of_not_and_nontrivial_const to i8), i8 %notx)
   ret i8 %m
 }
 
@@ -2354,12 +2354,12 @@ define i8 @smin_smin_smin_reassoc_constants(i8 %x, i8 %y) {
 
 define i8 @umax_umax_reassoc_constantexpr_sink(i8 %x, i8 %y) {
 ; CHECK-LABEL: @umax_umax_reassoc_constantexpr_sink(
-; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 ptrtoint (i8 (i8, i8)* @umax_umax_reassoc_constantexpr_sink to i8))
+; CHECK-NEXT:    [[M1:%.*]] = call i8 @llvm.umax.i8(i8 [[X:%.*]], i8 ptrtoint (ptr @umax_umax_reassoc_constantexpr_sink to i8))
 ; CHECK-NEXT:    [[M2:%.*]] = call i8 @llvm.umax.i8(i8 [[M1]], i8 42)
 ; CHECK-NEXT:    ret i8 [[M2]]
 ;
   %m1 = call i8 @llvm.umax.i8(i8 %x, i8 42)
-  %m2 = call i8 @llvm.umax.i8(i8 %m1, i8 ptrtoint (i8 (i8, i8)* @umax_umax_reassoc_constantexpr_sink to i8))
+  %m2 = call i8 @llvm.umax.i8(i8 %m1, i8 ptrtoint (ptr @umax_umax_reassoc_constantexpr_sink to i8))
   ret i8 %m2
 }
 
@@ -2485,8 +2485,8 @@ define <3 x i8> @smin_unary_shuffle_ops_uses(<3 x i8> %x, <3 x i8> %y) {
 
 define i1 @PR57986() {
 ; CHECK-LABEL: @PR57986(
-; CHECK-NEXT:    ret i1 ptrtoint (i32* @g to i1)
+; CHECK-NEXT:    ret i1 ptrtoint (ptr @g to i1)
 ;
-  %umin = call i1 @llvm.umin.i1(i1 ptrtoint (i32* @g to i1), i1 true)
+  %umin = call i1 @llvm.umin.i1(i1 ptrtoint (ptr @g to i1), i1 true)
   ret i1 %umin
 }

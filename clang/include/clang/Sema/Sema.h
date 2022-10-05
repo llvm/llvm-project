@@ -7631,7 +7631,8 @@ public:
   void CheckExplicitlyDefaultedFunction(Scope *S, FunctionDecl *MD);
 
   bool CheckExplicitlyDefaultedSpecialMember(CXXMethodDecl *MD,
-                                             CXXSpecialMember CSM);
+                                             CXXSpecialMember CSM,
+                                             SourceLocation DefaultLoc);
   void CheckDelayedMemberExceptionSpecs();
 
   bool CheckExplicitlyDefaultedComparison(Scope *S, FunctionDecl *MD,
@@ -9053,7 +9054,7 @@ public:
   MultiLevelTemplateArgumentList getTemplateInstantiationArgs(
       const NamedDecl *D, const TemplateArgumentList *Innermost = nullptr,
       bool RelativeToPrimary = false, const FunctionDecl *Pattern = nullptr,
-      bool LookBeyondLambda = false, bool IncludeContainingStruct = false);
+      bool ForConstraintInstantiation = false);
 
   /// A context in which code is being synthesized (where a source location
   /// alone is not sufficient to identify the context). This covers template
@@ -9134,6 +9135,9 @@ public:
 
       // We are normalizing a constraint expression.
       ConstraintNormalization,
+
+      // Instantiating a Requires Expression parameter clause.
+      RequirementParameterInstantiation,
 
       // We are substituting into the parameter mapping of an atomic constraint
       // during normalization.
@@ -9464,6 +9468,11 @@ public:
                           concepts::NestedRequirement *Req, ConstraintsCheck,
                           SourceRange InstantiationRange = SourceRange());
 
+    /// \brief Note that we are checking a requires clause.
+    InstantiatingTemplate(Sema &SemaRef, SourceLocation PointOfInstantiation,
+                          const RequiresExpr *E,
+                          sema::TemplateDeductionInfo &DeductionInfo,
+                          SourceRange InstantiationRange);
     /// Note that we have finished instantiating this template.
     void Clear();
 
@@ -9782,6 +9791,9 @@ public:
                       SmallVectorImpl<QualType> &ParamTypes,
                       SmallVectorImpl<ParmVarDecl *> *OutParams,
                       ExtParameterInfoBuilder &ParamInfos);
+  bool SubstDefaultArgument(SourceLocation Loc, ParmVarDecl *Param,
+                            const MultiLevelTemplateArgumentList &TemplateArgs,
+                            bool ForCallExpr = false);
   ExprResult SubstExpr(Expr *E,
                        const MultiLevelTemplateArgumentList &TemplateArgs);
 

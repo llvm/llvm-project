@@ -193,6 +193,14 @@ def TypeStringAttrWithTypeOp : TEST_Op<"string_attr_with_type"> {
   let assemblyFormat = "$attr attr-dict";
 }
 
+def FloatAttrOp : TEST_Op<"float_attrs"> {
+  // TODO: Clean up the OpBase float type and attribute selectors so they
+  // can express all of the types.
+  let arguments = (ins
+    AnyAttr:$float_attr
+  );
+}
+
 def I32Case5:  I32EnumAttrCase<"case5", 5>;
 def I32Case10: I32EnumAttrCase<"case10", 10>;
 
@@ -293,6 +301,17 @@ def DenseArrayAttrOp : TEST_Op<"dense_array_attr"> {
    `i32attr` `=` $i32attr `i64attr` `=` $i64attr  `f32attr` `=` $f32attr
    `f64attr` `=` $f64attr `emptyattr` `=` $emptyattr attr-dict
   }];
+}
+
+def ConfinedDenseArrayAttrOp : TEST_Op<"confined_dense_array_attr"> {
+  let arguments = (ins
+      ConfinedAttr<DenseI16ArrayAttr,
+                   [DenseArrayStrictlySorted<DenseI16ArrayAttr>]>:$emptyattr,
+      ConfinedAttr<DenseI32ArrayAttr,
+                   [DenseArraySorted<DenseI32ArrayAttr>]>:$i32attr,
+      ConfinedAttr<DenseI64ArrayAttr,
+                   [DenseArrayStrictlySorted<DenseI64ArrayAttr>]>:$i64attr
+  );
 }
 
 //===----------------------------------------------------------------------===//

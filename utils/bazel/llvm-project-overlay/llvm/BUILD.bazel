@@ -3578,6 +3578,7 @@ cc_binary(
         ":BinaryFormat",
         ":CodeGen",
         ":DebugInfo",
+        ":Debuginfod",
         ":DebugInfoDWARF",
         ":Demangle",
         ":MC",

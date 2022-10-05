@@ -3006,7 +3006,8 @@ void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
 }
 
 void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop, Value *IfCond,
-                                ConstantInt *Simdlen, ConstantInt *Safelen) {
+                                OrderKind Order, ConstantInt *Simdlen,
+                                ConstantInt *Safelen) {
   LLVMContext &Ctx = Builder.getContext();
 
   Function *F = CanonicalLoop->getFunction();
@@ -3061,7 +3062,9 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop, Value *IfCond,
   // In presence of finite 'safelen', it may be unsafe to mark all
   // the memory instructions parallel, because loop-carried
   // dependences of 'safelen' iterations are possible.
-  if (Safelen == nullptr) {
+  // If clause order(concurrent) is specified then the memory instructions
+  // are marked parallel even if 'safelen' is finite.
+  if ((Safelen == nullptr) || (Order == OrderKind::OMP_ORDER_concurrent)) {
     // Add access group metadata to memory-access instructions.
     MDNode *AccessGroup = MDNode::getDistinct(Ctx, {});
     for (BasicBlock *BB : Reachable)

@@ -1402,7 +1402,8 @@ OwningOpRef<ModuleOp> translateLLVMIRToModule(llvm::SourceMgr &sourceMgr,
 namespace mlir {
 void registerFromLLVMIRTranslation() {
   TranslateToMLIRRegistration fromLLVM(
-      "import-llvm", [](llvm::SourceMgr &sourceMgr, MLIRContext *context) {
+      "import-llvm", "from llvm to mlir",
+      [](llvm::SourceMgr &sourceMgr, MLIRContext *context) {
         return ::translateLLVMIRToModule(sourceMgr, context);
       });
 }

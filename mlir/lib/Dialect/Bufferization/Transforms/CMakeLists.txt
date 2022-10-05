@@ -7,6 +7,7 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
   BufferUtils.cpp
   BufferViewFlowAnalysis.cpp
   DropEquivalentBufferResults.cpp
+  EmptyTensorToAllocTensor.cpp
   FuncBufferizableOpInterfaceImpl.cpp
   OneShotAnalysis.cpp
   OneShotModuleBufferize.cpp

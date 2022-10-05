@@ -49,7 +49,7 @@ func.func @add_d(%arga: tensor<32xf32, #DV>, %argb: f32, %argx: tensor<32xf32>) 
 // CHECK:           %[[VAL_3:.*]] = arith.constant 0.000000e+00 : f32
 // CHECK:           %[[VAL_4:.*]] = arith.constant 0 : index
 // CHECK:           %[[VAL_5:.*]] = arith.constant 1 : index
-// CHECK:           %[[VAL_INITTENSOR:.*]] = linalg.init_tensor [32] : tensor<32xf32>
+// CHECK:           %[[VAL_INITTENSOR:.*]] = tensor.empty() : tensor<32xf32>
 // CHECK:           %[[VAL_6:.*]] = sparse_tensor.values %[[VAL_0]] : tensor<32xf32, #sparse_tensor.encoding<{ dimLevelType = [ "dense" ] }>> to memref<?xf32>
 // CHECK:           %[[VAL_7:.*]] = bufferization.to_memref %[[VAL_INITTENSOR]] : memref<32xf32>
 // CHECK:           linalg.fill ins(%[[VAL_3]] : f32) outs(%[[VAL_7]] : memref<32xf32>)
@@ -62,7 +62,7 @@ func.func @add_d(%arga: tensor<32xf32, #DV>, %argb: f32, %argx: tensor<32xf32>) 
 // CHECK:           return %[[VAL_11]] : tensor<32xf32>
 // CHECK:         }
 func.func @add_d_init(%arga: tensor<32xf32, #DV>, %argb: f32) -> tensor<32xf32> {
-  %u = linalg.init_tensor [32] : tensor<32xf32>
+  %u = tensor.empty() : tensor<32xf32>
   %0 = linalg.generic #trait1
      ins(%arga: tensor<32xf32, #DV>)
     outs(%u: tensor<32xf32>) {

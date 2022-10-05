@@ -38,8 +38,10 @@ def TestConsumeOperand : Op<Transform_Dialect, "test_consume_operand",
      [DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let arguments = (ins
     Arg<PDL_Operation, "",
-        [TransformMappingRead, TransformMappingFree]>:$operand);
-  let assemblyFormat = "$operand attr-dict";
+        [TransformMappingRead, TransformMappingFree]>:$operand,
+    Arg<Optional<PDL_Operation>, "",
+        [TransformMappingRead, TransformMappingFree]>:$second_operand);
+  let assemblyFormat = "$operand (`,` $second_operand^)? attr-dict";
   let cppNamespace = "::mlir::test";
 }
 
@@ -229,6 +231,16 @@ def TestPrintNumberOfAssociatedPayloadIROps
   let arguments = (ins PDL_Operation:$handle);
   let assemblyFormat = "$handle attr-dict";
   let cppNamespace = "::mlir::test";
+}
+
+def TestCopyPayloadOp
+  : Op<Transform_Dialect, "test_copy_payload",
+       [DeclareOpInterfaceMethods<TransformOpInterface>]> {
+  let arguments = (ins Arg<PDL_Operation, "", [TransformMappingRead]>:$handle);
+  let results = (outs Res<PDL_Operation, "",
+      [TransformMappingAlloc, TransformMappingWrite]>:$copy);
+  let cppNamespace = "::mlir::test";
+  let assemblyFormat = "$handle attr-dict";
 }
 
 #endif // MLIR_TESTTRANSFORMDIALECTEXTENSION_TD

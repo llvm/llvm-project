@@ -21,34 +21,29 @@
 #include <unistd.h>
 #endif
 
-#if defined(_WIN32)
-static DWORD getWindowsProtectionFlags(unsigned Flags) {
-  switch (Flags & llvm::sys::Memory::MF_RWE_MASK) {
-  case llvm::sys::Memory::MF_READ:
-    return PAGE_READONLY;
-  case llvm::sys::Memory::MF_WRITE:
-    // Note: PAGE_WRITE is not supported by VirtualProtect
-    return PAGE_READWRITE;
-  case llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_WRITE:
-    return PAGE_READWRITE;
-  case llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_EXEC:
-    return PAGE_EXECUTE_READ;
-  case llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_WRITE |
-      llvm::sys::Memory::MF_EXEC:
-    return PAGE_EXECUTE_READWRITE;
-  case llvm::sys::Memory::MF_EXEC:
-    return PAGE_EXECUTE;
-  default:
-    llvm_unreachable("Illegal memory protection flag specified!");
-  }
-  // Provide a default return value as required by some compilers.
-  return PAGE_NOACCESS;
-}
-#endif
-
 namespace llvm {
 namespace orc {
 namespace rt_bootstrap {
+
+#if defined(_WIN32)
+static DWORD getWindowsProtectionFlags(MemProt MP) {
+  if (MP == MemProt::Read)
+    return PAGE_READONLY;
+  if (MP == MemProt::Write ||
+      MP == (MemProt::Write | MemProt::Read)) {
+    // Note: PAGE_WRITE is not supported by VirtualProtect
+    return PAGE_READWRITE;
+  }
+  if (MP == (MemProt::Read | MemProt::Exec))
+    return PAGE_EXECUTE_READ;
+  if (MP == (MemProt::Read | MemProt::Write | MemProt::Exec))
+    return PAGE_EXECUTE_READWRITE;
+  if (MP == MemProt::Exec)
+    return PAGE_EXECUTE;
+
+  return PAGE_NOACCESS;
+}
+#endif
 
 Expected<std::pair<ExecutorAddr, std::string>>
 ExecutorSharedMemoryMapperService::reserve(uint64_t Size) {
@@ -137,11 +132,11 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
 #if defined(LLVM_ON_UNIX)
 
     int NativeProt = 0;
-    if (Segment.Prot & tpctypes::WPF_Read)
+    if ((Segment.AG.getMemProt() & MemProt::Read) == MemProt::Read)
       NativeProt |= PROT_READ;
-    if (Segment.Prot & tpctypes::WPF_Write)
+    if ((Segment.AG.getMemProt() & MemProt::Write) == MemProt::Write)
       NativeProt |= PROT_WRITE;
-    if (Segment.Prot & tpctypes::WPF_Exec)
+    if ((Segment.AG.getMemProt() & MemProt::Exec) == MemProt::Exec)
       NativeProt |= PROT_EXEC;
 
     if (mprotect(Segment.Addr.toPtr<void *>(), Segment.Size, NativeProt))
@@ -150,7 +145,7 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
 #elif defined(_WIN32)
 
     DWORD NativeProt =
-        getWindowsProtectionFlags(fromWireProtectionFlags(Segment.Prot));
+        getWindowsProtectionFlags(Segment.AG.getMemProt());
 
     if (!VirtualProtect(Segment.Addr.toPtr<void *>(), Segment.Size, NativeProt,
                         &NativeProt))
@@ -158,7 +153,7 @@ Expected<ExecutorAddr> ExecutorSharedMemoryMapperService::initialize(
 
 #endif
 
-    if (Segment.Prot & tpctypes::WPF_Exec)
+    if ((Segment.AG.getMemProt() & MemProt::Exec) == MemProt::Exec)
       sys::Memory::InvalidateInstructionCache(Segment.Addr.toPtr<void *>(),
                                               Segment.Size);
   }

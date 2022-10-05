@@ -15898,72 +15898,6 @@ void Sema::CheckCastAlign(Expr *Op, QualType T, SourceRange TRange) {
     << TRange << Op->getSourceRange();
 }
 
-/// Check whether this array fits the idiom of a flexible array member,
-/// depending on the value of -fstrict-flex-array.
-///
-/// We avoid emitting out-of-bounds access warnings for such arrays.
-static bool isFlexibleArrayMemberExpr(Sema &S, const Expr *E,
-                                      const NamedDecl *ND,
-                                      unsigned StrictFlexArraysLevel) {
-
-  if (!ND)
-    return false;
-
-  const ConstantArrayType *ArrayTy =
-      S.Context.getAsConstantArrayType(E->getType());
-  llvm::APInt Size = ArrayTy->getSize();
-
-  if (Size == 0)
-    return true;
-
-  // FIXME: While the default -fstrict-flex-arrays=0 permits Size>1 trailing
-  // arrays to be treated as flexible-array-members, we still emit diagnostics
-  // as if they are not. Pending further discussion...
-  if (StrictFlexArraysLevel >= 2 || Size.uge(2))
-    return false;
-
-  const FieldDecl *FD = dyn_cast<FieldDecl>(ND);
-  if (!FD)
-    return false;
-
-  // Don't consider sizes resulting from macro expansions or template argument
-  // substitution to form C89 tail-padded arrays.
-
-  TypeSourceInfo *TInfo = FD->getTypeSourceInfo();
-  while (TInfo) {
-    TypeLoc TL = TInfo->getTypeLoc();
-    // Look through typedefs.
-    if (TypedefTypeLoc TTL = TL.getAsAdjusted<TypedefTypeLoc>()) {
-      const TypedefNameDecl *TDL = TTL.getTypedefNameDecl();
-      TInfo = TDL->getTypeSourceInfo();
-      continue;
-    }
-    if (ConstantArrayTypeLoc CTL = TL.getAs<ConstantArrayTypeLoc>()) {
-      const Expr *SizeExpr = dyn_cast<IntegerLiteral>(CTL.getSizeExpr());
-      if (!SizeExpr || SizeExpr->getExprLoc().isMacroID())
-        return false;
-    }
-    break;
-  }
-
-  const RecordDecl *RD = dyn_cast<RecordDecl>(FD->getDeclContext());
-  if (!RD)
-    return false;
-  if (RD->isUnion())
-    return false;
-  if (const CXXRecordDecl *CRD = dyn_cast<CXXRecordDecl>(RD)) {
-    if (!CRD->isStandardLayout())
-      return false;
-  }
-
-  // See if this is the last field decl in the record.
-  const Decl *D = FD;
-  while ((D = D->getNextDeclInContext()))
-    if (isa<FieldDecl>(D))
-      return false;
-  return true;
-}
-
 void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                             const ArraySubscriptExpr *ASE,
                             bool AllowOnePastEnd, bool IndexNegated) {
@@ -15983,17 +15917,12 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
 
   unsigned StrictFlexArraysLevel = getLangOpts().StrictFlexArrays;
 
-  const NamedDecl *ND = nullptr;
-  if (const auto *DRE = dyn_cast<DeclRefExpr>(BaseExpr))
-    ND = DRE->getDecl();
-  else if (const auto *ME = dyn_cast<MemberExpr>(BaseExpr))
-    ND = ME->getMemberDecl();
-
   const Type *BaseType =
       ArrayTy == nullptr ? nullptr : ArrayTy->getElementType().getTypePtr();
   bool IsUnboundedArray =
-      BaseType == nullptr ||
-      isFlexibleArrayMemberExpr(*this, BaseExpr, ND, StrictFlexArraysLevel);
+      BaseType == nullptr || BaseExpr->isFlexibleArrayMemberLike(
+                                 Context, StrictFlexArraysLevel,
+                                 /*IgnoreTemplateOrMacroSubstitution=*/true);
   if (EffectiveType->isDependentType() ||
       (!IsUnboundedArray && BaseType->isDependentType()))
     return;
@@ -16061,15 +15990,14 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                               << (unsigned)MaxElems.getLimitedValue(~0U)
                               << IndexExpr->getSourceRange());
 
-      if (!ND) {
-        // Try harder to find a NamedDecl to point at in the note.
-        while (const auto *ASE = dyn_cast<ArraySubscriptExpr>(BaseExpr))
-          BaseExpr = ASE->getBase()->IgnoreParenCasts();
-        if (const auto *DRE = dyn_cast<DeclRefExpr>(BaseExpr))
-          ND = DRE->getDecl();
-        if (const auto *ME = dyn_cast<MemberExpr>(BaseExpr))
-          ND = ME->getMemberDecl();
-      }
+      const NamedDecl *ND = nullptr;
+      // Try harder to find a NamedDecl to point at in the note.
+      while (const auto *ASE = dyn_cast<ArraySubscriptExpr>(BaseExpr))
+        BaseExpr = ASE->getBase()->IgnoreParenCasts();
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(BaseExpr))
+        ND = DRE->getDecl();
+      if (const auto *ME = dyn_cast<MemberExpr>(BaseExpr))
+        ND = ME->getMemberDecl();
 
       if (ND)
         DiagRuntimeBehavior(ND->getBeginLoc(), BaseExpr,
@@ -16152,15 +16080,14 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                                       << IndexExpr->getSourceRange());
   }
 
-  if (!ND) {
-    // Try harder to find a NamedDecl to point at in the note.
-    while (const auto *ASE = dyn_cast<ArraySubscriptExpr>(BaseExpr))
-      BaseExpr = ASE->getBase()->IgnoreParenCasts();
-    if (const auto *DRE = dyn_cast<DeclRefExpr>(BaseExpr))
-      ND = DRE->getDecl();
-    if (const auto *ME = dyn_cast<MemberExpr>(BaseExpr))
-      ND = ME->getMemberDecl();
-  }
+  const NamedDecl *ND = nullptr;
+  // Try harder to find a NamedDecl to point at in the note.
+  while (const auto *ASE = dyn_cast<ArraySubscriptExpr>(BaseExpr))
+    BaseExpr = ASE->getBase()->IgnoreParenCasts();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(BaseExpr))
+    ND = DRE->getDecl();
+  if (const auto *ME = dyn_cast<MemberExpr>(BaseExpr))
+    ND = ME->getMemberDecl();
 
   if (ND)
     DiagRuntimeBehavior(ND->getBeginLoc(), BaseExpr,

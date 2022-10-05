@@ -101,7 +101,7 @@ define <2 x i32> @shrink_and_vec(<2 x i33> %a) {
 ; This is based on an 'any_of' loop construct.
 ; By narrowing the phi and logic op, we simplify away the zext and the final icmp.
 
-define i1 @searchArray1(i32 %needle, i32* %haystack) {
+define i1 @searchArray1(i32 %needle, ptr %haystack) {
 ; CHECK-LABEL: @searchArray1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
@@ -109,8 +109,8 @@ define i1 @searchArray1(i32 %needle, i32* %haystack) {
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[FOUND:%.*]] = phi i8 [ 0, [[ENTRY]] ], [ [[OR:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[INDVAR]] to i64
-; CHECK-NEXT:    [[IDX:%.*]] = getelementptr i32, i32* [[HAYSTACK:%.*]], i64 [[TMP0]]
-; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[IDX]], align 4
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr i32, ptr [[HAYSTACK:%.*]], i64 [[TMP0]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[IDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[LD]], [[NEEDLE:%.*]]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP1]] to i8
 ; CHECK-NEXT:    [[OR]] = or i8 [[FOUND]], [[ZEXT]]
@@ -127,8 +127,8 @@ entry:
 loop:
   %indvar = phi i32 [ 0, %entry ], [ %indvar.next, %loop ]
   %found = phi i8 [ 0, %entry ], [ %or, %loop ]
-  %idx = getelementptr i32, i32* %haystack, i32 %indvar
-  %ld = load i32, i32* %idx
+  %idx = getelementptr i32, ptr %haystack, i32 %indvar
+  %ld = load i32, ptr %idx
   %cmp1 = icmp eq i32 %ld, %needle
   %zext = zext i1 %cmp1 to i8
   %or = or i8 %found, %zext
@@ -145,15 +145,15 @@ exit:
 ; This is based on an 'all_of' loop construct.
 ; By narrowing the phi and logic op, we simplify away the zext and the final icmp.
 
-define i1 @searchArray2(i32 %hay, i32* %haystack) {
+define i1 @searchArray2(i32 %hay, ptr %haystack) {
 ; CHECK-LABEL: @searchArray2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVAR:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVAR_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[FOUND:%.*]] = phi i8 [ 1, [[ENTRY]] ], [ [[AND:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IDX:%.*]] = getelementptr i32, i32* [[HAYSTACK:%.*]], i64 [[INDVAR]]
-; CHECK-NEXT:    [[LD:%.*]] = load i32, i32* [[IDX]], align 4
+; CHECK-NEXT:    [[IDX:%.*]] = getelementptr i32, ptr [[HAYSTACK:%.*]], i64 [[INDVAR]]
+; CHECK-NEXT:    [[LD:%.*]] = load i32, ptr [[IDX]], align 4
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[LD]], [[HAY:%.*]]
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i1 [[CMP1]] to i8
 ; CHECK-NEXT:    [[AND]] = and i8 [[FOUND]], [[ZEXT]]
@@ -170,8 +170,8 @@ entry:
 loop:
   %indvar = phi i64 [ 0, %entry ], [ %indvar.next, %loop ]
   %found = phi i8 [ 1, %entry ], [ %and, %loop ]
-  %idx = getelementptr i32, i32* %haystack, i64 %indvar
-  %ld = load i32, i32* %idx
+  %idx = getelementptr i32, ptr %haystack, i64 %indvar
+  %ld = load i32, ptr %idx
   %cmp1 = icmp eq i32 %ld, %hay
   %zext = zext i1 %cmp1 to i8
   %and = and i8 %found, %zext

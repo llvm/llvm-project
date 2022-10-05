@@ -21,6 +21,7 @@
 # CHECK-NEXT: [[#%x,NUMBER:]] g     O __DATA,__common _number
 # CHECK-NEXT: [[#%x,FOO:]]    g     O __TEXT,obj _foo
 # CHECK-NEXT: [[#%x,HEADER:]] g     F __TEXT,__text __mh_execute_header
+# CHECK-NEXT: [[#%x,HEADER:]] *UND* dyld_stub_binder
 
 # CHECK-NEXT: # Path: {{.*}}{{/|\\}}map-file.s.tmp/test-map
 # CHECK-NEXT: # Arch: x86_64

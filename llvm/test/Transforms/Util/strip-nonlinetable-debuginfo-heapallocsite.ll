@@ -7,17 +7,16 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-apple-macosx11.0.0"
 
 ; Function Attrs: noinline optnone ssp uwtable mustprogress
-define dso_local i32* @_Z3getv() #0 !dbg !8 {
+define dso_local ptr @_Z3getv() #0 !dbg !8 {
 entry:
 ; CHECK-LABEL: entry:
 ; CHECK-NOT: !heapallocsite
-  %call = call noalias nonnull i8* @_Znam(i64 1024) #2, !dbg !14, !heapallocsite !13
-  %0 = bitcast i8* %call to i32*, !dbg !14
-  ret i32* %0, !dbg !15
+  %call = call noalias nonnull ptr @_Znam(i64 1024) #2, !dbg !14, !heapallocsite !13
+  ret ptr %call, !dbg !15
 }
 
 ; Function Attrs: nobuiltin allocsize(0)
-declare nonnull i8* @_Znam(i64) #1
+declare nonnull ptr @_Znam(i64) #1
 
 attributes #0 = { noinline optnone ssp uwtable mustprogress }
 attributes #1 = { nobuiltin allocsize(0) "frame-pointer"="all" }

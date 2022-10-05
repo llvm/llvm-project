@@ -6103,9 +6103,9 @@ bool Sema::CheckTemplateArgumentList(
     CXXThisScopeRAII(*this, RD, ThisQuals, RD != nullptr);
 
     MultiLevelTemplateArgumentList MLTAL = getTemplateInstantiationArgs(
-        Template, &StackTemplateArgs, /*RelativeToPrimary*/ true,
-        /*Pattern*/ nullptr,
-        /*LookBeyondLambda*/ true, /*IncludeContainingStruct*/ true);
+        Template, &StackTemplateArgs, /*RelativeToPrimary=*/true,
+        /*Pattern=*/nullptr,
+        /*ForConceptInstantiation=*/true);
     if (EnsureTemplateArgumentListConstraints(
             Template, MLTAL,
             SourceRange(TemplateLoc, TemplateArgs.getRAngleLoc()))) {
@@ -7943,12 +7943,26 @@ static bool MatchTemplateParameterKind(
                  : Kind),
             TemplateArgLoc))
       return false;
-  } else if (Kind != Sema::TPL_TemplateTemplateArgumentMatch) {
+  }
+
+  if (Kind != Sema::TPL_TemplateTemplateArgumentMatch &&
+      !isa<TemplateTemplateParmDecl>(Old)) {
     const Expr *NewC = nullptr, *OldC = nullptr;
-    if (const auto *TC = cast<TemplateTypeParmDecl>(New)->getTypeConstraint())
-      NewC = TC->getImmediatelyDeclaredConstraint();
-    if (const auto *TC = cast<TemplateTypeParmDecl>(Old)->getTypeConstraint())
-      OldC = TC->getImmediatelyDeclaredConstraint();
+
+    if (isa<TemplateTypeParmDecl>(New)) {
+      if (const auto *TC = cast<TemplateTypeParmDecl>(New)->getTypeConstraint())
+        NewC = TC->getImmediatelyDeclaredConstraint();
+      if (const auto *TC = cast<TemplateTypeParmDecl>(Old)->getTypeConstraint())
+        OldC = TC->getImmediatelyDeclaredConstraint();
+    } else if (isa<NonTypeTemplateParmDecl>(New)) {
+      if (const Expr *E = cast<NonTypeTemplateParmDecl>(New)
+                              ->getPlaceholderTypeConstraint())
+        NewC = E;
+      if (const Expr *E = cast<NonTypeTemplateParmDecl>(Old)
+                              ->getPlaceholderTypeConstraint())
+        OldC = E;
+    } else
+      llvm_unreachable("unexpected template parameter type");
 
     auto Diagnose = [&] {
       S.Diag(NewC ? NewC->getBeginLoc() : New->getBeginLoc(),

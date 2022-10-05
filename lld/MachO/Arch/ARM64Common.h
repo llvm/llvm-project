@@ -107,18 +107,15 @@ inline uint64_t pageBits(uint64_t address) {
   return address & pageMask;
 }
 
-template <class LP>
 inline void writeStub(uint8_t *buf8, const uint32_t stubCode[3],
-                      const macho::Symbol &sym) {
+                      const macho::Symbol &sym, uint64_t pointerVA) {
   auto *buf32 = reinterpret_cast<uint32_t *>(buf8);
   constexpr size_t stubCodeSize = 3 * sizeof(uint32_t);
   SymbolDiagnostic d = {&sym, "stub"};
   uint64_t pcPageBits =
       pageBits(in.stubs->addr + sym.stubsIndex * stubCodeSize);
-  uint64_t lazyPointerVA =
-      in.lazyPointers->addr + sym.stubsIndex * LP::wordSize;
-  encodePage21(&buf32[0], d, stubCode[0], pageBits(lazyPointerVA) - pcPageBits);
-  encodePageOff12(&buf32[1], d, stubCode[1], lazyPointerVA);
+  encodePage21(&buf32[0], d, stubCode[0], pageBits(pointerVA) - pcPageBits);
+  encodePageOff12(&buf32[1], d, stubCode[1], pointerVA);
   buf32[2] = stubCode[2];
 }
 

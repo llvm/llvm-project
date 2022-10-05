@@ -1037,6 +1037,25 @@ def Arith_IndexCastOp
 }
 
 //===----------------------------------------------------------------------===//
+// IndexCastUIOp
+//===----------------------------------------------------------------------===//
+
+def Arith_IndexCastUIOp
+  : Arith_CastOp<"index_castui", IndexCastTypeConstraint, IndexCastTypeConstraint,
+                 [DeclareOpInterfaceMethods<InferIntRangeInterface>]> {
+  let summary = "unsigned cast between index and integer types";
+  let description = [{
+    Casts between scalar or vector integers and corresponding 'index' scalar or
+    vectors. Index is an integer of platform-specific bit width. If casting to
+    a wider integer, the value is zero-extended. If casting to a narrower
+    integer, the value is truncated.
+  }];
+
+  let hasFolder = 1;
+  let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // BitcastOp
 //===----------------------------------------------------------------------===//
 

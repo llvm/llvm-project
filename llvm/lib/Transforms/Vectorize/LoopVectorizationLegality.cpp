@@ -916,7 +916,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 }
 
 bool LoopVectorizationLegality::canVectorizeMemory() {
-  LAI = &(*GetLAA)(*TheLoop);
+  LAI = &LAIs.getInfo(*TheLoop);
   const OptimizationRemarkAnalysis *LAR = LAI->getReport();
   if (LAR) {
     ORE->emit([&]() {

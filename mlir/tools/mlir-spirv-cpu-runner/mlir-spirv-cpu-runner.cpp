@@ -51,7 +51,10 @@ using namespace mlir;
 /// Each of these two modules is translated to LLVM IR module, then they are
 /// linked together and returned.
 static std::unique_ptr<llvm::Module>
-convertMLIRModule(ModuleOp module, llvm::LLVMContext &context) {
+convertMLIRModule(Operation *op, llvm::LLVMContext &context) {
+  auto module = dyn_cast<ModuleOp>(op);
+  if (!module)
+    return op->emitError("op must be a 'builtin.module"), nullptr;
   // Verify that there is only one nested module.
   auto modules = module.getOps<ModuleOp>();
   if (!llvm::hasSingleElement(modules)) {
@@ -71,8 +74,9 @@ convertMLIRModule(ModuleOp module, llvm::LLVMContext &context) {
   return mainModule;
 }
 
-static LogicalResult runMLIRPasses(ModuleOp module) {
-  PassManager passManager(module.getContext());
+static LogicalResult runMLIRPasses(Operation *module) {
+  PassManager passManager(module->getContext(),
+                          module->getName().getStringRef());
   applyPassManagerCLOptions(passManager);
   passManager.addPass(createGpuKernelOutliningPass());
   passManager.addPass(createConvertGPUToSPIRVPass(/*mapMemorySpace=*/true));

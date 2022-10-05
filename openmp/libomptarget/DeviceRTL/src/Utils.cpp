@@ -32,6 +32,7 @@ __attribute__((weak, optnone, cold)) KEEP_ALIVE void keepAlive() {
 
 namespace impl {
 
+bool isSharedMemPtr(const void *Ptr) { return false; }
 void Unpack(uint64_t Val, uint32_t *LowBits, uint32_t *HighBits);
 uint64_t Pack(uint32_t LowBits, uint32_t HighBits);
 
@@ -51,6 +52,7 @@ uint64_t Pack(uint32_t LowBits, uint32_t HighBits) {
 }
 
 #pragma omp end declare variant
+///}
 
 /// NVPTX Implementation
 ///
@@ -74,6 +76,7 @@ uint64_t Pack(uint32_t LowBits, uint32_t HighBits) {
 }
 
 #pragma omp end declare variant
+///}
 
 int32_t shuffle(uint64_t Mask, int32_t Var, int32_t SrcLane);
 int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t LaneDelta,
@@ -99,6 +102,9 @@ int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t LaneDelta,
   return __builtin_amdgcn_ds_bpermute(Index << 2, Var);
 }
 
+bool isSharedMemPtr(const void * Ptr) {
+  return __builtin_amdgcn_is_shared((const __attribute__((address_space(0))) void *)Ptr);
+}
 #pragma omp end declare variant
 ///}
 
@@ -117,7 +123,10 @@ int32_t shuffleDown(uint64_t Mask, int32_t Var, uint32_t Delta, int32_t Width) {
   return __nvvm_shfl_sync_down_i32(Mask, Var, Delta, T);
 }
 
+bool isSharedMemPtr(const void *Ptr) { return __nvvm_isspacep_shared(Ptr); }
+
 #pragma omp end declare variant
+///}
 } // namespace impl
 
 uint64_t utils::pack(uint32_t LowBits, uint32_t HighBits) {
@@ -136,6 +145,8 @@ int32_t utils::shuffleDown(uint64_t Mask, int32_t Var, uint32_t Delta,
                            int32_t Width) {
   return impl::shuffleDown(Mask, Var, Delta, Width);
 }
+
+bool utils::isSharedMemPtr(void *Ptr) { return impl::isSharedMemPtr(Ptr); }
 
 extern "C" {
 int32_t __kmpc_shuffle_int32(int32_t Val, int16_t Delta, int16_t SrcLane) {

@@ -58,6 +58,7 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Container* __get_container() const { return container; }
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(back_insert_iterator);
 
 template <class _Container>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20

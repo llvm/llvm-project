@@ -41,6 +41,7 @@ template <class _Fn>
 struct __range_adaptor_closure_t : _Fn, __range_adaptor_closure<__range_adaptor_closure_t<_Fn>> {
     constexpr explicit __range_adaptor_closure_t(_Fn&& __f) : _Fn(std::move(__f)) { }
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__range_adaptor_closure_t);
 
 template <class _Tp>
 concept _RangeAdaptorClosure = derived_from<remove_cvref_t<_Tp>, __range_adaptor_closure<remove_cvref_t<_Tp>>>;

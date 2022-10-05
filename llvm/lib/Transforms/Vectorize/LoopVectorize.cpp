@@ -2212,16 +2212,15 @@ struct LoopVectorize : public FunctionPass {
     auto *TLI = TLIP ? &TLIP->getTLI(F) : nullptr;
     auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
     auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+    auto &LAIs = getAnalysis<LoopAccessLegacyAnalysis>().getLAIs();
     auto *DB = &getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
     auto *ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
     auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
 
-    std::function<const LoopAccessInfo &(Loop &)> GetLAA =
-        [&](Loop &L) -> const LoopAccessInfo & { return LAA->getInfo(&L); };
-
-    return Impl.runImpl(F, *SE, *LI, *TTI, *DT, *BFI, TLI, *DB, *AA, *AC,
-                        GetLAA, *ORE, PSI).MadeAnyChange;
+    return Impl
+        .runImpl(F, *SE, *LI, *TTI, *DT, *BFI, TLI, *DB, *AA, *AC, LAIs, *ORE,
+                 PSI)
+        .MadeAnyChange;
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -10202,7 +10201,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Check if it is legal to vectorize the loop.
   LoopVectorizationRequirements Requirements;
-  LoopVectorizationLegality LVL(L, PSE, DT, TTI, TLI, AA, F, GetLAA, LI, ORE,
+  LoopVectorizationLegality LVL(L, PSE, DT, TTI, TLI, AA, F, *LAIs, LI, ORE,
                                 &Requirements, &Hints, DB, AC, BFI, PSI);
   if (!LVL.canVectorize(EnableVPlanNativePath)) {
     LLVM_DEBUG(dbgs() << "LV: Not vectorizing: Cannot prove legality.\n");
@@ -10563,8 +10562,8 @@ LoopVectorizeResult LoopVectorizePass::runImpl(
     Function &F, ScalarEvolution &SE_, LoopInfo &LI_, TargetTransformInfo &TTI_,
     DominatorTree &DT_, BlockFrequencyInfo &BFI_, TargetLibraryInfo *TLI_,
     DemandedBits &DB_, AAResults &AA_, AssumptionCache &AC_,
-    std::function<const LoopAccessInfo &(Loop &)> &GetLAA_,
-    OptimizationRemarkEmitter &ORE_, ProfileSummaryInfo *PSI_) {
+    LoopAccessInfoManager &LAIs_, OptimizationRemarkEmitter &ORE_,
+    ProfileSummaryInfo *PSI_) {
   SE = &SE_;
   LI = &LI_;
   TTI = &TTI_;
@@ -10573,7 +10572,7 @@ LoopVectorizeResult LoopVectorizePass::runImpl(
   TLI = TLI_;
   AA = &AA_;
   AC = &AC_;
-  GetLAA = &GetLAA_;
+  LAIs = &LAIs_;
   DB = &DB_;
   ORE = &ORE_;
   PSI = PSI_;
@@ -10643,13 +10642,11 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
     auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
     LoopAccessInfoManager &LAIs = AM.getResult<LoopAccessAnalysis>(F);
-    std::function<const LoopAccessInfo &(Loop &)> GetLAA =
-        [&](Loop &L) -> const LoopAccessInfo & { return LAIs.getInfo(L); };
     auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
     ProfileSummaryInfo *PSI =
         MAMProxy.getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
     LoopVectorizeResult Result =
-        runImpl(F, SE, LI, TTI, DT, BFI, &TLI, DB, AA, AC, GetLAA, ORE, PSI);
+        runImpl(F, SE, LI, TTI, DT, BFI, &TLI, DB, AA, AC, LAIs, ORE, PSI);
     if (!Result.MadeAnyChange)
       return PreservedAnalyses::all();
     PreservedAnalyses PA;

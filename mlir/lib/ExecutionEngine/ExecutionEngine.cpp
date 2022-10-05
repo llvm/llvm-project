@@ -232,7 +232,7 @@ ExecutionEngine::ExecutionEngine(bool enableObjectCache,
 }
 
 Expected<std::unique_ptr<ExecutionEngine>>
-ExecutionEngine::create(ModuleOp m, const ExecutionEngineOptions &options) {
+ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options) {
   auto engine = std::make_unique<ExecutionEngine>(
       options.enableObjectCache, options.enableGDBNotificationListener,
       options.enablePerfNotificationListener);

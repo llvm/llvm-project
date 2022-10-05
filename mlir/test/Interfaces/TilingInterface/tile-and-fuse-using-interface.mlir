@@ -6,7 +6,7 @@ func.func @gemm_fill_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) ->
   %cst = arith.constant 0.0 : f32
   %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %d1 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
-  %init = linalg.init_tensor [%d0, %d1] : tensor<?x?xf32>
+  %init = tensor.empty(%d0, %d1) : tensor<?x?xf32>
   %fill = linalg.fill ins(%cst : f32) outs(%init : tensor<?x?xf32>) -> tensor<?x?xf32>
   %gemm = linalg.matmul {__internal_linalg_transform__ = "fusion"}
       ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
@@ -16,7 +16,7 @@ func.func @gemm_fill_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>) ->
 //      CHECK: func.func @gemm_fill_fusion(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?xf32>)
-//      CHECK:   %[[INIT:.+]] = linalg.init_tensor
+//      CHECK:   %[[INIT:.+]] = tensor.empty
 //      CHECK:   scf.for %[[IV0:[a-zA-Z0-9]+]] =
 // CHECK-SAME:       iter_args(%[[ITERARG0:.+]] = %[[INIT]])
 //      CHECK:     scf.for %[[IV1:[a-zA-Z0-9]+]] =
@@ -41,7 +41,7 @@ func.func @gemm_generic_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
   %cst = arith.constant 0.0 : f32
   %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %d1 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
-  %init = linalg.init_tensor [%d0, %d1] : tensor<?x?xf32>
+  %init = tensor.empty(%d0, %d1) : tensor<?x?xf32>
   %fill = linalg.fill ins(%cst : f32) outs(%init : tensor<?x?xf32>) -> tensor<?x?xf32>
   %gemm = linalg.matmul
       ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
@@ -61,7 +61,7 @@ func.func @gemm_generic_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32>,
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?xf32>,
 // CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<?xf32>)
-//      CHECK:   %[[INIT:.+]] = linalg.init_tensor
+//      CHECK:   %[[INIT:.+]] = tensor.empty
 //      CHECK:   scf.for %[[IV0:[a-zA-Z0-9]+]] =
 // CHECK-SAME:       iter_args(%[[ITERARG0:.+]] = %[[INIT]])
 //      CHECK:     scf.for %[[IV1:[a-zA-Z0-9]+]] =
@@ -90,12 +90,12 @@ func.func @gemm_gemm_fusion(%lhs0 : tensor<?x?xf32>, %rhs0 : tensor<?x?xf32>, %r
   %cst = arith.constant 0.0 : f32
   %d0 = tensor.dim %lhs0, %c0 : tensor<?x?xf32>
   %d1 = tensor.dim %rhs0, %c1 : tensor<?x?xf32>
-  %init0 = linalg.init_tensor [%d0, %d1] : tensor<?x?xf32>
+  %init0 = tensor.empty(%d0, %d1) : tensor<?x?xf32>
   %fill0 = linalg.fill ins(%cst : f32) outs(%init0 : tensor<?x?xf32>) -> tensor<?x?xf32>
   %gemm0 = linalg.matmul
       ins(%lhs0, %rhs0 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%fill0 : tensor<?x?xf32>) -> tensor<?x?xf32>
   %d2 = tensor.dim %rhs1, %c1 : tensor<?x?xf32>
-  %init1 = linalg.init_tensor [%d0, %d2] : tensor<?x?xf32>
+  %init1 = tensor.empty(%d0, %d2) : tensor<?x?xf32>
   %fill1 = linalg.fill ins(%cst : f32) outs(%init1 : tensor<?x?xf32>) -> tensor<?x?xf32>
   %gemm1 = linalg.matmul  {__internal_linalg_transform__ = "gemm_fusion"}
       ins(%gemm0, %rhs1 : tensor<?x?xf32>, tensor<?x?xf32>) outs(%fill1 : tensor<?x?xf32>) -> tensor<?x?xf32>
@@ -109,9 +109,9 @@ func.func @gemm_gemm_fusion(%lhs0 : tensor<?x?xf32>, %rhs0 : tensor<?x?xf32>, %r
 //  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
 //  CHECK-DAG:   %[[D0:.+]] = tensor.dim %[[LHS0]], %[[C0]]
 //  CHECK-DAG:   %[[D1:.+]] = tensor.dim %[[RHS0]], %[[C1]]
-//  CHECK-DAG:   %[[INIT0:.+]] = linalg.init_tensor [%[[D0]], %[[D1]]]
+//  CHECK-DAG:   %[[INIT0:.+]] = tensor.empty(%[[D0]], %[[D1]])
 //  CHECK-DAG:   %[[D2:.+]] = tensor.dim %[[RHS1]], %[[C1]]
-//      CHECK:   %[[INIT1:.+]] = linalg.init_tensor [%[[D0]], %[[D2]]]
+//      CHECK:   %[[INIT1:.+]] = tensor.empty(%[[D0]], %[[D2]])
 //      CHECK:   scf.for %[[IV:[a-zA-Z0-9]+]] =
 // CHECK-SAME:       iter_args(%[[ITERARG:.+]] = %[[INIT1]])
 //  CHECK-DAG:     %[[LHS0_TILE:.+]] = tensor.extract_slice %[[LHS0]][%[[IV]], 0]
@@ -140,12 +140,12 @@ func.func @gemm_transpose_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32
   %cst = arith.constant 0.0 : f32
   %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %d1 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
-  %init0 = linalg.init_tensor [%d0, %d1] : tensor<?x?xf32>
+  %init0 = tensor.empty(%d0, %d1) : tensor<?x?xf32>
   %fill = linalg.fill ins(%cst : f32) outs(%init0 : tensor<?x?xf32>) -> tensor<?x?xf32>
   %gemm = linalg.matmul
       ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%fill : tensor<?x?xf32>) -> tensor<?x?xf32>
-  %init1 = linalg.init_tensor [%d1, %d0] : tensor<?x?xf32>
+  %init1 = tensor.empty(%d1, %d0) : tensor<?x?xf32>
   %transpose = linalg.generic {
       __internal_linalg_transform__ = "fusion",
       indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d1, d0)>],
@@ -163,8 +163,8 @@ func.func @gemm_transpose_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?xf32
 //  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
 //  CHECK-DAG:   %[[D0:.+]] = tensor.dim %[[ARG0]], %[[C0]]
 //  CHECK-DAG:   %[[D1:.+]] = tensor.dim %[[ARG1]], %[[C1]]
-//  CHECK-DAG:   %[[INIT0:.+]] = linalg.init_tensor [%[[D0]], %[[D1]]]
-//  CHECK-DAG:   %[[INIT1:.+]] = linalg.init_tensor [%[[D1]], %[[D0]]]
+//  CHECK-DAG:   %[[INIT0:.+]] = tensor.empty(%[[D0]], %[[D1]])
+//  CHECK-DAG:   %[[INIT1:.+]] = tensor.empty(%[[D1]], %[[D0]])
 //      CHECK:   scf.for %[[IV0:[a-zA-Z0-9]+]] =
 // CHECK-SAME:       iter_args(%[[ITERARG0:.+]] = %[[INIT1]])
 //      CHECK:     scf.for %[[IV1:[a-zA-Z0-9]+]] =
@@ -192,7 +192,7 @@ func.func @interchange_matmul_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?
   %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %d1 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
   %cst = arith.constant 0.0 : f32
-  %0 = linalg.init_tensor [%d0, %d1] : tensor<?x?xf32>
+  %0 = tensor.empty(%d0, %d1) : tensor<?x?xf32>
   %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<?x?xf32>) -> tensor<?x?xf32>
   %2 = linalg.matmul
       ins(%arg0, %arg1 : tensor<?x?xf32>, tensor<?x?xf32>)
@@ -211,7 +211,7 @@ func.func @interchange_matmul_fusion(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x?
 //      CHECK: func.func @interchange_matmul_fusion(
 // CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
 // CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?x?xf32>)
-//      CHECK:   %[[INIT:.+]] = linalg.init_tensor
+//      CHECK:   %[[INIT:.+]] = tensor.empty
 //      CHECK:   scf.for %[[IV0:[a-zA-Z0-9]+]] =
 // CHECK-SAME:       iter_args(%[[ITERARG0:.+]] = %[[INIT]])
 //      CHECK:     scf.for %[[IV1:[a-zA-Z0-9]+]] =
@@ -243,7 +243,7 @@ func.func @matmul_plus_matmul(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>,
     outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
   %3 = tensor.dim %2, %c0 : tensor<?x?xf32>
   %4 = tensor.dim %2, %c1 : tensor<?x?xf32>
-  %5 = linalg.init_tensor [%3, %4] : tensor<?x?xf32>
+  %5 = tensor.empty(%3, %4) : tensor<?x?xf32>
   %6 = linalg.generic
     {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                       affine_map<(d0, d1) -> (d0, d1)>,
@@ -302,7 +302,7 @@ func.func @matmul_plus_transpose_matmul(%arg0: tensor<?x?xf32>, %arg1: tensor<?x
     outs(%arg2 : tensor<?x?xf32>) -> tensor<?x?xf32>
   %3 = tensor.dim %2, %c0 : tensor<?x?xf32>
   %4 = tensor.dim %2, %c1 : tensor<?x?xf32>
-  %5 = linalg.init_tensor [%3, %4] : tensor<?x?xf32>
+  %5 = tensor.empty(%3, %4) : tensor<?x?xf32>
   %6 = linalg.generic
     {indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
                       affine_map<(d0, d1) -> (d1, d0)>,

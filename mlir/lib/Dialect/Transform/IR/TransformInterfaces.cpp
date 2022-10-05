@@ -10,6 +10,7 @@
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Operation.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "transform-dialect"
@@ -45,35 +46,28 @@ transform::TransformState::getPayloadOps(Value value) const {
   return iter->getSecond();
 }
 
-Value transform::TransformState::getHandleForPayloadOp(Operation *op) const {
+LogicalResult transform::TransformState::getHandlesForPayloadOp(
+    Operation *op, SmallVectorImpl<Value> &handles) const {
+  bool found = false;
   for (const Mappings &mapping : llvm::make_second_range(mappings)) {
-    if (Value handle = mapping.reverse.lookup(op))
-      return handle;
+    auto iterator = mapping.reverse.find(op);
+    if (iterator != mapping.reverse.end()) {
+      llvm::append_range(handles, iterator->getSecond());
+      found = true;
+    }
   }
-  return Value();
+
+  return success(found);
 }
 
-LogicalResult transform::TransformState::tryEmplaceReverseMapping(
-    Mappings &map, Operation *operation, Value handle) {
-  auto insertionResult = map.reverse.insert({operation, handle});
-  if (!insertionResult.second && insertionResult.first->second != handle) {
-    InFlightDiagnostic diag = operation->emitError()
-                              << "operation tracked by two handles";
-    diag.attachNote(handle.getLoc()) << "handle";
-    diag.attachNote(insertionResult.first->second.getLoc()) << "handle";
-    return diag;
-  }
-  return success();
-}
-
-LogicalResult
-transform::TransformState::setPayloadOps(Value value,
-                                         ArrayRef<Operation *> targets) {
+void transform::TransformState::setPayloadOps(Value value,
+                                              ArrayRef<Operation *> targets) {
   assert(value != kTopLevelValue &&
          "attempting to reset the transformation root");
 
+  // TODO: this may go now
   if (value.use_empty())
-    return success();
+    return;
 
   // Setting new payload for the value without cleaning it first is a misuse of
   // the API, assert here.
@@ -84,25 +78,29 @@ transform::TransformState::setPayloadOps(Value value,
   assert(inserted && "value is already associated with another list");
   (void)inserted;
 
-  // Having multiple handles to the same operation is an error in the transform
-  // expressed using the dialect and may be constructed by valid API calls from
-  // valid IR. Emit an error here.
-  for (Operation *op : targets) {
-    if (failed(tryEmplaceReverseMapping(mappings, op, value)))
-      return failure();
-  }
+  for (Operation *op : targets)
+    mappings.reverse[op].push_back(value);
+}
 
-  return success();
+void transform::TransformState::dropReverseMapping(Mappings &mappings,
+                                                   Operation *op, Value value) {
+  auto it = mappings.reverse.find(op);
+  if (it != mappings.reverse.end())
+    return;
+
+  llvm::erase_value(it->getSecond(), value);
+  if (it->getSecond().empty())
+    mappings.reverse.erase(it);
 }
 
 void transform::TransformState::removePayloadOps(Value value) {
   Mappings &mappings = getMapping(value);
   for (Operation *op : mappings.direct[value])
-    mappings.reverse.erase(op);
+    dropReverseMapping(mappings, op, value);
   mappings.direct.erase(value);
 }
 
-LogicalResult transform::TransformState::updatePayloadOps(
+void transform::TransformState::updatePayloadOps(
     Value value, function_ref<Operation *(Operation *)> callback) {
   Mappings &mappings = getMapping(value);
   auto it = mappings.direct.find(value);
@@ -112,58 +110,58 @@ LogicalResult transform::TransformState::updatePayloadOps(
   updated.reserve(association.size());
 
   for (Operation *op : association) {
-    mappings.reverse.erase(op);
+    dropReverseMapping(mappings, op, value);
     if (Operation *updatedOp = callback(op)) {
       updated.push_back(updatedOp);
-      if (failed(tryEmplaceReverseMapping(mappings, updatedOp, value)))
-        return failure();
+      mappings.reverse[updatedOp].push_back(value);
     }
   }
 
   std::swap(association, updated);
-  return success();
+}
+
+void transform::TransformState::recordHandleInvalidationOne(
+    OpOperand &handle, Operation *payloadOp, Value otherHandle) {
+  ArrayRef<Operation *> potentialAncestors = getPayloadOps(handle.get());
+  // If the op is associated with invalidated handle, skip the check as it
+  // may be reading invalid IR.
+  if (invalidatedHandles.count(otherHandle))
+    return;
+
+  for (Operation *ancestor : potentialAncestors) {
+    if (!ancestor->isAncestor(payloadOp))
+      continue;
+
+    // Make sure the error-reporting lambda doesn't capture anything
+    // by-reference because it will go out of scope. Additionally, extract
+    // location from Payload IR ops because the ops themselves may be
+    // deleted before the lambda gets called.
+    Location ancestorLoc = ancestor->getLoc();
+    Location opLoc = payloadOp->getLoc();
+    Operation *owner = handle.getOwner();
+    unsigned operandNo = handle.getOperandNumber();
+    invalidatedHandles[otherHandle] = [ancestorLoc, opLoc, owner, operandNo,
+                                       otherHandle](Location currentLoc) {
+      InFlightDiagnostic diag = emitError(currentLoc)
+                                << "op uses a handle invalidated by a "
+                                   "previously executed transform op";
+      diag.attachNote(otherHandle.getLoc()) << "handle to invalidated ops";
+      diag.attachNote(owner->getLoc())
+          << "invalidated by this transform op that consumes its operand #"
+          << operandNo
+          << " and invalidates handles to payload ops nested in payload "
+             "ops associated with the consumed handle";
+      diag.attachNote(ancestorLoc) << "ancestor payload op";
+      diag.attachNote(opLoc) << "nested payload op";
+    };
+  }
 }
 
 void transform::TransformState::recordHandleInvalidation(OpOperand &handle) {
-  ArrayRef<Operation *> potentialAncestors = getPayloadOps(handle.get());
-  for (const Mappings &mapping : llvm::make_second_range(mappings)) {
-    for (const auto &kvp : mapping.reverse) {
-      // If the op is associated with invalidated handle, skip the check as it
-      // may be reading invalid IR.
-      Operation *op = kvp.first;
-      Value otherHandle = kvp.second;
-      if (invalidatedHandles.count(otherHandle))
-        continue;
-
-      for (Operation *ancestor : potentialAncestors) {
-        if (!ancestor->isProperAncestor(op))
-          continue;
-
-        // Make sure the error-reporting lambda doesn't capture anything
-        // by-reference because it will go out of scope. Additionally, extract
-        // location from Payload IR ops because the ops themselves may be
-        // deleted before the lambda gets called.
-        Location ancestorLoc = ancestor->getLoc();
-        Location opLoc = op->getLoc();
-        Operation *owner = handle.getOwner();
-        unsigned operandNo = handle.getOperandNumber();
-        invalidatedHandles[otherHandle] = [ancestorLoc, opLoc, owner, operandNo,
-                                           otherHandle](Location currentLoc) {
-          InFlightDiagnostic diag = emitError(currentLoc)
-                                    << "op uses a handle invalidated by a "
-                                       "previously executed transform op";
-          diag.attachNote(otherHandle.getLoc()) << "handle to invalidated ops";
-          diag.attachNote(owner->getLoc())
-              << "invalidated by this transform op that consumes its operand #"
-              << operandNo
-              << " and invalidates handles to payload ops nested in payload "
-                 "ops associated with the consumed handle";
-          diag.attachNote(ancestorLoc) << "ancestor payload op";
-          diag.attachNote(opLoc) << "nested payload op";
-        };
-      }
-    }
-  }
+  for (const Mappings &mapping : llvm::make_second_range(mappings))
+    for (const auto &[payloadOp, otherHandles] : mapping.reverse)
+      for (Value otherHandle : otherHandles)
+        recordHandleInvalidationOne(handle, payloadOp, otherHandle);
 }
 
 LogicalResult transform::TransformState::checkAndRecordHandleInvalidation(
@@ -252,8 +250,7 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     assert(result.getDefiningOp() == transform.getOperation() &&
            "payload IR association for a value other than the result of the "
            "current transform op");
-    if (failed(setPayloadOps(result, results.get(result.getResultNumber()))))
-      return DiagnosedSilenceableFailure::definiteFailure();
+    setPayloadOps(result, results.get(result.getResultNumber()));
   }
 
   printOnFailureRAII.release();
@@ -273,10 +270,16 @@ transform::TransformState::Extension::~Extension() = default;
 LogicalResult
 transform::TransformState::Extension::replacePayloadOp(Operation *op,
                                                        Operation *replacement) {
-  return state.updatePayloadOps(state.getHandleForPayloadOp(op),
-                                [&](Operation *current) {
-                                  return current == op ? replacement : current;
-                                });
+  SmallVector<Value> handles;
+  if (failed(state.getHandlesForPayloadOp(op, handles)))
+    return failure();
+
+  for (Value handle : handles) {
+    state.updatePayloadOps(handle, [&](Operation *current) {
+      return current == op ? replacement : current;
+    });
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -311,7 +314,7 @@ transform::TransformResults::get(unsigned resultNumber) const {
 // Utilities for PossibleTopLevelTransformOpTrait.
 //===----------------------------------------------------------------------===//
 
-LogicalResult transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
+void transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
     TransformState &state, Operation *op, Region &region) {
   SmallVector<Operation *> targets;
   if (op->getNumOperands() != 0)
@@ -319,7 +322,7 @@ LogicalResult transform::detail::mapPossibleTopLevelTransformOpBlockArguments(
   else
     targets.push_back(state.getTopLevel());
 
-  return state.mapBlockArguments(region.front().getArgument(0), targets);
+  state.mapBlockArguments(region.front().getArgument(0), targets);
 }
 
 LogicalResult

@@ -46,6 +46,9 @@ LogicalResult promoteBufferResultsToOutParams(ModuleOp module);
 /// function argument.
 std::unique_ptr<Pass> createDropEquivalentBufferResultsPass();
 
+/// Create a pass that rewrites tensor.empty to bufferization.alloc_tensor.
+std::unique_ptr<Pass> createEmptyTensorToAllocTensorPass();
+
 /// Drop all memref function results that are equivalent to a function argument.
 LogicalResult dropEquivalentBufferResults(ModuleOp module);
 

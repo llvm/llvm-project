@@ -167,7 +167,7 @@ define <4 x half> @shuffle_v4f16_3u6u(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    global_load_dword v5, v[0:1], off offset:4
 ; GFX9-NEXT:    global_load_dword v4, v[2:3], off offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v5
+; GFX9-NEXT:    v_alignbit_b32 v0, s4, v5, 16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -179,7 +179,7 @@ define <4 x half> @shuffle_v4f16_3u6u(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10-NEXT:    global_load_dword v5, v[0:1], off offset:4
 ; GFX10-NEXT:    global_load_dword v4, v[2:3], off offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v5
+; GFX10-NEXT:    v_alignbit_b32 v0, s4, v5, 16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -191,7 +191,7 @@ define <4 x half> @shuffle_v4f16_3u6u(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
 ; GFX11-NEXT:    global_load_b32 v1, v[2:3], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX11-NEXT:    v_alignbit_b32 v0, s0, v0, 16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
@@ -207,7 +207,7 @@ define <4 x half> @shuffle_v4f16_3uu7(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    global_load_dword v5, v[0:1], off offset:4
 ; GFX9-NEXT:    global_load_dword v4, v[2:3], off offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v5
+; GFX9-NEXT:    v_alignbit_b32 v0, s4, v5, 16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -219,7 +219,7 @@ define <4 x half> @shuffle_v4f16_3uu7(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10-NEXT:    global_load_dword v5, v[0:1], off offset:4
 ; GFX10-NEXT:    global_load_dword v4, v[2:3], off offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v5
+; GFX10-NEXT:    v_alignbit_b32 v0, s4, v5, 16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -231,7 +231,7 @@ define <4 x half> @shuffle_v4f16_3uu7(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
 ; GFX11-NEXT:    global_load_b32 v1, v[2:3], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
+; GFX11-NEXT:    v_alignbit_b32 v0, s0, v0, 16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
@@ -246,12 +246,9 @@ define <4 x half> @shuffle_v4f16_35u5(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v5, v[0:1], off offset:4
 ; GFX9-NEXT:    global_load_dword v4, v[2:3], off
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0xffff
-; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_and_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    s_mov_b32 s4, 0x7060302
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v4
-; GFX9-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX9-NEXT:    v_perm_b32 v0, v4, v5, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -261,12 +258,8 @@ define <4 x half> @shuffle_v4f16_35u5(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dword v5, v[0:1], off offset:4
 ; GFX10-NEXT:    global_load_dword v4, v[2:3], off
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
-; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_and_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v4
-; GFX10-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX10-NEXT:    v_perm_b32 v0, v4, v5, 0x7060302
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -276,13 +269,8 @@ define <4 x half> @shuffle_v4f16_35u5(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
 ; GFX11-NEXT:    global_load_b32 v1, v[2:3], off
-; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x7060302
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -294,46 +282,37 @@ define <4 x half> @shuffle_v4f16_357u(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-LABEL: shuffle_v4f16_357u:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v6, v[0:1], off offset:4
 ; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[2:3], off
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0xffff
+; GFX9-NEXT:    global_load_dword v6, v[0:1], off offset:4
+; GFX9-NEXT:    s_mov_b32 s4, 0x7060302
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_and_b32_sdwa v0, v0, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    v_alignbit_b32 v1, s4, v5, 16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 16, v4
-; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v5
-; GFX9-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX9-NEXT:    v_perm_b32 v0, v4, v6, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: shuffle_v4f16_357u:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    global_load_dword v6, v[0:1], off offset:4
 ; GFX10-NEXT:    global_load_dwordx2 v[4:5], v[2:3], off
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
+; GFX10-NEXT:    global_load_dword v6, v[0:1], off offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_and_b32_sdwa v0, v0, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_alignbit_b32 v1, s4, v5, 16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v4
-; GFX10-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
-; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v5
+; GFX10-NEXT:    v_perm_b32 v0, v4, v6, 0x7060302
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: shuffle_v4f16_357u:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    global_load_b32 v4, v[0:1], off offset:4
-; GFX11-NEXT:    global_load_b64 v[0:1], v[2:3], off
+; GFX11-NEXT:    global_load_b64 v[2:3], v[2:3], off
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v4
+; GFX11-NEXT:    v_alignbit_b32 v1, s0, v3, 16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
+; GFX11-NEXT:    v_perm_b32 v0, v2, v0, 0x7060302
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -909,10 +888,8 @@ define <4 x half> @shuffle_v4f16_2356(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[5:6], v[2:3], off
 ; GFX9-NEXT:    global_load_dword v4, v[0:1], off offset:4
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_and_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_lshl_or_b32 v1, v6, 16, v0
+; GFX9-NEXT:    v_alignbit_b32 v1, v6, v5, 16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -923,10 +900,8 @@ define <4 x half> @shuffle_v4f16_2356(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[5:6], v[2:3], off
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off offset:4
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_and_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_lshl_or_b32 v1, v6, 16, v0
+; GFX10-NEXT:    v_alignbit_b32 v1, v6, v5, 16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -938,10 +913,7 @@ define <4 x half> @shuffle_v4f16_2356(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    global_load_b64 v[2:3], v[2:3], off
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX11-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
+; GFX11-NEXT:    v_alignbit_b32 v1, v3, v2, 16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
@@ -956,10 +928,8 @@ define <4 x half> @shuffle_v4f16_5623(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[5:6], v[2:3], off
 ; GFX9-NEXT:    global_load_dword v4, v[0:1], off offset:4
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_and_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_lshl_or_b32 v0, v6, 16, v0
+; GFX9-NEXT:    v_alignbit_b32 v0, v6, v5, 16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -970,12 +940,10 @@ define <4 x half> @shuffle_v4f16_5623(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[5:6], v[2:3], off
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off offset:4
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_and_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_alignbit_b32 v0, v6, v5, 16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v4
-; GFX10-NEXT:    v_lshl_or_b32 v0, v6, 16, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: shuffle_v4f16_5623:
@@ -985,10 +953,7 @@ define <4 x half> @shuffle_v4f16_5623(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    global_load_b64 v[2:3], v[2:3], off
 ; GFX11-NEXT:    global_load_b32 v1, v[0:1], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
+; GFX11-NEXT:    v_alignbit_b32 v0, v3, v2, 16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
@@ -1001,48 +966,36 @@ define <4 x half> @shuffle_v4f16_3456(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-LABEL: shuffle_v4f16_3456:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v6, v[0:1], off offset:4
 ; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[2:3], off
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0xffff
+; GFX9-NEXT:    global_load_dword v6, v[0:1], off offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_and_b32_sdwa v1, v0, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    v_alignbit_b32 v1, v5, v4, 16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_and_b32_sdwa v2, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_lshl_or_b32 v0, v4, 16, v1
-; GFX9-NEXT:    v_lshl_or_b32 v1, v5, 16, v2
+; GFX9-NEXT:    v_alignbit_b32 v0, v4, v6, 16
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: shuffle_v4f16_3456:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    global_load_dword v6, v[0:1], off offset:4
 ; GFX10-NEXT:    global_load_dwordx2 v[4:5], v[2:3], off
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
+; GFX10-NEXT:    global_load_dword v6, v[0:1], off offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_and_b32_sdwa v1, v0, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_alignbit_b32 v1, v5, v4, 16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_and_b32_sdwa v2, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_lshl_or_b32 v0, v4, 16, v1
-; GFX10-NEXT:    v_lshl_or_b32 v1, v5, 16, v2
+; GFX10-NEXT:    v_alignbit_b32 v0, v4, v6, 16
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: shuffle_v4f16_3456:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    global_load_b32 v4, v[0:1], off offset:4
-; GFX11-NEXT:    global_load_b64 v[0:1], v[2:3], off
+; GFX11-NEXT:    global_load_b64 v[2:3], v[2:3], off
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v4
+; GFX11-NEXT:    v_alignbit_b32 v1, v3, v2, 16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX11-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
-; GFX11-NEXT:    v_lshl_or_b32 v1, v1, 16, v3
+; GFX11-NEXT:    v_alignbit_b32 v0, v2, v0, 16
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -1054,15 +1007,12 @@ define <4 x half> @shuffle_v4f16_5634(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-LABEL: shuffle_v4f16_5634:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v6, v[0:1], off offset:4
 ; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[2:3], off
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0xffff
+; GFX9-NEXT:    global_load_dword v6, v[0:1], off offset:4
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_and_b32_sdwa v1, v0, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    v_alignbit_b32 v0, v5, v4, 16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_and_b32_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_lshl_or_b32 v1, v4, 16, v1
-; GFX9-NEXT:    v_lshl_or_b32 v0, v5, 16, v0
+; GFX9-NEXT:    v_alignbit_b32 v1, v4, v6, 16
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: shuffle_v4f16_5634:
@@ -1071,13 +1021,10 @@ define <4 x half> @shuffle_v4f16_5634(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[4:5], v[2:3], off
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off offset:4
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_and_b32_sdwa v1, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_alignbit_b32 v0, v5, v4, 16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_and_b32_sdwa v2, v0, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_lshl_or_b32 v0, v5, 16, v1
-; GFX10-NEXT:    v_lshl_or_b32 v1, v4, 16, v2
+; GFX10-NEXT:    v_alignbit_b32 v1, v4, v6, 16
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: shuffle_v4f16_5634:
@@ -1085,17 +1032,11 @@ define <4 x half> @shuffle_v4f16_5634(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b64 v[2:3], v[2:3], off
-; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
+; GFX11-NEXT:    global_load_b32 v1, v[0:1], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
+; GFX11-NEXT:    v_alignbit_b32 v0, v3, v2, 16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX11-NEXT:    v_and_b32_e32 v4, 0xffff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_lshl_or_b32 v0, v3, 16, v1
-; GFX11-NEXT:    v_lshl_or_b32 v1, v2, 16, v4
+; GFX11-NEXT:    v_alignbit_b32 v1, v2, v1, 16
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -1107,16 +1048,13 @@ define <4 x half> @shuffle_v4f16_5734(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-LABEL: shuffle_v4f16_5734:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v6, v[0:1], off offset:4
 ; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[2:3], off
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0xffff
+; GFX9-NEXT:    global_load_dword v6, v[0:1], off offset:4
+; GFX9-NEXT:    s_mov_b32 s4, 0x7060302
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_and_b32_sdwa v1, v0, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    v_perm_b32 v0, v5, v4, s4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_and_b32_sdwa v0, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 16, v5
-; GFX9-NEXT:    v_lshl_or_b32 v1, v4, 16, v1
-; GFX9-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX9-NEXT:    v_alignbit_b32 v1, v4, v6, 16
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: shuffle_v4f16_5734:
@@ -1125,14 +1063,10 @@ define <4 x half> @shuffle_v4f16_5734(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[4:5], v[2:3], off
 ; GFX10-NEXT:    global_load_dword v6, v[0:1], off offset:4
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_and_b32_sdwa v1, v0, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_lshrrev_b32_e32 v2, 16, v5
+; GFX10-NEXT:    v_perm_b32 v0, v5, v4, 0x7060302
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_and_b32_sdwa v3, v0, v6 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_lshl_or_b32 v0, v2, 16, v1
-; GFX10-NEXT:    v_lshl_or_b32 v1, v4, 16, v3
+; GFX10-NEXT:    v_alignbit_b32 v1, v4, v6, 16
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: shuffle_v4f16_5734:
@@ -1140,18 +1074,11 @@ define <4 x half> @shuffle_v4f16_5734(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b64 v[2:3], v[2:3], off
-; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
+; GFX11-NEXT:    global_load_b32 v1, v[0:1], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
+; GFX11-NEXT:    v_perm_b32 v0, v3, v2, 0x7060302
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 16, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX11-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX11-NEXT:    v_and_b32_e32 v4, 0xffff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_lshl_or_b32 v0, v3, 16, v1
-; GFX11-NEXT:    v_lshl_or_b32 v1, v2, 16, v4
+; GFX11-NEXT:    v_alignbit_b32 v1, v2, v1, 16
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -1165,10 +1092,8 @@ define <4 x i16> @shuffle_v4i16_2356(<4 x i16> addrspace(1)* %arg0, <4 x i16> ad
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[5:6], v[2:3], off
 ; GFX9-NEXT:    global_load_dword v4, v[0:1], off offset:4
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_and_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_lshl_or_b32 v1, v6, 16, v0
+; GFX9-NEXT:    v_alignbit_b32 v1, v6, v5, 16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -1179,10 +1104,8 @@ define <4 x i16> @shuffle_v4i16_2356(<4 x i16> addrspace(1)* %arg0, <4 x i16> ad
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[5:6], v[2:3], off
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off offset:4
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_and_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_lshl_or_b32 v1, v6, 16, v0
+; GFX10-NEXT:    v_alignbit_b32 v1, v6, v5, 16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -1194,9 +1117,7 @@ define <4 x i16> @shuffle_v4i16_2356(<4 x i16> addrspace(1)* %arg0, <4 x i16> ad
 ; GFX11-NEXT:    global_load_b64 v[2:3], v[2:3], off
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
+; GFX11-NEXT:    v_alignbit_b32 v1, v3, v2, 16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x i16>, <4 x i16> addrspace(1)* %arg0
@@ -1248,9 +1169,9 @@ define <4 x half> @shuffle_v4f16_0000(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v0
-; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX9-NEXT:    v_perm_b32 v0, v0, v0, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1260,8 +1181,7 @@ define <4 x half> @shuffle_v4f16_0000(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_and_b32_e32 v1, 0xffff, v0
-; GFX10-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX10-NEXT:    v_perm_b32 v0, v0, v0, 0x5040100
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1271,9 +1191,8 @@ define <4 x half> @shuffle_v4f16_0000(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v1, 0xffff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX11-NEXT:    v_perm_b32 v0, v0, v0, 0x5040100
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
@@ -1288,9 +1207,7 @@ define <4 x half> @shuffle_v4f16_1010(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff
-; GFX9-NEXT:    v_and_b32_sdwa v1, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX9-NEXT:    v_alignbit_b32 v0, v0, v0, 16
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1300,9 +1217,7 @@ define <4 x half> @shuffle_v4f16_1010(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0xffff
-; GFX10-NEXT:    v_and_b32_sdwa v1, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX10-NEXT:    v_alignbit_b32 v0, v0, v0, 16
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1312,10 +1227,7 @@ define <4 x half> @shuffle_v4f16_1010(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX11-NEXT:    v_alignbit_b32 v0, v0, v0, 16
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -1329,13 +1241,12 @@ define <4 x half> @shuffle_v4f16_1100(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-LABEL: shuffle_v4f16_1100:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX9-NEXT:    global_load_dwordx2 v[1:2], v[0:1], off
+; GFX9-NEXT:    s_mov_b32 s4, 0x7060302
+; GFX9-NEXT:    s_mov_b32 s5, 0x5040100
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v0
-; GFX9-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
-; GFX9-NEXT:    v_lshl_or_b32 v1, v0, 16, v1
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v2
-; GFX9-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
+; GFX9-NEXT:    v_perm_b32 v0, v1, v1, s4
+; GFX9-NEXT:    v_perm_b32 v1, v1, v1, s5
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: shuffle_v4f16_1100:
@@ -1344,11 +1255,8 @@ define <4 x half> @shuffle_v4f16_1100(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[1:2], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
-; GFX10-NEXT:    v_and_b32_e32 v3, 0xffff, v1
-; GFX10-NEXT:    v_and_b32_e32 v2, 0xffff, v0
-; GFX10-NEXT:    v_lshl_or_b32 v1, v1, 16, v3
-; GFX10-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
+; GFX10-NEXT:    v_perm_b32 v0, v1, v1, 0x7060302
+; GFX10-NEXT:    v_perm_b32 v1, v1, v1, 0x5040100
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: shuffle_v4f16_1100:
@@ -1357,13 +1265,8 @@ define <4 x half> @shuffle_v4f16_1100(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b64 v[1:2], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
-; GFX11-NEXT:    v_and_b32_e32 v3, 0xffff, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_and_b32_e32 v2, 0xffff, v0
-; GFX11-NEXT:    v_lshl_or_b32 v1, v1, 16, v3
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 16, v2
+; GFX11-NEXT:    v_perm_b32 v0, v1, v1, 0x7060302
+; GFX11-NEXT:    v_perm_b32 v1, v1, v1, 0x5040100
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -1375,13 +1278,11 @@ define <4 x half> @shuffle_v4f16_6161(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-LABEL: shuffle_v4f16_6161:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_dword v4, v[2:3], off offset:4
-; GFX9-NEXT:    global_load_dword v5, v[0:1], off
-; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff, v4
+; GFX9-NEXT:    global_load_dword v4, v[0:1], off
+; GFX9-NEXT:    global_load_dword v5, v[2:3], off offset:4
+; GFX9-NEXT:    s_mov_b32 s4, 0xffff
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v5
-; GFX9-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX9-NEXT:    v_bfi_b32 v0, s4, v5, v4
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1389,13 +1290,10 @@ define <4 x half> @shuffle_v4f16_6161(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-NEXT:    global_load_dword v4, v[2:3], off offset:4
-; GFX10-NEXT:    global_load_dword v5, v[0:1], off
-; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v4
+; GFX10-NEXT:    global_load_dword v4, v[0:1], off
+; GFX10-NEXT:    global_load_dword v5, v[2:3], off offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v5
-; GFX10-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
+; GFX10-NEXT:    v_bfi_b32 v0, 0xffff, v5, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1403,14 +1301,11 @@ define <4 x half> @shuffle_v4f16_6161(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    global_load_b32 v2, v[2:3], off offset:4
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
-; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_and_b32_e32 v1, 0xffff, v2
+; GFX11-NEXT:    global_load_b32 v1, v[2:3], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
+; GFX11-NEXT:    v_bfi_b32 v0, 0xffff, v1, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
@@ -1424,10 +1319,9 @@ define <4 x half> @shuffle_v4f16_2333(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off offset:4
+; GFX9-NEXT:    s_mov_b32 s4, 0x7060302
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX9-NEXT:    v_and_b32_e32 v2, 0xffff, v1
-; GFX9-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
+; GFX9-NEXT:    v_perm_b32 v1, v0, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: shuffle_v4f16_2333:
@@ -1436,9 +1330,7 @@ define <4 x half> @shuffle_v4f16_2333(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dword v0, v[0:1], off offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX10-NEXT:    v_and_b32_e32 v2, 0xffff, v1
-; GFX10-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
+; GFX10-NEXT:    v_perm_b32 v1, v0, v0, 0x7060302
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: shuffle_v4f16_2333:
@@ -1447,10 +1339,7 @@ define <4 x half> @shuffle_v4f16_2333(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v2, 0xffff, v1
-; GFX11-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
+; GFX11-NEXT:    v_perm_b32 v1, v0, v0, 0x7060302
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -1463,10 +1352,9 @@ define <4 x half> @shuffle_v4f16_6667(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off offset:4
+; GFX9-NEXT:    s_mov_b32 s4, 0x7060302
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX9-NEXT:    v_and_b32_e32 v2, 0xffff, v1
-; GFX9-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
+; GFX9-NEXT:    v_perm_b32 v1, v0, v0, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: shuffle_v4f16_6667:
@@ -1475,9 +1363,7 @@ define <4 x half> @shuffle_v4f16_6667(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dword v0, v[0:1], off offset:4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX10-NEXT:    v_and_b32_e32 v2, 0xffff, v1
-; GFX10-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
+; GFX10-NEXT:    v_perm_b32 v1, v0, v0, 0x7060302
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: shuffle_v4f16_6667:
@@ -1486,10 +1372,7 @@ define <4 x half> @shuffle_v4f16_6667(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v2, 0xffff, v1
-; GFX11-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
+; GFX11-NEXT:    v_perm_b32 v1, v0, v0, 0x7060302
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -1642,10 +1525,8 @@ define <4 x half> @shuffle_v8f16_13_14_2_3(<8 x half> addrspace(1)* %arg0, <8 x 
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[5:6], v[2:3], off offset:8
 ; GFX9-NEXT:    global_load_dword v4, v[0:1], off offset:4
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX9-NEXT:    s_waitcnt vmcnt(1)
-; GFX9-NEXT:    v_and_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_lshl_or_b32 v0, v6, 16, v0
+; GFX9-NEXT:    v_alignbit_b32 v0, v6, v5, 16
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
@@ -1656,12 +1537,10 @@ define <4 x half> @shuffle_v8f16_13_14_2_3(<8 x half> addrspace(1)* %arg0, <8 x 
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[5:6], v[2:3], off offset:8
 ; GFX10-NEXT:    global_load_dword v4, v[0:1], off offset:4
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX10-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-NEXT:    v_and_b32_sdwa v0, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX10-NEXT:    v_alignbit_b32 v0, v6, v5, 16
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v1, v4
-; GFX10-NEXT:    v_lshl_or_b32 v0, v6, 16, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: shuffle_v8f16_13_14_2_3:
@@ -1671,10 +1550,7 @@ define <4 x half> @shuffle_v8f16_13_14_2_3(<8 x half> addrspace(1)* %arg0, <8 x 
 ; GFX11-NEXT:    global_load_b64 v[2:3], v[2:3], off offset:8
 ; GFX11-NEXT:    global_load_b32 v1, v[0:1], off offset:4
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    v_lshl_or_b32 v0, v3, 16, v0
+; GFX11-NEXT:    v_alignbit_b32 v0, v3, v2, 16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <8 x half>, <8 x half> addrspace(1)* %arg0
@@ -1688,9 +1564,9 @@ define <4 x half> @shuffle_v3f16_0122(<3 x half> addrspace(1)* %arg0, <3 x half>
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
+; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_and_b32_e32 v2, 0xffff, v1
-; GFX9-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
+; GFX9-NEXT:    v_perm_b32 v1, v1, v1, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: shuffle_v3f16_0122:
@@ -1699,8 +1575,7 @@ define <4 x half> @shuffle_v3f16_0122(<3 x half> addrspace(1)* %arg0, <3 x half>
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_and_b32_e32 v2, 0xffff, v1
-; GFX10-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
+; GFX10-NEXT:    v_perm_b32 v1, v1, v1, 0x5040100
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: shuffle_v3f16_0122:
@@ -1709,9 +1584,7 @@ define <4 x half> @shuffle_v3f16_0122(<3 x half> addrspace(1)* %arg0, <3 x half>
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_and_b32_e32 v2, 0xffff, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-NEXT:    v_lshl_or_b32 v1, v1, 16, v2
+; GFX11-NEXT:    v_perm_b32 v1, v1, v1, 0x5040100
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <3 x half>, <3 x half> addrspace(1)* %arg0
   %val1 = load <3 x half>, <3 x half> addrspace(1)* %arg1
@@ -1724,10 +1597,8 @@ define <4 x half> @shuffle_v2f16_0122(<2 x half> addrspace(1)* %arg0, <2 x half>
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_dword v0, v[0:1], off
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0xffff
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_and_b32_sdwa v1, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_lshl_or_b32 v1, v0, 16, v1
+; GFX9-NEXT:    v_alignbit_b32 v1, v0, v0, 16
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: shuffle_v2f16_0122:
@@ -1735,10 +1606,8 @@ define <4 x half> @shuffle_v2f16_0122(<2 x half> addrspace(1)* %arg0, <2 x half>
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dword v0, v[0:1], off
-; GFX10-NEXT:    v_mov_b32_e32 v1, 0xffff
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_and_b32_sdwa v1, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_lshl_or_b32 v1, v0, 16, v1
+; GFX10-NEXT:    v_alignbit_b32 v1, v0, v0, 16
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: shuffle_v2f16_0122:
@@ -1747,10 +1616,7 @@ define <4 x half> @shuffle_v2f16_0122(<2 x half> addrspace(1)* %arg0, <2 x half>
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX11-NEXT:    v_lshl_or_b32 v1, v0, 16, v1
+; GFX11-NEXT:    v_alignbit_b32 v1, v0, v0, 16
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <2 x half>, <2 x half> addrspace(1)* %arg0
   %val1 = load <2 x half>, <2 x half> addrspace(1)* %arg1
@@ -1907,14 +1773,12 @@ define <4 x half> @shuffle_v4f16_0456(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX9-NEXT:    global_load_dwordx2 v[4:5], v[0:1], off
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    global_load_dwordx2 v[5:6], v[2:3], off
+; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
 ; GFX9-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX9-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
-; GFX9-NEXT:    v_and_b32_e32 v1, 0xffff, v4
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    v_and_b32_sdwa v2, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_lshl_or_b32 v0, v5, 16, v1
-; GFX9-NEXT:    v_lshl_or_b32 v1, v6, 16, v2
+; GFX9-NEXT:    v_perm_b32 v0, v5, v4, s4
+; GFX9-NEXT:    v_alignbit_b32 v1, v6, v5, 16
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: shuffle_v4f16_0456:
@@ -1925,29 +1789,22 @@ define <4 x half> @shuffle_v4f16_0456(<4 x half> addrspace(1)* %arg0, <4 x half>
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    global_load_dwordx2 v[5:6], v[2:3], off
 ; GFX10-NEXT:    ; kill: killed $vgpr0 killed $vgpr1
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0xffff
 ; GFX10-NEXT:    ; kill: killed $vgpr2 killed $vgpr3
-; GFX10-NEXT:    v_and_b32_e32 v1, 0xffff, v4
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    v_and_b32_sdwa v2, v0, v5 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX10-NEXT:    v_lshl_or_b32 v0, v5, 16, v1
-; GFX10-NEXT:    v_lshl_or_b32 v1, v6, 16, v2
+; GFX10-NEXT:    v_perm_b32 v0, v5, v4, 0x5040100
+; GFX10-NEXT:    v_alignbit_b32 v1, v6, v5, 16
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: shuffle_v4f16_0456:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    global_load_b64 v[2:3], v[2:3], off
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
-; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX11-NEXT:    v_lshl_or_b32 v0, v2, 16, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GFX11-NEXT:    v_lshl_or_b32 v1, v3, 16, v1
+; GFX11-NEXT:    global_load_b64 v[1:2], v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX11-NEXT:    v_alignbit_b32 v1, v2, v1, 16
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, <4 x half> addrspace(1)* %arg0
   %val1 = load <4 x half>, <4 x half> addrspace(1)* %arg1
@@ -2006,3 +1863,372 @@ declare <2 x half> @llvm.fma.v2f16(<2 x half>, <2 x half>, <2 x half>) #0
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 attributes #0 = { nounwind readnone speculatable }
+define <2 x half> @low16bits(<2 x half> addrspace(1)* %x0, <2 x half> addrspace(1)* %x1) {
+; GFX9-LABEL: low16bits:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dword v4, v[0:1], off
+; GFX9-NEXT:    global_load_dword v5, v[2:3], off
+; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_perm_b32 v0, v5, v4, s4
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: low16bits:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dword v4, v[0:1], off
+; GFX10-NEXT:    global_load_dword v5, v[2:3], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_perm_b32 v0, v5, v4, 0x5040100
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: low16bits:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    global_load_b32 v1, v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %0 = load <2 x half>, <2 x half> addrspace(1)* %x0, align 4
+  %1 = load <2 x half>, <2 x half> addrspace(1)* %x1, align 4
+  %vy1.0.vec.insert = shufflevector <2 x half> %0, <2 x half> poison, <2 x i32> <i32 0, i32 undef>
+  %vy1.2.vec.insert = shufflevector <2 x half> %vy1.0.vec.insert, <2 x half> %1, <2 x i32> <i32 0, i32 2>
+  ret <2 x half> %vy1.2.vec.insert
+}
+
+define <2 x half> @hi16bits(<2 x half> addrspace(1)* %x0, <2 x half> addrspace(1)* %x1) {
+; GFX9-LABEL: hi16bits:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dword v4, v[0:1], off
+; GFX9-NEXT:    global_load_dword v5, v[2:3], off
+; GFX9-NEXT:    s_mov_b32 s4, 0x7060302
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_perm_b32 v0, v5, v4, s4
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: hi16bits:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dword v4, v[0:1], off
+; GFX10-NEXT:    global_load_dword v5, v[2:3], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_perm_b32 v0, v5, v4, 0x7060302
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: hi16bits:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    global_load_b32 v1, v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x7060302
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %0 = load <2 x half>, <2 x half> addrspace(1)* %x0, align 4
+  %1 = load <2 x half>, <2 x half> addrspace(1)* %x1, align 4
+  %vy1.0.vec.insert = shufflevector <2 x half> %0, <2 x half> poison, <2 x i32> <i32 1, i32 undef>
+  %vy1.2.vec.insert = shufflevector <2 x half> %vy1.0.vec.insert, <2 x half> %1, <2 x i32> <i32 0, i32 3>
+  ret <2 x half> %vy1.2.vec.insert
+}
+
+define <2 x half> @low16hi16bits(<2 x half> addrspace(1)* %x0, <2 x half> addrspace(1)* %x1) {
+; GFX9-LABEL: low16hi16bits:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dword v4, v[0:1], off
+; GFX9-NEXT:    global_load_dword v5, v[2:3], off
+; GFX9-NEXT:    s_mov_b32 s4, 0xffff
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_bfi_b32 v0, s4, v4, v5
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: low16hi16bits:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dword v4, v[0:1], off
+; GFX10-NEXT:    global_load_dword v5, v[2:3], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_bfi_b32 v0, 0xffff, v4, v5
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: low16hi16bits:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    global_load_b32 v1, v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_bfi_b32 v0, 0xffff, v0, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %0 = load <2 x half>, <2 x half> addrspace(1)* %x0, align 4
+  %1 = load <2 x half>, <2 x half> addrspace(1)* %x1, align 4
+  %vy1.0.vec.insert = shufflevector <2 x half> %0, <2 x half> poison, <2 x i32> <i32 0, i32 undef>
+  %vy1.2.vec.insert = shufflevector <2 x half> %vy1.0.vec.insert, <2 x half> %1, <2 x i32> <i32 0, i32 3>
+  ret <2 x half> %vy1.2.vec.insert
+}
+
+define <2 x half> @hi16low16bits(<2 x half> addrspace(1)* %x0, <2 x half> addrspace(1)* %x1) {
+; GFX9-LABEL: hi16low16bits:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dword v4, v[0:1], off
+; GFX9-NEXT:    global_load_dword v5, v[2:3], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_alignbit_b32 v0, v5, v4, 16
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: hi16low16bits:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dword v4, v[0:1], off
+; GFX10-NEXT:    global_load_dword v5, v[2:3], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_alignbit_b32 v0, v5, v4, 16
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: hi16low16bits:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    global_load_b32 v1, v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %0 = load <2 x half>, <2 x half> addrspace(1)* %x0, align 4
+  %1 = load <2 x half>, <2 x half> addrspace(1)* %x1, align 4
+  %vy1.0.vec.insert = shufflevector <2 x half> %0, <2 x half> poison, <2 x i32> <i32 1, i32 undef>
+  %vy1.2.vec.insert = shufflevector <2 x half> %vy1.0.vec.insert, <2 x half> %1, <2 x i32> <i32 0, i32 2>
+  ret <2 x half> %vy1.2.vec.insert
+}
+
+define <2 x i16> @i16_low16bits(<2 x i16> addrspace(1)* %x0, <2 x i16> addrspace(1)* %x1) {
+; GFX9-LABEL: i16_low16bits:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dword v4, v[0:1], off
+; GFX9-NEXT:    global_load_dword v5, v[2:3], off
+; GFX9-NEXT:    s_mov_b32 s4, 0x5040100
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_perm_b32 v0, v5, v4, s4
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: i16_low16bits:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dword v4, v[0:1], off
+; GFX10-NEXT:    global_load_dword v5, v[2:3], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_perm_b32 v0, v5, v4, 0x5040100
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: i16_low16bits:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    global_load_b32 v1, v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x5040100
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %0 = load <2 x i16>, <2 x i16> addrspace(1)* %x0, align 4
+  %1 = load <2 x i16>, <2 x i16> addrspace(1)* %x1, align 4
+  %vy1.0.vec.insert = shufflevector <2 x i16> %0, <2 x i16> poison, <2 x i32> <i32 0, i32 undef>
+  %vy1.2.vec.insert = shufflevector <2 x i16> %vy1.0.vec.insert, <2 x i16> %1, <2 x i32> <i32 0, i32 2>
+  ret <2 x i16> %vy1.2.vec.insert
+}
+
+define <2 x i16> @i16_low16hi16bits(<2 x i16> addrspace(1)* %x0, <2 x i16> addrspace(1)* %x1) {
+; GFX9-LABEL: i16_low16hi16bits:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dword v4, v[0:1], off
+; GFX9-NEXT:    global_load_dword v5, v[2:3], off
+; GFX9-NEXT:    s_mov_b32 s4, 0xffff
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_bfi_b32 v0, s4, v4, v5
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: i16_low16hi16bits:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dword v4, v[0:1], off
+; GFX10-NEXT:    global_load_dword v5, v[2:3], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_bfi_b32 v0, 0xffff, v4, v5
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: i16_low16hi16bits:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    global_load_b32 v1, v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_bfi_b32 v0, 0xffff, v0, v1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %0 = load <2 x i16>, <2 x i16> addrspace(1)* %x0, align 4
+  %1 = load <2 x i16>, <2 x i16> addrspace(1)* %x1, align 4
+  %vy1.0.vec.insert = shufflevector <2 x i16> %0, <2 x i16> poison, <2 x i32> <i32 0, i32 undef>
+  %vy1.2.vec.insert = shufflevector <2 x i16> %vy1.0.vec.insert, <2 x i16> %1, <2 x i32> <i32 0, i32 3>
+  ret <2 x i16> %vy1.2.vec.insert
+}
+
+define <2 x i16> @i16_hi16low16bits(<2 x i16> addrspace(1)* %x0, <2 x i16> addrspace(1)* %x1) {
+; GFX9-LABEL: i16_hi16low16bits:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dword v4, v[0:1], off
+; GFX9-NEXT:    global_load_dword v5, v[2:3], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_alignbit_b32 v0, v5, v4, 16
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: i16_hi16low16bits:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dword v4, v[0:1], off
+; GFX10-NEXT:    global_load_dword v5, v[2:3], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_alignbit_b32 v0, v5, v4, 16
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: i16_hi16low16bits:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    global_load_b32 v1, v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_alignbit_b32 v0, v1, v0, 16
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %0 = load <2 x i16>, <2 x i16> addrspace(1)* %x0, align 4
+  %1 = load <2 x i16>, <2 x i16> addrspace(1)* %x1, align 4
+  %vy1.0.vec.insert = shufflevector <2 x i16> %0, <2 x i16> poison, <2 x i32> <i32 1, i32 undef>
+  %vy1.2.vec.insert = shufflevector <2 x i16> %vy1.0.vec.insert, <2 x i16> %1, <2 x i32> <i32 0, i32 2>
+  ret <2 x i16> %vy1.2.vec.insert
+}
+
+define <2 x i16> @i16_hi16bits(<2 x i16> addrspace(1)* %x0, <2 x i16> addrspace(1)* %x1) {
+; GFX9-LABEL: i16_hi16bits:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dword v4, v[0:1], off
+; GFX9-NEXT:    global_load_dword v5, v[2:3], off
+; GFX9-NEXT:    s_mov_b32 s4, 0x7060302
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_perm_b32 v0, v5, v4, s4
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: i16_hi16bits:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dword v4, v[0:1], off
+; GFX10-NEXT:    global_load_dword v5, v[2:3], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_perm_b32 v0, v5, v4, 0x7060302
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: i16_hi16bits:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    global_load_b32 v1, v[2:3], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_perm_b32 v0, v1, v0, 0x7060302
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %0 = load <2 x i16>, <2 x i16> addrspace(1)* %x0, align 4
+  %1 = load <2 x i16>, <2 x i16> addrspace(1)* %x1, align 4
+  %vy1.0.vec.insert = shufflevector <2 x i16> %0, <2 x i16> poison, <2 x i32> <i32 1, i32 undef>
+  %vy1.2.vec.insert = shufflevector <2 x i16> %vy1.0.vec.insert, <2 x i16> %1, <2 x i32> <i32 0, i32 3>
+  ret <2 x i16> %vy1.2.vec.insert
+}
+
+define <2 x i16> @v2i16_hi16bits(<2 x i16> addrspace(1)* %x0) {
+; GFX9-LABEL: v2i16_hi16bits:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dword v0, v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v2i16_hi16bits:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dword v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v2i16_hi16bits:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %load0 = load <2 x i16>, <2 x i16> addrspace(1)* %x0, align 4
+  %insert1 = insertelement <2 x i16> undef, i16 0, i32 0
+  %insert2 = insertelement <2 x i16> %insert1, i16 0, i32 1
+  %vec.ret = shufflevector <2 x i16> %insert2, <2 x i16> %load0, <2 x i32> <i32 0, i32 3>
+  ret <2 x i16> %vec.ret
+}
+
+define <2 x half> @v2half_hi16bits(<2 x half> addrspace(1)* %x0) {
+; GFX9-LABEL: v2half_hi16bits:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    global_load_dword v0, v[0:1], off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10-LABEL: v2half_hi16bits:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX10-NEXT:    global_load_dword v0, v[0:1], off
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
+; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: v2half_hi16bits:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_b32 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_and_b32_e32 v0, 0xffff0000, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %load0 = load <2 x half>, <2 x half> addrspace(1)* %x0, align 4
+  %insert1 = insertelement <2 x half> undef, half 0.0, i32 0
+  %insert2 = insertelement <2 x half> %insert1, half 0.0, i32 1
+  %vec.ret = shufflevector <2 x half> %insert2, <2 x half> %load0, <2 x i32> <i32 0, i32 3>
+  ret <2 x half> %vec.ret
+}

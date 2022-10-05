@@ -1636,6 +1636,21 @@ class ArrayCount<int n> : AttrConstraint<
     CPred<"$_self.cast<::mlir::ArrayAttr>().size() == " #n>,
     "with exactly " # n # " elements">;
 
+class DenseArraySorted<DenseArrayAttrBase arrayType> : AttrConstraint<
+    CPred<"llvm::is_sorted($_self.cast<" # arrayType # ">().asArrayRef())">,
+    "should be in non-decreasing order">;
+
+class DenseArrayStrictlySorted<DenseArrayAttrBase arrayType> : AttrConstraint<
+    And<[
+      CPred<"llvm::is_sorted($_self.cast<" # arrayType # ">().asArrayRef())">,
+      // Check that no two adjacent elements are the same.
+      CPred<"[](" # arrayType.returnType # " a) {\n"
+        "return std::adjacent_find(std::begin(a), std::end(a)) == "
+        "std::end(a);\n"
+        "}($_self.cast<" # arrayType # ">().asArrayRef())"
+      >]>,
+    "should be in increasing order">;
+
 class IntArrayNthElemEq<int index, int value> : AttrConstraint<
     And<[
       CPred<"$_self.cast<::mlir::ArrayAttr>().size() > " # index>,

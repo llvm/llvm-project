@@ -39,8 +39,7 @@ void test() {
   {
     std::basic_string<CharT> output;
     OutIt out_it{output};
-    std::basic_format_context context =
-        test_format_context_create(out_it, args, en_US);
+    std::basic_format_context<OutIt, CharT> context = test_format_context_create(out_it, args, en_US);
     assert(args.__size() == 4);
     assert(test_basic_format_arg(context.arg(0), true));
     assert(test_basic_format_arg(context.arg(1), CharT('a')));
@@ -59,8 +58,7 @@ void test() {
   {
     std::basic_string<CharT> output;
     OutIt out_it{output};
-    std::basic_format_context context =
-        test_format_context_create(out_it, args, fr_FR);
+    std::basic_format_context<OutIt, CharT> context = test_format_context_create(out_it, args, fr_FR);
     assert(args.__size() == 4);
     assert(test_basic_format_arg(context.arg(0), true));
     assert(test_basic_format_arg(context.arg(1), CharT('a')));

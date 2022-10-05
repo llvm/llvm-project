@@ -189,11 +189,11 @@ define <4 x i32> @pr20113(<4 x i16> %a, <4 x i16> %b) {
 @pr21445_data = external global i32
 define i1 @pr21445(i8 %a) {
 ; CHECK-LABEL: @pr21445(
-; CHECK-NEXT:  %[[umul:.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 %a, i8 ptrtoint (i32* @pr21445_data to i8))
+; CHECK-NEXT:  %[[umul:.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 %a, i8 ptrtoint (ptr @pr21445_data to i8))
 ; CHECK-NEXT:  %[[cmp:.*]] = extractvalue { i8, i1 } %[[umul]], 1
 ; CHECK-NEXT:  ret i1 %[[cmp]]
   %ext = zext i8 %a to i32
-  %mul = mul i32 %ext, zext (i8 ptrtoint (i32* @pr21445_data to i8) to i32)
+  %mul = mul i32 %ext, zext (i8 ptrtoint (ptr @pr21445_data to i8) to i32)
   %and = and i32 %mul, 255
   %cmp = icmp ne i32 %mul, %and
   ret i1 %cmp

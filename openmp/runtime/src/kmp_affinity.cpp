@@ -3301,7 +3301,6 @@ restart_radix_check:
   for (i = 0; i < num_avail; ++i) {
     unsigned os = threadInfo[i][osIdIndex];
     int src_index;
-    int dst_index = 0;
     kmp_hw_thread_t &hw_thread = __kmp_topology->at(i);
     hw_thread.clear();
     hw_thread.os_id = os;
@@ -3318,7 +3317,6 @@ restart_radix_check:
       } else if (src_index == threadIdIndex) {
         hw_thread.ids[threadLevel] = threadInfo[i][src_index];
       }
-      dst_index++;
     }
   }
 

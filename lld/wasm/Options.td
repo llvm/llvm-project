@@ -38,6 +38,10 @@ multiclass B<string name, string help1, string help2> {
 // The following flags are shared with the ELF linker
 def Bsymbolic: F<"Bsymbolic">, HelpText<"Bind defined symbols locally">;
 
+def Bdynamic: F<"Bdynamic">, HelpText<"Link against shared libraries (default)">;
+
+def Bstatic: F<"Bstatic">, HelpText<"Do not link against shared libraries">;
+
 defm color_diagnostics: B<"color-diagnostics",
   "Alias for --color-diagnostics=always",
   "Alias for --color-diagnostics=never">;
@@ -80,10 +84,10 @@ defm merge_data_segments: BB<"merge-data-segments",
 
 def help: F<"help">, HelpText<"Print option help">;
 
-def l: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libName>">,
+def library: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libName>">,
   HelpText<"Root name of library to use">;
 
-def L: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
+def library_path: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
   HelpText<"Add a directory to the library search path">;
 
 def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
@@ -219,8 +223,17 @@ def features: CommaJoined<["--", "-"], "features=">,
 // Aliases
 def: JoinedOrSeparate<["-"], "e">, Alias<entry>;
 def: J<"entry=">, Alias<entry>;
+def: F<"call_shared">, Alias<Bdynamic>, HelpText<"Alias for --Bdynamic">;
+def: F<"dy">, Alias<Bdynamic>, HelpText<"Alias for --Bdynamic">;
+def: F<"dn">, Alias<Bstatic>, HelpText<"Alias for --Bstatic">;
+def: F<"non_shared">, Alias<Bstatic>, HelpText<"Alias for --Bstatic">;
+def: F<"static">, Alias<Bstatic>, HelpText<"Alias for --Bstatic">;
 def: Flag<["-"], "E">, Alias<export_dynamic>, HelpText<"Alias for --export-dynamic">;
 def: Flag<["-"], "i">, Alias<initial_memory>;
+def: Separate<["--", "-"], "library">, Alias<library>;
+def: Joined<["--", "-"], "library=">, Alias<library>;
+def: Separate<["--", "-"], "library-path">, Alias<library_path>;
+def: Joined<["--", "-"], "library-path=">, Alias<library_path>;
 def: Flag<["-"], "M">, Alias<print_map>, HelpText<"Alias for --print-map">;
 def: Flag<["-"], "r">, Alias<relocatable>;
 def: Flag<["-"], "s">, Alias<strip_all>, HelpText<"Alias for --strip-all">;

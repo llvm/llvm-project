@@ -4,7 +4,7 @@
 ; RUN: opt < %s -passes=instcombine -S -data-layout="E" | FileCheck %s --check-prefixes=BE
 ; RUN: opt < %s -passes=instcombine -S -data-layout="e" | FileCheck %s --check-prefixes=LE
 
-declare i8* @memchr(i8*, i32, i64)
+declare ptr @memchr(ptr, i32, i64)
 
 ; BE representation: { 'a', 'b', 'c', 'd', 'e', ..., 'p' }
 ; LE representation: { 'd', 'c', 'b', 'a', 'h', ..., 'm' }
@@ -13,109 +13,106 @@ declare i8* @memchr(i8*, i32, i64)
 
 ; Fold memchr(a, C, 16) for C in ['a', 'd'] U ['o', 'q'].
 
-define void @fold_memchr_a(i64* %pcmp) {
+define void @fold_memchr_a(ptr %pcmp) {
 ; BE-LABEL: @fold_memchr_a(
-; BE-NEXT:    store i64 0, i64* [[PCMP:%.*]], align 4
-; BE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, i64* [[PCMP]], i64 1
-; BE-NEXT:    store i64 1, i64* [[PSTOR1]], align 4
-; BE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, i64* [[PCMP]], i64 2
-; BE-NEXT:    store i64 2, i64* [[PSTOR2]], align 4
-; BE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, i64* [[PCMP]], i64 3
-; BE-NEXT:    store i64 3, i64* [[PSTOR3]], align 4
-; BE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, i64* [[PCMP]], i64 4
-; BE-NEXT:    store i64 13, i64* [[PSTOR4]], align 4
-; BE-NEXT:    [[PSTOR6:%.*]] = getelementptr i64, i64* [[PCMP]], i64 6
-; BE-NEXT:    store i64 14, i64* [[PSTOR6]], align 4
-; BE-NEXT:    [[PSTOR7:%.*]] = getelementptr i64, i64* [[PCMP]], i64 7
-; BE-NEXT:    store i64 15, i64* [[PSTOR7]], align 4
-; BE-NEXT:    [[PSTOR8:%.*]] = getelementptr i64, i64* [[PCMP]], i64 8
-; BE-NEXT:    store i64 0, i64* [[PSTOR8]], align 4
+; BE-NEXT:    store i64 0, ptr [[PCMP:%.*]], align 4
+; BE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, ptr [[PCMP]], i64 1
+; BE-NEXT:    store i64 1, ptr [[PSTOR1]], align 4
+; BE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, ptr [[PCMP]], i64 2
+; BE-NEXT:    store i64 2, ptr [[PSTOR2]], align 4
+; BE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, ptr [[PCMP]], i64 3
+; BE-NEXT:    store i64 3, ptr [[PSTOR3]], align 4
+; BE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, ptr [[PCMP]], i64 4
+; BE-NEXT:    store i64 13, ptr [[PSTOR4]], align 4
+; BE-NEXT:    [[PSTOR6:%.*]] = getelementptr i64, ptr [[PCMP]], i64 6
+; BE-NEXT:    store i64 14, ptr [[PSTOR6]], align 4
+; BE-NEXT:    [[PSTOR7:%.*]] = getelementptr i64, ptr [[PCMP]], i64 7
+; BE-NEXT:    store i64 15, ptr [[PSTOR7]], align 4
+; BE-NEXT:    [[PSTOR8:%.*]] = getelementptr i64, ptr [[PCMP]], i64 8
+; BE-NEXT:    store i64 0, ptr [[PSTOR8]], align 4
 ; BE-NEXT:    ret void
 ;
 ; LE-LABEL: @fold_memchr_a(
-; LE-NEXT:    store i64 3, i64* [[PCMP:%.*]], align 4
-; LE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, i64* [[PCMP]], i64 1
-; LE-NEXT:    store i64 2, i64* [[PSTOR1]], align 4
-; LE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, i64* [[PCMP]], i64 2
-; LE-NEXT:    store i64 1, i64* [[PSTOR2]], align 4
-; LE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, i64* [[PCMP]], i64 3
-; LE-NEXT:    store i64 0, i64* [[PSTOR3]], align 4
-; LE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, i64* [[PCMP]], i64 4
-; LE-NEXT:    store i64 14, i64* [[PSTOR4]], align 4
-; LE-NEXT:    [[PSTOR6:%.*]] = getelementptr i64, i64* [[PCMP]], i64 6
-; LE-NEXT:    store i64 13, i64* [[PSTOR6]], align 4
-; LE-NEXT:    [[PSTOR7:%.*]] = getelementptr i64, i64* [[PCMP]], i64 7
-; LE-NEXT:    store i64 12, i64* [[PSTOR7]], align 4
-; LE-NEXT:    [[PSTOR8:%.*]] = getelementptr i64, i64* [[PCMP]], i64 8
-; LE-NEXT:    store i64 0, i64* [[PSTOR8]], align 4
+; LE-NEXT:    store i64 3, ptr [[PCMP:%.*]], align 4
+; LE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, ptr [[PCMP]], i64 1
+; LE-NEXT:    store i64 2, ptr [[PSTOR1]], align 4
+; LE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, ptr [[PCMP]], i64 2
+; LE-NEXT:    store i64 1, ptr [[PSTOR2]], align 4
+; LE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, ptr [[PCMP]], i64 3
+; LE-NEXT:    store i64 0, ptr [[PSTOR3]], align 4
+; LE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, ptr [[PCMP]], i64 4
+; LE-NEXT:    store i64 14, ptr [[PSTOR4]], align 4
+; LE-NEXT:    [[PSTOR6:%.*]] = getelementptr i64, ptr [[PCMP]], i64 6
+; LE-NEXT:    store i64 13, ptr [[PSTOR6]], align 4
+; LE-NEXT:    [[PSTOR7:%.*]] = getelementptr i64, ptr [[PCMP]], i64 7
+; LE-NEXT:    store i64 12, ptr [[PSTOR7]], align 4
+; LE-NEXT:    [[PSTOR8:%.*]] = getelementptr i64, ptr [[PCMP]], i64 8
+; LE-NEXT:    store i64 0, ptr [[PSTOR8]], align 4
 ; LE-NEXT:    ret void
 ;
-  %p0 = getelementptr [4 x i32], [4 x i32]* @a, i64 0, i64 0
-  %p1 = bitcast i32* %p0 to i8*
-  %ip0 = ptrtoint [4 x i32]* @a to i64
+  %ip0 = ptrtoint ptr @a to i64
 
 ; Fold memchr(a, 'a', 16) - a to 0 (3 in LE).
 
-  %pa = call i8* @memchr(i8* %p1, i32 97, i64 16)
-  %ipa = ptrtoint i8* %pa to i64
+  %pa = call ptr @memchr(ptr @a, i32 97, i64 16)
+  %ipa = ptrtoint ptr %pa to i64
   %offa = sub i64 %ipa, %ip0
-  %pstor0 = getelementptr i64, i64* %pcmp, i64 0
-  store i64 %offa, i64* %pstor0
+  store i64 %offa, ptr %pcmp
 
 ; Fold memchr(a, 'b', 16) - a to 1 (2 in LE)
 
-  %pb = call i8* @memchr(i8* %p1, i32 98, i64 16)
-  %ipb = ptrtoint i8* %pb to i64
+  %pb = call ptr @memchr(ptr @a, i32 98, i64 16)
+  %ipb = ptrtoint ptr %pb to i64
   %offb = sub i64 %ipb, %ip0
-  %pstor1 = getelementptr i64, i64* %pcmp, i64 1
-  store i64 %offb, i64* %pstor1
+  %pstor1 = getelementptr i64, ptr %pcmp, i64 1
+  store i64 %offb, ptr %pstor1
 
 ; Fold memchr(a, 'c', 16) - a to 2 (1 in LE)
 
-  %pc = call i8* @memchr(i8* %p1, i32 99, i64 16)
-  %ipc = ptrtoint i8* %pc to i64
+  %pc = call ptr @memchr(ptr @a, i32 99, i64 16)
+  %ipc = ptrtoint ptr %pc to i64
   %offc = sub i64 %ipc, %ip0
-  %pstor2 = getelementptr i64, i64* %pcmp, i64 2
-  store i64 %offc, i64* %pstor2
+  %pstor2 = getelementptr i64, ptr %pcmp, i64 2
+  store i64 %offc, ptr %pstor2
 
 ; Fold memchr(a, 'd', 16) - a to 3 (0 in LE)
 
-  %pd = call i8* @memchr(i8* %p1, i32 100, i64 16)
-  %ipd = ptrtoint i8* %pd to i64
+  %pd = call ptr @memchr(ptr @a, i32 100, i64 16)
+  %ipd = ptrtoint ptr %pd to i64
   %offd = sub i64 %ipd, %ip0
-  %pstor3 = getelementptr i64, i64* %pcmp, i64 3
-  store i64 %offd, i64* %pstor3
+  %pstor3 = getelementptr i64, ptr %pcmp, i64 3
+  store i64 %offd, ptr %pstor3
 
 ; Fold memchr(a, 'n', 16) - a to 13 (14 in LE)
 
-  %pn = call i8* @memchr(i8* %p1, i32 110, i64 16)
-  %ipn = ptrtoint i8* %pn to i64
+  %pn = call ptr @memchr(ptr @a, i32 110, i64 16)
+  %ipn = ptrtoint ptr %pn to i64
   %offn = sub i64 %ipn, %ip0
-  %pstor4 = getelementptr i64, i64* %pcmp, i64 4
-  store i64 %offn, i64* %pstor4
+  %pstor4 = getelementptr i64, ptr %pcmp, i64 4
+  store i64 %offn, ptr %pstor4
 
 ; Fold memchr(a, 'o', 16) - a to 14 (13 in LE)
 
-  %po = call i8* @memchr(i8* %p1, i32 111, i64 16)
-  %ipo = ptrtoint i8* %po to i64
+  %po = call ptr @memchr(ptr @a, i32 111, i64 16)
+  %ipo = ptrtoint ptr %po to i64
   %offo = sub i64 %ipo, %ip0
-  %pstor6 = getelementptr i64, i64* %pcmp, i64 6
-  store i64 %offo, i64* %pstor6
+  %pstor6 = getelementptr i64, ptr %pcmp, i64 6
+  store i64 %offo, ptr %pstor6
 
 ; Fold memchr(a, 'p', 16) - a to 15 (12 in LE)
 
-  %pp = call i8* @memchr(i8* %p1, i32 112, i64 16)
-  %ipp = ptrtoint i8* %pp to i64
+  %pp = call ptr @memchr(ptr @a, i32 112, i64 16)
+  %ipp = ptrtoint ptr %pp to i64
   %offp = sub i64 %ipp, %ip0
-  %pstor7 = getelementptr i64, i64* %pcmp, i64 7
-  store i64 %offp, i64* %pstor7
+  %pstor7 = getelementptr i64, ptr %pcmp, i64 7
+  store i64 %offp, ptr %pstor7
 
 ; Fold memchr(a, 'q', 16) to null in both BE and LE.
 
-  %pq = call i8* @memchr(i8* %p1, i32 113, i64 16)
-  %ipq = ptrtoint i8* %pq to i64
-  %pstor8 = getelementptr i64, i64* %pcmp, i64 8
-  store i64 %ipq, i64* %pstor8
+  %pq = call ptr @memchr(ptr @a, i32 113, i64 16)
+  %ipq = ptrtoint ptr %pq to i64
+  %pstor8 = getelementptr i64, ptr %pcmp, i64 8
+  store i64 %ipq, ptr %pstor8
 
   ret void
 }
@@ -123,84 +120,82 @@ define void @fold_memchr_a(i64* %pcmp) {
 
 ; Fold memchr(a + 1, C, 12) for C in ['e', 'h'] U ['a', 'd'].
 
-define void @fold_memchr_a_p1(i64* %pcmp) {
+define void @fold_memchr_a_p1(ptr %pcmp) {
 ; BE-LABEL: @fold_memchr_a_p1(
-; BE-NEXT:    store i64 0, i64* [[PCMP:%.*]], align 4
-; BE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, i64* [[PCMP]], i64 1
-; BE-NEXT:    store i64 1, i64* [[PSTOR1]], align 4
-; BE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, i64* [[PCMP]], i64 2
-; BE-NEXT:    store i64 2, i64* [[PSTOR2]], align 4
-; BE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, i64* [[PCMP]], i64 3
-; BE-NEXT:    store i64 3, i64* [[PSTOR3]], align 4
-; BE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, i64* [[PCMP]], i64 4
-; BE-NEXT:    store i64 0, i64* [[PSTOR4]], align 4
-; BE-NEXT:    [[PSTOR5:%.*]] = getelementptr i64, i64* [[PCMP]], i64 5
-; BE-NEXT:    store i64 0, i64* [[PSTOR5]], align 4
+; BE-NEXT:    store i64 0, ptr [[PCMP:%.*]], align 4
+; BE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, ptr [[PCMP]], i64 1
+; BE-NEXT:    store i64 1, ptr [[PSTOR1]], align 4
+; BE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, ptr [[PCMP]], i64 2
+; BE-NEXT:    store i64 2, ptr [[PSTOR2]], align 4
+; BE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, ptr [[PCMP]], i64 3
+; BE-NEXT:    store i64 3, ptr [[PSTOR3]], align 4
+; BE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, ptr [[PCMP]], i64 4
+; BE-NEXT:    store i64 0, ptr [[PSTOR4]], align 4
+; BE-NEXT:    [[PSTOR5:%.*]] = getelementptr i64, ptr [[PCMP]], i64 5
+; BE-NEXT:    store i64 0, ptr [[PSTOR5]], align 4
 ; BE-NEXT:    ret void
 ;
 ; LE-LABEL: @fold_memchr_a_p1(
-; LE-NEXT:    store i64 3, i64* [[PCMP:%.*]], align 4
-; LE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, i64* [[PCMP]], i64 1
-; LE-NEXT:    store i64 2, i64* [[PSTOR1]], align 4
-; LE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, i64* [[PCMP]], i64 2
-; LE-NEXT:    store i64 1, i64* [[PSTOR2]], align 4
-; LE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, i64* [[PCMP]], i64 3
-; LE-NEXT:    store i64 0, i64* [[PSTOR3]], align 4
-; LE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, i64* [[PCMP]], i64 4
-; LE-NEXT:    store i64 0, i64* [[PSTOR4]], align 4
-; LE-NEXT:    [[PSTOR5:%.*]] = getelementptr i64, i64* [[PCMP]], i64 5
-; LE-NEXT:    store i64 0, i64* [[PSTOR5]], align 4
+; LE-NEXT:    store i64 3, ptr [[PCMP:%.*]], align 4
+; LE-NEXT:    [[PSTOR1:%.*]] = getelementptr i64, ptr [[PCMP]], i64 1
+; LE-NEXT:    store i64 2, ptr [[PSTOR1]], align 4
+; LE-NEXT:    [[PSTOR2:%.*]] = getelementptr i64, ptr [[PCMP]], i64 2
+; LE-NEXT:    store i64 1, ptr [[PSTOR2]], align 4
+; LE-NEXT:    [[PSTOR3:%.*]] = getelementptr i64, ptr [[PCMP]], i64 3
+; LE-NEXT:    store i64 0, ptr [[PSTOR3]], align 4
+; LE-NEXT:    [[PSTOR4:%.*]] = getelementptr i64, ptr [[PCMP]], i64 4
+; LE-NEXT:    store i64 0, ptr [[PSTOR4]], align 4
+; LE-NEXT:    [[PSTOR5:%.*]] = getelementptr i64, ptr [[PCMP]], i64 5
+; LE-NEXT:    store i64 0, ptr [[PSTOR5]], align 4
 ; LE-NEXT:    ret void
 ;
-  %p0 = getelementptr [4 x i32], [4 x i32]* @a, i64 0, i64 1
-  %p1 = bitcast i32* %p0 to i8*
-  %ip0 = ptrtoint i8* %p1 to i64
+  %p0 = getelementptr [4 x i32], ptr @a, i64 0, i64 1
+  %ip0 = ptrtoint ptr %p0 to i64
 
 ; Fold memchr(a + 1, 'e', 12) - a to 0 (3 in LE).
 
-  %pe = call i8* @memchr(i8* %p1, i32 101, i64 12)
-  %ipe = ptrtoint i8* %pe to i64
+  %pe = call ptr @memchr(ptr %p0, i32 101, i64 12)
+  %ipe = ptrtoint ptr %pe to i64
   %offe = sub i64 %ipe, %ip0
-  %pstor0 = getelementptr i64, i64* %pcmp, i64 0
-  store i64 %offe, i64* %pstor0
+  store i64 %offe, ptr %pcmp
 
 ; Fold memchr(a + 1, 'f', 12) - a to 1 (2 in LE).
 
-  %pf = call i8* @memchr(i8* %p1, i32 102, i64 12)
-  %ipf = ptrtoint i8* %pf to i64
+  %pf = call ptr @memchr(ptr %p0, i32 102, i64 12)
+  %ipf = ptrtoint ptr %pf to i64
   %offf = sub i64 %ipf, %ip0
-  %pstor1 = getelementptr i64, i64* %pcmp, i64 1
-  store i64 %offf, i64* %pstor1
+  %pstor1 = getelementptr i64, ptr %pcmp, i64 1
+  store i64 %offf, ptr %pstor1
 
 ; Fold memchr(a + 1, 'g', 12) - a to 2 (1 in LE).
 
-  %pg = call i8* @memchr(i8* %p1, i32 103, i64 12)
-  %ipg = ptrtoint i8* %pg to i64
+  %pg = call ptr @memchr(ptr %p0, i32 103, i64 12)
+  %ipg = ptrtoint ptr %pg to i64
   %offg = sub i64 %ipg, %ip0
-  %pstor2 = getelementptr i64, i64* %pcmp, i64 2
-  store i64 %offg, i64* %pstor2
+  %pstor2 = getelementptr i64, ptr %pcmp, i64 2
+  store i64 %offg, ptr %pstor2
 
 ; Fold memchr(a + 1, 'h', 12) - a to 3 (0 in LE).
 
-  %ph = call i8* @memchr(i8* %p1, i32 104, i64 12)
-  %iph = ptrtoint i8* %ph to i64
+  %ph = call ptr @memchr(ptr %p0, i32 104, i64 12)
+  %iph = ptrtoint ptr %ph to i64
   %offh = sub i64 %iph, %ip0
-  %pstor3 = getelementptr i64, i64* %pcmp, i64 3
-  store i64 %offh, i64* %pstor3
+  %pstor3 = getelementptr i64, ptr %pcmp, i64 3
+  store i64 %offh, ptr %pstor3
 
 ; Fold memchr(a + 1, 'a', 12) to null in both BE and LE.
 
-  %pa = call i8* @memchr(i8* %p1, i32 97, i64 12)
-  %ipa = ptrtoint i8* %pa to i64
-  %pstor4 = getelementptr i64, i64* %pcmp, i64 4
-  store i64 %ipa, i64* %pstor4
+  %pa = call ptr @memchr(ptr %p0, i32 97, i64 12)
+  %ipa = ptrtoint ptr %pa to i64
+  %pstor4 = getelementptr i64, ptr %pcmp, i64 4
+  store i64 %ipa, ptr %pstor4
 
 ; Fold memchr(a + 1, 'd', 12) to null in both BE and LE.
 
-  %pd = call i8* @memchr(i8* %p1, i32 100, i64 12)
-  %ipd = ptrtoint i8* %pd to i64
-  %pstor5 = getelementptr i64, i64* %pcmp, i64 5
-  store i64 %ipd, i64* %pstor5
+  %pd = call ptr @memchr(ptr %p0, i32 100, i64 12)
+  %ipd = ptrtoint ptr %pd to i64
+  %pstor5 = getelementptr i64, ptr %pcmp, i64 5
+  store i64 %ipd, ptr %pstor5
 
   ret void
 }

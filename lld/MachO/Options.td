@@ -1230,8 +1230,10 @@ def executable_path : Flag<["-"], "executable_path">,
     Flags<[HelpHidden]>,
     Group<grp_undocumented>;
 def fixup_chains : Flag<["-"], "fixup_chains">,
-    HelpText<"This option is undocumented in ld64">,
-    Flags<[HelpHidden]>,
+    HelpText<"Emit chained fixups">,
+    Group<grp_undocumented>;
+def no_fixup_chains : Flag<["-"], "no_fixup_chains">,
+    HelpText<"Emit fixup information as classic dyld opcodes">,
     Group<grp_undocumented>;
 def fixup_chains_section : Flag<["-"], "fixup_chains_section">,
     HelpText<"This option is undocumented in ld64">,
