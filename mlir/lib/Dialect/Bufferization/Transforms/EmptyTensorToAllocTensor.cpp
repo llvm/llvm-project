@@ -1,4 +1,4 @@
-//===- InitTensorToAllocTensor.cpp - Lower init_tensor to alloc_tensor ----===//
+//===- InitTensorToAllocTensor.cpp - Lower tensor.empty to alloc_tensor ---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Linalg/Passes.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -14,8 +14,10 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
+namespace bufferization {
 #define GEN_PASS_DEF_EMPTYTENSORTOALLOCTENSOR
-#include "mlir/Dialect/Linalg/Passes.h.inc"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
+} // namespace bufferization
 } // namespace mlir
 
 using namespace mlir;
@@ -35,7 +37,8 @@ struct EmptyTensorLoweringPattern : public OpRewritePattern<tensor::EmptyOp> {
 };
 
 struct EmptyTensorToAllocTensor
-    : public impl::EmptyTensorToAllocTensorBase<EmptyTensorToAllocTensor> {
+    : public bufferization::impl::EmptyTensorToAllocTensorBase<
+          EmptyTensorToAllocTensor> {
   EmptyTensorToAllocTensor() = default;
 
   void runOnOperation() override;
@@ -55,6 +58,7 @@ void EmptyTensorToAllocTensor::runOnOperation() {
     signalPassFailure();
 }
 
-std::unique_ptr<Pass> mlir::createEmptyTensorToAllocTensorPass() {
+std::unique_ptr<Pass>
+mlir::bufferization::createEmptyTensorToAllocTensorPass() {
   return std::make_unique<EmptyTensorToAllocTensor>();
 }
