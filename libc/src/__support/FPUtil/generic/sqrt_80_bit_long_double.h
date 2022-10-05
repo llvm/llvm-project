@@ -44,7 +44,7 @@ static inline long double sqrt(long double x) {
   if (bits.is_inf_or_nan()) {
     if (bits.get_sign() && (bits.get_mantissa() == 0)) {
       // sqrt(-Inf) = NaN
-      return FPBits<long double>::build_quiet_nan(ONE >> 1);
+      return FPBits<long double>::build_nan(ONE >> 1);
     } else {
       // sqrt(NaN) = NaN
       // sqrt(+Inf) = +Inf
@@ -56,7 +56,7 @@ static inline long double sqrt(long double x) {
     return x;
   } else if (bits.get_sign()) {
     // sqrt( negative numbers ) = NaN
-    return FPBits<long double>::build_quiet_nan(ONE >> 1);
+    return FPBits<long double>::build_nan(ONE >> 1);
   } else {
     int x_exp = bits.get_exponent();
     UIntType x_mant = bits.get_mantissa();

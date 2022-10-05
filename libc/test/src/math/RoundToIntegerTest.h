@@ -36,7 +36,7 @@ private:
   const F neg_zero = F(__llvm_libc::fputil::FPBits<F>::neg_zero());
   const F inf = F(__llvm_libc::fputil::FPBits<F>::inf());
   const F neg_inf = F(__llvm_libc::fputil::FPBits<F>::neg_inf());
-  const F nan = F(__llvm_libc::fputil::FPBits<F>::build_quiet_nan(1));
+  const F nan = F(__llvm_libc::fputil::FPBits<F>::build_nan(1));
   static constexpr I INTEGER_MIN = I(1) << (sizeof(I) * 8 - 1);
   static constexpr I INTEGER_MAX = -(INTEGER_MIN + 1);
 
@@ -84,10 +84,7 @@ public:
   void do_infinity_and_na_n_test(RoundToIntegerFunc func) {
     test_one_input(func, inf, INTEGER_MAX, true);
     test_one_input(func, neg_inf, INTEGER_MIN, true);
-#if LLVM_LIBC_IMPLEMENTATION_DEFINED_TEST_BEHAVIOR
-    // Result is not well-defined, we always returns INTEGER_MAX
     test_one_input(func, nan, INTEGER_MAX, true);
-#endif
   }
 
   void testInfinityAndNaN(RoundToIntegerFunc func) {
