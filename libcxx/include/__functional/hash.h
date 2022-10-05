@@ -135,7 +135,7 @@ struct __murmur2_or_cityhash<_Size, 64>
     if (__len >= 4) {
       const uint32_t __a = __loadword<uint32_t>(__s);
       const uint32_t __b = __loadword<uint32_t>(__s + __len - 4);
-      return __hash_len_16(__len + (__a << 3), __b);
+      return __hash_len_16(__len + (static_cast<_Size>(__a) << 3), __b);
     }
     if (__len > 0) {
       const unsigned char __a = static_cast<unsigned char>(__s[0]);
