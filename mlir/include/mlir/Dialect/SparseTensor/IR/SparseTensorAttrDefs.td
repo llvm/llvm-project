@@ -168,10 +168,16 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     //
     // TODO: separate type and property in encoding
     //
-    enum class DimLevelType {
-      Dense,
-      Compressed, CompressedNu, CompressedNo, CompressedNuNo,
-      Singleton, SingletonNu, SingletonNo, SingletonNuNo,
+    enum class DimLevelType : uint8_t {
+      Dense            = 4,  // 0b001_00
+      Compressed       = 8,  // 0b010_00
+      CompressedNu     = 9,  // 0b010_01
+      CompressedNo     = 10, // 0b010_10
+      CompressedNuNo   = 11, // 0b010_11
+      Singleton        = 16, // 0b100_00
+      SingletonNu      = 17, // 0b100_01
+      SingletonNo      = 18, // 0b100_10
+      SingletonNuNo    = 19, // 0b100_11
     };
   }];
 }
