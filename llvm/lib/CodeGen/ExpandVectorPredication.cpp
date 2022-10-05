@@ -469,8 +469,8 @@ Value *CachingVPExpander::expandPredicationInComparison(IRBuilder<> &Builder,
   assert((maySpeculateLanes(VPI) || VPI.canIgnoreVectorLengthParam()) &&
          "Implicitly dropping %evl in non-speculatable operator!");
 
-  auto OC = *VPI.getFunctionalOpcode();
-  assert(OC == Instruction::ICmp || OC == Instruction::FCmp);
+  assert(*VPI.getFunctionalOpcode() == Instruction::ICmp ||
+         *VPI.getFunctionalOpcode() == Instruction::FCmp);
 
   Value *Op0 = VPI.getOperand(0);
   Value *Op1 = VPI.getOperand(1);
