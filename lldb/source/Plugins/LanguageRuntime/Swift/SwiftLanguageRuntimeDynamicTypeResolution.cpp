@@ -1126,7 +1126,7 @@ findFieldWithName(const std::vector<swift::reflection::FieldInfo> &fields,
     if (name != field.Name) {
       // A nonnull TypeRef is required for enum cases, where it represents cases
       // that have a payload. In other types it will be true anyway.
-      if (field.TR)
+      if (!is_enum || field.TR)
         ++index;
       return false;
     }
