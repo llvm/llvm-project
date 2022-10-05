@@ -79,10 +79,10 @@ exit:
 }
 
 
-define void @hoist_invariant_load(i1 %cond, i32* %np, i32 %M) {
+define void @hoist_invariant_load(i1 %cond, ptr %np, i32 %M) {
 ; CHECK-LABEL: @hoist_invariant_load(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[N:%.*]] = load i32, i32* [[NP:%.*]]
+; CHECK-NEXT:    [[N:%.*]] = load i32, ptr [[NP:%.*]]
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
@@ -105,7 +105,7 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-  %N = load i32, i32* %np
+  %N = load i32, ptr %np
   %guard_cond = icmp slt i32 %iv, %N
   call void(i1, ...) @llvm.experimental.guard(i1 %guard_cond) [ "deopt"() ]
   %loop_cond = icmp slt i32 %iv, %M
