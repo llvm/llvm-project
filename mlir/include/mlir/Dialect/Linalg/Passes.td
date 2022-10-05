@@ -24,16 +24,6 @@ def ConvertElementwiseToLinalg : Pass<"convert-elementwise-to-linalg", ""> {
   let dependentDialects = ["linalg::LinalgDialect", "memref::MemRefDialect"];
 }
 
-def EmptyTensorToAllocTensor : Pass<"empty-tensor-to-alloc-tensor"> {
-  let summary = "Replace all empty ops by alloc_tensor ops.";
-  let description = [{
-    tensor.empty ops return a tensor of unspecified contents who's only purpose
-    is to carry the tensor shape. This pass converts such ops to
-    bufferization.alloc_tensor ops, which bufferize to buffer allocations.
-  }];
-  let constructor = "mlir::createEmptyTensorToAllocTensorPass()";
-}
-
 def LinalgFoldUnitExtentDims : Pass<"linalg-fold-unit-extent-dims", ""> {
   let summary = "Remove unit-extent dimension in Linalg ops on tensors";
   let constructor = "mlir::createLinalgFoldUnitExtentDimsPass()";
