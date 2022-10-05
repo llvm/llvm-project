@@ -273,6 +273,10 @@ bool isPointerType(mlir::Type ty);
 /// Return true iff `ty` is the type of an ALLOCATABLE entity or value.
 bool isAllocatableType(mlir::Type ty);
 
+/// Return true iff `ty` is the type of an polymorphic entity or
+/// value.
+bool isPolymorphicType(mlir::Type ty);
+
 /// Return true iff `ty` is the type of an unlimited polymorphic entity or
 /// value.
 bool isUnlimitedPolymorphicType(mlir::Type ty);
