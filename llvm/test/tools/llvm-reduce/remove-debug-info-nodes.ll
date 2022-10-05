@@ -12,6 +12,10 @@
 ; CHECK-INTERESTINGNESS-DAG: [[CU]] = distinct !DICompileUnit(language: DW_LANG_C99,{{.*}}, retainedTypes: [[TYPES:![0-9]+]]
 ; CHECK-INTERESTINGNESS-DAG: [[TYPES]] = !{[[T0:![0-9]+]]
 ; CHECK-INTERESTINGNESS-DAG: [[T0]] = !DIBasicType(name: "unsigned int",
+; CHECK-INTERESTINGNESS-DAG: !DIGlobalVariable(
+; CHECK-INTERESTINGNESS-DAG: !DILocalVariable(name: "A"
+; CHECK-INTERESTINGNESS-DAG: !DILocalVariable(name: "B"
+; CHECK-INTERESTINGNESS-DAG: !DILocalVariable(name: "C"
 
 
 
