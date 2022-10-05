@@ -6,29 +6,25 @@ target triple = "x86_64-apple-macosx10.7.0"
 
 @x = global i32 0
 
-declare void @otherf(i32*)
+declare void @otherf(ptr)
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) nounwind
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 
 ; memcpyopt should not touch atomic ops
 define void @test1() nounwind uwtable ssp {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[X:%.*]] = alloca [101 x i32], align 16
-; CHECK-NEXT:    [[BC:%.*]] = bitcast [101 x i32]* [[X]] to i8*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i64(i8* align 16 [[BC]], i8 0, i64 400, i1 false)
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [101 x i32], [101 x i32]* [[X]], i32 0, i32 100
-; CHECK-NEXT:    store atomic i32 0, i32* [[GEP1]] unordered, align 4
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds [101 x i32], [101 x i32]* [[X]], i32 0, i32 0
-; CHECK-NEXT:    call void @otherf(i32* [[GEP2]])
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 16 [[X]], i8 0, i64 400, i1 false)
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds [101 x i32], ptr [[X]], i32 0, i32 100
+; CHECK-NEXT:    store atomic i32 0, ptr [[GEP1]] unordered, align 4
+; CHECK-NEXT:    call void @otherf(ptr [[X]])
 ; CHECK-NEXT:    ret void
 ;
   %x = alloca [101 x i32], align 16
-  %bc = bitcast [101 x i32]* %x to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 16 %bc, i8 0, i64 400, i1 false)
-  %gep1 = getelementptr inbounds [101 x i32], [101 x i32]* %x, i32 0, i32 100
-  store atomic i32 0, i32* %gep1 unordered, align 4
-  %gep2 = getelementptr inbounds [101 x i32], [101 x i32]* %x, i32 0, i32 0
-  call void @otherf(i32* %gep2)
+  call void @llvm.memset.p0.i64(ptr align 16 %x, i8 0, i64 400, i1 false)
+  %gep1 = getelementptr inbounds [101 x i32], ptr %x, i32 0, i32 100
+  store atomic i32 0, ptr %gep1 unordered, align 4
+  call void @otherf(ptr %x)
   ret void
 }
 
@@ -37,18 +33,18 @@ define void @test2() nounwind uwtable ssp {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[OLD:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[NEW:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @otherf(i32* nocapture [[NEW]])
-; CHECK-NEXT:    store atomic i32 0, i32* @x unordered, align 4
-; CHECK-NEXT:    call void @otherf(i32* nocapture [[NEW]])
+; CHECK-NEXT:    call void @otherf(ptr nocapture [[NEW]])
+; CHECK-NEXT:    store atomic i32 0, ptr @x unordered, align 4
+; CHECK-NEXT:    call void @otherf(ptr nocapture [[NEW]])
 ; CHECK-NEXT:    ret void
 ;
   %old = alloca i32
   %new = alloca i32
-  call void @otherf(i32* nocapture %old)
-  store atomic i32 0, i32* @x unordered, align 4
-  %v = load i32, i32* %old
-  store i32 %v, i32* %new
-  call void @otherf(i32* nocapture %new)
+  call void @otherf(ptr nocapture %old)
+  store atomic i32 0, ptr @x unordered, align 4
+  %v = load i32, ptr %old
+  store i32 %v, ptr %new
+  call void @otherf(ptr nocapture %new)
   ret void
 }
 
