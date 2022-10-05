@@ -617,6 +617,32 @@ exit:
   ret i16 0
 }
 
+define i16 @irreducible_entryblock_def(i1 %c) {
+; CHECK-LABEL: @irreducible_entryblock_def(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    br label [[B]]
+; CHECK:       B:
+; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[A]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i16 0
+;
+entry:
+  %obj = alloca i32, align 4
+  br i1 %c, label %A, label %B
+
+A:
+  store i32 1, ptr %obj, align 4
+  br label %B
+
+B:
+  br i1 %c, label %exit, label %A
+
+exit:
+  ret i16 0
+}
+
 ; An irreducible loop inside another loop.
 define i16 @irreducible_nested() {
 ; CHECK-LABEL: @irreducible_nested(
@@ -846,7 +872,6 @@ define i16 @partial_override_overloop(i1 %c, i32 %i) {
 ; CHECK-NEXT:    br label [[FIRST:%.*]]
 ; CHECK:       first:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i16], ptr @x, i16 0, i32 [[I:%.*]]
-; CHECK-NEXT:    store i16 1, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    br label [[DO_BODY:%.*]]
 ; CHECK:       do.body:
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i16 [ 0, [[FIRST]] ], [ [[INC:%.*]], [[DO_BODY]] ]
