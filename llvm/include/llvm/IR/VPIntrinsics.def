@@ -281,6 +281,10 @@ END_REGISTER_VP(vp_round, VP_FROUND)
 BEGIN_REGISTER_VP(vp_roundeven, 1, 2, VP_FROUNDEVEN, -1)
 END_REGISTER_VP(vp_roundeven, VP_FROUNDEVEN)
 
+// llvm.vp.roundtozero(x,mask,vlen)
+BEGIN_REGISTER_VP(vp_roundtozero, 1, 2, VP_FROUNDTOZERO, -1)
+END_REGISTER_VP(vp_roundtozero, VP_FROUNDTOZERO)
+
 ///// } Floating-Point Arithmetic
 
 ///// Type Casts {
