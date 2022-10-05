@@ -797,7 +797,7 @@ Module *ModuleMap::findModule(StringRef Name) const {
     if (!M->DefinitionLoc.isInvalid())
       for (const auto &Cb : Callbacks)
         Cb->moduleMapFoundForModule(
-            *getContainingModuleMapFile(M), M,
+            **getContainingModuleMapFile(M), M,
             SourceMgr.getFileCharacteristic(M->DefinitionLoc) ==
                 SrcMgr::C_System_ModuleMap);
     return M;

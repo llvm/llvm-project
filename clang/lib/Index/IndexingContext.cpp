@@ -219,7 +219,7 @@ bool IndexingContext::isSystemFile(FileID FID) {
   if (FI.getFileCharacteristic() != SrcMgr::C_User)
     return result(true);
 
-  auto *FE = FI.getContentCache().OrigEntry;
+  const FileEntry *FE = FI.getContentCache().OrigEntry;
   if (!FE)
     return result(false);
 
