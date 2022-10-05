@@ -43,7 +43,7 @@ module {
 
   transform.with_pdl_patterns {
   ^bb0(%arg0: !pdl.operation):
-    transform.sequence %arg0 failures(propagate) {
+    transform.sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb1(%arg1: !pdl.operation):
       %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
       %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1
@@ -89,7 +89,7 @@ module {
 
   transform.with_pdl_patterns {
   ^bb0(%arg0: !pdl.operation):
-    transform.sequence %arg0 failures(propagate) {
+    transform.sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb1(%arg1: !pdl.operation):
       %0 = transform.structured.match ops{["tensor.empty"]} in %arg1
       %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1

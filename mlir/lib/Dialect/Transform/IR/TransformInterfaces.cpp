@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
-#include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Operation.h"
@@ -71,12 +70,11 @@ transform::TransformState::setPayloadOps(Value value,
   if (value.use_empty())
     return success();
 
-  if (auto iface = value.getType().dyn_cast<TransformTypeInterface>()) {
-    DiagnosedSilenceableFailure result =
-        iface.checkPayload(value.getLoc(), targets);
-    if (failed(result.checkAndReport()))
-      return failure();
-  }
+  auto iface = value.getType().cast<TransformTypeInterface>();
+  DiagnosedSilenceableFailure result =
+      iface.checkPayload(value.getLoc(), targets);
+  if (failed(result.checkAndReport()))
+    return failure();
 
   // Setting new payload for the value without cleaning it first is a misuse of
   // the API, assert here.
@@ -128,12 +126,11 @@ LogicalResult transform::TransformState::updatePayloadOps(
     }
   }
 
-  if (auto iface = value.getType().dyn_cast<TransformTypeInterface>()) {
-    DiagnosedSilenceableFailure result =
-        iface.checkPayload(value.getLoc(), updated);
-    if (failed(result.checkAndReport()))
-      return failure();
-  }
+  auto iface = value.getType().cast<TransformTypeInterface>();
+  DiagnosedSilenceableFailure result =
+      iface.checkPayload(value.getLoc(), updated);
+  if (failed(result.checkAndReport()))
+    return failure();
 
   std::swap(association, updated);
   return success();
@@ -369,10 +366,9 @@ transform::detail::verifyPossibleTopLevelTransformOpTrait(Operation *op) {
 
   Block *body = &bodyRegion->front();
   if (body->getNumArguments() != 1 ||
-      !body->getArgumentTypes()[0].isa<pdl::OperationType>()) {
-    return op->emitOpError()
-           << "expects the entry block to have one argument of type "
-           << pdl::OperationType::get(op->getContext());
+      !body->getArgumentTypes()[0].isa<TransformTypeInterface>()) {
+    return op->emitOpError() << "expects the entry block to have one argument "
+                                "of type implementing TransformTypeInterface";
   }
 
   if (auto *parent =

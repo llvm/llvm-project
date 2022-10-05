@@ -17,7 +17,7 @@ func.func @get_parent_for_op(%arg0: index, %arg1: index, %arg2: index) {
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1
     // CHECK: = transform.loop.get_parent_for
@@ -34,13 +34,13 @@ transform.with_pdl_patterns {
 
 func.func @get_parent_for_op_no_loop(%arg0: index, %arg1: index) {
   // expected-note @below {{target op}}
-  arith.addi %arg0, %arg1 : index  
+  arith.addi %arg0, %arg1 : index
   return
 }
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1
     // expected-error @below {{could not find an 'scf.for' parent}}
@@ -82,7 +82,7 @@ func.func @loop_outline_op(%arg0: index, %arg1: index, %arg2: index) {
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1
     %1 = transform.loop.get_parent_for %0
@@ -111,7 +111,7 @@ func.func @loop_outline_op_multi_region() {
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["scf.while"]} in %arg1
     // expected-error @below {{failed to outline}}
@@ -142,7 +142,7 @@ func.func @loop_peel_op() {
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1
     %1 = transform.loop.get_parent_for %0
@@ -178,7 +178,7 @@ func.func @loop_pipeline_op(%A: memref<?xf32>, %result: memref<?xf32>) {
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["arith.addf"]} in %arg1
     %1 = transform.loop.get_parent_for %0
@@ -205,7 +205,7 @@ func.func @loop_unroll_op() {
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["arith.addi"]} in %arg1
     %1 = transform.loop.get_parent_for %0

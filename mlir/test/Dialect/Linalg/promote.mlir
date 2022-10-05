@@ -68,7 +68,7 @@ func.func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb0(%arg1: !pdl.operation):
       %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
       %1 = transform.structured.promote %0 { use_alloca }
@@ -141,7 +141,7 @@ func.func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb0(%arg1: !pdl.operation):
       %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
       %1 = transform.structured.promote %0
@@ -191,7 +191,7 @@ func.func @promote_rank_reducing_subviews(%arg0:  memref<?x?x?x64xf32, strided<[
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb0(%arg1: !pdl.operation):
       %0 = transform.structured.match interface{LinalgOp} in %arg1
       %1 = transform.structured.promote %0

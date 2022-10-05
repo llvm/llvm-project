@@ -8398,6 +8398,7 @@ td_library(
     deps = [
         ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
+        ":InferTypeOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":PDLDialectTdFiles",
         ":SideEffectInterfacesTdFiles",

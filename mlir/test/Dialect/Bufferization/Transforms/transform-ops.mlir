@@ -4,7 +4,7 @@
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb0(%arg1: !pdl.operation):
       %0 = transform.structured.match ops{["func.func"]} in %arg1
       transform.bufferization.one_shot_bufferize %0
@@ -36,7 +36,7 @@ func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb0(%arg1: !pdl.operation):
       %0 = transform.structured.match ops{["func.func"]} in %arg1
       transform.bufferization.one_shot_bufferize %0
@@ -62,7 +62,7 @@ func.func @test_function_analysis(%A : tensor<?xf32>, %v : vector<4xf32>) -> (te
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb0(%arg1: !pdl.operation):
       %0 = transform.structured.match ops{["func.func"]} in %arg1
       // expected-error @+1 {{bufferization failed}}
@@ -82,7 +82,7 @@ func.func @test_unknown_op_failure() -> (tensor<?xf32>) {
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb0(%arg1: !pdl.operation):
       // %arg1 is the module
       transform.bufferization.one_shot_bufferize %arg1

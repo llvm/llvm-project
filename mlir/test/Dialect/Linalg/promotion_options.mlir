@@ -33,7 +33,7 @@ func.func @gemm(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb0(%arg1: !pdl.operation):
       %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
       %1, %loops:3 = transform.structured.tile %0 [16, 16, 16]
