@@ -209,6 +209,11 @@ module attributes {gpu.container_module} {
     // CHECK: gpu.dealloc async [%[[t1]]] %[[m1]] : memref<13xf32, 1>
     %t2 = gpu.dealloc async [%t1] %m1 : memref<13xf32, 1>
 
+    // CHECK: %[[m2:.*]] = gpu.alloc host_shared () : memref<13xf32, 1>
+    %m2 = gpu.alloc host_shared () : memref<13xf32, 1>
+    // CHECK: gpu.dealloc %[[m2]] : memref<13xf32, 1>
+    gpu.dealloc %m2 : memref<13xf32, 1>
+
     return
   }
 
