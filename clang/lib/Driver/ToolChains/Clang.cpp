@@ -4842,7 +4842,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-emit-llvm-uselists");
 
     if (IsUsingLTO) {
-      // Only AMDGPU supports device-side LTO.
       if (IsDeviceOffloadAction && !JA.isDeviceOffloading(Action::OFK_OpenMP) &&
           !Args.hasFlag(options::OPT_offload_new_driver,
                         options::OPT_no_offload_new_driver, false) &&
@@ -4852,6 +4851,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                                options::OPT_foffload_lto_EQ)
                    ->getAsString(Args)
             << Triple.getTriple();
+      } else if (Triple.isNVPTX() && !IsRDCMode) {
+        D.Diag(diag::err_drv_unsupported_opt_for_language_mode)
+            << Args.getLastArg(options::OPT_foffload_lto,
+                               options::OPT_foffload_lto_EQ)
+                   ->getAsString(Args)
+            << "-fno-gpu-rdc";
       } else {
         assert(LTOMode == LTOK_Full || LTOMode == LTOK_Thin);
         CmdArgs.push_back(Args.MakeArgString(
