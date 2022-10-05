@@ -1373,46 +1373,64 @@ public:
     Value inX =
         rewriter.create<arith::IndexCastOp>(loc, rewriter.getI32Type(), x);
 
-    int32_t shift = op.getShift();
-    bool floatingPointMode = shift == 0;
+    bool floatingPointMode = resultElementTy.isF32();
 
-    Value yStride, xStride, yOffset, xOffset;
-    if (floatingPointMode) {
-      yStride = rewriter.create<arith::ConstantOp>(loc, op.getStrideFp()[0]);
-      xStride = rewriter.create<arith::ConstantOp>(loc, op.getStrideFp()[1]);
-      yOffset = rewriter.create<arith::ConstantOp>(loc, op.getOffsetFp()[0]);
-      xOffset = rewriter.create<arith::ConstantOp>(loc, op.getOffsetFp()[1]);
-    } else {
-      SmallVector<int32_t> stride, offset;
-      getValuesFromIntArrayAttribute(op.getStride(), stride);
-      getValuesFromIntArrayAttribute(op.getOffset(), offset);
+    Value yScaleN, yScaleD, xScaleN, xScaleD, yOffset, xOffset, yBorder,
+        xBorder;
+    SmallVector<int32_t> scale, offset, border;
+    getValuesFromIntArrayAttribute(op.getScale(), scale);
+    getValuesFromIntArrayAttribute(op.getOffset(), offset);
+    getValuesFromIntArrayAttribute(op.getBorder(), border);
 
-      yStride = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getI32IntegerAttr(stride[0]));
-      xStride = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getI32IntegerAttr(stride[1]));
-      yOffset = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getI32IntegerAttr(offset[0]));
-      xOffset = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getI32IntegerAttr(offset[1]));
-    }
+    yScaleN = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getI32IntegerAttr(scale[0]));
+    yScaleD = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getI32IntegerAttr(scale[1]));
+    xScaleN = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getI32IntegerAttr(scale[2]));
+    xScaleD = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getI32IntegerAttr(scale[3]));
+    yOffset = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getI32IntegerAttr(offset[0]));
+    xOffset = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getI32IntegerAttr(offset[1]));
+    yBorder = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getI32IntegerAttr(border[0]));
+    xBorder = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getI32IntegerAttr(border[1]));
 
     // Compute the the integer index and partial offset.
-    // x = x * stride + offset;
-    // ix = floor(x)
-    // dx = x - ix
     Value ix, iy, dx, dy;
+    // x = x * scale_d + offset;
+    // ix = floor(x / scale_n)
     if (floatingPointMode) {
+      // dx = x / scale_n - ix
       Value y =
           rewriter.create<arith::UIToFPOp>(loc, rewriter.getF32Type(), inY);
       Value x =
           rewriter.create<arith::UIToFPOp>(loc, rewriter.getF32Type(), inX);
 
-      y = rewriter.create<arith::MulFOp>(loc, y, yStride);
-      x = rewriter.create<arith::MulFOp>(loc, x, xStride);
+      yScaleN =
+          rewriter.create<arith::UIToFPOp>(loc, rewriter.getF32Type(), yScaleN);
+      yScaleD =
+          rewriter.create<arith::UIToFPOp>(loc, rewriter.getF32Type(), yScaleD);
+      xScaleN =
+          rewriter.create<arith::UIToFPOp>(loc, rewriter.getF32Type(), xScaleN);
+      xScaleD =
+          rewriter.create<arith::UIToFPOp>(loc, rewriter.getF32Type(), xScaleD);
+      yOffset =
+          rewriter.create<arith::UIToFPOp>(loc, rewriter.getF32Type(), yOffset);
+      xOffset =
+          rewriter.create<arith::UIToFPOp>(loc, rewriter.getF32Type(), xOffset);
+
+      y = rewriter.create<arith::MulFOp>(loc, y, yScaleD);
+      x = rewriter.create<arith::MulFOp>(loc, x, xScaleD);
 
       y = rewriter.create<arith::AddFOp>(loc, y, yOffset);
       x = rewriter.create<arith::AddFOp>(loc, x, xOffset);
+
+      y = rewriter.create<arith::DivFOp>(loc, y, yScaleN);
+      x = rewriter.create<arith::DivFOp>(loc, x, xScaleN);
 
       iy = rewriter.create<math::FloorOp>(loc, y);
       ix = rewriter.create<math::FloorOp>(loc, x);
@@ -1423,27 +1441,30 @@ public:
       iy = rewriter.create<arith::FPToSIOp>(loc, rewriter.getI32Type(), iy);
       ix = rewriter.create<arith::FPToSIOp>(loc, rewriter.getI32Type(), ix);
     } else {
-      Value shiftVal = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getI32IntegerAttr(shift));
-
-      Value y = rewriter.create<arith::MulIOp>(loc, inY, yStride);
-      Value x = rewriter.create<arith::MulIOp>(loc, inX, xStride);
+      //  dx = x - ix * scale_n;
+      Value y = rewriter.create<arith::MulIOp>(loc, inY, yScaleD);
+      Value x = rewriter.create<arith::MulIOp>(loc, inX, xScaleD);
 
       y = rewriter.create<arith::AddIOp>(loc, y, yOffset);
       x = rewriter.create<arith::AddIOp>(loc, x, xOffset);
 
-      iy = rewriter.create<arith::ShRSIOp>(loc, y, shiftVal);
-      ix = rewriter.create<arith::ShRSIOp>(loc, x, shiftVal);
+      iy = rewriter.create<arith::DivUIOp>(loc, y, yScaleN);
+      ix = rewriter.create<arith::DivUIOp>(loc, x, xScaleN);
 
-      Value yTrunc = rewriter.create<arith::ShLIOp>(loc, iy, shiftVal);
-      Value xTrunc = rewriter.create<arith::ShLIOp>(loc, ix, shiftVal);
+      Value temp_y = rewriter.create<arith::MulIOp>(loc, iy, yScaleN);
+      Value temp_x = rewriter.create<arith::MulIOp>(loc, ix, xScaleN);
 
-      dy = rewriter.create<arith::SubIOp>(loc, y, yTrunc);
-      dx = rewriter.create<arith::SubIOp>(loc, x, xTrunc);
+      dy = rewriter.create<arith::SubIOp>(loc, y, temp_y);
+      dx = rewriter.create<arith::SubIOp>(loc, x, temp_x);
     }
 
     if (op.getMode() == "NEAREST_NEIGHBOR") {
       Value yPred, xPred;
+      auto zeroVal = rewriter.create<arith::ConstantOp>(
+          loc, rewriter.getI32IntegerAttr(0));
+      auto oneVal = rewriter.create<arith::ConstantOp>(
+          loc, rewriter.getI32IntegerAttr(1));
+
       // Round the index position towards the closest pixel location.
       if (floatingPointMode) {
         auto halfVal = rewriter.create<arith::ConstantOp>(
@@ -1453,18 +1474,15 @@ public:
         xPred = rewriter.create<arith::CmpFOp>(loc, arith::CmpFPredicate::OGE,
                                                dx, halfVal);
       } else {
-        auto halfVal = rewriter.create<arith::ConstantOp>(
-            loc, rewriter.getI32IntegerAttr(1 << (shift - 1)));
+        Value yScaleNHalfVal =
+            rewriter.create<arith::ShRSIOp>(loc, yScaleN, oneVal);
+        Value xScaleNHalfVal =
+            rewriter.create<arith::ShRSIOp>(loc, xScaleN, oneVal);
         yPred = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sge,
-                                               dy, halfVal);
+                                               dy, yScaleNHalfVal);
         xPred = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sge,
-                                               dx, halfVal);
+                                               dx, xScaleNHalfVal);
       }
-
-      auto zeroVal = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getI32IntegerAttr(0));
-      auto oneVal = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getI32IntegerAttr(1));
 
       auto yOffset =
           rewriter.create<arith::SelectOp>(loc, yPred, oneVal, zeroVal);
@@ -1491,9 +1509,8 @@ public:
       rewriter.create<linalg::YieldOp>(loc, result);
 
       return success();
-    }
-
-    if (op.getMode() == "BILINEAR") {
+    } else {
+      // The mode here must be BILINEAR. This has been checked above.
       Value y0 = iy;
       Value x0 = ix;
 
@@ -1527,10 +1544,8 @@ public:
           loc, input, ValueRange{batch, y1, x1, channel});
 
       if (floatingPointMode) {
-        auto oneVal = rewriter.create<arith::ConstantOp>(
-            loc, rewriter.getF32FloatAttr(1.f));
         Value rightPart = dx;
-        Value leftPart = rewriter.create<arith::SubFOp>(loc, oneVal, dx);
+        Value leftPart = rewriter.create<arith::SubFOp>(loc, xScaleN, dx);
 
         y0x0 = rewriter.create<arith::MulFOp>(loc, y0x0, leftPart);
         y0x1 = rewriter.create<arith::MulFOp>(loc, y0x1, rightPart);
@@ -1541,46 +1556,46 @@ public:
         Value bottomAcc = rewriter.create<arith::AddFOp>(loc, y1x0, y1x1);
 
         Value bottomPart = dy;
-        Value topPart = rewriter.create<arith::SubFOp>(loc, oneVal, dy);
+        Value topPart = rewriter.create<arith::SubFOp>(loc, yScaleN, dy);
         topAcc = rewriter.create<arith::MulFOp>(loc, topAcc, topPart);
         bottomAcc = rewriter.create<arith::MulFOp>(loc, bottomAcc, bottomPart);
         Value result = rewriter.create<arith::AddFOp>(loc, topAcc, bottomAcc);
 
         rewriter.create<linalg::YieldOp>(loc, result);
         return success();
+      } else {
+        y0x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x0);
+        y0x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x1);
+        y1x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x0);
+        y1x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x1);
+
+        if (resultElementTy.getIntOrFloatBitWidth() > 32) {
+          dx = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dx);
+          dy = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dy);
+        }
+
+        Value rightPart = dx;
+        Value leftPart = rewriter.create<arith::SubIOp>(loc, xScaleN, dx);
+
+        y0x0 = rewriter.create<arith::MulIOp>(loc, y0x0, leftPart);
+        y0x1 = rewriter.create<arith::MulIOp>(loc, y0x1, rightPart);
+        Value topAcc = rewriter.create<arith::AddIOp>(loc, y0x0, y0x1);
+
+        y1x0 = rewriter.create<arith::MulIOp>(loc, y1x0, leftPart);
+        y1x1 = rewriter.create<arith::MulIOp>(loc, y1x1, rightPart);
+        Value bottomAcc = rewriter.create<arith::AddIOp>(loc, y1x0, y1x1);
+
+        Value bottomPart = dy;
+        Value topPart = rewriter.create<arith::SubIOp>(loc, yScaleN, dy);
+        topAcc = rewriter.create<arith::MulIOp>(loc, topAcc, topPart);
+        bottomAcc = rewriter.create<arith::MulIOp>(loc, bottomAcc, bottomPart);
+        Value result = rewriter.create<arith::AddIOp>(loc, topAcc, bottomAcc);
+
+        rewriter.create<linalg::YieldOp>(loc, result);
+        return success();
       }
-      y0x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x0);
-      y0x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x1);
-      y1x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x0);
-      y1x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x1);
-
-      if (resultElementTy.getIntOrFloatBitWidth() > 32) {
-        dx = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dx);
-        dy = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dy);
-      }
-
-      auto unitVal = rewriter.create<arith::ConstantOp>(
-          loc, rewriter.getIntegerAttr(resultElementTy, 1LL << shift));
-      Value rightPart = dx;
-      Value leftPart = rewriter.create<arith::SubIOp>(loc, unitVal, dx);
-
-      y0x0 = rewriter.create<arith::MulIOp>(loc, y0x0, leftPart);
-      y0x1 = rewriter.create<arith::MulIOp>(loc, y0x1, rightPart);
-      Value topAcc = rewriter.create<arith::AddIOp>(loc, y0x0, y0x1);
-
-      y1x0 = rewriter.create<arith::MulIOp>(loc, y1x0, leftPart);
-      y1x1 = rewriter.create<arith::MulIOp>(loc, y1x1, rightPart);
-      Value bottomAcc = rewriter.create<arith::AddIOp>(loc, y1x0, y1x1);
-
-      Value bottomPart = dy;
-      Value topPart = rewriter.create<arith::SubIOp>(loc, unitVal, dy);
-      topAcc = rewriter.create<arith::MulIOp>(loc, topAcc, topPart);
-      bottomAcc = rewriter.create<arith::MulIOp>(loc, bottomAcc, bottomPart);
-      Value result = rewriter.create<arith::AddIOp>(loc, topAcc, bottomAcc);
-
-      rewriter.create<linalg::YieldOp>(loc, result);
-      return success();
     }
+
     return failure();
   }
 };
