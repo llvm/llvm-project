@@ -16,5 +16,7 @@ add_integration_test(
     libc.include.unistd
     libc.src.signal.raise
     libc.src.sys.wait.wait
+    libc.src.sys.wait.wait4
+    libc.src.sys.wait.waitpid
     libc.src.unistd.fork
 )

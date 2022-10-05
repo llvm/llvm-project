@@ -11,3 +11,31 @@ add_entrypoint_object(
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  wait4
+  SRCS
+    wait4.cpp
+  HDRS
+    ../wait4.h
+  DEPENDS
+    libc.include.errno
+    libc.include.sys_wait
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  waitpid
+  SRCS
+    waitpid.cpp
+  HDRS
+    ../waitpid.h
+  DEPENDS
+    libc.include.errno
+    libc.include.sys_wait
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
