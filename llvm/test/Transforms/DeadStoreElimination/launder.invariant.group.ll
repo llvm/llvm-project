@@ -1,65 +1,65 @@
 ; RUN: opt < %s -basic-aa -dse -S | FileCheck %s
 
-; CHECK-LABEL: void @skipBarrier(i8* %ptr)
-define void @skipBarrier(i8* %ptr) {
+; CHECK-LABEL: void @skipBarrier(ptr %ptr)
+define void @skipBarrier(ptr %ptr) {
 ; CHECK-NOT: store i8 42
-  store i8 42, i8* %ptr
-; CHECK: %ptr2 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr)
-  %ptr2 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr)
+  store i8 42, ptr %ptr
+; CHECK: %ptr2 = call ptr @llvm.launder.invariant.group.p0(ptr %ptr)
+  %ptr2 = call ptr @llvm.launder.invariant.group.p0(ptr %ptr)
 ; CHECK: store i8 43
-  store i8 43, i8* %ptr2
+  store i8 43, ptr %ptr2
   ret void
 }
 
-; CHECK-LABEL: void @skip2Barriers(i8* %ptr)
-define void @skip2Barriers(i8* %ptr) {
+; CHECK-LABEL: void @skip2Barriers(ptr %ptr)
+define void @skip2Barriers(ptr %ptr) {
 ; CHECK-NOT: store i8 42
-  store i8 42, i8* %ptr
-; CHECK: %ptr2 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr)
-  %ptr2 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr)
+  store i8 42, ptr %ptr
+; CHECK: %ptr2 = call ptr @llvm.launder.invariant.group.p0(ptr %ptr)
+  %ptr2 = call ptr @llvm.launder.invariant.group.p0(ptr %ptr)
 ; CHECK-NOT: store i8 43
-  store i8 43, i8* %ptr2
-  %ptr3 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr2)
-  %ptr4 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr3)
+  store i8 43, ptr %ptr2
+  %ptr3 = call ptr @llvm.launder.invariant.group.p0(ptr %ptr2)
+  %ptr4 = call ptr @llvm.launder.invariant.group.p0(ptr %ptr3)
 
 ; CHECK: store i8 44
-  store i8 44, i8* %ptr4
+  store i8 44, ptr %ptr4
   ret void
 }
 
-; CHECK-LABEL: void @skip3Barriers(i8* %ptr)
-define void @skip3Barriers(i8* %ptr) {
+; CHECK-LABEL: void @skip3Barriers(ptr %ptr)
+define void @skip3Barriers(ptr %ptr) {
 ; CHECK-NOT: store i8 42
-  store i8 42, i8* %ptr
-; CHECK: %ptr2 = call i8* @llvm.strip.invariant.group.p0i8(i8* %ptr)
-  %ptr2 = call i8* @llvm.strip.invariant.group.p0i8(i8* %ptr)
+  store i8 42, ptr %ptr
+; CHECK: %ptr2 = call ptr @llvm.strip.invariant.group.p0(ptr %ptr)
+  %ptr2 = call ptr @llvm.strip.invariant.group.p0(ptr %ptr)
 ; CHECK-NOT: store i8 43
-  store i8 43, i8* %ptr2
-  %ptr3 = call i8* @llvm.strip.invariant.group.p0i8(i8* %ptr2)
-  %ptr4 = call i8* @llvm.strip.invariant.group.p0i8(i8* %ptr3)
+  store i8 43, ptr %ptr2
+  %ptr3 = call ptr @llvm.strip.invariant.group.p0(ptr %ptr2)
+  %ptr4 = call ptr @llvm.strip.invariant.group.p0(ptr %ptr3)
 
 ; CHECK: store i8 44
-  store i8 44, i8* %ptr4
+  store i8 44, ptr %ptr4
   ret void
 }
 
-; CHECK-LABEL: void @skip4Barriers(i8* %ptr)
-define void @skip4Barriers(i8* %ptr) {
+; CHECK-LABEL: void @skip4Barriers(ptr %ptr)
+define void @skip4Barriers(ptr %ptr) {
 ; CHECK-NOT: store i8 42
-  store i8 42, i8* %ptr
-; CHECK: %ptr2 = call i8* @llvm.strip.invariant.group.p0i8(i8* %ptr)
-  %ptr2 = call i8* @llvm.strip.invariant.group.p0i8(i8* %ptr)
+  store i8 42, ptr %ptr
+; CHECK: %ptr2 = call ptr @llvm.strip.invariant.group.p0(ptr %ptr)
+  %ptr2 = call ptr @llvm.strip.invariant.group.p0(ptr %ptr)
 ; CHECK-NOT: store i8 43
-  store i8 43, i8* %ptr2
-  %ptr3 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr2)
-  %ptr4 = call i8* @llvm.strip.invariant.group.p0i8(i8* %ptr3)
-  %ptr5 = call i8* @llvm.launder.invariant.group.p0i8(i8* %ptr3)
+  store i8 43, ptr %ptr2
+  %ptr3 = call ptr @llvm.launder.invariant.group.p0(ptr %ptr2)
+  %ptr4 = call ptr @llvm.strip.invariant.group.p0(ptr %ptr3)
+  %ptr5 = call ptr @llvm.launder.invariant.group.p0(ptr %ptr3)
 
 ; CHECK: store i8 44
-  store i8 44, i8* %ptr5
+  store i8 44, ptr %ptr5
   ret void
 }
 
 
-declare i8* @llvm.launder.invariant.group.p0i8(i8*)
-declare i8* @llvm.strip.invariant.group.p0i8(i8*)
+declare ptr @llvm.launder.invariant.group.p0(ptr)
+declare ptr @llvm.strip.invariant.group.p0(ptr)

@@ -5,16 +5,15 @@ declare void @bar()
 define void @foo() {
 bb1:
   %memtmp3.i = alloca [21 x i8], align 1
-  %0 = getelementptr inbounds [21 x i8], [21 x i8]* %memtmp3.i, i64 0, i64 0
   br label %bb3
 
 bb2:
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %memtmp3.i)
   br label %bb3
 
 bb3:
   call void @bar()
-  call void @llvm.lifetime.end.p0i8(i64 -1, i8* %0)
+  call void @llvm.lifetime.end.p0(i64 -1, ptr %memtmp3.i)
   br label %bb4
 
 bb4:
@@ -22,4 +21,4 @@ bb4:
 
 }
 
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) nounwind
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
