@@ -1,4 +1,4 @@
-@echo on
+@echo off
 setlocal enabledelayedexpansion
 
 if "%1"=="" goto usage
@@ -52,9 +52,22 @@ REM   For LLDB, SWIG version <= 3.0.8 needs to be used to work around
 REM   https://github.com/swig/swig/issues/769
 
 
-REM You need to modify the paths below:
-set vsdevcmd=C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\Tools\VsDevCmd.bat
+set vsdevcmd=
+set vs_2019_prefix=C:\Program Files (x86)\Microsoft Visual Studio\2019
+:: try potential activated visual studio, then 2019, with different editions
+call :find_visual_studio "%VSINSTALLDIR%"
+call :find_visual_studio "%vs_2019_prefix%\Enterprise"
+call :find_visual_studio "%vs_2019_prefix%\Professional"
+call :find_visual_studio "%vs_2019_prefix%\Community"
+call :find_visual_studio "%vs_2019_prefix%\BuildTools"
+if not exist "%vsdevcmd%" (
+  echo Can't find any installation of Visual Studio
+  exit /b 1
+)
+echo Using VS devcmd: %vsdevcmd%
 
+:: start echoing what we do
+@echo on
 set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310-32
 set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310
 
@@ -314,3 +327,13 @@ exit /b 0
 :parse_args_done
 exit /b 0
 ::==============================================================================
+:find_visual_studio
+set "vs_install=%~1"
+if "%vs_install%" == "" exit /b 1
+
+if "%vsdevcmd%" NEQ "" exit /b 0 :: already found
+
+set "candidate=%vs_install%\Common7\Tools\VsDevCmd.bat"
+echo trying VS devcmd: %candidate%
+if exist "%candidate%" set "vsdevcmd=%candidate%"
+exit /b 0

@@ -558,9 +558,6 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString("-plugin-opt=jobs=" + Twine(Parallelism)));
 
-  if (!CLANG_ENABLE_OPAQUE_POINTERS_INTERNAL)
-    CmdArgs.push_back(Args.MakeArgString("-plugin-opt=no-opaque-pointers"));
-
   // If an explicit debugger tuning argument appeared, pass it along.
   if (Arg *A = Args.getLastArg(options::OPT_gTune_Group,
                                options::OPT_ggdbN_Group)) {

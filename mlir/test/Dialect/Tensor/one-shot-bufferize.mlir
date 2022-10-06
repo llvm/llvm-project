@@ -126,15 +126,12 @@ func.func @insert_slice_fun_not_inplace(
 
 // -----
 
-// CHECK-LABEL: func @tensor_cast_not_in_place(
-//  CHECK-SAME:     %[[A:.*]]: memref<?xf32{{.*}}>, %[[B:.*]]: memref<?xf32{{.*}}>
-//       CHECK:   %[[alloc:.*]] = memref.alloc
-//       CHECK:   memref.copy %[[A]], %[[alloc]]
+// CHECK-LABEL: func @tensor_cast_in_place(
+//  CHECK-SAME:     %[[A:.*]]: memref<?xf32{{.*}}>
 //       CHECK:   %[[subview:.*]] = memref.subview %[[A]][{{.*}}] [4] [1] : {{.*}} to memref<4xf32
-//       CHECK:   memref.copy %[[alloc]], %[[subview]]
-func.func @tensor_cast_not_in_place(
-    %A : tensor<?xf32> {bufferization.writable = true},
-    %B : tensor<?xf32> {bufferization.writable = false}, %idx: index)
+//       CHECK:   memref.copy %[[A]], %[[subview]]
+func.func @tensor_cast_in_place(
+    %A : tensor<?xf32> {bufferization.writable = true}, %idx: index)
   -> (tensor<?xf32>)
 {
   %r0 = tensor.cast %A : tensor<?xf32> to tensor<4xf32>
@@ -242,4 +239,17 @@ func.func @dealloc_pad_buffer(%t1: tensor<?x10xindex>, %l2: index, %h1: index,
   } : tensor<?x10xindex> to tensor<?x?xindex>
   %r = tensor.extract %0[%idx, %idx] : tensor<?x?xindex>
   return %r : index
+}
+
+// -----
+
+// CHECK-LABEL: func @insert_equivalent_tensor
+func.func @insert_equivalent_tensor(%t: tensor<10xf32>) -> tensor<10xf32> {
+  // CHECK-NOT: memref.alloc
+  %cst = arith.constant 4.200000e+01 : f32
+  // CHECK: linalg.fill
+  %0 = linalg.fill ins(%cst : f32) outs(%t : tensor<10xf32>) -> tensor<10xf32>
+  // CHECK-NOT: memref.copy
+  %1 = tensor.insert_slice %0 into %t[0][10][1] : tensor<10xf32> into tensor<10xf32>
+  return %1 : tensor<10xf32>
 }
