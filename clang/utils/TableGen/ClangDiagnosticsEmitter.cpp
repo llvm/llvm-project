@@ -162,8 +162,8 @@ static void groupDiagnostics(const std::vector<Record*> &Diags,
     DefInit *DI = dyn_cast<DefInit>(R->getValueInit("Group"));
     if (!DI)
       continue;
-    assert(R->getValueAsDef("Class")->getName() != "CLASS_NOTE" &&
-           "Note can't be in a DiagGroup");
+    // assert(R->getValueAsDef("Class")->getName() != "CLASS_NOTE" &&
+    //        "Note can't be in a DiagGroup");
     std::string GroupName =
         std::string(DI->getDef()->getValueAsString("GroupName"));
     DiagsInGroup[GroupName].DiagsInGroup.push_back(R);

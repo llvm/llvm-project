@@ -227,20 +227,21 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgValues(CmdArgs, options::OPT__SLASH_link);
 
   // Control Flow Guard checks
-  if (Arg *A = Args.getLastArg(options::OPT__SLASH_guard)) {
-    StringRef GuardArgs = A->getValue();
-    if (GuardArgs.equals_insensitive("cf") ||
-        GuardArgs.equals_insensitive("cf,nochecks")) {
-      // MSVC doesn't yet support the "nochecks" modifier.
-      CmdArgs.push_back("-guard:cf");
-    } else if (GuardArgs.equals_insensitive("cf-")) {
-      CmdArgs.push_back("-guard:cf-");
-    } else if (GuardArgs.equals_insensitive("ehcont")) {
-      CmdArgs.push_back("-guard:ehcont");
-    } else if (GuardArgs.equals_insensitive("ehcont-")) {
-      CmdArgs.push_back("-guard:ehcont-");
-    }
-  }
+  // [HACKY] NO NO NO. We dont need /guard.
+  // if (Arg *A = Args.getLastArg(options::OPT__SLASH_guard)) {
+  //   StringRef GuardArgs = A->getValue();
+  //   if (GuardArgs.equals_insensitive("cf") ||
+  //       GuardArgs.equals_insensitive("cf,nochecks")) {
+  //     // MSVC doesn't yet support the "nochecks" modifier.
+  //     CmdArgs.push_back("-guard:cf");
+  //   } else if (GuardArgs.equals_insensitive("cf-")) {
+  //     CmdArgs.push_back("-guard:cf-");
+  //   } else if (GuardArgs.equals_insensitive("ehcont")) {
+  //     CmdArgs.push_back("-guard:ehcont");
+  //   } else if (GuardArgs.equals_insensitive("ehcont-")) {
+  //     CmdArgs.push_back("-guard:ehcont-");
+  //   }
+  // }
 
   if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
                    options::OPT_fno_openmp, false)) {

@@ -657,7 +657,7 @@ void SymbolTable::reportDuplicate(Symbol *existing, InputFile *newFile,
   if (config->forceMultiple)
     warn(os.str());
   else
-    error(os.str());
+    message(os.str()); //[MSVC Compatibility]
 }
 
 Symbol *SymbolTable::addAbsolute(StringRef n, COFFSymbolRef sym) {

@@ -688,21 +688,21 @@ template <class X, class Y>
 [[nodiscard]] inline auto cast_if_present(const Y &Val) {
   if (!detail::isPresent(Val))
     return CastInfo<X, const Y>::castFailed();
-  assert(isa<X>(Val) && "cast_if_present<Ty>() argument of incompatible type!");
+  //assert(isa<X>(Val) && "cast_if_present<Ty>() argument of incompatible type!");
   return cast<X>(detail::unwrapValue(Val));
 }
 
 template <class X, class Y> [[nodiscard]] inline auto cast_if_present(Y &Val) {
   if (!detail::isPresent(Val))
     return CastInfo<X, Y>::castFailed();
-  assert(isa<X>(Val) && "cast_if_present<Ty>() argument of incompatible type!");
+  //assert(isa<X>(Val) && "cast_if_present<Ty>() argument of incompatible type!");
   return cast<X>(detail::unwrapValue(Val));
 }
 
 template <class X, class Y> [[nodiscard]] inline auto cast_if_present(Y *Val) {
   if (!detail::isPresent(Val))
     return CastInfo<X, Y *>::castFailed();
-  assert(isa<X>(Val) && "cast_if_present<Ty>() argument of incompatible type!");
+  //assert(isa<X>(Val) && "cast_if_present<Ty>() argument of incompatible type!");
   return cast<X>(detail::unwrapValue(Val));
 }
 

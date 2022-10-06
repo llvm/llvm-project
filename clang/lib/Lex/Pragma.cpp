@@ -34,6 +34,7 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Lex/Token.h"
 #include "clang/Lex/TokenLexer.h"
+#include "clang/Lex/MacroGuardValidator.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -981,6 +982,35 @@ bool Preprocessor::LexOnOffSwitch(tok::OnOffSwitch &Result) {
 }
 
 namespace {
+
+/// MacroGuardHandler - "\#pragma macro_arg_guard" verify macro arg.
+struct MacroGuardHandler : public PragmaHandler {
+    MacroGuardHandler() : PragmaHandler("macro_arg_guard") {}
+    bool IsValidatorRegistered = false;
+
+    void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                      Token &PragmaTok) override {
+        // Reset buffer
+        ArgsToEnclosedForMacroGuardValidator.clear();
+
+        Token Tok;
+        PP.Lex(Tok);
+        // loop until the end of preprocessing directive.
+        while (Tok.isNot(tok::eod)) {
+            ArgsToEnclosedForMacroGuardValidator.push_back(
+                Tok.getIdentifierInfo());
+            PP.Lex(Tok);
+        }
+
+        if (!IsValidatorRegistered) {
+            // Register the validator PPCallbacks
+            auto Validator =
+                std::make_unique<MacroGuardValidator>(PP.getSourceManager());
+            PP.addPPCallbacks(std::move(Validator));
+            IsValidatorRegistered = false;
+        }
+    }
+};
 
 /// PragmaOnceHandler - "\#pragma once" marks the file as atomically included.
 struct PragmaOnceHandler : public PragmaHandler {
@@ -2065,6 +2095,7 @@ struct PragmaFinalHandler : public PragmaHandler {
 /// RegisterBuiltinPragmas - Install the standard preprocessor pragmas:
 /// \#pragma GCC poison/system_header/dependency and \#pragma once.
 void Preprocessor::RegisterBuiltinPragmas() {
+  AddPragmaHandler(new MacroGuardHandler());
   AddPragmaHandler(new PragmaOnceHandler());
   AddPragmaHandler(new PragmaMarkHandler());
   AddPragmaHandler(new PragmaPushMacroHandler());

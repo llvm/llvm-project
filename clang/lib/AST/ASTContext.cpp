@@ -11008,6 +11008,8 @@ QualType ASTContext::getCorrespondingSignedType(QualType T) const {
     return SatFractTy;
   case BuiltinType::SatULongFract:
     return SatLongFractTy;
+  case BuiltinType::Bool: //[MSVC Compatibility]
+    return BoolTy;
   default:
     assert(
         (T->hasSignedIntegerRepresentation() || T->isSignedFixedPointType()) &&

@@ -255,9 +255,11 @@ struct Configuration {
   uint32_t minorImageVersion = 0;
   // If changing the default os/subsys version here, update the default in
   // the MinGW driver accordingly.
-  uint32_t majorOSVersion = 6;
+  // Chang the value to 4 to support win-xp
+  uint32_t majorOSVersion = 4;
   uint32_t minorOSVersion = 0;
-  uint32_t majorSubsystemVersion = 6;
+  // Chang the value to 4 to support win-xp
+  uint32_t majorSubsystemVersion = 4;
   uint32_t minorSubsystemVersion = 0;
   uint32_t timestamp = 0;
   uint32_t functionPadMin = 0;

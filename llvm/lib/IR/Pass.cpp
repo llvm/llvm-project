@@ -15,6 +15,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/LegacyPassNameParser.h"
@@ -171,6 +172,37 @@ static std::string getDescription(const Function &F) {
 }
 
 bool FunctionPass::skipFunction(const Function &F) const {
+  // [seh] We do not opt functions include seh/cxx eh on Windows OS
+  for (auto &BB : F) {
+    bool Find = false;
+    for (auto &I : BB) {
+      auto InvokeIst = dyn_cast<InvokeInst>(&I);
+      if (!InvokeIst) {
+        continue;
+      }
+
+      auto CalledFunction = InvokeIst->getCalledFunction();
+      if (!CalledFunction) {
+        continue;
+      }
+
+      // Find llvm.seh.try.begin/end or llvm.seh.scope.begin/end
+      if (CalledFunction->getName().str().find("llvm.seh.") !=
+          std::string::npos) {
+        auto FF = (Function *)&F;
+        FF->addFnAttr(llvm::Attribute::NoInline);
+        FF->removeFnAttr(llvm::Attribute::AlwaysInline);
+        FF->addFnAttr(llvm::Attribute::OptimizeNone);
+        Find = true;
+        break;
+      }
+    }
+
+    if (Find) {
+      break;
+    }
+  }
+
   OptPassGate &Gate = F.getContext().getOptPassGate();
   if (Gate.isEnabled() && !Gate.shouldRunPass(this, getDescription(F)))
     return true;

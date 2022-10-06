@@ -206,6 +206,17 @@ const CallInst *BasicBlock::getPostdominatingDeoptimizeCall() const {
   return BB->getTerminatingDeoptimizeCall();
 }
 
+const Instruction *BasicBlock::getFirstMayFaultInst() const {
+  if (InstList.empty())
+    return nullptr;
+  // [SEH] LoadInst/StoreInst/CallBase(InlineAsm/CallInst/CallBrInst)/IntrinsicInst
+  for (const Instruction &I : *this)
+    if (isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallBase>(I) ||
+        isa<IntrinsicInst>(I))
+      return &I;
+  return nullptr;
+}
+
 const Instruction* BasicBlock::getFirstNonPHI() const {
   for (const Instruction &I : *this)
     if (!isa<PHINode>(I))

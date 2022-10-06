@@ -12749,10 +12749,11 @@ QualType Sema::CheckCompareOperands(ExprResult &LHS, ExprResult &RHS,
     } else if ((LHSIsNull && LHSType->isIntegerType()) ||
                (RHSIsNull && RHSType->isIntegerType())) {
       if (IsOrdered) {
-        isError = getLangOpts().CPlusPlus;
-        DiagID =
-          isError ? diag::err_typecheck_ordered_comparison_of_pointer_and_zero
-                  : diag::ext_typecheck_ordered_comparison_of_pointer_and_zero;
+        // [MSVC Compatibility]
+        //isError = getLangOpts().CPlusPlus;
+        //DiagID =
+        //  isError ? diag::err_typecheck_ordered_comparison_of_pointer_and_zero
+        //          : diag::ext_typecheck_ordered_comparison_of_pointer_and_zero;
       }
     } else if (getLangOpts().CPlusPlus) {
       DiagID = diag::err_typecheck_comparison_of_pointer_integer;

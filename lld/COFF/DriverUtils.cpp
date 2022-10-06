@@ -377,11 +377,12 @@ static std::string createDefaultXml() {
 
   // Emit the XML. Note that we do *not* verify that the XML attributes are
   // syntactically correct. This is intentional for link.exe compatibility.
-  os << "<?xml version=\"1.0\" standalone=\"yes\"?>\n"
-     << "<assembly xmlns=\"urn:schemas-microsoft-com:asm.v1\"\n"
-     << "          manifestVersion=\"1.0\">\n";
+  // Use microsoft xml to support win-xp.
+  os << "<?xml version='1.0' encoding='UTF-8' standalone='yes'?>\n"
+     << "<assembly xmlns='urn:schemas-microsoft-com:asm.v1' "
+        "manifestVersion='1.0'>\n";
   if (config->manifestUAC) {
-    os << "  <trustInfo>\n"
+    os << "  <trustInfo xmlns=\"urn:schemas-microsoft-com:asm.v3\">\n"
        << "    <security>\n"
        << "      <requestedPrivileges>\n"
        << "         <requestedExecutionLevel level=" << config->manifestLevel

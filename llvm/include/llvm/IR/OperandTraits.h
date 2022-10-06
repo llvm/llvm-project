@@ -136,14 +136,10 @@ CLASS::const_op_iterator CLASS::op_end() const { \
   return OperandTraits<CLASS>::op_end(const_cast<CLASS*>(this)); \
 } \
 VALUECLASS *CLASS::getOperand(unsigned i_nocapture) const { \
-  assert(i_nocapture < OperandTraits<CLASS>::operands(this) \
-         && "getOperand() out of range!"); \
   return cast_or_null<VALUECLASS>( \
     OperandTraits<CLASS>::op_begin(const_cast<CLASS*>(this))[i_nocapture].get()); \
 } \
 void CLASS::setOperand(unsigned i_nocapture, VALUECLASS *Val_nocapture) { \
-  assert(i_nocapture < OperandTraits<CLASS>::operands(this) \
-         && "setOperand() out of range!"); \
   OperandTraits<CLASS>::op_begin(this)[i_nocapture] = Val_nocapture; \
 } \
 unsigned CLASS::getNumOperands() const { \

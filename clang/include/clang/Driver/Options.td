@@ -529,6 +529,12 @@ defvar std = !strconcat("LangStandard::getLangStandardForKind(", lang_std.KeyPat
 
 // Developer Driver Options
 
+def fprint_arguments : Flag<["-"], "fprint-arguments">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
+  HelpText<"Print clang arguments">;
+def fencrypt_string : Flag<["-"], "fencrypt-string">, Group<f_Group>, Flags<[CC1Option, CoreOption]>,
+  HelpText<"Encrypt your strings">,
+  MarshallingInfoFlag<CodeGenOpts<"EncryptString">>;
+
 def internal_Group : OptionGroup<"<clang internal options>">, Flags<[HelpHidden]>;
 def internal_driver_Group : OptionGroup<"<clang driver internal options>">,
   Group<internal_Group>, HelpText<"DRIVER OPTIONS">;
@@ -1456,7 +1462,7 @@ defm cxx_exceptions: BoolFOption<"cxx-exceptions",
   LangOpts<"CXXExceptions">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enable C++ exceptions">, NegFlag<SetFalse>>;
 defm async_exceptions: BoolFOption<"async-exceptions",
-  LangOpts<"EHAsynch">, DefaultFalse,
+  LangOpts<"EHAsynch">, DefaultTrue,
   PosFlag<SetTrue, [CC1Option], "Enable EH Asynchronous exceptions">, NegFlag<SetFalse>>;
 defm cxx_modules : BoolFOption<"cxx-modules",
   LangOpts<"CPlusPlusModules">, Default<cpp20.KeyPath>,
@@ -1949,7 +1955,7 @@ defm rewrite_includes : BoolFOption<"rewrite-includes",
 defm directives_only : OptInCC1FFlag<"directives-only", "">;
 
 defm delete_null_pointer_checks : BoolFOption<"delete-null-pointer-checks",
-  CodeGenOpts<"NullPointerIsValid">, DefaultFalse,
+  CodeGenOpts<"NullPointerIsValid">, DefaultTrue,
   NegFlag<SetTrue, [CC1Option], "Do not treat usage of null pointers as undefined behavior">,
   PosFlag<SetFalse, [], "Treat usage of null pointers as undefined behavior (default)">,
   BothFlags<[CoreOption]>>;
@@ -6769,6 +6775,10 @@ def _SLASH_permissive : CLFlag<"permissive">,
   HelpText<"Enable some non conforming code to compile">;
 def _SLASH_permissive_ : CLFlag<"permissive-">,
   HelpText<"Disable non conforming code from compiling (default)">;
+def _SLASH_d1nodatetime : CLFlag<"d1nodatetime">,
+  HelpText<"d1nodatetime">;
+def _SLASH_d1import_no_registry : CLFlag<"d1import_no_registry">,
+  HelpText<"d1import_no_registry">;
 def _SLASH_Tc : CLCompileJoinedOrSeparate<"Tc">,
   HelpText<"Treat <file> as C source file">, MetaVarName<"<file>">;
 def _SLASH_TC : CLCompileFlag<"TC">, HelpText<"Treat all source files as C">;

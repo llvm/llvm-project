@@ -265,6 +265,12 @@ public:
   // If BufStr has an invalid BOM, returns the BOM name; otherwise, returns
   // nullptr
   static const char *getInvalidBOM(StringRef BufStr);
+
+  // Check buffer is UTF16
+  static bool checkBufUTF16(StringRef BufStr);
+
+   // Check buffer is UTF32
+  static bool checkBufUTF32(StringRef BufStr);
 };
 
 // Assert that the \c ContentCache objects will always be 8-byte aligned so
