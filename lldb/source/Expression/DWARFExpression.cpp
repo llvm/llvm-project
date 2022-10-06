@@ -69,21 +69,9 @@ void DWARFExpression::UpdateValue(uint64_t const_value,
 
 void DWARFExpression::DumpLocation(Stream *s, lldb::DescriptionLevel level,
                                    ABI *abi) const {
-  std::function<llvm::StringRef(uint64_t DwarfRegNum, bool IsEH)> GetRegName;
-  if (abi) {
-    auto RegInfo = abi->GetMCRegisterInfo();
-    GetRegName = [RegInfo](uint64_t DwarfRegNum, bool IsEH) -> llvm::StringRef {
-      if (llvm::Optional<unsigned> LLVMRegNum =
-              RegInfo.getLLVMRegNum(DwarfRegNum, IsEH))
-        if (const char *RegName = RegInfo.getName(*LLVMRegNum))
-          return llvm::StringRef(RegName);
-      return {};
-    };
-  }
-  auto DumpOpts = llvm::DIDumpOptions();
-  DumpOpts.GetNameForDWARFReg = GetRegName;
   llvm::DWARFExpression(m_data.GetAsLLVM(), m_data.GetAddressByteSize())
-      .print(s->AsRawOstream(), DumpOpts, nullptr);
+      .print(s->AsRawOstream(), llvm::DIDumpOptions(),
+             abi ? &abi->GetMCRegisterInfo() : nullptr, nullptr);
 }
 
 RegisterKind DWARFExpression::GetRegisterKind() const { return m_reg_kind; }
