@@ -1452,7 +1452,8 @@ def : Pat<(AArch64mrs imm:$id),
 def MOVbaseTLS : Pseudo<(outs GPR64:$dst), (ins),
                        [(set GPR64:$dst, AArch64threadpointer)]>, Sched<[WriteSys]>;
 
-let Defs = [ X9, X16, X17, NZCV ] in {
+// This gets lowered into a 24-byte instruction sequence
+let Defs = [ X9, X16, X17, NZCV ], Size = 24 in {
 def KCFI_CHECK : Pseudo<
   (outs), (ins GPR64:$ptr, i32imm:$type), []>, Sched<[]>;
 }

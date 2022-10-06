@@ -146,15 +146,15 @@ enum class MLIR_SPARSETENSOR_EXPORT Action : uint32_t {
 /// breaking dependency cycles.  `SparseTensorEncodingAttr::DimLevelType`
 /// is the source of truth and this enum should be kept consistent with it.
 enum class MLIR_SPARSETENSOR_EXPORT DimLevelType : uint8_t {
-  kDense = 0,
-  kCompressed = 1,
-  kCompressedNu = 2,
-  kCompressedNo = 3,
-  kCompressedNuNo = 4,
-  kSingleton = 5,
-  kSingletonNu = 6,
-  kSingletonNo = 7,
-  kSingletonNuNo = 8,
+  kDense = 4,           // 0b001_00
+  kCompressed = 8,      // 0b010_00
+  kCompressedNu = 9,    // 0b010_01
+  kCompressedNo = 10,   // 0b010_10
+  kCompressedNuNo = 11, // 0b010_11
+  kSingleton = 16,      // 0b100_00
+  kSingletonNu = 17,    // 0b100_01
+  kSingletonNo = 18,    // 0b100_10
+  kSingletonNuNo = 19,  // 0b100_11
 };
 
 /// Check if the `DimLevelType` is dense.
@@ -164,55 +164,70 @@ constexpr MLIR_SPARSETENSOR_EXPORT bool isDenseDLT(DimLevelType dlt) {
 
 /// Check if the `DimLevelType` is compressed (regardless of properties).
 constexpr MLIR_SPARSETENSOR_EXPORT bool isCompressedDLT(DimLevelType dlt) {
-  switch (dlt) {
-  case DimLevelType::kCompressed:
-  case DimLevelType::kCompressedNu:
-  case DimLevelType::kCompressedNo:
-  case DimLevelType::kCompressedNuNo:
-    return true;
-  default:
-    return false;
-  }
+  return static_cast<uint8_t>(dlt) &
+         static_cast<uint8_t>(DimLevelType::kCompressed);
 }
 
 /// Check if the `DimLevelType` is singleton (regardless of properties).
 constexpr MLIR_SPARSETENSOR_EXPORT bool isSingletonDLT(DimLevelType dlt) {
-  switch (dlt) {
-  case DimLevelType::kSingleton:
-  case DimLevelType::kSingletonNu:
-  case DimLevelType::kSingletonNo:
-  case DimLevelType::kSingletonNuNo:
-    return true;
-  default:
-    return false;
-  }
+  return static_cast<uint8_t>(dlt) &
+         static_cast<uint8_t>(DimLevelType::kSingleton);
 }
 
 /// Check if the `DimLevelType` is ordered (regardless of storage format).
 constexpr MLIR_SPARSETENSOR_EXPORT bool isOrderedDLT(DimLevelType dlt) {
-  switch (dlt) {
-  case DimLevelType::kCompressedNo:
-  case DimLevelType::kCompressedNuNo:
-  case DimLevelType::kSingletonNo:
-  case DimLevelType::kSingletonNuNo:
-    return false;
-  default:
-    return true;
-  }
+  return !(static_cast<uint8_t>(dlt) & 2);
 }
 
 /// Check if the `DimLevelType` is unique (regardless of storage format).
 constexpr MLIR_SPARSETENSOR_EXPORT bool isUniqueDLT(DimLevelType dlt) {
-  switch (dlt) {
-  case DimLevelType::kCompressedNu:
-  case DimLevelType::kCompressedNuNo:
-  case DimLevelType::kSingletonNu:
-  case DimLevelType::kSingletonNuNo:
-    return false;
-  default:
-    return true;
-  }
+  return !(static_cast<uint8_t>(dlt) & 1);
 }
+
+// Ensure the above predicates work as intended.
+static_assert((!isCompressedDLT(DimLevelType::kDense) &&
+               isCompressedDLT(DimLevelType::kCompressed) &&
+               isCompressedDLT(DimLevelType::kCompressedNu) &&
+               isCompressedDLT(DimLevelType::kCompressedNo) &&
+               isCompressedDLT(DimLevelType::kCompressedNuNo) &&
+               !isCompressedDLT(DimLevelType::kSingleton) &&
+               !isCompressedDLT(DimLevelType::kSingletonNu) &&
+               !isCompressedDLT(DimLevelType::kSingletonNo) &&
+               !isCompressedDLT(DimLevelType::kSingletonNuNo)),
+              "isCompressedDLT definition is broken");
+
+static_assert((!isSingletonDLT(DimLevelType::kDense) &&
+               !isSingletonDLT(DimLevelType::kCompressed) &&
+               !isSingletonDLT(DimLevelType::kCompressedNu) &&
+               !isSingletonDLT(DimLevelType::kCompressedNo) &&
+               !isSingletonDLT(DimLevelType::kCompressedNuNo) &&
+               isSingletonDLT(DimLevelType::kSingleton) &&
+               isSingletonDLT(DimLevelType::kSingletonNu) &&
+               isSingletonDLT(DimLevelType::kSingletonNo) &&
+               isSingletonDLT(DimLevelType::kSingletonNuNo)),
+              "isSingletonDLT definition is broken");
+
+static_assert((isOrderedDLT(DimLevelType::kDense) &&
+               isOrderedDLT(DimLevelType::kCompressed) &&
+               isOrderedDLT(DimLevelType::kCompressedNu) &&
+               !isOrderedDLT(DimLevelType::kCompressedNo) &&
+               !isOrderedDLT(DimLevelType::kCompressedNuNo) &&
+               isOrderedDLT(DimLevelType::kSingleton) &&
+               isOrderedDLT(DimLevelType::kSingletonNu) &&
+               !isOrderedDLT(DimLevelType::kSingletonNo) &&
+               !isOrderedDLT(DimLevelType::kSingletonNuNo)),
+              "isOrderedDLT definition is broken");
+
+static_assert((isUniqueDLT(DimLevelType::kDense) &&
+               isUniqueDLT(DimLevelType::kCompressed) &&
+               !isUniqueDLT(DimLevelType::kCompressedNu) &&
+               isUniqueDLT(DimLevelType::kCompressedNo) &&
+               !isUniqueDLT(DimLevelType::kCompressedNuNo) &&
+               isUniqueDLT(DimLevelType::kSingleton) &&
+               !isUniqueDLT(DimLevelType::kSingletonNu) &&
+               isUniqueDLT(DimLevelType::kSingletonNo) &&
+               !isUniqueDLT(DimLevelType::kSingletonNuNo)),
+              "isUniqueDLT definition is broken");
 
 } // namespace sparse_tensor
 } // namespace mlir

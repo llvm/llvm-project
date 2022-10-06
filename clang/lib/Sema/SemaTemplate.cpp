@@ -7829,8 +7829,8 @@ Sema::BuildExpressionFromIntegralTemplateArgument(const TemplateArgument &Arg,
     E = new (Context) CharacterLiteral(Arg.getAsIntegral().getZExtValue(),
                                        Kind, T, Loc);
   } else if (T->isBooleanType()) {
-    E = new (Context) CXXBoolLiteralExpr(Arg.getAsIntegral().getBoolValue(),
-                                         T, Loc);
+    E = CXXBoolLiteralExpr::Create(Context, Arg.getAsIntegral().getBoolValue(),
+                                   T, Loc);
   } else if (T->isNullPtrType()) {
     E = new (Context) CXXNullPtrLiteralExpr(Context.NullPtrTy, Loc);
   } else {

@@ -25,7 +25,7 @@ def testEncodingAttr1D():
     # CHECK: equal: True
     print(f"equal: {casted == parsed}")
 
-    # CHECK: dim_level_types: [<DimLevelType.compressed: 1>]
+    # CHECK: dim_level_types: [<DimLevelType.compressed: 8>]
     print(f"dim_level_types: {casted.dim_level_types}")
     # CHECK: dim_ordering: None
     print(f"dim_ordering: {casted.dim_ordering}")
@@ -64,7 +64,7 @@ def testEncodingAttr2D():
     # CHECK: equal: True
     print(f"equal: {casted == parsed}")
 
-    # CHECK: dim_level_types: [<DimLevelType.dense: 0>, <DimLevelType.compressed: 1>]
+    # CHECK: dim_level_types: [<DimLevelType.dense: 4>, <DimLevelType.compressed: 8>]
     print(f"dim_level_types: {casted.dim_level_types}")
     # CHECK: dim_ordering: (d0, d1) -> (d1, d0)
     print(f"dim_ordering: {casted.dim_ordering}")

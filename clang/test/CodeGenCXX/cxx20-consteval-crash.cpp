@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -std=c++20 %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 %s -emit-llvm -o - | FileCheck %s
 // RUN: %clang_cc1 -emit-obj -debug-info-kind=constructor -std=c++20 %s -o -
 
 namespace PR50787 {
@@ -9,7 +9,7 @@ constexpr auto& x1 = X();
 auto x2 = X();
 
 // CHECK: @_ZN7PR507872x_E = external global i32, align 4
-// CHECK-NEXT: @_ZN7PR507872x1E = constant i32* @_ZN7PR507872x_E, align 8
+// CHECK-NEXT: @_ZN7PR507872x1E = constant ptr @_ZN7PR507872x_E, align 8
 // CHECK-NEXT: @_ZN7PR507872x2E = global i32 0, align 4
 }
 
