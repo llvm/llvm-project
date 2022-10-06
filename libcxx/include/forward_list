@@ -196,6 +196,7 @@ template <class T, class Allocator, class Predicate>
 #include <__memory/shared_ptr.h>
 #include <__memory/swap_allocator.h>
 #include <__memory/unique_ptr.h>
+#include <__memory_resource/polymorphic_allocator.h>
 #include <__type_traits/is_allocator.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -1775,6 +1776,15 @@ inline _LIBCPP_INLINE_VISIBILITY
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if _LIBCPP_STD_VER > 14
+_LIBCPP_BEGIN_NAMESPACE_STD
+namespace pmr {
+template <class _ValueT>
+using forward_list = std::forward_list<_ValueT, polymorphic_allocator<_ValueT>>;
+} // namespace pmr
+_LIBCPP_END_NAMESPACE_STD
+#endif
 
 _LIBCPP_POP_MACROS
 
