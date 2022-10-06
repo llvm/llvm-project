@@ -513,7 +513,7 @@ public:
                           bool assumeVerified);
 
   // Implement the bound 'writeBytecode' method.
-  void writeBytecode(pybind11::object fileObject);
+  void writeBytecode(const pybind11::object &fileObject);
 
   /// Moves the operation before or after the other operation.
   void moveAfter(PyOperationBase &other);
