@@ -1029,7 +1029,7 @@ public:
 
   template <typename AttrType>
   void getMutexIDs(CapExprSet &Mtxs, AttrType *Attr, const Expr *Exp,
-                   const NamedDecl *D, VarDecl *SelfDecl = nullptr);
+                   const NamedDecl *D, til::SExpr *Self = nullptr);
 
   template <class AttrType>
   void getMutexIDs(CapExprSet &Mtxs, AttrType *Attr, const Expr *Exp,
@@ -1220,7 +1220,7 @@ bool ThreadSafetyAnalyzer::inCurrentScope(const CapabilityExpr &CapE) {
   if (const auto *LP = dyn_cast<til::LiteralPtr>(SExp)) {
     const ValueDecl *VD = LP->clangDecl();
     // Variables defined in a function are always inaccessible.
-    if (!VD->isDefinedOutsideFunctionOrMethod())
+    if (!VD || !VD->isDefinedOutsideFunctionOrMethod())
       return false;
     // For now we consider static class members to be inaccessible.
     if (isa<CXXRecordDecl>(VD->getDeclContext()))
@@ -1311,10 +1311,10 @@ void ThreadSafetyAnalyzer::removeLock(FactSet &FSet, const CapabilityExpr &Cp,
 template <typename AttrType>
 void ThreadSafetyAnalyzer::getMutexIDs(CapExprSet &Mtxs, AttrType *Attr,
                                        const Expr *Exp, const NamedDecl *D,
-                                       VarDecl *SelfDecl) {
+                                       til::SExpr *Self) {
   if (Attr->args_size() == 0) {
     // The mutex held is the "this" object.
-    CapabilityExpr Cp = SxBuilder.translateAttrExpr(nullptr, D, Exp, SelfDecl);
+    CapabilityExpr Cp = SxBuilder.translateAttrExpr(nullptr, D, Exp, Self);
     if (Cp.isInvalid()) {
       warnInvalidLock(Handler, nullptr, D, Exp, Cp.getKind());
       return;
@@ -1326,7 +1326,7 @@ void ThreadSafetyAnalyzer::getMutexIDs(CapExprSet &Mtxs, AttrType *Attr,
   }
 
   for (const auto *Arg : Attr->args()) {
-    CapabilityExpr Cp = SxBuilder.translateAttrExpr(Arg, D, Exp, SelfDecl);
+    CapabilityExpr Cp = SxBuilder.translateAttrExpr(Arg, D, Exp, Self);
     if (Cp.isInvalid()) {
       warnInvalidLock(Handler, nullptr, D, Exp, Cp.getKind());
       continue;
@@ -1529,6 +1529,8 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
 
   ThreadSafetyAnalyzer *Analyzer;
   FactSet FSet;
+  /// Maps constructed objects to `this` placeholder prior to initialization.
+  llvm::SmallDenseMap<const Expr *, til::LiteralPtr *> ConstructedObjects;
   LocalVariableMap::Context LVarCtx;
   unsigned CtxIndex;
 
@@ -1536,14 +1538,17 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
   void warnIfMutexNotHeld(const NamedDecl *D, const Expr *Exp, AccessKind AK,
                           Expr *MutexExp, ProtectedOperationKind POK,
                           SourceLocation Loc);
-  void warnIfMutexHeld(const NamedDecl *D, const Expr *Exp, Expr *MutexExp);
+  void warnIfMutexHeld(const NamedDecl *D, const Expr *Exp, Expr *MutexExp,
+                       SourceLocation Loc);
 
   void checkAccess(const Expr *Exp, AccessKind AK,
                    ProtectedOperationKind POK = POK_VarAccess);
   void checkPtAccess(const Expr *Exp, AccessKind AK,
                      ProtectedOperationKind POK = POK_VarAccess);
 
-  void handleCall(const Expr *Exp, const NamedDecl *D, VarDecl *VD = nullptr);
+  void handleCall(const Expr *Exp, const NamedDecl *D,
+                  til::LiteralPtr *Self = nullptr,
+                  SourceLocation Loc = SourceLocation());
   void examineArguments(const FunctionDecl *FD,
                         CallExpr::const_arg_iterator ArgBegin,
                         CallExpr::const_arg_iterator ArgEnd,
@@ -1560,6 +1565,7 @@ public:
   void VisitCallExpr(const CallExpr *Exp);
   void VisitCXXConstructExpr(const CXXConstructExpr *Exp);
   void VisitDeclStmt(const DeclStmt *S);
+  void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *Exp);
 };
 
 } // namespace
@@ -1629,7 +1635,7 @@ void BuildLockset::warnIfMutexNotHeld(const NamedDecl *D, const Expr *Exp,
 
 /// Warn if the LSet contains the given lock.
 void BuildLockset::warnIfMutexHeld(const NamedDecl *D, const Expr *Exp,
-                                   Expr *MutexExp) {
+                                   Expr *MutexExp, SourceLocation Loc) {
   CapabilityExpr Cp = Analyzer->SxBuilder.translateAttrExpr(MutexExp, D, Exp);
   if (Cp.isInvalid()) {
     warnInvalidLock(Analyzer->Handler, MutexExp, D, Exp, Cp.getKind());
@@ -1641,7 +1647,7 @@ void BuildLockset::warnIfMutexHeld(const NamedDecl *D, const Expr *Exp,
   const FactEntry *LDat = FSet.findLock(Analyzer->FactMan, Cp);
   if (LDat) {
     Analyzer->Handler.handleFunExcludesLock(Cp.getKind(), D->getNameAsString(),
-                                            Cp.toString(), Exp->getExprLoc());
+                                            Cp.toString(), Loc);
   }
 }
 
@@ -1761,21 +1767,34 @@ void BuildLockset::checkPtAccess(const Expr *Exp, AccessKind AK,
 /// and check that the appropriate locks are held. Non-const method calls with
 /// the same signature as const method calls can be also treated as reads.
 ///
+/// \param Exp   The call expression.
+/// \param D     The callee declaration.
+/// \param Self  If \p Exp = nullptr, the implicit this argument.
+/// \param Loc   If \p Exp = nullptr, the location.
 void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
-                              VarDecl *VD) {
-  SourceLocation Loc = Exp->getExprLoc();
+                              til::LiteralPtr *Self, SourceLocation Loc) {
   CapExprSet ExclusiveLocksToAdd, SharedLocksToAdd;
   CapExprSet ExclusiveLocksToRemove, SharedLocksToRemove, GenericLocksToRemove;
   CapExprSet ScopedReqsAndExcludes;
 
   // Figure out if we're constructing an object of scoped lockable class
-  bool isScopedVar = false;
-  if (VD) {
-    if (const auto *CD = dyn_cast<const CXXConstructorDecl>(D)) {
-      const CXXRecordDecl* PD = CD->getParent();
-      if (PD && PD->hasAttr<ScopedLockableAttr>())
-        isScopedVar = true;
+  CapabilityExpr Scp;
+  if (Exp) {
+    assert(!Self);
+    const auto *TagT = Exp->getType()->getAs<TagType>();
+    if (TagT && Exp->isPRValue()) {
+      std::pair<til::LiteralPtr *, StringRef> Placeholder =
+          Analyzer->SxBuilder.createThisPlaceholder(Exp);
+      auto inserted = ConstructedObjects.insert({Exp, Placeholder.first});
+      assert(inserted.second && "Are we visiting the same expression again?");
+      if (isa<CXXConstructExpr>(Exp))
+        Self = Placeholder.first;
+      if (TagT->getDecl()->hasAttr<ScopedLockableAttr>())
+        Scp = CapabilityExpr(Placeholder.first, Placeholder.second, false);
     }
+
+    assert(Loc.isInvalid());
+    Loc = Exp->getExprLoc();
   }
 
   for(const Attr *At : D->attrs()) {
@@ -1786,7 +1805,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
         const auto *A = cast<AcquireCapabilityAttr>(At);
         Analyzer->getMutexIDs(A->isShared() ? SharedLocksToAdd
                                             : ExclusiveLocksToAdd,
-                              A, Exp, D, VD);
+                              A, Exp, D, Self);
         break;
       }
 
@@ -1797,7 +1816,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
         const auto *A = cast<AssertExclusiveLockAttr>(At);
 
         CapExprSet AssertLocks;
-        Analyzer->getMutexIDs(AssertLocks, A, Exp, D, VD);
+        Analyzer->getMutexIDs(AssertLocks, A, Exp, D, Self);
         for (const auto &AssertLock : AssertLocks)
           Analyzer->addLock(
               FSet, std::make_unique<LockableFactEntry>(
@@ -1808,7 +1827,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
         const auto *A = cast<AssertSharedLockAttr>(At);
 
         CapExprSet AssertLocks;
-        Analyzer->getMutexIDs(AssertLocks, A, Exp, D, VD);
+        Analyzer->getMutexIDs(AssertLocks, A, Exp, D, Self);
         for (const auto &AssertLock : AssertLocks)
           Analyzer->addLock(
               FSet, std::make_unique<LockableFactEntry>(
@@ -1819,7 +1838,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       case attr::AssertCapability: {
         const auto *A = cast<AssertCapabilityAttr>(At);
         CapExprSet AssertLocks;
-        Analyzer->getMutexIDs(AssertLocks, A, Exp, D, VD);
+        Analyzer->getMutexIDs(AssertLocks, A, Exp, D, Self);
         for (const auto &AssertLock : AssertLocks)
           Analyzer->addLock(FSet, std::make_unique<LockableFactEntry>(
                                       AssertLock,
@@ -1833,11 +1852,11 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       case attr::ReleaseCapability: {
         const auto *A = cast<ReleaseCapabilityAttr>(At);
         if (A->isGeneric())
-          Analyzer->getMutexIDs(GenericLocksToRemove, A, Exp, D, VD);
+          Analyzer->getMutexIDs(GenericLocksToRemove, A, Exp, D, Self);
         else if (A->isShared())
-          Analyzer->getMutexIDs(SharedLocksToRemove, A, Exp, D, VD);
+          Analyzer->getMutexIDs(SharedLocksToRemove, A, Exp, D, Self);
         else
-          Analyzer->getMutexIDs(ExclusiveLocksToRemove, A, Exp, D, VD);
+          Analyzer->getMutexIDs(ExclusiveLocksToRemove, A, Exp, D, Self);
         break;
       }
 
@@ -1845,10 +1864,10 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
         const auto *A = cast<RequiresCapabilityAttr>(At);
         for (auto *Arg : A->args()) {
           warnIfMutexNotHeld(D, Exp, A->isShared() ? AK_Read : AK_Written, Arg,
-                             POK_FunctionCall, Exp->getExprLoc());
+                             POK_FunctionCall, Loc);
           // use for adopting a lock
-          if (isScopedVar)
-            Analyzer->getMutexIDs(ScopedReqsAndExcludes, A, Exp, D, VD);
+          if (!Scp.shouldIgnore())
+            Analyzer->getMutexIDs(ScopedReqsAndExcludes, A, Exp, D, Self);
         }
         break;
       }
@@ -1856,10 +1875,10 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       case attr::LocksExcluded: {
         const auto *A = cast<LocksExcludedAttr>(At);
         for (auto *Arg : A->args()) {
-          warnIfMutexHeld(D, Exp, Arg);
+          warnIfMutexHeld(D, Exp, Arg, Loc);
           // use for deferring a lock
-          if (isScopedVar)
-            Analyzer->getMutexIDs(ScopedReqsAndExcludes, A, Exp, D, VD);
+          if (!Scp.shouldIgnore())
+            Analyzer->getMutexIDs(ScopedReqsAndExcludes, A, Exp, D, Self);
         }
         break;
       }
@@ -1882,7 +1901,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
 
   // Add locks.
   FactEntry::SourceKind Source =
-      isScopedVar ? FactEntry::Managed : FactEntry::Acquired;
+      !Scp.shouldIgnore() ? FactEntry::Managed : FactEntry::Acquired;
   for (const auto &M : ExclusiveLocksToAdd)
     Analyzer->addLock(FSet, std::make_unique<LockableFactEntry>(M, LK_Exclusive,
                                                                 Loc, Source));
@@ -1890,15 +1909,9 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
     Analyzer->addLock(
         FSet, std::make_unique<LockableFactEntry>(M, LK_Shared, Loc, Source));
 
-  if (isScopedVar) {
+  if (!Scp.shouldIgnore()) {
     // Add the managing object as a dummy mutex, mapped to the underlying mutex.
-    SourceLocation MLoc = VD->getLocation();
-    DeclRefExpr DRE(VD->getASTContext(), VD, false, VD->getType(), VK_LValue,
-                    VD->getLocation());
-    // FIXME: does this store a pointer to DRE?
-    CapabilityExpr Scp = Analyzer->SxBuilder.translateAttrExpr(&DRE, nullptr);
-
-    auto ScopedEntry = std::make_unique<ScopedLockableFactEntry>(Scp, MLoc);
+    auto ScopedEntry = std::make_unique<ScopedLockableFactEntry>(Scp, Loc);
     for (const auto &M : ExclusiveLocksToAdd)
       ScopedEntry->addLock(M);
     for (const auto &M : SharedLocksToAdd)
@@ -2058,36 +2071,11 @@ void BuildLockset::VisitCXXConstructExpr(const CXXConstructExpr *Exp) {
   } else {
     examineArguments(D, Exp->arg_begin(), Exp->arg_end());
   }
+  if (D && D->hasAttrs())
+    handleCall(Exp, D);
 }
 
-static CXXConstructorDecl *
-findConstructorForByValueReturn(const CXXRecordDecl *RD) {
-  // Prefer a move constructor over a copy constructor. If there's more than
-  // one copy constructor or more than one move constructor, we arbitrarily
-  // pick the first declared such constructor rather than trying to guess which
-  // one is more appropriate.
-  CXXConstructorDecl *CopyCtor = nullptr;
-  for (auto *Ctor : RD->ctors()) {
-    if (Ctor->isDeleted())
-      continue;
-    if (Ctor->isMoveConstructor())
-      return Ctor;
-    if (!CopyCtor && Ctor->isCopyConstructor())
-      CopyCtor = Ctor;
-  }
-  return CopyCtor;
-}
-
-static Expr *buildFakeCtorCall(CXXConstructorDecl *CD, ArrayRef<Expr *> Args,
-                               SourceLocation Loc) {
-  ASTContext &Ctx = CD->getASTContext();
-  return CXXConstructExpr::Create(Ctx, Ctx.getRecordType(CD->getParent()), Loc,
-                                  CD, true, Args, false, false, false, false,
-                                  CXXConstructExpr::CK_Complete,
-                                  SourceRange(Loc, Loc));
-}
-
-static Expr *UnpackConstruction(Expr *E) {
+static const Expr *UnpackConstruction(const Expr *E) {
   if (auto *CE = dyn_cast<CastExpr>(E))
     if (CE->getCastKind() == CK_NoOp)
       E = CE->getSubExpr()->IgnoreParens();
@@ -2106,7 +2094,7 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
 
   for (auto *D : S->getDeclGroup()) {
     if (auto *VD = dyn_cast_or_null<VarDecl>(D)) {
-      Expr *E = VD->getInit();
+      const Expr *E = VD->getInit();
       if (!E)
         continue;
       E = E->IgnoreParens();
@@ -2116,25 +2104,23 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
         E = EWC->getSubExpr()->IgnoreParens();
       E = UnpackConstruction(E);
 
-      if (const auto *CE = dyn_cast<CXXConstructExpr>(E)) {
-        const auto *CtorD = dyn_cast_or_null<NamedDecl>(CE->getConstructor());
-        if (!CtorD || !CtorD->hasAttrs())
-          continue;
-        handleCall(E, CtorD, VD);
-      } else if (isa<CallExpr>(E) && E->isPRValue()) {
-        // If the object is initialized by a function call that returns a
-        // scoped lockable by value, use the attributes on the copy or move
-        // constructor to figure out what effect that should have on the
-        // lockset.
-        // FIXME: Is this really the best way to handle this situation?
-        auto *RD = E->getType()->getAsCXXRecordDecl();
-        if (!RD || !RD->hasAttr<ScopedLockableAttr>())
-          continue;
-        CXXConstructorDecl *CtorD = findConstructorForByValueReturn(RD);
-        if (!CtorD || !CtorD->hasAttrs())
-          continue;
-        handleCall(buildFakeCtorCall(CtorD, {E}, E->getBeginLoc()), CtorD, VD);
+      if (auto Object = ConstructedObjects.find(E);
+          Object != ConstructedObjects.end()) {
+        Object->second->setClangDecl(VD);
+        ConstructedObjects.erase(Object);
       }
+    }
+  }
+}
+
+void BuildLockset::VisitMaterializeTemporaryExpr(
+    const MaterializeTemporaryExpr *Exp) {
+  if (const ValueDecl *ExtD = Exp->getExtendingDecl()) {
+    if (auto Object =
+            ConstructedObjects.find(UnpackConstruction(Exp->getSubExpr()));
+        Object != ConstructedObjects.end()) {
+      Object->second->setClangDecl(ExtD);
+      ConstructedObjects.erase(Object);
     }
   }
 }
@@ -2411,19 +2397,33 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
           LocksetBuilder.Visit(CS.getStmt());
           break;
         }
-        // Ignore BaseDtor, MemberDtor, and TemporaryDtor for now.
+        // Ignore BaseDtor and MemberDtor for now.
         case CFGElement::AutomaticObjectDtor: {
           CFGAutomaticObjDtor AD = BI.castAs<CFGAutomaticObjDtor>();
           const auto *DD = AD.getDestructorDecl(AC.getASTContext());
           if (!DD->hasAttrs())
             break;
 
-          // Create a dummy expression,
-          auto *VD = const_cast<VarDecl *>(AD.getVarDecl());
-          DeclRefExpr DRE(VD->getASTContext(), VD, false,
-                          VD->getType().getNonReferenceType(), VK_LValue,
-                          AD.getTriggerStmt()->getEndLoc());
-          LocksetBuilder.handleCall(&DRE, DD);
+          LocksetBuilder.handleCall(nullptr, DD,
+                                    SxBuilder.createVariable(AD.getVarDecl()),
+                                    AD.getTriggerStmt()->getEndLoc());
+          break;
+        }
+        case CFGElement::TemporaryDtor: {
+          auto TD = BI.castAs<CFGTemporaryDtor>();
+
+          // Clean up constructed object even if there are no attributes to
+          // keep the number of objects in limbo as small as possible.
+          if (auto Object = LocksetBuilder.ConstructedObjects.find(
+                  TD.getBindTemporaryExpr()->getSubExpr());
+              Object != LocksetBuilder.ConstructedObjects.end()) {
+            const auto *DD = TD.getDestructorDecl(AC.getASTContext());
+            if (DD->hasAttrs())
+              // TODO: the location here isn't quite correct.
+              LocksetBuilder.handleCall(nullptr, DD, Object->second,
+                                        TD.getBindTemporaryExpr()->getEndLoc());
+            LocksetBuilder.ConstructedObjects.erase(Object);
+          }
           break;
         }
         default:
