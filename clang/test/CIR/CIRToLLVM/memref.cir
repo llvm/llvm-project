@@ -14,11 +14,11 @@ module {
 
 //      MLIR: module  {
 // MLIR-NEXT:   func @foo() -> i32 {
-// MLIR-NEXT:     %0 = memref.alloca() {alignment = 4 : i64} : memref<i32>
+// MLIR-NEXT:     [[alloca:%[a-z0-9]+]] = memref.alloca() {alignment = 4 : i64} : memref<i32>
 // MLIR-NEXT:     %c1_i32 = arith.constant 1 : i32
-// MLIR-NEXT:     memref.store %c1_i32, %0[] : memref<i32>
-// MLIR-NEXT:     %1 = memref.load %0[] : memref<i32>
-// MLIR-NEXT:     return %1 : i32
+// MLIR-NEXT:     memref.store %c1_i32, [[alloca]][] : memref<i32>
+// MLIR-NEXT:     [[load:%[a-z0-9]+]] = memref.load [[alloca]][] : memref<i32>
+// MLIR-NEXT:     return [[load]] : i32
 // MLIR-NEXT:   }
 // MLIR-NEXT: }
 
