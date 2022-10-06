@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple arm-arm-none-eabi %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -o - -triple aarch64-arm-none-eabi %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -o - -triple arm-arm-none-eabi %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -o - -triple aarch64-arm-none-eabi %s | FileCheck %s
 
 // Test name-mangling of __fp16 passed directly as a function argument
 // (when that is permitted).
@@ -12,5 +12,5 @@ void fp16_argument(__fp16 arg) {}
 // this, we have to pass it a function pointer and make __fp16 the
 // return type of that.
 
-// CHECK: define {{.*}}void @_Z11fp16_returnPFDhvE(half ()* noundef %{{.*}})
+// CHECK: define {{.*}}void @_Z11fp16_returnPFDhvE(ptr noundef %{{.*}})
 void fp16_return(__fp16 (*func)(void)) {}

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
 
 // Check mangling of Vtables, VTTs, and construction vtables that
 // involve standard substitutions.
@@ -16,8 +16,8 @@
 namespace std {
   struct A { A(); };
   
-  // CHECK-LABEL: define{{.*}} void @_ZNSt1AC2Ev(%"struct.std::A"* {{[^,]*}} %this) unnamed_addr
-  // CHECK-LABEL: define{{.*}} void @_ZNSt1AC1Ev(%"struct.std::A"* {{[^,]*}} %this) unnamed_addr
+  // CHECK-LABEL: define{{.*}} void @_ZNSt1AC2Ev(ptr {{[^,]*}} %this) unnamed_addr
+  // CHECK-LABEL: define{{.*}} void @_ZNSt1AC1Ev(ptr {{[^,]*}} %this) unnamed_addr
   A::A() { }
 };
 

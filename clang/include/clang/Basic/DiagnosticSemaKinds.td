@@ -4703,6 +4703,8 @@ def ext_ovl_ambiguous_oper_binary_reversed : ExtWarn<
 def note_ovl_ambiguous_oper_binary_reversed_self : Note<
   "ambiguity is between a regular call to this operator and a call with the "
   "argument order reversed">;
+def note_ovl_ambiguous_eqeq_reversed_self_non_const : Note<
+  "mark 'operator==' as const or add a matching 'operator!=' to resolve the ambiguity">;
 def note_ovl_ambiguous_oper_binary_selected_candidate : Note<
   "candidate function with non-reversed arguments">;
 def note_ovl_ambiguous_oper_binary_reversed_candidate : Note<
