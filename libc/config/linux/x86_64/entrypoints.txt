@@ -26,6 +26,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sched.sched_getaffinity
     libc.src.sched.sched_setaffinity
 
+    # signal.h entrypoints
+    libc.src.signal.kill
+
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bzero
