@@ -211,7 +211,7 @@ void CodeGenFunction::EmitNoLoopKernel(const OMPExecutableDirective &D,
     llvm::Value *GpuThreadId = RT.getGPUThreadID(*this);
 
     // workgroup_size
-    llvm::Value *WorkGroupSize = RT.getGPUCompleteBlockSize(*this);
+    llvm::Value *WorkGroupSize = RT.getGPUCompleteBlockSize(*this, D);
 
     // workgroup_id
     llvm::Value *WorkGroupId = RT.getGPUBlockID(*this);

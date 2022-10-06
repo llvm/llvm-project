@@ -7611,7 +7611,6 @@ CodeGenModule::getNoLoopCombinedClausesStatus(const OMPExecutableDirective &D) {
       D.hasClausesOfKind<OMPDeviceClause>() ||
       D.hasClausesOfKind<OMPIfClause>() ||
       D.hasClausesOfKind<OMPInReductionClause>() ||
-      D.hasClausesOfKind<OMPThreadLimitClause>() ||
       D.hasClausesOfKind<OMPDefaultClause>() ||
       D.hasClausesOfKind<OMPNumTeamsClause>() ||
       D.hasClausesOfKind<OMPReductionClause>() ||
@@ -7636,6 +7635,7 @@ CodeGenModule::NoLoopXteamErr CodeGenModule::getXteamRedCombinedClausesStatus(
       D.hasClausesOfKind<OMPIfClause>() ||
       D.hasClausesOfKind<OMPInReductionClause>() ||
       D.hasClausesOfKind<OMPThreadLimitClause>() ||
+      D.hasClausesOfKind<OMPNumThreadsClause>() ||
       D.hasClausesOfKind<OMPDefaultClause>() ||
       D.hasClausesOfKind<OMPNumTeamsClause>() ||
       D.hasClausesOfKind<OMPSharedClause>() ||

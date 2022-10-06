@@ -3487,8 +3487,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
 
         DP("After loading global for %s WGSize = %d\n", WGSizeName, WGSizeVal);
 
-        if (WGSizeVal < RTLDeviceInfoTy::DefaultWgSize ||
-            WGSizeVal > RTLDeviceInfoTy::MaxWgSize) {
+        if (WGSizeVal < 1 || WGSizeVal > RTLDeviceInfoTy::MaxWgSize) {
           DP("Error wrong WGSize value specified in HSA code object file: "
              "%d\n",
              WGSizeVal);

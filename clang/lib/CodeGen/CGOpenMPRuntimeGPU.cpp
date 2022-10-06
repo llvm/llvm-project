@@ -999,7 +999,7 @@ static bool supportsLightweightRuntime(ASTContext &Ctx,
 }
 
 // Create a unique global variable to indicate the flat-work-group-size
-// for this region. Values are [256..1024].
+// for this region. Values are [1..1024].
 static void setPropertyWorkGroupSize(CodeGenModule &CGM, StringRef Name,
                                      int WGSize) {
   auto *GVMode = new llvm::GlobalVariable(
@@ -1038,55 +1038,83 @@ static int ComputeGenericWorkgroupSize(CodeGenModule &CGM, int WorkgroupSize) {
   return WorkgroupSizeWithMaster;
 }
 
+int getWorkGroupSizeSPMDHelper(CodeGenModule &CGM,
+                               const OMPExecutableDirective &D) {
+  // Honor block-size provided by command-line option. This logic must be kept
+  // in sync with metadata generation. If this option is not specified on the
+  // command line then the value used will be the 256.
+  int WorkGroupSz = CGM.getLangOpts().OpenMPGPUThreadsPerTeam;
+
+  // Check block-size provided by thread_limit clause. We start with the
+  // maximum thread limit and lower it if user requests a lower thread limit.
+  int ThreadLimit = CGM.getTarget().getGridValue().GV_Max_WG_Size;
+  const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
+  if (ThreadLimitClause) {
+    Expr *ThreadLimitExpr = ThreadLimitClause->getThreadLimit();
+    clang::Expr::EvalResult Result;
+    if (ThreadLimitExpr->EvaluateAsInt(Result, CGM.getContext())) {
+      int ThreadLimitEval = Result.Val.getInt().getExtValue();
+      if (ThreadLimitEval > 0 && ThreadLimitEval < ThreadLimit)
+        ThreadLimit = ThreadLimitEval;
+    }
+  }
+
+  // If the command line work group size is less than any default or user
+  // specified thread limit then it is honored otherwise the thread limit
+  // determined above will be used.
+  if (WorkGroupSz > ThreadLimit)
+    WorkGroupSz = ThreadLimit;
+
+  // Set the actual number of threads if the user requests a value different
+  // then the default. If the value is greater than the currently computed
+  // thread limit then cap the number of threads to the thread limit.
+  int NumThreads = CGM.getTarget().getGridValue().GV_Default_WG_Size;
+  const auto *NumThreadsClause = D.getSingleClause<OMPNumThreadsClause>();
+  if (NumThreadsClause) {
+    Expr *NumThreadsExpr = NumThreadsClause->getNumThreads();
+    clang::Expr::EvalResult Result;
+    if (NumThreadsExpr->EvaluateAsInt(Result, CGM.getContext())) {
+      NumThreads = Result.Val.getInt().getExtValue();
+      // Cap the number of threads to the current thread limit.
+      if (NumThreads > ThreadLimit)
+        NumThreads = ThreadLimit;
+      // num_threads clause takes precendence over the command line value:
+      WorkGroupSz = NumThreads;
+    }
+  }
+
+  // Sanitize the workgroup size received from the command line. Its default
+  // value is GV_Default_WG_Size.
+  if (WorkGroupSz < 1 || WorkGroupSz > ThreadLimit)
+    WorkGroupSz = CGM.getTarget().getGridValue().GV_Default_WG_Size;
+
+  return WorkGroupSz;
+}
+
 void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
-                                            const OMPExecutableDirective &D,
-                                            llvm::Function *&OutlinedFn,
-                                            bool IsGeneric) {
+                                          const OMPExecutableDirective &D,
+                                          llvm::Function *&OutlinedFn,
+                                          bool IsGeneric) {
   if (!CGM.getTriple().isAMDGCN())
     return;
 
   int FlatAttr = 0;
   bool flatAttrEmitted = false;
-  unsigned CmdLineWorkGroupSz = CGM.getLangOpts().OpenMPGPUThreadsPerTeam;
-  // Sanitize the workgroup size received from the command line. Currently, we
-  // honor it only for SPMD kernels. This logic must be kept in sync with the
-  // amdgpu plugin
-  if (IsGeneric ||
-      CmdLineWorkGroupSz < CGM.getTarget().getGridValue().GV_Default_WG_Size ||
-      CmdLineWorkGroupSz > CGM.getTarget().getGridValue().GV_Max_WG_Size)
-    CmdLineWorkGroupSz = CGM.getTarget().getGridValue().GV_Default_WG_Size;
-  unsigned DefaultWorkGroupSz =
+  unsigned compileTimeThreadLimit =
       CGM.getTarget().getGridValue().GV_Default_WG_Size;
   // If constant ThreadLimit(), set reqd_work_group_size metadata
   if (isOpenMPTeamsDirective(D.getDirectiveKind()) ||
       isOpenMPParallelDirective(D.getDirectiveKind()) ||
-      CmdLineWorkGroupSz != DefaultWorkGroupSz ||
       CGM.isXteamRedKernel(CGM.getSingleForStmt(D.getAssociatedStmt()))) {
-    const auto *ThreadLimitClause = D.getSingleClause<OMPThreadLimitClause>();
-    const auto *NumThreadsClause = D.getSingleClause<OMPNumThreadsClause>();
-    int compileTimeThreadLimit = 0;
-    // Only one of thread_limit or num_threads is used, cant do it for both
-    if (ThreadLimitClause && !NumThreadsClause) {
-      Expr *ThreadLimitExpr = ThreadLimitClause->getThreadLimit();
-      clang::Expr::EvalResult Result;
-      if (ThreadLimitExpr->EvaluateAsInt(Result, CGM.getContext()))
-        compileTimeThreadLimit = Result.Val.getInt().getExtValue();
-    } else if (!ThreadLimitClause && NumThreadsClause) {
-      Expr *NumThreadsExpr = NumThreadsClause->getNumThreads();
-      clang::Expr::EvalResult Result;
-      if (NumThreadsExpr->EvaluateAsInt(Result, CGM.getContext()))
-        compileTimeThreadLimit = Result.Val.getInt().getExtValue();
-    } else if (CGM.isXteamRedKernel(
-                   CGM.getSingleForStmt(D.getAssociatedStmt()))) {
-      // Xteam reduction overrides the command-line option for now,
-      // blocksize hardcoded to 1024 for now
-      compileTimeThreadLimit = 1024;
-    } else if (CmdLineWorkGroupSz != DefaultWorkGroupSz) {
-      compileTimeThreadLimit = CmdLineWorkGroupSz;
-    }
+    // Call the work group size calculation for SPMD mode loops.
+    compileTimeThreadLimit = getWorkGroupSizeSPMDHelper(CGM, D);
 
-    // printf("========= WARNING CONSTANT Compile-Time TL: %d\n",
-    //       compileTimeThreadLimit);
+    // Xteam reduction overrides the command-line option and other settings
+    // for now: blocksize hardcoded to 1024.
+    // TODO: remove this restriction.
+    if (CGM.isXteamRedKernel(CGM.getSingleForStmt(D.getAssociatedStmt())))
+      compileTimeThreadLimit = 1024;
+
     // Add kernel metadata if ThreadLimit Clause is compile time constant > 0
     if (compileTimeThreadLimit > 0) {
       if (IsGeneric)
@@ -1103,11 +1131,10 @@ void CGOpenMPRuntimeGPU::GenerateMetaData(CodeGenModule &CGM,
   if (!flatAttrEmitted) {
     // When outermost construct does not have teams or parallel
     // workgroup size is still based on mode
-    int GenericModeWorkgroupSize = CmdLineWorkGroupSz;
+    int GenericModeWorkgroupSize = compileTimeThreadLimit;
     if (IsGeneric)
       GenericModeWorkgroupSize =
-          ComputeGenericWorkgroupSize(CGM, CmdLineWorkGroupSz);
-
+          ComputeGenericWorkgroupSize(CGM, compileTimeThreadLimit);
     FlatAttr = GenericModeWorkgroupSize;
     OutlinedFn->addFnAttr("amdgpu-flat-work-group-size",
                           "1," + llvm::utostr(GenericModeWorkgroupSize));
@@ -4194,22 +4221,16 @@ llvm::Value *CGOpenMPRuntimeGPU::getGPUBlockID(CodeGenFunction &CGF) {
   return Bld.CreateCall(F, llvm::None, "gpu_block_id");
 }
 
-llvm::Value *CGOpenMPRuntimeGPU::getGPUCompleteBlockSize(CodeGenFunction &CGF) {
-  // TODO handle kernel specific block size based on thread_limit
-
+llvm::Value *
+CGOpenMPRuntimeGPU::getGPUCompleteBlockSize(CodeGenFunction &CGF,
+                                            const OMPExecutableDirective &D) {
   // The following logic does not consider generic kernels, so use this
   // interface for SPMD kernels only.
 
-  // Honor block-size provided by command-line option. This logic must be kept
-  // in sync with metadata generation
-  unsigned CmdLineWorkGroupSz = CGM.getLangOpts().OpenMPGPUThreadsPerTeam;
-  // Sanitize the workgroup size received from the command line. Its default
-  // value is GV_Default_WG_Size.
-  if (CmdLineWorkGroupSz < CGM.getTarget().getGridValue().GV_Default_WG_Size ||
-      CmdLineWorkGroupSz > CGM.getTarget().getGridValue().GV_Max_WG_Size)
-    CmdLineWorkGroupSz = CGM.getTarget().getGridValue().GV_Default_WG_Size;
-
-  return llvm::ConstantInt::get(CGF.Int32Ty, CmdLineWorkGroupSz);
+  // Get effects of thread-controlling clauses on the current number of threads
+  // and any command line requests:
+  return llvm::ConstantInt::get(CGF.Int32Ty,
+                                getWorkGroupSizeSPMDHelper(CGM, D));
 }
 
 llvm::Value *CGOpenMPRuntimeGPU::getXteamRedBlockSize(CodeGenFunction &CGF) {

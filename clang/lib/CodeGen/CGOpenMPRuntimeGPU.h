@@ -192,7 +192,8 @@ public:
 
   /// Get the complete block size in use on the GPU. If there is a
   /// partial block, that information is not returned.
-  llvm::Value *getGPUCompleteBlockSize(CodeGenFunction &CGF);
+  llvm::Value *getGPUCompleteBlockSize(CodeGenFunction &CGF,
+                                       const OMPExecutableDirective &D);
 
   /// Get the number of blocks on the GPU
   llvm::Value *getGPUNumBlocks(CodeGenFunction &CGF);
