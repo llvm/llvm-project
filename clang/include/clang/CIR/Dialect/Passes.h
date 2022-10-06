@@ -23,6 +23,7 @@ namespace mlir {
 std::unique_ptr<Pass> createLifetimeCheckPass();
 std::unique_ptr<Pass> createLifetimeCheckPass(clang::ASTContext *astCtx);
 std::unique_ptr<Pass> createMergeCleanupsPass();
+std::unique_ptr<Pass> createDropASTPass();
 
 //===----------------------------------------------------------------------===//
 // Registration

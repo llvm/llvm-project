@@ -45,6 +45,9 @@ mlir::LogicalResult runCIRToCIRPasses(mlir::ModuleOp theModule,
     pm.addPass(std::move(lifetimePass));
   }
 
+  // FIXME: once CIRCodenAction fixes emission other than CIR we
+  // need to run this right before dialect emission.
+  pm.addPass(mlir::createDropASTPass());
   pm.enableVerifier(enableVerifier);
 
   return pm.run(theModule);
