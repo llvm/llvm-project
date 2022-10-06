@@ -262,14 +262,24 @@ BitVector Merger::simplifyCond(unsigned s0, unsigned p0) {
       break;
     }
   }
-  // Now apply the two basic rules.
+
   BitVector simple = latPoints[p0].bits;
   bool reset = isSingleton && hasAnySparse(simple);
+  unsigned offset = 0;
+  if (!reset)
+    // Starts resetting from a dense dimension, so that the first bit (if kept)
+    // is not undefined dimension type.
+    for (unsigned b = 0, be = simple.size(); b < be; b++)
+      if (simple[b] && isDimLevelType(b, DimLvlType::kDense))
+        offset = b;
+
+  // Now apply the two basic rules.
   for (unsigned b = 0, be = simple.size(); b < be; b++) {
-    if (simple[b] && (!isDimLevelType(b, DimLvlType::kCompressed) &&
-                      !isDimLevelType(b, DimLvlType::kSingleton))) {
+    unsigned i = (offset + b) % be;
+    if (simple[i] && (!isDimLevelType(i, DimLvlType::kCompressed) &&
+                      !isDimLevelType(i, DimLvlType::kSingleton))) {
       if (reset)
-        simple.reset(b);
+        simple.reset(i);
       reset = true;
     }
   }

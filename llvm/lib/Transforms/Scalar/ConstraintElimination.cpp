@@ -434,8 +434,7 @@ bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A,
     return false;
 
   return NewVariables.empty() && R.Preconditions.empty() && !R.IsEq &&
-         !R.empty() &&
-         getCS(CmpInst::isSigned(Pred)).isConditionImplied(R.Coefficients);
+         !R.empty() && getCS(R.IsSigned).isConditionImplied(R.Coefficients);
 }
 
 void ConstraintInfo::transferToOtherSystem(
@@ -681,7 +680,7 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
     if (R.size() < 2 || !NewVariables.empty() || !R.isValid(Info))
       return false;
 
-    auto &CSToUse = Info.getCS(CmpInst::isSigned(Pred));
+    auto &CSToUse = Info.getCS(R.IsSigned);
     return CSToUse.isConditionImplied(R.Coefficients);
   };
 

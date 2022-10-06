@@ -1,4 +1,4 @@
-//===- NvvmMMASupport.h - MLIR Vector to GPU lowering support --------===//
+//===-- MMAUtils.h - MLIR NVGPU dialect utilities for MMA operations-------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,24 +6,30 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file provides utilities to assist in the lowering of Vector operations
-// to GPU dialect MMA operations.
+// This file provides utilities to assist in the lowering of other dialects
+// (e.g. Vector) to `nvgpu.mma.*` dialect operations.
 //
 //===----------------------------------------------------------------------===//
-#ifndef MLIR_CONVERSION_VECTORTOGPU_NVGPUSUPPORT_H
-#define MLIR_CONVERSION_VECTORTOGPU_NVGPUSUPPORT_H
+#ifndef MLIR_DIALECT_NVGPU_UTILS_MMAUTILS_H
+#define MLIR_DIALECT_NVGPU_UTILS_MMAUTILS_H
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
-#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
-#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Types.h"
 
 namespace mlir {
+namespace vector {
+enum class IteratorType : uint32_t;
+class ContractionOp;
+} // namespace vector
+
+namespace NVVM {
+enum class MMALayout : uint32_t;
+} // namespace NVVM
+
 namespace nvgpu {
 
+/// Represents the role of an operand in an MMA instruction:
+/// `result := matmul(A, B) + C`
 enum class MatMulOperandRole : int32_t { A = 0, B, C };
 
 /// Collects information about a warp-level matrix operand represented by a
@@ -33,8 +39,10 @@ struct WarpMatrixInfo {
   MatMulOperandRole operandRole;
 };
 
-/// Given an op that operates on a VectorType representing a warp-level matrix
-/// operand, the function returns a struct containing relevant type information.
+/// If `op` is a `vector.transfer_write`, return the `WarpMatrixInfo` for the
+/// vector operand. If op is a `vector.transfer_read`, `vector.contraction`, or
+/// `arith.constant`, return the `WarpMatrixInfo` corresponding to the result.
+/// Otherwise, return failure.
 FailureOr<WarpMatrixInfo> getWarpMatrixInfo(Operation *op);
 
 /// Returns the number of bits in a single tile row. It is either 128, 256, or
@@ -67,6 +75,8 @@ FailureOr<AffineMap>
 getLaneIdAndValueIdToOperandCoord(Location loc, OpBuilder &builder,
                                   const WarpMatrixInfo &fragmentType);
 
+/// Encapsulates the parameters needed to lower a `nvgpu.ldmatrix` operation to
+/// `nvvm.ldmatrix`.
 struct LdMatrixParams {
   VectorType fragmentType;
   bool isAccum;
@@ -75,6 +85,8 @@ struct LdMatrixParams {
   NVVM::MMALayout targetLayout;
 };
 
+/// Given `type` that contains info for a warp-matrix operand and whether or not
+/// the load is a transposed load, return the LdMatrixParams.
 FailureOr<LdMatrixParams> getLdMatrixParams(const WarpMatrixInfo &type,
                                             bool transpose);
 /// Returns an AffineMap which maps a single dimension representing the laneId
@@ -84,8 +96,10 @@ FailureOr<AffineMap>
 getLaneIdToLdMatrixMatrixCoord(Location loc, OpBuilder &builder,
                                const LdMatrixParams &params);
 
-// Transform contract into (m, k)x(n, k)x(m, n) form so that it can be converted
-// to MMA matmul.
+/// Transform `vector.contract` into (m,k)x(n,k)x(m,n) form so that it can be
+/// converted to `nvgpu.mma.sync`. This specific form is meant to indicate that
+/// the vector operands are organized such that the reduction dimension is
+/// contiguous.
 struct PrepareContractToGPUMMASync
     : public OpRewritePattern<vector::ContractionOp> {
   using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
@@ -97,4 +111,4 @@ struct PrepareContractToGPUMMASync
 } // namespace nvgpu
 } // namespace mlir
 
-#endif // MLIR_CONVERSION_VECTORTOGPU_NVGPUSUPPORT_H
+#endif // MLIR_DIALECT_NVGPU_UTILS_MMAUTILS_H

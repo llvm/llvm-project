@@ -123,3 +123,311 @@ exit:
 
   ret void
 }
+
+define i1 @test_or_chain_ule_1(i4 %x, i4 %y, i4 %z, i4 %a, i4 %b) {
+; CHECK-LABEL: @test_or_chain_ule_1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i4 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i4 2, [[X]]
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ule i4 2, [[A:%.*]]
+; CHECK-NEXT:    [[OR_1:%.*]] = or i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    [[OR_2:%.*]] = or i1 [[OR_1]], [[C_3]]
+; CHECK-NEXT:    [[OR_3:%.*]] = or i1 [[C_4]], [[OR_2]]
+; CHECK-NEXT:    br i1 [[OR_3]], label [[BB1:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[Z]]
+; CHECK-NEXT:    [[C_6:%.*]] = icmp ule i4 [[X]], [[A]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_5]], [[C_6]]
+; CHECK-NEXT:    [[C_7:%.*]] = icmp ule i4 2, [[X]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_7]]
+; CHECK-NEXT:    ret i1 [[RES_2]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i4 [[X]], [[Z]]
+; CHECK-NEXT:    [[F_2:%.*]] = icmp ule i4 2, [[X]]
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[F_1]], [[F_2]]
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i4 [[Y]], [[Z]]
+; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], [[T_1]]
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i4 [[X]], [[Y]]
+; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], [[T_2]]
+; CHECK-NEXT:    [[T_3:%.*]] = icmp ugt i4 [[X]], [[Z]]
+; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], [[T_3]]
+; CHECK-NEXT:    [[T_4:%.*]] = icmp ugt i4 2, [[A]]
+; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], [[T_4]]
+; CHECK-NEXT:    [[C_8:%.*]] = icmp ule i4 [[X]], [[A]]
+; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], [[C_8]]
+; CHECK-NEXT:    [[C_9:%.*]] = icmp ule i4 [[X]], [[B:%.*]]
+; CHECK-NEXT:    [[RES_9:%.*]] = xor i1 [[RES_8]], [[C_9]]
+; CHECK-NEXT:    ret i1 [[RES_9]]
+;
+entry:
+  %c.1 = icmp ule i4 %x, %y
+  %c.2 = icmp ule i4 %y, %z
+  %c.3 = icmp ule i4 2, %x
+  %c.4 = icmp ule i4 2, %a
+  %or.1 = or i1 %c.1, %c.2
+  %or.2 = or i1 %or.1, %c.3
+  %or.3 = or i1 %c.4, %or.2
+  br i1 %or.3, label %bb1, label %exit
+
+bb1:
+  %c.5 = icmp ule i4 %x, %z
+  %c.6 = icmp ule i4 %x, %a
+  %res.1 = xor i1 %c.5, %c.6
+  %c.7 = icmp ule i4 2, %x
+  %res.2 = xor i1 %res.1, %c.7
+  ret i1 %res.2
+
+exit:
+  %f.1 = icmp ule i4 %x, %z
+  %f.2 = icmp ule i4 2, %x
+  %res.3 = xor i1 %f.1, %f.2
+
+  %t.1 = icmp ugt i4 %y, %z
+  %res.4 = xor i1 %res.3, %t.1
+
+  %t.2 = icmp ugt i4 %x, %y
+  %res.5 = xor i1 %res.4, %t.2
+
+  %t.3 = icmp ugt i4 %x, %z
+  %res.6 = xor i1 %res.5, %t.3
+
+  %t.4 = icmp ugt i4 2, %a
+  %res.7 = xor i1 %res.6, %t.4
+
+  %c.8 = icmp ule i4 %x, %a
+  %res.8 = xor i1 %res.7, %c.8
+
+  %c.9 = icmp ule i4 %x, %b
+  %res.9 = xor i1 %res.8, %c.9
+
+  ret i1 %res.9
+}
+
+; Same as @test_or_chain_ule_1, but with the `or`s ordered differently.
+define i1 @test_or_chain_ule_2(i4 %x, i4 %y, i4 %z, i4 %a, i4 %b) {
+; CHECK-LABEL: @test_or_chain_ule_2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i4 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i4 2, [[X]]
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ule i4 2, [[A:%.*]]
+; CHECK-NEXT:    [[OR_1:%.*]] = or i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    [[OR_2:%.*]] = or i1 [[C_3]], [[C_4]]
+; CHECK-NEXT:    [[OR_3:%.*]] = or i1 [[OR_1]], [[OR_2]]
+; CHECK-NEXT:    br i1 [[OR_3]], label [[BB1:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[Z]]
+; CHECK-NEXT:    [[C_6:%.*]] = icmp ule i4 [[X]], [[A]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_5]], [[C_6]]
+; CHECK-NEXT:    [[C_7:%.*]] = icmp ule i4 2, [[X]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_7]]
+; CHECK-NEXT:    ret i1 [[RES_2]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i4 [[X]], [[Z]]
+; CHECK-NEXT:    [[F_2:%.*]] = icmp ule i4 2, [[X]]
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[F_1]], [[F_2]]
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i4 [[Y]], [[Z]]
+; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], [[T_1]]
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i4 [[X]], [[Y]]
+; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], [[T_2]]
+; CHECK-NEXT:    [[T_3:%.*]] = icmp ugt i4 [[X]], [[Z]]
+; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], [[T_3]]
+; CHECK-NEXT:    [[T_4:%.*]] = icmp ugt i4 2, [[A]]
+; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], [[T_4]]
+; CHECK-NEXT:    [[C_8:%.*]] = icmp ule i4 [[X]], [[A]]
+; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], [[C_8]]
+; CHECK-NEXT:    [[C_9:%.*]] = icmp ule i4 [[X]], [[B:%.*]]
+; CHECK-NEXT:    [[RES_9:%.*]] = xor i1 [[RES_8]], [[C_9]]
+; CHECK-NEXT:    ret i1 [[RES_9]]
+;
+entry:
+  %c.1 = icmp ule i4 %x, %y
+  %c.2 = icmp ule i4 %y, %z
+  %c.3 = icmp ule i4 2, %x
+  %c.4 = icmp ule i4 2, %a
+  %or.1 = or i1 %c.1, %c.2
+  %or.2 = or i1 %c.3, %c.4
+  %or.3 = or i1 %or.1, %or.2
+  br i1 %or.3, label %bb1, label %exit
+
+bb1:
+  %c.5 = icmp ule i4 %x, %z
+  %c.6 = icmp ule i4 %x, %a
+  %res.1 = xor i1 %c.5, %c.6
+  %c.7 = icmp ule i4 2, %x
+  %res.2 = xor i1 %res.1, %c.7
+  ret i1 %res.2
+
+exit:
+  %f.1 = icmp ule i4 %x, %z
+  %f.2 = icmp ule i4 2, %x
+  %res.3 = xor i1 %f.1, %f.2
+
+  %t.1 = icmp ugt i4 %y, %z
+  %res.4 = xor i1 %res.3, %t.1
+
+  %t.2 = icmp ugt i4 %x, %y
+  %res.5 = xor i1 %res.4, %t.2
+
+  %t.3 = icmp ugt i4 %x, %z
+  %res.6 = xor i1 %res.5, %t.3
+
+  %t.4 = icmp ugt i4 2, %a
+  %res.7 = xor i1 %res.6, %t.4
+
+  %c.8 = icmp ule i4 %x, %a
+  %res.8 = xor i1 %res.7, %c.8
+
+  %c.9 = icmp ule i4 %x, %b
+  %res.9 = xor i1 %res.8, %c.9
+
+  ret i1 %res.9
+}
+
+declare i1 @cond() readnone
+
+; Test with `or` chain that also contains instructions other than `or` and `icmp`.
+define i1 @test_or_chain_with_other_conds_ule(i4 %x, i4 %y, i4 %z, i4 %a, i1 %arg.c) {
+; CHECK-LABEL: @test_or_chain_with_other_conds_ule(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i4 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[C_3:%.*]] = call i1 @cond()
+; CHECK-NEXT:    [[OR_1:%.*]] = or i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    [[OR_2:%.*]] = or i1 [[C_3]], [[OR_1]]
+; CHECK-NEXT:    [[OR_3:%.*]] = or i1 [[OR_2]], [[ARG_C:%.*]]
+; CHECK-NEXT:    br i1 [[OR_3]], label [[BB1:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[Z]]
+; CHECK-NEXT:    [[C_6:%.*]] = icmp ule i4 [[X]], [[A:%.*]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_5]], [[C_6]]
+; CHECK-NEXT:    [[C_7:%.*]] = icmp ule i4 2, [[X]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_7]]
+; CHECK-NEXT:    ret i1 [[RES_2]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i4 [[X]], [[Z]]
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i4 [[Y]], [[Z]]
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[F_1]], [[T_1]]
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i4 [[X]], [[Y]]
+; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], [[T_2]]
+; CHECK-NEXT:    [[T_3:%.*]] = icmp ugt i4 [[X]], [[Z]]
+; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], [[T_3]]
+; CHECK-NEXT:    [[C_8:%.*]] = icmp ule i4 [[X]], [[A]]
+; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], [[C_8]]
+; CHECK-NEXT:    ret i1 [[RES_6]]
+;
+entry:
+  %c.1 = icmp ule i4 %x, %y
+  %c.2 = icmp ule i4 %y, %z
+  %c.3 = call i1 @cond()
+  %or.1 = or i1 %c.1, %c.2
+  %or.2 = or i1 %c.3, %or.1
+  %or.3 = or i1 %or.2, %arg.c
+  br i1 %or.3, label %bb1, label %exit
+
+bb1:
+  %c.5 = icmp ule i4 %x, %z
+  %c.6 = icmp ule i4 %x, %a
+  %res.1 = xor i1 %c.5, %c.6
+  %c.7 = icmp ule i4 2, %x
+  %res.2 = xor i1 %res.1, %c.7
+  ret i1 %res.2
+
+exit:
+  %f.1 = icmp ule i4 %x, %z
+
+  %t.1 = icmp ugt i4 %y, %z
+  %res.3 = xor i1 %f.1, %t.1
+
+  %t.2 = icmp ugt i4 %x, %y
+  %res.4 = xor i1 %res.3, %t.2
+
+  %t.3 = icmp ugt i4 %x, %z
+  %res.5 = xor i1 %res.4, %t.3
+
+  %c.8 = icmp ule i4 %x, %a
+  %res.6 = xor i1 %res.5, %c.8
+
+  ret i1 %res.6
+}
+
+define i1 @test_or_chain_with_and_ule(i4 %x, i4 %y, i4 %z, i4 %a, i4 %b) {
+; CHECK-LABEL: @test_or_chain_with_and_ule(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ule i4 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ule i4 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ule i4 2, [[X]]
+; CHECK-NEXT:    [[C_4:%.*]] = icmp ule i4 2, [[A:%.*]]
+; CHECK-NEXT:    [[OR_1:%.*]] = or i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    [[AND_2:%.*]] = and i1 [[C_3]], [[C_4]]
+; CHECK-NEXT:    [[OR_3:%.*]] = or i1 [[OR_1]], [[AND_2]]
+; CHECK-NEXT:    br i1 [[OR_3]], label [[BB1:%.*]], label [[EXIT:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[Z]]
+; CHECK-NEXT:    [[C_6:%.*]] = icmp ule i4 [[X]], [[A]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_5]], [[C_6]]
+; CHECK-NEXT:    [[C_7:%.*]] = icmp ule i4 2, [[X]]
+; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_7]]
+; CHECK-NEXT:    ret i1 [[RES_2]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[F_1:%.*]] = icmp ule i4 [[X]], [[Z]]
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ugt i4 [[Y]], [[Z]]
+; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[F_1]], [[T_1]]
+; CHECK-NEXT:    [[T_2:%.*]] = icmp ugt i4 [[X]], [[Y]]
+; CHECK-NEXT:    [[RES_4:%.*]] = xor i1 [[RES_3]], [[T_2]]
+; CHECK-NEXT:    [[T_3:%.*]] = icmp ugt i4 [[X]], [[Z]]
+; CHECK-NEXT:    [[RES_5:%.*]] = xor i1 [[RES_4]], [[T_3]]
+; CHECK-NEXT:    [[C_8:%.*]] = icmp ule i4 [[X]], [[A]]
+; CHECK-NEXT:    [[RES_6:%.*]] = xor i1 [[RES_5]], [[C_8]]
+; CHECK-NEXT:    [[C_9:%.*]] = icmp ule i4 [[X]], [[B:%.*]]
+; CHECK-NEXT:    [[RES_7:%.*]] = xor i1 [[RES_6]], [[C_9]]
+; CHECK-NEXT:    [[C_10:%.*]] = icmp ule i4 2, [[X]]
+; CHECK-NEXT:    [[RES_8:%.*]] = xor i1 [[RES_7]], [[C_10]]
+; CHECK-NEXT:    [[C_11:%.*]] = icmp ugt i4 2, [[A]]
+; CHECK-NEXT:    [[RES_9:%.*]] = xor i1 [[RES_8]], [[C_11]]
+; CHECK-NEXT:    ret i1 [[RES_9]]
+;
+entry:
+  %c.1 = icmp ule i4 %x, %y
+  %c.2 = icmp ule i4 %y, %z
+  %c.3 = icmp ule i4 2, %x
+  %c.4 = icmp ule i4 2, %a
+  %or.1 = or i1 %c.1, %c.2
+  %and.2 = and i1 %c.3, %c.4
+  %or.3 = or i1 %or.1, %and.2
+  br i1 %or.3, label %bb1, label %exit
+
+bb1:
+  %c.5 = icmp ule i4 %x, %z
+  %c.6 = icmp ule i4 %x, %a
+  %res.1 = xor i1 %c.5, %c.6
+  %c.7 = icmp ule i4 2, %x
+  %res.2 = xor i1 %res.1, %c.7
+  ret i1 %res.2
+
+exit:
+  %f.1 = icmp ule i4 %x, %z
+  %t.1 = icmp ugt i4 %y, %z
+  %res.3 = xor i1 %f.1, %t.1
+
+  %t.2 = icmp ugt i4 %x, %y
+  %res.4 = xor i1 %res.3, %t.2
+
+  %t.3 = icmp ugt i4 %x, %z
+  %res.5 = xor i1 %res.4, %t.3
+
+  %c.8 = icmp ule i4 %x, %a
+  %res.6 = xor i1 %res.5, %c.8
+
+  %c.9 = icmp ule i4 %x, %b
+  %res.7 = xor i1 %res.6, %c.9
+
+  %c.10 = icmp ule i4 2, %x
+  %res.8 = xor i1 %res.7, %c.10
+
+  %c.11 = icmp ugt i4 2, %a
+  %res.9 = xor i1 %res.8, %c.11
+
+  ret i1 %res.9
+}

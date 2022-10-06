@@ -7922,8 +7922,8 @@ ExpectedStmt ASTNodeImporter::VisitCXXBoolLiteralExpr(CXXBoolLiteralExpr *E) {
   if (!ToLocationOrErr)
     return ToLocationOrErr.takeError();
 
-  return new (Importer.getToContext()) CXXBoolLiteralExpr(
-      E->getValue(), *ToTypeOrErr, *ToLocationOrErr);
+  return CXXBoolLiteralExpr::Create(Importer.getToContext(), E->getValue(),
+                                    *ToTypeOrErr, *ToLocationOrErr);
 }
 
 ExpectedStmt ASTNodeImporter::VisitMemberExpr(MemberExpr *E) {
