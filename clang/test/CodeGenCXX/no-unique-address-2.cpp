@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
 
 struct TriviallyCopyable {};
 
@@ -21,5 +21,5 @@ void call() {
 
 // The memcpy call should copy exact 4 bytes for member 'int i'
 // CHECK: define {{.*}} void @_ZN3FooC2EOS_
-// CHECK:  call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.+}}, i8* {{.+}}, i64 4, i1 false)
+// CHECK:  call void @llvm.memcpy.p0.p0.i64(ptr {{.+}}, ptr {{.+}}, i64 4, i1 false)
 // CHECK:  call void @_ZN20NonTriviallyCopyableC2EOS_

@@ -1,18 +1,18 @@
 // RUN: %clang_cc1 -fblocks -debug-info-kind=limited -gcodeview -emit-llvm %s \
 // RUN:       -o - -triple=x86_64-pc-win32 -Wno-new-returns-null -std=c++98 | \
-// RUN:    grep -E 'DISubprogram|DICompositeType' | sed -e 's/.*name: "\([^"]*\)".*/"\1"/' | \
+// RUN:    grep -E 'DISubprogram|DICompositeType' | sed -e 's/.*name: "\(ptr\)".*/"\1"/' | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,UNQUAL
 // RUN: %clang_cc1 -fblocks -debug-info-kind=line-tables-only -gcodeview -emit-llvm %s \
 // RUN:       -o - -triple=x86_64-pc-win32 -Wno-new-returns-null -std=c++98 | \
-// RUN:    grep 'DISubprogram' | sed -e 's/.*name: "\([^"]*\)".*/"\1"/' | \
+// RUN:    grep 'DISubprogram' | sed -e 's/.*name: "\(ptr\)".*/"\1"/' | \
 // RUN:    FileCheck %s
 // RUN: %clang_cc1 -fblocks -debug-info-kind=limited -gcodeview -emit-llvm %s \
 // RUN:       -o - -triple=x86_64-pc-win32 -Wno-new-returns-null -std=c++11 | \
-// RUN:    grep -E 'DISubprogram|DICompositeType' | sed -e 's/.*name: "\([^"]*\)".*/"\1"/' | \
+// RUN:    grep -E 'DISubprogram|DICompositeType' | sed -e 's/.*name: "\(ptr\)".*/"\1"/' | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,UNQUAL
 // RUN: %clang_cc1 -fblocks -debug-info-kind=limited -gcodeview -emit-llvm %s \
 // RUN:       -o - -triple=x86_64-pc-win32 -Wno-new-returns-null | \
-// RUN:    grep -E 'DISubprogram|DICompositeType' | sed -e 's/.*name: "\([^"]*\)".*/"\1"/' | \
+// RUN:    grep -E 'DISubprogram|DICompositeType' | sed -e 's/.*name: "\(ptr\)".*/"\1"/' | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,UNQUAL
 
 void freefunc() { }
