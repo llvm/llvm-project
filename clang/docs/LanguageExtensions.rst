@@ -1404,8 +1404,7 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_convertible`` (C++, Embarcadero)
 * ``__is_convertible_to`` (Microsoft):
   Synonym for ``__is_convertible``.
-* ``__is_destructible`` (C++, MSVC 2013):
-  Only available in ``-fms-extensions`` mode.
+* ``__is_destructible`` (C++, MSVC 2013)
 * ``__is_empty`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_enum`` (C++, GNU, Microsoft, Embarcadero)
 * ``__is_final`` (C++, GNU, Microsoft)
@@ -1427,7 +1426,6 @@ The following type trait primitives are supported by Clang. Those traits marked
 * ``__is_nothrow_assignable`` (C++, MSVC 2013)
 * ``__is_nothrow_constructible`` (C++, MSVC 2013)
 * ``__is_nothrow_destructible`` (C++, MSVC 2013)
-  Only available in ``-fms-extensions`` mode.
 * ``__is_nullptr`` (C++, GNU, Microsoft, Embarcadero):
   Returns true for ``std::nullptr_t`` and false for everything else. The
   corresponding standard library feature is ``std::is_null_pointer``, but

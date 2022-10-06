@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++11 -fblocks -Wno-deprecated-builtins -fms-extensions -Wno-microsoft %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++14 -fblocks -Wno-deprecated-builtins -fms-extensions -Wno-microsoft %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++1z -fblocks -Wno-deprecated-builtins -fms-extensions -Wno-microsoft %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++11 -fblocks -Wno-deprecated-builtins %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++14 -fblocks -Wno-deprecated-builtins %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++1z -fblocks -Wno-deprecated-builtins %s
 
 #define T(b) (b) ? 1 : -1
 #define F(b) (b) ? -1 : 1
@@ -414,23 +414,12 @@ struct PotentiallyFinal<T*> final { };
 template<>
 struct PotentiallyFinal<int> final { };
 
-struct SealedClass sealed {
-};
 
-template<typename T>
-struct PotentiallySealed { };
 
-template<typename T>
-struct PotentiallySealed<T*> sealed { };
 
-template<>
-struct PotentiallySealed<int> sealed { };
 
 void is_final()
 {
-	{ int arr[T(__is_final(SealedClass))]; }
-	{ int arr[T(__is_final(PotentiallySealed<float*>))]; }
-	{ int arr[T(__is_final(PotentiallySealed<int>))]; }
 	{ int arr[T(__is_final(FinalClass))]; }
 	{ int arr[T(__is_final(PotentiallyFinal<float*>))]; }
 	{ int arr[T(__is_final(PotentiallyFinal<int>))]; }
@@ -445,32 +434,8 @@ void is_final()
 	{ int arr[F(__is_final(cvoid))]; }
 	{ int arr[F(__is_final(IntArNB))]; }
 	{ int arr[F(__is_final(HasAnonymousUnion))]; }
-	{ int arr[F(__is_final(PotentiallyFinal<float>))]; }
-	{ int arr[F(__is_final(PotentiallySealed<float>))]; }
 }
 
-void is_sealed()
-{
-	{ int arr[T(__is_sealed(SealedClass))]; }
-	{ int arr[T(__is_sealed(PotentiallySealed<float*>))]; }
-	{ int arr[T(__is_sealed(PotentiallySealed<int>))]; }
-	{ int arr[T(__is_sealed(FinalClass))]; }
-	{ int arr[T(__is_sealed(PotentiallyFinal<float*>))]; }
-	{ int arr[T(__is_sealed(PotentiallyFinal<int>))]; }
-
-	{ int arr[F(__is_sealed(int))]; }
-	{ int arr[F(__is_sealed(Union))]; }
-	{ int arr[F(__is_sealed(Int))]; }
-	{ int arr[F(__is_sealed(IntAr))]; }
-	{ int arr[F(__is_sealed(UnionAr))]; }
-	{ int arr[F(__is_sealed(Derives))]; }
-	{ int arr[F(__is_sealed(ClassType))]; }
-	{ int arr[F(__is_sealed(cvoid))]; }
-	{ int arr[F(__is_sealed(IntArNB))]; }
-	{ int arr[F(__is_sealed(HasAnonymousUnion))]; }
-	{ int arr[F(__is_sealed(PotentiallyFinal<float>))]; }
-	{ int arr[F(__is_sealed(PotentiallySealed<float>))]; }
-}
 
 typedef HasVirt Polymorph;
 struct InheritPolymorph : Polymorph {};
