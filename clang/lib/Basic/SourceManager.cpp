@@ -869,36 +869,38 @@ FileID SourceManager::getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const {
   }
 
   // Essentially the same as the local case, but the loaded array is sorted
-  // in the other direction.
+  // in the other direction (decreasing order).
+  // GreaterIndex is the one where the offset is greater, which is actually a
+  // lower index!
+  unsigned GreaterIndex = 0;
+  unsigned LessIndex = LoadedSLocEntryTable.size();
+  if (LastFileIDLookup.ID < 0) {
+    // Prune the search space.
+    int LastID = LastFileIDLookup.ID;
+    if (getLoadedSLocEntryByID(LastID).getOffset() > SLocOffset)
+      GreaterIndex =
+          (-LastID - 2) + 1; // Exclude LastID, else we would have hit the cache
+    else
+      LessIndex = -LastID - 2;
+  }
 
   // First do a linear scan from the last lookup position, if possible.
-  unsigned I;
-  int LastID = LastFileIDLookup.ID;
-  if (LastID >= 0 || getLoadedSLocEntryByID(LastID).getOffset() < SLocOffset)
-    I = 0;
-  else
-    I = (-LastID - 2) + 1;
-
   unsigned NumProbes;
   bool Invalid = false;
-  for (NumProbes = 0; NumProbes < 8; ++NumProbes, ++I) {
+  for (NumProbes = 0; NumProbes < 8; ++NumProbes, ++GreaterIndex) {
     // Make sure the entry is loaded!
-    const SrcMgr::SLocEntry &E = getLoadedSLocEntry(I, &Invalid);
+    const SrcMgr::SLocEntry &E = getLoadedSLocEntry(GreaterIndex, &Invalid);
     if (Invalid)
       return FileID(); // invalid entry.
     if (E.getOffset() <= SLocOffset) {
-      FileID Res = FileID::get(-int(I) - 2);
+      FileID Res = FileID::get(-int(GreaterIndex) - 2);
       LastFileIDLookup = Res;
       NumLinearScans += NumProbes + 1;
       return Res;
     }
   }
 
-  // Linear scan failed. Do the binary search. Note the reverse sorting of the
-  // table: GreaterIndex is the one where the offset is greater, which is
-  // actually a lower index!
-  unsigned GreaterIndex = I;
-  unsigned LessIndex = LoadedSLocEntryTable.size();
+  // Linear scan failed. Do the binary search.
   NumProbes = 0;
   while (true) {
     ++NumProbes;
