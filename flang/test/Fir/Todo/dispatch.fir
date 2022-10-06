@@ -5,6 +5,6 @@
 
 func.func @dispatch(%arg0: !fir.class<!fir.type<derived3{f:f32}>>) {
 // CHECK: not yet implemented: fir.class type conversion
-  %0 = fir.dispatch "method"(%arg0) : (!fir.class<!fir.type<derived3{f:f32}>>) -> i32
+  %0 = fir.dispatch "method"(%arg0 : !fir.class<!fir.type<derived3{f:f32}>>) -> i32
   return
 }

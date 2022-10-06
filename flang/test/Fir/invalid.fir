@@ -761,7 +761,7 @@ func.func private @ifoo(!fir.ref<f32>) -> i32
 
 func.func private @dispatch(%arg0: !fir.class<!fir.type<derived{a:i32,b:i32}>>) -> () {
   // expected-error@+1 {{'fir.dispatch' op pass_arg_pos must be smaller than the number of operands}}
-  fir.dispatch "proc1"(%arg0, %arg0) : (!fir.class<!fir.type<derived{a:i32,b:i32}>>, !fir.class<!fir.type<derived{a:i32,b:i32}>>) -> () {pass_arg_pos = 1 : i32}
+  fir.dispatch "proc1"(%arg0 : !fir.class<!fir.type<derived{a:i32,b:i32}>>) (%arg0 : !fir.class<!fir.type<derived{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
   return
 }
 
@@ -769,6 +769,6 @@ func.func private @dispatch(%arg0: !fir.class<!fir.type<derived{a:i32,b:i32}>>) 
 
 func.func private @dispatch(%arg0: !fir.class<!fir.type<derived{a:i32,b:i32}>>, %arg1: i32) -> () {
   // expected-error@+1 {{'fir.dispatch' op pass_arg_pos must be a polymorphic operand}}
-  fir.dispatch "proc1"(%arg0, %arg0, %arg1) : (!fir.class<!fir.type<derived{a:i32,b:i32}>>, !fir.class<!fir.type<derived{a:i32,b:i32}>>, i32) -> () {pass_arg_pos = 1 : i32}
+  fir.dispatch "proc1"(%arg0 : !fir.class<!fir.type<derived{a:i32,b:i32}>>) (%arg0, %arg1 : !fir.class<!fir.type<derived{a:i32,b:i32}>>, i32) {pass_arg_pos = 1 : i32}
   return
 }
