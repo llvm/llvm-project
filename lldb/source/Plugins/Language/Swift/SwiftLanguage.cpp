@@ -288,10 +288,6 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
                 lldb_private::formatters::swift::Array_SummaryProvider,
                 "Swift.Array summary provider",
                 ConstString("^Swift.Array<.+>$"), summary_flags, true);
-  AddCXXSummary(swift_category_sp,
-                lldb_private::formatters::swift::Array_SummaryProvider,
-                "Swift.Array summary provider",
-                ConstString("Swift._NSSwiftArray"), summary_flags, false);
   AddCXXSummary(
       swift_category_sp, lldb_private::formatters::swift::Array_SummaryProvider,
       "Swift.ContiguousArray summary provider",
@@ -341,11 +337,6 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       lldb_private::formatters::swift::ArraySyntheticFrontEndCreator,
       "Swift.Array synthetic children", ConstString("^Swift.Array<.+>$"),
       synth_flags, true);
-  AddCXXSynthetic(
-      swift_category_sp,
-      lldb_private::formatters::swift::ArraySyntheticFrontEndCreator,
-      "Swift.Array synthetic children", ConstString("Swift._NSSwiftArray"),
-      synth_flags, false);
   AddCXXSynthetic(
       swift_category_sp,
       lldb_private::formatters::swift::ArraySyntheticFrontEndCreator,
