@@ -1038,6 +1038,20 @@ mlir::LogicalResult fir::CoordinateOp::verify() {
 // DispatchOp
 //===----------------------------------------------------------------------===//
 
+mlir::LogicalResult fir::DispatchOp::verify() {
+  // Check that pass_arg_pos is in range of actual operands. pass_arg_pos is
+  // unsigned so check for less than zero is not needed.
+  if (getPassArgPos() && *getPassArgPos() > (getArgOperands().size() - 1))
+    return emitOpError(
+        "pass_arg_pos must be smaller than the number of operands");
+
+  // Operand pointed by pass_arg_pos must have polymorphic type.
+  if (getPassArgPos() &&
+      !fir::isPolymorphicType(getArgOperands()[*getPassArgPos()].getType()))
+    return emitOpError("pass_arg_pos must be a polymorphic operand");
+  return mlir::success();
+}
+
 mlir::FunctionType fir::DispatchOp::getFunctionType() {
   return mlir::FunctionType::get(getContext(), getOperandTypes(),
                                  getResultTypes());
@@ -1060,11 +1074,11 @@ mlir::ParseResult fir::DispatchOp::parse(mlir::OpAsmParser &parser,
                         parser.getBuilder().getStringAttr(calleeName));
   }
   if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::Paren) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
       parser.parseColonType(calleeType) ||
       parser.addTypesToList(calleeType.getResults(), result.types) ||
       parser.resolveOperands(operands, calleeType.getInputs(), calleeLoc,
-                             result.operands))
+                             result.operands) ||
+      parser.parseOptionalAttrDict(result.attributes))
     return mlir::failure();
   return mlir::success();
 }
@@ -1079,6 +1093,9 @@ void fir::DispatchOp::print(mlir::OpAsmPrinter &p) {
   p << ") : ";
   p.printFunctionalType(getOperation()->getOperandTypes(),
                         getOperation()->getResultTypes());
+  p.printOptionalAttrDict(getOperation()->getAttrs(),
+                          {mlir::SymbolTable::getSymbolAttrName(),
+                           fir::DispatchOp::getMethodAttrNameStr()});
 }
 
 //===----------------------------------------------------------------------===//
