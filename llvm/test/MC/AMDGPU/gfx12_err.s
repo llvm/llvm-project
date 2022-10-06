@@ -70,3 +70,12 @@ v_fma_mixhi_f16_e64_dpp v5, v1, 0, v4 quad_perm:[3,2,1,0]
 
 v_fma_mixlo_f16_e64_dpp v5, v1, 1, v4 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+v_lshlrev_b64 v[5:6], s2, s[0:1]
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
+
+v_lshrrev_b64 v[5:6], s2, s[0:1]
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
+
+v_ashrrev_i64 v[5:6], s2, s[0:1]
+// GFX12-ERR: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand (violates constant bus restrictions)
