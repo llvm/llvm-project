@@ -1570,6 +1570,10 @@ mlir::Value CIRGenFunction::buildAlloca(StringRef name, InitStyle initStyle,
     addr = builder.create<mlir::cir::AllocaOp>(loc, /*addr type*/ localVarPtrTy,
                                                /*var type*/ ty, name, initStyle,
                                                alignIntAttr);
+    if (currVarDecl) {
+      auto alloca = cast<mlir::cir::AllocaOp>(addr.getDefiningOp());
+      alloca.setAstAttr(ASTVarDeclAttr::get(builder.getContext(), currVarDecl));
+    }
   }
   return addr;
 }
