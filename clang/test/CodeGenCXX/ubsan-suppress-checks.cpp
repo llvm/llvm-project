@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=alignment | FileCheck %s --check-prefixes=CHECK,ALIGN
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=null | FileCheck %s --check-prefixes=CHECK,NULL
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=alignment,null -DCHECK_LAMBDA | FileCheck %s --check-prefixes=LAMBDA
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=alignment | FileCheck %s --check-prefixes=CHECK,ALIGN
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=null | FileCheck %s --check-prefixes=CHECK,NULL
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s -fsanitize=alignment,null -DCHECK_LAMBDA | FileCheck %s --check-prefixes=LAMBDA
 
 // CHECK-LABEL: define{{.*}} void @_Z22load_non_null_pointersv
 void load_non_null_pointers() {
@@ -33,10 +33,10 @@ struct A {
 
   // CHECK-LABEL: define linkonce_odr void @_ZN1A10do_nothingEv
   void do_nothing() {
-    // ALIGN: %[[THISINT1:[0-9]+]] = ptrtoint %struct.A* %{{.*}} to i64, !nosanitize
+    // ALIGN: %[[THISINT1:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT1]], 3, !nosanitize
-    // NULL: icmp ne %struct.A* %[[THIS1:[a-z0-9]+]], null, !nosanitize
-    // NULL: ptrtoint %struct.A* %[[THIS1]] to i64, !nosanitize
+    // NULL: icmp ne ptr %[[THIS1:[a-z0-9]+]], null, !nosanitize
+    // NULL: ptrtoint ptr %[[THIS1]] to i64, !nosanitize
     // CHECK: call void @__ubsan_handle_type_mismatch
     // CHECK-NOT: call void @__ubsan_handle_type_mismatch
     // CHECK: ret void
@@ -45,8 +45,8 @@ struct A {
 #ifdef CHECK_LAMBDA
   // LAMBDA-LABEL: define linkonce_odr void @_ZN1A22do_nothing_with_lambdaEv
   void do_nothing_with_lambda() {
-    // LAMBDA: icmp ne %struct.A* %[[THIS2:[a-z0-9]+]], null, !nosanitize
-    // LAMBDA: %[[THISINT2:[0-9]+]] = ptrtoint %struct.A* %[[THIS2]] to i64, !nosanitize
+    // LAMBDA: icmp ne ptr %[[THIS2:[a-z0-9]+]], null, !nosanitize
+    // LAMBDA: %[[THISINT2:[0-9]+]] = ptrtoint ptr %[[THIS2]] to i64, !nosanitize
     // LAMBDA: and i64 %[[THISINT2]], 3, !nosanitize
     // LAMBDA: call void @__ubsan_handle_type_mismatch
 
@@ -69,10 +69,10 @@ struct A {
 
   // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN1A11load_memberEv
   int load_member() {
-    // ALIGN: %[[THISINT3:[0-9]+]] = ptrtoint %struct.A* %{{.*}} to i64, !nosanitize
+    // ALIGN: %[[THISINT3:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT3]], 3, !nosanitize
-    // NULL: icmp ne %struct.A* %[[THIS3:[a-z0-9]+]], null, !nosanitize
-    // NULL: ptrtoint %struct.A* %[[THIS3]] to i64, !nosanitize
+    // NULL: icmp ne ptr %[[THIS3:[a-z0-9]+]], null, !nosanitize
+    // NULL: ptrtoint ptr %[[THIS3]] to i64, !nosanitize
     // CHECK: call void @__ubsan_handle_type_mismatch
     // CHECK-NOT: call void @__ubsan_handle_type_mismatch
     return foo;
@@ -81,10 +81,10 @@ struct A {
 
   // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN1A11call_methodEv
   int call_method() {
-    // ALIGN: %[[THISINT4:[0-9]+]] = ptrtoint %struct.A* %{{.*}} to i64, !nosanitize
+    // ALIGN: %[[THISINT4:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT4]], 3, !nosanitize
-    // NULL: icmp ne %struct.A* %[[THIS4:[a-z0-9]+]], null, !nosanitize
-    // NULL: ptrtoint %struct.A* %[[THIS4]] to i64, !nosanitize
+    // NULL: icmp ne ptr %[[THIS4:[a-z0-9]+]], null, !nosanitize
+    // NULL: ptrtoint ptr %[[THIS4]] to i64, !nosanitize
     // CHECK: call void @__ubsan_handle_type_mismatch
     // CHECK-NOT: call void @__ubsan_handle_type_mismatch
     return load_member();
@@ -93,10 +93,10 @@ struct A {
 
   // CHECK-LABEL: define linkonce_odr void @_ZN1A15assign_member_1Ev
   void assign_member_1() {
-    // ALIGN: %[[THISINT5:[0-9]+]] = ptrtoint %struct.A* %{{.*}} to i64, !nosanitize
+    // ALIGN: %[[THISINT5:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT5]], 3, !nosanitize
-    // NULL: icmp ne %struct.A* %[[THIS5:[a-z0-9]+]], null, !nosanitize
-    // NULL: ptrtoint %struct.A* %[[THIS5]] to i64, !nosanitize
+    // NULL: icmp ne ptr %[[THIS5:[a-z0-9]+]], null, !nosanitize
+    // NULL: ptrtoint ptr %[[THIS5]] to i64, !nosanitize
     // CHECK: call void @__ubsan_handle_type_mismatch
     // CHECK-NOT: call void @__ubsan_handle_type_mismatch
     foo = 0;
@@ -105,10 +105,10 @@ struct A {
 
   // CHECK-LABEL: define linkonce_odr void @_ZN1A15assign_member_2Ev
   void assign_member_2() {
-    // ALIGN: %[[THISINT6:[0-9]+]] = ptrtoint %struct.A* %{{.*}} to i64, !nosanitize
+    // ALIGN: %[[THISINT6:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT6]], 3, !nosanitize
-    // NULL: icmp ne %struct.A* %[[THIS6:[a-z0-9]+]], null, !nosanitize
-    // NULL: ptrtoint %struct.A* %[[THIS6]] to i64, !nosanitize
+    // NULL: icmp ne ptr %[[THIS6:[a-z0-9]+]], null, !nosanitize
+    // NULL: ptrtoint ptr %[[THIS6]] to i64, !nosanitize
     // CHECK: call void @__ubsan_handle_type_mismatch
     // CHECK-NOT: call void @__ubsan_handle_type_mismatch
     (__extension__ (this))->foo = 0;
@@ -117,10 +117,10 @@ struct A {
 
   // CHECK-LABEL: define linkonce_odr void @_ZNK1A15assign_member_3Ev
   void assign_member_3() const {
-    // ALIGN: %[[THISINT7:[0-9]+]] = ptrtoint %struct.A* %{{.*}} to i64, !nosanitize
+    // ALIGN: %[[THISINT7:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT7]], 3, !nosanitize
-    // NULL: icmp ne %struct.A* %[[THIS7:[a-z0-9]+]], null, !nosanitize
-    // NULL: ptrtoint %struct.A* %[[THIS7]] to i64, !nosanitize
+    // NULL: icmp ne ptr %[[THIS7:[a-z0-9]+]], null, !nosanitize
+    // NULL: ptrtoint ptr %[[THIS7]] to i64, !nosanitize
     // CHECK: call void @__ubsan_handle_type_mismatch
     // CHECK-NOT: call void @__ubsan_handle_type_mismatch
     const_cast<A *>(this)->foo = 0;
@@ -129,7 +129,7 @@ struct A {
 
   // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN1A22call_through_referenceERS_
   static int call_through_reference(A &a) {
-    // ALIGN: %[[OBJINT:[0-9]+]] = ptrtoint %struct.A* %{{.*}} to i64, !nosanitize
+    // ALIGN: %[[OBJINT:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[OBJINT]], 3, !nosanitize
     // ALIGN: call void @__ubsan_handle_type_mismatch
     // NULL-NOT: call void @__ubsan_handle_type_mismatch
@@ -173,11 +173,11 @@ struct Derived : public Base {
 
   // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7Derived13load_member_2Ev
   int load_member_2() {
-    // ALIGN: %[[THISINT8:[0-9]+]] = ptrtoint %struct.Derived* %{{.*}} to i64, !nosanitize
+    // ALIGN: %[[THISINT8:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT8]], 7, !nosanitize
     // ALIGN: call void @__ubsan_handle_type_mismatch
-    // NULL: icmp ne %struct.Derived* %[[THIS8:[a-z0-9]+]], null, !nosanitize
-    // NULL: ptrtoint %struct.Derived* %[[THIS8]] to i64, !nosanitize
+    // NULL: icmp ne ptr %[[THIS8:[a-z0-9]+]], null, !nosanitize
+    // NULL: ptrtoint ptr %[[THIS8]] to i64, !nosanitize
     // CHECK: call void @__ubsan_handle_type_mismatch
     //
     // Check the result of the cast before using it.
@@ -190,12 +190,12 @@ struct Derived : public Base {
 
   // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7Derived13load_member_3Ev
   int load_member_3() {
-    // ALIGN: %[[THISINT9:[0-9]+]] = ptrtoint %struct.Derived* %{{.*}} to i64, !nosanitize
+    // ALIGN: %[[THISINT9:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT9]], 7, !nosanitize
     // ALIGN: call void @__ubsan_handle_type_mismatch
     // ALIGN: call void @__ubsan_handle_type_mismatch
-    // NULL: icmp ne %struct.Derived* %[[THIS9:[a-z0-9]+]], null, !nosanitize
-    // NULL: ptrtoint %struct.Derived* %[[THIS9]] to i64, !nosanitize
+    // NULL: icmp ne ptr %[[THIS9:[a-z0-9]+]], null, !nosanitize
+    // NULL: ptrtoint ptr %[[THIS9]] to i64, !nosanitize
     // CHECK: call void @__ubsan_handle_type_mismatch
     // CHECK-NOT: call void @__ubsan_handle_type_mismatch
     return reinterpret_cast<Derived *>(static_cast<Base *>(this))->foo;
@@ -204,11 +204,11 @@ struct Derived : public Base {
 
   // CHECK-LABEL: define linkonce_odr noundef i32 @_ZN7Derived13load_member_1Ev
   int load_member_1() override {
-    // ALIGN: %[[THISINT10:[0-9]+]] = ptrtoint %struct.Derived* %{{.*}} to i64, !nosanitize
+    // ALIGN: %[[THISINT10:[0-9]+]] = ptrtoint ptr %{{.*}} to i64, !nosanitize
     // ALIGN: and i64 %[[THISINT10]], 7, !nosanitize
     // ALIGN: call void @__ubsan_handle_type_mismatch
-    // NULL: icmp ne %struct.Derived* %[[THIS10:[a-z0-9]+]], null, !nosanitize
-    // NULL: ptrtoint %struct.Derived* %[[THIS10]] to i64, !nosanitize
+    // NULL: icmp ne ptr %[[THIS10:[a-z0-9]+]], null, !nosanitize
+    // NULL: ptrtoint ptr %[[THIS10]] to i64, !nosanitize
     // CHECK: call void @__ubsan_handle_type_mismatch
     // CHECK-NOT: call void @__ubsan_handle_type_mismatch
     return foo + bar;

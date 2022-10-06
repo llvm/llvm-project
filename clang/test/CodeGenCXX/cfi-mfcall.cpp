@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fsanitize=cfi-mfcall -fsanitize-trap=cfi-mfcall -fvisibility=hidden -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fsanitize=cfi-mfcall -fsanitize-trap=cfi-mfcall -fvisibility=default -emit-llvm -o - %s | FileCheck --check-prefix=DEFAULT %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-mfcall -fsanitize-trap=cfi-mfcall -fvisibility=hidden -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fsanitize=cfi-mfcall -fsanitize-trap=cfi-mfcall -fvisibility=default -emit-llvm -o - %s | FileCheck --check-prefix=DEFAULT %s
 // With -fwhole-program-vtables we should get the member function pointer type
 // test, even without hidden visibility.
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck %s --check-prefix=WPV
+// RUN: %clang_cc1 -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck %s --check-prefix=WPV
 
 struct B1 {};
 struct B2 {};
@@ -14,20 +14,19 @@ struct S : B1, B3 {};
 
 void f(S *s, void (S::*p)()) {
   // WPV: [[OFFSET:%.*]] = sub i64 {{.*}}, 1
-  // WPV: [[VFPTR:%.*]] = getelementptr i8, i8* %{{.*}}, i64 [[OFFSET]]
-  // WPV: [[TT:%.*]] = call i1 @llvm.public.type.test(i8* [[VFPTR]], metadata !"_ZTSM1SFvvE.virtual")
+  // WPV: [[VFPTR:%.*]] = getelementptr i8, ptr %{{.*}}, i64 [[OFFSET]]
+  // WPV: [[TT:%.*]] = call i1 @llvm.public.type.test(ptr [[VFPTR]], metadata !"_ZTSM1SFvvE.virtual")
   // CHECK: [[OFFSET:%.*]] = sub i64 {{.*}}, 1
-  // CHECK: [[VFPTR:%.*]] = getelementptr i8, i8* %{{.*}}, i64 [[OFFSET]]
-  // CHECK: [[TT:%.*]] = call i1 @llvm.type.test(i8* [[VFPTR]], metadata !"_ZTSM1SFvvE.virtual")
+  // CHECK: [[VFPTR:%.*]] = getelementptr i8, ptr %{{.*}}, i64 [[OFFSET]]
+  // CHECK: [[TT:%.*]] = call i1 @llvm.type.test(ptr [[VFPTR]], metadata !"_ZTSM1SFvvE.virtual")
   // CHECK: br i1 [[TT]], label {{.*}}, label %[[TRAP1:[^,]*]]
 
   // CHECK: [[TRAP1]]:
   // CHECK-NEXT: llvm.ubsantrap
 
-  // CHECK: [[NVFPTR:%.*]] = bitcast void (%struct.S*)* {{.*}} to i8*
-  // CHECK: [[TT1:%.*]] = call i1 @llvm.type.test(i8* [[NVFPTR]], metadata !"_ZTSM2B1FvvE")
+  // CHECK: [[TT1:%.*]] = call i1 @llvm.type.test(ptr {{.*}}, metadata !"_ZTSM2B1FvvE")
   // CHECK: [[OR1:%.*]] = or i1 false, [[TT1]]
-  // CHECK: [[TT2:%.*]] = call i1 @llvm.type.test(i8* [[NVFPTR]], metadata !"_ZTSM2B2FvvE")
+  // CHECK: [[TT2:%.*]] = call i1 @llvm.type.test(ptr {{.*}}, metadata !"_ZTSM2B2FvvE")
   // CHECK: [[OR2:%.*]] = or i1 [[OR1]], [[TT2]]
   // CHECK: br i1 [[OR2]], label {{.*}}, label %[[TRAP2:[^,]*]]
 
