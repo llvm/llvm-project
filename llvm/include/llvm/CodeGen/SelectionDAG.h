@@ -926,6 +926,9 @@ public:
   /// BooleanContent for type OpVT or truncating it.
   SDValue getBoolExtOrTrunc(SDValue Op, const SDLoc &SL, EVT VT, EVT OpVT);
 
+  /// Create negative operation as (SUB 0, Val).
+  SDValue getNegative(SDValue Val, const SDLoc &DL, EVT VT);
+
   /// Create a bitwise NOT operation as (XOR Val, -1).
   SDValue getNOT(const SDLoc &DL, SDValue Val, EVT VT);
 
