@@ -30,7 +30,7 @@ class NextAfterTestTemplate : public __llvm_libc::testing::Test {
   const T neg_zero = T(FPBits::neg_zero());
   const T inf = T(FPBits::inf());
   const T neg_inf = T(FPBits::neg_inf());
-  const T nan = T(FPBits::build_quiet_nan(1));
+  const T nan = T(FPBits::build_nan(1));
   const UIntType min_subnormal = FPBits::MIN_SUBNORMAL;
   const UIntType max_subnormal = FPBits::MAX_SUBNORMAL;
   const UIntType min_normal = FPBits::MIN_NORMAL;

@@ -30,7 +30,7 @@ static inline T remquo(T x, T y, int &q) {
   if (ybits.is_nan())
     return y;
   if (xbits.is_inf() || ybits.is_zero())
-    return FPBits<T>::build_quiet_nan(1);
+    return FPBits<T>::build_nan(1);
 
   if (xbits.is_zero()) {
     q = 0;
