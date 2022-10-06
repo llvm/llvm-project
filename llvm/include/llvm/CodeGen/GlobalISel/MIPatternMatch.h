@@ -237,6 +237,20 @@ inline SpecificConstantMatch m_AllOnesInt() {
 }
 ///}
 
+/// Matcher for a specific register.
+struct SpecificRegisterMatch {
+  Register RequestedReg;
+  SpecificRegisterMatch(Register RequestedReg) : RequestedReg(RequestedReg) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    return Reg == RequestedReg;
+  }
+};
+
+/// Matches a register only if it is equal to \p RequestedReg.
+inline SpecificRegisterMatch m_SpecificReg(Register RequestedReg) {
+  return SpecificRegisterMatch(RequestedReg);
+}
+
 // TODO: Rework this for different kinds of MachineOperand.
 // Currently assumes the Src for a match is a register.
 // We might want to support taking in some MachineOperands and call getReg on
