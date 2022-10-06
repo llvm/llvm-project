@@ -9,7 +9,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 ; GEN: $__llvm_profile_raw_version = comdat any
-; GEN: @__llvm_profile_raw_version = constant i64 {{[0-9]+}}, comdat
+; GEN: @__llvm_profile_raw_version = hidden constant i64 {{[0-9]+}}, comdat
 ; GEN: @__profn_test_criticalEdge = private constant [17 x i8] c"test_criticalEdge"
 ; GEN: @__profn__stdin__bar = private constant [11 x i8] c"<stdin>:bar"
 
