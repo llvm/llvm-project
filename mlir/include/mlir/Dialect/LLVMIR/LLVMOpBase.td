@@ -378,7 +378,7 @@ class LLVM_IntrOp<string mnem, list<int> overloadedResults,
 //
 // Sample use: derive an entry from this class and populate the fields.
 //
-//    def LLVM_Name : LLVM_ZeroResultIntrOp<"name", [0], [NoSideEffect]>,
+//    def LLVM_Name : LLVM_ZeroResultIntrOp<"name", [0], [Pure]>,
 //                    Arguments<(ins LLVM_Type, LLVM_Type)>;
 //
 // The mnemonic will be prefixed with "llvm.intr.", where the "llvm." part comes
@@ -405,14 +405,14 @@ class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
 // LLVM vector reduction over a single vector.
 class LLVM_VectorReduction<string mnem>
     : LLVM_OneResultIntrOp<"vector.reduce." # mnem,
-                           [], [0], [NoSideEffect]>,
+                           [], [0], [Pure]>,
       Arguments<(ins LLVM_Type)>;
 
 // LLVM vector reduction over a single vector, with an initial value,
 // and with permission to reassociate the reduction operations.
 class LLVM_VectorReductionAcc<string mnem>
     : LLVM_OpBase<LLVM_Dialect, "intr.vector.reduce." # mnem,
-                  [NoSideEffect]>,
+                  [Pure]>,
       Results<(outs LLVM_Type:$res)>,
       Arguments<(ins LLVM_Type, LLVM_Type,
                  DefaultValuedAttr<BoolAttr, "false">:$reassoc)> {

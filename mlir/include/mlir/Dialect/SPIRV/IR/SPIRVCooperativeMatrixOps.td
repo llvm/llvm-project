@@ -16,7 +16,7 @@
 // -----
 
 def SPIRV_NVCooperativeMatrixLengthOp : SPIRV_NvVendorOp<"CooperativeMatrixLength",
-  [NoSideEffect]> {
+  [Pure]> {
   let summary = "See extension SPV_NV_cooperative_matrix";
 
   let description = [{
@@ -137,7 +137,7 @@ def SPIRV_NVCooperativeMatrixLoadOp : SPIRV_NvVendorOp<"CooperativeMatrixLoad", 
 // -----
 
 def SPIRV_NVCooperativeMatrixMulAddOp : SPIRV_NvVendorOp<"CooperativeMatrixMulAdd",
-  [NoSideEffect, AllTypesMatch<["c", "result"]>]> {
+  [Pure, AllTypesMatch<["c", "result"]>]> {
   let summary = "See extension SPV_NV_cooperative_matrix";
 
   let description = [{

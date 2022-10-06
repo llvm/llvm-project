@@ -22,7 +22,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // -----
 
 def SPIRV_BranchOp : SPIRV_Op<"Branch", [
-    DeclareOpInterfaceMethods<BranchOpInterface>, InFunctionScope, NoSideEffect,
+    DeclareOpInterfaceMethods<BranchOpInterface>, InFunctionScope, Pure,
     Terminator]> {
   let summary = "Unconditional branch to target block.";
 
@@ -79,7 +79,7 @@ def SPIRV_BranchOp : SPIRV_Op<"Branch", [
 
 def SPIRV_BranchConditionalOp : SPIRV_Op<"BranchConditional", [
     AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
-    InFunctionScope, NoSideEffect, Terminator]> {
+    InFunctionScope, Pure, Terminator]> {
   let summary = [{
     If Condition is true, branch to true block, otherwise branch to false
     block.
@@ -313,7 +313,7 @@ def SPIRV_LoopOp : SPIRV_Op<"mlir.loop", [InFunctionScope]> {
 
 // -----
 
-def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [NoSideEffect, Terminator]> {
+def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [Pure, Terminator]> {
   let summary = "A special terminator for merging a structured selection/loop.";
 
   let description = [{
@@ -337,7 +337,7 @@ def SPIRV_MergeOp : SPIRV_Op<"mlir.merge", [NoSideEffect, Terminator]> {
 
 // -----
 
-def SPIRV_ReturnOp : SPIRV_Op<"Return", [InFunctionScope, NoSideEffect,
+def SPIRV_ReturnOp : SPIRV_Op<"Return", [InFunctionScope, Pure,
                                      Terminator]> {
   let summary = "Return with no value from a function with void return type.";
 
@@ -382,7 +382,7 @@ def SPIRV_UnreachableOp : SPIRV_Op<"Unreachable", [InFunctionScope, Terminator]>
 
 // -----
 
-def SPIRV_ReturnValueOp : SPIRV_Op<"ReturnValue", [InFunctionScope, NoSideEffect,
+def SPIRV_ReturnValueOp : SPIRV_Op<"ReturnValue", [InFunctionScope, Pure,
                                                Terminator]> {
   let summary = "Return a value from a function.";
 
