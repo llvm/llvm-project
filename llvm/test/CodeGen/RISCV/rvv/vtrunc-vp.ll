@@ -187,7 +187,7 @@ define <vscale x 15 x i16> @vtrunc_nxv15i16_nxv15i64(<vscale x 15 x i64> %a, <vs
   ret <vscale x 15 x i16> %v
 }
 
-declare <vscale x 2 x i32> @llvm.vp.trunc.nxv2i64.nxv2i32(<vscale x 2 x i64>, <vscale x 2 x i1>, i32)
+declare <vscale x 2 x i32> @llvm.vp.trunc.nxv2i32.nxv2i64(<vscale x 2 x i64>, <vscale x 2 x i1>, i32)
 
 define <vscale x 2 x i32> @vtrunc_nxv2i32_nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_nxv2i32_nxv2i64:
@@ -196,7 +196,7 @@ define <vscale x 2 x i32> @vtrunc_nxv2i32_nxv2i64(<vscale x 2 x i64> %a, <vscale
 ; CHECK-NEXT:    vnsrl.wi v10, v8, 0, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i32> @llvm.vp.trunc.nxv2i64.nxv2i32(<vscale x 2 x i64> %a, <vscale x 2 x i1> %m, i32 %vl)
+  %v = call <vscale x 2 x i32> @llvm.vp.trunc.nxv2i32.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> %m, i32 %vl)
   ret <vscale x 2 x i32> %v
 }
 
@@ -207,7 +207,7 @@ define <vscale x 2 x i32> @vtrunc_nxv2i32_nxv2i64_unmasked(<vscale x 2 x i64> %a
 ; CHECK-NEXT:    vnsrl.wi v10, v8, 0
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x i32> @llvm.vp.trunc.nxv2i64.nxv2i32(<vscale x 2 x i64> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
+  %v = call <vscale x 2 x i32> @llvm.vp.trunc.nxv2i32.nxv2i64(<vscale x 2 x i64> %a, <vscale x 2 x i1> shufflevector (<vscale x 2 x i1> insertelement (<vscale x 2 x i1> undef, i1 true, i32 0), <vscale x 2 x i1> undef, <vscale x 2 x i32> zeroinitializer), i32 %vl)
   ret <vscale x 2 x i32> %v
 }
 
@@ -283,7 +283,7 @@ define <vscale x 32 x i8> @vtrunc_nxv32i8_nxv32i32(<vscale x 32 x i32> %a, <vsca
   ret <vscale x 32 x i8> %v
 }
 
-declare <vscale x 32 x i32> @llvm.vp.trunc.nxv32i64.nxv32i32(<vscale x 32 x i64>, <vscale x 32 x i1>, i32)
+declare <vscale x 32 x i32> @llvm.vp.trunc.nxv32i32.nxv32i64(<vscale x 32 x i64>, <vscale x 32 x i1>, i32)
 
 define <vscale x 32 x i32> @vtrunc_nxv32i64_nxv32i32(<vscale x 32 x i64> %a, <vscale x 32 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_nxv32i64_nxv32i32:
@@ -378,6 +378,6 @@ define <vscale x 32 x i32> @vtrunc_nxv32i64_nxv32i32(<vscale x 32 x i64> %a, <vs
 ; CHECK-NEXT:    add sp, sp, a0
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 32 x i32> @llvm.vp.trunc.nxv32i64.nxv32i32(<vscale x 32 x i64> %a, <vscale x 32 x i1> %m, i32 %vl)
+  %v = call <vscale x 32 x i32> @llvm.vp.trunc.nxv32i32.nxv32i64(<vscale x 32 x i64> %a, <vscale x 32 x i1> %m, i32 %vl)
   ret <vscale x 32 x i32> %v
 }
