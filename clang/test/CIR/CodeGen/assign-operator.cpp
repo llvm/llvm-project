@@ -11,8 +11,8 @@ struct String {
   // StringView::StringView(String const&)
   //
   // CHECK: cir.func linkonce_odr @_ZN10StringViewC2ERK6String
-  // CHECK:   %0 = cir.alloca !cir.ptr<!_22struct2EStringView22>, cir.ptr <!cir.ptr<!_22struct2EStringView22>>, ["this", paraminit] {alignment = 8 : i64}
-  // CHECK:   %1 = cir.alloca !cir.ptr<!_22struct2EString22>, cir.ptr <!cir.ptr<!_22struct2EString22>>, ["s", paraminit] {alignment = 8 : i64}
+  // CHECK:   %0 = cir.alloca !cir.ptr<!_22struct2EStringView22>, cir.ptr <!cir.ptr<!_22struct2EStringView22>>, ["this", init] {alignment = 8 : i64}
+  // CHECK:   %1 = cir.alloca !cir.ptr<!_22struct2EString22>, cir.ptr <!cir.ptr<!_22struct2EString22>>, ["s", init] {alignment = 8 : i64}
   // CHECK:   cir.store %arg0, %0 : !cir.ptr<!_22struct2EStringView22>
   // CHECK:   cir.store %arg1, %1 : !cir.ptr<!_22struct2EString22>
   // CHECK:   %2 = cir.load %0 : cir.ptr <!cir.ptr<!_22struct2EStringView22>>
@@ -27,9 +27,9 @@ struct String {
   // StringView::operator=(StringView&&)
   //
   // CHECK: cir.func linkonce_odr @_ZN10StringViewaSEOS_
-  // CHECK:   %0 = cir.alloca !cir.ptr<!_22struct2EStringView22>, cir.ptr <!cir.ptr<!_22struct2EStringView22>>, ["this", paraminit] {alignment = 8 : i64}
-  // CHECK:   %1 = cir.alloca !cir.ptr<!_22struct2EStringView22>, cir.ptr <!cir.ptr<!_22struct2EStringView22>>, ["", paraminit] {alignment = 8 : i64}
-  // CHECK:   %2 = cir.alloca !cir.ptr<!_22struct2EStringView22>, cir.ptr <!cir.ptr<!_22struct2EStringView22>>, ["__retval", uninitialized] {alignment = 8 : i64}
+  // CHECK:   %0 = cir.alloca !cir.ptr<!_22struct2EStringView22>, cir.ptr <!cir.ptr<!_22struct2EStringView22>>, ["this", init] {alignment = 8 : i64}
+  // CHECK:   %1 = cir.alloca !cir.ptr<!_22struct2EStringView22>, cir.ptr <!cir.ptr<!_22struct2EStringView22>>, ["", init] {alignment = 8 : i64}
+  // CHECK:   %2 = cir.alloca !cir.ptr<!_22struct2EStringView22>, cir.ptr <!cir.ptr<!_22struct2EStringView22>>, ["__retval"] {alignment = 8 : i64}
   // CHECK:   cir.store %arg0, %0 : !cir.ptr<!_22struct2EStringView22>
   // CHECK:   cir.store %arg1, %1 : !cir.ptr<!_22struct2EStringView22>
   // CHECK:   %3 = cir.load deref %0 : cir.ptr <!cir.ptr<!_22struct2EStringView22>>
@@ -60,13 +60,13 @@ int main() {
 }
 
 // CHECK: cir.func @main() -> i32 {
-// CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, ["__retval", uninitialized] {alignment = 4 : i64}
-// CHECK:     %1 = cir.alloca !_22struct2EStringView22, cir.ptr <!_22struct2EStringView22>, ["sv", uninitialized] {alignment = 8 : i64}
+// CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64}
+// CHECK:     %1 = cir.alloca !_22struct2EStringView22, cir.ptr <!_22struct2EStringView22>, ["sv"] {alignment = 8 : i64}
 // CHECK:     cir.call @_ZN10StringViewC2Ev(%1) : (!cir.ptr<!_22struct2EStringView22>) -> ()
 // CHECK:     cir.scope {
-// CHECK:       %3 = cir.alloca !_22struct2EString22, cir.ptr <!_22struct2EString22>, ["s", uninitialized] {alignment = 8 : i64}
-// CHECK:       %4 = cir.alloca !_22struct2EStringView22, cir.ptr <!_22struct2EStringView22>, ["ref.tmp", uninitialized] {alignment = 8 : i64}
-// CHECK:       %5 = cir.alloca !_22struct2EStringView22, cir.ptr <!_22struct2EStringView22>, ["ref.tmp", uninitialized] {alignment = 8 : i64}
+// CHECK:       %3 = cir.alloca !_22struct2EString22, cir.ptr <!_22struct2EString22>, ["s"] {alignment = 8 : i64}
+// CHECK:       %4 = cir.alloca !_22struct2EStringView22, cir.ptr <!_22struct2EStringView22>, ["ref.tmp"] {alignment = 8 : i64}
+// CHECK:       %5 = cir.alloca !_22struct2EStringView22, cir.ptr <!_22struct2EStringView22>, ["ref.tmp"] {alignment = 8 : i64}
 // CHECK:       %6 = cir.get_global @".str" : cir.ptr <!cir.array<i8 x 3>>
 // CHECK:       %7 = cir.cast(array_to_ptrdecay, %6 : !cir.ptr<!cir.array<i8 x 3>>), !cir.ptr<i8>
 // CHECK:       cir.call @_ZN6StringC2EPKc(%3, %7) : (!cir.ptr<!_22struct2EString22>, !cir.ptr<i8>) -> ()

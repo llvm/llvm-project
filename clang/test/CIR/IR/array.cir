@@ -2,10 +2,10 @@
 
 module  {
   cir.func @arrays() {
-    %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr<!cir.array<i32 x 10>>, ["x", paraminit]
+    %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr<!cir.array<i32 x 10>>, ["x", init]
     cir.return
   }
 }
 
 // CHECK: cir.func @arrays() {
-// CHECK-NEXT:     %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["x", paraminit]
+// CHECK-NEXT:     %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["x", init]

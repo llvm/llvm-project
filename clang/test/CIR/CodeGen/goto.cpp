@@ -10,8 +10,8 @@ end:
 }
 
 // CHECK:   cir.func @_Z2g0i
-// CHECK-NEXT  %0 = cir.alloca i32, cir.ptr <i32>, ["a", paraminit] {alignment = 4 : i64}
-// CHECK-NEXT  %1 = cir.alloca i32, cir.ptr <i32>, ["b", cinit] {alignment = 4 : i64}
+// CHECK-NEXT  %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
+// CHECK-NEXT  %1 = cir.alloca i32, cir.ptr <i32>, ["b", init] {alignment = 4 : i64}
 // CHECK-NEXT  cir.store %arg0, %0 : i32, cir.ptr <i32>
 // CHECK-NEXT  %2 = cir.load %0 : cir.ptr <i32>, i32
 // CHECK-NEXT  cir.store %2, %1 : i32, cir.ptr <i32>
@@ -38,9 +38,9 @@ end:
 
 // Make sure alloca for "y" shows up in the entry block
 // CHECK: cir.func @_Z2g1i(%arg0: i32
-// CHECK-NEXT: %0 = cir.alloca i32, cir.ptr <i32>, ["a", paraminit] {alignment = 4 : i64}
-// CHECK-NEXT: %1 = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64}
-// CHECK-NEXT: %2 = cir.alloca i32, cir.ptr <i32>, ["y", cinit] {alignment = 4 : i64}
+// CHECK-NEXT: %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
+// CHECK-NEXT: %1 = cir.alloca i32, cir.ptr <i32>, ["x", init] {alignment = 4 : i64}
+// CHECK-NEXT: %2 = cir.alloca i32, cir.ptr <i32>, ["y", init] {alignment = 4 : i64}
 // CHECK-NEXT: cir.store %arg0, %0 : i32, cir.ptr <i32>
 
 int g2() {

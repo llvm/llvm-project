@@ -3,14 +3,14 @@
 // RUN: cir-tool %s | cir-tool | FileCheck %s
 module  {
   cir.func @foo(%arg0: i32) -> i32 {
-    %0 = cir.alloca i32, cir.ptr <i32>, ["x", paraminit]
+    %0 = cir.alloca i32, cir.ptr <i32>, ["x", init]
     cir.store %arg0, %0 : i32, cir.ptr <i32>
     %1 = cir.load %0 : cir.ptr <i32>, i32
     cir.return %1 : i32
   }
 
   cir.func @f3() -> i32 {
-    %0 = cir.alloca i32, cir.ptr <i32>, ["x", cinit]
+    %0 = cir.alloca i32, cir.ptr <i32>, ["x", init]
     %1 = cir.cst(3 : i32) : i32
     cir.store %1, %0 : i32, cir.ptr <i32>
     %2 = cir.load %0 : cir.ptr <i32>, i32
@@ -18,8 +18,8 @@ module  {
   }
 
   cir.func @if0(%arg0: i32) -> i32 {
-    %0 = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64}
-    %1 = cir.alloca i32, cir.ptr <i32>, ["a", paraminit] {alignment = 4 : i64}
+    %0 = cir.alloca i32, cir.ptr <i32>, ["x", init] {alignment = 4 : i64}
+    %1 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
     cir.store %arg0, %1 : i32, cir.ptr <i32>
     %2 = cir.cst(0 : i32) : i32
     cir.store %2, %0 : i32, cir.ptr <i32>
@@ -37,9 +37,9 @@ module  {
   }
 
   cir.func @s0() {
-    %0 = cir.alloca i32, cir.ptr <i32>, ["x", uninitialized] {alignment = 4 : i64}
+    %0 = cir.alloca i32, cir.ptr <i32>, ["x"] {alignment = 4 : i64}
     cir.scope {
-      %1 = cir.alloca i32, cir.ptr <i32>, ["y", uninitialized] {alignment = 4 : i64}
+      %1 = cir.alloca i32, cir.ptr <i32>, ["y"] {alignment = 4 : i64}
     }
     cir.return
   }
@@ -48,14 +48,14 @@ module  {
 // CHECK: module  {
 
 // CHECK-NEXT:   cir.func @foo(%arg0: i32) -> i32 {
-// CHECK-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, ["x", paraminit]
+// CHECK-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, ["x", init]
 // CHECK-NEXT:     cir.store %arg0, %0 : i32, cir.ptr <i32>
 // CHECK-NEXT:     %1 = cir.load %0 : cir.ptr <i32>, i32
 // CHECK-NEXT:     cir.return %1 : i32
 // CHECK-NEXT:   }
 
 // CHECK-NEXT:   cir.func @f3() -> i32 {
-// CHECK-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, ["x", cinit]
+// CHECK-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, ["x", init]
 // CHECK-NEXT:     %1 = cir.cst(3 : i32) : i32
 // CHECK-NEXT:     cir.store %1, %0 : i32, cir.ptr <i32>
 // CHECK-NEXT:     %2 = cir.load %0 : cir.ptr <i32>, i32
@@ -73,9 +73,9 @@ module  {
 // CHECK-NEXT:   }
 
 // CHECK: cir.func @s0() {
-// CHECK-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, ["x", uninitialized] {alignment = 4 : i64}
+// CHECK-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, ["x"] {alignment = 4 : i64}
 // CHECK-NEXT:     cir.scope {
-// CHECK-NEXT:       %1 = cir.alloca i32,  cir.ptr <i32>, ["y", uninitialized] {alignment = 4 : i64}
+// CHECK-NEXT:       %1 = cir.alloca i32,  cir.ptr <i32>, ["y"] {alignment = 4 : i64}
 // CHECK-NEXT:     }
 
 // CHECK: }

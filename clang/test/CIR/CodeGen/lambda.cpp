@@ -9,4 +9,4 @@ void fn() {
 //      CHECK: !22class2Eanon22 = !cir.struct<"class.anon", i8>
 // CHECK-NEXT: module
 // CHECK-NEXT:   cir.func @_Z2fnv()
-// CHECK-NEXT:     %0 = cir.alloca !22class2Eanon22, cir.ptr <!22class2Eanon22>, ["a", uninitialized]
+// CHECK-NEXT:     %0 = cir.alloca !22class2Eanon22, cir.ptr <!22class2Eanon22>, ["a"]

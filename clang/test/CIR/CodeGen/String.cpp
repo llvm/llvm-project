@@ -32,7 +32,7 @@ void test() {
 // CHECK-NEXT: }
 //      CHECK: cir.func linkonce_odr @_ZN6StringC2Ei
 // CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!_22class2EString22>
-// CHECK-NEXT:   %1 = cir.alloca i32, cir.ptr <i32>, ["size", paraminit]
+// CHECK-NEXT:   %1 = cir.alloca i32, cir.ptr <i32>, ["size", init]
 // CHECK-NEXT:   cir.store %arg0, %0
 // CHECK-NEXT:   cir.store %arg1, %1
 // CHECK-NEXT:   %2 = cir.load %0
@@ -47,8 +47,8 @@ void test() {
 // CHECK-NEXT: }
 
 //      CHECK: cir.func linkonce_odr @_ZN6StringC2EPKc
-// CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!_22class2EString22>, cir.ptr <!cir.ptr<!_22class2EString22>>, ["this", paraminit] {alignment = 8 : i64}
-// CHECK-NEXT:   %1 = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["s", paraminit] {alignment = 8 : i64}
+// CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!_22class2EString22>, cir.ptr <!cir.ptr<!_22class2EString22>>, ["this", init] {alignment = 8 : i64}
+// CHECK-NEXT:   %1 = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["s", init] {alignment = 8 : i64}
 // CHECK-NEXT:   cir.store %arg0, %0 : !cir.ptr<!_22class2EString22>, cir.ptr <!cir.ptr<!_22class2EString22>>
 // CHECK-NEXT:   cir.store %arg1, %1 : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
 // CHECK-NEXT:   %2 = cir.load %0 : cir.ptr <!cir.ptr<!_22class2EString22>>, !cir.ptr<!_22class2EString22>
@@ -58,8 +58,8 @@ void test() {
 // CHECK-NEXT:   cir.return
 
 //      CHECK: cir.func linkonce_odr @_ZN6StringC1EPKc
-// CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!_22class2EString22>, cir.ptr <!cir.ptr<!_22class2EString22>>, ["this", paraminit] {alignment = 8 : i64}
-// CHECK-NEXT:   %1 = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["s", paraminit] {alignment = 8 : i64}
+// CHECK-NEXT:   %0 = cir.alloca !cir.ptr<!_22class2EString22>, cir.ptr <!cir.ptr<!_22class2EString22>>, ["this", init] {alignment = 8 : i64}
+// CHECK-NEXT:   %1 = cir.alloca !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>, ["s", init] {alignment = 8 : i64}
 // CHECK-NEXT:   cir.store %arg0, %0 : !cir.ptr<!_22class2EString22>, cir.ptr <!cir.ptr<!_22class2EString22>>
 // CHECK-NEXT:   cir.store %arg1, %1 : !cir.ptr<i8>, cir.ptr <!cir.ptr<i8>>
 // CHECK-NEXT:   %2 = cir.load %0 : cir.ptr <!cir.ptr<!_22class2EString22>>, !cir.ptr<!_22class2EString22>

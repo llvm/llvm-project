@@ -30,7 +30,7 @@ void sw1(int a) {
 // CHECK-NEXT: },
 // CHECK-NEXT: case (equal, 2 : i32)  {
 // CHECK-NEXT:   cir.scope {
-// CHECK-NEXT:       %4 = cir.alloca i32, cir.ptr <i32>, ["yolo", cinit]
+// CHECK-NEXT:       %4 = cir.alloca i32, cir.ptr <i32>, ["yolo", init]
 // CHECK-NEXT:       %5 = cir.load %1 : cir.ptr <i32>, i32
 // CHECK-NEXT:       %6 = cir.cst(1 : i32) : i32
 // CHECK-NEXT:       %7 = cir.binop(add, %5, %6) : i32
@@ -54,8 +54,8 @@ void sw2(int a) {
 
 // CHECK: cir.func @_Z3sw2i
 // CHECK: cir.scope {
-// CHECK-NEXT:   %1 = cir.alloca i32, cir.ptr <i32>, ["yolo", cinit]
-// CHECK-NEXT:   %2 = cir.alloca i32, cir.ptr <i32>, ["fomo", cinit]
+// CHECK-NEXT:   %1 = cir.alloca i32, cir.ptr <i32>, ["yolo", init]
+// CHECK-NEXT:   %2 = cir.alloca i32, cir.ptr <i32>, ["fomo", init]
 // CHECK:        cir.switch (%4 : i32) [
 // CHECK-NEXT:   case (equal, 3 : i32)  {
 // CHECK-NEXT:     %5 = cir.cst(0 : i32) : i32

@@ -8,9 +8,9 @@ int c0() {
 }
 
 // CHECK: cir.func @_Z2c0v() -> i32 {
-// CHECK: %[[#RET:]] = cir.alloca i32, cir.ptr <i32>, ["__retval", uninitialized]
-// CHECK: %[[#A:]] = cir.alloca i32, cir.ptr <i32>, ["a", cinit]
-// CHECK: %[[#B:]] = cir.alloca i32, cir.ptr <i32>, ["b", cinit]
+// CHECK: %[[#RET:]] = cir.alloca i32, cir.ptr <i32>, ["__retval"]
+// CHECK: %[[#A:]] = cir.alloca i32, cir.ptr <i32>, ["a", init]
+// CHECK: %[[#B:]] = cir.alloca i32, cir.ptr <i32>, ["b", init]
 // CHECK: %[[#LOADED_B:]] = cir.load %[[#B]] : cir.ptr <i32>, i32
 // CHECK: %[[#]] = cir.binop(add, %[[#LOADED_B]], %[[#]]) : i32
 // CHECK: %[[#LOADED_A:]] = cir.load %[[#A]] : cir.ptr <i32>, i32

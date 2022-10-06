@@ -227,25 +227,10 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
   auto SrcAlloca =
       dyn_cast_or_null<mlir::cir::AllocaOp>(Addr.getPointer().getDefiningOp());
   if (currVarDecl && SrcAlloca) {
-    InitStyle IS;
     const VarDecl *VD = currVarDecl;
     assert(VD && "VarDecl expected");
-    if (VD->hasInit()) {
-      switch (VD->getInitStyle()) {
-      case VarDecl::ParenListInit:
-        llvm_unreachable("NYI");
-      case VarDecl::CInit:
-        IS = InitStyle::cinit;
-        break;
-      case VarDecl::CallInit:
-        IS = InitStyle::callinit;
-        break;
-      case VarDecl::ListInit:
-        IS = InitStyle::listinit;
-        break;
-      }
-      SrcAlloca.setInitAttr(InitStyleAttr::get(builder.getContext(), IS));
-    }
+    if (VD->hasInit())
+      SrcAlloca.setInitAttr(mlir::UnitAttr::get(builder.getContext()));
   }
 
   assert(currSrcLoc && "must pass in source location");
@@ -1529,8 +1514,8 @@ mlir::LogicalResult CIRGenFunction::buildIfOnBoolExpr(const Expr *cond,
                                       resElse.succeeded());
 }
 
-mlir::Value CIRGenFunction::buildAlloca(StringRef name, InitStyle initStyle,
-                                        mlir::Type ty, mlir::Location loc,
+mlir::Value CIRGenFunction::buildAlloca(StringRef name, mlir::Type ty,
+                                        mlir::Location loc,
                                         CharUnits alignment) {
   auto getAllocaInsertPositionOp =
       [&](mlir::Block **insertBlock) -> mlir::Operation * {
@@ -1564,7 +1549,7 @@ mlir::Value CIRGenFunction::buildAlloca(StringRef name, InitStyle initStyle,
       builder.setInsertionPointToStart(insertBlock);
     }
     addr = builder.create<mlir::cir::AllocaOp>(loc, /*addr type*/ localVarPtrTy,
-                                               /*var type*/ ty, name, initStyle,
+                                               /*var type*/ ty, name,
                                                alignIntAttr);
     if (currVarDecl) {
       auto alloca = cast<mlir::cir::AllocaOp>(addr.getDefiningOp());
@@ -1574,10 +1559,10 @@ mlir::Value CIRGenFunction::buildAlloca(StringRef name, InitStyle initStyle,
   return addr;
 }
 
-mlir::Value CIRGenFunction::buildAlloca(StringRef name, InitStyle initStyle,
-                                        QualType ty, mlir::Location loc,
+mlir::Value CIRGenFunction::buildAlloca(StringRef name, QualType ty,
+                                        mlir::Location loc,
                                         CharUnits alignment) {
-  return buildAlloca(name, initStyle, getCIRType(ty), loc, alignment);
+  return buildAlloca(name, getCIRType(ty), loc, alignment);
 }
 
 mlir::Value CIRGenFunction::buildLoadOfScalar(LValue lvalue,
@@ -1770,6 +1755,5 @@ mlir::cir::AllocaOp CIRGenFunction::CreateTempAlloca(mlir::Type Ty,
   if (ArraySize)
     assert(0 && "NYI");
   return cast<mlir::cir::AllocaOp>(
-      buildAlloca(Name.str(), InitStyle::uninitialized, Ty, Loc, CharUnits())
-          .getDefiningOp());
+      buildAlloca(Name.str(), Ty, Loc, CharUnits()).getDefiningOp());
 }

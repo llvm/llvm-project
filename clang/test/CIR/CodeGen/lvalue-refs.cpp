@@ -7,7 +7,7 @@ struct String {
 void split(String &S) {}
 
 // CHECK: cir.func @_Z5splitR6String(%arg0: !cir.ptr<!_22struct2EString22>
-// CHECK:     %0 = cir.alloca !cir.ptr<!_22struct2EString22>, cir.ptr <!cir.ptr<!_22struct2EString22>>, ["S", paraminit]
+// CHECK:     %0 = cir.alloca !cir.ptr<!_22struct2EString22>, cir.ptr <!cir.ptr<!_22struct2EString22>>, ["S", init]
 
 void foo() {
   String s;
@@ -15,5 +15,5 @@ void foo() {
 }
 
 // CHECK: cir.func @_Z3foov() {
-// CHECK:     %0 = cir.alloca !_22struct2EString22, cir.ptr <!_22struct2EString22>, ["s", uninitialized]
+// CHECK:     %0 = cir.alloca !_22struct2EString22, cir.ptr <!_22struct2EString22>, ["s"]
 // CHECK:     cir.call @_Z5splitR6String(%0) : (!cir.ptr<!_22struct2EString22>) -> ()

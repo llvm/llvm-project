@@ -4,8 +4,8 @@
 
 module {
   cir.func @foo() {
-    %0 = cir.alloca i32, cir.ptr <i32>, ["a", cinit] {alignment = 4 : i64}
-    %1 = cir.alloca i32, cir.ptr <i32>, ["b", cinit] {alignment = 4 : i64}
+    %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
+    %1 = cir.alloca i32, cir.ptr <i32>, ["b", init] {alignment = 4 : i64}
     %2 = cir.cst(2 : i32) : i32
     cir.store %2, %0 : i32, cir.ptr <i32>
     cir.store %2, %1 : i32, cir.ptr <i32>

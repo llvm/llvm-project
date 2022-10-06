@@ -5,8 +5,8 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 }
 
 // CHECK: cir.func @_Z15cxxstaticcast_0j
-// CHECK:    %0 = cir.alloca i32, cir.ptr <i32>, ["x", paraminit] {alignment = 4 : i64}
-// CHECK:    %1 = cir.alloca i8, cir.ptr <i8>, ["__retval", uninitialized] {alignment = 1 : i64}
+// CHECK:    %0 = cir.alloca i32, cir.ptr <i32>, ["x", init] {alignment = 4 : i64}
+// CHECK:    %1 = cir.alloca i8, cir.ptr <i8>, ["__retval"] {alignment = 1 : i64}
 // CHECK:    cir.store %arg0, %0 : i32, cir.ptr <i32>
 // CHECK:    %2 = cir.load %0 : cir.ptr <i32>, i32
 // CHECK:    %3 = cir.cast(integral, %2 : i32), i8

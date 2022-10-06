@@ -115,15 +115,11 @@ static RetTy parseOptionalCIRKeyword(OpAsmParser &parser,
 void AllocaOp::build(::mlir::OpBuilder &odsBuilder,
                      ::mlir::OperationState &odsState, ::mlir::Type addr,
                      ::mlir::Type allocaType, ::llvm::StringRef name,
-                     ::mlir::cir::InitStyle init,
                      ::mlir::IntegerAttr alignment) {
   odsState.addAttribute(getAllocaTypeAttrName(odsState.name),
                         ::mlir::TypeAttr::get(allocaType));
   odsState.addAttribute(getNameAttrName(odsState.name),
                         odsBuilder.getStringAttr(name));
-  odsState.addAttribute(
-      getInitAttrName(odsState.name),
-      ::mlir::cir::InitStyleAttr::get(odsBuilder.getContext(), init));
   if (alignment) {
     odsState.addAttribute(getAlignmentAttrName(odsState.name), alignment);
   }

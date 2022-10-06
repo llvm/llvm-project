@@ -123,7 +123,7 @@ cir.func @cast2(%p: !cir.ptr<i32>) {
 // -----
 
 cir.func @cast3(%p: !cir.ptr<i32>) {
-  %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["x", paraminit]
+  %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["x", init]
   %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<f32> // expected-error {{requires same type for array element and pointee result}}
   cir.return
 }
@@ -202,7 +202,7 @@ module {
 // -----
 
 cir.func @unary0() {
-  %0 = cir.alloca i32, cir.ptr <i32>, ["a", cinit] {alignment = 4 : i64}
+  %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
   %1 = cir.cst(2 : i32) : i32
 
   %3 = cir.unary(inc, %1) : i32, i32 // expected-error {{'cir.unary' op requires input to be defined by a memory load}}
@@ -213,7 +213,7 @@ cir.func @unary0() {
 // -----
 
 cir.func @unary1() {
-  %0 = cir.alloca i32, cir.ptr <i32>, ["a", cinit] {alignment = 4 : i64}
+  %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64}
   %1 = cir.cst(2 : i32) : i32
   cir.store %1, %0 : i32, cir.ptr <i32>
 
