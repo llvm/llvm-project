@@ -15,6 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/Cuda.h"
+#include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
 #include "clang/Driver/OffloadBundler.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -73,12 +74,12 @@ OffloadTargetInfo::OffloadTargetInfo(const StringRef Target,
     auto KindTriple = TripleOrGPU.first.split('-');
     this->OffloadKind = KindTriple.first;
     this->Triple = llvm::Triple(KindTriple.second);
-    this->GPUArch = Target.substr(Target.find(TripleOrGPU.second));
+    this->TargetID = Target.substr(Target.find(TripleOrGPU.second));
   } else {
     auto KindTriple = TargetFeatures.first.split('-');
     this->OffloadKind = KindTriple.first;
     this->Triple = llvm::Triple(KindTriple.second);
-    this->GPUArch = "";
+    this->TargetID = "";
   }
 }
 
@@ -113,12 +114,11 @@ bool OffloadTargetInfo::isTripleValid() const {
 
 bool OffloadTargetInfo::operator==(const OffloadTargetInfo &Target) const {
   return OffloadKind == Target.OffloadKind &&
-    Triple.isCompatibleWith(Target.Triple) &&
-    GPUArch == Target.GPUArch;
+         Triple.isCompatibleWith(Target.Triple) && TargetID == Target.TargetID;
 }
 
-std::string OffloadTargetInfo::str() {
-  return Twine(OffloadKind + "-" + Triple.str() + "-" + GPUArch).str();
+std::string OffloadTargetInfo::str() const {
+  return Twine(OffloadKind + "-" + Triple.str() + "-" + TargetID).str();
 }
 
 static StringRef getDeviceFileExtension(StringRef Device,
@@ -139,6 +139,51 @@ static std::string getDeviceLibraryFileName(StringRef BundleFileName,
   Result += LibName;
   Result += Extension;
   return Result;
+}
+
+/// @brief Checks if a code object \p CodeObjectInfo is compatible with a given
+/// target \p TargetInfo.
+/// @link https://clang.llvm.org/docs/ClangOffloadBundler.html#bundle-entry-id
+bool isCodeObjectCompatible(const OffloadTargetInfo &CodeObjectInfo,
+                            const OffloadTargetInfo &TargetInfo) {
+
+  // Compatible in case of exact match.
+  if (CodeObjectInfo == TargetInfo) {
+    DEBUG_WITH_TYPE("CodeObjectCompatibility",
+                    dbgs() << "Compatible: Exact match: \t[CodeObject: "
+                           << CodeObjectInfo.str()
+                           << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
+    return true;
+  }
+
+  // Incompatible if Kinds or Triples mismatch.
+  if (!CodeObjectInfo.isOffloadKindCompatible(TargetInfo.OffloadKind) ||
+      !CodeObjectInfo.Triple.isCompatibleWith(TargetInfo.Triple)) {
+    DEBUG_WITH_TYPE(
+        "CodeObjectCompatibility",
+        dbgs() << "Incompatible: Kind/Triple mismatch \t[CodeObject: "
+               << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
+               << "]\n");
+    return false;
+  }
+
+  // Incompatible if target IDs are incompatible.
+  if (!clang::isCompatibleTargetID(CodeObjectInfo.TargetID,
+                                   TargetInfo.TargetID)) {
+    DEBUG_WITH_TYPE(
+        "CodeObjectCompatibility",
+        dbgs() << "Incompatible: target IDs are incompatible \t[CodeObject: "
+               << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
+               << "]\n");
+    return false;
+  }
+
+  DEBUG_WITH_TYPE(
+      "CodeObjectCompatibility",
+      dbgs() << "Compatible: Code Objects are compatible \t[CodeObject: "
+             << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
+             << "]\n");
+  return true;
 }
 
 /// Generic file handler interface.
@@ -959,17 +1004,22 @@ Error OffloadBundler::UnbundleFiles() {
     StringRef CurTriple = **CurTripleOrErr;
     assert(!CurTriple.empty());
 
-    auto Output = Worklist.find(CurTriple);
-    // The file may have more bundles for other targets, that we don't care
-    // about. Therefore, move on to the next triple
+    auto Output = Worklist.begin();
+    for (auto E = Worklist.end(); Output != E; Output++) {
+      if (isCodeObjectCompatible(
+              OffloadTargetInfo(CurTriple, BundlerConfig),
+              OffloadTargetInfo((*Output).first(), BundlerConfig))) {
+        break;
+      }
+    }
+
     if (Output == Worklist.end())
       continue;
-
     // Check if the output file can be opened and copy the bundle to it.
     std::error_code EC;
-    raw_fd_ostream OutputFile(Output->second, EC, sys::fs::OF_None);
+    raw_fd_ostream OutputFile((*Output).second, EC, sys::fs::OF_None);
     if (EC)
-      return createFileError(Output->second, EC);
+      return createFileError((*Output).second, EC);
     if (Error Err = FH->ReadBundle(OutputFile, Input))
       return Err;
     if (Error Err = FH->ReadBundleEnd(Input))
@@ -1038,49 +1088,6 @@ Error OffloadBundler::UnbundleFiles() {
 static Archive::Kind getDefaultArchiveKindForHost() {
   return Triple(sys::getDefaultTargetTriple()).isOSDarwin() ? Archive::K_DARWIN
                                                             : Archive::K_GNU;
-}
-
-/// @brief Checks if a code object \p CodeObjectInfo is compatible with a given
-/// target \p TargetInfo.
-/// @link https://clang.llvm.org/docs/ClangOffloadBundler.html#bundle-entry-id
-bool isCodeObjectCompatible(OffloadTargetInfo &CodeObjectInfo,
-                            OffloadTargetInfo &TargetInfo) {
-
-  // Compatible in case of exact match.
-  if (CodeObjectInfo == TargetInfo) {
-    DEBUG_WITH_TYPE("CodeObjectCompatibility",
-                    dbgs() << "Compatible: Exact match: \t[CodeObject: "
-                           << CodeObjectInfo.str()
-                           << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
-    return true;
-  }
-
-  // Incompatible if Kinds or Triples mismatch.
-  if (!CodeObjectInfo.isOffloadKindCompatible(TargetInfo.OffloadKind) ||
-      !CodeObjectInfo.Triple.isCompatibleWith(TargetInfo.Triple)) {
-    DEBUG_WITH_TYPE(
-        "CodeObjectCompatibility",
-        dbgs() << "Incompatible: Kind/Triple mismatch \t[CodeObject: "
-               << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
-               << "]\n");
-    return false;
-  }
-
-  // Incompatible if GPUArch mismatch.
-  if (CodeObjectInfo.GPUArch != TargetInfo.GPUArch) {
-    DEBUG_WITH_TYPE("CodeObjectCompatibility",
-                    dbgs() << "Incompatible: GPU Arch mismatch \t[CodeObject: "
-                           << CodeObjectInfo.str()
-                           << "]\t:\t[Target: " << TargetInfo.str() << "]\n");
-    return false;
-  }
-
-  DEBUG_WITH_TYPE(
-      "CodeObjectCompatibility",
-      dbgs() << "Compatible: Code Objects are compatible \t[CodeObject: "
-             << CodeObjectInfo.str() << "]\t:\t[Target: " << TargetInfo.str()
-             << "]\n");
-  return true;
 }
 
 /// @brief Computes a list of targets among all given targets which are
@@ -1211,7 +1218,7 @@ Error OffloadBundler::UnbundleArchive() {
               Twine(llvm::sys::path::stem(BundledObjectFileName) + "-" +
                     CodeObject +
                     getDeviceLibraryFileName(BundledObjectFileName,
-                                             CodeObjectInfo.GPUArch))
+                                             CodeObjectInfo.TargetID))
                   .str();
           // Replace ':' in optional target feature list with '_' to ensure
           // cross-platform validity.
