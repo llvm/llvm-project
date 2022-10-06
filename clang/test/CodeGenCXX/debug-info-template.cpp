@@ -1,4 +1,4 @@
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target x86_64-unknown_unknown -g %s -o - -std=c++20 | FileCheck %s
+// RUN: %clang -S -emit-llvm -target x86_64-unknown_unknown -g %s -o - -std=c++20 | FileCheck %s
 
 // CHECK: @tci = dso_local global %"struct.TC<unsigned int, 2, &glb, &foo::e, &foo::f, &foo::g, 1, 2, 3>::nested" zeroinitializer, align 1, !dbg [[TCI:![0-9]+]]
 // CHECK: @tcn = dso_local global %struct.TC zeroinitializer, align 1, !dbg [[TCN:![0-9]+]]
@@ -40,7 +40,7 @@ TC
 < unsigned,
 // CHECK: [[TCARG2]] = !DITemplateValueParameter(type: [[UINT]], value: i32 2)
   2,
-// CHECK: [[TCARG3]] = !DITemplateValueParameter(name: "x", type: [[CINTPTR:![0-9]*]], value: i32* @glb)
+// CHECK: [[TCARG3]] = !DITemplateValueParameter(name: "x", type: [[CINTPTR:![0-9]*]], value: ptr @glb)
 // CHECK: [[CINTPTR]] = !DIDerivedType(tag: DW_TAG_pointer_type, {{.*}}baseType: [[CINT:![0-9]+]]
 // CHECK: [[CINT]] = !DIDerivedType(tag: DW_TAG_const_type, {{.*}}baseType: [[INT:![0-9]+]]
 // CHECK: [[INT]] = !DIBasicType(name: "int"
@@ -69,10 +69,10 @@ TC
 // CHECK: [[FUNTYPE:![0-9]*]] = !DISubroutineType(types: [[FUNARGS:![0-9]*]])
 // CHECK: [[FUNARGS]] = !{null}
   &foo::e,
-// CHECK: [[TCARG5]] = !DITemplateValueParameter(name: "b", type: [[MEMFUNPTR:![0-9]*]], value: { i64, i64 } { i64 ptrtoint (void (%struct.foo*)* @_ZN3foo1fEv to i64), i64 0 })
+// CHECK: [[TCARG5]] = !DITemplateValueParameter(name: "b", type: [[MEMFUNPTR:![0-9]*]], value: { i64, i64 } { i64 ptrtoint (ptr @_ZN3foo1fEv to i64), i64 0 })
 // CHECK: [[MEMFUNPTR]] = !DIDerivedType(tag: DW_TAG_ptr_to_member_type, {{.*}}baseType: [[FTYPE]], {{.*}}extraData: ![[FOO]])
   &foo::f,
-// CHECK: [[TCARG6]] = !DITemplateValueParameter(name: "f", type: [[FUNPTR:![0-9]*]], value: void ()* @_ZN3foo1gEv)
+// CHECK: [[TCARG6]] = !DITemplateValueParameter(name: "f", type: [[FUNPTR:![0-9]*]], value: ptr @_ZN3foo1gEv)
 // CHECK: [[FUNPTR]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: [[FUNTYPE]]
   &foo::g,
 // CHECK: [[TCARG7]] = !DITemplateValueParameter(tag: DW_TAG_GNU_template_parameter_pack, name: "Is", value: [[TCARG7_VALS:![0-9]*]])
@@ -134,7 +134,7 @@ struct NN {
 // CHECK-SAME:             identifier:
 // CHECK: [[NNARGS]] = !{[[NNARG1:![0-9]*]], [[NNARG2:![0-9]*]]}
 // CHECK: [[NNARG1]] = !DITemplateValueParameter(tag: DW_TAG_GNU_template_template_param, name: "tmpl", value: !"tmpl_impl")
-// CHECK: [[NNARG2]] = !DITemplateValueParameter(name: "lvr", type: [[INTLVR:![0-9]*]], value: i32* @glb)
+// CHECK: [[NNARG2]] = !DITemplateValueParameter(name: "lvr", type: [[INTLVR:![0-9]*]], value: ptr @glb)
 // CHECK: [[INTLVR]] = !DIDerivedType(tag: DW_TAG_reference_type, baseType: [[INT]]
 NN<tmpl_impl, glb> nn;
 
@@ -149,7 +149,7 @@ PaddingAtEnd PaddedObj = {};
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "PaddingAtEndTemplate<&PaddedObj>"
 // CHECK-SAME:             templateParams: [[PTOARGS:![0-9]*]]
 // CHECK: [[PTOARGS]] = !{[[PTOARG1:![0-9]*]]}
-// CHECK: [[PTOARG1]] = !DITemplateValueParameter(type: [[CONST_PADDINGATEND_PTR:![0-9]*]], value: %struct.PaddingAtEnd* @PaddedObj)
+// CHECK: [[PTOARG1]] = !DITemplateValueParameter(type: [[CONST_PADDINGATEND_PTR:![0-9]*]], value: ptr @PaddedObj)
 // CHECK: [[CONST_PADDINGATEND_PTR]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: ![[PADDINGATEND]], size: 64)
 template <PaddingAtEnd *>
 struct PaddingAtEndTemplate {
@@ -178,7 +178,7 @@ ClassTemplateArgRefTemplate<ClassTemplateArgObj.Arg> ClassTemplateArgRefObj;
 
 // CHECK: !DICompositeType(tag: DW_TAG_structure_type, name: "ClassTemplateArgRefTemplate<<template param ClassTemplateArg{1, 2.000000e+00}> >", {{.*}}, templateParams: ![[CLASS_TEMP_REF_ARGS:[0-9]*]],
 // CHECK: ![[CLASS_TEMP_REF_ARGS]] = !{![[CLASS_TEMP_REF_ARG:[0-9]*]]}
-// CHECK: ![[CLASS_TEMP_REF_ARG]] = !DITemplateValueParameter(type: ![[CLASS_TEMP_ARG_CONST_REF_TYPE]], value: %{{.*}}* @_ZTAXtl16ClassTemplateArgLi1ELf40000000EEE)
+// CHECK: ![[CLASS_TEMP_REF_ARG]] = !DITemplateValueParameter(type: ![[CLASS_TEMP_ARG_CONST_REF_TYPE]], value: ptr @_ZTAXtl16ClassTemplateArgLi1ELf40000000EEE)
 
 inline namespace inl {
   struct t1 { };
