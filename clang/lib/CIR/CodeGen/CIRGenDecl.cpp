@@ -205,6 +205,8 @@ void CIRGenFunction::buildVarDecl(const VarDecl &D) {
     assert(0 && "not implemented");
 
   assert(D.hasLocalStorage());
+
+  CIRGenFunction::VarDeclContext varDeclCtx{*this, &D};
   return buildAutoVarDecl(D);
 }
 
@@ -213,7 +215,7 @@ void CIRGenFunction::buildScalarInit(const Expr *init, const ValueDecl *D,
   // TODO: this is where a lot of ObjC lifetime stuff would be done.
   mlir::Value value = buildScalarExpr(init);
   SourceLocRAIIObject Loc{*this, getLoc(D->getSourceRange())};
-  buildStoreThroughLValue(RValue::get(value), lvalue, D);
+  buildStoreThroughLValue(RValue::get(value), lvalue);
   return;
 }
 

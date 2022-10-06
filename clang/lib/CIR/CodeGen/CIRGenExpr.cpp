@@ -204,17 +204,15 @@ mlir::Value CIRGenFunction::buildToMemory(mlir::Value Value, QualType Ty) {
   return Value;
 }
 
-void CIRGenFunction::buildStoreOfScalar(mlir::Value value, LValue lvalue,
-                                        const Decl *InitDecl) {
+void CIRGenFunction::buildStoreOfScalar(mlir::Value value, LValue lvalue) {
   // TODO: constant matrix type, volatile, non temporal, TBAA
   buildStoreOfScalar(value, lvalue.getAddress(), false, lvalue.getType(),
-                     lvalue.getBaseInfo(), InitDecl, false);
+                     lvalue.getBaseInfo(), false);
 }
 
 void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
                                         bool Volatile, QualType Ty,
                                         LValueBaseInfo BaseInfo,
-                                        const Decl *InitDecl,
                                         bool isNontemporal) {
   if (!CGM.getCodeGenOpts().PreserveVec3Type) {
     if (Ty->isVectorType()) {
@@ -232,9 +230,9 @@ void CIRGenFunction::buildStoreOfScalar(mlir::Value Value, Address Addr,
   assert(Addr.getPointer() && "expected pointer to exist");
   auto SrcAlloca =
       dyn_cast_or_null<mlir::cir::AllocaOp>(Addr.getPointer().getDefiningOp());
-  if (InitDecl && SrcAlloca) {
+  if (currVarDecl && SrcAlloca) {
     InitStyle IS;
-    const VarDecl *VD = dyn_cast_or_null<VarDecl>(InitDecl);
+    const VarDecl *VD = currVarDecl;
     assert(VD && "VarDecl expected");
     if (VD->hasInit()) {
       switch (VD->getInitStyle()) {
@@ -277,12 +275,11 @@ RValue CIRGenFunction::buildLoadOfLValue(LValue LV, SourceLocation Loc) {
   return RValue::get(buildLoadOfScalar(LV, Loc));
 }
 
-void CIRGenFunction::buildStoreThroughLValue(RValue Src, LValue Dst,
-                                             const Decl *InitDecl) {
+void CIRGenFunction::buildStoreThroughLValue(RValue Src, LValue Dst) {
   assert(Dst.isSimple() && "only implemented simple");
   // TODO: ObjC lifetime.
   assert(Src.isScalar() && "Can't emit an agg store with this method");
-  buildStoreOfScalar(Src.getScalarVal(), Dst, InitDecl);
+  buildStoreOfScalar(Src.getScalarVal(), Dst);
 }
 
 static LValue buildGlobalVarDeclLValue(CIRGenFunction &CGF, const Expr *E,
@@ -435,7 +432,7 @@ LValue CIRGenFunction::buildBinaryOperatorLValue(const BinaryOperator *E) {
     LValue LV = buildLValue(E->getLHS());
 
     SourceLocRAIIObject Loc{*this, getLoc(E->getSourceRange())};
-    buildStoreThroughLValue(RV, LV, nullptr /*InitDecl*/);
+    buildStoreThroughLValue(RV, LV);
     assert(!getContext().getLangOpts().OpenMP &&
            "last priv cond not implemented");
     return LV;
