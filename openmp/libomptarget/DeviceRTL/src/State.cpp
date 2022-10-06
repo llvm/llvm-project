@@ -263,11 +263,11 @@ void state::enterDataEnvironment(IdentTy *Ident) {
   if (!atomic::load(ThreadStatesBitsPtr, atomic::seq_cst)) {
     uint32_t Bytes = sizeof(ThreadStates[0]) * mapping::getBlockSize();
     void *ThreadStatesPtr =
-        memory::allocShared(Bytes, "Thread state array allocation");
+        memory::allocGlobal(Bytes, "Thread state array allocation");
     if (!atomic::cas(ThreadStatesBitsPtr, uintptr_t(0),
                      reinterpret_cast<uintptr_t>(ThreadStatesPtr),
                      atomic::seq_cst, atomic::seq_cst))
-      memory::freeShared(ThreadStatesPtr, Bytes,
+      memory::freeGlobal(ThreadStatesPtr, Bytes,
                          "Thread state array allocated multiple times");
     ASSERT(atomic::load(ThreadStatesBitsPtr, atomic::seq_cst) &&
            "Expected valid thread states bit!");
