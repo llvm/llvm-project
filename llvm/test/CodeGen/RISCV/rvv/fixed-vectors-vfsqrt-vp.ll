@@ -9,7 +9,7 @@ declare <2 x half> @llvm.vp.sqrt.v2f16(<2 x half>, <2 x i1>, i32)
 define <2 x half> @vfsqrt_vv_v2f16(<2 x half> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfsqrt_vv_v2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x half> @llvm.vp.sqrt.v2f16(<2 x half> %va, <2 x i1> %m, i32 %evl)
@@ -33,7 +33,7 @@ declare <4 x half> @llvm.vp.sqrt.v4f16(<4 x half>, <4 x i1>, i32)
 define <4 x half> @vfsqrt_vv_v4f16(<4 x half> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfsqrt_vv_v4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x half> @llvm.vp.sqrt.v4f16(<4 x half> %va, <4 x i1> %m, i32 %evl)
@@ -57,7 +57,7 @@ declare <8 x half> @llvm.vp.sqrt.v8f16(<8 x half>, <8 x i1>, i32)
 define <8 x half> @vfsqrt_vv_v8f16(<8 x half> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfsqrt_vv_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x half> @llvm.vp.sqrt.v8f16(<8 x half> %va, <8 x i1> %m, i32 %evl)
@@ -81,7 +81,7 @@ declare <16 x half> @llvm.vp.sqrt.v16f16(<16 x half>, <16 x i1>, i32)
 define <16 x half> @vfsqrt_vv_v16f16(<16 x half> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfsqrt_vv_v16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <16 x half> @llvm.vp.sqrt.v16f16(<16 x half> %va, <16 x i1> %m, i32 %evl)
@@ -105,7 +105,7 @@ declare <2 x float> @llvm.vp.sqrt.v2f32(<2 x float>, <2 x i1>, i32)
 define <2 x float> @vfsqrt_vv_v2f32(<2 x float> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfsqrt_vv_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x float> @llvm.vp.sqrt.v2f32(<2 x float> %va, <2 x i1> %m, i32 %evl)
@@ -129,7 +129,7 @@ declare <4 x float> @llvm.vp.sqrt.v4f32(<4 x float>, <4 x i1>, i32)
 define <4 x float> @vfsqrt_vv_v4f32(<4 x float> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfsqrt_vv_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x float> @llvm.vp.sqrt.v4f32(<4 x float> %va, <4 x i1> %m, i32 %evl)
@@ -153,7 +153,7 @@ declare <8 x float> @llvm.vp.sqrt.v8f32(<8 x float>, <8 x i1>, i32)
 define <8 x float> @vfsqrt_vv_v8f32(<8 x float> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfsqrt_vv_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x float> @llvm.vp.sqrt.v8f32(<8 x float> %va, <8 x i1> %m, i32 %evl)
@@ -177,7 +177,7 @@ declare <16 x float> @llvm.vp.sqrt.v16f32(<16 x float>, <16 x i1>, i32)
 define <16 x float> @vfsqrt_vv_v16f32(<16 x float> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfsqrt_vv_v16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <16 x float> @llvm.vp.sqrt.v16f32(<16 x float> %va, <16 x i1> %m, i32 %evl)
@@ -201,7 +201,7 @@ declare <2 x double> @llvm.vp.sqrt.v2f64(<2 x double>, <2 x i1>, i32)
 define <2 x double> @vfsqrt_vv_v2f64(<2 x double> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfsqrt_vv_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x double> @llvm.vp.sqrt.v2f64(<2 x double> %va, <2 x i1> %m, i32 %evl)
@@ -225,7 +225,7 @@ declare <4 x double> @llvm.vp.sqrt.v4f64(<4 x double>, <4 x i1>, i32)
 define <4 x double> @vfsqrt_vv_v4f64(<4 x double> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfsqrt_vv_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x double> @llvm.vp.sqrt.v4f64(<4 x double> %va, <4 x i1> %m, i32 %evl)
@@ -249,7 +249,7 @@ declare <8 x double> @llvm.vp.sqrt.v8f64(<8 x double>, <8 x i1>, i32)
 define <8 x double> @vfsqrt_vv_v8f64(<8 x double> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfsqrt_vv_v8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x double> @llvm.vp.sqrt.v8f64(<8 x double> %va, <8 x i1> %m, i32 %evl)
@@ -273,7 +273,7 @@ declare <15 x double> @llvm.vp.sqrt.v15f64(<15 x double>, <15 x i1>, i32)
 define <15 x double> @vfsqrt_vv_v15f64(<15 x double> %va, <15 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfsqrt_vv_v15f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <15 x double> @llvm.vp.sqrt.v15f64(<15 x double> %va, <15 x i1> %m, i32 %evl)
@@ -297,7 +297,7 @@ declare <16 x double> @llvm.vp.sqrt.v16f64(<16 x double>, <16 x i1>, i32)
 define <16 x double> @vfsqrt_vv_v16f64(<16 x double> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfsqrt_vv_v16f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfsqrt.v v8, v8, v0.t
 ; CHECK-NEXT:    ret
   %v = call <16 x double> @llvm.vp.sqrt.v16f64(<16 x double> %va, <16 x i1> %m, i32 %evl)
@@ -330,14 +330,14 @@ define <32 x double> @vfsqrt_vv_v32f64(<32 x double> %va, <32 x i1> %m, i32 zero
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:  .LBB26_2:
-; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    vfsqrt.v v16, v16, v0.t
 ; CHECK-NEXT:    bltu a0, a1, .LBB26_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:  .LBB26_4:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vfsqrt.v v8, v8, v0.t
 ; CHECK-NEXT:    ret

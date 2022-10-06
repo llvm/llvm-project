@@ -7,7 +7,7 @@ declare <2 x half> @llvm.vp.fptrunc.v2f16.v2f32(<2 x float>, <2 x i1>, i32)
 define <2 x half> @vfptrunc_v2f16_v2f32(<2 x float> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_v2f16_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v9, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -31,9 +31,9 @@ declare <2 x half> @llvm.vp.fptrunc.v2f16.v2f64(<2 x double>, <2 x i1>, i32)
 define <2 x half> @vfptrunc_v2f16_v2f64(<2 x double> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_v2f16_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v9, v8, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x half> @llvm.vp.fptrunc.v2f16.v2f64(<2 x double> %a, <2 x i1> %m, i32 %vl)
@@ -57,7 +57,7 @@ declare <2 x float> @llvm.vp.fptrunc.v2f64.v2f32(<2 x double>, <2 x i1>, i32)
 define <2 x float> @vfptrunc_v2f32_v2f64(<2 x double> %a, <2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_v2f32_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v9, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -81,7 +81,7 @@ declare <15 x float> @llvm.vp.fptrunc.v15f64.v15f32(<15 x double>, <15 x i1>, i3
 define <15 x float> @vfptrunc_v15f32_v15f64(<15 x double> %a, <15 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_v15f32_v15f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v16, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v16
 ; CHECK-NEXT:    ret
@@ -110,14 +110,14 @@ define <32 x float> @vfptrunc_v32f32_v32f64(<32 x double> %a, <32 x i1> %m, i32 
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a2
 ; CHECK-NEXT:  .LBB7_2:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v16, v0.t
 ; CHECK-NEXT:    bltu a0, a1, .LBB7_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:  .LBB7_4:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl8re8.v v24, (a0) # Unknown-size Folded Reload
