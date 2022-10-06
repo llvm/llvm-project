@@ -2962,7 +2962,7 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     case Intrinsic::seh_try_end:
     case Intrinsic::seh_scope_end:
       if (CleanupMBB)                     // a block referenced by EH table
-        CleanupMBB->setHasAddressTaken(); // so dtor-funclet not removed by opts
+        CleanupMBB->setMachineBlockAddressTaken(); // so dtor-funclet not removed by opts
       break;
     case Intrinsic::experimental_patchpoint_void:
     case Intrinsic::experimental_patchpoint_i64:
