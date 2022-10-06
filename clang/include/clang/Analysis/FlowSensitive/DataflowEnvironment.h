@@ -288,6 +288,11 @@ public:
     return DACtx->createAtomicBoolValue();
   }
 
+  /// Returns a unique instance of boolean Top.
+  BoolValue &makeTopBoolValue() const {
+    return DACtx->createTopBoolValue();
+  }
+
   /// Returns a boolean value that represents the conjunction of `LHS` and
   /// `RHS`. Subsequent calls with the same arguments, regardless of their
   /// order, will return the same result. If the given boolean values represent
