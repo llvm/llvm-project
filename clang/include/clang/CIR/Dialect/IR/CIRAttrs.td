@@ -83,8 +83,8 @@ def CstArrayAttr : CIR_Attr<"CstArray", "cst_array", [TypedAttrInterface]> {
 // AST Wrappers
 //===----------------------------------------------------------------------===//
 
-class ASTDecl<string name, list<Trait> traits = []>
-  : CIR_Attr<!strconcat("AST", name), "ast", traits> {
+class ASTDecl<string name, string prefix, list<Trait> traits = []>
+  : CIR_Attr<!strconcat("AST", name), !strconcat(prefix, ".ast"), traits> {
   string clang_name = !strconcat("clang::", name);
 
   let summary = !strconcat("Wraps a ", clang_name, " AST node.");
@@ -104,6 +104,7 @@ class ASTDecl<string name, list<Trait> traits = []>
   let genVerifyDecl = 1;
 }
 
-def ASTFunctionDeclAttr : ASTDecl<"FunctionDecl">;
+def ASTFunctionDeclAttr : ASTDecl<"FunctionDecl", "function.decl">;
+def ASTVarDeclAttr : ASTDecl<"VarDecl", "var.decl">;
 
 #endif // MLIR_CIR_DIALECT_CIR_ATTRS

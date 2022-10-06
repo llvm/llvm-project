@@ -228,11 +228,19 @@ def AllocaOp : CIR_Op<"alloca", [
     StrAttr:$name,
     // FIXME: add "uninitialzed" as default mode
     Arg<InitStyle, "initialization style">:$init,
-    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment,
+    OptionalAttr<ASTVarDeclAttr>:$ast
   );
 
   let results = (outs Res<CIR_PointerType, "",
                       [MemAlloc<AutomaticAllocationScopeResource>]>:$addr);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Type":$addr, "Type":$allocaType,
+                   "StringRef":$name, "mlir::cir::InitStyle":$init,
+                   "IntegerAttr":$alignment)>
+  ];
 
   let extraClassDeclaration = [{
     // Whether the alloca input type is a pointer.
@@ -242,7 +250,8 @@ def AllocaOp : CIR_Op<"alloca", [
   // FIXME: we should not be printing `cir.ptr` below, that should come
   // from the pointer type directly.
   let assemblyFormat = [{
-    $allocaType `,` `cir.ptr` type($addr) `,` `[` $name `,` $init `]` attr-dict
+    $allocaType `,` `cir.ptr` type($addr) `,` `[` $name `,` $init `]`
+    (`ast` $ast^)? attr-dict
   }];
 
   let hasVerifier = 0;
