@@ -866,7 +866,7 @@ static void printBerkeleyTotals() {
          << "(TOTALS)\n";
 }
 
-int main(int argc, char **argv) {
+int llvm_size_main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   BumpPtrAllocator A;
   StringSaver Saver(A);
@@ -941,4 +941,5 @@ int main(int argc, char **argv) {
 
   if (HadError)
     return 1;
+  return 0;
 }
