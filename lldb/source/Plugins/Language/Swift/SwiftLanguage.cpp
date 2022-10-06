@@ -549,18 +549,6 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
                 "GLKit summary provider", ConstString(GLKitTypes),
                 simd_summary_flags, true);
 
-  TypeSummaryImpl::Flags nil_summary_flags;
-  nil_summary_flags.SetCascades(true)
-      .SetDontShowChildren(true)
-      .SetDontShowValue(true)
-      .SetHideItemNames(false)
-      .SetShowMembersOneLiner(false)
-      .SetSkipPointers(true)
-      .SetSkipReferences(false);
-
-  AddStringSummary(swift_category_sp, "nil", ConstString("Swift._Nil"),
-                   nil_summary_flags);
-
   AddStringSummary(swift_category_sp, "${var.native}",
                    ConstString("CoreGraphics.CGFloat"), summary_flags);
   AddStringSummary(swift_category_sp, "${var.native}",
