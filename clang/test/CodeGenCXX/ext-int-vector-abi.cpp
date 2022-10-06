@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple x86_64-gnu-linux -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=LIN64
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i386-gnu-linux -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=LIN32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-gnu-linux -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=LIN64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i386-gnu-linux -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=LIN32
 
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple x86_64-windows-pc -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=WIN64
-// RUN: %clang_cc1 -no-opaque-pointers -no-enable-noundef-analysis -triple i386-windows-pc -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=WIN32
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-pc -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=WIN64
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple i386-windows-pc -O3 -disable-llvm-passes -I%S -emit-llvm -o - %s | FileCheck %s --check-prefixes=WIN32
 
 // Make sure BitInt vector match builtin Int vector abi.
 
@@ -61,7 +61,7 @@ uint32_t4s ManglingTestRetParam(uint32_t4s Param) {
 
 typedef unsigned _BitInt(64) uint64_t4 __attribute__((ext_vector_type(4)));
 uint64_t4 ManglingTestRetParam(uint64_t4 Param) {
-// LIN64: define{{.*}} <4 x i64> @_Z20ManglingTestRetParamDv4_DU64_(<4 x i64>* byval(<4 x i64>) align 32 %
+// LIN64: define{{.*}} <4 x i64> @_Z20ManglingTestRetParamDv4_DU64_(ptr byval(<4 x i64>) align 32 %
 // LIN32: define{{.*}} <4 x i64> @_Z20ManglingTestRetParamDv4_DU64_(<4 x i64> %
 // WIN64: define dso_local <4 x i64> @"?ManglingTestRetParam@@YAT?$__vector@U?$_UBitInt@$0EA@@__clang@@$03@__clang@@T12@@Z"(<4 x i64> %
 // WIN32: define dso_local <4 x i64> @"?ManglingTestRetParam@@YAT?$__vector@U?$_UBitInt@$0EA@@__clang@@$03@__clang@@T12@@Z"(<4 x i64> inreg %
@@ -70,7 +70,7 @@ uint64_t4 ManglingTestRetParam(uint64_t4 Param) {
 
 typedef unsigned long long uint64_t4s __attribute__((ext_vector_type(4)));
 uint64_t4s ManglingTestRetParam(uint64_t4s Param) {
-// LIN64: define{{.*}} <4 x i64> @_Z20ManglingTestRetParamDv4_y(<4 x i64>* byval(<4 x i64>) align 32 %
+// LIN64: define{{.*}} <4 x i64> @_Z20ManglingTestRetParamDv4_y(ptr byval(<4 x i64>) align 32 %
 // LIN32: define{{.*}} <4 x i64> @_Z20ManglingTestRetParamDv4_y(<4 x i64> %
 // WIN64: define dso_local <4 x i64> @"?ManglingTestRetParam@@YAT?$__vector@_K$03@__clang@@T12@@Z"(<4 x i64> %
 // WIN32: define dso_local <4 x i64> @"?ManglingTestRetParam@@YAT?$__vector@_K$03@__clang@@T12@@Z"(<4 x i64> inreg %
@@ -79,7 +79,7 @@ uint64_t4s ManglingTestRetParam(uint64_t4s Param) {
 
 typedef _BitInt(32) vint32_t8 __attribute__((vector_size(32)));
 vint32_t8 ManglingTestRetParam(vint32_t8 Param) {
-// LIN64: define{{.*}} <8 x i32> @_Z20ManglingTestRetParamDv8_DB32_(<8 x i32>* byval(<8 x i32>) align 32 %
+// LIN64: define{{.*}} <8 x i32> @_Z20ManglingTestRetParamDv8_DB32_(ptr byval(<8 x i32>) align 32 %
 // LIN32: define{{.*}} <8 x i32> @_Z20ManglingTestRetParamDv8_DB32_(<8 x i32> %
 // WIN64: define dso_local <8 x i32> @"?ManglingTestRetParam@@YA?AT?$__vector@U?$_BitInt@$0CA@@__clang@@$07@__clang@@T12@@Z"(<8 x i32> %
 // WIN32: define dso_local <8 x i32> @"?ManglingTestRetParam@@YA?AT?$__vector@U?$_BitInt@$0CA@@__clang@@$07@__clang@@T12@@Z"(<8 x i32> inreg %
@@ -88,7 +88,7 @@ vint32_t8 ManglingTestRetParam(vint32_t8 Param) {
 
 typedef int vint32_t8i __attribute__((vector_size(32)));
 vint32_t8i ManglingTestRetParam(vint32_t8i Param) {
-// LIN64: define{{.*}} <8 x i32> @_Z20ManglingTestRetParamDv8_i(<8 x i32>* byval(<8 x i32>) align 32 %
+// LIN64: define{{.*}} <8 x i32> @_Z20ManglingTestRetParamDv8_i(ptr byval(<8 x i32>) align 32 %
 // LIN32: define{{.*}} <8 x i32> @_Z20ManglingTestRetParamDv8_i(<8 x i32> %
 // WIN64: define dso_local <8 x i32> @"?ManglingTestRetParam@@YA?AT?$__vector@H$07@__clang@@T12@@Z"(<8 x i32> %
 // WIN32: define dso_local <8 x i32> @"?ManglingTestRetParam@@YA?AT?$__vector@H$07@__clang@@T12@@Z"(<8 x i32> inreg %

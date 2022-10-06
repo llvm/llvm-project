@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -w -triple i686-pc-win32 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -w -triple i686-pc-win32 -emit-llvm -o - %s | FileCheck %s
 
 // PR44395
 // MSVC passes up to three vectors in registers, and the rest indirectly. Check
@@ -21,31 +21,31 @@ void receive_vec_128(NonTrivial nt, __m128 x, __m128 y, __m128 z, __m128 w, __m1
 // CHECK-SAME: (<4 x float> inreg noundef %x,
 // CHECK-SAME: <4 x float> inreg noundef %y,
 // CHECK-SAME: <4 x float> inreg noundef %z,
-// CHECK-SAME: <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>* inalloca(<{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>) %0)
+// CHECK-SAME: ptr inalloca(<{ %struct.NonTrivial, ptr, ptr }>) %0)
 
 void pass_vec_128() {
   __m128 z = {0};
   receive_vec_128(NonTrivial(), z, z, z, z, z);
 }
 // CHECK-LABEL: define dso_local void @"?pass_vec_128@@YAXXZ"()
-// CHECK: getelementptr inbounds <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>, <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>* %{{[^,]*}}, i32 0, i32 0
-// CHECK: call x86_thiscallcc noundef %struct.NonTrivial* @"??0NonTrivial@@QAE@XZ"(%struct.NonTrivial* {{[^,]*}} %{{.*}})
+// CHECK: getelementptr inbounds <{ %struct.NonTrivial, ptr, ptr }>, ptr %{{[^,]*}}, i32 0, i32 0
+// CHECK: call x86_thiscallcc noundef ptr @"??0NonTrivial@@QAE@XZ"(ptr {{[^,]*}} %{{.*}})
 
 // Store q, store temp alloca.
-// CHECK: store <4 x float> %{{[^,]*}}, <4 x float>* %{{[^,]*}}, align 16
-// CHECK: getelementptr inbounds <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>, <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>* %{{[^,]*}}, i32 0, i32 1
-// CHECK: store <4 x float>* %{{[^,]*}}, <4 x float>** %{{[^,]*}}, align 4
+// CHECK: store <4 x float> %{{[^,]*}}, ptr %{{[^,]*}}, align 16
+// CHECK: getelementptr inbounds <{ %struct.NonTrivial, ptr, ptr }>, ptr %{{[^,]*}}, i32 0, i32 1
+// CHECK: store ptr %{{[^,]*}}, ptr %{{[^,]*}}, align 4
 
 // Store w, store temp alloca.
-// CHECK: store <4 x float> %{{[^,]*}}, <4 x float>* %{{[^,]*}}, align 16
-// CHECK: getelementptr inbounds <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>, <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>* %{{[^,]*}}, i32 0, i32 2
-// CHECK: store <4 x float>* %{{[^,]*}}, <4 x float>** %{{[^,]*}}, align 4
+// CHECK: store <4 x float> %{{[^,]*}}, ptr %{{[^,]*}}, align 16
+// CHECK: getelementptr inbounds <{ %struct.NonTrivial, ptr, ptr }>, ptr %{{[^,]*}}, i32 0, i32 2
+// CHECK: store ptr %{{[^,]*}}, ptr %{{[^,]*}}, align 4
 
 // CHECK: call void @"?receive_vec_128@@YAXUNonTrivial@@T__m128@@1111@Z"
 // CHECK-SAME: (<4 x float> inreg noundef %{{[^,]*}},
 // CHECK-SAME: <4 x float> inreg noundef %{{[^,]*}},
 // CHECK-SAME: <4 x float> inreg noundef %{{[^,]*}},
-// CHECK-SAME: <{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>* inalloca(<{ %struct.NonTrivial, <4 x float>*, <4 x float>* }>) %{{[^,]*}})
+// CHECK-SAME: ptr inalloca(<{ %struct.NonTrivial, ptr, ptr }>) %{{[^,]*}})
 
 // w will be passed indirectly by register, and q will be passed indirectly, but
 // the pointer will be in memory.
@@ -56,9 +56,9 @@ void __fastcall fastcall_receive_vec(__m128 x, __m128 y, __m128 z, __m128 w, int
 // CHECK-SAME: (<4 x float> inreg noundef %x,
 // CHECK-SAME: <4 x float> inreg noundef %y,
 // CHECK-SAME: <4 x float> inreg noundef %z,
-// CHECK-SAME: <4 x float>* inreg noundef %0,
+// CHECK-SAME: ptr inreg noundef %0,
 // CHECK-SAME: i32 inreg noundef %edx,
-// CHECK-SAME: <{ <4 x float>*, %struct.NonTrivial }>* inalloca(<{ <4 x float>*, %struct.NonTrivial }>) %1)
+// CHECK-SAME: ptr inalloca(<{ ptr, %struct.NonTrivial }>) %1)
 
 
 void __vectorcall vectorcall_receive_vec(double xmm0, double xmm1, double xmm2,
@@ -73,6 +73,6 @@ void __vectorcall vectorcall_receive_vec(double xmm0, double xmm1, double xmm2,
 // CHECK-SAME: <4 x float> inreg noundef %x,
 // CHECK-SAME: <4 x float> inreg noundef %y,
 // CHECK-SAME: <4 x float> inreg noundef %z,
-// CHECK-SAME: <4 x float>* inreg noundef %0,
+// CHECK-SAME: ptr inreg noundef %0,
 // CHECK-SAME: i32 inreg noundef %edx,
-// CHECK-SAME: <{ <4 x float>*, %struct.NonTrivial }>* inalloca(<{ <4 x float>*, %struct.NonTrivial }>) %1)
+// CHECK-SAME: ptr inalloca(<{ ptr, %struct.NonTrivial }>) %1)

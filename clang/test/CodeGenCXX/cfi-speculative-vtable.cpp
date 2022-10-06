@@ -11,4 +11,4 @@ class A {
 A a;
 
 // CHECK: @_ZTV1A ={{.*}} available_externally
-// CHECK-NOT: !{{.*}} = !{!{{.*}}, [4 x i8*]* @_ZTV1A, i64 16}
+// CHECK-NOT: !{{.*}} = !{!{{.*}}, ptr @_ZTV1A, i64 16}

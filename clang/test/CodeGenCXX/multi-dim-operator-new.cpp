@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple x86_64-unknown-unknown -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple x86_64-unknown-unknown -emit-llvm -o - | FileCheck %s
 // PR6641
 
 extern "C" int printf(const char *, ...);
@@ -43,6 +43,6 @@ int main() {
  return 0;
 }
 
-// CHECK: call noalias noundef nonnull i8* @_Znam
-// CHECK: call noalias noundef nonnull i8* @_Znam
-// CHECK: call noalias noundef nonnull i8* @_Znam
+// CHECK: call noalias noundef nonnull ptr @_Znam
+// CHECK: call noalias noundef nonnull ptr @_Znam
+// CHECK: call noalias noundef nonnull ptr @_Znam
