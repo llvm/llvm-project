@@ -48,6 +48,7 @@ Improvements and New Features
 - Declarations of ``std::c8rtomb()`` and ``std::mbrtoc8()`` from P0482R6 are
   now provided when implementations in the global namespace are provided by
   the C library.
+- Implemented ``<memory_resource>`` header from C++17
 
 Deprecations and Removals
 -------------------------
