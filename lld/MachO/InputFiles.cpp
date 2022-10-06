@@ -1096,7 +1096,8 @@ void ObjFile::registerCompactUnwind(Section &compactUnwindSection) {
     // llvm-mc omits CU entries for functions that need DWARF encoding, but
     // `ld -r` doesn't. We can ignore them because we will re-synthesize these
     // CU entries from the DWARF info during the output phase.
-    if ((encoding & target->modeDwarfEncoding) == target->modeDwarfEncoding)
+    if ((encoding & static_cast<uint32_t>(UNWIND_MODE_MASK)) ==
+        target->modeDwarfEncoding)
       continue;
 
     ConcatInputSection *referentIsec;
