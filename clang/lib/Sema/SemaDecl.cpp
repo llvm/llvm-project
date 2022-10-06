@@ -14657,6 +14657,21 @@ void Sema::ActOnFinishInlineFunctionDef(FunctionDecl *D) {
   Consumer.HandleInlineFunctionDefinition(D);
 }
 
+static bool FindPossiblePrototype(const FunctionDecl *FD,
+                                  const FunctionDecl *&PossiblePrototype) {
+  for (const FunctionDecl *Prev = FD->getPreviousDecl(); Prev;
+       Prev = Prev->getPreviousDecl()) {
+    // Ignore any declarations that occur in function or method
+    // scope, because they aren't visible from the header.
+    if (Prev->getLexicalDeclContext()->isFunctionOrMethod())
+      continue;
+
+    PossiblePrototype = Prev;
+    return Prev->getType()->isFunctionProtoType();
+  }
+  return false;
+}
+
 static bool
 ShouldWarnAboutMissingPrototype(const FunctionDecl *FD,
                                 const FunctionDecl *&PossiblePrototype) {
@@ -14703,16 +14718,9 @@ ShouldWarnAboutMissingPrototype(const FunctionDecl *FD,
   if (!FD->isExternallyVisible())
     return false;
 
-  for (const FunctionDecl *Prev = FD->getPreviousDecl();
-       Prev; Prev = Prev->getPreviousDecl()) {
-    // Ignore any declarations that occur in function or method
-    // scope, because they aren't visible from the header.
-    if (Prev->getLexicalDeclContext()->isFunctionOrMethod())
-      continue;
-
-    PossiblePrototype = Prev;
-    return Prev->getType()->isFunctionNoProtoType();
-  }
+  // If we were able to find a potential prototype, don't warn.
+  if (FindPossiblePrototype(FD, PossiblePrototype))
+    return false;
 
   return true;
 }
@@ -15279,6 +15287,12 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
                       : FixItHint{});
         }
       }
+
+      // We might not have found a prototype because we didn't wish to warn on
+      // the lack of a missing prototype. Try again without the checks for
+      // whether we want to warn on the missing prototype.
+      if (!PossiblePrototype)
+        (void)FindPossiblePrototype(FD, PossiblePrototype);
 
       // If the function being defined does not have a prototype, then we may
       // need to diagnose it as changing behavior in C2x because we now know

@@ -40,7 +40,7 @@ body: |
     ; CHECK-NEXT: $x12 = frame-setup PseudoReadVLENB
     ; CHECK-NEXT: $x12 = frame-setup SLLI killed $x12, 1
     ; CHECK-NEXT: $x2 = frame-setup SUB $x2, killed $x12
-    ; CHECK-NEXT: dead $x0 = PseudoVSETVLI killed renamable $x11, 88 /* e64, m1, ta, mu */, implicit-def $vl, implicit-def $vtype
+    ; CHECK-NEXT: dead $x0 = PseudoVSETVLI killed renamable $x11, 216 /* e64, m1, ta, ma */, implicit-def $vl, implicit-def $vtype
     ; CHECK-NEXT: renamable $v8 = PseudoVLE64_V_M1 killed renamable $x10, $noreg, 6 /* e64 */, implicit $vl, implicit $vtype :: (load unknown-size from %ir.pa, align 8)
     ; CHECK-NEXT: $x10 = PseudoReadVLENB
     ; CHECK-NEXT: $x10 = SLLI killed $x10, 1

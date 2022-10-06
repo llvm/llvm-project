@@ -5,7 +5,7 @@
 define <vscale x 1 x i8> @vor_vx_nxv1i8(<vscale x 1 x i8> %va, i8 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i8> poison, i8 %b, i32 0
@@ -17,7 +17,7 @@ define <vscale x 1 x i8> @vor_vx_nxv1i8(<vscale x 1 x i8> %va, i8 signext %b) {
 define <vscale x 1 x i8> @vor_vx_nxv1i8_0(<vscale x 1 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv1i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i8> poison, i8 -12, i32 0
@@ -29,7 +29,7 @@ define <vscale x 1 x i8> @vor_vx_nxv1i8_0(<vscale x 1 x i8> %va) {
 define <vscale x 1 x i8> @vor_vx_nxv1i8_1(<vscale x 1 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv1i8_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i8> poison, i8 15, i32 0
@@ -42,7 +42,7 @@ define <vscale x 1 x i8> @vor_vx_nxv1i8_2(<vscale x 1 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv1i8_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i8> poison, i8 16, i32 0
@@ -54,7 +54,7 @@ define <vscale x 1 x i8> @vor_vx_nxv1i8_2(<vscale x 1 x i8> %va) {
 define <vscale x 2 x i8> @vor_vx_nxv2i8(<vscale x 2 x i8> %va, i8 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i8> poison, i8 %b, i32 0
@@ -66,7 +66,7 @@ define <vscale x 2 x i8> @vor_vx_nxv2i8(<vscale x 2 x i8> %va, i8 signext %b) {
 define <vscale x 2 x i8> @vor_vx_nxv2i8_0(<vscale x 2 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv2i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i8> poison, i8 -12, i32 0
@@ -78,7 +78,7 @@ define <vscale x 2 x i8> @vor_vx_nxv2i8_0(<vscale x 2 x i8> %va) {
 define <vscale x 2 x i8> @vor_vx_nxv2i8_1(<vscale x 2 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv2i8_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i8> poison, i8 15, i32 0
@@ -91,7 +91,7 @@ define <vscale x 2 x i8> @vor_vx_nxv2i8_2(<vscale x 2 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv2i8_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i8> poison, i8 16, i32 0
@@ -103,7 +103,7 @@ define <vscale x 2 x i8> @vor_vx_nxv2i8_2(<vscale x 2 x i8> %va) {
 define <vscale x 4 x i8> @vor_vx_nxv4i8(<vscale x 4 x i8> %va, i8 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i8> poison, i8 %b, i32 0
@@ -115,7 +115,7 @@ define <vscale x 4 x i8> @vor_vx_nxv4i8(<vscale x 4 x i8> %va, i8 signext %b) {
 define <vscale x 4 x i8> @vor_vx_nxv4i8_0(<vscale x 4 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv4i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i8> poison, i8 -12, i32 0
@@ -127,7 +127,7 @@ define <vscale x 4 x i8> @vor_vx_nxv4i8_0(<vscale x 4 x i8> %va) {
 define <vscale x 4 x i8> @vor_vx_nxv4i8_1(<vscale x 4 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv4i8_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i8> poison, i8 15, i32 0
@@ -140,7 +140,7 @@ define <vscale x 4 x i8> @vor_vx_nxv4i8_2(<vscale x 4 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv4i8_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i8> poison, i8 16, i32 0
@@ -152,7 +152,7 @@ define <vscale x 4 x i8> @vor_vx_nxv4i8_2(<vscale x 4 x i8> %va) {
 define <vscale x 8 x i8> @vor_vx_nxv8i8(<vscale x 8 x i8> %va, i8 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> poison, i8 %b, i32 0
@@ -164,7 +164,7 @@ define <vscale x 8 x i8> @vor_vx_nxv8i8(<vscale x 8 x i8> %va, i8 signext %b) {
 define <vscale x 8 x i8> @vor_vx_nxv8i8_0(<vscale x 8 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv8i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> poison, i8 -12, i32 0
@@ -176,7 +176,7 @@ define <vscale x 8 x i8> @vor_vx_nxv8i8_0(<vscale x 8 x i8> %va) {
 define <vscale x 8 x i8> @vor_vx_nxv8i8_1(<vscale x 8 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv8i8_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> poison, i8 15, i32 0
@@ -189,7 +189,7 @@ define <vscale x 8 x i8> @vor_vx_nxv8i8_2(<vscale x 8 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv8i8_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i8> poison, i8 16, i32 0
@@ -201,7 +201,7 @@ define <vscale x 8 x i8> @vor_vx_nxv8i8_2(<vscale x 8 x i8> %va) {
 define <vscale x 16 x i8> @vor_vx_nxv16i8(<vscale x 16 x i8> %va, i8 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i8> poison, i8 %b, i32 0
@@ -213,7 +213,7 @@ define <vscale x 16 x i8> @vor_vx_nxv16i8(<vscale x 16 x i8> %va, i8 signext %b)
 define <vscale x 16 x i8> @vor_vx_nxv16i8_0(<vscale x 16 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv16i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i8> poison, i8 -12, i32 0
@@ -225,7 +225,7 @@ define <vscale x 16 x i8> @vor_vx_nxv16i8_0(<vscale x 16 x i8> %va) {
 define <vscale x 16 x i8> @vor_vx_nxv16i8_1(<vscale x 16 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv16i8_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i8> poison, i8 15, i32 0
@@ -238,7 +238,7 @@ define <vscale x 16 x i8> @vor_vx_nxv16i8_2(<vscale x 16 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv16i8_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i8> poison, i8 16, i32 0
@@ -250,7 +250,7 @@ define <vscale x 16 x i8> @vor_vx_nxv16i8_2(<vscale x 16 x i8> %va) {
 define <vscale x 32 x i8> @vor_vx_nxv32i8(<vscale x 32 x i8> %va, i8 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 32 x i8> poison, i8 %b, i32 0
@@ -262,7 +262,7 @@ define <vscale x 32 x i8> @vor_vx_nxv32i8(<vscale x 32 x i8> %va, i8 signext %b)
 define <vscale x 32 x i8> @vor_vx_nxv32i8_0(<vscale x 32 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv32i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 32 x i8> poison, i8 -12, i32 0
@@ -274,7 +274,7 @@ define <vscale x 32 x i8> @vor_vx_nxv32i8_0(<vscale x 32 x i8> %va) {
 define <vscale x 32 x i8> @vor_vx_nxv32i8_1(<vscale x 32 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv32i8_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 32 x i8> poison, i8 15, i32 0
@@ -287,7 +287,7 @@ define <vscale x 32 x i8> @vor_vx_nxv32i8_2(<vscale x 32 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv32i8_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 32 x i8> poison, i8 16, i32 0
@@ -299,7 +299,7 @@ define <vscale x 32 x i8> @vor_vx_nxv32i8_2(<vscale x 32 x i8> %va) {
 define <vscale x 64 x i8> @vor_vx_nxv64i8(<vscale x 64 x i8> %va, i8 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 64 x i8> poison, i8 %b, i32 0
@@ -311,7 +311,7 @@ define <vscale x 64 x i8> @vor_vx_nxv64i8(<vscale x 64 x i8> %va, i8 signext %b)
 define <vscale x 64 x i8> @vor_vx_nxv64i8_0(<vscale x 64 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv64i8_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 64 x i8> poison, i8 -12, i32 0
@@ -323,7 +323,7 @@ define <vscale x 64 x i8> @vor_vx_nxv64i8_0(<vscale x 64 x i8> %va) {
 define <vscale x 64 x i8> @vor_vx_nxv64i8_1(<vscale x 64 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv64i8_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 64 x i8> poison, i8 15, i32 0
@@ -336,7 +336,7 @@ define <vscale x 64 x i8> @vor_vx_nxv64i8_2(<vscale x 64 x i8> %va) {
 ; CHECK-LABEL: vor_vx_nxv64i8_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 64 x i8> poison, i8 16, i32 0
@@ -348,7 +348,7 @@ define <vscale x 64 x i8> @vor_vx_nxv64i8_2(<vscale x 64 x i8> %va) {
 define <vscale x 1 x i16> @vor_vx_nxv1i16(<vscale x 1 x i16> %va, i16 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i16> poison, i16 %b, i32 0
@@ -360,7 +360,7 @@ define <vscale x 1 x i16> @vor_vx_nxv1i16(<vscale x 1 x i16> %va, i16 signext %b
 define <vscale x 1 x i16> @vor_vx_nxv1i16_0(<vscale x 1 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv1i16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i16> poison, i16 -12, i32 0
@@ -372,7 +372,7 @@ define <vscale x 1 x i16> @vor_vx_nxv1i16_0(<vscale x 1 x i16> %va) {
 define <vscale x 1 x i16> @vor_vx_nxv1i16_1(<vscale x 1 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv1i16_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i16> poison, i16 15, i32 0
@@ -385,7 +385,7 @@ define <vscale x 1 x i16> @vor_vx_nxv1i16_2(<vscale x 1 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv1i16_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i16> poison, i16 16, i32 0
@@ -397,7 +397,7 @@ define <vscale x 1 x i16> @vor_vx_nxv1i16_2(<vscale x 1 x i16> %va) {
 define <vscale x 2 x i16> @vor_vx_nxv2i16(<vscale x 2 x i16> %va, i16 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i16> poison, i16 %b, i32 0
@@ -409,7 +409,7 @@ define <vscale x 2 x i16> @vor_vx_nxv2i16(<vscale x 2 x i16> %va, i16 signext %b
 define <vscale x 2 x i16> @vor_vx_nxv2i16_0(<vscale x 2 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv2i16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i16> poison, i16 -12, i32 0
@@ -421,7 +421,7 @@ define <vscale x 2 x i16> @vor_vx_nxv2i16_0(<vscale x 2 x i16> %va) {
 define <vscale x 2 x i16> @vor_vx_nxv2i16_1(<vscale x 2 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv2i16_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i16> poison, i16 15, i32 0
@@ -434,7 +434,7 @@ define <vscale x 2 x i16> @vor_vx_nxv2i16_2(<vscale x 2 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv2i16_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i16> poison, i16 16, i32 0
@@ -446,7 +446,7 @@ define <vscale x 2 x i16> @vor_vx_nxv2i16_2(<vscale x 2 x i16> %va) {
 define <vscale x 4 x i16> @vor_vx_nxv4i16(<vscale x 4 x i16> %va, i16 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i16> poison, i16 %b, i32 0
@@ -458,7 +458,7 @@ define <vscale x 4 x i16> @vor_vx_nxv4i16(<vscale x 4 x i16> %va, i16 signext %b
 define <vscale x 4 x i16> @vor_vx_nxv4i16_0(<vscale x 4 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv4i16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i16> poison, i16 -12, i32 0
@@ -470,7 +470,7 @@ define <vscale x 4 x i16> @vor_vx_nxv4i16_0(<vscale x 4 x i16> %va) {
 define <vscale x 4 x i16> @vor_vx_nxv4i16_1(<vscale x 4 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv4i16_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i16> poison, i16 15, i32 0
@@ -483,7 +483,7 @@ define <vscale x 4 x i16> @vor_vx_nxv4i16_2(<vscale x 4 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv4i16_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i16> poison, i16 16, i32 0
@@ -495,7 +495,7 @@ define <vscale x 4 x i16> @vor_vx_nxv4i16_2(<vscale x 4 x i16> %va) {
 define <vscale x 8 x i16> @vor_vx_nxv8i16(<vscale x 8 x i16> %va, i16 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> poison, i16 %b, i32 0
@@ -507,7 +507,7 @@ define <vscale x 8 x i16> @vor_vx_nxv8i16(<vscale x 8 x i16> %va, i16 signext %b
 define <vscale x 8 x i16> @vor_vx_nxv8i16_0(<vscale x 8 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv8i16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> poison, i16 -12, i32 0
@@ -519,7 +519,7 @@ define <vscale x 8 x i16> @vor_vx_nxv8i16_0(<vscale x 8 x i16> %va) {
 define <vscale x 8 x i16> @vor_vx_nxv8i16_1(<vscale x 8 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv8i16_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> poison, i16 15, i32 0
@@ -532,7 +532,7 @@ define <vscale x 8 x i16> @vor_vx_nxv8i16_2(<vscale x 8 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv8i16_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i16> poison, i16 16, i32 0
@@ -544,7 +544,7 @@ define <vscale x 8 x i16> @vor_vx_nxv8i16_2(<vscale x 8 x i16> %va) {
 define <vscale x 16 x i16> @vor_vx_nxv16i16(<vscale x 16 x i16> %va, i16 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i16> poison, i16 %b, i32 0
@@ -556,7 +556,7 @@ define <vscale x 16 x i16> @vor_vx_nxv16i16(<vscale x 16 x i16> %va, i16 signext
 define <vscale x 16 x i16> @vor_vx_nxv16i16_0(<vscale x 16 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv16i16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i16> poison, i16 -12, i32 0
@@ -568,7 +568,7 @@ define <vscale x 16 x i16> @vor_vx_nxv16i16_0(<vscale x 16 x i16> %va) {
 define <vscale x 16 x i16> @vor_vx_nxv16i16_1(<vscale x 16 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv16i16_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i16> poison, i16 15, i32 0
@@ -581,7 +581,7 @@ define <vscale x 16 x i16> @vor_vx_nxv16i16_2(<vscale x 16 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv16i16_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i16> poison, i16 16, i32 0
@@ -593,7 +593,7 @@ define <vscale x 16 x i16> @vor_vx_nxv16i16_2(<vscale x 16 x i16> %va) {
 define <vscale x 32 x i16> @vor_vx_nxv32i16(<vscale x 32 x i16> %va, i16 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv32i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e16, m8, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 32 x i16> poison, i16 %b, i32 0
@@ -605,7 +605,7 @@ define <vscale x 32 x i16> @vor_vx_nxv32i16(<vscale x 32 x i16> %va, i16 signext
 define <vscale x 32 x i16> @vor_vx_nxv32i16_0(<vscale x 32 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv32i16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 32 x i16> poison, i16 -12, i32 0
@@ -617,7 +617,7 @@ define <vscale x 32 x i16> @vor_vx_nxv32i16_0(<vscale x 32 x i16> %va) {
 define <vscale x 32 x i16> @vor_vx_nxv32i16_1(<vscale x 32 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv32i16_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 32 x i16> poison, i16 15, i32 0
@@ -630,7 +630,7 @@ define <vscale x 32 x i16> @vor_vx_nxv32i16_2(<vscale x 32 x i16> %va) {
 ; CHECK-LABEL: vor_vx_nxv32i16_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e16, m8, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 32 x i16> poison, i16 16, i32 0
@@ -642,7 +642,7 @@ define <vscale x 32 x i16> @vor_vx_nxv32i16_2(<vscale x 32 x i16> %va) {
 define <vscale x 1 x i32> @vor_vx_nxv1i32(<vscale x 1 x i32> %va, i32 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i32> poison, i32 %b, i32 0
@@ -654,7 +654,7 @@ define <vscale x 1 x i32> @vor_vx_nxv1i32(<vscale x 1 x i32> %va, i32 signext %b
 define <vscale x 1 x i32> @vor_vx_nxv1i32_0(<vscale x 1 x i32> %va) {
 ; CHECK-LABEL: vor_vx_nxv1i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i32> poison, i32 -12, i32 0
@@ -666,7 +666,7 @@ define <vscale x 1 x i32> @vor_vx_nxv1i32_0(<vscale x 1 x i32> %va) {
 define <vscale x 1 x i32> @vor_vx_nxv1i32_1(<vscale x 1 x i32> %va) {
 ; CHECK-LABEL: vor_vx_nxv1i32_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i32> poison, i32 15, i32 0
@@ -679,7 +679,7 @@ define <vscale x 1 x i32> @vor_vx_nxv1i32_2(<vscale x 1 x i32> %va) {
 ; CHECK-LABEL: vor_vx_nxv1i32_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i32> poison, i32 16, i32 0
@@ -691,7 +691,7 @@ define <vscale x 1 x i32> @vor_vx_nxv1i32_2(<vscale x 1 x i32> %va) {
 define <vscale x 2 x i32> @vor_vx_nxv2i32(<vscale x 2 x i32> %va, i32 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i32> poison, i32 %b, i32 0
@@ -703,7 +703,7 @@ define <vscale x 2 x i32> @vor_vx_nxv2i32(<vscale x 2 x i32> %va, i32 signext %b
 define <vscale x 2 x i32> @vor_vx_nxv2i32_0(<vscale x 2 x i32> %va) {
 ; CHECK-LABEL: vor_vx_nxv2i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i32> poison, i32 -12, i32 0
@@ -715,7 +715,7 @@ define <vscale x 2 x i32> @vor_vx_nxv2i32_0(<vscale x 2 x i32> %va) {
 define <vscale x 2 x i32> @vor_vx_nxv2i32_1(<vscale x 2 x i32> %va) {
 ; CHECK-LABEL: vor_vx_nxv2i32_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i32> poison, i32 15, i32 0
@@ -728,7 +728,7 @@ define <vscale x 2 x i32> @vor_vx_nxv2i32_2(<vscale x 2 x i32> %va) {
 ; CHECK-LABEL: vor_vx_nxv2i32_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i32> poison, i32 16, i32 0
@@ -740,7 +740,7 @@ define <vscale x 2 x i32> @vor_vx_nxv2i32_2(<vscale x 2 x i32> %va) {
 define <vscale x 4 x i32> @vor_vx_nxv4i32(<vscale x 4 x i32> %va, i32 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i32> poison, i32 %b, i32 0
@@ -752,7 +752,7 @@ define <vscale x 4 x i32> @vor_vx_nxv4i32(<vscale x 4 x i32> %va, i32 signext %b
 define <vscale x 4 x i32> @vor_vx_nxv4i32_0(<vscale x 4 x i32> %va) {
 ; CHECK-LABEL: vor_vx_nxv4i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i32> poison, i32 -12, i32 0
@@ -764,7 +764,7 @@ define <vscale x 4 x i32> @vor_vx_nxv4i32_0(<vscale x 4 x i32> %va) {
 define <vscale x 4 x i32> @vor_vx_nxv4i32_1(<vscale x 4 x i32> %va) {
 ; CHECK-LABEL: vor_vx_nxv4i32_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i32> poison, i32 15, i32 0
@@ -777,7 +777,7 @@ define <vscale x 4 x i32> @vor_vx_nxv4i32_2(<vscale x 4 x i32> %va) {
 ; CHECK-LABEL: vor_vx_nxv4i32_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i32> poison, i32 16, i32 0
@@ -789,7 +789,7 @@ define <vscale x 4 x i32> @vor_vx_nxv4i32_2(<vscale x 4 x i32> %va) {
 define <vscale x 8 x i32> @vor_vx_nxv8i32(<vscale x 8 x i32> %va, i32 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
@@ -801,7 +801,7 @@ define <vscale x 8 x i32> @vor_vx_nxv8i32(<vscale x 8 x i32> %va, i32 signext %b
 define <vscale x 8 x i32> @vor_vx_nxv8i32_0(<vscale x 8 x i32> %va) {
 ; CHECK-LABEL: vor_vx_nxv8i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> poison, i32 -12, i32 0
@@ -813,7 +813,7 @@ define <vscale x 8 x i32> @vor_vx_nxv8i32_0(<vscale x 8 x i32> %va) {
 define <vscale x 8 x i32> @vor_vx_nxv8i32_1(<vscale x 8 x i32> %va) {
 ; CHECK-LABEL: vor_vx_nxv8i32_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> poison, i32 15, i32 0
@@ -826,7 +826,7 @@ define <vscale x 8 x i32> @vor_vx_nxv8i32_2(<vscale x 8 x i32> %va) {
 ; CHECK-LABEL: vor_vx_nxv8i32_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i32> poison, i32 16, i32 0
@@ -838,7 +838,7 @@ define <vscale x 8 x i32> @vor_vx_nxv8i32_2(<vscale x 8 x i32> %va) {
 define <vscale x 16 x i32> @vor_vx_nxv16i32(<vscale x 16 x i32> %va, i32 signext %b) {
 ; CHECK-LABEL: vor_vx_nxv16i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i32> poison, i32 %b, i32 0
@@ -850,7 +850,7 @@ define <vscale x 16 x i32> @vor_vx_nxv16i32(<vscale x 16 x i32> %va, i32 signext
 define <vscale x 16 x i32> @vor_vx_nxv16i32_0(<vscale x 16 x i32> %va) {
 ; CHECK-LABEL: vor_vx_nxv16i32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i32> poison, i32 -12, i32 0
@@ -862,7 +862,7 @@ define <vscale x 16 x i32> @vor_vx_nxv16i32_0(<vscale x 16 x i32> %va) {
 define <vscale x 16 x i32> @vor_vx_nxv16i32_1(<vscale x 16 x i32> %va) {
 ; CHECK-LABEL: vor_vx_nxv16i32_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i32> poison, i32 15, i32 0
@@ -875,7 +875,7 @@ define <vscale x 16 x i32> @vor_vx_nxv16i32_2(<vscale x 16 x i32> %va) {
 ; CHECK-LABEL: vor_vx_nxv16i32_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 16 x i32> poison, i32 16, i32 0
@@ -892,7 +892,7 @@ define <vscale x 1 x i64> @vor_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b) {
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
+; RV32-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vlse64.v v9, (a0), zero
 ; RV32-NEXT:    vor.vv v8, v8, v9
 ; RV32-NEXT:    addi sp, sp, 16
@@ -900,7 +900,7 @@ define <vscale x 1 x i64> @vor_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b) {
 ;
 ; RV64-LABEL: vor_vx_nxv1i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV64-NEXT:    vor.vx v8, v8, a0
 ; RV64-NEXT:    ret
   %head = insertelement <vscale x 1 x i64> poison, i64 %b, i32 0
@@ -912,7 +912,7 @@ define <vscale x 1 x i64> @vor_vx_nxv1i64(<vscale x 1 x i64> %va, i64 %b) {
 define <vscale x 1 x i64> @vor_vx_nxv1i64_0(<vscale x 1 x i64> %va) {
 ; CHECK-LABEL: vor_vx_nxv1i64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i64> poison, i64 -12, i32 0
@@ -924,7 +924,7 @@ define <vscale x 1 x i64> @vor_vx_nxv1i64_0(<vscale x 1 x i64> %va) {
 define <vscale x 1 x i64> @vor_vx_nxv1i64_1(<vscale x 1 x i64> %va) {
 ; CHECK-LABEL: vor_vx_nxv1i64_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i64> poison, i64 15, i32 0
@@ -937,7 +937,7 @@ define <vscale x 1 x i64> @vor_vx_nxv1i64_2(<vscale x 1 x i64> %va) {
 ; CHECK-LABEL: vor_vx_nxv1i64_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 1 x i64> poison, i64 16, i32 0
@@ -954,7 +954,7 @@ define <vscale x 2 x i64> @vor_vx_nxv2i64(<vscale x 2 x i64> %va, i64 %b) {
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; RV32-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vlse64.v v10, (a0), zero
 ; RV32-NEXT:    vor.vv v8, v8, v10
 ; RV32-NEXT:    addi sp, sp, 16
@@ -962,7 +962,7 @@ define <vscale x 2 x i64> @vor_vx_nxv2i64(<vscale x 2 x i64> %va, i64 %b) {
 ;
 ; RV64-LABEL: vor_vx_nxv2i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; RV64-NEXT:    vor.vx v8, v8, a0
 ; RV64-NEXT:    ret
   %head = insertelement <vscale x 2 x i64> poison, i64 %b, i32 0
@@ -974,7 +974,7 @@ define <vscale x 2 x i64> @vor_vx_nxv2i64(<vscale x 2 x i64> %va, i64 %b) {
 define <vscale x 2 x i64> @vor_vx_nxv2i64_0(<vscale x 2 x i64> %va) {
 ; CHECK-LABEL: vor_vx_nxv2i64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i64> poison, i64 -12, i32 0
@@ -986,7 +986,7 @@ define <vscale x 2 x i64> @vor_vx_nxv2i64_0(<vscale x 2 x i64> %va) {
 define <vscale x 2 x i64> @vor_vx_nxv2i64_1(<vscale x 2 x i64> %va) {
 ; CHECK-LABEL: vor_vx_nxv2i64_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i64> poison, i64 15, i32 0
@@ -999,7 +999,7 @@ define <vscale x 2 x i64> @vor_vx_nxv2i64_2(<vscale x 2 x i64> %va) {
 ; CHECK-LABEL: vor_vx_nxv2i64_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 2 x i64> poison, i64 16, i32 0
@@ -1016,7 +1016,7 @@ define <vscale x 4 x i64> @vor_vx_nxv4i64(<vscale x 4 x i64> %va, i64 %b) {
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli a1, zero, e64, m4, ta, mu
+; RV32-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; RV32-NEXT:    vlse64.v v12, (a0), zero
 ; RV32-NEXT:    vor.vv v8, v8, v12
 ; RV32-NEXT:    addi sp, sp, 16
@@ -1024,7 +1024,7 @@ define <vscale x 4 x i64> @vor_vx_nxv4i64(<vscale x 4 x i64> %va, i64 %b) {
 ;
 ; RV64-LABEL: vor_vx_nxv4i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; RV64-NEXT:    vor.vx v8, v8, a0
 ; RV64-NEXT:    ret
   %head = insertelement <vscale x 4 x i64> poison, i64 %b, i32 0
@@ -1036,7 +1036,7 @@ define <vscale x 4 x i64> @vor_vx_nxv4i64(<vscale x 4 x i64> %va, i64 %b) {
 define <vscale x 4 x i64> @vor_vx_nxv4i64_0(<vscale x 4 x i64> %va) {
 ; CHECK-LABEL: vor_vx_nxv4i64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i64> poison, i64 -12, i32 0
@@ -1048,7 +1048,7 @@ define <vscale x 4 x i64> @vor_vx_nxv4i64_0(<vscale x 4 x i64> %va) {
 define <vscale x 4 x i64> @vor_vx_nxv4i64_1(<vscale x 4 x i64> %va) {
 ; CHECK-LABEL: vor_vx_nxv4i64_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i64> poison, i64 15, i32 0
@@ -1061,7 +1061,7 @@ define <vscale x 4 x i64> @vor_vx_nxv4i64_2(<vscale x 4 x i64> %va) {
 ; CHECK-LABEL: vor_vx_nxv4i64_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i64> poison, i64 16, i32 0
@@ -1078,7 +1078,7 @@ define <vscale x 8 x i64> @vor_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b) {
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
+; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v16, (a0), zero
 ; RV32-NEXT:    vor.vv v8, v8, v16
 ; RV32-NEXT:    addi sp, sp, 16
@@ -1086,7 +1086,7 @@ define <vscale x 8 x i64> @vor_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b) {
 ;
 ; RV64-LABEL: vor_vx_nxv8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
+; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vor.vx v8, v8, a0
 ; RV64-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> poison, i64 %b, i32 0
@@ -1098,7 +1098,7 @@ define <vscale x 8 x i64> @vor_vx_nxv8i64(<vscale x 8 x i64> %va, i64 %b) {
 define <vscale x 8 x i64> @vor_vx_nxv8i64_0(<vscale x 8 x i64> %va) {
 ; CHECK-LABEL: vor_vx_nxv8i64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, -12
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> poison, i64 -12, i32 0
@@ -1110,7 +1110,7 @@ define <vscale x 8 x i64> @vor_vx_nxv8i64_0(<vscale x 8 x i64> %va) {
 define <vscale x 8 x i64> @vor_vx_nxv8i64_1(<vscale x 8 x i64> %va) {
 ; CHECK-LABEL: vor_vx_nxv8i64_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vor.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> poison, i64 15, i32 0
@@ -1123,7 +1123,7 @@ define <vscale x 8 x i64> @vor_vx_nxv8i64_2(<vscale x 8 x i64> %va) {
 ; CHECK-LABEL: vor_vx_nxv8i64_2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vor.vx v8, v8, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> poison, i64 16, i32 0
@@ -1136,7 +1136,7 @@ define <vscale x 8 x i64> @vor_vx_nxv8i64_2(<vscale x 8 x i64> %va) {
 define <vscale x 8 x i64> @vor_vx_nxv8i64_3(<vscale x 8 x i64> %va) {
 ; CHECK-LABEL: vor_vx_nxv8i64_3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, -1
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 8 x i64> poison, i64 -1, i32 0
@@ -1152,7 +1152,7 @@ define <vscale x 8 x i64> @vor_xx_nxv8i64(i64 %a, i64 %b) nounwind {
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
-; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
+; RV32-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
 ; RV32-NEXT:    sw a3, 12(sp)
 ; RV32-NEXT:    sw a2, 8(sp)
@@ -1164,7 +1164,7 @@ define <vscale x 8 x i64> @vor_xx_nxv8i64(i64 %a, i64 %b) nounwind {
 ; RV64-LABEL: vor_xx_nxv8i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    or a0, a0, a1
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
+; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vmv.v.x v8, a0
 ; RV64-NEXT:    ret
   %head1 = insertelement <vscale x 8 x i64> poison, i64 %a, i32 0

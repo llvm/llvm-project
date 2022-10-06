@@ -18,7 +18,7 @@ define <2 x half> @vfptrunc_v2f16_v2f32(<2 x float> %a, <2 x i1> %m, i32 zeroext
 define <2 x half> @vfptrunc_v2f16_v2f32_unmasked(<2 x float> %a, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_v2f16_v2f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -43,9 +43,9 @@ define <2 x half> @vfptrunc_v2f16_v2f64(<2 x double> %a, <2 x i1> %m, i32 zeroex
 define <2 x half> @vfptrunc_v2f16_v2f64_unmasked(<2 x double> %a, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_v2f16_v2f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.rod.f.f.w v9, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v9
 ; CHECK-NEXT:    ret
   %v = call <2 x half> @llvm.vp.fptrunc.v2f16.v2f64(<2 x double> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> undef, i1 true, i32 0), <2 x i1> undef, <2 x i32> zeroinitializer), i32 %vl)
@@ -68,7 +68,7 @@ define <2 x float> @vfptrunc_v2f32_v2f64(<2 x double> %a, <2 x i1> %m, i32 zeroe
 define <2 x float> @vfptrunc_v2f32_v2f64_unmasked(<2 x double> %a, i32 zeroext %vl) {
 ; CHECK-LABEL: vfptrunc_v2f32_v2f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -103,7 +103,7 @@ define <32 x float> @vfptrunc_v32f32_v32f64(<32 x double> %a, <32 x i1> %m, i32 
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    addi a2, a0, -16
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
 ; CHECK-NEXT:    bltu a0, a2, .LBB7_2
@@ -123,7 +123,7 @@ define <32 x float> @vfptrunc_v32f32_v32f64(<32 x double> %a, <32 x i1> %m, i32 
 ; CHECK-NEXT:    vl8re8.v v24, (a0) # Unknown-size Folded Reload
 ; CHECK-NEXT:    vfncvt.f.f.w v16, v24, v0.t
 ; CHECK-NEXT:    li a0, 32
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, ma
 ; CHECK-NEXT:    vslideup.vi v16, v8, 16
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    csrr a0, vlenb

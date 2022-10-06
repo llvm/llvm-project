@@ -13,7 +13,7 @@ define void @local_var_mf8() {
 ; RV64IV-NEXT:    csrr a0, vlenb
 ; RV64IV-NEXT:    add a0, sp, a0
 ; RV64IV-NEXT:    addi a0, a0, 16
-; RV64IV-NEXT:    vsetvli a1, zero, e8, mf8, ta, mu
+; RV64IV-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
 ; RV64IV-NEXT:    vle8.v v8, (a0)
 ; RV64IV-NEXT:    addi a0, sp, 16
 ; RV64IV-NEXT:    vle8.v v8, (a0)

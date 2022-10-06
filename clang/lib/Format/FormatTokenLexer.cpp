@@ -760,6 +760,7 @@ void FormatTokenLexer::handleTemplateStrings() {
   for (; Offset != Lex->getBuffer().end(); ++Offset) {
     if (Offset[0] == '`') {
       StateStack.pop();
+      ++Offset;
       break;
     }
     if (Offset[0] == '\\') {
@@ -768,12 +769,12 @@ void FormatTokenLexer::handleTemplateStrings() {
                Offset[1] == '{') {
       // '${' introduces an expression interpolation in the template string.
       StateStack.push(LexerState::NORMAL);
-      ++Offset;
+      Offset += 2;
       break;
     }
   }
 
-  StringRef LiteralText(TmplBegin, Offset - TmplBegin + 1);
+  StringRef LiteralText(TmplBegin, Offset - TmplBegin);
   BacktickToken->setType(TT_TemplateString);
   BacktickToken->Tok.setKind(tok::string_literal);
   BacktickToken->TokenText = LiteralText;
@@ -794,9 +795,7 @@ void FormatTokenLexer::handleTemplateStrings() {
                                       StartColumn, Style.TabWidth, Encoding);
   }
 
-  SourceLocation loc = Offset < Lex->getBuffer().end()
-                           ? Lex->getSourceLocation(Offset + 1)
-                           : SourceMgr.getLocForEndOfFile(ID);
+  SourceLocation loc = Lex->getSourceLocation(Offset);
   resetLexer(SourceMgr.getFileOffset(loc));
 }
 

@@ -26,7 +26,7 @@ declare <8 x i1> @llvm.vp.icmp.nxv2i32(<8 x i32>, <8 x i32>, metadata, <8 x i1>,
 define <8 x i32> @vpmerge_vpadd2(<8 x i32> %passthru, <8 x i32> %x, <8 x i32> %y, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_vpadd2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmseq.vv v0, v9, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
@@ -43,7 +43,7 @@ define <8 x i32> @vpmerge_vpadd2(<8 x i32> %passthru, <8 x i32> %x, <8 x i32> %y
 define <8 x i32> @vpmerge_vpadd3(<8 x i32> %passthru, <8 x i32> %x, <8 x i32> %y, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_vpadd3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %splat = insertelement <8 x i1> poison, i1 -1, i32 0
@@ -177,7 +177,7 @@ define <8 x i32> @vpmerge_vpload(<8 x i32> %passthru, <8 x i32> * %p, <8 x i1> %
 define <8 x i32> @vpmerge_vpload2(<8 x i32> %passthru, <8 x i32> * %p, <8 x i32> %x, <8 x i32> %y, i32 zeroext %vl) {
 ; CHECK-LABEL: vpmerge_vpload2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vmseq.vv v0, v9, v10
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
@@ -229,7 +229,7 @@ define <8 x i32> @vpselect_vpadd2(<8 x i32> %passthru, <8 x i32> %x, <8 x i32> %
 define <8 x i32> @vpselect_vpadd3(<8 x i32> %passthru, <8 x i32> %x, <8 x i32> %y, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpadd3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %splat = insertelement <8 x i1> poison, i1 -1, i32 0

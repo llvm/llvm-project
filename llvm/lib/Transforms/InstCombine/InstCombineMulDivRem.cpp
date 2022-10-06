@@ -962,6 +962,22 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
     }
   }
 
+  // With appropriate no-wrap constraints, remove a common factor in the
+  // dividend and divisor that is disguised as a left-shift.
+  if (match(Op1, m_Shl(m_Value(X), m_Value(Z))) &&
+      match(Op0, m_c_Mul(m_Specific(X), m_Value(Y)))) {
+    // Both operands must have the matching no-wrap for this kind of division.
+    auto *OBO0 = cast<OverflowingBinaryOperator>(Op0);
+    auto *OBO1 = cast<OverflowingBinaryOperator>(Op1);
+    bool HasNUW = OBO0->hasNoUnsignedWrap() && OBO1->hasNoUnsignedWrap();
+
+    // (X * Y) u/ (X << Z) --> Y u>> Z
+    if (!IsSigned && HasNUW)
+      return BinaryOperator::CreateLShr(Y, Z);
+
+    // TODO: Handle signed division.
+  }
+
   return nullptr;
 }
 

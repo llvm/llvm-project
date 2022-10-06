@@ -648,9 +648,9 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32MV-NEXT:    sw a1, 12(sp)
 ; RV32MV-NEXT:    sw a0, 8(sp)
 ; RV32MV-NEXT:    li a0, 85
-; RV32MV-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
+; RV32MV-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; RV32MV-NEXT:    vmv.s.x v0, a0
-; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32MV-NEXT:    mv a0, sp
 ; RV32MV-NEXT:    vle32.v v8, (a0)
 ; RV32MV-NEXT:    vmv.v.i v10, 1
@@ -661,15 +661,15 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV32MV-NEXT:    li a0, 1
 ; RV32MV-NEXT:    vmv.s.x v12, a0
 ; RV32MV-NEXT:    vmv.v.i v14, 0
-; RV32MV-NEXT:    vsetivli zero, 3, e32, m2, tu, mu
+; RV32MV-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
 ; RV32MV-NEXT:    vslideup.vi v14, v12, 2
-; RV32MV-NEXT:    vsetivli zero, 5, e32, m2, tu, mu
+; RV32MV-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
 ; RV32MV-NEXT:    vslideup.vi v14, v10, 4
-; RV32MV-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; RV32MV-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32MV-NEXT:    vmsne.vv v0, v8, v14
 ; RV32MV-NEXT:    vmv.v.i v8, 0
 ; RV32MV-NEXT:    vmerge.vim v8, v8, -1, v0
-; RV32MV-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
+; RV32MV-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; RV32MV-NEXT:    vse32.v v8, (s2)
 ; RV32MV-NEXT:    vslidedown.vi v10, v8, 1
 ; RV32MV-NEXT:    vmv.x.s a0, v10
@@ -758,7 +758,7 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV64MV-NEXT:    add a1, a3, a1
 ; RV64MV-NEXT:    sd a1, 8(sp)
 ; RV64MV-NEXT:    mv a1, sp
-; RV64MV-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; RV64MV-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64MV-NEXT:    vle64.v v8, (a1)
 ; RV64MV-NEXT:    lui a1, %hi(.LCPI3_3)
 ; RV64MV-NEXT:    addi a1, a1, %lo(.LCPI3_3)
@@ -769,7 +769,7 @@ define void @test_srem_vec(<3 x i33>* %X) nounwind {
 ; RV64MV-NEXT:    vmsne.vv v0, v8, v10
 ; RV64MV-NEXT:    vmv.v.i v8, 0
 ; RV64MV-NEXT:    vmerge.vim v8, v8, -1, v0
-; RV64MV-NEXT:    vsetivli zero, 1, e64, m2, ta, mu
+; RV64MV-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV64MV-NEXT:    vslidedown.vi v10, v8, 2
 ; RV64MV-NEXT:    vmv.x.s a2, v10
 ; RV64MV-NEXT:    slli a3, a2, 31

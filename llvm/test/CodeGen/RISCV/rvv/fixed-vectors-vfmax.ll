@@ -9,7 +9,7 @@ declare <2 x half> @llvm.maxnum.v2f16(<2 x half>, <2 x half>)
 define <2 x half> @vfmax_v2f16_vv(<2 x half> %a, <2 x half> %b) {
 ; CHECK-LABEL: vfmax_v2f16_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %v = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> %b)
@@ -19,7 +19,7 @@ define <2 x half> @vfmax_v2f16_vv(<2 x half> %a, <2 x half> %b) {
 define <2 x half> @vfmax_v2f16_vf(<2 x half> %a, half %b) {
 ; CHECK-LABEL: vfmax_v2f16_vf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x half> poison, half %b, i32 0
@@ -31,7 +31,7 @@ define <2 x half> @vfmax_v2f16_vf(<2 x half> %a, half %b) {
 define <2 x half> @vfmax_v2f16_fv(<2 x half> %a, half %b) {
 ; CHECK-LABEL: vfmax_v2f16_fv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x half> poison, half %b, i32 0
@@ -45,7 +45,7 @@ declare <4 x half> @llvm.maxnum.v4f16(<4 x half>, <4 x half>)
 define <4 x half> @vfmax_v4f16_vv(<4 x half> %a, <4 x half> %b) {
 ; CHECK-LABEL: vfmax_v4f16_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %v = call <4 x half> @llvm.maxnum.v4f16(<4 x half> %a, <4 x half> %b)
@@ -55,7 +55,7 @@ define <4 x half> @vfmax_v4f16_vv(<4 x half> %a, <4 x half> %b) {
 define <4 x half> @vfmax_v4f16_vf(<4 x half> %a, half %b) {
 ; CHECK-LABEL: vfmax_v4f16_vf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x half> poison, half %b, i32 0
@@ -67,7 +67,7 @@ define <4 x half> @vfmax_v4f16_vf(<4 x half> %a, half %b) {
 define <4 x half> @vfmax_v4f16_fv(<4 x half> %a, half %b) {
 ; CHECK-LABEL: vfmax_v4f16_fv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x half> poison, half %b, i32 0
@@ -81,7 +81,7 @@ declare <8 x half> @llvm.maxnum.v8f16(<8 x half>, <8 x half>)
 define <8 x half> @vfmax_v8f16_vv(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: vfmax_v8f16_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %v = call <8 x half> @llvm.maxnum.v8f16(<8 x half> %a, <8 x half> %b)
@@ -91,7 +91,7 @@ define <8 x half> @vfmax_v8f16_vv(<8 x half> %a, <8 x half> %b) {
 define <8 x half> @vfmax_v8f16_vf(<8 x half> %a, half %b) {
 ; CHECK-LABEL: vfmax_v8f16_vf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x half> poison, half %b, i32 0
@@ -103,7 +103,7 @@ define <8 x half> @vfmax_v8f16_vf(<8 x half> %a, half %b) {
 define <8 x half> @vfmax_v8f16_fv(<8 x half> %a, half %b) {
 ; CHECK-LABEL: vfmax_v8f16_fv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x half> poison, half %b, i32 0
@@ -117,7 +117,7 @@ declare <16 x half> @llvm.maxnum.v16f16(<16 x half>, <16 x half>)
 define <16 x half> @vfmax_v16f16_vv(<16 x half> %a, <16 x half> %b) {
 ; CHECK-LABEL: vfmax_v16f16_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %v = call <16 x half> @llvm.maxnum.v16f16(<16 x half> %a, <16 x half> %b)
@@ -127,7 +127,7 @@ define <16 x half> @vfmax_v16f16_vv(<16 x half> %a, <16 x half> %b) {
 define <16 x half> @vfmax_v16f16_vf(<16 x half> %a, half %b) {
 ; CHECK-LABEL: vfmax_v16f16_vf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x half> poison, half %b, i32 0
@@ -139,7 +139,7 @@ define <16 x half> @vfmax_v16f16_vf(<16 x half> %a, half %b) {
 define <16 x half> @vfmax_v16f16_fv(<16 x half> %a, half %b) {
 ; CHECK-LABEL: vfmax_v16f16_fv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x half> poison, half %b, i32 0
@@ -153,7 +153,7 @@ declare <2 x float> @llvm.maxnum.v2f32(<2 x float>, <2 x float>)
 define <2 x float> @vfmax_v2f32_vv(<2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: vfmax_v2f32_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %v = call <2 x float> @llvm.maxnum.v2f32(<2 x float> %a, <2 x float> %b)
@@ -163,7 +163,7 @@ define <2 x float> @vfmax_v2f32_vv(<2 x float> %a, <2 x float> %b) {
 define <2 x float> @vfmax_v2f32_vf(<2 x float> %a, float %b) {
 ; CHECK-LABEL: vfmax_v2f32_vf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x float> poison, float %b, i32 0
@@ -175,7 +175,7 @@ define <2 x float> @vfmax_v2f32_vf(<2 x float> %a, float %b) {
 define <2 x float> @vfmax_v2f32_fv(<2 x float> %a, float %b) {
 ; CHECK-LABEL: vfmax_v2f32_fv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x float> poison, float %b, i32 0
@@ -189,7 +189,7 @@ declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>)
 define <4 x float> @vfmax_v4f32_vv(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: vfmax_v4f32_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %v = call <4 x float> @llvm.maxnum.v4f32(<4 x float> %a, <4 x float> %b)
@@ -199,7 +199,7 @@ define <4 x float> @vfmax_v4f32_vv(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @vfmax_v4f32_vf(<4 x float> %a, float %b) {
 ; CHECK-LABEL: vfmax_v4f32_vf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x float> poison, float %b, i32 0
@@ -211,7 +211,7 @@ define <4 x float> @vfmax_v4f32_vf(<4 x float> %a, float %b) {
 define <4 x float> @vfmax_v4f32_fv(<4 x float> %a, float %b) {
 ; CHECK-LABEL: vfmax_v4f32_fv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x float> poison, float %b, i32 0
@@ -225,7 +225,7 @@ declare <8 x float> @llvm.maxnum.v8f32(<8 x float>, <8 x float>)
 define <8 x float> @vfmax_v8f32_vv(<8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: vfmax_v8f32_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %v = call <8 x float> @llvm.maxnum.v8f32(<8 x float> %a, <8 x float> %b)
@@ -235,7 +235,7 @@ define <8 x float> @vfmax_v8f32_vv(<8 x float> %a, <8 x float> %b) {
 define <8 x float> @vfmax_v8f32_vf(<8 x float> %a, float %b) {
 ; CHECK-LABEL: vfmax_v8f32_vf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x float> poison, float %b, i32 0
@@ -247,7 +247,7 @@ define <8 x float> @vfmax_v8f32_vf(<8 x float> %a, float %b) {
 define <8 x float> @vfmax_v8f32_fv(<8 x float> %a, float %b) {
 ; CHECK-LABEL: vfmax_v8f32_fv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x float> poison, float %b, i32 0
@@ -261,7 +261,7 @@ declare <16 x float> @llvm.maxnum.v16f32(<16 x float>, <16 x float>)
 define <16 x float> @vfmax_v16f32_vv(<16 x float> %a, <16 x float> %b) {
 ; CHECK-LABEL: vfmax_v16f32_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %v = call <16 x float> @llvm.maxnum.v16f32(<16 x float> %a, <16 x float> %b)
@@ -271,7 +271,7 @@ define <16 x float> @vfmax_v16f32_vv(<16 x float> %a, <16 x float> %b) {
 define <16 x float> @vfmax_v16f32_vf(<16 x float> %a, float %b) {
 ; CHECK-LABEL: vfmax_v16f32_vf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x float> poison, float %b, i32 0
@@ -283,7 +283,7 @@ define <16 x float> @vfmax_v16f32_vf(<16 x float> %a, float %b) {
 define <16 x float> @vfmax_v16f32_fv(<16 x float> %a, float %b) {
 ; CHECK-LABEL: vfmax_v16f32_fv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x float> poison, float %b, i32 0
@@ -297,7 +297,7 @@ declare <2 x double> @llvm.maxnum.v2f64(<2 x double>, <2 x double>)
 define <2 x double> @vfmax_v2f64_vv(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: vfmax_v2f64_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %v = call <2 x double> @llvm.maxnum.v2f64(<2 x double> %a, <2 x double> %b)
@@ -307,7 +307,7 @@ define <2 x double> @vfmax_v2f64_vv(<2 x double> %a, <2 x double> %b) {
 define <2 x double> @vfmax_v2f64_vf(<2 x double> %a, double %b) {
 ; CHECK-LABEL: vfmax_v2f64_vf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x double> poison, double %b, i32 0
@@ -319,7 +319,7 @@ define <2 x double> @vfmax_v2f64_vf(<2 x double> %a, double %b) {
 define <2 x double> @vfmax_v2f64_fv(<2 x double> %a, double %b) {
 ; CHECK-LABEL: vfmax_v2f64_fv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x double> poison, double %b, i32 0
@@ -333,7 +333,7 @@ declare <4 x double> @llvm.maxnum.v4f64(<4 x double>, <4 x double>)
 define <4 x double> @vfmax_v4f64_vv(<4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: vfmax_v4f64_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %v = call <4 x double> @llvm.maxnum.v4f64(<4 x double> %a, <4 x double> %b)
@@ -343,7 +343,7 @@ define <4 x double> @vfmax_v4f64_vv(<4 x double> %a, <4 x double> %b) {
 define <4 x double> @vfmax_v4f64_vf(<4 x double> %a, double %b) {
 ; CHECK-LABEL: vfmax_v4f64_vf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x double> poison, double %b, i32 0
@@ -355,7 +355,7 @@ define <4 x double> @vfmax_v4f64_vf(<4 x double> %a, double %b) {
 define <4 x double> @vfmax_v4f64_fv(<4 x double> %a, double %b) {
 ; CHECK-LABEL: vfmax_v4f64_fv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x double> poison, double %b, i32 0
@@ -369,7 +369,7 @@ declare <8 x double> @llvm.maxnum.v8f64(<8 x double>, <8 x double>)
 define <8 x double> @vfmax_v8f64_vv(<8 x double> %a, <8 x double> %b) {
 ; CHECK-LABEL: vfmax_v8f64_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %v = call <8 x double> @llvm.maxnum.v8f64(<8 x double> %a, <8 x double> %b)
@@ -379,7 +379,7 @@ define <8 x double> @vfmax_v8f64_vv(<8 x double> %a, <8 x double> %b) {
 define <8 x double> @vfmax_v8f64_vf(<8 x double> %a, double %b) {
 ; CHECK-LABEL: vfmax_v8f64_vf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x double> poison, double %b, i32 0
@@ -391,7 +391,7 @@ define <8 x double> @vfmax_v8f64_vf(<8 x double> %a, double %b) {
 define <8 x double> @vfmax_v8f64_fv(<8 x double> %a, double %b) {
 ; CHECK-LABEL: vfmax_v8f64_fv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x double> poison, double %b, i32 0
@@ -405,7 +405,7 @@ declare <16 x double> @llvm.maxnum.v16f64(<16 x double>, <16 x double>)
 define <16 x double> @vfmax_v16f64_vv(<16 x double> %a, <16 x double> %b) {
 ; CHECK-LABEL: vfmax_v16f64_vv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %v = call <16 x double> @llvm.maxnum.v16f64(<16 x double> %a, <16 x double> %b)
@@ -415,7 +415,7 @@ define <16 x double> @vfmax_v16f64_vv(<16 x double> %a, <16 x double> %b) {
 define <16 x double> @vfmax_v16f64_vf(<16 x double> %a, double %b) {
 ; CHECK-LABEL: vfmax_v16f64_vf:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x double> poison, double %b, i32 0
@@ -427,7 +427,7 @@ define <16 x double> @vfmax_v16f64_vf(<16 x double> %a, double %b) {
 define <16 x double> @vfmax_v16f64_fv(<16 x double> %a, double %b) {
 ; CHECK-LABEL: vfmax_v16f64_fv:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmax.vf v8, v8, fa0
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x double> poison, double %b, i32 0

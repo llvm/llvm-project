@@ -9,7 +9,7 @@ declare <vscale x 1 x i1> @llvm.vp.merge.nxv1i1(<vscale x 1 x i1>, <vscale x 1 x
 define <vscale x 1 x i1> @vpmerge_nxv1i1(<vscale x 1 x i1> %va, <vscale x 1 x i1> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpmerge_nxv1i1:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
+; RV32-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vid.v v10
 ; RV32-NEXT:    vmsltu.vx v10, v10, a0
 ; RV32-NEXT:    vmand.mm v9, v9, v10
@@ -20,7 +20,7 @@ define <vscale x 1 x i1> @vpmerge_nxv1i1(<vscale x 1 x i1> %va, <vscale x 1 x i1
 ;
 ; RV64-LABEL: vpmerge_nxv1i1:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV64-NEXT:    vid.v v10
 ; RV64-NEXT:    vmsltu.vx v10, v10, a0
 ; RV64-NEXT:    vmand.mm v9, v9, v10
@@ -37,7 +37,7 @@ declare <vscale x 1 x i8> @llvm.vp.merge.nxv1i8(<vscale x 1 x i1>, <vscale x 1 x
 define <vscale x 1 x i8> @vpmerge_vv_nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x i8> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -48,7 +48,7 @@ define <vscale x 1 x i8> @vpmerge_vv_nxv1i8(<vscale x 1 x i8> %va, <vscale x 1 x
 define <vscale x 1 x i8> @vpmerge_vx_nxv1i8(i8 %a, <vscale x 1 x i8> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i8> poison, i8 %a, i32 0
@@ -60,7 +60,7 @@ define <vscale x 1 x i8> @vpmerge_vx_nxv1i8(i8 %a, <vscale x 1 x i8> %vb, <vscal
 define <vscale x 1 x i8> @vpmerge_vi_nxv1i8(<vscale x 1 x i8> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv1i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i8> poison, i8 2, i32 0
@@ -74,7 +74,7 @@ declare <vscale x 2 x i8> @llvm.vp.merge.nxv2i8(<vscale x 2 x i1>, <vscale x 2 x
 define <vscale x 2 x i8> @vpmerge_vv_nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x i8> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -85,7 +85,7 @@ define <vscale x 2 x i8> @vpmerge_vv_nxv2i8(<vscale x 2 x i8> %va, <vscale x 2 x
 define <vscale x 2 x i8> @vpmerge_vx_nxv2i8(i8 %a, <vscale x 2 x i8> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x i8> poison, i8 %a, i32 0
@@ -97,7 +97,7 @@ define <vscale x 2 x i8> @vpmerge_vx_nxv2i8(i8 %a, <vscale x 2 x i8> %vb, <vscal
 define <vscale x 2 x i8> @vpmerge_vi_nxv2i8(<vscale x 2 x i8> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x i8> poison, i8 2, i32 0
@@ -111,7 +111,7 @@ declare <vscale x 3 x i8> @llvm.vp.merge.nxv3i8(<vscale x 3 x i1>, <vscale x 3 x
 define <vscale x 3 x i8> @vpmerge_vv_nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x i8> %vb, <vscale x 3 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv3i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -122,7 +122,7 @@ define <vscale x 3 x i8> @vpmerge_vv_nxv3i8(<vscale x 3 x i8> %va, <vscale x 3 x
 define <vscale x 3 x i8> @vpmerge_vx_nxv3i8(i8 %a, <vscale x 3 x i8> %vb, <vscale x 3 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv3i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 3 x i8> poison, i8 %a, i32 0
@@ -134,7 +134,7 @@ define <vscale x 3 x i8> @vpmerge_vx_nxv3i8(i8 %a, <vscale x 3 x i8> %vb, <vscal
 define <vscale x 3 x i8> @vpmerge_vi_nxv3i8(<vscale x 3 x i8> %vb, <vscale x 3 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv3i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 3 x i8> poison, i8 2, i32 0
@@ -148,7 +148,7 @@ declare <vscale x 4 x i8> @llvm.vp.merge.nxv4i8(<vscale x 4 x i1>, <vscale x 4 x
 define <vscale x 4 x i8> @vpmerge_vv_nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x i8> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -159,7 +159,7 @@ define <vscale x 4 x i8> @vpmerge_vv_nxv4i8(<vscale x 4 x i8> %va, <vscale x 4 x
 define <vscale x 4 x i8> @vpmerge_vx_nxv4i8(i8 %a, <vscale x 4 x i8> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x i8> poison, i8 %a, i32 0
@@ -171,7 +171,7 @@ define <vscale x 4 x i8> @vpmerge_vx_nxv4i8(i8 %a, <vscale x 4 x i8> %vb, <vscal
 define <vscale x 4 x i8> @vpmerge_vi_nxv4i8(<vscale x 4 x i8> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x i8> poison, i8 2, i32 0
@@ -185,7 +185,7 @@ declare <vscale x 8 x i7> @llvm.vp.merge.nxv8i7(<vscale x 8 x i1>, <vscale x 8 x
 define <vscale x 8 x i7> @vpmerge_vv_nxv8i7(<vscale x 8 x i7> %va, <vscale x 8 x i7> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv8i7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -196,7 +196,7 @@ define <vscale x 8 x i7> @vpmerge_vv_nxv8i7(<vscale x 8 x i7> %va, <vscale x 8 x
 define <vscale x 8 x i7> @vpmerge_vx_nxv8i7(i7 %a, <vscale x 8 x i7> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv8i7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i7> poison, i7 %a, i32 0
@@ -208,7 +208,7 @@ define <vscale x 8 x i7> @vpmerge_vx_nxv8i7(i7 %a, <vscale x 8 x i7> %vb, <vscal
 define <vscale x 8 x i7> @vpmerge_vi_nxv8i7(<vscale x 8 x i7> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv8i7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i7> poison, i7 2, i32 0
@@ -222,7 +222,7 @@ declare <vscale x 8 x i8> @llvm.vp.merge.nxv8i8(<vscale x 8 x i1>, <vscale x 8 x
 define <vscale x 8 x i8> @vpmerge_vv_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x i8> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -233,7 +233,7 @@ define <vscale x 8 x i8> @vpmerge_vv_nxv8i8(<vscale x 8 x i8> %va, <vscale x 8 x
 define <vscale x 8 x i8> @vpmerge_vx_nxv8i8(i8 %a, <vscale x 8 x i8> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i8> poison, i8 %a, i32 0
@@ -245,7 +245,7 @@ define <vscale x 8 x i8> @vpmerge_vx_nxv8i8(i8 %a, <vscale x 8 x i8> %vb, <vscal
 define <vscale x 8 x i8> @vpmerge_vi_nxv8i8(<vscale x 8 x i8> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i8> poison, i8 2, i32 0
@@ -259,7 +259,7 @@ declare <vscale x 16 x i8> @llvm.vp.merge.nxv16i8(<vscale x 16 x i1>, <vscale x 
 define <vscale x 16 x i8> @vpmerge_vv_nxv16i8(<vscale x 16 x i8> %va, <vscale x 16 x i8> %vb, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v10, v10, v8, v0
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -270,7 +270,7 @@ define <vscale x 16 x i8> @vpmerge_vv_nxv16i8(<vscale x 16 x i8> %va, <vscale x 
 define <vscale x 16 x i8> @vpmerge_vx_nxv16i8(i8 %a, <vscale x 16 x i8> %vb, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 16 x i8> poison, i8 %a, i32 0
@@ -282,7 +282,7 @@ define <vscale x 16 x i8> @vpmerge_vx_nxv16i8(i8 %a, <vscale x 16 x i8> %vb, <vs
 define <vscale x 16 x i8> @vpmerge_vi_nxv16i8(<vscale x 16 x i8> %vb, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 16 x i8> poison, i8 2, i32 0
@@ -296,7 +296,7 @@ declare <vscale x 32 x i8> @llvm.vp.merge.nxv32i8(<vscale x 32 x i1>, <vscale x 
 define <vscale x 32 x i8> @vpmerge_vv_nxv32i8(<vscale x 32 x i8> %va, <vscale x 32 x i8> %vb, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v12, v12, v8, v0
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -307,7 +307,7 @@ define <vscale x 32 x i8> @vpmerge_vv_nxv32i8(<vscale x 32 x i8> %va, <vscale x 
 define <vscale x 32 x i8> @vpmerge_vx_nxv32i8(i8 %a, <vscale x 32 x i8> %vb, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e8, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i8> poison, i8 %a, i32 0
@@ -319,7 +319,7 @@ define <vscale x 32 x i8> @vpmerge_vx_nxv32i8(i8 %a, <vscale x 32 x i8> %vb, <vs
 define <vscale x 32 x i8> @vpmerge_vi_nxv32i8(<vscale x 32 x i8> %vb, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv32i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i8> poison, i8 2, i32 0
@@ -333,7 +333,7 @@ declare <vscale x 64 x i8> @llvm.vp.merge.nxv64i8(<vscale x 64 x i1>, <vscale x 
 define <vscale x 64 x i8> @vpmerge_vv_nxv64i8(<vscale x 64 x i8> %va, <vscale x 64 x i8> %vb, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v16, v16, v8, v0
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -344,7 +344,7 @@ define <vscale x 64 x i8> @vpmerge_vv_nxv64i8(<vscale x 64 x i8> %va, <vscale x 
 define <vscale x 64 x i8> @vpmerge_vx_nxv64i8(i8 %a, <vscale x 64 x i8> %vb, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 64 x i8> poison, i8 %a, i32 0
@@ -356,7 +356,7 @@ define <vscale x 64 x i8> @vpmerge_vx_nxv64i8(i8 %a, <vscale x 64 x i8> %vb, <vs
 define <vscale x 64 x i8> @vpmerge_vi_nxv64i8(<vscale x 64 x i8> %vb, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv64i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 64 x i8> poison, i8 2, i32 0
@@ -385,7 +385,7 @@ define <vscale x 128 x i8> @vpmerge_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; RV32-NEXT:    add a4, sp, a4
 ; RV32-NEXT:    addi a4, a4, 16
 ; RV32-NEXT:    vs8r.v v24, (a4) # Unknown-size Folded Spill
-; RV32-NEXT:    vsetvli a4, zero, e8, m8, ta, mu
+; RV32-NEXT:    vsetvli a4, zero, e8, m8, ta, ma
 ; RV32-NEXT:    vlm.v v2, (a2)
 ; RV32-NEXT:    sub a4, a3, a1
 ; RV32-NEXT:    vmv1r.v v1, v0
@@ -402,7 +402,7 @@ define <vscale x 128 x i8> @vpmerge_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; RV32-NEXT:    mv a2, a4
 ; RV32-NEXT:  .LBB28_2:
 ; RV32-NEXT:    vl8r.v v8, (a0)
-; RV32-NEXT:    vsetvli zero, a2, e8, m8, tu, mu
+; RV32-NEXT:    vsetvli zero, a2, e8, m8, tu, ma
 ; RV32-NEXT:    vmv1r.v v0, v2
 ; RV32-NEXT:    csrr a0, vlenb
 ; RV32-NEXT:    slli a0, a0, 4
@@ -419,7 +419,7 @@ define <vscale x 128 x i8> @vpmerge_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; RV32-NEXT:  # %bb.3:
 ; RV32-NEXT:    mv a3, a1
 ; RV32-NEXT:  .LBB28_4:
-; RV32-NEXT:    vsetvli zero, a3, e8, m8, tu, mu
+; RV32-NEXT:    vsetvli zero, a3, e8, m8, tu, ma
 ; RV32-NEXT:    vmv1r.v v0, v1
 ; RV32-NEXT:    addi a0, sp, 16
 ; RV32-NEXT:    vl8re8.v v24, (a0) # Unknown-size Folded Reload
@@ -442,7 +442,7 @@ define <vscale x 128 x i8> @vpmerge_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; RV64-NEXT:    slli a1, a1, 3
 ; RV64-NEXT:    add a4, a0, a1
 ; RV64-NEXT:    vl8r.v v24, (a4)
-; RV64-NEXT:    vsetvli a4, zero, e8, m8, ta, mu
+; RV64-NEXT:    vsetvli a4, zero, e8, m8, ta, ma
 ; RV64-NEXT:    vlm.v v2, (a2)
 ; RV64-NEXT:    sub a4, a3, a1
 ; RV64-NEXT:    vmv1r.v v1, v0
@@ -454,14 +454,14 @@ define <vscale x 128 x i8> @vpmerge_vv_nxv128i8(<vscale x 128 x i8> %va, <vscale
 ; RV64-NEXT:    mv a2, a4
 ; RV64-NEXT:  .LBB28_2:
 ; RV64-NEXT:    vl8r.v v8, (a0)
-; RV64-NEXT:    vsetvli zero, a2, e8, m8, tu, mu
+; RV64-NEXT:    vsetvli zero, a2, e8, m8, tu, ma
 ; RV64-NEXT:    vmv1r.v v0, v2
 ; RV64-NEXT:    vmerge.vvm v24, v24, v16, v0
 ; RV64-NEXT:    bltu a3, a1, .LBB28_4
 ; RV64-NEXT:  # %bb.3:
 ; RV64-NEXT:    mv a3, a1
 ; RV64-NEXT:  .LBB28_4:
-; RV64-NEXT:    vsetvli zero, a3, e8, m8, tu, mu
+; RV64-NEXT:    vsetvli zero, a3, e8, m8, tu, ma
 ; RV64-NEXT:    vmv1r.v v0, v1
 ; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    vl8re8.v v16, (a0) # Unknown-size Folded Reload
@@ -487,16 +487,16 @@ define <vscale x 128 x i8> @vpmerge_vx_nxv128i8(i8 %a, <vscale x 128 x i8> %vb, 
 ; CHECK-NEXT:    mv a4, a3
 ; CHECK-NEXT:  .LBB29_2:
 ; CHECK-NEXT:    li a5, 0
-; CHECK-NEXT:    vsetvli a6, zero, e8, m8, ta, mu
+; CHECK-NEXT:    vsetvli a6, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v24, (a1)
-; CHECK-NEXT:    vsetvli zero, a4, e8, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a4, e8, m8, tu, ma
 ; CHECK-NEXT:    sub a1, a2, a3
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    bltu a2, a1, .LBB29_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a5, a1
 ; CHECK-NEXT:  .LBB29_4:
-; CHECK-NEXT:    vsetvli zero, a5, e8, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a5, e8, m8, tu, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vmerge.vxm v16, v16, a0, v0
 ; CHECK-NEXT:    ret
@@ -517,16 +517,16 @@ define <vscale x 128 x i8> @vpmerge_vi_nxv128i8(<vscale x 128 x i8> %vb, <vscale
 ; CHECK-NEXT:    mv a3, a2
 ; CHECK-NEXT:  .LBB30_2:
 ; CHECK-NEXT:    li a4, 0
-; CHECK-NEXT:    vsetvli a5, zero, e8, m8, ta, mu
+; CHECK-NEXT:    vsetvli a5, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vlm.v v24, (a0)
-; CHECK-NEXT:    vsetvli zero, a3, e8, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a3, e8, m8, tu, ma
 ; CHECK-NEXT:    sub a0, a1, a2
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    bltu a1, a0, .LBB30_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a4, a0
 ; CHECK-NEXT:  .LBB30_4:
-; CHECK-NEXT:    vsetvli zero, a4, e8, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a4, e8, m8, tu, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vmerge.vim v16, v16, 2, v0
 ; CHECK-NEXT:    ret
@@ -541,7 +541,7 @@ declare <vscale x 1 x i16> @llvm.vp.merge.nxv1i16(<vscale x 1 x i1>, <vscale x 1
 define <vscale x 1 x i16> @vpmerge_vv_nxv1i16(<vscale x 1 x i16> %va, <vscale x 1 x i16> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -552,7 +552,7 @@ define <vscale x 1 x i16> @vpmerge_vv_nxv1i16(<vscale x 1 x i16> %va, <vscale x 
 define <vscale x 1 x i16> @vpmerge_vx_nxv1i16(i16 %a, <vscale x 1 x i16> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i16> poison, i16 %a, i32 0
@@ -564,7 +564,7 @@ define <vscale x 1 x i16> @vpmerge_vx_nxv1i16(i16 %a, <vscale x 1 x i16> %vb, <v
 define <vscale x 1 x i16> @vpmerge_vi_nxv1i16(<vscale x 1 x i16> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i16> poison, i16 2, i32 0
@@ -578,7 +578,7 @@ declare <vscale x 2 x i16> @llvm.vp.merge.nxv2i16(<vscale x 2 x i1>, <vscale x 2
 define <vscale x 2 x i16> @vpmerge_vv_nxv2i16(<vscale x 2 x i16> %va, <vscale x 2 x i16> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -589,7 +589,7 @@ define <vscale x 2 x i16> @vpmerge_vv_nxv2i16(<vscale x 2 x i16> %va, <vscale x 
 define <vscale x 2 x i16> @vpmerge_vx_nxv2i16(i16 %a, <vscale x 2 x i16> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x i16> poison, i16 %a, i32 0
@@ -601,7 +601,7 @@ define <vscale x 2 x i16> @vpmerge_vx_nxv2i16(i16 %a, <vscale x 2 x i16> %vb, <v
 define <vscale x 2 x i16> @vpmerge_vi_nxv2i16(<vscale x 2 x i16> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x i16> poison, i16 2, i32 0
@@ -615,7 +615,7 @@ declare <vscale x 4 x i16> @llvm.vp.merge.nxv4i16(<vscale x 4 x i1>, <vscale x 4
 define <vscale x 4 x i16> @vpmerge_vv_nxv4i16(<vscale x 4 x i16> %va, <vscale x 4 x i16> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -626,7 +626,7 @@ define <vscale x 4 x i16> @vpmerge_vv_nxv4i16(<vscale x 4 x i16> %va, <vscale x 
 define <vscale x 4 x i16> @vpmerge_vx_nxv4i16(i16 %a, <vscale x 4 x i16> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x i16> poison, i16 %a, i32 0
@@ -638,7 +638,7 @@ define <vscale x 4 x i16> @vpmerge_vx_nxv4i16(i16 %a, <vscale x 4 x i16> %vb, <v
 define <vscale x 4 x i16> @vpmerge_vi_nxv4i16(<vscale x 4 x i16> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x i16> poison, i16 2, i32 0
@@ -652,7 +652,7 @@ declare <vscale x 8 x i16> @llvm.vp.merge.nxv8i16(<vscale x 8 x i1>, <vscale x 8
 define <vscale x 8 x i16> @vpmerge_vv_nxv8i16(<vscale x 8 x i16> %va, <vscale x 8 x i16> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v10, v10, v8, v0
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -663,7 +663,7 @@ define <vscale x 8 x i16> @vpmerge_vv_nxv8i16(<vscale x 8 x i16> %va, <vscale x 
 define <vscale x 8 x i16> @vpmerge_vx_nxv8i16(i16 %a, <vscale x 8 x i16> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i16> poison, i16 %a, i32 0
@@ -675,7 +675,7 @@ define <vscale x 8 x i16> @vpmerge_vx_nxv8i16(i16 %a, <vscale x 8 x i16> %vb, <v
 define <vscale x 8 x i16> @vpmerge_vi_nxv8i16(<vscale x 8 x i16> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i16> poison, i16 2, i32 0
@@ -689,7 +689,7 @@ declare <vscale x 16 x i16> @llvm.vp.merge.nxv16i16(<vscale x 16 x i1>, <vscale 
 define <vscale x 16 x i16> @vpmerge_vv_nxv16i16(<vscale x 16 x i16> %va, <vscale x 16 x i16> %vb, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v12, v12, v8, v0
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -700,7 +700,7 @@ define <vscale x 16 x i16> @vpmerge_vv_nxv16i16(<vscale x 16 x i16> %va, <vscale
 define <vscale x 16 x i16> @vpmerge_vx_nxv16i16(i16 %a, <vscale x 16 x i16> %vb, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e16, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 16 x i16> poison, i16 %a, i32 0
@@ -712,7 +712,7 @@ define <vscale x 16 x i16> @vpmerge_vx_nxv16i16(i16 %a, <vscale x 16 x i16> %vb,
 define <vscale x 16 x i16> @vpmerge_vi_nxv16i16(<vscale x 16 x i16> %vb, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 16 x i16> poison, i16 2, i32 0
@@ -726,7 +726,7 @@ declare <vscale x 32 x i16> @llvm.vp.merge.nxv32i16(<vscale x 32 x i1>, <vscale 
 define <vscale x 32 x i16> @vpmerge_vv_nxv32i16(<vscale x 32 x i16> %va, <vscale x 32 x i16> %vb, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv32i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v16, v16, v8, v0
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -737,7 +737,7 @@ define <vscale x 32 x i16> @vpmerge_vv_nxv32i16(<vscale x 32 x i16> %va, <vscale
 define <vscale x 32 x i16> @vpmerge_vx_nxv32i16(i16 %a, <vscale x 32 x i16> %vb, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv32i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e16, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i16> poison, i16 %a, i32 0
@@ -749,7 +749,7 @@ define <vscale x 32 x i16> @vpmerge_vx_nxv32i16(i16 %a, <vscale x 32 x i16> %vb,
 define <vscale x 32 x i16> @vpmerge_vi_nxv32i16(<vscale x 32 x i16> %vb, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv32i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x i16> poison, i16 2, i32 0
@@ -763,7 +763,7 @@ declare <vscale x 1 x i32> @llvm.vp.merge.nxv1i32(<vscale x 1 x i1>, <vscale x 1
 define <vscale x 1 x i32> @vpmerge_vv_nxv1i32(<vscale x 1 x i32> %va, <vscale x 1 x i32> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -774,7 +774,7 @@ define <vscale x 1 x i32> @vpmerge_vv_nxv1i32(<vscale x 1 x i32> %va, <vscale x 
 define <vscale x 1 x i32> @vpmerge_vx_nxv1i32(i32 %a, <vscale x 1 x i32> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i32> poison, i32 %a, i32 0
@@ -786,7 +786,7 @@ define <vscale x 1 x i32> @vpmerge_vx_nxv1i32(i32 %a, <vscale x 1 x i32> %vb, <v
 define <vscale x 1 x i32> @vpmerge_vi_nxv1i32(<vscale x 1 x i32> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv1i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i32> poison, i32 2, i32 0
@@ -800,7 +800,7 @@ declare <vscale x 2 x i32> @llvm.vp.merge.nxv2i32(<vscale x 2 x i1>, <vscale x 2
 define <vscale x 2 x i32> @vpmerge_vv_nxv2i32(<vscale x 2 x i32> %va, <vscale x 2 x i32> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -811,7 +811,7 @@ define <vscale x 2 x i32> @vpmerge_vv_nxv2i32(<vscale x 2 x i32> %va, <vscale x 
 define <vscale x 2 x i32> @vpmerge_vx_nxv2i32(i32 %a, <vscale x 2 x i32> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x i32> poison, i32 %a, i32 0
@@ -823,7 +823,7 @@ define <vscale x 2 x i32> @vpmerge_vx_nxv2i32(i32 %a, <vscale x 2 x i32> %vb, <v
 define <vscale x 2 x i32> @vpmerge_vi_nxv2i32(<vscale x 2 x i32> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x i32> poison, i32 2, i32 0
@@ -837,7 +837,7 @@ declare <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1>, <vscale x 4
 define <vscale x 4 x i32> @vpmerge_vv_nxv4i32(<vscale x 4 x i32> %va, <vscale x 4 x i32> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v10, v10, v8, v0
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -848,7 +848,7 @@ define <vscale x 4 x i32> @vpmerge_vv_nxv4i32(<vscale x 4 x i32> %va, <vscale x 
 define <vscale x 4 x i32> @vpmerge_vx_nxv4i32(i32 %a, <vscale x 4 x i32> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x i32> poison, i32 %a, i32 0
@@ -860,7 +860,7 @@ define <vscale x 4 x i32> @vpmerge_vx_nxv4i32(i32 %a, <vscale x 4 x i32> %vb, <v
 define <vscale x 4 x i32> @vpmerge_vi_nxv4i32(<vscale x 4 x i32> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x i32> poison, i32 2, i32 0
@@ -874,7 +874,7 @@ declare <vscale x 8 x i32> @llvm.vp.merge.nxv8i32(<vscale x 8 x i1>, <vscale x 8
 define <vscale x 8 x i32> @vpmerge_vv_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i32> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v12, v12, v8, v0
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -885,7 +885,7 @@ define <vscale x 8 x i32> @vpmerge_vv_nxv8i32(<vscale x 8 x i32> %va, <vscale x 
 define <vscale x 8 x i32> @vpmerge_vx_nxv8i32(i32 %a, <vscale x 8 x i32> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i32> poison, i32 %a, i32 0
@@ -897,7 +897,7 @@ define <vscale x 8 x i32> @vpmerge_vx_nxv8i32(i32 %a, <vscale x 8 x i32> %vb, <v
 define <vscale x 8 x i32> @vpmerge_vi_nxv8i32(<vscale x 8 x i32> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i32> poison, i32 2, i32 0
@@ -911,7 +911,7 @@ declare <vscale x 16 x i32> @llvm.vp.merge.nxv16i32(<vscale x 16 x i1>, <vscale 
 define <vscale x 16 x i32> @vpmerge_vv_nxv16i32(<vscale x 16 x i32> %va, <vscale x 16 x i32> %vb, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv16i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v16, v16, v8, v0
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -922,7 +922,7 @@ define <vscale x 16 x i32> @vpmerge_vv_nxv16i32(<vscale x 16 x i32> %va, <vscale
 define <vscale x 16 x i32> @vpmerge_vx_nxv16i32(i32 %a, <vscale x 16 x i32> %vb, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vx_nxv16i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 16 x i32> poison, i32 %a, i32 0
@@ -934,7 +934,7 @@ define <vscale x 16 x i32> @vpmerge_vx_nxv16i32(i32 %a, <vscale x 16 x i32> %vb,
 define <vscale x 16 x i32> @vpmerge_vi_nxv16i32(<vscale x 16 x i32> %vb, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv16i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 16 x i32> poison, i32 2, i32 0
@@ -948,7 +948,7 @@ declare <vscale x 1 x i64> @llvm.vp.merge.nxv1i64(<vscale x 1 x i1>, <vscale x 1
 define <vscale x 1 x i64> @vpmerge_vv_nxv1i64(<vscale x 1 x i64> %va, <vscale x 1 x i64> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv1i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -971,7 +971,7 @@ define <vscale x 1 x i64> @vpmerge_vx_nxv1i64(i64 %a, <vscale x 1 x i64> %vb, <v
 ;
 ; RV64-LABEL: vpmerge_vx_nxv1i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a1, e64, m1, tu, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m1, tu, ma
 ; RV64-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; RV64-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i64> poison, i64 %a, i32 0
@@ -983,7 +983,7 @@ define <vscale x 1 x i64> @vpmerge_vx_nxv1i64(i64 %a, <vscale x 1 x i64> %vb, <v
 define <vscale x 1 x i64> @vpmerge_vi_nxv1i64(<vscale x 1 x i64> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv1i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x i64> poison, i64 2, i32 0
@@ -997,7 +997,7 @@ declare <vscale x 2 x i64> @llvm.vp.merge.nxv2i64(<vscale x 2 x i1>, <vscale x 2
 define <vscale x 2 x i64> @vpmerge_vv_nxv2i64(<vscale x 2 x i64> %va, <vscale x 2 x i64> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v10, v10, v8, v0
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -1020,7 +1020,7 @@ define <vscale x 2 x i64> @vpmerge_vx_nxv2i64(i64 %a, <vscale x 2 x i64> %vb, <v
 ;
 ; RV64-LABEL: vpmerge_vx_nxv2i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a1, e64, m2, tu, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m2, tu, ma
 ; RV64-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; RV64-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x i64> poison, i64 %a, i32 0
@@ -1032,7 +1032,7 @@ define <vscale x 2 x i64> @vpmerge_vx_nxv2i64(i64 %a, <vscale x 2 x i64> %vb, <v
 define <vscale x 2 x i64> @vpmerge_vi_nxv2i64(<vscale x 2 x i64> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x i64> poison, i64 2, i32 0
@@ -1046,7 +1046,7 @@ declare <vscale x 4 x i64> @llvm.vp.merge.nxv4i64(<vscale x 4 x i1>, <vscale x 4
 define <vscale x 4 x i64> @vpmerge_vv_nxv4i64(<vscale x 4 x i64> %va, <vscale x 4 x i64> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v12, v12, v8, v0
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -1069,7 +1069,7 @@ define <vscale x 4 x i64> @vpmerge_vx_nxv4i64(i64 %a, <vscale x 4 x i64> %vb, <v
 ;
 ; RV64-LABEL: vpmerge_vx_nxv4i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, tu, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, tu, ma
 ; RV64-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; RV64-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x i64> poison, i64 %a, i32 0
@@ -1081,7 +1081,7 @@ define <vscale x 4 x i64> @vpmerge_vx_nxv4i64(i64 %a, <vscale x 4 x i64> %vb, <v
 define <vscale x 4 x i64> @vpmerge_vi_nxv4i64(<vscale x 4 x i64> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x i64> poison, i64 2, i32 0
@@ -1095,7 +1095,7 @@ declare <vscale x 8 x i64> @llvm.vp.merge.nxv8i64(<vscale x 8 x i1>, <vscale x 8
 define <vscale x 8 x i64> @vpmerge_vv_nxv8i64(<vscale x 8 x i64> %va, <vscale x 8 x i64> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv8i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v16, v16, v8, v0
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -1118,7 +1118,7 @@ define <vscale x 8 x i64> @vpmerge_vx_nxv8i64(i64 %a, <vscale x 8 x i64> %vb, <v
 ;
 ; RV64-LABEL: vpmerge_vx_nxv8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a1, e64, m8, tu, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m8, tu, ma
 ; RV64-NEXT:    vmerge.vxm v8, v8, a0, v0
 ; RV64-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i64> poison, i64 %a, i32 0
@@ -1130,7 +1130,7 @@ define <vscale x 8 x i64> @vpmerge_vx_nxv8i64(i64 %a, <vscale x 8 x i64> %vb, <v
 define <vscale x 8 x i64> @vpmerge_vi_nxv8i64(<vscale x 8 x i64> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vi_nxv8i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vim v8, v8, 2, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x i64> poison, i64 2, i32 0
@@ -1144,7 +1144,7 @@ declare <vscale x 1 x half> @llvm.vp.merge.nxv1f16(<vscale x 1 x i1>, <vscale x 
 define <vscale x 1 x half> @vpmerge_vv_nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x half> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -1155,7 +1155,7 @@ define <vscale x 1 x half> @vpmerge_vv_nxv1f16(<vscale x 1 x half> %va, <vscale 
 define <vscale x 1 x half> @vpmerge_vf_nxv1f16(half %a, <vscale x 1 x half> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vf_nxv1f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x half> poison, half %a, i32 0
@@ -1169,7 +1169,7 @@ declare <vscale x 2 x half> @llvm.vp.merge.nxv2f16(<vscale x 2 x i1>, <vscale x 
 define <vscale x 2 x half> @vpmerge_vv_nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x half> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -1180,7 +1180,7 @@ define <vscale x 2 x half> @vpmerge_vv_nxv2f16(<vscale x 2 x half> %va, <vscale 
 define <vscale x 2 x half> @vpmerge_vf_nxv2f16(half %a, <vscale x 2 x half> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vf_nxv2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x half> poison, half %a, i32 0
@@ -1194,7 +1194,7 @@ declare <vscale x 4 x half> @llvm.vp.merge.nxv4f16(<vscale x 4 x i1>, <vscale x 
 define <vscale x 4 x half> @vpmerge_vv_nxv4f16(<vscale x 4 x half> %va, <vscale x 4 x half> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -1205,7 +1205,7 @@ define <vscale x 4 x half> @vpmerge_vv_nxv4f16(<vscale x 4 x half> %va, <vscale 
 define <vscale x 4 x half> @vpmerge_vf_nxv4f16(half %a, <vscale x 4 x half> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vf_nxv4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x half> poison, half %a, i32 0
@@ -1219,7 +1219,7 @@ declare <vscale x 8 x half> @llvm.vp.merge.nxv8f16(<vscale x 8 x i1>, <vscale x 
 define <vscale x 8 x half> @vpmerge_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x 8 x half> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v10, v10, v8, v0
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -1230,7 +1230,7 @@ define <vscale x 8 x half> @vpmerge_vv_nxv8f16(<vscale x 8 x half> %va, <vscale 
 define <vscale x 8 x half> @vpmerge_vf_nxv8f16(half %a, <vscale x 8 x half> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vf_nxv8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x half> poison, half %a, i32 0
@@ -1244,7 +1244,7 @@ declare <vscale x 16 x half> @llvm.vp.merge.nxv16f16(<vscale x 16 x i1>, <vscale
 define <vscale x 16 x half> @vpmerge_vv_nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x half> %vb, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v12, v12, v8, v0
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -1255,7 +1255,7 @@ define <vscale x 16 x half> @vpmerge_vv_nxv16f16(<vscale x 16 x half> %va, <vsca
 define <vscale x 16 x half> @vpmerge_vf_nxv16f16(half %a, <vscale x 16 x half> %vb, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vf_nxv16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 16 x half> poison, half %a, i32 0
@@ -1269,7 +1269,7 @@ declare <vscale x 32 x half> @llvm.vp.merge.nxv32f16(<vscale x 32 x i1>, <vscale
 define <vscale x 32 x half> @vpmerge_vv_nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %vb, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v16, v16, v8, v0
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -1280,7 +1280,7 @@ define <vscale x 32 x half> @vpmerge_vv_nxv32f16(<vscale x 32 x half> %va, <vsca
 define <vscale x 32 x half> @vpmerge_vf_nxv32f16(half %a, <vscale x 32 x half> %vb, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vf_nxv32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m8, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 32 x half> poison, half %a, i32 0
@@ -1294,7 +1294,7 @@ declare <vscale x 1 x float> @llvm.vp.merge.nxv1f32(<vscale x 1 x i1>, <vscale x
 define <vscale x 1 x float> @vpmerge_vv_nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x float> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -1305,7 +1305,7 @@ define <vscale x 1 x float> @vpmerge_vv_nxv1f32(<vscale x 1 x float> %va, <vscal
 define <vscale x 1 x float> @vpmerge_vf_nxv1f32(float %a, <vscale x 1 x float> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vf_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x float> poison, float %a, i32 0
@@ -1319,7 +1319,7 @@ declare <vscale x 2 x float> @llvm.vp.merge.nxv2f32(<vscale x 2 x i1>, <vscale x
 define <vscale x 2 x float> @vpmerge_vv_nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x float> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -1330,7 +1330,7 @@ define <vscale x 2 x float> @vpmerge_vv_nxv2f32(<vscale x 2 x float> %va, <vscal
 define <vscale x 2 x float> @vpmerge_vf_nxv2f32(float %a, <vscale x 2 x float> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vf_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x float> poison, float %a, i32 0
@@ -1344,7 +1344,7 @@ declare <vscale x 4 x float> @llvm.vp.merge.nxv4f32(<vscale x 4 x i1>, <vscale x
 define <vscale x 4 x float> @vpmerge_vv_nxv4f32(<vscale x 4 x float> %va, <vscale x 4 x float> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v10, v10, v8, v0
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -1355,7 +1355,7 @@ define <vscale x 4 x float> @vpmerge_vv_nxv4f32(<vscale x 4 x float> %va, <vscal
 define <vscale x 4 x float> @vpmerge_vf_nxv4f32(float %a, <vscale x 4 x float> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vf_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x float> poison, float %a, i32 0
@@ -1369,7 +1369,7 @@ declare <vscale x 8 x float> @llvm.vp.merge.nxv8f32(<vscale x 8 x i1>, <vscale x
 define <vscale x 8 x float> @vpmerge_vv_nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x float> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v12, v12, v8, v0
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -1380,7 +1380,7 @@ define <vscale x 8 x float> @vpmerge_vv_nxv8f32(<vscale x 8 x float> %va, <vscal
 define <vscale x 8 x float> @vpmerge_vf_nxv8f32(float %a, <vscale x 8 x float> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vf_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x float> poison, float %a, i32 0
@@ -1394,7 +1394,7 @@ declare <vscale x 16 x float> @llvm.vp.merge.nxv16f32(<vscale x 16 x i1>, <vscal
 define <vscale x 16 x float> @vpmerge_vv_nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x float> %vb, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v16, v16, v8, v0
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -1405,7 +1405,7 @@ define <vscale x 16 x float> @vpmerge_vv_nxv16f32(<vscale x 16 x float> %va, <vs
 define <vscale x 16 x float> @vpmerge_vf_nxv16f32(float %a, <vscale x 16 x float> %vb, <vscale x 16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vf_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 16 x float> poison, float %a, i32 0
@@ -1419,7 +1419,7 @@ declare <vscale x 1 x double> @llvm.vp.merge.nxv1f64(<vscale x 1 x i1>, <vscale 
 define <vscale x 1 x double> @vpmerge_vv_nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x double> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v9, v9, v8, v0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -1430,7 +1430,7 @@ define <vscale x 1 x double> @vpmerge_vv_nxv1f64(<vscale x 1 x double> %va, <vsc
 define <vscale x 1 x double> @vpmerge_vf_nxv1f64(double %a, <vscale x 1 x double> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vf_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 1 x double> poison, double %a, i32 0
@@ -1444,7 +1444,7 @@ declare <vscale x 2 x double> @llvm.vp.merge.nxv2f64(<vscale x 2 x i1>, <vscale 
 define <vscale x 2 x double> @vpmerge_vv_nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x double> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v10, v10, v8, v0
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -1455,7 +1455,7 @@ define <vscale x 2 x double> @vpmerge_vv_nxv2f64(<vscale x 2 x double> %va, <vsc
 define <vscale x 2 x double> @vpmerge_vf_nxv2f64(double %a, <vscale x 2 x double> %vb, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vf_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 2 x double> poison, double %a, i32 0
@@ -1469,7 +1469,7 @@ declare <vscale x 4 x double> @llvm.vp.merge.nxv4f64(<vscale x 4 x i1>, <vscale 
 define <vscale x 4 x double> @vpmerge_vv_nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x double> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v12, v12, v8, v0
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -1480,7 +1480,7 @@ define <vscale x 4 x double> @vpmerge_vv_nxv4f64(<vscale x 4 x double> %va, <vsc
 define <vscale x 4 x double> @vpmerge_vf_nxv4f64(double %a, <vscale x 4 x double> %vb, <vscale x 4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vf_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 4 x double> poison, double %a, i32 0
@@ -1494,7 +1494,7 @@ declare <vscale x 8 x double> @llvm.vp.merge.nxv8f64(<vscale x 8 x i1>, <vscale 
 define <vscale x 8 x double> @vpmerge_vv_nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v16, v16, v8, v0
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -1505,7 +1505,7 @@ define <vscale x 8 x double> @vpmerge_vv_nxv8f64(<vscale x 8 x double> %va, <vsc
 define <vscale x 8 x double> @vpmerge_vf_nxv8f64(double %a, <vscale x 8 x double> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vf_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, tu, ma
 ; CHECK-NEXT:    vfmerge.vfm v8, v8, fa0, v0
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <vscale x 8 x double> poison, double %a, i32 0

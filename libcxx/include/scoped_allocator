@@ -112,6 +112,7 @@ template <class OuterA1, class OuterA2, class... InnerAllocs>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
 #include <__memory/allocator_traits.h>
+#include <__memory/uses_allocator_construction.h>
 #include <__type_traits/common_type.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/integral_constant.h>
@@ -523,6 +524,18 @@ public:
     size_type max_size() const
         {return allocator_traits<outer_allocator_type>::max_size(outer_allocator());}
 
+#if _LIBCPP_STD_VER >= 20
+    template <class _Type, class... _Args>
+    _LIBCPP_HIDE_FROM_ABI void construct(_Type* __ptr, _Args&&... __args) {
+      using _OM = __outermost<outer_allocator_type>;
+      std::apply(
+          [__ptr, this](auto&&... __newargs) {
+            allocator_traits<typename _OM::type>::construct(
+                _OM()(outer_allocator()), __ptr, std::forward<decltype(__newargs)>(__newargs)...);
+          },
+          std::uses_allocator_construction_args<_Type>(inner_allocator(), std::forward<_Args>(__args)...));
+    }
+#else
     template <class _Tp, class... _Args>
         _LIBCPP_INLINE_VISIBILITY
         void construct(_Tp* __p, _Args&& ...__args)
@@ -577,6 +590,7 @@ public:
                   _VSTD::forward_as_tuple(_VSTD::forward<_Up>(__x.first)),
                   _VSTD::forward_as_tuple(_VSTD::forward<_Vp>(__x.second)));
     }
+#endif
 
     template <class _Tp>
         _LIBCPP_INLINE_VISIBILITY

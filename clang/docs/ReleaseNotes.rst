@@ -231,6 +231,10 @@ Improvements to Clang's diagnostics
   be selected.
 - Add a fix-it hint for the ``-Wdefaulted-function-deleted`` warning to
   explicitly delete the function.
+- Fixed an accidental duplicate diagnostic involving the declaration of a
+  function definition without a prototype which is preceded by a static
+  declaration of the function with a prototype. Fixes
+  `Issue 58181 <https://github.com/llvm/llvm-project/issues/58181>`_.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
