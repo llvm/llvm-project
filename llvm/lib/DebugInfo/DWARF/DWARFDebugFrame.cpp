@@ -14,6 +14,7 @@
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Errc.h"
@@ -28,13 +29,14 @@
 using namespace llvm;
 using namespace dwarf;
 
-static void printRegister(raw_ostream &OS, DIDumpOptions DumpOpts,
+static void printRegister(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
                           unsigned RegNum) {
-  if (DumpOpts.GetNameForDWARFReg) {
-    auto RegName = DumpOpts.GetNameForDWARFReg(RegNum, DumpOpts.IsEH);
-    if (!RegName.empty()) {
-      OS << RegName;
-      return;
+  if (MRI) {
+    if (Optional<unsigned> LLVMRegNum = MRI->getLLVMRegNum(RegNum, IsEH)) {
+      if (const char *RegName = MRI->getName(*LLVMRegNum)) {
+        OS << RegName;
+        return;
+      }
     }
   }
   OS << "reg" << RegNum;
@@ -78,7 +80,8 @@ UnwindLocation UnwindLocation::createAtDWARFExpression(DWARFExpression Expr) {
   return {Expr, true};
 }
 
-void UnwindLocation::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
+void UnwindLocation::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
+                          bool IsEH) const {
   if (Dereference)
     OS << '[';
   switch (Kind) {
@@ -100,7 +103,7 @@ void UnwindLocation::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     OS << Offset;
     break;
   case RegPlusOffset:
-    printRegister(OS, DumpOpts, RegNum);
+    printRegister(OS, MRI, IsEH, RegNum);
     if (Offset == 0 && !AddrSpace)
       break;
     if (Offset >= 0)
@@ -109,10 +112,9 @@ void UnwindLocation::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     if (AddrSpace)
       OS << " in addrspace" << *AddrSpace;
     break;
-  case DWARFExpr: {
-    Expr->print(OS, DumpOpts, nullptr);
+  case DWARFExpr:
+    Expr->print(OS, DIDumpOptions(), MRI, nullptr, IsEH);
     break;
-  }
   case Constant:
     OS << Offset;
     break;
@@ -123,8 +125,7 @@ void UnwindLocation::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
 
 raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS,
                                      const UnwindLocation &UL) {
-  auto DumpOpts = DIDumpOptions();
-  UL.dump(OS, DumpOpts);
+  UL.dump(OS, nullptr, false);
   return OS;
 }
 
@@ -149,55 +150,53 @@ bool UnwindLocation::operator==(const UnwindLocation &RHS) const {
   return false;
 }
 
-void RegisterLocations::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
+void RegisterLocations::dump(raw_ostream &OS, const MCRegisterInfo *MRI,
+                             bool IsEH) const {
   bool First = true;
   for (const auto &RegLocPair : Locations) {
     if (First)
       First = false;
     else
       OS << ", ";
-    printRegister(OS, DumpOpts, RegLocPair.first);
+    printRegister(OS, MRI, IsEH, RegLocPair.first);
     OS << '=';
-    RegLocPair.second.dump(OS, DumpOpts);
+    RegLocPair.second.dump(OS, MRI, IsEH);
   }
 }
 
 raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS,
                                      const RegisterLocations &RL) {
-  auto DumpOpts = DIDumpOptions();
-  RL.dump(OS, DumpOpts);
+  RL.dump(OS, nullptr, false);
   return OS;
 }
 
-void UnwindRow::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+void UnwindRow::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
                      unsigned IndentLevel) const {
   OS.indent(2 * IndentLevel);
   if (hasAddress())
     OS << format("0x%" PRIx64 ": ", *Address);
   OS << "CFA=";
-  CFAValue.dump(OS, DumpOpts);
+  CFAValue.dump(OS, MRI, IsEH);
   if (RegLocs.hasLocations()) {
     OS << ": ";
-    RegLocs.dump(OS, DumpOpts);
+    RegLocs.dump(OS, MRI, IsEH);
   }
   OS << "\n";
 }
 
 raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS, const UnwindRow &Row) {
-  auto DumpOpts = DIDumpOptions();
-  Row.dump(OS, DumpOpts, 0);
+  Row.dump(OS, nullptr, false, 0);
   return OS;
 }
 
-void UnwindTable::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+void UnwindTable::dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
                        unsigned IndentLevel) const {
   for (const UnwindRow &Row : Rows)
-    Row.dump(OS, DumpOpts, IndentLevel);
+    Row.dump(OS, MRI, IsEH, IndentLevel);
 }
 
 raw_ostream &llvm::dwarf::operator<<(raw_ostream &OS, const UnwindTable &Rows) {
-  auto DumpOpts = DIDumpOptions();
-  Rows.dump(OS, DumpOpts, 0);
+  Rows.dump(OS, nullptr, false, 0);
   return OS;
 }
 
@@ -854,6 +853,7 @@ CFIProgram::getOperandTypes() {
 
 /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
 void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
+                              const MCRegisterInfo *MRI, bool IsEH,
                               const Instruction &Instr, unsigned OperandIdx,
                               uint64_t Operand) const {
   assert(OperandIdx < MaxOperands);
@@ -901,7 +901,7 @@ void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
     break;
   case OT_Register:
     OS << ' ';
-    printRegister(OS, DumpOpts, Operand);
+    printRegister(OS, MRI, IsEH, Operand);
     break;
   case OT_AddressSpace:
     OS << format(" in addrspace%" PRId64, Operand);
@@ -909,19 +909,20 @@ void CFIProgram::printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
   case OT_Expression:
     assert(Instr.Expression && "missing DWARFExpression object");
     OS << " ";
-    Instr.Expression->print(OS, DumpOpts, nullptr);
+    Instr.Expression->print(OS, DumpOpts, MRI, nullptr, IsEH);
     break;
   }
 }
 
 void CFIProgram::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+                      const MCRegisterInfo *MRI, bool IsEH,
                       unsigned IndentLevel) const {
   for (const auto &Instr : Instructions) {
     uint8_t Opcode = Instr.Opcode;
     OS.indent(2 * IndentLevel);
     OS << callFrameString(Opcode) << ":";
     for (unsigned i = 0; i < Instr.Ops.size(); ++i)
-      printOperand(OS, DumpOpts, Instr, i, Instr.Ops[i]);
+      printOperand(OS, DumpOpts, MRI, IsEH, Instr, i, Instr.Ops[i]);
     OS << '\n';
   }
 }
@@ -938,20 +939,21 @@ constexpr uint64_t getCIEId(bool IsDWARF64, bool IsEH) {
   return DW_CIE_ID;
 }
 
-void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
+void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+               const MCRegisterInfo *MRI, bool IsEH) const {
   // A CIE with a zero length is a terminator entry in the .eh_frame section.
-  if (DumpOpts.IsEH && Length == 0) {
+  if (IsEH && Length == 0) {
     OS << format("%08" PRIx64, Offset) << " ZERO terminator\n";
     return;
   }
 
   OS << format("%08" PRIx64, Offset)
      << format(" %0*" PRIx64, IsDWARF64 ? 16 : 8, Length)
-     << format(" %0*" PRIx64, IsDWARF64 && !DumpOpts.IsEH ? 16 : 8,
-               getCIEId(IsDWARF64, DumpOpts.IsEH))
+     << format(" %0*" PRIx64, IsDWARF64 && !IsEH ? 16 : 8,
+               getCIEId(IsDWARF64, IsEH))
      << " CIE\n"
      << "  Format:                " << FormatString(IsDWARF64) << "\n";
-  if (DumpOpts.IsEH && Version != 1)
+  if (IsEH && Version != 1)
     OS << "WARNING: unsupported CIE version\n";
   OS << format("  Version:               %d\n", Version)
      << "  Augmentation:          \"" << Augmentation << "\"\n";
@@ -972,11 +974,11 @@ void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
     OS << "\n";
   }
   OS << "\n";
-  CFIs.dump(OS, DumpOpts);
+  CFIs.dump(OS, DumpOpts, MRI, IsEH);
   OS << "\n";
 
   if (Expected<UnwindTable> RowsOrErr = UnwindTable::create(this))
-    RowsOrErr->dump(OS, DumpOpts, 1);
+    RowsOrErr->dump(OS, MRI, IsEH, 1);
   else {
     DumpOpts.RecoverableErrorHandler(joinErrors(
         createStringError(errc::invalid_argument,
@@ -986,10 +988,11 @@ void CIE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   OS << "\n";
 }
 
-void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
+void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+               const MCRegisterInfo *MRI, bool IsEH) const {
   OS << format("%08" PRIx64, Offset)
      << format(" %0*" PRIx64, IsDWARF64 ? 16 : 8, Length)
-     << format(" %0*" PRIx64, IsDWARF64 && !DumpOpts.IsEH ? 16 : 8, CIEPointer)
+     << format(" %0*" PRIx64, IsDWARF64 && !IsEH ? 16 : 8, CIEPointer)
      << " FDE cie=";
   if (LinkedCIE)
     OS << format("%08" PRIx64, LinkedCIE->getOffset());
@@ -1000,11 +1003,11 @@ void FDE::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   OS << "  Format:       " << FormatString(IsDWARF64) << "\n";
   if (LSDAAddress)
     OS << format("  LSDA Address: %016" PRIx64 "\n", *LSDAAddress);
-  CFIs.dump(OS, DumpOpts);
+  CFIs.dump(OS, DumpOpts, MRI, IsEH);
   OS << "\n";
 
   if (Expected<UnwindTable> RowsOrErr = UnwindTable::create(this))
-    RowsOrErr->dump(OS, DumpOpts, 1);
+    RowsOrErr->dump(OS, MRI, IsEH, 1);
   else {
     DumpOpts.RecoverableErrorHandler(joinErrors(
         createStringError(errc::invalid_argument,
@@ -1239,15 +1242,15 @@ FrameEntry *DWARFDebugFrame::getEntryAtOffset(uint64_t Offset) const {
 }
 
 void DWARFDebugFrame::dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+                           const MCRegisterInfo *MRI,
                            Optional<uint64_t> Offset) const {
-  DumpOpts.IsEH = IsEH;
   if (Offset) {
     if (auto *Entry = getEntryAtOffset(*Offset))
-      Entry->dump(OS, DumpOpts);
+      Entry->dump(OS, DumpOpts, MRI, IsEH);
     return;
   }
 
   OS << "\n";
   for (const auto &Entry : Entries)
-    Entry->dump(OS, DumpOpts);
+    Entry->dump(OS, DumpOpts, MRI, IsEH);
 }
