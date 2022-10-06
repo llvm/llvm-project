@@ -163,8 +163,8 @@ std::unique_ptr<Iterator> Dex::createFileProximityIterator(
   llvm::StringMap<SourceParams> Sources;
   for (const auto &Path : ProximityPaths) {
     Sources[Path] = SourceParams();
-    auto PathURI = URI::create(Path);
-    const auto PathProximityURIs = generateProximityURIs(PathURI.toString());
+    auto PathURI = URI::create(Path).toString();
+    const auto PathProximityURIs = generateProximityURIs(PathURI.c_str());
     for (const auto &ProximityURI : PathProximityURIs)
       ParentURIs.insert(ProximityURI);
   }
@@ -353,30 +353,49 @@ size_t Dex::estimateMemoryUsage() const {
   return Bytes + BackingDataSize;
 }
 
-std::vector<std::string> generateProximityURIs(llvm::StringRef URIPath) {
-  std::vector<std::string> Result;
-  auto ParsedURI = URI::parse(URIPath);
-  assert(ParsedURI &&
-         "Non-empty argument of generateProximityURIs() should be a valid "
-         "URI.");
-  llvm::StringRef Body = ParsedURI->body();
-  // FIXME(kbobyrev): Currently, this is a heuristic which defines the maximum
-  // size of resulting vector. Some projects might want to have higher limit if
-  // the file hierarchy is deeper. For the generic case, it would be useful to
-  // calculate Limit in the index build stage by calculating the maximum depth
-  // of the project source tree at runtime.
-  size_t Limit = 5;
-  // Insert original URI before the loop: this would save a redundant iteration
-  // with a URI parse.
-  Result.emplace_back(ParsedURI->toString());
-  while (!Body.empty() && --Limit > 0) {
-    // FIXME(kbobyrev): Parsing and encoding path to URIs is not necessary and
-    // could be optimized.
-    Body = llvm::sys::path::parent_path(Body, llvm::sys::path::Style::posix);
-    if (!Body.empty())
-      Result.emplace_back(
-          URI(ParsedURI->scheme(), ParsedURI->authority(), Body).toString());
+// Given foo://bar/one/two
+// Returns        ~~~~~~~~  (or empty for bad URI)
+llvm::StringRef findPathInURI(llvm::StringRef S) {
+  S = S.split(':').second;   // Eat scheme.
+  if (S.consume_front("//")) // Eat authority.
+    S = S.drop_until([](char C) { return C == '/'; });
+  return S;
+}
+
+// FIXME(kbobyrev): Currently, this is a heuristic which defines the maximum
+// size of resulting vector. Some projects might want to have higher limit if
+// the file hierarchy is deeper. For the generic case, it would be useful to
+// calculate Limit in the index build stage by calculating the maximum depth
+// of the project source tree at runtime.
+constexpr unsigned ProximityURILimit = 5;
+
+llvm::SmallVector<llvm::StringRef, ProximityURILimit>
+generateProximityURIs(llvm::StringRef URI) {
+  // This function is hot when indexing, so don't parse/reserialize URIPath,
+  // just emit substrings of it instead.
+  //
+  // foo://bar/one/two
+  //          ~~~~~~~~
+  //            Path
+  llvm::StringRef Path = findPathInURI(URI);
+  if (Path.empty())
+    return {}; // Bad URI.
+  assert(Path.begin() >= URI.begin() && Path.begin() < URI.end() &&
+         Path.end() == URI.end());
+
+  // The original is a proximity URI.
+  llvm::SmallVector<llvm::StringRef, ProximityURILimit> Result = {URI};
+  // Form proximity URIs by chopping before each slash in the path part.
+  for (auto Slash = Path.rfind('/'); Slash > 0 && Slash != StringRef::npos;
+       Slash = Path.rfind('/')) {
+    Path = Path.substr(0, Slash);
+    Result.push_back(URI.substr(0, Path.end() - URI.data()));
+    if (Result.size() == ProximityURILimit)
+      return Result;
   }
+  // The root foo://bar/ is a proximity URI.
+  if (Path.startswith("/"))
+    Result.push_back(URI.substr(0, Path.begin() + 1 - URI.data()));
   return Result;
 }
 

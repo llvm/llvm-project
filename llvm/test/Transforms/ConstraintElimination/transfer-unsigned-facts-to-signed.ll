@@ -55,11 +55,11 @@ define i1 @idx_known_positive_via_len_2(i8 %len, i8 %idx) {
 ; CHECK:       then.1:
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ult i8 [[IDX]], [[LEN]]
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp sge i8 [[IDX]], 0
-; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, [[T_2]]
+; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[IDX]], 1
 ; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], [[C_1]]
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[LEN]], 1
-; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[C_2]]
+; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], true
 ; CHECK-NEXT:    ret i1 [[R_3]]
 ; CHECK:       else:
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp sge i8 [[IDX]], 0

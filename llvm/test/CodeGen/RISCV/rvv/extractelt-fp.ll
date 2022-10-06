@@ -7,7 +7,7 @@
 define half @extractelt_nxv1f16_0(<vscale x 1 x half> %v) {
 ; CHECK-LABEL: extractelt_nxv1f16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x half> %v, i32 0
@@ -17,7 +17,7 @@ define half @extractelt_nxv1f16_0(<vscale x 1 x half> %v) {
 define half @extractelt_nxv1f16_imm(<vscale x 1 x half> %v) {
 ; CHECK-LABEL: extractelt_nxv1f16_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -28,7 +28,7 @@ define half @extractelt_nxv1f16_imm(<vscale x 1 x half> %v) {
 define half @extractelt_nxv1f16_idx(<vscale x 1 x half> %v, i32 signext %idx) {
 ; CHECK-LABEL: extractelt_nxv1f16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -39,7 +39,7 @@ define half @extractelt_nxv1f16_idx(<vscale x 1 x half> %v, i32 signext %idx) {
 define half @extractelt_nxv2f16_0(<vscale x 2 x half> %v) {
 ; CHECK-LABEL: extractelt_nxv2f16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x half> %v, i32 0
@@ -49,7 +49,7 @@ define half @extractelt_nxv2f16_0(<vscale x 2 x half> %v) {
 define half @extractelt_nxv2f16_imm(<vscale x 2 x half> %v) {
 ; CHECK-LABEL: extractelt_nxv2f16_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -60,7 +60,7 @@ define half @extractelt_nxv2f16_imm(<vscale x 2 x half> %v) {
 define half @extractelt_nxv2f16_idx(<vscale x 2 x half> %v, i32 signext %idx) {
 ; CHECK-LABEL: extractelt_nxv2f16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -71,7 +71,7 @@ define half @extractelt_nxv2f16_idx(<vscale x 2 x half> %v, i32 signext %idx) {
 define half @extractelt_nxv4f16_0(<vscale x 4 x half> %v) {
 ; CHECK-LABEL: extractelt_nxv4f16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 4 x half> %v, i32 0
@@ -81,7 +81,7 @@ define half @extractelt_nxv4f16_0(<vscale x 4 x half> %v) {
 define half @extractelt_nxv4f16_imm(<vscale x 4 x half> %v) {
 ; CHECK-LABEL: extractelt_nxv4f16_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -92,7 +92,7 @@ define half @extractelt_nxv4f16_imm(<vscale x 4 x half> %v) {
 define half @extractelt_nxv4f16_idx(<vscale x 4 x half> %v, i32 signext %idx) {
 ; CHECK-LABEL: extractelt_nxv4f16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -103,7 +103,7 @@ define half @extractelt_nxv4f16_idx(<vscale x 4 x half> %v, i32 signext %idx) {
 define half @extractelt_nxv8f16_0(<vscale x 8 x half> %v) {
 ; CHECK-LABEL: extractelt_nxv8f16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, m2, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 8 x half> %v, i32 0
@@ -113,7 +113,7 @@ define half @extractelt_nxv8f16_0(<vscale x 8 x half> %v) {
 define half @extractelt_nxv8f16_imm(<vscale x 8 x half> %v) {
 ; CHECK-LABEL: extractelt_nxv8f16_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -124,7 +124,7 @@ define half @extractelt_nxv8f16_imm(<vscale x 8 x half> %v) {
 define half @extractelt_nxv8f16_idx(<vscale x 8 x half> %v, i32 signext %idx) {
 ; CHECK-LABEL: extractelt_nxv8f16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -135,7 +135,7 @@ define half @extractelt_nxv8f16_idx(<vscale x 8 x half> %v, i32 signext %idx) {
 define half @extractelt_nxv16f16_0(<vscale x 16 x half> %v) {
 ; CHECK-LABEL: extractelt_nxv16f16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 16 x half> %v, i32 0
@@ -145,7 +145,7 @@ define half @extractelt_nxv16f16_0(<vscale x 16 x half> %v) {
 define half @extractelt_nxv16f16_imm(<vscale x 16 x half> %v) {
 ; CHECK-LABEL: extractelt_nxv16f16_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -156,7 +156,7 @@ define half @extractelt_nxv16f16_imm(<vscale x 16 x half> %v) {
 define half @extractelt_nxv16f16_idx(<vscale x 16 x half> %v, i32 signext %idx) {
 ; CHECK-LABEL: extractelt_nxv16f16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -167,7 +167,7 @@ define half @extractelt_nxv16f16_idx(<vscale x 16 x half> %v, i32 signext %idx) 
 define half @extractelt_nxv32f16_0(<vscale x 32 x half> %v) {
 ; CHECK-LABEL: extractelt_nxv32f16_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e16, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, m8, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 32 x half> %v, i32 0
@@ -177,7 +177,7 @@ define half @extractelt_nxv32f16_0(<vscale x 32 x half> %v) {
 define half @extractelt_nxv32f16_imm(<vscale x 32 x half> %v) {
 ; CHECK-LABEL: extractelt_nxv32f16_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -188,7 +188,7 @@ define half @extractelt_nxv32f16_imm(<vscale x 32 x half> %v) {
 define half @extractelt_nxv32f16_idx(<vscale x 32 x half> %v, i32 signext %idx) {
 ; CHECK-LABEL: extractelt_nxv32f16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -199,7 +199,7 @@ define half @extractelt_nxv32f16_idx(<vscale x 32 x half> %v, i32 signext %idx) 
 define float @extractelt_nxv1f32_0(<vscale x 1 x float> %v) {
 ; CHECK-LABEL: extractelt_nxv1f32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x float> %v, i32 0
@@ -209,7 +209,7 @@ define float @extractelt_nxv1f32_0(<vscale x 1 x float> %v) {
 define float @extractelt_nxv1f32_imm(<vscale x 1 x float> %v) {
 ; CHECK-LABEL: extractelt_nxv1f32_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -220,7 +220,7 @@ define float @extractelt_nxv1f32_imm(<vscale x 1 x float> %v) {
 define float @extractelt_nxv1f32_idx(<vscale x 1 x float> %v, i32 signext %idx) {
 ; CHECK-LABEL: extractelt_nxv1f32_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -231,7 +231,7 @@ define float @extractelt_nxv1f32_idx(<vscale x 1 x float> %v, i32 signext %idx) 
 define float @extractelt_nxv2f32_0(<vscale x 2 x float> %v) {
 ; CHECK-LABEL: extractelt_nxv2f32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x float> %v, i32 0
@@ -241,7 +241,7 @@ define float @extractelt_nxv2f32_0(<vscale x 2 x float> %v) {
 define float @extractelt_nxv2f32_imm(<vscale x 2 x float> %v) {
 ; CHECK-LABEL: extractelt_nxv2f32_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -252,7 +252,7 @@ define float @extractelt_nxv2f32_imm(<vscale x 2 x float> %v) {
 define float @extractelt_nxv2f32_idx(<vscale x 2 x float> %v, i32 signext %idx) {
 ; CHECK-LABEL: extractelt_nxv2f32_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -263,7 +263,7 @@ define float @extractelt_nxv2f32_idx(<vscale x 2 x float> %v, i32 signext %idx) 
 define float @extractelt_nxv4f32_0(<vscale x 4 x float> %v) {
 ; CHECK-LABEL: extractelt_nxv4f32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m2, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 4 x float> %v, i32 0
@@ -273,7 +273,7 @@ define float @extractelt_nxv4f32_0(<vscale x 4 x float> %v) {
 define float @extractelt_nxv4f32_imm(<vscale x 4 x float> %v) {
 ; CHECK-LABEL: extractelt_nxv4f32_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -284,7 +284,7 @@ define float @extractelt_nxv4f32_imm(<vscale x 4 x float> %v) {
 define float @extractelt_nxv4f32_idx(<vscale x 4 x float> %v, i32 signext %idx) {
 ; CHECK-LABEL: extractelt_nxv4f32_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -295,7 +295,7 @@ define float @extractelt_nxv4f32_idx(<vscale x 4 x float> %v, i32 signext %idx) 
 define float @extractelt_nxv8f32_0(<vscale x 8 x float> %v) {
 ; CHECK-LABEL: extractelt_nxv8f32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 8 x float> %v, i32 0
@@ -305,7 +305,7 @@ define float @extractelt_nxv8f32_0(<vscale x 8 x float> %v) {
 define float @extractelt_nxv8f32_imm(<vscale x 8 x float> %v) {
 ; CHECK-LABEL: extractelt_nxv8f32_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -316,7 +316,7 @@ define float @extractelt_nxv8f32_imm(<vscale x 8 x float> %v) {
 define float @extractelt_nxv8f32_idx(<vscale x 8 x float> %v, i32 signext %idx) {
 ; CHECK-LABEL: extractelt_nxv8f32_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -327,7 +327,7 @@ define float @extractelt_nxv8f32_idx(<vscale x 8 x float> %v, i32 signext %idx) 
 define float @extractelt_nxv16f32_0(<vscale x 16 x float> %v) {
 ; CHECK-LABEL: extractelt_nxv16f32_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e32, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m8, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 16 x float> %v, i32 0
@@ -337,7 +337,7 @@ define float @extractelt_nxv16f32_0(<vscale x 16 x float> %v) {
 define float @extractelt_nxv16f32_imm(<vscale x 16 x float> %v) {
 ; CHECK-LABEL: extractelt_nxv16f32_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -348,7 +348,7 @@ define float @extractelt_nxv16f32_imm(<vscale x 16 x float> %v) {
 define float @extractelt_nxv16f32_idx(<vscale x 16 x float> %v, i32 signext %idx) {
 ; CHECK-LABEL: extractelt_nxv16f32_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -359,7 +359,7 @@ define float @extractelt_nxv16f32_idx(<vscale x 16 x float> %v, i32 signext %idx
 define double @extractelt_nxv1f64_0(<vscale x 1 x double> %v) {
 ; CHECK-LABEL: extractelt_nxv1f64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 1 x double> %v, i32 0
@@ -369,7 +369,7 @@ define double @extractelt_nxv1f64_0(<vscale x 1 x double> %v) {
 define double @extractelt_nxv1f64_imm(<vscale x 1 x double> %v) {
 ; CHECK-LABEL: extractelt_nxv1f64_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -380,7 +380,7 @@ define double @extractelt_nxv1f64_imm(<vscale x 1 x double> %v) {
 define double @extractelt_nxv1f64_idx(<vscale x 1 x double> %v, i32 signext %idx) {
 ; CHECK-LABEL: extractelt_nxv1f64_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -391,7 +391,7 @@ define double @extractelt_nxv1f64_idx(<vscale x 1 x double> %v, i32 signext %idx
 define double @extractelt_nxv2f64_0(<vscale x 2 x double> %v) {
 ; CHECK-LABEL: extractelt_nxv2f64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e64, m2, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 2 x double> %v, i32 0
@@ -401,7 +401,7 @@ define double @extractelt_nxv2f64_0(<vscale x 2 x double> %v) {
 define double @extractelt_nxv2f64_imm(<vscale x 2 x double> %v) {
 ; CHECK-LABEL: extractelt_nxv2f64_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e64, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -412,7 +412,7 @@ define double @extractelt_nxv2f64_imm(<vscale x 2 x double> %v) {
 define double @extractelt_nxv2f64_idx(<vscale x 2 x double> %v, i32 signext %idx) {
 ; CHECK-LABEL: extractelt_nxv2f64_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e64, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -423,7 +423,7 @@ define double @extractelt_nxv2f64_idx(<vscale x 2 x double> %v, i32 signext %idx
 define double @extractelt_nxv4f64_0(<vscale x 4 x double> %v) {
 ; CHECK-LABEL: extractelt_nxv4f64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e64, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e64, m4, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 4 x double> %v, i32 0
@@ -433,7 +433,7 @@ define double @extractelt_nxv4f64_0(<vscale x 4 x double> %v) {
 define double @extractelt_nxv4f64_imm(<vscale x 4 x double> %v) {
 ; CHECK-LABEL: extractelt_nxv4f64_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e64, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -444,7 +444,7 @@ define double @extractelt_nxv4f64_imm(<vscale x 4 x double> %v) {
 define double @extractelt_nxv4f64_idx(<vscale x 4 x double> %v, i32 signext %idx) {
 ; CHECK-LABEL: extractelt_nxv4f64_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e64, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e64, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -455,7 +455,7 @@ define double @extractelt_nxv4f64_idx(<vscale x 4 x double> %v, i32 signext %idx
 define double @extractelt_nxv8f64_0(<vscale x 8 x double> %v) {
 ; CHECK-LABEL: extractelt_nxv8f64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e64, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 8 x double> %v, i32 0
@@ -465,7 +465,7 @@ define double @extractelt_nxv8f64_0(<vscale x 8 x double> %v) {
 define double @extractelt_nxv8f64_imm(<vscale x 8 x double> %v) {
 ; CHECK-LABEL: extractelt_nxv8f64_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -476,7 +476,7 @@ define double @extractelt_nxv8f64_imm(<vscale x 8 x double> %v) {
 define double @extractelt_nxv8f64_idx(<vscale x 8 x double> %v, i32 signext %idx) {
 ; CHECK-LABEL: extractelt_nxv8f64_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a0
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -488,7 +488,7 @@ define void @store_extractelt_nxv8f64(<vscale x 8 x double>* %x, double* %p) {
 ; CHECK-LABEL: store_extractelt_nxv8f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re64.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
@@ -502,7 +502,7 @@ define void @store_vfmv_f_s_nxv8f64(<vscale x 8 x double>* %x, double* %p) {
 ; CHECK-LABEL: store_vfmv_f_s_nxv8f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8re64.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <vscale x 8 x double>, <vscale x 8 x double>* %x
@@ -518,7 +518,7 @@ define float @extractelt_fadd_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI47_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI47_0)(a0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s ft1, v8
 ; CHECK-NEXT:    fadd.s fa0, ft1, ft0
@@ -535,7 +535,7 @@ define float @extractelt_fsub_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI48_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI48_0)(a0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    vfmv.f.s ft1, v8
 ; CHECK-NEXT:    fsub.s fa0, ft0, ft1
@@ -552,7 +552,7 @@ define float @extractelt_fmul_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI49_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI49_0)(a0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 3
 ; CHECK-NEXT:    vfmv.f.s ft1, v8
 ; CHECK-NEXT:    fmul.s fa0, ft1, ft0
@@ -569,7 +569,7 @@ define float @extractelt_fdiv_nxv4f32_splat(<vscale x 4 x float> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI50_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI50_0)(a0)
-; CHECK-NEXT:    vsetivli zero, 0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e32, m2, ta, ma
 ; CHECK-NEXT:    vfmv.f.s ft1, v8
 ; CHECK-NEXT:    fdiv.s fa0, ft1, ft0
 ; CHECK-NEXT:    ret
@@ -583,7 +583,7 @@ define float @extractelt_fdiv_nxv4f32_splat(<vscale x 4 x float> %x) {
 define double @extractelt_nxv16f64_0(<vscale x 16 x double> %v) {
 ; CHECK-LABEL: extractelt_nxv16f64_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 0, e64, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
   %r = extractelement <vscale x 16 x double> %v, i32 0
@@ -620,7 +620,7 @@ define double @extractelt_nxv16f64_neg1(<vscale x 16 x double> %v) {
 define double @extractelt_nxv16f64_imm(<vscale x 16 x double> %v) {
 ; CHECK-LABEL: extractelt_nxv16f64_imm:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret

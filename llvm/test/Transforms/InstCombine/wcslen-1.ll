@@ -5,7 +5,7 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-declare i64 @wcslen(i32*)
+declare i64 @wcslen(ptr)
 
 !0 = !{i32 1, !"wchar_size", i32 4}
 !llvm.module.flags = !{!0}
@@ -22,8 +22,7 @@ define i64 @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
 ; CHECK-NEXT:    ret i64 5
 ;
-  %hello_p = getelementptr [6 x i32], [6 x i32]* @hello, i64 0, i64 0
-  %hello_l = call i64 @wcslen(i32* %hello_p)
+  %hello_l = call i64 @wcslen(ptr @hello)
   ret i64 %hello_l
 }
 
@@ -31,8 +30,7 @@ define i64 @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
 ; CHECK-NEXT:    ret i64 0
 ;
-  %null_p = getelementptr [1 x i32], [1 x i32]* @null, i64 0, i64 0
-  %null_l = call i64 @wcslen(i32* %null_p)
+  %null_l = call i64 @wcslen(ptr @null)
   ret i64 %null_l
 }
 
@@ -40,8 +38,7 @@ define i64 @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
 ; CHECK-NEXT:    ret i64 0
 ;
-  %null_hello_p = getelementptr [7 x i32], [7 x i32]* @null_hello, i64 0, i64 0
-  %null_hello_l = call i64 @wcslen(i32* %null_hello_p)
+  %null_hello_l = call i64 @wcslen(ptr @null_hello)
   ret i64 %null_hello_l
 }
 
@@ -49,7 +46,7 @@ define i64 @test_simplify4() {
 ; CHECK-LABEL: @test_simplify4(
 ; CHECK-NEXT:    ret i64 0
 ;
-  %len = tail call i64 @wcslen(i32* @nullstring) nounwind
+  %len = tail call i64 @wcslen(ptr @nullstring) nounwind
   ret i64 %len
 }
 
@@ -59,19 +56,18 @@ define i1 @test_simplify5() {
 ; CHECK-LABEL: @test_simplify5(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %hello_p = getelementptr [6 x i32], [6 x i32]* @hello, i64 0, i64 0
-  %hello_l = call i64 @wcslen(i32* %hello_p)
+  %hello_l = call i64 @wcslen(ptr @hello)
   %eq_hello = icmp eq i64 %hello_l, 0
   ret i1 %eq_hello
 }
 
-define i1 @test_simplify6(i32* %str_p) {
+define i1 @test_simplify6(ptr %str_p) {
 ; CHECK-LABEL: @test_simplify6(
-; CHECK-NEXT:    [[CHAR0:%.*]] = load i32, i32* [[STR_P:%.*]], align 4
+; CHECK-NEXT:    [[CHAR0:%.*]] = load i32, ptr [[STR_P:%.*]], align 4
 ; CHECK-NEXT:    [[EQ_NULL:%.*]] = icmp eq i32 [[CHAR0]], 0
 ; CHECK-NEXT:    ret i1 [[EQ_NULL]]
 ;
-  %str_l = call i64 @wcslen(i32* %str_p)
+  %str_l = call i64 @wcslen(ptr %str_p)
   %eq_null = icmp eq i64 %str_l, 0
   ret i1 %eq_null
 }
@@ -82,19 +78,18 @@ define i1 @test_simplify7() {
 ; CHECK-LABEL: @test_simplify7(
 ; CHECK-NEXT:    ret i1 true
 ;
-  %hello_p = getelementptr [6 x i32], [6 x i32]* @hello, i64 0, i64 0
-  %hello_l = call i64 @wcslen(i32* %hello_p)
+  %hello_l = call i64 @wcslen(ptr @hello)
   %ne_hello = icmp ne i64 %hello_l, 0
   ret i1 %ne_hello
 }
 
-define i1 @test_simplify8(i32* %str_p) {
+define i1 @test_simplify8(ptr %str_p) {
 ; CHECK-LABEL: @test_simplify8(
-; CHECK-NEXT:    [[CHAR0:%.*]] = load i32, i32* [[STR_P:%.*]], align 4
+; CHECK-NEXT:    [[CHAR0:%.*]] = load i32, ptr [[STR_P:%.*]], align 4
 ; CHECK-NEXT:    [[NE_NULL:%.*]] = icmp ne i32 [[CHAR0]], 0
 ; CHECK-NEXT:    ret i1 [[NE_NULL]]
 ;
-  %str_l = call i64 @wcslen(i32* %str_p)
+  %str_l = call i64 @wcslen(ptr %str_p)
   %ne_null = icmp ne i64 %str_l, 0
   ret i1 %ne_null
 }
@@ -104,10 +99,8 @@ define i64 @test_simplify9(i1 %x) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[X:%.*]], i64 5, i64 6
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
-  %hello = getelementptr [6 x i32], [6 x i32]* @hello, i64 0, i64 0
-  %longer = getelementptr [7 x i32], [7 x i32]* @longer, i64 0, i64 0
-  %s = select i1 %x, i32* %hello, i32* %longer
-  %l = call i64 @wcslen(i32* %s)
+  %s = select i1 %x, ptr @hello, ptr @longer
+  %l = call i64 @wcslen(ptr %s)
   ret i64 %l
 }
 
@@ -120,8 +113,8 @@ define i64 @test_simplify10(i32 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw i64 5, [[TMP1]]
 ; CHECK-NEXT:    ret i64 [[TMP2]]
 ;
-  %hello_p = getelementptr inbounds [6 x i32], [6 x i32]* @hello, i32 0, i32 %x
-  %hello_l = call i64 @wcslen(i32* %hello_p)
+  %hello_p = getelementptr inbounds [6 x i32], ptr @hello, i32 0, i32 %x
+  %hello_l = call i64 @wcslen(ptr %hello_p)
   ret i64 %hello_l
 }
 
@@ -135,8 +128,8 @@ define i64 @test_simplify11(i32 %x) {
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %and = and i32 %x, 7
-  %hello_p = getelementptr inbounds [13 x i32], [13 x i32]* @null_hello_mid, i32 0, i32 %and
-  %hello_l = call i64 @wcslen(i32* %hello_p)
+  %hello_p = getelementptr inbounds [13 x i32], ptr @null_hello_mid, i32 0, i32 %and
+  %hello_l = call i64 @wcslen(ptr %hello_p)
   ret i64 %hello_l
 }
 
@@ -144,11 +137,10 @@ define i64 @test_simplify11(i32 %x) {
 
 define i64 @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[A_L:%.*]] = call i64 @wcslen(i32* nonnull getelementptr inbounds ([32 x i32], [32 x i32]* @a, i64 0, i64 0))
+; CHECK-NEXT:    [[A_L:%.*]] = call i64 @wcslen(ptr nonnull @a)
 ; CHECK-NEXT:    ret i64 [[A_L]]
 ;
-  %a_p = getelementptr [32 x i32], [32 x i32]* @a, i64 0, i64 0
-  %a_l = call i64 @wcslen(i32* %a_p)
+  %a_l = call i64 @wcslen(ptr @a)
   ret i64 %a_l
 }
 
@@ -157,24 +149,24 @@ define i64 @test_no_simplify1() {
 define i64 @test_no_simplify2(i32 %x) {
 ; CHECK-LABEL: @test_no_simplify2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [7 x i32], [7 x i32]* @null_hello, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(i32* nonnull [[HELLO_P]])
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [7 x i32], ptr @null_hello, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
-  %hello_p = getelementptr inbounds [7 x i32], [7 x i32]* @null_hello, i32 0, i32 %x
-  %hello_l = call i64 @wcslen(i32* %hello_p)
+  %hello_p = getelementptr inbounds [7 x i32], ptr @null_hello, i32 0, i32 %x
+  %hello_l = call i64 @wcslen(ptr %hello_p)
   ret i64 %hello_l
 }
 
 define i64 @test_no_simplify2_no_null_opt(i32 %x) #0 {
 ; CHECK-LABEL: @test_no_simplify2_no_null_opt(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [7 x i32], [7 x i32]* @null_hello, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(i32* [[HELLO_P]])
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [7 x i32], ptr @null_hello, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
-  %hello_p = getelementptr inbounds [7 x i32], [7 x i32]* @null_hello, i32 0, i32 %x
-  %hello_l = call i64 @wcslen(i32* %hello_p)
+  %hello_p = getelementptr inbounds [7 x i32], ptr @null_hello, i32 0, i32 %x
+  %hello_l = call i64 @wcslen(ptr %hello_p)
   ret i64 %hello_l
 }
 
@@ -184,13 +176,13 @@ define i64 @test_no_simplify3(i32 %x) {
 ; CHECK-LABEL: @test_no_simplify3(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 15
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[AND]] to i64
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [13 x i32], [13 x i32]* @null_hello_mid, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(i32* nonnull [[HELLO_P]])
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [13 x i32], ptr @null_hello_mid, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr nonnull [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
   %and = and i32 %x, 15
-  %hello_p = getelementptr inbounds [13 x i32], [13 x i32]* @null_hello_mid, i32 0, i32 %and
-  %hello_l = call i64 @wcslen(i32* %hello_p)
+  %hello_p = getelementptr inbounds [13 x i32], ptr @null_hello_mid, i32 0, i32 %and
+  %hello_l = call i64 @wcslen(ptr %hello_p)
   ret i64 %hello_l
 }
 
@@ -198,13 +190,13 @@ define i64 @test_no_simplify3_no_null_opt(i32 %x) #0 {
 ; CHECK-LABEL: @test_no_simplify3_no_null_opt(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 15
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[AND]] to i64
-; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [13 x i32], [13 x i32]* @null_hello_mid, i64 0, i64 [[TMP1]]
-; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(i32* [[HELLO_P]])
+; CHECK-NEXT:    [[HELLO_P:%.*]] = getelementptr inbounds [13 x i32], ptr @null_hello_mid, i64 0, i64 [[TMP1]]
+; CHECK-NEXT:    [[HELLO_L:%.*]] = call i64 @wcslen(ptr [[HELLO_P]])
 ; CHECK-NEXT:    ret i64 [[HELLO_L]]
 ;
   %and = and i32 %x, 15
-  %hello_p = getelementptr inbounds [13 x i32], [13 x i32]* @null_hello_mid, i32 0, i32 %and
-  %hello_l = call i64 @wcslen(i32* %hello_p)
+  %hello_p = getelementptr inbounds [13 x i32], ptr @null_hello_mid, i32 0, i32 %and
+  %hello_l = call i64 @wcslen(ptr %hello_p)
   ret i64 %hello_l
 }
 
@@ -218,7 +210,7 @@ define i64 @test_simplify12() {
 ; CHECK-LABEL: @test_simplify12(
 ; CHECK-NEXT:    ret i64 0
 ;
-  %l = call i64 @wcslen(i32* bitcast ([1 x i16]* @str16 to i32*))
+  %l = call i64 @wcslen(ptr @str16)
   ret i64 %l
 }
 

@@ -22,7 +22,7 @@ define <4 x half> @vsitofp_v4f16_v4i1(<4 x i1> %va, <4 x i1> %m, i32 zeroext %ev
 define <4 x half> @vsitofp_v4f16_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vsitofp_v4f16_v4i1_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
 ; CHECK-NEXT:    vfcvt.f.x.v v8, v8
@@ -49,7 +49,7 @@ define <4 x float> @vsitofp_v4f32_v4i1(<4 x i1> %va, <4 x i1> %m, i32 zeroext %e
 define <4 x float> @vsitofp_v4f32_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vsitofp_v4f32_v4i1_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
 ; CHECK-NEXT:    vfcvt.f.x.v v8, v8
@@ -76,7 +76,7 @@ define <4 x double> @vsitofp_v4f64_v4i1(<4 x i1> %va, <4 x i1> %m, i32 zeroext %
 define <4 x double> @vsitofp_v4f64_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vsitofp_v4f64_v4i1_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
 ; CHECK-NEXT:    vfcvt.f.x.v v8, v8

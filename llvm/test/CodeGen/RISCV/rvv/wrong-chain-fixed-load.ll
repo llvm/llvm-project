@@ -9,7 +9,7 @@ define void @do.memmove() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a0, %hi(c)
 ; CHECK-NEXT:    addi a0, a0, %lo(c)
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    addi a1, a0, 16
 ; CHECK-NEXT:    vle64.v v9, (a1)

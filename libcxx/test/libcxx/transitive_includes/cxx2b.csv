@@ -479,6 +479,7 @@ memory iosfwd
 memory limits
 memory new
 memory stdexcept
+memory tuple
 memory type_traits
 memory typeinfo
 memory version
