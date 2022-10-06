@@ -40,7 +40,6 @@ else:
   ret i1 0
 }
 
-; FIXME: currently adding extra facts is dependent on the visitation order of facts.
 define i1 @len_known_positive_via_idx_2(i8 %len, i8 %idx) {
 ; CHECK-LABEL: @len_known_positive_via_idx_2(
 ; CHECK-NEXT:  entry:
