@@ -9466,6 +9466,20 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return DAG.getNode(RISCVISD::SELECT_CC, DL, N->getValueType(0),
                          {LHS, RHS, CC, TrueV, FalseV});
 
+    // (select c, -1, y) -> -c | y
+    if (isAllOnesConstant(TrueV)) {
+      SDValue C = DAG.getSetCC(DL, VT, LHS, RHS, CCVal);
+      SDValue Neg = DAG.getNegative(C, DL, VT);
+      return DAG.getNode(ISD::OR, DL, VT, Neg, FalseV);
+    }
+    // (select c, y, -1) -> -!c | y
+    if (isAllOnesConstant(FalseV)) {
+      SDValue C = DAG.getSetCC(DL, VT, LHS, RHS,
+                               ISD::getSetCCInverse(CCVal, VT));
+      SDValue Neg = DAG.getNegative(C, DL, VT);
+      return DAG.getNode(ISD::OR, DL, VT, Neg, TrueV);
+    }
+
     return SDValue();
   }
   case RISCVISD::BR_CC: {
