@@ -29,7 +29,7 @@ define <2 x half> @vp_floor_v2f16_unmasked(<2 x half> %va, i32 zeroext %evl) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI1_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI1_0)(a1)
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmset.m v0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
 ; CHECK-NEXT:    vfabs.v v9, v8, v0.t
@@ -71,7 +71,7 @@ define <4 x half> @vp_floor_v4f16_unmasked(<4 x half> %va, i32 zeroext %evl) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI3_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI3_0)(a1)
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmset.m v0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfabs.v v9, v8, v0.t
@@ -113,7 +113,7 @@ define <8 x half> @vp_floor_v8f16_unmasked(<8 x half> %va, i32 zeroext %evl) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI5_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI5_0)(a1)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmset.m v0
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
 ; CHECK-NEXT:    vfabs.v v9, v8, v0.t
@@ -157,7 +157,7 @@ define <16 x half> @vp_floor_v16f16_unmasked(<16 x half> %va, i32 zeroext %evl) 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI7_0)
 ; CHECK-NEXT:    flh ft0, %lo(.LCPI7_0)(a1)
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmset.m v10
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v10
@@ -201,7 +201,7 @@ define <2 x float> @vp_floor_v2f32_unmasked(<2 x float> %va, i32 zeroext %evl) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI9_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI9_0)(a1)
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmset.m v0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
 ; CHECK-NEXT:    vfabs.v v9, v8, v0.t
@@ -243,7 +243,7 @@ define <4 x float> @vp_floor_v4f32_unmasked(<4 x float> %va, i32 zeroext %evl) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI11_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI11_0)(a1)
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmset.m v0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vfabs.v v9, v8, v0.t
@@ -287,7 +287,7 @@ define <8 x float> @vp_floor_v8f32_unmasked(<8 x float> %va, i32 zeroext %evl) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI13_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI13_0)(a1)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmset.m v10
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v10
@@ -333,7 +333,7 @@ define <16 x float> @vp_floor_v16f32_unmasked(<16 x float> %va, i32 zeroext %evl
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI15_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI15_0)(a1)
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmset.m v12
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v12
@@ -377,7 +377,7 @@ define <2 x double> @vp_floor_v2f64_unmasked(<2 x double> %va, i32 zeroext %evl)
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI17_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI17_0)(a1)
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmset.m v0
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    vfabs.v v9, v8, v0.t
@@ -421,7 +421,7 @@ define <4 x double> @vp_floor_v4f64_unmasked(<4 x double> %va, i32 zeroext %evl)
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI19_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI19_0)(a1)
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmset.m v10
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v10
@@ -467,7 +467,7 @@ define <8 x double> @vp_floor_v8f64_unmasked(<8 x double> %va, i32 zeroext %evl)
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI21_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI21_0)(a1)
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmset.m v12
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v12
@@ -513,7 +513,7 @@ define <15 x double> @vp_floor_v15f64_unmasked(<15 x double> %va, i32 zeroext %e
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI23_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI23_0)(a1)
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmset.m v16
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v16
@@ -559,7 +559,7 @@ define <16 x double> @vp_floor_v16f64_unmasked(<16 x double> %va, i32 zeroext %e
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a1, %hi(.LCPI25_0)
 ; CHECK-NEXT:    fld ft0, %lo(.LCPI25_0)(a1)
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmset.m v16
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v16
@@ -585,7 +585,7 @@ define <32 x double> @vp_floor_v32f64(<32 x double> %va, <32 x i1> %m, i32 zeroe
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v1, v0
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    addi a2, a0, -16
 ; CHECK-NEXT:    vslidedown.vi v2, v0, 2
 ; CHECK-NEXT:    bltu a0, a2, .LBB26_2
@@ -645,7 +645,7 @@ define <32 x double> @vp_floor_v32f64_unmasked(<32 x double> %va, i32 zeroext %e
 ; CHECK-LABEL: vp_floor_v32f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    addi a2, a0, -16
 ; CHECK-NEXT:    vmset.m v1
 ; CHECK-NEXT:    bltu a0, a2, .LBB27_2

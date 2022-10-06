@@ -84,6 +84,7 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -799,17 +800,17 @@ Status ProcessGDBRemote::DoLaunch(lldb_private::Module *exe_module,
       GDBRemoteCommunication::ScopedTimeout timeout(m_gdb_comm,
                                                     std::chrono::seconds(10));
 
-      int arg_packet_err = m_gdb_comm.SendArgumentsPacket(launch_info);
-      if (arg_packet_err == 0) {
-        std::string error_str;
-        if (m_gdb_comm.GetLaunchSuccess(error_str)) {
-          SetID(m_gdb_comm.GetCurrentProcessID());
-        } else {
-          error.SetErrorString(error_str.c_str());
-        }
+      // Since we can't send argv0 separate from the executable path, we need to
+      // make sure to use the actual executable path found in the launch_info...
+      Args args = launch_info.GetArguments();
+      if (FileSpec exe_file = launch_info.GetExecutableFile())
+        args.ReplaceArgumentAtIndex(0, exe_file.GetPath(false));
+      if (llvm::Error err = m_gdb_comm.LaunchProcess(args)) {
+        error.SetErrorStringWithFormatv("Cannot launch '{0}': {1}",
+                                        args.GetArgumentAtIndex(0),
+                                        llvm::fmt_consume(std::move(err)));
       } else {
-        error.SetErrorStringWithFormat("'A' packet returned an error: %i",
-                                       arg_packet_err);
+        SetID(m_gdb_comm.GetCurrentProcessID());
       }
     }
 

@@ -79,3 +79,15 @@
 // SYNTAX-ONLY: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-fsyntax-only"
 // SYNTAX-ONLY: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-fsyntax-only"
 // SYNTAX-ONLY: "-cc1" "-triple" "x86_64-unknown-linux-gnu"{{.*}}"-fsyntax-only"
+
+//
+// Check to ensure that we can use '-foffload' when not operating in RDC-mode.
+//
+// RUN: %clang -### --target=x86_64-linux-gnu -fno-gpu-rdc --offload-new-driver -ccc-print-bindings \
+// RUN:        -foffload-lto --offload-arch=gfx90a --offload-arch=gfx908 -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix=LTO-NO-RDC %s
+//      LTO-NO-RDC: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[LTO_908:.+]]"
+// LTO-NO-RDC-NEXT: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[LTO_908]]"], output: "[[OBJ_908:.+]]"
+// LTO-NO-RDC-NEXT: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[LTO_90A:.+]]"
+// LTO-NO-RDC-NEXT: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[LTO_90A]]"], output: "[[OBJ_90A:.+]]"
+// LTO-NO-RDC-NEXT: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[OBJ_908]]", "[[OBJ_90A]]"], output: "[[HIPFB:.+]]"
