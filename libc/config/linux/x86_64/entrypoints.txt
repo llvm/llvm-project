@@ -143,6 +143,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.dup
     libc.src.unistd.dup2
     libc.src.unistd.dup3
+    libc.src.unistd.execve
     libc.src.unistd.fchdir
     libc.src.unistd.fsync
     libc.src.unistd.ftruncate
@@ -412,6 +413,8 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.clock_gettime
 
     # unistd.h entrypoints
+    libc.src.unistd.environ
+    libc.src.unistd.execv
     libc.src.unistd.fork
     libc.src.unistd.__llvm_libc_syscall
   )
