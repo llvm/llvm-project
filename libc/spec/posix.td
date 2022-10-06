@@ -258,9 +258,16 @@ def POSIX : StandardSpec<"POSIX"> {
         SigSetType,
         StructSigaction,
         UnionSigVal,
+        PidT,
       ],
       [], // Enumerations
       [
+        FunctionSpec<
+          "kill",
+          RetValSpec<IntType>,
+          [ArgSpec<PidT>,
+            ArgSpec<IntType>]
+        >,
         FunctionSpec<
           "sigaction",
           RetValSpec<IntType>,
