@@ -36,3 +36,18 @@ define i32 @not_reassociate_or_or_not(i32 %a, i32 %b, i32 %c, i32 %d) {
   %b3 = or i32 %b2, %notc
   ret i32 %b3
 }
+
+define i32 @PR58137(i32 %a, i32 %b) {
+; CHECK-LABEL: @PR58137(
+; CHECK-NEXT:    [[MUL:%.*]] = shl i32 [[A:%.*]], 1
+; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[MUL]], [[B:%.*]]
+; CHECK-NEXT:    [[MUL2:%.*]] = shl nsw i32 [[A]], 1
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[MUL1]], [[MUL2]]
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %mul = mul nsw i32 2, %b
+  %mul1 = mul nsw i32 %mul, %a
+  %mul2 = mul nsw i32 2, %a
+  %div = sdiv i32 %mul1, %mul2
+  ret i32 %div
+}
