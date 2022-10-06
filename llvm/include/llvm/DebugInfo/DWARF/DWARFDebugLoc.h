@@ -67,9 +67,8 @@ public:
   /// updated to point past the end of the current list).
   bool dumpLocationList(uint64_t *Offset, raw_ostream &OS,
                         Optional<object::SectionedAddress> BaseAddr,
-                        const MCRegisterInfo *MRI, const DWARFObject &Obj,
-                        DWARFUnit *U, DIDumpOptions DumpOpts,
-                        unsigned Indent) const;
+                        const DWARFObject &Obj, DWARFUnit *U,
+                        DIDumpOptions DumpOpts, unsigned Indent) const;
 
   Error visitAbsoluteLocationList(
       uint64_t Offset, Optional<object::SectionedAddress> BaseAddr,
@@ -109,8 +108,7 @@ public:
       : DWARFLocationTable(std::move(Data)) {}
 
   /// Print the location lists found within the debug_loc section.
-  void dump(raw_ostream &OS, const MCRegisterInfo *RegInfo,
-            const DWARFObject &Obj, DIDumpOptions DumpOpts,
+  void dump(raw_ostream &OS, const DWARFObject &Obj, DIDumpOptions DumpOpts,
             Optional<uint64_t> Offset) const;
 
   Error visitLocationList(
@@ -134,8 +132,7 @@ public:
 
   /// Dump all location lists within the given range.
   void dumpRange(uint64_t StartOffset, uint64_t Size, raw_ostream &OS,
-                 const MCRegisterInfo *MRI, const DWARFObject &Obj,
-                 DIDumpOptions DumpOpts);
+                 const DWARFObject &Obj, DIDumpOptions DumpOpts);
 
 protected:
   void dumpRawEntry(const DWARFLocationEntry &Entry, raw_ostream &OS,
