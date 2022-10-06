@@ -99,13 +99,13 @@ define <4 x i8> @strided_vpload_v4i8(i8* %ptr, i32 signext %stride, <4 x i1> %m,
 define <4 x i8> @strided_vpload_v4i8_allones_mask(i8* %ptr, i32 signext %stride, i32 zeroext %evl) {
 ; CHECK-RV32-LABEL: strided_vpload_v4i8_allones_mask:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-RV32-NEXT:    vlse8.v v8, (a0), a1
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: strided_vpload_v4i8_allones_mask:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    vsetvli zero, a2, e8, mf4, ta, mu
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e8, mf4, ta, ma
 ; CHECK-RV64-NEXT:    vlse8.v v8, (a0), a1
 ; CHECK-RV64-NEXT:    ret
   %a = insertelement <4 x i1> poison, i1 true, i32 0
@@ -189,13 +189,13 @@ define <8 x i16> @strided_vpload_v8i16(i16* %ptr, i32 signext %stride, <8 x i1> 
 define <8 x i16> @strided_vpload_v8i16_allones_mask(i16* %ptr, i32 signext %stride, i32 zeroext %evl) {
 ; CHECK-RV32-LABEL: strided_vpload_v8i16_allones_mask:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-RV32-NEXT:    vlse16.v v8, (a0), a1
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: strided_vpload_v8i16_allones_mask:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    vsetvli zero, a2, e16, m1, ta, mu
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e16, m1, ta, ma
 ; CHECK-RV64-NEXT:    vlse16.v v8, (a0), a1
 ; CHECK-RV64-NEXT:    ret
   %a = insertelement <8 x i1> poison, i1 true, i32 0
@@ -261,13 +261,13 @@ define <8 x i32> @strided_vpload_v8i32(i32* %ptr, i32 signext %stride, <8 x i1> 
 define <8 x i32> @strided_vpload_v8i32_allones_mask(i32* %ptr, i32 signext %stride, i32 zeroext %evl) {
 ; CHECK-RV32-LABEL: strided_vpload_v8i32_allones_mask:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-RV32-NEXT:    vlse32.v v8, (a0), a1
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: strided_vpload_v8i32_allones_mask:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-RV64-NEXT:    vlse32.v v8, (a0), a1
 ; CHECK-RV64-NEXT:    ret
   %a = insertelement <8 x i1> poison, i1 true, i32 0
@@ -315,13 +315,13 @@ define <4 x i64> @strided_vpload_v4i64(i64* %ptr, i32 signext %stride, <4 x i1> 
 define <4 x i64> @strided_vpload_v4i64_allones_mask(i64* %ptr, i32 signext %stride, i32 zeroext %evl) {
 ; CHECK-RV32-LABEL: strided_vpload_v4i64_allones_mask:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-RV32-NEXT:    vlse64.v v8, (a0), a1
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: strided_vpload_v4i64_allones_mask:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-RV64-NEXT:    vlse64.v v8, (a0), a1
 ; CHECK-RV64-NEXT:    ret
   %a = insertelement <4 x i1> poison, i1 true, i32 0
@@ -369,13 +369,13 @@ define <2 x half> @strided_vpload_v2f16(half* %ptr, i32 signext %stride, <2 x i1
 define <2 x half> @strided_vpload_v2f16_allones_mask(half* %ptr, i32 signext %stride, i32 zeroext %evl) {
 ; CHECK-RV32-LABEL: strided_vpload_v2f16_allones_mask:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-RV32-NEXT:    vlse16.v v8, (a0), a1
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: strided_vpload_v2f16_allones_mask:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    vsetvli zero, a2, e16, mf4, ta, mu
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e16, mf4, ta, ma
 ; CHECK-RV64-NEXT:    vlse16.v v8, (a0), a1
 ; CHECK-RV64-NEXT:    ret
   %a = insertelement <2 x i1> poison, i1 true, i32 0
@@ -477,13 +477,13 @@ define <8 x float> @strided_vpload_v8f32(float* %ptr, i32 signext %stride, <8 x 
 define <8 x float> @strided_vpload_v8f32_allones_mask(float* %ptr, i32 signext %stride, i32 zeroext %evl) {
 ; CHECK-RV32-LABEL: strided_vpload_v8f32_allones_mask:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-RV32-NEXT:    vlse32.v v8, (a0), a1
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: strided_vpload_v8f32_allones_mask:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    vsetvli zero, a2, e32, m2, ta, mu
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e32, m2, ta, ma
 ; CHECK-RV64-NEXT:    vlse32.v v8, (a0), a1
 ; CHECK-RV64-NEXT:    ret
   %a = insertelement <8 x i1> poison, i1 true, i32 0
@@ -531,13 +531,13 @@ define <4 x double> @strided_vpload_v4f64(double* %ptr, i32 signext %stride, <4 
 define <4 x double> @strided_vpload_v4f64_allones_mask(double* %ptr, i32 signext %stride, i32 zeroext %evl) {
 ; CHECK-RV32-LABEL: strided_vpload_v4f64_allones_mask:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-RV32-NEXT:    vlse64.v v8, (a0), a1
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: strided_vpload_v4f64_allones_mask:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-RV64-NEXT:    vlse64.v v8, (a0), a1
 ; CHECK-RV64-NEXT:    ret
   %a = insertelement <4 x i1> poison, i1 true, i32 0
@@ -584,13 +584,13 @@ define <3 x double> @strided_vpload_v3f64(double* %ptr, i32 signext %stride, <3 
 define <3 x double> @strided_vpload_v3f64_allones_mask(double* %ptr, i32 signext %stride, i32 zeroext %evl) {
 ; CHECK-RV32-LABEL: strided_vpload_v3f64_allones_mask:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-RV32-NEXT:    vlse64.v v8, (a0), a1
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: strided_vpload_v3f64_allones_mask:
 ; CHECK-RV64:       # %bb.0:
-; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; CHECK-RV64-NEXT:    vlse64.v v8, (a0), a1
 ; CHECK-RV64-NEXT:    ret
   %one = insertelement <3 x i1> poison, i1 true, i32 0
@@ -619,7 +619,7 @@ define <32 x double> @strided_vpload_v32f64(double* %ptr, i32 signext %stride, <
 ; CHECK-RV32-NEXT:  .LBB33_4:
 ; CHECK-RV32-NEXT:    mul a4, a2, a1
 ; CHECK-RV32-NEXT:    add a4, a0, a4
-; CHECK-RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; CHECK-RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-RV32-NEXT:    vslidedown.vi v0, v8, 2
 ; CHECK-RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, mu
 ; CHECK-RV32-NEXT:    vlse64.v v16, (a4), a1, v0.t
@@ -644,7 +644,7 @@ define <32 x double> @strided_vpload_v32f64(double* %ptr, i32 signext %stride, <
 ; CHECK-RV64-NEXT:  .LBB33_4:
 ; CHECK-RV64-NEXT:    mul a4, a2, a1
 ; CHECK-RV64-NEXT:    add a4, a0, a4
-; CHECK-RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; CHECK-RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-RV64-NEXT:    vslidedown.vi v0, v8, 2
 ; CHECK-RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, mu
 ; CHECK-RV64-NEXT:    vlse64.v v16, (a4), a1, v0.t
@@ -672,9 +672,9 @@ define <32 x double> @strided_vpload_v32f64_allones_mask(double* %ptr, i32 signe
 ; CHECK-RV32-NEXT:  .LBB34_4:
 ; CHECK-RV32-NEXT:    mul a4, a2, a1
 ; CHECK-RV32-NEXT:    add a4, a0, a4
-; CHECK-RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, mu
+; CHECK-RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vlse64.v v16, (a4), a1
-; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, mu
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vlse64.v v8, (a0), a1
 ; CHECK-RV32-NEXT:    ret
 ;
@@ -693,9 +693,9 @@ define <32 x double> @strided_vpload_v32f64_allones_mask(double* %ptr, i32 signe
 ; CHECK-RV64-NEXT:  .LBB34_4:
 ; CHECK-RV64-NEXT:    mul a4, a2, a1
 ; CHECK-RV64-NEXT:    add a4, a0, a4
-; CHECK-RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, mu
+; CHECK-RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vlse64.v v16, (a4), a1
-; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m8, ta, mu
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vlse64.v v8, (a0), a1
 ; CHECK-RV64-NEXT:    ret
   %one = insertelement <32 x i1> poison, i1 true, i32 0
@@ -731,7 +731,7 @@ define <33 x double> @strided_load_v33f64(double* %ptr, i64 %stride, <33 x i1> %
 ; CHECK-RV32-NEXT:  .LBB35_6:
 ; CHECK-RV32-NEXT:    mul t0, a5, a2
 ; CHECK-RV32-NEXT:    add t0, a1, t0
-; CHECK-RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; CHECK-RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-RV32-NEXT:    vslidedown.vi v0, v8, 2
 ; CHECK-RV32-NEXT:    vsetvli zero, a7, e64, m8, ta, mu
 ; CHECK-RV32-NEXT:    vlse64.v v16, (t0), a2, v0.t
@@ -747,20 +747,20 @@ define <33 x double> @strided_load_v33f64(double* %ptr, i64 %stride, <33 x i1> %
 ; CHECK-RV32-NEXT:  .LBB35_10:
 ; CHECK-RV32-NEXT:    mul a3, a3, a2
 ; CHECK-RV32-NEXT:    add a3, a1, a3
-; CHECK-RV32-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
+; CHECK-RV32-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-RV32-NEXT:    vslidedown.vi v0, v8, 4
 ; CHECK-RV32-NEXT:    vsetvli zero, a7, e64, m8, ta, mu
 ; CHECK-RV32-NEXT:    vlse64.v v24, (a3), a2, v0.t
 ; CHECK-RV32-NEXT:    vsetvli zero, a5, e64, m8, ta, mu
 ; CHECK-RV32-NEXT:    vmv1r.v v0, v8
 ; CHECK-RV32-NEXT:    vlse64.v v8, (a1), a2, v0.t
-; CHECK-RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
+; CHECK-RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vse64.v v8, (a0)
 ; CHECK-RV32-NEXT:    addi a1, a0, 256
-; CHECK-RV32-NEXT:    vsetivli zero, 1, e64, m8, ta, mu
+; CHECK-RV32-NEXT:    vsetivli zero, 1, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vse64.v v24, (a1)
 ; CHECK-RV32-NEXT:    addi a0, a0, 128
-; CHECK-RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
+; CHECK-RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vse64.v v16, (a0)
 ; CHECK-RV32-NEXT:    ret
 ;
@@ -787,7 +787,7 @@ define <33 x double> @strided_load_v33f64(double* %ptr, i64 %stride, <33 x i1> %
 ; CHECK-RV64-NEXT:  .LBB35_6:
 ; CHECK-RV64-NEXT:    mul t0, a5, a2
 ; CHECK-RV64-NEXT:    add t0, a1, t0
-; CHECK-RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; CHECK-RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-RV64-NEXT:    vslidedown.vi v0, v8, 2
 ; CHECK-RV64-NEXT:    vsetvli zero, a7, e64, m8, ta, mu
 ; CHECK-RV64-NEXT:    vlse64.v v16, (t0), a2, v0.t
@@ -803,20 +803,20 @@ define <33 x double> @strided_load_v33f64(double* %ptr, i64 %stride, <33 x i1> %
 ; CHECK-RV64-NEXT:  .LBB35_10:
 ; CHECK-RV64-NEXT:    mul a3, a4, a2
 ; CHECK-RV64-NEXT:    add a3, a1, a3
-; CHECK-RV64-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
+; CHECK-RV64-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-RV64-NEXT:    vslidedown.vi v0, v8, 4
 ; CHECK-RV64-NEXT:    vsetvli zero, a7, e64, m8, ta, mu
 ; CHECK-RV64-NEXT:    vlse64.v v24, (a3), a2, v0.t
 ; CHECK-RV64-NEXT:    vsetvli zero, a5, e64, m8, ta, mu
 ; CHECK-RV64-NEXT:    vmv1r.v v0, v8
 ; CHECK-RV64-NEXT:    vlse64.v v8, (a1), a2, v0.t
-; CHECK-RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
+; CHECK-RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vse64.v v8, (a0)
 ; CHECK-RV64-NEXT:    addi a1, a0, 256
-; CHECK-RV64-NEXT:    vsetivli zero, 1, e64, m8, ta, mu
+; CHECK-RV64-NEXT:    vsetivli zero, 1, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vse64.v v24, (a1)
 ; CHECK-RV64-NEXT:    addi a0, a0, 128
-; CHECK-RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
+; CHECK-RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vse64.v v16, (a0)
 ; CHECK-RV64-NEXT:    ret
   %v = call <33 x double> @llvm.experimental.vp.strided.load.v33f64.p0f64.i64(double* %ptr, i64 %stride, <33 x i1> %mask, i32 %evl)

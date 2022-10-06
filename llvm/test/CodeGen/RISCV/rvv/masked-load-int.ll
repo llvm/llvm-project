@@ -255,7 +255,7 @@ define <vscale x 2 x i8> @masked_load_zero_mask(<vscale x 2 x i8>* %a) nounwind 
 define <vscale x 2 x i8> @masked_load_allones_mask(<vscale x 2 x i8>* %a, <vscale x 2 x i8> %maskedoff) nounwind {
 ; CHECK-LABEL: masked_load_allones_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %insert = insertelement <vscale x 2 x i1> poison, i1 1, i32 0

@@ -9,7 +9,7 @@ declare <1 x float> @llvm.fma.v1f32(<1 x float>, <1 x float>, <1 x float>)
 define <1 x float> @vfwmacc_vv_nxv1f32(<1 x float> %va, <1 x half> %vb, <1 x half> %vc) {
 ; CHECK-LABEL: vfwmacc_vv_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwmacc.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <1 x half> %vb to <1 x float>
@@ -21,7 +21,7 @@ define <1 x float> @vfwmacc_vv_nxv1f32(<1 x float> %va, <1 x half> %vb, <1 x hal
 define <1 x float> @vfwmacc_vf_nxv1f32(<1 x float> %va, <1 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwmacc_vf_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x half> poison, half %c, i32 0
@@ -35,7 +35,7 @@ define <1 x float> @vfwmacc_vf_nxv1f32(<1 x float> %va, <1 x half> %vb, half %c)
 define <1 x float> @vfwnmacc_vv_nxv1f32(<1 x float> %va, <1 x half> %vb, <1 x half> %vc) {
 ; CHECK-LABEL: vfwnmacc_vv_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <1 x half> %vb to <1 x float>
@@ -49,7 +49,7 @@ define <1 x float> @vfwnmacc_vv_nxv1f32(<1 x float> %va, <1 x half> %vb, <1 x ha
 define <1 x float> @vfwnmacc_vf_nxv1f32(<1 x float> %va, <1 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmacc_vf_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x half> poison, half %c, i32 0
@@ -65,7 +65,7 @@ define <1 x float> @vfwnmacc_vf_nxv1f32(<1 x float> %va, <1 x half> %vb, half %c
 define <1 x float> @vfwnmacc_fv_nxv1f32(<1 x float> %va, <1 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmacc_fv_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x half> poison, half %c, i32 0
@@ -81,7 +81,7 @@ define <1 x float> @vfwnmacc_fv_nxv1f32(<1 x float> %va, <1 x half> %vb, half %c
 define <1 x float> @vfwmsac_vv_nxv1f32(<1 x float> %va, <1 x half> %vb, <1 x half> %vc) {
 ; CHECK-LABEL: vfwmsac_vv_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwmsac.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <1 x half> %vb to <1 x float>
@@ -94,7 +94,7 @@ define <1 x float> @vfwmsac_vv_nxv1f32(<1 x float> %va, <1 x half> %vb, <1 x hal
 define <1 x float> @vfwmsac_vf_nxv1f32(<1 x float> %va, <1 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwmsac_vf_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x half> poison, half %c, i32 0
@@ -109,7 +109,7 @@ define <1 x float> @vfwmsac_vf_nxv1f32(<1 x float> %va, <1 x half> %vb, half %c)
 define <1 x float> @vfwnmsac_vv_nxv1f32(<1 x float> %va, <1 x half> %vb, <1 x half> %vc) {
 ; CHECK-LABEL: vfwnmsac_vv_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <1 x half> %vb to <1 x float>
@@ -122,7 +122,7 @@ define <1 x float> @vfwnmsac_vv_nxv1f32(<1 x float> %va, <1 x half> %vb, <1 x ha
 define <1 x float> @vfwnmsac_vf_nxv1f32(<1 x float> %va, <1 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmsac_vf_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x half> poison, half %c, i32 0
@@ -137,7 +137,7 @@ define <1 x float> @vfwnmsac_vf_nxv1f32(<1 x float> %va, <1 x half> %vb, half %c
 define <1 x float> @vfwnmsac_fv_nxv1f32(<1 x float> %va, <1 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmsac_fv_nxv1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x half> poison, half %c, i32 0
@@ -154,7 +154,7 @@ declare <2 x float> @llvm.fma.v2f32(<2 x float>, <2 x float>, <2 x float>)
 define <2 x float> @vfwmacc_vv_nxv2f32(<2 x float> %va, <2 x half> %vb, <2 x half> %vc) {
 ; CHECK-LABEL: vfwmacc_vv_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwmacc.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <2 x half> %vb to <2 x float>
@@ -166,7 +166,7 @@ define <2 x float> @vfwmacc_vv_nxv2f32(<2 x float> %va, <2 x half> %vb, <2 x hal
 define <2 x float> @vfwmacc_vf_nxv2f32(<2 x float> %va, <2 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwmacc_vf_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x half> poison, half %c, i32 0
@@ -180,7 +180,7 @@ define <2 x float> @vfwmacc_vf_nxv2f32(<2 x float> %va, <2 x half> %vb, half %c)
 define <2 x float> @vfwnmacc_vv_nxv2f32(<2 x float> %va, <2 x half> %vb, <2 x half> %vc) {
 ; CHECK-LABEL: vfwnmacc_vv_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <2 x half> %vb to <2 x float>
@@ -194,7 +194,7 @@ define <2 x float> @vfwnmacc_vv_nxv2f32(<2 x float> %va, <2 x half> %vb, <2 x ha
 define <2 x float> @vfwnmacc_vf_nxv2f32(<2 x float> %va, <2 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmacc_vf_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x half> poison, half %c, i32 0
@@ -210,7 +210,7 @@ define <2 x float> @vfwnmacc_vf_nxv2f32(<2 x float> %va, <2 x half> %vb, half %c
 define <2 x float> @vfwnmacc_fv_nxv2f32(<2 x float> %va, <2 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmacc_fv_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x half> poison, half %c, i32 0
@@ -226,7 +226,7 @@ define <2 x float> @vfwnmacc_fv_nxv2f32(<2 x float> %va, <2 x half> %vb, half %c
 define <2 x float> @vfwmsac_vv_nxv2f32(<2 x float> %va, <2 x half> %vb, <2 x half> %vc) {
 ; CHECK-LABEL: vfwmsac_vv_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwmsac.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <2 x half> %vb to <2 x float>
@@ -239,7 +239,7 @@ define <2 x float> @vfwmsac_vv_nxv2f32(<2 x float> %va, <2 x half> %vb, <2 x hal
 define <2 x float> @vfwmsac_vf_nxv2f32(<2 x float> %va, <2 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwmsac_vf_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x half> poison, half %c, i32 0
@@ -254,7 +254,7 @@ define <2 x float> @vfwmsac_vf_nxv2f32(<2 x float> %va, <2 x half> %vb, half %c)
 define <2 x float> @vfwnmsac_vv_nxv2f32(<2 x float> %va, <2 x half> %vb, <2 x half> %vc) {
 ; CHECK-LABEL: vfwnmsac_vv_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <2 x half> %vb to <2 x float>
@@ -267,7 +267,7 @@ define <2 x float> @vfwnmsac_vv_nxv2f32(<2 x float> %va, <2 x half> %vb, <2 x ha
 define <2 x float> @vfwnmsac_vf_nxv2f32(<2 x float> %va, <2 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmsac_vf_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x half> poison, half %c, i32 0
@@ -282,7 +282,7 @@ define <2 x float> @vfwnmsac_vf_nxv2f32(<2 x float> %va, <2 x half> %vb, half %c
 define <2 x float> @vfwnmsac_fv_nxv2f32(<2 x float> %va, <2 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmsac_fv_nxv2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x half> poison, half %c, i32 0
@@ -300,7 +300,7 @@ declare <4 x float> @llvm.fma.v4f32(<4 x float>, <4 x float>, <4 x float>)
 define <4 x float> @vfwmacc_vv_nxv4f32(<4 x float> %va, <4 x half> %vb, <4 x half> %vc) {
 ; CHECK-LABEL: vfwmacc_vv_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwmacc.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <4 x half> %vb to <4 x float>
@@ -312,7 +312,7 @@ define <4 x float> @vfwmacc_vv_nxv4f32(<4 x float> %va, <4 x half> %vb, <4 x hal
 define <4 x float> @vfwmacc_vf_nxv4f32(<4 x float> %va, <4 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwmacc_vf_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x half> poison, half %c, i32 0
@@ -326,7 +326,7 @@ define <4 x float> @vfwmacc_vf_nxv4f32(<4 x float> %va, <4 x half> %vb, half %c)
 define <4 x float> @vfwnmacc_vv_nxv4f32(<4 x float> %va, <4 x half> %vb, <4 x half> %vc) {
 ; CHECK-LABEL: vfwnmacc_vv_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <4 x half> %vb to <4 x float>
@@ -340,7 +340,7 @@ define <4 x float> @vfwnmacc_vv_nxv4f32(<4 x float> %va, <4 x half> %vb, <4 x ha
 define <4 x float> @vfwnmacc_vf_nxv4f32(<4 x float> %va, <4 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmacc_vf_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x half> poison, half %c, i32 0
@@ -356,7 +356,7 @@ define <4 x float> @vfwnmacc_vf_nxv4f32(<4 x float> %va, <4 x half> %vb, half %c
 define <4 x float> @vfwnmacc_fv_nxv4f32(<4 x float> %va, <4 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmacc_fv_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x half> poison, half %c, i32 0
@@ -372,7 +372,7 @@ define <4 x float> @vfwnmacc_fv_nxv4f32(<4 x float> %va, <4 x half> %vb, half %c
 define <4 x float> @vfwmsac_vv_nxv4f32(<4 x float> %va, <4 x half> %vb, <4 x half> %vc) {
 ; CHECK-LABEL: vfwmsac_vv_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwmsac.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <4 x half> %vb to <4 x float>
@@ -385,7 +385,7 @@ define <4 x float> @vfwmsac_vv_nxv4f32(<4 x float> %va, <4 x half> %vb, <4 x hal
 define <4 x float> @vfwmsac_vf_nxv4f32(<4 x float> %va, <4 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwmsac_vf_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x half> poison, half %c, i32 0
@@ -400,7 +400,7 @@ define <4 x float> @vfwmsac_vf_nxv4f32(<4 x float> %va, <4 x half> %vb, half %c)
 define <4 x float> @vfwnmsac_vv_nxv4f32(<4 x float> %va, <4 x half> %vb, <4 x half> %vc) {
 ; CHECK-LABEL: vfwnmsac_vv_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <4 x half> %vb to <4 x float>
@@ -413,7 +413,7 @@ define <4 x float> @vfwnmsac_vv_nxv4f32(<4 x float> %va, <4 x half> %vb, <4 x ha
 define <4 x float> @vfwnmsac_vf_nxv4f32(<4 x float> %va, <4 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmsac_vf_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x half> poison, half %c, i32 0
@@ -428,7 +428,7 @@ define <4 x float> @vfwnmsac_vf_nxv4f32(<4 x float> %va, <4 x half> %vb, half %c
 define <4 x float> @vfwnmsac_fv_nxv4f32(<4 x float> %va, <4 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmsac_fv_nxv4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x half> poison, half %c, i32 0
@@ -445,7 +445,7 @@ declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>)
 define <8 x float> @vfwmacc_vv_nxv8f32(<8 x float> %va, <8 x half> %vb, <8 x half> %vc) {
 ; CHECK-LABEL: vfwmacc_vv_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwmacc.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %vd = fpext <8 x half> %vb to <8 x float>
@@ -457,7 +457,7 @@ define <8 x float> @vfwmacc_vv_nxv8f32(<8 x float> %va, <8 x half> %vb, <8 x hal
 define <8 x float> @vfwmacc_vf_nxv8f32(<8 x float> %va, <8 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwmacc_vf_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwmacc.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x half> poison, half %c, i32 0
@@ -471,7 +471,7 @@ define <8 x float> @vfwmacc_vf_nxv8f32(<8 x float> %va, <8 x half> %vb, half %c)
 define <8 x float> @vfwnmacc_vv_nxv8f32(<8 x float> %va, <8 x half> %vb, <8 x half> %vc) {
 ; CHECK-LABEL: vfwnmacc_vv_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %vd = fpext <8 x half> %vb to <8 x float>
@@ -485,7 +485,7 @@ define <8 x float> @vfwnmacc_vv_nxv8f32(<8 x float> %va, <8 x half> %vb, <8 x ha
 define <8 x float> @vfwnmacc_vf_nxv8f32(<8 x float> %va, <8 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmacc_vf_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x half> poison, half %c, i32 0
@@ -501,7 +501,7 @@ define <8 x float> @vfwnmacc_vf_nxv8f32(<8 x float> %va, <8 x half> %vb, half %c
 define <8 x float> @vfwnmacc_fv_nxv8f32(<8 x float> %va, <8 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmacc_fv_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x half> poison, half %c, i32 0
@@ -517,7 +517,7 @@ define <8 x float> @vfwnmacc_fv_nxv8f32(<8 x float> %va, <8 x half> %vb, half %c
 define <8 x float> @vfwmsac_vv_nxv8f32(<8 x float> %va, <8 x half> %vb, <8 x half> %vc) {
 ; CHECK-LABEL: vfwmsac_vv_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwmsac.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %vd = fpext <8 x half> %vb to <8 x float>
@@ -530,7 +530,7 @@ define <8 x float> @vfwmsac_vv_nxv8f32(<8 x float> %va, <8 x half> %vb, <8 x hal
 define <8 x float> @vfwmsac_vf_nxv8f32(<8 x float> %va, <8 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwmsac_vf_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwmsac.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x half> poison, half %c, i32 0
@@ -545,7 +545,7 @@ define <8 x float> @vfwmsac_vf_nxv8f32(<8 x float> %va, <8 x half> %vb, half %c)
 define <8 x float> @vfwnmsac_vv_nxv8f32(<8 x float> %va, <8 x half> %vb, <8 x half> %vc) {
 ; CHECK-LABEL: vfwnmsac_vv_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %vd = fpext <8 x half> %vb to <8 x float>
@@ -558,7 +558,7 @@ define <8 x float> @vfwnmsac_vv_nxv8f32(<8 x float> %va, <8 x half> %vb, <8 x ha
 define <8 x float> @vfwnmsac_vf_nxv8f32(<8 x float> %va, <8 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmsac_vf_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x half> poison, half %c, i32 0
@@ -573,7 +573,7 @@ define <8 x float> @vfwnmsac_vf_nxv8f32(<8 x float> %va, <8 x half> %vb, half %c
 define <8 x float> @vfwnmsac_fv_nxv8f32(<8 x float> %va, <8 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmsac_fv_nxv8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x half> poison, half %c, i32 0
@@ -590,7 +590,7 @@ declare <16 x float> @llvm.fma.v16f32(<16 x float>, <16 x float>, <16 x float>)
 define <16 x float> @vfwmacc_vv_nxv16f32(<16 x float> %va, <16 x half> %vb, <16 x half> %vc) {
 ; CHECK-LABEL: vfwmacc_vv_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwmacc.vv v8, v12, v14
 ; CHECK-NEXT:    ret
   %vd = fpext <16 x half> %vb to <16 x float>
@@ -602,7 +602,7 @@ define <16 x float> @vfwmacc_vv_nxv16f32(<16 x float> %va, <16 x half> %vb, <16 
 define <16 x float> @vfwmacc_vf_nxv16f32(<16 x float> %va, <16 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwmacc_vf_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwmacc.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x half> poison, half %c, i32 0
@@ -616,7 +616,7 @@ define <16 x float> @vfwmacc_vf_nxv16f32(<16 x float> %va, <16 x half> %vb, half
 define <16 x float> @vfwnmacc_vv_nxv16f32(<16 x float> %va, <16 x half> %vb, <16 x half> %vc) {
 ; CHECK-LABEL: vfwnmacc_vv_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vv v8, v12, v14
 ; CHECK-NEXT:    ret
   %vd = fpext <16 x half> %vb to <16 x float>
@@ -630,7 +630,7 @@ define <16 x float> @vfwnmacc_vv_nxv16f32(<16 x float> %va, <16 x half> %vb, <16
 define <16 x float> @vfwnmacc_vf_nxv16f32(<16 x float> %va, <16 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmacc_vf_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x half> poison, half %c, i32 0
@@ -646,7 +646,7 @@ define <16 x float> @vfwnmacc_vf_nxv16f32(<16 x float> %va, <16 x half> %vb, hal
 define <16 x float> @vfwnmacc_fv_nxv16f32(<16 x float> %va, <16 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmacc_fv_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x half> poison, half %c, i32 0
@@ -662,7 +662,7 @@ define <16 x float> @vfwnmacc_fv_nxv16f32(<16 x float> %va, <16 x half> %vb, hal
 define <16 x float> @vfwmsac_vv_nxv16f32(<16 x float> %va, <16 x half> %vb, <16 x half> %vc) {
 ; CHECK-LABEL: vfwmsac_vv_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwmsac.vv v8, v12, v14
 ; CHECK-NEXT:    ret
   %vd = fpext <16 x half> %vb to <16 x float>
@@ -675,7 +675,7 @@ define <16 x float> @vfwmsac_vv_nxv16f32(<16 x float> %va, <16 x half> %vb, <16 
 define <16 x float> @vfwmsac_vf_nxv16f32(<16 x float> %va, <16 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwmsac_vf_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwmsac.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x half> poison, half %c, i32 0
@@ -690,7 +690,7 @@ define <16 x float> @vfwmsac_vf_nxv16f32(<16 x float> %va, <16 x half> %vb, half
 define <16 x float> @vfwnmsac_vv_nxv16f32(<16 x float> %va, <16 x half> %vb, <16 x half> %vc) {
 ; CHECK-LABEL: vfwnmsac_vv_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vv v8, v12, v14
 ; CHECK-NEXT:    ret
   %vd = fpext <16 x half> %vb to <16 x float>
@@ -703,7 +703,7 @@ define <16 x float> @vfwnmsac_vv_nxv16f32(<16 x float> %va, <16 x half> %vb, <16
 define <16 x float> @vfwnmsac_vf_nxv16f32(<16 x float> %va, <16 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmsac_vf_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x half> poison, half %c, i32 0
@@ -718,7 +718,7 @@ define <16 x float> @vfwnmsac_vf_nxv16f32(<16 x float> %va, <16 x half> %vb, hal
 define <16 x float> @vfwnmsac_fv_nxv16f32(<16 x float> %va, <16 x half> %vb, half %c) {
 ; CHECK-LABEL: vfwnmsac_fv_nxv16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x half> poison, half %c, i32 0
@@ -735,7 +735,7 @@ declare <1 x double> @llvm.fma.v1f64(<1 x double>, <1 x double>, <1 x double>)
 define <1 x double> @vfwmacc_vv_nxv1f64(<1 x double> %va, <1 x float> %vb, <1 x float> %vc) {
 ; CHECK-LABEL: vfwmacc_vv_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwmacc.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <1 x float> %vb to <1 x double>
@@ -747,7 +747,7 @@ define <1 x double> @vfwmacc_vv_nxv1f64(<1 x double> %va, <1 x float> %vb, <1 x 
 define <1 x double> @vfwmacc_vf_nxv1f64(<1 x double> %va, <1 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwmacc_vf_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x float> poison, float %c, i32 0
@@ -761,7 +761,7 @@ define <1 x double> @vfwmacc_vf_nxv1f64(<1 x double> %va, <1 x float> %vb, float
 define <1 x double> @vfwnmacc_vv_nxv1f64(<1 x double> %va, <1 x float> %vb, <1 x float> %vc) {
 ; CHECK-LABEL: vfwnmacc_vv_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <1 x float> %vb to <1 x double>
@@ -775,7 +775,7 @@ define <1 x double> @vfwnmacc_vv_nxv1f64(<1 x double> %va, <1 x float> %vb, <1 x
 define <1 x double> @vfwnmacc_vf_nxv1f64(<1 x double> %va, <1 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwnmacc_vf_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x float> poison, float %c, i32 0
@@ -791,7 +791,7 @@ define <1 x double> @vfwnmacc_vf_nxv1f64(<1 x double> %va, <1 x float> %vb, floa
 define <1 x double> @vfwnmacc_fv_nxv1f64(<1 x double> %va, <1 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwnmacc_fv_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x float> poison, float %c, i32 0
@@ -807,7 +807,7 @@ define <1 x double> @vfwnmacc_fv_nxv1f64(<1 x double> %va, <1 x float> %vb, floa
 define <1 x double> @vfwmsac_vv_nxv1f64(<1 x double> %va, <1 x float> %vb, <1 x float> %vc) {
 ; CHECK-LABEL: vfwmsac_vv_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwmsac.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <1 x float> %vb to <1 x double>
@@ -820,7 +820,7 @@ define <1 x double> @vfwmsac_vv_nxv1f64(<1 x double> %va, <1 x float> %vb, <1 x 
 define <1 x double> @vfwmsac_vf_nxv1f64(<1 x double> %va, <1 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwmsac_vf_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x float> poison, float %c, i32 0
@@ -835,7 +835,7 @@ define <1 x double> @vfwmsac_vf_nxv1f64(<1 x double> %va, <1 x float> %vb, float
 define <1 x double> @vfwnmsac_vv_nxv1f64(<1 x double> %va, <1 x float> %vb, <1 x float> %vc) {
 ; CHECK-LABEL: vfwnmsac_vv_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <1 x float> %vb to <1 x double>
@@ -848,7 +848,7 @@ define <1 x double> @vfwnmsac_vv_nxv1f64(<1 x double> %va, <1 x float> %vb, <1 x
 define <1 x double> @vfwnmsac_vf_nxv1f64(<1 x double> %va, <1 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwnmsac_vf_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x float> poison, float %c, i32 0
@@ -863,7 +863,7 @@ define <1 x double> @vfwnmsac_vf_nxv1f64(<1 x double> %va, <1 x float> %vb, floa
 define <1 x double> @vfwnmsac_fv_nxv1f64(<1 x double> %va, <1 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwnmsac_fv_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <1 x float> poison, float %c, i32 0
@@ -880,7 +880,7 @@ declare <2 x double> @llvm.fma.v2f64(<2 x double>, <2 x double>, <2 x double>)
 define <2 x double> @vfwmacc_vv_nxv2f64(<2 x double> %va, <2 x float> %vb, <2 x float> %vc) {
 ; CHECK-LABEL: vfwmacc_vv_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwmacc.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <2 x float> %vb to <2 x double>
@@ -892,7 +892,7 @@ define <2 x double> @vfwmacc_vv_nxv2f64(<2 x double> %va, <2 x float> %vb, <2 x 
 define <2 x double> @vfwmacc_vf_nxv2f64(<2 x double> %va, <2 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwmacc_vf_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x float> poison, float %c, i32 0
@@ -906,7 +906,7 @@ define <2 x double> @vfwmacc_vf_nxv2f64(<2 x double> %va, <2 x float> %vb, float
 define <2 x double> @vfwnmacc_vv_nxv2f64(<2 x double> %va, <2 x float> %vb, <2 x float> %vc) {
 ; CHECK-LABEL: vfwnmacc_vv_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <2 x float> %vb to <2 x double>
@@ -920,7 +920,7 @@ define <2 x double> @vfwnmacc_vv_nxv2f64(<2 x double> %va, <2 x float> %vb, <2 x
 define <2 x double> @vfwnmacc_vf_nxv2f64(<2 x double> %va, <2 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwnmacc_vf_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x float> poison, float %c, i32 0
@@ -936,7 +936,7 @@ define <2 x double> @vfwnmacc_vf_nxv2f64(<2 x double> %va, <2 x float> %vb, floa
 define <2 x double> @vfwnmacc_fv_nxv2f64(<2 x double> %va, <2 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwnmacc_fv_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x float> poison, float %c, i32 0
@@ -952,7 +952,7 @@ define <2 x double> @vfwnmacc_fv_nxv2f64(<2 x double> %va, <2 x float> %vb, floa
 define <2 x double> @vfwmsac_vv_nxv2f64(<2 x double> %va, <2 x float> %vb, <2 x float> %vc) {
 ; CHECK-LABEL: vfwmsac_vv_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwmsac.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <2 x float> %vb to <2 x double>
@@ -965,7 +965,7 @@ define <2 x double> @vfwmsac_vv_nxv2f64(<2 x double> %va, <2 x float> %vb, <2 x 
 define <2 x double> @vfwmsac_vf_nxv2f64(<2 x double> %va, <2 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwmsac_vf_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x float> poison, float %c, i32 0
@@ -980,7 +980,7 @@ define <2 x double> @vfwmsac_vf_nxv2f64(<2 x double> %va, <2 x float> %vb, float
 define <2 x double> @vfwnmsac_vv_nxv2f64(<2 x double> %va, <2 x float> %vb, <2 x float> %vc) {
 ; CHECK-LABEL: vfwnmsac_vv_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %vd = fpext <2 x float> %vb to <2 x double>
@@ -993,7 +993,7 @@ define <2 x double> @vfwnmsac_vv_nxv2f64(<2 x double> %va, <2 x float> %vb, <2 x
 define <2 x double> @vfwnmsac_vf_nxv2f64(<2 x double> %va, <2 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwnmsac_vf_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x float> poison, float %c, i32 0
@@ -1008,7 +1008,7 @@ define <2 x double> @vfwnmsac_vf_nxv2f64(<2 x double> %va, <2 x float> %vb, floa
 define <2 x double> @vfwnmsac_fv_nxv2f64(<2 x double> %va, <2 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwnmsac_fv_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x float> poison, float %c, i32 0
@@ -1026,7 +1026,7 @@ declare <4 x double> @llvm.fma.v4f64(<4 x double>, <4 x double>, <4 x double>)
 define <4 x double> @vfwmacc_vv_nxv4f64(<4 x double> %va, <4 x float> %vb, <4 x float> %vc) {
 ; CHECK-LABEL: vfwmacc_vv_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwmacc.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %vd = fpext <4 x float> %vb to <4 x double>
@@ -1038,7 +1038,7 @@ define <4 x double> @vfwmacc_vv_nxv4f64(<4 x double> %va, <4 x float> %vb, <4 x 
 define <4 x double> @vfwmacc_vf_nxv4f64(<4 x double> %va, <4 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwmacc_vf_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwmacc.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x float> poison, float %c, i32 0
@@ -1052,7 +1052,7 @@ define <4 x double> @vfwmacc_vf_nxv4f64(<4 x double> %va, <4 x float> %vb, float
 define <4 x double> @vfwnmacc_vv_nxv4f64(<4 x double> %va, <4 x float> %vb, <4 x float> %vc) {
 ; CHECK-LABEL: vfwnmacc_vv_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %vd = fpext <4 x float> %vb to <4 x double>
@@ -1066,7 +1066,7 @@ define <4 x double> @vfwnmacc_vv_nxv4f64(<4 x double> %va, <4 x float> %vb, <4 x
 define <4 x double> @vfwnmacc_vf_nxv4f64(<4 x double> %va, <4 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwnmacc_vf_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x float> poison, float %c, i32 0
@@ -1082,7 +1082,7 @@ define <4 x double> @vfwnmacc_vf_nxv4f64(<4 x double> %va, <4 x float> %vb, floa
 define <4 x double> @vfwnmacc_fv_nxv4f64(<4 x double> %va, <4 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwnmacc_fv_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x float> poison, float %c, i32 0
@@ -1098,7 +1098,7 @@ define <4 x double> @vfwnmacc_fv_nxv4f64(<4 x double> %va, <4 x float> %vb, floa
 define <4 x double> @vfwmsac_vv_nxv4f64(<4 x double> %va, <4 x float> %vb, <4 x float> %vc) {
 ; CHECK-LABEL: vfwmsac_vv_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwmsac.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %vd = fpext <4 x float> %vb to <4 x double>
@@ -1111,7 +1111,7 @@ define <4 x double> @vfwmsac_vv_nxv4f64(<4 x double> %va, <4 x float> %vb, <4 x 
 define <4 x double> @vfwmsac_vf_nxv4f64(<4 x double> %va, <4 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwmsac_vf_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwmsac.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x float> poison, float %c, i32 0
@@ -1126,7 +1126,7 @@ define <4 x double> @vfwmsac_vf_nxv4f64(<4 x double> %va, <4 x float> %vb, float
 define <4 x double> @vfwnmsac_vv_nxv4f64(<4 x double> %va, <4 x float> %vb, <4 x float> %vc) {
 ; CHECK-LABEL: vfwnmsac_vv_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vv v8, v10, v11
 ; CHECK-NEXT:    ret
   %vd = fpext <4 x float> %vb to <4 x double>
@@ -1139,7 +1139,7 @@ define <4 x double> @vfwnmsac_vv_nxv4f64(<4 x double> %va, <4 x float> %vb, <4 x
 define <4 x double> @vfwnmsac_vf_nxv4f64(<4 x double> %va, <4 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwnmsac_vf_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x float> poison, float %c, i32 0
@@ -1154,7 +1154,7 @@ define <4 x double> @vfwnmsac_vf_nxv4f64(<4 x double> %va, <4 x float> %vb, floa
 define <4 x double> @vfwnmsac_fv_nxv4f64(<4 x double> %va, <4 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwnmsac_fv_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x float> poison, float %c, i32 0
@@ -1171,7 +1171,7 @@ declare <8 x double> @llvm.fma.v8f64(<8 x double>, <8 x double>, <8 x double>)
 define <8 x double> @vfwmacc_vv_nxv8f64(<8 x double> %va, <8 x float> %vb, <8 x float> %vc) {
 ; CHECK-LABEL: vfwmacc_vv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwmacc.vv v8, v12, v14
 ; CHECK-NEXT:    ret
   %vd = fpext <8 x float> %vb to <8 x double>
@@ -1183,7 +1183,7 @@ define <8 x double> @vfwmacc_vv_nxv8f64(<8 x double> %va, <8 x float> %vb, <8 x 
 define <8 x double> @vfwmacc_vf_nxv8f64(<8 x double> %va, <8 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwmacc_vf_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwmacc.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x float> poison, float %c, i32 0
@@ -1197,7 +1197,7 @@ define <8 x double> @vfwmacc_vf_nxv8f64(<8 x double> %va, <8 x float> %vb, float
 define <8 x double> @vfwnmacc_vv_nxv8f64(<8 x double> %va, <8 x float> %vb, <8 x float> %vc) {
 ; CHECK-LABEL: vfwnmacc_vv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vv v8, v12, v14
 ; CHECK-NEXT:    ret
   %vd = fpext <8 x float> %vb to <8 x double>
@@ -1211,7 +1211,7 @@ define <8 x double> @vfwnmacc_vv_nxv8f64(<8 x double> %va, <8 x float> %vb, <8 x
 define <8 x double> @vfwnmacc_vf_nxv8f64(<8 x double> %va, <8 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwnmacc_vf_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x float> poison, float %c, i32 0
@@ -1227,7 +1227,7 @@ define <8 x double> @vfwnmacc_vf_nxv8f64(<8 x double> %va, <8 x float> %vb, floa
 define <8 x double> @vfwnmacc_fv_nxv8f64(<8 x double> %va, <8 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwnmacc_fv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwnmacc.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x float> poison, float %c, i32 0
@@ -1243,7 +1243,7 @@ define <8 x double> @vfwnmacc_fv_nxv8f64(<8 x double> %va, <8 x float> %vb, floa
 define <8 x double> @vfwmsac_vv_nxv8f64(<8 x double> %va, <8 x float> %vb, <8 x float> %vc) {
 ; CHECK-LABEL: vfwmsac_vv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwmsac.vv v8, v12, v14
 ; CHECK-NEXT:    ret
   %vd = fpext <8 x float> %vb to <8 x double>
@@ -1256,7 +1256,7 @@ define <8 x double> @vfwmsac_vv_nxv8f64(<8 x double> %va, <8 x float> %vb, <8 x 
 define <8 x double> @vfwmsac_vf_nxv8f64(<8 x double> %va, <8 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwmsac_vf_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwmsac.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x float> poison, float %c, i32 0
@@ -1271,7 +1271,7 @@ define <8 x double> @vfwmsac_vf_nxv8f64(<8 x double> %va, <8 x float> %vb, float
 define <8 x double> @vfwnmsac_vv_nxv8f64(<8 x double> %va, <8 x float> %vb, <8 x float> %vc) {
 ; CHECK-LABEL: vfwnmsac_vv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vv v8, v12, v14
 ; CHECK-NEXT:    ret
   %vd = fpext <8 x float> %vb to <8 x double>
@@ -1284,7 +1284,7 @@ define <8 x double> @vfwnmsac_vv_nxv8f64(<8 x double> %va, <8 x float> %vb, <8 x
 define <8 x double> @vfwnmsac_vf_nxv8f64(<8 x double> %va, <8 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwnmsac_vf_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x float> poison, float %c, i32 0
@@ -1299,7 +1299,7 @@ define <8 x double> @vfwnmsac_vf_nxv8f64(<8 x double> %va, <8 x float> %vb, floa
 define <8 x double> @vfwnmsac_fv_nxv8f64(<8 x double> %va, <8 x float> %vb, float %c) {
 ; CHECK-LABEL: vfwnmsac_fv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwnmsac.vf v8, fa0, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x float> poison, float %c, i32 0
