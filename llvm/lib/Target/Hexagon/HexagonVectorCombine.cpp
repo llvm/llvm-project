@@ -24,6 +24,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -81,6 +82,9 @@ public:
   // Is V an undef value?
   bool isUndef(const Value *Val) const;
 
+  // Get HVX vector type with the given element type.
+  VectorType *getHvxTy(Type *ElemTy, bool Pair = false) const;
+
   enum SizeKind {
     Store,  // Store size
     Alloc,  // Alloc size
@@ -88,6 +92,8 @@ public:
   int getSizeOf(const Value *Val, SizeKind Kind = Store) const;
   int getSizeOf(const Type *Ty, SizeKind Kind = Store) const;
   int getTypeAlignment(Type *Ty) const;
+  size_t length(Value *Val) const;
+  size_t length(Type *Ty) const;
 
   Constant *getNullValue(Type *Ty) const;
   Constant *getFullValue(Type *Ty) const;
@@ -428,10 +434,8 @@ auto AlignVectors::getMask(Value *Val) const -> Value * {
   }
 
   Type *ValTy = getPayload(Val)->getType();
-  if (auto *VecTy = dyn_cast<VectorType>(ValTy)) {
-    int ElemCount = VecTy->getElementCount().getFixedValue();
-    return HVC.getFullValue(HVC.getBoolTy(ElemCount));
-  }
+  if (auto *VecTy = dyn_cast<VectorType>(ValTy))
+    return HVC.getFullValue(HVC.getBoolTy(HVC.length(VecTy)));
   return HVC.getFullValue(HVC.getBoolTy());
 }
 
@@ -989,6 +993,19 @@ auto HexagonVectorCombine::isUndef(const Value *Val) const -> bool {
   return isa<UndefValue>(Val);
 }
 
+auto HexagonVectorCombine::getHvxTy(Type *ElemTy, bool Pair) const
+    -> VectorType * {
+  EVT ETy = EVT::getEVT(ElemTy, false);
+  assert(ETy.isSimple() && "Invalid HVX element type");
+  // Do not allow boolean types here: they don't have a fixed length.
+  assert(HST.isHVXElementType(ETy.getSimpleVT(), /*IncludeBool=*/false) &&
+         "Invalid HVX element type");
+  unsigned HwLen = HST.getVectorLength();
+  unsigned NumElems = (8 * HwLen) / ETy.getSizeInBits();
+  return VectorType::get(ElemTy, Pair ? 2 * NumElems : NumElems,
+                         /*Scalable=*/false);
+}
+
 auto HexagonVectorCombine::getSizeOf(const Value *Val, SizeKind Kind) const
     -> int {
   return getSizeOf(Val->getType(), Kind);
@@ -1012,6 +1029,16 @@ auto HexagonVectorCombine::getTypeAlignment(Type *Ty) const -> int {
   if (HST.isTypeForHVX(Ty))
     return HST.getVectorLength();
   return DL.getABITypeAlign(Ty).value();
+}
+
+auto HexagonVectorCombine::length(Value *Val) const -> size_t {
+  return length(Val->getType());
+}
+
+auto HexagonVectorCombine::length(Type *Ty) const -> size_t {
+  auto *VecTy = dyn_cast<VectorType>(Ty);
+  assert(VecTy && "Must be a vector type");
+  return VecTy->getElementCount().getFixedValue();
 }
 
 auto HexagonVectorCombine::getNullValue(Type *Ty) const -> Constant * {
@@ -1137,8 +1164,7 @@ auto HexagonVectorCombine::concat(IRBuilder<> &Builder,
   Work[ThisW].assign(Vecs.begin(), Vecs.end());
   while (Work[ThisW].size() > 1) {
     auto *Ty = cast<VectorType>(Work[ThisW].front()->getType());
-    int ElemCount = Ty->getElementCount().getFixedValue();
-    SMask.resize(ElemCount * 2);
+    SMask.resize(length(Ty) * 2);
     std::iota(SMask.begin(), SMask.end(), 0);
 
     Work[OtherW].clear();
@@ -1167,7 +1193,7 @@ auto HexagonVectorCombine::vresize(IRBuilder<> &Builder, Value *Val,
   auto *ValTy = cast<VectorType>(Val->getType());
   assert(ValTy->getElementType() == Pad->getType());
 
-  int CurSize = ValTy->getElementCount().getFixedValue();
+  int CurSize = length(ValTy);
   if (CurSize == NewSize)
     return Val;
   // Truncate?
@@ -1198,7 +1224,7 @@ auto HexagonVectorCombine::rescale(IRBuilder<> &Builder, Value *Mask,
   assert(FromSize % ToSize == 0 || ToSize % FromSize == 0);
 
   auto *MaskTy = cast<VectorType>(Mask->getType());
-  int FromCount = MaskTy->getElementCount().getFixedValue();
+  int FromCount = length(MaskTy);
   int ToCount = (FromCount * FromSize) / ToSize;
   assert((FromCount * FromSize) % ToSize == 0);
 
@@ -1261,7 +1287,7 @@ auto HexagonVectorCombine::createHvxIntrinsic(IRBuilder<> &Builder,
         return Ty;
       if (ElemTy == BoolTy)
         return VectorType::get(BoolTy, 8 * HwLen, /*Scalable*/ false);
-      return VectorType::get(Int32Ty, HwLen / 4, /*Scalable*/ false);
+      return getHvxTy(Int32Ty);
     }
     // Non-HVX type. It should be a scalar.
     assert(Ty == Int32Ty || Ty->isIntegerTy(64));
