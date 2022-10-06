@@ -977,12 +977,16 @@ class Sema;
     /// functions to a candidate set.
     struct OperatorRewriteInfo {
       OperatorRewriteInfo()
-          : OriginalOperator(OO_None), AllowRewrittenCandidates(false) {}
-      OperatorRewriteInfo(OverloadedOperatorKind Op, bool AllowRewritten)
-          : OriginalOperator(Op), AllowRewrittenCandidates(AllowRewritten) {}
+          : OriginalOperator(OO_None), OpLoc(), AllowRewrittenCandidates(false) {}
+      OperatorRewriteInfo(OverloadedOperatorKind Op, SourceLocation OpLoc,
+                          bool AllowRewritten)
+          : OriginalOperator(Op), OpLoc(OpLoc),
+            AllowRewrittenCandidates(AllowRewritten) {}
 
       /// The original operator as written in the source.
       OverloadedOperatorKind OriginalOperator;
+      /// The source location of the operator.
+      SourceLocation OpLoc;
       /// Whether we should include rewritten candidates in the overload set.
       bool AllowRewrittenCandidates;
 
@@ -1018,22 +1022,23 @@ class Sema;
           CRK = OverloadCandidateRewriteKind(CRK | CRK_Reversed);
         return CRK;
       }
-
       /// Determines whether this operator could be implemented by a function
       /// with reversed parameter order.
       bool isReversible() {
         return AllowRewrittenCandidates && OriginalOperator &&
                (getRewrittenOverloadedOperator(OriginalOperator) != OO_None ||
-                shouldAddReversed(OriginalOperator));
+                allowsReversed(OriginalOperator));
       }
 
-      /// Determine whether we should consider looking for and adding reversed
-      /// candidates for operator Op.
-      bool shouldAddReversed(OverloadedOperatorKind Op);
+      /// Determine whether reversing parameter order is allowed for operator
+      /// Op.
+      bool allowsReversed(OverloadedOperatorKind Op);
 
       /// Determine whether we should add a rewritten candidate for \p FD with
       /// reversed parameter order.
-      bool shouldAddReversed(ASTContext &Ctx, const FunctionDecl *FD);
+      /// \param OriginalArgs are the original non reversed arguments.
+      bool shouldAddReversed(Sema &S, ArrayRef<Expr *> OriginalArgs,
+                             FunctionDecl *FD);
     };
 
   private:
