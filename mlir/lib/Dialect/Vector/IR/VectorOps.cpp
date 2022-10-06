@@ -328,7 +328,7 @@ struct ElideUnitDimsInMultiDimReduction
   LogicalResult matchAndRewrite(MultiDimReductionOp reductionOp,
                                 PatternRewriter &rewriter) const override {
     ArrayRef<int64_t> shape = reductionOp.getSourceVectorType().getShape();
-    for (auto dim : enumerate(shape)) {
+    for (const auto &dim : enumerate(shape)) {
       if (reductionOp.isReducedDim(dim.index()) && dim.value() != 1)
         return failure();
     }
