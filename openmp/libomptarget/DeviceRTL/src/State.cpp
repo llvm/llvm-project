@@ -267,7 +267,7 @@ void state::enterDataEnvironment(IdentTy *Ident) {
     if (!atomic::cas(ThreadStatesBitsPtr, uintptr_t(0),
                      reinterpret_cast<uintptr_t>(ThreadStatesPtr),
                      atomic::seq_cst, atomic::seq_cst))
-      memory::freeGlobal(ThreadStatesPtr, Bytes,
+      memory::freeGlobal(ThreadStatesPtr,
                          "Thread state array allocated multiple times");
     ASSERT(atomic::load(ThreadStatesBitsPtr, atomic::seq_cst) &&
            "Expected valid thread states bit!");
