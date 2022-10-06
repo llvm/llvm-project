@@ -75,7 +75,6 @@ void ModuleMap::addLinkAsDependency(Module *Mod) {
 
 Module::HeaderKind ModuleMap::headerRoleToKind(ModuleHeaderRole Role) {
   switch ((int)Role) {
-  default: llvm_unreachable("unknown header role");
   case NormalHeader:
     return Module::HK_Normal;
   case PrivateHeader:
@@ -84,7 +83,10 @@ Module::HeaderKind ModuleMap::headerRoleToKind(ModuleHeaderRole Role) {
     return Module::HK_Textual;
   case PrivateHeader | TextualHeader:
     return Module::HK_PrivateTextual;
+  case ExcludedHeader:
+    return Module::HK_Excluded;
   }
+  llvm_unreachable("unknown header role");
 }
 
 ModuleMap::ModuleHeaderRole
@@ -99,9 +101,13 @@ ModuleMap::headerKindToRole(Module::HeaderKind Kind) {
   case Module::HK_PrivateTextual:
     return ModuleHeaderRole(PrivateHeader | TextualHeader);
   case Module::HK_Excluded:
-    llvm_unreachable("unexpected header kind");
+    return ExcludedHeader;
   }
   llvm_unreachable("unknown header kind");
+}
+
+bool ModuleMap::isModular(ModuleHeaderRole Role) {
+  return !(Role & (ModuleMap::TextualHeader | ModuleMap::ExcludedHeader));
 }
 
 Module::ExportDecl
@@ -264,10 +270,7 @@ void ModuleMap::resolveHeader(Module *Mod,
     } else {
       Module::Header H = {Header.FileName, std::string(RelativePathName.str()),
                           *File};
-      if (Header.Kind == Module::HK_Excluded)
-        excludeHeader(Mod, H);
-      else
-        addHeader(Mod, H, headerKindToRole(Header.Kind));
+      addHeader(Mod, H, headerKindToRole(Header.Kind));
     }
   } else if (Header.HasBuiltinHeader && !Header.Size && !Header.ModTime) {
     // There's a builtin header but no corresponding on-disk header. Assume
@@ -489,6 +492,12 @@ void ModuleMap::diagnoseHeaderInclusion(Module *RequestingModule,
   HeadersMap::iterator Known = findKnownHeader(File);
   if (Known != Headers.end()) {
     for (const KnownHeader &Header : Known->second) {
+      // Excluded headers don't really belong to a module.
+      if (Header.getRole() == ModuleMap::ExcludedHeader) {
+        Excluded = true;
+        continue;
+      }
+
       // Remember private headers for later printing of a diagnostic.
       if (violatesPrivateInclude(RequestingModule, File, Header)) {
         Private = Header.getModule();
@@ -562,6 +571,11 @@ static bool isBetterKnownHeader(const ModuleMap::KnownHeader &New,
       (Old.getRole() & ModuleMap::TextualHeader))
     return !(New.getRole() & ModuleMap::TextualHeader);
 
+  // Prefer a non-excluded header over an excluded header.
+  if ((New.getRole() == ModuleMap::ExcludedHeader) !=
+      (Old.getRole() == ModuleMap::ExcludedHeader))
+    return New.getRole() != ModuleMap::ExcludedHeader;
+
   // Don't have a reason to choose between these. Just keep the first one.
   return false;
 }
@@ -570,8 +584,7 @@ ModuleMap::KnownHeader ModuleMap::findModuleForHeader(const FileEntry *File,
                                                       bool AllowTextual,
                                                       bool AllowExcluded) {
   auto MakeResult = [&](ModuleMap::KnownHeader R) -> ModuleMap::KnownHeader {
-    if ((!AllowTextual && R.getRole() & ModuleMap::TextualHeader) ||
-        (!AllowExcluded && R.getRole() & ModuleMap::ExcludedHeader))
+    if (!AllowTextual && R.getRole() & ModuleMap::TextualHeader)
       return {};
     return R;
   };
@@ -581,6 +594,9 @@ ModuleMap::KnownHeader ModuleMap::findModuleForHeader(const FileEntry *File,
     ModuleMap::KnownHeader Result;
     // Iterate over all modules that 'File' is part of to find the best fit.
     for (KnownHeader &H : Known->second) {
+      // Cannot use a module if the header is excluded in it.
+      if (!AllowExcluded && H.getRole() == ModuleMap::ExcludedHeader)
+        continue;
       // Prefer a header from the source module over all others.
       if (H.getModule()->getTopLevelModule() == SourceModule)
         return MakeResult(H);
@@ -1265,18 +1281,6 @@ void ModuleMap::addHeader(Module *Mod, Module::Header Header,
   // Notify callbacks that we just added a new header.
   for (const auto &Cb : Callbacks)
     Cb->moduleMapAddHeader(Header.Entry->getName());
-}
-
-void ModuleMap::excludeHeader(Module *Mod, Module::Header Header) {
-  KnownHeader KH(Mod, ModuleHeaderRole::ExcludedHeader);
-
-  // Add this as a known header so we won't implicitly add it to any
-  // umbrella directory module.
-  // FIXME: Should we only exclude it from umbrella modules within the
-  // specified module?
-  Headers[Header.Entry].push_back(KH);
-
-  Mod->Headers[Module::HK_Excluded].push_back(std::move(Header));
 }
 
 Optional<FileEntryRef>
@@ -2346,6 +2350,7 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
                                       SourceLocation LeadingLoc) {
   // We've already consumed the first token.
   ModuleMap::ModuleHeaderRole Role = ModuleMap::NormalHeader;
+
   if (LeadingToken == MMToken::PrivateKeyword) {
     Role = ModuleMap::PrivateHeader;
     // 'private' may optionally be followed by 'textual'.
@@ -2353,6 +2358,8 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
       LeadingToken = Tok.Kind;
       consumeToken();
     }
+  } else if (LeadingToken == MMToken::ExcludeKeyword) {
+    Role = ModuleMap::ExcludedHeader;
   }
 
   if (LeadingToken == MMToken::TextualKeyword)
@@ -2386,9 +2393,7 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
   Header.FileName = std::string(Tok.getString());
   Header.FileNameLoc = consumeToken();
   Header.IsUmbrella = LeadingToken == MMToken::UmbrellaKeyword;
-  Header.Kind =
-      (LeadingToken == MMToken::ExcludeKeyword ? Module::HK_Excluded
-                                               : Map.headerRoleToKind(Role));
+  Header.Kind = Map.headerRoleToKind(Role);
 
   // Check whether we already have an umbrella.
   if (Header.IsUmbrella && ActiveModule->Umbrella) {
