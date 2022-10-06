@@ -42,8 +42,8 @@ static constexpr const char kSortNonstableFuncNamePrefix[] =
 static constexpr const char kSortStableFuncNamePrefix[] =
     "_sparse_sort_stable_";
 
-typedef function_ref<void(OpBuilder &, ModuleOp, func::FuncOp, size_t)>
-    FuncGeneratorType;
+using FuncGeneratorType =
+    function_ref<void(OpBuilder &, ModuleOp, func::FuncOp, size_t)>;
 
 /// Constructs a function name with this format to facilitate quick sort:
 ///   <namePrefix><dim>_<x type>_<y0 type>..._<yn type>
