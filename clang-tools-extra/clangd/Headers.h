@@ -35,6 +35,12 @@ namespace clangd {
 /// Returns true if \p Include is literal include like "path" or <path>.
 bool isLiteralInclude(llvm::StringRef Include);
 
+/// If Text begins an Include-What-You-Use directive, returns it.
+/// Given "// IWYU pragma: keep", returns "keep".
+/// Input is a null-terminated char* as provided by SM.getCharacterData().
+/// (This should not be StringRef as we do *not* want to scan for its length).
+llvm::Optional<StringRef> parseIWYUPragma(const char *Text);
+
 /// Represents a header file to be #include'd.
 struct HeaderFile {
   std::string File;

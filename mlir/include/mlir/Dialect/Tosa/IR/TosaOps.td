@@ -1634,6 +1634,8 @@ def Tosa_ResizeOp : Tosa_Op<"resize", [
   let results = (outs
     Tosa_Tensor4D:$output
   );
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

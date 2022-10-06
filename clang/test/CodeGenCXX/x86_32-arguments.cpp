@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-darwin9 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-apple-darwin9 -emit-llvm -o - %s | FileCheck %s
 
 // Non-trivial dtors, should both be passed indirectly.
 struct S {
@@ -6,9 +6,9 @@ struct S {
   short s;
 };
 
-// CHECK-LABEL: define{{.*}} void @_Z1fv(%struct.S* noalias sret(%struct.S) align 2 %
+// CHECK-LABEL: define{{.*}} void @_Z1fv(ptr noalias sret(%struct.S) align 2 %
 S f() { return S(); }
-// CHECK-LABEL: define{{.*}} void @_Z1f1S(%struct.S* noundef %0)
+// CHECK-LABEL: define{{.*}} void @_Z1f1S(ptr noundef %0)
 void f(S) { }
 
 // Non-trivial dtors, should both be passed indirectly.
@@ -18,10 +18,10 @@ public:
   double c;
 };
 
-// CHECK-LABEL: define{{.*}} void @_Z1gv(%class.C* noalias sret(%class.C) align 4 %
+// CHECK-LABEL: define{{.*}} void @_Z1gv(ptr noalias sret(%class.C) align 4 %
 C g() { return C(); }
 
-// CHECK-LABEL: define{{.*}} void @_Z1f1C(%class.C* noundef %0)
+// CHECK-LABEL: define{{.*}} void @_Z1f1C(ptr noundef %0)
 void f(C) { }
 
 
@@ -31,7 +31,7 @@ void f(C) { }
 
 // CHECK-LABEL: define{{.*}} void @_ZThn4_N18BasicAliasAnalysis13getModRefInfoE8CallSite
 // ...
-// CHECK: %struct.CallSite* noundef byval(%struct.CallSite) align 4 %CS)
+// CHECK: ptr noundef byval(%struct.CallSite) align 4 %CS)
 struct CallSite {
   unsigned Ptr;
   CallSite(unsigned XX) : Ptr(XX) {}
@@ -84,12 +84,12 @@ struct s4_1 { float x; };
 struct s4_2 : s4_0, s4_1 { };
 s4_2 f4() { return s4_2(); }
 
-// CHECK-LABEL: define{{.*}} i32* @_Z2f5v()
+// CHECK-LABEL: define{{.*}} ptr @_Z2f5v()
 struct s5 { s5(); int &x; };
 s5 f5() { return s5(); }
 
 // CHECK-LABEL: define{{.*}} i32 @_Z4f6_0M2s6i(i32 %a)
-// CHECK: define{{.*}} i64 @_Z4f6_1M2s6FivE({ i32, i32 }* noundef byval({ i32, i32 }) align 4 %0)
+// CHECK: define{{.*}} i64 @_Z4f6_1M2s6FivE(ptr noundef byval({ i32, i32 }) align 4 %0)
 // FIXME: It would be nice to avoid byval on the previous case.
 struct s6 {};
 typedef int s6::* s6_mdp;
@@ -103,13 +103,13 @@ struct s7_1 { double x; };
 struct s7 : s7_0, s7_1 { };
 s7 f7() { return s7(); }
 
-// CHECK-LABEL: define{{.*}} void @_Z2f8v(%struct.s8* noalias sret(%struct.s8) align 4 %agg.result)
+// CHECK-LABEL: define{{.*}} void @_Z2f8v(ptr noalias sret(%struct.s8) align 4 %agg.result)
 struct s8_0 { };
 struct s8_1 { double x; };
 struct s8 { s8_0 a; s8_1 b; };
 s8 f8() { return s8(); }
 
-// CHECK-LABEL: define{{.*}} void @_Z2f9v(%struct.s9* noalias sret(%struct.s9) align 4 %agg.result)
+// CHECK-LABEL: define{{.*}} void @_Z2f9v(ptr noalias sret(%struct.s9) align 4 %agg.result)
 struct s9_0 { unsigned : 0; };
 struct s9_1 { double x; };
 struct s9 { s9_0 a; s9_1 b; };

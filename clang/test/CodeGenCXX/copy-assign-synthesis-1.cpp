@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -std=c++11 -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -std=c++11 -emit-llvm %s -o - | \
 // RUN: FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-darwin -std=c++11 -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -triple i386-apple-darwin -std=c++11 -emit-llvm %s -o - | \
 // RUN: FileCheck %s
 
 extern "C" int printf(...);
@@ -92,4 +92,4 @@ int main() {
   dstY.pr();
 }
 
-// CHECK: define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %struct.X* @_ZN1XaSERKS_
+// CHECK: define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN1XaSERKS_

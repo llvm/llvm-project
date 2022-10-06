@@ -92,12 +92,16 @@ void llvm::reduceOperandsOneDeltaPass(TestRunner &Test) {
       if (isOne(Op) || isZero(Op) || isZeroOrOneFP(Op))
         return nullptr;
 
-      if (auto *IntTy = dyn_cast<IntegerType>(VT->getElementType()))
-        return ConstantVector::getSplat(VT->getElementCount(),
-                                        ConstantInt::get(IntTy, 1));
-
-      return ConstantVector::getSplat(
-          VT->getElementCount(), ConstantFP::get(VT->getElementType(), 1.0));
+      Type *ElementType = VT->getElementType();
+      Constant *C;
+      if (ElementType->isFloatingPointTy()) {
+        C = ConstantFP::get(ElementType, 1.0);
+      } else if (IntegerType *IntTy = dyn_cast<IntegerType>(ElementType)) {
+        C = ConstantInt::get(IntTy, 1);
+      } else {
+        return nullptr;
+      }
+      return ConstantVector::getSplat(VT->getElementCount(), C);
     }
 
     return nullptr;

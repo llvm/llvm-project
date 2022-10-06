@@ -29,6 +29,9 @@ define amdgpu_kernel void @kernel(i32 %a, i32 addrspace(1)* %x, i32 noundef %n) 
 ; UNIFY-NEXT:    call void @llvm.trap()
 ; UNIFY-NEXT:    br label %UnifiedUnreachableBlock
 ; UNIFY-LABEL: if.end6.sink.split:
+; UNIFY-NEXT:    %x.kernarg.offset = getelementptr inbounds i8, i8 addrspace(4)* %kernel.kernarg.segment, i64 8
+; UNIFY-NEXT:    %x.kernarg.offset.cast = bitcast i8 addrspace(4)* %x.kernarg.offset to i32 addrspace(1)* addrspace(4)*
+; UNIFY-NEXT:    %x.load = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* %x.kernarg.offset.cast, align 8, !invariant.load !0
 ; UNIFY-NEXT:    %idxprom = sext i32 %tid to i64
 ; UNIFY-NEXT:    %x1 = getelementptr inbounds i32, i32 addrspace(1)* %x.load, i64 %idxprom
 ; UNIFY-NEXT:    store i32 %a.load, i32 addrspace(1)* %x1, align 4

@@ -189,6 +189,7 @@ def main():
     # TODO: While direct s2s is far too slow for per-commit testing,
     # we should have some framework ensure that we run this test with
     # `s2s=0` on a regular basis, to ensure that it does continue to work.
+    # TODO: be sure to test s2s=0 together with singletons.
     s2s = 1
     sparsification_options = (
         f'parallelization-strategy=none '
@@ -200,10 +201,12 @@ def main():
         options=sparsification_options, opt_level=0, shared_libs=[support_lib])
     f64 = ir.F64Type.get()
     # Be careful about increasing this because
-    #     len(types) = 1 + 2^rank * rank! * len(bitwidths)^2
+    #     len(types) = 1 + len(level_choices)^rank * rank! * len(bitwidths)^2
     shape = range(2, 6)
     rank = len(shape)
     # All combinations.
+    # TODO: add singleton here too; which requires updating how `np_arg0`
+    # is initialized below.
     levels = list(itertools.product(*itertools.repeat(
       [st.DimLevelType.dense, st.DimLevelType.compressed], rank)))
     # All permutations.

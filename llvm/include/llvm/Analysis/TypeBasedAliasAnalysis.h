@@ -28,9 +28,7 @@ class MDNode;
 class MemoryLocation;
 
 /// A simple AA result that uses TBAA metadata to answer queries.
-class TypeBasedAAResult : public AAResultBase<TypeBasedAAResult> {
-  friend AAResultBase<TypeBasedAAResult>;
-
+class TypeBasedAAResult : public AAResultBase {
 public:
   /// Handle invalidation events from the new pass manager.
   ///
@@ -44,7 +42,8 @@ public:
                     AAQueryInfo &AAQI);
   bool pointsToConstantMemory(const MemoryLocation &Loc, AAQueryInfo &AAQI,
                               bool OrLocal);
-  FunctionModRefBehavior getModRefBehavior(const CallBase *Call);
+  FunctionModRefBehavior getModRefBehavior(const CallBase *Call,
+                                           AAQueryInfo &AAQI);
   FunctionModRefBehavior getModRefBehavior(const Function *F);
   ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
                            AAQueryInfo &AAQI);

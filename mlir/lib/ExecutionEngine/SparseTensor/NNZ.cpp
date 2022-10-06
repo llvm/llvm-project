@@ -31,28 +31,29 @@ SparseTensorNNZ::SparseTensorNNZ(const std::vector<uint64_t> &dimSizes,
                                  const std::vector<DimLevelType> &sparsity)
     : dimSizes(dimSizes), dimTypes(sparsity), nnz(getRank()) {
   assert(dimSizes.size() == dimTypes.size() && "Rank mismatch");
-  bool uncompressed = true;
-  (void)uncompressed;
+  bool alreadyCompressed = false;
+  (void)alreadyCompressed;
   uint64_t sz = 1; // the product of all `dimSizes` strictly less than `r`.
   for (uint64_t rank = getRank(), r = 0; r < rank; r++) {
-    switch (dimTypes[r]) {
-    case DimLevelType::kCompressed:
-      assert(uncompressed &&
-             "Multiple compressed layers not currently supported");
-      uncompressed = false;
+    const DimLevelType dlt = sparsity[r];
+    if (isCompressedDLT(dlt)) {
+      if (alreadyCompressed)
+        MLIR_SPARSETENSOR_FATAL(
+            "Multiple compressed layers not currently supported");
+      alreadyCompressed = true;
       nnz[r].resize(sz, 0); // Both allocate and zero-initialize.
-      break;
-    case DimLevelType::kDense:
-      assert(uncompressed && "Dense after compressed not currently supported");
-      break;
-    case DimLevelType::kSingleton:
+    } else if (isDenseDLT(dlt)) {
+      if (alreadyCompressed)
+        MLIR_SPARSETENSOR_FATAL(
+            "Dense after compressed not currently supported");
+    } else if (isSingletonDLT(dlt)) {
       // Singleton after Compressed causes no problems for allocating
       // `nnz` nor for the yieldPos loop.  This remains true even
       // when adding support for multiple compressed dimensions or
       // for dense-after-compressed.
-      break;
-    default:
-      MLIR_SPARSETENSOR_FATAL("unsupported dimension level type");
+    } else {
+      MLIR_SPARSETENSOR_FATAL("unsupported dimension level type: %d\n",
+                              static_cast<uint8_t>(dlt));
     }
     sz = detail::checkedMul(sz, dimSizes[r]);
   }
@@ -65,7 +66,7 @@ SparseTensorNNZ::SparseTensorNNZ(const std::vector<uint64_t> &dimSizes,
 void SparseTensorNNZ::forallIndices(uint64_t stopDim,
                                     SparseTensorNNZ::NNZConsumer yield) const {
   assert(stopDim < getRank() && "Dimension out of bounds");
-  assert(dimTypes[stopDim] == DimLevelType::kCompressed &&
+  assert(isCompressedDLT(dimTypes[stopDim]) &&
          "Cannot look up non-compressed dimensions");
   forallIndices(yield, stopDim, 0, 0);
 }
@@ -78,7 +79,7 @@ void SparseTensorNNZ::forallIndices(uint64_t stopDim,
 void SparseTensorNNZ::add(const std::vector<uint64_t> &ind) {
   uint64_t parentPos = 0;
   for (uint64_t rank = getRank(), r = 0; r < rank; ++r) {
-    if (dimTypes[r] == DimLevelType::kCompressed)
+    if (isCompressedDLT(dimTypes[r]))
       nnz[r][parentPos]++;
     parentPos = parentPos * dimSizes[r] + ind[r];
   }

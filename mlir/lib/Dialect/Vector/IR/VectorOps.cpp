@@ -309,6 +309,50 @@ LogicalResult MultiDimReductionOp::verify() {
   return success();
 }
 
+namespace {
+// Only unit dimensions that are being reduced are folded. If the dimension is
+// unit, but not reduced, it is not folded, thereby keeping the output type the
+// same. If not all dimensions which are reduced are of unit dimension, this
+// transformation does nothing. This is just a generalization of
+// ElideSingleElementReduction for ReduceOp.
+struct ElideUnitDimsInMultiDimReduction
+    : public OpRewritePattern<MultiDimReductionOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(MultiDimReductionOp reductionOp,
+                                PatternRewriter &rewriter) const override {
+    ArrayRef<int64_t> shape = reductionOp.getSourceVectorType().getShape();
+    for (auto dim : enumerate(shape)) {
+      if (reductionOp.isReducedDim(dim.index()) && dim.value() != 1)
+        return failure();
+    }
+    Location loc = reductionOp.getLoc();
+    Value acc = reductionOp.getAcc();
+    Value cast;
+    if (reductionOp.getDestType().isa<VectorType>()) {
+      cast = rewriter.create<vector::ShapeCastOp>(
+          loc, reductionOp.getDestType(), reductionOp.getSource());
+    } else {
+      // This means we are reducing all the dimensions, and all reduction
+      // dimensions are of size 1. So a simple extraction would do.
+      cast = rewriter.create<vector::ExtractOp>(
+          loc, reductionOp.getDestType(), reductionOp.getSource(),
+          rewriter.getI64ArrayAttr(SmallVector<int64_t>(shape.size(), 0)));
+    }
+
+    Value result = vector::makeArithReduction(rewriter, loc,
+                                              reductionOp.getKind(), acc, cast);
+    rewriter.replaceOp(reductionOp, result);
+    return success();
+  }
+};
+} // namespace
+
+void MultiDimReductionOp::getCanonicalizationPatterns(
+    RewritePatternSet &results, MLIRContext *context) {
+  results.add<ElideUnitDimsInMultiDimReduction>(context);
+}
+
 //===----------------------------------------------------------------------===//
 // ReductionOp
 //===----------------------------------------------------------------------===//
