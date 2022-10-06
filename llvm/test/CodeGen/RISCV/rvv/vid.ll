@@ -10,7 +10,7 @@ declare <vscale x 1 x i8> @llvm.riscv.vid.nxv1i8(
 define <vscale x 1 x i8> @intrinsic_vid_v_nxv1i8(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv1i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -48,7 +48,7 @@ declare <vscale x 2 x i8> @llvm.riscv.vid.nxv2i8(
 define <vscale x 2 x i8> @intrinsic_vid_v_nxv2i8(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv2i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -86,7 +86,7 @@ declare <vscale x 4 x i8> @llvm.riscv.vid.nxv4i8(
 define <vscale x 4 x i8> @intrinsic_vid_v_nxv4i8(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv4i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -124,7 +124,7 @@ declare <vscale x 8 x i8> @llvm.riscv.vid.nxv8i8(
 define <vscale x 8 x i8> @intrinsic_vid_v_nxv8i8(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv8i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -162,7 +162,7 @@ declare <vscale x 16 x i8> @llvm.riscv.vid.nxv16i8(
 define <vscale x 16 x i8> @intrinsic_vid_v_nxv16i8(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv16i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -200,7 +200,7 @@ declare <vscale x 32 x i8> @llvm.riscv.vid.nxv32i8(
 define <vscale x 32 x i8> @intrinsic_vid_v_nxv32i8(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv32i8:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -238,7 +238,7 @@ declare <vscale x 1 x i16> @llvm.riscv.vid.nxv1i16(
 define <vscale x 1 x i16> @intrinsic_vid_v_nxv1i16(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv1i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -276,7 +276,7 @@ declare <vscale x 2 x i16> @llvm.riscv.vid.nxv2i16(
 define <vscale x 2 x i16> @intrinsic_vid_v_nxv2i16(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv2i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -314,7 +314,7 @@ declare <vscale x 4 x i16> @llvm.riscv.vid.nxv4i16(
 define <vscale x 4 x i16> @intrinsic_vid_v_nxv4i16(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv4i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -352,7 +352,7 @@ declare <vscale x 8 x i16> @llvm.riscv.vid.nxv8i16(
 define <vscale x 8 x i16> @intrinsic_vid_v_nxv8i16(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv8i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -390,7 +390,7 @@ declare <vscale x 16 x i16> @llvm.riscv.vid.nxv16i16(
 define <vscale x 16 x i16> @intrinsic_vid_v_nxv16i16(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -428,7 +428,7 @@ declare <vscale x 32 x i16> @llvm.riscv.vid.nxv32i16(
 define <vscale x 32 x i16> @intrinsic_vid_v_nxv32i16(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv32i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -466,7 +466,7 @@ declare <vscale x 1 x i32> @llvm.riscv.vid.nxv1i32(
 define <vscale x 1 x i32> @intrinsic_vid_v_nxv1i32(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv1i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -504,7 +504,7 @@ declare <vscale x 2 x i32> @llvm.riscv.vid.nxv2i32(
 define <vscale x 2 x i32> @intrinsic_vid_v_nxv2i32(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv2i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -542,7 +542,7 @@ declare <vscale x 4 x i32> @llvm.riscv.vid.nxv4i32(
 define <vscale x 4 x i32> @intrinsic_vid_v_nxv4i32(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv4i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -580,7 +580,7 @@ declare <vscale x 8 x i32> @llvm.riscv.vid.nxv8i32(
 define <vscale x 8 x i32> @intrinsic_vid_v_nxv8i32(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv8i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -618,7 +618,7 @@ declare <vscale x 16 x i32> @llvm.riscv.vid.nxv16i32(
 define <vscale x 16 x i32> @intrinsic_vid_v_nxv16i32(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv16i32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -656,7 +656,7 @@ declare <vscale x 1 x i64> @llvm.riscv.vid.nxv1i64(
 define <vscale x 1 x i64> @intrinsic_vid_v_nxv1i64(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv1i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -694,7 +694,7 @@ declare <vscale x 2 x i64> @llvm.riscv.vid.nxv2i64(
 define <vscale x 2 x i64> @intrinsic_vid_v_nxv2i64(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv2i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -732,7 +732,7 @@ declare <vscale x 4 x i64> @llvm.riscv.vid.nxv4i64(
 define <vscale x 4 x i64> @intrinsic_vid_v_nxv4i64(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv4i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:
@@ -770,7 +770,7 @@ declare <vscale x 8 x i64> @llvm.riscv.vid.nxv8i64(
 define <vscale x 8 x i64> @intrinsic_vid_v_nxv8i64(iXLen %0) nounwind {
 ; CHECK-LABEL: intrinsic_vid_v_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vid.v v8
 ; CHECK-NEXT:    ret
 entry:

@@ -19,7 +19,7 @@ define <2 x half> @vfmin_vv_v2f16(<2 x half> %va, <2 x half> %vb, <2 x i1> %m, i
 define <2 x half> @vfmin_vv_v2f16_unmasked(<2 x half> %va, <2 x half> %vb, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmin_vv_v2f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x i1> poison, i1 true, i32 0
@@ -43,7 +43,7 @@ define <4 x half> @vfmin_vv_v4f16(<4 x half> %va, <4 x half> %vb, <4 x i1> %m, i
 define <4 x half> @vfmin_vv_v4f16_unmasked(<4 x half> %va, <4 x half> %vb, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmin_vv_v4f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x i1> poison, i1 true, i32 0
@@ -67,7 +67,7 @@ define <8 x half> @vfmin_vv_v8f16(<8 x half> %va, <8 x half> %vb, <8 x i1> %m, i
 define <8 x half> @vfmin_vv_v8f16_unmasked(<8 x half> %va, <8 x half> %vb, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmin_vv_v8f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i32 0
@@ -91,7 +91,7 @@ define <16 x half> @vfmin_vv_v16f16(<16 x half> %va, <16 x half> %vb, <16 x i1> 
 define <16 x half> @vfmin_vv_v16f16_unmasked(<16 x half> %va, <16 x half> %vb, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmin_vv_v16f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x i1> poison, i1 true, i32 0
@@ -115,7 +115,7 @@ define <2 x float> @vfmin_vv_v2f32(<2 x float> %va, <2 x float> %vb, <2 x i1> %m
 define <2 x float> @vfmin_vv_v2f32_unmasked(<2 x float> %va, <2 x float> %vb, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmin_vv_v2f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x i1> poison, i1 true, i32 0
@@ -139,7 +139,7 @@ define <4 x float> @vfmin_vv_v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> %m
 define <4 x float> @vfmin_vv_v4f32_unmasked(<4 x float> %va, <4 x float> %vb, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmin_vv_v4f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x i1> poison, i1 true, i32 0
@@ -163,7 +163,7 @@ define <8 x float> @vfmin_vv_v8f32(<8 x float> %va, <8 x float> %vb, <8 x i1> %m
 define <8 x float> @vfmin_vv_v8f32_unmasked(<8 x float> %va, <8 x float> %vb, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmin_vv_v8f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i32 0
@@ -187,7 +187,7 @@ define <16 x float> @vfmin_vv_v16f32(<16 x float> %va, <16 x float> %vb, <16 x i
 define <16 x float> @vfmin_vv_v16f32_unmasked(<16 x float> %va, <16 x float> %vb, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmin_vv_v16f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x i1> poison, i1 true, i32 0
@@ -211,7 +211,7 @@ define <2 x double> @vfmin_vv_v2f64(<2 x double> %va, <2 x double> %vb, <2 x i1>
 define <2 x double> @vfmin_vv_v2f64_unmasked(<2 x double> %va, <2 x double> %vb, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmin_vv_v2f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %head = insertelement <2 x i1> poison, i1 true, i32 0
@@ -235,7 +235,7 @@ define <4 x double> @vfmin_vv_v4f64(<4 x double> %va, <4 x double> %vb, <4 x i1>
 define <4 x double> @vfmin_vv_v4f64_unmasked(<4 x double> %va, <4 x double> %vb, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmin_vv_v4f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v10
 ; CHECK-NEXT:    ret
   %head = insertelement <4 x i1> poison, i1 true, i32 0
@@ -259,7 +259,7 @@ define <8 x double> @vfmin_vv_v8f64(<8 x double> %va, <8 x double> %vb, <8 x i1>
 define <8 x double> @vfmin_vv_v8f64_unmasked(<8 x double> %va, <8 x double> %vb, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmin_vv_v8f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v12
 ; CHECK-NEXT:    ret
   %head = insertelement <8 x i1> poison, i1 true, i32 0
@@ -283,7 +283,7 @@ define <15 x double> @vfmin_vv_v15f64(<15 x double> %va, <15 x double> %vb, <15 
 define <15 x double> @vfmin_vv_v15f64_unmasked(<15 x double> %va, <15 x double> %vb, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmin_vv_v15f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <15 x i1> poison, i1 true, i32 0
@@ -307,7 +307,7 @@ define <16 x double> @vfmin_vv_v16f64(<16 x double> %va, <16 x double> %vb, <16 
 define <16 x double> @vfmin_vv_v16f64_unmasked(<16 x double> %va, <16 x double> %vb, i32 zeroext %evl) {
 ; CHECK-LABEL: vfmin_vv_v16f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v16
 ; CHECK-NEXT:    ret
   %head = insertelement <16 x i1> poison, i1 true, i32 0
@@ -328,10 +328,10 @@ define <32 x double> @vfmin_vv_v32f64(<32 x double> %va, <32 x double> %vb, <32 
 ; CHECK-NEXT:    mul a1, a1, a3
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    vmv1r.v v1, v0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
 ; CHECK-NEXT:    addi a1, a0, 128
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a1)
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 3
@@ -388,7 +388,7 @@ define <32 x double> @vfmin_vv_v32f64_unmasked(<32 x double> %va, <32 x double> 
 ; CHECK-LABEL: vfmin_vv_v32f64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi a1, a0, 128
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v24, (a1)
 ; CHECK-NEXT:    addi a3, a2, -16
 ; CHECK-NEXT:    li a1, 0
@@ -397,14 +397,14 @@ define <32 x double> @vfmin_vv_v32f64_unmasked(<32 x double> %va, <32 x double> 
 ; CHECK-NEXT:    mv a1, a3
 ; CHECK-NEXT:  .LBB27_2:
 ; CHECK-NEXT:    vle64.v v0, (a0)
-; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vfmin.vv v16, v16, v24
 ; CHECK-NEXT:    bltu a2, a0, .LBB27_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    li a2, 16
 ; CHECK-NEXT:  .LBB27_4:
-; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmin.vv v8, v8, v0
 ; CHECK-NEXT:    ret
   %head = insertelement <32 x i1> poison, i1 true, i32 0

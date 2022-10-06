@@ -23,7 +23,7 @@ define void @foo(i32* nocapture noundef %p1) {
 ; CHECK-NEXT:    andi sp, sp, -64
 ; CHECK-NEXT:    mv s1, sp
 ; CHECK-NEXT:    mv s2, a0
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    addi a0, s1, 160
 ; CHECK-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
@@ -40,7 +40,7 @@ define void @foo(i32* nocapture noundef %p1) {
 ; CHECK-NEXT:    sd t0, 0(sp)
 ; CHECK-NEXT:    call bar@plt
 ; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (s2)
 ; CHECK-NEXT:    addi a0, s1, 160
 ; CHECK-NEXT:    vl2re8.v v10, (a0) # Unknown-size Folded Reload
