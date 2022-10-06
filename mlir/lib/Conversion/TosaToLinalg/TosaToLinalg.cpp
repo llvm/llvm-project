@@ -1451,11 +1451,11 @@ public:
       iy = rewriter.create<arith::DivUIOp>(loc, y, yScaleN);
       ix = rewriter.create<arith::DivUIOp>(loc, x, xScaleN);
 
-      Value temp_y = rewriter.create<arith::MulIOp>(loc, iy, yScaleN);
-      Value temp_x = rewriter.create<arith::MulIOp>(loc, ix, xScaleN);
+      Value tempY = rewriter.create<arith::MulIOp>(loc, iy, yScaleN);
+      Value tempX = rewriter.create<arith::MulIOp>(loc, ix, xScaleN);
 
-      dy = rewriter.create<arith::SubIOp>(loc, y, temp_y);
-      dx = rewriter.create<arith::SubIOp>(loc, x, temp_x);
+      dy = rewriter.create<arith::SubIOp>(loc, y, tempY);
+      dx = rewriter.create<arith::SubIOp>(loc, x, tempX);
     }
 
     if (op.getMode() == "NEAREST_NEIGHBOR") {
