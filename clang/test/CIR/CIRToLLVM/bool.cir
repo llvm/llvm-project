@@ -12,7 +12,7 @@ module {
 }
 
 // MLIR: func @foo() {
-// MLIR: [[Value:%[0-9]+]] = memref.alloca() {alignment = 1 : i64} : memref<i8>
+// MLIR: [[Value:%[a-z0-9]+]] = memref.alloca() {alignment = 1 : i64} : memref<i8>
 // MLIR: = arith.constant 1 : i8
 // MLIR: memref.store {{.*}}, [[Value]][] : memref<i8>
 // return
