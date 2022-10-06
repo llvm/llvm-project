@@ -1,11 +1,11 @@
 // RUN: cir-tool %s | FileCheck %s
 
 cir.func @l0() {
-  %0 = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64}
+  %0 = cir.alloca i32, cir.ptr <i32>, ["x", init] {alignment = 4 : i64}
   %1 = cir.cst(0 : i32) : i32
   cir.store %1, %0 : i32, cir.ptr <i32>
   cir.scope {
-    %2 = cir.alloca i32, cir.ptr <i32>, ["i", cinit] {alignment = 4 : i64}
+    %2 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
     %3 = cir.cst(0 : i32) : i32
     cir.store %3, %2 : i32, cir.ptr <i32>
     cir.loop for(cond :  {
@@ -36,7 +36,7 @@ cir.func @l0() {
     }
   }
   cir.scope {
-    %2 = cir.alloca i32, cir.ptr <i32>, ["i", cinit] {alignment = 4 : i64}
+    %2 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
     %3 = cir.cst(0 : i32) : i32
     cir.store %3, %2 : i32, cir.ptr <i32>
     cir.loop while(cond :  {
@@ -64,7 +64,7 @@ cir.func @l0() {
   }
 
   cir.scope {
-    %2 = cir.alloca i32, cir.ptr <i32>, ["i", cinit] {alignment = 4 : i64}
+    %2 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
     %3 = cir.cst(0 : i32) : i32
     cir.store %3, %2 : i32, cir.ptr <i32>
     cir.loop dowhile(cond :  {

@@ -15,10 +15,10 @@ int s0(int a, int b) {
 // CHECK: #loc3 = loc(fused["{{.*}}sourcelocation.cpp":4:15, "{{.*}}sourcelocation.cpp":4:19])
 // CHECK: module  {
 // CHECK:   cir.func @_Z2s0ii(%arg0: i32 loc(fused["{{.*}}sourcelocation.cpp":4:8, "{{.*}}sourcelocation.cpp":4:12]), %arg1: i32 loc(fused["{{.*}}sourcelocation.cpp":4:15, "{{.*}}sourcelocation.cpp":4:19])) -> i32 {
-// CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, ["a", paraminit] {alignment = 4 : i64} loc(#loc2)
-// CHECK:     %1 = cir.alloca i32, cir.ptr <i32>, ["b", paraminit] {alignment = 4 : i64} loc(#loc3)
-// CHECK:     %2 = cir.alloca i32, cir.ptr <i32>, ["__retval", uninitialized] {alignment = 4 : i64} loc(#loc4)
-// CHECK:     %3 = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64} loc(#loc5)
+// CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, ["a", init] {alignment = 4 : i64} loc(#loc2)
+// CHECK:     %1 = cir.alloca i32, cir.ptr <i32>, ["b", init] {alignment = 4 : i64} loc(#loc3)
+// CHECK:     %2 = cir.alloca i32, cir.ptr <i32>, ["__retval"] {alignment = 4 : i64} loc(#loc4)
+// CHECK:     %3 = cir.alloca i32, cir.ptr <i32>, ["x", init] {alignment = 4 : i64} loc(#loc5)
 // CHECK:     cir.store %arg0, %0 : i32, cir.ptr <i32> loc(#loc6)
 // CHECK:     cir.store %arg1, %1 : i32, cir.ptr <i32> loc(#loc6)
 // CHECK:     %4 = cir.load %0 : cir.ptr <i32>, i32 loc(#loc7)

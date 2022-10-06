@@ -559,10 +559,10 @@ void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
 
   // If other styles of initialization gets added, required to add support
   // here.
-  assert((allocaOp.getInitAttr().getValue() == mlir::cir::InitStyle::cinit ||
-          allocaOp.getInitAttr().getValue() ==
-              mlir::cir::InitStyle::uninitialized) &&
-         "other init styles tbd");
+  auto varDecl = allocaOp.getAst();
+  assert(!varDecl ||
+         (!allocaOp.getInit() || !varDecl->getAstDecl()->isDirectInit()) &&
+             "not implemented");
 }
 
 void LifetimeCheckPass::checkStore(StoreOp storeOp) {

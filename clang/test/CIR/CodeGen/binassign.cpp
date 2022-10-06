@@ -17,7 +17,7 @@ int foo(int a, int b) {
   return x;
 }
 
-// CHECK: [[Value:%[0-9]+]] = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64}
+// CHECK: [[Value:%[0-9]+]] = cir.alloca i32, cir.ptr <i32>, ["x", init] {alignment = 4 : i64}
 // CHECK: = cir.binop(mul,
 // CHECK: = cir.load {{.*}}[[Value]]
 // CHECK: = cir.binop(mul,

@@ -234,8 +234,7 @@ void CIRGenFunction::buildAndUpdateRetAlloca(QualType ty, mlir::Location loc,
   } else if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::InAlloca) {
     llvm_unreachable("NYI");
   } else {
-    auto addr =
-        buildAlloca("__retval", InitStyle::uninitialized, ty, loc, alignment);
+    auto addr = buildAlloca("__retval", ty, loc, alignment);
     FnRetAlloca = addr;
     ReturnValue = Address(addr, alignment);
 
@@ -255,9 +254,11 @@ mlir::LogicalResult CIRGenFunction::declare(const Decl *var, QualType ty,
   assert(namedVar && "Needs a named decl");
   assert(!symbolTable.count(var) && "not supposed to be available just yet");
 
-  addr = buildAlloca(namedVar->getName(),
-                     isParam ? InitStyle::paraminit : InitStyle::uninitialized,
-                     ty, loc, alignment);
+  addr = buildAlloca(namedVar->getName(), ty, loc, alignment);
+  if (isParam) {
+    auto allocaOp = cast<mlir::cir::AllocaOp>(addr.getDefiningOp());
+    allocaOp.setInitAttr(mlir::UnitAttr::get(builder.getContext()));
+  }
 
   symbolTable.insert(var, addr);
   return mlir::success();

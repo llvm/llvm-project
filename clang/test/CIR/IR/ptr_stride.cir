@@ -2,7 +2,7 @@
 
 module  {
   cir.func @arraysubscript(%arg0: i32) {
-    %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["x", paraminit]
+    %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["x", init]
     %1 = cir.cast(int_to_bool, %arg0 : i32), !cir.bool
     %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
     %3 = cir.cst(0 : i32) : i32
@@ -12,7 +12,7 @@ module  {
 }
 
 // CHECK: cir.func @arraysubscript(%arg0: i32) {
-// CHECK-NEXT:    %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["x", paraminit]
+// CHECK-NEXT:    %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr <!cir.array<i32 x 10>>, ["x", init]
 // CHECK-NEXT:    %1 = cir.cast(int_to_bool, %arg0 : i32), !cir.bool
 // CHECK-NEXT:    %2 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
 // CHECK-NEXT:    %3 = cir.cst(0 : i32) : i32

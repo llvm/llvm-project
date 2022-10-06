@@ -8,7 +8,7 @@ int *p0() {
 }
 
 // CHECK: cir.func @_Z2p0v() -> !cir.ptr<i32> {
-// CHECK: %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", cinit]
+// CHECK: %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", init]
 // CHECK: %2 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
 // CHECK: cir.store %2, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
 
@@ -19,7 +19,7 @@ int *p1() {
 }
 
 // CHECK: cir.func @_Z2p1v() -> !cir.ptr<i32> {
-// CHECK: %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", uninitialized]
+// CHECK: %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p"]
 // CHECK: %2 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
 // CHECK: cir.store %2, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
 
@@ -35,12 +35,12 @@ int *p2() {
 }
 
 // CHECK: cir.func @_Z2p2v() -> !cir.ptr<i32> {
-// CHECK-NEXT:  %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["__retval", uninitialized] {alignment = 8 : i64}
-// CHECK-NEXT:  %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", cinit] {alignment = 8 : i64}
+// CHECK-NEXT:  %0 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["__retval"] {alignment = 8 : i64}
+// CHECK-NEXT:  %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["p", init] {alignment = 8 : i64}
 // CHECK-NEXT:  %2 = cir.cst(#cir.null : !cir.ptr<i32>) : !cir.ptr<i32>
 // CHECK-NEXT:  cir.store %2, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>
 // CHECK-NEXT:  cir.scope {
-// CHECK-NEXT:    %7 = cir.alloca i32, cir.ptr <i32>, ["x", cinit] {alignment = 4 : i64}
+// CHECK-NEXT:    %7 = cir.alloca i32, cir.ptr <i32>, ["x", init] {alignment = 4 : i64}
 // CHECK-NEXT:    %8 = cir.cst(0 : i32) : i32
 // CHECK-NEXT:    cir.store %8, %7 : i32, cir.ptr <i32>
 // CHECK-NEXT:    cir.store %7, %1 : !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>

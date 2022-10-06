@@ -41,13 +41,13 @@ void use_global_string() {
 // CHECK-NEXT: cir.global external @s2 = @".str": !cir.ptr<i8>
 
 // CHECK: cir.func @_Z10use_globalv() {
-// CHECK-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, ["li", cinit] {alignment = 4 : i64}
+// CHECK-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, ["li", init] {alignment = 4 : i64}
 // CHECK-NEXT:     %1 = cir.get_global @a : cir.ptr <i32>
 // CHECK-NEXT:     %2 = cir.load %1 : cir.ptr <i32>, i32
 // CHECK-NEXT:     cir.store %2, %0 : i32, cir.ptr <i32>
 
 // CHECK: cir.func @_Z17use_global_stringv() {
-// CHECK-NEXT:   %0 = cir.alloca i8, cir.ptr <i8>, ["c", cinit] {alignment = 1 : i64}
+// CHECK-NEXT:   %0 = cir.alloca i8, cir.ptr <i8>, ["c", init] {alignment = 1 : i64}
 // CHECK-NEXT:   %1 = cir.get_global @s2 : cir.ptr <!cir.ptr<i8>>
 // CHECK-NEXT:   %2 = cir.load %1 : cir.ptr <!cir.ptr<i8>>, !cir.ptr<i8>
 // CHECK-NEXT:   %3 = cir.cst(0 : i32) : i32

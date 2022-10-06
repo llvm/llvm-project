@@ -2,7 +2,7 @@
 
 module  {
   cir.func @yolo(%arg0 : i32) {
-    %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr<!cir.array<i32 x 10>>, ["x", paraminit]
+    %0 = cir.alloca !cir.array<i32 x 10>, cir.ptr<!cir.array<i32 x 10>>, ["x", init]
     %a = cir.cast (int_to_bool, %arg0 : i32), !cir.bool
 
     %3 = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>

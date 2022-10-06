@@ -166,23 +166,6 @@ def ConstantOp : CIR_Op<"cst",
 // AllocaOp
 //===----------------------------------------------------------------------===//
 
-def InitStyle_None      : I32EnumAttrCase<"uninitialized", 1>;
-def InitStyle_ParamInit : I32EnumAttrCase<"paraminit", 2>;
-
-// These are similar to Clang's VarDecl initialization style
-def InitStyle_CInit     : I32EnumAttrCase<"cinit", 3>;
-def InitStyle_CallInit  : I32EnumAttrCase<"callinit", 4>;
-def InitStyle_ListInit  : I32EnumAttrCase<"listinit", 5>;
-
-def InitStyle : I32EnumAttr<
-    "InitStyle",
-    "initialization style",
-    [InitStyle_None, InitStyle_ParamInit,
-     InitStyle_CInit, InitStyle_CallInit,
-     InitStyle_ListInit]> {
-  let cppNamespace = "::mlir::cir";
-}
-
 class AllocaTypesMatchWith<string summary, string lhsArg, string rhsArg,
                      string transform, string comparator = "std::equal_to<>()">
   : PredOpTrait<summary, CPred<
@@ -202,12 +185,10 @@ def AllocaOp : CIR_Op<"alloca", [
   let description = [{
     The `cir.alloca` operation defines a scope-local variable.
 
-    Initialization style must be one of:
-    - uninitialized
-    - paraminit: alloca to hold a function argument
-    - callinit: Call-style initialization (C++98)
-    - cinit: C-style initialization with assignment
-    - listinit: Direct list-initialization (C++11)
+    The presence `init` attribute indicates that the local variable represented
+    by this alloca was originally initialized in C/C++ source code. In such
+    cases, the first use contains the initialization (a cir.store, a cir.call
+    to a ctor, etc).
 
     The result type is a pointer to the input's type.
 
@@ -215,10 +196,10 @@ def AllocaOp : CIR_Op<"alloca", [
 
     ```mlir
     // int count = 3;
-    %0 = cir.alloca i32, !cir.ptr<i32>, ["count", cinit] {alignment = 4 : i64}
+    %0 = cir.alloca i32, !cir.ptr<i32>, ["count", init] {alignment = 4 : i64}
 
     // int *ptr;
-    %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["ptr", uninitialized] {alignment = 8 : i64}
+    %1 = cir.alloca !cir.ptr<i32>, cir.ptr <!cir.ptr<i32>>, ["ptr"] {alignment = 8 : i64}
     ...
     ```
   }];
@@ -226,8 +207,7 @@ def AllocaOp : CIR_Op<"alloca", [
   let arguments = (ins
     TypeAttr:$allocaType,
     StrAttr:$name,
-    // FIXME: add "uninitialzed" as default mode
-    Arg<InitStyle, "initialization style">:$init,
+    UnitAttr:$init,
     ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment,
     OptionalAttr<ASTVarDeclAttr>:$ast
   );
@@ -238,7 +218,7 @@ def AllocaOp : CIR_Op<"alloca", [
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "Type":$addr, "Type":$allocaType,
-                   "StringRef":$name, "mlir::cir::InitStyle":$init,
+                   "StringRef":$name,
                    "IntegerAttr":$alignment)>
   ];
 
@@ -250,7 +230,10 @@ def AllocaOp : CIR_Op<"alloca", [
   // FIXME: we should not be printing `cir.ptr` below, that should come
   // from the pointer type directly.
   let assemblyFormat = [{
-    $allocaType `,` `cir.ptr` type($addr) `,` `[` $name `,` $init `]`
+    $allocaType `,` `cir.ptr` type($addr) `,`
+    `[` $name
+       (`,` `init` $init^)?
+    `]`
     (`ast` $ast^)? attr-dict
   }];
 

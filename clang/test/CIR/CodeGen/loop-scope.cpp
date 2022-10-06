@@ -11,19 +11,19 @@ void l0() {
 
 // CPPSCOPE: cir.func @_Z2l0v() {
 // CPPSCOPE-NEXT:   cir.scope {
-// CPPSCOPE-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, ["i", cinit] {alignment = 4 : i64}
-// CPPSCOPE-NEXT:     %1 = cir.alloca i32, cir.ptr <i32>, ["j", cinit] {alignment = 4 : i64}
+// CPPSCOPE-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
+// CPPSCOPE-NEXT:     %1 = cir.alloca i32, cir.ptr <i32>, ["j", init] {alignment = 4 : i64}
 // CPPSCOPE-NEXT:     %2 = cir.cst(0 : i32) : i32
 // CPPSCOPE-NEXT:     cir.store %2, %0 : i32, cir.ptr <i32>
 // CPPSCOPE-NEXT:     cir.loop for(cond :  {
 
 // CSCOPE: cir.func @l0() {
 // CSCOPE-NEXT: cir.scope {
-// CSCOPE-NEXT:   %0 = cir.alloca i32, cir.ptr <i32>, ["i", cinit] {alignment = 4 : i64}
+// CSCOPE-NEXT:   %0 = cir.alloca i32, cir.ptr <i32>, ["i", init] {alignment = 4 : i64}
 // CSCOPE-NEXT:   %1 = cir.cst(0 : i32) : i32
 // CSCOPE-NEXT:   cir.store %1, %0 : i32, cir.ptr <i32>
 // CSCOPE-NEXT:   cir.loop for(cond :  {
 
 // CSCOPE:        })  {
 // CSCOPE-NEXT:     cir.scope {
-// CSCOPE-NEXT:       %2 = cir.alloca i32, cir.ptr <i32>, ["j", cinit] {alignment = 4 : i64}
+// CSCOPE-NEXT:       %2 = cir.alloca i32, cir.ptr <i32>, ["j", init] {alignment = 4 : i64}

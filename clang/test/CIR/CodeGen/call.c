@@ -20,9 +20,9 @@ void d(void) {
 // CHECK:     cir.return
 // CHECK:   }
 // CHECK:   cir.func @b(%arg0: i32 {{.*}}, %arg1: i32 {{.*}}) -> i32 {
-// CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, ["a", paraminit]
-// CHECK:     %1 = cir.alloca i32, cir.ptr <i32>, ["b", paraminit]
-// CHECK:     %2 = cir.alloca i32, cir.ptr <i32>, ["__retval", uninitialized]
+// CHECK:     %0 = cir.alloca i32, cir.ptr <i32>, ["a", init]
+// CHECK:     %1 = cir.alloca i32, cir.ptr <i32>, ["b", init]
+// CHECK:     %2 = cir.alloca i32, cir.ptr <i32>, ["__retval"]
 // CHECK:     cir.store %arg0, %0 : i32, cir.ptr <i32>
 // CHECK:     cir.store %arg1, %1 : i32, cir.ptr <i32>
 // CHECK:     %3 = cir.load %0 : cir.ptr <i32>, i32
@@ -33,9 +33,9 @@ void d(void) {
 // CHECK:     cir.return %6
 // CHECK:   }
 // CHECK:   cir.func @c(%arg0: f64 {{.*}}, %arg1: f64 {{.*}}) -> f64 {
-// CHECK:     %0 = cir.alloca f64, cir.ptr <f64>, ["a", paraminit]
-// CHECK:     %1 = cir.alloca f64, cir.ptr <f64>, ["b", paraminit]
-// CHECK:     %2 = cir.alloca f64, cir.ptr <f64>, ["__retval", uninitialized]
+// CHECK:     %0 = cir.alloca f64, cir.ptr <f64>, ["a", init]
+// CHECK:     %1 = cir.alloca f64, cir.ptr <f64>, ["b", init]
+// CHECK:     %2 = cir.alloca f64, cir.ptr <f64>, ["__retval"]
 // CHECK:     cir.store %arg0, %0 : f64, cir.ptr <f64>
 // CHECK:     cir.store %arg1, %1 : f64, cir.ptr <f64>
 // CHECK:     %3 = cir.load %0 : cir.ptr <f64>, f64
@@ -58,9 +58,9 @@ void d(void) {
 // CXX-NEXT:     cir.return
 // CXX-NEXT:   }
 // CXX-NEXT:   cir.func @_Z1bii(%arg0: i32 {{.*}}, %arg1: i32 {{.*}}) -> i32 {
-// CXX-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, ["a", paraminit]
-// CXX-NEXT:     %1 = cir.alloca i32, cir.ptr <i32>, ["b", paraminit]
-// CXX-NEXT:     %2 = cir.alloca i32, cir.ptr <i32>, ["__retval", uninitialized]
+// CXX-NEXT:     %0 = cir.alloca i32, cir.ptr <i32>, ["a", init]
+// CXX-NEXT:     %1 = cir.alloca i32, cir.ptr <i32>, ["b", init]
+// CXX-NEXT:     %2 = cir.alloca i32, cir.ptr <i32>, ["__retval"]
 // CXX-NEXT:     cir.store %arg0, %0 : i32, cir.ptr <i32>
 // CXX-NEXT:     cir.store %arg1, %1 : i32, cir.ptr <i32>
 // CXX-NEXT:     %3 = cir.load %0 : cir.ptr <i32>, i32
@@ -71,9 +71,9 @@ void d(void) {
 // CXX-NEXT:     cir.return %6
 // CXX-NEXT:   }
 // CXX-NEXT:   cir.func @_Z1cdd(%arg0: f64 {{.*}}, %arg1: f64 {{.*}}) -> f64 {
-// CXX-NEXT:     %0 = cir.alloca f64, cir.ptr <f64>, ["a", paraminit]
-// CXX-NEXT:     %1 = cir.alloca f64, cir.ptr <f64>, ["b", paraminit]
-// CXX-NEXT:     %2 = cir.alloca f64, cir.ptr <f64>, ["__retval", uninitialized]
+// CXX-NEXT:     %0 = cir.alloca f64, cir.ptr <f64>, ["a", init]
+// CXX-NEXT:     %1 = cir.alloca f64, cir.ptr <f64>, ["b", init]
+// CXX-NEXT:     %2 = cir.alloca f64, cir.ptr <f64>, ["__retval"]
 // CXX-NEXT:     cir.store %arg0, %0 : f64, cir.ptr <f64>
 // CXX-NEXT:     cir.store %arg1, %1 : f64, cir.ptr <f64>
 // CXX-NEXT:     %3 = cir.load %0 : cir.ptr <f64>, f64

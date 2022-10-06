@@ -7,8 +7,8 @@ unsigned id0() {
 }
 
 // CHECK: cir.func @_Z3id0v() -> i32 {
-// CHECK: %[[#RET:]] = cir.alloca i32, cir.ptr <i32>, ["__retval", uninitialized]
-// CHECK: %[[#A:]] = cir.alloca i32, cir.ptr <i32>, ["a", cinit]
+// CHECK: %[[#RET:]] = cir.alloca i32, cir.ptr <i32>, ["__retval"]
+// CHECK: %[[#A:]] = cir.alloca i32, cir.ptr <i32>, ["a", init]
 // CHECK: %[[#BEFORE_A:]] = cir.load %[[#A]]
 // CHECK: %[[#AFTER_A:]] = cir.unary(inc, %[[#BEFORE_A]])
 // CHECK: cir.store %[[#AFTER_A]], %[[#A]]
@@ -21,8 +21,8 @@ unsigned id1() {
 }
 
 // CHECK: cir.func @_Z3id1v() -> i32 {
-// CHECK: %[[#RET:]] = cir.alloca i32, cir.ptr <i32>, ["__retval", uninitialized]
-// CHECK: %[[#A:]] = cir.alloca i32, cir.ptr <i32>, ["a", cinit]
+// CHECK: %[[#RET:]] = cir.alloca i32, cir.ptr <i32>, ["__retval"]
+// CHECK: %[[#A:]] = cir.alloca i32, cir.ptr <i32>, ["a", init]
 // CHECK: %[[#BEFORE_A:]] = cir.load %[[#A]]
 // CHECK: %[[#AFTER_A:]] = cir.unary(dec, %[[#BEFORE_A]])
 // CHECK: cir.store %[[#AFTER_A]], %[[#A]]
@@ -34,8 +34,8 @@ unsigned id2() {
 }
 
 // CHECK: cir.func @_Z3id2v() -> i32 {
-// CHECK: %[[#RET:]] = cir.alloca i32, cir.ptr <i32>, ["__retval", uninitialized]
-// CHECK: %[[#A:]] = cir.alloca i32, cir.ptr <i32>, ["a", cinit]
+// CHECK: %[[#RET:]] = cir.alloca i32, cir.ptr <i32>, ["__retval"]
+// CHECK: %[[#A:]] = cir.alloca i32, cir.ptr <i32>, ["a", init]
 // CHECK: %[[#BEFORE_A:]] = cir.load %[[#A]]
 // CHECK: %[[#AFTER_A:]] = cir.unary(inc, %[[#BEFORE_A]])
 // CHECK: cir.store %[[#AFTER_A]], %[[#A]]
@@ -47,8 +47,8 @@ unsigned id3() {
 }
 
 // CHECK: cir.func @_Z3id3v() -> i32 {
-// CHECK: %[[#RET:]] = cir.alloca i32, cir.ptr <i32>, ["__retval", uninitialized]
-// CHECK: %[[#A:]] = cir.alloca i32, cir.ptr <i32>, ["a", cinit]
+// CHECK: %[[#RET:]] = cir.alloca i32, cir.ptr <i32>, ["__retval"]
+// CHECK: %[[#A:]] = cir.alloca i32, cir.ptr <i32>, ["a", init]
 // CHECK: %[[#BEFORE_A:]] = cir.load %[[#A]]
 // CHECK: %[[#AFTER_A:]] = cir.unary(dec, %[[#BEFORE_A]])
 // CHECK: cir.store %[[#AFTER_A]], %[[#A]]
