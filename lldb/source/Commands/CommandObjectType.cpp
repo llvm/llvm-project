@@ -2319,12 +2319,17 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
       type = eRegexSynth;
   }
 
-  if (category->AnyMatches(type_name, eFormatCategoryItemFilter, false)) {
-    if (error)
-      error->SetErrorStringWithFormat("cannot add synthetic for type %s when "
-                                      "filter is defined in same category!",
-                                      type_name.AsCString());
-    return false;
+  // Only check for conflicting filters in the same category if `type_name` is
+  // an actual type name. Matching a regex string against registered regexes
+  // doesn't work.
+  if (type == eRegularSynth) {
+    if (category->AnyMatches(type_name, eFormatCategoryItemFilter, false)) {
+      if (error)
+        error->SetErrorStringWithFormat("cannot add synthetic for type %s when "
+                                        "filter is defined in same category!",
+                                        type_name.AsCString());
+      return false;
+    }
   }
 
   if (type == eRegexSynth) {
@@ -2442,13 +2447,18 @@ private:
         type = eRegexFilter;
     }
 
-    if (category->AnyMatches(type_name, eFormatCategoryItemSynth, false)) {
-      if (error)
-        error->SetErrorStringWithFormat("cannot add filter for type %s when "
-                                        "synthetic is defined in same "
-                                        "category!",
-                                        type_name.AsCString());
-      return false;
+    // Only check for conflicting synthetic child providers in the same category
+    // if `type_name` is an actual type name. Matching a regex string against
+    // registered regexes doesn't work.
+    if (type == eRegularFilter) {
+      if (category->AnyMatches(type_name, eFormatCategoryItemSynth, false)) {
+        if (error)
+          error->SetErrorStringWithFormat("cannot add filter for type %s when "
+                                          "synthetic is defined in same "
+                                          "category!",
+                                          type_name.AsCString());
+        return false;
+      }
     }
 
     if (type == eRegexFilter) {
