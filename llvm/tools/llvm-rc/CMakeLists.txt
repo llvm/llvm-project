@@ -19,6 +19,7 @@ add_llvm_tool(llvm-rc
   ResourceScriptParser.cpp
   ResourceScriptStmt.cpp
   ResourceScriptToken.cpp
+  GENERATE_DRIVER
   )
 
 add_llvm_tool_symlink(llvm-windres llvm-rc)

@@ -238,7 +238,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
 
   // We can completely ignore inaccessible memory here, because MemoryLocations
   // can only reference accessible memory.
-  auto MRB = getModRefBehavior(Call).getWithoutLoc(
+  auto MRB = getModRefBehavior(Call, AAQI).getWithoutLoc(
       FunctionModRefBehavior::InaccessibleMem);
   if (MRB.doesNotAccessMemory())
     return ModRefInfo::NoModRef;
@@ -296,11 +296,11 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
   // aggregate set of AA results.
 
   // If Call1 or Call2 are readnone, they don't interact.
-  auto Call1B = getModRefBehavior(Call1);
+  auto Call1B = getModRefBehavior(Call1, AAQI);
   if (Call1B.doesNotAccessMemory())
     return ModRefInfo::NoModRef;
 
-  auto Call2B = getModRefBehavior(Call2);
+  auto Call2B = getModRefBehavior(Call2, AAQI);
   if (Call2B.doesNotAccessMemory())
     return ModRefInfo::NoModRef;
 
@@ -387,11 +387,12 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
   return Result;
 }
 
-FunctionModRefBehavior AAResults::getModRefBehavior(const CallBase *Call) {
+FunctionModRefBehavior AAResults::getModRefBehavior(const CallBase *Call,
+                                                    AAQueryInfo &AAQI) {
   FunctionModRefBehavior Result = FunctionModRefBehavior::unknown();
 
   for (const auto &AA : AAs) {
-    Result &= AA->getModRefBehavior(Call);
+    Result &= AA->getModRefBehavior(Call, AAQI);
 
     // Early-exit the moment we reach the bottom of the lattice.
     if (Result.doesNotAccessMemory())
@@ -399,6 +400,11 @@ FunctionModRefBehavior AAResults::getModRefBehavior(const CallBase *Call) {
   }
 
   return Result;
+}
+
+FunctionModRefBehavior AAResults::getModRefBehavior(const CallBase *Call) {
+  SimpleAAQueryInfo AAQI;
+  return getModRefBehavior(Call, AAQI);
 }
 
 FunctionModRefBehavior AAResults::getModRefBehavior(const Function *F) {
@@ -662,7 +668,7 @@ ModRefInfo AAResults::getModRefInfo(const Instruction *I,
                                     AAQueryInfo &AAQIP) {
   if (OptLoc == None) {
     if (const auto *Call = dyn_cast<CallBase>(I))
-      return getModRefBehavior(Call).getModRef();
+      return getModRefBehavior(Call, AAQIP).getModRef();
   }
 
   const MemoryLocation &Loc = OptLoc.value_or(MemoryLocation());

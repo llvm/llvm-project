@@ -611,9 +611,9 @@ struct InsertOpInterface
 /// Return true if the (ExtractSliceOp, InsertSliceOp) pair match (i.e.
 /// equivalent operand / result and same offset/sizes/strides specification).
 template <typename OpTy>
-static bool areEquivalentExtractSliceOps(const AnalysisState &state,
-                                         ExtractSliceOp extractSliceOp,
-                                         OpTy insertSliceOp) {
+static bool areEquivalentSlices(const AnalysisState &state,
+                                ExtractSliceOp extractSliceOp,
+                                OpTy insertSliceOp) {
   if (!extractSliceOp || !insertSliceOp)
     return false;
   if (extractSliceOp != insertSliceOp &&
@@ -626,20 +626,31 @@ static bool areEquivalentExtractSliceOps(const AnalysisState &state,
   return true;
 }
 
-/// Return true if `value` is originating from an ExtractSliceOp that matches
-/// the given InsertSliceOp.
+/// Return true if `value` is originating from the InsertSliceOp's destination
+/// or an ExtractSliceOp that matches the given InsertSliceOp.
 template <typename OpTy>
-static bool hasMatchingExtractSliceOp(const AnalysisState &state, Value value,
-                                      OpTy insertSliceOp) {
-  auto condition = [&](Value val) {
+static bool matchesInsertDestination(const AnalysisState &state, Value value,
+                                     OpTy insertSliceOp) {
+  // Look for matching slices.
+  auto matchesSlice = [&](Value val) {
     if (auto extractSliceOp = val.getDefiningOp<ExtractSliceOp>())
-      if (areEquivalentExtractSliceOps(state, extractSliceOp, insertSliceOp))
+      if (areEquivalentSlices(state, extractSliceOp, insertSliceOp))
         return true;
     return false;
   };
+  if (llvm::all_of(state.findValueInReverseUseDefChain(value, matchesSlice),
+                   matchesSlice))
+    return true;
 
-  return llvm::all_of(state.findValueInReverseUseDefChain(value, condition),
-                      condition);
+  // Look for equivalent values.
+  auto isEquivalent = [&](Value val) {
+    return state.areEquivalentBufferizedValues(val, insertSliceOp.getDest());
+  };
+  if (llvm::all_of(state.findValueInReverseUseDefChain(
+                       value, isEquivalent, /*followEquivalentOnly=*/true),
+                   isEquivalent))
+    return true;
+  return false;
 }
 
 template <typename OpTy>
@@ -661,8 +672,8 @@ static bool isNotConflictingInsertSliceLikeOp(Operation *op, OpOperand *uRead,
 
     // TODO: Use insertSliceOp.getDestOpOperand etc. when available.
     if (uRead == &insertSliceOp->getOpOperand(1) /*dest*/ &&
-        hasMatchingExtractSliceOp(state, uConflictingWrite->get(),
-                                  insertSliceOp))
+        matchesInsertDestination(state, uConflictingWrite->get(),
+                                 insertSliceOp))
       // Case 1: The main insight is that InsertSliceOp reads only part of
       // the destination tensor. The overwritten area is not read. If
       // uConflictingWrite writes into exactly the memory location that is
@@ -679,7 +690,7 @@ static bool isNotConflictingInsertSliceLikeOp(Operation *op, OpOperand *uRead,
 
     if (uRead == &insertSliceOp->getOpOperand(0) /*source*/ &&
         uConflictingWrite == &insertSliceOp->getOpOperand(1) /*dest*/ &&
-        hasMatchingExtractSliceOp(state, uRead->get(), insertSliceOp))
+        matchesInsertDestination(state, uRead->get(), insertSliceOp))
       // Case 2: The read of the source tensor and the write to the dest
       // tensor via an InsertSliceOp is not a conflict if the read is
       // reading exactly that part of an equivalent tensor that the
@@ -712,8 +723,8 @@ static bool isNotConflictingInsertSliceLikeOp(Operation *op, OpOperand *uRead,
     if (uConflictingWrite == &insertSliceOp->getOpOperand(1) /*dest*/ &&
         state.areEquivalentBufferizedValues(uRead->get(),
                                             insertSliceOp.getSource()) &&
-        hasMatchingExtractSliceOp(state, insertSliceOp.getSource(),
-                                  insertSliceOp))
+        matchesInsertDestination(state, insertSliceOp.getSource(),
+                                 insertSliceOp))
       return true;
 
   return false;

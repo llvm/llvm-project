@@ -405,9 +405,10 @@ bool TypeBasedAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
 }
 
 FunctionModRefBehavior
-TypeBasedAAResult::getModRefBehavior(const CallBase *Call) {
+TypeBasedAAResult::getModRefBehavior(const CallBase *Call,
+                                     AAQueryInfo &AAQI) {
   if (!EnableTBAA)
-    return AAResultBase::getModRefBehavior(Call);
+    return AAResultBase::getModRefBehavior(Call, AAQI);
 
   // If this is an "immutable" type, we can assume the call doesn't write
   // to memory.
@@ -416,7 +417,7 @@ TypeBasedAAResult::getModRefBehavior(const CallBase *Call) {
         (isStructPathTBAA(M) && TBAAStructTagNode(M).isTypeImmutable()))
       return FunctionModRefBehavior::readOnly();
 
-  return AAResultBase::getModRefBehavior(Call);
+  return AAResultBase::getModRefBehavior(Call, AAQI);
 }
 
 FunctionModRefBehavior TypeBasedAAResult::getModRefBehavior(const Function *F) {

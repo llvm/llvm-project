@@ -719,7 +719,7 @@ replaceSlices(LLVMContext &LLVMCtx,
   exit(EXIT_SUCCESS);
 }
 
-int main(int argc, char **argv) {
+int llvm_lipo_main(int argc, char **argv) {
   InitLLVM X(argc, argv);
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
