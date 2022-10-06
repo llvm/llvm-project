@@ -17,6 +17,10 @@ __attribute__((destructor)) void call_me_last(void) {
 [numthreads(1,1,1)]
 void main(unsigned GI : SV_GroupIndex) {}
 
+// Make sure global variable for ctors/dtors removed.
+// CHECK-NOT:@llvm.global_ctors
+// CHECK-NOT:@llvm.global_dtors
+
 //CHECK: define void @main()
 //CHECK-NEXT: entry:
 //CHECK-NEXT:   call void @"?call_me_first@@YAXXZ"()
