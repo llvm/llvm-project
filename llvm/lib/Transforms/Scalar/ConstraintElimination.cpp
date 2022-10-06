@@ -578,18 +578,32 @@ void State::addInfoFor(BasicBlock &BB) {
   if (!Br || !Br->isConditional())
     return;
 
-  // If the condition is an OR of 2 compares and the false successor only has
-  // the current block as predecessor, queue both negated conditions for the
+  // If the condition is a chain of ORs and the false successor only has
+  // the current block as predecessor, queue the negated conditions for the
   // false successor.
   Value *Op0, *Op1;
-  if (match(Br->getCondition(), m_LogicalOr(m_Value(Op0), m_Value(Op1))) &&
-      isa<ICmpInst>(Op0) && isa<ICmpInst>(Op1)) {
+  if (match(Br->getCondition(), m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
     BasicBlock *FalseSuccessor = Br->getSuccessor(1);
     if (canAddSuccessor(BB, FalseSuccessor)) {
-      WorkList.emplace_back(DT.getNode(FalseSuccessor), cast<ICmpInst>(Op0),
-                            true);
-      WorkList.emplace_back(DT.getNode(FalseSuccessor), cast<ICmpInst>(Op1),
-                            true);
+      SmallVector<Value *> CondWorkList;
+      SmallPtrSet<Value *, 8> SeenCond;
+      auto QueueValue = [&CondWorkList, &SeenCond](Value *V) {
+        if (SeenCond.insert(V).second)
+          CondWorkList.push_back(V);
+      };
+      QueueValue(Op0);
+      QueueValue(Op1);
+      while (!CondWorkList.empty()) {
+        Value *Cur = CondWorkList.pop_back_val();
+        if (auto *Cmp = dyn_cast<ICmpInst>(Cur)) {
+          WorkList.emplace_back(DT.getNode(FalseSuccessor), Cmp, true);
+          continue;
+        }
+        if (match(Cur, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
+          QueueValue(Op0);
+          QueueValue(Op1);
+        }
+      }
     }
     return;
   }
