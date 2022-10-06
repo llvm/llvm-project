@@ -29,13 +29,17 @@ define i64 @iv_wider_type_rc_two_narrow_types(i32 %offA, i16 %offB, i8* %arrA, i
 ; CHECK-NEXT:    [[IV_TRUNC_16:%.*]] = trunc i64 [[IV]] to i16
 ; CHECK-NEXT:    [[INDEXA:%.*]] = add i32 [[IV_TRUNC_32]], [[OFFA]]
 ; CHECK-NEXT:    [[INDEXB:%.*]] = add i16 [[IV_TRUNC_16]], [[OFFB]]
+; CHECK-NEXT:    [[RCA:%.*]] = icmp ult i32 [[INDEXA]], [[LENGTHA]]
+; CHECK-NEXT:    [[RCB:%.*]] = icmp ult i16 [[INDEXB]], [[LENGTHB]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[RCA]], [[RCB]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP8]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[WIDE_CHK]])
 ; CHECK-NEXT:    [[INDEXA_EXT:%.*]] = zext i32 [[INDEXA]] to i64
 ; CHECK-NEXT:    [[ADDRA:%.*]] = getelementptr inbounds i8, i8* [[ARRA]], i64 [[INDEXA_EXT]]
-; CHECK-NEXT:    [[ELTA:%.*]] = load i8, i8* [[ADDRA]]
+; CHECK-NEXT:    [[ELTA:%.*]] = load i8, i8* [[ADDRA]], align 1
 ; CHECK-NEXT:    [[INDEXB_EXT:%.*]] = zext i16 [[INDEXB]] to i64
 ; CHECK-NEXT:    [[ADDRB:%.*]] = getelementptr inbounds i8, i8* [[ARRB]], i64 [[INDEXB_EXT]]
-; CHECK-NEXT:    store i8 [[ELTA]], i8* [[ADDRB]]
+; CHECK-NEXT:    store i8 [[ELTA]], i8* [[ADDRB]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[LATCH_CHECK:%.*]] = icmp ult i64 [[IV_NEXT]], 16
 ; CHECK-NEXT:    br i1 [[LATCH_CHECK]], label [[LOOP]], label [[EXIT:%.*]]
@@ -102,15 +106,21 @@ define i64 @iv_rc_different_types(i32 %offA, i32 %offB, i8* %arrA, i8* %arrB, i6
 ; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i32
 ; CHECK-NEXT:    [[INDEXA:%.*]] = add i32 [[IV_TRUNC]], [[OFFA]]
 ; CHECK-NEXT:    [[INDEXB:%.*]] = add i32 [[IV_TRUNC]], [[OFFB]]
+; CHECK-NEXT:    [[RCA:%.*]] = icmp ult i32 [[INDEXA]], [[LENGTHA]]
+; CHECK-NEXT:    [[RCIV:%.*]] = icmp ult i64 [[IV]], [[MAX]]
+; CHECK-NEXT:    [[WIDE_CHK:%.*]] = and i1 [[RCA]], [[RCIV]]
+; CHECK-NEXT:    [[RCB:%.*]] = icmp ult i32 [[INDEXB]], [[LENGTHB]]
+; CHECK-NEXT:    [[WIDE_CHK_FINAL:%.*]] = and i1 [[WIDE_CHK]], [[RCB]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP15]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[WIDE_CHK_FINAL]])
 ; CHECK-NEXT:    [[INDEXA_EXT:%.*]] = zext i32 [[INDEXA]] to i64
 ; CHECK-NEXT:    [[ADDRA:%.*]] = getelementptr inbounds i8, i8* [[ARRA]], i64 [[INDEXA_EXT]]
-; CHECK-NEXT:    [[ELTA:%.*]] = load i8, i8* [[ADDRA]]
+; CHECK-NEXT:    [[ELTA:%.*]] = load i8, i8* [[ADDRA]], align 1
 ; CHECK-NEXT:    [[INDEXB_EXT:%.*]] = zext i32 [[INDEXB]] to i64
 ; CHECK-NEXT:    [[ADDRB:%.*]] = getelementptr inbounds i8, i8* [[ARRB]], i64 [[INDEXB_EXT]]
-; CHECK-NEXT:    [[ELTB:%.*]] = load i8, i8* [[ADDRB]]
+; CHECK-NEXT:    [[ELTB:%.*]] = load i8, i8* [[ADDRB]], align 1
 ; CHECK-NEXT:    [[RESULT:%.*]] = xor i8 [[ELTA]], [[ELTB]]
-; CHECK-NEXT:    store i8 [[RESULT]], i8* [[ADDRA]]
+; CHECK-NEXT:    store i8 [[RESULT]], i8* [[ADDRA]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[LATCH_CHECK:%.*]] = icmp ult i64 [[IV]], 15
 ; CHECK-NEXT:    br i1 [[LATCH_CHECK]], label [[LOOP]], label [[EXIT:%.*]]
@@ -167,9 +177,9 @@ define i64 @iv_rc_different_type(i32 %offA, i8* %arrA) {
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[RCA]], i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    [[INDEXA_EXT:%.*]] = zext i32 [[INDEXA]] to i64
 ; CHECK-NEXT:    [[ADDRA:%.*]] = getelementptr inbounds i8, i8* [[ARRA]], i64 [[INDEXA_EXT]]
-; CHECK-NEXT:    [[ELTA:%.*]] = load i8, i8* [[ADDRA]]
+; CHECK-NEXT:    [[ELTA:%.*]] = load i8, i8* [[ADDRA]], align 1
 ; CHECK-NEXT:    [[RES:%.*]] = add i8 [[ELTA]], 2
-; CHECK-NEXT:    store i8 [[ELTA]], i8* [[ADDRA]]
+; CHECK-NEXT:    store i8 [[ELTA]], i8* [[ADDRA]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; CHECK-NEXT:    [[LATCH_CHECK:%.*]] = icmp sge i64 [[IV_NEXT]], 2
 ; CHECK-NEXT:    br i1 [[LATCH_CHECK]], label [[LOOP]], label [[EXIT:%.*]]
