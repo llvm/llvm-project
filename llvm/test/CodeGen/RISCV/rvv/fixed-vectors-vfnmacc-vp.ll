@@ -28,7 +28,7 @@ define <2 x half> @vfnmacc_vv_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c,
 define <2 x half> @vfnmacc_vv_v2f16_unmasked(<2 x half> %a, <2 x half> %b, <2 x half> %c, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_v2f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
 ; CHECK-NEXT:    vfnmacc.vv v10, v8, v9
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -80,7 +80,7 @@ define <2 x half> @vfnmacc_vf_v2f16_commute(<2 x half> %a, half %b, <2 x half> %
 define <2 x half> @vfnmacc_vf_v2f16_unmasked(<2 x half> %a, half %b, <2 x half> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_v2f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, tu, ma
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -171,7 +171,7 @@ define <4 x half> @vfnmacc_vv_v4f16(<4 x half> %a, <4 x half> %b, <4 x half> %c,
 define <4 x half> @vfnmacc_vv_v4f16_unmasked(<4 x half> %a, <4 x half> %b, <4 x half> %c, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_v4f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
 ; CHECK-NEXT:    vfnmacc.vv v10, v8, v9
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -223,7 +223,7 @@ define <4 x half> @vfnmacc_vf_v4f16_commute(<4 x half> %a, half %b, <4 x half> %
 define <4 x half> @vfnmacc_vf_v4f16_unmasked(<4 x half> %a, half %b, <4 x half> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_v4f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, tu, ma
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -314,7 +314,7 @@ define <8 x half> @vfnmacc_vv_v8f16(<8 x half> %a, <8 x half> %b, <8 x half> %c,
 define <8 x half> @vfnmacc_vv_v8f16_unmasked(<8 x half> %a, <8 x half> %b, <8 x half> %c, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_v8f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
 ; CHECK-NEXT:    vfnmacc.vv v10, v8, v9
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -366,7 +366,7 @@ define <8 x half> @vfnmacc_vf_v8f16_commute(<8 x half> %a, half %b, <8 x half> %
 define <8 x half> @vfnmacc_vf_v8f16_unmasked(<8 x half> %a, half %b, <8 x half> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_v8f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, tu, ma
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -457,7 +457,7 @@ define <16 x half> @vfnmacc_vv_v16f16(<16 x half> %a, <16 x half> %b, <16 x half
 define <16 x half> @vfnmacc_vv_v16f16_unmasked(<16 x half> %a, <16 x half> %b, <16 x half> %c, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_v16f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
 ; CHECK-NEXT:    vfnmacc.vv v12, v8, v10
 ; CHECK-NEXT:    vmv2r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -509,7 +509,7 @@ define <16 x half> @vfnmacc_vf_v16f16_commute(<16 x half> %a, half %b, <16 x hal
 define <16 x half> @vfnmacc_vf_v16f16_unmasked(<16 x half> %a, half %b, <16 x half> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_v16f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, tu, ma
 ; CHECK-NEXT:    vfnmacc.vf v10, fa0, v8
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -600,7 +600,7 @@ define <32 x half> @vfnmacc_vv_v32f16(<32 x half> %a, <32 x half> %b, <32 x half
 define <32 x half> @vfnmacc_vv_v32f16_unmasked(<32 x half> %a, <32 x half> %b, <32 x half> %c, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_v32f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
 ; CHECK-NEXT:    vfnmacc.vv v16, v8, v12
 ; CHECK-NEXT:    vmv4r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -652,7 +652,7 @@ define <32 x half> @vfnmacc_vf_v32f16_commute(<32 x half> %a, half %b, <32 x hal
 define <32 x half> @vfnmacc_vf_v32f16_unmasked(<32 x half> %a, half %b, <32 x half> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_v32f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m4, tu, ma
 ; CHECK-NEXT:    vfnmacc.vf v12, fa0, v8
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -743,7 +743,7 @@ define <2 x float> @vfnmacc_vv_v2f32(<2 x float> %a, <2 x float> %b, <2 x float>
 define <2 x float> @vfnmacc_vv_v2f32_unmasked(<2 x float> %a, <2 x float> %b, <2 x float> %c, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_v2f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, ma
 ; CHECK-NEXT:    vfnmacc.vv v10, v8, v9
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -795,7 +795,7 @@ define <2 x float> @vfnmacc_vf_v2f32_commute(<2 x float> %a, float %b, <2 x floa
 define <2 x float> @vfnmacc_vf_v2f32_unmasked(<2 x float> %a, float %b, <2 x float> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_v2f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, tu, ma
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -886,7 +886,7 @@ define <4 x float> @vfnmacc_vv_v4f32(<4 x float> %a, <4 x float> %b, <4 x float>
 define <4 x float> @vfnmacc_vv_v4f32_unmasked(<4 x float> %a, <4 x float> %b, <4 x float> %c, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_v4f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vfnmacc.vv v10, v8, v9
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -938,7 +938,7 @@ define <4 x float> @vfnmacc_vf_v4f32_commute(<4 x float> %a, float %b, <4 x floa
 define <4 x float> @vfnmacc_vf_v4f32_unmasked(<4 x float> %a, float %b, <4 x float> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_v4f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, ma
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -1029,7 +1029,7 @@ define <8 x float> @vfnmacc_vv_v8f32(<8 x float> %a, <8 x float> %b, <8 x float>
 define <8 x float> @vfnmacc_vv_v8f32_unmasked(<8 x float> %a, <8 x float> %b, <8 x float> %c, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_v8f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; CHECK-NEXT:    vfnmacc.vv v12, v8, v10
 ; CHECK-NEXT:    vmv2r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -1081,7 +1081,7 @@ define <8 x float> @vfnmacc_vf_v8f32_commute(<8 x float> %a, float %b, <8 x floa
 define <8 x float> @vfnmacc_vf_v8f32_unmasked(<8 x float> %a, float %b, <8 x float> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_v8f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, tu, ma
 ; CHECK-NEXT:    vfnmacc.vf v10, fa0, v8
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -1172,7 +1172,7 @@ define <16 x float> @vfnmacc_vv_v16f32(<16 x float> %a, <16 x float> %b, <16 x f
 define <16 x float> @vfnmacc_vv_v16f32_unmasked(<16 x float> %a, <16 x float> %b, <16 x float> %c, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_v16f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, ma
 ; CHECK-NEXT:    vfnmacc.vv v16, v8, v12
 ; CHECK-NEXT:    vmv4r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -1224,7 +1224,7 @@ define <16 x float> @vfnmacc_vf_v16f32_commute(<16 x float> %a, float %b, <16 x 
 define <16 x float> @vfnmacc_vf_v16f32_unmasked(<16 x float> %a, float %b, <16 x float> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_v16f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, tu, ma
 ; CHECK-NEXT:    vfnmacc.vf v12, fa0, v8
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -1315,7 +1315,7 @@ define <2 x double> @vfnmacc_vv_v2f64(<2 x double> %a, <2 x double> %b, <2 x dou
 define <2 x double> @vfnmacc_vv_v2f64_unmasked(<2 x double> %a, <2 x double> %b, <2 x double> %c, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_v2f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vfnmacc.vv v10, v8, v9
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -1367,7 +1367,7 @@ define <2 x double> @vfnmacc_vf_v2f64_commute(<2 x double> %a, double %b, <2 x d
 define <2 x double> @vfnmacc_vf_v2f64_unmasked(<2 x double> %a, double %b, <2 x double> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_v2f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, tu, ma
 ; CHECK-NEXT:    vfnmacc.vf v9, fa0, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -1458,7 +1458,7 @@ define <4 x double> @vfnmacc_vv_v4f64(<4 x double> %a, <4 x double> %b, <4 x dou
 define <4 x double> @vfnmacc_vv_v4f64_unmasked(<4 x double> %a, <4 x double> %b, <4 x double> %c, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_v4f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, ma
 ; CHECK-NEXT:    vfnmacc.vv v12, v8, v10
 ; CHECK-NEXT:    vmv2r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -1510,7 +1510,7 @@ define <4 x double> @vfnmacc_vf_v4f64_commute(<4 x double> %a, double %b, <4 x d
 define <4 x double> @vfnmacc_vf_v4f64_unmasked(<4 x double> %a, double %b, <4 x double> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_v4f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, tu, ma
 ; CHECK-NEXT:    vfnmacc.vf v10, fa0, v8
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -1601,7 +1601,7 @@ define <8 x double> @vfnmacc_vv_v8f64(<8 x double> %a, <8 x double> %b, <8 x dou
 define <8 x double> @vfnmacc_vv_v8f64_unmasked(<8 x double> %a, <8 x double> %b, <8 x double> %c, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vv_v8f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, ma
 ; CHECK-NEXT:    vfnmacc.vv v16, v8, v12
 ; CHECK-NEXT:    vmv4r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -1653,7 +1653,7 @@ define <8 x double> @vfnmacc_vf_v8f64_commute(<8 x double> %a, double %b, <8 x d
 define <8 x double> @vfnmacc_vf_v8f64_unmasked(<8 x double> %a, double %b, <8 x double> %c, i32 zeroext %evl) {
 ; CHECK-LABEL: vfnmacc_vf_v8f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, tu, ma
 ; CHECK-NEXT:    vfnmacc.vf v12, fa0, v8
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret

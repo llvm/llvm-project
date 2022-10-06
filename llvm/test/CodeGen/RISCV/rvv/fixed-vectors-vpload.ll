@@ -43,7 +43,7 @@ define <4 x i8> @vpload_v4i8(<4 x i8>* %ptr, <4 x i1> %m, i32 zeroext %evl) {
 define <4 x i8> @vpload_v4i8_allones_mask(<4 x i8>* %ptr, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v4i8_allones_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <4 x i1> poison, i1 true, i32 0
@@ -103,7 +103,7 @@ define <8 x i16> @vpload_v8i16(<8 x i16>* %ptr, <8 x i1> %m, i32 zeroext %evl) {
 define <8 x i16> @vpload_v8i16_allones_mask(<8 x i16>* %ptr, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v8i16_allones_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <8 x i1> poison, i1 true, i32 0
@@ -151,7 +151,7 @@ define <6 x i32> @vpload_v6i32(<6 x i32>* %ptr, <6 x i1> %m, i32 zeroext %evl) {
 define <6 x i32> @vpload_v6i32_allones_mask(<6 x i32>* %ptr, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v6i32_allones_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <6 x i1> poison, i1 true, i32 0
@@ -175,7 +175,7 @@ define <8 x i32> @vpload_v8i32(<8 x i32>* %ptr, <8 x i1> %m, i32 zeroext %evl) {
 define <8 x i32> @vpload_v8i32_allones_mask(<8 x i32>* %ptr, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v8i32_allones_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <8 x i1> poison, i1 true, i32 0
@@ -211,7 +211,7 @@ define <4 x i64> @vpload_v4i64(<4 x i64>* %ptr, <4 x i1> %m, i32 zeroext %evl) {
 define <4 x i64> @vpload_v4i64_allones_mask(<4 x i64>* %ptr, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v4i64_allones_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <4 x i1> poison, i1 true, i32 0
@@ -247,7 +247,7 @@ define <2 x half> @vpload_v2f16(<2 x half>* %ptr, <2 x i1> %m, i32 zeroext %evl)
 define <2 x half> @vpload_v2f16_allones_mask(<2 x half>* %ptr, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v2f16_allones_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <2 x i1> poison, i1 true, i32 0
@@ -319,7 +319,7 @@ define <8 x float> @vpload_v8f32(<8 x float>* %ptr, <8 x i1> %m, i32 zeroext %ev
 define <8 x float> @vpload_v8f32_allones_mask(<8 x float>* %ptr, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v8f32_allones_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <8 x i1> poison, i1 true, i32 0
@@ -355,7 +355,7 @@ define <4 x double> @vpload_v4f64(<4 x double>* %ptr, <4 x i1> %m, i32 zeroext %
 define <4 x double> @vpload_v4f64_allones_mask(<4 x double>* %ptr, i32 zeroext %evl) {
 ; CHECK-LABEL: vpload_v4f64_allones_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = insertelement <4 x i1> poison, i1 true, i32 0
@@ -388,7 +388,7 @@ define <32 x double> @vpload_v32f64(<32 x double>* %ptr, <32 x i1> %m, i32 zeroe
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:  .LBB31_2:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v8, 2
 ; CHECK-NEXT:    addi a3, a0, 128
 ; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, mu
@@ -426,7 +426,7 @@ define <33 x double> @vpload_v33f64(<33 x double>* %ptr, <33 x i1> %m, i32 zeroe
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a4, a5
 ; CHECK-NEXT:  .LBB32_4:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v8, 2
 ; CHECK-NEXT:    addi a5, a1, 128
 ; CHECK-NEXT:    vsetvli zero, a4, e64, m8, ta, mu
@@ -442,7 +442,7 @@ define <33 x double> @vpload_v33f64(<33 x double>* %ptr, <33 x i1> %m, i32 zeroe
 ; CHECK-NEXT:  # %bb.7:
 ; CHECK-NEXT:    li a4, 16
 ; CHECK-NEXT:  .LBB32_8:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v0, v8, 4
 ; CHECK-NEXT:    addi a5, a1, 256
 ; CHECK-NEXT:    vsetvli zero, a4, e64, m8, ta, mu
@@ -454,13 +454,13 @@ define <33 x double> @vpload_v33f64(<33 x double>* %ptr, <33 x i1> %m, i32 zeroe
 ; CHECK-NEXT:    vsetvli zero, a3, e64, m8, ta, mu
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vle64.v v8, (a1), v0.t
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    addi a1, a0, 256
-; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v24, (a1)
 ; CHECK-NEXT:    addi a0, a0, 128
-; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; CHECK-NEXT:    vse64.v v16, (a0)
 ; CHECK-NEXT:    ret
   %load = call <33 x double> @llvm.vp.load.v33f64.p0v33f64(<33 x double>* %ptr, <33 x i1> %m, i32 %evl)

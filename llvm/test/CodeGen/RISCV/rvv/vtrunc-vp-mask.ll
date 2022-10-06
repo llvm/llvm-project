@@ -19,7 +19,7 @@ define <vscale x 2 x i1> @vtrunc_nxv2i1_nxv2i16(<vscale x 2 x i16> %a, <vscale x
 define <vscale x 2 x i1> @vtrunc_nxv2i1_nxv2i16_unmasked(<vscale x 2 x i16> %a, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_nxv2i1_nxv2i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
@@ -44,7 +44,7 @@ define <vscale x 2 x i1> @vtrunc_nxv2i1_nxv2i32(<vscale x 2 x i32> %a, <vscale x
 define <vscale x 2 x i1> @vtrunc_nxv2i1_nxv2i32_unmasked(<vscale x 2 x i32> %a, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_nxv2i1_nxv2i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
@@ -70,7 +70,7 @@ define <vscale x 2 x i1> @vtrunc_nxv2i1_nxv2i64(<vscale x 2 x i64> %a, <vscale x
 define <vscale x 2 x i1> @vtrunc_nxv2i1_nxv2i64_unmasked(<vscale x 2 x i64> %a, i32 zeroext %vl) {
 ; CHECK-LABEL: vtrunc_nxv2i1_nxv2i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret

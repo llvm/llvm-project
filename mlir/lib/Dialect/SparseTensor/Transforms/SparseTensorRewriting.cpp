@@ -111,6 +111,20 @@ static bool isZeroYield(GenericOp op) {
   return isZeroValue(yieldOp.getOperand(0));
 }
 
+/// Populates given sizes array from type (for static sizes) and from
+/// the tensor (for dynamic sizes).
+static void sizesForTensor(OpBuilder &builder, SmallVector<Value, 4> &sizes,
+                           Location loc, ShapedType stp, Value tensor) {
+  for (const auto &d : enumerate(stp.getShape())) {
+    Value dim;
+    if (d.value() == ShapedType::kDynamicSize)
+      dim = builder.create<tensor::DimOp>(loc, tensor, d.index());
+    else
+      dim = constantIndex(builder, loc, d.value());
+    sizes.push_back(dim);
+  }
+}
+
 // TODO: The dim level property of the COO type relies on input tensors, the
 // shape relies on the output tensor
 // Helpers to setup a COO type.
@@ -119,8 +133,11 @@ static RankedTensorType getUnorderedCOOFromType(RankedTensorType src) {
   auto rank = src.getRank();
   SmallVector<SparseTensorEncodingAttr::DimLevelType, 4> dims;
 
-  // An unordered and non-unique compressed dim at beginning.
-  dims.push_back(SparseTensorEncodingAttr::DimLevelType::CompressedNuNo);
+  // An unordered and non-unique compressed dim at beginning unless the tensor
+  // is a 1D tensor.
+  if (rank > 1)
+    dims.push_back(SparseTensorEncodingAttr::DimLevelType::CompressedNuNo);
+
   // TODO: it is actually ordered at the level for ordered input.
   // Followed by unordered non-unique n-2 singleton levels.
   std::fill_n(std::back_inserter(dims), rank - 2,
@@ -281,7 +298,72 @@ private:
   }
 };
 
-/// Sparse rewriting rule for reshape operator.
+/// Sparse rewriting rule for sparse-to-sparse reshape operator.
+template <typename ReshapeOp>
+struct Sparse2SparseReshapeRewriter : public OpRewritePattern<ReshapeOp> {
+public:
+  using OpRewritePattern<ReshapeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ReshapeOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    Value srcTensor = op.getSrc();
+    auto srcTp = srcTensor.getType().template cast<RankedTensorType>();
+    auto dstTp = op.getResult().getType().template cast<RankedTensorType>();
+    SparseTensorEncodingAttr encSrc = getSparseTensorEncoding(srcTp);
+    SparseTensorEncodingAttr encDst = getSparseTensorEncoding(dstTp);
+    if (!encDst || !encSrc) {
+      return failure();
+    }
+
+    // Generate code to represent the static dimension constants or compute
+    // the dynamic dimension values.
+    SmallVector<Value, 4> srcSizes;
+    sizesForTensor(rewriter, srcSizes, loc, srcTp, srcTensor);
+    SmallVector<Value, 4> dstSizes;
+    SmallVector<Value, 4> dstDynSizes;
+    if (dstTp.hasStaticShape()) {
+      for (auto d : dstTp.getShape())
+        dstSizes.push_back(constantIndex(rewriter, loc, d));
+    } else {
+      ArrayRef<int64_t> dstShape = dstTp.getShape();
+      genReshapeDstShape(loc, rewriter, dstSizes, srcSizes, dstShape,
+                         op.getReassociationIndices());
+      for (auto &d : llvm::enumerate(dstShape)) {
+        if (d.value() == ShapedType::kDynamicSize)
+          dstDynSizes.push_back(dstSizes[d.index()]);
+      }
+    }
+
+    // Implement the sparse2sparse reshape as follows:
+    //   %tmp = bufferization.alloc_tensor : unordered COO
+    //   foreach srcCoords %srcTensor
+    //     insert translateIndicesArray(srcCoords), %tmp
+    //   %t = sparse_tensor.cast %tmp
+    RankedTensorType cooTp = getUnorderedCOOFromType(dstTp);
+    auto cooBuffer =
+        rewriter.create<AllocTensorOp>(loc, cooTp, dstDynSizes).getResult();
+    rewriter.create<ForeachOp>(
+        loc, srcTensor, [&](OpBuilder &builder, Location loc, ValueRange args) {
+          SmallVector<Value, 4> srcIndices;
+          SmallVector<Value, 4> dstIndices;
+          for (int64_t i = 0, e = srcTp.getRank(); i < e; i++) {
+            uint64_t dim = toStoredDim(encSrc, i);
+            srcIndices.push_back(args[dim]);
+          }
+          translateIndicesArray(builder, loc, op.getReassociationIndices(),
+                                srcIndices, srcSizes, dstSizes, dstIndices);
+          builder.create<InsertOp>(loc, args.back(), cooBuffer, dstIndices);
+          builder.create<sparse_tensor::YieldOp>(loc);
+        });
+
+    rewriter.replaceOpWithNewOp<ConvertOp>(op, dstTp, cooBuffer);
+    return success();
+  }
+};
+
+/// Sparse rewriting rule for sparse-to-dense and dense-to-sparse reshape
+/// operator.
 template <typename ReshapeOp>
 struct ReshapeRewriter : public OpRewritePattern<ReshapeOp> {
 public:
@@ -437,7 +519,6 @@ public:
 //===---------------------------------------------------------------------===//
 // Methods that add patterns described in this file to a pattern list.
 //===---------------------------------------------------------------------===//
-
 void mlir::populateSparseTensorRewriting(RewritePatternSet &patterns,
                                          bool enableRT) {
   patterns.add<FoldInvariantYield, FuseSparseMultiplyOverAdd,
@@ -446,5 +527,8 @@ void mlir::populateSparseTensorRewriting(RewritePatternSet &patterns,
       patterns.getContext());
   // TODO: If RT not enabled, rewrite concatenate ops, etc here.
   if (!enableRT)
-    patterns.add<ConcatenateRewriter>(patterns.getContext());
+    patterns.add<ConcatenateRewriter,
+                 Sparse2SparseReshapeRewriter<tensor::ExpandShapeOp>,
+                 Sparse2SparseReshapeRewriter<tensor::CollapseShapeOp>>(
+        patterns.getContext());
 }

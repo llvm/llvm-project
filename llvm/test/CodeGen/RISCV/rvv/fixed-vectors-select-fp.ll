@@ -7,10 +7,10 @@
 define <2 x half> @select_v2f16(i1 zeroext %c, <2 x half> %a, <2 x half> %b) {
 ; CHECK-LABEL: select_v2f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <2 x half> %a, <2 x half> %b
@@ -21,10 +21,10 @@ define <2 x half> @selectcc_v2f16(half %a, half %b, <2 x half> %c, <2 x half> %d
 ; CHECK-LABEL: selectcc_v2f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    feq.h a0, fa0, fa1
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %cmp = fcmp oeq half %a, %b
@@ -35,10 +35,10 @@ define <2 x half> @selectcc_v2f16(half %a, half %b, <2 x half> %c, <2 x half> %d
 define <4 x half> @select_v4f16(i1 zeroext %c, <4 x half> %a, <4 x half> %b) {
 ; CHECK-LABEL: select_v4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <4 x half> %a, <4 x half> %b
@@ -49,10 +49,10 @@ define <4 x half> @selectcc_v4f16(half %a, half %b, <4 x half> %c, <4 x half> %d
 ; CHECK-LABEL: selectcc_v4f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    feq.h a0, fa0, fa1
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %cmp = fcmp oeq half %a, %b
@@ -63,10 +63,10 @@ define <4 x half> @selectcc_v4f16(half %a, half %b, <4 x half> %c, <4 x half> %d
 define <8 x half> @select_v8f16(i1 zeroext %c, <8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: select_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <8 x half> %a, <8 x half> %b
@@ -77,10 +77,10 @@ define <8 x half> @selectcc_v8f16(half %a, half %b, <8 x half> %c, <8 x half> %d
 ; CHECK-LABEL: selectcc_v8f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    feq.h a0, fa0, fa1
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %cmp = fcmp oeq half %a, %b
@@ -91,10 +91,10 @@ define <8 x half> @selectcc_v8f16(half %a, half %b, <8 x half> %c, <8 x half> %d
 define <16 x half> @select_v16f16(i1 zeroext %c, <16 x half> %a, <16 x half> %b) {
 ; CHECK-LABEL: select_v16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
 ; CHECK-NEXT:    vmsne.vi v0, v12, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <16 x half> %a, <16 x half> %b
@@ -105,10 +105,10 @@ define <16 x half> @selectcc_v16f16(half %a, half %b, <16 x half> %c, <16 x half
 ; CHECK-LABEL: selectcc_v16f16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    feq.h a0, fa0, fa1
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
 ; CHECK-NEXT:    vmsne.vi v0, v12, 0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; CHECK-NEXT:    ret
   %cmp = fcmp oeq half %a, %b
@@ -119,10 +119,10 @@ define <16 x half> @selectcc_v16f16(half %a, half %b, <16 x half> %c, <16 x half
 define <2 x float> @select_v2f32(i1 zeroext %c, <2 x float> %a, <2 x float> %b) {
 ; CHECK-LABEL: select_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <2 x float> %a, <2 x float> %b
@@ -133,10 +133,10 @@ define <2 x float> @selectcc_v2f32(float %a, float %b, <2 x float> %c, <2 x floa
 ; CHECK-LABEL: selectcc_v2f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    feq.s a0, fa0, fa1
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %cmp = fcmp oeq float %a, %b
@@ -147,10 +147,10 @@ define <2 x float> @selectcc_v2f32(float %a, float %b, <2 x float> %c, <2 x floa
 define <4 x float> @select_v4f32(i1 zeroext %c, <4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: select_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <4 x float> %a, <4 x float> %b
@@ -161,10 +161,10 @@ define <4 x float> @selectcc_v4f32(float %a, float %b, <4 x float> %c, <4 x floa
 ; CHECK-LABEL: selectcc_v4f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    feq.s a0, fa0, fa1
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %cmp = fcmp oeq float %a, %b
@@ -175,10 +175,10 @@ define <4 x float> @selectcc_v4f32(float %a, float %b, <4 x float> %c, <4 x floa
 define <8 x float> @select_v8f32(i1 zeroext %c, <8 x float> %a, <8 x float> %b) {
 ; CHECK-LABEL: select_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
 ; CHECK-NEXT:    vmsne.vi v0, v12, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <8 x float> %a, <8 x float> %b
@@ -189,10 +189,10 @@ define <8 x float> @selectcc_v8f32(float %a, float %b, <8 x float> %c, <8 x floa
 ; CHECK-LABEL: selectcc_v8f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    feq.s a0, fa0, fa1
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
 ; CHECK-NEXT:    vmsne.vi v0, v12, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; CHECK-NEXT:    ret
   %cmp = fcmp oeq float %a, %b
@@ -203,10 +203,10 @@ define <8 x float> @selectcc_v8f32(float %a, float %b, <8 x float> %c, <8 x floa
 define <16 x float> @select_v16f32(i1 zeroext %c, <16 x float> %a, <16 x float> %b) {
 ; CHECK-LABEL: select_v16f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v16, a0
 ; CHECK-NEXT:    vmsne.vi v0, v16, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v12, v8, v0
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <16 x float> %a, <16 x float> %b
@@ -217,10 +217,10 @@ define <16 x float> @selectcc_v16f32(float %a, float %b, <16 x float> %c, <16 x 
 ; CHECK-LABEL: selectcc_v16f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    feq.s a0, fa0, fa1
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v16, a0
 ; CHECK-NEXT:    vmsne.vi v0, v16, 0
-; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v12, v8, v0
 ; CHECK-NEXT:    ret
   %cmp = fcmp oeq float %a, %b
@@ -231,10 +231,10 @@ define <16 x float> @selectcc_v16f32(float %a, float %b, <16 x float> %c, <16 x 
 define <2 x double> @select_v2f64(i1 zeroext %c, <2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: select_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <2 x double> %a, <2 x double> %b
@@ -245,10 +245,10 @@ define <2 x double> @selectcc_v2f64(double %a, double %b, <2 x double> %c, <2 x 
 ; CHECK-LABEL: selectcc_v2f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    feq.d a0, fa0, fa1
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    vmsne.vi v0, v10, 0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; CHECK-NEXT:    ret
   %cmp = fcmp oeq double %a, %b
@@ -259,10 +259,10 @@ define <2 x double> @selectcc_v2f64(double %a, double %b, <2 x double> %c, <2 x 
 define <4 x double> @select_v4f64(i1 zeroext %c, <4 x double> %a, <4 x double> %b) {
 ; CHECK-LABEL: select_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
 ; CHECK-NEXT:    vmsne.vi v0, v12, 0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <4 x double> %a, <4 x double> %b
@@ -273,10 +273,10 @@ define <4 x double> @selectcc_v4f64(double %a, double %b, <4 x double> %c, <4 x 
 ; CHECK-LABEL: selectcc_v4f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    feq.d a0, fa0, fa1
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v12, a0
 ; CHECK-NEXT:    vmsne.vi v0, v12, 0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v10, v8, v0
 ; CHECK-NEXT:    ret
   %cmp = fcmp oeq double %a, %b
@@ -287,10 +287,10 @@ define <4 x double> @selectcc_v4f64(double %a, double %b, <4 x double> %c, <4 x 
 define <8 x double> @select_v8f64(i1 zeroext %c, <8 x double> %a, <8 x double> %b) {
 ; CHECK-LABEL: select_v8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v16, a0
 ; CHECK-NEXT:    vmsne.vi v0, v16, 0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v12, v8, v0
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <8 x double> %a, <8 x double> %b
@@ -301,10 +301,10 @@ define <8 x double> @selectcc_v8f64(double %a, double %b, <8 x double> %c, <8 x 
 ; CHECK-LABEL: selectcc_v8f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    feq.d a0, fa0, fa1
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v16, a0
 ; CHECK-NEXT:    vmsne.vi v0, v16, 0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v12, v8, v0
 ; CHECK-NEXT:    ret
   %cmp = fcmp oeq double %a, %b
@@ -315,10 +315,10 @@ define <8 x double> @selectcc_v8f64(double %a, double %b, <8 x double> %c, <8 x 
 define <16 x double> @select_v16f64(i1 zeroext %c, <16 x double> %a, <16 x double> %b) {
 ; CHECK-LABEL: select_v16f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v24, a0
 ; CHECK-NEXT:    vmsne.vi v0, v24, 0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v16, v8, v0
 ; CHECK-NEXT:    ret
   %v = select i1 %c, <16 x double> %a, <16 x double> %b
@@ -329,10 +329,10 @@ define <16 x double> @selectcc_v16f64(double %a, double %b, <16 x double> %c, <1
 ; CHECK-LABEL: selectcc_v16f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    feq.d a0, fa0, fa1
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v24, a0
 ; CHECK-NEXT:    vmsne.vi v0, v24, 0
-; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v16, v8, v0
 ; CHECK-NEXT:    ret
   %cmp = fcmp oeq double %a, %b

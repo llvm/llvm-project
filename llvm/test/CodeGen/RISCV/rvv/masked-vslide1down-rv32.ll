@@ -15,10 +15,10 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_mask_tumu_vx_nxv1i64_nxv1i64_i6
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a3, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    slli a3, a3, 1
-; CHECK-NEXT:    vsetvli zero, a3, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a3, e32, m1, ta, ma
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a0
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a1
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
 ; CHECK-NEXT:    ret
 entry:
@@ -37,10 +37,10 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_mask_tamu_vx_nxv1i64_nxv1i64_i6
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a3, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    slli a3, a3, 1
-; CHECK-NEXT:    vsetvli zero, a3, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a3, e32, m1, ta, ma
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a0
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a1
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
 ; CHECK-NEXT:    ret
 entry:
@@ -61,10 +61,10 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_mask_tuma_vx_nxv1i64_nxv1i64_i6
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a3, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    slli a3, a3, 1
-; CHECK-NEXT:    vsetvli zero, a3, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a3, e32, m1, ta, ma
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a0
 ; CHECK-NEXT:    vslide1down.vx v9, v9, a1
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, tu, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, tu, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
 ; CHECK-NEXT:    ret
 entry:
@@ -84,7 +84,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_mask_tama_vx_nxv1i64_nxv1i64_i6
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    slli a2, a2, 1
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-NEXT:    ret
@@ -104,7 +104,7 @@ define <vscale x 1 x i64> @intrinsic_vslide1down_mask_tama_undef_mask_vx_nxv1i64
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli a2, a2, e64, m1, ta, mu
 ; CHECK-NEXT:    slli a2, a2, 1
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a0
 ; CHECK-NEXT:    vslide1down.vx v8, v8, a1
 ; CHECK-NEXT:    ret

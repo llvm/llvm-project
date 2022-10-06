@@ -5,7 +5,7 @@
 define <vscale x 1 x i16> @bswap_nxv1i16(<vscale x 1 x i16> %va) {
 ; CHECK-LABEL: bswap_nxv1i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsrl.vi v9, v8, 8
 ; CHECK-NEXT:    vsll.vi v8, v8, 8
 ; CHECK-NEXT:    vor.vv v8, v8, v9
@@ -18,7 +18,7 @@ declare <vscale x 1 x i16> @llvm.bswap.nxv1i16(<vscale x 1 x i16>)
 define <vscale x 2 x i16> @bswap_nxv2i16(<vscale x 2 x i16> %va) {
 ; CHECK-LABEL: bswap_nxv2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsrl.vi v9, v8, 8
 ; CHECK-NEXT:    vsll.vi v8, v8, 8
 ; CHECK-NEXT:    vor.vv v8, v8, v9
@@ -31,7 +31,7 @@ declare <vscale x 2 x i16> @llvm.bswap.nxv2i16(<vscale x 2 x i16>)
 define <vscale x 4 x i16> @bswap_nxv4i16(<vscale x 4 x i16> %va) {
 ; CHECK-LABEL: bswap_nxv4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vsrl.vi v9, v8, 8
 ; CHECK-NEXT:    vsll.vi v8, v8, 8
 ; CHECK-NEXT:    vor.vv v8, v8, v9
@@ -44,7 +44,7 @@ declare <vscale x 4 x i16> @llvm.bswap.nxv4i16(<vscale x 4 x i16>)
 define <vscale x 8 x i16> @bswap_nxv8i16(<vscale x 8 x i16> %va) {
 ; CHECK-LABEL: bswap_nxv8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vsrl.vi v10, v8, 8
 ; CHECK-NEXT:    vsll.vi v8, v8, 8
 ; CHECK-NEXT:    vor.vv v8, v8, v10
@@ -57,7 +57,7 @@ declare <vscale x 8 x i16> @llvm.bswap.nxv8i16(<vscale x 8 x i16>)
 define <vscale x 16 x i16> @bswap_nxv16i16(<vscale x 16 x i16> %va) {
 ; CHECK-LABEL: bswap_nxv16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vsrl.vi v12, v8, 8
 ; CHECK-NEXT:    vsll.vi v8, v8, 8
 ; CHECK-NEXT:    vor.vv v8, v8, v12
@@ -70,7 +70,7 @@ declare <vscale x 16 x i16> @llvm.bswap.nxv16i16(<vscale x 16 x i16>)
 define <vscale x 32 x i16> @bswap_nxv32i16(<vscale x 32 x i16> %va) {
 ; CHECK-LABEL: bswap_nxv32i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
 ; CHECK-NEXT:    vsrl.vi v16, v8, 8
 ; CHECK-NEXT:    vsll.vi v8, v8, 8
 ; CHECK-NEXT:    vor.vv v8, v8, v16
@@ -83,7 +83,7 @@ declare <vscale x 32 x i16> @llvm.bswap.nxv32i16(<vscale x 32 x i16>)
 define <vscale x 1 x i32> @bswap_nxv1i32(<vscale x 1 x i32> %va) {
 ; RV32-LABEL: bswap_nxv1i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; RV32-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vsrl.vi v9, v8, 8
 ; RV32-NEXT:    lui a0, 16
 ; RV32-NEXT:    addi a0, a0, -256
@@ -100,7 +100,7 @@ define <vscale x 1 x i32> @bswap_nxv1i32(<vscale x 1 x i32> %va) {
 ;
 ; RV64-LABEL: bswap_nxv1i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; RV64-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; RV64-NEXT:    vsrl.vi v9, v8, 8
 ; RV64-NEXT:    lui a0, 16
 ; RV64-NEXT:    addiw a0, a0, -256
@@ -122,7 +122,7 @@ declare <vscale x 1 x i32> @llvm.bswap.nxv1i32(<vscale x 1 x i32>)
 define <vscale x 2 x i32> @bswap_nxv2i32(<vscale x 2 x i32> %va) {
 ; RV32-LABEL: bswap_nxv2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; RV32-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; RV32-NEXT:    vsrl.vi v9, v8, 8
 ; RV32-NEXT:    lui a0, 16
 ; RV32-NEXT:    addi a0, a0, -256
@@ -139,7 +139,7 @@ define <vscale x 2 x i32> @bswap_nxv2i32(<vscale x 2 x i32> %va) {
 ;
 ; RV64-LABEL: bswap_nxv2i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; RV64-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; RV64-NEXT:    vsrl.vi v9, v8, 8
 ; RV64-NEXT:    lui a0, 16
 ; RV64-NEXT:    addiw a0, a0, -256
@@ -161,7 +161,7 @@ declare <vscale x 2 x i32> @llvm.bswap.nxv2i32(<vscale x 2 x i32>)
 define <vscale x 4 x i32> @bswap_nxv4i32(<vscale x 4 x i32> %va) {
 ; RV32-LABEL: bswap_nxv4i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; RV32-NEXT:    vsrl.vi v10, v8, 8
 ; RV32-NEXT:    lui a0, 16
 ; RV32-NEXT:    addi a0, a0, -256
@@ -178,7 +178,7 @@ define <vscale x 4 x i32> @bswap_nxv4i32(<vscale x 4 x i32> %va) {
 ;
 ; RV64-LABEL: bswap_nxv4i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; RV64-NEXT:    vsrl.vi v10, v8, 8
 ; RV64-NEXT:    lui a0, 16
 ; RV64-NEXT:    addiw a0, a0, -256
@@ -200,7 +200,7 @@ declare <vscale x 4 x i32> @llvm.bswap.nxv4i32(<vscale x 4 x i32>)
 define <vscale x 8 x i32> @bswap_nxv8i32(<vscale x 8 x i32> %va) {
 ; RV32-LABEL: bswap_nxv8i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; RV32-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; RV32-NEXT:    vsrl.vi v12, v8, 8
 ; RV32-NEXT:    lui a0, 16
 ; RV32-NEXT:    addi a0, a0, -256
@@ -217,7 +217,7 @@ define <vscale x 8 x i32> @bswap_nxv8i32(<vscale x 8 x i32> %va) {
 ;
 ; RV64-LABEL: bswap_nxv8i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; RV64-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; RV64-NEXT:    vsrl.vi v12, v8, 8
 ; RV64-NEXT:    lui a0, 16
 ; RV64-NEXT:    addiw a0, a0, -256
@@ -239,7 +239,7 @@ declare <vscale x 8 x i32> @llvm.bswap.nxv8i32(<vscale x 8 x i32>)
 define <vscale x 16 x i32> @bswap_nxv16i32(<vscale x 16 x i32> %va) {
 ; RV32-LABEL: bswap_nxv16i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
+; RV32-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; RV32-NEXT:    vsrl.vi v16, v8, 8
 ; RV32-NEXT:    lui a0, 16
 ; RV32-NEXT:    addi a0, a0, -256
@@ -256,7 +256,7 @@ define <vscale x 16 x i32> @bswap_nxv16i32(<vscale x 16 x i32> %va) {
 ;
 ; RV64-LABEL: bswap_nxv16i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e32, m8, ta, mu
+; RV64-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; RV64-NEXT:    vsrl.vi v16, v8, 8
 ; RV64-NEXT:    lui a0, 16
 ; RV64-NEXT:    addiw a0, a0, -256
@@ -292,7 +292,7 @@ define <vscale x 1 x i64> @bswap_nxv1i64(<vscale x 1 x i64> %va) {
 ; RV32-NEXT:    addi a1, a1, -256
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    li a2, 56
-; RV32-NEXT:    vsetvli a3, zero, e64, m1, ta, mu
+; RV32-NEXT:    vsetvli a3, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vsrl.vx v9, v8, a2
 ; RV32-NEXT:    li a3, 40
 ; RV32-NEXT:    vsrl.vx v10, v8, a3
@@ -326,7 +326,7 @@ define <vscale x 1 x i64> @bswap_nxv1i64(<vscale x 1 x i64> %va) {
 ; RV64-LABEL: bswap_nxv1i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a0, 56
-; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV64-NEXT:    vsrl.vx v9, v8, a0
 ; RV64-NEXT:    li a1, 40
 ; RV64-NEXT:    vsrl.vx v10, v8, a1
@@ -380,7 +380,7 @@ define <vscale x 2 x i64> @bswap_nxv2i64(<vscale x 2 x i64> %va) {
 ; RV32-NEXT:    addi a1, a1, -256
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    li a2, 56
-; RV32-NEXT:    vsetvli a3, zero, e64, m2, ta, mu
+; RV32-NEXT:    vsetvli a3, zero, e64, m2, ta, ma
 ; RV32-NEXT:    vsrl.vx v10, v8, a2
 ; RV32-NEXT:    li a3, 40
 ; RV32-NEXT:    vsrl.vx v12, v8, a3
@@ -414,7 +414,7 @@ define <vscale x 2 x i64> @bswap_nxv2i64(<vscale x 2 x i64> %va) {
 ; RV64-LABEL: bswap_nxv2i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a0, 56
-; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, mu
+; RV64-NEXT:    vsetvli a1, zero, e64, m2, ta, ma
 ; RV64-NEXT:    vsrl.vx v10, v8, a0
 ; RV64-NEXT:    li a1, 40
 ; RV64-NEXT:    vsrl.vx v12, v8, a1
@@ -468,7 +468,7 @@ define <vscale x 4 x i64> @bswap_nxv4i64(<vscale x 4 x i64> %va) {
 ; RV32-NEXT:    addi a1, a1, -256
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    li a2, 56
-; RV32-NEXT:    vsetvli a3, zero, e64, m4, ta, mu
+; RV32-NEXT:    vsetvli a3, zero, e64, m4, ta, ma
 ; RV32-NEXT:    vsrl.vx v12, v8, a2
 ; RV32-NEXT:    li a3, 40
 ; RV32-NEXT:    vsrl.vx v16, v8, a3
@@ -502,7 +502,7 @@ define <vscale x 4 x i64> @bswap_nxv4i64(<vscale x 4 x i64> %va) {
 ; RV64-LABEL: bswap_nxv4i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a0, 56
-; RV64-NEXT:    vsetvli a1, zero, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli a1, zero, e64, m4, ta, ma
 ; RV64-NEXT:    vsrl.vx v12, v8, a0
 ; RV64-NEXT:    li a1, 40
 ; RV64-NEXT:    vsrl.vx v16, v8, a1
@@ -559,7 +559,7 @@ define <vscale x 8 x i64> @bswap_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV32-NEXT:    addi a1, a1, -256
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    li a2, 56
-; RV32-NEXT:    vsetvli a3, zero, e64, m8, ta, mu
+; RV32-NEXT:    vsetvli a3, zero, e64, m8, ta, ma
 ; RV32-NEXT:    li a3, 40
 ; RV32-NEXT:    vsrl.vx v16, v8, a3
 ; RV32-NEXT:    vand.vx v16, v16, a1
@@ -620,7 +620,7 @@ define <vscale x 8 x i64> @bswap_nxv8i64(<vscale x 8 x i64> %va) {
 ; RV64-LABEL: bswap_nxv8i64:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a0, 56
-; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, mu
+; RV64-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
 ; RV64-NEXT:    vsrl.vx v16, v8, a0
 ; RV64-NEXT:    li a1, 40
 ; RV64-NEXT:    vsrl.vx v24, v8, a1

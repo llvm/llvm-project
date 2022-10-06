@@ -546,3 +546,27 @@
 
 // CHECK: [[L0:[0-9]+]]: linker, {[[A3]], [[B3]]}, ir, (device-hip, [[ARCH]])
 // CHECK: offload, "device-hip (amdgcn-amd-amdhsa:[[ARCH]])" {[[L0]]}, ir
+
+//
+// Test the bindings using the new driver in LTO-mode.
+//
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-phases \
+// RUN:        --offload-arch=gfx90a --offload-arch=gfx908 -foffload-lto -fgpu-rdc -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix=LTO %s
+//      LTO: 0: input, "[[INPUT:.+]]", hip, (host-hip)
+// LTO-NEXT: 1: preprocessor, {0}, hip-cpp-output, (host-hip)
+// LTO-NEXT: 2: compiler, {1}, ir, (host-hip)
+// LTO-NEXT: 3: input, "[[INPUT]]", hip, (device-hip, gfx908)
+// LTO-NEXT: 4: preprocessor, {3}, hip-cpp-output, (device-hip, gfx908)
+// LTO-NEXT: 5: compiler, {4}, ir, (device-hip, gfx908)
+// LTO-NEXT: 6: backend, {5}, lto-bc, (device-hip, gfx908)
+// LTO-NEXT: 7: offload, "device-hip (amdgcn-amd-amdhsa:gfx908)" {6}, lto-bc
+// LTO-NEXT: 8: input, "[[INPUT]]", hip, (device-hip, gfx90a)
+// LTO-NEXT: 9: preprocessor, {8}, hip-cpp-output, (device-hip, gfx90a)
+// LTO-NEXT: 10: compiler, {9}, ir, (device-hip, gfx90a)
+// LTO-NEXT: 11: backend, {10}, lto-bc, (device-hip, gfx90a)
+// LTO-NEXT: 12: offload, "device-hip (amdgcn-amd-amdhsa:gfx90a)" {11}, lto-bc
+// LTO-NEXT: 13: clang-offload-packager, {7, 12}, image, (device-hip)
+// LTO-NEXT: 14: offload, "host-hip (x86_64-unknown-linux-gnu)" {2}, "device-hip (x86_64-unknown-linux-gnu)" {13}, ir
+// LTO-NEXT: 15: backend, {14}, assembler, (host-hip)
+// LTO-NEXT: 16: assembler, {15}, object, (host-hip)
