@@ -528,7 +528,8 @@ public:
   /// When IgnoreTemplateOrMacroSubstitution is set, it doesn't consider sizes
   /// resulting from the substitution of a macro or a template as special sizes.
   bool isFlexibleArrayMemberLike(
-      ASTContext &Context, unsigned StrictFlexArraysLevel,
+      ASTContext &Context,
+      LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
       bool IgnoreTemplateOrMacroSubstitution = false) const;
 
   /// isIntegerConstantExpr - Return the value if this expression is a valid
