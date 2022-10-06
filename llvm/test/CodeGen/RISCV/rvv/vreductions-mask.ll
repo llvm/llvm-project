@@ -7,7 +7,7 @@ declare i1 @llvm.vector.reduce.or.nxv1i1(<vscale x 1 x i1>)
 define signext i1 @vreduce_or_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_nxv1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -21,7 +21,7 @@ declare i1 @llvm.vector.reduce.xor.nxv1i1(<vscale x 1 x i1>)
 define signext i1 @vreduce_xor_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_nxv1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -35,7 +35,7 @@ declare i1 @llvm.vector.reduce.and.nxv1i1(<vscale x 1 x i1>)
 define signext i1 @vreduce_and_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -50,7 +50,7 @@ declare i1 @llvm.vector.reduce.umax.nxv1i1(<vscale x 1 x i1>)
 define signext i1 @vreduce_umax_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_nxv1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -64,7 +64,7 @@ declare i1 @llvm.vector.reduce.smax.nxv1i1(<vscale x 1 x i1>)
 define signext i1 @vreduce_smax_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -79,7 +79,7 @@ declare i1 @llvm.vector.reduce.umin.nxv1i1(<vscale x 1 x i1>)
 define signext i1 @vreduce_umin_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -94,7 +94,7 @@ declare i1 @llvm.vector.reduce.smin.nxv1i1(<vscale x 1 x i1>)
 define signext i1 @vreduce_smin_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -108,7 +108,7 @@ declare i1 @llvm.vector.reduce.or.nxv2i1(<vscale x 2 x i1>)
 define signext i1 @vreduce_or_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_nxv2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -122,7 +122,7 @@ declare i1 @llvm.vector.reduce.xor.nxv2i1(<vscale x 2 x i1>)
 define signext i1 @vreduce_xor_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_nxv2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -136,7 +136,7 @@ declare i1 @llvm.vector.reduce.and.nxv2i1(<vscale x 2 x i1>)
 define signext i1 @vreduce_and_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -151,7 +151,7 @@ declare i1 @llvm.vector.reduce.umax.nxv2i1(<vscale x 2 x i1>)
 define signext i1 @vreduce_umax_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_nxv2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -165,7 +165,7 @@ declare i1 @llvm.vector.reduce.smax.nxv2i1(<vscale x 2 x i1>)
 define signext i1 @vreduce_smax_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -180,7 +180,7 @@ declare i1 @llvm.vector.reduce.umin.nxv2i1(<vscale x 2 x i1>)
 define signext i1 @vreduce_umin_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -195,7 +195,7 @@ declare i1 @llvm.vector.reduce.smin.nxv2i1(<vscale x 2 x i1>)
 define signext i1 @vreduce_smin_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -209,7 +209,7 @@ declare i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1>)
 define signext i1 @vreduce_or_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_nxv4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -223,7 +223,7 @@ declare i1 @llvm.vector.reduce.xor.nxv4i1(<vscale x 4 x i1>)
 define signext i1 @vreduce_xor_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_nxv4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -237,7 +237,7 @@ declare i1 @llvm.vector.reduce.and.nxv4i1(<vscale x 4 x i1>)
 define signext i1 @vreduce_and_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -252,7 +252,7 @@ declare i1 @llvm.vector.reduce.umax.nxv4i1(<vscale x 4 x i1>)
 define signext i1 @vreduce_umax_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_nxv4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -266,7 +266,7 @@ declare i1 @llvm.vector.reduce.smax.nxv4i1(<vscale x 4 x i1>)
 define signext i1 @vreduce_smax_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -281,7 +281,7 @@ declare i1 @llvm.vector.reduce.umin.nxv4i1(<vscale x 4 x i1>)
 define signext i1 @vreduce_umin_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -296,7 +296,7 @@ declare i1 @llvm.vector.reduce.smin.nxv4i1(<vscale x 4 x i1>)
 define signext i1 @vreduce_smin_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -310,7 +310,7 @@ declare i1 @llvm.vector.reduce.or.nxv8i1(<vscale x 8 x i1>)
 define signext i1 @vreduce_or_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_nxv8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -324,7 +324,7 @@ declare i1 @llvm.vector.reduce.xor.nxv8i1(<vscale x 8 x i1>)
 define signext i1 @vreduce_xor_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_nxv8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -338,7 +338,7 @@ declare i1 @llvm.vector.reduce.and.nxv8i1(<vscale x 8 x i1>)
 define signext i1 @vreduce_and_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -353,7 +353,7 @@ declare i1 @llvm.vector.reduce.umax.nxv8i1(<vscale x 8 x i1>)
 define signext i1 @vreduce_umax_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_nxv8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -367,7 +367,7 @@ declare i1 @llvm.vector.reduce.smax.nxv8i1(<vscale x 8 x i1>)
 define signext i1 @vreduce_smax_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -382,7 +382,7 @@ declare i1 @llvm.vector.reduce.umin.nxv8i1(<vscale x 8 x i1>)
 define signext i1 @vreduce_umin_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -397,7 +397,7 @@ declare i1 @llvm.vector.reduce.smin.nxv8i1(<vscale x 8 x i1>)
 define signext i1 @vreduce_smin_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -411,7 +411,7 @@ declare i1 @llvm.vector.reduce.or.nxv16i1(<vscale x 16 x i1>)
 define signext i1 @vreduce_or_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_nxv16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -425,7 +425,7 @@ declare i1 @llvm.vector.reduce.xor.nxv16i1(<vscale x 16 x i1>)
 define signext i1 @vreduce_xor_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_nxv16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -439,7 +439,7 @@ declare i1 @llvm.vector.reduce.and.nxv16i1(<vscale x 16 x i1>)
 define signext i1 @vreduce_and_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -454,7 +454,7 @@ declare i1 @llvm.vector.reduce.umax.nxv16i1(<vscale x 16 x i1>)
 define signext i1 @vreduce_umax_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_nxv16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -468,7 +468,7 @@ declare i1 @llvm.vector.reduce.smax.nxv16i1(<vscale x 16 x i1>)
 define signext i1 @vreduce_smax_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -483,7 +483,7 @@ declare i1 @llvm.vector.reduce.umin.nxv16i1(<vscale x 16 x i1>)
 define signext i1 @vreduce_umin_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -498,7 +498,7 @@ declare i1 @llvm.vector.reduce.smin.nxv16i1(<vscale x 16 x i1>)
 define signext i1 @vreduce_smin_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -512,7 +512,7 @@ declare i1 @llvm.vector.reduce.or.nxv32i1(<vscale x 32 x i1>)
 define signext i1 @vreduce_or_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_nxv32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -526,7 +526,7 @@ declare i1 @llvm.vector.reduce.xor.nxv32i1(<vscale x 32 x i1>)
 define signext i1 @vreduce_xor_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_nxv32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -540,7 +540,7 @@ declare i1 @llvm.vector.reduce.and.nxv32i1(<vscale x 32 x i1>)
 define signext i1 @vreduce_and_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -555,7 +555,7 @@ declare i1 @llvm.vector.reduce.umax.nxv32i1(<vscale x 32 x i1>)
 define signext i1 @vreduce_umax_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_nxv32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -569,7 +569,7 @@ declare i1 @llvm.vector.reduce.smax.nxv32i1(<vscale x 32 x i1>)
 define signext i1 @vreduce_smax_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -584,7 +584,7 @@ declare i1 @llvm.vector.reduce.umin.nxv32i1(<vscale x 32 x i1>)
 define signext i1 @vreduce_umin_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -599,7 +599,7 @@ declare i1 @llvm.vector.reduce.smin.nxv32i1(<vscale x 32 x i1>)
 define signext i1 @vreduce_smin_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -613,7 +613,7 @@ declare i1 @llvm.vector.reduce.or.nxv64i1(<vscale x 64 x i1>)
 define signext i1 @vreduce_or_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_nxv64i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -627,7 +627,7 @@ declare i1 @llvm.vector.reduce.xor.nxv64i1(<vscale x 64 x i1>)
 define signext i1 @vreduce_xor_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_nxv64i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -641,7 +641,7 @@ declare i1 @llvm.vector.reduce.and.nxv64i1(<vscale x 64 x i1>)
 define signext i1 @vreduce_and_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_nxv64i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -656,7 +656,7 @@ declare i1 @llvm.vector.reduce.umax.nxv64i1(<vscale x 64 x i1>)
 define signext i1 @vreduce_umax_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_nxv64i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -670,7 +670,7 @@ declare i1 @llvm.vector.reduce.smax.nxv64i1(<vscale x 64 x i1>)
 define signext i1 @vreduce_smax_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_nxv64i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -685,7 +685,7 @@ declare i1 @llvm.vector.reduce.umin.nxv64i1(<vscale x 64 x i1>)
 define signext i1 @vreduce_umin_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_nxv64i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -700,7 +700,7 @@ declare i1 @llvm.vector.reduce.smin.nxv64i1(<vscale x 64 x i1>)
 define signext i1 @vreduce_smin_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_nxv64i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -714,7 +714,7 @@ declare i1 @llvm.vector.reduce.add.nxv1i1(<vscale x 1 x i1>)
 define signext i1 @vreduce_add_nxv1i1(<vscale x 1 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_nxv1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -728,7 +728,7 @@ declare i1 @llvm.vector.reduce.add.nxv2i1(<vscale x 2 x i1>)
 define signext i1 @vreduce_add_nxv2i1(<vscale x 2 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_nxv2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -742,7 +742,7 @@ declare i1 @llvm.vector.reduce.add.nxv4i1(<vscale x 4 x i1>)
 define signext i1 @vreduce_add_nxv4i1(<vscale x 4 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_nxv4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -756,7 +756,7 @@ declare i1 @llvm.vector.reduce.add.nxv8i1(<vscale x 8 x i1>)
 define signext i1 @vreduce_add_nxv8i1(<vscale x 8 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_nxv8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -770,7 +770,7 @@ declare i1 @llvm.vector.reduce.add.nxv16i1(<vscale x 16 x i1>)
 define signext i1 @vreduce_add_nxv16i1(<vscale x 16 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_nxv16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -784,7 +784,7 @@ declare i1 @llvm.vector.reduce.add.nxv32i1(<vscale x 32 x i1>)
 define signext i1 @vreduce_add_nxv32i1(<vscale x 32 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_nxv32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -798,7 +798,7 @@ declare i1 @llvm.vector.reduce.add.nxv64i1(<vscale x 64 x i1>)
 define signext i1 @vreduce_add_nxv64i1(<vscale x 64 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_nxv64i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0

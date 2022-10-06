@@ -6,7 +6,7 @@ define <vscale x 1 x i32> @fshr(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <v
 ; CHECK-LABEL: fshr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 31
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vand.vx v11, v10, a0
 ; CHECK-NEXT:    vsrl.vv v9, v9, v11
 ; CHECK-NEXT:    vnot.v v10, v10
@@ -23,7 +23,7 @@ define <vscale x 1 x i32> @fshl(<vscale x 1 x i32> %a, <vscale x 1 x i32> %b, <v
 ; CHECK-LABEL: fshl:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a0, 31
-; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vand.vx v11, v10, a0
 ; CHECK-NEXT:    vsll.vv v8, v8, v11
 ; CHECK-NEXT:    vnot.v v10, v10

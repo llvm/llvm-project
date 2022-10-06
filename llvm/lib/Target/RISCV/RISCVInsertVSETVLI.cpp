@@ -773,13 +773,7 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
   // destination is tied to a source. Unless the source is undef. In that case
   // the user would have some control over the policy values.
   bool TailAgnostic = true;
-  bool UsesMaskPolicy = RISCVII::usesMaskPolicy(TSFlags);
-  // FIXME: Could we look at the above or below instructions to choose the
-  // matched mask policy to reduce vsetvli instructions? Default mask policy is
-  // agnostic if instructions use mask policy, otherwise is undisturbed. Because
-  // most mask operations are mask undisturbed, so we could possibly reduce the
-  // vsetvli between mask and nomasked instruction sequence.
-  bool MaskAgnostic = UsesMaskPolicy;
+  bool MaskAgnostic = true;
   unsigned UseOpIdx;
   if (RISCVII::hasVecPolicyOp(TSFlags)) {
     const MachineOperand &Op = MI.getOperand(MI.getNumExplicitOperands() - 1);
@@ -794,21 +788,22 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
     MaskAgnostic = Policy & RISCVII::MASK_AGNOSTIC;
   } else if (MI.isRegTiedToUseOperand(0, &UseOpIdx)) {
     TailAgnostic = false;
-    if (UsesMaskPolicy)
-      MaskAgnostic = false;
+    MaskAgnostic = false;
     // If the tied operand is an IMPLICIT_DEF we can keep TailAgnostic.
     const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
     MachineInstr *UseMI = MRI->getVRegDef(UseMO.getReg());
     if (UseMI && UseMI->isImplicitDef()) {
       TailAgnostic = true;
-      if (UsesMaskPolicy)
-        MaskAgnostic = true;
+      MaskAgnostic = true;
     }
     // Some pseudo instructions force a tail agnostic policy despite having a
     // tied def.
     if (RISCVII::doesForceTailAgnostic(TSFlags))
       TailAgnostic = true;
   }
+
+  if (!RISCVII::usesMaskPolicy(TSFlags))
+    MaskAgnostic = true;
 
   RISCVII::VLMUL VLMul = RISCVII::getLMul(TSFlags);
 

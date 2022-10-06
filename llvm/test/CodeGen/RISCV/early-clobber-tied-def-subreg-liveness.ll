@@ -22,7 +22,7 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    sub sp, sp, a0
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_49)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_49)
-; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_48)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_48)
@@ -52,7 +52,7 @@ define void @_Z3foov() {
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    lui a0, %hi(.L__const._Z3foov.var_44)
 ; CHECK-NEXT:    addi a0, a0, %lo(.L__const._Z3foov.var_44)
-; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e16, m2, ta, ma
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 1
