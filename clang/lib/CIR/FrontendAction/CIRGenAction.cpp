@@ -214,7 +214,8 @@ public:
         }
 
         // Emit remaining defaulted C++ methods
-        gen->buildDefaultMethods();
+        if (!feOptions.ClangIRDisableEmitCXXDefault)
+          gen->buildDefaultMethods();
 
         // FIXME: we cannot roundtrip prettyForm=true right now.
         mlir::OpPrintingFlags flags;

@@ -420,6 +420,9 @@ public:
   /// Disable Clang IR (CIR) verifier
   unsigned ClangIRDisableCIRVerifier : 1;
 
+  /// Disable ClangIR emission for CXX default (compiler generated methods).
+  unsigned ClangIRDisableEmitCXXDefault : 1;
+
   /// Enable diagnostic verification for CIR
   unsigned ClangIRVerifyDiags : 1;
 
@@ -611,8 +614,8 @@ public:
         EmitSymbolGraphSymbolLabelsForTesting(false),
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
         UseClangIRPipeline(false), ClangIRDisablePasses(false),
-        ClangIRDisableCIRVerifier(false), ClangIRLifetimeCheck(false),
-        TimeTraceGranularity(500) {}
+        ClangIRDisableCIRVerifier(false), ClangIRDisableEmitCXXDefault(false),
+        ClangIRLifetimeCheck(false), TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.
