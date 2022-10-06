@@ -26,9 +26,6 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sched.sched_getaffinity
     libc.src.sched.sched_setaffinity
 
-    # signal.h entrypoints
-    libc.src.signal.kill
-
     # string.h entrypoints
     libc.src.string.bcmp
     libc.src.string.bzero
@@ -376,6 +373,7 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # signal.h entrypoints
     libc.src.signal.raise
+    libc.src.signal.kill
     libc.src.signal.sigaction
     libc.src.signal.sigdelset
     libc.src.signal.sigaddset
