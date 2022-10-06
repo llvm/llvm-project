@@ -323,12 +323,12 @@ define i5 @sdiv_mul_shl_nsw_commute1(i5 %x, i5 %y, i5 %z) {
 
 define i5 @sdiv_mul_shl_nsw_commute2(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @sdiv_mul_shl_nsw_commute2(
-; CHECK-NEXT:    [[M1:%.*]] = mul nsw i5 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[M1:%.*]] = mul nsw i5 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[M2:%.*]] = shl nsw i5 [[Z:%.*]], [[X]]
 ; CHECK-NEXT:    [[D:%.*]] = sdiv i5 [[M1]], [[M2]]
 ; CHECK-NEXT:    ret i5 [[D]]
 ;
-  %m1 = mul nsw i5 %x, %y
+  %m1 = mul nsw i5 %y, %x
   %m2 = shl nsw i5 %z, %x
   %d = sdiv i5 %m1, %m2
   ret i5 %d
@@ -420,11 +420,11 @@ define i5 @sdiv_mul_shl_missing_nsw2(i5 %x, i5 %y, i5 %z) {
   ret i5 %d
 }
 
+; (X * Y) u/ (X << Z) --> Y u>> Z
+
 define i5 @udiv_mul_shl_nuw(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @udiv_mul_shl_nuw(
-; CHECK-NEXT:    [[M1:%.*]] = mul nuw i5 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M2:%.*]] = shl nuw i5 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = udiv i5 [[M1]], [[M2]]
+; CHECK-NEXT:    [[D:%.*]] = lshr i5 [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i5 [[D]]
 ;
   %m1 = mul nuw i5 %x, %y
@@ -433,11 +433,11 @@ define i5 @udiv_mul_shl_nuw(i5 %x, i5 %y, i5 %z) {
   ret i5 %d
 }
 
+; (Y * X) u/ (X << Z) --> Y u>> Z
+
 define i5 @udiv_mul_shl_nuw_commute1(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @udiv_mul_shl_nuw_commute1(
-; CHECK-NEXT:    [[M1:%.*]] = mul nuw i5 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M2:%.*]] = shl nuw i5 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = udiv i5 [[M1]], [[M2]]
+; CHECK-NEXT:    [[D:%.*]] = lshr i5 [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i5 [[D]]
 ;
   %m1 = mul nuw i5 %y, %x
@@ -445,6 +445,8 @@ define i5 @udiv_mul_shl_nuw_commute1(i5 %x, i5 %y, i5 %z) {
   %d = udiv i5 %m1, %m2
   ret i5 %d
 }
+
+; negative test - shl is not commutative
 
 define i5 @udiv_mul_shl_nuw_commute2(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @udiv_mul_shl_nuw_commute2(
@@ -459,12 +461,13 @@ define i5 @udiv_mul_shl_nuw_commute2(i5 %x, i5 %y, i5 %z) {
   ret i5 %d
 }
 
+; extra uses are ok
+
 define i8 @udiv_mul_shl_nsw_use1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_mul_shl_nsw_use1(
 ; CHECK-NEXT:    [[M1:%.*]] = mul nuw i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[M1]])
-; CHECK-NEXT:    [[M2:%.*]] = shl nuw i8 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[M1]], [[M2]]
+; CHECK-NEXT:    [[D:%.*]] = lshr i8 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %m1 = mul nuw i8 %x, %y
@@ -474,12 +477,13 @@ define i8 @udiv_mul_shl_nsw_use1(i8 %x, i8 %y, i8 %z) {
   ret i8 %d
 }
 
+; extra uses are ok
+
 define i8 @udiv_mul_shl_nsw_use2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_mul_shl_nsw_use2(
-; CHECK-NEXT:    [[M1:%.*]] = mul nuw i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M2:%.*]] = shl nuw i8 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[M2:%.*]] = shl nuw i8 [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[M2]])
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[M1]], [[M2]]
+; CHECK-NEXT:    [[D:%.*]] = lshr i8 [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %m1 = mul nuw i8 %x, %y
@@ -488,6 +492,8 @@ define i8 @udiv_mul_shl_nsw_use2(i8 %x, i8 %y, i8 %z) {
   %d = udiv i8 %m1, %m2
   ret i8 %d
 }
+
+; extra uses are ok
 
 define i8 @udiv_mul_shl_nsw_use3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_mul_shl_nsw_use3(
@@ -495,7 +501,7 @@ define i8 @udiv_mul_shl_nsw_use3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-NEXT:    call void @use(i8 [[M1]])
 ; CHECK-NEXT:    [[M2:%.*]] = shl nuw i8 [[X]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[M2]])
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[M1]], [[M2]]
+; CHECK-NEXT:    [[D:%.*]] = lshr i8 [[Y]], [[Z]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %m1 = mul nuw i8 %x, %y
@@ -506,18 +512,22 @@ define i8 @udiv_mul_shl_nsw_use3(i8 %x, i8 %y, i8 %z) {
   ret i8 %d
 }
 
+; TODO: This can fold to (1<<z) / y
+
 define i5 @udiv_shl_mul_nuw(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @udiv_shl_mul_nuw(
-; CHECK-NEXT:    [[M1:%.*]] = shl nuw i5 [[Z:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[M1:%.*]] = shl nuw i5 [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    [[M2:%.*]] = mul nuw i5 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[D:%.*]] = udiv i5 [[M1]], [[M2]]
 ; CHECK-NEXT:    ret i5 [[D]]
 ;
-  %m1 = shl nuw i5 %z, %x
+  %m1 = shl nuw i5 %x, %z
   %m2 = mul nuw i5 %x, %y
   %d = udiv i5 %m1, %m2
   ret i5 %d
 }
+
+; negative test - wrong no-wrap
 
 define i5 @udiv_mul_shl_missing_nsw1(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @udiv_mul_shl_missing_nsw1(
@@ -531,6 +541,8 @@ define i5 @udiv_mul_shl_missing_nsw1(i5 %x, i5 %y, i5 %z) {
   %d = udiv i5 %m1, %m2
   ret i5 %d
 }
+
+; negative test - wrong no-wrap
 
 define i5 @udiv_mul_shl_missing_nsw2(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @udiv_mul_shl_missing_nsw2(
