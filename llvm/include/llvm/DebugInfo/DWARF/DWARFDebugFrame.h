@@ -162,7 +162,7 @@ public:
   /// instead of from .debug_frame. This is needed for register number
   /// conversion because some register numbers differ between the two sections
   /// for certain architectures like x86.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const;
+  void dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const;
 
   bool operator==(const UnwindLocation &RHS) const;
 };
@@ -220,7 +220,7 @@ public:
   /// instead of from .debug_frame. This is needed for register number
   /// conversion because some register numbers differ between the two sections
   /// for certain architectures like x86.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const;
+  void dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH) const;
 
   /// Returns true if we have any register locations in this object.
   bool hasLocations() const { return !Locations.empty(); }
@@ -301,7 +301,7 @@ public:
   ///
   /// \param IndentLevel specify the indent level as an integer. The UnwindRow
   /// will be output to the stream preceded by 2 * IndentLevel number of spaces.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+  void dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
             unsigned IndentLevel = 0) const;
 };
 
@@ -346,7 +346,7 @@ public:
   ///
   /// \param IndentLevel specify the indent level as an integer. The UnwindRow
   /// will be output to the stream preceded by 2 * IndentLevel number of spaces.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+  void dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
             unsigned IndentLevel = 0) const;
 
   /// Create an UnwindTable from a Common Information Entry (CIE).
@@ -452,8 +452,8 @@ public:
   /// where a problem occurred in case an error is returned.
   Error parse(DWARFDataExtractor Data, uint64_t *Offset, uint64_t EndOffset);
 
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
-            unsigned IndentLevel = 1) const;
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts, const MCRegisterInfo *MRI,
+            bool IsEH, unsigned IndentLevel = 1) const;
 
   void addInstruction(const Instruction &I) { Instructions.push_back(I); }
 
@@ -521,6 +521,7 @@ private:
 
   /// Print \p Opcode's operand number \p OperandIdx which has value \p Operand.
   void printOperand(raw_ostream &OS, DIDumpOptions DumpOpts,
+                    const MCRegisterInfo *MRI, bool IsEH,
                     const Instruction &Instr, unsigned OperandIdx,
                     uint64_t Operand) const;
 };
@@ -545,7 +546,8 @@ public:
   CFIProgram &cfis() { return CFIs; }
 
   /// Dump the instructions in this CFI fragment
-  virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const = 0;
+  virtual void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+                    const MCRegisterInfo *MRI, bool IsEH) const = 0;
 
 protected:
   const FrameKind Kind;
@@ -599,7 +601,8 @@ public:
 
   uint32_t getLSDAPointerEncoding() const { return LSDAPointerEncoding; }
 
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const override;
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts, const MCRegisterInfo *MRI,
+            bool IsEH) const override;
 
 private:
   /// The following fields are defined in section 6.4.1 of the DWARF standard v4
@@ -639,7 +642,8 @@ public:
   uint64_t getAddressRange() const { return AddressRange; }
   Optional<uint64_t> getLSDAAddress() const { return LSDAAddress; }
 
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts) const override;
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts, const MCRegisterInfo *MRI,
+            bool IsEH) const override;
 
   static bool classof(const FrameEntry *FE) { return FE->getKind() == FK_FDE; }
 
@@ -681,7 +685,7 @@ public:
   ~DWARFDebugFrame();
 
   /// Dump the section data into the given stream.
-  void dump(raw_ostream &OS, DIDumpOptions DumpOpts,
+  void dump(raw_ostream &OS, DIDumpOptions DumpOpts, const MCRegisterInfo *MRI,
             Optional<uint64_t> Offset) const;
 
   /// Parse the section from raw data. \p Data is assumed to contain the whole

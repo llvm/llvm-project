@@ -42,16 +42,7 @@ void LiveVariable::print(raw_ostream &OS, const MCRegisterInfo &MRI) const {
   DataExtractor Data({LocExpr.Expr.data(), LocExpr.Expr.size()},
                      Unit->getContext().isLittleEndian(), 0);
   DWARFExpression Expression(Data, Unit->getAddressByteSize());
-
-  auto GetRegName = [&MRI, &OS](uint64_t DwarfRegNum, bool IsEH) -> StringRef {
-    if (Optional<unsigned> LLVMRegNum = MRI.getLLVMRegNum(DwarfRegNum, IsEH))
-      if (const char *RegName = MRI.getName(*LLVMRegNum))
-        return StringRef(RegName);
-    OS << "<unknown register " << DwarfRegNum << ">";
-    return {};
-  };
-
-  Expression.printCompact(OS, GetRegName);
+  Expression.printCompact(OS, MRI);
 }
 
 void LiveVariablePrinter::addVariable(DWARFDie FuncDie, DWARFDie VarDie) {
