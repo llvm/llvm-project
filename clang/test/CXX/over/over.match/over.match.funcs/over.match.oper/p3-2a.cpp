@@ -125,46 +125,204 @@ namespace PR44627 {
   bool b2 = 0 == ADL::type();
 }
 
-// Various C++17 cases that are known to be broken by the C++20 rules.
-namespace problem_cases {
-  // We can have an ambiguity between an operator and its reversed form. This
-  // wasn't intended by the original "consistent comparison" proposal, and we
-  // allow it as extension, picking the non-reversed form.
-  struct A {
-    bool operator==(const A&); // expected-note {{ambiguity is between a regular call to this operator and a call with the argument order reversed}}
-  };
-  bool cmp_non_const = A() == A(); // expected-warning {{ambiguous}}
+namespace P2468R2 {
+// Problem cases prior to P2468R2 but now intentionally rejected.
+struct SymmetricNonConst {
+  bool operator==(const SymmetricNonConst&); // expected-note {{ambiguity is between a regular call to this operator and a call with the argument order reversed}}
+  // expected-note@-1 {{mark 'operator==' as const or add a matching 'operator!=' to resolve the ambiguity}}
+};
+bool cmp_non_const = SymmetricNonConst() == SymmetricNonConst(); // expected-warning {{ambiguous}}
 
-  struct B {
-    virtual bool operator==(const B&) const;
-  };
-  struct D : B {
-    bool operator==(const B&) const override; // expected-note {{operator}}
-  };
-  bool cmp_base_derived = D() == D(); // expected-warning {{ambiguous}}
+struct SymmetricConst {
+  bool operator==(const SymmetricConst&) const;
+};
+bool cmp_const = SymmetricConst() == SymmetricConst();
 
-  template<typename T> struct CRTPBase {
-    bool operator==(const T&) const; // expected-note {{operator}} expected-note {{reversed}}
-    bool operator!=(const T&) const; // expected-note {{non-reversed}}
-  };
-  struct CRTP : CRTPBase<CRTP> {};
-  bool cmp_crtp = CRTP() == CRTP(); // expected-warning-re {{ambiguous despite there being a unique best viable function{{$}}}}}}
-  bool cmp_crtp2 = CRTP() != CRTP(); // expected-warning {{ambiguous despite there being a unique best viable function with non-reversed arguments}}
+struct SymmetricNonConstWithoutConstRef {
+  bool operator==(SymmetricNonConstWithoutConstRef);
+};
+bool cmp_non_const_wo_ref = SymmetricNonConstWithoutConstRef() == SymmetricNonConstWithoutConstRef();
 
-  // Given a choice between a rewritten and non-rewritten function with the
-  // same parameter types, where the rewritten function is reversed and each
-  // has a better conversion for one of the two arguments, prefer the
-  // non-rewritten one.
-  using UBool = signed char; // ICU uses this.
-  struct ICUBase {
-    virtual UBool operator==(const ICUBase&) const;
-    UBool operator!=(const ICUBase &arg) const { return !operator==(arg); }
-  };
-  struct ICUDerived : ICUBase {
-    UBool operator==(const ICUBase&) const override; // expected-note {{declared here}} expected-note {{ambiguity is between}}
-  };
-  bool cmp_icu = ICUDerived() != ICUDerived(); // expected-warning {{ambiguous}} expected-warning {{'bool', not 'UBool'}}
+struct B {
+  virtual bool operator==(const B&) const;
+};
+struct D : B {
+  bool operator==(const B&) const override; // expected-note {{operator}}
+};
+bool cmp_base_derived = D() == D(); // expected-warning {{ambiguous}}
+
+// Reversed "3" not used because we find "2".
+// Rewrite != from "3" but warn that "chosen rewritten candidate must return cv-bool".
+using UBool = signed char;
+struct ICUBase {
+  virtual UBool operator==(const ICUBase&) const; // 1.
+  UBool operator!=(const ICUBase &arg) const { return !operator==(arg); } // 2.
+};
+struct ICUDerived : ICUBase {
+  // 3.
+  UBool operator==(const ICUBase&) const override; // expected-note {{declared here}}
+};
+bool cmp_icu = ICUDerived() != ICUDerived(); // expected-warning {{ISO C++20 requires return type of selected 'operator==' function for rewritten '!=' comparison to be 'bool', not 'UBool' (aka 'signed char')}}
+// Accepted by P2468R2.
+// 1
+struct S {
+  bool operator==(const S&) { return true; }
+  bool operator!=(const S&) { return false; }
+};
+bool ts = S{} != S{};
+// 2
+template<typename T> struct CRTPBase {
+  bool operator==(const T&) const;
+  bool operator!=(const T&) const;
+};
+struct CRTP : CRTPBase<CRTP> {};
+bool cmp_crtp = CRTP() == CRTP();
+bool cmp_crtp2 = CRTP() != CRTP();
+// https://github.com/llvm/llvm-project/issues/57711
+namespace issue_57711 {
+template <class T>
+bool compare(T l, T r)
+    requires requires { l == r; } {
+  return l == r;
 }
+
+void test() {
+  compare(CRTP(), CRTP()); // previously this was a hard error (due to SFINAE failure).
+}
+}
+// 3
+template <bool>
+struct GenericIterator {
+  using ConstIterator = GenericIterator<true>;
+  using NonConstIterator = GenericIterator<false>;
+  GenericIterator() = default;
+  GenericIterator(const NonConstIterator&);
+
+  bool operator==(ConstIterator) const;
+  bool operator!=(ConstIterator) const;
+};
+using Iterator = GenericIterator<false>;
+
+bool biter = Iterator{} == Iterator{};
+
+// Intentionally rejected by P2468R2
+struct ImplicitInt {
+  ImplicitInt();
+  ImplicitInt(int*);
+  bool operator==(const ImplicitInt&) const; // expected-note {{candidate function (with reversed parameter order)}}
+  operator int*() const;
+};
+bool implicit_int = nullptr != ImplicitInt{}; // expected-error {{use of overloaded operator '!=' is ambiguous (with operand types 'std::nullptr_t' and 'ImplicitInt')}}
+                                              // expected-note@-1 4 {{built-in candidate operator!=}}
+
+// https://eel.is/c++draft/over.match.oper#example-2
+namespace example {
+struct A {};
+template<typename T> bool operator==(A, T);     // 1. expected-note {{candidate function template not viable: no known conversion from 'int' to 'A' for 1st argument}}
+bool a1 = 0 == A();                             // OK, calls reversed 1
+template<typename T> bool operator!=(A, T);
+bool a2 = 0 == A();  // expected-error {{invalid operands to binary expression ('int' and 'A')}}
+
+struct B {
+  bool operator==(const B&);    // 2
+  // expected-note@-1 {{ambiguity is between a regular call to this operator and a call with the argument order reversed}}
+};
+struct C : B {
+  C();
+  C(B);
+  bool operator!=(const B&);    // 3
+};
+bool c1 = B() == C(); // OK, calls 2; reversed 2 is not a candidate because search for operator!= in C finds 3
+bool c2 = C() == B();  // Search for operator!= inside B never finds 3. expected-warning {{ISO C++20 considers use of overloaded operator '==' (with operand types 'C' and 'B') to be ambiguous despite there being a unique best viable function}}
+
+struct D {};
+template<typename T> bool operator==(D, T);     // 4
+inline namespace N {
+  template<typename T> bool operator!=(D, T);   // 5
+}
+bool d1 = 0 == D();  // OK, calls reversed 4; 5 does not forbid 4 as a rewrite target as "search" does not look inside inline namespaces.
+} // namespace example
+
+namespace template_tests {
+namespace template_head_does_not_match {
+struct A {};
+template<typename T, class U = int> bool operator==(A, T);
+template <class T> bool operator!=(A, T);
+bool x = 0 == A(); // Ok. Use rewritten candidate.
+}
+
+namespace template_with_different_param_name_are_equivalent {
+struct A {};
+template<typename T> bool operator==(A, T); // expected-note {{candidate function template not viable: no known conversion from 'int' to 'A' for 1st argument}}
+template <typename U> bool operator!=(A, U);
+bool x = 0 == A(); // expected-error {{invalid operands to binary expression ('int' and 'A')}}
+}
+
+namespace template_and_non_template {
+struct A {
+template<typename T> bool operator==(const T&);
+// expected-note@-1{{mark 'operator==' as const or add a matching 'operator!=' to resolve the ambiguity}}
+// expected-note@-2{{ambiguity is between a regular call to this operator and a call with the argument order reversed}}
+};
+bool a = A() == A(); // expected-warning {{ambiguous despite there being a unique best viable function}}
+
+struct B {
+template<typename T> bool operator==(const T&) const;
+bool operator!=(const B&);
+};
+bool b = B() == B(); // ok. No rewrite due to const.
+
+struct C {};
+template <class T=int>
+bool operator==(C, int);
+bool operator!=(C, int);
+bool c = 0 == C(); // Ok. Use rewritten candidate as the non-template 'operator!=' does not correspond to template 'operator=='
+}
+} // template_tests
+
+namespace using_decls {
+namespace simple {
+struct C {};
+bool operator==(C, int); // expected-note {{candidate function not viable: no known conversion from 'int' to 'C' for 1st argument}}
+bool a = 0 == C(); // Ok. Use rewritten candidate.
+namespace other_ns { bool operator!=(C, int); }
+bool b = 0 == C(); // Ok. Use rewritten candidate.
+using other_ns::operator!=;
+bool c = 0 == C(); // Rewrite not possible. expected-error {{invalid operands to binary expression ('int' and 'C')}}
+}
+namespace templated {
+struct C {};
+template<typename T>
+bool operator==(C, T); // expected-note {{candidate function template not viable: no known conversion from 'int' to 'C' for 1st argument}}
+bool a = 0 == C(); // Ok. Use rewritten candidate.
+namespace other_ns { template<typename T> bool operator!=(C, T); }
+bool b = 0 == C(); // Ok. Use rewritten candidate.
+using other_ns::operator!=;
+bool c = 0 == C(); // Rewrite not possible. expected-error {{invalid operands to binary expression ('int' and 'C')}}
+} // templated
+} // using_decls
+
+// FIXME: Match requires clause.
+namespace match_requires_clause {
+template<int x>
+struct A {
+bool operator==(int) requires (x==1); // 1.
+bool operator!=(int) requires (x==2); // 2.
+};
+int a1 = 0 == A<1>(); // Should not find 2 as the requires clause does not match. \
+                      // expected-error {{invalid operands to binary expression ('int' and 'A<1>')}}
+}
+
+namespace static_operators {
+// Verify no crash.
+struct X { 
+  bool operator ==(X const&); // expected-note {{ambiguity is between a regular call}}
+                              // expected-note@-1 {{mark 'operator==' as const or add a matching 'operator!=' to resolve the ambiguity}}
+  static bool operator !=(X const&, X const&); // expected-error {{overloaded 'operator!=' cannot be a static member function}}
+};
+bool x = X() == X(); // expected-warning {{ambiguous}}
+}
+} // namespace P2468R2
 
 #else // NO_ERRORS
 

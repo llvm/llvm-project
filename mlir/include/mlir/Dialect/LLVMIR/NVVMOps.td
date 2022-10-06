@@ -168,6 +168,15 @@ def NVVM_VoteBallotOp :
   let hasCustomAssemblyFormat = 1;
 }
 
+def NVVM_SyncWarpOp : 
+  NVVM_Op<"bar.warp.sync">,
+  Arguments<(ins LLVM_Type:$mask)> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_bar_warp_sync, {$mask});
+  }];
+  let assemblyFormat = "$mask attr-dict `:` type($mask)";
+}
+
 
 def NVVM_CpAsyncOp : NVVM_Op<"cp.async.shared.global">,
   Arguments<(ins LLVM_i8Ptr_shared:$dst,

@@ -7,7 +7,7 @@ struct X {
 };
 
 X::X(int v) {
-  // CHECK_TEMPORARILY_DISABLED: call void @_ZN1XC2Ei(%struct.X* %this1, i32 %tmp), !dbg
+  // CHECK_TEMPORARILY_DISABLED: call void @_ZN1XC2Ei(ptr %this1, i32 %tmp), !dbg
   // TEMPORARY CHECK: X
   value = v;
 }
