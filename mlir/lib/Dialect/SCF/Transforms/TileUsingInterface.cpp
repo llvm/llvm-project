@@ -199,7 +199,7 @@ yieldTiledValues(RewriterBase &rewriter, ValueRange initValues,
       [&](OpBuilder &b, Location loc,
           ArrayRef<BlockArgument> newBBArgs) -> SmallVector<Value> {
     SmallVector<Value> inserts;
-    for (auto yieldedValue : llvm::enumerate(yieldedValues)) {
+    for (const auto &yieldedValue : llvm::enumerate(yieldedValues)) {
       ArrayRef<OpFoldResult> tileOffsets =
           tileOffsetsList[yieldedValue.index()];
       ArrayRef<OpFoldResult> tileSizes = tileSizesList[yieldedValue.index()];
@@ -368,7 +368,7 @@ mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
   int64_t numResults = op->getNumResults();
   SmallVector<SmallVector<OpFoldResult>> resultOffsetsList(numResults),
       resultSizesList(numResults);
-  for (auto result : llvm::enumerate(op->getResults())) {
+  for (const auto &result : llvm::enumerate(op->getResults())) {
     if (failed(op.getResultTilePosition(rewriter, result.index(), offsets,
                                         sizes,
                                         resultOffsetsList[result.index()],
@@ -451,7 +451,7 @@ mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
       return rewriter.notifyMatchFailure(consumer, "failed to tile consumer");
     tileAndFuseResult.tiledAndFusedOps.insert(tilingResult->tiledOp);
     tileAndFuseResult.loops = std::move(tilingResult->loops);
-    for (auto result : llvm::enumerate(
+    for (const auto &result : llvm::enumerate(
              llvm::zip(consumer->getResults(), tilingResult->replacements))) {
       tileAndFuseResult.replacements[std::get<0>(result.value())] =
           std::get<1>(result.value());
