@@ -9,6 +9,7 @@
 #include "Headers.h"
 
 #include "Compiler.h"
+#include "Matchers.h"
 #include "TestFS.h"
 #include "TestTU.h"
 #include "clang/Basic/TokenKinds.h"
@@ -30,6 +31,7 @@ namespace {
 using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::ElementsAre;
+using ::testing::Eq;
 using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::UnorderedElementsAre;
@@ -443,6 +445,18 @@ TEST_F(HeadersTest, HasIWYUPragmas) {
   EXPECT_TRUE(Includes.hasIWYUExport(getID("export.h", Includes)));
   EXPECT_TRUE(Includes.hasIWYUExport(getID("begin_exports.h", Includes)));
   EXPECT_FALSE(Includes.hasIWYUExport(getID("none.h", Includes)));
+}
+
+TEST(Headers, ParseIWYUPragma) {
+  EXPECT_THAT(parseIWYUPragma("// IWYU pragma: keep"), HasValue(Eq("keep")));
+  EXPECT_THAT(parseIWYUPragma("// IWYU pragma: keep\netc"),
+              HasValue(Eq("keep")));
+  EXPECT_EQ(parseIWYUPragma("/* IWYU pragma: keep"), llvm::None)
+      << "Only // comments supported!";
+  EXPECT_EQ(parseIWYUPragma("//  IWYU pragma: keep"), llvm::None)
+      << "Sensitive to whitespace";
+  EXPECT_EQ(parseIWYUPragma("// IWYU pragma:keep"), llvm::None)
+      << "Sensitive to whitespace";
 }
 
 } // namespace
