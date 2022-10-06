@@ -849,7 +849,7 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
       Type *Ty = Val->getType();
       if (Ty->isVectorTy())
         return Val;
-      auto *VecTy = VectorType::get(Ty, 1, /*Scalable*/ false);
+      auto *VecTy = VectorType::get(Ty, 1, /*Scalable=*/false);
       return Builder.CreateBitCast(Val, VecTy);
     };
 
@@ -961,7 +961,7 @@ auto HexagonVectorCombine::getByteTy(int ElemCount) const -> Type * {
   IntegerType *ByteTy = Type::getInt8Ty(F.getContext());
   if (ElemCount == 0)
     return ByteTy;
-  return VectorType::get(ByteTy, ElemCount, /*Scalable*/ false);
+  return VectorType::get(ByteTy, ElemCount, /*Scalable=*/false);
 }
 
 auto HexagonVectorCombine::getBoolTy(int ElemCount) const -> Type * {
@@ -969,7 +969,7 @@ auto HexagonVectorCombine::getBoolTy(int ElemCount) const -> Type * {
   IntegerType *BoolTy = Type::getInt1Ty(F.getContext());
   if (ElemCount == 0)
     return BoolTy;
-  return VectorType::get(BoolTy, ElemCount, /*Scalable*/ false);
+  return VectorType::get(BoolTy, ElemCount, /*Scalable=*/false);
 }
 
 auto HexagonVectorCombine::getConstInt(int Val) const -> ConstantInt * {
@@ -1198,7 +1198,7 @@ auto HexagonVectorCombine::vresize(IRBuilder<> &Builder, Value *Val,
     return Val;
   // Truncate?
   if (CurSize > NewSize)
-    return getElementRange(Builder, Val, /*Unused*/ Val, 0, NewSize);
+    return getElementRange(Builder, Val, /*Ignored*/ Val, 0, NewSize);
   // Extend.
   SmallVector<int, 128> SMask(NewSize);
   std::iota(SMask.begin(), SMask.begin() + CurSize, 0);
@@ -1234,11 +1234,11 @@ auto HexagonVectorCombine::rescale(IRBuilder<> &Builder, Value *Mask,
   // Mask <N x i1> -> sext to <N x FromTy> -> bitcast to <M x ToTy> ->
   // -> trunc to <M x i1>.
   Value *Ext = Builder.CreateSExt(
-      Mask, VectorType::get(FromITy, FromCount, /*Scalable*/ false));
+      Mask, VectorType::get(FromITy, FromCount, /*Scalable=*/false));
   Value *Cast = Builder.CreateBitCast(
-      Ext, VectorType::get(ToITy, ToCount, /*Scalable*/ false));
+      Ext, VectorType::get(ToITy, ToCount, /*Scalable=*/false));
   return Builder.CreateTrunc(
-      Cast, VectorType::get(getBoolTy(), ToCount, /*Scalable*/ false));
+      Cast, VectorType::get(getBoolTy(), ToCount, /*Scalable=*/false));
 }
 
 // Bitcast to bytes, and return least significant bits.
@@ -1281,7 +1281,7 @@ auto HexagonVectorCombine::createHvxIntrinsic(IRBuilder<> &Builder,
   // HVX vector -> v16i32/v32i32
   // HVX vector predicate -> v512i1/v1024i1
   auto getTypeForIntrin = [&](Type *Ty) -> Type * {
-    if (HST.isTypeForHVX(Ty, /*IncludeBool*/ true)) {
+    if (HST.isTypeForHVX(Ty, /*IncludeBool=*/true)) {
       Type *ElemTy = cast<VectorType>(Ty)->getElementType();
       if (ElemTy == Int32Ty)
         return Ty;
@@ -1299,7 +1299,7 @@ auto HexagonVectorCombine::createHvxIntrinsic(IRBuilder<> &Builder,
     Type *SrcTy = Val->getType();
     if (SrcTy == DestTy)
       return Val;
-    if (HST.isTypeForHVX(SrcTy, /*IncludeBool*/ true)) {
+    if (HST.isTypeForHVX(SrcTy, /*IncludeBool=*/true)) {
       if (cast<VectorType>(SrcTy)->getElementType() == BoolTy) {
         // This should take care of casts the other way too, for example
         // v1024i1 -> v32i1.
@@ -1328,7 +1328,7 @@ auto HexagonVectorCombine::createHvxIntrinsic(IRBuilder<> &Builder,
   if (CallTy == RetTy)
     return Call;
   // Scalar types should have RetTy matching the call return type.
-  assert(HST.isTypeForHVX(CallTy, /*IncludeBool*/ true));
+  assert(HST.isTypeForHVX(CallTy, /*IncludeBool=*/true));
   if (cast<VectorType>(CallTy)->getElementType() == BoolTy)
     return getCast(Builder, Call, RetTy);
   return Builder.CreateBitCast(Call, RetTy);
