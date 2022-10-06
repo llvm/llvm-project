@@ -471,8 +471,6 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
 
   // do not move the relative order of these - @unchecked needs to come first or
   // else pain will ensue
-  AddSummary(swift_category_sp, swift_unchecked_optional_summary_sp,
-             ConstString("^Swift.ImplicitlyUnwrappedOptional<.+>$"), true);
   AddSummary(swift_category_sp, swift_optional_summary_sp,
              ConstString("^Swift.Optional<.+>$"), true);
 
@@ -486,12 +484,6 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
   AddSummary(swift_category_sp, swift_optional_summary_sp, ConstString("()?"),
              false);
 
-  AddCXXSynthetic(swift_category_sp,
-                  lldb_private::formatters::swift::
-                      SwiftUncheckedOptionalSyntheticFrontEndCreator,
-                  "Swift.Optional synthetic children",
-                  ConstString("^Swift.ImplicitlyUnwrappedOptional<.+>$"),
-                  optional_synth_flags, true);
   AddCXXSynthetic(
       swift_category_sp,
       lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEndCreator,
