@@ -418,8 +418,8 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
     m_fixed_text = m_expr_text;
     return false;
   } else if (error_code) {
-    // Calculate the fixed expression string at this point:
-    if (diagnostic_manager.HasFixIts()) {
+    // If fixits are enabled, calculate the fixed expression string.
+    if (m_options.GetAutoApplyFixIts() && diagnostic_manager.HasFixIts()) {
       if (m_parser->RewriteExpression(diagnostic_manager)) {
         size_t fixed_start;
         size_t fixed_end;
