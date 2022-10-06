@@ -28,7 +28,7 @@ define void @s116_modified(float* %a) {
 ; CHECK-NEXT:    [[LD4:%.*]] = load float, float* [[GEP4]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[LD0]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP2]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP4]], <4 x i32> <i32 0, i32 4, i32 5, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP4]], <4 x i32> <i32 0, i32 4, i32 5, i32 undef>
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[LD4]], i32 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> poison, float [[LD1]], i32 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x float> [[TMP7]], float [[LD1]], i32 1
