@@ -4037,7 +4037,24 @@ def HLSLResource : InheritableAttr {
   let Args = [EnumArgument<"ResourceType", "ResourceClass",
                            ["SRV", "UAV", "CBuffer", "Sampler"],
                            ["SRV", "UAV", "CBuffer", "Sampler"]
-                           >];
+                           >,
+              EnumArgument<"ResourceShape", "ResourceKind",
+                           ["Texture1D", "Texture2D", "Texture2DMS",
+                            "Texture3D", "TextureCube", "Texture1DArray",
+                            "Texture2DArray", "Texture2DMSArray",
+                            "TextureCubeArray", "TypedBuffer", "RawBuffer",
+                            "StructuredBuffer", "CBufferKind", "SamplerKind",
+                            "TBuffer", "RTAccelerationStructure", "FeedbackTexture2D",
+                            "FeedbackTexture2DArray"],
+                           ["Texture1D", "Texture2D", "Texture2DMS",
+                            "Texture3D", "TextureCube", "Texture1DArray",
+                            "Texture2DArray", "Texture2DMSArray",
+                            "TextureCubeArray", "TypedBuffer", "RawBuffer",
+                            "StructuredBuffer", "CBufferKind", "SamplerKind",
+                            "TBuffer", "RTAccelerationStructure", "FeedbackTexture2D",
+                            "FeedbackTexture2DArray"]
+                            >
+              ];
   let Documentation = [InternalOnly];
 }
 
