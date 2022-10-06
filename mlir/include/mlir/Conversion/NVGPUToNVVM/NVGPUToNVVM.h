@@ -16,6 +16,9 @@ class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
 
+#define GEN_PASS_DECL_CONVERTNVGPUTONVVM
+#include "mlir/Conversion/Passes.h.inc"
+
 void populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
                                            RewritePatternSet &patterns);
 

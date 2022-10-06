@@ -1165,6 +1165,7 @@ Init *BinOpInit::Fold(Record *CurRec) const {
   case ADD:
   case SUB:
   case MUL:
+  case DIV:
   case AND:
   case OR:
   case XOR:
@@ -1183,6 +1184,16 @@ Init *BinOpInit::Fold(Record *CurRec) const {
       case ADD: Result = LHSv + RHSv; break;
       case SUB: Result = LHSv - RHSv; break;
       case MUL: Result = LHSv * RHSv; break;
+      case DIV:
+        if (RHSv == 0)
+          PrintFatalError(CurRec->getLoc(),
+                          "Illegal operation: division by zero");
+        else if (LHSv == INT64_MIN && RHSv == -1)
+          PrintFatalError(CurRec->getLoc(),
+                          "Illegal operation: INT64_MIN / -1");
+        else
+          Result = LHSv / RHSv;
+        break;
       case AND: Result = LHSv & RHSv; break;
       case OR:  Result = LHSv | RHSv; break;
       case XOR: Result = LHSv ^ RHSv; break;
@@ -1215,6 +1226,7 @@ std::string BinOpInit::getAsString() const {
   case ADD: Result = "!add"; break;
   case SUB: Result = "!sub"; break;
   case MUL: Result = "!mul"; break;
+  case DIV: Result = "!div"; break;
   case AND: Result = "!and"; break;
   case OR: Result = "!or"; break;
   case XOR: Result = "!xor"; break;
@@ -2238,6 +2250,7 @@ static void ProfileDagInit(FoldingSetNodeID &ID, Init *V, StringInit *VN,
 
 DagInit *DagInit::get(Init *V, StringInit *VN, ArrayRef<Init *> ArgRange,
                       ArrayRef<StringInit *> NameRange) {
+  assert(ArgRange.size() == NameRange.size());
   FoldingSetNodeID ID;
   ProfileDagInit(ID, V, VN, ArgRange, NameRange);
 

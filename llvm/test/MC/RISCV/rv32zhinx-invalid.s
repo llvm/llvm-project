@@ -1,8 +1,8 @@
 # RUN: not llvm-mc -triple riscv32 -mattr=+zhinx %s 2>&1 | FileCheck %s
 
 # Not support float registers
-flw fa4, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point)
-fadd.h fa0, fa1, fa2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point)
+flw fa4, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'F' (Single-Precision Floating-Point){{$}}
+fadd.h fa0, fa1, fa2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point){{$}}
 
 # Invalid instructions
 fsw a5, 12(sp) # CHECK: :[[@LINE]]:5: error: invalid operand for instruction

@@ -419,6 +419,27 @@ inline unsigned OpResultImpl::getResultNumber() const {
   return cast<InlineOpResult>(this)->getResultNumber();
 }
 
+/// TypedValue is a Value with a statically know type.
+/// TypedValue can be null/empty
+template <typename Ty>
+struct TypedValue : Value {
+  /// Return the known Type
+  Ty getType() { return Value::getType().template cast<Ty>(); }
+  void setType(mlir::Type ty) {
+    assert(ty.template isa<Ty>());
+    Value::setType(ty);
+  }
+
+  TypedValue(Value val) : Value(val) {
+    assert(!val || val.getType().template isa<Ty>());
+  }
+  TypedValue &operator=(const Value &other) {
+    assert(!other || other.getType().template isa<Ty>());
+    Value::operator=(other);
+    return *this;
+  }
+};
+
 } // namespace detail
 
 /// This is a value defined by a result of an operation.
@@ -458,6 +479,12 @@ private:
 inline ::llvm::hash_code hash_value(Value arg) {
   return ::llvm::hash_value(arg.getImpl());
 }
+
+template <typename Ty, typename Value = mlir::Value>
+/// If Ty is mlir::Type this will select `Value` instead of having a wrapper
+/// around it. This helps resolve ambiguous conversion issues.
+using TypedValue = std::conditional_t<std::is_same_v<Ty, mlir::Type>,
+                                      mlir::Value, detail::TypedValue<Ty>>;
 
 } // namespace mlir
 

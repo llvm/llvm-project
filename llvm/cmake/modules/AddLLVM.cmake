@@ -118,7 +118,7 @@ function(add_llvm_symbol_exports target_name export_file)
       set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                    LINK_FLAGS "  -Wl,--version-script,\"${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}\"")
     endif()
-  else()
+  elseif(WIN32)
     set(native_export_file "${target_name}.def")
 
     add_custom_command(OUTPUT ${native_export_file}
@@ -129,7 +129,18 @@ function(add_llvm_symbol_exports target_name export_file)
       COMMENT "Creating export file for ${target_name}")
     set(export_file_linker_flag "${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}")
     if(MSVC)
+      # cl.exe or clang-cl, i.e. MSVC style command line interface
       set(export_file_linker_flag "/DEF:\"${export_file_linker_flag}\"")
+    elseif(CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+      # clang in msvc mode, calling a link.exe/lld-link style linker
+      set(export_file_linker_flag "-Wl,/DEF:\"${export_file_linker_flag}\"")
+    elseif(MINGW)
+      # ${export_file_linker_flag}, which is the plain file name, works as is
+      # when passed to the compiler driver, which then passes it on to the
+      # linker as an input file.
+      set(export_file_linker_flag "\"${export_file_linker_flag}\"")
+    else()
+      message(FATAL_ERROR "Unsupported Windows toolchain")
     endif()
     set_property(TARGET ${target_name} APPEND_STRING PROPERTY
                  LINK_FLAGS " ${export_file_linker_flag}")
@@ -899,12 +910,15 @@ macro(generate_llvm_objects name)
 
     list(APPEND ALL_FILES ${CMAKE_CURRENT_BINARY_DIR}/${name}-driver.cpp)
 
-    if (LLVM_TOOL_LLVM_DRIVER_BUILD)
+    if (LLVM_TOOL_LLVM_DRIVER_BUILD
+        AND (NOT LLVM_DISTRIBUTION_COMPONENTS OR ${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS)
+       )
       set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_COMPONENTS ${LLVM_LINK_COMPONENTS})
       set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_DEPS ${ARG_DEPENDS} ${LLVM_COMMON_DEPENDS})
       set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_OBJLIBS "${obj_name}")
 
       set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_TOOLS ${name})
+      set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_TOOL_ALIASES_${name} ${name})
       target_link_libraries(${obj_name} ${LLVM_PTHREAD_LIB})
       llvm_config(${obj_name} ${USE_SHARED} ${LLVM_LINK_COMPONENTS} )
     endif()
@@ -1093,7 +1107,7 @@ function(process_llvm_pass_plugins)
           message(FATAL_ERROR "LLVM_INSTALL_PACKAGE_DIR must be defined and writable. GEN_CONFIG should only be passe when building LLVM proper.")
       endif()
       # LLVM_INSTALL_PACKAGE_DIR might be absolute, so don't reuse below.
-      set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm")
+      set(llvm_cmake_builddir "${LLVM_LIBRARY_DIR}/cmake/llvm")
       file(WRITE
           "${llvm_cmake_builddir}/LLVMConfigExtensions.cmake"
           "set(LLVM_STATIC_EXTENSIONS ${LLVM_STATIC_EXTENSIONS})")
@@ -1289,7 +1303,10 @@ macro(llvm_add_tool project name)
   if( NOT LLVM_BUILD_TOOLS )
     set(EXCLUDE_FROM_ALL ON)
   endif()
-  if(ARG_GENERATE_DRIVER AND LLVM_TOOL_LLVM_DRIVER_BUILD)
+  if(ARG_GENERATE_DRIVER
+     AND LLVM_TOOL_LLVM_DRIVER_BUILD
+     AND (NOT LLVM_DISTRIBUTION_COMPONENTS OR ${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS)
+    )
     generate_llvm_objects(${name} ${ARGN})
     add_custom_target(${name} DEPENDS llvm-driver)
   else()
@@ -2020,8 +2037,10 @@ endfunction()
 
 function(llvm_install_symlink project name dest)
   get_property(LLVM_DRIVER_TOOLS GLOBAL PROPERTY LLVM_DRIVER_TOOLS)
-  if(LLVM_TOOL_LLVM_DRIVER_BUILD AND ${dest} IN_LIST LLVM_DRIVER_TOOLS)
-    set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_TOOL_SYMLINKS ${name})
+  if(LLVM_TOOL_LLVM_DRIVER_BUILD
+     AND ${dest} IN_LIST LLVM_DRIVER_TOOLS
+     AND (NOT LLVM_DISTRIBUTION_COMPONENTS OR ${dest} IN_LIST LLVM_DISTRIBUTION_COMPONENTS)
+    )
     return()
   endif()
   cmake_parse_arguments(ARG "ALWAYS_GENERATE" "COMPONENT" "" ${ARGN})
@@ -2068,11 +2087,7 @@ function(llvm_add_tool_symlink project link_name target)
   get_property(LLVM_DRIVER_TOOLS GLOBAL PROPERTY LLVM_DRIVER_TOOLS)
 
   if (${target} IN_LIST LLVM_DRIVER_TOOLS)
-    string(REPLACE "-" "_" tool_entry ${target})
-    string(REPLACE "-" "_" key ${link_name})
-    string(REPLACE "llvm-" "" tool_name ${link_name})
-    set_property(GLOBAL APPEND_STRING PROPERTY
-                 LLVM_EXTRA_DRIVER_ENTRIES "LLVM_DRIVER_TOOL(\"${tool_name}\", ${tool_entry})\n")
+    set_property(GLOBAL APPEND PROPERTY LLVM_DRIVER_TOOL_ALIASES_${target} ${link_name})
   endif()
   set(dest_binary "$<TARGET_FILE:${target}>")
 
@@ -2135,7 +2150,14 @@ function(llvm_add_tool_symlink project link_name target)
     add_custom_command(OUTPUT ${output_path}
                      COMMAND ${CMAKE_COMMAND} -E ${LLVM_LINK_OR_COPY} "${dest_binary}" "${output_path}"
                      DEPENDS ${target})
-    add_custom_target(${target_name} ALL DEPENDS ${target} ${output_path})
+
+    # TODO: Make use of generator expressions below once CMake 3.19 or higher is the minimum supported version.
+    set(should_build_all)
+    get_target_property(target_excluded_from_all ${target} EXCLUDE_FROM_ALL)
+    if (NOT target_excluded_from_all)
+      set(should_build_all ALL)
+    endif()
+    add_custom_target(${target_name} ${should_build_all} DEPENDS ${target} ${output_path})
     set_target_properties(${target_name} PROPERTIES FOLDER Tools)
 
     # Make sure both the link and target are toolchain tools

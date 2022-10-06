@@ -23,18 +23,18 @@ namespace {
 namespace mlir {
 namespace spirv {
 void populateSPIRVGLCanonicalizationPatterns(RewritePatternSet &results) {
-  results.add<ConvertComparisonIntoClamp1_SPV_FOrdLessThanOp,
-              ConvertComparisonIntoClamp1_SPV_FOrdLessThanEqualOp,
-              ConvertComparisonIntoClamp1_SPV_SLessThanOp,
-              ConvertComparisonIntoClamp1_SPV_SLessThanEqualOp,
-              ConvertComparisonIntoClamp1_SPV_ULessThanOp,
-              ConvertComparisonIntoClamp1_SPV_ULessThanEqualOp,
-              ConvertComparisonIntoClamp2_SPV_FOrdLessThanOp,
-              ConvertComparisonIntoClamp2_SPV_FOrdLessThanEqualOp,
-              ConvertComparisonIntoClamp2_SPV_SLessThanOp,
-              ConvertComparisonIntoClamp2_SPV_SLessThanEqualOp,
-              ConvertComparisonIntoClamp2_SPV_ULessThanOp,
-              ConvertComparisonIntoClamp2_SPV_ULessThanEqualOp>(
+  results.add<ConvertComparisonIntoClamp1_SPIRV_FOrdLessThanOp,
+              ConvertComparisonIntoClamp1_SPIRV_FOrdLessThanEqualOp,
+              ConvertComparisonIntoClamp1_SPIRV_SLessThanOp,
+              ConvertComparisonIntoClamp1_SPIRV_SLessThanEqualOp,
+              ConvertComparisonIntoClamp1_SPIRV_ULessThanOp,
+              ConvertComparisonIntoClamp1_SPIRV_ULessThanEqualOp,
+              ConvertComparisonIntoClamp2_SPIRV_FOrdLessThanOp,
+              ConvertComparisonIntoClamp2_SPIRV_FOrdLessThanEqualOp,
+              ConvertComparisonIntoClamp2_SPIRV_SLessThanOp,
+              ConvertComparisonIntoClamp2_SPIRV_SLessThanEqualOp,
+              ConvertComparisonIntoClamp2_SPIRV_ULessThanOp,
+              ConvertComparisonIntoClamp2_SPIRV_ULessThanEqualOp>(
       results.getContext());
 }
 } // namespace spirv

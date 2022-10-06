@@ -130,6 +130,20 @@ static DynamicLoaderDarwinKernelProperties &GetGlobalProperties() {
   return g_settings;
 }
 
+static bool is_kernel(Module *module) {
+  if (!module)
+    return false;
+  ObjectFile *objfile = module->GetObjectFile();
+  if (!objfile)
+    return false;
+  if (objfile->GetType() != ObjectFile::eTypeExecutable)
+    return false;
+  if (objfile->GetStrata() != ObjectFile::eStrataKernel)
+    return false;
+
+  return true;
+}
+
 // Create an instance of this class. This function is filled into the plugin
 // info class that gets handed out by the plugin factory and allows the lldb to
 // instantiate an instance of this class.
@@ -138,15 +152,8 @@ DynamicLoader *DynamicLoaderDarwinKernel::CreateInstance(Process *process,
   if (!force) {
     // If the user provided an executable binary and it is not a kernel, this
     // plugin should not create an instance.
-    Module *exe_module = process->GetTarget().GetExecutableModulePointer();
-    if (exe_module) {
-      ObjectFile *object_file = exe_module->GetObjectFile();
-      if (object_file) {
-        if (object_file->GetStrata() != ObjectFile::eStrataKernel) {
-          return nullptr;
-        }
-      }
-    }
+    if (!is_kernel(process->GetTarget().GetExecutableModulePointer()))
+      return nullptr;
 
     // If the target's architecture does not look like an Apple environment,
     // this plugin should not create an instance.
@@ -176,7 +183,6 @@ DynamicLoader *DynamicLoaderDarwinKernel::CreateInstance(Process *process,
   // At this point if there is an ExecutableModule, it is a kernel and the
   // Target is some variant of an Apple system. If the Process hasn't provided
   // the kernel load address, we need to look around in memory to find it.
-
   const addr_t kernel_load_address = SearchForDarwinKernel(process);
   if (CheckForKernelImageAtAddress(kernel_load_address, process).IsValid()) {
     process->SetCanRunCode(false);
@@ -188,18 +194,15 @@ DynamicLoader *DynamicLoaderDarwinKernel::CreateInstance(Process *process,
 lldb::addr_t
 DynamicLoaderDarwinKernel::SearchForDarwinKernel(Process *process) {
   addr_t kernel_load_address = process->GetImageInfoAddress();
-  if (kernel_load_address == LLDB_INVALID_ADDRESS) {
+  if (kernel_load_address == LLDB_INVALID_ADDRESS)
     kernel_load_address = SearchForKernelAtSameLoadAddr(process);
-    if (kernel_load_address == LLDB_INVALID_ADDRESS) {
-      kernel_load_address = SearchForKernelWithDebugHints(process);
-      if (kernel_load_address == LLDB_INVALID_ADDRESS) {
-        kernel_load_address = SearchForKernelNearPC(process);
-        if (kernel_load_address == LLDB_INVALID_ADDRESS) {
-          kernel_load_address = SearchForKernelViaExhaustiveSearch(process);
-        }
-      }
-    }
-  }
+  if (kernel_load_address == LLDB_INVALID_ADDRESS)
+    kernel_load_address = SearchForKernelWithDebugHints(process);
+  if (kernel_load_address == LLDB_INVALID_ADDRESS)
+    kernel_load_address = SearchForKernelNearPC(process);
+  if (kernel_load_address == LLDB_INVALID_ADDRESS)
+    kernel_load_address = SearchForKernelViaExhaustiveSearch(process);
+
   return kernel_load_address;
 }
 
@@ -209,16 +212,11 @@ DynamicLoaderDarwinKernel::SearchForDarwinKernel(Process *process) {
 lldb::addr_t
 DynamicLoaderDarwinKernel::SearchForKernelAtSameLoadAddr(Process *process) {
   Module *exe_module = process->GetTarget().GetExecutableModulePointer();
-  if (exe_module == nullptr)
+
+  if (!is_kernel(process->GetTarget().GetExecutableModulePointer()))
     return LLDB_INVALID_ADDRESS;
 
   ObjectFile *exe_objfile = exe_module->GetObjectFile();
-  if (exe_objfile == nullptr)
-    return LLDB_INVALID_ADDRESS;
-
-  if (exe_objfile->GetType() != ObjectFile::eTypeExecutable ||
-      exe_objfile->GetStrata() != ObjectFile::eStrataKernel)
-    return LLDB_INVALID_ADDRESS;
 
   if (!exe_objfile->GetBaseAddress().IsValid())
     return LLDB_INVALID_ADDRESS;
@@ -406,7 +404,7 @@ DynamicLoaderDarwinKernel::ReadMachHeader(addr_t addr, Process *process, llvm::M
   const uint32_t magicks[] = { llvm::MachO::MH_MAGIC_64, llvm::MachO::MH_MAGIC, llvm::MachO::MH_CIGAM, llvm::MachO::MH_CIGAM_64};
 
   bool found_matching_pattern = false;
-  for (size_t i = 0; i < llvm::array_lengthof (magicks); i++)
+  for (size_t i = 0; i < std::size(magicks); i++)
     if (::memcmp (&header.magic, &magicks[i], sizeof (uint32_t)) == 0)
         found_matching_pattern = true;
 
@@ -475,8 +473,7 @@ DynamicLoaderDarwinKernel::CheckForKernelImageAtAddress(lldb::addr_t addr,
       return UUID();
     }
 
-    if (exe_objfile->GetType() == ObjectFile::eTypeExecutable &&
-        exe_objfile->GetStrata() == ObjectFile::eStrataKernel) {
+    if (is_kernel(memory_module_sp.get())) {
       ArchSpec kernel_arch(eArchTypeMachO, header.cputype, header.cpusubtype);
       if (!process->GetTarget().GetArchitecture().IsCompatibleMatch(
               kernel_arch)) {
@@ -525,10 +522,10 @@ void DynamicLoaderDarwinKernel::UpdateIfNeeded() {
   LoadKernelModuleIfNeeded();
   SetNotificationBreakpointIfNeeded();
 }
-/// Called after attaching a process.
-///
-/// Allow DynamicLoader plug-ins to execute some code after
-/// attaching to a process.
+
+/// We've attached to a remote connection, or read a corefile.
+/// Now load the kernel binary and potentially the kexts, add
+/// them to the Target.
 void DynamicLoaderDarwinKernel::DidAttach() {
   PrivateInitialize(m_process);
   UpdateIfNeeded();
@@ -574,14 +571,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageAtFileAddress(
 
 void DynamicLoaderDarwinKernel::KextImageInfo::SetModule(ModuleSP module_sp) {
   m_module_sp = module_sp;
-  if (module_sp.get() && module_sp->GetObjectFile()) {
-    if (module_sp->GetObjectFile()->GetType() == ObjectFile::eTypeExecutable &&
-        module_sp->GetObjectFile()->GetStrata() == ObjectFile::eStrataKernel) {
-      m_kernel_image = true;
-    } else {
-      m_kernel_image = false;
-    }
-  }
+  m_kernel_image = is_kernel(module_sp.get());
 }
 
 ModuleSP DynamicLoaderDarwinKernel::KextImageInfo::GetModule() {
@@ -671,18 +661,7 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::ReadMemoryModule(
   if (memory_module_sp.get() == nullptr)
     return false;
 
-  bool is_kernel = false;
-  if (memory_module_sp->GetObjectFile()) {
-    if (memory_module_sp->GetObjectFile()->GetType() ==
-            ObjectFile::eTypeExecutable &&
-        memory_module_sp->GetObjectFile()->GetStrata() ==
-            ObjectFile::eStrataKernel) {
-      is_kernel = true;
-    } else if (memory_module_sp->GetObjectFile()->GetType() ==
-               ObjectFile::eTypeSharedLibrary) {
-      is_kernel = false;
-    }
-  }
+  bool this_is_kernel = is_kernel(memory_module_sp.get());
 
   // If this is a kext, and the kernel specified what UUID we should find at
   // this load address, require that the memory module have a matching UUID or
@@ -707,8 +686,8 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::ReadMemoryModule(
   }
 
   m_memory_module_sp = memory_module_sp;
-  m_kernel_image = is_kernel;
-  if (is_kernel) {
+  m_kernel_image = this_is_kernel;
+  if (this_is_kernel) {
     if (log) {
       // This is unusual and probably not intended
       LLDB_LOGF(log,
@@ -717,22 +696,6 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::ReadMemoryModule(
     }
     if (memory_module_sp->GetArchitecture().IsValid()) {
       process->GetTarget().SetArchitecture(memory_module_sp->GetArchitecture());
-    }
-    if (m_uuid.IsValid()) {
-      ModuleSP exe_module_sp = process->GetTarget().GetExecutableModule();
-      if (exe_module_sp.get() && exe_module_sp->GetUUID().IsValid()) {
-        if (m_uuid != exe_module_sp->GetUUID()) {
-          // The user specified a kernel binary that has a different UUID than
-          // the kernel actually running in memory.  This never ends well;
-          // clear the user specified kernel binary from the Target.
-
-          m_module_sp.reset();
-
-          ModuleList user_specified_kernel_list;
-          user_specified_kernel_list.Append(exe_module_sp);
-          process->GetTarget().GetImages().Remove(user_specified_kernel_list);
-        }
-      }
     }
   }
 
@@ -771,6 +734,17 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
     Stream &s = target.GetDebugger().GetOutputStream();
     s.Printf("Kernel UUID: %s\n", m_uuid.GetAsString().c_str());
     s.Printf("Load Address: 0x%" PRIx64 "\n", m_load_address);
+
+    // Start of a kernel debug session, we have the UUID of the kernel.
+    // Go through the target's list of modules and if there are any kernel
+    // modules with non-matching UUIDs, remove them.  The user may have added
+    // the wrong kernel binary manually and it will only confuse things.
+    ModuleList incorrect_kernels;
+    for (ModuleSP module_sp : target.GetImages().Modules()) {
+      if (is_kernel(module_sp.get()) && module_sp->GetUUID() != m_uuid)
+        incorrect_kernels.Append(module_sp);
+    }
+    target.GetImages().Remove(incorrect_kernels);
   }
 
   if (!m_module_sp) {
@@ -841,10 +815,6 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
     if (m_module_sp) {
       if (m_uuid.IsValid() && m_module_sp->GetUUID() == m_uuid) {
         target.GetImages().AppendIfNeeded(m_module_sp, false);
-        if (IsKernel() &&
-            target.GetExecutableModulePointer() != m_module_sp.get()) {
-          target.SetExecutableModule(m_module_sp, eLoadDependentsNo);
-        }
       }
     }
   }
@@ -980,8 +950,11 @@ DynamicLoaderDarwinKernel::KextImageInfo::GetArchitecture() const {
 void DynamicLoaderDarwinKernel::LoadKernelModuleIfNeeded() {
   if (!m_kext_summary_header_ptr_addr.IsValid()) {
     m_kernel.Clear();
-    m_kernel.SetModule(m_process->GetTarget().GetExecutableModule());
-    m_kernel.SetIsKernel(true);
+    ModuleSP module_sp = m_process->GetTarget().GetExecutableModule();
+    if (is_kernel(module_sp.get())) {
+      m_kernel.SetModule(module_sp);
+      m_kernel.SetIsKernel(true);
+    }
 
     ConstString kernel_name("mach_kernel");
     if (m_kernel.GetModule().get() && m_kernel.GetModule()->GetObjectFile() &&
@@ -1389,7 +1362,7 @@ uint32_t DynamicLoaderDarwinKernel::ReadKextSummaries(
       if (name_data == nullptr)
         break;
       image_infos[i].SetName((const char *)name_data);
-      UUID uuid = UUID::fromOptionalData(extractor.GetData(&offset, 16), 16);
+      UUID uuid(extractor.GetData(&offset, 16), 16);
       image_infos[i].SetUUID(uuid);
       image_infos[i].SetLoadAddress(extractor.GetU64(&offset));
       image_infos[i].SetSize(extractor.GetU64(&offset));

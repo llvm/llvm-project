@@ -5,6 +5,7 @@ from lldbsuite.test import lldbutil
 
 class TestFunctionTemplateSpecializationTempArgs(TestBase):
 
+    @skipIf(oslist=['windows'], archs=['aarch64'])
     def test_function_template_specialization_temp_args(self):
         self.build()
 

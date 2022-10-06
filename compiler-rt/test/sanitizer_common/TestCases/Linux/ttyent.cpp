@@ -1,6 +1,6 @@
 // RUN: %clangxx -O0 -g %s -o %t
 //
-// REQUIRES: freebsd, netbsd
+// REQUIRES: freebsd || netbsd
 
 #include <assert.h>
 #include <stdlib.h>

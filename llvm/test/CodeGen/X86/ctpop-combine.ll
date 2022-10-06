@@ -88,16 +88,16 @@ define i8 @test4(i8 %x) nounwind readnone {
 ;
 ; NO-POPCOUNT-LABEL: test4:
 ; NO-POPCOUNT:       # %bb.0:
-; NO-POPCOUNT-NEXT:    andb $127, %dil
-; NO-POPCOUNT-NEXT:    movl %edi, %eax
-; NO-POPCOUNT-NEXT:    shrb %al
-; NO-POPCOUNT-NEXT:    andb $21, %al
-; NO-POPCOUNT-NEXT:    subb %al, %dil
 ; NO-POPCOUNT-NEXT:    movl %edi, %ecx
+; NO-POPCOUNT-NEXT:    andb $127, %cl
+; NO-POPCOUNT-NEXT:    shrb %dil
+; NO-POPCOUNT-NEXT:    andb $21, %dil
+; NO-POPCOUNT-NEXT:    subb %dil, %cl
+; NO-POPCOUNT-NEXT:    movl %ecx, %eax
+; NO-POPCOUNT-NEXT:    andb $51, %al
+; NO-POPCOUNT-NEXT:    shrb $2, %cl
 ; NO-POPCOUNT-NEXT:    andb $51, %cl
-; NO-POPCOUNT-NEXT:    shrb $2, %dil
-; NO-POPCOUNT-NEXT:    andb $51, %dil
-; NO-POPCOUNT-NEXT:    addb %dil, %cl
+; NO-POPCOUNT-NEXT:    addb %al, %cl
 ; NO-POPCOUNT-NEXT:    movl %ecx, %eax
 ; NO-POPCOUNT-NEXT:    shrb $4, %al
 ; NO-POPCOUNT-NEXT:    addb %cl, %al
@@ -162,27 +162,27 @@ define i32 @ctpop_ne_one(i64 %x) nounwind readnone {
 define i1 @ctpop_trunc_non_power2(i255 %x) nounwind {
 ; CHECK-LABEL: ctpop_trunc_non_power2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movabsq $9223372036854775807, %r8 # imm = 0x7FFFFFFFFFFFFFFF
-; CHECK-NEXT:    movq %rcx, %r9
-; CHECK-NEXT:    andq %r8, %r9
-; CHECK-NEXT:    movq %rdi, %r10
-; CHECK-NEXT:    addq $-1, %r10
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    adcq $-1, %rax
+; CHECK-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; CHECK-NEXT:    movq %rcx, %r8
+; CHECK-NEXT:    andq %rax, %r8
+; CHECK-NEXT:    movq %rdi, %r9
+; CHECK-NEXT:    addq $-1, %r9
+; CHECK-NEXT:    movq %rsi, %r10
+; CHECK-NEXT:    adcq $-1, %r10
 ; CHECK-NEXT:    movq %rdx, %r11
 ; CHECK-NEXT:    adcq $-1, %r11
-; CHECK-NEXT:    adcq %r8, %rcx
-; CHECK-NEXT:    andq %rdi, %r10
+; CHECK-NEXT:    adcq %rax, %rcx
+; CHECK-NEXT:    andq %rdi, %r9
 ; CHECK-NEXT:    andq %rdx, %r11
-; CHECK-NEXT:    orq %r10, %r11
-; CHECK-NEXT:    andq %r9, %rcx
-; CHECK-NEXT:    andq %rsi, %rax
-; CHECK-NEXT:    orq %rcx, %rax
-; CHECK-NEXT:    orq %r11, %rax
+; CHECK-NEXT:    orq %r9, %r11
+; CHECK-NEXT:    andq %r8, %rcx
+; CHECK-NEXT:    andq %rsi, %r10
+; CHECK-NEXT:    orq %rcx, %r10
+; CHECK-NEXT:    orq %r11, %r10
 ; CHECK-NEXT:    sete %cl
 ; CHECK-NEXT:    orq %rdx, %rdi
-; CHECK-NEXT:    orq %rsi, %r9
-; CHECK-NEXT:    orq %rdi, %r9
+; CHECK-NEXT:    orq %rsi, %r8
+; CHECK-NEXT:    orq %rdi, %r8
 ; CHECK-NEXT:    setne %al
 ; CHECK-NEXT:    andb %cl, %al
 ; CHECK-NEXT:    retq

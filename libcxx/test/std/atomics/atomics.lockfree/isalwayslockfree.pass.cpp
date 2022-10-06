@@ -17,13 +17,12 @@
 
 #include "test_macros.h"
 
-#if !defined(__cpp_lib_atomic_is_always_lock_free)
-# error Feature test macro missing.
-#endif
-
-template <typename T> void checkAlwaysLockFree() {
-  if (std::atomic<T>::is_always_lock_free)
+template <typename T>
+void checkAlwaysLockFree() {
+  if (std::atomic<T>::is_always_lock_free) {
+    LIBCPP_ASSERT(sizeof(std::atomic<T>) == sizeof(T)); // technically not required, but libc++ does it that way
     assert(std::atomic<T>().is_lock_free());
+  }
 }
 
 void run()
@@ -85,10 +84,13 @@ void run()
     CHECK_ALWAYS_LOCK_FREE(struct LLIArr16 { long long int i[16]; });
     CHECK_ALWAYS_LOCK_FREE(struct Padding { char c; /* padding */ long long int i; });
     CHECK_ALWAYS_LOCK_FREE(union IntFloat { int i; float f; });
+    CHECK_ALWAYS_LOCK_FREE(enum class CharEnumClass : char { foo });
 
     // C macro and static constexpr must be consistent.
+    enum class CharEnumClass : char { foo };
     static_assert(std::atomic<bool>::is_always_lock_free == (2 == ATOMIC_BOOL_LOCK_FREE), "");
     static_assert(std::atomic<char>::is_always_lock_free == (2 == ATOMIC_CHAR_LOCK_FREE), "");
+    static_assert(std::atomic<CharEnumClass>::is_always_lock_free == (2 == ATOMIC_CHAR_LOCK_FREE), "");
     static_assert(std::atomic<signed char>::is_always_lock_free == (2 == ATOMIC_CHAR_LOCK_FREE), "");
     static_assert(std::atomic<unsigned char>::is_always_lock_free == (2 == ATOMIC_CHAR_LOCK_FREE), "");
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)

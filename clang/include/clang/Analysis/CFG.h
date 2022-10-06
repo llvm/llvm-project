@@ -1466,6 +1466,8 @@ private:
   llvm::DenseMap<const DeclStmt *, const DeclStmt *> SyntheticDeclStmts;
 };
 
+Expr *extractElementInitializerFromNestedAILE(const ArrayInitLoopExpr *AILE);
+
 } // namespace clang
 
 //===----------------------------------------------------------------------===//

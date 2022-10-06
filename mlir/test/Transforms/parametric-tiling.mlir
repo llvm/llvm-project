@@ -12,11 +12,11 @@ func.func @rectangular(%arg0: memref<?x?xf32>) {
   // COMMON:      %[[diff:.*]] = arith.subi %c44, %c2
   // COMMON:      %[[adjustment:.*]] = arith.subi %c1, %c1_{{.*}}
   // COMMON-NEXT: %[[diff_adj:.*]] = arith.addi %[[diff]], %[[adjustment]]
-  // COMMON-NEXT: %[[range:.*]] = arith.divsi %[[diff_adj]], %c1
+  // COMMON-NEXT: %[[range:.*]] = arith.divui %[[diff_adj]], %c1
 
   // Ceildiv to get the parametric tile size.
   // COMMON:       %[[sum:.*]] = arith.addi %[[range]], %c6
-  // COMMON-NEXT:  %[[size:.*]] = arith.divsi %[[sum]], %c7
+  // COMMON-NEXT:  %[[size:.*]] = arith.divui %[[sum]], %c7
   // New outer step (original is %c1).
   // COMMON-NEXT:      %[[step:.*]] = arith.muli %c1, %[[size]]
 
@@ -26,11 +26,11 @@ func.func @rectangular(%arg0: memref<?x?xf32>) {
   // TILE_74:      %[[diff2:.*]] = arith.subi %c44, %c1
   // TILE_74:      %[[adjustment2:.*]] = arith.subi %c2, %c1_{{.*}}
   // TILE_74-NEXT: %[[diff2_adj:.*]] = arith.addi %[[diff2]], %[[adjustment2]]
-  // TILE_74-NEXT: %[[range2:.*]] = arith.divsi %[[diff2_adj]], %c2
+  // TILE_74-NEXT: %[[range2:.*]] = arith.divui %[[diff2_adj]], %c2
 
   // Ceildiv to get the parametric tile size for the second original scf.
   // TILE_74:      %[[sum2:.*]] = arith.addi %[[range2]], %c3
-  // TILE_74-NEXT: %[[size2:.*]] = arith.divsi %[[sum2]], %c4
+  // TILE_74-NEXT: %[[size2:.*]] = arith.divui %[[sum2]], %c4
   // New inner step (original is %c2).
   // TILE_74-NEXT:     %[[step2:.*]] = arith.muli %c2, %[[size2]]
 
@@ -76,11 +76,11 @@ func.func @triangular(%arg0: memref<?x?xf32>) {
   // COMMON:      %[[diff:.*]] = arith.subi %c44, %c2
   // COMMON:      %[[adjustment:.*]] = arith.subi %c1, %c1_{{.*}}
   // COMMON-NEXT: %[[diff_adj:.*]] = arith.addi %[[diff]], %[[adjustment]]
-  // COMMON-NEXT: %[[range:.*]] = arith.divsi %[[diff_adj]], %c1
+  // COMMON-NEXT: %[[range:.*]] = arith.divui %[[diff_adj]], %c1
 
   // Ceildiv to get the parametric tile size.
   // COMMON:       %[[sum:.*]] = arith.addi %[[range]], %c6
-  // COMMON-NEXT:  %[[size:.*]] = arith.divsi %[[sum]], %c7
+  // COMMON-NEXT:  %[[size:.*]] = arith.divui %[[sum]], %c7
   // New outer step (original is %c1).
   // COMMON-NEXT:  %[[step:.*]] = arith.muli %c1, %[[size]]
 
@@ -95,11 +95,11 @@ func.func @triangular(%arg0: memref<?x?xf32>) {
   // where step is known to be %c2.
   // TILE_74:      %[[diff2:.*]] = arith.subi %[[i]], %c1
   // TILE_74-NEXT: %[[diff2_adj:.*]] = arith.addi %[[diff2]], %[[adjustment2]]
-  // TILE_74-NEXT: %[[range2:.*]] = arith.divsi %[[diff2_adj]], %c2
+  // TILE_74-NEXT: %[[range2:.*]] = arith.divui %[[diff2_adj]], %c2
 
   // Ceildiv to get the parametric tile size for the second original scf.
   // TILE_74:      %[[sum2:.*]] = arith.addi %[[range2]], %c3
-  // TILE_74-NEXT: %[[size2:.*]] = arith.divsi %[[sum2]], %c4
+  // TILE_74-NEXT: %[[size2:.*]] = arith.divui %[[sum2]], %c4
   // New inner step (original is %c2).
   // TILE_74-NEXT:     %[[step2:.*]] = arith.muli %c2, %[[size2]]
 

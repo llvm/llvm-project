@@ -2329,7 +2329,7 @@ std::string ELFDumper<ELFT>::getDynamicEntry(uint64_t Type,
       return "REL";
     if (Value == DT_RELA)
       return "RELA";
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DT_PLTGOT:
   case DT_HASH:
   case DT_STRTAB:
@@ -3693,8 +3693,16 @@ static void printSectionDescription(formatted_raw_ostream &OS,
 }
 
 template <class ELFT> void GNUELFDumper<ELFT>::printSectionHeaders() {
-  unsigned Bias = ELFT::Is64Bits ? 0 : 8;
   ArrayRef<Elf_Shdr> Sections = cantFail(this->Obj.sections());
+  if (Sections.empty()) {
+    OS << "\nThere are no sections in this file.\n";
+    Expected<StringRef> SecStrTableOrErr =
+        this->Obj.getSectionStringTable(Sections, this->WarningHandler);
+    if (!SecStrTableOrErr)
+      this->reportUniqueWarning(SecStrTableOrErr.takeError());
+    return;
+  }
+  unsigned Bias = ELFT::Is64Bits ? 0 : 8;
   OS << "There are " << to_string(Sections.size())
      << " section headers, starting at offset "
      << "0x" << utohexstr(this->Obj.getHeader().e_shoff, /*LowerCase=*/true) << ":\n\n";
@@ -4074,6 +4082,14 @@ template <class ELFT> void GNUELFDumper<ELFT>::printHashSymbols() {
 
 template <class ELFT> void GNUELFDumper<ELFT>::printSectionDetails() {
   ArrayRef<Elf_Shdr> Sections = cantFail(this->Obj.sections());
+  if (Sections.empty()) {
+    OS << "\nThere are no sections in this file.\n";
+    Expected<StringRef> SecStrTableOrErr =
+        this->Obj.getSectionStringTable(Sections, this->WarningHandler);
+    if (!SecStrTableOrErr)
+      this->reportUniqueWarning(SecStrTableOrErr.takeError());
+    return;
+  }
   OS << "There are " << to_string(Sections.size())
      << " section headers, starting at offset "
      << "0x" << utohexstr(this->Obj.getHeader().e_shoff, /*LowerCase=*/true) << ":\n\n";
@@ -4257,12 +4273,21 @@ static bool checkPTDynamic(const typename ELFT::Phdr &Phdr,
 template <class ELFT>
 void GNUELFDumper<ELFT>::printProgramHeaders(
     bool PrintProgramHeaders, cl::boolOrDefault PrintSectionMapping) {
-  if (PrintProgramHeaders)
-    printProgramHeaders();
+  const bool ShouldPrintSectionMapping = (PrintSectionMapping != cl::BOU_FALSE);
+  // Exit early if no program header or section mapping details were requested.
+  if (!PrintProgramHeaders && !ShouldPrintSectionMapping)
+    return;
 
-  // Display the section mapping along with the program headers, unless
-  // -section-mapping is explicitly set to false.
-  if (PrintSectionMapping != cl::BOU_FALSE)
+  if (PrintProgramHeaders) {
+    const Elf_Ehdr &Header = this->Obj.getHeader();
+    if (Header.e_phnum == 0) {
+      OS << "\nThere are no program headers in this file.\n";
+    } else {
+      printProgramHeaders();
+    }
+  }
+
+  if (ShouldPrintSectionMapping)
     printSectionMapping();
 }
 
@@ -5039,7 +5064,7 @@ template <typename ELFT> static GNUAbiTag getGNUAbiTag(ArrayRef<uint8_t> Desc) {
       "Linux", "Hurd", "Solaris", "FreeBSD", "NetBSD", "Syllable", "NaCl",
   };
   StringRef OSName = "Unknown";
-  if (Words[0] < array_lengthof(OSNames))
+  if (Words[0] < std::size(OSNames))
     OSName = OSNames[Words[0]];
   uint32_t Major = Words[1], Minor = Words[2], Patch = Words[3];
   std::string str;
@@ -6499,7 +6524,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
         break;
       case 0:
         // ELFOSABI_AMDGPU_PAL, ELFOSABI_AMDGPU_MESA3D support *_V3 flags.
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case ELF::ELFABIVERSION_AMDGPU_HSA_V3:
         W.printFlags("Flags", E.e_flags,
                      makeArrayRef(ElfHeaderAMDGPUFlagsABIVersion3),
@@ -7053,7 +7078,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printBBAddrMaps() {
         Sec.sh_type != SHT_LLVM_BB_ADDR_MAP_V0) {
       continue;
     }
-    Optional<const Elf_Shdr *> FunctionSec = None;
+    Optional<const Elf_Shdr *> FunctionSec;
     if (IsRelocatable)
       FunctionSec =
           unwrapOrError(this->FileName, this->Obj.getSection(Sec.sh_link));

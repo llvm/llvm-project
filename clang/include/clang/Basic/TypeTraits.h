@@ -67,6 +67,10 @@ const char *getTraitName(UnaryExprOrTypeTrait T) LLVM_READONLY;
 const char *getTraitSpelling(TypeTrait T) LLVM_READONLY;
 const char *getTraitSpelling(ArrayTypeTrait T) LLVM_READONLY;
 const char *getTraitSpelling(UnaryExprOrTypeTrait T) LLVM_READONLY;
+
+/// Return the arity of the type trait \p T.
+unsigned getTypeTraitArity(TypeTrait T) LLVM_READONLY;
+
 } // namespace clang
 
 #endif

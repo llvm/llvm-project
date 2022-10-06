@@ -7,14 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/ViewOpGraph.h"
-#include "PassDetail.h"
+
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/IndentedOstream.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/GraphWriter.h"
 #include <utility>
+
+namespace mlir {
+#define GEN_PASS_DEF_VIEWOPGRAPH
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -72,7 +79,7 @@ public:
 /// This pass generates a Graphviz dataflow visualization of an MLIR operation.
 /// Note: See https://www.graphviz.org/doc/info/lang.html for more information
 /// about the Graphviz DOT language.
-class PrintOpPass : public ViewOpGraphBase<PrintOpPass> {
+class PrintOpPass : public impl::ViewOpGraphBase<PrintOpPass> {
 public:
   PrintOpPass(raw_ostream &os) : os(os) {}
   PrintOpPass(const PrintOpPass &o) : PrintOpPass(o.os.getOStream()) {}

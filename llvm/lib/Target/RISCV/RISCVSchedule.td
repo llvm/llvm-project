@@ -38,14 +38,14 @@ def WriteAtomicLDW  : SchedWrite;    // Atomic load word
 def WriteAtomicLDD  : SchedWrite;    // Atomic load double word
 def WriteAtomicSTW  : SchedWrite;    // Atomic store word
 def WriteAtomicSTD  : SchedWrite;    // Atomic store double word
-def WriteFALU16     : SchedWrite;    // FP 16-bit computation
-def WriteFALU32     : SchedWrite;    // FP 32-bit computation
-def WriteFALU64     : SchedWrite;    // FP 64-bit computation
+def WriteFAdd16     : SchedWrite;    // 16-bit floating point addition/subtraction
+def WriteFAdd32     : SchedWrite;    // 32-bit floating point addition/subtraction
+def WriteFAdd64     : SchedWrite;    // 64-bit floating point addition/subtraction
 def WriteFMul16     : SchedWrite;    // 16-bit floating point multiply
-def WriteFMA16      : SchedWrite;    // 16-bit floating point fused multiply-add
 def WriteFMul32     : SchedWrite;    // 32-bit floating point multiply
-def WriteFMA32      : SchedWrite;    // 32-bit floating point fused multiply-add
 def WriteFMul64     : SchedWrite;    // 64-bit floating point multiply
+def WriteFMA16      : SchedWrite;    // 16-bit floating point fused multiply-add
+def WriteFMA32      : SchedWrite;    // 32-bit floating point fused multiply-add
 def WriteFMA64      : SchedWrite;    // 64-bit floating point fused multiply-add
 def WriteFDiv16     : SchedWrite;    // 16-bit floating point divide
 def WriteFDiv32     : SchedWrite;    // 32-bit floating point divide
@@ -112,6 +112,7 @@ def ReadCSR         : SchedRead;
 def ReadMemBase     : SchedRead;
 def ReadFMemBase    : SchedRead;
 def ReadStoreData   : SchedRead;
+def ReadFStoreData  : SchedRead;
 def ReadIALU        : SchedRead;
 def ReadIALU32      : SchedRead;    // 32-bit integer ALU operations on RV64I
 def ReadShiftImm    : SchedRead;
@@ -130,14 +131,14 @@ def ReadAtomicLDW   : SchedRead;    // Atomic load word
 def ReadAtomicLDD   : SchedRead;    // Atomic load double word
 def ReadAtomicSTW   : SchedRead;    // Atomic store word
 def ReadAtomicSTD   : SchedRead;    // Atomic store double word
-def ReadFALU16      : SchedRead;    // FP 16-bit computation
-def ReadFALU32      : SchedRead;    // FP 32-bit computation
-def ReadFALU64      : SchedRead;    // FP 64-bit computation
+def ReadFAdd16      : SchedRead;    // 16-bit floating point addition/subtraction
+def ReadFAdd32      : SchedRead;    // 32-bit floating point addition/subtraction
+def ReadFAdd64      : SchedRead;    // 64-bit floating point addition/subtraction
 def ReadFMul16      : SchedRead;    // 16-bit floating point multiply
-def ReadFMA16       : SchedRead;    // 16-bit floating point fused multiply-add
 def ReadFMul32      : SchedRead;    // 32-bit floating point multiply
-def ReadFMA32       : SchedRead;    // 32-bit floating point fused multiply-add
 def ReadFMul64      : SchedRead;    // 64-bit floating point multiply
+def ReadFMA16       : SchedRead;    // 16-bit floating point fused multiply-add
+def ReadFMA32       : SchedRead;    // 32-bit floating point fused multiply-add
 def ReadFMA64       : SchedRead;    // 64-bit floating point fused multiply-add
 def ReadFDiv16      : SchedRead;    // 16-bit floating point divide
 def ReadFDiv32      : SchedRead;    // 32-bit floating point divide
@@ -184,7 +185,7 @@ def ReadFClass64         : SchedRead;
 
 multiclass UnsupportedSchedZfh {
 let Unsupported = true in {
-def : WriteRes<WriteFALU16, []>;
+def : WriteRes<WriteFAdd16, []>;
 def : WriteRes<WriteFClass16, []>;
 def : WriteRes<WriteFCvtF16ToF64, []>;
 def : WriteRes<WriteFCvtF64ToF16, []>;
@@ -206,7 +207,7 @@ def : WriteRes<WriteFSGNJ16, []>;
 def : WriteRes<WriteFST16, []>;
 def : WriteRes<WriteFSqrt16, []>;
 
-def : ReadAdvance<ReadFALU16, 0>;
+def : ReadAdvance<ReadFAdd16, 0>;
 def : ReadAdvance<ReadFClass16, 0>;
 def : ReadAdvance<ReadFCvtF16ToF64, 0>;
 def : ReadAdvance<ReadFCvtF64ToF16, 0>;
@@ -229,5 +230,5 @@ def : ReadAdvance<ReadFSqrt16, 0>;
 }
 
 // Include the scheduler resources for other instruction extensions.
-include "RISCVScheduleB.td"
+include "RISCVScheduleZb.td"
 include "RISCVScheduleV.td"

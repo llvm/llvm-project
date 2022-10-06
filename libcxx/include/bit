@@ -71,14 +71,6 @@ namespace std {
 #include <type_traits>
 #include <version>
 
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
-#  include <iosfwd>
-#endif
-
-#if defined(_LIBCPP_COMPILER_MSVC)
-#  include <intrin.h>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
@@ -89,7 +81,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template<class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 _Tp __rotr(_Tp __t, unsigned int __cnt) _NOEXCEPT
 {
     static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__rotr requires an unsigned integer type");
@@ -100,7 +92,7 @@ _Tp __rotr(_Tp __t, unsigned int __cnt) _NOEXCEPT
 }
 
 template<class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 int __countl_zero(_Tp __t) _NOEXCEPT
 {
     static_assert(__libcpp_is_unsigned_integer<_Tp>::value, "__countl_zero requires an unsigned integer type");
@@ -255,5 +247,9 @@ enum class endian {
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <iosfwd>
+#endif
 
 #endif // _LIBCPP_BIT

@@ -148,11 +148,20 @@ PlatformDarwinDevice::GetSDKDirectoryForCurrentOSVersion() {
   uint32_t i;
   if (UpdateSDKDirectoryInfosIfNeeded()) {
     const uint32_t num_sdk_infos = m_sdk_directory_infos.size();
-
-    // Check to see if the user specified a build string. If they did, then be
-    // sure to match it.
     std::vector<bool> check_sdk_info(num_sdk_infos, true);
-    ConstString build(m_sdk_build);
+
+    // Prefer the user SDK build string.
+    ConstString build = GetSDKBuild();
+
+    // Fall back to the platform's build string.
+    if (!build) {
+      if (llvm::Optional<std::string> os_build_str = GetOSBuildString()) {
+        build = ConstString(*os_build_str);
+      }
+    }
+
+    // If we have a build string, only check platforms for which the build
+    // string matches.
     if (build) {
       for (i = 0; i < num_sdk_infos; ++i)
         check_sdk_info[i] = m_sdk_directory_infos[i].build == build;
@@ -163,14 +172,14 @@ PlatformDarwinDevice::GetSDKDirectoryForCurrentOSVersion() {
     llvm::VersionTuple version = GetOSVersion();
     if (!version.empty()) {
       if (UpdateSDKDirectoryInfosIfNeeded()) {
-        // First try for an exact match of major, minor and update
+        // First try for an exact match of major, minor and update.
         for (i = 0; i < num_sdk_infos; ++i) {
           if (check_sdk_info[i]) {
             if (m_sdk_directory_infos[i].version == version)
               return &m_sdk_directory_infos[i];
           }
         }
-        // First try for an exact match of major and minor
+        // Try for an exact match of major and minor.
         for (i = 0; i < num_sdk_infos; ++i) {
           if (check_sdk_info[i]) {
             if (m_sdk_directory_infos[i].version.getMajor() ==
@@ -181,7 +190,7 @@ PlatformDarwinDevice::GetSDKDirectoryForCurrentOSVersion() {
             }
           }
         }
-        // Lastly try to match of major version only..
+        // Lastly try to match of major version only.
         for (i = 0; i < num_sdk_infos; ++i) {
           if (check_sdk_info[i]) {
             if (m_sdk_directory_infos[i].version.getMajor() ==
@@ -192,7 +201,7 @@ PlatformDarwinDevice::GetSDKDirectoryForCurrentOSVersion() {
         }
       }
     } else if (build) {
-      // No version, just a build number, search for the first one that matches
+      // No version, just a build number, return the first one that matches.
       for (i = 0; i < num_sdk_infos; ++i)
         if (check_sdk_info[i])
           return &m_sdk_directory_infos[i];

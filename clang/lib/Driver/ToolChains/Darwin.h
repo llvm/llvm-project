@@ -254,7 +254,8 @@ public:
 
   bool UseObjCMixedDispatch() const override { return true; }
 
-  bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override;
+  UnwindTableLevel
+  getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;
 
   RuntimeLibType GetDefaultRuntimeLibType() const override {
     return ToolChain::RLT_CompilerRT;
@@ -628,7 +629,8 @@ private:
                                    llvm::StringRef ArchDir,
                                    llvm::StringRef BitDir) const;
 
-  llvm::StringRef GetHeaderSysroot(const llvm::opt::ArgList &DriverArgs) const;
+  llvm::SmallString<128>
+  GetEffectiveSysroot(const llvm::opt::ArgList &DriverArgs) const;
 };
 
 } // end namespace toolchains

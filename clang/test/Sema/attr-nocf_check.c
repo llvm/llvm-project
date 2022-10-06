@@ -15,7 +15,7 @@ void testNoCfCheckImpl(double __attribute__((nocf_check)) i) {} // expected-warn
 // Allow attributed function pointers as well as casting between attributed
 // and non-attributed function pointers.
 void testNoCfCheckMismatch(FuncPointer f) {
-  FuncPointerWithNoCfCheck fNoCfCheck = f; // expected-warning {{incompatible function pointer types}}
+  FuncPointerWithNoCfCheck fNoCfCheck = f; // expected-error {{incompatible function pointer types}}
   (*fNoCfCheck)();                         // no-warning
 }
 

@@ -75,7 +75,7 @@ ModulePass* llvm::createAMDGPUOpenCLEnqueuedBlockLoweringPass() {
 /// Collect direct or indirect callers of \p F and save them
 /// to \p Callers.
 static void collectCallers(Function *F, DenseSet<Function *> &Callers) {
-  for (auto U : F->users()) {
+  for (auto *U : F->users()) {
     if (auto *CI = dyn_cast<CallInst>(&*U)) {
       auto *Caller = CI->getParent()->getParent();
       if (Callers.insert(Caller).second)
@@ -95,7 +95,7 @@ static void collectFunctionUsers(User *U, DenseSet<Function *> &Funcs) {
   }
   if (!isa<Constant>(U))
     return;
-  for (auto UU : U->users())
+  for (auto *UU : U->users())
     collectFunctionUsers(&*UU, Funcs);
 }
 
@@ -123,7 +123,7 @@ bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
           /*isExternallyInitialized=*/false);
       LLVM_DEBUG(dbgs() << "runtime handle created: " << *GV << '\n');
 
-      for (auto U : F.users()) {
+      for (auto *U : F.users()) {
         auto *UU = &*U;
         if (!isa<ConstantExpr>(UU))
           continue;
@@ -138,7 +138,7 @@ bool AMDGPUOpenCLEnqueuedBlockLowering::runOnModule(Module &M) {
     }
   }
 
-  for (auto F : Callers) {
+  for (auto *F : Callers) {
     if (F->getCallingConv() != CallingConv::AMDGPU_KERNEL)
       continue;
     F->addFnAttr("calls-enqueue-kernel");

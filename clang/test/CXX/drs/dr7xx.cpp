@@ -178,7 +178,8 @@ namespace dr727 { // dr727: partial
     static_assert(B<0>().v<1> == 3, "");
     static_assert(B<0>().v<0> == 4, "");
 #if __cplusplus < 201702L
-    // expected-error@-2 {{failed}}
+    // expected-error@-2 {{failed}} \
+    // expected-note@-2 {{evaluates to '2 == 4'}}
 #endif
 
     static_assert(B<1>().w<1> == 1, "");

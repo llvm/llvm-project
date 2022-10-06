@@ -13,7 +13,7 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -90,6 +90,12 @@ static AffineMap reindexIndexingMap(AffineMap map) {
          "expected reindexed map with same number of dims and results");
   return res;
 }
+
+/// Helper enum to represent conv1d input traversal order.
+enum class Conv1DOpOrder {
+  Ncw, // Corresponds to operation that traverses the input in (n, c, w) order.
+  Nwc  // Corresponds to operation that traverses the input in (n, w, c) order.
+};
 
 /// Helper data structure to represent the result of vectorization.
 /// In certain specific cases, like terminators, we do not want to propagate/
@@ -184,14 +190,8 @@ static Operation *buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
 }
 
 static SmallVector<bool> getReductionMask(LinalgOp linalgOp) {
-  unsigned idx = 0;
-  SmallVector<bool> reductionMask(linalgOp.iterator_types().size(), false);
-  for (auto attr : linalgOp.iterator_types()) {
-    if (isReductionIterator(attr))
-      reductionMask[idx] = true;
-    ++idx;
-  }
-  return reductionMask;
+  return llvm::to_vector(
+      llvm::map_range(linalgOp.getIteratorTypesArray(), isReductionIterator));
 }
 
 /// Build a vector.transfer_write of `value` into `outputOperand` at indices set
@@ -209,7 +209,7 @@ static Value buildVectorWrite(OpBuilder &b, Value value,
   if (vectorType.getRank() > 0) {
     // 0-d case is still special: do not invert the reindexing map.
     AffineMap map =
-        reindexIndexingMap(linalgOp.getTiedIndexingMap(outputOperand));
+        reindexIndexingMap(linalgOp.getMatchingIndexingMap(outputOperand));
     SmallVector<int64_t> transposeShape =
         applyPermutationMap(inversePermutation(map), vectorType.getShape());
     assert(!transposeShape.empty() && "unexpected empty transpose shape");
@@ -252,7 +252,7 @@ vectorizeLinalgYield(OpBuilder &b, Operation *op,
   auto yieldOp = dyn_cast<linalg::YieldOp>(op);
   if (!yieldOp)
     return VectorizationResult{VectorizationStatus::Failure, nullptr};
-  for (const auto &outputs : llvm::enumerate(yieldOp.values())) {
+  for (const auto &outputs : llvm::enumerate(yieldOp.getValues())) {
     // TODO: Scan for an opportunity for reuse.
     // TODO: use a map.
     Value vectorValue = bvm.lookup(outputs.value());
@@ -278,23 +278,23 @@ static VectorizationResult vectorizeLinalgIndex(OpBuilder &b, Operation *op,
   auto targetShape = linalgOp.computeStaticLoopSizes();
   // Compute a one-dimensional index vector for the index op dimension.
   SmallVector<int64_t> constantSeq =
-      llvm::to_vector<16>(llvm::seq<int64_t>(0, targetShape[indexOp.dim()]));
+      llvm::to_vector<16>(llvm::seq<int64_t>(0, targetShape[indexOp.getDim()]));
   auto constantOp =
       b.create<arith::ConstantOp>(loc, b.getIndexVectorAttr(constantSeq));
   // Return the one-dimensional index vector if it lives in the trailing
   // dimension of the iteration space since the vectorization algorithm in this
   // case can handle the broadcast.
-  if (indexOp.dim() == targetShape.size() - 1)
+  if (indexOp.getDim() == targetShape.size() - 1)
     return VectorizationResult{VectorizationStatus::NewOp, constantOp};
   // Otherwise permute the targetShape to move the index dimension last,
   // broadcast the one-dimensional index vector to the permuted shape, and
   // finally transpose the broadcasted index vector to undo the permutation.
-  std::swap(targetShape[indexOp.dim()], targetShape.back());
+  std::swap(targetShape[indexOp.getDim()], targetShape.back());
   auto broadCastOp = b.create<vector::BroadcastOp>(
       loc, VectorType::get(targetShape, b.getIndexType()), constantOp);
   SmallVector<int64_t> transposition =
       llvm::to_vector<16>(llvm::seq<int64_t>(0, linalgOp.getNumLoops()));
-  std::swap(transposition.back(), transposition[indexOp.dim()]);
+  std::swap(transposition.back(), transposition[indexOp.getDim()]);
   auto transposeOp =
       b.create<vector::TransposeOp>(loc, broadCastOp, transposition);
   return VectorizationResult{VectorizationStatus::NewOp, transposeOp};
@@ -473,12 +473,12 @@ vectorizeAsLinalgGeneric(OpBuilder &b, LinalgOp linalgOp,
     // } else {
     if (opOperand->getOperandNumber() < linalgOp.getNumInputs()) {
       map = inverseAndBroadcastProjectedPermutation(
-          linalgOp.getTiedIndexingMap(opOperand));
+          linalgOp.getMatchingIndexingMap(opOperand));
       readType = VectorType::get(commonVectorShape,
                                  getElementTypeOrSelf(opOperand->get()));
     } else {
       map = inversePermutation(
-          reindexIndexingMap(linalgOp.getTiedIndexingMap(opOperand)));
+          reindexIndexingMap(linalgOp.getMatchingIndexingMap(opOperand)));
       readType = VectorType::get(map.compose(linalgOp.getShape(opOperand)),
                                  getElementTypeOrSelf(opOperand->get()));
     }
@@ -534,11 +534,15 @@ vectorizeAsLinalgGeneric(OpBuilder &b, LinalgOp linalgOp,
 // TODO: probably need some extra checks for reduction followed by consumer
 // ops that may not commute (e.g. linear reduction + non-linear instructions).
 static LogicalResult reductionPreconditions(LinalgOp op) {
-  if (llvm::none_of(op.iterator_types(), isReductionIterator)) {
+  if (llvm::none_of(op.getIteratorTypesArray(), isReductionIterator)) {
     LDBG("reduction precondition failed: no reduction iterator");
     return failure();
   }
   for (OpOperand *opOperand : op.getOutputOperands()) {
+    AffineMap indexingMap = op.getMatchingIndexingMap(opOperand);
+    if (indexingMap.isPermutation())
+      continue;
+
     Operation *reduceOp = matchLinalgReduction(opOperand);
     if (!reduceOp || !getCombinerOpKind(reduceOp)) {
       LDBG("reduction precondition failed: reduction detection failed");
@@ -562,8 +566,16 @@ static LogicalResult vectorizeStaticLinalgOpPrecondition(linalg::LinalgOp op) {
       return failure();
     }
   }
-  if (isElementwise(op))
+  if (isElementwise(op)) {
+    // Some operations in the body cannot be vectorized.
+    for (Operation &payloadOp : *op.getBlock()) {
+      if (isa<tensor::ExtractOp>(payloadOp)) {
+        LDBG("precondition failed: `tensor.extract` not vectorizable");
+        return failure();
+      }
+    }
     return success();
+  }
   // TODO: isaConvolutionOpInterface that can also infer from generic features.
   // But we will still need stride/dilation attributes that will be annoying to
   // reverse-engineer...
@@ -583,7 +595,7 @@ static LogicalResult vectorizeStaticLinalgOpPrecondition(linalg::LinalgOp op) {
   return success();
 }
 
-static LogicalResult vectorizeLinalgOpPrecondition(LinalgOp linalgOp) {
+LogicalResult mlir::linalg::vectorizeLinalgOpPrecondition(LinalgOp linalgOp) {
   // All types must be static shape to go to vector.
   if (linalgOp.hasDynamicShape()) {
     LDBG("precondition failed: dynamic shape");
@@ -676,7 +688,7 @@ static SmallVector<Value> ofrToIndexValues(OpBuilder &builder, Location loc,
   return result;
 }
 
-/// Rewrite a tensor::PadOp into a sequence of InitTensorOp, FillOp and
+/// Rewrite a tensor::PadOp into a sequence of EmptyOp, FillOp and
 /// InsertSliceOp. For now, only constant padding values are supported.
 /// If there is enough static type information, TransferReadOps and
 /// TransferWriteOps may be generated instead of InsertSliceOps.
@@ -1308,22 +1320,31 @@ namespace {
 /// or
 ///
 /// ```
+///   Op def: (     n,     c,     w,    f,    kw )
+///    Iters: ({Par(), Par(), Par(), Red(), Red()})
+///   Layout: {{n, c, strideW * w + dilationW * kw}, {f, c, kw}, {n, f, w}}
+/// ```
+/// kw is unrolled, w is unrolled iff dilationW > 1.
+///
+/// or
+///
+/// ```
 ///   Op def: (     n,     w,     c,    kw )
 ///    Iters: ({Par(), Par(), Par(), Red()})
 ///   Layout: {{n, strideW * w + dilationW * kw, c}, {kw, c}, {n, w, c}}
 /// ```
 /// kw is unrolled, w is unrolled iff dilationW > 1.
-struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
-  Conv1DNwcGenerator(OpBuilder &builder, LinalgOp linalgOp, int strideW,
-                     int dilationW)
+struct Conv1DGenerator : public StructuredGenerator<LinalgOp> {
+  Conv1DGenerator(OpBuilder &builder, LinalgOp linalgOp, int strideW,
+                  int dilationW)
       : StructuredGenerator<LinalgOp>(builder, linalgOp), strideW(strideW),
         dilationW(dilationW) {
     // Determine whether `linalgOp` can be generated with this generator
     if (linalgOp.getNumInputs() != 2 || linalgOp.getNumOutputs() != 1)
       return;
-    lhsShaped = linalgOp.inputs()[0];
-    rhsShaped = linalgOp.inputs()[1];
-    resShaped = linalgOp.outputs()[0];
+    lhsShaped = linalgOp.getInputs()[0];
+    rhsShaped = linalgOp.getInputs()[1];
+    resShaped = linalgOp.getOutputs()[0];
     lhsShapedType = lhsShaped.getType().dyn_cast<ShapedType>();
     rhsShapedType = rhsShaped.getType().dyn_cast<ShapedType>();
     resShapedType = resShaped.getType().dyn_cast<ShapedType>();
@@ -1378,15 +1399,43 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
   /// kw is always unrolled.
   /// TODO: w (resp. kw) is unrolled when the strideW ( resp. dilationW) is
   /// > 1.
-  FailureOr<Operation *> conv() {
+  FailureOr<Operation *> conv(Conv1DOpOrder conv1DOpOrder) {
     if (!valid)
       return failure();
 
     int64_t nSize, wSize, cSize, kwSize, fSize;
-    // kernel{kw, c, f}
-    bindShapeDims(rhsShapedType, kwSize, cSize, fSize);
-    // out{n, w, f}
-    bindShapeDims(resShapedType, nSize, wSize);
+    SmallVector<int64_t, 3> lhsShape, rhsShape, resShape;
+    switch (conv1DOpOrder) {
+    case Conv1DOpOrder::Nwc:
+      // kernel{kw, c, f}
+      bindShapeDims(rhsShapedType, kwSize, cSize, fSize);
+      // out{n, w, f}
+      bindShapeDims(resShapedType, nSize, wSize);
+      lhsShape = {nSize,
+                  // iw = ow * sw + kw *  dw - 1
+                  //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
+                  // Perform the proper inclusive -> exclusive -> inclusive.
+                  ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) -
+                      1,
+                  cSize};
+      rhsShape = {kwSize, cSize, fSize};
+      resShape = {nSize, wSize, fSize};
+      break;
+    case Conv1DOpOrder::Ncw:
+      // kernel{f, c, kw}
+      bindShapeDims(rhsShapedType, fSize, cSize, kwSize);
+      // out{n, f, w}
+      bindShapeDims(resShapedType, nSize, fSize, wSize);
+      lhsShape = {nSize, cSize,
+                  // iw = ow * sw + kw *  dw - 1
+                  //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
+                  // Perform the proper inclusive -> exclusive -> inclusive.
+                  ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) -
+                      1};
+      rhsShape = {fSize, cSize, kwSize};
+      resShape = {nSize, fSize, wSize};
+      break;
+    }
 
     vector::TransferWriteOp write;
     Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
@@ -1399,17 +1448,9 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
     Type lhsEltType = lhsShapedType.getElementType();
     Type rhsEltType = rhsShapedType.getElementType();
     Type resEltType = resShapedType.getElementType();
-    VectorType lhsType = VectorType::get(
-        {nSize,
-         // iw = ow * sw + kw *  dw - 1
-         //   (i.e. 16 convolved with 3 (@stride 1 dilation 1) -> 14)
-         // Perform the proper inclusive -> exclusive -> inclusive.
-         ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) - 1,
-         cSize},
-        lhsEltType);
-    VectorType rhsType = VectorType::get({kwSize, cSize, fSize}, rhsEltType);
-    VectorType resType = VectorType::get({nSize, wSize, fSize}, resEltType);
-
+    auto lhsType = VectorType::get(lhsShape, lhsEltType);
+    auto rhsType = VectorType::get(rhsShape, rhsEltType);
+    auto resType = VectorType::get(resShape, resEltType);
     // Read lhs slice of size {w * strideW + kw * dilationW, c, f} @ [0, 0,
     // 0].
     Value lhs = builder.create<vector::TransferReadOp>(
@@ -1420,6 +1461,28 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
     // Read res slice of size {n, w, f} @ [0, 0, 0].
     Value res = builder.create<vector::TransferReadOp>(
         loc, resType, resShaped, ValueRange{zero, zero, zero});
+
+    // The base vectorization case is input: {n,w,c}, weight: {kw,c,f}, output:
+    // {n,w,f}. To reuse the base pattern vectorization case, we do pre
+    // transpose on input, weight, and output.
+    switch (conv1DOpOrder) {
+    case Conv1DOpOrder::Nwc:
+      // Base case, so no transposes necessary.
+      break;
+    case Conv1DOpOrder::Ncw: {
+      // To match base vectorization case, we pre-transpose current case.
+      // ncw -> nwc
+      static constexpr std::array<int64_t, 3> permLhs = {0, 2, 1};
+      lhs = builder.create<vector::TransposeOp>(loc, lhs, permLhs);
+      // fcw -> wcf
+      static constexpr std::array<int64_t, 3> permRhs = {2, 1, 0};
+      rhs = builder.create<vector::TransposeOp>(loc, rhs, permRhs);
+      // nfw -> nwf
+      static constexpr std::array<int64_t, 3> permRes = {0, 2, 1};
+      res = builder.create<vector::TransposeOp>(loc, res, permRes);
+      break;
+    }
+    }
 
     //===------------------------------------------------------------------===//
     // Begin vector-only rewrite part
@@ -1474,6 +1537,21 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
     // End vector-only rewrite part
     //===------------------------------------------------------------------===//
 
+    // The base vectorization case is output: {n,w,f}
+    // To reuse the result from base pattern vectorization case, we post
+    // transpose the base case result.
+    switch (conv1DOpOrder) {
+    case Conv1DOpOrder::Nwc:
+      // Base case, so no transposes necessary.
+      break;
+    case Conv1DOpOrder::Ncw: {
+      // nwf -> nfw
+      static constexpr std::array<int64_t, 3> perm = {0, 2, 1};
+      res = builder.create<vector::TransposeOp>(loc, res, perm);
+      break;
+    }
+    }
+
     // Write back res slice of size {n, w, f} @ [0, 0, 0].
     return builder
         .create<vector::TransferWriteOp>(loc, res, resShaped,
@@ -1484,13 +1562,14 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
   // Create a contraction: lhs{n, w, c} * rhs{c, f} -> res{n, w, f}
   Value conv1dSliceAsContraction(OpBuilder &b, Location loc, Value lhs,
                                  Value rhs, Value res) {
-    StringRef par = Par().strRef, red = Red().strRef;
+    vector::IteratorType par = vector::IteratorType::parallel;
+    vector::IteratorType red = vector::IteratorType::reduction;
     AffineExpr n, w, f, c;
     bindDims(ctx, n, w, f, c);
     return builder.create<vector::ContractionOp>(
         loc, lhs, rhs, res,
         /*indexingMaps=*/MapList{{n, w, c}, {c, f}, {n, w, f}},
-        /*iteratorTypes=*/ArrayRef<StringRef>{par, par, par, red});
+        /*iteratorTypes=*/ArrayRef<vector::IteratorType>{par, par, par, red});
   }
 
   /// Generate a vector implementation for:
@@ -1614,7 +1693,7 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
 
   /// Entry point that transposes into the common form:
   ///   {{n, strideW * w + dilationW * kw, c}, {kw, c, f}, {n, w, f}}
-  FailureOr<Operation *> generateConv() {
+  FailureOr<Operation *> generateNwcConv() {
     AffineExpr n, w, f, kw, c;
     bindDims(ctx, n, w, f, kw, c);
     if (!iters({Par(), Par(), Par(), Red(), Red()}))
@@ -1624,7 +1703,23 @@ struct Conv1DNwcGenerator : public StructuredGenerator<LinalgOp> {
     if (layout({/*lhsIndex*/ {n, strideW * w + dilationW * kw, c},
                 /*rhsIndex*/ {kw, c, f},
                 /*resIndex*/ {n, w, f}}))
-      return conv();
+      return conv(Conv1DOpOrder::Nwc);
+    return failure();
+  }
+
+  /// Entry point that transposes into the common form:
+  ///   {{n, c, strideW * w + dilationW * kw}, {f, c, kw}, {n, f, w}}
+  FailureOr<Operation *> generateNcwConv() {
+    AffineExpr n, w, f, kw, c;
+    bindDims(ctx, n, f, w, c, kw);
+    if (!iters({Par(), Par(), Par(), Red(), Red()}))
+      return failure();
+
+    if (layout({/*lhsIndex*/ {n, c, strideW * w + dilationW * kw},
+                /*rhsIndex*/ {f, c, kw},
+                /*resIndex*/ {n, f, w}}))
+      return conv(Conv1DOpOrder::Ncw);
+
     return failure();
   }
 
@@ -1663,8 +1758,11 @@ static FailureOr<Operation *> vectorizeConvolution(OpBuilder &b, LinalgOp op) {
   auto dilations = op->getAttrOfType<DenseIntElementsAttr>("dilations");
   auto stride = strides ? *strides.getValues<uint64_t>().begin() : 1;
   auto dilation = dilations ? *dilations.getValues<uint64_t>().begin() : 1;
-  Conv1DNwcGenerator e(b, op, stride, dilation);
-  auto res = e.generateConv();
+  Conv1DGenerator e(b, op, stride, dilation);
+  auto res = e.generateNwcConv();
+  if (succeeded(res))
+    return res;
+  res = e.generateNcwConv();
   if (succeeded(res))
     return res;
   return e.generateDilatedConv();

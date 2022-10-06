@@ -317,7 +317,7 @@ void Platform::GetStatus(Stream &strm) {
     strm.Format("   Sysroot: {0}\n", GetSDKRootDirectory());
   }
   if (GetWorkingDirectory()) {
-    strm.Printf("WorkingDir: %s\n", GetWorkingDirectory().GetCString());
+    strm.Printf("WorkingDir: %s\n", GetWorkingDirectory().GetPath().c_str());
   }
   if (!IsConnected())
     return;
@@ -434,12 +434,13 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     // make the new directory and get in there
     FileSpec dst_dir = rc_baton->dst;
     if (!dst_dir.GetFilename())
-      dst_dir.GetFilename() = src.GetLastPathComponent();
+      dst_dir.SetFilename(src.GetLastPathComponent());
     Status error = rc_baton->platform_ptr->MakeDirectory(
         dst_dir, lldb::eFilePermissionsDirectoryDefault);
     if (error.Fail()) {
       rc_baton->error.SetErrorStringWithFormat(
-          "unable to setup directory %s on remote end", dst_dir.GetCString());
+          "unable to setup directory %s on remote end",
+          dst_dir.GetPath().c_str());
       return FileSystem::eEnumerateDirectoryResultQuit; // got an error, bail out
     }
 
@@ -449,7 +450,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     // Make a filespec that only fills in the directory of a FileSpec so when
     // we enumerate we can quickly fill in the filename for dst copies
     FileSpec recurse_dst;
-    recurse_dst.GetDirectory().SetCString(dst_dir.GetPath().c_str());
+    recurse_dst.SetDirectory(dst_dir.GetPathAsConstString());
     RecurseCopyBaton rc_baton2 = {recurse_dst, rc_baton->platform_ptr,
                                   Status()};
     FileSystem::Instance().EnumerateDirectory(src_dir_path, true, true, true,
@@ -465,7 +466,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     // copy the file and keep going
     FileSpec dst_file = rc_baton->dst;
     if (!dst_file.GetFilename())
-      dst_file.GetFilename() = src.GetFilename();
+      dst_file.SetFilename(src.GetFilename());
 
     FileSpec src_resolved;
 
@@ -487,7 +488,7 @@ RecurseCopy_Callback(void *baton, llvm::sys::fs::file_type ft,
     // copy the file and keep going
     FileSpec dst_file = rc_baton->dst;
     if (!dst_file.GetFilename())
-      dst_file.GetFilename() = src.GetFilename();
+      dst_file.SetFilename(src.GetFilename());
     Status err = rc_baton->platform_ptr->PutFile(src, dst_file);
     if (err.Fail()) {
       rc_baton->error.SetErrorString(err.AsCString());
@@ -514,7 +515,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
   FileSpec fixed_dst(dst);
 
   if (!fixed_dst.GetFilename())
-    fixed_dst.GetFilename() = src.GetFilename();
+    fixed_dst.SetFilename(src.GetFilename());
 
   FileSpec working_dir = GetWorkingDirectory();
 
@@ -522,7 +523,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
     if (dst.GetDirectory()) {
       const char first_dst_dir_char = dst.GetDirectory().GetCString()[0];
       if (first_dst_dir_char == '/' || first_dst_dir_char == '\\') {
-        fixed_dst.GetDirectory() = dst.GetDirectory();
+        fixed_dst.SetDirectory(dst.GetDirectory());
       }
       // If the fixed destination file doesn't have a directory yet, then we
       // must have a relative path. We will resolve this relative path against
@@ -533,7 +534,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
         if (working_dir) {
           relative_spec = working_dir;
           relative_spec.AppendPathComponent(dst.GetPath());
-          fixed_dst.GetDirectory() = relative_spec.GetDirectory();
+          fixed_dst.SetDirectory(relative_spec.GetDirectory());
         } else {
           error.SetErrorStringWithFormat(
               "platform working directory must be valid for relative path '%s'",
@@ -543,7 +544,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
       }
     } else {
       if (working_dir) {
-        fixed_dst.GetDirectory().SetCString(working_dir.GetCString());
+        fixed_dst.SetDirectory(working_dir.GetPathAsConstString());
       } else {
         error.SetErrorStringWithFormat(
             "platform working directory must be valid for relative path '%s'",
@@ -553,7 +554,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
     }
   } else {
     if (working_dir) {
-      fixed_dst.GetDirectory().SetCString(working_dir.GetCString());
+      fixed_dst.SetDirectory(working_dir.GetPathAsConstString());
     } else {
       error.SetErrorStringWithFormat("platform working directory must be valid "
                                      "when destination directory is empty");
@@ -580,7 +581,7 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
         // Make a filespec that only fills in the directory of a FileSpec so
         // when we enumerate we can quickly fill in the filename for dst copies
         FileSpec recurse_dst;
-        recurse_dst.GetDirectory().SetCString(fixed_dst.GetCString());
+        recurse_dst.SetDirectory(fixed_dst.GetPathAsConstString());
         std::string src_dir_path(src.GetPath());
         RecurseCopyBaton baton = {recurse_dst, this, Status()};
         FileSystem::Instance().EnumerateDirectory(
@@ -737,7 +738,7 @@ ConstString Platform::GetFullNameForDylib(ConstString basename) {
 bool Platform::SetRemoteWorkingDirectory(const FileSpec &working_dir) {
   Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "Platform::SetRemoteWorkingDirectory('%s')",
-            working_dir.GetCString());
+            working_dir.GetPath().c_str());
   m_working_dir = working_dir;
   return true;
 }
@@ -928,7 +929,8 @@ ArchSpec Platform::GetAugmentedArchSpec(llvm::StringRef triple) {
 
   ArchSpec compatible_arch;
   ArchSpec raw_arch(triple);
-  if (!IsCompatibleArchitecture(raw_arch, {}, false, &compatible_arch))
+  if (!IsCompatibleArchitecture(raw_arch, {}, ArchSpec::CompatibleMatch,
+                                &compatible_arch))
     return raw_arch;
 
   if (!compatible_arch.IsValid())
@@ -1155,16 +1157,14 @@ Platform::CreateArchList(llvm::ArrayRef<llvm::Triple::ArchType> archs,
 /// architecture and the target triple contained within.
 bool Platform::IsCompatibleArchitecture(const ArchSpec &arch,
                                         const ArchSpec &process_host_arch,
-                                        bool exact_arch_match,
+                                        ArchSpec::MatchType match,
                                         ArchSpec *compatible_arch_ptr) {
   // If the architecture is invalid, we must answer true...
   if (arch.IsValid()) {
     ArchSpec platform_arch;
-    auto match = exact_arch_match ? &ArchSpec::IsExactMatch
-                                  : &ArchSpec::IsCompatibleMatch;
     for (const ArchSpec &platform_arch :
          GetSupportedArchitectures(process_host_arch)) {
-      if ((arch.*match)(platform_arch)) {
+      if (arch.IsMatch(platform_arch, match)) {
         if (compatible_arch_ptr)
           *compatible_arch_ptr = platform_arch;
         return true;
@@ -1772,24 +1772,20 @@ lldb::ProcessSP Platform::DoConnectProcess(llvm::StringRef connect_url,
   error.Clear();
 
   if (!target) {
-    ArchSpec arch;
-    if (target && target->GetArchitecture().IsValid())
-      arch = target->GetArchitecture();
-    else
-      arch = Target::GetDefaultArchitecture();
+    ArchSpec arch = Target::GetDefaultArchitecture();
 
-    const char *triple = "";
-    if (arch.IsValid())
-      triple = arch.GetTriple().getTriple().c_str();
+    const char *triple =
+        arch.IsValid() ? arch.GetTriple().getTriple().c_str() : "";
 
     TargetSP new_target_sp;
     error = debugger.GetTargetList().CreateTarget(
         debugger, "", triple, eLoadDependentsNo, nullptr, new_target_sp);
-    target = new_target_sp.get();
-  }
 
-  if (!target || error.Fail())
-    return nullptr;
+    target = new_target_sp.get();
+    if (!target || error.Fail()) {
+      return nullptr;
+    }
+  }
 
   lldb::ProcessSP process_sp =
       target->CreateProcess(debugger.GetListener(), plugin_name, nullptr, true);
@@ -1930,6 +1926,13 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
     trap_opcode_size = sizeof(g_i386_opcode);
   } break;
 
+  case llvm::Triple::riscv32:
+  case llvm::Triple::riscv64: {
+    static const uint8_t g_riscv_opcode[] = {0x73, 0x00, 0x10, 0x00}; // ebreak
+    trap_opcode = g_riscv_opcode;
+    trap_opcode_size = sizeof(g_riscv_opcode);
+  } break;
+
   default:
     return 0;
   }
@@ -1965,14 +1968,15 @@ PlatformSP PlatformList::GetOrCreate(const ArchSpec &arch,
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   // First try exact arch matches across all platforms already created
   for (const auto &platform_sp : m_platforms) {
-    if (platform_sp->IsCompatibleArchitecture(arch, process_host_arch, true,
-                                              platform_arch_ptr))
+    if (platform_sp->IsCompatibleArchitecture(
+            arch, process_host_arch, ArchSpec::ExactMatch, platform_arch_ptr))
       return platform_sp;
   }
 
   // Next try compatible arch matches across all platforms already created
   for (const auto &platform_sp : m_platforms) {
-    if (platform_sp->IsCompatibleArchitecture(arch, process_host_arch, false,
+    if (platform_sp->IsCompatibleArchitecture(arch, process_host_arch,
+                                              ArchSpec::CompatibleMatch,
                                               platform_arch_ptr))
       return platform_sp;
   }
@@ -1984,8 +1988,9 @@ PlatformSP PlatformList::GetOrCreate(const ArchSpec &arch,
        (create_callback = PluginManager::GetPlatformCreateCallbackAtIndex(idx));
        ++idx) {
     PlatformSP platform_sp = create_callback(false, &arch);
-    if (platform_sp && platform_sp->IsCompatibleArchitecture(
-                           arch, process_host_arch, true, platform_arch_ptr)) {
+    if (platform_sp &&
+        platform_sp->IsCompatibleArchitecture(
+            arch, process_host_arch, ArchSpec::ExactMatch, platform_arch_ptr)) {
       m_platforms.push_back(platform_sp);
       return platform_sp;
     }
@@ -1996,7 +2001,8 @@ PlatformSP PlatformList::GetOrCreate(const ArchSpec &arch,
        ++idx) {
     PlatformSP platform_sp = create_callback(false, &arch);
     if (platform_sp && platform_sp->IsCompatibleArchitecture(
-                           arch, process_host_arch, false, platform_arch_ptr)) {
+                           arch, process_host_arch, ArchSpec::CompatibleMatch,
+                           platform_arch_ptr)) {
       m_platforms.push_back(platform_sp);
       return platform_sp;
     }
@@ -2030,7 +2036,7 @@ PlatformSP PlatformList::GetOrCreate(llvm::ArrayRef<ArchSpec> archs,
   if (m_selected_platform_sp) {
     for (const ArchSpec &arch : archs) {
       if (m_selected_platform_sp->IsCompatibleArchitecture(
-              arch, process_host_arch, false, nullptr))
+              arch, process_host_arch, ArchSpec::CompatibleMatch, nullptr))
         return m_selected_platform_sp;
     }
   }
@@ -2038,8 +2044,8 @@ PlatformSP PlatformList::GetOrCreate(llvm::ArrayRef<ArchSpec> archs,
   // Prefer the host platform if it matches at least one architecture.
   if (host_platform_sp) {
     for (const ArchSpec &arch : archs) {
-      if (host_platform_sp->IsCompatibleArchitecture(arch, process_host_arch,
-                                                     false, nullptr))
+      if (host_platform_sp->IsCompatibleArchitecture(
+              arch, process_host_arch, ArchSpec::CompatibleMatch, nullptr))
         return host_platform_sp;
     }
   }
@@ -2054,10 +2060,9 @@ PlatformSP PlatformList::GetOrCreate(llvm::ArrayRef<ArchSpec> archs,
   // the same platform supports all architectures then that's the obvious next
   // best thing.
   if (candidates.size() == archs.size()) {
-    if (std::all_of(candidates.begin(), candidates.end(),
-                    [&](const PlatformSP &p) -> bool {
-                      return p->GetName() == candidates.front()->GetName();
-                    })) {
+    if (llvm::all_of(candidates, [&](const PlatformSP &p) -> bool {
+          return p->GetName() == candidates.front()->GetName();
+        })) {
       return candidates.front();
     }
   }
@@ -2073,4 +2078,22 @@ PlatformSP PlatformList::Create(llvm::StringRef name) {
   PlatformSP platform_sp = Platform::Create(name);
   m_platforms.push_back(platform_sp);
   return platform_sp;
+}
+
+bool PlatformList::LoadPlatformBinaryAndSetup(Process *process,
+                                              lldb::addr_t addr, bool notify) {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+
+  PlatformCreateInstance create_callback;
+  for (int idx = 0;
+       (create_callback = PluginManager::GetPlatformCreateCallbackAtIndex(idx));
+       ++idx) {
+    ArchSpec arch;
+    PlatformSP platform_sp = create_callback(true, &arch);
+    if (platform_sp) {
+      if (platform_sp->LoadPlatformBinaryAndSetup(process, addr, notify))
+        return true;
+    }
+  }
+  return false;
 }

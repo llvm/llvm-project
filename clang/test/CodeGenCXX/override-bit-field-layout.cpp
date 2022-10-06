@@ -1,7 +1,9 @@
-// RUN: %clang_cc1 -w -triple=x86_64-pc-win32 -fms-compatibility -fdump-record-layouts-simple -foverride-record-layout=%S/Inputs/override-bit-field-layout.layout %s | FileCheck %s
+// RUN: %clang_cc1 %std_cxx98-14 -w -triple=x86_64-pc-win32 -fms-compatibility -fdump-record-layouts-simple -foverride-record-layout=%S/Inputs/override-bit-field-layout.layout %s | FileCheck %s --check-prefixes=CHECK,PRE17
+// RUN: %clang_cc1 -std=c++17 -w -triple=x86_64-pc-win32 -fms-compatibility -fdump-record-layouts-simple -foverride-record-layout=%S/Inputs/override-bit-field-layout.layout %s | FileCheck %s --check-prefixes=CHECK,CXX17
+// RUN: %clang_cc1 %std_cxx20- -w -triple=x86_64-pc-win32 -fms-compatibility -fdump-record-layouts-simple -foverride-record-layout=%S/Inputs/override-bit-field-layout.layout %s | FileCheck %s --check-prefixes=CHECK,CXX20
 
-// CHECK: Type: struct S1
-// CHECK:   FieldOffsets: [0, 11]
+// PRE17: Type: struct S1
+// PRE17:   FieldOffsets: [0, 11]
 struct S1 {
   short a : 3;
   short b : 5;
@@ -13,6 +15,11 @@ struct S2 {
   virtual ~S2() = default;
   short a : 3;
 };
+
+// CXX17: Type: struct S1
+// CXX17:   FieldOffsets: [0, 11]
+// CXX20: Type: struct S1
+// CXX20:   FieldOffsets: [0, 3]
 
 // CHECK: Type: struct S3
 // CHECK:   Size:32

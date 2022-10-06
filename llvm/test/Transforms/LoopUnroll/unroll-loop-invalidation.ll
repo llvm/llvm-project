@@ -3,28 +3,17 @@
 ; analysis is cached, then unroll the loop (deleting it) and make sure that the
 ; next function doesn't get a cache "hit" for this stale analysis result.
 ;
-; RUN: opt -S -passes='loop(require<access-info>),loop-unroll,loop(print-access-info)' -debug-pass-manager < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes='require<access-info>,loop-unroll,print<access-info>' -debug-pass-manager < %s 2>&1 | FileCheck %s
 ;
+; CHECK: Running pass: RequireAnalysisPass<{{.*}}LoopAccessAnalysis
 ; CHECK: Running analysis: LoopAnalysis
-; CHECK: Running analysis: InnerAnalysisManagerProxy<
-; CHECK: Running pass: RequireAnalysisPass<{{.*}}LoopAccessAnalysis
-; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 2 containing: %inner1.header
-; CHECK: Running pass: RequireAnalysisPass<{{.*}}LoopAccessAnalysis
-; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 2 containing: %inner2.header
-; CHECK: Running pass: RequireAnalysisPass<{{.*}}LoopAccessAnalysis
-; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 1 containing: %outer.header
 ; CHECK: Running pass: LoopUnrollPass
-; CHECK: Clearing all analysis results for: inner2.header
-; CHECK: Clearing all analysis results for: outer.header
-; CHECK: Invalidating analysis: LoopAccessAnalysis on {{.*}}inner1.header
-; CHECK-NOT: Invalidating analysis: LoopAccessAnalysis on {{.*}}inner1.header.1
+; CHECK: Invalidating analysis: LoopAccessAnalysis on test
 ; CHECK: Running pass: LoopAccessInfoPrinterPass
-; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 1 containing: %inner1.header
+; CHECK: Running analysis: LoopAccessAnalysis on test
 ; CHECK: Loop access info in function 'test':
 ; CHECK:   inner1.header:
-; CHECK: Running pass: LoopAccessInfoPrinterPass
-; CHECK: Running analysis: LoopAccessAnalysis on Loop at depth 1 containing: %inner1.header.1
-; CHECK: Loop access info in function 'test':
+
 ; CHECK:   inner1.header.1:
 
 target triple = "x86_64-unknown-linux-gnu"

@@ -116,33 +116,31 @@ public:
   /// It is safe to move or destroy a parent context after calling derive().
   /// The child will keep its parent alive, and its data remains accessible.
   template <class Type>
-  Context derive(const Key<Type> &Key,
-                 typename std::decay<Type>::type Value) const & {
+  Context derive(const Key<Type> &Key, std::decay_t<Type> Value) const & {
     return Context(std::make_shared<Data>(
         Data{/*Parent=*/DataPtr, &Key,
-             std::make_unique<TypedAnyStorage<typename std::decay<Type>::type>>(
+             std::make_unique<TypedAnyStorage<std::decay_t<Type>>>(
                  std::move(Value))}));
   }
 
   template <class Type>
-  Context
-  derive(const Key<Type> &Key,
-         typename std::decay<Type>::type Value) && /* takes ownership */ {
+  Context derive(const Key<Type> &Key,
+                 std::decay_t<Type> Value) && /* takes ownership */ {
     return Context(std::make_shared<Data>(
         Data{/*Parent=*/std::move(DataPtr), &Key,
-             std::make_unique<TypedAnyStorage<typename std::decay<Type>::type>>(
+             std::make_unique<TypedAnyStorage<std::decay_t<Type>>>(
                  std::move(Value))}));
   }
 
   /// Derives a child context, using an anonymous key.
   /// Intended for objects stored only for their destructor's side-effect.
   template <class Type> Context derive(Type &&Value) const & {
-    static Key<typename std::decay<Type>::type> Private;
+    static Key<std::decay_t<Type>> Private;
     return derive(Private, std::forward<Type>(Value));
   }
 
   template <class Type> Context derive(Type &&Value) && {
-    static Key<typename std::decay<Type>::type> Private;
+    static Key<std::decay_t<Type>> Private;
     return std::move(*this).derive(Private, std::forward<Type>(Value));
   }
 
@@ -184,7 +182,7 @@ private:
 /// WithContext replaces Context::current() with a provided scope.
 /// When the WithContext is destroyed, the original scope is restored.
 /// For extending the current context with new value, prefer WithContextValue.
-class LLVM_NODISCARD WithContext {
+class [[nodiscard]] WithContext {
 public:
   WithContext(Context C) : Restore(Context::swapCurrent(std::move(C))) {}
   ~WithContext() { Context::swapCurrent(std::move(Restore)); }
@@ -199,7 +197,7 @@ private:
 
 /// WithContextValue extends Context::current() with a single value.
 /// When the WithContextValue is destroyed, the original scope is restored.
-class LLVM_NODISCARD WithContextValue {
+class [[nodiscard]] WithContextValue {
 public:
   template <typename T>
   WithContextValue(const Key<T> &K, typename std::decay<T>::type V)

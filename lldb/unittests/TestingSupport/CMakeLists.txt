@@ -12,4 +12,5 @@ add_lldb_library(lldbUtilityHelpers
     ObjectYAML
   )
 
+add_subdirectory(Host)
 add_subdirectory(Symbol)

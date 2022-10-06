@@ -308,9 +308,8 @@ static int ExecuteCC1Tool(SmallVectorImpl<const char *> &ArgV) {
   llvm::cl::ResetAllOptionOccurrences();
 
   llvm::BumpPtrAllocator A;
-  llvm::StringSaver Saver(A);
-  llvm::cl::ExpandResponseFiles(Saver, &llvm::cl::TokenizeGNUCommandLine, ArgV,
-                                /*MarkEOLs=*/false);
+  llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine);
+  ECtx.expandResponseFiles(ArgV);
   StringRef Tool = ArgV[1];
   void *GetExecutablePathVP = (void *)(intptr_t)GetExecutablePath;
   if (Tool == "-cc1")
@@ -374,7 +373,8 @@ int clang_main(int Argc, char **Argv) {
 
   if (MarkEOLs && Args.size() > 1 && StringRef(Args[1]).startswith("-cc1"))
     MarkEOLs = false;
-  llvm::cl::ExpandResponseFiles(Saver, Tokenizer, Args, MarkEOLs);
+  llvm::cl::ExpansionContext ECtx(A, Tokenizer);
+  ECtx.setMarkEOLs(MarkEOLs).expandResponseFiles(Args);
 
   StringRef FileName = StringRef(Args[Args.size() - 1]);
   // [MSVC Compatibility]

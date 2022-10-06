@@ -4,7 +4,6 @@
 # RUN: llvm-jitlink -noexec \
 # RUN:              -slab-allocate 100Kb -slab-address 0xfff00000 -slab-page-size 4096 \
 # RUN:              -abs external_data=0xdeadbeef \
-# RUN:              -abs extern_out_of_range32=0x7fff00000000 \
 # RUN:              -check %s %t/coff_sm_reloc.o
 
 	.text
@@ -39,6 +38,18 @@ test_rel32_func:
 	.p2align 4, 0x90
 test_rel32_data:
     leaq named_data(%rip), %rax
+
+# Check IMAGE_REL_AMD64_ADDR64 sets address of symbol to the fixup position.
+# jitlink-check: *{8}(test_addr64) = named_data
+	.text
+	.def named_func;
+	.scl 2;
+	.type 32;
+	.endef
+	.globl test_addr64
+	.p2align 4, 0x90
+test_addr64:
+	.quad named_data
 
 # Local named data/func that is used in conjunction with other test cases
 	.text

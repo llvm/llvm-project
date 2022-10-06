@@ -1,27 +1,39 @@
 // RUN: mlir-opt -topological-sort %s | FileCheck %s
+// RUN: mlir-opt -test-topological-sort-analysis %s | FileCheck %s -check-prefix=CHECK-ANALYSIS
 
 // Test producer is after user.
 // CHECK-LABEL: test.graph_region
-test.graph_region {
+// CHECK-ANALYSIS-LABEL: test.graph_region
+test.graph_region attributes{"root"} {
   // CHECK-NEXT: test.foo
   // CHECK-NEXT: test.baz
   // CHECK-NEXT: test.bar
-  %0 = "test.foo"() : () -> i32
-  "test.bar"(%1, %0) : (i32, i32) -> ()
-  %1 = "test.baz"() : () -> i32
+
+  // CHECK-ANALYSIS-NEXT: test.foo{{.*}} {pos = 0
+  // CHECK-ANALYSIS-NEXT: test.bar{{.*}} {pos = 2
+  // CHECK-ANALYSIS-NEXT: test.baz{{.*}} {pos = 1
+  %0 = "test.foo"() {selected} : () -> i32
+  "test.bar"(%1, %0) {selected} : (i32, i32) -> ()
+  %1 = "test.baz"() {selected} : () -> i32
 }
 
 // Test cycles.
 // CHECK-LABEL: test.graph_region
-test.graph_region {
+// CHECK-ANALYSIS-LABEL: test.graph_region
+test.graph_region attributes{"root"} {
   // CHECK-NEXT: test.d
   // CHECK-NEXT: test.a
   // CHECK-NEXT: test.c
   // CHECK-NEXT: test.b
-  %2 = "test.c"(%1) : (i32) -> i32
+
+  // CHECK-ANALYSIS-NEXT: test.c{{.*}} {pos = 0
+  // CHECK-ANALYSIS-NEXT: test.b{{.*}} : (
+  // CHECK-ANALYSIS-NEXT: test.a{{.*}} {pos = 2
+  // CHECK-ANALYSIS-NEXT: test.d{{.*}} {pos = 1
+  %2 = "test.c"(%1) {selected} : (i32) -> i32
   %1 = "test.b"(%0, %2) : (i32, i32) -> i32
-  %0 = "test.a"(%3) : (i32) -> i32
-  %3 = "test.d"() : () -> i32
+  %0 = "test.a"(%3) {selected} : (i32) -> i32
+  %3 = "test.d"() {selected} : () -> i32
 }
 
 // Test block arguments.

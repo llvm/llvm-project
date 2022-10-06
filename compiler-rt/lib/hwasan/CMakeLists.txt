@@ -16,8 +16,10 @@ set(HWASAN_RTL_SOURCES
   hwasan_poisoning.cpp
   hwasan_report.cpp
   hwasan_setjmp_aarch64.S
+  hwasan_setjmp_riscv64.S
   hwasan_setjmp_x86_64.S
   hwasan_tag_mismatch_aarch64.S
+  hwasan_tag_mismatch_riscv64.S
   hwasan_thread.cpp
   hwasan_thread_list.cpp
   hwasan_type_test.cpp

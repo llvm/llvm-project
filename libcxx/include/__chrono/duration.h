@@ -278,18 +278,18 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR typename common_type<duration>::type operator+() const {return typename common_type<duration>::type(*this);}
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR typename common_type<duration>::type operator-() const {return typename common_type<duration>::type(-__rep_);}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 duration& operator++()      {++__rep_; return *this;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 duration  operator++(int)   {return duration(__rep_++);}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 duration& operator--()      {--__rep_; return *this;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 duration  operator--(int)   {return duration(__rep_--);}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17 duration& operator++()      {++__rep_; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17 duration  operator++(int)   {return duration(__rep_++);}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17 duration& operator--()      {--__rep_; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17 duration  operator--(int)   {return duration(__rep_--);}
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 duration& operator+=(const duration& __d) {__rep_ += __d.count(); return *this;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 duration& operator-=(const duration& __d) {__rep_ -= __d.count(); return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17 duration& operator+=(const duration& __d) {__rep_ += __d.count(); return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17 duration& operator-=(const duration& __d) {__rep_ -= __d.count(); return *this;}
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 duration& operator*=(const rep& __rhs) {__rep_ *= __rhs; return *this;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 duration& operator/=(const rep& __rhs) {__rep_ /= __rhs; return *this;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 duration& operator%=(const rep& __rhs) {__rep_ %= __rhs; return *this;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14 duration& operator%=(const duration& __rhs) {__rep_ %= __rhs.count(); return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17 duration& operator*=(const rep& __rhs) {__rep_ *= __rhs; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17 duration& operator/=(const rep& __rhs) {__rep_ /= __rhs; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17 duration& operator%=(const rep& __rhs) {__rep_ %= __rhs; return *this;}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17 duration& operator%=(const duration& __rhs) {__rep_ %= __rhs.count(); return *this;}
 
     // special values
 
@@ -534,67 +534,67 @@ inline namespace literals
   inline namespace chrono_literals
   {
 
-    constexpr chrono::hours operator""h(unsigned long long __h)
+    _LIBCPP_HIDE_FROM_ABI constexpr chrono::hours operator""h(unsigned long long __h)
     {
         return chrono::hours(static_cast<chrono::hours::rep>(__h));
     }
 
-    constexpr chrono::duration<long double, ratio<3600,1>> operator""h(long double __h)
+    _LIBCPP_HIDE_FROM_ABI constexpr chrono::duration<long double, ratio<3600,1>> operator""h(long double __h)
     {
         return chrono::duration<long double, ratio<3600,1>>(__h);
     }
 
 
-    constexpr chrono::minutes operator""min(unsigned long long __m)
+    _LIBCPP_HIDE_FROM_ABI constexpr chrono::minutes operator""min(unsigned long long __m)
     {
         return chrono::minutes(static_cast<chrono::minutes::rep>(__m));
     }
 
-    constexpr chrono::duration<long double, ratio<60,1>> operator""min(long double __m)
+    _LIBCPP_HIDE_FROM_ABI constexpr chrono::duration<long double, ratio<60,1>> operator""min(long double __m)
     {
         return chrono::duration<long double, ratio<60,1>> (__m);
     }
 
 
-    constexpr chrono::seconds operator""s(unsigned long long __s)
+    _LIBCPP_HIDE_FROM_ABI constexpr chrono::seconds operator""s(unsigned long long __s)
     {
         return chrono::seconds(static_cast<chrono::seconds::rep>(__s));
     }
 
-    constexpr chrono::duration<long double> operator""s(long double __s)
+    _LIBCPP_HIDE_FROM_ABI constexpr chrono::duration<long double> operator""s(long double __s)
     {
         return chrono::duration<long double> (__s);
     }
 
 
-    constexpr chrono::milliseconds operator""ms(unsigned long long __ms)
+    _LIBCPP_HIDE_FROM_ABI constexpr chrono::milliseconds operator""ms(unsigned long long __ms)
     {
         return chrono::milliseconds(static_cast<chrono::milliseconds::rep>(__ms));
     }
 
-    constexpr chrono::duration<long double, milli> operator""ms(long double __ms)
+    _LIBCPP_HIDE_FROM_ABI constexpr chrono::duration<long double, milli> operator""ms(long double __ms)
     {
         return chrono::duration<long double, milli>(__ms);
     }
 
 
-    constexpr chrono::microseconds operator""us(unsigned long long __us)
+    _LIBCPP_HIDE_FROM_ABI constexpr chrono::microseconds operator""us(unsigned long long __us)
     {
         return chrono::microseconds(static_cast<chrono::microseconds::rep>(__us));
     }
 
-    constexpr chrono::duration<long double, micro> operator""us(long double __us)
+    _LIBCPP_HIDE_FROM_ABI constexpr chrono::duration<long double, micro> operator""us(long double __us)
     {
         return chrono::duration<long double, micro> (__us);
     }
 
 
-    constexpr chrono::nanoseconds operator""ns(unsigned long long __ns)
+    _LIBCPP_HIDE_FROM_ABI constexpr chrono::nanoseconds operator""ns(unsigned long long __ns)
     {
         return chrono::nanoseconds(static_cast<chrono::nanoseconds::rep>(__ns));
     }
 
-    constexpr chrono::duration<long double, nano> operator""ns(long double __ns)
+    _LIBCPP_HIDE_FROM_ABI constexpr chrono::duration<long double, nano> operator""ns(long double __ns)
     {
         return chrono::duration<long double, nano> (__ns);
     }

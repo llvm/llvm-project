@@ -157,6 +157,7 @@ class SOP1_1 <string opName, list<dag> pattern=[]> : SOP1_Pseudo <
   let has_sdst = 0;
 }
 
+
 class UniformUnaryFrag<SDPatternOperator Op> : PatFrag <
   (ops node:$src0),
   (Op $src0),
@@ -523,8 +524,7 @@ def S_MAX_U32 : SOP2_32 <"s_max_u32",
 class SelectPat<SDPatternOperator select> : PatFrag <
   (ops node:$src1, node:$src2),
   (select SCC, $src1, $src2),
-  [{ return Subtarget->hasScalarCompareEq64() &&
-            N->getOperand(0)->hasOneUse() && !N->isDivergent(); }]
+  [{ return !N->isDivergent(); }]
 >;
 
 let Uses = [SCC] in {
@@ -723,6 +723,7 @@ class SOPK_Pseudo <string opName, dag outs, dag ins,
   let hasSideEffects = 0;
   let SALU = 1;
   let SOPK = 1;
+  let FixedSize = 1;
   let SchedRW = [WriteSALU];
   let UseNamedOperandTable = 1;
   string Mnemonic = opName;
@@ -738,6 +739,7 @@ class SOPK_Real<SOPK_Pseudo ps> :
   let SOPK = 1;
   let isPseudo = 0;
   let isCodeGenOnly = 0;
+  let UseNamedOperandTable = 1;
 
   // copy relevant pseudo op flags
   let SubtargetPredicate = ps.SubtargetPredicate;

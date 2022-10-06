@@ -556,7 +556,7 @@ bool AArch64SpeculationHardening::expandSpeculationSafeValue(
     break;
   case AArch64::SpeculationSafeValueW:
     Is64Bit = false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::SpeculationSafeValueX:
     // Just remove the SpeculationSafe pseudo's if control flow
     // miss-speculation isn't happening because we're already inserting barriers
@@ -681,7 +681,7 @@ bool AArch64SpeculationHardening::runOnMachineFunction(MachineFunction &MF) {
   EntryBlocks.push_back(&MF.front());
   for (const LandingPadInfo &LPI : MF.getLandingPads())
     EntryBlocks.push_back(LPI.LandingPadBlock);
-  for (auto Entry : EntryBlocks)
+  for (auto *Entry : EntryBlocks)
     insertSPToRegTaintPropagation(
         *Entry, Entry->SkipPHIsLabelsAndDebug(Entry->begin()));
 

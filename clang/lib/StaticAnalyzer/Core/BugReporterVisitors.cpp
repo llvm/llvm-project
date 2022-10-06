@@ -1340,13 +1340,12 @@ static void showBRDiagnostics(llvm::raw_svector_ostream &OS, StoreInfo SI) {
 static void showBRParamDiagnostics(llvm::raw_svector_ostream &OS,
                                    StoreInfo SI) {
   const auto *VR = cast<VarRegion>(SI.Dest);
-  const auto *Param = cast<ParmVarDecl>(VR->getDecl());
+  const auto *D = VR->getDecl();
 
   OS << "Passing ";
 
   if (isa<loc::ConcreteInt>(SI.Value)) {
-    OS << (isObjCPointer(Param) ? "nil object reference"
-                                : "null pointer value");
+    OS << (isObjCPointer(D) ? "nil object reference" : "null pointer value");
 
   } else if (SI.Value.isUndef()) {
     OS << "uninitialized value";
@@ -1361,12 +1360,19 @@ static void showBRParamDiagnostics(llvm::raw_svector_ostream &OS,
     OS << "value";
   }
 
-  // Printed parameter indexes are 1-based, not 0-based.
-  unsigned Idx = Param->getFunctionScopeIndex() + 1;
-  OS << " via " << Idx << llvm::getOrdinalSuffix(Idx) << " parameter";
-  if (VR->canPrintPretty()) {
-    OS << " ";
-    VR->printPretty(OS);
+  if (const auto *Param = dyn_cast<ParmVarDecl>(VR->getDecl())) {
+    // Printed parameter indexes are 1-based, not 0-based.
+    unsigned Idx = Param->getFunctionScopeIndex() + 1;
+    OS << " via " << Idx << llvm::getOrdinalSuffix(Idx) << " parameter";
+    if (VR->canPrintPretty()) {
+      OS << " ";
+      VR->printPretty(OS);
+    }
+  } else if (const auto *ImplParam = dyn_cast<ImplicitParamDecl>(D)) {
+    if (ImplParam->getParameterKind() ==
+        ImplicitParamDecl::ImplicitParamKind::ObjCSelf) {
+      OS << " via implicit parameter 'self'";
+    }
   }
 }
 
@@ -1408,6 +1414,83 @@ static void showBRDefaultDiagnostics(llvm::raw_svector_ostream &OS,
     OS << " to ";
     SI.Dest->printPretty(OS);
   }
+}
+
+static bool isTrivialCopyOrMoveCtor(const CXXConstructExpr *CE) {
+  if (!CE)
+    return false;
+
+  const auto *CtorDecl = CE->getConstructor();
+
+  return CtorDecl->isCopyOrMoveConstructor() && CtorDecl->isTrivial();
+}
+
+static const Expr *tryExtractInitializerFromList(const InitListExpr *ILE,
+                                                 const MemRegion *R) {
+
+  const auto *TVR = dyn_cast_or_null<TypedValueRegion>(R);
+
+  if (!TVR)
+    return nullptr;
+
+  const auto ITy = ILE->getType().getCanonicalType();
+
+  // Push each sub-region onto the stack.
+  std::stack<const TypedValueRegion *> TVRStack;
+  while (isa<FieldRegion>(TVR) || isa<ElementRegion>(TVR)) {
+    // We found a region that matches the type of the init list,
+    // so we assume this is the outer-most region. This can happen
+    // if the initializer list is inside a class. If our assumption
+    // is wrong, we return a nullptr in the end.
+    if (ITy == TVR->getValueType().getCanonicalType())
+      break;
+
+    TVRStack.push(TVR);
+    TVR = cast<TypedValueRegion>(TVR->getSuperRegion());
+  }
+
+  // If the type of the outer most region doesn't match the type
+  // of the ILE, we can't match the ILE and the region.
+  if (ITy != TVR->getValueType().getCanonicalType())
+    return nullptr;
+
+  const Expr *Init = ILE;
+  while (!TVRStack.empty()) {
+    TVR = TVRStack.top();
+    TVRStack.pop();
+
+    // We hit something that's not an init list before
+    // running out of regions, so we most likely failed.
+    if (!isa<InitListExpr>(Init))
+      return nullptr;
+
+    ILE = cast<InitListExpr>(Init);
+    auto NumInits = ILE->getNumInits();
+
+    if (const auto *FR = dyn_cast<FieldRegion>(TVR)) {
+      const auto *FD = FR->getDecl();
+
+      if (FD->getFieldIndex() >= NumInits)
+        return nullptr;
+
+      Init = ILE->getInit(FD->getFieldIndex());
+    } else if (const auto *ER = dyn_cast<ElementRegion>(TVR)) {
+      const auto Ind = ER->getIndex();
+
+      // If index is symbolic, we can't figure out which expression
+      // belongs to the region.
+      if (!Ind.isConstant())
+        return nullptr;
+
+      const auto IndVal = Ind.getAsInteger()->getLimitedValue();
+      if (IndVal >= NumInits)
+        return nullptr;
+
+      Init = ILE->getInit(IndVal);
+    }
+  }
+
+  return Init;
 }
 
 PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
@@ -1456,12 +1539,88 @@ PathDiagnosticPieceRef StoreSiteFinder::VisitNode(const ExplodedNode *Succ,
 
     StoreSite = Succ;
 
-    // If this is an assignment expression, we can track the value
-    // being assigned.
-    if (Optional<PostStmt> P = Succ->getLocationAs<PostStmt>())
-      if (const BinaryOperator *BO = P->getStmtAs<BinaryOperator>())
+    if (Optional<PostStmt> P = Succ->getLocationAs<PostStmt>()) {
+      // If this is an assignment expression, we can track the value
+      // being assigned.
+      if (const BinaryOperator *BO = P->getStmtAs<BinaryOperator>()) {
         if (BO->isAssignmentOp())
           InitE = BO->getRHS();
+      }
+      // If we have a declaration like 'S s{1,2}' that needs special
+      // handling, we handle it here.
+      else if (const auto *DS = P->getStmtAs<DeclStmt>()) {
+        const auto *Decl = DS->getSingleDecl();
+        if (isa<VarDecl>(Decl)) {
+          const auto *VD = cast<VarDecl>(Decl);
+
+          // FIXME: Here we only track the inner most region, so we lose
+          // information, but it's still better than a crash or no information
+          // at all.
+          //
+          // E.g.: The region we have is 's.s2.s3.s4.y' and we only track 'y',
+          // and throw away the rest.
+          if (const auto *ILE = dyn_cast<InitListExpr>(VD->getInit()))
+            InitE = tryExtractInitializerFromList(ILE, R);
+        }
+      } else if (const auto *CE = P->getStmtAs<CXXConstructExpr>()) {
+
+        const auto State = Succ->getState();
+
+        if (isTrivialCopyOrMoveCtor(CE) && isa<SubRegion>(R)) {
+          // Migrate the field regions from the current object to
+          // the parent object. If we track 'a.y.e' and encounter
+          // 'S a = b' then we need to track 'b.y.e'.
+
+          // Push the regions to a stack, from last to first, so
+          // considering the example above the stack will look like
+          // (bottom) 'e' -> 'y' (top).
+
+          std::stack<const SubRegion *> SRStack;
+          const SubRegion *SR = cast<SubRegion>(R);
+          while (isa<FieldRegion>(SR) || isa<ElementRegion>(SR)) {
+            SRStack.push(SR);
+            SR = cast<SubRegion>(SR->getSuperRegion());
+          }
+
+          // Get the region for the object we copied/moved from.
+          const auto *OriginEx = CE->getArg(0);
+          const auto OriginVal =
+              State->getSVal(OriginEx, Succ->getLocationContext());
+
+          // Pop the stored field regions and apply them to the origin
+          // object in the same order we had them on the copy.
+          // OriginField will evolve like 'b' -> 'b.y' -> 'b.y.e'.
+          SVal OriginField = OriginVal;
+          while (!SRStack.empty()) {
+            const auto *TopR = SRStack.top();
+            SRStack.pop();
+
+            if (const auto *FR = dyn_cast<FieldRegion>(TopR)) {
+              OriginField = State->getLValue(FR->getDecl(), OriginField);
+            } else if (const auto *ER = dyn_cast<ElementRegion>(TopR)) {
+              OriginField = State->getLValue(ER->getElementType(),
+                                             ER->getIndex(), OriginField);
+            } else {
+              // FIXME: handle other region type
+            }
+          }
+
+          // Track 'b.y.e'.
+          getParentTracker().track(V, OriginField.getAsRegion(), Options);
+          InitE = OriginEx;
+        }
+      }
+      // This branch can occur in cases like `Ctor() : field{ x, y } {}'.
+      else if (const auto *ILE = P->getStmtAs<InitListExpr>()) {
+        // FIXME: Here we only track the top level region, so we lose
+        // information, but it's still better than a crash or no information
+        // at all.
+        //
+        // E.g.: The region we have is 's.s2.s3.s4.y' and we only track 'y', and
+        // throw away the rest.
+        InitE = tryExtractInitializerFromList(ILE, R);
+      }
+    }
 
     // If this is a call entry, the variable should be a parameter.
     // FIXME: Handle CXXThisRegion as well. (This is not a priority because
@@ -2342,7 +2501,7 @@ public:
       // what is written inside the pointer.
       bool CanDereference = true;
       if (const auto *SR = L->getRegionAs<SymbolicRegion>()) {
-        if (SR->getSymbol()->getType()->getPointeeType()->isVoidType())
+        if (SR->getPointeeStaticType()->isVoidType())
           CanDereference = false;
       } else if (L->getRegionAs<AllocaRegion>())
         CanDereference = false;
@@ -2395,6 +2554,29 @@ public:
     if (!RVNode)
       return {};
 
+    Tracker::Result CombinedResult;
+    Tracker &Parent = getParentTracker();
+
+    const auto track = [&CombinedResult, &Parent, ExprNode,
+                        Opts](const Expr *Inner) {
+      CombinedResult.combineWith(Parent.track(Inner, ExprNode, Opts));
+    };
+
+    // FIXME: Initializer lists can appear in many different contexts
+    // and most of them needs a special handling. For now let's handle
+    // what we can. If the initializer list only has 1 element, we track
+    // that.
+    // This snippet even handles nesting, e.g.: int *x{{{{{y}}}}};
+    if (const auto *ILE = dyn_cast<InitListExpr>(E)) {
+      if (ILE->getNumInits() == 1) {
+        track(ILE->getInit(0));
+
+        return CombinedResult;
+      }
+
+      return {};
+    }
+
     ProgramStateRef RVState = RVNode->getState();
     SVal V = RVState->getSValAsScalarOrLoc(E, RVNode->getLocationContext());
     const auto *BO = dyn_cast<BinaryOperator>(E);
@@ -2406,13 +2588,6 @@ public:
     SVal LHSV = RVState->getSVal(BO->getLHS(), RVNode->getLocationContext());
 
     // Track both LHS and RHS of a multiplication.
-    Tracker::Result CombinedResult;
-    Tracker &Parent = getParentTracker();
-
-    const auto track = [&CombinedResult, &Parent, ExprNode, Opts](Expr *Inner) {
-      CombinedResult.combineWith(Parent.track(Inner, ExprNode, Opts));
-    };
-
     if (BO->getOpcode() == BO_Mul) {
       if (LHSV.isZeroConstant())
         track(BO->getLHS());

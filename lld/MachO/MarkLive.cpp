@@ -15,8 +15,7 @@
 #include "mach-o/compact_unwind_encoding.h"
 #include "llvm/Support/TimeProfiler.h"
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 using namespace llvm;
 using namespace llvm::MachO;
@@ -58,7 +57,6 @@ public:
 private:
   void enqueue(InputSection *isec, uint64_t off, const WorklistEntry *prev);
   void addSym(Symbol *s, const WorklistEntry *prev);
-  void printWhyLive(Symbol *s, const WorklistEntry *prev);
   const InputSection *getInputSection(const WorklistEntry *) const;
   WorklistEntry *makeEntry(InputSection *, const WorklistEntry *prev) const;
 
@@ -83,23 +81,7 @@ void MarkLiveImpl<RecordWhyLive>::enqueue(
   }
 }
 
-template <bool RecordWhyLive>
-void MarkLiveImpl<RecordWhyLive>::addSym(
-    Symbol *s,
-    const typename MarkLiveImpl<RecordWhyLive>::WorklistEntry *prev) {
-  if (s->used)
-    return;
-  s->used = true;
-  printWhyLive(s, prev);
-  if (auto *d = dyn_cast<Defined>(s)) {
-    if (d->isec)
-      enqueue(d->isec, d->value, prev);
-    if (d->unwindEntry)
-      enqueue(d->unwindEntry, 0, prev);
-  }
-}
-
-static void printWhyLiveImpl(const Symbol *s, const WhyLiveEntry *prev) {
+static void printWhyLive(const Symbol *s, const WhyLiveEntry *prev) {
   std::string out = toString(*s) + " from " + toString(s->getFile());
   int indent = 2;
   for (const WhyLiveEntry *entry = prev; entry;
@@ -114,44 +96,47 @@ static void printWhyLiveImpl(const Symbol *s, const WhyLiveEntry *prev) {
   message(out);
 }
 
-// NOTE: if/when `constexpr if` becomes available, we can simplify a lot of
-// the partial template specializations below.
-
-template <>
-void MarkLiveImpl<true>::printWhyLive(Symbol *s, const WhyLiveEntry *prev) {
-  if (!config->whyLive.empty() && config->whyLive.match(s->getName()))
-    printWhyLiveImpl(s, prev);
-}
-
-template <>
-void MarkLiveImpl<false>::printWhyLive(Symbol *s, const InputSection *prev) {}
-
-template <>
-const InputSection *
-MarkLiveImpl<true>::getInputSection(const WhyLiveEntry *entry) const {
-  return entry->isec;
-}
-
-template <>
-const InputSection *
-MarkLiveImpl<false>::getInputSection(const InputSection *isec) const {
-  return isec;
-}
-
-template <>
-typename MarkLiveImpl<true>::WorklistEntry *MarkLiveImpl<true>::makeEntry(
-    InputSection *isec, const MarkLiveImpl<true>::WorklistEntry *prev) const {
-  if (!isec) {
-    assert(!prev);
-    return nullptr;
+template <bool RecordWhyLive>
+void MarkLiveImpl<RecordWhyLive>::addSym(
+    Symbol *s,
+    const typename MarkLiveImpl<RecordWhyLive>::WorklistEntry *prev) {
+  if (s->used)
+    return;
+  s->used = true;
+  if constexpr (RecordWhyLive)
+    if (!config->whyLive.empty() && config->whyLive.match(s->getName()))
+      printWhyLive(s, prev);
+  if (auto *d = dyn_cast<Defined>(s)) {
+    if (d->isec)
+      enqueue(d->isec, d->value, prev);
+    if (d->unwindEntry)
+      enqueue(d->unwindEntry, 0, prev);
   }
-  return make<WhyLiveEntry>(isec, prev);
 }
 
-template <>
-typename MarkLiveImpl<false>::WorklistEntry *MarkLiveImpl<false>::makeEntry(
-    InputSection *isec, const MarkLiveImpl<false>::WorklistEntry *prev) const {
-  return isec;
+template <bool RecordWhyLive>
+const InputSection *MarkLiveImpl<RecordWhyLive>::getInputSection(
+    const MarkLiveImpl<RecordWhyLive>::WorklistEntry *entry) const {
+  if constexpr (RecordWhyLive)
+    return entry->isec;
+  else
+    return entry;
+}
+
+template <bool RecordWhyLive>
+typename MarkLiveImpl<RecordWhyLive>::WorklistEntry *
+MarkLiveImpl<RecordWhyLive>::makeEntry(
+    InputSection *isec,
+    const MarkLiveImpl<RecordWhyLive>::WorklistEntry *prev) const {
+  if constexpr (RecordWhyLive) {
+    if (!isec) {
+      assert(!prev);
+      return nullptr;
+    }
+    return make<WhyLiveEntry>(isec, prev);
+  } else {
+    return isec;
+  }
 }
 
 template <bool RecordWhyLive>
@@ -244,7 +229,7 @@ void markLive() {
       // FIXME: When we implement these flags, make symbols from them GC
       // roots:
       // * -reexported_symbol(s_list)
-      // * -alias(-list)
+      // * -alias_list
       // * -init
 
       // In dylibs and bundles and in executables with -export_dynamic,
@@ -280,13 +265,17 @@ void markLive() {
     // mod_init_funcs, mod_term_funcs sections
     if (sectionType(isec->getFlags()) == S_MOD_INIT_FUNC_POINTERS ||
         sectionType(isec->getFlags()) == S_MOD_TERM_FUNC_POINTERS) {
+      assert(!config->emitInitOffsets ||
+             sectionType(isec->getFlags()) != S_MOD_INIT_FUNC_POINTERS);
       marker->enqueue(isec, 0);
       continue;
     }
   }
 
+  for (ConcatInputSection *isec : in.initOffsets->inputs())
+    marker->enqueue(isec, 0);
+
   marker->markTransitively();
 }
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho

@@ -716,3 +716,60 @@ define void @test_variadic_call_2(ptr %addr_ptr, ptr %val_ptr) {
   call void (ptr, ...) @variadic_callee(ptr %addr, double %val)
   ret void
 }
+
+; Return value is in memory unless subtarget is AVX or higher.
+define <32 x float> @test_return_v32f32() {
+  ; X86-LABEL: name: test_return_v32f32
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; X86-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s32) from %fixed-stack.0, align 16)
+  ; X86-NEXT:   [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
+  ; X86-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+  ; X86-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[LOAD]](p0) :: (store (<32 x s32>))
+  ; X86-NEXT:   $eax = COPY [[LOAD]](p0)
+  ; X86-NEXT:   RET 0
+  ; X64-LABEL: name: test_return_v32f32
+  ; X64: bb.1 (%ir-block.0):
+  ; X64-NEXT:   liveins: $rdi
+  ; X64-NEXT: {{  $}}
+  ; X64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+  ; X64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
+  ; X64-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+  ; X64-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[COPY]](p0) :: (store (<32 x s32>))
+  ; X64-NEXT:   $rax = COPY [[COPY]](p0)
+  ; X64-NEXT:   RET 0
+  ret <32 x float> zeroinitializer
+}
+
+define float @test_call_v32f32() {
+  ; X86-LABEL: name: test_call_v32f32
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
+  ; X86-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; X86-NEXT:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $esp
+  ; X86-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; X86-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s32)
+  ; X86-NEXT:   G_STORE [[FRAME_INDEX]](p0), [[PTR_ADD]](p0) :: (store (p0) into stack, align 1)
+  ; X86-NEXT:   CALLpcrel32 @test_return_v32f32, csr_32, implicit $esp, implicit $ssp
+  ; X86-NEXT:   ADJCALLSTACKUP32 4, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
+  ; X86-NEXT:   [[LOAD:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[FRAME_INDEX]](p0) :: (load (<32 x s32>) from %stack.0)
+  ; X86-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[LOAD]](<32 x s32>), [[C]](s32)
+  ; X86-NEXT:   $fp0 = COPY [[EVEC]](s32)
+  ; X86-NEXT:   RET 0, implicit $fp0
+  ; X64-LABEL: name: test_call_v32f32
+  ; X64: bb.1 (%ir-block.0):
+  ; X64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
+  ; X64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; X64-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; X64-NEXT:   $rdi = COPY [[FRAME_INDEX]](p0)
+  ; X64-NEXT:   CALL64pcrel32 @test_return_v32f32, csr_64, implicit $rsp, implicit $ssp, implicit $rdi
+  ; X64-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; X64-NEXT:   [[LOAD:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[FRAME_INDEX]](p0) :: (load (<32 x s32>) from %stack.0)
+  ; X64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[LOAD]](<32 x s32>), [[C]](s64)
+  ; X64-NEXT:   $xmm0 = COPY [[EVEC]](s32)
+  ; X64-NEXT:   RET 0, implicit $xmm0
+  %vect = call <32 x float> @test_return_v32f32()
+  %elt = extractelement <32 x float> %vect, i32 7
+  ret float %elt
+}

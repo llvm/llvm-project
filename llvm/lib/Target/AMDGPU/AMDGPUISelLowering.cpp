@@ -692,12 +692,11 @@ bool AMDGPUTargetLowering::isLoadBitCastBeneficial(EVT LoadTy, EVT CastTy,
 // SI+ has instructions for cttz / ctlz for 32-bit values. This is probably also
 // profitable with the expansion for 64-bit since it's generally good to
 // speculate things.
-// FIXME: These should really have the size as a parameter.
-bool AMDGPUTargetLowering::isCheapToSpeculateCttz() const {
+bool AMDGPUTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
   return true;
 }
 
-bool AMDGPUTargetLowering::isCheapToSpeculateCtlz() const {
+bool AMDGPUTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
   return true;
 }
 
@@ -1631,14 +1630,17 @@ SDValue AMDGPUTargetLowering::LowerDIVREM24(SDValue Op, SelectionDAG &DAG,
   SDValue fqneg = DAG.getNode(ISD::FNEG, DL, FltVT, fq);
 
   MachineFunction &MF = DAG.getMachineFunction();
-  const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
+
+  bool UseFmadFtz = false;
+  if (Subtarget->isGCN()) {
+    const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+    UseFmadFtz = MFI->getMode().allFP32Denormals();
+  }
 
   // float fr = mad(fqneg, fb, fa);
-  unsigned OpCode = !Subtarget->hasMadMacF32Insts() ?
-                    (unsigned)ISD::FMA :
-                    !MFI->getMode().allFP32Denormals() ?
-                    (unsigned)ISD::FMAD :
-                    (unsigned)AMDGPUISD::FMAD_FTZ;
+  unsigned OpCode = !Subtarget->hasMadMacF32Insts() ? (unsigned)ISD::FMA
+                    : UseFmadFtz ? (unsigned)AMDGPUISD::FMAD_FTZ
+                                 : (unsigned)ISD::FMAD;
   SDValue fr = DAG.getNode(OpCode, DL, FltVT, fqneg, fb, fa);
 
   // int iq = (int)fq;
@@ -2456,7 +2458,8 @@ SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
     SDLoc DL(Op);
 
     SDValue IntToFp32 = DAG.getNode(Op.getOpcode(), DL, MVT::f32, Src);
-    SDValue FPRoundFlag = DAG.getIntPtrConstant(0, SDLoc(Op));
+    SDValue FPRoundFlag =
+        DAG.getIntPtrConstant(0, SDLoc(Op), /*isTarget=*/true);
     SDValue FPRound =
         DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, IntToFp32, FPRoundFlag);
 
@@ -2496,7 +2499,8 @@ SDValue AMDGPUTargetLowering::LowerSINT_TO_FP(SDValue Op,
     SDValue Src = Op.getOperand(0);
 
     SDValue IntToFp32 = DAG.getNode(Op.getOpcode(), DL, MVT::f32, Src);
-    SDValue FPRoundFlag = DAG.getIntPtrConstant(0, SDLoc(Op));
+    SDValue FPRoundFlag =
+        DAG.getIntPtrConstant(0, SDLoc(Op), /*isTarget=*/true);
     SDValue FPRound =
         DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, IntToFp32, FPRoundFlag);
 
@@ -4600,9 +4604,16 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
     case Intrinsic::amdgcn_mbcnt_hi: {
       const GCNSubtarget &ST =
           DAG.getMachineFunction().getSubtarget<GCNSubtarget>();
-      // These return at most the wavefront size - 1.
+      // These return at most the (wavefront size - 1) + src1
+      // As long as src1 is an immediate we can calc known bits
+      KnownBits Src1Known = DAG.computeKnownBits(Op.getOperand(2), Depth + 1);
+      unsigned Src1ValBits = Src1Known.countMaxActiveBits();
+      unsigned MaxActiveBits = std::max(Src1ValBits, ST.getWavefrontSizeLog2());
+      // Cater for potential carry
+      MaxActiveBits += Src1ValBits ? 1 : 0;
       unsigned Size = Op.getValueType().getSizeInBits();
-      Known.Zero.setHighBits(Size - ST.getWavefrontSizeLog2());
+      if (MaxActiveBits < Size)
+        Known.Zero.setHighBits(Size - MaxActiveBits);
       break;
     }
     case Intrinsic::amdgcn_workitem_id_x:
@@ -4806,8 +4817,15 @@ AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
   case AtomicRMWInst::FMax:
   case AtomicRMWInst::FMin:
     return AtomicExpansionKind::CmpXChg;
-  default:
-    return AtomicExpansionKind::None;
+  default: {
+    if (auto *IntTy = dyn_cast<IntegerType>(RMW->getType())) {
+      unsigned Size = IntTy->getBitWidth();
+      if (Size == 32 || Size == 64)
+        return AtomicExpansionKind::None;
+    }
+
+    return AtomicExpansionKind::CmpXChg;
+  }
   }
 }
 

@@ -3,30 +3,30 @@
 // -fPIC and -fPIE only affects host relocation model.
 // device compilation always uses PIC. 
 
-// RUN: %clang -### -target x86_64-unknown-linux-gnu \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu \
 // RUN:   --offload-arch=gfx906 %s -nogpulib -nogpuinc \
 // RUN:   2>&1 | FileCheck -check-prefixes=DEV,HOST-PIE %s
 
-// RUN: %clang -### -target x86_64-unknown-linux-gnu \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu \
 // RUN:   -fgpu-rdc --offload-arch=gfx906 %s -nogpulib -nogpuinc \
 // RUN:   2>&1 | FileCheck -check-prefixes=DEV,HOST-PIE %s
 
-// RUN: %clang -### -target x86_64-unknown-linux-gnu \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu \
 // RUN:   --offload-arch=gfx906 %s -nogpulib -nogpuinc \
 // RUN:   -fPIC \
 // RUN:   2>&1 | FileCheck -check-prefixes=DEV,HOST-PIC %s
 
-// RUN: %clang -### -target x86_64-unknown-linux-gnu \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu \
 // RUN:   -fgpu-rdc --offload-arch=gfx906 %s -nogpulib -nogpuinc \
 // RUN:   -fPIC \
 // RUN:   2>&1 | FileCheck -check-prefixes=DEV,HOST-PIC %s
 
-// RUN: %clang -### -target x86_64-unknown-linux-gnu \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu \
 // RUN:   --offload-arch=gfx906 %s -nogpulib -nogpuinc \
 // RUN:   -fPIE \
 // RUN:   2>&1 | FileCheck -check-prefixes=DEV,HOST-PIE %s
 
-// RUN: %clang -### -target x86_64-unknown-linux-gnu \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu \
 // RUN:   -fgpu-rdc --offload-arch=gfx906 %s -nogpulib -nogpuinc \
 // RUN:   -fPIE \
 // RUN:   2>&1 | FileCheck -check-prefixes=DEV,HOST-PIE %s

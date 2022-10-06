@@ -6,16 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/AllocTensorElimination.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
-#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Dominance.h"
 #include "mlir/Pass/Pass.h"
+
+namespace mlir {
+namespace bufferization {
+#define GEN_PASS_DEF_ALLOCTENSORELIMINATION
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
+} // namespace bufferization
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -140,6 +146,15 @@ LogicalResult mlir::bufferization::eliminateAllocTensors(
         return WalkResult::skip();
       Value allocTensor = maybeAllocTensor.front();
 
+      // Replace only if the types match.
+      // TODO: This could be extended to support IR such as:
+      // %0 = bufferization.alloc_tensor : tensor<128xf32>
+      // %1 = "some_op"(%0) : (tensor<128xf32>) -> (tensor<128xf32>)
+      // %2 = tensor.expand_shape %1 ...
+      // %3 = tensor.insert_slice %2 into ...
+      if (allocTensor.getType() != operand.get().getType())
+        return WalkResult::skip();
+
       // Find a suitable insertion point.
       Operation *insertionPoint =
           findValidInsertionPoint(allocTensor.getDefiningOp(), neededValues);
@@ -225,7 +240,8 @@ mlir::bufferization::insertSliceAnchoredAllocTensorEliminationStep(
 
 namespace {
 struct AllocTensorElimination
-    : public AllocTensorEliminationBase<AllocTensorElimination> {
+    : public bufferization::impl::AllocTensorEliminationBase<
+          AllocTensorElimination> {
   AllocTensorElimination() = default;
 
   void runOnOperation() override;

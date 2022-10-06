@@ -39,6 +39,7 @@ public:
   void printStackMap() const override;
   void printNeededLibraries() override;
   void printStringTable() override;
+  void printExceptionSection() override;
 
   ScopedPrinter &getScopedPrinter() const { return W; }
 
@@ -46,6 +47,9 @@ private:
   template <typename T> void printSectionHeaders(ArrayRef<T> Sections);
   template <typename T> void printGenericSectionHeader(T &Sec) const;
   template <typename T> void printOverflowSectionHeader(T &Sec) const;
+  template <typename T>
+  void printExceptionSectionEntry(const T &ExceptionSectEnt) const;
+  template <typename T> void printExceptionSectionEntries() const;
   template <typename T> const T *getAuxEntPtr(uintptr_t AuxAddress);
   void printFileAuxEnt(const XCOFFFileAuxEnt *AuxEntPtr);
   void printCsectAuxEnt(XCOFFCsectAuxRef AuxEntRef);
@@ -127,6 +131,47 @@ void XCOFFDumper::printSectionHeaders() {
     printSectionHeaders(Obj.sections64());
   else
     printSectionHeaders(Obj.sections32());
+}
+
+template <typename T>
+void XCOFFDumper::printExceptionSectionEntry(const T &ExceptionSectEnt) const {
+  if (ExceptionSectEnt.getReason())
+    W.printHex("Trap Instr Addr", ExceptionSectEnt.getTrapInstAddr());
+  else {
+    uint32_t SymIdx = ExceptionSectEnt.getSymbolIndex();
+    Expected<StringRef> ErrOrSymbolName = Obj.getSymbolNameByIndex(SymIdx);
+    if (Error E = ErrOrSymbolName.takeError()) {
+      reportUniqueWarning(std::move(E));
+      return;
+    }
+    StringRef SymName = *ErrOrSymbolName;
+
+    W.printNumber("Symbol", SymName, SymIdx);
+  }
+  W.printNumber("LangID", ExceptionSectEnt.getLangID());
+  W.printNumber("Reason", ExceptionSectEnt.getReason());
+}
+
+template <typename T> void XCOFFDumper::printExceptionSectionEntries() const {
+  Expected<ArrayRef<T>> ExceptSectEntsOrErr = Obj.getExceptionEntries<T>();
+  if (Error E = ExceptSectEntsOrErr.takeError()) {
+    reportUniqueWarning(std::move(E));
+    return;
+  }
+  ArrayRef<T> ExceptSectEnts = *ExceptSectEntsOrErr;
+
+  DictScope DS(W, "Exception section");
+  if (ExceptSectEnts.empty())
+    return;
+  for (auto &Ent : ExceptSectEnts)
+    printExceptionSectionEntry(Ent);
+}
+
+void XCOFFDumper::printExceptionSection() {
+  if (Obj.is64Bit())
+    printExceptionSectionEntries<ExceptionSectionEntry64>();
+  else
+    printExceptionSectionEntries<ExceptionSectionEntry32>();
 }
 
 void XCOFFDumper::printRelocations() {

@@ -11,7 +11,7 @@ add_mlir_conversion_library(MLIRSCFToGPU
   LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRAffineToStandard
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRComplexDialect
   MLIRGPUTransforms
   MLIRIR

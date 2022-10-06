@@ -10,6 +10,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -25,6 +26,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -269,36 +271,49 @@ TEST(MachineInstrExtraInfo, AddExtraInfo) {
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
-  MDNode *MDN = MDNode::getDistinct(Ctx, None);
+  MDNode *HAM = MDNode::getDistinct(Ctx, None);
+  MDNode *PCS = MDNode::getDistinct(Ctx, None);
 
   ASSERT_TRUE(MI->memoperands_empty());
   ASSERT_FALSE(MI->getPreInstrSymbol());
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
+  ASSERT_FALSE(MI->getPCSections());
 
   MI->setMemRefs(*MF, MMOs);
   ASSERT_TRUE(MI->memoperands().size() == 1);
   ASSERT_FALSE(MI->getPreInstrSymbol());
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
+  ASSERT_FALSE(MI->getPCSections());
 
   MI->setPreInstrSymbol(*MF, Sym1);
   ASSERT_TRUE(MI->memoperands().size() == 1);
   ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
+  ASSERT_FALSE(MI->getPCSections());
 
   MI->setPostInstrSymbol(*MF, Sym2);
   ASSERT_TRUE(MI->memoperands().size() == 1);
   ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
   ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
   ASSERT_FALSE(MI->getHeapAllocMarker());
+  ASSERT_FALSE(MI->getPCSections());
 
-  MI->setHeapAllocMarker(*MF, MDN);
+  MI->setHeapAllocMarker(*MF, HAM);
   ASSERT_TRUE(MI->memoperands().size() == 1);
   ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
   ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
-  ASSERT_TRUE(MI->getHeapAllocMarker() == MDN);
+  ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
+  ASSERT_FALSE(MI->getPCSections());
+
+  MI->setPCSections(*MF, PCS);
+  ASSERT_TRUE(MI->memoperands().size() == 1);
+  ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
+  ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
+  ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
+  ASSERT_TRUE(MI->getPCSections() == PCS);
 }
 
 TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
@@ -316,12 +331,14 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
-  MDNode *MDN = MDNode::getDistinct(Ctx, None);
+  MDNode *HAM = MDNode::getDistinct(Ctx, None);
+  MDNode *PCS = MDNode::getDistinct(Ctx, None);
 
   MI->setMemRefs(*MF, MMOs);
   MI->setPreInstrSymbol(*MF, Sym1);
   MI->setPostInstrSymbol(*MF, Sym2);
-  MI->setHeapAllocMarker(*MF, MDN);
+  MI->setHeapAllocMarker(*MF, HAM);
+  MI->setPCSections(*MF, PCS);
 
   MMOs.push_back(MMO);
 
@@ -329,13 +346,15 @@ TEST(MachineInstrExtraInfo, ChangeExtraInfo) {
   ASSERT_TRUE(MI->memoperands().size() == 2);
   ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
   ASSERT_TRUE(MI->getPostInstrSymbol() == Sym2);
-  ASSERT_TRUE(MI->getHeapAllocMarker() == MDN);
+  ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
+  ASSERT_TRUE(MI->getPCSections() == PCS);
 
   MI->setPostInstrSymbol(*MF, Sym1);
   ASSERT_TRUE(MI->memoperands().size() == 2);
   ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
   ASSERT_TRUE(MI->getPostInstrSymbol() == Sym1);
-  ASSERT_TRUE(MI->getHeapAllocMarker() == MDN);
+  ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
+  ASSERT_TRUE(MI->getPCSections() == PCS);
 }
 
 TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
@@ -354,36 +373,49 @@ TEST(MachineInstrExtraInfo, RemoveExtraInfo) {
   MMOs.push_back(MMO);
   MCSymbol *Sym1 = MC->createTempSymbol("pre_label", false);
   MCSymbol *Sym2 = MC->createTempSymbol("post_label", false);
-  MDNode *MDN = MDNode::getDistinct(Ctx, None);
+  MDNode *HAM = MDNode::getDistinct(Ctx, None);
+  MDNode *PCS = MDNode::getDistinct(Ctx, None);
 
   MI->setMemRefs(*MF, MMOs);
   MI->setPreInstrSymbol(*MF, Sym1);
   MI->setPostInstrSymbol(*MF, Sym2);
-  MI->setHeapAllocMarker(*MF, MDN);
+  MI->setHeapAllocMarker(*MF, HAM);
+  MI->setPCSections(*MF, PCS);
 
   MI->setPostInstrSymbol(*MF, nullptr);
   ASSERT_TRUE(MI->memoperands().size() == 2);
   ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
   ASSERT_FALSE(MI->getPostInstrSymbol());
-  ASSERT_TRUE(MI->getHeapAllocMarker() == MDN);
+  ASSERT_TRUE(MI->getHeapAllocMarker() == HAM);
+  ASSERT_TRUE(MI->getPCSections() == PCS);
 
   MI->setHeapAllocMarker(*MF, nullptr);
   ASSERT_TRUE(MI->memoperands().size() == 2);
   ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
+  ASSERT_TRUE(MI->getPCSections() == PCS);
+
+  MI->setPCSections(*MF, nullptr);
+  ASSERT_TRUE(MI->memoperands().size() == 2);
+  ASSERT_TRUE(MI->getPreInstrSymbol() == Sym1);
+  ASSERT_FALSE(MI->getPostInstrSymbol());
+  ASSERT_FALSE(MI->getHeapAllocMarker());
+  ASSERT_FALSE(MI->getPCSections());
 
   MI->setPreInstrSymbol(*MF, nullptr);
   ASSERT_TRUE(MI->memoperands().size() == 2);
   ASSERT_FALSE(MI->getPreInstrSymbol());
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
+  ASSERT_FALSE(MI->getPCSections());
 
   MI->setMemRefs(*MF, {});
   ASSERT_TRUE(MI->memoperands_empty());
   ASSERT_FALSE(MI->getPreInstrSymbol());
   ASSERT_FALSE(MI->getPostInstrSymbol());
   ASSERT_FALSE(MI->getHeapAllocMarker());
+  ASSERT_FALSE(MI->getPCSections());
 }
 
 TEST(MachineInstrDebugValue, AddDebugValueOperand) {
@@ -410,6 +442,34 @@ TEST(MachineInstrDebugValue, AddDebugValueOperand) {
     ASSERT_TRUE(MI->getOperand(0).isDebug());
     ASSERT_TRUE(MI->getOperand(1).isDebug());
   }
+}
+
+MATCHER_P(HasMIMetadata, MIMD, "") {
+  return arg->getDebugLoc() == MIMD.getDL() &&
+         arg->getPCSections() == MIMD.getPCSections();
+}
+
+TEST(MachineInstrBuilder, BuildMI) {
+  LLVMContext Ctx;
+  MDNode *PCS = MDNode::getDistinct(Ctx, None);
+  MDNode *DI = MDNode::getDistinct(Ctx, None);
+  DebugLoc DL(DI);
+  MIMetadata MIMD(DL, PCS);
+  EXPECT_EQ(MIMD.getDL(), DL);
+  EXPECT_EQ(MIMD.getPCSections(), PCS);
+  // Check common BuildMI() overloads propagate MIMetadata.
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+  auto MBB = MF->CreateMachineBasicBlock();
+  MCInstrDesc MCID = {0, 0, 0, 0, 0, 0, 0, nullptr, nullptr, nullptr};
+  EXPECT_THAT(BuildMI(*MF, MIMD, MCID), HasMIMetadata(MIMD));
+  EXPECT_THAT(BuildMI(*MF, MIMD, MCID), HasMIMetadata(MIMD));
+  EXPECT_THAT(BuildMI(*MBB, MBB->end(), MIMD, MCID), HasMIMetadata(MIMD));
+  EXPECT_THAT(BuildMI(*MBB, MBB->end(), MIMD, MCID), HasMIMetadata(MIMD));
+  EXPECT_THAT(BuildMI(*MBB, MBB->instr_end(), MIMD, MCID), HasMIMetadata(MIMD));
+  EXPECT_THAT(BuildMI(*MBB, *MBB->begin(), MIMD, MCID), HasMIMetadata(MIMD));
+  EXPECT_THAT(BuildMI(*MBB, &*MBB->begin(), MIMD, MCID), HasMIMetadata(MIMD));
+  EXPECT_THAT(BuildMI(MBB, MIMD, MCID), HasMIMetadata(MIMD));
 }
 
 static_assert(std::is_trivially_copyable<MCOperand>::value,

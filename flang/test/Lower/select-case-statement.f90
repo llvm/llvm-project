@@ -252,7 +252,6 @@
     print*, n
   end subroutine
 
-
   ! CHECK-LABEL: func @_QPscharacter2
   subroutine scharacter2(s)
     ! CHECK-DAG: %[[V_0:[0-9]+]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>>
@@ -284,6 +283,100 @@
     end select
     print*, n
   end subroutine
+
+  ! CHECK-LABEL: func @_QPsempty
+  ! empty select case blocks
+  subroutine sempty(n)
+    ! CHECK:   %[[selectI1:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
+    ! CHECK:   fir.select_case %[[selectI1]] : i32 [#fir.point, %c1{{.*}}, ^bb1, #fir.point, %c2{{.*}}, ^bb2, unit, ^bb3]
+    ! CHECK: ^bb1:  // pred: ^bb0
+    ! CHECK:   fir.call @_FortranAioBeginExternalListOutput
+    ! CHECK:   br ^bb4
+    ! CHECK: ^bb2:  // pred: ^bb0
+    ! CHECK:   br ^bb4
+    ! CHECK: ^bb3:  // pred: ^bb0
+    ! CHECK:   fir.call @_FortranAioBeginExternalListOutput
+    ! CHECK:   br ^bb4
+    select case (n)
+      case (1)
+        print*, n, 'i:case 1'
+      case (2)
+      ! print*, n, 'i:case 2'
+      case default
+        print*, n, 'i:case default'
+    end select
+    ! CHECK: ^bb4:  // 3 preds: ^bb1, ^bb2, ^bb3
+    ! CHECK:   %[[cmpC1:[0-9]+]] = fir.call @_FortranACharacterCompareScalar1
+    ! CHECK:   %[[selectC1:[0-9]+]] = arith.cmpi eq, %[[cmpC1]], %c0{{.*}} : i32
+    ! CHECK:   cond_br %[[selectC1]], ^bb6, ^bb5
+    ! CHECK: ^bb5:  // pred: ^bb4
+    ! CHECK:   %[[cmpC2:[0-9]+]] = fir.call @_FortranACharacterCompareScalar1
+    ! CHECK:   %[[selectC2:[0-9]+]] = arith.cmpi eq, %[[cmpC2]], %c0{{.*}} : i32
+    ! CHECK:   cond_br %[[selectC2]], ^bb8, ^bb7
+    ! CHECK: ^bb6:  // pred: ^bb4
+    ! CHECK:   fir.call @_FortranAioBeginExternalListOutput
+    ! print*, n, 'c:case 2'
+    ! CHECK:   br ^bb10
+    ! CHECK: ^bb7:  // pred: ^bb5
+    ! CHECK:   br ^bb9
+    ! CHECK: ^bb8:  // pred: ^bb5
+    ! CHECK:   br ^bb10
+    ! CHECK: ^bb9:  // pred: ^bb7
+    ! CHECK:   fir.call @_FortranAioBeginExternalListOutput
+    ! CHECK:   br ^bb10
+    ! CHECK: ^bb10:  // 3 preds: ^bb6, ^bb8, ^bb9
+    select case (char(ichar('0')+n))
+      case ('1')
+        print*, n, 'c:case 1'
+      case ('2')
+      ! print*, n, 'c:case 2'
+      case default
+        print*, n, 'c:case default'
+    end select
+    ! CHECK:   return
+  end subroutine
+
+  ! CHECK-LABEL: func @_QPsgoto
+  ! select case with goto exit
+  subroutine sgoto
+    n = 0
+    do i=1,8
+      ! CHECK:   %[[i:[0-9]+]] = fir.alloca {{.*}} "_QFsgotoEi"
+      ! CHECK: ^bb2:  // pred: ^bb1
+      ! CHECK:   %[[selector:[0-9]+]] = fir.load %[[i]] : !fir.ref<i32>
+      ! CHECK:   fir.select_case %[[selector]] : i32 [#fir.upper, %c2{{.*}}, ^bb3, #fir.lower, %c5{{.*}}, ^bb4, unit, ^bb7]
+      ! CHECK: ^bb3:  // pred: ^bb2
+      ! CHECK:   arith.muli %c10{{[^0]}}
+      ! CHECK:   br ^bb9
+      ! CHECK: ^bb4:  // pred: ^bb2
+      ! CHECK:   arith.muli %c1000{{[^0]}}
+      ! CHECK:   cond_br {{.*}}, ^bb5, ^bb6
+      ! CHECK: ^bb5:  // pred: ^bb4
+      ! CHECK:   br ^bb8
+      ! CHECK: ^bb6:  // pred: ^bb4
+      ! CHECK:   arith.muli %c10000{{[^0]}}
+      ! CHECK:   br ^bb9
+      ! CHECK: ^bb7:  // pred: ^bb2
+      ! CHECK:   arith.muli %c100{{[^0]}}
+      ! CHECK:   br ^bb8
+      ! CHECK: ^bb8:  // 2 preds: ^bb5, ^bb7
+      ! CHECK:   br ^bb9
+      ! CHECK: ^bb9:  // 3 preds: ^bb3, ^bb6, ^bb8
+      ! CHECK:   fir.call @_FortranAioBeginExternalListOutput
+      select case(i)
+      case (:2)
+        n = i * 10
+      case (5:)
+        n = i * 1000
+        if (i <= 6) goto 9
+        n = i * 10000
+      case default
+        n = i * 100
+  9   end select
+      print*, n
+    enddo
+    ! CHECK:   return
+  end
 
   ! CHECK-LABEL: func @_QPswhere
   subroutine swhere(num)
@@ -392,6 +485,15 @@
     call scharacter2('22 ')   ! expected output:  9 -2
     call scharacter2('.  ')   ! expected output:  9 -2
     call scharacter2('   ')   ! expected output:  9 -2
+
+    print*
+    call sempty(0)            ! expected output: 0 i:case default 0; c:case default
+    call sempty(1)            ! expected output: 1 i:case 1; 1 c:case 1
+    call sempty(2)            ! no output
+    call sempty(3)            ! expected output: 3 i:case default; 3 c:case default
+
+    print*
+    call sgoto                ! expected output:  10 20 300 400 5000 6000 70000 80000 
 
     print*
     call swhere(1)            ! expected output: 42.

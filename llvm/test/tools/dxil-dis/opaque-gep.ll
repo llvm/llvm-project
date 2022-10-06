@@ -1,5 +1,5 @@
 ; RUN: llc --filetype=obj %s -o - | dxil-dis -o - | FileCheck %s
-target triple = "dxil-unknown-unknown"
+target triple = "dxil-unknown-shadermodel6.7-library"
 
 define i32 @fn(ptr %0)  {
   %2 = getelementptr i32, ptr %0, i32 4

@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/ArrayRef.h"
+#include "src/__support/CPP/span.h"
 #include "src/string/bzero.h"
 #include "utils/UnitTest/Test.h"
 
-using __llvm_libc::cpp::Array;
-using __llvm_libc::cpp::ArrayRef;
-using Data = Array<char, 2048>;
+using __llvm_libc::cpp::array;
+using __llvm_libc::cpp::span;
+using Data = array<char, 2048>;
 
-static const ArrayRef<char> k_deadcode("DEADC0DE", 8);
+static const span<const char> k_deadcode("DEADC0DE", 8);
 
 // Returns a Data object filled with a repetition of `filler`.
-Data get_data(ArrayRef<char> filler) {
+Data get_data(span<const char> filler) {
   Data out;
   for (size_t i = 0; i < out.size(); ++i)
     out[i] = filler[i % filler.size()];

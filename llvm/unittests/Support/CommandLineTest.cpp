@@ -99,7 +99,7 @@ TEST(CommandLineTest, ModifyExisitingOption) {
   static const char ValueString[] = "Integer";
 
   StringMap<cl::Option *> &Map =
-      cl::getRegisteredOptions(*cl::TopLevelSubCommand);
+      cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
 
   ASSERT_EQ(Map.count("test-option"), 1u) << "Could not find option in map.";
 
@@ -375,7 +375,7 @@ TEST(CommandLineTest, AliasesWithArguments) {
     { "-tool", "-alias", "x" }
   };
 
-  for (size_t i = 0, e = array_lengthof(Inputs); i < e; ++i) {
+  for (size_t i = 0, e = std::size(Inputs); i < e; ++i) {
     StackOption<std::string> Actual("actual");
     StackOption<bool> Extra("extra");
     StackOption<std::string> Input(cl::Positional);
@@ -404,8 +404,8 @@ void testAliasRequired(int argc, const char *const *argv) {
 TEST(CommandLineTest, AliasRequired) {
   const char *opts1[] = { "-tool", "-option=x" };
   const char *opts2[] = { "-tool", "-o", "x" };
-  testAliasRequired(array_lengthof(opts1), opts1);
-  testAliasRequired(array_lengthof(opts2), opts2);
+  testAliasRequired(std::size(opts1), opts1);
+  testAliasRequired(std::size(opts2), opts2);
 }
 
 TEST(CommandLineTest, HideUnrelatedOptions) {
@@ -420,7 +420,7 @@ TEST(CommandLineTest, HideUnrelatedOptions) {
       << "Hid extra option that should be visable.";
 
   StringMap<cl::Option *> &Map =
-      cl::getRegisteredOptions(*cl::TopLevelSubCommand);
+      cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
   ASSERT_TRUE(Map.count("help") == (size_t)0 ||
               cl::NotHidden == Map["help"]->getOptionHiddenFlag())
       << "Hid default option that should be visable.";
@@ -446,7 +446,7 @@ TEST(CommandLineTest, HideUnrelatedOptionsMulti) {
       << "Hid extra option that should be visable.";
 
   StringMap<cl::Option *> &Map =
-      cl::getRegisteredOptions(*cl::TopLevelSubCommand);
+      cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
   ASSERT_TRUE(Map.count("help") == (size_t)0 ||
               cl::NotHidden == Map["help"]->getOptionHiddenFlag())
       << "Hid default option that should be visable.";
@@ -455,8 +455,8 @@ TEST(CommandLineTest, HideUnrelatedOptionsMulti) {
 TEST(CommandLineTest, SetMultiValues) {
   StackOption<int> Option("option");
   const char *args[] = {"prog", "-option=1", "-option=2"};
-  EXPECT_TRUE(cl::ParseCommandLineOptions(array_lengthof(args), args,
-                                          StringRef(), &llvm::nulls()));
+  EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args), args, StringRef(),
+                                          &llvm::nulls()));
   EXPECT_EQ(Option, 2);
 }
 
@@ -529,7 +529,7 @@ TEST(CommandLineTest, AddToAllSubCommands) {
   cl::ResetCommandLineParser();
 
   StackSubCommand SC1("sc1", "First subcommand");
-  StackOption<bool> AllOpt("everywhere", cl::sub(*cl::AllSubCommands),
+  StackOption<bool> AllOpt("everywhere", cl::sub(cl::SubCommand::getAll()),
                            cl::init(false));
   StackSubCommand SC2("sc2", "Second subcommand");
 
@@ -566,8 +566,8 @@ TEST(CommandLineTest, AddToAllSubCommands) {
 TEST(CommandLineTest, ReparseCommandLineOptions) {
   cl::ResetCommandLineParser();
 
-  StackOption<bool> TopLevelOpt("top-level", cl::sub(*cl::TopLevelSubCommand),
-                                cl::init(false));
+  StackOption<bool> TopLevelOpt(
+      "top-level", cl::sub(cl::SubCommand::getTopLevel()), cl::init(false));
 
   const char *args[] = {"prog", "-top-level"};
 
@@ -614,10 +614,12 @@ TEST(CommandLineTest, RemoveFromRegularSubCommand) {
 TEST(CommandLineTest, RemoveFromTopLevelSubCommand) {
   cl::ResetCommandLineParser();
 
-  StackOption<bool> TopLevelRemove(
-      "top-level-remove", cl::sub(*cl::TopLevelSubCommand), cl::init(false));
-  StackOption<bool> TopLevelKeep(
-      "top-level-keep", cl::sub(*cl::TopLevelSubCommand), cl::init(false));
+  StackOption<bool> TopLevelRemove("top-level-remove",
+                                   cl::sub(cl::SubCommand::getTopLevel()),
+                                   cl::init(false));
+  StackOption<bool> TopLevelKeep("top-level-keep",
+                                 cl::sub(cl::SubCommand::getTopLevel()),
+                                 cl::init(false));
 
   const char *args[] = {"prog", "-top-level-remove"};
 
@@ -638,9 +640,9 @@ TEST(CommandLineTest, RemoveFromAllSubCommands) {
 
   StackSubCommand SC1("sc1", "First Subcommand");
   StackSubCommand SC2("sc2", "Second Subcommand");
-  StackOption<bool> RemoveOption("remove-option", cl::sub(*cl::AllSubCommands),
-                                 cl::init(false));
-  StackOption<bool> KeepOption("keep-option", cl::sub(*cl::AllSubCommands),
+  StackOption<bool> RemoveOption(
+      "remove-option", cl::sub(cl::SubCommand::getAll()), cl::init(false));
+  StackOption<bool> KeepOption("keep-option", cl::sub(cl::SubCommand::getAll()),
                                cl::init(false));
 
   const char *args0[] = {"prog", "-remove-option"};
@@ -719,13 +721,13 @@ TEST(CommandLineTest, GetRegisteredSubcommands) {
 TEST(CommandLineTest, DefaultOptions) {
   cl::ResetCommandLineParser();
 
-  StackOption<std::string> Bar("bar", cl::sub(*cl::AllSubCommands),
+  StackOption<std::string> Bar("bar", cl::sub(cl::SubCommand::getAll()),
                                cl::DefaultOption);
   StackOption<std::string, cl::alias> Bar_Alias(
       "b", cl::desc("Alias for -bar"), cl::aliasopt(Bar), cl::DefaultOption);
 
-  StackOption<bool> Foo("foo", cl::init(false), cl::sub(*cl::AllSubCommands),
-                        cl::DefaultOption);
+  StackOption<bool> Foo("foo", cl::init(false),
+                        cl::sub(cl::SubCommand::getAll()), cl::DefaultOption);
   StackOption<bool, cl::alias> Foo_Alias("f", cl::desc("Alias for -foo"),
                                          cl::aliasopt(Foo), cl::DefaultOption);
 
@@ -867,10 +869,9 @@ TEST(CommandLineTest, ResponseFiles) {
 
   // Expand response files.
   llvm::BumpPtrAllocator A;
-  llvm::StringSaver Saver(A);
-  ASSERT_TRUE(llvm::cl::ExpandResponseFiles(
-      Saver, llvm::cl::TokenizeGNUCommandLine, Argv, false, true, false,
-      /*CurrentDir=*/StringRef(TestRoot), FS));
+  llvm::cl::ExpansionContext ECtx(A, llvm::cl::TokenizeGNUCommandLine);
+  ECtx.setVFS(&FS).setCurrentDir(TestRoot).setRelativeNames(true);
+  ASSERT_TRUE(ECtx.expandResponseFiles(Argv));
   EXPECT_THAT(Argv, testing::Pointwise(
                         StringEquality(),
                         {"test/test", "-flag_1", "-option_1", "-option_2",
@@ -925,15 +926,14 @@ TEST(CommandLineTest, RecursiveResponseFiles) {
   SmallVector<const char *, 4> Argv = {"test/test", SelfFileRef.c_str(),
                                        "-option_3"};
   BumpPtrAllocator A;
-  StringSaver Saver(A);
 #ifdef _WIN32
   cl::TokenizerCallback Tokenizer = cl::TokenizeWindowsCommandLine;
 #else
   cl::TokenizerCallback Tokenizer = cl::TokenizeGNUCommandLine;
 #endif
-  ASSERT_FALSE(
-      cl::ExpandResponseFiles(Saver, Tokenizer, Argv, false, false, false,
-                              /*CurrentDir=*/llvm::StringRef(TestRoot), FS));
+  llvm::cl::ExpansionContext ECtx(A, Tokenizer);
+  ECtx.setVFS(&FS).setCurrentDir(TestRoot);
+  ASSERT_FALSE(ECtx.expandResponseFiles(Argv));
 
   EXPECT_THAT(Argv,
               testing::Pointwise(StringEquality(),
@@ -969,10 +969,9 @@ TEST(CommandLineTest, ResponseFilesAtArguments) {
   Argv.push_back(ResponseFileRef.c_str());
 
   BumpPtrAllocator A;
-  StringSaver Saver(A);
-  ASSERT_FALSE(cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv,
-                                       false, false, false,
-                                       /*CurrentDir=*/StringRef(TestRoot), FS));
+  llvm::cl::ExpansionContext ECtx(A, cl::TokenizeGNUCommandLine);
+  ECtx.setVFS(&FS).setCurrentDir(TestRoot);
+  ASSERT_FALSE(ECtx.expandResponseFiles(Argv));
 
   // ASSERT instead of EXPECT to prevent potential out-of-bounds access.
   ASSERT_EQ(Argv.size(), 1 + NON_RSP_AT_ARGS + 2);
@@ -1004,10 +1003,9 @@ TEST(CommandLineTest, ResponseFileRelativePath) {
   SmallVector<const char *, 2> Argv = {"test/test", "@dir/outer.rsp"};
 
   BumpPtrAllocator A;
-  StringSaver Saver(A);
-  ASSERT_TRUE(cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Argv,
-                                      false, true, false,
-                                      /*CurrentDir=*/StringRef(TestRoot), FS));
+  llvm::cl::ExpansionContext ECtx(A, cl::TokenizeGNUCommandLine);
+  ECtx.setVFS(&FS).setCurrentDir(TestRoot).setRelativeNames(true);
+  ASSERT_TRUE(ECtx.expandResponseFiles(Argv));
   EXPECT_THAT(Argv,
               testing::Pointwise(StringEquality(), {"test/test", "-flag"}));
 }
@@ -1024,14 +1022,14 @@ TEST(CommandLineTest, ResponseFileEOLs) {
              MemoryBuffer::getMemBuffer("-Xclang -Wno-whatever\n input.cpp"));
   SmallVector<const char *, 2> Argv = {"clang", "@eols.rsp"};
   BumpPtrAllocator A;
-  StringSaver Saver(A);
-  ASSERT_TRUE(cl::ExpandResponseFiles(Saver, cl::TokenizeWindowsCommandLine,
-                                      Argv, true, true, false,
-                                      /*CurrentDir=*/StringRef(TestRoot), FS));
+  llvm::cl::ExpansionContext ECtx(A, cl::TokenizeWindowsCommandLine);
+  ECtx.setVFS(&FS).setCurrentDir(TestRoot).setMarkEOLs(true).setRelativeNames(
+      true);
+  ASSERT_TRUE(ECtx.expandResponseFiles(Argv));
   const char *Expected[] = {"clang", "-Xclang", "-Wno-whatever", nullptr,
                             "input.cpp"};
-  ASSERT_EQ(array_lengthof(Expected), Argv.size());
-  for (size_t I = 0, E = array_lengthof(Expected); I < E; ++I) {
+  ASSERT_EQ(std::size(Expected), Argv.size());
+  for (size_t I = 0, E = std::size(Expected); I < E; ++I) {
     if (Expected[I] == nullptr) {
       ASSERT_EQ(Argv[I], nullptr);
     } else {
@@ -1062,7 +1060,7 @@ TEST(CommandLineTest, SetDefautValue) {
 
   cl::ResetAllOptionOccurrences();
 
-  for (auto &OM : cl::getRegisteredOptions(*cl::TopLevelSubCommand)) {
+  for (auto &OM : cl::getRegisteredOptions(cl::SubCommand::getTopLevel())) {
     cl::Option *O = OM.second;
     if (O->ArgStr == "opt2") {
       continue;
@@ -1123,8 +1121,8 @@ TEST(CommandLineTest, ReadConfigFile) {
   EXPECT_NE(CurrDir.str(), TestDir.path());
 
   llvm::BumpPtrAllocator A;
-  llvm::StringSaver Saver(A);
-  bool Result = llvm::cl::readConfigFile(ConfigFile.path(), Saver, Argv);
+  llvm::cl::ExpansionContext ECtx(A, cl::tokenizeConfigFile);
+  bool Result = ECtx.readConfigFile(ConfigFile.path(), Argv);
 
   EXPECT_TRUE(Result);
   EXPECT_EQ(Argv.size(), 13U);

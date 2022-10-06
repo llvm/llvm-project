@@ -150,6 +150,20 @@ def quantized_batch_matmul(A=TensorDef(T1, Batch, S.M, S.K),
                        TypeFn.cast_signed(U, AZp)) * (TypeFn.cast_signed(
                            U, B[D.b, D.k, D.n]) - TypeFn.cast_signed(U, BZp))
 
+@linalg_structured_op
+def batch_reduce_matmul(A=TensorDef(T1, Batch, S.M, S.K),
+                        B=TensorDef(T2, Batch, S.K, S.N),
+                        C=TensorDef(U, S.M, S.N, output=True)):
+  """Performs a batch-reduce matrix multiplication of two 3D inputs.
+  The partial multiplication results are reduced into a 2D output.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  domain(D.b, D.m, D.n, D.k)
+  implements(ContractionOpInterface)
+  C[D.m, D.n] += TypeFn.cast_signed(U, A[D.b, D.m, D.k] * TypeFn.cast_signed(
+    U, B[D.b, D.k, D.n]))
 
 @linalg_structured_op
 def matvec(A=TensorDef(T1, S.M, S.N),
@@ -269,6 +283,26 @@ def conv_1d_nwc_wcf(I=TensorDef(T1, S.N, S.OW * S.SW + S.KW * S.DW, S.C),
       U, I[D.n, D.ow * S.SW + D.kw * S.DW, D.c]) * TypeFn.cast_signed(
           U, K[D.kw, D.c, D.f])
 
+@linalg_structured_op
+def conv_1d_ncw_fcw(I=TensorDef(T1, S.N, S.C, S.OW * S.SW + S.KW * S.DW),
+                    K=TensorDef(T2, S.F, S.C, S.KW),
+                    O=TensorDef(U, S.N, S.F, S.OW, output=True),
+                    strides=IndexAttrDef(S.SW, default=[1]),
+                    dilations=IndexAttrDef(S.DW, default=[1])):
+  """Performs 1-D convolution.
+
+  Layout:
+    * Input: NCW.
+    * Kernel: FCW.
+
+  Numeric casting is performed on the operands to the inner multiply, promoting
+  them to the same data type as the accumulator/output.
+  """
+  implements(ConvolutionOpInterface)
+  domain(D.n, D.f, D.ow, D.c, D.kw)
+  O[D.n, D.f, D.ow] += TypeFn.cast_signed(
+      U, I[D.n, D.c, D.ow * S.SW + D.kw * S.DW]) * TypeFn.cast_signed(
+          U, K[D.f, D.c, D.kw])
 
 @linalg_structured_op
 def conv_2d_nhwc_hwcf(I=TensorDef(T1, S.N, S.OH * S.SH + S.KH * S.DH,

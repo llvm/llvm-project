@@ -30,7 +30,9 @@ a select is not allowed to be passed to a rule within another data structure.
 """
 
 def enum_targets_gen_impl(ctx):
-    to_replace = "@LLVM_ENUM_{}S@".format(ctx.attr.macro_name)
+    to_replace = ctx.attr.placeholder_name
+    if not to_replace:
+        to_replace = "@LLVM_ENUM_{}S@".format(ctx.attr.macro_name)
     replacement = "\n".join([
         "LLVM_{}({})\n".format(ctx.attr.macro_name, t)
         for t in ctx.attr.targets
@@ -56,6 +58,10 @@ enum_targets_gen = rule(
                   " placeholder being replaced `@LLVM_ENUM_{}S@` and of the" +
                   " macro invocations generated `LLVM_{}(TARGET)`. Should be" +
                   " all caps and singular, e.g. 'DISASSEMBLER'",
+        ),
+        "placeholder_name": attr.string(
+            doc = "The name of the placeholder. If unset, this defaults to" +
+                  " `@LLVM_ENUM_{macro_name}S@`",
         ),
     },
     # output_to_genfiles is required for header files.

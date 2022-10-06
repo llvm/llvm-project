@@ -242,19 +242,30 @@ static OverwriteResult isMaskedStoreOverwrite(const Instruction *KillingI,
   const auto *DeadII = dyn_cast<IntrinsicInst>(DeadI);
   if (KillingII == nullptr || DeadII == nullptr)
     return OW_Unknown;
-  if (KillingII->getIntrinsicID() != Intrinsic::masked_store ||
-      DeadII->getIntrinsicID() != Intrinsic::masked_store)
+  if (KillingII->getIntrinsicID() != DeadII->getIntrinsicID())
     return OW_Unknown;
-  // Pointers.
-  Value *KillingPtr = KillingII->getArgOperand(1)->stripPointerCasts();
-  Value *DeadPtr = DeadII->getArgOperand(1)->stripPointerCasts();
-  if (KillingPtr != DeadPtr && !AA.isMustAlias(KillingPtr, DeadPtr))
-    return OW_Unknown;
-  // Masks.
-  // TODO: check that KillingII's mask is a superset of the DeadII's mask.
-  if (KillingII->getArgOperand(3) != DeadII->getArgOperand(3))
-    return OW_Unknown;
-  return OW_Complete;
+  if (KillingII->getIntrinsicID() == Intrinsic::masked_store) {
+    // Type size.
+    VectorType *KillingTy =
+        cast<VectorType>(KillingII->getArgOperand(0)->getType());
+    VectorType *DeadTy = cast<VectorType>(DeadII->getArgOperand(0)->getType());
+    if (KillingTy->getScalarSizeInBits() != DeadTy->getScalarSizeInBits())
+      return OW_Unknown;
+    // Element count.
+    if (KillingTy->getElementCount() != DeadTy->getElementCount())
+      return OW_Unknown;
+    // Pointers.
+    Value *KillingPtr = KillingII->getArgOperand(1)->stripPointerCasts();
+    Value *DeadPtr = DeadII->getArgOperand(1)->stripPointerCasts();
+    if (KillingPtr != DeadPtr && !AA.isMustAlias(KillingPtr, DeadPtr))
+      return OW_Unknown;
+    // Masks.
+    // TODO: check that KillingII's mask is a superset of the DeadII's mask.
+    if (KillingII->getArgOperand(3) != DeadII->getArgOperand(3))
+      return OW_Unknown;
+    return OW_Complete;
+  }
+  return OW_Unknown;
 }
 
 /// Return 'OW_Complete' if a store to the 'KillingLoc' location completely
@@ -1075,13 +1086,16 @@ struct DSEState {
       }
 
       MemoryAccess *UseAccess = WorkList[I];
-      // Simply adding the users of MemoryPhi to the worklist is not enough,
-      // because we might miss read clobbers in different iterations of a loop,
-      // for example.
-      // TODO: Add support for phi translation to handle the loop case.
-      if (isa<MemoryPhi>(UseAccess))
-        return false;
+      if (isa<MemoryPhi>(UseAccess)) {
+        // AliasAnalysis does not account for loops. Limit elimination to
+        // candidates for which we can guarantee they always store to the same
+        // memory location.
+        if (!isGuaranteedLoopInvariant(MaybeLoc->Ptr))
+          return false;
 
+        PushMemUses(cast<MemoryPhi>(UseAccess));
+        continue;
+      }
       // TODO: Checking for aliasing is expensive. Consider reducing the amount
       // of times this is called and/or caching it.
       Instruction *UseInst = cast<MemoryUseOrDef>(UseAccess)->getMemoryInst();
@@ -1774,10 +1788,9 @@ struct DSEState {
         !memoryIsNotModifiedBetween(Malloc, MemSet, BatchAA, DL, &DT))
       return false;
     IRBuilder<> IRB(Malloc);
-    const auto &DL = Malloc->getModule()->getDataLayout();
-    auto *Calloc =
-      emitCalloc(ConstantInt::get(IRB.getIntPtrTy(DL), 1),
-                 Malloc->getArgOperand(0), IRB, TLI);
+    Type *SizeTTy = Malloc->getArgOperand(0)->getType();
+    auto *Calloc = emitCalloc(ConstantInt::get(SizeTTy, 1),
+                              Malloc->getArgOperand(0), IRB, TLI);
     if (!Calloc)
       return false;
     MemorySSAUpdater Updater(&MSSA);
@@ -1861,8 +1874,23 @@ struct DSEState {
           // We are searching for the definition of the store's destination.
           // So, if that is the same definition as the load, then this is a
           // noop. Otherwise, fail.
-          if (LoadAccess != Current)
+          if (LoadAccess != Current) {
+            // This is a potentially clobbering store, but it writes the same
+            // value, so we can safely ignore it if alignment is as expected.
+            if (auto *CurrentDef = cast<MemoryDef>(Current))
+              if (auto *CurrentStoreI =
+                      dyn_cast_or_null<StoreInst>(CurrentDef->getMemoryInst()))
+                // Check alignment to ensure load or store does not access at an
+                // offset.
+                if (CurrentStoreI->getValueOperand() == LoadI) {
+                  TypeSize StoreSize = DL.getTypeStoreSize(LoadI->getType());
+                  if (!StoreSize.isScalable() &&
+                      std::min(CurrentStoreI->getAlign(), LoadI->getAlign()) >=
+                          StoreSize)
+                    continue;
+                }
             return false;
+          }
         }
         return true;
       }
@@ -1967,7 +1995,7 @@ static bool eliminateDeadStores(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
 
     Optional<MemoryLocation> MaybeKillingLoc;
     if (State.isMemTerminatorInst(KillingI))
-      MaybeKillingLoc = State.getLocForTerminator(KillingI).map(
+      MaybeKillingLoc = State.getLocForTerminator(KillingI).transform(
           [](const std::pair<MemoryLocation, bool> &P) { return P.first; });
     else
       MaybeKillingLoc = State.getLocForWrite(KillingI);

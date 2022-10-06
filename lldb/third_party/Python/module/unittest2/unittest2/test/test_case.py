@@ -1,7 +1,6 @@
 import difflib
 import pprint
 import re
-import six
 
 from copy import deepcopy
 
@@ -543,7 +542,7 @@ class Test_TestCase(unittest2.TestCase, EqualityMixin, HashingMixin):
             def runTest(self):
                 pass
 
-        self.assertIsInstance(Foo().id(), six.string_types)
+        self.assertIsInstance(Foo().id(), str)
 
     # "If result is omitted or None, a temporary result object is created
     # and used, but is not made available to the caller. As TestCase owns the

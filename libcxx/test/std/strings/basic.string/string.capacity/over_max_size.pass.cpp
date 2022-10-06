@@ -37,20 +37,17 @@ test(const S& s)
     assert ( false );
 }
 
+template <class S>
+void test_string() {
+  test(S());
+  test(S("123"));
+  test(S("12345678901234567890123456789012345678901234567890"));
+}
+
 bool test() {
-  {
-    typedef std::string S;
-    test(S());
-    test(S("123"));
-    test(S("12345678901234567890123456789012345678901234567890"));
-  }
+  test_string<std::string>();
 #if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test(S());
-    test(S("123"));
-    test(S("12345678901234567890123456789012345678901234567890"));
-  }
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
 #endif
 
   return true;

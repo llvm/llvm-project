@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 | FileCheck %s
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 | FileCheck %s
 
 ; Test that the cost for the number of vector registers is returned for a
 ; non-power-of-two vector type.

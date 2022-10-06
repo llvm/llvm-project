@@ -6,16 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/Passes.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_STRIPDEBUGINFO
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
 namespace {
-struct StripDebugInfo : public StripDebugInfoBase<StripDebugInfo> {
+struct StripDebugInfo : public impl::StripDebugInfoBase<StripDebugInfo> {
   void runOnOperation() override;
 };
 } // namespace

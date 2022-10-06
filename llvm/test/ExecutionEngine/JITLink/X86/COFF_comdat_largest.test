@@ -5,10 +5,8 @@
 # Check jitlink handles largest selection type as plain weak symbol.
 #
 # CHECK: Creating graph symbols...
-# CHECK:      2: Creating defined graph symbol for COFF symbol ".text" in .text (index: 2)
-# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000001, linkage: strong, scope: local, dead  -   <anonymous symbol>
-# CHECK-NEXT: 4: Exporting COMDAT graph symbol for COFF symbol "func" in section 2
-# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000001, linkage: weak, scope: default, dead  -   func
+# CHECK: 4: Exporting COMDAT graph symbol for COFF symbol "func" in section 2
+# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000000, linkage: weak, scope: default, dead  -   func
 
 --- !COFF
 header:

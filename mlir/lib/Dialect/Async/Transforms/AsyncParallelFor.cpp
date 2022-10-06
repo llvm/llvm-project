@@ -10,12 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <utility>
+#include "mlir/Dialect/Async/Passes.h"
 
 #include "PassDetail.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Async/IR/Async.h"
-#include "mlir/Dialect/Async/Passes.h"
 #include "mlir/Dialect/Async/Transforms.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -26,6 +25,12 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include <utility>
+
+namespace mlir {
+#define GEN_PASS_DEF_ASYNCPARALLELFOR
+#include "mlir/Dialect/Async/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::async;
@@ -94,7 +99,7 @@ namespace {
 //   }
 //
 struct AsyncParallelForPass
-    : public AsyncParallelForBase<AsyncParallelForPass> {
+    : public impl::AsyncParallelForBase<AsyncParallelForPass> {
   AsyncParallelForPass() = default;
 
   AsyncParallelForPass(bool asyncDispatch, int32_t numWorkerThreads,
@@ -550,7 +555,7 @@ createAsyncDispatchFunction(ParallelComputeFunction &computeFunc,
     // Create async.execute operation to dispatch half of the block range.
     auto execute = b.create<ExecuteOp>(TypeRange(), ValueRange(), ValueRange(),
                                        executeBodyBuilder);
-    b.create<AddToGroupOp>(indexTy, execute.token(), group);
+    b.create<AddToGroupOp>(indexTy, execute.getToken(), group);
     b.create<scf::YieldOp>(ValueRange({start, midIndex}));
   }
 
@@ -697,7 +702,7 @@ doSequentialDispatch(ImplicitLocOpBuilder &b, PatternRewriter &rewriter,
     // Create async.execute operation to launch parallel computate function.
     auto execute = b.create<ExecuteOp>(TypeRange(), ValueRange(), ValueRange(),
                                        executeBodyBuilder);
-    b.create<AddToGroupOp>(rewriter.getIndexType(), execute.token(), group);
+    b.create<AddToGroupOp>(rewriter.getIndexType(), execute.getToken(), group);
     b.create<scf::YieldOp>();
   };
 

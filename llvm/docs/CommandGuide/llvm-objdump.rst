@@ -125,9 +125,27 @@ OPTIONS
   Specify the target architecture when disassembling. Use :option:`--version`
   for a list of available targets.
 
+.. option:: --build-id=<string>
+
+  Look up the object using the given build ID, specified as a hexadecimal
+  string. The found object is handled as if it were an input filename.
+
 .. option:: -C, --demangle
 
   Demangle symbol names in the output.
+
+.. option:: --debug-file-directory <path>
+
+  Provide a path to a directory with a `.build-id` subdirectory to search for
+  debug information for stripped binaries. Multiple instances of this argument
+  are searched in the order given.
+
+.. option:: --debuginfod, --no-debuginfod
+
+  Whether or not to try debuginfod lookups for debug binaries. Unless specified,
+  debuginfod is only enabled if libcurl was compiled in (``LLVM_ENABLE_CURL``)
+  and at least one server URL was provided by the environment variable
+  ``DEBUGINFOD_URLS``.
 
 .. option:: --debug-vars=<format>
 
@@ -171,9 +189,10 @@ OPTIONS
   Enable/disable target-specific attributes. Specify ``--mattr=help`` to display
   the available attributes.
 
-.. option:: --no-leading-addr
+.. option:: --no-leading-addr, --no-addresses
 
-  When disassembling, do not print leading addresses.
+  When disassembling, do not print leading addresses for instructions or inline
+  relocations.
 
 .. option:: --no-print-imm-hex
 
@@ -312,7 +331,11 @@ MACH-O ONLY OPTIONS AND COMMANDS
 
   Disassemble just the specified symbol's instructions.
 
-.. option:: --dyld_info
+.. option:: --chained-fixups
+
+  Print chained fixup information.
+
+.. option:: --dyld-info
 
   Print bind and rebase information used by dyld to resolve external
   references in a final linked binary.

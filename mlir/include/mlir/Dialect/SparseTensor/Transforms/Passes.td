@@ -11,7 +11,28 @@
 
 include "mlir/Pass/PassBase.td"
 
-def Sparsification : Pass<"sparsification", "ModuleOp"> {
+def SparseTensorRewrite : Pass<"sparse-tensor-rewrite", "ModuleOp"> {
+  let summary = "Applies sparse tensor rewriting rules prior to sparsification";
+  let description = [{
+    A pass that applies rewriting rules to sparse tensor operations prior
+    to running the actual sparsification pass.
+  }];
+  let constructor = "mlir::createSparseTensorRewritePass()";
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "bufferization::BufferizationDialect",
+    "linalg::LinalgDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+  let options = [
+    Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
+           "true", "Enable runtime library for manipulating sparse tensors">
+  ];
+}
+
+def SparsificationPass : Pass<"sparsification", "ModuleOp"> {
   let summary = "Automatically generate sparse tensor code from sparse tensor types";
   let description = [{
     A pass that implements the core functionality of a **sparse compiler**.
@@ -54,39 +75,67 @@ def Sparsification : Pass<"sparsification", "ModuleOp"> {
   let constructor = "mlir::createSparsificationPass()";
   let dependentDialects = [
     "AffineDialect",
-    "arith::ArithmeticDialect",
+    "arith::ArithDialect",
     "bufferization::BufferizationDialect",
     "LLVM::LLVMDialect",
+    "linalg::LinalgDialect",
     "memref::MemRefDialect",
     "scf::SCFDialect",
     "sparse_tensor::SparseTensorDialect",
     "vector::VectorDialect",
   ];
+  // TODO(57514): These enum options are duplicated in Passes.h.
   let options = [
-    Option<"parallelization", "parallelization-strategy", "int32_t", "0",
-           "Set the parallelization strategy">,
-    Option<"vectorization", "vectorization-strategy", "int32_t", "0",
-           "Set the vectorization strategy">,
+    Option<"parallelization", "parallelization-strategy", "mlir::SparseParallelizationStrategy",
+           "mlir::SparseParallelizationStrategy::kNone",
+           "Set the parallelization strategy", [{llvm::cl::values(
+             clEnumValN(mlir::SparseParallelizationStrategy::kNone, "none",
+                        "Turn off sparse parallelization."),
+             clEnumValN(mlir::SparseParallelizationStrategy::kDenseOuterLoop,
+                        "dense-outer-loop",
+                        "Enable dense outer loop sparse parallelization."),
+             clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageOuterLoop,
+                        "any-storage-outer-loop",
+                        "Enable sparse parallelization regardless of storage for the outer loop."),
+             clEnumValN(mlir::SparseParallelizationStrategy::kDenseAnyLoop,
+                        "dense-any-loop",
+                        "Enable dense parallelization for any loop."),
+             clEnumValN(mlir::SparseParallelizationStrategy::kAnyStorageAnyLoop,
+                        "any-storage-any-loop",
+                        "Enable sparse parallelization for any storage and loop."))}]>,
+    Option<"vectorization", "vectorization-strategy", "mlir::SparseVectorizationStrategy",
+           "mlir::SparseVectorizationStrategy::kNone",
+           "Set the vectorization strategy", [{llvm::cl::values(
+             clEnumValN(mlir::SparseVectorizationStrategy::kNone, "none",
+                        "Turn off sparse vectorization."),
+             clEnumValN(mlir::SparseVectorizationStrategy::kDenseInnerLoop,
+                        "dense-inner-loop",
+                        "Enable vectorization for dense inner loops."),
+             clEnumValN(mlir::SparseVectorizationStrategy::kAnyStorageInnerLoop,
+                        "any-storage-inner-loop",
+                        "Enable sparse vectorization for inner loops with any storage."))}]>,
     Option<"vectorLength", "vl", "int32_t", "1",
            "Set the vector length">,
     Option<"enableSIMDIndex32", "enable-simd-index32", "bool", "false",
            "Enable i32 indexing into vectors (for efficiency)">,
     Option<"enableVLAVectorization", "enable-vla-vectorization", "bool",
-           "false", "Enable vector length agnostic vectorization">
+           "false", "Enable vector length agnostic vectorization">,
+    Option<"enableRuntimeLibrary", "enable-runtime-library", "bool",
+           "true", "Enable runtime library for manipulating sparse tensors">
   ];
 }
 
-def SparseTensorConversion : Pass<"sparse-tensor-conversion", "ModuleOp"> {
-  let summary = "Apply conversion rules to sparse tensor primitives and types";
+def SparseTensorConversionPass : Pass<"sparse-tensor-conversion", "ModuleOp"> {
+  let summary = "Convert sparse tensors and primitives to library calls";
   let description = [{
-    A pass that converts sparse tensor primitives to calls into a runtime
-    support library. All sparse tensor types are converted into opaque
-    pointers to the underlying sparse storage schemes.
+    A pass that converts sparse tensor primitives into calls into a runtime
+    support library. Sparse tensor types are converted into opaque pointers
+    to the underlying sparse storage schemes.
 
-    Note that this is a current implementation choice to keep the conversion
-    relatively simple. In principle, these primitives could also be
-    converted to actual elaborate IR code that implements the primitives
-    on the selected sparse tensor storage schemes.
+    The use of opaque pointers together with runtime support library keeps
+    the conversion relatively simple, but at the expense of IR opacity,
+    which obscures opportunities for subsequent optimization of the IR.
+    An alternative is provided by the SparseTensorCodegen pass.
 
     Example of the conversion:
 
@@ -107,7 +156,7 @@ def SparseTensorConversion : Pass<"sparse-tensor-conversion", "ModuleOp"> {
   }];
   let constructor = "mlir::createSparseTensorConversionPass()";
   let dependentDialects = [
-    "arith::ArithmeticDialect",
+    "arith::ArithDialect",
     "bufferization::BufferizationDialect",
     "LLVM::LLVMDialect",
     "linalg::LinalgDialect",
@@ -119,6 +168,51 @@ def SparseTensorConversion : Pass<"sparse-tensor-conversion", "ModuleOp"> {
   let options = [
     Option<"sparseToSparse", "s2s-strategy", "int32_t", "0",
            "Set the strategy for sparse-to-sparse conversion">,
+  ];
+}
+
+def SparseTensorCodegen : Pass<"sparse-tensor-codegen", "ModuleOp"> {
+  let summary = "Convert sparse tensors and primitives to actual code";
+  let description = [{
+    A pass that converts sparse tensor types and primitives to actual
+    compiler visible buffers and compiler IR that implements these
+    primitives on the selected sparse tensor storage schemes.
+
+    This pass provides an alternative to the SparseTensorConversion pass,
+    eliminating the dependence on a runtime support library, and providing
+    much more opportunities for subsequent compiler optimization of the
+    generated code.
+
+    Example of the conversion:
+
+    ```mlir
+    TBD
+    ```
+  }];
+  let constructor = "mlir::createSparseTensorCodegenPass()";
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "bufferization::BufferizationDialect",
+    "linalg::LinalgDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "sparse_tensor::SparseTensorDialect",
+  ];
+}
+
+def SparseBufferRewrite : Pass<"sparse-buffer-rewrite", "ModuleOp"> {
+  let summary = "Rewrite sparse primitives on buffers to actual code";
+  let description = [{
+    A pass that rewrites sparse primitives on buffers to the MLIR implementation
+    of the primitives. For example, sparse_tensor.sort operator is implemented
+    in this pass.
+  }];
+  let constructor = "mlir::createSparseBufferRewritePass()";
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "memref::MemRefDialect",
+    "scf::SCFDialect",
+    "sparse_tensor::SparseTensorDialect",
   ];
 }
 

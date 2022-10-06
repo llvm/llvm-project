@@ -904,7 +904,6 @@ func SizeOf(t Type) (v Value)                 { v.C = C.LLVMSizeOf(t.C); return 
 func ConstNeg(v Value) (rv Value)             { rv.C = C.LLVMConstNeg(v.C); return }
 func ConstNSWNeg(v Value) (rv Value)          { rv.C = C.LLVMConstNSWNeg(v.C); return }
 func ConstNUWNeg(v Value) (rv Value)          { rv.C = C.LLVMConstNUWNeg(v.C); return }
-func ConstFNeg(v Value) (rv Value)            { rv.C = C.LLVMConstFNeg(v.C); return }
 func ConstNot(v Value) (rv Value)             { rv.C = C.LLVMConstNot(v.C); return }
 func ConstAdd(lhs, rhs Value) (v Value)       { v.C = C.LLVMConstAdd(lhs.C, rhs.C); return }
 func ConstNSWAdd(lhs, rhs Value) (v Value)    { v.C = C.LLVMConstNSWAdd(lhs.C, rhs.C); return }

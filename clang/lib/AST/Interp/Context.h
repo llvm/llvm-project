@@ -33,7 +33,7 @@ class State;
 enum PrimType : unsigned;
 
 /// Holds all information required to evaluate constexpr code in a module.
-class Context {
+class Context final {
 public:
   /// Initialises the constexpr VM.
   Context(ASTContext &Ctx);
@@ -60,7 +60,7 @@ public:
   unsigned getCharBit() const;
 
   /// Classifies an expression.
-  llvm::Optional<PrimType> classify(QualType T);
+  llvm::Optional<PrimType> classify(QualType T) const;
 
 private:
   /// Runs a function.

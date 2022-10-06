@@ -408,6 +408,9 @@ namespace llvm {
   /// RemoveRedundantDebugValues pass.
   extern char &RemoveRedundantDebugValuesID;
 
+  /// MachineCFGPrinter pass.
+  extern char &MachineCFGPrinterID;
+
   /// LiveDebugValues pass
   extern char &LiveDebugValuesID;
 
@@ -483,6 +486,9 @@ namespace llvm {
   /// instructions with selects or just the explicit vector length into the
   /// predicate mask.
   FunctionPass *createExpandVectorPredicationPass();
+
+  // Expands large div/rem instructions.
+  FunctionPass *createExpandLargeDivRemPass();
 
   // This pass expands memcmp() to load/stores.
   FunctionPass *createExpandMemCmpPass();

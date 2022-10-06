@@ -53,10 +53,10 @@ LLDB_PLUGIN_DEFINE(ABISysV_ppc64)
 const lldb_private::RegisterInfo *
 ABISysV_ppc64::GetRegisterInfoArray(uint32_t &count) {
   if (GetByteOrder() == lldb::eByteOrderLittle) {
-    count = llvm::array_lengthof(g_register_infos_ppc64le);
+    count = std::size(g_register_infos_ppc64le);
     return g_register_infos_ppc64le;
   } else {
-    count = llvm::array_lengthof(g_register_infos_ppc64);
+    count = std::size(g_register_infos_ppc64);
     return g_register_infos_ppc64;
   }
 }

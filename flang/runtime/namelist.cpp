@@ -8,6 +8,7 @@
 
 #include "namelist.h"
 #include "descriptor-io.h"
+#include "emit-encoded.h"
 #include "io-stmt.h"
 #include "flang/Runtime/io-api.h"
 #include <algorithm>
@@ -34,17 +35,17 @@ bool IONAME(OutputNamelist)(Cookie cookie, const NamelistGroup &group) {
   // Internal functions to advance records and convert case
   const auto EmitWithAdvance{[&](char ch) -> bool {
     return (!connection.NeedAdvance(1) || io.AdvanceRecord()) &&
-        io.Emit(&ch, 1);
+        EmitAscii(io, &ch, 1);
   }};
   const auto EmitUpperCase{[&](const char *str) -> bool {
     if (connection.NeedAdvance(std::strlen(str)) &&
-        !(io.AdvanceRecord() && io.Emit(" ", 1))) {
+        !(io.AdvanceRecord() && EmitAscii(io, " ", 1))) {
       return false;
     }
     for (; *str; ++str) {
       char up{*str >= 'a' && *str <= 'z' ? static_cast<char>(*str - 'a' + 'A')
                                          : *str};
-      if (!io.Emit(&up, 1)) {
+      if (!EmitAscii(io, &up, 1)) {
         return false;
       }
     }
@@ -141,7 +142,6 @@ static std::optional<SubscriptValue> GetSubscriptValue(IoStatementState &io) {
 static bool HandleSubscripts(IoStatementState &io, Descriptor &desc,
     const Descriptor &source, const char *name) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
-  io.HandleRelativePosition(1); // skip '('
   // Allow for blanks in subscripts; they're nonstandard, but not
   // ambiguous within the parentheses.
   SubscriptValue lower[maxRank], upper[maxRank], stride[maxRank];
@@ -251,7 +251,6 @@ static bool HandleSubstring(
   SubscriptValue chars{static_cast<SubscriptValue>(desc.ElementBytes()) / kind};
   // Allow for blanks in substring bounds; they're nonstandard, but not
   // ambiguous within the parentheses.
-  io.HandleRelativePosition(1); // skip '('
   std::optional<SubscriptValue> lower, upper;
   std::size_t byteCount{0};
   std::optional<char32_t> ch{io.GetNextNonBlank(byteCount)};
@@ -304,7 +303,6 @@ static bool HandleSubstring(
 static bool HandleComponent(IoStatementState &io, Descriptor &desc,
     const Descriptor &source, const char *name) {
   IoErrorHandler &handler{io.GetIoErrorHandler()};
-  io.HandleRelativePosition(1); // skip '%'
   char compName[nameBufferSize];
   if (GetLowerCaseName(io, compName, sizeof compName)) {
     const DescriptorAddendum *addendum{source.Addendum()};
@@ -331,7 +329,7 @@ static bool HandleComponent(IoStatementState &io, Descriptor &desc,
     }
   } else {
     handler.SignalError("NAMELIST component reference of input group item %s "
-                        "has no name after '%'",
+                        "has no name after '%%'",
         name);
   }
   return false;
@@ -436,6 +434,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
       do {
         Descriptor &mutableDescriptor{staticDesc[whichStaticDesc].descriptor()};
         whichStaticDesc ^= 1;
+        io.HandleRelativePosition(byteCount); // skip over '(' or '%'
         if (*next == '(') {
           if (!hadSubstring && (hadSubscripts || useDescriptor->rank() == 0)) {
             mutableDescriptor = *useDescriptor;
@@ -449,9 +448,11 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
                                 "NAMELIST group '%s'",
                 name, group.groupName);
             return false;
-          } else if (!HandleSubscripts(
-                         io, mutableDescriptor, *useDescriptor, name)) {
-            return false;
+          } else {
+            if (!HandleSubscripts(
+                    io, mutableDescriptor, *useDescriptor, name)) {
+              return false;
+            }
           }
           hadSubscripts = true;
         } else {
@@ -474,7 +475,7 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
     }
     io.HandleRelativePosition(byteCount);
     // Read the values into the descriptor.  An array can be short.
-    listInput->ResetForNextNamelistItem();
+    listInput->ResetForNextNamelistItem(useDescriptor->rank() > 0);
     if (!descr::DescriptorIO<Direction::Input>(io, *useDescriptor)) {
       return false;
     }
@@ -488,13 +489,14 @@ bool IONAME(InputNamelist)(Cookie cookie, const NamelistGroup &group) {
         "No '/' found after NAMELIST group '%s'", group.groupName);
     return false;
   }
-  io.HandleRelativePosition(1);
+  io.HandleRelativePosition(byteCount);
   return true;
 }
 
-bool IsNamelistName(IoStatementState &io) {
-  if (io.get_if<ListDirectedStatementState<Direction::Input>>()) {
-    if (io.mutableModes().inNamelist) {
+bool IsNamelistNameOrSlash(IoStatementState &io) {
+  if (auto *listInput{
+          io.get_if<ListDirectedStatementState<Direction::Input>>()}) {
+    if (listInput->inNamelistArray()) {
       SavedPosition savedPosition{io};
       std::size_t byteCount{0};
       if (auto ch{io.GetNextNonBlank(byteCount)}) {
@@ -506,6 +508,8 @@ bool IsNamelistName(IoStatementState &io) {
           ch = io.GetNextNonBlank(byteCount);
           // TODO: how to deal with NaN(...) ambiguity?
           return ch && (*ch == '=' || *ch == '(' || *ch == '%');
+        } else {
+          return *ch == '/';
         }
       }
     }

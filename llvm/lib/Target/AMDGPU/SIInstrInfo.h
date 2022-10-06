@@ -277,6 +277,10 @@ public:
 
   MachineBasicBlock *getBranchDestBlock(const MachineInstr &MI) const override;
 
+  /// Return whether the block terminate with divergent branch.
+  /// Note this only work before lowering the pseudo control flow instructions.
+  bool hasDivergentBranch(const MachineBasicBlock *MBB) const;
+
   void insertIndirectBranch(MachineBasicBlock &MBB,
                             MachineBasicBlock &NewDestBB,
                             MachineBasicBlock &RestoreBB, const DebugLoc &DL,

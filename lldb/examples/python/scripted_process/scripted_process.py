@@ -1,10 +1,8 @@
 from abc import ABCMeta, abstractmethod
-import six
 
 import lldb
 
-@six.add_metaclass(ABCMeta)
-class ScriptedProcess:
+class ScriptedProcess(metaclass=ABCMeta):
 
     """
     The base class for a scripted process.
@@ -193,8 +191,7 @@ class ScriptedProcess:
         """
         return None
 
-@six.add_metaclass(ABCMeta)
-class ScriptedThread:
+class ScriptedThread(metaclass=ABCMeta):
 
     """
     The base class for a scripted thread.

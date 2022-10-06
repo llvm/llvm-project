@@ -6,87 +6,82 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 
 @hello = constant [14 x i8] c"hello world\5Cn\00"
 @null = constant [1 x i8] zeroinitializer
-@chp = global i8* zeroinitializer
+@chp = global ptr zeroinitializer
 
-declare i8* @strrchr(i8*, i32)
+declare ptr @strrchr(ptr, i32)
 
 define void @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    store i8* getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 6), i8** @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hello, i32 0, i32 6), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %str = getelementptr [14 x i8], [14 x i8]* @hello, i32 0, i32 0
-  %dst = call i8* @strrchr(i8* %str, i32 119)
-  store i8* %dst, i8** @chp
+  %dst = call ptr @strrchr(ptr @hello, i32 119)
+  store ptr %dst, ptr @chp
   ret void
 }
 
 define void @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
-; CHECK-NEXT:    store i8* null, i8** @chp, align 4
+; CHECK-NEXT:    store ptr null, ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %str = getelementptr [1 x i8], [1 x i8]* @null, i32 0, i32 0
-  %dst = call i8* @strrchr(i8* %str, i32 119)
-  store i8* %dst, i8** @chp
+  %dst = call ptr @strrchr(ptr @null, i32 119)
+  store ptr %dst, ptr @chp
   ret void
 }
 
 define void @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    store i8* getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 13), i8** @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hello, i32 0, i32 13), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %src = getelementptr [14 x i8], [14 x i8]* @hello, i32 0, i32 0
-  %dst = call i8* @strrchr(i8* %src, i32 0)
-  store i8* %dst, i8** @chp
+  %dst = call ptr @strrchr(ptr @hello, i32 0)
+  store ptr %dst, ptr @chp
   ret void
 }
 
 define void @test_simplify4() {
 ; CHECK-LABEL: @test_simplify4(
-; CHECK-NEXT:    store i8* getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 13), i8** @chp, align 4
+; CHECK-NEXT:    store ptr getelementptr inbounds ([14 x i8], ptr @hello, i32 0, i32 13), ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %src = getelementptr [14 x i8], [14 x i8]* @hello, i32 0, i32 0
-  %dst = call i8* @strrchr(i8* %src, i32 65280)
-  store i8* %dst, i8** @chp
+  %dst = call ptr @strrchr(ptr @hello, i32 65280)
+  store ptr %dst, ptr @chp
   ret void
 }
 
 define void @test_xform_to_memrchr(i32 %chr) {
 ; CHECK-LABEL: @test_xform_to_memrchr(
-; CHECK-NEXT:    [[MEMRCHR:%.*]] = call i8* @memrchr(i8* noundef nonnull dereferenceable(14) getelementptr inbounds ([14 x i8], [14 x i8]* @hello, i32 0, i32 0), i32 [[CHR:%.*]], i32 14)
-; CHECK-NEXT:    store i8* [[MEMRCHR]], i8** @chp, align 4
+; CHECK-NEXT:    [[MEMRCHR:%.*]] = call ptr @memrchr(ptr noundef nonnull dereferenceable(14) @hello, i32 [[CHR:%.*]], i32 14)
+; CHECK-NEXT:    store ptr [[MEMRCHR]], ptr @chp, align 4
 ; CHECK-NEXT:    ret void
 ;
 
-  %src = getelementptr [14 x i8], [14 x i8]* @hello, i32 0, i32 0
-  %dst = call i8* @strrchr(i8* %src, i32 %chr)
-  store i8* %dst, i8** @chp
+  %dst = call ptr @strrchr(ptr @hello, i32 %chr)
+  store ptr %dst, ptr @chp
   ret void
 }
 
-define i8* @test1(i8* %str, i32 %c) {
+define ptr @test1(ptr %str, i32 %c) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @strrchr(i8* noundef nonnull dereferenceable(1) [[STR:%.*]], i32 [[C:%.*]])
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = call ptr @strrchr(ptr noundef nonnull dereferenceable(1) [[STR:%.*]], i32 [[C:%.*]])
+; CHECK-NEXT:    ret ptr [[RET]]
 ;
 
-  %ret = call i8* @strrchr(i8* %str, i32 %c)
-  ret i8* %ret
+  %ret = call ptr @strrchr(ptr %str, i32 %c)
+  ret ptr %ret
 }
 
-define i8* @test2(i8* %str, i32 %c) null_pointer_is_valid {
+define ptr @test2(ptr %str, i32 %c) null_pointer_is_valid {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @strrchr(i8* noundef [[STR:%.*]], i32 [[C:%.*]])
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = call ptr @strrchr(ptr noundef [[STR:%.*]], i32 [[C:%.*]])
+; CHECK-NEXT:    ret ptr [[RET]]
 ;
 
-  %ret = call i8* @strrchr(i8* %str, i32 %c)
-  ret i8* %ret
+  %ret = call ptr @strrchr(ptr %str, i32 %c)
+  ret ptr %ret
 }

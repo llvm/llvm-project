@@ -7,12 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
-#include "../PassDetail.h"
+
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTNVGPUTONVVM
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -85,9 +91,8 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
     if (arrayType.getElementType() == f16x2Ty ||
         arrayType.getElementType() == f32x1Ty) {
       for (unsigned i = 0; i < structType.getBody().size(); i++) {
-        Value el = rewriter.create<LLVM::ExtractValueOp>(
-            loc, structType.getBody()[i], intrinsicResult,
-            rewriter.getI64ArrayAttr(i));
+        Value el =
+            rewriter.create<LLVM::ExtractValueOp>(loc, intrinsicResult, i);
         el = rewriter.createOrFold<LLVM::BitcastOp>(
             loc, arrayType.getElementType(), el);
         elements.push_back(el);
@@ -105,12 +110,10 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
       for (unsigned i = 0, e = structType.getBody().size() / 2; i < e; i++) {
         Value vec =
             rewriter.create<LLVM::UndefOp>(loc, arrayType.getElementType());
-        Value x1 = rewriter.create<LLVM::ExtractValueOp>(
-            loc, structType.getBody()[i * 2], intrinsicResult,
-            rewriter.getI64ArrayAttr(i * 2));
-        Value x2 = rewriter.create<LLVM::ExtractValueOp>(
-            loc, structType.getBody()[i * 2 + 1], intrinsicResult,
-            rewriter.getI64ArrayAttr(i * 2 + 1));
+        Value x1 =
+            rewriter.create<LLVM::ExtractValueOp>(loc, intrinsicResult, i * 2);
+        Value x2 = rewriter.create<LLVM::ExtractValueOp>(loc, intrinsicResult,
+                                                         i * 2 + 1);
         vec = rewriter.create<LLVM::InsertElementOp>(loc, vec.getType(), vec,
                                                      x1, makeConst(0));
         vec = rewriter.create<LLVM::InsertElementOp>(loc, vec.getType(), vec,
@@ -122,9 +125,8 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
     // Create the final vectorized result.
     Value result = rewriter.create<LLVM::UndefOp>(loc, arrayType);
     for (const auto &el : llvm::enumerate(elements)) {
-      result = rewriter.create<LLVM::InsertValueOp>(
-          loc, arrayType, result, el.value(),
-          rewriter.getI64ArrayAttr(el.index()));
+      result = rewriter.create<LLVM::InsertValueOp>(loc, result, el.value(),
+                                                    el.index());
     }
     return result;
   }
@@ -152,8 +154,7 @@ static SmallVector<Value> unpackOperandVector(RewriterBase &rewriter,
   auto arrayTy = operand.getType().cast<LLVM::LLVMArrayType>();
 
   for (unsigned i = 0, e = arrayTy.getNumElements(); i < e; ++i) {
-    Value toUse = rewriter.create<LLVM::ExtractValueOp>(
-        loc, arrayTy.getElementType(), operand, rewriter.getI64ArrayAttr(i));
+    Value toUse = rewriter.create<LLVM::ExtractValueOp>(loc, operand, i);
 
     // For 4xi8 vectors, the intrinsic expects these to be provided as i32
     // scalar types.
@@ -238,15 +239,13 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
     Type finalResultType = typeConverter->convertType(vectorResultType);
     Value result = rewriter.create<LLVM::UndefOp>(loc, finalResultType);
     for (int64_t i = 0, e = vectorResultType.getDimSize(0); i < e; i++) {
-      Value i32Register = num32BitRegs > 1
-                              ? rewriter.create<LLVM::ExtractValueOp>(
-                                    loc, rewriter.getI32Type(), ldMatrixResult,
-                                    rewriter.getI64ArrayAttr(i))
-                              : ldMatrixResult;
+      Value i32Register =
+          num32BitRegs > 1
+              ? rewriter.create<LLVM::ExtractValueOp>(loc, ldMatrixResult, i)
+              : ldMatrixResult;
       Value casted =
           rewriter.create<LLVM::BitcastOp>(loc, innerVectorType, i32Register);
-      result = rewriter.create<LLVM::InsertValueOp>(
-          loc, finalResultType, result, casted, rewriter.getI64ArrayAttr(i));
+      result = rewriter.create<LLVM::InsertValueOp>(loc, result, casted, i);
     }
 
     rewriter.replaceOp(op, result);
@@ -275,10 +274,14 @@ struct MmaSyncOptoNVVM : public ConvertOpToLLVMPattern<nvgpu::MmaSyncOp> {
     NVVM::MMATypes ptxTypeB;
     Optional<NVVM::MMATypes> ptxTypeC = NVVM::MmaOp::inferOperandMMAType(
         cType.getElementType(), /*isAccumulator=*/true);
-    if (!ptxTypeC) {
+    if (!ptxTypeC)
       return op->emitError(
           "could not infer the PTX type for the accumulator/result");
-    }
+
+    // Tensor Cores (mma.sync) on F32 works only with TensorFloat32 (TF32).
+    bool tf32Enabled = op->hasAttr(op.getTf32EnabledAttrName());
+    if (aType.getElementType().isF32() && !tf32Enabled)
+      return failure();
 
     Optional<NVVM::MMAIntOverflow> overflow(llvm::None);
     if (aType.getElementType().isInteger(8)) {
@@ -330,7 +333,7 @@ struct MmaSyncOptoNVVM : public ConvertOpToLLVMPattern<nvgpu::MmaSyncOp> {
 };
 
 struct ConvertNVGPUToNVVMPass
-    : public ConvertNVGPUToNVVMBase<ConvertNVGPUToNVVMPass> {
+    : public impl::ConvertNVGPUToNVVMBase<ConvertNVGPUToNVVMPass> {
   ConvertNVGPUToNVVMPass() = default;
 
   void runOnOperation() override {
@@ -350,6 +353,35 @@ struct ConvertNVGPUToNVVMPass
       signalPassFailure();
   }
 };
+
+static void emitCpAsyncOpZfillAsm(Location loc, Value dstPtr, Value srcPtr,
+                                  Value dstBytes, Value srcElements,
+                                  mlir::MemRefType elementType,
+                                  ConversionPatternRewriter &rewriter) {
+  auto asmDialectAttr = LLVM::AsmDialectAttr::get(rewriter.getContext(),
+                                                  LLVM::AsmDialect::AD_ATT);
+  const char *asmStr = "cp.async.cg.shared.global [$0], [$1], $2, $3;\n";
+  const char *asmConstraints = "r,l,n,r";
+
+  Value c3I32 = rewriter.create<LLVM::ConstantOp>(
+      loc, rewriter.getI32Type(), rewriter.getI32IntegerAttr(3));
+  Value bitwidth = rewriter.create<LLVM::ConstantOp>(
+      loc, rewriter.getI32Type(),
+      rewriter.getI32IntegerAttr(elementType.getElementTypeBitWidth()));
+  Value srcElementsI32 =
+      rewriter.create<LLVM::TruncOp>(loc, rewriter.getI32Type(), srcElements);
+  Value srcBytes = rewriter.create<LLVM::LShrOp>(
+      loc, rewriter.create<LLVM::MulOp>(loc, bitwidth, srcElementsI32), c3I32);
+
+  SmallVector<Value> asmVals{dstPtr, srcPtr, dstBytes, srcBytes};
+
+  rewriter.create<LLVM::InlineAsmOp>(
+      loc, LLVM::LLVMVoidType::get(rewriter.getContext()), /*operands=*/asmVals,
+      /*asm_string=*/asmStr,
+      /*constraints=*/asmConstraints, /*has_side_effects=*/true,
+      /*is_align_stack=*/false, /*asm_dialect=*/asmDialectAttr,
+      /*operand_attrs=*/ArrayAttr());
+}
 
 struct NVGPUAsyncCopyLowering
     : public ConvertOpToLLVMPattern<nvgpu::DeviceAsyncCopyOp> {
@@ -380,15 +412,33 @@ struct NVGPUAsyncCopyLowering
         i8Ty, NVVM::NVVMMemorySpace::kGlobalMemorySpace);
     scrPtr = rewriter.create<LLVM::AddrSpaceCastOp>(loc, srcPointerGlobalType,
                                                     scrPtr);
-    int64_t numElements = adaptor.getNumElements().getZExtValue();
+    int64_t dstElements = adaptor.getDstElements().getZExtValue();
     int64_t sizeInBytes =
-        (dstMemrefType.getElementTypeBitWidth() * numElements) / 8;
+        (dstMemrefType.getElementTypeBitWidth() * dstElements) / 8;
     // bypass L1 is only supported for byte sizes of 16, we drop the hint
     // otherwise.
     UnitAttr bypassL1 =
         sizeInBytes == 16 ? adaptor.getBypassL1Attr() : UnitAttr();
-    rewriter.create<NVVM::CpAsyncOp>(
-        loc, dstPtr, scrPtr, rewriter.getI32IntegerAttr(sizeInBytes), bypassL1);
+
+    // When the optional SrcElements argument is present, the source (global
+    // memory) of CpAsyncOp is read only for SrcElements number of elements. The
+    // rest of the DstElements in the destination (shared memory) are filled
+    // with zeros.
+    if (op.getSrcElements())
+      emitCpAsyncOpZfillAsm(loc, dstPtr, scrPtr,
+                            rewriter.create<LLVM::ConstantOp>(
+                                loc, rewriter.getI32Type(),
+                                rewriter.getI32IntegerAttr(sizeInBytes)),
+                            adaptor.getSrcElements(), srcMemrefType, rewriter);
+
+    // When the optional SrcElements argument is *not* present, the regular
+    // CpAsyncOp is generated. CopyAsyncOp reads bytes from source (global
+    // memory) to fill DstElements number of elements in the destination (shared
+    // memory).
+    else
+      rewriter.create<NVVM::CpAsyncOp>(loc, dstPtr, scrPtr,
+                                       rewriter.getI32IntegerAttr(sizeInBytes),
+                                       bypassL1);
 
     // Drop the result token.
     Value zero = rewriter.create<LLVM::ConstantOp>(

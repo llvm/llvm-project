@@ -673,7 +673,11 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
 
   // C++20 features.
   if (LangOpts.CPlusPlus20) {
-    //Builder.defineMacro("__cpp_aggregate_paren_init", "201902L");
+    // Builder.defineMacro("__cpp_aggregate_paren_init", "201902L");
+
+    // P0848 is implemented, but we're still waiting for other concepts
+    // issues to be addressed before bumping __cpp_concepts up to 202002L.
+    // Refer to the discussion of this at https://reviews.llvm.org/D128619.
     Builder.defineMacro("__cpp_concepts", "201907L");
     Builder.defineMacro("__cpp_conditional_explicit", "201806L");
     //Builder.defineMacro("__cpp_consteval", "201811L");
@@ -692,6 +696,13 @@ static void InitializeCPlusPlusFeatureTestMacros(const LangOptions &LangOpts,
     Builder.defineMacro("__cpp_if_consteval", "202106L");
     Builder.defineMacro("__cpp_multidimensional_subscript", "202110L");
   }
+
+  // We provide those C++2b features as extensions in earlier language modes, so
+  // we also define their feature test macros.
+  if (LangOpts.CPlusPlus11)
+    Builder.defineMacro("__cpp_static_call_operator", "202207L");
+  Builder.defineMacro("__cpp_named_character_escapes", "202207L");
+
   if (LangOpts.Char8)
     Builder.defineMacro("__cpp_char8_t", "201811L");
   Builder.defineMacro("__cpp_impl_destroying_delete", "201806L");

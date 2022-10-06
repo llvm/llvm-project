@@ -218,6 +218,13 @@ public:
                      One.extractBits(NumBits, BitPosition));
   }
 
+  /// Concatenate the bits from \p Lo onto the bottom of *this.  This is
+  /// equivalent to:
+  ///   (this->zext(NewWidth) << Lo.getBitWidth()) | Lo.zext(NewWidth)
+  KnownBits concat(const KnownBits &Lo) const {
+    return KnownBits(Zero.concat(Lo.Zero), One.concat(Lo.One));
+  }
+
   /// Return KnownBits based on this, but updated given that the underlying
   /// value is known to be greater than or equal to Val.
   KnownBits makeGE(const APInt &Val) const;

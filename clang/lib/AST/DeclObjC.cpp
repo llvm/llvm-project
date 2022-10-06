@@ -403,21 +403,18 @@ ObjCInterfaceDecl::FindPropertyVisibleInPrimaryClass(
   return nullptr;
 }
 
-void ObjCInterfaceDecl::collectPropertiesToImplement(PropertyMap &PM,
-                                                     PropertyDeclOrder &PO) const {
+void ObjCInterfaceDecl::collectPropertiesToImplement(PropertyMap &PM) const {
   for (auto *Prop : properties()) {
     PM[std::make_pair(Prop->getIdentifier(), Prop->isClassProperty())] = Prop;
-    PO.push_back(Prop);
   }
   for (const auto *Ext : known_extensions()) {
     const ObjCCategoryDecl *ClassExt = Ext;
     for (auto *Prop : ClassExt->properties()) {
       PM[std::make_pair(Prop->getIdentifier(), Prop->isClassProperty())] = Prop;
-      PO.push_back(Prop);
     }
   }
   for (const auto *PI : all_referenced_protocols())
-    PI->collectPropertiesToImplement(PM, PO);
+    PI->collectPropertiesToImplement(PM);
   // Note, the properties declared only in class extensions are still copied
   // into the main @interface's property list, and therefore we don't
   // explicitly, have to search class extension properties.
@@ -864,7 +861,7 @@ bool ObjCMethodDecl::isDesignatedInitializerForTheInterface(
 }
 
 bool ObjCMethodDecl::hasParamDestroyedInCallee() const {
-  for (auto param : parameters()) {
+  for (auto *param : parameters()) {
     if (param->isDestroyedInCallee())
       return true;
   }
@@ -1496,7 +1493,7 @@ ObjCTypeParamList *ObjCTypeParamList::create(
 void ObjCTypeParamList::gatherDefaultTypeArgs(
        SmallVectorImpl<QualType> &typeArgs) const {
   typeArgs.reserve(size());
-  for (auto typeParam : *this)
+  for (auto *typeParam : *this)
     typeArgs.push_back(typeParam->getUnderlyingType());
 }
 
@@ -1998,19 +1995,17 @@ void ObjCProtocolDecl::startDefinition() {
     RD->Data = this->Data;
 }
 
-void ObjCProtocolDecl::collectPropertiesToImplement(PropertyMap &PM,
-                                                    PropertyDeclOrder &PO) const {
+void ObjCProtocolDecl::collectPropertiesToImplement(PropertyMap &PM) const {
   if (const ObjCProtocolDecl *PDecl = getDefinition()) {
     for (auto *Prop : PDecl->properties()) {
       // Insert into PM if not there already.
       PM.insert(std::make_pair(
           std::make_pair(Prop->getIdentifier(), Prop->isClassProperty()),
           Prop));
-      PO.push_back(Prop);
     }
     // Scan through protocol's protocols.
     for (const auto *PI : PDecl->protocols())
-      PI->collectPropertiesToImplement(PM, PO);
+      PI->collectPropertiesToImplement(PM);
   }
 }
 

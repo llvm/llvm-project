@@ -22,9 +22,7 @@
 #include <cstdint>
 #include <cstring>
 #include <string>
-#if __cplusplus > 201402L
 #include <string_view>
-#endif
 #include <system_error>
 #include <type_traits>
 
@@ -36,7 +34,7 @@ class format_object_base;
 class FormattedString;
 class FormattedNumber;
 class FormattedBytes;
-template <class T> class LLVM_NODISCARD Expected;
+template <class T> class [[nodiscard]] Expected;
 
 namespace sys {
 namespace fs {
@@ -237,11 +235,9 @@ public:
     return write(Str.data(), Str.length());
   }
 
-#if __cplusplus > 201402L
   raw_ostream &operator<<(const std::string_view &Str) {
     return write(Str.data(), Str.length());
   }
-#endif
 
   raw_ostream &operator<<(const SmallVectorImpl<char> &Str) {
     return write(Str.data(), Str.size());
@@ -565,7 +561,7 @@ public:
   ///     });
   ///   }
   ///   @endcode
-  LLVM_NODISCARD Expected<sys::fs::FileLocker> lock();
+  [[nodiscard]] Expected<sys::fs::FileLocker> lock();
 
   /// Tries to lock the underlying file within the specified period.
   ///
@@ -574,8 +570,8 @@ public:
   ///          error code.
   ///
   /// It is used as @ref lock.
-  LLVM_NODISCARD
-  Expected<sys::fs::FileLocker> tryLockFor(Duration const& Timeout);
+  [[nodiscard]] Expected<sys::fs::FileLocker>
+  tryLockFor(Duration const &Timeout);
 };
 
 /// This returns a reference to a raw_fd_ostream for standard output. Use it

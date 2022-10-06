@@ -78,7 +78,7 @@ private:
 /// - export: this is common and potentially interesting, there are three cases:
 ///    * Points to a public header (common): we can suppress include2 if you
 ///      already have include1. Only marginally useful.
-///    * Points to a private header annotated with `private` (somewhat commmon):
+///    * Points to a private header annotated with `private` (somewhat common):
 ///      Not incrementally useful as we support private.
 ///    * Points to a private header without pragmas (rare). This is a reversed
 ///      private pragma, and is valuable but too rare to be worthwhile.

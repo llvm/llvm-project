@@ -12,7 +12,7 @@ func.func @scalarize(%arg0: tensor<24x12xf32>,
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     %1, %loops = transform.structured.tile %0 [10, 0, 0]

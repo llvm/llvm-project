@@ -11,6 +11,8 @@
 
 #include <__llvm-libc-common.h>
 
+#include <llvm-libc-macros/sys-mman-macros.h>
+
 %%public_api()
 
 #endif // LLVM_LIBC_SYS_MMAN_H

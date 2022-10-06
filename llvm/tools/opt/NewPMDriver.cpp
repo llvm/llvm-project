@@ -381,7 +381,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
          ArrayRef<PassBuilder::PipelineElement>) {
         AddressSanitizerOptions Opts;
         if (Name == "asan-pipeline") {
-          MPM.addPass(ModuleAddressSanitizerPass(Opts));
+          MPM.addPass(AddressSanitizerPass(Opts));
           return true;
         }
         return false;

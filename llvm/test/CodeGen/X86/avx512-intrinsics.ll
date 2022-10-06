@@ -1011,8 +1011,8 @@ define <16 x i16> @test_x86_vcvtps2ph_256(<16 x float> %a0, <16 x i16> %src, i16
 ; X64-LABEL: test_x86_vcvtps2ph_256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    kmovw %edi, %k1
-; X64-NEXT:    vcvtps2ph $2, %zmm0, %ymm2 {%k1} {z}
-; X64-NEXT:    vcvtps2ph $2, %zmm0, %ymm1 {%k1}
+; X64-NEXT:    vcvtps2ph $3, {sae}, %zmm0, %ymm2 {%k1} {z}
+; X64-NEXT:    vcvtps2ph $4, {sae}, %zmm0, %ymm1 {%k1}
 ; X64-NEXT:    vpaddw %ymm1, %ymm2, %ymm1
 ; X64-NEXT:    vcvtps2ph $2, %zmm0, (%rsi)
 ; X64-NEXT:    vmovdqa %ymm1, %ymm0
@@ -1022,15 +1022,15 @@ define <16 x i16> @test_x86_vcvtps2ph_256(<16 x float> %a0, <16 x i16> %src, i16
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1
-; X86-NEXT:    vcvtps2ph $2, %zmm0, %ymm2 {%k1} {z}
-; X86-NEXT:    vcvtps2ph $2, %zmm0, %ymm1 {%k1}
+; X86-NEXT:    vcvtps2ph $3, {sae}, %zmm0, %ymm2 {%k1} {z}
+; X86-NEXT:    vcvtps2ph $4, {sae}, %zmm0, %ymm1 {%k1}
 ; X86-NEXT:    vpaddw %ymm1, %ymm2, %ymm1
 ; X86-NEXT:    vcvtps2ph $2, %zmm0, (%eax)
 ; X86-NEXT:    vmovdqa %ymm1, %ymm0
 ; X86-NEXT:    retl
   %res1 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %a0, i32 2, <16 x i16> zeroinitializer, i16 -1)
-  %res2 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %a0, i32 2, <16 x i16> zeroinitializer, i16 %mask)
-  %res3 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %a0, i32 2, <16 x i16> %src, i16 %mask)
+  %res2 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %a0, i32 11, <16 x i16> zeroinitializer, i16 %mask)
+  %res3 = call <16 x i16> @llvm.x86.avx512.mask.vcvtps2ph.512(<16 x float> %a0, i32 12, <16 x i16> %src, i16 %mask)
   store <16 x i16> %res1, ptr %dst
   %res  = add <16 x i16> %res2, %res3
   ret <16 x i16> %res
@@ -7510,7 +7510,6 @@ define <8 x double> @test_mm256_castpd256_pd256_freeze(<4 x double> %a0) nounwin
 ; CHECK-LABEL: test_mm256_castpd256_pd256_freeze:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %a1 = freeze <4 x double> poison
   %res = shufflevector <4 x double> %a0, <4 x double> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -7536,7 +7535,6 @@ define <16 x float> @test_mm256_castps256_ps512_freeze(<8 x float> %a0) nounwind
 ; CHECK-LABEL: test_mm256_castps256_ps512_freeze:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %a1 = freeze <8 x float> poison
   %res = shufflevector <8 x float> %a0, <8 x float> %a1, <16x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -7562,7 +7560,6 @@ define <8 x i64> @test_mm512_castsi256_si512_pd256_freeze(<4 x i64> %a0) nounwin
 ; CHECK-LABEL: test_mm512_castsi256_si512_pd256_freeze:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
-; CHECK-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %a1 = freeze <4 x i64> poison
   %res = shufflevector <4 x i64> %a0, <4 x i64> %a1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

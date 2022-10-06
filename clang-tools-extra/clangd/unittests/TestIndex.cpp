@@ -99,6 +99,11 @@ Symbol objcClass(llvm::StringRef Name) {
   return objcSym(Name, index::SymbolKind::Class, "objc(cs)");
 }
 
+Symbol objcCategory(llvm::StringRef Name, llvm::StringRef CategoryName) {
+  std::string USRPrefix = ("objc(cy)" + Name + "@").str();
+  return objcSym(CategoryName, index::SymbolKind::Extension, USRPrefix);
+}
+
 Symbol objcProtocol(llvm::StringRef Name) {
   return objcSym(Name, index::SymbolKind::Protocol, "objc(pl)");
 }

@@ -288,7 +288,7 @@ public:
   ArrayRef<Value *> getValues() const { return Values; }
 
   bool areAllIncomingValuesSame() const {
-    return llvm::all_of(Values, [&](Value *V) { return V == Values[0]; });
+    return llvm::all_equal(Values);
   }
 
   bool areAllIncomingValuesSameType() const {
@@ -634,7 +634,7 @@ private:
       if (PN->getIncomingValue(0) != PN)
         PN->replaceAllUsesWith(PN->getIncomingValue(0));
       else
-        PN->replaceAllUsesWith(UndefValue::get(PN->getType()));
+        PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
       PN->eraseFromParent();
     }
   }

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/StringView.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/dirent/closedir.h"
 #include "src/dirent/dirfd.h"
 #include "src/dirent/opendir.h"
@@ -17,7 +17,7 @@
 #include <dirent.h>
 #include <errno.h>
 
-using StringView = __llvm_libc::cpp::StringView;
+using string_view = __llvm_libc::cpp::string_view;
 
 TEST(LlvmLibcDirentTest, SimpleOpenAndRead) {
   ::DIR *dir = __llvm_libc::opendir("testdata");
@@ -33,13 +33,13 @@ TEST(LlvmLibcDirentTest, SimpleOpenAndRead) {
     struct ::dirent *d = __llvm_libc::readdir(dir);
     if (d == nullptr)
       break;
-    if (StringView(&d->d_name[0]).equals("file1.txt"))
+    if (string_view(&d->d_name[0]) == "file1.txt")
       file1 = d;
-    if (StringView(&d->d_name[0]).equals("file2.txt"))
+    if (string_view(&d->d_name[0]) == "file2.txt")
       file2 = d;
-    if (StringView(&d->d_name[0]).equals("dir1"))
+    if (string_view(&d->d_name[0]) == "dir1")
       dir1 = d;
-    if (StringView(&d->d_name[0]).equals("dir2"))
+    if (string_view(&d->d_name[0]) == "dir2")
       dir2 = d;
   }
 

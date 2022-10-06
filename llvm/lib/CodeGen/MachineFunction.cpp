@@ -306,7 +306,7 @@ bool MachineFunction::shouldSplitStack() const {
   return getFunction().hasFnAttribute("split-stack");
 }
 
-LLVM_NODISCARD unsigned
+[[nodiscard]] unsigned
 MachineFunction::addFrameInst(const MCCFIInstruction &Inst) {
   FrameInstructions.push_back(Inst);
   return FrameInstructions.size() - 1;
@@ -530,9 +530,11 @@ MachineFunction::getMachineMemOperand(const MachineMemOperand *MMO,
 
 MachineInstr::ExtraInfo *MachineFunction::createMIExtraInfo(
     ArrayRef<MachineMemOperand *> MMOs, MCSymbol *PreInstrSymbol,
-    MCSymbol *PostInstrSymbol, MDNode *HeapAllocMarker) {
+    MCSymbol *PostInstrSymbol, MDNode *HeapAllocMarker, MDNode *PCSections,
+    uint32_t CFIType) {
   return MachineInstr::ExtraInfo::create(Allocator, MMOs, PreInstrSymbol,
-                                         PostInstrSymbol, HeapAllocMarker);
+                                         PostInstrSymbol, HeapAllocMarker,
+                                         PCSections, CFIType);
 }
 
 const char *MachineFunction::createExternalSymbolName(StringRef Name) {

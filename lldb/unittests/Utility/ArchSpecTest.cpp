@@ -11,7 +11,6 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
-#include "llvm/Support/YAMLParser.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -467,24 +466,4 @@ TEST(ArchSpecTest, TripleComponentsWereSpecified) {
     ASSERT_TRUE(D.TripleOSWasSpecified());
     ASSERT_TRUE(D.TripleEnvironmentWasSpecified());
   }
-}
-
-TEST(ArchSpecTest, YAML) {
-  std::string buffer;
-  llvm::raw_string_ostream os(buffer);
-
-  // Serialize.
-  llvm::yaml::Output yout(os);
-  std::vector<ArchSpec> archs = {ArchSpec("x86_64-pc-linux"),
-                                 ArchSpec("x86_64-apple-macosx10.12"),
-                                 ArchSpec("i686-pc-windows")};
-  yout << archs;
-  os.flush();
-
-  // Deserialize.
-  std::vector<ArchSpec> deserialized;
-  llvm::yaml::Input yin(buffer);
-  yin >> deserialized;
-
-  EXPECT_EQ(archs, deserialized);
 }

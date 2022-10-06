@@ -110,19 +110,13 @@ define dso_local i32 @all_gpr(i32 returned %x) local_unnamed_addr #0 "zero-call-
 ; I386-LABEL: all_gpr:
 ; I386:       # %bb.0: # %entry
 ; I386-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; I386-NEXT:    xorl %ebp, %ebp
-; I386-NEXT:    xorl %ebx, %ebx
 ; I386-NEXT:    xorl %ecx, %ecx
-; I386-NEXT:    xorl %edi, %edi
 ; I386-NEXT:    xorl %edx, %edx
-; I386-NEXT:    xorl %esi, %esi
 ; I386-NEXT:    retl
 ;
 ; X86-64-LABEL: all_gpr:
 ; X86-64:       # %bb.0: # %entry
 ; X86-64-NEXT:    movl %edi, %eax
-; X86-64-NEXT:    xorl %ebp, %ebp
-; X86-64-NEXT:    xorl %ebx, %ebx
 ; X86-64-NEXT:    xorl %ecx, %ecx
 ; X86-64-NEXT:    xorl %edi, %edi
 ; X86-64-NEXT:    xorl %edx, %edx
@@ -131,10 +125,6 @@ define dso_local i32 @all_gpr(i32 returned %x) local_unnamed_addr #0 "zero-call-
 ; X86-64-NEXT:    xorl %r9d, %r9d
 ; X86-64-NEXT:    xorl %r10d, %r10d
 ; X86-64-NEXT:    xorl %r11d, %r11d
-; X86-64-NEXT:    xorl %r12d, %r12d
-; X86-64-NEXT:    xorl %r13d, %r13d
-; X86-64-NEXT:    xorl %r14d, %r14d
-; X86-64-NEXT:    xorl %r15d, %r15d
 ; X86-64-NEXT:    retq
 
 entry:
@@ -190,12 +180,8 @@ define dso_local i32 @all(i32 returned %x) local_unnamed_addr #0 "zero-call-used
 ; I386-NEXT:    fstp %st(0)
 ; I386-NEXT:    fstp %st(0)
 ; I386-NEXT:    fstp %st(0)
-; I386-NEXT:    xorl %ebp, %ebp
-; I386-NEXT:    xorl %ebx, %ebx
 ; I386-NEXT:    xorl %ecx, %ecx
-; I386-NEXT:    xorl %edi, %edi
 ; I386-NEXT:    xorl %edx, %edx
-; I386-NEXT:    xorl %esi, %esi
 ; I386-NEXT:    xorps %xmm0, %xmm0
 ; I386-NEXT:    xorps %xmm1, %xmm1
 ; I386-NEXT:    xorps %xmm2, %xmm2
@@ -225,8 +211,6 @@ define dso_local i32 @all(i32 returned %x) local_unnamed_addr #0 "zero-call-used
 ; X86-64-NEXT:    fstp %st(0)
 ; X86-64-NEXT:    fstp %st(0)
 ; X86-64-NEXT:    fstp %st(0)
-; X86-64-NEXT:    xorl %ebp, %ebp
-; X86-64-NEXT:    xorl %ebx, %ebx
 ; X86-64-NEXT:    xorl %ecx, %ecx
 ; X86-64-NEXT:    xorl %edi, %edi
 ; X86-64-NEXT:    xorl %edx, %edx
@@ -235,10 +219,6 @@ define dso_local i32 @all(i32 returned %x) local_unnamed_addr #0 "zero-call-used
 ; X86-64-NEXT:    xorl %r9d, %r9d
 ; X86-64-NEXT:    xorl %r10d, %r10d
 ; X86-64-NEXT:    xorl %r11d, %r11d
-; X86-64-NEXT:    xorl %r12d, %r12d
-; X86-64-NEXT:    xorl %r13d, %r13d
-; X86-64-NEXT:    xorl %r14d, %r14d
-; X86-64-NEXT:    xorl %r15d, %r15d
 ; X86-64-NEXT:    xorps %xmm0, %xmm0
 ; X86-64-NEXT:    xorps %xmm1, %xmm1
 ; X86-64-NEXT:    xorps %xmm2, %xmm2

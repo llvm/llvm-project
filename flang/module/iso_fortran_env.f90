@@ -16,12 +16,11 @@ module iso_fortran_env
   use __Fortran_builtins, only: &
     event_type => __builtin_event_type, &
     lock_type => __builtin_lock_type, &
-    team_type => __builtin_team_type
+    team_type => __builtin_team_type, &
+    atomic_int_kind => __builtin_atomic_int_kind, &
+    atomic_logical_kind => __builtin_atomic_logical_kind
 
   implicit none
-
-  integer, parameter :: atomic_int_kind = selected_int_kind(18)
-  integer, parameter :: atomic_logical_kind = atomic_int_kind
 
   ! TODO: Use PACK([x],test) in place of the array constructor idiom
   ! [(x, integer::j=1,COUNT([test]))] below once PACK() can be folded.
@@ -147,13 +146,13 @@ module iso_fortran_env
   integer, parameter :: stat_unlocked_failed_image = FORTRAN_RUNTIME_STAT_UNLOCKED_FAILED_IMAGE
 
   interface compiler_options
-    character(len=80) function compiler_options()
-    end function compiler_options
+    character(len=80) function compiler_options_1()
+    end function compiler_options_1
   end interface compiler_options
 
   interface compiler_version
-    character(len=80) function compiler_version()
-    end function compiler_version
+    character(len=80) function compiler_version_1()
+    end function compiler_version_1
   end interface compiler_version
 
 end module iso_fortran_env

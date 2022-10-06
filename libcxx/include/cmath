@@ -306,9 +306,18 @@ constexpr long double lerp(long double a, long double b, long double t) noexcept
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
-#include <math.h>
 #include <type_traits>
 #include <version>
+
+#include <math.h>
+
+#ifndef _LIBCPP_MATH_H
+#   error <cmath> tried including <math.h> but didn't find libc++'s <math.h> header. \
+          This usually means that your header search paths are not configured properly. \
+          The header search paths should contain the C++ Standard Library headers before \
+          any C Standard Library, and you are probably using compiler flags that make that \
+          not be the case.
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -615,7 +624,7 @@ __libcpp_isfinite_or_builtin(_A1 __lcpp_x) _NOEXCEPT
 
 #if _LIBCPP_STD_VER > 17
 template <typename _Fp>
-constexpr
+_LIBCPP_HIDE_FROM_ABI constexpr
 _Fp __lerp(_Fp __a, _Fp __b, _Fp __t) noexcept {
     if ((__a <= 0 && __b >= 0) || (__a >= 0 && __b <= 0))
         return __t * __b + (1 - __t) * __a;
@@ -628,13 +637,13 @@ _Fp __lerp(_Fp __a, _Fp __b, _Fp __t) noexcept {
         return __x < __b ? __x : __b;
 }
 
-constexpr float
+_LIBCPP_HIDE_FROM_ABI constexpr float
 lerp(float __a, float __b, float __t)                   _NOEXCEPT { return __lerp(__a, __b, __t); }
 
-constexpr double
+_LIBCPP_HIDE_FROM_ABI constexpr double
 lerp(double __a, double __b, double __t)                _NOEXCEPT { return __lerp(__a, __b, __t); }
 
-constexpr long double
+_LIBCPP_HIDE_FROM_ABI constexpr long double
 lerp(long double __a, long double __b, long double __t) _NOEXCEPT { return __lerp(__a, __b, __t); }
 
 template <class _A1, class _A2, class _A3>

@@ -639,7 +639,7 @@ func.func @fold_overlapping_insert(%input : tensor<?x?x?xf32>, %slice1: tensor<4
   %c1 = arith.constant 1: index
   %0 = tensor.insert_slice %slice1 into %input[%c0, %i, 0] [4, %size, 8] [1, 1, %c1] : tensor<4x?x8xf32> into tensor<?x?x?xf32>
   // CHECK: %[[INSERT:.+]] = tensor.insert_slice %[[SLICE2]] into %[[INPUT]]
-  %1 = tensor.insert_slice %slice2 into %0[%c0, %i, 0] [4, %size, 8] [1, 1, %c1] : tensor<4x?x8xf32> into tensor<?x?x?xf32>
+  %1 = tensor.insert_slice %slice2 into %0[0, %i, 0] [4, %size, 8] [1, 1, %c1] : tensor<4x?x8xf32> into tensor<?x?x?xf32>
   // CHECK: return %[[INSERT]]
   return %1 : tensor<?x?x?xf32>
 }
@@ -670,6 +670,20 @@ func.func @compose_expand_of_expand_of_zero_dim(%arg0 : tensor<f32>)
 // CHECK-LABEL: compose_expand_of_expand_of_zero_dim
 //       CHECK:   tensor.expand_shape %{{.*}} []
 //  CHECK-SAME:     tensor<f32> into tensor<1x1x1xf32>
+
+// -----
+
+// CHECK-LABEL: func.func @collapse_of_cast(
+// CHECK-SAME:         %[[IN:.*]]: tensor<8x12x32xf32>) -> tensor<?x32xf32> {
+// CHECK-NEXT:    %[[COLLAPSE:.*]] = tensor.collapse_shape %[[IN]] {{\[}}[0, 1], [2]] : tensor<8x12x32xf32> into tensor<96x32xf32>
+// CHECK-NEXT     %[[CAST:.*]] = tensor.cast %[[COLLAPSE]] : tensor<96x32xf32> to tensor<?x32xf32>
+// CHECK-NEXT     return %[[CAST]] : tensor<?x32xf32>
+func.func @collapse_of_cast(%t: tensor<8x12x32xf32>) -> tensor<?x32xf32> {
+  %0 = tensor.cast %t : tensor<8x12x32xf32> to tensor<?x?x?xf32>
+  %1 = tensor.collapse_shape %0 [[0, 1], [2]] : tensor<?x?x?xf32> into tensor<?x?xf32>
+  %2 = tensor.cast %1 : tensor<?x?xf32> to tensor<?x32xf32>
+  return %2 : tensor<?x32xf32>
+}
 
 // -----
 
@@ -1429,7 +1443,7 @@ func.func @cast_extract_slice_rank_reduce(%arg0 : tensor<128x512xf32>, %s : inde
 // -----
 
 // CHECK-LABEL: func.func @canonicalize_parallel_insert_slice_indices(
-//  CHECK-SAME:     %[[arg0:[0-9a-z]*]]: tensor<1x5xf32>, 
+//  CHECK-SAME:     %[[arg0:[0-9a-z]*]]: tensor<1x5xf32>,
 //  CHECK-SAME:     %[[arg1:[0-9a-z]*]]: tensor<?x?xf32>,
 //  CHECK-SAME:     %[[num_threads:[0-9a-z]*]]: index
 func.func @canonicalize_parallel_insert_slice_indices(
@@ -1441,14 +1455,176 @@ func.func @canonicalize_parallel_insert_slice_indices(
   %c1 = arith.constant 1 : index
 
   //  CHECK-NOT: tensor.cast
-  //      CHECK: scf.foreach_thread (%[[tidx:[0-9a-z]*]]) in (%[[num_threads]]) -> (tensor<?x?xf32>) {
+  //      CHECK: scf.foreach_thread (%[[tidx:[0-9a-z]*]]) in (%[[num_threads]]) shared_outs(%[[o:.*]] = %[[arg1]]) -> (tensor<?x?xf32>) {
   // CHECK-NEXT:   scf.foreach_thread.perform_concurrently {
-  // CHECK-NEXT:     tensor.parallel_insert_slice %[[arg0]] into %[[arg1]][%[[tidx]], 0] [1, 5] [1, 1]
-  %2 = scf.foreach_thread (%tidx) in (%num_threads)  -> (tensor<?x?xf32>) {
+  // CHECK-NEXT:     tensor.parallel_insert_slice %[[arg0]] into %[[o]][%[[tidx]], 0] [1, 5] [1, 1]
+  %2 = scf.foreach_thread (%tidx) in (%num_threads) shared_outs(%o = %arg1) -> (tensor<?x?xf32>) {
     %3 = tensor.cast %arg0 : tensor<1x5xf32> to tensor<?x5xf32>
     scf.foreach_thread.perform_concurrently {
-      tensor.parallel_insert_slice %3 into %arg1[%tidx, %c0] [%c1, 5] [%c1, %c1] : tensor<?x5xf32> into tensor<?x?xf32>
+      tensor.parallel_insert_slice %3 into %o[%tidx, %c0] [%c1, 5] [%c1, %c1] : tensor<?x5xf32> into tensor<?x?xf32>
     }
   }
   return %2 : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @dont_fold_parallel_insert_slice(
+//  CHECK-SAME:     %[[arg0:[0-9a-z]*]]: tensor<1x5xf32>,
+//  CHECK-SAME:     %[[arg1:[0-9a-z]*]]: tensor<1x5xf32>)
+func.func @dont_fold_parallel_insert_slice(
+    %arg0 : tensor<1x5xf32>, %arg1: tensor<1x5xf32>) -> tensor<1x5xf32>
+{
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  //      CHECK: scf.foreach_thread () in () shared_outs(%[[o:.*]] = %[[arg1]]) -> (tensor<1x5xf32>) {
+  // CHECK-NEXT:   scf.foreach_thread.perform_concurrently {
+  // CHECK-NEXT:     tensor.parallel_insert_slice %[[arg0]] into %[[o]][0, 0] [1, 5] [1, 1] : tensor<1x5xf32> into tensor<1x5xf32>
+  %2 = scf.foreach_thread () in () shared_outs(%o = %arg1) -> (tensor<1x5xf32>) {
+    scf.foreach_thread.perform_concurrently {
+      tensor.parallel_insert_slice %arg0 into %o[%c0, %c0] [1, 5] [%c1, %c1] : tensor<1x5xf32> into tensor<1x5xf32>
+    }
+  }
+  return %2 : tensor<1x5xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @fold_insert_slice_after_extract_slice
+//  CHECK-SAME: (%[[INPUT:.+]]: tensor<1x2x2x4xf32>)
+func.func @fold_insert_slice_after_extract_slice(%input: tensor<1x2x2x4xf32>) -> tensor<1x2x2x4xf32> {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.extract_slice %input[0, 0, 0, 0] [1, 1, 2, 4] [1, 1, 1, 1] : tensor<1x2x2x4xf32> to tensor<1x2x4xf32>
+  %1 = tensor.insert_slice %0 into %input[%c0, 0, %c0, 0] [1, 1, 2, 4] [1, 1, 1, 1] : tensor<1x2x4xf32> into tensor<1x2x2x4xf32>
+  // CHECK: return %[[INPUT]]
+  return %1: tensor<1x2x2x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @dont_fold_mismatched_source_dst
+func.func @dont_fold_mismatched_source_dst(%input0: tensor<1x2x2x4xf32>, %input1: tensor<1x2x2x4xf32>) -> tensor<1x2x2x4xf32> {
+  %c0 = arith.constant 0 : index
+  // CHECK: tensor.extract_slice
+  %0 = tensor.extract_slice %input0[0, 0, 0, 0] [1, 1, 2, 4] [1, 1, 1, 1] : tensor<1x2x2x4xf32> to tensor<1x2x4xf32>
+  // CHECK: tensor.insert_slice
+  %1 = tensor.insert_slice %0 into %input1[%c0, 0, %c0, 0] [1, 1, 2, 4] [1, 1, 1, 1] : tensor<1x2x4xf32> into tensor<1x2x2x4xf32>
+  return %1: tensor<1x2x2x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func.func @dont_fold_mismatched_parameters
+func.func @dont_fold_mismatched_parameters(%input: tensor<1x2x2x4xf32>) -> tensor<1x2x2x4xf32> {
+  %c0 = arith.constant 0 : index
+  // CHECK: tensor.extract_slice
+  %0 = tensor.extract_slice %input[0, 0, 0, 0] [1, 1, 2, 4] [1, 1, 1, 1] : tensor<1x2x2x4xf32> to tensor<1x2x4xf32>
+  // CHECK: tensor.insert_slice
+  %1 = tensor.insert_slice %0 into %input[%c0, 1, %c0, 0] [1, 1, 2, 4] [1, 1, 1, 1] : tensor<1x2x4xf32> into tensor<1x2x2x4xf32>
+  return %1: tensor<1x2x2x4xf32>
+}
+
+// -----
+
+func.func @empty_canonicalize() -> (tensor<4x5x?xf32>) {
+  %c6 = arith.constant 6 : index
+  %0 = tensor.empty(%c6) : tensor<4x5x?xf32>
+  return %0 : tensor<4x5x?xf32>
+}
+// CHECK: func @empty_canonicalize
+// CHECK:   %[[T0:.+]] = tensor.empty() : tensor<4x5x6xf32>
+// CHECK:   %[[T1:.+]] = tensor.cast %[[T0]] : tensor<4x5x6xf32> to tensor<4x5x?xf32>
+// CHECK:   return %[[T1]]
+
+// -----
+
+func.func @empty_reshape_expansion(%arg0 : index) -> tensor<2x3x5x4x?x7xf32> {
+  %0 = tensor.empty(%arg0) : tensor<6x5x?xf32>
+  %1 = tensor.expand_shape %0 [[0, 1], [2], [3, 4, 5]]
+      : tensor<6x5x?xf32> into tensor<2x3x5x4x?x7xf32>
+  return %1 : tensor<2x3x5x4x?x7xf32>
+}
+//      CHECK: #[[MAP:.+]] = affine_map<()[s0] -> (s0 floordiv 28)>
+//      CHECK: func @empty_reshape_expansion
+// CHECK-SAME:     %[[ARG0:.+]]: index
+// CHECK-NEXT:   %[[D:.+]] = affine.apply #[[MAP]]()[%[[ARG0]]]
+// CHECK-NEXT:   %[[INIT:.+]] = tensor.empty(%[[D]])
+// CHECK-NEXT:   return %[[INIT]]
+
+// -----
+
+func.func @empty_reshape_collapse(%arg0 : index) -> tensor<6x5x?xf32> {
+  %0 = tensor.empty(%arg0) : tensor<2x3x5x4x?x7xf32>
+  %1 = tensor.collapse_shape %0 [[0, 1], [2], [3, 4, 5]]
+      : tensor<2x3x5x4x?x7xf32> into tensor<6x5x?xf32>
+  return %1 : tensor<6x5x?xf32>
+}
+//      CHECK: #[[MAP:.+]] = affine_map<()[s0] -> (s0 * 28)>
+//      CHECK: func @empty_reshape_collapse
+// CHECK-SAME:     %[[ARG0:.+]]: index
+// CHECK-NEXT:   %[[D:.+]] = affine.apply #[[MAP]]()[%[[ARG0]]]
+// CHECK-NEXT:   %[[INIT:.+]] = tensor.empty(%[[D]])
+// CHECK-NEXT:   return %[[INIT]]
+
+// -----
+
+func.func @fold_empty_tensor_with_slice
+  (%arg0 : index, %arg1 : index) -> tensor<5x?x20xf32>
+{
+  %0 = tensor.empty(%arg0) : tensor<?x10x40xf32>
+  %1 = tensor.extract_slice %0[0, 0, 0] [5, %arg1, 20] [1, 1, 1]
+    : tensor<?x10x40xf32> to tensor<5x?x20xf32>
+  return %1 : tensor<5x?x20xf32>
+}
+//      CHECK: func @fold_empty_tensor_with_slice
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: index
+// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//      CHECK:   %[[T0:.+]] = tensor.empty(%[[ARG1]])
+//      CHECK:   return %[[T0]]
+
+// -----
+
+func.func @fold_empty_tensor_with_cast(%arg0 : index) -> tensor<1x12xf32> {
+  %0 = tensor.empty(%arg0) : tensor<?x12xf32>
+  %1 = tensor.cast %0 : tensor<?x12xf32> to tensor<1x12xf32>
+  return %1 : tensor<1x12xf32>
+}
+//      CHECK: func @fold_empty_tensor_with_cast(%[[ARG0:.+]]: index)
+//      CHECK:   %[[T0:.+]] = tensor.empty() : tensor<1x12xf32>
+//      CHECK:   return %[[T0]] : tensor<1x12xf32>
+
+// -----
+
+func.func private @some_use(%i : index, %j : index)
+
+// CHECK-LABEL: func @empty_tensor_canonicalize
+//  CHECK-SAME:   %[[I:.*]]: index
+func.func @empty_tensor_canonicalize(%i : index) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  // CHECK-NOT: tensor.empty
+  %0 = tensor.empty(%i) : tensor<?x42xf32>
+
+  // CHECK-NOT: tensor.dim
+  %1 = tensor.dim %0, %c0: tensor<?x42xf32>
+  %2 = tensor.dim %0, %c1: tensor<?x42xf32>
+
+  // CHECK: %[[c42:.*]] = arith.constant 42 : index
+  // CHECK: call @some_use(%[[I]], %[[c42]])
+  call @some_use(%1, %2) : (index, index) -> ()
+
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @rank_reducing_empty_tensor_extract
+func.func @rank_reducing_empty_tensor_extract(%sz : index, %idx : index) -> tensor<2xf32> {
+  // CHECK: tensor.empty() : tensor<2xf32>
+  %a = tensor.empty(%sz) : tensor<?x2xf32>
+
+  // CHECK-NOT: extract
+  %r = tensor.extract_slice %a[%idx, 0] [1, 2] [1, 1] : tensor<?x2xf32> to tensor<2xf32>
+  return %r: tensor<2xf32>
 }

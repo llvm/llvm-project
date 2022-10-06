@@ -17,7 +17,7 @@ for.cond.cleanup126:                              ; preds = %for.cond120
   unreachable
 
 for.body127:                                      ; preds = %for.cond120
-  %0 = load i16**, i16*** undef, align 1
+  %0 = load ptr, ptr undef, align 1
   br label %for.cond120
 }
 

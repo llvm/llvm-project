@@ -12,10 +12,12 @@
 
 #include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Core/ParallelUtilities.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Timer.h"
 #include <atomic>
+#include <iterator>
 #include <map>
 #include <set>
 #include <unordered_map>
@@ -162,17 +164,19 @@ bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
   if (A.isMultiEntry() || B.isMultiEntry())
     return false;
 
+  if (A.hasIslandsInfo() || B.hasIslandsInfo())
+    return false;
+
   // Process both functions in either DFS or existing order.
-  const BinaryFunction::BasicBlockOrderType OrderA =
-      opts::UseDFS
-          ? A.dfs()
-          : BinaryFunction::BasicBlockOrderType(A.getLayout().block_begin(),
-                                                A.getLayout().block_end());
-  const BinaryFunction::BasicBlockOrderType OrderB =
-      opts::UseDFS
-          ? B.dfs()
-          : BinaryFunction::BasicBlockOrderType(B.getLayout().block_begin(),
-                                                B.getLayout().block_end());
+  SmallVector<const BinaryBasicBlock *, 0> OrderA;
+  SmallVector<const BinaryBasicBlock *, 0> OrderB;
+  if (opts::UseDFS) {
+    copy(A.dfs(), std::back_inserter(OrderA));
+    copy(B.dfs(), std::back_inserter(OrderB));
+  } else {
+    copy(A.getLayout().blocks(), std::back_inserter(OrderA));
+    copy(B.getLayout().blocks(), std::back_inserter(OrderB));
+  }
 
   const BinaryContext &BC = A.getBinaryContext();
 
@@ -281,7 +285,7 @@ bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
     // One of the identical blocks may have a trailing unconditional jump that
     // is ignored for CFG purposes.
     const MCInst *TrailingInstr =
-        (I != E ? &(*I) : (OtherI != OtherE ? &(*OtherI) : 0));
+        (I != E ? &(*I) : (OtherI != OtherE ? &(*OtherI) : nullptr));
     if (TrailingInstr && !BC.MIB->isUnconditionalBranch(*TrailingInstr))
       return false;
 

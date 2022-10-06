@@ -41,7 +41,10 @@ public:
     return dyn_cast_or_null<T>(lookup(name));
   }
 
-  /// Erase the given symbol from the table.
+  /// Remove the given symbol from the table, without deleting it.
+  void remove(Operation *op);
+
+  /// Erase the given symbol from the table and delete the operation.
   void erase(Operation *symbol);
 
   /// Insert a new symbol into the table, and rename it as necessary to avoid

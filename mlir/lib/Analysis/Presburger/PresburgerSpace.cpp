@@ -13,6 +13,15 @@
 using namespace mlir;
 using namespace presburger;
 
+PresburgerSpace PresburgerSpace::getDomainSpace() const {
+  // TODO: Preserve identifiers here.
+  return PresburgerSpace::getSetSpace(numDomain, numSymbols, numLocals);
+}
+
+PresburgerSpace PresburgerSpace::getRangeSpace() const {
+  return PresburgerSpace::getSetSpace(numRange, numSymbols, numLocals);
+}
+
 unsigned PresburgerSpace::getNumVarKind(VarKind kind) const {
   if (kind == VarKind::Domain)
     return getNumDomainVars();

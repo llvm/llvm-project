@@ -352,7 +352,7 @@ IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
 
 llvm::Optional<TextEdit>
 IncludeInserter::insert(llvm::StringRef VerbatimHeader) const {
-  llvm::Optional<TextEdit> Edit = None;
+  llvm::Optional<TextEdit> Edit;
   if (auto Insertion = Inserter.insert(VerbatimHeader.trim("\"<>"),
                                        VerbatimHeader.startswith("<")))
     Edit = replacementToEdit(Code, *Insertion);

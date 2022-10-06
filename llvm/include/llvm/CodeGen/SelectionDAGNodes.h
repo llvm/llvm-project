@@ -118,9 +118,16 @@ bool isBuildVectorOfConstantSDNodes(const SDNode *N);
 /// ConstantFPSDNode or undef.
 bool isBuildVectorOfConstantFPSDNodes(const SDNode *N);
 
+/// Returns true if the specified node is a vector where all elements can
+/// be truncated to the specified element size without a loss in meaning.
+bool isVectorShrinkable(const SDNode *N, unsigned NewEltSize, bool Signed);
+
 /// Return true if the node has at least one operand and all operands of the
 /// specified node are ISD::UNDEF.
 bool allOperandsUndef(const SDNode *N);
+
+/// Return true if the specified node is FREEZE(UNDEF).
+bool isFreezeUndef(const SDNode *N);
 
 } // end namespace ISD
 
@@ -615,6 +622,8 @@ private:
 
   SDNodeFlags Flags;
 
+  uint32_t CFIType = 0;
+
 public:
   /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
   /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
@@ -963,6 +972,9 @@ public:
   /// Clear any flags in this node that aren't also set in Flags.
   /// If Flags is not in a defined state then this has no effect.
   void intersectFlagsWith(const SDNodeFlags Flags);
+
+  void setCFIType(uint32_t Type) { CFIType = Type; }
+  uint32_t getCFIType() const { return CFIType; }
 
   /// Return the number of values defined/returned by this operator.
   unsigned getNumValues() const { return NumValues; }
@@ -1677,6 +1689,12 @@ bool isOneConstant(SDValue V);
 /// Returns true if \p V is a constant min signed integer value.
 bool isMinSignedConstant(SDValue V);
 
+/// Returns true if \p V is a neutral element of Opc with Flags.
+/// When OperandNo is 0, it checks that V is a left identity. Otherwise, it
+/// checks that V is a right identity.
+bool isNeutralConstant(unsigned Opc, SDNodeFlags Flags, SDValue V,
+                       unsigned OperandNo);
+
 /// Return the non-bitcasted source operand of \p V if it exists.
 /// If \p V is not a bitcasted value, it is returned as-is.
 SDValue peekThroughBitcasts(SDValue V);
@@ -2081,8 +2099,8 @@ public:
   bool isConstant() const;
 
   /// If this BuildVector is constant and represents the numerical series
-  /// <a, a+n, a+2n, a+3n, ...> where a is integer and n is a non-zero integer,
-  /// the value <a,n> is returned.
+  /// "<a, a+n, a+2n, a+3n, ...>" where a is integer and n is a non-zero integer,
+  /// the value "<a,n>" is returned.
   Optional<std::pair<APInt, APInt>> isConstantSequence() const;
 
   /// Recast bit data \p SrcBitElements to \p DstEltSizeInBits wide elements.

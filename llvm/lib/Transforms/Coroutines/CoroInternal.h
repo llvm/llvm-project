@@ -112,6 +112,7 @@ struct LLVM_LIBRARY_VISIBILITY Shape {
     unsigned IndexAlign;
     unsigned IndexOffset;
     bool HasFinalSuspend;
+    bool HasUnwindCoroEnd;
   };
 
   struct RetconLoweringStorage {

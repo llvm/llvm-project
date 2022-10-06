@@ -336,8 +336,8 @@ void FrameOptimizerPass::performShrinkWrapping(const RegAnalysis &RA,
 
   std::vector<std::pair<uint64_t, const BinaryFunction *>> Top10Funcs;
   auto LogFunc = [&](BinaryFunction &BF) {
-    auto Lower = std::lower_bound(
-        Top10Funcs.begin(), Top10Funcs.end(), BF.getKnownExecutionCount(),
+    auto Lower = llvm::lower_bound(
+        Top10Funcs, BF.getKnownExecutionCount(),
         [](const std::pair<uint64_t, const BinaryFunction *> &Elmt,
            uint64_t Value) { return Elmt.first > Value; });
     if (Lower == Top10Funcs.end() && Top10Funcs.size() >= 10)

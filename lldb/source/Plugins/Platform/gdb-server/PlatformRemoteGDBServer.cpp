@@ -177,7 +177,7 @@ FileSpec PlatformRemoteGDBServer::GetRemoteWorkingDirectory() {
     if (m_gdb_client_up->GetWorkingDir(working_dir) && log)
       LLDB_LOGF(log,
                 "PlatformRemoteGDBServer::GetRemoteWorkingDirectory() -> '%s'",
-                working_dir.GetCString());
+                working_dir.GetPath().c_str());
     return working_dir;
   } else {
     return Platform::GetRemoteWorkingDirectory();
@@ -191,7 +191,7 @@ bool PlatformRemoteGDBServer::SetRemoteWorkingDirectory(
     // will for use to re-read it
     Log *log = GetLog(LLDBLog::Platform);
     LLDB_LOGF(log, "PlatformRemoteGDBServer::SetRemoteWorkingDirectory('%s')",
-              working_dir.GetCString());
+              working_dir.GetPath().c_str());
     return m_gdb_client_up->SetWorkingDir(working_dir) == 0;
   } else
     return Platform::SetRemoteWorkingDirectory(working_dir);
@@ -238,11 +238,6 @@ Status PlatformRemoteGDBServer::ConnectRemote(Args &args) {
   client_up->SetPacketTimeout(
       process_gdb_remote::ProcessGDBRemote::GetPacketTimeout());
   client_up->SetConnection(std::make_unique<ConnectionFileDescriptor>());
-  if (repro::Generator *g = repro::Reproducer::Instance().GetGenerator()) {
-    repro::GDBRemoteProvider &provider =
-        g->GetOrCreate<repro::GDBRemoteProvider>();
-    client_up->SetPacketRecorder(provider.GetNewPacketRecorder());
-  }
   client_up->Connect(url, &error);
 
   if (error.Fail())
@@ -546,7 +541,8 @@ Status PlatformRemoteGDBServer::MakeDirectory(const FileSpec &file_spec,
   LLDB_LOGF(log,
             "PlatformRemoteGDBServer::MakeDirectory(path='%s', mode=%o) "
             "error = %u (%s)",
-            file_spec.GetCString(), mode, error.GetError(), error.AsCString());
+            file_spec.GetPath().c_str(), mode, error.GetError(),
+            error.AsCString());
   return error;
 }
 
@@ -560,7 +556,7 @@ Status PlatformRemoteGDBServer::GetFilePermissions(const FileSpec &file_spec,
   LLDB_LOGF(log,
             "PlatformRemoteGDBServer::GetFilePermissions(path='%s', "
             "file_permissions=%o) error = %u (%s)",
-            file_spec.GetCString(), file_permissions, error.GetError(),
+            file_spec.GetPath().c_str(), file_permissions, error.GetError(),
             error.AsCString());
   return error;
 }
@@ -575,7 +571,7 @@ Status PlatformRemoteGDBServer::SetFilePermissions(const FileSpec &file_spec,
   LLDB_LOGF(log,
             "PlatformRemoteGDBServer::SetFilePermissions(path='%s', "
             "file_permissions=%o) error = %u (%s)",
-            file_spec.GetCString(), file_permissions, error.GetError(),
+            file_spec.GetPath().c_str(), file_permissions, error.GetError(),
             error.AsCString());
   return error;
 }
@@ -644,7 +640,7 @@ Status PlatformRemoteGDBServer::CreateSymlink(
   LLDB_LOGF(log,
             "PlatformRemoteGDBServer::CreateSymlink(src='%s', dst='%s') "
             "error = %u (%s)",
-            src.GetCString(), dst.GetCString(), error.GetError(),
+            src.GetPath().c_str(), dst.GetPath().c_str(), error.GetError(),
             error.AsCString());
   return error;
 }
@@ -655,7 +651,7 @@ Status PlatformRemoteGDBServer::Unlink(const FileSpec &file_spec) {
   Status error = m_gdb_client_up->Unlink(file_spec);
   Log *log = GetLog(LLDBLog::Platform);
   LLDB_LOGF(log, "PlatformRemoteGDBServer::Unlink(path='%s') error = %u (%s)",
-            file_spec.GetCString(), error.GetError(), error.AsCString());
+            file_spec.GetPath().c_str(), error.GetError(), error.AsCString());
   return error;
 }
 
@@ -802,7 +798,7 @@ size_t PlatformRemoteGDBServer::ConnectToWaitingProcesses(Debugger &debugger,
   for (size_t i = 0; i < connection_urls.size(); ++i) {
     ConnectProcess(connection_urls[i].c_str(), "gdb-remote", debugger, nullptr, error);
     if (error.Fail())
-      return i; // We already connected to i process succsessfully
+      return i; // We already connected to i process successfully
   }
   return connection_urls.size();
 }

@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fexceptions -fobjc-exceptions -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fexceptions -fobjc-exceptions -fvisibility hidden -o - %s | FileCheck -check-prefix=CHECK-HIDDEN %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm -fexceptions -fobjc-exceptions -fvisibility=hidden -o - %s | FileCheck -check-prefix=CHECK-HIDDEN %s
 
 __attribute__((objc_root_class)) 
 @interface Root {

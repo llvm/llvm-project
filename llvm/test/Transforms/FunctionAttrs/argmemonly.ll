@@ -25,6 +25,18 @@ entry:
   ret i32 %l
 }
 
+define i32 @test_only_read_arg_already_has_argmemonly(i32* %ptr) argmemonly {
+; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nosync nounwind readonly willreturn
+; CHECK-LABEL: @test_only_read_arg_already_has_argmemonly(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[L:%.*]] = load i32, i32* [[PTR:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[L]]
+;
+entry:
+  %l = load i32, i32* %ptr
+  ret i32 %l
+}
+
 define i32 @test_read_global() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readonly willreturn
 ; CHECK-LABEL: @test_read_global(
@@ -107,6 +119,7 @@ entry:
 declare i32 @fn_argmemonly(i32*) argmemonly
 
 define i32 @test_call_argmemonly(i32* %ptr) {
+; CHECK: Function Attrs: argmemonly
 ; CHECK-LABEL: @test_call_argmemonly(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[C:%.*]] = call i32 @fn_argmemonly(i32* [[PTR:%.*]])
@@ -189,4 +202,50 @@ entry:
   store i32 %l, i32* %a
   %l.2 = load i32, i32* %a
   ret i32 %l.2
+}
+
+declare void @fn_inaccessiblememonly() inaccessiblememonly
+
+define void @test_inaccessiblememonly() {
+; CHECK: Function Attrs: inaccessiblememonly
+; CHECK-LABEL: @test_inaccessiblememonly(
+; CHECK-NEXT:    call void @fn_inaccessiblememonly()
+; CHECK-NEXT:    ret void
+;
+  call void @fn_inaccessiblememonly()
+  ret void
+}
+
+define void @test_inaccessiblememonly_readonly() {
+; CHECK: Function Attrs: inaccessiblememonly nofree readonly
+; CHECK-LABEL: @test_inaccessiblememonly_readonly(
+; CHECK-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR15:[0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  call void @fn_inaccessiblememonly() readonly
+  ret void
+}
+
+define void @test_inaccessibleorargmemonly_readonly(i32* %arg) {
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly nofree readonly
+; CHECK-LABEL: @test_inaccessibleorargmemonly_readonly(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[ARG:%.*]], align 4
+; CHECK-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR15]]
+; CHECK-NEXT:    ret void
+;
+  load i32, i32* %arg
+  call void @fn_inaccessiblememonly() readonly
+  ret void
+}
+
+define void @test_inaccessibleorargmemonly_readwrite(i32* %arg) {
+; CHECK: Function Attrs: inaccessiblemem_or_argmemonly
+; CHECK-LABEL: @test_inaccessibleorargmemonly_readwrite(
+; CHECK-NEXT:    store i32 0, i32* [[ARG:%.*]], align 4
+; CHECK-NEXT:    call void @fn_inaccessiblememonly() #[[ATTR15]]
+; CHECK-NEXT:    ret void
+;
+  store i32 0, i32* %arg
+  call void @fn_inaccessiblememonly() readonly
+  ret void
 }

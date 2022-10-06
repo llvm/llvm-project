@@ -3,7 +3,6 @@ tablegen(LLVM Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(DwarfutilTableGen)
 
 set(LLVM_LINK_COMPONENTS
-  ${LLVM_TARGETS_TO_BUILD}
   DebugInfoDWARF
   DWARFLinker
   MC

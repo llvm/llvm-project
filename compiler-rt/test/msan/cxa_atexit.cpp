@@ -1,4 +1,4 @@
-// RUN: %clangxx_msan -O0 %s -o %t && %run %t %p
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -O0 %s -o %t && %run %t %p
 
 // PR17377: C++ module destructors get stale argument shadow.
 

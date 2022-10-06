@@ -9,7 +9,6 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 
 // template<bidirectional_iterator I1, sentinel_for<I1> S1, bidirectional_iterator I2>
@@ -65,7 +64,7 @@ constexpr void test_iterators() {
       std::same_as<std::ranges::in_out_result<In, Out>> auto ret =
         std::ranges::copy_backward(In(in.data()), Sent(In(in.data() + in.size())), Out(out.data() + out.size()));
       assert(in == out);
-      assert(base(ret.in) == in.data());
+      assert(base(ret.in) == in.data() + in.size());
       assert(base(ret.out) == out.data());
     }
     {
@@ -75,7 +74,7 @@ constexpr void test_iterators() {
       std::same_as<std::ranges::in_out_result<In, Out>> auto ret =
           std::ranges::copy_backward(range, Out(out.data() + out.size()));
       assert(in == out);
-      assert(base(ret.in) == in.data());
+      assert(base(ret.in) == in.data() + in.size());
       assert(base(ret.out) == out.data());
     }
   }
@@ -86,7 +85,7 @@ constexpr void test_iterators() {
       std::array<int, 0> out;
       auto ret =
           std::ranges::copy_backward(In(in.data()), Sent(In(in.data() + in.size())), Out(out.data() + out.size()));
-      assert(base(ret.in) == in.data());
+      assert(base(ret.in) == in.data() + in.size());
       assert(base(ret.out) == out.data());
     }
     {
@@ -94,7 +93,7 @@ constexpr void test_iterators() {
       std::array<int, 0> out;
       auto range = std::ranges::subrange(In(in.data()), Sent(In(in.data() + in.size())));
       auto ret = std::ranges::copy_backward(range, Out(out.data()));
-      assert(base(ret.in) == in.data());
+      assert(base(ret.in) == in.data() + in.size());
       assert(base(ret.out) == out.data());
     }
   }
@@ -143,7 +142,7 @@ constexpr bool test() {
     std::array<int, 4> out;
     std::same_as<std::ranges::in_out_result<int*, int*>> auto ret =
         std::ranges::copy_backward(std::views::all(in), out.data() + out.size());
-    assert(ret.in == in.data());
+    assert(ret.in == in.data() + in.size());
     assert(ret.out == out.data());
     assert(in == out);
   }
@@ -163,7 +162,7 @@ constexpr bool test() {
       std::array<CopyOnce, 4> in {};
       std::array<CopyOnce, 4> out {};
       auto ret = std::ranges::copy_backward(in.begin(), in.end(), out.end());
-      assert(ret.in == in.begin());
+      assert(ret.in == in.end());
       assert(ret.out == out.begin());
       assert(std::all_of(out.begin(), out.end(), [](const auto& e) { return e.copied; }));
     }
@@ -171,7 +170,7 @@ constexpr bool test() {
       std::array<CopyOnce, 4> in {};
       std::array<CopyOnce, 4> out {};
       auto ret = std::ranges::copy_backward(in, out.end());
-      assert(ret.in == in.begin());
+      assert(ret.in == in.end());
       assert(ret.out == out.begin());
       assert(std::all_of(out.begin(), out.end(), [](const auto& e) { return e.copied; }));
     }
@@ -196,7 +195,7 @@ constexpr bool test() {
       out[2].next = &out[1];
       out[2].canCopy = true;
       auto ret = std::ranges::copy_backward(in, out.end());
-      assert(ret.in == in.begin());
+      assert(ret.in == in.end());
       assert(ret.out == out.begin());
       assert(out[0].canCopy);
       assert(out[1].canCopy);
@@ -209,7 +208,7 @@ constexpr bool test() {
       out[2].next = &out[1];
       out[2].canCopy = true;
       auto ret = std::ranges::copy_backward(in.begin(), in.end(), out.end());
-      assert(ret.in == in.begin());
+      assert(ret.in == in.end());
       assert(ret.out == out.begin());
       assert(out[0].canCopy);
       assert(out[1].canCopy);

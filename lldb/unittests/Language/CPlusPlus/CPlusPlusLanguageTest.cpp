@@ -108,7 +108,10 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "llvm", "isUInt<10u>", "(unsigned long)", "", "llvm::isUInt<10u>"},
       {"f<A<operator<(X,Y)::Subclass>, sizeof(B)<sizeof(C)>()", "",
        "f<A<operator<(X,Y)::Subclass>, sizeof(B)<sizeof(C)>", "()", "",
-       "f<A<operator<(X,Y)::Subclass>, sizeof(B)<sizeof(C)>"}};
+       "f<A<operator<(X,Y)::Subclass>, sizeof(B)<sizeof(C)>"},
+      {"llvm::Optional<llvm::MCFixupKind>::operator*() const volatile &&",
+       "llvm::Optional<llvm::MCFixupKind>", "operator*", "()", "const volatile &&",
+       "llvm::Optional<llvm::MCFixupKind>::operator*"}};
 
   for (const auto &test : test_cases) {
     CPlusPlusLanguage::MethodName method(ConstString(test.input));

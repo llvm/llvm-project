@@ -243,3 +243,32 @@ extern "C" int f4(promise_on_alloc_failure_tag) {
   // CHECK:   ret i32 %[[LoadRet]]
   co_return;
 }
+
+struct promise_sized_delete_tag2 {};
+
+template <>
+struct std::coroutine_traits<void, promise_sized_delete_tag2> {
+  struct promise_type {
+    // Tests that the compiler can choose the correct operator delete
+    // when we have multiple operator delete
+    void operator delete(void*, unsigned long);
+    void operator delete(void*);
+    void get_return_object() {}
+    suspend_always initial_suspend() { return {}; }
+    suspend_always final_suspend() noexcept { return {}; }
+    void return_void() {}
+  };
+};
+
+// CHECK-LABEL: f5(
+extern "C" void f5(promise_sized_delete_tag2) {
+  // CHECK: %[[ID:.+]] = call token @llvm.coro.id(i32 16
+  // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
+  // CHECK: call noalias noundef nonnull i8* @_Znwm(i64 noundef %[[SIZE]])
+
+  // CHECK: %[[FRAME:.+]] = call i8* @llvm.coro.begin(
+  // CHECK: %[[MEM:.+]] = call i8* @llvm.coro.free(token %[[ID]], i8* %[[FRAME]])
+  // CHECK: %[[SIZE2:.+]] = call i64 @llvm.coro.size.i64()
+  // CHECK: call void @_ZNSt16coroutine_traitsIJv25promise_sized_delete_tag2EE12promise_typedlEPvm(i8* noundef %[[MEM]], i64 noundef %[[SIZE2]])
+  co_return;
+}

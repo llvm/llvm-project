@@ -9,7 +9,6 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<forward_iterator I1, sentinel_for<I1> S1, forward_iterator I2,
 //          sentinel_for<I2> S2, class Pred = ranges::equal_to,

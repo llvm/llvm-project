@@ -111,7 +111,7 @@ class DumpVisitor : public RecursiveASTVisitor<DumpVisitor> {
   // Attr just uses a weird method name. Maybe we should fix it instead?
   SourceRange getSourceRange(const Attr *Node) { return Node->getRange(); }
 
-  // Kind is usualy the class name, without the suffix ("Type" etc).
+  // Kind is usually the class name, without the suffix ("Type" etc).
   // Where there's a set of variants instead, we use the 'Kind' enum values.
 
   std::string getKind(const Decl *D) { return D->getDeclKindName(); }

@@ -556,7 +556,7 @@ public:
     // Handle result
     if (const std::optional<Fortran::evaluate::characteristics::FunctionResult>
             &result = procedure.functionResult)
-      handleImplicitResult(*result);
+      handleImplicitResult(*result, procedure.IsBindC());
     else if (interface.side().hasAlternateReturns())
       addFirResult(mlir::IndexType::get(&mlirContext),
                    FirPlaceHolder::resultEntityPosition, Property::Value);
@@ -582,18 +582,18 @@ public:
 
   void buildExplicitInterface(
       const Fortran::evaluate::characteristics::Procedure &procedure) {
+    bool isBindC = procedure.IsBindC();
     // Handle result
     if (const std::optional<Fortran::evaluate::characteristics::FunctionResult>
             &result = procedure.functionResult) {
       if (result->CanBeReturnedViaImplicitInterface())
-        handleImplicitResult(*result);
+        handleImplicitResult(*result, isBindC);
       else
         handleExplicitResult(*result);
     } else if (interface.side().hasAlternateReturns()) {
       addFirResult(mlir::IndexType::get(&mlirContext),
                    FirPlaceHolder::resultEntityPosition, Property::Value);
     }
-    bool isBindC = procedure.IsBindC();
     // Handle arguments
     const auto &argumentEntities =
         getEntityContainer(interface.side().getCallDescription());
@@ -671,7 +671,8 @@ public:
 
 private:
   void handleImplicitResult(
-      const Fortran::evaluate::characteristics::FunctionResult &result) {
+      const Fortran::evaluate::characteristics::FunctionResult &result,
+      bool isBindC) {
     if (result.IsProcedurePointer())
       TODO(interface.converter.getCurrentLocation(),
            "procedure pointer result not yet handled");
@@ -681,7 +682,13 @@ private:
     Fortran::evaluate::DynamicType dynamicType = typeAndShape->type();
     // Character result allocated by caller and passed as hidden arguments
     if (dynamicType.category() == Fortran::common::TypeCategory::Character) {
-      handleImplicitCharacterResult(dynamicType);
+      if (isBindC) {
+        mlir::Type mlirType = translateDynamicType(dynamicType);
+        addFirResult(mlirType, FirPlaceHolder::resultEntityPosition,
+                     Property::Value);
+      } else {
+        handleImplicitCharacterResult(dynamicType);
+      }
     } else if (dynamicType.category() ==
                Fortran::common::TypeCategory::Derived) {
       // Derived result need to be allocated by the caller and the result value
@@ -790,9 +797,14 @@ private:
     Fortran::common::TypeCategory cat = dynamicType.category();
     // DERIVED
     if (cat == Fortran::common::TypeCategory::Derived) {
-      if (dynamicType.IsPolymorphic())
+      // TODO is kept under experimental flag until feature is complete.
+      if (dynamicType.IsPolymorphic() &&
+          !getConverter().getLoweringOptions().isPolymorphicTypeImplEnabled())
         TODO(interface.converter.getCurrentLocation(),
              "support for polymorphic types");
+
+      if (dynamicType.IsUnlimitedPolymorphic())
+        return mlir::NoneType::get(&mlirContext);
       return getConverter().genType(dynamicType.GetDerivedTypeSpec());
     }
     // CHARACTER with compile time constant length.
@@ -853,16 +865,17 @@ private:
       type = fir::HeapType::get(type);
     if (obj.attrs.test(Attrs::Pointer))
       type = fir::PointerType::get(type);
-    mlir::Type boxType = fir::BoxType::get(type);
+    mlir::Type boxType = fir::wrapInClassOrBoxType(
+        type, obj.type.type().IsPolymorphic(), obj.type.type().IsAssumedType());
 
     if (obj.attrs.test(Attrs::Allocatable) || obj.attrs.test(Attrs::Pointer)) {
-      // Pass as fir.ref<fir.box>
+      // Pass as fir.ref<fir.box> or fir.ref<fir.class>
       mlir::Type boxRefType = fir::ReferenceType::get(boxType);
       addFirOperand(boxRefType, nextPassedArgPosition(), Property::MutableBox,
                     attrs);
       addPassedArg(PassEntityBy::MutableBox, entity, characteristics);
     } else if (dummyRequiresBox(obj)) {
-      // Pass as fir.box
+      // Pass as fir.box or fir.class
       if (isValueAttr)
         TODO(loc, "assumed shape dummy argument with VALUE attribute");
       addFirOperand(boxType, nextPassedArgPosition(), Property::Box, attrs);
@@ -886,7 +899,13 @@ private:
         if (isBindC) {
           passBy = PassEntityBy::Value;
           prop = Property::Value;
-          passType = type;
+          if (fir::isa_builtin_cptr_type(type)) {
+            auto recTy = type.dyn_cast<fir::RecordType>();
+            mlir::Type fieldTy = recTy.getTypeList()[0].second;
+            passType = fir::ReferenceType::get(fieldTy);
+          } else {
+            passType = type;
+          }
         } else {
           passBy = PassEntityBy::BaseAddressValueAttribute;
         }
@@ -941,12 +960,19 @@ private:
     assert(typeAndShape && "expect type for non proc pointer result");
     mlir::Type mlirType = translateDynamicType(typeAndShape->type());
     fir::SequenceType::Shape bounds = getBounds(typeAndShape->shape());
+    const auto *resTypeAndShape{result.GetTypeAndShape()};
+    bool resIsPolymorphic =
+        resTypeAndShape && resTypeAndShape->type().IsPolymorphic();
+    bool resIsAssumedType =
+        resTypeAndShape && resTypeAndShape->type().IsAssumedType();
     if (!bounds.empty())
       mlirType = fir::SequenceType::get(bounds, mlirType);
     if (result.attrs.test(Attr::Allocatable))
-      mlirType = fir::BoxType::get(fir::HeapType::get(mlirType));
+      mlirType = fir::wrapInClassOrBoxType(fir::HeapType::get(mlirType),
+                                           resIsPolymorphic, resIsAssumedType);
     if (result.attrs.test(Attr::Pointer))
-      mlirType = fir::BoxType::get(fir::PointerType::get(mlirType));
+      mlirType = fir::wrapInClassOrBoxType(fir::PointerType::get(mlirType),
+                                           resIsPolymorphic, resIsAssumedType);
 
     if (fir::isa_char(mlirType)) {
       // Character scalar results must be passed as arguments in lowering so
@@ -1041,6 +1067,33 @@ bool Fortran::lower::CallInterface<T>::PassedEntity::mayBeReadByCall() const {
   if (!characteristics)
     return true;
   return characteristics->GetIntent() != Fortran::common::Intent::Out;
+}
+template <typename T>
+bool Fortran::lower::CallInterface<T>::PassedEntity::isIntentOut() const {
+  if (!characteristics)
+    return true;
+  return characteristics->GetIntent() == Fortran::common::Intent::Out;
+}
+template <typename T>
+bool Fortran::lower::CallInterface<T>::PassedEntity::mustBeMadeContiguous()
+    const {
+  if (!characteristics)
+    return true;
+  const auto *dummy =
+      std::get_if<Fortran::evaluate::characteristics::DummyDataObject>(
+          &characteristics->u);
+  if (!dummy)
+    return false;
+  const auto &shapeAttrs = dummy->type.attrs();
+  using ShapeAttrs = Fortran::evaluate::characteristics::TypeAndShape::Attr;
+  if (shapeAttrs.test(ShapeAttrs::AssumedRank) ||
+      shapeAttrs.test(ShapeAttrs::AssumedShape))
+    return dummy->attrs.test(
+        Fortran::evaluate::characteristics::DummyDataObject::Attr::Contiguous);
+  if (shapeAttrs.test(ShapeAttrs::DeferredShape))
+    return false;
+  // Explicit shape arrays are contiguous.
+  return dummy->type.Rank() > 0;
 }
 
 template <typename T>
@@ -1238,4 +1291,9 @@ mlir::Type Fortran::lower::getDummyProcedureType(
   if (::mustPassLengthWithDummyProcedure(iface))
     return fir::factory::getCharacterProcedureTupleType(procType);
   return procType;
+}
+
+bool Fortran::lower::isCPtrArgByValueType(mlir::Type ty) {
+  return ty.isa<fir::ReferenceType>() &&
+         fir::isa_integer(fir::unwrapRefType(ty));
 }

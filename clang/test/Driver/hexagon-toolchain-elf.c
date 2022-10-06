@@ -431,7 +431,6 @@
 // RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
 // RUN:   -mcpu=hexagonv60 \
 // RUN:   -s \
-// RUN:   -Tbss 0xdead -Tdata 0xbeef -Ttext 0xcafe \
 // RUN:   -t \
 // RUN:   -e start_here \
 // RUN:   -uFoo -undefined Bar \
@@ -445,7 +444,6 @@
 // CHECK03B: "-L{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib/v60"
 // CHECK03B: "-L{{.*}}/Inputs/hexagon_tree/Tools/bin/../target/hexagon/lib"
 // CHECK03B: "-s"
-// CHECK03B: "-Tbss" "0xdead" "-Tdata" "0xbeef" "-Ttext" "0xcafe"
 // CHECK03B: "-t"
 // CHECK03B: "-u" "Foo" "-undefined" "Bar"
 // CHECK03B: "{{[^"]+}}.o"

@@ -564,8 +564,37 @@ MCSectionELF *MCContext::getELFSection(const Twine &Section, unsigned Type,
     Kind = SectionKind::getExecuteOnly();
   else if (Flags & ELF::SHF_EXECINSTR)
     Kind = SectionKind::getText();
-  else
+  else if (~Flags & ELF::SHF_WRITE)
     Kind = SectionKind::getReadOnly();
+  else if (Flags & ELF::SHF_TLS)
+    Kind = (Type & ELF::SHT_NOBITS) ? SectionKind::getThreadBSS()
+                                    : SectionKind::getThreadData();
+  else
+    // Default to `SectionKind::getText()`. This is the default for gas as
+    // well. The condition that falls into this case is where we do not have any
+    // section flags and must infer a classification rather than where we have
+    // section flags (i.e. this is not that SHF_EXECINSTR is unset bur rather it
+    // is unknown).
+    Kind = llvm::StringSwitch<SectionKind>(CachedName)
+               .Case(".bss", SectionKind::getBSS())
+               .StartsWith(".bss.", SectionKind::getBSS())
+               .StartsWith(".gnu.linkonce.b.", SectionKind::getBSS())
+               .StartsWith(".llvm.linkonce.b.", SectionKind::getBSS())
+               .Case(".data", SectionKind::getData())
+               .Case(".data1", SectionKind::getData())
+               .Case(".data.rel.ro", SectionKind::getReadOnlyWithRel())
+               .Case(".rodata", SectionKind::getReadOnly())
+               .Case(".rodata1", SectionKind::getReadOnly())
+               .Case(".tbss", SectionKind::getThreadBSS())
+               .StartsWith(".tbss.", SectionKind::getThreadData())
+               .StartsWith(".gnu.linkonce.tb.", SectionKind::getThreadData())
+               .StartsWith(".llvm.linkonce.tb.", SectionKind::getThreadData())
+               .Case(".tdata", SectionKind::getThreadData())
+               .StartsWith(".tdata.", SectionKind::getThreadData())
+               .StartsWith(".gnu.linkonce.td.", SectionKind::getThreadData())
+               .StartsWith(".llvm.linkonce.td.", SectionKind::getThreadData())
+               .StartsWith(".debug_", SectionKind::getMetadata())
+               .Default(SectionKind::getText());
 
   MCSectionELF *Result =
       createELFSectionImpl(CachedName, Type, Flags, Kind, EntrySize, GroupSym,
@@ -855,30 +884,35 @@ void MCContext::addDebugPrefixMapEntry(const std::string &From,
   DebugPrefixMap.insert(std::make_pair(From, To));
 }
 
+void MCContext::remapDebugPath(SmallVectorImpl<char> &Path) {
+  for (const auto &[From, To] : DebugPrefixMap)
+    if (llvm::sys::path::replace_path_prefix(Path, From, To))
+      break;
+}
+
 void MCContext::RemapDebugPaths() {
   const auto &DebugPrefixMap = this->DebugPrefixMap;
   if (DebugPrefixMap.empty())
     return;
 
-  const auto RemapDebugPath = [&DebugPrefixMap](std::string &Path) {
-    SmallString<256> P(Path);
-    for (const auto &Entry : DebugPrefixMap) {
-      if (llvm::sys::path::replace_path_prefix(P, Entry.first, Entry.second)) {
-        Path = P.str().str();
-        break;
-      }
-    }
-  };
-
   // Remap compilation directory.
-  std::string CompDir = std::string(CompilationDir.str());
-  RemapDebugPath(CompDir);
-  CompilationDir = CompDir;
+  remapDebugPath(CompilationDir);
 
-  // Remap MCDwarfDirs in all compilation units.
-  for (auto &CUIDTablePair : MCDwarfLineTablesCUMap)
-    for (auto &Dir : CUIDTablePair.second.getMCDwarfDirs())
-      RemapDebugPath(Dir);
+  // Remap MCDwarfDirs and RootFile.Name in all compilation units.
+  SmallString<256> P;
+  for (auto &CUIDTablePair : MCDwarfLineTablesCUMap) {
+    for (auto &Dir : CUIDTablePair.second.getMCDwarfDirs()) {
+      P = Dir;
+      remapDebugPath(P);
+      Dir = std::string(P);
+    }
+
+    // Used by DW_TAG_compile_unit's DT_AT_name and DW_TAG_label's
+    // DW_AT_decl_file for DWARF v5 generated for assembly source.
+    P = CUIDTablePair.second.getRootFile().Name;
+    remapDebugPath(P);
+    CUIDTablePair.second.getRootFile().Name = std::string(P);
+  }
 }
 
 //===----------------------------------------------------------------------===//

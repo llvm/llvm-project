@@ -2,7 +2,7 @@
 # RUN: llc -march=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=0 -disable-gisel-legality-check -o - %s | FileCheck -check-prefix=GFX8 %s
 # RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX9 %s
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX10 %s
-# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX10 %s
+# RUN: llc -march=amdgcn -mcpu=gfx1100 -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck -check-prefix=GFX11 %s
 
 ---
 
@@ -35,6 +35,12 @@ body: |
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10-NEXT: %2:vgpr_32 = nofpexcept V_MAX_F16_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_ENDPGM 0, implicit %2
+    ; GFX11-LABEL: name: fcanonicalize_f16_denorm
+    ; GFX11: liveins: $vgpr0
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: %2:vgpr_32 = nofpexcept V_MAX_F16_t16_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0, implicit %2
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
     %2:vgpr(s16) = G_FCANONICALIZE %1
@@ -72,6 +78,12 @@ body: |
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10-NEXT: %2:vgpr_32 = nofpexcept V_MAX_F16_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_ENDPGM 0, implicit %2
+    ; GFX11-LABEL: name: fcanonicalize_f16_flush
+    ; GFX11: liveins: $vgpr0
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: %2:vgpr_32 = nofpexcept V_MAX_F16_t16_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0, implicit %2
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s16) = G_TRUNC %0
     %2:vgpr(s16) = G_FCANONICALIZE %1
@@ -110,6 +122,12 @@ body: |
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10-NEXT: %1:vgpr_32 = nofpexcept V_MAX_F32_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_ENDPGM 0, implicit %1
+    ; GFX11-LABEL: name: fcanonicalize_f32_denorm
+    ; GFX11: liveins: $vgpr0
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: %1:vgpr_32 = nofpexcept V_MAX_F32_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0, implicit %1
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FCANONICALIZE %0
     S_ENDPGM 0, implicit %1
@@ -147,6 +165,12 @@ body: |
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10-NEXT: %1:vgpr_32 = nofpexcept V_MAX_F32_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_ENDPGM 0, implicit %1
+    ; GFX11-LABEL: name: fcanonicalize_f32_flush
+    ; GFX11: liveins: $vgpr0
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: %1:vgpr_32 = nofpexcept V_MAX_F32_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0, implicit %1
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FCANONICALIZE %0
     S_ENDPGM 0, implicit %1
@@ -184,6 +208,12 @@ body: |
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10-NEXT: %1:vgpr_32 = nofpexcept V_PK_MAX_F16 8, [[COPY]], 8, [[COPY]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_ENDPGM 0, implicit %1
+    ; GFX11-LABEL: name: fcanonicalize_v2f16_denorm
+    ; GFX11: liveins: $vgpr0
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: %1:vgpr_32 = nofpexcept V_PK_MAX_F16 8, [[COPY]], 8, [[COPY]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0, implicit %1
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = G_FCANONICALIZE %0
     S_ENDPGM 0, implicit %1
@@ -221,6 +251,12 @@ body: |
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10-NEXT: %1:vgpr_32 = nofpexcept V_PK_MAX_F16 8, [[COPY]], 8, [[COPY]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_ENDPGM 0, implicit %1
+    ; GFX11-LABEL: name: fcanonicalize_v2f16_flush
+    ; GFX11: liveins: $vgpr0
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: %1:vgpr_32 = nofpexcept V_PK_MAX_F16 8, [[COPY]], 8, [[COPY]], 0, 0, 0, 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0, implicit %1
     %0:vgpr(<2 x s16>) = COPY $vgpr0
     %1:vgpr(<2 x s16>) = G_FCANONICALIZE %0
     S_ENDPGM 0, implicit %1
@@ -258,6 +294,12 @@ body: |
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10-NEXT: %1:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_ENDPGM 0, implicit %1
+    ; GFX11-LABEL: name: fcanonicalize_f64_denorm
+    ; GFX11: liveins: $vgpr0_vgpr1
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX11-NEXT: %1:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0, implicit %1
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FCANONICALIZE %0
     S_ENDPGM 0, implicit %1
@@ -295,6 +337,12 @@ body: |
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX10-NEXT: %1:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_ENDPGM 0, implicit %1
+    ; GFX11-LABEL: name: fcanonicalize_f64_flush
+    ; GFX11: liveins: $vgpr0_vgpr1
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; GFX11-NEXT: %1:vreg_64 = nofpexcept V_MAX_F64_e64 0, [[COPY]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0, implicit %1
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s64) = G_FCANONICALIZE %0
     S_ENDPGM 0, implicit %1
@@ -331,6 +379,12 @@ body: |
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10-NEXT: %2:vgpr_32 = nofpexcept V_MAX_F32_e64 2, [[COPY]], 2, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_ENDPGM 0, implicit %2
+    ; GFX11-LABEL: name: fcanonicalize_fabs_f32_denorm
+    ; GFX11: liveins: $vgpr0
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: %2:vgpr_32 = nofpexcept V_MAX_F32_e64 2, [[COPY]], 2, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0, implicit %2
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FABS %0
     %2:vgpr(s32) = G_FCANONICALIZE %1
@@ -369,6 +423,12 @@ body: |
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10-NEXT: %2:vgpr_32 = nofpexcept V_MAX_F32_e64 2, [[COPY]], 2, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_ENDPGM 0, implicit %2
+    ; GFX11-LABEL: name: fcanonicalize_fabs_f32_flush
+    ; GFX11: liveins: $vgpr0
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: %2:vgpr_32 = nofpexcept V_MAX_F32_e64 2, [[COPY]], 2, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0, implicit %2
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FABS %0
     %2:vgpr(s32) = G_FCANONICALIZE %1
@@ -406,6 +466,12 @@ body: |
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10-NEXT: %2:vgpr_32 = nofpexcept V_MAX_F32_e64 1, [[COPY]], 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_ENDPGM 0, implicit %2
+    ; GFX11-LABEL: name: fcanonicalize_fneg_f32_denorm
+    ; GFX11: liveins: $vgpr0
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: %2:vgpr_32 = nofpexcept V_MAX_F32_e64 1, [[COPY]], 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0, implicit %2
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FNEG %0
     %2:vgpr(s32) = G_FCANONICALIZE %1
@@ -443,6 +509,12 @@ body: |
     ; GFX10-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX10-NEXT: %2:vgpr_32 = nofpexcept V_MAX_F32_e64 1, [[COPY]], 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_ENDPGM 0, implicit %2
+    ; GFX11-LABEL: name: fcanonicalize_fneg_f32_flush
+    ; GFX11: liveins: $vgpr0
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: %2:vgpr_32 = nofpexcept V_MAX_F32_e64 1, [[COPY]], 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0, implicit %2
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FNEG %0
     %2:vgpr(s32) = G_FCANONICALIZE %1
@@ -486,6 +558,14 @@ body: |
     ; GFX10-NEXT: [[V_XOR_B32_e64_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e64 [[S_MOV_B32_]], [[COPY]], implicit $exec
     ; GFX10-NEXT: %3:vgpr_32 = nofpexcept V_MAX_F32_e64 2, [[V_XOR_B32_e64_]], 2, [[V_XOR_B32_e64_]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_ENDPGM 0, implicit %3
+    ; GFX11-LABEL: name: fcanonicalize_fneg_fabs_f32_denorm
+    ; GFX11: liveins: $vgpr0
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
+    ; GFX11-NEXT: [[V_XOR_B32_e64_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e64 [[S_MOV_B32_]], [[COPY]], implicit $exec
+    ; GFX11-NEXT: %3:vgpr_32 = nofpexcept V_MAX_F32_e64 2, [[V_XOR_B32_e64_]], 2, [[V_XOR_B32_e64_]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0, implicit %3
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FNEG %0
     %2:vgpr(s32) = G_FABS %1
@@ -530,6 +610,14 @@ body: |
     ; GFX10-NEXT: [[V_XOR_B32_e64_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e64 [[S_MOV_B32_]], [[COPY]], implicit $exec
     ; GFX10-NEXT: %3:vgpr_32 = nofpexcept V_MAX_F32_e64 2, [[V_XOR_B32_e64_]], 2, [[V_XOR_B32_e64_]], 0, 0, implicit $mode, implicit $exec
     ; GFX10-NEXT: S_ENDPGM 0, implicit %3
+    ; GFX11-LABEL: name: fcanonicalize_fneg_fabs_f32_flush
+    ; GFX11: liveins: $vgpr0
+    ; GFX11-NEXT: {{  $}}
+    ; GFX11-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; GFX11-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 2147483648
+    ; GFX11-NEXT: [[V_XOR_B32_e64_:%[0-9]+]]:vgpr_32 = V_XOR_B32_e64 [[S_MOV_B32_]], [[COPY]], implicit $exec
+    ; GFX11-NEXT: %3:vgpr_32 = nofpexcept V_MAX_F32_e64 2, [[V_XOR_B32_e64_]], 2, [[V_XOR_B32_e64_]], 0, 0, implicit $mode, implicit $exec
+    ; GFX11-NEXT: S_ENDPGM 0, implicit %3
     %0:vgpr(s32) = COPY $vgpr0
     %1:vgpr(s32) = G_FNEG %0
     %2:vgpr(s32) = G_FABS %1

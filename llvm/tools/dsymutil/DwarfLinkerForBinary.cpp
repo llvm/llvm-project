@@ -591,58 +591,58 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
       [&](const Twine &Error, StringRef Context, const DWARFDie *) {
         error(Error, Context);
       });
-  GeneralLinker.setObjFileLoader(
-      [&DebugMap, &RL, this](StringRef ContainerName,
-                             StringRef Path) -> ErrorOr<DWARFFile &> {
-        auto &Obj = DebugMap.addDebugMapObject(
-            Path, sys::TimePoint<std::chrono::seconds>(), MachO::N_OSO);
+  objFileLoader Loader = [&DebugMap, &RL,
+                          this](StringRef ContainerName,
+                                StringRef Path) -> ErrorOr<DWARFFile &> {
+    auto &Obj = DebugMap.addDebugMapObject(
+        Path, sys::TimePoint<std::chrono::seconds>(), MachO::N_OSO);
 
-        if (auto ErrorOrObj = loadObject(Obj, DebugMap, RL)) {
-          return *ErrorOrObj;
-        } else {
-          // Try and emit more helpful warnings by applying some heuristics.
-          StringRef ObjFile = ContainerName;
-          bool IsClangModule = sys::path::extension(Path).equals(".pcm");
-          bool IsArchive = ObjFile.endswith(")");
+    if (auto ErrorOrObj = loadObject(Obj, DebugMap, RL)) {
+      return *ErrorOrObj;
+    } else {
+      // Try and emit more helpful warnings by applying some heuristics.
+      StringRef ObjFile = ContainerName;
+      bool IsClangModule = sys::path::extension(Path).equals(".pcm");
+      bool IsArchive = ObjFile.endswith(")");
 
-          if (IsClangModule) {
-            StringRef ModuleCacheDir = sys::path::parent_path(Path);
-            if (sys::fs::exists(ModuleCacheDir)) {
-              // If the module's parent directory exists, we assume that the
-              // module cache has expired and was pruned by clang.  A more
-              // adventurous dsymutil would invoke clang to rebuild the module
-              // now.
-              if (!ModuleCacheHintDisplayed) {
-                WithColor::note()
-                    << "The clang module cache may have expired since "
-                       "this object file was built. Rebuilding the "
-                       "object file will rebuild the module cache.\n";
-                ModuleCacheHintDisplayed = true;
-              }
-            } else if (IsArchive) {
-              // If the module cache directory doesn't exist at all and the
-              // object file is inside a static library, we assume that the
-              // static library was built on a different machine. We don't want
-              // to discourage module debugging for convenience libraries within
-              // a project though.
-              if (!ArchiveHintDisplayed) {
-                WithColor::note()
-                    << "Linking a static library that was built with "
-                       "-gmodules, but the module cache was not found.  "
-                       "Redistributable static libraries should never be "
-                       "built with module debugging enabled.  The debug "
-                       "experience will be degraded due to incomplete "
-                       "debug information.\n";
-                ArchiveHintDisplayed = true;
-              }
-            }
+      if (IsClangModule) {
+        StringRef ModuleCacheDir = sys::path::parent_path(Path);
+        if (sys::fs::exists(ModuleCacheDir)) {
+          // If the module's parent directory exists, we assume that the
+          // module cache has expired and was pruned by clang.  A more
+          // adventurous dsymutil would invoke clang to rebuild the module
+          // now.
+          if (!ModuleCacheHintDisplayed) {
+            WithColor::note()
+                << "The clang module cache may have expired since "
+                   "this object file was built. Rebuilding the "
+                   "object file will rebuild the module cache.\n";
+            ModuleCacheHintDisplayed = true;
           }
-
-          return ErrorOrObj.getError();
+        } else if (IsArchive) {
+          // If the module cache directory doesn't exist at all and the
+          // object file is inside a static library, we assume that the
+          // static library was built on a different machine. We don't want
+          // to discourage module debugging for convenience libraries within
+          // a project though.
+          if (!ArchiveHintDisplayed) {
+            WithColor::note()
+                << "Linking a static library that was built with "
+                   "-gmodules, but the module cache was not found.  "
+                   "Redistributable static libraries should never be "
+                   "built with module debugging enabled.  The debug "
+                   "experience will be degraded due to incomplete "
+                   "debug information.\n";
+            ArchiveHintDisplayed = true;
+          }
         }
+      }
 
-        llvm_unreachable("Unhandled DebugMap object");
-      });
+      return ErrorOrObj.getError();
+    }
+
+    llvm_unreachable("Unhandled DebugMap object");
+  };
   GeneralLinker.setSwiftInterfacesMap(&ParseableSwiftInterfaces);
   bool ReflectionSectionsPresentInBinary = false;
   // If there is no output specified, no point in checking the binary for swift5
@@ -660,6 +660,12 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
       copySwiftReflectionMetadata(Obj.get(), Streamer.get(),
                                   SectionToOffsetInDwarf, RelocationsToApply);
   }
+
+  uint16_t MaxDWARFVersion = 0;
+  std::function<void(const DWARFUnit &Unit)> OnCUDieLoaded =
+      [&MaxDWARFVersion](const DWARFUnit &Unit) {
+        MaxDWARFVersion = std::max(Unit.getVersion(), MaxDWARFVersion);
+      };
 
   for (const auto &Obj : Map.objects()) {
     // N_AST objects (swiftmodule files) should get dumped directly into the
@@ -702,8 +708,9 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
 
       continue;
     }
+
     if (auto ErrorOrObj = loadObject(*Obj, Map, RL))
-      GeneralLinker.addObjectFile(*ErrorOrObj);
+      GeneralLinker.addObjectFile(*ErrorOrObj, Loader, OnCUDieLoaded);
     else {
       ObjectsForLinking.push_back(std::make_unique<DWARFFile>(
           Obj->getObjectFilename(), nullptr, nullptr,
@@ -712,8 +719,16 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
     }
   }
 
+  // If we haven't seen any CUs, pick an arbitrary valid Dwarf version anyway.
+  if (MaxDWARFVersion == 0)
+    MaxDWARFVersion = 3;
+
+  if (Error E = GeneralLinker.setTargetDWARFVersion(MaxDWARFVersion))
+    return error(toString(std::move(E)));
+
   // link debug info for loaded object files.
-  GeneralLinker.link();
+  if (Error E = GeneralLinker.link())
+    return error(toString(std::move(E)));
 
   StringRef ArchName = Map.getTriple().getArchName();
   if (Error E = emitRemarks(Options, Map.getBinaryPath(), ArchName, RL))

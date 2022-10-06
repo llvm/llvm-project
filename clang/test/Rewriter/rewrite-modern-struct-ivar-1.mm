@@ -34,7 +34,7 @@ typedef struct {
 @implementation Foo
 - (void)x:(Foo *)other {
   bar.x = 0;
-  bar.y = 1;
+  bar.y = -1;
   self->_internal._singleRange._range = (( other ->bar.x) ? &( other ->_internal._singleRange._range) : ((NSRange *)(&(((_NSRangeInfo *)( other ->_internal._multipleRanges._data))->_ranges))))[0];
 }
 @end

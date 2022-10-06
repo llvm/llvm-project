@@ -5,10 +5,9 @@
 define i32 @test1() {
 ; CHECK-LABEL: test1:
 ; CHECK:         .word b
-; CHECK-NEXT:    .word .Ltmp0
+; CHECK-NEXT:    .word .LBB0_2
 ; CHECK: // %bb.1:
-; CHECK: .Ltmp0:
-; CHECK: .LBB0_2: // %indirect
+; CHECK: .LBB0_2: // Block address taken
 entry:
   callbr void asm sideeffect "1:\0A\09.word b, ${0:l}\0A\09", "!i"()
           to label %cleanup [label %indirect]
@@ -31,9 +30,8 @@ entry:
 
 if.then:
 ; CHECK:       .word b
-; CHECK-NEXT:  .word .Ltmp2
-; CHECK:       .Ltmp2:
-; CHECK-NEXT:  .LBB1_3: // %if.end6
+; CHECK-NEXT:  .word .LBB1_3
+; CHECK:       .LBB1_3: // Block address taken
   callbr void asm sideeffect "1:\0A\09.word b, ${0:l}\0A\09", "!i"()
           to label %if.then4 [label %if.end6]
 
@@ -48,8 +46,7 @@ if.end6:
   br i1 %phitmp, label %if.end10, label %if.then9
 
 if.then9:
-; CHECK: .Ltmp4:
-; CHECK-NEXT:  .LBB1_5: // %l_yes
+; CHECK: .LBB1_5: // Block address taken
   callbr void asm sideeffect "", "!i"()
           to label %if.end10 [label %l_yes]
 

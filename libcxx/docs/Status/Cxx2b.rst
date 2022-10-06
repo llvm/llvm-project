@@ -37,6 +37,10 @@ Paper Status
    :header-rows: 1
    :widths: auto
 
+.. note::
+
+   .. [#note-P2273] P2273: ``make_unique_for_overwrite`` isn't done yet since `P1020` hasn't been implemented yet.
+
 .. _issues-status-cxx2b:
 
 Library Working Group Issues Status

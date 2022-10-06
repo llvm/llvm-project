@@ -1801,8 +1801,13 @@ multiclass sve_int_dup_mask_imm<string asm> {
   def : InstAlias<"mov $Zd, $imm",
                   (!cast<Instruction>(NAME) ZPR64:$Zd, sve_preferred_logical_imm64:$imm), 5>;
 
-  def : Pat<(nxv2i64 (splat_vector (i64 logical_imm64:$imm))),
-            (!cast<Instruction>(NAME) logical_imm64:$imm)>;
+  // NOTE: No pattern for nxv16i8 because DUP has full coverage.
+  def : Pat<(nxv8i16 (splat_vector (i32 (SVELogicalImm16Pat i64:$imm)))),
+            (!cast<Instruction>(NAME) i64:$imm)>;
+  def : Pat<(nxv4i32 (splat_vector (i32 (SVELogicalImm32Pat i64:$imm)))),
+            (!cast<Instruction>(NAME) i64:$imm)>;
+  def : Pat<(nxv2i64 (splat_vector (i64 (SVELogicalImm64Pat i64:$imm)))),
+            (!cast<Instruction>(NAME) i64:$imm)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -8049,6 +8054,7 @@ class sve2_char_match<bit sz, bit opc, string asm,
   let Inst{3-0}   = Pd;
 
   let Defs = [NZCV];
+  let ElementSize = pprty.ElementSize;
   let isPTestLike = 1;
 }
 

@@ -86,10 +86,8 @@ define void @uniform_store_i1(i1* noalias %dst, i64* noalias %start, i64 %N) {
 ; CHECK: vector.body
 ; CHECK: %[[GEP:.*]] = getelementptr inbounds i64, <64 x i64*> {{.*}}, i64 1
 ; CHECK: %[[ICMP:.*]] = icmp eq <64 x i64*> %[[GEP]], %[[SPLAT:.*]]
-; CHECK: %[[EXTRACT1:.*]] = extractelement <64 x i1> %[[ICMP]], i32 0
+; CHECK: %[[EXTRACT1:.*]] = extractelement <64 x i1> %[[ICMP]], i32 63
 ; CHECK: store i1 %[[EXTRACT1]], i1* %dst
-; CHECK: %[[EXTRACT2:.*]] = extractelement <64 x i1> %[[ICMP]], i32 1
-; CHECK: store i1 %[[EXTRACT2]], i1* %dst
 ; CHECK-NOT: vscale
 entry:
   br label %for.body

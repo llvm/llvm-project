@@ -70,6 +70,7 @@ class RemarkStreamer;
 }
 template <typename T> class StringMapEntry;
 class StringRef;
+class TypedPointerType;
 class ValueHandleBase;
 
 using DenseMapAPIntKeyInfo = DenseMapInfo<APInt>;
@@ -1386,8 +1387,8 @@ public:
   Optional<uint64_t> DiagnosticsHotnessThreshold = 0;
 
   /// The percentage of difference between profiling branch weights and
-  // llvm.expect branch weights to tolerate when emiting MisExpect diagnostics
-  Optional<uint64_t> DiagnosticsMisExpectTolerance = 0;
+  /// llvm.expect branch weights to tolerate when emiting MisExpect diagnostics
+  Optional<uint32_t> DiagnosticsMisExpectTolerance = 0;
   bool MisExpectWarningRequested = false;
 
   /// The specialized remark streamer used by LLVM's OptimizationRemarkEmitter.
@@ -1484,6 +1485,7 @@ public:
   DenseMap<std::pair<Type *, ElementCount>, VectorType *> VectorTypes;
   DenseMap<Type *, PointerType *> PointerTypes; // Pointers in AddrSpace = 0
   DenseMap<std::pair<Type *, unsigned>, PointerType *> ASPointerTypes;
+  DenseMap<std::pair<Type *, unsigned>, TypedPointerType *> ASTypedPointerTypes;
 
   /// ValueHandles - This map keeps track of all of the value handles that are
   /// watching a Value*.  The Value::HasValueHandle bit is used to know
@@ -1570,8 +1572,6 @@ public:
   bool getOpaquePointers();
   bool hasOpaquePointersValue();
   void setOpaquePointers(bool OP);
-
-  llvm::Any TargetDataStorage;
 
 private:
   Optional<bool> OpaquePointers;

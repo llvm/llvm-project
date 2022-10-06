@@ -1,4 +1,4 @@
-executable("make-confusable-table") {
+executable("clang-tidy-confusable-chars-gen") {
   deps = [ "//llvm/lib/Support" ]
   sources = [ "BuildConfusableTable.cpp" ]
 }

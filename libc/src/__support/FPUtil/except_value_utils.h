@@ -11,55 +11,88 @@
 
 #include "FEnvImpl.h"
 #include "FPBits.h"
+#include "src/__support/CPP/optional.h"
 
 namespace __llvm_libc {
 
 namespace fputil {
 
-template <typename T, int N> struct ExceptionalValues {
-  using UIntType = typename FPBits<T>::UIntType;
-  static constexpr int SIZE = N;
-  // Input bits.
-  UIntType inputs[SIZE];
-  // Output bits contains 4 values:
-  //   output[i][0]: output bits corresponding to FE_TOWARDZERO
-  //   output[i][1]: offset for FE_UPWARD
-  //   output[i][2]: offset for FE_DOWNWARD
-  //   output[i][3]: offset for FE_TONEAREST
-  UIntType outputs[SIZE][4];
-};
+// This file contains utility functions and classes to manage exceptional values
+// when there are many of them.
+//
+// Example usage:
+//
+// Define list of exceptional inputs and outputs:
+//   static constexpr int N = ...;  // Number of exceptional values.
+//   static constexpr fputil::ExceptValues<UIntType, N> Excepts {
+//     <list of input bits, output bits and offsets>
+//   };
+//
+// Check for exceptional inputs:
+//   if (auto r = Excepts.lookup(x_bits); unlikely(r.has_value()))
+//     return r.value();
 
-template <typename T, int N> struct ExceptionChecker {
-  using UIntType = typename FPBits<T>::UIntType;
-  using FPBits = FPBits<T>;
-  using ExceptionalValues = ExceptionalValues<T, N>;
+template <typename T, size_t N> struct ExceptValues {
+  static_assert(cpp::is_floating_point_v<T>, "Must be a floating point type.");
 
-  static bool check_odd_func(const ExceptionalValues &ExceptVals,
-                             UIntType x_abs, bool sign, T &result) {
-    for (int i = 0; i < N; ++i) {
-      if (unlikely(x_abs == ExceptVals.inputs[i])) {
-        UIntType out_bits = ExceptVals.outputs[i][0]; // FE_TOWARDZERO
+  using UIntType = typename FPBits<T>::UIntType;
+
+  struct Mapping {
+    UIntType input;
+    UIntType rnd_towardzero_result;
+    UIntType rnd_upward_offset;
+    UIntType rnd_downward_offset;
+    UIntType rnd_tonearest_offset;
+  };
+
+  Mapping values[N];
+
+  constexpr cpp::optional<T> lookup(UIntType x_bits) const {
+    for (size_t i = 0; i < N; ++i) {
+      if (unlikely(x_bits == values[i].input)) {
+        UIntType out_bits = values[i].rnd_towardzero_result;
         switch (fputil::get_round()) {
         case FE_UPWARD:
-          out_bits +=
-              sign ? ExceptVals.outputs[i][2] : ExceptVals.outputs[i][1];
+          out_bits += values[i].rnd_upward_offset;
           break;
         case FE_DOWNWARD:
-          out_bits +=
-              sign ? ExceptVals.outputs[i][1] : ExceptVals.outputs[i][2];
+          out_bits += values[i].rnd_downward_offset;
           break;
         case FE_TONEAREST:
-          out_bits += ExceptVals.outputs[i][3];
+          out_bits += values[i].rnd_tonearest_offset;
           break;
         }
-        result = FPBits(out_bits).get_val();
+        return FPBits<T>(out_bits).get_val();
+      }
+    }
+    return cpp::nullopt;
+  }
+
+  constexpr cpp::optional<T> lookup_odd(UIntType x_abs, bool sign) const {
+    for (size_t i = 0; i < N; ++i) {
+      if (unlikely(x_abs == values[i].input)) {
+        UIntType out_bits = values[i].rnd_towardzero_result;
+        switch (fputil::get_round()) {
+        case FE_UPWARD:
+          out_bits += sign ? values[i].rnd_downward_offset
+                           : values[i].rnd_upward_offset;
+          break;
+        case FE_DOWNWARD:
+          out_bits += sign ? values[i].rnd_upward_offset
+                           : values[i].rnd_downward_offset;
+          break;
+        case FE_TONEAREST:
+          out_bits += values[i].rnd_tonearest_offset;
+          break;
+        }
+        T result = FPBits<T>(out_bits).get_val();
         if (sign)
           result = -result;
 
-        return true;
+        return result;
       }
     }
-    return false;
+    return cpp::nullopt;
   }
 };
 

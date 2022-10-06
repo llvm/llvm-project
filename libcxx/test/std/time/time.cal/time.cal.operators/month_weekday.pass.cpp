@@ -26,16 +26,12 @@
 //   operator/(const weekday_indexed& wdi, int m) noexcept;
 // Returns: month(m) / wdi.
 
-
 //
 // [Example:
 // constexpr auto mwd = February/Tuesday[3]; // mwd is the third Tuesday of February of an as yet unspecified year
 //      static_assert(mwd.month() == February);
 //      static_assert(mwd.weekday_indexed() == Tuesday[3]);
-// —end example]
-
-
-
+// -end example]
 
 #include <chrono>
 #include <type_traits>

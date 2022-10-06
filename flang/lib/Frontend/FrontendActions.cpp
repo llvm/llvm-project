@@ -142,13 +142,14 @@ bool CodeGenAction::beginSourceFileAction() {
   // Create a LoweringBridge
   const common::IntrinsicTypeDefaultKinds &defKinds =
       ci.getInvocation().getSemanticsContext().defaultKinds();
-  fir::KindMapping kindMap(mlirCtx.get(),
-      llvm::ArrayRef<fir::KindTy>{fir::fromDefaultKinds(defKinds)});
+  fir::KindMapping kindMap(mlirCtx.get(), llvm::ArrayRef<fir::KindTy>{
+                                              fir::fromDefaultKinds(defKinds)});
   lower::LoweringBridge lb = Fortran::lower::LoweringBridge::create(
-      *mlirCtx, defKinds, ci.getInvocation().getSemanticsContext().intrinsics(),
+      *mlirCtx, ci.getInvocation().getSemanticsContext(), defKinds,
+      ci.getInvocation().getSemanticsContext().intrinsics(),
       ci.getInvocation().getSemanticsContext().targetCharacteristics(),
       ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
-      kindMap);
+      kindMap, ci.getInvocation().getLoweringOpts());
 
   // Create a parse tree and lower it to FIR
   Fortran::parser::Program &parseTree{*ci.getParsing().parseTree()};
@@ -425,8 +426,8 @@ void GetDefinitionAction::executeAction() {
       clang::DiagnosticsEngine::Error, "Symbol not found");
 
   auto gdv = ci.getInvocation().getFrontendOpts().getDefVals;
-  auto charBlock{cs.GetCharBlockFromLineAndColumns(
-      gdv.line, gdv.startColumn, gdv.endColumn)};
+  auto charBlock{cs.GetCharBlockFromLineAndColumns(gdv.line, gdv.startColumn,
+                                                   gdv.endColumn)};
   if (!charBlock) {
     ci.getDiagnostics().Report(diagID);
     return;
@@ -528,6 +529,14 @@ void CodeGenAction::generateLLVMIR() {
   llvmModule = mlir::translateModuleToLLVMIR(
       *mlirModule, *llvmCtx, moduleName ? *moduleName : "FIRModule");
 
+  // Set PIC/PIE level LLVM module flags.
+  if (opts.PICLevel > 0) {
+    llvmModule->setPICLevel(static_cast<llvm::PICLevel::Level>(opts.PICLevel));
+    if (opts.IsPIE)
+      llvmModule->setPIELevel(
+          static_cast<llvm::PIELevel::Level>(opts.PICLevel));
+  }
+
   if (!llvmModule) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
         clang::DiagnosticsEngine::Error, "failed to create the LLVM module");
@@ -570,11 +579,12 @@ void CodeGenAction::setUpTargetMachine() {
   assert(theTarget && "Failed to create Target");
 
   // Create `TargetMachine`
-  llvm::CodeGenOpt::Level OptLevel =
-      getCGOptLevel(ci.getInvocation().getCodeGenOpts());
+  const auto &CGOpts = ci.getInvocation().getCodeGenOpts();
+  llvm::CodeGenOpt::Level OptLevel = getCGOptLevel(CGOpts);
   tm.reset(theTarget->createTargetMachine(
       theTriple, /*CPU=*/"",
-      /*Features=*/"", llvm::TargetOptions(), /*Reloc::Model=*/llvm::None,
+      /*Features=*/"", llvm::TargetOptions(),
+      /*Reloc::Model=*/CGOpts.getRelocationModel(),
       /*CodeModel::Model=*/llvm::None, OptLevel));
   assert(tm && "Failed to create TargetMachine");
 }

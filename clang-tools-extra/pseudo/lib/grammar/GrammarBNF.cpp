@@ -64,10 +64,10 @@ public:
            UniqueAttributeValues.insert(KV.second);
       }
     }
-    llvm::for_each(UniqueNonterminals, [&T](llvm::StringRef Name) {
+    for (llvm::StringRef Name : UniqueNonterminals) {
       T->Nonterminals.emplace_back();
       T->Nonterminals.back().Name = Name.str();
-    });
+    }
     assert(T->Nonterminals.size() < (1 << (SymbolBits - 1)) &&
            "Too many nonterminals to fit in SymbolID bits!");
     llvm::sort(T->Nonterminals, [](const GrammarTable::Nonterminal &L,
@@ -77,10 +77,10 @@ public:
     // Add an empty string for the corresponding sentinel unset attribute.
     T->AttributeValues.push_back("");
     UniqueAttributeValues.erase("");
-    llvm::for_each(UniqueAttributeValues, [&T](llvm::StringRef Name) {
+    for (llvm::StringRef Name : UniqueAttributeValues) {
       T->AttributeValues.emplace_back();
       T->AttributeValues.back() = Name.str();
-    });
+    }
     llvm::sort(T->AttributeValues);
     assert(T->AttributeValues.front() == "");
 
@@ -327,8 +327,13 @@ private:
             "Token-like name {0} is used as a nonterminal", G.symbolName(SID)));
       }
     }
-    for (RuleID RID = 0; RID + 1u < T.Rules.size(); ++RID) {
-      if (T.Rules[RID] == T.Rules[RID + 1])
+    llvm::DenseSet<llvm::hash_code> VisitedRules;
+    for (RuleID RID = 0; RID < T.Rules.size(); ++RID) {
+      const auto &R = T.Rules[RID];
+      auto Code = llvm::hash_combine(
+          R.Target, llvm::hash_combine_range(R.seq().begin(), R.seq().end()));
+      auto [_, New] = VisitedRules.insert(Code);
+      if (!New)
         Diagnostics.push_back(
             llvm::formatv("Duplicate rule: `{0}`", G.dumpRule(RID)));
     }

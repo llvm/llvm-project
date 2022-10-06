@@ -65,8 +65,9 @@ public:
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
 
-  bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override {
-    return true;
+  UnwindTableLevel
+  getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override {
+    return UnwindTableLevel::Asynchronous;
   }
 
   llvm::ExceptionHandling GetExceptionModel(

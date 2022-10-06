@@ -164,8 +164,8 @@ template <
     WalkOrder Order = WalkOrder::PostOrder, typename FuncTy,
     typename ArgT = detail::first_argument<FuncTy>,
     typename RetT = decltype(std::declval<FuncTy>()(std::declval<ArgT>()))>
-typename std::enable_if<
-    llvm::is_one_of<ArgT, Operation *, Region *, Block *>::value, RetT>::type
+std::enable_if_t<llvm::is_one_of<ArgT, Operation *, Region *, Block *>::value,
+                 RetT>
 walk(Operation *op, FuncTy &&callback) {
   return detail::walk(op, function_ref<RetT(ArgT)>(callback), Order);
 }
@@ -185,10 +185,10 @@ template <
     WalkOrder Order = WalkOrder::PostOrder, typename FuncTy,
     typename ArgT = detail::first_argument<FuncTy>,
     typename RetT = decltype(std::declval<FuncTy>()(std::declval<ArgT>()))>
-typename std::enable_if<
+std::enable_if_t<
     !llvm::is_one_of<ArgT, Operation *, Region *, Block *>::value &&
         std::is_same<RetT, void>::value,
-    RetT>::type
+    RetT>
 walk(Operation *op, FuncTy &&callback) {
   auto wrapperFn = [&](Operation *op) {
     if (auto derivedOp = dyn_cast<ArgT>(op))
@@ -220,10 +220,10 @@ template <
     WalkOrder Order = WalkOrder::PostOrder, typename FuncTy,
     typename ArgT = detail::first_argument<FuncTy>,
     typename RetT = decltype(std::declval<FuncTy>()(std::declval<ArgT>()))>
-typename std::enable_if<
+std::enable_if_t<
     !llvm::is_one_of<ArgT, Operation *, Region *, Block *>::value &&
         std::is_same<RetT, WalkResult>::value,
-    RetT>::type
+    RetT>
 walk(Operation *op, FuncTy &&callback) {
   auto wrapperFn = [&](Operation *op) {
     if (auto derivedOp = dyn_cast<ArgT>(op))
@@ -261,7 +261,7 @@ walk(Operation *op,
 template <typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
           typename RetT = decltype(std::declval<FuncTy>()(
               std::declval<ArgT>(), std::declval<const WalkStage &>()))>
-typename std::enable_if<std::is_same<ArgT, Operation *>::value, RetT>::type
+std::enable_if_t<std::is_same<ArgT, Operation *>::value, RetT>
 walk(Operation *op, FuncTy &&callback) {
   return detail::walk(op,
                       function_ref<RetT(ArgT, const WalkStage &)>(callback));
@@ -276,9 +276,9 @@ walk(Operation *op, FuncTy &&callback) {
 template <typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
           typename RetT = decltype(std::declval<FuncTy>()(
               std::declval<ArgT>(), std::declval<const WalkStage &>()))>
-typename std::enable_if<!std::is_same<ArgT, Operation *>::value &&
-                            std::is_same<RetT, void>::value,
-                        RetT>::type
+std::enable_if_t<!std::is_same<ArgT, Operation *>::value &&
+                     std::is_same<RetT, void>::value,
+                 RetT>
 walk(Operation *op, FuncTy &&callback) {
   auto wrapperFn = [&](Operation *op, const WalkStage &stage) {
     if (auto derivedOp = dyn_cast<ArgT>(op))
@@ -301,9 +301,9 @@ walk(Operation *op, FuncTy &&callback) {
 template <typename FuncTy, typename ArgT = detail::first_argument<FuncTy>,
           typename RetT = decltype(std::declval<FuncTy>()(
               std::declval<ArgT>(), std::declval<const WalkStage &>()))>
-typename std::enable_if<!std::is_same<ArgT, Operation *>::value &&
-                            std::is_same<RetT, WalkResult>::value,
-                        RetT>::type
+std::enable_if_t<!std::is_same<ArgT, Operation *>::value &&
+                     std::is_same<RetT, WalkResult>::value,
+                 RetT>
 walk(Operation *op, FuncTy &&callback) {
   auto wrapperFn = [&](Operation *op, const WalkStage &stage) {
     if (auto derivedOp = dyn_cast<ArgT>(op))

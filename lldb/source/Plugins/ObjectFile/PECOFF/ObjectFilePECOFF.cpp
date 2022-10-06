@@ -30,11 +30,12 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/Utility/UUID.h"
-#include "llvm/BinaryFormat/COFF.h"
 
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFFImportFile.h"
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 
@@ -147,7 +148,7 @@ static UUID GetCoffUUID(llvm::object::COFFObjectFile &coff_obj) {
       UUID::CvRecordPdb70 info;
       memcpy(&info.Uuid, pdb_info->PDB70.Signature, sizeof(info.Uuid));
       info.Age = pdb_info->PDB70.Age;
-      return UUID::fromCvRecord(info);
+      return UUID(info);
     }
   }
 
@@ -170,7 +171,7 @@ static UUID GetCoffUUID(llvm::object::COFFObjectFile &coff_obj) {
   }
   // Use 4 bytes of crc from the .gnu_debuglink section.
   llvm::support::ulittle32_t data(gnu_debuglink_crc);
-  return UUID::fromData(&data, sizeof(data));
+  return UUID(&data, sizeof(data));
 }
 
 char ObjectFilePECOFF::ID;
@@ -377,6 +378,13 @@ lldb::SymbolType ObjectFilePECOFF::MapSymbolType(uint16_t coff_symbol_type) {
       coff_symbol_type >> llvm::COFF::SCT_COMPLEX_TYPE_SHIFT;
   if (complex_type == llvm::COFF::IMAGE_SYM_DTYPE_FUNCTION) {
     return lldb::eSymbolTypeCode;
+  }
+  const auto base_type = coff_symbol_type & 0xff;
+  if (base_type == llvm::COFF::IMAGE_SYM_TYPE_NULL &&
+      complex_type == llvm::COFF::IMAGE_SYM_DTYPE_NULL) {
+    // Unknown type. LLD and GNU ld uses this for variables on MinGW, so
+    // consider these symbols to be data to enable printing.
+    return lldb::eSymbolTypeData;
   }
   return lldb::eSymbolTypeInvalid;
 }
@@ -743,7 +751,7 @@ bool ObjectFilePECOFF::ParseSectionHeaders(
 }
 
 llvm::StringRef ObjectFilePECOFF::GetSectionName(const section_header_t &sect) {
-  llvm::StringRef hdr_name(sect.name, llvm::array_lengthof(sect.name));
+  llvm::StringRef hdr_name(sect.name, std::size(sect.name));
   hdr_name = hdr_name.split('\0').first;
   if (hdr_name.consume_front("/")) {
     lldb::offset_t stroff;
@@ -760,131 +768,170 @@ llvm::StringRef ObjectFilePECOFF::GetSectionName(const section_header_t &sect) {
 
 void ObjectFilePECOFF::ParseSymtab(Symtab &symtab) {
   SectionList *sect_list = GetSectionList();
-  const uint32_t num_syms = m_coff_header.nsyms;
-  if (m_file && num_syms > 0 && m_coff_header.symoff > 0) {
-    const uint32_t symbol_size = 18;
-    const size_t symbol_data_size = num_syms * symbol_size;
-    // Include the 4-byte string table size at the end of the symbols
-    DataExtractor symtab_data =
-        ReadImageData(m_coff_header.symoff, symbol_data_size + 4);
-    lldb::offset_t offset = symbol_data_size;
-    const uint32_t strtab_size = symtab_data.GetU32(&offset);
-    if (strtab_size > 0) {
-      DataExtractor strtab_data = ReadImageData(
-          m_coff_header.symoff + symbol_data_size, strtab_size);
+  rva_symbol_list_t sorted_exports = AppendFromExportTable(sect_list, symtab);
+  AppendFromCOFFSymbolTable(sect_list, symtab, sorted_exports);
+}
 
-      offset = 0;
-      std::string symbol_name;
-      Symbol *symbols = symtab.Resize(num_syms);
-      for (uint32_t i = 0; i < num_syms; ++i) {
-        coff_symbol_t symbol;
-        const uint32_t symbol_offset = offset;
-        const char *symbol_name_cstr = nullptr;
-        // If the first 4 bytes of the symbol string are zero, then they
-        // are followed by a 4-byte string table offset. Else these
-        // 8 bytes contain the symbol name
-        if (symtab_data.GetU32(&offset) == 0) {
-          // Long string that doesn't fit into the symbol table name, so
-          // now we must read the 4 byte string table offset
-          uint32_t strtab_offset = symtab_data.GetU32(&offset);
-          symbol_name_cstr = strtab_data.PeekCStr(strtab_offset);
-          symbol_name.assign(symbol_name_cstr);
+static bool RVASymbolListCompareRVA(const std::pair<uint32_t, uint32_t> &a,
+                                    const std::pair<uint32_t, uint32_t> &b) {
+  return a.first < b.first;
+}
+
+void ObjectFilePECOFF::AppendFromCOFFSymbolTable(
+    SectionList *sect_list, Symtab &symtab,
+    const ObjectFilePECOFF::rva_symbol_list_t &sorted_exports) {
+  const uint32_t num_syms = m_binary->getNumberOfSymbols();
+  if (num_syms == 0)
+    return;
+  // Check that this is not a bigobj; we do not support bigobj.
+  if (m_binary->getSymbolTableEntrySize() !=
+      sizeof(llvm::object::coff_symbol16))
+    return;
+
+  Log *log = GetLog(LLDBLog::Object);
+  symtab.Reserve(symtab.GetNumSymbols() + num_syms);
+  for (const auto &sym_ref : m_binary->symbols()) {
+    const auto coff_sym_ref = m_binary->getCOFFSymbol(sym_ref);
+    auto name_or_error = sym_ref.getName();
+    if (auto err = name_or_error.takeError()) {
+      LLDB_LOG(log,
+               "ObjectFilePECOFF::AppendFromCOFFSymbolTable - failed to get "
+               "symbol table entry name: {0}",
+               llvm::fmt_consume(std::move(err)));
+      continue;
+    }
+    const llvm::StringRef sym_name = *name_or_error;
+    Symbol symbol;
+    symbol.GetMangled().SetValue(ConstString(sym_name));
+    int16_t section_number =
+        static_cast<int16_t>(coff_sym_ref.getSectionNumber());
+    if (section_number >= 1) {
+      symbol.GetAddressRef() = Address(
+          sect_list->FindSectionByID(section_number), coff_sym_ref.getValue());
+      const auto symbol_type = MapSymbolType(coff_sym_ref.getType());
+      symbol.SetType(symbol_type);
+
+      // Check for duplicate of exported symbols:
+      const uint32_t symbol_rva = symbol.GetAddressRef().GetFileAddress() -
+                                  m_coff_header_opt.image_base;
+      const auto &first_match = std::lower_bound(
+          sorted_exports.begin(), sorted_exports.end(),
+          std::make_pair(symbol_rva, 0), RVASymbolListCompareRVA);
+      for (auto it = first_match;
+           it != sorted_exports.end() && it->first == symbol_rva; ++it) {
+        Symbol *exported = symtab.SymbolAtIndex(it->second);
+        if (symbol_type != lldb::eSymbolTypeInvalid)
+          exported->SetType(symbol_type);
+        if (exported->GetMangled() == symbol.GetMangled()) {
+          symbol.SetExternal(true);
+          // We don't want the symbol to be duplicated (e.g. when running
+          // `disas -n func`), but we also don't want to erase this entry (to
+          // preserve the original symbol order), so we mark it as additional.
+          symbol.SetType(lldb::eSymbolTypeAdditional);
         } else {
-          // Short string that fits into the symbol table name which is 8
-          // bytes
-          offset += sizeof(symbol.name) - 4; // Skip remaining
-          symbol_name_cstr = symtab_data.PeekCStr(symbol_offset);
-          if (symbol_name_cstr == nullptr)
-            break;
-          symbol_name.assign(symbol_name_cstr, sizeof(symbol.name));
-        }
-        symbol.value = symtab_data.GetU32(&offset);
-        symbol.sect = symtab_data.GetU16(&offset);
-        symbol.type = symtab_data.GetU16(&offset);
-        symbol.storage = symtab_data.GetU8(&offset);
-        symbol.naux = symtab_data.GetU8(&offset);
-        symbols[i].GetMangled().SetValue(ConstString(symbol_name.c_str()));
-        if ((int16_t)symbol.sect >= 1) {
-          Address symbol_addr(sect_list->FindSectionByID(symbol.sect),
-                              symbol.value);
-          symbols[i].GetAddressRef() = symbol_addr;
-          symbols[i].SetType(MapSymbolType(symbol.type));
-        }
-
-        if (symbol.naux > 0) {
-          i += symbol.naux;
-          offset += symbol.naux * symbol_size;
+          // It is possible for a symbol to be exported in a different name
+          // from its original. In this case keep both entries so lookup using
+          // either names will work. If this symbol has an invalid type, replace
+          // it with the type from the export symbol.
+          if (symbol.GetType() == lldb::eSymbolTypeInvalid)
+            symbol.SetType(exported->GetType());
         }
       }
+    } else if (section_number == llvm::COFF::IMAGE_SYM_ABSOLUTE) {
+      symbol.GetAddressRef() = Address(coff_sym_ref.getValue());
+      symbol.SetType(lldb::eSymbolTypeAbsolute);
     }
-  }
-
-  // Read export header
-  if (coff_data_dir_export_table < m_coff_header_opt.data_dirs.size() &&
-      m_coff_header_opt.data_dirs[coff_data_dir_export_table].vmsize > 0 &&
-      m_coff_header_opt.data_dirs[coff_data_dir_export_table].vmaddr > 0) {
-    export_directory_entry export_table;
-    uint32_t data_start =
-        m_coff_header_opt.data_dirs[coff_data_dir_export_table].vmaddr;
-
-    DataExtractor symtab_data = ReadImageDataByRVA(
-        data_start, m_coff_header_opt.data_dirs[0].vmsize);
-    lldb::offset_t offset = 0;
-
-    // Read export_table header
-    export_table.characteristics = symtab_data.GetU32(&offset);
-    export_table.time_date_stamp = symtab_data.GetU32(&offset);
-    export_table.major_version = symtab_data.GetU16(&offset);
-    export_table.minor_version = symtab_data.GetU16(&offset);
-    export_table.name = symtab_data.GetU32(&offset);
-    export_table.base = symtab_data.GetU32(&offset);
-    export_table.number_of_functions = symtab_data.GetU32(&offset);
-    export_table.number_of_names = symtab_data.GetU32(&offset);
-    export_table.address_of_functions = symtab_data.GetU32(&offset);
-    export_table.address_of_names = symtab_data.GetU32(&offset);
-    export_table.address_of_name_ordinals = symtab_data.GetU32(&offset);
-
-    bool has_ordinal = export_table.address_of_name_ordinals != 0;
-
-    lldb::offset_t name_offset = export_table.address_of_names - data_start;
-    lldb::offset_t name_ordinal_offset =
-        export_table.address_of_name_ordinals - data_start;
-
-    Symbol *symbols = symtab.Resize(export_table.number_of_names);
-
-    std::string symbol_name;
-
-    // Read each export table entry
-    for (size_t i = 0; i < export_table.number_of_names; ++i) {
-      uint32_t name_ordinal =
-          has_ordinal ? symtab_data.GetU16(&name_ordinal_offset) : i;
-      uint32_t name_address = symtab_data.GetU32(&name_offset);
-
-      const char *symbol_name_cstr =
-          symtab_data.PeekCStr(name_address - data_start);
-      symbol_name.assign(symbol_name_cstr);
-
-      lldb::offset_t function_offset = export_table.address_of_functions -
-                                        data_start +
-                                        sizeof(uint32_t) * name_ordinal;
-      uint32_t function_rva = symtab_data.GetU32(&function_offset);
-
-      Address symbol_addr(m_coff_header_opt.image_base + function_rva,
-                          sect_list);
-      symbols[i].GetMangled().SetValue(ConstString(symbol_name.c_str()));
-      symbols[i].GetAddressRef() = symbol_addr;
-      symbols[i].SetType(lldb::eSymbolTypeCode);
-      symbols[i].SetDebug(true);
-    }
+    symtab.AddSymbol(symbol);
   }
 }
 
+ObjectFilePECOFF::rva_symbol_list_t
+ObjectFilePECOFF::AppendFromExportTable(SectionList *sect_list,
+                                        Symtab &symtab) {
+  const auto *export_table = m_binary->getExportTable();
+  if (!export_table)
+    return {};
+  const uint32_t num_syms = export_table->AddressTableEntries;
+  if (num_syms == 0)
+    return {};
+
+  Log *log = GetLog(LLDBLog::Object);
+  rva_symbol_list_t export_list;
+  symtab.Reserve(symtab.GetNumSymbols() + num_syms);
+  // Read each export table entry, ordered by ordinal instead of by name.
+  for (const auto &entry : m_binary->export_directories()) {
+    llvm::StringRef sym_name;
+    if (auto err = entry.getSymbolName(sym_name)) {
+      LLDB_LOG(log,
+               "ObjectFilePECOFF::AppendFromExportTable - failed to get export "
+               "table entry name: {0}",
+               llvm::fmt_consume(std::move(err)));
+      continue;
+    }
+    Symbol symbol;
+    // Note: symbol name may be empty if it is only exported by ordinal.
+    symbol.GetMangled().SetValue(ConstString(sym_name));
+
+    uint32_t ordinal;
+    llvm::cantFail(entry.getOrdinal(ordinal));
+    symbol.SetID(ordinal);
+
+    bool is_forwarder;
+    llvm::cantFail(entry.isForwarder(is_forwarder));
+    if (is_forwarder) {
+      // Forwarder exports are redirected by the loader transparently, but keep
+      // it in symtab and make a note using the symbol name.
+      llvm::StringRef forwarder_name;
+      if (auto err = entry.getForwardTo(forwarder_name)) {
+        LLDB_LOG(log,
+                 "ObjectFilePECOFF::AppendFromExportTable - failed to get "
+                 "forwarder name of forwarder export '{0}': {1}",
+                 sym_name, llvm::fmt_consume(std::move(err)));
+        continue;
+      }
+      llvm::SmallString<256> new_name = {symbol.GetDisplayName().GetStringRef(),
+                                         " (forwarded to ", forwarder_name,
+                                         ")"};
+      symbol.GetMangled().SetDemangledName(ConstString(new_name.str()));
+      symbol.SetDemangledNameIsSynthesized(true);
+    }
+
+    uint32_t function_rva;
+    if (auto err = entry.getExportRVA(function_rva)) {
+      LLDB_LOG(log,
+               "ObjectFilePECOFF::AppendFromExportTable - failed to get "
+               "address of export entry '{0}': {1}",
+               sym_name, llvm::fmt_consume(std::move(err)));
+      continue;
+    }
+    // Skip the symbol if it doesn't look valid.
+    if (function_rva == 0 && sym_name.empty())
+      continue;
+    symbol.GetAddressRef() =
+        Address(m_coff_header_opt.image_base + function_rva, sect_list);
+
+    // An exported symbol may be either code or data. Guess by checking whether
+    // the section containing the symbol is executable.
+    symbol.SetType(lldb::eSymbolTypeData);
+    if (!is_forwarder)
+      if (auto section_sp = symbol.GetAddressRef().GetSection())
+        if (section_sp->GetPermissions() & ePermissionsExecutable)
+          symbol.SetType(lldb::eSymbolTypeCode);
+    symbol.SetExternal(true);
+    uint32_t idx = symtab.AddSymbol(symbol);
+    export_list.push_back(std::make_pair(function_rva, idx));
+  }
+  std::stable_sort(export_list.begin(), export_list.end(),
+                   RVASymbolListCompareRVA);
+  return export_list;
+}
+
 std::unique_ptr<CallFrameInfo> ObjectFilePECOFF::CreateCallFrameInfo() {
-  if (coff_data_dir_exception_table >= m_coff_header_opt.data_dirs.size())
+  if (llvm::COFF::EXCEPTION_TABLE >= m_coff_header_opt.data_dirs.size())
     return {};
 
   data_directory data_dir_exception =
-      m_coff_header_opt.data_dirs[coff_data_dir_exception_table];
+      m_coff_header_opt.data_dirs[llvm::COFF::EXCEPTION_TABLE];
   if (!data_dir_exception.vmaddr)
     return {};
 
@@ -1084,7 +1131,7 @@ uint32_t ObjectFilePECOFF::ParseDependentModules() {
     // with the help of the object file's directory.
     llvm::SmallString<128> dll_fullpath;
     FileSpec dll_specs(dll_name);
-    dll_specs.GetDirectory().SetString(m_file.GetDirectory().GetCString());
+    dll_specs.SetDirectory(m_file.GetDirectory());
 
     if (!llvm::sys::fs::real_path(dll_specs.GetPath(), dll_fullpath))
       m_deps_filespec->EmplaceBack(dll_fullpath);

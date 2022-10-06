@@ -133,9 +133,9 @@ private:
   /// CFI state at the entry to this basic block.
   int32_t CFIState{-1};
 
-  /// In cases where the parent function has been split, IsCold == true means
-  /// this BB will be allocated outside its parent function.
-  bool IsCold{false};
+  /// In cases where the parent function has been split, FragmentNum > 0 means
+  /// this BB will be allocated in a fragment outside its parent function.
+  FragmentNum Fragment;
 
   /// Indicates if the block could be outlined.
   bool CanOutline{true};
@@ -424,6 +424,9 @@ public:
   /// Return branch info corresponding to an edge going to \p Succ basic block.
   BinaryBranchInfo &getBranchInfo(const BinaryBasicBlock &Succ);
 
+  /// Return branch info corresponding to an edge going to \p Succ basic block.
+  const BinaryBranchInfo &getBranchInfo(const BinaryBasicBlock &Succ) const;
+
   /// Return branch info corresponding to an edge going to a basic block with
   /// label \p Label.
   BinaryBranchInfo &getBranchInfo(const MCSymbol *Label);
@@ -672,13 +675,21 @@ public:
 
   void markValid(const bool Valid) { IsValid = Valid; }
 
-  FragmentNum getFragmentNum() const {
-    return IsCold ? FragmentNum::cold() : FragmentNum::hot();
+  FragmentNum getFragmentNum() const { return Fragment; }
+
+  void setFragmentNum(const FragmentNum Value) { Fragment = Value; }
+
+  bool isSplit() const { return Fragment != FragmentNum::main(); }
+
+  bool isCold() const {
+    assert(Fragment.get() < 2 &&
+           "Function is split into more than two (hot/cold)-fragments");
+    return isSplit();
   }
 
-  bool isCold() const { return IsCold; }
-
-  void setIsCold(const bool Flag) { IsCold = Flag; }
+  void setIsCold(const bool Flag) {
+    Fragment = Flag ? FragmentNum::cold() : FragmentNum::main();
+  }
 
   /// Return true if the block can be outlined. At the moment we disallow
   /// outlining of blocks that can potentially throw exceptions or are
@@ -974,7 +985,7 @@ private:
 #if defined(LLVM_ON_UNIX)
 /// Keep the size of the BinaryBasicBlock within a reasonable size class
 /// (jemalloc bucket) on Linux
-static_assert(sizeof(BinaryBasicBlock) <= 256, "");
+static_assert(sizeof(BinaryBasicBlock) <= 256);
 #endif
 
 bool operator<(const BinaryBasicBlock &LHS, const BinaryBasicBlock &RHS);

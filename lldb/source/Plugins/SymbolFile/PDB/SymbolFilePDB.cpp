@@ -1057,7 +1057,7 @@ SymbolFilePDB::ParseVariables(const lldb_private::SymbolContext &sc,
         switch (lexical_parent->getSymTag()) {
         case PDB_SymType::Exe:
           assert(sc.comp_unit);
-          LLVM_FALLTHROUGH;
+          [[fallthrough]];
         case PDB_SymType::Compiland: {
           if (sc.comp_unit) {
             local_variable_list_sp = sc.comp_unit->GetVariableList(false);
@@ -1305,12 +1305,17 @@ void SymbolFilePDB::CacheFunctionNames() {
 }
 
 void SymbolFilePDB::FindFunctions(
-    lldb_private::ConstString name,
+    const lldb_private::Module::LookupInfo &lookup_info,
     const lldb_private::CompilerDeclContext &parent_decl_ctx,
-    FunctionNameType name_type_mask, bool include_inlines,
+    bool include_inlines,
     lldb_private::SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  ConstString name = lookup_info.GetLookupName();
+  FunctionNameType name_type_mask = lookup_info.GetNameTypeMask();
   lldbassert((name_type_mask & eFunctionNameTypeAuto) == 0);
+
+  if (name_type_mask & eFunctionNameTypeFull)
+    name = lookup_info.GetName();
 
   if (name_type_mask == eFunctionNameTypeNone)
     return;
@@ -1613,9 +1618,7 @@ void SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,
 
   if (can_parse) {
     if (auto *type = ResolveTypeUID(pdb_symbol.getSymIndexId())) {
-      auto result =
-          std::find(type_collection.begin(), type_collection.end(), type);
-      if (result == type_collection.end())
+      if (!llvm::is_contained(type_collection, type))
         type_collection.push_back(type);
     }
   }
@@ -1940,7 +1943,7 @@ SymbolFilePDB::GetMangledForPDBFunc(const llvm::pdb::PDBSymbolFunc &pdb_func) {
   if (!func_decorated_name.empty()) {
     mangled.SetMangledName(ConstString(func_decorated_name));
 
-    // For MSVC, format of C funciton's decorated name depends on calling
+    // For MSVC, format of C function's decorated name depends on calling
     // convention. Unfortunately none of the format is recognized by current
     // LLDB. For example, `_purecall` is a __cdecl C function. From PDB,
     // `__purecall` is retrieved as both its decorated and undecorated name
@@ -2010,8 +2013,7 @@ uint32_t SymbolFilePDB::GetCompilandId(const llvm::pdb::PDBSymbolData &data) {
         auto &sec_cs = m_sec_contribs[sec];
 
         auto offset = SectionContrib->getAddressOffset();
-        auto it =
-            std::upper_bound(sec_cs.begin(), sec_cs.end(), offset, pred_upper);
+        auto it = llvm::upper_bound(sec_cs, offset, pred_upper);
 
         auto size = SectionContrib->getLength();
         sec_cs.insert(it, {offset, size, comp_id});
@@ -2036,8 +2038,7 @@ uint32_t SymbolFilePDB::GetCompilandId(const llvm::pdb::PDBSymbolData &data) {
   if (DataSection) {
     // Search by section contributions
     auto &sec_cs = m_sec_contribs[DataSection];
-    auto it =
-        std::upper_bound(sec_cs.begin(), sec_cs.end(), DataOffset, pred_upper);
+    auto it = llvm::upper_bound(sec_cs, DataOffset, pred_upper);
     if (it != sec_cs.begin()) {
       --it;
       if (DataOffset < it->Offset + it->Size)

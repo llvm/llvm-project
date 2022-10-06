@@ -497,6 +497,12 @@ LLVM_READONLY
 int getVOPDFull(unsigned OpX, unsigned OpY);
 
 LLVM_READONLY
+bool isVOPD(unsigned Opc);
+
+LLVM_READONLY
+bool isTrue16Inst(unsigned Opc);
+
+LLVM_READONLY
 unsigned mapWMMA2AddrTo3AddrOpcode(unsigned Opc);
 
 LLVM_READONLY

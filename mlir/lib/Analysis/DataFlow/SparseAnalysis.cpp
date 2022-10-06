@@ -41,7 +41,7 @@ LogicalResult AbstractSparseDataFlowAnalysis::initialize(Operation *top) {
     if (region.empty())
       continue;
     for (Value argument : region.front().getArguments())
-      markAllPessimisticFixpoint(getLatticeElement(argument));
+      setAllToEntryStates(getLatticeElement(argument));
   }
 
   return initializeRecursively(top);
@@ -87,16 +87,10 @@ void AbstractSparseDataFlowAnalysis::visitOperation(Operation *op) {
   // Get the result lattices.
   SmallVector<AbstractSparseLattice *> resultLattices;
   resultLattices.reserve(op->getNumResults());
-  // Track whether all results have reached their fixpoint.
-  bool allAtFixpoint = true;
   for (Value result : op->getResults()) {
     AbstractSparseLattice *resultLattice = getLatticeElement(result);
-    allAtFixpoint &= resultLattice->isAtFixpoint();
     resultLattices.push_back(resultLattice);
   }
-  // If all result lattices have reached a fixpoint, there is nothing to do.
-  if (allAtFixpoint)
-    return;
 
   // The results of a region branch operation are determined by control-flow.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
@@ -110,7 +104,7 @@ void AbstractSparseDataFlowAnalysis::visitOperation(Operation *op) {
     // If not all return sites are known, then conservatively assume we can't
     // reason about the data-flow.
     if (!predecessors->allPredecessorsKnown())
-      return markAllPessimisticFixpoint(resultLattices);
+      return setAllToEntryStates(resultLattices);
     for (Operation *predecessor : predecessors->getKnownPredecessors())
       for (auto it : llvm::zip(predecessor->getOperands(), resultLattices))
         join(std::get<1>(it), *getLatticeElementFor(op, std::get<0>(it)));
@@ -123,9 +117,6 @@ void AbstractSparseDataFlowAnalysis::visitOperation(Operation *op) {
   for (Value operand : op->getOperands()) {
     AbstractSparseLattice *operandLattice = getLatticeElement(operand);
     operandLattice->useDefSubscribe(this);
-    // If any of the operand states are not initialized, bail out.
-    if (operandLattice->isUninitialized())
-      return;
     operandLattices.push_back(operandLattice);
   }
 
@@ -145,16 +136,10 @@ void AbstractSparseDataFlowAnalysis::visitBlock(Block *block) {
   // Get the argument lattices.
   SmallVector<AbstractSparseLattice *> argLattices;
   argLattices.reserve(block->getNumArguments());
-  bool allAtFixpoint = true;
   for (BlockArgument argument : block->getArguments()) {
     AbstractSparseLattice *argLattice = getLatticeElement(argument);
-    allAtFixpoint &= argLattice->isAtFixpoint();
     argLattices.push_back(argLattice);
   }
-  // If all argument lattices have reached their fixpoints, then there is
-  // nothing to do.
-  if (allAtFixpoint)
-    return;
 
   // The argument lattices of entry blocks are set by region control-flow or the
   // callgraph.
@@ -166,7 +151,7 @@ void AbstractSparseDataFlowAnalysis::visitBlock(Block *block) {
       // If not all callsites are known, conservatively mark all lattices as
       // having reached their pessimistic fixpoints.
       if (!callsites->allPredecessorsKnown())
-        return markAllPessimisticFixpoint(argLattices);
+        return setAllToEntryStates(argLattices);
       for (Operation *callsite : callsites->getKnownPredecessors()) {
         auto call = cast<CallOpInterface>(callsite);
         for (auto it : llvm::zip(call.getArgOperands(), argLattices))
@@ -209,13 +194,13 @@ void AbstractSparseDataFlowAnalysis::visitBlock(Block *block) {
         if (Value operand = operands[it.index()]) {
           join(it.value(), *getLatticeElementFor(block, operand));
         } else {
-          // Conservatively mark internally produced arguments as having reached
-          // their pessimistic fixpoint.
-          markAllPessimisticFixpoint(it.value());
+          // Conservatively consider internally produced arguments as entry
+          // points.
+          setAllToEntryStates(it.value());
         }
       }
     } else {
-      return markAllPessimisticFixpoint(argLattices);
+      return setAllToEntryStates(argLattices);
     }
   }
 }
@@ -243,7 +228,7 @@ void AbstractSparseDataFlowAnalysis::visitRegionSuccessors(
 
     if (!operands) {
       // We can't reason about the data-flow.
-      return markAllPessimisticFixpoint(lattices);
+      return setAllToEntryStates(lattices);
     }
 
     ValueRange inputs = predecessors->getSuccessorInputs(op);
@@ -252,7 +237,7 @@ void AbstractSparseDataFlowAnalysis::visitRegionSuccessors(
 
     unsigned firstIndex = 0;
     if (inputs.size() != lattices.size()) {
-      if (auto *op = point.dyn_cast<Operation *>()) {
+      if (point.dyn_cast<Operation *>()) {
         if (!inputs.empty())
           firstIndex = inputs.front().cast<OpResult>().getResultNumber();
         visitNonControlFlowArgumentsImpl(
@@ -285,10 +270,10 @@ AbstractSparseDataFlowAnalysis::getLatticeElementFor(ProgramPoint point,
   return state;
 }
 
-void AbstractSparseDataFlowAnalysis::markAllPessimisticFixpoint(
+void AbstractSparseDataFlowAnalysis::setAllToEntryStates(
     ArrayRef<AbstractSparseLattice *> lattices) {
   for (AbstractSparseLattice *lattice : lattices)
-    propagateIfChanged(lattice, lattice->markPessimisticFixpoint());
+    setToEntryState(lattice);
 }
 
 void AbstractSparseDataFlowAnalysis::join(AbstractSparseLattice *lhs,

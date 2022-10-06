@@ -161,8 +161,7 @@ namespace {
 /// We traverse all operations but only record the ones that appear in
 /// `toSort` for the final result.
 struct DFSState {
-  DFSState(const SetVector<Operation *> &set)
-      : toSort(set), topologicalCounts(), seen() {}
+  DFSState(const SetVector<Operation *> &set) : toSort(set), seen() {}
   const SetVector<Operation *> &toSort;
   SmallVector<Operation *, 16> topologicalCounts;
   DenseSet<Operation *> seen;

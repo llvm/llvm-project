@@ -9,6 +9,8 @@
 #include "../lib/Transforms/Vectorize/VPlan.h"
 #include "../lib/Transforms/Vectorize/VPlanTransforms.h"
 #include "VPlanTestBase.h"
+#include "llvm/ADT/Triple.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "gtest/gtest.h"
 #include <string>
 
@@ -133,11 +135,12 @@ compound=true
 )";
   EXPECT_EQ(ExpectedStr, FullDump);
 #endif
-
+  TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
+  TargetLibraryInfo TLI(TLII);
   SmallPtrSet<Instruction *, 1> DeadInstructions;
   VPlanTransforms::VPInstructionsToVPRecipes(
       LI->getLoopFor(LoopHeader), Plan, [](PHINode *P) { return nullptr; },
-      DeadInstructions, *SE);
+      DeadInstructions, *SE, TLI);
 }
 
 TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
@@ -165,9 +168,11 @@ TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
   auto Plan = buildHCFG(LoopHeader);
 
   SmallPtrSet<Instruction *, 1> DeadInstructions;
+  TargetLibraryInfoImpl TLII(Triple(M.getTargetTriple()));
+  TargetLibraryInfo TLI(TLII);
   VPlanTransforms::VPInstructionsToVPRecipes(
       LI->getLoopFor(LoopHeader), Plan, [](PHINode *P) { return nullptr; },
-      DeadInstructions, *SE);
+      DeadInstructions, *SE, TLI);
 
   VPBlockBase *Entry = Plan->getEntry()->getEntryBasicBlock();
   EXPECT_NE(nullptr, Entry->getSingleSuccessor());

@@ -11,6 +11,9 @@ int aa = 1 + 1.0iF;
 int bb = 0;
 bb += 1i;
 
+typedef __complex__ float ComplexFloat;
+int cc = 1 + (ComplexFloat)(1.0iF);
+
 result = arr*ii;
 result = ii*brr;
 

@@ -13,23 +13,31 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-    {
+TEST_CONSTEXPR_CXX23 bool test() {
+  {
     std::unique_ptr<int> p1 = std::make_unique<int>(1);
-    assert ( *p1 == 1 );
-    p1 = std::make_unique<int> ();
-    assert ( *p1 == 0 );
-    }
+    assert(*p1 == 1);
+    p1 = std::make_unique<int>();
+    assert(*p1 == 0);
+  }
 
-    {
-    std::unique_ptr<std::string> p2 = std::make_unique<std::string> ( "Meow!" );
-    assert ( *p2 == "Meow!" );
-    p2 = std::make_unique<std::string> ();
-    assert ( *p2 == "" );
-    p2 = std::make_unique<std::string> ( 6, 'z' );
-    assert ( *p2 == "zzzzzz" );
-    }
+  {
+    std::unique_ptr<std::string> p2 = std::make_unique<std::string>("Meow!");
+    assert(*p2 == "Meow!");
+    p2 = std::make_unique<std::string>();
+    assert(*p2 == "");
+    p2 = std::make_unique<std::string>(6, 'z');
+    assert(*p2 == "zzzzzz");
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 23
+  static_assert(test());
+#endif
 
   return 0;
 }

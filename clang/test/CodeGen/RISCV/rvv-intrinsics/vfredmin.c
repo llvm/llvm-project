@@ -303,3 +303,39 @@ vfloat16m1_t test_vfredmin_vs_f16m4_f16m1_m (vbool4_t mask, vfloat16m1_t dest, v
 vfloat16m1_t test_vfredmin_vs_f16m8_f16m1_m (vbool2_t mask, vfloat16m1_t dest, vfloat16m8_t vector, vfloat16m1_t scalar, size_t vl) {
   return vfredmin_vs_f16m8_f16m1_m(mask, dest, vector, scalar, vl);
 }
+
+// CHECK-RV64-LABEL: @test_vfredmin_vs_f32mf2_f32m1_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vfredmin.nxv2f32.nxv1f32.i64(<vscale x 2 x float> [[MERGE:%.*]], <vscale x 1 x float> [[VECTOR:%.*]], <vscale x 2 x float> [[SCALAR:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
+//
+vfloat32m1_t test_vfredmin_vs_f32mf2_f32m1_tu(vfloat32m1_t merge, vfloat32mf2_t vector, vfloat32m1_t scalar, size_t vl) {
+  return vfredmin_vs_f32mf2_f32m1_tu(merge, vector, scalar, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfredmin_vs_f32mf2_f32m1_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vfredmin.nxv2f32.nxv1f32.i64(<vscale x 2 x float> undef, <vscale x 1 x float> [[VECTOR:%.*]], <vscale x 2 x float> [[SCALAR:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
+//
+vfloat32m1_t test_vfredmin_vs_f32mf2_f32m1_ta(vfloat32mf2_t vector, vfloat32m1_t scalar, size_t vl) {
+  return vfredmin_vs_f32mf2_f32m1_ta(vector, scalar, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfredmin_vs_f32mf2_f32m1_tum(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vfredmin.mask.nxv2f32.nxv1f32.i64(<vscale x 2 x float> [[MERGE:%.*]], <vscale x 1 x float> [[VECTOR:%.*]], <vscale x 2 x float> [[SCALAR:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
+//
+vfloat32m1_t test_vfredmin_vs_f32mf2_f32m1_tum(vbool64_t mask, vfloat32m1_t merge, vfloat32mf2_t vector, vfloat32m1_t scalar, size_t vl) {
+  return vfredmin_vs_f32mf2_f32m1_tum(mask, merge, vector, scalar, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vfredmin_vs_f32mf2_f32m1_tam(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x float> @llvm.riscv.vfredmin.mask.nxv2f32.nxv1f32.i64(<vscale x 2 x float> undef, <vscale x 1 x float> [[VECTOR:%.*]], <vscale x 2 x float> [[SCALAR:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x float> [[TMP0]]
+//
+vfloat32m1_t test_vfredmin_vs_f32mf2_f32m1_tam(vbool64_t mask, vfloat32mf2_t vector, vfloat32m1_t scalar, size_t vl) {
+  return vfredmin_vs_f32mf2_f32m1_tam(mask, vector, scalar, vl);
+}

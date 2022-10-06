@@ -23,7 +23,7 @@ define void @cond_inv_load_i32i32i16(i32* noalias nocapture %a, i32* noalias noc
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32* [[TMP4]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, <vscale x 4 x i32>* [[TMP5]], align 4
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <vscale x 4 x i32> [[WIDE_LOAD]], zeroinitializer
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i16> @llvm.masked.gather.nxv4i16.nxv4p0i16(<vscale x 4 x i16*> [[BROADCAST_SPLAT]], i32 2, <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i16> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i16> @llvm.masked.gather.nxv4i16.nxv4p0i16(<vscale x 4 x i16*> [[BROADCAST_SPLAT]], i32 2, <vscale x 4 x i1> [[TMP6]], <vscale x 4 x i16> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = sext <vscale x 4 x i16> [[WIDE_MASKED_GATHER]] to <vscale x 4 x i32>
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[TMP8]] to <vscale x 4 x i32>*
@@ -105,7 +105,7 @@ define void @cond_inv_load_f64f64f64(double* noalias nocapture %a, double* noali
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[TMP4]] to <vscale x 4 x double>*
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x double>, <vscale x 4 x double>* [[TMP5]], align 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = fcmp ogt <vscale x 4 x double> [[WIDE_LOAD]], shufflevector (<vscale x 4 x double> insertelement (<vscale x 4 x double> poison, double 4.000000e-01, i32 0), <vscale x 4 x double> poison, <vscale x 4 x i32> zeroinitializer)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x double> @llvm.masked.gather.nxv4f64.nxv4p0f64(<vscale x 4 x double*> [[BROADCAST_SPLAT]], i32 8, <vscale x 4 x i1> [[TMP6]], <vscale x 4 x double> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x double> @llvm.masked.gather.nxv4f64.nxv4p0f64(<vscale x 4 x double*> [[BROADCAST_SPLAT]], i32 8, <vscale x 4 x i1> [[TMP6]], <vscale x 4 x double> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr double, double* [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast double* [[TMP7]] to <vscale x 4 x double>*
 ; CHECK-NEXT:    call void @llvm.masked.store.nxv4f64.p0nxv4f64(<vscale x 4 x double> [[WIDE_MASKED_GATHER]], <vscale x 4 x double>* [[TMP8]], i32 8, <vscale x 4 x i1> [[TMP6]])
@@ -188,7 +188,7 @@ define void @invariant_load_cond(i32* noalias nocapture %a, i32* nocapture reado
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, i32* [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i32* [[TMP8]] to <vscale x 4 x i32>*
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0nxv4i32(<vscale x 4 x i32>* [[TMP9]], i32 4, <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i32> poison)
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0i32(<vscale x 4 x i32*> [[DOTSPLAT]], i32 4, <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i32> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0i32(<vscale x 4 x i32*> [[DOTSPLAT]], i32 4, <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i32> poison)
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <vscale x 4 x i32> [[WIDE_MASKED_GATHER]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr i32, i32* [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast i32* [[TMP11]] to <vscale x 4 x i32>*

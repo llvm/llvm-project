@@ -190,7 +190,7 @@ define <4 x i32> @half_shuffle_i32x4(<4 x i32> %src) {
 ; CHECK-LABEL: half_shuffle_i32x4:
 ; CHECK:         .functype half_shuffle_i32x4 (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i8x16.shuffle $push0=, $0, $0, 0, 0, 0, 0, 8, 9, 10, 11, 0, 1, 2, 3, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle $push0=, $0, $0, 0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    i32.const $push1=, 0
 ; CHECK-NEXT:    i32x4.replace_lane $push2=, $pop0, 0, $pop1
 ; CHECK-NEXT:    i32.const $push3=, 3

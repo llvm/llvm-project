@@ -29,6 +29,9 @@ namespace {
 enum EdgeKind_coff_x86_64 : Edge::Kind {
   PCRel32 = x86_64::FirstPlatformRelocation,
   Pointer32NB,
+  Pointer64,
+  SectionIdx16,
+  SecRel32,
 };
 
 class COFFJITLinker_x86_64 : public JITLinker<COFFJITLinker_x86_64> {
@@ -108,6 +111,57 @@ private:
       Addend -= 1;
       break;
     }
+    case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_REL32_2: {
+      Kind = EdgeKind_coff_x86_64::PCRel32;
+      Addend = *reinterpret_cast<const support::little32_t *>(FixupPtr);
+      Addend -= 2;
+      break;
+    }
+    case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_REL32_3: {
+      Kind = EdgeKind_coff_x86_64::PCRel32;
+      Addend = *reinterpret_cast<const support::little32_t *>(FixupPtr);
+      Addend -= 3;
+      break;
+    }
+    case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_REL32_4: {
+      Kind = EdgeKind_coff_x86_64::PCRel32;
+      Addend = *reinterpret_cast<const support::little32_t *>(FixupPtr);
+      Addend -= 4;
+      break;
+    }
+    case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_REL32_5: {
+      Kind = EdgeKind_coff_x86_64::PCRel32;
+      Addend = *reinterpret_cast<const support::little32_t *>(FixupPtr);
+      Addend -= 5;
+      break;
+    }
+    case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_ADDR64: {
+      Kind = EdgeKind_coff_x86_64::Pointer64;
+      Addend = *reinterpret_cast<const support::little64_t *>(FixupPtr);
+      break;
+    }
+    case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_SECTION: {
+      Kind = EdgeKind_coff_x86_64::SectionIdx16;
+      Addend = *reinterpret_cast<const support::little16_t *>(FixupPtr);
+      uint64_t SectionIdx = 0;
+      if (COFFSymbol.isAbsolute())
+        SectionIdx = getObject().getNumberOfSections() + 1;
+      else
+        SectionIdx = COFFSymbol.getSectionNumber();
+      auto *AbsSym = &getGraph().addAbsoluteSymbol(
+          "secidx", orc::ExecutorAddr(SectionIdx), 2, Linkage::Strong,
+          Scope::Local, false);
+      GraphSymbol = AbsSym;
+      break;
+    }
+    case COFF::RelocationTypeAMD64::IMAGE_REL_AMD64_SECREL: {
+      // FIXME: SECREL to external symbol should be handled
+      if (!GraphSymbol->isDefined())
+        return Error::success();
+      Kind = EdgeKind_coff_x86_64::SecRel32;
+      Addend = *reinterpret_cast<const support::little32_t *>(FixupPtr);
+      break;
+    }
     default: {
       return make_error<JITLinkError>("Unsupported x86_64 relocation:" +
                                       formatv("{0:d}", Rel.getType()));
@@ -150,6 +204,21 @@ public:
           E.setKind(x86_64::PCRel32);
           break;
         }
+        case EdgeKind_coff_x86_64::Pointer64: {
+          E.setKind(x86_64::Pointer64);
+          break;
+        }
+        case EdgeKind_coff_x86_64::SectionIdx16: {
+          E.setKind(x86_64::Pointer16);
+          break;
+        }
+        case EdgeKind_coff_x86_64::SecRel32: {
+          E.setAddend(E.getAddend() -
+                      getSectionStart(E.getTarget().getBlock().getSection())
+                          .getValue());
+          E.setKind(x86_64::Pointer32);
+          break;
+        }
         default:
           break;
         }
@@ -160,6 +229,15 @@ public:
 
 private:
   static StringRef getImageBaseSymbolName() { return "__ImageBase"; }
+
+  orc::ExecutorAddr getSectionStart(Section &Sec) {
+    if (!SectionStartCache.count(&Sec)) {
+      SectionRange Range(Sec);
+      SectionStartCache[&Sec] = Range.getStart();
+    }
+    return SectionStartCache[&Sec];
+  }
+
   Expected<JITTargetAddress> getImageBaseAddress(LinkGraph &G,
                                                  JITLinkContext &Ctx) {
     if (this->ImageBase)
@@ -189,6 +267,8 @@ private:
     this->ImageBase = ImageBase;
     return ImageBase;
   }
+
+  DenseMap<Section *, orc::ExecutorAddr> SectionStartCache;
   JITTargetAddress ImageBase = 0;
 };
 
@@ -213,6 +293,12 @@ const char *getCOFFX86RelocationKindName(Edge::Kind R) {
     return "PCRel32";
   case Pointer32NB:
     return "Pointer32NB";
+  case Pointer64:
+    return "Pointer64";
+  case SectionIdx16:
+    return "SectionIdx16";
+  case SecRel32:
+    return "SecRel32";
   default:
     return x86_64::getEdgeKindName(R);
   }

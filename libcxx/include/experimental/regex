@@ -48,6 +48,8 @@ namespace pmr {
 
 _LIBCPP_BEGIN_NAMESPACE_LFTS_PMR
 
+#ifndef _LIBCPP_CXX03_LANG
+
 template <class _BiDirIter>
 using match_results =
     _VSTD::match_results<_BiDirIter,
@@ -59,6 +61,8 @@ typedef match_results<_VSTD_LFTS_PMR::string::const_iterator> smatch;
 typedef match_results<const wchar_t*> wcmatch;
 typedef match_results<_VSTD_LFTS_PMR::wstring::const_iterator> wsmatch;
 #endif
+
+#endif // _LIBCPP_CXX03_LANG
 
 _LIBCPP_END_NAMESPACE_LFTS_PMR
 

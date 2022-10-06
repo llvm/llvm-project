@@ -192,13 +192,18 @@ This gives the ``DiagnosticConsumer`` information about what the argument means
 without requiring it to use a specific presentation (consider this MVC for
 Clang :).
 
+It is really easy to add format specifiers to the Clang diagnostics system, but
+they should be discussed before they are added.  If you are creating a lot of
+repetitive diagnostics and/or have an idea for a useful formatter, please bring
+it up on the cfe-dev mailing list.
+
 Here are the different diagnostic argument formats currently supported by
 Clang:
 
 **"s" format**
 
 Example:
-  ``"requires %1 parameter%s1"``
+  ``"requires %0 parameter%s0"``
 Class:
   Integers
 Description:
@@ -206,12 +211,15 @@ Description:
   diagnostics.  When the integer is 1, it prints as nothing.  When the integer
   is not 1, it prints as "``s``".  This allows some simple grammatical forms to
   be to be handled correctly, and eliminates the need to use gross things like
-  ``"requires %1 parameter(s)"``.
+  ``"requires %1 parameter(s)"``. Note, this only handles adding a simple
+  "``s``" character, it will not handle situations where pluralization is more
+  complicated such as turning ``fancy`` into ``fancies`` or ``mouse`` into
+  ``mice``. You can use the "plural" format specifier to handle such situations.
 
 **"select" format**
 
 Example:
-  ``"must be a %select{unary|binary|unary or binary}2 operator"``
+  ``"must be a %select{unary|binary|unary or binary}0 operator"``
 Class:
   Integers
 Description:
@@ -219,7 +227,7 @@ Description:
   into one common one, without requiring the difference to be specified as an
   English string argument.  Instead of specifying the string, the diagnostic
   gets an integer argument and the format string selects the numbered option.
-  In this case, the "``%2``" value must be an integer in the range [0..2].  If
+  In this case, the "``%0``" value must be an integer in the range [0..2].  If
   it is 0, it prints "unary", if it is 1 it prints "binary" if it is 2, it
   prints "unary or binary".  This allows other language translations to
   substitute reasonable words (or entire phrases) based on the semantics of the
@@ -229,11 +237,11 @@ Description:
 **"plural" format**
 
 Example:
-  ``"you have %1 %plural{1:mouse|:mice}1 connected to your computer"``
+  ``"you have %0 %plural{1:mouse|:mice}0 connected to your computer"``
 Class:
   Integers
 Description:
-  This is a formatter for complex plural forms.  It is designed to handle even
+  This is a formatter for complex plural forms. It is designed to handle even
   the requirements of languages with very complex plural forms, as many Baltic
   languages have.  The argument consists of a series of expression/form pairs,
   separated by ":", where the first form whose expression evaluates to true is
@@ -245,10 +253,10 @@ Description:
   numeric condition can take one of three forms.
 
   * number: A simple decimal number matches if the argument is the same as the
-    number.  Example: ``"%plural{1:mouse|:mice}4"``
+    number.  Example: ``"%plural{1:mouse|:mice}0"``
   * range: A range in square brackets matches if the argument is within the
     range.  Then range is inclusive on both ends.  Example:
-    ``"%plural{0:none|1:one|[2,5]:some|:many}2"``
+    ``"%plural{0:none|1:one|[2,5]:some|:many}0"``
   * modulo: A modulo operator is followed by a number, and equals sign and
     either a number or a range.  The tests are the same as for plain numbers
     and ranges, but the argument is taken modulo the number first.  Example:
@@ -313,11 +321,6 @@ Description:
   braces before the pipe is printed, with the formatted text replacing the $.
   If tree printing is on, the text after the pipe is printed and a type tree is
   printed after the diagnostic message.
-
-It is really easy to add format specifiers to the Clang diagnostics system, but
-they should be discussed before they are added.  If you are creating a lot of
-repetitive diagnostics and/or have an idea for a useful formatter, please bring
-it up on the cfe-dev mailing list.
 
 **"sub" format**
 

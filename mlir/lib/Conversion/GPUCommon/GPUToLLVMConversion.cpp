@@ -15,8 +15,7 @@
 
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 
-#include "../PassDetail.h"
-#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
@@ -38,6 +37,11 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
 
+namespace mlir {
+#define GEN_PASS_DEF_GPUTOLLVMCONVERSIONPASS
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
+
 using namespace mlir;
 
 static constexpr const char *kGpuBinaryStorageSuffix = "_gpubin_cst";
@@ -45,9 +49,15 @@ static constexpr const char *kGpuBinaryStorageSuffix = "_gpubin_cst";
 namespace {
 
 class GpuToLLVMConversionPass
-    : public GpuToLLVMConversionPassBase<GpuToLLVMConversionPass> {
+    : public impl::GpuToLLVMConversionPassBase<GpuToLLVMConversionPass> {
 public:
   GpuToLLVMConversionPass() = default;
+
+  GpuToLLVMConversionPass(bool kernelBarePtrCallConv)
+      : GpuToLLVMConversionPass() {
+    if (this->kernelBarePtrCallConv.getNumOccurrences() == 0)
+      this->kernelBarePtrCallConv = kernelBarePtrCallConv;
+  }
 
   GpuToLLVMConversionPass(const GpuToLLVMConversionPass &other)
       : GpuToLLVMConversionPassBase(other) {}
@@ -60,6 +70,11 @@ private:
       *this, "gpu-binary-annotation",
       llvm::cl::desc("Annotation attribute string for GPU binary"),
       llvm::cl::init(gpu::getDefaultGpuBinaryAnnotation())};
+  Option<bool> kernelBarePtrCallConv{
+      *this, "use-bare-pointers-for-kernels",
+      llvm::cl::desc("Use bare pointers to pass memref arguments to kernels. "
+                     "The kernel must use the same setting for this option."),
+      llvm::cl::init(false)};
 };
 
 struct FunctionCallBuilder {
@@ -290,9 +305,11 @@ class ConvertLaunchFuncOpToGpuRuntimeCallPattern
     : public ConvertOpToGpuRuntimeCallPattern<gpu::LaunchFuncOp> {
 public:
   ConvertLaunchFuncOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter,
-                                             StringRef gpuBinaryAnnotation)
+                                             StringRef gpuBinaryAnnotation,
+                                             bool kernelBarePtrCallConv)
       : ConvertOpToGpuRuntimeCallPattern<gpu::LaunchFuncOp>(typeConverter),
-        gpuBinaryAnnotation(gpuBinaryAnnotation) {}
+        gpuBinaryAnnotation(gpuBinaryAnnotation),
+        kernelBarePtrCallConv(kernelBarePtrCallConv) {}
 
 private:
   Value generateParamsArray(gpu::LaunchFuncOp launchOp, OpAdaptor adaptor,
@@ -305,6 +322,7 @@ private:
                   ConversionPatternRewriter &rewriter) const override;
 
   llvm::SmallString<32> gpuBinaryAnnotation;
+  bool kernelBarePtrCallConv;
 };
 
 class EraseGpuModuleOpPattern : public OpRewritePattern<gpu::GPUModuleOp> {
@@ -370,14 +388,15 @@ void GpuToLLVMConversionPass::runOnOperation() {
 
   target.addIllegalDialect<gpu::GPUDialect>();
 
-  mlir::arith::populateArithmeticToLLVMConversionPatterns(converter, patterns);
+  mlir::arith::populateArithToLLVMConversionPatterns(converter, patterns);
   mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
   populateVectorToLLVMConversionPatterns(converter, patterns);
   populateMemRefToLLVMConversionPatterns(converter, patterns);
   populateFuncToLLVMConversionPatterns(converter, patterns);
   populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
                                                     target);
-  populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation);
+  populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation,
+                                      kernelBarePtrCallConv);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
@@ -429,7 +448,7 @@ LogicalResult ConvertHostRegisterOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   Location loc = op->getLoc();
 
-  auto memRefType = hostRegisterOp.value().getType();
+  auto memRefType = hostRegisterOp.getValue().getType();
   auto elementType = memRefType.cast<UnrankedMemRefType>().getElementType();
   auto elementSize = getSizeInBytes(loc, elementType, rewriter);
 
@@ -445,6 +464,10 @@ LogicalResult ConvertHostRegisterOpToGpuRuntimeCallPattern::matchAndRewrite(
 LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::AllocOp allocOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
+  if (adaptor.getHostShared())
+    return rewriter.notifyMatchFailure(
+        allocOp, "host_shared allocation is not supported");
+
   MemRefType memRefType = allocOp.getType();
 
   if (failed(areAllLLVMTypes(allocOp, adaptor.getOperands(), rewriter)) ||
@@ -459,15 +482,15 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
   SmallVector<Value, 4> shape;
   SmallVector<Value, 4> strides;
   Value sizeBytes;
-  getMemRefDescriptorSizes(loc, memRefType, adaptor.dynamicSizes(), rewriter,
+  getMemRefDescriptorSizes(loc, memRefType, adaptor.getDynamicSizes(), rewriter,
                            shape, strides, sizeBytes);
 
   // Allocate the underlying buffer and store a pointer to it in the MemRef
   // descriptor.
   Type elementPtrType = this->getElementPtrType(memRefType);
-  auto stream = adaptor.asyncDependencies().front();
+  auto stream = adaptor.getAsyncDependencies().front();
   Value allocatedPtr =
-      allocCallBuilder.create(loc, rewriter, {sizeBytes, stream}).getResult(0);
+      allocCallBuilder.create(loc, rewriter, {sizeBytes, stream}).getResult();
   allocatedPtr =
       rewriter.create<LLVM::BitcastOp>(loc, elementPtrType, allocatedPtr);
 
@@ -493,9 +516,9 @@ LogicalResult ConvertDeallocOpToGpuRuntimeCallPattern::matchAndRewrite(
   Location loc = deallocOp.getLoc();
 
   Value pointer =
-      MemRefDescriptor(adaptor.memref()).allocatedPtr(rewriter, loc);
+      MemRefDescriptor(adaptor.getMemref()).allocatedPtr(rewriter, loc);
   auto casted = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pointer);
-  Value stream = adaptor.asyncDependencies().front();
+  Value stream = adaptor.getAsyncDependencies().front();
   deallocCallBuilder.create(loc, rewriter, {casted, stream});
 
   rewriter.replaceOp(deallocOp, {stream});
@@ -524,7 +547,7 @@ LogicalResult ConvertAsyncYieldToGpuRuntimeCallPattern::matchAndRewrite(
       continue;
     auto idx = operand.getOperandNumber();
     auto stream = adaptor.getOperands()[idx];
-    auto event = eventCreateCallBuilder.create(loc, rewriter, {}).getResult(0);
+    auto event = eventCreateCallBuilder.create(loc, rewriter, {}).getResult();
     eventRecordCallBuilder.create(loc, rewriter, {event, stream});
     newOperands[idx] = event;
     streams.insert(stream);
@@ -552,7 +575,7 @@ static bool isDefinedByCallTo(Value value, StringRef functionName) {
 LogicalResult ConvertWaitOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::WaitOp waitOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  if (waitOp.asyncToken())
+  if (waitOp.getAsyncToken())
     return rewriter.notifyMatchFailure(waitOp, "Cannot convert async op.");
 
   Location loc = waitOp.getLoc();
@@ -582,7 +605,7 @@ LogicalResult ConvertWaitOpToGpuRuntimeCallPattern::matchAndRewrite(
 LogicalResult ConvertWaitAsyncOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::WaitOp waitOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  if (!waitOp.asyncToken())
+  if (!waitOp.getAsyncToken())
     return rewriter.notifyMatchFailure(waitOp, "Can only convert async op.");
 
   Location loc = waitOp.getLoc();
@@ -590,15 +613,14 @@ LogicalResult ConvertWaitAsyncOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto insertionPoint = rewriter.saveInsertionPoint();
   SmallVector<Value, 1> events;
   for (auto pair :
-       llvm::zip(waitOp.asyncDependencies(), adaptor.getOperands())) {
+       llvm::zip(waitOp.getAsyncDependencies(), adaptor.getOperands())) {
     auto operand = std::get<1>(pair);
     if (isDefinedByCallTo(operand, streamCreateCallBuilder.functionName)) {
       // The converted operand's definition created a stream. Insert an event
       // into the stream just after the last use of the original token operand.
       auto *defOp = std::get<0>(pair).getDefiningOp();
       rewriter.setInsertionPointAfter(defOp);
-      auto event =
-          eventCreateCallBuilder.create(loc, rewriter, {}).getResult(0);
+      auto event = eventCreateCallBuilder.create(loc, rewriter, {}).getResult();
       eventRecordCallBuilder.create(loc, rewriter, {event, operand});
       events.push_back(event);
     } else {
@@ -608,7 +630,7 @@ LogicalResult ConvertWaitAsyncOpToGpuRuntimeCallPattern::matchAndRewrite(
     }
   }
   rewriter.restoreInsertionPoint(insertionPoint);
-  auto stream = streamCreateCallBuilder.create(loc, rewriter, {}).getResult(0);
+  auto stream = streamCreateCallBuilder.create(loc, rewriter, {}).getResult();
   for (auto event : events)
     streamWaitEventCallBuilder.create(loc, rewriter, {stream, event});
   for (auto event : events)
@@ -635,9 +657,24 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateParamsArray(
     gpu::LaunchFuncOp launchOp, OpAdaptor adaptor, OpBuilder &builder) const {
   auto loc = launchOp.getLoc();
   auto numKernelOperands = launchOp.getNumKernelOperands();
-  auto arguments = getTypeConverter()->promoteOperands(
-      loc, launchOp.getOperands().take_back(numKernelOperands),
-      adaptor.getOperands().take_back(numKernelOperands), builder);
+  SmallVector<Value, 4> arguments;
+  if (kernelBarePtrCallConv) {
+    // Hack the bare pointer value on just for the argument promotion
+    LLVMTypeConverter *converter = getTypeConverter();
+    LowerToLLVMOptions options = converter->getOptions();
+    LowerToLLVMOptions overrideToMatchKernelOpts = options;
+    overrideToMatchKernelOpts.useBarePtrCallConv = true;
+    converter->dangerousSetOptions(overrideToMatchKernelOpts);
+    arguments = converter->promoteOperands(
+        loc, launchOp.getOperands().take_back(numKernelOperands),
+        adaptor.getOperands().take_back(numKernelOperands), builder);
+    converter->dangerousSetOptions(options);
+  } else {
+    arguments = getTypeConverter()->promoteOperands(
+        loc, launchOp.getOperands().take_back(numKernelOperands),
+        adaptor.getOperands().take_back(numKernelOperands), builder);
+  }
+
   auto numArguments = arguments.size();
   SmallVector<Type, 4> argumentTypes;
   argumentTypes.reserve(numArguments);
@@ -645,25 +682,21 @@ Value ConvertLaunchFuncOpToGpuRuntimeCallPattern::generateParamsArray(
     argumentTypes.push_back(argument.getType());
   auto structType = LLVM::LLVMStructType::getNewIdentified(context, StringRef(),
                                                            argumentTypes);
-  auto one = builder.create<LLVM::ConstantOp>(loc, llvmInt32Type,
-                                              builder.getI32IntegerAttr(1));
+  auto one = builder.create<LLVM::ConstantOp>(loc, llvmInt32Type, 1);
   auto structPtr = builder.create<LLVM::AllocaOp>(
       loc, LLVM::LLVMPointerType::get(structType), one, /*alignment=*/0);
-  auto arraySize = builder.create<LLVM::ConstantOp>(
-      loc, llvmInt32Type, builder.getI32IntegerAttr(numArguments));
+  auto arraySize =
+      builder.create<LLVM::ConstantOp>(loc, llvmInt32Type, numArguments);
   auto arrayPtr = builder.create<LLVM::AllocaOp>(loc, llvmPointerPointerType,
                                                  arraySize, /*alignment=*/0);
-  auto zero = builder.create<LLVM::ConstantOp>(loc, llvmInt32Type,
-                                               builder.getI32IntegerAttr(0));
   for (const auto &en : llvm::enumerate(arguments)) {
-    auto index = builder.create<LLVM::ConstantOp>(
-        loc, llvmInt32Type, builder.getI32IntegerAttr(en.index()));
     auto fieldPtr = builder.create<LLVM::GEPOp>(
         loc, LLVM::LLVMPointerType::get(argumentTypes[en.index()]), structPtr,
-        ArrayRef<Value>{zero, index.getResult()});
+        ArrayRef<LLVM::GEPArg>{0, en.index()});
     builder.create<LLVM::StoreOp>(loc, en.value(), fieldPtr);
-    auto elementPtr = builder.create<LLVM::GEPOp>(loc, llvmPointerPointerType,
-                                                  arrayPtr, index.getResult());
+    auto elementPtr =
+        builder.create<LLVM::GEPOp>(loc, llvmPointerPointerType, arrayPtr,
+                                    ArrayRef<LLVM::GEPArg>{en.index()});
     auto casted =
         builder.create<LLVM::BitcastOp>(loc, llvmPointerType, fieldPtr);
     builder.create<LLVM::StoreOp>(loc, casted, elementPtr);
@@ -718,14 +751,14 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
   if (failed(areAllLLVMTypes(launchOp, adaptor.getOperands(), rewriter)))
     return failure();
 
-  if (launchOp.asyncDependencies().size() > 1)
+  if (launchOp.getAsyncDependencies().size() > 1)
     return rewriter.notifyMatchFailure(
         launchOp, "Cannot convert with more than one async dependency.");
 
   // Fail when the synchronous version of the op has async dependencies. The
   // lowering destroys the stream, and we do not want to check that there is no
   // use of the stream after this op.
-  if (!launchOp.asyncToken() && !launchOp.asyncDependencies().empty())
+  if (!launchOp.getAsyncToken() && !launchOp.getAsyncDependencies().empty())
     return rewriter.notifyMatchFailure(
         launchOp, "Cannot convert non-async op with async dependencies.");
 
@@ -758,27 +791,26 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
       launchOp.getKernelModuleName().getValue(),
       launchOp.getKernelName().getValue(), loc, rewriter);
   auto function = moduleGetFunctionCallBuilder.create(
-      loc, rewriter, {module.getResult(0), kernelName});
-  auto zero = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type,
-                                                rewriter.getI32IntegerAttr(0));
+      loc, rewriter, {module.getResult(), kernelName});
+  Value zero = rewriter.create<LLVM::ConstantOp>(loc, llvmInt32Type, 0);
   Value stream =
-      adaptor.asyncDependencies().empty()
-          ? streamCreateCallBuilder.create(loc, rewriter, {}).getResult(0)
-          : adaptor.asyncDependencies().front();
+      adaptor.getAsyncDependencies().empty()
+          ? streamCreateCallBuilder.create(loc, rewriter, {}).getResult()
+          : adaptor.getAsyncDependencies().front();
   // Create array of pointers to kernel arguments.
   auto kernelParams = generateParamsArray(launchOp, adaptor, rewriter);
   auto nullpointer = rewriter.create<LLVM::NullOp>(loc, llvmPointerPointerType);
-  Value dynamicSharedMemorySize = launchOp.dynamicSharedMemorySize()
-                                      ? launchOp.dynamicSharedMemorySize()
+  Value dynamicSharedMemorySize = launchOp.getDynamicSharedMemorySize()
+                                      ? launchOp.getDynamicSharedMemorySize()
                                       : zero;
   launchKernelCallBuilder.create(
       loc, rewriter,
-      {function.getResult(0), adaptor.gridSizeX(), adaptor.gridSizeY(),
-       adaptor.gridSizeZ(), adaptor.blockSizeX(), adaptor.blockSizeY(),
-       adaptor.blockSizeZ(), dynamicSharedMemorySize, stream, kernelParams,
+      {function.getResult(), adaptor.getGridSizeX(), adaptor.getGridSizeY(),
+       adaptor.getGridSizeZ(), adaptor.getBlockSizeX(), adaptor.getBlockSizeY(),
+       adaptor.getBlockSizeZ(), dynamicSharedMemorySize, stream, kernelParams,
        /*extra=*/nullpointer});
 
-  if (launchOp.asyncToken()) {
+  if (launchOp.getAsyncToken()) {
     // Async launch: make dependent ops use the same stream.
     rewriter.replaceOp(launchOp, {stream});
   } else {
@@ -789,7 +821,7 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
     streamDestroyCallBuilder.create(loc, rewriter, stream);
     rewriter.eraseOp(launchOp);
   }
-  moduleUnloadCallBuilder.create(loc, rewriter, module.getResult(0));
+  moduleUnloadCallBuilder.create(loc, rewriter, module.getResult());
 
   return success();
 }
@@ -797,7 +829,7 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
 LogicalResult ConvertMemcpyOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::MemcpyOp memcpyOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  auto memRefType = memcpyOp.src().getType().cast<MemRefType>();
+  auto memRefType = memcpyOp.getSrc().getType().cast<MemRefType>();
 
   if (failed(areAllLLVMTypes(memcpyOp, adaptor.getOperands(), rewriter)) ||
       !isConvertibleAndHasIdentityMaps(memRefType) ||
@@ -806,13 +838,13 @@ LogicalResult ConvertMemcpyOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   auto loc = memcpyOp.getLoc();
 
-  MemRefDescriptor srcDesc(adaptor.src());
+  MemRefDescriptor srcDesc(adaptor.getSrc());
   Value numElements = getNumElements(rewriter, loc, memRefType, srcDesc);
 
   Type elementPtrType = getElementPtrType(memRefType);
   Value nullPtr = rewriter.create<LLVM::NullOp>(loc, elementPtrType);
-  Value gepPtr = rewriter.create<LLVM::GEPOp>(loc, elementPtrType, nullPtr,
-                                              ArrayRef<Value>{numElements});
+  Value gepPtr =
+      rewriter.create<LLVM::GEPOp>(loc, elementPtrType, nullPtr, numElements);
   auto sizeBytes =
       rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gepPtr);
 
@@ -820,9 +852,9 @@ LogicalResult ConvertMemcpyOpToGpuRuntimeCallPattern::matchAndRewrite(
       loc, llvmPointerType, srcDesc.alignedPtr(rewriter, loc));
   auto dst = rewriter.create<LLVM::BitcastOp>(
       loc, llvmPointerType,
-      MemRefDescriptor(adaptor.dst()).alignedPtr(rewriter, loc));
+      MemRefDescriptor(adaptor.getDst()).alignedPtr(rewriter, loc));
 
-  auto stream = adaptor.asyncDependencies().front();
+  auto stream = adaptor.getAsyncDependencies().front();
   memcpyCallBuilder.create(loc, rewriter, {dst, src, sizeBytes, stream});
 
   rewriter.replaceOp(memcpyOp, {stream});
@@ -833,7 +865,7 @@ LogicalResult ConvertMemcpyOpToGpuRuntimeCallPattern::matchAndRewrite(
 LogicalResult ConvertMemsetOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::MemsetOp memsetOp, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-  auto memRefType = memsetOp.dst().getType().cast<MemRefType>();
+  auto memRefType = memsetOp.getDst().getType().cast<MemRefType>();
 
   if (failed(areAllLLVMTypes(memsetOp, adaptor.getOperands(), rewriter)) ||
       !isConvertibleAndHasIdentityMaps(memRefType) ||
@@ -842,21 +874,21 @@ LogicalResult ConvertMemsetOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   auto loc = memsetOp.getLoc();
 
-  Type valueType = adaptor.value().getType();
+  Type valueType = adaptor.getValue().getType();
   if (!valueType.isIntOrFloat() || valueType.getIntOrFloatBitWidth() != 32) {
     return rewriter.notifyMatchFailure(memsetOp,
                                        "value must be a 32 bit scalar");
   }
 
-  MemRefDescriptor dstDesc(adaptor.dst());
+  MemRefDescriptor dstDesc(adaptor.getDst());
   Value numElements = getNumElements(rewriter, loc, memRefType, dstDesc);
 
   auto value =
-      rewriter.create<LLVM::BitcastOp>(loc, llvmInt32Type, adaptor.value());
+      rewriter.create<LLVM::BitcastOp>(loc, llvmInt32Type, adaptor.getValue());
   auto dst = rewriter.create<LLVM::BitcastOp>(
       loc, llvmPointerType, dstDesc.alignedPtr(rewriter, loc));
 
-  auto stream = adaptor.asyncDependencies().front();
+  auto stream = adaptor.getAsyncDependencies().front();
   memsetCallBuilder.create(loc, rewriter, {dst, value, numElements, stream});
 
   rewriter.replaceOp(memsetOp, {stream});
@@ -867,19 +899,20 @@ LogicalResult ConvertSetDefaultDeviceOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::SetDefaultDeviceOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
   Location loc = op.getLoc();
-  setDefaultDeviceCallBuilder.create(loc, rewriter, {adaptor.devIndex()});
+  setDefaultDeviceCallBuilder.create(loc, rewriter, {adaptor.getDevIndex()});
   rewriter.replaceOp(op, {});
   return success();
 }
 
 std::unique_ptr<mlir::OperationPass<mlir::ModuleOp>>
-mlir::createGpuToLLVMConversionPass() {
-  return std::make_unique<GpuToLLVMConversionPass>();
+mlir::createGpuToLLVMConversionPass(bool kernelBarePtrCallConv) {
+  return std::make_unique<GpuToLLVMConversionPass>(kernelBarePtrCallConv);
 }
 
 void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                RewritePatternSet &patterns,
-                                               StringRef gpuBinaryAnnotation) {
+                                               StringRef gpuBinaryAnnotation,
+                                               bool kernelBarePtrCallConv) {
   converter.addConversion(
       [context = &converter.getContext()](gpu::AsyncTokenType type) -> Type {
         return LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
@@ -893,7 +926,7 @@ void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                ConvertWaitAsyncOpToGpuRuntimeCallPattern,
                ConvertWaitOpToGpuRuntimeCallPattern,
                ConvertAsyncYieldToGpuRuntimeCallPattern>(converter);
-  patterns.add<ConvertLaunchFuncOpToGpuRuntimeCallPattern>(converter,
-                                                           gpuBinaryAnnotation);
+  patterns.add<ConvertLaunchFuncOpToGpuRuntimeCallPattern>(
+      converter, gpuBinaryAnnotation, kernelBarePtrCallConv);
   patterns.add<EraseGpuModuleOpPattern>(&converter.getContext());
 }

@@ -22,6 +22,21 @@
 
 namespace llvm {
 
+// This namespace holds all of the target specific flags that instruction info
+// tracks.
+namespace LoongArchII {
+enum {
+  MO_None,
+  MO_CALL,
+  MO_CALL_PLT,
+  MO_PCREL_HI,
+  MO_PCREL_LO,
+  MO_GOT_PC_HI,
+  MO_GOT_PC_LO,
+  // TODO: Add more flags.
+};
+} // end namespace LoongArchII
+
 namespace LoongArchABI {
 enum ABI {
   ABI_ILP32S,

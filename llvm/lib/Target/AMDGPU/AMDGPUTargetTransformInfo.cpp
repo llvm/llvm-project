@@ -512,13 +512,12 @@ bool GCNTTIImpl::getTgtMemIntrinsic(IntrinsicInst *Inst,
 
 InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-    TTI::OperandValueKind Opd1Info, TTI::OperandValueKind Opd2Info,
-    TTI::OperandValueProperties Opd1PropInfo,
-    TTI::OperandValueProperties Opd2PropInfo, ArrayRef<const Value *> Args,
+    TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
+    ArrayRef<const Value *> Args,
     const Instruction *CxtI) {
 
   // Legalize the type.
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
   // Because we don't have any legal vector operations, but the legal types, we
@@ -588,7 +587,7 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
             return TargetTransformInfo::TCC_Free;
         }
       }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::FADD:
   case ISD::FSUB:
     if (ST->hasPackedFP32Ops() && SLT == MVT::f32)
@@ -657,8 +656,8 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     break;
   }
 
-  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info, Opd2Info,
-                                       Opd1PropInfo, Opd2PropInfo, Args, CxtI);
+  return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
+                                       Args, CxtI);
 }
 
 // Return true if there's a potential benefit from using v2f16/v2i16
@@ -690,7 +689,7 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   Type *RetTy = ICA.getReturnType();
 
   // Legalize the type.
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, RetTy);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
 
   unsigned NElts = LT.second.isVector() ?
     LT.second.getVectorNumElements() : 1;
@@ -769,7 +768,7 @@ GCNTTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *Ty,
   if (!ST->hasVOP3PInsts() || OrigTy.getScalarSizeInBits() != 16)
     return BaseT::getArithmeticReductionCost(Opcode, Ty, FMF, CostKind);
 
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   return LT.first * getFullRateInstrCost();
 }
 
@@ -784,7 +783,7 @@ GCNTTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
   if (!ST->hasVOP3PInsts() || OrigTy.getScalarSizeInBits() != 16)
     return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, CostKind);
 
-  std::pair<InstructionCost, MVT> LT = TLI->getTypeLegalizationCost(DL, Ty);
+  std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   return LT.first * getHalfRateInstrCost(CostKind);
 }
 
@@ -919,6 +918,38 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
     return false;
   }
 
+  // In most cases TID / wavefrontsize is uniform.
+  //
+  // However, if a kernel has uneven dimesions we can have a value of
+  // workitem-id-x divided by the wavefrontsize non-uniform. For example
+  // dimensions (65, 2) will have workitems with address (64, 0) and (0, 1)
+  // packed into a same wave which gives 1 and 0 after the division by 64
+  // respectively.
+  //
+  // FIXME: limit it to 1D kernels only, although that shall be possible
+  // to perform this optimization is the size of the X dimension is a power
+  // of 2, we just do not currently have infrastructure to query it.
+  using namespace llvm::PatternMatch;
+  uint64_t C;
+  if (match(V, m_LShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
+                      m_ConstantInt(C))) ||
+      match(V, m_AShr(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
+                      m_ConstantInt(C)))) {
+    const Function *F = cast<Instruction>(V)->getFunction();
+    return C >= ST->getWavefrontSizeLog2() &&
+           ST->getMaxWorkitemID(*F, 1) == 0 && ST->getMaxWorkitemID(*F, 2) == 0;
+  }
+
+  Value *Mask;
+  if (match(V, m_c_And(m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>(),
+                       m_Value(Mask)))) {
+    const Function *F = cast<Instruction>(V)->getFunction();
+    const DataLayout &DL = F->getParent()->getDataLayout();
+    return computeKnownBits(Mask, DL).countMinTrailingZeros() >=
+               ST->getWavefrontSizeLog2() &&
+           ST->getMaxWorkitemID(*F, 1) == 0 && ST->getMaxWorkitemID(*F, 2) == 0;
+  }
+
   const ExtractValueInst *ExtValue = dyn_cast<ExtractValueInst>(V);
   if (!ExtValue)
     return false;
@@ -958,6 +989,9 @@ bool GCNTTIImpl::collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
   case Intrinsic::amdgcn_ds_fmax:
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private:
+  case Intrinsic::amdgcn_flat_atomic_fadd:
+  case Intrinsic::amdgcn_flat_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_fmin:
     OpIndexes.push_back(0);
     return true;
   default:
@@ -1032,6 +1066,18 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
     return B.CreateIntrinsic(Intrinsic::ptrmask, {NewV->getType(), MaskTy},
                              {NewV, MaskOp});
   }
+  case Intrinsic::amdgcn_flat_atomic_fadd:
+  case Intrinsic::amdgcn_flat_atomic_fmax:
+  case Intrinsic::amdgcn_flat_atomic_fmin: {
+    Module *M = II->getParent()->getParent()->getParent();
+    Type *DestTy = II->getType();
+    Type *SrcTy = NewV->getType();
+    Function *NewDecl = Intrinsic::getDeclaration(M, II->getIntrinsicID(),
+                                                  {DestTy, SrcTy, DestTy});
+    II->setArgOperand(0, NewV);
+    II->setCalledFunction(NewDecl);
+    return II;
+  }
   default:
     return nullptr;
   }
@@ -1039,6 +1085,7 @@ Value *GCNTTIImpl::rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
 
 InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
                                            VectorType *VT, ArrayRef<int> Mask,
+                                           TTI::TargetCostKind CostKind,
                                            int Index, VectorType *SubTp,
                                            ArrayRef<const Value *> Args) {
   Kind = improveShuffleKindFromMask(Kind, Mask);
@@ -1059,7 +1106,7 @@ InstructionCost GCNTTIImpl::getShuffleCost(TTI::ShuffleKind Kind,
     }
   }
 
-  return BaseT::getShuffleCost(Kind, VT, Mask, Index, SubTp);
+  return BaseT::getShuffleCost(Kind, VT, Mask, CostKind, Index, SubTp);
 }
 
 bool GCNTTIImpl::areInlineCompatible(const Function *Caller,
@@ -1147,4 +1194,18 @@ int GCNTTIImpl::get64BitInstrCost(TTI::TargetCostKind CostKind) const {
              ? getFullRateInstrCost()
              : ST->hasHalfRate64Ops() ? getHalfRateInstrCost(CostKind)
                                       : getQuarterRateInstrCost(CostKind);
+}
+
+std::pair<InstructionCost, MVT>
+GCNTTIImpl::getTypeLegalizationCost(Type *Ty) const {
+  std::pair<InstructionCost, MVT> Cost = BaseT::getTypeLegalizationCost(Ty);
+  auto Size = DL.getTypeSizeInBits(Ty);
+  // Maximum load or store can handle 8 dwords for scalar and 4 for
+  // vector ALU. Let's assume anything above 8 dwords is expensive
+  // even if legal.
+  if (Size <= 256)
+    return Cost;
+
+  Cost.first += (Size + 255) / 256;
+  return Cost;
 }

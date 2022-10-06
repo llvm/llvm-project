@@ -207,7 +207,7 @@ public:
 
   // TODO: This function is almost the same as ELFAsmParser::ParseDirectiveSize
   // so maybe could be shared somehow.
-  bool parseDirectiveSize(StringRef, SMLoc) {
+  bool parseDirectiveSize(StringRef, SMLoc Loc) {
     StringRef Name;
     if (Parser->parseIdentifier(Name))
       return TokError("expected identifier in directive");
@@ -219,9 +219,14 @@ public:
       return true;
     if (expect(AsmToken::EndOfStatement, "eol"))
       return true;
-    // This is done automatically by the assembler for functions currently,
-    // so this is only currently needed for data sections:
-    getStreamer().emitELFSize(Sym, Expr);
+    auto WasmSym = cast<MCSymbolWasm>(Sym);
+    if (WasmSym->isFunction()) {
+      // Ignore .size directives for function symbols.  They get their size
+      // set automatically based on their content.
+      Warning(Loc, ".size directive ignored for function symbols");
+    } else {
+      getStreamer().emitELFSize(Sym, Expr);
+    }
     return false;
   }
 

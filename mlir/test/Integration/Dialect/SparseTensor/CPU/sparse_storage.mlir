@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --sparse-compiler | \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 //
@@ -105,10 +105,10 @@ module {
     // CHECK: ( 0, 2, 7, 2, 3, 4, 1, 2, 7, 2, 6, 7, 1, 2, 6, 7, 6 )
     // CHECK: ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17 )
     //
-    %7 = sparse_tensor.pointers %1, %c1 : tensor<10x8xf64, #CSR> to memref<?xindex>
+    %7 = sparse_tensor.pointers %1 { dimension = 1 : index } : tensor<10x8xf64, #CSR> to memref<?xindex>
     %8 = vector.transfer_read %7[%c0], %c0: memref<?xindex>, vector<11xindex>
     vector.print %8 : vector<11xindex>
-    %9 = sparse_tensor.indices %1, %c1 : tensor<10x8xf64, #CSR> to memref<?xindex>
+    %9 = sparse_tensor.indices %1 { dimension = 1 : index } : tensor<10x8xf64, #CSR> to memref<?xindex>
     %10 = vector.transfer_read %9[%c0], %c0: memref<?xindex>, vector<17xindex>
     vector.print %10 : vector<17xindex>
     %11 = sparse_tensor.values %1 : tensor<10x8xf64, #CSR> to memref<?xf64>
@@ -130,16 +130,16 @@ module {
     // CHECK: ( 0, 2, 7, 2, 3, 4, 1, 2, 7, 2, 6, 7, 1, 2, 6, 7, 6 )
     // CHECK: ( 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17 )
     //
-    %13 = sparse_tensor.pointers %2, %c0 : tensor<10x8xf64, #DCSR> to memref<?xindex>
+    %13 = sparse_tensor.pointers %2 { dimension = 0 : index } : tensor<10x8xf64, #DCSR> to memref<?xindex>
     %14 = vector.transfer_read %13[%c0], %c0: memref<?xindex>, vector<2xindex>
     vector.print %14 : vector<2xindex>
-    %15 = sparse_tensor.indices %2, %c0 : tensor<10x8xf64, #DCSR> to memref<?xindex>
+    %15 = sparse_tensor.indices %2 { dimension = 0 : index } : tensor<10x8xf64, #DCSR> to memref<?xindex>
     %16 = vector.transfer_read %15[%c0], %c0: memref<?xindex>, vector<8xindex>
     vector.print %16 : vector<8xindex>
-    %17 = sparse_tensor.pointers %2, %c1 : tensor<10x8xf64, #DCSR> to memref<?xindex>
+    %17 = sparse_tensor.pointers %2 { dimension = 1 : index } : tensor<10x8xf64, #DCSR> to memref<?xindex>
     %18 = vector.transfer_read %17[%c0], %c0: memref<?xindex>, vector<9xindex>
     vector.print %18 : vector<9xindex>
-    %19 = sparse_tensor.indices %2, %c1 : tensor<10x8xf64, #DCSR> to memref<?xindex>
+    %19 = sparse_tensor.indices %2 { dimension = 1 : index } : tensor<10x8xf64, #DCSR> to memref<?xindex>
     %20 = vector.transfer_read %19[%c0], %c0: memref<?xindex>, vector<17xindex>
     vector.print %20 : vector<17xindex>
     %21 = sparse_tensor.values %2 : tensor<10x8xf64, #DCSR> to memref<?xf64>
@@ -157,10 +157,10 @@ module {
     // CHECK: ( 0, 5, 7, 0, 2, 5, 6, 7, 3, 4, 6, 7, 9, 0, 5, 6, 7 )
     // CHECK: ( 1, 7, 13, 2, 4, 8, 10, 14, 5, 6, 11, 15, 17, 3, 9, 12, 16 )
     //
-    %23 = sparse_tensor.pointers %3, %c1 : tensor<10x8xf64, #CSC> to memref<?xindex>
+    %23 = sparse_tensor.pointers %3 { dimension = 1 : index } : tensor<10x8xf64, #CSC> to memref<?xindex>
     %24 = vector.transfer_read %23[%c0], %c0: memref<?xindex>, vector<9xindex>
     vector.print %24 : vector<9xindex>
-    %25 = sparse_tensor.indices %3, %c1 : tensor<10x8xf64, #CSC> to memref<?xindex>
+    %25 = sparse_tensor.indices %3 { dimension = 1 : index } : tensor<10x8xf64, #CSC> to memref<?xindex>
     %26 = vector.transfer_read %25[%c0], %c0: memref<?xindex>, vector<17xindex>
     vector.print %26 : vector<17xindex>
     %27 = sparse_tensor.values %3 : tensor<10x8xf64, #CSC> to memref<?xf64>
@@ -182,16 +182,16 @@ module {
     // CHECK: ( 0, 5, 7, 0, 2, 5, 6, 7, 3, 4, 6, 7, 9, 0, 5, 6, 7 )
     // CHECK: ( 1, 7, 13, 2, 4, 8, 10, 14, 5, 6, 11, 15, 17, 3, 9, 12, 16 )
     //
-    %29 = sparse_tensor.pointers %4, %c0 : tensor<10x8xf64, #DCSC> to memref<?xindex>
+    %29 = sparse_tensor.pointers %4 { dimension = 0 : index } : tensor<10x8xf64, #DCSC> to memref<?xindex>
     %30 = vector.transfer_read %29[%c0], %c0: memref<?xindex>, vector<2xindex>
     vector.print %30 : vector<2xindex>
-    %31 = sparse_tensor.indices %4, %c0 : tensor<10x8xf64, #DCSC> to memref<?xindex>
+    %31 = sparse_tensor.indices %4 { dimension = 0 : index } : tensor<10x8xf64, #DCSC> to memref<?xindex>
     %32 = vector.transfer_read %31[%c0], %c0: memref<?xindex>, vector<7xindex>
     vector.print %32 : vector<7xindex>
-    %33 = sparse_tensor.pointers %4, %c1 : tensor<10x8xf64, #DCSC> to memref<?xindex>
+    %33 = sparse_tensor.pointers %4 { dimension = 1 : index } : tensor<10x8xf64, #DCSC> to memref<?xindex>
     %34 = vector.transfer_read %33[%c0], %c0: memref<?xindex>, vector<8xindex>
     vector.print %34 : vector<8xindex>
-    %35 = sparse_tensor.indices %4, %c1 : tensor<10x8xf64, #DCSC> to memref<?xindex>
+    %35 = sparse_tensor.indices %4 { dimension = 1 : index } : tensor<10x8xf64, #DCSC> to memref<?xindex>
     %36 = vector.transfer_read %35[%c0], %c0: memref<?xindex>, vector<17xindex>
     vector.print %36 : vector<17xindex>
     %37 = sparse_tensor.values %4 : tensor<10x8xf64, #DCSC> to memref<?xf64>
@@ -212,10 +212,10 @@ module {
     // CHECK-SAME: 0, 7, 8, 0, 0, 0, 0, 9, 0, 0, 10, 0, 0, 0, 11, 12,
     // CHECK-SAME: 0, 13, 14, 0, 0, 0, 15, 16, 0, 0, 0, 0, 0, 0, 17, 0 )
     //
-    %39 = sparse_tensor.pointers %x, %c0 : tensor<10x8xf64, #BlockRow> to memref<?xindex>
+    %39 = sparse_tensor.pointers %x { dimension = 0 : index } : tensor<10x8xf64, #BlockRow> to memref<?xindex>
     %40 = vector.transfer_read %39[%c0], %c0: memref<?xindex>, vector<2xindex>
     vector.print %40 : vector<2xindex>
-    %41 = sparse_tensor.indices %x, %c0 : tensor<10x8xf64, #BlockRow> to memref<?xindex>
+    %41 = sparse_tensor.indices %x { dimension = 0 : index } : tensor<10x8xf64, #BlockRow> to memref<?xindex>
     %42 = vector.transfer_read %41[%c0], %c0: memref<?xindex>, vector<8xindex>
     vector.print %42 : vector<8xindex>
     %43 = sparse_tensor.values %x : tensor<10x8xf64, #BlockRow> to memref<?xf64>
@@ -235,10 +235,10 @@ module {
     // CHECK-SAME: 0, 8, 10, 14, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0,
     // CHECK-SAME: 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 15, 0, 17, 3, 0, 0, 0, 0, 9, 12, 16, 0, 0 )
     //
-    %45 = sparse_tensor.pointers %y, %c0 : tensor<10x8xf64, #BlockCol> to memref<?xindex>
+    %45 = sparse_tensor.pointers %y { dimension = 0 : index } : tensor<10x8xf64, #BlockCol> to memref<?xindex>
     %46 = vector.transfer_read %45[%c0], %c0: memref<?xindex>, vector<2xindex>
     vector.print %46 : vector<2xindex>
-    %47 = sparse_tensor.indices %y, %c0 : tensor<10x8xf64, #BlockCol> to memref<?xindex>
+    %47 = sparse_tensor.indices %y { dimension = 0 : index } : tensor<10x8xf64, #BlockCol> to memref<?xindex>
     %48 = vector.transfer_read %47[%c0], %c0: memref<?xindex>, vector<7xindex>
     vector.print %48 : vector<7xindex>
     %49 = sparse_tensor.values %y : tensor<10x8xf64, #BlockCol> to memref<?xf64>

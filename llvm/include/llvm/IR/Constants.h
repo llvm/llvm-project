@@ -1013,7 +1013,6 @@ public:
 
   static Constant *getNeg(Constant *C, bool HasNUW = false,
                           bool HasNSW = false);
-  static Constant *getFNeg(Constant *C);
   static Constant *getNot(Constant *C);
   static Constant *getAdd(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
@@ -1189,13 +1188,6 @@ public:
   /// \param OnlyIfReducedTy see \a getWithOperands() docs.
   static Constant *getSelect(Constant *C, Constant *V1, Constant *V2,
                              Type *OnlyIfReducedTy = nullptr);
-
-  /// get - Return a unary operator constant expression,
-  /// folding if possible.
-  ///
-  /// \param OnlyIfReducedTy see \a getWithOperands() docs.
-  static Constant *get(unsigned Opcode, Constant *C1, unsigned Flags = 0,
-                       Type *OnlyIfReducedTy = nullptr);
 
   /// get - Return a binary or shift operator constant expression,
   /// folding if possible.

@@ -34,7 +34,7 @@ class Stream;
 class Scalar {
   template<typename T>
   static llvm::APSInt MakeAPSInt(T v) {
-    static_assert(std::is_integral<T>::value, "");
+    static_assert(std::is_integral<T>::value);
     static_assert(sizeof(T) <= sizeof(uint64_t), "Conversion loses precision!");
     return llvm::APSInt(
         llvm::APInt(sizeof(T) * 8, uint64_t(v), std::is_signed<T>::value),

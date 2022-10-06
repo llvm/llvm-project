@@ -43,6 +43,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang-pseudo/Disambiguate.h"
 #include "clang-pseudo/Forest.h"
 #include "clang-pseudo/grammar/Grammar.h"
 #include "llvm/ADT/StringExtras.h"
@@ -60,6 +61,7 @@ struct Writer {
   const Grammar &G;
   const ForestNode &Root;
   const TokenStream &Stream;
+  const Disambiguation &Disambig;
 
   void write() {
     Out << "<!doctype html>\n";
@@ -150,7 +152,8 @@ void Writer::writeForestJSON() {
           break;
         case ForestNode::Ambiguous:
           Out.attribute("kind", "ambiguous");
-          Out.attribute("selected", AssignID(N->children().front(), End));
+          Out.attribute("selected",
+                        AssignID(N->children()[Disambig.lookup(N)], End));
           break;
         case ForestNode::Opaque:
           Out.attribute("kind", "opaque");
@@ -180,8 +183,9 @@ void Writer::writeForestJSON() {
 // We only accept the derived stream here.
 // FIXME: allow the original stream instead?
 void writeHTMLForest(llvm::raw_ostream &OS, const Grammar &G,
-                     const ForestNode &Root, const TokenStream &Stream) {
-  Writer{OS, G, Root, Stream}.write();
+                     const ForestNode &Root, const Disambiguation &Disambig,
+                     const TokenStream &Stream) {
+  Writer{OS, G, Root, Stream, Disambig}.write();
 }
 
 } // namespace pseudo

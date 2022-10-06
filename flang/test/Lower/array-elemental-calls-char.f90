@@ -226,11 +226,13 @@ subroutine foo6(c)
   ! CHECK:         %[[VAL_14:.*]] = fir.emboxchar %[[VAL_13]], %[[VAL_6]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
   ! CHECK:         %[[VAL_15:.*]] = fir.convert %[[VAL_6]]#1 : (index) -> i32
   ! CHECK:         %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (i32) -> index
+  ! CHECK:         %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_16]], %{{.*}} : index
+  ! CHECK:         %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_16]], %{{.*}} : index
   ! CHECK:         %[[VAL_17:.*]] = fir.call @llvm.stacksave() : () -> !fir.ref<i8>
-  ! CHECK:         %[[VAL_18:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_16]] : index) {bindc_name = ".result"}
-  ! CHECK:         %[[VAL_19:.*]] = fir.call @_QMchar_elemPelem_return_char(%[[VAL_18]], %[[VAL_16]], %[[VAL_14]]) : (!fir.ref<!fir.char<1,?>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
-  ! CHECK:         %[[VAL_20:.*]] = arith.cmpi slt, %[[VAL_6]]#1, %[[VAL_16]] : index
-  ! CHECK:         %[[VAL_21:.*]] = arith.select %[[VAL_20]], %[[VAL_6]]#1, %[[VAL_16]] : index
+  ! CHECK:         %[[VAL_18:.*]] = fir.alloca !fir.char<1,?>(%[[SELECT]] : index) {bindc_name = ".result"}
+  ! CHECK:         %[[VAL_19:.*]] = fir.call @_QMchar_elemPelem_return_char(%[[VAL_18]], %[[SELECT]], %[[VAL_14]]) : (!fir.ref<!fir.char<1,?>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
+  ! CHECK:         %[[VAL_20:.*]] = arith.cmpi slt, %[[VAL_6]]#1, %[[SELECT]] : index
+  ! CHECK:         %[[VAL_21:.*]] = arith.select %[[VAL_20]], %[[VAL_6]]#1, %[[SELECT]] : index
   ! CHECK:         %[[VAL_22:.*]] = fir.convert %[[VAL_21]] : (index) -> i64
   ! CHECK:         %[[VAL_23:.*]] = fir.convert %[[VAL_13]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK:         %[[VAL_24:.*]] = fir.convert %[[VAL_18]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>

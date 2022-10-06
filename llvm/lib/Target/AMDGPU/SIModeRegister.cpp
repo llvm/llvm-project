@@ -174,14 +174,36 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
       return Status(FP_ROUND_MODE_DP(3),
                     FP_ROUND_MODE_DP(FP_ROUND_ROUND_TO_ZERO));
     case AMDGPU::FPTRUNC_UPWARD_PSEUDO: {
-      // Replacing the pseudo by a real instruction
-      MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_e32));
+      // Replacing the pseudo by a real instruction in place
+      if (TII->getSubtarget().hasTrue16BitInsts()) {
+        MachineBasicBlock &MBB = *MI.getParent();
+        MachineInstrBuilder B(*MBB.getParent(), MI);
+        MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_t16_e64));
+        MachineOperand Src0 = MI.getOperand(1);
+        MI.removeOperand(1);
+        B.addImm(0); // src0_modifiers
+        B.add(Src0); // re-add src0 operand
+        B.addImm(0); // clamp
+        B.addImm(0); // omod
+      } else
+        MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_e32));
       return Status(FP_ROUND_MODE_DP(3),
                     FP_ROUND_MODE_DP(FP_ROUND_ROUND_TO_INF));
     }
     case AMDGPU::FPTRUNC_DOWNWARD_PSEUDO: {
-      // Replacing the pseudo by a real instruction
-      MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_e32));
+      // Replacing the pseudo by a real instruction in place
+      if (TII->getSubtarget().hasTrue16BitInsts()) {
+        MachineBasicBlock &MBB = *MI.getParent();
+        MachineInstrBuilder B(*MBB.getParent(), MI);
+        MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_t16_e64));
+        MachineOperand Src0 = MI.getOperand(1);
+        MI.removeOperand(1);
+        B.addImm(0); // src0_modifiers
+        B.add(Src0); // re-add src0 operand
+        B.addImm(0); // clamp
+        B.addImm(0); // omod
+      } else
+        MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_e32));
       return Status(FP_ROUND_MODE_DP(3),
                     FP_ROUND_MODE_DP(FP_ROUND_ROUND_TO_NEGINF));
     }

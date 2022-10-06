@@ -40,25 +40,24 @@ class MultiplexExternalSemaSource : public ExternalSemaSource {
   static char ID;
 
 private:
-  SmallVector<ExternalSemaSource *, 2> Sources; // doesn't own them.
+  SmallVector<ExternalSemaSource *, 2> Sources;
 
 public:
-
-  ///Constructs a new multiplexing external sema source and appends the
+  /// Constructs a new multiplexing external sema source and appends the
   /// given element to it.
   ///
-  ///\param[in] s1 - A non-null (old) ExternalSemaSource.
-  ///\param[in] s2 - A non-null (new) ExternalSemaSource.
+  ///\param[in] S1 - A non-null (old) ExternalSemaSource.
+  ///\param[in] S2 - A non-null (new) ExternalSemaSource.
   ///
-  MultiplexExternalSemaSource(ExternalSemaSource& s1, ExternalSemaSource& s2);
+  MultiplexExternalSemaSource(ExternalSemaSource *S1, ExternalSemaSource *S2);
 
   ~MultiplexExternalSemaSource() override;
 
-  ///Appends new source to the source list.
+  /// Appends new source to the source list.
   ///
   ///\param[in] source - An ExternalSemaSource.
   ///
-  void addSource(ExternalSemaSource &source);
+  void AddSource(ExternalSemaSource *Source);
 
   //===--------------------------------------------------------------------===//
   // ExternalASTSource.

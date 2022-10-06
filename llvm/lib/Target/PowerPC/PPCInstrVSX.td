@@ -1300,7 +1300,7 @@ let Predicates = [HasVSX, HasP8Vector] in {
       Requires<[In64BitMode]>;
   def MFVSRWZ : XX1_RS6_RD5_XO<31, 115, (outs gprc:$rA), (ins vsfrc:$XT),
                                "mfvsrwz $rA, $XT", IIC_VecGeneral,
-                               [(set i32:$rA, (PPCmfvsr f64:$XT))]>;
+                               [(set i32:$rA, (PPCmfvsr f64:$XT))]>, ZExt32To64;
   // FIXME: Setting the hasSideEffects flag here to match current behaviour.
   let isCodeGenOnly = 1, hasSideEffects = 1 in
   def MFVRWZ : XX1_RS6_RD5_XO<31, 115, (outs gprc:$rA), (ins vsrc:$XT),
@@ -3021,9 +3021,6 @@ defm : ScalToVecWPermute<v2f64, (f64 f64:$A),
                                    (SUBREG_TO_REG (i64 1), $A, sub_64), 0),
                          (SUBREG_TO_REG (i64 1), $A, sub_64)>;
 
-def : Pat<(f64 (extractelt (v2f64 (bitconvert (v16i8
-                 (PPCvperm v16i8:$A, v16i8:$B, v16i8:$C)))), 0)),
-          (f64 (EXTRACT_SUBREG (VPERM $B, $A, $C), sub_64))>;
 def : Pat<(f64 (extractelt v2f64:$S, 0)),
           (f64 (EXTRACT_SUBREG (XXPERMDI $S, $S, 2), sub_64))>;
 def : Pat<(f64 (extractelt v2f64:$S, 1)),

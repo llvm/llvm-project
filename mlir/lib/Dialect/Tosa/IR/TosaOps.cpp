@@ -21,6 +21,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -333,10 +334,42 @@ static void getI64Values(ArrayAttr arrayAttr, SmallVector<int64_t> &values) {
   }
 }
 
-static void getF64Values(ArrayAttr arrayAttr, SmallVector<double> &values) {
-  for (auto it : arrayAttr) {
-    values.push_back(it.cast<FloatAttr>().getValueAsDouble());
+static LogicalResult resolveBroadcastShape(const ValueShapeRange &operands,
+                                           SmallVector<int64_t> &outShape) {
+  int64_t outRank = 0;
+  for (int i = 0, e = operands.size(); i != e; ++i) {
+    auto shape = operands.getShape(i);
+    if (!shape.hasRank()) {
+      // TODO(jennik): Update function to have better case handling for invalid
+      // operands and for ranked tensors.
+      return failure();
+    }
+    outRank = std::max<int64_t>(outRank, shape.getRank());
   }
+
+  outShape.resize(outRank, 1);
+
+  for (int i = 0, e = operands.size(); i != e; ++i) {
+    auto shape = operands.getShape(i);
+    auto rankDiff = outShape.size() - shape.getRank();
+
+    for (size_t i = 0, e = shape.getRank(); i < e; ++i) {
+      auto dim1 = outShape[i + rankDiff];
+      auto dim2 = shape.getDimSize(i);
+      auto resolvedDim = dim1;
+
+      if (dim1 == 1) {
+        resolvedDim = dim2;
+      } else if (dim2 == 1) {
+        resolvedDim = dim1;
+      } else if (dim1 != dim2) {
+        return failure();
+      }
+      outShape[i + rankDiff] = resolvedDim;
+    }
+  }
+
+  return success();
 }
 
 LogicalResult tosa::ArgMaxOp::inferReturnTypeComponents(
@@ -419,6 +452,27 @@ LogicalResult tosa::ConcatOp::inferReturnTypeComponents(
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
   return success();
+}
+
+LogicalResult tosa::EqualOp::inferReturnTypeComponents(
+    MLIRContext *context, ::llvm::Optional<Location> location,
+    ValueShapeRange operands, DictionaryAttr attributes, RegionRange regions,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  llvm::SmallVector<int64_t> outShape;
+  if (resolveBroadcastShape(operands, outShape).failed()) {
+    inferredReturnShapes.push_back(ShapedTypeComponents());
+    return success();
+  }
+
+  inferredReturnShapes.push_back(
+      ShapedTypeComponents(outShape, IntegerType::get(context, /*width=*/1)));
+  return success();
+}
+
+bool tosa::EqualOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
+  if (l.size() != r.size() || l.size() != 1)
+    return false;
+  return succeeded(verifyCompatibleShape(l[0], r[0]));
 }
 
 LogicalResult tosa::FullyConnectedOp::inferReturnTypeComponents(
@@ -740,64 +794,36 @@ LogicalResult tosa::ResizeOp::inferReturnTypeComponents(
   llvm::SmallVector<int64_t, 4> outputShape;
   outputShape.resize(4, ShapedType::kDynamicSize);
 
-  int32_t inHeight = ShapedType::kDynamicSize;
-  int32_t inWidth = ShapedType::kDynamicSize;
-
   ShapeAdaptor inputShape = operands.getShape(adaptor.getInput());
-  if (inputShape.hasRank()) {
-    outputShape[0] = inputShape.getDimSize(0);
-    outputShape[3] = inputShape.getDimSize(3);
+  if (!inputShape.hasRank())
+    return failure();
 
-    inHeight = inputShape.getDimSize(1);
-    inWidth = inputShape.getDimSize(2);
-  }
+  outputShape[0] = inputShape.getDimSize(0);
+  outputShape[3] = inputShape.getDimSize(3);
+  int32_t inputHeight = inputShape.getDimSize(1);
+  int32_t inputWidth = inputShape.getDimSize(2);
 
-  int32_t shift = adaptor.getShift();
-  llvm::SmallVector<int64_t> newShape;
-  getI64Values(adaptor.getOutputSize(), newShape);
-  outputShape[1] = newShape[0];
-  outputShape[2] = newShape[1];
+  if ((inputHeight == ShapedType::kDynamicSize) ||
+      (inputWidth == ShapedType::kDynamicSize))
+    return failure();
 
-  llvm::SmallVector<int64_t> strideInt;
+  llvm::SmallVector<int64_t> scaleInt;
   llvm::SmallVector<int64_t> offsetInt;
-  llvm::SmallVector<double> strideFp;
-  llvm::SmallVector<double> offsetFp;
+  llvm::SmallVector<int64_t> borderInt;
+  getI64Values(adaptor.getScale(), scaleInt);
   getI64Values(adaptor.getOffset(), offsetInt);
-  getF64Values(adaptor.getOffsetFp(), offsetFp);
-  getI64Values(adaptor.getStride(), strideInt);
-  getF64Values(adaptor.getStrideFp(), strideFp);
+  getI64Values(adaptor.getBorder(), borderInt);
 
-  // If we have a 0 zero in integers we know that the resize indexing needs to
-  // be performed in floating point. Use the floating point varient to compute
-  // the resize shape.
-  bool fpMode = strideInt[0] == 0;
+  // Compute the output shape based on attributes: scale, offset, and border.
+  outputShape[1] =
+      (((inputHeight - 1) * scaleInt[0] - offsetInt[0] + borderInt[0]) /
+       scaleInt[1]) +
+      1;
 
-  // We can compute the output shape if attribute specifies unknown dimensions
-  // based on the offset and stride. If we perfectly line up to the last index
-  // we need to round up the size to include it.
-  if (outputShape[1] == ShapedType::kDynamicSize && inHeight >= 0 && fpMode) {
-    float sizeFp = (inHeight - offsetFp[0] - 1) / strideFp[0];
-    float round = std::floor(sizeFp) == sizeFp ? 1 : 0;
-    outputShape[1] = std::ceil(sizeFp) + round;
-  }
-
-  if (outputShape[2] == ShapedType::kDynamicSize && inWidth >= 0 && fpMode) {
-    float sizeFp = (inWidth - offsetFp[1] - 1) / strideFp[1];
-    float round = std::floor(sizeFp) == sizeFp ? 1 : 0;
-    outputShape[2] = std::ceil(sizeFp) + round;
-  }
-
-  if (outputShape[1] == ShapedType::kDynamicSize && inHeight >= 0 && !fpMode) {
-    int64_t size = (inHeight - 1);
-    size = ((size << shift) - offsetInt[0]) / strideInt[0];
-    outputShape[1] = size + 1;
-  }
-
-  if (outputShape[2] == ShapedType::kDynamicSize && inWidth >= 0 && !fpMode) {
-    int64_t size = (inWidth - 1);
-    size = ((size << shift) - offsetInt[1]) / strideInt[1];
-    outputShape[2] = size + 1;
-  }
+  outputShape[2] =
+      (((inputWidth - 1) * scaleInt[2] - offsetInt[1] + borderInt[1]) /
+       scaleInt[3]) +
+      1;
 
   inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
   return success();
@@ -870,42 +896,6 @@ REDUCE_SHAPE_INFER(tosa::ReduceProdOp)
 REDUCE_SHAPE_INFER(tosa::ReduceSumOp)
 #undef REDUCE_SHAPE_INFER
 
-static LogicalResult resolveBroadcastShape(const ValueShapeRange &operands,
-                                           SmallVector<int64_t> &outShape) {
-  int64_t outRank = 0;
-  for (int i = 0, e = operands.size(); i != e; ++i) {
-    auto shape = operands.getShape(i);
-    if (!shape.hasRank()) {
-      return failure();
-    }
-    outRank = std::max<int64_t>(outRank, shape.getRank());
-  }
-
-  outShape.resize(outRank, 1);
-
-  for (int i = 0, e = operands.size(); i != e; ++i) {
-    auto shape = operands.getShape(i);
-    auto rankDiff = outShape.size() - shape.getRank();
-
-    for (size_t i = 0, e = shape.getRank(); i < e; ++i) {
-      auto dim1 = outShape[i + rankDiff];
-      auto dim2 = shape.getDimSize(i);
-      auto resolvedDim = dim1;
-
-      if (dim1 == 1) {
-        resolvedDim = dim2;
-      } else if (dim2 == 1) {
-        resolvedDim = dim1;
-      } else if (dim1 != dim2) {
-        return failure();
-      }
-      outShape[i + rankDiff] = resolvedDim;
-    }
-  }
-
-  return success();
-}
-
 static LogicalResult NAryInferReturnTypes(
     const ValueShapeRange &operands,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
@@ -939,7 +929,6 @@ NARY_SHAPE_INFER(tosa::CeilOp)
 NARY_SHAPE_INFER(tosa::ClampOp)
 NARY_SHAPE_INFER(tosa::ClzOp)
 NARY_SHAPE_INFER(tosa::DivOp)
-NARY_SHAPE_INFER(tosa::EqualOp)
 NARY_SHAPE_INFER(tosa::ExpOp)
 NARY_SHAPE_INFER(tosa::FloorOp)
 NARY_SHAPE_INFER(tosa::GreaterEqualOp)
@@ -958,7 +947,6 @@ NARY_SHAPE_INFER(tosa::MulOp)
 NARY_SHAPE_INFER(tosa::NegateOp)
 NARY_SHAPE_INFER(tosa::PowOp)
 NARY_SHAPE_INFER(tosa::ReciprocalOp)
-NARY_SHAPE_INFER(tosa::ReluNOp)
 NARY_SHAPE_INFER(tosa::RescaleOp)
 NARY_SHAPE_INFER(tosa::ReverseOp)
 NARY_SHAPE_INFER(tosa::RsqrtOp)

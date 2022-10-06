@@ -48,8 +48,8 @@ test:
 # RELAX-RELOC: R_RISCV_ALIGN - 0x4
 # RELAX-INST:  addi    zero, zero, 0
 # C-EXT-RELAX-RELOC: R_RISCV_ALIGN - 0x6
-# C-EXT-RELAX-INST:  addi    zero, zero, 0
 # C-EXT-RELAX-INST:  c.nop
+# C-EXT-RELAX-INST:  addi    zero, zero, 0
 # C-EXT-NORELAX-INST: addi    zero, zero, 0
 	add	a0, a0, a1
 	.align 4
@@ -75,7 +75,7 @@ test:
 # NORELAX-INST: addi    zero, zero, 0
 # C-EXT-RELAX-RELOC: R_RISCV_ALIGN - 0x6
 # C-EXT-RELAX-INST:  addi    zero, zero, 0
-# C-EXT-RELAX-INST:  c.nop
+# C-EXT-RELAX-INST-NOT:  c.nop
 # C-EXT-INST: addi    zero, zero, 0
 # C-EXT-INST: c.nop
 	add	a0, a0, a1

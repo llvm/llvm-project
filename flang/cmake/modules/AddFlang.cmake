@@ -18,7 +18,7 @@ endmacro()
 
 macro(add_flang_library name)
   cmake_parse_arguments(ARG
-    "SHARED;STATIC"
+    "SHARED;STATIC;INSTALL_WITH_TOOLCHAIN"
     ""
     "ADDITIONAL_HEADERS"
     ${ARGN})
@@ -65,7 +65,8 @@ macro(add_flang_library name)
 
   if (TARGET ${name})
 
-    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "libflang")
+    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "libflang"
+        OR ARG_INSTALL_WITH_TOOLCHAIN)
       get_target_export_arg(${name} Flang export_to_flangtargets UMBRELLA flang-libraries)
       install(TARGETS ${name}
         COMPONENT ${name}

@@ -317,8 +317,7 @@ bool PHITransAddr::PHITranslateValue(BasicBlock *CurBB, BasicBlock *PredBB,
   assert(DT || !MustDominate);
   assert(Verify() && "Invalid PHITransAddr!");
   if (DT && DT->isReachableFromEntry(PredBB))
-    Addr =
-        PHITranslateSubExpr(Addr, CurBB, PredBB, MustDominate ? DT : nullptr);
+    Addr = PHITranslateSubExpr(Addr, CurBB, PredBB, DT);
   else
     Addr = nullptr;
   assert(Verify() && "Invalid PHITransAddr!");
@@ -425,7 +424,8 @@ InsertPHITranslatedSubExpr(Value *InVal, BasicBlock *CurBB,
     // PHI translate the LHS.
     Value *OpVal = InsertPHITranslatedSubExpr(Inst->getOperand(0),
                                               CurBB, PredBB, DT, NewInsts);
-    if (OpVal == 0) return 0;
+    if (OpVal == nullptr)
+      return nullptr;
 
     BinaryOperator *Res = BinaryOperator::CreateAdd(OpVal, Inst->getOperand(1),
                                            InVal->getName()+".phi.trans.insert",

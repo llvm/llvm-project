@@ -46,15 +46,31 @@ protected:
       Str << " declare <8 x i32> @llvm.vp." << BinaryIntOpcode
           << ".v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32) ";
 
-    const char *BinaryFPOpcodes[] = {"fadd", "fsub", "fmul", "fdiv", "frem"};
+    const char *BinaryFPOpcodes[] = {"fadd", "fsub",   "fmul",   "fdiv",
+                                     "frem", "minnum", "maxnum", "copysign"};
     for (const char *BinaryFPOpcode : BinaryFPOpcodes)
       Str << " declare <8 x float> @llvm.vp." << BinaryFPOpcode
           << ".v8f32(<8 x float>, <8 x float>, <8 x i1>, i32) ";
 
+    Str << " declare <8 x float> @llvm.vp.floor.v8f32(<8 x float>, <8 x i1>, "
+           "i32)";
+    Str << " declare <8 x float> @llvm.vp.round.v8f32(<8 x float>, <8 x i1>, "
+           "i32)";
+    Str << " declare <8 x float> @llvm.vp.roundeven.v8f32(<8 x float>, <8 x "
+           "i1>, "
+           "i32)";
+    Str << " declare <8 x float> @llvm.vp.ceil.v8f32(<8 x float>, <8 x i1>, "
+           "i32)";
     Str << " declare <8 x float> @llvm.vp.fneg.v8f32(<8 x float>, <8 x i1>, "
+           "i32)";
+    Str << " declare <8 x float> @llvm.vp.fabs.v8f32(<8 x float>, <8 x i1>, "
+           "i32)";
+    Str << " declare <8 x float> @llvm.vp.sqrt.v8f32(<8 x float>, <8 x i1>, "
            "i32)";
     Str << " declare <8 x float> @llvm.vp.fma.v8f32(<8 x float>, <8 x float>, "
            "<8 x float>, <8 x i1>, i32) ";
+    Str << " declare <8 x float> @llvm.vp.fmuladd.v8f32(<8 x float>, "
+           "<8 x float>, <8 x float>, <8 x i1>, i32) ";
 
     Str << " declare void @llvm.vp.store.v8i32.p0v8i32(<8 x i32>, <8 x i32>*, "
            "<8 x i1>, i32) ";

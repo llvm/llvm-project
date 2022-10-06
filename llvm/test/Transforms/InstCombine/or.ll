@@ -154,10 +154,14 @@ define i32 @test20(i32 %x) {
   ret i32 %z
 }
 
+; TODO: This should combine to t1 + 2.
 define i32 @test21(i32 %t1) {
 ; CHECK-LABEL: @test21(
-; CHECK-NEXT:    [[T1_MASK1:%.*]] = add i32 [[T1:%.*]], 2
-; CHECK-NEXT:    ret i32 [[T1_MASK1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[T1:%.*]], -2
+; CHECK-NEXT:    [[T3:%.*]] = add i32 [[TMP1]], 2
+; CHECK-NEXT:    [[T5:%.*]] = and i32 [[T1]], 1
+; CHECK-NEXT:    [[T6:%.*]] = or i32 [[T5]], [[T3]]
+; CHECK-NEXT:    ret i32 [[T6]]
 ;
   %t1.mask1 = add i32 %t1, 2
   %t3 = and i32 %t1.mask1, -2
@@ -296,29 +300,29 @@ define i1 @and_icmp_eq_0_logical(i32 %A, i32 %B) {
   ret i1 %D
 }
 
-define i1 @test27(i32* %A, i32* %B) {
+define i1 @test27(ptr %A, ptr %B) {
 ; CHECK-LABEL: @test27(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32* [[A:%.*]], null
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32* [[B:%.*]], null
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq ptr [[A:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[B:%.*]], null
 ; CHECK-NEXT:    [[E:%.*]] = and i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[E]]
 ;
-  %C1 = ptrtoint i32* %A to i32
-  %C2 = ptrtoint i32* %B to i32
+  %C1 = ptrtoint ptr %A to i32
+  %C2 = ptrtoint ptr %B to i32
   %D = or i32 %C1, %C2
   %E = icmp eq i32 %D, 0
   ret i1 %E
 }
 
-define <2 x i1> @test27vec(<2 x i32*> %A, <2 x i32*> %B) {
+define <2 x i1> @test27vec(<2 x ptr> %A, <2 x ptr> %B) {
 ; CHECK-LABEL: @test27vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i32*> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32*> [[B:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x ptr> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x ptr> [[B:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[E:%.*]] = and <2 x i1> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[E]]
 ;
-  %C1 = ptrtoint <2 x i32*> %A to <2 x i32>
-  %C2 = ptrtoint <2 x i32*> %B to <2 x i32>
+  %C1 = ptrtoint <2 x ptr> %A to <2 x i32>
+  %C2 = ptrtoint <2 x ptr> %B to <2 x i32>
   %D = or <2 x i32> %C1, %C2
   %E = icmp eq <2 x i32> %D, zeroinitializer
   ret <2 x i1> %E
@@ -352,29 +356,29 @@ define i1 @test28_logical(i32 %A, i32 %B) {
   ret i1 %D
 }
 
-define i1 @test29(i32* %A, i32* %B) {
+define i1 @test29(ptr %A, ptr %B) {
 ; CHECK-LABEL: @test29(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32* [[A:%.*]], null
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32* [[B:%.*]], null
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne ptr [[A:%.*]], null
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne ptr [[B:%.*]], null
 ; CHECK-NEXT:    [[E:%.*]] = or i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[E]]
 ;
-  %C1 = ptrtoint i32* %A to i32
-  %C2 = ptrtoint i32* %B to i32
+  %C1 = ptrtoint ptr %A to i32
+  %C2 = ptrtoint ptr %B to i32
   %D = or i32 %C1, %C2
   %E = icmp ne i32 %D, 0
   ret i1 %E
 }
 
-define <2 x i1> @test29vec(<2 x i32*> %A, <2 x i32*> %B) {
+define <2 x i1> @test29vec(<2 x ptr> %A, <2 x ptr> %B) {
 ; CHECK-LABEL: @test29vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i32*> [[A:%.*]], zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32*> [[B:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x ptr> [[A:%.*]], zeroinitializer
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x ptr> [[B:%.*]], zeroinitializer
 ; CHECK-NEXT:    [[E:%.*]] = or <2 x i1> [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret <2 x i1> [[E]]
 ;
-  %C1 = ptrtoint <2 x i32*> %A to <2 x i32>
-  %C2 = ptrtoint <2 x i32*> %B to <2 x i32>
+  %C1 = ptrtoint <2 x ptr> %A to <2 x i32>
+  %C2 = ptrtoint <2 x ptr> %B to <2 x i32>
   %D = or <2 x i32> %C1, %C2
   %E = icmp ne <2 x i32> %D, zeroinitializer
   ret <2 x i1> %E

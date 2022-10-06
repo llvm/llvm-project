@@ -1,5 +1,3 @@
-// REQUIRES: x86-registered-target
-//
 /// Test the profile runtime library to be linked for PS4/PS5 compiler.
 /// Check runtime flag --dependent-lib which does not append the default library search path.
 //

@@ -729,7 +729,7 @@ static bool narrowSDivOrSRem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   // operands.
   unsigned OrigWidth = Instr->getType()->getIntegerBitWidth();
 
-  // What is the smallest bit width that can accomodate the entire value ranges
+  // What is the smallest bit width that can accommodate the entire value ranges
   // of both of the operands?
   std::array<Optional<ConstantRange>, 2> CRs;
   unsigned MinSignedBits = 0;
@@ -781,7 +781,7 @@ static bool processUDivOrURem(BinaryOperator *Instr, LazyValueInfo *LVI) {
   // Find the smallest power of two bitwidth that's sufficient to hold Instr's
   // operands.
 
-  // What is the smallest bit width that can accomodate the entire value ranges
+  // What is the smallest bit width that can accommodate the entire value ranges
   // of both of the operands?
   unsigned MaxActiveBits = 0;
   for (Value *Operand : Instr->operands()) {
@@ -850,11 +850,13 @@ static bool processSRem(BinaryOperator *SDI, LazyValueInfo *LVI) {
       BinaryOperator::CreateURem(Ops[0].V, Ops[1].V, SDI->getName(), SDI);
   URem->setDebugLoc(SDI->getDebugLoc());
 
-  Value *Res = URem;
+  auto *Res = URem;
 
   // If the divident was non-positive, we need to negate the result.
-  if (Ops[0].D == Domain::NonPositive)
+  if (Ops[0].D == Domain::NonPositive) {
     Res = BinaryOperator::CreateNeg(Res, Res->getName() + ".neg", SDI);
+    Res->setDebugLoc(SDI->getDebugLoc());
+  }
 
   SDI->replaceAllUsesWith(Res);
   SDI->eraseFromParent();

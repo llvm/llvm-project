@@ -840,7 +840,7 @@ private:
       }
     }
 
-    unsigned DuplicationCost = 0;
+    InstructionCost DuplicationCost = 0;
 
     unsigned JumpTableSize = 0;
     TTI->getEstimatedNumberOfCaseClusters(*Switch, JumpTableSize, nullptr,
@@ -851,7 +851,7 @@ private:
       // using binary search, hence the LogBase2().
       unsigned CondBranches =
           APInt(32, Switch->getNumSuccessors()).ceilLogBase2();
-      DuplicationCost = *Metrics.NumInsts.getValue() / CondBranches;
+      DuplicationCost = Metrics.NumInsts / CondBranches;
     } else {
       // Compared with jump tables, the DFA optimizer removes an indirect branch
       // on each loop iteration, thus making branch prediction more precise. The
@@ -859,7 +859,7 @@ private:
       // predictor to make a mistake, and the more benefit there is in the DFA
       // optimizer. Thus, the more branch targets there are, the lower is the
       // cost of the DFA opt.
-      DuplicationCost = *Metrics.NumInsts.getValue() / JumpTableSize;
+      DuplicationCost = Metrics.NumInsts / JumpTableSize;
     }
 
     LLVM_DEBUG(dbgs() << "\nDFA Jump Threading: Cost to jump thread block "

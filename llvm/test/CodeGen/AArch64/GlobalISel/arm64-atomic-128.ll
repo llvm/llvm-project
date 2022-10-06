@@ -415,3 +415,74 @@ define void @atomic_load_relaxed(i64, i64, i128* %p, i128* %p2) {
     store i128 %r, i128* %p2
     ret void
 }
+
+define i128 @val_compare_and_swap_return(i128* %p, i128 %oldval, i128 %newval) {
+; CHECK-LLSC-O1-LABEL: val_compare_and_swap_return:
+; CHECK-LLSC-O1:       // %bb.0:
+; CHECK-LLSC-O1-NEXT:  .LBB5_1: // =>This Inner Loop Header: Depth=1
+; CHECK-LLSC-O1-NEXT:    ldaxp x8, x1, [x0]
+; CHECK-LLSC-O1-NEXT:    cmp x8, x2
+; CHECK-LLSC-O1-NEXT:    cset w9, ne
+; CHECK-LLSC-O1-NEXT:    cmp x1, x3
+; CHECK-LLSC-O1-NEXT:    cinc w9, w9, ne
+; CHECK-LLSC-O1-NEXT:    cbz w9, .LBB5_3
+; CHECK-LLSC-O1-NEXT:  // %bb.2: // in Loop: Header=BB5_1 Depth=1
+; CHECK-LLSC-O1-NEXT:    stxp w9, x8, x1, [x0]
+; CHECK-LLSC-O1-NEXT:    cbnz w9, .LBB5_1
+; CHECK-LLSC-O1-NEXT:    b .LBB5_4
+; CHECK-LLSC-O1-NEXT:  .LBB5_3: // in Loop: Header=BB5_1 Depth=1
+; CHECK-LLSC-O1-NEXT:    stxp w9, x4, x5, [x0]
+; CHECK-LLSC-O1-NEXT:    cbnz w9, .LBB5_1
+; CHECK-LLSC-O1-NEXT:  .LBB5_4:
+; CHECK-LLSC-O1-NEXT:    mov x0, x8
+; CHECK-LLSC-O1-NEXT:    ret
+;
+; CHECK-CAS-O1-LABEL: val_compare_and_swap_return:
+; CHECK-CAS-O1:       // %bb.0:
+; CHECK-CAS-O1-NEXT:    // kill: def $x2 killed $x2 killed $x2_x3 def $x2_x3
+; CHECK-CAS-O1-NEXT:    // kill: def $x4 killed $x4 killed $x4_x5 def $x4_x5
+; CHECK-CAS-O1-NEXT:    // kill: def $x3 killed $x3 killed $x2_x3 def $x2_x3
+; CHECK-CAS-O1-NEXT:    // kill: def $x5 killed $x5 killed $x4_x5 def $x4_x5
+; CHECK-CAS-O1-NEXT:    caspa x2, x3, x4, x5, [x0]
+; CHECK-CAS-O1-NEXT:    mov x0, x2
+; CHECK-CAS-O1-NEXT:    mov x1, x3
+; CHECK-CAS-O1-NEXT:    ret
+;
+; CHECK-LLSC-O0-LABEL: val_compare_and_swap_return:
+; CHECK-LLSC-O0:       // %bb.0:
+; CHECK-LLSC-O0-NEXT:    mov x9, x0
+; CHECK-LLSC-O0-NEXT:  .LBB5_1: // =>This Inner Loop Header: Depth=1
+; CHECK-LLSC-O0-NEXT:    ldaxp x0, x1, [x9]
+; CHECK-LLSC-O0-NEXT:    cmp x0, x2
+; CHECK-LLSC-O0-NEXT:    cset w8, ne
+; CHECK-LLSC-O0-NEXT:    cmp x1, x3
+; CHECK-LLSC-O0-NEXT:    cinc w8, w8, ne
+; CHECK-LLSC-O0-NEXT:    cbnz w8, .LBB5_3
+; CHECK-LLSC-O0-NEXT:  // %bb.2: // in Loop: Header=BB5_1 Depth=1
+; CHECK-LLSC-O0-NEXT:    stxp w8, x4, x5, [x9]
+; CHECK-LLSC-O0-NEXT:    cbnz w8, .LBB5_1
+; CHECK-LLSC-O0-NEXT:    b .LBB5_4
+; CHECK-LLSC-O0-NEXT:  .LBB5_3: // in Loop: Header=BB5_1 Depth=1
+; CHECK-LLSC-O0-NEXT:    stxp w8, x0, x1, [x9]
+; CHECK-LLSC-O0-NEXT:    cbnz w8, .LBB5_1
+; CHECK-LLSC-O0-NEXT:  .LBB5_4:
+; CHECK-LLSC-O0-NEXT:    ret
+;
+; CHECK-CAS-O0-LABEL: val_compare_and_swap_return:
+; CHECK-CAS-O0:       // %bb.0:
+; CHECK-CAS-O0-NEXT:    mov x8, x0
+; CHECK-CAS-O0-NEXT:    mov x1, x3
+; CHECK-CAS-O0-NEXT:    mov x0, x4
+; CHECK-CAS-O0-NEXT:    // kill: def $x2 killed $x2 def $x2_x3
+; CHECK-CAS-O0-NEXT:    mov x3, x1
+; CHECK-CAS-O0-NEXT:    // kill: def $x0 killed $x0 def $x0_x1
+; CHECK-CAS-O0-NEXT:    mov x1, x5
+; CHECK-CAS-O0-NEXT:    caspa x2, x3, x0, x1, [x8]
+; CHECK-CAS-O0-NEXT:    mov x0, x2
+; CHECK-CAS-O0-NEXT:    mov x1, x3
+; CHECK-CAS-O0-NEXT:    ret
+
+  %pair = cmpxchg i128* %p, i128 %oldval, i128 %newval acquire acquire
+  %val = extractvalue { i128, i1 } %pair, 0
+  ret i128 %val
+}

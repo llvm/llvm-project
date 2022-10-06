@@ -53,11 +53,9 @@ define { <2 x float>, <2 x float> } @test1(i32 %conv.i32.i.i.i) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP4]], <4 x float> zeroinitializer, <4 x float> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <4 x float> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP6]], <4 x float> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> zeroinitializer, <2 x float> [[TMP7]], <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x float> [[TMP6]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> zeroinitializer, <2 x float> [[TMP9]], <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } zeroinitializer, <2 x float> [[TMP8]], 0
-; CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } [[DOTFCA_0_INSERT]], <2 x float> [[TMP10]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[TMP6]], <4 x float> poison, <2 x i32> <i32 2, i32 3>
+; CHECK-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } zeroinitializer, <2 x float> [[TMP7]], 0
+; CHECK-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } [[DOTFCA_0_INSERT]], <2 x float> [[TMP8]], 1
 ; CHECK-NEXT:    ret { <2 x float>, <2 x float> } zeroinitializer
 ;
 entry:

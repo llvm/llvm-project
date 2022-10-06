@@ -8,15 +8,21 @@
 
 #include "mlir/Conversion/MathToLibm/MathToLibm.h"
 
-#include "../PassDetail.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTMATHTOLIBM
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -129,6 +135,14 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
     opFunc = rewriter.create<func::FuncOp>(rewriter.getUnknownLoc(), name,
                                            opFunctionTy);
     opFunc.setPrivate();
+
+    // By definition Math dialect operations imply LLVM's "readnone"
+    // function attribute, so we can set it here to provide more
+    // optimization opportunities (e.g. LICM) for backends targeting LLVM IR.
+    // This will have to be changed, when strict FP behavior is supported
+    // by Math dialect.
+    opFunc->setAttr(LLVM::LLVMDialect::getReadnoneAttrName(),
+                    UnitAttr::get(rewriter.getContext()));
   }
   assert(isa<FunctionOpInterface>(SymbolTable::lookupSymbolIn(module, name)));
 
@@ -138,18 +152,22 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
   return success();
 }
 
-void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns,
-                                                PatternBenefit benefit) {
+void mlir::populateMathToLibmConversionPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit,
+    llvm::Optional<PatternBenefit> log1pBenefit) {
   patterns.add<VecOpToScalarOp<math::Atan2Op>, VecOpToScalarOp<math::ExpM1Op>,
                VecOpToScalarOp<math::TanhOp>, VecOpToScalarOp<math::CosOp>,
                VecOpToScalarOp<math::SinOp>, VecOpToScalarOp<math::ErfOp>,
+               VecOpToScalarOp<math::RoundEvenOp>,
                VecOpToScalarOp<math::RoundOp>, VecOpToScalarOp<math::AtanOp>,
-               VecOpToScalarOp<math::TanOp>>(patterns.getContext(), benefit);
+               VecOpToScalarOp<math::TanOp>, VecOpToScalarOp<math::TruncOp>>(
+      patterns.getContext(), benefit);
   patterns.add<PromoteOpToF32<math::Atan2Op>, PromoteOpToF32<math::ExpM1Op>,
                PromoteOpToF32<math::TanhOp>, PromoteOpToF32<math::CosOp>,
                PromoteOpToF32<math::SinOp>, PromoteOpToF32<math::ErfOp>,
-               PromoteOpToF32<math::RoundOp>, PromoteOpToF32<math::AtanOp>,
-               PromoteOpToF32<math::TanOp>>(patterns.getContext(), benefit);
+               PromoteOpToF32<math::RoundEvenOp>, PromoteOpToF32<math::RoundOp>,
+               PromoteOpToF32<math::AtanOp>, PromoteOpToF32<math::TanOp>,
+               PromoteOpToF32<math::TruncOp>>(patterns.getContext(), benefit);
   patterns.add<ScalarOpToLibmCall<math::AtanOp>>(patterns.getContext(), "atanf",
                                                  "atan", benefit);
   patterns.add<ScalarOpToLibmCall<math::Atan2Op>>(patterns.getContext(),
@@ -162,17 +180,27 @@ void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns,
                                                 "tan", benefit);
   patterns.add<ScalarOpToLibmCall<math::TanhOp>>(patterns.getContext(), "tanhf",
                                                  "tanh", benefit);
+  patterns.add<ScalarOpToLibmCall<math::RoundEvenOp>>(
+      patterns.getContext(), "roundevenf", "roundeven", benefit);
   patterns.add<ScalarOpToLibmCall<math::RoundOp>>(patterns.getContext(),
                                                   "roundf", "round", benefit);
   patterns.add<ScalarOpToLibmCall<math::CosOp>>(patterns.getContext(), "cosf",
                                                 "cos", benefit);
   patterns.add<ScalarOpToLibmCall<math::SinOp>>(patterns.getContext(), "sinf",
                                                 "sin", benefit);
+  patterns.add<ScalarOpToLibmCall<math::Log1pOp>>(
+      patterns.getContext(), "log1pf", "log1p", log1pBenefit.value_or(benefit));
+  patterns.add<ScalarOpToLibmCall<math::FloorOp>>(patterns.getContext(),
+                                                  "floorf", "floor", benefit);
+  patterns.add<ScalarOpToLibmCall<math::CeilOp>>(patterns.getContext(), "ceilf",
+                                                 "ceil", benefit);
+  patterns.add<ScalarOpToLibmCall<math::TruncOp>>(patterns.getContext(),
+                                                  "truncf", "trunc", benefit);
 }
 
 namespace {
 struct ConvertMathToLibmPass
-    : public ConvertMathToLibmBase<ConvertMathToLibmPass> {
+    : public impl::ConvertMathToLibmBase<ConvertMathToLibmPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -184,8 +212,8 @@ void ConvertMathToLibmPass::runOnOperation() {
   populateMathToLibmConversionPatterns(patterns, /*benefit=*/1);
 
   ConversionTarget target(getContext());
-  target.addLegalDialect<arith::ArithmeticDialect, BuiltinDialect,
-                         func::FuncDialect, vector::VectorDialect>();
+  target.addLegalDialect<arith::ArithDialect, BuiltinDialect, func::FuncDialect,
+                         vector::VectorDialect>();
   target.addIllegalDialect<math::MathDialect>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();

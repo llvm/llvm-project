@@ -15,7 +15,6 @@
 #include "lldb/API/SBFile.h"
 #include "lldb/API/SBHostOS.h"
 #include "lldb/API/SBLanguageRuntime.h"
-#include "lldb/API/SBReproducer.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
@@ -742,39 +741,6 @@ EXAMPLES:
   llvm::outs() << examples << '\n';
 }
 
-static llvm::Optional<int> InitializeReproducer(llvm::StringRef argv0,
-                                                opt::InputArgList &input_args) {
-  bool capture = input_args.hasArg(OPT_capture);
-  bool generate_on_exit = input_args.hasArg(OPT_generate_on_exit);
-  auto *capture_path = input_args.getLastArg(OPT_capture_path);
-
-  if (generate_on_exit && !capture) {
-    WithColor::warning()
-        << "-reproducer-generate-on-exit specified without -capture\n";
-  }
-
-  if (capture || capture_path) {
-    if (capture_path) {
-      if (!capture)
-        WithColor::warning() << "-capture-path specified without -capture\n";
-      if (const char *error = SBReproducer::Capture(capture_path->getValue())) {
-        WithColor::error() << "reproducer capture failed: " << error << '\n';
-        return 1;
-      }
-    } else {
-      const char *error = SBReproducer::Capture();
-      if (error) {
-        WithColor::error() << "reproducer capture failed: " << error << '\n';
-        return 1;
-      }
-    }
-    if (generate_on_exit)
-      SBReproducer::SetAutoGenerate(true);
-  }
-
-  return llvm::None;
-}
-
 int main(int argc, char const *argv[]) {
   // Editline uses for example iswprint which is dependent on LC_CTYPE.
   std::setlocale(LC_ALL, "");
@@ -814,10 +780,6 @@ int main(int argc, char const *argv[]) {
     llvm::errs() << "Use '" << argv0
                  << " --help' for a complete list of options.\n";
     return 1;
-  }
-
-  if (auto exit_code = InitializeReproducer(argv[0], input_args)) {
-    return *exit_code;
   }
 
   SBError error = SBDebugger::InitializeWithErrorHandling();

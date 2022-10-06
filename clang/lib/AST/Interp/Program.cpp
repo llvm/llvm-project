@@ -127,7 +127,7 @@ llvm::Optional<unsigned> Program::getOrCreateGlobal(const ValueDecl *VD) {
   if (auto Idx = getGlobal(VD))
     return Idx;
 
-  if (auto Idx = createGlobal(VD)) {
+  if (auto Idx = createGlobal(VD, nullptr)) {
     GlobalIndices[VD] = *Idx;
     return Idx;
   }
@@ -153,7 +153,8 @@ llvm::Optional<unsigned> Program::getOrCreateDummy(const ParmVarDecl *PD) {
   return {};
 }
 
-llvm::Optional<unsigned> Program::createGlobal(const ValueDecl *VD) {
+llvm::Optional<unsigned> Program::createGlobal(const ValueDecl *VD,
+                                               const Expr *Init) {
   bool IsStatic, IsExtern;
   if (auto *Var = dyn_cast<VarDecl>(VD)) {
     IsStatic = !Var->hasLocalStorage();
@@ -162,7 +163,7 @@ llvm::Optional<unsigned> Program::createGlobal(const ValueDecl *VD) {
     IsStatic = false;
     IsExtern = true;
   }
-  if (auto Idx = createGlobal(VD, VD->getType(), IsStatic, IsExtern)) {
+  if (auto Idx = createGlobal(VD, VD->getType(), IsStatic, IsExtern, Init)) {
     for (const Decl *P = VD; P; P = P->getPreviousDecl())
       GlobalIndices[P] = *Idx;
     return *Idx;
@@ -175,7 +176,8 @@ llvm::Optional<unsigned> Program::createGlobal(const Expr *E) {
 }
 
 llvm::Optional<unsigned> Program::createGlobal(const DeclTy &D, QualType Ty,
-                                               bool IsStatic, bool IsExtern) {
+                                               bool IsStatic, bool IsExtern,
+                                               const Expr *Init) {
   // Create a descriptor for the global.
   Descriptor *Desc;
   const bool IsConst = Ty.isConstQualified();
@@ -206,19 +208,6 @@ Function *Program::getFunction(const FunctionDecl *F) {
   return It == Funcs.end() ? nullptr : It->second.get();
 }
 
-llvm::Expected<Function *> Program::getOrCreateFunction(const FunctionDecl *F) {
-  if (Function *Func = getFunction(F)) {
-    return Func;
-  }
-
-  // Try to compile the function if it wasn't compiled yet.
-  if (const FunctionDecl *FD = F->getDefinition())
-    return ByteCodeStmtGen<ByteCodeEmitter>(Ctx, *this).compileFunc(FD);
-
-  // A relocation which traps if not resolved.
-  return nullptr;
-}
-
 Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   // Use the actual definition as a key.
   RD = RD->getDefinition();
@@ -232,7 +221,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   }
 
   // Number of bytes required by fields and base classes.
-  unsigned Size = 0;
+  unsigned BaseSize = 0;
   // Number of bytes required by virtual base.
   unsigned VirtSize = 0;
 
@@ -256,9 +245,9 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
       const RecordDecl *BD = Spec.getType()->castAs<RecordType>()->getDecl();
       Record *BR = getOrCreateRecord(BD);
       if (Descriptor *Desc = GetBaseDesc(BD, BR)) {
-        Size += align(sizeof(InlineDescriptor));
-        Bases.push_back({BD, Size, Desc, BR});
-        Size += align(BR->getSize());
+        BaseSize += align(sizeof(InlineDescriptor));
+        Bases.push_back({BD, BaseSize, Desc, BR});
+        BaseSize += align(BR->getSize());
         continue;
       }
       return nullptr;
@@ -282,7 +271,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   Record::FieldList Fields;
   for (const FieldDecl *FD : RD->fields()) {
     // Reserve space for the field's descriptor and the offset.
-    Size += align(sizeof(InlineDescriptor));
+    BaseSize += align(sizeof(InlineDescriptor));
 
     // Classify the field and add its metadata.
     QualType FT = FD->getType();
@@ -298,19 +287,19 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     }
     if (!Desc)
       return nullptr;
-    Fields.push_back({FD, Size, Desc});
-    Size += align(Desc->getAllocSize());
+    Fields.push_back({FD, BaseSize, Desc});
+    BaseSize += align(Desc->getAllocSize());
   }
 
   Record *R = new (Allocator) Record(RD, std::move(Bases), std::move(Fields),
-                                     std::move(VirtBases), VirtSize, Size);
+                                     std::move(VirtBases), VirtSize, BaseSize);
   Records.insert({RD, R});
   return R;
 }
 
 Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
                                       bool IsConst, bool IsTemporary,
-                                      bool IsMutable) {
+                                      bool IsMutable, const Expr *Init) {
   // Classes and structures.
   if (auto *RT = Ty->getAs<RecordType>()) {
     if (auto *Record = getOrCreateRecord(RT->getDecl()))
@@ -334,14 +323,15 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
       } else {
         // Arrays of composites. In this case, the array is a list of pointers,
         // followed by the actual elements.
-        Descriptor *Desc =
+        Descriptor *ElemDesc =
             createDescriptor(D, ElemTy.getTypePtr(), IsConst, IsTemporary);
-        if (!Desc)
+        if (!ElemDesc)
           return nullptr;
-        InterpSize ElemSize = Desc->getAllocSize() + sizeof(InlineDescriptor);
+        InterpSize ElemSize =
+            ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
         if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems)
           return {};
-        return allocateDescriptor(D, Desc, NumElems, IsConst, IsTemporary,
+        return allocateDescriptor(D, ElemDesc, NumElems, IsConst, IsTemporary,
                                   IsMutable);
       }
     }

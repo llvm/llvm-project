@@ -18,11 +18,20 @@
 #include <__debug>
 #include <__functional/hash.h>
 #include <__iterator/iterator_traits.h>
+#include <__memory/addressof.h>
+#include <__memory/allocator_traits.h>
+#include <__memory/compressed_pair.h>
+#include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
+#include <__memory/unique_ptr.h>
+#include <__type_traits/can_extract_key.h>
+#include <__utility/forward.h>
+#include <__utility/move.h>
+#include <__utility/pair.h>
 #include <__utility/swap.h>
 #include <cmath>
+#include <cstring>
 #include <initializer_list>
-#include <memory>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -48,7 +57,7 @@ template <class ..._Args>
 struct __is_hash_value_type : false_type {};
 
 template <class _One>
-struct __is_hash_value_type<_One> : __is_hash_value_type_imp<__uncvref_t<_One> > {};
+struct __is_hash_value_type<_One> : __is_hash_value_type_imp<__remove_cvref_t<_One> > {};
 
 _LIBCPP_FUNC_VIS
 size_t __next_prime(size_t __n);
@@ -58,16 +67,13 @@ struct __hash_node_base
 {
     typedef typename pointer_traits<_NodePtr>::element_type __node_type;
     typedef __hash_node_base __first_node;
-    typedef typename __rebind_pointer<_NodePtr, __first_node>::type __node_base_pointer;
+    typedef __rebind_pointer_t<_NodePtr, __first_node> __node_base_pointer;
     typedef _NodePtr __node_pointer;
 
 #if defined(_LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB)
   typedef __node_base_pointer __next_pointer;
 #else
-  typedef typename conditional<
-      is_pointer<__node_pointer>::value,
-      __node_base_pointer,
-      __node_pointer>::type   __next_pointer;
+    typedef __conditional_t<is_pointer<__node_pointer>::value, __node_base_pointer, __node_pointer> __next_pointer;
 #endif
 
     __next_pointer    __next_;
@@ -96,7 +102,7 @@ template <class _Tp, class _VoidPtr>
 struct _LIBCPP_STANDALONE_DEBUG __hash_node
     : public __hash_node_base
              <
-                 typename __rebind_pointer<_VoidPtr, __hash_node<_Tp, _VoidPtr> >::type
+                 __rebind_pointer_t<_VoidPtr, __hash_node<_Tp, _VoidPtr> >
              >
 {
     typedef _Tp __node_value_type;
@@ -208,9 +214,9 @@ struct __hash_map_pointer_types {};
 template <class _Tp, class _AllocPtr, class _KVTypes>
 struct __hash_map_pointer_types<_Tp, _AllocPtr, _KVTypes, true> {
   typedef typename _KVTypes::__map_value_type   _Mv;
-  typedef typename __rebind_pointer<_AllocPtr, _Mv>::type
+  typedef __rebind_pointer_t<_AllocPtr, _Mv>
                                                        __map_value_type_pointer;
-  typedef typename __rebind_pointer<_AllocPtr, const _Mv>::type
+  typedef __rebind_pointer_t<_AllocPtr, const _Mv>
                                                  __const_map_value_type_pointer;
 };
 
@@ -228,21 +234,21 @@ public:
   typedef ptrdiff_t difference_type;
   typedef size_t size_type;
 
-  typedef typename __rebind_pointer<_NodePtr, void>::type       __void_pointer;
+  typedef __rebind_pointer_t<_NodePtr, void>       __void_pointer;
 
   typedef typename pointer_traits<_NodePtr>::element_type       __node_type;
   typedef _NodePtr                                              __node_pointer;
 
   typedef __hash_node_base<__node_pointer>                      __node_base_type;
-  typedef typename __rebind_pointer<_NodePtr, __node_base_type>::type
+  typedef __rebind_pointer_t<_NodePtr, __node_base_type>
                                                              __node_base_pointer;
 
   typedef typename __node_base_type::__next_pointer          __next_pointer;
 
   typedef _Tp                                                 __node_value_type;
-  typedef typename __rebind_pointer<_VoidPtr, __node_value_type>::type
+  typedef __rebind_pointer_t<_VoidPtr, __node_value_type>
                                                       __node_value_type_pointer;
-  typedef typename __rebind_pointer<_VoidPtr, const __node_value_type>::type
+  typedef __rebind_pointer_t<_VoidPtr, const __node_value_type>
                                                 __const_node_value_type_pointer;
 
 private:
@@ -250,7 +256,7 @@ private:
                 "_NodePtr should never be a pointer to const");
     static_assert((is_same<typename pointer_traits<_VoidPtr>::element_type, void>::value),
                   "_VoidPtr does not point to unqualified void type");
-    static_assert((is_same<typename __rebind_pointer<_VoidPtr, __node_type>::type,
+    static_assert((is_same<__rebind_pointer_t<_VoidPtr, __node_type>,
                           _NodePtr>::value), "_VoidPtr does not rebind to _NodePtr.");
 };
 
@@ -269,7 +275,7 @@ struct __hash_node_types_from_iterator<__hash_const_local_iterator<_NodePtr> > :
 template <class _NodeValueTp, class _VoidPtr>
 struct __make_hash_node_types {
   typedef __hash_node<_NodeValueTp, _VoidPtr> _NodeTp;
-  typedef typename __rebind_pointer<_VoidPtr, _NodeTp>::type _NodePtr;
+  typedef __rebind_pointer_t<_VoidPtr, _NodeTp> _NodePtr;
   typedef __hash_node_types<_NodePtr> type;
 };
 
@@ -614,8 +620,8 @@ class _LIBCPP_TEMPLATE_VIS __hash_const_local_iterator
 
     typedef pointer_traits<__node_pointer>          __pointer_traits;
     typedef typename __pointer_traits::element_type __node;
-    typedef typename remove_const<__node>::type     __non_const_node;
-    typedef typename __rebind_pointer<__node_pointer, __non_const_node>::type
+    typedef __remove_const_t<__node>                  __non_const_node;
+    typedef __rebind_pointer_t<__node_pointer, __non_const_node>
         __non_const_node_pointer;
 public:
     typedef __hash_local_iterator<__non_const_node_pointer>
@@ -2279,7 +2285,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__do_rehash(size_type __nbc)
                     else
                     {
                         __next_pointer __np = __cp;
-                        if _LIBCPP_CONSTEXPR_AFTER_CXX14 (!_UniqueKeys)
+                        if _LIBCPP_CONSTEXPR_SINCE_CXX17 (!_UniqueKeys)
                         {
                             for (; __np->__next_ != nullptr &&
                                    key_eq()(__cp->__upcast()->__value_,

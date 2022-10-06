@@ -32,7 +32,7 @@ public:
   // strictly below that of the previous column, and all columns which have only
   // zeros are at the end.
   static std::pair<unsigned, LinearTransform>
-  makeTransformToColumnEchelon(Matrix m);
+  makeTransformToColumnEchelon(const Matrix &m);
 
   // Returns an IntegerRelation having a constraint vector vT for every
   // constraint vector v in rel, where T is this transform.
@@ -40,14 +40,13 @@ public:
 
   // The given vector is interpreted as a row vector v. Post-multiply v with
   // this transform, say T, and return vT.
-  SmallVector<int64_t, 8> preMultiplyWithRow(ArrayRef<int64_t> rowVec) const {
+  SmallVector<MPInt, 8> preMultiplyWithRow(ArrayRef<MPInt> rowVec) const {
     return matrix.preMultiplyWithRow(rowVec);
   }
 
   // The given vector is interpreted as a column vector v. Pre-multiply v with
   // this transform, say T, and return Tv.
-  SmallVector<int64_t, 8>
-  postMultiplyWithColumn(ArrayRef<int64_t> colVec) const {
+  SmallVector<MPInt, 8> postMultiplyWithColumn(ArrayRef<MPInt> colVec) const {
     return matrix.postMultiplyWithColumn(colVec);
   }
 

@@ -575,6 +575,8 @@ TEST_F(FormatTestCSharp, CSharpEscapedQuotesInVerbatimStrings) {
   verifyFormat(R"(string str = @"""Hello world""";)", Style);
   verifyFormat(R"(string str = $@"""Hello {friend}""";)", Style);
   verifyFormat(R"(return $@"Foo ""/foo?f={Request.Query["f"]}""";)", Style);
+  verifyFormat(R"(return @$"Foo ""/foo?f={Request.Query["f"]}""";)", Style);
+  verifyFormat(R"(return @$"path\to\{specifiedFile}")", Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpQuotesInInterpolatedStrings) {
@@ -615,6 +617,24 @@ var x = foo(className, $@"some code:
 		", values)}");)";
 
   EXPECT_EQ(Code, format(Code, Style));
+}
+
+TEST_F(FormatTestCSharp, CSharpNewOperator) {
+  FormatStyle Style = getLLVMStyle(FormatStyle::LK_CSharp);
+
+  verifyFormat("public void F() {\n"
+               "  var v = new C(() => { var t = 5; });\n"
+               "}",
+               Style);
+  verifyFormat("public void F() {\n"
+               "  var v = new C(() => {\n"
+               "    try {\n"
+               "    } catch {\n"
+               "      var t = 5;\n"
+               "    }\n"
+               "  });\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTestCSharp, CSharpLambdas) {

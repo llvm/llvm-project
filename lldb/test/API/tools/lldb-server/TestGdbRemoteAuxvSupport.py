@@ -112,11 +112,12 @@ class TestGdbRemoteAuxvSupport(gdbremote_testcase.GdbRemoteTestCaseBase):
         auxv_dict = self.build_auxv_dict(endian, word_size, auxv_data)
         self.assertIsNotNone(auxv_dict)
 
-        # Verify keys look reasonable.
+        # Verify keys look reasonable. While AUX values are most commonly
+        # small (usually smaller than 50), they can sometimes be larger.
+        self.trace("auxv dict: {}".format(auxv_dict))
         for auxv_key in auxv_dict:
             self.assertTrue(auxv_key >= 1)
-            self.assertTrue(auxv_key <= 1000)
-        self.trace("auxv dict: {}".format(auxv_dict))
+            self.assertTrue(auxv_key <= 2500)
 
     @skipIfWindows
     @expectedFailureNetBSD

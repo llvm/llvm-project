@@ -21,22 +21,34 @@
 // test assignment from null
 
 template <bool IsArray>
-void test_basic() {
+TEST_CONSTEXPR_CXX23 void test_basic() {
   typedef typename std::conditional<IsArray, A[], A>::type VT;
   const int expect_alive = IsArray ? 5 : 1;
   {
     std::unique_ptr<VT> s2(newValue<VT>(expect_alive));
-    assert(A::count == expect_alive);
+    if (!TEST_IS_CONSTANT_EVALUATED)
+      assert(A::count == expect_alive);
     s2 = nullptr;
-    assert(A::count == 0);
+    if (!TEST_IS_CONSTANT_EVALUATED)
+      assert(A::count == 0);
     assert(s2.get() == 0);
   }
-  assert(A::count == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED)
+    assert(A::count == 0);
+}
+
+TEST_CONSTEXPR_CXX23 bool test() {
+  test_basic</*IsArray*/ false>();
+  test_basic<true>();
+
+  return true;
 }
 
 int main(int, char**) {
-  test_basic</*IsArray*/ false>();
-  test_basic<true>();
+  test();
+#if TEST_STD_VER >= 23
+  static_assert(test());
+#endif
 
   return 0;
 }

@@ -101,6 +101,10 @@ public:
       const lldb_private::SourceLocationSpec &src_location_spec,
       lldb::SymbolContextItem resolve_scope,
       lldb_private::SymbolContextList &sc_list) override;
+
+  lldb_private::Status
+  CalculateFrameVariableError(lldb_private::StackFrame &frame) override;
+
   void
   FindGlobalVariables(lldb_private::ConstString name,
                       const lldb_private::CompilerDeclContext &parent_decl_ctx,
@@ -109,9 +113,8 @@ public:
   void FindGlobalVariables(const lldb_private::RegularExpression &regex,
                            uint32_t max_matches,
                            lldb_private::VariableList &variables) override;
-  void FindFunctions(lldb_private::ConstString name,
+  void FindFunctions(const lldb_private::Module::LookupInfo &lookup_info,
                      const lldb_private::CompilerDeclContext &parent_decl_ctx,
-                     lldb::FunctionNameType name_type_mask,
                      bool include_inlines,
                      lldb_private::SymbolContextList &sc_list) override;
   void FindFunctions(const lldb_private::RegularExpression &regex,
@@ -169,6 +172,7 @@ protected:
     lldb_private::FileSpec so_file;
     lldb_private::ConstString oso_path;
     llvm::sys::TimePoint<> oso_mod_time;
+    lldb_private::Status oso_load_error;
     OSOInfoSP oso_sp;
     lldb::CompUnitSP compile_unit_sp;
     uint32_t first_symbol_index = UINT32_MAX;

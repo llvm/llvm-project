@@ -32,9 +32,24 @@ def LLVMLibcExt : StandardSpec<"llvm_libc_ext"> {
           >,
       ]
   >;
+  
+  HeaderSpec Sched = HeaderSpec<
+      "sched.h",
+      [], // Macros
+      [PidT, SizeTType, CpuSetT], // Types
+      [], // Enumerations
+      [
+        FunctionSpec<
+            "__sched_getcpucount",
+            RetValSpec<IntType>,
+            [ArgSpec<SizeTType>, ArgSpec<ConstCpuSetPtr>]
+        >,
+      ]
+  >;
 
   let Headers = [
     String,
+    Sched,
     Assert,
   ];
 }

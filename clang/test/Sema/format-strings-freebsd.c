@@ -35,9 +35,9 @@ void check_freebsd_kernel_extensions(int i, long l, char *s, short h)
   freebsd_kernel_printf("%lr", l); // no-warning
 
   // h modifier expects a short
-  freebsd_kernel_printf("%hr", i); // expected-warning{{format specifies type 'short' but the argument has type 'int'}}
+  freebsd_kernel_printf("%hr", i); // no-warning
   freebsd_kernel_printf("%hr", h); // no-warning
-  freebsd_kernel_printf("%hy", i); // expected-warning{{format specifies type 'short' but the argument has type 'int'}}
+  freebsd_kernel_printf("%hy", i); // no-warning
   freebsd_kernel_printf("%hy", h); // no-warning
 
   // %y expects an int

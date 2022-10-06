@@ -302,9 +302,8 @@ void MachOWriter::writeSymbolTable() {
           .MachOLoadCommand.symtab_command_data;
 
   char *SymTable = (char *)Buf->getBufferStart() + SymTabCommand.symoff;
-  for (auto Iter = O.SymTable.Symbols.begin(), End = O.SymTable.Symbols.end();
-       Iter != End; Iter++) {
-    SymbolEntry *Sym = Iter->get();
+  for (auto &Symbol : O.SymTable.Symbols) {
+    SymbolEntry *Sym = Symbol.get();
     uint32_t Nstrx = LayoutBuilder.getStringTableBuilder().getOffset(Sym->Name);
 
     if (Is64Bit)

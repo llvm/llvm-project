@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=cl2.0 -fapply-global-visibility-to-externs -fvisibility default -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck --check-prefix=FVIS-DEFAULT %s
-// RUN: %clang_cc1 -std=cl2.0 -fapply-global-visibility-to-externs -fvisibility protected -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck --check-prefix=FVIS-PROTECTED %s
-// RUN: %clang_cc1 -std=cl2.0 -fapply-global-visibility-to-externs -fvisibility hidden -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck --check-prefix=FVIS-HIDDEN %s
+// RUN: %clang_cc1 -std=cl2.0 -fapply-global-visibility-to-externs -fvisibility=default -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck --check-prefix=FVIS-DEFAULT %s
+// RUN: %clang_cc1 -std=cl2.0 -fapply-global-visibility-to-externs -fvisibility=protected -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck --check-prefix=FVIS-PROTECTED %s
+// RUN: %clang_cc1 -std=cl2.0 -fapply-global-visibility-to-externs -fvisibility=hidden -triple amdgcn-unknown-unknown -S -emit-llvm -o - %s | FileCheck --check-prefix=FVIS-HIDDEN %s
 
 // REQUIRES: amdgpu-registered-target
 

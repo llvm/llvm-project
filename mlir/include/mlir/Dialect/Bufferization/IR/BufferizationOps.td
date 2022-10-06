@@ -60,7 +60,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     Example:
 
     ```mlir
-    %c = bufferization.alloc_tensor [%d1, %d2] : tensor<?x?xf32, #SparseMatrix>
+    %c = bufferization.alloc_tensor(%d1, %d2) : tensor<?x?xf32, #SparseMatrix>
     %0 = linalg.matmul
       ins(%a, %b: tensor<?x?xf32, #SparseMatrix>, tensor<?x?xf32, #SparseMatrix>)
       outs(%c: tensor<?x?xf32, #SparseMatrix>) -> tensor<?x?xf32, #SparseMatrix>
@@ -82,12 +82,6 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
 
     bool bufferizesToAllocation(OpResult opResult) { return true; }
 
-    FailureOr<unsigned> getMemorySpace(OpResult opResult) {
-      if (getMemorySpace().has_value())
-        return static_cast<unsigned>(*getMemorySpace());
-      return failure();
-    }
-
     bool bufferizesToMemoryRead(OpOperand &opOperand,
                                 const AnalysisState &state);
 
@@ -96,6 +90,10 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
 
     SmallVector<OpResult> getAliasingOpResult(
         OpOperand &opOperand, const AnalysisState &state);
+
+    FailureOr<BaseMemRefType> getBufferType(
+        Value value, const BufferizationOptions &options,
+        const DenseMap<Value, BaseMemRefType> &fixedTypes);
 
     RankedTensorType getType() {
       return getResult().getType().cast<RankedTensorType>();
@@ -324,6 +322,12 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
       // It is unknown whether the memref operand is writable or not.
       return false;
     }
+
+    FailureOr<BaseMemRefType> getBufferType(
+        Value value, const BufferizationOptions &options,
+        const DenseMap<Value, BaseMemRefType> &fixedTypes) {
+      return getMemref().getType().cast<BaseMemRefType>();
+    }
   }];
 
   let assemblyFormat = "$memref attr-dict `:` type($memref)";
@@ -351,8 +355,8 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
     Casts a tensor to a memref.
 
     ```mlir
-    // Result type is memref<4x?xf32, #map0, 42>
-    %12 = bufferization.to_memref %10 : memref<4x?xf32, #map0, 42>
+    // Result type is memref<4x?xf32, #layout, 42>
+    %12 = bufferization.to_memref %10 : memref<4x?xf32, #layout, 42>
     ```
 
     Note, that mutating the result of the `to_memref` operation leads to

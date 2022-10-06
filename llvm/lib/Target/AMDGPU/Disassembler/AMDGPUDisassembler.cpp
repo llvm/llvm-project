@@ -119,6 +119,7 @@ static DecodeStatus decodeBoolReg(MCInst &Inst, unsigned Val, uint64_t Addr,
 DECODE_OPERAND(Decode##RegClass##RegisterClass, decodeOperand_##RegClass)
 
 DECODE_OPERAND_REG(VGPR_32)
+DECODE_OPERAND_REG(VGPR_32_Lo128)
 DECODE_OPERAND_REG(VRegOrLds_32)
 DECODE_OPERAND_REG(VS_32)
 DECODE_OPERAND_REG(VS_64)
@@ -560,6 +561,12 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     if (Bytes.size() < 4) break;
     const uint64_t QW = ((uint64_t)eatBytes<uint32_t>(Bytes) << 32) | DW;
 
+    if (STI.getFeatureBits()[AMDGPU::FeatureGFX940Insts]) {
+      Res = tryDecodeInst(DecoderTableGFX94064, MI, QW, Address);
+      if (Res)
+        break;
+    }
+
     if (STI.getFeatureBits()[AMDGPU::FeatureGFX90AInsts]) {
       Res = tryDecodeInst(DecoderTableGFX90A64, MI, QW, Address);
       if (Res)
@@ -598,7 +605,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
               MI.getOpcode() == AMDGPU::V_FMAC_LEGACY_F32_e64_gfx10 ||
               MI.getOpcode() == AMDGPU::V_FMAC_DX9_ZERO_F32_e64_gfx11 ||
               MI.getOpcode() == AMDGPU::V_FMAC_F16_e64_gfx10 ||
-              MI.getOpcode() == AMDGPU::V_FMAC_F16_e64_gfx11)) {
+              MI.getOpcode() == AMDGPU::V_FMAC_F16_t16_e64_gfx11)) {
     // Insert dummy unused src2_modifiers.
     insertNamedMCOperand(MI, MCOperand::createImm(0),
                          AMDGPU::OpName::src2_modifiers);
@@ -697,7 +704,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
   int ImmLitIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::imm);
-  if (Res && ImmLitIdx != -1)
+  bool isVOP2 = MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP2;
+  if (Res && ImmLitIdx != -1 && (isVOP2 || AMDGPU::isVOPD(MI.getOpcode())))
     Res = convertFMAanyK(MI, ImmLitIdx);
 
   // if the opcode was not recognized we'll assume a Size of 4 bytes
@@ -1133,6 +1141,10 @@ MCOperand AMDGPUDisassembler::decodeOperand_VSrcV232(unsigned Val) const {
   return decodeSrcOp(OPWV232, Val);
 }
 
+MCOperand AMDGPUDisassembler::decodeOperand_VGPR_32_Lo128(unsigned Val) const {
+  return createRegOperand(AMDGPU::VGPR_32_Lo128RegClassID, Val);
+}
+
 MCOperand AMDGPUDisassembler::decodeOperand_VGPR_32(unsigned Val) const {
   // Some instructions have operand restrictions beyond what the encoding
   // allows. Some ordinarily VSrc_32 operands are VGPR_32, so clear the extra
@@ -1507,7 +1519,7 @@ MCOperand AMDGPUDisassembler::decodeSrcOp(const OpWidthTy Width, unsigned Val,
   }
   if (Val <= SGPR_MAX) {
     // "SGPR_MIN <= Val" is always true and causes compilation warning.
-    static_assert(SGPR_MIN == 0, "");
+    static_assert(SGPR_MIN == 0);
     return createSRegOperand(getSgprClassId(Width), Val - SGPR_MIN);
   }
 
@@ -1551,7 +1563,7 @@ MCOperand AMDGPUDisassembler::decodeDstOp(const OpWidthTy Width, unsigned Val) c
 
   if (Val <= SGPR_MAX) {
     // "SGPR_MIN <= Val" is always true and causes compilation warning.
-    static_assert(SGPR_MIN == 0, "");
+    static_assert(SGPR_MIN == 0);
     return createSRegOperand(getSgprClassId(Width), Val - SGPR_MIN);
   }
 

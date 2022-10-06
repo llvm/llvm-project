@@ -1356,10 +1356,8 @@ struct TypeDeclarationStmt {
 };
 
 // R828 access-id -> access-name | generic-spec
-struct AccessId {
-  UNION_CLASS_BOILERPLATE(AccessId);
-  std::variant<Name, common::Indirection<GenericSpec>> u;
-};
+// "access-name" is ambiguous with "generic-spec", so that's what's parsed
+WRAPPER_CLASS(AccessId, common::Indirection<GenericSpec>);
 
 // R827 access-stmt -> access-spec [[::] access-id-list]
 struct AccessStmt {
@@ -3383,6 +3381,13 @@ struct OmpScheduleClause {
   std::tuple<std::optional<OmpScheduleModifier>, ScheduleType,
       std::optional<ScalarIntExpr>>
       t;
+};
+
+// device([ device-modifier :] scalar-integer-expression)
+struct OmpDeviceClause {
+  TUPLE_CLASS_BOILERPLATE(OmpDeviceClause);
+  ENUM_CLASS(DeviceModifier, Ancestor, Device_Num)
+  std::tuple<std::optional<DeviceModifier>, ScalarIntExpr> t;
 };
 
 // 2.12 if-clause -> IF ([ directive-name-modifier :] scalar-logical-expr)

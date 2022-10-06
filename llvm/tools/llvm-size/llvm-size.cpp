@@ -570,6 +570,8 @@ static void printFileSectionSizes(StringRef file) {
         else if (MachO && OutputFormat == darwin)
           outs() << a->getFileName() << "(" << o->getFileName() << "):\n";
         printObjectSectionSizes(o);
+        if (!MachO && OutputFormat == darwin)
+          outs() << o->getFileName() << " (ex " << a->getFileName() << ")\n";
         if (OutputFormat == berkeley) {
           if (MachO)
             outs() << a->getFileName() << "(" << o->getFileName() << ")\n";
@@ -836,6 +838,8 @@ static void printFileSectionSizes(StringRef file) {
     else if (MachO && OutputFormat == darwin && MoreThanOneFile)
       outs() << o->getFileName() << ":\n";
     printObjectSectionSizes(o);
+    if (!MachO && OutputFormat == darwin)
+      outs() << o->getFileName() << "\n";
     if (OutputFormat == berkeley) {
       if (!MachO || MoreThanOneFile)
         outs() << o->getFileName();

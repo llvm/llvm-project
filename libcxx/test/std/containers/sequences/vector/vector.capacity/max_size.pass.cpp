@@ -19,7 +19,7 @@
 #include "test_macros.h"
 
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX20 bool test() {
   {
     typedef limited_allocator<int, 10> A;
     typedef std::vector<int, A> C;
@@ -44,6 +44,16 @@ int main(int, char**) {
     assert(c.max_size() <= max_dist);
     assert(c.max_size() <= alloc_max_size(c.get_allocator()));
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER > 17
+  static_assert(test());
+#endif
 
   return 0;
 }

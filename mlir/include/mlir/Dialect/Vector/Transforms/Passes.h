@@ -13,6 +13,9 @@
 
 namespace mlir {
 namespace vector {
+#define GEN_PASS_DECL
+#include "mlir/Dialect/Vector/Transforms/Passes.h.inc"
+
 /// Creates an instance of the `vector` dialect bufferization pass.
 std::unique_ptr<Pass> createVectorBufferizePass();
 

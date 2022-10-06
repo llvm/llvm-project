@@ -18,6 +18,7 @@
 #include "bolt/Profile/Heatmap.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -76,6 +77,8 @@ MaxSamples("max-samples",
   cl::Optional,
   cl::Hidden,
   cl::cat(AggregatorCategory));
+
+extern cl::opt<opts::ProfileFormatKind> ProfileFormat;
 
 cl::opt<bool> ReadPreAggregated(
     "pa", cl::desc("skip perf and read data from a pre-aggregated file format"),
@@ -316,8 +319,6 @@ void DataAggregator::processFileBuildID(StringRef FileBuildID) {
   } else {
     outs() << "PERF2BOLT: matched build-id and file name\n";
   }
-
-  return;
 }
 
 bool DataAggregator::checkPerfDataMagic(StringRef FileName) {
@@ -611,7 +612,8 @@ Error DataAggregator::readProfile(BinaryContext &BC) {
     convertBranchData(Function);
   }
 
-  if (opts::AggregateOnly) {
+  if (opts::AggregateOnly &&
+      opts::ProfileFormat == opts::ProfileFormatKind::PF_Fdata) {
     if (std::error_code EC = writeAggregatedFile(opts::OutputFilename))
       report_error("cannot create output data file", EC);
   }
@@ -699,7 +701,7 @@ bool DataAggregator::doSample(BinaryFunction &Func, uint64_t Address,
 
   Address -= Func.getAddress();
   if (BAT)
-    Address = BAT->translate(Func, Address, /*IsBranchSrc=*/false);
+    Address = BAT->translate(Func.getAddress(), Address, /*IsBranchSrc=*/false);
 
   I->second.bumpCount(Address, Count);
   return true;
@@ -722,8 +724,8 @@ bool DataAggregator::doIntraBranch(BinaryFunction &Func, uint64_t From,
                     << Func.getPrintName() << " @ " << Twine::utohexstr(To)
                     << '\n');
   if (BAT) {
-    From = BAT->translate(Func, From, /*IsBranchSrc=*/true);
-    To = BAT->translate(Func, To, /*IsBranchSrc=*/false);
+    From = BAT->translate(Func.getAddress(), From, /*IsBranchSrc=*/true);
+    To = BAT->translate(Func.getAddress(), To, /*IsBranchSrc=*/false);
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: BAT translation on bumpBranchCount: "
                       << Func.getPrintName() << " @ " << Twine::utohexstr(From)
                       << " -> " << Func.getPrintName() << " @ "
@@ -752,7 +754,7 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
     }
     From -= FromFunc->getAddress();
     if (BAT)
-      From = BAT->translate(*FromFunc, From, /*IsBranchSrc=*/true);
+      From = BAT->translate(FromFunc->getAddress(), From, /*IsBranchSrc=*/true);
 
     recordExit(*FromFunc, From, Mispreds, Count);
   }
@@ -766,7 +768,7 @@ bool DataAggregator::doInterBranch(BinaryFunction *FromFunc,
     }
     To -= ToFunc->getAddress();
     if (BAT)
-      To = BAT->translate(*ToFunc, To, /*IsBranchSrc=*/false);
+      To = BAT->translate(ToFunc->getAddress(), To, /*IsBranchSrc=*/false);
 
     recordEntry(*ToFunc, To, Mispreds, Count);
   }
@@ -822,7 +824,8 @@ bool DataAggregator::doTrace(const LBREntry &First, const LBREntry &Second,
   }
 
   Optional<BoltAddressTranslation::FallthroughListTy> FTs =
-      BAT ? BAT->getFallthroughsInTrace(*FromFunc, First.To, Second.From)
+      BAT ? BAT->getFallthroughsInTrace(FromFunc->getAddress(), First.To,
+                                        Second.From)
           : getFallthroughsInTrace(*FromFunc, First, Second, Count);
   if (!FTs) {
     LLVM_DEBUG(
@@ -866,8 +869,8 @@ bool DataAggregator::recordTrace(
   if (From > To)
     return false;
 
-  BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(From);
-  BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
+  const BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(From);
+  const BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
 
   if (!FromBB || !ToBB)
     return false;
@@ -876,7 +879,8 @@ bool DataAggregator::recordTrace(
   // the previous block (that instruction should be a call).
   if (From == FromBB->getOffset() && !BF.containsAddress(FirstLBR.From) &&
       !FromBB->isEntryPoint() && !FromBB->isLandingPad()) {
-    BinaryBasicBlock *PrevBB = BF.getLayout().getBlock(FromBB->getIndex() - 1);
+    const BinaryBasicBlock *PrevBB =
+        BF.getLayout().getBlock(FromBB->getIndex() - 1);
     if (PrevBB->getSuccessor(FromBB->getLabel())) {
       const MCInst *Instr = PrevBB->getLastNonPseudoInstr();
       if (Instr && BC.MIB->isCall(*Instr))
@@ -1052,6 +1056,10 @@ void DataAggregator::consumeRestOfLine() {
   Line += 1;
 }
 
+bool DataAggregator::checkNewLine() {
+  return ParsingBuf[0] == '\n';
+}
+
 ErrorOr<DataAggregator::PerfBranchSample> DataAggregator::parseBranchSample() {
   PerfBranchSample Res;
 
@@ -1157,7 +1165,7 @@ ErrorOr<DataAggregator::PerfMemSample> DataAggregator::parseMemSample() {
   ErrorOr<StringRef> Event = parseString(FieldSeparator);
   if (std::error_code EC = Event.getError())
     return EC;
-  if (Event.get().find("mem-loads") == StringRef::npos) {
+  if (!Event.get().contains("mem-loads")) {
     consumeRestOfLine();
     return Res;
   }
@@ -2022,19 +2030,16 @@ std::error_code DataAggregator::parseMMapEvents() {
     MMapInfo &MMapInfo = I->second;
     if (BC->HasFixedLoadAddress && MMapInfo.MMapAddress) {
       // Check that the binary mapping matches one of the segments.
-      bool MatchFound = false;
-      for (auto &KV : BC->SegmentMapInfo) {
-        SegmentInfo &SegInfo = KV.second;
-        // The mapping is page-aligned and hence the MMapAddress could be
-        // different from the segment start address. We cannot know the page
-        // size of the mapping, but we know it should not exceed the segment
-        // alignment value. Hence we are performing an approximate check.
-        if (SegInfo.Address >= MMapInfo.MMapAddress &&
-            SegInfo.Address - MMapInfo.MMapAddress < SegInfo.Alignment) {
-          MatchFound = true;
-          break;
-        }
-      }
+      bool MatchFound = llvm::any_of(
+          llvm::make_second_range(BC->SegmentMapInfo),
+          [&](SegmentInfo &SegInfo) {
+            // The mapping is page-aligned and hence the MMapAddress could be
+            // different from the segment start address. We cannot know the page
+            // size of the mapping, but we know it should not exceed the segment
+            // alignment value. Hence we are performing an approximate check.
+            return SegInfo.Address >= MMapInfo.MMapAddress &&
+                   SegInfo.Address - MMapInfo.MMapAddress < SegInfo.Alignment;
+          });
       if (!MatchFound) {
         errs() << "PERF2BOLT-WARNING: ignoring mapping of " << NameToUse
                << " at 0x" << Twine::utohexstr(MMapInfo.MMapAddress) << '\n';
@@ -2146,7 +2151,8 @@ DataAggregator::parseNameBuildIDPair() {
 
   // If one of the strings is missing, don't issue a parsing error, but still
   // do not return a value.
-  if (ParsingBuf[0] == '\n')
+  consumeAllRemainingFS();
+  if (checkNewLine())
     return NoneType();
 
   ErrorOr<StringRef> NameStr = parseString(FieldSeparator, true);

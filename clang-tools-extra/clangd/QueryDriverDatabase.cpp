@@ -189,8 +189,7 @@ extractSystemIncludesAndTarget(llvm::SmallString<128> Driver,
 
   for (size_t I = 0, E = CommandLine.size(); I < E; ++I) {
     llvm::StringRef Arg = CommandLine[I];
-    if (llvm::any_of(FlagsToPreserve,
-                     [&Arg](llvm::StringRef S) { return S == Arg; })) {
+    if (llvm::is_contained(FlagsToPreserve, Arg)) {
       Args.push_back(Arg);
     } else {
       const auto *Found =
@@ -342,7 +341,7 @@ public:
       auto Type = driver::types::lookupTypeForExtension(Ext);
       if (Type == driver::types::TY_INVALID) {
         elog("System include extraction: invalid file type for {0}", Ext);
-        return {};
+        return Cmd;
       }
       Lang = driver::types::getTypeName(Type);
     }

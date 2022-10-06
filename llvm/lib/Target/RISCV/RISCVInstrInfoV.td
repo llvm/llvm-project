@@ -28,6 +28,14 @@ class VTypeIOp<int VTypeINum> : Operand<XLenVT> {
   let ParserMatchClass = VTypeIAsmOperand<VTypeINum>;
   let PrintMethod = "printVTypeI";
   let DecoderMethod = "decodeUImmOperand<"#VTypeINum#">";
+  let OperandType = "OPERAND_VTYPEI" # VTypeINum;
+  let OperandNamespace = "RISCVOp";
+  let MCOperandPredicate = [{
+    int64_t Imm;
+    if (MCOp.evaluateAsConstantImm(Imm))
+      return isUInt<VTypeINum>(Imm);
+    return MCOp.isBareSymbolRef();
+  }];
 }
 
 def VTypeIOp10 : VTypeIOp<10>;
@@ -54,6 +62,8 @@ def simm5 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<5>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<5>;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<5>";
+  let OperandType = "OPERAND_SIMM5";
+  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -71,6 +81,8 @@ def SImm5Plus1AsmOperand : AsmOperandClass {
 def simm5_plus1 : Operand<XLenVT>, ImmLeaf<XLenVT,
   [{return (isInt<5>(Imm) && Imm != -16) || Imm == 16;}]> {
   let ParserMatchClass = SImm5Plus1AsmOperand;
+  let OperandType = "OPERAND_SIMM5_PLUS1";
+  let OperandNamespace = "RISCVOp";
   let MCOperandPredicate = [{
     int64_t Imm;
     if (MCOp.evaluateAsConstantImm(Imm))
@@ -131,18 +143,13 @@ class VSSSEGSched<int nf, int eew> : Sched<[
   !cast<SchedReadWrite>("WriteVSSSEG" #nf #"e" #eew),
   !cast<SchedReadWrite>("ReadVSTS" #eew #"V"), ReadVSTX, ReadVSTSX, ReadVMask]>;
 // Indexed Segment Loads and Stores
-class VLUXSEGSched<int nf, int eew> : Sched<[
-  !cast<SchedReadWrite>("WriteVLUXSEG" #nf #"e" #eew), ReadVLDX, ReadVLDUXV,
-  ReadVMask]>;
-class VLOXSEGSched<int nf, int eew> : Sched<[
-  !cast<SchedReadWrite>("WriteVLOXSEG" #nf #"e" #eew), ReadVLDX, ReadVLDOXV,
-  ReadVMask]>;
-class VSUXSEGSched<int nf, int eew> : Sched<[
-  !cast<SchedReadWrite>("WriteVSUXSEG" #nf #"e" #eew),
-  !cast<SchedReadWrite>("ReadVSTUX" #eew), ReadVSTX, ReadVSTUXV, ReadVMask]>;
-class VSOXSEGSched<int nf, int eew> : Sched<[
-  !cast<SchedReadWrite>("WriteVSOXSEG" #nf #"e" #eew),
-  !cast<SchedReadWrite>("ReadVSTOX" #eew), ReadVSTX, ReadVSTOXV, ReadVMask]>;
+class VLXSEGSched<int nf, int eew, string o> : Sched<[
+  !cast<SchedReadWrite>("WriteVL" #o # "XSEG" #nf #"e" #eew), ReadVLDX,
+  !cast<SchedReadWrite>("ReadVLD" # o # "XV"), ReadVMask]>;
+class VSXSEGSched<int nf, int eew, string o> : Sched<[
+  !cast<SchedReadWrite>("WriteVS" #o # "XSEG" #nf #"e" #eew),
+  !cast<SchedReadWrite>("ReadVST" #o # "X" #eew), ReadVSTX,
+  !cast<SchedReadWrite>("ReadVST" #o # "XV"), ReadVMask]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction class templates
@@ -832,13 +839,15 @@ multiclass VWholeLoadEEW64<bits<3> nf, string opcodestr, RegisterClass VRC, Sche
 let Predicates = [HasVInstructions] in {
 let hasSideEffects = 1, mayLoad = 0, mayStore = 0 in {
 def VSETVLI : RVInstSetVLi<(outs GPR:$rd), (ins GPR:$rs1, VTypeIOp11:$vtypei),
-                           "vsetvli", "$rd, $rs1, $vtypei">;
-
+                           "vsetvli", "$rd, $rs1, $vtypei">,
+                           Sched<[WriteVSETVLI, ReadVSETVLI]>;
 def VSETIVLI : RVInstSetiVLi<(outs GPR:$rd), (ins uimm5:$uimm, VTypeIOp10:$vtypei),
-                             "vsetivli", "$rd, $uimm, $vtypei">;
+                             "vsetivli", "$rd, $uimm, $vtypei">,
+                             Sched<[WriteVSETIVLI]>;
 
 def VSETVL : RVInstSetVL<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
-                         "vsetvl", "$rd, $rs1, $rs2">;
+                         "vsetvl", "$rd, $rs1, $rs2">,
+                          Sched<[WriteVSETVL, ReadVSETVL, ReadVSETVL]>;
 } // hasSideEffects = 1, mayLoad = 0, mayStore = 0
 foreach eew = [8, 16, 32] in {
   defvar w = !cast<RISCVWidth>("LSWidth" # eew);
@@ -1284,17 +1293,26 @@ def VFMV_V_F : RVInstVX<0b010111, OPFVF, (outs VR:$vd),
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 // Single-Width Floating-Point/Integer Type-Convert Instructions
+let mayRaiseFPException = true in {
+let Uses = [FRM] in {
 defm VFCVT_XU_F_V : VCVTI_FV_VS2<"vfcvt.xu.f.v", 0b010010, 0b00000>;
 defm VFCVT_X_F_V : VCVTI_FV_VS2<"vfcvt.x.f.v", 0b010010, 0b00001>;
+}
 defm VFCVT_RTZ_XU_F_V : VCVTI_FV_VS2<"vfcvt.rtz.xu.f.v", 0b010010, 0b00110>;
 defm VFCVT_RTZ_X_F_V : VCVTI_FV_VS2<"vfcvt.rtz.x.f.v", 0b010010, 0b00111>;
+let Uses = [FRM] in {
 defm VFCVT_F_XU_V : VCVTF_IV_VS2<"vfcvt.f.xu.v", 0b010010, 0b00010>;
 defm VFCVT_F_X_V : VCVTF_IV_VS2<"vfcvt.f.x.v", 0b010010, 0b00011>;
+}
+} // mayRaiseFPException = true
 
 // Widening Floating-Point/Integer Type-Convert Instructions
-let Constraints = "@earlyclobber $vd", RVVConstraint = WidenCvt in {
+let Constraints = "@earlyclobber $vd", RVVConstraint = WidenCvt,
+    mayRaiseFPException = true in {
+let Uses = [FRM] in {
 defm VFWCVT_XU_F_V : VWCVTI_FV_VS2<"vfwcvt.xu.f.v", 0b010010, 0b01000>;
 defm VFWCVT_X_F_V : VWCVTI_FV_VS2<"vfwcvt.x.f.v", 0b010010, 0b01001>;
+}
 defm VFWCVT_RTZ_XU_F_V : VWCVTI_FV_VS2<"vfwcvt.rtz.xu.f.v", 0b010010, 0b01110>;
 defm VFWCVT_RTZ_X_F_V : VWCVTI_FV_VS2<"vfwcvt.rtz.x.f.v", 0b010010, 0b01111>;
 defm VFWCVT_F_XU_V : VWCVTF_IV_VS2<"vfwcvt.f.xu.v", 0b010010, 0b01010>;
@@ -1303,16 +1321,20 @@ defm VFWCVT_F_F_V : VWCVTF_FV_VS2<"vfwcvt.f.f.v", 0b010010, 0b01100>;
 } // Constraints = "@earlyclobber $vd", RVVConstraint = WidenCvt
 
 // Narrowing Floating-Point/Integer Type-Convert Instructions
-let Constraints = "@earlyclobber $vd" in {
+let Constraints = "@earlyclobber $vd", mayRaiseFPException = true in {
+let Uses = [FRM] in {
 defm VFNCVT_XU_F_W : VNCVTI_FV_VS2<"vfncvt.xu.f.w", 0b010010, 0b10000>;
 defm VFNCVT_X_F_W : VNCVTI_FV_VS2<"vfncvt.x.f.w", 0b010010, 0b10001>;
+}
 defm VFNCVT_RTZ_XU_F_W : VNCVTI_FV_VS2<"vfncvt.rtz.xu.f.w", 0b010010, 0b10110>;
 defm VFNCVT_RTZ_X_F_W : VNCVTI_FV_VS2<"vfncvt.rtz.x.f.w", 0b010010, 0b10111>;
+let Uses = [FRM] in {
 defm VFNCVT_F_XU_W : VNCVTF_IV_VS2<"vfncvt.f.xu.w", 0b010010, 0b10010>;
 defm VFNCVT_F_X_W : VNCVTF_IV_VS2<"vfncvt.f.x.w", 0b010010, 0b10011>;
 defm VFNCVT_F_F_W : VNCVTF_FV_VS2<"vfncvt.f.f.w", 0b010010, 0b10100>;
+}
 defm VFNCVT_ROD_F_F_W : VNCVTF_FV_VS2<"vfncvt.rod.f.f.w", 0b010010, 0b10101>;
-} // Constraints = "@earlyclobber $vd"
+} // Constraints = "@earlyclobber $vd", mayRaiseFPException = true
 } // Predicates = HasVInstructionsAnyF]
 
 let Predicates = [HasVInstructions] in {
@@ -1543,16 +1565,20 @@ let Predicates = [HasVInstructions] in {
       // Vector Indexed Instructions
       def VLUXSEG#nf#EI#eew#_V :
         VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedUnord, w,
-                            "vluxseg"#nf#"ei"#eew#".v">, VLUXSEGSched<nf, eew>;
+                            "vluxseg"#nf#"ei"#eew#".v">,
+        VLXSEGSched<nf, eew, "U">;
       def VLOXSEG#nf#EI#eew#_V :
         VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedOrder, w,
-                            "vloxseg"#nf#"ei"#eew#".v">, VLOXSEGSched<nf, eew>;
+                            "vloxseg"#nf#"ei"#eew#".v">,
+        VLXSEGSched<nf, eew, "O">;
       def VSUXSEG#nf#EI#eew#_V :
         VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedUnord, w,
-                             "vsuxseg"#nf#"ei"#eew#".v">, VSUXSEGSched<nf, eew>;
+                             "vsuxseg"#nf#"ei"#eew#".v">,
+        VSXSEGSched<nf, eew, "U">;
       def VSOXSEG#nf#EI#eew#_V :
         VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedOrder, w,
-                             "vsoxseg"#nf#"ei"#eew#".v">, VSOXSEGSched<nf, eew>;
+                             "vsoxseg"#nf#"ei"#eew#".v">,
+        VSXSEGSched<nf, eew, "O">;
     }
   }
 } // Predicates = [HasVInstructions]
@@ -1584,16 +1610,16 @@ let Predicates = [HasVInstructionsI64, IsRV64] in {
     // Vector Indexed Segment Instructions
     def VLUXSEG#nf#EI64_V :
       VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedUnord, LSWidth64,
-                          "vluxseg"#nf#"ei64.v">, VLUXSEGSched<nf, 64>;
+                          "vluxseg"#nf#"ei64.v">, VLXSEGSched<nf, 64, "U">;
     def VLOXSEG#nf#EI64_V :
       VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedOrder, LSWidth64,
-                          "vloxseg"#nf#"ei64.v">, VLOXSEGSched<nf, 64>;
+                          "vloxseg"#nf#"ei64.v">, VLXSEGSched<nf, 64, "O">;
     def VSUXSEG#nf#EI64_V :
       VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedUnord, LSWidth64,
-                           "vsuxseg"#nf#"ei64.v">, VSUXSEGSched<nf, 64>;
+                           "vsuxseg"#nf#"ei64.v">, VSXSEGSched<nf, 64, "U">;
     def VSOXSEG#nf#EI64_V :
       VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedOrder, LSWidth64,
-                           "vsoxseg"#nf#"ei64.v">, VSOXSEGSched<nf, 64>;
+                           "vsoxseg"#nf#"ei64.v">, VSXSEGSched<nf, 64, "O">;
   }
 } // Predicates = [HasVInstructionsI64, IsRV64]
 

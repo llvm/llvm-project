@@ -13,7 +13,6 @@
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 
-#include "../PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -22,9 +21,13 @@
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTAFFINETOSTANDARD
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -43,7 +46,7 @@ using namespace mlir::vector;
 static Value buildMinMaxReductionSeq(Location loc,
                                      arith::CmpIPredicate predicate,
                                      ValueRange values, OpBuilder &builder) {
-  assert(!llvm::empty(values) && "empty min/max chain");
+  assert(!values.empty() && "empty min/max chain");
 
   auto valueIt = values.begin();
   Value value = *valueIt++;
@@ -544,13 +547,14 @@ void mlir::populateAffineToVectorConversionPatterns(
 }
 
 namespace {
-class LowerAffinePass : public ConvertAffineToStandardBase<LowerAffinePass> {
+class LowerAffinePass
+    : public impl::ConvertAffineToStandardBase<LowerAffinePass> {
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
     populateAffineToStdConversionPatterns(patterns);
     populateAffineToVectorConversionPatterns(patterns);
     ConversionTarget target(getContext());
-    target.addLegalDialect<arith::ArithmeticDialect, memref::MemRefDialect,
+    target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect,
                            scf::SCFDialect, VectorDialect>();
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))

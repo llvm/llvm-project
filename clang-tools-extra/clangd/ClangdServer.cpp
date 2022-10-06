@@ -177,6 +177,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
       DynamicIdx(Opts.BuildDynamicSymbolIndex ? new FileIndex() : nullptr),
       ClangTidyProvider(Opts.ClangTidyProvider),
       UseDirtyHeaders(Opts.UseDirtyHeaders),
+      LineFoldingOnly(Opts.LineFoldingOnly),
       PreambleParseForwardingFunctions(Opts.PreambleParseForwardingFunctions),
       WorkspaceRoot(Opts.WorkspaceRoot),
       Transient(Opts.ImplicitCancellation ? TUScheduler::InvalidateOnUpdate
@@ -751,7 +752,7 @@ void ClangdServer::findHover(PathRef File, Position Pos,
 
 void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
                                  TypeHierarchyDirection Direction,
-                                 Callback<Optional<TypeHierarchyItem>> CB) {
+                                 Callback<std::vector<TypeHierarchyItem>> CB) {
   auto Action = [File = File.str(), Pos, Resolve, Direction, CB = std::move(CB),
                  this](Expected<InputsAndAST> InpAST) mutable {
     if (!InpAST)
@@ -761,6 +762,22 @@ void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
   };
 
   WorkScheduler->runWithAST("TypeHierarchy", File, std::move(Action));
+}
+
+void ClangdServer::superTypes(
+    const TypeHierarchyItem &Item,
+    Callback<llvm::Optional<std::vector<TypeHierarchyItem>>> CB) {
+  WorkScheduler->run("typeHierarchy/superTypes", /*Path=*/"",
+                     [=, CB = std::move(CB)]() mutable {
+                       CB(clangd::superTypes(Item, Index));
+                     });
+}
+
+void ClangdServer::subTypes(const TypeHierarchyItem &Item,
+                            Callback<std::vector<TypeHierarchyItem>> CB) {
+  WorkScheduler->run(
+      "typeHierarchy/subTypes", /*Path=*/"",
+      [=, CB = std::move(CB)]() mutable { CB(clangd::subTypes(Item, Index)); });
 }
 
 void ClangdServer::resolveTypeHierarchy(
@@ -834,14 +851,18 @@ void ClangdServer::documentSymbols(llvm::StringRef File,
 
 void ClangdServer::foldingRanges(llvm::StringRef File,
                                  Callback<std::vector<FoldingRange>> CB) {
-  auto Action =
-      [CB = std::move(CB)](llvm::Expected<InputsAndAST> InpAST) mutable {
-        if (!InpAST)
-          return CB(InpAST.takeError());
-        CB(clangd::getFoldingRanges(InpAST->AST));
-      };
-  WorkScheduler->runWithAST("FoldingRanges", File, std::move(Action),
-                            Transient);
+  auto Code = getDraft(File);
+  if (!Code)
+    return CB(llvm::make_error<LSPError>(
+        "trying to compute folding ranges for non-added document",
+        ErrorCode::InvalidParams));
+  auto Action = [LineFoldingOnly = LineFoldingOnly, CB = std::move(CB),
+                 Code = std::move(*Code)]() mutable {
+    CB(clangd::getFoldingRanges(Code, LineFoldingOnly));
+  };
+  // We want to make sure folding ranges are always available for all the open
+  // files, hence prefer runQuick to not wait for operations on other files.
+  WorkScheduler->runQuick("FoldingRanges", File, std::move(Action));
 }
 
 void ClangdServer::findType(llvm::StringRef File, Position Pos,
@@ -997,10 +1018,16 @@ llvm::StringMap<TUScheduler::FileStats> ClangdServer::fileStats() const {
   return WorkScheduler->fileStats();
 }
 
-LLVM_NODISCARD bool
+[[nodiscard]] bool
 ClangdServer::blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds) {
   // Order is important here: we don't want to block on A and then B,
   // if B might schedule work on A.
+
+#if defined(__has_feature) &&                                                  \
+    (__has_feature(address_sanitizer) || __has_feature(hwaddress_sanitizer) || \
+     __has_feature(memory_sanitizer) || __has_feature(thread_sanitizer))
+  (*TimeoutSeconds) *= 10;
+#endif
 
   // Nothing else can schedule work on TUScheduler, because it's not threadsafe
   // and we're blocking the main thread.

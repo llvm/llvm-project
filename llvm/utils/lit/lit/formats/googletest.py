@@ -15,6 +15,7 @@ kIsWindows = sys.platform in ['win32', 'cygwin']
 
 class GoogleTest(TestFormat):
     def __init__(self, test_sub_dirs, test_suffix, run_under = []):
+        self.seen_executables = set()
         self.test_sub_dirs = str(test_sub_dirs).split(';')
 
         # On Windows, assume tests will also end in '.exe'.
@@ -54,6 +55,12 @@ class GoogleTest(TestFormat):
                                              suffixes=self.test_suffixes):
                 # Discover the tests in this executable.
                 execpath = os.path.join(source_path, subdir, fn)
+                if execpath in self.seen_executables:
+                    litConfig.warning(
+                        "Skip adding %r since it has been added to the test pool" % execpath)
+                    continue
+                else:
+                    self.seen_executables.add(execpath)
                 num_tests = self.get_num_tests(execpath, litConfig,
                                                localConfig)
                 if num_tests is not None:
@@ -112,8 +119,8 @@ class GoogleTest(TestFormat):
         shard_env = {
             'GTEST_OUTPUT': 'json:' + test.gtest_json_file,
             'GTEST_SHUFFLE': '1' if use_shuffle else '0',
-            'GTEST_TOTAL_SHARDS': total_shards,
-            'GTEST_SHARD_INDEX': shard_idx
+            'GTEST_TOTAL_SHARDS': os.environ.get("GTEST_TOTAL_SHARDS", total_shards),
+            'GTEST_SHARD_INDEX': os.environ.get("GTEST_SHARD_INDEX", shard_idx)
         }
         test.config.environment.update(shard_env)
 
@@ -239,7 +246,11 @@ class GoogleTest(TestFormat):
 
             # Load json file to retrieve results.
             with open(test.gtest_json_file, encoding='utf-8') as f:
-                testsuites = json.load(f)['testsuites']
+                try:
+                    testsuites = json.load(f)['testsuites']
+                except json.JSONDecodeError as e:
+                    raise RuntimeError("Failed to parse json file: " +
+                                       test.gtest_json_file + "\n" + e.doc)
                 for testcase in testsuites:
                     for testinfo in testcase['testsuite']:
                         # Ignore disabled tests.

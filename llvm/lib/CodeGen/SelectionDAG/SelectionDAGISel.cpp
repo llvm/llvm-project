@@ -22,6 +22,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/EHPersonalities.h"
@@ -337,6 +338,7 @@ void SelectionDAGISel::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<GCModuleInfo>();
   AU.addRequired<TargetLibraryInfoWrapperPass>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
+  AU.addRequired<AssumptionCacheTracker>();
   if (UseMBPI && OptLevel != CodeGenOpt::None)
     AU.addRequired<BranchProbabilityInfoWrapperPass>();
   AU.addRequired<ProfileSummaryInfoWrapperPass>();
@@ -404,6 +406,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   LibInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(Fn);
   GFI = Fn.hasGC() ? &getAnalysis<GCModuleInfo>().getFunctionInfo(Fn) : nullptr;
   ORE = std::make_unique<OptimizationRemarkEmitter>(&Fn);
+  AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(mf.getFunction());
   auto *PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
   BlockFrequencyInfo *BFI = nullptr;
   if (PSI && PSI->hasProfileSummary() && OptLevel != CodeGenOpt::None)
@@ -431,7 +434,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   else
     AA = nullptr;
 
-  SDB->init(GFI, AA, LibInfo);
+  SDB->init(GFI, AA, AC, LibInfo);
 
   MF->setHasInlineAsm(false);
 
@@ -998,6 +1001,15 @@ public:
     if (ISelPosition == SelectionDAG::allnodes_iterator(N))
       ++ISelPosition;
   }
+
+  /// NodeInserted - Handle new nodes inserted into the graph: propagate
+  /// metadata from root nodes that also applies to new nodes, in case the root
+  /// is later deleted.
+  void NodeInserted(SDNode *N) override {
+    SDNode *CurNode = &*ISelPosition;
+    if (MDNode *MD = DAG.getPCSections(CurNode))
+      DAG.addPCSections(N, MD);
+  }
 };
 
 } // end anonymous namespace
@@ -1074,7 +1086,7 @@ void SelectionDAGISel::DoInstructionSelection() {
     ++ISelPosition;
 
     // Make sure that ISelPosition gets properly updated when nodes are deleted
-    // in calls made from this function.
+    // in calls made from this function. New nodes inherit relevant metadata.
     ISelUpdater ISU(*CurDAG, ISelPosition);
 
     // The AllNodes list is now topological-sorted. Visit the

@@ -110,6 +110,24 @@ class InterchangeOp:
         ip=ip)
 
 
+class MatchOp:
+  """Specialization for MatchOp class."""
+
+  @classmethod
+  def match_op_names(MatchOp,
+                     target: Union[Operation, Value],
+                     names: Sequence[str],
+                     loc=None,
+                     ip=None):
+    pdl_operation_type = pdl.OperationType.get()
+    return MatchOp(
+        pdl_operation_type,
+        _get_op_result_or_value(target),
+        ops=ArrayAttr.get(list(map(lambda s: StringAttr.get(s), names))),
+        loc=loc,
+        ip=ip)
+
+
 class MultiTileSizesOp:
   """Specialization for MultitileSizesOp class."""
 
@@ -193,7 +211,7 @@ class SplitOp:
       static_split_point = split_point
       dynamic_split_point = None
     else:
-      static_split_point = _get_int64_attr(ShapedType._get_dynamic_size())
+      static_split_point = _get_int64_attr(ShapedType.get_dynamic_size())
       dynamic_split_point = _get_op_result_or_value(split_point)
 
     pdl_operation_type = pdl.OperationType.get()
@@ -237,7 +255,7 @@ class TileOp:
           static_sizes.append(size)
         else:
           static_sizes.append(
-              IntegerAttr.get(i64_type, ShapedType._get_dynamic_size()))
+              IntegerAttr.get(i64_type, ShapedType.get_dynamic_size()))
           dynamic_sizes.append(_get_op_result_or_value(size))
       sizes_attr = ArrayAttr.get(static_sizes)
 
@@ -269,7 +287,7 @@ class VectorizeOp:
                ip=None):
     pdl_operation_type = pdl.OperationType.get()
     if isinstance(vectorize_padding, bool):
-      vectorize_padding = BoolAttr.get(vectorize_padding)
+      vectorize_padding = UnitAttr.get()
     super().__init__(
         pdl_operation_type,
         _get_op_result_or_value(target),

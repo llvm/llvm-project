@@ -26,6 +26,7 @@
 // CHECK: __ARM_FEATURE_IDIV 1
 // CHECK: __ARM_FEATURE_LDREX 0xF
 // CHECK: __ARM_FEATURE_NUMERIC_MAXMIN 1
+// CHECK-NOT: __ARM_FEATURE_RCPC 1
 // CHECK-NOT: __ARM_FEATURE_SHA2 1
 // CHECK-NOT: __ARM_FEATURE_SHA3 1
 // CHECK-NOT: __ARM_FEATURE_SHA512 1
@@ -150,6 +151,7 @@
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE %s
 // CHECK-SVE: __ARM_FEATURE_SVE 1
+// CHECK-SVE: __ARM_FEATURE_SVE_VECTOR_OPERATORS 2
 
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+sve+bf16 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE-BF16 %s
 // CHECK-SVE-BF16: __ARM_FEATURE_BF16_SCALAR_ARITHMETIC 1
@@ -512,9 +514,7 @@
 // RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=2048 -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-SVE-VECTOR-BITS -D#VBITS=2048 %s
 // RUN: %clang -target aarch64-arm-none-eabi -march=armv8-a+sve -msve-vector-bits=512+ -x c -E -dM %s -o - 2>&1 | FileCheck -check-prefix=CHECK-NO-SVE-VECTOR-BITS %s
 // CHECK-SVE-VECTOR-BITS: __ARM_FEATURE_SVE_BITS [[#VBITS:]]
-// CHECK-SVE-VECTOR-BITS: __ARM_FEATURE_SVE_VECTOR_OPERATORS 1
 // CHECK-NO-SVE-VECTOR-BITS-NOT: __ARM_FEATURE_SVE_BITS
-// CHECK-NO-SVE-VECTOR-BITS-NOT: __ARM_FEATURE_SVE_VECTOR_OPERATORS
 
 // ================== Check Large System Extensions (LSE)
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+lse -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
@@ -561,3 +561,6 @@
 // CHECK-BEFORE-V83-NOT: __ARM_FEATURE_COMPLEX 1
 // CHECK-BEFORE-V83-NOT: __ARM_FEATURE_JCVT 1
 // CHECK-BEFORE-V85-NOT: __ARM_FEATURE_FRINT 1
+
+// RUN: %clang --target=aarch64 -march=armv8.2-a+rcpc -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-RCPC %s
+// CHECK-RCPC: __ARM_FEATURE_RCPC 1

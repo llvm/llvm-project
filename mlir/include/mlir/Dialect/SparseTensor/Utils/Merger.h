@@ -21,7 +21,20 @@ namespace mlir {
 namespace sparse_tensor {
 
 /// Dimension level type for a tensor (undef means index does not appear).
-enum Dim { kSparse, kDense, kSingle, kUndef };
+enum class DimLvlType { kDense, kCompressed, kSingleton, kUndef };
+
+/// Per-dimension level format (type and properties). Dense and undefined
+/// level types should always be marked ordered and unique.
+struct DimLevelFormat {
+  DimLevelFormat(DimLvlType tp, bool o = true, bool u = true)
+      : levelType(tp), isOrdered(o), isUnique(u) {
+    assert((tp == DimLvlType::kCompressed || tp == DimLvlType::kSingleton) ||
+           (o && u));
+  }
+  DimLvlType levelType;
+  bool isOrdered;
+  bool isUnique;
+};
 
 /// Tensor expression kind.
 enum Kind {
@@ -32,6 +45,7 @@ enum Kind {
   // Unary operations.
   kAbsF,
   kAbsC,
+  kAbsI,
   kCeilF,
   kFloorF,
   kSqrtF,
@@ -62,6 +76,7 @@ enum Kind {
   kBitCast,
   kBinaryBranch, // semiring unary branch created from a binary op
   kUnary,        // semiring unary op
+  kSelect,       // custom selection criteria
   // Binary operations.
   kMulF,
   kMulC,
@@ -83,6 +98,7 @@ enum Kind {
   kShrU, // unsigned
   kShlI,
   kBinary, // semiring binary op
+  kReduce, // semiring reduction op
 };
 
 /// Children subexpressions of tensor operations.
@@ -114,8 +130,8 @@ struct TensorExp {
   /// this field may be used to cache "hoisted" loop invariant tensor loads.
   Value val;
 
-  /// Code blocks used by semirings. For the case of kUnary and
-  /// kBinary, this holds the original operation with all regions. For
+  /// Code blocks used by semirings. For the case of kUnary, kBinary, kReduce,
+  /// and kSelect, this holds the original operation with all regions. For
   /// kBinaryBranch, this holds the YieldOp for the left or right half
   /// to be merged into a nested scf loop.
   Operation *op;
@@ -154,7 +170,9 @@ public:
   /// invariant expressions in the kernel.
   Merger(unsigned t, unsigned l)
       : outTensor(t - 1), syntheticTensor(t), numTensors(t + 1), numLoops(l),
-        hasSparseOut(false), dims(t + 1, std::vector<Dim>(l, Dim::kUndef)) {}
+        hasSparseOut(false),
+        dims(t + 1, std::vector<DimLevelFormat>(
+                        l, DimLevelFormat(DimLvlType::kUndef))) {}
 
   /// Adds a tensor expression. Returns its index.
   unsigned addExp(Kind k, unsigned e0, unsigned e1 = -1u, Value v = Value(),
@@ -223,22 +241,10 @@ public:
   unsigned tensor(unsigned b) const { return b % numTensors; }
   unsigned index(unsigned b) const { return b / numTensors; }
 
-  /// Returns true if bit corresponds to queried dim.
-  bool isDim(unsigned b, Dim d) const { return isDim(tensor(b), index(b), d); }
-
   /// Returns true if bit corresponds to index of output tensor.
   bool isOutTensor(unsigned b, unsigned i) const {
     return tensor(b) == outTensor && index(b) == i;
   }
-
-  /// Returns true if tensor access at given index has queried dim.
-  bool isDim(unsigned t, unsigned i, Dim d) const {
-    assert(t < numTensors && i < numLoops);
-    return dims[t][i] == d;
-  }
-
-  /// Returns true if any set bit corresponds to queried dim.
-  bool hasAnyDimOf(const BitVector &bits, Dim d) const;
 
   /// Returns true if given tensor iterates *only* in the given tensor
   /// expression. For the output tensor, this defines a "simply dynamic"
@@ -246,8 +252,29 @@ public:
   /// sparse vector a.
   bool isSingleCondition(unsigned t, unsigned e) const;
 
-  /// Dimension setter.
-  void setDim(unsigned t, unsigned i, Dim d) { dims[t][i] = d; }
+  /// Returns true if bit corresponds to given dimension level type.
+  bool isDimLevelType(unsigned b, DimLvlType tp) const {
+    return isDimLevelType(tensor(b), index(b), tp);
+  }
+
+  /// Returns true if tensor access at index has given dimension level type.
+  bool isDimLevelType(unsigned t, unsigned i, DimLvlType tp) const {
+    return getDimLevelFormat(t, i).levelType == tp;
+  }
+
+  /// Returns true if any set bit corresponds to sparse dimension level type.
+  bool hasAnySparse(const BitVector &bits) const;
+
+  /// Dimension level format getter.
+  DimLevelFormat getDimLevelFormat(unsigned t, unsigned i) const {
+    assert(t < numTensors && i < numLoops);
+    return dims[t][i];
+  }
+
+  /// Dimension level format setter.
+  void setDimLevelFormat(unsigned t, unsigned i, DimLevelFormat d) {
+    dims[t][i] = d;
+  }
 
   // Has sparse output tensor setter.
   void setHasSparseOut(bool s) { hasSparseOut = s; }
@@ -296,7 +323,7 @@ private:
   const unsigned numTensors;
   const unsigned numLoops;
   bool hasSparseOut;
-  std::vector<std::vector<Dim>> dims;
+  std::vector<std::vector<DimLevelFormat>> dims;
   llvm::SmallVector<TensorExp, 32> tensorExps;
   llvm::SmallVector<LatPoint, 16> latPoints;
   llvm::SmallVector<SmallVector<unsigned, 16>, 8> latSets;

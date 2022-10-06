@@ -1,9 +1,3 @@
-; RUN: opt < %s -inline-threshold=0 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK
-;
-; Ensure the threshold has no impact on these decisions.
-; RUN: opt < %s -inline-threshold=20000000 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK
-; RUN: opt < %s -inline-threshold=-20000000 -always-inline -enable-new-pm=0 -S | FileCheck %s --check-prefix=CHECK
-;
 ; The new pass manager doesn't re-use any threshold based infrastructure for
 ; the always inliner, but test that we get the correct result.
 ; RUN: opt < %s -inline-threshold=0 -passes=always-inline -S | FileCheck %s --check-prefix=CHECK

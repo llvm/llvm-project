@@ -29,7 +29,7 @@ enum PrimType : uint32_t;
 /// Describes a scope block.
 ///
 /// The block gathers all the descriptors of the locals defined in this block.
-class Scope {
+class Scope final {
 public:
   /// Information about a local's storage.
   struct Local {
@@ -56,22 +56,26 @@ private:
 ///
 /// Contains links to the bytecode of the function, as well as metadata
 /// describing all arguments and stack-local variables.
-class Function {
+class Function final {
 public:
   using ParamDescriptor = std::pair<PrimType, Descriptor *>;
 
   /// Returns the size of the function's local stack.
   unsigned getFrameSize() const { return FrameSize; }
-  /// Returns the size of the argument stackx
+  /// Returns the size of the argument stack.
   unsigned getArgSize() const { return ArgSize; }
 
   /// Returns a pointer to the start of the code.
-  CodePtr getCodeBegin() const;
+  CodePtr getCodeBegin() const { return Code.data(); }
   /// Returns a pointer to the end of the code.
-  CodePtr getCodeEnd() const;
+  CodePtr getCodeEnd() const { return Code.data() + Code.size(); }
 
   /// Returns the original FunctionDecl.
   const FunctionDecl *getDecl() const { return F; }
+
+  /// Returns the name of the function decl this code
+  /// was generated for.
+  const std::string getName() const { return F->getNameInfo().getAsString(); }
 
   /// Returns the location.
   SourceLocation getLoc() const { return Loc; }
@@ -108,6 +112,9 @@ public:
   /// Checks if the function is a constructor.
   bool isConstructor() const { return isa<CXXConstructorDecl>(F); }
 
+  /// Checks if the function is fully done compiling.
+  bool isFullyCompiled() const { return IsFullyCompiled; }
+
 private:
   /// Construct a function representing an actual function.
   Function(Program &P, const FunctionDecl *F, unsigned ArgSize,
@@ -123,6 +130,8 @@ private:
     Scopes = std::move(NewScopes);
     IsValid = true;
   }
+
+  void setIsFullyCompiled(bool FC) { IsFullyCompiled = FC; }
 
 private:
   friend class Program;
@@ -150,6 +159,9 @@ private:
   llvm::DenseMap<unsigned, ParamDescriptor> Params;
   /// Flag to indicate if the function is valid.
   bool IsValid = false;
+  /// Flag to indicate if the function is done being
+  /// compiled to bytecode.
+  bool IsFullyCompiled = false;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().

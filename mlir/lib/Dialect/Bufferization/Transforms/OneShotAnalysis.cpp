@@ -351,14 +351,40 @@ static bool happensBefore(Operation *a, Operation *b,
   return false;
 }
 
+static Region *
+getEnclosingRepetitiveRegion(Operation *op,
+                             const BufferizationOptions &options) {
+  while (Region *region = op->getParentRegion()) {
+    op = region->getParentOp();
+    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
+      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
+        return region;
+  }
+  return nullptr;
+}
+
+static Region *
+getEnclosingRepetitiveRegion(Value value, const BufferizationOptions &options) {
+  Region *region = value.getParentRegion();
+  while (region) {
+    Operation *op = region->getParentOp();
+    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
+      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
+        return region;
+    region = op->getParentRegion();
+  }
+  return nullptr;
+}
+
 /// For each given value, find the closest enclosing repetitive region. If this
 /// is the same region for each value, return it. Otherwise return None.
 /// Note: If there is no enclosing repetitive region, return nullptr.
 static Optional<Region *>
-getCommonEnclosingRepetitiveRegion(ArrayRef<Value> values) {
+getCommonEnclosingRepetitiveRegion(ArrayRef<Value> values,
+                                   const BufferizationOptions &options) {
   if (values.empty())
     return None;
-  Region *r = getEnclosingRepetitiveRegion(values.front());
+  Region *r = getEnclosingRepetitiveRegion(values.front(), options);
   for (Value value : values.drop_front())
     if (getEnclosingRepetitiveRegion(value) != r)
       return None;
@@ -432,7 +458,7 @@ static bool hasReadAfterWriteInterference(
   // Find the inner-most enclosing repetitive region of each alias. If this is
   // the same region for every alias, save it in `repetitiveRegionOfWrites`.
   Optional<Region *> repetitiveRegionOfWrites =
-      getCommonEnclosingRepetitiveRegion(writtenAliases);
+      getCommonEnclosingRepetitiveRegion(writtenAliases, options);
 
   for (OpOperand *uRead : usesRead) {
     Operation *readingOp = uRead->getOwner();
@@ -497,7 +523,7 @@ static bool hasReadAfterWriteInterference(
       bool canUseOpDominance =
           writtenAliases.empty() ||
           repetitiveRegionOfWrites ==
-              getEnclosingRepetitiveRegion(conflictingWritingOp);
+              getEnclosingRepetitiveRegion(conflictingWritingOp, options);
 
       // No conflict if the readingOp dominates conflictingWritingOp, i.e., the
       // write is not visible when reading.
@@ -832,27 +858,37 @@ checkAliasInfoConsistency(Operation *op, const DominanceInfo &domInfo,
                           AnalysisState &state,
                           const BufferizationAliasInfo &aliasInfo) {
   const BufferizationOptions &options = state.getOptions();
-  Operation *inconsistentOp = nullptr;
-  WalkResult walkResult = op->walk([&](Operation *op) {
-    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
-      for (OpOperand &opOperand : op->getOpOperands())
-        if (opOperand.get().getType().isa<TensorType>()) {
-          if (wouldCreateReadAfterWriteInterference(
-                  opOperand, domInfo, state, aliasInfo,
-                  /*checkConsistencyOnly=*/true)) {
-            // This error can happen if certain "mustBufferizeInPlace" interface
-            // methods are implemented incorrectly, such that the IR already has
-            // a RaW conflict before making any bufferization decisions.
-            inconsistentOp = op;
-            return WalkResult::interrupt();
-          }
+
+  WalkResult walkResult = op->walk([&](BufferizableOpInterface op) {
+    // Skip ops that are not in the filter.
+    if (!options.isOpAllowed(op.getOperation()))
+      return WalkResult::advance();
+
+    // Input IR may not contain any ToMemrefOps. These are not supported because
+    // the analysis cannot follow the data flow through memrefs.
+    if (isa<ToMemrefOp>(op.getOperation())) {
+      op->emitError("to_memref ops not supported during One-Shot Analysis");
+      return WalkResult::interrupt();
+    }
+
+    for (OpOperand &opOperand : op->getOpOperands()) {
+      if (opOperand.get().getType().isa<TensorType>()) {
+        if (wouldCreateReadAfterWriteInterference(
+                opOperand, domInfo, state, aliasInfo,
+                /*checkConsistencyOnly=*/true)) {
+          // This error can happen if certain "mustBufferizeInPlace" interface
+          // methods are implemented incorrectly, such that the IR already has
+          // a RaW conflict before making any bufferization decisions.
+          op->emitError("input IR has RaW conflict");
+          return WalkResult::interrupt();
         }
+      }
+    }
+
     return WalkResult::advance();
   });
 
-  if (walkResult.wasInterrupted())
-    return inconsistentOp->emitError("input IR has RaW conflict");
-  return success();
+  return success(!walkResult.wasInterrupted());
 }
 
 /// Annotate the IR with the result of the analysis. For testing/debugging only.
@@ -989,10 +1025,15 @@ LogicalResult bufferization::analyzeOp(Operation *op,
 LogicalResult
 bufferization::runOneShotBufferize(Operation *op,
                                    const OneShotBufferizationOptions &options) {
-  OneShotAnalysisState state(op, options);
-  if (failed(insertTensorCopies(op, options)))
-    return failure();
+  assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
+         "invalid combination of bufferization flags");
+  if (!options.copyBeforeWrite) {
+    // If a buffer is copied before every write, no analysis is needed.
+    OneShotAnalysisState state(op, options);
+    if (failed(insertTensorCopies(op, options)))
+      return failure();
+  }
   if (options.testAnalysisOnly)
     return success();
-  return bufferizeOp(op, options, /*copyBeforeWrite=*/false);
+  return bufferizeOp(op, options, /*copyBeforeWrite=*/options.copyBeforeWrite);
 }

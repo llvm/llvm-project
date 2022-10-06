@@ -34,7 +34,7 @@ computeConversionSet(iterator_range<Region::iterator> region,
                      Location regionLoc,
                      SmallVectorImpl<Operation *> &toConvert,
                      ConversionTarget *target = nullptr) {
-  if (llvm::empty(region))
+  if (region.empty())
     return success();
 
   // Traverse starting from the entry block.
@@ -1407,9 +1407,7 @@ void ConversionPatternRewriterImpl::notifyOpReplaced(Operation *op,
   bool resultChanged = false;
 
   // Create mappings for each of the new result values.
-  Value newValue, result;
-  for (auto it : llvm::zip(newValues, op->getResults())) {
-    std::tie(newValue, result) = it;
+  for (auto [newValue, result] : llvm::zip(newValues, op->getResults())) {
     if (!newValue) {
       resultChanged = true;
       continue;
@@ -2554,9 +2552,7 @@ replaceMaterialization(ConversionPatternRewriterImpl &rewriterImpl,
 
   // For each of the materialization results, update the inverse mappings to
   // point to the replacement values.
-  for (auto it : llvm::zip(matResults, values)) {
-    Value matResult, newValue;
-    std::tie(matResult, newValue) = it;
+  for (auto [matResult, newValue] : llvm::zip(matResults, values)) {
     auto inverseMapIt = inverseMapping.find(matResult);
     if (inverseMapIt == inverseMapping.end())
       continue;
@@ -2782,7 +2778,7 @@ static LogicalResult legalizeUnresolvedMaterialization(
 
       // If an argument materialization failed, fallback to trying a target
       // materialization.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case UnresolvedMaterialization::Target:
       newMaterialization = converter->materializeTargetConversion(
           rewriter, op->getLoc(), outputType, inputOperands);
@@ -3081,8 +3077,8 @@ struct FunctionOpInterfaceSignatureConversion : public ConversionPattern {
     SmallVector<Type, 1> newResults;
     if (failed(typeConverter->convertSignatureArgs(type.getInputs(), result)) ||
         failed(typeConverter->convertTypes(type.getResults(), newResults)) ||
-        failed(rewriter.convertRegionTypes(&funcOp.getBody(), *typeConverter,
-                                           &result)))
+        failed(rewriter.convertRegionTypes(&funcOp.getFunctionBody(),
+                                           *typeConverter, &result)))
       return failure();
 
     // Update the function signature in-place.

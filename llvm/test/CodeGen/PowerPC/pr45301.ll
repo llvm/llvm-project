@@ -13,15 +13,15 @@ define dso_local void @g(%struct.e.0.1.2.3.12.29* %agg.result) local_unnamed_add
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    addis r4, r2, g@toc@ha
 ; CHECK-NEXT:    addi r4, r4, g@toc@l
-; CHECK-NEXT:    ld r5, 0(r4)
-; CHECK-NEXT:    std r5, 0(r3)
 ; CHECK-NEXT:    ld r5, 16(r4)
 ; CHECK-NEXT:    std r5, 16(r3)
-; CHECK-NEXT:    ld r6, 8(r4)
-; CHECK-NEXT:    std r6, 8(r3)
-; CHECK-NEXT:    ld r6, 24(r4)
-; CHECK-NEXT:    std r6, 24(r3)
-; CHECK-NEXT:    lwz r6, 0(r3)
+; CHECK-NEXT:    ld r6, 0(r4)
+; CHECK-NEXT:    std r6, 0(r3)
+; CHECK-NEXT:    rldicl r6, r6, 32, 32
+; CHECK-NEXT:    ld r7, 8(r4)
+; CHECK-NEXT:    std r7, 8(r3)
+; CHECK-NEXT:    ld r7, 24(r4)
+; CHECK-NEXT:    std r7, 24(r3)
 ; CHECK-NEXT:    ld r4, 32(r4)
 ; CHECK-NEXT:    std r4, 32(r3)
 ; CHECK-NEXT:    li r4, 20

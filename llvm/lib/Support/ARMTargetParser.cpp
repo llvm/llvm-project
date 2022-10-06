@@ -39,12 +39,6 @@ ARM::ArchKind ARM::parseArch(StringRef Arch) {
 unsigned ARM::parseArchVersion(StringRef Arch) {
   Arch = getCanonicalArchName(Arch);
   switch (parseArch(Arch)) {
-  case ArchKind::ARMV2:
-  case ArchKind::ARMV2A:
-    return 2;
-  case ArchKind::ARMV3:
-  case ArchKind::ARMV3M:
-    return 3;
   case ArchKind::ARMV4:
   case ArchKind::ARMV4T:
     return 4;
@@ -125,10 +119,6 @@ ARM::ProfileKind ARM::parseArchProfile(StringRef Arch) {
   case ArchKind::ARMV9_2A:
   case ArchKind::ARMV9_3A:
     return ProfileKind::A;
-  case ArchKind::ARMV2:
-  case ArchKind::ARMV2A:
-  case ArchKind::ARMV3:
-  case ArchKind::ARMV3M:
   case ArchKind::ARMV4:
   case ArchKind::ARMV4T:
   case ArchKind::ARMV5T:

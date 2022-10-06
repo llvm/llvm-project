@@ -573,20 +573,18 @@ def MTCTR8 : XFXForm_7_ext<31, 467, 9, (outs), (ins g8rc:$rS),
                            "mtctr $rS", IIC_SprMTSPR>,
              PPC970_DGroup_First, PPC970_Unit_FXU;
 }
-let hasSideEffects = 1, Defs = [CTR8] in {
+// MTCTR[8|]loop must be inside a loop-preheader, duplicating
+// the loop-preheader block will break this assumption.
+let hasSideEffects = 1, isNotDuplicable = 1, Defs = [CTR8] in {
 let Pattern = [(int_set_loop_iterations i64:$rS)] in
 def MTCTR8loop : XFXForm_7_ext<31, 467, 9, (outs), (ins g8rc:$rS),
                                "mtctr $rS", IIC_SprMTSPR>,
                  PPC970_DGroup_First, PPC970_Unit_FXU;
 }
 
-
-let hasSideEffects = 1, Defs = [CTR8] in
-def MTCTR8Pseudo : PPCEmitTimePseudo<(outs), (ins g8rc:$rS), "#MTCTR8Pseudo", []>;
-
-let hasSideEffects = 1, Uses = [CTR8], Defs = [CTR8] in
-def DecreaseCTR8Pseudo : PPCEmitTimePseudo<(outs crbitrc:$rT), (ins i64imm:$stride),
-                                          "#DecreaseCTR8Pseudo", []>;
+let hasSideEffects = 1, hasNoSchedulingInfo = 1, isNotDuplicable = 1, Uses = [CTR8], Defs = [CTR8] in
+def DecreaseCTR8loop : PPCEmitTimePseudo<(outs crbitrc:$rT), (ins i64imm:$stride),
+                                        "#DecreaseCTR8loop", [(set i1:$rT, (int_loop_decrement (i64 imm:$stride)))]>;
 
 let Pattern = [(set i64:$rT, readcyclecounter)] in
 def MFTB8 : XFXForm_1_ext<31, 339, 268, (outs g8rc:$rT), (ins),
@@ -648,10 +646,10 @@ let isCodeGenOnly = 1 in {
 let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in {
 def LI8  : DForm_2_r0<14, (outs g8rc:$rD), (ins s16imm64:$imm),
                       "li $rD, $imm", IIC_IntSimple,
-                      [(set i64:$rD, imm64SExt16:$imm)]>;
+                      [(set i64:$rD, imm64SExt16:$imm)]>, SExt32To64;
 def LIS8 : DForm_2_r0<15, (outs g8rc:$rD), (ins s17imm64:$imm),
                       "lis $rD, $imm", IIC_IntSimple,
-                      [(set i64:$rD, imm16ShiftedSExt:$imm)]>;
+                      [(set i64:$rD, imm16ShiftedSExt:$imm)]>, SExt32To64;
 }
 
 // Logical ops.
@@ -691,11 +689,11 @@ let Defs = [CR0] in {
 def ANDI8_rec  : DForm_4<28, (outs g8rc:$dst), (ins g8rc:$src1, u16imm64:$src2),
                       "andi. $dst, $src1, $src2", IIC_IntGeneral,
                       [(set i64:$dst, (and i64:$src1, immZExt16:$src2))]>,
-                      isRecordForm;
+                      isRecordForm, SExt32To64, ZExt32To64;
 def ANDIS8_rec : DForm_4<29, (outs g8rc:$dst), (ins g8rc:$src1, u16imm64:$src2),
                      "andis. $dst, $src1, $src2", IIC_IntGeneral,
                     [(set i64:$dst, (and i64:$src1, imm16ShiftedZExt:$src2))]>,
-                     isRecordForm;
+                     isRecordForm, ZExt32To64;
 }
 def ORI8    : DForm_4<24, (outs g8rc:$dst), (ins g8rc:$src1, u16imm64:$src2),
                       "ori $dst, $src1, $src2", IIC_IntSimple,
@@ -902,39 +900,44 @@ defm SRAD : XForm_6rc<31, 794, (outs g8rc:$rA), (ins g8rc:$rS, gprc:$rB),
 
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 defm CNTLZW8 : XForm_11r<31,  26, (outs g8rc:$rA), (ins g8rc:$rS),
-                        "cntlzw", "$rA, $rS", IIC_IntGeneral, []>;
+                        "cntlzw", "$rA, $rS", IIC_IntGeneral, []>,
+                        ZExt32To64, SExt32To64;
 defm CNTTZW8 : XForm_11r<31, 538, (outs g8rc:$rA), (ins g8rc:$rS),
                         "cnttzw", "$rA, $rS", IIC_IntGeneral, []>,
-               Requires<[IsISA3_0]>;
+               Requires<[IsISA3_0]>, ZExt32To64, SExt32To64;
 
 defm EXTSB8 : XForm_11r<31, 954, (outs g8rc:$rA), (ins g8rc:$rS),
                         "extsb", "$rA, $rS", IIC_IntSimple,
-                        [(set i64:$rA, (sext_inreg i64:$rS, i8))]>;
+                        [(set i64:$rA, (sext_inreg i64:$rS, i8))]>, SExt32To64;
 defm EXTSH8 : XForm_11r<31, 922, (outs g8rc:$rA), (ins g8rc:$rS),
                         "extsh", "$rA, $rS", IIC_IntSimple,
-                        [(set i64:$rA, (sext_inreg i64:$rS, i16))]>;
+                        [(set i64:$rA, (sext_inreg i64:$rS, i16))]>, SExt32To64;
 
 defm SLW8  : XForm_6r<31,  24, (outs g8rc:$rA), (ins g8rc:$rS, g8rc:$rB),
-                      "slw", "$rA, $rS, $rB", IIC_IntGeneral, []>;
+                      "slw", "$rA, $rS, $rB", IIC_IntGeneral, []>, ZExt32To64;
 defm SRW8  : XForm_6r<31, 536, (outs g8rc:$rA), (ins g8rc:$rS, g8rc:$rB),
-                      "srw", "$rA, $rS, $rB", IIC_IntGeneral, []>;
+                      "srw", "$rA, $rS, $rB", IIC_IntGeneral, []>, ZExt32To64;
 } // Interpretation64Bit
 
 // For fast-isel:
 let isCodeGenOnly = 1 in {
 def EXTSB8_32_64 : XForm_11<31, 954, (outs g8rc:$rA), (ins gprc:$rS),
-                           "extsb $rA, $rS", IIC_IntSimple, []>, isPPC64;
+                           "extsb $rA, $rS", IIC_IntSimple, []>, isPPC64,
+                           SExt32To64;
 def EXTSH8_32_64 : XForm_11<31, 922, (outs g8rc:$rA), (ins gprc:$rS),
-                           "extsh $rA, $rS", IIC_IntSimple, []>, isPPC64;
+                           "extsh $rA, $rS", IIC_IntSimple, []>, isPPC64,
+                           SExt32To64;
 } // isCodeGenOnly for fast-isel
 
 defm EXTSW  : XForm_11r<31, 986, (outs g8rc:$rA), (ins g8rc:$rS),
                         "extsw", "$rA, $rS", IIC_IntSimple,
-                        [(set i64:$rA, (sext_inreg i64:$rS, i32))]>, isPPC64;
+                        [(set i64:$rA, (sext_inreg i64:$rS, i32))]>, isPPC64,
+                        SExt32To64;
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in
 defm EXTSW_32_64 : XForm_11r<31, 986, (outs g8rc:$rA), (ins gprc:$rS),
                              "extsw", "$rA, $rS", IIC_IntSimple,
-                             [(set i64:$rA, (sext i32:$rS))]>, isPPC64;
+                             [(set i64:$rA, (sext i32:$rS))]>, isPPC64,
+                             SExt32To64;
 let isCodeGenOnly = 1 in
 def EXTSW_32 : XForm_11<31, 986, (outs gprc:$rA), (ins gprc:$rS),
                         "extsw $rA, $rS", IIC_IntSimple,
@@ -963,13 +966,16 @@ def SRADI_32  : XSForm_1<31, 413, (outs gprc:$rA), (ins gprc:$rS, u6imm:$SH),
 
 defm CNTLZD : XForm_11r<31,  58, (outs g8rc:$rA), (ins g8rc:$rS),
                         "cntlzd", "$rA, $rS", IIC_IntGeneral,
-                        [(set i64:$rA, (ctlz i64:$rS))]>;
+                        [(set i64:$rA, (ctlz i64:$rS))]>,
+                        ZExt32To64, SExt32To64;
 defm CNTTZD : XForm_11r<31, 570, (outs g8rc:$rA), (ins g8rc:$rS),
                         "cnttzd", "$rA, $rS", IIC_IntGeneral,
-                        [(set i64:$rA, (cttz i64:$rS))]>, Requires<[IsISA3_0]>;
+                        [(set i64:$rA, (cttz i64:$rS))]>, Requires<[IsISA3_0]>,
+                        ZExt32To64, SExt32To64;
 def POPCNTD : XForm_11<31, 506, (outs g8rc:$rA), (ins g8rc:$rS),
                        "popcntd $rA, $rS", IIC_IntGeneral,
-                       [(set i64:$rA, (ctpop i64:$rS))]>;
+                       [(set i64:$rA, (ctpop i64:$rS))]>,
+                       ZExt32To64, SExt32To64;
 def BPERMD : XForm_6<31, 252, (outs g8rc:$rA), (ins g8rc:$rS, g8rc:$rB),
                      "bpermd $rA, $rS, $rB", IIC_IntGeneral,
                      [(set i64:$rA, (int_ppc_bpermd g8rc:$rS, g8rc:$rB))]>,
@@ -1020,7 +1026,7 @@ let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
                        [(set i64:$RT, (add_without_simm16 (mul_without_simm16 i64:$RA, i64:$RB), i64:$RC))]>,
                        isPPC64;
   def SETB8 : XForm_44<31, 128, (outs g8rc:$RT), (ins crrc:$BFA),
-                       "setb $RT, $BFA", IIC_IntGeneral>, isPPC64;
+                       "setb $RT, $BFA", IIC_IntGeneral>, isPPC64, SExt32To64;
 }
 def ADDPCIS : DXForm<19, 2, (outs g8rc:$RT), (ins i32imm:$D),
                      "addpcis $RT, $D", IIC_BrB, []>, isPPC64;
@@ -1242,29 +1248,29 @@ let Interpretation64Bit = 1, isCodeGenOnly = 1 in
 def LHA8: DForm_1<42, (outs g8rc:$rD), (ins memri:$src),
                   "lha $rD, $src", IIC_LdStLHA,
                   [(set i64:$rD, (sextloadi16 DForm:$src))]>,
-                  PPC970_DGroup_Cracked;
+                  PPC970_DGroup_Cracked, SExt32To64;
 def LWA  : DSForm_1<58, 2, (outs g8rc:$rD), (ins memrix:$src),
                     "lwa $rD, $src", IIC_LdStLWA,
                     [(set i64:$rD,
                           (sextloadi32 DSForm:$src))]>, isPPC64,
-                    PPC970_DGroup_Cracked;
+                    PPC970_DGroup_Cracked, SExt32To64;
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in
 def LHAX8: XForm_1_memOp<31, 343, (outs g8rc:$rD), (ins memrr:$src),
                         "lhax $rD, $src", IIC_LdStLHA,
                         [(set i64:$rD, (sextloadi16 XForm:$src))]>,
-                        PPC970_DGroup_Cracked;
+                        PPC970_DGroup_Cracked, SExt32To64;
 def LWAX : XForm_1_memOp<31, 341, (outs g8rc:$rD), (ins memrr:$src),
                         "lwax $rD, $src", IIC_LdStLHA,
                         [(set i64:$rD, (sextloadi32 XForm:$src))]>, isPPC64,
-                        PPC970_DGroup_Cracked;
+                        PPC970_DGroup_Cracked, SExt32To64;
 // For fast-isel:
 let isCodeGenOnly = 1, mayLoad = 1, hasSideEffects = 0 in {
 def LWA_32  : DSForm_1<58, 2, (outs gprc:$rD), (ins memrix:$src),
                       "lwa $rD, $src", IIC_LdStLWA, []>, isPPC64,
-                      PPC970_DGroup_Cracked;
+                      PPC970_DGroup_Cracked, SExt32To64;
 def LWAX_32 : XForm_1_memOp<31, 341, (outs gprc:$rD), (ins memrr:$src),
                             "lwax $rD, $src", IIC_LdStLHA, []>, isPPC64,
-                            PPC970_DGroup_Cracked;
+                            PPC970_DGroup_Cracked, SExt32To64;
 } // end fast-isel isCodeGenOnly
 
 // Update forms.
@@ -1296,23 +1302,29 @@ let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
 let PPC970_Unit = 2 in {
 def LBZ8 : DForm_1<34, (outs g8rc:$rD), (ins memri:$src),
                   "lbz $rD, $src", IIC_LdStLoad,
-                  [(set i64:$rD, (zextloadi8 DForm:$src))]>;
+                  [(set i64:$rD, (zextloadi8 DForm:$src))]>, ZExt32To64,
+                  SExt32To64;
 def LHZ8 : DForm_1<40, (outs g8rc:$rD), (ins memri:$src),
                   "lhz $rD, $src", IIC_LdStLoad,
-                  [(set i64:$rD, (zextloadi16 DForm:$src))]>;
+                  [(set i64:$rD, (zextloadi16 DForm:$src))]>, ZExt32To64,
+                  SExt32To64;
 def LWZ8 : DForm_1<32, (outs g8rc:$rD), (ins memri:$src),
                   "lwz $rD, $src", IIC_LdStLoad,
-                  [(set i64:$rD, (zextloadi32 DForm:$src))]>, isPPC64;
+                  [(set i64:$rD, (zextloadi32 DForm:$src))]>, isPPC64,
+                  ZExt32To64;
 
 def LBZX8 : XForm_1_memOp<31,  87, (outs g8rc:$rD), (ins memrr:$src),
                           "lbzx $rD, $src", IIC_LdStLoad,
-                          [(set i64:$rD, (zextloadi8 XForm:$src))]>;
+                          [(set i64:$rD, (zextloadi8 XForm:$src))]>, ZExt32To64,
+                          SExt32To64;
 def LHZX8 : XForm_1_memOp<31, 279, (outs g8rc:$rD), (ins memrr:$src),
                           "lhzx $rD, $src", IIC_LdStLoad,
-                          [(set i64:$rD, (zextloadi16 XForm:$src))]>;
+                          [(set i64:$rD, (zextloadi16 XForm:$src))]>,
+                          ZExt32To64, SExt32To64;
 def LWZX8 : XForm_1_memOp<31,  23, (outs g8rc:$rD), (ins memrr:$src),
                           "lwzx $rD, $src", IIC_LdStLoad,
-                          [(set i64:$rD, (zextloadi32 XForm:$src))]>;
+                          [(set i64:$rD, (zextloadi32 XForm:$src))]>,
+                          ZExt32To64;
                    
                    
 // Update forms.
@@ -1390,9 +1402,9 @@ def LDBRX : XForm_1_memOp<31,  532, (outs g8rc:$rD), (ins memrr:$src),
 
 let mayLoad = 1, hasSideEffects = 0, isCodeGenOnly = 1 in {
 def LHBRX8 : XForm_1_memOp<31, 790, (outs g8rc:$rD), (ins memrr:$src),
-                          "lhbrx $rD, $src", IIC_LdStLoad, []>;
+                          "lhbrx $rD, $src", IIC_LdStLoad, []>, ZExt32To64;
 def LWBRX8 : XForm_1_memOp<31,  534, (outs g8rc:$rD), (ins memrr:$src),
-                          "lwbrx $rD, $src", IIC_LdStLoad, []>;
+                          "lwbrx $rD, $src", IIC_LdStLoad, []>, ZExt32To64;
 }
 
 let mayLoad = 1, hasSideEffects = 0 in {
@@ -1960,10 +1972,9 @@ def SLBSYNC : XForm_0<31, 338, (outs), (ins), "slbsync", IIC_SprSLBSYNC, []>;
 
 def : Pat<(int_ppc_stdcx ForceXForm:$dst, g8rc:$A),
           (STDCX g8rc:$A, ForceXForm:$dst)>;
+def : Pat<(PPCStoreCond ForceXForm:$dst, g8rc:$A, 8),
+          (STDCX g8rc:$A, ForceXForm:$dst)>;
 
-// trapd
-def : Pat<(int_ppc_trapd g8rc:$A),
-          (TDI 24, $A, 0)>;
 def : Pat<(i64 (int_ppc_mfspr timm:$SPR)),
           (MFSPR8 $SPR)>;
 def : Pat<(int_ppc_mtspr timm:$SPR, g8rc:$RT),

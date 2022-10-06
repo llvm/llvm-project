@@ -4,7 +4,7 @@
 // Check invalid -fuse-cuid= option.
 
 // RUN: not %clang -### -x hip \
-// RUN:   -target x86_64-unknown-linux-gnu \
+// RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
 // RUN:   -c -nogpulib -fuse-cuid=invalid \
@@ -15,7 +15,7 @@
 // Check random CUID generator.
 
 // RUN: %clang -### -x hip \
-// RUN:   -target x86_64-unknown-linux-gnu \
+// RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
 // RUN:   -c -nogpulib -fuse-cuid=random \
@@ -26,7 +26,7 @@
 // Check fixed CUID.
 
 // RUN: %clang -### -x hip \
-// RUN:   -target x86_64-unknown-linux-gnu \
+// RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
 // RUN:   -c -nogpulib -cuid=xyz_123 \
@@ -37,7 +37,7 @@
 // Check fixed CUID override -fuse-cuid.
 
 // RUN: %clang -### -x hip \
-// RUN:   -target x86_64-unknown-linux-gnu \
+// RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
 // RUN:   -c -nogpulib -fuse-cuid=random -cuid=xyz_123 \
@@ -48,7 +48,7 @@
 // Check hash CUID generator.
 
 // RUN: %clang -### -x hip \
-// RUN:   -target x86_64-unknown-linux-gnu \
+// RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
 // RUN:   -c -nogpulib -fuse-cuid=hash \

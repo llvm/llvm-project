@@ -138,6 +138,7 @@ def TemplateArgument : PropertyType;
 def TemplateArgumentKind : EnumPropertyType<"TemplateArgument::ArgKind">;
 def TemplateName : DefaultValuePropertyType;
 def TemplateNameKind : EnumPropertyType<"TemplateName::NameKind">;
+def TypeOfKind : EnumPropertyType<"TypeOfKind">;
 def UInt32 : CountPropertyType<"uint32_t">;
 def UInt64 : CountPropertyType<"uint64_t">;
 def UnaryTypeTransformKind : EnumPropertyType<"UnaryTransformType::UTTKind">;
@@ -786,13 +787,13 @@ let Class = PropertyTypeCase<TemplateArgument, "TemplateExpansion"> in {
   def : Property<"numExpansions", Optional<UInt32>> {
     let Read = [{
       // Translate unsigned -> uint32_t just in case.
-      node.getNumTemplateExpansions().map(
+      node.getNumTemplateExpansions().transform(
         [](unsigned i) { return uint32_t(i); })
     }];
   }
   def : Creator<[{
     auto numExpansionsUnsigned =
-      numExpansions.map([](uint32_t i) { return unsigned(i); });
+      numExpansions.transform([](uint32_t i) { return unsigned(i); });
     return TemplateArgument(name, numExpansionsUnsigned);
   }]>;
 }

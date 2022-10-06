@@ -10,7 +10,6 @@
 #define liblldb_IntelPTProcessTrace_H_
 
 #include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
-
 #include <memory>
 
 namespace lldb_private {

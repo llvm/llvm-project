@@ -35,6 +35,7 @@
 #include <__ranges/single_view.h>
 #include <__ranges/subrange.h>
 #include <__ranges/view_interface.h>
+#include <__type_traits/maybe_const.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <type_traits>
@@ -45,7 +46,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 
 namespace ranges {
 
@@ -458,7 +459,7 @@ inline namespace __cpo {
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
 

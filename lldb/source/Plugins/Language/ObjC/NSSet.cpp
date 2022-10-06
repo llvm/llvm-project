@@ -461,7 +461,7 @@ bool lldb_private::formatters::NSSetISyntheticFrontEnd::Update() {
   if (error.Fail())
     return false;
   m_data_ptr = data_location + m_ptr_size;
-  return false;
+  return true;
 }
 
 bool lldb_private::formatters::NSSetISyntheticFrontEnd::MightHaveChildren() {
@@ -735,9 +735,7 @@ lldb_private::formatters::
     process_sp->ReadMemory(data_location, m_data_64, sizeof(D64),
                            error);
   }
-  if (error.Fail())
-    return false;
-  return false;
+  return error.Success();
 }
 
 template <typename D32, typename D64>

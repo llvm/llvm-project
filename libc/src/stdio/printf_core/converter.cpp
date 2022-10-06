@@ -26,11 +26,11 @@ namespace printf_core {
 
 int convert(Writer *writer, const FormatSection &to_conv) {
   if (!to_conv.has_conv)
-    return writer->write(to_conv.raw_string, to_conv.raw_len);
+    return writer->write(to_conv.raw_string);
 
   switch (to_conv.conv_name) {
   case '%':
-    return writer->write("%", 1);
+    return writer->write("%");
   case 'c':
     return convert_char(writer, to_conv);
   case 's':
@@ -38,12 +38,10 @@ int convert(Writer *writer, const FormatSection &to_conv) {
   case 'd':
   case 'i':
   case 'u':
-    return convert_int(writer, to_conv);
   case 'o':
-    return convert_oct(writer, to_conv);
   case 'x':
   case 'X':
-    return convert_hex(writer, to_conv);
+    return convert_int(writer, to_conv);
 #ifndef LLVM_LIBC_PRINTF_DISABLE_FLOAT
   // case 'f':
   // case 'F':
@@ -65,7 +63,7 @@ int convert(Writer *writer, const FormatSection &to_conv) {
   case 'p':
     return convert_pointer(writer, to_conv);
   default:
-    return writer->write(to_conv.raw_string, to_conv.raw_len);
+    return writer->write(to_conv.raw_string);
   }
   return -1;
 }

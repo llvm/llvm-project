@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns \
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve \
 // RUN:   -target-feature +neon -S -O1 -o - -emit-llvm %s | FileCheck %s
 
 // Tests to check that all sve datatypes can be passed in as input operands

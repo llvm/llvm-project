@@ -22,16 +22,16 @@
 ; RUN: opt -S -print-changed -passes=instsimplify -filter-print-funcs="f,g" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-FILTER-MULT-FUNC
 ;
 ; Check that the reporting of IRs respects -filter-passes
-; RUN: opt -S -print-changed -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-FILTER-PASSES
+; RUN: opt -S -print-changed -passes="instsimplify,no-op-function" -filter-passes="no-op-function" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-FILTER-PASSES
 ;
 ; Check that the reporting of IRs respects -filter-passes with multiple passes
-; RUN: opt -S -print-changed -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-FILTER-MULT-PASSES
+; RUN: opt -S -print-changed -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-FILTER-MULT-PASSES
 ;
 ; Check that the reporting of IRs respects both -filter-passes and -filter-print-funcs
-; RUN: opt -S -print-changed -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" -filter-print-funcs=f 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-FILTER-FUNC-PASSES
+; RUN: opt -S -print-changed -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" -filter-print-funcs=f 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-FILTER-FUNC-PASSES
 ;
 ; Check that the reporting of IRs respects -filter-passes, -filter-print-funcs and -print-module-scope
-; RUN: opt -S -print-changed -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" -filter-print-funcs=f -print-module-scope 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-FILTER-FUNC-PASSES-MOD-SCOPE
+; RUN: opt -S -print-changed -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" -filter-print-funcs=f -print-module-scope 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-FILTER-FUNC-PASSES-MOD-SCOPE
 ;
 ; Check that repeated passes that change the IR are printed and that the
 ; others (including g) are filtered out.  Note that the second time
@@ -69,16 +69,16 @@
 ; RUN: opt -S -print-changed=quiet -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-QUIET-FILTER-PASSES-NONE --allow-empty
 ;
 ; Check that the reporting of IRs respects -filter-passes with multiple passes
-; RUN: opt -S -print-changed=quiet -passes="instsimplify" -filter-passes="NoOpFunctionPass,InstSimplifyPass" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-QUIET-FILTER-PASSES
+; RUN: opt -S -print-changed=quiet -passes="instsimplify" -filter-passes="no-op-function,instsimplify" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-QUIET-FILTER-PASSES
 ;
 ; Check that the reporting of IRs respects -filter-passes with multiple passes
-; RUN: opt -S -print-changed=quiet -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-QUIET-FILTER-MULT-PASSES
+; RUN: opt -S -print-changed=quiet -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-QUIET-FILTER-MULT-PASSES
 ;
 ; Check that the reporting of IRs respects both -filter-passes and -filter-print-funcs
-; RUN: opt -S -print-changed=quiet -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" -filter-print-funcs=f 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-QUIET-FILTER-FUNC-PASSES
+; RUN: opt -S -print-changed=quiet -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" -filter-print-funcs=f 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-QUIET-FILTER-FUNC-PASSES
 ;
 ; Check that the reporting of IRs respects -filter-passes, -filter-print-funcs and -print-module-scope
-; RUN: opt -S -print-changed=quiet -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" -filter-print-funcs=f -print-module-scope 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-QUIET-FILTER-FUNC-PASSES-MOD-SCOPE
+; RUN: opt -S -print-changed=quiet -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" -filter-print-funcs=f -print-module-scope 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-QUIET-FILTER-FUNC-PASSES-MOD-SCOPE
 ;
 ; Check that repeated passes that change the IR are printed and that the
 ; others (including g) are filtered out.  Note that the second time

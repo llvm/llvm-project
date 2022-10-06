@@ -51,7 +51,7 @@ struct DynamicTypeStorage;
 /// extensible dialect (a dialect inheriting ExtensibleDialect). This class
 /// stores the parser, the printer, and the verifier of the attribute. Each
 /// dynamic attribute definition refers to one instance of this class.
-class DynamicAttrDefinition : SelfOwningTypeID {
+class DynamicAttrDefinition : public SelfOwningTypeID {
 public:
   using VerifierFn = llvm::unique_function<LogicalResult(
       function_ref<InFlightDiagnostic()>, ArrayRef<Attribute>) const>;
@@ -196,7 +196,7 @@ public:
 /// extensible dialect (a dialect inheriting ExtensibleDialect). This class
 /// stores the parser, the printer, and the verifier of the type. Each dynamic
 /// type definition refers to one instance of this class.
-class DynamicTypeDefinition : SelfOwningTypeID {
+class DynamicTypeDefinition : public SelfOwningTypeID {
 public:
   using VerifierFn = llvm::unique_function<LogicalResult(
       function_ref<InFlightDiagnostic()>, ArrayRef<Attribute>) const>;
@@ -550,6 +550,30 @@ private:
   /// Owns the TypeID generated at runtime for operations.
   TypeIDAllocator typeIDAllocator;
 };
+
+//===----------------------------------------------------------------------===//
+// Dynamic dialect
+//===----------------------------------------------------------------------===//
+
+/// A dialect that can be defined at runtime. It can be extended with new
+/// operations, types, and attributes at runtime.
+class DynamicDialect : public SelfOwningTypeID, public ExtensibleDialect {
+public:
+  DynamicDialect(StringRef name, MLIRContext *ctx);
+
+  TypeID getTypeID() { return SelfOwningTypeID::getTypeID(); }
+
+  /// Check if the dialect is an extensible dialect.
+  static bool classof(const Dialect *dialect);
+
+  virtual Type parseType(DialectAsmParser &parser) const override;
+  virtual void printType(Type type, DialectAsmPrinter &printer) const override;
+
+  virtual Attribute parseAttribute(DialectAsmParser &parser,
+                                   Type type) const override;
+  virtual void printAttribute(Attribute attr,
+                              DialectAsmPrinter &printer) const override;
+};
 } // namespace mlir
 
 namespace llvm {
@@ -559,6 +583,15 @@ template <>
 struct isa_impl<mlir::ExtensibleDialect, mlir::Dialect> {
   static inline bool doit(const ::mlir::Dialect &dialect) {
     return mlir::ExtensibleDialect::classof(&dialect);
+  }
+};
+
+/// Provide isa functionality for DynamicDialect.
+/// This is to override the isa functionality for Dialect.
+template <>
+struct isa_impl<mlir::DynamicDialect, mlir::Dialect> {
+  static inline bool doit(const ::mlir::Dialect &dialect) {
+    return mlir::DynamicDialect::classof(&dialect);
   }
 };
 } // namespace llvm

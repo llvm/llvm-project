@@ -52,19 +52,19 @@ operator^(chars_format __x, chars_format __y) {
                       _VSTD::__to_underlying(__y));
 }
 
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 chars_format&
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14 chars_format&
 operator&=(chars_format& __x, chars_format __y) {
   __x = __x & __y;
   return __x;
 }
 
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 chars_format&
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14 chars_format&
 operator|=(chars_format& __x, chars_format __y) {
   __x = __x | __y;
   return __x;
 }
 
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 chars_format&
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14 chars_format&
 operator^=(chars_format& __x, chars_format __y) {
   __x = __x ^ __y;
   return __x;

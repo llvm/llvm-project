@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILValueEnumerator.h"
-#include "DXILPointerType.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Argument.h"
@@ -32,6 +31,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/TypedPointerType.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -373,7 +373,7 @@ ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType) {
     EnumerateValue(&F);
     EnumerateType(F.getValueType());
     EnumerateType(
-        dxil::TypedPointerType::get(F.getFunctionType(), F.getAddressSpace()));
+        TypedPointerType::get(F.getFunctionType(), F.getAddressSpace()));
     EnumerateAttributes(F.getAttributes());
   }
 
@@ -394,7 +394,7 @@ ValueEnumerator::ValueEnumerator(const Module &M, Type *PrefixType) {
     if (GV.hasInitializer())
       EnumerateValue(GV.getInitializer());
     EnumerateType(
-        dxil::TypedPointerType::get(GV.getValueType(), GV.getAddressSpace()));
+        TypedPointerType::get(GV.getValueType(), GV.getAddressSpace()));
     if (GV.hasAttributes())
       EnumerateAttributes(GV.getAttributesAsList(AttributeList::FunctionIndex));
   }

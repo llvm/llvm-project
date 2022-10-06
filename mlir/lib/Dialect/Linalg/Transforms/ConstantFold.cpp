@@ -77,8 +77,8 @@ public:
     auto getOperandElementType = [](OpOperand *operand) {
       return operand->get().getType().cast<ShapedType>().getElementType();
     };
-    if (!llvm::is_splat(llvm::map_range(genericOp.getInputAndOutputOperands(),
-                                        getOperandElementType)))
+    if (!llvm::all_equal(llvm::map_range(genericOp.getInputAndOutputOperands(),
+                                         getOperandElementType)))
       return failure();
 
     // We can only handle the case where we have int/float elements.
@@ -122,10 +122,8 @@ public:
 
     // Identified this as a potential candidate for folding. Now check the
     // policy to see whether we are allowed to proceed.
-    for (int i = 0; i < numInputs; ++i) {
-      OpOperand *consumer = genericOp.getInputOperand(i);
-      OpResult producer = consumer->get().cast<OpResult>();
-      if (!controlFn(producer, *consumer))
+    for (auto *operand : genericOp.getInputOperands()) {
+      if (!controlFn(operand))
         return failure();
     }
 
@@ -273,7 +271,7 @@ struct FoldConstantTranspose : public FoldConstantBase<FoldConstantTranspose> {
 
   RegionComputationFn getRegionComputeFn(GenericOp genericOp) const {
     // Make sure the region only contains a yield op.
-    Block &body = genericOp.region().front();
+    Block &body = genericOp.getRegion().front();
     if (!llvm::hasSingleElement(body))
       return nullptr;
     auto yieldOp = dyn_cast<linalg::YieldOp>(body.getTerminator());
@@ -281,7 +279,7 @@ struct FoldConstantTranspose : public FoldConstantBase<FoldConstantTranspose> {
       return nullptr;
 
     // The yield op should return the block argument corresponds to the input.
-    for (Value yieldVal : yieldOp.values()) {
+    for (Value yieldVal : yieldOp.getValues()) {
       auto yieldArg = yieldVal.dyn_cast<BlockArgument>();
       if (!yieldArg || yieldArg.getOwner() != &body)
         return nullptr;

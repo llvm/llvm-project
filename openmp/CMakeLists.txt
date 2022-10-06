@@ -67,20 +67,21 @@ set(ENABLE_LIBOMPTARGET ON)
 # Currently libomptarget cannot be compiled on Windows or MacOS X.
 # Since the device plugins are only supported on Linux anyway,
 # there is no point in trying to compile libomptarget on other OSes.
-if (APPLE OR WIN32 OR NOT OPENMP_HAVE_STD_CPP14_FLAG)
+if (APPLE OR WIN32 OR NOT OPENMP_HAVE_STD_CPP17_FLAG)
   set(ENABLE_LIBOMPTARGET OFF)
-endif()
-
-set(ENABLE_LIBOMPTARGET_PROFILING OFF)
-if (ENABLE_LIBOMPTARGET AND NOT LLVM_RUNTIMES_BUILD)
-  set(ENABLE_LIBOMPTARGET_PROFILING ON)
 endif()
 
 option(OPENMP_ENABLE_LIBOMPTARGET "Enable building libomptarget for offloading."
        ${ENABLE_LIBOMPTARGET})
-option(OPENMP_ENABLE_LIBOMPTARGET_PROFILING "Enable time profiling for libomptarget."
-       ${ENABLE_LIBOMPTARGET_PROFILING})
 option(OPENMP_ENABLE_LIBOMP_PROFILING "Enable time profiling for libomp." OFF)
+
+# Header install location
+if(${OPENMP_STANDALONE_BUILD})
+  set(LIBOMP_HEADERS_INSTALL_PATH "${CMAKE_INSTALL_INCLUDEDIR}")
+else()
+  string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" CLANG_VERSION ${PACKAGE_VERSION})
+  set(LIBOMP_HEADERS_INSTALL_PATH "${OPENMP_INSTALL_LIBDIR}/clang/${CLANG_VERSION}/include")
+endif()
 
 # Build host runtime library, after LIBOMPTARGET variables are set since they are needed
 # to enable time profiling support in the OpenMP runtime.
@@ -93,7 +94,7 @@ if (OPENMP_ENABLE_LIBOMPTARGET)
   # Check that the library can actually be built.
   if (APPLE OR WIN32)
     message(FATAL_ERROR "libomptarget cannot be built on Windows and MacOS X!")
-  elseif (NOT OPENMP_HAVE_STD_CPP14_FLAG)
+  elseif (NOT OPENMP_HAVE_STD_CPP17_FLAG)
     message(FATAL_ERROR "Host compiler must support C++14 to build libomptarget!")
   endif()
 

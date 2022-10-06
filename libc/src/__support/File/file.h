@@ -224,9 +224,9 @@ public:
   static ModeFlags mode_flags(const char *mode);
 
 private:
-  size_t write_unlocked_lbf(const void *data, size_t len);
-  size_t write_unlocked_fbf(const void *data, size_t len);
-  size_t write_unlocked_nbf(const void *data, size_t len);
+  size_t write_unlocked_lbf(const uint8_t *data, size_t len);
+  size_t write_unlocked_fbf(const uint8_t *data, size_t len);
+  size_t write_unlocked_nbf(const uint8_t *data, size_t len);
 };
 
 // The implementaiton of this function is provided by the platfrom_file

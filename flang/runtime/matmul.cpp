@@ -184,9 +184,11 @@ static inline void DoMatmul(
   }
   SubscriptValue n{x.GetDimension(xRank - 1).Extent()};
   if (n != y.GetDimension(0).Extent()) {
-    terminator.Crash("MATMUL: arrays do not conform (%jd != %jd)",
+    terminator.Crash("MATMUL: unacceptable operand shapes (%jdx%jd, %jdx%jd)",
+        static_cast<std::intmax_t>(x.GetDimension(0).Extent()),
         static_cast<std::intmax_t>(n),
-        static_cast<std::intmax_t>(y.GetDimension(0).Extent()));
+        static_cast<std::intmax_t>(y.GetDimension(0).Extent()),
+        static_cast<std::intmax_t>(y.GetDimension(1).Extent()));
   }
   using WriteResult =
       CppTypeFor<RCAT == TypeCategory::Logical ? TypeCategory::Integer : RCAT,

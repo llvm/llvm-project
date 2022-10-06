@@ -120,7 +120,7 @@ public:
     MCDwarfLineTableParams Params = Assembler.getDWARFLinetableParams();
     Optional<MCDwarfLineStr> LineStr(None);
     if (Ctx.getDwarfVersion() >= 5) {
-      LineStr = MCDwarfLineStr(Ctx);
+      LineStr.emplace(Ctx);
       Header.setRootFile("dir", "file", None, None);
     }
     MCSymbol *LineEndSym = Header.Emit(TheStreamer, Params, LineStr).second;

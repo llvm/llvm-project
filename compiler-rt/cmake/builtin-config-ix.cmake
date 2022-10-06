@@ -30,6 +30,14 @@ _Float16 foo(_Float16 x) {
 "
 )
 
+builtin_check_c_compiler_source(COMPILER_RT_HAS_BFLOAT16
+"
+__bf16 foo(__bf16 x) {
+ return x;
+}
+"
+)
+
 builtin_check_c_compiler_source(COMPILER_RT_HAS_ASM_LSE
 "
 asm(\".arch armv8-a+lse\");
@@ -97,7 +105,7 @@ if(APPLE)
   endfunction()
 
   set(DARWIN_EMBEDDED_PLATFORMS)
-  set(DARWIN_osx_BUILTIN_MIN_VER 10.5)
+  set(DARWIN_osx_BUILTIN_MIN_VER 10.7)
   set(DARWIN_osx_BUILTIN_MIN_VER_FLAG
       -mmacosx-version-min=${DARWIN_osx_BUILTIN_MIN_VER})
   set(DARWIN_osx_BUILTIN_ALL_POSSIBLE_ARCHS ${X86} ${X86_64})

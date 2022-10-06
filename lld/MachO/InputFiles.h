@@ -44,6 +44,7 @@ struct PlatformInfo;
 class ConcatInputSection;
 class Symbol;
 class Defined;
+class AliasSymbol;
 struct Reloc;
 enum class RefState : uint8_t;
 
@@ -158,6 +159,7 @@ public:
   ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
           bool lazy = false, bool forceHidden = false);
   ArrayRef<llvm::MachO::data_in_code_entry> getDataInCode() const;
+  ArrayRef<uint8_t> getOptimizationHints() const;
   template <class LP> void parse();
 
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
@@ -175,7 +177,7 @@ public:
   std::vector<ConcatInputSection *> debugSections;
   std::vector<CallGraphEntry> callGraph;
   llvm::DenseMap<ConcatInputSection *, FDE> fdes;
-  std::vector<OptimizationHint> optimizationHints;
+  std::vector<AliasSymbol *> aliases;
 
 private:
   llvm::once_flag initDwarf;
@@ -186,12 +188,11 @@ private:
                     ArrayRef<typename LP::nlist> nList, const char *strtab,
                     bool subsectionsViaSymbols);
   template <class NList>
-  Symbol *parseNonSectionSymbol(const NList &sym, StringRef name);
+  Symbol *parseNonSectionSymbol(const NList &sym, const char *strtab);
   template <class SectionHeader>
   void parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
                         const SectionHeader &, Section &);
   void parseDebugInfo();
-  void parseOptimizationHints(ArrayRef<uint8_t> data);
   void splitEhFrames(ArrayRef<uint8_t> dataArr, Section &ehFrameSection);
   void registerCompactUnwind(Section &compactUnwindSection);
   void registerEhFrames(Section &ehFrameSection);
@@ -219,10 +220,13 @@ public:
   explicit DylibFile(const llvm::MachO::InterfaceFile &interface,
                      DylibFile *umbrella, bool isBundleLoader,
                      bool explicitlyLinked);
+  explicit DylibFile(DylibFile *umbrella);
 
   void parseLoadCommands(MemoryBufferRef mb);
   void parseReexports(const llvm::MachO::InterfaceFile &interface);
   bool isReferenced() const { return numReferencedSymbols > 0; }
+  bool isExplicitlyLinked() const;
+  void setExplicitlyLinked() { explicitlyLinked = true; }
 
   static bool classof(const InputFile *f) { return f->kind() == DylibKind; }
 
@@ -239,14 +243,26 @@ public:
   bool forceNeeded = false;
   bool forceWeakImport = false;
   bool deadStrippable = false;
-  bool explicitlyLinked = false;
+
+private:
+  bool explicitlyLinked = false; // Access via isExplicitlyLinked().
+
+public:
   // An executable can be used as a bundle loader that will load the output
   // file being linked, and that contains symbols referenced, but not
   // implemented in the bundle. When used like this, it is very similar
   // to a dylib, so we've used the same class to represent it.
   bool isBundleLoader;
 
+  // Synthetic Dylib objects created by $ld$previous symbols in this dylib.
+  // Usually empty. These synthetic dylibs won't have synthetic dylibs
+  // themselves.
+  SmallVector<DylibFile *, 2> extraDylibs;
+
 private:
+  DylibFile *getSyntheticDylib(StringRef installName, uint32_t currentVersion,
+                               uint32_t compatVersion);
+
   bool handleLDSymbol(StringRef originalName);
   void handleLDPreviousSymbol(StringRef name, StringRef originalName);
   void handleLDInstallNameSymbol(StringRef name, StringRef originalName);

@@ -471,18 +471,18 @@ bool StackProtector::InsertStackProtectors() {
     // instrumentation has already been generated.
     HasIRCheck = true;
 
-    // If we're instrumenting a block with a musttail call, the check has to be
+    // If we're instrumenting a block with a tail call, the check has to be
     // inserted before the call rather than between it and the return. The
-    // verifier guarantees that a musttail call is either directly before the
+    // verifier guarantees that a tail call is either directly before the
     // return or with a single correct bitcast of the return value in between so
     // we don't need to worry about many situations here.
     Instruction *CheckLoc = RI;
     Instruction *Prev = RI->getPrevNonDebugInstruction();
-    if (Prev && isa<CallInst>(Prev) && cast<CallInst>(Prev)->isMustTailCall())
+    if (Prev && isa<CallInst>(Prev) && cast<CallInst>(Prev)->isTailCall())
       CheckLoc = Prev;
     else if (Prev) {
       Prev = Prev->getPrevNonDebugInstruction();
-      if (Prev && isa<CallInst>(Prev) && cast<CallInst>(Prev)->isMustTailCall())
+      if (Prev && isa<CallInst>(Prev) && cast<CallInst>(Prev)->isTailCall())
         CheckLoc = Prev;
     }
 

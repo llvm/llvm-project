@@ -17,7 +17,7 @@ func.func @f(%0: index) {
 
   %11 = memref.alloc() : memref<3x4x5xf32, affine_map<(i, j, k)->(i, j, k)>>
 // CHECK: MemRefType offset: 0 strides: 20, 5, 1
-  %b11 = memref.alloc() : memref<3x4x5xf32, offset: 0, strides: [20, 5, 1]>
+  %b11 = memref.alloc() : memref<3x4x5xf32, strided<[20, 5, 1], offset: 0>>
 // CHECK: MemRefType offset: 0 strides: 20, 5, 1
   %12 = memref.alloc(%0) : memref<3x4x?xf32, affine_map<(i, j, k)->(i, j, k)>>
 // CHECK: MemRefType offset: 0 strides: ?, ?, 1
@@ -34,19 +34,19 @@ func.func @f(%0: index) {
 // CHECK: MemRefType offset: 1 strides: 32, 16, ?
   %22 = memref.alloc()[%0] : memref<3x4x5xf32, affine_map<(i, j, k)[M]->(32 * i + M * j + 16 * k + 3)>>
 // CHECK: MemRefType offset: 3 strides: 32, ?, 16
-  %b22 = memref.alloc(%0)[%0, %0] : memref<3x4x?xf32, offset: 0, strides: [?, ?, 1]>
+  %b22 = memref.alloc(%0)[%0, %0] : memref<3x4x?xf32, strided<[?, ?, 1], offset: 0>>
 // CHECK: MemRefType offset: 0 strides: ?, ?, 1
   %23 = memref.alloc(%0)[%0] : memref<3x?x5xf32, affine_map<(i, j, k)[M]->(M * i + 32 * j + 16 * k + 7)>>
 // CHECK: MemRefType offset: 7 strides: ?, 32, 16
-  %b23 = memref.alloc(%0)[%0] : memref<3x?x5xf32, offset: 0, strides: [?, 5, 1]>
+  %b23 = memref.alloc(%0)[%0] : memref<3x?x5xf32, strided<[?, 5, 1], offset: 0>>
 // CHECK: MemRefType offset: 0 strides: ?, 5, 1
   %24 = memref.alloc(%0)[%0] : memref<3x?x5xf32, affine_map<(i, j, k)[M]->(M * i + 32 * j + 16 * k + M)>>
 // CHECK: MemRefType offset: ? strides: ?, 32, 16
-  %b24 = memref.alloc(%0)[%0, %0] : memref<3x?x5xf32, offset: ?, strides: [?, 32, 16]>
+  %b24 = memref.alloc(%0)[%0, %0] : memref<3x?x5xf32, strided<[?, 32, 16], offset: ?>>
 // CHECK: MemRefType offset: ? strides: ?, 32, 16
   %25 = memref.alloc(%0, %0)[%0, %0] : memref<?x?x16xf32, affine_map<(i, j, k)[M, N]->(M * i + N * j + k + 1)>>
 // CHECK: MemRefType offset: 1 strides: ?, ?, 1
-  %b25 = memref.alloc(%0, %0)[%0, %0] : memref<?x?x16xf32, offset: 1, strides: [?, ?, 1]>
+  %b25 = memref.alloc(%0, %0)[%0, %0] : memref<?x?x16xf32, strided<[?, ?, 1], offset: 1>>
 // CHECK: MemRefType offset: 1 strides: ?, ?, 1
   %26 = memref.alloc(%0)[] : memref<?xf32, affine_map<(i)[M]->(i)>>
 // CHECK: MemRefType offset: 0 strides: 1

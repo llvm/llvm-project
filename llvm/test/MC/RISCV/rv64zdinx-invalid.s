@@ -1,7 +1,7 @@
 # RUN: not llvm-mc -triple riscv64 -mattr=+zdinx %s 2>&1 | FileCheck %s
 
 # Not support float registers
-fld fa4, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'D' (Double-Precision Floating-Point)
+fld fa4, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
 ld a0, -2049(a1) # CHECK: :[[@LINE]]:8: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo modifier or an integer in the range [-2048, 2047]
 
 # Invalid instructions

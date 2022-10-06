@@ -51,8 +51,20 @@ std::vector<std::string> printAfterPasses();
 // Returns true if we should always print the entire module.
 bool forcePrintModuleIR();
 
+// Return true if -filter-passes is empty or contains the pass name.
+bool isPassInPrintList(StringRef PassName);
+bool isFilterPassesEmpty();
+
 // Returns true if we should print the function.
 bool isFunctionInPrintList(StringRef FunctionName);
+
+// Perform a system based diff between \p Before and \p After, using \p
+// OldLineFormat, \p NewLineFormat, and \p UnchangedLineFormat to control the
+// formatting of the output. Return an error message for any failures instead
+// of the diff.
+std::string doSystemDiff(StringRef Before, StringRef After,
+                         StringRef OldLineFormat, StringRef NewLineFormat,
+                         StringRef UnchangedLineFormat);
 
 } // namespace llvm
 

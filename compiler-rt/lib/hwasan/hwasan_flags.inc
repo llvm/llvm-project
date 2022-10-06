@@ -39,7 +39,7 @@ HWASAN_FLAG(
 
 HWASAN_FLAG(bool, free_checks_tail_magic, 1,
     "If set, free() will check the magic values "
-    "to the right of the allocated object "
+    "after the allocated object "
     "if the allocation size is not a divident of the granule size")
 HWASAN_FLAG(
     int, max_free_fill_size, 0,

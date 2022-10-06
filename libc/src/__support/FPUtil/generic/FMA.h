@@ -9,13 +9,12 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMA_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_FMA_H
 
-#include "src/__support/CPP/Bit.h"
-#include "src/__support/CPP/TypeTraits.h"
-#include "src/__support/CPP/UInt128.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/FloatProperties.h"
-#include "src/__support/FPUtil/builtin_wrappers.h"
+#include "src/__support/UInt128.h"
+#include "src/__support/builtin_wrappers.h"
 #include "src/__support/common.h"
 
 namespace __llvm_libc {
@@ -259,7 +258,8 @@ template <> inline double fma<double>(double x, double y, double z) {
         (round_mode == FE_UPWARD && prod_sign) ||
         (round_mode == FE_DOWNWARD && !prod_sign)) {
       result = FPBits::MAX_NORMAL;
-      return prod_sign ? -bit_cast<double>(result) : bit_cast<double>(result);
+      return prod_sign ? -cpp::bit_cast<double>(result)
+                       : cpp::bit_cast<double>(result);
     }
     return prod_sign ? static_cast<double>(FPBits::neg_inf())
                      : static_cast<double>(FPBits::inf());
@@ -282,7 +282,7 @@ template <> inline double fma<double>(double x, double y, double z) {
       ++result;
   }
 
-  return bit_cast<double>(result);
+  return cpp::bit_cast<double>(result);
 }
 
 } // namespace generic

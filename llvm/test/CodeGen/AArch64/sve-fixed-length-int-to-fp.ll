@@ -696,10 +696,9 @@ define void @ucvtf_v16i64_v16f16(<16 x i64>* %a, <16 x half>* %b) vscale_range(8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.d
-; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i64>, <16 x i64>* %a
   %res = uitofp <16 x i64> %op1 to <16 x half>
@@ -714,10 +713,9 @@ define void @ucvtf_v32i64_v32f16(<32 x i64>* %a, <32 x half>* %b) vscale_range(1
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    ucvtf z0.h, p0/m, z0.d
-; CHECK-NEXT:    ptrue p0.h, vl32
+; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i64>, <32 x i64>* %a
   %res = uitofp <32 x i64> %op1 to <32 x half>
@@ -1638,10 +1636,9 @@ define void @scvtf_v16i64_v16f16(<16 x i64>* %a, <16 x half>* %b) vscale_range(8
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    scvtf z0.h, p0/m, z0.d
-; CHECK-NEXT:    ptrue p0.h, vl16
+; CHECK-NEXT:    ptrue p0.s, vl16
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <16 x i64>, <16 x i64>* %a
   %res = sitofp <16 x i64> %op1 to <16 x half>
@@ -1656,10 +1653,9 @@ define void @scvtf_v32i64_v32f16(<32 x i64>* %a, <32 x half>* %b) vscale_range(1
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    scvtf z0.h, p0/m, z0.d
-; CHECK-NEXT:    ptrue p0.h, vl32
+; CHECK-NEXT:    ptrue p0.s, vl32
 ; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
-; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x1]
+; CHECK-NEXT:    st1h { z0.s }, p0, [x1]
 ; CHECK-NEXT:    ret
   %op1 = load <32 x i64>, <32 x i64>* %a
   %res = sitofp <32 x i64> %op1 to <32 x half>

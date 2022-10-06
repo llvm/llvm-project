@@ -45,7 +45,7 @@ class TestStopReasonAfterExpression(TestBase):
 
         stop_reason = other_thread.GetStopReason()
 
-        self.assertEqual(stop_reason, lldb.eStopReasonBreakpoint,
+        self.assertStopReason(stop_reason, lldb.eStopReasonBreakpoint,
                          "Still records stopped at breakpoint: %s"
                          %(lldbutil.stop_reason_to_str(stop_reason)))
         self.assertEqual(other_thread.GetStopReasonDataAtIndex(0), 1,

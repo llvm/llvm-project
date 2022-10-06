@@ -23,7 +23,6 @@ add_lldb_unittest(UtilityTests
   RangeTest.cpp
   RegisterValueTest.cpp
   RegularExpressionTest.cpp
-  ReproducerTest.cpp
   ScalarTest.cpp
   SharedClusterTest.cpp
   StateTest.cpp

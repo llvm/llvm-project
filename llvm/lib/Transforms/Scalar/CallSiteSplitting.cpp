@@ -165,7 +165,7 @@ static void recordConditions(CallBase &CB, BasicBlock *Pred,
 }
 
 static void addConditions(CallBase &CB, const ConditionsTy &Conditions) {
-  for (auto &Cond : Conditions) {
+  for (const auto &Cond : Conditions) {
     Value *Arg = Cond.first->getOperand(0);
     Constant *ConstVal = cast<Constant>(Cond.first->getOperand(1));
     if (Cond.second == ICmpInst::ICMP_EQ)
@@ -364,9 +364,9 @@ static void splitCallSite(CallBase &CB,
     // attempting removal.
     SmallVector<BasicBlock *, 2> Splits(predecessors((TailBB)));
     assert(Splits.size() == 2 && "Expected exactly 2 splits!");
-    for (unsigned i = 0; i < Splits.size(); i++) {
-      Splits[i]->getTerminator()->eraseFromParent();
-      DTU.applyUpdatesPermissive({{DominatorTree::Delete, Splits[i], TailBB}});
+    for (BasicBlock *BB : Splits) {
+      BB->getTerminator()->eraseFromParent();
+      DTU.applyUpdatesPermissive({{DominatorTree::Delete, BB, TailBB}});
     }
 
     // Erase the tail block once done with musttail patching

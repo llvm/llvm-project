@@ -5,10 +5,10 @@
 ;       please update this test some other analysis that isn't preserved.
 
 ; CHECK: Running analysis: LazyValueAnalysis on drop_a_wc_and_leave_early
-; CHECK: Running pass: LoopPredicationPass on Loop at depth 1 containing: %loop<header><exiting>,%guarded<exiting>,%guarded2<latch><exiting>
+; CHECK: Running pass: LoopPredicationPass on loop
 ; CHECK: Invalidating analysis: LazyValueAnalysis on drop_a_wc_and_leave_early
 ; CHECK: Running analysis: LazyValueAnalysis on drop_a_wc_and_leave
-; CHECK: Running pass: LoopPredicationPass on Loop at depth 1 containing: %loop<header><exiting>,%guarded<exiting>,%guarded2<latch><exiting>
+; CHECK: Running pass: LoopPredicationPass on loop
 ; CHECK: Invalidating analysis: LazyValueAnalysis on drop_a_wc_and_leave
 
 

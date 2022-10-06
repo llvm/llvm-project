@@ -23,7 +23,9 @@ using namespace llvm::COFF;
 using namespace lld;
 using namespace lld::coff;
 
-AutoExporter::AutoExporter() {
+AutoExporter::AutoExporter(
+    const llvm::DenseSet<StringRef> &manualExcludeSymbols)
+    : manualExcludeSymbols(manualExcludeSymbols) {
   excludeLibs = {
       "libgcc",
       "libgcc_s",
@@ -122,6 +124,10 @@ void AutoExporter::addWholeArchive(StringRef path) {
   excludeLibs.erase(libName);
 }
 
+void AutoExporter::addExcludedSymbol(StringRef symbol) {
+  excludeSymbols.insert(symbol);
+}
+
 bool AutoExporter::shouldExport(const COFFLinkerContext &ctx,
                                 Defined *sym) const {
   if (!sym || !sym->getChunk())
@@ -131,7 +137,7 @@ bool AutoExporter::shouldExport(const COFFLinkerContext &ctx,
   // disallow import symbols.
   if (!isa<DefinedRegular>(sym) && !isa<DefinedCommon>(sym))
     return false;
-  if (excludeSymbols.count(sym->getName()))
+  if (excludeSymbols.count(sym->getName()) || manualExcludeSymbols.count(sym->getName()))
     return false;
 
   for (StringRef prefix : excludeSymbolPrefixes.keys())

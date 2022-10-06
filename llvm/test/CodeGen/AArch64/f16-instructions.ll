@@ -167,11 +167,8 @@ define half @test_tailcall_flipped(half %a, half %b) #0 {
 }
 
 ; CHECK-CVT-LABEL: test_select:
-; CHECK-CVT-NEXT: fcvt s1, h1
-; CHECK-CVT-NEXT: fcvt s0, h0
 ; CHECK-CVT-NEXT: cmp  w0, #0
 ; CHECK-CVT-NEXT: fcsel s0, s0, s1, ne
-; CHECK-CVT-NEXT: fcvt h0, s0
 ; CHECK-CVT-NEXT: ret
 
 ; CHECK-FP16-LABEL: test_select:
@@ -187,11 +184,8 @@ define half @test_select(half %a, half %b, i1 zeroext %c) #0 {
 ; CHECK-CVT-LABEL: test_select_cc:
 ; CHECK-CVT-DAG: fcvt s3, h3
 ; CHECK-CVT-DAG: fcvt s2, h2
-; CHECK-CVT-DAG: fcvt s1, h1
-; CHECK-CVT-DAG: fcvt s0, h0
 ; CHECK-CVT-DAG: fcmp s2, s3
 ; CHECK-CVT-NEXT: fcsel s0, s0, s1, ne
-; CHECK-CVT-NEXT: fcvt h0, s0
 ; CHECK-CVT-NEXT: ret
 
 ; CHECK-FP16-LABEL: test_select_cc:
@@ -224,11 +218,8 @@ define float @test_select_cc_f32_f16(float %a, float %b, half %c, half %d) #0 {
 }
 
 ; CHECK-CVT-LABEL: test_select_cc_f16_f32:
-; CHECK-CVT-DAG:  fcvt s0, h0
-; CHECK-CVT-DAG:  fcvt s1, h1
 ; CHECK-CVT-DAG:  fcmp s2, s3
 ; CHECK-CVT-NEXT: fcsel s0, s0, s1, ne
-; CHECK-CVT-NEXT: fcvt h0, s0
 ; CHECK-CVT-NEXT: ret
 
 ; CHECK-FP16-LABEL: test_select_cc_f16_f32:
@@ -485,16 +476,14 @@ define i1 @test_fcmp_ord(half %a, half %b) #0 {
 }
 
 ; CHECK-COMMON-LABEL: test_fccmp:
-; CHECK-CVT:      fcvt  s0, h0
-; CHECK-CVT-NEXT: fmov  s1, #8.00000000
-; CHECK-CVT-NEXT: fcmp  s0, s1
-; CHECK-CVT-NEXT: fmov  s1, #5.00000000
-; CHECK-CVT-NEXT: cset  w8, gt
-; CHECK-CVT-NEXT: fcmp  s0, s1
-; CHECK-CVT-NEXT: cset  w9, mi
-; CHECK-CVT-NEXT: tst   w8, w9
-; CHECK-CVT-NEXT: fcsel s0, s0, s1, ne
-; CHECK-CVT-NEXT: fcvt  h0, s0
+; CHECK-CVT:      fcvt  s1, h0
+; CHECK-CVT-NEXT: fmov  s2, #5.00000000
+; CHECK-CVT-NEXT: fcmp  s1, s2
+; CHECK-CVT-NEXT: fmov  s2, #8.00000000
+; CHECK-CVT-NEXT: adrp x8
+; CHECK-CVT-NEXT: fccmp s1, s2, #4, mi
+; CHECK-CVT-NEXT: ldr h1, [x8,
+; CHECK-CVT-NEXT: fcsel s0, s0, s1, gt
 ; CHECK-CVT-NEXT: str   h0, [x0]
 ; CHECK-CVT-NEXT: ret
 ; CHECK-FP16:      fmov  h1, #5.00000000

@@ -351,6 +351,9 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
 class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   friend class GCNTargetMachine;
 
+  // State of MODE register, assumed FP mode.
+  AMDGPU::SIModeRegisterDefaults Mode;
+
   // Registers that may be reserved for spilling purposes. These may be the same
   // as the input registers.
   Register ScratchRSrcReg = AMDGPU::PRIVATE_RSRC_REG;
@@ -550,6 +553,10 @@ public:
 
   void reserveWWMRegister(Register Reg) {
     WWMReservedRegs.insert(Reg);
+  }
+
+  AMDGPU::SIModeRegisterDefaults getMode() const {
+    return Mode;
   }
 
   ArrayRef<SIRegisterInfo::SpilledReg>

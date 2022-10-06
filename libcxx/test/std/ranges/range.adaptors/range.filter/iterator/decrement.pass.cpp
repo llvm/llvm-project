@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr iterator& operator--() requires bidirectional_range<V>;
 // constexpr iterator operator--(int) requires bidirectional_range<V>;

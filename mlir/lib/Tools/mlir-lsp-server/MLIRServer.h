@@ -10,6 +10,7 @@
 #define LIB_MLIR_TOOLS_MLIRLSPSERVER_SERVER_H_
 
 #include "mlir/Support/LLVM.h"
+#include "llvm/Support/Error.h"
 #include <memory>
 
 namespace mlir {
@@ -23,6 +24,7 @@ struct Diagnostic;
 struct DocumentSymbol;
 struct Hover;
 struct Location;
+struct MLIRConvertBytecodeResult;
 struct Position;
 struct Range;
 class URIForFile;
@@ -72,6 +74,14 @@ public:
   void getCodeActions(const URIForFile &uri, const Range &pos,
                       const CodeActionContext &context,
                       std::vector<CodeAction> &actions);
+
+  /// Convert the given bytecode file to the textual format.
+  llvm::Expected<MLIRConvertBytecodeResult>
+  convertFromBytecode(const URIForFile &uri);
+
+  /// Convert the given textual file to the bytecode format.
+  llvm::Expected<MLIRConvertBytecodeResult>
+  convertToBytecode(const URIForFile &uri);
 
 private:
   struct Impl;

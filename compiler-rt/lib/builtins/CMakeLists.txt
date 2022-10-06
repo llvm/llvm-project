@@ -165,10 +165,8 @@ set(GENERIC_SOURCES
   subvsi3.c
   subvti3.c
   trampoline_setup.c
-  truncdfbf2.c
   truncdfhf2.c
   truncdfsf2.c
-  truncsfbf2.c
   truncsfhf2.c
   ucmpdi2.c
   ucmpti2.c
@@ -182,6 +180,15 @@ set(GENERIC_SOURCES
   umodsi3.c
   umodti3.c
 )
+
+# Build BF16 files only when "__bf16" is available.
+if(COMPILER_RT_HAS_BFLOAT16 AND NOT APPLE)
+  set(GENERIC_SOURCES
+    ${GENERIC_SOURCES}
+    truncdfbf2.c
+    truncsfbf2.c
+  )
+endif()
 
 # TODO: Several "tf" files (and divtc3.c, but not multc3.c) are in
 # GENERIC_SOURCES instead of here.
@@ -621,9 +628,11 @@ set(mips64_SOURCES ${GENERIC_TF_SOURCES}
 set(mips64el_SOURCES ${GENERIC_TF_SOURCES}
                      ${mips_SOURCES})
 
+set(powerpc_SOURCES ${GENERIC_SOURCES})
+
 set(powerpcspe_SOURCES ${GENERIC_SOURCES})
 
-set(powerpc_SOURCES
+set(powerpc64_SOURCES
   ppc/divtc3.c
   ppc/fixtfdi.c
   ppc/fixunstfdi.c
@@ -638,17 +647,17 @@ set(powerpc_SOURCES
 )
 # These routines require __int128, which isn't supported on AIX.
 if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
-  set(powerpc_SOURCES
+  set(powerpc64_SOURCES
     ppc/floattitf.c
     ppc/fixtfti.c
     ppc/fixunstfti.c
-    ${powerpc_SOURCES}
+    ${powerpc64_SOURCES}
   )
 endif()
-set(powerpc64le_SOURCES ${powerpc_SOURCES})
-set(powerpc64_SOURCES ${powerpc_SOURCES})
+set(powerpc64le_SOURCES ${powerpc64_SOURCES})
 
 set(riscv_SOURCES
+  riscv/fp_mode.c
   riscv/save.S
   riscv/restore.S
   ${GENERIC_SOURCES}
@@ -690,6 +699,7 @@ if (APPLE)
   darwin_add_builtin_libraries(${BUILTIN_SUPPORTED_OS})
 else ()
   set(BUILTIN_CFLAGS "")
+  add_security_warnings(BUILTIN_CFLAGS 0)
 
   if (COMPILER_RT_HAS_FCF_PROTECTION_FLAG)
     append_list_if(COMPILER_RT_ENABLE_CET -fcf-protection=full BUILTIN_CFLAGS)
@@ -753,8 +763,9 @@ else ()
         list(APPEND BUILTIN_CFLAGS_${arch} -fomit-frame-pointer -DCOMPILER_RT_ARMHF_TARGET)
       endif()
 
-      # For some arches, force enable int128 for compiling long double routines.
-      if("${arch}" STREQUAL "powerpc" OR "${arch}" STREQUAL "riscv32")
+      # For RISCV32, we must force enable int128 for compiling long
+      # double routines.
+      if("${arch}" STREQUAL "riscv32")
         list(APPEND BUILTIN_CFLAGS_${arch} -fforce-enable-int128)
       endif()
 

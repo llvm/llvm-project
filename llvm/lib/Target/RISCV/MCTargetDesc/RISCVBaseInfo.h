@@ -168,6 +168,12 @@ static inline bool usesMaskPolicy(uint64_t TSFlags) {
   return TSFlags & UsesMaskPolicyMask;
 }
 
+static inline unsigned getMergeOpNum(const MCInstrDesc &Desc) {
+  assert(hasMergeOp(Desc.TSFlags));
+  assert(!Desc.isVariadic());
+  return Desc.getNumDefs();
+}
+
 static inline unsigned getVLOpNum(const MCInstrDesc &Desc) {
   const uint64_t TSFlags = Desc.TSFlags;
   // This method is only called if we expect to have a VL operand, and all
@@ -186,6 +192,11 @@ static inline unsigned getSEWOpNum(const MCInstrDesc &Desc) {
   if (hasVecPolicyOp(TSFlags))
     Offset = 2;
   return Desc.getNumOperands() - Offset;
+}
+
+static inline unsigned getVecPolicyOpNum(const MCInstrDesc &Desc) {
+  assert(hasVecPolicyOp(Desc.TSFlags));
+  return Desc.getNumOperands() - 1;
 }
 
 // RISC-V Specific Machine Operand Flags
@@ -219,11 +230,24 @@ enum OperandType : unsigned {
   OPERAND_UIMM4,
   OPERAND_UIMM5,
   OPERAND_UIMM7,
+  OPERAND_UIMM7_LSB00,
+  OPERAND_UIMM8_LSB00,
+  OPERAND_UIMM8_LSB000,
   OPERAND_UIMM12,
+  OPERAND_ZERO,
+  OPERAND_SIMM5,
+  OPERAND_SIMM5_PLUS1,
+  OPERAND_SIMM6,
+  OPERAND_SIMM6_NONZERO,
+  OPERAND_SIMM10_LSB0000_NONZERO,
   OPERAND_SIMM12,
   OPERAND_SIMM12_LSB00000,
   OPERAND_UIMM20,
   OPERAND_UIMMLOG2XLEN,
+  OPERAND_UIMMLOG2XLEN_NONZERO,
+  OPERAND_UIMM_SHFL,
+  OPERAND_VTYPEI10,
+  OPERAND_VTYPEI11,
   OPERAND_RVKRNUM,
   OPERAND_LAST_RISCV_IMM = OPERAND_RVKRNUM,
   // Operand is either a register or uimm5, this is used by V extension pseudo
@@ -430,6 +454,8 @@ inline static bool isTailAgnostic(unsigned VType) { return VType & 0x40; }
 inline static bool isMaskAgnostic(unsigned VType) { return VType & 0x80; }
 
 void printVType(unsigned VType, raw_ostream &OS);
+
+unsigned getSEWLMULRatio(unsigned SEW, RISCVII::VLMUL VLMul);
 
 } // namespace RISCVVType
 

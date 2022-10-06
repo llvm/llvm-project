@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // friend constexpr void iter_swap(const iterator& l, const iterator& r) noexcept(see below)
-//   requires (indirectly_­swappable<iterator_t<maybe-const<Const, Views>>> && ...);
+//   requires (indirectly_swappable<iterator_t<maybe-const<Const, Views>>> && ...);
 
 #include <array>
 #include <cassert>

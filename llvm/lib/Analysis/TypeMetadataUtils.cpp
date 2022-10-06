@@ -61,7 +61,7 @@ static void findLoadCallsAtConstantOffset(
     } else if (auto GEP = dyn_cast<GetElementPtrInst>(User)) {
       // Take into account the GEP offset.
       if (VPtr == GEP->getPointerOperand() && GEP->hasAllConstantIndices()) {
-        SmallVector<Value *, 8> Indices(GEP->op_begin() + 1, GEP->op_end());
+        SmallVector<Value *, 8> Indices(drop_begin(GEP->operands()));
         int64_t GEPOffset = M->getDataLayout().getIndexedOffsetInType(
             GEP->getSourceElementType(), Indices);
         findLoadCallsAtConstantOffset(M, DevirtCalls, User, Offset + GEPOffset,

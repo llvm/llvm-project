@@ -44,13 +44,15 @@ class FuncOp;
 /// - `loop` isnt erased, but is left in a "no-op" state where the body of the
 ///   loop just yields the basic block arguments that correspond to the
 ///   initialization values of a loop. The loop is dead after this method.
-/// - All uses of the `newIterOperands` within the generated new loop
-///   are replaced with the corresponding `BlockArgument` in the loop body.
+/// - If `replaceIterOperandsUsesInLoop` is true, all uses of the
+///   `newIterOperands` within the generated new loop are replaced
+///   with the corresponding `BlockArgument` in the loop body.
 using NewYieldValueFn = std::function<SmallVector<Value>(
     OpBuilder &b, Location loc, ArrayRef<BlockArgument> newBBArgs)>;
 scf::ForOp replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
                                     ValueRange newIterOperands,
-                                    const NewYieldValueFn &newYieldValuesFn);
+                                    const NewYieldValueFn &newYieldValuesFn,
+                                    bool replaceIterOperandsUsesInLoop = true);
 
 /// Update a perfectly nested loop nest to yield new values from the innermost
 /// loop and propagating it up through the loop nest. This function
@@ -64,12 +66,14 @@ scf::ForOp replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
 ///   the body of the loop just yields the basic block arguments that correspond
 ///   to the initialization values of a loop. The original loops are dead after
 ///   this method.
-/// - All uses of the `newIterOperands` within the generated new loop
-///   are replaced with the corresponding `BlockArgument` in the loop body.
+/// - If `replaceIterOperandsUsesInLoop` is true, all uses of the
+///   `newIterOperands` within the generated new loop are replaced with the
+///   corresponding `BlockArgument` in the loop body.
 SmallVector<scf::ForOp>
 replaceLoopNestWithNewYields(OpBuilder &builder, ArrayRef<scf::ForOp> loopNest,
                              ValueRange newIterOperands,
-                             NewYieldValueFn newYieldValueFn);
+                             const NewYieldValueFn &newYieldValueFn,
+                             bool replaceIterOperandsUsesInLoop = true);
 
 /// Outline a region with a single block into a new FuncOp.
 /// Assumes the FuncOp result types is the type of the yielded operands of the

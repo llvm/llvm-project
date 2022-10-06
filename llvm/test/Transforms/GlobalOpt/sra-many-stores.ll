@@ -10,6 +10,8 @@
 ; CHECK: @[[GLOBAL:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global [[STRUCT_WIDGET:%.*]] zeroinitializer
 ; CHECK: @[[GLOBAL_ARRAY_IN_STRUCT:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global [[STRUCT_WITH_ARRAY:%.*]] zeroinitializer
 ; CHECK: @[[GLOBAL_ARRAY:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global [100 x i64] zeroinitializer
+; CHECK: @[[A:[a-zA-Z0-9_$"\\.-]+]] = global i8 0, align 4
+; CHECK: @[[B:[a-zA-Z0-9_$"\\.-]+]] = internal unnamed_addr global [[STRUCT_20I8:%.*]] { i8 4, i8 4, i8 4, i8 5, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 5, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4 }
 ;.
 define internal void @read_struct() {
 ; CHECK-LABEL: @read_struct(
@@ -165,5 +167,87 @@ define void @store_to_array() {
   store i64 0, ptr getelementptr inbounds ([100 x i64], ptr @global.array, i64 0, i32 14), align 8
   store i64 0, ptr getelementptr inbounds ([100 x i64], ptr @global.array, i64 0, i32 15), align 8
   tail call void @read_array()
+  ret void
+}
+
+
+%struct.20i8 = type { i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }
+@a = global i8 0, align 4
+@b = internal global  %struct.20i8 { i8 4, i8 4, i8 4, i8 5, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 5, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4, i8 4 }
+
+define void @test_single_write_to_global_b() {
+; CHECK-LABEL: @test_single_write_to_global_b(
+; CHECK-NEXT:    store i8 0, ptr getelementptr inbounds ([[STRUCT_20I8:%.*]], ptr @b, i64 0, i32 1), align 1
+; CHECK-NEXT:    [[I3:%.*]] = load i8, ptr @b, align 16
+; CHECK-NEXT:    store volatile i8 [[I3]], ptr @a, align 4
+; CHECK-NEXT:    [[I4:%.*]] = load i8, ptr getelementptr inbounds ([[STRUCT_20I8]], ptr @b, i64 0, i32 2), align 2
+; CHECK-NEXT:    store volatile i8 [[I4]], ptr @a, align 4
+; CHECK-NEXT:    [[I5:%.*]] = load i8, ptr getelementptr inbounds ([[STRUCT_20I8]], ptr @b, i64 0, i32 3), align 1
+; CHECK-NEXT:    store volatile i8 [[I5]], ptr @a, align 4
+; CHECK-NEXT:    [[I6:%.*]] = load i8, ptr getelementptr inbounds ([[STRUCT_20I8]], ptr @b, i64 0, i32 4), align 4
+; CHECK-NEXT:    store volatile i8 [[I6]], ptr @a, align 4
+; CHECK-NEXT:    [[I7:%.*]] = load i8, ptr getelementptr inbounds ([[STRUCT_20I8]], ptr @b, i64 0, i32 5), align 1
+; CHECK-NEXT:    store volatile i8 [[I7]], ptr @a, align 4
+; CHECK-NEXT:    [[I8:%.*]] = load i8, ptr getelementptr inbounds ([[STRUCT_20I8]], ptr @b, i64 0, i32 7), align 1
+; CHECK-NEXT:    store volatile i8 [[I8]], ptr @a, align 4
+; CHECK-NEXT:    [[I9:%.*]] = load i8, ptr getelementptr inbounds ([[STRUCT_20I8]], ptr @b, i64 0, i32 8), align 8
+; CHECK-NEXT:    store volatile i8 [[I9]], ptr @a, align 4
+; CHECK-NEXT:    [[I10:%.*]] = load i8, ptr getelementptr inbounds ([[STRUCT_20I8]], ptr @b, i64 0, i32 9), align 1
+; CHECK-NEXT:    store volatile i8 [[I10]], ptr @a, align 4
+; CHECK-NEXT:    [[I11:%.*]] = load i8, ptr getelementptr inbounds ([[STRUCT_20I8]], ptr @b, i64 0, i32 10), align 2
+; CHECK-NEXT:    store volatile i8 [[I11]], ptr @a, align 4
+; CHECK-NEXT:    [[I12:%.*]] = load i8, ptr getelementptr inbounds ([[STRUCT_20I8]], ptr @b, i64 0, i32 11), align 1
+; CHECK-NEXT:    store volatile i8 [[I12]], ptr @a, align 4
+; CHECK-NEXT:    [[I13:%.*]] = load i8, ptr getelementptr inbounds ([[STRUCT_20I8]], ptr @b, i64 0, i32 12), align 4
+; CHECK-NEXT:    store volatile i8 [[I13]], ptr @a, align 4
+; CHECK-NEXT:    [[I14:%.*]] = load i8, ptr getelementptr inbounds ([[STRUCT_20I8]], ptr @b, i64 0, i32 13), align 1
+; CHECK-NEXT:    store volatile i8 [[I14]], ptr @a, align 4
+; CHECK-NEXT:    [[I15:%.*]] = load i8, ptr getelementptr inbounds ([[STRUCT_20I8]], ptr @b, i64 0, i32 14), align 2
+; CHECK-NEXT:    store volatile i8 [[I15]], ptr @a, align 4
+; CHECK-NEXT:    [[I16:%.*]] = load i8, ptr getelementptr inbounds ([[STRUCT_20I8]], ptr @b, i64 0, i32 15), align 1
+; CHECK-NEXT:    store volatile i8 [[I16]], ptr @a, align 4
+; CHECK-NEXT:    [[I17:%.*]] = load i8, ptr getelementptr inbounds ([[STRUCT_20I8]], ptr @b, i64 0, i32 16), align 16
+; CHECK-NEXT:    store volatile i8 [[I17]], ptr @a, align 4
+; CHECK-NEXT:    [[I18:%.*]] = load i8, ptr getelementptr inbounds ([[STRUCT_20I8]], ptr @b, i64 0, i32 17), align 1
+; CHECK-NEXT:    store volatile i8 [[I18]], ptr @a, align 4
+; CHECK-NEXT:    [[I19:%.*]] = load i8, ptr getelementptr inbounds ([[STRUCT_20I8]], ptr @b, i64 0, i32 18), align 2
+; CHECK-NEXT:    store volatile i8 [[I19]], ptr @a, align 4
+; CHECK-NEXT:    ret void
+;
+  store i8 0, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 1), align 1
+  %i3 = load i8, ptr @b, align 16
+  store volatile i8 %i3, ptr @a, align 4
+  %i4 = load i8, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 2), align 2
+  store volatile i8 %i4, ptr @a, align 4
+  %i5 = load i8, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 3), align 1
+  store volatile i8 %i5, ptr @a, align 4
+  %i6 = load i8, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 4), align 4
+  store volatile i8 %i6, ptr @a, align 4
+  %i7 = load i8, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 5), align 1
+  store volatile i8 %i7, ptr @a, align 4
+  %i8 = load i8, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 7), align 1
+  store volatile i8 %i8, ptr @a, align 4
+  %i9 = load i8, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 8), align 8
+  store volatile i8 %i9, ptr @a, align 4
+  %i10 = load i8, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 9), align 1
+  store volatile i8 %i10, ptr @a, align 4
+  %i11 = load i8, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 10), align 2
+  store volatile i8 %i11, ptr @a, align 4
+  %i12 = load i8, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 11), align 1
+  store volatile i8 %i12, ptr @a, align 4
+  %i13 = load i8, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 12), align 4
+  store volatile i8 %i13, ptr @a, align 4
+  %i14 = load i8, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 13), align 1
+  store volatile i8 %i14, ptr @a, align 4
+  %i15 = load i8, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 14), align 2
+  store volatile i8 %i15, ptr @a, align 4
+  %i16 = load i8, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 15), align 1
+  store volatile i8 %i16, ptr @a, align 4
+  %i17 = load i8, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 16), align 16
+  store volatile i8 %i17, ptr @a, align 4
+  %i18 = load i8, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 17), align 1
+  store volatile i8 %i18, ptr @a, align 4
+  %i19 = load i8, ptr getelementptr inbounds (%struct.20i8, ptr @b, i64 0, i32 18), align 2
+  store volatile i8 %i19, ptr @a, align 4
   ret void
 }

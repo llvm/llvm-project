@@ -47,7 +47,7 @@
 //     CHECK-PEEL-12:   }
 func.func @matmul_static_tensor(%arg0: tensor<1500x1600xf32>, %arg1: tensor<1600x1700xf32>)
     -> tensor<1500x1700xf32> {
-  %out = linalg.init_tensor [1500, 1700] : tensor<1500x1700xf32>
+  %out = tensor.empty() : tensor<1500x1700xf32>
   %r = linalg.matmul {__internal_linalg_transform__ = "tile"}
       ins(%arg0, %arg1: tensor<1500x1600xf32>, tensor<1600x1700xf32>)
       outs(%out: tensor<1500x1700xf32>) -> tensor<1500x1700xf32>
@@ -102,7 +102,7 @@ func.func @matmul_dynamic_tensor(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>)
   %c1 = arith.constant 1 : index
   %d0 = tensor.dim %arg0, %c0 : tensor<?x?xf32>
   %d1 = tensor.dim %arg1, %c1 : tensor<?x?xf32>
-  %out = linalg.init_tensor [%d0, %d1] : tensor<?x?xf32>
+  %out = tensor.empty(%d0, %d1) : tensor<?x?xf32>
   %r = linalg.matmul {__internal_linalg_transform__ = "tile"}
       ins(%arg0, %arg1: tensor<?x?xf32>, tensor<?x?xf32>)
       outs(%out: tensor<?x?xf32>) -> tensor<?x?xf32>

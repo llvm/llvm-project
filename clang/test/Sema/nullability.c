@@ -167,7 +167,7 @@ void conditional_expr(int c) {
 
   p = c ? nonnullP2 : nonnullP2;
   p = c ? nonnullP2 : nullableP2; // expected-warning{{implicit conversion from nullable pointer 'IntP _Nullable' (aka 'int *') to non-nullable pointer type 'int * _Nonnull'}}
-  p = c ? nullableP2 : nonnullP2; // expected-warning{{implicit conversion from nullable pointer 'NullableIntP1' (aka 'int *') to non-nullable pointer type 'int * _Nonnull'}}
+  p = c ? nullableP2 : nonnullP2; // expected-warning{{implicit conversion from nullable pointer 'IntP _Nullable' (aka 'int *') to non-nullable pointer type 'int * _Nonnull'}}
   p = c ? nullableP2 : nullableP2; // expected-warning{{implicit conversion from nullable pointer 'NullableIntP1' (aka 'int *') to non-nullable pointer type 'int * _Nonnull'}}
 }
 

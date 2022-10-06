@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++14 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 %s -Wpre-c++17-compat
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx17-compat -std=c++17 %s -Wpre-c++17-compat
 
 // Check that we don't allow illegal uses of inline
 // (checking C++-only constructs here)
@@ -14,5 +14,5 @@ void localVar() {
 #if __cplusplus <= 201402L
 inline int a; // expected-warning{{inline variables are a C++17 extension}}
 #else
-inline int a; // expected-warning{{inline variables are incompatible with C++ standards before C++17}}
+inline int a; // cxx17-compat-warning{{inline variables are incompatible with C++ standards before C++17}}
 #endif

@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -verify %s
+// RUN: %clang_cc1 -verify=expected,precxx17 %std_cxx98-14 %s
+// RUN: %clang_cc1 -verify=expected,cxx17 %std_cxx17- %s
 
 template <class T> struct Base {
   // expected-note@-1 2{{member type 'Base<int>' found by ambiguous name lookup}}
@@ -26,7 +27,9 @@ namespace PR6717 {
   } // expected-error {{expected ';' after class}}
 
     WebVector(const WebVector<T>& other) { } // expected-error{{undeclared identifier 'T'}} \
-                                                expected-error{{a type specifier is required}}
+                                                precxx17-error{{a type specifier is required}} \
+                                                cxx17-error{{deduction guide declaration without trailing return type}} \
+                                                cxx17-error{{deduction guide cannot have a function definition}}
 
   template <typename C>
   WebVector<T>& operator=(const C& other) { } // expected-error{{undeclared identifier 'T'}}

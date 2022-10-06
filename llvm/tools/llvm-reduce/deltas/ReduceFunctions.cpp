@@ -16,8 +16,6 @@
 #include "Delta.h"
 #include "Utils.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/IR/Constants.h"
-#include "llvm/IR/Instructions.h"
 #include <iterator>
 #include <vector>
 
@@ -33,7 +31,8 @@ static void extractFunctionsFromModule(Oracle &O, Module &Program) {
             // Intrinsics don't have function bodies that are useful to
             // reduce. Additionally, intrinsics may have additional operand
             // constraints. But, do drop intrinsics that are not referenced.
-            return (!F.isIntrinsic() || F.use_empty()) && !O.shouldKeep();
+            return (!F.isIntrinsic() || F.use_empty()) && !hasAliasUse(F) &&
+                   !O.shouldKeep();
           });
 
   // Then, drop body of each of them. We want to batch this and do nothing else

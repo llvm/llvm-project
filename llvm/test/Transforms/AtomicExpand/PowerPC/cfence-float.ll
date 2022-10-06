@@ -8,8 +8,8 @@ define float @bar(float* %fp) {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load atomic i32, ptr [[FP:%.*]] monotonic, align 4
+; CHECK-NEXT:    call void @llvm.ppc.cfence.i32(i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP0]] to float
-; CHECK-NEXT:    call void @llvm.ppc.cfence.f32(float [[TMP1]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
 entry:

@@ -34,6 +34,11 @@ void OptionValuePathMappings::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
+llvm::json::Value
+OptionValuePathMappings::ToJSON(const ExecutionContext *exe_ctx) {
+  return m_path_mappings.ToJSON();
+}
+
 Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
                                                    VarSetOperationType op) {
   Status error;
@@ -91,7 +96,7 @@ Status OptionValuePathMappings::SetValueFromString(llvm::StringRef value,
     }
     m_path_mappings.Clear(m_notify_changes);
     // Fall through to append case
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case eVarSetOperationAppend:
     if (argc < 2 || (argc & 1)) {
       error.SetErrorString("append operation takes one or more path pairs");

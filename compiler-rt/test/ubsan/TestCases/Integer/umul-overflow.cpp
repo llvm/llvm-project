@@ -13,7 +13,7 @@ int main() {
   (void)(uint16_t(0xffff) * uint16_t(0x8001));
 
   (void)(uint32_t(0xffffffff) * uint32_t(0x2));
-  // CHECK: umul-overflow.cpp:15:31: runtime error: unsigned integer overflow: 4294967295 * 2 cannot be represented in type 'unsigned int'
+  // CHECK: umul-overflow.cpp:15:31: runtime error: unsigned integer overflow: 4294967295 * 2 cannot be represented in type '{{uint32_t|unsigned int}}'
 
   return 0;
 }

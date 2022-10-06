@@ -37,8 +37,6 @@ def NVVM_Dialect : Dialect {
   }];
 
   let useDefaultAttributePrinterParser = 1;
-
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 //===----------------------------------------------------------------------===//

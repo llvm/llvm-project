@@ -68,6 +68,9 @@ LogicalResult mlir::MlirLspServerMain(int argc, char **argv,
   llvm::sys::ChangeStdinToBinary();
   JSONTransport transport(stdin, llvm::outs(), inputStyle, prettyPrint);
 
+  // Register the additionally supported URI schemes for the MLIR server.
+  URIForFile::registerSupportedScheme("mlir.bytecode-mlir");
+
   // Configure the servers and start the main language server.
   MLIRServer server(registry);
   return runMlirLSPServer(server, transport);

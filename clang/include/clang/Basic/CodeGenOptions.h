@@ -102,6 +102,12 @@ public:
     IAD_Intel,
   };
 
+  enum DebugSrcHashKind {
+    DSH_MD5,
+    DSH_SHA1,
+    DSH_SHA256,
+  };
+
   // This field stores one of the allowed values for the option
   // -fbasic-block-sections=.  The allowed values with this option are:
   // {"labels", "all", "list=<file>", "none"}.
@@ -424,7 +430,7 @@ public:
 
   /// The maximum percentage profiling weights can deviate from the expected
   /// values in order to be included in misexpect diagnostics.
-  Optional<uint64_t> DiagnosticsMisExpectTolerance = 0;
+  Optional<uint32_t> DiagnosticsMisExpectTolerance = 0;
 
 public:
   // Define accessors/mutators for code generation options of enumeration type.
@@ -483,7 +489,12 @@ public:
   bool hasSanitizeCoverage() const {
     return SanitizeCoverageType || SanitizeCoverageIndirectCalls ||
            SanitizeCoverageTraceCmp || SanitizeCoverageTraceLoads ||
-           SanitizeCoverageTraceStores;
+           SanitizeCoverageTraceStores || SanitizeCoverageControlFlow;
+  }
+
+  // Check if any one of SanitizeBinaryMetadata* is enabled.
+  bool hasSanitizeBinaryMetadata() const {
+    return SanitizeBinaryMetadataCovered || SanitizeBinaryMetadataAtomics;
   }
 };
 

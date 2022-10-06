@@ -8,16 +8,20 @@
 
 #include "mlir/Conversion/ComplexToStandard/ComplexToStandard.h"
 
-#include <memory>
-#include <type_traits>
-
-#include "../PassDetail.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include <memory>
+#include <type_traits>
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTCOMPLEXTOSTANDARD
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -288,10 +292,10 @@ struct DivOpConversion : public OpConversionPattern<complex::DivOp> {
     // Case 1. Zero denominator, numerator contains at most one NaN value.
     Value zero = rewriter.create<arith::ConstantOp>(
         loc, elementType, rewriter.getZeroAttr(elementType));
-    Value rhsRealAbs = rewriter.create<math::AbsOp>(loc, rhsReal);
+    Value rhsRealAbs = rewriter.create<math::AbsFOp>(loc, rhsReal);
     Value rhsRealIsZero = rewriter.create<arith::CmpFOp>(
         loc, arith::CmpFPredicate::OEQ, rhsRealAbs, zero);
-    Value rhsImagAbs = rewriter.create<math::AbsOp>(loc, rhsImag);
+    Value rhsImagAbs = rewriter.create<math::AbsFOp>(loc, rhsImag);
     Value rhsImagIsZero = rewriter.create<arith::CmpFOp>(
         loc, arith::CmpFPredicate::OEQ, rhsImagAbs, zero);
     Value lhsRealIsNotNaN = rewriter.create<arith::CmpFOp>(
@@ -321,10 +325,10 @@ struct DivOpConversion : public OpConversionPattern<complex::DivOp> {
         loc, arith::CmpFPredicate::ONE, rhsImagAbs, inf);
     Value rhsFinite =
         rewriter.create<arith::AndIOp>(loc, rhsRealFinite, rhsImagFinite);
-    Value lhsRealAbs = rewriter.create<math::AbsOp>(loc, lhsReal);
+    Value lhsRealAbs = rewriter.create<math::AbsFOp>(loc, lhsReal);
     Value lhsRealInfinite = rewriter.create<arith::CmpFOp>(
         loc, arith::CmpFPredicate::OEQ, lhsRealAbs, inf);
-    Value lhsImagAbs = rewriter.create<math::AbsOp>(loc, lhsImag);
+    Value lhsImagAbs = rewriter.create<math::AbsFOp>(loc, lhsImag);
     Value lhsImagInfinite = rewriter.create<arith::CmpFOp>(
         loc, arith::CmpFPredicate::OEQ, lhsImagAbs, inf);
     Value lhsInfinite =
@@ -513,11 +517,28 @@ struct Log1pOpConversion : public OpConversionPattern<complex::Log1pOp> {
 
     Value real = b.create<complex::ReOp>(elementType, adaptor.getComplex());
     Value imag = b.create<complex::ImOp>(elementType, adaptor.getComplex());
+
+    Value half = b.create<arith::ConstantOp>(elementType,
+                                             b.getFloatAttr(elementType, 0.5));
     Value one = b.create<arith::ConstantOp>(elementType,
                                             b.getFloatAttr(elementType, 1));
+    Value two = b.create<arith::ConstantOp>(elementType,
+                                            b.getFloatAttr(elementType, 2));
+
+    // log1p(a+bi) = .5*log((a+1)^2+b^2) + i*atan2(b, a + 1)
+    // log((a+1)+bi) = .5*log(a*a + 2*a + 1 + b*b) + i*atan2(b, a+1)
+    // log((a+1)+bi) = .5*log1p(a*a + 2*a + b*b) + i*atan2(b, a+1)
+    Value sumSq = b.create<arith::MulFOp>(real, real);
+    sumSq = b.create<arith::AddFOp>(sumSq, b.create<arith::MulFOp>(real, two));
+    sumSq = b.create<arith::AddFOp>(sumSq, b.create<arith::MulFOp>(imag, imag));
+    Value logSumSq = b.create<math::Log1pOp>(elementType, sumSq);
+    Value resultReal = b.create<arith::MulFOp>(logSumSq, half);
+
     Value realPlusOne = b.create<arith::AddFOp>(real, one);
-    Value newComplex = b.create<complex::CreateOp>(type, realPlusOne, imag);
-    rewriter.replaceOpWithNewOp<complex::LogOp>(op, type, newComplex);
+
+    Value resultImag = b.create<math::Atan2Op>(elementType, imag, realPlusOne);
+    rewriter.replaceOpWithNewOp<complex::CreateOp>(op, type, resultReal,
+                                                   resultImag);
     return success();
   }
 };
@@ -533,25 +554,25 @@ struct MulOpConversion : public OpConversionPattern<complex::MulOp> {
     auto elementType = type.getElementType().cast<FloatType>();
 
     Value lhsReal = b.create<complex::ReOp>(elementType, adaptor.getLhs());
-    Value lhsRealAbs = b.create<math::AbsOp>(lhsReal);
+    Value lhsRealAbs = b.create<math::AbsFOp>(lhsReal);
     Value lhsImag = b.create<complex::ImOp>(elementType, adaptor.getLhs());
-    Value lhsImagAbs = b.create<math::AbsOp>(lhsImag);
+    Value lhsImagAbs = b.create<math::AbsFOp>(lhsImag);
     Value rhsReal = b.create<complex::ReOp>(elementType, adaptor.getRhs());
-    Value rhsRealAbs = b.create<math::AbsOp>(rhsReal);
+    Value rhsRealAbs = b.create<math::AbsFOp>(rhsReal);
     Value rhsImag = b.create<complex::ImOp>(elementType, adaptor.getRhs());
-    Value rhsImagAbs = b.create<math::AbsOp>(rhsImag);
+    Value rhsImagAbs = b.create<math::AbsFOp>(rhsImag);
 
     Value lhsRealTimesRhsReal = b.create<arith::MulFOp>(lhsReal, rhsReal);
-    Value lhsRealTimesRhsRealAbs = b.create<math::AbsOp>(lhsRealTimesRhsReal);
+    Value lhsRealTimesRhsRealAbs = b.create<math::AbsFOp>(lhsRealTimesRhsReal);
     Value lhsImagTimesRhsImag = b.create<arith::MulFOp>(lhsImag, rhsImag);
-    Value lhsImagTimesRhsImagAbs = b.create<math::AbsOp>(lhsImagTimesRhsImag);
+    Value lhsImagTimesRhsImagAbs = b.create<math::AbsFOp>(lhsImagTimesRhsImag);
     Value real =
         b.create<arith::SubFOp>(lhsRealTimesRhsReal, lhsImagTimesRhsImag);
 
     Value lhsImagTimesRhsReal = b.create<arith::MulFOp>(lhsImag, rhsReal);
-    Value lhsImagTimesRhsRealAbs = b.create<math::AbsOp>(lhsImagTimesRhsReal);
+    Value lhsImagTimesRhsRealAbs = b.create<math::AbsFOp>(lhsImagTimesRhsReal);
     Value lhsRealTimesRhsImag = b.create<arith::MulFOp>(lhsReal, rhsImag);
-    Value lhsRealTimesRhsImagAbs = b.create<math::AbsOp>(lhsRealTimesRhsImag);
+    Value lhsRealTimesRhsImagAbs = b.create<math::AbsFOp>(lhsRealTimesRhsImag);
     Value imag =
         b.create<arith::AddFOp>(lhsImagTimesRhsReal, lhsRealTimesRhsImag);
 
@@ -762,7 +783,7 @@ struct SqrtOpConversion : public OpConversionPattern<complex::SqrtOp> {
     Value real = b.create<complex::ReOp>(elementType, adaptor.getComplex());
     Value imag = b.create<complex::ImOp>(elementType, adaptor.getComplex());
 
-    Value absLhs = b.create<math::AbsOp>(real);
+    Value absLhs = b.create<math::AbsFOp>(real);
     Value absArg = b.create<complex::AbsOp>(elementType, arg);
     Value addAbs = b.create<arith::AddFOp>(absLhs, absArg);
 
@@ -1064,7 +1085,7 @@ void mlir::populateComplexToStandardConversionPatterns(
 
 namespace {
 struct ConvertComplexToStandardPass
-    : public ConvertComplexToStandardBase<ConvertComplexToStandardPass> {
+    : public impl::ConvertComplexToStandardBase<ConvertComplexToStandardPass> {
   void runOnOperation() override;
 };
 
@@ -1074,7 +1095,7 @@ void ConvertComplexToStandardPass::runOnOperation() {
   populateComplexToStandardConversionPatterns(patterns);
 
   ConversionTarget target(getContext());
-  target.addLegalDialect<arith::ArithmeticDialect, math::MathDialect>();
+  target.addLegalDialect<arith::ArithDialect, math::MathDialect>();
   target.addLegalOp<complex::CreateOp, complex::ImOp, complex::ReOp>();
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))

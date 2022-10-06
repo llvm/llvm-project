@@ -82,6 +82,7 @@ public:
     eBroadcastBitProgress = (1 << 0),
     eBroadcastBitWarning = (1 << 1),
     eBroadcastBitError = (1 << 2),
+    eBroadcastSymbolChange = (1 << 3),
   };
 
   static ConstString GetStaticBroadcasterClass();
@@ -151,11 +152,7 @@ public:
 
   Status SetInputString(const char *data);
 
-  // This method will setup data recorder if reproducer enabled.
-  // On reply mode this method should take instructions from reproducer file.
-  Status SetInputFile(lldb::FileSP file);
-
-  void SetInputFile(lldb::FileSP file, repro::DataRecorder *recorder);
+  void SetInputFile(lldb::FileSP file);
 
   void SetOutputFile(lldb::FileSP file);
 
@@ -293,8 +290,6 @@ public:
   void SetPrompt(llvm::StringRef p);
   void SetPrompt(const char *) = delete;
 
-  llvm::StringRef GetReproducerPath() const;
-
   bool GetUseExternalEditor() const;
 
   bool SetUseExternalEditor(bool use_external_editor_p);
@@ -404,7 +399,7 @@ public:
   ///   If a pointer is passed to a std::once_flag, then it will be used to
   ///   ensure the given warning is only broadcast once.
   static void
-  ReportWarning(std::string messsage,
+  ReportWarning(std::string message,
                 llvm::Optional<lldb::user_id_t> debugger_id = llvm::None,
                 std::once_flag *once = nullptr);
 
@@ -426,9 +421,11 @@ public:
   ///   If a pointer is passed to a std::once_flag, then it will be used to
   ///   ensure the given error is only broadcast once.
   static void
-  ReportError(std::string messsage,
+  ReportError(std::string message,
               llvm::Optional<lldb::user_id_t> debugger_id = llvm::None,
               std::once_flag *once = nullptr);
+
+  static void ReportSymbolChange(const ModuleSpec &module_spec);
 
 protected:
   friend class CommandInterpreter;

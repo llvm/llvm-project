@@ -292,17 +292,12 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
   getExitBlocks(ExitBBs);
   df_iterator_default_set<BlockT *> VisitSet;
   VisitSet.insert(ExitBBs.begin(), ExitBBs.end());
-  df_ext_iterator<BlockT *, df_iterator_default_set<BlockT *>>
-      BI = df_ext_begin(getHeader(), VisitSet),
-      BE = df_ext_end(getHeader(), VisitSet);
 
   // Keep track of the BBs visited.
   SmallPtrSet<BlockT *, 8> VisitedBBs;
 
   // Check the individual blocks.
-  for (; BI != BE; ++BI) {
-    BlockT *BB = *BI;
-
+  for (BlockT *BB : depth_first_ext(getHeader(), VisitSet)) {
     assert(std::any_of(GraphTraits<BlockT *>::child_begin(BB),
                        GraphTraits<BlockT *>::child_end(BB),
                        [&](BlockT *B) { return contains(B); }) &&
@@ -340,7 +335,7 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
 
   if (VisitedBBs.size() != getNumBlocks()) {
     dbgs() << "The following blocks are unreachable in the loop: ";
-    for (auto BB : Blocks) {
+    for (auto *BB : Blocks) {
       if (!VisitedBBs.count(BB)) {
         dbgs() << *BB << "\n";
       }

@@ -50,10 +50,11 @@ hot_path:
   pop %rbp
   ret
   .cfi_endproc
+end:
   .size _start, .-_start
 
   .data
-rel:  .quad cold_path
+rel:  .quad end
 
 # CHECK:   BOLT-INFO: Shrink wrapping moved 2 spills inserting load/stores and 0 spills inserting push/pops
 

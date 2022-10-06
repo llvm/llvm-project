@@ -10,7 +10,6 @@
 #define _LIBCPP___TYPE_TRAITS_DISJUNCTION_H
 
 #include <__config>
-#include <__type_traits/conditional.h>
 #include <__type_traits/integral_constant.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

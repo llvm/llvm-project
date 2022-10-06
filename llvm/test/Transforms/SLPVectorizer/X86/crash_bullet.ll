@@ -14,18 +14,19 @@ define void @_ZN23btGeneric6DofConstraint8getInfo1EPN17btTypedConstraint17btCons
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[M_NUMCONSTRAINTROWS4:%.*]] = getelementptr inbounds %"struct.btTypedConstraint::btConstraintInfo1.17.157.357.417.477.960", %"struct.btTypedConstraint::btConstraintInfo1.17.157.357.417.477.960"* [[INFO:%.*]], i64 0, i32 0
+; CHECK-NEXT:    [[NUB5:%.*]] = getelementptr inbounds %"struct.btTypedConstraint::btConstraintInfo1.17.157.357.417.477.960", %"struct.btTypedConstraint::btConstraintInfo1.17.157.357.417.477.960"* [[INFO]], i64 0, i32 1
 ; CHECK-NEXT:    br i1 undef, label [[LAND_LHS_TRUE_I_1:%.*]], label [[IF_THEN7_1:%.*]]
 ; CHECK:       land.lhs.true.i.1:
 ; CHECK-NEXT:    br i1 undef, label [[FOR_INC_1:%.*]], label [[IF_THEN7_1]]
 ; CHECK:       if.then7.1:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[M_NUMCONSTRAINTROWS4]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> <i32 1, i32 5>, <2 x i32>* [[TMP0]], align 4
+; CHECK-NEXT:    store i32 1, i32* [[M_NUMCONSTRAINTROWS4]], align 4
+; CHECK-NEXT:    store i32 5, i32* [[NUB5]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC_1]]
 ; CHECK:       for.inc.1:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ <i32 1, i32 5>, [[IF_THEN7_1]] ], [ <i32 0, i32 6>, [[LAND_LHS_TRUE_I_1]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 1, i32 -1>
-; CHECK-NEXT:    [[TMP3:%.*]] = bitcast i32* [[M_NUMCONSTRAINTROWS4]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> [[TMP2]], <2 x i32>* [[TMP3]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ <i32 1, i32 5>, [[IF_THEN7_1]] ], [ <i32 0, i32 6>, [[LAND_LHS_TRUE_I_1]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i32> [[TMP0]], <i32 1, i32 -1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32* [[M_NUMCONSTRAINTROWS4]] to <2 x i32>*
+; CHECK-NEXT:    store <2 x i32> [[TMP1]], <2 x i32>* [[TMP2]], align 4
 ; CHECK-NEXT:    unreachable
 ;
 entry:

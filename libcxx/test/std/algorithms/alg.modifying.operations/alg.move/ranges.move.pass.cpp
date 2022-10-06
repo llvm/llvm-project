@@ -9,7 +9,6 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<input_iterator I, sentinel_for<I> S, weakly_incrementable O>
 //   requires indirectly_movable<I, O>
@@ -155,7 +154,7 @@ constexpr bool test() {
       assert(b[2].get() == 3);
     }
   }
-  
+
   { // check that a move-only type works for ProxyIterator
     {
       MoveOnly a[] = {1, 2, 3};

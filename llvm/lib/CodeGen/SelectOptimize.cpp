@@ -29,6 +29,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ScaledNumber.h"
@@ -180,7 +181,7 @@ private:
   // consisting of instructions exclusively computed for producing the operands
   // of the source instruction.
   void getExclBackwardsSlice(Instruction *I, std::stack<Instruction *> &Slice,
-                             bool ForSinking = false);
+                             Instruction *SI, bool ForSinking = false);
 
   // Returns true if the condition of the select is highly predictable.
   bool isSelectHighlyPredictable(const SelectInst *SI);
@@ -375,13 +376,13 @@ void SelectOptimize::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       // false operands.
       if (auto *TI = dyn_cast<Instruction>(SI->getTrueValue())) {
         std::stack<Instruction *> TrueSlice;
-        getExclBackwardsSlice(TI, TrueSlice, true);
+        getExclBackwardsSlice(TI, TrueSlice, SI, true);
         maxTrueSliceLen = std::max(maxTrueSliceLen, TrueSlice.size());
         TrueSlices.push_back(TrueSlice);
       }
       if (auto *FI = dyn_cast<Instruction>(SI->getFalseValue())) {
         std::stack<Instruction *> FalseSlice;
-        getExclBackwardsSlice(FI, FalseSlice, true);
+        getExclBackwardsSlice(FI, FalseSlice, SI, true);
         maxFalseSliceLen = std::max(maxFalseSliceLen, FalseSlice.size());
         FalseSlices.push_back(FalseSlice);
       }
@@ -655,7 +656,7 @@ bool SelectOptimize::hasExpensiveColdOperand(
     const SmallVector<SelectInst *, 2> &ASI) {
   bool ColdOperand = false;
   uint64_t TrueWeight, FalseWeight, TotalWeight;
-  if (ASI.front()->extractProfMetadata(TrueWeight, FalseWeight)) {
+  if (extractBranchWeights(*ASI.front(), TrueWeight, FalseWeight)) {
     uint64_t MinWeight = std::min(TrueWeight, FalseWeight);
     TotalWeight = TrueWeight + FalseWeight;
     // Is there a path with frequency <ColdOperandThreshold% (default:20%) ?
@@ -682,7 +683,7 @@ bool SelectOptimize::hasExpensiveColdOperand(
     }
     if (ColdI) {
       std::stack<Instruction *> ColdSlice;
-      getExclBackwardsSlice(ColdI, ColdSlice);
+      getExclBackwardsSlice(ColdI, ColdSlice, SI);
       InstructionCost SliceCost = 0;
       while (!ColdSlice.empty()) {
         SliceCost += TTI->getInstructionCost(ColdSlice.top(),
@@ -703,6 +704,22 @@ bool SelectOptimize::hasExpensiveColdOperand(
   return false;
 }
 
+// Check if it is safe to move LoadI next to the SI.
+// Conservatively assume it is safe only if there is no instruction
+// modifying memory in-between the load and the select instruction.
+static bool isSafeToSinkLoad(Instruction *LoadI, Instruction *SI) {
+  // Assume loads from different basic blocks are unsafe to move.
+  if (LoadI->getParent() != SI->getParent())
+    return false;
+  auto It = LoadI->getIterator();
+  while (&*It != SI) {
+    if (It->mayWriteToMemory())
+      return false;
+    It++;
+  }
+  return true;
+}
+
 // For a given source instruction, collect its backwards dependence slice
 // consisting of instructions exclusively computed for the purpose of producing
 // the operands of the source instruction. As an approximation
@@ -711,7 +728,7 @@ bool SelectOptimize::hasExpensiveColdOperand(
 // form an one-use chain that leads to the source instruction.
 void SelectOptimize::getExclBackwardsSlice(Instruction *I,
                                            std::stack<Instruction *> &Slice,
-                                           bool ForSinking) {
+                                           Instruction *SI, bool ForSinking) {
   SmallPtrSet<Instruction *, 2> Visited;
   std::queue<Instruction *> Worklist;
   Worklist.push(I);
@@ -733,6 +750,13 @@ void SelectOptimize::getExclBackwardsSlice(Instruction *I,
                        isa<SelectInst>(II) || isa<PHINode>(II)))
       continue;
 
+    // Avoid sinking loads in order not to skip state-modifying instructions,
+    // that may alias with the loaded address.
+    // Only allow sinking of loads within the same basic block that are
+    // conservatively proven to be safe.
+    if (ForSinking && II->mayReadFromMemory() && !isSafeToSinkLoad(II, SI))
+      continue;
+
     // Avoid considering instructions with less frequency than the source
     // instruction (i.e., avoid colder code regions of the dependence slice).
     if (BFI->getBlockFreq(II->getParent()) < BFI->getBlockFreq(I->getParent()))
@@ -750,7 +774,7 @@ void SelectOptimize::getExclBackwardsSlice(Instruction *I,
 
 bool SelectOptimize::isSelectHighlyPredictable(const SelectInst *SI) {
   uint64_t TrueWeight, FalseWeight;
-  if (SI->extractProfMetadata(TrueWeight, FalseWeight)) {
+  if (extractBranchWeights(*SI, TrueWeight, FalseWeight)) {
     uint64_t Max = std::max(TrueWeight, FalseWeight);
     uint64_t Sum = TrueWeight + FalseWeight;
     if (Sum != 0) {
@@ -925,7 +949,7 @@ Optional<uint64_t> SelectOptimize::computeInstCost(const Instruction *I) {
       TTI->getInstructionCost(I, TargetTransformInfo::TCK_Latency);
   if (auto OC = ICost.getValue())
     return Optional<uint64_t>(*OC);
-  return Optional<uint64_t>(None);
+  return Optional<uint64_t>();
 }
 
 ScaledNumber<uint64_t>
@@ -959,7 +983,7 @@ SelectOptimize::getPredictedPathCost(Scaled64 TrueCost, Scaled64 FalseCost,
                                      const SelectInst *SI) {
   Scaled64 PredPathCost;
   uint64_t TrueWeight, FalseWeight;
-  if (SI->extractProfMetadata(TrueWeight, FalseWeight)) {
+  if (extractBranchWeights(*SI, TrueWeight, FalseWeight)) {
     uint64_t SumWeight = TrueWeight + FalseWeight;
     if (SumWeight != 0) {
       PredPathCost = TrueCost * Scaled64::get(TrueWeight) +

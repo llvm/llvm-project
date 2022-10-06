@@ -4,8 +4,6 @@
 # decisions it did and  providing some useful context information that can
 # be used for improving the formatter
 
-from __future__ import print_function
-
 import lldb
 
 

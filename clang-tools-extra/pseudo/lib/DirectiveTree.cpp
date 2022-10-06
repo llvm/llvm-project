@@ -10,6 +10,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <variant>
 
 namespace clang {
 namespace pseudo {
@@ -141,6 +142,36 @@ private:
   clang::IdentifierTable PPKeywords;
 };
 
+struct Dumper {
+  llvm::raw_ostream &OS;
+  unsigned Indent = 0;
+
+  Dumper(llvm::raw_ostream& OS) : OS(OS) {}
+  void operator()(const DirectiveTree& Tree) {
+    for (const auto& Chunk : Tree.Chunks)
+      std::visit(*this, Chunk);
+  }
+  void operator()(const DirectiveTree::Conditional &Conditional) {
+    for (unsigned I = 0; I < Conditional.Branches.size(); ++I) {
+      const auto &Branch = Conditional.Branches[I];
+      (*this)(Branch.first, Conditional.Taken == I);
+      Indent += 2;
+      (*this)(Branch.second);
+      Indent -= 2;
+    }
+    (*this)(Conditional.End);
+  }
+  void operator()(const DirectiveTree::Directive &Directive,
+                  bool Taken = false) {
+    OS.indent(Indent) << llvm::formatv(
+        "#{0} ({1} tokens){2}\n", tok::getPPKeywordSpelling(Directive.Kind),
+        Directive.Tokens.size(), Taken ? " TAKEN" : "");
+  }
+  void operator()(const DirectiveTree::Code &Code) {
+    OS.indent(Indent) << llvm::formatv("code ({0} tokens)\n",
+                                       Code.Tokens.size());
+  }
+};
 } // namespace
 
 DirectiveTree DirectiveTree::parse(const TokenStream &Code) {
@@ -149,57 +180,13 @@ DirectiveTree DirectiveTree::parse(const TokenStream &Code) {
   return Result;
 }
 
-static void dump(llvm::raw_ostream &OS, const DirectiveTree &, unsigned Indent);
-static void dump(llvm::raw_ostream &OS,
-                 const DirectiveTree::Directive &Directive, unsigned Indent,
-                 bool Taken = false) {
-  OS.indent(Indent) << llvm::formatv(
-      "#{0} ({1} tokens){2}\n", tok::getPPKeywordSpelling(Directive.Kind),
-      Directive.Tokens.size(), Taken ? " TAKEN" : "");
-}
-static void dump(llvm::raw_ostream &OS, const DirectiveTree::Code &Code,
-                 unsigned Indent) {
-  OS.indent(Indent) << llvm::formatv("code ({0} tokens)\n", Code.Tokens.size());
-}
-static void dump(llvm::raw_ostream &OS,
-                 const DirectiveTree::Conditional &Conditional,
-                 unsigned Indent) {
-  for (unsigned I = 0; I < Conditional.Branches.size(); ++I) {
-    const auto &Branch = Conditional.Branches[I];
-    dump(OS, Branch.first, Indent, Conditional.Taken == I);
-    dump(OS, Branch.second, Indent + 2);
-  }
-  dump(OS, Conditional.End, Indent);
-}
-
-static void dump(llvm::raw_ostream &OS, const DirectiveTree::Chunk &Chunk,
-                 unsigned Indent) {
-  switch (Chunk.kind()) {
-  case DirectiveTree::Chunk::K_Empty:
-    llvm_unreachable("invalid chunk");
-  case DirectiveTree::Chunk::K_Code:
-    return dump(OS, (const DirectiveTree::Code &)Chunk, Indent);
-  case DirectiveTree::Chunk::K_Directive:
-    return dump(OS, (const DirectiveTree::Directive &)Chunk, Indent);
-  case DirectiveTree::Chunk::K_Conditional:
-    return dump(OS, (const DirectiveTree::Conditional &)Chunk, Indent);
-  }
-}
-
-static void dump(llvm::raw_ostream &OS, const DirectiveTree &Tree,
-                 unsigned Indent) {
-  for (const auto &Chunk : Tree.Chunks)
-    dump(OS, Chunk, Indent);
-}
-
 // Define operator<< in terms of dump() functions above.
 #define OSTREAM_DUMP(Type)                                                     \
   llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Type &T) {        \
-    dump(OS, T, 0);                                                            \
+    Dumper{OS}(T);                                                         \
     return OS;                                                                 \
   }
 OSTREAM_DUMP(DirectiveTree)
-OSTREAM_DUMP(DirectiveTree::Chunk)
 OSTREAM_DUMP(DirectiveTree::Directive)
 OSTREAM_DUMP(DirectiveTree::Conditional)
 OSTREAM_DUMP(DirectiveTree::Code)
@@ -223,9 +210,6 @@ class BranchChooser {
 public:
   BranchChooser(const TokenStream &Code) : Code(Code) {}
 
-  void choose(DirectiveTree &M) { walk(M); }
-
-private:
   // Describes code seen by making particular branch choices. Higher is better.
   struct Score {
     int Tokens = 0; // excluding comments and directives
@@ -246,7 +230,7 @@ private:
     }
   };
 
-  Score walk(DirectiveTree::Code &C) {
+  Score operator()(DirectiveTree::Code &C) {
     Score S;
     for (const Token &T : Code.tokens(C.Tokens))
       if (T.Kind != tok::comment)
@@ -254,35 +238,14 @@ private:
     return S;
   }
 
-  Score walk(DirectiveTree::Directive &D) {
+  Score operator()(DirectiveTree::Directive &D) {
     Score S;
     S.Directives = 1;
     S.Errors = D.Kind == tok::pp_error;
     return S;
   }
 
-  Score walk(DirectiveTree::Chunk &C) {
-    switch (C.kind()) {
-    case DirectiveTree::Chunk::K_Code:
-      return walk((DirectiveTree::Code &)C);
-    case DirectiveTree::Chunk::K_Directive:
-      return walk((DirectiveTree::Directive &)C);
-    case DirectiveTree::Chunk::K_Conditional:
-      return walk((DirectiveTree::Conditional &)C);
-    case DirectiveTree::Chunk::K_Empty:
-      break;
-    }
-    llvm_unreachable("bad chunk kind");
-  }
-
-  Score walk(DirectiveTree &M) {
-    Score S;
-    for (DirectiveTree::Chunk &C : M.Chunks)
-      S += walk(C);
-    return S;
-  }
-
-  Score walk(DirectiveTree::Conditional &C) {
+  Score operator()(DirectiveTree::Conditional &C) {
     Score Best;
     bool MayTakeTrivial = true;
     bool TookTrivial = false;
@@ -311,7 +274,14 @@ private:
     }
     return Best;
   }
+  Score walk(DirectiveTree &M) {
+    Score S;
+    for (auto &C : M.Chunks)
+      S += std::visit(*this, C);
+    return S;
+  }
 
+private:
   // Return true if the directive starts an always-taken conditional branch,
   // false if the branch is never taken, and None otherwise.
   llvm::Optional<bool> isTakenWhenReached(const DirectiveTree::Directive &Dir) {
@@ -344,7 +314,7 @@ private:
 } // namespace
 
 void chooseConditionalBranches(DirectiveTree &Tree, const TokenStream &Code) {
-  BranchChooser{Code}.choose(Tree);
+  BranchChooser{Code}.walk(Tree);
 }
 
 namespace {
@@ -358,31 +328,17 @@ public:
 
   void walk(const DirectiveTree &T) {
     for (const auto &C : T.Chunks)
-      walk(C);
+      std::visit(*this, C);
   }
 
-  void walk(const DirectiveTree::Chunk &C) {
-    switch (C.kind()) {
-    case DirectiveTree::Chunk::K_Code:
-      return walk((const DirectiveTree::Code &)C);
-    case DirectiveTree::Chunk::K_Directive:
-      return walk((const DirectiveTree::Directive &)C);
-    case DirectiveTree::Chunk::K_Conditional:
-      return walk((const DirectiveTree::Conditional &)C);
-    case DirectiveTree::Chunk::K_Empty:
-      break;
-    }
-    llvm_unreachable("bad chunk kind");
-  }
-
-  void walk(const DirectiveTree::Code &C) {
+  void operator()(const DirectiveTree::Code &C) {
     for (const auto &Tok : In.tokens(C.Tokens))
       Out.push(Tok);
   }
 
-  void walk(const DirectiveTree::Directive &) {}
+  void operator()(const DirectiveTree::Directive &) {}
 
-  void walk(const DirectiveTree::Conditional &C) {
+  void operator()(const DirectiveTree::Conditional &C) {
     if (C.Taken)
       walk(C.Branches[*C.Taken].second);
   }

@@ -25,10 +25,10 @@ int main(int, char**)
     typedef std::list<int> L;
     L c(a1, a1+sizeof(a1)/sizeof(a1[0]));
 #if TEST_STD_VER > 17
-	ASSERT_SAME_TYPE(L::size_type, decltype(c.unique()));
+    ASSERT_SAME_TYPE(L::size_type, decltype(c.unique()));
     assert(c.unique() == 5);
 #else
-	ASSERT_SAME_TYPE(void,         decltype(c.unique()));
+    ASSERT_SAME_TYPE(void,         decltype(c.unique()));
     c.unique();
 #endif
     assert(c == std::list<int>(a2, a2+4));

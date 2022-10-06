@@ -188,18 +188,20 @@ template <class T, class Allocator, class Predicate>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
 #include <__iterator/next.h>
+#include <__memory/addressof.h>
+#include <__memory/allocator.h>
+#include <__memory/allocator_traits.h>
+#include <__memory/compressed_pair.h>
+#include <__memory/pointer_traits.h>
+#include <__memory/shared_ptr.h>
 #include <__memory/swap_allocator.h>
+#include <__memory/unique_ptr.h>
+#include <__type_traits/is_allocator.h>
 #include <__utility/forward.h>
+#include <__utility/move.h>
 #include <limits>
-#include <memory>
 #include <type_traits>
 #include <version>
-
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
-#  include <algorithm>
-#  include <functional>
-#  include <iterator>
-#endif
 
 // standard-mandated includes
 
@@ -239,30 +241,23 @@ struct __forward_list_node_value_type<__forward_list_node<_Tp, _VoidPtr> > {
 template <class _NodePtr>
 struct __forward_node_traits {
 
-  typedef typename remove_cv<
-        typename pointer_traits<_NodePtr>::element_type>::type  __node;
+  typedef __remove_cv_t<
+        typename pointer_traits<_NodePtr>::element_type>        __node;
   typedef typename __forward_list_node_value_type<__node>::type __node_value_type;
   typedef _NodePtr                                              __node_pointer;
   typedef __forward_begin_node<_NodePtr>                        __begin_node;
-  typedef typename __rebind_pointer<_NodePtr, __begin_node>::type
-                                                                __begin_node_pointer;
-  typedef typename __rebind_pointer<_NodePtr, void>::type       __void_pointer;
+  typedef __rebind_pointer_t<_NodePtr, __begin_node>            __begin_node_pointer;
+  typedef __rebind_pointer_t<_NodePtr, void>                    __void_pointer;
 
 #if defined(_LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB)
   typedef __begin_node_pointer __iter_node_pointer;
 #else
-  typedef typename conditional<
-          is_pointer<__void_pointer>::value,
-          __begin_node_pointer,
-          __node_pointer
-    >::type __iter_node_pointer;
+  typedef __conditional_t<is_pointer<__void_pointer>::value, __begin_node_pointer, __node_pointer>
+      __iter_node_pointer;
 #endif
 
-  typedef typename conditional<
-          is_same<__iter_node_pointer, __node_pointer>::value,
-          __begin_node_pointer,
-          __node_pointer
-    >::type __non_iter_node_pointer;
+  typedef __conditional_t<is_same<__iter_node_pointer, __node_pointer>::value, __begin_node_pointer, __node_pointer>
+      __non_iter_node_pointer;
 
   _LIBCPP_INLINE_VISIBILITY
   static __iter_node_pointer __as_iter_node(__iter_node_pointer __p) {
@@ -278,7 +273,7 @@ template <class _NodePtr>
 struct __forward_begin_node
 {
     typedef _NodePtr pointer;
-    typedef typename __rebind_pointer<_NodePtr, __forward_begin_node>::type __begin_node_pointer;
+    typedef __rebind_pointer_t<_NodePtr, __forward_begin_node> __begin_node_pointer;
 
     pointer __next_;
 
@@ -291,16 +286,11 @@ struct __forward_begin_node
 };
 
 template <class _Tp, class _VoidPtr>
-struct _LIBCPP_HIDDEN __begin_node_of
-{
-    typedef __forward_begin_node<
-        typename __rebind_pointer<_VoidPtr, __forward_list_node<_Tp, _VoidPtr> >::type
-    > type;
-};
+using __begin_node_of = __forward_begin_node<__rebind_pointer_t<_VoidPtr, __forward_list_node<_Tp, _VoidPtr> > >;
 
 template <class _Tp, class _VoidPtr>
 struct _LIBCPP_STANDALONE_DEBUG __forward_list_node
-    : public __begin_node_of<_Tp, _VoidPtr>::type
+    : public __begin_node_of<_Tp, _VoidPtr>
 {
     typedef _Tp value_type;
 
@@ -353,7 +343,7 @@ public:
     typedef value_type&                                       reference;
     typedef typename pointer_traits<__node_pointer>::difference_type
                                                               difference_type;
-    typedef typename __rebind_pointer<__node_pointer, value_type>::type pointer;
+    typedef __rebind_pointer_t<__node_pointer, value_type> pointer;
 
     _LIBCPP_INLINE_VISIBILITY
     __forward_list_iterator() _NOEXCEPT : __ptr_(nullptr) {}
@@ -434,7 +424,7 @@ public:
     typedef const value_type&                                 reference;
     typedef typename pointer_traits<__node_pointer>::difference_type
                                                               difference_type;
-    typedef typename __rebind_pointer<__node_pointer, const value_type>::type
+    typedef __rebind_pointer_t<__node_pointer, const value_type>
                                                               pointer;
 
     _LIBCPP_INLINE_VISIBILITY
@@ -482,7 +472,7 @@ protected:
 
     typedef typename allocator_traits<allocator_type>::void_pointer  void_pointer;
     typedef __forward_list_node<value_type, void_pointer>            __node;
-    typedef typename __begin_node_of<value_type, void_pointer>::type __begin_node;
+    typedef __begin_node_of<value_type, void_pointer>                __begin_node;
     typedef typename __rebind_alloc_helper<allocator_traits<allocator_type>, __node>::type __node_allocator;
     typedef allocator_traits<__node_allocator>        __node_traits;
     typedef typename __node_traits::pointer           __node_pointer;
@@ -1702,6 +1692,7 @@ forward_list<_Tp, _Alloc>::reverse() _NOEXCEPT
 }
 
 template <class _Tp, class _Alloc>
+_LIBCPP_HIDE_FROM_ABI
 bool operator==(const forward_list<_Tp, _Alloc>& __x,
                 const forward_list<_Tp, _Alloc>& __y)
 {
@@ -1786,5 +1777,11 @@ inline _LIBCPP_INLINE_VISIBILITY
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <algorithm>
+#  include <functional>
+#  include <iterator>
+#endif
 
 #endif // _LIBCPP_FORWARD_LIST

@@ -117,13 +117,20 @@ subroutine s7
 end
 
 subroutine s8
-  !ERROR: Assignment to subprogram 's8' is not allowed
+  !ERROR: Assignment to procedure 's8' is not allowed
   s8 = 1.0
 end
 
 real function f9() result(r)
-  !ERROR: Assignment to subprogram 'f9' is not allowed
+  !ERROR: Assignment to procedure 'f9' is not allowed
   f9 = 1.0
+end
+
+subroutine s9
+  real f9a
+  !ERROR: Assignment to procedure 'f9a' is not allowed
+  f9a = 1.0
+  print *, f9a(1)
 end
 
 !ERROR: No explicit type declared for dummy argument 'n'

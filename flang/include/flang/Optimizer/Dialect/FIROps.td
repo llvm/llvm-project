@@ -417,7 +417,7 @@ def fir_UndefOp : fir_OneResultOp<"undefined", [NoSideEffect]> {
   let results = (outs AnyType:$intype);
 
   let assemblyFormat = "type($intype) attr-dict";
-  
+
   // Note: we allow `undef : ref<T>` since it is a possible from transformations.
   let hasVerifier = 0;
 }
@@ -538,9 +538,9 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
         }
       }
       $_state.addAttribute(getOperandSegmentSizeAttr(),
-        $_builder.getI32VectorAttr({1, 0, sumArgs}));
+        $_builder.getDenseI32ArrayAttr({1, 0, sumArgs}));
       $_state.addAttribute(getTargetOffsetAttr(),
-        $_builder.getI32VectorAttr(argOffs));
+        $_builder.getDenseI32ArrayAttr(argOffs));
       $_state.addAttributes(attributes);
     }]
   >];
@@ -762,7 +762,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoSideEffect, AttrSizedOperandSegments]> {
     OptionalAttr<AffineMapAttr>:$accessMap
   );
 
-  let results = (outs fir_BoxType);
+  let results = (outs BoxOrClassType);
 
   let builders = [
     OpBuilder<(ins "llvm::ArrayRef<mlir::Type>":$resultTypes,

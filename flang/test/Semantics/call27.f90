@@ -1,5 +1,5 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
-! Catch NULL() actual argement association with allocatable dummy argument
+! Catch NULL() actual argument association with allocatable dummy argument
 program test
   !ERROR: Null actual argument 'NULL()' may not be associated with allocatable dummy argument 'a='
   call foo1(null())

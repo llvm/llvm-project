@@ -21,6 +21,7 @@
 
 namespace llvm {
 class AAResults;
+class AssumptionCache;
 class TargetInstrInfo;
 class TargetMachine;
 class SelectionDAGBuilder;
@@ -48,6 +49,7 @@ public:
   SelectionDAG *CurDAG;
   std::unique_ptr<SelectionDAGBuilder> SDB;
   AAResults *AA = nullptr;
+  AssumptionCache *AC = nullptr;
   GCFunctionInfo *GFI = nullptr;
   CodeGenOpt::Level OptLevel;
   const TargetInstrInfo *TII;

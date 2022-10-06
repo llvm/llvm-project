@@ -14,7 +14,7 @@
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(int, pthread_attr_destroy, (pthread_attr_t * attr)) {
+LLVM_LIBC_FUNCTION(int, pthread_attr_destroy, (pthread_attr_t *)) {
   // There is nothing to cleanup.
   return 0;
 }

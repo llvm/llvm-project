@@ -1,10 +1,13 @@
 // RUN:   mlir-opt %s -pass-pipeline="async-to-async-runtime,func.func(async-runtime-ref-counting,async-runtime-ref-counting-opt),convert-async-to-llvm,func.func(convert-linalg-to-loops,convert-scf-to-cf),convert-linalg-to-llvm,convert-memref-to-llvm,func.func(convert-arith-to-llvm),convert-func-to-llvm,reconcile-unrealized-casts" \
 // RUN: | mlir-cpu-runner                                                      \
 // RUN:     -e main -entry-point-result=void -O0                               \
-// RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_c_runner_utils%shlibext  \
-// RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_runner_utils%shlibext    \
-// RUN:     -shared-libs=%linalg_test_lib_dir/libmlir_async_runtime%shlibext   \
+// RUN:     -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext  \
+// RUN:     -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext    \
+// RUN:     -shared-libs=%mlir_lib_dir/libmlir_async_runtime%shlibext   \
 // RUN: | FileCheck %s
+
+// FIXME: https://github.com/llvm/llvm-project/issues/57231
+// UNSUPPORTED: hwasan
 
 func.func @main() {
   %i0 = arith.constant 0 : index

@@ -164,13 +164,34 @@ def AttrC : TestAttr<"TestF"> {
 
 /// Test attribute with self type parameter
 
-// ATTR: TestGAttr::parse
-// ATTR:   return TestGAttr::get
-// ATTR:     odsType
+// ATTR-LABEL: Attribute TestGAttr::parse
+// ATTR: if (odsType)
+// ATTR:   if (auto reqType = odsType.dyn_cast<::mlir::Type>())
+// ATTR:     _result_type = reqType
+// ATTR: TestGAttr::get
+// ATTR-NEXT: *_result_a
+// ATTR-NEXT: _result_type.value_or(::mlir::NoneType::get(
 def AttrD : TestAttr<"TestG"> {
   let parameters = (ins "int":$a, AttributeSelfTypeParameter<"">:$type);
   let mnemonic = "attr_d";
   let assemblyFormat = "$a";
+}
+
+// Check that the self-type parameter can be referenced without being bound.
+
+// ATTR-LABEL: Attribute TestHAttr::parse
+// ATTR: _result_type = reqType
+// ATTR: parseUseType(odsParser,
+// ATTR-NEXT: *_result_type
+
+// ATTR-LABEL: void TestHAttr::print
+// ATTR: printUseType(odsPrinter,
+// ATTR-NEXT: getType()
+
+def AttrE : TestAttr<"TestH"> {
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type);
+  let mnemonic = "attr_e";
+  let assemblyFormat = "custom<UseType>(ref($type))";
 }
 
 /// Test type parser and printer that mix variables and struct are generated
@@ -417,11 +438,11 @@ def TypeD : TestType<"TestF"> {
 // TYPE: ::mlir::Type TestGType::parse(::mlir::AsmParser &odsParser) {
 // TYPE:   if (::mlir::failed(_result_a))
 // TYPE:     return {};
-// TYPE:   if (::mlir::succeeded(_result_a) && *_result_a)
+// TYPE:   if (::mlir::succeeded(_result_a) && !((*_result_a) == int()))
 // TYPE:     if (odsParser.parseComma())
 // TYPE:       return {};
 
-// TYPE: if ((getA()))
+// TYPE: if (!(getA() == int()))
 // TYPE:   odsPrinter.printStrippedAttrOrType(getA());
 // TYPE: odsPrinter << ", ";
 // TYPE: odsPrinter.printStrippedAttrOrType(getB());
@@ -441,7 +462,7 @@ def TypeE : TestType<"TestG"> {
 // TYPE:     return {};
 
 // TYPE: void TestHType::print(::mlir::AsmPrinter &odsPrinter) const {
-// TYPE:   if ((getA())) {
+// TYPE:   if (!(getA() == int())) {
 // TYPE:     odsPrinter << "a = ";
 // TYPE:     odsPrinter.printStrippedAttrOrType(getA());
 // TYPE:     odsPrinter << ", ";
@@ -484,9 +505,9 @@ def TypeG : TestType<"TestI"> {
 // TYPE:     return {};
 
 // TYPE: void TestJType::print(::mlir::AsmPrinter &odsPrinter) const {
-// TYPE:   if ((getB())) {
+// TYPE:   if (!(getB() == int())) {
 // TYPE:     odsPrinter << "(";
-// TYPE:     if ((getB()))
+// TYPE:     if (!(getB() == int()))
 // TYPE:       odsPrinter.printStrippedAttrOrType(getB());
 // TYPE:     odsPrinter << ")";
 // TYPE:   } else {
@@ -504,7 +525,7 @@ def TypeH : TestType<"TestJ"> {
 // TYPE:   _result_a.value_or(10)
 
 // TYPE: void TestKType::print(::mlir::AsmPrinter &odsPrinter) const {
-// TYPE:   if ((getA() && !(getA() == 10)))
+// TYPE:   if (!(getA() == 10))
 
 def TypeI : TestType<"TestK"> {
   let parameters = (ins DefaultValuedParameter<"int", "10">:$a);
@@ -550,4 +571,56 @@ def TypeK : TestType<"TestM"> {
   let parameters = (ins ConvertFromStorageParameter:$a);
   let mnemonic = "type_k";
   let assemblyFormat = "$a";
+}
+
+// TYPE-LABEL: ::mlir::Type TestNType::parse
+// TYPE: parseFoo(
+// TYPE-NEXT: _result_a,
+// TYPE-NEXT: 1);
+
+// TYPE-LABEL: void TestNType::print
+// TYPE: printFoo(
+// TYPE-NEXT: getA(),
+// TYPE-NEXT: 1);
+
+def TypeL : TestType<"TestN"> {
+  let parameters = (ins "int":$a);
+  let mnemonic = "type_l";
+  let assemblyFormat = [{ custom<Foo>($a, "1") }];
+}
+
+// TYPE-LABEL: ::mlir::Type TestOType::parse
+// TYPE: if (odsParser.parseOptionalQuestion())
+// TYPE: _result_a =
+// TYPE: else
+
+// TYPE-LABEL: void TestOType::print
+// TYPE: if (!(!(getA() == int())))
+// TYPE: odsPrinter << ' ' << "?"
+// TYPE: else
+// TYPE: odsPrinter.printStrippedAttrOrType(getA())
+
+def TypeM : TestType<"TestO"> {
+  let parameters = (ins OptionalParameter<"int">:$a);
+  let mnemonic = "type_m";
+  let assemblyFormat = "(`?`) : ($a^)?";
+}
+
+// TYPE-LABEL: ::mlir::Type TestPType::parse
+// TYPE: if (odsParser.parseOptionalQuestion())
+// TYPE: bool _seen_a
+// TYPE: bool _seen_b
+// TYPE: _loop_body(_paramKey))
+// TYPE: else {
+// TYPE-NEXT: }
+
+// TYPE-LABEL: void TestPType::print
+// TYPE: if (!(!(getA() == int()) || !(getB() == int())))
+// TYPE-NEXT: odsPrinter << "?"
+
+def TypeN : TestType<"TestP"> {
+  let parameters = (ins OptionalParameter<"int">:$a,
+                        OptionalParameter<"int">:$b);
+  let mnemonic = "type_n";
+  let assemblyFormat = "`<` (`?`) : (struct($a, $b)^)? `>`";
 }

@@ -24,6 +24,8 @@ class PrintObjectArrayTestCase(TestBase):
         disable_constant_classes = {
             'CC':
             'xcrun clang',  # FIXME: Remove when flags are available upstream.
+            'USE_SYSTEM_STDLIB':
+            '1', # See above.
             'CFLAGS_EXTRAS':
             '-fno-constant-nsnumber-literals ' +
             '-fno-constant-nsarray-literals ' +

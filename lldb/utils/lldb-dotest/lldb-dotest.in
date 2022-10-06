@@ -16,7 +16,11 @@ llvm_tools_dir = "@LLVM_TOOLS_DIR_CONFIGURED@"
 
 if __name__ == '__main__':
     wrapper_args = sys.argv[1:]
-    dotest_args = dotest_args_str.split(';')
+    dotest_args = []
+    # split on an empty string will produce [''] and if you
+    # add that to the command, it will be treated as a directory...
+    if len(dotest_args_str) > 0:
+        dotest_args = dotest_args_str.split(';')
     # Build dotest.py command.
     cmd = [sys.executable, dotest_path]
     cmd.extend(['--arch', arch])

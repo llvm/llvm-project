@@ -28,8 +28,7 @@
 
 struct A {};
 
-int main(int, char**)
-{
+TEST_CONSTEXPR_CXX20 bool tests() {
 
 //  Test the explicit deduction guides
     {
@@ -143,5 +142,13 @@ int main(int, char**)
 
     SequenceContainerDeductionGuidesSfinaeAway<std::vector, std::vector<int>>();
 
+    return true;
+}
+
+int main(int, char**) {
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
     return 0;
 }

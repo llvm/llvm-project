@@ -101,11 +101,8 @@ define void @extract_subvector_v256i8(<256 x i8>* %a, <128 x i8>* %b) vscale_ran
 define <2 x i16> @extract_subvector_v4i16(<4 x i16> %op) vscale_range(2,0) #0 {
 ; CHECK-LABEL: extract_subvector_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w8, v0.h[2]
-; CHECK-NEXT:    umov w9, v0.h[3]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    mov v0.s[1], w9
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %ret = call <2 x i16> @llvm.vector.extract.v2i16.v4i16(<4 x i16> %op, i64 2)

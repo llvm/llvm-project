@@ -8,16 +8,21 @@
 
 #include "mlir/Conversion/ShapeToStandard/ShapeToStandard.h"
 
-#include "../PassDetail.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTSHAPETOSTANDARD
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::shape;
@@ -319,6 +324,28 @@ LogicalResult IsBroadcastableOpConverter::matchAndRewrite(
       });
 
   rewriter.replaceOp(op, reduceResult.getResults().front());
+  return success();
+}
+
+namespace {
+class DimOpConverter : public OpConversionPattern<DimOp> {
+  using OpConversionPattern<DimOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(DimOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+} // namespace
+
+LogicalResult
+DimOpConverter::matchAndRewrite(DimOp op, OpAdaptor adaptor,
+                                ConversionPatternRewriter &rewriter) const {
+  // Lower to dim(X, i) to get_extent(shape_of(X), i) and rely on further
+  // lowerings. This can be further optimized if needed to avoid intermediate
+  // steps.
+  auto shapeOf = rewriter.create<shape::ShapeOfOp>(op.getLoc(), op.getValue());
+  rewriter.replaceOpWithNewOp<shape::GetExtentOp>(op, op.getType(), shapeOf,
+                                                  op.getIndex());
   return success();
 }
 
@@ -658,7 +685,7 @@ namespace {
 namespace {
 /// Conversion pass.
 class ConvertShapeToStandardPass
-    : public ConvertShapeToStandardBase<ConvertShapeToStandardPass> {
+    : public impl::ConvertShapeToStandardBase<ConvertShapeToStandardPass> {
 
   void runOnOperation() override;
 };
@@ -668,7 +695,7 @@ void ConvertShapeToStandardPass::runOnOperation() {
   // Setup target legality.
   MLIRContext &ctx = getContext();
   ConversionTarget target(ctx);
-  target.addLegalDialect<arith::ArithmeticDialect, SCFDialect,
+  target.addLegalDialect<arith::ArithDialect, SCFDialect,
                          tensor::TensorDialect>();
   target.addLegalOp<CstrRequireOp, func::FuncOp, ModuleOp>();
 
@@ -693,6 +720,7 @@ void mlir::populateShapeToStandardConversionPatterns(
       BroadcastOpConverter,
       ConstShapeOpConverter,
       ConstSizeOpConversion,
+      DimOpConverter,
       IsBroadcastableOpConverter,
       GetExtentOpConverter,
       RankOpConverter,

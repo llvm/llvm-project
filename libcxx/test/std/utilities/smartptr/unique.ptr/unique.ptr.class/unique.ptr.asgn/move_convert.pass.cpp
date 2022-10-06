@@ -23,21 +23,20 @@
 
 template <int ID = 0>
 struct GenericDeleter {
-  void operator()(void*) const {}
+  TEST_CONSTEXPR_CXX23 void operator()(void*) const {}
 };
 
 template <int ID = 0>
 struct GenericConvertingDeleter {
+  template <int OID>
+  TEST_CONSTEXPR_CXX23 GenericConvertingDeleter(GenericConvertingDeleter<OID>) {}
 
   template <int OID>
-  GenericConvertingDeleter(GenericConvertingDeleter<OID>) {}
-
-  template <int OID>
-  GenericConvertingDeleter& operator=(GenericConvertingDeleter<OID> const&) {
+  TEST_CONSTEXPR_CXX23 GenericConvertingDeleter& operator=(GenericConvertingDeleter<OID> const&) {
     return *this;
   }
 
-  void operator()(void*) const {}
+  TEST_CONSTEXPR_CXX23 void operator()(void*) const {}
 };
 
 template <class T, class U>
@@ -156,9 +155,9 @@ bool checkArg(ConstTrackingDeleter<ID> const& d) {
 
 template <class From, bool AssignIsConst = false>
 struct AssignDeleter {
-  AssignDeleter() = default;
-  AssignDeleter(AssignDeleter const&) = default;
-  AssignDeleter(AssignDeleter&&) = default;
+  TEST_CONSTEXPR_CXX23 AssignDeleter()                     = default;
+  TEST_CONSTEXPR_CXX23 AssignDeleter(AssignDeleter const&) = default;
+  TEST_CONSTEXPR_CXX23 AssignDeleter(AssignDeleter&&)      = default;
 
   AssignDeleter& operator=(AssignDeleter const&) = delete;
   AssignDeleter& operator=(AssignDeleter &&) = delete;
@@ -166,34 +165,34 @@ struct AssignDeleter {
   template <class T> AssignDeleter& operator=(T&&) && = delete;
   template <class T> AssignDeleter& operator=(T&&) const && = delete;
 
-  template <class T, class = typename std::enable_if<
-      std::is_same<T&&, From>::value && !AssignIsConst
-    >::type>
-  AssignDeleter& operator=(T&&) & { return *this; }
+  template <class T, class = typename std::enable_if< std::is_same<T&&, From>::value && !AssignIsConst >::type>
+  TEST_CONSTEXPR_CXX23 AssignDeleter& operator=(T&&) & {
+    return *this;
+  }
 
-  template <class T, class = typename std::enable_if<
-      std::is_same<T&&, From>::value && AssignIsConst
-    >::type>
-  const AssignDeleter& operator=(T&&) const & { return *this; }
+  template <class T, class = typename std::enable_if< std::is_same<T&&, From>::value && AssignIsConst >::type>
+  TEST_CONSTEXPR_CXX23 const AssignDeleter& operator=(T&&) const& {
+    return *this;
+  }
 
   template <class T>
-  void operator()(T) const {}
+  TEST_CONSTEXPR_CXX23 void operator()(T) const {}
 };
 
 template <class VT, class DDest, class DSource>
-  void doDeleterTest() {
-    using U1 = std::unique_ptr<VT, DDest>;
-    using U2 = std::unique_ptr<VT, DSource>;
-    static_assert(std::is_nothrow_assignable<U1, U2&&>::value, "");
-    typename std::decay<DDest>::type ddest;
-    typename std::decay<DSource>::type dsource;
-    U1 u1(nullptr, ddest);
-    U2 u2(nullptr, dsource);
-    u1 = std::move(u2);
+TEST_CONSTEXPR_CXX23 void doDeleterTest() {
+  using U1 = std::unique_ptr<VT, DDest>;
+  using U2 = std::unique_ptr<VT, DSource>;
+  static_assert(std::is_nothrow_assignable<U1, U2&&>::value, "");
+  typename std::decay<DDest>::type ddest;
+  typename std::decay<DSource>::type dsource;
+  U1 u1(nullptr, ddest);
+  U2 u2(nullptr, dsource);
+  u1 = std::move(u2);
 }
 
 template <bool IsArray>
-void test_sfinae() {
+TEST_CONSTEXPR_CXX23 void test_sfinae() {
   typedef typename std::conditional<IsArray, A[], A>::type VT;
 
   { // Test that different non-reference deleter types are allowed so long
@@ -281,9 +280,8 @@ void test_sfinae() {
   }
 }
 
-
 template <bool IsArray>
-void test_noexcept() {
+TEST_CONSTEXPR_CXX23 void test_noexcept() {
   typedef typename std::conditional<IsArray, A[], A>::type VT;
   {
     typedef std::unique_ptr<const VT> APtr;
@@ -405,17 +403,28 @@ void test_deleter_value_category() {
   }
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX23 bool test() {
   {
     test_sfinae</*IsArray*/false>();
     test_noexcept<false>();
-    test_deleter_value_category<false>();
+    if (!TEST_IS_CONSTANT_EVALUATED)
+      test_deleter_value_category<false>();
   }
   {
     test_sfinae</*IsArray*/true>();
     test_noexcept<true>();
-    test_deleter_value_category<true>();
+    if (!TEST_IS_CONSTANT_EVALUATED)
+      test_deleter_value_category<true>();
   }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 23
+  static_assert(test());
+#endif
 
   return 0;
 }

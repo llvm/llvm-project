@@ -11,6 +11,7 @@ unittest("ClangDriverTests") {
     "//llvm/lib/Target:TargetsToBuild",
   ]
   sources = [
+    "DXCModeTest.cpp",
     "DistroTest.cpp",
     "ModuleCacheTest.cpp",
     "MultilibTest.cpp",

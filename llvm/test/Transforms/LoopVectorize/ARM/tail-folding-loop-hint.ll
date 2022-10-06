@@ -14,7 +14,9 @@ define dso_local void @tail_folding(i32* noalias nocapture %A, i32* noalias noca
 ; CHECK:       vector.body:
 ; CHECK-NOT:   call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(
 ; CHECK-NOT:   call void @llvm.masked.store.v4i32.p0v4i32(
-; CHECK:       br i1 %{{.*}}, label %{{.*}}, label %vector.body
+; CHECK:       br i1 %{{.*}}, label %{{.*}}, label %vector.body, !llvm.loop [[VEC_LOOP1:![0-9]+]]
+;
+; CHECK:       br i1 %{{.*}}, label %{{.*}}, label %for.body, !llvm.loop [[SCALAR_LOOP1:![0-9]+]]
 entry:
   br label %for.body
 
@@ -49,7 +51,9 @@ define dso_local void @predicate_loop_hint(i32* noalias nocapture %A, i32* noali
 ; CHECK:         %[[ADD:.*]] = add nsw <4 x i32> %[[WML2]], %[[WML1]]
 ; CHECK:         call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %[[ADD]], {{.*}}<4 x i1> %active.lane.mask
 ; CHECK:         %index.next = add i64 %index, 4
-; CHECK:         br i1 %{{.*}}, label %{{.*}}, label %vector.body
+; CHECK:         br i1 %{{.*}}, label %{{.*}}, label %vector.body, !llvm.loop [[VEC_LOOP2:![0-9]+]]
+;
+; CHECK:         br i1 %{{.*}}, label %{{.*}}, label %for.body, !llvm.loop [[SCALAR_LOOP2:![0-9]+]]
 entry:
   br label %for.body
 
@@ -70,12 +74,12 @@ for.body:
   br i1 %exitcond, label %for.cond.cleanup, label %for.body, !llvm.loop !6
 }
 
-; CHECK:      !0 = distinct !{!0, !1}
-; CHECK-NEXT: !1 = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK-NEXT: !2 = distinct !{!2, !3, !1}
-; CHECK-NEXT: !3 = !{!"llvm.loop.unroll.runtime.disable"}
-; CHECK-NEXT: !4 = distinct !{!4, !1}
-; CHECK-NEXT: !5 = distinct !{!5, !3, !1}
+; CHECK:      [[VEC_LOOP1]] = distinct !{[[VEC_LOOP1]], [[MD_IS_VEC:![0-9]+]]}
+; CHECK-NEXT: [[MD_IS_VEC:![0-9]+]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK-NEXT: [[SCALAR_LOOP1]] = distinct !{[[SCALAR_LOOP1]], [[MD_RT_UNROLL_DIS:![0-9]+]], [[MD_IS_VEC]]}
+; CHECK-NEXT: [[MD_RT_UNROLL_DIS]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-NEXT: [[VEC_LOOP2]] = distinct !{[[VEC_LOOP2]], [[MD_IS_VEC]]}
+; CHECK-NEXT: [[SCALAR_LOOP2]] = distinct !{[[SCALAR_LOOP2]], [[MD_RT_UNROLL_DIS]], [[MD_IS_VEC]]}
 
 !6 = distinct !{!6, !7, !8}
 !7 = !{!"llvm.loop.vectorize.predicate.enable", i1 true}

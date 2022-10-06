@@ -931,6 +931,8 @@ const TargetRegisterClass *
 SIRegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
   if (isAGPRClass(RC) && !ST.hasGFX90AInsts())
     return getEquivalentVGPRClass(RC);
+  if (RC == &AMDGPU::SCC_CLASSRegClass)
+    return getWaveMaskRegClass();
 
   return RC;
 }
@@ -2154,8 +2156,27 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             }
 
             if (NewOpc != -1) {
+              // removeOperand doesn't fixup tied operand indexes as it goes, so
+              // it asserts. Untie vdst_in for now and retie them afterwards.
+              int VDstIn = AMDGPU::getNamedOperandIdx(Opc,
+                                                     AMDGPU::OpName::vdst_in);
+              bool TiedVDst = VDstIn != -1 &&
+                              MI->getOperand(VDstIn).isReg() &&
+                              MI->getOperand(VDstIn).isTied();
+              if (TiedVDst)
+                MI->untieRegOperand(VDstIn);
+
               MI->removeOperand(
                   AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::saddr));
+
+              if (TiedVDst) {
+                int NewVDst =
+                    AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::vdst);
+                int NewVDstIn =
+                    AMDGPU::getNamedOperandIdx(NewOpc, AMDGPU::OpName::vdst_in);
+                assert (NewVDst != -1 && NewVDstIn != -1 && "Must be tied!");
+                MI->tieOperands(NewVDst, NewVDstIn);
+              }
               MI->setDesc(TII->get(NewOpc));
               return;
             }
@@ -2675,7 +2696,7 @@ bool SIRegisterInfo::isSGPRReg(const MachineRegisterInfo &MRI,
     RC = MRI.getRegClass(Reg);
   else
     RC = getPhysRegClass(Reg);
-  return isSGPRClass(RC);
+  return RC ? isSGPRClass(RC) : false;
 }
 
 const TargetRegisterClass *
@@ -2702,26 +2723,6 @@ SIRegisterInfo::getEquivalentSGPRClass(const TargetRegisterClass *VRC) const {
   const TargetRegisterClass *SRC = getSGPRClassForBitWidth(Size);
   assert(SRC && "Invalid register class size");
   return SRC;
-}
-
-const TargetRegisterClass *SIRegisterInfo::getSubRegClass(
-                         const TargetRegisterClass *RC, unsigned SubIdx) const {
-  if (SubIdx == AMDGPU::NoSubRegister)
-    return RC;
-
-  // We can assume that each lane corresponds to one 32-bit register.
-  unsigned Size = getNumChannelsFromSubReg(SubIdx) * 32;
-  if (isAGPRClass(RC)) {
-    RC = getAGPRClassForBitWidth(Size);
-  } else if (isVGPRClass(RC)) {
-    RC = getVGPRClassForBitWidth(Size);
-  } else if (isVectorSuperClass(RC)) {
-    RC = getVectorSuperClassForBitWidth(Size);
-  } else {
-    RC = getSGPRClassForBitWidth(Size);
-  }
-  assert(RC && "Invalid sub-register class size");
-  return RC;
 }
 
 const TargetRegisterClass *
@@ -2812,6 +2813,13 @@ const TargetRegisterClass*
 SIRegisterInfo::getRegClassForReg(const MachineRegisterInfo &MRI,
                                   Register Reg) const {
   return Reg.isVirtual() ? MRI.getRegClass(Reg) : getPhysRegClass(Reg);
+}
+
+const TargetRegisterClass *
+SIRegisterInfo::getRegClassForOperandReg(const MachineRegisterInfo &MRI,
+                                         const MachineOperand &MO) const {
+  const TargetRegisterClass *SrcRC = getRegClassForReg(MRI, MO.getReg());
+  return getSubRegisterClass(SrcRC, MO.getSubReg());
 }
 
 bool SIRegisterInfo::isVGPR(const MachineRegisterInfo &MRI,
@@ -3062,20 +3070,6 @@ SIRegisterInfo::getProperlyAlignedRC(const TargetRegisterClass *RC) const {
     return getAlignedVectorSuperClassForBitWidth(Size);
 
   return RC;
-}
-
-bool SIRegisterInfo::isConstantPhysReg(MCRegister PhysReg) const {
-  switch (PhysReg) {
-  case AMDGPU::SGPR_NULL:
-  case AMDGPU::SGPR_NULL64:
-  case AMDGPU::SRC_SHARED_BASE:
-  case AMDGPU::SRC_PRIVATE_BASE:
-  case AMDGPU::SRC_SHARED_LIMIT:
-  case AMDGPU::SRC_PRIVATE_LIMIT:
-    return true;
-  default:
-    return false;
-  }
 }
 
 ArrayRef<MCPhysReg>

@@ -10,7 +10,6 @@ include "llvm/Target/Target.td"
 
 def R600InstrInfo : InstrInfo {
   let guessInstructionProperties = 1;
-  let noNamedPositionallyEncodedOperands = 1;
 }
 
 def R600 : Target {

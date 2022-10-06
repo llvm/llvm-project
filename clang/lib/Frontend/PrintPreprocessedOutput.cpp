@@ -877,7 +877,7 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
     } else if (Tok.isLiteral() && !Tok.needsCleaning() &&
                Tok.getLiteralData()) {
       OS.write(Tok.getLiteralData(), Tok.getLength());
-    } else if (Tok.getLength() < llvm::array_lengthof(Buffer)) {
+    } else if (Tok.getLength() < std::size(Buffer)) {
       const char *TokPtr = Buffer;
       unsigned Len = PP.getSpelling(Tok, TokPtr);
       OS.write(TokPtr, Len);

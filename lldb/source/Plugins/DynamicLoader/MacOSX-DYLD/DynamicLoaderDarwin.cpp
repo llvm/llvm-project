@@ -276,7 +276,7 @@ bool DynamicLoaderDarwin::UpdateImageLoadAddress(Module *module,
 
               changed = m_process->GetTarget().SetSectionLoadAddress(
                   section_sp, new_section_load_addr, warn_multiple);
-            } 
+            }
           }
         }
 
@@ -501,7 +501,7 @@ bool DynamicLoaderDarwin::JSONImageInformationIntoImageInfo(
       image_infos[i].segments.push_back(segment);
     }
 
-    image_infos[i].uuid.SetFromOptionalStringRef(
+    image_infos[i].uuid.SetFromStringRef(
         image->GetValueForKey("uuid")->GetAsString()->GetValue());
 
     // All sections listed in the dyld image info structure will all either be
@@ -541,8 +541,8 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
   const size_t image_infos_size = image_infos.size();
   for (size_t i = 0; i < image_infos_size; i++) {
     if (image_infos[i].header.filetype == llvm::MachO::MH_DYLINKER) {
-      // In a "simulator" process we will have two dyld modules -- 
-      // a "dyld" that we want to keep track of, and a "dyld_sim" which 
+      // In a "simulator" process we will have two dyld modules --
+      // a "dyld" that we want to keep track of, and a "dyld_sim" which
       // we don't need to keep track of here.  dyld_sim will have a non-macosx
       // OS.
       if (target_arch.GetTriple().getEnvironment() == llvm::Triple::Simulator &&
@@ -551,7 +551,7 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
       }
 
       dyld_idx = i;
-    } 
+    }
     if (image_infos[i].header.filetype == llvm::MachO::MH_EXECUTE) {
       exe_idx = i;
     }
@@ -567,8 +567,27 @@ void DynamicLoaderDarwin::UpdateSpecialBinariesFromNewImageInfos(
                 exe_module_sp->GetFileSpec().GetPath().c_str());
       target.GetImages().AppendIfNeeded(exe_module_sp);
       UpdateImageLoadAddress(exe_module_sp.get(), image_infos[exe_idx]);
-      if (exe_module_sp.get() != target.GetExecutableModulePointer()) {
+      if (exe_module_sp.get() != target.GetExecutableModulePointer())
         target.SetExecutableModule(exe_module_sp, eLoadDependentsNo);
+
+      // Update the target executable's arch if necessary.
+      auto exe_triple = exe_module_sp->GetArchitecture().GetTriple();
+      if (target_arch.GetTriple().isArm64e() &&
+          exe_triple.getArch() == llvm::Triple::aarch64 &&
+          !exe_triple.isArm64e()) {
+        // On arm64e-capable Apple platforms, the system libraries are
+        // always arm64e, but applications often are arm64. When a
+        // target is created from a file, LLDB recognizes it as an
+        // arm64 target, but debugserver will still (technically
+        // correct) report the process as being arm64e. For
+        // consistency, set the target to arm64 here, so attaching to
+        // a live process behaves the same as creating a process from
+        // file.
+        auto triple = target_arch.GetTriple();
+        triple.setArchName(exe_triple.getArchName());
+        target_arch.SetTriple(triple);
+        target.SetArchitecture(target_arch, /*set_platform=*/false,
+                               /*merge=*/false);
       }
     }
   }
@@ -652,7 +671,7 @@ bool DynamicLoaderDarwin::AddModulesUsingImageInfos(
               module_spec.SetObjectOffset(objfile->GetFileOffset() +
                                           commpage_section->GetFileOffset());
               module_spec.SetObjectSize(objfile->GetByteSize());
-              commpage_image_module_sp = target.GetOrCreateModule(module_spec, 
+              commpage_image_module_sp = target.GetOrCreateModule(module_spec,
                                                                true /* notify */);
               if (!commpage_image_module_sp ||
                   commpage_image_module_sp->GetObjectFile() == nullptr) {
@@ -1023,8 +1042,7 @@ lldb::ModuleSP DynamicLoaderDarwin::GetPThreadLibraryModule() {
   if (!module_sp) {
     SymbolContextList sc_list;
     ModuleSpec module_spec;
-    module_spec.GetFileSpec().GetFilename().SetCString(
-        "libsystem_pthread.dylib");
+    module_spec.GetFileSpec().SetFilename("libsystem_pthread.dylib");
     ModuleList module_list;
     m_process->GetTarget().GetImages().FindModules(module_spec, module_list);
     if (!module_list.IsEmpty()) {

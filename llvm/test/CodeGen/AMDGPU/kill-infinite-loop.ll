@@ -9,6 +9,7 @@
 ; this case right before the s_endpgm to avoid GPU hangs, which is what this
 ; tests.
 
+; FIXME: Immediate value 0x41200000 should be folded into the v_cmp instruction.
 define amdgpu_ps void @return_void(float %0) #0 {
 ; CHECK-LABEL: return_void:
 ; CHECK:       ; %bb.0: ; %main_body

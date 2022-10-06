@@ -452,8 +452,8 @@ QualType getFullyQualifiedType(QualType QT, const ASTContext &Ctx,
   // We don't consider the alias introduced by `using a::X` as a new type.
   // The qualified name is still a::X.
   if (const auto *UT = QT->getAs<UsingType>()) {
-    return getFullyQualifiedType(UT->getUnderlyingType(), Ctx,
-                                 WithGlobalNsPrefix);
+    QT = Ctx.getQualifiedType(UT->getUnderlyingType(), PrefixQualifiers);
+    return getFullyQualifiedType(QT, Ctx, WithGlobalNsPrefix);
   }
 
   // Create a nested name specifier if needed.

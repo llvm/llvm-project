@@ -47,10 +47,10 @@ return:                                           ; preds = %bb
 }
 
 ; CHECK-LABEL: test1:
-; CHECK: 	movl	%{{.*}},   (%[[RDI:...]],%[[RCX:...]],4)
-; CHECK:	movl	%{{.*}},  8(%[[RDI]],%[[RCX]],4)
-; CHECK:	movl	%{{.*}},  4(%[[RDI]],%[[RCX]],4)
-; CHECK:	movl	%{{.*}}, 12(%[[RDI]],%[[RCX]],4)
+; CHECK:	movl	%{{.*}}, (%[[BASE:r.*]],%[[INDEX:r.*]],4)
+; CHECK:	movl	%{{.*}}, 8(%[[BASE]],%[[INDEX]],4)
+; CHECK:	movl	%{{.*}}, 4(%[[BASE]],%[[INDEX]],4)
+; CHECK:	movl	%{{.*}}, 12(%[[BASE]],%[[INDEX]],4)
 
 define void @test1(ptr nocapture %array, i32 %r0, i8 signext %k, i8 signext %i0) nounwind {
 bb.nph:

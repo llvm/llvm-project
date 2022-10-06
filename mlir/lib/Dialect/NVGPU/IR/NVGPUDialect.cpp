@@ -21,35 +21,17 @@
 using namespace mlir;
 using namespace mlir::nvgpu;
 
-#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.cpp.inc"
-
 void nvgpu::NVGPUDialect::initialize() {
-  addTypes<DeviceAsyncTokenType>();
+  addTypes<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/NVGPU/IR/NVGPUTypes.cpp.inc"
+      >();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc"
       >();
 }
 
-Type NVGPUDialect::parseType(DialectAsmParser &parser) const {
-  // Parse the main keyword for the type.
-  StringRef keyword;
-  if (parser.parseKeyword(&keyword))
-    return Type();
-  MLIRContext *context = getContext();
-  // Handle 'device async token' types.
-  if (keyword == "device.async.token")
-    return DeviceAsyncTokenType::get(context);
-
-  parser.emitError(parser.getNameLoc(), "unknown nvgpu type: " + keyword);
-  return Type();
-}
-
-void NVGPUDialect::printType(Type type, DialectAsmPrinter &os) const {
-  TypeSwitch<Type>(type)
-      .Case<DeviceAsyncTokenType>([&](Type) { os << "device.async.token"; })
-      .Default([](Type) { llvm_unreachable("unexpected 'nvgpu' type kind"); });
-}
 //===----------------------------------------------------------------------===//
 // NVGPU_DeviceAsyncCopyOp
 //===----------------------------------------------------------------------===//
@@ -91,6 +73,12 @@ LogicalResult DeviceAsyncCopyOp::verify() {
 //===----------------------------------------------------------------------===//
 // NVGPU_MmaSyncOp
 //===----------------------------------------------------------------------===//
+void MmaSyncOp::build(::mlir::OpBuilder &odsBuilder,
+                      ::mlir::OperationState &odsState, Value matrixA,
+                      Value matrixB, Value matrixC, ArrayAttr mmaShape) {
+  build(odsBuilder, odsState, matrixC.getType(), matrixA, matrixB, matrixC,
+        mmaShape, UnitAttr());
+}
 
 LogicalResult MmaSyncOp::verify() {
 
@@ -121,6 +109,9 @@ LogicalResult MmaSyncOp::verify() {
 
   // vector element type
   Type aType = aVector.getElementType();
+
+  // tensor float32 (TF32) enabled
+  bool tf32Enabled = getOperation()->hasAttr(getTf32EnabledAttrName());
 
   // nvgpu.mma.sync shape (per 32 threads or per warp)
   int64_t m = getMmaShape()[0].cast<IntegerAttr>().getInt();
@@ -163,6 +154,10 @@ LogicalResult MmaSyncOp::verify() {
     return emitOpError() << "expected " << m * n
                          << " warp-wide matrix C elements";
 
+  // verify tf32 tensor cores are enabled for only F32 datatype
+  if (tf32Enabled && !(aType.isF32()))
+    return emitOpError() << "expected tf32 tensor cores only for F32 operands";
+
   //
   // Extended verification
   //
@@ -173,17 +168,17 @@ LogicalResult MmaSyncOp::verify() {
   int64_t kTile = k / shapeK;
 
   // verify shape of aVector
-  if (!((aShape[0] == mTile * kTile) && (aShape[1] == numElementA)))
+  if ((aShape[0] != mTile * kTile) || (aShape[1] != numElementA))
     return emitOpError() << "expected matrix A to be shaped (" << mTile * kTile
                          << " x " << numElementA << ")";
 
   // verify shape of bVector
-  if (!((bShape[0] == kTile * nTile) && (bShape[1] == numElementB)))
+  if ((bShape[0] != kTile * nTile) || (bShape[1] != numElementB))
     return emitOpError() << "expected matrix B to be shaped (" << kTile * nTile
                          << " x " << numElementB << ")";
 
   // verify shape of cVector
-  if (!((cShape[0] == mTile * nTile) && (cShape[1] == numElementC)))
+  if ((cShape[0] != mTile * nTile) || (cShape[1] != numElementC))
     return emitOpError() << "expected matrix C to be shaped (" << mTile * nTile
                          << " x " << numElementC << ")";
 
@@ -241,5 +236,14 @@ LogicalResult LdMatrixOp::verify() {
   return success();
 }
 
+//===----------------------------------------------------------------------===//
+// TableGen'd dialect, type, and op definitions
+//===----------------------------------------------------------------------===//
+
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.cpp.inc"
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc"
+
+#define GET_TYPEDEF_CLASSES
+#include "mlir/Dialect/NVGPU/IR/NVGPUTypes.cpp.inc"

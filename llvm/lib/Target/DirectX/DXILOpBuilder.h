@@ -24,23 +24,23 @@ class Type;
 class FunctionType;
 class Use;
 
-namespace DXIL {
+namespace dxil {
 
 class DXILOpBuilder {
 public:
   DXILOpBuilder(Module &M, IRBuilderBase &B) : M(M), B(B) {}
-  CallInst *createDXILOpCall(DXIL::OpCode OpCode, Type *OverloadTy,
+  CallInst *createDXILOpCall(dxil::OpCode OpCode, Type *OverloadTy,
                              llvm::iterator_range<Use *> Args);
-  Type *getOverloadTy(DXIL::OpCode OpCode, FunctionType *FT,
+  Type *getOverloadTy(dxil::OpCode OpCode, FunctionType *FT,
                       bool NoOpCodeParam);
-  static const char *getOpCodeName(DXIL::OpCode DXILOp);
+  static const char *getOpCodeName(dxil::OpCode DXILOp);
 
 private:
   Module &M;
   IRBuilderBase &B;
 };
 
-} // namespace DXIL
+} // namespace dxil
 } // namespace llvm
 
 #endif

@@ -1,5 +1,4 @@
 ! This test checks lowering of `FIRSTPRIVATE` clause for scalar types.
-! TODO: Add a test for same var being first and lastprivate when support is there.
 
 ! RUN: bbc -fopenmp -emit-fir %s -o - | FileCheck %s
 ! RUN: flang-new -fc1 -fopenmp -emit-fir %s -o - | FileCheck %s
@@ -84,24 +83,21 @@ print *, arg1
 end subroutine
 
 !CHECK: func.func @_QPmult_lastprivate_int(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}, %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "arg2"}) {
-!CHECK-DAG: omp.parallel  {
+!CHECK: omp.parallel  {
 !CHECK-DAG: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1"
 !CHECK-DAG: %[[CLONE2:.*]] = fir.alloca i32 {bindc_name = "arg2"
 !CHECK: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
 
 ! Testing last iteration check
-!CHECK-DAG: %[[IV_CMP1:.*]] = arith.cmpi eq, %[[INDX_WS]]
-!CHECK-DAG: scf.if %[[IV_CMP1]] {
+!CHECK: %[[IV_CMP1:.*]] = arith.cmpi eq, %[[INDX_WS]]
+!CHECK-NEXT: scf.if %[[IV_CMP1]] {
 ! Testing lastprivate val update
-!CHECK-NEXT: %[[CLONE_LD1:.*]] = fir.load %[[CLONE1]] : !fir.ref<i32>
-!CHECK-NEXT: fir.store %[[CLONE_LD1]] to %[[ARG1]] : !fir.ref<i32>
-!CHECK-DAG: }
-!CHECK-DAG: scf.if %[[IV_CMP1]] {
-! Testing lastprivate val update
-!CHECK-NEXT: %[[CLONE_LD2:.*]] = fir.load %[[CLONE2]] : !fir.ref<i32>
-!CHECK-NEXT: fir.store %[[CLONE_LD2]] to %[[ARG2]] : !fir.ref<i32>
-!CHECK-DAG: }
-!CHECK-DAG: omp.yield
+!CHECK-DAG: %[[CLONE_LD1:.*]] = fir.load %[[CLONE1]] : !fir.ref<i32>
+!CHECK-DAG: fir.store %[[CLONE_LD1]] to %[[ARG1]] : !fir.ref<i32>
+!CHECK-DAG: %[[CLONE_LD2:.*]] = fir.load %[[CLONE2]] : !fir.ref<i32>
+!CHECK-DAG: fir.store %[[CLONE_LD2]] to %[[ARG2]] : !fir.ref<i32>
+!CHECK: }
+!CHECK: omp.yield
 
 subroutine mult_lastprivate_int(arg1, arg2)
         integer :: arg1, arg2
@@ -118,21 +114,21 @@ print *, arg1, arg2
 end subroutine
 
 !CHECK: func.func @_QPmult_lastprivate_int2(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}, %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "arg2"}) {
-!CHECK-DAG: omp.parallel  {
+!CHECK: omp.parallel  {
 !CHECK-DAG: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1"
 !CHECK-DAG: %[[CLONE2:.*]] = fir.alloca i32 {bindc_name = "arg2"
 !CHECK: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
 
-! Testing last iteration check
-!CHECK-DAG: %[[IV_CMP1:.*]] = arith.cmpi eq, %[[INDX_WS]]
-!CHECK-DAG: scf.if %[[IV_CMP1]] {
-! Testing lastprivate val update
-!CHECK-NEXT: %[[CLONE_LD2:.*]] = fir.load %[[CLONE2]] : !fir.ref<i32>
-!CHECK-NEXT: fir.store %[[CLONE_LD2]] to %[[ARG2]] : !fir.ref<i32>
-!CHECK-NEXT: %[[CLONE_LD1:.*]] = fir.load %[[CLONE1]] : !fir.ref<i32>
-!CHECK-NEXT: fir.store %[[CLONE_LD1]] to %[[ARG1]] : !fir.ref<i32>
-!CHECK-NEXT: }
-!CHECK-NEXT: omp.yield
+!Testing last iteration check
+!CHECK: %[[IV_CMP1:.*]] = arith.cmpi eq, %[[INDX_WS]]
+!CHECK-NEXT: scf.if %[[IV_CMP1]] {
+!Testing lastprivate val update
+!CHECK-DAG: %[[CLONE_LD2:.*]] = fir.load %[[CLONE2]] : !fir.ref<i32>
+!CHECK-DAG: fir.store %[[CLONE_LD2]] to %[[ARG2]] : !fir.ref<i32>
+!CHECK-DAG: %[[CLONE_LD1:.*]] = fir.load %[[CLONE1]] : !fir.ref<i32>
+!CHECK-DAG: fir.store %[[CLONE_LD1]] to %[[ARG1]] : !fir.ref<i32>
+!CHECK: }
+!CHECK: omp.yield
 
 subroutine mult_lastprivate_int2(arg1, arg2)
         integer :: arg1, arg2
@@ -149,19 +145,19 @@ print *, arg1, arg2
 end subroutine
 
 !CHECK: func.func @_QPfirstpriv_lastpriv_int(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}, %[[ARG2:.*]]: !fir.ref<i32> {fir.bindc_name = "arg2"}) {
-!CHECK-DAG: omp.parallel  {
-!CHECK-DAG: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1"
+!CHECK: omp.parallel  {
 ! Firstprivate update
-!CHECK-NEXT: %[[FPV_LD:.*]] = fir.load %[[ARG1]] : !fir.ref<i32>
-!CHECK-NEXT: fir.store %[[FPV_LD]] to %[[CLONE1]] : !fir.ref<i32>
+!CHECK-DAG: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1"
+!CHECK-DAG: %[[FPV_LD:.*]] = fir.load %[[ARG1]] : !fir.ref<i32>
+!CHECK-DAG: fir.store %[[FPV_LD]] to %[[CLONE1]] : !fir.ref<i32>
 ! Lastprivate Allocation
-!CHECK-NEXT: %[[CLONE2:.*]] = fir.alloca i32 {bindc_name = "arg2"
-!CHECK-NEXT: omp.barrier
+!CHECK-DAG: %[[CLONE2:.*]] = fir.alloca i32 {bindc_name = "arg2"
+!CHECK-NOT: omp.barrier
 !CHECK: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
 
 ! Testing last iteration check
-!CHECK-DAG: %[[IV_CMP1:.*]] = arith.cmpi eq, %[[INDX_WS]]
-!CHECK-DAG: scf.if %[[IV_CMP1]] {
+!CHECK: %[[IV_CMP1:.*]] = arith.cmpi eq, %[[INDX_WS]]
+!CHECK-NEXT: scf.if %[[IV_CMP1]] {
 ! Testing lastprivate val update
 !CHECK-NEXT: %[[CLONE_LD:.*]] = fir.load %[[CLONE2]] : !fir.ref<i32>
 !CHECK-NEXT: fir.store %[[CLONE_LD]] to %[[ARG2]] : !fir.ref<i32>
@@ -182,4 +178,32 @@ end do
 print *, arg1, arg2
 end subroutine
 
+!CHECK: func.func @_QPfirstpriv_lastpriv_int2(%[[ARG1:.*]]: !fir.ref<i32> {fir.bindc_name = "arg1"}) {
+!CHECK: omp.parallel  {
+! Firstprivate update
+!CHECK-NEXT: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "arg1"
+!CHECK-NEXT: %[[FPV_LD:.*]] = fir.load %[[ARG1]] : !fir.ref<i32>
+!CHECK-NEXT: fir.store %[[FPV_LD]] to %[[CLONE1]] : !fir.ref<i32>
+!CHECK-NEXT: omp.barrier
+!CHECK: omp.wsloop for (%[[INDX_WS:.*]]) : {{.*}} {
+! Testing last iteration check
+!CHECK: %[[IV_CMP1:.*]] = arith.cmpi eq, %[[INDX_WS]]
+!CHECK-NEXT: scf.if %[[IV_CMP1]] {
+! Testing lastprivate val update
+!CHECK-NEXT: %[[CLONE_LD:.*]] = fir.load %[[CLONE1]] : !fir.ref<i32>
+!CHECK-NEXT: fir.store %[[CLONE_LD]] to %[[ARG1]] : !fir.ref<i32>
+!CHECK-NEXT: }
+!CHECK-NEXT: omp.yield
 
+subroutine firstpriv_lastpriv_int2(arg1)
+        integer :: arg1
+!$OMP PARALLEL 
+!$OMP DO FIRSTPRIVATE(arg1) LASTPRIVATE(arg1)
+do n = 1, 5
+        arg1 = 2
+        print *, arg1
+end do
+!$OMP END DO
+!$OMP END PARALLEL
+print *, arg1
+end subroutine

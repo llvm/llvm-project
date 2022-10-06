@@ -18,6 +18,7 @@
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -404,7 +405,7 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
     case tok::r_brace:
       if (!NestedModules)
         break;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       ParsedAttributes Attrs(AttrFactory);
       MaybeParseCXX11Attributes(Attrs);
@@ -677,6 +678,8 @@ bool Parser::ParseUsingDeclarator(DeclaratorContext Context,
 ///
 ///     using-enum-declaration: [C++20, dcl.enum]
 ///       'using' elaborated-enum-specifier ;
+///       The terminal name of the elaborated-enum-specifier undergoes
+///       ordinary lookup
 ///
 ///     elaborated-enum-specifier:
 ///       'enum' nested-name-specifier[opt] identifier
@@ -696,21 +699,47 @@ Parser::DeclGroupPtrTy Parser::ParseUsingDeclaration(
 
     DiagnoseCXX11AttributeExtension(PrefixAttrs);
 
-    DeclSpec DS(AttrFactory);
-    ParseEnumSpecifier(UELoc, DS, TemplateInfo, AS,
-                       // DSC_trailing has the semantics we desire
-                       DeclSpecContext::DSC_trailing);
-
     if (TemplateInfo.Kind) {
       SourceRange R = TemplateInfo.getSourceRange();
       Diag(UsingLoc, diag::err_templated_using_directive_declaration)
           << 1 /* declaration */ << R << FixItHint::CreateRemoval(R);
-
+      SkipUntil(tok::semi);
+      return nullptr;
+    }
+    CXXScopeSpec SS;
+    if (ParseOptionalCXXScopeSpecifier(SS, /*ParsedType=*/nullptr,
+                                       /*ObectHasErrors=*/false,
+                                       /*EnteringConttext=*/false,
+                                       /*MayBePseudoDestructor=*/nullptr,
+                                       /*IsTypename=*/false,
+                                       /*IdentifierInfo=*/nullptr,
+                                       /*OnlyNamespace=*/false,
+                                       /*InUsingDeclaration=*/true)) {
+      SkipUntil(tok::semi);
       return nullptr;
     }
 
-    Decl *UED = Actions.ActOnUsingEnumDeclaration(getCurScope(), AS, UsingLoc,
-                                                  UELoc, DS);
+    if (Tok.is(tok::code_completion)) {
+      cutOffParsing();
+      Actions.CodeCompleteUsing(getCurScope());
+      return nullptr;
+    }
+
+    if (!Tok.is(tok::identifier)) {
+      Diag(Tok.getLocation(), diag::err_using_enum_expect_identifier)
+          << Tok.is(tok::kw_enum);
+      SkipUntil(tok::semi);
+      return nullptr;
+    }
+    IdentifierInfo *IdentInfo = Tok.getIdentifierInfo();
+    SourceLocation IdentLoc = ConsumeToken();
+    Decl *UED = Actions.ActOnUsingEnumDeclaration(
+        getCurScope(), AS, UsingLoc, UELoc, IdentLoc, *IdentInfo, &SS);
+    if (!UED) {
+      SkipUntil(tok::semi);
+      return nullptr;
+    }
+
     DeclEnd = Tok.getLocation();
     if (ExpectAndConsume(tok::semi, diag::err_expected_after,
                          "using-enum declaration"))
@@ -934,10 +963,11 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
   if (Tok.is(tok::kw__Static_assert) && !getLangOpts().C11)
     Diag(Tok, diag::ext_c11_feature) << Tok.getName();
   if (Tok.is(tok::kw_static_assert)) {
-    if (!getLangOpts().CPlusPlus)
-      Diag(Tok, diag::ext_ms_static_assert)
-          << FixItHint::CreateReplacement(Tok.getLocation(), "_Static_assert");
-    else
+    if (!getLangOpts().CPlusPlus) {
+      if (!getLangOpts().C2x)
+        Diag(Tok, diag::ext_ms_static_assert) << FixItHint::CreateReplacement(
+            Tok.getLocation(), "_Static_assert");
+    } else
       Diag(Tok, diag::warn_cxx98_compat_static_assert);
   }
 
@@ -1021,7 +1051,7 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
     EndLoc = Tok.getAnnotationEndLoc();
     // Unfortunately, we don't know the LParen source location as the annotated
     // token doesn't have it.
-    DS.setTypeofParensRange(SourceRange(SourceLocation(), EndLoc));
+    DS.setTypeArgumentRange(SourceRange(SourceLocation(), EndLoc));
     ConsumeAnnotationToken();
     if (Result.isInvalid()) {
       DS.SetTypeSpecError();
@@ -1085,7 +1115,7 @@ SourceLocation Parser::ParseDecltypeSpecifier(DeclSpec &DS) {
 
     // Match the ')'
     T.consumeClose();
-    DS.setTypeofParensRange(T.getRange());
+    DS.setTypeArgumentRange(T.getRange());
     if (T.getCloseLocation().isInvalid()) {
       DS.SetTypeSpecError();
       // FIXME: this should return the location of the last token
@@ -1142,35 +1172,48 @@ void Parser::AnnotateExistingDecltypeSpecifier(const DeclSpec &DS,
   PP.AnnotateCachedTokens(Tok);
 }
 
-void Parser::ParseUnderlyingTypeSpecifier(DeclSpec &DS) {
-  assert(Tok.is(tok::kw___underlying_type) &&
-         "Not an underlying type specifier");
-
-  SourceLocation StartLoc = ConsumeToken();
-  BalancedDelimiterTracker T(*this, tok::l_paren);
-  if (T.expectAndConsume(diag::err_expected_lparen_after, "__underlying_type",
-                         tok::r_paren)) {
-    return;
+DeclSpec::TST Parser::TypeTransformTokToDeclSpec() {
+  switch (Tok.getKind()) {
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
+  case tok::kw___##Trait:                                                      \
+    return DeclSpec::TST_##Trait;
+#include "clang/Basic/TransformTypeTraits.def"
+  default:
+    llvm_unreachable("passed in an unhandled type transformation built-in");
   }
+}
+
+bool Parser::MaybeParseTypeTransformTypeSpecifier(DeclSpec &DS) {
+  if (!NextToken().is(tok::l_paren)) {
+    Tok.setKind(tok::identifier);
+    return false;
+  }
+  DeclSpec::TST TypeTransformTST = TypeTransformTokToDeclSpec();
+  SourceLocation StartLoc = ConsumeToken();
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  if (T.expectAndConsume(diag::err_expected_lparen_after, Tok.getName(),
+                         tok::r_paren))
+    return true;
 
   TypeResult Result = ParseTypeName();
   if (Result.isInvalid()) {
     SkipUntil(tok::r_paren, StopAtSemi);
-    return;
+    return true;
   }
 
-  // Match the ')'
   T.consumeClose();
   if (T.getCloseLocation().isInvalid())
-    return;
+    return true;
 
   const char *PrevSpec = nullptr;
   unsigned DiagID;
-  if (DS.SetTypeSpecType(DeclSpec::TST_underlyingType, StartLoc, PrevSpec,
-                         DiagID, Result.get(),
+  if (DS.SetTypeSpecType(TypeTransformTST, StartLoc, PrevSpec, DiagID,
+                         Result.get(),
                          Actions.getASTContext().getPrintingPolicy()))
     Diag(StartLoc, DiagID) << PrevSpec;
-  DS.setTypeofParensRange(T.getRange());
+  DS.setTypeArgumentRange(T.getRange());
+  return true;
 }
 
 /// ParseBaseTypeSpecifier - Parse a C++ base-type-specifier which is either a
@@ -1230,7 +1273,8 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
   if (Tok.is(tok::annot_template_id)) {
     TemplateIdAnnotation *TemplateId = takeTemplateIdAnnotation(Tok);
     if (TemplateId->mightBeType()) {
-      AnnotateTemplateIdTokenAsType(SS, /*IsClassName*/ true);
+      AnnotateTemplateIdTokenAsType(SS, ImplicitTypenameContext::No,
+                                    /*IsClassName=*/true);
 
       assert(Tok.is(tok::annot_typename) && "template-id -> type failed");
       TypeResult Type = getTypeAnnotation(Tok);
@@ -1272,7 +1316,8 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
       return true;
     if (Tok.is(tok::annot_template_id) &&
         takeTemplateIdAnnotation(Tok)->mightBeType())
-      AnnotateTemplateIdTokenAsType(SS, /*IsClassName*/ true);
+      AnnotateTemplateIdTokenAsType(SS, ImplicitTypenameContext::No,
+                                    /*IsClassName=*/true);
 
     // If we didn't end up with a typename token, there's nothing more we
     // can do.
@@ -1293,7 +1338,8 @@ TypeResult Parser::ParseBaseTypeSpecifier(SourceLocation &BaseLoc,
       *Id, IdLoc, getCurScope(), &SS, /*isClassName=*/true, false, nullptr,
       /*IsCtorOrDtorName=*/false,
       /*WantNontrivialTypeSourceInfo=*/true,
-      /*IsClassTemplateDeductionContext*/ false, &CorrectedII);
+      /*IsClassTemplateDeductionContext=*/false, ImplicitTypenameContext::No,
+      &CorrectedII);
   if (!Type) {
     Diag(IdLoc, diag::err_expected_class_name);
     return true;
@@ -1525,28 +1571,58 @@ void Parser::ParseClassSpecifier(tok::TokenKind TagTokKind,
   if (TagType == DeclSpec::TST_struct && Tok.isNot(tok::identifier) &&
       !Tok.isAnnotation() && Tok.getIdentifierInfo() &&
       Tok.isOneOf(
-          tok::kw___is_abstract, tok::kw___is_aggregate,
-          tok::kw___is_arithmetic, tok::kw___is_array, tok::kw___is_assignable,
-          tok::kw___is_base_of, tok::kw___is_class, tok::kw___is_complete_type,
-          tok::kw___is_compound, tok::kw___is_const, tok::kw___is_constructible,
-          tok::kw___is_convertible, tok::kw___is_convertible_to,
-          tok::kw___is_destructible, tok::kw___is_empty, tok::kw___is_enum,
-          tok::kw___is_floating_point, tok::kw___is_final,
-          tok::kw___is_function, tok::kw___is_fundamental,
-          tok::kw___is_integral, tok::kw___is_interface_class,
-          tok::kw___is_literal, tok::kw___is_lvalue_expr,
-          tok::kw___is_lvalue_reference, tok::kw___is_member_function_pointer,
-          tok::kw___is_member_object_pointer, tok::kw___is_member_pointer,
-          tok::kw___is_nothrow_assignable, tok::kw___is_nothrow_constructible,
-          tok::kw___is_nothrow_destructible, tok::kw___is_object,
-          tok::kw___is_pod, tok::kw___is_pointer, tok::kw___is_polymorphic,
-          tok::kw___is_reference, tok::kw___is_rvalue_expr,
-          tok::kw___is_rvalue_reference, tok::kw___is_same, tok::kw___is_scalar,
-          tok::kw___is_sealed, tok::kw___is_signed,
-          tok::kw___is_standard_layout, tok::kw___is_trivial,
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) tok::kw___##Trait,
+#include "clang/Basic/TransformTypeTraits.def"
+          tok::kw___is_abstract,
+          tok::kw___is_aggregate,
+          tok::kw___is_arithmetic,
+          tok::kw___is_array,
+          tok::kw___is_assignable,
+          tok::kw___is_base_of,
+          tok::kw___is_class,
+          tok::kw___is_complete_type,
+          tok::kw___is_compound,
+          tok::kw___is_const,
+          tok::kw___is_constructible,
+          tok::kw___is_convertible,
+          tok::kw___is_convertible_to,
+          tok::kw___is_destructible,
+          tok::kw___is_empty,
+          tok::kw___is_enum,
+          tok::kw___is_floating_point,
+          tok::kw___is_final,
+          tok::kw___is_function,
+          tok::kw___is_fundamental,
+          tok::kw___is_integral,
+          tok::kw___is_interface_class,
+          tok::kw___is_literal,
+          tok::kw___is_lvalue_expr,
+          tok::kw___is_lvalue_reference,
+          tok::kw___is_member_function_pointer,
+          tok::kw___is_member_object_pointer,
+          tok::kw___is_member_pointer,
+          tok::kw___is_nothrow_assignable,
+          tok::kw___is_nothrow_constructible,
+          tok::kw___is_nothrow_destructible,
+          tok::kw___is_object,
+          tok::kw___is_pod,
+          tok::kw___is_pointer,
+          tok::kw___is_polymorphic,
+          tok::kw___is_reference,
+          tok::kw___is_rvalue_expr,
+          tok::kw___is_rvalue_reference,
+          tok::kw___is_same,
+          tok::kw___is_scalar,
+          tok::kw___is_sealed,
+          tok::kw___is_signed,
+          tok::kw___is_standard_layout,
+          tok::kw___is_trivial,
           tok::kw___is_trivially_assignable,
-          tok::kw___is_trivially_constructible, tok::kw___is_trivially_copyable,
-          tok::kw___is_union, tok::kw___is_unsigned, tok::kw___is_void,
+          tok::kw___is_trivially_constructible,
+          tok::kw___is_trivially_copyable,
+          tok::kw___is_union,
+          tok::kw___is_unsigned,
+          tok::kw___is_void,
           tok::kw___is_volatile))
     // GNU libstdc++ 4.2 and libc++ use certain intrinsic names as the
     // name of struct templates, but some are keywords in GCC >= 4.3
@@ -3242,7 +3318,7 @@ Parser::DeclGroupPtrTy Parser::ParseCXXClassMemberDeclarationWithPragmas(
     // yet.
     if (getLangOpts().OpenCL && !NextToken().is(tok::colon))
       return ParseCXXClassMemberDeclaration(AS, AccessAttrs);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case tok::kw_public:
   case tok::kw_protected: {
     if (getLangOpts().HLSL)
@@ -3688,7 +3764,8 @@ MemInitResult Parser::ParseMemInitializer(Decl *ConstructorDecl) {
                                            ? takeTemplateIdAnnotation(Tok)
                                            : nullptr;
     if (TemplateId && TemplateId->mightBeType()) {
-      AnnotateTemplateIdTokenAsType(SS, /*IsClassName*/ true);
+      AnnotateTemplateIdTokenAsType(SS, ImplicitTypenameContext::No,
+                                    /*IsClassName=*/true);
       assert(Tok.is(tok::annot_typename) && "template-id -> type failed");
       TemplateTypeTy = getTypeAnnotation(Tok);
       ConsumeAnnotationToken();
@@ -4717,7 +4794,7 @@ void Parser::ParseMicrosoftIfExistsClassDeclaration(
     Diag(Result.KeywordLoc, diag::warn_microsoft_dependent_exists)
         << Result.IsIfExists;
     // Fall through to skip.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case IEB_Skip:
     Braces.skipToEnd();

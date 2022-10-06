@@ -24,6 +24,7 @@ class DebugActionManager;
 class DiagnosticEngine;
 class Dialect;
 class DialectRegistry;
+class DynamicDialect;
 class InFlightDiagnostic;
 class Location;
 class MLIRContextImpl;
@@ -109,6 +110,11 @@ public:
     getOrLoadDialect<Dialect>();
     loadDialect<OtherDialect, MoreDialects...>();
   }
+
+  /// Get (or create) a dynamic dialect for the given name.
+  DynamicDialect *
+  getOrLoadDynamicDialect(StringRef dialectNamespace,
+                          function_ref<void(DynamicDialect *)> ctor);
 
   /// Load all dialects available in the registry in this context.
   void loadAllAvailableDialects();

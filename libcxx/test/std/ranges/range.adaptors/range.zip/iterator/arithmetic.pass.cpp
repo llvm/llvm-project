@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // x += n;
 // x + n;
@@ -16,8 +15,8 @@
 // x - n;
 // x - y;
 // All the arithmetic operators have the constraint `requires all-random-access<Const, Views...>;`,
-// except `operator-(x, y)` which instead has the constraint 
-//    `requires (sized_­sentinel_­for<iterator_t<maybe-const<Const, Views>>,
+// except `operator-(x, y)` which instead has the constraint
+//    `requires (sized_sentinel_for<iterator_t<maybe-const<Const, Views>>,
 //                                  iterator_t<maybe-const<Const, Views>>> && ...);`
 
 #include <ranges>

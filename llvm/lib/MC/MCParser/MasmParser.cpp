@@ -140,9 +140,7 @@ struct StructInfo {
                       unsigned FieldAlignmentSize);
 
   StructInfo() = default;
-
-  StructInfo(StringRef StructName, bool Union, unsigned AlignmentValue)
-      : Name(StructName), IsUnion(Union), Alignment(AlignmentValue) {}
+  StructInfo(StringRef StructName, bool Union, unsigned AlignmentValue);
 };
 
 // FIXME: This should probably use a class hierarchy, raw pointers between the
@@ -170,14 +168,7 @@ struct StructFieldInfo {
   StructInfo Structure;
 
   StructFieldInfo() = default;
-  StructFieldInfo(const std::vector<StructInitializer> &V, StructInfo S) {
-    Initializers = V;
-    Structure = S;
-  }
-  StructFieldInfo(std::vector<StructInitializer> &&V, StructInfo S) {
-    Initializers = V;
-    Structure = S;
-  }
+  StructFieldInfo(std::vector<StructInitializer> V, StructInfo S);
 };
 
 class FieldInitializer {
@@ -189,133 +180,19 @@ public:
     StructFieldInfo StructInfo;
   };
 
-  ~FieldInitializer() {
-    switch (FT) {
-    case FT_INTEGRAL:
-      IntInfo.~IntFieldInfo();
-      break;
-    case FT_REAL:
-      RealInfo.~RealFieldInfo();
-      break;
-    case FT_STRUCT:
-      StructInfo.~StructFieldInfo();
-      break;
-    }
-  }
+  ~FieldInitializer();
+  FieldInitializer(FieldType FT);
 
-  FieldInitializer(FieldType FT) : FT(FT) {
-    switch (FT) {
-    case FT_INTEGRAL:
-      new (&IntInfo) IntFieldInfo();
-      break;
-    case FT_REAL:
-      new (&RealInfo) RealFieldInfo();
-      break;
-    case FT_STRUCT:
-      new (&StructInfo) StructFieldInfo();
-      break;
-    }
-  }
-
-  FieldInitializer(SmallVector<const MCExpr *, 1> &&Values) : FT(FT_INTEGRAL) {
-    new (&IntInfo) IntFieldInfo(Values);
-  }
-
-  FieldInitializer(SmallVector<APInt, 1> &&AsIntValues) : FT(FT_REAL) {
-    new (&RealInfo) RealFieldInfo(AsIntValues);
-  }
-
+  FieldInitializer(SmallVector<const MCExpr *, 1> &&Values);
+  FieldInitializer(SmallVector<APInt, 1> &&AsIntValues);
   FieldInitializer(std::vector<StructInitializer> &&Initializers,
-                   struct StructInfo Structure)
-      : FT(FT_STRUCT) {
-    new (&StructInfo) StructFieldInfo(Initializers, Structure);
-  }
+                   struct StructInfo Structure);
 
-  FieldInitializer(const FieldInitializer &Initializer) : FT(Initializer.FT) {
-    switch (FT) {
-    case FT_INTEGRAL:
-      new (&IntInfo) IntFieldInfo(Initializer.IntInfo);
-      break;
-    case FT_REAL:
-      new (&RealInfo) RealFieldInfo(Initializer.RealInfo);
-      break;
-    case FT_STRUCT:
-      new (&StructInfo) StructFieldInfo(Initializer.StructInfo);
-      break;
-    }
-  }
+  FieldInitializer(const FieldInitializer &Initializer);
+  FieldInitializer(FieldInitializer &&Initializer);
 
-  FieldInitializer(FieldInitializer &&Initializer) : FT(Initializer.FT) {
-    switch (FT) {
-    case FT_INTEGRAL:
-      new (&IntInfo) IntFieldInfo(Initializer.IntInfo);
-      break;
-    case FT_REAL:
-      new (&RealInfo) RealFieldInfo(Initializer.RealInfo);
-      break;
-    case FT_STRUCT:
-      new (&StructInfo) StructFieldInfo(Initializer.StructInfo);
-      break;
-    }
-  }
-
-  FieldInitializer &operator=(const FieldInitializer &Initializer) {
-    if (FT != Initializer.FT) {
-      switch (FT) {
-      case FT_INTEGRAL:
-        IntInfo.~IntFieldInfo();
-        break;
-      case FT_REAL:
-        RealInfo.~RealFieldInfo();
-        break;
-      case FT_STRUCT:
-        StructInfo.~StructFieldInfo();
-        break;
-      }
-    }
-    FT = Initializer.FT;
-    switch (FT) {
-    case FT_INTEGRAL:
-      IntInfo = Initializer.IntInfo;
-      break;
-    case FT_REAL:
-      RealInfo = Initializer.RealInfo;
-      break;
-    case FT_STRUCT:
-      StructInfo = Initializer.StructInfo;
-      break;
-    }
-    return *this;
-  }
-
-  FieldInitializer &operator=(FieldInitializer &&Initializer) {
-    if (FT != Initializer.FT) {
-      switch (FT) {
-      case FT_INTEGRAL:
-        IntInfo.~IntFieldInfo();
-        break;
-      case FT_REAL:
-        RealInfo.~RealFieldInfo();
-        break;
-      case FT_STRUCT:
-        StructInfo.~StructFieldInfo();
-        break;
-      }
-    }
-    FT = Initializer.FT;
-    switch (FT) {
-    case FT_INTEGRAL:
-      IntInfo = Initializer.IntInfo;
-      break;
-    case FT_REAL:
-      RealInfo = Initializer.RealInfo;
-      break;
-    case FT_STRUCT:
-      StructInfo = Initializer.StructInfo;
-      break;
-    }
-    return *this;
-  }
+  FieldInitializer &operator=(const FieldInitializer &Initializer);
+  FieldInitializer &operator=(FieldInitializer &&Initializer);
 };
 
 struct StructInitializer {
@@ -340,6 +217,16 @@ struct FieldInfo {
   FieldInfo(FieldType FT) : Contents(FT) {}
 };
 
+StructFieldInfo::StructFieldInfo(std::vector<StructInitializer> V,
+                                 StructInfo S) {
+  Initializers = std::move(V);
+  Structure = S;
+}
+
+StructInfo::StructInfo(StringRef StructName, bool Union,
+                       unsigned AlignmentValue)
+    : Name(StructName), IsUnion(Union), Alignment(AlignmentValue) {}
+
 FieldInfo &StructInfo::addField(StringRef FieldName, FieldType FT,
                                 unsigned FieldAlignmentSize) {
   if (!FieldName.empty())
@@ -353,6 +240,139 @@ FieldInfo &StructInfo::addField(StringRef FieldName, FieldType FT,
   }
   AlignmentSize = std::max(AlignmentSize, FieldAlignmentSize);
   return Field;
+}
+
+FieldInitializer::~FieldInitializer() {
+  switch (FT) {
+  case FT_INTEGRAL:
+    IntInfo.~IntFieldInfo();
+    break;
+  case FT_REAL:
+    RealInfo.~RealFieldInfo();
+    break;
+  case FT_STRUCT:
+    StructInfo.~StructFieldInfo();
+    break;
+  }
+}
+
+FieldInitializer::FieldInitializer(FieldType FT) : FT(FT) {
+  switch (FT) {
+  case FT_INTEGRAL:
+    new (&IntInfo) IntFieldInfo();
+    break;
+  case FT_REAL:
+    new (&RealInfo) RealFieldInfo();
+    break;
+  case FT_STRUCT:
+    new (&StructInfo) StructFieldInfo();
+    break;
+  }
+}
+
+FieldInitializer::FieldInitializer(SmallVector<const MCExpr *, 1> &&Values)
+    : FT(FT_INTEGRAL) {
+  new (&IntInfo) IntFieldInfo(Values);
+}
+
+FieldInitializer::FieldInitializer(SmallVector<APInt, 1> &&AsIntValues)
+    : FT(FT_REAL) {
+  new (&RealInfo) RealFieldInfo(AsIntValues);
+}
+
+FieldInitializer::FieldInitializer(
+    std::vector<StructInitializer> &&Initializers, struct StructInfo Structure)
+    : FT(FT_STRUCT) {
+  new (&StructInfo) StructFieldInfo(std::move(Initializers), Structure);
+}
+
+FieldInitializer::FieldInitializer(const FieldInitializer &Initializer)
+    : FT(Initializer.FT) {
+  switch (FT) {
+  case FT_INTEGRAL:
+    new (&IntInfo) IntFieldInfo(Initializer.IntInfo);
+    break;
+  case FT_REAL:
+    new (&RealInfo) RealFieldInfo(Initializer.RealInfo);
+    break;
+  case FT_STRUCT:
+    new (&StructInfo) StructFieldInfo(Initializer.StructInfo);
+    break;
+  }
+}
+
+FieldInitializer::FieldInitializer(FieldInitializer &&Initializer)
+    : FT(Initializer.FT) {
+  switch (FT) {
+  case FT_INTEGRAL:
+    new (&IntInfo) IntFieldInfo(Initializer.IntInfo);
+    break;
+  case FT_REAL:
+    new (&RealInfo) RealFieldInfo(Initializer.RealInfo);
+    break;
+  case FT_STRUCT:
+    new (&StructInfo) StructFieldInfo(Initializer.StructInfo);
+    break;
+  }
+}
+
+FieldInitializer &
+FieldInitializer::operator=(const FieldInitializer &Initializer) {
+  if (FT != Initializer.FT) {
+    switch (FT) {
+    case FT_INTEGRAL:
+      IntInfo.~IntFieldInfo();
+      break;
+    case FT_REAL:
+      RealInfo.~RealFieldInfo();
+      break;
+    case FT_STRUCT:
+      StructInfo.~StructFieldInfo();
+      break;
+    }
+  }
+  FT = Initializer.FT;
+  switch (FT) {
+  case FT_INTEGRAL:
+    IntInfo = Initializer.IntInfo;
+    break;
+  case FT_REAL:
+    RealInfo = Initializer.RealInfo;
+    break;
+  case FT_STRUCT:
+    StructInfo = Initializer.StructInfo;
+    break;
+  }
+  return *this;
+}
+
+FieldInitializer &FieldInitializer::operator=(FieldInitializer &&Initializer) {
+  if (FT != Initializer.FT) {
+    switch (FT) {
+    case FT_INTEGRAL:
+      IntInfo.~IntFieldInfo();
+      break;
+    case FT_REAL:
+      RealInfo.~RealFieldInfo();
+      break;
+    case FT_STRUCT:
+      StructInfo.~StructFieldInfo();
+      break;
+    }
+  }
+  FT = Initializer.FT;
+  switch (FT) {
+  case FT_INTEGRAL:
+    IntInfo = Initializer.IntInfo;
+    break;
+  case FT_REAL:
+    RealInfo = Initializer.RealInfo;
+    break;
+  case FT_STRUCT:
+    StructInfo = Initializer.StructInfo;
+    break;
+  }
+  return *this;
 }
 
 /// The concrete assembly parser instance.
@@ -2258,7 +2278,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       Lex();
     }
 
-    getTargetParser().doBeforeLabelEmit(Sym);
+    getTargetParser().doBeforeLabelEmit(Sym, IDLoc);
 
     // Emit the label.
     if (!getTargetParser().isParsingMSInlineAsm())
@@ -2576,7 +2596,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       // Size directive; part of an instruction.
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DK_SBYTE:
   case DK_DB:
     Lex();
@@ -2587,7 +2607,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       // Size directive; part of an instruction.
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DK_SWORD:
   case DK_DW:
     Lex();
@@ -2598,7 +2618,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       // Size directive; part of an instruction.
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DK_SDWORD:
   case DK_DD:
     Lex();
@@ -2609,7 +2629,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       // Size directive; part of an instruction.
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DK_DF:
     Lex();
     return parseDirectiveNamedValue(nextVal, 6, IDVal, IDLoc);
@@ -2619,7 +2639,7 @@ bool MasmParser::parseStatement(ParseStatementInfo &Info,
       // Size directive; part of an instruction.
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DK_SQWORD:
   case DK_DQ:
     Lex();
@@ -3740,7 +3760,7 @@ bool MasmParser::emitIntegralValues(unsigned Size, unsigned *Count) {
   if (checkForValidSection() || parseScalarInstList(Size, Values))
     return true;
 
-  for (auto Value : Values) {
+  for (const auto *Value : Values) {
     emitIntValue(Value, Size);
   }
   if (Count)

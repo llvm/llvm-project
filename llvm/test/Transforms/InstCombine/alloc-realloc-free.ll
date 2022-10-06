@@ -5,15 +5,15 @@ define dso_local void @test() local_unnamed_addr #0 {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    ret void
 ;
-  %1 = tail call noalias align 16 dereferenceable_or_null(4) i8* @malloc(i64 4) #4
-  %2 = tail call align 16 dereferenceable_or_null(6) i8* @realloc(i8* %1, i64 6) #4
-  tail call void @free(i8* %2) #4
+  %1 = tail call noalias align 16 dereferenceable_or_null(4) ptr @malloc(i64 4) #4
+  %2 = tail call align 16 dereferenceable_or_null(6) ptr @realloc(ptr %1, i64 6) #4
+  tail call void @free(ptr %2) #4
   ret void
 }
 
-declare dso_local noalias noundef i8* @malloc(i64 noundef) local_unnamed_addr #1
-declare dso_local noalias noundef i8* @realloc(i8* nocapture allocptr, i64 noundef) local_unnamed_addr #2
-declare dso_local void @free(i8* nocapture allocptr noundef) local_unnamed_addr #2
+declare dso_local noalias noundef ptr @malloc(i64 noundef) local_unnamed_addr #1
+declare dso_local noalias noundef ptr @realloc(ptr nocapture allocptr, i64 noundef) local_unnamed_addr #2
+declare dso_local void @free(ptr nocapture allocptr noundef) local_unnamed_addr #3
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3
 
 attributes #0 = { mustprogress nounwind uwtable willreturn }

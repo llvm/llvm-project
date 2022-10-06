@@ -32,7 +32,6 @@ add_llvm_library(omptarget
 
   LINK_LIBS 
   PRIVATE
-  ${CMAKE_DL_LIBS}
   "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/exports"
   NO_INSTALL_RPATH
 )

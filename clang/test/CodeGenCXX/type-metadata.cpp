@@ -1,17 +1,17 @@
 // Tests for the cfi-vcall feature:
-// RUN: %clang_cc1 -no-opaque-pointers -flto -flto-unit -triple x86_64-unknown-linux -fvisibility hidden -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT --check-prefix=ITANIUM --check-prefix=TT-ITANIUM-HIDDEN --check-prefix=NDIAG %s
-// RUN: %clang_cc1 -no-opaque-pointers -flto -flto-unit -triple x86_64-unknown-linux -fvisibility hidden -fsanitize=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT --check-prefix=ITANIUM --check-prefix=TT-ITANIUM-HIDDEN --check-prefix=ITANIUM-DIAG --check-prefix=DIAG --check-prefix=DIAG-ABORT %s
-// RUN: %clang_cc1 -no-opaque-pointers -flto -flto-unit -triple x86_64-unknown-linux -fvisibility hidden -fsanitize=cfi-vcall -fsanitize-recover=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT --check-prefix=ITANIUM --check-prefix=TT-ITANIUM-HIDDEN --check-prefix=ITANIUM-DIAG --check-prefix=DIAG --check-prefix=DIAG-RECOVER %s
+// RUN: %clang_cc1 -no-opaque-pointers -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT --check-prefix=ITANIUM --check-prefix=TT-ITANIUM-HIDDEN --check-prefix=NDIAG %s
+// RUN: %clang_cc1 -no-opaque-pointers -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT --check-prefix=ITANIUM --check-prefix=TT-ITANIUM-HIDDEN --check-prefix=ITANIUM-DIAG --check-prefix=DIAG --check-prefix=DIAG-ABORT %s
+// RUN: %clang_cc1 -no-opaque-pointers -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -fsanitize-recover=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT --check-prefix=ITANIUM --check-prefix=TT-ITANIUM-HIDDEN --check-prefix=ITANIUM-DIAG --check-prefix=DIAG --check-prefix=DIAG-RECOVER %s
 // RUN: %clang_cc1 -no-opaque-pointers -flto -flto-unit -triple x86_64-pc-windows-msvc -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-NVT --check-prefix=MS --check-prefix=TT-MS --check-prefix=NDIAG %s
 
 // Tests for the whole-program-vtables feature:
-// RUN: %clang_cc1 -no-opaque-pointers -flto -flto-unit -triple x86_64-unknown-linux -fvisibility hidden -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=ITANIUM --check-prefix=TT-ITANIUM-HIDDEN %s
+// RUN: %clang_cc1 -no-opaque-pointers -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=ITANIUM --check-prefix=TT-ITANIUM-HIDDEN %s
 // RUN: %clang_cc1 -no-opaque-pointers -flto -flto-unit -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=ITANIUM-DEFAULTVIS --check-prefix=TT-ITANIUM-DEFAULT %s
 // RUN: %clang_cc1 -no-opaque-pointers -O2 -flto -flto-unit -triple x86_64-unknown-linux -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=ITANIUM-OPT %s
 // RUN: %clang_cc1 -no-opaque-pointers -flto -flto-unit -triple x86_64-pc-windows-msvc -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=VTABLE-OPT --check-prefix=MS --check-prefix=TT-MS %s
 
 // Tests for cfi + whole-program-vtables:
-// RUN: %clang_cc1 -no-opaque-pointers -flto -flto-unit -triple x86_64-unknown-linux -fvisibility hidden -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-VT --check-prefix=ITANIUM --check-prefix=TC-ITANIUM %s
+// RUN: %clang_cc1 -no-opaque-pointers -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-VT --check-prefix=ITANIUM --check-prefix=TC-ITANIUM %s
 // RUN: %clang_cc1 -no-opaque-pointers -flto -flto-unit -triple x86_64-pc-windows-msvc -fsanitize=cfi-vcall -fsanitize-trap=cfi-vcall -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=CFI --check-prefix=CFI-VT --check-prefix=MS --check-prefix=TC-MS %s
 
 // ITANIUM: @_ZTV1A = {{[^!]*}}, !type [[A16:![0-9]+]]

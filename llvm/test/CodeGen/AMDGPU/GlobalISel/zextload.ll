@@ -41,6 +41,15 @@ define i32 @zextload_global_i1_to_i32(i1 addrspace(1)* %ptr) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: zextload_global_i1_to_i32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_u8 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_and_b32_e32 v0, 1, v0
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %load = load i1, i1 addrspace(1)* %ptr
   %ext = zext i1 %load to i32
   ret i32 %ext
@@ -78,6 +87,14 @@ define i32 @zextload_global_i8_to_i32(i8 addrspace(1)* %ptr) {
 ; GFX10-NEXT:    global_load_ubyte v0, v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: zextload_global_i8_to_i32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_u8 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %load = load i8, i8 addrspace(1)* %ptr
   %ext = zext i8 %load to i32
   ret i32 %ext
@@ -115,6 +132,14 @@ define i32 @zextload_global_i16_to_i32(i16 addrspace(1)* %ptr) {
 ; GFX10-NEXT:    global_load_ushort v0, v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: zextload_global_i16_to_i32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    global_load_u16 v0, v[0:1], off
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %load = load i16, i16 addrspace(1)* %ptr
   %ext = zext i16 %load to i32
   ret i32 %ext

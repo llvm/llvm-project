@@ -1,13 +1,13 @@
 // RUN: mlir-opt %s --sparse-compiler | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 //
 // Do the same run, but now with SIMDization as well. This should not change the outcome.
 //
-// RUN: mlir-opt %s --sparse-compiler="vectorization-strategy=2 vl=8" | \
+// RUN: mlir-opt %s -sparse-compiler="vl=8" | \
 // RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 #SM = #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>
@@ -50,8 +50,8 @@ module {
   // (with dense result).
   //
   func.func @sampled_dd(%args: tensor<8x8xf64, #SM>,
-                   %arga: tensor<8x8xf64>,
-                   %argb: tensor<8x8xf64>) -> tensor<8x8xf64> {
+                        %arga: tensor<8x8xf64>,
+                        %argb: tensor<8x8xf64>) -> tensor<8x8xf64> {
     %1 = arith.constant dense<0.0> : tensor<8x8xf64>
     %2 = linalg.generic #trait_sampled_dense_dense
       ins(%args, %arga, %argb: tensor<8x8xf64, #SM>,
@@ -71,8 +71,8 @@ module {
   // (with dense result).
   //
   func.func @sampled_dd_unfused(%args: tensor<8x8xf64, #SM>,
-                           %arga: tensor<8x8xf64>,
-                           %argb: tensor<8x8xf64>) -> tensor<8x8xf64> {
+                                %arga: tensor<8x8xf64>,
+                                %argb: tensor<8x8xf64>) -> tensor<8x8xf64> {
     // Perform dense-dense matrix matrix multiplication.
     %1 = arith.constant dense<0.0> : tensor<8x8xf64>
     %2 = linalg.generic #trait_matmul
@@ -99,8 +99,8 @@ module {
   // (with sparse result).
   //
   func.func @sparse_sampled_dd(%args: tensor<8x8xf64, #SM>,
-                          %arga: tensor<8x8xf64>,
-                          %argb: tensor<8x8xf64>) -> tensor<8x8xf64, #SM> {
+                               %arga: tensor<8x8xf64>,
+                               %argb: tensor<8x8xf64>) -> tensor<8x8xf64, #SM> {
     %1 = bufferization.alloc_tensor() : tensor<8x8xf64, #SM>
     %2 = linalg.generic #trait_sampled_dense_dense
       ins(%args, %arga, %argb: tensor<8x8xf64, #SM>,

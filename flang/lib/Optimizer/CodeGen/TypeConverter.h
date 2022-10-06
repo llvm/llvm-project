@@ -64,6 +64,10 @@ public:
       // procedure pointer feature is implemented.
       return llvm::None;
     });
+    addConversion([&](fir::ClassType classTy) {
+      TODO_NOLOC("fir.class type conversion");
+      return llvm::None;
+    });
     addConversion(
         [&](fir::CharacterType charTy) { return convertCharType(charTy); });
     addConversion(
@@ -316,9 +320,9 @@ public:
     // degenerate the array and do not want a the type to become `T**` but
     // merely `T*`.
     if (auto seqTy = eleTy.dyn_cast<fir::SequenceType>()) {
-      if (!seqTy.hasConstantShape() ||
+      if (seqTy.hasDynamicExtents() ||
           characterWithDynamicLen(seqTy.getEleTy())) {
-        if (seqTy.hasConstantInterior())
+        if (seqTy.getConstantRows() > 0)
           return convertType(seqTy);
         eleTy = seqTy.getEleTy();
       }
@@ -356,7 +360,7 @@ public:
         if (--i == 0)
           break;
       }
-      if (seq.hasConstantShape())
+      if (!seq.hasDynamicExtents())
         return baseTy;
     }
     return mlir::LLVM::LLVMPointerType::get(baseTy);

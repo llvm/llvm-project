@@ -6,7 +6,7 @@ entry:
   br i1 undef, label %split1, label %split2
 
 split1:
-  store i16 undef, i16* undef, align 2
+  store i16 undef, ptr undef, align 2
  br label %merge
 split2:
  br label %merge
@@ -17,7 +17,7 @@ merge:
 ; because it is reverse reachable, so the CFG still has it as a
 ; predecessor of the block
 ; CHECK:  3 = MemoryPhi({split1,1},{split2,liveOnEntry},{forwardunreachable,liveOnEntry})
-  store i16 undef, i16* undef, align 2
+  store i16 undef, ptr undef, align 2
   ret void
 }
 

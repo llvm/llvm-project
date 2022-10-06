@@ -130,6 +130,17 @@ static void EmitUnwindCode(MCStreamer &streamer, const MCSymbol *begin,
 
 static void EmitSymbolRefWithOfs(MCStreamer &streamer,
                                  const MCSymbol *Base,
+                                 int64_t Offset) {
+  MCContext &Context = streamer.getContext();
+  const MCConstantExpr *OffExpr = MCConstantExpr::create(Offset, Context);
+  const MCSymbolRefExpr *BaseRefRel = MCSymbolRefExpr::create(Base,
+                                              MCSymbolRefExpr::VK_COFF_IMGREL32,
+                                              Context);
+  streamer.emitValue(MCBinaryExpr::createAdd(BaseRefRel, OffExpr, Context), 4);
+}
+
+static void EmitSymbolRefWithOfs(MCStreamer &streamer,
+                                 const MCSymbol *Base,
                                  const MCSymbol *Other) {
   MCContext &Context = streamer.getContext();
   const MCSymbolRefExpr *BaseRef = MCSymbolRefExpr::create(Base, Context);
@@ -642,26 +653,29 @@ getARM64OffsetInProlog(const std::vector<WinEH::Instruction> &Prolog,
       return -1;
   }
 
-  // If the epilog was a subset of the prolog, find its offset.
   if (Epilog.size() == Prolog.size())
     return 0;
+
+  // If the epilog was a subset of the prolog, find its offset.
   return ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction>(
       &Prolog[Epilog.size()], Prolog.size() - Epilog.size()));
 }
 
 static int checkARM64PackedEpilog(MCStreamer &streamer, WinEH::FrameInfo *info,
+                                  WinEH::FrameInfo::Segment *Seg,
                                   int PrologCodeBytes) {
   // Can only pack if there's one single epilog
-  if (info->EpilogMap.size() != 1)
+  if (Seg->Epilogs.size() != 1)
     return -1;
 
+  MCSymbol *Sym = Seg->Epilogs.begin()->first;
   const std::vector<WinEH::Instruction> &Epilog =
-      info->EpilogMap.begin()->second.Instructions;
+      info->EpilogMap[Sym].Instructions;
 
   // Check that the epilog actually is at the very end of the function,
   // otherwise it can't be packed.
-  uint32_t DistanceFromEnd = (uint32_t)GetAbsDifference(
-      streamer, info->FuncletOrFuncEnd, info->EpilogMap.begin()->first);
+  uint32_t DistanceFromEnd =
+      (uint32_t)(Seg->Offset + Seg->Length - Seg->Epilogs.begin()->second);
   if (DistanceFromEnd / 4 != Epilog.size())
     return -1;
 
@@ -686,7 +700,7 @@ static int checkARM64PackedEpilog(MCStreamer &streamer, WinEH::FrameInfo *info,
 
   // As we choose to express the epilog as part of the prolog, remove the
   // epilog from the map, so we don't try to emit its opcodes.
-  info->EpilogMap.clear();
+  info->EpilogMap.erase(Sym);
   return Offset;
 }
 
@@ -923,6 +937,270 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
   return true;
 }
 
+static void ARM64ProcessEpilogs(WinEH::FrameInfo *info,
+                                WinEH::FrameInfo::Segment *Seg,
+                                uint32_t &TotalCodeBytes,
+                                MapVector<MCSymbol *, uint32_t> &EpilogInfo) {
+
+  std::vector<MCSymbol *> EpilogStarts;
+  for (auto &I : Seg->Epilogs)
+    EpilogStarts.push_back(I.first);
+
+  // Epilogs processed so far.
+  std::vector<MCSymbol *> AddedEpilogs;
+  for (auto *S : EpilogStarts) {
+    MCSymbol *EpilogStart = S;
+    auto &EpilogInstrs = info->EpilogMap[S].Instructions;
+    uint32_t CodeBytes = ARM64CountOfUnwindCodes(EpilogInstrs);
+
+    MCSymbol* MatchingEpilog =
+      FindMatchingEpilog(EpilogInstrs, AddedEpilogs, info);
+    int PrologOffset;
+    if (MatchingEpilog) {
+      assert(EpilogInfo.find(MatchingEpilog) != EpilogInfo.end() &&
+             "Duplicate epilog not found");
+      EpilogInfo[EpilogStart] = EpilogInfo.lookup(MatchingEpilog);
+      // Clear the unwind codes in the EpilogMap, so that they don't get output
+      // in ARM64EmitUnwindInfoForSegment().
+      EpilogInstrs.clear();
+    } else if ((PrologOffset = getARM64OffsetInProlog(info->Instructions,
+                                                      EpilogInstrs)) >= 0) {
+      EpilogInfo[EpilogStart] = PrologOffset;
+      // If the segment doesn't have a prolog, an end_c will be emitted before
+      // prolog opcodes. So epilog start index in opcodes array is moved by 1.
+      if (!Seg->HasProlog)
+        EpilogInfo[EpilogStart] += 1;
+      // Clear the unwind codes in the EpilogMap, so that they don't get output
+      // in ARM64EmitUnwindInfoForSegment().
+      EpilogInstrs.clear();
+    } else {
+      EpilogInfo[EpilogStart] = TotalCodeBytes;
+      TotalCodeBytes += CodeBytes;
+      AddedEpilogs.push_back(EpilogStart);
+    }
+  }
+}
+
+static void ARM64FindSegmentsInFunction(MCStreamer &streamer,
+                                        WinEH::FrameInfo *info,
+                                        int64_t RawFuncLength) {
+  struct EpilogStartEnd {
+    MCSymbol *Start;
+    int64_t Offset;
+    int64_t End;
+  };
+  // Record Start and End of each epilog.
+  SmallVector<struct EpilogStartEnd, 4> Epilogs;
+  for (auto &I : info->EpilogMap) {
+    MCSymbol *Start = I.first;
+    auto &Instrs = I.second.Instructions;
+    int64_t Offset = GetAbsDifference(streamer, Start, info->Begin);
+    assert((Epilogs.size() == 0 || Offset >= Epilogs.back().End) &&
+           "Epilogs should be monotonically ordered");
+    // Exclue the end opcode from Instrs.size() when calculating the end of the
+    // epilog.
+    Epilogs.push_back({Start, Offset, Offset + (int64_t)(Instrs.size() - 1) * 4});
+  }
+
+  unsigned E = 0;
+  int64_t SegLimit = 0xFFFFC;
+  int64_t SegOffset = 0;
+
+  if (RawFuncLength > SegLimit) {
+
+    int64_t RemainingLength = RawFuncLength;
+
+    while (RemainingLength > SegLimit) {
+      // Try divide the function into segments, requirements:
+      // 1. Segment length <= 0xFFFFC;
+      // 2. Each Prologue or Epilogue must be fully within a segment.
+      int64_t SegLength = SegLimit;
+      int64_t SegEnd = SegOffset + SegLength;
+      // Keep record on symbols and offsets of epilogs in this segment.
+      MapVector<MCSymbol *, int64_t> EpilogsInSegment;
+
+      while (E < Epilogs.size() && Epilogs[E].End < SegEnd) {
+        // Epilogs within current segment.
+        EpilogsInSegment[Epilogs[E].Start] = Epilogs[E].Offset;
+        ++E;
+      }
+
+      // At this point, we have:
+      // 1. Put all epilogs in segments already. No action needed here; or
+      // 2. Found an epilog that will cross segments boundry. We need to
+      //    move back current segment's end boundry, so the epilog is entirely
+      //    in the next segment; or
+      // 3. Left at least one epilog that is entirely after this segment.
+      //    It'll be handled by the next iteration, or the last segment.
+      if (E < Epilogs.size() && Epilogs[E].Offset <= SegEnd)
+        // Move back current Segment's end boundry.
+        SegLength = Epilogs[E].Offset - SegOffset;
+
+      auto Seg = WinEH::FrameInfo::Segment(
+          SegOffset, SegLength, /* HasProlog */!SegOffset);
+      Seg.Epilogs = std::move(EpilogsInSegment);
+      info->Segments.push_back(Seg);
+
+      SegOffset += SegLength;
+      RemainingLength -= SegLength;
+    }
+  }
+
+  // Add the last segment when RawFuncLength > 0xFFFFC,
+  // or the only segment otherwise.
+  auto LastSeg =
+      WinEH::FrameInfo::Segment(SegOffset, RawFuncLength - SegOffset,
+                                /* HasProlog */!SegOffset);
+  for (; E < Epilogs.size(); ++E)
+    LastSeg.Epilogs[Epilogs[E].Start] = Epilogs[E].Offset;
+  info->Segments.push_back(LastSeg);
+}
+
+static void ARM64EmitUnwindInfoForSegment(MCStreamer &streamer,
+                                          WinEH::FrameInfo *info,
+                                          WinEH::FrameInfo::Segment &Seg,
+                                          bool TryPacked = true) {
+  MCContext &context = streamer.getContext();
+  MCSymbol *Label = context.createTempSymbol();
+
+  streamer.emitValueToAlignment(4);
+  streamer.emitLabel(Label);
+  Seg.Symbol = Label;
+  // Use the 1st segemnt's label as function's.
+  if (Seg.Offset == 0)
+    info->Symbol = Label;
+
+  bool HasProlog = Seg.HasProlog;
+  bool HasEpilogs = (Seg.Epilogs.size() != 0);
+
+  uint32_t SegLength = (uint32_t)Seg.Length / 4;
+  uint32_t PrologCodeBytes = info->PrologCodeBytes;
+
+  int PackedEpilogOffset = HasEpilogs ?
+      checkARM64PackedEpilog(streamer, info, &Seg, PrologCodeBytes) : -1;
+
+  // TODO:
+  // 1. Enable packed unwind info (.pdata only) for multi-segment functions.
+  // 2. Emit packed unwind info (.pdata only) for segments that have neithor
+  //    prolog nor epilog.
+  if (info->Segments.size() == 1 && PackedEpilogOffset >= 0 &&
+      uint32_t(PackedEpilogOffset) < PrologCodeBytes &&
+      !info->HandlesExceptions && SegLength <= 0x7ff && TryPacked) {
+    // Matching prolog/epilog and no exception handlers; check if the
+    // prolog matches the patterns that can be described by the packed
+    // format.
+
+    // info->Symbol was already set even if we didn't actually write any
+    // unwind info there. Keep using that as indicator that this unwind
+    // info has been generated already.
+    if (tryARM64PackedUnwind(info, SegLength, PackedEpilogOffset))
+      return;
+  }
+
+  // If the prolog is not in this segment, we need to emit an end_c, which takes
+  // 1 byte, before prolog unwind ops.
+  if (!HasProlog) {
+    PrologCodeBytes += 1;
+    if (PackedEpilogOffset >= 0)
+      PackedEpilogOffset += 1;
+    // If a segment has neither prolog nor epilog, "With full .xdata record,
+    // Epilog Count = 1. Epilog Start Index points to end_c."
+    // https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling#function-fragments
+    // TODO: We can remove this if testing shows zero epilog scope is ok with
+    //       MS unwinder.
+    if (!HasEpilogs)
+      // Pack the fake epilog into phantom prolog.
+      PackedEpilogOffset = 0;
+  }
+
+  uint32_t TotalCodeBytes = PrologCodeBytes;
+
+  // Process epilogs.
+  MapVector<MCSymbol *, uint32_t> EpilogInfo;
+  ARM64ProcessEpilogs(info, &Seg, TotalCodeBytes, EpilogInfo);
+
+  // Code Words, Epilog count, E, X, Vers, Function Length
+  uint32_t row1 = 0x0;
+  uint32_t CodeWords = TotalCodeBytes / 4;
+  uint32_t CodeWordsMod = TotalCodeBytes % 4;
+  if (CodeWordsMod)
+    CodeWords++;
+  uint32_t EpilogCount =
+      PackedEpilogOffset >= 0 ? PackedEpilogOffset : Seg.Epilogs.size();
+  bool ExtensionWord = EpilogCount > 31 || TotalCodeBytes > 124;
+  if (!ExtensionWord) {
+    row1 |= (EpilogCount & 0x1F) << 22;
+    row1 |= (CodeWords & 0x1F) << 27;
+  }
+  if (info->HandlesExceptions) // X
+    row1 |= 1 << 20;
+  if (PackedEpilogOffset >= 0) // E
+    row1 |= 1 << 21;
+  row1 |= SegLength & 0x3FFFF;
+  streamer.emitInt32(row1);
+
+  // Extended Code Words, Extended Epilog Count
+  if (ExtensionWord) {
+    // FIXME: We should be able to split unwind info into multiple sections.
+    if (CodeWords > 0xFF || EpilogCount > 0xFFFF)
+      report_fatal_error(
+          "SEH unwind data splitting is only implemnted for large functions, "
+          "cases of too many code words or too many epilogs will be done later"
+      );
+    uint32_t row2 = 0x0;
+    row2 |= (CodeWords & 0xFF) << 16;
+    row2 |= (EpilogCount & 0xFFFF);
+    streamer.emitInt32(row2);
+  }
+
+  if (PackedEpilogOffset < 0) {
+    // Epilog Start Index, Epilog Start Offset
+    for (auto &I : EpilogInfo) {
+      MCSymbol *EpilogStart = I.first;
+      uint32_t EpilogIndex = I.second;
+      // Epilog offset within the Segment.
+      uint32_t EpilogOffset = (uint32_t)(Seg.Epilogs[EpilogStart] - Seg.Offset);
+      if (EpilogOffset)
+        EpilogOffset /= 4;
+      uint32_t row3 = EpilogOffset;
+      row3 |= (EpilogIndex & 0x3FF) << 22;
+      streamer.emitInt32(row3);
+    }
+  }
+
+  // Note that even for segments that have no prolog, we still need to emit
+  // prolog unwinding opcodes so that the unwinder knows how to unwind from
+  // such a segment.
+  // The end_c opcode at the start indicates to the unwinder that the actual
+  // prolog is outside of the current segment, and the unwinder shouldn't try
+  // to check for unwinding from a partial prolog.
+  if (!HasProlog)
+    // Emit an end_c.
+    streamer.emitInt8((uint8_t)0xE5);
+
+  // Emit prolog unwind instructions (in reverse order).
+  for (auto Inst : llvm::reverse(info->Instructions))
+    ARM64EmitUnwindCode(streamer, Inst);
+
+  // Emit epilog unwind instructions
+  for (auto &I : Seg.Epilogs) {
+    auto &EpilogInstrs = info->EpilogMap[I.first].Instructions;
+    for (const WinEH::Instruction &inst : EpilogInstrs)
+      ARM64EmitUnwindCode(streamer, inst);
+  }
+
+  int32_t BytesMod = CodeWords * 4 - TotalCodeBytes;
+  assert(BytesMod >= 0);
+  for (int i = 0; i < BytesMod; i++)
+    streamer.emitInt8(0xE3);
+
+  if (info->HandlesExceptions)
+    streamer.emitValue(
+        MCSymbolRefExpr::create(info->ExceptionHandler,
+                                MCSymbolRefExpr::VK_COFF_IMGREL32, context),
+        4);
+}
+
 // Populate the .xdata section.  The format of .xdata on ARM64 is documented at
 // https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
 static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
@@ -955,13 +1233,6 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
   simplifyARM64Opcodes(info->Instructions, false);
   for (auto &I : info->EpilogMap)
     simplifyARM64Opcodes(I.second.Instructions, true);
-
-  MCContext &context = streamer.getContext();
-  MCSymbol *Label = context.createTempSymbol();
-
-  streamer.emitValueToAlignment(4);
-  streamer.emitLabel(Label);
-  info->Symbol = Label;
 
   int64_t RawFuncLength;
   if (!info->FuncletOrFuncEnd) {
@@ -996,134 +1267,15 @@ static void ARM64EmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
     RawFuncLength = GetAbsDifference(streamer, info->FuncletOrFuncEnd,
                                      info->Begin);
   }
-  if (RawFuncLength > 0xFFFFF)
-    report_fatal_error("SEH unwind data splitting not yet implemented");
-  uint32_t FuncLength = (uint32_t)RawFuncLength / 4;
-  uint32_t PrologCodeBytes = ARM64CountOfUnwindCodes(info->Instructions);
-  uint32_t TotalCodeBytes = PrologCodeBytes;
 
-  int PackedEpilogOffset =
-      checkARM64PackedEpilog(streamer, info, PrologCodeBytes);
+  ARM64FindSegmentsInFunction(streamer, info, RawFuncLength);
 
-  if (PackedEpilogOffset >= 0 &&
-      uint32_t(PackedEpilogOffset) < PrologCodeBytes &&
-      !info->HandlesExceptions && FuncLength <= 0x7ff && TryPacked) {
-    // Matching prolog/epilog and no exception handlers; check if the
-    // prolog matches the patterns that can be described by the packed
-    // format.
+  info->PrologCodeBytes = ARM64CountOfUnwindCodes(info->Instructions);
+  for (auto &S : info->Segments)
+    ARM64EmitUnwindInfoForSegment(streamer, info, S, TryPacked);
 
-    // info->Symbol was already set even if we didn't actually write any
-    // unwind info there. Keep using that as indicator that this unwind
-    // info has been generated already.
-
-    if (tryARM64PackedUnwind(info, FuncLength, PackedEpilogOffset))
-      return;
-  }
-
-  // Process epilogs.
-  MapVector<MCSymbol *, uint32_t> EpilogInfo;
-  // Epilogs processed so far.
-  std::vector<MCSymbol *> AddedEpilogs;
-
-  for (auto &I : info->EpilogMap) {
-    MCSymbol *EpilogStart = I.first;
-    auto &EpilogInstrs = I.second.Instructions;
-    uint32_t CodeBytes = ARM64CountOfUnwindCodes(EpilogInstrs);
-
-    MCSymbol* MatchingEpilog =
-      FindMatchingEpilog(EpilogInstrs, AddedEpilogs, info);
-    int PrologOffset;
-    if (MatchingEpilog) {
-      assert(EpilogInfo.find(MatchingEpilog) != EpilogInfo.end() &&
-             "Duplicate epilog not found");
-      EpilogInfo[EpilogStart] = EpilogInfo.lookup(MatchingEpilog);
-      // Clear the unwind codes in the EpilogMap, so that they don't get output
-      // in the logic below.
-      EpilogInstrs.clear();
-    } else if ((PrologOffset = getARM64OffsetInProlog(info->Instructions,
-                                                      EpilogInstrs)) >= 0) {
-      EpilogInfo[EpilogStart] = PrologOffset;
-      // Clear the unwind codes in the EpilogMap, so that they don't get output
-      // in the logic below.
-      EpilogInstrs.clear();
-    } else {
-      EpilogInfo[EpilogStart] = TotalCodeBytes;
-      TotalCodeBytes += CodeBytes;
-      AddedEpilogs.push_back(EpilogStart);
-    }
-  }
-
-  // Code Words, Epilog count, E, X, Vers, Function Length
-  uint32_t row1 = 0x0;
-  uint32_t CodeWords = TotalCodeBytes / 4;
-  uint32_t CodeWordsMod = TotalCodeBytes % 4;
-  if (CodeWordsMod)
-    CodeWords++;
-  uint32_t EpilogCount =
-      PackedEpilogOffset >= 0 ? PackedEpilogOffset : info->EpilogMap.size();
-  bool ExtensionWord = EpilogCount > 31 || TotalCodeBytes > 124;
-  if (!ExtensionWord) {
-    row1 |= (EpilogCount & 0x1F) << 22;
-    row1 |= (CodeWords & 0x1F) << 27;
-  }
-  if (info->HandlesExceptions) // X
-    row1 |= 1 << 20;
-  if (PackedEpilogOffset >= 0) // E
-    row1 |= 1 << 21;
-  row1 |= FuncLength & 0x3FFFF;
-  streamer.emitInt32(row1);
-
-  // Extended Code Words, Extended Epilog Count
-  if (ExtensionWord) {
-    // FIXME: We should be able to split unwind info into multiple sections.
-    if (CodeWords > 0xFF || EpilogCount > 0xFFFF)
-      report_fatal_error("SEH unwind data splitting not yet implemented");
-    uint32_t row2 = 0x0;
-    row2 |= (CodeWords & 0xFF) << 16;
-    row2 |= (EpilogCount & 0xFFFF);
-    streamer.emitInt32(row2);
-  }
-
-  if (PackedEpilogOffset < 0) {
-    // Epilog Start Index, Epilog Start Offset
-    for (auto &I : EpilogInfo) {
-      MCSymbol *EpilogStart = I.first;
-      uint32_t EpilogIndex = I.second;
-      uint32_t EpilogOffset =
-          (uint32_t)GetAbsDifference(streamer, EpilogStart, info->Begin);
-      if (EpilogOffset)
-        EpilogOffset /= 4;
-      uint32_t row3 = EpilogOffset;
-      row3 |= (EpilogIndex & 0x3FF) << 22;
-      streamer.emitInt32(row3);
-    }
-  }
-
-  // Emit prolog unwind instructions (in reverse order).
-  uint8_t numInst = info->Instructions.size();
-  for (uint8_t c = 0; c < numInst; ++c) {
-    WinEH::Instruction inst = info->Instructions.back();
-    info->Instructions.pop_back();
-    ARM64EmitUnwindCode(streamer, inst);
-  }
-
-  // Emit epilog unwind instructions
-  for (auto &I : info->EpilogMap) {
-    auto &EpilogInstrs = I.second.Instructions;
-    for (const WinEH::Instruction &inst : EpilogInstrs)
-      ARM64EmitUnwindCode(streamer, inst);
-  }
-
-  int32_t BytesMod = CodeWords * 4 - TotalCodeBytes;
-  assert(BytesMod >= 0);
-  for (int i = 0; i < BytesMod; i++)
-    streamer.emitInt8(0xE3);
-
-  if (info->HandlesExceptions)
-    streamer.emitValue(
-        MCSymbolRefExpr::create(info->ExceptionHandler,
-                                MCSymbolRefExpr::VK_COFF_IMGREL32, context),
-        4);
+  // Clear prolog instructions after unwind info is emitted for all segments.
+  info->Instructions.clear();
 }
 
 static uint32_t ARMCountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
@@ -1629,7 +1781,7 @@ static bool tryARMPackedUnwind(MCStreamer &streamer, WinEH::FrameInfo *info,
         Step = 2;
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Win64EH::UOP_WideSaveRegMask:
       if (Step != 1 && Step != 2)
         return false;
@@ -1893,7 +2045,7 @@ static bool tryARMPackedUnwind(MCStreamer &streamer, WinEH::FrameInfo *info,
       case Win64EH::UOP_WideEndNop:
         GotReturn = true;
         Ret = (Inst.Operation == Win64EH::UOP_EndNop) ? 1 : 2;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case Win64EH::UOP_End:
         if (Step != 6 && Step != 7 && Step != 8 && Step != 9 && Step != 10)
           return false;
@@ -2187,10 +2339,8 @@ static void ARMEmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
   // Emit epilog unwind instructions
   for (auto &I : info->EpilogMap) {
     auto &EpilogInstrs = I.second.Instructions;
-    for (uint32_t i = 0; i < EpilogInstrs.size(); i++) {
-      WinEH::Instruction inst = EpilogInstrs[i];
+    for (const WinEH::Instruction &inst : EpilogInstrs)
       ARMEmitUnwindCode(streamer, inst);
-    }
   }
 
   int32_t BytesMod = CodeWords * 4 - TotalCodeBytes;
@@ -2204,6 +2354,24 @@ static void ARMEmitUnwindInfo(MCStreamer &streamer, WinEH::FrameInfo *info,
                                 MCSymbolRefExpr::VK_COFF_IMGREL32, context),
         4);
 }
+
+static void ARM64EmitRuntimeFunction(MCStreamer &streamer,
+                                     const WinEH::FrameInfo *info) {
+  MCContext &context = streamer.getContext();
+
+  streamer.emitValueToAlignment(4);
+  for (const auto &S : info->Segments) {
+    EmitSymbolRefWithOfs(streamer, info->Begin, S.Offset);
+    if (info->PackedInfo)
+      streamer.emitInt32(info->PackedInfo);
+    else
+      streamer.emitValue(
+          MCSymbolRefExpr::create(S.Symbol, MCSymbolRefExpr::VK_COFF_IMGREL32,
+                                  context),
+          4);
+  }
+}
+
 
 static void ARMEmitRuntimeFunction(MCStreamer &streamer,
                                    const WinEH::FrameInfo *info) {
@@ -2241,7 +2409,7 @@ void llvm::Win64EH::ARM64UnwindEmitter::Emit(MCStreamer &Streamer) const {
       continue;
     MCSection *PData = Streamer.getAssociatedPDataSection(CFI->TextSection);
     Streamer.switchSection(PData);
-    ARMEmitRuntimeFunction(Streamer, Info);
+    ARM64EmitRuntimeFunction(Streamer, Info);
   }
 }
 

@@ -21,16 +21,16 @@
 ; (loop2:)
 ; REMARK: remark: /tmp/kk.c:2:20: 1 spills 1.000000e+04 total spills cost 1 reloads 1.000000e+04 total reloads cost generated in loop{{$}}
 ; (loop:)
-; REMARK: remark: /tmp/kk.c:1:20: 2 spills 1.010000e+04 total spills cost 2 reloads 1.010000e+04 total reloads cost generated in loop{{$}}
+; REMARK: remark: /tmp/kk.c:1:20: 2 spills 1.010000e+04 total spills cost 2 reloads 1.010000e+04 total reloads cost 1 virtual registers copies 1.000000e+02 total copies cost generated in loop{{$}}
 ; (func:)
-; REMARK: remark: /tmp/kk.c:1:1: 3 spills 1.020000e+04 total spills cost 3 reloads 1.020000e+04 total reloads cost generated in function
+; REMARK: remark: /tmp/kk.c:1:1: 3 spills 1.020000e+04 total spills cost 3 reloads 1.020000e+04 total reloads cost 3 virtual registers copies 1.020000e+02 total copies cost generated in function{{$}}
 
 ; (loop3:)
 ; HOTNESS: remark: /tmp/kk.c:3:20: 1 spills 1.000000e+02 total spills cost 1 reloads 1.000000e+02 total reloads cost generated in loop (hotness: 300)
 ; (loop2:)
 ; HOTNESS: remark: /tmp/kk.c:2:20: 1 spills 1.000000e+04 total spills cost 1 reloads 1.000000e+04 total reloads cost generated in loop (hotness: 30000)
 ; (loop:)
-; HOTNESS: remark: /tmp/kk.c:1:20: 2 spills 1.010000e+04 total spills cost 2 reloads 1.010000e+04 total reloads cost generated in loop (hotness: 300)
+; HOTNESS: remark: /tmp/kk.c:1:20: 2 spills 1.010000e+04 total spills cost 2 reloads 1.010000e+04 total reloads cost 1 virtual registers copies 1.000000e+02 total copies cost generated in loop (hotness: 300)
 
 ; NO_REMARK-NOT: remark
 
@@ -86,6 +86,10 @@
 ; YAML:   - String:          ' reloads '
 ; YAML:   - TotalReloadsCost: '1.010000e+04'
 ; YAML:   - String:          ' total reloads cost '
+; YAML:   - NumVRCopies:     '1'
+; YAML:   - String:          ' virtual registers copies '
+; YAML:   - TotalCopiesCost: '1.000000e+02'
+; YAML:   - String:          ' total copies cost '
 ; YAML:   - String:          generated in loop
 ; YAML: ...
 ; YAML: --- !Missed
@@ -103,6 +107,10 @@
 ; YAML:   - String:          ' reloads '
 ; YAML:   - TotalReloadsCost: '1.020000e+04'
 ; YAML:   - String:          ' total reloads cost '
+; YAML:   - NumVRCopies:     '3'
+; YAML:   - String:          ' virtual registers copies '
+; YAML:   - TotalCopiesCost: '1.020000e+02'
+; YAML:   - String:          ' total copies cost '
 ; YAML:   - String:          generated in function
 ; YAML: ...
 

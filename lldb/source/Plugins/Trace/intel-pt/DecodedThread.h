@@ -9,28 +9,16 @@
 #ifndef LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_DECODEDTHREAD_H
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_DECODEDTHREAD_H
 
+#include "intel-pt.h"
+#include "lldb/Target/Trace.h"
+#include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
+#include "llvm/Support/Errc.h"
+#include "llvm/Support/Error.h"
 #include <utility>
 #include <vector>
 
-#include "llvm/Support/Errc.h"
-#include "llvm/Support/Error.h"
-
-#include "lldb/Target/Trace.h"
-#include "lldb/Utility/TraceIntelPTGDBRemotePackets.h"
-
-#include "intel-pt.h"
-
 namespace lldb_private {
 namespace trace_intel_pt {
-
-/// libipt status utils
-/// \{
-bool IsLibiptError(int libipt_status);
-
-bool IsEndOfStream(int libipt_status);
-
-bool IsTscUnavailable(int libipt_status);
-/// \}
 
 /// Class for representing a libipt decoding error.
 class IntelPTError : public llvm::ErrorInfo<IntelPTError> {
@@ -173,8 +161,12 @@ public:
   ///   The trace item index to compare with.
   ///
   /// \return
-  ///   The requested cpu id, or \a llvm::None if not available.
-  llvm::Optional<lldb::cpu_id_t> GetCPUByIndex(uint64_t item_index) const;
+  ///   The requested cpu id, or \a LLDB_INVALID_CPU_ID if not available.
+  lldb::cpu_id_t GetCPUByIndex(uint64_t item_index) const;
+
+  /// \return
+  ///   The PSB offset associated with the given item index.
+  lldb::addr_t GetSyncPointOffsetByIndex(uint64_t item_index) const;
 
   /// Get a maximal range of trace items that include the given \p item_index
   /// that have the same TSC value.
@@ -202,27 +194,11 @@ public:
   ///     The load address of the instruction at the given index.
   lldb::addr_t GetInstructionLoadAddress(uint64_t item_index) const;
 
-  /// Return an object with statistics of the TSC decoding errors that happened.
-  /// A TSC error is not a fatal error and doesn't create gaps in the trace.
-  /// Instead we only keep track of them as statistics.
-  ///
-  /// \return
-  ///   An object with the statistics of TSC decoding errors.
-  const LibiptErrorsStats &GetTscErrorsStats() const;
-
   /// Return an object with statistics of the trace events that happened.
   ///
   /// \return
   ///   The stats object of all the events.
   const EventsStats &GetEventsStats() const;
-
-  /// Record an error decoding a TSC timestamp.
-  ///
-  /// See \a GetTscErrors() for more documentation.
-  ///
-  /// \param[in] libipt_error_code
-  ///   An error returned by the libipt library.
-  void RecordTscError(int libipt_error_code);
 
   /// The approximate size in bytes used by this instance,
   /// including all the already decoded instructions.
@@ -237,6 +213,9 @@ public:
   /// Notify this object that a CPU has been seen.
   /// If this a new CPU, an event will be created.
   void NotifyCPU(lldb::cpu_id_t cpu_id);
+
+  /// Notify this object that a new PSB has been seen.
+  void NotifySyncPoint(lldb::addr_t psb_offset);
 
   /// Append a decoding error.
   void AppendError(const IntelPTError &error);
@@ -297,20 +276,21 @@ private:
   llvm::Optional<std::map<uint64_t, NanosecondsRange>::iterator>
       m_last_nanoseconds = llvm::None;
 
-  // The cpu information is stored as a map. It maps `instruction index -> CPU`
+  // The cpu information is stored as a map. It maps `item index -> CPU`.
   // A CPU is associated with the next instructions that follow until the next
   // cpu is seen.
   std::map<uint64_t, lldb::cpu_id_t> m_cpus;
   /// This is the chronologically last CPU ID.
   llvm::Optional<uint64_t> m_last_cpu = llvm::None;
 
+  // The PSB offsets are stored as a map. It maps `item index -> psb offset`.
+  llvm::DenseMap<uint64_t, lldb::addr_t> m_psb_offsets;
+
   /// TSC -> nanos conversion utility.
   llvm::Optional<LinuxPerfZeroTscConversion> m_tsc_conversion;
 
   /// Statistics of all tracing events.
   EventsStats m_events_stats;
-  /// Statistics of libipt errors when decoding TSCs.
-  LibiptErrorsStats m_tsc_errors_stats;
   /// Total amount of time spent decoding.
   std::chrono::milliseconds m_total_decoding_time{0};
 };

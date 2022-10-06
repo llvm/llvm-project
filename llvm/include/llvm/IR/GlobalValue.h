@@ -145,11 +145,19 @@ private:
     case AppendingLinkage:
     case InternalLinkage:
     case PrivateLinkage:
-      return isInterposable();
+      // Optimizations may assume builtin semantics for functions defined as
+      // nobuiltin due to attributes at call-sites. To avoid applying IPO based
+      // on nobuiltin semantics, treat such function definitions as maybe
+      // derefined.
+      return isInterposable() || isNobuiltinFnDef();
     }
 
     llvm_unreachable("Fully covered switch above!");
   }
+
+  /// Returns true if the global is a function definition with the nobuiltin
+  /// attribute.
+  bool isNobuiltinFnDef() const;
 
 protected:
   /// The intrinsic ID for this subclass (which must be a Function).
@@ -267,7 +275,11 @@ public:
   bool hasDLLExportStorageClass() const {
     return DllStorageClass == DLLExportStorageClass;
   }
-  void setDLLStorageClass(DLLStorageClassTypes C) { DllStorageClass = C; }
+  void setDLLStorageClass(DLLStorageClassTypes C) {
+    assert((!hasLocalLinkage() || C == DefaultStorageClass) &&
+           "local linkage requires DefaultStorageClass");
+    DllStorageClass = C;
+  }
 
   bool hasSection() const { return !getSection().empty(); }
   StringRef getSection() const;
@@ -516,8 +528,10 @@ public:
   }
 
   void setLinkage(LinkageTypes LT) {
-    if (isLocalLinkage(LT))
+    if (isLocalLinkage(LT)) {
       Visibility = DefaultVisibility;
+      DllStorageClass = DefaultStorageClass;
+    }
     Linkage = LT;
     if (isImplicitDSOLocal())
       setDSOLocal(true);

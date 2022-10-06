@@ -8,7 +8,7 @@
 # RESULT: bb.0.entry:
 # RESULT: %{{[0-9]+}}:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 
-# RESULT: bb.1 (address-taken, align 8):
+# RESULT: bb.1 (ir-block-address-taken %ir-block.exitblock, align 8):
 # RESULT: bb.2 (landing-pad, align 16):
 # RESULT: bb.3 (inlineasm-br-indirect-target):
 # RESULT: bb.4 (ehfunclet-entry):
@@ -19,6 +19,7 @@
 # RESULT-NEXT: successors: %bb.9(0x66666666), %bb.10(0x1999999a)
 # RESULT: bb.9:
 # RESULT: bb.10.exitblock:
+# RESULT: bb.11 (machine-block-address-taken):
 
 --- |
   define void @func(i32 %size)  {
@@ -48,7 +49,7 @@ body:             |
     S_NOP 0
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
 
-  bb.1 (address-taken, align 8):
+  bb.1 (ir-block-address-taken %ir-block.exitblock, align 8):
 
   bb.2 (landing-pad, align 16):
 
@@ -69,4 +70,6 @@ body:             |
 
   bb.10.exitblock:
     S_ENDPGM 0, implicit %0
+
+  bb.11 (machine-block-address-taken):
 ...

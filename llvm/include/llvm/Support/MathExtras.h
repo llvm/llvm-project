@@ -13,18 +13,14 @@
 #ifndef LLVM_SUPPORT_MATHEXTRAS_H
 #define LLVM_SUPPORT_MATHEXTRAS_H
 
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <climits>
-#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <limits>
 #include <type_traits>
-
-#ifdef __ANDROID_NDK__
-#include <android/api-level.h>
-#endif
 
 #ifdef _MSC_VER
 // Declare these intrinsics manually rather including intrin.h. It's very
@@ -154,8 +150,7 @@ template <typename T> struct TrailingZerosCounter<T, 8> {
 ///   valid arguments.
 template <typename T>
 unsigned countTrailingZeros(T Val, ZeroBehavior ZB = ZB_Width) {
-  static_assert(std::numeric_limits<T>::is_integer &&
-                    !std::numeric_limits<T>::is_signed,
+  static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::detail::TrailingZerosCounter<T, sizeof(T)>::count(Val, ZB);
 }
@@ -223,8 +218,7 @@ template <typename T> struct LeadingZerosCounter<T, 8> {
 ///   valid arguments.
 template <typename T>
 unsigned countLeadingZeros(T Val, ZeroBehavior ZB = ZB_Width) {
-  static_assert(std::numeric_limits<T>::is_integer &&
-                    !std::numeric_limits<T>::is_signed,
+  static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return llvm::detail::LeadingZerosCounter<T, sizeof(T)>::count(Val, ZB);
 }
@@ -301,8 +295,24 @@ static const unsigned char BitReverseTable256[256] = {
 };
 
 /// Reverse the bits in \p Val.
-template <typename T>
-T reverseBits(T Val) {
+template <typename T> T reverseBits(T Val) {
+#if __has_builtin(__builtin_bitreverse8)
+  if constexpr (std::is_same_v<T, uint8_t>)
+    return __builtin_bitreverse8(Val);
+#endif
+#if __has_builtin(__builtin_bitreverse16)
+  if constexpr (std::is_same_v<T, uint16_t>)
+    return __builtin_bitreverse16(Val);
+#endif
+#if __has_builtin(__builtin_bitreverse32)
+  if constexpr (std::is_same_v<T, uint32_t>)
+    return __builtin_bitreverse32(Val);
+#endif
+#if __has_builtin(__builtin_bitreverse64)
+  if constexpr (std::is_same_v<T, uint64_t>)
+    return __builtin_bitreverse64(Val);
+#endif
+
   unsigned char in[sizeof(Val)];
   unsigned char out[sizeof(Val)];
   std::memcpy(in, &Val, sizeof(Val));
@@ -311,34 +321,6 @@ T reverseBits(T Val) {
   std::memcpy(&Val, out, sizeof(Val));
   return Val;
 }
-
-#if __has_builtin(__builtin_bitreverse8)
-template<>
-inline uint8_t reverseBits<uint8_t>(uint8_t Val) {
-  return __builtin_bitreverse8(Val);
-}
-#endif
-
-#if __has_builtin(__builtin_bitreverse16)
-template<>
-inline uint16_t reverseBits<uint16_t>(uint16_t Val) {
-  return __builtin_bitreverse16(Val);
-}
-#endif
-
-#if __has_builtin(__builtin_bitreverse32)
-template<>
-inline uint32_t reverseBits<uint32_t>(uint32_t Val) {
-  return __builtin_bitreverse32(Val);
-}
-#endif
-
-#if __has_builtin(__builtin_bitreverse64)
-template<>
-inline uint64_t reverseBits<uint64_t>(uint64_t Val) {
-  return __builtin_bitreverse64(Val);
-}
-#endif
 
 // NOTE: The following support functions use the _32/_64 extensions instead of
 // type overloading so that signed and unsigned integers can be used without
@@ -361,17 +343,16 @@ constexpr inline uint64_t Make_64(uint32_t High, uint32_t Low) {
 
 /// Checks if an integer fits into the given bit width.
 template <unsigned N> constexpr inline bool isInt(int64_t x) {
-  return N >= 64 || (-(INT64_C(1)<<(N-1)) <= x && x < (INT64_C(1)<<(N-1)));
-}
-// Template specializations to get better code for common cases.
-template <> constexpr inline bool isInt<8>(int64_t x) {
-  return static_cast<int8_t>(x) == x;
-}
-template <> constexpr inline bool isInt<16>(int64_t x) {
-  return static_cast<int16_t>(x) == x;
-}
-template <> constexpr inline bool isInt<32>(int64_t x) {
-  return static_cast<int32_t>(x) == x;
+  if constexpr (N == 8)
+    return static_cast<int8_t>(x) == x;
+  if constexpr (N == 16)
+    return static_cast<int16_t>(x) == x;
+  if constexpr (N == 32)
+    return static_cast<int32_t>(x) == x;
+  if constexpr (N < 64)
+    return -(INT64_C(1) << (N - 1)) <= x && x < (INT64_C(1) << (N - 1));
+  (void)x; // MSVC v19.25 warns that x is unused.
+  return true;
 }
 
 /// Checks if a signed integer is an N bit number shifted left by S.
@@ -384,32 +365,18 @@ constexpr inline bool isShiftedInt(int64_t x) {
 }
 
 /// Checks if an unsigned integer fits into the given bit width.
-///
-/// This is written as two functions rather than as simply
-///
-///   return N >= 64 || X < (UINT64_C(1) << N);
-///
-/// to keep MSVC from (incorrectly) warning on isUInt<64> that we're shifting
-/// left too many places.
-template <unsigned N>
-constexpr inline std::enable_if_t<(N < 64), bool> isUInt(uint64_t X) {
+template <unsigned N> constexpr inline bool isUInt(uint64_t x) {
   static_assert(N > 0, "isUInt<0> doesn't make sense");
-  return X < (UINT64_C(1) << (N));
-}
-template <unsigned N>
-constexpr inline std::enable_if_t<N >= 64, bool> isUInt(uint64_t) {
+  if constexpr (N == 8)
+    return static_cast<uint8_t>(x) == x;
+  if constexpr (N == 16)
+    return static_cast<uint16_t>(x) == x;
+  if constexpr (N == 32)
+    return static_cast<uint32_t>(x) == x;
+  if constexpr (N < 64)
+    return x < (UINT64_C(1) << (N));
+  (void)x; // MSVC v19.25 warns that x is unused.
   return true;
-}
-
-// Template specializations to get better code for common cases.
-template <> constexpr inline bool isUInt<8>(uint64_t x) {
-  return static_cast<uint8_t>(x) == x;
-}
-template <> constexpr inline bool isUInt<16>(uint64_t x) {
-  return static_cast<uint16_t>(x) == x;
-}
-template <> constexpr inline bool isUInt<32>(uint64_t x) {
-  return static_cast<uint32_t>(x) == x;
 }
 
 /// Checks if a unsigned integer is an N bit number shifted left by S.
@@ -489,12 +456,12 @@ constexpr inline bool isShiftedMask_64(uint64_t Value) {
 /// Return true if the argument is a power of two > 0.
 /// Ex. isPowerOf2_32(0x00100000U) == true (32 bit edition.)
 constexpr inline bool isPowerOf2_32(uint32_t Value) {
-  return Value && !(Value & (Value - 1));
+  return llvm::has_single_bit(Value);
 }
 
 /// Return true if the argument is a power of two > 0 (64 bit edition.)
 constexpr inline bool isPowerOf2_64(uint64_t Value) {
-  return Value && !(Value & (Value - 1));
+  return llvm::has_single_bit(Value);
 }
 
 /// Count the number of ones from the most significant bit to the first
@@ -507,8 +474,7 @@ constexpr inline bool isPowerOf2_64(uint64_t Value) {
 /// ZB_Undefined are valid arguments.
 template <typename T>
 unsigned countLeadingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
-  static_assert(std::numeric_limits<T>::is_integer &&
-                    !std::numeric_limits<T>::is_signed,
+  static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return countLeadingZeros<T>(~Value, ZB);
 }
@@ -523,52 +489,19 @@ unsigned countLeadingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
 /// ZB_Undefined are valid arguments.
 template <typename T>
 unsigned countTrailingOnes(T Value, ZeroBehavior ZB = ZB_Width) {
-  static_assert(std::numeric_limits<T>::is_integer &&
-                    !std::numeric_limits<T>::is_signed,
+  static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
   return countTrailingZeros<T>(~Value, ZB);
 }
-
-namespace detail {
-template <typename T, std::size_t SizeOfT> struct PopulationCounter {
-  static unsigned count(T Value) {
-    // Generic version, forward to 32 bits.
-    static_assert(SizeOfT <= 4, "Not implemented!");
-#if defined(__GNUC__)
-    return __builtin_popcount(Value);
-#else
-    uint32_t v = Value;
-    v = v - ((v >> 1) & 0x55555555);
-    v = (v & 0x33333333) + ((v >> 2) & 0x33333333);
-    return ((v + (v >> 4) & 0xF0F0F0F) * 0x1010101) >> 24;
-#endif
-  }
-};
-
-template <typename T> struct PopulationCounter<T, 8> {
-  static unsigned count(T Value) {
-#if defined(__GNUC__)
-    return __builtin_popcountll(Value);
-#else
-    uint64_t v = Value;
-    v = v - ((v >> 1) & 0x5555555555555555ULL);
-    v = (v & 0x3333333333333333ULL) + ((v >> 2) & 0x3333333333333333ULL);
-    v = (v + (v >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
-    return unsigned((uint64_t)(v * 0x0101010101010101ULL) >> 56);
-#endif
-  }
-};
-} // namespace detail
 
 /// Count the number of set bits in a value.
 /// Ex. countPopulation(0xF000F000) = 8
 /// Returns 0 if the word is zero.
 template <typename T>
 inline unsigned countPopulation(T Value) {
-  static_assert(std::numeric_limits<T>::is_integer &&
-                    !std::numeric_limits<T>::is_signed,
+  static_assert(std::is_unsigned_v<T>,
                 "Only unsigned integral types are allowed.");
-  return detail::PopulationCounter<T, sizeof(T)>::count(Value);
+  return (unsigned)llvm::popcount(Value);
 }
 
 /// Return true if the argument contains a non-empty sequence of ones with the
@@ -608,15 +541,6 @@ template <size_t kValue> constexpr inline size_t CTLog2() {
 
 template <> constexpr inline size_t CTLog2<1>() { return 0; }
 
-/// Return the log base 2 of the specified value.
-inline double Log2(double Value) {
-#if defined(__ANDROID_API__) && __ANDROID_API__ < 18
-  return __builtin_log(Value) / __builtin_log(2.0);
-#else
-  return log2(Value);
-#endif
-}
-
 /// Return the floor log base 2 of the specified value, -1 if the value is zero.
 /// (32 bit edition.)
 /// Ex. Log2_32(32) == 5, Log2_32(1) == 0, Log2_32(0) == -1, Log2_32(6) == 2
@@ -643,55 +567,32 @@ inline unsigned Log2_64_Ceil(uint64_t Value) {
   return 64 - countLeadingZeros(Value - 1);
 }
 
-/// Return the greatest common divisor of the values using Euclid's algorithm.
-template <typename T>
-inline T greatestCommonDivisor(T A, T B) {
-  while (B) {
-    T Tmp = B;
-    B = A % B;
-    A = Tmp;
-  }
-  return A;
-}
-
-inline uint64_t GreatestCommonDivisor64(uint64_t A, uint64_t B) {
-  return greatestCommonDivisor<uint64_t>(A, B);
-}
-
 /// This function takes a 64-bit integer and returns the bit equivalent double.
 inline double BitsToDouble(uint64_t Bits) {
-  double D;
   static_assert(sizeof(uint64_t) == sizeof(double), "Unexpected type sizes");
-  memcpy(&D, &Bits, sizeof(Bits));
-  return D;
+  return llvm::bit_cast<double>(Bits);
 }
 
 /// This function takes a 32-bit integer and returns the bit equivalent float.
 inline float BitsToFloat(uint32_t Bits) {
-  float F;
   static_assert(sizeof(uint32_t) == sizeof(float), "Unexpected type sizes");
-  memcpy(&F, &Bits, sizeof(Bits));
-  return F;
+  return llvm::bit_cast<float>(Bits);
 }
 
 /// This function takes a double and returns the bit equivalent 64-bit integer.
 /// Note that copying doubles around changes the bits of NaNs on some hosts,
 /// notably x86, so this routine cannot be used if these bits are needed.
 inline uint64_t DoubleToBits(double Double) {
-  uint64_t Bits;
   static_assert(sizeof(uint64_t) == sizeof(double), "Unexpected type sizes");
-  memcpy(&Bits, &Double, sizeof(Double));
-  return Bits;
+  return llvm::bit_cast<uint64_t>(Double);
 }
 
 /// This function takes a float and returns the bit equivalent 32-bit integer.
 /// Note that copying floats around changes the bits of NaNs on some hosts,
 /// notably x86, so this routine cannot be used if these bits are needed.
 inline uint32_t FloatToBits(float Float) {
-  uint32_t Bits;
   static_assert(sizeof(uint32_t) == sizeof(float), "Unexpected type sizes");
-  memcpy(&Bits, &Float, sizeof(Float));
-  return Bits;
+  return llvm::bit_cast<uint32_t>(Float);
 }
 
 /// A and B are either alignments or offsets. Return the minimum alignment that

@@ -2,8 +2,7 @@
 // RUN: llvm-dis %t.bc -o - | FileCheck %s
 
 // Test case for PR45426. Make sure we do not crash while writing bitcode
-// containing a simplify-able fneg constant expression. Check that the created
-// bitcode file can be disassembled and has the constant expressions simplified.
+// containing a simplify-able fneg constant expression.
 //
 // CHECK-LABEL define i32 @main()
 // CHECK:      entry:
@@ -11,7 +10,9 @@
 // CHECK-NEXT:   store i32 0, i32* %retval
 // CHECK-NEXT:   [[LV:%.*]] = load float*, float** @c
 // CHECK-NEXT:   store float 1.000000e+00, float* [[LV]], align 4
-// CHECK-NEXT:   ret i32 -1
+// CHECK-NEXT:   [[FNEG:%.*]] = fneg float 1.000000e+00
+// CHECK-NEXT:   [[CONV:%.*]] = fptosi float [[FNEG]] to i32
+// CHECK-NEXT:   ret i32 [[CONV]]
 
 int a[], b;
 float *c;

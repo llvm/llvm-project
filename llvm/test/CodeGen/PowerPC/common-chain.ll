@@ -35,8 +35,8 @@
 define i64 @two_chain_same_offset_succ(i8* %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-LABEL: two_chain_same_offset_succ:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpdi r6, 1
-; CHECK-NEXT:    blt cr0, .LBB0_4
+; CHECK-NEXT:    cmpdi r6, 0
+; CHECK-NEXT:    ble cr0, .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    sldi r7, r4, 1
 ; CHECK-NEXT:    mtctr r6
@@ -140,9 +140,9 @@ for.body:                                         ; preds = %entry, %for.body
 define i64 @not_perfect_chain_all_same_offset_fail(i8* %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-LABEL: not_perfect_chain_all_same_offset_fail:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpdi r6, 1
+; CHECK-NEXT:    cmpdi r6, 0
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    blt cr0, .LBB1_4
+; CHECK-NEXT:    ble cr0, .LBB1_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    sldi r7, r4, 1
 ; CHECK-NEXT:    sldi r9, r4, 2
@@ -245,8 +245,8 @@ for.body:                                         ; preds = %entry, %for.body
 define i64 @no_enough_elements_fail(i8* %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-LABEL: no_enough_elements_fail:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpdi r6, 1
-; CHECK-NEXT:    blt cr0, .LBB2_4
+; CHECK-NEXT:    cmpdi r6, 0
+; CHECK-NEXT:    ble cr0, .LBB2_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    sldi r7, r4, 1
 ; CHECK-NEXT:    mtctr r6
@@ -333,8 +333,8 @@ for.body:                                         ; preds = %entry, %for.body
 define i64 @no_reuseable_offset_fail(i8* %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-LABEL: no_reuseable_offset_fail:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpdi r6, 1
-; CHECK-NEXT:    blt cr0, .LBB3_4
+; CHECK-NEXT:    cmpdi r6, 0
+; CHECK-NEXT:    ble cr0, .LBB3_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    sldi r9, r4, 3
 ; CHECK-NEXT:    mtctr r6
@@ -440,11 +440,11 @@ for.body:                                         ; preds = %entry, %for.body
 define i64 @not_same_offset_fail(i8* %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-LABEL: not_same_offset_fail:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpdi r6, 1
+; CHECK-NEXT:    cmpdi r6, 0
 ; CHECK-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    blt cr0, .LBB4_3
+; CHECK-NEXT:    ble cr0, .LBB4_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    mulli r11, r4, 10
 ; CHECK-NEXT:    sldi r8, r4, 2
@@ -564,8 +564,8 @@ for.body:                                         ; preds = %entry, %for.body
 define i64 @two_chain_different_offsets_succ(i8* %p, i64 %offset, i64 %base1, i64 %n) {
 ; CHECK-LABEL: two_chain_different_offsets_succ:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpdi r6, 1
-; CHECK-NEXT:    blt cr0, .LBB5_4
+; CHECK-NEXT:    cmpdi r6, 0
+; CHECK-NEXT:    ble cr0, .LBB5_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    sldi r8, r4, 2
 ; CHECK-NEXT:    add r7, r5, r4
@@ -666,8 +666,8 @@ for.body:                                         ; preds = %entry, %for.body
 define i64 @two_chain_two_bases_succ(i8* %p, i64 %offset, i64 %base1, i64 %base2, i64 %n) {
 ; CHECK-LABEL: two_chain_two_bases_succ:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpdi r7, 1
-; CHECK-NEXT:    blt cr0, .LBB6_4
+; CHECK-NEXT:    cmpdi r7, 0
+; CHECK-NEXT:    ble cr0, .LBB6_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    add r6, r6, r4
 ; CHECK-NEXT:    add r5, r5, r4
@@ -751,7 +751,7 @@ for.body:                                         ; preds = %entry, %for.body
 define signext i32 @spill_reduce_succ(double* %input1, double* %input2, double* %output, i64 %m, i64 %inc1, i64 %inc2, i64 %inc3, i64 %inc4, i64 %inc) {
 ; CHECK-LABEL: spill_reduce_succ:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmpdi r6, 1
+; CHECK-NEXT:    cmpdi r6, 0
 ; CHECK-NEXT:    std r14, -144(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r15, -136(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r16, -128(r1) # 8-byte Folded Spill
@@ -774,7 +774,7 @@ define signext i32 @spill_reduce_succ(double* %input1, double* %input2, double* 
 ; CHECK-NEXT:    std r9, -160(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r8, -176(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    std r7, -168(r1) # 8-byte Folded Spill
-; CHECK-NEXT:    blt cr0, .LBB7_7
+; CHECK-NEXT:    ble cr0, .LBB7_7
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    sldi r6, r6, 2
 ; CHECK-NEXT:    li r7, 1

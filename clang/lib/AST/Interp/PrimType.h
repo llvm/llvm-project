@@ -18,10 +18,11 @@
 #include <cstdint>
 #include "Boolean.h"
 #include "Integral.h"
-#include "Pointer.h"
 
 namespace clang {
 namespace interp {
+
+class Pointer;
 
 /// Enumeration of the primitive types of the VM.
 enum PrimType : unsigned {

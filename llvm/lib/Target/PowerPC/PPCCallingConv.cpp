@@ -37,7 +37,7 @@ static bool CC_PPC32_SVR4_Custom_AlignArgRegs(unsigned &ValNo, MVT &ValVT,
     PPC::R3, PPC::R4, PPC::R5, PPC::R6,
     PPC::R7, PPC::R8, PPC::R9, PPC::R10,
   };
-  const unsigned NumArgRegs = array_lengthof(ArgRegs);
+  const unsigned NumArgRegs = std::size(ArgRegs);
 
   unsigned RegNum = State.getFirstUnallocated(ArgRegs);
 
@@ -62,7 +62,7 @@ static bool CC_PPC32_SVR4_Custom_SkipLastArgRegsPPCF128(
     PPC::R3, PPC::R4, PPC::R5, PPC::R6,
     PPC::R7, PPC::R8, PPC::R9, PPC::R10,
   };
-  const unsigned NumArgRegs = array_lengthof(ArgRegs);
+  const unsigned NumArgRegs = std::size(ArgRegs);
 
   unsigned RegNum = State.getFirstUnallocated(ArgRegs);
   int RegsLeft = NumArgRegs - RegNum;
@@ -88,7 +88,7 @@ static bool CC_PPC32_SVR4_Custom_AlignFPArgRegs(unsigned &ValNo, MVT &ValVT,
     PPC::F8
   };
 
-  const unsigned NumArgRegs = array_lengthof(ArgRegs);
+  const unsigned NumArgRegs = std::size(ArgRegs);
 
   unsigned RegNum = State.getFirstUnallocated(ArgRegs);
 

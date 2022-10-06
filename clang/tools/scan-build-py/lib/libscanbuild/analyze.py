@@ -386,8 +386,6 @@ def analyzer_params(args):
 
     result = []
 
-    if args.store_model:
-        result.append('-analyzer-store={0}'.format(args.store_model))
     if args.constraints_model:
         result.append('-analyzer-constraints={0}'.format(
             args.constraints_model))

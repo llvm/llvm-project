@@ -6,4 +6,4 @@
 
 !llvm.module.flags = !{!0}
 ; CHECK: !llvm.module.flags = !{!0}
-; CHECK: !0 = !{i32 7, !"PIC Level", i32 1}
+; CHECK: !0 = !{i32 8, !"PIC Level", i32 1}

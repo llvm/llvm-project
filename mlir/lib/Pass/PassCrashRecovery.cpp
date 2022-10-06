@@ -443,33 +443,42 @@ void PassManager::enableCrashReproducerGeneration(
 // Asm Resource
 //===----------------------------------------------------------------------===//
 
-void mlir::attachPassReproducerAsmResource(ParserConfig &config,
-                                           PassManager &pm,
-                                           bool &enableThreading) {
-  auto parseFn = [&](AsmParsedResourceEntry &entry) -> LogicalResult {
+void PassReproducerOptions::attachResourceParser(ParserConfig &config) {
+  auto parseFn = [this](AsmParsedResourceEntry &entry) -> LogicalResult {
     if (entry.getKey() == "pipeline") {
-      FailureOr<std::string> pipeline = entry.parseAsString();
-      if (failed(pipeline))
-        return failure();
-      return parsePassPipeline(*pipeline, pm);
+      FailureOr<std::string> value = entry.parseAsString();
+      if (succeeded(value))
+        this->pipeline = std::move(*value);
+      return value;
     }
     if (entry.getKey() == "disable_threading") {
       FailureOr<bool> value = entry.parseAsBool();
-
-      // FIXME: We should just update the context directly, but some places
-      // force disable threading during parsing.
       if (succeeded(value))
-        enableThreading = !(*value);
+        this->disableThreading = *value;
       return value;
     }
     if (entry.getKey() == "verify_each") {
       FailureOr<bool> value = entry.parseAsBool();
       if (succeeded(value))
-        pm.enableVerifier(*value);
+        this->verifyEach = *value;
       return value;
     }
     return entry.emitError() << "unknown 'mlir_reproducer' resource key '"
                              << entry.getKey() << "'";
   };
   config.attachResourceParser("mlir_reproducer", parseFn);
+}
+
+LogicalResult PassReproducerOptions::apply(PassManager &pm) const {
+  if (pipeline.has_value())
+    if (failed(parsePassPipeline(*pipeline, pm)))
+      return failure();
+
+  if (disableThreading.has_value())
+    pm.getContext()->disableMultithreading(*disableThreading);
+
+  if (verifyEach.has_value())
+    pm.enableVerifier(*verifyEach);
+
+  return success();
 }

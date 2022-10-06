@@ -37,7 +37,7 @@ private:
             std::enable_if_t<!std::is_convertible<RangeT, const Node *>::value>
                 * = nullptr>
   void printChildren(RangeT &&range) {
-    if (llvm::empty(range))
+    if (range.empty())
       return;
 
     // Print the first N-1 elements with a prefix of "|-".
@@ -59,7 +59,7 @@ private:
   /// the given label.
   template <typename RangeT>
   void printChildren(StringRef label, RangeT &&range) {
-    if (llvm::empty(range))
+    if (range.empty())
       return;
     elementIndentStack.reserve(elementIndentStack.size() + 1);
     llvm::SaveAndRestore<bool> lastElement(elementIndentStack.back(), true);

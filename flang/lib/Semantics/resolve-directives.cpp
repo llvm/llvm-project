@@ -868,6 +868,21 @@ void AccAttributeVisitor::PrivatizeAssociatedLoopIndex(
   }
   Symbol::Flag ivDSA{Symbol::Flag::AccPrivate};
 
+  const auto getNextDoConstruct =
+      [this](const parser::Block &block) -> const parser::DoConstruct * {
+    for (const auto &entry : block) {
+      if (const auto *doConstruct = GetDoConstructIf(entry)) {
+        return doConstruct;
+      } else if (parser::Unwrap<parser::CompilerDirective>(entry)) {
+        // It is allowed to have a compiler directive associated with the loop.
+        continue;
+      } else {
+        break;
+      }
+    }
+    return nullptr;
+  };
+
   const auto &outer{std::get<std::optional<parser::DoConstruct>>(x.t)};
   for (const parser::DoConstruct *loop{&*outer}; loop && level > 0; --level) {
     // go through all the nested do-loops and resolve index variables
@@ -879,8 +894,7 @@ void AccAttributeVisitor::PrivatizeAssociatedLoopIndex(
     }
 
     const auto &block{std::get<parser::Block>(loop->t)};
-    const auto it{block.begin()};
-    loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
+    loop = getNextDoConstruct(block);
   }
   CHECK(level == 0);
 }
@@ -1490,6 +1504,35 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
         }
       }
     }
+    std::vector<Symbol *> defaultDSASymbols;
+    for (int dirDepth{0}; dirDepth < (int)dirContext_.size(); ++dirDepth) {
+      DirContext &dirContext = dirContext_[dirDepth];
+      bool hasDataSharingAttr{false};
+      for (auto symMap : dirContext.objectWithDSA) {
+        // if the `symbol` already has a data-sharing attribute
+        if (symMap.first->name() == name.symbol->name()) {
+          hasDataSharingAttr = true;
+          break;
+        }
+      }
+      if (hasDataSharingAttr) {
+        if (defaultDSASymbols.size())
+          symbol = &MakeAssocSymbol(symbol->name(), *defaultDSASymbols.back(),
+              context_.FindScope(dirContext.directiveSource));
+        continue;
+      }
+
+      if (dirContext.defaultDSA == semantics::Symbol::Flag::OmpPrivate ||
+          dirContext.defaultDSA == semantics::Symbol::Flag::OmpFirstPrivate) {
+        Symbol *hostSymbol = defaultDSASymbols.size() ? defaultDSASymbols.back()
+                                                      : &symbol->GetUltimate();
+        defaultDSASymbols.push_back(
+            DeclarePrivateAccessEntity(*hostSymbol, dirContext.defaultDSA,
+                context_.FindScope(dirContext.directiveSource)));
+      } else if (defaultDSASymbols.size())
+        symbol = &MakeAssocSymbol(symbol->name(), *defaultDSASymbols.back(),
+            context_.FindScope(dirContext.directiveSource));
+    }
   } // within OpenMP construct
 }
 
@@ -1634,7 +1677,9 @@ void OmpAttributeVisitor::ResolveOmpObject(
               // 2.15.3 When a named common block appears in a list, it has the
               // same meaning as if every explicit member of the common block
               // appeared in the list
-              for (auto &object : symbol->get<CommonBlockDetails>().objects()) {
+              auto &details{symbol->get<CommonBlockDetails>()};
+              unsigned index{0};
+              for (auto &object : details.objects()) {
                 if (auto *resolvedObject{
                         ResolveOmp(*object, ompFlag, currScope())}) {
                   if (dataCopyingAttributeFlags.test(ompFlag)) {
@@ -1642,7 +1687,9 @@ void OmpAttributeVisitor::ResolveOmpObject(
                   } else {
                     AddToContextObjectWithDSA(*resolvedObject, ompFlag);
                   }
+                  details.replace_object(*resolvedObject, index);
                 }
+                index++;
               }
             } else {
               context_.Say(name.source, // 2.15.3
@@ -1852,8 +1899,7 @@ void OmpAttributeVisitor::CheckLabelContext(const parser::CharBlock source,
 bool OmpAttributeVisitor::HasSymbolInEnclosingScope(
     const Symbol &symbol, Scope &scope) {
   const auto symbols{scope.parent().GetSymbols()};
-  auto it{std::find(symbols.begin(), symbols.end(), symbol)};
-  return it != symbols.end();
+  return llvm::is_contained(symbols, symbol);
 }
 
 } // namespace Fortran::semantics

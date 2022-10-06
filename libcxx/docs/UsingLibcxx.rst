@@ -152,18 +152,21 @@ where the static or shared library was compiled **with** assertions but the user
 disable them). However, most of the code in libc++ is in the headers, so the user-selected
 value for ``_LIBCPP_ENABLE_ASSERTIONS`` (if any) will usually be respected.
 
-When an assertion fails, an assertion handler function is called. The library provides a default
-assertion handler that prints an error message and calls ``std::abort()``. Note that this assertion
-handler is provided by the static or shared library, so it is only available when deploying to a
-platform where the compiled library is sufficiently recent. However, users can also override that
-assertion handler with their own, which can be useful to provide custom behavior, or when deploying
-to older platforms where the default assertion handler isn't available.
+When an assertion fails, the program is aborted through a special verbose termination function. The
+library provides a default function that prints an error message and calls ``std::abort()``. Note
+that this function is provided by the static or shared library, so it is only available when deploying
+to a platform where the compiled library is sufficiently recent. On older platforms, the program will
+terminate in an unspecified unsuccessful manner, but the quality of diagnostics won't be great.
+However, users can also override that function with their own, which can be useful to either provide
+custom behavior or when deploying to an older platform where the default function isn't available.
 
-Replacing the default assertion handler is done by defining the following function:
+Replacing the default verbose termination function is done by defining the
+``_LIBCPP_AVAILABILITY_CUSTOM_VERBOSE_ABORT_PROVIDED`` macro in all translation units of your program
+and defining the following function in exactly one translation unit:
 
 .. code-block:: cpp
 
-  void __libcpp_assertion_handler(char const* format, ...)
+  void __libcpp_verbose_abort(char const* format, ...)
 
 This mechanism is similar to how one can replace the default definition of ``operator new``
 and ``operator delete``. For example:
@@ -171,9 +174,9 @@ and ``operator delete``. For example:
 .. code-block:: cpp
 
   // In HelloWorldHandler.cpp
-  #include <version> // must include any libc++ header before defining the handler (C compatibility headers excluded)
+  #include <version> // must include any libc++ header before defining the function (C compatibility headers excluded)
 
-  void std::__libcpp_assertion_handler(char const* format, ...) {
+  void std::__libcpp_verbose_abort(char const* format, ...) {
     va_list list;
     va_start(list, format);
     std::vfprintf(stderr, format, list);
@@ -187,31 +190,16 @@ and ``operator delete``. For example:
 
   int main() {
     std::vector<int> v;
-    int& x = v[0]; // Your assertion handler will be called here if _LIBCPP_ENABLE_ASSERTIONS=1
+    int& x = v[0]; // Your termination function will be called here if _LIBCPP_ENABLE_ASSERTIONS=1
   }
 
-Also note that the assertion handler should usually not return. Since the assertions in libc++
-catch undefined behavior, your code will proceed with undefined behavior if your assertion
-handler is called and does return.
+Also note that the verbose termination function should never return. Since assertions in libc++
+catch undefined behavior, your code will proceed with undefined behavior if your function is called
+and does return.
 
-Furthermore, throwing an exception from the assertion handler is not recommended. Indeed, many
-functions in the library are ``noexcept``, and any exception thrown from the assertion handler
-will result in ``std::terminate`` being called.
-
-Back-deploying with a custom assertion handler
-----------------------------------------------
-When deploying to an older platform that does not provide a default assertion handler, the
-compiler will diagnose the usage of ``std::__libcpp_assertion_handler`` with an error. This
-is done to avoid the load-time error that would otherwise happen if the code was being deployed
-on the older system.
-
-If you are providing a custom assertion handler, this error is effectively a false positive.
-To let the library know that you are providing a custom assertion handler in back-deployment
-scenarios, you must define the ``_LIBCPP_AVAILABILITY_CUSTOM_ASSERTION_HANDLER_PROVIDED`` macro,
-and the library will assume that you are providing your own definition. If no definition is
-provided and the code is back-deployed to the older platform, it will fail to load when the
-dynamic linker fails to find a definition for ``std::__libcpp_assertion_handler``, so you
-should only remove the guard rails if you really mean it!
+Furthermore, exceptions should not be thrown from the function. Indeed, many functions in the
+library are ``noexcept``, and any exception thrown from the termination function will result
+in ``std::terminate`` being called.
 
 Libc++ Configuration Macros
 ===========================
@@ -260,19 +248,9 @@ thread safety annotations.
   replacement scenarios from working, e.g. replacing `operator new` and
   expecting a non-replaced `operator new[]` to call the replaced `operator new`.
 
-**_LIBCPP_ENABLE_NODISCARD**:
-  Allow the library to add ``[[nodiscard]]`` attributes to entities not specified
-  as ``[[nodiscard]]`` by the current language dialect. This includes
-  backporting applications of ``[[nodiscard]]`` from newer dialects and
-  additional extended applications at the discretion of the library. All
-  additional applications of ``[[nodiscard]]`` are disabled by default.
-  See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>` for
-  more information.
-
 **_LIBCPP_DISABLE_NODISCARD_EXT**:
-  This macro prevents the library from applying ``[[nodiscard]]`` to entities
-  purely as an extension. See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>`
-  for more information.
+  This macro disables library-extensions of ``[[nodiscard]]``.
+  See :ref:`Extended Applications of [[nodiscard]] <nodiscard extension>` for more information.
 
 **_LIBCPP_DISABLE_DEPRECATION_WARNINGS**:
   This macro disables warnings when using deprecated components. For example,
@@ -362,25 +340,14 @@ Users who want help diagnosing misuses of STL functions may desire a more
 liberal application of ``[[nodiscard]]``.
 
 For this reason libc++ provides an extension that does just that! The
-extension must be enabled by defining ``_LIBCPP_ENABLE_NODISCARD``. The extended
-applications of ``[[nodiscard]]`` takes two forms:
+extension is enabled by default and can be disabled by defining ``_LIBCPP_DISABLE_NODISCARD_EXT``.
+The extended applications of ``[[nodiscard]]`` takes two forms:
 
 1. Backporting ``[[nodiscard]]`` to entities declared as such by the
    standard in newer dialects, but not in the present one.
 
 2. Extended applications of ``[[nodiscard]]``, at the library's discretion,
    applied to entities never declared as such by the standard.
-
-Users may also opt-out of additional applications ``[[nodiscard]]`` using
-additional macros.
-
-Applications of the first form, which backport ``[[nodiscard]]`` from a newer
-dialect, may be disabled using macros specific to the dialect in which it was
-added. For example, ``_LIBCPP_DISABLE_NODISCARD_AFTER_CXX17``.
-
-Applications of the second form, which are pure extensions, may be disabled
-by defining ``_LIBCPP_DISABLE_NODISCARD_EXT``.
-
 
 Entities declared with ``_LIBCPP_NODISCARD_EXT``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -436,6 +403,21 @@ which no dialect declares as such (See the second form described above).
 * ``to_integer``
 * ``to_underlying``
 
+Extended integral type support
+------------------------------
+
+Several platforms support types that are not specified in the Standard, such as
+the 128-bit integral types ``__int128_t`` and ``__uint128_t``. As an extension,
+libc++ does a best-effort attempt to support these types like other integral
+types, by supporting them notably in:
+
+* ``<bits>``
+* ``<charconv>``
+* ``<functional>``
+* ``<type_traits>``
+* ``<format>``
+* ``<random>``
+
 Additional types supported in random distributions
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -444,3 +426,11 @@ distributions with types other than ``short``, ``int``, ``long``, ``long long``,
 undefined. As an extension, libc++ supports instantiating ``binomial_distribution``, ``discrete_distribution``,
 ``geometric_distribution``, ``negative_binomial_distribution``, ``poisson_distribution``, and ``uniform_int_distribution``
 with ``int8_t``, ``__int128_t`` and their unsigned versions.
+
+Extensions to ``<format>``
+--------------------------
+
+The exposition only type ``basic-format-string`` and its typedefs
+``format-string`` and ``wformat-string`` became ``basic_format_string``,
+``format_string``, and ``wformat_string`` in C++23. Libc++ makes these types
+available in C++20 as an extension.

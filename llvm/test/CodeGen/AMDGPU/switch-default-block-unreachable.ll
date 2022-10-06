@@ -8,6 +8,7 @@ define void @test() #1 {
   ;
   ; GCN-LABEL: name: test
   ; GCN: bb.{{[0-9]+}}.entry:
+  ; GCN: bb.{{[0-9]+}}.Flow1:
   ; GCN: bb.{{[0-9]+}}.entry.true.blk:
   ; GCN: bb.{{[0-9]+}}.entry.false.blk:
   ; GCN: bb.{{[0-9]+}}.switch.blk:
@@ -17,7 +18,8 @@ define void @test() #1 {
   ; GCN-NOT: bb.{{[0-9]+}}.unreach.blk:
   ; GCN-NOT: PHI
 
-  ; GCN: bb.{{[0-9]+}}.exit:
+  ; GCN: bb.{{[0-9]+}}.Flow:
+  ; GCN: bb.{{[0-9]+}}.UnifiedReturnBlock:
   entry:
     %idx = tail call i32 @llvm.amdgcn.workitem.id.x() #0
     br i1 undef, label %entry.true.blk, label %entry.false.blk

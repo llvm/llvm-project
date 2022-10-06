@@ -252,13 +252,6 @@ void IoChecker::Enter(const parser::Format &spec) {
                   "Format expression must be default character or default scalar integer"_err_en_US);
               return;
             }
-            if (expr->Rank() > 0 &&
-                !IsSimplyContiguous(*expr, context_.foldingContext())) {
-              // The runtime APIs don't allow arbitrary descriptors for formats.
-              context_.Say(format.source,
-                  "Format expression must be a simply contiguous array if not scalar"_err_en_US);
-              return;
-            }
             flags_.set(Flag::CharFmt);
             const std::optional<std::string> constantFormat{
                 GetConstExpr<std::string>(format)};
@@ -556,10 +549,6 @@ void IoChecker::Enter(const parser::IoUnit &spec) {
       if (HasVectorSubscript(*expr)) {
         context_.Say(parser::FindSourceLocation(*var), // C1201
             "Internal file must not have a vector subscript"_err_en_US);
-      } else if (!ExprTypeKindIsDefault(*expr, context_)) {
-        // This may be too restrictive; other kinds may be valid.
-        context_.Say(parser::FindSourceLocation(*var), // C1202
-            "Invalid character kind for an internal file variable"_err_en_US);
       }
     }
     SetSpecifier(IoSpecKind::Unit);

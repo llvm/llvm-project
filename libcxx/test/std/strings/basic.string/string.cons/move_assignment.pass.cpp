@@ -32,43 +32,30 @@ test(S s1, S s2)
     assert(s1.capacity() >= s1.size());
 }
 
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  test(S(), S());
+  test(S("1"), S());
+  test(S(), S("1"));
+  test(S("1"), S("2"));
+  test(S("1"), S("2"));
+
+  test(S(),
+        S("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
+  test(S("123456789"),
+        S("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
+  test(S("1234567890123456789012345678901234567890123456789012345678901234567890"),
+        S("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
+  test(S("1234567890123456789012345678901234567890123456789012345678901234567890"
+          "1234567890123456789012345678901234567890123456789012345678901234567890"),
+        S("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    test(S(), S());
-    test(S("1"), S());
-    test(S(), S("1"));
-    test(S("1"), S("2"));
-    test(S("1"), S("2"));
-
-    test(S(),
-         S("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
-    test(S("123456789"),
-         S("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
-    test(S("1234567890123456789012345678901234567890123456789012345678901234567890"),
-         S("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
-    test(S("1234567890123456789012345678901234567890123456789012345678901234567890"
-           "1234567890123456789012345678901234567890123456789012345678901234567890"),
-         S("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
-  }
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test(S(), S());
-    test(S("1"), S());
-    test(S(), S("1"));
-    test(S("1"), S("2"));
-    test(S("1"), S("2"));
-
-    test(S(),
-         S("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
-    test(S("123456789"),
-         S("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
-    test(S("1234567890123456789012345678901234567890123456789012345678901234567890"),
-         S("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
-    test(S("1234567890123456789012345678901234567890123456789012345678901234567890"
-           "1234567890123456789012345678901234567890123456789012345678901234567890"),
-         S("abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyz"));
-  }
+  test_string<std::string>();
+#if TEST_STD_VER >= 11
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
+#endif
 
   return true;
 }

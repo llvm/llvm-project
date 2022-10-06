@@ -329,7 +329,7 @@ static std::string
 mangleTypeDescriptorKinds(llvm::ArrayRef<std::int64_t> kinds) {
   if (kinds.empty())
     return "";
-  std::string result = "";
+  std::string result;
   for (std::int64_t kind : kinds)
     result += "." + std::to_string(kind);
   return result;

@@ -29,6 +29,10 @@ void OptionValueLanguage::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
+llvm::json::Value OptionValueLanguage::ToJSON(const ExecutionContext *exe_ctx) {
+  return Language::GetNameForLanguageType(m_current_value);
+}
+
 Status OptionValueLanguage::SetValueFromString(llvm::StringRef value,
                                                VarSetOperationType op) {
   Status error;

@@ -11,22 +11,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../PassDetail.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
+
 #include "mlir/Analysis/DataLayoutAnalysis.h"
-#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
-#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/VectorPattern.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -34,6 +37,7 @@
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -42,6 +46,11 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
 #include <functional>
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTFUNCTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -131,9 +140,7 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
   SmallVector<NamedAttribute, 4> attributes;
   filterFuncAttributes(funcOp->getAttrs(), /*filterArgAndResAttrs=*/false,
                        attributes);
-  Type wrapperFuncType;
-  bool resultIsNowArg;
-  std::tie(wrapperFuncType, resultIsNowArg) =
+  auto [wrapperFuncType, resultIsNowArg] =
       typeConverter.convertFunctionTypeCWrapper(type);
   if (resultIsNowArg)
     prependResAttrsToArgAttrs(rewriter, attributes, funcOp.getNumArguments());
@@ -166,7 +173,7 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
   auto call = rewriter.create<LLVM::CallOp>(loc, newFuncOp, args);
 
   if (resultIsNowArg) {
-    rewriter.create<LLVM::StoreOp>(loc, call.getResult(0),
+    rewriter.create<LLVM::StoreOp>(loc, call.getResult(),
                                    wrapperFuncOp.getArgument(0));
     rewriter.create<LLVM::ReturnOp>(loc, ValueRange{});
   } else {
@@ -189,9 +196,7 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
                                  LLVM::LLVMFuncOp newFuncOp) {
   OpBuilder::InsertionGuard guard(builder);
 
-  Type wrapperType;
-  bool resultIsNowArg;
-  std::tie(wrapperType, resultIsNowArg) =
+  auto [wrapperType, resultIsNowArg] =
       typeConverter.convertFunctionTypeCWrapper(funcOp.getFunctionType());
   // This conversion can only fail if it could not convert one of the argument
   // types. But since it has been applied to a non-wrapper function before, it
@@ -269,7 +274,7 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
 
   if (resultIsNowArg) {
     Value result = builder.create<LLVM::LoadOp>(loc, args.front());
-    builder.create<LLVM::ReturnOp>(loc, ValueRange{result});
+    builder.create<LLVM::ReturnOp>(loc, result);
   } else {
     builder.create<LLVM::ReturnOp>(loc, call.getResults());
   }
@@ -315,10 +320,42 @@ protected:
       SmallVector<Attribute, 4> newArgAttrs(
           llvmType.cast<LLVM::LLVMFunctionType>().getNumParams());
       for (unsigned i = 0, e = funcOp.getNumArguments(); i < e; ++i) {
+        // Some LLVM IR attribute have a type attached to them. During FuncOp ->
+        // LLVMFuncOp conversion these types may have changed. Account for that
+        // change by converting attributes' types as well.
+        SmallVector<NamedAttribute, 4> convertedAttrs;
+        auto attrsDict = argAttrDicts[i].cast<DictionaryAttr>();
+        convertedAttrs.reserve(attrsDict.size());
+        for (const NamedAttribute &attr : attrsDict) {
+          const auto convert = [&](const NamedAttribute &attr) {
+            return TypeAttr::get(getTypeConverter()->convertType(
+                attr.getValue().cast<TypeAttr>().getValue()));
+          };
+          if (attr.getName().getValue() ==
+              LLVM::LLVMDialect::getByValAttrName()) {
+            convertedAttrs.push_back(rewriter.getNamedAttr(
+                LLVM::LLVMDialect::getByValAttrName(), convert(attr)));
+          } else if (attr.getName().getValue() ==
+                     LLVM::LLVMDialect::getByRefAttrName()) {
+            convertedAttrs.push_back(rewriter.getNamedAttr(
+                LLVM::LLVMDialect::getByRefAttrName(), convert(attr)));
+          } else if (attr.getName().getValue() ==
+                     LLVM::LLVMDialect::getStructRetAttrName()) {
+            convertedAttrs.push_back(rewriter.getNamedAttr(
+                LLVM::LLVMDialect::getStructRetAttrName(), convert(attr)));
+          } else if (attr.getName().getValue() ==
+                     LLVM::LLVMDialect::getInAllocaAttrName()) {
+            convertedAttrs.push_back(rewriter.getNamedAttr(
+                LLVM::LLVMDialect::getInAllocaAttrName(), convert(attr)));
+          } else {
+            convertedAttrs.push_back(attr);
+          }
+        }
         auto mapping = result.getInputMapping(i);
         assert(mapping && "unexpected deletion of function argument");
         for (size_t j = 0; j < mapping->size; ++j)
-          newArgAttrs[mapping->inputNo + j] = argAttrDicts[i];
+          newArgAttrs[mapping->inputNo + j] =
+              DictionaryAttr::get(rewriter.getContext(), convertedAttrs);
       }
       attributes.push_back(
           rewriter.getNamedAttr(FunctionOpInterface::getArgDictAttrName(),
@@ -521,11 +558,8 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
       // Extract individual results from the structure and return them as list.
       results.reserve(numResults);
       for (unsigned i = 0; i < numResults; ++i) {
-        auto type =
-            this->typeConverter->convertType(callOp.getResult(i).getType());
         results.push_back(rewriter.create<LLVM::ExtractValueOp>(
-            callOp.getLoc(), type, newOp->getResult(0),
-            rewriter.getI64ArrayAttr(i)));
+            callOp.getLoc(), newOp->getResult(0), i));
       }
     }
 
@@ -624,12 +658,7 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
     }
 
     // If ReturnOp has 0 or 1 operand, create it and return immediately.
-    if (numArguments == 0) {
-      rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, TypeRange(), ValueRange(),
-                                                  op->getAttrs());
-      return success();
-    }
-    if (numArguments == 1) {
+    if (numArguments <= 1) {
       rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(
           op, TypeRange(), updatedOperands, op->getAttrs());
       return success();
@@ -637,14 +666,13 @@ struct ReturnOpLowering : public ConvertOpToLLVMPattern<func::ReturnOp> {
 
     // Otherwise, we need to pack the arguments into an LLVM struct type before
     // returning.
-    auto packedType = getTypeConverter()->packFunctionResults(
-        llvm::to_vector<4>(op.getOperandTypes()));
+    auto packedType =
+        getTypeConverter()->packFunctionResults(op.getOperandTypes());
 
     Value packed = rewriter.create<LLVM::UndefOp>(loc, packedType);
-    for (unsigned i = 0; i < numArguments; ++i) {
-      packed = rewriter.create<LLVM::InsertValueOp>(
-          loc, packedType, packed, updatedOperands[i],
-          rewriter.getI64ArrayAttr(i));
+    for (auto &it : llvm::enumerate(updatedOperands)) {
+      packed = rewriter.create<LLVM::InsertValueOp>(loc, packed, it.value(),
+                                                    it.index());
     }
     rewriter.replaceOpWithNewOp<LLVM::ReturnOp>(op, TypeRange(), packed,
                                                 op->getAttrs());
@@ -676,7 +704,7 @@ void mlir::populateFuncToLLVMConversionPatterns(LLVMTypeConverter &converter,
 namespace {
 /// A pass converting Func operations into the LLVM IR dialect.
 struct ConvertFuncToLLVMPass
-    : public ConvertFuncToLLVMBase<ConvertFuncToLLVMPass> {
+    : public impl::ConvertFuncToLLVMBase<ConvertFuncToLLVMPass> {
   ConvertFuncToLLVMPass() = default;
   ConvertFuncToLLVMPass(bool useBarePtrCallConv, unsigned indexBitwidth,
                         bool useAlignedAlloc,
@@ -713,7 +741,7 @@ struct ConvertFuncToLLVMPass
     populateFuncToLLVMConversionPatterns(typeConverter, patterns);
 
     // TODO: Remove these in favor of their dedicated conversion passes.
-    arith::populateArithmeticToLLVMConversionPatterns(typeConverter, patterns);
+    arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
     cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
 
     LLVMConversionTarget target(getContext());

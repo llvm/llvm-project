@@ -1,4 +1,4 @@
-# 'spv' Dialect
+# SPIR-V Dialect
 
 This document describes the design of the SPIR-V dialect in MLIR. It lists
 various design choices we made for modeling different SPIR-V mechanisms, and
@@ -76,36 +76,36 @@ extensible as SPIR-V specification.
 
 The SPIR-V dialect adopts the following conventions for IR:
 
-*   The prefix for all SPIR-V types and operations are `spv.`.
+*   The prefix for all SPIR-V types and operations are `spirv.`.
 *   All instructions in an extended instruction set are further qualified with
     the extended instruction set's prefix. For example, all operations in the
-    GLSL extended instruction set have the prefix of `spv.GL.`.
+    GLSL extended instruction set have the prefix of `spirv.GL.`.
 *   Ops that directly mirror instructions in the specification have `CamelCase`
     names that are the same as the instruction opnames (without the `Op`
-    prefix). For example, `spv.FMul` is a direct mirror of `OpFMul` in the
+    prefix). For example, `spirv.FMul` is a direct mirror of `OpFMul` in the
     specification. Such an op will be serialized into and deserialized from one
     SPIR-V instruction.
 *   Ops with `snake_case` names are those that have different representation
     from corresponding instructions (or concepts) in the specification. These
-    ops are mostly for defining the SPIR-V structure. For example, `spv.module`
-    and `spv.Constant`. They may correspond to one or more instructions during
+    ops are mostly for defining the SPIR-V structure. For example, `spirv.module`
+    and `spirv.Constant`. They may correspond to one or more instructions during
     (de)serialization.
 *   Ops with `mlir.snake_case` names are those that have no corresponding
     instructions (or concepts) in the binary format. They are introduced to
-    satisfy MLIR structural requirements. For example, `spv.mlir.merge`. They
+    satisfy MLIR structural requirements. For example, `spirv.mlir.merge`. They
     map to no instructions during (de)serialization.
 
-(TODO: consider merging the last two cases and adopting `spv.mlir.` prefix for
+(TODO: consider merging the last two cases and adopting `spirv.mlir.` prefix for
 them.)
 
 ## Module
 
-A SPIR-V module is defined via the `spv.module` op, which has one region that
+A SPIR-V module is defined via the `spirv.module` op, which has one region that
 contains one block. Model-level instructions, including function definitions,
 are all placed inside the block. Functions are defined using the builtin `func`
 op.
 
-We choose to model a SPIR-V module with a dedicated `spv.module` op based on the
+We choose to model a SPIR-V module with a dedicated `spirv.module` op based on the
 following considerations:
 
 *   It maps cleanly to a SPIR-V module in the specification.
@@ -114,11 +114,11 @@ following considerations:
 *   We can attach additional model-level attributes.
 *   We can control custom assembly form.
 
-The `spv.module` op's region cannot capture SSA values from outside, neither
-implicitly nor explicitly. The `spv.module` op's region is closed as to what ops
+The `spirv.module` op's region cannot capture SSA values from outside, neither
+implicitly nor explicitly. The `spirv.module` op's region is closed as to what ops
 can appear inside: apart from the builtin `func` op, it can only contain ops
-from the SPIR-V dialect. The `spv.module` op's verifier enforces this rule. This
-meaningfully guarantees that a `spv.module` can be the entry point and boundary
+from the SPIR-V dialect. The `spirv.module` op's verifier enforces this rule. This
+meaningfully guarantees that a `spirv.module` can be the entry point and boundary
 for serialization.
 
 ### Module-level operations
@@ -148,7 +148,7 @@ instructions are represented in the SPIR-V dialect:
 #### Use MLIR attributes for metadata
 
 *   Requirements for capabilities, extensions, extended instruction sets,
-    addressing model, and memory model are conveyed using `spv.module`
+    addressing model, and memory model are conveyed using `spirv.module`
     attributes. This is considered better because these information are for the
     execution environment. It's easier to probe them if on the module op itself.
 *   Annotations/decoration instructions are "folded" into the instructions they
@@ -166,23 +166,23 @@ instructions are represented in the SPIR-V dialect:
 #### Unify and localize constants
 
 *   Various normal constant instructions are represented by the same
-    `spv.Constant` op. Those instructions are just for constants of different
+    `spirv.Constant` op. Those instructions are just for constants of different
     types; using one op to represent them reduces IR verbosity and makes
     transformations less tedious.
-*   Normal constants are not placed in `spv.module`'s region; they are localized
+*   Normal constants are not placed in `spirv.module`'s region; they are localized
     into functions. This is to make functions in the SPIR-V dialect to be
     isolated and explicit capturing. Constants are cheap to duplicate given
     attributes are made unique in `MLIRContext`.
 
 #### Adopt symbol-based global variables and specialization constant
 
-*   Global variables are defined with the `spv.GlobalVariable` op. They do not
+*   Global variables are defined with the `spirv.GlobalVariable` op. They do not
     generate SSA values. Instead they have symbols and should be referenced via
-    symbols. To use global variables in a function block, `spv.mlir.addressof` is
+    symbols. To use global variables in a function block, `spirv.mlir.addressof` is
     needed to turn the symbol into an SSA value.
-*   Specialization constants are defined with the `spv.SpecConstant` op. Similar
+*   Specialization constants are defined with the `spirv.SpecConstant` op. Similar
     to global variables, they do not generate SSA values and have symbols for
-    reference, too. `spv.mlir.referenceof` is needed to turn the symbol into an SSA
+    reference, too. `spirv.mlir.referenceof` is needed to turn the symbol into an SSA
     value for use in a function block.
 
 The above choices enables functions in the SPIR-V dialect to be isolated and
@@ -200,10 +200,10 @@ explicit capturing.
 
 *   A SPIR-V module can have multiple entry points. And these entry points refer
     to the function and interface variables. It’s not suitable to model them as
-    `spv.module` op attributes. We can model them as normal ops of using symbol
+    `spirv.module` op attributes. We can model them as normal ops of using symbol
     references.
 *   Similarly for execution modes, which are coupled with entry points, we can
-    model them as normal ops in `spv.module`'s region.
+    model them as normal ops in `spirv.module`'s region.
 
 ## Decorations
 
@@ -226,8 +226,8 @@ OpDecorate %v2 NoContraction
 We can represent them in the SPIR-V dialect as:
 
 ```mlir
-%v1 = "spv.FMul"(%0, %0) {RelaxedPrecision: unit} : (f32, f32) -> (f32)
-%v2 = "spv.FMul"(%1, %1) {NoContraction: unit} : (f32, f32) -> (f32)
+%v1 = "spirv.FMul"(%0, %0) {RelaxedPrecision: unit} : (f32, f32) -> (f32)
+%v2 = "spirv.FMul"(%1, %1) {NoContraction: unit} : (f32, f32) -> (f32)
 ```
 
 This approach benefits transformations. Essentially those decorations are just
@@ -288,16 +288,16 @@ element-type ::= integer-type
                | vector-type
                | spirv-type
 
-array-type ::= `!spv.array` `<` integer-literal `x` element-type
+array-type ::= `!spirv.array` `<` integer-literal `x` element-type
                (`,` `stride` `=` integer-literal)? `>`
 ```
 
 For example,
 
 ```mlir
-!spv.array<4 x i32>
-!spv.array<4 x i32, stride = 4>
-!spv.array<16 x vector<4 x f32>>
+!spirv.array<4 x i32>
+!spirv.array<4 x i32, stride = 4>
+!spirv.array<16 x vector<4 x f32>>
 ```
 
 ### Image type
@@ -317,7 +317,7 @@ sampler-use-info ::= `SamplerUnknown` | `NeedSampler` | `NoSampler`
 
 format ::= `Unknown` | `Rgba32f` | <and other SPIR-V Image Formats...>
 
-image-type ::= `!spv.image<` element-type `,` dim `,` depth-info `,`
+image-type ::= `!spirv.image<` element-type `,` dim `,` depth-info `,`
                            arrayed-info `,` sampling-info `,`
                            sampler-use-info `,` format `>`
 ```
@@ -325,8 +325,8 @@ image-type ::= `!spv.image<` element-type `,` dim `,` depth-info `,`
 For example,
 
 ```mlir
-!spv.image<f32, 1D, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Unknown>
-!spv.image<f32, Cube, IsDepth, Arrayed, MultiSampled, NeedSampler, Rgba32f>
+!spirv.image<f32, 1D, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Unknown>
+!spirv.image<f32, Cube, IsDepth, Arrayed, MultiSampled, NeedSampler, Rgba32f>
 ```
 
 ### Pointer type
@@ -339,14 +339,14 @@ storage-class ::= `UniformConstant`
                 | `Workgroup`
                 | <and other storage classes...>
 
-pointer-type ::= `!spv.ptr<` element-type `,` storage-class `>`
+pointer-type ::= `!spirv.ptr<` element-type `,` storage-class `>`
 ```
 
 For example,
 
 ```mlir
-!spv.ptr<i32, Function>
-!spv.ptr<vector<4 x f32>, Uniform>
+!spirv.ptr<i32, Function>
+!spirv.ptr<vector<4 x f32>, Uniform>
 ```
 
 ### Runtime array type
@@ -354,22 +354,22 @@ For example,
 This corresponds to SPIR-V [runtime array type][RuntimeArrayType]. Its syntax is
 
 ```
-runtime-array-type ::= `!spv.rtarray` `<` element-type (`,` `stride` `=` integer-literal)? `>`
+runtime-array-type ::= `!spirv.rtarray` `<` element-type (`,` `stride` `=` integer-literal)? `>`
 ```
 
 For example,
 
 ```mlir
-!spv.rtarray<i32>
-!spv.rtarray<i32, stride=4>
-!spv.rtarray<vector<4 x f32>>
+!spirv.rtarray<i32>
+!spirv.rtarray<i32, stride=4>
+!spirv.rtarray<vector<4 x f32>>
 ```
 ### Sampled image type
 
 This corresponds to SPIR-V [sampled image type][SampledImageType]. Its syntax is
 
 ```
-sampled-image-type ::= `!spv.sampled_image<!spv.image<` element-type `,` dim `,` depth-info `,`
+sampled-image-type ::= `!spirv.sampled_image<!spirv.image<` element-type `,` dim `,` depth-info `,`
                                                         arrayed-info `,` sampling-info `,`
                                                         sampler-use-info `,` format `>>`
 ```
@@ -377,8 +377,8 @@ sampled-image-type ::= `!spv.sampled_image<!spv.image<` element-type `,` dim `,`
 For example,
 
 ```mlir
-!spv.sampled_image<!spv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>
-!spv.sampled_image<!spv.image<i32, Rect, DepthUnknown, Arrayed, MultiSampled, NeedSampler, R8ui>>
+!spirv.sampled_image<!spirv.image<f32, Dim1D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>
+!spirv.sampled_image<!spirv.image<i32, Rect, DepthUnknown, Arrayed, MultiSampled, NeedSampler, R8ui>>
 ```
 
 ### Struct type
@@ -387,17 +387,17 @@ This corresponds to SPIR-V [struct type][StructType]. Its syntax is
 
 ```
 struct-member-decoration ::= integer-literal? spirv-decoration*
-struct-type ::= `!spv.struct<` spirv-type (`[` struct-member-decoration `]`)?
+struct-type ::= `!spirv.struct<` spirv-type (`[` struct-member-decoration `]`)?
                      (`, ` spirv-type (`[` struct-member-decoration `]`)?
 ```
 
 For Example,
 
 ```mlir
-!spv.struct<f32>
-!spv.struct<f32 [0]>
-!spv.struct<f32, !spv.image<f32, 1D, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Unknown>>
-!spv.struct<f32 [0], i32 [4]>
+!spirv.struct<f32>
+!spirv.struct<f32 [0]>
+!spirv.struct<f32, !spirv.image<f32, 1D, NoDepth, NonArrayed, SingleSampled, SamplerUnknown, Unknown>>
+!spirv.struct<f32 [0], i32 [4]>
 ```
 
 ## Function
@@ -423,12 +423,12 @@ more concisely:
 
 ```mlir
 func.func @f(%arg: i32) -> i32 {
-  "spv.ReturnValue"(%arg) : (i32) -> (i32)
+  "spirv.ReturnValue"(%arg) : (i32) -> (i32)
 }
 ```
 
 A SPIR-V function can have at most one result. It cannot contain nested
-functions or non-SPIR-V operations. `spv.module` verifies these requirements.
+functions or non-SPIR-V operations. `spirv.module` verifies these requirements.
 
 A major difference between the SPIR-V dialect and the SPIR-V specification for
 functions is that the former are isolated and require explicit capturing, while
@@ -442,7 +442,7 @@ infrastructure require ops to be isolated, e.g., the
 [greedy pattern rewriter][GreedyPatternRewriter] can only act on ops isolated
 from above.
 
-(TODO: create a dedicated `spv.fn` op for SPIR-V functions.)
+(TODO: create a dedicated `spirv.fn` op for SPIR-V functions.)
 
 ## Operations
 
@@ -475,9 +475,9 @@ For example,
 can be represented in the dialect as
 
 ```mlir
-%0 = "spv.Constant"() { value = 42 : i32 } : () -> i32
-%1 = "spv.Variable"(%0) { storage_class = "Function" } : (i32) -> !spv.ptr<i32, Function>
-%2 = "spv.IAdd"(%0, %0) : (i32, i32) -> i32
+%0 = "spirv.Constant"() { value = 42 : i32 } : () -> i32
+%1 = "spirv.Variable"(%0) { storage_class = "Function" } : (i32) -> !spirv.ptr<i32, Function>
+%2 = "spirv.IAdd"(%0, %0) : (i32, i32) -> i32
 ```
 
 Operation documentation is written in each op's Op Definition Spec using
@@ -508,8 +508,8 @@ proper name prefix. For example, for
 we can have
 
 ```mlir
-%1 = "spv.GL.Log"(%cst) : (f32) -> (f32)
-%2 = "spv.GL.Sqrt"(%cst) : (f32) -> (f32)
+%1 = "spirv.GL.Log"(%cst) : (f32) -> (f32)
+%2 = "spirv.GL.Sqrt"(%cst) : (f32) -> (f32)
 ```
 
 ## Control Flow
@@ -525,21 +525,21 @@ control flow construct. With this approach, it's easier to discover all blocks
 belonging to a structured control flow construct. It is also more idiomatic to
 MLIR system.
 
-We introduce a `spv.mlir.selection` and `spv.mlir.loop` op for structured selections and
+We introduce a `spirv.mlir.selection` and `spirv.mlir.loop` op for structured selections and
 loops, respectively. The merge targets are the next ops following them. Inside
-their regions, a special terminator, `spv.mlir.merge` is introduced for branching to
+their regions, a special terminator, `spirv.mlir.merge` is introduced for branching to
 the merge target.
 
 ### Selection
 
-`spv.mlir.selection` defines a selection construct. It contains one region. The
+`spirv.mlir.selection` defines a selection construct. It contains one region. The
 region should contain at least two blocks: one selection header block and one
 merge block.
 
 *   The selection header block should be the first block. It should contain the
-    `spv.BranchConditional` or `spv.Switch` op.
+    `spirv.BranchConditional` or `spirv.Switch` op.
 *   The merge block should be the last block. The merge block should only
-    contain a `spv.mlir.merge` op. Any block can branch to the merge block for early
+    contain a `spirv.mlir.merge` op. Any block can branch to the merge block for early
     exit.
 
 ```
@@ -581,24 +581,24 @@ It will be represented as
 
 ```mlir
 func.func @selection(%cond: i1) -> () {
-  %zero = spv.Constant 0: i32
-  %one = spv.Constant 1: i32
-  %two = spv.Constant 2: i32
-  %x = spv.Variable init(%zero) : !spv.ptr<i32, Function>
+  %zero = spirv.Constant 0: i32
+  %one = spirv.Constant 1: i32
+  %two = spirv.Constant 2: i32
+  %x = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
 
-  spv.mlir.selection {
-    spv.BranchConditional %cond, ^then, ^else
+  spirv.mlir.selection {
+    spirv.BranchConditional %cond, ^then, ^else
 
   ^then:
-    spv.Store "Function" %x, %one : i32
-    spv.Branch ^merge
+    spirv.Store "Function" %x, %one : i32
+    spirv.Branch ^merge
 
   ^else:
-    spv.Store "Function" %x, %two : i32
-    spv.Branch ^merge
+    spirv.Store "Function" %x, %two : i32
+    spirv.Branch ^merge
 
   ^merge:
-    spv.mlir.merge
+    spirv.mlir.merge
   }
 
   // ...
@@ -608,14 +608,14 @@ func.func @selection(%cond: i1) -> () {
 
 ### Loop
 
-`spv.mlir.loop` defines a loop construct. It contains one region. The region should
+`spirv.mlir.loop` defines a loop construct. It contains one region. The region should
 contain at least four blocks: one entry block, one loop header block, one loop
 continue block, one merge block.
 
 *   The entry block should be the first block and it should jump to the loop
     header block, which is the second block.
 *   The merge block should be the last block. The merge block should only
-    contain a `spv.mlir.merge` op. Any block except the entry block can branch to
+    contain a `spirv.mlir.merge` op. Any block except the entry block can branch to
     the merge block for early exit.
 *   The continue block should be the second to last block and it should have a
     branch to the loop header block.
@@ -669,30 +669,30 @@ It will be represented as
 
 ```mlir
 func.func @loop(%count : i32) -> () {
-  %zero = spv.Constant 0: i32
-  %one = spv.Constant 1: i32
-  %var = spv.Variable init(%zero) : !spv.ptr<i32, Function>
+  %zero = spirv.Constant 0: i32
+  %one = spirv.Constant 1: i32
+  %var = spirv.Variable init(%zero) : !spirv.ptr<i32, Function>
 
-  spv.mlir.loop {
-    spv.Branch ^header
+  spirv.mlir.loop {
+    spirv.Branch ^header
 
   ^header:
-    %val0 = spv.Load "Function" %var : i32
-    %cmp = spv.SLessThan %val0, %count : i32
-    spv.BranchConditional %cmp, ^body, ^merge
+    %val0 = spirv.Load "Function" %var : i32
+    %cmp = spirv.SLessThan %val0, %count : i32
+    spirv.BranchConditional %cmp, ^body, ^merge
 
   ^body:
     // ...
-    spv.Branch ^continue
+    spirv.Branch ^continue
 
   ^continue:
-    %val1 = spv.Load "Function" %var : i32
-    %add = spv.IAdd %val1, %one : i32
-    spv.Store "Function" %var, %add : i32
-    spv.Branch ^header
+    %val1 = spirv.Load "Function" %var : i32
+    %add = spirv.IAdd %val1, %one : i32
+    spirv.Store "Function" %var, %add : i32
+    spirv.Branch ^header
 
   ^merge:
-    spv.mlir.merge
+    spirv.mlir.merge
   }
   return
 }
@@ -729,28 +729,28 @@ It will be represented as:
 
 ```mlir
 func.func @foo() -> () {
-  %var = spv.Variable : !spv.ptr<i32, Function>
+  %var = spirv.Variable : !spirv.ptr<i32, Function>
 
-  spv.mlir.selection {
-    %true = spv.Constant true
-    spv.BranchConditional %true, ^true, ^false
+  spirv.mlir.selection {
+    %true = spirv.Constant true
+    spirv.BranchConditional %true, ^true, ^false
 
   ^true:
-    %zero = spv.Constant 0 : i32
-    spv.Branch ^phi(%zero: i32)
+    %zero = spirv.Constant 0 : i32
+    spirv.Branch ^phi(%zero: i32)
 
   ^false:
-    %one = spv.Constant 1 : i32
-    spv.Branch ^phi(%one: i32)
+    %one = spirv.Constant 1 : i32
+    spirv.Branch ^phi(%one: i32)
 
   ^phi(%arg: i32):
-    spv.Store "Function" %var, %arg : i32
-    spv.Return
+    spirv.Store "Function" %var, %arg : i32
+    spirv.Return
 
   ^merge:
-    spv.mlir.merge
+    spirv.mlir.merge
   }
-  spv.Return
+  spirv.Return
 }
 ```
 
@@ -778,7 +778,7 @@ implement the above interfaces.
 SPIR-V ops' availability implementation methods are automatically synthesized
 from the availability specification on each op and enum attribute in TableGen.
 An op needs to look into not only the opcode but also operands to derive its
-availability requirements. For example, `spv.ControlBarrier` requires no
+availability requirements. For example, `spirv.ControlBarrier` requires no
 special capability if the execution scope is `Subgroup`, but it will require
 the `VulkanMemoryModel` capability if the scope is `QueueFamily`.
 
@@ -801,8 +801,8 @@ instructions.
 
 SPIR-V compilation should also take into consideration of the execution
 environment, so we generate SPIR-V modules valid for the target environment.
-This is conveyed by the `spv.target_env` (`spirv::TargetEnvAttr`) attribute. It
-should be of `#spv.target_env` attribute kind, which is defined as:
+This is conveyed by the `spirv.target_env` (`spirv::TargetEnvAttr`) attribute. It
+should be of `#spirv.target_env` attribute kind, which is defined as:
 
 ```
 spirv-version    ::= `v1.0` | `v1.1` | ...
@@ -817,7 +817,7 @@ spirv-capability-elements ::= spirv-capability (`,` spirv-capability)*
 
 spirv-resource-limits ::= dictionary-attribute
 
-spirv-vce-attribute ::= `#` `spv.vce` `<`
+spirv-vce-attribute ::= `#` `spirv.vce` `<`
                             spirv-version `,`
                             spirv-capability-list `,`
                             spirv-extensions-list `>`
@@ -827,7 +827,7 @@ spirv-device-type ::= `DiscreteGPU` | `IntegratedGPU` | `CPU` | ...
 spirv-device-id ::= integer-literal
 spirv-device-info ::= spirv-vendor-id (`:` spirv-device-type (`:` spirv-device-id)?)?
 
-spirv-target-env-attribute ::= `#` `spv.target_env` `<`
+spirv-target-env-attribute ::= `#` `spirv.target_env` `<`
                                   spirv-vce-attribute,
                                   (spirv-device-info `,`)?
                                   spirv-resource-limits `>`
@@ -835,7 +835,7 @@ spirv-target-env-attribute ::= `#` `spv.target_env` `<`
 
 The attribute has a few fields:
 
-*   A `#spv.vce` (`spirv::VerCapExtAttr`) attribute:
+*   A `#spirv.vce` (`spirv::VerCapExtAttr`) attribute:
     *   The target SPIR-V version.
     *   A list of SPIR-V extensions for the target.
     *   A list of SPIR-V capabilities for the target.
@@ -848,8 +848,8 @@ For example,
 
 ```
 module attributes {
-spv.target_env = #spv.target_env<
-    #spv.vce<v1.3, [Shader, GroupNonUniform], [SPV_KHR_8bit_storage]>,
+spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.3, [Shader, GroupNonUniform], [SPV_KHR_8bit_storage]>,
     ARM:IntegratedGPU,
     {
       max_compute_workgroup_invocations = 128 : i32,
@@ -858,7 +858,7 @@ spv.target_env = #spv.target_env<
 } { ... }
 ```
 
-Dialect conversion framework will utilize the information in `spv.target_env` to
+Dialect conversion framework will utilize the information in `spirv.target_env` to
 properly filter out patterns and ops not available in the target execution
 environment. When targeting SPIR-V, one needs to create a
 [`SPIRVConversionTarget`](#spirvconversiontarget) by providing such an
@@ -904,26 +904,26 @@ to and guide the SPIR-V compilation path.
 The SPIR-V dialect defines [a few attributes][MlirSpirvAbi] for specifying these
 interfaces:
 
-*   `spv.entry_point_abi` is a struct attribute that should be attached to the
+*   `spirv.entry_point_abi` is a struct attribute that should be attached to the
     entry function. It contains:
     *   `local_size` for specifying the local work group size for the dispatch.
-*   `spv.interface_var_abi` is attribute that should be attached to each operand
-    and result of the entry function. It should be of `#spv.interface_var_abi`
+*   `spirv.interface_var_abi` is attribute that should be attached to each operand
+    and result of the entry function. It should be of `#spirv.interface_var_abi`
     attribute kind, which is defined as:
 
 ```
 spv-storage-class     ::= `StorageBuffer` | ...
 spv-descriptor-set    ::= integer-literal
 spv-binding           ::= integer-literal
-spv-interface-var-abi ::= `#` `spv.interface_var_abi` `<(` spv-descriptor-set
+spv-interface-var-abi ::= `#` `spirv.interface_var_abi` `<(` spv-descriptor-set
                           `,` spv-binding `)` (`,` spv-storage-class)? `>`
 ```
 
 For example,
 
 ```
-#spv.interface_var_abi<(0, 0), StorageBuffer>
-#spv.interface_var_abi<(0, 1)>
+#spirv.interface_var_abi<(0, 0), StorageBuffer>
+#spirv.interface_var_abi<(0, 1)>
 ```
 
 The attribute has a few fields:
@@ -936,11 +936,11 @@ The SPIR-V dialect provides a [`LowerABIAttributesPass`][MlirSpirvPasses] that
 uses this information to lower the entry point function and its ABI consistent
 with the Vulkan validation rules. Specifically,
 
-*   Creates `spv.GlobalVariable`s for the arguments, and replaces all uses of
+*   Creates `spirv.GlobalVariable`s for the arguments, and replaces all uses of
     the argument with this variable. The SSA value used for replacement is
-    obtained using the `spv.mlir.addressof` operation.
-*   Adds the `spv.EntryPoint` and `spv.ExecutionMode` operations into the
-    `spv.module` for the entry function.
+    obtained using the `spirv.mlir.addressof` operation.
+*   Adds the `spirv.EntryPoint` and `spirv.ExecutionMode` operations into the
+    `spirv.module` for the entry function.
 
 ## Serialization and deserialization
 
@@ -966,16 +966,16 @@ assembler/disassembler in the [SPIRV-Tools][SpirvTools] project.
 A few transformations are performed in the process of serialization because of
 the representational differences between SPIR-V dialect and binary format:
 
-*   Attributes on `spv.module` are emitted as their corresponding SPIR-V
+*   Attributes on `spirv.module` are emitted as their corresponding SPIR-V
     instructions.
 *   Types are serialized into `OpType*` instructions in the SPIR-V binary module
     section for types, constants, and global variables.
-*   `spv.Constant`s are unified and placed in the SPIR-V binary module section
+*   `spirv.Constant`s are unified and placed in the SPIR-V binary module section
     for types, constants, and global variables.
 *   Attributes on ops, if not part of the op's binary encoding, are emitted as
     `OpDecorate*` instructions in the SPIR-V binary module section for
     decorations.
-*   `spv.mlir.selection`s and `spv.mlir.loop`s are emitted as basic blocks with `Op*Merge`
+*   `spirv.mlir.selection`s and `spirv.mlir.loop`s are emitted as basic blocks with `Op*Merge`
     instructions in the header block as required by the binary format.
 *   Block arguments are materialized as `OpPhi` instructions at the beginning of
     the corresponding blocks.
@@ -984,20 +984,20 @@ Similarly, a few transformations are performed during deserialization:
 
 *   Instructions for execution environment requirements (extensions,
     capabilities, extended instruction sets, etc.) will be placed as attributes
-    on `spv.module`.
+    on `spirv.module`.
 *   `OpType*` instructions will be converted into proper `mlir::Type`s.
-*   `OpConstant*` instructions are materialized as `spv.Constant` at each use
+*   `OpConstant*` instructions are materialized as `spirv.Constant` at each use
     site.
-*   `OpVariable` instructions will be converted to `spv.GlobalVariable` ops if
-    in module-level; otherwise they will be converted into `spv.Variable` ops.
+*   `OpVariable` instructions will be converted to `spirv.GlobalVariable` ops if
+    in module-level; otherwise they will be converted into `spirv.Variable` ops.
 *   Every use of a module-level `OpVariable` instruction will materialize a
-    `spv.mlir.addressof` op to turn the symbol of the corresponding
-    `spv.GlobalVariable` into an SSA value.
+    `spirv.mlir.addressof` op to turn the symbol of the corresponding
+    `spirv.GlobalVariable` into an SSA value.
 *   Every use of a `OpSpecConstant` instruction will materialize a
-    `spv.mlir.referenceof` op to turn the symbol of the corresponding
-    `spv.SpecConstant` into an SSA value.
+    `spirv.mlir.referenceof` op to turn the symbol of the corresponding
+    `spirv.SpecConstant` into an SSA value.
 *   `OpPhi` instructions are converted to block arguments.
-*   Structured control flow are placed inside `spv.mlir.selection` and `spv.mlir.loop`.
+*   Structured control flow are placed inside `spirv.mlir.selection` and `spirv.mlir.loop`.
 
 ## Conversions
 
@@ -1017,12 +1017,12 @@ lowering described below implements both these requirements.)
 
 The `mlir::spirv::SPIRVConversionTarget` class derives from the
 `mlir::ConversionTarget` class and serves as a utility to define a conversion
-target satisfying a given [`spv.target_env`](#target-environment). It registers
+target satisfying a given [`spirv.target_env`](#target-environment). It registers
 proper hooks to check the dynamic legality of SPIR-V ops. Users can further
 register other legality constraints into the returned `SPIRVConversionTarget`.
 
 `spirv::lookupTargetEnvOrDefault()` is a handy utility function to query an
-`spv.target_env` attached in the input IR or use the default to construct a
+`spirv.target_env` attached in the input IR or use the default to construct a
 `SPIRVConversionTarget`.
 
 ### `SPIRVTypeConverter`
@@ -1052,7 +1052,7 @@ directly.
 (TODO: Convert other vectors of lengths to scalars or arrays)
 
 [Builtin memref types][MlirMemrefType] with static shape and stride are
-converted to `spv.ptr<spv.struct<spv.array<...>>>`s. The resultant SPIR-V array
+converted to `spirv.ptr<spirv.struct<spirv.array<...>>>`s. The resultant SPIR-V array
 types have the same element type as the source memref and its number of elements
 is obtained from the layout specification of the memref. The storage class of
 the pointer type are derived from the memref's memory space with
@@ -1063,24 +1063,24 @@ the pointer type are derived from the memref's memory space with
 #### Setting layout for shader interface variables
 
 SPIR-V validation rules for shaders require composite objects to be explicitly
-laid out. If a `spv.GlobalVariable` is not explicitly laid out, the utility
+laid out. If a `spirv.GlobalVariable` is not explicitly laid out, the utility
 method `mlir::spirv::decorateType` implements a layout consistent with
 the [Vulkan shader requirements][VulkanShaderInterface].
 
 #### Creating builtin variables
 
-In SPIR-V dialect, builtins are represented using `spv.GlobalVariable`s, with
-`spv.mlir.addressof` used to get a handle to the builtin as an SSA value.  The
-method `mlir::spirv::getBuiltinVariableValue` creates a `spv.GlobalVariable` for
-the builtin in the current `spv.module` if it does not exist already, and
-returns an SSA value generated from an `spv.mlir.addressof` operation.
+In SPIR-V dialect, builtins are represented using `spirv.GlobalVariable`s, with
+`spirv.mlir.addressof` used to get a handle to the builtin as an SSA value.  The
+method `mlir::spirv::getBuiltinVariableValue` creates a `spirv.GlobalVariable` for
+the builtin in the current `spirv.module` if it does not exist already, and
+returns an SSA value generated from an `spirv.mlir.addressof` operation.
 
 ### Current conversions to SPIR-V
 
 Using the above infrastructure, conversions are implemented from
 
-*   [Arithmetic Dialect][MlirArithmeticDialect]
-*   [GPU Dialect][MlirGpuDialect] : A gpu.module is converted to a `spv.module`.
+*   [Arith Dialect][MlirArithDialect]
+*   [GPU Dialect][MlirGpuDialect] : A gpu.module is converted to a `spirv.module`.
     A gpu.function within this module is lowered as an entry function.
 
 ## Code organization
@@ -1160,7 +1160,7 @@ These common utilities are implemented in the `MLIRSPIRVConversion` and
 
 ## Rationale
 
-### Lowering `memref`s to `!spv.array<..>` and `!spv.rtarray<..>`.
+### Lowering `memref`s to `!spirv.array<..>` and `!spirv.rtarray<..>`.
 
 The LLVM dialect lowers `memref` types to a `MemrefDescriptor`:
 
@@ -1177,8 +1177,8 @@ struct MemrefDescriptor {
 ```
 
 In SPIR-V dialect, we chose not to use a `MemrefDescriptor`. Instead a `memref`
-is lowered directly to a `!spv.ptr<!spv.array<nelts x elem_type>>` when the
-`memref` is statically shaped, and `!spv.ptr<!spv.rtarray<elem_type>>` when the
+is lowered directly to a `!spirv.ptr<!spirv.array<nelts x elem_type>>` when the
+`memref` is statically shaped, and `!spirv.ptr<!spirv.rtarray<elem_type>>` when the
 `memref` is dynamically shaped. The rationale behind this choice is described
 below.
 
@@ -1198,7 +1198,7 @@ below.
     Vulkan-capable device we can target; basically ruling out mobile support..
 
 1.  An alternative to having one level of indirection (as is the case with
-    `MemrefDescriptor`s), is to embed the `!spv.array` or `!spv.rtarray`
+    `MemrefDescriptor`s), is to embed the `!spirv.array` or `!spirv.rtarray`
     directly in the `MemrefDescriptor`, Having such a descriptor at the ABI
     boundary implies that the first few bytes of the input/output buffers would
     need to be reserved for shape/stride information. This adds an unnecessary
@@ -1364,7 +1364,7 @@ conversion as well, the pattern must inherit from the
 `mlir::spirv::SPIRVTypeConverter`.  If the operation has a region, [signature
 conversion][MlirDialectConversionSignatureConversion] might be needed as well.
 
-**Note**: The current validation rules of `spv.module` require that all
+**Note**: The current validation rules of `spirv.module` require that all
 operations contained within its region are valid operations in the SPIR-V
 dialect.
 

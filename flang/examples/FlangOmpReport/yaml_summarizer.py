@@ -44,7 +44,7 @@ Pseudo-examples:
     $ python3 yaml_summarizer.py file_1.yaml file_2.yaml
     <Unique OMP constructs with there grouped clauses from file_1.yaml and file_2.yaml>
 
-    Construcsts are in the form:
+    Constructs are in the form:
     - construct: someOMPconstruct
     count: 8
     clauses:

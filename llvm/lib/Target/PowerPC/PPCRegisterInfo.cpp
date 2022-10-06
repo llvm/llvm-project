@@ -257,8 +257,11 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
     return CSR_SVR432_VSRP_SaveList;
   if (Subtarget.hasAltivec())
     return CSR_SVR432_Altivec_SaveList;
-  else if (Subtarget.hasSPE())
+  else if (Subtarget.hasSPE()) {
+    if (TM.isPositionIndependent() && !TM.isPPC64())
+      return CSR_SVR432_SPE_NO_S30_31_SaveList;
     return CSR_SVR432_SPE_SaveList;
+   }
   return CSR_SVR432_SaveList;
 }
 
@@ -317,8 +320,11 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                ? CSR_SVR432_VSRP_RegMask
                : (Subtarget.hasAltivec()
                       ? CSR_SVR432_Altivec_RegMask
-                      : (Subtarget.hasSPE() ? CSR_SVR432_SPE_RegMask
-                                            : CSR_SVR432_RegMask));
+                      : (Subtarget.hasSPE()
+                             ? (TM.isPositionIndependent()
+                                     ? CSR_SVR432_SPE_NO_S30_31_RegMask
+                                     : CSR_SVR432_SPE_RegMask)
+                             : CSR_SVR432_RegMask));
 }
 
 const uint32_t*
@@ -398,9 +404,8 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // Reserve Altivec registers when Altivec is unavailable.
   if (!Subtarget.hasAltivec())
-    for (TargetRegisterClass::iterator I = PPC::VRRCRegClass.begin(),
-         IE = PPC::VRRCRegClass.end(); I != IE; ++I)
-      markSuperRegs(Reserved, *I);
+    for (MCRegister Reg : PPC::VRRCRegClass)
+      markSuperRegs(Reserved, Reg);
 
   if (Subtarget.isAIXABI() && Subtarget.hasAltivec() &&
       !TM.getAIXExtendedAltivecABI()) {
@@ -459,13 +464,13 @@ bool PPCRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) co
   // The callee saved info is valid so it can be traversed.
   // Checking for registers that need saving that do not have load or store
   // forms where the address offset is an immediate.
-  for (unsigned i = 0; i < Info.size(); i++) {
+  for (const CalleeSavedInfo &CSI : Info) {
     // If the spill is to a register no scavenging is required.
-    if (Info[i].isSpilledToReg())
+    if (CSI.isSpilledToReg())
       continue;
 
-    int FrIdx = Info[i].getFrameIdx();
-    Register Reg = Info[i].getReg();
+    int FrIdx = CSI.getFrameIdx();
+    Register Reg = CSI.getReg();
 
     const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg);
     unsigned Opcode = InstrInfo->getStoreOpcodeForSpill(RC);
@@ -561,6 +566,7 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
   // want to allocate the corresponding physical subreg for the source.
   // The copy into ACC will be a BUILD_UACC so we want to allocate
   // the same number UACC for the source.
+  const TargetRegisterClass *RegClass = MRI->getRegClass(VirtReg);
   for (MachineInstr &Use : MRI->reg_nodbg_instructions(VirtReg)) {
     const MachineOperand *ResultOp = nullptr;
     Register ResultReg;
@@ -572,10 +578,17 @@ bool PPCRegisterInfo::getRegAllocationHints(Register VirtReg,
           MRI->getRegClass(ResultReg)->contains(PPC::UACC0) &&
           VRM->hasPhys(ResultReg)) {
         Register UACCPhys = VRM->getPhys(ResultReg);
-        Register HintReg = getSubReg(UACCPhys, ResultOp->getSubReg());
-        // Ensure that the hint is a VSRp register.
-        if (HintReg >= PPC::VSRp0 && HintReg <= PPC::VSRp31)
-          Hints.push_back(HintReg);
+        Register HintReg;
+        if (RegClass->contains(PPC::VSRp0)) {
+          HintReg = getSubReg(UACCPhys, ResultOp->getSubReg());
+          // Ensure that the hint is a VSRp register.
+          if (HintReg >= PPC::VSRp0 && HintReg <= PPC::VSRp31)
+            Hints.push_back(HintReg);
+        } else if (RegClass->contains(PPC::ACC0)) {
+          HintReg = PPC::ACC0 + (UACCPhys - PPC::UACC0);
+          if (HintReg >= PPC::ACC0 && HintReg <= PPC::ACC7)
+            Hints.push_back(HintReg);
+        }
       }
       break;
     }

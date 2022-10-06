@@ -14,7 +14,10 @@
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/Support/CachePruning.h"
 #include "llvm/Support/Caching.h"
+#include "llvm/Support/MemoryBuffer.h"
+
 #include <mutex>
 
 namespace lldb_private {
@@ -40,11 +43,18 @@ namespace lldb_private {
 
 class DataFileCache {
 public:
-  /// Create a data file cache in the directory path that is specified.
+  /// Create a data file cache in the directory path that is specified, using
+  /// the specified policy.
   ///
   /// Data will be cached in files created in this directory when clients call
   /// DataFileCache::SetCacheData.
-  DataFileCache(llvm::StringRef path);
+  DataFileCache(llvm::StringRef path,
+                llvm::CachePruningPolicy policy =
+                    DataFileCache::GetLLDBIndexCachePolicy());
+
+  /// Gets the default LLDB index cache policy, which is controlled by the
+  /// "LLDBIndexCache" family of settings.
+  static llvm::CachePruningPolicy GetLLDBIndexCachePolicy();
 
   /// Get cached data from the cache directory for the specified key.
   ///

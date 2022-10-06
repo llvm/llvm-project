@@ -10,7 +10,7 @@
 static inline __attribute__((__always_inline__, __nodebug__))
 
 __rvv_generic
-__attribute__((clang_builtin_alias(__builtin_rvv_vadd_vv)))
+__attribute__((clang_builtin_alias(__builtin_rvv_vadd_vv_ta)))
 vint8m1_t vadd_generic (vint8m1_t op0, vint8m1_t op1, size_t op2);
 
 // CHECK-LABEL: @test(

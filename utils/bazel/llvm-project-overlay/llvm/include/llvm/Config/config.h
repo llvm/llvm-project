@@ -333,9 +333,6 @@
 /* Define to the vendor of this package. */
 /* #undef PACKAGE_VENDOR */
 
-/* Define if std::is_trivially_copyable is supported */
-#define HAVE_STD_IS_TRIVIALLY_COPYABLE 1
-
 /* Define to a function implementing stricmp */
 /* stricmp defined conditionally below. */
 

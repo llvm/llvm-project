@@ -42,8 +42,6 @@ void mlir::linalg::CodegenStrategy::configurePassPipeline(
                       : linalg::LinalgTransformationFilter(
                             t->filter, currentState, nextState);
     t->addToPassPipeline(pm, filter);
-    if (addEnablePass)
-      pm.addPass(createLinalgStrategyEnablePass(linalgEnablingOptions));
   }
   pm.addPass(createLinalgStrategyRemoveMarkersPass());
 }

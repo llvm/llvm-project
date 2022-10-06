@@ -90,6 +90,34 @@ struct ForcedFraction16 {
   }
 };
 
+/// Placeholder for real*10 version of Mod Intrinsic
+struct ForcedMod10 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ModReal10));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto fltTy = mlir::FloatType::getF80(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {fltTy, fltTy, strTy, intTy},
+                                     {fltTy});
+    };
+  }
+};
+
+/// Placeholder for real*16 version of Mod Intrinsic
+struct ForcedMod16 {
+  static constexpr const char *name = ExpandAndQuoteKey(RTNAME(ModReal16));
+  static constexpr fir::runtime::FuncTypeBuilderFunc getTypeModel() {
+    return [](mlir::MLIRContext *ctx) {
+      auto fltTy = mlir::FloatType::getF128(ctx);
+      auto strTy = fir::ReferenceType::get(mlir::IntegerType::get(ctx, 8));
+      auto intTy = mlir::IntegerType::get(ctx, 8 * sizeof(int));
+      return mlir::FunctionType::get(ctx, {fltTy, fltTy, strTy, intTy},
+                                     {fltTy});
+    };
+  }
+};
+
 /// Placeholder for real*10 version of Nearest Intrinsic
 struct ForcedNearest10 {
   static constexpr const char *name = ExpandAndQuoteKey(RTNAME(Nearest10));
@@ -266,6 +294,38 @@ mlir::Value fir::runtime::genFraction(fir::FirOpBuilder &builder,
   auto funcTy = func.getFunctionType();
   llvm::SmallVector<mlir::Value> args = {
       builder.createConvert(loc, funcTy.getInput(0), x)};
+
+  return builder.create<fir::CallOp>(loc, func, args).getResult(0);
+}
+
+/// Generate call to Mod intrinsic runtime routine.
+mlir::Value fir::runtime::genMod(fir::FirOpBuilder &builder, mlir::Location loc,
+                                 mlir::Value a, mlir::Value p) {
+  mlir::func::FuncOp func;
+  mlir::Type fltTy = a.getType();
+
+  if (fltTy != p.getType())
+    fir::emitFatalError(loc, "arguments type mismatch in MOD");
+
+  if (fltTy.isF16())
+    TODO(loc, "support for REAL with KIND = 2 in MOD");
+  else if (fltTy.isF32())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ModReal4)>(loc, builder);
+  else if (fltTy.isF64())
+    func = fir::runtime::getRuntimeFunc<mkRTKey(ModReal8)>(loc, builder);
+  else if (fltTy.isF80())
+    func = fir::runtime::getRuntimeFunc<ForcedMod10>(loc, builder);
+  else if (fltTy.isF128())
+    func = fir::runtime::getRuntimeFunc<ForcedMod16>(loc, builder);
+  else
+    fir::emitFatalError(loc, "unsupported REAL kind in MOD");
+
+  auto funcTy = func.getFunctionType();
+  auto sourceFile = fir::factory::locationToFilename(builder, loc);
+  auto sourceLine =
+      fir::factory::locationToLineNo(builder, loc, funcTy.getInput(3));
+  auto args = fir::runtime::createArguments(builder, loc, funcTy, a, p,
+                                            sourceFile, sourceLine);
 
   return builder.create<fir::CallOp>(loc, func, args).getResult(0);
 }

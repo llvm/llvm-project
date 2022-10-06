@@ -186,6 +186,12 @@ void BreakpointList::ClearAllBreakpointSites() {
     bp_sp->ClearAllBreakpointSites();
 }
 
+void BreakpointList::ResetHitCounts() {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  for (const auto &bp_sp : m_breakpoints)
+    bp_sp->ResetHitCount();
+}
+
 void BreakpointList::GetListMutex(
     std::unique_lock<std::recursive_mutex> &lock) {
   lock = std::unique_lock<std::recursive_mutex>(m_mutex);

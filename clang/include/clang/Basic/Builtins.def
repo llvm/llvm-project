@@ -97,7 +97,8 @@
 //  S:N: -> similar to the s:N: attribute, but the function is like vscanf
 //          in that it accepts its arguments as a va_list rather than
 //          through an ellipsis
-//  e -> const, but only when -fno-math-errno
+//  e -> const, but only when -fno-math-errno and FP exceptions are ignored
+//  g -> const when FP exceptions are ignored
 //  j -> returns_twice (like setjmp)
 //  u -> arguments are not evaluated for their side-effects
 //  V:N: -> requires vectors of at least N bits to be legal
@@ -545,7 +546,7 @@ BUILTIN(__builtin_va_start, "vA.", "nt")
 BUILTIN(__builtin_va_end, "vA", "n")
 BUILTIN(__builtin_va_copy, "vAA", "n")
 BUILTIN(__builtin_stdarg_start, "vA.", "nt")
-BUILTIN(__builtin_assume_aligned, "v*vC*z.", "nc")
+BUILTIN(__builtin_assume_aligned, "v*vC*z.", "nct")
 BUILTIN(__builtin_bcmp, "ivC*vC*z", "Fn")
 BUILTIN(__builtin_bcopy, "vv*v*z", "n")
 BUILTIN(__builtin_bzero, "vv*z", "nF")
@@ -1340,7 +1341,7 @@ LIBBUILTIN(ilogbf, "if", "fne", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(ilogbl, "iLd", "fne", "math.h", ALL_LANGUAGES)
 
 // POSIX math.h declares a global, signgam, that lgamma writes to, so these
-// shouldn't have "e" or "c" attributes
+// shouldn't have "e", "c" or "g" attributes
 LIBBUILTIN(lgamma, "dd", "fn", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(lgammaf, "ff", "fn", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(lgammal, "LdLd", "fn", "math.h", ALL_LANGUAGES)
@@ -1401,9 +1402,9 @@ LIBBUILTIN(remquo, "dddi*", "fn", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(remquof, "fffi*", "fn", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(remquol, "LdLdLdi*", "fn", "math.h", ALL_LANGUAGES)
 
-LIBBUILTIN(rint, "dd", "fnc", "math.h", ALL_LANGUAGES)
-LIBBUILTIN(rintf, "ff", "fnc", "math.h", ALL_LANGUAGES)
-LIBBUILTIN(rintl, "LdLd", "fnc", "math.h", ALL_LANGUAGES)
+LIBBUILTIN(rint, "dd", "fng", "math.h", ALL_LANGUAGES)
+LIBBUILTIN(rintf, "ff", "fng", "math.h", ALL_LANGUAGES)
+LIBBUILTIN(rintl, "LdLd", "fng", "math.h", ALL_LANGUAGES)
 
 LIBBUILTIN(round, "dd", "fnc", "math.h", ALL_LANGUAGES)
 LIBBUILTIN(roundf, "ff", "fnc", "math.h", ALL_LANGUAGES)
@@ -1634,6 +1635,7 @@ LANGBUILTIN(__builtin_coro_done, "bv*", "n", COR_LANG)
 LANGBUILTIN(__builtin_coro_promise, "v*v*IiIb", "n", COR_LANG)
 
 LANGBUILTIN(__builtin_coro_size, "z", "n", COR_LANG)
+LANGBUILTIN(__builtin_coro_align, "z", "n", COR_LANG)
 LANGBUILTIN(__builtin_coro_frame, "v*", "n", COR_LANG)
 LANGBUILTIN(__builtin_coro_noop, "v*", "n", COR_LANG)
 LANGBUILTIN(__builtin_coro_free, "v*v*", "n", COR_LANG)
@@ -1700,6 +1702,7 @@ LANGBUILTIN(__builtin_get_device_side_mangled_name, "cC*.", "ncT", CUDA_LANG)
 
 // HLSL
 LANGBUILTIN(__builtin_hlsl_wave_active_count_bits, "Uib", "nc", HLSL_LANG)
+LANGBUILTIN(__builtin_hlsl_create_handle, "v*Uc", "nc", HLSL_LANG)
 
 // Builtins for XRay
 BUILTIN(__xray_customevent, "vcC*z", "")

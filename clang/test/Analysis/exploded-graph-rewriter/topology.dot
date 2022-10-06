@@ -22,9 +22,7 @@ Node0x1 [shape=record,label=
       "program_state": {
         "environment": null,
         "constraints": null,
-        "dynamic_types": null,
-        "constructing_objects": null,
-        "index_of_element": null,
+        "dynamic_types": null,        
         "checker_messages": [
           { "checker": "foo", "messages": ["bar"] }
         ],

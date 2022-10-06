@@ -126,7 +126,7 @@ static bool mutationIsSane(const LegalizeRule &Rule,
   case FewerElements:
     if (!OldTy.isVector())
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case MoreElements: {
     // MoreElements can go from scalar to vector.
     const ElementCount OldElts = OldTy.isVector() ?
@@ -296,7 +296,7 @@ LegalizeRuleSet &LegalizerInfo::getActionDefinitionsBuilder(
     std::initializer_list<unsigned> Opcodes) {
   unsigned Representative = *Opcodes.begin();
 
-  assert(!llvm::empty(Opcodes) && Opcodes.begin() + 1 != Opcodes.end() &&
+  assert(Opcodes.size() >= 2 &&
          "Initializer list must have at least two opcodes");
 
   for (unsigned Op : llvm::drop_begin(Opcodes))

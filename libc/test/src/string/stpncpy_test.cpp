@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/ArrayRef.h"
+#include "src/__support/CPP/span.h"
 #include "src/string/stpncpy.h"
 #include "utils/UnitTest/Test.h"
 #include <stddef.h> // For size_t.
 
 class LlvmLibcStpncpyTest : public __llvm_libc::testing::Test {
 public:
-  void check_stpncpy(__llvm_libc::cpp::MutableArrayRef<char> dst,
-                     const __llvm_libc::cpp::ArrayRef<char> src, size_t n,
-                     const __llvm_libc::cpp::ArrayRef<char> expected,
+  void check_stpncpy(__llvm_libc::cpp::span<char> dst,
+                     const __llvm_libc::cpp::span<const char> src, size_t n,
+                     const __llvm_libc::cpp::span<const char> expected,
                      size_t expectedCopied) {
     // Making sure we don't overflow buffer.
     ASSERT_GE(dst.size(), n);

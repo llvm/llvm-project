@@ -63,7 +63,7 @@ SmallVector<int64_t, 4> LLVM::detail::getCoordinates(ArrayRef<int64_t> basis,
 // vector in each position.
 void LLVM::detail::nDVectorIterate(const LLVM::detail::NDVectorTypeInfo &info,
                                    OpBuilder &builder,
-                                   function_ref<void(ArrayAttr)> fun) {
+                                   function_ref<void(ArrayRef<int64_t>)> fun) {
   unsigned ub = 1;
   for (auto s : info.arraySizes)
     ub *= s;
@@ -73,8 +73,7 @@ void LLVM::detail::nDVectorIterate(const LLVM::detail::NDVectorTypeInfo &info,
     if (coords.empty())
       break;
     assert(coords.size() == info.arraySizes.size());
-    auto position = builder.getI64ArrayAttr(coords);
-    fun(position);
+    fun(coords);
   }
 }
 
@@ -83,32 +82,22 @@ LogicalResult LLVM::detail::handleMultidimensionalVectors(
     std::function<Value(Type, ValueRange)> createOperand,
     ConversionPatternRewriter &rewriter) {
   auto resultNDVectorType = op->getResult(0).getType().cast<VectorType>();
-
-  SmallVector<Type> operand1DVectorTypes;
-  for (Value operand : op->getOperands()) {
-    auto operandNDVectorType = operand.getType().cast<VectorType>();
-    auto operandTypeInfo =
-        extractNDVectorTypeInfo(operandNDVectorType, typeConverter);
-    operand1DVectorTypes.push_back(operandTypeInfo.llvm1DVectorTy);
-  }
   auto resultTypeInfo =
       extractNDVectorTypeInfo(resultNDVectorType, typeConverter);
   auto result1DVectorTy = resultTypeInfo.llvm1DVectorTy;
   auto resultNDVectoryTy = resultTypeInfo.llvmNDVectorTy;
   auto loc = op->getLoc();
   Value desc = rewriter.create<LLVM::UndefOp>(loc, resultNDVectoryTy);
-  nDVectorIterate(resultTypeInfo, rewriter, [&](ArrayAttr position) {
+  nDVectorIterate(resultTypeInfo, rewriter, [&](ArrayRef<int64_t> position) {
     // For this unrolled `position` corresponding to the `linearIndex`^th
     // element, extract operand vectors
     SmallVector<Value, 4> extractedOperands;
     for (const auto &operand : llvm::enumerate(operands)) {
       extractedOperands.push_back(rewriter.create<LLVM::ExtractValueOp>(
-          loc, operand1DVectorTypes[operand.index()], operand.value(),
-          position));
+          loc, operand.value(), position));
     }
     Value newVal = createOperand(result1DVectorTy, extractedOperands);
-    desc = rewriter.create<LLVM::InsertValueOp>(loc, resultNDVectoryTy, desc,
-                                                newVal, position);
+    desc = rewriter.create<LLVM::InsertValueOp>(loc, desc, newVal, position);
   });
   rewriter.replaceOp(op, desc);
   return success();

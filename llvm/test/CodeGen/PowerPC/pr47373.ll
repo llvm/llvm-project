@@ -20,8 +20,8 @@ define void @d() local_unnamed_addr #0 {
 ; CHECK-NEXT:    mr r30, r3
 ; CHECK-NEXT:    bl b
 ; CHECK-NEXT:    nop
-; CHECK-NEXT:    cmpwi r30, 1
-; CHECK-NEXT:    blt cr0, .LBB0_9
+; CHECK-NEXT:    cmpwi r30, 0
+; CHECK-NEXT:    ble cr0, .LBB0_9
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    cmplwi r30, 4
 ; CHECK-NEXT:    clrldi r4, r30, 32

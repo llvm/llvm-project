@@ -11,14 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "cuda.h"
+#include "llvm/Support/DynamicLibrary.h"
+
 #include "Debug.h"
+#include "cuda.h"
 #include "dlwrap.h"
 
+#include <memory>
 #include <string>
 #include <unordered_map>
-
-#include <dlfcn.h>
 
 DLWRAP_INITIALIZE();
 
@@ -105,9 +106,11 @@ static bool checkForCUDA() {
   };
 
   const char *CudaLib = DYNAMIC_CUDA_PATH;
-  void *DynlibHandle = dlopen(CudaLib, RTLD_NOW);
-  if (!DynlibHandle) {
-    DP("Unable to load library '%s': %s!\n", CudaLib, dlerror());
+  std::string ErrMsg;
+  auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
+      llvm::sys::DynamicLibrary::getPermanentLibrary(CudaLib, &ErrMsg));
+  if (!DynlibHandle->isValid()) {
+    DP("Unable to load library '%s': %s!\n", CudaLib, ErrMsg.c_str());
     return false;
   }
 
@@ -117,7 +120,7 @@ static bool checkForCUDA() {
     auto It = TryFirst.find(Sym);
     if (It != TryFirst.end()) {
       const char *First = It->second;
-      void *P = dlsym(DynlibHandle, First);
+      void *P = DynlibHandle->getAddressOfSymbol(First);
       if (P) {
         DP("Implementing %s with dlsym(%s) -> %p\n", Sym, First, P);
         *dlwrap::pointer(I) = P;
@@ -125,7 +128,7 @@ static bool checkForCUDA() {
       }
     }
 
-    void *P = dlsym(DynlibHandle, Sym);
+    void *P = DynlibHandle->getAddressOfSymbol(Sym);
     if (P == nullptr) {
       DP("Unable to find '%s' in '%s'!\n", Sym, CudaLib);
       return false;

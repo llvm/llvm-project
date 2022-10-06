@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/Builders.h"
@@ -29,11 +29,12 @@ using namespace mlir;
 class InnerOuterDimReductionConversion
     : public OpRewritePattern<vector::MultiDimReductionOp> {
 public:
-  using OpRewritePattern<vector::MultiDimReductionOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   explicit InnerOuterDimReductionConversion(
-      MLIRContext *context, vector::VectorMultiReductionLowering options)
-      : mlir::OpRewritePattern<vector::MultiDimReductionOp>(context),
+      MLIRContext *context, vector::VectorMultiReductionLowering options,
+      PatternBenefit benefit = 1)
+      : mlir::OpRewritePattern<vector::MultiDimReductionOp>(context, benefit),
         useInnerDimsForReduction(
             options == vector::VectorMultiReductionLowering::InnerReduction) {}
 
@@ -101,11 +102,12 @@ private:
 class ReduceMultiDimReductionRank
     : public OpRewritePattern<vector::MultiDimReductionOp> {
 public:
-  using OpRewritePattern<vector::MultiDimReductionOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   explicit ReduceMultiDimReductionRank(
-      MLIRContext *context, vector::VectorMultiReductionLowering options)
-      : mlir::OpRewritePattern<vector::MultiDimReductionOp>(context),
+      MLIRContext *context, vector::VectorMultiReductionLowering options,
+      PatternBenefit benefit = 1)
+      : mlir::OpRewritePattern<vector::MultiDimReductionOp>(context, benefit),
         useInnerDimsForReduction(
             options == vector::VectorMultiReductionLowering::InnerReduction) {}
 
@@ -224,7 +226,7 @@ private:
 /// and combines results
 struct TwoDimMultiReductionToElementWise
     : public OpRewritePattern<vector::MultiDimReductionOp> {
-  using OpRewritePattern<vector::MultiDimReductionOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
                                 PatternRewriter &rewriter) const override {
@@ -261,7 +263,7 @@ struct TwoDimMultiReductionToElementWise
 /// a sequence of vector.reduction ops.
 struct TwoDimMultiReductionToReduction
     : public OpRewritePattern<vector::MultiDimReductionOp> {
-  using OpRewritePattern<vector::MultiDimReductionOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
                                 PatternRewriter &rewriter) const override {
@@ -301,7 +303,7 @@ struct TwoDimMultiReductionToReduction
 /// separately.
 struct OneDimMultiReductionToTwoDim
     : public OpRewritePattern<vector::MultiDimReductionOp> {
-  using OpRewritePattern<vector::MultiDimReductionOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
                                 PatternRewriter &rewriter) const override {
@@ -338,12 +340,15 @@ struct OneDimMultiReductionToTwoDim
 };
 
 void mlir::vector::populateVectorMultiReductionLoweringPatterns(
-    RewritePatternSet &patterns, VectorMultiReductionLowering options) {
+    RewritePatternSet &patterns, VectorMultiReductionLowering options,
+    PatternBenefit benefit) {
   patterns.add<InnerOuterDimReductionConversion, ReduceMultiDimReductionRank>(
-      patterns.getContext(), options);
-  patterns.add<OneDimMultiReductionToTwoDim>(patterns.getContext());
+      patterns.getContext(), options, benefit);
+  patterns.add<OneDimMultiReductionToTwoDim>(patterns.getContext(), benefit);
   if (options == VectorMultiReductionLowering ::InnerReduction)
-    patterns.add<TwoDimMultiReductionToReduction>(patterns.getContext());
+    patterns.add<TwoDimMultiReductionToReduction>(patterns.getContext(),
+                                                  benefit);
   else
-    patterns.add<TwoDimMultiReductionToElementWise>(patterns.getContext());
+    patterns.add<TwoDimMultiReductionToElementWise>(patterns.getContext(),
+                                                    benefit);
 }

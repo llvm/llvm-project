@@ -362,8 +362,9 @@ multiclass VPatWidenBinarySDNode_WV_WX<SDNode op, PatFrags extop,
     defvar wti = vtiToWti.Wti;
     def : Pat<(op (wti.Vector wti.RegClass:$rs2),
                   (wti.Vector (extop (vti.Vector vti.RegClass:$rs1)))),
-              (!cast<Instruction>(instruction_name#"_WV_"#vti.LMul.MX)
-                 wti.RegClass:$rs2, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
+              (!cast<Instruction>(instruction_name#"_WV_"#vti.LMul.MX#"_TIED")
+                 wti.RegClass:$rs2, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW,
+                 TAIL_AGNOSTIC)>;
     def : Pat<(op (wti.Vector wti.RegClass:$rs2),
                   (wti.Vector (extop (vti.Vector (SplatPat GPR:$rs1))))),
               (!cast<Instruction>(instruction_name#"_WX_"#vti.LMul.MX)
@@ -443,8 +444,9 @@ multiclass VPatWidenBinaryFPSDNode_WV_WF<SDNode op, string instruction_name> {
                   (wti.Vector (riscv_fpextend_vl_oneuse
                                    (vti.Vector vti.RegClass:$rs1),
                                    (vti.Mask true_mask), (XLenVT srcvalue)))),
-              (!cast<Instruction>(instruction_name#"_WV_"#vti.LMul.MX)
-                 wti.RegClass:$rs2, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW)>;
+              (!cast<Instruction>(instruction_name#"_WV_"#vti.LMul.MX#"_TIED")
+                 wti.RegClass:$rs2, vti.RegClass:$rs1, vti.AVL, vti.Log2SEW,
+                 TAIL_AGNOSTIC)>;
     def : Pat<(op (wti.Vector wti.RegClass:$rs2),
                   (wti.Vector (riscv_fpextend_vl_oneuse
                                    (vti.Vector (SplatFPOp vti.ScalarRegClass:$rs1)),

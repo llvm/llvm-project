@@ -1,6 +1,7 @@
-; RUN: opt < %s -disable-loop-unrolling -debug-only=loop-vectorize -passes='default<O3>' -S 2>&1 | FileCheck %s
+; RUN: opt < %s -disable-loop-unrolling -debug-only=loop-vectorize -passes="default<O3>" -S 2>&1 | FileCheck %s
 ; RUN: opt < %s -disable-loop-unrolling -debug-only=loop-vectorize -O3 -S 2>&1 | FileCheck %s
 ; REQUIRES: asserts
+
 ; We want to make sure that we don't even try to vectorize loops again
 ; The vectorizer used to mark the un-vectorized loop only as already vectorized
 ; thus, trying to vectorize the vectorized loop again

@@ -246,9 +246,9 @@ void PassManagerBuilder::addExtensionsToPM(ExtensionPointTy ETy,
         std::get<1>(Ext)(*this, PM);
     }
   }
-  for (unsigned i = 0, e = Extensions.size(); i != e; ++i)
-    if (Extensions[i].first == ETy)
-      Extensions[i].second(*this, PM);
+  for (const auto &[PT, Fn] : Extensions)
+    if (PT == ETy)
+      Fn(*this, PM);
 }
 
 void PassManagerBuilder::addInitialAliasAnalysisPasses(
@@ -647,7 +647,6 @@ void PassManagerBuilder::populateModulePassManager(
   MPM.add(createGlobalsAAWrapperPass());
 
   // Start of CallGraph SCC passes.
-  MPM.add(createPruneEHPass()); // Remove dead EH info
   bool RunInliner = false;
   if (Inliner) {
     MPM.add(Inliner);

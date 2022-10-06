@@ -145,7 +145,7 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
   bool hasConstantShape() const {
     if (auto eleTy = fir::dyn_cast_ptrEleTy(getAddr().getType()))
       if (auto arrTy = eleTy.dyn_cast<fir::SequenceType>())
-        return arrTy.hasConstantShape();
+        return !arrTy.hasDynamicExtents();
     return false;
   }
 

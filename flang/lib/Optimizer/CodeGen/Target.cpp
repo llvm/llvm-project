@@ -253,6 +253,87 @@ struct TargetPPC64le : public GenericTarget<TargetPPC64le> {
 };
 } // namespace
 
+//===----------------------------------------------------------------------===//
+// sparc (sparc 32 bit) target specifics.
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct TargetSparc : public GenericTarget<TargetSparc> {
+  using GenericTarget::GenericTarget;
+
+  static constexpr int defaultWidth = 32;
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Location, mlir::Type eleTy) const override {
+    assert(fir::isa_real(eleTy));
+    CodeGenSpecifics::Marshalling marshal;
+    // Use a type that will be translated into LLVM as:
+    // { t, t }   struct of 2 eleTy
+    mlir::TypeRange range = {eleTy, eleTy};
+    auto structTy = mlir::TupleType::get(eleTy.getContext(), range);
+    marshal.emplace_back(fir::ReferenceType::get(structTy), AT{});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Location loc, mlir::Type eleTy) const override {
+    assert(fir::isa_real(eleTy));
+    CodeGenSpecifics::Marshalling marshal;
+    // Use a type that will be translated into LLVM as:
+    // { t, t }   struct of 2 eleTy, byval
+    mlir::TypeRange range = {eleTy, eleTy};
+    auto structTy = mlir::TupleType::get(eleTy.getContext(), range);
+    marshal.emplace_back(fir::ReferenceType::get(structTy),
+                         AT{/*alignment=*/0, /*byval=*/true});
+    return marshal;
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// sparcv9 (sparc 64 bit) target specifics.
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct TargetSparcV9 : public GenericTarget<TargetSparcV9> {
+  using GenericTarget::GenericTarget;
+
+  static constexpr int defaultWidth = 64;
+
+  CodeGenSpecifics::Marshalling
+  complexArgumentType(mlir::Location loc, mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    const auto *sem = &floatToSemantics(kindMap, eleTy);
+    if (sem == &llvm::APFloat::IEEEsingle() ||
+        sem == &llvm::APFloat::IEEEdouble()) {
+      // two distinct float, double arguments
+      marshal.emplace_back(eleTy, AT{});
+      marshal.emplace_back(eleTy, AT{});
+    } else if (sem == &llvm::APFloat::IEEEquad()) {
+      // Use a type that will be translated into LLVM as:
+      // { fp128, fp128 }   struct of 2 fp128, byval, align 16
+      mlir::TypeRange range = {eleTy, eleTy};
+      marshal.emplace_back(fir::ReferenceType::get(
+                               mlir::TupleType::get(eleTy.getContext(), range)),
+                           AT{/*align=*/16, /*byval=*/true});
+    } else {
+      TODO(loc, "complex for this precision");
+    }
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  complexReturnType(mlir::Location loc, mlir::Type eleTy) const override {
+    CodeGenSpecifics::Marshalling marshal;
+    // Use a type that will be translated into LLVM as:
+    // { eleTy, eleTy }   struct of 2 eleTy
+    mlir::TypeRange range = {eleTy, eleTy};
+    marshal.emplace_back(mlir::TupleType::get(eleTy.getContext(), range), AT{});
+    return marshal;
+  }
+};
+} // namespace
+
 // Instantiate the overloaded target instance based on the triple value.
 // TODO: Add other targets to this file as needed.
 std::unique_ptr<fir::CodeGenSpecifics>
@@ -268,6 +349,7 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
     case llvm::Triple::OSType::Linux:
     case llvm::Triple::OSType::Darwin:
     case llvm::Triple::OSType::MacOSX:
+    case llvm::Triple::OSType::Solaris:
     case llvm::Triple::OSType::Win32:
       return std::make_unique<TargetI386>(ctx, std::move(trp),
                                           std::move(kindMap));
@@ -280,6 +362,7 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
     case llvm::Triple::OSType::Linux:
     case llvm::Triple::OSType::Darwin:
     case llvm::Triple::OSType::MacOSX:
+    case llvm::Triple::OSType::Solaris:
     case llvm::Triple::OSType::Win32:
       return std::make_unique<TargetX86_64>(ctx, std::move(trp),
                                             std::move(kindMap));
@@ -303,6 +386,26 @@ fir::CodeGenSpecifics::get(mlir::MLIRContext *ctx, llvm::Triple &&trp,
       break;
     case llvm::Triple::OSType::Linux:
       return std::make_unique<TargetPPC64le>(ctx, std::move(trp),
+                                             std::move(kindMap));
+    }
+    break;
+  case llvm::Triple::ArchType::sparc:
+    switch (trp.getOS()) {
+    default:
+      break;
+    case llvm::Triple::OSType::Linux:
+    case llvm::Triple::OSType::Solaris:
+      return std::make_unique<TargetSparc>(ctx, std::move(trp),
+                                           std::move(kindMap));
+    }
+    break;
+  case llvm::Triple::ArchType::sparcv9:
+    switch (trp.getOS()) {
+    default:
+      break;
+    case llvm::Triple::OSType::Linux:
+    case llvm::Triple::OSType::Solaris:
+      return std::make_unique<TargetSparcV9>(ctx, std::move(trp),
                                              std::move(kindMap));
     }
     break;

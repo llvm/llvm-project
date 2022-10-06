@@ -3,7 +3,7 @@
 ; Without removal of duplicate entries, the size is 62 lines
 ;      CHECK:	.section	.llvm_stackmaps,{{.*$}}
 ; CHECK-NEXT:{{(.+$[[:space:]]){48}[[:space:]]}}
-;  CHECK-NOT:{{.|[[:space:]]}}
+; CHECK-SAME: .section
 
 target triple = "x86_64-pc-linux-gnu"
 

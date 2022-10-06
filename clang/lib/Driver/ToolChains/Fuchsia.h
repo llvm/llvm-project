@@ -50,8 +50,9 @@ public:
   CXXStdlibType GetDefaultCXXStdlibType() const override {
     return ToolChain::CST_Libcxx;
   }
-  bool IsUnwindTablesDefault(const llvm::opt::ArgList &Args) const override {
-    return true;
+  UnwindTableLevel
+  getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override {
+    return UnwindTableLevel::Asynchronous;
   }
   bool isPICDefault() const override { return false; }
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override {

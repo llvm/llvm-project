@@ -663,9 +663,10 @@ MCSymbol *EHStreamer::emitExceptionTable() {
       Asm->OutStreamer->emitLabel(CSRange.ExceptionLabel);
 
       // Emit the LSDA header.
-      // If only one call-site range exists, LPStart is omitted as it is the
-      // same as the function entry.
-      if (CallSiteRanges.size() == 1) {
+      // LPStart is omitted if either we have a single call-site range (in which
+      // case the function entry is treated as @LPStart) or if this function has
+      // no landing pads (in which case @LPStart is undefined).
+      if (CallSiteRanges.size() == 1 || LandingPadRange == nullptr) {
         Asm->emitEncodingByte(dwarf::DW_EH_PE_omit, "@LPStart");
       } else if (!Asm->isPositionIndependent()) {
         // For more than one call-site ranges, LPStart must be explicitly

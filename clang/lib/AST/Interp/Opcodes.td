@@ -42,18 +42,8 @@ def ArgSint64 : ArgType { let Name = "int64_t"; }
 def ArgUint64 : ArgType { let Name = "uint64_t"; }
 def ArgBool : ArgType { let Name = "bool"; }
 
-def ArgFunction : ArgType { let Name = "Function *"; }
-def ArgRecord : ArgType { let Name = "Record *"; }
-
-def ArgSema : ArgType { let Name = "const fltSemantics *"; }
-
-def ArgExpr : ArgType { let Name = "const Expr *"; }
-def ArgFloatingLiteral : ArgType { let Name = "const FloatingLiteral *"; }
-def ArgCXXMethodDecl : ArgType { let Name = "const CXXMethodDecl *"; }
-def ArgFunctionDecl : ArgType { let Name = "const FunctionDecl *"; }
+def ArgFunction : ArgType { let Name = "const Function *"; }
 def ArgRecordDecl : ArgType { let Name = "const RecordDecl *"; }
-def ArgCXXRecordDecl : ArgType { let Name = "const CXXRecordDecl *"; }
-def ArgValueDecl : ArgType { let Name = "const ValueDecl *"; }
 def ArgRecordField : ArgType { let Name = "const Record::Field *"; }
 
 //===----------------------------------------------------------------------===//
@@ -71,6 +61,10 @@ def AluTypeClass : TypeClass {
 
 def PtrTypeClass : TypeClass {
   let Types = [Ptr];
+}
+
+def BoolTypeClass : TypeClass {
+  let Types = [Bool];
 }
 
 def AllTypeClass : TypeClass {
@@ -149,6 +143,22 @@ def RetValue : Opcode {
 // [] -> EXIT
 def NoRet : Opcode {}
 
+
+def Call : Opcode {
+  let Args = [ArgFunction];
+  let Types = [AllTypeClass];
+  let ChangesPC = 1;
+  let HasCustomEval = 1;
+  let HasGroup = 1;
+}
+
+def CallVoid : Opcode {
+  let Args = [ArgFunction];
+  let Types = [];
+  let ChangesPC = 1;
+  let HasCustomEval = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Frame management
 //===----------------------------------------------------------------------===//
@@ -183,6 +193,7 @@ def ConstBool : ConstOpcode<Bool, ArgBool>;
 // [] -> [Integer]
 def Zero : Opcode {
   let Types = [AluTypeClass];
+  let HasGroup = 1;
 }
 
 // [] -> [Pointer]
@@ -382,6 +393,41 @@ def SubOffset : AluOpcode;
 def Sub : AluOpcode;
 def Add : AluOpcode;
 def Mul : AluOpcode;
+
+
+//===----------------------------------------------------------------------===//
+// Unary operators.
+//===----------------------------------------------------------------------===//
+
+// [Real] -> [Real]
+def Inv: Opcode {
+  let Types = [BoolTypeClass];
+  let HasGroup = 1;
+}
+
+// [Real] -> [Real]
+def Neg: Opcode {
+  let Types = [AluTypeClass];
+  let HasGroup = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Cast.
+//===----------------------------------------------------------------------===//
+// TODO: Expand this to handle casts between more types.
+
+def FromCastTypeClass : TypeClass {
+  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool];
+}
+
+def ToCastTypeClass : TypeClass {
+  let Types = [Uint8, Sint8, Uint16, Sint16, Uint32, Sint32, Uint64, Sint64, Bool];
+}
+
+def Cast: Opcode {
+  let Types = [FromCastTypeClass, ToCastTypeClass];
+  let HasGroup = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // Comparison opcodes.

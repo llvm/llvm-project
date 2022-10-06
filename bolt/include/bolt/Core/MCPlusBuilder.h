@@ -164,9 +164,14 @@ protected:
   void setTailCall(MCInst &Inst);
 
 public:
-  class InstructionIterator
-      : public std::iterator<std::bidirectional_iterator_tag, MCInst> {
+  class InstructionIterator {
   public:
+    using iterator_category = std::bidirectional_iterator_tag;
+    using value_type = MCInst;
+    using difference_type = std::ptrdiff_t;
+    using pointer = value_type *;
+    using reference = value_type &;
+
     class Impl {
     public:
       virtual Impl *Copy() const = 0;
@@ -1426,7 +1431,7 @@ public:
     return false;
   }
 
-  /// Store \p Target absolute adddress to \p RegName
+  /// Store \p Target absolute address to \p RegName
   virtual InstructionListType materializeAddress(const MCSymbol *Target,
                                                  MCContext *Ctx,
                                                  MCPhysReg RegName,

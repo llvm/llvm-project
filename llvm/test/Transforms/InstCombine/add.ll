@@ -455,31 +455,31 @@ define i32 @add_nsw_sext_add(i8 %x) {
 
 ; Negative test - extra use of the sext means increase of instructions.
 
-define i32 @add_nsw_sext_add_extra_use_1(i8 %x, i32* %p) {
+define i32 @add_nsw_sext_add_extra_use_1(i8 %x, ptr %p) {
 ; CHECK-LABEL: @add_nsw_sext_add_extra_use_1(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i8 [[X:%.*]], 42
 ; CHECK-NEXT:    [[EXT:%.*]] = sext i8 [[ADD]] to i32
-; CHECK-NEXT:    store i32 [[EXT]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[EXT]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = add nsw i32 [[EXT]], 356
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %add = add nsw i8 %x, 42
   %ext = sext i8 %add to i32
-  store i32 %ext, i32* %p
+  store i32 %ext, ptr %p
   %r = add i32 %ext, 356
   ret i32 %r
 }
 
-define <2 x i32> @add_nsw_sext_add_vec_extra_use_2(<2 x i8> %x, <2 x i8>* %p) {
+define <2 x i32> @add_nsw_sext_add_vec_extra_use_2(<2 x i8> %x, ptr %p) {
 ; CHECK-LABEL: @add_nsw_sext_add_vec_extra_use_2(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i8> [[X:%.*]], <i8 42, i8 -5>
-; CHECK-NEXT:    store <2 x i8> [[ADD]], <2 x i8>* [[P:%.*]], align 2
+; CHECK-NEXT:    store <2 x i8> [[ADD]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext <2 x i8> [[X]] to <2 x i32>
 ; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i32> [[TMP1]], <i32 398, i32 7>
 ; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %add = add nsw <2 x i8> %x, <i8 42, i8 -5>
-  store <2 x i8> %add, <2 x i8>* %p
+  store <2 x i8> %add, ptr %p
   %ext = sext <2 x i8> %add to <2 x i32>
   %r = add <2 x i32> %ext, <i32 356, i32 12>
   ret <2 x i32> %r
@@ -499,31 +499,31 @@ define <2 x i32> @add_nuw_zext_add_vec(<2 x i16> %x) {
 
 ; Negative test - extra use of the zext means increase of instructions.
 
-define i64 @add_nuw_zext_add_extra_use_1(i8 %x, i64* %p) {
+define i64 @add_nuw_zext_add_extra_use_1(i8 %x, ptr %p) {
 ; CHECK-LABEL: @add_nuw_zext_add_extra_use_1(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X:%.*]], 42
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[ADD]] to i64
-; CHECK-NEXT:    store i64 [[EXT]], i64* [[P:%.*]], align 4
+; CHECK-NEXT:    store i64 [[EXT]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i64 [[EXT]], 356
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %add = add nuw i8 %x, 42
   %ext = zext i8 %add to i64
-  store i64 %ext, i64* %p
+  store i64 %ext, ptr %p
   %r = add i64 %ext, 356
   ret i64 %r
 }
 
-define i64 @add_nuw_zext_add_extra_use_2(i8 %x, i8* %p) {
+define i64 @add_nuw_zext_add_extra_use_2(i8 %x, ptr %p) {
 ; CHECK-LABEL: @add_nuw_zext_add_extra_use_2(
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw i8 [[X:%.*]], 42
-; CHECK-NEXT:    store i8 [[ADD]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    store i8 [[ADD]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[X]] to i64
 ; CHECK-NEXT:    [[R:%.*]] = add nuw nsw i64 [[TMP1]], -314
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %add = add nuw i8 %x, 42
-  store i8 %add, i8* %p
+  store i8 %add, ptr %p
   %ext = zext i8 %add to i64
   %r = add i64 %ext, -356
   ret i64 %r
@@ -724,12 +724,12 @@ define i8 @test34(i8 %A) {
 }
 
 ; If all bits affected by the add are included
-; in the mask, do the add before the mask op.
+; in the mask, do the mask op before the add.
 
 define i8 @masked_add(i8 %x) {
 ; CHECK-LABEL: @masked_add(
-; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], 96
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP1]], -16
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -16
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[AND]], 96
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %and = and i8 %x, 240 ; 0xf0
@@ -739,8 +739,8 @@ define i8 @masked_add(i8 %x) {
 
 define <2 x i8> @masked_add_splat(<2 x i8> %x) {
 ; CHECK-LABEL: @masked_add_splat(
-; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X:%.*]], <i8 64, i8 64>
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i8> [[TMP1]], <i8 -64, i8 -64>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[X:%.*]], <i8 -64, i8 -64>
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[AND]], <i8 64, i8 64>
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %and = and <2 x i8> %x, <i8 192, i8 192> ; 0xc0
@@ -761,14 +761,14 @@ define i8 @not_masked_add(i8 %x) {
 
 define i8 @masked_add_multi_use(i8 %x) {
 ; CHECK-LABEL: @masked_add_multi_use(
-; CHECK-NEXT:    [[TMP:%.*]] = add i8 [[X:%.*]], 96
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP:%.*]], -16
-; CHECK-NEXT:    call void @use(i8 [[X]])
+; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], -16
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[AND]], 96
+; CHECK-NEXT:    call void @use(i8 [[AND]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %and = and i8 %x, -16 ; 0xf0
   %r = add i8 %and, 96  ; 0x60
-  call void @use(i8 %x) ; extra use
+  call void @use(i8 %and) ; extra use
   ret i8 %r
 }
 
@@ -1206,17 +1206,17 @@ define i32 @and31_add(i1 %x, i1 %y) {
 
 ; Negative test - extra use
 
-define i32 @lshr_add_use(i1 %x, i1 %y, i32* %p) {
+define i32 @lshr_add_use(i1 %x, i1 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_add_use(
 ; CHECK-NEXT:    [[XZ:%.*]] = zext i1 [[X:%.*]] to i32
-; CHECK-NEXT:    store i32 [[XZ]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[XZ]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XZ]], [[YS]]
 ; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xz = zext i1 %x to i32
-  store i32 %xz, i32* %p
+  store i32 %xz, ptr %p
   %ys = sext i1 %y to i32
   %sub = add i32 %xz, %ys
   %r = lshr i32 %sub, 31
@@ -1225,18 +1225,18 @@ define i32 @lshr_add_use(i1 %x, i1 %y, i32* %p) {
 
 ; Negative test - extra use
 
-define i32 @lshr_add_use2(i1 %x, i1 %y, i32* %p) {
+define i32 @lshr_add_use2(i1 %x, i1 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_add_use2(
 ; CHECK-NEXT:    [[XZ:%.*]] = zext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    store i32 [[YS]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[YS]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XZ]], [[YS]]
 ; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xz = zext i1 %x to i32
   %ys = sext i1 %y to i32
-  store i32 %ys, i32* %p
+  store i32 %ys, ptr %p
   %sub = add i32 %xz, %ys
   %r = lshr i32 %sub, 31
   ret i32 %r
@@ -1332,17 +1332,17 @@ define i32 @and31_add_sexts(i1 %x, i1 %y) {
 
 ; Negative test - extra use
 
-define i32 @lshr_add_use_sexts(i1 %x, i1 %y, i32* %p) {
+define i32 @lshr_add_use_sexts(i1 %x, i1 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_add_use_sexts(
 ; CHECK-NEXT:    [[XS:%.*]] = sext i1 [[X:%.*]] to i32
-; CHECK-NEXT:    store i32 [[XS]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[XS]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XS]], [[YS]]
 ; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xs = sext i1 %x to i32
-  store i32 %xs, i32* %p
+  store i32 %xs, ptr %p
   %ys = sext i1 %y to i32
   %sub = add i32 %xs, %ys
   %r = lshr i32 %sub, 31
@@ -1351,18 +1351,18 @@ define i32 @lshr_add_use_sexts(i1 %x, i1 %y, i32* %p) {
 
 ; Negative test - extra use
 
-define i32 @lshr_add_use2_sexts(i1 %x, i1 %y, i32* %p) {
+define i32 @lshr_add_use2_sexts(i1 %x, i1 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_add_use2_sexts(
 ; CHECK-NEXT:    [[XS:%.*]] = sext i1 [[X:%.*]] to i32
 ; CHECK-NEXT:    [[YS:%.*]] = sext i1 [[Y:%.*]] to i32
-; CHECK-NEXT:    store i32 [[YS]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[YS]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[XS]], [[YS]]
 ; CHECK-NEXT:    [[R:%.*]] = lshr i32 [[SUB]], 31
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %xs = sext i1 %x to i32
   %ys = sext i1 %y to i32
-  store i32 %ys, i32* %p
+  store i32 %ys, ptr %p
   %sub = add i32 %xs, %ys
   %r = lshr i32 %sub, 31
   ret i32 %r
@@ -1754,4 +1754,583 @@ define i32 @add_add_add_commute3(i32 %A, i32 %B, i32 %C, i32 %D) {
   %F = add i32 %C, %E
   %G = add i32 %D, %F
   ret i32 %G
+}
+
+; x * y + x --> (y + 1) * x
+
+define i8 @mul_add_common_factor_commute1(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_add_common_factor_commute1(
+; CHECK-NEXT:    [[X1:%.*]] = add i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X1]], [[X:%.*]]
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul nsw i8 %x, %y
+  %a = add nsw i8 %m, %x
+  ret i8 %a
+}
+
+define <2 x i8> @mul_add_common_factor_commute2(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @mul_add_common_factor_commute2(
+; CHECK-NEXT:    [[M1:%.*]] = add <2 x i8> [[Y:%.*]], <i8 1, i8 1>
+; CHECK-NEXT:    [[A:%.*]] = mul nuw <2 x i8> [[M1]], [[X:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[A]]
+;
+  %m = mul nuw <2 x i8> %y, %x
+  %a = add nuw <2 x i8> %m, %x
+  ret <2 x i8> %a
+}
+
+define i8 @mul_add_common_factor_commute3(i8 %p, i8 %y) {
+; CHECK-LABEL: @mul_add_common_factor_commute3(
+; CHECK-NEXT:    [[X:%.*]] = mul i8 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[M1:%.*]] = add i8 [[Y:%.*]], 1
+; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X]], [[M1]]
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %x = mul i8 %p, %p ; thwart complexity-based canonicalization
+  %m = mul nuw i8 %x, %y
+  %a = add nsw i8 %x, %m
+  ret i8 %a
+}
+
+define i8 @mul_add_common_factor_commute4(i8 %p, i8 %q) {
+; CHECK-LABEL: @mul_add_common_factor_commute4(
+; CHECK-NEXT:    [[X:%.*]] = mul i8 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[Y:%.*]] = mul i8 [[Q:%.*]], [[Q]]
+; CHECK-NEXT:    [[M1:%.*]] = add i8 [[Y]], 1
+; CHECK-NEXT:    [[A:%.*]] = mul i8 [[X]], [[M1]]
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %x = mul i8 %p, %p ; thwart complexity-based canonicalization
+  %y = mul i8 %q, %q ; thwart complexity-based canonicalization
+  %m = mul nsw i8 %y, %x
+  %a = add nuw i8 %x, %m
+  ret i8 %a
+}
+
+; negative test - uses
+
+define i8 @mul_add_common_factor_use(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_add_common_factor_use(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[M]])
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], [[X]]
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul i8 %x, %y
+  call void @use(i8 %m)
+  %a = add i8 %m, %x
+  ret i8 %a
+}
+
+define i8 @not_mul(i8 %x) {
+; CHECK-LABEL: @not_mul(
+; CHECK-NEXT:    [[TMP1:%.*]] = mul i8 [[X:%.*]], -41
+; CHECK-NEXT:    [[PLUSX:%.*]] = add i8 [[TMP1]], -1
+; CHECK-NEXT:    ret i8 [[PLUSX]]
+;
+  %mul = mul nsw i8 %x, 42
+  %not = xor i8 %mul, -1
+  %plusx = add nsw i8 %not, %x
+  ret i8 %plusx
+}
+
+define <2 x i8> @not_mul_commute(<2 x i8> %p) {
+; CHECK-LABEL: @not_mul_commute(
+; CHECK-NEXT:    [[X:%.*]] = mul <2 x i8> [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <2 x i8> [[X]], <i8 43, i8 43>
+; CHECK-NEXT:    [[PLUSX:%.*]] = add <2 x i8> [[TMP1]], <i8 -1, i8 -1>
+; CHECK-NEXT:    ret <2 x i8> [[PLUSX]]
+;
+  %x = mul <2 x i8> %p, %p ; thwart complexity-based canonicalization
+  %mul = mul nuw <2 x i8> %x, <i8 -42, i8 -42>
+  %not = xor <2 x i8> %mul, <i8 -1, i8 -1>
+  %plusx = add nuw <2 x i8> %x, %not
+  ret <2 x i8> %plusx
+}
+
+; negative test - need common operand
+
+define i8 @not_mul_wrong_op(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_mul_wrong_op(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[MUL]], -1
+; CHECK-NEXT:    [[PLUSX:%.*]] = add i8 [[NOT]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[PLUSX]]
+;
+  %mul = mul i8 %x, 42
+  %not = xor i8 %mul, -1
+  %plusx = add i8 %not, %y
+  ret i8 %plusx
+}
+
+; negative test - avoid creating an extra mul
+
+define i8 @not_mul_use1(i8 %x) {
+; CHECK-LABEL: @not_mul_use1(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i8 [[X:%.*]], 42
+; CHECK-NEXT:    call void @use(i8 [[MUL]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[MUL]], -1
+; CHECK-NEXT:    [[PLUSX:%.*]] = add nsw i8 [[NOT]], [[X]]
+; CHECK-NEXT:    ret i8 [[PLUSX]]
+;
+  %mul = mul nsw i8 %x, 42
+  call void @use(i8 %mul)
+  %not = xor i8 %mul, -1
+  %plusx = add nsw i8 %not, %x
+  ret i8 %plusx
+}
+
+; negative test - too many instructions
+
+define i8 @not_mul_use2(i8 %x) {
+; CHECK-LABEL: @not_mul_use2(
+; CHECK-NEXT:    [[MUL:%.*]] = mul i8 [[X:%.*]], 42
+; CHECK-NEXT:    [[NOT:%.*]] = xor i8 [[MUL]], -1
+; CHECK-NEXT:    call void @use(i8 [[NOT]])
+; CHECK-NEXT:    [[PLUSX:%.*]] = add i8 [[NOT]], [[X]]
+; CHECK-NEXT:    ret i8 [[PLUSX]]
+;
+  %mul = mul i8 %x, 42
+  %not = xor i8 %mul, -1
+  call void @use(i8 %not)
+  %plusx = add i8 %not, %x
+  ret i8 %plusx
+}
+
+define i8 @full_ashr_inc(i8 %x) {
+; CHECK-LABEL: @full_ashr_inc(
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt i8 [[X:%.*]], -1
+; CHECK-NEXT:    [[R:%.*]] = zext i1 [[ISNOTNEG]] to i8
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = ashr i8 %x, 7
+  %r = add i8 %a, 1
+  ret i8 %r
+}
+
+define <2 x i6> @full_ashr_inc_vec(<2 x i6> %x) {
+; CHECK-LABEL: @full_ashr_inc_vec(
+; CHECK-NEXT:    [[ISNOTNEG:%.*]] = icmp sgt <2 x i6> [[X:%.*]], <i6 -1, i6 -1>
+; CHECK-NEXT:    [[R:%.*]] = zext <2 x i1> [[ISNOTNEG]] to <2 x i6>
+; CHECK-NEXT:    ret <2 x i6> [[R]]
+;
+  %a = ashr <2 x i6> %x, <i6 5, i6 poison>
+  %r = add <2 x i6> %a, <i6 1, i6 1>
+  ret <2 x i6> %r
+}
+
+; negative test - extra use
+
+define i8 @full_ashr_inc_use(i8 %x) {
+; CHECK-LABEL: @full_ashr_inc_use(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[A]], 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = ashr i8 %x, 7
+  call void @use(i8 %a)
+  %r = add i8 %a, 1
+  ret i8 %r
+}
+
+; negative test - wrong shift amount
+
+define i8 @not_full_ashr_inc(i8 %x) {
+; CHECK-LABEL: @not_full_ashr_inc(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 6
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[A]], 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = ashr i8 %x, 6
+  %r = add i8 %a, 1
+  ret i8 %r
+}
+
+; negative test - wrong add amount
+
+define i8 @full_ashr_not_inc(i8 %x) {
+; CHECK-LABEL: @full_ashr_not_inc(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 7
+; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[A]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %a = ashr i8 %x, 7
+  %r = add i8 %a, 2
+  ret i8 %r
+}
+
+define i8 @select_negate_or_zero(i1 %b, i8 %x, i8 %y) {
+; CHECK-LABEL: @select_negate_or_zero(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i8 0, i8 [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = sub i8 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[ADD1]]
+;
+  %negx = sub i8 0, %x
+  %sel = select i1 %b, i8 0, i8 %negx
+  %add = add i8 %sel, %y
+  ret i8 %add
+}
+
+; commuted add operands - same result
+
+define <2 x i8> @select_negate_or_zero_commute(<2 x i1> %b, <2 x i8> %x, <2 x i8> %p) {
+; CHECK-LABEL: @select_negate_or_zero_commute(
+; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> [[B:%.*]], <2 x i8> zeroinitializer, <2 x i8> [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = sub <2 x i8> [[Y]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i8> [[ADD1]]
+;
+  %y = mul <2 x i8> %p, %p ; thwart complexity-based canonicalization
+  %negx = sub <2 x i8> <i8 poison, i8 0>, %x
+  %sel = select <2 x i1> %b, <2 x i8> <i8 poison, i8 0>, <2 x i8> %negx
+  %add = add <2 x i8> %y, %sel
+  ret <2 x i8> %add
+}
+
+; swapped select operands and extra use are ok
+
+define i8 @select_negate_or_zero_swap(i1 %b, i8 %x, i8 %y) {
+; CHECK-LABEL: @select_negate_or_zero_swap(
+; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[NEGX]])
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i8 [[X]], i8 0
+; CHECK-NEXT:    [[ADD1:%.*]] = sub i8 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[ADD1]]
+;
+  %negx = sub i8 0, %x
+  call void @use(i8 %negx)
+  %sel = select i1 %b, i8 %negx, i8 0
+  %add = add i8 %sel, %y
+  ret i8 %add
+}
+
+; commuted add operands - same result
+
+define i8 @select_negate_or_zero_swap_commute(i1 %b, i8 %x, i8 %p) {
+; CHECK-LABEL: @select_negate_or_zero_swap_commute(
+; CHECK-NEXT:    [[Y:%.*]] = mul i8 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[B:%.*]], i8 [[X:%.*]], i8 0
+; CHECK-NEXT:    [[ADD1:%.*]] = sub i8 [[Y]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[ADD1]]
+;
+  %y = mul i8 %p, %p ; thwart complexity-based canonicalization
+  %negx = sub i8 0, %x
+  %sel = select i1 %b, i8 %negx, i8 0
+  %add = add i8 %y, %sel
+  ret i8 %add
+}
+
+; negative test - one arm of the select must simplify
+
+define i8 @select_negate_or_nonzero(i1 %b, i8 %x, i8 %y) {
+; CHECK-LABEL: @select_negate_or_nonzero(
+; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B:%.*]], i8 42, i8 [[NEGX]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[SEL]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %negx = sub i8 0, %x
+  %sel = select i1 %b, i8 42, i8 %negx
+  %add = add i8 %sel, %y
+  ret i8 %add
+}
+
+; negative test - must have a negate, not any subtract
+
+define i8 @select_nonnegate_or_zero(i1 %b, i8 %x, i8 %y) {
+; CHECK-LABEL: @select_nonnegate_or_zero(
+; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 42, [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B:%.*]], i8 0, i8 [[NEGX]]
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[SEL]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %negx = sub i8 42, %x
+  %sel = select i1 %b, i8 0, i8 %negx
+  %add = add i8 %sel, %y
+  ret i8 %add
+}
+
+; negative test - don't create an extra instruction
+
+define i8 @select_negate_or_nonzero_use(i1 %b, i8 %x, i8 %y) {
+; CHECK-LABEL: @select_negate_or_nonzero_use(
+; CHECK-NEXT:    [[NEGX:%.*]] = sub i8 0, [[X:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B:%.*]], i8 0, i8 [[NEGX]]
+; CHECK-NEXT:    call void @use(i8 [[SEL]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[SEL]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %negx = sub i8 0, %x
+  %sel = select i1 %b, i8 0, i8 %negx
+  call void @use(i8 %sel)
+  %add = add i8 %sel, %y
+  ret i8 %add
+}
+
+; extra reduction because y + ~y -> -1
+
+define i5 @select_negate_not(i1 %b, i5 %x, i5 %y) {
+; CHECK-LABEL: @select_negate_not(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i5 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = select i1 [[B:%.*]], i5 -1, i5 [[TMP1]]
+; CHECK-NEXT:    ret i5 [[ADD1]]
+;
+  %negx = sub i5 0, %x
+  %noty = xor i5 %y, -1
+  %sel = select i1 %b, i5 %noty, i5 %negx
+  %add = add i5 %sel, %y
+  ret i5 %add
+}
+
+define i5 @select_negate_not_commute(i1 %b, i5 %x, i5 %p) {
+; CHECK-LABEL: @select_negate_not_commute(
+; CHECK-NEXT:    [[Y:%.*]] = mul i5 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i5 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = select i1 [[B:%.*]], i5 -1, i5 [[TMP1]]
+; CHECK-NEXT:    ret i5 [[ADD1]]
+;
+  %y = mul i5 %p, %p ; thwart complexity-based canonicalization
+  %negx = sub i5 0, %x
+  %noty = xor i5 %y, -1
+  %sel = select i1 %b, i5 %noty, i5 %negx
+  %add = add i5 %y, %sel
+  ret i5 %add
+}
+
+define i5 @select_negate_not_swap(i1 %b, i5 %x, i5 %y) {
+; CHECK-LABEL: @select_negate_not_swap(
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i5 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = select i1 [[B:%.*]], i5 [[TMP1]], i5 -1
+; CHECK-NEXT:    ret i5 [[ADD1]]
+;
+  %negx = sub i5 0, %x
+  %noty = xor i5 %y, -1
+  %sel = select i1 %b, i5 %negx, i5 %noty
+  %add = add i5 %sel, %y
+  ret i5 %add
+}
+
+define i5 @select_negate_not_swap_commute(i1 %b, i5 %x, i5 %p) {
+; CHECK-LABEL: @select_negate_not_swap_commute(
+; CHECK-NEXT:    [[Y:%.*]] = mul i5 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i5 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[ADD1:%.*]] = select i1 [[B:%.*]], i5 [[TMP1]], i5 -1
+; CHECK-NEXT:    ret i5 [[ADD1]]
+;
+  %y = mul i5 %p, %p ; thwart complexity-based canonicalization
+  %negx = sub i5 0, %x
+  %noty = xor i5 %y, -1
+  %sel = select i1 %b, i5 %negx, i5 %noty
+  %add = add i5 %y, %sel
+  ret i5 %add
+}
+
+define i32 @add_select_sub_both_arms_simplify(i1 %b, i32 %a) {
+; CHECK-LABEL: @add_select_sub_both_arms_simplify(
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[B:%.*]], i32 [[A:%.*]], i32 99
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+  %sub = sub i32 99, %a
+  %sel = select i1 %b, i32 0, i32 %sub
+  %add = add i32 %sel, %a
+  ret i32 %add
+}
+
+define <2 x i8> @add_select_sub_both_arms_simplify_swap(<2 x i1> %b, <2 x i8> %a) {
+; CHECK-LABEL: @add_select_sub_both_arms_simplify_swap(
+; CHECK-NEXT:    [[ADD:%.*]] = select <2 x i1> [[B:%.*]], <2 x i8> <i8 42, i8 99>, <2 x i8> [[A:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[ADD]]
+;
+  %sub = sub <2 x i8> <i8 42, i8 99>, %a
+  %sel = select <2 x i1> %b, <2 x i8> %sub, <2 x i8> zeroinitializer
+  %add = add <2 x i8> %sel, %a
+  ret <2 x i8> %add
+}
+
+define i8 @add_select_sub_both_arms_simplify_use1(i1 %b, i8 %a) {
+; CHECK-LABEL: @add_select_sub_both_arms_simplify_use1(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 42, [[A:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[SUB]])
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[B:%.*]], i8 [[A]], i8 42
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %sub = sub i8 42, %a
+  call void @use(i8 %sub)
+  %sel = select i1 %b, i8 0, i8 %sub
+  %add = add i8 %sel, %a
+  ret i8 %add
+}
+
+define i8 @add_select_sub_both_arms_simplify_use2(i1 %b, i8 %a) {
+; CHECK-LABEL: @add_select_sub_both_arms_simplify_use2(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 42, [[A:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[B:%.*]], i8 0, i8 [[SUB]]
+; CHECK-NEXT:    call void @use(i8 [[SEL]])
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[SEL]], [[A]]
+; CHECK-NEXT:    ret i8 [[ADD]]
+;
+  %sub = sub i8 42, %a
+  %sel = select i1 %b, i8 0, i8 %sub
+  call void @use(i8 %sel)
+  %add = add i8 %sel, %a
+  ret i8 %add
+}
+
+define i5 @demand_low_bits_uses(i8 %x, i8 %y) {
+; CHECK-LABEL: @demand_low_bits_uses(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[A:%.*]] = sub i8 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = trunc i8 [[Y]] to i5
+; CHECK-NEXT:    ret i5 [[R]]
+;
+  %m = mul i8 %x, -32 ; 0xE0
+  %a = add i8 %m, %y
+  call void @use(i8 %a)
+  %r = trunc i8 %a to i5
+  ret i5 %r
+}
+
+; negative test - demands one more bit
+
+define i6 @demand_low_bits_uses_extra_bit(i8 %x, i8 %y) {
+; CHECK-LABEL: @demand_low_bits_uses_extra_bit(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[X:%.*]], 5
+; CHECK-NEXT:    [[A:%.*]] = sub i8 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[R:%.*]] = trunc i8 [[A]] to i6
+; CHECK-NEXT:    ret i6 [[R]]
+;
+  %m = mul i8 %x, -32 ; 0xE0
+  %a = add i8 %m, %y
+  call void @use(i8 %a)
+  %r = trunc i8 %a to i6
+  ret i6 %r
+}
+
+define i8 @demand_low_bits_uses_commute(i8 %x, i8 %p, i8 %z) {
+; CHECK-LABEL: @demand_low_bits_uses_commute(
+; CHECK-NEXT:    [[Y:%.*]] = mul i8 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], -64
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[Y]], [[M]]
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[S]], 2
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %y = mul i8 %p, %p ; thwart complexity-based canonicalization
+  %m = and i8 %x, -64 ; 0xC0
+  %a = add i8 %y, %m
+  call void @use(i8 %a)
+  %s = sub i8 %a, %z
+  %r = shl i8 %s, 2
+  ret i8 %r
+}
+
+; negative test - demands one more bit
+
+define i8 @demand_low_bits_uses_commute_extra_bit(i8 %x, i8 %p, i8 %z) {
+; CHECK-LABEL: @demand_low_bits_uses_commute_extra_bit(
+; CHECK-NEXT:    [[Y:%.*]] = mul i8 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[M:%.*]] = and i8 [[X:%.*]], -64
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[Y]], [[M]]
+; CHECK-NEXT:    call void @use(i8 [[A]])
+; CHECK-NEXT:    [[S:%.*]] = sub i8 [[A]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = shl i8 [[S]], 1
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %y = mul i8 %p, %p ; thwart complexity-based canonicalization
+  %m = and i8 %x, -64 ; 0xC0
+  %a = add i8 %y, %m
+  call void @use(i8 %a)
+  %s = sub i8 %a, %z
+  %r = shl i8 %s, 1
+  ret i8 %r
+}
+
+define { i64, i64 } @PR57576(i64 noundef %x, i64 noundef %y, i64 noundef %z, i64 noundef %w) {
+; CHECK-LABEL: @PR57576(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i64 [[X:%.*]] to i128
+; CHECK-NEXT:    [[ZY:%.*]] = zext i64 [[Y:%.*]] to i128
+; CHECK-NEXT:    [[ZZ:%.*]] = zext i64 [[Z:%.*]] to i128
+; CHECK-NEXT:    [[SHY:%.*]] = shl nuw i128 [[ZY]], 64
+; CHECK-NEXT:    [[XY:%.*]] = or i128 [[SHY]], [[ZX]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub i128 [[XY]], [[ZZ]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i128 [[SUB]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = lshr i128 [[SUB]], 64
+; CHECK-NEXT:    [[DOTTR:%.*]] = trunc i128 [[TMP1]] to i64
+; CHECK-NEXT:    [[DOTNARROW:%.*]] = sub i64 [[DOTTR]], [[W:%.*]]
+; CHECK-NEXT:    [[R1:%.*]] = insertvalue { i64, i64 } poison, i64 [[T]], 0
+; CHECK-NEXT:    [[R2:%.*]] = insertvalue { i64, i64 } [[R1]], i64 [[DOTNARROW]], 1
+; CHECK-NEXT:    ret { i64, i64 } [[R2]]
+;
+  %zx = zext i64 %x to i128
+  %zy = zext i64 %y to i128
+  %zw = zext i64 %w to i128
+  %zz = zext i64 %z to i128
+  %shy = shl nuw i128 %zy, 64
+  %mw = mul i128 %zw, -18446744073709551616
+  %xy = or i128 %shy, %zx
+  %sub = sub i128 %xy, %zz
+  %add = add i128 %sub, %mw
+  %t = trunc i128 %add to i64
+  %h = lshr i128 %add, 64
+  %t2 = trunc i128 %h to i64
+  %r1 = insertvalue { i64, i64 } poison, i64 %t, 0
+  %r2 = insertvalue { i64, i64 } %r1, i64 %t2, 1
+  ret { i64, i64 } %r2
+}
+
+define i8 @mul_negpow2(i8 %x, i8 %y) {
+; CHECK-LABEL: @mul_negpow2(
+; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[A:%.*]] = sub i8 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul i8 %x, -2
+  %a = add i8 %m, %y
+  ret i8 %a
+}
+
+define <2 x i8> @mul_negpow2_commute_vec(<2 x i8> %x, <2 x i8> %p) {
+; CHECK-LABEL: @mul_negpow2_commute_vec(
+; CHECK-NEXT:    [[Y:%.*]] = mul <2 x i8> [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl <2 x i8> [[X:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[A:%.*]] = sub <2 x i8> [[Y]], [[TMP1]]
+; CHECK-NEXT:    ret <2 x i8> [[A]]
+;
+  %y = mul <2 x i8> %p, %p ; thwart complexity-based canonicalization
+  %m = mul <2 x i8> %x, <i8 -8, i8 -8>
+  %a = add <2 x i8> %y, %m
+  ret <2 x i8> %a
+}
+
+; negative test - extra use
+
+define i8 @mul_negpow2_use(i8 %x) {
+; CHECK-LABEL: @mul_negpow2_use(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], -2
+; CHECK-NEXT:    call void @use(i8 [[M]])
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], 42
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul i8 %x, -2
+  call void @use(i8 %m)
+  %a = add i8 %m, 42
+  ret i8 %a
+}
+
+; negative test - not negative-power-of-2 multiplier
+
+define i8 @mul_not_negpow2(i8 %x) {
+; CHECK-LABEL: @mul_not_negpow2(
+; CHECK-NEXT:    [[M:%.*]] = mul i8 [[X:%.*]], -3
+; CHECK-NEXT:    [[A:%.*]] = add i8 [[M]], 42
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %m = mul i8 %x, -3
+  %a = add i8 %m, 42
+  ret i8 %a
 }

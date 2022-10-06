@@ -1126,3 +1126,17 @@ define i8 @noop_and_t1(i8 %x) {
   %r = and i8 %b, 126
   ret i8 %r
 }
+
+; hidden simplifydemandedbits constant.
+define i8 @noop_and_t2(i8 %x) {
+; CHECK-LABEL: @noop_and_t2(
+; CHECK-NEXT:    [[A:%.*]] = and i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[B:%.*]] = or i8 [[A]], 127
+; CHECK-NEXT:    [[C:%.*]] = and i8 [[B]], 62
+; CHECK-NEXT:    ret i8 [[C]]
+;
+  %a = and i8 %x, 2
+  %b = or i8 %a, 127
+  %c = and i8 %b, 62
+  ret i8 %c
+}

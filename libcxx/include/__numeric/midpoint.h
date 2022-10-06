@@ -55,12 +55,12 @@ midpoint(_TPtr __a, _TPtr __b) noexcept
 
 
 template <typename _Tp>
-constexpr int __sign(_Tp __val) {
+_LIBCPP_HIDE_FROM_ABI constexpr int __sign(_Tp __val) {
     return (_Tp(0) < __val) - (__val < _Tp(0));
 }
 
 template <typename _Fp>
-constexpr _Fp __fp_abs(_Fp __f) { return __f >= 0 ? __f : -__f; }
+_LIBCPP_HIDE_FROM_ABI constexpr _Fp __fp_abs(_Fp __f) { return __f >= 0 ? __f : -__f; }
 
 template <class _Fp>
 _LIBCPP_INLINE_VISIBILITY constexpr

@@ -17,6 +17,8 @@ inference. The return type can often be deduced from the deduced return shape
 and elemental type (queryable from `InferShapedTypeOpInterface`) and so type
 inference for tensor types can be implemented with `InferShapedTypeOpInterface`.
 
+[TOC]
+
 ## Shape functions
 
 The C++ interfaces are the base mechanism whereby shape inference is queried and

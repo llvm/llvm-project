@@ -23,21 +23,23 @@ define void @irreducible(i1 %PredEntry, i1 %PredB1, i1 %PredB2, i1 %PredB3, i1 %
 ; CHECK:       B2:
 ; CHECK-NEXT:    br i1 [[PREDB2_INV]], label [[B3:%.*]], label [[FLOW3:%.*]]
 ; CHECK:       Flow2:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ [[TMP4:%.*]], [[FLOW3]] ], [ true, [[FLOW1]] ]
-; CHECK-NEXT:    br i1 [[TMP3]], label [[EXIT:%.*]], label [[IRR_GUARD]]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi i1 [ [[TMP5:%.*]], [[FLOW3]] ], [ undef, [[FLOW1]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ [[TMP6:%.*]], [[FLOW3]] ], [ true, [[FLOW1]] ]
+; CHECK-NEXT:    br i1 [[TMP4]], label [[EXIT:%.*]], label [[IRR_GUARD]]
 ; CHECK:       B3:
 ; CHECK-NEXT:    br label [[FLOW3]]
 ; CHECK:       B4:
 ; CHECK-NEXT:    br label [[FLOW]]
 ; CHECK:       Flow3:
-; CHECK-NEXT:    [[TMP4]] = phi i1 [ false, [[B3]] ], [ true, [[B2]] ]
+; CHECK-NEXT:    [[TMP5]] = phi i1 [ [[PREDB3:%.*]], [[B3]] ], [ undef, [[B2]] ]
+; CHECK-NEXT:    [[TMP6]] = phi i1 [ false, [[B3]] ], [ true, [[B2]] ]
 ; CHECK-NEXT:    br label [[FLOW2]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ; CHECK:       irr.guard:
-; CHECK-NEXT:    [[GUARD_B1:%.*]] = phi i1 [ [[PREDENTRY:%.*]], [[ENTRY:%.*]] ], [ [[PREDB3:%.*]], [[FLOW2]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = xor i1 [[GUARD_B1]], true
-; CHECK-NEXT:    br i1 [[TMP5]], label [[B4]], label [[FLOW]]
+; CHECK-NEXT:    [[GUARD_B1:%.*]] = phi i1 [ [[PREDENTRY:%.*]], [[ENTRY:%.*]] ], [ [[TMP3]], [[FLOW2]] ]
+; CHECK-NEXT:    [[GUARD_B1_INV:%.*]] = xor i1 [[GUARD_B1]], true
+; CHECK-NEXT:    br i1 [[GUARD_B1_INV]], label [[B4]], label [[FLOW]]
 ;
 {
 entry:

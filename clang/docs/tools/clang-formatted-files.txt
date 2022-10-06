@@ -3591,7 +3591,6 @@ lldb/examples/plugins/commands/fooplugin.cpp
 lldb/examples/synthetic/bitfield/program.cpp
 lldb/include/lldb/lldb-defines.h
 lldb/include/lldb/lldb-forward.h
-lldb/include/lldb/lldb-private-defines.h
 lldb/include/lldb/lldb-private.h
 lldb/include/lldb/lldb-public.h
 lldb/include/lldb/lldb-versioning.h
@@ -4181,6 +4180,8 @@ lldb/source/Plugins/Language/ClangCommon/ClangHighlighter.cpp
 lldb/source/Plugins/Language/ClangCommon/ClangHighlighter.h
 lldb/source/Plugins/Language/CPlusPlus/BlockPointer.cpp
 lldb/source/Plugins/Language/CPlusPlus/BlockPointer.h
+lldb/source/Plugins/Language/CPlusPlus/Coroutines.cpp
+lldb/source/Plugins/Language/CPlusPlus/Coroutines.h
 lldb/source/Plugins/Language/CPlusPlus/CPlusPlusLanguage.h
 lldb/source/Plugins/Language/CPlusPlus/CPlusPlusNameParser.h
 lldb/source/Plugins/Language/CPlusPlus/CxxStringTypes.h

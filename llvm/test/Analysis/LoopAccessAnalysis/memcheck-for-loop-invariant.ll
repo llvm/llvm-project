@@ -1,4 +1,4 @@
-; RUN: opt -passes='print-access-info' -disable-output  < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print<access-info>' -disable-output  < %s 2>&1 | FileCheck %s
 
 ; Handle memchecks involving loop-invariant addresses:
 ;

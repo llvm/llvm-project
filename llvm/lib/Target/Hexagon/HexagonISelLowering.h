@@ -57,6 +57,8 @@ enum NodeType : unsigned {
   VASR,
   VLSR,
 
+  SSAT,        // Signed saturate.
+  USAT,        // Unsigned saturate.
   TSTBIT,
   INSERT,
   EXTRACTU,
@@ -79,19 +81,30 @@ enum NodeType : unsigned {
   QCAT,
   QTRUE,
   QFALSE,
+
+  TL_EXTEND,   // Wrappers for ISD::*_EXTEND and ISD::TRUNCATE to prevent DAG
+  TL_TRUNCATE, // from auto-folding operations, e.g.
+               // (i32 ext (i16 ext i8)) would be folded to (i32 ext i8).
+               // To simplify the type legalization, we want to keep these
+               // single steps separate during type legalization.
+               // TL_[EXTEND|TRUNCATE] Inp, i128 _, i32 Opc
+               // * Inp is the original input to extend/truncate,
+               // * _ is a dummy operand with an illegal type (can be undef),
+               // * Opc is the original opcode.
+               // The legalization process (in Hexagon lowering code) will
+               // first deal with the "real" types (i.e. Inp and the result),
+               // and once all of them are processed, the wrapper node will
+               // be replaced with the original ISD node. The dummy illegal
+               // operand is there to make sure that the legalization hooks
+               // are called again after everything else is legal, giving
+               // us the opportunity to undo the wrapping.
+
   TYPECAST,    // No-op that's used to convert between different legal
                // types in a register.
   VALIGN,      // Align two vectors (in Op0, Op1) to one that would have
                // been loaded from address in Op2.
   VALIGNADDR,  // Align vector address: Op0 & -Op1, except when it is
                // an address in a vector load, then it's a no-op.
-  VPACKL,      // Pack low parts of the input vector to the front of the
-               // output. For example v64i16 VPACKL(v32i32) will pick
-               // the low halfwords and pack them into the first 32
-               // halfwords of the output. The rest of the output is
-               // unspecified.
-  VUNPACK,     // Unpacking into low elements with sign extension.
-  VUNPACKU,    // Unpacking into low elements with zero extension.
   ISEL,        // Marker for nodes that were created during ISel, and
                // which need explicit selection (would have been left
                // unselected otherwise).
@@ -111,8 +124,6 @@ public:
   explicit HexagonTargetLowering(const TargetMachine &TM,
                                  const HexagonSubtarget &ST);
 
-  bool isHVXVectorType(MVT Ty) const;
-
   /// IsEligibleForTailCallOptimization - Check whether the call is eligible
   /// for tail call optimization. Targets which want to do tail call
   /// optimization should implement this function.
@@ -129,8 +140,8 @@ public:
   bool isTruncateFree(Type *Ty1, Type *Ty2) const override;
   bool isTruncateFree(EVT VT1, EVT VT2) const override;
 
-  bool isCheapToSpeculateCttz() const override { return true; }
-  bool isCheapToSpeculateCtlz() const override { return true; }
+  bool isCheapToSpeculateCttz(Type *) const override { return true; }
+  bool isCheapToSpeculateCtlz(Type *) const override { return true; }
   bool isCtlzFast() const override { return true; }
 
   bool hasBitTest(SDValue X, SDValue Y) const override;
@@ -405,6 +416,10 @@ private:
   TypePair typeSplit(MVT Ty) const;
   MVT typeExtElem(MVT VecTy, unsigned Factor) const;
   MVT typeTruncElem(MVT VecTy, unsigned Factor) const;
+  TypePair typeExtendToWider(MVT Ty0, MVT Ty1) const;
+  TypePair typeWidenToWider(MVT Ty0, MVT Ty1) const;
+  MVT typeLegalize(MVT Ty, SelectionDAG &DAG) const;
+  MVT typeWidenToHvx(MVT Ty) const;
 
   SDValue opJoin(const VectorPair &Ops, const SDLoc &dl,
                  SelectionDAG &DAG) const;
@@ -453,6 +468,14 @@ private:
                               bool ZeroExt, SelectionDAG &DAG) const;
   SDValue compressHvxPred(SDValue VecQ, const SDLoc &dl, MVT ResTy,
                           SelectionDAG &DAG) const;
+  SDValue resizeToWidth(SDValue VecV, MVT ResTy, bool Signed, const SDLoc &dl,
+                        SelectionDAG &DAG) const;
+  SDValue extractSubvector(SDValue Vec, MVT SubTy, unsigned SubIdx,
+                           SelectionDAG &DAG) const;
+  VectorPair emitHvxAddWithOverflow(SDValue A, SDValue B, const SDLoc &dl,
+                                    bool Signed, SelectionDAG &DAG) const;
+  VectorPair emitHvxShiftRightRnd(SDValue Val, unsigned Amt, bool Signed,
+                                  SelectionDAG &DAG) const;
 
   SDValue LowerHvxBuildVector(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxSplatVector(SDValue Op, SelectionDAG &DAG) const;
@@ -474,20 +497,30 @@ private:
   SDValue LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxMaskedOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxFpExtend(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerHvxConvertFpInt(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
+  SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
 
-  SDValue SplitHvxPairOp(SDValue Op, SelectionDAG &DAG) const;
+  VectorPair SplitVectorOp(SDValue Op, SelectionDAG &DAG) const;
+
   SDValue SplitHvxMemOp(SDValue Op, SelectionDAG &DAG) const;
   SDValue WidenHvxLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue WidenHvxStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue WidenHvxSetCC(SDValue Op, SelectionDAG &DAG) const;
-  SDValue WidenHvxExtend(SDValue Op, SelectionDAG &DAG) const;
-  SDValue WidenHvxTruncate(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LegalizeHvxResize(SDValue Op, SelectionDAG &DAG) const;
+  SDValue WidenHvxFpIntConv(SDValue Op, SelectionDAG &DAG) const;
+  SDValue ExpandHvxResizeIntoSteps(SDValue Op, SelectionDAG &DAG) const;
+  SDValue EqualizeFpIntConversion(SDValue Op, SelectionDAG &DAG) const;
+
+  SDValue CreateTLWrapper(SDValue Op, SelectionDAG &DAG) const;
+  SDValue RemoveTLWrapper(SDValue Op, SelectionDAG &DAG) const;
 
   std::pair<const TargetRegisterClass*, uint8_t>
   findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)
       const override;
 
+  bool shouldSplitToHvx(MVT Ty, SelectionDAG &DAG) const;
   bool shouldWidenToHvx(MVT Ty, SelectionDAG &DAG) const;
   bool isHvxOperation(SDNode *N, SelectionDAG &DAG) const;
   SDValue LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const;

@@ -474,7 +474,8 @@ public:
       SmallVectorImpl<char> *SearchPath, SmallVectorImpl<char> *RelativePath,
       Module *RequestingModule, ModuleMap::KnownHeader *SuggestedModule,
       bool *IsMapped, bool *IsFrameworkFound, bool SkipCache = false,
-      bool BuildSystemModule = false);
+      bool BuildSystemModule = false, bool OpenFile = true,
+      bool CacheFailures = true);
 
   /// Look up a subframework for the specified \#include file.
   ///
@@ -647,7 +648,8 @@ public:
   /// \param File The header that we wish to map to a module.
   /// \param AllowTextual Whether we want to find textual headers too.
   ModuleMap::KnownHeader findModuleForHeader(const FileEntry *File,
-                                             bool AllowTextual = false) const;
+                                             bool AllowTextual = false,
+                                             bool AllowExcluded = false) const;
 
   /// Retrieve all the modules corresponding to the given file.
   ///
@@ -759,7 +761,8 @@ private:
   getFileAndSuggestModule(StringRef FileName, SourceLocation IncludeLoc,
                           const DirectoryEntry *Dir, bool IsSystemHeaderDir,
                           Module *RequestingModule,
-                          ModuleMap::KnownHeader *SuggestedModule);
+                          ModuleMap::KnownHeader *SuggestedModule,
+                          bool OpenFile = true, bool CacheFailures = true);
 
   /// Cache the result of a successful lookup at the given include location
   /// using the search path at \c HitIt.

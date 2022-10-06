@@ -398,7 +398,7 @@ bool llvm::isSplatValue(const Value *V, int Index, unsigned Depth) {
   if (auto *Shuf = dyn_cast<ShuffleVectorInst>(V)) {
     // FIXME: We can safely allow undefs here. If Index was specified, we will
     //        check that the mask elt is defined at the required index.
-    if (!is_splat(Shuf->getShuffleMask()))
+    if (!all_equal(Shuf->getShuffleMask()))
       return false;
 
     // Match any index.
@@ -478,7 +478,7 @@ bool llvm::widenShuffleMaskElts(int Scale, ArrayRef<int> Mask,
     if (SliceFront < 0) {
       // Negative values (undef or other "sentinel" values) must be equal across
       // the entire slice.
-      if (!is_splat(MaskSlice))
+      if (!all_equal(MaskSlice))
         return false;
       ScaledMask.push_back(SliceFront);
     } else {
@@ -1117,8 +1117,9 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
       // wrap around the address space we would do a memory access at nullptr
       // even without the transformation. The wrapping checks are therefore
       // deferred until after we've formed the interleaved groups.
-      int64_t Stride = getPtrStride(PSE, ElementTy, Ptr, TheLoop, Strides,
-                                    /*Assume=*/true, /*ShouldCheckWrap=*/false);
+      int64_t Stride =
+        getPtrStride(PSE, ElementTy, Ptr, TheLoop, Strides,
+                     /*Assume=*/true, /*ShouldCheckWrap=*/false).value_or(0);
 
       const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
       uint64_t Size = DL.getTypeAllocSize(ElementTy);
@@ -1338,7 +1339,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     Value *MemberPtr = getLoadStorePointerOperand(Member);
     Type *AccessTy = getLoadStoreType(Member);
     if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, Strides,
-                     /*Assume=*/false, /*ShouldCheckWrap=*/true))
+                     /*Assume=*/false, /*ShouldCheckWrap=*/true).value_or(0))
       return false;
     LLVM_DEBUG(dbgs() << "LV: Invalidate candidate interleaved group due to "
                       << FirstOrLast

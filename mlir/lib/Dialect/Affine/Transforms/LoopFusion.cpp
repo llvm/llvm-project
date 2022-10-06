@@ -10,7 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Affine/Passes.h"
+
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
@@ -19,6 +20,7 @@
 #include "mlir/Dialect/Affine/LoopFusionUtils.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
 #include "mlir/Dialect/Affine/Utils.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
@@ -33,6 +35,12 @@
 #include "llvm/Support/raw_ostream.h"
 #include <iomanip>
 #include <sstream>
+
+namespace mlir {
+#define GEN_PASS_DEF_AFFINELOOPFUSION
+#include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace mlir
+
 #define DEBUG_TYPE "affine-loop-fusion"
 
 using namespace mlir;
@@ -47,7 +55,7 @@ namespace {
 // TODO: Extend this pass to check for fusion preventing dependences,
 // and add support for more general loop fusion algorithms.
 
-struct LoopFusion : public AffineLoopFusionBase<LoopFusion> {
+struct LoopFusion : public impl::AffineLoopFusionBase<LoopFusion> {
   LoopFusion() = default;
   LoopFusion(unsigned fastMemorySpace, uint64_t localBufSizeThresholdBytes,
              bool maximalFusion, enum FusionMode affineFusionMode) {
@@ -795,18 +803,11 @@ bool MemRefDependenceGraph::init(func::FuncOp f) {
         Node node(nextNodeId++, &op);
         nodes.insert({node.id, node});
       }
-    } else if (auto effectInterface = dyn_cast<MemoryEffectOpInterface>(op)) {
+    } else if (hasEffect<MemoryEffects::Write, MemoryEffects::Free>(&op)) {
       // Create graph node for top-level op, which could have a memory write
       // side effect.
-      SmallVector<MemoryEffects::EffectInstance, 1> effects;
-      effectInterface.getEffects(effects);
-      if (llvm::any_of(effects, [](const MemoryEffects::EffectInstance &it) {
-            return isa<MemoryEffects::Write, MemoryEffects::Free>(
-                it.getEffect());
-          })) {
-        Node node(nextNodeId++, &op);
-        nodes.insert({node.id, node});
-      }
+      Node node(nextNodeId++, &op);
+      nodes.insert({node.id, node});
     }
   }
 
@@ -1124,10 +1125,10 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
   // loop nest at 'dstLoopDepth'.
   uint64_t minFusedLoopNestComputeCost = std::numeric_limits<uint64_t>::max();
   double maxStorageReduction = 0.0;
-  Optional<uint64_t> sliceMemEstimate = None;
+  Optional<uint64_t> sliceMemEstimate;
 
   // The best loop depth at which to materialize the slice.
-  Optional<unsigned> bestDstLoopDepth = None;
+  Optional<unsigned> bestDstLoopDepth;
 
   // Compute op instance count for the src loop nest without iteration slicing.
   uint64_t srcLoopNestCost = getComputeCost(srcLoopIVs[0], srcLoopNestStats);
@@ -1260,7 +1261,7 @@ static bool isFusionProfitable(Operation *srcOpInst, Operation *srcStoreOpInst,
   auto dstMemSize = getMemoryFootprintBytes(dstForOp);
   auto srcMemSize = getMemoryFootprintBytes(srcLoopIVs[0]);
 
-  Optional<double> storageReduction = None;
+  Optional<double> storageReduction;
 
   if (!dstMemSize || !srcMemSize) {
     LLVM_DEBUG(llvm::dbgs()

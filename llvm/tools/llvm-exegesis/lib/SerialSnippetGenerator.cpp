@@ -96,7 +96,7 @@ static void appendCodeTemplates(const LLVMState &State,
   switch (ExecutionModeBit) {
   case ExecutionMode::ALWAYS_SERIAL_IMPLICIT_REGS_ALIAS:
     // Nothing to do, the instruction is always serial.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ExecutionMode::ALWAYS_SERIAL_TIED_REGS_ALIAS: {
     // Picking whatever value for the tied variable will make the instruction
     // serial.

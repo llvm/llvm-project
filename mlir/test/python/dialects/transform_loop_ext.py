@@ -18,7 +18,7 @@ def run(f):
 
 @run
 def getParentLoop():
-  sequence = transform.SequenceOp()
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
   with InsertionPoint(sequence.body):
     loop.GetParentForOp(sequence.bodyTarget, num_loops=2)
     transform.YieldOp()
@@ -29,7 +29,7 @@ def getParentLoop():
 
 @run
 def loopOutline():
-  sequence = transform.SequenceOp()
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
   with InsertionPoint(sequence.body):
     loop.LoopOutlineOp(sequence.bodyTarget, func_name="foo")
     transform.YieldOp()
@@ -40,7 +40,7 @@ def loopOutline():
 
 @run
 def loopPeel():
-  sequence = transform.SequenceOp()
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
   with InsertionPoint(sequence.body):
     loop.LoopPeelOp(sequence.bodyTarget)
     transform.YieldOp()
@@ -50,7 +50,7 @@ def loopPeel():
 
 @run
 def loopPipeline():
-  sequence = transform.SequenceOp()
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
   with InsertionPoint(sequence.body):
     loop.LoopPipelineOp(sequence.bodyTarget, iteration_interval=3)
     transform.YieldOp()
@@ -62,7 +62,7 @@ def loopPipeline():
 
 @run
 def loopUnroll():
-  sequence = transform.SequenceOp()
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
   with InsertionPoint(sequence.body):
     loop.LoopUnrollOp(sequence.bodyTarget, factor=42)
     transform.YieldOp()

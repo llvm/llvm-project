@@ -78,7 +78,7 @@ struct FieldParser<Optional<int>> {
     Optional<int> value;
     value.emplace();
     OptionalParseResult result = parser.parseOptionalInteger(*value);
-    if (result.hasValue()) {
+    if (result.has_value()) {
       if (succeeded(*result))
         return value;
       return failure();
@@ -101,8 +101,7 @@ namespace test {
 struct TestRecursiveTypeStorage : public ::mlir::TypeStorage {
   using KeyTy = ::llvm::StringRef;
 
-  explicit TestRecursiveTypeStorage(::llvm::StringRef key)
-      : name(key), body(::mlir::Type()) {}
+  explicit TestRecursiveTypeStorage(::llvm::StringRef key) : name(key) {}
 
   bool operator==(const KeyTy &other) const { return name == other; }
 

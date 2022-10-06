@@ -14,7 +14,9 @@
 // discrete_distribution();
 
 #include <random>
+
 #include <cassert>
+#include <vector>
 
 #include "test_macros.h"
 

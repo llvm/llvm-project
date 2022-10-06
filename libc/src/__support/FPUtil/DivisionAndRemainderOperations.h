@@ -13,7 +13,7 @@
 #include "ManipulationFunctions.h"
 #include "NormalFloat.h"
 
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
 
 namespace __llvm_libc {
 namespace fputil {
@@ -22,8 +22,7 @@ static constexpr int QUOTIENT_LSB_BITS = 3;
 
 // The implementation is a bit-by-bit algorithm which uses integer division
 // to evaluate the quotient and remainder.
-template <typename T,
-          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
+template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 static inline T remquo(T x, T y, int &q) {
   FPBits<T> xbits(x), ybits(y);
   if (xbits.is_nan())

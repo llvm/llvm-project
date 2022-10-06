@@ -5,7 +5,7 @@
 define i32 @one_direct_branch(i32* %src) {
 ; CHECK-LABEL: @one_direct_branch(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -17,14 +17,14 @@ define i32 @one_direct_branch(i32* %src) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i32> <i32 25500, i32 25500, i32 25500, i32 25500>, [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP4]], i32 3
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 0, 0
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 1000, 1000
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
@@ -35,7 +35,7 @@ define i32 @one_direct_branch(i32* %src) {
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[PHI_XOR:%.*]] = phi i32 [ [[XOR]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[IV_NEXT]], 0
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[XOR_LCSSA:%.*]] = phi i32 [ [[PHI_XOR]], [[LOOP_LATCH]] ], [ [[TMP6]], [[MIDDLE_BLOCK]] ]
@@ -54,7 +54,7 @@ loop:
 loop.latch:
   %phi.xor = phi i32 [ %xor, %loop ]
   %iv.next = add nsw i32 %iv, 1
-  %tobool.not = icmp eq i32 %iv.next, 0
+  %tobool.not = icmp eq i32 %iv.next, 1000
   br i1 %tobool.not, label %exit, label %loop
 
 exit:
@@ -65,7 +65,7 @@ exit:
 define i32 @two_direct_branch(i32* %src) {
 ; CHECK-LABEL: @two_direct_branch(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -77,14 +77,14 @@ define i32 @two_direct_branch(i32* %src) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, <4 x i32>* [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor <4 x i32> <i32 25500, i32 25500, i32 25500, i32 25500>, [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i32> [[TMP4]], i32 3
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 0, 0
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 1000, 1000
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
@@ -98,7 +98,7 @@ define i32 @two_direct_branch(i32* %src) {
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[PHI_XOR:%.*]] = phi i32 [ [[PHI_XOR_1]], [[BB]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[IV_NEXT]], 0
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[XOR_LCSSA:%.*]] = phi i32 [ [[PHI_XOR]], [[LOOP_LATCH]] ], [ [[TMP6]], [[MIDDLE_BLOCK]] ]
@@ -121,7 +121,7 @@ bb:
 loop.latch:
   %phi.xor = phi i32 [ %phi.xor.1, %bb ]
   %iv.next = add nsw i32 %iv, 1
-  %tobool.not = icmp eq i32 %iv.next, 0
+  %tobool.not = icmp eq i32 %iv.next, 1000
   br i1 %tobool.not, label %exit, label %loop
 
 exit:
@@ -132,7 +132,7 @@ exit:
 define i32 @cond_branch(i32 %a, i32* %src) {
 ; CHECK-LABEL: @cond_branch(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 true, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i32> poison, i32 [[A:%.*]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
@@ -151,14 +151,14 @@ define i32 @cond_branch(i32 %a, i32* %src) {
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> <i32 10, i32 10, i32 10, i32 10>, <4 x i32> [[TMP4]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i32> [[VEC_IND]], <i32 4, i32 4, i32 4, i32 4>
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[PREDPHI]], i32 3
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 0, 0
+; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 1000, 1000
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 1000, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
@@ -172,7 +172,7 @@ define i32 @cond_branch(i32 %a, i32* %src) {
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    [[PHI_XOR:%.*]] = phi i32 [ [[XOR]], [[LOOP]] ], [ 10, [[THEN]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
-; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[IV_NEXT]], 0
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[IV_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    [[XOR_LCSSA:%.*]] = phi i32 [ [[PHI_XOR]], [[LOOP_LATCH]] ], [ [[TMP8]], [[MIDDLE_BLOCK]] ]
@@ -195,7 +195,7 @@ then:
 loop.latch:
   %phi.xor = phi i32 [ %xor, %loop ], [ 10, %then ]
   %iv.next = add nsw i32 %iv, 1
-  %tobool.not = icmp eq i32 %iv.next, 0
+  %tobool.not = icmp eq i32 %iv.next, 1000
   br i1 %tobool.not, label %exit, label %loop
 
 exit:

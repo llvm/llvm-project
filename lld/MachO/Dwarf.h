@@ -12,8 +12,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/DWARF/DWARFObject.h"
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 class ObjFile;
 
@@ -41,6 +40,10 @@ public:
     return lineSection;
   }
 
+  llvm::DWARFSection const &getStrOffsetsSection() const override {
+    return strOffsSection;
+  }
+
   // Returns an instance of DwarfObject if the given object file has the
   // relevant DWARF debug sections.
   static std::unique_ptr<DwarfObject> create(ObjFile *);
@@ -48,11 +51,11 @@ public:
 private:
   llvm::DWARFSection infoSection;
   llvm::DWARFSection lineSection;
+  llvm::DWARFSection strOffsSection;
   llvm::StringRef abbrevSection;
   llvm::StringRef strSection;
 };
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

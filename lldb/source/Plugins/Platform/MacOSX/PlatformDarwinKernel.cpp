@@ -12,6 +12,7 @@
                        // source/Host/macosx/cfcpp utilities
 
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -26,6 +27,7 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ArchSpec.h"
+#include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -39,6 +41,8 @@
 #include <memory>
 
 #include "Host/macosx/cfcpp/CFCBundle.h"
+#include "Plugins/DynamicLoader/Darwin-Kernel/DynamicLoaderDarwinKernel.h"
+#include "Plugins/ObjectContainer/Mach-O-Fileset/ObjectContainerMachOFileset.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -615,7 +619,7 @@ bool PlatformDarwinKernel::KextHasdSYMSibling(
   FileSpec dsym_fspec = kext_bundle_filepath;
   std::string filename = dsym_fspec.GetFilename().AsCString();
   filename += ".dSYM";
-  dsym_fspec.GetFilename() = ConstString(filename);
+  dsym_fspec.SetFilename(filename);
   if (FileSystem::Instance().IsDirectory(dsym_fspec)) {
     return true;
   }
@@ -652,7 +656,7 @@ bool PlatformDarwinKernel::KernelHasdSYMSibling(const FileSpec &kernel_binary) {
   FileSpec kernel_dsym = kernel_binary;
   std::string filename = kernel_binary.GetFilename().AsCString();
   filename += ".dSYM";
-  kernel_dsym.GetFilename() = ConstString(filename);
+  kernel_dsym.SetFilename(filename);
   return FileSystem::Instance().IsDirectory(kernel_dsym);
 }
 
@@ -670,8 +674,7 @@ bool PlatformDarwinKernel::KerneldSYMHasNoSiblingBinary(
 
   FileSpec binary_filespec = kernel_dsym;
   // Chop off the '.dSYM' extension on the filename
-  binary_filespec.GetFilename() =
-      binary_filespec.GetFileNameStrippingExtension();
+  binary_filespec.SetFilename(binary_filespec.GetFileNameStrippingExtension());
 
   // Is there a binary next to this this?  Then return false.
   if (FileSystem::Instance().Exists(binary_filespec))
@@ -725,23 +728,28 @@ Status PlatformDarwinKernel::GetSharedModule(
   // "com.apple.driver.AppleIRController") and search our kext index.
   std::string kext_bundle_id = platform_file.GetPath();
 
-  if (!kext_bundle_id.empty() && module_spec.GetUUID().IsValid()) {
-    if (kext_bundle_id == "mach_kernel") {
-      return GetSharedModuleKernel(module_spec, process, module_sp,
-                                   module_search_paths_ptr, old_modules,
-                                   did_create_ptr);
+  if (module_spec.GetUUID().IsValid()) {
+    // DynamicLoaderDarwinKernel uses the magic name mach_kernel,
+    // UUID search can get here with no name - and it may be a kernel.
+    if (kext_bundle_id == "mach_kernel" || kext_bundle_id.empty()) {
+      error = GetSharedModuleKernel(module_spec, process, module_sp,
+                                    module_search_paths_ptr, old_modules,
+                                    did_create_ptr);
+      if (error.Success() && module_sp) {
+        return error;
+      }
     } else {
       return GetSharedModuleKext(module_spec, process, module_sp,
                                  module_search_paths_ptr, old_modules,
                                  did_create_ptr);
     }
-  } else {
-    // Give the generic methods, including possibly calling into  DebugSymbols
-    // framework on macOS systems, a chance.
-    return PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
-                                           module_search_paths_ptr, old_modules,
-                                           did_create_ptr);
   }
+
+  // Give the generic methods, including possibly calling into DebugSymbols
+  // framework on macOS systems, a chance.
+  return PlatformDarwin::GetSharedModule(module_spec, process, module_sp,
+                                         module_search_paths_ptr, old_modules,
+                                         did_create_ptr);
 }
 
 Status PlatformDarwinKernel::GetSharedModuleKext(
@@ -799,7 +807,8 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
           module_sp->MatchesModuleSpec(kern_spec)) {
         // module_sp is an actual kernel binary we want to add.
         if (process) {
-          process->GetTarget().GetImages().AppendIfNeeded(module_sp);
+          const bool notify = false;
+          process->GetTarget().GetImages().AppendIfNeeded(module_sp, notify);
           error.Clear();
           return error;
         } else {
@@ -831,7 +840,8 @@ Status PlatformDarwinKernel::GetSharedModuleKernel(
           module_sp->MatchesModuleSpec(kern_spec)) {
         // module_sp is an actual kernel binary we want to add.
         if (process) {
-          process->GetTarget().GetImages().AppendIfNeeded(module_sp);
+          const bool notify = false;
+          process->GetTarget().GetImages().AppendIfNeeded(module_sp, notify);
           error.Clear();
           return error;
         } else {
@@ -907,6 +917,70 @@ Status PlatformDarwinKernel::ExamineKextForMatchingUUID(
   }
 
   return {};
+}
+
+static addr_t find_kernel_in_macho_fileset(Process *process,
+                                           addr_t input_addr) {
+  Status error;
+  WritableDataBufferSP header_data(new DataBufferHeap(512, 0));
+  if (!process->ReadMemory(input_addr, header_data->GetBytes(),
+                           header_data->GetByteSize(), error) ||
+      !error.Success())
+    return LLDB_INVALID_ADDRESS;
+  ModuleSP module_sp(new Module(ModuleSpec()));
+  ObjectContainerSP container_sp(
+      ObjectContainerMachOFileset::CreateMemoryInstance(
+          module_sp, header_data, process->shared_from_this(), input_addr));
+  if (!container_sp)
+    return LLDB_INVALID_ADDRESS;
+
+  ObjectContainerMachOFileset *fileset_container =
+      static_cast<ObjectContainerMachOFileset *>(container_sp.get());
+  ObjectContainerMachOFileset::Entry *entry =
+      fileset_container->FindEntry("com.apple.kernel");
+  if (entry)
+    return entry->vmaddr;
+  return LLDB_INVALID_ADDRESS;
+}
+
+bool PlatformDarwinKernel::LoadPlatformBinaryAndSetup(Process *process,
+                                                      lldb::addr_t input_addr,
+                                                      bool notify) {
+  Log *log =
+      GetLog(LLDBLog::Platform | LLDBLog::DynamicLoader | LLDBLog::Process);
+
+  if (!process)
+    return false;
+
+  addr_t actual_address = find_kernel_in_macho_fileset(process, input_addr);
+
+  LLDB_LOGF(log,
+            "PlatformDarwinKernel::%s check address 0x%" PRIx64 " for "
+            "a macho fileset, got back kernel address 0x%" PRIx64,
+            __FUNCTION__, input_addr, actual_address);
+
+  if (actual_address == LLDB_INVALID_ADDRESS)
+    return false;
+
+  // We have a xnu kernel binary, this is a kernel debug session.
+  // Set the Target's Platform to be PlatformDarwinKernel, and the
+  // Process' DynamicLoader to be DynamicLoaderDarwinKernel.
+
+  PlatformSP platform_sp =
+      process->GetTarget().GetDebugger().GetPlatformList().Create(
+          PlatformDarwinKernel::GetPluginNameStatic());
+  if (platform_sp)
+    process->GetTarget().SetPlatform(platform_sp);
+
+  DynamicLoaderUP dyld_up =
+      std::make_unique<DynamicLoaderDarwinKernel>(process, actual_address);
+  if (!dyld_up)
+    return false;
+
+  // Process owns it now
+  process->SetDynamicLoader(std::move(dyld_up));
+
+  return true;
 }
 
 std::vector<ArchSpec> PlatformDarwinKernel::GetSupportedArchitectures(

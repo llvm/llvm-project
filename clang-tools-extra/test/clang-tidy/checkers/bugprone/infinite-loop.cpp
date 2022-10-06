@@ -685,3 +685,29 @@ void test_typeof_dowhile_infinite() {
     0;
   }) x;
 }
+
+void test_local_static_recursion() {
+  static int i = 10;
+  int j = 0;
+
+  i--;
+  while (i >= 0)
+    test_local_static_recursion(); // no warning, recursively decrement i
+  for (; i >= 0;)
+    test_local_static_recursion(); // no warning, recursively decrement i
+  for (; i + j >= 0;)
+    test_local_static_recursion(); // no warning, recursively decrement i
+  for (; i >= 0; i--)
+    ; // no warning, i decrements
+  while (j >= 0)
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (j) are updated in the loop body [bugprone-infinite-loop]
+    test_local_static_recursion();
+
+  int (*p)(int) = 0;
+
+  while (i >= 0)
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: this loop is infinite; none of its condition variables (i) are updated in the loop body [bugprone-infinite-loop]
+    p = 0;
+  while (i >= 0)
+    p(0); // we don't know what p points to so no warning
+}

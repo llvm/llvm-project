@@ -74,7 +74,9 @@ include "SparcCallingConv.td"
 include "SparcSchedule.td"
 include "SparcInstrInfo.td"
 
-def SparcInstrInfo : InstrInfo;
+def SparcInstrInfo : InstrInfo {
+  let useDeprecatedPositionallyEncodedOperands = 1;
+}
 
 def SparcAsmParser : AsmParser {
   bit ShouldEmitMatchRegisterName = 0;

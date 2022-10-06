@@ -940,7 +940,7 @@ Each concrete `OpView` subclass further defines several public-intended
 attributes:
 
 *   `OPERATION_NAME` attribute with the `str` fully qualified operation name
-    (i.e. `math.abs`).
+    (i.e. `math.absf`).
 *   An `__init__` method for the *default builder* if one is defined or inferred
     for the operation.
 *   `@property` getter for each operand or result (using an auto-generated name
@@ -1170,4 +1170,3 @@ exist for this functionality, which can then be wrapped using pybind11 and
 utilities to connect to the rest of Python API. The bindings can be located in a
 separate pybind11 module or in the same module as attributes and types, and
 loaded along with the dialect.
-

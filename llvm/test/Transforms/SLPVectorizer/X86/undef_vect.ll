@@ -12,7 +12,9 @@ define void @_Z2azv() local_unnamed_addr {
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.smax.v8i32(<8 x i32> [[TMP1]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = icmp sgt i32 [[TMP2]], undef
 ; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[OP_RDX]], i32 [[TMP2]], i32 undef
-; CHECK-NEXT:    [[DOTSROA_SPECULATED_9:%.*]] = select i1 undef, i32 undef, i32 [[OP_RDX1]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = icmp sgt i32 [[OP_RDX1]], undef
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = select i1 [[OP_RDX2]], i32 [[OP_RDX1]], i32 undef
+; CHECK-NEXT:    [[DOTSROA_SPECULATED_9:%.*]] = select i1 undef, i32 undef, i32 [[OP_RDX3]]
 ; CHECK-NEXT:    [[CMP_I1_10:%.*]] = icmp slt i32 [[DOTSROA_SPECULATED_9]], undef
 ; CHECK-NEXT:    ret void
 ;

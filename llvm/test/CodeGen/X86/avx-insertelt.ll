@@ -422,7 +422,7 @@ define <8 x i32> @insert_i32_two_elts_of_high_subvector(<8 x i32> %x, i32 %s) {
 define <4 x i64> @insert_i64_two_elts_of_high_subvector(<4 x i64> %x, i64 %s) {
 ; AVX-LABEL: insert_i64_two_elts_of_high_subvector:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm1
+; AVX-NEXT:    vmovq %rdi, %xmm1
 ; AVX-NEXT:    vpinsrq $1, %rdi, %xmm1, %xmm1
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
@@ -523,7 +523,7 @@ define <8 x i32> @insert_i32_two_elts_of_low_subvector(<8 x i32> %x, i32 %s) {
 define <4 x i64> @insert_i64_two_elts_of_low_subvector(<4 x i64> %x, i64 %s) {
 ; AVX-LABEL: insert_i64_two_elts_of_low_subvector:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpinsrq $0, %rdi, %xmm0, %xmm1
+; AVX-NEXT:    vmovq %rdi, %xmm1
 ; AVX-NEXT:    vpinsrq $1, %rdi, %xmm1, %xmm1
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm1[0,1,2,3],ymm0[4,5,6,7]
 ; AVX-NEXT:    retq

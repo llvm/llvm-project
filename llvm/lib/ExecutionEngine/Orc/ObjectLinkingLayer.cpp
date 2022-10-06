@@ -67,7 +67,7 @@ private:
 
   static bool hasMachOInitSection(LinkGraph &G) {
     for (auto &Sec : G.sections())
-      if (Sec.getName() == "__DATA,__obj_selrefs" ||
+      if (Sec.getName() == "__DATA,__objc_selrefs" ||
           Sec.getName() == "__DATA,__objc_classlist" ||
           Sec.getName() == "__TEXT,__swift5_protos" ||
           Sec.getName() == "__TEXT,__swift5_proto" ||
@@ -218,6 +218,8 @@ public:
           Flags |= JITSymbolFlags::Callable;
         if (Sym->getScope() == Scope::Default)
           Flags |= JITSymbolFlags::Exported;
+        if (Sym->getLinkage() == Linkage::Weak)
+          Flags |= JITSymbolFlags::Weak;
 
         InternedResult[InternedName] =
             JITEvaluatedSymbol(Sym->getAddress().getValue(), Flags);
@@ -537,7 +539,8 @@ private:
     for (auto *B : G.blocks()) {
       auto &BI = BlockInfos[B];
       for (auto &E : B->edges()) {
-        if (E.getTarget().getScope() == Scope::Local) {
+        if (E.getTarget().getScope() == Scope::Local &&
+            !E.getTarget().isAbsolute()) {
           auto &TgtB = E.getTarget().getBlock();
           if (&TgtB != B) {
             BI.Dependencies.insert(&TgtB);

@@ -642,7 +642,7 @@ TEST(ParseFixedCompilationDatabase, HandlesPositionalArgsSyntaxOnly) {
   // Adjust the given command line arguments to ensure that any positional
   // arguments in them are stripped.
   const char *Argv[] = {"--", "somefile.cpp", "-fsyntax-only", "-DDEF3"};
-  int Argc = llvm::array_lengthof(Argv);
+  int Argc = std::size(Argv);
   std::string ErrorMessage;
   std::unique_ptr<CompilationDatabase> Database =
       FixedCompilationDatabase::loadFromCommandLine(Argc, Argv, ErrorMessage);

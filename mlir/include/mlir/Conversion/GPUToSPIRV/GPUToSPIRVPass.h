@@ -21,9 +21,15 @@ class ModuleOp;
 template <typename T>
 class OperationPass;
 
-/// Creates a pass to convert GPU Ops to SPIR-V ops. For a gpu.func to be
-/// converted, it should have a spv.entry_point_abi attribute.
-std::unique_ptr<OperationPass<ModuleOp>> createConvertGPUToSPIRVPass();
+#define GEN_PASS_DECL_CONVERTGPUTOSPIRV
+#include "mlir/Conversion/Passes.h.inc"
+
+/// Creates a pass to convert GPU kernel ops to corresponding SPIR-V ops. For a
+/// gpu.func to be converted, it should have a spirv.entry_point_abi attribute.
+/// If `mapMemorySpace` is true, performs MemRef memory space to SPIR-V mapping
+/// according to default Vulkan rules first.
+std::unique_ptr<OperationPass<ModuleOp>>
+createConvertGPUToSPIRVPass(bool mapMemorySpace = false);
 
 } // namespace mlir
 #endif // MLIR_CONVERSION_GPUTOSPIRV_GPUTOSPIRVPASS_H

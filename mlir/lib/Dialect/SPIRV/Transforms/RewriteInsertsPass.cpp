@@ -12,11 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
+
+#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+
+namespace mlir {
+namespace spirv {
+#define GEN_PASS_DEF_SPIRVREWRITEINSERTSPASS
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
+} // namespace spirv
+} // namespace mlir
 
 using namespace mlir;
 
@@ -25,7 +32,7 @@ namespace {
 /// Replaces sequential chains of `spirv::CompositeInsertOp` operation into
 /// `spirv::CompositeConstructOp` operation if possible.
 class RewriteInsertsPass
-    : public SPIRVRewriteInsertsPassBase<RewriteInsertsPass> {
+    : public spirv::impl::SPIRVRewriteInsertsPassBase<RewriteInsertsPass> {
 public:
   void runOnOperation() override;
 
@@ -56,7 +63,7 @@ void RewriteInsertsPass::runOnOperation() {
     SmallVector<Value, 4> operands;
     // Collect inserted objects.
     for (auto insertionOp : insertions)
-      operands.push_back(insertionOp.object());
+      operands.push_back(insertionOp.getObject());
 
     OpBuilder builder(lastCompositeInsertOp);
     auto compositeConstructOp = builder.create<spirv::CompositeConstructOp>(
@@ -77,11 +84,13 @@ void RewriteInsertsPass::runOnOperation() {
 LogicalResult RewriteInsertsPass::collectInsertionChain(
     spirv::CompositeInsertOp op,
     SmallVectorImpl<spirv::CompositeInsertOp> &insertions) {
-  auto indicesArrayAttr = op.indices().cast<ArrayAttr>();
+  auto indicesArrayAttr = op.getIndices().cast<ArrayAttr>();
   // TODO: handle nested composite object.
   if (indicesArrayAttr.size() == 1) {
-    auto numElements =
-        op.composite().getType().cast<spirv::CompositeType>().getNumElements();
+    auto numElements = op.getComposite()
+                           .getType()
+                           .cast<spirv::CompositeType>()
+                           .getNumElements();
 
     auto index = indicesArrayAttr[0].cast<IntegerAttr>().getInt();
     // Need a last index to collect a sequential chain.
@@ -95,12 +104,12 @@ LogicalResult RewriteInsertsPass::collectInsertionChain(
       if (index == 0)
         return success();
 
-      op = op.composite().getDefiningOp<spirv::CompositeInsertOp>();
+      op = op.getComposite().getDefiningOp<spirv::CompositeInsertOp>();
       if (!op)
         return failure();
 
       --index;
-      indicesArrayAttr = op.indices().cast<ArrayAttr>();
+      indicesArrayAttr = op.getIndices().cast<ArrayAttr>();
       if ((indicesArrayAttr.size() != 1) ||
           (indicesArrayAttr[0].cast<IntegerAttr>().getInt() != index))
         return failure();

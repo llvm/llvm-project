@@ -2092,7 +2092,7 @@ TEST(LazyCallGraphTest, ReplaceNodeFunction) {
   EXPECT_EQ(&DN, &(*BN)[DN].getNode());
 }
 
-TEST(LazyCallGraphTest, RemoveFunctionWithSpurriousRef) {
+TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRef) {
   LLVMContext Context;
   // A graph with a couple of RefSCCs.
   std::unique_ptr<Module> M =
@@ -2170,6 +2170,163 @@ TEST(LazyCallGraphTest, RemoveFunctionWithSpurriousRef) {
   I = CG.postorder_ref_scc_begin();
   EXPECT_EQ(&RC1, &*I++);
   EXPECT_EQ(&RC2, &*I++);
+  EXPECT_EQ(CG.postorder_ref_scc_end(), I);
+}
+
+TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRefRecursive) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M =
+      parseAssembly(Context, "define void @a(ptr %p) {\n"
+                             "  store ptr @b, ptr %p\n"
+                             "  ret void\n"
+                             "}\n"
+                             "define void @b(ptr %p) {\n"
+                             "  store ptr @c, ptr %p\n"
+                             "  ret void\n"
+                             "}\n"
+                             "define void @c(ptr %p) {\n"
+                             "  ret void\n"
+                             "}\n");
+  LazyCallGraph CG = buildCG(*M);
+
+  LazyCallGraph::Node &AN = CG.get(lookupFunction(*M, "a"));
+  LazyCallGraph::Node &BN = CG.get(lookupFunction(*M, "b"));
+  LazyCallGraph::Node &CN = CG.get(lookupFunction(*M, "c"));
+  AN.populate();
+  BN.populate();
+  CN.populate();
+  // Insert spurious ref edge.
+  CG.insertEdge(CN, AN, LazyCallGraph::Edge::Ref);
+
+  // Force the graph to be fully expanded.
+  CG.buildRefSCCs();
+  auto I = CG.postorder_ref_scc_begin();
+  LazyCallGraph::RefSCC &RC = *I++;
+  EXPECT_EQ(CG.postorder_ref_scc_end(), I);
+
+  ASSERT_EQ(RC.size(), 3);
+
+  EXPECT_EQ(&RC, CG.lookupRefSCC(AN));
+  EXPECT_EQ(&RC, CG.lookupRefSCC(BN));
+  EXPECT_EQ(&RC, CG.lookupRefSCC(CN));
+
+  // Now delete 'a'. There are no uses of this function but there are
+  // spurious references.
+  CG.removeDeadFunction(AN.getFunction());
+
+  // The only observable change should be that the RefSCC is gone from the
+  // postorder sequence.
+  I = CG.postorder_ref_scc_begin();
+  EXPECT_EQ(CG.lookupRefSCC(CN), &*I++);
+  EXPECT_EQ(CG.lookupRefSCC(BN), &*I++);
+  EXPECT_EQ(CG.postorder_ref_scc_end(), I);
+}
+
+TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRefRecursive2) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M =
+      parseAssembly(Context, "define void @a(ptr %p) {\n"
+                             "  store ptr @b, ptr %p\n"
+                             "  ret void\n"
+                             "}\n"
+                             "define void @b(ptr %p) {\n"
+                             "  store ptr @c, ptr %p\n"
+                             "  ret void\n"
+                             "}\n"
+                             "define void @c(ptr %p) {\n"
+                             "  store ptr @b, ptr %p\n"
+                             "  store ptr @d, ptr %p\n"
+                             "  ret void\n"
+                             "}\n"
+                             "define void @d(ptr %p) {\n"
+                             "  ret void\n"
+                             "}\n");
+  LazyCallGraph CG = buildCG(*M);
+
+  LazyCallGraph::Node &AN = CG.get(lookupFunction(*M, "a"));
+  LazyCallGraph::Node &BN = CG.get(lookupFunction(*M, "b"));
+  LazyCallGraph::Node &CN = CG.get(lookupFunction(*M, "c"));
+  LazyCallGraph::Node &DN = CG.get(lookupFunction(*M, "d"));
+  AN.populate();
+  BN.populate();
+  CN.populate();
+  DN.populate();
+  // Insert spurious ref edge.
+  CG.insertEdge(DN, AN, LazyCallGraph::Edge::Ref);
+
+  // Force the graph to be fully expanded.
+  CG.buildRefSCCs();
+  auto I = CG.postorder_ref_scc_begin();
+  LazyCallGraph::RefSCC &RC = *I++;
+  EXPECT_EQ(CG.postorder_ref_scc_end(), I);
+
+  ASSERT_EQ(4, RC.size());
+
+  EXPECT_EQ(&RC, CG.lookupRefSCC(AN));
+  EXPECT_EQ(&RC, CG.lookupRefSCC(BN));
+  EXPECT_EQ(&RC, CG.lookupRefSCC(CN));
+  EXPECT_EQ(&RC, CG.lookupRefSCC(DN));
+
+  // Now delete 'a'. There are no uses of this function but there are
+  // spurious references.
+  CG.removeDeadFunction(AN.getFunction());
+
+  // The only observable change should be that the RefSCC is gone from the
+  // postorder sequence.
+  I = CG.postorder_ref_scc_begin();
+  EXPECT_EQ(CG.lookupRefSCC(DN), &*I++);
+  EXPECT_EQ(CG.lookupRefSCC(CN), &*I);
+  EXPECT_EQ(CG.lookupRefSCC(BN), &*I++);
+  EXPECT_EQ(CG.postorder_ref_scc_end(), I);
+}
+
+TEST(LazyCallGraphTest, RemoveFunctionWithSpuriousRefRecursive3) {
+  LLVMContext Context;
+  std::unique_ptr<Module> M =
+      parseAssembly(Context, "define void @a(ptr %p) {\n"
+                             "  store ptr @b, ptr %p\n"
+                             "  ret void\n"
+                             "}\n"
+                             "define void @b(ptr %p) {\n"
+                             "  store ptr @c, ptr %p\n"
+                             "  ret void\n"
+                             "}\n"
+                             "define void @c(ptr %p) {\n"
+                             "  ret void\n"
+                             "}\n");
+  LazyCallGraph CG = buildCG(*M);
+
+  LazyCallGraph::Node &AN = CG.get(lookupFunction(*M, "a"));
+  LazyCallGraph::Node &BN = CG.get(lookupFunction(*M, "b"));
+  LazyCallGraph::Node &CN = CG.get(lookupFunction(*M, "c"));
+  AN.populate();
+  BN.populate();
+  CN.populate();
+  // Insert spurious ref edges.
+  CG.insertEdge(CN, AN, LazyCallGraph::Edge::Ref);
+  CG.insertEdge(BN, AN, LazyCallGraph::Edge::Ref);
+
+  // Force the graph to be fully expanded.
+  CG.buildRefSCCs();
+  auto I = CG.postorder_ref_scc_begin();
+  LazyCallGraph::RefSCC &RC = *I++;
+  EXPECT_EQ(CG.postorder_ref_scc_end(), I);
+
+  ASSERT_EQ(RC.size(), 3);
+
+  EXPECT_EQ(&RC, CG.lookupRefSCC(AN));
+  EXPECT_EQ(&RC, CG.lookupRefSCC(BN));
+  EXPECT_EQ(&RC, CG.lookupRefSCC(CN));
+
+  // Now delete 'a'. There are no uses of this function but there are
+  // spurious references.
+  CG.removeDeadFunction(AN.getFunction());
+
+  // The only observable change should be that the RefSCC is gone from the
+  // postorder sequence.
+  I = CG.postorder_ref_scc_begin();
+  EXPECT_EQ(CG.lookupRefSCC(CN), &*I++);
+  EXPECT_EQ(CG.lookupRefSCC(BN), &*I++);
   EXPECT_EQ(CG.postorder_ref_scc_end(), I);
 }
 

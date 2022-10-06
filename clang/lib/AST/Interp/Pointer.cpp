@@ -106,7 +106,7 @@ APValue Pointer::toAPValue() const {
 
       // Build the path into the object.
       Pointer Ptr = *this;
-      while (Ptr.isField()) {
+      while (Ptr.isField() || Ptr.isArrayElement()) {
         if (Ptr.isArrayElement()) {
           Path.push_back(APValue::LValuePathEntry::ArrayIndex(Ptr.getIndex()));
           Ptr = Ptr.getArray();
@@ -154,8 +154,9 @@ bool Pointer::isInitialized() const {
 void Pointer::initialize() const {
   assert(Pointee && "Cannot initialize null pointer");
   Descriptor *Desc = getFieldDesc();
-  if (Desc->isPrimitiveArray()) {
-    if (!Pointee->IsStatic) {
+
+  if (Desc->isArray()) {
+    if (Desc->isPrimitiveArray() && !Pointee->IsStatic) {
       // Primitive array initializer.
       InitMap *&Map = getInitMap();
       if (Map == (InitMap *)-1)

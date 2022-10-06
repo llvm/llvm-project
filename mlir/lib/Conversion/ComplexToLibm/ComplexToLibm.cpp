@@ -8,10 +8,15 @@
 
 #include "mlir/Conversion/ComplexToLibm/ComplexToLibm.h"
 
-#include "../PassDetail.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTCOMPLEXTOLIBM
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -117,7 +122,7 @@ void mlir::populateComplexToLibmConversionPatterns(RewritePatternSet &patterns,
 
 namespace {
 struct ConvertComplexToLibmPass
-    : public ConvertComplexToLibmBase<ConvertComplexToLibmPass> {
+    : public impl::ConvertComplexToLibmBase<ConvertComplexToLibmPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -131,7 +136,8 @@ void ConvertComplexToLibmPass::runOnOperation() {
   ConversionTarget target(getContext());
   target.addLegalDialect<func::FuncDialect>();
   target.addIllegalOp<complex::PowOp, complex::SqrtOp, complex::TanhOp,
-                      complex::AbsOp, complex::AngleOp>();
+                      complex::CosOp, complex::SinOp, complex::ConjOp,
+                      complex::LogOp, complex::AbsOp, complex::AngleOp>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();
 }

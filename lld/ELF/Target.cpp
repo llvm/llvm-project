@@ -94,8 +94,8 @@ TargetInfo *elf::getTarget() {
 ErrorPlace elf::getErrorPlace(const uint8_t *loc) {
   assert(loc != nullptr);
   for (InputSectionBase *d : inputSections) {
-    auto *isec = cast<InputSection>(d);
-    if (!isec->getParent() || (isec->type & SHT_NOBITS))
+    auto *isec = dyn_cast<InputSection>(d);
+    if (!isec || !isec->getParent() || (isec->type & SHT_NOBITS))
       continue;
 
     const uint8_t *isecLoc =

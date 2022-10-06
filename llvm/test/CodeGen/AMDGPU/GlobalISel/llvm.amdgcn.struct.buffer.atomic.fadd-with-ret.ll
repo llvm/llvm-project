@@ -1,8 +1,7 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GFX90A %s
-; RUN: not llc -global-isel < %s -march=amdgcn -mcpu=gfx908 -verify-machineinstrs 2>&1 | FileCheck %s -check-prefix=GFX908
+; RUN: not --crash llc -global-isel < %s -march=amdgcn -mcpu=gfx908 -verify-machineinstrs 2>&1 | FileCheck %s -check-prefix=GFX908
 
-; GFX908: error: {{.*}} return versions of fp atomics not supported
-; GFX908: error: {{.*}} return versions of fp atomics not supported
+; GFX908: LLVM ERROR: cannot select: %29:vgpr_32(s32) = G_AMDGPU_BUFFER_ATOMIC_FADD %40:vgpr, %15:sgpr(<4 x s32>), %41:vgpr(s32), %42:vgpr, %33:sgpr, 0, 0, -1 :: (volatile dereferenceable load store (s32), align 1, addrspace 4) (in function: buffer_atomic_add_f32_rtn)
 
 declare float @llvm.amdgcn.struct.buffer.atomic.fadd.f32(float, <4 x i32>, i32, i32, i32, i32 immarg)
 declare <2 x half> @llvm.amdgcn.struct.buffer.atomic.fadd.v2f16(<2 x half>, <4 x i32>, i32, i32, i32, i32 immarg)

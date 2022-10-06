@@ -20,38 +20,31 @@
 #include "mlir/IR/OpImplementation.h"
 
 namespace mlir {
-/// Auxiliary range data structure to unpack the offset, size and stride
-/// operands into a list of triples. Such a list can be more convenient to
-/// manipulate.
-struct Range {
-  OpFoldResult offset;
-  OpFoldResult size;
-  OpFoldResult stride;
-};
 
-class OffsetSizeAndStrideOpInterface;
+/// Return a vector of OpFoldResults given the special value
+/// that indicates whether of the value is dynamic or not.
+SmallVector<OpFoldResult, 4> getMixedValues(ArrayAttr staticValues,
+                                            ValueRange dynamicValues,
+                                            int64_t dynamicValueIndicator);
 
-/// Return a vector of all the static or dynamic offsets of the op from provided
-/// external static and dynamic offsets.
-SmallVector<OpFoldResult, 4> getMixedOffsets(OffsetSizeAndStrideOpInterface op,
-                                             ArrayAttr staticOffsets,
-                                             ValueRange offsets);
+/// Return a vector of all the static and dynamic offsets/strides.
+SmallVector<OpFoldResult, 4> getMixedStridesOrOffsets(ArrayAttr staticValues,
+                                                      ValueRange dynamicValues);
 
-/// Return a vector of all the static or dynamic sizes of the op from provided
-/// external static and dynamic sizes.
-SmallVector<OpFoldResult, 4> getMixedSizes(OffsetSizeAndStrideOpInterface op,
-                                           ArrayAttr staticSizes,
-                                           ValueRange sizes);
+/// Return a vector of all the static and dynamic sizes.
+SmallVector<OpFoldResult, 4> getMixedSizes(ArrayAttr staticValues,
+                                           ValueRange dynamicValues);
 
-/// Return a vector of all the static or dynamic strides of the op from provided
-/// external static and dynamic strides.
-SmallVector<OpFoldResult, 4> getMixedStrides(OffsetSizeAndStrideOpInterface op,
-                                             ArrayAttr staticStrides,
-                                             ValueRange strides);
+/// Decompose a vector of mixed static or dynamic values into the corresponding
+/// pair of arrays. This is the inverse function of `getMixedValues`.
+std::pair<ArrayAttr, SmallVector<Value>>
+decomposeMixedValues(Builder &b,
+                     const SmallVectorImpl<OpFoldResult> &mixedValues,
+                     const int64_t dynamicValueIndicator);
 
-/// Decompose a vector of mixed static or dynamic strides/offsets into the
+/// Decompose a vector of mixed static and dynamic strides/offsets into the
 /// corresponding pair of arrays. This is the inverse function of
-/// `getMixedStrides` and `getMixedOffsets`.
+/// `getMixedStridesOrOffsets`.
 std::pair<ArrayAttr, SmallVector<Value>> decomposeMixedStridesOrOffsets(
     OpBuilder &b, const SmallVectorImpl<OpFoldResult> &mixedValues);
 
@@ -62,12 +55,16 @@ std::pair<ArrayAttr, SmallVector<Value>>
 decomposeMixedSizes(OpBuilder &b,
                     const SmallVectorImpl<OpFoldResult> &mixedValues);
 
+class OffsetSizeAndStrideOpInterface;
+
 namespace detail {
+
 LogicalResult verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op);
 
 bool sameOffsetsSizesAndStrides(
     OffsetSizeAndStrideOpInterface a, OffsetSizeAndStrideOpInterface b,
     llvm::function_ref<bool(OpFoldResult, OpFoldResult)> cmp);
+
 } // namespace detail
 } // namespace mlir
 
@@ -78,73 +75,40 @@ namespace mlir {
 
 /// Printer hook for custom directive in assemblyFormat.
 ///
-///   custom<OperandsOrIntegersOffsetsOrStridesList>($values, $integers)
+///   custom<DynamicIndexList>($values, $integers)
 ///
 /// where `values` is of ODS type `Variadic<Index>` and `integers` is of ODS
-/// type `I64ArrayAttr`.  for use in in assemblyFormat. Prints a list with
-/// either (1) the static integer value in `integers` if the value is
-/// ShapedType::kDynamicStrideOrOffset or (2) the next value otherwise.  This
-/// allows idiomatic printing of mixed value and integer attributes in a
-/// list. E.g. `[%arg0, 7, 42, %arg42]`.
-void printOperandsOrIntegersOffsetsOrStridesList(OpAsmPrinter &printer,
-                                                 Operation *op,
-                                                 OperandRange values,
-                                                 ArrayAttr integers);
-
-/// Printer hook for custom directive in assemblyFormat.
-///
-///   custom<OperandsOrIntegersSizesList>($values, $integers)
-///
-/// where `values` is of ODS type `Variadic<Index>` and `integers` is of ODS
-/// type `I64ArrayAttr`.  for use in in assemblyFormat. Prints a list with
-/// either (1) the static integer value in `integers` if the value is
-/// ShapedType::kDynamicSize or (2) the next value otherwise.  This
-/// allows idiomatic printing of mixed value and integer attributes in a
-/// list. E.g. `[%arg0, 7, 42, %arg42]`.
-void printOperandsOrIntegersSizesList(OpAsmPrinter &printer, Operation *op,
-                                      OperandRange values, ArrayAttr integers);
+/// type `I64ArrayAttr`. Prints a list with either (1) the static integer value
+/// in `integers` is `dynVal` or (2) the next value otherwise. This allows
+/// idiomatic printing of mixed value and integer attributes in a list. E.g.
+/// `[%arg0, 7, 42, %arg42]`.
+void printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
+                           OperandRange values, ArrayAttr integers,
+                           int64_t dynVal);
 
 /// Pasrer hook for custom directive in assemblyFormat.
 ///
-///   custom<OperandsOrIntegersOffsetsOrStridesList>($values, $integers)
+///   custom<DynamicIndexList>($values, $integers)
 ///
 /// where `values` is of ODS type `Variadic<Index>` and `integers` is of ODS
-/// type `I64ArrayAttr`.  for use in in assemblyFormat. Parse a mixed list with
-/// either (1) static integer values or (2) SSA values.  Fill `integers` with
-/// the integer ArrayAttr, where ShapedType::kDynamicStrideOrOffset encodes the
-/// position of SSA values. Add the parsed SSA values to `values` in-order.
+/// type `I64ArrayAttr`. Parse a mixed list with either (1) static integer
+/// values or (2) SSA values. Fill `integers` with the integer ArrayAttr, where
+/// `dynVal` encodes the position of SSA values. Add the parsed SSA values
+/// to `values` in-order.
 //
 /// E.g. after parsing "[%arg0, 7, 42, %arg42]":
 ///   1. `result` is filled with the i64 ArrayAttr "[`dynVal`, 7, 42, `dynVal`]"
 ///   2. `ssa` is filled with "[%arg0, %arg1]".
-ParseResult parseOperandsOrIntegersOffsetsOrStridesList(
-    OpAsmParser &parser,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    ArrayAttr &integers);
-
-/// Pasrer hook for custom directive in assemblyFormat.
-///
-///   custom<OperandsOrIntegersSizesList>($values, $integers)
-///
-/// where `values` is of ODS type `Variadic<Index>` and `integers` is of ODS
-/// type `I64ArrayAttr`.  for use in in assemblyFormat. Parse a mixed list with
-/// either (1) static integer values or (2) SSA values.  Fill `integers` with
-/// the integer ArrayAttr, where ShapedType::kDynamicSize encodes the
-/// position of SSA values. Add the parsed SSA values to `values` in-order.
-//
-/// E.g. after parsing "[%arg0, 7, 42, %arg42]":
-///   1. `result` is filled with the i64 ArrayAttr "[`dynVal`, 7, 42, `dynVal`]"
-///   2. `ssa` is filled with "[%arg0, %arg1]".
-ParseResult parseOperandsOrIntegersSizesList(
-    OpAsmParser &parser,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    ArrayAttr &integers);
+ParseResult
+parseDynamicIndexList(OpAsmParser &parser,
+                      SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+                      ArrayAttr &integers, int64_t dynVal);
 
 /// Verify that a the `values` has as many elements as the number of entries in
 /// `attr` for which `isDynamic` evaluates to true.
 LogicalResult verifyListOfOperandsOrIntegers(
     Operation *op, StringRef name, unsigned expectedNumElements, ArrayAttr attr,
-    ValueRange values, llvm::function_ref<bool(int64_t)> isDynamic);
+    ValueRange values, function_ref<bool(int64_t)> isDynamic);
 
 } // namespace mlir
 

@@ -71,7 +71,7 @@ struct LdMatrixParams {
   VectorType fragmentType;
   bool isAccum;
   int64_t numTiles;
-  IteratorType contiguousDimType;
+  vector::IteratorType contiguousDimType;
   NVVM::MMALayout targetLayout;
 };
 

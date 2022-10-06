@@ -2,9 +2,6 @@
 Test that commands do not try and hold on to stale CommandInterpreters in a multiple debuggers scenario
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

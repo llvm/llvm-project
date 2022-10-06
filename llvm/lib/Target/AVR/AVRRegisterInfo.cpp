@@ -199,7 +199,7 @@ void AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
         Opcode = AVR::ADIWRdK;
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     default: {
       // This opcode will get expanded into a pair of subi/sbci.

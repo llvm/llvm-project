@@ -16,7 +16,9 @@
 // param_type(initializer_list<result_type> bl, UnaryOperation fw);
 
 #include <random>
+
 #include <cassert>
+#include <vector>
 
 #include "test_macros.h"
 

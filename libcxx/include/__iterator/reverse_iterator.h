@@ -52,7 +52,7 @@ class _LIBCPP_TEMPLATE_VIS reverse_iterator
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 private:
 #ifndef _LIBCPP_ABI_NO_ITERATOR_BASES
-    _Iter __t; // no longer used as of LWG #2360, not removed due to ABI break
+    _Iter __t_; // no longer used as of LWG #2360, not removed due to ABI break
 #endif
 
 #if _LIBCPP_STD_VER > 17
@@ -70,9 +70,7 @@ public:
                                   typename iterator_traits<_Iter>::iterator_category>;
     using pointer = typename iterator_traits<_Iter>::pointer;
 #if _LIBCPP_STD_VER > 17
-    using iterator_concept = _If<__is_cpp17_random_access_iterator<_Iter>::value,
-                                  random_access_iterator_tag,
-                                  bidirectional_iterator_tag>;
+    using iterator_concept = _If<random_access_iterator<_Iter>, random_access_iterator_tag, bidirectional_iterator_tag>;
     using value_type = iter_value_t<_Iter>;
     using difference_type = iter_difference_t<_Iter>;
     using reference = iter_reference_t<_Iter>;
@@ -83,18 +81,18 @@ public:
 #endif
 
 #ifndef _LIBCPP_ABI_NO_ITERATOR_BASES
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    reverse_iterator() : __t(), current() {}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
+    reverse_iterator() : __t_(), current() {}
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
-    explicit reverse_iterator(_Iter __x) : __t(__x), current(__x) {}
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
+    explicit reverse_iterator(_Iter __x) : __t_(__x), current(__x) {}
 
     template <class _Up, class = __enable_if_t<
         !is_same<_Up, _Iter>::value && is_convertible<_Up const&, _Iter>::value
     > >
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reverse_iterator(const reverse_iterator<_Up>& __u)
-        : __t(__u.base()), current(__u.base())
+        : __t_(__u.base()), current(__u.base())
     { }
 
     template <class _Up, class = __enable_if_t<
@@ -102,22 +100,22 @@ public:
         is_convertible<_Up const&, _Iter>::value &&
         is_assignable<_Iter&, _Up const&>::value
     > >
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reverse_iterator& operator=(const reverse_iterator<_Up>& __u) {
-        __t = current = __u.base();
+        __t_ = current = __u.base();
         return *this;
     }
 #else
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reverse_iterator() : current() {}
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     explicit reverse_iterator(_Iter __x) : current(__x) {}
 
     template <class _Up, class = __enable_if_t<
         !is_same<_Up, _Iter>::value && is_convertible<_Up const&, _Iter>::value
     > >
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reverse_iterator(const reverse_iterator<_Up>& __u)
         : current(__u.base())
     { }
@@ -127,15 +125,15 @@ public:
         is_convertible<_Up const&, _Iter>::value &&
         is_assignable<_Iter&, _Up const&>::value
     > >
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reverse_iterator& operator=(const reverse_iterator<_Up>& __u) {
         current = __u.base();
         return *this;
     }
 #endif
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     _Iter base() const {return current;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reference operator*() const {_Iter __tmp = current; return *--__tmp;}
 
 #if _LIBCPP_STD_VER > 17
@@ -150,29 +148,29 @@ public:
       }
     }
 #else
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     pointer operator->() const {
       return std::addressof(operator*());
     }
 #endif // _LIBCPP_STD_VER > 17
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reverse_iterator& operator++() {--current; return *this;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reverse_iterator operator++(int) {reverse_iterator __tmp(*this); --current; return __tmp;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reverse_iterator& operator--() {++current; return *this;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reverse_iterator operator--(int) {reverse_iterator __tmp(*this); ++current; return __tmp;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reverse_iterator operator+(difference_type __n) const {return reverse_iterator(current - __n);}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reverse_iterator& operator+=(difference_type __n) {current -= __n; return *this;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reverse_iterator operator-(difference_type __n) const {return reverse_iterator(current + __n);}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reverse_iterator& operator-=(difference_type __n) {current += __n; return *this;}
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
     reference operator[](difference_type __n) const {return *(*this + __n);}
 
 #if _LIBCPP_STD_VER > 17
@@ -204,7 +202,7 @@ template <class _Iter>
 struct __is_reverse_iterator<reverse_iterator<_Iter> > : true_type {};
 
 template <class _Iter1, class _Iter2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
 bool
 operator==(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& __y)
 #if _LIBCPP_STD_VER > 17
@@ -217,7 +215,7 @@ operator==(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& 
 }
 
 template <class _Iter1, class _Iter2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
 bool
 operator<(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& __y)
 #if _LIBCPP_STD_VER > 17
@@ -230,7 +228,7 @@ operator<(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& _
 }
 
 template <class _Iter1, class _Iter2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
 bool
 operator!=(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& __y)
 #if _LIBCPP_STD_VER > 17
@@ -243,7 +241,7 @@ operator!=(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& 
 }
 
 template <class _Iter1, class _Iter2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
 bool
 operator>(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& __y)
 #if _LIBCPP_STD_VER > 17
@@ -256,7 +254,7 @@ operator>(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& _
 }
 
 template <class _Iter1, class _Iter2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
 bool
 operator>=(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& __y)
 #if _LIBCPP_STD_VER > 17
@@ -269,7 +267,7 @@ operator>=(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& 
 }
 
 template <class _Iter1, class _Iter2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
 bool
 operator<=(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& __y)
 #if _LIBCPP_STD_VER > 17
@@ -293,7 +291,7 @@ operator<=>(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>&
 
 #ifndef _LIBCPP_CXX03_LANG
 template <class _Iter1, class _Iter2>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
 auto
 operator-(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& __y)
 -> decltype(__y.base() - __x.base())
@@ -311,7 +309,7 @@ operator-(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& _
 #endif
 
 template <class _Iter>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
 reverse_iterator<_Iter>
 operator+(typename reverse_iterator<_Iter>::difference_type __n, const reverse_iterator<_Iter>& __x)
 {
@@ -326,7 +324,7 @@ inline constexpr bool disable_sized_sentinel_for<reverse_iterator<_Iter1>, rever
 
 #if _LIBCPP_STD_VER > 11
 template <class _Iter>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX14
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX17
 reverse_iterator<_Iter> make_reverse_iterator(_Iter __i)
 {
     return reverse_iterator<_Iter>(__i);
@@ -365,7 +363,7 @@ class __unconstrained_reverse_iterator {
   _Iter __iter_;
 
 public:
-  static_assert(__is_cpp17_bidirectional_iterator<_Iter>::value);
+  static_assert(__is_cpp17_bidirectional_iterator<_Iter>::value || bidirectional_iterator<_Iter>);
 
   using iterator_type = _Iter;
   using iterator_category =
@@ -391,6 +389,14 @@ public:
     } else {
       return std::prev(__iter_).operator->();
     }
+  }
+
+  _LIBCPP_HIDE_FROM_ABI friend constexpr
+  iter_rvalue_reference_t<_Iter> iter_move(const __unconstrained_reverse_iterator& __i)
+    noexcept(is_nothrow_copy_constructible_v<_Iter> &&
+        noexcept(ranges::iter_move(--declval<_Iter&>()))) {
+    auto __tmp = __i.base();
+    return ranges::iter_move(--__tmp);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __unconstrained_reverse_iterator& operator++() {
@@ -493,7 +499,7 @@ struct __unwrap_reverse_iter_impl {
   }
 };
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 template <ranges::bidirectional_range _Range>
 _LIBCPP_HIDE_FROM_ABI constexpr ranges::
     subrange<reverse_iterator<ranges::iterator_t<_Range>>, reverse_iterator<ranges::iterator_t<_Range>>>

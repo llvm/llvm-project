@@ -762,13 +762,17 @@ def X86any_cvtps2ph : PatFrags<(ops node:$src1, node:$src2),
                                [(X86strict_cvtps2ph node:$src1, node:$src2),
                                 (X86cvtps2ph node:$src1, node:$src2)]>;
 
-def X86mcvtps2ph   : SDNode<"X86ISD::MCVTPS2PH",
-                        SDTypeProfile<1, 4, [SDTCVecEltisVT<0, i16>,
-                                             SDTCVecEltisVT<1, f32>,
-                                             SDTCisVT<2, i32>,
-                                             SDTCisSameAs<0, 3>,
-                                             SDTCVecEltisVT<4, i1>,
-                                             SDTCisSameNumEltsAs<1, 4>]> >;
+def X86cvtps2phSAE : SDNode<"X86ISD::CVTPS2PH_SAE", SDTcvtps2ph>;
+
+def SDTmcvtps2ph : SDTypeProfile<1, 4, [SDTCVecEltisVT<0, i16>,
+                                        SDTCVecEltisVT<1, f32>,
+                                        SDTCisVT<2, i32>,
+                                        SDTCisSameAs<0, 3>,
+                                        SDTCVecEltisVT<4, i1>,
+                                        SDTCisSameNumEltsAs<1, 4>]>;
+def X86mcvtps2ph : SDNode<"X86ISD::MCVTPS2PH", SDTmcvtps2ph>;
+def X86mcvtps2phSAE : SDNode<"X86ISD::MCVTPS2PH_SAE", SDTmcvtps2ph>;
+
 def X86vfpextSAE  : SDNode<"X86ISD::VFPEXT_SAE",
                         SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisVec<0>,
                                              SDTCisFP<1>, SDTCisVec<1>,

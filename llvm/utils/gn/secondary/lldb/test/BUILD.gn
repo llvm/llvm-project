@@ -53,9 +53,10 @@ write_lit_cfg("lit_api_site_cfg") {
   output = lldb_lit_api_site_cfg_file
   extra_values = [
     "LLDB_BUILD_INTEL_PT=0",
-    "LLDB_DOTEST_ARGS=",
+    "LLDB_TEST_COMMON_ARGS=",
+    "LLDB_TEST_USER_ARGS=",
     "LLDB_ENABLE_PYTHON=0",
-    "LLDB_HAS_LIBCXX=",  # FIXME: support this (?)
+    "LLDB_HAS_LIBCXX=0",  # FIXME: support this (?)
     "LLDB_LIBS_DIR=",  # FIXME: for shared builds only (?)
     "LLDB_TEST_ARCH=$current_cpu",
     "LLDB_TEST_COMPILER=" + rebase_path("$root_build_dir/bin/clang"),
@@ -133,12 +134,22 @@ write_lit_cfg("lit_unit_site_cfg") {
   extra_values = [ "LLVM_BUILD_MODE=." ]
 }
 
+action("lit-lldb-init-quiet") {
+  script = "//llvm/utils/gn/build/write_file.py"
+  outputs = [ "$root_out_dir/obj/lldb/test/Shell/lit-lldb-init-quiet" ]
+  args = [
+    rebase_path(outputs[0], root_build_dir),
+    "command source -C --silent-run true lit-lldb-init",
+  ]
+}
+
 # This target should contain all dependencies of check-lldb.
 # //:default depends on it, so that ninja's default target builds all
 # prerequisites for check-lldb but doesn't run check-lldb itself.
 group("test") {
   deps = [
     ":lit-lldb-init",
+    ":lit-lldb-init-quiet",
     ":lit_api_site_cfg",
     ":lit_shell_site_cfg",
     ":lit_site_cfg",
@@ -165,12 +176,12 @@ group("test") {
     "//llvm/tools/llvm-objcopy:symlinks",
     "//llvm/tools/llvm-pdbutil",
     "//llvm/tools/llvm-readobj:symlinks",
-    "//llvm/tools/split-file",
     "//llvm/tools/yaml2obj",
     "//llvm/utils/FileCheck",
     "//llvm/utils/count",
     "//llvm/utils/llvm-lit",
     "//llvm/utils/not",
+    "//llvm/utils/split-file",
   ]
   testonly = true
 }

@@ -102,7 +102,7 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
     if (CByte) {
       // Handle cases that can be done using at most two of
       // MVI, MVHI, MVHHI and MVGHI.  The latter two can only be
-      // used if ByteVal is all zeros or all ones; in other casees,
+      // used if ByteVal is all zeros or all ones; in other cases,
       // we can move at most 2 halfwords.
       uint64_t ByteVal = CByte->getZExtValue();
       if (ByteVal == 0 || ByteVal == 255 ?

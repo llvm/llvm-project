@@ -3,7 +3,7 @@ Test lldb settings command.
 """
 
 
-
+import json
 import os
 import re
 import lldb
@@ -274,7 +274,7 @@ class SettingsCommandTestCase(TestBase):
         self.assertEqual(launch_info.GetArgumentAtIndex(0), "A")
         self.assertEqual(launch_info.GetArgumentAtIndex(1), "B")
         self.assertEqual(launch_info.GetArgumentAtIndex(2), "C")
-        
+
         self.expect(
             'target show-launch-environment',
             substrs=["MY_ENV_VAR=YES"])
@@ -787,3 +787,59 @@ class SettingsCommandTestCase(TestBase):
 
         # A known option should fail if its argument is invalid.
         self.expect("settings set auto-confirm bogus", error=True)
+
+    def get_setting_json(self, setting_path = None):
+        settings_data = self.dbg.GetSetting(setting_path)
+        stream = lldb.SBStream()
+        settings_data.GetAsJSON(stream)
+        return json.loads(stream.GetData())
+
+    def verify_setting_value_json(self, setting_path, setting_value):
+        self.runCmd("settings set %s %s" % (setting_path, setting_value))
+        settings_json = self.get_setting_json(setting_path)
+        self.assertEqual(settings_json, setting_value)
+
+    def test_settings_api(self):
+        """
+            Test that ensures SBDebugger::GetSetting() APIs
+            can correctly fetch settings.
+        """
+
+        # Test basic values and embedding special JSON escaping characters.
+        self.runCmd("settings set auto-confirm true")
+        self.runCmd("settings set tab-size 2")
+        arg_value = "hello \"world\""
+        self.runCmd('settings set target.arg0 %s' % arg_value)
+
+        settings_json = self.get_setting_json()
+        self.assertEqual(settings_json["auto-confirm"], True)
+        self.assertEqual(settings_json["tab-size"], 2)
+        self.assertEqual(settings_json["target"]["arg0"], arg_value)
+
+        settings_data = self.get_setting_json("target.arg0")
+        self.assertEqual(settings_data, arg_value)
+
+        # Test OptionValueFileSpec
+        self.verify_setting_value_json("platform.module-cache-directory", self.get_process_working_directory())
+
+        # Test OptionValueArray
+        setting_path = "target.run-args"
+        setting_value = ["value1", "value2", "value3"]
+        self.runCmd("settings set %s %s" % (setting_path, " ".join(setting_value)))
+        settings_json = self.get_setting_json(setting_path)
+        self.assertEqual(settings_json, setting_value)
+
+        # Test OptionValueFormatEntity
+        setting_value = """thread #${thread.index}{, name = \\'${thread.name}\\
+        '}{, queue = ${ansi.fg.green}\\'${thread.queue}\\'${ansi.normal}}{,
+        activity = ${ansi.fg.green}\\'${thread.info.activity.name}\\'${ansi.normal}}
+        {, ${thread.info.trace_messages} messages}{, stop reason = ${ansi.fg.red}$
+        {thread.stop-reason}${ansi.normal}}{\\\\nReturn value: ${thread.return-value}}
+        {\\\\nCompleted expression: ${thread.completed-expression}}\\\\n"""
+        self.verify_setting_value_json("thread-stop-format", setting_value)
+
+        # Test OptionValueRegex
+        self.verify_setting_value_json("target.process.thread.step-avoid-regexp", "^std::")
+
+        # Test OptionValueLanguage
+        self.verify_setting_value_json("repl-lang", "c++")

@@ -206,7 +206,7 @@ std::string getShortestQualifiedNameInNamespace(llvm::StringRef DeclName,
                                                 llvm::StringRef NsName) {
   DeclName = DeclName.ltrim(':');
   NsName = NsName.ltrim(':');
-  if (DeclName.find(':') == llvm::StringRef::npos)
+  if (!DeclName.contains(':'))
     return std::string(DeclName);
 
   auto NsNameSplitted = splitSymbolName(NsName);

@@ -35,9 +35,10 @@ static constexpr llvm::StringRef kPrintNewline = "printNewline";
 static constexpr llvm::StringRef kMalloc = "malloc";
 static constexpr llvm::StringRef kAlignedAlloc = "aligned_alloc";
 static constexpr llvm::StringRef kFree = "free";
-static constexpr llvm::StringRef kGenericAlloc = "_mlir_alloc";
-static constexpr llvm::StringRef kGenericAlignedAlloc = "_mlir_aligned_alloc";
-static constexpr llvm::StringRef kGenericFree = "_mlir_free";
+static constexpr llvm::StringRef kGenericAlloc = "_mlir_memref_to_llvm_alloc";
+static constexpr llvm::StringRef kGenericAlignedAlloc =
+    "_mlir_memref_to_llvm_aligned_alloc";
+static constexpr llvm::StringRef kGenericFree = "_mlir_memref_to_llvm_free";
 static constexpr llvm::StringRef kMemRefCopy = "memrefCopy";
 
 /// Generic print function lookupOrCreate helper.
@@ -147,14 +148,4 @@ mlir::LLVM::lookupOrCreateMemRefCopyFn(ModuleOp moduleOp, Type indexType,
       moduleOp, kMemRefCopy,
       ArrayRef<Type>{indexType, unrankedDescriptorType, unrankedDescriptorType},
       LLVM::LLVMVoidType::get(moduleOp->getContext()));
-}
-
-Operation::result_range mlir::LLVM::createLLVMCall(OpBuilder &b, Location loc,
-                                                   LLVM::LLVMFuncOp fn,
-                                                   ValueRange paramTypes,
-                                                   ArrayRef<Type> resultTypes) {
-  return b
-      .create<LLVM::CallOp>(loc, resultTypes, SymbolRefAttr::get(fn),
-                            paramTypes)
-      ->getResults();
 }

@@ -168,21 +168,21 @@ ProcessKDP::~ProcessKDP() {
   Finalize();
 }
 
-Status ProcessKDP::WillLaunch(Module *module) {
+Status ProcessKDP::DoWillLaunch(Module *module) {
   Status error;
   error.SetErrorString("launching not supported in kdp-remote plug-in");
   return error;
 }
 
-Status ProcessKDP::WillAttachToProcessWithID(lldb::pid_t pid) {
+Status ProcessKDP::DoWillAttachToProcessWithID(lldb::pid_t pid) {
   Status error;
   error.SetErrorString(
       "attaching to a by process ID not supported in kdp-remote plug-in");
   return error;
 }
 
-Status ProcessKDP::WillAttachToProcessWithName(const char *process_name,
-                                               bool wait_for_launch) {
+Status ProcessKDP::DoWillAttachToProcessWithName(const char *process_name,
+                                                 bool wait_for_launch) {
   Status error;
   error.SetErrorString(
       "attaching to a by process name not supported in kdp-remote plug-in");

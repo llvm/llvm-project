@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/ADT/STLArrayExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/config.h"
 #include "llvm/Support/Compiler.h"
@@ -285,10 +284,10 @@ void raw_ostream::copy_to_buffer(const char *Ptr, size_t Size) {
   // Handle short strings specially, memcpy isn't very good at very short
   // strings.
   switch (Size) {
-  case 4: OutBufCur[3] = Ptr[3]; LLVM_FALLTHROUGH;
-  case 3: OutBufCur[2] = Ptr[2]; LLVM_FALLTHROUGH;
-  case 2: OutBufCur[1] = Ptr[1]; LLVM_FALLTHROUGH;
-  case 1: OutBufCur[0] = Ptr[0]; LLVM_FALLTHROUGH;
+  case 4: OutBufCur[3] = Ptr[3]; [[fallthrough]];
+  case 3: OutBufCur[2] = Ptr[2]; [[fallthrough]];
+  case 2: OutBufCur[1] = Ptr[1]; [[fallthrough]];
+  case 1: OutBufCur[0] = Ptr[0]; [[fallthrough]];
   case 0: break;
   default:
     memcpy(OutBufCur, Ptr, Size);
@@ -480,12 +479,11 @@ static raw_ostream &write_padding(raw_ostream &OS, unsigned NumChars) {
                                C, C, C, C, C, C, C, C, C, C, C, C, C, C, C, C};
 
   // Usually the indentation is small, handle it with a fastpath.
-  if (NumChars < array_lengthof(Chars))
+  if (NumChars < std::size(Chars))
     return OS.write(Chars, NumChars);
 
   while (NumChars) {
-    unsigned NumToWrite = std::min(NumChars,
-                                   (unsigned)array_lengthof(Chars)-1);
+    unsigned NumToWrite = std::min(NumChars, (unsigned)std::size(Chars) - 1);
     OS.write(Chars, NumToWrite);
     NumChars -= NumToWrite;
   }

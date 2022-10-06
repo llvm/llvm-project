@@ -126,8 +126,9 @@ static mlir::ParseResult parseAllocatableOp(FN wrapResultType,
     parser.emitError(parser.getNameLoc(), "invalid allocate type: ") << intype;
     return mlir::failure();
   }
-  result.addAttribute("operand_segment_sizes",
-                      builder.getI32VectorAttr({typeparamsSize, shapeSize}));
+  result.addAttribute(
+      "operand_segment_sizes",
+      builder.getDenseI32ArrayAttr({typeparamsSize, shapeSize}));
   if (parser.parseOptionalAttrDict(result.attributes) ||
       parser.addTypeToList(restype, result.types))
     return mlir::failure();
@@ -1105,7 +1106,7 @@ mlir::ParseResult fir::DispatchTableOp::parse(mlir::OpAsmParser &parser,
   // Parse the optional table body.
   mlir::Region *body = result.addRegion();
   mlir::OptionalParseResult parseResult = parser.parseOptionalRegion(*body);
-  if (parseResult.hasValue() && failed(*parseResult))
+  if (parseResult.has_value() && failed(*parseResult))
     return mlir::failure();
 
   fir::DispatchTableOp::ensureTerminator(*body, parser.getBuilder(),
@@ -1287,7 +1288,7 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
     // Parse the optional initializer body.
     auto parseResult =
         parser.parseOptionalRegion(*result.addRegion(), /*arguments=*/{});
-    if (parseResult.hasValue() && mlir::failed(*parseResult))
+    if (parseResult.has_value() && mlir::failed(*parseResult))
       return mlir::failure();
   }
   return mlir::success();
@@ -2431,8 +2432,8 @@ static mlir::ParseResult parseIntegralSwitchTerminator(
     sumArgs += argSize;
   }
   result.addAttribute(operandSegmentAttr,
-                      bld.getI32VectorAttr({1, 0, sumArgs}));
-  result.addAttribute(getTargetOffsetAttr(), bld.getI32VectorAttr(argOffs));
+                      bld.getDenseI32ArrayAttr({1, 0, sumArgs}));
+  result.addAttribute(getTargetOffsetAttr(), bld.getDenseI32ArrayAttr(argOffs));
   return mlir::success();
 }
 
@@ -2480,13 +2481,12 @@ void fir::SelectOp::print(mlir::OpAsmPrinter &p) {
 }
 
 template <typename A, typename... AdditionalArgs>
-static A getSubOperands(unsigned pos, A allArgs,
-                        mlir::DenseIntElementsAttr ranges,
+static A getSubOperands(unsigned pos, A allArgs, mlir::DenseI32ArrayAttr ranges,
                         AdditionalArgs &&...additionalArgs) {
   unsigned start = 0;
   for (unsigned i = 0; i < pos; ++i)
-    start += (*(ranges.begin() + i)).getZExtValue();
-  return allArgs.slice(start, (*(ranges.begin() + pos)).getZExtValue(),
+    start += ranges[i];
+  return allArgs.slice(start, ranges[pos],
                        std::forward<AdditionalArgs>(additionalArgs)...);
 }
 
@@ -2498,12 +2498,8 @@ getMutableSuccessorOperands(unsigned pos, mlir::MutableOperandRange operands,
       *owner->getAttrDictionary().getNamed(offsetAttr);
   return getSubOperands(
       pos, operands,
-      targetOffsetAttr.getValue().cast<mlir::DenseIntElementsAttr>(),
+      targetOffsetAttr.getValue().cast<mlir::DenseI32ArrayAttr>(),
       mlir::MutableOperandRange::OperandSegment(pos, targetOffsetAttr));
-}
-
-static unsigned denseElementsSize(mlir::DenseIntElementsAttr attr) {
-  return attr.getNumElements();
 }
 
 llvm::Optional<mlir::OperandRange> fir::SelectOp::getCompareOperands(unsigned) {
@@ -2524,8 +2520,8 @@ llvm::Optional<llvm::ArrayRef<mlir::Value>>
 fir::SelectOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
                                     unsigned oper) {
   auto a =
-      (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(getTargetOffsetAttr());
-  auto segments = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
+      (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(getTargetOffsetAttr());
+  auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
       getOperandSegmentSizeAttr());
   return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
 }
@@ -2533,15 +2529,16 @@ fir::SelectOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
 llvm::Optional<mlir::ValueRange>
 fir::SelectOp::getSuccessorOperands(mlir::ValueRange operands, unsigned oper) {
   auto a =
-      (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(getTargetOffsetAttr());
-  auto segments = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
+      (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(getTargetOffsetAttr());
+  auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
       getOperandSegmentSizeAttr());
   return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
 }
 
 unsigned fir::SelectOp::targetOffsetSize() {
-  return denseElementsSize((*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
-      getTargetOffsetAttr()));
+  return (*this)
+      ->getAttrOfType<mlir::DenseI32ArrayAttr>(getTargetOffsetAttr())
+      .size();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2550,17 +2547,17 @@ unsigned fir::SelectOp::targetOffsetSize() {
 
 llvm::Optional<mlir::OperandRange>
 fir::SelectCaseOp::getCompareOperands(unsigned cond) {
-  auto a = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
-      getCompareOffsetAttr());
+  auto a =
+      (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(getCompareOffsetAttr());
   return {getSubOperands(cond, getCompareArgs(), a)};
 }
 
 llvm::Optional<llvm::ArrayRef<mlir::Value>>
 fir::SelectCaseOp::getCompareOperands(llvm::ArrayRef<mlir::Value> operands,
                                       unsigned cond) {
-  auto a = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
-      getCompareOffsetAttr());
-  auto segments = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
+  auto a =
+      (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(getCompareOffsetAttr());
+  auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
       getOperandSegmentSizeAttr());
   return {getSubOperands(cond, getSubOperands(1, operands, segments), a)};
 }
@@ -2568,9 +2565,9 @@ fir::SelectCaseOp::getCompareOperands(llvm::ArrayRef<mlir::Value> operands,
 llvm::Optional<mlir::ValueRange>
 fir::SelectCaseOp::getCompareOperands(mlir::ValueRange operands,
                                       unsigned cond) {
-  auto a = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
-      getCompareOffsetAttr());
-  auto segments = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
+  auto a =
+      (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(getCompareOffsetAttr());
+  auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
       getOperandSegmentSizeAttr());
   return {getSubOperands(cond, getSubOperands(1, operands, segments), a)};
 }
@@ -2584,8 +2581,8 @@ llvm::Optional<llvm::ArrayRef<mlir::Value>>
 fir::SelectCaseOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
                                         unsigned oper) {
   auto a =
-      (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(getTargetOffsetAttr());
-  auto segments = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
+      (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(getTargetOffsetAttr());
+  auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
       getOperandSegmentSizeAttr());
   return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
 }
@@ -2594,8 +2591,8 @@ llvm::Optional<mlir::ValueRange>
 fir::SelectCaseOp::getSuccessorOperands(mlir::ValueRange operands,
                                         unsigned oper) {
   auto a =
-      (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(getTargetOffsetAttr());
-  auto segments = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
+      (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(getTargetOffsetAttr());
+  auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
       getOperandSegmentSizeAttr());
   return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
 }
@@ -2668,9 +2665,11 @@ mlir::ParseResult fir::SelectCaseOp::parse(mlir::OpAsmParser &parser,
   }
   auto &bld = parser.getBuilder();
   result.addAttribute(fir::SelectCaseOp::getOperandSegmentSizeAttr(),
-                      bld.getI32VectorAttr({1, offSize, toffSize}));
-  result.addAttribute(getCompareOffsetAttr(), bld.getI32VectorAttr(argOffs));
-  result.addAttribute(getTargetOffsetAttr(), bld.getI32VectorAttr(targOffs));
+                      bld.getDenseI32ArrayAttr({1, offSize, toffSize}));
+  result.addAttribute(getCompareOffsetAttr(),
+                      bld.getDenseI32ArrayAttr(argOffs));
+  result.addAttribute(getTargetOffsetAttr(),
+                      bld.getDenseI32ArrayAttr(targOffs));
   return mlir::success();
 }
 
@@ -2703,13 +2702,15 @@ void fir::SelectCaseOp::print(mlir::OpAsmPrinter &p) {
 }
 
 unsigned fir::SelectCaseOp::compareOffsetSize() {
-  return denseElementsSize((*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
-      getCompareOffsetAttr()));
+  return (*this)
+      ->getAttrOfType<mlir::DenseI32ArrayAttr>(getCompareOffsetAttr())
+      .size();
 }
 
 unsigned fir::SelectCaseOp::targetOffsetSize() {
-  return denseElementsSize((*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
-      getTargetOffsetAttr()));
+  return (*this)
+      ->getAttrOfType<mlir::DenseI32ArrayAttr>(getTargetOffsetAttr())
+      .size();
 }
 
 void fir::SelectCaseOp::build(mlir::OpBuilder &builder,
@@ -2738,7 +2739,7 @@ void fir::SelectCaseOp::build(mlir::OpBuilder &builder,
   for (auto ops : cmpOperands)
     result.addOperands(ops);
   result.addAttribute(getCompareOffsetAttr(),
-                      builder.getI32VectorAttr(operOffs));
+                      builder.getDenseI32ArrayAttr(operOffs));
   const auto count = destinations.size();
   for (auto d : destinations)
     result.addSuccessors(d);
@@ -2756,8 +2757,9 @@ void fir::SelectCaseOp::build(mlir::OpBuilder &builder,
     }
   }
   result.addAttribute(getOperandSegmentSizeAttr(),
-                      builder.getI32VectorAttr({1, operSize, sumArgs}));
-  result.addAttribute(getTargetOffsetAttr(), builder.getI32VectorAttr(argOffs));
+                      builder.getDenseI32ArrayAttr({1, operSize, sumArgs}));
+  result.addAttribute(getTargetOffsetAttr(),
+                      builder.getDenseI32ArrayAttr(argOffs));
   result.addAttributes(attributes);
 }
 
@@ -2854,8 +2856,8 @@ llvm::Optional<llvm::ArrayRef<mlir::Value>>
 fir::SelectRankOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
                                         unsigned oper) {
   auto a =
-      (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(getTargetOffsetAttr());
-  auto segments = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
+      (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(getTargetOffsetAttr());
+  auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
       getOperandSegmentSizeAttr());
   return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
 }
@@ -2864,15 +2866,16 @@ llvm::Optional<mlir::ValueRange>
 fir::SelectRankOp::getSuccessorOperands(mlir::ValueRange operands,
                                         unsigned oper) {
   auto a =
-      (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(getTargetOffsetAttr());
-  auto segments = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
+      (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(getTargetOffsetAttr());
+  auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
       getOperandSegmentSizeAttr());
   return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
 }
 
 unsigned fir::SelectRankOp::targetOffsetSize() {
-  return denseElementsSize((*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
-      getTargetOffsetAttr()));
+  return (*this)
+      ->getAttrOfType<mlir::DenseI32ArrayAttr>(getTargetOffsetAttr())
+      .size();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2898,8 +2901,8 @@ llvm::Optional<llvm::ArrayRef<mlir::Value>>
 fir::SelectTypeOp::getSuccessorOperands(llvm::ArrayRef<mlir::Value> operands,
                                         unsigned oper) {
   auto a =
-      (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(getTargetOffsetAttr());
-  auto segments = (*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
+      (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(getTargetOffsetAttr());
+  auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
       getOperandSegmentSizeAttr());
   return {getSubOperands(oper, getSubOperands(2, operands, segments), a)};
 }
@@ -2944,14 +2947,15 @@ mlir::ParseResult fir::SelectTypeOp::parse(mlir::OpAsmParser &parser,
     offSize += argSize;
   }
   result.addAttribute(fir::SelectTypeOp::getOperandSegmentSizeAttr(),
-                      bld.getI32VectorAttr({1, 0, offSize}));
-  result.addAttribute(getTargetOffsetAttr(), bld.getI32VectorAttr(argOffs));
+                      bld.getDenseI32ArrayAttr({1, 0, offSize}));
+  result.addAttribute(getTargetOffsetAttr(), bld.getDenseI32ArrayAttr(argOffs));
   return mlir::success();
 }
 
 unsigned fir::SelectTypeOp::targetOffsetSize() {
-  return denseElementsSize((*this)->getAttrOfType<mlir::DenseIntElementsAttr>(
-      getTargetOffsetAttr()));
+  return (*this)
+      ->getAttrOfType<mlir::DenseI32ArrayAttr>(getTargetOffsetAttr())
+      .size();
 }
 
 void fir::SelectTypeOp::print(mlir::OpAsmPrinter &p) {
@@ -3021,8 +3025,9 @@ void fir::SelectTypeOp::build(mlir::OpBuilder &builder,
     }
   }
   result.addAttribute(getOperandSegmentSizeAttr(),
-                      builder.getI32VectorAttr({1, 0, sumArgs}));
-  result.addAttribute(getTargetOffsetAttr(), builder.getI32VectorAttr(argOffs));
+                      builder.getDenseI32ArrayAttr({1, 0, sumArgs}));
+  result.addAttribute(getTargetOffsetAttr(),
+                      builder.getDenseI32ArrayAttr(argOffs));
   result.addAttributes(attributes);
 }
 

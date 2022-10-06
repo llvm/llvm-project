@@ -123,7 +123,7 @@ public:
 
   /// GetModule may return module for compile unit's object file.
   /// GetExeModule returns module for executable object file that contains
-  /// compile unit where type was actualy defined.
+  /// compile unit where type was actually defined.
   /// GetModule and GetExeModule may return the same value.
   lldb::ModuleSP GetExeModule();
 

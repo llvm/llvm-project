@@ -64,11 +64,23 @@ public:
   ByteCodeExprGen(Context &Ctx, Program &P, Tys &&... Args)
       : Emitter(Ctx, P, Args...), Ctx(Ctx), P(P) {}
 
-  // Expression visitors - result returned on stack.
+  // Expression visitors - result returned on interp stack.
   bool VisitCastExpr(const CastExpr *E);
   bool VisitIntegerLiteral(const IntegerLiteral *E);
   bool VisitParenExpr(const ParenExpr *E);
   bool VisitBinaryOperator(const BinaryOperator *E);
+  bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
+  bool VisitCallExpr(const CallExpr *E);
+  bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E);
+  bool VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E);
+  bool VisitUnaryOperator(const UnaryOperator *E);
+  bool VisitDeclRefExpr(const DeclRefExpr *E);
+  bool VisitImplicitValueInitExpr(const ImplicitValueInitExpr *E);
+  bool VisitSubstNonTypeTemplateParmExpr(const SubstNonTypeTemplateParmExpr *E);
+  bool VisitArraySubscriptExpr(const ArraySubscriptExpr *E);
+  bool VisitInitListExpr(const InitListExpr *E);
+  bool VisitConstantExpr(const ConstantExpr *E);
+  bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E);
 
 protected:
   bool visitExpr(const Expr *E) override;
@@ -122,29 +134,45 @@ protected:
   bool discard(const Expr *E);
   /// Evaluates an expression and places result on stack.
   bool visit(const Expr *E);
-  /// Compiles an initializer for a local.
-  bool visitInitializer(const Expr *E, InitFnRef GenPtr);
+  /// Compiles an initializer.
+  bool visitInitializer(const Expr *E);
+  /// Compiles an array initializer.
+  bool visitArrayInitializer(const Expr *Initializer);
 
   /// Visits an expression and converts it to a boolean.
   bool visitBool(const Expr *E);
 
   /// Visits an initializer for a local.
   bool visitLocalInitializer(const Expr *Init, unsigned I) {
-    return visitInitializer(Init, [this, I, Init] {
-      return this->emitGetPtrLocal(I, Init);
-    });
+    if (!this->emitGetPtrLocal(I, Init))
+      return false;
+
+    if (!visitInitializer(Init))
+      return false;
+
+    return this->emitPopPtr(Init);
   }
 
   /// Visits an initializer for a global.
   bool visitGlobalInitializer(const Expr *Init, unsigned I) {
-    return visitInitializer(Init, [this, I, Init] {
-      return this->emitGetPtrGlobal(I, Init);
-    });
+    if (!this->emitGetPtrGlobal(I, Init))
+      return false;
+
+    if (!visitInitializer(Init))
+      return false;
+
+    return this->emitPopPtr(Init);
   }
 
   /// Visits a delegated initializer.
   bool visitThisInitializer(const Expr *I) {
-    return visitInitializer(I, [this, I] { return this->emitThis(I); });
+    if (!this->emitThis(I))
+      return false;
+
+    if (!visitInitializer(I))
+      return false;
+
+    return this->emitPopPtr(I);
   }
 
   /// Creates a local primitive value.

@@ -18,10 +18,10 @@ struct S4 : public S3 {
   S4() : S3() {}
 };
 
-typedef __attribute__((ext_vector_type(2), aligned(32))) float float32x2_t;
+typedef __attribute__((ext_vector_type(8), aligned(32))) float float32x8_t;
 
 struct S5 {
-  float32x2_t x;
+  float32x8_t x;
 };
 
 void *operator new (unsigned long, void *p) { return p; }
@@ -54,21 +54,21 @@ S2 *func_03() {
   return new S2[20];
 }
 
-float32x2_t *func_04() {
+float32x8_t *func_04() {
   // CHECK-LABEL: define {{.*}} @_Z7func_04v
   // CHECK:       and i64 %{{.*}}, 31, !nosanitize
   // CHECK:       icmp eq i64 %{{.*}}, 0, !nosanitize
-  // CHECK:       ret <2 x float>*
-  return new float32x2_t;
+  // CHECK:       ret <8 x float>*
+  return new float32x8_t;
 }
 
-float32x2_t *func_05() {
+float32x8_t *func_05() {
   // CHECK-LABEL: define {{.*}} @_Z7func_05v
   // CHECK:       and i64 %{{.*}}, 31, !nosanitize
   // CHECK:       icmp eq i64 %{{.*}}, 0, !nosanitize
   // CHECK-NOT:   and i64 %{{.*}}, 31
-  // CHECK:       ret <2 x float>*
-  return new float32x2_t[20];
+  // CHECK:       ret <8 x float>*
+  return new float32x8_t[20];
 }
 
 S3 *func_07() {
@@ -110,21 +110,21 @@ S2 *func_11(void *p) {
   return new(p) S2[10];
 }
 
-float32x2_t *func_12() {
+float32x8_t *func_12() {
   // CHECK-LABEL: define {{.*}} @_Z7func_12v
   // CHECK:       and i64 %{{.*}}, 31, !nosanitize
   // CHECK:       icmp eq i64 %{{.*}}, 0, !nosanitize
-  // CHECK:       ret <2 x float>*
-  return new float32x2_t;
+  // CHECK:       ret <8 x float>*
+  return new float32x8_t;
 }
 
-float32x2_t *func_13() {
+float32x8_t *func_13() {
   // CHECK-LABEL: define {{.*}} @_Z7func_13v
   // CHECK:       and i64 %{{.*}}, 31, !nosanitize
   // CHECK:       icmp eq i64 %{{.*}}, 0, !nosanitize
   // CHECK-NOT:   and i64 %{{.*}}, 31
-  // CHECK:       ret <2 x float>*
-  return new float32x2_t[20];
+  // CHECK:       ret <8 x float>*
+  return new float32x8_t[20];
 }
 
 S4 *func_14() {

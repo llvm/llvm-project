@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-darwin
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: mkdir %t/incl

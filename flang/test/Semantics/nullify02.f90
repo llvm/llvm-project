@@ -40,10 +40,12 @@ module badNullify
   end interface
 contains
   !ERROR: 'ptrfun' was not declared a separate module procedure
+  !ERROR: 'ptrfun' is already declared in this scoping unit
   module function ptrFun()
     integer, pointer :: ptrFun
     real :: realVar
     nullify(ptrFun)
+    !ERROR: name in NULLIFY statement must have the POINTER attribute
     nullify(realVar)
   end function
 end module

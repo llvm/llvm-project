@@ -8,8 +8,6 @@
 #   export PYTHONPATH=/Applications/Xcode.app/Contents/SharedFrameworks/LLDB.framework/Resources/Python
 #----------------------------------------------------------------------
 
-from __future__ import print_function
-
 import optparse
 import os
 import platform

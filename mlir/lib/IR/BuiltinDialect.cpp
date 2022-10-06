@@ -12,10 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/BuiltinDialect.h"
+#include "BuiltinDialectBytecode.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeRange.h"
@@ -23,14 +25,27 @@
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
-// Builtin Dialect
+// TableGen'erated dialect
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/BuiltinDialect.cpp.inc"
 
+//===----------------------------------------------------------------------===//
+// BuiltinBlobManagerInterface
+//===----------------------------------------------------------------------===//
+
+using BuiltinBlobManagerInterface =
+    ResourceBlobManagerDialectInterfaceBase<DenseResourceElementsHandle>;
+
+//===----------------------------------------------------------------------===//
+// BuiltinOpAsmDialectInterface
+//===----------------------------------------------------------------------===//
+
 namespace {
 struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
-  using OpAsmDialectInterface::OpAsmDialectInterface;
+  BuiltinOpAsmDialectInterface(Dialect *dialect,
+                               BuiltinBlobManagerInterface &mgr)
+      : OpAsmDialectInterface(dialect), blobManager(mgr) {}
 
   AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
     if (attr.isa<AffineMapAttr>()) {
@@ -57,6 +72,38 @@ struct BuiltinOpAsmDialectInterface : public OpAsmDialectInterface {
     }
     return AliasResult::NoAlias;
   }
+
+  //===------------------------------------------------------------------===//
+  // Resources
+  //===------------------------------------------------------------------===//
+
+  std::string
+  getResourceKey(const AsmDialectResourceHandle &handle) const override {
+    return cast<DenseResourceElementsHandle>(handle).getKey().str();
+  }
+  FailureOr<AsmDialectResourceHandle>
+  declareResource(StringRef key) const final {
+    return blobManager.insert(key);
+  }
+  LogicalResult parseResource(AsmParsedResourceEntry &entry) const final {
+    FailureOr<AsmResourceBlob> blob = entry.parseAsBlob();
+    if (failed(blob))
+      return failure();
+
+    // Update the blob for this entry.
+    blobManager.update(entry.getKey(), std::move(*blob));
+    return success();
+  }
+  void
+  buildResources(Operation *op,
+                 const SetVector<AsmDialectResourceHandle> &referencedResources,
+                 AsmResourceBuilder &provider) const final {
+    blobManager.buildResources(provider, referencedResources.getArrayRef());
+  }
+
+private:
+  /// The blob manager for the dialect.
+  BuiltinBlobManagerInterface &blobManager;
 };
 } // namespace
 
@@ -68,7 +115,10 @@ void BuiltinDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/IR/BuiltinOps.cpp.inc"
       >();
-  addInterfaces<BuiltinOpAsmDialectInterface>();
+
+  auto &blobInterface = addInterface<BuiltinBlobManagerInterface>();
+  addInterface<BuiltinOpAsmDialectInterface>(blobInterface);
+  builtin_dialect_detail::addBytecodeInterface(this);
 }
 
 //===----------------------------------------------------------------------===//

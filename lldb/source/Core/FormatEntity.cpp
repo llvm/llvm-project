@@ -696,7 +696,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
 
   case FormatEntity::Entry::Type::ScriptVariableSynthetic:
     is_script = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case FormatEntity::Entry::Type::VariableSynthetic:
     custom_format = entry.fmt;
     val_obj_display = (ValueObject::ValueObjectRepresentationStyle)entry.number;
@@ -710,9 +710,6 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
   default:
     return false;
   }
-
-  if (valobj == nullptr)
-    return false;
 
   ValueObject::ExpressionPathAftermath what_next =
       (do_deref_pointer ? ValueObject::eExpressionPathAftermathDereference
@@ -828,7 +825,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     bitfield_name.Printf("%s:%d", target->GetTypeName().AsCString(),
                          target->GetBitfieldBitSize());
     auto type_sp = std::make_shared<TypeNameSpecifierImpl>(
-        bitfield_name.GetString(), false);
+        bitfield_name.GetString(), lldb::eFormatterMatchExact);
     if (val_obj_display ==
             ValueObject::eValueObjectRepresentationStyleSummary &&
         !DataVisualization::GetSummaryForType(type_sp))
@@ -1695,7 +1692,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
               llvm::StringRef var_representation;
               const char *var_name = var_value_sp->GetName().GetCString();
               if (var_value_sp->GetCompilerType().IsValid()) {
-                if (var_value_sp && exe_scope->CalculateTarget())
+                if (exe_scope && exe_scope->CalculateTarget())
                   var_value_sp =
                       var_value_sp->GetQualifiedRepresentationIfAvailable(
                           exe_scope->CalculateTarget()

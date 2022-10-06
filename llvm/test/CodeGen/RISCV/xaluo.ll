@@ -1670,8 +1670,8 @@ define i1 @saddo.not.i64(i64 %v1, i64 %v2) {
 ; RV32-NEXT:    xor a1, a1, a3
 ; RV32-NEXT:    not a1, a1
 ; RV32-NEXT:    and a0, a1, a0
-; RV32-NEXT:    li a1, -1
-; RV32-NEXT:    slt a0, a1, a0
+; RV32-NEXT:    slti a0, a0, 0
+; RV32-NEXT:    xori a0, a0, 1
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: saddo.not.i64:
@@ -1693,8 +1693,8 @@ define i1 @saddo.not.i64(i64 %v1, i64 %v2) {
 ; RV32ZBA-NEXT:    xor a1, a1, a3
 ; RV32ZBA-NEXT:    not a1, a1
 ; RV32ZBA-NEXT:    and a0, a1, a0
-; RV32ZBA-NEXT:    li a1, -1
-; RV32ZBA-NEXT:    slt a0, a1, a0
+; RV32ZBA-NEXT:    slti a0, a0, 0
+; RV32ZBA-NEXT:    xori a0, a0, 1
 ; RV32ZBA-NEXT:    ret
 ;
 ; RV64ZBA-LABEL: saddo.not.i64:

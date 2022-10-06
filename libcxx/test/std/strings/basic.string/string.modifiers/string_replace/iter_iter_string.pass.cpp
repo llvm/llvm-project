@@ -283,7 +283,7 @@ void test() {
 #endif
   }
 
-#if TEST_STD_VER > 3
+#if TEST_STD_VER >= 11
   { // LWG 2946
     std::string s = "  ";
     s.replace(s.cbegin(), s.cend(), {"abc", 1});

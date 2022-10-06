@@ -35,18 +35,6 @@ TARGE_DIR=$(readlink -f $1)
 COMPILER_RT_SRC=$(readlink -f ${SCRIPT_DIR}/../../../..)
 LLVM_SRC=${LLVM_SRC:-${COMPILER_RT_SRC}/../llvm}
 LLVM_SRC=$(readlink -f $LLVM_SRC)
-if [[ ! -d "${LLVM_SRC}/../llvm" ]] ; then
-  LLVM_SRC=$(readlink -f ${COMPILER_RT_SRC}/../../../llvm)
-fi
-LIBCXX_SRC=$(readlink -f ${COMPILER_RT_SRC}/../libcxx)
-LIBCXXABI_SRC=$(readlink -f ${COMPILER_RT_SRC}/../libcxxabi)
-
-if [[ ! -d "${LLVM_SRC}/../llvm" ||
-      ! -d "${LIBCXX_SRC}" ||
-      ! -d "${LIBCXXABI_SRC}" ]]; then
-  echo "Missing or incomplete LLVM_SRC"
-  exit 1
-fi
 
 if [[ "$ZLIB_SRC" == ""  ||
       ! -x "${ZLIB_SRC}/configure" ||
@@ -55,8 +43,6 @@ if [[ "$ZLIB_SRC" == ""  ||
   exit 1
 fi
 ZLIB_SRC=$(readlink -f $ZLIB_SRC)
-
-J="${J:-50}"
 
 CLANG="${CLANG:-`which clang`}"
 CLANG_DIR=$(readlink -f $(dirname "$CLANG"))
@@ -71,7 +57,6 @@ TBLGEN=$CLANG_DIR/llvm-tblgen
 OPT=$CLANG_DIR/opt
 AR=$CLANG_DIR/llvm-ar
 LINK=$CLANG_DIR/llvm-link
-TARGET_TRIPLE=$($CC -print-target-triple)
 
 for F in $CC $CXX $TBLGEN $LINK $OPT $AR; do
   if [[ ! -x "$F" ]]; then
@@ -86,26 +71,28 @@ LLVM_BUILD=${BUILD_DIR}/llvm
 SYMBOLIZER_BUILD=${BUILD_DIR}/symbolizer
 
 FLAGS=${FLAGS:-}
-FLAGS="$FLAGS -fPIC -flto -Os -g0 -DNDEBUG"
+TARGET_TRIPLE=$($CC -print-target-triple $FLAGS)
+if [[ "$FLAGS" =~ "-m32" ]] ; then
+  # Avoid new wrappers.
+  FLAGS+=" -U_FILE_OFFSET_BITS"
+fi
+FLAGS+=" -fPIC -flto -Oz -g0 -DNDEBUG -target $TARGET_TRIPLE -Wno-unused-command-line-argument"
+LINKFLAGS="-fuse-ld=lld -target $TARGET_TRIPLE"
 
 # Build zlib.
 mkdir -p ${ZLIB_BUILD}
 cd ${ZLIB_BUILD}
 cp -r ${ZLIB_SRC}/* .
-CC=$CC CFLAGS="$FLAGS" RANLIB=/bin/true ./configure --static
-make -j${J} libz.a
+AR="${AR}" CC="${CC}" CFLAGS="$FLAGS -Wno-deprecated-non-prototype" RANLIB=/bin/true ./configure --static
+make -j libz.a
 
 # Build and install libcxxabi and libcxx.
 if [[ ! -d ${LIBCXX_BUILD} ]]; then
   mkdir -p ${LIBCXX_BUILD}
   cd ${LIBCXX_BUILD}
   LIBCXX_FLAGS="${FLAGS} -Wno-macro-redefined"
-  PROJECTS=
-  if [[ ! -d $LLVM_SRC/projects/libcxxabi ]] ; then
-    PROJECTS="-DLLVM_ENABLE_PROJECTS='libcxx;libcxxabi'"
-  fi
   cmake -GNinja \
-    ${PROJECTS} \
+    -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi" \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=$CC \
     -DCMAKE_CXX_COMPILER=$CXX \
@@ -113,19 +100,18 @@ if [[ ! -d ${LIBCXX_BUILD} ]]; then
     -DCMAKE_CXX_FLAGS_RELEASE="${LIBCXX_FLAGS}" \
     -DLIBCXXABI_ENABLE_ASSERTIONS=OFF \
     -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
-    -DLIBCXXABI_ENABLE_SHARED=OFF \
     -DLIBCXX_ENABLE_ASSERTIONS=OFF \
     -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
     -DLIBCXX_ENABLE_RTTI=OFF \
-    -DLIBCXX_ENABLE_SHARED=OFF \
-    -DLLVM_DEFAULT_TARGET_TRIPLE="${TARGET_TRIPLE}" \
-  $LLVM_SRC
+    -DCMAKE_SHARED_LINKER_FLAGS="$LINKFLAGS" \
+  $LLVM_SRC/../runtimes
 fi
 cd ${LIBCXX_BUILD}
 ninja cxx cxxabi
 
 FLAGS="${FLAGS} -fno-rtti -fno-exceptions"
-LLVM_FLAGS="${FLAGS} -nostdinc++ -I${ZLIB_BUILD} -isystem ${LIBCXX_BUILD}/include/${TARGET_TRIPLE}/c++/v1 -isystem ${LIBCXX_BUILD}/include/c++/v1 -Wno-error=global-constructors"
+LLVM_CFLAGS="${FLAGS} -Wno-global-constructors"
+LLVM_CXXFLAGS="${LLVM_CFLAGS} -nostdinc++ -I${ZLIB_BUILD} -isystem ${LIBCXX_BUILD}/include -isystem ${LIBCXX_BUILD}/include/c++/v1"
 
 # Build LLVM.
 if [[ ! -d ${LLVM_BUILD} ]]; then
@@ -135,10 +121,10 @@ if [[ ! -d ${LLVM_BUILD} ]]; then
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER=$CC \
     -DCMAKE_CXX_COMPILER=$CXX \
-    -DCMAKE_C_FLAGS_RELEASE="${LLVM_FLAGS}" \
-    -DCMAKE_CXX_FLAGS_RELEASE="${LLVM_FLAGS}" \
+    -DCMAKE_C_FLAGS="${LLVM_CFLAGS}" \
+    -DCMAKE_CXX_FLAGS="${LLVM_CXXFLAGS}" \
+    -DCMAKE_EXE_LINKER_FLAGS="$LINKFLAGS -stdlib=libc++ -L${LIBCXX_BUILD}/lib" \
     -DLLVM_TABLEGEN=$TBLGEN \
-    -DLLVM_DEFAULT_TARGET_TRIPLE="${TARGET_TRIPLE}" \
     -DLLVM_ENABLE_ZLIB=ON \
     -DLLVM_ENABLE_TERMINFO=OFF \
     -DLLVM_ENABLE_THREADS=OFF \
@@ -153,7 +139,7 @@ mkdir ${SYMBOLIZER_BUILD}
 cd ${SYMBOLIZER_BUILD}
 
 echo "Compiling..."
-SYMBOLIZER_FLAGS="$LLVM_FLAGS -I${LLVM_SRC}/include -I${LLVM_BUILD}/include -std=c++14"
+SYMBOLIZER_FLAGS="$LLVM_CXXFLAGS -I${LLVM_SRC}/include -I${LLVM_BUILD}/include -std=c++17"
 $CXX $SYMBOLIZER_FLAGS ${SRC_DIR}/sanitizer_symbolize.cpp ${SRC_DIR}/sanitizer_wrappers.cpp -c
 $AR rc symbolizer.a sanitizer_symbolize.o sanitizer_wrappers.o
 

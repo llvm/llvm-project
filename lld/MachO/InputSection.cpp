@@ -29,8 +29,8 @@ using namespace lld::macho;
 // Verify ConcatInputSection's size on 64-bit builds. The size of std::vector
 // can differ based on STL debug levels (e.g. iterator debugging on MSVC's STL),
 // so account for that.
-static_assert(sizeof(void *) != 8 || sizeof(ConcatInputSection) ==
-                                         sizeof(std::vector<Reloc>) + 104,
+static_assert(sizeof(void *) != 8 ||
+                  sizeof(ConcatInputSection) == sizeof(std::vector<Reloc>) + 88,
               "Try to minimize ConcatInputSection's size, we create many "
               "instances of it");
 
@@ -177,14 +177,13 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
 
   memcpy(buf, data.data(), data.size());
 
-  std::vector<uint64_t> relocTargets;
-  if (!optimizationHints.empty())
-    relocTargets.reserve(relocs.size());
-
   for (size_t i = 0; i < relocs.size(); i++) {
     const Reloc &r = relocs[i];
     uint8_t *loc = buf + r.offset;
     uint64_t referentVA = 0;
+
+    const bool needsFixup = config->emitChainedFixups &&
+                            target->hasAttr(r.type, RelocAttrBits::UNSIGNED);
     if (target->hasAttr(r.type, RelocAttrBits::SUBTRAHEND)) {
       const Symbol *fromSym = r.referent.get<Symbol *>();
       const Reloc &minuend = relocs[++i];
@@ -209,26 +208,27 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
       }
       referentVA = resolveSymbolVA(referentSym, r.type) + r.addend;
 
-      if (isThreadLocalVariables(getFlags())) {
+      if (isThreadLocalVariables(getFlags()) && isa<Defined>(referentSym)) {
         // References from thread-local variable sections are treated as offsets
         // relative to the start of the thread-local data memory area, which
         // is initialized via copying all the TLV data sections (which are all
         // contiguous).
-        if (isa<Defined>(referentSym))
-          referentVA -= firstTLVDataSection->addr;
+        referentVA -= firstTLVDataSection->addr;
+      } else if (needsFixup) {
+        writeChainedFixup(loc, referentSym, r.addend);
+        continue;
       }
     } else if (auto *referentIsec = r.referent.dyn_cast<InputSection *>()) {
       assert(!::shouldOmitFromOutput(referentIsec));
       referentVA = referentIsec->getVA(r.addend);
+
+      if (needsFixup) {
+        writeChainedRebase(loc, referentVA);
+        continue;
+      }
     }
     target->relocateOne(loc, r, referentVA, getVA() + r.offset);
-
-    if (!optimizationHints.empty())
-      relocTargets.push_back(referentVA);
   }
-
-  if (!optimizationHints.empty())
-    target->applyOptimizationHints(buf, this, relocTargets);
 }
 
 ConcatInputSection *macho::makeSyntheticInputSection(StringRef segName,
@@ -250,9 +250,9 @@ void CStringInputSection::splitIntoPieces() {
     size_t end = s.find(0);
     if (end == StringRef::npos)
       fatal(getLocation(off) + ": string is not null terminated");
-    size_t size = end + 1;
-    uint32_t hash = config->dedupLiterals ? xxHash64(s.substr(0, size)) : 0;
+    uint32_t hash = deduplicateLiterals ? xxHash64(s.take_front(end)) : 0;
     pieces.emplace_back(off, hash);
+    size_t size = end + 1; // include null terminator
     s = s.substr(size);
     off += size;
   }
@@ -337,6 +337,11 @@ bool macho::isCfStringSection(const InputSection *isec) {
 
 bool macho::isClassRefsSection(const InputSection *isec) {
   return isec->getName() == section_names::objcClassRefs &&
+         isec->getSegName() == segment_names::data;
+}
+
+bool macho::isSelRefsSection(const InputSection *isec) {
+  return isec->getName() == section_names::objcSelrefs &&
          isec->getSegName() == segment_names::data;
 }
 

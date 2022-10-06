@@ -21,7 +21,7 @@
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
   %1 = fir.load %arg0 : !fir.ref<f32>
-  %2 = math.abs %1 : f32
+  %2 = math.absf %1 : f32
   fir.store %2 to %0 : !fir.ref<f32>
   %3 = fir.load %0 : !fir.ref<f32>
   return %3 : f32
@@ -29,7 +29,7 @@ func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
 func.func @_QPtest_real8(%arg0: !fir.ref<f64> {fir.bindc_name = "x"}) -> f64 {
   %0 = fir.alloca f64 {bindc_name = "test_real8", uniq_name = "_QFtest_real8Etest_real8"}
   %1 = fir.load %arg0 : !fir.ref<f64>
-  %2 = math.abs %1 : f64
+  %2 = math.absf %1 : f64
   fir.store %2 to %0 : !fir.ref<f64>
   %3 = fir.load %0 : !fir.ref<f64>
   return %3 : f64
@@ -37,7 +37,7 @@ func.func @_QPtest_real8(%arg0: !fir.ref<f64> {fir.bindc_name = "x"}) -> f64 {
 func.func @_QPtest_real16(%arg0: !fir.ref<f128> {fir.bindc_name = "x"}) -> f128 {
   %0 = fir.alloca f128 {bindc_name = "test_real16", uniq_name = "_QFtest_real16Etest_real16"}
   %1 = fir.load %arg0 : !fir.ref<f128>
-  %2 = math.abs %1 : f128
+  %2 = math.absf %1 : f128
   fir.store %2 to %0 : !fir.ref<f128>
   %3 = fir.load %0 : !fir.ref<f128>
   return %3 : f128
@@ -93,7 +93,7 @@ func.func private @hypot(f64, f64) -> f64
 func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
   %0 = fir.alloca f32 {bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}
   %1 = fir.load %arg0 : !fir.ref<f32>
-  %2 = math.abs %1 : f32
+  %2 = math.absf %1 : f32
   fir.store %2 to %0 : !fir.ref<f32>
   %3 = fir.load %0 : !fir.ref<f32>
   return %3 : f32
@@ -101,7 +101,7 @@ func.func @_QPtest_real4(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}) -> f32 {
 func.func @_QPtest_real8(%arg0: !fir.ref<f64> {fir.bindc_name = "x"}) -> f64 {
   %0 = fir.alloca f64 {bindc_name = "test_real8", uniq_name = "_QFtest_real8Etest_real8"}
   %1 = fir.load %arg0 : !fir.ref<f64>
-  %2 = math.abs %1 : f64
+  %2 = math.absf %1 : f64
   fir.store %2 to %0 : !fir.ref<f64>
   %3 = fir.load %0 : !fir.ref<f64>
   return %3 : f64
@@ -109,7 +109,7 @@ func.func @_QPtest_real8(%arg0: !fir.ref<f64> {fir.bindc_name = "x"}) -> f64 {
 func.func @_QPtest_real16(%arg0: !fir.ref<f128> {fir.bindc_name = "x"}) -> f128 {
   %0 = fir.alloca f128 {bindc_name = "test_real16", uniq_name = "_QFtest_real16Etest_real16"}
   %1 = fir.load %arg0 : !fir.ref<f128>
-  %2 = math.abs %1 : f128
+  %2 = math.absf %1 : f128
   fir.store %2 to %0 : !fir.ref<f128>
   %3 = fir.load %0 : !fir.ref<f128>
   return %3 : f128
@@ -1466,6 +1466,19 @@ func.func private @powf(f32, f32) -> f32
 func.func private @llvm.powi.f64.i32(f64, i32) -> f64
 func.func private @pow(f64, f64) -> f64
 
+//--- exponentiation_integer.fir
+// RUN: fir-opt %t/exponentiation_integer.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/exponentiation_integer.fir
+// CHECK: @_QPtest_int4
+// CHECK: llvm.call @__mlir_math_ipowi_i32({{%[A-Za-z0-9._]+}}, {{%[A-Za-z0-9._]+}}) : (i32, i32) -> i32
+
+func.func @_QPtest_int4(%arg0: !fir.ref<i32> {fir.bindc_name = "x"}, %arg1: !fir.ref<i32> {fir.bindc_name = "y"}, %arg2: !fir.ref<i32> {fir.bindc_name = "z"}) {
+  %0 = fir.load %arg0 : !fir.ref<i32>
+  %1 = fir.load %arg1 : !fir.ref<i32>
+  %2 = math.ipowi %0, %1 : i32
+  fir.store %2 to %arg2 : !fir.ref<i32>
+  return
+}
+
 //--- sign_fast.fir
 // RUN: fir-opt %t/sign_fast.fir --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" | FileCheck %t/sign_fast.fir
 // CHECK: @_QPtest_real4
@@ -1934,4 +1947,3 @@ func.func @_QPtest_real8(%arg0: !fir.ref<f64> {fir.bindc_name = "x"}) -> f64 {
 }
 func.func private @tanf(f32) -> f32
 func.func private @tan(f64) -> f64
-

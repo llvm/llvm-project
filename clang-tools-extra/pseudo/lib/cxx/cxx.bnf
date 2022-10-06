@@ -1,7 +1,7 @@
 # This is a C++ grammar from the C++ standard [1].
 #
 # The grammar is a superset of the true grammar requring semantic constraints to
-# resolve ambiguties. The grammar is context-free and ambiguous (beyond the
+# resolve ambiguities. The grammar is context-free and ambiguous (beyond the
 # limit of LR(k)). We use general parsing algorithm (e.g GLR) to handle the
 # grammar and generate a transition table which is used to drive the parsing.
 #
@@ -29,19 +29,14 @@
 # We list important nonterminals as start symbols, rather than doing it for all
 # nonterminals by default, this reduces the number of states by 30% and LRTable
 # actions by 16%.
-_ := translation-unit
-_ := statement-seq
-_ := declaration-seq
+_ := translation-unit EOF
+_ := statement-seq EOF
+_ := declaration-seq EOF
 
 # gram.key
-typedef-name := IDENTIFIER
-typedef-name := simple-template-id
+#! we don't distinguish between namespaces and namespace aliases, as it's hard
+#! and uninteresting.
 namespace-name := IDENTIFIER
-namespace-name := namespace-alias
-namespace-alias := IDENTIFIER
-class-name := IDENTIFIER
-class-name := simple-template-id
-enum-name := IDENTIFIER
 template-name := IDENTIFIER
 
 # gram.basic
@@ -68,7 +63,7 @@ unqualified-id := ~ type-name
 unqualified-id := ~ decltype-specifier
 unqualified-id := template-id
 qualified-id := nested-name-specifier TEMPLATE_opt unqualified-id
-nested-name-specifier := ::
+nested-name-specifier := :: [guard]
 nested-name-specifier := type-name ::
 nested-name-specifier := namespace-name ::
 nested-name-specifier := decltype-specifier ::
@@ -335,7 +330,7 @@ block-declaration := opaque-enum-declaration
 nodeclspec-function-declaration := function-declarator ;
 alias-declaration := USING IDENTIFIER = defining-type-id ;
 simple-declaration := decl-specifier-seq init-declarator-list_opt ;
-simple-declaration := decl-specifier-seq ref-qualifier_opt [ identifier-list ] initializer ;
+simple-declaration := decl-specifier-seq ref-qualifier_opt [ identifier-list ] initializer ; [guard]
 static_assert-declaration := STATIC_ASSERT ( constant-expression ) ;
 static_assert-declaration := STATIC_ASSERT ( constant-expression , string-literal ) ;
 empty-declaration := ;
@@ -375,24 +370,28 @@ simple-type-specifier := nested-name-specifier TEMPLATE simple-template-id
 simple-type-specifier := decltype-specifier
 simple-type-specifier := placeholder-type-specifier
 simple-type-specifier := nested-name-specifier_opt template-name
+simple-type-specifier := SHORT
+simple-type-specifier := LONG
+simple-type-specifier := SIGNED
+simple-type-specifier := UNSIGNED
 simple-type-specifier := builtin-type
+#! builtin-type added to aid in classifying which specifiers may combined.
 builtin-type := CHAR
 builtin-type := CHAR8_T
 builtin-type := CHAR16_T
 builtin-type := CHAR32_T
 builtin-type := WCHAR_T
 builtin-type := BOOL
-simple-type-specifier := SHORT
 builtin-type := INT
-simple-type-specifier := LONG
-simple-type-specifier := SIGNED
-simple-type-specifier := UNSIGNED
 builtin-type := FLOAT
 builtin-type := DOUBLE
 builtin-type := VOID
-type-name := class-name
-type-name := enum-name
-type-name := typedef-name
+#! Unlike C++ standard grammar, we don't distinguish the underlying type (class,
+#! enum, typedef) of the IDENTIFIER, as these ambiguities are "local" and don't
+#! affect the final parse tree. Eliminating them gives a significant performance
+#! boost to the parser.
+type-name := IDENTIFIER
+type-name := simple-template-id
 elaborated-type-specifier := class-key nested-name-specifier_opt IDENTIFIER
 elaborated-type-specifier := class-key simple-template-id
 elaborated-type-specifier := class-key nested-name-specifier TEMPLATE_opt simple-template-id
@@ -550,14 +549,15 @@ private-module-fragment := module-keyword : PRIVATE ; declaration-seq_opt
 class-specifier := class-head { member-specification_opt [recover=Brackets] }
 class-head := class-key class-head-name class-virt-specifier_opt base-clause_opt
 class-head := class-key base-clause_opt
-class-head-name := nested-name-specifier_opt class-name
+class-head-name := nested-name-specifier_opt type-name
 class-virt-specifier := contextual-final
 class-key := CLASS
 class-key := STRUCT
 class-key := UNION
 member-specification := member-declaration member-specification_opt
 member-specification := access-specifier : member-specification_opt
-member-declaration := decl-specifier-seq_opt member-declarator-list_opt ;
+member-declaration := decl-specifier-seq member-declarator-list_opt ;
+member-declaration := member-declarator-list ;
 member-declaration := function-definition
 member-declaration := using-declaration
 member-declaration := using-enum-declaration
@@ -570,9 +570,9 @@ member-declaration := opaque-enum-declaration
 member-declaration := empty-declaration
 member-declarator-list := member-declarator
 member-declarator-list := member-declarator-list , member-declarator
-member-declarator := declarator virt-specifier-seq_opt pure-specifier_opt
-member-declarator := declarator requires-clause
-member-declarator := declarator brace-or-equal-initializer
+member-declarator := function-declarator virt-specifier-seq_opt pure-specifier_opt
+member-declarator := function-declarator requires-clause
+member-declarator := non-function-declarator brace-or-equal-initializer_opt
 member-declarator := IDENTIFIER_opt : constant-expression brace-or-equal-initializer_opt
 virt-specifier-seq := virt-specifier
 virt-specifier-seq := virt-specifier-seq virt-specifier

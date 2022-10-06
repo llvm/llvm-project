@@ -74,6 +74,8 @@ class RISCVAsmParser : public MCTargetAsmParser {
   bool isRV32E() const { return getSTI().hasFeature(RISCV::FeatureRV32E); }
 
   RISCVTargetStreamer &getTargetStreamer() {
+    assert(getParser().getStreamer().getTargetStreamer() &&
+           "do not have a target streamer");
     MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
     return static_cast<RISCVTargetStreamer &>(TS);
   }

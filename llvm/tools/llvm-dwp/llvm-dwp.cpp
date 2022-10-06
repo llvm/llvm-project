@@ -71,7 +71,10 @@ getDWOFilenames(StringRef ExecFilename) {
     if (!DWOCompDir.empty()) {
       SmallString<16> DWOPath(std::move(DWOName));
       sys::fs::make_absolute(DWOCompDir, DWOPath);
-      DWOPaths.emplace_back(DWOPath.data(), DWOPath.size());
+      if (!sys::fs::exists(DWOPath) && sys::fs::exists(DWOName))
+        DWOPaths.push_back(std::move(DWOName));
+      else
+        DWOPaths.emplace_back(DWOPath.data(), DWOPath.size());
     } else {
       DWOPaths.push_back(std::move(DWOName));
     }
@@ -108,7 +111,13 @@ int main(int argc, char **argv) {
   for (const auto &ExecFilename : ExecFilenames) {
     auto DWOs = getDWOFilenames(ExecFilename);
     if (!DWOs) {
-      logAllUnhandledErrors(DWOs.takeError(), WithColor::error());
+      logAllUnhandledErrors(
+          handleErrors(DWOs.takeError(),
+                       [&](std::unique_ptr<ECError> EC) -> Error {
+                         return createFileError(ExecFilename,
+                                                Error(std::move(EC)));
+                       }),
+          WithColor::error());
       return 1;
     }
     DWOFilenames.insert(DWOFilenames.end(),
@@ -124,7 +133,13 @@ int main(int argc, char **argv) {
 
   auto ErrOrTriple = readTargetTriple(DWOFilenames.front());
   if (!ErrOrTriple) {
-    logAllUnhandledErrors(ErrOrTriple.takeError(), WithColor::error());
+    logAllUnhandledErrors(
+        handleErrors(ErrOrTriple.takeError(),
+                     [&](std::unique_ptr<ECError> EC) -> Error {
+                       return createFileError(DWOFilenames.front(),
+                                              Error(std::move(EC)));
+                     }),
+        WithColor::error());
     return 1;
   }
 

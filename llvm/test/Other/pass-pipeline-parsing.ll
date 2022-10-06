@@ -149,7 +149,7 @@
 ; CHECK-ADAPTORS: Running pass: NoOpFunctionPass
 ; CHECK-ADAPTORS: Running pass: ModuleToFunctionPassAdaptor
 ; CHECK-ADAPTORS: Running pass: FunctionToLoopPassAdaptor
-; CHECK-ADAPTORS: Running pass: NoOpLoopPass on Loop at depth 1 containing: %loop
+; CHECK-ADAPTORS: Running pass: NoOpLoopPass on loop
 ; CHECK-ADAPTORS: Running pass: ModuleToPostOrderCGSCCPassAdaptor
 ; CHECK-ADAPTORS: Running pass: NoOpCGSCCPass
 ; CHECK-ADAPTORS: Running pass: ModuleToPostOrderCGSCCPassAdaptor
@@ -158,11 +158,11 @@
 ; CHECK-ADAPTORS: Running pass: NoOpFunctionPass
 ; CHECK-ADAPTORS: Running pass: CGSCCToFunctionPassAdaptor
 ; CHECK-ADAPTORS: Running pass: FunctionToLoopPassAdaptor
-; CHECK-ADAPTORS: Running pass: NoOpLoopPass on Loop at depth 1 containing: %loop
+; CHECK-ADAPTORS: Running pass: NoOpLoopPass on loop
 ; CHECK-ADAPTORS: Running pass: ModuleToFunctionPassAdaptor
 ; CHECK-ADAPTORS: Running pass: PassManager{{.*}}Function
 ; CHECK-ADAPTORS: Running pass: FunctionToLoopPassAdaptor
-; CHECK-ADAPTORS: Running pass: NoOpLoopPass on Loop at depth 1 containing: %loop
+; CHECK-ADAPTORS: Running pass: NoOpLoopPass on loop
 
 ; RUN: opt -disable-output -debug-pass-manager \
 ; RUN:     -passes='module(function(no-op-function,loop(no-op-loop,no-op-loop)))' %s 2>&1 \

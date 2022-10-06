@@ -12,8 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
-#include "../PassDetail.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -24,13 +24,18 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 
+namespace mlir {
+#define GEN_PASS_DEF_SCFTOCONTROLFLOW
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
+
 using namespace mlir;
 using namespace mlir::scf;
 
 namespace {
 
 struct SCFToControlFlowPass
-    : public SCFToControlFlowBase<SCFToControlFlowPass> {
+    : public impl::SCFToControlFlowBase<SCFToControlFlowPass> {
   void runOnOperation() override;
 };
 
@@ -458,11 +463,9 @@ ParallelLowering::matchAndRewrite(ParallelOp parallelOp,
   ivs.reserve(parallelOp.getNumLoops());
   bool first = true;
   SmallVector<Value, 4> loopResults(iterArgs);
-  for (auto loopOperands :
+  for (auto [iv, lower, upper, step] :
        llvm::zip(parallelOp.getInductionVars(), parallelOp.getLowerBound(),
                  parallelOp.getUpperBound(), parallelOp.getStep())) {
-    Value iv, lower, upper, step;
-    std::tie(iv, lower, upper, step) = loopOperands;
     ForOp forOp = rewriter.create<ForOp>(loc, lower, upper, step, iterArgs);
     ivs.push_back(forOp.getInductionVar());
     auto iterRange = forOp.getRegionIterArgs();

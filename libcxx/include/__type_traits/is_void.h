@@ -31,7 +31,7 @@ inline constexpr bool is_void_v = __is_void(_Tp);
 #else
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_void
-    : public is_same<typename remove_cv<_Tp>::type, void> {};
+    : public is_same<__remove_cv_t<_Tp>, void> {};
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>

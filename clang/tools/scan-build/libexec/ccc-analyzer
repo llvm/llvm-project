@@ -466,9 +466,6 @@ my $Analyses = $ENV{'CCC_ANALYZER_ANALYSIS'};
 # Get the plugins to load.
 my $Plugins = $ENV{'CCC_ANALYZER_PLUGINS'};
 
-# Get the store model.
-my $StoreModel = $ENV{'CCC_ANALYZER_STORE_MODEL'};
-
 # Get the constraints engine.
 my $ConstraintsModel = $ENV{'CCC_ANALYZER_CONSTRAINTS_MODEL'};
 
@@ -727,10 +724,6 @@ if ($Action eq 'compile' or $Action eq 'link') {
 
     if ($FileLang ne 'unknown') {
       push @CmdArgs, '-x', $FileLang;
-    }
-
-    if (defined $StoreModel) {
-      push @AnalyzeArgs, "-analyzer-store=$StoreModel";
     }
 
     if (defined $ConstraintsModel) {

@@ -321,6 +321,10 @@ RUN: ld.lld -### -m i386pep foo.o -wrap foo1 --wrap foo2 2>&1 | FileCheck -check
 RUN: ld.lld -### -m i386pep foo.o -wrap=foo1 --wrap=foo2 2>&1 | FileCheck -check-prefix WRAP %s
 WRAP: -wrap:foo1 -wrap:foo2
 
+RUN: ld.lld -### -m i386pep foo.o -exclude-symbols sym1,sym2 --exclude-symbols sym3 2>&1 | FileCheck -check-prefix EXCLUDE_SYMBOLS %s
+RUN: ld.lld -### -m i386pep foo.o -exclude-symbols=sym1,sym2 --exclude-symbols=sym3 2>&1 | FileCheck -check-prefix EXCLUDE_SYMBOLS %s
+EXCLUDE_SYMBOLS: -exclude-symbols:sym1,sym2 -exclude-symbols:sym3
+
 RUN: ld.lld -### -m i386pep foo.o 2>&1 | FileCheck -check-prefix DEMANGLE %s
 RUN: ld.lld -### -m i386pep foo.o -demangle 2>&1 | FileCheck -check-prefix DEMANGLE %s
 RUN: ld.lld -### -m i386pep foo.o --demangle 2>&1 | FileCheck -check-prefix DEMANGLE %s
@@ -352,3 +356,18 @@ RUN: ld.lld -### foo.o -m i386pep -heap 8388608,16384 2>&1 | FileCheck -check-pr
 RUN: ld.lld -### foo.o -m i386pep --heap 8388608,16384 2>&1 | FileCheck -check-prefix=HEAP %s
 RUN: ld.lld -### foo.o -m i386pep --heap=8388608,16384 2>&1 | FileCheck -check-prefix=HEAP %s
 HEAP: -heap:8388608,16384
+
+RUN: ld.lld -### foo.o -m i386pep --no-guard-cf 2>&1 | FileCheck -check-prefix=NO_GUARD_CF %s
+RUN: ld.lld -### foo.o -m i386pep --no-guard-cf --no-guard-longjmp 2>&1 | FileCheck -check-prefix=NO_GUARD_CF %s
+NO_GUARD_CF-NOT: -guard:
+
+RUN: ld.lld -### foo.o -m i386pep --guard-cf 2>&1 | FileCheck -check-prefix=GUARD_CF %s
+RUN: ld.lld -### foo.o -m i386pep --guard-cf --guard-longjmp 2>&1 | FileCheck -check-prefix=GUARD_CF %s
+GUARD_CF: -guard:cf,longjmp
+
+RUN: ld.lld -### foo.o -m i386pep --guard-cf --no-guard-longjmp 2>&1 | FileCheck -check-prefix=GUARD_CF_NOLONGJMP %s
+GUARD_CF_NOLONGJMP: -guard:cf,nolongjmp
+
+RUN: ld.lld -### foo.o -m i386pep --guard-longjmp 2>&1 | FileCheck -check-prefix=GUARD_LONGJMP_NO_CF %s
+RUN: ld.lld -### foo.o -m i386pep --no-guard-cf --guard-longjmp 2>&1 | FileCheck -check-prefix=GUARD_LONGJMP_NO_CF %s
+GUARD_LONGJMP_NO_CF: warning: parameter --guard-longjmp only takes effect when used with --guard-cf

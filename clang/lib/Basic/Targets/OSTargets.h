@@ -50,8 +50,7 @@ protected:
   }
 
 public:
-  CloudABITargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {}
+  using OSTargetInfo<Target>::OSTargetInfo;
 };
 
 // Ananas target
@@ -66,8 +65,7 @@ protected:
   }
 
 public:
-  AnanasTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {}
+  using OSTargetInfo<Target>::OSTargetInfo;
 };
 
 void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
@@ -280,8 +278,7 @@ protected:
   }
 
 public:
-  KFreeBSDTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {}
+  using OSTargetInfo<Target>::OSTargetInfo;
 };
 
 // Haiku Target
@@ -336,8 +333,7 @@ protected:
       Builder.defineMacro("_GNU_SOURCE");
   }
 public:
-  HurdTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {}
+  using OSTargetInfo<Target>::OSTargetInfo;
 };
 
 // Minix Target
@@ -360,8 +356,7 @@ protected:
   }
 
 public:
-  MinixTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : OSTargetInfo<Target>(Triple, Opts) {}
+  using OSTargetInfo<Target>::OSTargetInfo;
 };
 
 // Linux target
@@ -388,6 +383,9 @@ protected:
     } else {
         Builder.defineMacro("__gnu_linux__");
     }
+    // Work around Issue #47994 until glibc PR build/27558 is fixed.
+    if (Triple.isSPARC())
+      Builder.defineMacro("__NO_INLINE__");
     if (Opts.POSIXThreads)
       Builder.defineMacro("_REENTRANT");
     if (Opts.CPlusPlus)
@@ -477,7 +475,7 @@ public:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       this->HasFloat128 = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       this->MCountName = "__mcount";
       break;
@@ -494,23 +492,6 @@ public:
       break;
     }
   }
-};
-
-// PSP Target
-template <typename Target>
-class LLVM_LIBRARY_VISIBILITY PSPTargetInfo : public OSTargetInfo<Target> {
-protected:
-  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
-                    MacroBuilder &Builder) const override {
-    // PSP defines; list based on the output of the pspdev gcc toolchain.
-    Builder.defineMacro("PSP");
-    Builder.defineMacro("_PSP");
-    Builder.defineMacro("__psp__");
-    Builder.defineMacro("__ELF__");
-  }
-
-public:
-  PSPTargetInfo(const llvm::Triple &Triple) : OSTargetInfo<Target>(Triple) {}
 };
 
 // PS3 PPU Target
@@ -592,8 +573,7 @@ protected:
   }
 
 public:
-  PS4OSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : PSOSTargetInfo<Target>(Triple, Opts) {}
+  using PSOSTargetInfo<Target>::PSOSTargetInfo;
 };
 
 // PS5 Target
@@ -609,8 +589,7 @@ protected:
   }
 
 public:
-  PS5OSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : PSOSTargetInfo<Target>(Triple, Opts) {}
+  using PSOSTargetInfo<Target>::PSOSTargetInfo;
 };
 
 // RTEMS Target
@@ -983,8 +962,7 @@ class LLVM_LIBRARY_VISIBILITY WASITargetInfo
   }
 
 public:
-  explicit WASITargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
-      : WebAssemblyOSTargetInfo<Target>(Triple, Opts) {}
+  using WebAssemblyOSTargetInfo<Target>::WebAssemblyOSTargetInfo;
 };
 
 // Emscripten target

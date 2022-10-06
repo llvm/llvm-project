@@ -664,7 +664,7 @@ TEST_F(CommentParserTest, ParagraphSplitting1) {
     "*/"),
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -801,7 +801,7 @@ TEST_F(CommentParserTest, ParamCommand3) {
     "// Bbb\n")
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -831,7 +831,7 @@ TEST_F(CommentParserTest, ParamCommand4) {
     "// Bbb\n"),
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -861,7 +861,7 @@ TEST_F(CommentParserTest, ParamCommand5) {
     "// Bbb\n"),
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -892,7 +892,7 @@ TEST_F(CommentParserTest, ParamCommand6) {
     "// Bbb\n"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -947,7 +947,7 @@ TEST_F(CommentParserTest, TParamCommand1) {
     "// Bbb\n"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -1081,7 +1081,7 @@ TEST_F(CommentParserTest, HTML1) {
     "// <a >"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 1));
 
@@ -1103,7 +1103,7 @@ TEST_F(CommentParserTest, HTML2) {
     "// <br />"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 1));
 
@@ -1127,7 +1127,7 @@ TEST_F(CommentParserTest, HTML3) {
     "// <a href >",
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 1));
 
@@ -1149,7 +1149,7 @@ TEST_F(CommentParserTest, HTML4) {
     "// <a href=\"bbb\">",
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 1));
 
@@ -1172,7 +1172,7 @@ TEST_F(CommentParserTest, HTML5) {
     "// </a >"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 1));
 
@@ -1285,7 +1285,7 @@ TEST_F(CommentParserTest, VerbatimBlock5) {
     " *\\endverbatim*/"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 1));
 
@@ -1309,7 +1309,7 @@ TEST_F(CommentParserTest, VerbatimBlock6) {
     " * \\endverbatim*/"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -1336,7 +1336,7 @@ TEST_F(CommentParserTest, VerbatimBlock7) {
     " * \\endverbatim*/"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -1364,7 +1364,7 @@ TEST_F(CommentParserTest, VerbatimBlock8) {
     " * Bbb\n"
     " * \\endverbatim*/"
   };
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -1387,7 +1387,7 @@ TEST_F(CommentParserTest, VerbatimLine1) {
     "// \\fn\n"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -1405,7 +1405,7 @@ TEST_F(CommentParserTest, VerbatimLine2) {
     "/** \\fn void *foo(const char *zzz = \"\\$\");*/"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 
@@ -1424,7 +1424,7 @@ TEST_F(CommentParserTest, Deprecated) {
     "/// @deprecated\n"
   };
 
-  for (size_t i = 0, e = array_lengthof(Sources); i != e; i++) {
+  for (size_t i = 0, e = std::size(Sources); i != e; i++) {
     FullComment *FC = parseString(Sources[i]);
     ASSERT_TRUE(HasChildCount(FC, 2));
 

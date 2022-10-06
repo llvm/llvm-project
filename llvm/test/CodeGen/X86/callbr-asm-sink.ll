@@ -12,12 +12,12 @@ define void @klist_dec_and_del(%struct1*) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    leaq 8(%rdi), %rax
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    # 8(%rdi) .Ltmp0
+; CHECK-NEXT:    # 8(%rdi) .LBB0_1
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .Ltmp0: # Block address taken
-; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:  .LBB0_1: # Block address taken
+; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    movq $0, -8(%rax)
 ; CHECK-NEXT:    retq
   %2 = getelementptr inbounds %struct1, %struct1* %0, i64 0, i32 1

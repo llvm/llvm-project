@@ -604,7 +604,7 @@ class Parameter(object):
   Parameters are used to customize the behavior of test suites in a user
   controllable way. There are two ways of setting the value of a Parameter.
   The first one is to pass `--param <KEY>=<VALUE>` when running Lit (or
-  equivalenlty to set `litConfig.params[KEY] = VALUE` somewhere in the
+  equivalently to set `litConfig.params[KEY] = VALUE` somewhere in the
   Lit configuration files. This method will set the parameter globally for
   all test suites being run.
 

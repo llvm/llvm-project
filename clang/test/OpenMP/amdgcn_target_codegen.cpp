@@ -27,7 +27,7 @@ int test_amdgcn_target_tid_threads_simd() {
 
   int arr[N];
 
-// CHECK: call i32 @__kmpc_target_init(%struct.ident_t* addrspacecast (%struct.ident_t addrspace(1)* @1 to %struct.ident_t*), i8 2, i1 false, i1 false)
+// CHECK: call i32 @__kmpc_target_init(%struct.ident_t* addrspacecast (%struct.ident_t addrspace(1)* @1 to %struct.ident_t*), i8 2, i1 false, i1 true)
 #pragma omp target simd
   for (int i = 0; i < N; i++) {
     arr[i] = 1;

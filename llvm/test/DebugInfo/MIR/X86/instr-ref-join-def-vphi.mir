@@ -1,0 +1,241 @@
+# RUN: llc -run-pass=livedebugvalues %s -o - -experimental-debug-variable-locations | FileCheck %s --check-prefixes=CHECK
+
+# Test that we do not drop debug values when joining a VPHI and a Def that use
+# the same value.
+# In this test case, the live out value for "a" from bb.4 is a VPHI with a
+# defined value, the value live-in register $esi at bb.3. In bb.5, we also have
+# a DBG_INSTR_REF that explicitly defines "a" as holding that same value. When
+# joining these values to determine the live-in value of "a" at bb.6, we should
+# recognize that these values are identical and produce a valid live-in debug
+# value.
+
+# CHECK: ![[VAR:[0-9]+]] = !DILocalVariable(name: "a"
+
+# CHECK-LABEL: bb.6
+# CHECK: DBG_VALUE $esi, $noreg, ![[VAR]], !DIExpression()
+
+--- |
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-linux-gnu"
+
+  ; Function Attrs: mustprogress uwtable
+  define dso_local noundef i32 @"?foo@@YAHH@Z"(i32 noundef %0) local_unnamed_addr #0 !dbg !8 {
+    call void @llvm.dbg.value(metadata i32 %0, metadata !14, metadata !DIExpression()), !dbg !16
+    %2 = tail call noundef i32 @"?bar@@YAHXZ"(), !dbg !17
+    br label %3, !dbg !18
+
+  3:                                                ; preds = %13, %1
+    %4 = phi i32 [ %0, %1 ], [ %14, %13 ]
+    %5 = phi i32 [ %2, %1 ], [ %7, %13 ], !dbg !16
+    call void @llvm.dbg.value(metadata i32 %4, metadata !14, metadata !DIExpression()), !dbg !16
+    %6 = tail call noundef i32 @"?bar@@YAHXZ"(), !dbg !19
+    %7 = sub nsw i32 %5, %6, !dbg !19
+    %8 = srem i32 %7, 3, !dbg !21
+    %9 = icmp eq i32 %8, 0, !dbg !21
+    br i1 %9, label %10, label %13, !dbg !21
+
+  10:                                               ; preds = %3
+    %11 = tail call noundef i32 @"?bar@@YAHXZ"(), !dbg !22
+    %12 = add nsw i32 %11, %4, !dbg !22
+    call void @llvm.dbg.value(metadata i32 %12, metadata !14, metadata !DIExpression()), !dbg !16
+    br label %13, !dbg !25
+
+  13:                                               ; preds = %10, %3
+    %14 = phi i32 [ %12, %10 ], [ %4, %3 ]
+    call void @llvm.dbg.value(metadata i32 %14, metadata !14, metadata !DIExpression()), !dbg !16
+    %15 = icmp sgt i32 %7, 0, !dbg !26
+    br i1 %15, label %3, label %16, !dbg !26, !llvm.loop !27
+
+  16:                                               ; preds = %13
+    %17 = and i32 %7, 1, !dbg !30
+    %18 = icmp eq i32 %17, 0, !dbg !30
+    br i1 %18, label %19, label %22, !dbg !30
+
+  19:                                               ; preds = %16
+    %20 = tail call noundef i32 @"?bar@@YAHXZ"(), !dbg !31
+    %21 = add nsw i32 %20, %14, !dbg !31
+    call void @llvm.dbg.value(metadata i32 %21, metadata !14, metadata !DIExpression()), !dbg !16
+    br label %22, !dbg !34
+
+  22:                                               ; preds = %19, %16
+    %23 = phi i32 [ %21, %19 ], [ %14, %16 ], !dbg !16
+    call void @llvm.dbg.value(metadata i32 %23, metadata !14, metadata !DIExpression()), !dbg !16
+    ret i32 %23, !dbg !35
+  }
+
+  declare dso_local noundef i32 @"?bar@@YAHXZ"() local_unnamed_addr #1
+
+  ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #2
+
+  attributes #0 = { mustprogress uwtable "frame-pointer"="none" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+  attributes #1 = { "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "tune-cpu"="generic" }
+  attributes #2 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!3, !4, !5, !6}
+  !llvm.ident = !{!7}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: !1, producer: "clang version 15.0.0", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+  !1 = !DIFile(filename: "test.cpp", directory: "\")
+  !3 = !{i32 2, !"Debug Info Version", i32 3}
+  !4 = !{i32 1, !"wchar_size", i32 2}
+  !5 = !{i32 7, !"PIC Level", i32 2}
+  !6 = !{i32 7, !"uwtable", i32 2}
+  !7 = !{!"clang version 15.0.0"}
+  !8 = distinct !DISubprogram(name: "foo", linkageName: "?foo@@YAHH@Z", scope: !9, file: !9, line: 3, type: !10, scopeLine: 3, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !13)
+  !9 = !DIFile(filename: ".\\test.cpp", directory: "\")
+  !10 = !DISubroutineType(types: !11)
+  !11 = !{!12, !12}
+  !12 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+  !13 = !{!14}
+  !14 = !DILocalVariable(name: "a", arg: 1, scope: !8, file: !9, line: 3, type: !12)
+  !16 = !DILocation(line: 0, scope: !8)
+  !17 = !DILocation(line: 4, scope: !8)
+  !18 = !DILocation(line: 5, scope: !8)
+  !19 = !DILocation(line: 6, scope: !20)
+  !20 = distinct !DILexicalBlock(scope: !8, file: !9, line: 5)
+  !21 = !DILocation(line: 7, scope: !20)
+  !22 = !DILocation(line: 8, scope: !23)
+  !23 = distinct !DILexicalBlock(scope: !24, file: !9, line: 7)
+  !24 = distinct !DILexicalBlock(scope: !20, file: !9, line: 7)
+  !25 = !DILocation(line: 9, scope: !23)
+  !26 = !DILocation(line: 10, scope: !20)
+  !27 = distinct !{!27, !18, !28, !29}
+  !28 = !DILocation(line: 10, scope: !8)
+  !29 = !{!"llvm.loop.mustprogress"}
+  !30 = !DILocation(line: 11, scope: !8)
+  !31 = !DILocation(line: 12, scope: !32)
+  !32 = distinct !DILexicalBlock(scope: !33, file: !9, line: 11)
+  !33 = distinct !DILexicalBlock(scope: !8, file: !9, line: 11)
+  !34 = !DILocation(line: 13, scope: !32)
+  !35 = !DILocation(line: 14, scope: !8)
+
+...
+---
+name:            '?foo@@YAHH@Z'
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       true
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$ecx', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       56
+  offsetAdjustment: -56
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 32
+  cvBytesOfCalleeSavedRegisters: 16
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:
+  - { id: 0, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default,
+      callee-saved-register: '$rdi', callee-saved-restored: true, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default,
+      callee-saved-register: '$rsi', callee-saved-restored: true, debug-info-variable: '',
+      debug-info-expression: '', debug-info-location: '' }
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0 (%ir-block.1):
+    successors: %bb.1(0x80000000)
+    liveins: $ecx, $rsi, $rdi
+
+    DBG_VALUE $ecx, $noreg, !14, !DIExpression(), debug-location !16
+    frame-setup PUSH64r killed $rsi, implicit-def $rsp, implicit $rsp
+    frame-setup SEH_PushReg 57
+    frame-setup PUSH64r killed $rdi, implicit-def $rsp, implicit $rsp
+    frame-setup SEH_PushReg 53
+    $rsp = frame-setup SUB64ri8 $rsp, 40, implicit-def dead $eflags
+    frame-setup SEH_StackAlloc 40
+    frame-setup SEH_EndPrologue
+    $esi = MOV32rr $ecx
+    CALL64pcrel32 @"?bar@@YAHXZ", csr_win64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-instr-number 8, debug-location !17
+    $edi = MOV32rr $eax, debug-location !17
+    JMP_1 %bb.1
+
+  bb.3 (%ir-block.13, align 16):
+    successors: %bb.1(0x7c000000), %bb.4(0x04000000)
+    liveins: $edi, $esi
+
+    DBG_PHI $esi, 5
+    TEST32rr renamable $edi, renamable $edi, implicit-def $eflags, debug-location !26
+    JCC_1 %bb.4, 14, implicit $eflags, debug-location !26
+
+  bb.1 (%ir-block.3):
+    successors: %bb.2(0x30000000), %bb.3(0x50000000)
+    liveins: $edi, $esi
+
+    DBG_PHI $esi, 3
+    DBG_PHI $edi, 2
+    DBG_INSTR_REF 3, 0, !14, !DIExpression(), debug-location !16
+    CALL64pcrel32 @"?bar@@YAHXZ", csr_win64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !19
+    renamable $edi = nsw SUB32rr killed renamable $edi, killed renamable $eax, implicit-def dead $eflags, debug-instr-number 1, debug-location !19
+    renamable $eax = IMUL32rri renamable $edi, -1431655765, implicit-def dead $eflags, debug-location !21
+    renamable $eax = ADD32ri killed renamable $eax, 715827882, implicit-def dead $eflags, debug-location !21
+    CMP32ri killed renamable $eax, 1431655764, implicit-def $eflags, debug-location !21
+    JCC_1 %bb.3, 7, implicit $eflags, debug-location !21
+
+  bb.2 (%ir-block.10):
+    successors: %bb.3(0x80000000)
+    liveins: $edi, $esi
+
+    CALL64pcrel32 @"?bar@@YAHXZ", csr_win64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !22
+    renamable $esi = nsw ADD32rr killed renamable $esi, killed renamable $eax, implicit-def dead $eflags, debug-instr-number 4, debug-location !22
+    DBG_INSTR_REF 4, 0, !14, !DIExpression(), debug-location !16
+    JMP_1 %bb.3
+
+  bb.4 (%ir-block.16):
+    successors: %bb.5(0x40000000), %bb.6(0x40000000)
+    liveins: $edi, $esi
+
+    TEST8ri renamable $dil, 1, implicit-def $eflags, implicit killed $edi, debug-location !30
+    JCC_1 %bb.6, 5, implicit $eflags, debug-location !30
+
+  bb.5 (%ir-block.19):
+    successors: %bb.6(0x80000000)
+    liveins: $esi
+
+    CALL64pcrel32 @"?bar@@YAHXZ", csr_win64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !31
+    DBG_INSTR_REF 5, 0, !14, !DIExpression(), debug-location !16
+
+  bb.6 (%ir-block.22):
+    liveins: $esi
+
+    $eax = MOV32rr killed $esi, debug-location !35
+    SEH_Epilogue debug-location !35
+    $rsp = frame-destroy ADD64ri8 $rsp, 40, implicit-def dead $eflags, debug-location !35
+    $rdi = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !35
+    $rsi = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !35
+    RET64 $eax, debug-location !35
+
+...

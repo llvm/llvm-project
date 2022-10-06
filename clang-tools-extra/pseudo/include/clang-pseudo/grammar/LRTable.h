@@ -105,7 +105,9 @@ public:
   bool canFollow(SymbolID Nonterminal, SymbolID Terminal) const {
     assert(isToken(Terminal));
     assert(isNonterminal(Nonterminal));
-    return FollowSets.test(tok::NUM_TOKENS * Nonterminal +
+    // tok::unknown is a sentinel value used in recovery: can follow anything.
+    return Terminal == tokenSymbol(tok::unknown) ||
+           FollowSets.test(tok::NUM_TOKENS * Nonterminal +
                            symbolToToken(Terminal));
   }
 

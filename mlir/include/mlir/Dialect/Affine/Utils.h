@@ -304,6 +304,30 @@ Optional<SmallVector<Value, 8>> expandAffineMap(OpBuilder &builder,
                                                 AffineMap affineMap,
                                                 ValueRange operands);
 
+/// Holds the result of (div a, b)  and (mod a, b).
+struct DivModValue {
+  Value quotient;
+  Value remainder;
+};
+
+/// Create IR to calculate (div lhs, rhs) and (mod lhs, rhs).
+DivModValue getDivMod(OpBuilder &b, Location loc, Value lhs, Value rhs);
+
+/// Generate the IR to delinearize `linearIndex` given the `basis` and return
+/// the multi-index.
+FailureOr<SmallVector<Value>> delinearizeIndex(OpBuilder &b, Location loc,
+                                               Value linearIndex,
+                                               ArrayRef<Value> basis);
+
+/// Ensure that all operations that could be executed after `start`
+/// (noninclusive) and prior to `memOp` (e.g. on a control flow/op path
+/// between the operations) do not have the potential memory effect
+/// `EffectType` on `memOp`. `memOp`  is an operation that reads or writes to
+/// a memref. For example, if `EffectType` is MemoryEffects::Write, this method
+/// will check if there is no write to the memory between `start` and `memOp`
+/// that would change the read within `memOp`.
+template <typename EffectType, typename T>
+bool hasNoInterveningEffect(Operation *start, T memOp);
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_UTILS_H

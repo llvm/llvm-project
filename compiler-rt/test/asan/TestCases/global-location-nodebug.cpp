@@ -15,8 +15,8 @@
 // UNSUPPORTED: windows
 
 // CHECK: AddressSanitizer: global-buffer-overflow
-// CLASS_STATIC-NO-G: 0x{{.*}} is located 4 bytes to the right of global variable '{{.*}}C::array{{.*}}' defined in '{{.*}}global-location.cpp' {{.*}} of size 40
-// GLOB-NO-G: 0x{{.*}} is located 4 bytes to the right of global variable '{{.*}}global{{.*}}' defined in '{{.*}}global-location.cpp' {{.*}} of size 40
-// FUNC_STATIC-NO-G: 0x{{.*}} is located 4 bytes to the right of global variable '{{.*}}main::array{{.*}}' defined in '{{.*}}global-location.cpp' {{.*}} of size 40
-// LITERAL-NO-G: 0x{{.*}} is located 0 bytes to the right of global variable {{.*}} defined in '{{.*}}global-location.cpp' {{.*}} of size 11
+// CLASS_STATIC-NO-G: 0x{{.*}} is located 4 bytes after global variable '{{.*}}C::array{{.*}}' defined in '{{.*}}global-location.cpp' {{.*}} of size 40
+// GLOB-NO-G: 0x{{.*}} is located 4 bytes after global variable '{{.*}}global{{.*}}' defined in '{{.*}}global-location.cpp' {{.*}} of size 40
+// FUNC_STATIC-NO-G: 0x{{.*}} is located 4 bytes after global variable '{{.*}}main::array{{.*}}' defined in '{{.*}}global-location.cpp' {{.*}} of size 40
+// LITERAL-NO-G: 0x{{.*}} is located 0 bytes after global variable {{.*}} defined in '{{.*}}global-location.cpp' {{.*}} of size 11
 // CHECK: SUMMARY: AddressSanitizer: global-buffer-overflow

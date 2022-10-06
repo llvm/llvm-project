@@ -129,13 +129,15 @@ _BitInt(33) ManglingTestRetParam(_BitInt(33) Param) {
   return 0;
 }
 
+typedef unsigned _BitInt(16) uint16_t4 __attribute__((ext_vector_type(4)));
+typedef _BitInt(32) vint32_t8 __attribute__((vector_size(32)));
+
 template<typename T>
 void ManglingTestTemplateParam(T&);
 template<_BitInt(99) T>
 void ManglingTestNTTP();
 template <int N>
 auto ManglingDependent() -> decltype(_BitInt(N){});
-
 
 void ManglingInstantiator() {
   // LIN: define{{.*}} void @_Z20ManglingInstantiatorv()
@@ -156,6 +158,12 @@ void ManglingInstantiator() {
   // LIN: call signext i4 @_Z17ManglingDependentILi4EEDTtlDBT__EEv()
   // WIN64: call i4 @"??$ManglingDependent@$03@@YAU?$_BitInt@$03@__clang@@XZ"()
   // WIN32: call signext i4 @"??$ManglingDependent@$03@@YAU?$_BitInt@$03@__clang@@XZ"()
+  uint16_t4 V;
+  ManglingTestTemplateParam(V);
+  // LIN: call void @_Z25ManglingTestTemplateParamIDv4_DU16_EvRT_(<4 x i16>*
+  // WIN64: call void @"??$ManglingTestTemplateParam@T?$__vector@U?$_UBitInt@$0BA@@__clang@@$03@__clang@@@@YAXAEAT?$__vector@U?$_UBitInt@$0BA@@__clang@@$03@__clang@@@Z"(<4 x i16>*
+  // WIN32: call void @"??$ManglingTestTemplateParam@T?$__vector@U?$_UBitInt@$0BA@@__clang@@$03@__clang@@@@YAXAAT?$__vector@U?$_UBitInt@$0BA@@__clang@@$03@__clang@@@Z"(<4 x i16>*
+
 }
 
 void TakesVarargs(int i, ...) {
@@ -272,6 +280,65 @@ void TakesVarargs(int i, ...) {
   // WIN32: %[[LOADV3:.+]] = load i16, i16* %[[BC3]]
   // WIN32: store i16 %[[LOADV3]], i16*
 
+  uint16_t4 D = __builtin_va_arg(args, uint16_t4);
+  // LIN64: %[[AD4:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %[[ARGS]]
+  // LIN64: %[[OFA_P4:.+]] = getelementptr inbounds %struct.__va_list_tag, %struct.__va_list_tag* %[[AD4]], i32 0, i32 1
+  // LIN64: %[[GPOFFSET:.+]] = load i32, i32* %[[OFA_P4]]
+  // LIN64: %[[FITSINGP:.+]] = icmp ule i32 %[[GPOFFSET]], 160
+  // LIN64: br i1 %[[FITSINGP]]
+  // LIN64: %[[BC4:.+]] = phi <4 x i16>*
+  // LIN64: %[[LOADV4:.+]] = load <4 x i16>, <4 x i16>* %[[BC4]]
+  // LIN64: store <4 x i16> %[[LOADV4]], <4 x i16>*
+
+  // LIN32: %[[CUR4:.+]] = load i8*, i8** %[[ARGS]]
+  // LIN32: %[[NEXT4:.+]] = getelementptr inbounds i8, i8* %[[CUR4]], i32 8
+  // LIN32: store i8* %[[NEXT4]], i8** %[[ARGS]]
+  // LIN32: %[[BC4:.+]] = bitcast i8* %[[CUR4]] to <4 x i16>*
+  // LIN32: %[[LOADV4:.+]] = load <4 x i16>, <4 x i16>* %[[BC4]]
+  // LIN32: store <4 x i16> %[[LOADV4]], <4 x i16>* %
+
+  // WIN: %[[CUR4:.+]] = load i8*, i8** %[[ARGS]]
+  // WIN64: %[[NEXT4:.+]] = getelementptr inbounds i8, i8* %[[CUR4]], i64 8
+  // WIN32: %[[NEXT4:.+]] = getelementptr inbounds i8, i8* %[[CUR4]], i32 8
+  // WIN: store i8* %[[NEXT4]], i8** %[[ARGS]]
+  // WIN: %[[BC4:.+]] = bitcast i8* %[[CUR4]] to <4 x i16>*
+  // WIN: %[[LOADV4:.+]] = load <4 x i16>, <4 x i16>* %[[BC4]]
+  // WIN: store <4 x i16> %[[LOADV4]], <4 x i16>*
+
+  vint32_t8 E = __builtin_va_arg(args, vint32_t8);
+  // LIN64: %[[AD5:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %[[ARGS]]
+  // LIN64: %[[OFAA_P4:.+]] = getelementptr inbounds %struct.__va_list_tag, %struct.__va_list_tag* %[[AD5]], i32 0, i32 2
+  // LIN64: %[[OFAA:.+]] = load i8*, i8** %[[OFAA_P4]]
+  // LIN64: %[[TOINT:.+]] = ptrtoint i8* %[[OFAA]] to i64
+  // LIN64: %[[ADD:.+]] = add i64 %[[TOINT]], 31
+  // LIN64: %[[AND:.+]] = and i64 %[[ADD]], -32
+  // LIN64: %[[OFAA_ALIGNED:.+]] = inttoptr i64 %[[AND]] to i8*
+  // LIN64: %[[BC5:.+]] = bitcast i8* %[[OFAA_ALIGNED]] to <8 x i32>*
+  // LIN64: %[[LOADV5:.+]] = load <8 x i32>, <8 x i32>* %[[BC5]]
+  // LIN64: store <8 x i32> %[[LOADV5]], <8 x i32>*
+
+  // LIN32: %[[CUR5:.+]] = load i8*, i8** %[[ARGS]]
+  // LIN32: %[[TOINT:.+]] = ptrtoint i8* %[[CUR5]] to i32
+  // LIN32: %[[ADD:.+]] = add i32 %[[TOINT]], 31
+  // LIN32: %[[AND:.+]] = and i32 %[[ADD]], -32
+  // LIN32: %[[CUR5_ALIGNED:.+]] = inttoptr i32 %[[AND]] to i8*
+  // LIN32: %[[NEXT5:.+]] = getelementptr inbounds i8, i8* %[[CUR5_ALIGNED]], i32 32
+  // LIN32: store i8* %[[NEXT5]], i8** %[[ARGS]]
+  // LIN32: %[[LOADP5:.+]] = bitcast i8* %[[CUR5_ALIGNED]] to <8 x i32>*
+  // LIN32: %[[LOADV5:.+]] = load <8 x i32>, <8 x i32>* %[[LOADP5]]
+  // LIN32: store <8 x i32> %[[LOADV5]], <8 x i32>*
+
+  // WIN: %[[CUR5:.+]] = load i8*, i8** %[[ARGS]]
+  // WIN64: %[[NEXT5:.+]] = getelementptr inbounds i8, i8* %[[CUR5]], i64 8
+  // WIN32: %[[NEXT5:.+]] = getelementptr inbounds i8, i8* %[[CUR5]], i32 32
+  // WIN: store i8* %[[NEXT5]], i8** %[[ARGS]]
+  // WIN64: %[[BC5:.+]] = bitcast i8* %[[CUR5]] to <8 x i32>**
+  // WIN64: %[[LOADP5:.+]] = load <8 x i32>*, <8 x i32>** %[[BC5]]
+  // WIN64: %[[LOADV5:.+]] = load <8 x i32>, <8 x i32>* %[[LOADP5]]
+  // WIN32: %[[BC5:.+]] = bitcast i8* %argp.cur8 to <8 x i32>*
+  // WIN32: %[[LOADV5:.+]] = load <8 x i32>, <8 x i32>* %[[BC5]]
+  // WIN: store <8 x i32> %[[LOADV5]], <8 x i32>*
+
   __builtin_va_end(args);
   // LIN64: %[[ENDAD:.+]] = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %[[ARGS]]
   // LIN64: %[[ENDAD1:.+]] = bitcast %struct.__va_list_tag* %[[ENDAD]] to i8*
@@ -318,6 +385,16 @@ void typeid_tests() {
  // LIN32: call void @_ZNSt9type_infoC1ERKS_(%"class.std::type_info"* {{[^,]*}} %{{.+}}, %"class.std::type_info"* nonnull align 4 dereferenceable(8) bitcast ({ i8*, i8* }* @_ZTIDB32_ to %"class.std::type_info"*))
  // WIN64:  call %"class.std::type_info"* @"??0type_info@std@@QEAA@AEBV01@@Z"(%"class.std::type_info"* {{[^,]*}} %{{.+}}, %"class.std::type_info"* nonnull align 8 dereferenceable(16) bitcast (%rtti.TypeDescriptor27* @"??_R0U?$_BitInt@$0CA@@__clang@@@8" to %"class.std::type_info"*))
  // WIN32:  call x86_thiscallcc %"class.std::type_info"* @"??0type_info@std@@QAE@ABV01@@Z"(%"class.std::type_info"* {{[^,]*}} %{{.+}}, %"class.std::type_info"* nonnull align 4 dereferenceable(8) bitcast (%rtti.TypeDescriptor27* @"??_R0U?$_BitInt@$0CA@@__clang@@@8" to %"class.std::type_info"*))
+ auto G = typeid(uint16_t4);
+ // LIN64: call void @_ZNSt9type_infoC1ERKS_(%"class.std::type_info"* {{[^,]*}} %{{.+}}, %"class.std::type_info"* nonnull align 8 dereferenceable(16) bitcast ({ i8*, i8* }* @_ZTIDv4_DU16_ to %"class.std::type_info"*))
+ // LIN32: call void @_ZNSt9type_infoC1ERKS_(%"class.std::type_info"* {{[^,]*}} %{{.+}}, %"class.std::type_info"* nonnull align 4 dereferenceable(8) bitcast ({ i8*, i8* }* @_ZTIDv4_DU16_ to %"class.std::type_info"*))
+ // WIN64: call %"class.std::type_info"* @"??0type_info@std@@QEAA@AEBV01@@Z"(%"class.std::type_info"* {{[^,]*}} %{{.+}}, %"class.std::type_info"* nonnull align 8 dereferenceable(16) bitcast (%rtti.TypeDescriptor53* @"??_R0T?$__vector@U?$_UBitInt@$0BA@@__clang@@$03@__clang@@@8" to %"class.std::type_info"*))
+ // WIN32: call x86_thiscallcc %"class.std::type_info"* @"??0type_info@std@@QAE@ABV01@@Z"(%"class.std::type_info"* {{[^,]*}} %{{.+}}, %"class.std::type_info"* nonnull align 4 dereferenceable(8) bitcast (%rtti.TypeDescriptor53* @"??_R0T?$__vector@U?$_UBitInt@$0BA@@__clang@@$03@__clang@@@8" to %"class.std::type_info"*))
+ auto H = typeid(vint32_t8);
+ // LIN64: call void @_ZNSt9type_infoC1ERKS_(%"class.std::type_info"* {{[^,]*}} %{{.+}}, %"class.std::type_info"* nonnull align 8 dereferenceable(16) bitcast ({ i8*, i8* }* @_ZTIDv8_DB32_ to %"class.std::type_info"*))
+ // LIN32: call void @_ZNSt9type_infoC1ERKS_(%"class.std::type_info"* {{[^,]*}} %{{.+}}, %"class.std::type_info"* nonnull align 4 dereferenceable(8) bitcast ({ i8*, i8* }* @_ZTIDv8_DB32_ to %"class.std::type_info"*))
+ // WIN64: call %"class.std::type_info"* @"??0type_info@std@@QEAA@AEBV01@@Z"(%"class.std::type_info"* {{[^,]*}} %{{.+}}, %"class.std::type_info"* nonnull align 8 dereferenceable(16) bitcast (%rtti.TypeDescriptor54* @"??_R0?AT?$__vector@U?$_BitInt@$0CA@@__clang@@$07@__clang@@@8" to %"class.std::type_info"*))
+ // WIN32: call x86_thiscallcc %"class.std::type_info"* @"??0type_info@std@@QAE@ABV01@@Z"(%"class.std::type_info"* {{[^,]*}} %{{.+}}, %"class.std::type_info"* nonnull align 4 dereferenceable(8) bitcast (%rtti.TypeDescriptor54* @"??_R0?AT?$__vector@U?$_BitInt@$0CA@@__clang@@$07@__clang@@@8" to %"class.std::type_info"*))
 }
 
 void ExplicitCasts() {
@@ -336,12 +413,19 @@ void ExplicitCasts() {
   // CHECK: %[[CONV:.+]] = trunc i33 %{{.+}} to i32
   i = b;
   // CHECK: %[[CONV:.+]] = sext i31 %{{.+}} to i32
+  uint16_t4 c;
+  c = i;
+  // CHECK: %[[CONV:.+]] = trunc i32 %{{.+}} to i16
+  // CHECK: %[[VEC:.+]] = insertelement <4 x i16> poison, i16 %[[CONV]], i32 0
+  // CHECK: %[[Splat:.+]] = shufflevector <4 x i16> %[[VEC]], <4 x i16> poison, <4 x i32> zeroinitializer
 }
 
 struct S {
   _BitInt(17) A;
   _BitInt(128) B;
   _BitInt(17) C;
+  uint16_t4 D;
+  vint32_t8 E;
 };
 
 void OffsetOfTest() {
@@ -358,6 +442,14 @@ void OffsetOfTest() {
   // LIN64: store i{{.+}} 24, i{{.+}}* %{{.+}}
   // LIN32: store i{{.+}} 20, i{{.+}}* %{{.+}}
   // WIN: store i{{.+}} 24, i{{.+}}* %{{.+}}
+  auto D = __builtin_offsetof(S,D);
+  // LIN64: store i64 32, i64* %{{.+}}
+  // LIN32: store i32 24, i32* %{{.+}}
+  // WIN: store i{{.+}} 32, i{{.+}}* %{{.+}}
+  auto E = __builtin_offsetof(S,E);
+  // LIN64: store i64 64, i64* %{{.+}}
+  // LIN32: store i32 32, i32* %{{.+}}
+  // WIN: store i{{.+}} 64, i{{.+}}* %{{.+}}
 }
 
 
@@ -378,6 +470,44 @@ void ShiftBitIntByConstant(_BitInt(28) Ext) {
   // CHECK: shl i28 %{{.+}}, 29
   Ext >> 29;
   // CHECK: ashr i28 %{{.+}}, 29
+}
+void ShiftBitIntByConstant(uint16_t4 Ext) {
+// LIN64: define{{.*}} void @_Z21ShiftBitIntByConstantDv4_DU16_(double %
+// LIN32: define dso_local void @_Z21ShiftBitIntByConstantDv4_DU16_(i64 %
+// WIN: define dso_local void @"?ShiftBitIntByConstant@@YAXT?$__vector@U?$_UBitInt@$0BA@@__clang@@$03@__clang@@@Z"(<4 x i16>
+  Ext << 7;
+  // CHECK: shl <4 x i16> %{{.+}}, <i16 7, i16 7, i16 7, i16 7>
+  Ext >> 7;
+  // CHECK: lshr <4 x i16> %{{.+}}, <i16 7, i16 7, i16 7, i16 7>
+  Ext << -7;
+  // CHECK: shl <4 x i16> %{{.+}}, <i16 -7, i16 -7, i16 -7, i16 -7>
+  Ext >> -7;
+  // CHECK: lshr <4 x i16> %{{.+}}, <i16 -7, i16 -7, i16 -7, i16 -7>
+
+  // UB in C/C++, Defined in OpenCL.
+  Ext << 29;
+  // CHECK: shl <4 x i16> %{{.+}}, <i16 29, i16 29, i16 29, i16 29>
+  Ext >> 29;
+  // CHECK: lshr <4 x i16> %{{.+}}, <i16 29, i16 29, i16 29, i16 29>
+}
+void ShiftBitIntByConstant(vint32_t8 Ext) {
+// LIN64: define{{.*}} void @_Z21ShiftBitIntByConstantDv8_DB32_(<8 x i32>* byval(<8 x i32>) align 32 %
+// LIN32: define dso_local void @_Z21ShiftBitIntByConstantDv8_DB32_(<8 x i32> %
+// WIN: define dso_local void @"?ShiftBitIntByConstant@@YAXT?$__vector@U?$_BitInt@$0CA@@__clang@@$07@__clang@@@Z"(<8 x i32>
+  Ext << 7;
+  // CHECK: shl <8 x i32> %{{.+}}, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+  Ext >> 7;
+  // CHECK: ashr <8 x i32> %{{.+}}, <i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7, i32 7>
+  Ext << -7;
+  // CHECK: shl <8 x i32> %{{.+}}, <i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7>
+  Ext >> -7;
+  // CHECK: ashr <8 x i32> %{{.+}}, <i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7, i32 -7>
+
+  // UB in C/C++, Defined in OpenCL.
+  Ext << 29;
+  // CHECK: shl <8 x i32> %{{.+}}, <i32 29, i32 29, i32 29, i32 29, i32 29, i32 29, i32 29, i32 29>
+  Ext >> 29;
+  // CHECK: ashr <8 x i32> %{{.+}}, <i32 29, i32 29, i32 29, i32 29, i32 29, i32 29, i32 29, i32 29>
 }
 
 void ConstantShiftByBitInt(_BitInt(28) Ext, _BitInt(65) LargeExt) {
@@ -459,6 +589,28 @@ void ComplexTest(_Complex _BitInt(12) first, _Complex _BitInt(33) second) {
   // CHECK: %[[SECOND_IMAG:.+]] = load i33, i33* %[[SECOND_IMAGP]]
   // CHECK: %[[REAL:.+]] = add i33 %[[FIRST_REAL_CONV]], %[[SECOND_REAL]]
   // CHECK: %[[IMAG:.+]] = add i33 %[[FIRST_IMAG_CONV]], %[[SECOND_IMAG]]
+}
+
+typedef  _BitInt(64) vint64_t16 __attribute__((vector_size(16)));
+void VectorTest(vint64_t16 first, vint64_t16 second) {
+  // LIN: define{{.*}} void @_Z10VectorTestDv2_DB64_S0_(<2 x i64> %{{.+}}, <2 x i64> %{{.+}})
+  // WIN64: define dso_local void @"?VectorTest@@YAXT?$__vector@U?$_BitInt@$0EA@@__clang@@$01@__clang@@0@Z"(<2 x i64> %{{.+}}, <2 x i64> %{{.+}})
+  // WIN32: define dso_local void @"?VectorTest@@YAXT?$__vector@U?$_BitInt@$0EA@@__clang@@$01@__clang@@0@Z"(<2 x i64> inreg %{{.+}}, <2 x i64> inreg %{{.+}})
+  __builtin_shufflevector (first, first, 1, 3, 2) + __builtin_shufflevector (second, second, 1, 3, 2);
+  // CHECK: %[[Shuffle:.+]] = shufflevector <2 x i64> %{{.+}}, <2 x i64> %{{.+}}, <3 x i32> <i32 1, i32 3, i32 2>
+  // CHECK:  %[[Shuffle1:.+]] = shufflevector <2 x i64> %{{.+}}, <2 x i64> %{{.+}}, <3 x i32> <i32 1, i32 3, i32 2>
+  // CHECK: %[[ADD:.+]] = add <3 x i64> %[[Shuffle]], %[[Shuffle1]]
+}
+
+void VectorTest(uint16_t4 first, uint16_t4 second) {
+  // LIN64: define{{.*}} void @_Z10VectorTestDv4_DU16_S0_(double %{{.+}}, double %{{.+}})
+  // LIN32: define{{.*}} void @_Z10VectorTestDv4_DU16_S0_(i64 %{{.+}}, i64 %{{.+}})
+  // WIN64: define dso_local void @"?VectorTest@@YAXT?$__vector@U?$_UBitInt@$0BA@@__clang@@$03@__clang@@0@Z"(<4 x i16> %{{.+}}, <4 x i16> %{{.+}})
+  // WIN32: define dso_local void @"?VectorTest@@YAXT?$__vector@U?$_UBitInt@$0BA@@__clang@@$03@__clang@@0@Z"(<4 x i16> inreg %{{.+}}, <4 x i16> inreg %{{.+}})
+  first.xzw + second.zwx;
+  // CHECK: %[[Shuffle:.+]] = shufflevector <4 x i16> %{{.+}}, <4 x i16> poison, <3 x i32> <i32 0, i32 2, i32 3>
+  // CHECK: %[[Shuffle1:.+]] = shufflevector <4 x i16> %{{.+}}, <4 x i16> poison, <3 x i32> <i32 2, i32 3, i32 0>
+  // CHECK: %[[ADD:.+]] = add <3 x i16> %[[Shuffle]], %[[Shuffle1]]
 }
 
 // Ensure that these types don't alias the normal int types.

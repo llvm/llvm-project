@@ -6,6 +6,15 @@
 ; CHECK: .section        .CRT$XCA00042,"dr"
 ; CHECK: .p2align        3
 ; CHECK: .quad   f
+; CHECK: .section        .CRT$XCC,"dr"
+; CHECK: .p2align        3
+; CHECK: .quad   i
+; CHECK: .section        .CRT$XCC00250,"dr"
+; CHECK: .p2align        3
+; CHECK: .quad   k
+; CHECK: .section        .CRT$XCL,"dr"
+; CHECK: .p2align        3
+; CHECK: .quad   j
 ; CHECK: .section        .CRT$XCT12345,"dr"
 ; CHECK: .p2align        3
 ; CHECK: .quad   g
@@ -24,10 +33,13 @@ $h = comdat any
 @str1 = private dso_local unnamed_addr constant [6 x i8] c"first\00", align 1
 @str2 = private dso_local unnamed_addr constant [5 x i8] c"main\00", align 1
 
-@llvm.global_ctors = appending global [3 x { i32, ptr, ptr }] [
+@llvm.global_ctors = appending global [6 x { i32, ptr, ptr }] [
   { i32, ptr, ptr } { i32 12345, ptr @g, ptr null },
   { i32, ptr, ptr } { i32 42, ptr @f, ptr null },
-  { i32, ptr, ptr } { i32 23456, ptr @init_h, ptr @h }
+  { i32, ptr, ptr } { i32 23456, ptr @init_h, ptr @h },
+  { i32, ptr, ptr } { i32 200, ptr @i, ptr null },
+  { i32, ptr, ptr } { i32 400, ptr @j, ptr null },
+  { i32, ptr, ptr } { i32 250, ptr @k, ptr null }
 ]
 
 declare dso_local i32 @puts(ptr nocapture readonly) local_unnamed_addr
@@ -50,6 +62,23 @@ entry:
   ret void
 }
 
+define dso_local void @i() {
+entry:
+  store i8 43, ptr @h
+  ret void
+}
+
+define dso_local void @j() {
+entry:
+  store i8 44, ptr @h
+  ret void
+}
+
+define dso_local void @k() {
+entry:
+  store i8 45, ptr @h
+  ret void
+}
 
 ; Function Attrs: nounwind uwtable
 define dso_local i32 @main() local_unnamed_addr {

@@ -328,7 +328,7 @@ void lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetValueOffset(
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
     size_t idx) {
-  static ConstString g_cc("__cc");
+  static ConstString g_cc_("__cc_"), g_cc("__cc");
   static ConstString g_nc("__nc");
   static ConstString g_value_("__value_");
 
@@ -414,15 +414,17 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex(
     switch (potential_child_sp->GetNumChildren()) {
     case 1: {
       auto child0_sp = potential_child_sp->GetChildAtIndex(0, true);
-      if (child0_sp && child0_sp->GetName() == g_cc)
+      if (child0_sp &&
+          (child0_sp->GetName() == g_cc_ || child0_sp->GetName() == g_cc))
         potential_child_sp = child0_sp->Clone(ConstString(name.GetString()));
       break;
     }
     case 2: {
       auto child0_sp = potential_child_sp->GetChildAtIndex(0, true);
       auto child1_sp = potential_child_sp->GetChildAtIndex(1, true);
-      if (child0_sp && child0_sp->GetName() == g_cc && child1_sp &&
-          child1_sp->GetName() == g_nc)
+      if (child0_sp &&
+          (child0_sp->GetName() == g_cc_ || child0_sp->GetName() == g_cc) &&
+          child1_sp && child1_sp->GetName() == g_nc)
         potential_child_sp = child0_sp->Clone(ConstString(name.GetString()));
       break;
     }

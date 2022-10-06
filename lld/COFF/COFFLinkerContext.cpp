@@ -13,8 +13,7 @@
 #include "lld/Common/Memory.h"
 #include "llvm/DebugInfo/CodeView/TypeHashing.h"
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 COFFLinkerContext::COFFLinkerContext()
     : symtab(*this), rootTimer("Total Linking Time"),
@@ -36,5 +35,4 @@ COFFLinkerContext::COFFLinkerContext()
       tpiStreamLayoutTimer("TPI Stream Layout", totalPdbLinkTimer),
       diskCommitTimer("Commit to Disk", totalPdbLinkTimer) {}
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff

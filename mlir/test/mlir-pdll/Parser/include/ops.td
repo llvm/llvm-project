@@ -10,7 +10,7 @@ def OpAllSingle : Op<Test_Dialect, "all_single"> {
   let arguments = (ins
     I64:$operand,
     I64Attr:$attr,
-    Confined<I64Attr, [IntNonNegative]>:$nonNegativeAttr
+    ConfinedAttr<I64Attr, [IntNonNegative]>:$nonNegativeAttr
   );
   let results = (outs I64:$result);
 }

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fvisibility hidden -fsanitize=cfi-nvcall -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fvisibility hidden -fsanitize=cfi-nvcall,cfi-cast-strict -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-STRICT %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-nvcall -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux -fvisibility=hidden -fsanitize=cfi-nvcall,cfi-cast-strict -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-STRICT %s
 
 struct A {
   virtual void f();

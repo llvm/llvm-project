@@ -886,12 +886,6 @@ TEST(RenameTest, Renameable) {
          @end
        )cpp",
        "not a supported kind", HeaderFile},
-      {R"cpp(// FIXME: rename virtual/override methods is not supported yet.
-         struct A {
-          virtual void f^oo() {}
-         };
-      )cpp",
-       "not a supported kind", !HeaderFile},
       {R"cpp(
          void foo(int);
          void foo(char);
@@ -1489,6 +1483,53 @@ TEST(CrossFileRenameTests, WithUpToDateIndex) {
           p->[[foo]]();
         }
       )cpp",
+      },
+      {
+          // virtual methods.
+          R"cpp(
+        class Base {
+          virtual void [[foo]]();
+        };
+        class Derived1 : public Base {
+          void [[f^oo]]() override;
+        };
+        class NotDerived {
+          void foo() {};
+        }
+      )cpp",
+          R"cpp(
+        #include "foo.h"
+        void Base::[[foo]]() {}
+        void Derived1::[[foo]]() {}
+
+        class Derived2 : public Derived1 {
+          void [[foo]]() override {};
+        };
+
+        void func(Base* b, Derived1* d1, 
+                  Derived2* d2, NotDerived* nd) {
+          b->[[foo]]();
+          d1->[[foo]]();
+          d2->[[foo]]();
+          nd->foo();
+        }
+      )cpp",
+      },
+      {
+          // virtual templated method
+          R"cpp(
+        template <typename> class Foo { virtual void [[m]](); };
+        class Bar : Foo<int> { void [[^m]]() override; };
+      )cpp",
+          R"cpp(
+          #include "foo.h"
+
+          template<typename T> void Foo<T>::[[m]]() {}
+          // FIXME: not renamed as the index doesn't see this as an override of
+          // the canonical Foo<T>::m().
+          // https://github.com/clangd/clangd/issues/1325
+          class Baz : Foo<float> { void m() override; };
+        )cpp"
       },
       {
           // rename on constructor and destructor.

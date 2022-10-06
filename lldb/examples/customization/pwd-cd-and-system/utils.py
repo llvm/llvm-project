@@ -1,5 +1,4 @@
 """Utility for changing directories and execution of commands in a subshell."""
-from __future__ import print_function
 
 import os
 import shlex

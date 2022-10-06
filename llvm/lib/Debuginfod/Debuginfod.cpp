@@ -27,9 +27,8 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Debuginfod/HTTPClient.h"
-#include "llvm/Object/Binary.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/Object/ELFObjectFile.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/Errc.h"
@@ -40,8 +39,12 @@
 #include "llvm/Support/xxhash.h"
 
 #include <atomic>
+#include <thread>
 
 namespace llvm {
+
+using llvm::object::BuildIDRef;
+
 static std::string uniqueKey(llvm::StringRef S) { return utostr(xxHash64(S)); }
 
 // Returns a binary BuildID as a normalized hex string.
@@ -300,16 +303,6 @@ Error DebuginfodCollection::updateForever(std::chrono::milliseconds Interval) {
   llvm_unreachable("updateForever loop should never end");
 }
 
-static bool isDebugBinary(object::ObjectFile *Object) {
-  // TODO: handle PDB debuginfo
-  std::unique_ptr<DWARFContext> Context = DWARFContext::create(
-      *Object, DWARFContext::ProcessDebugRelocations::Process);
-  const DWARFObject &DObj = Context->getDWARFObj();
-  unsigned NumSections = 0;
-  DObj.forEachInfoSections([&](const DWARFSection &S) { NumSections++; });
-  return NumSections;
-}
-
 static bool hasELFMagic(StringRef FilePath) {
   file_magic Type;
   std::error_code EC = identify_magic(FilePath, Type);
@@ -369,12 +362,12 @@ Error DebuginfodCollection::findBinaries(StringRef Path) {
         if (!Object)
           continue;
 
-        Optional<BuildIDRef> ID = symbolize::getBuildID(Object);
+        Optional<BuildIDRef> ID = getBuildID(Object);
         if (!ID)
           continue;
 
         std::string IDString = buildIDToString(ID.value());
-        if (isDebugBinary(Object)) {
+        if (Object->hasDebugInfo()) {
           std::lock_guard<sys::RWMutex> DebugBinariesGuard(DebugBinariesMutex);
           DebugBinaries[IDString] = FilePath;
         } else {
@@ -484,7 +477,7 @@ DebuginfodServer::DebuginfodServer(DebuginfodLog &Log,
               {404, "text/plain", "Build ID is not a hex string\n"});
           return;
         }
-        BuildID ID(IDString.begin(), IDString.end());
+        object::BuildID ID(IDString.begin(), IDString.end());
         Expected<std::string> PathOrErr = Collection.findDebugBinaryPath(ID);
         if (Error Err = PathOrErr.takeError()) {
           consumeError(std::move(Err));
@@ -502,7 +495,7 @@ DebuginfodServer::DebuginfodServer(DebuginfodLog &Log,
               {404, "text/plain", "Build ID is not a hex string\n"});
           return;
         }
-        BuildID ID(IDString.begin(), IDString.end());
+        object::BuildID ID(IDString.begin(), IDString.end());
         Expected<std::string> PathOrErr = Collection.findBinaryPath(ID);
         if (Error Err = PathOrErr.takeError()) {
           consumeError(std::move(Err));

@@ -7,14 +7,12 @@ define void @test(i8* %ptr, i8 %cmp, i8 %val) {
 ; PPC64LE-NEXT:    clrlwi 4, 4, 24
 ; PPC64LE-NEXT:  .LBB0_1:
 ; PPC64LE-NEXT:    lbarx 6, 0, 3
-; PPC64LE-NEXT:    cmpw 4, 6
-; PPC64LE-NEXT:    bne 0, .LBB0_3
+; PPC64LE-NEXT:    cmpw 6, 4
+; PPC64LE-NEXT:    bnelr 0
 ; PPC64LE-NEXT:  # %bb.2:
 ; PPC64LE-NEXT:    stbcx. 5, 0, 3
-; PPC64LE-NEXT:    beqlr 0
-; PPC64LE-NEXT:    b .LBB0_1
-; PPC64LE-NEXT:  .LBB0_3:
-; PPC64LE-NEXT:    stbcx. 6, 0, 3
+; PPC64LE-NEXT:    bne 0, .LBB0_1
+; PPC64LE-NEXT:  # %bb.3:
 ; PPC64LE-NEXT:    blr
   %res = cmpxchg i8* %ptr, i8 %cmp, i8 %val monotonic monotonic
   ret void

@@ -20,7 +20,7 @@
 
 int main(int, char**)
 {
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     assert( std::char_traits<char8_t>::eq(u8'a', u8'a'));
     assert(!std::char_traits<char8_t>::eq(u8'a', u8'A'));
 #endif

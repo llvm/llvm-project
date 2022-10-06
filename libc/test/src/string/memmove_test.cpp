@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/ArrayRef.h"
+#include "src/__support/CPP/span.h"
 #include "src/string/memmove.h"
 #include "utils/UnitTest/MemoryMatcher.h"
 #include "utils/UnitTest/Test.h"
 
-using __llvm_libc::cpp::Array;
-using __llvm_libc::cpp::ArrayRef;
-using __llvm_libc::cpp::MutableArrayRef;
+using __llvm_libc::cpp::array;
+using __llvm_libc::cpp::span;
 
 TEST(LlvmLibcMemmoveTest, MoveZeroByte) {
   char Buffer[] = {'a', 'b', 'y', 'z'};
@@ -86,13 +85,13 @@ char GetRandomChar() {
   return Seed;
 }
 
-void Randomize(MutableArrayRef<char> Buffer) {
+void Randomize(span<char> Buffer) {
   for (auto &current : Buffer)
     current = GetRandomChar();
 }
 
 TEST(LlvmLibcMemmoveTest, Thorough) {
-  using LargeBuffer = Array<char, 3 * kMaxSize>;
+  using LargeBuffer = array<char, 3 * kMaxSize>;
   LargeBuffer GroundTruth;
   Randomize(GroundTruth);
   for (int Size = 0; Size < kMaxSize; ++Size) {

@@ -23,8 +23,7 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 def SCF_Dialect : Dialect {
   let name = "scf";
   let cppNamespace = "::mlir::scf";
-  let dependentDialects = ["arith::ArithmeticDialect"];
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
+  let dependentDialects = ["arith::ArithDialect"];
 }
 
 // Base class for SCF dialect ops.
@@ -234,6 +233,12 @@ def ForOp : SCF_Op<"for",
     Block::BlockArgListType getRegionIterArgs() {
       return getBody()->getArguments().drop_front(getNumInductionVars());
     }
+    /// Return the `index`-th region iteration argument.
+    BlockArgument getRegionIterArg(unsigned index) {
+      assert(index < getNumRegionIterArgs() && 
+        "expected an index less than the number of region iter args");
+      return getBody()->getArguments().drop_front(getNumInductionVars())[index];
+    }
     Operation::operand_range getIterOperands() {
       return getOperands().drop_front(getNumControlOperands());
     }
@@ -245,6 +250,9 @@ def ForOp : SCF_Op<"for",
     void setLowerBound(Value bound) { getOperation()->setOperand(0, bound); }
     void setUpperBound(Value bound) { getOperation()->setOperand(1, bound); }
     void setStep(Value step) { getOperation()->setOperand(2, step); }
+    void setIterArg(unsigned iterArgNum, Value iterArgValue) {
+      getOperation()->setOperand(iterArgNum + getNumControlOperands(), iterArgValue);
+    }
 
     /// Number of induction variables, always 1 for scf::ForOp.
     unsigned getNumInductionVars() { return 1; }
@@ -262,6 +270,17 @@ def ForOp : SCF_Op<"for",
     unsigned getNumIterOperands() {
       return getOperation()->getNumOperands() - getNumControlOperands();
     }
+    /// Get the iter arg number for an operand. If it isnt an iter arg
+    /// operand return llvm::None.
+    Optional<unsigned> getIterArgNumberForOpOperand(OpOperand &opOperand) {
+      if (opOperand.getOwner() != getOperation())
+        return llvm::None;
+      unsigned operandNumber = opOperand.getOperandNumber();
+      if (operandNumber < getNumControlOperands())
+        return llvm::None;
+      return operandNumber - getNumControlOperands();
+    }
+
     /// Get the region iter arg that corresponds to an OpOperand.
     /// This helper prevents internal op implementation detail leakage to
     /// clients by hiding the operand / block argument mapping.
@@ -324,6 +343,7 @@ def ForOp : SCF_Op<"for",
 //===----------------------------------------------------------------------===//
 
 def ForeachThreadOp : SCF_Op<"foreach_thread", [
+       AttrSizedOperandSegments,
        SingleBlockImplicitTerminator<"scf::PerformConcurrentlyOp">,
        RecursiveSideEffects,
        AutomaticAllocationScope,
@@ -334,6 +354,17 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     region application operation. It has exactly one block that represents the
     parallel body and it takes index operands that indicate how many parallel
     instances of that function are created.
+
+    The op also takes a variadic number of tensor operands (`shared_outs`).
+    The future buffers corresponding to these tensors are shared among all
+    threads. Shared tensors should be accessed via their corresponding block
+    arguments. If multiple threads write to a shared buffer in a racy
+    fashion, these writes will execute in some unspecified order. Tensors that
+    are not shared can be used inside the body (i.e., the op is not isolated
+    from above); however, if a use of such a tensor bufferizes to a memory
+    write, the tensor is privatized, i.e., a thread-local copy of the tensor is
+    used. This ensures that memory side effects of a thread are not visible to
+    other threads (or in the parent body), apart from explicitly shared tensors.
 
     The name "thread" conveys the fact that the parallel execution is mapped
     (i.e. distributed) to a set of virtual threads of execution, one function
@@ -349,26 +380,20 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     context of the concrete target the op is lowered to, or to ignore it when
     the specification is ill-formed or unsupported for a particular target.
 
-    The only allowed terminator is `scf.foreach_thread.perform_concurrently`,
-    which dictates how the partial results of all parallel invocations should be
-    reconciled into a full value.
+    The only allowed terminator is `scf.foreach_thread.perform_concurrently`.
+    `scf.foreach_thread` returns one value per `shared_out` operand. The
+    actions of the `perform_concurrently` terminators specify how to combine the
+    partial results of all parallel invocations into a full value, in some
+    unspecified order. The "destination" of each such op must be a `shared_out`
+    block argument of the `scf.foreach_thread` op.
 
-    `scf.foreach_thread` returns values that are formed by aggregating the
-    actions of all the `perform_concurrently` terminator of all the virtual
-    threads, in some unspecified order.
-    In other words, `scf.foreach_thread` performs all actions specified in the
-    `perform_concurrently` terminator, after it receives the control back from
-    its body along each virtual thread of execution.
     The actions involved in constructing the return values are further described
-    by [parallel_insert_slice](#parallelinsertslice-parallelinsertsliceop).
+    by `tensor.parallel_insert_slice`.
 
     `scf.foreach_thread` acts as an implicit synchronization point.
 
-    Multi-value returns are encoded by including multiple operations inside the
-    `perform_concurrently` block.
-
-    When the parallel function body has side effects, the order of reads and
-    writes to memory is unspecified across threads.
+    When the parallel function body has side effects, their order is unspecified
+    across threads.
 
     Example:
 
@@ -377,7 +402,8 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     // Sequential context.
     //
     %matmul_and_pointwise:2 = scf.foreach_thread (%thread_id_1, %thread_id_2) in
-         (%num_threads_1, %numthread_id_2) -> (tensor<?x?xT>, tensor<?xT>) {
+        (%num_threads_1, %numthread_id_2) shared_outs(%o1 = %C, %o2 = %pointwise)
+      -> (tensor<?x?xT>, tensor<?xT>) {
       //
       // Parallel context, each thread with id = (%thread_id_1, %thread_id_2)
       // runs its version of the code.
@@ -386,21 +412,19 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
         tensor<?x?xT> to tensor<?x?xT>
       %sB = tensor.extract_slice %B[g((%thread_id_1, %thread_id_2))]:
         tensor<?x?xT> to tensor<?x?xT>
-      %sC = tensor.extract_slice %C[h((%thread_id_1, %thread_id_2))]:
+      %sC = tensor.extract_slice %o1[h((%thread_id_1, %thread_id_2))]:
         tensor<?x?xT> to tensor<?x?xT>
       %sD = matmul ins(%sA, %sB) outs(%sC)
 
-      %spointwise = subtensor %pointwise[i((%thread_id_1, %thread_id_2))]:
+      %spointwise = subtensor %o2[i((%thread_id_1, %thread_id_2))]:
         tensor<?xT> to tensor<?xT>
       %sE = add ins(%spointwise) outs(%sD)
 
       scf.foreach_thread.perform_concurrently {
-        // First op within the parallel terminator contributes to producing %matmul_and_pointwise#0.
-        scf.foreach_thread.parallel_insert_slice %sD into %C[h((%thread_id_1, %thread_id_2))]:
+        scf.foreach_thread.parallel_insert_slice %sD into %o1[h((%thread_id_1, %thread_id_2))]:
           tensor<?x?xT> into tensor<?x?xT>
 
-        // Second op within the parallel terminator contributes to producing %matmul_and_pointwise#1.
-        scf.foreach_thread.parallel_insert_slice %spointwise into %pointwise[i((%thread_id_1, %thread_id_2))]:
+        scf.foreach_thread.parallel_insert_slice %spointwise into %o2[i((%thread_id_1, %thread_id_2))]:
           tensor<?xT> into tensor<?xT>
       }
     }
@@ -414,7 +438,8 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     // Sequential context.
     //
     %matmul_and_pointwise:2 = scf.foreach_thread (%thread_id_1, %thread_id_2) in
-         (%num_threads_1, %numthread_id_2) -> (tensor<?x?xT>, tensor<?xT>) {
+        (%num_threads_1, %numthread_id_2) shared_outs(...)
+      -> (tensor<?x?xT>, tensor<?xT>) {
       //
       // Parallel context, each thread with id = **(%thread_id_2, %thread_id_1)**
       // runs its version of the code.
@@ -426,9 +451,23 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     // Implicit synchronization point.
     // Sequential context.
     //
+
+    Example with privatized tensors:
+    %t0 = ...
+    %t1 = ...
+    %r = scf.foreach_thread ... shared_outs(%o = t0) -> tensor<?xf32> {
+      // %t0 and %t1 are privatized. %t0 is definitely copied for each thread
+      // because the scf.foreach_thread op's %t0 use bufferizes to a memory
+      // write. In the absence of other conflicts, %t1 is copied only if there
+      // are uses of %t1 in the body that bufferize to a memory read and to a
+      // memory write.
+      "some_use"(%t0)
+      "some_use"(%t1)
+    }
   }];
   let arguments = (ins Variadic<Index>:$num_threads,
-                   DefaultValuedAttr<I64ArrayAttr, "{}">:$thread_dim_mapping);
+                       Variadic<AnyRankedTensor>:$outputs,
+                       DefaultValuedAttr<I64ArrayAttr, "{}">:$thread_dim_mapping);
 
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
@@ -439,19 +478,58 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
   // The default builder does not add the proper body BBargs, roll our own.
   let skipDefaultBuilders = 1;
   let builders = [
-    // Bodyless builder, result types must be specified.
-    OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$num_threads,
+    // Bodyless builder, outputs must be specified.
+    OpBuilder<(ins "ValueRange":$outputs, "ValueRange":$num_threads,
                    CArg<"ArrayRef<int64_t>", "{}">:$thread_dim_mapping)>,
-    // Builder that takes a bodyBuilder lambda, result types are inferred from
-    // the terminator.
-    OpBuilder<(ins "ValueRange":$num_threads,
+    // Builder that takes a bodyBuilder lambda.
+    OpBuilder<(ins "ValueRange":$outputs, "ValueRange":$num_threads,
                    "ArrayRef<int64_t>":$thread_dim_mapping,
                    "function_ref<void(OpBuilder &, Location, ValueRange)>":$bodyBuilder)>
   ];
   let extraClassDeclaration = [{
     int64_t getRank() { return getNumThreads().size(); }
-    ::mlir::ValueRange getThreadIndices() { return getBody()->getArguments(); }
-    ::mlir::Value getThreadIndex(int64_t idx) { return getBody()->getArgument(idx); }
+
+    OpResult getTiedOpResult(OpOperand *opOperand) {
+      assert(opOperand->getOperandNumber() >= getRank() && "invalid operand");
+      return getOperation()->getOpResult(
+          opOperand->getOperandNumber() - getRank());
+    }
+
+    OpOperand *getTiedOpOperand(BlockArgument bbArg) {
+      assert(bbArg.getArgNumber() >= getRank() && "invalid bbArg");
+      return &getOperation()->getOpOperand(bbArg.getArgNumber());
+    }
+
+    BlockArgument getTiedBlockArgument(OpOperand *opOperand) {
+      assert(opOperand->getOperandNumber() >= getRank() && "invalid operand");
+      return getBody()->getArgument(opOperand->getOperandNumber());
+    }
+
+    ArrayRef<BlockArgument> getOutputBlockArguments() {
+      return getBody()->getArguments().drop_front(getRank());
+    }
+
+    ::mlir::ValueRange getThreadIndices() {
+      return getBody()->getArguments().take_front(getRank());
+    }
+
+    ::mlir::Value getThreadIndex(int64_t idx) {
+      return getThreadIndices()[idx];
+    }
+
+    ::mlir::Block::BlockArgListType getRegionOutArgs() {
+      return getBody()->getArguments().drop_front(getRank());
+    }
+
+    /// Return the thread indices in the order specified by the 
+    /// thread_dim_mapping attribute. Return failure is 
+    /// thread_dim_mapping is not a valid permutation.
+    FailureOr<SmallVector<Value>> getPermutedThreadIndices();
+
+    /// Return the number of threads in the order specified by the
+    /// thread_dim_mapping attribute.
+    /// Return failure is thread_dim_mapping is not a valid permutation.
+    FailureOr<SmallVector<OpFoldResult>> getPermutedNumThreads(OpBuilder &b);
 
     // The ensureTerminator method generated by SingleBlockImplicitTerminator is
     // unaware of the fact that our terminator also needs a region to be
@@ -497,7 +575,7 @@ def PerformConcurrentlyOp : SCF_Op<"foreach_thread.perform_concurrently", [
   // TODO: Add a `PerformConcurrentlyOpInterface` interface for ops that can
   // appear inside perform_concurrently.
   let extraClassDeclaration = [{
-    ::llvm::SmallVector<::mlir::Type> getYieldedTypes();
+    ::llvm::SmallVector<::mlir::BlockArgument> getDests();
     ::llvm::iterator_range<::mlir::Block::iterator> getYieldingOps();
     ::mlir::OpResult getParentResult(int64_t idx);
   }];

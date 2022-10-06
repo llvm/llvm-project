@@ -1,44 +1,44 @@
 // RUN: mlir-opt -test-spirv-module-combiner -split-input-file -verify-diagnostics %s | FileCheck %s
 
 module {
-spv.module @Module1 Logical GLSL450 {
-  spv.GlobalVariable @foo bind(1, 0) : !spv.ptr<f32, Input>
-  spv.func @bar() -> () "None" {
-    spv.Return
+spirv.module @Module1 Logical GLSL450 {
+  spirv.GlobalVariable @foo bind(1, 0) : !spirv.ptr<f32, Input>
+  spirv.func @bar() -> () "None" {
+    spirv.Return
   }
-  spv.func @baz() -> () "None" {
-    spv.Return
+  spirv.func @baz() -> () "None" {
+    spirv.Return
   }
 
-  spv.SpecConstant @sc = -5 : i32
+  spirv.SpecConstant @sc = -5 : i32
 }
 
-spv.module @Module2 Logical GLSL450 {
-  spv.func @foo() -> () "None" {
-    spv.Return
+spirv.module @Module2 Logical GLSL450 {
+  spirv.func @foo() -> () "None" {
+    spirv.Return
   }
 
-  spv.GlobalVariable @bar bind(1, 0) : !spv.ptr<f32, Input>
+  spirv.GlobalVariable @bar bind(1, 0) : !spirv.ptr<f32, Input>
 
-  spv.func @baz() -> () "None" {
-    spv.Return
+  spirv.func @baz() -> () "None" {
+    spirv.Return
   }
 
-  spv.SpecConstant @sc = -5 : i32
+  spirv.SpecConstant @sc = -5 : i32
 }
 
-spv.module @Module3 Logical GLSL450 {
-  spv.func @foo() -> () "None" {
-    spv.Return
+spirv.module @Module3 Logical GLSL450 {
+  spirv.func @foo() -> () "None" {
+    spirv.Return
   }
 
-  spv.GlobalVariable @bar bind(1, 0) : !spv.ptr<f32, Input>
+  spirv.GlobalVariable @bar bind(1, 0) : !spirv.ptr<f32, Input>
 
-  spv.func @baz() -> () "None" {
-    spv.Return
+  spirv.func @baz() -> () "None" {
+    spirv.Return
   }
 
-  spv.SpecConstant @sc = -5 : i32
+  spirv.SpecConstant @sc = -5 : i32
 }
 }
 

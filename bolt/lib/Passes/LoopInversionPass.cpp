@@ -44,7 +44,8 @@ bool LoopInversionPass::runOnFunction(BinaryFunction &BF) {
     const unsigned BBIndex = BB->getLayoutIndex();
     const unsigned SuccBBIndex = SuccBB->getLayoutIndex();
     if (SuccBB == PredBB && BB != SuccBB && BBIndex != 0 && SuccBBIndex != 0 &&
-        SuccBB->succ_size() == 2 && BB->isCold() == SuccBB->isCold()) {
+        SuccBB->succ_size() == 2 &&
+        BB->getFragmentNum() == SuccBB->getFragmentNum()) {
       // Get the second successor (after loop BB)
       BinaryBasicBlock *SecondSucc = nullptr;
       for (BinaryBasicBlock *Succ : SuccBB->successors()) {

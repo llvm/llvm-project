@@ -27,7 +27,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template < class _Comp, class _InIter1, class _Sent1, class _InIter2, class _Sent2, class _OutIter>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 pair<__uncvref_t<_InIter1>, __uncvref_t<_OutIter> >
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pair<__remove_cvref_t<_InIter1>, __remove_cvref_t<_OutIter> >
 __set_difference(
     _InIter1&& __first1, _Sent1&& __last1, _InIter2&& __first2, _Sent2&& __last2, _OutIter&& __result, _Comp&& __comp) {
   while (__first1 != __last1 && __first2 != __last2) {
@@ -46,19 +46,19 @@ __set_difference(
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator, class _Compare>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _OutputIterator set_difference(
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator set_difference(
     _InputIterator1 __first1,
     _InputIterator1 __last1,
     _InputIterator2 __first2,
     _InputIterator2 __last2,
     _OutputIterator __result,
     _Compare __comp) {
-  typedef typename __comp_ref_type<_Compare>::type _Comp_ref;
-  return std::__set_difference<_Comp_ref>(__first1, __last1, __first2, __last2, __result, __comp).second;
+  return std::__set_difference<__comp_ref_type<_Compare> >(__first1, __last1, __first2, __last2, __result, __comp)
+      .second;
 }
 
 template <class _InputIterator1, class _InputIterator2, class _OutputIterator>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX17 _OutputIterator set_difference(
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _OutputIterator set_difference(
     _InputIterator1 __first1,
     _InputIterator1 __last1,
     _InputIterator2 __first2,

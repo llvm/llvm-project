@@ -227,7 +227,7 @@ static bool isArmBigEndian(const llvm::Triple &Triple,
   case llvm::Triple::armeb:
   case llvm::Triple::thumbeb:
     IsBigEndian = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
     if (Arg *A = Args.getLastArg(options::OPT_mlittle_endian,
@@ -278,6 +278,10 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
     return "elf32_sparc";
   case llvm::Triple::sparcv9:
     return "elf64_sparc";
+  case llvm::Triple::loongarch32:
+    return "elf32loongarch";
+  case llvm::Triple::loongarch64:
+    return "elf64loongarch";
   case llvm::Triple::mips:
     return "elf32btsmip";
   case llvm::Triple::mipsel:
@@ -631,6 +635,16 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
       AddRunTimeLibs(ToolChain, D, CmdArgs, Args);
 
+      // LLVM support for atomics on 32-bit SPARC V8+ is incomplete, so
+      // forcibly link with libatomic as a workaround.
+      // TODO: Issue #41880 and D118021.
+      if (getToolChain().getTriple().getArch() == llvm::Triple::sparc) {
+        CmdArgs.push_back("--push-state");
+        CmdArgs.push_back("--as-needed");
+        CmdArgs.push_back("-latomic");
+        CmdArgs.push_back("--pop-state");
+      }
+
       if (WantPthread && !isAndroid)
         CmdArgs.push_back("-lpthread");
 
@@ -716,7 +730,7 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
       CmdArgs.push_back("--compress-debug-sections");
     } else {
       StringRef Value = A->getValue();
-      if (Value == "none" || Value == "zlib") {
+      if (Value == "none" || Value == "zlib" || Value == "zstd") {
         CmdArgs.push_back(
             Args.MakeArgString("--compress-debug-sections=" + Twine(Value)));
       } else {
@@ -1355,7 +1369,7 @@ static bool findMipsMtiMultilibs(const Multilib::flags_list &Flags,
                   {"/../../../../mips-mti-linux-gnu/lib" + M.gccSuffix()});
             });
   }
-  for (auto Candidate : {&MtiMipsMultilibsV1, &MtiMipsMultilibsV2}) {
+  for (auto *Candidate : {&MtiMipsMultilibsV1, &MtiMipsMultilibsV2}) {
     if (Candidate->select(Flags, Result.SelectedMultilib)) {
       Result.Multilibs = *Candidate;
       return true;
@@ -1448,7 +1462,7 @@ static bool findMipsImgMultilibs(const Multilib::flags_list &Flags,
                   {"/../../../../mips-img-linux-gnu/lib" + M.gccSuffix()});
             });
   }
-  for (auto Candidate : {&ImgMultilibsV1, &ImgMultilibsV2}) {
+  for (auto *Candidate : {&ImgMultilibsV1, &ImgMultilibsV2}) {
     if (Candidate->select(Flags, Result.SelectedMultilib)) {
       Result.Multilibs = *Candidate;
       return true;
@@ -1983,6 +1997,28 @@ void Generic_GCC::GCCInstallationDetector::init(
                            CandidateTripleAliases, CandidateBiarchLibDirs,
                            CandidateBiarchTripleAliases);
 
+  // If --gcc-install-dir= is specified, skip filesystem detection.
+  if (const Arg *A =
+          Args.getLastArg(clang::driver::options::OPT_gcc_install_dir_EQ);
+      A && A->getValue()[0]) {
+    StringRef InstallDir = A->getValue();
+    if (!ScanGCCForMultilibs(TargetTriple, Args, InstallDir, false)) {
+      D.Diag(diag::err_drv_invalid_gcc_install_dir) << InstallDir;
+    } else {
+      (void)InstallDir.consume_back("/");
+      StringRef VersionText = llvm::sys::path::filename(InstallDir);
+      StringRef TripleText =
+          llvm::sys::path::filename(llvm::sys::path::parent_path(InstallDir));
+
+      Version = GCCVersion::Parse(VersionText);
+      GCCTriple.setTriple(TripleText);
+      GCCInstallPath = std::string(InstallDir);
+      GCCParentLibPath = GCCInstallPath + "/../../..";
+      IsValid = true;
+    }
+    return;
+  }
+
   // Compute the set of prefixes for our search.
   SmallVector<std::string, 8> Prefixes;
   StringRef GCCToolchainDir = getGCCToolchainDir(Args, D.SysRoot);
@@ -2218,6 +2254,10 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       "i386-redhat-linux6E", "i686-redhat-linux",     "i386-redhat-linux",
       "i586-suse-linux",     "i686-montavista-linux", "i686-gnu",
   };
+
+  static const char *const LoongArch64LibDirs[] = {"/lib64", "/lib"};
+  static const char *const LoongArch64Triples[] = {
+      "loongarch64-linux-gnu", "loongarch64-unknown-linux-gnu"};
 
   static const char *const M68kLibDirs[] = {"/lib"};
   static const char *const M68kTriples[] = {
@@ -2465,6 +2505,11 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       BiarchLibDirs.append(begin(X32LibDirs), end(X32LibDirs));
       BiarchTripleAliases.append(begin(X32Triples), end(X32Triples));
     }
+    break;
+  // TODO: Handle loongarch32.
+  case llvm::Triple::loongarch64:
+    LibDirs.append(begin(LoongArch64LibDirs), end(LoongArch64LibDirs));
+    TripleAliases.append(begin(LoongArch64Triples), end(LoongArch64Triples));
     break;
   case llvm::Triple::m68k:
     LibDirs.append(begin(M68kLibDirs), end(M68kLibDirs));
@@ -2804,7 +2849,8 @@ void Generic_GCC::printVerboseInfo(raw_ostream &OS) const {
   RocmInstallation.print(OS);
 }
 
-bool Generic_GCC::IsUnwindTablesDefault(const ArgList &Args) const {
+ToolChain::UnwindTableLevel
+Generic_GCC::getDefaultUnwindTableLevel(const ArgList &Args) const {
   switch (getArch()) {
   case llvm::Triple::aarch64:
   case llvm::Triple::ppc:
@@ -2813,9 +2859,9 @@ bool Generic_GCC::IsUnwindTablesDefault(const ArgList &Args) const {
   case llvm::Triple::ppc64le:
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:
-    return true;
+    return UnwindTableLevel::Asynchronous;
   default:
-    return false;
+    return UnwindTableLevel::None;
   }
 }
 
@@ -2851,6 +2897,8 @@ bool Generic_GCC::IsIntegratedAssemblerDefault() const {
   case llvm::Triple::csky:
   case llvm::Triple::hexagon:
   case llvm::Triple::lanai:
+  case llvm::Triple::loongarch32:
+  case llvm::Triple::loongarch64:
   case llvm::Triple::m68k:
   case llvm::Triple::mips:
   case llvm::Triple::mipsel:

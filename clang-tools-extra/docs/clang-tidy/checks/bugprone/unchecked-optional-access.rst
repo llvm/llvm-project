@@ -269,7 +269,7 @@ The check is aware of aliases of optional types that are created via
 Lambdas
 -------
 
-The check does not currently report unsafe optional acceses in lambdas.
+The check does not currently report unsafe optional accesses in lambdas.
 A future version will expand the scope to lambdas, following the rules
 outlined above. It is best to follow the same principles when using
 optionals in lambdas.

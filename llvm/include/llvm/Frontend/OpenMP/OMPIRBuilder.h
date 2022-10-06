@@ -14,6 +14,7 @@
 #ifndef LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 #define LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 
+#include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/IRBuilder.h"
@@ -467,6 +468,20 @@ private:
                                           bool NeedsBarrier,
                                           Value *Chunk = nullptr);
 
+  /// Create alternative version of the loop to support if clause
+  ///
+  /// OpenMP if clause can require to generate second loop. This loop
+  /// will be executed when if clause condition is not met. createIfVersion
+  /// adds branch instruction to the copied loop if \p  ifCond is not met.
+  ///
+  /// \param Loop       Original loop which should be versioned.
+  /// \param IfCond     Value which corresponds to if clause condition
+  /// \param VMap       Value to value map to define relation between
+  ///                   original and copied loop values and loop blocks.
+  /// \param NamePrefix Optional name prefix for if.then if.else blocks.
+  void createIfVersion(CanonicalLoopInfo *Loop, Value *IfCond,
+                       ValueToValueMapTy &VMap, const Twine &NamePrefix = "");
+
 public:
   /// Modifies the canonical loop to be a workshare loop.
   ///
@@ -597,11 +612,18 @@ public:
   void unrollLoopPartial(DebugLoc DL, CanonicalLoopInfo *Loop, int32_t Factor,
                          CanonicalLoopInfo **UnrolledCLI);
 
-  /// Add metadata to simd-ize a loop.
+  /// Add metadata to simd-ize a loop. If IfCond is not nullptr, the loop
+  /// is cloned. The metadata which prevents vectorization is added to
+  /// to the cloned loop. The cloned loop is executed when ifCond is evaluated
+  /// to false.
   ///
   /// \param Loop    The loop to simd-ize.
+  /// \param IfCond  The value which corresponds to the if clause condition.
+  /// \param Order   The enum to map order clause
   /// \param Simdlen The Simdlen length to apply to the simd loop.
-  void applySimd(CanonicalLoopInfo *Loop, ConstantInt *Simdlen);
+  /// \param Safelen The Safelen length to apply to the simd loop.
+  void applySimd(CanonicalLoopInfo *Loop, Value *IfCond, omp::OrderKind Order,
+                 ConstantInt *Simdlen, ConstantInt *Safelen);
 
   /// Generator for '#omp flush'
   ///
@@ -626,9 +648,16 @@ public:
   /// \param Tied True if the task is tied, false if the task is untied.
   /// \param Final i1 value which is `true` if the task is final, `false` if the
   ///              task is not final.
+  /// \param IfCondition i1 value. If it evaluates to `false`, an undeferred
+  ///                    task is generated, and the encountering thread must
+  ///                    suspend the current task region, for which execution
+  ///                    cannot be resumed until execution of the structured
+  ///                    block that is associated with the generated task is
+  ///                    completed.
   InsertPointTy createTask(const LocationDescription &Loc,
                            InsertPointTy AllocaIP, BodyGenCallbackTy BodyGenCB,
-                           bool Tied = true, Value *Final = nullptr);
+                           bool Tied = true, Value *Final = nullptr,
+                           Value *IfCondition = nullptr);
 
   /// Generator for the taskgroup construct
   ///
@@ -840,7 +869,7 @@ public:
   /// \param NumThreads Number of threads via the 'thread_limit' clause.
   /// \param HostPtr Pointer to the host-side pointer of the target kernel.
   /// \param KernelArgs Array of arguments to the kernel.
-  /// \param NoWaitKernelArgs Optional array of arguments to the nowait kernel.
+  /// \param NoWaitArgs Optional array of arguments to the nowait kernel.
   InsertPointTy emitTargetKernel(const LocationDescription &Loc, Value *&Return,
                                  Value *Ident, Value *DeviceID, Value *NumTeams,
                                  Value *NumThreads, Value *HostPtr,

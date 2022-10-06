@@ -768,7 +768,8 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
   }
 
   args.push_back(OMD->getSelfDecl());
-  args.push_back(OMD->getCmdDecl());
+  if (!OMD->isDirectMethod())
+    args.push_back(OMD->getCmdDecl());
 
   args.append(OMD->param_begin(), OMD->param_end());
 
@@ -1749,7 +1750,7 @@ void CodeGenFunction::EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S){
     &CGM.getContext().Idents.get("count")
   };
   Selector FastEnumSel =
-    CGM.getContext().Selectors.getSelector(llvm::array_lengthof(II), &II[0]);
+      CGM.getContext().Selectors.getSelector(std::size(II), &II[0]);
 
   QualType ItemsTy =
     getContext().getConstantArrayType(getContext().getObjCIdType(),

@@ -1,6 +1,6 @@
 ; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
-; Check that the contstraints on the paramater derived from the
+; Check that the constraints on the parameter derived from the
 ; range metadata (see bottom of the file) are present:
 ;
 ; CHECK: Context:

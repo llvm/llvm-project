@@ -47,14 +47,6 @@ ARM_FPU("softvfp", FK_SOFTVFP, FPUVersion::NONE, NeonSupportLevel::None, FPURest
 #endif
 ARM_ARCH("invalid", INVALID, "", "",
           ARMBuildAttrs::CPUArch::Pre_v4, FK_NONE, ARM::AEK_NONE)
-ARM_ARCH("armv2", ARMV2, "2", "v2", ARMBuildAttrs::CPUArch::Pre_v4,
-          FK_NONE, ARM::AEK_NONE)
-ARM_ARCH("armv2a", ARMV2A, "2A", "v2a", ARMBuildAttrs::CPUArch::Pre_v4,
-          FK_NONE, ARM::AEK_NONE)
-ARM_ARCH("armv3", ARMV3, "3", "v3", ARMBuildAttrs::CPUArch::Pre_v4,
-          FK_NONE, ARM::AEK_NONE)
-ARM_ARCH("armv3m", ARMV3M, "3M", "v3m", ARMBuildAttrs::CPUArch::Pre_v4,
-          FK_NONE, ARM::AEK_NONE)
 ARM_ARCH("armv4", ARMV4, "4", "v4", ARMBuildAttrs::CPUArch::v4,
           FK_NONE, ARM::AEK_NONE)
 ARM_ARCH("armv4t", ARMV4T, "4T", "v4t", ARMBuildAttrs::CPUArch::v4T,
@@ -86,7 +78,7 @@ ARM_ARCH("armv7-m", ARMV7M, "7-M", "v7m", ARMBuildAttrs::CPUArch::v7,
           FK_NONE, ARM::AEK_HWDIVTHUMB)
 ARM_ARCH("armv7e-m", ARMV7EM, "7E-M", "v7em", ARMBuildAttrs::CPUArch::v7E_M,
           FK_NONE, (ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP))
-ARM_ARCH("armv8-a", ARMV8A, "8-A", "v8", ARMBuildAttrs::CPUArch::v8_A,
+ARM_ARCH("armv8-a", ARMV8A, "8-A", "v8a", ARMBuildAttrs::CPUArch::v8_A,
          FK_CRYPTO_NEON_FP_ARMV8,
          (ARM::AEK_SEC | ARM::AEK_MP | ARM::AEK_VIRT | ARM::AEK_HWDIVARM |
           ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_CRC))

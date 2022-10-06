@@ -1,4 +1,4 @@
-// RUN: %clangxx_asan -O1 -fsanitize-address-use-after-scope %s -o %t && %run %t
+// RUN: %clangxx_asan -O1 %s -o %t && %run %t
 
 #include <stdio.h>
 #include <stdlib.h>

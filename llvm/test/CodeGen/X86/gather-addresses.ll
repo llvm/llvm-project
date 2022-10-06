@@ -53,17 +53,17 @@ define <4 x double> @foo(ptr %p, ptr %i, ptr %h) nounwind {
 ; WIN-SSE2:       # %bb.0:
 ; WIN-SSE2-NEXT:    movdqa (%rdx), %xmm0
 ; WIN-SSE2-NEXT:    pand (%r8), %xmm0
-; WIN-SSE2-NEXT:    movd %xmm0, %r8d
+; WIN-SSE2-NEXT:    movd %xmm0, %eax
 ; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; WIN-SSE2-NEXT:    movd %xmm1, %r9d
+; WIN-SSE2-NEXT:    movd %xmm1, %edx
 ; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; WIN-SSE2-NEXT:    movd %xmm1, %r10d
+; WIN-SSE2-NEXT:    movd %xmm1, %r8d
 ; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; WIN-SSE2-NEXT:    movd %xmm0, %edx
-; WIN-SSE2-NEXT:    movslq %r8d, %rax
-; WIN-SSE2-NEXT:    movslq %r9d, %r8
-; WIN-SSE2-NEXT:    movslq %r10d, %r9
+; WIN-SSE2-NEXT:    movd %xmm0, %r9d
+; WIN-SSE2-NEXT:    cltq
 ; WIN-SSE2-NEXT:    movslq %edx, %rdx
+; WIN-SSE2-NEXT:    movslq %r8d, %r8
+; WIN-SSE2-NEXT:    movslq %r9d, %r9
 ; WIN-SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; WIN-SSE2-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; WIN-SSE2-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
@@ -185,18 +185,18 @@ define <4 x i64> @old(ptr %p, ptr %i, ptr %h, i64 %f) nounwind {
 ; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
 ; WIN-SSE2-NEXT:    movd %xmm1, %ecx
 ; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; WIN-SSE2-NEXT:    movd %xmm1, %r8d
+; WIN-SSE2-NEXT:    movd %xmm1, %edx
 ; WIN-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
-; WIN-SSE2-NEXT:    movd %xmm0, %edx
+; WIN-SSE2-NEXT:    movd %xmm0, %r8d
 ; WIN-SSE2-NEXT:    andl %r9d, %eax
 ; WIN-SSE2-NEXT:    andl %r9d, %ecx
-; WIN-SSE2-NEXT:    andl %r9d, %r8d
 ; WIN-SSE2-NEXT:    andl %r9d, %edx
+; WIN-SSE2-NEXT:    andl %r9d, %r8d
 ; WIN-SSE2-NEXT:    movq %rax, %xmm0
 ; WIN-SSE2-NEXT:    movq %rcx, %xmm1
 ; WIN-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; WIN-SSE2-NEXT:    movq %rdx, %xmm2
-; WIN-SSE2-NEXT:    movq %r8, %xmm1
+; WIN-SSE2-NEXT:    movq %r8, %xmm2
+; WIN-SSE2-NEXT:    movq %rdx, %xmm1
 ; WIN-SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; WIN-SSE2-NEXT:    retq
 ;
@@ -206,17 +206,17 @@ define <4 x i64> @old(ptr %p, ptr %i, ptr %h, i64 %f) nounwind {
 ; WIN-SSE4-NEXT:    pand (%r8), %xmm0
 ; WIN-SSE4-NEXT:    movd %xmm0, %eax
 ; WIN-SSE4-NEXT:    pextrd $1, %xmm0, %ecx
-; WIN-SSE4-NEXT:    pextrd $2, %xmm0, %r8d
-; WIN-SSE4-NEXT:    pextrd $3, %xmm0, %edx
+; WIN-SSE4-NEXT:    pextrd $2, %xmm0, %edx
+; WIN-SSE4-NEXT:    pextrd $3, %xmm0, %r8d
 ; WIN-SSE4-NEXT:    andl %r9d, %eax
 ; WIN-SSE4-NEXT:    andl %r9d, %ecx
-; WIN-SSE4-NEXT:    andl %r9d, %r8d
 ; WIN-SSE4-NEXT:    andl %r9d, %edx
+; WIN-SSE4-NEXT:    andl %r9d, %r8d
 ; WIN-SSE4-NEXT:    movq %rcx, %xmm1
 ; WIN-SSE4-NEXT:    movq %rax, %xmm0
 ; WIN-SSE4-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; WIN-SSE4-NEXT:    movq %rdx, %xmm2
-; WIN-SSE4-NEXT:    movq %r8, %xmm1
+; WIN-SSE4-NEXT:    movq %r8, %xmm2
+; WIN-SSE4-NEXT:    movq %rdx, %xmm1
 ; WIN-SSE4-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; WIN-SSE4-NEXT:    retq
 ;

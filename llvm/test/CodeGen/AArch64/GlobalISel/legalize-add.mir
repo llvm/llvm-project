@@ -10,9 +10,9 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
     ; CHECK-NEXT: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s32) = G_UADDO [[COPY]], [[COPY2]]
-    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s32) = G_UADDE [[COPY1]], [[COPY3]], %18
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[UADDO1]], [[C]]
+    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s32) = G_UADDE [[COPY1]], [[COPY3]], [[AND]]
     ; CHECK-NEXT: $x0 = COPY [[UADDO]](s64)
     ; CHECK-NEXT: $x1 = COPY [[UADDE]](s64)
     %0:_(s64) = COPY $x0
@@ -37,11 +37,11 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
     ; CHECK-NEXT: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s32) = G_UADDO [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s32) = G_UADDE [[COPY1]], [[COPY2]], %34
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[UADDO1]], [[C]]
-    ; CHECK-NEXT: [[UADDE2:%[0-9]+]]:_(s64), [[UADDE3:%[0-9]+]]:_(s32) = G_UADDE [[COPY2]], [[COPY3]], %32
+    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s32) = G_UADDE [[COPY1]], [[COPY2]], [[AND]]
     ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[UADDE1]], [[C]]
+    ; CHECK-NEXT: [[UADDE2:%[0-9]+]]:_(s64), [[UADDE3:%[0-9]+]]:_(s32) = G_UADDE [[COPY2]], [[COPY3]], [[AND1]]
     ; CHECK-NEXT: $x0 = COPY [[UADDO]](s64)
     ; CHECK-NEXT: $x1 = COPY [[UADDE]](s64)
     ; CHECK-NEXT: $x2 = COPY [[UADDE2]](s64)
@@ -89,9 +89,9 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
     ; CHECK-NEXT: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s32) = G_UADDO [[COPY]], [[COPY2]]
-    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s32) = G_UADDE [[COPY1]], [[COPY3]], %24
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[UADDO1]], [[C]]
+    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s32) = G_UADDE [[COPY1]], [[COPY3]], [[AND]]
     ; CHECK-NEXT: $x0 = COPY [[UADDO]](s64)
     ; CHECK-NEXT: $x1 = COPY [[UADDE]](s64)
     %0:_(s64) = COPY $x0
@@ -119,9 +119,9 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
     ; CHECK-NEXT: [[UADDO:%[0-9]+]]:_(s64), [[UADDO1:%[0-9]+]]:_(s32) = G_UADDO [[COPY]], [[COPY2]]
-    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s32) = G_UADDE [[COPY1]], [[COPY3]], %24
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
     ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[UADDO1]], [[C]]
+    ; CHECK-NEXT: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s32) = G_UADDE [[COPY1]], [[COPY3]], [[AND]]
     ; CHECK-NEXT: $x0 = COPY [[UADDO]](s64)
     ; CHECK-NEXT: $x1 = COPY [[UADDE]](s64)
     %0:_(s64) = COPY $x0

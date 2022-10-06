@@ -52,9 +52,10 @@ using _4 = __llvm_libc::scalar::_4;
 using _32 = Chained<_16, _16>;
 using _64 = Chained<_32, _32>;
 
-struct ZVA {
+struct Zva64 {
   static constexpr size_t SIZE = 64;
-  static void splat_set(char *dst, const unsigned char value) {
+
+  static void splat_set(char *dst, const unsigned char) {
 #if __SIZEOF_POINTER__ == 4
     asm("dc zva, %w[dst]" : : [dst] "r"(dst) : "memory");
 #else
@@ -63,13 +64,14 @@ struct ZVA {
   }
 };
 
-inline static bool AArch64ZVA(char *dst, size_t count) {
+inline static bool hasZva() {
   uint64_t zva_val;
   asm("mrs %[zva_val], dczid_el0" : [zva_val] "=r"(zva_val));
-  if ((zva_val & 31) != 4)
-    return false;
-  splat_set<Align<_64, Arg::_1>::Then<Loop<ZVA, _64>>>(dst, 0, count);
-  return true;
+  // DC ZVA is permitted if DZP, bit [4] is zero.
+  // BS, bits [3:0] is log2 of the block size in words.
+  // So the next line checks whether the instruction is permitted and block size
+  // is 16 words (i.e. 64 bytes).
+  return (zva_val & 0b11111) == 0b00100;
 }
 
 } // namespace aarch64_memset

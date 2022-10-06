@@ -531,6 +531,8 @@ def SubOp : ComplexArithmeticOp<"sub"> {
     %a = complex.sub %b, %c : complex<f32>
     ```
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -590,6 +592,7 @@ def ConjOp : ComplexUnaryOp<"conj", [SameOperandsAndResultType]> {
   }];
 
   let results = (outs Complex<AnyFloat>:$result);
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

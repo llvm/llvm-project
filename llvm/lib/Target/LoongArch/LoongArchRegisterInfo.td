@@ -40,6 +40,7 @@ def RegAliasName : RegAltNameIndex;
 // Integer registers
 
 let RegAltNameIndices = [RegAliasName] in {
+  let isConstant = true in
   def R0  : LoongArchReg<0,  "r0", ["zero"]>, DwarfRegNum<[0]>;
   def R1  : LoongArchReg<1,  "r1", ["ra"]>, DwarfRegNum<[1]>;
   def R2  : LoongArchReg<2,  "r2", ["tp"]>, DwarfRegNum<[2]>;

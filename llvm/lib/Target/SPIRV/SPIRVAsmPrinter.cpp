@@ -57,6 +57,7 @@ public:
   void outputMCInst(MCInst &Inst);
   void outputInstruction(const MachineInstr *MI);
   void outputModuleSection(SPIRV::ModuleSectionType MSType);
+  void outputGlobalRequirements();
   void outputEntryPoints();
   void outputDebugSourceAndStrings(const Module &M);
   void outputOpExtInstImports(const Module &M);
@@ -64,7 +65,7 @@ public:
   void outputOpFunctionEnd();
   void outputExtFuncDecls();
   void outputExecutionModeFromMDNode(Register Reg, MDNode *Node,
-                                     SPIRV::ExecutionMode EM);
+                                     SPIRV::ExecutionMode::ExecutionMode EM);
   void outputExecutionMode(const Module &M);
   void outputAnnotations(const Module &M);
   void outputModuleSections();
@@ -268,7 +269,8 @@ void SPIRVAsmPrinter::outputOpExtInstImports(const Module &M) {
     MCInst Inst;
     Inst.setOpcode(SPIRV::OpExtInstImport);
     Inst.addOperand(MCOperand::createReg(Reg));
-    addStringImm(getExtInstSetName(static_cast<SPIRV::InstructionSet>(Set)),
+    addStringImm(getExtInstSetName(
+                     static_cast<SPIRV::InstructionSet::InstructionSet>(Set)),
                  Inst);
     outputMCInst(Inst);
   }
@@ -291,7 +293,8 @@ void SPIRVAsmPrinter::outputEntryPoints() {
   DenseSet<Register> InterfaceIDs;
   for (MachineInstr *MI : MAI->GlobalVarList) {
     assert(MI->getOpcode() == SPIRV::OpVariable);
-    auto SC = static_cast<SPIRV::StorageClass>(MI->getOperand(2).getImm());
+    auto SC = static_cast<SPIRV::StorageClass::StorageClass>(
+        MI->getOperand(2).getImm());
     // Before version 1.4, the interface's storage classes are limited to
     // the Input and Output storage classes. Starting with version 1.4,
     // the interface's storage classes are all storage classes used in
@@ -315,6 +318,30 @@ void SPIRVAsmPrinter::outputEntryPoints() {
     }
     outputMCInst(TmpInst);
   }
+}
+
+// Create global OpCapability instructions for the required capabilities.
+void SPIRVAsmPrinter::outputGlobalRequirements() {
+  // Abort here if not all requirements can be satisfied.
+  MAI->Reqs.checkSatisfiable(*ST);
+
+  for (const auto &Cap : MAI->Reqs.getMinimalCapabilities()) {
+    MCInst Inst;
+    Inst.setOpcode(SPIRV::OpCapability);
+    Inst.addOperand(MCOperand::createImm(Cap));
+    outputMCInst(Inst);
+  }
+
+  // Generate the final OpExtensions with strings instead of enums.
+  for (const auto &Ext : MAI->Reqs.getExtensions()) {
+    MCInst Inst;
+    Inst.setOpcode(SPIRV::OpExtension);
+    addStringImm(getSymbolicOperandMnemonic(
+                     SPIRV::OperandCategory::ExtensionOperand, Ext),
+                 Inst);
+    outputMCInst(Inst);
+  }
+  // TODO add a pseudo instr for version number.
 }
 
 void SPIRVAsmPrinter::outputExtFuncDecls() {
@@ -375,8 +402,8 @@ static void addOpsFromMDNode(MDNode *MDN, MCInst &Inst,
   }
 }
 
-void SPIRVAsmPrinter::outputExecutionModeFromMDNode(Register Reg, MDNode *Node,
-                                                    SPIRV::ExecutionMode EM) {
+void SPIRVAsmPrinter::outputExecutionModeFromMDNode(
+    Register Reg, MDNode *Node, SPIRV::ExecutionMode::ExecutionMode EM) {
   MCInst Inst;
   Inst.setOpcode(SPIRV::OpExecutionMode);
   Inst.addOperand(MCOperand::createReg(Reg));
@@ -466,8 +493,8 @@ void SPIRVAsmPrinter::outputModuleSections() {
   MAI = &SPIRVModuleAnalysis::MAI;
   assert(ST && TII && MAI && M && "Module analysis is required");
   // Output instructions according to the Logical Layout of a Module:
-  // TODO: 1,2. All OpCapability instructions, then optional OpExtension
-  // instructions.
+  // 1,2. All OpCapability instructions, then optional OpExtension instructions.
+  outputGlobalRequirements();
   // 3. Optional OpExtInstImport instructions.
   outputOpExtInstImports(*M);
   // 4. The single required OpMemoryModel instruction.

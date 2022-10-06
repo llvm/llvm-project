@@ -50,6 +50,7 @@ public:
   llvm::Error addModule(PartialTranslationUnit &PTU);
   llvm::Error removeModule(PartialTranslationUnit &PTU);
   llvm::Error runCtors() const;
+  llvm::Error cleanUp();
   llvm::Expected<llvm::JITTargetAddress>
   getSymbolAddress(llvm::StringRef Name, SymbolNameKind NameKind) const;
   llvm::orc::LLJIT *getExecutionEngine() const { return Jit.get(); }

@@ -14,8 +14,8 @@ from the [MLIR LangRef](LangRef.md).
 
 Attributes are the mechanism for specifying constant data on operations in
 places where a variable is never allowed - e.g. the comparison predicate of a
-[`arith.cmpi` operation](Dialects/ArithmeticOps.md#arithcmpi-mlirarithcmpiop), or
-the underlying value of a [`arith.constant` operation](Dialects/ArithmeticOps.md#arithconstant-mlirarithconstantop).
+[`arith.cmpi` operation](Dialects/ArithOps.md#arithcmpi-mlirarithcmpiop), or
+the underlying value of a [`arith.constant` operation](Dialects/ArithOps.md#arithconstant-mlirarithconstantop).
 Each operation has an attribute dictionary, which associates a set of attribute
 names to attribute values.
 
@@ -24,7 +24,7 @@ names to attribute values.
 Every SSA value, such as operation results or block arguments, in MLIR has a type
 defined by the type system. MLIR has an open type system with no fixed list of types,
 and there are no restrictions on the abstractions they represent. For example, take
-the following [Arithmetic AddI operation](Dialects/ArithmeticOps.md#arithaddi-mlirarithaddiop):
+the following [Arithmetic AddI operation](Dialects/ArithOps.md#arithaddi-mlirarithaddiop):
 
 ```mlir
   %result = arith.addi %lhs, %rhs : i64
@@ -126,9 +126,9 @@ def My_IntegerAttr : MyDialect_Attr<"Integer", "int"> {
     An integer attribute is a literal attribute that represents an integral
     value of the specified integer type.
   }];
-  /// Here we've defined two parameters, one is the `self` type of the attribute
-  /// (i.e. the type of the Attribute itself), and the other is the integer value
-  /// of the attribute.
+  /// Here we've defined two parameters, one is a "self" type parameter, and the
+  /// other is the integer value of the attribute. The self type parameter is
+  /// specially handled by the assembly format.
   let parameters = (ins AttributeSelfTypeParameter<"">:$type, "APInt":$value);
 
   /// Here we've defined a custom builder for the type, that removes the need to pass
@@ -146,6 +146,8 @@ def My_IntegerAttr : MyDialect_Attr<"Integer", "int"> {
   ///
   ///    #my.int<50> : !my.int<32> // a 32-bit integer of value 50.
   ///
+  /// Note that the self type parameter is not included in the assembly format.
+  /// Its value is derived from the optional trailing type on all attributes.
   let assemblyFormat = "`<` $value `>`";
 
   /// Indicate that our attribute will add additional verification to the parameters.
@@ -271,9 +273,8 @@ MLIR includes several specialized classes for common situations:
 - `ArrayRefOfSelfAllocationParameter<arrayOf, descriptionOfParam>` for arrays of
   objects which self-allocate as per the last specialization.
 
-- `AttributeSelfTypeParameter` is a special AttrParameter that corresponds to
-  the `Type` of the attribute. Only one parameter of the attribute may be of
-  this parameter type.
+- `AttributeSelfTypeParameter` is a special `AttrParameter` that represents
+  parameters derived from the optional trailing type on attributes.
 
 ### Traits
 
@@ -639,28 +640,27 @@ To add a custom conversion between the `cppStorageType` and the C++ type of the
 parameter, parameters can override `convertFromStorage`, which by default is
 `"$_self"` (i.e., it attempts an implicit conversion from `cppStorageType`).
 
-###### Optional Parameters
+###### Optional and Default-Valued Parameters
 
+An optional parameter can be omitted from the assembly format of an attribute or
+a type. An optional parameter is omitted when it is equal to its default value.
 Optional parameters in the assembly format can be indicated by setting
-`isOptional`. The C++ type of an optional parameter is required to satisfy the
-following requirements:
+`defaultValue`, a string of the C++ default value. If a value for the parameter
+was not encountered during parsing, it is set to this default value. If a
+parameter is equal to its default value, it is not printed. The `comparator`
+field of the parameter is used, but if one is not specified, the equality
+operator is used.
 
-- is default-constructible
-- is contextually convertible to `bool`
-- only the default-constructed value is `false`
-
-The parameter parser should return the default-constructed value to indicate "no
-value present". The printer will guard on the presence of a value to print the
-parameter.
-
-If a value was not parsed for an optional parameter, then the parameter will be
-set to its default-constructed C++ value. For example, `Optional<int>` will be
-set to `llvm::None` and `Attribute` will be set to `nullptr`.
+When using `OptionalParameter`, the default value is set to the C++
+default-constructed value for the C++ storage type. For example, `Optional<int>`
+will be set to `llvm::None` and `Attribute` will be set to `nullptr`. The
+presence of these parameters is tested by comparing them to their "null" values.
 
 Only optional parameters or directives that only capture optional parameters can
 be used in optional groups. An optional group is a set of elements optionally
-printed based on the presence of an anchor. Suppose parameter `a` is an
-`IntegerAttr`.
+printed based on the presence of an anchor. The group in which the anchor is
+placed is printed if it is present, otherwise the other one is printed. Suppose
+parameter `a` is an `IntegerAttr`.
 
 ```
 ( `(` $a^ `)` ) : (`x`)?
@@ -671,16 +671,9 @@ printed as `(5 : i32)`. If it is not present, it will be `x`. Directives that
 are used inside optional groups are allowed only if all captured parameters are
 also optional.
 
-###### Default-Valued Parameters
-
-Optional parameters can be given default values by setting `defaultValue`, a
-string of the C++ default value, or by using `DefaultValuedParameter`. If a
-value for the parameter was not encountered during parsing, it is set to this
-default value. If a parameter is equal to its default value, it is not printed.
-The `comparator` field of the parameter is used, but if one is not specified,
-the equality operator is used.
-
-For example:
+An optional parameter can also be specified with `DefaultValuedParameter`, which
+specifies that a parameter should be omitted when it is equal to some given
+value.
 
 ```tablegen
 let parameters = (ins DefaultValuedParameter<"Optional<int>", "5">:$a)
@@ -700,6 +693,54 @@ available through `$_ctxt`. E.g.
 
 ```tablegen
 DefaultValuedParameter<"IntegerType", "IntegerType::get($_ctxt, 32)">
+```
+
+The value of parameters that appear __before__ the default-valued parameter in
+the parameter declaration list are available as substitutions. E.g.
+
+```tablegen
+let parameters = (ins
+  "IntegerAttr":$value,
+  DefaultValuedParameter<"Type", "$value.getType()">:$type
+);
+```
+
+###### Attribute Self Type Parameter
+
+An attribute optionally has a trailing type after the assembly format of the
+attribute value itself. MLIR parses over the attribute value and optionally
+parses a colon-type before passing the `Type` into the dialect parser hook.
+
+```
+dialect-attribute  ::= `#` dialect-namespace `<` attr-data `>`
+                       (`:` type)?
+                     | `#` alias-name pretty-dialect-sym-body? (`:` type)?
+```
+
+`AttributeSelfTypeParameter` is an attribute parameter specially handled by the
+assembly format generator. Only one such parameter can be specified, and its
+value is derived from the trailing type. This parameter's default value is
+`NoneType::get($_ctxt)`.
+
+In order for the type to be printed by
+MLIR, however, the attribute must implement `TypedAttrInterface`. For example,
+
+```tablegen
+// This attribute has only a self type parameter.
+def MyExternAttr : AttrDef<MyDialect, "MyExtern", [TypedAttrInterface]> {
+  let parameters = (AttributeSelfTypeParameter<"">:$type);
+  let mnemonic = "extern";
+  let assemblyFormat = "";
+}
+```
+
+This attribute can look like:
+
+```mlir
+#my_dialect.extern // none
+#my_dialect.extern : i32
+#my_dialect.extern : tensor<4xi32>
+#my_dialect.extern : !my_dialect.my_type
 ```
 
 ##### Assembly Format Directives
@@ -845,6 +886,19 @@ void printStringParam(AsmPrinter &printer, StringRef value);
 
 The custom parser is considered to have failed if it returns failure or if any
 bound parameters have failure values afterwards.
+
+A string of C++ code can be used as a `custom` directive argument. When
+generating the custom parser and printer call, the string is pasted as a
+function argument. For example, `parseBar` and `printBar` can be re-used with
+a constant integer:
+
+```tablegen
+let parameters = (ins "int":$bar);
+let assemblyFormat = [{ custom<Bar>($foo, "1") }];
+```
+
+The string is pasted verbatim but with substitutions for `$_builder` and
+`$_ctxt`. String literals can be used to parameterize custom directives.
 
 ### Verification
 

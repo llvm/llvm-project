@@ -13,8 +13,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../PassDetail.h"
 #include "mlir/Conversion/GPUToVulkan/ConvertGPUToVulkanPass.h"
+
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
@@ -23,7 +23,13 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Target/SPIRV/Serialization.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTGPULAUNCHFUNCTOVULKANLAUNCHFUNC
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -38,7 +44,7 @@ namespace {
 /// function and attaching binary data and entry point name as an attributes to
 /// created vulkan launch call op.
 class ConvertGpuLaunchFuncToVulkanLaunchFunc
-    : public ConvertGpuLaunchFuncToVulkanLaunchFuncBase<
+    : public impl::ConvertGpuLaunchFuncToVulkanLaunchFuncBase<
           ConvertGpuLaunchFuncToVulkanLaunchFunc> {
 public:
   void runOnOperation() override;
@@ -134,7 +140,7 @@ LogicalResult ConvertGpuLaunchFuncToVulkanLaunchFunc::createBinaryShader(
   SmallVector<uint32_t, 0> binary;
   for (auto spirvModule : module.getOps<spirv::ModuleOp>()) {
     if (done)
-      return spirvModule.emitError("should only contain one 'spv.module' op");
+      return spirvModule.emitError("should only contain one 'spirv.module' op");
     done = true;
 
     if (failed(spirv::serialize(spirvModule, binary)))

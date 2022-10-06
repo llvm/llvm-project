@@ -2,15 +2,16 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("//llvm:tblgen.bzl", "gentbl")
 load("//llvm:binary_alias.bzl", "binary_alias")
 load("//llvm:cc_plugin_library.bzl", "cc_plugin_library")
-load("//llvm:template_rule.bzl", "template_rule")
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 exports_files([
     "tools/clang-format/clang-format.el",
@@ -358,11 +359,11 @@ genrule(
     name = "basic_version_gen",
     outs = ["include/clang/Basic/Version.inc"],
     cmd = (
-        "echo '#define CLANG_VERSION 15.0.0' >> $@\n" +
-        "echo '#define CLANG_VERSION_MAJOR 15' >> $@\n" +
+        "echo '#define CLANG_VERSION 16.0.0' >> $@\n" +
+        "echo '#define CLANG_VERSION_MAJOR 16' >> $@\n" +
         "echo '#define CLANG_VERSION_MINOR 0' >> $@\n" +
         "echo '#define CLANG_VERSION_PATCHLEVEL 0' >> $@\n" +
-        "echo '#define CLANG_VERSION_STRING \"15.0.0\"' >> $@\n"
+        "echo '#define CLANG_VERSION_STRING \"16.0.0\"' >> $@\n"
     ),
 )
 
@@ -1948,13 +1949,13 @@ cc_binary(
     ],
 )
 
-template_rule(
+expand_template(
     name = "clang_main",
-    src = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
     out = "clang-driver.cpp",
     substitutions = {
         "@TOOL_NAME@": "clang",
     },
+    template = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
 )
 
 cc_library(
@@ -2107,19 +2108,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "clang-offload-wrapper",
-    srcs = glob(["tools/clang-offload-wrapper/*.cpp"]),
-    stamp = 0,
-    deps = [
-        ":basic",
-        "//llvm:BitWriter",
-        "//llvm:Support",
-        "//llvm:TransformUtils",
-        "//llvm:ir_headers",
-    ],
-)
-
-cc_binary(
     name = "clang-refactor",
     srcs = glob([
         "tools/clang-refactor/*.cpp",
@@ -2189,6 +2177,7 @@ cc_binary(
     srcs = glob(["tools/clang-scan-deps/*.cpp"]),
     stamp = 0,
     deps = [
+        ":driver",
         ":frontend",
         ":tooling",
         ":tooling_dependency_scanning",

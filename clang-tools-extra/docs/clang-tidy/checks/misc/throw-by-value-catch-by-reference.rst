@@ -17,7 +17,7 @@ Exceptions:
     are not susceptible to slicing and the usage of string literals is
     idiomatic.
   * Catching character pointers (``char``, ``wchar_t``, unicode character types)
-    will not be flagged to allow catching sting literals.
+    will not be flagged to allow catching string literals.
   * Moved named values will not be flagged as not throwing an anonymous
     temporary. In this case we can be sure that the user knows that the object
     can't be accessed outside catch blocks handling the error.

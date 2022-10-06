@@ -50,7 +50,7 @@ static void LLVMErrorHandler(void *UserData, const char *Message,
 
 // If we are running with -verify a reported has to be returned as unsuccess.
 // This is relevant especially for the test suite.
-static int checkDiagErrors(const clang::CompilerInstance *CI) {
+static int checkDiagErrors(const clang::CompilerInstance *CI, bool HasError) {
   unsigned Errs = CI->getDiagnostics().getClient()->getNumErrors();
   if (CI->getDiagnosticOpts().VerifyDiagnostics) {
     // If there was an error that came from the verifier we must return 1 as
@@ -62,13 +62,15 @@ static int checkDiagErrors(const clang::CompilerInstance *CI) {
     // The interpreter expects BeginSourceFile/EndSourceFiles to be balanced.
     Client->BeginSourceFile(CI->getLangOpts(), &CI->getPreprocessor());
   }
-  return Errs ? EXIT_FAILURE : EXIT_SUCCESS;
+  return (Errs || HasError) ? EXIT_FAILURE : EXIT_SUCCESS;
 }
 
 llvm::ExitOnError ExitOnErr;
 int main(int argc, const char **argv) {
   ExitOnErr.setBanner("clang-repl: ");
   llvm::cl::ParseCommandLineOptions(argc, argv);
+
+  llvm::llvm_shutdown_obj Y; // Call llvm_shutdown() on exit.
 
   std::vector<const char *> ClangArgv(ClangArgs.size());
   std::transform(ClangArgs.begin(), ClangArgs.end(), ClangArgv.begin(),
@@ -105,6 +107,8 @@ int main(int argc, const char **argv) {
       llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
   }
 
+  bool HasError = false;
+
   if (OptInputs.empty()) {
     llvm::LineEditor LE("clang-repl");
     // FIXME: Add LE.setListCompleter
@@ -112,13 +116,17 @@ int main(int argc, const char **argv) {
       if (*Line == R"(%quit)")
         break;
       if (*Line == R"(%undo)") {
-        if (auto Err = Interp->Undo())
+        if (auto Err = Interp->Undo()) {
           llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+          HasError = true;
+        }
         continue;
       }
 
-      if (auto Err = Interp->ParseAndExecute(*Line))
+      if (auto Err = Interp->ParseAndExecute(*Line)) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(), "error: ");
+        HasError = true;
+      }
     }
   }
 
@@ -127,7 +135,5 @@ int main(int argc, const char **argv) {
   // later errors use the default handling behavior instead.
   llvm::remove_fatal_error_handler();
 
-  llvm::llvm_shutdown();
-
-  return checkDiagErrors(Interp->getCompilerInstance());
+  return checkDiagErrors(Interp->getCompilerInstance(), HasError);
 }

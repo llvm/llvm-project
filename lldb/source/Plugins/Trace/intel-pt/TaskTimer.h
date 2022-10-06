@@ -10,10 +10,8 @@
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TASKTIMER_H
 
 #include "lldb/lldb-types.h"
-
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
-
 #include <chrono>
 #include <functional>
 #include <unordered_map>

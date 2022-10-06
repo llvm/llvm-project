@@ -81,7 +81,7 @@ public:
   }
 
   template <class... Args>
-  constexpr explicit OptionalStorage(in_place_t, Args &&...args)
+  constexpr explicit OptionalStorage(std::in_place_t, Args &&...args)
       : val(std::forward<Args>(args)...), hasVal(true) {}
 
   void reset() noexcept {
@@ -92,13 +92,16 @@ public:
   }
 
   constexpr bool has_value() const noexcept { return hasVal; }
-  constexpr bool hasValue() const noexcept { return hasVal; }
+  LLVM_DEPRECATED("Use has_value instead.", "has_value")
+  constexpr bool hasValue() const noexcept {
+    return hasVal;
+  }
 
   T &value() &noexcept {
     assert(hasVal);
     return val;
   }
-  T &getValue() &noexcept {
+  LLVM_DEPRECATED("Use value instead.", "value") T &getValue() &noexcept {
     assert(hasVal);
     return val;
   }
@@ -106,6 +109,7 @@ public:
     assert(hasVal);
     return val;
   }
+  LLVM_DEPRECATED("Use value instead.", "value")
   constexpr T const &getValue() const &noexcept {
     assert(hasVal);
     return val;
@@ -114,7 +118,7 @@ public:
     assert(hasVal);
     return std::move(val);
   }
-  T &&getValue() &&noexcept {
+  LLVM_DEPRECATED("Use value instead.", "value") T &&getValue() &&noexcept {
     assert(hasVal);
     return std::move(val);
   }
@@ -192,7 +196,7 @@ public:
   OptionalStorage &operator=(OptionalStorage &&other) = default;
 
   template <class... Args>
-  constexpr explicit OptionalStorage(in_place_t, Args &&...args)
+  constexpr explicit OptionalStorage(std::in_place_t, Args &&...args)
       : val(std::forward<Args>(args)...), hasVal(true) {}
 
   void reset() noexcept {
@@ -203,13 +207,16 @@ public:
   }
 
   constexpr bool has_value() const noexcept { return hasVal; }
-  constexpr bool hasValue() const noexcept { return hasVal; }
+  LLVM_DEPRECATED("Use has_value instead.", "has_value")
+  constexpr bool hasValue() const noexcept {
+    return hasVal;
+  }
 
   T &value() &noexcept {
     assert(hasVal);
     return val;
   }
-  T &getValue() &noexcept {
+  LLVM_DEPRECATED("Use value instead.", "value") T &getValue() &noexcept {
     assert(hasVal);
     return val;
   }
@@ -217,6 +224,7 @@ public:
     assert(hasVal);
     return val;
   }
+  LLVM_DEPRECATED("Use value instead.", "value")
   constexpr T const &getValue() const &noexcept {
     assert(hasVal);
     return val;
@@ -225,7 +233,7 @@ public:
     assert(hasVal);
     return std::move(val);
   }
-  T &&getValue() &&noexcept {
+  LLVM_DEPRECATED("Use value instead.", "value") T &&getValue() &&noexcept {
     assert(hasVal);
     return std::move(val);
   }
@@ -267,15 +275,15 @@ public:
   constexpr Optional() = default;
   constexpr Optional(NoneType) {}
 
-  constexpr Optional(const T &y) : Storage(in_place, y) {}
+  constexpr Optional(const T &y) : Storage(std::in_place, y) {}
   constexpr Optional(const Optional &O) = default;
 
-  constexpr Optional(T &&y) : Storage(in_place, std::move(y)) {}
+  constexpr Optional(T &&y) : Storage(std::in_place, std::move(y)) {}
   constexpr Optional(Optional &&O) = default;
 
   template <typename... ArgTypes>
-  constexpr Optional(in_place_t, ArgTypes &&...Args)
-      : Storage(in_place, std::forward<ArgTypes>(Args)...) {}
+  constexpr Optional(std::in_place_t, ArgTypes &&...Args)
+      : Storage(std::in_place, std::forward<ArgTypes>(Args)...) {}
 
   Optional &operator=(T &&y) {
     Storage = std::move(y);
@@ -303,13 +311,21 @@ public:
   constexpr const T *getPointer() const { return &Storage.value(); }
   T *getPointer() { return &Storage.value(); }
   constexpr const T &value() const & { return Storage.value(); }
-  constexpr const T &getValue() const & { return Storage.value(); }
+  LLVM_DEPRECATED("Use value instead.", "value")
+  constexpr const T &getValue() const & {
+    return Storage.value();
+  }
   T &value() & { return Storage.value(); }
-  T &getValue() & { return Storage.value(); }
+  LLVM_DEPRECATED("Use value instead.", "value") T &getValue() & {
+    return Storage.value();
+  }
 
   constexpr explicit operator bool() const { return has_value(); }
   constexpr bool has_value() const { return Storage.has_value(); }
-  constexpr bool hasValue() const { return Storage.has_value(); }
+  LLVM_DEPRECATED("Use has_value instead.", "has_value")
+  constexpr bool hasValue() const {
+    return Storage.has_value();
+  }
   constexpr const T *operator->() const { return getPointer(); }
   T *operator->() { return getPointer(); }
   constexpr const T &operator*() const & { return value(); }
@@ -319,13 +335,20 @@ public:
     return has_value() ? value() : std::forward<U>(alt);
   }
   template <typename U>
-  [[deprecated("Use value_or instead.")]] constexpr T
-  getValueOr(U &&alt) const & {
+  LLVM_DEPRECATED("Use value_or instead.", "value_or")
+  constexpr T getValueOr(U &&alt) const & {
     return has_value() ? value() : std::forward<U>(alt);
   }
 
   /// Apply a function to the value if present; otherwise return None.
   template <class Function>
+  auto transform(const Function &F) const & -> Optional<decltype(F(value()))> {
+    if (*this)
+      return F(value());
+    return None;
+  }
+  template <class Function>
+  LLVM_DEPRECATED("Use transform instead.", "transform")
   auto map(const Function &F) const & -> Optional<decltype(F(value()))> {
     if (*this)
       return F(value());
@@ -333,19 +356,30 @@ public:
   }
 
   T &&value() && { return std::move(Storage.value()); }
-  T &&getValue() && { return std::move(Storage.value()); }
+  LLVM_DEPRECATED("Use value instead.", "value") T &&getValue() && {
+    return std::move(Storage.value());
+  }
   T &&operator*() && { return std::move(Storage.value()); }
 
   template <typename U> T value_or(U &&alt) && {
     return has_value() ? std::move(value()) : std::forward<U>(alt);
   }
   template <typename U>
-  [[deprecated("Use value_or instead.")]] T getValueOr(U &&alt) && {
+  LLVM_DEPRECATED("Use value_or instead.", "value_or")
+  T getValueOr(U &&alt) && {
     return has_value() ? std::move(value()) : std::forward<U>(alt);
   }
 
   /// Apply a function to the value if present; otherwise return None.
   template <class Function>
+  auto transform(
+      const Function &F) && -> Optional<decltype(F(std::move(*this).value()))> {
+    if (*this)
+      return F(std::move(*this).value());
+    return None;
+  }
+  template <class Function>
+  LLVM_DEPRECATED("Use transform instead.", "transform")
   auto map(const Function &F)
       && -> Optional<decltype(F(std::move(*this).value()))> {
     if (*this)

@@ -20,9 +20,15 @@ using namespace mlir::dataflow;
 //===----------------------------------------------------------------------===//
 
 void ConstantValue::print(raw_ostream &os) const {
-  if (constant)
-    return constant.print(os);
-  os << "<NO VALUE>";
+  if (isUninitialized()) {
+    os << "<UNINITIALIZED>";
+    return;
+  }
+  if (getConstantValue() == nullptr) {
+    os << "<UNKNOWN>";
+    return;
+  }
+  return getConstantValue().print(os);
 }
 
 //===----------------------------------------------------------------------===//
@@ -38,13 +44,18 @@ void SparseConstantPropagation::visitOperation(
   // guarantee that folding will be out-of-place. We don't allow in-place
   // folds as the desire here is for simulated execution, and not general
   // folding.
-  if (op->getNumRegions())
+  if (op->getNumRegions()) {
+    setAllToEntryStates(results);
     return;
+  }
 
   SmallVector<Attribute, 8> constantOperands;
   constantOperands.reserve(op->getNumOperands());
-  for (auto *operandLattice : operands)
+  for (auto *operandLattice : operands) {
+    if (operandLattice->getValue().isUninitialized())
+      return;
     constantOperands.push_back(operandLattice->getValue().getConstantValue());
+  }
 
   // Save the original operands and attributes just in case the operation
   // folds in-place. The constant passed in may not correspond to the real
@@ -57,7 +68,7 @@ void SparseConstantPropagation::visitOperation(
   SmallVector<OpFoldResult, 8> foldResults;
   foldResults.reserve(op->getNumResults());
   if (failed(op->fold(constantOperands, foldResults))) {
-    markAllPessimisticFixpoint(results);
+    setAllToEntryStates(results);
     return;
   }
 
@@ -67,7 +78,7 @@ void SparseConstantPropagation::visitOperation(
   if (foldResults.empty()) {
     op->setOperands(originalOperands);
     op->setAttrs(originalAttrs);
-    markAllPessimisticFixpoint(results);
+    setAllToEntryStates(results);
     return;
   }
 
@@ -89,4 +100,10 @@ void SparseConstantPropagation::visitOperation(
           lattice, *getLatticeElement(foldResult.get<Value>()));
     }
   }
+}
+
+void SparseConstantPropagation::setToEntryState(
+    Lattice<ConstantValue> *lattice) {
+  propagateIfChanged(lattice,
+                     lattice->join(ConstantValue::getUnknownConstant()));
 }

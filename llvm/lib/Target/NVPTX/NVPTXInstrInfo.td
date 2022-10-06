@@ -731,16 +731,16 @@ def UInt16Const : PatLeaf<(imm), [{
   return v.isIntN(16);
 }]>;
 
-def Int5Const : PatLeaf<(imm), [{
-  // Check if 0 <= v < 32; only then will the result of (x << v) be an int32.
+def IntConst_0_30 : PatLeaf<(imm), [{
+  // Check if 0 <= v < 31; only then will the result of (x << v) be an int32.
   const APInt &v = N->getAPIntValue();
-  return v.sge(0) && v.slt(32);
+  return v.sge(0) && v.slt(31);
 }]>;
 
-def Int4Const : PatLeaf<(imm), [{
-  // Check if 0 <= v < 16; only then will the result of (x << v) be an int16.
+def IntConst_0_14 : PatLeaf<(imm), [{
+  // Check if 0 <= v < 15; only then will the result of (x << v) be an int16.
   const APInt &v = N->getAPIntValue();
-  return v.sge(0) && v.slt(16);
+  return v.sge(0) && v.slt(15);
 }]>;
 
 def SHL2MUL32 : SDNodeXForm<imm, [{
@@ -756,17 +756,17 @@ def SHL2MUL16 : SDNodeXForm<imm, [{
 }]>;
 
 // Convert "sign/zero-extend, then shift left by an immediate" to mul.wide.
-def : Pat<(shl (sext Int32Regs:$a), (i32 Int5Const:$b)),
+def : Pat<(shl (sext Int32Regs:$a), (i32 IntConst_0_30:$b)),
           (MULWIDES64Imm Int32Regs:$a, (SHL2MUL32 node:$b))>,
       Requires<[doMulWide]>;
-def : Pat<(shl (zext Int32Regs:$a), (i32 Int5Const:$b)),
+def : Pat<(shl (zext Int32Regs:$a), (i32 IntConst_0_30:$b)),
           (MULWIDEU64Imm Int32Regs:$a, (SHL2MUL32 node:$b))>,
       Requires<[doMulWide]>;
 
-def : Pat<(shl (sext Int16Regs:$a), (i16 Int4Const:$b)),
+def : Pat<(shl (sext Int16Regs:$a), (i16 IntConst_0_14:$b)),
           (MULWIDES32Imm Int16Regs:$a, (SHL2MUL16 node:$b))>,
       Requires<[doMulWide]>;
-def : Pat<(shl (zext Int16Regs:$a), (i16 Int4Const:$b)),
+def : Pat<(shl (zext Int16Regs:$a), (i16 IntConst_0_14:$b)),
           (MULWIDEU32Imm Int16Regs:$a, (SHL2MUL16 node:$b))>,
       Requires<[doMulWide]>;
 
@@ -3084,57 +3084,30 @@ def : Pat<(f64 (fpextend Float32Regs:$a)),
 def retflag : SDNode<"NVPTXISD::RET_FLAG", SDTNone,
                      [SDNPHasChain, SDNPOptInGlue]>;
 
-// fceil, ffloor, fround, ftrunc.
+// fceil, ffloor, froundeven, ftrunc.
 
-def : Pat<(fceil Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRPI)>;
-def : Pat<(fceil Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRPI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(fceil Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRPI)>, Requires<[doNoF32FTZ]>;
-def : Pat<(fceil Float64Regs:$a),
-          (CVT_f64_f64 Float64Regs:$a, CvtRPI)>;
+multiclass CVT_ROUND<SDNode OpNode, PatLeaf Mode, PatLeaf ModeFTZ> {
+  def : Pat<(OpNode Float16Regs:$a),
+            (CVT_f16_f16 Float16Regs:$a, Mode)>;
+  def : Pat<(OpNode Float32Regs:$a),
+            (CVT_f32_f32 Float32Regs:$a, ModeFTZ)>, Requires<[doF32FTZ]>;
+  def : Pat<(OpNode Float32Regs:$a),
+            (CVT_f32_f32 Float32Regs:$a, Mode)>, Requires<[doNoF32FTZ]>;
+  def : Pat<(OpNode Float64Regs:$a),
+            (CVT_f64_f64 Float64Regs:$a, Mode)>;
+}
 
-def : Pat<(ffloor Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRMI)>;
-def : Pat<(ffloor Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRMI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(ffloor Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRMI)>, Requires<[doNoF32FTZ]>;
-def : Pat<(ffloor Float64Regs:$a),
-          (CVT_f64_f64 Float64Regs:$a, CvtRMI)>;
-
-def : Pat<(ftrunc Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRZI)>;
-def : Pat<(ftrunc Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRZI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(ftrunc Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRZI)>, Requires<[doNoF32FTZ]>;
-def : Pat<(ftrunc Float64Regs:$a),
-          (CVT_f64_f64 Float64Regs:$a, CvtRZI)>;
+defm : CVT_ROUND<fceil, CvtRPI, CvtRPI_FTZ>;
+defm : CVT_ROUND<ffloor, CvtRMI, CvtRMI_FTZ>;
+defm : CVT_ROUND<froundeven, CvtRNI, CvtRNI_FTZ>;
+defm : CVT_ROUND<ftrunc, CvtRZI, CvtRZI_FTZ>;
 
 // nearbyint and rint are implemented as rounding to nearest even.  This isn't
 // strictly correct, because it causes us to ignore the rounding mode.  But it
 // matches what CUDA's "libm" does.
 
-def : Pat<(fnearbyint Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRNI)>;
-def : Pat<(fnearbyint Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRNI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(fnearbyint Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRNI)>, Requires<[doNoF32FTZ]>;
-def : Pat<(fnearbyint Float64Regs:$a),
-          (CVT_f64_f64 Float64Regs:$a, CvtRNI)>;
-
-def : Pat<(frint Float16Regs:$a),
-          (CVT_f16_f16 Float16Regs:$a, CvtRNI)>;
-def : Pat<(frint Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRNI_FTZ)>, Requires<[doF32FTZ]>;
-def : Pat<(frint Float32Regs:$a),
-          (CVT_f32_f32 Float32Regs:$a, CvtRNI)>, Requires<[doNoF32FTZ]>;
-def : Pat<(frint Float64Regs:$a),
-          (CVT_f64_f64 Float64Regs:$a, CvtRNI)>;
-
+defm : CVT_ROUND<fnearbyint, CvtRNI, CvtRNI_FTZ>;
+defm : CVT_ROUND<frint, CvtRNI, CvtRNI_FTZ>;
 
 //-----------------------------------
 // Control-flow

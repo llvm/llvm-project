@@ -50,8 +50,9 @@ void test3(void) {
 // <rdar://problem/6156893>
 void test4(const volatile void *addr)
 {
-    asm ("nop" : : "r"(*addr)); // expected-error {{invalid type 'const volatile void' in asm input for constraint 'r'}}
-    asm ("nop" : : "m"(*addr));
+    asm ("nop" : : "r"(*addr)); /* expected-error {{invalid type 'const volatile void' in asm input for constraint 'r'}}
+                                   expected-warning {{ISO C does not allow indirection on operand of type 'const volatile void *'}} */
+    asm ("nop" : : "m"(*addr)); // expected-warning {{ISO C does not allow indirection on operand of type 'const volatile void *'}}
 
     asm ("nop" : : "r"(test4(addr))); // expected-error {{invalid type 'void' in asm input for constraint 'r'}}
     asm ("nop" : : "m"(test4(addr))); // expected-error {{invalid lvalue in asm input for constraint 'm'}}

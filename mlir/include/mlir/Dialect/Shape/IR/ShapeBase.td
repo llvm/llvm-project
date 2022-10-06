@@ -36,12 +36,11 @@ def ShapeDialect : Dialect {
   }];
 
   let cppNamespace = "::mlir::shape";
-  let dependentDialects = ["arith::ArithmeticDialect", "tensor::TensorDialect"];
+  let dependentDialects = ["arith::ArithDialect", "tensor::TensorDialect"];
 
   let useDefaultTypePrinterParser = 1;
   let hasConstantMaterializer = 1;
   let hasOperationAttrVerify = 1;
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 class Shape_Type<string name, string typeMnemonic> : TypeDef<ShapeDialect, name> {
@@ -109,6 +108,11 @@ def Shape_ShapeOrExtentTensorType : AnyTypeOf<[Shape_ShapeType,
                                               "shape or extent tensor">;
 
 def Shape_SizeOrIndexType : AnyTypeOf<[Shape_SizeType, Index], "size or index">;
+
+// Any type representing a shape or size/dim.
+def Shape_AnyShapeOrSizeType : AnyTypeOf<
+    [Shape_SizeOrIndexType, Shape_ShapeOrExtentTensorType],
+  "any shape or size">;
 
 def Shape_WitnessType : Shape_Type<"Witness", "witness"> {
   let description = [{

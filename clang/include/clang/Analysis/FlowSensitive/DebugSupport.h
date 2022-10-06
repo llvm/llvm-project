@@ -20,15 +20,19 @@
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace clang {
 namespace dataflow {
 
+/// Returns a string representation of a value kind.
+llvm::StringRef debugString(Value::Kind Kind);
+
 /// Returns a string representation of a boolean assignment to true or false.
-std::string debugString(Solver::Result::Assignment Assignment);
+llvm::StringRef debugString(Solver::Result::Assignment Assignment);
 
 /// Returns a string representation of the result status of a SAT check.
-std::string debugString(Solver::Result::Status Status);
+llvm::StringRef debugString(Solver::Result::Status Status);
 
 /// Returns a string representation for the boolean value `B`.
 ///

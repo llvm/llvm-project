@@ -447,7 +447,6 @@ define zeroext i32 @q_to_u32(fp128 %m) #0 {
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    xscvqpuwz v2, v2
 ; P9-NEXT:    mfvsrwz r3, v2
-; P9-NEXT:    clrldi r3, r3, 32
 ; P9-NEXT:    blr
 ;
 ; NOVSX-LABEL: q_to_u32:

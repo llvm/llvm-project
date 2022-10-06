@@ -99,9 +99,11 @@ end program wsloop_variable
 !CHECK:           %[[VAL_16:.*]] = fir.convert %[[VAL_15]] : (i32) -> index
 !CHECK:           %[[VAL_17:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
 !CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_17]] : (i32) -> index
-!CHECK:           %[[VAL_19:.*]] = fir.do_loop %[[VAL_20:.*]] = %[[VAL_14]] to %[[VAL_16]] step %[[VAL_18]] -> index {
-!CHECK:             %[[VAL_21:.*]] = fir.convert %[[VAL_20]] : (index) -> i64
-!CHECK:             fir.store %[[VAL_21]] to %[[VAL_5]] : !fir.ref<i64>
+!CHECK:           %[[LB:.*]] = fir.convert %[[VAL_14]] : (index) -> i64
+!CHECK:           %[[VAL_19:.*]]:2 = fir.do_loop %[[VAL_20:[^ ]*]] =
+!CHECK-SAME:          %[[VAL_14]] to %[[VAL_16]] step %[[VAL_18]]
+!CHECK-SAME:          iter_args(%[[IV:.*]] = %[[LB]]) -> (index, i64) {
+!CHECK:             fir.store %[[IV]] to %[[VAL_5]] : !fir.ref<i64>
 !CHECK:             %[[LOAD_IV:.*]] = fir.load %[[STORE_IV]] : !fir.ref<i32>
 !CHECK:             %[[VAL_22:.*]] = fir.convert %[[LOAD_IV]] : (i32) -> i64
 !CHECK:             %[[VAL_23:.*]] = fir.load %[[VAL_5]] : !fir.ref<i64>
@@ -109,10 +111,12 @@ end program wsloop_variable
 !CHECK:             %[[VAL_25:.*]] = fir.convert %[[VAL_24]] : (i64) -> f32
 !CHECK:             fir.store %[[VAL_25]] to %[[VAL_6]] : !fir.ref<f32>
 !CHECK:             %[[VAL_26:.*]] = arith.addi %[[VAL_20]], %[[VAL_18]] : index
-!CHECK:             fir.result %[[VAL_26]] : index
+!CHECK:             %[[STEPCAST:.*]] = fir.convert %[[VAL_18]] : (index) -> i64
+!CHECK:             %[[IVLOAD:.*]] = fir.load %[[VAL_5]] : !fir.ref<i64>
+!CHECK:             %[[IVINC:.*]] = arith.addi %[[IVLOAD]], %[[STEPCAST]]
+!CHECK:             fir.result %[[VAL_26]], %[[IVINC]] : index, i64
 !CHECK:           }
-!CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_28:.*]] : (index) -> i64
-!CHECK:           fir.store %[[VAL_27]] to %[[VAL_5]] : !fir.ref<i64>
+!CHECK:           fir.store %[[VAL_19]]#1 to %[[VAL_5]] : !fir.ref<i64>
 !CHECK:           omp.yield
 !CHECK:         }
 !CHECK:         return

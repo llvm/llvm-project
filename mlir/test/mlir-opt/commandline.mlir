@@ -31,9 +31,10 @@
 // CHECK-NEXT: scf
 // CHECK-NEXT: shape
 // CHECK-NEXT: sparse_tensor
-// CHECK-NEXT: spv
+// CHECK-NEXT: spirv
 // CHECK-NEXT: tensor
 // CHECK-NEXT: test
+// CHECK-NEXT: test_dyn
 // CHECK-NEXT: tosa
 // CHECK-NEXT: transform
 // CHECK-NEXT: vector

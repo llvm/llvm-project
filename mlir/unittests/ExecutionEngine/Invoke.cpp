@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
@@ -30,6 +30,13 @@
 
 #include "gmock/gmock.h"
 
+// SPARC currently lacks JIT support.
+#ifdef __sparc__
+#define SKIP_WITHOUT_JIT(x) DISABLED_##x
+#else
+#define SKIP_WITHOUT_JIT(x) x
+#endif
+
 using namespace mlir;
 
 // The JIT isn't supported on Windows at that time
@@ -46,15 +53,14 @@ static struct LLVMInitializer {
 /// dialects lowering to LLVM Dialect.
 static LogicalResult lowerToLLVMDialect(ModuleOp module) {
   PassManager pm(module.getContext());
-  pm.addPass(mlir::createMemRefToLLVMPass());
-  pm.addNestedPass<func::FuncOp>(
-      mlir::arith::createConvertArithmeticToLLVMPass());
+  pm.addPass(mlir::createMemRefToLLVMConversionPass());
+  pm.addNestedPass<func::FuncOp>(mlir::createArithToLLVMConversionPass());
   pm.addPass(mlir::createConvertFuncToLLVMPass());
   pm.addPass(mlir::createReconcileUnrealizedCastsPass());
   return pm.run(module);
 }
 
-TEST(MLIRExecutionEngine, AddInteger) {
+TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(AddInteger)) {
   std::string moduleStr = R"mlir(
   func.func @foo(%arg0 : i32) -> i32 attributes { llvm.emit_c_interface } {
     %res = arith.addi %arg0, %arg0 : i32
@@ -80,7 +86,7 @@ TEST(MLIRExecutionEngine, AddInteger) {
   ASSERT_EQ(result, 42 + 42);
 }
 
-TEST(MLIRExecutionEngine, SubtractFloat) {
+TEST(MLIRExecutionEngine, SKIP_WITHOUT_JIT(SubtractFloat)) {
   std::string moduleStr = R"mlir(
   func.func @foo(%arg0 : f32, %arg1 : f32) -> f32 attributes { llvm.emit_c_interface } {
     %res = arith.subf %arg0, %arg1 : f32
@@ -106,7 +112,7 @@ TEST(MLIRExecutionEngine, SubtractFloat) {
   ASSERT_EQ(result, 42.f);
 }
 
-TEST(NativeMemRefJit, ZeroRankMemref) {
+TEST(NativeMemRefJit, SKIP_WITHOUT_JIT(ZeroRankMemref)) {
   OwningMemRef<float, 0> a({});
   a[{}] = 42.;
   ASSERT_EQ(*a->data, 42);
@@ -136,7 +142,7 @@ TEST(NativeMemRefJit, ZeroRankMemref) {
     EXPECT_EQ(&elt, &(a[{}]));
 }
 
-TEST(NativeMemRefJit, RankOneMemref) {
+TEST(NativeMemRefJit, SKIP_WITHOUT_JIT(RankOneMemref)) {
   int64_t shape[] = {9};
   OwningMemRef<float, 1> a(shape);
   int count = 1;
@@ -176,7 +182,7 @@ TEST(NativeMemRefJit, RankOneMemref) {
   }
 }
 
-TEST(NativeMemRefJit, BasicMemref) {
+TEST(NativeMemRefJit, SKIP_WITHOUT_JIT(BasicMemref)) {
   constexpr int k = 3;
   constexpr int m = 7;
   // Prepare arguments beforehand.
@@ -236,7 +242,7 @@ static void memrefMultiply(::StridedMemRefType<float, 2> *memref,
 #if __has_feature(memory_sanitizer)
 #define MAYBE_JITCallback DISABLED_JITCallback
 #else
-#define MAYBE_JITCallback JITCallback
+#define MAYBE_JITCallback SKIP_WITHOUT_JIT(JITCallback)
 #endif
 TEST(NativeMemRefJit, MAYBE_JITCallback) {
   constexpr int k = 2;

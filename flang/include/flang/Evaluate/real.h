@@ -177,17 +177,21 @@ public:
   template <typename INT>
   ValueWithRealFlags<Real> SCALE(const INT &by,
       Rounding rounding = TargetCharacteristics::defaultRounding) const {
-    auto expo{exponentBias + by.ToInt64()};
+    // Normalize a fraction with just its LSB set and then multiply.
+    // (Set the LSB, not the MSB, in case the scale factor needs to
+    //  be subnormal.)
+    auto adjust{exponentBias + binaryPrecision - 1};
+    auto expo{adjust + by.ToInt64()};
     if (IsZero()) {
       expo = exponentBias; // ignore by, don't overflow
     } else if (by > INT{maxExponent}) {
-      expo = maxExponent;
-    } else if (by < INT{-exponentBias}) {
+      expo = maxExponent + binaryPrecision - 1;
+    } else if (by < INT{-adjust}) {
       expo = -1;
     }
     Real twoPow;
     RealFlags flags{
-        twoPow.Normalize(false, static_cast<int>(expo), Fraction::MASKL(1))};
+        twoPow.Normalize(false, static_cast<int>(expo), Fraction::MASKR(1))};
     ValueWithRealFlags<Real> result{Multiply(twoPow, rounding)};
     result.flags |= flags;
     return result;

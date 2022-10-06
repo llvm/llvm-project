@@ -55,6 +55,7 @@ def : GINodeEquiv<G_FCONSTANT, fpimm>;
 def : GINodeEquiv<G_IMPLICIT_DEF, undef>;
 def : GINodeEquiv<G_FRAME_INDEX, frameindex>;
 def : GINodeEquiv<G_BLOCK_ADDR, blockaddress>;
+def : GINodeEquiv<G_PTR_ADD, ptradd>;
 def : GINodeEquiv<G_ADD, add>;
 def : GINodeEquiv<G_SUB, sub>;
 def : GINodeEquiv<G_MUL, mul>;

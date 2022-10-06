@@ -184,3 +184,35 @@ func.func @dead_store_nested_region(%arg0: i1, %arg1: i1, %arg2 : memref<4x4xf32
   return
 }
 
+// CHECK-LABEL: func @forward_dead_store_negative
+//       CHECK:   vector.transfer_write
+//       CHECK:   vector.transfer_write
+//       CHECK:   vector.transfer_write
+//       CHECK:   vector.transfer_write
+//       CHECK:   vector.transfer_read
+//       CHECK:   vector.transfer_write
+//       CHECK:   return
+func.func @forward_dead_store_negative(%arg0: i1, %arg1 : memref<4x4xf32>,
+  %v0 : vector<1x4xf32>, %v1 : vector<1x1xf32>, %v2 : vector<1x4xf32>, %i : index) -> vector<1x4xf32> {
+  %alias = memref.subview %arg1[0, 0] [2, 2] [1, 1] : 
+    memref<4x4xf32> to memref<2x2xf32, strided<[4, 1]>>
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c0 = arith.constant 0 : index
+  %cf0 = arith.constant 0.0 : f32
+  vector.transfer_write %v0, %arg1[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, memref<4x4xf32>
+  // blocking write.
+  vector.transfer_write %v1, %alias[%c0, %c0] {in_bounds = [true, true]} :
+    vector<1x1xf32>, memref<2x2xf32, strided<[4, 1]>>
+  vector.transfer_write %v2, %arg1[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, memref<4x4xf32>
+  // blocking write.
+  vector.transfer_write %v1, %alias[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x1xf32>, memref<2x2xf32, strided<[4, 1]>>    
+  %0 = vector.transfer_read %arg1[%c1, %c0], %cf0 {in_bounds = [true, true]} :
+    memref<4x4xf32>, vector<1x4xf32>  
+  vector.transfer_write %v2, %arg1[%c1, %c0] {in_bounds = [true, true]} :
+    vector<1x4xf32>, memref<4x4xf32>
+  return %0 : vector<1x4xf32>
+}

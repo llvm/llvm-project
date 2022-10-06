@@ -530,7 +530,7 @@ def VMOV_N   : WOpInst<"vmov_n", ".1",
 }
 let InstName = "" in
 def VDUP_LANE: WOpInst<"vdup_lane", ".qI",
-                       "UcUsUicsiPcPsfQUcQUsQUiQcQsQiQPcQPsQflUlQlQUl",
+                       "UcUsUicsiPcPshfQUcQUsQUiQcQsQiQPcQPsQhQflUlQlQUl",
                        OP_DUP_LN>;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -980,7 +980,7 @@ def COPYQ_LANEQ : IOpInst<"vcopy_laneq", "..I.I",
 
 ////////////////////////////////////////////////////////////////////////////////
 // Set all lanes to same value
-def VDUP_LANE1: WOpInst<"vdup_lane", ".qI", "hdQhQdPlQPl", OP_DUP_LN>;
+def VDUP_LANE1: WOpInst<"vdup_lane", ".qI", "dQdPlQPl", OP_DUP_LN>;
 def VDUP_LANE2: WOpInst<"vdup_laneq", ".QI",
                   "csilUcUsUiUlPcPshfdQcQsQiQlQPcQPsQUcQUsQUiQUlQhQfQdPlQPl",
                         OP_DUP_LN> {
@@ -1141,7 +1141,7 @@ def SHA256H2 : SInst<"vsha256h2", "....", "QUi">;
 def SHA256SU1 : SInst<"vsha256su1", "....", "QUi">;
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_SHA3) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__ARM_FEATURE_SHA3) && defined(__aarch64__)" in {
 def BCAX : SInst<"vbcax", "....", "QUcQUsQUiQUlQcQsQiQl">;
 def EOR3 : SInst<"veor3", "....", "QUcQUsQUiQUlQcQsQiQl">;
 def RAX1 : SInst<"vrax1", "...", "QUl">;
@@ -1151,7 +1151,7 @@ def XAR :  SInst<"vxar", "...I", "QUl">;
 }
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_SHA512) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__ARM_FEATURE_SHA512) && defined(__aarch64__)" in {
 
 def SHA512SU0 : SInst<"vsha512su0", "...", "QUl">;
 def SHA512su1 : SInst<"vsha512su1", "....", "QUl">;
@@ -1159,7 +1159,7 @@ def SHA512H : SInst<"vsha512h", "....", "QUl">;
 def SHA512H2 : SInst<"vsha512h2", "....", "QUl">;
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_SM3) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__ARM_FEATURE_SM3) && defined(__aarch64__)" in {
 def SM3SS1 : SInst<"vsm3ss1", "....", "QUi">;
 def SM3TT1A : SInst<"vsm3tt1a", "....I", "QUi">;
 def SM3TT1B : SInst<"vsm3tt1b", "....I", "QUi">;
@@ -1169,7 +1169,7 @@ def SM3PARTW1 : SInst<"vsm3partw1", "....", "QUi">;
 def SM3PARTW2 : SInst<"vsm3partw2", "....", "QUi">;
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__ARM_FEATURE_SM4) && defined(__aarch64__)" in {
+let ArchGuard = "defined(__ARM_FEATURE_SM4) && defined(__aarch64__)" in {
 def SM4E : SInst<"vsm4e", "...", "QUi">;
 def SM4EKEY : SInst<"vsm4ekey", "...", "QUi">;
 }
@@ -1192,7 +1192,7 @@ def FCVTAS_S32 : SInst<"vcvta_s32", "S.", "fQf">;
 def FCVTAU_S32 : SInst<"vcvta_u32", "U.", "fQf">;
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__aarch64__)" in {
+let ArchGuard = "defined(__aarch64__)" in {
 def FCVTNS_S64 : SInst<"vcvtn_s64", "S.", "dQd">;
 def FCVTNU_S64 : SInst<"vcvtn_u64", "U.", "dQd">;
 def FCVTPS_S64 : SInst<"vcvtp_s64", "S.", "dQd">;
@@ -1216,7 +1216,7 @@ def FRINTZ_S32 : SInst<"vrnd", "..", "fQf">;
 def FRINTI_S32 : SInst<"vrndi", "..", "fQf">;
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__aarch64__) && defined(__ARM_FEATURE_DIRECTED_ROUNDING)" in {
+let ArchGuard = "defined(__aarch64__) && defined(__ARM_FEATURE_DIRECTED_ROUNDING)" in {
 def FRINTN_S64 : SInst<"vrndn", "..", "dQd">;
 def FRINTA_S64 : SInst<"vrnda", "..", "dQd">;
 def FRINTP_S64 : SInst<"vrndp", "..", "dQd">;
@@ -1226,7 +1226,7 @@ def FRINTZ_S64 : SInst<"vrnd", "..", "dQd">;
 def FRINTI_S64 : SInst<"vrndi", "..", "dQd">;
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__aarch64__) && defined(__ARM_FEATURE_FRINT)" in {
+let ArchGuard = "defined(__aarch64__) && defined(__ARM_FEATURE_FRINT)" in {
 def FRINT32X_S32 : SInst<"vrnd32x", "..", "fQf">;
 def FRINT32Z_S32 : SInst<"vrnd32z", "..", "fQf">;
 def FRINT64X_S32 : SInst<"vrnd64x", "..", "fQf">;
@@ -1241,7 +1241,7 @@ def FMAXNM_S32 : SInst<"vmaxnm", "...", "fQf">;
 def FMINNM_S32 : SInst<"vminnm", "...", "fQf">;
 }
 
-let ArchGuard = "__ARM_ARCH >= 8 && defined(__aarch64__) && defined(__ARM_FEATURE_NUMERIC_MAXMIN)" in {
+let ArchGuard = "defined(__aarch64__) && defined(__ARM_FEATURE_NUMERIC_MAXMIN)" in {
 def FMAXNM_S64 : SInst<"vmaxnm", "...", "dQd">;
 def FMINNM_S64 : SInst<"vminnm", "...", "dQd">;
 }
@@ -1283,7 +1283,7 @@ def VQTBX4_A64 : WInst<"vqtbx4", "..(4Q)U", "UccPcQUcQcQPc">;
 // itself during generation so, unlike all other intrinsics, this one should
 // include *all* types, not just additional ones.
 def VVREINTERPRET : REINTERPRET_CROSS_SELF<"csilUcUsUiUlhfdPcPsPlQcQsQiQlQUcQUsQUiQUlQhQfQdQPcQPsQPlQPk"> {
-  let ArchGuard = "__ARM_ARCH >= 8 && defined(__aarch64__)";
+  let ArchGuard = "defined(__aarch64__)";
   let BigEndianSafe = 1;
 }
 
@@ -1644,7 +1644,8 @@ def SCALAR_VDUP_LANE : IInst<"vdup_lane", "1.I", "ScSsSiSlSfSdSUcSUsSUiSUlSPcSPs
 def SCALAR_VDUP_LANEQ : IInst<"vdup_laneq", "1QI", "ScSsSiSlSfSdSUcSUsSUiSUlSPcSPs"> {
   let isLaneQ = 1;
 }
-}
+
+} // ArchGuard = "defined(__aarch64__)"
 
 // ARMv8.2-A FP16 vector intrinsics for A32/A64.
 let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
@@ -1762,15 +1763,6 @@ let ArchGuard = "defined(__ARM_FEATURE_FP16_VECTOR_ARITHMETIC)" in {
   def VZIPH    : WInst<"vzip", "2..", "hQh">;
   def VUZPH    : WInst<"vuzp", "2..", "hQh">;
   def VTRNH    : WInst<"vtrn", "2..", "hQh">;
-
-
-  let ArchGuard = "!defined(__aarch64__)" in {
-    // Set all lanes to same value.
-    // Already implemented prior to ARMv8.2-A.
-    def VMOV_NH  : WOpInst<"vmov_n", ".1", "hQh", OP_DUP>;
-    def VDUP_NH  : WOpInst<"vdup_n", ".1", "hQh", OP_DUP>;
-    def VDUP_LANE1H : WOpInst<"vdup_lane", ".qI", "hQh", OP_DUP_LN>;
-  }
 
   // Vector Extract
   def VEXTH      : WInst<"vext", "...I", "hQh">;

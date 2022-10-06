@@ -1,9 +1,6 @@
 ; This test verifies that the loop vectorizer will NOT produce a tail
 ; loop with the optimize for size or the minimize size attributes.
 ; REQUIRES: asserts
-; RUN: opt < %s -enable-new-pm=0 -loop-vectorize -S | FileCheck %s
-; RUN: opt < %s -enable-new-pm=0 -loop-vectorize -pgso -S | FileCheck %s -check-prefix=PGSO
-; RUN: opt < %s -enable-new-pm=0 -loop-vectorize -pgso=false -S | FileCheck %s -check-prefix=NPGSO
 ; RUN: opt < %s -passes='require<profile-summary>,loop-vectorize' -S | FileCheck %s
 ; RUN: opt < %s -passes='require<profile-summary>,loop-vectorize' -pgso -S | FileCheck %s -check-prefix=PGSO
 ; RUN: opt < %s -passes='require<profile-summary>,loop-vectorize' -pgso=false -S | FileCheck %s -check-prefix=NPGSO

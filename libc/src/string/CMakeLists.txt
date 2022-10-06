@@ -7,7 +7,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.CPP.bitset
     .memory_utils.memcpy_implementation
-    .memory_utils.memset_implementation
+    .memory_utils.bzero_implementation
 )
 
 add_entrypoint_object(
@@ -65,7 +65,7 @@ add_entrypoint_object(
   HDRS
     stpncpy.h
   DEPENDS
-    .memory_utils.memset_implementation
+    .memory_utils.bzero_implementation
 )
 
 add_entrypoint_object(
@@ -126,6 +126,17 @@ add_entrypoint_object(
     .memory_utils.memcpy_implementation
     .string_utils
     libc.include.stdlib
+)
+
+add_entrypoint_object(
+  strerror
+  SRCS
+    strerror.cpp
+  HDRS
+    strerror.h
+  DEPENDS
+    libc.src.__support.error_to_string
+    libc.src.__support.CPP.span
 )
 
 add_entrypoint_object(

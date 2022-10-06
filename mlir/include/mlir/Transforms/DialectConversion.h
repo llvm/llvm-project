@@ -16,6 +16,7 @@
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
+#include <type_traits>
 
 namespace mlir {
 
@@ -245,7 +246,7 @@ private:
   /// different callback forms, that all compose into a single version.
   /// With callback of form: `Optional<Type>(T)`
   template <typename T, typename FnT>
-  std::enable_if_t<llvm::is_invocable<FnT, T>::value, ConversionCallbackFn>
+  std::enable_if_t<std::is_invocable_v<FnT, T>, ConversionCallbackFn>
   wrapCallback(FnT &&callback) {
     return wrapCallback<T>(
         [callback = std::forward<FnT>(callback)](
@@ -262,7 +263,7 @@ private:
   /// With callback of form: `Optional<LogicalResult>(T, SmallVectorImpl<Type>
   /// &)`
   template <typename T, typename FnT>
-  std::enable_if_t<llvm::is_invocable<FnT, T, SmallVectorImpl<Type> &>::value,
+  std::enable_if_t<std::is_invocable_v<FnT, T, SmallVectorImpl<Type> &>,
                    ConversionCallbackFn>
   wrapCallback(FnT &&callback) {
     return wrapCallback<T>(
@@ -274,9 +275,9 @@ private:
   /// With callback of form: `Optional<LogicalResult>(T, SmallVectorImpl<Type>
   /// &, ArrayRef<Type>)`.
   template <typename T, typename FnT>
-  std::enable_if_t<llvm::is_invocable<FnT, T, SmallVectorImpl<Type> &,
-                                      ArrayRef<Type>>::value,
-                   ConversionCallbackFn>
+  std::enable_if_t<
+      std::is_invocable_v<FnT, T, SmallVectorImpl<Type> &, ArrayRef<Type>>,
+      ConversionCallbackFn>
   wrapCallback(FnT &&callback) {
     return [callback = std::forward<FnT>(callback)](
                Type type, SmallVectorImpl<Type> &results,
@@ -720,8 +721,7 @@ public:
     addDynamicallyLegalOp<OpT2, OpTs...>(callback);
   }
   template <typename OpT, class Callable>
-  typename std::enable_if<
-      !llvm::is_invocable<Callable, Operation *>::value>::type
+  std::enable_if_t<!std::is_invocable_v<Callable, Operation *>>
   addDynamicallyLegalOp(Callable &&callback) {
     addDynamicallyLegalOp<OpT>(
         [=](Operation *op) { return callback(cast<OpT>(op)); });
@@ -760,8 +760,7 @@ public:
     markOpRecursivelyLegal<OpT2, OpTs...>(callback);
   }
   template <typename OpT, class Callable>
-  typename std::enable_if<
-      !llvm::is_invocable<Callable, Operation *>::value>::type
+  std::enable_if_t<!std::is_invocable_v<Callable, Operation *>>
   markOpRecursivelyLegal(Callable &&callback) {
     markOpRecursivelyLegal<OpT>(
         [=](Operation *op) { return callback(cast<OpT>(op)); });

@@ -1174,15 +1174,15 @@ vzeroupper
 # CHECK-NEXT:  3      7     1.00                        vcvttss2si	%xmm0, %rcx
 # CHECK-NEXT:  3      11    1.00    *                   vcvttss2si	(%rax), %ecx
 # CHECK-NEXT:  3      11    1.00    *                   vcvttss2si	(%rax), %rcx
-# CHECK-NEXT:  1      14    3.00                        vdivpd	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  1      14    4.00                        vdivpd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  2      20    4.00    *                   vdivpd	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  1      14    5.00                        vdivpd	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  1      14    8.00                        vdivpd	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  2      21    8.00    *                   vdivpd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  1      11    3.00                        vdivps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  2      17    5.00    *                   vdivps	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  2      17    3.00    *                   vdivps	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      11    5.00                        vdivps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  2      18    5.00    *                   vdivps	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  1      14    3.00                        vdivsd	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  1      14    4.00                        vdivsd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  2      19    4.00    *                   vdivsd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  1      11    3.00                        vdivss	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  2      16    3.00    *                   vdivss	(%rax), %xmm1, %xmm2
@@ -1736,7 +1736,7 @@ vzeroupper
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     123.00 317.42 196.42 173.17 173.17 34.00  337.92 6.25   12.67
+# CHECK-NEXT:  -     126.00 317.42 196.42 173.17 173.17 34.00  337.92 6.25   12.67
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -1884,15 +1884,15 @@ vzeroupper
 # CHECK-NEXT:  -      -     1.33   0.33    -      -      -     1.33    -      -     vcvttss2si	%xmm0, %rcx
 # CHECK-NEXT:  -      -     1.00   1.00   0.50   0.50    -      -      -      -     vcvttss2si	(%rax), %ecx
 # CHECK-NEXT:  -      -     1.00   1.00   0.50   0.50    -      -      -      -     vcvttss2si	(%rax), %rcx
-# CHECK-NEXT:  -     3.00   1.00    -      -      -      -      -      -      -     vdivpd	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  -     4.00   1.00    -      -      -      -      -      -      -     vdivpd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -     4.00   1.00    -     0.50   0.50    -      -      -      -     vdivpd	(%rax), %xmm1, %xmm2
-# CHECK-NEXT:  -     5.00   1.00    -      -      -      -      -      -      -     vdivpd	%ymm0, %ymm1, %ymm2
+# CHECK-NEXT:  -     8.00   1.00    -      -      -      -      -      -      -     vdivpd	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  -     8.00   1.00    -     0.50   0.50    -      -      -      -     vdivpd	(%rax), %ymm1, %ymm2
 # CHECK-NEXT:  -     3.00   1.00    -      -      -      -      -      -      -     vdivps	%xmm0, %xmm1, %xmm2
-# CHECK-NEXT:  -     5.00   1.00    -     0.50   0.50    -      -      -      -     vdivps	(%rax), %xmm1, %xmm2
+# CHECK-NEXT:  -     3.00   1.00    -     0.50   0.50    -      -      -      -     vdivps	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -     5.00   1.00    -      -      -      -      -      -      -     vdivps	%ymm0, %ymm1, %ymm2
 # CHECK-NEXT:  -     5.00   1.00    -     0.50   0.50    -      -      -      -     vdivps	(%rax), %ymm1, %ymm2
-# CHECK-NEXT:  -     3.00   1.00    -      -      -      -      -      -      -     vdivsd	%xmm0, %xmm1, %xmm2
+# CHECK-NEXT:  -     4.00   1.00    -      -      -      -      -      -      -     vdivsd	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -     4.00   1.00    -     0.50   0.50    -      -      -      -     vdivsd	(%rax), %xmm1, %xmm2
 # CHECK-NEXT:  -     3.00   1.00    -      -      -      -      -      -      -     vdivss	%xmm0, %xmm1, %xmm2
 # CHECK-NEXT:  -     3.00   1.00    -     0.50   0.50    -      -      -      -     vdivss	(%rax), %xmm1, %xmm2

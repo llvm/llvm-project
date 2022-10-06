@@ -295,7 +295,7 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
 
   Hint *Hints[] = {&Width,        &Interleave, &Force,
                    &IsVectorized, &Predicate,  &Scalable};
-  for (auto H : Hints) {
+  for (auto *H : Hints) {
     if (Name == H->Name) {
       if (H->validate(Val))
         H->Value = Val;
@@ -456,14 +456,25 @@ int LoopVectorizationLegality::isConsecutivePtr(Type *AccessTy,
                                                 PGSOQueryType::IRPass);
   bool CanAddPredicate = !OptForSize;
   int Stride = getPtrStride(PSE, AccessTy, Ptr, TheLoop, Strides,
-                            CanAddPredicate, false);
+                            CanAddPredicate, false).value_or(0);
   if (Stride == 1 || Stride == -1)
     return Stride;
   return 0;
 }
 
-bool LoopVectorizationLegality::isUniform(Value *V) {
+bool LoopVectorizationLegality::isUniform(Value *V) const {
   return LAI->isUniform(V);
+}
+
+bool LoopVectorizationLegality::isUniformMemOp(Instruction &I) const {
+  Value *Ptr = getLoadStorePointerOperand(&I);
+  if (!Ptr)
+    return false;
+  // Note: There's nothing inherent which prevents predicated loads and
+  // stores from being uniform.  The current lowering simply doesn't handle
+  // it; in particular, the cost model distinguishes scatter/gather from
+  // scalar w/predication, and we currently rely on the scalar path.
+  return isUniform(Ptr) && !blockNeedsPredication(I.getParent());
 }
 
 bool LoopVectorizationLegality::canVectorizeOuterLoop() {
@@ -666,7 +677,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           // Non-header phi nodes that have outside uses can be vectorized. Add
           // them to the list of allowed exits.
           // Unsafe cyclic dependencies with header phis are identified during
-          // legalization for reduction, induction and first order
+          // legalization for reduction, induction and fixed order
           // recurrences.
           AllowedExit.insert(&I);
           continue;
@@ -689,20 +700,20 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           continue;
         }
 
-        // TODO: Instead of recording the AllowedExit, it would be good to record the
-        // complementary set: NotAllowedExit. These include (but may not be
-        // limited to):
+        // TODO: Instead of recording the AllowedExit, it would be good to
+        // record the complementary set: NotAllowedExit. These include (but may
+        // not be limited to):
         // 1. Reduction phis as they represent the one-before-last value, which
-        // is not available when vectorized 
+        // is not available when vectorized
         // 2. Induction phis and increment when SCEV predicates cannot be used
         // outside the loop - see addInductionPhi
         // 3. Non-Phis with outside uses when SCEV predicates cannot be used
         // outside the loop - see call to hasOutsideLoopUser in the non-phi
         // handling below
-        // 4. FirstOrderRecurrence phis that can possibly be handled by
+        // 4. FixedOrderRecurrence phis that can possibly be handled by
         // extraction.
         // By recording these, we can then reason about ways to vectorize each
-        // of these NotAllowedExit. 
+        // of these NotAllowedExit.
         InductionDescriptor ID;
         if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID)) {
           addInductionPhi(Phi, ID, AllowedExit);
@@ -710,10 +721,10 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
           continue;
         }
 
-        if (RecurrenceDescriptor::isFirstOrderRecurrence(Phi, TheLoop,
+        if (RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop,
                                                          SinkAfter, DT)) {
           AllowedExit.insert(Phi);
-          FirstOrderRecurrences.insert(Phi);
+          FixedOrderRecurrences.insert(Phi);
           continue;
         }
 
@@ -883,12 +894,12 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
     }
   }
 
-  // For first order recurrences, we use the previous value (incoming value from
+  // For fixed order recurrences, we use the previous value (incoming value from
   // the latch) to check if it dominates all users of the recurrence. Bail out
   // if we have to sink such an instruction for another recurrence, as the
   // dominance requirement may not hold after sinking.
   BasicBlock *LoopLatch = TheLoop->getLoopLatch();
-  if (any_of(FirstOrderRecurrences, [LoopLatch, this](const PHINode *Phi) {
+  if (any_of(FixedOrderRecurrences, [LoopLatch, this](const PHINode *Phi) {
         Instruction *V =
             cast<Instruction>(Phi->getIncomingValueForBlock(LoopLatch));
         return SinkAfter.find(V) != SinkAfter.end();
@@ -905,7 +916,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 }
 
 bool LoopVectorizationLegality::canVectorizeMemory() {
-  LAI = &(*GetLAA)(*TheLoop);
+  LAI = &LAIs.getInfo(*TheLoop);
   const OptimizationRemarkAnalysis *LAR = LAI->getReport();
   if (LAR) {
     ORE->emit([&]() {
@@ -922,16 +933,33 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   // vectorize loop is made, runtime checks are added so as to make sure that
   // invariant address won't alias with any other objects.
   if (!LAI->getStoresToInvariantAddresses().empty()) {
-    // For each invariant address, check its last stored value is unconditional.
+    // For each invariant address, check if last stored value is unconditional
+    // and the address is not calculated inside the loop.
     for (StoreInst *SI : LAI->getStoresToInvariantAddresses()) {
-      if (isInvariantStoreOfReduction(SI) &&
-          blockNeedsPredication(SI->getParent())) {
+      if (!isInvariantStoreOfReduction(SI))
+        continue;
+
+      if (blockNeedsPredication(SI->getParent())) {
         reportVectorizationFailure(
             "We don't allow storing to uniform addresses",
             "write of conditional recurring variant value to a loop "
             "invariant address could not be vectorized",
             "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
         return false;
+      }
+
+      // Invariant address should be defined outside of loop. LICM pass usually
+      // makes sure it happens, but in rare cases it does not, we do not want
+      // to overcomplicate vectorization to support this case.
+      if (Instruction *Ptr = dyn_cast<Instruction>(SI->getPointerOperand())) {
+        if (TheLoop->contains(Ptr)) {
+          reportVectorizationFailure(
+              "Invariant address is calculated inside the loop",
+              "write to a loop invariant address could not "
+              "be vectorized",
+              "CantVectorizeStoreToLoopInvariantAddress", ORE, TheLoop);
+          return false;
+        }
       }
     }
 
@@ -1069,9 +1097,9 @@ bool LoopVectorizationLegality::isInductionVariable(const Value *V) const {
   return isInductionPhi(V) || isCastedInductionVariable(V);
 }
 
-bool LoopVectorizationLegality::isFirstOrderRecurrence(
+bool LoopVectorizationLegality::isFixedOrderRecurrence(
     const PHINode *Phi) const {
-  return FirstOrderRecurrences.count(Phi);
+  return FixedOrderRecurrences.count(Phi);
 }
 
 bool LoopVectorizationLegality::blockNeedsPredication(BasicBlock *BB) const {
@@ -1096,30 +1124,24 @@ bool LoopVectorizationLegality::blockCanBePredicated(
     if (isa<NoAliasScopeDeclInst>(&I))
       continue;
 
-    // We might be able to hoist the load.
-    if (I.mayReadFromMemory()) {
-      auto *LI = dyn_cast<LoadInst>(&I);
-      if (!LI)
-        return false;
-      if (!SafePtrs.count(LI->getPointerOperand())) {
+    // Loads are handled via masking (or speculated if safe to do so.)
+    if (auto *LI = dyn_cast<LoadInst>(&I)) {
+      if (!SafePtrs.count(LI->getPointerOperand()))
         MaskedOp.insert(LI);
-        continue;
-      }
+      continue;
     }
 
-    if (I.mayWriteToMemory()) {
-      auto *SI = dyn_cast<StoreInst>(&I);
-      if (!SI)
-        return false;
-      // Predicated store requires some form of masking:
-      // 1) masked store HW instruction,
-      // 2) emulation via load-blend-store (only if safe and legal to do so,
-      //    be aware on the race conditions), or
-      // 3) element-by-element predicate check and scalar store.
+    // Predicated store requires some form of masking:
+    // 1) masked store HW instruction,
+    // 2) emulation via load-blend-store (only if safe and legal to do so,
+    //    be aware on the race conditions), or
+    // 3) element-by-element predicate check and scalar store.
+    if (auto *SI = dyn_cast<StoreInst>(&I)) {
       MaskedOp.insert(SI);
       continue;
     }
-    if (I.mayThrow())
+
+    if (I.mayReadFromMemory() || I.mayWriteToMemory() || I.mayThrow())
       return false;
   }
 
@@ -1162,7 +1184,7 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
     for (Instruction &I : *BB) {
       LoadInst *LI = dyn_cast<LoadInst>(&I);
       if (LI && !LI->getType()->isVectorTy() && !mustSuppressSpeculation(*LI) &&
-          isDereferenceableAndAlignedInLoop(LI, TheLoop, SE, *DT))
+          isDereferenceableAndAlignedInLoop(LI, TheLoop, SE, *DT, AC))
         SafePointers.insert(LI->getPointerOperand());
     }
   }
@@ -1364,7 +1386,7 @@ bool LoopVectorizationLegality::prepareToFoldTailByMasking() {
 
   SmallPtrSet<const Value *, 8> ReductionLiveOuts;
 
-  for (auto &Reduction : getReductionVars())
+  for (const auto &Reduction : getReductionVars())
     ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
 
   // TODO: handle non-reduction outside users when tail is folded by masking.

@@ -80,9 +80,12 @@ public:
   // Is V an undef value?
   bool isUndef(const Value *Val) const;
 
-  int getSizeOf(const Value *Val) const;
-  int getSizeOf(const Type *Ty) const;
-  int getAllocSizeOf(const Type *Ty) const;
+  enum SizeKind {
+    Store,  // Store size
+    Alloc,  // Alloc size
+  };
+  int getSizeOf(const Value *Val, SizeKind Kind = Store) const;
+  int getSizeOf(const Type *Ty, SizeKind Kind = Store) const;
   int getTypeAlignment(Type *Ty) const;
 
   Constant *getNullValue(Type *Ty) const;
@@ -110,6 +113,9 @@ public:
                               BasicBlock::const_iterator To,
                               const T &Ignore = {}) const;
 
+  // This function is only used for assertions at the moment.
+  [[maybe_unused]] bool isByteVecTy(Type *Ty) const;
+
   Function &F;
   const DataLayout &DL;
   AliasAnalysis &AA;
@@ -119,11 +125,6 @@ public:
   const HexagonSubtarget &HST;
 
 private:
-#ifndef NDEBUG
-  // These two functions are only used for assertions at the moment.
-  bool isByteVecTy(Type *Ty) const;
-  bool isSectorTy(Type *Ty) const;
-#endif
   Value *getElementRange(IRBuilder<> &Builder, Value *Lo, Value *Hi, int Start,
                          int Length) const;
 };
@@ -149,6 +150,7 @@ private:
              Align H)
         : Inst(I), Addr(A), ValTy(T), HaveAlign(H),
           NeedAlign(HVC.getTypeAlignment(ValTy)) {}
+    AddrInfo &operator=(const AddrInfo &) = default;
 
     // XXX: add Size member?
     Instruction *Inst;
@@ -185,6 +187,7 @@ private:
       Segment(Value *Val, int Begin, int Len)
           : Val(Val), Start(Begin), Size(Len) {}
       Segment(const Segment &Seg) = default;
+      Segment &operator=(const Segment &Seg) = default;
       Value *Val; // Value representable as a sequence of bytes.
       int Start;  // First byte of the value that belongs to the segment.
       int Size;   // Number of bytes in the segment.
@@ -195,6 +198,7 @@ private:
       Block(Value *Val, int Off, int Len, int Pos)
           : Seg(Val, Off, Len), Pos(Pos) {}
       Block(const Block &Blk) = default;
+      Block &operator=(const Block &Blk) = default;
       Segment Seg; // Value segment.
       int Pos;     // Position (offset) of the segment in the Block.
     };
@@ -221,6 +225,8 @@ private:
   Optional<MemoryLocation> getLocation(const Instruction &In) const;
   Optional<AddrInfo> getAddrInfo(Instruction &In) const;
   bool isHvx(const AddrInfo &AI) const;
+  // This function is only used for assertions at the moment.
+  [[maybe_unused]] bool isSectorTy(Type *Ty) const;
 
   Value *getPayload(Value *Val) const;
   Value *getMask(Value *Val) const;
@@ -443,7 +449,7 @@ auto AlignVectors::createAdjustedPointer(IRBuilder<> &Builder, Value *Ptr,
   auto *PtrTy = cast<PointerType>(Ptr->getType());
   if (!PtrTy->isOpaque()) {
     Type *ElemTy = PtrTy->getNonOpaquePointerElementType();
-    int ElemSize = HVC.getAllocSizeOf(ElemTy);
+    int ElemSize = HVC.getSizeOf(ElemTy, HVC.Alloc);
     if (Adjust % ElemSize == 0 && Adjust != 0) {
       Value *Tmp0 =
           Builder.CreateGEP(ElemTy, Ptr, HVC.getConstInt(Adjust / ElemSize));
@@ -801,6 +807,7 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
 
     if (DoAlign) {
       for (int j = 0; j != NumSectors; ++j) {
+        assert(isSectorTy(ASpan[j].Seg.Val->getType()));
         ASpan[j].Seg.Val = HVC.vralignb(Builder, ASpan[j].Seg.Val,
                                         ASpan[j + 1].Seg.Val, AlignVal);
       }
@@ -864,10 +871,11 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
     // vlalign
     if (DoAlign) {
       for (int j = 1; j != NumSectors + 2; ++j) {
-        ASpanV[j - 1].Seg.Val = HVC.vlalignb(Builder, ASpanV[j - 1].Seg.Val,
-                                             ASpanV[j].Seg.Val, AlignVal);
-        ASpanM[j - 1].Seg.Val = HVC.vlalignb(Builder, ASpanM[j - 1].Seg.Val,
-                                             ASpanM[j].Seg.Val, AlignVal);
+        Value *PrevV = ASpanV[j - 1].Seg.Val, *ThisV = ASpanV[j].Seg.Val;
+        Value *PrevM = ASpanM[j - 1].Seg.Val, *ThisM = ASpanM[j].Seg.Val;
+        assert(isSectorTy(PrevV->getType()) && isSectorTy(PrevM->getType()));
+        ASpanV[j - 1].Seg.Val = HVC.vlalignb(Builder, PrevV, ThisV, AlignVal);
+        ASpanM[j - 1].Seg.Val = HVC.vlalignb(Builder, PrevM, ThisM, AlignVal);
       }
     }
 
@@ -892,6 +900,15 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
     Inst->eraseFromParent();
 
   return true;
+}
+
+auto AlignVectors::isSectorTy(Type *Ty) const -> bool {
+  if (!HVC.isByteVecTy(Ty))
+    return false;
+  int Size = HVC.getSizeOf(Ty);
+  if (HVC.HST.isTypeForHVX(Ty))
+    return Size == static_cast<int>(HVC.HST.getVectorLength());
+  return Size == 4 || Size == 8;
 }
 
 auto AlignVectors::run() -> bool {
@@ -970,16 +987,21 @@ auto HexagonVectorCombine::isUndef(const Value *Val) const -> bool {
   return isa<UndefValue>(Val);
 }
 
-auto HexagonVectorCombine::getSizeOf(const Value *Val) const -> int {
-  return getSizeOf(Val->getType());
+auto HexagonVectorCombine::getSizeOf(const Value *Val, SizeKind Kind) const
+    -> int {
+  return getSizeOf(Val->getType(), Kind);
 }
 
-auto HexagonVectorCombine::getSizeOf(const Type *Ty) const -> int {
-  return DL.getTypeStoreSize(const_cast<Type *>(Ty)).getFixedValue();
-}
-
-auto HexagonVectorCombine::getAllocSizeOf(const Type *Ty) const -> int {
-  return DL.getTypeAllocSize(const_cast<Type *>(Ty)).getFixedValue();
+auto HexagonVectorCombine::getSizeOf(const Type *Ty, SizeKind Kind) const
+    -> int {
+  auto *NcTy = const_cast<Type *>(Ty);
+  switch (Kind) {
+  case Store:
+    return DL.getTypeStoreSize(NcTy).getFixedValue();
+  case Alloc:
+    return DL.getTypeAllocSize(NcTy).getFixedValue();
+  }
+  llvm_unreachable("Unhandled SizeKind enum");
 }
 
 auto HexagonVectorCombine::getTypeAlignment(Type *Ty) const -> int {
@@ -1036,7 +1058,6 @@ auto HexagonVectorCombine::insertb(IRBuilder<> &Builder, Value *Dst, Value *Src,
 auto HexagonVectorCombine::vlalignb(IRBuilder<> &Builder, Value *Lo, Value *Hi,
                                     Value *Amt) const -> Value * {
   assert(Lo->getType() == Hi->getType() && "Argument type mismatch");
-  assert(isSectorTy(Hi->getType()));
   if (isZero(Amt))
     return Hi;
   int VecLen = getSizeOf(Hi);
@@ -1070,7 +1091,6 @@ auto HexagonVectorCombine::vlalignb(IRBuilder<> &Builder, Value *Lo, Value *Hi,
 auto HexagonVectorCombine::vralignb(IRBuilder<> &Builder, Value *Lo, Value *Hi,
                                     Value *Amt) const -> Value * {
   assert(Lo->getType() == Hi->getType() && "Argument type mismatch");
-  assert(isSectorTy(Lo->getType()));
   if (isZero(Amt))
     return Lo;
   int VecLen = getSizeOf(Lo);
@@ -1332,7 +1352,7 @@ auto HexagonVectorCombine::calculatePointerDifference(Value *Ptr0,
     return None;
 
   Builder B(Gep0->getParent());
-  int Scale = getAllocSizeOf(Gep0->getSourceElementType());
+  int Scale = getSizeOf(Gep0->getSourceElementType(), Alloc);
 
   // FIXME: for now only check GEPs with a single index.
   if (Gep0->getNumOperands() != 2 || Gep1->getNumOperands() != 2)
@@ -1445,22 +1465,11 @@ auto HexagonVectorCombine::isSafeToMoveBeforeInBB(const Instruction &In,
   return true;
 }
 
-#ifndef NDEBUG
 auto HexagonVectorCombine::isByteVecTy(Type *Ty) const -> bool {
   if (auto *VecTy = dyn_cast<VectorType>(Ty))
     return VecTy->getElementType() == getByteTy();
   return false;
 }
-
-auto HexagonVectorCombine::isSectorTy(Type *Ty) const -> bool {
-  if (!isByteVecTy(Ty))
-    return false;
-  int Size = getSizeOf(Ty);
-  if (HST.isTypeForHVX(Ty))
-    return Size == static_cast<int>(HST.getVectorLength());
-  return Size == 4 || Size == 8;
-}
-#endif
 
 auto HexagonVectorCombine::getElementRange(IRBuilder<> &Builder, Value *Lo,
                                            Value *Hi, int Start,

@@ -315,5 +315,37 @@ define float @fadd_fma_fmul_extra_use_3(float %a, float %b, float %c, float %d, 
   ret float %a2
 }
 
+define float @fmac_sequence_innermost_fmul(float %a, float %b, float %c, float %d, float %e, float %f, float %g) {
+; CHECK-LABEL: fmac_sequence_innermost_fmul:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmadd s0, s0, s1, s6
+; CHECK-NEXT:    fmadd s0, s2, s3, s0
+; CHECK-NEXT:    fmadd s0, s4, s5, s0
+; CHECK-NEXT:    ret
+  %t0 = fmul float %a, %b
+  %t1 = fmul contract float %c, %d
+  %t2 = fadd contract float %t0, %t1
+  %t3 = fmul contract float %e, %f
+  %t4 = fadd contract float %t2, %t3
+  %t5 = fadd contract reassoc float %t4, %g
+  ret float %t5
+}
+
+define float @fmac_sequence_innermost_fmul_intrinsics(float %a, float %b, float %c, float %d, float %e, float %f, float %g) {
+; CHECK-LABEL: fmac_sequence_innermost_fmul_intrinsics:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmadd s0, s0, s1, s6
+; CHECK-NEXT:    fmadd s0, s2, s3, s0
+; CHECK-NEXT:    fmadd s0, s4, s5, s0
+; CHECK-NEXT:    ret
+  %t0 = fmul float %a, %b
+  %t1 = call float @llvm.fma.f32(float %c, float %d, float %t0)
+  %t2 = call float @llvm.fma.f32(float %e, float %f, float %t1)
+  %t5 = fadd contract reassoc float %t2, %g
+  ret float %t5
+}
+
+declare float @llvm.fma.f32(float, float, float)
+
 declare void @use(double)
 

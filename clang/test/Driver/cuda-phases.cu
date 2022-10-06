@@ -238,8 +238,8 @@
 // NEW-DRIVER-RDC-NEXT: 12: backend, {11}, assembler, (device-cuda, sm_70)
 // NEW-DRIVER-RDC-NEXT: 13: assembler, {12}, object, (device-cuda, sm_70)
 // NEW-DRIVER-RDC-NEXT: 14: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {13}, object
-// NEW-DRIVER-RDC-NEXT: 15: clang-offload-packager, {8, 14}, image
-// NEW-DRIVER-RDC-NEXT: 16: offload, " (powerpc64le-ibm-linux-gnu)" {2}, " (powerpc64le-ibm-linux-gnu)" {15}, ir
+// NEW-DRIVER-RDC-NEXT: 15: clang-offload-packager, {8, 14}, image, (device-cuda)
+// NEW-DRIVER-RDC-NEXT: 16: offload, "host-cuda (powerpc64le-ibm-linux-gnu)" {2}, "device-cuda (powerpc64le-ibm-linux-gnu)" {15}, ir
 // NEW-DRIVER-RDC-NEXT: 17: backend, {16}, assembler, (host-cuda)
 // NEW-DRIVER-RDC-NEXT: 18: assembler, {17}, object, (host-cuda)
 // NEW-DRIVER-RDC-NEXT: 19: clang-linker-wrapper, {18}, image, (host-cuda)
@@ -262,7 +262,7 @@
 // NEW-DRIVER-NEXT: 13: assembler, {12}, object, (device-cuda, sm_70)
 // NEW-DRIVER-NEXT: 14: offload, "device-cuda (nvptx64-nvidia-cuda:sm_70)" {13}, object
 // NEW-DRIVER-NEXT: 15: clang-offload-packager, {8, 14}, image
-// NEW-DRIVER-NEXT: 16: offload, " (powerpc64le-ibm-linux-gnu)" {2}, " (powerpc64le-ibm-linux-gnu)" {15}, ir
+// NEW-DRIVER-NEXT: 16: offload, "host-cuda (powerpc64le-ibm-linux-gnu)" {2}, "device-cuda (powerpc64le-ibm-linux-gnu)" {15}, ir
 // NEW-DRIVER-NEXT: 17: backend, {16}, assembler, (host-cuda)
 // NEW-DRIVER-NEXT: 18: assembler, {17}, object, (host-cuda)
 // NEW-DRIVER-NEXT: 19: clang-linker-wrapper, {18}, image, (host-cuda)

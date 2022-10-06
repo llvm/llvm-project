@@ -2,15 +2,12 @@
 Test lldb-vscode setBreakpoints request
 """
 
-from __future__ import print_function
-
-import unittest2
 import vscode
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 import lldbvscode_testcase
-
+import os
 
 def make_buffer_verify_dict(start_idx, count, offset=0):
     verify_dict = {}
@@ -41,6 +38,14 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
                                  ' "%s")') % (
                                     key, actual_value,
                                     verify_value))
+        if 'contains' in verify_dict:
+            verify = verify_dict['contains']
+            for key in verify:
+                contains_array = verify[key]
+                actual_value = actual[key]
+                self.assertTrue(isinstance(contains_array, list))
+                for verify_value in contains_array:
+                    self.assertIn(verify_value, actual_value)
         if 'missing' in verify_dict:
             missing = verify_dict['missing']
             for key in missing:
@@ -462,3 +467,95 @@ class TestVSCode_variables(lldbvscode_testcase.VSCodeTestCaseBase):
             "pt": {"missing": ["indexedVariables"]},
         }
         self.verify_variables(verify_locals, locals)
+
+    @skipIfWindows
+    @skipIfRemote
+    def test_registers(self):
+        '''
+            Test that registers whose byte size is the size of a pointer on
+            the current system get formatted as lldb::eFormatAddressInfo. This
+            will show the pointer value followed by a description of the address
+            itself. To test this we attempt to find the PC value in the general
+            purpose registers, and since we will be stopped in main.cpp, verify
+            that the value for the PC starts with a pointer and is followed by
+            a description that contains main.cpp.
+        '''
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+        breakpoint1_line = line_number(source, "// breakpoint 1")
+        lines = [breakpoint1_line]
+        # Set breakpoint in the thread function so we can step the threads
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.assertEqual(
+            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        )
+        self.continue_to_breakpoints(breakpoint_ids)
+
+
+        pc_name = None
+        arch = self.getArchitecture()
+        if arch == 'x86_64':
+            pc_name = 'rip'
+        elif arch == 'x86':
+            pc_name = 'rip'
+        elif arch.startswith('arm'):
+            pc_name = 'pc'
+
+        if pc_name is None:
+            return
+        # Verify locals
+        reg_sets = self.vscode.get_registers()
+        for reg_set in reg_sets:
+            if reg_set['name'] == 'General Purpose Registers':
+                varRef = reg_set['variablesReference']
+                regs = self.vscode.request_variables(varRef)['body']['variables']
+                for reg in regs:
+                    if reg['name'] == pc_name:
+                        value = reg['value']
+                        self.assertTrue(value.startswith('0x'))
+                        self.assertTrue('a.out`main + ' in value)
+                        self.assertTrue('at main.cpp:' in value)
+
+    @no_debug_info_test
+    @skipUnlessDarwin
+    def test_darwin_dwarf_missing_obj(self):
+        '''
+            Test that if we build a binary with DWARF in .o files and we remove
+            the .o file for main.cpp, that we get a variable named "<error>"
+            whose value matches the appriopriate error. Errors when getting
+            variables are returned in the LLDB API when the user should be
+            notified of issues that can easily be solved by rebuilding or
+            changing compiler options and are designed to give better feedback
+            to the user.
+        '''
+        self.build(debug_info="dwarf")
+        program = self.getBuildArtifact("a.out")
+        main_obj = self.getBuildArtifact("main.o")
+        self.assertTrue(os.path.exists(main_obj))
+        # Delete the main.o file that contains the debug info so we force an
+        # error when we run to main and try to get variables
+        os.unlink(main_obj)
+
+        self.create_debug_adaptor()
+        self.assertTrue(os.path.exists(program), 'executable must exist')
+        self.launch(program)
+
+        functions = ['main']
+        breakpoint_ids = self.set_function_breakpoints(functions)
+        self.assertEquals(len(breakpoint_ids), len(functions), "expect one breakpoint")
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        locals = self.vscode.get_local_variables()
+
+        verify_locals = {
+            '<error>': {
+                'equals': {'type': 'const char *'},
+                'contains': { 'value': [
+                    'debug map object file ',
+                    'main.o" containing debug info does not exist, debug info will not be loaded']
+                }
+            },
+        }
+        varref_dict = {}
+        self.verify_variables(verify_locals, locals, varref_dict)

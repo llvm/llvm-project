@@ -1,19 +1,20 @@
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -aarch64-sve-vector-bits-min=256 | FileCheck %s -D#VBITS=256
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -aarch64-sve-vector-bits-min=384 | FileCheck %s -D#VBITS=256
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -aarch64-sve-vector-bits-min=512 | FileCheck %s -D#VBITS=512
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -aarch64-sve-vector-bits-min=640 | FileCheck %s -D#VBITS=512
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -aarch64-sve-vector-bits-min=768 | FileCheck %s -D#VBITS=512
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -aarch64-sve-vector-bits-min=896 | FileCheck %s -D#VBITS=512
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -aarch64-sve-vector-bits-min=1024 | FileCheck %s -D#VBITS=1024
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -aarch64-sve-vector-bits-min=1152 | FileCheck %s -D#VBITS=1024
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -aarch64-sve-vector-bits-min=1280 | FileCheck %s -D#VBITS=1024
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -aarch64-sve-vector-bits-min=1408 | FileCheck %s -D#VBITS=1024
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -aarch64-sve-vector-bits-min=1536 | FileCheck %s -D#VBITS=1024
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -aarch64-sve-vector-bits-min=1664 | FileCheck %s -D#VBITS=1024
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -aarch64-sve-vector-bits-min=1792 | FileCheck %s -D#VBITS=1024
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -aarch64-sve-vector-bits-min=1920 | FileCheck %s -D#VBITS=1024
-; RUN: opt < %s -passes='print<cost-model>' 2>&1 -disable-output -aarch64-sve-vector-bits-min=2048 | FileCheck %s -D#VBITS=2048
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=256 | FileCheck %s -D#VBITS=256
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=384 | FileCheck %s -D#VBITS=256
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=512 | FileCheck %s -D#VBITS=512
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=640 | FileCheck %s -D#VBITS=512
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=768 | FileCheck %s -D#VBITS=512
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=896 | FileCheck %s -D#VBITS=512
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=1024 | FileCheck %s -D#VBITS=1024
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=1152 | FileCheck %s -D#VBITS=1024
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=1280 | FileCheck %s -D#VBITS=1024
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=1408 | FileCheck %s -D#VBITS=1024
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=1536 | FileCheck %s -D#VBITS=1024
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=1664 | FileCheck %s -D#VBITS=1024
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=1792 | FileCheck %s -D#VBITS=1024
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=1920 | FileCheck %s -D#VBITS=1024
+; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -aarch64-sve-vector-bits-min=2048 | FileCheck %s -D#VBITS=2048
 
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
 define void @fixed_sve_vls() #0 {

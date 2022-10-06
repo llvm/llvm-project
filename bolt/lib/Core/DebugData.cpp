@@ -1183,11 +1183,9 @@ void DebugAbbrevWriter::addUnitAbbreviations(DWARFUnit &Unit) {
       // FIXME: if we had a full access to DWARFDebugAbbrev::AbbrDeclSets
       // we wouldn't have to build our own sorted list for the quick lookup.
       if (AbbrevSetOffsets.empty()) {
-        for_each(
-            *Unit.getContext().getDebugAbbrev(),
-            [&](const std::pair<uint64_t, DWARFAbbreviationDeclarationSet> &P) {
-              AbbrevSetOffsets.push_back(P.first);
-            });
+        for (const std::pair<const uint64_t, DWARFAbbreviationDeclarationSet>
+                 &P : *Unit.getContext().getDebugAbbrev())
+          AbbrevSetOffsets.push_back(P.first);
         sort(AbbrevSetOffsets);
       }
       auto It = upper_bound(AbbrevSetOffsets, StartOffset);
@@ -1593,7 +1591,7 @@ void DwarfLineTable::emit(BinaryContext &BC, MCStreamer &Streamer) {
   // Some versions of GCC output DWARF5 .debug_info, but DWARF4 or lower
   // .debug_line
   if (LineStrSection) {
-    LineStr = MCDwarfLineStr(*BC.Ctx);
+    LineStr.emplace(*BC.Ctx);
     parseAndPopulateDebugLineStr(*LineStrSection, *LineStr, BC, Streamer);
   }
 

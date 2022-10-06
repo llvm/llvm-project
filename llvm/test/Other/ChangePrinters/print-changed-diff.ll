@@ -17,13 +17,13 @@
 ; RUN: opt -S -print-changed=diff -passes=instsimplify -filter-print-funcs="f,g" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-FILTER-MULT-FUNC
 ;
 ; Check that the reporting of IRs respects -filter-passes
-; RUN: opt -S -print-changed=diff -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-FILTER-PASSES
+; RUN: opt -S -print-changed=diff -passes="instsimplify,no-op-function" -filter-passes="no-op-function" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-FILTER-PASSES
 ;
 ; Check that the reporting of IRs respects -filter-passes with multiple passes
-; RUN: opt -S -print-changed=diff -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-FILTER-MULT-PASSES
+; RUN: opt -S -print-changed=diff -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-FILTER-MULT-PASSES
 ;
 ; Check that the reporting of IRs respects both -filter-passes and -filter-print-funcs
-; RUN: opt -S -print-changed=diff -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" -filter-print-funcs=f 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-FILTER-FUNC-PASSES
+; RUN: opt -S -print-changed=diff -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" -filter-print-funcs=f 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-FILTER-FUNC-PASSES
 ;
 ; Check that repeated passes that change the IR are printed and that the
 ; others (including g) are filtered out.  Note that only the first time
@@ -49,13 +49,13 @@
 ; RUN: opt -S -print-changed=diff-quiet -passes=instsimplify -filter-print-funcs="f,g" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-QUIET-FILTER-MULT-FUNC
 ;
 ; Check that the reporting of IRs respects -filter-passes
-; RUN: opt -S -print-changed=diff-quiet -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-QUIET-FILTER-PASSES-NONE --allow-empty
+; RUN: opt -S -print-changed=diff-quiet -passes="instsimplify,no-op-function" -filter-passes="no-op-function" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-QUIET-FILTER-PASSES-NONE --allow-empty
 ;
 ; Check that the reporting of IRs respects -filter-passes with multiple passes
-; RUN: opt -S -print-changed=diff-quiet -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-QUIET-FILTER-MULT-PASSES
+; RUN: opt -S -print-changed=diff-quiet -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-QUIET-FILTER-MULT-PASSES
 ;
 ; Check that the reporting of IRs respects both -filter-passes and -filter-print-funcs
-; RUN: opt -S -print-changed=diff-quiet -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" -filter-print-funcs=f 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-QUIET-FILTER-FUNC-PASSES
+; RUN: opt -S -print-changed=diff-quiet -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" -filter-print-funcs=f 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-DIFF-QUIET-FILTER-FUNC-PASSES
 ;
 ; Check that repeated passes that change the IR are printed and that the
 ; others (including g) are filtered out.  Note that only the first time
@@ -81,13 +81,13 @@
 ; RUN: opt -S -print-changed=cdiff -passes=instsimplify -filter-print-funcs="f,g" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-CDIFF-FILTER-MULT-FUNC
 ;
 ; Check that the reporting of IRs respects -filter-passes
-; RUN: opt -S -print-changed=cdiff -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-CDIFF-FILTER-PASSES
+; RUN: opt -S -print-changed=cdiff -passes="instsimplify,no-op-function" -filter-passes="no-op-function" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-CDIFF-FILTER-PASSES
 ;
 ; Check that the reporting of IRs respects -filter-passes with multiple passes
-; RUN: opt -S -print-changed=cdiff -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-CDIFF-FILTER-MULT-PASSES
+; RUN: opt -S -print-changed=cdiff -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-CDIFF-FILTER-MULT-PASSES
 ;
 ; Check that the reporting of IRs respects both -filter-passes and -filter-print-funcs
-; RUN: opt -S -print-changed=cdiff -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" -filter-print-funcs=f 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-CDIFF-FILTER-FUNC-PASSES
+; RUN: opt -S -print-changed=cdiff -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" -filter-print-funcs=f 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-CDIFF-FILTER-FUNC-PASSES
 ;
 ; Check that repeated passes that change the IR are printed and that the
 ; others (including g) are filtered out.  Note that only the first time
@@ -113,13 +113,13 @@
 ; RUN: opt -S -print-changed=cdiff-quiet -passes=instsimplify -filter-print-funcs="f,g" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-CDIFF-QUIET-FILTER-MULT-FUNC
 ;
 ; Check that the reporting of IRs respects -filter-passes
-; RUN: opt -S -print-changed=cdiff-quiet -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-CDIFF-QUIET-FILTER-PASSES-NONE --allow-empty
+; RUN: opt -S -print-changed=cdiff-quiet -passes="instsimplify,no-op-function" -filter-passes="no-op-function" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-CDIFF-QUIET-FILTER-PASSES-NONE --allow-empty
 ;
 ; Check that the reporting of IRs respects -filter-passes with multiple passes
-; RUN: opt -S -print-changed=cdiff-quiet -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-CDIFF-QUIET-FILTER-MULT-PASSES
+; RUN: opt -S -print-changed=cdiff-quiet -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-CDIFF-QUIET-FILTER-MULT-PASSES
 ;
 ; Check that the reporting of IRs respects both -filter-passes and -filter-print-funcs
-; RUN: opt -S -print-changed=cdiff-quiet -passes="instsimplify,no-op-function" -filter-passes="NoOpFunctionPass,InstSimplifyPass" -filter-print-funcs=f 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-CDIFF-QUIET-FILTER-FUNC-PASSES
+; RUN: opt -S -print-changed=cdiff-quiet -passes="instsimplify,no-op-function" -filter-passes="no-op-function,instsimplify" -filter-print-funcs=f 2>&1 -o /dev/null < %s | FileCheck %s --check-prefix=CHECK-CDIFF-QUIET-FILTER-FUNC-PASSES
 ;
 ; Check that repeated passes that change the IR are printed and that the
 ; others (including g) are filtered out.  Note that only the first time

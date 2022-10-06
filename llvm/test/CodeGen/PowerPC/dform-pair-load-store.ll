@@ -16,23 +16,22 @@ define void @foo(i32 zeroext %n, <256 x i1>* %ptr, <256 x i1>* %ptr2) {
 ; CHECK-NEXT:    cmplwi r3, 0
 ; CHECK-NEXT:    beqlr cr0
 ; CHECK-NEXT:  # %bb.1: # %for.body.lr.ph
-; CHECK-NEXT:    clrldi r6, r3, 32
-; CHECK-NEXT:    addi r3, r4, 64
-; CHECK-NEXT:    addi r4, r5, 64
-; CHECK-NEXT:    mtctr r6
+; CHECK-NEXT:    addi r4, r4, 64
+; CHECK-NEXT:    addi r5, r5, 64
+; CHECK-NEXT:    mtctr r3
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    #
-; CHECK-NEXT:    lxvp vsp34, -64(r3)
-; CHECK-NEXT:    lxvp vsp36, -32(r3)
-; CHECK-NEXT:    lxvp vsp32, 0(r3)
-; CHECK-NEXT:    lxvp vsp38, 32(r3)
-; CHECK-NEXT:    addi r3, r3, 1
-; CHECK-NEXT:    stxvp vsp34, -64(r4)
-; CHECK-NEXT:    stxvp vsp36, -32(r4)
-; CHECK-NEXT:    stxvp vsp32, 0(r4)
-; CHECK-NEXT:    stxvp vsp38, 32(r4)
+; CHECK-NEXT:    lxvp vsp34, -64(r4)
+; CHECK-NEXT:    lxvp vsp36, -32(r4)
+; CHECK-NEXT:    lxvp vsp32, 0(r4)
+; CHECK-NEXT:    lxvp vsp38, 32(r4)
 ; CHECK-NEXT:    addi r4, r4, 1
+; CHECK-NEXT:    stxvp vsp34, -64(r5)
+; CHECK-NEXT:    stxvp vsp36, -32(r5)
+; CHECK-NEXT:    stxvp vsp32, 0(r5)
+; CHECK-NEXT:    stxvp vsp38, 32(r5)
+; CHECK-NEXT:    addi r5, r5, 1
 ; CHECK-NEXT:    bdnz .LBB0_2
 ; CHECK-NEXT:  # %bb.3: # %for.cond.cleanup
 ; CHECK-NEXT:    blr
@@ -42,23 +41,22 @@ define void @foo(i32 zeroext %n, <256 x i1>* %ptr, <256 x i1>* %ptr2) {
 ; CHECK-BE-NEXT:    cmplwi r3, 0
 ; CHECK-BE-NEXT:    beqlr cr0
 ; CHECK-BE-NEXT:  # %bb.1: # %for.body.lr.ph
-; CHECK-BE-NEXT:    clrldi r6, r3, 32
-; CHECK-BE-NEXT:    addi r3, r4, 64
-; CHECK-BE-NEXT:    addi r4, r5, 64
-; CHECK-BE-NEXT:    mtctr r6
+; CHECK-BE-NEXT:    addi r4, r4, 64
+; CHECK-BE-NEXT:    addi r5, r5, 64
+; CHECK-BE-NEXT:    mtctr r3
 ; CHECK-BE-NEXT:    .p2align 4
 ; CHECK-BE-NEXT:  .LBB0_2: # %for.body
 ; CHECK-BE-NEXT:    #
-; CHECK-BE-NEXT:    lxvp vsp34, -64(r3)
-; CHECK-BE-NEXT:    lxvp vsp36, -32(r3)
-; CHECK-BE-NEXT:    lxvp vsp32, 0(r3)
-; CHECK-BE-NEXT:    lxvp vsp38, 32(r3)
-; CHECK-BE-NEXT:    addi r3, r3, 1
-; CHECK-BE-NEXT:    stxvp vsp34, -64(r4)
-; CHECK-BE-NEXT:    stxvp vsp36, -32(r4)
-; CHECK-BE-NEXT:    stxvp vsp32, 0(r4)
-; CHECK-BE-NEXT:    stxvp vsp38, 32(r4)
+; CHECK-BE-NEXT:    lxvp vsp34, -64(r4)
+; CHECK-BE-NEXT:    lxvp vsp36, -32(r4)
+; CHECK-BE-NEXT:    lxvp vsp32, 0(r4)
+; CHECK-BE-NEXT:    lxvp vsp38, 32(r4)
 ; CHECK-BE-NEXT:    addi r4, r4, 1
+; CHECK-BE-NEXT:    stxvp vsp34, -64(r5)
+; CHECK-BE-NEXT:    stxvp vsp36, -32(r5)
+; CHECK-BE-NEXT:    stxvp vsp32, 0(r5)
+; CHECK-BE-NEXT:    stxvp vsp38, 32(r5)
+; CHECK-BE-NEXT:    addi r5, r5, 1
 ; CHECK-BE-NEXT:    bdnz .LBB0_2
 ; CHECK-BE-NEXT:  # %bb.3: # %for.cond.cleanup
 ; CHECK-BE-NEXT:    blr

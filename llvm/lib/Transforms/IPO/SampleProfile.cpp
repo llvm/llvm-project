@@ -25,6 +25,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallVector.h"
@@ -74,6 +75,7 @@
 #include "llvm/Transforms/Instrumentation.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
+#include "llvm/Transforms/Utils/MisExpect.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseImpl.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseUtil.h"
 #include <algorithm>
@@ -362,7 +364,7 @@ private:
       FS->GUIDToFuncNameMap = Map;
       for (const auto &ICS : FS->getCallsiteSamples()) {
         const FunctionSamplesMap &FSMap = ICS.second;
-        for (auto &IFS : FSMap) {
+        for (const auto &IFS : FSMap) {
           FunctionSamples &FS = const_cast<FunctionSamples &>(IFS.second);
           FSToUpdate.push(&FS);
         }
@@ -475,7 +477,7 @@ protected:
       const SmallVectorImpl<CallBase *> &Candidates, const Function &F,
       bool Hot);
   void promoteMergeNotInlinedContextSamples(
-      DenseMap<CallBase *, const FunctionSamples *> NonInlinedCallSites,
+      MapVector<CallBase *, const FunctionSamples *> NonInlinedCallSites,
       const Function &F);
   std::vector<Function *> buildFunctionOrder(Module &M, CallGraph *CG);
   std::unique_ptr<ProfiledCallGraph> buildProfiledCallGraph(CallGraph &CG);
@@ -984,7 +986,7 @@ bool SampleProfileLoader::shouldInlineColdCallee(CallBase &CallInst) {
 void SampleProfileLoader::emitOptimizationRemarksForInlineCandidates(
     const SmallVectorImpl<CallBase *> &Candidates, const Function &F,
     bool Hot) {
-  for (auto I : Candidates) {
+  for (auto *I : Candidates) {
     Function *CalledFunction = I->getCalledFunction();
     if (CalledFunction) {
       ORE->emit(OptimizationRemarkAnalysis(getAnnotatedRemarkPassName(),
@@ -1106,7 +1108,7 @@ bool SampleProfileLoader::inlineHotFunctions(
          "ProfAccForSymsInList should be false when profile-sample-accurate "
          "is enabled");
 
-  DenseMap<CallBase *, const FunctionSamples *> LocalNotInlinedCallSites;
+  MapVector<CallBase *, const FunctionSamples *> LocalNotInlinedCallSites;
   bool Changed = false;
   bool LocalChanged = true;
   while (LocalChanged) {
@@ -1126,7 +1128,7 @@ bool SampleProfileLoader::inlineHotFunctions(
               AllCandidates.push_back(CB);
               if (FS->getHeadSamplesEstimate() > 0 ||
                   FunctionSamples::ProfileIsCS)
-                LocalNotInlinedCallSites.try_emplace(CB, FS);
+                LocalNotInlinedCallSites.insert({CB, FS});
               if (callsiteIsHot(FS, PSI, ProfAccForSymsInList))
                 Hot = true;
               else if (shouldInlineColdCallee(*CB))
@@ -1219,12 +1221,10 @@ bool SampleProfileLoader::tryInlineCandidate(
 
   InlineFunctionInfo IFI(nullptr, GetAC);
   IFI.UpdateProfile = false;
-  if (!InlineFunction(CB, IFI).isSuccess())
+  InlineResult IR = InlineFunction(CB, IFI,
+                                   /*MergeAttributes=*/true);
+  if (!IR.isSuccess())
     return false;
-
-  // Merge the attributes based on the inlining.
-  AttributeFuncs::mergeAttributesForInlining(*BB->getParent(),
-                                             *CalledFunction);
 
   // The call to InlineFunction erases I, so we can't pass it here.
   emitInlinedIntoBasedOnCost(*ORE, DLoc, BB, *CalledFunction, *BB->getParent(),
@@ -1409,7 +1409,7 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
   if (ExternalInlineAdvisor)
     SizeLimit = std::numeric_limits<unsigned>::max();
 
-  DenseMap<CallBase *, const FunctionSamples *> LocalNotInlinedCallSites;
+  MapVector<CallBase *, const FunctionSamples *> LocalNotInlinedCallSites;
 
   // Perform iterative BFS call site prioritized inlining
   bool Changed = false;
@@ -1466,7 +1466,7 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
           ICPCount++;
           Changed = true;
         } else if (!ContextTracker) {
-          LocalNotInlinedCallSites.try_emplace(I, FS);
+          LocalNotInlinedCallSites.insert({I, FS});
         }
       }
     } else if (CalledFunction && CalledFunction->getSubprogram() &&
@@ -1479,7 +1479,7 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
         }
         Changed = true;
       } else if (!ContextTracker) {
-        LocalNotInlinedCallSites.try_emplace(I, Candidate.CalleeSamples);
+        LocalNotInlinedCallSites.insert({I, Candidate.CalleeSamples});
       }
     } else if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
       findExternalInlineCandidate(I, findCalleeFunctionSamples(*I),
@@ -1505,11 +1505,11 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
 }
 
 void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
-    DenseMap<CallBase *, const FunctionSamples *> NonInlinedCallSites,
+    MapVector<CallBase *, const FunctionSamples *> NonInlinedCallSites,
     const Function &F) {
   // Accumulate not inlined callsite information into notInlinedSamples
   for (const auto &Pair : NonInlinedCallSites) {
-    CallBase *I = Pair.getFirst();
+    CallBase *I = Pair.first;
     Function *Callee = I->getCalledFunction();
     if (!Callee || Callee->isDeclaration())
       continue;
@@ -1521,7 +1521,7 @@ void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
         << "' into '" << ore::NV("Caller", &F) << "'");
 
     ++NumCSNotInlined;
-    const FunctionSamples *FS = Pair.getSecond();
+    const FunctionSamples *FS = Pair.second;
     if (FS->getTotalSamples() == 0 && FS->getHeadSamplesEstimate() == 0) {
       continue;
     }
@@ -1704,10 +1704,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
       }
     }
 
-    // FIXME: Re-enable for sample profiling after investigating why the sum
-    // of branch weights can be 0
-    //
-    // misexpect::checkExpectAnnotations(*TI, Weights, /*IsFrontend=*/false);
+    misexpect::checkExpectAnnotations(*TI, Weights, /*IsFrontend=*/false);
 
     uint64_t TempWeight;
     // Only set weights if there is at least one non-zero weight.
@@ -2061,7 +2058,7 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
          "No empty StringRef should be added in SymbolMap");
 
   bool retval = false;
-  for (auto F : buildFunctionOrder(M, CG)) {
+  for (auto *F : buildFunctionOrder(M, CG)) {
     assert(!F->isDeclaration());
     clearFunctionData();
     retval |= runOnFunction(*F, AM);

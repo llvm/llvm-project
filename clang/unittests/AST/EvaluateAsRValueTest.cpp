@@ -107,3 +107,50 @@ TEST(EvaluateAsRValue, FailsGracefullyForUnknownTypes) {
         Args));
   }
 }
+
+class CheckLValueToRValueConversionVisitor
+    : public clang::RecursiveASTVisitor<CheckLValueToRValueConversionVisitor> {
+public:
+  bool VisitDeclRefExpr(const clang::DeclRefExpr *E) {
+    clang::Expr::EvalResult Result;
+    E->EvaluateAsRValue(Result, E->getDecl()->getASTContext(), true);
+
+    EXPECT_TRUE(Result.Val.hasValue());
+    // Since EvaluateAsRValue does an implicit lvalue-to-rvalue conversion,
+    // the result cannot be a LValue.
+    EXPECT_FALSE(Result.Val.isLValue());
+
+    return true;
+  }
+};
+
+class CheckConversionAction : public clang::ASTFrontendAction {
+public:
+  std::unique_ptr<clang::ASTConsumer>
+  CreateASTConsumer(clang::CompilerInstance &Compiler,
+                    llvm::StringRef FilePath) override {
+    return std::make_unique<Consumer>();
+  }
+
+private:
+  class Consumer : public clang::ASTConsumer {
+  public:
+    ~Consumer() override {}
+
+    void HandleTranslationUnit(clang::ASTContext &Ctx) override {
+      CheckLValueToRValueConversionVisitor Evaluator;
+      Evaluator.TraverseDecl(Ctx.getTranslationUnitDecl());
+    }
+  };
+};
+
+TEST(EvaluateAsRValue, LValueToRValueConversionWorks) {
+  std::string ModesToTest[] = {"", "-fexperimental-new-constant-interpreter"};
+  for (std::string const &Mode : ModesToTest) {
+    std::vector<std::string> Args(1, Mode);
+    ASSERT_TRUE(runToolOnCodeWithArgs(std::make_unique<CheckConversionAction>(),
+                                      "constexpr int a = 20;\n"
+                                      "static_assert(a == 20, \"\");\n",
+                                      Args));
+  }
+}

@@ -77,7 +77,7 @@ void test2 ( const CharT *s, size_t len ) {
 
 int main(int, char**) {
     test1<std::string_view> ();
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     test1<std::u8string_view> ();
 #endif
     test1<std::u16string_view> ();
@@ -98,7 +98,7 @@ int main(int, char**) {
     test2 ( L"", 0 );
 #endif
 
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     test2 ( u8"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE", 105 );
     test2 ( u8"ABCDE", 5 );
     test2 ( u8"a", 1 );

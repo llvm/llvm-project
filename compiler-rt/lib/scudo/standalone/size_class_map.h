@@ -235,7 +235,7 @@ struct FuchsiaSizeClassConfig {
   static const uptr MinSizeLog = 5;
   static const uptr MidSizeLog = 8;
   static const uptr MaxSizeLog = 17;
-  static const u32 MaxNumCachedHint = 10;
+  static const u32 MaxNumCachedHint = 12;
   static const uptr MaxBytesCachedLog = 10;
   static const uptr SizeDelta = Chunk::getHeaderSize();
 };

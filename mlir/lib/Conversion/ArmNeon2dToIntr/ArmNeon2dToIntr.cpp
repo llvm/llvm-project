@@ -7,13 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/ArmNeon2dToIntr/ArmNeon2dToIntr.h"
-#include "../PassDetail.h"
+
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTARMNEON2DTOINTR
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::arm_neon;
@@ -47,7 +52,7 @@ public:
 };
 
 class ConvertArmNeon2dToIntr
-    : public ConvertArmNeon2dToIntrBase<ConvertArmNeon2dToIntr> {
+    : public impl::ConvertArmNeon2dToIntrBase<ConvertArmNeon2dToIntr> {
   void runOnOperation() override {
     auto *context = &getContext();
 

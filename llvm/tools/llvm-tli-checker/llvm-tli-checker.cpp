@@ -155,6 +155,7 @@ void TLINameList::dump() {
 // Store all the exported symbol names we found in the input libraries.
 // We use a map to get hashed lookup speed; the bool is meaningless.
 class SDKNameMap : public StringMap<bool> {
+  void maybeInsertSymbol(const SymbolRef &S, const ObjectFile &O);
   void populateFromObject(ObjectFile *O);
   void populateFromArchive(Archive *A);
 
@@ -162,6 +163,19 @@ public:
   void populateFromFile(StringRef LibDir, StringRef LibName);
 };
 static SDKNameMap SDKNames;
+
+// Insert defined global function symbols into the map if valid.
+void SDKNameMap::maybeInsertSymbol(const SymbolRef &S, const ObjectFile &O) {
+  SymbolRef::Type Type = unwrapIgnoreError(S.getType());
+  uint32_t Flags = unwrapIgnoreError(S.getFlags());
+  section_iterator Section = unwrapIgnoreError(S.getSection(),
+                                               /*Default=*/O.section_end());
+  if (Type == SymbolRef::ST_Function && (Flags & SymbolRef::SF_Global) &&
+      Section != O.section_end()) {
+    StringRef Name = unwrapIgnoreError(S.getName());
+    insert({ Name, true });
+  }
+}
 
 // Given an ObjectFile, extract the global function symbols.
 void SDKNameMap::populateFromObject(ObjectFile *O) {
@@ -173,16 +187,12 @@ void SDKNameMap::populateFromObject(ObjectFile *O) {
   }
   const auto *ELF = cast<ELFObjectFileBase>(O);
 
-  for (auto &S : ELF->getDynamicSymbolIterators()) {
-    // We want only defined global function symbols.
-    SymbolRef::Type Type = unwrapIgnoreError(S.getType());
-    uint32_t Flags = unwrapIgnoreError(S.getFlags());
-    section_iterator Section = unwrapIgnoreError(S.getSection(),
-                                                 /*Default=*/O->section_end());
-    StringRef Name = unwrapIgnoreError(S.getName());
-    if (Type == SymbolRef::ST_Function && (Flags & SymbolRef::SF_Global) &&
-        Section != O->section_end())
-      insert({Name, true});
+  if (ELF->getEType() == ELF::ET_REL) {
+    for (const auto &S : ELF->symbols())
+      maybeInsertSymbol(S, *O);
+  } else {
+    for (const auto &S : ELF->getDynamicSymbolIterators())
+      maybeInsertSymbol(S, *O);
   }
 }
 
@@ -191,7 +201,7 @@ void SDKNameMap::populateFromObject(ObjectFile *O) {
 void SDKNameMap::populateFromArchive(Archive *A) {
   Error Err = Error::success();
   int Index = -1;
-  for (auto &C : A->children(Err)) {
+  for (const auto &C : A->children(Err)) {
     ++Index;
     Expected<std::unique_ptr<object::Binary>> ChildOrErr = C.getAsBinary();
     if (!ChildOrErr) {

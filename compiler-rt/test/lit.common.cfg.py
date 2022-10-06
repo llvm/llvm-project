@@ -172,11 +172,9 @@ if config.asan_shadow_scale != '':
 if config.memprof_shadow_scale != '':
   config.target_cflags += " -mllvm -memprof-mapping-scale=" + config.memprof_shadow_scale
 
-config.environment = dict(os.environ)
-
 # Clear some environment variables that might affect Clang.
-possibly_dangerous_env_vars = ['ASAN_OPTIONS', 'DFSAN_OPTIONS', 'LSAN_OPTIONS',
-                               'MSAN_OPTIONS', 'UBSAN_OPTIONS',
+possibly_dangerous_env_vars = ['ASAN_OPTIONS', 'DFSAN_OPTIONS', 'HWASAN_OPTIONS',
+                               'LSAN_OPTIONS', 'MSAN_OPTIONS', 'UBSAN_OPTIONS',
                                'COMPILER_PATH', 'RC_DEBUG_OPTIONS',
                                'CINDEXTEST_PREAMBLE_FILE', 'LIBRARY_PATH',
                                'CPATH', 'C_INCLUDE_PATH', 'CPLUS_INCLUDE_PATH',
@@ -540,9 +538,12 @@ def is_binutils_lto_supported():
   # We require both ld.bfd and ld.gold exist and support plugins. They are in
   # the same repository 'binutils-gdb' and usually built together.
   for exe in (config.gnu_ld_executable, config.gold_executable):
-    ld_cmd = subprocess.Popen([exe, '--help'], stdout=subprocess.PIPE, env={'LANG': 'C'})
-    ld_out = ld_cmd.stdout.read().decode()
-    ld_cmd.wait()
+    try:
+      ld_cmd = subprocess.Popen([exe, '--help'], stdout=subprocess.PIPE, env={'LANG': 'C'})
+      ld_out = ld_cmd.stdout.read().decode()
+      ld_cmd.wait()
+    except OSError:
+      return False
     if not '-plugin' in ld_out:
       return False
 

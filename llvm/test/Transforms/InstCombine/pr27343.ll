@@ -12,8 +12,8 @@ define i32 @__isnan(float %x) alwaysinline nounwind optsize {
 ;
 entry:
   %x.addr = alloca float, align 4
-  store float %x, float* %x.addr, align 4
-  %0 = load float, float* %x.addr, align 4
+  store float %x, ptr %x.addr, align 4
+  %0 = load float, ptr %x.addr, align 4
   %1 = bitcast float %0 to i32
   %shl = shl i32 %1, 1
   %cmp = icmp ugt i32 %shl, -16777216

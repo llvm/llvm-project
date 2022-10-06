@@ -383,7 +383,7 @@ bool HexagonPacketizerList::promoteToDotCur(MachineInstr &MI,
 
 void HexagonPacketizerList::cleanUpDotCur() {
   MachineInstr *MI = nullptr;
-  for (auto BI : CurrentPacketMIs) {
+  for (auto *BI : CurrentPacketMIs) {
     LLVM_DEBUG(dbgs() << "Cleanup packet has "; BI->dump(););
     if (HII->isDotCurInst(*BI)) {
       MI = BI;
@@ -440,7 +440,7 @@ bool HexagonPacketizerList::canPromoteToDotCur(const MachineInstr &MI,
 
   // Check for existing uses of a vector register within the packet which
   // would be affected by converting a vector load into .cur formt.
-  for (auto BI : CurrentPacketMIs) {
+  for (auto *BI : CurrentPacketMIs) {
     LLVM_DEBUG(dbgs() << "packet has "; BI->dump(););
     if (BI->readsRegister(DepReg, MF.getSubtarget().getRegisterInfo()))
       return false;
@@ -668,7 +668,7 @@ bool HexagonPacketizerList::canPromoteToNewValueStore(const MachineInstr &MI,
 
   // New-value stores are of class NV (slot 0), dual stores require class ST
   // in slot 0 (PRM 5.5).
-  for (auto I : CurrentPacketMIs) {
+  for (auto *I : CurrentPacketMIs) {
     SUnit *PacketSU = MIToSUnit.find(I)->second;
     if (PacketSU->getInstr()->mayStore())
       return false;
@@ -754,7 +754,7 @@ bool HexagonPacketizerList::canPromoteToNewValueStore(const MachineInstr &MI,
 
   unsigned StartCheck = 0;
 
-  for (auto I : CurrentPacketMIs) {
+  for (auto *I : CurrentPacketMIs) {
     SUnit *TempSU = MIToSUnit.find(I)->second;
     MachineInstr &TempMI = *TempSU->getInstr();
 
@@ -920,7 +920,7 @@ bool HexagonPacketizerList::restrictingDepExistInPacket(MachineInstr &MI,
                                                         unsigned DepReg) {
   SUnit *PacketSUDep = MIToSUnit.find(&MI)->second;
 
-  for (auto I : CurrentPacketMIs) {
+  for (auto *I : CurrentPacketMIs) {
     // We only care for dependencies to predicated instructions
     if (!HII->isPredicated(*I))
       continue;
@@ -990,7 +990,7 @@ bool HexagonPacketizerList::arePredicatesComplements(MachineInstr &MI1,
   // Analyze relationships between all existing members of the packet.
   // Look for Anti dependecy on the same predicate reg as used in the
   // candidate.
-  for (auto I : CurrentPacketMIs) {
+  for (auto *I : CurrentPacketMIs) {
     // Scheduling Unit for current insn in the packet.
     SUnit *PacketSU = MIToSUnit.find(I)->second;
 
@@ -1690,7 +1690,7 @@ bool HexagonPacketizerList::foundLSInPacket() {
   bool FoundLoad = false;
   bool FoundStore = false;
 
-  for (auto MJ : CurrentPacketMIs) {
+  for (auto *MJ : CurrentPacketMIs) {
     unsigned Opc = MJ->getOpcode();
     if (Opc == Hexagon::S2_allocframe || Opc == Hexagon::L2_deallocframe)
       continue;
@@ -1915,7 +1915,7 @@ unsigned int HexagonPacketizerList::calcStall(const MachineInstr &I) {
   // }
   // Here I2 and I3 has 0 cycle latency, but I1 and I2 has 2.
 
-  for (auto J : CurrentPacketMIs) {
+  for (auto *J : CurrentPacketMIs) {
     SUnit *SUJ = MIToSUnit[J];
     for (auto &Pred : SUI->Preds)
       if (Pred.getSUnit() == SUJ)
@@ -1926,7 +1926,7 @@ unsigned int HexagonPacketizerList::calcStall(const MachineInstr &I) {
 
   // Check if the latency is greater than one between this instruction and any
   // instruction in the previous packet.
-  for (auto J : OldPacketMIs) {
+  for (auto *J : OldPacketMIs) {
     SUnit *SUJ = MIToSUnit[J];
     for (auto &Pred : SUI->Preds)
       if (Pred.getSUnit() == SUJ && Pred.getLatency() > 1)

@@ -324,7 +324,7 @@ func.func @to_select_with_body(%cond: i1) -> index {
 // CHECK:           [[V0:%.*]] = arith.select {{.*}}, [[C0]], [[C1]]
 // CHECK:           scf.if {{.*}} {
 // CHECK:             "test.op"() : () -> ()
-// CHECK:           } 
+// CHECK:           }
 // CHECK:           return [[V0]] : index
 // -----
 
@@ -547,7 +547,7 @@ func.func @merge_yielding_nested_if_nv1(%arg0: i1, %arg1: i1) {
       scf.yield %0, %1 : i32, f32
     }
   }
-  return 
+  return
 }
 
 // CHECK-LABEL: @merge_yielding_nested_if_nv2
@@ -557,7 +557,7 @@ func.func @merge_yielding_nested_if_nv2(%arg0: i1, %arg1: i1) -> i32 {
 // CHECK: %[[PRE1:.*]] = "test.op1"() : () -> i32
 // CHECK: %[[COND:.*]] = arith.andi %[[ARG0]], %[[ARG1]]
 // CHECK: %[[RES:.*]] = arith.select %[[ARG0]], %[[PRE0]], %[[PRE1]]
-// CHECK: scf.if %[[COND]] 
+// CHECK: scf.if %[[COND]]
 // CHECK:   "test.run"() : () -> ()
 // CHECK: }
 // CHECK: return %[[RES]]
@@ -716,6 +716,26 @@ func.func @replace_single_iteration_loop_non_unit_step() {
   }
   // CHECK: "test.consume"(%[[VAL]])
   "test.consume"(%0) : (i32) -> ()
+  return
+}
+
+
+// -----
+
+// CHECK-LABEL: func @replace_single_iteration_const_diff(
+//  CHECK-SAME: %[[A0:.*]]: index)
+func.func @replace_single_iteration_const_diff(%arg0 : index) {
+  // CHECK-NEXT: %[[CST:.*]] = arith.constant 2
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %5 = arith.addi %arg0, %c1 : index
+  // CHECK-NOT: scf.for
+  scf.for %arg2 = %arg0 to %5 step %c1 {
+    // CHECK-NEXT: %[[MUL:.*]] = arith.muli %[[A0]], %[[CST]]
+    %7 = arith.muli %c2, %arg2 : index
+    // CHECK-NEXT: "test.consume"(%[[MUL]])
+    "test.consume"(%7) : (index) -> ()
+  }
   return
 }
 
@@ -986,7 +1006,7 @@ func.func @while_cond_true() -> i1 {
 // CHECK-NEXT:           %[[cmp:.+]] = "test.condition"() : () -> i1
 // CHECK-NEXT:           scf.condition(%[[cmp]]) %[[cmp]] : i1
 // CHECK-NEXT:         } do {
-// CHECK-NEXT:         ^bb0(%arg0: i1):  
+// CHECK-NEXT:         ^bb0(%arg0: i1):
 // CHECK-NEXT:           "test.use"(%[[true]]) : (i1) -> ()
 // CHECK-NEXT:           scf.yield
 // CHECK-NEXT:         }
@@ -1009,7 +1029,7 @@ func.func @while_unused_arg(%x : i32, %y : f64) -> i32 {
 // CHECK-NEXT:           %[[cmp:.*]] = "test.condition"(%[[arg2]]) : (i32) -> i1
 // CHECK-NEXT:           scf.condition(%[[cmp]]) %[[arg2]] : i32
 // CHECK-NEXT:         } do {
-// CHECK-NEXT:         ^bb0(%[[post:.+]]: i32):  
+// CHECK-NEXT:         ^bb0(%[[post:.+]]: i32):
 // CHECK-NEXT:           %[[next:.+]] = "test.use"(%[[post]]) : (i32) -> i32
 // CHECK-NEXT:           scf.yield %[[next]] : i32
 // CHECK-NEXT:         }
@@ -1105,7 +1125,7 @@ func.func @while_unused_result() -> i32 {
 // CHECK-NEXT:           %{{.*}} = "test.get_some_value"() : () -> i64
 // CHECK-NEXT:           scf.condition(%[[cmp]]) %[[val]] : i32
 // CHECK-NEXT:         } do {
-// CHECK-NEXT:         ^bb0(%[[arg:.*]]: i32):  
+// CHECK-NEXT:         ^bb0(%[[arg:.*]]: i32):
 // CHECK-NEXT:           "test.use"(%[[arg]]) : (i32) -> ()
 // CHECK-NEXT:           scf.yield
 // CHECK-NEXT:         }
@@ -1133,7 +1153,7 @@ func.func @while_cmp_lhs(%arg0 : i32) {
 // CHECK-NEXT:         %[[cmp:.+]] = arith.cmpi ne, %[[val]], %arg0 : i32
 // CHECK-NEXT:           scf.condition(%[[cmp]]) %[[val]] : i32
 // CHECK-NEXT:         } do {
-// CHECK-NEXT:         ^bb0(%arg1: i32):  
+// CHECK-NEXT:         ^bb0(%arg1: i32):
 // CHECK-NEXT:           "test.use"(%[[true]], %[[false]], %arg1) : (i1, i1, i32) -> ()
 // CHECK-NEXT:           scf.yield
 // CHECK-NEXT:         }
@@ -1160,7 +1180,7 @@ func.func @while_cmp_rhs(%arg0 : i32) {
 // CHECK-NEXT:         %[[cmp:.+]] = arith.cmpi ne, %arg0, %[[val]] : i32
 // CHECK-NEXT:           scf.condition(%[[cmp]]) %[[val]] : i32
 // CHECK-NEXT:         } do {
-// CHECK-NEXT:         ^bb0(%arg1: i32):  
+// CHECK-NEXT:         ^bb0(%arg1: i32):
 // CHECK-NEXT:           "test.use"(%[[true]], %[[false]], %arg1) : (i1, i1, i32) -> ()
 // CHECK-NEXT:           scf.yield
 // CHECK-NEXT:         }

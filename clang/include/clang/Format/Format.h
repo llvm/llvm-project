@@ -872,6 +872,23 @@ struct FormatStyle {
   /// \version 3.7
   bool BinPackParameters;
 
+  /// If ``true``, clang-format will always break after a Json array `[`
+  /// otherwise it will scan until the closing `]` to determine if it should add
+  /// newlines between elements (prettier compatible).
+  ///
+  /// NOTE: This is currently only for formatting JSON.
+  /// \code
+  ///    true:                                  false:
+  ///    [                          vs.      [1, 2, 3, 4]
+  ///      1,
+  ///      2,
+  ///      3,
+  ///      4
+  ///    ]
+  /// \endcode
+  /// \version 16
+  bool BreakArrays;
+
   /// The style of wrapping parameters on the same line (bin-packed) or
   /// on one line each.
   enum BinPackStyle : int8_t {
@@ -1423,11 +1440,11 @@ struct FormatStyle {
     /// Wrap class definitions.
     /// \code
     ///   true:
-    ///   class foo {};
-    ///
-    ///   false:
     ///   class foo
     ///   {};
+    ///
+    ///   false:
+    ///   class foo {};
     /// \endcode
     bool AfterClass;
 
@@ -1775,7 +1792,7 @@ struct FormatStyle {
     /// Change specifiers/qualifiers to be aligned based on ``QualifierOrder``.
     /// With:
     /// \code{.yaml}
-    ///   QualifierOrder: ['inline', 'static' , 'type', 'const']
+    ///   QualifierOrder: ['inline', 'static', 'type', 'const']
     /// \endcode
     ///
     /// \code
@@ -2980,7 +2997,7 @@ struct FormatStyle {
   ///    /* second veryVeryVeryVeryVeryVeryVeryVeryVeryVeryVeryLongComment with plenty of
   ///     * information */
   /// \endcode
-  /// \version 4
+  /// \version 3.8
   bool ReflowComments;
   // clang-format on
 
@@ -3236,7 +3253,7 @@ struct FormatStyle {
   /// insensitive fashion.
   /// If ``CaseSensitive``, includes are sorted in an alphabetical or case
   /// sensitive fashion.
-  /// \version 4
+  /// \version 3.8
   SortIncludesOptions SortIncludes;
 
   /// Position for Java Static imports.
@@ -3878,6 +3895,7 @@ struct FormatStyle {
            AttributeMacros == R.AttributeMacros &&
            BinPackArguments == R.BinPackArguments &&
            BinPackParameters == R.BinPackParameters &&
+           BreakArrays == R.BreakArrays &&
            BreakBeforeBinaryOperators == R.BreakBeforeBinaryOperators &&
            BreakBeforeBraces == R.BreakBeforeBraces &&
            BreakBeforeConceptDeclarations == R.BreakBeforeConceptDeclarations &&

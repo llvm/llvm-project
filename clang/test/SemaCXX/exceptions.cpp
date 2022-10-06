@@ -1,6 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify=expected,precxx17 %std_cxx98-14 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -fsyntax-only -verify %std_cxx17- %s
 
 struct A; // expected-note 4 {{forward declaration of 'A'}}
 
@@ -128,6 +127,7 @@ namespace PR6831 {
   }
 }
 
+#if __cplusplus < 201703L
 namespace Decay {
   struct A {
     void f() throw (A[10]);
@@ -164,6 +164,7 @@ namespace Decay {
 void rval_ref() throw (int &&); // expected-error {{rvalue reference type 'int &&' is not allowed in exception specification}}
 #if __cplusplus <= 199711L
 // expected-warning@-2 {{rvalue references are a C++11 extension}}
+#endif
 #endif
 
 namespace HandlerInversion {
@@ -244,14 +245,14 @@ void f8() {
 
 namespace ConstVolatileThrow {
 struct S {
-  S() {}         // expected-note{{candidate constructor not viable}}
-  S(const S &s); // expected-note{{candidate constructor not viable}}
+  S() {}         // precxx17-note{{candidate constructor not viable}}
+  S(const S &s); // precxx17-note{{candidate constructor not viable}}
 };
 
 typedef const volatile S CVS;
 
 void f() {
-  throw CVS(); // expected-error{{no matching constructor for initialization}}
+  throw CVS(); // precxx17-error{{no matching constructor for initialization}}
 }
 }
 

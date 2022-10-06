@@ -40,7 +40,7 @@ class ErroneousIoStatementState;
 
 template <Direction, typename CHAR = char>
 class InternalFormattedIoStatementState;
-template <Direction, typename CHAR = char> class InternalListIoStatementState;
+template <Direction> class InternalListIoStatementState;
 template <Direction, typename CHAR = char>
 class ExternalFormattedIoStatementState;
 template <Direction> class ExternalListIoStatementState;
@@ -87,11 +87,7 @@ public:
   // Completes an I/O statement and reclaims storage.
   int EndIoStatement();
 
-  bool Emit(const char *, std::size_t, std::size_t elementBytes);
-  bool Emit(const char *, std::size_t);
-  bool Emit(const char16_t *, std::size_t chars);
-  bool Emit(const char32_t *, std::size_t chars);
-  template <typename CHAR> bool EmitEncoded(const CHAR *, std::size_t);
+  bool Emit(const char *, std::size_t bytes, std::size_t elementBytes = 0);
   bool Receive(char *, std::size_t, std::size_t elementBytes = 0);
   std::size_t GetNextInputBytes(const char *&);
   bool AdvanceRecord(int = 1);
@@ -127,15 +123,10 @@ public:
   // Vacant after the end of the current record
   std::optional<char32_t> GetCurrentChar(std::size_t &byteCount);
 
-  bool EmitRepeated(char, std::size_t);
-  bool EmitField(const char *, std::size_t length, std::size_t width);
-
-  // For fixed-width fields, initialize the number of remaining characters.
-  // Skip over leading blanks, then return the first non-blank character (if
-  // any).
-  std::optional<char32_t> PrepareInput(
-      const DataEdit &edit, std::optional<int> &remaining) {
-    remaining.reset();
+  // For fixed-width fields, return the number of remaining characters.
+  // Skip over leading blanks.
+  std::optional<int> CueUpInput(const DataEdit &edit) {
+    std::optional<int> remaining;
     if (edit.IsListDirected()) {
       std::size_t byteCount{0};
       GetNextNonBlank(byteCount);
@@ -145,7 +136,7 @@ public:
       }
       SkipSpaces(remaining);
     }
-    return NextInField(remaining, edit);
+    return remaining;
   }
 
   std::optional<char32_t> SkipSpaces(std::optional<int> &remaining) {
@@ -198,10 +189,10 @@ public:
     if (get_if<FormattedIoStatementState<D>>()) {
       return true;
     } else {
-      if (!get_if<ErroneousIoStatementState>()) {
-        GetIoErrorHandler().Crash(
-            "%s called for I/O statement that is not formatted %s", name,
-            D == Direction::Output ? "output" : "input");
+      auto &handler{GetIoErrorHandler()};
+      if (!handler.InError()) {
+        handler.Crash("%s called for I/O statement that is not formatted %s",
+            name, D == Direction::Output ? "output" : "input");
       }
       return false;
     }
@@ -255,11 +246,8 @@ public:
   int EndIoStatement() { return GetIoStat(); }
 
   // These are default no-op backstops that can be overridden by descendants.
-  bool Emit(const char *, std::size_t, std::size_t elementBytes);
-  bool Emit(const char *, std::size_t);
-  bool Emit(const char16_t *, std::size_t chars);
-  bool Emit(const char32_t *, std::size_t chars);
-  bool Receive(char *, std::size_t, std::size_t elementBytes = 0);
+  bool Emit(const char *, std::size_t bytes, std::size_t elementBytes = 0);
+  bool Receive(char *, std::size_t bytes, std::size_t elementBytes = 0);
   std::size_t GetNextInputBytes(const char *&);
   bool AdvanceRecord(int);
   void BackspaceRecord();
@@ -305,6 +293,9 @@ template <>
 class ListDirectedStatementState<Direction::Input>
     : public FormattedIoStatementState<Direction::Input> {
 public:
+  bool inNamelistArray() const { return inNamelistArray_; }
+  void set_inNamelistArray(bool yes = true) { inNamelistArray_ = yes; }
+
   // Skips value separators, handles repetition and null values.
   // Vacant when '/' appears; present with descriptor == ListDirectedNullValue
   // when a null value appears.
@@ -315,10 +306,11 @@ public:
   // input statement.  This member function resets some state so that
   // repetition and null values work correctly for each successive
   // NAMELIST input item.
-  void ResetForNextNamelistItem() {
+  void ResetForNextNamelistItem(bool inNamelistArray) {
     remaining_ = 0;
     eatComma_ = false;
     realPart_ = imaginaryPart_ = false;
+    inNamelistArray_ = inNamelistArray;
   }
 
 private:
@@ -328,24 +320,22 @@ private:
   bool hitSlash_{false}; // once '/' is seen, nullify further items
   bool realPart_{false};
   bool imaginaryPart_{false};
+  bool inNamelistArray_{false};
 };
 
-template <Direction DIR, typename CHAR = char>
+template <Direction DIR>
 class InternalIoStatementState : public IoStatementBase,
                                  public IoDirectionState<DIR> {
 public:
-  using CharType = CHAR;
   using Buffer =
-      std::conditional_t<DIR == Direction::Input, const CharType *, CharType *>;
+      std::conditional_t<DIR == Direction::Input, const char *, char *>;
   InternalIoStatementState(Buffer, std::size_t,
       const char *sourceFile = nullptr, int sourceLine = 0);
   InternalIoStatementState(
       const Descriptor &, const char *sourceFile = nullptr, int sourceLine = 0);
   int EndIoStatement();
 
-  using IoStatementBase::Emit;
-  bool Emit(
-      const CharType *data, std::size_t chars /* not necessarily bytes */);
+  bool Emit(const char *data, std::size_t bytes, std::size_t elementBytes = 0);
   std::size_t GetNextInputBytes(const char *&);
   bool AdvanceRecord(int = 1);
   void BackspaceRecord();
@@ -361,17 +351,18 @@ protected:
 
 template <Direction DIR, typename CHAR>
 class InternalFormattedIoStatementState
-    : public InternalIoStatementState<DIR, CHAR>,
+    : public InternalIoStatementState<DIR>,
       public FormattedIoStatementState<DIR> {
 public:
   using CharType = CHAR;
-  using typename InternalIoStatementState<DIR, CharType>::Buffer;
+  using typename InternalIoStatementState<DIR>::Buffer;
   InternalFormattedIoStatementState(Buffer internal, std::size_t internalLength,
       const CharType *format, std::size_t formatLength,
+      const Descriptor *formatDescriptor = nullptr,
       const char *sourceFile = nullptr, int sourceLine = 0);
   InternalFormattedIoStatementState(const Descriptor &, const CharType *format,
-      std::size_t formatLength, const char *sourceFile = nullptr,
-      int sourceLine = 0);
+      std::size_t formatLength, const Descriptor *formatDescriptor = nullptr,
+      const char *sourceFile = nullptr, int sourceLine = 0);
   IoStatementState &ioStatementState() { return ioStatementState_; }
   void CompleteOperation();
   int EndIoStatement();
@@ -382,17 +373,16 @@ public:
 
 private:
   IoStatementState ioStatementState_; // points to *this
-  using InternalIoStatementState<DIR, CharType>::unit_;
+  using InternalIoStatementState<DIR>::unit_;
   // format_ *must* be last; it may be partial someday
   FormatControl<InternalFormattedIoStatementState> format_;
 };
 
-template <Direction DIR, typename CHAR>
-class InternalListIoStatementState : public InternalIoStatementState<DIR, CHAR>,
+template <Direction DIR>
+class InternalListIoStatementState : public InternalIoStatementState<DIR>,
                                      public ListDirectedStatementState<DIR> {
 public:
-  using CharType = CHAR;
-  using typename InternalIoStatementState<DIR, CharType>::Buffer;
+  using typename InternalIoStatementState<DIR>::Buffer;
   InternalListIoStatementState(Buffer internal, std::size_t internalLength,
       const char *sourceFile = nullptr, int sourceLine = 0);
   InternalListIoStatementState(
@@ -402,7 +392,7 @@ public:
 
 private:
   IoStatementState ioStatementState_; // points to *this
-  using InternalIoStatementState<DIR, CharType>::unit_;
+  using InternalIoStatementState<DIR>::unit_;
 };
 
 class ExternalIoStatementBase : public IoStatementBase {
@@ -431,10 +421,7 @@ public:
   MutableModes &mutableModes() { return mutableModes_; }
   void CompleteOperation();
   int EndIoStatement();
-  bool Emit(const char *, std::size_t, std::size_t elementBytes);
-  bool Emit(const char *, std::size_t);
-  bool Emit(const char16_t *, std::size_t chars /* not bytes */);
-  bool Emit(const char32_t *, std::size_t chars /* not bytes */);
+  bool Emit(const char *, std::size_t bytes, std::size_t elementBytes = 0);
   std::size_t GetNextInputBytes(const char *&);
   bool AdvanceRecord(int = 1);
   void BackspaceRecord();
@@ -457,8 +444,8 @@ class ExternalFormattedIoStatementState
 public:
   using CharType = CHAR;
   ExternalFormattedIoStatementState(ExternalFileUnit &, const CharType *format,
-      std::size_t formatLength, const char *sourceFile = nullptr,
-      int sourceLine = 0);
+      std::size_t formatLength, const Descriptor *formatDescriptor = nullptr,
+      const char *sourceFile = nullptr, int sourceLine = 0);
   void CompleteOperation();
   int EndIoStatement();
   std::optional<DataEdit> GetNextDataEdit(
@@ -498,10 +485,7 @@ public:
   ExternalFileUnit *GetExternalFileUnit() const;
   void CompleteOperation();
   int EndIoStatement();
-  bool Emit(const char *, std::size_t, std::size_t elementBytes);
-  bool Emit(const char *, std::size_t);
-  bool Emit(const char16_t *, std::size_t chars /* not bytes */);
-  bool Emit(const char32_t *, std::size_t chars /* not bytes */);
+  bool Emit(const char *, std::size_t bytes, std::size_t elementBytes = 0);
   std::size_t GetNextInputBytes(const char *&);
   void HandleRelativePosition(std::int64_t);
   void HandleAbsolutePosition(std::int64_t);
@@ -516,8 +500,8 @@ class ChildFormattedIoStatementState : public ChildIoStatementState<DIR>,
 public:
   using CharType = CHAR;
   ChildFormattedIoStatementState(ChildIo &, const CharType *format,
-      std::size_t formatLength, const char *sourceFile = nullptr,
-      int sourceLine = 0);
+      std::size_t formatLength, const Descriptor *formatDescriptor = nullptr,
+      const char *sourceFile = nullptr, int sourceLine = 0);
   MutableModes &mutableModes() { return mutableModes_; }
   void CompleteOperation();
   int EndIoStatement();
@@ -571,7 +555,7 @@ private:
   std::optional<OpenStatus> status_;
   std::optional<Position> position_;
   std::optional<Action> action_;
-  Convert convert_{Convert::Native};
+  Convert convert_{Convert::Unknown};
   OwningPtr<char> path_;
   std::size_t pathLength_;
   std::optional<bool> isUnformatted_;
@@ -696,10 +680,7 @@ class InquireIOLengthState : public NoUnitIoStatementState,
 public:
   InquireIOLengthState(const char *sourceFile = nullptr, int sourceLine = 0);
   std::size_t bytes() const { return bytes_; }
-  bool Emit(const char *, std::size_t, std::size_t elementBytes);
-  bool Emit(const char *, std::size_t);
-  bool Emit(const char16_t *, std::size_t chars);
-  bool Emit(const char32_t *, std::size_t chars);
+  bool Emit(const char *, std::size_t bytes, std::size_t elementBytes = 0);
 
 private:
   std::size_t bytes_{0};
@@ -734,13 +715,6 @@ private:
   ConnectionState connection_;
   ExternalFileUnit *unit_{nullptr};
 };
-
-extern template bool IoStatementState::EmitEncoded<char>(
-    const char *, std::size_t);
-extern template bool IoStatementState::EmitEncoded<char16_t>(
-    const char16_t *, std::size_t);
-extern template bool IoStatementState::EmitEncoded<char32_t>(
-    const char32_t *, std::size_t);
 
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_IO_STMT_H_

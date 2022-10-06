@@ -457,7 +457,10 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       })
       .alwaysLegal();
 
-  getActionDefinitionsBuilder(G_SEXT_INREG).legalFor({s32, s64}).lower();
+  getActionDefinitionsBuilder(G_SEXT_INREG)
+      .legalFor({s32, s64})
+      .legalFor(PackedVectorAllTypeList)
+      .lower();
 
   // FP conversions
   getActionDefinitionsBuilder(G_FPTRUNC)
@@ -507,10 +510,9 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
     getActionDefinitionsBuilder(G_GLOBAL_VALUE).legalFor({p0});
 
   getActionDefinitionsBuilder(G_PTRTOINT)
-      .legalForCartesianProduct({s8, s16, s32, s64}, {p0})
-      .legalFor({{v2s64, v2p0}})
-      .maxScalar(0, s64)
-      .widenScalarToNextPow2(0, /*Min*/ 8);
+      .legalFor({{s64, p0}, {v2s64, v2p0}})
+      .widenScalarToNextPow2(0, 64)
+      .clampScalar(0, s64, s64);
 
   getActionDefinitionsBuilder(G_INTTOPTR)
       .unsupportedIf([&](const LegalityQuery &Query) {
@@ -676,11 +678,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         // to be the same size as the dest.
         if (DstTy != SrcTy)
           return false;
-        for (auto &Ty : {v2s32, v4s32, v2s64, v2p0, v16s8, v8s16}) {
-          if (DstTy == Ty)
-            return true;
-        }
-        return false;
+        return llvm::is_contained({v2s32, v4s32, v2s64, v2p0, v16s8, v8s16},
+                                  DstTy);
       })
       // G_SHUFFLE_VECTOR can have scalar sources (from 1 x s vectors), we
       // just want those lowered into G_BUILD_VECTOR
@@ -782,7 +781,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_SBFX, G_UBFX})
       .customFor({{s32, s32}, {s64, s64}});
 
-  // TODO: Use generic lowering when custom lowering is not possible.
   auto always = [=](const LegalityQuery &Q) { return true; };
   getActionDefinitionsBuilder(G_CTPOP)
       .legalFor({{v8s8, v8s8}, {v16s8, v16s8}})
@@ -808,15 +806,28 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .libcallFor({s128})
       .minScalar(0, MinFPScalar);
 
-  // TODO: Vector types.
   getActionDefinitionsBuilder({G_FMAXIMUM, G_FMINIMUM})
-      .legalFor({MinFPScalar, s32, s64})
-      .minScalar(0, MinFPScalar);
+      .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
+      .legalIf([=](const LegalityQuery &Query) {
+        const auto &Ty = Query.Types[0];
+        return (Ty == v8s16 || Ty == v4s16) && HasFP16;
+      })
+      .minScalar(0, MinFPScalar)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64);
 
   // TODO: Libcall support for s128.
   // TODO: s16 should be legal with full FP16 support.
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
       .legalFor({{s64, s32}, {s64, s64}});
+
+  // TODO: Custom legalization for vector types.
+  // TODO: Custom legalization for mismatched types.
+  // TODO: s16 support.
+  getActionDefinitionsBuilder(G_FCOPYSIGN).customFor({{s32, s32}, {s64, s64}});
+
+  getActionDefinitionsBuilder(G_FMAD).lower();
 
   getLegacyLegalizerInfo().computeTables();
   verify(*ST.getInstrInfo());
@@ -860,6 +871,8 @@ bool AArch64LegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
   case TargetOpcode::G_MEMMOVE:
   case TargetOpcode::G_MEMSET:
     return legalizeMemOps(MI, Helper);
+  case TargetOpcode::G_FCOPYSIGN:
+    return legalizeFCopySign(MI, Helper);
   }
 
   llvm_unreachable("expected switch to return");
@@ -875,7 +888,7 @@ bool AArch64LegalizerInfo::legalizeRotate(MachineInstr &MI,
   (void)AmtTy;
   assert(AmtTy.isScalar() && "Expected a scalar rotate");
   assert(AmtTy.getSizeInBits() < 64 && "Expected this rotate to be legal");
-  auto NewAmt = Helper.MIRBuilder.buildSExt(LLT::scalar(64), AmtReg);
+  auto NewAmt = Helper.MIRBuilder.buildZExt(LLT::scalar(64), AmtReg);
   Helper.Observer.changingInstr(MI);
   MI.getOperand(2).setReg(NewAmt.getReg(0));
   Helper.Observer.changedInstr(MI);
@@ -1024,6 +1037,30 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     auto &Value = MI.getOperand(3);
     Register ZExtValueReg = MIB.buildAnyExt(LLT::scalar(64), Value).getReg(0);
     Value.setReg(ZExtValueReg);
+    return true;
+  }
+  case Intrinsic::prefetch: {
+    MachineIRBuilder MIB(MI);
+    auto &AddrVal = MI.getOperand(1);
+
+    int64_t IsWrite = MI.getOperand(2).getImm();
+    int64_t Locality = MI.getOperand(3).getImm();
+    int64_t IsData = MI.getOperand(4).getImm();
+
+    bool IsStream = Locality == 0;
+    if (Locality != 0) {
+      assert(Locality <= 3 && "Prefetch locality out-of-range");
+      // The locality degree is the opposite of the cache speed.
+      // Put the number the other way around.
+      // The encoding starts at 0 for level 1
+      Locality = 3 - Locality;
+    }
+
+    unsigned PrfOp =
+        (IsWrite << 4) | (!IsData << 3) | (Locality << 1) | IsStream;
+
+    MIB.buildInstr(AArch64::G_PREFETCH).addImm(PrfOp).add(AddrVal);
+    MI.eraseFromParent();
     return true;
   }
   }
@@ -1218,9 +1255,6 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
   //  uaddlp.4h v0, v0  // v4s16, v2s32
   //  uaddlp.2s v0, v0  //        v2s32
 
-  if (!ST->hasNEON() ||
-      MI.getMF()->getFunction().hasFnAttribute(Attribute::NoImplicitFloat))
-    return false;
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
   Register Dst = MI.getOperand(0).getReg();
   Register Val = MI.getOperand(1).getReg();
@@ -1229,6 +1263,14 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
   assert(Ty == MRI.getType(Dst) &&
          "Expected src and dst to have the same type!");
   unsigned Size = Ty.getSizeInBits();
+
+  if (!ST->hasNEON() ||
+      MI.getMF()->getFunction().hasFnAttribute(Attribute::NoImplicitFloat)) {
+    // Use generic lowering when custom lowering is not possible.
+    return Ty.isScalar() && (Size == 32 || Size == 64) &&
+           Helper.lowerBitCount(MI) ==
+               LegalizerHelper::LegalizeResult::Legalized;
+  }
 
   // Pre-conditioning: widen Val up to the nearest vector type.
   // s32,s64,v4s16,v2s32 -> v8i8
@@ -1412,4 +1454,64 @@ bool AArch64LegalizerInfo::legalizeMemOps(MachineInstr &MI,
   }
 
   return false;
+}
+
+bool AArch64LegalizerInfo::legalizeFCopySign(MachineInstr &MI,
+                                             LegalizerHelper &Helper) const {
+  MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
+  Register Dst = MI.getOperand(0).getReg();
+  LLT DstTy = MRI.getType(Dst);
+  assert(DstTy.isScalar() && "Only expected scalars right now!");
+  const unsigned DstSize = DstTy.getSizeInBits();
+  assert((DstSize == 32 || DstSize == 64) && "Unexpected dst type!");
+  assert(MRI.getType(MI.getOperand(2).getReg()) == DstTy &&
+         "Expected homogeneous types!");
+
+  // We want to materialize a mask with the high bit set.
+  uint64_t EltMask;
+  LLT VecTy;
+
+  // TODO: s16 support.
+  switch (DstSize) {
+  default:
+    llvm_unreachable("Unexpected type for G_FCOPYSIGN!");
+  case 64: {
+    // AdvSIMD immediate moves cannot materialize out mask in a single
+    // instruction for 64-bit elements. Instead, materialize zero and then
+    // negate it.
+    EltMask = 0;
+    VecTy = LLT::fixed_vector(2, DstTy);
+    break;
+  }
+  case 32:
+    EltMask = 0x80000000ULL;
+    VecTy = LLT::fixed_vector(4, DstTy);
+    break;
+  }
+
+  // Widen In1 and In2 to 128 bits. We want these to eventually become
+  // INSERT_SUBREGs.
+  auto Undef = MIRBuilder.buildUndef(VecTy);
+  auto Zero = MIRBuilder.buildConstant(DstTy, 0);
+  auto Ins1 = MIRBuilder.buildInsertVectorElement(
+      VecTy, Undef, MI.getOperand(1).getReg(), Zero);
+  auto Ins2 = MIRBuilder.buildInsertVectorElement(
+      VecTy, Undef, MI.getOperand(2).getReg(), Zero);
+
+  // Construct the mask.
+  auto Mask = MIRBuilder.buildConstant(VecTy, EltMask);
+  if (DstSize == 64)
+    Mask = MIRBuilder.buildFNeg(VecTy, Mask);
+
+  auto Sel = MIRBuilder.buildInstr(AArch64::G_BIT, {VecTy}, {Ins1, Ins2, Mask});
+
+  // Build an unmerge whose 0th elt is the original G_FCOPYSIGN destination. We
+  // want this to eventually become an EXTRACT_SUBREG.
+  SmallVector<Register, 2> DstRegs(1, Dst);
+  for (unsigned I = 1, E = VecTy.getNumElements(); I < E; ++I)
+    DstRegs.push_back(MRI.createGenericVirtualRegister(DstTy));
+  MIRBuilder.buildUnmerge(DstRegs, Sel);
+  MI.eraseFromParent();
+  return true;
 }

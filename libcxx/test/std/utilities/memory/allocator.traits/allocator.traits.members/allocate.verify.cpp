@@ -17,9 +17,10 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
-#include <memory>
-#include <cstdint>
 #include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <memory>
 
 #include "test_macros.h"
 

@@ -500,18 +500,24 @@ TEST_F(TestTypeSystemClang, TemplateArguments) {
   for (CompilerType t : {type, typedef_type, auto_type}) {
     SCOPED_TRACE(t.GetTypeName().AsCString());
 
-    EXPECT_EQ(m_ast->GetTemplateArgumentKind(t.GetOpaqueQualType(), 0),
-              eTemplateArgumentKindType);
-    EXPECT_EQ(m_ast->GetTypeTemplateArgument(t.GetOpaqueQualType(), 0),
-              int_type);
-    EXPECT_EQ(llvm::None,
-              m_ast->GetIntegralTemplateArgument(t.GetOpaqueQualType(), 0));
+    const bool expand_pack = false;
+    EXPECT_EQ(
+        m_ast->GetTemplateArgumentKind(t.GetOpaqueQualType(), 0, expand_pack),
+        eTemplateArgumentKindType);
+    EXPECT_EQ(
+        m_ast->GetTypeTemplateArgument(t.GetOpaqueQualType(), 0, expand_pack),
+        int_type);
+    EXPECT_EQ(llvm::None, m_ast->GetIntegralTemplateArgument(
+                              t.GetOpaqueQualType(), 0, expand_pack));
 
-    EXPECT_EQ(m_ast->GetTemplateArgumentKind(t.GetOpaqueQualType(), 1),
-              eTemplateArgumentKindIntegral);
-    EXPECT_EQ(m_ast->GetTypeTemplateArgument(t.GetOpaqueQualType(), 1),
-              CompilerType());
-    auto result = m_ast->GetIntegralTemplateArgument(t.GetOpaqueQualType(), 1);
+    EXPECT_EQ(
+        m_ast->GetTemplateArgumentKind(t.GetOpaqueQualType(), 1, expand_pack),
+        eTemplateArgumentKindIntegral);
+    EXPECT_EQ(
+        m_ast->GetTypeTemplateArgument(t.GetOpaqueQualType(), 1, expand_pack),
+        CompilerType());
+    auto result = m_ast->GetIntegralTemplateArgument(t.GetOpaqueQualType(), 1,
+                                                     expand_pack);
     ASSERT_NE(llvm::None, result);
     EXPECT_EQ(arg, result->value);
     EXPECT_EQ(int_type, result->type);
@@ -720,21 +726,22 @@ TEST_F(TestTypeSystemClang, TestGetTypeClassDeclType) {
 
 TEST_F(TestTypeSystemClang, TestGetTypeClassTypeOf) {
   clang::ASTContext &ctxt = m_ast->getASTContext();
-  QualType t = ctxt.getTypeOfType(makeConstInt(ctxt));
+  QualType t = ctxt.getTypeOfType(makeConstInt(ctxt), TypeOfKind::Qualified);
   EXPECT_EQ(lldb::eTypeClassBuiltin, m_ast->GetTypeClass(t.getAsOpaquePtr()));
 }
 
 TEST_F(TestTypeSystemClang, TestGetTypeClassTypeOfExpr) {
   clang::ASTContext &ctxt = m_ast->getASTContext();
   auto *nullptr_expr = new (ctxt) CXXNullPtrLiteralExpr(ctxt.NullPtrTy, SourceLocation());
-  QualType t = ctxt.getTypeOfExprType(nullptr_expr);
+  QualType t = ctxt.getTypeOfExprType(nullptr_expr, TypeOfKind::Qualified);
   EXPECT_EQ(lldb::eTypeClassBuiltin, m_ast->GetTypeClass(t.getAsOpaquePtr()));
 }
 
 TEST_F(TestTypeSystemClang, TestGetTypeClassNested) {
   clang::ASTContext &ctxt = m_ast->getASTContext();
-  QualType t_base = ctxt.getTypeOfType(makeConstInt(ctxt));
-  QualType t = ctxt.getTypeOfType(t_base);
+  QualType t_base =
+      ctxt.getTypeOfType(makeConstInt(ctxt), TypeOfKind::Qualified);
+  QualType t = ctxt.getTypeOfType(t_base, TypeOfKind::Qualified);
   EXPECT_EQ(lldb::eTypeClassBuiltin, m_ast->GetTypeClass(t.getAsOpaquePtr()));
 }
 

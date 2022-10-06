@@ -26,6 +26,7 @@ struct test_ostream
 int main(int, char**)
 {
 //  expected-error-re@ios:* {{{{(static_assert|static assertion)}} failed{{.*}}traits_type::char_type must be the same type as CharT}}
+//  expected-error@ostream:* {{only virtual member functions can be marked 'override'}}
 
   return 0;
 }

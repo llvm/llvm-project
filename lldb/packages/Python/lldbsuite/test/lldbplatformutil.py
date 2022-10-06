@@ -9,10 +9,7 @@ import re
 import subprocess
 import sys
 import os
-
-# Third-party modules
-import six
-from six.moves.urllib import parse as urlparse
+from urllib.parse import urlparse
 
 # LLDB modules
 from . import configuration
@@ -62,7 +59,7 @@ def android_device_api():
     if not hasattr(android_device_api, 'result'):
         assert configuration.lldb_platform_url is not None
         device_id = None
-        parsed_url = urlparse.urlparse(configuration.lldb_platform_url)
+        parsed_url = urlparse(configuration.lldb_platform_url)
         host_name = parsed_url.netloc.split(":")[0]
         if host_name != 'localhost':
             device_id = host_name

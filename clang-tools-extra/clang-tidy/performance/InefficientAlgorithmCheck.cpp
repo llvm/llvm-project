@@ -68,9 +68,8 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
     PtrToContainer = true;
   }
   const llvm::StringRef IneffContName = IneffCont->getName();
-  const bool Unordered =
-      IneffContName.find("unordered") != llvm::StringRef::npos;
-  const bool Maplike = IneffContName.find("map") != llvm::StringRef::npos;
+  const bool Unordered = IneffContName.contains("unordered");
+  const bool Maplike = IneffContName.contains("map");
 
   // Store if the key type of the container is compatible with the value
   // that is searched for.
@@ -84,8 +83,7 @@ void InefficientAlgorithmCheck::check(const MatchFinder::MatchResult &Result) {
     const Expr *Arg = AlgCall->getArg(3);
     const QualType AlgCmp =
         Arg->getType().getUnqualifiedType().getCanonicalType();
-    const unsigned CmpPosition =
-        (IneffContName.find("map") == llvm::StringRef::npos) ? 1 : 2;
+    const unsigned CmpPosition = IneffContName.contains("map") ? 2 : 1;
     const QualType ContainerCmp = IneffCont->getTemplateArgs()[CmpPosition]
                                       .getAsType()
                                       .getUnqualifiedType()

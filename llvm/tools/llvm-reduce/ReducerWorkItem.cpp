@@ -206,8 +206,10 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
         DstMF->CreateMachineBasicBlock(SrcMBB.getBasicBlock());
     Src2DstMBB[&SrcMBB] = DstMBB;
 
-    if (SrcMBB.hasAddressTaken())
-      DstMBB->setHasAddressTaken();
+    if (SrcMBB.isIRBlockAddressTaken())
+      DstMBB->setAddressTakenIRBlock(SrcMBB.getAddressTakenIRBlock());
+    if (SrcMBB.isMachineBlockAddressTaken())
+      DstMBB->setMachineBlockAddressTaken();
 
     // FIXME: This is not serialized
     if (SrcMBB.hasLabelMustBeEmitted())

@@ -28,11 +28,10 @@ template <
     typename AttrClass,
     // Require AttrClass to be a derived class from Attribute and get its
     // value type
-    typename ValueType =
-        typename std::enable_if<std::is_base_of<Attribute, AttrClass>::value,
-                                AttrClass>::type::ValueType,
+    typename ValueType = typename std::enable_if_t<
+        std::is_base_of<Attribute, AttrClass>::value, AttrClass>::ValueType,
     // Require the ValueType is not void
-    typename = typename std::enable_if<!std::is_void<ValueType>::value>::type>
+    typename = std::enable_if_t<!std::is_void<ValueType>::value>>
 struct attr_value_binder {
   ValueType *bind_value;
 
@@ -224,10 +223,9 @@ struct PatternMatcherValue {
 template <typename TupleT, class CallbackT, std::size_t... Is>
 constexpr void enumerateImpl(TupleT &&tuple, CallbackT &&callback,
                              std::index_sequence<Is...>) {
-  (void)std::initializer_list<int>{
-      0,
-      (callback(std::integral_constant<std::size_t, Is>{}, std::get<Is>(tuple)),
-       0)...};
+
+  (callback(std::integral_constant<std::size_t, Is>{}, std::get<Is>(tuple)),
+   ...);
 }
 
 template <typename... Tys, typename CallbackT>

@@ -270,3 +270,85 @@ bool mlir::hasNonIdentityLayout(Type type) {
     return !memrefType.getLayout().isIdentity();
   return false;
 }
+
+llvm::SmallBitVector
+mlir::getSlicedDimensions(ArrayRef<OpFoldResult> sliceInputShape,
+                          ArrayRef<Range> sliceParams) {
+  assert(sliceParams.size() == sliceInputShape.size() &&
+         "only supports non rank-reducing case");
+  llvm::SmallBitVector mask(sliceInputShape.size());
+  unsigned idx = 0;
+  for (const auto &[offset, size, stride] : sliceParams) {
+    Optional<int64_t> offsetConst = getConstantIntValue(offset);
+    Optional<int64_t> strideConst = getConstantIntValue(stride);
+    mask[idx] = !isEqualConstantIntOrValue(size, sliceInputShape[idx]) ||
+                (!strideConst || *strideConst != 1) ||
+                (!offsetConst || *offsetConst != 0);
+    idx++;
+  }
+  return mask;
+}
+
+llvm::SmallBitVector mlir::getLinearizedDimensions(
+    ArrayRef<ReassociationIndices> reassociationIndices) {
+  llvm::SmallBitVector result(reassociationIndices.size());
+  for (const auto &it : llvm::enumerate(reassociationIndices))
+    result[it.index()] = it.value().size() > 1;
+  return result;
+}
+
+SmallVector<Range> SliceFromCollapseHelper::getExtractSliceParams(
+    MLIRContext *ctx, ArrayRef<ValueRange> multiIndices) {
+  unsigned loopIdx = 0;
+  auto oneAttr = IntegerAttr::get(IndexType::get(ctx), 1);
+  auto zeroAttr = IntegerAttr::get(IndexType::get(ctx), 0);
+  SmallVector<Range> offsetsSizesAndStrides;
+  offsetsSizesAndStrides.reserve(collapseShapeInputShape.size());
+  for (const auto &it : llvm::enumerate(reassociationIndices)) {
+    // Case 1: Linearized dimensions that have also been sliced. These
+    // are size of 1 because we are iterating over these dimensions. The
+    // offsets are exactly the de-linearized multi-indices.
+    if (slicedDimensions[it.index()] && linearizedDimensions[it.index()]) {
+      llvm::append_range(
+          offsetsSizesAndStrides,
+          llvm::map_range(multiIndices[loopIdx++], [&](Value v) -> Range {
+            return Range{getAsOpFoldResult(v), oneAttr, oneAttr};
+          }));
+      continue;
+    }
+
+    // Case 2: One or possibly multiple combined input dimensions, but we
+    // have proven that these are not sliced. In this case we just take
+    // the full extent of each dimension in the reassociation list.
+    if (linearizedDimensions[it.index()]) {
+      llvm::append_range(
+          offsetsSizesAndStrides,
+          llvm::map_range(it.value(), [&](int64_t idx) -> Range {
+            return {zeroAttr, collapseShapeInputShape[idx], oneAttr};
+          }));
+      continue;
+    }
+
+    // Case 3: A single index, but it may be sliced.
+    offsetsSizesAndStrides.push_back(sliceParams[it.index()]);
+  }
+  return offsetsSizesAndStrides;
+}
+
+SmallVector<Range>
+SliceFromCollapseHelper::getInsertSliceParams(MLIRContext *ctx,
+                                              ValueRange tileIndices) {
+  auto one = IntegerAttr::get(IndexType::get(ctx), 1);
+  auto zero = IntegerAttr::get(IndexType::get(ctx), 0);
+  SmallVector<Range> insertParams;
+  insertParams.reserve(linearizedDimensions.size());
+  unsigned loopIdx = 0;
+  for (unsigned i = 0; i < linearizedDimensions.size(); i++) {
+    if (linearizedDimensions[i] && slicedDimensions[i]) {
+      insertParams.push_back(Range{tileIndices[loopIdx++], one, one});
+      continue;
+    }
+    insertParams.push_back(Range{zero, sliceParams[i].size, one});
+  }
+  return insertParams;
+}

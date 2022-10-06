@@ -31,6 +31,7 @@ enum LineType {
   LT_PreprocessorDirective,
   LT_VirtualFunctionDecl,
   LT_ArrayOfStructInitializer,
+  LT_CommentAbovePPDirective,
 };
 
 class AnnotatedLine {
@@ -39,10 +40,11 @@ public:
       : First(Line.Tokens.front().Tok), Level(Line.Level),
         MatchingOpeningBlockLineIndex(Line.MatchingOpeningBlockLineIndex),
         MatchingClosingBlockLineIndex(Line.MatchingClosingBlockLineIndex),
-        InPPDirective(Line.InPPDirective),
+        InPPDirective(Line.InPPDirective), InMacroBody(Line.InMacroBody),
         MustBeDeclaration(Line.MustBeDeclaration), MightBeFunctionDecl(false),
         IsMultiVariableDeclStmt(false), Affected(false),
         LeadingEmptyLinesAffected(false), ChildrenAffected(false),
+        IsContinuation(Line.IsContinuation),
         FirstStartColumn(Line.FirstStartColumn) {
     assert(!Line.Tokens.empty());
 
@@ -128,6 +130,7 @@ public:
   size_t MatchingOpeningBlockLineIndex;
   size_t MatchingClosingBlockLineIndex;
   bool InPPDirective;
+  bool InMacroBody;
   bool MustBeDeclaration;
   bool MightBeFunctionDecl;
   bool IsMultiVariableDeclStmt;
@@ -142,6 +145,10 @@ public:
 
   /// \c True if one of this line's children intersects with an input range.
   bool ChildrenAffected;
+
+  /// \c True if this line should be indented by ContinuationIndent in addition
+  /// to the normal indention level.
+  bool IsContinuation;
 
   unsigned FirstStartColumn;
 

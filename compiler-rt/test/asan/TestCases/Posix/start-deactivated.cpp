@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
   // CHECK: AddressSanitizer: heap-buffer-overflow
   // CHECK: READ of size 1
   // CHECK: {{#0 .* in do_another_bad_thing}}
-  // CHECK: is located 5 bytes to the right of 100-byte region
+  // CHECK: is located 5 bytes after 100-byte region
   // CHECK: in do_another_bad_thing
 
   return 0;

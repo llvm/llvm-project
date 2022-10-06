@@ -12,7 +12,7 @@ define float @test_atomicrmw_fsub_f32_flat(float* %ptr, float %value) {
 ; GCN-NEXT:    [[TMP2:%.*]] = bitcast float* [[PTR]] to i32*
 ; GCN-NEXT:    [[TMP3:%.*]] = bitcast float [[NEW]] to i32
 ; GCN-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg i32* [[TMP2]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst
+; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg i32* [[TMP2]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
 ; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; GCN-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
@@ -34,7 +34,7 @@ define float @test_atomicrmw_fsub_f32_global(float addrspace(1)* %ptr, float %va
 ; GCN-NEXT:    [[TMP2:%.*]] = bitcast float addrspace(1)* [[PTR]] to i32 addrspace(1)*
 ; GCN-NEXT:    [[TMP3:%.*]] = bitcast float [[NEW]] to i32
 ; GCN-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg i32 addrspace(1)* [[TMP2]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst
+; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg i32 addrspace(1)* [[TMP2]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
 ; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; GCN-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
@@ -56,7 +56,7 @@ define float @test_atomicrmw_fsub_f32_local(float addrspace(3)* %ptr, float %val
 ; GCN-NEXT:    [[TMP2:%.*]] = bitcast float addrspace(3)* [[PTR]] to i32 addrspace(3)*
 ; GCN-NEXT:    [[TMP3:%.*]] = bitcast float [[NEW]] to i32
 ; GCN-NEXT:    [[TMP4:%.*]] = bitcast float [[LOADED]] to i32
-; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg i32 addrspace(3)* [[TMP2]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst
+; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg i32 addrspace(3)* [[TMP2]], i32 [[TMP4]], i32 [[TMP3]] seq_cst seq_cst, align 4
 ; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i32, i1 } [[TMP5]], 1
 ; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i32, i1 } [[TMP5]], 0
 ; GCN-NEXT:    [[TMP6]] = bitcast i32 [[NEWLOADED]] to float
@@ -70,7 +70,7 @@ define float @test_atomicrmw_fsub_f32_local(float addrspace(3)* %ptr, float %val
 
 define half @test_atomicrmw_fsub_f16_flat(half* %ptr, half %value) {
 ; GCN-LABEL: @test_atomicrmw_fsub_f16_flat(
-; GCN-NEXT:    [[RES:%.*]] = atomicrmw fsub half* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst
+; GCN-NEXT:    [[RES:%.*]] = atomicrmw fsub half* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst, align 2
 ; GCN-NEXT:    ret half [[RES]]
 ;
   %res = atomicrmw fsub half* %ptr, half %value seq_cst
@@ -79,16 +79,25 @@ define half @test_atomicrmw_fsub_f16_flat(half* %ptr, half %value) {
 
 define half @test_atomicrmw_fsub_f16_global(half addrspace(1)* %ptr, half %value) {
 ; GCN-LABEL: @test_atomicrmw_fsub_f16_global(
-; GCN-NEXT:    [[RES:%.*]] = atomicrmw fsub half addrspace(1)* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst
+; GCN-NEXT:    [[RES:%.*]] = atomicrmw fsub half addrspace(1)* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst, align 2
 ; GCN-NEXT:    ret half [[RES]]
 ;
   %res = atomicrmw fsub half addrspace(1)* %ptr, half %value seq_cst
   ret half %res
 }
 
+define half @test_atomicrmw_fsub_f16_global_align4(half addrspace(1)* %ptr, half %value) {
+; GCN-LABEL: @test_atomicrmw_fsub_f16_global_align4(
+; GCN-NEXT:    [[RES:%.*]] = atomicrmw fsub half addrspace(1)* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst, align 4
+; GCN-NEXT:    ret half [[RES]]
+;
+  %res = atomicrmw fsub half addrspace(1)* %ptr, half %value seq_cst, align 4
+  ret half %res
+}
+
 define half @test_atomicrmw_fsub_f16_local(half addrspace(3)* %ptr, half %value) {
 ; GCN-LABEL: @test_atomicrmw_fsub_f16_local(
-; GCN-NEXT:    [[RES:%.*]] = atomicrmw fsub half addrspace(3)* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst
+; GCN-NEXT:    [[RES:%.*]] = atomicrmw fsub half addrspace(3)* [[PTR:%.*]], half [[VALUE:%.*]] seq_cst, align 2
 ; GCN-NEXT:    ret half [[RES]]
 ;
   %res = atomicrmw fsub half addrspace(3)* %ptr, half %value seq_cst
@@ -105,7 +114,7 @@ define double @test_atomicrmw_fsub_f64_flat(double* %ptr, double %value) {
 ; GCN-NEXT:    [[TMP2:%.*]] = bitcast double* [[PTR]] to i64*
 ; GCN-NEXT:    [[TMP3:%.*]] = bitcast double [[NEW]] to i64
 ; GCN-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg i64* [[TMP2]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst
+; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg i64* [[TMP2]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
 ; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GCN-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -127,7 +136,7 @@ define double @test_atomicrmw_fsub_f64_global(double addrspace(1)* %ptr, double 
 ; GCN-NEXT:    [[TMP2:%.*]] = bitcast double addrspace(1)* [[PTR]] to i64 addrspace(1)*
 ; GCN-NEXT:    [[TMP3:%.*]] = bitcast double [[NEW]] to i64
 ; GCN-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg i64 addrspace(1)* [[TMP2]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst
+; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg i64 addrspace(1)* [[TMP2]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
 ; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GCN-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double
@@ -149,7 +158,7 @@ define double @test_atomicrmw_fsub_f64_local(double addrspace(3)* %ptr, double %
 ; GCN-NEXT:    [[TMP2:%.*]] = bitcast double addrspace(3)* [[PTR]] to i64 addrspace(3)*
 ; GCN-NEXT:    [[TMP3:%.*]] = bitcast double [[NEW]] to i64
 ; GCN-NEXT:    [[TMP4:%.*]] = bitcast double [[LOADED]] to i64
-; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg i64 addrspace(3)* [[TMP2]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst
+; GCN-NEXT:    [[TMP5:%.*]] = cmpxchg i64 addrspace(3)* [[TMP2]], i64 [[TMP4]], i64 [[TMP3]] seq_cst seq_cst, align 8
 ; GCN-NEXT:    [[SUCCESS:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
 ; GCN-NEXT:    [[NEWLOADED:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
 ; GCN-NEXT:    [[TMP6]] = bitcast i64 [[NEWLOADED]] to double

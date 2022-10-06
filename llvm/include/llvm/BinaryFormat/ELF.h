@@ -435,6 +435,7 @@ enum : unsigned {
   EF_ARM_ABI_FLOAT_SOFT = 0x00000200U, // EABI_VER5
   EF_ARM_VFP_FLOAT = 0x00000400U,      // Legacy pre EABI_VER5
   EF_ARM_ABI_FLOAT_HARD = 0x00000400U, // EABI_VER5
+  EF_ARM_BE8 = 0x00800000U,
   EF_ARM_EABI_UNKNOWN = 0x00000000U,
   EF_ARM_EABI_VER1 = 0x01000000U,
   EF_ARM_EABI_VER2 = 0x02000000U,
@@ -1597,6 +1598,7 @@ enum {
   NT_GNU_BUILD_ID = 3,
   NT_GNU_GOLD_VERSION = 4,
   NT_GNU_PROPERTY_TYPE_0 = 5,
+  FDO_PACKAGING_METADATA = 0xcafe1a7e,
 };
 
 // Android note types.
@@ -1798,6 +1800,7 @@ struct Elf64_Nhdr {
 // Legal values for ch_type field of compressed section header.
 enum {
   ELFCOMPRESS_ZLIB = 1,            // ZLIB/DEFLATE algorithm.
+  ELFCOMPRESS_ZSTD = 2,            // Zstandard algorithm
   ELFCOMPRESS_LOOS = 0x60000000,   // Start of OS-specific.
   ELFCOMPRESS_HIOS = 0x6fffffff,   // End of OS-specific.
   ELFCOMPRESS_LOPROC = 0x70000000, // Start of processor-specific.

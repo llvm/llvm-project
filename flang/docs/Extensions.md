@@ -140,7 +140,7 @@ end
   for the default kind of INTEGER are assumed to have the least larger kind
   that can hold them, if one exists.
 * BOZ literals can be used as INTEGER values in contexts where the type is
-  unambiguous: the right hand sides of assigments and initializations
+  unambiguous: the right hand sides of assignments and initializations
   of INTEGER entities, as actual arguments to a few intrinsic functions
   (ACHAR, BTEST, CHAR), and as actual arguments of references to
   procedures with explicit interfaces whose corresponding dummy
@@ -235,6 +235,11 @@ end
   respectively.
 * A digit count of d=0 is accepted in Ew.0, Dw.0, and Gw.0 output
   editing if no nonzero scale factor (kP) is in effect.
+* The name `IMAG` is accepted as an alias for the generic intrinsic
+  function `AIMAG`.
+* The legacy extension intrinsic functions `IZEXT` and `JZEXT`
+  are supported; `ZEXT` has different behavior with various older
+  compilers, so it is not supported.
 
 ### Extensions supported when enabled by options
 
@@ -287,7 +292,7 @@ end
 * Use of INTEGER data with the intrinsic logical operators `.NOT.`, `.AND.`, `.OR.`,
   and `.XOR.`.
 * IF (integer expression) THEN ... END IF  (PGI/Intel)
-* Comparsion of LOGICAL with ==/.EQ. rather than .EQV. (also .NEQV.) (PGI/Intel)
+* Comparison of LOGICAL with ==/.EQ. rather than .EQV. (also .NEQV.) (PGI/Intel)
 * Procedure pointers in COMMON blocks (PGI/Intel)
 * Underindexing multi-dimensional arrays (e.g., A(1) rather than A(1,1)) (PGI only)
 * Legacy PGI `NCHARACTER` type and `NC` Kanji character literals
@@ -309,6 +314,9 @@ end
 * VMS listing control directives (`%LIST`, `%NOLIST`, `%EJECT`)
 * Continuation lines on `INCLUDE` lines
 * `NULL()` actual argument corresponding to an `ALLOCATABLE` dummy data object
+* User (non-intrinsic) `ELEMENTAL` procedures may not be passed as actual
+  arguments, in accordance with the standard; some Fortran compilers
+  permit such usage.
 
 ## Preprocessing behavior
 
@@ -410,3 +418,25 @@ end
   to some forms of input in this situation.)
   For sequential formatted output, RECL= serves as a limit on record lengths
   that raises an error when it is exceeded.
+
+* When a `DATA` statement in a `BLOCK` construct could be construed as
+  either initializing a host-associated object or declaring a new local
+  initialized object, f18 interprets the standard's classification of
+  a `DATA` statement as being a "declaration" rather than a "specification"
+  construct, and notes that the `BLOCK` construct is defined as localizing
+  names that have specifications in the `BLOCK` construct.
+  So this example will elicit an error about multiple initialization:
+```
+subroutine subr
+  integer n = 1
+  block
+    data n/2/
+  end block
+end subroutine
+```
+
+  Other Fortran compilers disagree with each other in their interpretations
+  of this example.
+  The precedent among the most commonly used compilers
+  agrees with f18's interpretation: a `DATA` statement without any other
+  specification of the name refers to the host-associated object.

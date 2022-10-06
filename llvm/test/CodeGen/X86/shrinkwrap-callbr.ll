@@ -20,7 +20,7 @@ define i32 @test1(i32 %v) {
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    callq fn
 ; CHECK-NEXT:    #APP
-; CHECK-NEXT:    # jump to .Ltmp0
+; CHECK-NEXT:    # jump to .LBB0_4
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:  # %bb.2: # %return
 ; CHECK-NEXT:    movl $4, %eax
@@ -33,8 +33,9 @@ define i32 @test1(i32 %v) {
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .Ltmp0: # Block address taken
-; CHECK-NEXT:  .LBB0_4: # %two
+; CHECK-NEXT:  .LBB0_4: # Block address taken
+; CHECK-NEXT:    # %two
+; CHECK-NEXT:    # Label of block must be emitted
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8

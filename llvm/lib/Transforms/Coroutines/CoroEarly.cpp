@@ -8,6 +8,7 @@
 
 #include "llvm/Transforms/Coroutines/CoroEarly.h"
 #include "CoroInternal.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -100,6 +101,25 @@ void Lowerer::lowerCoroDone(IntrinsicInst *II) {
   II->eraseFromParent();
 }
 
+static void buildDebugInfoForNoopResumeDestroyFunc(Function *NoopFn) {
+  Module &M = *NoopFn->getParent();
+  if (M.debug_compile_units().empty())
+     return;
+
+  DICompileUnit *CU = *M.debug_compile_units_begin();
+  DIBuilder DB(M, /*AllowUnresolved*/ false, CU);
+  std::array<Metadata *, 2> Params{nullptr, nullptr};
+  auto *SubroutineType =
+      DB.createSubroutineType(DB.getOrCreateTypeArray(Params));
+  StringRef Name = NoopFn->getName();
+  auto *SP = DB.createFunction(
+      CU, /*Name=*/Name, /*LinkageName=*/Name, /*File=*/ CU->getFile(),
+      /*LineNo=*/0, SubroutineType, /*ScopeLine=*/0, DINode::FlagArtificial,
+      DISubprogram::SPFlagDefinition);
+  NoopFn->setSubprogram(SP);
+  DB.finalize();
+}
+
 void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
   if (!NoopCoro) {
     LLVMContext &C = Builder.getContext();
@@ -116,8 +136,9 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
     // Create a Noop function that does nothing.
     Function *NoopFn =
         Function::Create(FnTy, GlobalValue::LinkageTypes::PrivateLinkage,
-                         "NoopCoro.ResumeDestroy", &M);
+                         "__NoopCoro_ResumeDestroy", &M);
     NoopFn->setCallingConv(CallingConv::Fast);
+    buildDebugInfoForNoopResumeDestroyFunc(NoopFn);
     auto *Entry = BasicBlock::Create(C, "entry", NoopFn);
     ReturnInst::Create(C, Entry);
 

@@ -44,6 +44,7 @@
 ! CHECK-NEXT: -fno-integrated-as     Disable the integrated assembler
 ! CHECK-NEXT: -fopenacc              Enable OpenACC
 ! CHECK-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
+! CHECK-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
 ! CHECK-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! CHECK-NEXT: -help     Display available options
 ! CHECK-NEXT: -I <dir>               Add directory to the end of the list of include search paths

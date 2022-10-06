@@ -37,6 +37,10 @@ bool MCXCOFFStreamer::emitSymbolAttribute(MCSymbol *Sym,
   getAssembler().registerSymbol(*Symbol);
 
   switch (Attribute) {
+  // XCOFF doesn't support the cold feature.
+  case MCSA_Cold:
+    return false;
+
   case MCSA_Global:
   case MCSA_Extern:
     Symbol->setStorageClass(XCOFF::C_EXT);
@@ -75,6 +79,16 @@ void MCXCOFFStreamer::emitXCOFFSymbolLinkageWithVisibility(
     return;
 
   emitSymbolAttribute(Symbol, Visibility);
+}
+
+void MCXCOFFStreamer::emitXCOFFExceptDirective(const MCSymbol *Symbol,
+                                               MCSymbol *Trap, unsigned Lang,
+                                               unsigned Reason,
+                                               unsigned FunctionSize,
+                                               bool hasDebug) {
+  report_fatal_error(
+      "emitXCOFFExceptDirective not yet supported for integrated "
+      "assembler path.");
 }
 
 void MCXCOFFStreamer::emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,

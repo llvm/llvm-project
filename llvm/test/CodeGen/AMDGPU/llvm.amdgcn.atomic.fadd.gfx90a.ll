@@ -6,7 +6,7 @@ declare <2 x half> @llvm.amdgcn.buffer.atomic.fadd.v2f16(<2 x half>, <4 x i32>, 
 declare float @llvm.amdgcn.global.atomic.fadd.f32.p1f32.f32(float addrspace(1)*, float)
 declare <2 x half> @llvm.amdgcn.global.atomic.fadd.v2f16.p1v2f16.v2f16(<2 x half> addrspace(1)*, <2 x half>)
 
-; GFX908: error: {{.*}} return versions of fp atomics not supported
+; GFX908:  LLVM ERROR: Cannot select: {{.+}}: f32,ch = BUFFER_ATOMIC_FADD
 
 ; GFX90A-LABEL: {{^}}buffer_atomic_add_f32:
 ; GFX90A: buffer_atomic_add_f32 v0, v1, s[0:3], 0 idxen glc

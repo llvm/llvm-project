@@ -10,13 +10,13 @@
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_GENERIC_SQRT_H
 
 #include "sqrt_80_bit_long_double.h"
-#include "src/__support/CPP/Bit.h"
-#include "src/__support/CPP/TypeTraits.h"
-#include "src/__support/CPP/UInt128.h"
+#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PlatformDefs.h"
-#include "src/__support/FPUtil/builtin_wrappers.h"
+#include "src/__support/UInt128.h"
+#include "src/__support/builtin_wrappers.h"
 
 namespace __llvm_libc {
 namespace fputil {
@@ -64,8 +64,7 @@ inline void normalize<long double>(int &exponent, UInt128 &mantissa) {
 // Correctly rounded IEEE 754 SQRT for all rounding modes.
 // Shift-and-add algorithm.
 template <typename T>
-static inline cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, T>
-sqrt(T x) {
+static inline cpp::enable_if_t<cpp::is_floating_point_v<T>, T> sqrt(T x) {
 
   if constexpr (internal::SpecialLongDouble<T>::VALUE) {
     // Special 80-bit long double.
@@ -162,7 +161,7 @@ sqrt(T x) {
         break;
       }
 
-      return __llvm_libc::bit_cast<T>(y);
+      return cpp::bit_cast<T>(y);
     }
   }
 }

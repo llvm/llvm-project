@@ -993,7 +993,7 @@ static MachineBasicBlock::iterator InsertSEH(MachineBasicBlock::iterator MBBI,
     llvm_unreachable("No SEH Opcode for this instruction");
   case AArch64::LDPDpost:
     Imm = -Imm;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::STPDpre: {
     unsigned Reg0 = RegInfo->getSEHRegNum(MBBI->getOperand(1).getReg());
     unsigned Reg1 = RegInfo->getSEHRegNum(MBBI->getOperand(2).getReg());
@@ -1006,7 +1006,7 @@ static MachineBasicBlock::iterator InsertSEH(MachineBasicBlock::iterator MBBI,
   }
   case AArch64::LDPXpost:
     Imm = -Imm;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::STPXpre: {
     Register Reg0 = MBBI->getOperand(1).getReg();
     Register Reg1 = MBBI->getOperand(2).getReg();
@@ -1024,7 +1024,7 @@ static MachineBasicBlock::iterator InsertSEH(MachineBasicBlock::iterator MBBI,
   }
   case AArch64::LDRDpost:
     Imm = -Imm;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::STRDpre: {
     unsigned Reg = RegInfo->getSEHRegNum(MBBI->getOperand(1).getReg());
     MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveFReg_X))
@@ -1035,7 +1035,7 @@ static MachineBasicBlock::iterator InsertSEH(MachineBasicBlock::iterator MBBI,
   }
   case AArch64::LDRXpost:
     Imm = -Imm;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AArch64::STRXpre: {
     unsigned Reg =  RegInfo->getSEHRegNum(MBBI->getOperand(1).getReg());
     MIB = BuildMI(MF, DL, TII.get(AArch64::SEH_SaveReg_X))
@@ -1452,7 +1452,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
             .addImm(Subtarget.isTargetILP32() ? 32 : 0);
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     case SwiftAsyncFramePointerMode::Always:
       // ORR x29, x29, #0x1000_0000_0000_0000
@@ -1660,13 +1660,14 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
           .setMIFlags(MachineInstr::FrameSetup);
     }
 
+    const char* ChkStk = Subtarget.getChkStkName();
     switch (MF.getTarget().getCodeModel()) {
     case CodeModel::Tiny:
     case CodeModel::Small:
     case CodeModel::Medium:
     case CodeModel::Kernel:
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL))
-          .addExternalSymbol("__chkstk")
+          .addExternalSymbol(ChkStk)
           .addReg(AArch64::X15, RegState::Implicit)
           .addReg(AArch64::X16, RegState::Implicit | RegState::Define | RegState::Dead)
           .addReg(AArch64::X17, RegState::Implicit | RegState::Define | RegState::Dead)
@@ -1681,8 +1682,8 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
     case CodeModel::Large:
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::MOVaddrEXT))
           .addReg(AArch64::X16, RegState::Define)
-          .addExternalSymbol("__chkstk")
-          .addExternalSymbol("__chkstk")
+          .addExternalSymbol(ChkStk)
+          .addExternalSymbol(ChkStk)
           .setMIFlags(MachineInstr::FrameSetup);
       if (NeedsWinCFI) {
         HasWinCFI = true;
@@ -1863,8 +1864,9 @@ static void InsertReturnAddressAuth(MachineFunction &MF,
   // From v8.3a onwards there are optimised authenticate LR and return
   // instructions, namely RETA{A,B}, that can be used instead. In this case the
   // DW_CFA_AARCH64_negate_ra_state can't be emitted.
-  if (Subtarget.hasPAuth() && MBBI != MBB.end() &&
-      MBBI->getOpcode() == AArch64::RET_ReallyLR) {
+  if (Subtarget.hasPAuth() &&
+      !MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack) &&
+      MBBI != MBB.end() && MBBI->getOpcode() == AArch64::RET_ReallyLR) {
     BuildMI(MBB, MBBI, DL,
             TII->get(MFI.shouldSignWithBKey() ? AArch64::RETAB : AArch64::RETAA))
         .copyImplicitOps(*MBBI);
@@ -2025,7 +2027,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
       // Avoid the reload as it is GOT relative, and instead fall back to the
       // hardcoded value below.  This allows a mismatch between the OS and
       // application without immediately terminating on the difference.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case SwiftAsyncFramePointerMode::Always:
       // We need to reset FP to its untagged state on return. Bit 60 is
       // currently used to show the presence of an extended frame.
@@ -2522,8 +2524,8 @@ static void computeCalleeSaveRegisterPairs(
   (void)CC;
   // MachO's compact unwind format relies on all registers being stored in
   // pairs.
-  assert((!produceCompactUnwindFrame(MF) ||
-          CC == CallingConv::PreserveMost || CC == CallingConv::CXX_FAST_TLS ||
+  assert((!produceCompactUnwindFrame(MF) || CC == CallingConv::PreserveMost ||
+          CC == CallingConv::CXX_FAST_TLS || CC == CallingConv::Win64 ||
           (Count & 1) == 0) &&
          "Odd number of callee-saved regs to spill!");
   int ByteOffset = AFI->getCalleeSavedStackSize();
@@ -2608,8 +2610,8 @@ static void computeCalleeSaveRegisterPairs(
 
     // MachO's compact unwind format relies on all registers being stored in
     // adjacent register pairs.
-    assert((!produceCompactUnwindFrame(MF) ||
-            CC == CallingConv::PreserveMost || CC == CallingConv::CXX_FAST_TLS ||
+    assert((!produceCompactUnwindFrame(MF) || CC == CallingConv::PreserveMost ||
+            CC == CallingConv::CXX_FAST_TLS || CC == CallingConv::Win64 ||
             (RPI.isPaired() &&
              ((RPI.Reg1 == AArch64::LR && RPI.Reg2 == AArch64::FP) ||
               RPI.Reg1 + 1 == RPI.Reg2))) &&

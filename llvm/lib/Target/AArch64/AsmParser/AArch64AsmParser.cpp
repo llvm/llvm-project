@@ -2313,7 +2313,7 @@ void AArch64Operand::print(raw_ostream &OS) const {
     OS << "<register " << getReg() << ">";
     if (!getShiftExtendAmount() && !hasShiftExtendAmount())
       break;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case k_ShiftExtend:
     OS << "<" << AArch64_AM::getShiftExtendName(getShiftExtendType()) << " #"
        << getShiftExtendAmount();
@@ -4745,7 +4745,7 @@ bool AArch64AsmParser::validateInstruction(MCInst &Inst, SMLoc &IDLoc,
     if (RI->isSubRegisterEq(Rn, Rt2))
       return Error(Loc[1], "unpredictable LDP instruction, writeback base "
                            "is also a destination");
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case AArch64::LDPDi:
   case AArch64::LDPQi:

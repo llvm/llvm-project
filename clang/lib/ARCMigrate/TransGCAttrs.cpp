@@ -158,7 +158,7 @@ public:
     if (!D)
       return false;
 
-    for (auto I : D->redecls())
+    for (auto *I : D->redecls())
       if (!isInMainFile(I->getLocation()))
         return false;
 

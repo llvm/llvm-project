@@ -536,6 +536,7 @@ public:
 class CompressedSection : public SectionBase {
   MAKE_SEC_WRITER_FRIEND
 
+  uint32_t ChType = 0;
   DebugCompressionType CompressionType;
   uint64_t DecompressedSize;
   uint64_t DecompressedAlign;
@@ -543,12 +544,13 @@ class CompressedSection : public SectionBase {
 
 public:
   CompressedSection(const SectionBase &Sec,
-                    DebugCompressionType CompressionType);
-  CompressedSection(ArrayRef<uint8_t> CompressedData, uint64_t DecompressedSize,
-                    uint64_t DecompressedAlign);
+    DebugCompressionType CompressionType, bool Is64Bits);
+  CompressedSection(ArrayRef<uint8_t> CompressedData, uint32_t ChType,
+                    uint64_t DecompressedSize, uint64_t DecompressedAlign);
 
   uint64_t getDecompressedSize() const { return DecompressedSize; }
   uint64_t getDecompressedAlign() const { return DecompressedAlign; }
+  uint64_t getChType() const { return ChType; }
 
   Error accept(SectionVisitor &Visitor) const override;
   Error accept(MutableSectionVisitor &Visitor) override;
@@ -562,8 +564,9 @@ class DecompressedSection : public SectionBase {
   MAKE_SEC_WRITER_FRIEND
 
 public:
+  uint32_t ChType;
   explicit DecompressedSection(const CompressedSection &Sec)
-      : SectionBase(Sec) {
+      : SectionBase(Sec), ChType(Sec.getChType()) {
     Size = Sec.getDecompressedSize();
     Align = Sec.getDecompressedAlign();
     Flags = OriginalFlags = (Flags & ~ELF::SHF_COMPRESSED);
@@ -1042,6 +1045,7 @@ public:
   Segment ElfHdrSegment;
   Segment ProgramHdrSegment;
 
+  bool Is64Bits;
   uint8_t OSABI;
   uint8_t ABIVersion;
   uint64_t Entry;

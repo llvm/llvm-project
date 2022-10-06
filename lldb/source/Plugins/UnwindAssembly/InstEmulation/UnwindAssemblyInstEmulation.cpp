@@ -84,10 +84,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
       const bool show_address = true;
       const bool show_bytes = true;
       const bool show_control_flow_kind = true;
-      m_inst_emulator_up->GetRegisterInfo(unwind_plan.GetRegisterKind(),
-                                          unwind_plan.GetInitialCFARegister(),
-                                          m_cfa_reg_info);
-
+      m_cfa_reg_info = *m_inst_emulator_up->GetRegisterInfo(
+          unwind_plan.GetRegisterKind(), unwind_plan.GetInitialCFARegister());
       m_fp_is_cfa = false;
       m_register_values.clear();
       m_pushed_regs.clear();
@@ -130,9 +128,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
         // cache the stack pointer register number (in whatever register
         // numbering this UnwindPlan uses) for quick reference during
         // instruction parsing.
-        RegisterInfo sp_reg_info;
-        m_inst_emulator_up->GetRegisterInfo(
-            eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP, sp_reg_info);
+        RegisterInfo sp_reg_info = *m_inst_emulator_up->GetRegisterInfo(
+            eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP);
 
         // The architecture dependent condition code of the last processed
         // instruction.
@@ -172,8 +169,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
                 lldb::RegisterKind row_kind =
                     m_unwind_plan_ptr->GetRegisterKind();
                 // set m_cfa_reg_info to the row's CFA reg.
-                m_inst_emulator_up->GetRegisterInfo(row_kind, row_cfa_regnum,
-                                                    m_cfa_reg_info);
+                m_cfa_reg_info = *m_inst_emulator_up->GetRegisterInfo(
+                    row_kind, row_cfa_regnum);
                 // set m_fp_is_cfa.
                 if (sp_reg_info.kinds[row_kind] == row_cfa_regnum)
                   m_fp_is_cfa = false;
@@ -219,8 +216,8 @@ bool UnwindAssemblyInstEmulation::GetNonCallSiteUnwindPlanFromAssembly(
                   lldb::RegisterKind row_kind =
                       m_unwind_plan_ptr->GetRegisterKind();
                   // set m_cfa_reg_info to the row's CFA reg.
-                  m_inst_emulator_up->GetRegisterInfo(row_kind, row_cfa_regnum,
-                                                      m_cfa_reg_info);
+                  m_cfa_reg_info = *m_inst_emulator_up->GetRegisterInfo(
+                      row_kind, row_cfa_regnum);
                   // set m_fp_is_cfa.
                   if (sp_reg_info.kinds[row_kind] == row_cfa_regnum)
                     m_fp_is_cfa = false;
@@ -455,7 +452,7 @@ size_t UnwindAssemblyInstEmulation::WriteMemory(
   case EmulateInstruction::eContextPushRegisterOnStack: {
     uint32_t reg_num = LLDB_INVALID_REGNUM;
     uint32_t generic_regnum = LLDB_INVALID_REGNUM;
-    assert(context.info_type ==
+    assert(context.GetInfoType() ==
                EmulateInstruction::eInfoTypeRegisterToRegisterPlusOffset &&
            "unhandled case, add code to handle this!");
     const uint32_t unwind_reg_kind = m_unwind_plan_ptr->GetRegisterKind();
@@ -574,7 +571,8 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
     // with the same amount.
     lldb::RegisterKind kind = m_unwind_plan_ptr->GetRegisterKind();
     if (m_fp_is_cfa && reg_info->kinds[kind] == m_cfa_reg_info.kinds[kind] &&
-        context.info_type == EmulateInstruction::eInfoTypeRegisterPlusOffset &&
+        context.GetInfoType() ==
+            EmulateInstruction::eInfoTypeRegisterPlusOffset &&
         context.info.RegisterPlusOffset.reg.kinds[kind] ==
             m_cfa_reg_info.kinds[kind]) {
       const int64_t offset = context.info.RegisterPlusOffset.signed_offset;
@@ -585,18 +583,19 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
 
   case EmulateInstruction::eContextAbsoluteBranchRegister:
   case EmulateInstruction::eContextRelativeBranchImmediate: {
-    if (context.info_type == EmulateInstruction::eInfoTypeISAAndImmediate &&
+    if (context.GetInfoType() == EmulateInstruction::eInfoTypeISAAndImmediate &&
         context.info.ISAAndImmediate.unsigned_data32 > 0) {
       m_forward_branch_offset =
           context.info.ISAAndImmediateSigned.signed_data32;
-    } else if (context.info_type ==
+    } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeISAAndImmediateSigned &&
                context.info.ISAAndImmediateSigned.signed_data32 > 0) {
       m_forward_branch_offset = context.info.ISAAndImmediate.unsigned_data32;
-    } else if (context.info_type == EmulateInstruction::eInfoTypeImmediate &&
+    } else if (context.GetInfoType() ==
+                   EmulateInstruction::eInfoTypeImmediate &&
                context.info.unsigned_immediate > 0) {
       m_forward_branch_offset = context.info.unsigned_immediate;
-    } else if (context.info_type ==
+    } else if (context.GetInfoType() ==
                    EmulateInstruction::eInfoTypeImmediateSigned &&
                context.info.signed_immediate > 0) {
       m_forward_branch_offset = context.info.signed_immediate;
@@ -609,7 +608,7 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
     const uint32_t generic_regnum = reg_info->kinds[eRegisterKindGeneric];
     if (reg_num != LLDB_INVALID_REGNUM &&
         generic_regnum != LLDB_REGNUM_GENERIC_SP) {
-      switch (context.info_type) {
+      switch (context.GetInfoType()) {
       case EmulateInstruction::eInfoTypeAddress:
         if (m_pushed_regs.find(reg_num) != m_pushed_regs.end() &&
             context.info.address == m_pushed_regs[reg_num]) {
@@ -621,11 +620,10 @@ bool UnwindAssemblyInstEmulation::WriteRegister(
           // to using SP to calculate the CFA.
           if (m_fp_is_cfa) {
             m_fp_is_cfa = false;
-            RegisterInfo sp_reg_info;
             lldb::RegisterKind sp_reg_kind = eRegisterKindGeneric;
             uint32_t sp_reg_num = LLDB_REGNUM_GENERIC_SP;
-            m_inst_emulator_up->GetRegisterInfo(sp_reg_kind, sp_reg_num,
-                                                sp_reg_info);
+            RegisterInfo sp_reg_info =
+                *m_inst_emulator_up->GetRegisterInfo(sp_reg_kind, sp_reg_num);
             RegisterValue sp_reg_val;
             if (GetRegisterValue(sp_reg_info, sp_reg_val)) {
               m_cfa_reg_info = sp_reg_info;

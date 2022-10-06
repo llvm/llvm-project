@@ -204,7 +204,7 @@ private:
 
     LLVM_DEBUG(dbgs() << "Processing relocations:\n");
 
-    for (auto &S : Obj.sections()) {
+    for (const auto &S : Obj.sections()) {
 
       orc::ExecutorAddr SectionAddress(S.getAddress());
 

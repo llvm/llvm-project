@@ -474,14 +474,11 @@ Type LLVMTypeConverter::packFunctionResults(TypeRange types) {
 
 Value LLVMTypeConverter::promoteOneMemRefDescriptor(Location loc, Value operand,
                                                     OpBuilder &builder) {
-  auto *context = builder.getContext();
-  auto int64Ty = IntegerType::get(builder.getContext(), 64);
-  auto indexType = IndexType::get(context);
   // Alloca with proper alignment. We do not expect optimizations of this
   // alloca op and so we omit allocating at the entry block.
   auto ptrType = LLVM::LLVMPointerType::get(operand.getType());
-  Value one = builder.create<LLVM::ConstantOp>(loc, int64Ty,
-                                               IntegerAttr::get(indexType, 1));
+  Value one = builder.create<LLVM::ConstantOp>(loc, builder.getI64Type(),
+                                               builder.getIndexAttr(1));
   Value allocated =
       builder.create<LLVM::AllocaOp>(loc, ptrType, one, /*alignment=*/0);
   // Store into the alloca'ed descriptor.

@@ -57,6 +57,13 @@ func.func @shuffle_rank_mismatch(%arg0: vector<2xf32>, %arg1: vector<4x2xf32>) {
 }
 
 // -----
+ 
+func.func @shuffle_rank_mismatch_0d(%arg0: vector<f32>, %arg1: vector<1xf32>) {
+  // expected-error@+1 {{'vector.shuffle' op rank mismatch}}
+  %1 = vector.shuffle %arg0, %arg1 [0, 1] : vector<f32>, vector<1xf32>
+}
+
+// -----
 
 func.func @shuffle_trailing_dim_size_mismatch(%arg0: vector<2x2xf32>, %arg1: vector<2x4xf32>) {
   // expected-error@+1 {{'vector.shuffle' op dimension mismatch}}
@@ -1104,7 +1111,8 @@ func.func @bitcast_sizemismatch(%arg0 : vector<5x1x3x2xf32>) {
 // -----
 
 func.func @reduce_unknown_kind(%arg0: vector<16xf32>) -> f32 {
-  // expected-error@+1 {{custom op 'vector.reduction' Unknown combining kind: joho}}
+  // expected-error@+2 {{custom op 'vector.reduction' failed to parse Vector_CombiningKindAttr parameter 'value' which is to be a `::mlir::vector::CombiningKind`}}
+  // expected-error@+1 {{custom op 'vector.reduction' expected ::mlir::vector::CombiningKind to be one of: }}
   %0 = vector.reduction <joho>, %arg0 : vector<16xf32> into f32
 }
 
@@ -1145,9 +1153,23 @@ func.func @multi_reduce_invalid_type(%arg0: vector<4x16xf32>, %acc: vector<16xf3
 
 // -----
 
+func.func @transpose_rank_mismatch_0d(%arg0: vector<f32>) {
+  // expected-error@+1 {{'vector.transpose' op vector result rank mismatch: 1}}
+  %0 = vector.transpose %arg0, [] : vector<f32> to vector<100xf32>
+}
+
+// -----
+
 func.func @transpose_rank_mismatch(%arg0: vector<4x16x11xf32>) {
   // expected-error@+1 {{'vector.transpose' op vector result rank mismatch: 1}}
   %0 = vector.transpose %arg0, [2, 1, 0] : vector<4x16x11xf32> to vector<100xf32>
+}
+
+// -----
+ 
+func.func @transpose_length_mismatch_0d(%arg0: vector<f32>) {
+  // expected-error@+1 {{'vector.transpose' op transposition length mismatch: 1}}
+  %0 = vector.transpose %arg0, [1] : vector<f32> to vector<f32>
 }
 
 // -----
@@ -1305,7 +1327,7 @@ func.func @gather_memref_mismatch(%base: memref<?x?xf64>, %indices: vector<16xi3
 func.func @gather_rank_mismatch(%base: memref<?xf32>, %indices: vector<16xi32>,
                            %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.gather' op result #0 must be  of ranks 1, but got 'vector<2x16xf32>'}}
+  // expected-error@+1 {{'vector.gather' op expected result dim to match indices dim}}
   %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
     : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<2x16xf32>
 }
@@ -1444,48 +1466,6 @@ func.func @compress_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>
   %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.compressstore' op requires 2 indices}}
   vector.compressstore %base[%c0, %c0, %c0], %mask, %value : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
-}
-
-// -----
-
-func.func @extract_map_rank(%v: vector<32xf32>, %id : index) {
-  // expected-error@+1 {{'vector.extract_map' op expected source and destination vectors of same rank}}
-  %0 = vector.extract_map %v[%id] : vector<32xf32> to vector<2x1xf32>
-}
-
-// -----
-
-func.func @extract_map_size(%v: vector<63xf32>, %id : index) {
-  // expected-error@+1 {{'vector.extract_map' op source vector dimensions must be a multiple of destination vector dimensions}}
-  %0 = vector.extract_map %v[%id] : vector<63xf32> to vector<2xf32>
-}
-
-// -----
-
-func.func @extract_map_id(%v: vector<2x32xf32>, %id : index) {
-  // expected-error@+1 {{'vector.extract_map' op expected number of ids must match the number of dimensions distributed}}
-  %0 = vector.extract_map %v[%id] : vector<2x32xf32> to vector<1x1xf32>
-}
-
-// -----
-
-func.func @insert_map_rank(%v: vector<2x1xf32>, %v1: vector<32xf32>, %id : index) {
-  // expected-error@+1 {{'vector.insert_map' op expected source and destination vectors of same rank}}
-  %0 = vector.insert_map %v, %v1[%id] : vector<2x1xf32> into vector<32xf32>
-}
-
-// -----
-
-func.func @insert_map_size(%v: vector<3xf32>, %v1: vector<64xf32>, %id : index) {
-  // expected-error@+1 {{'vector.insert_map' op destination vector size must be a multiple of source vector size}}
-  %0 = vector.insert_map %v, %v1[%id] : vector<3xf32> into vector<64xf32>
-}
-
-// -----
-
-func.func @insert_map_id(%v: vector<2x1xf32>, %v1: vector<4x32xf32>, %id : index) {
-  // expected-error@+1 {{'vector.insert_map' op expected number of ids must match the number of dimensions distributed}}
-  %0 = vector.insert_map %v, %v1[%id] : vector<2x1xf32> into vector<4x32xf32>
 }
 
 // -----

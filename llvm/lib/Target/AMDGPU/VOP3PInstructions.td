@@ -35,7 +35,7 @@ class VOP3P_Mix_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR,
                FP16InputMods:$src2_modifiers, VCSrc_f16:$src2);
     dag dpp_srcs =
           (ins FPVRegInputMods:$src0_modifiers, VGPRSrc_32:$src0,
-               FP16InputMods:$src1_modifiers, VCSrc_f16:$src1,
+               FPVRegInputMods:$src1_modifiers, VGPRSrc_32:$src1,
                FP16InputMods:$src2_modifiers, VCSrc_f16:$src2);
 
            // FIXME: clampmod0 misbehaves with the non-default vdst_in
@@ -1004,14 +1004,14 @@ multiclass VOP3P_Real_MFMA_gfx940<bits<7> op, string Name = !cast<VOP3_Pseudo>(N
                                   VOP3_Pseudo PS_ACD = !cast<VOP3_Pseudo>(NAME # "_e64"),
                                   VOP3_Pseudo PS_VCD = !cast<VOP3_Pseudo>(NAME # "_vgprcd" # "_e64")> {
   let SubtargetPredicate = isGFX940Plus,
-      AssemblerPredicate = isGFX940Plus, DecoderNamespace = "GFX9",
+      AssemblerPredicate = isGFX940Plus, DecoderNamespace = "GFX940",
       AsmString = Name # PS_ACD.AsmOperands, Constraints = "" in {
   def _gfx940_acd : VOP3P_Real<PS_ACD, SIEncodingFamily.GFX940>,
                     VOP3Pe_MAI <op, PS_ACD.Pfl, 1>;
 
   def _gfx940_vcd : VOP3P_Real<PS_VCD, SIEncodingFamily.GFX940>,
                     VOP3Pe_MAI <op, PS_VCD.Pfl, 0>;
-  } // End AssemblerPredicate = isGFX940Plus, DecoderNamespace = "GFX9"
+  } // End AssemblerPredicate = isGFX940Plus, DecoderNamespace = "GFX940"
 
   defm : VOP3P_Real_MFMA_gfx940_aliases<Name, PS_ACD.Mnemonic, NAME>;
 

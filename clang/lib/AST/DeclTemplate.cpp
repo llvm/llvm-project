@@ -250,6 +250,16 @@ bool TemplateDecl::hasAssociatedConstraints() const {
   return false;
 }
 
+bool TemplateDecl::isTypeAlias() const {
+  switch (getKind()) {
+  case TemplateDecl::TypeAliasTemplate:
+  case TemplateDecl::BuiltinTemplate:
+    return true;
+  default:
+    return false;
+  };
+}
+
 //===----------------------------------------------------------------------===//
 // RedeclarableTemplateDecl Implementation
 //===----------------------------------------------------------------------===//
@@ -519,6 +529,9 @@ static void ProfileTemplateParameterList(ASTContext &C,
       ID.AddInteger(0);
       ID.AddBoolean(NTTP->isParameterPack());
       NTTP->getType().getCanonicalType().Profile(ID);
+      ID.AddBoolean(NTTP->hasPlaceholderTypeConstraint());
+      if (const Expr *E = NTTP->getPlaceholderTypeConstraint())
+        E->Profile(ID, C, /*Canonical=*/true);
       continue;
     }
     if (const auto *TTP = dyn_cast<TemplateTypeParmDecl>(D)) {
@@ -929,6 +942,14 @@ ClassTemplateSpecializationDecl::Create(ASTContext &Context, TagKind TK,
           Context, ClassTemplateSpecialization, TK, DC, StartLoc, IdLoc,
           SpecializedTemplate, Args, PrevDecl);
   Result->setMayHaveOutOfDateDef(false);
+
+  // If the template decl is incomplete, copy the external lexical storage from
+  // the base template. This allows instantiations of incomplete types to
+  // complete using the external AST if the template's declaration came from an
+  // external AST.
+  if (!SpecializedTemplate->getTemplatedDecl()->isCompleteDefinition())
+    Result->setHasExternalLexicalStorage(
+      SpecializedTemplate->getTemplatedDecl()->hasExternalLexicalStorage());
 
   Context.getTypeDeclType(Result, PrevDecl);
   return Result;

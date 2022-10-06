@@ -129,7 +129,7 @@ struct TestInvalidIRPass
       signalPassFailure();
     if (!emitInvalidIR)
       return;
-    OpBuilder b(getOperation().getBody());
+    OpBuilder b(getOperation().getFunctionBody());
     OperationState state(b.getUnknownLoc(), "test.any_attr_of_i32_str");
     b.create(state);
   }
@@ -156,7 +156,7 @@ struct TestInvalidParentPass
   }
   void runOnOperation() final {
     FunctionOpInterface op = getOperation();
-    OpBuilder b(getOperation().getBody());
+    OpBuilder b(op.getFunctionBody());
     b.create<test::TestCallOp>(op.getLoc(), TypeRange(), "some_unknown_func",
                                ValueRange());
   }

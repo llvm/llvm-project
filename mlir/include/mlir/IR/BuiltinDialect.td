@@ -34,7 +34,6 @@ def Builtin_Dialect : Dialect {
 
   public:
   }];
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 #endif // BUILTIN_BASE

@@ -34,12 +34,6 @@ L6:  ldr   x3, [x3, _before_near@PAGEOFF]
 # CHECK-NEXT: adrp x2
 # CHECK-NEXT: ldr x3
 
-## Targets don't match (invalid input)
-L7:  adrp  x4, _before_near@PAGE
-L8:  ldr   x4, [x4, _after_near@PAGEOFF]
-# CHECK-NEXT: adrp x4
-# CHECK-NEXT: ldr x4
-
 ## Not an adrp instruction
 L9:  udf   0
 L10: ldr   x5, [x5, _after_near@PAGEOFF]
@@ -51,12 +45,6 @@ L11: adrp  x6, _after_near@PAGE
 L12: ldr   x6, 0
 # CHECK-NEXT: adrp x6
 # CHECK-NEXT: ldr x6, #0
-
-## Target is not aligned to 4 bytes
-L13: adrp  x7, _after_unaligned@PAGE
-L14: ldr   x7, [x7, _after_unaligned@PAGEOFF]
-# CHECK-NEXT: adrp x7
-# CHECK-NEXT: ldr x7
 
 ## Byte load, unsupported
 L15: adrp  x8, _after_near@PAGE
@@ -123,9 +111,7 @@ L34: ldr   x17, [x17, _after_far@PAGEOFF]
 _after_near:
   .quad 0
   .quad 0
-  .byte 0
-_after_unaligned:
-.space 1048575
+.space 1048576
 
 _after_far:
   .quad 0
@@ -133,10 +119,8 @@ _after_far:
 .loh AdrpLdr L1, L2
 .loh AdrpLdr L3, L4
 .loh AdrpLdr L5, L6
-.loh AdrpLdr L7, L8
 .loh AdrpLdr L9, L10
 .loh AdrpLdr L11, L12
-.loh AdrpLdr L13, L14
 .loh AdrpLdr L15, L16
 .loh AdrpLdr L17, L18
 .loh AdrpLdr L19, L20

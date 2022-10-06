@@ -79,11 +79,19 @@ public:
   llvm::ArrayRef<const ForestNode *> elements() const {
     assert(kind() == Sequence);
     return children(Data >> RuleBits);
-  };
+  }
+  llvm::MutableArrayRef<ForestNode *> elements() {
+    assert(kind() == Sequence);
+    return children(Data >> RuleBits);
+  }
 
   // Returns all possible interpretations of the code.
   // REQUIRES: this is an Ambiguous node.
   llvm::ArrayRef<const ForestNode *> alternatives() const {
+    assert(kind() == Ambiguous);
+    return children(Data);
+  }
+  llvm::MutableArrayRef<ForestNode *> alternatives() {
     assert(kind() == Ambiguous);
     return children(Data);
   }
@@ -134,6 +142,10 @@ private:
     return llvm::makeArrayRef(reinterpret_cast<ForestNode *const *>(this + 1),
                               Num);
   }
+  llvm::MutableArrayRef<ForestNode *> children(uint16_t Num) {
+    return llvm::makeMutableArrayRef(reinterpret_cast<ForestNode **>(this + 1),
+                                     Num);
+  }
 
   Token::Index StartIndex;
   Kind K : 4;
@@ -145,7 +157,7 @@ private:
   // An array of ForestNode* following the object.
 };
 // ForestNode may not be destroyed (for BumpPtrAllocator).
-static_assert(std::is_trivially_destructible<ForestNode>(), "");
+static_assert(std::is_trivially_destructible<ForestNode>());
 
 // A memory arena for the parse forest.
 class ForestArena {
@@ -179,7 +191,7 @@ public:
   }
 
   size_t nodeCount() const { return NodeCount; }
-  size_t bytes() const { return Arena.getBytesAllocated() + sizeof(this); }
+  size_t bytes() const { return Arena.getBytesAllocated() + sizeof(*this); }
 
 private:
   ForestNode &create(ForestNode::Kind K, SymbolID SID, Token::Index Start,
@@ -199,7 +211,9 @@ private:
 };
 
 class ForestNode::RecursiveIterator
-    : public std::iterator<std::input_iterator_tag, const ForestNode> {
+    : public llvm::iterator_facade_base<ForestNode::RecursiveIterator,
+                                        std::input_iterator_tag,
+                                        const ForestNode> {
   llvm::DenseSet<const ForestNode *> Seen;
   struct StackFrame {
     const ForestNode *Parent;
@@ -211,7 +225,7 @@ class ForestNode::RecursiveIterator
 public:
   RecursiveIterator(const ForestNode *N = nullptr) : Cur(N) {}
 
-  const ForestNode &operator*() const { return *Cur; };
+  const ForestNode &operator*() const { return *Cur; }
   void operator++();
   bool operator==(const RecursiveIterator &I) const { return Cur == I.Cur; }
   bool operator!=(const RecursiveIterator &I) const { return !(*this == I); }

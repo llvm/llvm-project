@@ -14,6 +14,8 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cmath>
+
 #if defined(_WIN32) && !defined(__MINGW32__)
 #include <float.h> // For _fpclass in llvm::write_double.
 #endif
@@ -149,7 +151,7 @@ void llvm::write_hex(raw_ostream &S, uint64_t N, HexPrintStyle Style,
       std::max(static_cast<unsigned>(W), std::max(1u, Nibbles) + PrefixChars);
 
   char NumberBuffer[kMaxWidth];
-  ::memset(NumberBuffer, '0', llvm::array_lengthof(NumberBuffer));
+  ::memset(NumberBuffer, '0', std::size(NumberBuffer));
   if (Prefix)
     NumberBuffer[1] = 'x';
   char *EndPtr = NumberBuffer + NumChars;

@@ -587,11 +587,15 @@
 // I386-NETBSD:#define __i386__ 1
 // I386-NETBSD:#define i386 1
 
-// RUN: %clang_cc1 -E -dM -triple=i686-pc-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix I386-DECLSPEC %s
-// RUN: %clang_cc1 -E -dM -fms-extensions -triple=i686-pc-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix I386-DECLSPEC %s
-// RUN: %clang_cc1 -E -dM -triple=i686-unknown-cygwin < /dev/null | FileCheck -match-full-lines -check-prefix I386-DECLSPEC %s
-// RUN: %clang_cc1 -E -dM -fms-extensions -triple=i686-unknown-cygwin < /dev/null | FileCheck -match-full-lines -check-prefix I386-DECLSPEC %s
-// I386-DECLSPEC: #define __declspec{{.*}}
+// RUN: %clang_cc1 -E -dM -triple=i686-pc-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix I386-DECLSPEC-GNU %s
+// RUN: %clang_cc1 -E -dM -triple=i686-unknown-cygwin < /dev/null | FileCheck -match-full-lines -check-prefix I386-DECLSPEC-GNU %s
+// I386-DECLSPEC-GNU: #define __declspec{{.*}} __attribute__{{.*}}
+
+// RUN: %clang_cc1 -E -dM -fms-extensions -triple=i686-pc-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix I386-DECLSPEC-MS %s
+// RUN: %clang_cc1 -E -dM -fdeclspec -triple=i686-pc-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix I386-DECLSPEC-MS %s
+// RUN: %clang_cc1 -E -dM -fms-extensions -triple=i686-unknown-cygwin < /dev/null | FileCheck -match-full-lines -check-prefix I386-DECLSPEC-MS %s
+// RUN: %clang_cc1 -E -dM -fdeclspec -triple=i686-unknown-cygwin < /dev/null | FileCheck -match-full-lines -check-prefix I386-DECLSPEC-MS %s
+// I386-DECLSPEC-MS: #define __declspec{{.*}} __declspec{{.*}}
 
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -fgnuc-version=4.2.1 -triple=x86_64-none-none < /dev/null | FileCheck -match-full-lines -check-prefix X86_64 %s

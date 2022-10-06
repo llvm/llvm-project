@@ -9,22 +9,70 @@
 #ifndef BOLT_PASSES_SPLIT_FUNCTIONS_H
 #define BOLT_PASSES_SPLIT_FUNCTIONS_H
 
+#include "bolt/Core/FunctionLayout.h"
 #include "bolt/Passes/BinaryPasses.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/Support/CommandLine.h"
 #include <atomic>
 
 namespace llvm {
 namespace bolt {
 
+/// Strategy used to partition blocks into fragments.
+enum SplitFunctionsStrategy : char {
+  /// Split each function into a hot and cold fragment using profiling
+  /// information.
+  Profile2 = 0,
+  /// Split each function into a hot and cold fragment at a randomly chosen
+  /// split point (ignoring any available profiling information).
+  Random2,
+  /// Split each function into N fragments at a randomly chosen split points
+  /// (ignoring any available profiling information).
+  RandomN,
+  /// Split all basic blocks of each function into fragments such that each
+  /// fragment contains exactly a single basic block.
+  All
+};
+
+class SplitStrategy {
+public:
+  using BlockIt = BinaryFunction::BasicBlockOrderType::iterator;
+
+  virtual ~SplitStrategy() = default;
+  virtual bool canSplit(const BinaryFunction &BF) = 0;
+  virtual bool keepEmpty() = 0;
+  virtual void fragment(const BlockIt Start, const BlockIt End) = 0;
+};
+
 /// Split function code in multiple parts.
 class SplitFunctions : public BinaryFunctionPass {
 private:
   /// Split function body into fragments.
-  template <typename SplitStrategy>
-  void splitFunction(BinaryFunction &Function, SplitStrategy Strategy = {});
+  void splitFunction(BinaryFunction &Function, SplitStrategy &Strategy);
+
+  struct TrampolineKey {
+    FragmentNum SourceFN = FragmentNum::main();
+    const MCSymbol *Target = nullptr;
+
+    TrampolineKey() = default;
+    TrampolineKey(const FragmentNum SourceFN, const MCSymbol *const Target)
+        : SourceFN(SourceFN), Target(Target) {}
+
+    static inline TrampolineKey getEmptyKey() { return TrampolineKey(); };
+    static inline TrampolineKey getTombstoneKey() {
+      return TrampolineKey(FragmentNum(UINT_MAX), nullptr);
+    };
+    static unsigned getHashValue(const TrampolineKey &Val) {
+      return llvm::hash_combine(Val.SourceFN.get(), Val.Target);
+    }
+    static bool isEqual(const TrampolineKey &LHS, const TrampolineKey &RHS) {
+      return LHS.SourceFN == RHS.SourceFN && LHS.Target == RHS.Target;
+    }
+  };
 
   /// Map basic block labels to their trampoline block labels.
-  using TrampolineSetType = DenseMap<const MCSymbol *, const MCSymbol *>;
+  using TrampolineSetType =
+      DenseMap<TrampolineKey, const MCSymbol *, TrampolineKey>;
 
   using BasicBlockOrderType = BinaryFunction::BasicBlockOrderType;
 

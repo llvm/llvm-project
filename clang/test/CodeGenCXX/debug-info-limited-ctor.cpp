@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -debug-info-kind=constructor -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -debug-info-kind=constructor -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=ITANIUM %s
 
 // CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "A"{{.*}}DIFlagTypePassByValue
 struct A {
@@ -77,3 +78,14 @@ void L() {
 // Check that types are being added to retained types list.
 // CHECK-DAG: !DICompileUnit{{.*}}retainedTypes: ![[RETAINED:[0-9]+]]
 // CHECK-DAG: ![[RETAINED]] = {{.*}}![[C]]
+
+
+struct VTableAndCtor {
+  virtual void f1();
+  VTableAndCtor();
+};
+
+VTableAndCtor::VTableAndCtor() {
+}
+
+// ITANIUM-DAG: !DICompositeType({{.*}}name: "VTableAndCtor", {{.*}}flags: DIFlagFwdDecl

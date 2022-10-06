@@ -52,7 +52,7 @@ namespace tgtok {
     String, Then, TrueKW,
 
     // Bang operators.
-    XConcat, XADD, XSUB, XMUL, XNOT, XAND, XOR, XXOR, XSRA, XSRL, XSHL,
+    XConcat, XADD, XSUB, XMUL, XDIV, XNOT, XAND, XOR, XXOR, XSRA, XSRL, XSHL,
     XListConcat, XListSplat, XStrConcat, XInterleave, XSubstr, XFind, XCast,
     XSubst, XForEach, XFilter, XFoldl, XHead, XTail, XSize, XEmpty, XIf,
     XCond, XEq, XIsA, XDag, XNe, XLe, XLt, XGe, XGt, XSetDagOp, XGetDagOp,
@@ -131,6 +131,7 @@ public:
   }
 
   SMLoc getLoc() const;
+  SMRange getLocRange() const;
 
 private:
   /// LexToken - Read the next token and return its code.

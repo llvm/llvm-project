@@ -23,7 +23,6 @@
 //  * Only phi nodes can be self referential: 'add i32 %0, %0 ; <int>:0' is bad
 //  * PHI nodes must have an entry for each predecessor, with no extras.
 //  * PHI nodes must be the first thing in a basic block, all grouped together
-//  * PHI nodes must have at least one entry
 //  * All basic blocks should only end with terminator insts, not contain them
 //  * The entry node to a function must not have predecessors
 //  * All Instructions must be embedded into a basic block
@@ -664,7 +663,14 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
   if (GV.isDeclarationForLinker())
     Check(!GV.hasComdat(), "Declaration may not be in a Comdat!", &GV);
 
+  if (GV.hasDLLExportStorageClass()) {
+    Check(!GV.hasHiddenVisibility(),
+          "dllexport GlobalValue must have default or protected visibility",
+          &GV);
+  }
   if (GV.hasDLLImportStorageClass()) {
+    Check(GV.hasDefaultVisibility(),
+          "dllimport GlobalValue must have default visibility", &GV);
     Check(!GV.isDSOLocal(), "GlobalValue with DLLImport Storage is dso_local!",
           &GV);
 
@@ -2052,6 +2058,25 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
           "Attributes 'minsize and optnone' are incompatible!", V);
   }
 
+  if (Attrs.hasFnAttr("aarch64_pstate_sm_enabled")) {
+    Check(!Attrs.hasFnAttr("aarch64_pstate_sm_compatible"),
+           "Attributes 'aarch64_pstate_sm_enabled and "
+           "aarch64_pstate_sm_compatible' are incompatible!",
+           V);
+  }
+
+  if (Attrs.hasFnAttr("aarch64_pstate_za_new")) {
+    Check(!Attrs.hasFnAttr("aarch64_pstate_za_preserved"),
+           "Attributes 'aarch64_pstate_za_new and aarch64_pstate_za_preserved' "
+           "are incompatible!",
+           V);
+
+    Check(!Attrs.hasFnAttr("aarch64_pstate_za_shared"),
+           "Attributes 'aarch64_pstate_za_new and aarch64_pstate_za_shared' "
+           "are incompatible!",
+           V);
+  }
+
   if (Attrs.hasFnAttr(Attribute::JumpTable)) {
     const GlobalValue *GV = cast<GlobalValue>(V);
     Check(GV->hasGlobalUnnamedAddr(),
@@ -2151,6 +2176,20 @@ void Verifier::verifyFunctionMetadata(
             MD);
       Check(isa<ConstantAsMetadata>(MD->getOperand(1)),
             "expected integer argument to function_entry_count", MD);
+    } else if (Pair.first == LLVMContext::MD_kcfi_type) {
+      MDNode *MD = Pair.second;
+      Check(MD->getNumOperands() == 1,
+            "!kcfi_type must have exactly one operand", MD);
+      Check(MD->getOperand(0) != nullptr, "!kcfi_type operand must not be null",
+            MD);
+      Check(isa<ConstantAsMetadata>(MD->getOperand(0)),
+            "expected a constant operand for !kcfi_type", MD);
+      Constant *C = cast<ConstantAsMetadata>(MD->getOperand(0))->getValue();
+      Check(isa<ConstantInt>(C),
+            "expected a constant integer operand for !kcfi_type", MD);
+      IntegerType *Type = cast<ConstantInt>(C)->getType();
+      Check(Type->getBitWidth() == 32,
+            "expected a 32-bit integer constant operand for !kcfi_type", MD);
     }
   }
 }
@@ -2494,7 +2533,7 @@ void Verifier::visitFunction(const Function &F) {
   case CallingConv::SPIR_KERNEL:
     Check(F.getReturnType()->isVoidTy(),
           "Calling convention requires void return type", &F);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case CallingConv::AMDGPU_VS:
   case CallingConv::AMDGPU_HS:
   case CallingConv::AMDGPU_GS:
@@ -2523,7 +2562,7 @@ void Verifier::visitFunction(const Function &F) {
       }
     }
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case CallingConv::Fast:
   case CallingConv::Cold:
   case CallingConv::Intel_OCL_BI:
@@ -2617,7 +2656,8 @@ void Verifier::visitFunction(const Function &F) {
             "blockaddress may not be used with the entry block!", Entry);
     }
 
-    unsigned NumDebugAttachments = 0, NumProfAttachments = 0;
+    unsigned NumDebugAttachments = 0, NumProfAttachments = 0,
+             NumKCFIAttachments = 0;
     // Visit metadata attachments.
     for (const auto &I : MDs) {
       // Verify that the attachment is legal.
@@ -2647,6 +2687,12 @@ void Verifier::visitFunction(const Function &F) {
         ++NumProfAttachments;
         Check(NumProfAttachments == 1,
               "function must have a single !prof attachment", &F, I.second);
+        break;
+      case LLVMContext::MD_kcfi_type:
+        ++NumKCFIAttachments;
+        Check(NumKCFIAttachments == 1,
+              "function must have a single !kcfi_type attachment", &F,
+              I.second);
         break;
       }
 
@@ -3349,7 +3395,7 @@ void Verifier::visitCallBase(CallBase &Call) {
   bool FoundDeoptBundle = false, FoundFuncletBundle = false,
        FoundGCTransitionBundle = false, FoundCFGuardTargetBundle = false,
        FoundPreallocatedBundle = false, FoundGCLiveBundle = false,
-       FoundPtrauthBundle = false,
+       FoundPtrauthBundle = false, FoundKCFIBundle = false,
        FoundAttachedCallBundle = false;
   for (unsigned i = 0, e = Call.getNumOperandBundles(); i < e; ++i) {
     OperandBundleUse BU = Call.getOperandBundleAt(i);
@@ -3385,6 +3431,14 @@ void Verifier::visitCallBase(CallBase &Call) {
             "Ptrauth bundle key operand must be an i32 constant", Call);
       Check(BU.Inputs[1]->getType()->isIntegerTy(64),
             "Ptrauth bundle discriminator operand must be an i64", Call);
+    } else if (Tag == LLVMContext::OB_kcfi) {
+      Check(!FoundKCFIBundle, "Multiple kcfi operand bundles", Call);
+      FoundKCFIBundle = true;
+      Check(BU.Inputs.size() == 1, "Expected exactly one kcfi bundle operand",
+            Call);
+      Check(isa<ConstantInt>(BU.Inputs[0]) &&
+                BU.Inputs[0]->getType()->isIntegerTy(32),
+            "Kcfi bundle operand must be an i32 constant", Call);
     } else if (Tag == LLVMContext::OB_preallocated) {
       Check(!FoundPreallocatedBundle, "Multiple preallocated operand bundles",
             Call);
@@ -3414,8 +3468,10 @@ void Verifier::visitCallBase(CallBase &Call) {
 
   // Verify that each inlinable callsite of a debug-info-bearing function in a
   // debug-info-bearing function has a debug location attached to it. Failure to
-  // do so causes assertion failures when the inliner sets up inline scope info.
+  // do so causes assertion failures when the inliner sets up inline scope info
+  // (Interposable functions are not inlinable).
   if (Call.getFunction()->getSubprogram() && Call.getCalledFunction() &&
+      !Call.getCalledFunction()->isInterposable() &&
       Call.getCalledFunction()->getSubprogram())
     CheckDI(Call.getDebugLoc(),
             "inlinable function call in a function with "
@@ -4477,6 +4533,8 @@ void Verifier::visitProfMetadata(Instruction &I, MDNode *MD) {
         ExpectedNumOperands = IBI->getNumDestinations();
       else if (isa<SelectInst>(&I))
         ExpectedNumOperands = 2;
+      else if (CallBrInst *CI = dyn_cast<CallBrInst>(&I))
+        ExpectedNumOperands = CI->getNumSuccessors();
       else
         CheckFailed("!prof branch_weights are not allowed for this instruction",
                     MD);
@@ -4529,8 +4587,8 @@ void Verifier::visitMemProfMetadata(Instruction &I, MDNode *MD) {
     visitCallStackMetadata(StackMD);
 
     // Check that remaining operands are MDString.
-    Check(std::all_of(MIB->op_begin() + 1, MIB->op_end(),
-                      [](const MDOperand &Op) { return isa<MDString>(Op); }),
+    Check(llvm::all_of(llvm::drop_begin(MIB->operands()),
+                       [](const MDOperand &Op) { return isa<MDString>(Op); }),
           "Not all !memprof MemInfoBlock operands 1 to N are MDString", MIB);
   }
 }
@@ -5124,9 +5182,12 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           Call);
     break;
   case Intrinsic::prefetch:
-    Check(cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue() < 2 &&
-              cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 4,
-          "invalid arguments to llvm.prefetch", Call);
+    Check(cast<ConstantInt>(Call.getArgOperand(1))->getZExtValue() < 2,
+          "rw argument to llvm.prefetch must be 0-1", Call);
+    Check(cast<ConstantInt>(Call.getArgOperand(2))->getZExtValue() < 4,
+          "locality argument to llvm.prefetch must be 0-4", Call);
+    Check(cast<ConstantInt>(Call.getArgOperand(3))->getZExtValue() < 2,
+          "cache type argument to llvm.prefetch must be 0-1", Call);
     break;
   case Intrinsic::stackprotector:
     Check(isa<AllocaInst>(Call.getArgOperand(1)->stripPointerCasts()),
@@ -6078,7 +6139,7 @@ void Verifier::verifyCompileUnits() {
   SmallPtrSet<const Metadata *, 2> Listed;
   if (CUs)
     Listed.insert(CUs->op_begin(), CUs->op_end());
-  for (auto *CU : CUVisited)
+  for (const auto *CU : CUVisited)
     CheckDI(Listed.count(CU), "DICompileUnit not listed in llvm.dbg.cu", CU);
   CUVisited.clear();
 }
@@ -6088,7 +6149,7 @@ void Verifier::verifyDeoptimizeCallingConvs() {
     return;
 
   const Function *First = DeoptimizeDeclarations[0];
-  for (auto *F : makeArrayRef(DeoptimizeDeclarations).slice(1)) {
+  for (const auto *F : makeArrayRef(DeoptimizeDeclarations).slice(1)) {
     Check(First->getCallingConv() == F->getCallingConv(),
           "All llvm.experimental.deoptimize declarations must have the same "
           "calling convention",

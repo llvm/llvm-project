@@ -14,7 +14,7 @@
 
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
@@ -83,10 +83,8 @@ Optional<SmallVector<int64_t, 4>> mlir::shapeRatio(ArrayRef<int64_t> superShape,
   // Starting from the end, compute the integer divisors.
   std::vector<int64_t> result;
   result.reserve(superShape.size());
-  int64_t superSize = 0, subSize = 0;
-  for (auto it :
+  for (auto [superSize, subSize] :
        llvm::zip(llvm::reverse(superShape), llvm::reverse(subShape))) {
-    std::tie(superSize, subSize) = it;
     assert(superSize > 0 && "superSize must be > 0");
     assert(subSize > 0 && "subSize must be > 0");
 

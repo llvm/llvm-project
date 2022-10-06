@@ -131,7 +131,7 @@ func.func @parallel_body_arguments_wrong_type(
   "scf.parallel"(%arg0, %arg1, %arg2) ({
     ^bb0(%i0: f32):
       scf.yield
-  }) {operand_segment_sizes = dense<[1, 1, 1, 0]>: vector<4xi32>}: (index, index, index) -> ()
+  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0>}: (index, index, index) -> ()
   return
 }
 
@@ -143,7 +143,7 @@ func.func @parallel_body_wrong_number_of_arguments(
   "scf.parallel"(%arg0, %arg1, %arg2) ({
     ^bb0(%i0: index, %i1: index):
       scf.yield
-  }) {operand_segment_sizes = dense<[1, 1, 1, 0]>: vector<4xi32>}: (index, index, index) -> ()
+  }) {operand_segment_sizes = array<i32: 1, 1, 1, 0>}: (index, index, index) -> ()
   return
 }
 
@@ -527,11 +527,11 @@ func.func @wrong_num_results(%in: tensor<100xf32>, %out: tensor<100xf32>) {
   %c1 = arith.constant 1 : index
   %num_threads = arith.constant 100 : index
 
-  // expected-error @+1 {{produces 2 results, but its terminator yields 1 value(s)}}
-  %result:2 = scf.foreach_thread (%thread_idx) in (%num_threads) -> (tensor<100xf32>, tensor<100xf32>) {
+  // expected-error @+1 {{1 operands present, but expected 2}}
+  %result:2 = scf.foreach_thread (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>, tensor<100xf32>) {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
       scf.foreach_thread.perform_concurrently {
-        tensor.parallel_insert_slice %1 into %out[%thread_idx][1][1] :
+        tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
       }
   }
@@ -540,14 +540,14 @@ func.func @wrong_num_results(%in: tensor<100xf32>, %out: tensor<100xf32>) {
 
 // -----
 
-func.func @wrong_type_result(%in: tensor<100xf32>, %out: tensor<100xf32>) {
+func.func @invalid_insert_dest(%in: tensor<100xf32>, %out: tensor<100xf32>) {
   %c1 = arith.constant 1 : index
   %num_threads = arith.constant 100 : index
 
-  // expected-error @+1 {{type mismatch between result 0 ('tensor<?xf32>') and terminator ('tensor<100xf32>')}}
-  %result = scf.foreach_thread (%thread_idx) in (%num_threads) -> (tensor<?xf32>) {
+  %result = scf.foreach_thread (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>) {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
       scf.foreach_thread.perform_concurrently {
+        // expected-error @+1 {{may only insert into an output block argument}}
         tensor.parallel_insert_slice %1 into %out[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
       }
@@ -561,11 +561,11 @@ func.func @wrong_terminator_op(%in: tensor<100xf32>, %out: tensor<100xf32>) {
   %c1 = arith.constant 1 : index
   %num_threads = arith.constant 100 : index
 
-  %result = scf.foreach_thread (%thread_idx) in (%num_threads) -> (tensor<100xf32>) {
+  %result = scf.foreach_thread (%thread_idx) in (%num_threads) shared_outs(%o = %out) -> (tensor<100xf32>) {
       %1 = tensor.extract_slice %in[%thread_idx][1][1] : tensor<100xf32> to tensor<1xf32>
       // expected-error @+1 {{expected only tensor.parallel_insert_slice ops}}
       scf.foreach_thread.perform_concurrently {
-        tensor.parallel_insert_slice %1 into %out[%thread_idx][1][1] :
+        tensor.parallel_insert_slice %1 into %o[%thread_idx][1][1] :
           tensor<1xf32> into tensor<100xf32>
         %0 = arith.constant 1: index
       }

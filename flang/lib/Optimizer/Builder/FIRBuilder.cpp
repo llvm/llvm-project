@@ -166,9 +166,8 @@ mlir::Value fir::FirOpBuilder::allocateLocal(
   llvm::SmallVector<mlir::Value> elidedLenParams =
       elideLengthsAlreadyInType(ty, lenParams);
   auto idxTy = getIndexType();
-  llvm::for_each(elidedShape, [&](mlir::Value sh) {
+  for (mlir::Value sh : elidedShape)
     indices.push_back(createConvert(loc, idxTy, sh));
-  });
   // Add a target attribute, if needed.
   llvm::SmallVector<mlir::NamedAttribute> attrs;
   if (asTarget)
@@ -1268,4 +1267,21 @@ mlir::Value fir::factory::genMaxWithZero(fir::FirOpBuilder &builder,
       loc, mlir::arith::CmpIPredicate::sgt, value, zero);
   return builder.create<mlir::arith::SelectOp>(loc, valueIsGreater, value,
                                                zero);
+}
+
+mlir::Value fir::factory::genCPtrOrCFunptrAddr(fir::FirOpBuilder &builder,
+                                               mlir::Location loc,
+                                               mlir::Value cPtr,
+                                               mlir::Type ty) {
+  assert(ty.isa<fir::RecordType>());
+  auto recTy = ty.dyn_cast<fir::RecordType>();
+  assert(recTy.getTypeList().size() == 1);
+  auto fieldName = recTy.getTypeList()[0].first;
+  mlir::Type fieldTy = recTy.getTypeList()[0].second;
+  auto fieldIndexType = fir::FieldType::get(ty.getContext());
+  mlir::Value field =
+      builder.create<fir::FieldIndexOp>(loc, fieldIndexType, fieldName, recTy,
+                                        /*typeParams=*/mlir::ValueRange{});
+  return builder.create<fir::CoordinateOp>(loc, builder.getRefType(fieldTy),
+                                           cPtr, field);
 }

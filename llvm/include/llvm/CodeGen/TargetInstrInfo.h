@@ -54,6 +54,8 @@ class ScheduleDAGMI;
 class ScheduleHazardRecognizer;
 class SDNode;
 class SelectionDAG;
+class SMSchedule;
+class SwingSchedulerDAG;
 class RegScavenger;
 class TargetRegisterClass;
 class TargetRegisterInfo;
@@ -106,6 +108,11 @@ public:
 
   static bool isGenericOpcode(unsigned Opc) {
     return Opc <= TargetOpcode::GENERIC_OP_END;
+  }
+
+  static bool isGenericAtomicRMWOpcode(unsigned Opc) {
+    return Opc >= TargetOpcode::GENERIC_ATOMICRMW_OP_START &&
+           Opc <= TargetOpcode::GENERIC_ATOMICRMW_OP_END;
   }
 
   /// Given a machine instruction descriptor, returns the register
@@ -728,6 +735,13 @@ public:
     /// be ignored. An example could be a loop comparison, or induction variable
     /// update with no users being pipelined.
     virtual bool shouldIgnoreForPipelining(const MachineInstr *MI) const = 0;
+
+    /// Return true if the proposed schedule should used.  Otherwise return
+    /// false to not pipeline the loop. This function should be used to ensure
+    /// that pipelined loops meet target-specific quality heuristics.
+    virtual bool shouldUseSchedule(SwingSchedulerDAG &SSD, SMSchedule &SMS) {
+      return true;
+    }
 
     /// Create a condition to determine if the trip count of the loop is greater
     /// than TC, where TC is always one more than for the previous prologue or

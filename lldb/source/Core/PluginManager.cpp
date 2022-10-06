@@ -724,11 +724,14 @@ struct ObjectContainerInstance
   ObjectContainerInstance(
       llvm::StringRef name, llvm::StringRef description,
       CallbackType create_callback,
+      ObjectContainerCreateMemoryInstance create_memory_callback,
       ObjectFileGetModuleSpecifications get_module_specifications)
       : PluginInstance<ObjectContainerCreateInstance>(name, description,
                                                       create_callback),
+        create_memory_callback(create_memory_callback),
         get_module_specifications(get_module_specifications) {}
 
+  ObjectContainerCreateMemoryInstance create_memory_callback;
   ObjectFileGetModuleSpecifications get_module_specifications;
 };
 typedef PluginInstances<ObjectContainerInstance> ObjectContainerInstances;
@@ -741,9 +744,11 @@ static ObjectContainerInstances &GetObjectContainerInstances() {
 bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     ObjectContainerCreateInstance create_callback,
-    ObjectFileGetModuleSpecifications get_module_specifications) {
+    ObjectFileGetModuleSpecifications get_module_specifications,
+    ObjectContainerCreateMemoryInstance create_memory_callback) {
   return GetObjectContainerInstances().RegisterPlugin(
-      name, description, create_callback, get_module_specifications);
+      name, description, create_callback, create_memory_callback,
+      get_module_specifications);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -754,6 +759,14 @@ bool PluginManager::UnregisterPlugin(
 ObjectContainerCreateInstance
 PluginManager::GetObjectContainerCreateCallbackAtIndex(uint32_t idx) {
   return GetObjectContainerInstances().GetCallbackAtIndex(idx);
+}
+
+ObjectContainerCreateMemoryInstance
+PluginManager::GetObjectContainerCreateMemoryCallbackAtIndex(uint32_t idx) {
+  const auto &instances = GetObjectContainerInstances().GetInstances();
+  if (idx < instances.size())
+    return instances[idx].create_memory_callback;
+  return nullptr;
 }
 
 ObjectFileGetModuleSpecifications

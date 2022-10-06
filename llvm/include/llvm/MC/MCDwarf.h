@@ -22,6 +22,7 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/Support/StringSaver.h"
 #include <cassert>
 #include <cstdint>
 #include <string>
@@ -48,6 +49,8 @@ MCSymbol *emitListsTableHeaderStart(MCStreamer &S);
 
 /// Manage the .debug_line_str section contents, if we use it.
 class MCDwarfLineStr {
+  BumpPtrAllocator Alloc;
+  StringSaver Saver{Alloc};
   MCSymbol *LineStrLabel = nullptr;
   StringTableBuilder LineStrings{StringTableBuilder::DWARF};
   bool UseRelocs = false;
@@ -56,6 +59,8 @@ public:
   /// Construct an instance that can emit .debug_line_str (for use in a normal
   /// v5 line table).
   explicit MCDwarfLineStr(MCContext &Ctx);
+
+  StringSaver &getSaver() { return Saver; }
 
   /// Emit a reference to the string.
   void emitRef(MCStreamer *MCOS, StringRef Path);
@@ -382,6 +387,7 @@ public:
 
   bool hasRootFile() const { return !Header.RootFile.Name.empty(); }
 
+  MCDwarfFile &getRootFile() { return Header.RootFile; }
   const MCDwarfFile &getRootFile() const { return Header.RootFile; }
 
   // Report whether MD5 usage has been consistent (all-or-none).

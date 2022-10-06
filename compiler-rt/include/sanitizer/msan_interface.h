@@ -92,6 +92,8 @@ extern "C" {
 
   /* Tell MSan about newly destroyed memory. Mark memory as uninitialized. */
   void __sanitizer_dtor_callback(const volatile void* data, size_t size);
+  void __sanitizer_dtor_callback_fields(const volatile void *data, size_t size);
+  void __sanitizer_dtor_callback_vptr(const volatile void *data);
 
   /* This function may be optionally provided by user and should return
      a string containing Msan runtime options. See msan_flags.h for details. */

@@ -63,11 +63,10 @@ define amdgpu_kernel void @global_atomic_fadd_f32_off_ss(float addrspace(1)* %pt
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_load_dword s2, s[4:5], 0x8
 ; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x0
+; GFX908-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX908-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX908-NEXT:    v_mov_b32_e32 v2, s2
-; GFX908-NEXT:    v_mov_b32_e32 v0, s0
-; GFX908-NEXT:    v_mov_b32_e32 v1, s1
-; GFX908-NEXT:    global_atomic_add_f32 v[0:1], v2, off offset:2048
+; GFX908-NEXT:    v_mov_b32_e32 v0, s2
+; GFX908-NEXT:    global_atomic_add_f32 v1, v0, s[0:1] offset:2048
 ; GFX908-NEXT:    s_endpgm
 ;
 ; GFX90A-LABEL: global_atomic_fadd_f32_off_ss:

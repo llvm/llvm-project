@@ -17,6 +17,9 @@ struct OneShotBufferizationOptions;
 // Passes
 //===----------------------------------------------------------------------===//
 
+#define GEN_PASS_DECL
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
+
 /// Creates an instance of the BufferDeallocation pass to free all allocated
 /// buffers.
 std::unique_ptr<Pass> createBufferDeallocationPass();
@@ -42,6 +45,9 @@ LogicalResult promoteBufferResultsToOutParams(ModuleOp module);
 /// Creates a pass that drops memref function results that are equivalent to a
 /// function argument.
 std::unique_ptr<Pass> createDropEquivalentBufferResultsPass();
+
+/// Create a pass that rewrites tensor.empty to bufferization.alloc_tensor.
+std::unique_ptr<Pass> createEmptyTensorToAllocTensorPass();
 
 /// Drop all memref function results that are equivalent to a function argument.
 LogicalResult dropEquivalentBufferResults(ModuleOp module);

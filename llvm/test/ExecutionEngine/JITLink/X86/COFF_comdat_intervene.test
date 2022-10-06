@@ -6,9 +6,9 @@
 #
 # CHECK: Creating graph symbols...
 # CHECK:      6: Exporting COMDAT graph symbol for COFF symbol "func2" in section 3
-# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000001, linkage: weak, scope: default, dead  -   func2
+# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000000, linkage: weak, scope: default, dead  -   func2
 # CHECK:      7: Exporting COMDAT graph symbol for COFF symbol "func" in section 2
-# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000001, linkage: weak, scope: default, dead  -   func
+# CHECK-NEXT:   0x0 (block + 0x00000000): size: 0x00000000, linkage: weak, scope: default, dead  -   func
 
 --- !COFF
 header:

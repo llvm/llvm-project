@@ -40,8 +40,8 @@
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='function(early-cse<>,early-cse<memssa>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-12
 ; CHECK-12: function(early-cse<>,early-cse<memssa>)
 
-; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='msan-module,function(msan,msan<>,msan<recover;kernel;eager-checks;track-origins=5>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-13
-; CHECK-13: msan-module,function(msan<track-origins=0>,msan<track-origins=0>,msan<recover;kernel;eager-checks;track-origins=5>)
+; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='msan,module(msan,msan<>,msan<recover;kernel;eager-checks;track-origins=5>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-13
+; CHECK-13: msan<track-origins=0>,msan<track-origins=0>,msan<track-origins=0>,msan<recover;kernel;eager-checks;track-origins=5>
 
 ; RUN: opt -disable-output -disable-verify -print-pipeline-passes -passes='module(hwasan<>,hwasan<kernel;recover>)' < %s | FileCheck %s --match-full-lines --check-prefixes=CHECK-14
 ; CHECK-14: hwasan<>,hwasan<kernel;recover>

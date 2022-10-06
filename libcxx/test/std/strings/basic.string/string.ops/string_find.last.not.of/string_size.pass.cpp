@@ -156,7 +156,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   }
 #endif
 
-#if TEST_STD_VER > 3
+#if TEST_STD_VER >= 11
   { // LWG 2946
     std::string s = " !";
     assert(s.find_last_not_of({"abc", 1}) == s.size() - 1);

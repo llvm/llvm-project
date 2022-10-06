@@ -102,7 +102,7 @@ bool BinaryBasicBlock::validateSuccessorInvariants() {
     if (Valid) {
       for (const MCSymbol *Sym : UniqueSyms) {
         Valid &= (Sym == Function->getFunctionEndLabel() ||
-                  Sym == Function->getFunctionColdEndLabel());
+                  Sym == Function->getFunctionEndLabel(getFragmentNum()));
         if (!Valid) {
           errs() << "BOLT-WARNING: Jump table contains illegal entry: "
                  << Sym->getName() << "\n";
@@ -581,15 +581,17 @@ uint64_t BinaryBasicBlock::estimateSize(const MCCodeEmitter *Emitter) const {
 
 BinaryBasicBlock::BinaryBranchInfo &
 BinaryBasicBlock::getBranchInfo(const BinaryBasicBlock &Succ) {
-  auto BI = branch_info_begin();
-  for (BinaryBasicBlock *BB : successors()) {
-    if (&Succ == BB)
-      return *BI;
-    ++BI;
-  }
+  return const_cast<BinaryBranchInfo &>(
+      static_cast<const BinaryBasicBlock &>(*this).getBranchInfo(Succ));
+}
 
-  llvm_unreachable("Invalid successor");
-  return *BI;
+const BinaryBasicBlock::BinaryBranchInfo &
+BinaryBasicBlock::getBranchInfo(const BinaryBasicBlock &Succ) const {
+  const auto Zip = llvm::zip(successors(), branch_info());
+  const auto Result = llvm::find_if(
+      Zip, [&](const auto &Tuple) { return std::get<0>(Tuple) == &Succ; });
+  assert(Result != Zip.end() && "Cannot find target in successors");
+  return std::get<1>(*Result);
 }
 
 BinaryBasicBlock::BinaryBranchInfo &

@@ -1313,7 +1313,7 @@ attributes #0 = { noinline cold }
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare dso_local void @omp_init_nest_lock_with_hint(%struct.omp_nest_lock_t*, i32)
 
-; OPTIMISTIC: ; Function Attrs: inaccessiblememonly nofree nosync nounwind readonly willreturn
+; OPTIMISTIC: ; Function Attrs: inaccessiblemem_or_argmemonly nofree nosync nounwind willreturn
 ; OPTIMISTIC-NEXT: declare dso_local double @omp_get_wtime()
 
 ; OPTIMISTIC-NOT: Function Attrs

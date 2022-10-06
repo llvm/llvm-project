@@ -6,7 +6,7 @@
 // RUN:   | FileCheck -check-prefixes=FOUND %s
 
 // RUN: %clang -v --rocm-path=%S/Inputs/rocm 2>&1 \
-// RUN:   -target amdgcn-amd-amdhsa \
+// RUN:   --target=amdgcn-amd-amdhsa \
 // RUN:   | FileCheck -check-prefixes=FOUND %s
 
 // FOUND: Found HIP installation: {{.*Inputs.*rocm}}, version 3.6.20214-a2917cd
@@ -17,7 +17,7 @@
 // RUN:   | FileCheck -check-prefixes=DEFAULT %s
 
 // RUN: %clang -v --rocm-path=%S 2>&1 \
-// RUN:   -target amdgcn-amd-amdhsa \
+// RUN:   --target=amdgcn-amd-amdhsa \
 // RUN:   | FileCheck -check-prefixes=DEFAULT %s
 
 // DEFAULT: Found HIP installation: {{.*Driver}}, version 3.5.
@@ -26,7 +26,7 @@
 // RUN:   | FileCheck -check-prefixes=SPECIFIED %s
 
 // RUN: %clang -v --rocm-path=%S --hip-version=3.7.0 2>&1 \
-// RUN:   -target amdgcn-amd-amdhsa \
+// RUN:   --target=amdgcn-amd-amdhsa \
 // RUN:   | FileCheck -check-prefixes=SPECIFIED %s
 
 // SPECIFIED: Found HIP installation: {{.*Driver}}, version 3.7.0

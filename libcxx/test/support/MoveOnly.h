@@ -62,7 +62,7 @@ struct std::hash<MoveOnly>
 {
     typedef MoveOnly argument_type;
     typedef size_t result_type;
-    TEST_CONSTEXPR size_t operator()(const MoveOnly& x) const {return x.get();}
+    TEST_CONSTEXPR size_t operator()(const MoveOnly& x) const {return static_cast<size_t>(x.get());}
 };
 
 #endif // MOVEONLY_H

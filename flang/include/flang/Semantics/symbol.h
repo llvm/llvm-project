@@ -351,6 +351,10 @@ public:
   MutableSymbolVector &objects() { return objects_; }
   const MutableSymbolVector &objects() const { return objects_; }
   void add_object(Symbol &object) { objects_.emplace_back(object); }
+  void replace_object(Symbol &object, unsigned index) {
+    CHECK(index < (unsigned)objects_.size());
+    objects_[index] = object;
+  }
   std::size_t alignment() const { return alignment_; }
   void set_alignment(std::size_t alignment) { alignment_ = alignment; }
 
@@ -472,6 +476,7 @@ public:
   Symbol *specific() { return specific_; }
   const Symbol *specific() const { return specific_; }
   void set_specific(Symbol &specific);
+  void clear_specific();
   Symbol *derivedType() { return derivedType_; }
   const Symbol *derivedType() const { return derivedType_; }
   void set_derivedType(Symbol &derivedType);
@@ -628,6 +633,10 @@ public:
                              },
                              [](const HostAssocDetails &x) {
                                return x.symbol().HasExplicitInterface();
+                             },
+                             [](const GenericDetails &x) {
+                               return x.specific() &&
+                                   x.specific()->HasExplicitInterface();
                              },
                              [](const auto &) { return false; },
                          },

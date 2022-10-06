@@ -46,6 +46,8 @@
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/MatrixUtils.h"
 
+#include <cmath>
+
 using namespace llvm;
 using namespace PatternMatch;
 
@@ -80,12 +82,29 @@ static cl::opt<MatrixLayoutTy> MatrixLayout(
                clEnumValN(MatrixLayoutTy::RowMajor, "row-major",
                           "Use row-major layout")));
 
+static cl::opt<bool> PrintAfterTransposeOpt("matrix-print-after-transpose-opt",
+                                            cl::init(false));
+
 /// Helper function to either return Scope, if it is a subprogram or the
 /// attached subprogram for a local scope.
 static DISubprogram *getSubprogram(DIScope *Scope) {
   if (auto *Subprogram = dyn_cast<DISubprogram>(Scope))
     return Subprogram;
   return cast<DILocalScope>(Scope)->getSubprogram();
+}
+
+/// Return true if V is a splat of a value (which is used when multiplying a
+/// matrix with a scalar).
+static bool isSplat(Value *V) {
+  if (auto *SV = dyn_cast<ShuffleVectorInst>(V))
+    return SV->isZeroEltSplat();
+  return false;
+}
+
+/// Match any mul operation (fp or integer).
+template <typename LTy, typename RTy>
+auto m_AnyMul(const LTy &L, const RTy &R) {
+  return m_CombineOr(m_Mul(L, R), m_FMul(L, R));
 }
 
 namespace {
@@ -384,6 +403,9 @@ class LowerMatrixIntrinsics {
         return NumColumns;
       return NumRows;
     }
+
+    /// Returns the transposed shape.
+    ShapeInfo t() const { return ShapeInfo(NumColumns, NumRows); }
   };
 
   /// Maps instructions to their shape information. The shape information
@@ -684,6 +706,25 @@ public:
     return NewWorkList;
   }
 
+  /// (Op0 op Op1)^T -> Op0^T op Op1^T
+  /// Transpose \p Op0 and \p Op1 of shape \p Shape0 and \p Shape1, then use
+  /// them on both sides of \p Operation.
+  Instruction *distributeTransposes(
+      Value *Op0, ShapeInfo Shape0, Value *Op1, ShapeInfo Shape1,
+      MatrixBuilder &Builder,
+      function_ref<Instruction *(Value *, ShapeInfo, Value *, ShapeInfo)>
+          Operation) {
+    Value *T0 = Builder.CreateMatrixTranspose(
+        Op0, Shape0.NumRows, Shape0.NumColumns, Op0->getName() + "_t");
+    // We are being run after shape prop, add shape for newly created
+    // instructions so that we lower them later.
+    setShapeInfo(T0, Shape0.t());
+    Value *T1 = Builder.CreateMatrixTranspose(
+        Op1, Shape1.NumRows, Shape1.NumColumns, Op1->getName() + "_t");
+    setShapeInfo(T1, Shape1.t());
+    return Operation(T0, Shape0.t(), T1, Shape1.t());
+  }
+
   /// Try moving transposes in order to fold them away or into multiplies.
   void optimizeTransposes() {
     auto ReplaceAllUsesWith = [this](Instruction &Old, Value *New) {
@@ -725,8 +766,8 @@ public:
 
         Value *TA, *TAMA, *TAMB;
         ConstantInt *R, *K, *C;
-        if (match(&I, m_Intrinsic<Intrinsic::matrix_transpose>(m_Value(TA)))) {
-
+        if (match(&I, m_Intrinsic<Intrinsic::matrix_transpose>(
+                          m_Value(TA), m_ConstantInt(R), m_ConstantInt(C)))) {
           // Transpose of a transpose is a nop
           Value *TATA;
           if (match(TA,
@@ -735,25 +776,45 @@ public:
             EraseFromParent(&I);
             EraseFromParent(TA);
           }
-
+          // k^T -> k
+          else if (isSplat(TA)) {
+            ReplaceAllUsesWith(I, TA);
+            EraseFromParent(&I);
+          }
           // (A * B)^t -> B^t * A^t
           // RxK KxC      CxK   KxR
           else if (match(TA, m_Intrinsic<Intrinsic::matrix_multiply>(
                                  m_Value(TAMA), m_Value(TAMB), m_ConstantInt(R),
                                  m_ConstantInt(K), m_ConstantInt(C)))) {
-            Value *T0 = Builder.CreateMatrixTranspose(TAMB, K->getZExtValue(),
-                                                      C->getZExtValue(),
-                                                      TAMB->getName() + "_t");
-            // We are being run after shape prop, add shape for newly created
-            // instructions so that we lower them later.
-            setShapeInfo(T0, {C, K});
-            Value *T1 = Builder.CreateMatrixTranspose(TAMA, R->getZExtValue(),
-                                                      K->getZExtValue(),
-                                                      TAMA->getName() + "_t");
-            setShapeInfo(T1, {K, R});
-            NewInst = Builder.CreateMatrixMultiply(T0, T1, C->getZExtValue(),
-                                                   K->getZExtValue(),
-                                                   R->getZExtValue(), "mmul");
+            NewInst = distributeTransposes(
+                TAMB, {K, C}, TAMA, {R, K}, Builder,
+                [&](Value *T0, ShapeInfo Shape0, Value *T1, ShapeInfo Shape1) {
+                  return Builder.CreateMatrixMultiply(
+                      T0, T1, Shape0.NumRows, Shape0.NumColumns,
+                      Shape1.NumColumns, "mmul");
+                });
+            ReplaceAllUsesWith(I, NewInst);
+            EraseFromParent(&I);
+            EraseFromParent(TA);
+            // Same as above, but with a mul, which occurs when multiplied
+            // with a scalar.
+            // (A * k)^t -> A^t * k
+            //  R  x  C     RxC
+          } else if (match(TA, m_AnyMul(m_Value(TAMA), m_Value(TAMB))) &&
+                     (isSplat(TAMA) || isSplat(TAMB))) {
+            IRBuilder<> LocalBuilder(&I);
+            // We know that the transposed operand is of shape RxC.
+            // An when multiplied with a scalar, the shape is preserved.
+            NewInst = distributeTransposes(
+                TAMA, {R, C}, TAMB, {R, C}, Builder,
+                [&](Value *T0, ShapeInfo Shape0, Value *T1, ShapeInfo Shape1) {
+                  bool IsFP = I.getType()->isFPOrFPVectorTy();
+                  auto *Mul = IsFP ? LocalBuilder.CreateFMul(T0, T1, "mmul")
+                                   : LocalBuilder.CreateMul(T0, T1, "mmul");
+                  auto *Result = cast<Instruction>(Mul);
+                  setShapeInfo(Result, Shape0);
+                  return Result;
+                });
             ReplaceAllUsesWith(I, NewInst);
             EraseFromParent(&I);
             EraseFromParent(TA);
@@ -832,10 +893,10 @@ public:
 
     if (!isMinimal()) {
       optimizeTransposes();
-      LLVM_DEBUG({
+      if (PrintAfterTransposeOpt) {
         dbgs() << "Dump after matrix transpose optimization:\n";
-        Func.dump();
-      });
+        Func.print(dbgs());
+      }
     }
 
     bool Changed = false;
@@ -2160,7 +2221,7 @@ public:
       // the inlinedAt chain. If the function does not have a DISubprogram, we
       // only map them to the containing function.
       MapVector<DISubprogram *, SmallVector<Value *, 8>> Subprog2Exprs;
-      for (auto &KV : Inst2Matrix) {
+      for (const auto &KV : Inst2Matrix) {
         if (Func.getSubprogram()) {
           auto *I = cast<Instruction>(KV.first);
           DILocation *Context = I->getDebugLoc();

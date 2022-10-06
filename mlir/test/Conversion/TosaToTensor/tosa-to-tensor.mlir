@@ -15,7 +15,7 @@ func.func @slice_dyn(%arg0: tensor<?xf32>) -> (tensor<?xf32>) {
   // CHECK: %[[DIM:.+]] = tensor.dim %arg0, %[[C0]]
   // CHECK: %[[C2:.+]] = arith.constant 2 : index
   // CHECK: %[[SUB:.+]] = arith.subi %[[DIM]], %[[C2]]
-  // CHECK: %2 = tensor.extract_slice %arg0[2] [%[[SUB]]] [1]
+  // CHECK: tensor.extract_slice %arg0[2] [%[[SUB]]] [1]
   %0 = "tosa.slice"(%arg0) {start = [2], size = [-1]} : (tensor<?xf32>)  -> (tensor<?xf32>)
   return %0 : tensor<?xf32>
 }

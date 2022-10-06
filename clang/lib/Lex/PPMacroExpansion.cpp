@@ -393,6 +393,10 @@ void Preprocessor::RegisterBuiltinMacros() {
   Ident__is_target_os     = RegisterBuiltinMacro(*this, "__is_target_os");
   Ident__is_target_environment =
       RegisterBuiltinMacro(*this, "__is_target_environment");
+  Ident__is_target_variant_os =
+      RegisterBuiltinMacro(*this, "__is_target_variant_os");
+  Ident__is_target_variant_environment =
+      RegisterBuiltinMacro(*this, "__is_target_variant_environment");
 
   // Modules.
   Ident__building_module  = RegisterBuiltinMacro(*this, "__building_module");
@@ -1437,6 +1441,39 @@ static bool isTargetEnvironment(const TargetInfo &TI,
   return TI.getTriple().getEnvironment() == Env.getEnvironment();
 }
 
+/// Implements the __is_target_variant_os builtin macro.
+static bool isTargetVariantOS(const TargetInfo &TI, const IdentifierInfo *II) {
+  if (TI.getTriple().isOSDarwin()) {
+    const llvm::Triple *VariantTriple = TI.getDarwinTargetVariantTriple();
+    if (!VariantTriple)
+      return false;
+
+    std::string OSName =
+        (llvm::Twine("unknown-unknown-") + II->getName().lower()).str();
+    llvm::Triple OS(OSName);
+    if (OS.getOS() == llvm::Triple::Darwin) {
+      // Darwin matches macos, ios, etc.
+      return VariantTriple->isOSDarwin();
+    }
+    return VariantTriple->getOS() == OS.getOS();
+  }
+  return false;
+}
+
+/// Implements the __is_target_variant_environment builtin macro.
+static bool isTargetVariantEnvironment(const TargetInfo &TI,
+                                const IdentifierInfo *II) {
+  if (TI.getTriple().isOSDarwin()) {
+    const llvm::Triple *VariantTriple = TI.getDarwinTargetVariantTriple();
+    if (!VariantTriple)
+      return false;
+    std::string EnvName = (llvm::Twine("---") + II->getName().lower()).str();
+    llvm::Triple Env(EnvName);
+    return VariantTriple->getEnvironment() == Env.getEnvironment();
+  }
+  return false;
+}
+
 /// ExpandBuiltinMacro - If an identifier token is read that is to be expanded
 /// as a builtin macro, handle it and return the next token as 'Tok'.
 void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
@@ -1677,7 +1714,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               .Case("__array_rank", true)
               .Case("__array_extent", true)
               .Case("__reference_binds_to_temporary", true)
-              .Case("__underlying_type", true)
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) .Case("__" #Trait, true)
+#include "clang/Basic/TransformTypeTraits.def"
               .Default(false);
         } else {
           return llvm::StringSwitch<bool>(II->getName())
@@ -1691,6 +1729,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
               .Case("__is_target_vendor", true)
               .Case("__is_target_os", true)
               .Case("__is_target_environment", true)
+              .Case("__is_target_variant_os", true)
+              .Case("__is_target_variant_environment", true)
               .Default(false);
         }
       });
@@ -1890,6 +1930,22 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
           IdentifierInfo *II = ExpectFeatureIdentifierInfo(
               Tok, *this, diag::err_feature_check_malformed);
           return II && isTargetEnvironment(getTargetInfo(), II);
+        });
+  } else if (II == Ident__is_target_variant_os) {
+    EvaluateFeatureLikeBuiltinMacro(
+        OS, Tok, II, *this, false,
+        [this](Token &Tok, bool &HasLexedNextToken) -> int {
+          IdentifierInfo *II = ExpectFeatureIdentifierInfo(
+              Tok, *this, diag::err_feature_check_malformed);
+          return II && isTargetVariantOS(getTargetInfo(), II);
+        });
+  } else if (II == Ident__is_target_variant_environment) {
+    EvaluateFeatureLikeBuiltinMacro(
+        OS, Tok, II, *this, false,
+        [this](Token &Tok, bool &HasLexedNextToken) -> int {
+          IdentifierInfo *II = ExpectFeatureIdentifierInfo(
+              Tok, *this, diag::err_feature_check_malformed);
+          return II && isTargetVariantEnvironment(getTargetInfo(), II);
         });
   } else {
     llvm_unreachable("Unknown identifier!");

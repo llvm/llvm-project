@@ -15,24 +15,16 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    .cfi_def_cfa 22, 0
 ; CHECK-NEXT:    st.w $zero, $fp, -16
 ; CHECK-NEXT:    st.w $zero, $fp, -12
-; CHECK-NEXT:    bnez $zero, .LBB0_2
-; CHECK-NEXT:    b .LBB0_1
-; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    beqz $zero, .LBB0_1
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    st.w $a0, $fp, -24
-; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    ld.w $a0, $fp, -16
-; CHECK-NEXT:    bne $a0, $zero, .LBB0_5
-; CHECK-NEXT:    b .LBB0_4
+; CHECK-NEXT:    beqz $a0, .LBB0_4
 ; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    ori $a0, $zero, 1
 ; CHECK-NEXT:    st.w $a0, $fp, -24
-; CHECK-NEXT:  .LBB0_6:
-; CHECK-NEXT:    move $a0, $zero
-; CHECK-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
-; CHECK-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
-; CHECK-NEXT:    addi.w $sp, $sp, 32
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    b .LBB0_6
 ; CHECK-NEXT:  .LBB0_1:
 ; CHECK-NEXT:    ori $a0, $zero, 2
 ; CHECK-NEXT:    st.w $a0, $fp, -20
@@ -42,7 +34,8 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    st.w $a0, $fp, -24
 ; CHECK-NEXT:    ori $a0, $zero, 4
 ; CHECK-NEXT:    st.w $a0, $fp, -28
-; CHECK-NEXT:    b .LBB0_3
+; CHECK-NEXT:    ld.w $a0, $fp, -16
+; CHECK-NEXT:    bnez $a0, .LBB0_5
 ; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    ori $a0, $zero, 2
 ; CHECK-NEXT:    st.w $a0, $fp, -20
@@ -52,7 +45,12 @@ define dso_local i32 @check_boundaries() #0 {
 ; CHECK-NEXT:    st.w $a0, $fp, -24
 ; CHECK-NEXT:    ori $a0, $zero, 4
 ; CHECK-NEXT:    st.w $a0, $fp, -28
-; CHECK-NEXT:    b .LBB0_6
+; CHECK-NEXT:  .LBB0_6:
+; CHECK-NEXT:    move $a0, $zero
+; CHECK-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
+; CHECK-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
+; CHECK-NEXT:    addi.w $sp, $sp, 32
+; CHECK-NEXT:    ret
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4
@@ -100,8 +98,8 @@ define dso_local i32 @main() #0 {
 ; CHECK-NEXT:    .cfi_offset 22, -8
 ; CHECK-NEXT:    addi.w $fp, $sp, 32
 ; CHECK-NEXT:    .cfi_def_cfa 22, 0
-; CHECK-NEXT:    pcalau12i $a0, x
-; CHECK-NEXT:    addi.w $a0, $a0, x
+; CHECK-NEXT:    pcalau12i $a0, %pc_hi20(x)
+; CHECK-NEXT:    addi.w $a0, $a0, %pc_lo12(x)
 ; CHECK-NEXT:    ori $a1, $zero, 1
 ; CHECK-NEXT:    st.w $a1, $a0, 0
 ; CHECK-NEXT:    st.w $zero, $fp, -12
@@ -122,7 +120,7 @@ define dso_local i32 @main() #0 {
 ; CHECK-NEXT:    ld.w $fp, $sp, 24 # 4-byte Folded Reload
 ; CHECK-NEXT:    ld.w $ra, $sp, 28 # 4-byte Folded Reload
 ; CHECK-NEXT:    addi.w $sp, $sp, 32
-; CHECK-NEXT:    jirl $zero, $ra, 0
+; CHECK-NEXT:    ret
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
   %3 = alloca i32, align 4

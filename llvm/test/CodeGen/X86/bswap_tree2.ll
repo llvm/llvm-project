@@ -10,29 +10,23 @@
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    andl $16711680, %ecx # imm = 0xFF0000
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    orl $-16777216, %edx # imm = 0xFF000000
-; CHECK-NEXT:    shll $8, %ecx
-; CHECK-NEXT:    shrl $8, %edx
-; CHECK-NEXT:    orl %ecx, %edx
-; CHECK-NEXT:    bswapl %eax
-; CHECK-NEXT:    shrl $16, %eax
-; CHECK-NEXT:    orl %edx, %eax
+; CHECK-NEXT:    movzwl %ax, %ecx
+; CHECK-NEXT:    orl %eax, %ecx
+; CHECK-NEXT:    orl $-16777216, %ecx # imm = 0xFF000000
+; CHECK-NEXT:    shrl $8, %ecx
+; CHECK-NEXT:    andl $16711935, %eax # imm = 0xFF00FF
+; CHECK-NEXT:    shll $8, %eax
+; CHECK-NEXT:    orl %ecx, %eax
 ; CHECK-NEXT:    retl
 ;
 ; CHECK64-LABEL: test1:
 ; CHECK64:       # %bb.0:
-; CHECK64-NEXT:    movl %edi, %ecx
-; CHECK64-NEXT:    andl $16711680, %ecx # imm = 0xFF0000
-; CHECK64-NEXT:    movl %edi, %eax
+; CHECK64-NEXT:    movzwl %di, %eax
+; CHECK64-NEXT:    orl %edi, %eax
 ; CHECK64-NEXT:    orl $-16777216, %eax # imm = 0xFF000000
-; CHECK64-NEXT:    shll $8, %ecx
 ; CHECK64-NEXT:    shrl $8, %eax
-; CHECK64-NEXT:    orl %ecx, %eax
-; CHECK64-NEXT:    bswapl %edi
-; CHECK64-NEXT:    shrl $16, %edi
+; CHECK64-NEXT:    andl $16711935, %edi # imm = 0xFF00FF
+; CHECK64-NEXT:    shll $8, %edi
 ; CHECK64-NEXT:    orl %edi, %eax
 ; CHECK64-NEXT:    retq
   %byte0 = and i32 %x, 255        ; 0x000000ff

@@ -632,6 +632,13 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
     }
   }
 
+  if (MBB->isIRBlockAddressTaken()) {
+    if (!MBB->getAddressTakenIRBlock()->hasAddressTaken())
+      report("ir-block-address-taken is associated with basic block not used by "
+             "a blockaddress.",
+             MBB);
+  }
+
   // Count the number of landing pad successors.
   SmallPtrSet<const MachineBasicBlock*, 4> LandingPadSuccs;
   for (const auto *succ : MBB->successors()) {
@@ -868,6 +875,34 @@ void MachineVerifier::verifyInlineAsm(const MachineInstr *MI) {
     const MachineOperand &MO = MI->getOperand(OpNo);
     if (!MO.isReg() || !MO.isImplicit())
       report("Expected implicit register after groups", &MO, OpNo);
+  }
+
+  if (MI->getOpcode() == TargetOpcode::INLINEASM_BR) {
+    const MachineBasicBlock *MBB = MI->getParent();
+
+    for (unsigned i = InlineAsm::MIOp_FirstOperand, e = MI->getNumOperands();
+         i != e; ++i) {
+      const MachineOperand &MO = MI->getOperand(i);
+
+      if (!MO.isMBB())
+        continue;
+
+      // Check the successor & predecessor lists look ok, assume they are
+      // not. Find the indirect target without going through the successors.
+      const MachineBasicBlock *IndirectTargetMBB = MO.getMBB();
+      if (!IndirectTargetMBB) {
+        report("INLINEASM_BR indirect target does not exist", &MO, i);
+        break;
+      }
+
+      if (!MBB->isSuccessor(IndirectTargetMBB))
+        report("INLINEASM_BR indirect target missing from successor list", &MO,
+               i);
+
+      if (!IndirectTargetMBB->isPredecessor(MBB))
+        report("INLINEASM_BR indirect target predecessor list missing parent",
+               &MO, i);
+    }
   }
 }
 
@@ -1690,6 +1725,11 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
     break;
   }
+  case TargetOpcode::G_ASSERT_ALIGN: {
+    if (MI->getOperand(2).getImm() < 1)
+      report("alignment immediate must be >= 1", MI);
+    break;
+  }
   default:
     break;
   }
@@ -1888,6 +1928,36 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
       break;
     }
   } break;
+  case TargetOpcode::REG_SEQUENCE: {
+    unsigned NumOps = MI->getNumOperands();
+    if (!(NumOps & 1)) {
+      report("Invalid number of operands for REG_SEQUENCE", MI);
+      break;
+    }
+
+    for (unsigned I = 1; I != NumOps; I += 2) {
+      const MachineOperand &RegOp = MI->getOperand(I);
+      const MachineOperand &SubRegOp = MI->getOperand(I + 1);
+
+      if (!RegOp.isReg())
+        report("Invalid register operand for REG_SEQUENCE", &RegOp, I);
+
+      if (!SubRegOp.isImm() || SubRegOp.getImm() == 0 ||
+          SubRegOp.getImm() >= TRI->getNumSubRegIndices()) {
+        report("Invalid subregister index operand for REG_SEQUENCE",
+               &SubRegOp, I + 1);
+      }
+    }
+
+    Register DstReg = MI->getOperand(0).getReg();
+    if (DstReg.isPhysical())
+      report("REG_SEQUENCE does not support physical register results", MI);
+
+    if (MI->getOperand(0).getSubReg())
+      report("Invalid subreg result for REG_SEQUENCE", MI);
+
+    break;
+  }
   }
 }
 
@@ -2255,8 +2325,18 @@ void MachineVerifier::checkLivenessAtDef(const MachineOperand *MO,
                                          bool SubRangeCheck,
                                          LaneBitmask LaneMask) {
   if (const VNInfo *VNI = LR.getVNInfoAt(DefIdx)) {
-    assert(VNI && "NULL valno is not allowed");
-    if (VNI->def != DefIdx) {
+    // The LR can correspond to the whole reg and its def slot is not obliged
+    // to be the same as the MO' def slot. E.g. when we check here "normal"
+    // subreg MO but there is other EC subreg MO in the same instruction so the
+    // whole reg has EC def slot and differs from the currently checked MO' def
+    // slot. For example:
+    // %0 [16e,32r:0) 0@16e  L..3 [16e,32r:0) 0@16e  L..C [16r,32r:0) 0@16r
+    // Check that there is an early-clobber def of the same superregister
+    // somewhere is performed in visitMachineFunctionAfter()
+    if (((SubRangeCheck || MO->getSubReg() == 0) && VNI->def != DefIdx) ||
+        !SlotIndex::isSameInstr(VNI->def, DefIdx) ||
+        (VNI->def != DefIdx &&
+         (!VNI->def.isEarlyClobber() || !DefIdx.isRegister()))) {
       report("Inconsistent valno->def", MO, MONum);
       report_context_liverange(LR);
       report_context_vreg_regunit(VRegOrUnit);

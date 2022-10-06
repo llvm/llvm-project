@@ -377,7 +377,11 @@ SBError SBDebugger::SetInputFile(SBFile file) {
     error.ref().SetErrorString("invalid debugger");
     return error;
   }
-  error.SetError(m_opaque_sp->SetInputFile(file.m_opaque_sp));
+  if (!file) {
+    error.ref().SetErrorString("invalid file");
+    return error;
+  }
+  m_opaque_sp->SetInputFile(file.m_opaque_sp);
   return error;
 }
 
@@ -434,6 +438,29 @@ SBError SBDebugger::SetErrorFile(SBFile file) {
   }
   m_opaque_sp->SetErrorFile(file.m_opaque_sp);
   return error;
+}
+
+lldb::SBStructuredData SBDebugger::GetSetting(const char *setting) {
+  LLDB_INSTRUMENT_VA(this, setting);
+
+  SBStructuredData data;
+  if (!m_opaque_sp)
+    return data;
+
+  StreamString json_strm;
+  ExecutionContext exe_ctx(
+      m_opaque_sp->GetCommandInterpreter().GetExecutionContext());
+  if (setting && strlen(setting) > 0)
+    m_opaque_sp->DumpPropertyValue(&exe_ctx, json_strm, setting,
+                                   /*dump_mask*/ 0,
+                                   /*is_json*/ true);
+  else
+    m_opaque_sp->DumpAllPropertyValues(&exe_ctx, json_strm, /*dump_mask*/ 0,
+                                       /*is_json*/ true);
+
+  data.m_impl_up->SetObjectSP(
+      StructuredData::ParseJSON(json_strm.GetString().str()));
+  return data;
 }
 
 FILE *SBDebugger::GetInputFileHandle() {
@@ -1365,9 +1392,7 @@ void SBDebugger::SetPrompt(const char *prompt) {
 const char *SBDebugger::GetReproducerPath() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return (m_opaque_sp
-              ? ConstString(m_opaque_sp->GetReproducerPath()).GetCString()
-              : nullptr);
+  return "GetReproducerPath has been deprecated";
 }
 
 ScriptLanguage SBDebugger::GetScriptLanguage() const {

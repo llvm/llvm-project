@@ -246,25 +246,20 @@ NativeProcessLinux::Factory::Launch(ProcessLaunchInfo &launch_info,
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
-  ProcessInstanceInfo Info;
-  if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architecture",
-                                         llvm::inconvertibleErrorCode());
-  }
-
-  // Set the architecture to the exe architecture.
-  LLDB_LOG(log, "pid = {0:x}, detected architecture {1}", pid,
-           Info.GetArchitecture().GetArchitectureName());
-
   status = SetDefaultPtraceOpts(pid);
   if (status.Fail()) {
     LLDB_LOG(log, "failed to set default ptrace options: {0}", status);
     return status.ToError();
   }
 
+  llvm::Expected<ArchSpec> arch_or =
+      NativeRegisterContextLinux::DetermineArchitecture(pid);
+  if (!arch_or)
+    return arch_or.takeError();
+
   return std::unique_ptr<NativeProcessLinux>(new NativeProcessLinux(
       pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
-      Info.GetArchitecture(), mainloop, {pid}));
+      *arch_or, mainloop, {pid}));
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
@@ -274,19 +269,17 @@ NativeProcessLinux::Factory::Attach(
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "pid = {0:x}", pid);
 
-  // Retrieve the architecture for the running process.
-  ProcessInstanceInfo Info;
-  if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architecture",
-                                         llvm::inconvertibleErrorCode());
-  }
-
   auto tids_or = NativeProcessLinux::Attach(pid);
   if (!tids_or)
     return tids_or.takeError();
+  ArrayRef<::pid_t> tids = *tids_or;
+  llvm::Expected<ArchSpec> arch_or =
+      NativeRegisterContextLinux::DetermineArchitecture(tids[0]);
+  if (!arch_or)
+    return arch_or.takeError();
 
   return std::unique_ptr<NativeProcessLinux>(new NativeProcessLinux(
-      pid, -1, native_delegate, Info.GetArchitecture(), mainloop, *tids_or));
+      pid, -1, native_delegate, *arch_or, mainloop, tids));
 }
 
 NativeProcessLinux::Extension
@@ -859,7 +852,7 @@ bool NativeProcessLinux::MonitorClone(NativeThreadLinux &parent,
       break;
     }
   }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case PTRACE_EVENT_FORK:
   case PTRACE_EVENT_VFORK: {
     bool is_vfork = event == PTRACE_EVENT_VFORK;
@@ -889,7 +882,8 @@ bool NativeProcessLinux::MonitorClone(NativeThreadLinux &parent,
 }
 
 bool NativeProcessLinux::SupportHardwareSingleStepping() const {
-  if (m_arch.GetMachine() == llvm::Triple::arm || m_arch.IsMIPS())
+  if (m_arch.IsMIPS() || m_arch.GetMachine() == llvm::Triple::arm ||
+      m_arch.GetTriple().isRISCV())
     return false;
   return true;
 }
@@ -940,8 +934,14 @@ Status NativeProcessLinux::Resume(const ResumeActionList &resume_actions) {
     case eStateStepping: {
       // Run the thread, possibly feeding it the signal.
       const int signo = action->signal;
-      ResumeThread(static_cast<NativeThreadLinux &>(*thread), action->state,
-                   signo);
+      Status error = ResumeThread(static_cast<NativeThreadLinux &>(*thread),
+                                  action->state, signo);
+      if (error.Fail())
+        return Status("NativeProcessLinux::%s: failed to resume thread "
+                      "for pid %" PRIu64 ", tid %" PRIu64 ", error = %s",
+                      __FUNCTION__, GetID(), thread->GetID(),
+                      error.AsCString());
+
       break;
     }
 

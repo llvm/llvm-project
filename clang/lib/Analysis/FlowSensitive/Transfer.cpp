@@ -332,6 +332,25 @@ public:
                           std::make_unique<PointerValue>(*ThisPointeeLoc)));
   }
 
+  void VisitReturnStmt(const ReturnStmt *S) {
+    auto *Ret = S->getRetValue();
+    if (Ret == nullptr)
+      return;
+
+    auto *Val = Env.getValue(*Ret, SkipPast::None);
+    if (Val == nullptr)
+      return;
+
+    // FIXME: Support reference-type returns.
+    if (Val->getKind() == Value::Kind::Reference)
+      return;
+
+    auto *Loc = Env.getReturnStorageLocation();
+    assert(Loc != nullptr);
+    // FIXME: Model NRVO.
+    Env.setValue(*Loc, *Val);
+  }
+
   void VisitMemberExpr(const MemberExpr *S) {
     ValueDecl *Member = S->getMemberDecl();
     assert(Member != nullptr);
@@ -425,6 +444,8 @@ public:
     Env.setStorageLocation(*S, Loc);
     if (Value *Val = Env.createValue(S->getType()))
       Env.setValue(Loc, *Val);
+
+    transferInlineCall(S, ConstructorDecl);
   }
 
   void VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *S) {
@@ -507,34 +528,7 @@ public:
         return;
       Env.setStorageLocation(*S, *ArgLoc);
     } else if (const FunctionDecl *F = S->getDirectCallee()) {
-      // This case is for context-sensitive analysis, which we only do if we
-      // have the callee body available in the translation unit.
-      if (!Options.ContextSensitive || F->getBody() == nullptr)
-        return;
-
-      auto &ASTCtx = F->getASTContext();
-
-      // FIXME: Cache these CFGs.
-      auto CFCtx = ControlFlowContext::build(F, F->getBody(), &ASTCtx);
-      // FIXME: Handle errors here and below.
-      assert(CFCtx);
-      auto ExitBlock = CFCtx->getCFG().getExit().getBlockID();
-
-      auto CalleeEnv = Env.pushCall(S);
-
-      // FIXME: Use the same analysis as the caller for the callee.
-      DataflowAnalysisOptions Options;
-      auto Analysis = NoopAnalysis(ASTCtx, Options);
-
-      auto BlockToOutputState =
-          dataflow::runDataflowAnalysis(*CFCtx, Analysis, CalleeEnv);
-      assert(BlockToOutputState);
-      assert(ExitBlock < BlockToOutputState->size());
-
-      auto ExitState = (*BlockToOutputState)[ExitBlock];
-      assert(ExitState);
-
-      Env = ExitState->Env;
+      transferInlineCall(S, F);
     }
   }
 
@@ -661,6 +655,52 @@ private:
     // If the value of `SubExpr` is still unknown, we create a fresh symbolic
     // boolean value for it.
     return Env.makeAtomicBoolValue();
+  }
+
+  // If context sensitivity is enabled, try to analyze the body of the callee
+  // `F` of `S`. The type `E` must be either `CallExpr` or `CXXConstructExpr`.
+  template <typename E>
+  void transferInlineCall(const E *S, const FunctionDecl *F) {
+    if (!(Options.ContextSensitiveOpts &&
+          Env.canDescend(Options.ContextSensitiveOpts->Depth, F)))
+      return;
+
+    const ControlFlowContext *CFCtx = Env.getControlFlowContext(F);
+    if (!CFCtx)
+      return;
+
+    // FIXME: We don't support context-sensitive analysis of recursion, so
+    // we should return early here if `F` is the same as the `FunctionDecl`
+    // holding `S` itself.
+
+    auto ExitBlock = CFCtx->getCFG().getExit().getBlockID();
+
+    if (const auto *NonConstructExpr = dyn_cast<CallExpr>(S)) {
+      // Note that it is important for the storage location of `S` to be set
+      // before `pushCall`, because the latter uses it to set the storage
+      // location for `return`.
+      auto &ReturnLoc = Env.createStorageLocation(*S);
+      Env.setStorageLocation(*S, ReturnLoc);
+    }
+    auto CalleeEnv = Env.pushCall(S);
+
+    // FIXME: Use the same analysis as the caller for the callee. Note,
+    // though, that doing so would require support for changing the analysis's
+    // ASTContext.
+    assert(CFCtx->getDecl() != nullptr &&
+           "ControlFlowContexts in the environment should always carry a decl");
+    auto Analysis = NoopAnalysis(CFCtx->getDecl()->getASTContext(),
+                                 DataflowAnalysisOptions{Options});
+
+    auto BlockToOutputState =
+        dataflow::runDataflowAnalysis(*CFCtx, Analysis, CalleeEnv);
+    assert(BlockToOutputState);
+    assert(ExitBlock < BlockToOutputState->size());
+
+    auto ExitState = (*BlockToOutputState)[ExitBlock];
+    assert(ExitState);
+
+    Env.popCall(ExitState->Env);
   }
 
   const StmtToEnvMap &StmtToEnv;

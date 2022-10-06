@@ -609,7 +609,7 @@ public:
   const CodeGen::CGBlockInfo *BlockInfo = nullptr;
   llvm::Value *BlockPointer = nullptr;
 
-  llvm::DenseMap<const VarDecl *, FieldDecl *> LambdaCaptureFields;
+  llvm::DenseMap<const ValueDecl *, FieldDecl *> LambdaCaptureFields;
   FieldDecl *LambdaThisCaptureField = nullptr;
 
   /// A mapping from NRVO variables to the flags used to indicate
@@ -1094,7 +1094,7 @@ public:
 
     void ForceCleanup() {
       RunCleanupsScope::ForceCleanup();
-      MappedVars.restore(CGF);
+      restoreMap();
     }
 
     /// Exit scope - all the mapped variables are restored.
@@ -1108,6 +1108,11 @@ public:
       VD = VD->getCanonicalDecl();
       return !VD->isLocalVarDeclOrParm() && CGF.LocalDeclMap.count(VD) > 0;
     }
+
+    /// Restore all mapped variables w/o clean up. This is usefully when we want
+    /// to reference the original variables but don't want the clean up because
+    /// that could emit lifetime end too early, causing backend issue #56913.
+    void restoreMap() { MappedVars.restore(CGF); }
   };
 
   /// Save/restore original map of previously emitted local vars in case when we
@@ -1522,7 +1527,8 @@ public:
   /// If \p StepV is null, the default increment is 1.
   void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr) {
     if (CGM.getCodeGenOpts().hasProfileClangInstr() &&
-        !CurFn->hasFnAttribute(llvm::Attribute::NoProfile))
+        !CurFn->hasFnAttribute(llvm::Attribute::NoProfile) &&
+        !CurFn->hasFnAttribute(llvm::Attribute::SkipProfile))
       PGO.emitCounterIncrement(Builder, S, StepV);
     PGO.setCurrentStmt(S);
   }
@@ -4194,6 +4200,12 @@ public:
   llvm::Type *getEltType(const SVETypeFlags &TypeFlags);
   llvm::ScalableVectorType *getSVEType(const SVETypeFlags &TypeFlags);
   llvm::ScalableVectorType *getSVEPredType(const SVETypeFlags &TypeFlags);
+  llvm::Value *EmitSVETupleSetOrGet(const SVETypeFlags &TypeFlags,
+                                    llvm::Type *ReturnType,
+                                    ArrayRef<llvm::Value *> Ops);
+  llvm::Value *EmitSVETupleCreate(const SVETypeFlags &TypeFlags,
+                                  llvm::Type *ReturnType,
+                                  ArrayRef<llvm::Value *> Ops);
   llvm::Value *EmitSVEAllTruePred(const SVETypeFlags &TypeFlags);
   llvm::Value *EmitSVEDupX(llvm::Value *Scalar);
   llvm::Value *EmitSVEDupX(llvm::Value *Scalar, llvm::Type *Ty);
@@ -4247,7 +4259,7 @@ public:
   llvm::Value *EmitHexagonBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
   llvm::Value *EmitRISCVBuiltinExpr(unsigned BuiltinID, const CallExpr *E,
                                     ReturnValueSlot ReturnValue);
-  bool ProcessOrderScopeAMDGCN(llvm::Value *Order, llvm::Value *Scope,
+  void ProcessOrderScopeAMDGCN(llvm::Value *Order, llvm::Value *Scope,
                                llvm::AtomicOrdering &AO,
                                llvm::SyncScope::ID &SSID);
 
@@ -4402,6 +4414,11 @@ public:
 
   /// EmitLoadOfComplex - Load a complex number from the specified l-value.
   ComplexPairTy EmitLoadOfComplex(LValue src, SourceLocation loc);
+
+  ComplexPairTy EmitPromotedComplexExpr(const Expr *E, QualType PromotionType);
+  llvm::Value *EmitPromotedScalarExpr(const Expr *E, QualType PromotionType);
+  ComplexPairTy EmitPromotedValue(ComplexPairTy result, QualType PromotionType);
+  ComplexPairTy EmitUnPromotedValue(ComplexPairTy result, QualType PromotionType);
 
   Address emitAddrOfRealComponent(Address complex, QualType complexType);
   Address emitAddrOfImagComponent(Address complex, QualType complexType);
@@ -4599,6 +4616,9 @@ public:
   /// Emit a description of a source location in a format suitable for
   /// passing to a runtime sanitizer handler.
   llvm::Constant *EmitCheckSourceLocation(SourceLocation Loc);
+
+  void EmitKCFIOperandBundle(const CGCallee &Callee,
+                             SmallVectorImpl<llvm::OperandBundleDef> &Bundles);
 
   /// Create a basic block that will either trap or call a handler function in
   /// the UBSan runtime with the provided arguments, and create a conditional

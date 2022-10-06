@@ -146,19 +146,21 @@ Operation *SymbolTable::lookup(StringAttr name) const {
   return symbolTable.lookup(name);
 }
 
-/// Erase the given symbol from the table.
-void SymbolTable::erase(Operation *symbol) {
-  StringAttr name = getNameIfSymbol(symbol);
+void SymbolTable::remove(Operation *op) {
+  StringAttr name = getNameIfSymbol(op);
   assert(name && "expected valid 'name' attribute");
-  assert(symbol->getParentOp() == symbolTableOp &&
+  assert(op->getParentOp() == symbolTableOp &&
          "expected this operation to be inside of the operation with this "
          "SymbolTable");
 
   auto it = symbolTable.find(name);
-  if (it != symbolTable.end() && it->second == symbol) {
+  if (it != symbolTable.end() && it->second == op)
     symbolTable.erase(it);
-    symbol->erase();
-  }
+}
+
+void SymbolTable::erase(Operation *symbol) {
+  remove(symbol);
+  symbol->erase();
 }
 
 // TODO: Consider if this should be renamed to something like insertOrUpdate
@@ -853,23 +855,30 @@ replaceAllSymbolUsesImpl(SymbolT symbol, StringAttr newSymbol, IRUnitT *limit) {
     SymbolRefAttr newAttr = generateNewRefAttr(scope.symbol, newLeafAttr);
 
     auto walkFn = [&](Operation *op) -> Optional<WalkResult> {
-      auto remapAttrFn = [&](Attribute attr) -> Attribute {
+      auto remapAttrFn =
+          [&](Attribute attr) -> std::pair<Attribute, WalkResult> {
+        // Regardless of the match, don't walk nested SymbolRefAttrs, we don't
+        // want to accidentally replace an inner reference.
         if (attr == oldAttr)
-          return newAttr;
+          return {newAttr, WalkResult::skip()};
         // Handle prefix matches.
         if (SymbolRefAttr symRef = attr.dyn_cast<SymbolRefAttr>()) {
           if (isReferencePrefixOf(oldAttr, symRef)) {
             auto oldNestedRefs = oldAttr.getNestedReferences();
             auto nestedRefs = symRef.getNestedReferences();
             if (oldNestedRefs.empty())
-              return SymbolRefAttr::get(newSymbol, nestedRefs);
+              return {SymbolRefAttr::get(newSymbol, nestedRefs),
+                      WalkResult::skip()};
 
             auto newNestedRefs = llvm::to_vector<4>(nestedRefs);
             newNestedRefs[oldNestedRefs.size() - 1] = newLeafAttr;
-            return SymbolRefAttr::get(symRef.getRootReference(), newNestedRefs);
+            return {
+                SymbolRefAttr::get(symRef.getRootReference(), newNestedRefs),
+                WalkResult::skip()};
           }
+          return {attr, WalkResult::skip()};
         }
-        return attr;
+        return {attr, WalkResult::advance()};
       };
       // Generate a new attribute dictionary by replacing references to the old
       // symbol.

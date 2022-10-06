@@ -2,9 +2,6 @@
 Use lldb Python SBtarget.WatchAddress() API to create a watchpoint for write of '*g_char_ptr'.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

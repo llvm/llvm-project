@@ -1,9 +1,5 @@
 """Test queues inspection SB APIs."""
 
-from __future__ import print_function
-
-
-import unittest2
 import os
 import lldb
 from lldbsuite.test.decorators import *
@@ -19,6 +15,12 @@ class TestQueues(TestBase):
         """Test queues inspection SB APIs."""
         self.build()
         self.queues()
+
+    @skipUnlessDarwin
+    @add_test_categories(['pyapi'])
+    def test_queue_specific_breakpoints(self):
+        self.build()
+        self.queue_specific_breakpoints()
 
     @skipUnlessDarwin
     @add_test_categories(['pyapi'])
@@ -121,6 +123,21 @@ class TestQueues(TestBase):
                 (idx,
                  t.GetQueue().GetQueueID(),
                     queue.GetQueueID()))
+
+    def check_queue_breakpoints(self, queue1, queue2, queue_breakpoint):
+        queue1_thread = queue1.GetThreadAtIndex(0)
+        queue2_thread = queue2.GetThreadAtIndex(0)
+
+        self.assertEqual(queue_breakpoint.GetQueueName(), queue1.GetName(),
+                         "The breakpoint was set for queue %s, but the breakpoint's queue name is %s" % (queue_breakpoint.GetQueueName(), queue1.GetName()))
+        self.assertEqual(queue_breakpoint.GetHitCount(), 1,
+                        "The breakpoint for queue %s has not been hit" % (queue_breakpoint.GetQueueName()))
+        self.assertStopReason(queue1_thread.GetStopReason(), lldb.eStopReasonBreakpoint,
+                         "Queue %s is not stopped at breakpoint %d" %
+                         (queue1.GetName(), queue_breakpoint.GetID()))
+        self.assertNotEqual(queue2_thread.GetStopReason(), lldb.eStopReasonBreakpoint,
+                            "Queue %s is stopped at breakpoint %d, but this breakpoint should only be hit for queue %s" %
+                            (queue2.GetName(), queue_breakpoint.GetID(), queue_breakpoint.GetQueueName()))
 
     def queues(self):
         """Test queues inspection SB APIs without libBacktraceRecording."""
@@ -371,3 +388,21 @@ class TestQueues(TestBase):
         ).GetName() == "doing_the_work_2", "queue 2's pending item #0 should be doing_the_work_2")
         self.assertTrue(queue_performer_2.GetPendingItemAtIndex(
             9999).IsValid() == False, "queue 2's pending item #9999 is invalid")
+
+    def queue_specific_breakpoints(self):
+        # Run the executable until the stopper function and get the breakpoint
+        # that's created from that. Then set the queue name of the breakpoint
+        # to be the name of the main thread
+        target, process, main_thread, queue_breakpoint = lldbutil.run_to_name_breakpoint(self, "stopper", only_one_thread=False)
+        queue_breakpoint.SetQueueName(main_thread.GetQueue().GetName())
+
+        # Create a submittor queue
+        queue_submittor_1 = lldb.SBQueue()
+        for idx in range(0, process.GetNumQueues()):
+            q = process.GetQueueAtIndex(idx)
+            if q.GetName() == "com.apple.work_submittor_1":
+                queue_submittor_1 = q
+
+        self.assertTrue(queue_submittor_1.IsValid(), "Unable to get expected queue com.apple.work_submittor_1, instead got queue %s" % (queue_submittor_1.GetName()))
+
+        self.check_queue_breakpoints(main_thread.GetQueue(), queue_submittor_1, queue_breakpoint)

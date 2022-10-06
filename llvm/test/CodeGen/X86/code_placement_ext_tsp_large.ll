@@ -69,7 +69,7 @@ define void @func_large() !prof !0 {
 ;
 ; CHECK-LABEL: Applying ext-tsp layout
 ; CHECK:   original  layout score: 9171074274.27
-; CHECK:   optimized layout score: 10756755324.57
+; CHECK:   optimized layout score: 10844307310.87
 ; CHECK: b0
 ; CHECK: b2
 ; CHECK: b3

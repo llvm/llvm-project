@@ -68,10 +68,9 @@ std::string ConfusableIdentifierCheck::skeleton(StringRef Name) {
     }
 
     StringRef Key(Prev, Curr - Prev);
-    auto Where = std::lower_bound(std::begin(ConfusableEntries),
-                                  std::end(ConfusableEntries), CodePoint,
-                                  [](decltype(ConfusableEntries[0]) x,
-                                     UTF32 y) { return x.codepoint < y; });
+    auto Where = llvm::lower_bound(ConfusableEntries, CodePoint,
+                                   [](decltype(ConfusableEntries[0]) x,
+                                      UTF32 y) { return x.codepoint < y; });
     if (Where == std::end(ConfusableEntries) || CodePoint != Where->codepoint) {
       Skeleton.append(Prev, Curr);
     } else {

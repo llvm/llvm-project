@@ -434,7 +434,7 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
     replaceLoadWithValue(ALoad, NewVal);
 
     // Avoid assertions in unreachable code.
-    if (NewVal == ALoad) NewVal = UndefValue::get(NewVal->getType());
+    if (NewVal == ALoad) NewVal = PoisonValue::get(NewVal->getType());
     ALoad->replaceAllUsesWith(NewVal);
     ReplacedLoads[ALoad] = NewVal;
   }

@@ -160,7 +160,7 @@ public:
   /// Returns the current pointer if it is of the specified pointer type,
   /// otherwise returns null.
   template <typename T> inline T dyn_cast() const {
-    return llvm::dyn_cast<T>(*this);
+    return llvm::dyn_cast_if_present<T>(*this);
   }
 
   /// If the union is set to the first pointer type get an address pointing to

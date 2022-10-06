@@ -21,6 +21,21 @@
 
 namespace mlir {
 
+/// Represents a range (offset, size, and stride) where each element of the
+/// triple may be dynamic or static.
+struct Range {
+  OpFoldResult offset;
+  OpFoldResult size;
+  OpFoldResult stride;
+};
+
+/// Given an array of Range values, return a tuple of (offset vector, sizes
+/// vector, and strides vector) formed by separating out the individual elements
+/// of each range.
+std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
+           SmallVector<OpFoldResult>>
+getOffsetsSizesAndStrides(ArrayRef<Range> ranges);
+
 /// Helper function to dispatch an OpFoldResult into `staticVec` if:
 ///   a) it is an IntegerAttr
 /// In other cases, the OpFoldResult is dispached to the `dynamicVec`.
@@ -48,7 +63,7 @@ OpFoldResult getAsOpFoldResult(Value val);
 
 /// Given an array of values, try to extract a constant Attribute from each
 /// value. If this fails, return the original value.
-SmallVector<OpFoldResult> getAsOpFoldResult(ArrayRef<Value> values);
+SmallVector<OpFoldResult> getAsOpFoldResult(ValueRange values);
 
 /// Convert `arrayAttr` to a vector of OpFoldResult.
 SmallVector<OpFoldResult> getAsOpFoldResult(ArrayAttr arrayAttr);
@@ -64,6 +79,13 @@ bool isConstantIntValue(OpFoldResult ofr, int64_t value);
 /// Ignore integer bitwitdh and type mismatch that come from the fact there is
 /// no IndexAttr and that IndexType have no bitwidth.
 bool isEqualConstantIntOrValue(OpFoldResult ofr1, OpFoldResult ofr2);
+
+/// Helper function to convert a vector of `OpFoldResult`s into a vector of
+/// `Value`s. For each `OpFoldResult` in `valueOrAttrVec` return the fold result
+/// if it casts to  a `Value` or create an index-type constant if it casts to
+/// `IntegerAttr`. No other attribute types are supported.
+SmallVector<Value> getAsValues(OpBuilder &b, Location loc,
+                               ArrayRef<OpFoldResult> valueOrAttrVec);
 
 } // namespace mlir
 

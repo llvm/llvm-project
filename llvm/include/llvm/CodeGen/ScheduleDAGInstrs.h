@@ -29,6 +29,7 @@
 #include <cassert>
 #include <cstdint>
 #include <list>
+#include <string>
 #include <utility>
 #include <vector>
 

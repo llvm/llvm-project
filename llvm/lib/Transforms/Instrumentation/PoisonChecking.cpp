@@ -89,9 +89,9 @@ static Value *buildOrChain(IRBuilder<> &B, ArrayRef<Value*> Ops) {
   if (i == Ops.size())
     return B.getFalse();
   Value *Accum = Ops[i++];
-  for (; i < Ops.size(); i++)
-    if (!isConstantFalse(Ops[i]))
-      Accum = B.CreateOr(Accum, Ops[i]);
+  for (Value *Op : llvm::drop_begin(Ops, i))
+    if (!isConstantFalse(Op))
+      Accum = B.CreateOr(Accum, Op);
   return Accum;
 }
 

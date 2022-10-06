@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/ArrayRef.h"
+#include "src/__support/CPP/span.h"
 #include "src/string/memccpy.h"
 #include "utils/UnitTest/Test.h"
 #include <stddef.h> // For size_t.
 
 class LlvmLibcMemccpyTest : public __llvm_libc::testing::Test {
 public:
-  void check_memccpy(__llvm_libc::cpp::MutableArrayRef<char> dst,
-                     const __llvm_libc::cpp::ArrayRef<char> src, int end,
+  void check_memccpy(__llvm_libc::cpp::span<char> dst,
+                     const __llvm_libc::cpp::span<const char> src, int end,
                      size_t count,
-                     const __llvm_libc::cpp::ArrayRef<char> expected,
+                     const __llvm_libc::cpp::span<const char> expected,
                      size_t expectedCopied, bool shouldReturnNull = false) {
     // Making sure we don't overflow buffer.
     ASSERT_GE(dst.size(), count);

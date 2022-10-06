@@ -9,7 +9,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   VectorTransferSplitRewritePatterns.cpp
   VectorTransferPermutationMapRewritePatterns.cpp
   VectorTransforms.cpp
-  VectorUnrollDistribute.cpp
+  VectorUnroll.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Vector/Transforms
@@ -21,7 +21,7 @@ add_mlir_dialect_library(MLIRVectorTransforms
   MLIRAffineDialect
   MLIRAffineAnalysis
   MLIRAffineUtils
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRBufferizationDialect
   MLIRBufferizationTransforms
   MLIRDialectUtils

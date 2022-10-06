@@ -320,9 +320,6 @@
 /* Define to the vendor of this package. */
 #cmakedefine PACKAGE_VENDOR "${PACKAGE_VENDOR}"
 
-/* Define if std::is_trivially_copyable is supported */
-#cmakedefine HAVE_STD_IS_TRIVIALLY_COPYABLE ${HAVE_STD_IS_TRIVIALLY_COPYABLE}
-
 /* Define to a function implementing stricmp */
 #cmakedefine stricmp ${stricmp}
 

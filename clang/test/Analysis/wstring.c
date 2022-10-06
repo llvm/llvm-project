@@ -33,7 +33,7 @@ typedef __WCHAR_TYPE__ wchar_t;
 void clang_analyzer_eval(int);
 
 //===----------------------------------------------------------------------===
-// wwmemcpy()
+// wmemcpy()
 //===----------------------------------------------------------------------===
 
 #define wmemcpy BUILTIN(wmemcpy)
@@ -137,6 +137,255 @@ void wmemcpy_unknown_size_warn (size_t n) {
   wchar_t a[4];
   void *result = wmemcpy(a, 0, n); // expected-warning{{Null pointer passed as 2nd argument to memory copy function}}
   clang_analyzer_eval(result == a); // no-warning (above is fatal)
+}
+
+//===----------------------------------------------------------------------===
+// wmempcpy()
+//===----------------------------------------------------------------------===
+
+wchar_t *wmempcpy(wchar_t *restrict s1, const wchar_t *restrict s2, size_t n);
+
+void wmempcpy0 (void) {
+  wchar_t src[] = {1, 2, 3, 4};
+  wchar_t dst[5] = {0};
+
+  wmempcpy(dst, src, 4); // no-warning
+
+  clang_analyzer_eval(wmempcpy(dst, src, 4) == &dst[4]); // expected-warning{{TRUE}}
+
+  // If we actually model the copy, we can make this known.
+  // The important thing for now is that the old value has been invalidated.
+  clang_analyzer_eval(dst[0] != 0); // expected-warning{{UNKNOWN}}
+}
+
+void wmempcpy1 (void) {
+  wchar_t src[] = {1, 2, 3, 4};
+  wchar_t dst[10];
+
+  wmempcpy(dst, src, 5); // expected-warning{{Memory copy function accesses out-of-bound array element}}
+}
+
+void wmempcpy2 (void) {
+  wchar_t src[] = {1, 2, 3, 4};
+  wchar_t dst[1];
+
+  wmempcpy(dst, src, 4); // expected-warning{{Memory copy function overflows the destination buffer}}
+}
+
+void wmempcpy3 (void) {
+  wchar_t src[] = {1, 2, 3, 4};
+  wchar_t dst[3];
+
+  wmempcpy(dst+1, src+2, 2); // no-warning
+}
+
+void wmempcpy4 (void) {
+  wchar_t src[] = {1, 2, 3, 4};
+  wchar_t dst[10];
+
+  wmempcpy(dst+2, src+2, 3); // expected-warning{{Memory copy function accesses out-of-bound array element}}
+}
+
+void wmempcpy5(void) {
+  wchar_t src[] = {1, 2, 3, 4};
+  wchar_t dst[3];
+
+  wmempcpy(dst + 2, src + 2, 2); // expected-warning{{Memory copy function overflows the destination buffer}}
+}
+
+void wmempcpy6(void) {
+  wchar_t a[4] = {0};
+  wmempcpy(a, a, 2); // expected-warning{{overlapping}}
+}
+
+void wmempcpy7(void) {
+  wchar_t a[4] = {0};
+  wmempcpy(a+2, a+1, 2); // expected-warning{{overlapping}}
+}
+
+void wmempcpy8(void) {
+  wchar_t a[4] = {0};
+  wmempcpy(a+1, a+2, 2); // expected-warning{{overlapping}}
+}
+
+void wmempcpy9(void) {
+  wchar_t a[4] = {0};
+  wmempcpy(a+2, a+1, 1); // no-warning
+  wmempcpy(a+1, a+2, 1); // no-warning
+}
+
+void wmempcpy10(void) {
+  wchar_t a[4] = {0};
+  wmempcpy(0, a, 1); // expected-warning{{Null pointer passed as 1st argument to memory copy function}}
+}
+
+void wmempcpy11(void) {
+  wchar_t a[4] = {0};
+  wmempcpy(a, 0, 1); // expected-warning{{Null pointer passed as 2nd argument to memory copy function}}
+}
+
+void wmempcpy12(void) {
+  wchar_t a[4] = {0};
+  wmempcpy(0, a, 0); // no-warning
+}
+
+void wmempcpy13(void) {
+  wchar_t a[4] = {0};
+  wmempcpy(a, 0, 0); // no-warning
+}
+
+void wmempcpy14(void) {
+  wchar_t src[] = {1, 2, 3, 4};
+  wchar_t dst[5] = {0};
+  wchar_t *p;
+
+  p = wmempcpy(dst, src, 4);
+
+  clang_analyzer_eval(p == &dst[4]); // expected-warning{{TRUE}}
+}
+
+struct st {
+  wchar_t i;
+  wchar_t j;
+};
+
+void wmempcpy15(void) {
+  struct st s1 = {0};
+  struct st s2;
+  struct st *p1;
+  struct st *p2;
+
+  p1 = (&s2) + 1;
+  p2 = (struct st *)wmempcpy((wchar_t *)&s2, (wchar_t *)&s1, 2);
+
+  clang_analyzer_eval(p1 == p2); // expected-warning{{TRUE}}
+}
+
+void wmempcpy16(void) {
+  struct st s1[10] = {{0}};
+  struct st s2[10];
+  struct st *p1;
+  struct st *p2;
+
+  p1 = (&s2[0]) + 5;
+  p2 = (struct st *)wmempcpy((wchar_t *)&s2[0], (wchar_t *)&s1[0], 5 * 2);
+
+  clang_analyzer_eval(p1 == p2); // expected-warning{{TRUE}}
+}
+
+void wmempcpy_unknown_size_warn (size_t n) {
+  wchar_t a[4];
+  void *result = wmempcpy(a, 0, n); // expected-warning{{Null pointer passed as 2nd argument to memory copy function}}
+  clang_analyzer_eval(result == a); // no-warning (above is fatal)
+}
+
+void wmempcpy_unknownable_size (wchar_t *src, float n) {
+  wchar_t a[4];
+  // This used to crash because we don't model floats.
+  wmempcpy(a, src, (size_t)n);
+}
+
+//===----------------------------------------------------------------------===
+// wmemmove()
+//===----------------------------------------------------------------------===
+
+#define wmemmove BUILTIN(wmemmove)
+wchar_t *wmemmove(wchar_t *s1, const wchar_t *s2, size_t n);
+
+void wmemmove0 (void) {
+  wchar_t src[] = {1, 2, 3, 4};
+  wchar_t dst[4] = {0};
+
+  wmemmove(dst, src, 4); // no-warning
+
+  clang_analyzer_eval(wmemmove(dst, src, 4) == dst); // expected-warning{{TRUE}}
+
+  clang_analyzer_eval(dst[0] != 0); // expected-warning{{UNKNOWN}}
+}
+
+void wmemmove1 (void) {
+  wchar_t src[] = {1, 2, 3, 4};
+  wchar_t dst[10];
+
+  wmemmove(dst, src, 5); // expected-warning{{out-of-bound}}
+}
+
+void wmemmove2 (void) {
+  wchar_t src[] = {1, 2, 3, 4};
+  wchar_t dst[1];
+
+  wmemmove(dst, src, 4); // expected-warning{{Memory copy function overflows the destination buffer}}
+}
+
+//===----------------------------------------------------------------------===
+// wmemcmp()
+//===----------------------------------------------------------------------===
+
+#define wmemcmp BUILTIN(wmemcmp)
+int wmemcmp(const wchar_t *s1, const wchar_t *s2, size_t n);
+
+void wmemcmp0 (void) {
+  wchar_t a[] = {1, 2, 3, 4};
+  wchar_t b[4] = { 0 };
+
+  wmemcmp(a, b, 4); // no-warning
+}
+
+void wmemcmp1 (void) {
+  wchar_t a[] = {1, 2, 3, 4};
+  wchar_t b[10] = { 0 };
+
+  wmemcmp(a, b, 5); // expected-warning{{out-of-bound}}
+}
+
+void wmemcmp2 (void) {
+  wchar_t a[] = {1, 2, 3, 4};
+  wchar_t b[1] = { 0 };
+
+  wmemcmp(a, b, 4); // expected-warning{{out-of-bound}}
+}
+
+void wmemcmp3 (void) {
+  wchar_t a[] = {1, 2, 3, 4};
+
+  clang_analyzer_eval(wmemcmp(a, a, 4) == 0); // expected-warning{{TRUE}}
+}
+
+void wmemcmp4 (wchar_t *input) {
+  wchar_t a[] = {1, 2, 3, 4};
+
+  clang_analyzer_eval(wmemcmp(a, input, 4) == 0); // expected-warning{{UNKNOWN}}
+}
+
+void wmemcmp5 (wchar_t *input) {
+  wchar_t a[] = {1, 2, 3, 4};
+
+  clang_analyzer_eval(wmemcmp(a, 0, 0) == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(wmemcmp(0, a, 0) == 0); // expected-warning{{TRUE}}
+  clang_analyzer_eval(wmemcmp(a, input, 0) == 0); // expected-warning{{TRUE}}
+}
+
+void wmemcmp6 (wchar_t *a, wchar_t *b, size_t n) {
+  int result = wmemcmp(a, b, n);
+  if (result != 0)
+    clang_analyzer_eval(n != 0); // expected-warning{{TRUE}}
+  // else
+  //   analyzer_assert_unknown(n == 0);
+
+  // We can't do the above comparison because n has already been constrained.
+  // On one path n == 0, on the other n != 0.
+}
+
+int wmemcmp7 (wchar_t *a, size_t x, size_t y, size_t n) {
+  // We used to crash when either of the arguments was unknown.
+  return wmemcmp(a, &a[x*y], n) +
+         wmemcmp(&a[x*y], a, n);
+}
+
+int wmemcmp8(wchar_t *a, size_t n) {
+  wchar_t *b = 0;
+  // Do not warn about the first argument!
+  return wmemcmp(a, b, n); // expected-warning{{Null pointer passed as 2nd argument to memory comparison function}}
 }
 
 //===----------------------------------------------------------------------===

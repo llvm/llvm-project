@@ -761,7 +761,7 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
   // Keep it for later, when we see a MODULE_HASH record
   uint64_t BlockEntryPos = Stream.getCurrentByteNo();
 
-  Optional<const char *> BlockName = None;
+  Optional<const char *> BlockName;
   if (DumpRecords) {
     O->OS << Indent << "<";
     if ((BlockName = GetBlockName(BlockID, BlockInfo, CurStreamType)))

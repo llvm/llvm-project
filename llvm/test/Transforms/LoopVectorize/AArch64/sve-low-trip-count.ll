@@ -40,18 +40,22 @@ for.end:                                          ; preds = %for.body
 
 define void @trip5_i8(i8* noalias nocapture noundef %dst, i8* noalias nocapture noundef readonly %src) #0 {
 ; CHECK-LABEL: @trip5_i8(
-; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
-; CHECK:         [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ {{%.*}}, %vector.ph ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %vector.body ]
-; CHECK:         {{%.*}} = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0nxv16i8(<vscale x 16 x i8>* {{%.*}}, i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
-; CHECK:         {{%.*}} = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0nxv16i8(<vscale x 16 x i8>* {{%.*}}, i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
-; CHECK:         call void @llvm.masked.store.nxv16i8.p0nxv16i8(<vscale x 16 x i8> {{%.*}}, <vscale x 16 x i8>* {{%.*}}, i32 1, <vscale x 16 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK:         [[VSCALE:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[VF:%.*]] = mul i64 [[VSCALE]], 16
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[VF]]
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 5)
-; CHECK-NEXT:    [[ACTIVE_LANE_MASK_NOT:%.*]] = xor <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], shufflevector (<vscale x 16 x i1> insertelement (<vscale x 16 x i1> poison, i1 true, i32 0), <vscale x 16 x i1> poison, <vscale x 16 x i32> zeroinitializer)
-; CHECK-NEXT:    br i1 true, label %middle.block, label %vector.body
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_08:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, i8* [[SRC:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, i8* [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[MUL:%.*]] = shl i8 [[TMP0]], 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i8, i8* [[DST:%.*]], i64 [[I_08]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, i8* [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[MUL]], [[TMP1]]
+; CHECK-NEXT:    store i8 [[ADD]], i8* [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[INC]] = add nuw nsw i64 [[I_08]], 1
+; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INC]], 5
+; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY]]
+; CHECK:       for.end:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %for.body

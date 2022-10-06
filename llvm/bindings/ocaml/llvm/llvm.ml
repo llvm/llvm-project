@@ -508,6 +508,8 @@ external array_type : lltype -> int -> lltype = "llvm_array_type"
 external pointer_type : lltype -> lltype = "llvm_pointer_type"
 external qualified_pointer_type : lltype -> int -> lltype
                                 = "llvm_qualified_pointer_type"
+external pointer_type_in_context : llcontext -> int -> lltype
+                                 = "llvm_pointer_type_in_context"
 external vector_type : lltype -> int -> lltype = "llvm_vector_type"
 
 external element_type : lltype -> lltype = "LLVMGetElementType"
@@ -637,7 +639,6 @@ external size_of : lltype -> llvalue = "LLVMSizeOf"
 external const_neg : llvalue -> llvalue = "LLVMConstNeg"
 external const_nsw_neg : llvalue -> llvalue = "LLVMConstNSWNeg"
 external const_nuw_neg : llvalue -> llvalue = "LLVMConstNUWNeg"
-external const_fneg : llvalue -> llvalue = "LLVMConstFNeg"
 external const_not : llvalue -> llvalue = "LLVMConstNot"
 external const_add : llvalue -> llvalue -> llvalue = "LLVMConstAdd"
 external const_nsw_add : llvalue -> llvalue -> llvalue = "LLVMConstNSWAdd"

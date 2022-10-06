@@ -11,8 +11,9 @@ add_object_library(
   HDRS
     file.h
   DEPENDS
-    libc.src.__support.threads.mutex
     libc.include.errno
+    libc.src.__support.CPP.span
+    libc.src.__support.threads.mutex
     libc.src.errno.errno
 )
 
@@ -23,7 +24,7 @@ add_object_library(
   HDRS
     dir.h
   DEPENDS
-    libc.src.__support.CPP.array_ref
+    libc.src.__support.CPP.span
     libc.src.__support.threads.mutex
 )
 

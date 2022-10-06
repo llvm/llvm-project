@@ -257,14 +257,6 @@ class AttrDef<Dialect dialect, string name, list<Trait> traits = [],
   let convertFromStorage = "$_self.cast<" # dialect.cppNamespace #
                                  "::" # cppClassName # ">()";
 
-  // A code block used to build the value 'Type' of an Attribute when
-  // initializing its storage instance. This field is optional, and if not
-  // present the attribute will have its value type set to `NoneType`. This code
-  // block may reference any of the attributes parameters via
-  // `$_<parameter-name`. If one of the parameters of the attribute is of type
-  // `AttributeSelfTypeParameter`, this field is ignored.
-  code typeBuilder = ?;
-
   // The predicate for when this def is used as a constraint.
   let predicate = CPred<"$_self.isa<" # dialect.cppNamespace #
                                  "::" # cppClassName # ">()">;
@@ -307,7 +299,7 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   string cppAccessorType = !if(!empty(accessorType), type, accessorType);
   // The C++ storage type of of this parameter if it is a reference, e.g.
   // `std::string` for `StringRef` or `SmallVector` for `ArrayRef`.
-  string cppStorageType = ?;
+  string cppStorageType = cppType;
   // The C++ code to convert from the storage type to the parameter type.
   string convertFromStorage = "$_self";
   // One-line human-readable description of the argument.
@@ -323,10 +315,6 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   // operator of `AsmPrinter` as necessary to print your type. Or you can
   // provide a custom printer.
   string printer = ?;
-  // Mark a parameter as optional. The C++ type of parameters marked as optional
-  // must be default constructible and be contextually convertible to `bool`.
-  // Any `Optional<T>` and any attribute type satisfies these requirements.
-  bit isOptional = 0;
   // Provide a default value for the parameter. Parameters with default values
   // are considered optional. If a value was not parsed for the parameter, it
   // will be set to the default value. Parameters equal to their default values
@@ -334,12 +322,24 @@ class AttrOrTypeParameter<string type, string desc, string accessorType = ""> {
   // which by default is the C++ equality operator. The current MLIR context is
   // made available through `$_ctxt`, e.g., for constructing default values for
   // attributes and types.
-  string defaultValue = ?;
+  string defaultValue = "";
 }
 class AttrParameter<string type, string desc, string accessorType = "">
  : AttrOrTypeParameter<type, desc, accessorType>;
 class TypeParameter<string type, string desc, string accessorType = "">
  : AttrOrTypeParameter<type, desc, accessorType>;
+
+// An optional parameter.
+class OptionalParameter<string type, string desc = ""> :
+    AttrOrTypeParameter<type, desc> {
+  let defaultValue = cppStorageType # "()";
+}
+
+// A parameter with a default value.
+class DefaultValuedParameter<string type, string value, string desc = ""> :
+    AttrOrTypeParameter<type, desc> {
+  let defaultValue = value;
+}
 
 // For StringRefs, which require allocation.
 class StringRefParameter<string desc = ""> :
@@ -362,6 +362,15 @@ class ArrayRefParameter<string arrayOf, string desc = ""> :
   let cppStorageType = "::llvm::SmallVector<" # arrayOf # ">";
 }
 
+// Regular array parameters cannot be parsed when empty. This optional array
+// parameter can be used with optional groups to be parsed when empty.
+class OptionalArrayRefParameter<string arrayOf, string desc = ""> :
+    OptionalParameter<"::llvm::ArrayRef<" # arrayOf # ">", desc> {
+  let allocator = [{$_dst = $_allocator.copyInto($_self);}];
+  let cppStorageType = "::llvm::SmallVector<" # arrayOf # ">";
+  let comparator = "::llvm::makeArrayRef($_lhs) == ::llvm::makeArrayRef($_rhs)";
+}
+
 // For classes which require allocation and have their own allocateInto method.
 class SelfAllocationParameter<string type, string desc> :
     AttrOrTypeParameter<type, desc> {
@@ -379,24 +388,50 @@ class ArrayRefOfSelfAllocationParameter<string arrayOf, string desc> :
   }];
 }
 
-// An optional parameter.
-class OptionalParameter<string type, string desc = ""> :
-    AttrOrTypeParameter<type, desc> {
-  let isOptional = 1;
-}
-
-// A parameter with a default value.
-class DefaultValuedParameter<string type, string value, string desc = ""> :
-    AttrOrTypeParameter<type, desc> {
-  let isOptional = 1;
-  let defaultValue = value;
-}
-
-// This is a special parameter used for AttrDefs that represents a `mlir::Type`
-// that is also used as the value `Type` of the attribute. Only one parameter
-// of the attribute may be of this type.
+// This is a special attribute parameter that represents the "self" type of the
+// attribute. It is specially handled by the assembly format generator to derive
+// its value from the optional trailing type after each attribute.
+//
+// By default, the self type parameter is optional and has a default value of
+// `none`. If a derived type other than `::mlir::Type` is specified, the
+// parameter loses its default value unless another one is specified by
+// `typeBuilder`.
 class AttributeSelfTypeParameter<string desc,
-                                 string derivedType = "::mlir::Type"> :
-    AttrOrTypeParameter<derivedType, desc> {}
+                                 string derivedType = "::mlir::Type",
+                                 string typeBuilder = ""> :
+    AttrOrTypeParameter<derivedType, desc> {
+  let defaultValue = !if(!and(!empty(typeBuilder),
+                              !eq(derivedType, "::mlir::Type")),
+                         "::mlir::NoneType::get($_ctxt)", typeBuilder);
+}
+
+//===----------------------------------------------------------------------===//
+// ArrayOfAttr
+//===----------------------------------------------------------------------===//
+
+/// This class defines an attribute that contains an array of elements. The
+/// elements can be any type, but if they are attributes, the nested elements
+/// are parsed and printed using the custom attribute syntax.
+class ArrayOfAttr<Dialect dialect, string attrName, string attrMnemonic,
+                  string eltName, list<Trait> traits = []>
+    : AttrDef<dialect, attrName, traits> {
+  let parameters = (ins OptionalArrayRefParameter<eltName>:$value);
+  let mnemonic = attrMnemonic;
+  let assemblyFormat = "`[` (`]`) : ($value^ `]`)?";
+
+  let returnType = "::llvm::ArrayRef<" # eltName # ">";
+  let constBuilderCall = "$_builder.getAttr<" # attrName # "Attr>($0)";
+  let convertFromStorage = "$_self.getValue()";
+
+  let extraClassDeclaration = [{
+    auto begin() const { return getValue().begin(); }
+    auto end() const { return getValue().end(); }
+    bool empty() const { return getValue().empty(); }
+    size_t size() const { return getValue().size(); }
+    auto &front() const { return getValue().front(); }
+    auto &back() const { return getValue().back(); }
+    auto &operator[](size_t index) { return getValue()[index]; }
+  }];
+}
 
 #endif // ATTRTYPEBASE_TD

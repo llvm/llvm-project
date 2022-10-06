@@ -15,9 +15,9 @@ bb7:                                              ; preds = %bb
   br label %bb8
 
 bb8:                                              ; preds = %bb80, %bb7
-  %tmp10 = load i32, i32* getelementptr inbounds ({ i32, i16, i32, i8, i8, i32, i32 }, { i32, i16, i32, i8, i8, i32, i32 }* @g_328, i64 0, i32 5), align 4
+  %tmp10 = load i32, ptr getelementptr inbounds ({ i32, i16, i32, i8, i8, i32, i32 }, ptr @g_328, i64 0, i32 5), align 4
   %0 = or i32 %tmp10, 9
-  store i32 %0, i32* getelementptr inbounds ({ i32, i16, i32, i8, i8, i32, i32 }, { i32, i16, i32, i8, i8, i32, i32 }* @g_328, i64 0, i32 5), align 4
+  store i32 %0, ptr getelementptr inbounds ({ i32, i16, i32, i8, i8, i32, i32 }, ptr @g_328, i64 0, i32 5), align 4
   br label %bb41.preheader.preheader
 
 bb41.preheader.preheader:                         ; preds = %bb80.thread, %bb8

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/Matrix.h"
+#include "./Utils.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -190,4 +191,59 @@ TEST(MatrixTest, resize) {
   for (unsigned row = 0; row < 7; ++row)
     for (unsigned col = 0; col < 7; ++col)
       EXPECT_EQ(mat(row, col), row >= 3 || col >= 3 ? 0 : int(10 * row + col));
+}
+
+static void checkHermiteNormalForm(const Matrix &mat,
+                                   const Matrix &hermiteForm) {
+  auto [h, u] = mat.computeHermiteNormalForm();
+
+  for (unsigned row = 0; row < mat.getNumRows(); row++)
+    for (unsigned col = 0; col < mat.getNumColumns(); col++)
+      EXPECT_EQ(h(row, col), hermiteForm(row, col));
+}
+
+TEST(MatrixTest, computeHermiteNormalForm) {
+  // TODO: Add a check to test the original statement of hermite normal form
+  // instead of using a precomputed result.
+
+  {
+    // Hermite form of a unimodular matrix is the identity matrix.
+    Matrix mat = makeMatrix(3, 3, {{2, 3, 6}, {3, 2, 3}, {17, 11, 16}});
+    Matrix hermiteForm = makeMatrix(3, 3, {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}});
+    checkHermiteNormalForm(mat, hermiteForm);
+  }
+
+  {
+    // Hermite form of a unimodular is the identity matrix.
+    Matrix mat = makeMatrix(
+        4, 4,
+        {{-6, -1, -19, -20}, {0, 1, 0, 0}, {-5, 0, -15, -16}, {6, 0, 18, 19}});
+    Matrix hermiteForm = makeMatrix(
+        4, 4, {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}, {0, 0, 0, 1}});
+    checkHermiteNormalForm(mat, hermiteForm);
+  }
+
+  {
+    Matrix mat = makeMatrix(
+        4, 4, {{3, 3, 1, 4}, {0, 1, 0, 0}, {0, 0, 19, 16}, {0, 0, 0, 3}});
+    Matrix hermiteForm = makeMatrix(
+        4, 4, {{1, 0, 0, 0}, {0, 1, 0, 0}, {1, 0, 3, 0}, {18, 0, 54, 57}});
+    checkHermiteNormalForm(mat, hermiteForm);
+  }
+
+  {
+    Matrix mat = makeMatrix(
+        4, 4, {{3, 3, 1, 4}, {0, 1, 0, 0}, {0, 0, 19, 16}, {0, 0, 0, 3}});
+    Matrix hermiteForm = makeMatrix(
+        4, 4, {{1, 0, 0, 0}, {0, 1, 0, 0}, {1, 0, 3, 0}, {18, 0, 54, 57}});
+    checkHermiteNormalForm(mat, hermiteForm);
+  }
+
+  {
+    Matrix mat =
+        makeMatrix(3, 5, {{0, 2, 0, 7, 1}, {-1, 0, 0, -3, 0}, {0, 4, 1, 0, 8}});
+    Matrix hermiteForm =
+        makeMatrix(3, 5, {{1, 0, 0, 0, 0}, {0, 1, 0, 0, 0}, {0, 0, 1, 0, 0}});
+    checkHermiteNormalForm(mat, hermiteForm);
+  }
 }

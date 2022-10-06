@@ -63,6 +63,13 @@ static bool shouldReduceOperand(Use &Op) {
   return true;
 }
 
+static bool switchCaseExists(Use &Op, ConstantInt *CI) {
+  SwitchInst *SI = dyn_cast<SwitchInst>(Op.getUser());
+  if (!SI)
+    return false;
+  return SI->findCaseValue(CI) != SI->case_default();
+}
+
 void llvm::reduceOperandsOneDeltaPass(TestRunner &Test) {
   errs() << "*** Reducing Operands to one...\n";
   auto ReduceValue = [](Use &Op) -> Value * {
@@ -71,6 +78,9 @@ void llvm::reduceOperandsOneDeltaPass(TestRunner &Test) {
 
     Type *Ty = Op->getType();
     if (auto *IntTy = dyn_cast<IntegerType>(Ty)) {
+      // Don't duplicate an existing switch case.
+      if (switchCaseExists(Op, ConstantInt::get(IntTy, 1)))
+        return nullptr;
       // Don't replace existing ones and zeroes.
       return (isOne(Op) || isZero(Op)) ? nullptr : ConstantInt::get(IntTy, 1);
     }
@@ -82,12 +92,16 @@ void llvm::reduceOperandsOneDeltaPass(TestRunner &Test) {
       if (isOne(Op) || isZero(Op) || isZeroOrOneFP(Op))
         return nullptr;
 
-      if (auto *IntTy = dyn_cast<IntegerType>(VT->getElementType()))
-        return ConstantVector::getSplat(VT->getElementCount(),
-                                        ConstantInt::get(IntTy, 1));
-
-      return ConstantVector::getSplat(
-          VT->getElementCount(), ConstantFP::get(VT->getElementType(), 1.0));
+      Type *ElementType = VT->getElementType();
+      Constant *C;
+      if (ElementType->isFloatingPointTy()) {
+        C = ConstantFP::get(ElementType, 1.0);
+      } else if (IntegerType *IntTy = dyn_cast<IntegerType>(ElementType)) {
+        C = ConstantInt::get(IntTy, 1);
+      } else {
+        return nullptr;
+      }
+      return ConstantVector::getSplat(VT->getElementCount(), C);
     }
 
     return nullptr;
@@ -102,6 +116,10 @@ void llvm::reduceOperandsZeroDeltaPass(TestRunner &Test) {
   auto ReduceValue = [](Use &Op) -> Value * {
     if (!shouldReduceOperand(Op))
       return nullptr;
+    // Don't duplicate an existing switch case.
+    if (auto *IntTy = dyn_cast<IntegerType>(Op->getType()))
+      if (switchCaseExists(Op, ConstantInt::get(IntTy, 0)))
+        return nullptr;
     // Don't replace existing zeroes.
     return isZero(Op) ? nullptr : Constant::getNullValue(Op->getType());
   };

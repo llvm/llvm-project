@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges, no-exceptions
+// UNSUPPORTED: no-exceptions
 
 // If the invocation of any non-const member function of `iterator` exits via an
 // exception, the iterator acquires a singular value.

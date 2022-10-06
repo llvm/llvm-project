@@ -354,8 +354,7 @@ void ExprInspectionChecker::analyzerDumpElementCount(const CallExpr *CE,
   if (const auto *TVR = MR->getAs<TypedValueRegion>()) {
     ElementTy = TVR->getValueType();
   } else {
-    ElementTy =
-        MR->castAs<SymbolicRegion>()->getSymbol()->getType()->getPointeeType();
+    ElementTy = MR->castAs<SymbolicRegion>()->getPointeeStaticType();
   }
 
   assert(!ElementTy->isPointerType());

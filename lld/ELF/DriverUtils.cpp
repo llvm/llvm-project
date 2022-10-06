@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains utility functions for the driver. Because there
+// This file contains utility functions for the ctx.driver. Because there
 // are so many small functions, we created this separate file to make
 // Driver.cpp less cluttered.
 //
@@ -169,11 +169,17 @@ std::string elf::createResponseFile(const opt::InputArgList &args) {
       os << quote(rewritePath(arg->getValue())) << "\n";
       break;
     case OPT_o:
-      // If -o path contains directories, "lld @response.txt" will likely
-      // fail because the archive we are creating doesn't contain empty
+    case OPT_Map:
+    case OPT_print_archive_stats:
+    case OPT_why_extract:
+      // If an output path contains directories, "lld @response.txt" will
+      // likely fail because the archive we are creating doesn't contain empty
       // directories for the output path (-o doesn't create directories).
       // Strip directories to prevent the issue.
-      os << "-o " << quote(path::filename(arg->getValue())) << "\n";
+      os << arg->getSpelling();
+      if (arg->getOption().getRenderStyle() == opt::Option::RenderSeparateStyle)
+        os << ' ';
+      os << quote(path::filename(arg->getValue())) << '\n';
       break;
     case OPT_lto_sample_profile:
       os << arg->getSpelling() << quote(rewritePath(arg->getValue())) << "\n";

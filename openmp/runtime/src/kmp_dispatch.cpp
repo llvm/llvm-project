@@ -1979,7 +1979,7 @@ int __kmp_dispatch_next_algorithm(int gtid,
 // TODO: implement count
 #else
 #define OMPT_LOOP_END // no-op
-#define OMPT_LOOP_DISPATCH // no-op
+#define OMPT_LOOP_DISPATCH(lb, ub, st, status) // no-op
 #endif
 
 #if KMP_STATS_ENABLED

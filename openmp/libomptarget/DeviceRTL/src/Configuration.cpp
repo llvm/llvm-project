@@ -23,6 +23,7 @@ using namespace _OMP;
 // defined by CGOpenMPRuntimeGPU
 extern uint32_t __omp_rtl_debug_kind;
 extern uint32_t __omp_rtl_assume_no_thread_state;
+extern uint32_t __omp_rtl_assume_no_nested_parallelism;
 
 // TODO: We want to change the name as soon as the old runtime is gone.
 // This variable should be visibile to the plugin so we override the default
@@ -51,5 +52,9 @@ bool config::isDebugMode(config::DebugKind Kind) {
 }
 
 bool config::mayUseThreadStates() { return !__omp_rtl_assume_no_thread_state; }
+
+bool config::mayUseNestedParallelism() {
+  return !__omp_rtl_assume_no_nested_parallelism;
+}
 
 #pragma omp end declare target

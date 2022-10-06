@@ -9,6 +9,19 @@
 # Prevent invalid caching if input files are modified during a build.
 build --experimental_guard_against_concurrent_changes
 
+# In opt mode, bazel by default builds both PIC and non-PIC object files for
+# tests vs binaries. We don't need this feature and it slows down opt builds
+# considerably.
+build --force_pic
+
+# Shared objects take up more space. With fast linkers and binaries that aren't
+# super large, the benefits of shared objects are minimal.
+build --dynamic_mode=off
+
+# Rely on compiler flags to compile with debug info/strip rather than stripping
+# based on compilation_mode.
+build --strip=never
+
 ###############################################################################
 # Options to select different strategies for linking potential dependent
 # libraries. The default leaves it disabled.
@@ -31,8 +44,8 @@ build:terminfo_system --repo_env=BAZEL_LLVM_TERMINFO_STRATEGY=system
 # Set the default compiler to the `clang` binary on the `PATH`.
 build:generic_clang --repo_env=CC=clang
 
-# C++14 standard version is required.
-build:generic_clang --cxxopt=-std=c++14 --host_cxxopt=-std=c++14
+# C++17 standard version is required.
+build:generic_clang --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
 
 # Use `-Wall` and `-Werror` for Clang.
 build:generic_clang --copt=-Wall --copt=-Werror --host_copt=-Wall --host_copt=-Werror
@@ -45,6 +58,10 @@ build:generic_clang --cxxopt=-Wno-range-loop-analysis --host_cxxopt=-Wno-range-l
 # not the point of the Bazel build to catch usage of deprecated APIs.
 build:generic_clang --copt=-Wno-deprecated --host_copt=-Wno-deprecated
 
+# lld links faster than other linkers. Assume that anybody using clang also has
+# lld available.
+build:generic_clang --linkopt=-fuse-ld=lld --host_linkopt=-fuse-ld=lld
+
 ###############################################################################
 # Options for "generic_gcc" builds: these options should generally apply to
 # builds using a GCC-based compiler, and default to the `gcc` executable on
@@ -56,8 +73,8 @@ build:generic_clang --copt=-Wno-deprecated --host_copt=-Wno-deprecated
 # Set the default compiler to the `gcc` binary on the `PATH`.
 build:generic_gcc --repo_env=CC=gcc
 
-# C++14 standard version is required.
-build:generic_gcc --cxxopt=-std=c++14 --host_cxxopt=-std=c++14
+# C++17 standard version is required.
+build:generic_gcc --cxxopt=-std=c++17 --host_cxxopt=-std=c++17
 
 # Build errors are not a helpful way to enforce deprecation in-repo and it is
 # not the point of the Bazel build to catch usage of deprecated APIs.
@@ -78,8 +95,8 @@ build:generic_gcc --copt=-Werror --host_copt=-Werror
 # Generic Windows flags common to both MSVC and Clang.
 ###############################################################################
 
-# C++14 standard version is required.
-build:windows --cxxopt=/std:c++14 --host_cxxopt=/std:c++14
+# C++17 standard version is required.
+build:windows --cxxopt=/std:c++17 --host_cxxopt=/std:c++17
 
 # Other generic dialect flags.
 build:windows --copt=/Zc:strictStrings --host_copt=/Zc:strictStrings
@@ -137,59 +154,34 @@ build:clang-cl --copt=/clang:-Wno-inconsistent-dllimport --host_copt=/clang:-Wno
 build:clang-cl --cxxopt=/clang:-Wno-c++11-narrowing --host_cxxopt=/clang:-Wno-c++11-narrowing
 
 ###############################################################################
-
-###############################################################################
-# Configuration for building remotely using Remote Build Execution (RBE)
-# Based on https://github.com/bazelbuild/bazel-toolchains/blob/master/bazelrc/bazel-1.0.0.bazelrc
+# Options for continuous integration.
 ###############################################################################
 
-build:rbe --remote_instance_name=projects/llvm-bazel/instances/default_instance
+# -O1 tries to provide a reasonable tradeoff between compile times and runtime
+# performance. However, if we start running more tests (e.g. all of
+# check-clang) we may want more optimizations.
+# Note for anybody considering using --compilation_mode=opt in CI, it builds
+# most files twice, one PIC version for shared libraries in tests, and one
+# non-PIC version for binaries.
+build:ci --copt=-O1
 
-# Depending on how many machines are in the remote execution instance, setting
-# this higher can make builds faster by allowing more jobs to run in parallel.
-# Setting it too high can result in jobs that timeout, however, while waiting
-# for a remote machine to execute them.
-build:rbe --jobs=150
+# Use clang.
+build:ci --config=generic_clang
 
-# Set several flags related to specifying the platform, toolchain and java
-# properties.
-# These flags should only be used as is for the rbe-ubuntu16-04 container
-# and need to be adapted to work with other toolchain containers.
-build:rbe --host_javabase=@rbe_default//java:jdk
-build:rbe --javabase=@rbe_default//java:jdk
-build:rbe --host_java_toolchain=@bazel_tools//tools/jdk:toolchain_hostjdk8
-build:rbe --java_toolchain=@bazel_tools//tools/jdk:toolchain_hostjdk8
-build:rbe --crosstool_top=@rbe_default//cc:toolchain
-build:rbe --action_env=BAZEL_DO_NOT_DETECT_CPP_TOOLCHAIN=1
-# Platform flags:
-# The toolchain container used for execution is defined in the target indicated
-# by "extra_execution_platforms", "host_platform" and "platforms".
-# More about platforms: https://docs.bazel.build/versions/main/platforms.html
-build:rbe --extra_toolchains=@rbe_default//config:cc-toolchain
-build:rbe --extra_execution_platforms=@rbe_default//config:platform
-build:rbe --host_platform=@rbe_default//config:platform
-build:rbe --platforms=@rbe_default//config:platform
+# Speedup bazel using a ramdisk.
+build:ci --sandbox_base=/dev/shm
 
-build:rbe --define=EXECUTOR=remote
+# Don't build/test targets tagged with "nobuildkite".
+build:ci --build_tag_filters=-nobuildkite
+build:ci --test_tag_filters=-nobuildkite
 
-# Enable remote execution so actions are performed on the remote systems.
-build:rbe --remote_executor=grpcs://remotebuildexecution.googleapis.com
+# Show as many errors as possible.
+build:ci --keep_going
 
-# Enforce stricter environment rules, which eliminates some non-hermetic
-# behavior and therefore improves both the remote cache hit rate and the
-# correctness and repeatability of the build.
-build:rbe --incompatible_strict_action_env=true
+# Show test errors.
+build:ci --test_output=errors
 
-# Set a higher timeout value, just in case.
-build:rbe --remote_timeout=3600
-
-# Local disk cache is incompatible with remote execution (for obvious reasons).
-build:rbe --disk_cache=""
-
-# Enable authentication. This will pick up application default credentials by
-# default. You can use --google_credentials=some_file.json to use a service
-# account credential instead.
-build:rbe --google_default_credentials=true
+###############################################################################
 
 # The user.bazelrc file is not checked in but available for local mods.
 # Always keep this at the end of the file so that user flags override.

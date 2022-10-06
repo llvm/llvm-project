@@ -41,5 +41,6 @@ int main(int, char**)
     assert(p != nullptr);
   }
 #endif
+
   return 0;
 }

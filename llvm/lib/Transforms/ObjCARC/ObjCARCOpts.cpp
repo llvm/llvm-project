@@ -1503,7 +1503,7 @@ static void collectReleaseInsertPts(
     const BlotMapVector<Value *, RRInfo> &Retains,
     DenseMap<const Instruction *, SmallPtrSet<const Value *, 2>>
         &ReleaseInsertPtToRCIdentityRoots) {
-  for (auto &P : Retains) {
+  for (const auto &P : Retains) {
     // Retains is a map from an objc_retain call to a RRInfo of the RC identity
     // root of the call. Get the RC identity root of the objc_retain call.
     Instruction *Retain = cast<Instruction>(P.first);
@@ -1541,7 +1541,7 @@ bool ObjCARCOpt::VisitInstructionTopDown(
   if (const SmallPtrSet<const Value *, 2> *Roots =
           getRCIdentityRootsFromReleaseInsertPt(
               Inst, ReleaseInsertPtToRCIdentityRoots))
-    for (auto *Root : *Roots) {
+    for (const auto *Root : *Roots) {
       TopDownPtrState &S = MyStates.getPtrTopDownState(Root);
       // Disable code motion if the current position is S_Retain to prevent
       // moving the objc_retain call past objc_release calls. If it's

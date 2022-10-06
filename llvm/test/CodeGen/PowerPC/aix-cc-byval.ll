@@ -80,8 +80,9 @@ entry:
 
 ; 32BIT:       bb.0.entry:
 ; 32BIT-NEXT:    liveins: $r3
-; 32BIT:         STW killed renamable $r3, 0, %fixed-stack.0 :: (store (s32) into %fixed-stack.0, align 8)
-; 32BIT-NEXT:    renamable $r3 = LBZ 0,  %fixed-stack.0 :: (dereferenceable load (s8)
+; 32BIT:         renamable $r4 = COPY $r3
+; 32BIT:         renamable $r3 = RLWINM $r3, 8, 24, 31
+; 32BIT:         STW killed renamable $r4, 0, %fixed-stack.0 :: (store (s32) into %fixed-stack.0, align 8)
 ; 32BIT-NEXT:    BLR
 
 ; 64BIT:       fixedStack:
@@ -92,18 +93,21 @@ entry:
 
 ; 64BIT:      bb.0.entry:
 ; 64BIT-NEXT:   liveins: $x3
-; 64BIT:        STD killed renamable $x3, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0, align 16)
-; 64BIT-NEXT:   renamable $x3 = LBZ8 0, %fixed-stack.0 :: (dereferenceable load (s8)
+; 64BIT:        renamable $x4 = COPY $x3
+; 64BIT:        renamable $x3 = RLDICL $x3, 8, 56
+; 64BIT:        STD killed renamable $x4, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0, align 16)
 
 ; CHECKASM-LABEL: .test_byval_1Byte:
 
-; ASM32:        stw 3, 24(1)
-; ASM32-NEXT:   lbz 3, 24(1)
-; ASM32-NEXT:   blr
+; ASM32:      mr 4, 3
+; ASM32-NEXT: srwi 3, 3, 24
+; ASM32-NEXT: stw 4, 24(1)
+; ASM32-NEXT: blr
 
-; ASM64:        std 3, 48(1)
-; ASM64-NEXT:   lbz 3, 48(1)
-; ASM64-NEXT:   blr
+; ASM64:      mr 4, 3
+; ASM64-NEXT: rldicl 3, 3, 8, 56
+; ASM64-NEXT: std 4, 48(1)
+; ASM64-NEXT: blr
 
 
 @f = common global float 0.000000e+00, align 4
@@ -433,10 +437,10 @@ entry:
 ; 64BIT:      bb.0.entry:
 ; 64BIT-NEXT:   liveins: $x3
 ; 64BIT:        STD killed renamable $x3, 0, %fixed-stack.2 :: (store (s64) into %fixed-stack.2, align 16)
-; 64BIT-NEXT:   STD killed renamable $x4, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0)
+; 64BIT:        STD renamable $x4, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0)
 ; 64BIT-DAG:    renamable $r[[SCRATCH1:[0-9]+]] = LBZ 3, %fixed-stack.2 :: (dereferenceable load (s8)
-; 64BIT-DAG:    renamable $r[[SCRATCH2:[0-9]+]] = LWZ 0, %fixed-stack.0 :: (dereferenceable load (s32)
-; 64BIT-NEXT:   renamable $r[[SCRATCH3:[0-9]+]] = nsw ADD4 killed renamable $r[[SCRATCH2]], killed renamable $r[[SCRATCH1]]
+; 64BIT-DAG:    renamable $x[[SCRATCH2:[0-9]+]] = RLDICL killed renamable $x4, 32, 32
+; 64BIT-NEXT:   renamable $r[[SCRATCH3:[0-9]+]] = nsw ADD4 renamable $r[[SCRATCH2]], killed renamable $r[[SCRATCH1]], implicit killed $x[[SCRATCH2]]
 ; 64BIT-NEXT:   renamable $x3 = EXTSW_32_64 killed renamable $r[[SCRATCH3]]
 ; 64BIT-NEXT:   BLR8
 
@@ -449,9 +453,9 @@ entry:
 ; ASM32-NEXT:   blr
 
 ; ASM64:        std 3, 48(1)
+; ASM64-NEXT:   lbz [[SCRATCH1:[0-9]+]], 51(1)
 ; ASM64-NEXT:   std 4, 56(1)
-; ASM64-DAG:    lbz [[SCRATCH1:[0-9]+]], 51(1)
-; ASM64-DAG:    lwz [[SCRATCH2:[0-9]+]], 56(1)
+; ASM64-NEXT:   rldicl [[SCRATCH2:[0-9]+]], 4, 32, 32
 ; ASM64-NEXT:   add [[SCRATCH3:[0-9]+]], [[SCRATCH2]], [[SCRATCH1]]
 ; ASM64-NEXT:   extsw 3, [[SCRATCH3]]
 ; ASM64-NEXT:   blr

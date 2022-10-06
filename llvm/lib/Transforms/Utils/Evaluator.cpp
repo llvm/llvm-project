@@ -626,10 +626,8 @@ bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
   CallStack.push_back(F);
 
   // Initialize arguments to the incoming values specified.
-  unsigned ArgNo = 0;
-  for (Function::arg_iterator AI = F->arg_begin(), E = F->arg_end(); AI != E;
-       ++AI, ++ArgNo)
-    setVal(&*AI, ActualArgs[ArgNo]);
+  for (const auto &[ArgNo, Arg] : llvm::enumerate(F->args()))
+    setVal(&Arg, ActualArgs[ArgNo]);
 
   // ExecutedBlocks - We only handle non-looping, non-recursive code.  As such,
   // we can only evaluate any one basic block at most once.  This set keeps

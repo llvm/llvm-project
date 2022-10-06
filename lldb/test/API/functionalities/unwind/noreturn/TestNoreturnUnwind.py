@@ -2,9 +2,6 @@
 Test that we can backtrace correctly with 'noreturn' functions on the stack
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

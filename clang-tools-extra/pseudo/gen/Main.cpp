@@ -65,7 +65,7 @@ namespace {
 // Mangles a symbol name into a valid identifier.
 //
 // These follow names in the grammar fairly closely:
-//   nonterminal: `ptr-declartor` becomes `ptr_declarator`;
+//   nonterminal: `ptr-declarator` becomes `ptr_declarator`;
 //   punctuator: `,` becomes `COMMA`;
 //   keyword: `INT` becomes `INT`;
 //   terminal: `IDENTIFIER` becomes `IDENTIFIER`;

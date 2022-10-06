@@ -129,6 +129,8 @@ FormatToken FormatLexer::lexToken() {
     return lexLiteral(tokStart);
   case '$':
     return lexVariable(tokStart);
+  case '"':
+    return lexString(tokStart);
   }
 }
 
@@ -151,6 +153,17 @@ FormatToken FormatLexer::lexVariable(const char *tokStart) {
   while (isalnum(*curPtr) || *curPtr == '_')
     ++curPtr;
   return formToken(FormatToken::variable, tokStart);
+}
+
+FormatToken FormatLexer::lexString(const char *tokStart) {
+  // Lex until another quote, respecting escapes.
+  bool escape = false;
+  while (const char curChar = *curPtr++) {
+    if (!escape && curChar == '"')
+      return formToken(FormatToken::string, tokStart);
+    escape = curChar == '\\';
+  }
+  return emitError(curPtr - 1, "unexpected end of file in string");
 }
 
 FormatToken FormatLexer::lexIdentifier(const char *tokStart) {
@@ -212,6 +225,8 @@ FailureOr<std::vector<FormatElement *>> FormatParser::parse() {
 FailureOr<FormatElement *> FormatParser::parseElement(Context ctx) {
   if (curToken.is(FormatToken::literal))
     return parseLiteral(ctx);
+  if (curToken.is(FormatToken::string))
+    return parseString(ctx);
   if (curToken.is(FormatToken::variable))
     return parseVariable(ctx);
   if (curToken.isKeyword())
@@ -253,6 +268,28 @@ FailureOr<FormatElement *> FormatParser::parseLiteral(Context ctx) {
   return create<LiteralElement>(value);
 }
 
+FailureOr<FormatElement *> FormatParser::parseString(Context ctx) {
+  FormatToken tok = curToken;
+  SMLoc loc = tok.getLoc();
+  consumeToken();
+
+  if (ctx != CustomDirectiveContext) {
+    return emitError(
+        loc, "strings may only be used as 'custom' directive arguments");
+  }
+  // Escape the string.
+  std::string value;
+  StringRef contents = tok.getSpelling().drop_front().drop_back();
+  value.reserve(contents.size());
+  bool escape = false;
+  for (char c : contents) {
+    escape = c == '\\';
+    if (!escape)
+      value.push_back(c);
+  }
+  return create<StringElement>(std::move(value));
+}
+
 FailureOr<FormatElement *> FormatParser::parseVariable(Context ctx) {
   FormatToken tok = curToken;
   SMLoc loc = tok.getLoc();
@@ -283,36 +320,43 @@ FailureOr<FormatElement *> FormatParser::parseOptionalGroup(Context ctx) {
 
   // Parse the child elements for this optional group.
   std::vector<FormatElement *> thenElements, elseElements;
-  Optional<unsigned> anchorIndex;
-  do {
-    FailureOr<FormatElement *> element = parseElement(TopLevelContext);
-    if (failed(element))
-      return failure();
-    // Check for an anchor.
-    if (curToken.is(FormatToken::caret)) {
-      if (anchorIndex)
-        return emitError(curToken.getLoc(), "only one element can be marked as "
-                                            "the anchor of an optional group");
-      anchorIndex = thenElements.size();
-      consumeToken();
-    }
-    thenElements.push_back(*element);
-  } while (!curToken.is(FormatToken::r_paren));
-  consumeToken();
-
-  // Parse the `else` elements of this optional group.
-  if (curToken.is(FormatToken::colon)) {
-    consumeToken();
-    if (failed(
-            parseToken(FormatToken::l_paren,
-                       "expected '(' to start else branch of optional group")))
-      return failure();
+  FormatElement *anchor = nullptr;
+  auto parseChildElements =
+      [this, &anchor](std::vector<FormatElement *> &elements) -> LogicalResult {
     do {
       FailureOr<FormatElement *> element = parseElement(TopLevelContext);
       if (failed(element))
         return failure();
-      elseElements.push_back(*element);
+      // Check for an anchor.
+      if (curToken.is(FormatToken::caret)) {
+        if (anchor) {
+          return emitError(curToken.getLoc(),
+                           "only one element can be marked as the anchor of an "
+                           "optional group");
+        }
+        anchor = *element;
+        consumeToken();
+      }
+      elements.push_back(*element);
     } while (!curToken.is(FormatToken::r_paren));
+    return success();
+  };
+
+  // Parse the 'then' elements. If the anchor was found in this group, then the
+  // optional is not inverted.
+  if (failed(parseChildElements(thenElements)))
+    return failure();
+  consumeToken();
+  bool inverted = !anchor;
+
+  // Parse the `else` elements of this optional group.
+  if (curToken.is(FormatToken::colon)) {
+    consumeToken();
+    if (failed(parseToken(
+            FormatToken::l_paren,
+            "expected '(' to start else branch of optional group")) ||
+        failed(parseChildElements(elseElements)))
+      return failure();
     consumeToken();
   }
   if (failed(parseToken(FormatToken::question,
@@ -320,28 +364,31 @@ FailureOr<FormatElement *> FormatParser::parseOptionalGroup(Context ctx) {
     return failure();
 
   // The optional group is required to have an anchor.
-  if (!anchorIndex)
+  if (!anchor)
     return emitError(loc, "optional group has no anchor element");
 
   // Verify the child elements.
-  if (failed(verifyOptionalGroupElements(loc, thenElements, anchorIndex)) ||
-      failed(verifyOptionalGroupElements(loc, elseElements, llvm::None)))
+  if (failed(verifyOptionalGroupElements(loc, thenElements, anchor)) ||
+      failed(verifyOptionalGroupElements(loc, elseElements, nullptr)))
     return failure();
 
   // Get the first parsable element. It must be an element that can be
   // optionally-parsed.
-  auto parseBegin = llvm::find_if_not(thenElements, [](FormatElement *element) {
+  auto isWhitespace = [](FormatElement *element) {
     return isa<WhitespaceElement>(element);
-  });
-  if (!isa<LiteralElement, VariableElement>(*parseBegin)) {
+  };
+  auto thenParseBegin = llvm::find_if_not(thenElements, isWhitespace);
+  auto elseParseBegin = llvm::find_if_not(elseElements, isWhitespace);
+  unsigned thenParseStart = std::distance(thenElements.begin(), thenParseBegin);
+  unsigned elseParseStart = std::distance(elseElements.begin(), elseParseBegin);
+
+  if (!isa<LiteralElement, VariableElement>(*thenParseBegin)) {
     return emitError(loc, "first parsable element of an optional group must be "
                           "a literal or variable");
   }
-
-  unsigned parseStart = std::distance(thenElements.begin(), parseBegin);
   return create<OptionalElement>(std::move(thenElements),
-                                 std::move(elseElements), *anchorIndex,
-                                 parseStart);
+                                 std::move(elseElements), thenParseStart,
+                                 elseParseStart, anchor, inverted);
 }
 
 FailureOr<FormatElement *> FormatParser::parseCustomDirective(SMLoc loc,
@@ -435,6 +482,8 @@ bool mlir::tblgen::isValidLiteral(StringRef value,
   }
   // Check the punctuation that are larger than a single character.
   if (value == "->")
+    return true;
+  if (value == "...")
     return true;
 
   // Otherwise, this must be an identifier.

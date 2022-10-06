@@ -41,10 +41,12 @@ test_pcrel32:
 # Test R_RISCV_CALL
 # jitlink-check: decode_operand(test_call, 1) = ((external_func - test_call) + 0x800)[31:12]
 # jitlink-check: decode_operand(test_call+4, 2)[11:0] = (external_func - test_call)[11:0]
-        .globl test_call
+        .globl test_call, external_func
         .p2align  1
         .type  test_call,@function
 test_call:
-        call external_func
+        .reloc ., R_RISCV_CALL, external_func
+        auipc ra, 0
+        jalr ra
         ret
         .size test_call, .-test_call

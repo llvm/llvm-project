@@ -264,6 +264,12 @@ bool isErrno(const Decl *D) {
   return false;
 }
 
+const char *describeErrnoCheckState(ErrnoCheckState CS) {
+  assert(CS == errno_modeling::MustNotBeChecked &&
+         "Errno description not applicable.");
+  return "may be undefined after the call and should not be used";
+}
+
 const NoteTag *getErrnoNoteTag(CheckerContext &C, const std::string &Message) {
   return C.getNoteTag([Message](PathSensitiveBugReport &BR) -> std::string {
     const MemRegion *ErrnoR = BR.getErrorNode()->getState()->get<ErrnoRegion>();
@@ -273,6 +279,32 @@ const NoteTag *getErrnoNoteTag(CheckerContext &C, const std::string &Message) {
     }
     return "";
   });
+}
+
+ProgramStateRef setErrnoForStdSuccess(ProgramStateRef State,
+                                      CheckerContext &C) {
+  return setErrnoState(State, MustNotBeChecked);
+}
+
+ProgramStateRef setErrnoForStdFailure(ProgramStateRef State, CheckerContext &C,
+                                      NonLoc ErrnoSym) {
+  SValBuilder &SVB = C.getSValBuilder();
+  NonLoc ZeroVal = SVB.makeZeroVal(C.getASTContext().IntTy).castAs<NonLoc>();
+  DefinedOrUnknownSVal Cond =
+      SVB.evalBinOp(State, BO_NE, ErrnoSym, ZeroVal, SVB.getConditionType())
+          .castAs<DefinedOrUnknownSVal>();
+  State = State->assume(Cond, true);
+  if (!State)
+    return nullptr;
+  return setErrnoValue(State, C.getLocationContext(), ErrnoSym, Irrelevant);
+}
+
+const NoteTag *getNoteTagForStdSuccess(CheckerContext &C, llvm::StringRef Fn) {
+  return getErrnoNoteTag(
+      C, (Twine("Assuming that function '") + Twine(Fn) +
+          Twine("' is successful, in this case the value 'errno' ") +
+          Twine(describeErrnoCheckState(MustNotBeChecked)))
+             .str());
 }
 
 } // namespace errno_modeling

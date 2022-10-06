@@ -1,6 +1,5 @@
 ; RUN: opt -S -loop-simplify -loop-fusion -debug-only=loop-fusion < %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
-; CHECK: may have side-effects
 ; CHECK: Could not hoist/sink all instructions
 
 declare void @unknown_func()
@@ -12,7 +11,7 @@ pre1:
   br label %body1
 
 ; CHECK:body1: 
-; CHECK-NOT:  %stay =
+; CHECK-NOT: call void @unknown_func()
 body1:  ; preds = %pre1, %body1
   %i = phi i32 [%i_next, %body1], [0, %pre1]
   %i_next = add i32 1, %i
@@ -26,7 +25,7 @@ pre2:
   br label %body2
 
 ; CHECK: body2:
-; CHECK-NOT: %stay =
+; CHECK-NOT: call void @unknown_func()
 body2:  ; preds = %pre2, %body2
   %i2 = phi i32 [%i_next2, %body2], [0, %pre2]
   %i_next2 = add i32 1, %i2
@@ -34,7 +33,6 @@ body2:  ; preds = %pre2, %body2
   br i1 %cond2, label %body2, label %exit
 
 ; CHECK: exit:
-; CHECK-NOT: %stay =
 exit:
   ret void
 }

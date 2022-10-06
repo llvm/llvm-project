@@ -62,6 +62,9 @@ public:
   class const_iterator {};
   const_iterator begin() { return const_iterator{}; }
 
+  void push_front(const T &) {}
+  void push_front(T &&) {}
+
   void push_back(const T &) {}
   void push_back(T &&) {}
 
@@ -86,6 +89,9 @@ public:
   void push_back(const T &) {}
   void push_back(T &&) {}
 
+  void push_front(const T &) {}
+  void push_front(T &&) {}
+
   template <typename... Args>
   iterator emplace(const_iterator pos, Args &&...args){};
   template <typename... Args>
@@ -103,6 +109,9 @@ public:
   class iterator {};
   class const_iterator {};
   const_iterator begin() { return const_iterator{}; }
+
+  void push_front(const T &) {}
+  void push_front(T &&) {}
 
   template <typename... Args>
   void emplace_front(Args &&...args){};
@@ -235,6 +244,9 @@ class stack {
 public:
   using value_type = T;
 
+  void push(const T &) {}
+  void push(T &&) {}
+
   template <typename... Args>
   void emplace(Args &&...args){};
 };
@@ -244,6 +256,9 @@ class queue {
 public:
   using value_type = T;
 
+  void push(const T &) {}
+  void push(T &&) {}
+
   template <typename... Args>
   void emplace(Args &&...args){};
 };
@@ -252,6 +267,9 @@ template <typename T>
 class priority_queue {
 public:
   using value_type = T;
+
+  void push(const T &) {}
+  void push(T &&) {}
 
   template <typename... Args>
   void emplace(Args &&...args){};
@@ -667,15 +685,43 @@ void testOtherContainers() {
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
   // CHECK-FIXES: l.emplace_back(42, 41);
 
+  l.push_front(Something(42, 41));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_front
+  // CHECK-FIXES: l.emplace_front(42, 41);
+
   std::deque<Something> d;
   d.push_back(Something(42));
   // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
   // CHECK-FIXES: d.emplace_back(42);
 
+  d.push_front(Something(42));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_front
+  // CHECK-FIXES: d.emplace_front(42);
+
   llvm::LikeASmallVector<Something> ls;
   ls.push_back(Something(42));
   // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back
   // CHECK-FIXES: ls.emplace_back(42);
+
+  std::stack<Something> s;
+  s.push(Something(42, 41));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace
+  // CHECK-FIXES: s.emplace(42, 41);
+
+  std::queue<Something> q;
+  q.push(Something(42, 41));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace
+  // CHECK-FIXES: q.emplace(42, 41);
+
+  std::priority_queue<Something> pq;
+  pq.push(Something(42, 41));
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace
+  // CHECK-FIXES: pq.emplace(42, 41);
+
+  std::forward_list<Something> fl;
+  fl.push_front(Something(42, 41));
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_front
+  // CHECK-FIXES: fl.emplace_front(42, 41);
 }
 
 class IntWrapper {
@@ -1013,6 +1059,82 @@ void testAllSTLEmplacyFunctions() {
   priority_queue.emplace(Foo(13));
   // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: unnecessary temporary object created while calling emplace
   // CHECK-FIXES: priority_queue.emplace(13);
+}
+
+void test_AliasEmplacyFunctions() {
+  typedef std::list<Foo> L;
+  using DQ = std::deque<Foo>;
+  L l;
+  l.emplace_back(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: l.emplace_back(3);
+
+  DQ dq;
+  dq.emplace_back(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: dq.emplace_back(3);
+
+  typedef std::stack<Foo> STACK;
+  using PQ = std::priority_queue<Foo>;
+  STACK stack;
+  stack.emplace(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: stack.emplace(3);
+
+  PQ pq;
+  pq.emplace(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: unnecessary temporary object created while calling emplace
+  // CHECK-FIXES: pq.emplace(3);
+
+  typedef std::forward_list<Foo> FL;
+  using DQ2 = std::deque<Foo>;
+  FL fl;
+  fl.emplace_front(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: unnecessary temporary object created while calling emplace_front
+  // CHECK-FIXES: fl.emplace_front(3);
+
+  DQ2 dq2;
+  dq2.emplace_front(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: unnecessary temporary object created while calling emplace_front
+  // CHECK-FIXES: dq2.emplace_front(3);
+}
+
+void test_Alias() {
+  typedef std::list<Foo> L;
+  using DQ = std::deque<Foo>;
+  L l;
+  l.push_back(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back instead of push_back [modernize-use-emplace]
+  // CHECK-FIXES: l.emplace_back(3);
+
+  DQ dq;
+  dq.push_back(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_back instead of push_back [modernize-use-emplace]
+  // CHECK-FIXES: dq.emplace_back(3);
+
+  typedef std::stack<Foo> STACK;
+  using PQ = std::priority_queue<Foo>;
+  STACK stack;
+  stack.push(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use emplace instead of push [modernize-use-emplace]
+  // CHECK-FIXES: stack.emplace(3);
+
+  PQ pq;
+  pq.push(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace instead of push [modernize-use-emplace]
+  // CHECK-FIXES: pq.emplace(3);
+
+  typedef std::forward_list<Foo> FL;
+  using DQ2 = std::deque<Foo>;
+  FL fl;
+  fl.push_front(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:6: warning: use emplace_front instead of push_front [modernize-use-emplace]
+  // CHECK-FIXES: fl.emplace_front(3);
+
+  DQ2 dq2;
+  dq2.push_front(Foo(3));
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use emplace_front instead of push_front [modernize-use-emplace]
+  // CHECK-FIXES: dq2.emplace_front(3);
 }
 
 struct Bar {

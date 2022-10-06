@@ -523,7 +523,7 @@ void SVEType::applyModifier(char Mod) {
     break;
   case 'c':
     Constant = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 'p':
     Pointer = true;
     Bitwidth = ElementBitwidth;
@@ -1282,6 +1282,8 @@ void SVEEmitter::createHeader(raw_ostream &OS) {
   OS << "#ifdef __cplusplus\n";
   OS << "} // extern \"C\"\n";
   OS << "#endif\n\n";
+  OS << "#undef __ai\n\n";
+  OS << "#undef __aio\n\n";
   OS << "#endif /*__ARM_FEATURE_SVE */\n\n";
   OS << "#endif /* __ARM_SVE_H */\n";
 }

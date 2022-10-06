@@ -305,7 +305,7 @@ define <4 x float> @simple_select_no_users(<4 x float> %a, <4 x float> %b, <4 x 
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <2 x i1> [[TMP11]], <2 x float> [[TMP13]], <2 x float> [[TMP15]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <2 x float> [[TMP16]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[RD1:%.*]] = shufflevector <4 x float> poison, <4 x float> [[TMP18]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+; CHECK-NEXT:    [[RD1:%.*]] = shufflevector <4 x float> [[TMP18]], <4 x float> poison, <4 x i32> <i32 undef, i32 undef, i32 0, i32 1>
 ; CHECK-NEXT:    ret <4 x float> [[RD1]]
 ;
   %c0 = extractelement <4 x i32> %c, i32 0
@@ -430,21 +430,9 @@ define <4 x float> @simple_select_partial_vector(<4 x float> %a, <4 x float> %b,
 ; Make sure that vectorization happens even if insertelements operations
 ; must be rescheduled. The case here is from compiling Julia.
 define <4 x float> @reschedule_extract(<4 x float> %a, <4 x float> %b) {
-; THRESHOLD-LABEL: @reschedule_extract(
-; THRESHOLD-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[A:%.*]], [[B:%.*]]
-; THRESHOLD-NEXT:    ret <4 x float> [[TMP1]]
-;
-; NOTHRESHOLD-LABEL: @reschedule_extract(
-; NOTHRESHOLD-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[A:%.*]], [[B:%.*]]
-; NOTHRESHOLD-NEXT:    ret <4 x float> [[TMP1]]
-;
-; MINTREESIZE-LABEL: @reschedule_extract(
-; MINTREESIZE-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[B:%.*]], i32 3
-; MINTREESIZE-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[A:%.*]], i32 3
-; MINTREESIZE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
-; MINTREESIZE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[TMP1]], i32 1
-; MINTREESIZE-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[A]], [[B]]
-; MINTREESIZE-NEXT:    ret <4 x float> [[TMP5]]
+; CHECK-LABEL: @reschedule_extract(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %b0 = extractelement <4 x float> %b, i32 0
@@ -468,21 +456,9 @@ define <4 x float> @reschedule_extract(<4 x float> %a, <4 x float> %b) {
 ; Check that cost model for vectorization takes credit for
 ; instructions that are erased.
 define <4 x float> @take_credit(<4 x float> %a, <4 x float> %b) {
-; THRESHOLD-LABEL: @take_credit(
-; THRESHOLD-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[A:%.*]], [[B:%.*]]
-; THRESHOLD-NEXT:    ret <4 x float> [[TMP1]]
-;
-; NOTHRESHOLD-LABEL: @take_credit(
-; NOTHRESHOLD-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[A:%.*]], [[B:%.*]]
-; NOTHRESHOLD-NEXT:    ret <4 x float> [[TMP1]]
-;
-; MINTREESIZE-LABEL: @take_credit(
-; MINTREESIZE-NEXT:    [[TMP1:%.*]] = extractelement <4 x float> [[B:%.*]], i32 3
-; MINTREESIZE-NEXT:    [[TMP2:%.*]] = extractelement <4 x float> [[A:%.*]], i32 3
-; MINTREESIZE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
-; MINTREESIZE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[TMP1]], i32 1
-; MINTREESIZE-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[A]], [[B]]
-; MINTREESIZE-NEXT:    ret <4 x float> [[TMP5]]
+; CHECK-LABEL: @take_credit(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
 ;
   %a0 = extractelement <4 x float> %a, i32 0
   %b0 = extractelement <4 x float> %b, i32 0
@@ -530,21 +506,9 @@ define <4 x double> @multi_tree(double %w, double %x, double %y, double %z) {
 }
 
 define <8 x float> @_vadd256(<8 x float> %a, <8 x float> %b) local_unnamed_addr #0 {
-; THRESHOLD-LABEL: @_vadd256(
-; THRESHOLD-NEXT:    [[TMP1:%.*]] = fadd <8 x float> [[A:%.*]], [[B:%.*]]
-; THRESHOLD-NEXT:    ret <8 x float> [[TMP1]]
-;
-; NOTHRESHOLD-LABEL: @_vadd256(
-; NOTHRESHOLD-NEXT:    [[TMP1:%.*]] = fadd <8 x float> [[A:%.*]], [[B:%.*]]
-; NOTHRESHOLD-NEXT:    ret <8 x float> [[TMP1]]
-;
-; MINTREESIZE-LABEL: @_vadd256(
-; MINTREESIZE-NEXT:    [[TMP1:%.*]] = extractelement <8 x float> [[B:%.*]], i32 7
-; MINTREESIZE-NEXT:    [[TMP2:%.*]] = extractelement <8 x float> [[A:%.*]], i32 7
-; MINTREESIZE-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
-; MINTREESIZE-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> [[TMP3]], float [[TMP1]], i32 1
-; MINTREESIZE-NEXT:    [[TMP5:%.*]] = fadd <8 x float> [[A]], [[B]]
-; MINTREESIZE-NEXT:    ret <8 x float> [[TMP5]]
+; CHECK-LABEL: @_vadd256(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <8 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <8 x float> [[TMP1]]
 ;
   %vecext = extractelement <8 x float> %a, i32 0
   %vecext1 = extractelement <8 x float> %b, i32 0

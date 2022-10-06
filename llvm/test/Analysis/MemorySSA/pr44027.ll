@@ -9,19 +9,19 @@ declare i32 @wobble(...)
 declare void @spam() align 2
 
 ; CHECK-LABEL: @f()
-define void @f() personality i8* bitcast (i32 (...)* @wobble to i8*) {
+define void @f() personality ptr @wobble {
 bb:
-  %tmp = alloca i32*, align 8
+  %tmp = alloca ptr, align 8
   invoke void @spam()
           to label %bb16 unwind label %bb23
 
 bb16:                                             ; preds = %bb
-  %tmp17 = load i32*, i32** %tmp, align 8
-  %tmp18 = load i32*, i32** %tmp, align 8
+  %tmp17 = load ptr, ptr %tmp, align 8
+  %tmp18 = load ptr, ptr %tmp, align 8
   unreachable
 
 bb23:                                             ; preds = %bb
-  %tmp24 = landingpad { i8*, i32 }
+  %tmp24 = landingpad { ptr, i32 }
           cleanup
   unreachable
 }

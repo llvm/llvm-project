@@ -176,23 +176,21 @@ void clang::ParseAST(Sema &S, bool PrintStats, bool SkipFunctionBodies) {
   // and to be able to use a name based on the module name.
 
   // At this point, we should know if we are building a non-header C++20 module.
-  if (S.getLangOpts().CPlusPlusModules && !S.getLangOpts().IsHeaderFile &&
-      !S.getLangOpts().CurrentModule.empty()) {
+  if (S.getLangOpts().CPlusPlusModules) {
     // If we are building the module from source, then the top level module
     // will be here.
     Module *CodegenModule = S.getCurrentModule();
     bool Interface = true;
     if (CodegenModule)
-      // We only use module initializers for interfaces (including partition
-      // implementation units).
+      // We only use module initializers for importable module (including
+      // partition implementation units).
       Interface = S.currentModuleIsInterface();
-    else
+    else if (S.getLangOpts().isCompilingModuleInterface())
       // If we are building the module from a PCM file, then the module can be
       // found here.
       CodegenModule = S.getPreprocessor().getCurrentModule();
-    // If neither. then ....
-    assert(CodegenModule && "codegen for a module, but don't know which?");
-    if (Interface)
+
+    if (Interface && CodegenModule)
       S.getASTContext().setModuleForCodeGen(CodegenModule);
   }
   Consumer->HandleTranslationUnit(S.getASTContext());

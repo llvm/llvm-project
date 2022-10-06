@@ -40,16 +40,16 @@ define i1 @test4(i37 %x) {
   ret i1 %B
 }
 
-define i7 @test5(i7 %A, i7* %P) {
+define i7 @test5(i7 %A, ptr %P) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i7 [[A:%.*]], -4
 ; CHECK-NEXT:    [[C:%.*]] = xor i7 [[TMP1]], 15
-; CHECK-NEXT:    store i7 [[C]], i7* [[P:%.*]], align 1
+; CHECK-NEXT:    store i7 [[C]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i7 3
 ;
   %B = or i7 %A, 3
   %C = xor i7 %B, 12
-  store i7 %C, i7* %P
+  store i7 %C, ptr %P
   %r = and i7 %C, 3
   ret i7 %r
 }
@@ -101,16 +101,16 @@ define i1 @test11(i737 %x) {
   ret i1 %B
 }
 
-define i117 @test12(i117 %A, i117* %P) {
+define i117 @test12(i117 %A, ptr %P) {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i117 [[A:%.*]], -4
 ; CHECK-NEXT:    [[C:%.*]] = xor i117 [[TMP1]], 15
-; CHECK-NEXT:    store i117 [[C]], i117* [[P:%.*]], align 4
+; CHECK-NEXT:    store i117 [[C]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i117 3
 ;
   %B = or i117 %A, 3
   %C = xor i117 %B, 12
-  store i117 %C, i117* %P
+  store i117 %C, ptr %P
   %r = and i117 %C, 3
   ret i117 %r
 }

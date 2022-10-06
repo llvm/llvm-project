@@ -84,8 +84,6 @@ void name ## _set(type *t, int index, type val) {
 import uuid
 import re
 import os
-
-import six
 %}
 
 // Include the version of swig that was used to generate this interface.

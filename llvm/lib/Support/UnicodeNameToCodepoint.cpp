@@ -46,7 +46,7 @@ struct Node {
     std::string S;
     // Reserve enough space for most unicode code points.
     // The chosen value represent the 99th percentile of name size as of
-    // Unicode 14.
+    // Unicode 15.0.
     S.reserve(46);
     const Node *N = this;
     while (N) {
@@ -251,7 +251,7 @@ constexpr const char *const HangulSyllables[][3] = {
     };
 // clang-format on
 
-// Unicode 14.0
+// Unicode 15.0
 // 3.12 Conjoining Jamo Behavior Common constants
 constexpr const char32_t SBase = 0xAC00;
 constexpr const uint32_t LCount = 19;
@@ -323,18 +323,17 @@ struct GeneratedNamesData {
   uint32_t End;
 };
 
-// Unicode 14.0 Table 4-8. Name Derivation Rule Prefix Strings
-// This needs to be kept in sync with
-// llvm/utils/UnicodeData/UnicodeNameMappingGenerator.cpp
+// Unicode 15.0 Table 4-8. Name Derivation Rule Prefix Strings
 static const GeneratedNamesData GeneratedNamesDataTable[] = {
     {"CJK UNIFIED IDEOGRAPH-", 0x3400, 0x4DBF},
-    {"CJK UNIFIED IDEOGRAPH-", 0x4E00, 0x9FFC},
-    {"CJK UNIFIED IDEOGRAPH-", 0x20000, 0x2A6DD},
-    {"CJK UNIFIED IDEOGRAPH-", 0x2A700, 0x2B734},
+    {"CJK UNIFIED IDEOGRAPH-", 0x4E00, 0x9FFF},
+    {"CJK UNIFIED IDEOGRAPH-", 0x20000, 0x2A6DF},
+    {"CJK UNIFIED IDEOGRAPH-", 0x2A700, 0x2B739},
     {"CJK UNIFIED IDEOGRAPH-", 0x2B740, 0x2B81D},
     {"CJK UNIFIED IDEOGRAPH-", 0x2B820, 0x2CEA1},
     {"CJK UNIFIED IDEOGRAPH-", 0x2CEB0, 0x2EBE0},
     {"CJK UNIFIED IDEOGRAPH-", 0x30000, 0x3134A},
+    {"CJK UNIFIED IDEOGRAPH-", 0x31350, 0x323AF},
     {"TANGUT IDEOGRAPH-", 0x17000, 0x187F7},
     {"TANGUT IDEOGRAPH-", 0x18D00, 0x18D08},
     {"KHITAN SMALL SCRIPT CHARACTER-", 0x18B00, 0x18CD5},
@@ -445,8 +444,8 @@ nearestMatchesForCodepointName(StringRef Pattern, std::size_t MaxMatchesCount) {
       return Name;
     };
 
-    auto It = std::lower_bound(
-        Matches.begin(), Matches.end(), Distance,
+    auto It = llvm::lower_bound(
+        Matches, Distance,
         [&](const MatchForCodepointName &a, std::size_t Distance) {
           if (Distance == a.Distance)
             return a.Name < GetName();

@@ -27,9 +27,6 @@ def OpenACC_Dialect : Dialect {
 
   let useDefaultAttributePrinterParser = 1;
   let cppNamespace = "::mlir::acc";
-
-  // TODO: Flip to _Prefixed.
-  let emitAccessorPrefix = kEmitAccessorPrefix_Raw;
 }
 
 // AccCommon requires definition of OpenACC_Dialect.
@@ -390,11 +387,11 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
   let regions = (region AnyRegion:$region);
 
   let extraClassDeclaration = [{
-    static StringRef getCollapseAttrName() { return "collapse"; }
-    static StringRef getSeqAttrName() { return "seq"; }
-    static StringRef getIndependentAttrName() { return "independent"; }
-    static StringRef getAutoAttrName() { return "auto"; }
-    static StringRef getExecutionMappingAttrName() { return "exec_mapping"; }
+    static StringRef getCollapseAttrStrName() { return "collapse"; }
+    static StringRef getSeqAttrStrName() { return "seq"; }
+    static StringRef getIndependentAttrStrName() { return "independent"; }
+    static StringRef getAutoAttrStrName() { return "auto"; }
+    static StringRef getExecutionMappingAttrStrName() { return "exec_mapping"; }
     static StringRef getGangKeyword() { return "gang"; }
     static StringRef getGangNumKeyword() { return "num"; }
     static StringRef getGangStaticKeyword() { return "static"; }

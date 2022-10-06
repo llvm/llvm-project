@@ -103,6 +103,8 @@ bool VPRecipeBase::mayReadFromMemory() const {
 
 bool VPRecipeBase::mayHaveSideEffects() const {
   switch (getVPDefID()) {
+  case VPPredInstPHISC:
+    return false;
   case VPWidenIntOrFpInductionSC:
   case VPWidenPointerInductionSC:
   case VPWidenCanonicalIVSC:
@@ -132,7 +134,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
 void VPLiveOut::fixPhi(VPlan &Plan, VPTransformState &State) {
   auto Lane = VPLane::getLastLaneForVF(State.VF);
   VPValue *ExitValue = getOperand(0);
-  if (Plan.isUniformAfterVectorization(ExitValue))
+  if (vputils::isUniformAfterVectorization(ExitValue))
     Lane = VPLane::getFirstLane();
   Phi->addIncoming(State.get(ExitValue, VPIteration(State.UF - 1, Lane)),
                    State.Builder.GetInsertBlock());
@@ -432,6 +434,64 @@ void VPInstruction::setFastMathFlags(FastMathFlags FMFNew) {
   FMF = FMFNew;
 }
 
+void VPWidenCallRecipe::execute(VPTransformState &State) {
+  auto &CI = *cast<CallInst>(getUnderlyingInstr());
+  assert(!isa<DbgInfoIntrinsic>(CI) &&
+         "DbgInfoIntrinsic should have been dropped during VPlan construction");
+  State.setDebugLocFromInst(&CI);
+
+  SmallVector<Type *, 4> Tys;
+  for (Value *ArgOperand : CI.args())
+    Tys.push_back(
+        ToVectorTy(ArgOperand->getType(), State.VF.getKnownMinValue()));
+
+  for (unsigned Part = 0; Part < State.UF; ++Part) {
+    SmallVector<Type *, 2> TysForDecl = {CI.getType()};
+    SmallVector<Value *, 4> Args;
+    for (const auto &I : enumerate(operands())) {
+      // Some intrinsics have a scalar argument - don't replace it with a
+      // vector.
+      Value *Arg;
+      if (VectorIntrinsicID == Intrinsic::not_intrinsic ||
+          !isVectorIntrinsicWithScalarOpAtArg(VectorIntrinsicID, I.index()))
+        Arg = State.get(I.value(), Part);
+      else
+        Arg = State.get(I.value(), VPIteration(0, 0));
+      if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, I.index()))
+        TysForDecl.push_back(Arg->getType());
+      Args.push_back(Arg);
+    }
+
+    Function *VectorF;
+    if (VectorIntrinsicID != Intrinsic::not_intrinsic) {
+      // Use vector version of the intrinsic.
+      if (State.VF.isVector())
+        TysForDecl[0] =
+            VectorType::get(CI.getType()->getScalarType(), State.VF);
+      Module *M = State.Builder.GetInsertBlock()->getModule();
+      VectorF = Intrinsic::getDeclaration(M, VectorIntrinsicID, TysForDecl);
+      assert(VectorF && "Can't retrieve vector intrinsic.");
+    } else {
+      // Use vector version of the function call.
+      const VFShape Shape = VFShape::get(CI, State.VF, false /*HasGlobalPred*/);
+#ifndef NDEBUG
+      assert(VFDatabase(CI).getVectorizedFunction(Shape) != nullptr &&
+             "Can't create vector function.");
+#endif
+      VectorF = VFDatabase(CI).getVectorizedFunction(Shape);
+    }
+    SmallVector<OperandBundleDef, 1> OpBundles;
+    CI.getOperandBundlesAsDefs(OpBundles);
+    CallInst *V = State.Builder.CreateCall(VectorF, Args, OpBundles);
+
+    if (isa<FPMathOperator>(V))
+      V->copyFastMathFlags(&CI);
+
+    State.set(this, V, Part);
+    State.addMetadata(V, &CI);
+  }
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
                               VPSlotTracker &SlotTracker) const {
@@ -448,6 +508,11 @@ void VPWidenCallRecipe::print(raw_ostream &O, const Twine &Indent,
   O << "call @" << CI->getCalledFunction()->getName() << "(";
   printOperands(O, SlotTracker);
   O << ")";
+
+  if (VectorIntrinsicID)
+    O << " (using vector intrinsic)";
+  else
+    O << " (using library function)";
 }
 
 void VPWidenSelectRecipe::print(raw_ostream &O, const Twine &Indent,
@@ -983,10 +1048,8 @@ void VPCanonicalIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(ElementCount VF) {
-  bool IsUniform = vputils::onlyFirstLaneUsed(this);
-  return all_of(users(),
-                [&](const VPUser *U) { return U->usesScalars(this); }) &&
-         (IsUniform || !VF.isScalable());
+  return IsScalarAfterVectorization &&
+         (!VF.isScalable() || vputils::onlyFirstLaneUsed(this));
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

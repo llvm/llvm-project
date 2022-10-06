@@ -160,7 +160,7 @@ class FPStore_r<bits<3> funct3, string opcodestr, RegisterClass rty,
     : RVInstS<funct3, OPC_STORE_FP, (outs),
               (ins rty:$rs2, GPR:$rs1, simm12:$imm12),
               opcodestr, "$rs2, ${imm12}(${rs1})">,
-      Sched<[sw, ReadStoreData, ReadFMemBase]>;
+      Sched<[sw, ReadFStoreData, ReadFMemBase]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,
     UseNamedOperandTable = 1, hasPostISelHook = 1, isCommutable = 1 in
@@ -314,7 +314,7 @@ defm : FPFMADynFrmAlias_m<FMSUB_S,  "fmsub.s",  FINX>;
 defm : FPFMADynFrmAlias_m<FNMSUB_S, "fnmsub.s", FINX>;
 defm : FPFMADynFrmAlias_m<FNMADD_S, "fnmadd.s", FINX>;
 
-let SchedRW = [WriteFALU32, ReadFALU32, ReadFALU32] in {
+let SchedRW = [WriteFAdd32, ReadFAdd32, ReadFAdd32] in {
 defm FADD_S : FPALU_rr_frm_m<0b0000000, "fadd.s", FINX, /*Commutable*/1>;
 defm FSUB_S : FPALU_rr_frm_m<0b0000100, "fsub.s", FINX>;
 }
@@ -564,7 +564,7 @@ def : PatSetCC<FPR32, any_fsetccs, SETOLT, FLT_S>;
 def : PatSetCC<FPR32, any_fsetccs, SETLE, FLE_S>;
 def : PatSetCC<FPR32, any_fsetccs, SETOLE, FLE_S>;
 
-def Select_FPR32_Using_CC_GPR : SelectCC_rrirr<FPR32, GPR>;
+defm Select_FPR32 : SelectCC_GPR_rrirr<FPR32>;
 
 /// Loads
 

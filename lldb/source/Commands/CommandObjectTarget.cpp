@@ -406,7 +406,7 @@ protected:
 
       if (core_file) {
         FileSpec core_file_dir;
-        core_file_dir.GetDirectory() = core_file.GetDirectory();
+        core_file_dir.SetDirectory(core_file.GetDirectory());
         target_sp->AppendExecutableSearchPaths(core_file_dir);
 
         ProcessSP process_sp(target_sp->CreateProcess(
@@ -1541,10 +1541,25 @@ static uint32_t LookupSymbolInModule(CommandInterpreter &interpreter,
     strm.IndentMore();
     for (uint32_t i = 0; i < num_matches; ++i) {
       Symbol *symbol = symtab->SymbolAtIndex(match_indexes[i]);
-      if (symbol && symbol->ValueIsAddress()) {
-        DumpAddress(
-            interpreter.GetExecutionContext().GetBestExecutionContextScope(),
-            symbol->GetAddressRef(), verbose, all_ranges, strm);
+      if (symbol) {
+        if (symbol->ValueIsAddress()) {
+          DumpAddress(
+              interpreter.GetExecutionContext().GetBestExecutionContextScope(),
+              symbol->GetAddressRef(), verbose, all_ranges, strm);
+          strm.EOL();
+        } else {
+          strm.IndentMore();
+          strm.Indent("    Name: ");
+          strm.PutCString(symbol->GetDisplayName().GetStringRef());
+          strm.EOL();
+          strm.Indent("    Value: ");
+          strm.Printf("0x%16.16" PRIx64 "\n", symbol->GetRawValue());
+          if (symbol->GetByteSizeIsValid()) {
+            strm.Indent("    Size: ");
+            strm.Printf("0x%16.16" PRIx64 "\n", symbol->GetByteSize());
+          }
+          strm.IndentLess();
+        }
       }
     }
     strm.IndentLess();
@@ -4072,7 +4087,7 @@ protected:
 
     if (!module_spec.GetUUID().IsValid()) {
       if (!module_spec.GetFileSpec() && !module_spec.GetPlatformFileSpec())
-        module_spec.GetFileSpec().GetFilename() = symbol_fspec.GetFilename();
+        module_spec.GetFileSpec().SetFilename(symbol_fspec.GetFilename());
     }
 
     // Now module_spec represents a symbol file for a module that might exist
@@ -4136,7 +4151,7 @@ protected:
         break;
 
       // Replace basename with one fewer extension
-      module_spec.GetFileSpec().GetFilename() = filename_no_extension;
+      module_spec.GetFileSpec().SetFilename(filename_no_extension);
       target->GetImages().FindModules(module_spec, matching_modules);
     }
 

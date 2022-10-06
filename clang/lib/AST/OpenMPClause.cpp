@@ -1626,18 +1626,19 @@ OMPAffinityClause *OMPAffinityClause::CreateEmpty(const ASTContext &C,
 }
 
 OMPInitClause *OMPInitClause::Create(const ASTContext &C, Expr *InteropVar,
-                                     ArrayRef<Expr *> PrefExprs, bool IsTarget,
-                                     bool IsTargetSync, SourceLocation StartLoc,
+                                     OMPInteropInfo &InteropInfo,
+                                     SourceLocation StartLoc,
                                      SourceLocation LParenLoc,
                                      SourceLocation VarLoc,
                                      SourceLocation EndLoc) {
 
-  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(PrefExprs.size() + 1));
-  auto *Clause =
-      new (Mem) OMPInitClause(IsTarget, IsTargetSync, StartLoc, LParenLoc,
-                              VarLoc, EndLoc, PrefExprs.size() + 1);
+  void *Mem =
+      C.Allocate(totalSizeToAlloc<Expr *>(InteropInfo.PreferTypes.size() + 1));
+  auto *Clause = new (Mem) OMPInitClause(
+      InteropInfo.IsTarget, InteropInfo.IsTargetSync, StartLoc, LParenLoc,
+      VarLoc, EndLoc, InteropInfo.PreferTypes.size() + 1);
   Clause->setInteropVar(InteropVar);
-  llvm::copy(PrefExprs, Clause->getTrailingObjects<Expr *>() + 1);
+  llvm::copy(InteropInfo.PreferTypes, Clause->getTrailingObjects<Expr *>() + 1);
   return Clause;
 }
 
@@ -1701,7 +1702,7 @@ void OMPClausePrinter::VisitOMPSimdlenClause(OMPSimdlenClause *Node) {
 void OMPClausePrinter::VisitOMPSizesClause(OMPSizesClause *Node) {
   OS << "sizes(";
   bool First = true;
-  for (auto Size : Node->getSizesRefs()) {
+  for (auto *Size : Node->getSizesRefs()) {
     if (!First)
       OS << ", ";
     Size->printPretty(OS, nullptr, Policy, 0);

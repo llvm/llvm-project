@@ -107,6 +107,14 @@
 // RUN:             | FileCheck -check-prefix=CI %s
 // RUN: %clang -### -c %s -gsce -target x86_64-unknown-linux 2>&1 \
 // RUN:             | FileCheck -check-prefix=NOCI %s
+// RUN: %clang -### %s -g -flto=thin -target x86_64-scei-ps4 2>&1 \
+// RUN:             | FileCheck -check-prefix=SNLDTLTOGARANGE %s
+// RUN: %clang -### %s -g -flto=full -target x86_64-scei-ps4 2>&1 \
+// RUN:             | FileCheck -check-prefix=SNLDFLTOGARANGE %s
+// RUN: %clang -### %s -g -flto -target x86_64-scei-ps5 2>&1 \
+// RUN:             | FileCheck -check-prefix=LLDGARANGE %s
+// RUN: %clang -### %s -g -target x86_64-scei-ps5 2>&1 \
+// RUN:             | FileCheck -check-prefix=LDGARANGE %s
 
 // On the AIX, -g defaults to -gdbx and limited debug info.
 // RUN: %clang -### -c -g %s -target powerpc-ibm-aix-xcoff 2>&1 \
@@ -365,6 +373,13 @@
 // NOPUB-NOT: -ggnu-pubnames
 // NOPUB-NOT: -gpubnames
 //
+
+// LDGARANGE: {{".*ld.*"}} {{.*}}
+// LDGARANGE-NOT: "-plugin-opt=-generate-arange-section"
+// LLDGARANGE: {{".*lld.*"}} {{.*}} "-plugin-opt=-generate-arange-section"
+// SNLDTLTOGARANGE: {{".*orbis-ld.*"}} {{.*}} "-lto-thin-debug-options=-generate-arange-section"
+// SNLDFLTOGARANGE: {{".*orbis-ld.*"}} {{.*}} "-lto-debug-options=-generate-arange-section"
+
 // PUB: -gpubnames
 //
 // RNGBSE: -fdebug-ranges-base-address
@@ -448,6 +463,6 @@
 // SIMPLE_TMPL_NAMES: -gsimple-template-names=simple
 // FWD_TMPL_PARAMS-DAG: -debug-forward-template-params
 // RUN: not %clang -### -target x86_64 -c -g -gsimple-template-names=mangled %s 2>&1 | FileCheck --check-prefix=MANGLED_TEMP_NAMES %s
-// MANGLED_TEMP_NAMES: error: unknown argument: '-gsimple-template-names=mangled'
+// MANGLED_TEMP_NAMES: error: unknown argument '-gsimple-template-names=mangled'; did you mean '-Xclang -gsimple-template-names=mangled'
 // RUN: %clang -### -target x86_64 -c -g %s 2>&1 | FileCheck --check-prefix=FULL_TEMP_NAMES --implicit-check-not=debug-forward-template-params %s
 // FULL_TEMP_NAMES-NOT: -gsimple-template-names

@@ -384,7 +384,7 @@ InstructionLengthDecode(const uint8_t *inst_bytes, int bytes_len,
 
 lldb::InstructionControlFlowKind GetControlFlowKind(bool is_exec_mode_64b,
                                                     Opcode m_opcode) {
-  llvm::Optional<InstructionOpcodeAndModrm> ret = llvm::None;
+  llvm::Optional<InstructionOpcodeAndModrm> ret;
 
   if (m_opcode.GetOpcodeBytes() == nullptr || m_opcode.GetByteSize() <= 0) {
     // x86_64 and i386 instructions are categorized as Opcode::Type::eTypeBytes

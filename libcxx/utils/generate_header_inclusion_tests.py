@@ -103,7 +103,6 @@ lit_markup = {
   "locale": ["UNSUPPORTED: no-localization"],
   "mutex": ["UNSUPPORTED: no-threads"],
   "ostream": ["UNSUPPORTED: no-localization"],
-  "ranges": ["UNSUPPORTED: libcpp-has-no-incomplete-ranges"],
   "regex": ["UNSUPPORTED: no-localization"],
   "semaphore": ["UNSUPPORTED: no-threads"],
   "shared_mutex": ["UNSUPPORTED: no-threads"],

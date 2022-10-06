@@ -6,14 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/Array.h"
+#include "src/__support/CPP/array.h"
 #include "src/string/memory_utils/utils.h"
 #include "utils/UnitTest/Test.h"
 
 namespace __llvm_libc {
 
 TEST(LlvmLibcUtilsTest, IsPowerOfTwoOrZero) {
-  static const cpp::Array<bool, 65> kExpectedValues{
+  static const cpp::array<bool, 65> kExpectedValues{
       1, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, // 0-15
       1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 16-31
       1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 32-47
@@ -25,7 +25,7 @@ TEST(LlvmLibcUtilsTest, IsPowerOfTwoOrZero) {
 }
 
 TEST(LlvmLibcUtilsTest, IsPowerOfTwo) {
-  static const cpp::Array<bool, 65> kExpectedValues{
+  static const cpp::array<bool, 65> kExpectedValues{
       0, 1, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, // 0-15
       1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 16-31
       1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 32-47
@@ -37,7 +37,7 @@ TEST(LlvmLibcUtilsTest, IsPowerOfTwo) {
 }
 
 TEST(LlvmLibcUtilsTest, Log2) {
-  static const cpp::Array<size_t, 65> kExpectedValues{
+  static const cpp::array<size_t, 65> kExpectedValues{
       0, 0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, // 0-15
       4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, // 16-31
       5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, // 32-47
@@ -49,7 +49,7 @@ TEST(LlvmLibcUtilsTest, Log2) {
 }
 
 TEST(LlvmLibcUtilsTest, LEPowerOf2) {
-  static const cpp::Array<size_t, 65> kExpectedValues{
+  static const cpp::array<size_t, 65> kExpectedValues{
       0,  1,  2,  2,  4,  4,  4,  4,  8,  8,  8,  8,  8,  8,  8,  8,  // 0-15
       16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, // 16-31
       32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, // 32-47
@@ -61,7 +61,7 @@ TEST(LlvmLibcUtilsTest, LEPowerOf2) {
 }
 
 TEST(LlvmLibcUtilsTest, GEPowerOf2) {
-  static const cpp::Array<size_t, 66> kExpectedValues{
+  static const cpp::array<size_t, 66> kExpectedValues{
       0,  1,  2,  4,  4,  8,  8,  8,  8,  16, 16, 16, 16, 16, 16, 16, // 0-15
       16, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, 32, // 16-31
       32, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, 64, // 32-47
@@ -104,4 +104,71 @@ TEST(LlvmLibcUtilsTest, OffsetToNextCacheLine) {
   EXPECT_EQ(offset_to_next_cache_line(forge(LLVM_LIBC_CACHELINE_SIZE - 1)),
             I(1));
 }
+
+TEST(LlvmLibcUtilsTest, Adjust1) {
+  char a;
+  const size_t base_size = 10;
+  for (size_t I = -2; I < 2; ++I) {
+    auto *ptr = &a;
+    size_t size = base_size;
+    adjust(I, ptr, size);
+    EXPECT_EQ(intptr_t(ptr), intptr_t(&a + I));
+    EXPECT_EQ(size, base_size - I);
+  }
+}
+
+TEST(LlvmLibcUtilsTest, Adjust2) {
+  char a, b;
+  const size_t base_size = 10;
+  for (size_t I = -2; I < 2; ++I) {
+    auto *p1 = &a;
+    auto *p2 = &b;
+    size_t size = base_size;
+    adjust(I, p1, p2, size);
+    EXPECT_EQ(intptr_t(p1), intptr_t(&a + I));
+    EXPECT_EQ(intptr_t(p2), intptr_t(&b + I));
+    EXPECT_EQ(size, base_size - I);
+  }
+}
+
+TEST(LlvmLibcUtilsTest, Align1) {
+  char a;
+  const size_t base_size = 10;
+  {
+    auto *ptr = &a;
+    size_t size = base_size;
+    align<128>(ptr, size);
+    EXPECT_TRUE(uintptr_t(ptr) % 128 == 0);
+    EXPECT_GE(ptr, &a);
+    EXPECT_EQ(size_t(ptr - &a), base_size - size);
+  }
+}
+
+TEST(LlvmLibcUtilsTest, Align2) {
+  char a, b;
+  const size_t base_size = 10;
+  {
+    auto *p1 = &a;
+    auto *p2 = &b;
+    size_t size = base_size;
+    align<128, Arg::_1>(p1, p2, size);
+    EXPECT_TRUE(uintptr_t(p1) % 128 == 0);
+    EXPECT_GE(p1, &a);
+    EXPECT_GE(p2, &b);
+    EXPECT_EQ(size_t(p1 - &a), base_size - size);
+    EXPECT_EQ(size_t(p2 - &b), base_size - size);
+  }
+  {
+    auto *p1 = &a;
+    auto *p2 = &b;
+    size_t size = base_size;
+    align<128, Arg::_2>(p1, p2, size);
+    EXPECT_TRUE(uintptr_t(p2) % 128 == 0);
+    EXPECT_GE(p1, &a);
+    EXPECT_GE(p2, &b);
+    EXPECT_EQ(size_t(p1 - &a), base_size - size);
+    EXPECT_EQ(size_t(p2 - &b), base_size - size);
+  }
+}
+
 } // namespace __llvm_libc

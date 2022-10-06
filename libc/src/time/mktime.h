@@ -9,7 +9,6 @@
 #ifndef LLVM_LIBC_SRC_TIME_MKTIME_H
 #define LLVM_LIBC_SRC_TIME_MKTIME_H
 
-#include "src/time/mktime.h"
 #include <time.h>
 
 namespace __llvm_libc {

@@ -94,8 +94,8 @@ lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::GetChildAtIndex(
 
 bool lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
   // Get element type.
-  ValueObjectSP data_type_finder_sp(
-      m_backend.GetChildMemberWithName(ConstString("__data"), true));
+  ValueObjectSP data_type_finder_sp = GetChildMemberWithName(
+      m_backend, {ConstString("__data_"), ConstString("__data")});
   if (!data_type_finder_sp)
     return false;
 
@@ -111,8 +111,8 @@ bool lldb_private::formatters::LibcxxStdSpanSyntheticFrontEnd::Update() {
     }
 
     // Get number of elements.
-    if (auto size_sp =
-            m_backend.GetChildMemberWithName(ConstString("__size"), true)) {
+    if (auto size_sp = GetChildMemberWithName(
+            m_backend, {ConstString("__size_"), ConstString("__size")})) {
       m_num_elements = size_sp->GetValueAsUnsigned(0);
     } else if (auto arg =
                    m_backend.GetCompilerType().GetIntegralTemplateArgument(1)) {

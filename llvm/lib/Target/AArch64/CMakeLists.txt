@@ -62,6 +62,7 @@ add_llvm_target(AArch64CodeGen
   AArch64ISelDAGToDAG.cpp
   AArch64ISelLowering.cpp
   AArch64InstrInfo.cpp
+  AArch64KCFI.cpp
   AArch64LoadStoreOptimizer.cpp
   AArch64LowerHomogeneousPrologEpilog.cpp
   AArch64MachineFunctionInfo.cpp
@@ -82,6 +83,7 @@ add_llvm_target(AArch64CodeGen
   AArch64TargetMachine.cpp
   AArch64TargetObjectFile.cpp
   AArch64TargetTransformInfo.cpp
+  SMEABIPass.cpp
   SVEIntrinsicOpts.cpp
   AArch64SIMDInstrOpt.cpp
 

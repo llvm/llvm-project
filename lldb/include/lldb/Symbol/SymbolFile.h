@@ -9,6 +9,7 @@
 #ifndef LLDB_SYMBOL_SYMBOLFILE_H
 #define LLDB_SYMBOL_SYMBOLFILE_H
 
+#include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/SourceLocationSpec.h"
@@ -221,6 +222,50 @@ public:
   virtual uint32_t ResolveSymbolContext(const Address &so_addr,
                                         lldb::SymbolContextItem resolve_scope,
                                         SymbolContext &sc) = 0;
+
+  /// Get an error that describes why variables might be missing for a given
+  /// symbol context.
+  ///
+  /// If there is an error in the debug information that prevents variables from
+  /// being fetched, this error will get filled in. If there is no debug
+  /// informaiton, no error should be returned. But if there is debug
+  /// information and something prevents the variables from being available a
+  /// valid error should be returned. Valid cases include:
+  /// - compiler option that removes variables (-gline-tables-only)
+  /// - missing external files
+  ///   - .dwo files in fission are not accessible or missing
+  ///   - .o files on darwin when not using dSYM files that are not accessible
+  ///     or missing
+  /// - mismatched exteral files
+  ///   - .dwo files in fission where the DWO ID doesn't match
+  ///   - .o files on darwin when modification timestamp doesn't match
+  /// - corrupted debug info
+  ///
+  /// \param[in] frame
+  ///   The stack frame to use as a basis for the context to check. The frame
+  ///   address can be used if there is not debug info due to it not being able
+  ///   to be loaded, or if there is a debug info context, like a compile unit,
+  ///   or function, it can be used to track down more information on why
+  ///   variables are missing.
+  ///
+  /// \returns
+  ///   An error specifying why there should have been debug info with variable
+  ///   information but the variables were not able to be resolved.
+  Status GetFrameVariableError(StackFrame &frame) {
+    Status err = CalculateFrameVariableError(frame);
+    if (err.Fail())
+      SetDebugInfoHadFrameVariableErrors();
+    return err;
+  }
+
+  /// Subclasses will override this function to for GetFrameVariableError().
+  ///
+  /// This allows GetFrameVariableError() to set the member variable
+  /// m_debug_info_had_variable_errors correctly without users having to do it
+  /// manually which is error prone.
+  virtual Status CalculateFrameVariableError(StackFrame &frame) {
+    return Status();
+  }
   virtual uint32_t
   ResolveSymbolContext(const SourceLocationSpec &src_location_spec,
                        lldb::SymbolContextItem resolve_scope,
@@ -234,9 +279,8 @@ public:
   virtual void FindGlobalVariables(const RegularExpression &regex,
                                    uint32_t max_matches,
                                    VariableList &variables);
-  virtual void FindFunctions(ConstString name,
+  virtual void FindFunctions(const Module::LookupInfo &lookup_info,
                              const CompilerDeclContext &parent_decl_ctx,
-                             lldb::FunctionNameType name_type_mask,
                              bool include_inlines, SymbolContextList &sc_list);
   virtual void FindFunctions(const RegularExpression &regex,
                              bool include_inlines, SymbolContextList &sc_list);
@@ -361,6 +405,12 @@ public:
   virtual void SetDebugInfoIndexWasSavedToCache() = 0;
   /// \}
 
+  /// Accessors for the bool that indicates if there was debug info, but errors
+  /// stopped variables from being able to be displayed correctly. See
+  /// GetFrameVariableError() for details on what are considered errors.
+  virtual bool GetDebugInfoHadFrameVariableErrors() const = 0;
+  virtual void SetDebugInfoHadFrameVariableErrors() = 0;
+
 protected:
   void AssertModuleLock();
 
@@ -434,6 +484,12 @@ public:
   void SetDebugInfoIndexWasSavedToCache() override {
     m_index_was_saved_to_cache = true;
   }
+  bool GetDebugInfoHadFrameVariableErrors() const override {
+    return m_debug_info_had_variable_errors;
+  }
+  void SetDebugInfoHadFrameVariableErrors() override {
+     m_debug_info_had_variable_errors = true;
+  }
 
 protected:
   virtual uint32_t CalculateNumCompileUnits() = 0;
@@ -452,6 +508,10 @@ protected:
   bool m_calculated_abilities = false;
   bool m_index_was_loaded_from_cache = false;
   bool m_index_was_saved_to_cache = false;
+  /// Set to true if any variable feteching errors have been found when calling
+  /// GetFrameVariableError(). This will be emitted in the "statistics dump"
+  /// information for a module.
+  bool m_debug_info_had_variable_errors = false;
 
 private:
   SymbolFileCommon(const SymbolFileCommon &) = delete;

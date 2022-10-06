@@ -9,7 +9,6 @@
 #include "TraceCursorIntelPT.h"
 #include "DecodedThread.h"
 #include "TraceIntelPT.h"
-
 #include <cstdlib>
 
 using namespace lldb;
@@ -24,7 +23,7 @@ TraceCursorIntelPT::TraceCursorIntelPT(
     : TraceCursor(thread_sp), m_decoded_thread_sp(decoded_thread_sp),
       m_tsc_conversion(tsc_conversion),
       m_beginning_of_time_nanos(beginning_of_time_nanos) {
-  Seek(0, SeekType::End);
+  Seek(0, lldb::eTraceCursorSeekTypeEnd);
 }
 
 void TraceCursorIntelPT::Next() {
@@ -68,15 +67,16 @@ TraceCursorIntelPT::GetNanosecondsRange() const {
   return m_nanoseconds_range;
 }
 
-bool TraceCursorIntelPT::Seek(int64_t offset, SeekType origin) {
+bool TraceCursorIntelPT::Seek(int64_t offset,
+                              lldb::TraceCursorSeekType origin) {
   switch (origin) {
-  case TraceCursor::SeekType::Beginning:
+  case lldb::eTraceCursorSeekTypeBeginning:
     m_pos = offset;
     break;
-  case TraceCursor::SeekType::End:
+  case lldb::eTraceCursorSeekTypeEnd:
     m_pos = m_decoded_thread_sp->GetItemsCount() - 1 + offset;
     break;
-  case TraceCursor::SeekType::Current:
+  case lldb::eTraceCursorSeekTypeCurrent:
     m_pos += offset;
   }
 
@@ -116,7 +116,7 @@ Optional<double> TraceCursorIntelPT::GetWallClockTime() const {
   return None;
 }
 
-Optional<lldb::cpu_id_t> TraceCursorIntelPT::GetCPU() const {
+lldb::cpu_id_t TraceCursorIntelPT::GetCPU() const {
   return m_decoded_thread_sp->GetCPUByIndex(m_pos);
 }
 
@@ -137,3 +137,9 @@ bool TraceCursorIntelPT::HasId(lldb::user_id_t id) const {
 }
 
 user_id_t TraceCursorIntelPT::GetId() const { return m_pos; }
+
+Optional<std::string> TraceCursorIntelPT::GetSyncPointMetadata() const {
+  return formatv("offset = 0x{0:x}",
+                 m_decoded_thread_sp->GetSyncPointOffsetByIndex(m_pos))
+      .str();
+}

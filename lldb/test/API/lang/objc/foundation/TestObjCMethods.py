@@ -3,9 +3,6 @@ Set breakpoints on objective-c class and instance methods in foundation.
 Also lookup objective-c data types and evaluate expressions.
 """
 
-from __future__ import print_function
-
-
 import os
 import os.path
 import lldb
@@ -126,6 +123,8 @@ class FoundationTestCase(TestBase):
 # locations = 1")
 
         self.runCmd("run", RUN_SUCCEEDED)
+
+        self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
 
         # The backtrace should show we stop at -[MyString description].
         self.expect("thread backtrace", "Stop at -[MyString description]",

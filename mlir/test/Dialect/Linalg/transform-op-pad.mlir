@@ -33,7 +33,7 @@ func.func @static_sizes_output_divisible(%arg0: tensor<24x12xf32>,
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     %1 = transform.structured.pad %0 {padding_values=[0.0 : f32, 0.0 : f32, 0.0 : f32], padding_dimensions=[0, 1, 2], pack_paddings=[1, 1, 0]}
@@ -52,7 +52,7 @@ func.func @pad(%arg0: tensor<24x12xf32>,
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     // expected-error @below {{op expects a padding value of type 'f32', got 0 : i32}}
@@ -72,7 +72,7 @@ func.func @pad(%arg0: tensor<24x12xf32>,
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     // expected-error @below {{expects a padding that parses to 'f32', got "foo"}}
@@ -93,7 +93,7 @@ func.func @pad(%arg0: tensor<24x12xf32>,
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(suppress) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     // This error is silenceable and is not reported by this transform

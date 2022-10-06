@@ -2015,9 +2015,8 @@ define void @arm_biquad_cascade_df2T_f32(%struct.arm_biquad_cascade_df2T_instanc
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    ldrd r12, r6, [r0, #4]
-; CHECK-NEXT:    and r8, r3, #1
+; CHECK-NEXT:    lsr.w r8, r3, #1
 ; CHECK-NEXT:    ldrb r0, [r0]
-; CHECK-NEXT:    lsrs r3, r3, #1
 ; CHECK-NEXT:    vldr s0, .LCPI20_0
 ; CHECK-NEXT:    b .LBB20_3
 ; CHECK-NEXT:  .LBB20_1: @ %if.else
@@ -2046,7 +2045,7 @@ define void @arm_biquad_cascade_df2T_f32(%struct.arm_biquad_cascade_df2T_instanc
 ; CHECK-NEXT:    vmov.f32 s6, s0
 ; CHECK-NEXT:    mov r5, r2
 ; CHECK-NEXT:    vmov.f32 s7, s0
-; CHECK-NEXT:    wls lr, r3, .LBB20_6
+; CHECK-NEXT:    wls lr, r8, .LBB20_6
 ; CHECK-NEXT:  @ %bb.4: @ %while.body.preheader
 ; CHECK-NEXT:    @ in Loop: Header=BB20_3 Depth=1
 ; CHECK-NEXT:    vmov q6, q1
@@ -2073,7 +2072,7 @@ define void @arm_biquad_cascade_df2T_f32(%struct.arm_biquad_cascade_df2T_instanc
 ; CHECK-NEXT:    le lr, .LBB20_5
 ; CHECK-NEXT:  .LBB20_6: @ %while.end
 ; CHECK-NEXT:    @ in Loop: Header=BB20_3 Depth=1
-; CHECK-NEXT:    cmp.w r8, #0
+; CHECK-NEXT:    lsls r7, r3, #31
 ; CHECK-NEXT:    beq .LBB20_1
 ; CHECK-NEXT:  @ %bb.7: @ %if.then
 ; CHECK-NEXT:    @ in Loop: Header=BB20_3 Depth=1

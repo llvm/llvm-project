@@ -538,19 +538,16 @@ erase_if(multimap<Key, T, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__iterator/erase_if_container.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
+#include <__memory/allocator.h>
 #include <__node_handle>
 #include <__tree>
+#include <__type_traits/is_allocator.h>
 #include <__utility/forward.h>
+#include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
-#include <memory>
+#include <tuple>
 #include <type_traits>
 #include <version>
-
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
-#  include <functional>
-#  include <iterator>
-#  include <utility>
-#endif
 
 // standard-mandated includes
 
@@ -619,46 +616,46 @@ public:
 template <class _Key, class _CP, class _Compare>
 class __map_value_compare<_Key, _CP, _Compare, false>
 {
-    _Compare comp;
+    _Compare __comp_;
 
 public:
     _LIBCPP_INLINE_VISIBILITY
     __map_value_compare()
         _NOEXCEPT_(is_nothrow_default_constructible<_Compare>::value)
-        : comp() {}
+        : __comp_() {}
     _LIBCPP_INLINE_VISIBILITY
     __map_value_compare(_Compare __c)
         _NOEXCEPT_(is_nothrow_copy_constructible<_Compare>::value)
-        : comp(__c) {}
+        : __comp_(__c) {}
     _LIBCPP_INLINE_VISIBILITY
-    const _Compare& key_comp() const _NOEXCEPT {return comp;}
+    const _Compare& key_comp() const _NOEXCEPT {return __comp_;}
 
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _CP& __x, const _CP& __y) const
-        {return comp(__x.__get_value().first, __y.__get_value().first);}
+        {return __comp_(__x.__get_value().first, __y.__get_value().first);}
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _CP& __x, const _Key& __y) const
-        {return comp(__x.__get_value().first, __y);}
+        {return __comp_(__x.__get_value().first, __y);}
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _Key& __x, const _CP& __y) const
-        {return comp(__x, __y.__get_value().first);}
+        {return __comp_(__x, __y.__get_value().first);}
     void swap(__map_value_compare& __y)
         _NOEXCEPT_(__is_nothrow_swappable<_Compare>::value)
     {
         using _VSTD::swap;
-        swap(comp, __y.comp);
+        swap(__comp_, __y.__comp_);
     }
 
 #if _LIBCPP_STD_VER > 11
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _K2& __x, const _CP& __y) const
-        {return comp(__x, __y.__get_value().first);}
+        {return __comp_(__x, __y.__get_value().first);}
 
     template <typename _K2>
     _LIBCPP_INLINE_VISIBILITY
     bool operator()(const _CP& __x, const _K2& __y) const
-        {return comp(__x.__get_value().first, __y);}
+        {return __comp_(__x.__get_value().first, __y);}
 #endif
 };
 
@@ -738,16 +735,16 @@ struct _LIBCPP_STANDALONE_DEBUG __value_type
     typedef pair<key_type&&, mapped_type&&>          __nc_rref_pair_type;
 
 private:
-    value_type __cc;
+    value_type __cc_;
 
 public:
     _LIBCPP_INLINE_VISIBILITY
     value_type& __get_value()
     {
 #if _LIBCPP_STD_VER > 14
-        return *_VSTD::launder(_VSTD::addressof(__cc));
+        return *_VSTD::launder(_VSTD::addressof(__cc_));
 #else
-        return __cc;
+        return __cc_;
 #endif
     }
 
@@ -755,9 +752,9 @@ public:
     const value_type& __get_value() const
     {
 #if _LIBCPP_STD_VER > 14
-        return *_VSTD::launder(_VSTD::addressof(__cc));
+        return *_VSTD::launder(_VSTD::addressof(__cc_));
 #else
-        return __cc;
+        return __cc_;
 #endif
     }
 
@@ -818,13 +815,13 @@ struct __value_type
     typedef pair<const key_type, mapped_type>        value_type;
 
 private:
-    value_type __cc;
+    value_type __cc_;
 
 public:
     _LIBCPP_INLINE_VISIBILITY
-    value_type& __get_value() { return __cc; }
+    value_type& __get_value() { return __cc_; }
     _LIBCPP_INLINE_VISIBILITY
-    const value_type& __get_value() const { return __cc; }
+    const value_type& __get_value() const { return __cc_; }
 
 private:
    __value_type();
@@ -2334,5 +2331,11 @@ inline _LIBCPP_INLINE_VISIBILITY
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <functional>
+#  include <iterator>
+#  include <utility>
+#endif
 
 #endif // _LIBCPP_MAP

@@ -2,9 +2,6 @@
 Test that expr will time out and allow other threads to run if it blocks.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

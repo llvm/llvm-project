@@ -25,8 +25,7 @@ class ProcessGDBRemote;
 
 class GDBRemoteCommunicationServerCommon : public GDBRemoteCommunicationServer {
 public:
-  GDBRemoteCommunicationServerCommon(const char *comm_name,
-                                     const char *listener_name);
+  GDBRemoteCommunicationServerCommon();
 
   ~GDBRemoteCommunicationServerCommon() override;
 

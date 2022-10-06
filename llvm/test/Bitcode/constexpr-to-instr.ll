@@ -1,4 +1,4 @@
-; RUN: llvm-as < %s | llvm-dis -expand-constant-exprs | FileCheck %s
+; RUN: llvm-dis -expand-constant-exprs < %s.bc | FileCheck %s
 
 @g = extern_weak global i32
 @g2 = extern_weak global i32
@@ -68,6 +68,24 @@ define <3 x i64> @test_vector() {
 ; CHECK-NEXT: %constexpr.ins1 = insertelement <3 x i64> %constexpr.ins, i64 %constexpr, i32 1
 ; CHECK-NEXT: %constexpr.ins2 = insertelement <3 x i64> %constexpr.ins1, i64 7, i32 2
   ret <3 x i64> <i64 5, i64 ptrtoint (ptr @g to i64), i64 7>
+}
+
+define [3 x i64] @test_array() {
+; CHECK-LABEL: define [3 x i64] @test_array() {
+; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
+; CHECK-NEXT: %constexpr.ins = insertvalue [3 x i64] poison, i64 5, 0
+; CHECK-NEXT: %constexpr.ins1 = insertvalue [3 x i64] %constexpr.ins, i64 %constexpr, 1
+; CHECK-NEXT: %constexpr.ins2 = insertvalue [3 x i64] %constexpr.ins1, i64 7, 2
+  ret [3 x i64] [i64 5, i64 ptrtoint (ptr @g to i64), i64 7]
+}
+
+define { i64, i64, i64 } @test_struct() {
+; CHECK-LABEL: define { i64, i64, i64 } @test_struct() {
+; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
+; CHECK-NEXT: %constexpr.ins = insertvalue { i64, i64, i64 } poison, i64 5, 0
+; CHECK-NEXT: %constexpr.ins1 = insertvalue { i64, i64, i64 } %constexpr.ins, i64 %constexpr, 1
+; CHECK-NEXT: %constexpr.ins2 = insertvalue { i64, i64, i64 } %constexpr.ins1, i64 7, 2
+  ret { i64, i64, i64 } {i64 5, i64 ptrtoint (ptr @g to i64), i64 7}
 }
 
 define i64 @test_reused_expr() {

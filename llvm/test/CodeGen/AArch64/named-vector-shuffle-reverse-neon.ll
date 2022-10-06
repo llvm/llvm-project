@@ -30,6 +30,24 @@ define <8 x i16> @reverse_v8i16(<8 x i16> %a) #0 {
   ret <8 x i16> %res
 }
 
+define <2 x i16> @reverse_v2i16(<2 x i16> %a) #0 {
+; CHECK-LABEL: reverse_v2i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-NEXT:    ret
+  %res = call <2 x i16> @llvm.experimental.vector.reverse.v2i16(<2 x i16> %a)
+  ret <2 x i16> %res
+}
+
+define <2 x i32> @reverse_v2i32(<2 x i32> %a) #0 {
+; CHECK-LABEL: reverse_v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-NEXT:    ret
+  %res = call <2 x i32> @llvm.experimental.vector.reverse.v2i32(<2 x i32> %a)
+  ret <2 x i32> %res
+}
+
 define <4 x i32> @reverse_v4i32(<4 x i32> %a) #0 {
 ; CHECK-LABEL: reverse_v4i32:
 ; CHECK:       // %bb.0:
@@ -60,6 +78,15 @@ define <8 x half> @reverse_v8f16(<8 x half> %a) #0 {
 
   %res = call <8 x half> @llvm.experimental.vector.reverse.v8f16(<8 x half> %a)
   ret <8 x half> %res
+}
+
+define <2 x float> @reverse_v2f32(<2 x float> %a) #0 {
+; CHECK-LABEL: reverse_v2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-NEXT:    ret
+  %res = call <2 x float> @llvm.experimental.vector.reverse.v2f32(<2 x float> %a)
+  ret <2 x float> %res
 }
 
 define <4 x float> @reverse_v4f32(<4 x float> %a) #0 {
@@ -163,10 +190,13 @@ define <16 x float> @reverse_v16f32(<16 x float> %a) #0 {
 declare <2 x i8> @llvm.experimental.vector.reverse.v2i8(<2 x i8>)
 declare <16 x i8> @llvm.experimental.vector.reverse.v16i8(<16 x i8>)
 declare <8 x i16> @llvm.experimental.vector.reverse.v8i16(<8 x i16>)
+declare <2 x i16> @llvm.experimental.vector.reverse.v2i16(<2 x i16>)
+declare <2 x i32> @llvm.experimental.vector.reverse.v2i32(<2 x i32>)
 declare <4 x i32> @llvm.experimental.vector.reverse.v4i32(<4 x i32>)
 declare <8 x i32> @llvm.experimental.vector.reverse.v8i32(<8 x i32>)
 declare <2 x i64> @llvm.experimental.vector.reverse.v2i64(<2 x i64>)
 declare <8 x half> @llvm.experimental.vector.reverse.v8f16(<8 x half>)
+declare <2 x float> @llvm.experimental.vector.reverse.v2f32(<2 x float>)
 declare <4 x float> @llvm.experimental.vector.reverse.v4f32(<4 x float>)
 declare <16 x float> @llvm.experimental.vector.reverse.v16f32(<16 x float>)
 declare <2 x double> @llvm.experimental.vector.reverse.v2f64(<2 x double>)

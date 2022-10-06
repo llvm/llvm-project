@@ -13,7 +13,6 @@ subroutine omp_do_firstprivate(a)
   ! CHECK-NEXT: %[[CLONE:.*]] = fir.alloca i32 {bindc_name = "a", pinned
   ! CHECK-NEXT: %[[LD:.*]] = fir.load %[[ARG0]] : !fir.ref<i32>
   ! CHECK-NEXT: fir.store %[[LD]] to %[[CLONE]] : !fir.ref<i32>
-  ! CHECK-NEXT: omp.barrier
   ! CHECK-NEXT: %[[REF:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
   ! CHECK: %[[LB:.*]] = arith.constant 1 : i32
   ! CHECK-NEXT: %[[UB:.*]] = fir.load %[[CLONE]] : !fir.ref<i32>
@@ -43,7 +42,6 @@ subroutine omp_do_firstprivate2(a, n)
   ! CHECK-NEXT: %[[CLONE1:.*]] = fir.alloca i32 {bindc_name = "n", pinned
   ! CHECK-NEXT: %[[LD1:.*]] = fir.load %[[ARG1]] : !fir.ref<i32>
   ! CHECK-NEXT: fir.store %[[LD1]] to %[[CLONE1]] : !fir.ref<i32>
-  ! CHECK-NEXT: omp.barrier
   ! CHECK-NEXT: %[[REF:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 
 

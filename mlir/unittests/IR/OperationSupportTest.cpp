@@ -281,10 +281,9 @@ TEST(OperandStorageTest, PopulateDefaultAttrs) {
   OpBuilder b(&context);
   auto req1 = b.getI32IntegerAttr(10);
   auto req2 = b.getI32IntegerAttr(60);
+  // Verify default attributes populated post op creation.
   Operation *op = b.create<test::OpAttrMatch1>(b.getUnknownLoc(), req1, nullptr,
                                                nullptr, req2);
-  EXPECT_EQ(op->getAttr("default_valued_attr"), nullptr);
-  op->populateDefaultAttrs();
   auto opt = op->getAttr("default_valued_attr");
   EXPECT_NE(opt, nullptr) << *op;
 

@@ -234,11 +234,11 @@ void RetpolineThunkInserter::populateThunk(MachineFunction &MF) {
   BuildMI(CaptureSpec, DebugLoc(), TII->get(X86::PAUSE));
   BuildMI(CaptureSpec, DebugLoc(), TII->get(X86::LFENCE));
   BuildMI(CaptureSpec, DebugLoc(), TII->get(X86::JMP_1)).addMBB(CaptureSpec);
-  CaptureSpec->setHasAddressTaken();
+  CaptureSpec->setMachineBlockAddressTaken();
   CaptureSpec->addSuccessor(CaptureSpec);
 
   CallTarget->addLiveIn(ThunkReg);
-  CallTarget->setHasAddressTaken();
+  CallTarget->setMachineBlockAddressTaken();
   CallTarget->setAlignment(Align(16));
 
   // Insert return address clobber

@@ -189,7 +189,7 @@ canonicalizeMinMaxOp(RewriterBase &rewriter, Operation *op, AffineMap map,
     // Skip unused operands and operands that are already constants.
     if (!newOperands[i] || getConstantIntValue(newOperands[i]))
       continue;
-    if (auto bound = constraints.getConstantBound(IntegerPolyhedron::EQ, i))
+    if (auto bound = constraints.getConstantBound64(IntegerPolyhedron::EQ, i))
       newOperands[i] =
           rewriter.create<arith::ConstantIndexOp>(op->getLoc(), *bound);
   }
@@ -211,24 +211,24 @@ addLoopRangeConstraints(FlatAffineValueConstraints &constraints, Value iv,
 
   unsigned dimIv = constraints.appendDimVar(iv);
   auto lbv = lb.dyn_cast<Value>();
-  unsigned dimLb =
-      lbv ? constraints.appendDimVar(lbv) : constraints.appendDimVar(/*num=*/1);
+  unsigned symLb = lbv ? constraints.appendSymbolVar(lbv)
+                       : constraints.appendSymbolVar(/*num=*/1);
   auto ubv = ub.dyn_cast<Value>();
-  unsigned dimUb =
-      ubv ? constraints.appendDimVar(ubv) : constraints.appendDimVar(/*num=*/1);
+  unsigned symUb = ubv ? constraints.appendSymbolVar(ubv)
+                       : constraints.appendSymbolVar(/*num=*/1);
 
   // If loop lower/upper bounds are constant: Add EQ constraint.
   Optional<int64_t> lbInt = getConstantIntValue(lb);
   Optional<int64_t> ubInt = getConstantIntValue(ub);
   if (lbInt)
-    constraints.addBound(IntegerPolyhedron::EQ, dimLb, *lbInt);
+    constraints.addBound(IntegerPolyhedron::EQ, symLb, *lbInt);
   if (ubInt)
-    constraints.addBound(IntegerPolyhedron::EQ, dimUb, *ubInt);
+    constraints.addBound(IntegerPolyhedron::EQ, symUb, *ubInt);
 
   // Lower bound: iv >= lb (equiv.: iv - lb >= 0)
   SmallVector<int64_t> ineqLb(constraints.getNumCols(), 0);
   ineqLb[dimIv] = 1;
-  ineqLb[dimLb] = -1;
+  ineqLb[symLb] = -1;
   constraints.addInequality(ineqLb);
 
   // Upper bound
@@ -238,14 +238,19 @@ addLoopRangeConstraints(FlatAffineValueConstraints &constraints, Value iv,
     // iv < lb + 1
     // TODO: Try to derive this constraint by simplifying the expression in
     // the else-branch.
-    ivUb = rewriter.getAffineDimExpr(dimLb) + 1;
+    ivUb =
+        rewriter.getAffineSymbolExpr(symLb - constraints.getNumDimVars()) + 1;
   } else {
     // The loop may have more than one iteration.
     // iv < lb + step * ((ub - lb - 1) floorDiv step) + 1
-    AffineExpr exprLb = lbInt ? rewriter.getAffineConstantExpr(*lbInt)
-                              : rewriter.getAffineDimExpr(dimLb);
-    AffineExpr exprUb = ubInt ? rewriter.getAffineConstantExpr(*ubInt)
-                              : rewriter.getAffineDimExpr(dimUb);
+    AffineExpr exprLb =
+        lbInt
+            ? rewriter.getAffineConstantExpr(*lbInt)
+            : rewriter.getAffineSymbolExpr(symLb - constraints.getNumDimVars());
+    AffineExpr exprUb =
+        ubInt
+            ? rewriter.getAffineConstantExpr(*ubInt)
+            : rewriter.getAffineSymbolExpr(symUb - constraints.getNumDimVars());
     ivUb = exprLb + 1 + (*stepInt * ((exprUb - exprLb - 1).floorDiv(*stepInt)));
   }
   auto map = AffineMap::get(

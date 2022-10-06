@@ -54,8 +54,9 @@ int64_t lld::args::getHex(opt::InputArgList &args, unsigned key,
   return ::getInteger(args, key, Default, 16);
 }
 
-std::vector<StringRef> lld::args::getStrings(opt::InputArgList &args, int id) {
-  std::vector<StringRef> v;
+SmallVector<StringRef, 0> lld::args::getStrings(opt::InputArgList &args,
+                                                int id) {
+  SmallVector<StringRef, 0> v;
   for (auto *arg : args.filtered(id))
     v.push_back(arg->getValue());
   return v;

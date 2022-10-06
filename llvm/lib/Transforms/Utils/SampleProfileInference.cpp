@@ -148,7 +148,7 @@ public:
   /// Returns a list of pairs (target node, amount of flow to the target).
   const std::vector<std::pair<uint64_t, int64_t>> getFlow(uint64_t Src) const {
     std::vector<std::pair<uint64_t, int64_t>> Flow;
-    for (auto &Edge : Edges[Src]) {
+    for (const auto &Edge : Edges[Src]) {
       if (Edge.Flow > 0)
         Flow.push_back(std::make_pair(Edge.Dst, Edge.Flow));
     }
@@ -158,7 +158,7 @@ public:
   /// Get the total flow between a pair of nodes.
   int64_t getFlow(uint64_t Src, uint64_t Dst) const {
     int64_t Flow = 0;
-    for (auto &Edge : Edges[Src]) {
+    for (const auto &Edge : Edges[Src]) {
       if (Edge.Dst == Dst) {
         Flow += Edge.Flow;
       }
@@ -568,9 +568,6 @@ private:
   std::vector<std::vector<Edge *>> AugmentingEdges;
 };
 
-constexpr int64_t MinCostMaxFlow::AuxCostUnlikely;
-constexpr uint64_t MinCostMaxFlow::MinBaseDistance;
-
 /// A post-processing adjustment of control flow. It applies two steps by
 /// rerouting some flow and making it more realistic:
 ///
@@ -640,7 +637,7 @@ private:
     while (!Queue.empty()) {
       Src = Queue.front();
       Queue.pop();
-      for (auto Jump : Func.Blocks[Src].SuccJumps) {
+      for (auto *Jump : Func.Blocks[Src].SuccJumps) {
         uint64_t Dst = Jump->Target;
         if (Jump->Flow > 0 && !Visited[Dst]) {
           Queue.push(Dst);
@@ -691,7 +688,7 @@ private:
           (Func.Blocks[Src].isExit() && Target == AnyExitBlock))
         break;
 
-      for (auto Jump : Func.Blocks[Src].SuccJumps) {
+      for (auto *Jump : Func.Blocks[Src].SuccJumps) {
         uint64_t Dst = Jump->Target;
         int64_t JumpDist = jumpDistance(Jump);
         if (Distance[Dst] > Distance[Src] + JumpDist) {
@@ -740,7 +737,7 @@ private:
   /// parts to a multiple of 1 / BaseDistance.
   int64_t jumpDistance(FlowJump *Jump) const {
     uint64_t BaseDistance =
-        std::max(static_cast<uint64_t>(MinCostMaxFlow::MinBaseDistance),
+        std::max(MinCostMaxFlow::MinBaseDistance,
                  std::min(Func.Blocks[Func.Entry].Flow,
                           MinCostMaxFlow::AuxCostUnlikely / NumBlocks()));
     if (Jump->IsUnlikely)
@@ -758,31 +755,30 @@ private:
   /// blocks. Then it verifies if flow rebalancing is feasible and applies it.
   void rebalanceUnknownSubgraphs() {
     // Try to find unknown subgraphs from each block
-    for (uint64_t I = 0; I < Func.Blocks.size(); I++) {
-      auto SrcBlock = &Func.Blocks[I];
+    for (const FlowBlock &SrcBlock : Func.Blocks) {
       // Verify if rebalancing rooted at SrcBlock is feasible
-      if (!canRebalanceAtRoot(SrcBlock))
+      if (!canRebalanceAtRoot(&SrcBlock))
         continue;
 
       // Find an unknown subgraphs starting at SrcBlock. Along the way,
       // fill in known destinations and intermediate unknown blocks.
       std::vector<FlowBlock *> UnknownBlocks;
       std::vector<FlowBlock *> KnownDstBlocks;
-      findUnknownSubgraph(SrcBlock, KnownDstBlocks, UnknownBlocks);
+      findUnknownSubgraph(&SrcBlock, KnownDstBlocks, UnknownBlocks);
 
       // Verify if rebalancing of the subgraph is feasible. If the search is
       // successful, find the unique destination block (which can be null)
       FlowBlock *DstBlock = nullptr;
-      if (!canRebalanceSubgraph(SrcBlock, KnownDstBlocks, UnknownBlocks,
+      if (!canRebalanceSubgraph(&SrcBlock, KnownDstBlocks, UnknownBlocks,
                                 DstBlock))
         continue;
 
       // We cannot rebalance subgraphs containing cycles among unknown blocks
-      if (!isAcyclicSubgraph(SrcBlock, DstBlock, UnknownBlocks))
+      if (!isAcyclicSubgraph(&SrcBlock, DstBlock, UnknownBlocks))
         continue;
 
       // Rebalance the flow
-      rebalanceUnknownSubgraph(SrcBlock, DstBlock, UnknownBlocks);
+      rebalanceUnknownSubgraph(&SrcBlock, DstBlock, UnknownBlocks);
     }
   }
 
@@ -795,7 +791,7 @@ private:
 
     // Do not attempt to process subgraphs from a block w/o unknown sucessors
     bool HasUnknownSuccs = false;
-    for (auto Jump : SrcBlock->SuccJumps) {
+    for (auto *Jump : SrcBlock->SuccJumps) {
       if (Func.Blocks[Jump->Target].UnknownWeight) {
         HasUnknownSuccs = true;
         break;
@@ -823,7 +819,7 @@ private:
       auto &Block = Func.Blocks[Queue.front()];
       Queue.pop();
       // Process blocks reachable from Block
-      for (auto Jump : Block.SuccJumps) {
+      for (auto *Jump : Block.SuccJumps) {
         // If Jump can be ignored, skip it
         if (ignoreJump(SrcBlock, nullptr, Jump))
           continue;
@@ -860,7 +856,7 @@ private:
     DstBlock = KnownDstBlocks.empty() ? nullptr : KnownDstBlocks.front();
 
     // Verify sinks of the subgraph
-    for (auto Block : UnknownBlocks) {
+    for (auto *Block : UnknownBlocks) {
       if (Block->SuccJumps.empty()) {
         // If there are multiple (known and unknown) sinks, we can't rebalance
         if (DstBlock != nullptr)
@@ -868,7 +864,7 @@ private:
         continue;
       }
       size_t NumIgnoredJumps = 0;
-      for (auto Jump : Block->SuccJumps) {
+      for (auto *Jump : Block->SuccJumps) {
         if (ignoreJump(SrcBlock, DstBlock, Jump))
           NumIgnoredJumps++;
       }
@@ -914,14 +910,14 @@ private:
     // Extract local in-degrees in the considered subgraph
     auto LocalInDegree = std::vector<uint64_t>(NumBlocks(), 0);
     auto fillInDegree = [&](const FlowBlock *Block) {
-      for (auto Jump : Block->SuccJumps) {
+      for (auto *Jump : Block->SuccJumps) {
         if (ignoreJump(SrcBlock, DstBlock, Jump))
           continue;
         LocalInDegree[Jump->Target]++;
       }
     };
     fillInDegree(SrcBlock);
-    for (auto Block : UnknownBlocks) {
+    for (auto *Block : UnknownBlocks) {
       fillInDegree(Block);
     }
     // A loop containing SrcBlock
@@ -943,7 +939,7 @@ private:
         AcyclicOrder.push_back(Block);
 
       // Add to the queue all successors with zero local in-degree
-      for (auto Jump : Block->SuccJumps) {
+      for (auto *Jump : Block->SuccJumps) {
         if (ignoreJump(SrcBlock, DstBlock, Jump))
           continue;
         uint64_t Dst = Jump->Target;
@@ -972,7 +968,7 @@ private:
     // Ditribute flow from the source block
     uint64_t BlockFlow = 0;
     // SrcBlock's flow is the sum of outgoing flows along non-ignored jumps
-    for (auto Jump : SrcBlock->SuccJumps) {
+    for (auto *Jump : SrcBlock->SuccJumps) {
       if (ignoreJump(SrcBlock, DstBlock, Jump))
         continue;
       BlockFlow += Jump->Flow;
@@ -980,11 +976,11 @@ private:
     rebalanceBlock(SrcBlock, DstBlock, SrcBlock, BlockFlow);
 
     // Ditribute flow from the remaining blocks
-    for (auto Block : UnknownBlocks) {
+    for (auto *Block : UnknownBlocks) {
       assert(Block->UnknownWeight && "incorrect unknown subgraph");
       uint64_t BlockFlow = 0;
       // Block's flow is the sum of incoming flows
-      for (auto Jump : Block->PredJumps) {
+      for (auto *Jump : Block->PredJumps) {
         BlockFlow += Jump->Flow;
       }
       Block->Flow = BlockFlow;
@@ -998,7 +994,7 @@ private:
                       const FlowBlock *Block, uint64_t BlockFlow) {
     // Process all successor jumps and update corresponding flow values
     size_t BlockDegree = 0;
-    for (auto Jump : Block->SuccJumps) {
+    for (auto *Jump : Block->SuccJumps) {
       if (ignoreJump(SrcBlock, DstBlock, Jump))
         continue;
       BlockDegree++;
@@ -1011,7 +1007,7 @@ private:
     // Each of the Block's successors gets the following amount of flow.
     // Rounding the value up so that all flow is propagated
     uint64_t SuccFlow = (BlockFlow + BlockDegree - 1) / BlockDegree;
-    for (auto Jump : Block->SuccJumps) {
+    for (auto *Jump : Block->SuccJumps) {
       if (ignoreJump(SrcBlock, DstBlock, Jump))
         continue;
       uint64_t Flow = std::min(SuccFlow, BlockFlow);
@@ -1137,7 +1133,7 @@ void extractWeights(MinCostMaxFlow &Network, FlowFunction &Func) {
     auto &Block = Func.Blocks[Src];
     uint64_t SrcOut = 3 * Src + 1;
     int64_t Flow = 0;
-    for (auto &Adj : Network.getFlow(SrcOut)) {
+    for (const auto &Adj : Network.getFlow(SrcOut)) {
       uint64_t DstIn = Adj.first;
       int64_t DstFlow = Adj.second;
       bool IsAuxNode = (DstIn < 3 * NumBlocks && DstIn % 3 == 2);
@@ -1176,7 +1172,7 @@ void verifyWeights(const FlowFunction &Func) {
   const uint64_t NumBlocks = Func.Blocks.size();
   auto InFlow = std::vector<uint64_t>(NumBlocks, 0);
   auto OutFlow = std::vector<uint64_t>(NumBlocks, 0);
-  for (auto &Jump : Func.Jumps) {
+  for (const auto &Jump : Func.Jumps) {
     InFlow[Jump.Target] += Jump.Flow;
     OutFlow[Jump.Source] += Jump.Flow;
   }
@@ -1202,7 +1198,7 @@ void verifyWeights(const FlowFunction &Func) {
   // One could modify FlowFunction to hold edges indexed by the sources, which
   // will avoid a creation of the object
   auto PositiveFlowEdges = std::vector<std::vector<uint64_t>>(NumBlocks);
-  for (auto &Jump : Func.Jumps) {
+  for (const auto &Jump : Func.Jumps) {
     if (Jump.Flow > 0) {
       PositiveFlowEdges[Jump.Source].push_back(Jump.Target);
     }

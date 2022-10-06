@@ -24,7 +24,6 @@ static cl::OptionCategory ProfGenCategory("ProfGen Options");
 
 static cl::opt<std::string> PerfScriptFilename(
     "perfscript", cl::value_desc("perfscript"),
-    llvm::cl::MiscFlags::CommaSeparated,
     cl::desc("Path of perf-script trace created by Linux perf tool with "
              "`script` command(the raw perf.data should be profiled with -b)"),
     cl::cat(ProfGenCategory));
@@ -32,7 +31,7 @@ static cl::alias PSA("ps", cl::desc("Alias for --perfscript"),
                      cl::aliasopt(PerfScriptFilename));
 
 static cl::opt<std::string> PerfDataFilename(
-    "perfdata", cl::value_desc("perfdata"), llvm::cl::MiscFlags::CommaSeparated,
+    "perfdata", cl::value_desc("perfdata"),
     cl::desc("Path of raw perf data created by Linux perf tool (it should be "
              "profiled with -b)"),
     cl::cat(ProfGenCategory));
@@ -41,7 +40,6 @@ static cl::alias PDA("pd", cl::desc("Alias for --perfdata"),
 
 static cl::opt<std::string> UnsymbolizedProfFilename(
     "unsymbolized-profile", cl::value_desc("unsymbolized profile"),
-    llvm::cl::MiscFlags::CommaSeparated,
     cl::desc("Path of the unsymbolized profile created by "
              "`llvm-profgen` with `--skip-symbolization`"),
     cl::cat(ProfGenCategory));
@@ -80,11 +78,11 @@ static void validateCommandLine() {
   // Allow the missing perfscript if we only use to show binary disassembly.
   if (!ShowDisassemblyOnly) {
     // Validate input profile is provided only once
-    uint16_t HasPerfData = PerfDataFilename.getNumOccurrences();
-    uint16_t HasPerfScript = PerfScriptFilename.getNumOccurrences();
-    uint16_t HasUnsymbolizedProfile =
-        UnsymbolizedProfFilename.getNumOccurrences();
-    uint16_t HasSampleProfile = SampleProfFilename.getNumOccurrences();
+    bool HasPerfData = PerfDataFilename.getNumOccurrences() > 0;
+    bool HasPerfScript = PerfScriptFilename.getNumOccurrences() > 0;
+    bool HasUnsymbolizedProfile =
+        UnsymbolizedProfFilename.getNumOccurrences() > 0;
+    bool HasSampleProfile = SampleProfFilename.getNumOccurrences() > 0;
     uint16_t S =
         HasPerfData + HasPerfScript + HasUnsymbolizedProfile + HasSampleProfile;
     if (S != 1) {

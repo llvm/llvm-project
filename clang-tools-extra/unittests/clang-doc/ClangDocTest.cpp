@@ -34,7 +34,12 @@ EnumInfo *InfoAsEnum(Info *I) {
   return static_cast<EnumInfo *>(I);
 }
 
-void CheckCommentInfo(CommentInfo &Expected, CommentInfo &Actual) {
+void CheckCommentInfo(const std::vector<CommentInfo> &Expected,
+                      const std::vector<CommentInfo> &Actual);
+void CheckCommentInfo(const std::vector<std::unique_ptr<CommentInfo>> &Expected,
+                      const std::vector<std::unique_ptr<CommentInfo>> &Actual);
+
+void CheckCommentInfo(const CommentInfo &Expected, const CommentInfo &Actual) {
   EXPECT_EQ(Expected.Kind, Actual.Kind);
   EXPECT_EQ(Expected.Text, Actual.Text);
   EXPECT_EQ(Expected.Name, Actual.Name);
@@ -56,9 +61,21 @@ void CheckCommentInfo(CommentInfo &Expected, CommentInfo &Actual) {
   for (size_t Idx = 0; Idx < Actual.Args.size(); ++Idx)
     EXPECT_EQ(Expected.Args[Idx], Actual.Args[Idx]);
 
-  ASSERT_EQ(Expected.Children.size(), Actual.Children.size());
-  for (size_t Idx = 0; Idx < Actual.Children.size(); ++Idx)
-    CheckCommentInfo(*Expected.Children[Idx], *Actual.Children[Idx]);
+  CheckCommentInfo(Expected.Children, Actual.Children);
+}
+
+void CheckCommentInfo(const std::vector<CommentInfo> &Expected,
+                      const std::vector<CommentInfo> &Actual) {
+  ASSERT_EQ(Expected.size(), Actual.size());
+  for (size_t Idx = 0; Idx < Actual.size(); ++Idx)
+    CheckCommentInfo(Expected[Idx], Actual[Idx]);
+}
+
+void CheckCommentInfo(const std::vector<std::unique_ptr<CommentInfo>> &Expected,
+                      const std::vector<std::unique_ptr<CommentInfo>> &Actual) {
+  ASSERT_EQ(Expected.size(), Actual.size());
+  for (size_t Idx = 0; Idx < Actual.size(); ++Idx)
+    CheckCommentInfo(*Expected[Idx], *Actual[Idx]);
 }
 
 void CheckReference(Reference &Expected, Reference &Actual) {
@@ -79,6 +96,7 @@ void CheckFieldTypeInfo(FieldTypeInfo *Expected, FieldTypeInfo *Actual) {
 void CheckMemberTypeInfo(MemberTypeInfo *Expected, MemberTypeInfo *Actual) {
   CheckFieldTypeInfo(Expected, Actual);
   EXPECT_EQ(Expected->Access, Actual->Access);
+  CheckCommentInfo(Expected->Description, Actual->Description);
 }
 
 void CheckBaseInfo(Info *Expected, Info *Actual) {
@@ -88,9 +106,7 @@ void CheckBaseInfo(Info *Expected, Info *Actual) {
   ASSERT_EQ(Expected->Namespace.size(), Actual->Namespace.size());
   for (size_t Idx = 0; Idx < Actual->Namespace.size(); ++Idx)
     CheckReference(Expected->Namespace[Idx], Actual->Namespace[Idx]);
-  ASSERT_EQ(Expected->Description.size(), Actual->Description.size());
-  for (size_t Idx = 0; Idx < Actual->Description.size(); ++Idx)
-    CheckCommentInfo(Expected->Description[Idx], Actual->Description[Idx]);
+  CheckCommentInfo(Expected->Description, Actual->Description);
 }
 
 void CheckSymbolInfo(SymbolInfo *Expected, SymbolInfo *Actual) {

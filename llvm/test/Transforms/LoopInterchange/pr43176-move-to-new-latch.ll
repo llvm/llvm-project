@@ -13,14 +13,12 @@ define void @test1() {
 ; CHECK-NEXT:    [[INC41:%.*]] = phi i32 [ [[INC4:%.*]], [[FOR_INC3:%.*]] ], [ undef, [[FOR_BODY_PREHEADER:%.*]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INC41]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [5 x i32], [5 x i32]* @b, i64 0, i64 [[IDXPROM]]
-; CHECK-NEXT:    br label [[FOR_BODY2_SPLIT:%.*]]
+; CHECK-NEXT:    br label [[FOR_INC:%.*]]
 ; CHECK:       for.body2.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY2:%.*]]
 ; CHECK:       for.body2:
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[TMP1:%.*]], [[FOR_INC_SPLIT:%.*]] ], [ 1, [[FOR_BODY2_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY_PREHEADER]]
-; CHECK:       for.body2.split:
-; CHECK-NEXT:    br label [[FOR_INC:%.*]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    store i32 undef, i32* [[ARRAYIDX]], align 4
@@ -80,14 +78,12 @@ define void @test2() {
 ; CHECK-NEXT:    [[INC41:%.*]] = phi i32 [ [[INC4:%.*]], [[FOR_INC3:%.*]] ], [ undef, [[FOR_BODY_PREHEADER:%.*]] ]
 ; CHECK-NEXT:    [[IDXPROM:%.*]] = sext i32 [[INC41]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [5 x i32], [5 x i32]* @b, i64 0, i64 [[IDXPROM]]
-; CHECK-NEXT:    br label [[FOR_BODY2_SPLIT:%.*]]
+; CHECK-NEXT:    br label [[FOR_INC:%.*]]
 ; CHECK:       for.body2.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY2:%.*]]
 ; CHECK:       for.body2:
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[TMP1:%.*]], [[FOR_INC_SPLIT:%.*]] ], [ 1, [[FOR_BODY2_PREHEADER]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY_PREHEADER]]
-; CHECK:       for.body2.split:
-; CHECK-NEXT:    br label [[FOR_INC:%.*]]
 ; CHECK:       for.inc:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[LSR_IV]], 4

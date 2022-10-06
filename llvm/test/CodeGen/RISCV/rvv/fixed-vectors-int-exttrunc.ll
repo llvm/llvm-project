@@ -163,9 +163,9 @@ define void @trunc_v4i8_v4i32(<4 x i32>* %x, <4 x i8>* %z) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, mu
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vncvt.x.x.w v8, v8
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
-; CHECK-NEXT:    vncvt.x.x.w v8, v8
+; CHECK-NEXT:    vnsrl.wi v8, v8, 0
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, <4 x i32>* %x
@@ -179,9 +179,9 @@ define void @trunc_v8i8_v8i32(<8 x i32>* %x, <8 x i8>* %z) {
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; LMULMAX8-NEXT:    vle32.v v8, (a0)
-; LMULMAX8-NEXT:    vncvt.x.x.w v10, v8
+; LMULMAX8-NEXT:    vnsrl.wi v10, v8, 0
 ; LMULMAX8-NEXT:    vsetvli zero, zero, e8, mf2, ta, mu
-; LMULMAX8-NEXT:    vncvt.x.x.w v8, v10
+; LMULMAX8-NEXT:    vnsrl.wi v8, v10, 0
 ; LMULMAX8-NEXT:    vse8.v v8, (a1)
 ; LMULMAX8-NEXT:    ret
 ;
@@ -189,9 +189,9 @@ define void @trunc_v8i8_v8i32(<8 x i32>* %x, <8 x i8>* %z) {
 ; LMULMAX2:       # %bb.0:
 ; LMULMAX2-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
 ; LMULMAX2-NEXT:    vle32.v v8, (a0)
-; LMULMAX2-NEXT:    vncvt.x.x.w v10, v8
+; LMULMAX2-NEXT:    vnsrl.wi v10, v8, 0
 ; LMULMAX2-NEXT:    vsetvli zero, zero, e8, mf2, ta, mu
-; LMULMAX2-NEXT:    vncvt.x.x.w v8, v10
+; LMULMAX2-NEXT:    vnsrl.wi v8, v10, 0
 ; LMULMAX2-NEXT:    vse8.v v8, (a1)
 ; LMULMAX2-NEXT:    ret
 ;
@@ -201,13 +201,13 @@ define void @trunc_v8i8_v8i32(<8 x i32>* %x, <8 x i8>* %z) {
 ; LMULMAX1-NEXT:    vle32.v v8, (a0)
 ; LMULMAX1-NEXT:    addi a0, a0, 16
 ; LMULMAX1-NEXT:    vle32.v v9, (a0)
-; LMULMAX1-NEXT:    vncvt.x.x.w v8, v8
+; LMULMAX1-NEXT:    vnsrl.wi v8, v8, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
-; LMULMAX1-NEXT:    vncvt.x.x.w v8, v8
+; LMULMAX1-NEXT:    vnsrl.wi v8, v8, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
-; LMULMAX1-NEXT:    vncvt.x.x.w v9, v9
+; LMULMAX1-NEXT:    vnsrl.wi v9, v9, 0
 ; LMULMAX1-NEXT:    vsetvli zero, zero, e8, mf4, ta, mu
-; LMULMAX1-NEXT:    vncvt.x.x.w v9, v9
+; LMULMAX1-NEXT:    vnsrl.wi v9, v9, 0
 ; LMULMAX1-NEXT:    vsetivli zero, 8, e8, mf2, tu, mu
 ; LMULMAX1-NEXT:    vslideup.vi v8, v9, 4
 ; LMULMAX1-NEXT:    vse8.v v8, (a1)

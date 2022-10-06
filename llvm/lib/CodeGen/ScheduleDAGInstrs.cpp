@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
+
 #include "llvm/ADT/IntEqClasses.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -53,7 +54,6 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -92,12 +92,12 @@ static unsigned getReductionSize() {
   return ReductionSize;
 }
 
-static void dumpSUList(ScheduleDAGInstrs::SUList &L) {
+static void dumpSUList(const ScheduleDAGInstrs::SUList &L) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   dbgs() << "{ ";
-  for (const SUnit *su : L) {
-    dbgs() << "SU(" << su->NodeNum << ")";
-    if (su != L.back())
+  for (const SUnit *SU : L) {
+    dbgs() << "SU(" << SU->NodeNum << ")";
+    if (SU != L.back())
       dbgs() << ", ";
   }
   dbgs() << "}\n";
@@ -125,7 +125,7 @@ static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
                                          const MachineFrameInfo &MFI,
                                          UnderlyingObjectsVector &Objects,
                                          const DataLayout &DL) {
-  auto allMMOsOkay = [&]() {
+  auto AllMMOsOkay = [&]() {
     for (const MachineMemOperand *MMO : MI->memoperands()) {
       // TODO: Figure out whether isAtomic is really necessary (see D57601).
       if (MMO->isVolatile() || MMO->isAtomic())
@@ -147,7 +147,7 @@ static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
           return false;
 
         bool MayAlias = PSV->mayAlias(&MFI);
-        Objects.push_back(UnderlyingObjectsVector::value_type(PSV, MayAlias));
+        Objects.emplace_back(PSV, MayAlias);
       } else if (const Value *V = MMO->getValue()) {
         SmallVector<Value *, 4> Objs;
         if (!getUnderlyingObjectsForCodeGen(V, Objs))
@@ -155,7 +155,7 @@ static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
 
         for (Value *V : Objs) {
           assert(isIdentifiedObject(V));
-          Objects.push_back(UnderlyingObjectsVector::value_type(V, true));
+          Objects.emplace_back(V, true);
         }
       } else
         return false;
@@ -163,7 +163,7 @@ static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
     return true;
   };
 
-  if (!allMMOsOkay()) {
+  if (!AllMMOsOkay()) {
     Objects.clear();
     return false;
   }
@@ -676,9 +676,9 @@ void ScheduleDAGInstrs::addChainDependencies(SUnit *SU,
 void ScheduleDAGInstrs::addBarrierChain(Value2SUsMap &map) {
   assert(BarrierChain != nullptr);
 
-  for (auto &I : map) {
-    SUList &sus = I.second;
-    for (auto *SU : sus)
+  for (auto &[V, SUs] : map) {
+    (void)V;
+    for (auto *SU : SUs)
       SU->addPredBarrier(BarrierChain);
   }
   map.clear();
@@ -793,7 +793,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
        MII != MIE; --MII) {
     MachineInstr &MI = *std::prev(MII);
     if (DbgMI) {
-      DbgValues.push_back(std::make_pair(DbgMI, &MI));
+      DbgValues.emplace_back(DbgMI, &MI);
       DbgMI = nullptr;
     }
 
@@ -1019,21 +1019,21 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const PseudoSourceValue* PSV) {
 }
 
 void ScheduleDAGInstrs::Value2SUsMap::dump() {
-  for (auto &Itr : *this) {
-    if (Itr.first.is<const Value*>()) {
-      const Value *V = Itr.first.get<const Value*>();
+  for (const auto &[ValType, SUs] : *this) {
+    if (ValType.is<const Value*>()) {
+      const Value *V = ValType.get<const Value*>();
       if (isa<UndefValue>(V))
         dbgs() << "Unknown";
       else
         V->printAsOperand(dbgs());
     }
-    else if (Itr.first.is<const PseudoSourceValue*>())
-      dbgs() <<  Itr.first.get<const PseudoSourceValue*>();
+    else if (ValType.is<const PseudoSourceValue*>())
+      dbgs() << ValType.get<const PseudoSourceValue*>();
     else
       llvm_unreachable("Unknown Value type.");
 
     dbgs() << " : ";
-    dumpSUList(Itr.second);
+    dumpSUList(SUs);
   }
 }
 
@@ -1045,12 +1045,16 @@ void ScheduleDAGInstrs::reduceHugeMemNodeMaps(Value2SUsMap &stores,
   // Insert all SU's NodeNums into a vector and sort it.
   std::vector<unsigned> NodeNums;
   NodeNums.reserve(stores.size() + loads.size());
-  for (auto &I : stores)
-    for (auto *SU : I.second)
+  for (const auto &[V, SUs] : stores) {
+    (void)V;
+    for (const auto *SU : SUs)
       NodeNums.push_back(SU->NodeNum);
-  for (auto &I : loads)
-    for (auto *SU : I.second)
+  }
+  for (const auto &[V, SUs] : loads) {
+    (void)V;
+    for (const auto *SU : SUs)
       NodeNums.push_back(SU->NodeNum);
+  }
   llvm::sort(NodeNums);
 
   // The N last elements in NodeNums will be removed, and the SU with
@@ -1308,7 +1312,7 @@ public:
 
   /// Adds a connection for cross edges.
   void visitCrossEdge(const SDep &PredDep, const SUnit *Succ) {
-    ConnectionPairs.push_back(std::make_pair(PredDep.getSUnit(), Succ));
+    ConnectionPairs.emplace_back(PredDep.getSUnit(), Succ);
   }
 
   /// Sets each node's subtree ID to the representative ID and record
@@ -1336,12 +1340,12 @@ public:
       LLVM_DEBUG(dbgs() << "  SU(" << Idx << ") in tree "
                         << R.DFSNodeData[Idx].SubtreeID << '\n');
     }
-    for (const std::pair<const SUnit*, const SUnit*> &P : ConnectionPairs) {
-      unsigned PredTree = SubtreeClasses[P.first->NodeNum];
-      unsigned SuccTree = SubtreeClasses[P.second->NodeNum];
+    for (const auto &[Pred, Succ] : ConnectionPairs) {
+      unsigned PredTree = SubtreeClasses[Pred->NodeNum];
+      unsigned SuccTree = SubtreeClasses[Succ->NodeNum];
       if (PredTree == SuccTree)
         continue;
-      unsigned Depth = P.first->getDepth();
+      unsigned Depth = Pred->getDepth();
       addConnection(PredTree, SuccTree, Depth);
       addConnection(SuccTree, PredTree, Depth);
     }
@@ -1408,7 +1412,7 @@ public:
   bool isComplete() const { return DFSStack.empty(); }
 
   void follow(const SUnit *SU) {
-    DFSStack.push_back(std::make_pair(SU, SU->Preds.begin()));
+    DFSStack.emplace_back(SU, SU->Preds.begin());
   }
   void advance() { ++DFSStack.back().second; }
 

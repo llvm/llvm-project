@@ -6,7 +6,7 @@
 ; CHECK-LABEL: f0:
 ; CHECK: r[[R0:[0-9]+]] = #32
 ; CHECK: v[[V0:[0-9]+]] = vmem(r0+#0)
-; CHECK: v[[V1:[0-9]+]].b = vdeal(v[[V0]].b)
+; CHECK: v[[V1:[0-9]+]].b = vpacke({{.*}},v[[V0]].h)
 ; CHECK: q[[Q0:[0-3]]] = vsetq(r[[R0]])
 ; CHECK: if (q[[Q0]]) vmem(r1+#0) = v[[V1]]
 define void @f0(<32 x i16>* %a0, <32 x i8>* %a1) #0 {
@@ -34,7 +34,7 @@ define void @f1(<32 x i32>* %a0, <32 x i8>* %a1) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK: r[[R0:[0-9]+]] = #64
 ; CHECK: v[[V0:[0-9]+]] = vmem(r0+#0)
-; CHECK: v[[V1:[0-9]+]].b = vdeal(v[[V0]].b)
+; CHECK: v[[V1:[0-9]+]].b = vpacke({{.*}},v[[V0]].h)
 ; CHECK: q[[Q0:[0-3]]] = vsetq(r[[R0]])
 ; CHECK: if (q[[Q0]]) vmem(r1+#0) = v[[V1]]
 define void @f2(<64 x i16>* %a0, <64 x i8>* %a1) #0 {
@@ -63,7 +63,7 @@ define void @f3(<64 x i32>* %a0, <64 x i8>* %a1) #0 {
 ; CHECK-LABEL: f4:
 ; CHECK: r[[R0:[0-9]+]] = #32
 ; CHECK: v[[V0:[0-9]+]] = vmem(r0+#0)
-; CHECK: v[[V1:[0-9]+]].h = vdeal(v[[V0]].h)
+; CHECK: v[[V1:[0-9]+]].h = vpacke({{.*}},v[[V0]].w)
 ; CHECK: q[[Q0:[0-3]]] = vsetq(r[[R0]])
 ; CHECK: if (q[[Q0]]) vmem(r1+#0) = v[[V1]]
 define void @f4(<16 x i32>* %a0, <16 x i16>* %a1) #0 {
@@ -77,7 +77,7 @@ define void @f4(<16 x i32>* %a0, <16 x i16>* %a1) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK: r[[R0:[0-9]+]] = #64
 ; CHECK: v[[V0:[0-9]+]] = vmem(r0+#0)
-; CHECK: v[[V1:[0-9]+]].h = vdeal(v[[V0]].h)
+; CHECK: v[[V1:[0-9]+]].h = vpacke({{.*}},v[[V0]].w)
 ; CHECK: q[[Q0:[0-3]]] = vsetq(r[[R0]])
 ; CHECK: if (q[[Q0]]) vmem(r1+#0) = v[[V1]]
 define void @f5(<32 x i32>* %a0, <32 x i16>* %a1) #0 {

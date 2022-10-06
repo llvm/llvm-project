@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,cpp14 %s
-// RUN: %clang_cc1 -fsyntax-only -verify=expected,cpp14 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cpp14 -std=gnu++14 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cpp14 -std=gnu++14 %s -fdelayed-template-parsing -DDELAYED_TEMPLATE_PARSING
 // RUN: %clang_cc1 -fsyntax-only -verify=expected,cpp17 -std=gnu++1z %s
 
 

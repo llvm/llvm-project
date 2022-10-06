@@ -117,7 +117,7 @@ Status ProcessDebugger::LaunchProcess(ProcessLaunchInfo &launch_info,
     FileSystem::Instance().Resolve(working_dir);
     if (!FileSystem::Instance().IsDirectory(working_dir)) {
       result.SetErrorStringWithFormat("No such file or directory: %s",
-                                      working_dir.GetCString());
+                                      working_dir.GetPath().c_str());
       return result;
     }
   }

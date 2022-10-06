@@ -39,7 +39,7 @@ define amdgpu_kernel void @test_readcyclecounter(i64 addrspace(1)* %out) #0 {
 ; GCN-LABEL: {{^}}test_readcyclecounter_smem:
 ; MEMTIME-DAG: s_memtime
 ; GCN-DAG:     s_load_{{dword|b32|b64}}
-; GETREG-DAG:  s_getreg_b32 s1, hwreg(HW_REG_SHADER_CYCLES, 0, 20)
+; GETREG-DAG:  s_getreg_b32 s{{[0-9]+}}, hwreg(HW_REG_SHADER_CYCLES, 0, 20)
 define amdgpu_cs i32 @test_readcyclecounter_smem(i64 addrspace(4)* inreg %in) #0 {
   %cycle0 = call i64 @llvm.readcyclecounter()
   %in.v = load i64, i64 addrspace(4)* %in

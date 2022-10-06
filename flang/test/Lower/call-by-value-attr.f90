@@ -67,6 +67,11 @@ program call_by_value_attr
   !CHECK: %[[SHAPE_7:.*]]  = fir.shape %[[CONST_15_1]] : (index) -> !fir.shape<1>
   !CHECK: %[[SLICE:.*]] = fir.slice %[[CONV_5]], %[[CONV_15]], %[[CONV_1]] : (index, index, index) -> !fir.slice<1>
   !CHECK: %[[BOX:.*]] = fir.embox %[[ARRAY_B]](%[[SHAPE_7]]) [%[[SLICE]]] : (!fir.ref<!fir.array<15xi32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<11xi32>>
+  !CHECK: %[[BOX_NONE:.*]] = fir.convert %[[BOX]] : (!fir.box<!fir.array<11xi32>>) -> !fir.box<none>
+  !CHECK: %[[IS_CONTIGUOUS:.*]] = fir.call @_FortranAIsContiguous(%[[BOX_NONE]]) : (!fir.box<none>) -> i1
+  !CHECK: %[[ADDR:.*]] = fir.if %[[IS_CONTIGUOUS]] -> (!fir.heap<!fir.array<11xi32>>) {
+  !CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<!fir.array<11xi32>>) -> !fir.heap<!fir.array<11xi32>>
+  !CHECKL fir.result %[[BOXADDR]] : !fir.heap<!fir.array<11xi32>>
   !CHECK: %[[CONST_0:.*]] = arith.constant 0 : index
   !CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[BOX]], %[[CONST_0]] : (!fir.box<!fir.array<11xi32>>, index) -> (index, index, index)
   !CHECK: %[[ARRAY_COPY_2:.*]] = fir.allocmem !fir.array<11xi32>, %[[DIMS]]#1 {uniq_name = ".copy"}
@@ -75,8 +80,9 @@ program call_by_value_attr
   !CHECK: %[[ARRAY_LOAD_8:.*]] = fir.array_load %[[BOX]] : (!fir.box<!fir.array<11xi32>>) -> !fir.array<11xi32>
   !CHECK: %[[DO_4:.*]] = fir.do_loop {{.*}} {
   !CHECK: }
-  !CHECK fir.array_merge_store %[[ARRAY_LOAD_7]], %[[DO_4]] to %[[ARRAY_COPY_2]] : !fir.array<11xi32>, !fir.array<11xi32>, !fir.heap<!fir.array<11xi32>>
-  !CHECK: %[[CONVERT_B:.*]] = fir.convert %[[ARRAY_COPY_2]] : (!fir.heap<!fir.array<11xi32>>) -> !fir.ref<!fir.array<10xi32>>
+  !CHECK: fir.array_merge_store %[[ARRAY_LOAD_7]], %[[DO_4]] to %[[ARRAY_COPY_2]] : !fir.array<11xi32>, !fir.array<11xi32>, !fir.heap<!fir.array<11xi32>>
+  !CHECK: fir.result %[[ARRAY_COPY_2]] : !fir.heap<!fir.array<11xi32>>
+  !CHECK: %[[CONVERT_B:.*]] = fir.convert %[[ADDR]] : (!fir.heap<!fir.array<11xi32>>) -> !fir.ref<!fir.array<10xi32>>
   !CHECK: fir.call @_QPsubra(%[[CONVERT_B]])
   call subra(b(5:15))
 end program call_by_value_attr

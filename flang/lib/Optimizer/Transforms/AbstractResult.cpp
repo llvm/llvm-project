@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -18,6 +17,12 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/Passes.h"
 #include "llvm/ADT/TypeSwitch.h"
+
+namespace fir {
+#define GEN_PASS_DEF_ABSTRACTRESULTONFUNCOPT
+#define GEN_PASS_DEF_ABSTRACTRESULTONGLOBALOPT
+#include "flang/Optimizer/Transforms/Passes.h.inc"
+} // namespace fir
 
 #define DEBUG_TYPE "flang-abstract-result-opt"
 
@@ -213,7 +218,7 @@ public:
     self.runOnSpecificOperation(op, shouldBoxResult, patterns, target);
 
     // Convert the calls and, if needed,  the ReturnOp in the function body.
-    target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithmeticDialect,
+    target.addLegalDialect<fir::FIROpsDialect, mlir::arith::ArithDialect,
                            mlir::func::FuncDialect>();
     target.addIllegalOp<fir::SaveResultOp>();
     target.addDynamicallyLegalOp<fir::CallOp>([](fir::CallOp call) {
@@ -248,7 +253,7 @@ public:
 
 class AbstractResultOnFuncOpt
     : public AbstractResultOptTemplate<AbstractResultOnFuncOpt,
-                                       fir::AbstractResultOnFuncOptBase> {
+                                       fir::impl::AbstractResultOnFuncOptBase> {
 public:
   void runOnSpecificOperation(mlir::func::FuncOp func, bool shouldBoxResult,
                               mlir::RewritePatternSet &patterns,
@@ -277,9 +282,39 @@ public:
     }
   }
 };
+
+inline static bool containsFunctionTypeWithAbstractResult(mlir::Type type) {
+  return mlir::TypeSwitch<mlir::Type, bool>(type)
+      .Case([](fir::BoxProcType boxProc) {
+        return fir::hasAbstractResult(
+            boxProc.getEleTy().cast<mlir::FunctionType>());
+      })
+      .Case([](fir::PointerType pointer) {
+        return fir::hasAbstractResult(
+            pointer.getEleTy().cast<mlir::FunctionType>());
+      })
+      .Default([](auto &&) { return false; });
+}
+
+class AbstractResultOnGlobalOpt
+    : public AbstractResultOptTemplate<
+          AbstractResultOnGlobalOpt, fir::impl::AbstractResultOnGlobalOptBase> {
+public:
+  void runOnSpecificOperation(fir::GlobalOp global, bool,
+                              mlir::RewritePatternSet &,
+                              mlir::ConversionTarget &) {
+    if (containsFunctionTypeWithAbstractResult(global.getType())) {
+      TODO(global->getLoc(), "support for procedure pointers");
+    }
+  }
+};
 } // end anonymous namespace
 } // namespace fir
 
 std::unique_ptr<mlir::Pass> fir::createAbstractResultOnFuncOptPass() {
   return std::make_unique<AbstractResultOnFuncOpt>();
+}
+
+std::unique_ptr<mlir::Pass> fir::createAbstractResultOnGlobalOptPass() {
+  return std::make_unique<AbstractResultOnGlobalOpt>();
 }

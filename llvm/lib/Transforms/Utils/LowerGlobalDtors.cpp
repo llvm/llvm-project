@@ -175,7 +175,7 @@ static bool runImpl(Module &M) {
       FunctionType *VoidVoid = FunctionType::get(Type::getVoidTy(C),
                                                  /*isVarArg=*/false);
 
-      for (auto Dtor : reverse(AssociatedAndMore.second))
+      for (auto *Dtor : reverse(AssociatedAndMore.second))
         CallInst::Create(VoidVoid, Dtor, "", BB);
       ReturnInst::Create(C, BB);
 

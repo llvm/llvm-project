@@ -256,6 +256,21 @@ entry:
   ret float %rdx
 }
 
+define float @reduce_fadd2(float %x, <4 x float> %v) {
+; CHECK-LABEL: reduce_fadd2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vfmv.s.f v9, fa0
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vfredusum.vs v8, v8, v9
+; CHECK-NEXT:    vfmv.f.s fa0, v8
+; CHECK-NEXT:    ret
+entry:
+  %rdx = call fast float @llvm.vector.reduce.fadd.v4f32(float 0.0, <4 x float> %v)
+  %res = fadd fast float %rdx, %x
+  ret float %res
+}
+
 define float @reduce_fmax(float %x, <4 x float> %v) {
 ; CHECK-LABEL: reduce_fmax:
 ; CHECK:       # %bb.0: # %entry

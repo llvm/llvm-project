@@ -10,11 +10,11 @@
 #define _LIBCPP___ALGORITHM_RANGES_PARTIAL_SORT_COPY_H
 
 #include <__algorithm/in_out_result.h>
+#include <__algorithm/iterator_operations.h>
 #include <__algorithm/make_projected.h>
 #include <__algorithm/partial_sort_copy.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__functional/invoke.h>
 #include <__functional/ranges_operations.h>
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
@@ -23,14 +23,14 @@
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
-#include <__utility/forward.h>
 #include <__utility/move.h>
+#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -52,9 +52,11 @@ struct __fn {
   partial_sort_copy_result<_Iter1, _Iter2>
   operator()(_Iter1 __first, _Sent1 __last, _Iter2 __result_first, _Sent2 __result_last,
              _Comp __comp = {}, _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
-    // TODO: implement
-    (void)__first; (void)__last; (void)__result_first; (void)__result_last; (void)__comp; (void)__proj1; (void)__proj2;
-    return {};
+    auto __result = std::__partial_sort_copy<_RangeAlgPolicy>(
+        std::move(__first), std::move(__last), std::move(__result_first), std::move(__result_last),
+        __comp, __proj1, __proj2
+    );
+    return {std::move(__result.first), std::move(__result.second)};
   }
 
   template <input_range _Range1, random_access_range _Range2, class _Comp = ranges::less,
@@ -67,9 +69,11 @@ struct __fn {
   partial_sort_copy_result<borrowed_iterator_t<_Range1>, borrowed_iterator_t<_Range2>>
   operator()(_Range1&& __range, _Range2&& __result_range, _Comp __comp = {},
              _Proj1 __proj1 = {}, _Proj2 __proj2 = {}) const {
-    // TODO: implement
-    (void)__range; (void)__result_range; (void)__comp; (void)__proj1; (void)__proj2;
-    return {};
+    auto __result = std::__partial_sort_copy<_RangeAlgPolicy>(
+        ranges::begin(__range), ranges::end(__range), ranges::begin(__result_range), ranges::end(__result_range),
+        __comp, __proj1, __proj2
+    );
+    return {std::move(__result.first), std::move(__result.second)};
   }
 
 };
@@ -83,6 +87,6 @@ inline namespace __cpo {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 17
 
 #endif // _LIBCPP___ALGORITHM_RANGES_PARTIAL_SORT_COPY_H

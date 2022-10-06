@@ -276,7 +276,7 @@ uint32_t mapping::getNumberOfProcessorElements() {
 
 // TODO: This is a workaround for initialization coming from kernels outside of
 //       the TU. We will need to solve this more correctly in the future.
-int __attribute__((weak)) KEEP_ALIVE SHARED(IsSPMDMode);
+int __attribute__((weak)) SHARED(IsSPMDMode);
 
 void mapping::init(bool IsSPMD) {
   if (mapping::isInitialThreadInLevel0(IsSPMD))
@@ -289,17 +289,17 @@ bool mapping::isGenericMode() { return !isSPMDMode(); }
 ///}
 
 extern "C" {
-uint32_t __kmpc_get_hardware_thread_id_in_block() {
+__attribute__((noinline)) uint32_t __kmpc_get_hardware_thread_id_in_block() {
   FunctionTracingRAII();
   return mapping::getThreadIdInBlock();
 }
 
-uint32_t __kmpc_get_hardware_num_threads_in_block() {
+__attribute__((noinline)) uint32_t __kmpc_get_hardware_num_threads_in_block() {
   FunctionTracingRAII();
   return impl::getNumHardwareThreadsInBlock();
 }
 
-uint32_t __kmpc_get_warp_size() {
+__attribute__((noinline)) uint32_t __kmpc_get_warp_size() {
   FunctionTracingRAII();
   return impl::getWarpSize();
 }

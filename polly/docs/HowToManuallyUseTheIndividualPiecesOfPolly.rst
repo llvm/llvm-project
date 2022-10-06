@@ -29,7 +29,7 @@ performance improvement can be expected by an optimal automatic optimizer.
 
         Polly is only able to work with code that matches a canonical form.
         To translate the LLVM-IR into this form we use a set of
-        canonicalication passes. They are scheduled by using
+        canonicalization passes. They are scheduled by using
         '-polly-canonicalize'.
 
         .. code-block:: console

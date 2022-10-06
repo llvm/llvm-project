@@ -157,6 +157,8 @@ void RISCVTargetELFStreamer::finish() {
 
   if (Features[RISCV::FeatureStdExtC])
     EFlags |= ELF::EF_RISCV_RVC;
+  if (Features[RISCV::FeatureStdExtZtso])
+    EFlags |= ELF::EF_RISCV_TSO;
 
   switch (ABI) {
   case RISCVABI::ABI_ILP32:
@@ -207,14 +209,6 @@ class RISCVELFStreamer : public MCELFStreamer {
 
   static bool requiresFixups(MCContext &C, const MCExpr *Value,
                              const MCExpr *&LHS, const MCExpr *&RHS) {
-    auto IsMetadataOrEHFrameSection = [](const MCSection &S) -> bool {
-      // Additionally check .apple_names/.apple_types. They are fixed-size and
-      // do not need fixups. llvm-dwarfdump --apple-names does not process
-      // R_RISCV_{ADD,SUB}32 in them.
-      return S.getKind().isMetadata() || S.getName() == ".eh_frame" ||
-             S.getName() == ".apple_names" || S.getName() == ".apple_types";
-    };
-
     const auto *MBE = dyn_cast<MCBinaryExpr>(Value);
     if (MBE == nullptr)
       return false;
@@ -233,15 +227,21 @@ class RISCVELFStreamer : public MCELFStreamer {
                              MCConstantExpr::create(E.getConstant(), C), C);
     RHS = E.getSymB();
 
-    // TODO: when available, R_RISCV_n_PCREL should be preferred.
+    // If either symbol is in a text section, we need to delay the relocation
+    // evaluation as relaxation may alter the size of the symbol.
+    //
+    // Unfortunately, we cannot identify if the symbol was built with relaxation
+    // as we do not track the state per symbol or section.  However, BFD will
+    // always emit the relocation and so we follow suit which avoids the need to
+    // track that information.
+    if (A.isInSection() && A.getSection().getKind().isText())
+      return true;
+    if (B.isInSection() && B.getSection().getKind().isText())
+      return true;
 
-    // Avoid pairwise relocations for symbolic difference in debug and .eh_frame
-    if (A.isInSection())
-      return !IsMetadataOrEHFrameSection(A.getSection());
-    if (B.isInSection())
-      return !IsMetadataOrEHFrameSection(B.getSection());
-    // as well as for absolute symbols.
-    return !A.getName().empty() || !B.getName().empty();
+    // Support cross-section symbolic differences ...
+    return A.isInSection() && B.isInSection() &&
+           A.getSection().getName() != B.getSection().getName();
   }
 
   void reset() override {

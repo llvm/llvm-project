@@ -33,7 +33,6 @@ namespace CodeGen {
   class CGFunctionInfo;
   class CodeGenFunction;
   class CodeGenTypes;
-  class SwiftABIInfo;
 
   // FIXME: All of this stuff should be part of the target interface
   // somehow. It is currently here because it is not clear how to factor
@@ -44,17 +43,14 @@ namespace CodeGen {
   /// ABIInfo - Target specific hooks for defining how a type should be
   /// passed or returned from functions.
   class ABIInfo {
-  public:
-    CodeGen::CodeGenTypes &CGT;
   protected:
+    CodeGen::CodeGenTypes &CGT;
     llvm::CallingConv::ID RuntimeCC;
   public:
     ABIInfo(CodeGen::CodeGenTypes &cgt)
         : CGT(cgt), RuntimeCC(llvm::CallingConv::C) {}
 
     virtual ~ABIInfo();
-
-    virtual bool supportsSwift() const { return false; }
 
     virtual bool allowBFloatArgsAndRet() const { return false; }
 
@@ -114,33 +110,33 @@ namespace CodeGen {
 
     CodeGen::ABIArgInfo
     getNaturalAlignIndirectInReg(QualType Ty, bool Realign = false) const;
-
-
   };
 
-  /// A refining implementation of ABIInfo for targets that support swiftcall.
-  ///
-  /// If we find ourselves wanting multiple such refinements, they'll probably
-  /// be independent refinements, and we should probably find another way
-  /// to do it than simple inheritance.
-  class SwiftABIInfo : public ABIInfo {
+  /// Target specific hooks for defining how a type should be passed or returned
+  /// from functions with one of the Swift calling conventions.
+  class SwiftABIInfo {
+  protected:
+    CodeGenTypes &CGT;
+    bool SwiftErrorInRegister;
+
   public:
-    SwiftABIInfo(CodeGen::CodeGenTypes &cgt) : ABIInfo(cgt) {}
+    SwiftABIInfo(CodeGen::CodeGenTypes &CGT, bool SwiftErrorInRegister)
+        : CGT(CGT), SwiftErrorInRegister(SwiftErrorInRegister) {}
 
-    bool supportsSwift() const final { return true; }
+    virtual ~SwiftABIInfo();
 
-    virtual bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> types,
-                                              bool asReturnValue) const = 0;
+    /// Returns true if an aggregate which expands to the given type sequence
+    /// should be passed / returned indirectly.
+    virtual bool shouldPassIndirectly(ArrayRef<llvm::Type *> ComponentTys,
+                                      bool AsReturnValue) const;
 
-    virtual bool isLegalVectorTypeForSwift(CharUnits totalSize,
-                                           llvm::Type *eltTy,
-                                           unsigned elts) const;
+    /// Returns true if the given vector type is legal from Swift's calling
+    /// convention perspective.
+    virtual bool isLegalVectorType(CharUnits VectorSize, llvm::Type *EltTy,
+                                   unsigned NumElts) const;
 
-    virtual bool isSwiftErrorInRegister() const = 0;
-
-    static bool classof(const ABIInfo *info) {
-      return info->supportsSwift();
-    }
+    /// Returns true if swifterror is lowered to a register by the target ABI.
+    bool isSwiftErrorInRegister() const { return SwiftErrorInRegister; };
   };
 }  // end namespace CodeGen
 }  // end namespace clang

@@ -29,6 +29,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -133,7 +134,7 @@ static Optional<unsigned> calculateIterationsToInvariance(
   // Place infinity to map to avoid infinite recursion for cycled Phis. Such
   // cycles can never stop on an invariant.
   IterationsToInvariance[Phi] = None;
-  Optional<unsigned> ToInvariance = None;
+  Optional<unsigned> ToInvariance;
 
   if (L->isLoopInvariant(Input))
     ToInvariance = 1u;
@@ -160,7 +161,8 @@ static Optional<unsigned> calculateIterationsToInvariance(
 // by an exit condition. Returns the number of iterations to peel off (at the
 // moment either 0 or 1).
 static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
-                                                      DominatorTree &DT) {
+                                                      DominatorTree &DT,
+                                                      AssumptionCache *AC) {
   // Skip loops with a single exiting block, because there should be no benefit
   // for the heuristic below.
   if (L.getExitingBlock())
@@ -201,7 +203,7 @@ static unsigned peelToTurnInvariantLoadsDerefencebale(Loop &L,
       if (auto *LI = dyn_cast<LoadInst>(&I)) {
         Value *Ptr = LI->getPointerOperand();
         if (DT.dominates(BB, Latch) && L.isLoopInvariant(Ptr) &&
-            !isDereferenceablePointer(Ptr, LI->getType(), DL, LI, &DT))
+            !isDereferenceablePointer(Ptr, LI->getType(), DL, LI, AC, &DT))
           for (Value *U : I.users())
             LoadUsers.insert(U);
       }
@@ -330,7 +332,7 @@ static unsigned countToEliminateCompares(Loop &L, unsigned MaxPeelCount,
 
 /// This "heuristic" exactly matches implicit behavior which used to exist
 /// inside getLoopEstimatedTripCount.  It was added here to keep an
-/// improvement inside that API from causing peeling to become more agressive.
+/// improvement inside that API from causing peeling to become more aggressive.
 /// This should probably be removed.
 static bool violatesLegacyMultiExitLoopCheck(Loop *L) {
   BasicBlock *Latch = L->getLoopLatch();
@@ -357,7 +359,8 @@ static bool violatesLegacyMultiExitLoopCheck(Loop *L) {
 void llvm::computePeelCount(Loop *L, unsigned LoopSize,
                             TargetTransformInfo::PeelingPreferences &PP,
                             unsigned TripCount, DominatorTree &DT,
-                            ScalarEvolution &SE, unsigned Threshold) {
+                            ScalarEvolution &SE, AssumptionCache *AC,
+                            unsigned Threshold) {
   assert(LoopSize > 0 && "Zero loop size is not allowed!");
   // Save the PP.PeelCount value set by the target in
   // TTI.getPeelingPreferences or by the flag -unroll-peel-count.
@@ -428,7 +431,7 @@ void llvm::computePeelCount(Loop *L, unsigned LoopSize,
                               countToEliminateCompares(*L, MaxPeelCount, SE));
 
   if (DesiredPeelCount == 0)
-    DesiredPeelCount = peelToTurnInvariantLoadsDerefencebale(*L, DT);
+    DesiredPeelCount = peelToTurnInvariantLoadsDerefencebale(*L, DT, AC);
 
   if (DesiredPeelCount > 0) {
     DesiredPeelCount = std::min(DesiredPeelCount, MaxPeelCount);
@@ -532,7 +535,7 @@ static void initBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
                               uint64_t &ExitWeight,
                               uint64_t &FallThroughWeight) {
   uint64_t TrueWeight, FalseWeight;
-  if (!LatchBR->extractProfMetadata(TrueWeight, FalseWeight))
+  if (!extractBranchWeights(*LatchBR, TrueWeight, FalseWeight))
     return;
   unsigned HeaderIdx = LatchBR->getSuccessor(0) == Header ? 0 : 1;
   ExitWeight = HeaderIdx ? TrueWeight : FalseWeight;

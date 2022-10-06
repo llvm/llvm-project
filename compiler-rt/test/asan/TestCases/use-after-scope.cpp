@@ -1,9 +1,4 @@
-// RUN: %clangxx_asan -O1 -fsanitize-address-use-after-scope %s -o %t && \
-// RUN:     not %run %t 2>&1 | FileCheck %s
-
-// -fsanitize-address-use-after-scope is now on by default:
-// RUN: %clangxx_asan -O1 %s -o %t && \
-// RUN:     not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_asan -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 volatile int *p = 0;
 

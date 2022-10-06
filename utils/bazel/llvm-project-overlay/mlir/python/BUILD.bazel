@@ -12,8 +12,9 @@ load("//mlir:tblgen.bzl", "gentbl_filegroup", "td_library")
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
 )
+
+licenses(["notice"])
 
 ##---------------------------------------------------------------------------##
 # Core IR modules.
@@ -196,23 +197,23 @@ filegroup(
 )
 
 ##---------------------------------------------------------------------------##
-# Arithmetic dialect.
+# Arith dialect.
 ##---------------------------------------------------------------------------##
 
 td_library(
-    name = "ArithmeticOpsPyTdFiles",
+    name = "ArithOpsPyTdFiles",
     srcs = [
         "//mlir:include/mlir/Bindings/Python/Attributes.td",
     ],
     includes = ["../include"],
     deps = [
-        "//mlir:ArithmeticOpsTdFiles",
+        "//mlir:ArithOpsTdFiles",
         "//mlir:OpBaseTdFiles",
     ],
 )
 
 gentbl_filegroup(
-    name = "ArithmeticOpsPyGen",
+    name = "ArithOpsPyGen",
     tbl_outs = [
         (
             [
@@ -223,18 +224,18 @@ gentbl_filegroup(
         ),
     ],
     tblgen = "//mlir:mlir-tblgen",
-    td_file = "mlir/dialects/ArithmeticOps.td",
+    td_file = "mlir/dialects/ArithOps.td",
     deps = [
-        ":ArithmeticOpsPyTdFiles",
+        ":ArithOpsPyTdFiles",
     ],
 )
 
 filegroup(
-    name = "ArithmeticOpsPyFiles",
+    name = "ArithOpsPyFiles",
     srcs = [
         "mlir/dialects/_arith_ops_ext.py",
         "mlir/dialects/arith.py",
-        ":ArithmeticOpsPyGen",
+        ":ArithOpsPyGen",
     ],
 )
 

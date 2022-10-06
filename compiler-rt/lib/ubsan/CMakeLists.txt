@@ -192,7 +192,8 @@ else()
     add_compiler_rt_runtime(clang_rt.ubsan_standalone
       STATIC
       ARCHS ${UBSAN_SUPPORTED_ARCH}
-      SOURCES ubsan_init_standalone_preinit.cpp
+      SOURCES
+        ubsan_init_standalone_preinit.cpp
       ADDITIONAL_HEADERS ${UBSAN_HEADERS}
       OBJECT_LIBS RTSanitizerCommon
               RTSanitizerCommonLibc

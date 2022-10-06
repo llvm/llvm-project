@@ -29,4 +29,6 @@ let TargetPrefix = "spv" in {
   def int_spv_bitcast : Intrinsic<[llvm_any_ty], [llvm_any_ty]>;
   def int_spv_switch : Intrinsic<[], [llvm_any_ty, llvm_vararg_ty]>;
   def int_spv_cmpxchg : Intrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_vararg_ty]>;
+  def int_spv_unreachable : Intrinsic<[], []>;
+  def int_spv_alloca : Intrinsic<[llvm_any_ty], []>;
 }

@@ -89,14 +89,16 @@ public:
                                               Debug symbol_debug_type,
                                               Visibility symbol_visibility,
                                               std::vector<uint32_t> &matches);
-  uint32_t
-  AppendSymbolIndexesMatchingRegExAndType(const RegularExpression &regex,
-                                          lldb::SymbolType symbol_type,
-                                          std::vector<uint32_t> &indexes);
+  uint32_t AppendSymbolIndexesMatchingRegExAndType(
+      const RegularExpression &regex, lldb::SymbolType symbol_type,
+      std::vector<uint32_t> &indexes,
+      Mangled::NamePreference name_preference = Mangled::ePreferDemangled);
   uint32_t AppendSymbolIndexesMatchingRegExAndType(
       const RegularExpression &regex, lldb::SymbolType symbol_type,
       Debug symbol_debug_type, Visibility symbol_visibility,
-      std::vector<uint32_t> &indexes);
+      std::vector<uint32_t> &indexes,
+      Mangled::NamePreference name_preference =
+          Mangled::NamePreference::ePreferDemangled);
   void FindAllSymbolsWithNameAndType(ConstString name,
                                      lldb::SymbolType symbol_type,
                                      std::vector<uint32_t> &symbol_indexes);
@@ -108,7 +110,8 @@ public:
   void FindAllSymbolsMatchingRexExAndType(
       const RegularExpression &regex, lldb::SymbolType symbol_type,
       Debug symbol_debug_type, Visibility symbol_visibility,
-      std::vector<uint32_t> &symbol_indexes);
+      std::vector<uint32_t> &symbol_indexes,
+      Mangled::NamePreference name_preference = Mangled::ePreferDemangled);
   Symbol *FindFirstSymbolWithNameAndType(ConstString name,
                                          lldb::SymbolType symbol_type,
                                          Debug symbol_debug_type,

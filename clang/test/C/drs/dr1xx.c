@@ -137,11 +137,21 @@ void dr105(void) {
  */
 void dr106(void *p, int i) {
   /* The behavior changed between C89 and C99. */
-  (void)&*p; /* c89only-warning {{ISO C forbids taking the address of an expression of type 'void'}} */
+  (void)&*p; /* c89only-warning {{ISO C forbids taking the address of an expression of type 'void'}}
+                c89only-warning {{ISO C does not allow indirection on operand of type 'void *'}} */
+
   /* The behavior of all three of these is undefined. */
-  (void)*p;
-  (void)(i ? *p : *p);
-  (void)(*p, *p); /* expected-warning {{left operand of comma operator has no effect}} */
+  (void)*p; /* expected-warning {{ISO C does not allow indirection on operand of type 'void *'}}*/
+
+  (void)&(*p); /* c89only-warning {{ISO C forbids taking the address of an expression of type 'void'}}
+                  expected-warning {{ISO C does not allow indirection on operand of type 'void *'}}*/
+
+  (void)(i ? *p : *p); /* expected-warning {{ISO C does not allow indirection on operand of type 'void *'}}
+                          expected-warning {{ISO C does not allow indirection on operand of type 'void *'}}*/
+
+  (void)(*p, *p); /* expected-warning {{left operand of comma operator has no effect}}
+                     expected-warning {{ISO C does not allow indirection on operand of type 'void *'}}
+		     expected-warning {{ISO C does not allow indirection on operand of type 'void *'}}*/
 }
 
 /* WG14 DR108: yes
@@ -178,10 +188,12 @@ void dr112(void *vp) {
  * Return expressions in functions declared to return qualified void
  */
 volatile void dr113_v(volatile void *vvp) { /* expected-warning {{function cannot return qualified void type 'volatile void'}} */
-  return *vvp; /* expected-warning {{void function 'dr113_v' should not return void expression}} */
+  return *vvp; /* expected-warning {{void function 'dr113_v' should not return void expression}}
+                  expected-warning{{ISO C does not allow indirection on operand of type 'volatile void *'}} */
 }
 const void dr113_c(const void *cvp) { /* expected-warning {{function cannot return qualified void type 'const void'}} */
-  return *cvp; /* expected-warning {{void function 'dr113_c' should not return void expression}} */
+  return *cvp; /* expected-warning {{void function 'dr113_c' should not return void expression}}
+                  expected-warning{{ISO C does not allow indirection on operand of type 'const void *'}} */
 }
 
 /* WG14 DR114: yes

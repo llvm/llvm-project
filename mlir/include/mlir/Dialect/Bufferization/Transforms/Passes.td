@@ -168,6 +168,17 @@ def DropEquivalentBufferResults : Pass<"drop-equivalent-buffer-results", "Module
   let dependentDialects = ["memref::MemRefDialect"];
 }
 
+def EmptyTensorToAllocTensor : Pass<"empty-tensor-to-alloc-tensor"> {
+  let summary = "Replace all empty ops by alloc_tensor ops.";
+  let description = [{
+    tensor.empty ops return a tensor of unspecified contents who's only purpose
+    is to carry the tensor shape. This pass converts such ops to
+    bufferization.alloc_tensor ops, which bufferize to buffer allocations.
+  }];
+  let constructor = "mlir::bufferization::createEmptyTensorToAllocTensorPass()";
+  let dependentDialects = ["tensor::TensorDialect"];
+}
+
 def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
   let summary = "One-Shot Bufferize";
   let description = [{
@@ -276,6 +287,8 @@ def OneShotBufferize : Pass<"one-shot-bufferize", "ModuleOp"> {
     Option<"bufferizeFunctionBoundaries", "bufferize-function-boundaries",
            "bool", /*default=*/"0",
            "Bufferize function boundaries (experimental).">,
+    Option<"copyBeforeWrite", "copy-before-write", "bool", /*default=*/"false",
+           "Skip the analysis. Make a buffer copy on every write.">,
     Option<"createDeallocs", "create-deallocs", "bool", /*default=*/"true",
            "Specify if buffers should be deallocated. For compatibility with "
            "core bufferization passes.">,

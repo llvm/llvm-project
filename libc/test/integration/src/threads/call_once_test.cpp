@@ -47,7 +47,7 @@ void call_from_5_threads() {
 
   for (unsigned int i = 0; i < NUM_THREADS; ++i) {
     int retval;
-    ASSERT_EQ(__llvm_libc::thrd_join(threads + i, &retval),
+    ASSERT_EQ(__llvm_libc::thrd_join(threads[i], &retval),
               static_cast<int>(thrd_success));
     ASSERT_EQ(retval, 0);
   }
@@ -102,10 +102,10 @@ void test_synchronization() {
             static_cast<int>(thrd_success));
 
   int retval;
-  ASSERT_EQ(__llvm_libc::thrd_join(&t1, &retval),
+  ASSERT_EQ(__llvm_libc::thrd_join(t1, &retval),
             static_cast<int>(thrd_success));
   ASSERT_EQ(retval, 0);
-  ASSERT_EQ(__llvm_libc::thrd_join(&t2, &retval),
+  ASSERT_EQ(__llvm_libc::thrd_join(t2, &retval),
             static_cast<int>(thrd_success));
   ASSERT_EQ(retval, 0);
 
@@ -114,7 +114,7 @@ void test_synchronization() {
   __llvm_libc::mtx_destroy(&once_func_blocker);
 }
 
-int main() {
+TEST_MAIN() {
   call_from_5_threads();
   test_synchronization();
   return 0;

@@ -151,7 +151,7 @@ bool ABISysV_arc::IsRegisterFileReduced(RegisterContext &reg_ctx) const {
                                                           /*fail_value*/ 0);
     // RF_BUILD "Number of Entries" bit.
     const uint32_t rf_entries_bit = 1U << 9U;
-    m_is_reg_file_reduced = (reg_value | rf_entries_bit) != 0;
+    m_is_reg_file_reduced = (reg_value & rf_entries_bit) != 0;
   }
 
   return m_is_reg_file_reduced.value_or(false);

@@ -269,10 +269,10 @@ contains
   end
 
   ! Check is_contiguous, which is usually the same as when pointer bounds
-  ! remapping is used. If it's not simply contiguous it's not constant so
-  ! an error is reported.
+  ! remapping is used.
   subroutine s12
     integer, pointer :: p(:)
+    integer, pointer, contiguous :: pc(:)
     type :: t
       integer :: a(4, 4)
       integer :: b
@@ -280,16 +280,20 @@ contains
     type(t), target :: x
     type(t), target :: y(10,10)
     integer :: v(10)
-    logical, parameter :: l1 = is_contiguous(x%a(:,:))
-    logical, parameter :: l2 = is_contiguous(y(1,1)%a(1,1))
+    logical(kind=merge(1,-1,is_contiguous(x%a(:,:)))) :: l1 ! known true
+    logical(kind=merge(1,-1,is_contiguous(y(1,1)%a(1,1)))) :: l2 ! known true
     !ERROR: Must be a constant value
-    logical, parameter :: l3 = is_contiguous(y(:,1)%a(1,1))
+    logical(kind=merge(-1,-2,is_contiguous(y(:,1)%a(1,1)))) :: l3 ! unknown
     !ERROR: Must be a constant value
-    logical, parameter :: l4 = is_contiguous(x%a(:,v))
+    logical(kind=merge(-1,-2,is_contiguous(y(:,1)%a(1,1)))) :: l4 ! unknown
+    logical(kind=merge(-1,1,is_contiguous(x%a(:,v)))) :: l5 ! known false
     !ERROR: Must be a constant value
-    logical, parameter :: l5 = is_contiguous(y(v,1)%a(1,1))
+    logical(kind=merge(-1,-2,is_contiguous(y(v,1)%a(1,1)))) :: l6 ! unknown
     !ERROR: Must be a constant value
-    logical, parameter :: l6 = is_contiguous(p(:))
+    logical(kind=merge(-1,-2,is_contiguous(p(:)))) :: l7 ! unknown
+    logical(kind=merge(1,-1,is_contiguous(pc(:)))) :: l8 ! known true
+    logical(kind=merge(-1,1,is_contiguous(pc(1:10:2)))) :: l9 ! known false
+    logical(kind=merge(-1,1,is_contiguous(pc(10:1:-1)))) :: l10 ! known false
   end
   subroutine test3(b)
     integer, intent(inout) :: b(..)

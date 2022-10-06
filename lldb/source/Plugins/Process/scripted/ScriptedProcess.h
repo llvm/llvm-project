@@ -50,10 +50,6 @@ public:
 
   static llvm::StringRef GetPluginDescriptionStatic();
 
-  ScriptedProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
-                  const ScriptedProcess::ScriptedProcessInfo &launch_info,
-                  Status &error);
-
   ~ScriptedProcess() override;
 
   bool CanDebug(lldb::TargetSP target_sp,
@@ -93,6 +89,10 @@ public:
   GetLoadedDynamicLibrariesInfos() override;
 
 protected:
+  ScriptedProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp,
+                  const ScriptedProcess::ScriptedProcessInfo &launch_info,
+                  Status &error);
+
   Status DoStop();
 
   void Clear();

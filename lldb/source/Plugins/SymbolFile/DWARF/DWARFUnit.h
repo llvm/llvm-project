@@ -51,7 +51,7 @@ class DWARFUnitHeader {
   uint64_t m_type_hash = 0;
   uint32_t m_type_offset = 0;
 
-  uint64_t m_dwo_id = 0;
+  llvm::Optional<uint64_t> m_dwo_id;
 
   DWARFUnitHeader() = default;
 
@@ -67,7 +67,7 @@ public:
   }
   uint64_t GetTypeHash() const { return m_type_hash; }
   dw_offset_t GetTypeOffset() const { return m_type_offset; }
-  uint64_t GetDWOId() const { return m_dwo_id; }
+  llvm::Optional<uint64_t> GetDWOId() const { return m_dwo_id; }
   bool IsTypeUnit() const {
     return m_unit_type == llvm::dwarf::DW_UT_type ||
            m_unit_type == llvm::dwarf::DW_UT_split_type;
@@ -92,7 +92,7 @@ public:
   virtual ~DWARFUnit();
 
   bool IsDWOUnit() { return m_is_dwo; }
-  uint64_t GetDWOId();
+  llvm::Optional<uint64_t> GetDWOId();
 
   void ExtractUnitDIEIfNeeded();
   void ExtractUnitDIENoDwoIfNeeded();
@@ -257,6 +257,34 @@ public:
 
   lldb_private::DWARFDataExtractor GetLocationData() const;
 
+  /// Returns true if any DIEs in the unit match any DW_TAG values in \a tags.
+  ///
+  /// \param[in] tags
+  ///   An array of dw_tag_t values to check all abbrevitions for.
+  ///
+  /// \returns
+  ///   True if any DIEs match any tag in \a tags, false otherwise.
+  bool HasAny(llvm::ArrayRef<dw_tag_t> tags);
+
+
+  /// Get the fission .dwo file specific error for this compile unit.
+  ///
+  /// The skeleton compile unit only can have a DWO error. Any other type
+  /// of DWARFUnit will not have a valid DWO error.
+  ///
+  /// \returns
+  ///   A valid DWO error if there is a problem with anything in the
+  ///   locating or parsing inforamtion in the .dwo file
+  const lldb_private::Status &GetDwoError() const { return m_dwo_error; }
+
+  /// Set the fission .dwo file specific error for this compile unit.
+  ///
+  /// This helps tracks issues that arise when trying to locate or parse a
+  /// .dwo file. Things like a missing .dwo file, DWO ID mismatch, and other
+  /// .dwo errors can be stored in each compile unit so the issues can be
+  /// communicated to the user.
+  void SetDwoError(const lldb_private::Status &error) { m_dwo_error = error; }
+
 protected:
   DWARFUnit(SymbolFileDWARF &dwarf, lldb::user_id_t uid,
             const DWARFUnitHeader &header,
@@ -336,7 +364,11 @@ protected:
   bool m_is_dwo;
   bool m_has_parsed_non_skeleton_unit;
   /// Value of DW_AT_GNU_dwo_id (v4) or dwo_id from CU header (v5).
-  uint64_t m_dwo_id;
+  llvm::Optional<uint64_t> m_dwo_id;
+  /// If we get an error when trying to load a .dwo file, save that error here.
+  /// Errors include .dwo/.dwp file not found, or the .dwp/.dwp file was found
+  /// but DWO ID doesn't match, etc.
+  lldb_private::Status m_dwo_error;
 
 private:
   void ParseProducerInfo();

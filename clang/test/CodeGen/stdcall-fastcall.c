@@ -144,3 +144,10 @@ void bar12(struct S3 y, int x) {
   // CHECK: call x86_fastcallcc void @foo12(float %{{.*}}, i32 inreg noundef %
   foo12(y, x);
 }
+
+void __attribute__((fastcall)) foo13(long long a, int b, int c);
+void bar13(long long a, int b, int c) {
+  // CHECK-LABEL: define{{.*}} void @bar13
+  // CHECK: call x86_fastcallcc void @foo13(i64 noundef %{{.*}}, i32 inreg noundef %{{.*}}, i32 inreg noundef %
+  foo13(a, b, c);
+}

@@ -98,14 +98,13 @@ void CodeSection::writeRelocations(raw_ostream &os) const {
 
 void DataSection::finalizeContents() {
   raw_string_ostream os(dataSectionHeader);
-  unsigned segmentCount = std::count_if(
-      segments.begin(), segments.end(),
-      [](OutputSegment *segment) { return segment->requiredInBinary(); });
+  unsigned segmentCount = llvm::count_if(segments, [](OutputSegment *segment) {
+    return segment->requiredInBinary();
+  });
 #ifndef NDEBUG
-  unsigned activeCount = std::count_if(
-      segments.begin(), segments.end(), [](OutputSegment *segment) {
-        return (segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0;
-      });
+  unsigned activeCount = llvm::count_if(segments, [](OutputSegment *segment) {
+    return (segment->initFlags & WASM_DATA_SEGMENT_IS_PASSIVE) == 0;
+  });
 #endif
 
   assert((config->sharedMemory || !config->isPic || config->extendedConst ||

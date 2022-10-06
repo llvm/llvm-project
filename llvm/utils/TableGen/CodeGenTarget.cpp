@@ -92,7 +92,9 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v512i1:   return "MVT::v512i1";
   case MVT::v1024i1:  return "MVT::v1024i1";
   case MVT::v128i2:   return "MVT::v128i2";
+  case MVT::v256i2:   return "MVT::v256i2";
   case MVT::v64i4:    return "MVT::v64i4";
+  case MVT::v128i4:   return "MVT::v128i4";
   case MVT::v1i8:     return "MVT::v1i8";
   case MVT::v2i8:     return "MVT::v2i8";
   case MVT::v4i8:     return "MVT::v4i8";
@@ -482,7 +484,7 @@ static const char *FixedInstrs[] = {
     nullptr};
 
 unsigned CodeGenTarget::getNumFixedInstructions() {
-  return array_lengthof(FixedInstrs) - 1;
+  return std::size(FixedInstrs) - 1;
 }
 
 /// Return all of the instructions defined by the target, ordered by
@@ -893,6 +895,9 @@ void CodeGenIntrinsic::setProperty(Record *R) {
   } else if (R->isSubClassOf("NoUndef")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     ArgumentAttributes.emplace_back(ArgNo, NoUndef, 0);
+  } else if (R->isSubClassOf("NonNull")) {
+    unsigned ArgNo = R->getValueAsInt("ArgNo");
+    ArgumentAttributes.emplace_back(ArgNo, NonNull, 0);
   } else if (R->isSubClassOf("Returned")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     ArgumentAttributes.emplace_back(ArgNo, Returned, 0);

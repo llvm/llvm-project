@@ -2,8 +2,8 @@
 ; RUN: -sanitizer-coverage-level=3 %s -S -o - | FileCheck %s
 
 ; The edge between %entry and %for.inc.i is a critical edge.
-; ModuleSanitizerCoveragePass must split this critical edge in order to track
-; coverage of this edge. ModuleSanitizerCoveragePass will also insert calls to
+; SanitizerCoveragePass must split this critical edge in order to track
+; coverage of this edge. SanitizerCoveragePass will also insert calls to
 ; @__sanitizer_cov_trace_pc using the debug location from the predecessor's
 ; branch.  but, if the branch itself is missing debug info (say, by accident
 ; due to a bug in an earlier transform), we would fail a verifier check that

@@ -943,9 +943,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     ParenParseOption ParenExprType;
     switch (ParseKind) {
       case CastParseKind::UnaryExprOnly:
-        if (!getLangOpts().CPlusPlus)
-          ParenExprType = CompoundLiteral;
-        LLVM_FALLTHROUGH;
+        assert(getLangOpts().CPlusPlus && "not possible to get here in C");
+        [[fallthrough]];
       case CastParseKind::AnyCastExpr:
         ParenExprType = ParenParseOption::CastExpr;
         break;
@@ -1038,9 +1037,10 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     return ParseCastExpression(ParseKind, isAddressOfOperand, isTypeCast,
                                isVectorLiteral, NotPrimaryExpression);
 
-  case tok::identifier: {      // primary-expression: identifier
-                               // unqualified-id: identifier
-                               // constant: enumeration-constant
+  case tok::identifier:
+  ParseIdentifier: {    // primary-expression: identifier
+                        // unqualified-id: identifier
+                        // constant: enumeration-constant
     // Turn a potentially qualified name into a annot_typename or
     // annot_cxxscope if it would be valid.  This handles things like x::y, etc.
     if (getLangOpts().CPlusPlus) {
@@ -1113,6 +1113,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
           REVERTIBLE_TYPE_TRAIT(__is_unsigned);
           REVERTIBLE_TYPE_TRAIT(__is_void);
           REVERTIBLE_TYPE_TRAIT(__is_volatile);
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
+  REVERTIBLE_TYPE_TRAIT(RTT_JOIN(__, Trait));
+#include "clang/Basic/TransformTypeTraits.def"
 #undef REVERTIBLE_TYPE_TRAIT
 #undef RTT_JOIN
         }
@@ -1357,7 +1360,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     // Special treatment because of member pointers
     SourceLocation SavedLoc = ConsumeToken();
     PreferredType.enterUnary(Actions, Tok.getLocation(), tok::amp, SavedLoc);
-    Res = ParseCastExpression(AnyCastExpr, true);
+
+    Res = ParseCastExpression(AnyCastExpr, /*isAddressOfOperand=*/true);
     if (!Res.isInvalid()) {
       Expr *Arg = Res.get();
       Res = Actions.ActOnUnaryOp(getCurScope(), SavedLoc, SavedKind, Arg);
@@ -1382,7 +1386,8 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     Res = ParseCastExpression(AnyCastExpr);
     if (!Res.isInvalid()) {
       Expr *Arg = Res.get();
-      Res = Actions.ActOnUnaryOp(getCurScope(), SavedLoc, SavedKind, Arg);
+      Res = Actions.ActOnUnaryOp(getCurScope(), SavedLoc, SavedKind, Arg,
+                                 isAddressOfOperand);
       if (Res.isInvalid())
         Res = Actions.CreateRecoveryExpr(SavedLoc, Arg->getEndLoc(), Arg);
     }
@@ -1413,7 +1418,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw__Alignof:   // unary-expression: '_Alignof' '(' type-name ')'
     if (!getLangOpts().C11)
       Diag(Tok, diag::ext_c11_feature) << Tok.getName();
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case tok::kw_alignof:    // unary-expression: 'alignof' '(' type-id ')'
   case tok::kw___alignof:  // unary-expression: '__alignof' unary-expression
                            // unary-expression: '__alignof' '(' type-name ')'
@@ -1502,7 +1507,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
                                            Ty.get(), nullptr);
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case tok::annot_decltype:
   case tok::kw_char:
@@ -1595,7 +1600,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
         ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
                                        /*ObjectHasErrors=*/false,
                                        /*EnteringContext=*/false);
-        AnnotateTemplateIdTokenAsType(SS);
+        AnnotateTemplateIdTokenAsType(SS, ImplicitTypenameContext::Yes);
         return ParseCastExpression(ParseKind, isAddressOfOperand, NotCastExpr,
                                    isTypeCast, isVectorLiteral,
                                    NotPrimaryExpression);
@@ -1614,14 +1619,14 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
       // translate it into a type and continue parsing as a cast
       // expression.
       CXXScopeSpec SS;
-      AnnotateTemplateIdTokenAsType(SS);
+      AnnotateTemplateIdTokenAsType(SS, ImplicitTypenameContext::Yes);
       return ParseCastExpression(ParseKind, isAddressOfOperand,
                                  NotCastExpr, isTypeCast, isVectorLiteral,
                                  NotPrimaryExpression);
     }
 
     // Fall through to treat the template-id as an id-expression.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
 
   case tok::kw_operator: // [C++] id-expression: operator/conversion-function-id
@@ -1739,6 +1744,17 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
                                    PreferredType.get(Tok.getLocation()));
     return ExprError();
   }
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
+#include "clang/Basic/TransformTypeTraits.def"
+    // HACK: libstdc++ uses some of the transform-type-traits as alias
+    // templates, so we need to work around this.
+    if (!NextToken().is(tok::l_paren)) {
+      Tok.setKind(tok::identifier);
+      Diag(Tok, diag::ext_keyword_as_ident)
+          << Tok.getIdentifierInfo()->getName() << 0;
+      goto ParseIdentifier;
+    }
+    goto ExpectedExpression;
   case tok::l_square:
     if (getLangOpts().CPlusPlus11) {
       if (getLangOpts().ObjC) {
@@ -1764,8 +1780,9 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
       Res = ParseObjCMessageExpression();
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
+  ExpectedExpression:
     NotCastExpr = true;
     return ExprError();
   }
@@ -1795,7 +1812,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
       if (Tok.isAtStartOfLine())
         return Res;
 
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case tok::period:
     case tok::arrow:
       break;
@@ -1883,7 +1900,7 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
         break;
       }
       // Fall through; this isn't a message send.
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     default:  // Not a postfix-expression suffix.
       return LHS;
@@ -2271,6 +2288,13 @@ Parser::ParsePostfixExpressionSuffix(ExprResult LHS) {
 ///           typeof ( expressions )
 ///           typeof ( type-name )
 /// [GNU/C++] typeof unary-expression
+/// [C2x]   typeof-specifier:
+///           typeof '(' typeof-specifier-argument ')'
+///           typeof_unqual '(' typeof-specifier-argument ')'
+///
+///         typeof-specifier-argument:
+///           expression
+///           type-name
 ///
 /// [OpenCL 1.1 6.11.12] vec_step built-in function:
 ///           vec_step ( expressions )
@@ -2282,8 +2306,9 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
                                            ParsedType &CastTy,
                                            SourceRange &CastRange) {
 
-  assert(OpTok.isOneOf(tok::kw_typeof, tok::kw_sizeof, tok::kw___alignof,
-                       tok::kw_alignof, tok::kw__Alignof, tok::kw_vec_step,
+  assert(OpTok.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual, tok::kw_sizeof,
+                       tok::kw___alignof, tok::kw_alignof, tok::kw__Alignof,
+                       tok::kw_vec_step,
                        tok::kw___builtin_omp_required_simd_align) &&
          "Not a typeof/sizeof/alignof/vec_step expression!");
 
@@ -2319,7 +2344,8 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
     }
 
     isCastExpr = false;
-    if (OpTok.is(tok::kw_typeof) && !getLangOpts().CPlusPlus) {
+    if (OpTok.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual) &&
+        !getLangOpts().CPlusPlus) {
       Diag(Tok, diag::err_expected_after) << OpTok.getIdentifierInfo()
                                           << tok::l_paren;
       return ExprError();
@@ -2345,7 +2371,8 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
       return ExprEmpty();
     }
 
-    if (getLangOpts().CPlusPlus || OpTok.isNot(tok::kw_typeof)) {
+    if (getLangOpts().CPlusPlus ||
+        !OpTok.isOneOf(tok::kw_typeof, tok::kw_typeof_unqual)) {
       // GNU typeof in C requires the expression to be parenthesized. Not so for
       // sizeof/alignof or in C++. Therefore, the parenthesized expression is
       // the start of a unary-expression, but doesn't include any postfix
@@ -3469,7 +3496,9 @@ Parser::ParseSimpleExpressionList(SmallVectorImpl<Expr*> &Exprs,
 
     Exprs.push_back(Expr.get());
 
-    if (Tok.isNot(tok::comma))
+    // We might be parsing the LHS of a fold-expression. If we reached the fold
+    // operator, stop.
+    if (Tok.isNot(tok::comma) || NextToken().is(tok::ellipsis))
       return false;
 
     // Move to the next argument, remember where the comma was.

@@ -34,9 +34,8 @@ using testing::SizeIs;
 ///   };
 std::string annotate(llvm::StringRef Input,
                      llvm::ArrayRef<HighlightingToken> Tokens) {
-  assert(std::is_sorted(
-      Tokens.begin(), Tokens.end(),
-      [](const HighlightingToken &L, const HighlightingToken &R) {
+  assert(llvm::is_sorted(
+      Tokens, [](const HighlightingToken &L, const HighlightingToken &R) {
         return L.R.start < R.R.start;
       }));
 
@@ -840,6 +839,12 @@ sizeof...($TemplateParameter[[Elements]]);
             $Function_deprecated[[Foo]]($Parameter[[x]]); 
             $Function_deprecated[[Foo]]($Parameter[[x]]); 
             $Function_deprecated[[Foo]]($Parameter[[x]]); 
+        }
+      )cpp",
+      // Predefined identifiers
+      R"cpp(
+        void $Function_decl[[Foo]]() {
+            const char *$LocalVariable_decl_readonly[[s]] = $LocalVariable_readonly_static[[__func__]];
         }
       )cpp",
       // Explicit template specialization

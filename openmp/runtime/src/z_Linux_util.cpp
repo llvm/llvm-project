@@ -765,13 +765,6 @@ void __kmp_create_worker(int gtid, kmp_info_t *th, size_t stack_size) {
      and also gives the user the stack space they requested for all threads */
   stack_size += gtid * __kmp_stkoffset * 2;
 
-#if defined(__ANDROID__) && __ANDROID_API__ < 19
-  // Round the stack size to a multiple of the page size. Older versions of
-  // Android (until KitKat) would fail pthread_attr_setstacksize with EINVAL
-  // if the stack size was not a multiple of the page size.
-  stack_size = (stack_size + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
-#endif
-
   KA_TRACE(10, ("__kmp_create_worker: T#%d, default stacksize = %lu bytes, "
                 "__kmp_stksize = %lu bytes, final stacksize = %lu bytes\n",
                 gtid, KMP_DEFAULT_STKSIZE, __kmp_stksize, stack_size));
@@ -2249,8 +2242,9 @@ int __kmp_get_load_balance(int max) {
   int stat_file = -1;
   int stat_path_fixed_len;
 
+#ifdef KMP_DEBUG
   int total_processes = 0; // Total number of processes in system.
-  int total_threads = 0; // Total number of threads in system.
+#endif
 
   double call_time = 0.0;
 
@@ -2297,7 +2291,9 @@ int __kmp_get_load_balance(int max) {
     // process' directory.
     if (proc_entry->d_type == DT_DIR && isdigit(proc_entry->d_name[0])) {
 
+#ifdef KMP_DEBUG
       ++total_processes;
+#endif
       // Make sure init process is the very first in "/proc", so we can replace
       // strcmp( proc_entry->d_name, "1" ) == 0 with simpler total_processes ==
       // 1. We are going to check that total_processes == 1 => d_name == "1" is
@@ -2338,7 +2334,6 @@ int __kmp_get_load_balance(int max) {
         while (task_entry != NULL) {
           // It is a directory and name starts with a digit.
           if (proc_entry->d_type == DT_DIR && isdigit(task_entry->d_name[0])) {
-            ++total_threads;
 
             // Construct complete stat file path. Easiest way would be:
             //  __kmp_str_buf_print( & stat_path, "%s/%s/stat", task_path.str,
@@ -2447,7 +2442,7 @@ finish: // Clean up and exit.
 
 #if !(KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_MIC ||                            \
       ((KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64) ||                 \
-      KMP_ARCH_PPC64 || KMP_ARCH_RISCV64)
+      KMP_ARCH_PPC64 || KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64)
 
 // we really only need the case with 1 argument, because CLANG always build
 // a struct of pointers to shared variables referenced in the outlined function

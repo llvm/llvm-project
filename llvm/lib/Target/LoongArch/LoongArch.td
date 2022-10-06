@@ -100,6 +100,10 @@ include "LoongArchInstrInfo.td"
 def : ProcessorModel<"generic-la32", NoSchedModel, []>;
 def : ProcessorModel<"generic-la64", NoSchedModel, [Feature64Bit]>;
 
+// Support generic for compatibility with other targets. The triple will be used
+// to change to the appropriate la32/la64 version.
+def : ProcessorModel<"generic", NoSchedModel, []>;
+
 def : ProcessorModel<"la464", NoSchedModel, [Feature64Bit,
                                              FeatureExtLASX,
                                              FeatureExtLVZ,

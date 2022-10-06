@@ -344,6 +344,10 @@ public:
     startLine() << Label << ": " << Value << "\n";
   }
 
+  void printStringEscaped(StringRef Label, StringRef Value) {
+    printStringEscapedImpl(Label, Value);
+  }
+
   void printBinary(StringRef Label, StringRef Str, ArrayRef<uint8_t> Value) {
     printBinaryImpl(Label, Str, Value, false);
   }
@@ -476,6 +480,12 @@ private:
   virtual void printNumberImpl(StringRef Label, StringRef Str,
                                StringRef Value) {
     startLine() << Label << ": " << Str << " (" << Value << ")\n";
+  }
+
+  virtual void printStringEscapedImpl(StringRef Label, StringRef Value) {
+    startLine() << Label << ": ";
+    OS.write_escaped(Value);
+    OS << '\n';
   }
 
   void scopedBegin(char Symbol) {

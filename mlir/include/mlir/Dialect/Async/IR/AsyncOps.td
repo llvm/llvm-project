@@ -76,11 +76,11 @@ def Async_ExecuteOp :
   }];
 
   let arguments = (ins Variadic<Async_TokenType>:$dependencies,
-                       Variadic<Async_AnyValueOrTokenType>:$operands);
+                       Variadic<Async_AnyValueOrTokenType>:$bodyOperands);
 
   let results = (outs Async_TokenType:$token,
-                      Variadic<Async_ValueType>:$results);
-  let regions = (region SizedRegion<1>:$body);
+                      Variadic<Async_ValueType>:$bodyResults);
+  let regions = (region SizedRegion<1>:$bodyRegion);
 
   let hasCustomAssemblyFormat = 1;
   let skipDefaultBuilders = 1;
@@ -505,7 +505,7 @@ def Async_RuntimeAddRefOp : Async_Op<"runtime.add_ref"> {
   }];
 
   let arguments = (ins Async_AnyAsyncType:$operand,
-                       Confined<I64Attr, [IntPositive]>:$count);
+                       ConfinedAttr<I64Attr, [IntPositive]>:$count);
 
   let assemblyFormat = [{
     $operand attr-dict `:` type($operand)
@@ -520,7 +520,7 @@ def Async_RuntimeDropRefOp : Async_Op<"runtime.drop_ref"> {
   }];
 
   let arguments = (ins Async_AnyAsyncType:$operand,
-                       Confined<I64Attr, [IntPositive]>:$count);
+                       ConfinedAttr<I64Attr, [IntPositive]>:$count);
 
   let assemblyFormat = [{
     $operand attr-dict `:` type($operand)

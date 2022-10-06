@@ -52,7 +52,6 @@ images = [
 # CHECK: MyFramework Plus.dylib
 # CHECK: ({{.*}}
 # CHECK: 1.11 - MyFramework 1.11
-# CHECK: <{{.*}}
 # CHECK: 01234
 # CHECK: /tmp/MyFramework Plus.dylib
 
@@ -62,7 +61,6 @@ images = [
 # CHECK: MyFramework-dev.dylib
 # CHECK: ({{.*}}
 # CHECK: 1.0.0svn - 1.0.0svn
-# CHECK: <{{.*}}
 # CHECK: 01234
 # CHECK: /MyFramework-dev.dylib
 
@@ -73,7 +71,6 @@ images = [
 # CHECK: ({{.*}}
 # CHECK: 400.9.4
 # CHECK: None
-# CHECK: None
 # CHECK: /usr/lib/libc++.1.dylib
 
 "0x1047b8000 - 0x10481ffff dyld arm64e  <cfa789d10da63f9a8996daf84ed9d04f> /usr/lib/dyld"
@@ -82,7 +79,6 @@ images = [
 # CHECK: dyld
 # CHECK: {{.*}}
 # CHECK: arm64e
-# CHECK: <{{.*}}
 # CHECK: cfa789d10da63f9a8996daf84ed9d04f
 # CHECK: /usr/lib/dyld
 ]
@@ -101,9 +97,6 @@ frames = [
 "2   MyApp Pro arm64    	0x000000019b0db3a8 foo + 72",
 # CHECK: 2
 # CHECK: MyApp Pro
-# CHECK: a
-# CHECK: arm64
-# CHECK: a
 # CHECK: 0x000000019b0db3a8
 # CHECK: foo + 72
 "3   He 0x1    	0x000000019b0db3a8 foo + 72"

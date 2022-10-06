@@ -13,10 +13,8 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 
-namespace llvm {
-namespace codeview {
+namespace llvm::codeview {
 union DebugInfo;
-}
 }
 
 namespace lld {

@@ -30,7 +30,7 @@ class TestBasicDeque(TestBase):
         ]
         riterator = "reverse_iterator"
         riterator_children = [
-            ValueCheck(name="__t"),
+            ValueCheck(), # Deprecated __t_ member; no need to check
             ValueCheck(name="current")
         ]
 

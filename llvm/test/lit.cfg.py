@@ -171,7 +171,7 @@ tools.extend([
     'llvm-tblgen', 'llvm-tapi-diff', 'llvm-undname', 'llvm-windres',
     'llvm-c-test', 'llvm-cxxfilt', 'llvm-xray', 'yaml2obj', 'obj2yaml',
     'yaml-bench', 'verify-uselistorder', 'bugpoint', 'llc', 'llvm-symbolizer',
-    'opt', 'sancov', 'sanstats'])
+    'opt', 'sancov', 'sanstats', 'llvm-remarkutil'])
 
 # The following tools are optional
 tools.extend([
@@ -216,19 +216,23 @@ def enable_ptxas(ptxas_executable):
             (11, 0), (11, 1), (11, 2), (11, 3), (11, 4), (11, 5), (11, 6),
         ]
 
+        def version_int(ver):
+            return ver[0] * 100 + ver[1]
+
         # ignore ptxas if its version is below the minimum supported
         # version
         min_version = ptxas_known_versions[0]
-        if version[0] < min_version[0] or version[1] < min_version[1]:
+        if version_int(version) < version_int(min_version):
             print(
                 'Warning: ptxas version {}.{} is not supported'.format(
                     version[0], version[1]))
             return
 
-        for known_major, known_minor in ptxas_known_versions:
-            if known_major <= version[0] and known_minor <= version[1]:
+        for known_version in ptxas_known_versions:
+            if version_int(known_version) <= version_int(version):
+                major, minor = known_version
                 config.available_features.add(
-                    'ptxas-{}.{}'.format(known_major, known_minor))
+                    'ptxas-{}.{}'.format(major, minor))
 
     config.available_features.add('ptxas')
     tools.extend([ToolSubst('%ptxas', ptxas_executable),
@@ -436,8 +440,9 @@ if 'darwin' == sys.platform:
         if 'hw.optional.fma: 1' in result:
             config.available_features.add('fma3')
 
-# .debug_frame is not emitted for targeting Windows x64, arm64, or AIX.
-if not re.match(r'^(x86_64|arm64|powerpc|powerpc64).*-(windows-gnu|windows-msvc|aix)', config.target_triple):
+# .debug_frame is not emitted for targeting Windows x64, aarch64/arm64, AIX, or Apple Silicon Mac.
+if not re.match(r'^(x86_64|aarch64|arm64|powerpc|powerpc64).*-(windows-gnu|windows-msvc|aix)', config.target_triple) \
+    and not re.match(r'^arm64(e)?-apple-(macos|darwin)', config.target_triple):
     config.available_features.add('debug_frame')
 
 if config.have_libxar:

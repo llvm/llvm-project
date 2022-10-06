@@ -298,10 +298,10 @@ defm : ZnWriteResFpuPair<WriteFBlend,    [ZnFPU01], 1>;
 defm : ZnWriteResFpuPair<WriteFBlendY,   [ZnFPU01], 1>;
 defm : X86WriteResPairUnsupported<WriteFBlendZ>;
 defm : ZnWriteResFpuPair<WriteFVarBlend, [ZnFPU01], 1>;
-defm : ZnWriteResFpuPair<WriteFVarBlendY,[ZnFPU01], 1>;
+defm : ZnWriteResFpuPair<WriteFVarBlendY,[ZnFPU01], 1, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteFVarBlendZ>;
 defm : ZnWriteResFpuPair<WriteVarBlend,  [ZnFPU0],  1>;
-defm : ZnWriteResFpuPair<WriteVarBlendY, [ZnFPU0],  1>;
+defm : ZnWriteResFpuPair<WriteVarBlendY, [ZnFPU0],  1, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteVarBlendZ>;
 defm : ZnWriteResFpuPair<WriteCvtSS2I,   [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteCvtPS2I,   [ZnFPU3],  5>;
@@ -319,20 +319,20 @@ defm : ZnWriteResFpuPair<WriteCvtI2SD,   [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteCvtI2PD,   [ZnFPU3],  5>;
 defm : ZnWriteResFpuPair<WriteCvtI2PDY,  [ZnFPU3],  5>;
 defm : X86WriteResPairUnsupported<WriteCvtI2PDZ>;
-defm : ZnWriteResFpuPair<WriteFDiv,      [ZnFPU3], 15>;
-defm : ZnWriteResFpuPair<WriteFDivX,     [ZnFPU3], 15>;
-//defm : ZnWriteResFpuPair<WriteFDivY,     [ZnFPU3], 15>;
+defm : ZnWriteResFpuPair<WriteFDiv,      [ZnFPU3], 10, [3]>;
+defm : ZnWriteResFpuPair<WriteFDivX,     [ZnFPU3], 10, [3]>;
+defm : ZnWriteResFpuPair<WriteFDivY,     [ZnFPU3], 10, [6], 2>;
 defm : X86WriteResPairUnsupported<WriteFDivZ>;
-defm : ZnWriteResFpuPair<WriteFDiv64,    [ZnFPU3], 15>;
-defm : ZnWriteResFpuPair<WriteFDiv64X,   [ZnFPU3], 15>;
-//defm : ZnWriteResFpuPair<WriteFDiv64Y,   [ZnFPU3], 15>;
+defm : ZnWriteResFpuPair<WriteFDiv64,    [ZnFPU3], 13, [5]>;
+defm : ZnWriteResFpuPair<WriteFDiv64X,   [ZnFPU3], 13, [5]>;
+defm : ZnWriteResFpuPair<WriteFDiv64Y,   [ZnFPU3], 15, [9], 2>;
 defm : X86WriteResPairUnsupported<WriteFDiv64Z>;
 defm : ZnWriteResFpuPair<WriteFSign,     [ZnFPU3],  2>;
 defm : ZnWriteResFpuPair<WriteFRnd,      [ZnFPU3],  4, [1], 1, 7, 1>; // FIXME: Should folds require 1 extra uops?
 defm : ZnWriteResFpuPair<WriteFRndY,     [ZnFPU3],  4, [1], 1, 7, 1>; // FIXME: Should folds require 1 extra uops?
 defm : X86WriteResPairUnsupported<WriteFRndZ>;
 defm : ZnWriteResFpuPair<WriteFLogic,    [ZnFPU],   1>;
-defm : ZnWriteResFpuPair<WriteFLogicY,   [ZnFPU],   1>;
+defm : ZnWriteResFpuPair<WriteFLogicY,   [ZnFPU],   1, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteFLogicZ>;
 defm : ZnWriteResFpuPair<WriteFTest,     [ZnFPU12], 2, [2], 1, 7, 1>;
 defm : ZnWriteResFpuPair<WriteFTestY,    [ZnFPU12], 4, [4], 3, 7, 2>;
@@ -343,33 +343,33 @@ defm : X86WriteResPairUnsupported<WriteFShuffleZ>;
 defm : ZnWriteResFpuPair<WriteFVarShuffle, [ZnFPU12], 1>;
 defm : ZnWriteResFpuPair<WriteFVarShuffleY,[ZnFPU12], 1>;
 defm : X86WriteResPairUnsupported<WriteFVarShuffleZ>;
-defm : ZnWriteResFpuPair<WriteFMul,      [ZnFPU01], 3, [1], 1, 7, 1>;
-defm : ZnWriteResFpuPair<WriteFMulX,     [ZnFPU01], 3, [1], 1, 7, 1>;
-defm : ZnWriteResFpuPair<WriteFMulY,     [ZnFPU01], 4, [1], 1, 7, 1>;
+defm : ZnWriteResFpuPair<WriteFMul,      [ZnFPU01], 3>;
+defm : ZnWriteResFpuPair<WriteFMulX,     [ZnFPU01], 3>;
+defm : ZnWriteResFpuPair<WriteFMulY,     [ZnFPU01], 3, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteFMulZ>;
-defm : ZnWriteResFpuPair<WriteFMul64,    [ZnFPU01], 3, [1], 1, 7, 1>;
-defm : ZnWriteResFpuPair<WriteFMul64X,   [ZnFPU01], 3, [1], 1, 7, 1>;
-defm : ZnWriteResFpuPair<WriteFMul64Y,   [ZnFPU01], 4, [1], 1, 7, 1>;
+defm : ZnWriteResFpuPair<WriteFMul64,    [ZnFPU01], 4>;
+defm : ZnWriteResFpuPair<WriteFMul64X,   [ZnFPU01], 4>;
+defm : ZnWriteResFpuPair<WriteFMul64Y,   [ZnFPU01], 4, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteFMul64Z>;
-defm : ZnWriteResFpuPair<WriteFMA,       [ZnFPU03], 5>;
-defm : ZnWriteResFpuPair<WriteFMAX,      [ZnFPU03], 5>;
-defm : ZnWriteResFpuPair<WriteFMAY,      [ZnFPU03], 5>;
+defm : ZnWriteResFpuPair<WriteFMA,       [ZnFPU01], 5>;
+defm : ZnWriteResFpuPair<WriteFMAX,      [ZnFPU01], 5>;
+defm : ZnWriteResFpuPair<WriteFMAY,      [ZnFPU01], 5, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteFMAZ>;
 defm : ZnWriteResFpuPair<WriteFRcp,      [ZnFPU01], 5>;
 defm : ZnWriteResFpuPair<WriteFRcpX,     [ZnFPU01], 5>;
-defm : ZnWriteResFpuPair<WriteFRcpY,     [ZnFPU01], 5, [1], 1, 7, 2>;
+defm : ZnWriteResFpuPair<WriteFRcpY,     [ZnFPU01], 5, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteFRcpZ>;
-//defm : ZnWriteResFpuPair<WriteFRsqrt,    [ZnFPU02], 5>;
-defm : ZnWriteResFpuPair<WriteFRsqrtX,   [ZnFPU01], 5, [1], 1, 7, 1>;
-//defm : ZnWriteResFpuPair<WriteFRsqrtY,   [ZnFPU01], 5, [2], 2>;
+defm : ZnWriteResFpuPair<WriteFRsqrt,    [ZnFPU01], 5>;
+defm : ZnWriteResFpuPair<WriteFRsqrtX,   [ZnFPU01], 5>;
+defm : ZnWriteResFpuPair<WriteFRsqrtY,   [ZnFPU01], 5, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteFRsqrtZ>;
-defm : ZnWriteResFpuPair<WriteFSqrt,     [ZnFPU3], 20, [20]>;
-defm : ZnWriteResFpuPair<WriteFSqrtX,    [ZnFPU3], 20, [20]>;
-defm : ZnWriteResFpuPair<WriteFSqrtY,    [ZnFPU3], 28, [28], 1, 7, 1>;
+defm : ZnWriteResFpuPair<WriteFSqrt,     [ZnFPU3], 14, [5]>;
+defm : ZnWriteResFpuPair<WriteFSqrtX,    [ZnFPU3], 14, [5]>;
+defm : ZnWriteResFpuPair<WriteFSqrtY,    [ZnFPU3], 14, [10], 1>;
 defm : X86WriteResPairUnsupported<WriteFSqrtZ>;
-defm : ZnWriteResFpuPair<WriteFSqrt64,   [ZnFPU3], 20, [20]>;
-defm : ZnWriteResFpuPair<WriteFSqrt64X,  [ZnFPU3], 20, [20]>;
-defm : ZnWriteResFpuPair<WriteFSqrt64Y,  [ZnFPU3], 40, [40], 1, 7, 1>;
+defm : ZnWriteResFpuPair<WriteFSqrt64,   [ZnFPU3], 20, [8]>;
+defm : ZnWriteResFpuPair<WriteFSqrt64X,  [ZnFPU3], 20, [8]>;
+defm : ZnWriteResFpuPair<WriteFSqrt64Y,  [ZnFPU3], 20, [16], 1>;
 defm : X86WriteResPairUnsupported<WriteFSqrt64Z>;
 defm : ZnWriteResFpuPair<WriteFSqrt80,   [ZnFPU3], 20, [20]>;
 
@@ -411,21 +411,21 @@ defm : ZnWriteResFpuPair<WriteVarVecShiftY, [ZnFPU1], 3, [4], 2>;
 defm : X86WriteResPairUnsupported<WriteVarVecShiftZ>;
 defm : ZnWriteResFpuPair<WriteVecLogic,   [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteVecLogicX,  [ZnFPU],   1>;
-defm : ZnWriteResFpuPair<WriteVecLogicY,  [ZnFPU],   1>;
+defm : ZnWriteResFpuPair<WriteVecLogicY,  [ZnFPU],   1, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteVecLogicZ>;
 defm : ZnWriteResFpuPair<WriteVecTest,    [ZnFPU12], 2, [2], 1, 7, 1>;
 defm : ZnWriteResFpuPair<WriteVecTestY,   [ZnFPU12], 4, [4], 3, 7, 2>;
 defm : X86WriteResPairUnsupported<WriteVecTestZ>;
 defm : ZnWriteResFpuPair<WriteVecALU,     [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteVecALUX,    [ZnFPU],   1>;
-defm : ZnWriteResFpuPair<WriteVecALUY,    [ZnFPU],   1>;
+defm : ZnWriteResFpuPair<WriteVecALUY,    [ZnFPU],   1, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteVecALUZ>;
 defm : ZnWriteResFpuPair<WriteVecIMul,    [ZnFPU0],  4>;
 defm : ZnWriteResFpuPair<WriteVecIMulX,   [ZnFPU0],  4>;
-defm : ZnWriteResFpuPair<WriteVecIMulY,   [ZnFPU0],  4>;
+defm : ZnWriteResFpuPair<WriteVecIMulY,   [ZnFPU0],  4, [2], 2>;
 defm : X86WriteResPairUnsupported<WriteVecIMulZ>;
-defm : ZnWriteResFpuPair<WritePMULLD,     [ZnFPU0],  4, [1], 1, 7, 1>; // FIXME
-defm : ZnWriteResFpuPair<WritePMULLDY,    [ZnFPU0],  5, [2], 1, 7, 1>; // FIXME
+defm : ZnWriteResFpuPair<WritePMULLD,     [ZnFPU0],  4, [2]>;
+defm : ZnWriteResFpuPair<WritePMULLDY,    [ZnFPU0],  4, [4], 2>;
 defm : X86WriteResPairUnsupported<WritePMULLDZ>;
 defm : ZnWriteResFpuPair<WriteShuffle,    [ZnFPU],   1>;
 defm : ZnWriteResFpuPair<WriteShuffleX,   [ZnFPU],   1>;
@@ -1430,40 +1430,6 @@ def : InstRW<[ZnWriteSHA256RNDS2Ld], (instrs SHA256RNDS2rm)>;
 
 //-- Arithmetic instructions --//
 
-// VDIVPS.
-// TODO - convert to ZnWriteResFpuPair
-// y,y,y.
-def ZnWriteVDIVPSYr : SchedWriteRes<[ZnFPU3]> {
-  let Latency = 12;
-  let ResourceCycles = [12];
-}
-def : SchedAlias<WriteFDivY,   ZnWriteVDIVPSYr>;
-
-// y,y,m256.
-def ZnWriteVDIVPSYLd : SchedWriteRes<[ZnAGU, ZnFPU3]> {
-  let Latency = 19;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1, 19];
-}
-def : SchedAlias<WriteFDivYLd,  ZnWriteVDIVPSYLd>;
-
-// VDIVPD.
-// TODO - convert to ZnWriteResFpuPair
-// y,y,y.
-def ZnWriteVDIVPDY : SchedWriteRes<[ZnFPU3]> {
-  let Latency = 15;
-  let ResourceCycles = [15];
-}
-def : SchedAlias<WriteFDiv64Y, ZnWriteVDIVPDY>;
-
-// y,y,m256.
-def ZnWriteVDIVPDYLd : SchedWriteRes<[ZnAGU, ZnFPU3]> {
-  let Latency = 22;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,22];
-}
-def : SchedAlias<WriteFDiv64YLd, ZnWriteVDIVPDYLd>;
-
 // DPPS.
 // x,x,i / v,v,v,i.
 def : SchedAlias<WriteDPPS,   ZnWriteMicrocoded>;
@@ -1479,39 +1445,6 @@ def : SchedAlias<WriteDPPD,   ZnWriteMicrocoded>;
 
 // x,m,i.
 def : SchedAlias<WriteDPPDLd, ZnWriteMicrocoded>;
-
-// RSQRTSS
-// TODO - convert to ZnWriteResFpuPair
-// x,x.
-def ZnWriteRSQRTSSr : SchedWriteRes<[ZnFPU02]> {
-  let Latency = 5;
-}
-def : SchedAlias<WriteFRsqrt, ZnWriteRSQRTSSr>;
-
-// x,m128.
-def ZnWriteRSQRTSSLd: SchedWriteRes<[ZnAGU, ZnFPU02]> {
-  let Latency = 12;
-  let NumMicroOps = 2;
-  let ResourceCycles = [1,2]; // FIXME: Is this right?
-}
-def : SchedAlias<WriteFRsqrtLd, ZnWriteRSQRTSSLd>;
-
-// RSQRTPS
-// TODO - convert to ZnWriteResFpuPair
-// y,y.
-def ZnWriteRSQRTPSYr : SchedWriteRes<[ZnFPU01]> {
-  let Latency = 5;
-  let NumMicroOps = 2;
-  let ResourceCycles = [2];
-}
-def : SchedAlias<WriteFRsqrtY, ZnWriteRSQRTPSYr>;
-
-// y,m256.
-def ZnWriteRSQRTPSYLd : SchedWriteRes<[ZnAGU, ZnFPU01]> {
-  let Latency = 12;
-  let NumMicroOps = 2;
-}
-def : SchedAlias<WriteFRsqrtYLd, ZnWriteRSQRTPSYLd>;
 
 //-- Other instructions --//
 

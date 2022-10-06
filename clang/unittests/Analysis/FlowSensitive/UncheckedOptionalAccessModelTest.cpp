@@ -14,10 +14,8 @@
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -1234,48 +1232,44 @@ private:
       template <typename T>
       T Make();
     )");
-    const tooling::FileContentMappings FileContents(Headers.begin(),
-                                                    Headers.end());
     UncheckedOptionalAccessModelOptions Options{
         /*IgnoreSmartPointerDereference=*/true};
     std::vector<SourceLocation> Diagnostics;
     llvm::Error Error = checkDataflow<UncheckedOptionalAccessModel>(
-        SourceCode, FuncMatcher,
-        [Options](ASTContext &Ctx, Environment &) {
-          return UncheckedOptionalAccessModel(Ctx, Options);
-        },
-        [&Diagnostics, Diagnoser = UncheckedOptionalAccessDiagnoser(Options)](
-            ASTContext &Ctx, const Stmt *Stmt,
-            const TypeErasedDataflowAnalysisState &State) mutable {
-          auto StmtDiagnostics = Diagnoser.diagnose(Ctx, Stmt, State.Env);
-          llvm::move(StmtDiagnostics, std::back_inserter(Diagnostics));
-        },
-        [&Diagnostics](AnalysisData AnalysisData) {
-          auto &SrcMgr = AnalysisData.ASTCtx.getSourceManager();
-
+        AnalysisInputs<UncheckedOptionalAccessModel>(
+            SourceCode, std::move(FuncMatcher),
+            [Options](ASTContext &Ctx, Environment &) {
+              return UncheckedOptionalAccessModel(Ctx, Options);
+            })
+            .withPostVisitCFG(
+                [&Diagnostics,
+                 Diagnoser = UncheckedOptionalAccessDiagnoser(Options)](
+                    ASTContext &Ctx, const CFGElement &Elt,
+                    const TypeErasedDataflowAnalysisState &State) mutable {
+                  auto EltDiagnostics =
+                      Diagnoser.diagnose(Ctx, &Elt, State.Env);
+                  llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
+                })
+            .withASTBuildArgs(
+                {"-fsyntax-only", "-std=c++17", "-Wno-undefined-inline"})
+            .withASTBuildVirtualMappedFiles(
+                tooling::FileContentMappings(Headers.begin(), Headers.end())),
+        /*VerifyResults=*/[&Diagnostics](
+                              const llvm::DenseMap<unsigned, std::string>
+                                  &Annotations,
+                              const AnalysisOutputs &AO) {
           llvm::DenseSet<unsigned> AnnotationLines;
-          for (const auto &Pair : AnalysisData.Annotations) {
-            auto *Stmt = Pair.getFirst();
-            AnnotationLines.insert(
-                SrcMgr.getPresumedLineNumber(Stmt->getBeginLoc()));
-            // We add both the begin and end locations, so that if the
-            // statement spans multiple lines then the test will fail.
-            //
-            // FIXME: Going forward, we should change this to instead just
-            // get the single line number from the annotation itself, rather
-            // than looking at the statement it's attached to.
-            AnnotationLines.insert(
-                SrcMgr.getPresumedLineNumber(Stmt->getEndLoc()));
+          for (const auto &[Line, _] : Annotations) {
+            AnnotationLines.insert(Line);
           }
-
+          auto &SrcMgr = AO.ASTCtx.getSourceManager();
           llvm::DenseSet<unsigned> DiagnosticLines;
           for (SourceLocation &Loc : Diagnostics) {
             DiagnosticLines.insert(SrcMgr.getPresumedLineNumber(Loc));
           }
 
           EXPECT_THAT(DiagnosticLines, ContainerEq(AnnotationLines));
-        },
-        {"-fsyntax-only", "-std=c++17", "-Wno-undefined-inline"}, FileContents);
+        });
     if (Error)
       FAIL() << llvm::toString(std::move(Error));
   }

@@ -472,3 +472,29 @@ define i32 @add_of_selects(i1 %A, i32 %B) {
   %add = add i32 %sel0, %sel1
   ret i32 %add
 }
+
+; The ADD can't cause overflow out of the low 4 bits so the OR can be removed.
+
+define i32 @add_undemanded_low_bits(i32 %x) {
+; CHECK-LABEL: @add_undemanded_low_bits(
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], 1616
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[ADD]], 4
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %or = or i32 %x, 15
+  %add = add i32 %or, 1616
+  %shr = lshr i32 %add, 4
+  ret i32 %shr
+}
+
+define i32 @sub_undemanded_low_bits(i32 %x) {
+; CHECK-LABEL: @sub_undemanded_low_bits(
+; CHECK-NEXT:    [[SUB:%.*]] = add i32 [[X:%.*]], -1616
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[SUB]], 4
+; CHECK-NEXT:    ret i32 [[SHR]]
+;
+  %or = or i32 %x, 15
+  %sub = sub i32 %or, 1616
+  %shr = lshr i32 %sub, 4
+  ret i32 %shr
+}

@@ -105,8 +105,8 @@ bool SystemZLDCleanup::VisitNode(MachineDomTreeNode *Node,
   }
 
   // Visit the children of this block in the dominator tree.
-  for (auto I = Node->begin(), E = Node->end(); I != E; ++I)
-    Changed |= VisitNode(*I, TLSBaseAddrReg);
+  for (auto &N : *Node)
+    Changed |= VisitNode(N, TLSBaseAddrReg);
 
   return Changed;
 }

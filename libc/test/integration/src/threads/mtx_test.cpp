@@ -64,7 +64,7 @@ void relay_counter() {
   }
 
   int retval = 123;
-  __llvm_libc::thrd_join(&thread, &retval);
+  __llvm_libc::thrd_join(thread, &retval);
   ASSERT_EQ(retval, 0);
 
   __llvm_libc::mtx_destroy(&mutex);
@@ -129,7 +129,7 @@ void wait_and_step() {
   }
 
   int retval = 123;
-  __llvm_libc::thrd_join(&thread, &retval);
+  __llvm_libc::thrd_join(thread, &retval);
   ASSERT_EQ(retval, 0);
 
   __llvm_libc::mtx_destroy(&start_lock);
@@ -183,7 +183,7 @@ void multiple_waiters() {
 
   int retval;
   for (int i = 0; i < THREAD_COUNT; ++i) {
-    __llvm_libc::thrd_join(waiters + i, &retval);
+    __llvm_libc::thrd_join(waiters[i], &retval);
   }
 
   ASSERT_EQ(wait_count, 0);
@@ -192,7 +192,7 @@ void multiple_waiters() {
   __llvm_libc::mtx_destroy(&counter_lock);
 }
 
-int main() {
+TEST_MAIN() {
   relay_counter();
   wait_and_step();
   multiple_waiters();

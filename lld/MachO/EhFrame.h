@@ -50,14 +50,12 @@
  * 5. (Optional) LSDA address (pointer-sized pcrel offset)
  * 6. DWARF instructions (ignored by LLD)
  */
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 class EhReader {
 public:
-  EhReader(const ObjFile *file, ArrayRef<uint8_t> data, size_t dataOff,
-           size_t wordSize)
-      : file(file), data(data), dataOff(dataOff), wordSize(wordSize) {}
+  EhReader(const ObjFile *file, ArrayRef<uint8_t> data, size_t dataOff)
+      : file(file), data(data), dataOff(dataOff) {}
   size_t size() const { return data.size(); }
   // Read and validate the length field.
   uint64_t readLength(size_t *off) const;
@@ -65,7 +63,7 @@ public:
   void skipValidLength(size_t *off) const;
   uint8_t readByte(size_t *off) const;
   uint32_t readU32(size_t *off) const;
-  uint64_t readPointer(size_t *off) const;
+  uint64_t readPointer(size_t *off, uint8_t size) const;
   StringRef readString(size_t *off) const;
   void skipLeb128(size_t *off) const;
   void failOn(size_t errOff, const Twine &msg) const;
@@ -76,7 +74,6 @@ private:
   // The offset of the data array within its section. Used only for error
   // reporting.
   const size_t dataOff;
-  size_t wordSize;
 };
 
 // The EH frame format, when emitted by llvm-mc, consists of a number of
@@ -114,7 +111,6 @@ private:
   SmallVector<Reloc, 6> newRelocs;
 };
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

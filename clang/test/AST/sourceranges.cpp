@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple i686-mingw32 -ast-dump %s | FileCheck %s
-// RUN: %clang_cc1 -triple i686-mingw32 -std=c++1z -ast-dump %s | FileCheck %s -check-prefix=CHECK-1Z
+// RUN: %clang_cc1 -triple i686-mingw32 %std_cxx11-14 -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -triple i686-mingw32 %std_cxx17- -ast-dump %s | FileCheck %s -check-prefix=CHECK-1Z
 
 template<class T>
 class P {

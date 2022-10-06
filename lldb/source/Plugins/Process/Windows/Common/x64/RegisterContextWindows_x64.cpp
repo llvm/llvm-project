@@ -262,7 +262,7 @@ RegisterInfo g_register_infos[] = {
     {DEFINE_FPU_XMM(xmm14)},
     {DEFINE_FPU_XMM(xmm15)}};
 
-static size_t k_num_register_infos = llvm::array_lengthof(g_register_infos);
+static size_t k_num_register_infos = std::size(g_register_infos);
 
 // Array of lldb register numbers used to define the set of all General Purpose
 // Registers
@@ -303,10 +303,10 @@ uint32_t g_fpu_reg_indices[] = {
 };
 
 RegisterSet g_register_sets[] = {
-    {"General Purpose Registers", "gpr",
-     llvm::array_lengthof(g_gpr_reg_indices), g_gpr_reg_indices},
-    {"Floating Point Registers", "fpu",
-     llvm::array_lengthof(g_fpu_reg_indices), g_fpu_reg_indices}};
+    {"General Purpose Registers", "gpr", std::size(g_gpr_reg_indices),
+     g_gpr_reg_indices},
+    {"Floating Point Registers", "fpu", std::size(g_fpu_reg_indices),
+     g_fpu_reg_indices}};
 }
 
 // Constructors and Destructors
@@ -317,7 +317,7 @@ RegisterContextWindows_x64::RegisterContextWindows_x64(
 RegisterContextWindows_x64::~RegisterContextWindows_x64() {}
 
 size_t RegisterContextWindows_x64::GetRegisterCount() {
-  return llvm::array_lengthof(g_register_infos);
+  return std::size(g_register_infos);
 }
 
 const RegisterInfo *
@@ -328,7 +328,7 @@ RegisterContextWindows_x64::GetRegisterInfoAtIndex(size_t reg) {
 }
 
 size_t RegisterContextWindows_x64::GetRegisterSetCount() {
-  return llvm::array_lengthof(g_register_sets);
+  return std::size(g_register_sets);
 }
 
 const RegisterSet *RegisterContextWindows_x64::GetRegisterSet(size_t reg_set) {

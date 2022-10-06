@@ -70,7 +70,7 @@ structured_op: !LinalgStructuredOpConfig
 #       ODS:  let arguments =
 #  ODS-NEXT:    Variadic<AnyType>:$inputs,
 #  ODS-NEXT:    Variadic<AnyShaped>:$outputs,
-#  ODS-NEXT:    DefaultValuedAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
+#  ODS-NEXT:    DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
 
 #       ODS:  let builders =
 #       ODS:  (ins "TypeRange":$resultTensorTypes, "ValueRange":$inputs,
@@ -157,7 +157,7 @@ structured_op: !LinalgStructuredOpConfig
 #       ODS:  let arguments =
 #  ODS-NEXT:    Variadic<AnyType>:$inputs,
 #  ODS-NEXT:    Variadic<AnyShaped>:$outputs,
-#  ODS-NEXT:    DefaultValuedAttr<RankedI64ElementsAttr<[2]>
+#  ODS-NEXT:    DefaultValuedOptionalAttr<RankedI64ElementsAttr<[2]>
 #  ODS-SAME:    "{ static_cast<int64_t>(1), static_cast<int64_t>(2) }">:$strides
 
 #       ODS:  "Attribute":$strides
@@ -167,9 +167,9 @@ structured_op: !LinalgStructuredOpConfig
 #  ODS-NEXT:  LogicalResult verifyIndexingMapRequiredAttributes();
 
 #       IMPL:  getSymbolBindings(Test2Op self)
-#       IMPL:  cst2 = self.strides().getValues<int64_t>()[0];
+#       IMPL:  cst2 = self.getStrides().getValues<int64_t>()[0];
 #  IMPL-NEXT:  getAffineConstantExpr(cst2, context)
-#       IMPL:  cst3 = self.strides().getValues<int64_t>()[1];
+#       IMPL:  cst3 = self.getStrides().getValues<int64_t>()[1];
 #  IMPL-NEXT:  getAffineConstantExpr(cst3, context)
 
 #       IMPL:  Test2Op::getIndexingMaps()
@@ -305,8 +305,8 @@ structured_op: !LinalgStructuredOpConfig
 #       ODS:  let arguments =
 #  ODS-NEXT:    Variadic<AnyType>:$inputs,
 #  ODS-NEXT:    Variadic<AnyShaped>:$outputs,
-#  ODS-NEXT:    DefaultValuedAttr<UnaryFnAttr, "UnaryFn::exp">:$unary_fun,
-#  ODS-NEXT:    DefaultValuedAttr<BinaryFnAttr, "BinaryFn::add">:$binary_fun
+#  ODS-NEXT:    DefaultValuedOptionalAttr<UnaryFnAttr, "UnaryFn::exp">:$unary_fun,
+#  ODS-NEXT:    DefaultValuedOptionalAttr<BinaryFnAttr, "BinaryFn::add">:$binary_fun
 
 #       ODS:    "Attribute":$unary_fun, "Attribute":$binary_fun,
 

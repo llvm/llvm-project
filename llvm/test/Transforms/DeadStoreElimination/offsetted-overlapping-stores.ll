@@ -15,40 +15,35 @@ define void @ArrayTestFullyOverlapping(i64 %0) {
 ;
 ; CHECK-LABEL: @ArrayTestFullyOverlapping(
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0:%.*]], -8
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [0 x i8], [0 x i8]* @BUFFER, i64 0, i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP3]] to i64*
-; CHECK-NEXT:    store i64 0, i64* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [0 x i8], ptr @BUFFER, i64 0, i64 [[TMP2]]
+; CHECK-NEXT:    store i64 0, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %2 = add i64 %0, -8
-  %3 = getelementptr inbounds [0 x i8], [0 x i8]* @BUFFER, i64 0, i64 %2
-  %4 = bitcast i8* %3 to i64*
-  %5 = add i64 %0, -4
-  %6 = getelementptr inbounds [0 x i8], [0 x i8]* @BUFFER, i64 0, i64 %5
-  %7 = bitcast i8* %6 to i32*
-  store i32 1, i32* %7
-  store i64 0, i64* %4
+  %3 = getelementptr inbounds [0 x i8], ptr @BUFFER, i64 0, i64 %2
+  %4 = add i64 %0, -4
+  %5 = getelementptr inbounds [0 x i8], ptr @BUFFER, i64 0, i64 %4
+  store i32 1, ptr %5
+  store i64 0, ptr %3
   ret void
 }
 
-define void @VectorTestFullyOverlapping(float* %arg, i32 %i) {
+define void @VectorTestFullyOverlapping(ptr %arg, i32 %i) {
 ; CHECK-LABEL: @VectorTestFullyOverlapping(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I2:%.*]] = zext i32 [[I:%.*]] to i64
-; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds float, float* [[ARG:%.*]], i64 [[I2]]
-; CHECK-NEXT:    [[I4:%.*]] = bitcast float* [[I3]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> zeroinitializer, <2 x float>* [[I4]], align 16
+; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[I2]]
+; CHECK-NEXT:    store <2 x float> zeroinitializer, ptr [[I3]], align 16
 ; CHECK-NEXT:    ret void
 ;
 bb:
   %i7 = add nuw nsw i32 %i, 1
   %i8 = zext i32 %i7 to i64
-  %i9 = getelementptr inbounds float, float* %arg, i64 %i8
-  store float 0.0, float* %i9, align 4
+  %i9 = getelementptr inbounds float, ptr %arg, i64 %i8
+  store float 0.0, ptr %i9, align 4
   %i2 = zext i32 %i to i64
-  %i3 = getelementptr inbounds float, float* %arg, i64 %i2
-  %i4 = bitcast float* %i3 to <2 x float>*
-  store <2 x float> <float 0.0, float 0.0>, <2 x float>* %i4, align 16
+  %i3 = getelementptr inbounds float, ptr %arg, i64 %i2
+  store <2 x float> <float 0.0, float 0.0>, ptr %i3, align 16
   ret void
 }
 
@@ -59,27 +54,23 @@ define void @ArrayTestPartiallyOverlapping(i64 %0) {
 ;
 ; CHECK-LABEL: @ArrayTestPartiallyOverlapping(
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0:%.*]], 10
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [0 x i8], [0 x i8]* @BUFFER, i64 0, i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast i8* [[TMP3]] to i64*
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [0 x i8], ptr @BUFFER, i64 0, i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP0]], 15
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [0 x i8], [0 x i8]* @BUFFER, i64 0, i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i8* [[TMP6]] to i32*
-; CHECK-NEXT:    store i32 1, i32* [[TMP7]], align 4
-; CHECK-NEXT:    store i64 0, i64* [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [0 x i8], ptr @BUFFER, i64 0, i64 [[TMP5]]
+; CHECK-NEXT:    store i32 1, ptr [[TMP6]], align 4
+; CHECK-NEXT:    store i64 0, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %2 = add i64 %0, 10
-  %3 = getelementptr inbounds [0 x i8], [0 x i8]* @BUFFER, i64 0, i64 %2
-  %4 = bitcast i8* %3 to i64*
-  %5 = add i64 %0, 15
-  %6 = getelementptr inbounds [0 x i8], [0 x i8]* @BUFFER, i64 0, i64 %5
-  %7 = bitcast i8* %6 to i32*
-  store i32 1, i32* %7
-  store i64 0, i64* %4
+  %3 = getelementptr inbounds [0 x i8], ptr @BUFFER, i64 0, i64 %2
+  %4 = add i64 %0, 15
+  %5 = getelementptr inbounds [0 x i8], ptr @BUFFER, i64 0, i64 %4
+  store i32 1, ptr %5
+  store i64 0, ptr %3
   ret void
 }
 
-define void @VectorTestPartiallyOverlapping(float* %arg, i32 %i) {
+define void @VectorTestPartiallyOverlapping(ptr %arg, i32 %i) {
 ;
 ; The DSE pass will not kill the store because the overlap is partial
 ; and won't fully clobber the original store.
@@ -87,26 +78,22 @@ define void @VectorTestPartiallyOverlapping(float* %arg, i32 %i) {
 ; CHECK-LABEL: @VectorTestPartiallyOverlapping(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I2:%.*]] = zext i32 [[I:%.*]] to i64
-; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds float, float* [[ARG:%.*]], i64 [[I2]]
-; CHECK-NEXT:    [[I4:%.*]] = bitcast float* [[I3]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float>* [[I4]], align 16
+; CHECK-NEXT:    [[I3:%.*]] = getelementptr inbounds float, ptr [[ARG:%.*]], i64 [[I2]]
+; CHECK-NEXT:    store <2 x float> <float 1.000000e+00, float 1.000000e+00>, ptr [[I3]], align 16
 ; CHECK-NEXT:    [[I5:%.*]] = add nuw nsw i32 [[I]], 1
 ; CHECK-NEXT:    [[I6:%.*]] = zext i32 [[I5]] to i64
-; CHECK-NEXT:    [[I7:%.*]] = getelementptr inbounds float, float* [[ARG]], i64 [[I6]]
-; CHECK-NEXT:    [[I8:%.*]] = bitcast float* [[I7]] to <2 x float>*
-; CHECK-NEXT:    store <2 x float> zeroinitializer, <2 x float>* [[I8]], align 16
+; CHECK-NEXT:    [[I7:%.*]] = getelementptr inbounds float, ptr [[ARG]], i64 [[I6]]
+; CHECK-NEXT:    store <2 x float> zeroinitializer, ptr [[I7]], align 16
 ; CHECK-NEXT:    ret void
 ;
 bb:
   %i2 = zext i32 %i to i64
-  %i3 = getelementptr inbounds float, float* %arg, i64 %i2
-  %i4 = bitcast float* %i3 to <2 x float>*
-  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, <2 x float>* %i4, align 16
+  %i3 = getelementptr inbounds float, ptr %arg, i64 %i2
+  store <2 x float> <float 1.000000e+00, float 1.000000e+00>, ptr %i3, align 16
   %i5 = add nuw nsw i32 %i, 1
   %i6 = zext i32 %i5 to i64
-  %i7 = getelementptr inbounds float, float* %arg, i64 %i6
-  %i8 = bitcast float* %i7 to <2 x float>*
-  store <2 x float> <float 0.0, float 0.0>, <2 x float>* %i8, align 16
+  %i7 = getelementptr inbounds float, ptr %arg, i64 %i6
+  store <2 x float> <float 0.0, float 0.0>, ptr %i7, align 16
   ret void
 }
 

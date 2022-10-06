@@ -1,12 +1,15 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c2x -verify %s
 
+// This is the latest version of nodiscard that we support.
+_Static_assert(__has_c_attribute(nodiscard) == 202003L);
+
 struct [[nodiscard]] S1 { // ok
   int i;
 };
 struct [[nodiscard, nodiscard]] S2 { // ok
   int i;
 };
-struct [[nodiscard("Wrong")]] S3 { // FIXME: may need an extension warning.
+struct [[nodiscard("Wrong")]] S3 {
   int i;
 };
 

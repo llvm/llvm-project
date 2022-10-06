@@ -88,7 +88,7 @@ static void restoreSSA(const DominatorTree &DT, const Loop *L,
   using InstVector = SmallVector<Instruction *, 8>;
   using IIMap = MapVector<Instruction *, InstVector>;
   IIMap ExternalUsers;
-  for (auto BB : L->blocks()) {
+  for (auto *BB : L->blocks()) {
     for (auto &I : *BB) {
       for (auto &U : I.uses()) {
         auto UserInst = cast<Instruction>(U.getUser());
@@ -117,7 +117,7 @@ static void restoreSSA(const DominatorTree &DT, const Loop *L,
     auto NewPhi = PHINode::Create(Def->getType(), Incoming.size(),
                                   Def->getName() + ".moved",
                                   LoopExitBlock->getTerminator());
-    for (auto In : Incoming) {
+    for (auto *In : Incoming) {
       LLVM_DEBUG(dbgs() << "predecessor " << In->getName() << ": ");
       if (Def->getParent() == In || DT.dominates(Def, In)) {
         LLVM_DEBUG(dbgs() << "dominated\n");
@@ -129,7 +129,7 @@ static void restoreSSA(const DominatorTree &DT, const Loop *L,
     }
 
     LLVM_DEBUG(dbgs() << "external users:");
-    for (auto U : II.second) {
+    for (auto *U : II.second) {
       LLVM_DEBUG(dbgs() << " " << U->getName());
       U->replaceUsesOfWith(Def, NewPhi);
     }
@@ -149,9 +149,9 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   // We need SetVectors, but the Loop API takes a vector, so we use a temporary.
   SmallVector<BasicBlock *, 8> Temp;
   L->getExitingBlocks(Temp);
-  for (auto BB : Temp) {
+  for (auto *BB : Temp) {
     ExitingBlocks.insert(BB);
-    for (auto S : successors(BB)) {
+    for (auto *S : successors(BB)) {
       auto SL = LI.getLoopFor(S);
       // A successor is not an exit if it is directly or indirectly in the
       // current loop.
@@ -196,7 +196,7 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
   // The guard blocks were created outside the loop, so they need to become
   // members of the parent loop.
   if (auto ParentLoop = L->getParentLoop()) {
-    for (auto G : GuardBlocks) {
+    for (auto *G : GuardBlocks) {
       ParentLoop->addBasicBlockToLoop(G, LI);
     }
     ParentLoop->verifyLoop();
@@ -213,7 +213,7 @@ static bool runImpl(LoopInfo &LI, DominatorTree &DT) {
 
   bool Changed = false;
   auto Loops = LI.getLoopsInPreorder();
-  for (auto L : Loops) {
+  for (auto *L : Loops) {
     LLVM_DEBUG(dbgs() << "Loop: " << L->getHeader()->getName() << " (depth: "
                       << LI.getLoopDepth(L->getHeader()) << ")\n");
     Changed |= unifyLoopExits(DT, LI, L);

@@ -442,8 +442,7 @@ ContentCache &SourceManager::getOrCreateContentCache(FileEntryRef FileEnt,
   if (OverriddenFilesInfo) {
     // If the file contents are overridden with contents from another file,
     // pass that file to ContentCache.
-    llvm::DenseMap<const FileEntry *, const FileEntry *>::iterator
-        overI = OverriddenFilesInfo->OverriddenFiles.find(FileEnt);
+    auto overI = OverriddenFilesInfo->OverriddenFiles.find(FileEnt);
     if (overI == OverriddenFilesInfo->OverriddenFiles.end())
       new (Entry) ContentCache(FileEnt);
     else
@@ -738,14 +737,18 @@ void SourceManager::overrideFileContents(
 }
 
 void SourceManager::overrideFileContents(const FileEntry *SourceFile,
-                                         const FileEntry *NewFile) {
-  assert(SourceFile->getSize() == NewFile->getSize() &&
+                                         FileEntryRef NewFile) {
+  assert(SourceFile->getSize() == NewFile.getSize() &&
          "Different sizes, use the FileManager to create a virtual file with "
          "the correct size");
   assert(FileInfos.count(SourceFile) == 0 &&
          "This function should be called at the initialization stage, before "
          "any parsing occurs.");
-  getOverriddenFilesInfo().OverriddenFiles[SourceFile] = NewFile;
+  // FileEntryRef is not default-constructible.
+  auto Pair = getOverriddenFilesInfo().OverriddenFiles.insert(
+      std::make_pair(SourceFile, NewFile));
+  if (!Pair.second)
+    Pair.first->second = NewFile;
 }
 
 Optional<FileEntryRef>
@@ -920,9 +923,12 @@ FileID SourceManager::getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const {
     I = (-LastID - 2) + 1;
 
   unsigned NumProbes;
+  bool Invalid = false;
   for (NumProbes = 0; NumProbes < 8; ++NumProbes, ++I) {
     // Make sure the entry is loaded!
-    const SrcMgr::SLocEntry &E = getLoadedSLocEntry(I);
+    const SrcMgr::SLocEntry &E = getLoadedSLocEntry(I, &Invalid);
+    if (Invalid)
+      return FileID(); // invalid entry.
     if (E.getOffset() <= SLocOffset) {
       FileID Res = FileID::get(-int(I) - 2);
       LastFileIDLookup = Res;
@@ -940,8 +946,8 @@ FileID SourceManager::getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const {
   while (true) {
     ++NumProbes;
     unsigned MiddleIndex = (LessIndex - GreaterIndex) / 2 + GreaterIndex;
-    const SrcMgr::SLocEntry &E = getLoadedSLocEntry(MiddleIndex);
-    if (E.getOffset() == 0)
+    const SrcMgr::SLocEntry &E = getLoadedSLocEntry(MiddleIndex, &Invalid);
+    if (Invalid)
       return FileID(); // invalid entry.
 
     ++NumProbes;
@@ -1835,11 +1841,11 @@ void SourceManager::computeMacroArgsCache(MacroArgsMap &MacroArgsCache,
         if (Entry.getFile().NumCreatedFIDs)
           ID += Entry.getFile().NumCreatedFIDs - 1 /*because of next ++ID*/;
         continue;
-      } else if (IncludeLoc.isValid()) {
-        // If file was included but not from FID, there is no more files/macros
-        // that may be "contained" in this file.
-        return;
       }
+      // If file was included but not from FID, there is no more files/macros
+      // that may be "contained" in this file.
+      if (IncludeLoc.isValid())
+        return;
       continue;
     }
 
@@ -2032,6 +2038,7 @@ InBeforeInTUCacheEntry &SourceManager::getInBeforeInTUCache(FileID LFID,
   // This is a magic number for limiting the cache size.  It was experimentally
   // derived from a small Objective-C project (where the cache filled
   // out to ~250 items).  We can make it larger if necessary.
+  // FIXME: this is almost certainly full these days. Use an LRU cache?
   enum { MagicCacheSize = 300 };
   IsBeforeInTUCacheKey Key(LFID, RFID);
 
@@ -2040,7 +2047,7 @@ InBeforeInTUCacheEntry &SourceManager::getInBeforeInTUCache(FileID LFID,
   // use.  When they update the value, the cache will get automatically
   // updated as well.
   if (IBTUCache.size() < MagicCacheSize)
-    return IBTUCache[Key];
+    return IBTUCache.try_emplace(Key, LFID, RFID).first->second;
 
   // Otherwise, do a lookup that will not construct a new value.
   InBeforeInTUCache::iterator I = IBTUCache.find(Key);
@@ -2048,6 +2055,7 @@ InBeforeInTUCacheEntry &SourceManager::getInBeforeInTUCache(FileID LFID,
     return I->second;
 
   // Fall back to the overflow value.
+  IBTUCacheOverflow.setQueryFIDs(LFID, RFID);
   return IBTUCacheOverflow;
 }
 
@@ -2122,43 +2130,62 @@ std::pair<bool, bool> SourceManager::isInTheSameTranslationUnit(
 
   // If we are comparing a source location with multiple locations in the same
   // file, we get a big win by caching the result.
-  if (IsBeforeInTUCache.isCacheValid(LOffs.first, ROffs.first))
+  if (IsBeforeInTUCache.isCacheValid())
     return std::make_pair(
         true, IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second));
 
-  // Okay, we missed in the cache, start updating the cache for this query.
-  IsBeforeInTUCache.setQueryFIDs(LOffs.first, ROffs.first,
-                          /*isLFIDBeforeRFID=*/LOffs.first.ID < ROffs.first.ID);
-
+  // Okay, we missed in the cache, we'll compute the answer and populate it.
   // We need to find the common ancestor. The only way of doing this is to
   // build the complete include chain for one and then walking up the chain
   // of the other looking for a match.
-  // We use a map from FileID to Offset to store the chain. Easier than writing
-  // a custom set hash info that only depends on the first part of a pair.
-  using LocSet = llvm::SmallDenseMap<FileID, unsigned, 16>;
-  LocSet LChain;
+
+  // A location within a FileID on the path up from LOffs to the main file.
+  struct Entry {
+    unsigned Offset;
+    FileID ParentFID; // Used for breaking ties.
+  };
+  llvm::SmallDenseMap<FileID, Entry, 16> LChain;
+
+  FileID Parent;
   do {
-    LChain.insert(LOffs);
+    LChain.try_emplace(LOffs.first, Entry{LOffs.second, Parent});
     // We catch the case where LOffs is in a file included by ROffs and
     // quit early. The other way round unfortunately remains suboptimal.
-  } while (LOffs.first != ROffs.first && !MoveUpIncludeHierarchy(LOffs, *this));
-  LocSet::iterator I;
-  while((I = LChain.find(ROffs.first)) == LChain.end()) {
-    if (MoveUpIncludeHierarchy(ROffs, *this))
-      break; // Met at topmost file.
-  }
-  if (I != LChain.end())
-    LOffs = *I;
+    if (LOffs.first == ROffs.first)
+      break;
+    Parent = LOffs.first;
+  } while (!MoveUpIncludeHierarchy(LOffs, *this));
 
-  // If we exited because we found a nearest common ancestor, compare the
-  // locations within the common file and cache them.
-  if (LOffs.first == ROffs.first) {
-    IsBeforeInTUCache.setCommonLoc(LOffs.first, LOffs.second, ROffs.second);
-    return std::make_pair(
-        true, IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second));
-  }
-  // Clear the lookup cache, it depends on a common location.
-  IsBeforeInTUCache.clear();
+  Parent = FileID();
+  do {
+    auto I = LChain.find(ROffs.first);
+    if (I != LChain.end()) {
+      // Compare the locations within the common file and cache them.
+      LOffs.first = I->first;
+      LOffs.second = I->second.Offset;
+      // The relative order of LParent and RParent is a tiebreaker when
+      // - locs expand to the same location (occurs in macro arg expansion)
+      // - one loc is a parent of the other (we consider the parent as "first")
+      // For the parent to be first, the invalid file ID must compare smaller.
+      // However loaded FileIDs are <0, so we perform *unsigned* comparison!
+      // This changes the relative order of local vs loaded FileIDs, but it
+      // doesn't matter as these are never mixed in macro expansion.
+      unsigned LParent = I->second.ParentFID.ID;
+      unsigned RParent = Parent.ID;
+      assert((LOffs.second != ROffs.second) || (LParent == 0 || RParent == 0) ||
+             isInSameSLocAddrSpace(getComposedLoc(I->second.ParentFID, 0),
+                                   getComposedLoc(Parent, 0), nullptr) &&
+                 "Mixed local/loaded FileIDs with same include location?");
+      IsBeforeInTUCache.setCommonLoc(LOffs.first, LOffs.second, ROffs.second,
+                                     LParent < RParent);
+      return std::make_pair(
+          true, IsBeforeInTUCache.getCachedResult(LOffs.second, ROffs.second));
+    }
+    Parent = ROffs.first;
+  } while (!MoveUpIncludeHierarchy(ROffs, *this));
+
+  // If we found no match, we're not in the same TU.
+  // We don't cache this, but it is rare.
   return std::make_pair(false, false);
 }
 

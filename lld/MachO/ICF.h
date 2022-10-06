@@ -13,15 +13,13 @@
 #include "lld/Common/LLVM.h"
 #include <vector>
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 class Symbol;
 
 void markAddrSigSymbols();
 void markSymAsAddrSig(Symbol *s);
 void foldIdenticalSections(bool onlyCfStrings);
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

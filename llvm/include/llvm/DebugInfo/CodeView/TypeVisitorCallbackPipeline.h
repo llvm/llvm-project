@@ -23,7 +23,7 @@ public:
   TypeVisitorCallbackPipeline() = default;
 
   Error visitUnknownType(CVRecord<TypeLeafKind> &Record) override {
-    for (auto Visitor : Pipeline) {
+    for (auto *Visitor : Pipeline) {
       if (auto EC = Visitor->visitUnknownType(Record))
         return EC;
     }
@@ -31,7 +31,7 @@ public:
   }
 
   Error visitUnknownMember(CVMemberRecord &Record) override {
-    for (auto Visitor : Pipeline) {
+    for (auto *Visitor : Pipeline) {
       if (auto EC = Visitor->visitUnknownMember(Record))
         return EC;
     }
@@ -39,7 +39,7 @@ public:
   }
 
   Error visitTypeBegin(CVType &Record) override {
-    for (auto Visitor : Pipeline) {
+    for (auto *Visitor : Pipeline) {
       if (auto EC = Visitor->visitTypeBegin(Record))
         return EC;
     }
@@ -47,7 +47,7 @@ public:
   }
 
   Error visitTypeBegin(CVType &Record, TypeIndex Index) override {
-    for (auto Visitor : Pipeline) {
+    for (auto *Visitor : Pipeline) {
       if (auto EC = Visitor->visitTypeBegin(Record, Index))
         return EC;
     }
@@ -55,7 +55,7 @@ public:
   }
 
   Error visitTypeEnd(CVType &Record) override {
-    for (auto Visitor : Pipeline) {
+    for (auto *Visitor : Pipeline) {
       if (auto EC = Visitor->visitTypeEnd(Record))
         return EC;
     }
@@ -63,7 +63,7 @@ public:
   }
 
   Error visitMemberBegin(CVMemberRecord &Record) override {
-    for (auto Visitor : Pipeline) {
+    for (auto *Visitor : Pipeline) {
       if (auto EC = Visitor->visitMemberBegin(Record))
         return EC;
     }
@@ -71,7 +71,7 @@ public:
   }
 
   Error visitMemberEnd(CVMemberRecord &Record) override {
-    for (auto Visitor : Pipeline) {
+    for (auto *Visitor : Pipeline) {
       if (auto EC = Visitor->visitMemberEnd(Record))
         return EC;
     }
@@ -97,7 +97,7 @@ public:
 
 private:
   template <typename T> Error visitKnownRecordImpl(CVType &CVR, T &Record) {
-    for (auto Visitor : Pipeline) {
+    for (auto *Visitor : Pipeline) {
       if (auto EC = Visitor->visitKnownRecord(CVR, Record))
         return EC;
     }
@@ -106,7 +106,7 @@ private:
 
   template <typename T>
   Error visitKnownMemberImpl(CVMemberRecord &CVMR, T &Record) {
-    for (auto Visitor : Pipeline) {
+    for (auto *Visitor : Pipeline) {
       if (auto EC = Visitor->visitKnownMember(CVMR, Record))
         return EC;
     }

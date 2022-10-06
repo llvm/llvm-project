@@ -12,7 +12,7 @@ from .lldbtest import *
 class Stopwatch(object):
     """Stopwatch provides a simple utility to start/stop your stopwatch multiple
     times.  Each start/stop is equal to a lap, with its elapsed time accumulated
-    while measurment is in progress.
+    while measurement is in progress.
 
     When you're ready to start from scratch for another round of measurements,
     be sure to call the reset() method.

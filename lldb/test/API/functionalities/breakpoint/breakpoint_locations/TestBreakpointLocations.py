@@ -89,6 +89,53 @@ class BreakpointLocationsTestCase(TestBase):
         bkpt.SetCondition(bkpt_new_cond)
         self.assertEqual(bkpt.location[0].GetCondition(), bkpt_new_cond, "Didn't go back to tracking condition")
 
+        # Test that set/get accessor methods on BreakpointLocation behave correctly.
+        bkpt_loc = bkpt.GetLocationAtIndex(0)
+
+        value = "MyQueue"
+        bkpt_loc.SetQueueName(value)
+        self.assertEqual(bkpt_loc.GetQueueName(), value,"Successfully set/get bp location QueueName")
+
+        value = 5
+        bkpt_loc.SetThreadID(value)
+        self.assertEqual(bkpt_loc.GetThreadID(), value,"Successfully set/get bp location ThreadID")
+
+        value = "1 == 0"
+        bkpt_loc.SetCondition(value)
+        self.assertEqual(bkpt_loc.GetCondition(), value,"Successfully set/get bp location Condition")
+
+        value = 6
+        bkpt_loc.SetThreadIndex(value)
+        self.assertEqual(bkpt_loc.GetThreadIndex(), value,"Successfully set/get bp location ThreadIndex")
+
+        value = "MyThread"
+        bkpt_loc.SetThreadName(value)
+        self.assertEqual(bkpt_loc.GetThreadName(), value,"Successfully set/get bp location ThreadName")
+
+        value = 5
+        bkpt_loc.SetIgnoreCount(value)
+        self.assertEqual(bkpt_loc.GetIgnoreCount(), value,"Successfully set/get bp location IgnoreCount")
+
+        for value in [True,False]:
+            bkpt_loc.SetAutoContinue(value)
+            self.assertEqual(bkpt_loc.GetAutoContinue(), value,"Successfully set/get bp location AutoContinue")
+
+        for value in [True,False]:
+            bkpt_loc.SetEnabled(value)
+            self.assertEqual(bkpt_loc.IsEnabled(), value,"Successfully set/get bp location SetEnabled")
+
+        # test set/get CommandLineCommands
+        set_cmds = lldb.SBStringList()
+        set_cmds.AppendString("frame var")
+        set_cmds.AppendString("bt")
+        bkpt_loc.SetCommandLineCommands(set_cmds)
+
+        get_cmds = lldb.SBStringList()
+        bkpt_loc.GetCommandLineCommands(get_cmds)
+        self.assertEqual(set_cmds.GetSize(), get_cmds.GetSize(), "Size of command line commands")
+        for idx, _ in  enumerate(set_cmds):
+            self.assertEqual(set_cmds.GetStringAtIndex(idx), get_cmds.GetStringAtIndex(idx), "Command %d"%(idx))
+
     def shadowed_bkpt_command_test(self):
         """Test that options set on the breakpoint and location behave correctly."""
         # Breakpoint option propagation from bkpt to loc used to be done the first time

@@ -112,6 +112,23 @@ TEST_F(RuntimeCallTest, genMinValTest) {
   testGenMinVal(*firBuilder, i128Ty, "_FortranAMinvalInteger16");
 }
 
+TEST_F(RuntimeCallTest, genParityTest) {
+  mlir::Location loc = firBuilder->getUnknownLoc();
+  mlir::Value undef = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
+  mlir::Value parity = fir::runtime::genParity(*firBuilder, loc, undef, dim);
+  checkCallOp(parity.getDefiningOp(), "_FortranAParity", 2);
+}
+
+TEST_F(RuntimeCallTest, genParityDescriptorTest) {
+  mlir::Location loc = firBuilder->getUnknownLoc();
+  mlir::Value result = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value mask = firBuilder->create<fir::UndefOp>(loc, seqTy10);
+  mlir::Value dim = firBuilder->createIntegerConstant(loc, i32Ty, 1);
+  fir::runtime::genParityDescriptor(*firBuilder, loc, result, mask, dim);
+  checkCallOpFromResultBox(result, "_FortranAParityDim", 3);
+}
+
 void testGenSum(
     fir::FirOpBuilder &builder, mlir::Type eleTy, llvm::StringRef fctName) {
   mlir::Location loc = builder.getUnknownLoc();
@@ -185,7 +202,8 @@ void testGenDotProduct(
   mlir::Type refSeqTy = fir::ReferenceType::get(seqTy);
   mlir::Value a = builder.create<fir::UndefOp>(loc, refSeqTy);
   mlir::Value b = builder.create<fir::UndefOp>(loc, refSeqTy);
-  mlir::Value result = builder.create<fir::UndefOp>(loc, seqTy);
+  mlir::Value result =
+      builder.create<fir::UndefOp>(loc, fir::ReferenceType::get(eleTy));
   mlir::Value prod = fir::runtime::genDotProduct(builder, loc, a, b, result);
   if (fir::isa_complex(eleTy))
     checkCallOpFromResultBox(result, fctName, 3);

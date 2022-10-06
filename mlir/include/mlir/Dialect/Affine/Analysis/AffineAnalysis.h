@@ -15,7 +15,7 @@
 #ifndef MLIR_DIALECT_AFFINE_ANALYSIS_AFFINEANALYSIS_H
 #define MLIR_DIALECT_AFFINE_ANALYSIS_AFFINEANALYSIS_H
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
@@ -175,6 +175,12 @@ DependenceResult checkMemrefAccessDependence(
 /// corresponds to a dependence result.
 inline bool hasDependence(DependenceResult result) {
   return result.value == DependenceResult::HasDependence;
+}
+
+/// Returns true if the provided DependenceResult corresponds to the absence of
+/// a dependence.
+inline bool noDependence(DependenceResult result) {
+  return result.value == DependenceResult::NoDependence;
 }
 
 /// Returns in 'depCompsVec', dependence components for dependences between all

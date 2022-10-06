@@ -249,7 +249,7 @@ func.func @to_memref_op_is_writing(
   // read further down. This will likely have to change with partial
   // bufferization.
 
-  // expected-error @+1 {{input IR has RaW conflict}}
+  // expected-error @+1 {{to_memref ops not supported during One-Shot Analysis}}
   %0 = bufferization.to_memref %t1 : memref<?xf32>
 
   // Read from both.
@@ -289,7 +289,7 @@ func.func @call_to_func_returning_non_equiv_tensor(%t : tensor<5xf32>) {
 // -----
 
 func.func @destination_passing_style_dominance_test_1(%cst : f32, %idx : index,
-                                                 %idx2 : index) -> f32 {
+                                                      %idx2 : index) -> f32 {
   %0 = scf.execute_region -> tensor<?xf32> {
     %1 = bufferization.alloc_tensor(%idx) : tensor<?xf32>
     // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
@@ -303,7 +303,7 @@ func.func @destination_passing_style_dominance_test_1(%cst : f32, %idx : index,
 // -----
 
 func.func @destination_passing_style_dominance_test_2(%cst : f32, %idx : index,
-                                                 %idx2 : index) -> f32 {
+                                                      %idx2 : index) -> f32 {
   %1 = bufferization.alloc_tensor(%idx) : tensor<?xf32>
 
   %0 = scf.execute_region -> tensor<?xf32> {

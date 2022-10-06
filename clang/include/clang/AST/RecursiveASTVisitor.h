@@ -69,30 +69,17 @@ template <typename T, typename U, typename R, typename... P>
 struct has_same_member_pointer_type<R (T::*)(P...), R (U::*)(P...)>
     : std::true_type {};
 
-template <bool has_same_type> struct is_same_method_impl {
-  template <typename FirstMethodPtrTy, typename SecondMethodPtrTy>
-  static bool isSameMethod(FirstMethodPtrTy FirstMethodPtr,
-                           SecondMethodPtrTy SecondMethodPtr) {
-    return false;
-  }
-};
-
-template <> struct is_same_method_impl<true> {
-  template <typename FirstMethodPtrTy, typename SecondMethodPtrTy>
-  static bool isSameMethod(FirstMethodPtrTy FirstMethodPtr,
-                           SecondMethodPtrTy SecondMethodPtr) {
-    return FirstMethodPtr == SecondMethodPtr;
-  }
-};
-
 /// Returns true if and only if \p FirstMethodPtr and \p SecondMethodPtr
 /// are pointers to the same non-static member function.
 template <typename FirstMethodPtrTy, typename SecondMethodPtrTy>
-bool isSameMethod(FirstMethodPtrTy FirstMethodPtr,
-                  SecondMethodPtrTy SecondMethodPtr) {
-  return is_same_method_impl<has_same_member_pointer_type<
-      FirstMethodPtrTy,
-      SecondMethodPtrTy>::value>::isSameMethod(FirstMethodPtr, SecondMethodPtr);
+LLVM_ATTRIBUTE_ALWAYS_INLINE LLVM_ATTRIBUTE_NODEBUG auto
+isSameMethod([[maybe_unused]] FirstMethodPtrTy FirstMethodPtr,
+             [[maybe_unused]] SecondMethodPtrTy SecondMethodPtr)
+    -> bool {
+  if constexpr (has_same_member_pointer_type<FirstMethodPtrTy,
+                                             SecondMethodPtrTy>::value)
+    return FirstMethodPtr == SecondMethodPtr;
+  return false;
 }
 
 } // end namespace detail
@@ -1083,7 +1070,7 @@ DEF_TRAVERSE_TYPE(TypedefType, {})
 DEF_TRAVERSE_TYPE(TypeOfExprType,
                   { TRY_TO(TraverseStmt(T->getUnderlyingExpr())); })
 
-DEF_TRAVERSE_TYPE(TypeOfType, { TRY_TO(TraverseType(T->getUnderlyingType())); })
+DEF_TRAVERSE_TYPE(TypeOfType, { TRY_TO(TraverseType(T->getUnmodifiedType())); })
 
 DEF_TRAVERSE_TYPE(DecltypeType,
                   { TRY_TO(TraverseStmt(T->getUnderlyingExpr())); })
@@ -1358,7 +1345,7 @@ DEF_TRAVERSE_TYPELOC(TypeOfExprType,
                      { TRY_TO(TraverseStmt(TL.getUnderlyingExpr())); })
 
 DEF_TRAVERSE_TYPELOC(TypeOfType, {
-  TRY_TO(TraverseTypeLoc(TL.getUnderlyingTInfo()->getTypeLoc()));
+  TRY_TO(TraverseTypeLoc(TL.getUnmodifiedTInfo()->getTypeLoc()));
 })
 
 // FIXME: location of underlying expr
@@ -1551,6 +1538,8 @@ DEF_TRAVERSE_DECL(CapturedDecl, {
 
 DEF_TRAVERSE_DECL(EmptyDecl, {})
 
+DEF_TRAVERSE_DECL(HLSLBufferDecl, {})
+
 DEF_TRAVERSE_DECL(LifetimeExtendedTemporaryDecl, {
   TRY_TO(TraverseStmt(D->getTemporaryExpr()));
 })
@@ -1562,10 +1551,15 @@ DEF_TRAVERSE_DECL(ImportDecl, {})
 
 DEF_TRAVERSE_DECL(FriendDecl, {
   // Friend is either decl or a type.
-  if (D->getFriendType())
+  if (D->getFriendType()) {
     TRY_TO(TraverseTypeLoc(D->getFriendType()->getTypeLoc()));
-  else
+    // Traverse any CXXRecordDecl owned by this type, since
+    // it will not be in the parent context:
+    if (auto *ET = D->getFriendType()->getType()->getAs<ElaboratedType>())
+      TRY_TO(TraverseDecl(ET->getOwnedTagDecl()));
+  } else {
     TRY_TO(TraverseDecl(D->getFriendDecl()));
+  }
 })
 
 DEF_TRAVERSE_DECL(FriendTemplateDecl, {

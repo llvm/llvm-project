@@ -19,11 +19,11 @@ module __Fortran_builtins
   private :: selected_int_kind
   integer, parameter, private :: int64 = selected_int_kind(18)
 
-  type :: __builtin_c_ptr
+  type, bind(c) :: __builtin_c_ptr
     integer(kind=int64) :: __address
   end type
 
-  type :: __builtin_c_funptr
+  type, bind(c) :: __builtin_c_funptr
     integer(kind=int64) :: __address
   end type
 
@@ -38,6 +38,9 @@ module __Fortran_builtins
   type :: __builtin_team_type
     integer(kind=int64) :: __id
   end type
+
+  integer, parameter :: __builtin_atomic_int_kind = selected_int_kind(18)
+  integer, parameter :: __builtin_atomic_logical_kind = __builtin_atomic_int_kind
 
   procedure(type(__builtin_c_ptr)) :: __builtin_c_loc
 

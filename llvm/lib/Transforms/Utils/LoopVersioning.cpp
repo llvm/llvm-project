@@ -137,8 +137,10 @@ void LoopVersioning::addPHINodes(
     // See if we have a single-operand PHI with the value defined by the
     // original loop.
     for (auto I = PHIBlock->begin(); (PN = dyn_cast<PHINode>(I)); ++I) {
-      if (PN->getIncomingValue(0) == Inst)
+      if (PN->getIncomingValue(0) == Inst) {
+        SE->forgetValue(PN);
         break;
+      }
     }
     // If not create it.
     if (!PN) {
@@ -254,8 +256,8 @@ void LoopVersioning::annotateInstWithNoAlias(Instruction *VersionedInst,
 }
 
 namespace {
-bool runImpl(LoopInfo *LI, function_ref<const LoopAccessInfo &(Loop &)> GetLAA,
-             DominatorTree *DT, ScalarEvolution *SE) {
+bool runImpl(LoopInfo *LI, LoopAccessInfoManager &LAIs, DominatorTree *DT,
+             ScalarEvolution *SE) {
   // Build up a worklist of inner-loops to version. This is necessary as the
   // act of versioning a loop creates new loops and can invalidate iterators
   // across the loops.
@@ -273,7 +275,7 @@ bool runImpl(LoopInfo *LI, function_ref<const LoopAccessInfo &(Loop &)> GetLAA,
     if (!L->isLoopSimplifyForm() || !L->isRotatedForm() ||
         !L->getExitingBlock())
       continue;
-    const LoopAccessInfo &LAI = GetLAA(*L);
+    const LoopAccessInfo &LAI = LAIs.getInfo(*L);
     if (!LAI.hasConvergentOp() &&
         (LAI.getNumRuntimePointerChecks() ||
          !LAI.getPSE().getPredicate().isAlwaysTrue())) {
@@ -282,6 +284,7 @@ bool runImpl(LoopInfo *LI, function_ref<const LoopAccessInfo &(Loop &)> GetLAA,
       LVer.versionLoop();
       LVer.annotateLoopWithNoAlias();
       Changed = true;
+      LAIs.clear();
     }
   }
 
@@ -299,14 +302,11 @@ public:
 
   bool runOnFunction(Function &F) override {
     auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    auto GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
-      return getAnalysis<LoopAccessLegacyAnalysis>().getInfo(&L);
-    };
-
+    auto &LAIs = getAnalysis<LoopAccessLegacyAnalysis>().getLAIs();
     auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
 
-    return runImpl(LI, GetLAA, DT, SE);
+    return runImpl(LI, LAIs, DT, SE);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -346,20 +346,10 @@ PreservedAnalyses LoopVersioningPass::run(Function &F,
                                           FunctionAnalysisManager &AM) {
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
-  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+  LoopAccessInfoManager &LAIs = AM.getResult<LoopAccessAnalysis>(F);
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
-  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
-  auto &AA = AM.getResult<AAManager>(F);
-  auto &AC = AM.getResult<AssumptionAnalysis>(F);
 
-  auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
-  auto GetLAA = [&](Loop &L) -> const LoopAccessInfo & {
-    LoopStandardAnalysisResults AR = {AA,  AC,  DT,      LI,      SE,
-                                      TLI, TTI, nullptr, nullptr, nullptr};
-    return LAM.getResult<LoopAccessAnalysis>(L, AR);
-  };
-
-  if (runImpl(&LI, GetLAA, &DT, &SE))
+  if (runImpl(&LI, LAIs, &DT, &SE))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
 }

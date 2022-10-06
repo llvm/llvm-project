@@ -1,8 +1,6 @@
 """
 Test some lldb command abbreviations.
 """
-from __future__ import print_function
-
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -44,7 +42,7 @@ class ExecTestCase(TestBase):
 
         # Create any breakpoints we need
         breakpoint1 = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint 1 here', lldb.SBFileSpec("main.cpp", False))
+            'Set breakpoint 1 here', lldb.SBFileSpec("main.c", False))
         self.assertTrue(breakpoint1, VALID_BREAKPOINT)
         breakpoint2 = target.BreakpointCreateBySourceRegex(
             'Set breakpoint 2 here', lldb.SBFileSpec("secondprog.cpp", False))
@@ -132,7 +130,7 @@ class ExecTestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
 
         (target, process, thread, breakpoint1) = lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint 1 here', lldb.SBFileSpec('main.cpp', False))
+            self, 'Set breakpoint 1 here', lldb.SBFileSpec('main.c', False))
 
         # The stop reason of the thread should be breakpoint.
         self.assertState(process.GetState(), lldb.eStateStopped,
@@ -145,7 +143,7 @@ class ExecTestCase(TestBase):
         # thread plan, which should be cleared when a new thread list appears.
         #
         # Continuing after this instruction step will trigger a call to
-        # ThreadPlan::ShouldReportRun, which sets the ThreadPlan's Thread cache to 
+        # ThreadPlan::ShouldReportRun, which sets the ThreadPlan's Thread cache to
         # the old Thread* value. In Process::UpdateThreadList we are clearing this
         # cache in preparation for the new ThreadList.
         #

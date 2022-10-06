@@ -867,7 +867,7 @@ void WinEHPrepare::demotePHIsOnFunclets(Function &F,
 
   for (auto *PN : PHINodes) {
     // There may be lingering uses on other EH PHIs being removed
-    PN->replaceAllUsesWith(UndefValue::get(PN->getType()));
+    PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
     PN->eraseFromParent();
   }
 }
@@ -981,10 +981,7 @@ void WinEHPrepare::cloneCommonBlocks(Function &F) {
           ColorVector &IncomingColors = BlockColors[IncomingBlock];
           assert(!IncomingColors.empty() && "Block not colored!");
           assert((IncomingColors.size() == 1 ||
-                  llvm::all_of(IncomingColors,
-                               [&](BasicBlock *Color) {
-                                 return Color != FuncletPadBB;
-                               })) &&
+                  !llvm::is_contained(IncomingColors, FuncletPadBB)) &&
                  "Cloning should leave this funclet's blocks monochromatic");
           EdgeTargetsFunclet = (IncomingColors.front() == FuncletPadBB);
         }

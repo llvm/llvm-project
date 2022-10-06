@@ -31,7 +31,7 @@
 // CHECK: error: unknown argument: '-%d'
 // CHECK: error: unknown argument: '-HHHH'
 // CHECK: error: unknown argument: '-munknown-to-clang-option'
-// CHECK: error: unknown argument: '-print-stats'
+// CHECK: error: unknown argument '-print-stats'; did you mean '-Xclang -print-stats'?
 // CHECK: error: unknown argument: '-funknown-to-clang-option'
 // CHECK: error: unknown argument: '-ifoo'
 // MULTILIB: warning: argument unused during compilation: '-imultilib dir'

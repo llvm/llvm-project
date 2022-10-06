@@ -130,16 +130,22 @@ Alias for
 .Fl -color-diagnostics Ns = Ns Cm auto .
 .It Fl -compress-debug-sections Ns = Ns Ar value
 Compress DWARF debug sections.
-.Ar value
+.Cm value
 may be
-.Cm none
-or
-.Cm zlib .
+.Pp
+.Bl -tag -width 2n -compact
+.It Cm none
+No compression.
+.It Cm zlib
 The default compression level is 1 (fastest) as the debug info usually
-compresses well at that level, but if you want to compress it more,
+compresses well at that level. If you want to compress it more,
 you can specify
 .Fl O2
 to set the compression level to 6.
+.It Cm zstd
+The compression level is 5.
+.El
+.Pp
 .It Fl -cref
 Output cross reference table. If
 .Fl Map
@@ -631,10 +637,10 @@ Creates a separate output section for every orphan input section.
 Determine how to handle unresolved symbols.
 .It Fl -use-android-relr-tags
 Use SHT_ANDROID_RELR / DT_ANDROID_RELR* tags instead of SHT_RELR / DT_RELR*.
-.It Fl v
+.It Fl v , Fl V
 Display the version number and proceed with linking if object files are
 specified.
-.It Fl V , Fl -version
+.It Fl -version
 Display the version number and exit.
 .It Fl -verbose
 Verbose mode.

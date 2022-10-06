@@ -1152,7 +1152,7 @@ CursorKind.OBJC_AT_THROW_STMT = CursorKind(219)
 # Objective-C's @synchronized statement.
 CursorKind.OBJC_AT_SYNCHRONIZED_STMT = CursorKind(220)
 
-# Objective-C's autorealease pool statement.
+# Objective-C's autorelease pool statement.
 CursorKind.OBJC_AUTORELEASE_POOL_STMT = CursorKind(221)
 
 # Objective-C's for collection statement.
@@ -1472,6 +1472,12 @@ class Cursor(Structure):
         function template that is declared '= default'.
         """
         return conf.lib.clang_CXXMethod_isDefaulted(self)
+
+    def is_deleted_method(self):
+        """Returns True if the cursor refers to a C++ member function or member
+        function template that is declared '= delete'.
+        """
+        return conf.lib.clang_CXXMethod_isDeleted(self)
 
     def is_mutable_field(self):
         """Returns True if the cursor refers to a C++ field that is declared
@@ -3423,6 +3429,10 @@ functionList = [
    bool),
 
   ("clang_CXXMethod_isDefaulted",
+   [Cursor],
+   bool),
+
+  ("clang_CXXMethod_isDeleted",
    [Cursor],
    bool),
 

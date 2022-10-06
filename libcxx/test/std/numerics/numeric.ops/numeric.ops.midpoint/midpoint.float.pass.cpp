@@ -95,31 +95,31 @@ void fp_test()
 
 #if defined(__PPC__) && (defined(__LONG_DOUBLE_128__) && __LONG_DOUBLE_128__) &&                                       \
     !(defined(__LONG_DOUBLE_IEEE128__) && __LONG_DOUBLE_IEEE128__)
-//	For 128 bit long double implemented as 2 doubles on PowerPC,
-//	nextafterl() of libm gives imprecise results which fails the
-//	midpoint() tests below. So skip the test for this case.
+//  For 128 bit long double implemented as 2 doubles on PowerPC,
+//  nextafterl() of libm gives imprecise results which fails the
+//  midpoint() tests below. So skip the test for this case.
     if constexpr (sizeof(T) != 16)
 #endif
     {
-	//  Since there's nothing in between, the midpoint has to be one or the other
-		T res;
-		res = std::midpoint(d0, d1);
-		assert(res == d0 || res == d1);
-		assert(d0 <= res);
-		assert(res <= d1);
-		res = std::midpoint(d1, d0);
-		assert(res == d0 || res == d1);
-		assert(d0 <= res);
-		assert(res <= d1);
+    //  Since there's nothing in between, the midpoint has to be one or the other
+        T res;
+        res = std::midpoint(d0, d1);
+        assert(res == d0 || res == d1);
+        assert(d0 <= res);
+        assert(res <= d1);
+        res = std::midpoint(d1, d0);
+        assert(res == d0 || res == d1);
+        assert(d0 <= res);
+        assert(res <= d1);
 
-		res = std::midpoint(d1, d2);
-		assert(res == d1 || res == d2);
-		assert(d1 <= res);
-		assert(res <= d2);
-		res = std::midpoint(d2, d1);
-		assert(res == d1 || res == d2);
-		assert(d1 <= res);
-		assert(res <= d2);
+        res = std::midpoint(d1, d2);
+        assert(res == d1 || res == d2);
+        assert(d1 <= res);
+        assert(res <= d2);
+        res = std::midpoint(d2, d1);
+        assert(res == d1 || res == d2);
+        assert(d1 <= res);
+        assert(res <= d2);
     }
 }
 

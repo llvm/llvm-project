@@ -28,7 +28,7 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
-std::unique_ptr<SymbolTable> elf::symtab;
+SymbolTable elf::symtab;
 
 void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   // Redirect __real_foo to the original foo and foo to the original __wrap_foo.
@@ -87,27 +87,14 @@ Symbol *SymbolTable::insert(StringRef name) {
   Symbol *sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
   symVector.push_back(sym);
 
-  // *sym was not initialized by a constructor. Fields that may get referenced
-  // when it is a placeholder must be initialized here.
+  // *sym was not initialized by a constructor. Initialize all Symbol fields.
+  memset(sym, 0, sizeof(Symbol));
   sym->setName(name);
-  sym->symbolKind = Symbol::PlaceholderKind;
   sym->partition = 1;
-  sym->visibility = STV_DEFAULT;
-  sym->isUsedInRegularObj = false;
-  sym->exportDynamic = false;
-  sym->inDynamicList = false;
-  sym->referenced = false;
-  sym->traced = false;
-  sym->scriptDefined = false;
+  sym->verdefIndex = -1;
   sym->versionId = VER_NDX_GLOBAL;
   if (pos != StringRef::npos)
     sym->hasVersionSuffix = true;
-  return sym;
-}
-
-Symbol *SymbolTable::addSymbol(const Symbol &newSym) {
-  Symbol *sym = insert(newSym.getName());
-  sym->resolve(newSym);
   return sym;
 }
 

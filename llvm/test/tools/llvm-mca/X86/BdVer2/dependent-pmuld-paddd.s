@@ -13,7 +13,7 @@ vpaddd %xmm0, %xmm0, %xmm3
 # CHECK:      Dispatch Width:    4
 # CHECK-NEXT: uOps Per Cycle:    0.50
 # CHECK-NEXT: IPC:               0.50
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: Block RThroughput: 1.0
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -25,8 +25,8 @@ vpaddd %xmm0, %xmm0, %xmm3
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      4     1.00                        vpmuldq	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT:  1      2     1.00                        vpaddd	%xmm1, %xmm1, %xmm0
-# CHECK-NEXT:  1      2     1.00                        vpaddd	%xmm0, %xmm0, %xmm3
+# CHECK-NEXT:  1      2     0.50                        vpaddd	%xmm1, %xmm1, %xmm0
+# CHECK-NEXT:  1      2     0.50                        vpaddd	%xmm0, %xmm0, %xmm3
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - PdAGLU01
@@ -55,13 +55,13 @@ vpaddd %xmm0, %xmm0, %xmm3
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00   2.00   1.00    -     1.50   1.50    -      -      -      -      -      -      -
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00   1.00   1.00    -     1.00    -     1.00   1.00    -      -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7.0]  [7.1]  [8.0]  [8.1]  [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16.0] [16.1] [17]   [18]   Instructions:
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -     1.00    -     1.00    -      -      -      -      -      -      -      -     vpmuldq	%xmm0, %xmm0, %xmm1
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     2.00    -      -     0.50   0.50    -      -      -      -      -      -      -     vpaddd	%xmm1, %xmm1, %xmm0
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     2.00    -      -      -      -     1.00    -      -      -      -      -      -      -     vpaddd	%xmm0, %xmm0, %xmm3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -      -      -      -     vpaddd	%xmm1, %xmm1, %xmm0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -     1.00    -      -      -      -      -      -     vpaddd	%xmm0, %xmm0, %xmm3
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          0123456789          0123456789

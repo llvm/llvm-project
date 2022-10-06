@@ -5,17 +5,16 @@ define i16 @test(i16 %call37) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CALL:%.*]] = load i16, i16* undef, align 2
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> <i16 poison, i16 0, i16 0, i16 0, i16 poison, i16 0, i16 0, i16 0>, i16 [[CALL37:%.*]], i32 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x i16> <i16 poison, i16 0, i16 0, i16 poison, i16 0, i16 0, i16 poison, i16 poison>, i16 [[CALL37:%.*]], i32 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i16> [[TMP0]], i16 [[CALL]], i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x i16> <i16 0, i16 0, i16 0, i16 poison, i16 0, i16 0, i16 poison, i16 0>, i16 [[CALL37]], i32 3
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x i16> [[TMP2]], i16 [[CALL37]], i32 6
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp slt <8 x i16> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <8 x i16> [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i1> [[TMP4]], <8 x i1> [[TMP5]], <8 x i32> <i32 0, i32 1, i32 2, i32 11, i32 12, i32 5, i32 14, i32 7>
-; CHECK-NEXT:    [[TMP7:%.*]] = zext <8 x i1> [[TMP6]] to <8 x i16>
-; CHECK-NEXT:    [[TMP8:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[TMP7]])
-; CHECK-NEXT:    [[OP_EXTRA:%.*]] = add i16 [[TMP8]], 0
-; CHECK-NEXT:    ret i16 [[OP_EXTRA]]
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i16> [[TMP1]], <8 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 3, i32 4, i32 3, i32 5>
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <8 x i16> [[SHUFFLE]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp sgt <8 x i16> [[SHUFFLE]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i1> [[TMP2]], <8 x i1> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 12, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <8 x i1> [[TMP4]] to <8 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[TMP5]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = add i16 [[TMP6]], 0
+; CHECK-NEXT:    ret i16 [[OP_RDX]]
 ;
 entry:
   %call = load i16, i16* undef, align 2

@@ -20,7 +20,6 @@
 #include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
 
@@ -279,13 +278,6 @@ SymbolVendorMacOSX::CreateInstance(const lldb::ModuleSP &module_sp,
         }
 
         symbol_vendor->AddSymbolFileRepresentation(dsym_objfile_sp);
-        if (!dsym_root.empty()) {
-          if (repro::Generator *g =
-                  repro::Reproducer::Instance().GetGenerator()) {
-            repro::FileProvider &fp = g->GetOrCreate<repro::FileProvider>();
-            fp.RecordInterestingDirectoryRecursive(dsym_root);
-          }
-        }
         return symbol_vendor;
       }
     }

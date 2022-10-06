@@ -11,6 +11,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "RISCV.h"
+#include "RISCVMachineFunctionInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -275,7 +276,7 @@ static bool isSignExtendingOpW(MachineInstr &MI, MachineRegisterInfo &MRI,
     // SLLIW reads the lowest 5 bits, while SLLI reads lowest 6 bits
     if (MI.getOperand(2).getImm() >= 32)
       return false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case RISCV::ADD:
   case RISCV::LD:
   case RISCV::LWU:
@@ -315,9 +316,21 @@ static bool isSignExtendedW(MachineInstr &OrigMI, MachineRegisterInfo &MRI,
       // Unknown opcode, give up.
       return false;
     case RISCV::COPY: {
-      Register SrcReg = MI->getOperand(1).getReg();
+      const MachineFunction *MF = MI->getMF();
+      const RISCVMachineFunctionInfo *RVFI =
+          MF->getInfo<RISCVMachineFunctionInfo>();
 
-      // TODO: Handle arguments and returns from calls?
+      // If this is the entry block and the register is livein, see if we know
+      // it is sign extended.
+      if (MI->getParent() == &MF->front()) {
+        Register VReg = MI->getOperand(0).getReg();
+        if (MF->getRegInfo().isLiveIn(VReg))
+          return RVFI->isSExt32Register(VReg);
+      }
+
+      // TODO: Handle returns from calls?
+
+      Register SrcReg = MI->getOperand(1).getReg();
 
       // If this is a copy from another register, check its source instruction.
       if (!SrcReg.isVirtual())
@@ -337,7 +350,7 @@ static bool isSignExtendedW(MachineInstr &OrigMI, MachineRegisterInfo &MRI,
     case RISCV::BSETI:
       if (MI->getOperand(2).getImm() >= 31)
         return false;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case RISCV::REM:
     case RISCV::ANDI:
     case RISCV::ORI:
@@ -456,7 +469,7 @@ bool RISCVSExtWRemoval::runOnMachineFunction(MachineFunction &MF) {
   }
 
   bool MadeChange = false;
-  for (auto MI : SExtWRemovalCands) {
+  for (auto *MI : SExtWRemovalCands) {
     SmallPtrSet<MachineInstr *, 4> FixableDef;
     Register SrcReg = MI->getOperand(1).getReg();
     MachineInstr &SrcMI = *MRI.getVRegDef(SrcReg);
@@ -478,7 +491,7 @@ bool RISCVSExtWRemoval::runOnMachineFunction(MachineFunction &MF) {
           BuildMI(MBB, Fixable, DL, ST.getInstrInfo()->get(Code));
       for (auto Op : Fixable->operands())
         Replacement.add(Op);
-      for (auto Op : Fixable->memoperands())
+      for (auto *Op : Fixable->memoperands())
         Replacement.addMemOperand(Op);
 
       LLVM_DEBUG(dbgs() << "Replacing " << *Fixable);

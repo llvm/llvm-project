@@ -145,8 +145,8 @@ initializerForParams(const SmallVector<MethodParameter, 8> &Params,
     Stream << llvm::formatv("- (instancetype)initWith{0}:({1}){2}",
                             capitalize(First.Name.trim().str()), First.Type,
                             First.Name);
-    for (auto It = Params.begin() + 1; It != Params.end(); ++It)
-      Stream << llvm::formatv(" {0}:({1}){0}", It->Name, It->Type);
+    for (const auto &It : llvm::drop_begin(Params))
+      Stream << llvm::formatv(" {0}:({1}){0}", It.Name, It.Type);
 
     if (GenerateImpl) {
       Stream <<

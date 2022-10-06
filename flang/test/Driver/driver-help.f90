@@ -42,6 +42,7 @@
 ! HELP-NEXT: -fno-integrated-as      Disable the integrated assembler
 ! HELP-NEXT: -fopenacc              Enable OpenACC
 ! HELP-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
+! HELP-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
 ! HELP-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! HELP-NEXT: -help                  Display available options
 ! HELP-NEXT: -I <dir>               Add directory to the end of the list of include search paths
@@ -119,6 +120,7 @@
 ! HELP-FC1-NEXT: -fno-reformat          Dump the cooked character stream in -E mode
 ! HELP-FC1-NEXT: -fopenacc              Enable OpenACC
 ! HELP-FC1-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
+! HELP-FC1-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
 ! HELP-FC1-NEXT: -fxor-operator         Enable .XOR. as a synonym of .NEQV.
 ! HELP-FC1-NEXT: -help                  Display available options
 ! HELP-FC1-NEXT: -init-only             Only execute frontend initialization
@@ -128,9 +130,13 @@
 ! HELP-FC1-NEXT: -mmlir <value>         Additional arguments to forward to MLIR's option processing
 ! HELP-FC1-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! HELP-FC1-NEXT: -module-suffix <suffix> Use <suffix> as the suffix for module files (the default value is `.mod`)
+! HELP-FC1-NEXT: -mrelocation-model <value>
+! HELP-FC1-NEXT:                        The relocation model to use
 ! HELP-FC1-NEXT: -nocpp                 Disable predefined and command line preprocessor macros
 ! HELP-FC1-NEXT: -o <file>              Write output to <file>
 ! HELP-FC1-NEXT: -pedantic              Warn on language extensions
+! HELP-FC1-NEXT: -pic-is-pie             File is for a position independent executable
+! HELP-FC1-NEXT: -pic-level <value>      Value for __PIC__
 ! HELP-FC1-NEXT: -plugin <name>         Use the named plugin action instead of the default action (use "help" to list available options)
 ! HELP-FC1-NEXT: -P                     Disable linemarker output in -E mode
 ! HELP-FC1-NEXT: -std=<value>           Language standard to compile for

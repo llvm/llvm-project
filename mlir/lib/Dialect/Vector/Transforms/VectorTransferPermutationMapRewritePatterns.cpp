@@ -53,7 +53,7 @@ transposeInBoundsAttr(OpBuilder &builder, ArrayAttr attr,
 /// vector.transfer_read to do the transpose in memory instead.
 struct TransferReadPermutationLowering
     : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::TransferReadOp op,
                                 PatternRewriter &rewriter) const override {
@@ -142,7 +142,7 @@ struct TransferReadPermutationLowering
 ///         permutation_map: (d0, d1, d2, d3) -> (d2, d3)
 struct TransferWritePermutationLowering
     : public OpRewritePattern<vector::TransferWriteOp> {
-  using OpRewritePattern<vector::TransferWriteOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::TransferWriteOp op,
                                 PatternRewriter &rewriter) const override {
@@ -201,7 +201,7 @@ struct TransferWritePermutationLowering
 ///         permutation_map: (d0, d1, d2, d3) -> (d1, 0, d3)
 ///     vector.broadcast %v
 struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern<vector::TransferReadOp>::OpRewritePattern;
+  using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(vector::TransferReadOp op,
                                 PatternRewriter &rewriter) const override {
@@ -271,8 +271,8 @@ struct TransferOpReduceRank : public OpRewritePattern<vector::TransferReadOp> {
 };
 
 void mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<TransferReadPermutationLowering,
                TransferWritePermutationLowering, TransferOpReduceRank>(
-      patterns.getContext());
+      patterns.getContext(), benefit);
 }

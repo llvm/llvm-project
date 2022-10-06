@@ -27,7 +27,7 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions"
-// CHECK-SAME: "-fvisibility" "hidden" "-fapply-global-visibility-to-externs"
+// CHECK-SAME: "-fvisibility=hidden" "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "-fgpu-rdc"
 // CHECK-SAME: {{.*}} "-o" [[A_BC1:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[A_SRC]]
@@ -36,7 +36,7 @@
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
 // CHECK-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions"
-// CHECK-SAME: "-fvisibility" "hidden" "-fapply-global-visibility-to-externs"
+// CHECK-SAME: "-fvisibility=hidden" "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "-fgpu-rdc"
 // CHECK-SAME: {{.*}} "-o" [[B_BC1:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]

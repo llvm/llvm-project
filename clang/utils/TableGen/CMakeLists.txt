@@ -1,6 +1,8 @@
 set(LLVM_LINK_COMPONENTS Support)
 
 add_tablegen(clang-tblgen CLANG
+  DESTINATION "${CLANG_TOOLS_INSTALL_DIR}"
+  EXPORT Clang
   ASTTableGen.cpp
   ClangASTNodesEmitter.cpp
   ClangASTPropertiesEmitter.cpp
