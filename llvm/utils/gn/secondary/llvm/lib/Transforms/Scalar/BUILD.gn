@@ -70,7 +70,6 @@ static_library("Scalar") {
     "NaryReassociate.cpp",
     "NewGVN.cpp",
     "PartiallyInlineLibCalls.cpp",
-    "PlaceSafepoints.cpp",
     "Reassociate.cpp",
     "Reg2Mem.cpp",
     "RewriteStatepointsForGC.cpp",
