@@ -320,6 +320,17 @@ OPTIONS
  Show basic information about each section in the profile. This option is
  only meaningful for sample-based profile in extbinary format.
 
+.. option:: --debug-info=<path>
+
+ Specify the executable or ``.dSYM`` that contains debug info for the raw profile.
+ When ``-debug-info-correlate`` was used for instrumentation, use this option
+ to show the correlated functions from the raw profile.
+
+.. option:: --covered
+
+ Show only the functions that have been executed, i.e., functions with non-zero
+ counts.
+
 .. program:: llvm-profdata overlap
 
 .. _profdata-overlap:
