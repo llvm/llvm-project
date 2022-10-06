@@ -224,7 +224,7 @@ static WarpExecuteOnLane0Op moveRegionToNewWarpOpAndAppendReturns(
 static bool canBeHoisted(Operation *op,
                          function_ref<bool(Value)> definedOutside) {
   return llvm::all_of(op->getOperands(), definedOutside) &&
-         isSideEffectFree(op) && op->getNumRegions() == 0;
+         isMemoryEffectFree(op) && op->getNumRegions() == 0;
 }
 
 /// Return a value yielded by `warpOp` which statifies the filter lamdba
@@ -555,7 +555,7 @@ struct WarpOpTransferWrite : public OpRewritePattern<vector::TransferWriteOp> {
     // There must be no op with a side effect after writeOp.
     Operation *nextOp = writeOp.getOperation();
     while ((nextOp = nextOp->getNextNode()))
-      if (!isSideEffectFree(nextOp))
+      if (!isMemoryEffectFree(nextOp))
         return failure();
 
     if (!llvm::all_of(writeOp->getOperands(), [&](Value value) {

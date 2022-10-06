@@ -45,9 +45,9 @@ class Toy_Op<string mnemonic, list<Trait> traits = []> :
 
 // We define a toy operation by inheriting from our base 'Toy_Op' class above.
 // Here we provide the mnemonic and a list of traits for the operation. The
-// constant operation is marked as 'NoSideEffect' as it is a pure operation
+// constant operation is marked as 'Pure' as it is a pure operation
 // and may be removed if dead.
-def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
+def ConstantOp : Toy_Op<"constant", [Pure]> {
   // Provide a summary and description for this operation. This can be used to
   // auto-generate documentation of the operations within our dialect.
   let summary = "constant";
@@ -92,7 +92,7 @@ def ConstantOp : Toy_Op<"constant", [NoSideEffect]> {
 //===----------------------------------------------------------------------===//
 
 def AddOp : Toy_Op<"add",
-    [NoSideEffect, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
+    [Pure, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
   let summary = "element-wise addition operation";
   let description = [{
     The "add" operation performs element-wise addition between two tensors.
@@ -118,7 +118,7 @@ def AddOp : Toy_Op<"add",
 def CastOp : Toy_Op<"cast", [
      DeclareOpInterfaceMethods<CastOpInterface>,
      DeclareOpInterfaceMethods<ShapeInferenceOpInterface>,
-     NoSideEffect,
+     Pure,
      SameOperandsAndResultShape
   ]> {
   let summary = "shape cast operation";
@@ -231,7 +231,7 @@ def GenericCallOp : Toy_Op<"generic_call",
 //===----------------------------------------------------------------------===//
 
 def MulOp : Toy_Op<"mul",
-    [NoSideEffect, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
+    [Pure, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
   let summary = "element-wise multiplication operation";
   let description = [{
     The "mul" operation performs element-wise multiplication between two
@@ -271,7 +271,7 @@ def PrintOp : Toy_Op<"print"> {
 // ReshapeOp
 //===----------------------------------------------------------------------===//
 
-def ReshapeOp : Toy_Op<"reshape", [NoSideEffect]> {
+def ReshapeOp : Toy_Op<"reshape", [Pure]> {
   let summary = "tensor reshape operation";
   let description = [{
     Reshape operation is transforming its input tensor into a new tensor with
@@ -299,7 +299,7 @@ def ReshapeOp : Toy_Op<"reshape", [NoSideEffect]> {
 // ReturnOp
 //===----------------------------------------------------------------------===//
 
-def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
+def ReturnOp : Toy_Op<"return", [Pure, HasParent<"FuncOp">,
                                  Terminator]> {
   let summary = "return operation";
   let description = [{
@@ -342,7 +342,7 @@ def ReturnOp : Toy_Op<"return", [NoSideEffect, HasParent<"FuncOp">,
 //===----------------------------------------------------------------------===//
 
 def TransposeOp : Toy_Op<"transpose",
-    [NoSideEffect, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
+    [Pure, DeclareOpInterfaceMethods<ShapeInferenceOpInterface>]> {
   let summary = "transpose operation";
 
   let arguments = (ins F64Tensor:$input);

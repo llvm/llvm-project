@@ -80,7 +80,7 @@ def TestPrintRemarkAtOperandOp
 def TestAddTestExtensionOp
   : Op<Transform_Dialect, "test_add_test_extension",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
-        NoSideEffect]> {
+        NoMemoryEffect]> {
   let arguments = (ins StrAttr:$message);
   let assemblyFormat = "$message attr-dict";
   let cppNamespace = "::mlir::test";
@@ -108,7 +108,7 @@ def TestRemapOperandPayloadToSelfOp
 def TestRemoveTestExtensionOp
   : Op<Transform_Dialect, "test_remove_test_extension",
        [DeclareOpInterfaceMethods<TransformOpInterface>,
-        NoSideEffect]> {
+        NoMemoryEffect]> {
   let assemblyFormat = "attr-dict";
   let cppNamespace = "::mlir::test";
 }

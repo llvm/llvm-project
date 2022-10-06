@@ -380,7 +380,7 @@ def SequenceOp : TransformDialectOp<"sequence",
 
 def WithPDLPatternsOp : TransformDialectOp<"with_pdl_patterns",
     [DeclareOpInterfaceMethods<TransformOpInterface>, NoTerminator,
-     OpAsmOpInterface, PossibleTopLevelTransformOpTrait, RecursiveSideEffects,
+     OpAsmOpInterface, PossibleTopLevelTransformOpTrait, RecursiveMemoryEffects,
      SymbolTable]> {
   let summary = "Contains PDL patterns available for use in transforms";
   let description = [{

@@ -19,7 +19,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
-def SPIRV_CompositeConstructOp : SPIRV_Op<"CompositeConstruct", [NoSideEffect]> {
+def SPIRV_CompositeConstructOp : SPIRV_Op<"CompositeConstruct", [Pure]> {
   let summary = [{
     Construct a new composite object from a set of constituent objects.
   }];
@@ -73,7 +73,7 @@ def SPIRV_CompositeConstructOp : SPIRV_Op<"CompositeConstruct", [NoSideEffect]> 
 // -----
 
 def SPIRV_CompositeExtractOp : SPIRV_Op<"CompositeExtract",
-                                        [NoSideEffect, UsableInSpecConstantOp]> {
+                                        [Pure, UsableInSpecConstantOp]> {
   let summary = "Extract a part of a composite object.";
 
   let description = [{
@@ -124,7 +124,7 @@ def SPIRV_CompositeExtractOp : SPIRV_Op<"CompositeExtract",
 // -----
 
 def SPIRV_CompositeInsertOp : SPIRV_Op<"CompositeInsert",
-                                       [NoSideEffect, UsableInSpecConstantOp]> {
+                                       [Pure, UsableInSpecConstantOp]> {
   let summary = [{
     Make a copy of a composite object, while modifying one part of it.
   }];
@@ -176,7 +176,7 @@ def SPIRV_CompositeInsertOp : SPIRV_Op<"CompositeInsert",
 // -----
 
 def SPIRV_VectorExtractDynamicOp : SPIRV_Op<"VectorExtractDynamic", [
-    NoSideEffect,
+    Pure,
     TypesMatchWith<"type of 'result' matches element type of 'vector'",
                    "vector", "result",
                    "$_self.cast<mlir::VectorType>().getElementType()">]> {
@@ -224,7 +224,7 @@ def SPIRV_VectorExtractDynamicOp : SPIRV_Op<"VectorExtractDynamic", [
 // -----
 
 def SPIRV_VectorInsertDynamicOp : SPIRV_Op<"VectorInsertDynamic", [
-    NoSideEffect,
+    Pure,
     TypesMatchWith<
       "type of 'component' matches element type of 'vector'",
       "vector", "component",
@@ -288,7 +288,7 @@ def SPIRV_VectorInsertDynamicOp : SPIRV_Op<"VectorInsertDynamic", [
 // -----
 
 def SPIRV_VectorShuffleOp : SPIRV_Op<"VectorShuffle", [
-    NoSideEffect, AllElementTypesMatch<["vector1", "vector2", "result"]>]> {
+    Pure, AllElementTypesMatch<["vector1", "vector2", "result"]>]> {
   let summary = [{
     Select arbitrary components from two vectors to make a new vector.
   }];
