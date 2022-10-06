@@ -372,6 +372,10 @@ static DemandedFields getDemanded(const MachineInstr &MI) {
     Res.demandVTYPE();
     if (RISCVII::hasVLOp(TSFlags))
       Res.VL = true;
+
+    // Behavior is independent of mask policy.
+    if (!RISCVII::usesMaskPolicy(TSFlags))
+      Res.MaskPolicy = false;
   }
 
   // Loads and stores with implicit EEW do not demand SEW or LMUL directly.
