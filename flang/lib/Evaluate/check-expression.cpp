@@ -699,7 +699,10 @@ public:
       return true; // scalars considered contiguous
     }
     int subscriptRank{0};
-    auto subscripts{CheckSubscripts(x.subscript(), subscriptRank)};
+    auto baseLbounds{GetLBOUNDs(context_, x.base())};
+    auto baseUbounds{GetUBOUNDs(context_, x.base())};
+    auto subscripts{CheckSubscripts(
+        x.subscript(), subscriptRank, &baseLbounds, &baseUbounds)};
     if (!subscripts.value_or(false)) {
       return subscripts; // subscripts not known to be contiguous
     } else if (subscriptRank > 0) {
@@ -745,17 +748,75 @@ public:
   Result operator()(const NullPointer &) const { return true; }
 
 private:
-  static std::optional<bool> CheckSubscripts(
-      const std::vector<Subscript> &subscript, int &rank) {
+  // Returns "true" for a provably empty or simply contiguous array section;
+  // return "false" for a provably nonempty discontiguous section or for use
+  // of a vector subscript.
+  std::optional<bool> CheckSubscripts(const std::vector<Subscript> &subscript,
+      int &rank, const Shape *baseLbounds = nullptr,
+      const Shape *baseUbounds = nullptr) const {
     bool anyTriplet{false};
     rank = 0;
+    // Detect any provably empty dimension in this array section, which would
+    // render the whole section empty and therefore vacuously contiguous.
+    std::optional<bool> result;
     for (auto j{subscript.size()}; j-- > 0;) {
       if (const auto *triplet{std::get_if<Triplet>(&subscript[j].u)}) {
-        auto isStride1{triplet->IsStrideOne()};
-        if (!isStride1.value_or(false)) {
-          return isStride1;
+        ++rank;
+        if (auto stride{ToInt64(triplet->stride())}) {
+          const Expr<SubscriptInteger> *lowerBound{triplet->GetLower()};
+          if (!lowerBound && baseLbounds && j < baseLbounds->size()) {
+            lowerBound = common::GetPtrFromOptional(baseLbounds->at(j));
+          }
+          const Expr<SubscriptInteger> *upperBound{triplet->GetUpper()};
+          if (!upperBound && baseUbounds && j < baseUbounds->size()) {
+            upperBound = common::GetPtrFromOptional(baseUbounds->at(j));
+          }
+          std::optional<ConstantSubscript> lowerVal{lowerBound
+                  ? ToInt64(Fold(context_, Expr<SubscriptInteger>{*lowerBound}))
+                  : std::nullopt};
+          std::optional<ConstantSubscript> upperVal{upperBound
+                  ? ToInt64(Fold(context_, Expr<SubscriptInteger>{*upperBound}))
+                  : std::nullopt};
+          if (lowerVal && upperVal) {
+            if (*lowerVal < *upperVal) {
+              if (*stride < 0) {
+                result = true; // empty dimension
+              } else if (!result && *stride > 1 &&
+                  *lowerVal + *stride <= *upperVal) {
+                result = false; // discontiguous if not empty
+              }
+            } else if (*lowerVal > *upperVal) {
+              if (*stride > 0) {
+                result = true; // empty dimension
+              } else if (!result && *stride < 0 &&
+                  *lowerVal + *stride >= *upperVal) {
+                result = false; // discontiguous if not empty
+              }
+            }
+          }
+        }
+      } else if (subscript[j].Rank() > 0) {
+        ++rank;
+        if (!result) {
+          result = false; // vector subscript
+        }
+      }
+    }
+    if (rank == 0) {
+      result = true; // scalar
+    }
+    if (result) {
+      return result;
+    }
+    // Not provably discontiguous at this point.
+    // Return "true" if simply contiguous, otherwise nullopt.
+    for (auto j{subscript.size()}; j-- > 0;) {
+      if (const auto *triplet{std::get_if<Triplet>(&subscript[j].u)}) {
+        auto stride{ToInt64(triplet->stride())};
+        if (!stride || stride != 1) {
+          return std::nullopt;
         } else if (anyTriplet) {
-          if (triplet->lower() || triplet->upper()) {
+          if (triplet->GetLower() || triplet->GetUpper()) {
             // all triplets before the last one must be just ":" for
             // simple contiguity
             return std::nullopt;
@@ -764,11 +825,11 @@ private:
           anyTriplet = true;
         }
         ++rank;
-      } else if (anyTriplet || subscript[j].Rank() > 0) {
-        return false;
+      } else if (anyTriplet) {
+        return std::nullopt;
       }
     }
-    return true;
+    return true; // simply contiguous
   }
 
   FoldingContext &context_;
