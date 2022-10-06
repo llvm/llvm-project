@@ -43,47 +43,47 @@ program test_error_stop
   !___ non-standard-conforming statements _________________________
 
   ! unknown stop-code
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   error stop code=int_code
 
   ! missing 'quiet='
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   error stop int_code, bool
 
   ! incorrect spelling for 'quiet='
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   error stop int_code, quiets=bool
 
   ! missing scalar-logical-expr for quiet=
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   error stop int_code, quiet
 
   ! superfluous stop-code
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   error stop int_code, char_code
 
   ! repeated quiet=
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   error stop int_code, quiet=bool, quiet=.true.
 
   ! superfluous stop-code
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   error stop int_code, char_code, quiet=bool
 
   ! superfluous integer
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   error stop int_code, quiet=bool, 5
 
   ! quiet= appears without stop-code
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   error stop quiet=bool
 
   ! incorrect syntax
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   error stop ()
 
   ! incorrect syntax
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   error stop (2, quiet=.true.)
 
 end program test_error_stop
