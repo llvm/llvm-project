@@ -44,7 +44,7 @@ define void @test(i32* nocapture %t2) {
 ; CHECK-NEXT:    [[T67:%.*]] = insertelement <8 x i32> [[TMP6]], i32 [[T32]], i32 2
 ; CHECK-NEXT:    [[T68:%.*]] = insertelement <8 x i32> [[T67]], i32 [[T49]], i32 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[T701:%.*]] = shufflevector <8 x i32> [[T68]], <8 x i32> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 6, i32 7>
+; CHECK-NEXT:    [[T701:%.*]] = shufflevector <8 x i32> [[T68]], <8 x i32> [[TMP7]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[T71:%.*]] = insertelement <8 x i32> [[T701]], i32 [[T34]], i32 6
 ; CHECK-NEXT:    [[T72:%.*]] = insertelement <8 x i32> [[T71]], i32 [[T49]], i32 7
 ; CHECK-NEXT:    [[T76:%.*]] = shl <8 x i32> [[T72]], <i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3, i32 3>

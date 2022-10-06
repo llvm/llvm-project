@@ -11,8 +11,7 @@ define void @_Z10fooConvertPDv4_xS0_S0_PKS_() {
 ; CHECK-NEXT:    [[TMP4:%.*]] = fpext <2 x half> [[TMP3]] to <2 x float>
 ; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <2 x float> [[TMP4]] to <2 x i32>
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-; CHECK-NEXT:    [[VECINS_I_5_I1:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> poison, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    [[TMP7:%.*]] = freeze <8 x i32> [[VECINS_I_5_I1]]
+; CHECK-NEXT:    [[VECINS_I_5_I1:%.*]] = shufflevector <8 x i32> [[TMP6]], <8 x i32> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 0, i32 1, i32 14, i32 15>
 ; CHECK-NEXT:    ret void
 ;
 entry:
