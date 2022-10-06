@@ -1,37 +1,32 @@
-//===- NvGpuSupport.cpp - MLIR Vector to GPU lowering support --------===//
+//===- MMAUtils.cpp - MLIR NVGPU dialect utils for MMA operations----------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file provides utilities to assist in the lowering of Vector operations
-// to NvGPU dialect MMA operations.
-//
-//===----------------------------------------------------------------------===//
+#include "mlir/Dialect/NVGPU/Utils/MMAUtils.h"
 
-#include "NvGpuSupport.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
-namespace mlir {
-namespace nvgpu {
-namespace {
+using namespace mlir;
+using namespace mlir::nvgpu;
 
 /// There are always 4 threads per [128|256|512] bit row.
-constexpr int64_t kThreadsPerRow = 4;
+static constexpr int64_t kThreadsPerRow = 4;
+static constexpr int64_t kNumRowsPerTile = 8;
 
-constexpr int64_t kNumRowsPerTile = 8;
-
-bool isAccumulatorOrResult(MatMulOperandRole operandType) {
+static bool isAccumulatorOrResult(MatMulOperandRole operandType) {
   return operandType == MatMulOperandRole::C;
 }
 
 /// Returns the number of registers which compose a matrix fragment held by a
 /// single thread.
-int64_t inferNumRegistersPerMatrixFragment(const WarpMatrixInfo &type) {
+static int64_t inferNumRegistersPerMatrixFragment(const WarpMatrixInfo &type) {
   int64_t lineSize = inferTileWidthInBits(type);
   auto shape = type.vectorType.getShape();
   return (shape[0] / kNumRowsPerTile) *
@@ -41,17 +36,16 @@ int64_t inferNumRegistersPerMatrixFragment(const WarpMatrixInfo &type) {
 
 /// Returns the number of 8 x [128|256|512] bit tiles that compose the given
 /// operand shape.
-std::array<int64_t, 2> getTileShape(ArrayRef<int64_t> operandShape,
-                                    Type elementType, int64_t lineSizeBits) {
+static std::array<int64_t, 2> getTileShape(ArrayRef<int64_t> operandShape,
+                                           Type elementType,
+                                           int64_t lineSizeBits) {
   // For each 8x128bit square, a thread is responsible for one 32bit register.
   return {operandShape[0] / kNumRowsPerTile,
           (operandShape[1] * elementType.getIntOrFloatBitWidth()) /
               lineSizeBits};
 }
 
-} // namespace
-
-FailureOr<WarpMatrixInfo> getWarpMatrixInfo(Operation *op) {
+FailureOr<WarpMatrixInfo> nvgpu::getWarpMatrixInfo(Operation *op) {
   WarpMatrixInfo info;
 
   // Determine the vector type.
@@ -84,7 +78,7 @@ FailureOr<WarpMatrixInfo> getWarpMatrixInfo(Operation *op) {
   return info;
 }
 
-int64_t inferTileWidthInBits(const WarpMatrixInfo &type) {
+int64_t nvgpu::inferTileWidthInBits(const WarpMatrixInfo &type) {
   bool isAcc = isAccumulatorOrResult(type.operandRole);
   Type elType = type.vectorType.getElementType();
   if (isAcc && elType.getIntOrFloatBitWidth() == 32) {
@@ -97,7 +91,7 @@ int64_t inferTileWidthInBits(const WarpMatrixInfo &type) {
 }
 
 FailureOr<FragmentElementInfo>
-getMmaSyncRegisterType(const WarpMatrixInfo &type) {
+nvgpu::getMmaSyncRegisterType(const WarpMatrixInfo &type) {
   MLIRContext *ctx = type.vectorType.getContext();
   const bool isAccum = isAccumulatorOrResult(type.operandRole);
 
@@ -170,8 +164,8 @@ static AffineMap getRegisterIndexToTileOffsetMap(int64_t lineSize,
 }
 
 FailureOr<AffineMap>
-getLaneIdAndValueIdToOperandCoord(Location loc, OpBuilder &builder,
-                                  const WarpMatrixInfo &fragmentType) {
+nvgpu::getLaneIdAndValueIdToOperandCoord(Location loc, OpBuilder &builder,
+                                         const WarpMatrixInfo &fragmentType) {
   Type elementType = fragmentType.vectorType.getElementType();
   ArrayRef<int64_t> operandShape = fragmentType.vectorType.getShape();
   FailureOr<nvgpu::FragmentElementInfo> regInfo =
@@ -205,8 +199,8 @@ getLaneIdAndValueIdToOperandCoord(Location loc, OpBuilder &builder,
                       (logicalValueIdDim % elementsPerRegister)});
 }
 
-FailureOr<nvgpu::LdMatrixParams> getLdMatrixParams(const WarpMatrixInfo &type,
-                                                   bool transpose) {
+FailureOr<nvgpu::LdMatrixParams>
+nvgpu::getLdMatrixParams(const WarpMatrixInfo &type, bool transpose) {
   LdMatrixParams params;
   Type elType = type.vectorType.getElementType();
   params.fragmentType = type.vectorType;
@@ -235,8 +229,8 @@ FailureOr<nvgpu::LdMatrixParams> getLdMatrixParams(const WarpMatrixInfo &type,
 }
 
 FailureOr<AffineMap>
-getLaneIdToLdMatrixMatrixCoord(Location loc, OpBuilder &builder,
-                               const LdMatrixParams &params) {
+nvgpu::getLaneIdToLdMatrixMatrixCoord(Location loc, OpBuilder &builder,
+                                      const LdMatrixParams &params) {
   // One thread per 128b row.
   const int64_t kNumThreadsPerTile = kNumRowsPerTile;
   const int bitsPerElement = static_cast<int>(
@@ -273,9 +267,8 @@ getLaneIdToLdMatrixMatrixCoord(Location loc, OpBuilder &builder,
   return failure();
 }
 
-LogicalResult
-PrepareContractToGPUMMASync::matchAndRewrite(vector::ContractionOp op,
-                                             PatternRewriter &rewriter) const {
+LogicalResult nvgpu::PrepareContractToGPUMMASync::matchAndRewrite(
+    vector::ContractionOp op, PatternRewriter &rewriter) const {
   Location loc = op.getLoc();
   Value lhs = op.getLhs();
   Value rhs = op.getRhs();
@@ -330,6 +323,3 @@ PrepareContractToGPUMMASync::matchAndRewrite(vector::ContractionOp op,
       op.getIteratorTypes());
   return success();
 }
-
-} // namespace nvgpu
-} // namespace mlir
