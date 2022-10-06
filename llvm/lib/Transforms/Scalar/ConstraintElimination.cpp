@@ -757,10 +757,20 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   // Next, sort worklist by dominance, so that dominating blocks and conditions
   // come before blocks and conditions dominated by them. If a block and a
   // condition have the same numbers, the condition comes before the block, as
-  // it holds on entry to the block.
-  stable_sort(S.WorkList, [](const ConstraintOrBlock &A, const ConstraintOrBlock &B) {
-    return std::tie(A.NumIn, A.IsBlock) < std::tie(B.NumIn, B.IsBlock);
-  });
+  // it holds on entry to the block. Also make sure conditions with constant
+  // operands come before conditions without constant operands. This increases
+  // the effectiveness of the current signed <-> unsigned fact transfer logic.
+  stable_sort(
+      S.WorkList, [](const ConstraintOrBlock &A, const ConstraintOrBlock &B) {
+        auto HasNoConstOp = [](const ConstraintOrBlock &B) {
+          return !B.IsBlock && !isa<ConstantInt>(B.Condition->getOperand(0)) &&
+                 !isa<ConstantInt>(B.Condition->getOperand(1));
+        };
+        bool NoConstOpA = HasNoConstOp(A);
+        bool NoConstOpB = HasNoConstOp(B);
+        return std::tie(A.NumIn, A.IsBlock, NoConstOpA) <
+               std::tie(B.NumIn, B.IsBlock, NoConstOpB);
+      });
 
   SmallVector<Instruction *> ToRemove;
 
