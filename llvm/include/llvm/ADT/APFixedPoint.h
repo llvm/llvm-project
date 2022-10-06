@@ -56,7 +56,7 @@ public:
   /// Check if the Semantic follow the requirements of an older more limited
   /// version of this class
   bool isValidLegacySema() const {
-    return LsbWeight <= 0 && Width >= -LsbWeight;
+    return LsbWeight <= 0 && static_cast<int>(Width) >= -LsbWeight;
   }
   unsigned getWidth() const { return Width; }
   unsigned getScale() const { assert(isValidLegacySema()); return -LsbWeight; }
