@@ -198,6 +198,9 @@ struct DIDumpOptions {
   bool SummarizeTypes = false;
   bool Verbose = false;
   bool DisplayRawContents = false;
+  bool IsEH = false;
+  std::function<llvm::StringRef(uint64_t DwarfRegNum, bool IsEH)>
+      GetNameForDWARFReg;
 
   /// Return default option set for printing a single DIE without children.
   static DIDumpOptions getForSingleDIE() {
