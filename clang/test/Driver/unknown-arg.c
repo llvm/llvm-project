@@ -1,5 +1,5 @@
-// RUN: not %clang %s -cake-is-lie -%0 -%d -HHHH -munknown-to-clang-option -print-stats -funknown-to-clang-option -ifoo -imultilib dir -### 2>&1 | \
-// RUN:     FileCheck %s
+// RUN: not %clang %s -cake-is-lie -%0 -%d -HHHH -munknown-to-clang-option -print-stats -funknown-to-clang-option -ifoo -imultilib dir -o ffload-device-only -### 2>&1 | \
+// RUN:     FileCheck %s --implicit-check-not=warning: 
 // RUN: %clang %s -imultilib dir -### 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=MULTILIB
 // RUN: not %clang %s -stdlibs=foo -hell -version -### 2>&1 | \
@@ -64,3 +64,9 @@
 // RUN: %clang -S %s -o %t.s  -Wunknown-to-clang-option 2>&1 | FileCheck --check-prefix=IGNORED %s
 
 // IGNORED: warning: unknown warning option '-Wunknown-to-clang-option'
+
+// RUN: %clang -### -offload-arch=sm_70 --offload-arch=sm_70 -offload-device-only -o ffload-device-only \
+// RUN:   -output -o foo %s 2>&1 | FileCheck --check-prefix=O-WARN %s
+//      O-WARN: warning: joined argument treated as '-o ffload-arch=sm_70'; did you mean '--offload-arch=sm_70'?
+// O-WARN-NEXT: warning: joined argument treated as '-o ffload-device-only'; did you mean '--offload-device-only'?
+// O-WARN-NEXT: warning: joined argument treated as '-o utput'; did you mean '--output'?
