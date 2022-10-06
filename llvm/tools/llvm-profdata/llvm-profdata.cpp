@@ -2826,7 +2826,8 @@ static int show_main(int argc, const char *argv[]) {
   return showMemProfProfile(Filename, ProfiledBinary, OS);
 }
 
-int main(int argc, const char *argv[]) {
+int llvm_profdata_main(int argc, char **argvNonConst) {
+  const char **argv = const_cast<const char **>(argvNonConst);
   InitLLVM X(argc, argv);
 
   StringRef ProgName(sys::path::filename(argv[0]));

@@ -79,7 +79,7 @@ static void error(Error EC) {
     });
 }
 
-int main(int Argc, const char **Argv) {
+int llvm_mt_main(int Argc, char **Argv) {
   InitLLVM X(Argc, Argv);
 
   CvtResOptTable T;

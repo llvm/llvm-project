@@ -1,6 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   BinaryFormat
-  InterfaceStub  
+  InterfaceStub
   Object
   Support
   TextAPI
@@ -18,4 +18,6 @@ add_llvm_tool(llvm-ifs
 
 DEPENDS
   IFSOptsTableGen
+
+  GENERATE_DRIVER
   )
