@@ -1,7 +1,7 @@
 ; Test that llvm-reduce can drop unneeded debug metadata nodes referenced by
 ; DICompileUnit and DISuprogram.
 ;
-; RUN: llvm-reduce --delta-passes=metadata --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+; RUN: llvm-reduce --delta-passes=di-metadata --abort-on-invalid-reduction --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: cat %t | FileCheck %s
 
 ; CHECK-INTERESTINGNESS: define void @test() !dbg
@@ -21,13 +21,12 @@
 ; CHECK: !llvm.dbg.cu = !{[[CU:.+]]}
 
 ; CHECK-DAG: [[CU]] = distinct !DICompileUnit(language: DW_LANG_C99,{{.*}}, retainedTypes: [[TYPES:![0-9]+]], globals: [[GLOBALS:![0-9]+]]
+; CHECK-DAG: [[EMPTY:![0-9]+]] = !{}
 ; CHECK-DAG: [[TYPES]] = !{[[T0:![0-9]+]]
 ; CHECK-DAG: [[T0]] = !DIBasicType(name: "unsigned int",
-; CHECK-DAG: [[GLOBALS]] = !{!{{.+}}
+; CHECK-DAG: [[GLOBALS]] = !{{{![0-9]+}}
 
-
-; CHECK-DAG: [[SUBPROG]] = distinct !DISubprogram(name: "test", {{.*}}retainedNodes: [[RETAINED_NODES:.+]])
-; CHECK-DAG: [[RETAINED_NODES]] = !{!{{.+}},
+; CHECK-DAG: [[SUBPROG]] = distinct !DISubprogram(name: "test", {{.*}}retainedNodes: [[EMPTY]])
 
 define void @test() !dbg !17 {
   ret void
