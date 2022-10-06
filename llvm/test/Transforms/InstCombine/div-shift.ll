@@ -295,11 +295,12 @@ define <2 x i32> @t16(<2 x i32> %x, <2 x i32> %y) {
   ret <2 x i32> %r
 }
 
+; (X * Y) s/ (X << Z) --> Y s/ (1 << Z)
+
 define i5 @sdiv_mul_shl_nsw(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @sdiv_mul_shl_nsw(
-; CHECK-NEXT:    [[M1:%.*]] = mul nsw i5 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M2:%.*]] = shl nsw i5 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv i5 [[M1]], [[M2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i5 1, [[Z:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i5 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i5 [[D]]
 ;
   %m1 = mul nsw i5 %x, %y
@@ -308,11 +309,12 @@ define i5 @sdiv_mul_shl_nsw(i5 %x, i5 %y, i5 %z) {
   ret i5 %d
 }
 
+; (Y * Z) s/ (X << Z) --> Y s/ (1 << Z)
+
 define i5 @sdiv_mul_shl_nsw_commute1(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @sdiv_mul_shl_nsw_commute1(
-; CHECK-NEXT:    [[M1:%.*]] = mul nsw i5 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[M2:%.*]] = shl nsw i5 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv i5 [[M1]], [[M2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i5 1, [[Z:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i5 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i5 [[D]]
 ;
   %m1 = mul nsw i5 %y, %x
@@ -320,6 +322,8 @@ define i5 @sdiv_mul_shl_nsw_commute1(i5 %x, i5 %y, i5 %z) {
   %d = sdiv i5 %m1, %m2
   ret i5 %d
 }
+
+; negative test - shl is not commutative
 
 define i5 @sdiv_mul_shl_nsw_commute2(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @sdiv_mul_shl_nsw_commute2(
@@ -334,12 +338,14 @@ define i5 @sdiv_mul_shl_nsw_commute2(i5 %x, i5 %y, i5 %z) {
   ret i5 %d
 }
 
+; extra use is ok
+
 define i8 @sdiv_mul_shl_nsw_use1(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sdiv_mul_shl_nsw_use1(
 ; CHECK-NEXT:    [[M1:%.*]] = mul nsw i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[M1]])
-; CHECK-NEXT:    [[M2:%.*]] = shl nsw i8 [[X]], [[Z:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[M1]], [[M2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i8 1, [[Z:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[Y]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %m1 = mul nsw i8 %x, %y
@@ -349,12 +355,14 @@ define i8 @sdiv_mul_shl_nsw_use1(i8 %x, i8 %y, i8 %z) {
   ret i8 %d
 }
 
+; extra use is ok
+
 define i8 @sdiv_mul_shl_nsw_use2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sdiv_mul_shl_nsw_use2(
-; CHECK-NEXT:    [[M1:%.*]] = mul nsw i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[M2:%.*]] = shl nsw i8 [[X]], [[Z:%.*]]
+; CHECK-NEXT:    [[M2:%.*]] = shl nsw i8 [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[M2]])
-; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[M1]], [[M2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i8 1, [[Z]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %m1 = mul nsw i8 %x, %y
@@ -363,6 +371,8 @@ define i8 @sdiv_mul_shl_nsw_use2(i8 %x, i8 %y, i8 %z) {
   %d = sdiv i8 %m1, %m2
   ret i8 %d
 }
+
+; negative test - both operands can't have extra uses
 
 define i8 @sdiv_mul_shl_nsw_use3(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sdiv_mul_shl_nsw_use3(
@@ -381,6 +391,8 @@ define i8 @sdiv_mul_shl_nsw_use3(i8 %x, i8 %y, i8 %z) {
   ret i8 %d
 }
 
+; negative test - shl must be divisor
+
 define i5 @sdiv_shl_mul_nsw(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @sdiv_shl_mul_nsw(
 ; CHECK-NEXT:    [[M1:%.*]] = shl nsw i5 [[Z:%.*]], [[X:%.*]]
@@ -394,6 +406,8 @@ define i5 @sdiv_shl_mul_nsw(i5 %x, i5 %y, i5 %z) {
   ret i5 %d
 }
 
+; negative test - wrong no-wrap
+
 define i5 @sdiv_mul_shl_missing_nsw1(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @sdiv_mul_shl_missing_nsw1(
 ; CHECK-NEXT:    [[M1:%.*]] = mul nsw i5 [[X:%.*]], [[Y:%.*]]
@@ -406,6 +420,8 @@ define i5 @sdiv_mul_shl_missing_nsw1(i5 %x, i5 %y, i5 %z) {
   %d = sdiv i5 %m1, %m2
   ret i5 %d
 }
+
+; negative test - wrong no-wrap
 
 define i5 @sdiv_mul_shl_missing_nsw2(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @sdiv_mul_shl_missing_nsw2(
