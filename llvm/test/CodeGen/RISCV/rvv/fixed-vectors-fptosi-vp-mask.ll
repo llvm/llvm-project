@@ -9,9 +9,8 @@ declare <4 x i1> @llvm.vp.fptosi.v4i1.v4f16(<4 x half>, <4 x i1>, i32)
 define <4 x i1> @vfptosi_v4i1_v4f16(<4 x half> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfptosi_v4i1_v4f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v8, v8, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.fptosi.v4i1.v4f16(<4 x half> %va, <4 x i1> %m, i32 %evl)
@@ -34,9 +33,8 @@ declare <4 x i1> @llvm.vp.fptosi.v4i1.v4f32(<4 x float>, <4 x i1>, i32)
 define <4 x i1> @vfptosi_v4i1_v4f32(<4 x float> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfptosi_v4i1_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v8, v8, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.fptosi.v4i1.v4f32(<4 x float> %va, <4 x i1> %m, i32 %evl)
@@ -59,9 +57,8 @@ declare <4 x i1> @llvm.vp.fptosi.v4i1.v4f64(<4 x double>, <4 x i1>, i32)
 define <4 x i1> @vfptosi_v4i1_v4f64(<4 x double> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vfptosi_v4i1_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.x.f.v v10, v8, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; CHECK-NEXT:    vmsne.vi v8, v10, 0, v0.t
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    ret
