@@ -295,17 +295,6 @@ SwiftArrayBufferHandler::CreateBufferHandler(ValueObject &valobj) {
   if (!clang_ast_context)
     return nullptr;
 
-  if (valobj_typename.startswith("Swift._NSSwiftArray")) {
-    CompilerType anyobject_type = clang_ast_context->GetBasicType(
-            lldb::eBasicTypeObjCID);
-    auto handler = std::unique_ptr<SwiftArrayBufferHandler>(
-        new SwiftArrayNativeBufferHandler(valobj, valobj.GetPointerValue(),
-                                          anyobject_type));
-    if (handler && handler->IsValid())
-      return handler;
-    return nullptr;
-  }
-
   // For now we have to keep the old mangled name since the Objc->Swift bindings
   // that are in Foundation don't get the new mangling.
   if (valobj_typename.startswith("_TtCs23_ContiguousArrayStorage") ||
