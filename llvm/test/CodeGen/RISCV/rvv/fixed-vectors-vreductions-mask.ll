@@ -9,7 +9,7 @@ declare i1 @llvm.vector.reduce.or.v1i1(<1 x i1>)
 define signext i1 @vreduce_or_v1i1(<1 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_v1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -25,7 +25,7 @@ declare i1 @llvm.vector.reduce.xor.v1i1(<1 x i1>)
 define signext i1 @vreduce_xor_v1i1(<1 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_v1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -41,7 +41,7 @@ declare i1 @llvm.vector.reduce.and.v1i1(<1 x i1>)
 define signext i1 @vreduce_and_v1i1(<1 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_v1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -57,7 +57,7 @@ declare i1 @llvm.vector.reduce.umax.v1i1(<1 x i1>)
 define signext i1 @vreduce_umax_v1i1(<1 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_v1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -73,7 +73,7 @@ declare i1 @llvm.vector.reduce.smax.v1i1(<1 x i1>)
 define signext i1 @vreduce_smax_v1i1(<1 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_v1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -89,7 +89,7 @@ declare i1 @llvm.vector.reduce.umin.v1i1(<1 x i1>)
 define signext i1 @vreduce_umin_v1i1(<1 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_v1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -105,7 +105,7 @@ declare i1 @llvm.vector.reduce.smin.v1i1(<1 x i1>)
 define signext i1 @vreduce_smin_v1i1(<1 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_v1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -121,7 +121,7 @@ declare i1 @llvm.vector.reduce.or.v2i1(<2 x i1>)
 define signext i1 @vreduce_or_v2i1(<2 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -135,7 +135,7 @@ declare i1 @llvm.vector.reduce.xor.v2i1(<2 x i1>)
 define signext i1 @vreduce_xor_v2i1(<2 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -149,7 +149,7 @@ declare i1 @llvm.vector.reduce.and.v2i1(<2 x i1>)
 define signext i1 @vreduce_and_v2i1(<2 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -164,7 +164,7 @@ declare i1 @llvm.vector.reduce.umax.v2i1(<2 x i1>)
 define signext i1 @vreduce_umax_v2i1(<2 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -178,7 +178,7 @@ declare i1 @llvm.vector.reduce.smax.v2i1(<2 x i1>)
 define signext i1 @vreduce_smax_v2i1(<2 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -193,7 +193,7 @@ declare i1 @llvm.vector.reduce.umin.v2i1(<2 x i1>)
 define signext i1 @vreduce_umin_v2i1(<2 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -208,7 +208,7 @@ declare i1 @llvm.vector.reduce.smin.v2i1(<2 x i1>)
 define signext i1 @vreduce_smin_v2i1(<2 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -222,7 +222,7 @@ declare i1 @llvm.vector.reduce.or.v4i1(<4 x i1>)
 define signext i1 @vreduce_or_v4i1(<4 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -236,7 +236,7 @@ declare i1 @llvm.vector.reduce.xor.v4i1(<4 x i1>)
 define signext i1 @vreduce_xor_v4i1(<4 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -250,7 +250,7 @@ declare i1 @llvm.vector.reduce.and.v4i1(<4 x i1>)
 define signext i1 @vreduce_and_v4i1(<4 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -265,7 +265,7 @@ declare i1 @llvm.vector.reduce.umax.v4i1(<4 x i1>)
 define signext i1 @vreduce_umax_v4i1(<4 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -279,7 +279,7 @@ declare i1 @llvm.vector.reduce.smax.v4i1(<4 x i1>)
 define signext i1 @vreduce_smax_v4i1(<4 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -294,7 +294,7 @@ declare i1 @llvm.vector.reduce.umin.v4i1(<4 x i1>)
 define signext i1 @vreduce_umin_v4i1(<4 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -309,7 +309,7 @@ declare i1 @llvm.vector.reduce.smin.v4i1(<4 x i1>)
 define signext i1 @vreduce_smin_v4i1(<4 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -323,7 +323,7 @@ declare i1 @llvm.vector.reduce.or.v8i1(<8 x i1>)
 define signext i1 @vreduce_or_v8i1(<8 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -337,7 +337,7 @@ declare i1 @llvm.vector.reduce.xor.v8i1(<8 x i1>)
 define signext i1 @vreduce_xor_v8i1(<8 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -351,7 +351,7 @@ declare i1 @llvm.vector.reduce.and.v8i1(<8 x i1>)
 define signext i1 @vreduce_and_v8i1(<8 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -366,7 +366,7 @@ declare i1 @llvm.vector.reduce.umax.v8i1(<8 x i1>)
 define signext i1 @vreduce_umax_v8i1(<8 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -380,7 +380,7 @@ declare i1 @llvm.vector.reduce.smax.v8i1(<8 x i1>)
 define signext i1 @vreduce_smax_v8i1(<8 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -395,7 +395,7 @@ declare i1 @llvm.vector.reduce.umin.v8i1(<8 x i1>)
 define signext i1 @vreduce_umin_v8i1(<8 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -410,7 +410,7 @@ declare i1 @llvm.vector.reduce.smin.v8i1(<8 x i1>)
 define signext i1 @vreduce_smin_v8i1(<8 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -424,7 +424,7 @@ declare i1 @llvm.vector.reduce.or.v16i1(<16 x i1>)
 define signext i1 @vreduce_or_v16i1(<16 x i1> %v) {
 ; CHECK-LABEL: vreduce_or_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -438,7 +438,7 @@ declare i1 @llvm.vector.reduce.xor.v16i1(<16 x i1>)
 define signext i1 @vreduce_xor_v16i1(<16 x i1> %v) {
 ; CHECK-LABEL: vreduce_xor_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -452,7 +452,7 @@ declare i1 @llvm.vector.reduce.and.v16i1(<16 x i1>)
 define signext i1 @vreduce_and_v16i1(<16 x i1> %v) {
 ; CHECK-LABEL: vreduce_and_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -467,7 +467,7 @@ declare i1 @llvm.vector.reduce.umax.v16i1(<16 x i1>)
 define signext i1 @vreduce_umax_v16i1(<16 x i1> %v) {
 ; CHECK-LABEL: vreduce_umax_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -481,7 +481,7 @@ declare i1 @llvm.vector.reduce.smax.v16i1(<16 x i1>)
 define signext i1 @vreduce_smax_v16i1(<16 x i1> %v) {
 ; CHECK-LABEL: vreduce_smax_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -496,7 +496,7 @@ declare i1 @llvm.vector.reduce.umin.v16i1(<16 x i1>)
 define signext i1 @vreduce_umin_v16i1(<16 x i1> %v) {
 ; CHECK-LABEL: vreduce_umin_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmnot.m v8, v0
 ; CHECK-NEXT:    vcpop.m a0, v8
 ; CHECK-NEXT:    snez a0, a0
@@ -511,7 +511,7 @@ declare i1 @llvm.vector.reduce.smin.v16i1(<16 x i1>)
 define signext i1 @vreduce_smin_v16i1(<16 x i1> %v) {
 ; CHECK-LABEL: vreduce_smin_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    seqz a0, a0
 ; CHECK-NEXT:    addi a0, a0, -1
@@ -525,7 +525,7 @@ declare i1 @llvm.vector.reduce.or.v32i1(<32 x i1>)
 define signext i1 @vreduce_or_v32i1(<32 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_or_v32i1:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmor.mm v8, v0, v8
 ; LMULMAX1-NEXT:    vcpop.m a0, v8
 ; LMULMAX1-NEXT:    seqz a0, a0
@@ -535,7 +535,7 @@ define signext i1 @vreduce_or_v32i1(<32 x i1> %v) {
 ; LMULMAX8-LABEL: vreduce_or_v32i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 32
-; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; LMULMAX8-NEXT:    vcpop.m a0, v0
 ; LMULMAX8-NEXT:    seqz a0, a0
 ; LMULMAX8-NEXT:    addi a0, a0, -1
@@ -549,7 +549,7 @@ declare i1 @llvm.vector.reduce.xor.v32i1(<32 x i1>)
 define signext i1 @vreduce_xor_v32i1(<32 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_xor_v32i1:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmxor.mm v8, v0, v8
 ; LMULMAX1-NEXT:    vcpop.m a0, v8
 ; LMULMAX1-NEXT:    andi a0, a0, 1
@@ -559,7 +559,7 @@ define signext i1 @vreduce_xor_v32i1(<32 x i1> %v) {
 ; LMULMAX8-LABEL: vreduce_xor_v32i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 32
-; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; LMULMAX8-NEXT:    vcpop.m a0, v0
 ; LMULMAX8-NEXT:    andi a0, a0, 1
 ; LMULMAX8-NEXT:    neg a0, a0
@@ -573,7 +573,7 @@ declare i1 @llvm.vector.reduce.and.v32i1(<32 x i1>)
 define signext i1 @vreduce_and_v32i1(<32 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_and_v32i1:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmnand.mm v8, v0, v8
 ; LMULMAX1-NEXT:    vcpop.m a0, v8
 ; LMULMAX1-NEXT:    snez a0, a0
@@ -583,7 +583,7 @@ define signext i1 @vreduce_and_v32i1(<32 x i1> %v) {
 ; LMULMAX8-LABEL: vreduce_and_v32i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 32
-; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; LMULMAX8-NEXT:    vmnot.m v8, v0
 ; LMULMAX8-NEXT:    vcpop.m a0, v8
 ; LMULMAX8-NEXT:    snez a0, a0
@@ -598,7 +598,7 @@ declare i1 @llvm.vector.reduce.umax.v32i1(<32 x i1>)
 define signext i1 @vreduce_umax_v32i1(<32 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_umax_v32i1:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmor.mm v8, v0, v8
 ; LMULMAX1-NEXT:    vcpop.m a0, v8
 ; LMULMAX1-NEXT:    seqz a0, a0
@@ -608,7 +608,7 @@ define signext i1 @vreduce_umax_v32i1(<32 x i1> %v) {
 ; LMULMAX8-LABEL: vreduce_umax_v32i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 32
-; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; LMULMAX8-NEXT:    vcpop.m a0, v0
 ; LMULMAX8-NEXT:    seqz a0, a0
 ; LMULMAX8-NEXT:    addi a0, a0, -1
@@ -622,7 +622,7 @@ declare i1 @llvm.vector.reduce.smax.v32i1(<32 x i1>)
 define signext i1 @vreduce_smax_v32i1(<32 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_smax_v32i1:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmnand.mm v8, v0, v8
 ; LMULMAX1-NEXT:    vcpop.m a0, v8
 ; LMULMAX1-NEXT:    snez a0, a0
@@ -632,7 +632,7 @@ define signext i1 @vreduce_smax_v32i1(<32 x i1> %v) {
 ; LMULMAX8-LABEL: vreduce_smax_v32i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 32
-; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; LMULMAX8-NEXT:    vmnot.m v8, v0
 ; LMULMAX8-NEXT:    vcpop.m a0, v8
 ; LMULMAX8-NEXT:    snez a0, a0
@@ -647,7 +647,7 @@ declare i1 @llvm.vector.reduce.umin.v32i1(<32 x i1>)
 define signext i1 @vreduce_umin_v32i1(<32 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_umin_v32i1:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmnand.mm v8, v0, v8
 ; LMULMAX1-NEXT:    vcpop.m a0, v8
 ; LMULMAX1-NEXT:    snez a0, a0
@@ -657,7 +657,7 @@ define signext i1 @vreduce_umin_v32i1(<32 x i1> %v) {
 ; LMULMAX8-LABEL: vreduce_umin_v32i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 32
-; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; LMULMAX8-NEXT:    vmnot.m v8, v0
 ; LMULMAX8-NEXT:    vcpop.m a0, v8
 ; LMULMAX8-NEXT:    snez a0, a0
@@ -672,7 +672,7 @@ declare i1 @llvm.vector.reduce.smin.v32i1(<32 x i1>)
 define signext i1 @vreduce_smin_v32i1(<32 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_smin_v32i1:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmor.mm v8, v0, v8
 ; LMULMAX1-NEXT:    vcpop.m a0, v8
 ; LMULMAX1-NEXT:    seqz a0, a0
@@ -682,7 +682,7 @@ define signext i1 @vreduce_smin_v32i1(<32 x i1> %v) {
 ; LMULMAX8-LABEL: vreduce_smin_v32i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 32
-; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; LMULMAX8-NEXT:    vcpop.m a0, v0
 ; LMULMAX8-NEXT:    seqz a0, a0
 ; LMULMAX8-NEXT:    addi a0, a0, -1
@@ -696,7 +696,7 @@ declare i1 @llvm.vector.reduce.or.v64i1(<64 x i1>)
 define signext i1 @vreduce_or_v64i1(<64 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_or_v64i1:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmor.mm v8, v8, v10
 ; LMULMAX1-NEXT:    vmor.mm v9, v0, v9
 ; LMULMAX1-NEXT:    vmor.mm v8, v9, v8
@@ -708,7 +708,7 @@ define signext i1 @vreduce_or_v64i1(<64 x i1> %v) {
 ; LMULMAX8-LABEL: vreduce_or_v64i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 64
-; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; LMULMAX8-NEXT:    vcpop.m a0, v0
 ; LMULMAX8-NEXT:    seqz a0, a0
 ; LMULMAX8-NEXT:    addi a0, a0, -1
@@ -722,7 +722,7 @@ declare i1 @llvm.vector.reduce.xor.v64i1(<64 x i1>)
 define signext i1 @vreduce_xor_v64i1(<64 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_xor_v64i1:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmxor.mm v8, v8, v10
 ; LMULMAX1-NEXT:    vmxor.mm v9, v0, v9
 ; LMULMAX1-NEXT:    vmxor.mm v8, v9, v8
@@ -734,7 +734,7 @@ define signext i1 @vreduce_xor_v64i1(<64 x i1> %v) {
 ; LMULMAX8-LABEL: vreduce_xor_v64i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 64
-; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; LMULMAX8-NEXT:    vcpop.m a0, v0
 ; LMULMAX8-NEXT:    andi a0, a0, 1
 ; LMULMAX8-NEXT:    neg a0, a0
@@ -748,7 +748,7 @@ declare i1 @llvm.vector.reduce.and.v64i1(<64 x i1>)
 define signext i1 @vreduce_and_v64i1(<64 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_and_v64i1:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmand.mm v8, v8, v10
 ; LMULMAX1-NEXT:    vmand.mm v9, v0, v9
 ; LMULMAX1-NEXT:    vmnand.mm v8, v9, v8
@@ -760,7 +760,7 @@ define signext i1 @vreduce_and_v64i1(<64 x i1> %v) {
 ; LMULMAX8-LABEL: vreduce_and_v64i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 64
-; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; LMULMAX8-NEXT:    vmnot.m v8, v0
 ; LMULMAX8-NEXT:    vcpop.m a0, v8
 ; LMULMAX8-NEXT:    snez a0, a0
@@ -775,7 +775,7 @@ declare i1 @llvm.vector.reduce.umax.v64i1(<64 x i1>)
 define signext i1 @vreduce_umax_v64i1(<64 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_umax_v64i1:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmor.mm v8, v8, v10
 ; LMULMAX1-NEXT:    vmor.mm v9, v0, v9
 ; LMULMAX1-NEXT:    vmor.mm v8, v9, v8
@@ -787,7 +787,7 @@ define signext i1 @vreduce_umax_v64i1(<64 x i1> %v) {
 ; LMULMAX8-LABEL: vreduce_umax_v64i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 64
-; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; LMULMAX8-NEXT:    vcpop.m a0, v0
 ; LMULMAX8-NEXT:    seqz a0, a0
 ; LMULMAX8-NEXT:    addi a0, a0, -1
@@ -801,7 +801,7 @@ declare i1 @llvm.vector.reduce.smax.v64i1(<64 x i1>)
 define signext i1 @vreduce_smax_v64i1(<64 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_smax_v64i1:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmand.mm v8, v8, v10
 ; LMULMAX1-NEXT:    vmand.mm v9, v0, v9
 ; LMULMAX1-NEXT:    vmnand.mm v8, v9, v8
@@ -813,7 +813,7 @@ define signext i1 @vreduce_smax_v64i1(<64 x i1> %v) {
 ; LMULMAX8-LABEL: vreduce_smax_v64i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 64
-; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; LMULMAX8-NEXT:    vmnot.m v8, v0
 ; LMULMAX8-NEXT:    vcpop.m a0, v8
 ; LMULMAX8-NEXT:    snez a0, a0
@@ -828,7 +828,7 @@ declare i1 @llvm.vector.reduce.umin.v64i1(<64 x i1>)
 define signext i1 @vreduce_umin_v64i1(<64 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_umin_v64i1:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmand.mm v8, v8, v10
 ; LMULMAX1-NEXT:    vmand.mm v9, v0, v9
 ; LMULMAX1-NEXT:    vmnand.mm v8, v9, v8
@@ -840,7 +840,7 @@ define signext i1 @vreduce_umin_v64i1(<64 x i1> %v) {
 ; LMULMAX8-LABEL: vreduce_umin_v64i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 64
-; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; LMULMAX8-NEXT:    vmnot.m v8, v0
 ; LMULMAX8-NEXT:    vcpop.m a0, v8
 ; LMULMAX8-NEXT:    snez a0, a0
@@ -855,7 +855,7 @@ declare i1 @llvm.vector.reduce.smin.v64i1(<64 x i1>)
 define signext i1 @vreduce_smin_v64i1(<64 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_smin_v64i1:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmor.mm v8, v8, v10
 ; LMULMAX1-NEXT:    vmor.mm v9, v0, v9
 ; LMULMAX1-NEXT:    vmor.mm v8, v9, v8
@@ -867,7 +867,7 @@ define signext i1 @vreduce_smin_v64i1(<64 x i1> %v) {
 ; LMULMAX8-LABEL: vreduce_smin_v64i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 64
-; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; LMULMAX8-NEXT:    vcpop.m a0, v0
 ; LMULMAX8-NEXT:    seqz a0, a0
 ; LMULMAX8-NEXT:    addi a0, a0, -1
@@ -881,7 +881,7 @@ declare i1 @llvm.vector.reduce.add.v1i1(<1 x i1>)
 define signext i1 @vreduce_add_v1i1(<1 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_v1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
 ; CHECK-NEXT:    vmv.x.s a0, v8
@@ -897,7 +897,7 @@ declare i1 @llvm.vector.reduce.add.v2i1(<2 x i1>)
 define signext i1 @vreduce_add_v2i1(<2 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -911,7 +911,7 @@ declare i1 @llvm.vector.reduce.add.v4i1(<4 x i1>)
 define signext i1 @vreduce_add_v4i1(<4 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -925,7 +925,7 @@ declare i1 @llvm.vector.reduce.add.v8i1(<8 x i1>)
 define signext i1 @vreduce_add_v8i1(<8 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -939,7 +939,7 @@ declare i1 @llvm.vector.reduce.add.v16i1(<16 x i1>)
 define signext i1 @vreduce_add_v16i1(<16 x i1> %v) {
 ; CHECK-LABEL: vreduce_add_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vcpop.m a0, v0
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    neg a0, a0
@@ -953,7 +953,7 @@ declare i1 @llvm.vector.reduce.add.v32i1(<32 x i1>)
 define signext i1 @vreduce_add_v32i1(<32 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_add_v32i1:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmxor.mm v8, v0, v8
 ; LMULMAX1-NEXT:    vcpop.m a0, v8
 ; LMULMAX1-NEXT:    andi a0, a0, 1
@@ -963,7 +963,7 @@ define signext i1 @vreduce_add_v32i1(<32 x i1> %v) {
 ; LMULMAX8-LABEL: vreduce_add_v32i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 32
-; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; LMULMAX8-NEXT:    vcpop.m a0, v0
 ; LMULMAX8-NEXT:    andi a0, a0, 1
 ; LMULMAX8-NEXT:    neg a0, a0
@@ -977,7 +977,7 @@ declare i1 @llvm.vector.reduce.add.v64i1(<64 x i1>)
 define signext i1 @vreduce_add_v64i1(<64 x i1> %v) {
 ; LMULMAX1-LABEL: vreduce_add_v64i1:
 ; LMULMAX1:       # %bb.0:
-; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; LMULMAX1-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; LMULMAX1-NEXT:    vmxor.mm v8, v8, v10
 ; LMULMAX1-NEXT:    vmxor.mm v9, v0, v9
 ; LMULMAX1-NEXT:    vmxor.mm v8, v9, v8
@@ -989,7 +989,7 @@ define signext i1 @vreduce_add_v64i1(<64 x i1> %v) {
 ; LMULMAX8-LABEL: vreduce_add_v64i1:
 ; LMULMAX8:       # %bb.0:
 ; LMULMAX8-NEXT:    li a0, 64
-; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
+; LMULMAX8-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; LMULMAX8-NEXT:    vcpop.m a0, v0
 ; LMULMAX8-NEXT:    andi a0, a0, 1
 ; LMULMAX8-NEXT:    neg a0, a0

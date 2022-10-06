@@ -21,7 +21,7 @@ define <4 x i1> @vfptoui_v4i1_v4f16(<4 x half> %va, <4 x i1> %m, i32 zeroext %ev
 define <4 x i1> @vfptoui_v4i1_v4f16_unmasked(<4 x half> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vfptoui_v4i1_v4f16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.xu.f.v v8, v8
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
@@ -46,7 +46,7 @@ define <4 x i1> @vfptoui_v4i1_v4f32(<4 x float> %va, <4 x i1> %m, i32 zeroext %e
 define <4 x i1> @vfptoui_v4i1_v4f32_unmasked(<4 x float> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vfptoui_v4i1_v4f32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.xu.f.v v8, v8
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
@@ -72,7 +72,7 @@ define <4 x i1> @vfptoui_v4i1_v4f64(<4 x double> %va, <4 x i1> %m, i32 zeroext %
 define <4 x i1> @vfptoui_v4i1_v4f64_unmasked(<4 x double> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vfptoui_v4i1_v4f64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vfcvt.rtz.xu.f.v v8, v8
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret

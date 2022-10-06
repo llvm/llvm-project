@@ -41,6 +41,7 @@ Implemented Papers
 - P2417R2 - A more constexpr bitset
 - P2445R1 - ``std::forward_like``
 - P2273R3 - Making ``std::unique_ptr`` constexpr
+- P0591R4 - Utility functions to implement uses-allocator construction
 
 Improvements and New Features
 -----------------------------

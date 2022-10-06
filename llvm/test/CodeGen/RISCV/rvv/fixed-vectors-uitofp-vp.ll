@@ -10,7 +10,7 @@ define <4 x half> @vuitofp_v4f16_v4i7(<4 x i7> %va, <4 x i1> %m, i32 zeroext %ev
 ; CHECK-LABEL: vuitofp_v4f16_v4i7:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 127
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vand.vx v9, v8, a1
 ; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
 ; CHECK-NEXT:    vfwcvt.f.xu.v v8, v9, v0.t
@@ -35,7 +35,7 @@ define <4 x half> @vuitofp_v4f16_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %ev
 define <4 x half> @vuitofp_v4f16_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f16_v4i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.xu.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -58,7 +58,7 @@ define <4 x half> @vuitofp_v4f16_v4i16(<4 x i16> %va, <4 x i1> %m, i32 zeroext %
 define <4 x half> @vuitofp_v4f16_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f16_v4i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <4 x half> @llvm.vp.uitofp.v4f16.v4i16(<4 x i16> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
@@ -81,7 +81,7 @@ define <4 x half> @vuitofp_v4f16_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext %
 define <4 x half> @vuitofp_v4f16_v4i32_unmasked(<4 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f16_v4i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.xu.w v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -106,9 +106,9 @@ define <4 x half> @vuitofp_v4f16_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %
 define <4 x half> @vuitofp_v4f16_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f16_v4i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfncvt.f.xu.w v10, v8
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v10
 ; CHECK-NEXT:    ret
   %v = call <4 x half> @llvm.vp.uitofp.v4f16.v4i64(<4 x i64> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
@@ -131,7 +131,7 @@ define <4 x float> @vuitofp_v4f32_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %e
 define <4 x float> @vuitofp_v4f32_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f32_v4i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v9, v8
 ; CHECK-NEXT:    vfwcvt.f.xu.v v8, v9
 ; CHECK-NEXT:    ret
@@ -155,7 +155,7 @@ define <4 x float> @vuitofp_v4f32_v4i16(<4 x i16> %va, <4 x i1> %m, i32 zeroext 
 define <4 x float> @vuitofp_v4f32_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f32_v4i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.xu.v v9, v8
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -178,7 +178,7 @@ define <4 x float> @vuitofp_v4f32_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext 
 define <4 x float> @vuitofp_v4f32_v4i32_unmasked(<4 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f32_v4i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <4 x float> @llvm.vp.uitofp.v4f32.v4i32(<4 x i32> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
@@ -201,7 +201,7 @@ define <4 x float> @vuitofp_v4f32_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext 
 define <4 x float> @vuitofp_v4f32_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f32_v4i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfncvt.f.xu.w v10, v8
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
@@ -225,7 +225,7 @@ define <4 x double> @vuitofp_v4f64_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %
 define <4 x double> @vuitofp_v4f64_v4i8_unmasked(<4 x i8> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f64_v4i8_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vzext.vf4 v10, v8
 ; CHECK-NEXT:    vfwcvt.f.xu.v v8, v10
 ; CHECK-NEXT:    ret
@@ -249,7 +249,7 @@ define <4 x double> @vuitofp_v4f64_v4i16(<4 x i16> %va, <4 x i1> %m, i32 zeroext
 define <4 x double> @vuitofp_v4f64_v4i16_unmasked(<4 x i16> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f64_v4i16_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8
 ; CHECK-NEXT:    vfwcvt.f.xu.v v8, v10
 ; CHECK-NEXT:    ret
@@ -273,7 +273,7 @@ define <4 x double> @vuitofp_v4f64_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext
 define <4 x double> @vuitofp_v4f64_v4i32_unmasked(<4 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f64_v4i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.xu.v v10, v8
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -296,7 +296,7 @@ define <4 x double> @vuitofp_v4f64_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext
 define <4 x double> @vuitofp_v4f64_v4i64_unmasked(<4 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vuitofp_v4f64_v4i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <4 x double> @llvm.vp.uitofp.v4f64.v4i64(<4 x i64> %va, <4 x i1> shufflevector (<4 x i1> insertelement (<4 x i1> undef, i1 true, i32 0), <4 x i1> undef, <4 x i32> zeroinitializer), i32 %evl)
@@ -310,7 +310,7 @@ define <32 x double> @vuitofp_v32f64_v32i64(<32 x i64> %va, <32 x i1> %m, i32 ze
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v24, v0
 ; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-NEXT:    addi a2, a0, -16
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
 ; CHECK-NEXT:    bltu a0, a2, .LBB25_2
@@ -341,14 +341,14 @@ define <32 x double> @vuitofp_v32f64_v32i64_unmasked(<32 x i64> %va, i32 zeroext
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a1
 ; CHECK-NEXT:  .LBB26_2:
-; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    vfcvt.f.xu.v v16, v16
 ; CHECK-NEXT:    bltu a0, a1, .LBB26_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:  .LBB26_4:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfcvt.f.xu.v v8, v8
 ; CHECK-NEXT:    ret
   %v = call <32 x double> @llvm.vp.uitofp.v32f64.v32i64(<32 x i64> %va, <32 x i1> shufflevector (<32 x i1> insertelement (<32 x i1> undef, i1 true, i32 0), <32 x i1> undef, <32 x i32> zeroinitializer), i32 %evl)

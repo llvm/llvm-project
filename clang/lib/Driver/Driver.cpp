@@ -4375,7 +4375,9 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
 
     // Compiling HIP in non-RDC mode requires linking each action individually.
     for (Action *&A : DeviceActions) {
-      if (A->getType() != types::TY_Object || Kind != Action::OFK_HIP ||
+      if ((A->getType() != types::TY_Object &&
+           A->getType() != types::TY_LTO_BC) ||
+          Kind != Action::OFK_HIP ||
           Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc, false))
         continue;
       ActionList LinkerInput = {A};

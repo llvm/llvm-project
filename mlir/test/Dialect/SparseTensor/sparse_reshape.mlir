@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s | mlir-opt | FileCheck %s --check-prefix=CHECK-ROUND
 // RUN: mlir-opt %s --sparse-tensor-conversion --cse --canonicalize | FileCheck %s --check-prefix=CHECK-CONV
+// RUN: mlir-opt %s --sparse-tensor-rewrite=enable-runtime-library=false --cse --canonicalize  | FileCheck %s --check-prefix=CHECK-RWT
 
 #SparseVector = #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>
 #SparseMatrix = #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>
@@ -36,6 +37,29 @@
 // CHECK-CONV:      call @delSparseTensorCOOF64
 // CHECK-CONV:      call @delSparseTensorCOOF64
 // CHECK-CONV:      return %[[N]] : !llvm.ptr<i8>
+//
+// rewrite for codegen:
+//
+// CHECK-RWT-LABEL:   func.func @sparse_expand(
+// CHECK-RWT-SAME:    %[[S:.*]]:
+// CHECK-RWT-DAG:     %[[C10:.*]] = arith.constant 10 : index
+// CHECK-RWT-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-RWT-DAG:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK-RWT:         %[[B:.*]] = bufferization.alloc_tensor()
+// CHECK-RWT:         %[[P0:.*]] = sparse_tensor.pointers %[[S]] {dimension = 0 : index}
+// CHECK-RWT:         %[[I0:.*]] = sparse_tensor.indices %[[S]] {dimension = 0 : index}
+// CHECK-RWT:         %[[V:.*]] = sparse_tensor.values %[[S]]
+// CHECK-RWT:         %[[S0:.*]] = memref.load %[[P0]]{{\[}}%[[C0]]] : memref<?xindex>
+// CHECK-RWT:         %[[E0:.*]] = memref.load %[[P0]]{{\[}}%[[C1]]] : memref<?xindex>
+// CHECK-RWT:         scf.for %[[I:.*]] = %[[S0]] to %[[E0]] step %[[C1]] {
+// CHECK-RWT:           %[[SI:.*]] = memref.load %[[I0]]{{\[}}%[[I]]] : memref<?xindex>
+// CHECK-RWT:           %[[SV:.*]] = memref.load %[[V]]{{\[}}%[[I]]] : memref<?xf64>
+// CHECK-RWT:           %[[DI0:.*]] = arith.divui %[[SI]], %[[C10]] : index
+// CHECK-RWT:           %[[DI1:.*]] = arith.remui %[[SI]], %[[C10]] : index
+// CHECK-RWT:           sparse_tensor.insert %[[SV]] into %[[B]]{{\[}}%[[DI0]], %[[DI1]]]
+// CHECK-RWT:         }
+// CHECK-RWT:         %[[T:.*]] = sparse_tensor.convert %[[B]]
+// CHECK-RWT:         return %[[T]] : tensor<10x10xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
 //
 func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10xf64, #SparseMatrix> {
   %0 = tensor.expand_shape %arg0 [[0, 1]] :
@@ -75,6 +99,37 @@ func.func @sparse_expand(%arg0: tensor<100xf64, #SparseVector>) -> tensor<10x10x
 // CHECK-CONV:      call @delSparseTensorCOOF64
 // CHECK-CONV:      call @delSparseTensorCOOF64
 // CHECK-CONV:      return %[[N]] : !llvm.ptr<i8>
+//
+// rewrite for codegen:
+//
+// CHECK-RWT-LABEL:   func.func @sparse_collapse(
+// CHECK-RWT-SAME:    %[[S:.*]]:
+// CHECK-RWT-DAG:     %[[C10:.*]] = arith.constant 10 : index
+// CHECK-RWT-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-RWT-DAG:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK-RWT:         %[[B:.*]] = bufferization.alloc_tensor()
+// CHECK-RWT:         %[[P0:.*]] = sparse_tensor.pointers %[[S]] {dimension = 0 : index}
+// CHECK-RWT:         %[[I0:.*]] = sparse_tensor.indices %[[S]] {dimension = 0 : index}
+// CHECK-RWT:          %[[P1:.*]] = sparse_tensor.pointers %[[S]] {dimension = 1 : index}
+// CHECK-RWT:          %[[I1:.*]] = sparse_tensor.indices %[[S]] {dimension = 1 : index}
+// CHECK-RWT:          %[[V:.*]] = sparse_tensor.values %[[S]]
+// CHECK-RWT:          %[[S0:.*]] = memref.load %[[P0]]{{\[}}%[[C0]]] : memref<?xindex>
+// CHECK-RWT:          %[[E0:.*]] = memref.load %[[P0]]{{\[}}%[[C1]]] : memref<?xindex>
+// CHECK-RWT:          scf.for %[[I:.*]] = %[[S0]] to %[[E0]] step %[[C1]] {
+// CHECK-RWT:            %[[SI0:.*]] = memref.load %[[I0]]{{\[}}%[[I]]] : memref<?xindex>
+// CHECK-RWT:            %[[PE1:.*]] = arith.addi %[[I]], %[[C1]] : index
+// CHECK-RWT:            %[[S1:.*]] = memref.load %[[P1]]{{\[}}%[[I]]] : memref<?xindex>
+// CHECK-RWT:            %[[E1:.*]] = memref.load %[[P1]]{{\[}}%[[PE1]]] : memref<?xindex>
+// CHECK-RWT:            scf.for %[[J:.*]] = %[[S1]] to %[[E1]] step %[[C1]] {
+// CHECK-RWT:              %[[SI1:.*]] = memref.load %[[I1]]{{\[}}%[[J]]] : memref<?xindex>
+// CHECK-RWT:              %[[SV:.*]] = memref.load %[[V]]{{\[}}%[[J]]] : memref<?xf64>
+// CHECK-RWT:              %[[T:.*]] = arith.muli %[[SI0]], %[[C10]] : index
+// CHECK-RWT:              %[[DI:.*]] = arith.addi %[[T]], %[[SI1]] : index
+// CHECK-RWT:              sparse_tensor.insert %[[SV]] into %[[B]]{{\[}}%[[DI]]]
+// CHECK-RWT             }
+// CHECK-RWT:          }
+// CHECK-RWT:        %[[T:.*]] = sparse_tensor.convert %[[B]]
+// CHECK-RWT:        return %[[T]] : tensor<100xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>>
 //
 func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<100xf64, #SparseVector> {
   %0 = tensor.collapse_shape %arg0 [[0, 1]] :
@@ -120,6 +175,35 @@ func.func @sparse_collapse(%arg0: tensor<10x10xf64, #SparseMatrix>) -> tensor<10
 // CHECK-CONV:      call @delSparseTensorCOOF64
 // CHECK-CONV:      return %[[N]] : !llvm.ptr<i8>
 //
+// rewrite for codegen:
+//
+// CHECK-RWT-LABEL:   func.func @dynamic_sparse_expand(
+// CHECK-RWT-SAME:    %[[S:.*]]:
+// CHECK-RWT-DAG:     %[[C10:.*]] = arith.constant 10 : index
+// CHECK-RWT-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-RWT-DAG:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK-RWT:         %[[SD:.*]] = tensor.dim %[[S]], %[[C0]]
+// CHECK-RWT:         %[[DD0:.*]] = arith.divui %[[SD]], %[[C10]] : index
+// CHECK-RWT:         %[[B:.*]] = bufferization.alloc_tensor(%[[DD0]])
+// CHECK-RWT:         %[[P0:.*]] = sparse_tensor.pointers %[[S]] {dimension = 0 : index}
+// CHECK-RWT:         %[[I0:.*]] = sparse_tensor.indices %[[S]] {dimension = 0 : index}
+// CHECK-RWT:         %[[V:.*]] = sparse_tensor.values %[[S]]
+// CHECK-RWT:         %[[S0:.*]] = memref.load %[[P0]]{{\[}}%[[C0]]] : memref<?xindex>
+// CHECK-RWT:         %[[E0:.*]] = memref.load %[[P0]]{{\[}}%[[C1]]] : memref<?xindex>
+// CHECK-RWT:         scf.for %[[I:.*]] = %[[S0]] to %[[E0]] step %[[C1]] {
+// CHECK-RWT:           %[[SI:.*]] = memref.load %[[I0]]{{\[}}%[[I]]] : memref<?xindex>
+// CHECK-RWT:           %[[SV:.*]] = memref.load %[[V]]{{\[}}%[[I]]] : memref<?xf64>
+// CHECK-RWT:           %[[T1:.*]] = arith.muli %[[DD0]], %[[C10]] : index
+// CHECK-RWT:           %[[T2:.*]] = arith.divui %[[T1]], %[[DD0]] : index
+// CHECK-RWT:           %[[DI0:.*]] = arith.divui %[[SI]], %[[T2]] : index
+// CHECK-RWT:           %[[T3:.*]] = arith.remui %[[SI]], %[[T2]] : index
+// CHECK-RWT:           %[[T4:.*]] = arith.divui %[[T2]], %[[C10]] : index
+// CHECK-RWT:           %[[DI1:.*]] = arith.divui %[[T3]], %[[T4]] : index
+// CHECK-RWT:           sparse_tensor.insert %[[SV]] into %[[B]]{{\[}}%[[DI0]], %[[DI1]]]
+// CHECK-RWT:         }
+// CHECK-RWT:         %[[T:.*]] = sparse_tensor.convert %[[B]]
+// CHECK-RWT:         return %[[T]] : tensor<?x10xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed", "compressed" ] }>>
+//
 func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<?x10xf64, #SparseMatrix> {
   %0 = tensor.expand_shape %arg0 [[0, 1]] :
     tensor<?xf64, #SparseVector> into tensor<?x10xf64, #SparseMatrix>
@@ -162,6 +246,42 @@ func.func @dynamic_sparse_expand(%arg0: tensor<?xf64, #SparseVector>) -> tensor<
 // CHECK-CONV:      call @delSparseTensorCOOF64
 // CHECK-CONV:      call @delSparseTensorCOOF64
 // CHECK-CONV:      return %[[N]] : !llvm.ptr<i8>
+//
+// rewrite for codegen:
+//
+// CHECK-RWT-LABEL:   func.func @dynamic_sparse_collapse(
+// CHECK-RWT-SAME:    %[[S:.*]]:
+// CHECK-RWT-DAG:     %[[C10:.*]] = arith.constant 10 : index
+// CHECK-RWT-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-RWT-DAG:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK-RWT:         %[[SD1:.*]] = tensor.dim %[[S]], %[[C1]]
+// CHECK-RWT:         %[[DD0:.*]] = arith.muli %[[SD1]], %[[C10]] : index
+// CHECK-RWT:         %[[B:.*]] = bufferization.alloc_tensor(%[[DD0]])
+// CHECK-RWT:         %[[P0:.*]] = sparse_tensor.pointers %[[S]] {dimension = 0 : index}
+// CHECK-RWT:         %[[I0:.*]] = sparse_tensor.indices %[[S]] {dimension = 0 : index}
+// CHECK-RWT:          %[[P1:.*]] = sparse_tensor.pointers %[[S]] {dimension = 1 : index}
+// CHECK-RWT:          %[[I1:.*]] = sparse_tensor.indices %[[S]] {dimension = 1 : index}
+// CHECK-RWT:          %[[V:.*]] = sparse_tensor.values %[[S]]
+// CHECK-RWT:          %[[S0:.*]] = memref.load %[[P0]]{{\[}}%[[C0]]] : memref<?xindex>
+// CHECK-RWT:          %[[E0:.*]] = memref.load %[[P0]]{{\[}}%[[C1]]] : memref<?xindex>
+// CHECK-RWT:          scf.for %[[I:.*]] = %[[S0]] to %[[E0]] step %[[C1]] {
+// CHECK-RWT:            %[[SI0:.*]] = memref.load %[[I0]]{{\[}}%[[I]]] : memref<?xindex>
+// CHECK-RWT:            %[[PE1:.*]] = arith.addi %[[I]], %[[C1]] : index
+// CHECK-RWT:            %[[S1:.*]] = memref.load %[[P1]]{{\[}}%[[I]]] : memref<?xindex>
+// CHECK-RWT:            %[[E1:.*]] = memref.load %[[P1]]{{\[}}%[[PE1]]] : memref<?xindex>
+// CHECK-RWT:            scf.for %[[J:.*]] = %[[S1]] to %[[E1]] step %[[C1]] {
+// CHECK-RWT:              %[[SI1:.*]] = memref.load %[[I1]]{{\[}}%[[J]]] : memref<?xindex>
+// CHECK-RWT:              %[[SV:.*]] = memref.load %[[V]]{{\[}}%[[J]]] : memref<?xf64>
+// CHECK-RWT:               %[[T1:.*]] = arith.divui %[[DD0]], %[[C10]] : index
+// CHECK-RWT:               %[[T2:.*]] = arith.muli %[[SI0]], %[[T1]] : index
+// CHECK-RWT:               %[[T3:.*]] = arith.divui %[[T1]], %[[SD1]] : index
+// CHECK-RWT:               %[[T4:.*]] = arith.muli %[[SI1]], %[[T3]] : index
+// CHECK-RWT:               %[[DI:.*]] = arith.addi %[[T2]], %[[T4]] : index
+// CHECK-RWT:              sparse_tensor.insert %[[SV]] into %[[B]]{{\[}}%[[DI]]]
+// CHECK-RWT             }
+// CHECK-RWT:          }
+// CHECK-RWT:        %[[T:.*]] = sparse_tensor.convert %[[B]]
+// CHECK-RWT:        return %[[T]] : tensor<?xf64, #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>>
 //
 func.func @dynamic_sparse_collapse(%arg0: tensor<10x?xf64, #SparseMatrix>) -> tensor<?xf64, #SparseVector> {
   %0 = tensor.collapse_shape %arg0 [[0, 1]] :

@@ -9,7 +9,7 @@ declare <4 x i16> @llvm.vp.sext.v4i16.v4i1(<4 x i1>, <4 x i1>, i32)
 define <4 x i16> @vsext_v4i16_v4i1(<4 x i1> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i16_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
 ; CHECK-NEXT:    ret
@@ -20,7 +20,7 @@ define <4 x i16> @vsext_v4i16_v4i1(<4 x i1> %va, <4 x i1> %m, i32 zeroext %evl) 
 define <4 x i16> @vsext_v4i16_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i16_v4i1_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
 ; CHECK-NEXT:    ret
@@ -33,7 +33,7 @@ declare <4 x i32> @llvm.vp.sext.v4i32.v4i1(<4 x i1>, <4 x i1>, i32)
 define <4 x i32> @vsext_v4i32_v4i1(<4 x i1> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i32_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
 ; CHECK-NEXT:    ret
@@ -44,7 +44,7 @@ define <4 x i32> @vsext_v4i32_v4i1(<4 x i1> %va, <4 x i1> %m, i32 zeroext %evl) 
 define <4 x i32> @vsext_v4i32_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i32_v4i1_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
 ; CHECK-NEXT:    ret
@@ -57,7 +57,7 @@ declare <4 x i64> @llvm.vp.sext.v4i64.v4i1(<4 x i1>, <4 x i1>, i32)
 define <4 x i64> @vsext_v4i64_v4i1(<4 x i1> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i64_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
 ; CHECK-NEXT:    ret
@@ -68,7 +68,7 @@ define <4 x i64> @vsext_v4i64_v4i1(<4 x i1> %va, <4 x i1> %m, i32 zeroext %evl) 
 define <4 x i64> @vsext_v4i64_v4i1_unmasked(<4 x i1> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v4i64_v4i1_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, -1, v0
 ; CHECK-NEXT:    ret
