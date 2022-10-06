@@ -109,6 +109,28 @@ static RetTy parseOptionalCIRKeyword(OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
+// AllocaOp
+//===----------------------------------------------------------------------===//
+
+void AllocaOp::build(::mlir::OpBuilder &odsBuilder,
+                     ::mlir::OperationState &odsState, ::mlir::Type addr,
+                     ::mlir::Type allocaType, ::llvm::StringRef name,
+                     ::mlir::cir::InitStyle init,
+                     ::mlir::IntegerAttr alignment) {
+  odsState.addAttribute(getAllocaTypeAttrName(odsState.name),
+                        ::mlir::TypeAttr::get(allocaType));
+  odsState.addAttribute(getNameAttrName(odsState.name),
+                        odsBuilder.getStringAttr(name));
+  odsState.addAttribute(
+      getInitAttrName(odsState.name),
+      ::mlir::cir::InitStyleAttr::get(odsBuilder.getContext(), init));
+  if (alignment) {
+    odsState.addAttribute(getAlignmentAttrName(odsState.name), alignment);
+  }
+  odsState.addTypes(addr);
+}
+
+//===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
@@ -1461,6 +1483,27 @@ void ASTFunctionDeclAttr::print(::mlir::AsmPrinter &printer) const {
 LogicalResult ASTFunctionDeclAttr::verify(
     ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
     ::clang::FunctionDecl *decl) {
+  if (!decl) {
+    emitError() << "expected non-null AST declaration";
+    return failure();
+  }
+  return success();
+}
+
+::mlir::Attribute ASTVarDeclAttr::parse(::mlir::AsmParser &parser,
+                                        ::mlir::Type type) {
+  // We cannot really parse anything AST related at this point
+  // since we have no serialization/JSON story.
+  return mlir::Attribute();
+}
+
+void ASTVarDeclAttr::print(::mlir::AsmPrinter &printer) const {
+  // Nothing to print besides the mnemonics.
+}
+
+LogicalResult ASTVarDeclAttr::verify(
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    ::clang::VarDecl *decl) {
   if (!decl) {
     emitError() << "expected non-null AST declaration";
     return failure();

@@ -1570,7 +1570,6 @@ mlir::Value CIRGenFunction::buildAlloca(StringRef name, InitStyle initStyle,
       // of the block.
       builder.setInsertionPointToStart(insertBlock);
     }
-
     addr = builder.create<mlir::cir::AllocaOp>(loc, /*addr type*/ localVarPtrTy,
                                                /*var type*/ ty, name, initStyle,
                                                alignIntAttr);
