@@ -269,3 +269,12 @@ namespace band {
   static_assert((1337 & -1) == 1337, "");
   static_assert((0 & gimme(12)) == 0, "");
 };
+
+namespace bitOr {
+  static_assert((10 | 1) == 11, "");
+  static_assert((10 | 10) == 10, "");
+
+  static_assert((1337 | -1) == -1, "");
+  static_assert((0 | gimme(12)) == 12, "");
+  static_assert((12 | true) == 13, "");
+};
