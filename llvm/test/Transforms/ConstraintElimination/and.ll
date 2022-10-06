@@ -203,13 +203,13 @@ define i1 @test_and_chain_ule_1(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i4 [[X]], [[Z]]
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i4 [[X]], [[Y]]
-; CHECK-NEXT:    [[R_1:%.*]] = xor i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i4 [[Y]], [[Z]]
-; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], [[T_3]]
+; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], true
 ; CHECK-NEXT:    [[T_4:%.*]] = icmp ule i4 3, [[X]]
-; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[T_4]]
+; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], true
 ; CHECK-NEXT:    [[T_5:%.*]] = icmp ule i4 3, [[A]]
-; CHECK-NEXT:    [[R_4:%.*]] = xor i1 [[R_3]], [[T_5]]
+; CHECK-NEXT:    [[R_4:%.*]] = xor i1 [[R_3]], true
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[A]]
 ; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_5]]
 ; CHECK-NEXT:    ret i1 [[R_5]]
@@ -291,13 +291,13 @@ define i1 @test_and_chain_ule_2(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i4 [[X]], [[Z]]
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i4 [[X]], [[Y]]
-; CHECK-NEXT:    [[R_1:%.*]] = xor i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i4 [[Y]], [[Z]]
-; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], [[T_3]]
+; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], true
 ; CHECK-NEXT:    [[T_4:%.*]] = icmp ule i4 3, [[X]]
-; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[T_4]]
+; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], true
 ; CHECK-NEXT:    [[T_5:%.*]] = icmp ule i4 3, [[A]]
-; CHECK-NEXT:    [[R_4:%.*]] = xor i1 [[R_3]], [[T_5]]
+; CHECK-NEXT:    [[R_4:%.*]] = xor i1 [[R_3]], true
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[A]]
 ; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_5]]
 ; CHECK-NEXT:    ret i1 [[R_5]]
@@ -380,9 +380,9 @@ define i1 @test_and_chain_with_other_insts_ule(i4 %x, i4 %y, i4 %z, i4 %a, i1 %a
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i4 [[X]], [[Z]]
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i4 [[X]], [[Y]]
-; CHECK-NEXT:    [[R_1:%.*]] = xor i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[R_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i4 [[Y]], [[Z]]
-; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], [[T_3]]
+; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], true
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp ule i4 3, [[X]]
 ; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[C_4]]
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 3, [[A:%.*]]
@@ -466,13 +466,13 @@ define i1 @test_and_chain_select_ule(i4 %x, i4 %y, i4 %z, i4 %a) {
 ; CHECK:       bb1:
 ; CHECK-NEXT:    [[T_1:%.*]] = icmp ule i4 [[X]], [[Z]]
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp ule i4 [[X]], [[Y]]
-; CHECK-NEXT:    [[R_1:%.*]] = xor i1 [[T_1]], [[T_2]]
+; CHECK-NEXT:    [[R_1:%.*]] = xor i1 [[T_1]], true
 ; CHECK-NEXT:    [[T_3:%.*]] = icmp ule i4 [[Y]], [[Z]]
 ; CHECK-NEXT:    [[R_2:%.*]] = xor i1 [[R_1]], [[T_3]]
 ; CHECK-NEXT:    [[T_4:%.*]] = icmp ule i4 3, [[X]]
-; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], [[T_4]]
+; CHECK-NEXT:    [[R_3:%.*]] = xor i1 [[R_2]], true
 ; CHECK-NEXT:    [[T_5:%.*]] = icmp ule i4 3, [[A]]
-; CHECK-NEXT:    [[R_4:%.*]] = xor i1 [[R_3]], [[T_5]]
+; CHECK-NEXT:    [[R_4:%.*]] = xor i1 [[R_3]], true
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp ule i4 [[X]], [[A]]
 ; CHECK-NEXT:    [[R_5:%.*]] = xor i1 [[R_4]], [[C_5]]
 ; CHECK-NEXT:    ret i1 [[R_5]]
