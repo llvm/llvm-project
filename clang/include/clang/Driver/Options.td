@@ -3065,6 +3065,10 @@ def clangir_disable_verifier : Flag<["-"], "clangir-disable-verifier">,
   MarshallingInfoFlag<FrontendOpts<"ClangIRDisableCIRVerifier">>;
 def flto_EQ_auto : Flag<["-"], "flto=auto">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>,
   Alias<flto_EQ>, AliasArgs<["full"]>, HelpText<"Enable LTO in 'full' mode">;
+def clangir_disable_emit_cxx_default : Flag<["-"], "clangir-disable-emit-cxx-default">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"ClangIR: Disable emission of c++ default (compiler implemented) methods.">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIRDisableEmitCXXDefault">>;
 def clangir_verify_diagnostics : Flag<["-"], "clangir-verify-diagnostics">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"ClangIR: Enable diagnostic verification in MLIR, similar to clang's -verify">,

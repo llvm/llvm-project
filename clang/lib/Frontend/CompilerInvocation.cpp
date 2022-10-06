@@ -3096,6 +3096,9 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Args.hasArg(OPT_clangir_disable_verifier))
     Opts.ClangIRDisableCIRVerifier = true;
 
+  if (Args.hasArg(OPT_clangir_disable_emit_cxx_default))
+    Opts.ClangIRDisableEmitCXXDefault = true;
+
   if (Args.hasArg(OPT_clangir_verify_diagnostics))
     Opts.ClangIRVerifyDiags = true;
 

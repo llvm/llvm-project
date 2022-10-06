@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++17 -mconstructor-aliases -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++17 -mconstructor-aliases -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -clangir-disable-emit-cxx-default %s -o - | FileCheck %s --check-prefix=DISABLE
 
 int strlen(char const *);
 
@@ -24,6 +25,9 @@ struct String {
   // CHECK:   cir.return
   // CHECK: }
 
+  // DISABLE: cir.func linkonce_odr @_ZN10StringViewC2ERK6String
+  // DISABLE-NEXT:   %0 = cir.alloca !cir.ptr<!_22struct2EStringView22>, cir.ptr <!cir.ptr<!_22struct2EStringView22>>, ["this", init] {alignment = 8 : i64}
+
   // StringView::operator=(StringView&&)
   //
   // CHECK: cir.func linkonce_odr @_ZN10StringViewaSEOS_
@@ -42,6 +46,9 @@ struct String {
   // CHECK:   %8 = cir.load %2 : cir.ptr <!cir.ptr<!_22struct2EStringView22>>
   // CHECK:   cir.return %8 : !cir.ptr<!_22struct2EStringView22>
   // CHECK: }
+
+  // DISABLE: cir.func @_ZN10StringViewaSEOS_
+  // DISABLE-NEXT: cir.func @main()
 };
 
 struct StringView {
