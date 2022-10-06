@@ -203,6 +203,7 @@ public:
     return static_cast<const BasicBlock *>(this)
         ->getFirstNonPHIOrDbgOrAlloca()
         .getNonConst();
+  }
 
   /// Returns the first potential AsynchEH faulty instruction
   /// currently it checks for loads/stores (which may dereference a null
