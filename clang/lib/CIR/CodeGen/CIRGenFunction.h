@@ -239,6 +239,25 @@ private:
   void buildAndUpdateRetAlloca(clang::QualType ty, mlir::Location loc,
                                clang::CharUnits alignment);
 
+  // Track current variable initialization (if there's one)
+  const clang::VarDecl *currVarDecl = nullptr;
+  class VarDeclContext {
+    CIRGenFunction &P;
+    const clang::VarDecl *OldVal = nullptr;
+
+  public:
+    VarDeclContext(CIRGenFunction &p, const VarDecl *Value) : P(p) {
+      if (P.currSrcLoc)
+        OldVal = P.currVarDecl;
+      P.currVarDecl = Value;
+    }
+
+    /// Can be used to restore the state early, before the dtor
+    /// is run.
+    void restore() { P.currVarDecl = OldVal; }
+    ~VarDeclContext() { restore(); }
+  };
+
   /// -------
   /// Source Location tracking
   /// -------
@@ -718,20 +737,17 @@ public:
 
   void buildAutoVarCleanups(const AutoVarEmission &emission);
 
-  void buildStoreOfScalar(mlir::Value value, LValue lvalue,
-                          const clang::Decl *InitDecl);
-
+  void buildStoreOfScalar(mlir::Value value, LValue lvalue);
   void buildStoreOfScalar(mlir::Value Value, Address Addr, bool Volatile,
                           clang::QualType Ty, LValueBaseInfo BaseInfo,
-                          const clang::Decl *InitDecl, bool isNontemporal);
+                          bool isNontemporal);
 
   mlir::Value buildToMemory(mlir::Value Value, clang::QualType Ty);
 
   /// Store the specified rvalue into the specified
   /// lvalue, where both are guaranteed to the have the same type, and that type
   /// is 'Ty'.
-  void buildStoreThroughLValue(RValue Src, LValue Dst,
-                               const clang::Decl *InitDecl);
+  void buildStoreThroughLValue(RValue Src, LValue Dst);
 
   mlir::LogicalResult buildBranchThroughCleanup(JumpDest &Dest,
                                                 clang::LabelDecl *L,

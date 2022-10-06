@@ -300,7 +300,7 @@ public:
     if (LV.isBitField())
       assert(0 && "no bitfield inc/dec yet");
     else
-      CGF.buildStoreThroughLValue(RValue::get(Value), LV, nullptr);
+      CGF.buildStoreThroughLValue(RValue::get(Value), LV);
 
     return E->isPrefix() ? Value : Input;
   }
@@ -1232,7 +1232,7 @@ LValue ScalarExprEmitter::buildCompoundAssignLValue(
   if (LHSLV.isBitField())
     assert(0 && "not yet implemented");
   else
-    CGF.buildStoreThroughLValue(RValue::get(Result), LHSLV, nullptr);
+    CGF.buildStoreThroughLValue(RValue::get(Result), LHSLV);
 
   assert(!CGF.getLangOpts().OpenMP && "Not implemented");
   return LHSLV;
