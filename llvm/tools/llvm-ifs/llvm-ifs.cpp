@@ -376,7 +376,7 @@ static DriverConfig parseArgs(int argc, char *const *argv) {
   return Config;
 }
 
-int llvm_ifs_main(int argc, char *argv[]) {
+int llvm_ifs_main(int argc, char **argv) {
   DriverConfig Config = parseArgs(argc, argv);
 
   if (Config.InputFilePaths.empty())
