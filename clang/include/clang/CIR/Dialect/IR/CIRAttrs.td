@@ -85,9 +85,9 @@ def CstArrayAttr : CIR_Attr<"CstArray", "cst_array", [TypedAttrInterface]> {
 
 class ASTDecl<string name, string prefix, list<Trait> traits = []>
   : CIR_Attr<!strconcat("AST", name), !strconcat(prefix, ".ast"), traits> {
-  string clang_name = !strconcat("clang::", name);
+  string clang_name = !strconcat("const clang::", name, " *");
 
-  let summary = !strconcat("Wraps a ", clang_name, " AST node.");
+  let summary = !strconcat("Wraps a '", clang_name, "' AST node.");
   let description = [{
     Operations optionally refer to this node, they could be available depending
     on the CIR lowering stage. Whether it's attached to the appropriated
@@ -95,7 +95,7 @@ class ASTDecl<string name, string prefix, list<Trait> traits = []>
 
     This always implies a non-null AST reference (verified).
   }];
-  let parameters = (ins !strconcat(clang_name, " *"):$astDecl);
+  let parameters = (ins clang_name:$astDecl);
 
   // Printing and parsing available in CIRDialect.cpp
   let hasCustomAssemblyFormat = 1;

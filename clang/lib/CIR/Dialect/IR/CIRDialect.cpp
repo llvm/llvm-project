@@ -1482,7 +1482,7 @@ void ASTFunctionDeclAttr::print(::mlir::AsmPrinter &printer) const {
 
 LogicalResult ASTFunctionDeclAttr::verify(
     ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
-    ::clang::FunctionDecl *decl) {
+    const ::clang::FunctionDecl *decl) {
   if (!decl) {
     emitError() << "expected non-null AST declaration";
     return failure();
@@ -1503,7 +1503,7 @@ void ASTVarDeclAttr::print(::mlir::AsmPrinter &printer) const {
 
 LogicalResult ASTVarDeclAttr::verify(
     ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
-    ::clang::VarDecl *decl) {
+    const ::clang::VarDecl *decl) {
   if (!decl) {
     emitError() << "expected non-null AST declaration";
     return failure();
