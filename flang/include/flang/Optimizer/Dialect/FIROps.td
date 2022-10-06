@@ -2336,7 +2336,7 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
       %r = fir.dispatch "methodA"(%o) : (!fir.class<T>) -> i32
 
       // fir.dispatch with the `pass_arg_pos` attribute.
-      %r = fir.dispatch "methodA"(%o, %o) : (!fir.class<T>, !fir.class<T>) -> i32 {pass_arg_pos = 0 : i32}
+      %r = fir.dispatch "methodA"(%o : !fir.class<T>) (%o : !fir.class<T>) -> i32 {pass_arg_pos = 0 : i32}
     ```
   }];
 
@@ -2347,11 +2347,14 @@ def fir_DispatchOp : fir_Op<"dispatch", []> {
     OptionalAttr<I32Attr>:$pass_arg_pos
   );
 
-  let results = (outs Variadic<AnyType>);
+  let results = (outs Variadic<AnyType>:$results);
 
   let hasVerifier = 1;
 
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    $method `(` $object `:` qualified(type($object)) `)`
+    ( `(` $args^ `:` type($args) `)` )? (`->` type($results)^)? attr-dict
+  }];
 
   let extraClassDeclaration = [{
     mlir::FunctionType getFunctionType();
