@@ -351,4 +351,11 @@ bool isSpecialOpaqueType(const Type *Ty) {
     return isOpenCLBuiltinType(SType) || isSPIRVBuiltinType(SType);
   return false;
 }
+
+std::string getFunctionGlobalIdentifier(const Function *F) {
+  StringRef Name = F->hasName() ? F->getName() : ".anonymous";
+  GlobalValue::LinkageTypes Linkage = F->getLinkage();
+  StringRef ModuleFileName = F->getParent()->getSourceFileName();
+  return GlobalValue::getGlobalIdentifier(Name, Linkage, ModuleFileName);
+}
 } // namespace llvm
