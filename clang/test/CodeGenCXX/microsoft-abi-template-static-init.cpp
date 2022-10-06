@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=i686-pc-win32 -fms-extensions -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-pc-win32 -fms-extensions -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=i686-pc-windows-msvc -fms-extensions -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-pc-windows-msvc  -fms-extensions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=i686-pc-win32 -fms-extensions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-pc-win32 -fms-extensions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=i686-pc-windows-msvc -fms-extensions -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=x86_64-pc-windows-msvc  -fms-extensions -emit-llvm -o - | FileCheck %s
 
 struct S {
   S();
@@ -88,4 +88,4 @@ int foo();
 inline int zoo = foo();
 inline static int boo = foo();
 
-// CHECK: @llvm.used = appending global [8 x i8*] [i8* bitcast (i32* @"?x@selectany_init@@3HA" to i8*), i8* bitcast (i32* @"?x1@selectany_init@@3HA" to i8*), i8* bitcast (i32* @"?x@?$A@H@explicit_template_instantiation@@2HA" to i8*), i8* bitcast (i32* @"?ioo@?$X_@H@@2HA" to i8*), i8* getelementptr inbounds (%struct.A, %struct.A* @"?aoo@S1@@2UA@@A", i32 0, i32 0), i8* bitcast (i32* @"?zoo@@3HA" to i8*), i8* getelementptr inbounds (%struct.S, %struct.S* @"?s@?$ExportedTemplate@H@@2US@@A", i32 0, i32 0), i8* bitcast (i32* @"?x@?$A@H@implicit_template_instantiation@@2HA" to i8*)], section "llvm.metadata"
+// CHECK: @llvm.used = appending global [8 x ptr] [ptr @"?x@selectany_init@@3HA", ptr @"?x1@selectany_init@@3HA", ptr @"?x@?$A@H@explicit_template_instantiation@@2HA", ptr @"?ioo@?$X_@H@@2HA", ptr @"?aoo@S1@@2UA@@A", ptr @"?zoo@@3HA", ptr @"?s@?$ExportedTemplate@H@@2US@@A", ptr @"?x@?$A@H@implicit_template_instantiation@@2HA"], section "llvm.metadata"

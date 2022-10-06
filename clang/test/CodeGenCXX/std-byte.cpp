@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++1z -Werror -triple i386-unknown-unknown -emit-llvm -O1 -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -std=c++1z -Werror -triple i386-unknown-unknown -emit-llvm -O1 -disable-llvm-passes -o - %s | FileCheck %s
 
 // std::byte should be considered equivalent to char for aliasing.
 
@@ -8,10 +8,10 @@ enum byte : unsigned char {};
 
 // CHECK-LABEL: define{{.*}} void @test0(
 extern "C" void test0(std::byte *sb, int *i) {
-  // CHECK: store i8 0, i8* %{{.*}} !tbaa [[TAG_CHAR:!.*]]
+  // CHECK: store i8 0, ptr %{{.*}} !tbaa [[TAG_CHAR:!.*]]
   *sb = std::byte{0};
 
-  // CHECK: store i32 1, i32* %{{.*}} !tbaa [[TAG_INT:!.*]]
+  // CHECK: store i32 1, ptr %{{.*}} !tbaa [[TAG_INT:!.*]]
   *i = 1;
 }
 
@@ -30,7 +30,7 @@ extern "C" void test1(::byte *b, ::my::byte *mb, ::my::std::byte *msb) {
   *b = ::byte{0};
   *mb = ::my::byte{0};
   *msb = ::my::std::byte{0};
-  // CHECK-NOT: store i8 0, i8* %{{.*}} !tbaa [[TAG_CHAR]]
+  // CHECK-NOT: store i8 0, ptr %{{.*}} !tbaa [[TAG_CHAR]]
 }
 
 // CHECK:  !"any pointer", [[TYPE_CHAR:!.*]],

@@ -8062,6 +8062,8 @@ cc_library(
     srcs = glob([
         "lib/Conversion/VectorToGPU/*.cpp",
         "lib/Conversion/VectorToGPU/*.h",
+        "lib/Dialect/NVGPU/Utils/*.cpp",
+        "include/mlir/Dialect/NVGPU/Utils/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Conversion/VectorToGPU/*.h",

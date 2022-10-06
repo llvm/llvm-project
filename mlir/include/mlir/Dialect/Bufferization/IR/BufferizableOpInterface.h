@@ -390,8 +390,12 @@ public:
   /// In the above example, Values with a star satisfy the condition. When
   /// starting the traversal from Value 1, the resulting SetVector is:
   /// { 2, 7, 8, 5 }
-  SetVector<Value> findValueInReverseUseDefChain(
-      Value value, llvm::function_ref<bool(Value)> condition) const;
+  ///
+  /// If `followEquivalentOnly` is set, only equivalent OpOperands are selected.
+  SetVector<Value>
+  findValueInReverseUseDefChain(Value value,
+                                llvm::function_ref<bool(Value)> condition,
+                                bool followEquivalentOnly = false) const;
 
   /// Find the Values of the last preceding write of a given Value.
   ///

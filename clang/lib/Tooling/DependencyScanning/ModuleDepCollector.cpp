@@ -406,15 +406,14 @@ ModuleID ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MD.ImplicitModulePCMPath = std::string(M->getASTFile()->getName());
   MD.IsSystem = M->IsSystem;
 
-  Optional<FileEntryRef> ModuleMap = MDC.ScanInstance.getPreprocessor()
-                                         .getHeaderSearchInfo()
-                                         .getModuleMap()
-                                         .getModuleMapFileForUniquing(M);
+  ModuleMap &ModMapInfo =
+      MDC.ScanInstance.getPreprocessor().getHeaderSearchInfo().getModuleMap();
+
+  Optional<FileEntryRef> ModuleMap = ModMapInfo.getModuleMapFileForUniquing(M);
 
   if (ModuleMap) {
-    StringRef Path = ModuleMap->getFileEntry().tryGetRealPathName();
-    if (Path.empty())
-      Path = ModuleMap->getName();
+    SmallString<128> Path = ModuleMap->getNameAsRequested();
+    ModMapInfo.canonicalizeModuleMapPath(Path);
     MD.ClangModuleMapFile = std::string(Path);
   }
 

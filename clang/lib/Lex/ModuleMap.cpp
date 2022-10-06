@@ -1303,6 +1303,42 @@ void ModuleMap::setInferredModuleAllowedBy(Module *M, const FileEntry *ModMap) {
   InferredModuleAllowedBy[M] = ModMap;
 }
 
+std::error_code
+ModuleMap::canonicalizeModuleMapPath(SmallVectorImpl<char> &Path) {
+  StringRef Dir = llvm::sys::path::parent_path({Path.data(), Path.size()});
+
+  // Do not canonicalize within the framework; the module map parser expects
+  // Modules/ not Versions/A/Modules.
+  if (llvm::sys::path::filename(Dir) == "Modules") {
+    StringRef Parent = llvm::sys::path::parent_path(Dir);
+    if (Parent.endswith(".framework"))
+      Dir = Parent;
+  }
+
+  FileManager &FM = SourceMgr.getFileManager();
+  auto DirEntry = FM.getDirectory(Dir.empty() ? "." : Dir);
+  if (!DirEntry)
+    return DirEntry.getError();
+
+  // Canonicalize the directory.
+  StringRef CanonicalDir = FM.getCanonicalName(*DirEntry);
+  if (CanonicalDir != Dir) {
+    bool Done = llvm::sys::path::replace_path_prefix(Path, Dir, CanonicalDir);
+    (void)Done;
+    assert(Done && "Path should always start with Dir");
+  }
+
+  // In theory, the filename component should also be canonicalized if it
+  // on a case-insensitive filesystem. However, the extra canonicalization is
+  // expensive and if clang looked up the filename it will always be lowercase.
+
+  // Remove ., remove redundant separators, and switch to native separators.
+  // This is needed for separators between CanonicalDir and the filename.
+  llvm::sys::path::remove_dots(Path);
+
+  return std::error_code();
+}
+
 void ModuleMap::addAdditionalModuleMapFile(const Module *M,
                                            const FileEntry *ModuleMap) {
   AdditionalModMaps[M].insert(ModuleMap);
