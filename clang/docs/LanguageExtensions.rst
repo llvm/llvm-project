@@ -4665,6 +4665,7 @@ The following builtin intrinsics can be used in constant expressions:
 * ``__builtin_ffs``
 * ``__builtin_ffsl``
 * ``__builtin_ffsll``
+* ``__builtin_fmax``
 * ``__builtin_fpclassify``
 * ``__builtin_inf``
 * ``__builtin_isinf``

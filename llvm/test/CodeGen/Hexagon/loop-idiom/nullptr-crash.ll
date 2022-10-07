@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -hexagon-loop-idiom -mtriple hexagon-unknown-elf < %s
+; RUN: opt -hexagon-loop-idiom -mtriple hexagon-unknown-elf < %s
 ; REQUIRES: asserts
 
 target triple = "hexagon"

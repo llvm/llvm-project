@@ -2,9 +2,9 @@
 ; DICompileUnit and DISuprogram.
 ;
 ; RUN: llvm-reduce --delta-passes=di-metadata --abort-on-invalid-reduction --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
-; RUN: cat %t | FileCheck %s
+; RUN: FileCheck <%t --enable-var-scope %s
 
-; CHECK-INTERESTINGNESS: define void @test() !dbg
+; CHECK-INTERESTINGNESS: define void @test() !dbg [[SUBPROG:![0-9]+]]
 ; CHECK-INTERESTINGNESS: !llvm.module.flags = !{
 
 ; CHECK-INTERESTINGNESS: !llvm.dbg.cu = !{[[CU:.+]]}
@@ -12,6 +12,7 @@
 ; CHECK-INTERESTINGNESS-DAG: [[CU]] = distinct !DICompileUnit(language: DW_LANG_C99,{{.*}}, retainedTypes: [[TYPES:![0-9]+]]
 ; CHECK-INTERESTINGNESS-DAG: [[TYPES]] = !{[[T0:![0-9]+]]
 ; CHECK-INTERESTINGNESS-DAG: [[T0]] = !DIBasicType(name: "unsigned int",
+; CHECK-INTERESTINGNESS-DAG: [[SUBPROG]] = distinct !DISubprogram(name: "test",
 
 
 

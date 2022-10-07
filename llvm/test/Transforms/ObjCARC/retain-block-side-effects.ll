@@ -1,4 +1,4 @@
-; RUN: opt -S -objc-arc-aa -basic-aa -gvn < %s | FileCheck %s
+; RUN: opt -S -aa-pipeline=objc-arc-aa -gvn < %s | FileCheck %s
 ; rdar://10050579
 
 ; objc_retainBlock stores into %repeater so the load from after the
