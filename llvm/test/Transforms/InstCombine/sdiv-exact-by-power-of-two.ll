@@ -69,3 +69,25 @@ define <2 x i8> @n6_vec_negative(<2 x i8> %x) {
   %div = sdiv exact <2 x i8> %x, <i8 32, i8 128> ; non-non-negative divisor
   ret <2 x i8> %div
 }
+
+define i8 @shl1_nsw(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl1_nsw(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 1, [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X:%.*]], [[SHL]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %shl = shl nsw i8 1, %y
+  %div = sdiv exact i8 %x, %shl
+  ret i8 %div
+}
+
+define i8 @shl1_nuw(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl1_nuw(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 1, [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X:%.*]], [[SHL]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %shl = shl nuw i8 1, %y
+  %div = sdiv exact i8 %x, %shl
+  ret i8 %div
+}
