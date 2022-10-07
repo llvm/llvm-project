@@ -1792,20 +1792,24 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType,
   SmallVector<int64_t, 4> newShape(newRank);
   MLIRContext *context = memrefType.getContext();
   for (unsigned d = 0; d < newRank; ++d) {
-    // Check if each dimension of normalized memrefType is dynamic.
+    // Check if this dimension is dynamic.
     bool isDynDim =
         isNormalizedMemRefDynamicDim(d, layoutMap, memrefTypeDynDims, context);
     if (isDynDim) {
       newShape[d] = -1;
     } else {
       // The lower bound for the shape is always zero.
-      auto ubConst = fac.getConstantBound64(IntegerPolyhedron::UB, d);
+      Optional<int64_t> ubConst =
+          fac.getConstantBound64(IntegerPolyhedron::UB, d);
       // For a static memref and an affine map with no symbols, this is
-      // always bounded.
-      assert(ubConst && "should always have an upper bound");
-      if (ubConst.value() < 0)
-        // This is due to an invalid map that maps to a negative space.
+      // always bounded. However, when we have symbols, we may not be able to
+      // obtain a constant upper bound. Also, mapping to a negative space is
+      // invalid for normalization.
+      if (!ubConst.has_value() || ubConst.value() < 0) {
+        LLVM_DEBUG(llvm::dbgs()
+                   << "can't normalize map due to unknown/invalid upper bound");
         return memrefType;
+      }
       // If dimension of new memrefType is dynamic, the value is -1.
       newShape[d] = ubConst.value() + 1;
     }
