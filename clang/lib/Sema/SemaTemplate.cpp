@@ -1691,14 +1691,28 @@ namespace {
 class ConstraintRefersToContainingTemplateChecker
     : public TreeTransform<ConstraintRefersToContainingTemplateChecker> {
   bool Result = false;
+  const FunctionDecl *Friend = nullptr;
   unsigned TemplateDepth = 0;
+
+  // Check a record-decl that we've seen to see if it is a lexical parent of the
+  // Friend, likely because it was referred to without its template arguments.
+  void CheckIfContainingRecord(const CXXRecordDecl *CheckingRD) {
+    CheckingRD = CheckingRD->getMostRecentDecl();
+
+    for (const DeclContext *DC = Friend->getLexicalDeclContext();
+         DC && !DC->isFileContext(); DC = DC->getParent())
+      if (const auto *RD = dyn_cast<CXXRecordDecl>(DC))
+        if (CheckingRD == RD->getMostRecentDecl())
+          Result = true;
+  }
 
 public:
   using inherited = TreeTransform<ConstraintRefersToContainingTemplateChecker>;
 
   ConstraintRefersToContainingTemplateChecker(Sema &SemaRef,
+                                              const FunctionDecl *Friend,
                                               unsigned TemplateDepth)
-      : inherited(SemaRef), TemplateDepth(TemplateDepth) {}
+      : inherited(SemaRef), Friend(Friend), TemplateDepth(TemplateDepth) {}
   bool getResult() const { return Result; }
 
   // This should be the only template parm type that we have to deal with.
@@ -1728,6 +1742,8 @@ public:
       TransformType(VD->getType());
     else if (auto *TD = dyn_cast<TemplateDecl>(D))
       TransformTemplateParameterList(TD->getTemplateParameters());
+    else if (auto *RD = dyn_cast<CXXRecordDecl>(D))
+      CheckIfContainingRecord(RD);
     else if (isa<NamedDecl>(D)) {
       // No direct types to visit here I believe.
     } else
@@ -1738,8 +1754,11 @@ public:
 } // namespace
 
 bool Sema::ConstraintExpressionDependsOnEnclosingTemplate(
-    unsigned TemplateDepth, const Expr *Constraint) {
-  ConstraintRefersToContainingTemplateChecker Checker(*this, TemplateDepth);
+    const FunctionDecl *Friend, unsigned TemplateDepth,
+    const Expr *Constraint) {
+  assert(Friend->getFriendObjectKind() && "Only works on a friend");
+  ConstraintRefersToContainingTemplateChecker Checker(*this, Friend,
+                                                      TemplateDepth);
   Checker.TransformExpr(const_cast<Expr *>(Constraint));
   return Checker.getResult();
 }
