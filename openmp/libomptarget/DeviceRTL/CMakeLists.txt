@@ -85,10 +85,6 @@ if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
   set(amdgpu_mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
 endif()
 
-# Activate RTL message dumps if requested by the user.
-set(LIBOMPTARGET_DEVICE_DEBUG FALSE CACHE BOOL
-  "Activate DeviceRTL debug messages.")
-
 set(include_files
   ${include_directory}/Configuration.h
   ${include_directory}/Debug.h
@@ -135,12 +131,6 @@ set(bc_flags -c -emit-llvm -std=c++17 -fvisibility=hidden
              -I${devicertl_base_directory}/../include
              ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
 )
-
-if(${LIBOMPTARGET_DEVICE_DEBUG})
-  list(APPEND bc_flags -DOMPTARGET_DEBUG=-1)
-else()
-  list(APPEND bc_flags -DOMPTARGET_DEBUG=0)
-endif()
 
 # first create an object target
 add_library(omptarget.devicertl.all_objs OBJECT IMPORTED)
