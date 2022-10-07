@@ -170,6 +170,10 @@ template <typename T> struct FPBits {
     return T(bits);
   }
 
+  static constexpr T build_quiet_nan(UIntType v) {
+    return build_nan(FloatProp::QUIET_NAN_MASK | v);
+  }
+
   // The function convert integer number and unbiased exponent to proper float
   // T type:
   //   Result = number * 2^(ep+1 - exponent_bias)

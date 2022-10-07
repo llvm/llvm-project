@@ -23,7 +23,7 @@ LLVM_LIBC_FUNCTION(float, atanf, (float x)) {
     if (xbits.is_inf())
       return opt_barrier(sign ? -M_MATH_PI_2 : M_MATH_PI_2);
     else
-      return x + 1.0f;
+      return x;
   }
   // |x| == 0.06905200332403183
   if (unlikely(xbits.uintval() == 0x3d8d6b23U)) {
