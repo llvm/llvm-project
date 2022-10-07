@@ -37,6 +37,7 @@ private:
   const SIRegisterInfo *TRI = nullptr;
   const SIInstrInfo *TII = nullptr;
   LiveIntervals *LIS = nullptr;
+  SlotIndexes *Indexes = nullptr;
 
   // Save and Restore blocks of the current function. Typically there is a
   // single save block, unless Windows EH funclets are involved.
@@ -74,7 +75,7 @@ char &llvm::SILowerSGPRSpillsID = SILowerSGPRSpills::ID;
 
 /// Insert spill code for the callee-saved registers used in the function.
 static void insertCSRSaves(MachineBasicBlock &SaveBlock,
-                           ArrayRef<CalleeSavedInfo> CSI,
+                           ArrayRef<CalleeSavedInfo> CSI, SlotIndexes *Indexes,
                            LiveIntervals *LIS) {
   MachineFunction &MF = *SaveBlock.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
@@ -103,13 +104,14 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       TII.storeRegToStackSlot(SaveBlock, I, Reg, !IsLiveIn, CS.getFrameIdx(),
                               RC, TRI);
 
-      if (LIS) {
+      if (Indexes) {
         assert(std::distance(MIS.begin(), I) == 1);
         MachineInstr &Inst = *std::prev(I);
-
-        LIS->InsertMachineInstrInMaps(Inst);
-        LIS->removeAllRegUnitsForPhysReg(Reg);
+        Indexes->insertMachineInstrInMaps(Inst);
       }
+
+      if (LIS)
+        LIS->removeAllRegUnitsForPhysReg(Reg);
     }
   }
 }
@@ -117,7 +119,7 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
 /// Insert restore code for the callee-saved registers used in the function.
 static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
                               MutableArrayRef<CalleeSavedInfo> CSI,
-                              LiveIntervals *LIS) {
+                              SlotIndexes *Indexes, LiveIntervals *LIS) {
   MachineFunction &MF = *RestoreBlock.getParent();
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
@@ -141,11 +143,13 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
       // Insert in reverse order.  loadRegFromStackSlot can insert
       // multiple instructions.
 
-      if (LIS) {
+      if (Indexes) {
         MachineInstr &Inst = *std::prev(I);
-        LIS->InsertMachineInstrInMaps(Inst);
-        LIS->removeAllRegUnitsForPhysReg(Reg);
+        Indexes->insertMachineInstrInMaps(Inst);
       }
+
+      if (LIS)
+        LIS->removeAllRegUnitsForPhysReg(Reg);
     }
   }
 }
@@ -228,14 +232,14 @@ bool SILowerSGPRSpills::spillCalleeSavedRegs(MachineFunction &MF) {
 
     if (!CSI.empty()) {
       for (MachineBasicBlock *SaveBlock : SaveBlocks)
-        insertCSRSaves(*SaveBlock, CSI, LIS);
+        insertCSRSaves(*SaveBlock, CSI, Indexes, LIS);
 
       // Add live ins to save blocks.
       assert(SaveBlocks.size() == 1 && "shrink wrapping not fully implemented");
       updateLiveness(MF, CSI);
 
       for (MachineBasicBlock *RestoreBlock : RestoreBlocks)
-        insertCSRRestores(*RestoreBlock, CSI, LIS);
+        insertCSRRestores(*RestoreBlock, CSI, Indexes, LIS);
       return true;
     }
   }
@@ -249,6 +253,7 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
   TRI = &TII->getRegisterInfo();
 
   LIS = getAnalysisIfAvailable<LiveIntervals>();
+  Indexes = getAnalysisIfAvailable<SlotIndexes>();
 
   assert(SaveBlocks.empty() && RestoreBlocks.empty());
 
@@ -293,8 +298,8 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
         assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
         if (FuncInfo->allocateSGPRSpillToVGPR(MF, FI)) {
           NewReservedRegs = true;
-          bool Spilled = TRI->eliminateSGPRToVGPRSpillFrameIndex(MI, FI,
-                                                                 nullptr, LIS);
+          bool Spilled = TRI->eliminateSGPRToVGPRSpillFrameIndex(
+              MI, FI, nullptr, Indexes, LIS);
           (void)Spilled;
           assert(Spilled && "failed to spill SGPR to VGPR when allocated");
           SpillFIs.set(FI);
