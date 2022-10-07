@@ -1,5 +1,5 @@
 ; Test that pure functions are cse'd away
-; RUN: opt < %s -globals-aa -gvn -instcombine -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=globals-aa,basic-aa -passes='require<globals-aa>,gvn,instcombine' -S | FileCheck %s
 
 define i32 @pure(i32 %X) {
         %Y = add i32 %X, 1              ; <i32> [#uses=1]

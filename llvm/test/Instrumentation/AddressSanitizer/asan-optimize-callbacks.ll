@@ -1,6 +1,6 @@
-; RUN: opt < %s -passes=asan-pipeline -asan-instrumentation-with-call-threshold=0 \
+; RUN: opt < %s -passes=asan -asan-instrumentation-with-call-threshold=0 \
 ; RUN:   -asan-optimize-callbacks -S | FileCheck %s --check-prefixes=LOAD,STORE
-; RUN: opt < %s -passes=asan-pipeline -asan-instrumentation-with-call-threshold=0 \
+; RUN: opt < %s -passes=asan -asan-instrumentation-with-call-threshold=0 \
 ; RUN:   -asan-optimize-callbacks --asan-kernel -S | \
 ; RUN:   FileCheck %s --check-prefixes=LOAD-KERNEL,STORE-KERNEL
 

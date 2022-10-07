@@ -1,4 +1,4 @@
-; RUN: opt -tbaa -sink -S < %s | FileCheck %s
+; RUN: opt -aa-pipeline=tbaa -sink -S < %s | FileCheck %s
 
 ; CHECK: a:
 ; CHECK:   %f = load float, float* %p, align 4, !tbaa [[TAGA:!.*]]
