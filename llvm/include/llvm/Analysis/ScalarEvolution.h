@@ -944,7 +944,7 @@ public:
   ///
   /// We don't have a way to invalidate per-loop/per-block dispositions. Clear
   /// and recompute is simpler.
-  void forgetBlockAndLoopDispositions(Value *V = nullptr);
+  void forgetBlockAndLoopDispositions();
 
   /// Determine the minimum number of zero bits that S is guaranteed to end in
   /// (at every loop iteration).  It is, at the same time, the minimum number
