@@ -1,7 +1,7 @@
 ; REQUIRES: x86-registered-target
 
-; RUN: opt < %s -S -asan-instrumentation-with-call-threshold=0 -passes='asan-pipeline' -asan-use-stack-safety=0 -o - | FileCheck %s --implicit-check-not="call {{.*}} @__asan_{{load|store|stack}}" --check-prefixes=CHECK,NOSAFETY
-; RUN: opt < %s -S -asan-instrumentation-with-call-threshold=0 -passes='asan-pipeline' -asan-use-stack-safety=1 -o - | FileCheck %s --implicit-check-not="call {{.*}} @__asan_{{load|store|stack}}"
+; RUN: opt < %s -S -asan-instrumentation-with-call-threshold=0 -passes=asan -asan-use-stack-safety=0 -o - | FileCheck %s --implicit-check-not="call {{.*}} @__asan_{{load|store|stack}}" --check-prefixes=CHECK,NOSAFETY
+; RUN: opt < %s -S -asan-instrumentation-with-call-threshold=0 -passes=asan -asan-use-stack-safety=1 -o - | FileCheck %s --implicit-check-not="call {{.*}} @__asan_{{load|store|stack}}"
 
 ; CHECK-LABEL: define i32 @load
 define i32 @load() sanitize_address {
