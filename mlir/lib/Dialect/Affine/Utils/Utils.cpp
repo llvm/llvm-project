@@ -1691,7 +1691,7 @@ LogicalResult mlir::normalizeMemRef(memref::AllocOp *allocOp) {
   // Fetch a new memref type after normalizing the old memref to have an
   // identity map layout.
   MemRefType newMemRefType =
-      normalizeMemRefType(memrefType, b, allocOp->getSymbolOperands().size());
+      normalizeMemRefType(memrefType, allocOp->getSymbolOperands().size());
   if (newMemRefType == memrefType)
     // Either memrefType already had an identity map or the map couldn't be
     // transformed to an identity map.
@@ -1742,7 +1742,7 @@ LogicalResult mlir::normalizeMemRef(memref::AllocOp *allocOp) {
   return success();
 }
 
-MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
+MemRefType mlir::normalizeMemRefType(MemRefType memrefType,
                                      unsigned numSymbolicOperands) {
   unsigned rank = memrefType.getRank();
   if (rank == 0)
@@ -1790,10 +1790,11 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
   // Project out the old data dimensions.
   fac.projectOut(newRank, fac.getNumVars() - newRank - fac.getNumLocalVars());
   SmallVector<int64_t, 4> newShape(newRank);
+  MLIRContext *context = memrefType.getContext();
   for (unsigned d = 0; d < newRank; ++d) {
     // Check if each dimension of normalized memrefType is dynamic.
-    bool isDynDim = isNormalizedMemRefDynamicDim(
-        d, layoutMap, memrefTypeDynDims, b.getContext());
+    bool isDynDim =
+        isNormalizedMemRefDynamicDim(d, layoutMap, memrefTypeDynDims, context);
     if (isDynDim) {
       newShape[d] = -1;
     } else {
@@ -1814,8 +1815,8 @@ MemRefType mlir::normalizeMemRefType(MemRefType memrefType, OpBuilder b,
   MemRefType newMemRefType =
       MemRefType::Builder(memrefType)
           .setShape(newShape)
-          .setLayout(AffineMapAttr::get(b.getMultiDimIdentityMap(newRank)));
-
+          .setLayout(AffineMapAttr::get(
+              AffineMap::getMultiDimIdentityMap(newRank, context)));
   return newMemRefType;
 }
 
@@ -1844,12 +1845,12 @@ static FailureOr<OpFoldResult> getIndexProduct(OpBuilder &b, Location loc,
 
 FailureOr<SmallVector<Value>> mlir::delinearizeIndex(OpBuilder &b, Location loc,
                                                      Value linearIndex,
-                                                     ArrayRef<Value> dimSizes) {
-  unsigned numDims = dimSizes.size();
+                                                     ArrayRef<Value> basis) {
+  unsigned numDims = basis.size();
 
   SmallVector<Value> divisors;
   for (unsigned i = 1; i < numDims; i++) {
-    ArrayRef<Value> slice = dimSizes.drop_front(i);
+    ArrayRef<Value> slice = basis.drop_front(i);
     FailureOr<OpFoldResult> prod = getIndexProduct(b, loc, slice);
     if (failed(prod))
       return failure();
