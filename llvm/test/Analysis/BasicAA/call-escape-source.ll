@@ -1,4 +1,4 @@
-; RUN: opt -aa-eval -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -aa-pipeline=basic-aa -passes=aa-eval -print-all-alias-modref-info -disable-output < %s 2>&1 | FileCheck %s
 
 ; A call return value is not always an escape source, because
 ; CaptureTracking can look through some calls. The test is constructed to

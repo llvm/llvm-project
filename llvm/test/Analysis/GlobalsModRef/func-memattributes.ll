@@ -1,4 +1,4 @@
-; RUN: opt < %s -disable-basic-aa -globals-aa -dse -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=globals-aa -passes='require<globals-aa>,dse' -S | FileCheck %s
 
 @X = internal global i32 4
 

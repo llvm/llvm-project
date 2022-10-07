@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -licm -disable-output
+; RUN: opt < %s -aa-pipeline=basic-aa -licm -disable-output
 target datalayout = "E-p:32:32"
 target triple = "powerpc-unknown-linux-gnu"
 

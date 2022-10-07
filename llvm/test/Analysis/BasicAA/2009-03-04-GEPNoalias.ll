@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -gvn -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -gvn -S | FileCheck %s
 
 declare noalias i32* @noalias()
 
