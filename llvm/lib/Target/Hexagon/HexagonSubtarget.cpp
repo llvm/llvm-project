@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
+#include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
@@ -725,4 +726,53 @@ unsigned HexagonSubtarget::getL1PrefetchDistance() const {
 
 bool HexagonSubtarget::enableSubRegLiveness() const {
   return EnableSubregLiveness;
+}
+
+Intrinsic::ID HexagonSubtarget::getIntrinsicId(unsigned Opc) const {
+  struct Scalar {
+    unsigned Opcode;
+    Intrinsic::ID IntId;
+  };
+  struct Hvx {
+    unsigned Opcode;
+    Intrinsic::ID Int64Id, Int128Id;
+  };
+
+  static Scalar ScalarInts[] = {
+#define GET_SCALAR_INTRINSICS
+#include "HexagonDepInstrIntrinsics.inc"
+#undef GET_SCALAR_INTRINSICS
+  };
+
+  static Hvx HvxInts[] = {
+#define GET_HVX_INTRINSICS
+#include "HexagonDepInstrIntrinsics.inc"
+#undef GET_HVX_INTRINSICS
+  };
+
+  const auto CmpOpcode = [](auto A, auto B) { return A.Opcode < B.Opcode; };
+  [[maybe_unused]] static bool SortedScalar =
+      (llvm::sort(ScalarInts, CmpOpcode), true);
+  [[maybe_unused]] static bool SortedHvx =
+      (llvm::sort(HvxInts, CmpOpcode), true);
+
+  auto [BS, ES] = std::make_pair(std::begin(ScalarInts), std::end(ScalarInts));
+  auto [BH, EH] = std::make_pair(std::begin(HvxInts), std::end(HvxInts));
+
+  auto FoundScalar = std::lower_bound(BS, ES, Scalar{Opc, 0}, CmpOpcode);
+  if (FoundScalar != ES && FoundScalar->Opcode == Opc)
+    return FoundScalar->IntId;
+
+  auto FoundHvx = std::lower_bound(BH, EH, Hvx{Opc, 0, 0}, CmpOpcode);
+  if (FoundHvx != EH && FoundHvx->Opcode == Opc) {
+    unsigned HwLen = getVectorLength();
+    if (HwLen == 64)
+      return FoundHvx->Int64Id;
+    if (HwLen == 128)
+      return FoundHvx->Int128Id;
+  }
+
+  std::string error = "Invalid opcode (" + std::to_string(Opc) + ")";
+  llvm_unreachable(error.c_str());
+  return 0;
 }
