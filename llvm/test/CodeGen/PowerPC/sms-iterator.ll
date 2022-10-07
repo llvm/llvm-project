@@ -22,8 +22,8 @@ define dso_local fastcc double @_ZN3povL9polysolveEiPdS0_() unnamed_addr #0 {
   %6 = phi i64 [ %12, %3 ], [ undef, %2 ]
   %7 = add nsw i64 %4, -1
   %8 = fmul fast double %5, 1.000000e+07
-  %9 = getelementptr inbounds %0, %0* null, i64 1, i32 1, i64 %7
-  %10 = load double, double* %9, align 8
+  %9 = getelementptr inbounds %0, ptr null, i64 1, i32 1, i64 %7
+  %10 = load double, ptr %9, align 8
   %11 = fadd fast double %10, %8
   %12 = add i64 %6, -1
   %13 = icmp eq i64 %12, 0

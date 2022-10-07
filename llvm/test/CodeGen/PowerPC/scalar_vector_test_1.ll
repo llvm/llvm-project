@@ -10,7 +10,7 @@
 
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x i64> @s2v_test1(i64* nocapture readonly %int64, <2 x i64> %vec) {
+define <2 x i64> @s2v_test1(ptr nocapture readonly %int64, <2 x i64> %vec) {
 ; P9LE-LABEL: s2v_test1:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfd f0, 0(r3)
@@ -36,13 +36,13 @@ define <2 x i64> @s2v_test1(i64* nocapture readonly %int64, <2 x i64> %vec) {
 ; P8BE-NEXT:    blr
 
 entry:
-  %0 = load i64, i64* %int64, align 8
+  %0 = load i64, ptr %int64, align 8
   %vecins = insertelement <2 x i64> %vec, i64 %0, i32 0
   ret <2 x i64> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x i64> @s2v_test2(i64* nocapture readonly %int64, <2 x i64> %vec)  {
+define <2 x i64> @s2v_test2(ptr nocapture readonly %int64, <2 x i64> %vec)  {
 ; P9LE-LABEL: s2v_test2:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfd f0, 8(r3)
@@ -68,14 +68,14 @@ define <2 x i64> @s2v_test2(i64* nocapture readonly %int64, <2 x i64> %vec)  {
 ; P8BE-NEXT:    blr
 
 entry:
-  %arrayidx = getelementptr inbounds i64, i64* %int64, i64 1
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %int64, i64 1
+  %0 = load i64, ptr %arrayidx, align 8
   %vecins = insertelement <2 x i64> %vec, i64 %0, i32 0
   ret <2 x i64> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x i64> @s2v_test3(i64* nocapture readonly %int64, <2 x i64> %vec, i32 signext %Idx)  {
+define <2 x i64> @s2v_test3(ptr nocapture readonly %int64, <2 x i64> %vec, i32 signext %Idx)  {
 ; P9LE-LABEL: s2v_test3:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    sldi r4, r7, 3
@@ -106,14 +106,14 @@ define <2 x i64> @s2v_test3(i64* nocapture readonly %int64, <2 x i64> %vec, i32 
 
 entry:
   %idxprom = sext i32 %Idx to i64
-  %arrayidx = getelementptr inbounds i64, i64* %int64, i64 %idxprom
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %int64, i64 %idxprom
+  %0 = load i64, ptr %arrayidx, align 8
   %vecins = insertelement <2 x i64> %vec, i64 %0, i32 0
   ret <2 x i64> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x i64> @s2v_test4(i64* nocapture readonly %int64, <2 x i64> %vec)  {
+define <2 x i64> @s2v_test4(ptr nocapture readonly %int64, <2 x i64> %vec)  {
 ; P9LE-LABEL: s2v_test4:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfd f0, 8(r3)
@@ -139,14 +139,14 @@ define <2 x i64> @s2v_test4(i64* nocapture readonly %int64, <2 x i64> %vec)  {
 ; P8BE-NEXT:    blr
 
 entry:
-  %arrayidx = getelementptr inbounds i64, i64* %int64, i64 1
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %int64, i64 1
+  %0 = load i64, ptr %arrayidx, align 8
   %vecins = insertelement <2 x i64> %vec, i64 %0, i32 0
   ret <2 x i64> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x i64> @s2v_test5(<2 x i64> %vec, i64* nocapture readonly %ptr1)  {
+define <2 x i64> @s2v_test5(<2 x i64> %vec, ptr nocapture readonly %ptr1)  {
 ; P9LE-LABEL: s2v_test5:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfd f0, 0(r5)
@@ -172,13 +172,13 @@ define <2 x i64> @s2v_test5(<2 x i64> %vec, i64* nocapture readonly %ptr1)  {
 ; P8BE-NEXT:    blr
 
 entry:
-  %0 = load i64, i64* %ptr1, align 8
+  %0 = load i64, ptr %ptr1, align 8
   %vecins = insertelement <2 x i64> %vec, i64 %0, i32 0
   ret <2 x i64> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x double> @s2v_test_f1(double* nocapture readonly %f64, <2 x double> %vec)  {
+define <2 x double> @s2v_test_f1(ptr nocapture readonly %f64, <2 x double> %vec)  {
 ; P9LE-LABEL: s2v_test_f1:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfd f0, 0(r3)
@@ -206,13 +206,13 @@ define <2 x double> @s2v_test_f1(double* nocapture readonly %f64, <2 x double> %
 
 
 entry:
-  %0 = load double, double* %f64, align 8
+  %0 = load double, ptr %f64, align 8
   %vecins = insertelement <2 x double> %vec, double %0, i32 0
   ret <2 x double> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x double> @s2v_test_f2(double* nocapture readonly %f64, <2 x double> %vec)  {
+define <2 x double> @s2v_test_f2(ptr nocapture readonly %f64, <2 x double> %vec)  {
 ; P9LE-LABEL: s2v_test_f2:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfd f0, 8(r3)
@@ -240,14 +240,14 @@ define <2 x double> @s2v_test_f2(double* nocapture readonly %f64, <2 x double> %
 
 
 entry:
-  %arrayidx = getelementptr inbounds double, double* %f64, i64 1
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %f64, i64 1
+  %0 = load double, ptr %arrayidx, align 8
   %vecins = insertelement <2 x double> %vec, double %0, i32 0
   ret <2 x double> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x double> @s2v_test_f3(double* nocapture readonly %f64, <2 x double> %vec, i32 signext %Idx)  {
+define <2 x double> @s2v_test_f3(ptr nocapture readonly %f64, <2 x double> %vec, i32 signext %Idx)  {
 ; P9LE-LABEL: s2v_test_f3:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    sldi r4, r7, 3
@@ -280,14 +280,14 @@ define <2 x double> @s2v_test_f3(double* nocapture readonly %f64, <2 x double> %
 
 entry:
   %idxprom = sext i32 %Idx to i64
-  %arrayidx = getelementptr inbounds double, double* %f64, i64 %idxprom
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %f64, i64 %idxprom
+  %0 = load double, ptr %arrayidx, align 8
   %vecins = insertelement <2 x double> %vec, double %0, i32 0
   ret <2 x double> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x double> @s2v_test_f4(double* nocapture readonly %f64, <2 x double> %vec)  {
+define <2 x double> @s2v_test_f4(ptr nocapture readonly %f64, <2 x double> %vec)  {
 ; P9LE-LABEL: s2v_test_f4:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfd f0, 8(r3)
@@ -315,14 +315,14 @@ define <2 x double> @s2v_test_f4(double* nocapture readonly %f64, <2 x double> %
 
 
 entry:
-  %arrayidx = getelementptr inbounds double, double* %f64, i64 1
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %f64, i64 1
+  %0 = load double, ptr %arrayidx, align 8
   %vecins = insertelement <2 x double> %vec, double %0, i32 0
   ret <2 x double> %vecins
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x double> @s2v_test_f5(<2 x double> %vec, double* nocapture readonly %ptr1)  {
+define <2 x double> @s2v_test_f5(<2 x double> %vec, ptr nocapture readonly %ptr1)  {
 ; P9LE-LABEL: s2v_test_f5:
 ; P9LE:       # %bb.0: # %entry
 ; P9LE-NEXT:    lfd f0, 0(r5)
@@ -350,7 +350,7 @@ define <2 x double> @s2v_test_f5(<2 x double> %vec, double* nocapture readonly %
 
 
 entry:
-  %0 = load double, double* %ptr1, align 8
+  %0 = load double, ptr %ptr1, align 8
   %vecins = insertelement <2 x double> %vec, double %0, i32 0
   ret <2 x double> %vecins
 }

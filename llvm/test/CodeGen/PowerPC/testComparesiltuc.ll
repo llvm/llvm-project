@@ -46,7 +46,7 @@ define dso_local void @test_iltuc_store(i8 zeroext %a, i8 zeroext %b) {
 entry:
   %cmp = icmp ult i8 %a, %b
   %conv3 = zext i1 %cmp to i8
-  store i8 %conv3, i8* @glob, align 1
+  store i8 %conv3, ptr @glob, align 1
   ret void
 }
 
@@ -62,6 +62,6 @@ define dso_local void @test_iltuc_sext_store(i8 zeroext %a, i8 zeroext %b) {
 entry:
   %cmp = icmp ult i8 %a, %b
   %conv3 = sext i1 %cmp to i8
-  store i8 %conv3, i8* @glob, align 1
+  store i8 %conv3, ptr @glob, align 1
   ret void
 }

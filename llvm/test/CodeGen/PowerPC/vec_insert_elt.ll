@@ -388,7 +388,7 @@ entry:
   ret <4 x float> %vecins
 }
 
-define <4 x float> @testFloat2(<4 x float> %a, i8* %b, i32 zeroext %idx1, i32 zeroext %idx2) {
+define <4 x float> @testFloat2(<4 x float> %a, ptr %b, i32 zeroext %idx1, i32 zeroext %idx2) {
 ; CHECK-LABEL: testFloat2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz r3, 0(r5)
@@ -461,17 +461,15 @@ define <4 x float> @testFloat2(<4 x float> %a, i8* %b, i32 zeroext %idx1, i32 ze
 ; AIX-P8-32-NEXT:    lxvw4x v2, 0, r5
 ; AIX-P8-32-NEXT:    blr
 entry:
-  %0 = bitcast i8* %b to float*
-  %add.ptr1 = getelementptr inbounds i8, i8* %b, i64 1
-  %1 = bitcast i8* %add.ptr1 to float*
-  %2 = load float, float* %0, align 4
-  %vecins = insertelement <4 x float> %a, float %2, i32 %idx1
-  %3 = load float, float* %1, align 4
-  %vecins2 = insertelement <4 x float> %vecins, float %3, i32 %idx2
+  %add.ptr1 = getelementptr inbounds i8, ptr %b, i64 1
+  %0 = load float, ptr %b, align 4
+  %vecins = insertelement <4 x float> %a, float %0, i32 %idx1
+  %1 = load float, ptr %add.ptr1, align 4
+  %vecins2 = insertelement <4 x float> %vecins, float %1, i32 %idx2
   ret <4 x float> %vecins2
 }
 
-define <4 x float> @testFloat3(<4 x float> %a, i8* %b, i32 zeroext %idx1, i32 zeroext %idx2) {
+define <4 x float> @testFloat3(<4 x float> %a, ptr %b, i32 zeroext %idx1, i32 zeroext %idx2) {
 ; CHECK-LABEL: testFloat3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    plwz r3, 65536(r5), 0
@@ -555,14 +553,12 @@ define <4 x float> @testFloat3(<4 x float> %a, i8* %b, i32 zeroext %idx1, i32 ze
 ; AIX-P8-32-NEXT:    lxvw4x v2, 0, r5
 ; AIX-P8-32-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %b, i64 65536
-  %0 = bitcast i8* %add.ptr to float*
-  %add.ptr1 = getelementptr inbounds i8, i8* %b, i64 68719476736
-  %1 = bitcast i8* %add.ptr1 to float*
-  %2 = load float, float* %0, align 4
-  %vecins = insertelement <4 x float> %a, float %2, i32 %idx1
-  %3 = load float, float* %1, align 4
-  %vecins2 = insertelement <4 x float> %vecins, float %3, i32 %idx2
+  %add.ptr = getelementptr inbounds i8, ptr %b, i64 65536
+  %add.ptr1 = getelementptr inbounds i8, ptr %b, i64 68719476736
+  %0 = load float, ptr %add.ptr, align 4
+  %vecins = insertelement <4 x float> %a, float %0, i32 %idx1
+  %1 = load float, ptr %add.ptr1, align 4
+  %vecins2 = insertelement <4 x float> %vecins, float %1, i32 %idx2
   ret <4 x float> %vecins2
 }
 
@@ -617,7 +613,7 @@ entry:
   ret <4 x float> %vecins1
 }
 
-define <4 x float> @testFloatImm2(<4 x float> %a, i32* %b) {
+define <4 x float> @testFloatImm2(<4 x float> %a, ptr %b) {
 ; CHECK-LABEL: testFloatImm2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz r3, 0(r5)
@@ -670,17 +666,15 @@ define <4 x float> @testFloatImm2(<4 x float> %a, i32* %b) {
 ; AIX-P8-32-NEXT:    vperm v2, v2, v3, v4
 ; AIX-P8-32-NEXT:    blr
 entry:
-  %0 = bitcast i32* %b to float*
-  %add.ptr1 = getelementptr inbounds i32, i32* %b, i64 1
-  %1 = bitcast i32* %add.ptr1 to float*
-  %2 = load float, float* %0, align 4
-  %vecins = insertelement <4 x float> %a, float %2, i32 0
-  %3 = load float, float* %1, align 4
-  %vecins2 = insertelement <4 x float> %vecins, float %3, i32 2
+  %add.ptr1 = getelementptr inbounds i32, ptr %b, i64 1
+  %0 = load float, ptr %b, align 4
+  %vecins = insertelement <4 x float> %a, float %0, i32 0
+  %1 = load float, ptr %add.ptr1, align 4
+  %vecins2 = insertelement <4 x float> %vecins, float %1, i32 2
   ret <4 x float> %vecins2
 }
 
-define <4 x float> @testFloatImm3(<4 x float> %a, i32* %b) {
+define <4 x float> @testFloatImm3(<4 x float> %a, ptr %b) {
 ; CHECK-LABEL: testFloatImm3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    plwz r3, 262144(r5), 0
@@ -742,14 +736,12 @@ define <4 x float> @testFloatImm3(<4 x float> %a, i32* %b) {
 ; AIX-P8-32-NEXT:    vperm v2, v2, v4, v3
 ; AIX-P8-32-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i32, i32* %b, i64 65536
-  %0 = bitcast i32* %add.ptr to float*
-  %add.ptr1 = getelementptr inbounds i32, i32* %b, i64 68719476736
-  %1 = bitcast i32* %add.ptr1 to float*
-  %2 = load float, float* %0, align 4
-  %vecins = insertelement <4 x float> %a, float %2, i32 0
-  %3 = load float, float* %1, align 4
-  %vecins2 = insertelement <4 x float> %vecins, float %3, i32 2
+  %add.ptr = getelementptr inbounds i32, ptr %b, i64 65536
+  %add.ptr1 = getelementptr inbounds i32, ptr %b, i64 68719476736
+  %0 = load float, ptr %add.ptr, align 4
+  %vecins = insertelement <4 x float> %a, float %0, i32 0
+  %1 = load float, ptr %add.ptr1, align 4
+  %vecins2 = insertelement <4 x float> %vecins, float %1, i32 2
   ret <4 x float> %vecins2
 }
 
@@ -803,7 +795,7 @@ entry:
   ret <2 x double> %vecins
 }
 
-define <2 x double> @testDouble2(<2 x double> %a, i8* %b, i32 zeroext %idx1, i32 zeroext %idx2) {
+define <2 x double> @testDouble2(<2 x double> %a, ptr %b, i32 zeroext %idx1, i32 zeroext %idx2) {
 ; CHECK-LABEL: testDouble2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld r3, 0(r5)
@@ -878,17 +870,15 @@ define <2 x double> @testDouble2(<2 x double> %a, i8* %b, i32 zeroext %idx1, i32
 ; AIX-P8-32-NEXT:    lxvd2x v2, 0, r4
 ; AIX-P8-32-NEXT:    blr
 entry:
-  %0 = bitcast i8* %b to double*
-  %add.ptr1 = getelementptr inbounds i8, i8* %b, i64 1
-  %1 = bitcast i8* %add.ptr1 to double*
-  %2 = load double, double* %0, align 8
-  %vecins = insertelement <2 x double> %a, double %2, i32 %idx1
-  %3 = load double, double* %1, align 8
-  %vecins2 = insertelement <2 x double> %vecins, double %3, i32 %idx2
+  %add.ptr1 = getelementptr inbounds i8, ptr %b, i64 1
+  %0 = load double, ptr %b, align 8
+  %vecins = insertelement <2 x double> %a, double %0, i32 %idx1
+  %1 = load double, ptr %add.ptr1, align 8
+  %vecins2 = insertelement <2 x double> %vecins, double %1, i32 %idx2
   ret <2 x double> %vecins2
 }
 
-define <2 x double> @testDouble3(<2 x double> %a, i8* %b, i32 zeroext %idx1, i32 zeroext %idx2) {
+define <2 x double> @testDouble3(<2 x double> %a, ptr %b, i32 zeroext %idx1, i32 zeroext %idx2) {
 ; CHECK-LABEL: testDouble3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, 65536(r5), 0
@@ -972,14 +962,12 @@ define <2 x double> @testDouble3(<2 x double> %a, i8* %b, i32 zeroext %idx1, i32
 ; AIX-P8-32-NEXT:    lxvd2x v2, 0, r4
 ; AIX-P8-32-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %b, i64 65536
-  %0 = bitcast i8* %add.ptr to double*
-  %add.ptr1 = getelementptr inbounds i8, i8* %b, i64 68719476736
-  %1 = bitcast i8* %add.ptr1 to double*
-  %2 = load double, double* %0, align 8
-  %vecins = insertelement <2 x double> %a, double %2, i32 %idx1
-  %3 = load double, double* %1, align 8
-  %vecins2 = insertelement <2 x double> %vecins, double %3, i32 %idx2
+  %add.ptr = getelementptr inbounds i8, ptr %b, i64 65536
+  %add.ptr1 = getelementptr inbounds i8, ptr %b, i64 68719476736
+  %0 = load double, ptr %add.ptr, align 8
+  %vecins = insertelement <2 x double> %a, double %0, i32 %idx1
+  %1 = load double, ptr %add.ptr1, align 8
+  %vecins2 = insertelement <2 x double> %vecins, double %1, i32 %idx2
   ret <2 x double> %vecins2
 }
 
@@ -1014,7 +1002,7 @@ entry:
   ret <2 x double> %vecins
 }
 
-define <2 x double> @testDoubleImm2(<2 x double> %a, i32* %b) {
+define <2 x double> @testDoubleImm2(<2 x double> %a, ptr %b) {
 ; CHECK-LABEL: testDoubleImm2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd f0, 0(r5)
@@ -1039,13 +1027,12 @@ define <2 x double> @testDoubleImm2(<2 x double> %a, i32* %b) {
 ; AIX-P8-NEXT:    xxpermdi v2, vs0, v2, 1
 ; AIX-P8-NEXT:    blr
 entry:
-  %0 = bitcast i32* %b to double*
-  %1 = load double, double* %0, align 8
-  %vecins = insertelement <2 x double> %a, double %1, i32 0
+  %0 = load double, ptr %b, align 8
+  %vecins = insertelement <2 x double> %a, double %0, i32 0
   ret <2 x double> %vecins
 }
 
-define <2 x double> @testDoubleImm3(<2 x double> %a, i32* %b) {
+define <2 x double> @testDoubleImm3(<2 x double> %a, ptr %b) {
 ; CHECK-LABEL: testDoubleImm3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd f0, 4(r5)
@@ -1070,14 +1057,13 @@ define <2 x double> @testDoubleImm3(<2 x double> %a, i32* %b) {
 ; AIX-P8-NEXT:    xxpermdi v2, vs0, v2, 1
 ; AIX-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i32, i32* %b, i64 1
-  %0 = bitcast i32* %add.ptr to double*
-  %1 = load double, double* %0, align 8
-  %vecins = insertelement <2 x double> %a, double %1, i32 0
+  %add.ptr = getelementptr inbounds i32, ptr %b, i64 1
+  %0 = load double, ptr %add.ptr, align 8
+  %vecins = insertelement <2 x double> %a, double %0, i32 0
   ret <2 x double> %vecins
 }
 
-define <2 x double> @testDoubleImm4(<2 x double> %a, i32* %b) {
+define <2 x double> @testDoubleImm4(<2 x double> %a, ptr %b) {
 ; CHECK-LABEL: testDoubleImm4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    plfd f0, 262144(r5), 0
@@ -1104,14 +1090,13 @@ define <2 x double> @testDoubleImm4(<2 x double> %a, i32* %b) {
 ; AIX-P8-NEXT:    xxpermdi v2, vs0, v2, 1
 ; AIX-P8-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i32, i32* %b, i64 65536
-  %0 = bitcast i32* %add.ptr to double*
-  %1 = load double, double* %0, align 8
-  %vecins = insertelement <2 x double> %a, double %1, i32 0
+  %add.ptr = getelementptr inbounds i32, ptr %b, i64 65536
+  %0 = load double, ptr %add.ptr, align 8
+  %vecins = insertelement <2 x double> %a, double %0, i32 0
   ret <2 x double> %vecins
 }
 
-define <2 x double> @testDoubleImm5(<2 x double> %a, i32* %b) {
+define <2 x double> @testDoubleImm5(<2 x double> %a, ptr %b) {
 ; CHECK-LABEL: testDoubleImm5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li r3, 1
@@ -1150,10 +1135,9 @@ define <2 x double> @testDoubleImm5(<2 x double> %a, i32* %b) {
 ; AIX-P8-32-NEXT:    xxpermdi v2, vs0, v2, 1
 ; AIX-P8-32-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i32, i32* %b, i64 68719476736
-  %0 = bitcast i32* %add.ptr to double*
-  %1 = load double, double* %0, align 8
-  %vecins = insertelement <2 x double> %a, double %1, i32 0
+  %add.ptr = getelementptr inbounds i32, ptr %b, i64 68719476736
+  %0 = load double, ptr %add.ptr, align 8
+  %vecins = insertelement <2 x double> %a, double %0, i32 0
   ret <2 x double> %vecins
 }
 

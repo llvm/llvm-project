@@ -9,8 +9,8 @@ define i32 @main() nounwind {
 entry:
 ; CHECK: li 4, 128
 ; CHECK-NOT: mr 4, {{.*}}
-  %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i32 0, i32 0), i32 128, i32 128) nounwind
+  %call = tail call i32 (ptr, ...) @printf(ptr @.str, i32 128, i32 128) nounwind
   ret i32 0
 }
 
-declare i32 @printf(i8* nocapture, ...) nounwind
+declare i32 @printf(ptr nocapture, ...) nounwind

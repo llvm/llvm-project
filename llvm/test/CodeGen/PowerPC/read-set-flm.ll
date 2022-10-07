@@ -74,7 +74,7 @@ entry:
   ret double %7
 }
 
-define void @cse_nomerge(double* %f1, double* %f2, double %f3) #0 {
+define void @cse_nomerge(ptr %f1, ptr %f2, double %f3) #0 {
 ; CHECK-LABEL: cse_nomerge:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
@@ -103,15 +103,15 @@ define void @cse_nomerge(double* %f1, double* %f2, double %f3) #0 {
 ; CHECK-NEXT:    blr
 entry:
   %0 = call double @llvm.ppc.readflm()
-  store double %0, double* %f1, align 8
+  store double %0, ptr %f1, align 8
   call void @effect_func()
   %1 = call double @llvm.ppc.readflm()
-  store double %1, double* %f2, align 8
+  store double %1, ptr %f2, align 8
   %2 = call contract double @llvm.ppc.setflm(double %f3)
   ret void
 }
 
-define void @cse_nomerge_readonly(double* %f1, double* %f2, double %f3) #0 {
+define void @cse_nomerge_readonly(ptr %f1, ptr %f2, double %f3) #0 {
 ; CHECK-LABEL: cse_nomerge_readonly:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
@@ -140,10 +140,10 @@ define void @cse_nomerge_readonly(double* %f1, double* %f2, double %f3) #0 {
 ; CHECK-NEXT:    blr
 entry:
   %0 = call double @llvm.ppc.readflm()
-  store double %0, double* %f1, align 8
+  store double %0, ptr %f1, align 8
   call void @readonly_func()
   %1 = call double @llvm.ppc.readflm()
-  store double %1, double* %f2, align 8
+  store double %1, ptr %f2, align 8
   %2 = call contract double @llvm.ppc.setflm(double %f3)
   ret void
 }

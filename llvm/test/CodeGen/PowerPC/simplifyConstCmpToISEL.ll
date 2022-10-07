@@ -33,11 +33,11 @@ for.body.i62.us:                                  ; preds = %if.end.i.us.1, %for
 
 test2.exit.us.unr-lcssa: ; preds = %if.end.i.us.1, %for.body.i62.us.preheader
   %c.addr.036.i.us.unr = phi i64 [ 0, %for.body.i62.us.preheader ], [ %c.addr.1.i.us.1, %if.end.i.us.1 ]
-  %1 = load i64, i64* undef, align 8
+  %1 = load i64, ptr undef, align 8
   %tobool.i61.us.epil = icmp eq i64 %c.addr.036.i.us.unr, 0
   %add.neg.i.us.epil.pn = select i1 %tobool.i61.us.epil, i64 %1, i64 0
   %storemerge269 = sub i64 %add.neg.i.us.epil.pn, 0
-  store i64 %storemerge269, i64* undef, align 8
+  store i64 %storemerge269, ptr undef, align 8
   unreachable
 
 test3.exit.split:             ; preds = %cond.end.i
