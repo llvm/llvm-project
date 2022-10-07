@@ -1,4 +1,5 @@
 RUN: llvm-profdata show --sample --json %p/Inputs/sample-profile.proftext | FileCheck %s --check-prefix=JSON
+RUN: llvm-profdata show --sample --output-format=json %p/Inputs/sample-profile.proftext | FileCheck %s --check-prefix=JSON
 JSON:      [
 JSON-NEXT:   {
 JSON-NEXT:     "name": "main",
