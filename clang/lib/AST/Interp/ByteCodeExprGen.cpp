@@ -145,10 +145,8 @@ bool ByteCodeExprGen<Emitter>::VisitIntegerLiteral(const IntegerLiteral *LE) {
   if (DiscardResult)
     return true;
 
-  auto Val = LE->getValue();
-  QualType LitTy = LE->getType();
-  if (Optional<PrimType> T = classify(LitTy))
-    return emitConst(*T, getIntWidth(LitTy), LE->getValue(), LE);
+  if (Optional<PrimType> T = classify(LE->getType()))
+    return emitConst(*T, LE->getValue(), LE);
   return this->bail(LE);
 }
 
@@ -345,7 +343,7 @@ bool ByteCodeExprGen<Emitter>::VisitArrayInitIndexExpr(
     return false;
   QualType IndexType = E->getType();
   APInt Value(getIntWidth(IndexType), *ArrayIndex);
-  return this->emitConst(classifyPrim(IndexType), 0, Value, E);
+  return this->emitConst(classifyPrim(IndexType), Value, E);
 }
 
 template <class Emitter>
@@ -569,8 +567,8 @@ bool ByteCodeExprGen<Emitter>::dereferenceVar(
 }
 
 template <class Emitter>
-bool ByteCodeExprGen<Emitter>::emitConst(PrimType T, unsigned NumBits,
-                                         const APInt &Value, const Expr *E) {
+bool ByteCodeExprGen<Emitter>::emitConst(PrimType T, const APInt &Value,
+                                         const Expr *E) {
   switch (T) {
   case PT_Sint8:
     return this->emitConstSint8(Value.getSExtValue(), E);
@@ -1092,8 +1090,7 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
   } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(Decl)) {
     PrimType T = *classify(ECD->getType());
 
-    return this->emitConst(T, getIntWidth(ECD->getType()), ECD->getInitVal(),
-                           E);
+    return this->emitConst(T, ECD->getInitVal(), E);
   }
 
   // References are implemented using pointers, so when we get here,
