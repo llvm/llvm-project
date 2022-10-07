@@ -970,12 +970,17 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
     auto *OBO0 = cast<OverflowingBinaryOperator>(Op0);
     auto *OBO1 = cast<OverflowingBinaryOperator>(Op1);
     bool HasNUW = OBO0->hasNoUnsignedWrap() && OBO1->hasNoUnsignedWrap();
+    bool HasNSW = OBO0->hasNoSignedWrap() && OBO1->hasNoSignedWrap();
 
     // (X * Y) u/ (X << Z) --> Y u>> Z
     if (!IsSigned && HasNUW)
       return BinaryOperator::CreateLShr(Y, Z);
 
-    // TODO: Handle signed division.
+    // (X * Y) s/ (X << Z) --> Y s/ (1 << Z)
+    if (IsSigned && HasNSW && (Op0->hasOneUse() || Op1->hasOneUse())) {
+      Value *Shl = Builder.CreateShl(ConstantInt::get(Ty, 1), Z);
+      return BinaryOperator::CreateSDiv(Y, Shl);
+    }
   }
 
   return nullptr;

@@ -919,7 +919,8 @@ llvm::Value *CodeGenFunction::LoadPassedObjectSize(const Expr *E,
 static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
                                           const Expr *Base,
                                           QualType &IndexedType,
-                                          unsigned StrictFlexArraysLevel) {
+                                          LangOptions::StrictFlexArraysLevelKind
+                                          StrictFlexArraysLevel) {
   // For the vector indexing extension, the bound is the number of elements.
   if (const VectorType *VT = Base->getType()->getAs<VectorType>()) {
     IndexedType = Base->getType();
@@ -958,7 +959,8 @@ void CodeGenFunction::EmitBoundsCheck(const Expr *E, const Expr *Base,
          "should not be called unless adding bounds checks");
   SanitizerScope SanScope(this);
 
-  const unsigned StrictFlexArraysLevel = getLangOpts().StrictFlexArrays;
+  const LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel =
+    getLangOpts().getStrictFlexArraysLevel();
 
   QualType IndexedType;
   llvm::Value *Bound =

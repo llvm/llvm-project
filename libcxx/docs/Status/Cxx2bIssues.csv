@@ -121,7 +121,7 @@
 `3563 <https://wg21.link/LWG3563>`__,"``keys_view`` example is broken","October 2021","","","|ranges|"
 `3566 <https://wg21.link/LWG3566>`__,"Constraint recursion for ``operator<=>(optional<T>, U)``","October 2021","","","|spaceship|"
 `3567 <https://wg21.link/LWG3567>`__,"Formatting move-only iterators take two","October 2021","","","|format|"
-`3568 <https://wg21.link/LWG3568>`__,"``basic_istream_view`` needs to initialize ``value_``","October 2021","","","|ranges|"
+`3568 <https://wg21.link/LWG3568>`__,"``basic_istream_view`` needs to initialize ``value_``","October 2021","|Complete|","16.0","|ranges|"
 `3570 <https://wg21.link/LWG3570>`__,"``basic_osyncstream::emit`` should be an unformatted output function","October 2021","",""
 `3571 <https://wg21.link/LWG3571>`__,"``flush_emit`` should set ``badbit`` if the ``emit`` call fails","October 2021","",""
 `3572 <https://wg21.link/LWG3572>`__,"``copyable-box`` should be fully ``constexpr``","October 2021","|Complete|","14.0","|ranges|"

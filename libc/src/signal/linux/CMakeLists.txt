@@ -8,6 +8,20 @@ add_header_library(
 )
 
 add_entrypoint_object(
+  kill
+  SRCS
+    kill.cpp
+  HDRS
+    ../kill.h
+  DEPENDS
+    libc.include.signal
+    libc.include.errno
+    libc.src.errno.errno
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
   raise
   SRCS
     raise.cpp

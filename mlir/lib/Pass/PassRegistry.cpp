@@ -348,6 +348,11 @@ llvm::cl::OptionValue<OpPassManager>::OptionValue(
     const mlir::OpPassManager &value) {
   setValue(value);
 }
+llvm::cl::OptionValue<OpPassManager>::OptionValue(
+    const llvm::cl::OptionValue<mlir::OpPassManager> &rhs) {
+  if (rhs.hasValue())
+    setValue(rhs.getValue());
+}
 llvm::cl::OptionValue<OpPassManager> &
 llvm::cl::OptionValue<OpPassManager>::operator=(
     const mlir::OpPassManager &rhs) {

@@ -3421,8 +3421,7 @@ void SelectionDAGBuilder::visitSelect(const User &I) {
       Values[i] =
           DAG.getNode(OpCode, dl, VT, LHSVal.getValue(LHSVal.getResNo() + i));
       if (Negate)
-        Values[i] = DAG.getNode(ISD::SUB, dl, VT, DAG.getConstant(0, dl, VT),
-                                Values[i]);
+        Values[i] = DAG.getNegative(Values[i], dl, VT);
     }
   } else {
     for (unsigned i = 0; i != NumValues; ++i) {

@@ -665,10 +665,9 @@ define signext i32 @smax_i32_pos_constant_trailing_zeros(i32 signext %a) {
 define signext i32 @smin_i32_negone(i32 signext %a) {
 ; NOZBB-LABEL: smin_i32_negone:
 ; NOZBB:       # %bb.0:
-; NOZBB-NEXT:    bltz a0, .LBB26_2
-; NOZBB-NEXT:  # %bb.1:
-; NOZBB-NEXT:    li a0, -1
-; NOZBB-NEXT:  .LBB26_2:
+; NOZBB-NEXT:    slti a1, a0, 0
+; NOZBB-NEXT:    addi a1, a1, -1
+; NOZBB-NEXT:    or a0, a1, a0
 ; NOZBB-NEXT:    ret
 ;
 ; ZBB-LABEL: smin_i32_negone:
@@ -684,47 +683,33 @@ define i64 @smin_i64_negone(i64 %a) {
 ; RV32I-LABEL: smin_i64_negone:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    li a2, -1
-; RV32I-NEXT:    mv a3, a0
-; RV32I-NEXT:    bge a1, a2, .LBB27_4
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    bne a1, a2, .LBB27_5
-; RV32I-NEXT:  .LBB27_2:
-; RV32I-NEXT:    bgez a1, .LBB27_6
-; RV32I-NEXT:  .LBB27_3:
-; RV32I-NEXT:    ret
-; RV32I-NEXT:  .LBB27_4:
-; RV32I-NEXT:    li a3, -1
 ; RV32I-NEXT:    beq a1, a2, .LBB27_2
-; RV32I-NEXT:  .LBB27_5:
-; RV32I-NEXT:    mv a0, a3
-; RV32I-NEXT:    bltz a1, .LBB27_3
-; RV32I-NEXT:  .LBB27_6:
-; RV32I-NEXT:    li a1, -1
+; RV32I-NEXT:  # %bb.1:
+; RV32I-NEXT:    slti a2, a1, -1
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    or a0, a2, a0
+; RV32I-NEXT:  .LBB27_2:
+; RV32I-NEXT:    slti a2, a1, 0
+; RV32I-NEXT:    addi a2, a2, -1
+; RV32I-NEXT:    or a1, a2, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: smin_i64_negone:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    bltz a0, .LBB27_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    li a0, -1
-; RV64I-NEXT:  .LBB27_2:
+; RV64I-NEXT:    slti a1, a0, 0
+; RV64I-NEXT:    addi a1, a1, -1
+; RV64I-NEXT:    or a0, a1, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV32ZBB-LABEL: smin_i64_negone:
 ; RV32ZBB:       # %bb.0:
 ; RV32ZBB-NEXT:    li a2, -1
-; RV32ZBB-NEXT:    mv a3, a0
-; RV32ZBB-NEXT:    bge a1, a2, .LBB27_3
-; RV32ZBB-NEXT:  # %bb.1:
-; RV32ZBB-NEXT:    bne a1, a2, .LBB27_4
-; RV32ZBB-NEXT:  .LBB27_2:
-; RV32ZBB-NEXT:    min a1, a1, a2
-; RV32ZBB-NEXT:    ret
-; RV32ZBB-NEXT:  .LBB27_3:
-; RV32ZBB-NEXT:    li a3, -1
 ; RV32ZBB-NEXT:    beq a1, a2, .LBB27_2
-; RV32ZBB-NEXT:  .LBB27_4:
-; RV32ZBB-NEXT:    mv a0, a3
+; RV32ZBB-NEXT:  # %bb.1:
+; RV32ZBB-NEXT:    slti a3, a1, -1
+; RV32ZBB-NEXT:    addi a3, a3, -1
+; RV32ZBB-NEXT:    or a0, a3, a0
+; RV32ZBB-NEXT:  .LBB27_2:
 ; RV32ZBB-NEXT:    min a1, a1, a2
 ; RV32ZBB-NEXT:    ret
 ;

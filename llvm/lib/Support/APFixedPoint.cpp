@@ -18,25 +18,32 @@
 
 namespace llvm {
 
+void FixedPointSemantics::print(llvm::raw_ostream &OS) const {
+  OS << "width=" << getWidth() << ", ";
+  if (isValidLegacySema())
+    OS << "scale=" << getScale() << ", ";
+  OS << "msb=" << getMsbWeight() << ", ";
+  OS << "lsb=" << getLsbWeight() << ", ";
+  OS << "IsSigned=" << IsSigned << ", ";
+  OS << "HasUnsignedPadding=" << HasUnsignedPadding << ", ";
+  OS << "IsSaturated=" << IsSaturated;
+}
+
 APFixedPoint APFixedPoint::convert(const FixedPointSemantics &DstSema,
                                    bool *Overflow) const {
   APSInt NewVal = Val;
-  unsigned DstWidth = DstSema.getWidth();
-  unsigned DstScale = DstSema.getScale();
-  bool Upscaling = DstScale > getScale();
+  int RelativeUpscale = getLsbWeight() - DstSema.getLsbWeight();
   if (Overflow)
     *Overflow = false;
 
-  if (Upscaling) {
-    NewVal = NewVal.extend(NewVal.getBitWidth() + DstScale - getScale());
-    NewVal <<= (DstScale - getScale());
-  } else {
-    NewVal >>= (getScale() - DstScale);
-  }
+  if (RelativeUpscale > 0)
+    NewVal = NewVal.extend(NewVal.getBitWidth() + RelativeUpscale);
+  NewVal = NewVal.relativeShl(RelativeUpscale);
 
   auto Mask = APInt::getBitsSetFrom(
       NewVal.getBitWidth(),
-      std::min(DstScale + DstSema.getIntegralBits(), NewVal.getBitWidth()));
+      std::min(DstSema.getIntegralBits() - DstSema.getLsbWeight(),
+               NewVal.getBitWidth()));
   APInt Masked(NewVal & Mask);
 
   // Change in the bits above the sign
@@ -58,7 +65,7 @@ APFixedPoint APFixedPoint::convert(const FixedPointSemantics &DstSema,
       *Overflow = true;
   }
 
-  NewVal = NewVal.extOrTrunc(DstWidth);
+  NewVal = NewVal.extOrTrunc(DstSema.getWidth());
   NewVal.setIsSigned(DstSema.isSigned());
   return APFixedPoint(NewVal, DstSema);
 }
@@ -68,21 +75,16 @@ int APFixedPoint::compare(const APFixedPoint &Other) const {
   APSInt OtherVal = Other.getValue();
   bool ThisSigned = Val.isSigned();
   bool OtherSigned = OtherVal.isSigned();
-  unsigned OtherScale = Other.getScale();
-  unsigned OtherWidth = OtherVal.getBitWidth();
 
-  unsigned CommonWidth = std::max(Val.getBitWidth(), OtherWidth);
-
-  // Prevent overflow in the event the widths are the same but the scales differ
-  CommonWidth += getScale() >= OtherScale ? getScale() - OtherScale
-                                          : OtherScale - getScale();
+  int CommonLsb = std::min(getLsbWeight(), Other.getLsbWeight());
+  int CommonMsb = std::max(getMsbWeight(), Other.getMsbWeight());
+  unsigned CommonWidth = CommonMsb - CommonLsb + 1;
 
   ThisVal = ThisVal.extOrTrunc(CommonWidth);
   OtherVal = OtherVal.extOrTrunc(CommonWidth);
 
-  unsigned CommonScale = std::max(getScale(), OtherScale);
-  ThisVal = ThisVal.shl(CommonScale - getScale());
-  OtherVal = OtherVal.shl(CommonScale - OtherScale);
+  ThisVal = ThisVal.shl(getLsbWeight() - CommonLsb);
+  OtherVal = OtherVal.shl(Other.getLsbWeight() - CommonLsb);
 
   if (ThisSigned && OtherSigned) {
     if (ThisVal.sgt(OtherVal))
@@ -152,9 +154,10 @@ bool FixedPointSemantics::fitsInFloatSemantics(
 
 FixedPointSemantics FixedPointSemantics::getCommonSemantics(
     const FixedPointSemantics &Other) const {
-  unsigned CommonScale = std::max(getScale(), Other.getScale());
-  unsigned CommonWidth =
-      std::max(getIntegralBits(), Other.getIntegralBits()) + CommonScale;
+  int CommonLsb = std::min(getLsbWeight(), Other.getLsbWeight());
+  int CommonMSb = std::max(getMsbWeight() - hasSignOrPaddingBit(),
+                           Other.getMsbWeight() - Other.hasSignOrPaddingBit());
+  unsigned CommonWidth = CommonMSb - CommonLsb + 1;
 
   bool ResultIsSigned = isSigned() || Other.isSigned();
   bool ResultIsSaturated = isSaturated() || Other.isSaturated();
@@ -171,7 +174,7 @@ FixedPointSemantics FixedPointSemantics::getCommonSemantics(
   if (ResultIsSigned || ResultHasUnsignedPadding)
     CommonWidth++;
 
-  return FixedPointSemantics(CommonWidth, CommonScale, ResultIsSigned,
+  return FixedPointSemantics(CommonWidth, Lsb{CommonLsb}, ResultIsSigned,
                              ResultIsSaturated, ResultHasUnsignedPadding);
 }
 
@@ -252,10 +255,10 @@ APFixedPoint APFixedPoint::mul(const APFixedPoint &Other,
   APSInt Result;
   if (CommonFXSema.isSigned())
     Result = ThisVal.smul_ov(OtherVal, Overflowed)
-                    .ashr(CommonFXSema.getScale());
+                 .relativeAShl(CommonFXSema.getLsbWeight());
   else
     Result = ThisVal.umul_ov(OtherVal, Overflowed)
-                    .lshr(CommonFXSema.getScale());
+                 .relativeLShl(CommonFXSema.getLsbWeight());
   assert(!Overflowed && "Full multiplication cannot overflow!");
   Result.setIsSigned(CommonFXSema.isSigned());
 
@@ -290,7 +293,10 @@ APFixedPoint APFixedPoint::div(const APFixedPoint &Other,
   bool Overflowed = false;
 
   // Widen the LHS and RHS so we can perform a full division.
-  unsigned Wide = CommonFXSema.getWidth() * 2;
+  // Also make sure that there will be enough space for the shift below to not
+  // overflow
+  unsigned Wide =
+      CommonFXSema.getWidth() * 2 + std::max(-CommonFXSema.getMsbWeight(), 0);
   if (CommonFXSema.isSigned()) {
     ThisVal = ThisVal.sext(Wide);
     OtherVal = OtherVal.sext(Wide);
@@ -301,7 +307,10 @@ APFixedPoint APFixedPoint::div(const APFixedPoint &Other,
 
   // Upscale to compensate for the loss of precision from division, and
   // perform the full division.
-  ThisVal = ThisVal.shl(CommonFXSema.getScale());
+  if (CommonFXSema.getLsbWeight() < 0)
+    ThisVal = ThisVal.shl(-CommonFXSema.getLsbWeight());
+  else if (CommonFXSema.getLsbWeight() > 0)
+    OtherVal = OtherVal.shl(CommonFXSema.getLsbWeight());
   APSInt Result;
   if (CommonFXSema.isSigned()) {
     APInt Rem;
@@ -371,17 +380,30 @@ APFixedPoint APFixedPoint::shl(unsigned Amt, bool *Overflow) const {
 
 void APFixedPoint::toString(SmallVectorImpl<char> &Str) const {
   APSInt Val = getValue();
-  unsigned Scale = getScale();
+  int Lsb = getLsbWeight();
+  int OrigWidth = getWidth();
 
-  if (Val.isSigned() && Val.isNegative() && Val != -Val) {
+  if (Lsb >= 0) {
+    APSInt IntPart = Val;
+    IntPart = IntPart.extend(IntPart.getBitWidth() + Lsb);
+    IntPart <<= Lsb;
+    IntPart.toString(Str, /*Radix=*/10);
+    Str.push_back('.');
+    Str.push_back('0');
+    return;
+  }
+
+  if (Val.isSigned() && Val.isNegative()) {
     Val = -Val;
+    Val.setIsUnsigned(true);
     Str.push_back('-');
   }
 
-  APSInt IntPart = Val >> Scale;
+  int Scale = -getLsbWeight();
+  APSInt IntPart = (OrigWidth > Scale) ? (Val >> Scale) : APSInt::get(0);
 
   // Add 4 digits to hold the value after multiplying 10 (the radix)
-  unsigned Width = Val.getBitWidth() + 4;
+  unsigned Width = std::max(OrigWidth, Scale) + 4;
   APInt FractPart = Val.zextOrTrunc(Scale).zext(Width);
   APInt FractPartMask = APInt::getAllOnes(Scale).zext(Width);
   APInt RadixInt = APInt(Width, 10);
@@ -395,6 +417,13 @@ void APFixedPoint::toString(SmallVectorImpl<char> &Str) const {
     FractPart = (FractPart * RadixInt) & FractPartMask;
   } while (FractPart != 0);
 }
+
+void APFixedPoint::print(raw_ostream &OS) const {
+  OS << "APFixedPoint(" << toString() << ", {";
+  Sema.print(OS);
+  OS << "})";
+}
+LLVM_DUMP_METHOD void APFixedPoint::dump() const { print(llvm::errs()); }
 
 APFixedPoint APFixedPoint::negate(bool *Overflow) const {
   if (!isSaturated()) {
@@ -480,7 +509,7 @@ APFloat APFixedPoint::convertToFloat(const fltSemantics &FloatSema) const {
 
   // Scale down the integer value in the float to match the correct scaling
   // factor.
-  APFloat ScaleFactor(std::pow(2, -(int)Sema.getScale()));
+  APFloat ScaleFactor(std::pow(2, Sema.getLsbWeight()));
   bool Ignored;
   ScaleFactor.convert(*OpSema, LosslessRM, &Ignored);
   Flt.multiply(ScaleFactor, LosslessRM);
@@ -535,7 +564,7 @@ APFixedPoint::getFromFloatValue(const APFloat &Value,
   // the integer range instead. Rounding mode is irrelevant here.
   // It is fine if this overflows to infinity even for saturating types,
   // since we will use floating point comparisons to check for saturation.
-  APFloat ScaleFactor(std::pow(2, DstFXSema.getScale()));
+  APFloat ScaleFactor(std::pow(2, -DstFXSema.getLsbWeight()));
   ScaleFactor.convert(*OpSema, LosslessRM, &Ignored);
   Val.multiply(ScaleFactor, LosslessRM);
 
@@ -549,7 +578,7 @@ APFixedPoint::getFromFloatValue(const APFloat &Value,
   // we risk checking for overflow with a value that is outside the
   // representable range of the fixed-point semantic even though no overflow
   // would occur had we rounded first.
-  ScaleFactor = APFloat(std::pow(2, -(int)DstFXSema.getScale()));
+  ScaleFactor = APFloat(std::pow(2, DstFXSema.getLsbWeight()));
   ScaleFactor.convert(*OpSema, LosslessRM, &Ignored);
   Val.roundToIntegral(RM);
   Val.multiply(ScaleFactor, LosslessRM);

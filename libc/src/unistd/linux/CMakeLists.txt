@@ -106,6 +106,33 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  execv
+  SRCS
+    execv.cpp
+  HDRS
+    ../execv.h
+  DEPENDS
+    libc.include.errno
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+    libc.src.unistd.environ
+)
+
+add_entrypoint_object(
+  execve
+  SRCS
+    execve.cpp
+  HDRS
+    ../execve.h
+  DEPENDS
+    libc.include.errno
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   fsync
   SRCS
     fsync.cpp

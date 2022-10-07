@@ -1198,7 +1198,8 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     // expression. That's just an instruction in hiding.
     // Also reject the case where we simplify back to the phi node. We wouldn't
     // be able to remove it in that case.
-    Value *NewVal = simplifyInstructionWithOperands(&I, Ops, SQ);
+    Value *NewVal = simplifyInstructionWithOperands(
+        &I, Ops, SQ.getWithInstruction(InBB->getTerminator()));
     if (NewVal && NewVal != PN && !match(NewVal, m_ConstantExpr())) {
       NewPhiValues.push_back(NewVal);
       continue;

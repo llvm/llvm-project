@@ -244,7 +244,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
   endif()
   if("${EXTRACT_TOOL}" STREQUAL "$<TARGET_FILE:llvm-extract>")
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/extracted_${bclib_name}
-      DEPENDS opt
+      DEPENDS llvm-extract
       APPEND)
   endif()
   if("${PACKAGER_TOOL}" STREQUAL "$<TARGET_FILE:clang-offload-packager>")

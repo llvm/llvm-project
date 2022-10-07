@@ -45,6 +45,9 @@ def ConstStructDirentPtrPtr : ConstType<StructDirentPtrPtr>;
 def StructTimeSpec : NamedType<"struct timespec">;
 def StructTimeSpecPtr : PtrType<StructTimeSpec>;
 
+def ExecArgvT : NamedType<"__exec_argv_t">;
+def ExecEnvpT : NamedType<"__exec_envp_t">;
+
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
   RestrictedPtrType RestrictedCharPtr = RestrictedPtrType<CharType>;
@@ -255,9 +258,16 @@ def POSIX : StandardSpec<"POSIX"> {
         SigSetType,
         StructSigaction,
         UnionSigVal,
+        PidT,
       ],
       [], // Enumerations
       [
+        FunctionSpec<
+          "kill",
+          RetValSpec<IntType>,
+          [ArgSpec<PidT>,
+            ArgSpec<IntType>]
+        >,
         FunctionSpec<
           "sigaction",
           RetValSpec<IntType>,
@@ -299,6 +309,8 @@ def POSIX : StandardSpec<"POSIX"> {
     "unistd.h",
     [], // Macros
     [
+      ExecArgvT,
+      ExecEnvpT,
       OffTType,
       SSizeTType,
       SizeTType,
@@ -341,6 +353,16 @@ def POSIX : StandardSpec<"POSIX"> {
           "close",
           RetValSpec<IntType>,
           [ArgSpec<IntType>]
+        >,
+        FunctionSpec<
+          "execv",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>, ArgSpec<ExecArgvT>]
+        >,
+        FunctionSpec<
+          "execve",
+          RetValSpec<IntType>,
+          [ArgSpec<ConstCharPtr>, ArgSpec<ExecArgvT>, ArgSpec<ExecEnvpT>]
         >,
         FunctionSpec<
           "fork",
@@ -512,6 +534,9 @@ def POSIX : StandardSpec<"POSIX"> {
           RetValSpec<SSizeTType>,
           [ArgSpec<IntType>, ArgSpec<ConstVoidPtr>, ArgSpec<SizeTType>]
         >,
+    ],
+    [
+        ObjectSpec<"environ", "char **">,
     ]
   >;
 

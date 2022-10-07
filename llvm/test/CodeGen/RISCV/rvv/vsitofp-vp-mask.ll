@@ -7,7 +7,7 @@ declare <vscale x 2 x half> @llvm.vp.sitofp.nxv2f16.nxv2i1(<vscale x 2 x i1>, <v
 define <vscale x 2 x half> @vsitofp_nxv2f16_nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsitofp_nxv2f16_nxv2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vmerge.vim v9, v9, -1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
@@ -34,7 +34,7 @@ declare <vscale x 2 x float> @llvm.vp.sitofp.nxv2f32.nxv2i1(<vscale x 2 x i1>, <
 define <vscale x 2 x float> @vsitofp_nxv2f32_nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsitofp_nxv2f32_nxv2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    vmerge.vim v9, v9, -1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8
@@ -61,7 +61,7 @@ declare <vscale x 2 x double> @llvm.vp.sitofp.nxv2f64.nxv2i1(<vscale x 2 x i1>, 
 define <vscale x 2 x double> @vsitofp_nxv2f64_nxv2i1(<vscale x 2 x i1> %va, <vscale x 2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsitofp_nxv2f64_nxv2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
 ; CHECK-NEXT:    vmerge.vim v10, v10, -1, v0
 ; CHECK-NEXT:    vmv1r.v v0, v8

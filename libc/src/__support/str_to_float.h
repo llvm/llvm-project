@@ -971,11 +971,11 @@ static inline T strtofloatingpoint(const char *__restrict src,
       }
       nan_mantissa |= fputil::FloatProperties<T>::QUIET_NAN_MASK;
       if (result.get_sign()) {
-        result = fputil::FPBits<T>(result.build_nan(nan_mantissa));
+        result = fputil::FPBits<T>(result.build_quiet_nan(nan_mantissa));
         result.set_sign(true);
       } else {
         result.set_sign(false);
-        result = fputil::FPBits<T>(result.build_nan(nan_mantissa));
+        result = fputil::FPBits<T>(result.build_quiet_nan(nan_mantissa));
       }
     }
   } else if ((*src | 32) == 'i') { // INF

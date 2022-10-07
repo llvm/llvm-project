@@ -160,7 +160,7 @@ if(DEFINED REMOTE_TEST_HOST)
   endif()
 
   set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_COMPILER_RT_EMULATOR
-        "\\\"${Python3_EXECUTABLE}\\\" \\\"${LLVM_PROJECT_DIR}/llvm/utils/remote-exec.py\\\" --execdir %T --exec-pattern='.*\\.c.*\\.tmp.*' --host=${REMOTE_TEST_USER}@${REMOTE_TEST_HOST}"
+        "\\\"${Python3_EXECUTABLE}\\\" \\\"${LLVM_PROJECT_DIR}/llvm/utils/remote-exec.py\\\" --host=${REMOTE_TEST_USER}@${REMOTE_TEST_HOST}"
         CACHE STRING "")
 
   set(RUNTIMES_${TOOLCHAIN_TARGET_TRIPLE}_LIBUNWIND_EXECUTOR                      "${DEFAULT_TEST_EXECUTOR}" CACHE STRING "")
