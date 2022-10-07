@@ -760,3 +760,48 @@ loop.latch.2:
 exit:
   ret void
 }
+
+; Test case that exposed a crash in the earlier NewVariables handling code.
+define void @test_only_some_new_variables_may_be_0(ptr %A, ptr %start) {
+; CHECK-LABEL: @test_only_some_new_variables_may_be_0(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A_10:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 10
+; CHECK-NEXT:    br label [[HEADER:%.*]]
+; CHECK:       header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[A_IV:%.*]] = getelementptr i32, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[A_IV]], [[A_10]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp uge ptr [[A_IV]], [[START:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_1]], [[C_2]]
+; CHECK-NEXT:    br i1 [[AND]], label [[LATCH]], label [[EXIT:%.*]]
+; CHECK:       latch:
+; CHECK-NEXT:    call void @clobber()
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
+; CHECK-NEXT:    [[CMP_NOT_I:%.*]] = icmp eq i64 [[IV]], 0
+; CHECK-NEXT:    br i1 [[CMP_NOT_I]], label [[HEADER]], label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %A.10 = getelementptr inbounds i32, ptr %A, i64 10
+  br label %header
+
+header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %A.iv = getelementptr i32, ptr %A, i64 %iv
+  %c.1 = icmp ult ptr %A.iv, %A.10
+  %c.2 = icmp uge ptr %A.iv, %start
+  %and = and i1 %c.1, %c.2
+  br i1 %and, label %latch, label %exit
+
+latch:
+  call void @clobber()
+  %iv.next = add nsw i64 %iv, -1
+  %cmp.not.i = icmp eq i64 %iv, 0
+  br i1 %cmp.not.i, label %header, label %exit
+
+exit:
+  ret void
+}
+
+declare void @clobber()
