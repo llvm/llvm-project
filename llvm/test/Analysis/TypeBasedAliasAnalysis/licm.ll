@@ -1,4 +1,4 @@
-; RUN: opt -tbaa -licm -S < %s | FileCheck %s
+; RUN: opt -aa-pipeline=tbaa -licm -S < %s | FileCheck %s
 
 ; LICM should be able to hoist the address load out of the loop
 ; by using TBAA information.

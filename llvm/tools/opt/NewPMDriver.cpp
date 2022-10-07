@@ -394,34 +394,9 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   // Specially handle the alias analysis manager so that we can register
   // a custom pipeline of AA passes with it.
   AAManager AA;
-  if (Passes.empty()) {
-    if (auto Err = PB.parseAAPipeline(AA, AAPipeline)) {
-      errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
-      return false;
-    }
-  }
-
-  // For compatibility with the legacy PM AA pipeline.
-  // AAResultsWrapperPass by default provides basic-aa in the legacy PM
-  // unless -disable-basic-aa is specified.
-  // TODO: remove this once tests implicitly requiring basic-aa use -passes= and
-  // -aa-pipeline=basic-aa.
-  if (!Passes.empty() && !DisableBasicAA) {
-    if (auto Err = PB.parseAAPipeline(AA, "basic-aa")) {
-      errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
-      return false;
-    }
-  }
-
-  // For compatibility with legacy pass manager.
-  // Alias analyses are not specially specified when using the legacy PM.
-  for (auto PassName : Passes) {
-    if (PB.isAAPassName(PassName)) {
-      if (auto Err = PB.parseAAPipeline(AA, PassName)) {
-        errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
-        return false;
-      }
-    }
+  if (auto Err = PB.parseAAPipeline(AA, AAPipeline)) {
+    errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
+    return false;
   }
 
   // Register the AA manager first so that our version is the one used.
