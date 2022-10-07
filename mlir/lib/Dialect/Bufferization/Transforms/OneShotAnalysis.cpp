@@ -430,10 +430,14 @@ static bool isMemoryWrite(Value value, const AnalysisState &state) {
 /// "writing_op", so op dominance can be used to compute the `happensBefore`
 /// relationship.
 ///
-/// This functions finds the closest enclosing repetitive region of all buffer
-/// writes wrt. the given given tensor reads and writes. If this is the same
-/// region (nullptr in case of "no repetitive region" found at all), op
-/// dominance can be used. Otherwise, it cannot be used.
+/// Whether op dominance can be used or not is decided as follows: Find the
+/// closest enclosing repetitive region of all buffer writes wrt. the given
+/// tensor reads and writes. (The given sets of reads and writes contain the
+/// entire alias set.) In case of a read, we look at the op that defines the
+/// read value. In case of a write, we look at the op that is writing. If all of
+/// those ops are in the same closest enclosing repetitive region (nullptr in
+/// case of "no repetitive region" found at all), then op dominance can be used.
+/// Otherwise, it cannot be used.
 ///
 /// Example: The common enclosing repetitive region is the scf.for loop.
 ///          Op dominance can be used.
@@ -572,23 +576,36 @@ static bool hasReadAfterWriteInterference(
       // met for uConflictingWrite to be an actual conflict.
       Operation *conflictingWritingOp = uConflictingWrite->getOwner();
 
-      // No conflict if the readingOp dominates conflictingWritingOp, i.e., the
-      // write is not visible when reading.
-      //
-      // Note: If ops are executed multiple times (e.g., because they are inside
-      //       a loop), there may be no meaningful `happensBefore` relationship.
-      if (useDominance &&
-          happensBefore(readingOp, conflictingWritingOp, domInfo))
-        continue;
+      // Inside of repetitive regions, ops may be executed multiple times and op
+      // dominance cannot be used to rule out conflicts.
+      if (useDominance) {
+        // No conflict if the readingOp dominates conflictingWritingOp, i.e.,
+        // the write is not visible when reading.
+        //
+        // Note: If ops are executed multiple times (e.g., because they are
+        //       inside a loop), there may be no meaningful `happensBefore`
+        //       relationship.
+        if (happensBefore(readingOp, conflictingWritingOp, domInfo))
+          continue;
 
-      // No conflict if the reading use equals the use of the conflicting write.
-      // A use cannot conflict with itself.
-      //
-      // Note: Just being the same op is not enough. It has to be the same use.
-      // Note: If the op is executed multiple times (e.g., because it is inside
-      //       a loop), it may be conflicting with itself.
-      if (useDominance && uConflictingWrite == uRead)
-        continue;
+        // No conflict if the reading use equals the use of the conflicting
+        // write. A use cannot conflict with itself.
+        //
+        // Note: Just being the same op is not enough. It has to be the same
+        //       use.
+        // Note: If the op is executed multiple times (e.g., because it is
+        //       inside a loop), it may be conflicting with itself.
+        if (uConflictingWrite == uRead)
+          continue;
+
+        // Ops are not conflicting if they are in mutually exclusive regions.
+        //
+        // Note: If ops are executed multiple times (e.g., because they are
+        //       inside a loop), mutually exclusive regions may be executed
+        //       multiple times.
+        if (insideMutuallyExclusiveRegions(readingOp, conflictingWritingOp))
+          continue;
+      }
 
       // No conflict if the op interface says so.
       if (auto bufferizableOp = options.dynCastBufferizableOp(readingOp))
@@ -600,15 +617,6 @@ static bool hasReadAfterWriteInterference(
                 options.dynCastBufferizableOp(conflictingWritingOp))
           if (bufferizableOp.isNotConflicting(uRead, uConflictingWrite, state))
             continue;
-
-      // Ops are not conflicting if they are in mutually exclusive regions.
-      //
-      // Note: If ops are executed multiple times (e.g., because they are inside
-      //       a loop), mutually exclusive regions may be executed multiple
-      //       times.
-      if (useDominance &&
-          insideMutuallyExclusiveRegions(readingOp, conflictingWritingOp))
-        continue;
 
       // Check all possible last writes.
       for (Value lastWrite : lastWrites) {
