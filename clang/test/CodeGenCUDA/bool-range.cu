@@ -14,10 +14,10 @@
 // TODO: Re-enable range metadata after issue
 // https://github.com/llvm/llvm-project/issues/58176 is fixed.
 
-// AMD:  %[[LD:[0-9]+]] = load i8, ptr addrspace(1) %x.global
+// AMD:  %[[LD:[0-9]+]] = load i8, ptr {{.*}}%x
 // AMD-NOT: !range
 // AMD:  %[[AND:[0-9]+]] = and i8 %[[LD]], 1
-// AMD:  store i8 %[[AND]], ptr addrspace(1) %y.global
+// AMD:  store i8 %[[AND]], ptr {{.*}}%y
 __global__ void test1(bool *x, bool *y) {
   *y = *x != false;
 }
