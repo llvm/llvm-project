@@ -83,7 +83,7 @@ Expr<SomeDerived> FoldOperation(
         isConstant &= IsInitialDataTarget(expr);
       }
     } else {
-      isConstant &= IsActuallyConstant(expr);
+      isConstant &= IsActuallyConstant(expr) || IsNullPointer(expr);
       if (auto valueShape{GetConstantExtents(context, expr)}) {
         if (auto componentShape{GetConstantExtents(context, symbol)}) {
           if (GetRank(*componentShape) > 0 && GetRank(*valueShape) == 0) {
