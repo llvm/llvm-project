@@ -18,6 +18,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Target/LLVMIR/TypeFromLLVM.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
@@ -31,6 +32,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IRReader/IRReader.h"
@@ -41,6 +43,15 @@ using namespace mlir;
 using namespace mlir::LLVM;
 
 #include "mlir/Dialect/LLVMIR/LLVMConversionEnumsFromLLVM.inc"
+
+/// Returns true if the LLVM IR intrinsic is convertible to an MLIR LLVM dialect
+/// intrinsic, or false if no counterpart exists.
+static bool isConvertibleIntrinsic(llvm::Intrinsic::ID id) {
+  static const DenseSet<unsigned> convertibleIntrinsics = {
+#include "mlir/Dialect/LLVMIR/LLVMConvertibleLLVMIRIntrinsics.inc"
+  };
+  return convertibleIntrinsics.contains(id);
+}
 
 // Utility to print an LLVM value as a string for passing to emitError().
 // FIXME: Diagnostic should be able to natively handle types that have
@@ -173,12 +184,20 @@ public:
   /// visited.
   SmallVector<Value> processValues(ArrayRef<llvm::Value *> values);
 
+  /// Converts `value` to an integer attribute. Asserts if the conversion fails.
+  IntegerAttr matchIntegerAttr(Value value);
+
   /// Translate the debug location to a FileLineColLoc, if `loc` is non-null.
   /// Otherwise, return UnknownLoc.
   Location translateLoc(llvm::DILocation *loc);
 
   /// Converts the type from LLVM to MLIR LLVM dialect.
   Type convertType(llvm::Type *type);
+
+  /// Converts an LLVM intrinsic to an MLIR LLVM dialect operation if an MLIR
+  /// counterpart exists. Otherwise, returns failure.
+  LogicalResult convertIntrinsic(OpBuilder &odsBuilder,
+                                 llvm::CallInst *callInst);
 
   /// Imports `f` into the current module.
   LogicalResult processFunction(llvm::Function *f);
@@ -261,6 +280,22 @@ Location Importer::translateLoc(llvm::DILocation *loc) {
 
 Type Importer::convertType(llvm::Type *type) {
   return typeTranslator.translateType(type);
+}
+
+LogicalResult Importer::convertIntrinsic(OpBuilder &odsBuilder,
+                                         llvm::CallInst *callInst) {
+  llvm::Function *callee = callInst->getCalledFunction();
+  if (!callee || !callee->isIntrinsic())
+    return failure();
+
+  // Check if the intrinsic is convertible to an MLIR dialect counterpart.
+  llvm::Intrinsic::ID intrinsicID = callee->getIntrinsicID();
+  if (!isConvertibleIntrinsic(intrinsicID))
+    return failure();
+
+#include "mlir/Dialect/LLVMIR/LLVMIntrinsicFromLLVMIRConversions.inc"
+
+  return failure();
 }
 
 // We only need integers, floats, doubles, and vectors and tensors thereof for
@@ -568,6 +603,14 @@ SmallVector<Value> Importer::processValues(ArrayRef<llvm::Value *> values) {
   return remapped;
 }
 
+IntegerAttr Importer::matchIntegerAttr(Value value) {
+  IntegerAttr integerAttr;
+  bool success = matchPattern(value, m_Constant(&integerAttr));
+  assert(success && "expected a constant value");
+  (void)success;
+  return integerAttr;
+}
+
 /// Return the MLIR OperationName for the given LLVM opcode.
 static StringRef lookupOperationNameFromOpcode(unsigned opcode) {
 // Maps from LLVM opcode to MLIR OperationName. This is deliberately ordered
@@ -647,15 +690,6 @@ static StringRef lookupOperationNameFromOpcode(unsigned opcode) {
 #undef INST
 
   return opcMap.lookup(opcode);
-}
-
-/// Return the MLIR OperationName for the given LLVM intrinsic ID.
-static StringRef lookupOperationNameFromIntrinsicID(unsigned id) {
-  // Maps from LLVM intrinsic ID to MLIR OperationName.
-  static const DenseMap<unsigned, StringRef> intrMap = {
-#include "mlir/Dialect/LLVMIR/LLVMIntrinsicToLLVMIROpPairs.inc"
-  };
-  return intrMap.lookup(id);
 }
 
 static ICmpPredicate getICmpPredicate(llvm::CmpInst::Predicate p) {
@@ -959,6 +993,11 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
   }
   case llvm::Instruction::Call: {
     llvm::CallInst *ci = cast<llvm::CallInst>(inst);
+
+    // For all intrinsics, try to generate to the corresponding op.
+    if (succeeded(convertIntrinsic(b, ci)))
+      return success();
+
     SmallVector<llvm::Value *> args(ci->args());
     SmallVector<Value> ops = processValues(args);
     SmallVector<Type, 2> tys;
@@ -968,20 +1007,6 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     }
     Operation *op;
     if (llvm::Function *callee = ci->getCalledFunction()) {
-      // For all intrinsics, try to generate to the corresponding op.
-      if (callee->isIntrinsic()) {
-        auto id = callee->getIntrinsicID();
-        StringRef opName = lookupOperationNameFromIntrinsicID(id);
-        if (!opName.empty()) {
-          OperationState state(loc, opName);
-          state.addOperands(ops);
-          state.addTypes(tys);
-          Operation *op = b.create(state);
-          if (!inst->getType()->isVoidTy())
-            instMap[inst] = op->getResult(0);
-          return success();
-        }
-      }
       op = b.create<CallOp>(
           loc, tys, SymbolRefAttr::get(b.getContext(), callee->getName()), ops);
     } else {
@@ -1171,12 +1196,8 @@ LogicalResult Importer::processFunction(llvm::Function *f) {
 
   auto functionType =
       convertType(f->getFunctionType()).dyn_cast<LLVMFunctionType>();
-  if (f->isIntrinsic()) {
-    StringRef opName = lookupOperationNameFromIntrinsicID(f->getIntrinsicID());
-    // Skip the intrinsic decleration if we could found a corresponding op.
-    if (!opName.empty())
-      return success();
-  }
+  if (f->isIntrinsic() && isConvertibleIntrinsic(f->getIntrinsicID()))
+    return success();
 
   bool dsoLocal = f->hasLocalLinkage();
   CConv cconv = convertCConvFromLLVM(f->getCallingConv());
