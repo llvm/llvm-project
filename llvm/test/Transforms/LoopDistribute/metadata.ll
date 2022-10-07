@@ -1,5 +1,5 @@
-; RUN: opt -basic-aa -loop-distribute -enable-loop-distribute=0 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=EXPLICIT --check-prefix=DEFAULT_OFF
-; RUN: opt -basic-aa -loop-distribute -enable-loop-distribute=1 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=EXPLICIT --check-prefix=DEFAULT_ON
+; RUN: opt -loop-distribute -enable-loop-distribute=0 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=EXPLICIT --check-prefix=DEFAULT_OFF
+; RUN: opt -loop-distribute -enable-loop-distribute=1 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=EXPLICIT --check-prefix=DEFAULT_ON
 
 ; Same loop as in basic.ll.  Check that distribution is enabled/disabled
 ; properly according to -enable-loop-distribute=0/1 and the

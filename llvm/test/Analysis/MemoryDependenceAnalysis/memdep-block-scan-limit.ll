@@ -1,5 +1,5 @@
-; RUN: opt -S -memdep -gvn -basic-aa < %s | FileCheck %s
-; RUN: opt -S -memdep -memdep-block-scan-limit=1 -gvn -basic-aa < %s | FileCheck %s --check-prefix=WITH-LIMIT
+; RUN: opt -S -gvn < %s | FileCheck %s
+; RUN: opt -S -memdep-block-scan-limit=1 -gvn < %s | FileCheck %s --check-prefix=WITH-LIMIT
 ; CHECK-LABEL: @test(
 ; CHECK: load
 ; CHECK-NOT: load

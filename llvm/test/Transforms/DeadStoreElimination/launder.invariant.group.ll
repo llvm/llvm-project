@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -dse -S | FileCheck %s
+; RUN: opt < %s -dse -S | FileCheck %s
 
 ; CHECK-LABEL: void @skipBarrier(ptr %ptr)
 define void @skipBarrier(ptr %ptr) {
