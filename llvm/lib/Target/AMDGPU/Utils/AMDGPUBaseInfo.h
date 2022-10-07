@@ -10,8 +10,12 @@
 #define LLVM_LIB_TARGET_AMDGPU_UTILS_AMDGPUBASEINFO_H
 
 #include "SIDefines.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/Alignment.h"
+#include <array>
+#include <functional>
+#include <utility>
 
 struct amd_kernel_code_t;
 
@@ -22,6 +26,7 @@ class Argument;
 class Function;
 class GCNSubtarget;
 class GlobalValue;
+class MCInstrInfo;
 class MCRegisterClass;
 class MCRegisterInfo;
 class MCSubtargetInfo;
@@ -498,6 +503,180 @@ int getVOPDFull(unsigned OpX, unsigned OpY);
 
 LLVM_READONLY
 bool isVOPD(unsigned Opc);
+
+namespace VOPD {
+
+enum Component : unsigned {
+  DST = 0,
+  SRC0,
+  SRC1,
+  SRC2,
+
+  DST_NUM = 1,
+  MAX_SRC_NUM = 3,
+  MAX_OPR_NUM = DST_NUM + MAX_SRC_NUM
+};
+
+// Number of VGPR banks per VOPD component operand.
+constexpr unsigned BANKS_NUM[] = {2, 4, 4, 2};
+
+enum ComponentIndex : unsigned { X = 0, Y = 1 };
+constexpr unsigned COMPONENTS[] = {ComponentIndex::X, ComponentIndex::Y};
+constexpr unsigned COMPONENTS_NUM = 2;
+
+enum ComponentKind : unsigned {
+  SINGLE = 0,  // A single VOP1 or VOP2 instruction which may be used in VOPD.
+  COMPONENT_X, // A VOPD instruction, X component.
+  COMPONENT_Y, // A VOPD instruction, Y component.
+  MAX = COMPONENT_Y
+};
+
+// Location of operands in a MachineInstr/MCInst
+// and position of operands in parsed operands array.
+class ComponentLayout {
+private:
+  // Regular MachineInstr/MCInst operands are ordered as follows:
+  //   dst, src0 [, other src operands]
+  // VOPD MachineInstr/MCInst operands are ordered as follows:
+  //   dstX, dstY, src0X [, other OpX operands], src0Y [, other OpY operands]
+  // Each ComponentKind has operand indices defined below.
+  static constexpr unsigned MC_DST_IDX[] = {0, 0, 1};
+  static constexpr unsigned FIRST_MC_SRC_IDX[] = {1, 2, 2 /* + OpXSrcNum */};
+
+  // Parsed operands of regular instructions are ordered as follows:
+  //   Mnemo dst src0 [vsrc1 ...]
+  // Parsed VOPD operands are ordered as follows:
+  //   OpXMnemo dstX src0X [vsrc1X|imm vsrc1X|vsrc1X imm] '::'
+  //   OpYMnemo dstY src0Y [vsrc1Y|imm vsrc1Y|vsrc1Y imm]
+  // Each ComponentKind has operand indices defined below.
+  static constexpr unsigned PARSED_DST_IDX[] = {1, 1, 4 /* + OpXSrcNum */};
+  static constexpr unsigned FIRST_PARSED_SRC_IDX[] = {2, 2,
+                                                      5 /* + OpXSrcNum */};
+
+private:
+  ComponentKind Kind;
+  unsigned OpXSrcNum;
+
+public:
+  ComponentLayout(ComponentKind Kind_ = ComponentKind::SINGLE,
+                  unsigned OpXSrcNum_ = 0)
+      : Kind(Kind_), OpXSrcNum(OpXSrcNum_) {
+    assert(Kind <= ComponentKind::MAX);
+    assert((Kind == ComponentKind::COMPONENT_Y) == (OpXSrcNum > 0));
+  }
+
+public:
+  unsigned getDstIndex() const { return MC_DST_IDX[Kind]; }
+  unsigned getSrcIndex(unsigned SrcIdx) const {
+    assert(SrcIdx < Component::MAX_SRC_NUM);
+    return FIRST_MC_SRC_IDX[Kind] + OpXSrcNum + SrcIdx;
+  }
+
+  unsigned getParsedDstIndex() const {
+    return PARSED_DST_IDX[Kind] + OpXSrcNum;
+  }
+  unsigned getParsedSrcIndex(unsigned SrcIdx) const {
+    assert(SrcIdx < Component::MAX_SRC_NUM);
+    return FIRST_PARSED_SRC_IDX[Kind] + OpXSrcNum + SrcIdx;
+  }
+};
+
+// Properties of VOPD components.
+class ComponentProps {
+private:
+  unsigned SrcOperandsNum;
+  Optional<unsigned> MandatoryLiteralIdx;
+  bool HasSrc2Acc;
+
+public:
+  ComponentProps(const MCInstrDesc &OpDesc);
+
+  unsigned getSrcOperandsNum() const { return SrcOperandsNum; }
+  bool hasMandatoryLiteral() const { return MandatoryLiteralIdx.has_value(); }
+  unsigned getMandatoryLiteralIndex() const {
+    assert(hasMandatoryLiteral());
+    return *MandatoryLiteralIdx;
+  }
+  bool hasRegularSrcOperand(unsigned SrcIdx) const {
+    assert(SrcIdx < Component::MAX_SRC_NUM);
+    return SrcOperandsNum > SrcIdx && !hasMandatoryLiteralAt(SrcIdx);
+  }
+  bool hasSrc2Acc() const { return HasSrc2Acc; }
+
+private:
+  bool hasMandatoryLiteralAt(unsigned SrcIdx) const {
+    assert(SrcIdx < Component::MAX_SRC_NUM);
+    return hasMandatoryLiteral() &&
+           *MandatoryLiteralIdx == Component::DST_NUM + SrcIdx;
+  }
+};
+
+// Layout and properties of VOPD components.
+class ComponentInfo : public ComponentLayout, public ComponentProps {
+public:
+  ComponentInfo(const MCInstrDesc &OpDesc,
+                ComponentKind Kind = ComponentKind::SINGLE,
+                unsigned OpXSrcNum = 0)
+      : ComponentLayout(Kind, OpXSrcNum), ComponentProps(OpDesc) {}
+
+  // Map MC operand index to parsed operand index.
+  // Return 0 if the specified operand does not exist.
+  unsigned getParsedOperandIndex(unsigned OprIdx) const;
+};
+
+// Properties of VOPD instructions.
+class InstInfo {
+private:
+  const ComponentInfo CompInfo[COMPONENTS_NUM];
+
+public:
+  using RegIndices = std::array<unsigned, Component::MAX_OPR_NUM>;
+
+  InstInfo(const MCInstrDesc &OpX, const MCInstrDesc &OpY)
+      : CompInfo{OpX, OpY} {}
+
+  InstInfo(const ComponentInfo &OprInfoX, const ComponentInfo &OprInfoY)
+      : CompInfo{OprInfoX, OprInfoY} {}
+
+  const ComponentInfo &operator[](size_t ComponentIdx) const {
+    assert(ComponentIdx < COMPONENTS_NUM);
+    return CompInfo[ComponentIdx];
+  }
+
+  // Check VOPD operands constraints.
+  // GetRegIdx(Component, OperandIdx) must return a VGPR register index
+  // for the specified component and operand. The callback must return 0
+  // if the operand is not a register or not a VGPR.
+  bool hasInvalidOperand(
+      std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
+    return getInvalidOperandIndex(GetRegIdx).has_value();
+  }
+
+  // Check VOPD operands constraints.
+  // Return the index of an invalid component operand, if any.
+  Optional<unsigned> getInvalidOperandIndex(
+      std::function<unsigned(unsigned, unsigned)> GetRegIdx) const;
+
+private:
+  RegIndices
+  getRegIndices(unsigned ComponentIdx,
+                std::function<unsigned(unsigned, unsigned)> GetRegIdx) const;
+};
+
+} // namespace VOPD
+
+LLVM_READONLY
+std::pair<unsigned, unsigned> getVOPDComponents(unsigned VOPDOpcode);
+
+LLVM_READONLY
+// Get properties of 2 single VOP1/VOP2 instructions
+// used as components to create a VOPD instruction.
+VOPD::InstInfo getVOPDInstInfo(const MCInstrDesc &OpX, const MCInstrDesc &OpY);
+
+LLVM_READONLY
+// Get properties of VOPD X and Y components.
+VOPD::InstInfo
+getVOPDInstInfo(unsigned VOPDOpcode, const MCInstrInfo *InstrInfo);
 
 LLVM_READONLY
 bool isTrue16Inst(unsigned Opc);

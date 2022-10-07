@@ -74,7 +74,7 @@ v_dual_fmamk_f32    v122, s0, 0xdeadbeef, v161   ::  v_dual_fmamk_f32  v123, s0,
 // GFX11-NEXT:{{^}}                                                                                 ^
 
 //===----------------------------------------------------------------------===//
-// A VOPD instruction cannot use more than 2 scalar operands
+// A VOPD instruction cannot use more than 2 scalar operands.
 //===----------------------------------------------------------------------===//
 
 // 2 different SGPRs + LITERAL
@@ -141,3 +141,129 @@ v_dual_add_f32      v255, vcc_lo, v2             ::  v_dual_cndmask_b32   v6, s1
 // GFX11: error: invalid operand (violates constant bus restrictions)
 // GFX11-NEXT:{{^}}v_dual_add_f32      v255, vcc_lo, v2             ::  v_dual_cndmask_b32   v6, s1, v3
 // GFX11-NEXT:{{^}}                                                                              ^
+
+//===----------------------------------------------------------------------===//
+// One dst register must be even and the other odd.
+//===----------------------------------------------------------------------===//
+
+v_dual_add_f32      v0, v4, v2                   ::  v_dual_add_f32       v2, v1, v3
+// GFX11: error: one dst register must be even and the other odd
+// GFX11-NEXT:{{^}}v_dual_add_f32      v0, v4, v2                   ::  v_dual_add_f32       v2, v1, v3
+// GFX11-NEXT:{{^}}                                                                          ^
+
+v_dual_mov_b32      v1, v4                       ::  v_dual_add_f32       v5, v1, v3
+// GFX11: error: one dst register must be even and the other odd
+// GFX11-NEXT:{{^}}v_dual_mov_b32      v1, v4                       ::  v_dual_add_f32       v5, v1, v3
+// GFX11-NEXT:{{^}}                                                                          ^
+
+v_dual_cndmask_b32  v2, v4, v5                   ::  v_dual_add_f32       v8, v5, v6
+// GFX11: error: one dst register must be even and the other odd
+// GFX11-NEXT:{{^}}v_dual_cndmask_b32  v2, v4, v5                   ::  v_dual_add_f32       v8, v5, v6
+// GFX11-NEXT:{{^}}                                                                          ^
+
+v_dual_fmac_f32     v3, v4, v5                   ::  v_dual_add_f32       v9, v5, v6
+// GFX11: error: one dst register must be even and the other odd
+// GFX11-NEXT:{{^}}v_dual_fmac_f32     v3, v4, v5                   ::  v_dual_add_f32       v9, v5, v6
+// GFX11-NEXT:{{^}}                                                                          ^
+
+v_dual_fmaak_f32    v4, v4, v5, 0xaf123456       ::  v_dual_add_f32       v0, v5, v6
+// GFX11: error: one dst register must be even and the other odd
+// GFX11-NEXT:{{^}}v_dual_fmaak_f32    v4, v4, v5, 0xaf123456       ::  v_dual_add_f32       v0, v5, v6
+// GFX11-NEXT:{{^}}                                                                          ^
+
+v_dual_fmamk_f32    v5, v4, 0xaf123456, v6       ::  v_dual_add_f32       v1, v5, v6
+// GFX11: error: one dst register must be even and the other odd
+// GFX11-NEXT:{{^}}v_dual_fmamk_f32    v5, v4, 0xaf123456, v6       ::  v_dual_add_f32       v1, v5, v6
+// GFX11-NEXT:{{^}}                                                                          ^
+
+//===----------------------------------------------------------------------===//
+// Src0 operands must use different VGPR banks.
+//===----------------------------------------------------------------------===//
+
+v_dual_add_f32      v1, v1, v5                   ::  v_dual_mov_b32       v2, v1
+// GFX11: error: src0 operands must use different VGPR banks
+// GFX11-NEXT:{{^}}v_dual_add_f32      v1, v1, v5                   ::  v_dual_mov_b32       v2, v1
+// GFX11-NEXT:{{^}}                                                                              ^
+
+v_dual_mov_b32      v1, v2                       ::  v_dual_add_f32       v2, v6, v6
+// GFX11: error: src0 operands must use different VGPR banks
+// GFX11-NEXT:{{^}}v_dual_mov_b32      v1, v2                       ::  v_dual_add_f32       v2, v6, v6
+// GFX11-NEXT:{{^}}                                                                              ^
+
+v_dual_cndmask_b32  v1, v3, v5                   ::  v_dual_add_f32       v2, v11, v6
+// GFX11: error: src0 operands must use different VGPR banks
+// GFX11-NEXT:{{^}}v_dual_cndmask_b32  v1, v3, v5                   ::  v_dual_add_f32       v2, v11, v6
+// GFX11-NEXT:{{^}}                                                                              ^
+
+v_dual_fmac_f32     v1, v4, v5                   ::  v_dual_add_f32       v2, v44, v6
+// GFX11: error: src0 operands must use different VGPR banks
+// GFX11-NEXT:{{^}}v_dual_fmac_f32     v1, v4, v5                   ::  v_dual_add_f32       v2, v44, v6
+// GFX11-NEXT:{{^}}                                                                              ^
+
+v_dual_fmaak_f32    v1, v5, v5, 0xaf123456       ::  v_dual_add_f32       v2, v25, v6
+// GFX11: error: src0 operands must use different VGPR banks
+// GFX11-NEXT:{{^}}v_dual_fmaak_f32    v1, v5, v5, 0xaf123456       ::  v_dual_add_f32       v2, v25, v6
+// GFX11-NEXT:{{^}}                                                                              ^
+
+v_dual_fmamk_f32    v1, v6, 0xaf123456, v6       ::  v_dual_add_f32       v2, v2, v6
+// GFX11: error: src0 operands must use different VGPR banks
+// GFX11-NEXT:{{^}}v_dual_fmamk_f32    v1, v6, 0xaf123456, v6       ::  v_dual_add_f32       v2, v2, v6
+// GFX11-NEXT:{{^}}                                                                              ^
+
+//===----------------------------------------------------------------------===//
+// Src1 operands must use different VGPR banks.
+//===----------------------------------------------------------------------===//
+
+v_dual_add_f32      v1, v4, v0                   ::  v_dual_add_f32       v2, v5, v4
+// GFX11: error: src1 operands must use different VGPR banks
+// GFX11-NEXT:{{^}}v_dual_add_f32      v1, v4, v0                   ::  v_dual_add_f32       v2, v5, v4
+// GFX11-NEXT:{{^}}                                                                                  ^
+
+v_dual_cndmask_b32  v1, v4, v1                   ::  v_dual_add_f32       v2, v5, v9
+// GFX11: error: src1 operands must use different VGPR banks
+// GFX11-NEXT:{{^}}v_dual_cndmask_b32  v1, v4, v1                   ::  v_dual_add_f32       v2, v5, v9
+// GFX11-NEXT:{{^}}                                                                                  ^
+
+v_dual_fmac_f32     v1, v4, v2                   ::  v_dual_add_f32       v2, v5, v14
+// GFX11: error: src1 operands must use different VGPR banks
+// GFX11-NEXT:{{^}}v_dual_fmac_f32     v1, v4, v2                   ::  v_dual_add_f32       v2, v5, v14
+// GFX11-NEXT:{{^}}                                                                                  ^
+
+v_dual_fmaak_f32    v1, v4, v3, 0xaf123456       ::  v_dual_add_f32       v2, v5, v23
+// GFX11: error: src1 operands must use different VGPR banks
+// GFX11-NEXT:{{^}}v_dual_fmaak_f32    v1, v4, v3, 0xaf123456       ::  v_dual_add_f32       v2, v5, v23
+// GFX11-NEXT:{{^}}                                                                                  ^
+
+v_dual_add_f32      v2, v4, v4                   ::  v_dual_cndmask_b32   v1, v5, v0
+// GFX11: error: src1 operands must use different VGPR banks
+// GFX11-NEXT:{{^}}v_dual_add_f32      v2, v4, v4                   ::  v_dual_cndmask_b32   v1, v5, v0
+// GFX11-NEXT:{{^}}                                                                                  ^
+
+v_dual_add_f32      v2, v4, v5                   ::  v_dual_fmac_f32      v1, v5, v1
+// GFX11: error: src1 operands must use different VGPR banks
+// GFX11-NEXT:{{^}}v_dual_add_f32      v2, v4, v5                   ::  v_dual_fmac_f32      v1, v5, v1
+// GFX11-NEXT:{{^}}                                                                                  ^
+
+v_dual_fmaak_f32    v1, v4, v3, 0xaf123456       ::  v_dual_fmaak_f32     v2, v5, v23, 0xaf123456
+// GFX11: error: src1 operands must use different VGPR banks
+// GFX11-NEXT:{{^}}v_dual_fmaak_f32    v1, v4, v3, 0xaf123456       ::  v_dual_fmaak_f32     v2, v5, v23, 0xaf123456
+// GFX11-NEXT:{{^}}                                                                                  ^
+
+//===----------------------------------------------------------------------===//
+// Src2 operands must use different VGPR banks.
+//===----------------------------------------------------------------------===//
+
+v_dual_fmamk_f32    v6, v1, 0xaf123456, v3       :: v_dual_fmamk_f32      v5, v2, 0xaf123456, v5
+// GFX11: error: src2 operands must use different VGPR banks
+// GFX11-NEXT:{{^}}v_dual_fmamk_f32    v6, v1, 0xaf123456, v3       :: v_dual_fmamk_f32      v5, v2, 0xaf123456, v5
+// GFX11-NEXT:{{^}}                                                                                              ^
+
+v_dual_fmac_f32     v7, v1, v2                   :: v_dual_fmamk_f32      v6, v2, 0xaf123456, v3
+// GFX11: error: src2 operands must use different VGPR banks
+// GFX11-NEXT:{{^}}v_dual_fmac_f32     v7, v1, v2                   :: v_dual_fmamk_f32      v6, v2, 0xaf123456, v3
+// GFX11-NEXT:{{^}}                                                                                              ^
+
+v_dual_fmamk_f32    v6, v1, 0xaf123456, v3       :: v_dual_fmac_f32       v5, v2, v3
+// GFX11: error: src2 operands must use different VGPR banks
+// GFX11-NEXT:{{^}}v_dual_fmamk_f32    v6, v1, 0xaf123456, v3       :: v_dual_fmac_f32       v5, v2, v3
+// GFX11-NEXT:{{^}}                                        ^
