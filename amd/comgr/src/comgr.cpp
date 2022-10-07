@@ -1874,7 +1874,7 @@ amd_comgr_get_mangled_name(amd_comgr_data_t Data,
     return AMD_COMGR_STATUS_ERROR;
 
   if (MangledName == NULL)
-    *Size = DataP->MangledNames[Index].length();
+    *Size = DataP->MangledNames[Index].size() + 1;
   else
     memcpy(MangledName, DataP->MangledNames[Index].c_str(), *Size);
 
