@@ -808,6 +808,7 @@ bool AMDGPUDisassembler::isMacDPP(MCInst &MI) const {
     assert(Desc.getOperandConstraint(
                AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::src2),
                MCOI::OperandConstraint::TIED_TO) == DST_IDX);
+    (void)DST_IDX;
     return true;
   }
 
