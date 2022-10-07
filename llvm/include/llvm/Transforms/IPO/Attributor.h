@@ -1778,7 +1778,10 @@ struct Attributor {
 
   /// Try to simplify \p IRP and in the scope \p S. If successful, true is
   /// returned and all potential values \p IRP can take are put into \p Values.
-  /// If false is returned no other information is valid.
+  /// If the result in \p Values contains select or PHI instructions it means
+  /// those could not be simplified to a single value. Recursive calls with
+  /// these instructions will yield their respective potential values. If false
+  /// is returned no other information is valid.
   bool getAssumedSimplifiedValues(const IRPosition &IRP,
                                   const AbstractAttribute *AA,
                                   SmallVectorImpl<AA::ValueAndContext> &Values,
