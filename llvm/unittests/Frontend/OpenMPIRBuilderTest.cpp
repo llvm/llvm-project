@@ -5353,12 +5353,8 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysArguments) {
   EXPECT_EQ(RTArgs.MapTypesArrayEnd, nullptr);
 
   EXPECT_EQ(RTArgs.BasePointersArray->getType(), VoidPtrPtrTy);
-  RTArgs.BasePointersArray->getType()->dump();
-  VoidPtrTy->dump();
   EXPECT_EQ(RTArgs.PointersArray->getType(), VoidPtrPtrTy);
   EXPECT_EQ(RTArgs.SizesArray->getType(), Int64PtrTy);
-  RTArgs.SizesArray->getType()->dump();
-  Int64PtrTy->dump();
   EXPECT_EQ(RTArgs.MapTypesArray->getType(), Int64PtrTy);
   EXPECT_EQ(RTArgs.MappersArray->getType(), VoidPtrPtrTy);
   EXPECT_EQ(RTArgs.MapNamesArray->getType(), VoidPtrPtrTy);
