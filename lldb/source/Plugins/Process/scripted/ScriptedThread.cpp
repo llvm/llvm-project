@@ -171,9 +171,7 @@ bool ScriptedThread::LoadArtificialStackFrames() {
   StackFrameListSP frames = GetStackFrameList();
 
   for (size_t idx = 0; idx < arr_size; idx++) {
-
     StructuredData::Dictionary *dict;
-
     if (!arr_sp->GetItemAtIndexAsDictionary(idx, dict) || !dict)
       return ScriptedInterface::ErrorWithMessage<bool>(
           LLVM_PRETTY_FUNCTION,
@@ -334,11 +332,10 @@ std::shared_ptr<DynamicRegisterInfo> ScriptedThread::GetDynamicRegisterInfo() {
 
     Status error;
     if (!reg_info)
-      return GetInterface()
-          ->ErrorWithMessage<std::shared_ptr<DynamicRegisterInfo>>(
-              LLVM_PRETTY_FUNCTION,
-              "Failed to get scripted thread registers info.", error,
-              LLDBLog::Thread);
+      return ScriptedInterface::ErrorWithMessage<
+          std::shared_ptr<DynamicRegisterInfo>>(
+          LLVM_PRETTY_FUNCTION, "Failed to get scripted thread registers info.",
+          error, LLDBLog::Thread);
 
     m_register_info_sp = std::make_shared<DynamicRegisterInfo>(
         *reg_info, m_scripted_process.GetTarget().GetArchitecture());
