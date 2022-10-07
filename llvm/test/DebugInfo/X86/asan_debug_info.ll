@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes=asan-pipeline -asan-use-after-return=never -S | \
+; RUN: opt < %s -passes=asan -asan-use-after-return=never -S | \
 ; RUN:   llc -O0 -filetype=obj - -o - | \
 ; RUN:   llvm-dwarfdump - | FileCheck %s
 
