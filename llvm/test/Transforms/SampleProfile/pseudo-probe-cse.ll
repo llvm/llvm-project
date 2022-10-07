@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -early-cse-memssa | FileCheck %s
+; RUN: opt < %s -S -passes='early-cse<memssa>' | FileCheck %s
 
 define i16 @f1() readonly {
   ret i16 0

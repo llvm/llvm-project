@@ -1,6 +1,4 @@
-; RUN: opt < %s -S -mtriple=aarch64-none-linux-gnu -mattr=+neon -early-cse -earlycse-debug-hash | FileCheck %s
-; RUN: opt < %s -S -mtriple=aarch64-none-linux-gnu -mattr=+neon -basic-aa -early-cse-memssa | FileCheck %s
-; RUN: opt < %s -S -mtriple=aarch64-none-linux-gnu -mattr=+neon -passes=early-cse | FileCheck %s
+; RUN: opt < %s -S -mtriple=aarch64-none-linux-gnu -mattr=+neon -passes=early-cse -earlycse-debug-hash | FileCheck %s
 ; RUN: opt < %s -S -mtriple=aarch64-none-linux-gnu -mattr=+neon -aa-pipeline=basic-aa -passes='early-cse<memssa>' | FileCheck %s
 
 define <4 x i32> @test_cse(ptr %a, [2 x <4 x i32>] %s.coerce, i32 %n) {
