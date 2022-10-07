@@ -1,6 +1,6 @@
 ; Test that llvm-reduce can remove uninteresting DI metadata from an IR file.
 ;
-; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=di-metadata --test %python --test-arg %p/Inputs/remove-dimetadata.py %s -o %t
+; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=di-metadata --test=FileCheck --test-arg=--check-prefix=CHECK-INTERESTINGNESS --test-arg=%s --test-arg=--input-file %s -o %t
 ; RUN: FileCheck <%t %s
 
 @global = global i32 0
@@ -30,5 +30,6 @@ define void @main() !dbg !5 {
 !16 = !{!17, !18}
 ; CHECK: elements: [[EL:![0-9]+]])
 ; CHECK: [[EL]] = !{!{{[0-9]+}}}
+; CHECK-INTERESTINGNESS: interesting
 !17 = !DIDerivedType(tag: DW_TAG_member, name: "interesting", scope: !14, file: !1, baseType: !13, size: 32, align: 32, flags: DIFlagPublic)
 !18 = !DIDerivedType(tag: DW_TAG_member, name: "uninteresting", scope: !14, file: !1, baseType: !13, size: 32, align: 32, offset: 32, flags: DIFlagPublic)
