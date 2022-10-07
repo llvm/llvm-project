@@ -319,6 +319,14 @@ static void genDelCOOCall(OpBuilder &builder, Location loc, Type elemTp,
   createFuncCall(builder, loc, name, {}, coo, EmitCInterface::Off);
 }
 
+/// Generates a call to release/delete a `SparseTensorIterator`.
+static void genDelIteratorCall(OpBuilder &builder, Location loc, Type elemTp,
+                               Value iter) {
+  SmallString<26> name{"delSparseTensorIterator",
+                       primaryTypeFunctionSuffix(elemTp)};
+  createFuncCall(builder, loc, name, {}, iter, EmitCInterface::Off);
+}
+
 /// Generates a call that adds one element to a coordinate scheme.
 /// In particular, this generates code like the following:
 ///   val = a[i1,..,ik];
@@ -335,7 +343,7 @@ static void genAddEltCall(OpBuilder &builder, Location loc, Type eltType,
 /// Generates a call to `iter->getNext()`.  If there is a next element,
 /// then it is copied into the out-parameters `ind` and `elemPtr`,
 /// and the return value is true.  If there isn't a next element, then
-/// the memory for `iter` is freed and the return value is false.
+/// the return value is false.
 static Value genGetNextCall(OpBuilder &builder, Location loc, Value iter,
                             Value ind, Value elemPtr) {
   Type elemTp = elemPtr.getType().cast<ShapedType>().getElementType();
@@ -572,7 +580,7 @@ genSparse2SparseReshape(ReshapeOp op, typename ReshapeOp::Adaptor adaptor,
   params[7] = coo;
   Value dst = genNewCall(rewriter, loc, params);
   genDelCOOCall(rewriter, loc, elemTp, coo);
-  genDelCOOCall(rewriter, loc, elemTp, iter);
+  genDelIteratorCall(rewriter, loc, elemTp, iter);
   rewriter.replaceOp(op, dst);
   return success();
 }
@@ -584,6 +592,7 @@ genSparse2SparseReshape(ReshapeOp op, typename ReshapeOp::Adaptor adaptor,
 //   }
 // TODO: It can be used by other operators (ReshapeOp, ConvertOP) conversion to
 // reduce code repetition!
+// TODO: rename to `genSparseIterationLoop`?
 static void genSparseCOOIterationLoop(
     ConversionPatternRewriter &rewriter, Location loc, Value t,
     RankedTensorType tensorTp,
@@ -624,7 +633,7 @@ static void genSparseCOOIterationLoop(
   rewriter.setInsertionPointAfter(whileOp);
 
   // Free memory for iterator.
-  genDelCOOCall(rewriter, loc, elemTp, iter);
+  genDelIteratorCall(rewriter, loc, elemTp, iter);
 }
 
 // Generate loop that iterates over a dense tensor.
@@ -875,11 +884,11 @@ public:
     if (!encDst && encSrc) {
       // This is sparse => dense conversion, which is handled as follows:
       //   dst = new Tensor(0);
-      //   iter = src->toCOO();
-      //   iter->startIterator();
+      //   iter = new SparseTensorIterator(src);
       //   while (elem = iter->getNext()) {
       //     dst[elem.indices] = elem.value;
       //   }
+      //   delete iter;
       RankedTensorType dstTensorTp = resType.cast<RankedTensorType>();
       RankedTensorType srcTensorTp = srcType.cast<RankedTensorType>();
       unsigned rank = dstTensorTp.getRank();
@@ -918,7 +927,7 @@ public:
       insertScalarIntoDenseTensor(rewriter, loc, elemPtr, dst, ivs);
       rewriter.create<scf::YieldOp>(loc);
       rewriter.setInsertionPointAfter(whileOp);
-      genDelCOOCall(rewriter, loc, elemTp, iter);
+      genDelIteratorCall(rewriter, loc, elemTp, iter);
       rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, resType, dst);
       // Deallocate the buffer.
       if (bufferization::allocationDoesNotEscape(op->getOpResult(0))) {
