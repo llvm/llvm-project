@@ -263,7 +263,7 @@ clang_experimental_DependencyScannerWorker_getFileDependencies_v3(
  * See \c clang_experimental_DependencyScannerWorker_getFileDependencies_v5.
  * Returns diagnostics in an unstructured CXString instead of CXDiagnosticSet.
  */
-CINDEX_LINKAGE CXErrorCode
+CINDEX_LINKAGE enum CXErrorCode
 clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
     CXDependencyScannerWorker Worker, int argc, const char *const *argv,
     const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
@@ -307,7 +307,7 @@ clang_experimental_DependencyScannerWorker_getFileDependencies_v4(
  * \returns \c CXError_Success on success; otherwise a non-zero \c CXErrorCode
  * indicating the kind of error.
  */
-CINDEX_LINKAGE CXErrorCode
+CINDEX_LINKAGE enum CXErrorCode
 clang_experimental_DependencyScannerWorker_getFileDependencies_v5(
     CXDependencyScannerWorker Worker, int argc, const char *const *argv,
     const char *ModuleName, const char *WorkingDirectory, void *MDCContext,
