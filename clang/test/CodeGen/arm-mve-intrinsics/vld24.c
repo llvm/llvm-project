@@ -10,7 +10,7 @@
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call { <8 x half>, <8 x half> } @llvm.arm.mve.vld2q.v8f16.p0f16(half* [[ADDR:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <8 x half>, <8 x half> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [[STRUCT_FLOAT16X8X2_T:%.*]] undef, <8 x half> [[TMP1]], 0, 0
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [[STRUCT_FLOAT16X8X2_T:%.*]] poison, <8 x half> [[TMP1]], 0, 0
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <8 x half>, <8 x half> } [[TMP0]], 1
 // CHECK-NEXT:    [[TMP4:%.*]] = insertvalue [[STRUCT_FLOAT16X8X2_T]] [[TMP2]], <8 x half> [[TMP3]], 0, 1
 // CHECK-NEXT:    ret [[STRUCT_FLOAT16X8X2_T]] [[TMP4]]
@@ -28,7 +28,7 @@ float16x8x2_t test_vld2q_f16(const float16_t *addr)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.arm.mve.vld4q.v16i8.p0i8(i8* [[ADDR:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [[STRUCT_UINT8X16X4_T:%.*]] undef, <16 x i8> [[TMP1]], 0, 0
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [[STRUCT_UINT8X16X4_T:%.*]] poison, <16 x i8> [[TMP1]], 0, 0
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[TMP0]], 1
 // CHECK-NEXT:    [[TMP4:%.*]] = insertvalue [[STRUCT_UINT8X16X4_T]] [[TMP2]], <16 x i8> [[TMP3]], 0, 1
 // CHECK-NEXT:    [[TMP5:%.*]] = extractvalue { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } [[TMP0]], 2
@@ -105,7 +105,7 @@ void test_vst2q_f16(float16_t *addr, float16x8x2_t value)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call { <8 x i16>, <8 x i16> } @llvm.arm.mve.vld2q.v8i16.p0i16(i16* [[ADDR:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <8 x i16>, <8 x i16> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [[STRUCT_UINT16X8X2_T:%.*]] undef, <8 x i16> [[TMP1]], 0, 0
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [[STRUCT_UINT16X8X2_T:%.*]] poison, <8 x i16> [[TMP1]], 0, 0
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <8 x i16>, <8 x i16> } [[TMP0]], 1
 // CHECK-NEXT:    [[TMP4:%.*]] = insertvalue [[STRUCT_UINT16X8X2_T]] [[TMP2]], <8 x i16> [[TMP3]], 0, 1
 // CHECK-NEXT:    store <8 x i16> [[TMP1]], <8 x i16>* [[VALUES:%.*]], align 8
@@ -129,7 +129,7 @@ void load_into_variable(const uint16_t *addr, uint16x8_t *values)
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = call { <4 x i32>, <4 x i32> } @llvm.arm.mve.vld2q.v4i32.p0i32(i32* [[ADDR:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[TMP0]], 0
-// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [[STRUCT_INT32X4X2_T:%.*]] undef, <4 x i32> [[TMP1]], 0, 0
+// CHECK-NEXT:    [[TMP2:%.*]] = insertvalue [[STRUCT_INT32X4X2_T:%.*]] poison, <4 x i32> [[TMP1]], 0, 0
 // CHECK-NEXT:    [[TMP3:%.*]] = extractvalue { <4 x i32>, <4 x i32> } [[TMP0]], 1
 // CHECK-NEXT:    [[TMP4:%.*]] = insertvalue [[STRUCT_INT32X4X2_T]] [[TMP2]], <4 x i32> [[TMP3]], 0, 1
 // CHECK-NEXT:    ret <4 x i32> [[TMP1]]

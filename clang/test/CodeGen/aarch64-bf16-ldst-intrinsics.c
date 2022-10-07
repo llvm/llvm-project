@@ -51,7 +51,7 @@ bfloat16x8_t test_vld1q_lane_bf16(bfloat16_t const *ptr, bfloat16x8_t src) {
 // CHECK-LABEL: @test_vld1_dup_bf16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load bfloat, bfloat* [[PTR:%.*]], align 2
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x bfloat> undef, bfloat [[TMP0]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x bfloat> poison, bfloat [[TMP0]], i64 0
 // CHECK-NEXT:    [[LANE:%.*]] = shufflevector <4 x bfloat> [[TMP1]], <4 x bfloat> poison, <4 x i32> zeroinitializer
 // CHECK-NEXT:    ret <4 x bfloat> [[LANE]]
 //
@@ -236,7 +236,7 @@ bfloat16x8x4_t test_vld1q_bf16_x4(bfloat16_t const *ptr) {
 // CHECK-LABEL: @test_vld1q_dup_bf16(
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load bfloat, bfloat* [[PTR:%.*]], align 2
-// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x bfloat> undef, bfloat [[TMP0]], i64 0
+// CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x bfloat> poison, bfloat [[TMP0]], i64 0
 // CHECK-NEXT:    [[LANE:%.*]] = shufflevector <8 x bfloat> [[TMP1]], <8 x bfloat> poison, <8 x i32> zeroinitializer
 // CHECK-NEXT:    ret <8 x bfloat> [[LANE]]
 //
