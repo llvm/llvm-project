@@ -1,4 +1,4 @@
-//===-- Implementation of strerror ----------------------------------------===//
+//===-- Implementation header for strerror_r --------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/string/strerror.h"
-#include "src/__support/common.h"
-#include "src/__support/error_to_string.h"
+#ifndef LLVM_LIBC_SRC_STRING_STRERROR_R_H
+#define LLVM_LIBC_SRC_STRING_STRERROR_R_H
+
+#include <stddef.h>
 
 namespace __llvm_libc {
 
-LLVM_LIBC_FUNCTION(char *, strerror, (int err_num)) {
-  return const_cast<char *>(get_error_string(err_num).data());
-}
+char *strerror_r(int err_num, char *buf, size_t buflen);
 
 } // namespace __llvm_libc
+
+#endif // LLVM_LIBC_SRC_STRING_STRERROR_R_H

@@ -223,18 +223,19 @@ public:
     }
   }
 
-  cpp::string_view get_str(int err_num) const {
+  cpp::string_view get_str(int err_num, cpp::string_view buffer) const {
     if (err_num >= 0 && static_cast<size_t>(err_num) < ERR_ARRAY_SIZE &&
         err_offsets[err_num] != -1) {
       return const_cast<char *>(string_array + err_offsets[err_num]);
     } else {
       // if the buffer can't hold "Unknown error" + ' ' + num_str, then just
       // return "Unknown error".
-      if (BUFFER_SIZE <
+      if (buffer.size() <
           (sizeof("Unknown error") + 1 + IntegerToString::dec_bufsize<int>()))
         return const_cast<char *>("Unknown error");
 
-      cpp::StringStream buffer_stream({error_buffer, BUFFER_SIZE});
+      cpp::StringStream buffer_stream(
+          {const_cast<char *>(buffer.data()), buffer.size()});
       buffer_stream << "Unknown error" << ' ' << err_num << '\0';
       return buffer_stream.str();
     }
@@ -246,6 +247,11 @@ static constexpr ErrorMapper error_mapper;
 } // namespace internal
 
 cpp::string_view get_error_string(int err_num) {
-  return internal::error_mapper.get_str(err_num);
+  return internal::error_mapper.get_str(
+      err_num, {internal::error_buffer, internal::BUFFER_SIZE});
+}
+
+cpp::string_view get_error_string(int err_num, cpp::string_view buffer) {
+  return internal::error_mapper.get_str(err_num, buffer);
 }
 } // namespace __llvm_libc
