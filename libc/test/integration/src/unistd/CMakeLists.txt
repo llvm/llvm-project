@@ -14,6 +14,7 @@ add_integration_test(
     libc.include.signal
     libc.include.sys_wait
     libc.include.unistd
+    libc.src.pthread.pthread_atfork
     libc.src.signal.raise
     libc.src.sys.wait.wait
     libc.src.sys.wait.wait4
