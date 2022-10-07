@@ -131,7 +131,7 @@ private:
 
 class AlignVectors {
 public:
-  AlignVectors(HexagonVectorCombine &HVC_) : HVC(HVC_) {}
+  AlignVectors(const HexagonVectorCombine &HVC_) : HVC(HVC_) {}
 
   bool run();
 
@@ -252,7 +252,7 @@ private:
   friend raw_ostream &operator<<(raw_ostream &OS, const ByteSpan &BS);
 
   std::map<Instruction *, AddrList> AddrGroups;
-  HexagonVectorCombine &HVC;
+  const HexagonVectorCombine &HVC;
 };
 
 LLVM_ATTRIBUTE_UNUSED
