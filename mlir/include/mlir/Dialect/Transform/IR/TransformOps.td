@@ -211,7 +211,8 @@ def MergeHandlesOp : TransformDialectOp<"merge_handles",
 }
 
 def PDLMatchOp : TransformDialectOp<"pdl_match",
-    [DeclareOpInterfaceMethods<TransformOpInterface>]> {
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Finds ops that match the named PDL pattern";
   let description = [{
     Find Payload IR ops nested within the Payload IR op associated with the
@@ -231,12 +232,10 @@ def PDLMatchOp : TransformDialectOp<"pdl_match",
   }];
 
   let arguments = (ins
-    Arg<PDL_Operation, "Payload IR scope to match within",
-        [TransformMappingRead, PayloadIRRead]>:$root, 
+    Arg<PDL_Operation, "Payload IR scope to match within">:$root, 
     SymbolRefAttr:$pattern_name);
   let results = (outs
-    Res<PDL_Operation, "Handle to the matched Payload IR ops",
-        [TransformMappingAlloc, TransformMappingWrite]>:$matched);
+    Res<PDL_Operation, "Handle to the matched Payload IR ops">:$matched);
 
   let assemblyFormat = "$pattern_name `in` $root attr-dict";
 }
