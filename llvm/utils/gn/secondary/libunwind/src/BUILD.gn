@@ -74,7 +74,7 @@ config("unwind_config") {
   }
 }
 
-if (libunwind_enable_shared) {
+if (libunwind_enable_shared && target_os != "android") {
   shared_library("unwind_shared") {
     output_dir = unwind_output_dir
     output_name = "unwind"
@@ -138,7 +138,7 @@ if (libunwind_enable_static) {
 
 group("src") {
   deps = []
-  if (libunwind_enable_shared) {
+  if (libunwind_enable_shared && target_os != "android") {
     deps += [ ":unwind_shared" ]
   }
   if (libunwind_enable_static) {
