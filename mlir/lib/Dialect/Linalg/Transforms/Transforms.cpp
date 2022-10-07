@@ -782,8 +782,6 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
 template <typename Conv2DOp, typename Conv1DOp>
 FailureOr<Conv1DOp> DownscaleSizeOneWindowed2DConvolution<Conv2DOp, Conv1DOp>::
     returningMatchAndRewrite(Conv2DOp convOp, PatternRewriter &rewriter) const {
-  if (failed(filter.checkAndNotify(rewriter, convOp)))
-    return failure();
   if (convOp.hasBufferSemantics())
     return failure(); // To be implemented.
 
@@ -867,7 +865,6 @@ FailureOr<Conv1DOp> DownscaleSizeOneWindowed2DConvolution<Conv2DOp, Conv1DOp>::
       rewriter, loc, conv1DOp.getResult(0), output);
   rewriter.replaceOp(convOp, inserted);
 
-  filter.replaceLinalgTransformationFilter(rewriter, conv1DOp);
   return conv1DOp;
 }
 
@@ -879,8 +876,6 @@ template struct linalg::DownscaleSizeOneWindowed2DConvolution<Conv2DNchwFchwOp,
 FailureOr<DepthwiseConv1DNwcWcOp>
 DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
     DepthwiseConv2DNhwcHwcOp convOp, PatternRewriter &rewriter) const {
-  if (failed(filter.checkAndNotify(rewriter, convOp)))
-    return failure();
   if (convOp.hasBufferSemantics())
     return failure(); // To be implemented.
 
@@ -943,17 +938,15 @@ DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
       rewriter, loc, conv1DOp.getResult(0), output);
   rewriter.replaceOp(convOp, inserted);
 
-  filter.replaceLinalgTransformationFilter(rewriter, conv1DOp);
   return conv1DOp;
 }
 
-void linalg::populateDecomposeConvolutionPatterns(
-    RewritePatternSet &patterns, const LinalgTransformationFilter &filter,
-    PatternBenefit benefit) {
+void linalg::populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
+                                                  PatternBenefit benefit) {
   patterns.add<DownscaleSizeOneWindowed2DConvolution<linalg::Conv2DNhwcHwcfOp,
                                                      Conv1DNwcWcfOp>,
                DownscaleSizeOneWindowed2DConvolution<linalg::Conv2DNchwFchwOp,
                                                      Conv1DNcwFcwOp>,
-               DownscaleDepthwiseConv2DNhwcHwcOp>(patterns.getContext(), filter,
+               DownscaleDepthwiseConv2DNhwcHwcOp>(patterns.getContext(),
                                                   benefit);
 }
