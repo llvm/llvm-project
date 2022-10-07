@@ -572,3 +572,49 @@ define i5 @udiv_mul_shl_missing_nsw2(i5 %x, i5 %y, i5 %z) {
   %d = udiv i5 %m1, %m2
   ret i5 %d
 }
+
+define i8 @udiv_shl_nuw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_shl_nuw(
+; CHECK-NEXT:    [[S:%.*]] = shl nuw i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[S]]
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %s = shl nuw i8 %y, %z
+  %d = udiv i8 %x, %s
+  ret i8 %d
+}
+
+define <2 x i4> @udiv_shl_nuw_exact(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
+; CHECK-LABEL: @udiv_shl_nuw_exact(
+; CHECK-NEXT:    [[S:%.*]] = shl nuw <2 x i4> [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv exact <2 x i4> [[X:%.*]], [[S]]
+; CHECK-NEXT:    ret <2 x i4> [[D]]
+;
+  %s = shl nuw <2 x i4> %y, %z
+  %d = udiv exact <2 x i4> %x, %s
+  ret <2 x i4> %d
+}
+
+define i8 @udiv_shl(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_shl(
+; CHECK-NEXT:    [[S:%.*]] = shl i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[S]]
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %s = shl i8 %y, %z
+  %d = udiv i8 %x, %s
+  ret i8 %d
+}
+
+define i8 @udiv_shl_nuw_use(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_shl_nuw_use(
+; CHECK-NEXT:    [[S:%.*]] = shl nuw i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[S]]
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %s = shl nuw i8 %y, %z
+  call void @use(i8 %s)
+  %d = udiv i8 %x, %s
+  ret i8 %d
+}
