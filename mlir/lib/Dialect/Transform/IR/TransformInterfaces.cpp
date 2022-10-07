@@ -66,10 +66,6 @@ transform::TransformState::setPayloadOps(Value value,
   assert(value != kTopLevelValue &&
          "attempting to reset the transformation root");
 
-  // TODO: this may go now
-  if (value.use_empty())
-    return success();
-
   auto iface = value.getType().cast<TransformTypeInterface>();
   DiagnosedSilenceableFailure result =
       iface.checkPayload(value.getLoc(), targets);
