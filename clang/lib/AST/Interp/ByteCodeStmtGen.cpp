@@ -153,6 +153,14 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
     return visitReturnStmt(cast<ReturnStmt>(S));
   case Stmt::IfStmtClass:
     return visitIfStmt(cast<IfStmt>(S));
+  case Stmt::WhileStmtClass:
+    return visitWhileStmt(cast<WhileStmt>(S));
+  case Stmt::DoStmtClass:
+    return visitDoStmt(cast<DoStmt>(S));
+  case Stmt::BreakStmtClass:
+    return visitBreakStmt(cast<BreakStmt>(S));
+  case Stmt::ContinueStmtClass:
+    return visitContinueStmt(cast<ContinueStmt>(S));
   case Stmt::NullStmtClass:
     return true;
   default: {
@@ -260,6 +268,69 @@ bool ByteCodeStmtGen<Emitter>::visitIfStmt(const IfStmt *IS) {
   }
 
   return true;
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitWhileStmt(const WhileStmt *S) {
+  const Expr *Cond = S->getCond();
+  const Stmt *Body = S->getBody();
+
+  LabelTy CondLabel = this->getLabel(); // Label before the condition.
+  LabelTy EndLabel = this->getLabel();  // Label after the loop.
+  LoopScope<Emitter> LS(this, EndLabel, CondLabel);
+
+  this->emitLabel(CondLabel);
+  if (!this->visitBool(Cond))
+    return false;
+  if (!this->jumpFalse(EndLabel))
+    return false;
+
+  if (!this->visitStmt(Body))
+    return false;
+  if (!this->jump(CondLabel))
+    return false;
+
+  this->emitLabel(EndLabel);
+
+  return true;
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitDoStmt(const DoStmt *S) {
+  const Expr *Cond = S->getCond();
+  const Stmt *Body = S->getBody();
+
+  LabelTy StartLabel = this->getLabel();
+  LabelTy EndLabel = this->getLabel();
+  LabelTy CondLabel = this->getLabel();
+  LoopScope<Emitter> LS(this, EndLabel, CondLabel);
+
+  this->emitLabel(StartLabel);
+  if (!this->visitStmt(Body))
+    return false;
+  this->emitLabel(CondLabel);
+  if (!this->visitBool(Cond))
+    return false;
+  if (!this->jumpTrue(StartLabel))
+    return false;
+  this->emitLabel(EndLabel);
+  return true;
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitBreakStmt(const BreakStmt *S) {
+  if (!BreakLabel)
+    return false;
+
+  return this->jump(*BreakLabel);
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitContinueStmt(const ContinueStmt *S) {
+  if (!ContinueLabel)
+    return false;
+
+  return this->jump(*ContinueLabel);
 }
 
 template <class Emitter>
