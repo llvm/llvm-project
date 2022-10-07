@@ -332,8 +332,6 @@ void initializePatchableFunctionPass(PassRegistry&);
 void initializePeepholeOptimizerPass(PassRegistry&);
 void initializePhiValuesWrapperPassPass(PassRegistry&);
 void initializePhysicalRegisterUsageInfoPass(PassRegistry&);
-void initializePlaceBackedgeSafepointsImplPass(PassRegistry&);
-void initializePlaceSafepointsPass(PassRegistry&);
 void initializePostDomOnlyPrinterWrapperPassPass(PassRegistry &);
 void initializePostDomOnlyViewerWrapperPassPass(PassRegistry &);
 void initializePostDomPrinterWrapperPassPass(PassRegistry &);
