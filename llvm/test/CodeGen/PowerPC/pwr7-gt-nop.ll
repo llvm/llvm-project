@@ -3,17 +3,17 @@ target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 target triple = "powerpc64-unknown-linux-gnu"
 
 ; Function Attrs: nounwind
-define void @foo(float* nocapture %a, float* nocapture %b, float* nocapture readonly %c, float* nocapture %d) #0 {
+define void @foo(ptr nocapture %a, ptr nocapture %b, ptr nocapture readonly %c, ptr nocapture %d) #0 {
 
 ; CHECK-LABEL: @foo
 
 entry:
-  %0 = load float, float* %b, align 4
-  store float %0, float* %a, align 4
-  %1 = load float, float* %c, align 4
-  store float %1, float* %b, align 4
-  %2 = load float, float* %a, align 4
-  store float %2, float* %d, align 4
+  %0 = load float, ptr %b, align 4
+  store float %0, ptr %a, align 4
+  %1 = load float, ptr %c, align 4
+  store float %1, ptr %b, align 4
+  %2 = load float, ptr %a, align 4
+  store float %2, ptr %d, align 4
   ret void
 
 ; CHECK: lwz [[REG1:[0-9]+]], 0(4)

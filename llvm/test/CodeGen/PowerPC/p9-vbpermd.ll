@@ -23,10 +23,10 @@ define void @test1() {
 ; CHECK-NEXT:    stxv 34, 0(3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @vull, align 16
-  %1 = load <16 x i8>, <16 x i8>* @vuc, align 16
+  %0 = load <2 x i64>, ptr @vull, align 16
+  %1 = load <16 x i8>, ptr @vuc, align 16
   %2 = call <2 x i64> @llvm.ppc.altivec.vbpermd(<2 x i64> %0, <16 x i8> %1)
-  store <2 x i64> %2, <2 x i64>* @res_vull, align 16
+  store <2 x i64> %2, ptr @res_vull, align 16
   ret void
 }
 declare <2 x i64> @llvm.ppc.altivec.vbpermd(<2 x i64>, <16 x i8>)

@@ -9,48 +9,48 @@ target triple = "powerpc64-unknown-linux-gnu"
 @cte_int = global <4 x i32> <i32 6, i32 6, i32 6, i32 6>, align 16
 
 
-define void @v4f32_to_v4i32(<4 x float> %x, <4 x i32>* nocapture %y) nounwind {
+define void @v4f32_to_v4i32(<4 x float> %x, ptr nocapture %y) nounwind {
 entry:
-  %0 = load <4 x float>, <4 x float>* @cte_float, align 16
+  %0 = load <4 x float>, ptr @cte_float, align 16
   %mul = fmul <4 x float> %0, %x
   %1 = fptosi <4 x float> %mul to <4 x i32>
-  store <4 x i32> %1, <4 x i32>* %y, align 16
+  store <4 x i32> %1, ptr %y, align 16
   ret void
 }
 ;CHECK-LABEL: v4f32_to_v4i32:
 ;CHECK: vctsxs {{[0-9]+}}, {{[0-9]+}}, 0
 
 
-define void @v4f32_to_v4u32(<4 x float> %x, <4 x i32>* nocapture %y) nounwind {
+define void @v4f32_to_v4u32(<4 x float> %x, ptr nocapture %y) nounwind {
 entry:
-  %0 = load <4 x float>, <4 x float>* @cte_float, align 16
+  %0 = load <4 x float>, ptr @cte_float, align 16
   %mul = fmul <4 x float> %0, %x
   %1 = fptoui <4 x float> %mul to <4 x i32>
-  store <4 x i32> %1, <4 x i32>* %y, align 16
+  store <4 x i32> %1, ptr %y, align 16
   ret void
 }
 ;CHECK-LABEL: v4f32_to_v4u32:
 ;CHECK: vctuxs {{[0-9]+}}, {{[0-9]+}}, 0
 
 
-define void @v4i32_to_v4f32(<4 x i32> %x, <4 x float>* nocapture %y) nounwind {
+define void @v4i32_to_v4f32(<4 x i32> %x, ptr nocapture %y) nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @cte_int, align 16
+  %0 = load <4 x i32>, ptr @cte_int, align 16
   %mul = mul <4 x i32> %0, %x
   %1 = sitofp <4 x i32> %mul to <4 x float>
-  store <4 x float> %1, <4 x float>* %y, align 16
+  store <4 x float> %1, ptr %y, align 16
   ret void
 }
 ;CHECK-LABEL: v4i32_to_v4f32:
 ;CHECK: vcfsx {{[0-9]+}}, {{[0-9]+}}, 0
 
 
-define void @v4u32_to_v4f32(<4 x i32> %x, <4 x float>* nocapture %y) nounwind {
+define void @v4u32_to_v4f32(<4 x i32> %x, ptr nocapture %y) nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @cte_int, align 16
+  %0 = load <4 x i32>, ptr @cte_int, align 16
   %mul = mul <4 x i32> %0, %x
   %1 = uitofp <4 x i32> %mul to <4 x float>
-  store <4 x float> %1, <4 x float>* %y, align 16
+  store <4 x float> %1, ptr %y, align 16
   ret void
 }
 ;CHECK-LABEL: v4u32_to_v4f32:

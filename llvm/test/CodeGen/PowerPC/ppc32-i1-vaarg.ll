@@ -1,10 +1,10 @@
 ; RUN: llc -verify-machineinstrs < %s -mcpu=ppc32 | FileCheck %s
 target triple = "powerpc-unknown-linux-gnu"
 
-declare void @printf(i8*, ...)
+declare void @printf(ptr, ...)
 
 define void @main() {
-  call void (i8*, ...) @printf(i8* undef, i1 false)
+  call void (ptr, ...) @printf(ptr undef, i1 false)
   ret void
 }
 

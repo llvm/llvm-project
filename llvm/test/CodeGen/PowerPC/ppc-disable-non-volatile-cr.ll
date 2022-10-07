@@ -29,11 +29,11 @@ entry:
   br i1 %cmp, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @fa to void ()*)()
+  tail call void @fa()
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @fb to void ()*)()
+  tail call void @fb()
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then

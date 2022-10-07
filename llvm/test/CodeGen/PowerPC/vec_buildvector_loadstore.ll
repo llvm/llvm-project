@@ -21,7 +21,7 @@ define void @foo() nounwind ssp {
 ; CHECK-NEXT:    stvx 2, 4, 3
 ; CHECK-NEXT:    blr
 entry:
-    %tmp0 = load <16 x i8>, <16 x i8>* @a, align 16
+    %tmp0 = load <16 x i8>, ptr @a, align 16
   %tmp180.i = extractelement <16 x i8> %tmp0, i32 0 ; <i8> [#uses=1]
   %tmp181.i = insertelement <16 x i8> <i8 0, i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef>, i8 %tmp180.i, i32 2 ; <<16 x i8>> [#uses=1]
   %tmp182.i = extractelement <16 x i8> %tmp0, i32 1 ; <i8> [#uses=1]
@@ -41,7 +41,7 @@ entry:
   %tmp196.i = insertelement <16 x i8> %tmp195.i, i8 0, i32 12 ; <<16 x i8>> [#uses=1]
   %tmp197.i = insertelement <16 x i8> %tmp196.i, i8 0, i32 13 ; <<16 x i8>> [#uses=1]
 %tmp201 = shufflevector <16 x i8> %tmp197.i, <16 x i8> %tmp0, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 28, i32 29>; ModuleID = 'try.c'
-    store <16 x i8> %tmp201, <16 x i8>* @c, align 16
+    store <16 x i8> %tmp201, ptr @c, align 16
     br label %return
 
 return:		; preds = %bb2
