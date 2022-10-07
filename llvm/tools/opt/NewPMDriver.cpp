@@ -462,18 +462,6 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
     std::string ModifiedPassName(PassName.begin(), PassName.end());
     if (PB.isAnalysisPassName(PassName))
       ModifiedPassName = "require<" + ModifiedPassName + ">";
-    // FIXME: These translations are supposed to be removed when lit tests that
-    // use these names have been updated to use the -passes syntax (and when the
-    // support for using the old syntax to specify passes is considered as
-    // deprecated for the new PM).
-    if (ModifiedPassName == "early-cse-memssa")
-      ModifiedPassName = "early-cse<memssa>";
-    else if (ModifiedPassName == "post-inline-ee-instrument")
-      ModifiedPassName = "ee-instrument<post-inline>";
-    else if (ModifiedPassName == "loop-extract-single")
-      ModifiedPassName = "loop-extract<single>";
-    else if (ModifiedPassName == "lower-matrix-intrinsics-minimal")
-      ModifiedPassName = "lower-matrix-intrinsics<minimal>";
     if (auto Err = PB.parsePassPipeline(MPM, ModifiedPassName)) {
       errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
       return false;
