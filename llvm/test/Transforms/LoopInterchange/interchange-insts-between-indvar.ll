@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -loop-interchange -cache-line-size=64 -verify-dom-info -verify-loop-info \
+; RUN: opt < %s -loop-interchange -cache-line-size=64 -verify-dom-info -verify-loop-info \
 ; RUN:     -S -pass-remarks=loop-interchange 2>&1 | FileCheck %s
 
 @A10 = local_unnamed_addr global [3 x [3 x i32]] zeroinitializer, align 16

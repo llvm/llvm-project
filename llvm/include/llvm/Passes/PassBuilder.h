@@ -374,12 +374,6 @@ public:
   /// returns false.
   Error parseAAPipeline(AAManager &AA, StringRef PipelineText);
 
-  /// Returns true if the pass name is the name of an alias analysis pass.
-  bool isAAPassName(StringRef PassName);
-
-  /// Returns true if the pass name is the name of a (non-alias) analysis pass.
-  bool isAnalysisPassName(StringRef PassName);
-
   /// Print pass names.
   void printPassNames(raw_ostream &OS);
 

@@ -1766,40 +1766,6 @@ void PassBuilder::setEnableHotColdSplitting(bool Enabled) {
   SplitColdCode = Enabled;
 }
 
-bool PassBuilder::isAAPassName(StringRef PassName) {
-#define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS)                               \
-  if (PassName == NAME)                                                        \
-    return true;
-#define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS)                             \
-  if (PassName == NAME)                                                        \
-    return true;
-#include "PassRegistry.def"
-  return false;
-}
-
-bool PassBuilder::isAnalysisPassName(StringRef PassName) {
-#define MODULE_ANALYSIS(NAME, CREATE_PASS)                                     \
-  if (PassName == NAME)                                                        \
-    return true;
-#define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
-  if (PassName == NAME)                                                        \
-    return true;
-#define LOOP_ANALYSIS(NAME, CREATE_PASS)                                       \
-  if (PassName == NAME)                                                        \
-    return true;
-#define CGSCC_ANALYSIS(NAME, CREATE_PASS)                                      \
-  if (PassName == NAME)                                                        \
-    return true;
-#define MODULE_ALIAS_ANALYSIS(NAME, CREATE_PASS)                               \
-  if (PassName == NAME)                                                        \
-    return true;
-#define FUNCTION_ALIAS_ANALYSIS(NAME, CREATE_PASS)                             \
-  if (PassName == NAME)                                                        \
-    return true;
-#include "PassRegistry.def"
-  return false;
-}
-
 static void printPassName(StringRef PassName, raw_ostream &OS) {
   OS << "  " << PassName << "\n";
 }
