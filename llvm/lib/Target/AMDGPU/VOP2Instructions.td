@@ -441,6 +441,11 @@ class VOP_MAC <ValueType vt0, ValueType vt1=vt0> : VOPProfile <[vt0, vt1, vt1, v
   let AsmDPP8 = getAsmDPP8<1, 2, 0, vt0>.ret;
   let AsmSDWA = getAsmSDWA<1, 2, vt0>.ret;
   let AsmSDWA9 = getAsmSDWA9<1, 1, 2, vt0>.ret;
+  let AsmVOP3DPPBase =
+      getAsmVOP3DPPBase<2 /*NumSrcArgs*/, HasDst, HasClamp,
+                        HasOpSel, HasOMod, IsVOP3P, HasModifiers,
+                        HasModifiers, HasModifiers,
+                        0 /*Src2HasMods*/, DstVT>.ret;
   let HasSrc2 = 0;
   let HasSrc2Mods = 0;
 
