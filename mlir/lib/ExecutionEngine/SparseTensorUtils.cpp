@@ -68,6 +68,44 @@ using namespace mlir::sparse_tensor;
 
 namespace {
 
+/// Wrapper class to avoid memory leakage issues.  The `SparseTensorCOO<V>`
+/// class provides a standard C++ iterator interface, where the iterator
+/// is implemented as per `std::vector`'s iterator.  However, for MLIR's
+/// usage we need to have an iterator which also holds onto the underlying
+/// `SparseTensorCOO<V>` so that it can be freed whenever the iterator
+/// is freed.
+//
+// We name this `SparseTensorIterator` rather than `SparseTensorCOOIterator`
+// for future-proofing, since the use of `SparseTensorCOO` is an
+// implementation detail that we eventually want to change (e.g., to
+// use `SparseTensorEnumerator` directly, rather than constructing the
+// intermediate `SparseTensorCOO` at all).
+template <typename V>
+class SparseTensorIterator final {
+public:
+  /// This ctor requires `coo` to be a non-null pointer to a dynamically
+  /// allocated object, and takes ownership of that object.  Therefore,
+  /// callers must not free the underlying COO object, since the iterator's
+  /// dtor will do so.
+  explicit SparseTensorIterator(const SparseTensorCOO<V> *coo)
+      : coo(coo), it(coo->begin()), end(coo->end()) {}
+
+  ~SparseTensorIterator() { delete coo; }
+
+  // Disable copy-ctor and copy-assignment, to prevent double-free.
+  SparseTensorIterator(const SparseTensorIterator<V> &) = delete;
+  SparseTensorIterator<V> &operator=(const SparseTensorIterator<V> &) = delete;
+
+  /// Gets the next element.  If there are no remaining elements, then
+  /// returns nullptr.
+  const Element<V> *getNext() { return it < end ? &*it++ : nullptr; }
+
+private:
+  const SparseTensorCOO<V> *const coo; // Owning pointer.
+  typename SparseTensorCOO<V>::const_iterator it;
+  const typename SparseTensorCOO<V>::const_iterator end;
+};
+
 /// Initializes sparse tensor from an external COO-flavored format.
 /// Used by `IMPL_CONVERTTOMLIRSPARSETENSOR`.
 // TODO: generalize beyond 64-bit indices.
@@ -194,7 +232,7 @@ extern "C" {
       return SparseTensorCOO<V>::newSparseTensorCOO(rank, shape, perm);        \
     coo = static_cast<SparseTensorStorage<P, I, V> *>(ptr)->toCOO(perm);       \
     if (action == Action::kToIterator) {                                       \
-      coo->startIterator();                                                    \
+      return new SparseTensorIterator<V>(coo);                                 \
     } else {                                                                   \
       assert(action == Action::kToCOO);                                        \
     }                                                                          \
@@ -398,16 +436,16 @@ MLIR_SPARSETENSOR_FOREVERY_V(IMPL_ADDELT)
 #undef IMPL_ADDELT
 
 #define IMPL_GETNEXT(VNAME, V)                                                 \
-  bool _mlir_ciface_getNext##VNAME(void *coo,                                  \
+  bool _mlir_ciface_getNext##VNAME(void *iter,                                 \
                                    StridedMemRefType<index_type, 1> *iref,     \
                                    StridedMemRefType<V, 0> *vref) {            \
-    assert(coo &&iref &&vref);                                                 \
+    assert(iter &&iref &&vref);                                                \
     assert(iref->strides[0] == 1);                                             \
     index_type *indx = iref->data + iref->offset;                              \
     V *value = vref->data + vref->offset;                                      \
     const uint64_t isize = iref->sizes[0];                                     \
     const Element<V> *elem =                                                   \
-        static_cast<SparseTensorCOO<V> *>(coo)->getNext();                     \
+        static_cast<SparseTensorIterator<V> *>(iter)->getNext();               \
     if (elem == nullptr)                                                       \
       return false;                                                            \
     for (uint64_t r = 0; r < isize; r++)                                       \
@@ -489,6 +527,13 @@ void delSparseTensor(void *tensor) {
   }
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_DELCOO)
 #undef IMPL_DELCOO
+
+#define IMPL_DELITER(VNAME, V)                                                 \
+  void delSparseTensorIterator##VNAME(void *iter) {                            \
+    delete static_cast<SparseTensorIterator<V> *>(iter);                       \
+  }
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_DELITER)
+#undef IMPL_DELITER
 
 char *getTensorFilename(index_type id) {
   char var[80];
