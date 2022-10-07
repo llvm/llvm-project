@@ -178,7 +178,7 @@ let Definition = "debugger" in {
   def FrameFormatUnique: Property<"frame-format-unique", "FormatEntity">,
     Global,
     DefaultStringValue<"frame #${frame.index}: ${ansi.fg.yellow}${frame.pc}${ansi.normal}{ ${module.file.basename}{`${function.name-without-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}{${function.is-optimized} [opt]}{${frame.is-artificial} [artificial]}\\\\n">,
-    Desc<"The default frame format string to use when displaying stack frameinformation for threads from thread backtrace unique.">;
+    Desc<"The default frame format string to use when displaying stack frame information for threads from thread backtrace unique.">;
   def ShowAutosuggestion: Property<"show-autosuggestion", "Boolean">,
     Global,
     DefaultFalse,
