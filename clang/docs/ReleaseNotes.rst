@@ -479,7 +479,8 @@ OpenMP Support in Clang
 CUDA Support in Clang
 ---------------------
 
-- ...
+- Clang now supports CUDA SDK up to 11.8
+- Added support for targeting sm_{87,89,90} GPUs.
 
 RISC-V Support in Clang
 -----------------------
