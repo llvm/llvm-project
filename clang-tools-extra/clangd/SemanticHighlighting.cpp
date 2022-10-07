@@ -164,7 +164,7 @@ kindForType(const Type *TP, const HeuristicResolver *Resolver) {
 
 // Whether T is const in a loose sense - is a variable with this type readonly?
 bool isConst(QualType T) {
-  if (T.isNull() || T->isDependentType())
+  if (T.isNull())
     return false;
   T = T.getNonReferenceType();
   if (T.isConstQualified())
