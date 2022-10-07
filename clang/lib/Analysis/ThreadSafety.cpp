@@ -1786,6 +1786,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       std::pair<til::LiteralPtr *, StringRef> Placeholder =
           Analyzer->SxBuilder.createThisPlaceholder(Exp);
       auto inserted = ConstructedObjects.insert({Exp, Placeholder.first});
+      (void)inserted;
       assert(inserted.second && "Are we visiting the same expression again?");
       if (isa<CXXConstructExpr>(Exp))
         Self = Placeholder.first;
