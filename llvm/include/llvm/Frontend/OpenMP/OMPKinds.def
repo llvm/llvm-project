@@ -92,6 +92,7 @@ __OMP_STRUCT_TYPE(OffloadEntry, __tgt_offload_entry, Int8Ptr, Int8Ptr, SizeTy,
 __OMP_STRUCT_TYPE(KernelArgs, __tgt_kernel_arguments, Int32, Int32, VoidPtrPtr,
                   VoidPtrPtr, Int64Ptr, Int64Ptr, VoidPtrPtr, VoidPtrPtr, Int64)
 __OMP_STRUCT_TYPE(AsyncInfo, __tgt_async_info, Int8Ptr)
+__OMP_STRUCT_TYPE(DependInfo, kmp_dep_info, SizeTy, SizeTy, Int8)
 
 #undef __OMP_STRUCT_TYPE
 #undef OMP_STRUCT_TYPE
