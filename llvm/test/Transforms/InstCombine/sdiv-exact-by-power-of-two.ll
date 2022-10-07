@@ -15,6 +15,7 @@ define i8 @t0(i8 %x) {
   %div = sdiv exact i8 %x, 32
   ret i8 %div
 }
+
 define i8 @n1(i8 %x) {
 ; CHECK-LABEL: @n1(
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X:%.*]], 32
@@ -23,6 +24,7 @@ define i8 @n1(i8 %x) {
   %div = sdiv i8 %x, 32 ; not exact
   ret i8 %div
 }
+
 define i8 @n2(i8 %x) {
 ; CHECK-LABEL: @n2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], -128
@@ -58,6 +60,7 @@ define <2 x i8> @n5_vec_undef(<2 x i8> %x) {
   %div = sdiv exact <2 x i8> %x, <i8 32, i8 undef>
   ret <2 x i8> %div
 }
+
 define <2 x i8> @n6_vec_negative(<2 x i8> %x) {
 ; CHECK-LABEL: @n6_vec_negative(
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact <2 x i8> [[X:%.*]], <i8 32, i8 -128>
