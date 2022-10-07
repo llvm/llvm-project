@@ -165,6 +165,7 @@ public:
   DecodeStatus convertVOP3DPPInst(MCInst &MI) const;
   DecodeStatus convertVOP3PDPPInst(MCInst &MI) const;
   DecodeStatus convertVOPCDPPInst(MCInst &MI) const;
+  void convertMacDPPInst(MCInst &MI) const;
 
   MCOperand decodeOperand_VGPR_32(unsigned Val) const;
   MCOperand decodeOperand_VGPR_32_Lo128(unsigned Val) const;
@@ -260,6 +261,8 @@ public:
   bool isGFX11Plus() const;
 
   bool hasArchitectedFlatScratch() const;
+
+  bool isMacDPP(MCInst &MI) const;
 };
 
 //===----------------------------------------------------------------------===//
