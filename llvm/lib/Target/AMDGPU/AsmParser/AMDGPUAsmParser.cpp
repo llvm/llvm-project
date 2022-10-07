@@ -8863,18 +8863,43 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultFI() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyDppFi);
 }
 
-void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands, bool IsDPP8) {
+void AMDGPUAsmParser::cvtVOP3DPP(MCInst &Inst, const OperandVector &Operands,
+                                 bool IsDPP8) {
   OptionalImmIndexMap OptionalIdx;
   unsigned Opc = Inst.getOpcode();
-  bool HasModifiers = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers) != -1;
-  unsigned I = 1;
   const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
+  bool HasModifiers =
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0_modifiers) != -1;
+
+  // MAC instructions are special because they have 'old'
+  // operand which is not tied to dst (but assumed to be).
+  // They also have dummy unused src2_modifiers.
+  int OldIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::old);
+  int Src2ModIdx =
+      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2_modifiers);
+  bool IsMAC = OldIdx != -1 && Src2ModIdx != -1 &&
+               Desc.getOperandConstraint(OldIdx, MCOI::TIED_TO) == -1;
+
+  unsigned I = 1;
   for (unsigned J = 0; J < Desc.getNumDefs(); ++J) {
     ((AMDGPUOperand &)*Operands[I++]).addRegOperands(Inst, 1);
   }
 
   int Fi = 0;
   for (unsigned E = Operands.size(); I != E; ++I) {
+
+    if (IsMAC) {
+      int NumOperands = Inst.getNumOperands();
+      if (OldIdx == NumOperands) {
+        // Handle old operand
+        constexpr int DST_IDX = 0;
+        Inst.addOperand(Inst.getOperand(DST_IDX));
+      } else if (Src2ModIdx == NumOperands) {
+        // Add unused dummy src2_modifiers
+        Inst.addOperand(MCOperand::createImm(0));
+      }
+    }
+
     auto TiedTo = Desc.getOperandConstraint(Inst.getNumOperands(),
                                             MCOI::TIED_TO);
     if (TiedTo != -1) {
