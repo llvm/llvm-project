@@ -253,7 +253,7 @@ OPTIONS
 
  Print the counter values for the displayed functions.
 
-.. option:: --output-format=<json|yaml>
+.. option:: --show-format=<text|json|yaml>
 
  Emit output in the selected format if supported by the provided profile type.
 
