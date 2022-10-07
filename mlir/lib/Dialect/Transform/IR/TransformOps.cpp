@@ -474,6 +474,13 @@ transform::PDLMatchOp::apply(transform::TransformResults &results,
   return DiagnosedSilenceableFailure::success();
 }
 
+void transform::PDLMatchOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  onlyReadsHandle(getRoot(), effects);
+  producesHandle(getMatched(), effects);
+  onlyReadsPayload(effects);
+}
+
 //===----------------------------------------------------------------------===//
 // ReplicateOp
 //===----------------------------------------------------------------------===//
