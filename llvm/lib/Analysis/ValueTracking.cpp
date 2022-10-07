@@ -4321,9 +4321,9 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
 /// return true.  When TrimAtNul is set, Str will contain only the bytes up
 /// to but not including the first nul.  Return false on failure.
 bool llvm::getConstantStringInfo(const Value *V, StringRef &Str,
-                                 uint64_t Offset, bool TrimAtNul) {
+                                 bool TrimAtNul) {
   ConstantDataArraySlice Slice;
-  if (!getConstantDataArrayInfo(V, Slice, 8, Offset))
+  if (!getConstantDataArrayInfo(V, Slice, 8))
     return false;
 
   if (Slice.Array == nullptr) {
