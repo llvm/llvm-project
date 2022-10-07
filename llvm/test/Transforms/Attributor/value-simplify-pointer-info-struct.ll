@@ -99,29 +99,20 @@ define i32 @testOneFieldGlobalS_type_mismatch() {
 ; CHECK-LABEL: define {{[^@]+}}@testOneFieldGlobalS_type_mismatch
 ; CHECK-SAME: () #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I:%.*]] = load double, ptr @GlobalS, align 8
-; CHECK-NEXT:    [[IC:%.*]] = fptosi double [[I]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[IC]], 42
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    br label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 0, 1
-; CHECK-NEXT:    br label [[IF_END]]
+; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[R_0:%.*]] = phi i32 [ [[ADD]], [[IF_THEN]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[I1:%.*]] = load i64, ptr getelementptr inbounds ([[STRUCT_S:%.*]], ptr @GlobalS, i32 0, i32 1), align 8
-; CHECK-NEXT:    [[I1C:%.*]] = sitofp i64 [[I1]] to double
-; CHECK-NEXT:    [[CMP1:%.*]] = fcmp oeq double [[I1C]], 3.140000e+00
-; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END4:%.*]]
+; CHECK-NEXT:    br label [[IF_END4:%.*]]
 ; CHECK:       if.then2:
-; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[R_0]], 2
-; CHECK-NEXT:    br label [[IF_END4]]
+; CHECK-NEXT:    unreachable
 ; CHECK:       if.end4:
-; CHECK-NEXT:    [[R_1:%.*]] = phi i32 [ [[ADD3]], [[IF_THEN2]] ], [ [[R_0]], [[IF_END]] ]
 ; CHECK-NEXT:    br label [[IF_END7:%.*]]
 ; CHECK:       if.then5:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       if.end7:
-; CHECK-NEXT:    ret i32 [[R_1]]
+; CHECK-NEXT:    ret i32 1
 ;
 entry:
   %i = load double, ptr @GlobalS, align 8
@@ -165,31 +156,25 @@ define i32 @testOneFieldGlobalS_byte_offset_wrong() {
 ; CHECK-LABEL: define {{[^@]+}}@testOneFieldGlobalS_byte_offset_wrong
 ; CHECK-SAME: () #[[ATTR2]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[I:%.*]] = load i32, ptr getelementptr inbounds (i32, ptr @GlobalS, i32 1), align 8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[I]], 42
-; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    br label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 0, 1
-; CHECK-NEXT:    br label [[IF_END]]
+; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[R_0:%.*]] = phi i32 [ [[ADD]], [[IF_THEN]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[I1:%.*]] = load double, ptr getelementptr (double, ptr @GlobalS, i32 3), align 8
 ; CHECK-NEXT:    [[CMP1:%.*]] = fcmp oeq double [[I1]], 3.140000e+00
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END4:%.*]]
 ; CHECK:       if.then2:
-; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 [[R_0]], 2
+; CHECK-NEXT:    [[ADD3:%.*]] = add nsw i32 1, 2
 ; CHECK-NEXT:    br label [[IF_END4]]
 ; CHECK:       if.end4:
-; CHECK-NEXT:    [[R_1:%.*]] = phi i32 [ [[ADD3]], [[IF_THEN2]] ], [ [[R_0]], [[IF_END]] ]
-; CHECK-NEXT:    [[I2:%.*]] = load ptr, ptr getelementptr (ptr, ptr @GlobalS, i32 11), align 8
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne ptr [[I2]], null
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_THEN5:%.*]], label [[IF_END7:%.*]]
+; CHECK-NEXT:    [[R_1:%.*]] = phi i32 [ [[ADD3]], [[IF_THEN2]] ], [ 1, [[IF_END]] ]
+; CHECK-NEXT:    br label [[IF_THEN5:%.*]]
 ; CHECK:       if.then5:
 ; CHECK-NEXT:    [[ADD6:%.*]] = add nsw i32 [[R_1]], 4
-; CHECK-NEXT:    br label [[IF_END7]]
+; CHECK-NEXT:    br label [[IF_END7:%.*]]
 ; CHECK:       if.end7:
-; CHECK-NEXT:    [[R_2:%.*]] = phi i32 [ [[ADD6]], [[IF_THEN5]] ], [ [[R_1]], [[IF_END4]] ]
-; CHECK-NEXT:    ret i32 [[R_2]]
+; CHECK-NEXT:    ret i32 [[ADD6]]
 ;
 entry:
   %i = load i32, ptr getelementptr (i32, ptr @GlobalS, i32 1), align 8
