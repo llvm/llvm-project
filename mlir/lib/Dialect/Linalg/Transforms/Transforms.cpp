@@ -396,23 +396,14 @@ mlir::linalg::LinalgTilingPattern::returningMatchAndRewrite(
 
 /// Linalg padding pattern.
 mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
-    MLIRContext *context, LinalgPaddingOptions options,
-    LinalgTransformationFilter f, PatternBenefit benefit)
+    MLIRContext *context, LinalgPaddingOptions options, PatternBenefit benefit)
     : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
-      filter(std::move(f)), options(std::move(options)) {}
-
-mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
-    StringRef opName, MLIRContext *context, LinalgPaddingOptions options,
-    LinalgTransformationFilter f, PatternBenefit benefit)
-    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
-      filter(f.addOpNameFilter(opName)), options(std::move(options)) {}
+      options(std::move(options)) {}
 
 FailureOr<LinalgOp>
 mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
     LinalgOp linalgOp, PatternRewriter &rewriter) const {
   if (!linalgOp.hasTensorSemantics())
-    return failure();
-  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
 
   // Pad the operation.
@@ -448,15 +439,10 @@ mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
     if (failed(newResult))
       continue;
     rewriter.replaceOp(padOp, *newResult);
-
-    // Do not apply hoist padding to the newly introduced transpose operations.
-    for (GenericOp transposeOp : transposeOps)
-      filter.replaceLinalgTransformationFilter(rewriter, transposeOp);
   }
 
   // Replace the original operation to pad.
   rewriter.replaceOp(linalgOp, *newResults);
-  filter.replaceLinalgTransformationFilter(rewriter, paddedOp);
 
   return paddedOp;
 }
