@@ -134,7 +134,8 @@ static fir::GlobalOp declareGlobal(Fortran::lower::AbstractConverter &converter,
     mlir::emitError(loc, "processing global declaration: symbol '")
         << toStringRef(sym.name()) << "' has unexpected details\n";
   return builder.createGlobal(loc, converter.genType(var), globalName, linkage,
-                              mlir::Attribute{}, isConstant(ultimate));
+                              mlir::Attribute{}, isConstant(ultimate),
+                              var.isTarget());
 }
 
 /// Temporary helper to catch todos in initial data target lowering.
@@ -442,7 +443,7 @@ static fir::GlobalOp defineGlobal(Fortran::lower::AbstractConverter &converter,
   }
   if (!global)
     global = builder.createGlobal(loc, symTy, globalName, linkage,
-                                  mlir::Attribute{}, isConst);
+                                  mlir::Attribute{}, isConst, var.isTarget());
   if (Fortran::semantics::IsAllocatableOrPointer(sym)) {
     const auto *details =
         sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();

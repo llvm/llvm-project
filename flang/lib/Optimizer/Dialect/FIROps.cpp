@@ -1251,6 +1251,9 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
     result.addAttribute("constant", builder.getUnitAttr());
   }
 
+  if (succeeded(parser.parseOptionalKeyword("target")))
+    result.addAttribute(getTargetAttrNameStr(), builder.getUnitAttr());
+
   mlir::Type globalType;
   if (parser.parseColonType(globalType))
     return mlir::failure();
@@ -1279,6 +1282,8 @@ void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
     p << '(' << val << ')';
   if (getOperation()->getAttr(fir::GlobalOp::getConstantAttrNameStr()))
     p << " constant";
+  if (getOperation()->getAttr(getTargetAttrName()))
+    p << " target";
   p << " : ";
   p.printType(getType());
   if (hasInitializationBody()) {
@@ -1295,7 +1300,7 @@ void fir::GlobalOp::appendInitialValue(mlir::Operation *op) {
 
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
-                          bool isConstant, mlir::Type type,
+                          bool isConstant, bool isTarget, mlir::Type type,
                           mlir::Attribute initialVal, mlir::StringAttr linkage,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   result.addRegion();
@@ -1307,6 +1312,8 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
   if (isConstant)
     result.addAttribute(getConstantAttrName(result.name),
                         builder.getUnitAttr());
+  if (isTarget)
+    result.addAttribute(getTargetAttrName(result.name), builder.getUnitAttr());
   if (initialVal)
     result.addAttribute(getInitValAttrName(result.name), initialVal);
   if (linkage)
@@ -1319,36 +1326,40 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::Type type, mlir::Attribute initialVal,
                           mlir::StringAttr linkage,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
-  build(builder, result, name, /*isConstant=*/false, type, {}, linkage, attrs);
+  build(builder, result, name, /*isConstant=*/false, /*isTarget=*/false, type,
+        {}, linkage, attrs);
 }
 
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
-                          bool isConstant, mlir::Type type,
+                          bool isConstant, bool isTarget, mlir::Type type,
                           mlir::StringAttr linkage,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
-  build(builder, result, name, isConstant, type, {}, linkage, attrs);
+  build(builder, result, name, isConstant, isTarget, type, {}, linkage, attrs);
 }
 
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
                           mlir::Type type, mlir::StringAttr linkage,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
-  build(builder, result, name, /*isConstant=*/false, type, {}, linkage, attrs);
+  build(builder, result, name, /*isConstant=*/false, /*isTarget=*/false, type,
+        {}, linkage, attrs);
 }
 
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
-                          bool isConstant, mlir::Type type,
+                          bool isConstant, bool isTarget, mlir::Type type,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
-  build(builder, result, name, isConstant, type, mlir::StringAttr{}, attrs);
+  build(builder, result, name, isConstant, isTarget, type, mlir::StringAttr{},
+        attrs);
 }
 
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
                           mlir::Type type,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
-  build(builder, result, name, /*isConstant=*/false, type, attrs);
+  build(builder, result, name, /*isConstant=*/false, /*isTarget=*/false, type,
+        attrs);
 }
 
 mlir::ParseResult fir::GlobalOp::verifyValidLinkage(llvm::StringRef linkage) {
