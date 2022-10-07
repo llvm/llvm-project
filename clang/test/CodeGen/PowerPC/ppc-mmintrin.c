@@ -1,26 +1,26 @@
 // REQUIRES: powerpc-registered-target
 
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr8 -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr8 -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P8,CHECK,CHECK-BE
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr8 -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P8,CHECK,CHECK-LE
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr9 -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-unknown-linux-gnu -mcpu=pwr9 -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P9,CHECK,CHECK-BE
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr9 -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-linux-gnu -mcpu=pwr9 -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n| FileCheck %s --check-prefixes=CHECK-P9,CHECK,CHECK-LE
 
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-unknown-freebsd13.0 -mcpu=pwr8 -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-unknown-freebsd13.0 -mcpu=pwr8 -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P8,CHECK,CHECK-BE
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-freebsd13.0 -mcpu=pwr8 -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-freebsd13.0 -mcpu=pwr8 -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P8,CHECK,CHECK-LE
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-unknown-freebsd13.0 -mcpu=pwr9 -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-unknown-freebsd13.0 -mcpu=pwr9 -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P9,CHECK,CHECK-BE
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64le-unknown-freebsd13.0 -mcpu=pwr9 -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64le-unknown-freebsd13.0 -mcpu=pwr9 -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n| FileCheck %s --check-prefixes=CHECK-P9,CHECK,CHECK-LE
 
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr8 -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr8 -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P8,CHECK,CHECK-BE
-// RUN: %clang -Xclang -no-opaque-pointers -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr9 -DNO_WARN_X86_INTRINSICS %s \
+// RUN: %clang -S -emit-llvm -target powerpc64-ibm-aix -mcpu=pwr9 -DNO_WARN_X86_INTRINSICS %s \
 // RUN:   -fno-discard-value-names -mllvm -disable-llvm-optzns -o - | llvm-cxxfilt -n | FileCheck %s --check-prefixes=CHECK-P9,CHECK,CHECK-BE
 
 #include <mmintrin.h>
@@ -205,20 +205,20 @@ test_convert() {
 // CHECK-LABEL: @test_convert
 
 // CHECK-LABEL: define available_externally i64 @_mm_cvtm64_si64
-// CHECK: %[[RESULT:[0-9a-zA-Z_.]+]] = load i64, i64* %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: %[[RESULT:[0-9a-zA-Z_.]+]] = load i64, ptr %{{[0-9a-zA-Z_.]+}}, align 8
 // CHECK-NEXT: ret i64 %[[RESULT]]
 
 // CHECK-LABEL: define available_externally i64 @_mm_cvtsi32_si64
-// CHECK: %[[LOAD:[0-9a-zA-Z_.]+]] = load i32, i32* %{{[0-9a-zA-Z_.]+}}
+// CHECK: %[[LOAD:[0-9a-zA-Z_.]+]] = load i32, ptr %{{[0-9a-zA-Z_.]+}}
 // CHECK-NEXT: %[[RESULT:[0-9a-zA-Z_.]+]] = zext i32 %[[LOAD]] to i64
 // CHECK-NEXT: ret i64 %[[RESULT]]
 
 // CHECK-LABEL: define available_externally i64 @_mm_cvtsi64_m64
-// CHECK: %[[RESULT:[0-9a-zA-Z_.]+]] = load i64, i64* %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: %[[RESULT:[0-9a-zA-Z_.]+]] = load i64, ptr %{{[0-9a-zA-Z_.]+}}, align 8
 // CHECK-NEXT: ret i64 %[[RESULT]]
 
 // CHECK-LABEL: define available_externally signext i32 @_mm_cvtsi64_si32
-// CHECK: %[[LOAD:[0-9a-zA-Z_.]+]] = load i64, i64* %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: %[[LOAD:[0-9a-zA-Z_.]+]] = load i64, ptr %{{[0-9a-zA-Z_.]+}}, align 8
 // CHECK-NEXT: %[[RESULT:[0-9a-zA-Z_.]+]] = trunc i64 %[[LOAD]] to i32
 // CHECK-NEXT: ret i32 %[[RESULT]]
 
@@ -236,14 +236,14 @@ test_alt_name_convert() {
 // CHECK: call i64 @_mm_cvtsi32_si64
 
 // CHECK-LABEL: define available_externally i64 @_m_from_int64
-// CHECK: %[[RESULT:[0-9a-zA-Z_.]+]] = load i64, i64* %{{[0-9a-zA-Z_.]+}}
+// CHECK: %[[RESULT:[0-9a-zA-Z_.]+]] = load i64, ptr %{{[0-9a-zA-Z_.]+}}
 // CHECK-NEXT: ret i64 %[[RESULT]]
 
 // CHECK-LABEL: define available_externally signext i32 @_m_to_int
 // CHECK: call signext i32 @_mm_cvtsi64_si32
 
 // CHECK-LABEL: define available_externally i64 @_m_to_int64
-// CHECK: %[[RESULT:[0-9a-zA-Z_.]+]] = load i64, i64* %{{[0-9a-zA-Z_.]+}}
+// CHECK: %[[RESULT:[0-9a-zA-Z_.]+]] = load i64, ptr %{{[0-9a-zA-Z_.]+}}
 // CHECK-NEXT: ret i64 %[[RESULT]]
 
 void __attribute__((noinline))
@@ -408,13 +408,13 @@ test_set() {
 // CHECK-LABEL: @test_set
 
 // CHECK-LABEL: define available_externally i64 @_mm_set_pi32
-// CHECK-COUNT-2: store i32 %{{[0-9a-zA-Z_.]+}}, i32*
+// CHECK-COUNT-2: store i32 %{{[0-9a-zA-Z_.]+}}, ptr
 
 // CHECK-LABEL: define available_externally i64 @_mm_set_pi16
-// CHECK-COUNT-4: store i16 %{{[0-9a-zA-Z_.]+}}, i16*
+// CHECK-COUNT-4: store i16 %{{[0-9a-zA-Z_.]+}}, ptr
 
 // CHECK-LABEL: define available_externally i64 @_mm_set_pi8
-// CHECK-COUNT-8: store i8 %{{[0-9a-zA-Z_.]+}}, i8*
+// CHECK-COUNT-8: store i8 %{{[0-9a-zA-Z_.]+}}, ptr
 
 void __attribute__((noinline))
 test_set1() {
@@ -426,19 +426,19 @@ test_set1() {
 // CHECK-LABEL: @test_set1
 
 // CHECK-LABEL: define available_externally i64 @_mm_set1_pi32
-// CHECK-COUNT-2: store i32 %{{[0-9a-zA-Z_.]+}}, i32*
+// CHECK-COUNT-2: store i32 %{{[0-9a-zA-Z_.]+}}, ptr
 
 // CHECK-LABEL: define available_externally i64 @_mm_set1_pi16
 // CHECK-P9: call <8 x i16> @vec_splats(short)
 // CHECK-P9: extractelement <2 x i64> %{{[0-9a-zA-Z_.]+}}, i32 0
-// CHECK-P8: %[[ADDR1:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
-// CHECK-P8: store i16 %{{[0-9a-zA-Z_.]+}}, i16* %[[ADDR1]], align 8
-// CHECK-P8: %[[ADDR2:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
-// CHECK-P8: store i16 %{{[0-9a-zA-Z_.]+}}, i16* %[[ADDR2]], align 2
-// CHECK-P8: %[[ADDR3:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
-// CHECK-P8: store i16 %{{[0-9a-zA-Z_.]+}}, i16* %[[ADDR3]], align 4
-// CHECK-P8: %[[ADDR4:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
-// CHECK-P8: store i16 %{{[0-9a-zA-Z_.]+}}, i16* %[[ADDR4]], align 2
+// CHECK-P8: %[[ADDR1:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
+// CHECK-P8: store i16 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR1]], align 8
+// CHECK-P8: %[[ADDR2:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
+// CHECK-P8: store i16 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR2]], align 2
+// CHECK-P8: %[[ADDR3:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
+// CHECK-P8: store i16 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR3]], align 4
+// CHECK-P8: %[[ADDR4:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
+// CHECK-P8: store i16 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR4]], align 2
 
 
 // CHECK-LABEL: define available_externally i64 @_mm_set1_pi8
@@ -456,10 +456,10 @@ test_setr() {
 // CHECK-LABEL: @test_setr
 
 // CHECK-LABEL: define available_externally i64 @_mm_setr_pi32
-// CHECK: %[[ADDR1:[0-9a-zA-Z_.]+]] = getelementptr inbounds [2 x i32], [2 x i32]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
-// CHECK: store i32 %{{[0-9a-zA-Z_.]+}}, i32* %[[ADDR1]], align 8
-// CHECK: %[[ADDR2:[0-9a-zA-Z_.]+]] = getelementptr inbounds [2 x i32], [2 x i32]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
-// CHECK: store i32 %{{[0-9a-zA-Z_.]+}}, i32* %[[ADDR2]], align 4
+// CHECK: %[[ADDR1:[0-9a-zA-Z_.]+]] = getelementptr inbounds [2 x i32], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
+// CHECK: store i32 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR1]], align 8
+// CHECK: %[[ADDR2:[0-9a-zA-Z_.]+]] = getelementptr inbounds [2 x i32], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
+// CHECK: store i32 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR2]], align 4
 
 // CHECK-LABEL: define available_externally i64 @_mm_setr_pi16
 // CHECK: call i64 @_mm_set_pi16
@@ -497,7 +497,7 @@ test_sll() {
 // CHECK: trunc i64 %{{[0-9a-zA-Z_.]+}} to i16
 // CHECK: call <8 x i16> @vec_splats(unsigned short)
 // CHECK: call <8 x i16> @vec_sl(short vector[8], unsigned short vector[8])
-// CHECK: store i64 0, i64*
+// CHECK: store i64 0, ptr
 
 // CHECK-LABEL: define available_externally i64 @_mm_sll_pi32
 // CHECK: %[[TRUNC:[0-9a-zA-Z_.]+]] = trunc i64 %{{[0-9a-zA-Z_.]+}} to i32
@@ -573,7 +573,7 @@ test_sra() {
 // CHECK: %[[TRUNC:[0-9a-zA-Z_.]+]] = trunc i64 %{{[0-9a-zA-Z_.]+}} to i16
 // CHECK: call <8 x i16> @vec_splats(unsigned short)(i16 noundef zeroext %[[TRUNC]])
 // CHECK: call <8 x i16> @vec_sra(short vector[8], unsigned short vector[8])
-// CHECK: store i64 0, i64*
+// CHECK: store i64 0, ptr
 
 // CHECK-LABEL: define available_externally i64 @_mm_srai_pi32
 // CHECK: %[[EXT:[0-9a-zA-Z_.]+]] = sext i32 %{{[0-9a-zA-Z_.]+}} to i64
@@ -633,7 +633,7 @@ test_srl() {
 // CHECK: trunc i64 %{{[0-9a-zA-Z_.]+}} to i16
 // CHECK: call <8 x i16> @vec_splats(unsigned short)
 // CHECK: call <8 x i16> @vec_sr(unsigned short vector[8], unsigned short vector[8])
-// CHECK: store i64 0, i64* %{{[0-9a-zA-Z_.]+}}, align 8
+// CHECK: store i64 0, ptr %{{[0-9a-zA-Z_.]+}}, align 8
 
 // CHECK-LABEL: define available_externally i64 @_mm_srli_si64
 // CHECK: %[[EXT:[0-9a-zA-Z_.]+]] = zext i32 %{{[0-9a-zA-Z_.]+}} to i64
@@ -691,9 +691,9 @@ test_sub() {
 // CHECK-LABEL: @test_sub
 
 // CHECK-LABEL: define available_externally i64 @_mm_sub_pi32
-// CHECK-P8-COUNT-2: getelementptr inbounds [2 x i32], [2 x i32]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
+// CHECK-P8-COUNT-2: getelementptr inbounds [2 x i32], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
 // CHECK-P8: sub nsw i32 %{{[0-9a-zA-Z_.]+}}, %{{[0-9a-zA-Z_.]+}}
-// CHECK-P8-COUNT-2: getelementptr inbounds [2 x i32], [2 x i32]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
+// CHECK-P8-COUNT-2: getelementptr inbounds [2 x i32], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
 // CHECK-P8: sub nsw i32 %{{[0-9a-zA-Z_.]+}}, %{{[0-9a-zA-Z_.]+}}
 // CHECK-P9: call <2 x i64> @vec_splats(unsigned long long)
 // CHECK-P9: call <2 x i64> @vec_splats(unsigned long long)
@@ -776,26 +776,26 @@ test_unpack() {
 // CHECK-LABEL: @test_unpack
 
 // CHECK-LABEL: define available_externally i64 @_mm_unpackhi_pi32
-// CHECK: getelementptr inbounds [2 x i32], [2 x i32]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
-// CHECK: %[[ADDR1:[0-9a-zA-Z_.]+]] = getelementptr inbounds [2 x i32], [2 x i32]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
-// CHECK: store i32 %{{[0-9a-zA-Z_.]+}}, i32* %[[ADDR1]], align 8
-// CHECK: getelementptr inbounds [2 x i32], [2 x i32]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
-// CHECK: %[[ADDR2:[0-9a-zA-Z_.]+]] = getelementptr inbounds [2 x i32], [2 x i32]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
-// CHECK: store i32 %{{[0-9a-zA-Z_.]+}}, i32* %[[ADDR2]], align 4
+// CHECK: getelementptr inbounds [2 x i32], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
+// CHECK: %[[ADDR1:[0-9a-zA-Z_.]+]] = getelementptr inbounds [2 x i32], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
+// CHECK: store i32 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR1]], align 8
+// CHECK: getelementptr inbounds [2 x i32], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
+// CHECK: %[[ADDR2:[0-9a-zA-Z_.]+]] = getelementptr inbounds [2 x i32], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
+// CHECK: store i32 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR2]], align 4
 
 // CHECK-LABEL: define available_externally i64 @_mm_unpackhi_pi16
-// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
-// CHECK: %[[ADDR1:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
-// CHECK: store i16 %{{[0-9a-zA-Z_.]+}}, i16* %[[ADDR1]], align 8
-// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
-// CHECK: %[[ADDR2:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
-// CHECK: store i16 %{{[0-9a-zA-Z_.]+}}, i16* %[[ADDR2]], align 2
-// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
-// CHECK: %[[ADDR3:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
-// CHECK: store i16 %{{[0-9a-zA-Z_.]+}}, i16* %[[ADDR3]], align 4
-// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
-// CHECK: %[[ADDR4:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
-// CHECK: store i16 %{{[0-9a-zA-Z_.]+}}, i16* %[[ADDR4]], align 2
+// CHECK: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
+// CHECK: %[[ADDR1:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
+// CHECK: store i16 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR1]], align 8
+// CHECK: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
+// CHECK: %[[ADDR2:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
+// CHECK: store i16 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR2]], align 2
+// CHECK: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
+// CHECK: %[[ADDR3:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
+// CHECK: store i16 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR3]], align 4
+// CHECK: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
+// CHECK: %[[ADDR4:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
+// CHECK: store i16 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR4]], align 2
 
 // CHECK-LABEL: define available_externally i64 @_mm_unpackhi_pi8
 // CHECK: call <2 x i64> @vec_splats(unsigned long long)
@@ -803,26 +803,26 @@ test_unpack() {
 // CHECK: call <16 x i8> @vec_mergel(unsigned char vector[16], unsigned char vector[16])
 
 // CHECK-LABEL: define available_externally i64 @_mm_unpacklo_pi32
-// CHECK: getelementptr inbounds [2 x i32], [2 x i32]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
-// CHECK: %[[ADDR1:[0-9a-zA-Z_.]+]] = getelementptr inbounds [2 x i32], [2 x i32]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
-// CHECK: store i32 %{{[0-9a-zA-Z_.]+}}, i32* %[[ADDR1]], align 8
-// CHECK: getelementptr inbounds [2 x i32], [2 x i32]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
-// CHECK: %[[ADDR2:[0-9a-zA-Z_.]+]] = getelementptr inbounds [2 x i32], [2 x i32]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
-// CHECK: store i32 %{{[0-9a-zA-Z_.]+}}, i32* %[[ADDR2]], align 4
+// CHECK: getelementptr inbounds [2 x i32], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
+// CHECK: %[[ADDR1:[0-9a-zA-Z_.]+]] = getelementptr inbounds [2 x i32], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
+// CHECK: store i32 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR1]], align 8
+// CHECK: getelementptr inbounds [2 x i32], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
+// CHECK: %[[ADDR2:[0-9a-zA-Z_.]+]] = getelementptr inbounds [2 x i32], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
+// CHECK: store i32 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR2]], align 4
 
 // CHECK-LABEL: define available_externally i64 @_mm_unpacklo_pi16
-// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
-// CHECK: %[[ADDR1:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
-// CHECK: store i16 %{{[0-9a-zA-Z_.]+}}, i16* %[[ADDR1]], align 8
-// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
-// CHECK: %[[ADDR2:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
-// CHECK: store i16 %{{[0-9a-zA-Z_.]+}}, i16* %[[ADDR2]], align 2
-// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
-// CHECK: %[[ADDR3:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
-// CHECK: store i16 %{{[0-9a-zA-Z_.]+}}, i16* %[[ADDR3]], align 4
-// CHECK: getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
-// CHECK: %[[ADDR4:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], [4 x i16]* %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
-// CHECK: store i16 %{{[0-9a-zA-Z_.]+}}, i16* %[[ADDR4]], align 2
+// CHECK: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
+// CHECK: %[[ADDR1:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
+// CHECK: store i16 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR1]], align 8
+// CHECK: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 0
+// CHECK: %[[ADDR2:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
+// CHECK: store i16 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR2]], align 2
+// CHECK: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
+// CHECK: %[[ADDR3:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 2
+// CHECK: store i16 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR3]], align 4
+// CHECK: getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 1
+// CHECK: %[[ADDR4:[0-9a-zA-Z_.]+]] = getelementptr inbounds [4 x i16], ptr %{{[0-9a-zA-Z_.]+}}, i64 0, i64 3
+// CHECK: store i16 %{{[0-9a-zA-Z_.]+}}, ptr %[[ADDR4]], align 2
 
 // CHECK-LABEL: define available_externally i64 @_mm_unpacklo_pi8
 // CHECK: call <2 x i64> @vec_splats(unsigned long long)

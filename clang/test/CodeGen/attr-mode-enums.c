@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 // Test checks that 'mode' attribute is handled correctly with enums, i. e. code
 //   1. "typedef enum { A } __attribute__((mode(HI))) T;" is accepted,
@@ -33,13 +33,13 @@ int main(void) {
   // CHECK: [[X8:%.+]] = alloca i8
   enum __attribute__((mode(QI))) { A8, B8 } x8 = B8;
 
-  // CHECK: store i8 0, i8* [[X1]]
-  // CHECK: store i16 1, i16* [[X2]]
-  // CHECK: store i32 0, i32* [[X3]]
-  // CHECK: store i64 1, i64* [[X4]]
-  // CHECK: store i8 0, i8* [[X5]]
-  // CHECK: store i128 0, i128* [[X7]]
-  // CHECK: store i8 1, i8* [[X8]]
+  // CHECK: store i8 0, ptr [[X1]]
+  // CHECK: store i16 1, ptr [[X2]]
+  // CHECK: store i32 0, ptr [[X3]]
+  // CHECK: store i64 1, ptr [[X4]]
+  // CHECK: store i8 0, ptr [[X5]]
+  // CHECK: store i128 0, ptr [[X7]]
+  // CHECK: store i8 1, ptr [[X8]]
 
   return x1 + x2 + x3 + x4 + x5 + x6 + x7 + x8;
 }
