@@ -613,10 +613,10 @@ class TextCrashLogParser(CrashLogParser):
     frame_regex = re.compile(r'^(\d+)\s+'              # id
                              r'(.+?)\s+'               # img_name
                              r'(?:' +version+ r'\s+)?' # img_version
-                             r'(0x[0-9a-fA-F]{7,})'    # addr (7 chars or more)
+                             r'(0x[0-9a-fA-F]{4,})'    # addr (4 chars or more)
                              r' +(.*)'                 # offs
                             )
-    null_frame_regex = re.compile(r'^\d+\s+\?\?\?\s+0{7,} +')
+    null_frame_regex = re.compile(r'^\d+\s+\?\?\?\s+0{4,} +')
     image_regex_uuid = re.compile(r'(0x[0-9a-fA-F]+)'          # img_lo
                                   r'\s+-\s+'                   #   -
                                   r'(0x[0-9a-fA-F]+)\s+'       # img_hi
