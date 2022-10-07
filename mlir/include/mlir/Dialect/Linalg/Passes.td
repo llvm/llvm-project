@@ -200,18 +200,6 @@ def LinalgStrategyPadPass
   ];
 }
 
-// TODO: if/when we need finer control add an anchorOp option.
-def LinalgStrategyDecomposePass
-    : Pass<"linalg-strategy-decompose-pass", "func::FuncOp"> {
-  let summary = "Configurable pass to apply pattern-based generalization.";
-  let constructor = "mlir::createLinalgStrategyDecomposePass()";
-  let dependentDialects = ["linalg::LinalgDialect"];
-  let options = [
-    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
-      "Which func op is the anchor to latch on.">,
-  ];
-}
-
 def LinalgStrategyRemoveMarkersPass
     : Pass<"linalg-strategy-remove-markers-pass", "func::FuncOp"> {
   let summary = "Cleanup pass that drops markers.";
