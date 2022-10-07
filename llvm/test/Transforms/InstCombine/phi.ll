@@ -1373,3 +1373,50 @@ join:
   %v = load i64, ptr %ptr, align 8
   ret i64 %v
 }
+
+define void @simplify_context_instr(ptr %ptr.base, i64 %n) {
+; CHECK-LABEL: @simplify_context_instr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PTR_END:%.*]] = getelementptr inbounds i8, ptr [[PTR_BASE:%.*]], i64 [[N:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], [[LATCH:%.*]] ], [ [[PTR_BASE]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[CMP:%.*]], [[LATCH]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[PTR]], align 1
+; CHECK-NEXT:    [[CMP]] = icmp eq i8 [[V]], 95
+; CHECK-NEXT:    br i1 [[CMP]], label [[LATCH]], label [[IF:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[PHI]], i32 117, i32 100
+; CHECK-NEXT:    call void @use(i32 [[SEL]])
+; CHECK-NEXT:    br label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i8, ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq ptr [[PTR_NEXT]], [[PTR_END]]
+; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %ptr.end = getelementptr inbounds i8, ptr %ptr.base, i64 %n
+  br label %loop
+
+loop:
+  %ptr = phi ptr [ %ptr.next, %latch ], [ %ptr.base, %entry ]
+  %phi = phi i1 [ %cmp, %latch ], [ true, %entry ]
+  %v = load i8, ptr %ptr, align 1
+  %cmp = icmp eq i8 %v, 95
+  br i1 %cmp, label %latch, label %if
+
+if:
+  %sel = select i1 %phi, i32 117, i32 100
+  call void @use(i32 %sel)
+  br label %latch
+
+latch:
+  %ptr.next = getelementptr inbounds i8, ptr %ptr, i64 1
+  %cmp.i.not = icmp eq ptr %ptr.next, %ptr.end
+  br i1 %cmp.i.not, label %exit, label %loop
+
+exit:
+  ret void
+}
