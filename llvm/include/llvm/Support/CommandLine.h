@@ -1290,7 +1290,7 @@ template <> struct applicator<FormattingFlags> {
 template <> struct applicator<MiscFlags> {
   static void opt(MiscFlags MF, Option &O) {
     assert((MF != Grouping || O.ArgStr.size() == 1) &&
-           "cl::Grouping can only apply to single charater Options.");
+           "cl::Grouping can only apply to single character Options.");
     O.setMiscFlag(MF);
   }
 };
