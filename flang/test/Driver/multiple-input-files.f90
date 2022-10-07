@@ -5,11 +5,11 @@
 ! NOTE: Use `-E` so that the compiler driver stops after the 1st compilation phase, preprocessing. That's all we need.
 
 ! TEST 1: Both input files are processed (output is printed to stdout)
-! RUN: %flang -E %s %S/Inputs/hello-world.f90 | FileCheck %s --match-full-lines -check-prefix=FLANG
+! RUN: %flang -E %s %S/Inputs/hello.f90 | FileCheck %s --match-full-lines -check-prefix=FLANG
 
 ! TEST 2: None of the files is processed (not possible to specify the output file when multiple input files are present)
-! RUN: not %flang -E -o - %S/Inputs/hello-world.f90 %s  2>&1 | FileCheck %s --match-full-lines -check-prefix=ERROR
-! RUN: not %flang -E -o %t %S/Inputs/hello-world.f90 %s 2>&1 | FileCheck %s --match-full-lines -check-prefix=ERROR
+! RUN: not %flang -E -o - %S/Inputs/hello.f90 %s  2>&1 | FileCheck %s --match-full-lines -check-prefix=ERROR
+! RUN: not %flang -E -o %t %S/Inputs/hello.f90 %s 2>&1 | FileCheck %s --match-full-lines -check-prefix=ERROR
 
 !----------------------------------------
 ! FLANG FRONTEND DRIVER (flang -fc1)
@@ -18,13 +18,13 @@
 ! This particular test case generates output files in the same directory as the input files. We need to copy the input files into a
 ! temporary directory to avoid polluting the source directory.
 ! RUN: rm -rf %t-dir && mkdir -p %t-dir && cd %t-dir
-! RUN: cp %s . && cp %S/Inputs/hello-world.f90 .
-! RUN: %flang_fc1 -test-io  hello-world.f90 multiple-input-files.f90 2>&1 \
+! RUN: cp %s . && cp %S/Inputs/hello.f90 .
+! RUN: %flang_fc1 -test-io  hello.f90 multiple-input-files.f90 2>&1 \
 ! RUN:  && FileCheck %s --input-file=multiple-input-files.txt --match-full-lines -check-prefix=FC1-OUTPUT1 \
-! RUN:  && FileCheck %s --input-file=hello-world.txt --match-full-lines -check-prefix=FC1-OUTPUT2
+! RUN:  && FileCheck %s --input-file=hello.txt --match-full-lines -check-prefix=FC1-OUTPUT2
 
 ! TEST 4: Only the last input file is processed
-! RUN: %flang_fc1 -test-io %s %S/Inputs/hello-world.f90 -o %t 2>&1 \
+! RUN: %flang_fc1 -test-io %s %S/Inputs/hello.f90 -o %t 2>&1 \
 ! RUN:  && FileCheck %s --input-file=%t --match-full-lines -check-prefix=FC1-OUTPUT3
 
 ! TEST 1: By default, `flang` prints the output from all input files to
@@ -35,8 +35,7 @@
 ! FLANG-NEXT:  End Program arithmetic
 
 ! FLANG-LABEL: program hello
-! FLANG-NEXT:  implicit none
-! FLANG-NEXT:  write(*,*) 'Hello world!'
+! FLANG-NEXT:  write(*,*), "Hello world!"
 ! FLANG-NEXT:end program hello
 
 ! TEST 2: `-o` does not when multiple input files are present
@@ -50,15 +49,13 @@
 ! FC1-OUTPUT1-NEXT:  End Program arithmetic
 
 ! FC1-OUTPUT2-LABEL:program hello
-! FC1-OUTPUT2-NEXT:  implicit none
-! FC1-OUTPUT2-NEXT:  write(*,*) 'Hello world!'
+! FC1-OUTPUT2-NEXT:  write(*,*), "Hello world!"
 ! FC1-OUTPUT2-NEXT:end program hello
 
 ! TEST 4: The output file _was_ specified - `flang_fc1` will process only
 ! the last input file and generate the corresponding output.
 ! FC1-OUTPUT3-LABEL:program hello
-! FC1-OUTPUT3-NEXT:  implicit none
-! FC1-OUTPUT3-NEXT:  write(*,*) 'Hello world!'
+! FC1-OUTPUT3-NEXT:  write(*,*), "Hello world!"
 ! FC1-OUTPUT3-NEXT:end program hello
 
 

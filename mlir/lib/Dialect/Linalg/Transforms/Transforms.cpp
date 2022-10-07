@@ -396,23 +396,14 @@ mlir::linalg::LinalgTilingPattern::returningMatchAndRewrite(
 
 /// Linalg padding pattern.
 mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
-    MLIRContext *context, LinalgPaddingOptions options,
-    LinalgTransformationFilter f, PatternBenefit benefit)
+    MLIRContext *context, LinalgPaddingOptions options, PatternBenefit benefit)
     : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
-      filter(std::move(f)), options(std::move(options)) {}
-
-mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
-    StringRef opName, MLIRContext *context, LinalgPaddingOptions options,
-    LinalgTransformationFilter f, PatternBenefit benefit)
-    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
-      filter(f.addOpNameFilter(opName)), options(std::move(options)) {}
+      options(std::move(options)) {}
 
 FailureOr<LinalgOp>
 mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
     LinalgOp linalgOp, PatternRewriter &rewriter) const {
   if (!linalgOp.hasTensorSemantics())
-    return failure();
-  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
 
   // Pad the operation.
@@ -448,15 +439,10 @@ mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
     if (failed(newResult))
       continue;
     rewriter.replaceOp(padOp, *newResult);
-
-    // Do not apply hoist padding to the newly introduced transpose operations.
-    for (GenericOp transposeOp : transposeOps)
-      filter.replaceLinalgTransformationFilter(rewriter, transposeOp);
   }
 
   // Replace the original operation to pad.
   rewriter.replaceOp(linalgOp, *newResults);
-  filter.replaceLinalgTransformationFilter(rewriter, paddedOp);
 
   return paddedOp;
 }
@@ -782,8 +768,6 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
 template <typename Conv2DOp, typename Conv1DOp>
 FailureOr<Conv1DOp> DownscaleSizeOneWindowed2DConvolution<Conv2DOp, Conv1DOp>::
     returningMatchAndRewrite(Conv2DOp convOp, PatternRewriter &rewriter) const {
-  if (failed(filter.checkAndNotify(rewriter, convOp)))
-    return failure();
   if (convOp.hasBufferSemantics())
     return failure(); // To be implemented.
 
@@ -867,7 +851,6 @@ FailureOr<Conv1DOp> DownscaleSizeOneWindowed2DConvolution<Conv2DOp, Conv1DOp>::
       rewriter, loc, conv1DOp.getResult(0), output);
   rewriter.replaceOp(convOp, inserted);
 
-  filter.replaceLinalgTransformationFilter(rewriter, conv1DOp);
   return conv1DOp;
 }
 
@@ -879,8 +862,6 @@ template struct linalg::DownscaleSizeOneWindowed2DConvolution<Conv2DNchwFchwOp,
 FailureOr<DepthwiseConv1DNwcWcOp>
 DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
     DepthwiseConv2DNhwcHwcOp convOp, PatternRewriter &rewriter) const {
-  if (failed(filter.checkAndNotify(rewriter, convOp)))
-    return failure();
   if (convOp.hasBufferSemantics())
     return failure(); // To be implemented.
 
@@ -943,17 +924,15 @@ DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
       rewriter, loc, conv1DOp.getResult(0), output);
   rewriter.replaceOp(convOp, inserted);
 
-  filter.replaceLinalgTransformationFilter(rewriter, conv1DOp);
   return conv1DOp;
 }
 
-void linalg::populateDecomposeConvolutionPatterns(
-    RewritePatternSet &patterns, const LinalgTransformationFilter &filter,
-    PatternBenefit benefit) {
+void linalg::populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
+                                                  PatternBenefit benefit) {
   patterns.add<DownscaleSizeOneWindowed2DConvolution<linalg::Conv2DNhwcHwcfOp,
                                                      Conv1DNwcWcfOp>,
                DownscaleSizeOneWindowed2DConvolution<linalg::Conv2DNchwFchwOp,
                                                      Conv1DNcwFcwOp>,
-               DownscaleDepthwiseConv2DNhwcHwcOp>(patterns.getContext(), filter,
+               DownscaleDepthwiseConv2DNhwcHwcOp>(patterns.getContext(),
                                                   benefit);
 }

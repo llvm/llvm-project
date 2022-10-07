@@ -590,9 +590,11 @@ transform::MatchOp::apply(transform::TransformResults &results,
                 getOps()->getAsValueRange<StringAttr>().end());
 
   ArrayRef<Operation *> payloadOps = state.getPayloadOps(getTarget());
-  if (payloadOps.size() != 1)
+  if (payloadOps.size() != 1) {
+    results.set(getResult().cast<OpResult>(), {});
     return DiagnosedSilenceableFailure(
         this->emitOpError("requires exactly one target handle"));
+  }
 
   SmallVector<Operation *> res;
   auto matchFun = [&](Operation *op) {
@@ -877,8 +879,11 @@ DiagnosedSilenceableFailure SplitOp::apply(TransformResults &results,
           }
           return OpFoldResult(op->getResult(0));
         }));
-    if (!diag.succeeded())
+    if (diag.isSilenceableFailure()) {
+      results.set(getFirst().cast<OpResult>(), {});
+      results.set(getSecond().cast<OpResult>(), {});
       return diag;
+    }
 
     if (splitPoints.size() != payload.size()) {
       emitError() << "expected the dynamic split point handle to point to as "
@@ -900,6 +905,8 @@ DiagnosedSilenceableFailure SplitOp::apply(TransformResults &results,
     if (!linalgOp) {
       auto diag = emitSilenceableError() << "only applies to structured ops";
       diag.attachNote(target->getLoc()) << "target op";
+      results.set(getFirst().cast<OpResult>(), {});
+      results.set(getSecond().cast<OpResult>(), {});
       return diag;
     }
 
@@ -907,6 +914,8 @@ DiagnosedSilenceableFailure SplitOp::apply(TransformResults &results,
       auto diag = emitSilenceableError() << "dimension " << getDimension()
                                          << " does not exist in target op";
       diag.attachNote(target->getLoc()) << "target op";
+      results.set(getFirst().cast<OpResult>(), {});
+      results.set(getSecond().cast<OpResult>(), {});
       return diag;
     }
 

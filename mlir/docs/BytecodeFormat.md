@@ -24,7 +24,7 @@ structural concepts layered on top.
 #### Fixed-Width Integers
 
 ```
-  byte                  ::= `0x00`...`0xFF`
+  byte ::= `0x00`...`0xFF`
 ```
 
 Fixed width integers are unsigned integers of a known byte size. The values are
@@ -179,7 +179,7 @@ and types to always be lazily loaded on demand.
 ```
 attr_type_section {
   attrs: attribute[],
-  types: type[]  
+  types: type[]
 }
 attr_type_offset_section {
   numAttrs: varint,
@@ -190,7 +190,7 @@ attr_type_offset_section {
 attr_type_offset_group {
   dialect: varint,
   numElements: varint,
-  offsets: varint[] // (offset << 1) | (hasCustomEncoding) 
+  offsets: varint[] // (offset << 1) | (hasCustomEncoding)
 }
 
 attribute {
@@ -323,7 +323,7 @@ op {
   numSuccessors: varint?,
   successors: varint[],
 
-  regionEncoding: varint?, // (numRegions << 1) | (isIsolatedFromAbove) 
+  regionEncoding: varint?, // (numRegions << 1) | (isIsolatedFromAbove)
   regions: region[]
 }
 ```

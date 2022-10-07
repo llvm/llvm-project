@@ -292,6 +292,8 @@ mlir::test::TestMixedSuccessAndSilenceableOp::applyToOne(
 DiagnosedSilenceableFailure
 mlir::test::TestPrintNumberOfAssociatedPayloadIROps::apply(
     transform::TransformResults &results, transform::TransformState &state) {
+  if (!getHandle())
+    emitRemark() << 0;
   emitRemark() << state.getPayloadOps(getHandle()).size();
   return DiagnosedSilenceableFailure::success();
 }

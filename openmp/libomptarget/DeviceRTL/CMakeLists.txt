@@ -32,8 +32,8 @@ if (LLVM_DIR)
   find_program(LINK_TOOL llvm-link PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
   find_program(OPT_TOOL opt PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
   find_program(EXTRACT_TOOL llvm-extract PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
-  if ((NOT CLANG_TOOL) OR (NOT LINK_TOOL) OR (NOT OPT_TOOL) OR (NOT EXTRACT_TOOL))
-    libomptarget_say("Not building DeviceRTL. Missing clang: ${CLANG_TOOL}, llvm-link: ${LINK_TOOL} or opt: ${OPT_TOOL}")
+  if ((NOT CLANG_TOOL) OR (NOT LINK_TOOL) OR (NOT OPT_TOOL) OR (NOT EXTRACT_TOOL) OR (NOT PACKAGER_TOOL))
+    libomptarget_say("Not building DeviceRTL. Missing clang: ${CLANG_TOOL}, llvm-link: ${LINK_TOOL}, opt: ${OPT_TOOL}, llvm-extract: ${EXTRACT_TOOL}, or clang-offload-packager: ${PACKAGER_TOOL}")
     return()
   else()
     libomptarget_say("Building DeviceRTL. Using clang: ${CLANG_TOOL}, llvm-link: ${LINK_TOOL} and opt: ${OPT_TOOL}")
@@ -85,10 +85,6 @@ if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
   set(amdgpu_mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
 endif()
 
-# Activate RTL message dumps if requested by the user.
-set(LIBOMPTARGET_DEVICE_DEBUG FALSE CACHE BOOL
-  "Activate DeviceRTL debug messages.")
-
 set(include_files
   ${include_directory}/Configuration.h
   ${include_directory}/Debug.h
@@ -135,12 +131,6 @@ set(bc_flags -c -emit-llvm -std=c++17 -fvisibility=hidden
              -I${devicertl_base_directory}/../include
              ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
 )
-
-if(${LIBOMPTARGET_DEVICE_DEBUG})
-  list(APPEND bc_flags -DOMPTARGET_DEBUG=-1)
-else()
-  list(APPEND bc_flags -DOMPTARGET_DEBUG=0)
-endif()
 
 # first create an object target
 add_library(omptarget.devicertl.all_objs OBJECT IMPORTED)
@@ -277,12 +267,12 @@ endfunction()
 # Generate a Bitcode library for all the compute capabilities the user requested
 add_custom_target(omptarget.devicertl.nvptx)
 foreach(sm ${nvptx_sm_list})
-  compileDeviceRTLLibrary(sm_${sm} nvptx nvptx64-nvidia-cuda -fopenmp-targets=nvptx64-nvidia-cuda -DLIBOMPTARGET_BC_TARGET --cuda-feature=+ptx61)
+  compileDeviceRTLLibrary(sm_${sm} nvptx nvptx64-nvidia-cuda -fopenmp-targets=nvptx64-nvidia-cuda --cuda-feature=+ptx61)
 endforeach()
 
 add_custom_target(omptarget.devicertl.amdgpu)
 foreach(mcpu ${amdgpu_mcpus})
-  compileDeviceRTLLibrary(${mcpu} amdgpu amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -DLIBOMPTARGET_BC_TARGET -D__AMDGCN__ -nogpulib)
+  compileDeviceRTLLibrary(${mcpu} amdgpu amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa)
 endforeach()
 
 # Archive all the object files generated above into a static library
