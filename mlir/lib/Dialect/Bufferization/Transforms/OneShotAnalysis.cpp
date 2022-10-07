@@ -386,7 +386,7 @@ getCommonEnclosingRepetitiveRegion(ArrayRef<Value> values,
     return None;
   Region *r = getEnclosingRepetitiveRegion(values.front(), options);
   for (Value value : values.drop_front())
-    if (getEnclosingRepetitiveRegion(value) != r)
+    if (getEnclosingRepetitiveRegion(value, options) != r)
       return None;
   return r;
 }
