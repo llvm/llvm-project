@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -gvn -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -gvn -S | FileCheck %s
 ;
 ; Check that section->word_ofs doesn't get reloaded in every iteration of the
 ; for loop.

@@ -234,30 +234,34 @@ fir::FirOpBuilder::createTemporary(mlir::Location loc, mlir::Type type,
 
 /// Create a global variable in the (read-only) data section. A global variable
 /// must have a unique name to identify and reference it.
-fir::GlobalOp
-fir::FirOpBuilder::createGlobal(mlir::Location loc, mlir::Type type,
-                                llvm::StringRef name, mlir::StringAttr linkage,
-                                mlir::Attribute value, bool isConst) {
+fir::GlobalOp fir::FirOpBuilder::createGlobal(mlir::Location loc,
+                                              mlir::Type type,
+                                              llvm::StringRef name,
+                                              mlir::StringAttr linkage,
+                                              mlir::Attribute value,
+                                              bool isConst, bool isTarget) {
   auto module = getModule();
   auto insertPt = saveInsertionPoint();
   if (auto glob = module.lookupSymbol<fir::GlobalOp>(name))
     return glob;
   setInsertionPoint(module.getBody(), module.getBody()->end());
-  auto glob = create<fir::GlobalOp>(loc, name, isConst, type, value, linkage);
+  auto glob =
+      create<fir::GlobalOp>(loc, name, isConst, isTarget, type, value, linkage);
   restoreInsertionPoint(insertPt);
   return glob;
 }
 
 fir::GlobalOp fir::FirOpBuilder::createGlobal(
     mlir::Location loc, mlir::Type type, llvm::StringRef name, bool isConst,
-    std::function<void(FirOpBuilder &)> bodyBuilder, mlir::StringAttr linkage) {
+    bool isTarget, std::function<void(FirOpBuilder &)> bodyBuilder,
+    mlir::StringAttr linkage) {
   auto module = getModule();
   auto insertPt = saveInsertionPoint();
   if (auto glob = module.lookupSymbol<fir::GlobalOp>(name))
     return glob;
   setInsertionPoint(module.getBody(), module.getBody()->end());
-  auto glob = create<fir::GlobalOp>(loc, name, isConst, type, mlir::Attribute{},
-                                    linkage);
+  auto glob = create<fir::GlobalOp>(loc, name, isConst, isTarget, type,
+                                    mlir::Attribute{}, linkage);
   auto &region = glob.getRegion();
   region.push_back(new mlir::Block);
   auto &block = glob.getRegion().back();

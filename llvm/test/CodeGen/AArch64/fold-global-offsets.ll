@@ -118,8 +118,6 @@ define i64 @f6() {
 }
 
 define i32 @f7() {
-; FIXME: GlobalISel doesn't handle vectors well.
-;
 ; CHECK-LABEL: f7:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adrp x8, x3+108
@@ -128,12 +126,8 @@ define i32 @f7() {
 ;
 ; GISEL-LABEL: f7:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    adrp x8, x3+88
-; GISEL-NEXT:    add x8, x8, :lo12:x3+88
-; GISEL-NEXT:    mov v0.d[1], x8
-; GISEL-NEXT:    mov d0, v0.d[1]
-; GISEL-NEXT:    fmov x8, d0
-; GISEL-NEXT:    ldr w0, [x8, #20]
+; GISEL-NEXT:    adrp x8, x3+108
+; GISEL-NEXT:    ldr w0, [x8, :lo12:x3+108]
 ; GISEL-NEXT:    ret
 
 entry:

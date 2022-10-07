@@ -12,6 +12,22 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  kill_test
+  SUITE
+    libc_signal_unittests
+  SRCS
+    kill_test.cpp
+  DEPENDS
+    libc.include.signal
+    libc.include.errno
+    libc.src.errno.errno
+    libc.src.signal.kill
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.test.errno_setter_matcher
+)
+
+add_libc_unittest(
   sigaction_test
   SUITE
     libc_signal_unittests

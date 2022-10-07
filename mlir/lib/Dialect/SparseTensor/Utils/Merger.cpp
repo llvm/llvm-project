@@ -265,21 +265,26 @@ BitVector Merger::simplifyCond(unsigned s0, unsigned p0) {
 
   BitVector simple = latPoints[p0].bits;
   bool reset = isSingleton && hasAnySparse(simple);
-  unsigned offset = 0;
+  unsigned be = simple.size();
+  unsigned offset = 0; // relative to the end
   if (!reset)
     // Starts resetting from a dense dimension, so that the first bit (if kept)
     // is not undefined dimension type.
-    for (unsigned b = 0, be = simple.size(); b < be; b++)
-      if (simple[b] && isDimLevelType(b, DimLvlType::kDense))
-        offset = b;
+    for (unsigned b = 0; b < be; b++) {
+      if (simple[b] && isDimLevelType(b, DimLvlType::kDense)) {
+        offset = be - b - 1; // relative to the end
+        break;
+      }
+    }
 
-  // Now apply the two basic rules.
-  for (unsigned b = 0, be = simple.size(); b < be; b++) {
-    unsigned i = (offset + b) % be;
-    if (simple[i] && (!isDimLevelType(i, DimLvlType::kCompressed) &&
-                      !isDimLevelType(i, DimLvlType::kSingleton))) {
+  // Now apply the two basic rules. We also iterate the bits reversely to always
+  // keep the rightmost bit (which could possibly be a synthetic tensor).
+  for (unsigned b = be - 1 - offset, i = 0; i < be;
+       b = b == 0 ? be - 1 : b - 1, i++) {
+    if (simple[b] && (!isDimLevelType(b, DimLvlType::kCompressed) &&
+                      !isDimLevelType(b, DimLvlType::kSingleton))) {
       if (reset)
-        simple.reset(i);
+        simple.reset(b);
       reset = true;
     }
   }

@@ -2829,7 +2829,7 @@ void ModuleVisitor::DoAddUse(SourceName location, SourceName localName,
       } else {
         return;
       }
-    } else if (&useUltimate == &BypassGeneric(localUltimate)) {
+    } else if (&useUltimate == &BypassGeneric(localUltimate).GetUltimate()) {
       return; // nothing to do; used subprogram is local's specific
     }
   } else if (useGeneric) {
@@ -3196,8 +3196,8 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
   auto &details{generic.get<GenericDetails>()};
   if (auto *proc{details.CheckSpecific()}) {
     auto msg{
-        "'%s' may not be the name of both a generic interface and a"
-        " procedure unless it is a specific procedure of the generic"_err_en_US};
+        "'%s' should not be the name of both a generic interface and a"
+        " procedure unless it is a specific procedure of the generic"_warn_en_US};
     if (proc->name().begin() > generic.name().begin()) {
       Say(proc->name(), std::move(msg));
     } else {
@@ -3230,7 +3230,7 @@ void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
     SayDerivedType(generic.name(),
         "Generic interface '%s' may only contain functions due to derived type"
         " with same name"_err_en_US,
-        *details.derivedType()->scope());
+        *details.derivedType()->GetUltimate().scope());
   }
   generic.set(isFunction ? Symbol::Flag::Function : Symbol::Flag::Subroutine);
 }
@@ -7233,8 +7233,8 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
   Symbol *existing{nullptr};
   // Check all variants of names, e.g. "operator(.ne.)" for "operator(/=)"
   for (const std::string &n : GetAllNames(context(), symbolName)) {
-    if (auto iter{currScope().find(n)}; iter != currScope().end()) {
-      existing = &*iter->second;
+    existing = currScope().FindSymbol(SourceName{n});
+    if (existing) {
       break;
     }
   }
@@ -7249,24 +7249,28 @@ void ResolveNamesVisitor::CreateGeneric(const parser::GenericSpec &x) {
           genericDetails.set_specific(*existingGeneric->specific());
         }
         AddGenericUse(genericDetails, existing->name(), existingUse->symbol());
-      } else if (existing == &ultimate) {
-        // Extending an extant generic in the same scope
-        info.Resolve(existing);
-        return;
-      } else {
-        // Host association of a generic is handled in ResolveGeneric()
-        CHECK(existing->has<HostAssocDetails>());
+      } else if (&existing->owner() == &currScope()) {
+        if (existing == &ultimate) {
+          // Extending an extant generic in the same scope
+          info.Resolve(existing);
+          return;
+        } else {
+          // Host association of a generic is handled elsewhere
+          CHECK(existing->has<HostAssocDetails>());
+        }
       }
     } else if (ultimate.has<SubprogramDetails>() ||
         ultimate.has<SubprogramNameDetails>()) {
-      genericDetails.set_specific(ultimate);
+      genericDetails.set_specific(*existing);
     } else if (ultimate.has<DerivedTypeDetails>()) {
-      genericDetails.set_derivedType(ultimate);
-    } else {
+      genericDetails.set_derivedType(*existing);
+    } else if (&existing->owner() == &currScope()) {
       SayAlreadyDeclared(symbolName, *existing);
       return;
     }
-    EraseSymbol(*existing);
+    if (&existing->owner() == &currScope()) {
+      EraseSymbol(*existing);
+    }
   }
   info.Resolve(&MakeSymbol(symbolName, Attrs{}, std::move(genericDetails)));
 }

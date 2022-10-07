@@ -31,7 +31,7 @@ svbfloat16_t test_svdupq_lane_bf16(svbfloat16_t data, uint64_t index) {
 }
 // CHECK-LABEL: @test_svdupq_n_bf16(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x bfloat> undef, bfloat [[X0:%.*]], i64 0
+// CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x bfloat> poison, bfloat [[X0:%.*]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x bfloat> [[TMP0]], bfloat [[X1:%.*]], i64 1
 // CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x bfloat> [[TMP1]], bfloat [[X2:%.*]], i64 2
 // CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x bfloat> [[TMP2]], bfloat [[X3:%.*]], i64 3
@@ -45,7 +45,7 @@ svbfloat16_t test_svdupq_lane_bf16(svbfloat16_t data, uint64_t index) {
 //
 // CPP-CHECK-LABEL: @_Z18test_svdupq_n_bf16u6__bf16u6__bf16u6__bf16u6__bf16u6__bf16u6__bf16u6__bf16u6__bf16(
 // CPP-CHECK-NEXT:  entry:
-// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x bfloat> undef, bfloat [[X0:%.*]], i64 0
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = insertelement <8 x bfloat> poison, bfloat [[X0:%.*]], i64 0
 // CPP-CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x bfloat> [[TMP0]], bfloat [[X1:%.*]], i64 1
 // CPP-CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x bfloat> [[TMP1]], bfloat [[X2:%.*]], i64 2
 // CPP-CHECK-NEXT:    [[TMP3:%.*]] = insertelement <8 x bfloat> [[TMP2]], bfloat [[X3:%.*]], i64 3

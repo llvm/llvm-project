@@ -1,4 +1,4 @@
-; RUN: opt -S -passes='asan-pipeline' -asan-skip-promotable-allocas=0 %s -o - | FileCheck %s
+; RUN: opt -S -passes=asan -asan-skip-promotable-allocas=0 %s -o - | FileCheck %s
 ; Generated from:
 ; int bar(int y) {
 ;   return y + 2;

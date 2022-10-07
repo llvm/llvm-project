@@ -176,10 +176,11 @@ public:
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
                              llvm::StringRef name,
                              mlir::StringAttr linkage = {},
-                             mlir::Attribute value = {}, bool isConst = false);
+                             mlir::Attribute value = {}, bool isConst = false,
+                             bool isTarget = false);
 
   fir::GlobalOp createGlobal(mlir::Location loc, mlir::Type type,
-                             llvm::StringRef name, bool isConst,
+                             llvm::StringRef name, bool isConst, bool isTarget,
                              std::function<void(FirOpBuilder &)> bodyBuilder,
                              mlir::StringAttr linkage = {});
 
@@ -188,7 +189,8 @@ public:
                                      llvm::StringRef name,
                                      mlir::StringAttr linkage = {},
                                      mlir::Attribute value = {}) {
-    return createGlobal(loc, type, name, linkage, value, /*isConst=*/true);
+    return createGlobal(loc, type, name, linkage, value, /*isConst=*/true,
+                        /*isTarget=*/false);
   }
 
   fir::GlobalOp
@@ -196,8 +198,8 @@ public:
                        llvm::StringRef name,
                        std::function<void(FirOpBuilder &)> bodyBuilder,
                        mlir::StringAttr linkage = {}) {
-    return createGlobal(loc, type, name, /*isConst=*/true, bodyBuilder,
-                        linkage);
+    return createGlobal(loc, type, name, /*isConst=*/true, /*isTarget=*/false,
+                        bodyBuilder, linkage);
   }
 
   /// Convert a StringRef string into a fir::StringLitOp.

@@ -83,6 +83,10 @@ class TestCase(TestBase):
         self.expect_expr("const int *i = &A::int_val_with_address; *i",
                          result_value="2")
 
+        # Printing the whole type takes a slightly different code path. Check that
+        # it does not crash.
+        self.expect("image lookup -t A")
+
     # dsymutil strips the debug info for classes that only have const static
     # data members without a definition namespace scope.
     @expectedFailureAll(debug_info=["dsym"])

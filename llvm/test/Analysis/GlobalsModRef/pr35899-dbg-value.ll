@@ -1,5 +1,5 @@
-; RUN: opt -S -strip-debug -globals-aa -instcombine < %s | FileCheck %s
-; RUN: opt -S -globals-aa -instcombine < %s | FileCheck %s
+; RUN: opt -S -strip-debug -aa-pipeline=globals-aa,basic-aa -passes='require<globals-aa>,instcombine' < %s | FileCheck %s
+; RUN: opt -S -aa-pipeline=globals-aa,basic-aa -passes='require<globals-aa>,instcombine' < %s | FileCheck %s
 
 ; Having debug info around shouldn't affect what globals-aa and instcombine do.
 

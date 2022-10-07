@@ -2,8 +2,8 @@
 ; allowing dead stripping to be performed, and that the appropriate runtime
 ; routines are invoked.
 
-; RUN: opt < %s -passes='asan-pipeline'             -asan-use-private-alias=0 -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,NOALIAS
-; RUN: opt < %s -passes='asan-pipeline'             -asan-use-private-alias=1 -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,ALIAS
+; RUN: opt < %s -passes=asan             -asan-use-private-alias=0 -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,NOALIAS
+; RUN: opt < %s -passes=asan             -asan-use-private-alias=1 -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,ALIAS
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"

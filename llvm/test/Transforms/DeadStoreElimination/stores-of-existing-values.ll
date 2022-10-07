@@ -594,6 +594,7 @@ define void @pr49927(ptr %q, ptr %p) {
 ; CHECK-LABEL: @pr49927(
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    store i32 [[V]], ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    store i32 [[V]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %v = load i32, ptr %p, align 4

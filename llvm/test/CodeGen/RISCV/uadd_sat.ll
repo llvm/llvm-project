@@ -13,24 +13,18 @@ declare i64 @llvm.uadd.sat.i64(i64, i64)
 define signext i32 @func(i32 signext %x, i32 signext %y) nounwind {
 ; RV32I-LABEL: func:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    mv a2, a0
 ; RV32I-NEXT:    add a1, a0, a1
-; RV32I-NEXT:    li a0, -1
-; RV32I-NEXT:    bltu a1, a2, .LBB0_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    mv a0, a1
-; RV32I-NEXT:  .LBB0_2:
+; RV32I-NEXT:    sltu a0, a1, a0
+; RV32I-NEXT:    neg a0, a0
+; RV32I-NEXT:    or a0, a0, a1
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: func:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    addw a1, a0, a1
-; RV64I-NEXT:    li a0, -1
-; RV64I-NEXT:    bltu a1, a2, .LBB0_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:  .LBB0_2:
+; RV64I-NEXT:    sltu a0, a1, a0
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV32IZbb-LABEL: func:
@@ -55,49 +49,40 @@ define i64 @func2(i64 %x, i64 %y) nounwind {
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    add a3, a1, a3
 ; RV32I-NEXT:    add a2, a0, a2
-; RV32I-NEXT:    sltu a4, a2, a0
-; RV32I-NEXT:    add a3, a3, a4
+; RV32I-NEXT:    sltu a0, a2, a0
+; RV32I-NEXT:    add a3, a3, a0
 ; RV32I-NEXT:    beq a3, a1, .LBB1_2
 ; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    sltu a4, a3, a1
+; RV32I-NEXT:    sltu a0, a3, a1
 ; RV32I-NEXT:  .LBB1_2:
-; RV32I-NEXT:    li a0, -1
-; RV32I-NEXT:    li a1, -1
-; RV32I-NEXT:    bnez a4, .LBB1_4
-; RV32I-NEXT:  # %bb.3:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:    mv a1, a3
-; RV32I-NEXT:  .LBB1_4:
+; RV32I-NEXT:    seqz a0, a0
+; RV32I-NEXT:    addi a1, a0, -1
+; RV32I-NEXT:    or a0, a1, a2
+; RV32I-NEXT:    or a1, a1, a3
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: func2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    mv a2, a0
 ; RV64I-NEXT:    add a1, a0, a1
-; RV64I-NEXT:    li a0, -1
-; RV64I-NEXT:    bltu a1, a2, .LBB1_2
-; RV64I-NEXT:  # %bb.1:
-; RV64I-NEXT:    mv a0, a1
-; RV64I-NEXT:  .LBB1_2:
+; RV64I-NEXT:    sltu a0, a1, a0
+; RV64I-NEXT:    neg a0, a0
+; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV32IZbb-LABEL: func2:
 ; RV32IZbb:       # %bb.0:
 ; RV32IZbb-NEXT:    add a3, a1, a3
 ; RV32IZbb-NEXT:    add a2, a0, a2
-; RV32IZbb-NEXT:    sltu a4, a2, a0
-; RV32IZbb-NEXT:    add a3, a3, a4
+; RV32IZbb-NEXT:    sltu a0, a2, a0
+; RV32IZbb-NEXT:    add a3, a3, a0
 ; RV32IZbb-NEXT:    beq a3, a1, .LBB1_2
 ; RV32IZbb-NEXT:  # %bb.1:
-; RV32IZbb-NEXT:    sltu a4, a3, a1
+; RV32IZbb-NEXT:    sltu a0, a3, a1
 ; RV32IZbb-NEXT:  .LBB1_2:
-; RV32IZbb-NEXT:    li a0, -1
-; RV32IZbb-NEXT:    li a1, -1
-; RV32IZbb-NEXT:    bnez a4, .LBB1_4
-; RV32IZbb-NEXT:  # %bb.3:
-; RV32IZbb-NEXT:    mv a0, a2
-; RV32IZbb-NEXT:    mv a1, a3
-; RV32IZbb-NEXT:  .LBB1_4:
+; RV32IZbb-NEXT:    seqz a0, a0
+; RV32IZbb-NEXT:    addi a1, a0, -1
+; RV32IZbb-NEXT:    or a0, a1, a2
+; RV32IZbb-NEXT:    or a1, a1, a3
 ; RV32IZbb-NEXT:    ret
 ;
 ; RV64IZbb-LABEL: func2:

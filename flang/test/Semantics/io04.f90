@@ -87,7 +87,7 @@
   !ERROR: If UNIT=* appears, REC must not appear
   write(*, rec=13) 'Ok'
 
-  !ERROR: Must have INTEGER type, but is REAL(4)
+  !ERROR: I/O unit must be a character variable or a scalar integer expression
   write(unit, *) 'Ok'
 
   !ERROR: If ADVANCE appears, UNIT=internal-file must not appear

@@ -4264,8 +4264,12 @@ gentbl_cc_library(
             "include/mlir/Dialect/LLVMIR/LLVMIntrinsicConversions.inc",
         ),
         (
-            ["-gen-llvmintrinsic-to-llvmirop-pairs"],
-            "include/mlir/Dialect/LLVMIR/LLVMIntrinsicToLLVMIROpPairs.inc",
+            ["-gen-intr-from-llvmir-conversions"],
+            "include/mlir/Dialect/LLVMIR/LLVMIntrinsicFromLLVMIRConversions.inc",
+        ),
+        (
+            ["-gen-convertible-llvmir-intrinsics"],
+            "include/mlir/Dialect/LLVMIR/LLVMConvertibleLLVMIRIntrinsics.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
@@ -6719,10 +6723,7 @@ cc_library(
     ],
     copts = ["-Dmlir_sparse_tensor_utils_EXPORTS"],
     includes = ["include"],
-    deps = [
-        ":mlir_float16_utils",
-        "//llvm:Support",
-    ],
+    deps = [":mlir_float16_utils"],
 )
 
 # We relist Enums.h because SparseTensorUtils.h includes/reexports it
@@ -9630,8 +9631,8 @@ cc_library(
     name = "MlirReduceLib",
     srcs = ["lib/Tools/mlir-reduce/MlirReduceMain.cpp"],
     hdrs = [
-      "include/mlir/Tools/mlir-reduce/MlirReduceMain.h",
-      "include/mlir/Tools/ParseUtilties.h",
+        "include/mlir/Tools/ParseUtilties.h",
+        "include/mlir/Tools/mlir-reduce/MlirReduceMain.h",
     ],
     includes = ["include"],
     deps = [

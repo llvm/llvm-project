@@ -1097,36 +1097,20 @@ protected:
           "-----------------------\nCategory: %s%s\n-----------------------\n",
           category->GetName(), category->IsEnabled() ? "" : " (disabled)");
 
-      TypeCategoryImpl::ForEachCallbacks<FormatterType> foreach;
-      foreach
-        .SetExact([&result, &formatter_regex, &any_printed](
-                      const TypeMatcher &type_matcher,
-                      const FormatterSharedPointer &format_sp) -> bool {
-          if (ShouldListItem(type_matcher.GetMatchString().GetStringRef(),
-                             formatter_regex.get())) {
-            any_printed = true;
-            result.GetOutputStream().Printf(
-                "%s: %s\n", type_matcher.GetMatchString().GetCString(),
-                format_sp->GetDescription().c_str());
-          }
-          return true;
-        });
-
-      foreach
-        .SetWithRegex([&result, &formatter_regex, &any_printed](
-                          const TypeMatcher &type_matcher,
-                          const FormatterSharedPointer &format_sp) -> bool {
-          if (ShouldListItem(type_matcher.GetMatchString().GetStringRef(),
-                             formatter_regex.get())) {
-            any_printed = true;
-            result.GetOutputStream().Printf(
-                "%s: %s\n", type_matcher.GetMatchString().GetCString(),
-                format_sp->GetDescription().c_str());
-          }
-          return true;
-        });
-
-      category->ForEach(foreach);
+      TypeCategoryImpl::ForEachCallback<FormatterType> print_formatter =
+          [&result, &formatter_regex,
+           &any_printed](const TypeMatcher &type_matcher,
+                         const FormatterSharedPointer &format_sp) -> bool {
+        if (ShouldListItem(type_matcher.GetMatchString().GetStringRef(),
+                           formatter_regex.get())) {
+          any_printed = true;
+          result.GetOutputStream().Printf(
+              "%s: %s\n", type_matcher.GetMatchString().GetCString(),
+              format_sp->GetDescription().c_str());
+        }
+        return true;
+      };
+      category->ForEach(print_formatter);
     };
 
     if (m_options.m_category_language.OptionWasSet()) {
@@ -2335,12 +2319,17 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
       type = eRegexSynth;
   }
 
-  if (category->AnyMatches(type_name, eFormatCategoryItemFilter, false)) {
-    if (error)
-      error->SetErrorStringWithFormat("cannot add synthetic for type %s when "
-                                      "filter is defined in same category!",
-                                      type_name.AsCString());
-    return false;
+  // Only check for conflicting filters in the same category if `type_name` is
+  // an actual type name. Matching a regex string against registered regexes
+  // doesn't work.
+  if (type == eRegularSynth) {
+    if (category->AnyMatches(type_name, eFormatCategoryItemFilter, false)) {
+      if (error)
+        error->SetErrorStringWithFormat("cannot add synthetic for type %s when "
+                                        "filter is defined in same category!",
+                                        type_name.AsCString());
+      return false;
+    }
   }
 
   if (type == eRegexSynth) {
@@ -2458,13 +2447,18 @@ private:
         type = eRegexFilter;
     }
 
-    if (category->AnyMatches(type_name, eFormatCategoryItemSynth, false)) {
-      if (error)
-        error->SetErrorStringWithFormat("cannot add filter for type %s when "
-                                        "synthetic is defined in same "
-                                        "category!",
-                                        type_name.AsCString());
-      return false;
+    // Only check for conflicting synthetic child providers in the same category
+    // if `type_name` is an actual type name. Matching a regex string against
+    // registered regexes doesn't work.
+    if (type == eRegularFilter) {
+      if (category->AnyMatches(type_name, eFormatCategoryItemSynth, false)) {
+        if (error)
+          error->SetErrorStringWithFormat("cannot add filter for type %s when "
+                                          "synthetic is defined in same "
+                                          "category!",
+                                          type_name.AsCString());
+        return false;
+      }
     }
 
     if (type == eRegexFilter) {

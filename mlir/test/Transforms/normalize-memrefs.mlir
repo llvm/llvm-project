@@ -332,3 +332,23 @@ func.func @affine_parallel_norm() ->  memref<8xf32, #tile> {
   }
   return %1 : memref<8xf32, #tile>
 }
+
+#map = affine_map<(d0, d1)[s0] -> (d0 * 3 + s0 + d1)>
+// CHECK-LABEL: func.func @map_symbol
+func.func @map_symbol() -> memref<2x3xf32, #map> {
+  %c1 = arith.constant 1 : index
+  // The constant isn't propagated here and the utility can't compute a constant
+  // upper bound for the memref dimension in the absence of that.
+  // CHECK: memref.alloc()[%{{.*}}]
+  %0 = memref.alloc()[%c1] : memref<2x3xf32, #map>
+  return %0 : memref<2x3xf32, #map>
+}
+
+#neg = affine_map<(d0, d1) -> (d0, d1 - 100)>
+// CHECK-LABEL: func.func @neg_map
+func.func @neg_map() -> memref<2x3xf32, #neg> {
+  // This isn't a valid map for normalization.
+  // CHECK: memref.alloc() : memref<2x3xf32, #{{.*}}>
+  %0 = memref.alloc() : memref<2x3xf32, #neg>
+  return %0 : memref<2x3xf32, #neg>
+}

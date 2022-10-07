@@ -1,5 +1,5 @@
 // REQUIRES: systemz-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -target-cpu z14 -triple s390x-ibm-linux -flax-vector-conversions=none \
+// RUN: %clang_cc1 -target-cpu z14 -triple s390x-ibm-linux -flax-vector-conversions=none \
 // RUN: -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s
 
 typedef __attribute__((vector_size(16))) signed char vec_schar;
@@ -34,10 +34,10 @@ void test_core(void) {
   // CHECK: call <2 x i64> @llvm.s390.vbperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
 
   vsc = __builtin_s390_vlrl(len, cptr);
-  // CHECK: call <16 x i8> @llvm.s390.vlrl(i32 %{{.*}}, i8* %{{.*}})
+  // CHECK: call <16 x i8> @llvm.s390.vlrl(i32 %{{.*}}, ptr %{{.*}})
 
   __builtin_s390_vstrl(vsc, len, ptr);
-  // CHECK: call void @llvm.s390.vstrl(<16 x i8> %{{.*}}, i32 %{{.*}}, i8* %{{.*}})
+  // CHECK: call void @llvm.s390.vstrl(<16 x i8> %{{.*}}, i32 %{{.*}}, ptr %{{.*}})
 }
 
 void test_integer(void) {
