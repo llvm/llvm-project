@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin12 -S -o - -emit-llvm %s | FileCheck %s -check-prefix=CHECK-NOERRNO
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -S -o - -emit-llvm -fmath-errno %s | FileCheck %s -check-prefix=CHECK-ERRNO
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin12 -S -o - -emit-llvm -x c++ %s | FileCheck %s -check-prefix=CHECK-NOERRNO
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -S -o - -emit-llvm -x c++ -fmath-errno %s | FileCheck %s -check-prefix=CHECK-ERRNO
+// RUN: %clang_cc1 -triple x86_64-apple-darwin12 -S -o - -emit-llvm %s | FileCheck %s -check-prefix=CHECK-NOERRNO
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -o - -emit-llvm -fmath-errno %s | FileCheck %s -check-prefix=CHECK-ERRNO
+// RUN: %clang_cc1 -triple x86_64-apple-darwin12 -S -o - -emit-llvm -x c++ %s | FileCheck %s -check-prefix=CHECK-NOERRNO
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -o - -emit-llvm -x c++ -fmath-errno %s | FileCheck %s -check-prefix=CHECK-ERRNO
 
 // Prototypes.
 #ifdef __cplusplus
@@ -330,9 +330,9 @@ void *use[] = {
 // CHECK-NOERRNO: declare double @ldexp(double noundef, i32 noundef) [[NUWRN]]
 // CHECK-NOERRNO: declare float @ldexpf(float noundef, i32 noundef) [[NUWRN]]
 // CHECK-NOERRNO: declare x86_fp80 @ldexpl(x86_fp80 noundef, i32 noundef) [[NUWRN]]
-// CHECK-NOERRNO: declare double @nan(i8* noundef) [[NUWRO:#[0-9]+]]
-// CHECK-NOERRNO: declare float @nanf(i8* noundef) [[NUWRO]]
-// CHECK-NOERRNO: declare x86_fp80 @nanl(i8* noundef) [[NUWRO]]
+// CHECK-NOERRNO: declare double @nan(ptr noundef) [[NUWRO:#[0-9]+]]
+// CHECK-NOERRNO: declare float @nanf(ptr noundef) [[NUWRO]]
+// CHECK-NOERRNO: declare x86_fp80 @nanl(ptr noundef) [[NUWRO]]
 // CHECK-NOERRNO: declare double @pow(double noundef, double noundef) [[NUWRN]]
 // CHECK-NOERRNO: declare float @powf(float noundef, float noundef) [[NUWRN]]
 // CHECK-NOERRNO: declare x86_fp80 @powl(x86_fp80 noundef, x86_fp80 noundef) [[NUWRN]]
@@ -539,9 +539,9 @@ void *use[] = {
 // CHECK-ERRNO: declare double @fabs(double noundef) [[NUWRN]]
 // CHECK-ERRNO: declare float @fabsf(float noundef) [[NUWRN]]
 // CHECK-ERRNO: declare x86_fp80 @fabsl(x86_fp80 noundef) [[NUWRN]]
-// CHECK-ERRNO: declare double @nan(i8* noundef) [[NUWRO:#[0-9]+]]
-// CHECK-ERRNO: declare float @nanf(i8* noundef) [[NUWRO]]
-// CHECK-ERRNO: declare x86_fp80 @nanl(i8* noundef) [[NUWRO]]
+// CHECK-ERRNO: declare double @nan(ptr noundef) [[NUWRO:#[0-9]+]]
+// CHECK-ERRNO: declare float @nanf(ptr noundef) [[NUWRO]]
+// CHECK-ERRNO: declare x86_fp80 @nanl(ptr noundef) [[NUWRO]]
 // CHECK-ERRNO: declare double @ceil(double noundef) [[NUWRN]]
 // CHECK-ERRNO: declare float @ceilf(float noundef) [[NUWRN]]
 // CHECK-ERRNO: declare x86_fp80 @ceill(x86_fp80 noundef) [[NUWRN]]

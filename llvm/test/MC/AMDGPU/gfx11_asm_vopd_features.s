@@ -102,3 +102,79 @@ v_dual_cndmask_b32  v255, s1, v2                 ::  v_dual_cndmask_b32   v6, s1
 
 v_dual_add_f32      v255, vcc_lo, v2             ::  v_dual_cndmask_b32   v6, v1, v3
 // GFX11: encoding: [0x6a,0x04,0x12,0xc9,0x01,0x07,0x06,0xff]
+
+//===----------------------------------------------------------------------===//
+// One dst register must be even and the other odd.
+//===----------------------------------------------------------------------===//
+
+v_dual_mul_f32      v0, v10, v20                 ::  v_dual_mul_f32      v1, v11, v21
+// GFX11: encoding: [0x0a,0x29,0xc6,0xc8,0x0b,0x2b,0x00,0x00]
+
+v_dual_mul_f32      v1, v10, v20                 ::  v_dual_mul_f32      v0, v11, v21
+// GFX11: encoding: [0x0a,0x29,0xc6,0xc8,0x0b,0x2b,0x00,0x01]
+
+//===----------------------------------------------------------------------===//
+// srcX0 and srcY0 must use different VGPR banks.
+//===----------------------------------------------------------------------===//
+
+v_dual_mul_f32      v0, v10, v20                 ::  v_dual_mul_f32      v1, v11, v21
+// GFX11: encoding: [0x0a,0x29,0xc6,0xc8,0x0b,0x2b,0x00,0x00]
+
+v_dual_mul_f32      v0, v10, v20                 ::  v_dual_mul_f32      v1, v12, v21
+// GFX11: encoding: [0x0a,0x29,0xc6,0xc8,0x0c,0x2b,0x00,0x00]
+
+v_dual_mul_f32      v0, v10, v20                 ::  v_dual_mul_f32      v1, v13, v21
+// GFX11: encoding: [0x0a,0x29,0xc6,0xc8,0x0d,0x2b,0x00,0x00]
+
+v_dual_mul_f32      v0, v10, v20                 ::  v_dual_mul_f32      v1, v15, v21
+// GFX11: encoding: [0x0a,0x29,0xc6,0xc8,0x0f,0x2b,0x00,0x00]
+
+v_dual_mul_f32      v0, v10, v20                 ::  v_dual_mul_f32      v1, v16, v21
+// GFX11: encoding: [0x0a,0x29,0xc6,0xc8,0x10,0x2b,0x00,0x00]
+
+v_dual_mul_f32      v0, v10, v20                 ::  v_dual_mul_f32      v1, v17, v21
+// GFX11: encoding: [0x0a,0x29,0xc6,0xc8,0x11,0x2b,0x00,0x00]
+
+//===----------------------------------------------------------------------===//
+// srcX1 and srcY1 must use different VGPR banks.
+//===----------------------------------------------------------------------===//
+
+v_dual_mul_f32      v0, v10, v20                 ::  v_dual_mul_f32      v1, v11, v21
+// GFX11: encoding: [0x0a,0x29,0xc6,0xc8,0x0b,0x2b,0x00,0x00]
+
+v_dual_mul_f32      v0, v10, v20                 ::  v_dual_mul_f32      v1, v11, v22
+// GFX11: encoding: [0x0a,0x29,0xc6,0xc8,0x0b,0x2d,0x00,0x00]
+
+v_dual_mul_f32      v0, v10, v20                 ::  v_dual_mul_f32      v1, v11, v23
+// GFX11: encoding: [0x0a,0x29,0xc6,0xc8,0x0b,0x2f,0x00,0x00]
+
+v_dual_mul_f32      v0, v10, v20                 ::  v_dual_mul_f32      v1, v11, v25
+// GFX11: encoding: [0x0a,0x29,0xc6,0xc8,0x0b,0x33,0x00,0x00]
+
+v_dual_mul_f32      v0, v10, v20                 ::  v_dual_mul_f32      v1, v11, v26
+// GFX11: encoding: [0x0a,0x29,0xc6,0xc8,0x0b,0x35,0x00,0x00]
+
+v_dual_mul_f32      v0, v10, v20                 ::  v_dual_mul_f32      v1, v11, v27
+// GFX11: encoding: [0x0a,0x29,0xc6,0xc8,0x0b,0x37,0x00,0x00]
+
+//===----------------------------------------------------------------------===//
+// srcX2 and srcY2 must use different VGPR banks.
+//===----------------------------------------------------------------------===//
+
+v_dual_fmamk_f32    v6, v1, 0xaf123456, v0       :: v_dual_fmamk_f32      v5, v2, 0xaf123456, v1
+// GFX11: encoding: [0x01,0x01,0x84,0xc8,0x02,0x03,0x04,0x06,0x56,0x34,0x12,0xaf]
+
+v_dual_fmamk_f32    v6, v1, 0xaf123456, v1       :: v_dual_fmamk_f32      v5, v2, 0xaf123456, v0
+// GFX11: encoding: [0x01,0x03,0x84,0xc8,0x02,0x01,0x04,0x06,0x56,0x34,0x12,0xaf]
+
+v_dual_fmac_f32     v6, v1, v2                   :: v_dual_fmamk_f32      v7, v2, 0xaf123456, v7
+// GFX11: encoding: [0x01,0x05,0x04,0xc8,0x02,0x0f,0x06,0x06,0x56,0x34,0x12,0xaf]
+
+v_dual_fmac_f32     v7, v1, v2                   :: v_dual_fmamk_f32      v6, v2, 0xaf123456, v6
+// GFX11: encoding: [0x01,0x05,0x04,0xc8,0x02,0x0d,0x06,0x07,0x56,0x34,0x12,0xaf]
+
+v_dual_fmamk_f32    v5, v1, 0xaf123456, v5       :: v_dual_fmac_f32       v6, v2, v3
+// GFX11: encoding: [0x01,0x0b,0x80,0xc8,0x02,0x07,0x06,0x05,0x56,0x34,0x12,0xaf]
+
+v_dual_fmamk_f32    v6, v1, 0xaf123456, v6       :: v_dual_fmac_f32       v5, v2, v3
+// GFX11: encoding: [0x01,0x0d,0x80,0xc8,0x02,0x07,0x04,0x06,0x56,0x34,0x12,0xaf]

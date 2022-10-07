@@ -657,7 +657,7 @@ bool Sema::FriendConstraintsDependOnEnclosingTemplate(const FunctionDecl *FD) {
 
   unsigned OldTemplateDepth = CalculateTemplateDepthForConstraints(*this, FD);
   for (const Expr *Constraint : ACs)
-    if (ConstraintExpressionDependsOnEnclosingTemplate(OldTemplateDepth,
+    if (ConstraintExpressionDependsOnEnclosingTemplate(FD, OldTemplateDepth,
                                                        Constraint))
       return true;
 

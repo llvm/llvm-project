@@ -906,8 +906,6 @@ FileID SourceManager::getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const {
     if (Invalid)
       return FileID(); // invalid entry.
 
-    ++NumProbes;
-
     if (E.getOffset() > SLocOffset) {
       if (GreaterIndex == MiddleIndex) {
         assert(0 && "binary search missed the entry");

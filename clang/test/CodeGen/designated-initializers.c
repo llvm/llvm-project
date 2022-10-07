@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown %s -emit-llvm -o - | FileCheck %s
 
 struct foo {
     void *a;
@@ -156,12 +156,11 @@ struct Derived D = {{}, .B.A = 42};
 
 void test1(int argc, char **argv)
 {
-  // CHECK: internal global %struct.foo { i8* null, i32 1024 }
+  // CHECK: internal global %struct.foo { ptr null, i32 1024 }
   static struct foo foo = {
     .b = 1024,
   };
 
-  // CHECK: bitcast %union.anon.5* %u2
   // CHECK: call void @llvm.memset
    union { int i; float f; } u2 = { };
 

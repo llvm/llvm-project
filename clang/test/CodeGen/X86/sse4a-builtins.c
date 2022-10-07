@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4a -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4a -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse4a -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse4a -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 
 #include <x86intrin.h>
@@ -33,13 +33,13 @@ __m128i test_mm_insert_si64(__m128i x, __m128i y) {
 void test_mm_stream_sd(double *p, __m128d a) {
   // CHECK-LABEL: test_mm_stream_sd
   // CHECK: extractelement <2 x double> %{{.*}}, i64 0
-  // CHECK: store double %{{.*}}, double* %{{.*}}, align 1, !nontemporal
+  // CHECK: store double %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
    _mm_stream_sd(p, a);
 }
 
 void test_mm_stream_ss(float *p, __m128 a) {
   // CHECK-LABEL: test_mm_stream_ss
   // CHECK: extractelement <4 x float> %{{.*}}, i64 0
-  // CHECK: store float %{{.*}}, float* %{{.*}}, align 1, !nontemporal
+  // CHECK: store float %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
   _mm_stream_ss(p, a);
 }
