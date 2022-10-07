@@ -240,12 +240,11 @@ LogicalResult replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
 /// escape (while leaving the IR in a valid state).
 LogicalResult normalizeMemRef(memref::AllocOp *op);
 
-/// Uses the old memref type map layout and computes the new memref type to have
-/// a new shape and a layout map, where the old layout map has been normalized
-/// to an identity layout map. It returns the old memref in case no
-/// normalization was needed or a failure occurs while transforming the old map
-/// layout to an identity layout map.
-MemRefType normalizeMemRefType(MemRefType memrefType, OpBuilder builder,
+/// Normalizes `memrefType` so that the affine layout map of the memref is
+/// transformed to an identity map with a new shape being computed for the
+/// normalized memref type and returns it. The old memref type is simplify
+/// returned if the normalization failed.
+MemRefType normalizeMemRefType(MemRefType memrefType,
                                unsigned numSymbolicOperands);
 
 /// Creates and inserts into 'builder' a new AffineApplyOp, with the number of
