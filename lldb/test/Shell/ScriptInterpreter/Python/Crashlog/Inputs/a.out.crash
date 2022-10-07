@@ -47,3 +47,4 @@ Trap Number:     14
 
 Binary Images:
        0x100000000 -        0x200000000 +a.out (0) <@UUID@> @EXEC@
+               0x0 - 0xffffffffffffffff ??? (*) <00000000-0000-0000-0000-000000000000> ???

@@ -623,7 +623,7 @@ class TextCrashLogParser(CrashLogParser):
                                   r'[+]?(.+?)\s+'              # img_name
                                   r'(?:(' +version+ r')\s+)?'  # img_version
                                   r'(?:<([-0-9a-fA-F]+)>\s+)?' # img_uuid
-                                  r'(/.*)'                     # img_path
+                                  r'(\?+|/.*)'                 # img_path
                                  )
     exception_type_regex = re.compile(r'^Exception Type:\s+(EXC_[A-Z_]+)(?:\s+\((.*)\))?')
     exception_codes_regex = re.compile(r'^Exception Codes:\s+(0x[0-9a-fA-F]+),\s*(0x[0-9a-fA-F]+)')
