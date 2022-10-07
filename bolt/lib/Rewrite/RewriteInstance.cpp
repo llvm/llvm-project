@@ -3798,6 +3798,16 @@ void RewriteInstance::mapDataSections(RuntimeDyld &RTDyld) {
   if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary())
     RtLibrary->addRuntimeLibSections(Sections);
 
+  if (!EHFrameSection || !EHFrameSection->isFinalized()) {
+    ErrorOr<BinarySection &> OldEHFrameSection =
+        BC->getUniqueSectionByName(Twine(getOrgSecPrefix(), ".eh_frame").str());
+    if (OldEHFrameSection) {
+      RTDyld.reassignSectionAddress(OldEHFrameSection->getSectionID(),
+                                    NextAvailableAddress);
+      BC->deregisterSection(*OldEHFrameSection);
+    }
+  }
+
   for (std::string &SectionName : Sections) {
     ErrorOr<BinarySection &> Section = BC->getUniqueSectionByName(SectionName);
     if (!Section || !Section->isAllocatable() || !Section->isFinalized())
