@@ -16,9 +16,18 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include <vector>
 
 using namespace llvm;
+
+static bool shouldKeepDebugIntrinsicMetadata(Instruction &I, MDNode &MD) {
+  return isa<DILocation>(MD) && isa<DbgInfoIntrinsic>(I);
+}
+
+static bool shouldKeepDebugNamedMetadata(NamedMDNode &MD) {
+  return MD.getName() == "llvm.dbg.cu" && MD.getNumOperands() != 0;
+}
 
 /// Removes all the Named and Unnamed Metadata Nodes, as well as any debug
 /// functions that aren't inside the desired Chunks.
@@ -26,7 +35,7 @@ static void extractMetadataFromModule(Oracle &O, Module &Program) {
   // Get out-of-chunk Named metadata nodes
   SmallVector<NamedMDNode *> NamedNodesToDelete;
   for (NamedMDNode &MD : Program.named_metadata())
-    if (!O.shouldKeep())
+    if (!shouldKeepDebugNamedMetadata(MD) && !O.shouldKeep())
       NamedNodesToDelete.push_back(&MD);
 
   for (NamedMDNode *NN : NamedNodesToDelete) {
@@ -58,9 +67,10 @@ static void extractMetadataFromModule(Oracle &O, Module &Program) {
     for (Instruction &I : instructions(F)) {
       SmallVector<std::pair<unsigned, MDNode *>> MDs;
       I.getAllMetadata(MDs);
-      for (std::pair<unsigned, MDNode *> &MD : MDs)
-        if (!O.shouldKeep())
+      for (std::pair<unsigned, MDNode *> &MD : MDs) {
+        if (!shouldKeepDebugIntrinsicMetadata(I, *MD.second) && !O.shouldKeep())
           I.setMetadata(MD.first, nullptr);
+      }
     }
   }
 }
