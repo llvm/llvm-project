@@ -102,14 +102,6 @@ template <PrimType OpType> bool EvalEmitter::emitRet(const SourceInfo &Info) {
   return ReturnValue<T>(S.Stk.pop<T>(), Result);
 }
 
-template <PrimType OpType>
-bool EvalEmitter::emitCall(const Function *Func, const SourceInfo &Info) {
-
-  S.Current = new InterpFrame(S, Func, {});
-  // Result of call will be on the stack and needs to be handled by the caller.
-  return Interpret(S, Result);
-}
-
 bool EvalEmitter::emitCallVoid(const Function *Func, const SourceInfo &Info) {
   APValue VoidResult;
   InterpFrame *before = S.Current;
