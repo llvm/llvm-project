@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='asan-pipeline' -S -o %t.ll
+; RUN: opt < %s -passes=asan -S -o %t.ll
 ; RUN: FileCheck %s < %t.ll
 ; RUN: llc < %t.ll | FileCheck %s --check-prefix=ASM
 

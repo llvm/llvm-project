@@ -376,17 +376,6 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   for (auto &PassPlugin : PassPlugins)
     PassPlugin.registerPassBuilderCallbacks(PB);
 
-  PB.registerPipelineParsingCallback(
-      [](StringRef Name, ModulePassManager &MPM,
-         ArrayRef<PassBuilder::PipelineElement>) {
-        AddressSanitizerOptions Opts;
-        if (Name == "asan-pipeline") {
-          MPM.addPass(AddressSanitizerPass(Opts));
-          return true;
-        }
-        return false;
-      });
-
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
 #include "llvm/Support/Extension.def"
