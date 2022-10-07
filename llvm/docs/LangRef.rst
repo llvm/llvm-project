@@ -21670,7 +21670,7 @@ Examples:
 .. _int_vp_roundtozero:
 
 '``llvm.vp.roundtozero.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
