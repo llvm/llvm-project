@@ -1120,6 +1120,7 @@ module std [system] {
       module dangling               { private header "__ranges/dangling.h" }
       module data                   { private header "__ranges/data.h" }
       module drop_view              { private header "__ranges/drop_view.h" }
+      module drop_while_view        { private header "__ranges/drop_while_view.h" }
       module empty                  { private header "__ranges/empty.h" }
       module empty_view             { private header "__ranges/empty_view.h" }
       module enable_borrowed_range  { private header "__ranges/enable_borrowed_range.h" }
