@@ -22,12 +22,14 @@ namespace llvm {
 namespace MIPatternMatch {
 
 template <typename Reg, typename Pattern>
-bool mi_match(Reg R, const MachineRegisterInfo &MRI, Pattern &&P) {
+[[nodiscard]] bool mi_match(Reg R, const MachineRegisterInfo &MRI,
+                            Pattern &&P) {
   return P.match(MRI, R);
 }
 
 template <typename Pattern>
-bool mi_match(MachineInstr &MI, const MachineRegisterInfo &MRI, Pattern &&P) {
+[[nodiscard]] bool mi_match(MachineInstr &MI, const MachineRegisterInfo &MRI,
+                            Pattern &&P) {
   return P.match(MRI, &MI);
 }
 
