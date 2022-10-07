@@ -793,24 +793,28 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
 
   // See if this is near the file point - worst case we start scanning from the
   // most newly created FileID.
-  const SrcMgr::SLocEntry *I;
 
-  if (LastFileIDLookup.ID < 0 ||
-      LocalSLocEntryTable[LastFileIDLookup.ID].getOffset() < SLocOffset) {
-    // Neither loc prunes our search.
-    I = LocalSLocEntryTable.end();
-  } else {
-    // Perhaps it is near the file point.
-    I = LocalSLocEntryTable.begin()+LastFileIDLookup.ID;
+  // LessIndex - This is the lower bound of the range that we're searching.
+  // We know that the offset corresponding to the FileID is is less than
+  // SLocOffset.
+  unsigned LessIndex = 0;
+  // upper bound of the search range.
+  unsigned GreaterIndex = LocalSLocEntryTable.size();
+  if (LastFileIDLookup.ID >= 0) {
+    // Use the LastFileIDLookup to prune the search space.
+    if (LocalSLocEntryTable[LastFileIDLookup.ID].getOffset() < SLocOffset)
+      LessIndex = LastFileIDLookup.ID;
+    else
+      GreaterIndex = LastFileIDLookup.ID;
   }
 
-  // Find the FileID that contains this.  "I" is an iterator that points to a
-  // FileID whose offset is known to be larger than SLocOffset.
+  // Find the FileID that contains this.
   unsigned NumProbes = 0;
   while (true) {
-    --I;
-    if (I->getOffset() <= SLocOffset) {
-      FileID Res = FileID::get(int(I - LocalSLocEntryTable.begin()));
+    --GreaterIndex;
+    assert(GreaterIndex < LocalSLocEntryTable.size());
+    if (LocalSLocEntryTable[GreaterIndex].getOffset() <= SLocOffset) {
+      FileID Res = FileID::get(int(GreaterIndex));
       // Remember it.  We have good locality across FileID lookups.
       LastFileIDLookup = Res;
       NumLinearScans += NumProbes+1;
@@ -820,13 +824,6 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
       break;
   }
 
-  // Convert "I" back into an index.  We know that it is an entry whose index is
-  // larger than the offset we are looking for.
-  unsigned GreaterIndex = I - LocalSLocEntryTable.begin();
-  // LessIndex - This is the lower bound of the range that we're searching.
-  // We know that the offset corresponding to the FileID is is less than
-  // SLocOffset.
-  unsigned LessIndex = 0;
   NumProbes = 0;
   while (true) {
     unsigned MiddleIndex = (GreaterIndex-LessIndex)/2+LessIndex;
