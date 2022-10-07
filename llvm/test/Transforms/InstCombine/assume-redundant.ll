@@ -1,4 +1,4 @@
-; RUN: opt -domtree -instcombine -loops -S < %s | FileCheck %s
+; RUN: opt -passes='require<domtree>,instcombine,require<domtree>' -S < %s | FileCheck %s
 ; Note: The -loops above can be anything that requires the domtree, and is
 ; necessary to work around a pass-manager bug.
 

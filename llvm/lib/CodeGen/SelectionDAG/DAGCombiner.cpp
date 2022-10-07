@@ -3061,6 +3061,17 @@ SDValue DAGCombiner::visitADDCARRY(SDNode *N) {
   if (SDValue Combined = visitADDCARRYLike(N1, N0, CarryIn, N))
     return Combined;
 
+  // We want to avoid useless duplication.
+  // TODO: This is done automatically for binary operations. As ADDCARRY is
+  // not a binary operation, this is not really possible to leverage this
+  // existing mechanism for it. However, if more operations require the same
+  // deduplication logic, then it may be worth generalize.
+  SDValue Ops[] = {N1, N0, CarryIn};
+  SDNode *CSENode =
+      DAG.getNodeIfExists(ISD::ADDCARRY, N->getVTList(), Ops, N->getFlags());
+  if (CSENode)
+    return SDValue(CSENode, 0);
+
   return SDValue();
 }
 
