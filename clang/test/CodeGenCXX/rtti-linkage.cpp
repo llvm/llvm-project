@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %std_cxx98- -no-opaque-pointers %s -I%S -triple=x86_64-apple-darwin10 -emit-llvm -Wno-dynamic-exception-spec -o - | FileCheck %s -check-prefixes=CHECK,CHECK-BOTH
-// RUN: %clang_cc1 %std_cxx98- -no-opaque-pointers %s -I%S -triple=x86_64-apple-darwin10 -emit-llvm -Wno-dynamic-exception-spec -fvisibility=hidden -o - | FileCheck %s --check-prefixes=CHECK-WITH-HIDDEN,CHECK-BOTH
+// RUN: %clang_cc1 %std_cxx98- %s -I%S -triple=x86_64-apple-darwin10 -emit-llvm -Wno-dynamic-exception-spec -o - | FileCheck %s -check-prefixes=CHECK,CHECK-BOTH
+// RUN: %clang_cc1 %std_cxx98- %s -I%S -triple=x86_64-apple-darwin10 -emit-llvm -Wno-dynamic-exception-spec -fvisibility=hidden -o - | FileCheck %s --check-prefixes=CHECK-WITH-HIDDEN,CHECK-BOTH
 
 #include <typeinfo>
 
@@ -71,7 +71,7 @@
 // CHECK: _ZTIZ2t7vE1A = linkonce_odr constant
 // CHECK: _ZTIPZ2t7vE1A = linkonce_odr constant
 
-// CHECK: _ZTIN12_GLOBAL__N_11DE to
+// CHECK: _ZTIN12_GLOBAL__N_11DE
 
 // A has no key function, so its RTTI data should be linkonce_odr.
 struct A { };

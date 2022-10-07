@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple %itanium_abi_triple -verify %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple %itanium_abi_triple -emit-llvm %s -o - -std=c++98 | FileCheck %s --check-prefix=CHECK-CXX98
-// RUN: %clang_cc1 -no-opaque-pointers -triple %itanium_abi_triple -emit-llvm %s -o - -std=c++11 | FileCheck %s --check-prefix=CHECK-CXX11
+// RUN: %clang_cc1 -triple %itanium_abi_triple -verify %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm %s -o - -std=c++98 | FileCheck %s --check-prefix=CHECK-CXX98
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm %s -o - -std=c++11 | FileCheck %s --check-prefix=CHECK-CXX11
 // expected-no-diagnostics
 
 #if __cplusplus >= 201103L
-// CHECK-CXX11: @_ZZ15InitRefWithListvE1r = internal constant i32* @_ZGRZ15InitRefWithListvE1r_
+// CHECK-CXX11: @_ZZ15InitRefWithListvE1r = internal constant ptr @_ZGRZ15InitRefWithListvE1r_
 // CHECK-CXX11: @_ZGRZ15InitRefWithListvE1r_ = internal constant i32 123
 int InitRefWithList() { static const int &r = {123}; return r; }
 #endif
@@ -37,6 +37,6 @@ const int &s2 = s.bitfield;
 struct SelfReference { SelfReference &r; };
 extern SelfReference self_reference_1;
 SelfReference self_reference_2 = {self_reference_1};
-// CHECK-CXX98: @self_reference_2 = {{.*}}global %[[SELF_REF:.*]] { %[[SELF_REF]]* @self_reference_1 }
+// CHECK-CXX98: @self_reference_2 = {{.*}}global %[[SELF_REF:.*]] { ptr @self_reference_1 }
 // CHECK-CXX11: @self_reference_2 = {{(dso_local )?}}global %[[SELF_REF:.*]] zeroinitializer
-// CHECK-CXX11: call {{.*}}memcpy{{.*}} @self_reference_2 {{.*}} @self_reference_1
+// CHECK-CXX11: call {{.*}}memcpy{{.*}} @self_reference_2, {{.*}} @self_reference_1
