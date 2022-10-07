@@ -83,6 +83,16 @@ add_header_library(
     libc.src.errno.errno
 )
 
+add_object_library(
+  fork_callbacks
+  SRCS
+    fork_callbacks.cpp
+  HDRS
+    fork_callbacks.h
+  DEPENDS
+    .threads.mutex
+)
+
 add_header_library(
   integer_operations
   HDRS
