@@ -32,6 +32,11 @@ class TestCase(TestBase):
         # Test a bool member.
         self.expect_expr("A::bool_val", result_value="true")
 
+        # Test a bool member when printing the struct it is a member of.
+        # TODO: replace this with printing struct A, once doing so doesn't crash lldb.
+        self.expect("image lookup -t StaticBoolStruct",
+                    substrs=["static const bool value = false;"])
+
         # Test that minimum and maximum values for each data type are right.
         self.expect_expr("A::char_max == char_max", result_value="true")
         self.expect_expr("A::uchar_max == uchar_max", result_value="true")
