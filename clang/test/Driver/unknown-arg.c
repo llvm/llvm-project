@@ -1,5 +1,5 @@
-// RUN: not %clang %s -cake-is-lie -%0 -%d -HHHH -munknown-to-clang-option -print-stats -funknown-to-clang-option -ifoo -imultilib dir -o ffload-device-only -### 2>&1 | \
-// RUN:     FileCheck %s --implicit-check-not=warning: 
+// RUN: not %clang %s -cake-is-lie -%0 -%d -HHHH -munknown-to-clang-option -print-stats -funknown-to-clang-option -ifoo -imultilib dir -### 2>&1 | \
+// RUN:     FileCheck %s
 // RUN: %clang %s -imultilib dir -### 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=MULTILIB
 // RUN: not %clang %s -stdlibs=foo -hell -version -### 2>&1 | \
