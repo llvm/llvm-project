@@ -9,7 +9,7 @@ define i1 @sge_0_unsigned_a_ne_0(i8 %a) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NE_0]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[A]] to i16
 ; CHECK-NEXT:    [[T:%.*]] = icmp sge i16 [[EXT]], 0
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a.ne.0 = icmp ne i8 %a, 0
   call void @llvm.assume(i1 %a.ne.0)
@@ -24,7 +24,7 @@ define i1 @sgt_0_unsigned_a_ne_0(i8 %a) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NE_0]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[A]] to i16
 ; CHECK-NEXT:    [[T:%.*]] = icmp sgt i16 [[EXT]], 0
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a.ne.0 = icmp ne i8 %a, 0
   call void @llvm.assume(i1 %a.ne.0)
@@ -54,7 +54,7 @@ define i1 @sge_0_unsigned_a_sge_0(i8 %a) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_SGE_0]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[A]] to i16
 ; CHECK-NEXT:    [[T:%.*]] = icmp sge i16 [[EXT]], 0
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a.sge.0 = icmp sge i8 %a, 0
   call void @llvm.assume(i1 %a.sge.0)
@@ -69,7 +69,7 @@ define i1 @sgt_0_unsigned_a_ugt_0(i8 %a) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_UGT_0]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[A]] to i16
 ; CHECK-NEXT:    [[T:%.*]] = icmp sgt i16 [[EXT]], 0
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a.ugt.0 = icmp ugt i8 %a, 0
   call void @llvm.assume(i1 %a.ugt.0)
@@ -99,7 +99,7 @@ define i1 @sgt_1_unsigned_a_ugt_1(i8 %a) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_UGT_1]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[A]] to i16
 ; CHECK-NEXT:    [[T:%.*]] = icmp sgt i16 [[EXT]], 1
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
   %a.ugt.1 = icmp ugt i8 %a, 1
   call void @llvm.assume(i1 %a.ugt.1)
@@ -133,8 +133,8 @@ define i1 @sgt_0_unsigned_a_ugt_neg_10(i8 %a) {
 ; CHECK-NEXT:    [[A_UGT_0:%.*]] = icmp ugt i8 [[A:%.*]], 10
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_UGT_0]])
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[A]] to i16
-; CHECK-NEXT:    [[T:%.*]] = icmp sgt i16 [[EXT]], 0
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i16 [[EXT]], 0
+; CHECK-NEXT:    ret i1 true
 ;
   %a.ugt.0 = icmp ugt i8 %a, 10
   call void @llvm.assume(i1 %a.ugt.0)
