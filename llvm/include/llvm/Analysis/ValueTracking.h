@@ -328,7 +328,7 @@ bool getConstantDataArrayInfo(const Value *V, ConstantDataArraySlice &Slice,
 /// character by default. If TrimAtNul is set to false, then this returns any
 /// trailing null characters as well as any other characters that come after
 /// it.
-bool getConstantStringInfo(const Value *V, StringRef &Str, uint64_t Offset = 0,
+bool getConstantStringInfo(const Value *V, StringRef &Str,
                            bool TrimAtNul = true);
 
 /// If we can compute the length of the string pointed to by the specified

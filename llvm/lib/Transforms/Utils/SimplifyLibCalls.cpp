@@ -735,7 +735,7 @@ Value *LibCallSimplifier::optimizeStrLCpy(CallInst *CI, IRBuilderBase &B) {
   // when it's not nul-terminated (as it's required to be) to avoid
   // reading past its end.
   StringRef Str;
-  if (!getConstantStringInfo(Src, Str, 0, /*TrimAtNul=*/false))
+  if (!getConstantStringInfo(Src, Str, /*TrimAtNul=*/false))
     return nullptr;
 
   uint64_t SrcLen = Str.find('\0');
@@ -1184,7 +1184,7 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
   }
 
   StringRef Str;
-  if (!getConstantStringInfo(SrcStr, Str, 0, /*TrimAtNul=*/false))
+  if (!getConstantStringInfo(SrcStr, Str, /*TrimAtNul=*/false))
     return nullptr;
 
   if (Str.size() == 0)
@@ -1279,7 +1279,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
   }
 
   StringRef Str;
-  if (!getConstantStringInfo(SrcStr, Str, 0, /*TrimAtNul=*/false))
+  if (!getConstantStringInfo(SrcStr, Str, /*TrimAtNul=*/false))
     return nullptr;
 
   if (CharC) {
@@ -1418,8 +1418,8 @@ static Value *optimizeMemCmpVarSize(CallInst *CI, Value *LHS, Value *RHS,
     return Constant::getNullValue(CI->getType());
 
   StringRef LStr, RStr;
-  if (!getConstantStringInfo(LHS, LStr, 0, /*TrimAtNul=*/false) ||
-      !getConstantStringInfo(RHS, RStr, 0, /*TrimAtNul=*/false))
+  if (!getConstantStringInfo(LHS, LStr, /*TrimAtNul=*/false) ||
+      !getConstantStringInfo(RHS, RStr, /*TrimAtNul=*/false))
     return nullptr;
 
   // If the contents of both constant arrays are known, fold a call to
@@ -1577,8 +1577,7 @@ Value *LibCallSimplifier::optimizeMemCCpy(CallInst *CI, IRBuilderBase &B) {
   if (N) {
     if (N->isNullValue())
       return Constant::getNullValue(CI->getType());
-    if (!getConstantStringInfo(Src, SrcStr, /*Offset=*/0,
-                               /*TrimAtNul=*/false) ||
+    if (!getConstantStringInfo(Src, SrcStr, /*TrimAtNul=*/false) ||
         // TODO: Handle zeroinitializer.
         !StopChar)
       return nullptr;
