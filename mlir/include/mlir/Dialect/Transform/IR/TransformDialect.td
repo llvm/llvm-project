@@ -192,6 +192,17 @@ def Transform_Dialect : Dialect {
     effect. The transformation is skipped if the register already contains an
     error description, and the control flow proceeds to the following operation.
 
+    Note that a silenceable failure, if emitted, is a compiler _error_ rather
+    than a warning. Transformations are expected to produce silenceable failures
+    if they haven't yet modified the payload IR, i.e. when reporting a
+    precondition failure, and an irrecoverable failure when they modified the IR
+    in a way that is contrary to the semantics of the transform operation or
+    would fail a postcondition. Some "navigation" operations that identify
+    payload IR targets for the following transformation may have a conceptual
+    "failure to match" that is considered a successful execution in the
+    execution model but results in handles associated with empty payload IR
+    operation lists.
+
     ## Handle Invalidation
 
     The execution model of the transform dialect allows a payload IR operation
