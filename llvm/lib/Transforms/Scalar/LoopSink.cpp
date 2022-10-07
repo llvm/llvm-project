@@ -312,13 +312,12 @@ static bool sinkLoopInvariantInstructions(Loop &L, AAResults &AA, LoopInfo &LI,
     if (!canSinkOrHoistInst(I, &AA, &DT, &L, MSSAU, false, LICMFlags))
       continue;
     if (sinkInstruction(L, I, ColdLoopBBs, LoopBlockNumber, LI, DT, BFI,
-                        &MSSAU)) {
+                        &MSSAU))
       Changed = true;
-      if (SE)
-        SE->forgetBlockAndLoopDispositions(&I);
-    }
   }
 
+  if (Changed && SE)
+    SE->forgetLoopDispositions();
   return Changed;
 }
 
