@@ -66,7 +66,7 @@ void identifyUninterestingMDNodes(Oracle &O, MDNodeList &MDs) {
     SmallVector<Metadata *, 16> TN;
     for (size_t I = 0; I < Tup->getNumOperands(); ++I) {
       // Ignore any operands that are not DebugInfo metadata nodes.
-      if (MDNode *OMD = dyn_cast_or_null<DINode>(Tup->getOperand(I)))
+      if (isa_and_nonnull<DINode>(Tup->getOperand(I)))
         // Don't add uninteresting operands to the tuple.
         if (!O.shouldKeep())
           continue;
