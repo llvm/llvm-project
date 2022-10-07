@@ -8,7 +8,6 @@ float test_mm_cvtsbh_ss(__bfloat16 A) {
   // CHECK-LABEL: @test_mm_cvtsbh_ss
   // CHECK: zext i16 %{{.*}} to i32
   // CHECK: shl i32 %{{.*}}, 16
-  // CHECK: bitcast i32 %{{.*}} to float
   // CHECK: ret float %{{.*}}
   return _mm_cvtsbh_ss(A);
 }
@@ -86,7 +85,6 @@ __m512 test_mm512_cvtpbh_ps(__m256bh A) {
   // CHECK-LABEL: @test_mm512_cvtpbh_ps
   // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
   // CHECK: @llvm.x86.avx512.pslli.d.512
-  // CHECK: bitcast <8 x i64> %{{.*}} to <16 x float>
   // CHECK: ret <16 x float> %{{.*}}
   return _mm512_cvtpbh_ps(A);
 }
@@ -96,7 +94,6 @@ __m512 test_mm512_maskz_cvtpbh_ps(__mmask16 M, __m256bh A) {
   // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   // CHECK: @llvm.x86.avx512.pslli.d.512
-  // CHECK: bitcast <8 x i64> %{{.*}} to <16 x float>
   // CHECK: ret <16 x float> %{{.*}}
   return _mm512_maskz_cvtpbh_ps(M, A);
 }
@@ -106,7 +103,6 @@ __m512 test_mm512_mask_cvtpbh_ps(__m512 S, __mmask16 M, __m256bh A) {
   // CHECK: sext <16 x i16> %{{.*}} to <16 x i32>
   // CHECK: @llvm.x86.avx512.pslli.d.512
   // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
-  // CHECK: bitcast <8 x i64> %{{.*}} to <16 x float>
   // CHECK: ret <16 x float> %{{.*}}
   return _mm512_mask_cvtpbh_ps(S, M, A);
 }

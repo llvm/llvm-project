@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -S -o - -disable-O0-optnone -emit-llvm %s | opt -S -mem2reg | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios7 -target-feature +neon -ffreestanding -S -o - -disable-O0-optnone -emit-llvm %s | opt -S -mem2reg | FileCheck %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
@@ -48,8 +48,8 @@ float64x2_t test_vmovq_n_f64(float64_t w) {
   return vmovq_n_f64(w);
 }
 
-// CHECK-LABEL: define{{.*}} <4 x half> @test_vmov_n_f16(half* noundef %a1) #1 {
-// CHECK:   [[TMP0:%.*]] = load half, half* %a1, align 2
+// CHECK-LABEL: define{{.*}} <4 x half> @test_vmov_n_f16(ptr noundef %a1) #1 {
+// CHECK:   [[TMP0:%.*]] = load half, ptr %a1, align 2
 // CHECK:   [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[TMP0]], i32 0
 // CHECK:   [[VECINIT1:%.*]] = insertelement <4 x half> [[VECINIT]], half [[TMP0]], i32 1
 // CHECK:   [[VECINIT2:%.*]] = insertelement <4 x half> [[VECINIT1]], half [[TMP0]], i32 2
@@ -65,8 +65,8 @@ float64x1_t test_vmov_n_f64(float64_t a1) {
 }
 */
 
-// CHECK-LABEL: define{{.*}} <8 x half> @test_vmovq_n_f16(half* noundef %a1) #0 {
-// CHECK:   [[TMP0:%.*]] = load half, half* %a1, align 2
+// CHECK-LABEL: define{{.*}} <8 x half> @test_vmovq_n_f16(ptr noundef %a1) #0 {
+// CHECK:   [[TMP0:%.*]] = load half, ptr %a1, align 2
 // CHECK:   [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[TMP0]], i32 0
 // CHECK:   [[VECINIT1:%.*]] = insertelement <8 x half> [[VECINIT]], half [[TMP0]], i32 1
 // CHECK:   [[VECINIT2:%.*]] = insertelement <8 x half> [[VECINIT1]], half [[TMP0]], i32 2

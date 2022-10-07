@@ -1,26 +1,26 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-linux-gnu -emit-llvm %s -o - -verify | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -emit-llvm %s -o - -verify | FileCheck %s
 
 // CHECK: @weakvar = weak{{.*}} global
 // CHECK: @__weakvar_alias ={{.*}} global
 // CHECK: @correct_linkage = weak{{.*}} global
 
 
-// CHECK-DAG: @both ={{.*}} alias void (), void ()* @__both
-// CHECK-DAG: @both2 ={{.*}} alias void (), void ()* @__both2
-// CHECK-DAG: @weakvar_alias = weak{{.*}} alias i32, i32* @__weakvar_alias
-// CHECK-DAG: @foo = weak{{.*}} alias void (), void ()* @__foo
-// CHECK-DAG: @foo2 = weak{{.*}} alias void (), void ()* @__foo2
-// CHECK-DAG: @stutter = weak{{.*}} alias void (), void ()* @__stutter
-// CHECK-DAG: @stutter2 = weak{{.*}} alias void (), void ()* @__stutter2
-// CHECK-DAG: @declfirst = weak{{.*}} alias void (), void ()* @__declfirst
-// CHECK-DAG: @declfirstattr = weak{{.*}} alias void (), void ()* @__declfirstattr
-// CHECK-DAG: @mix2 = weak{{.*}} alias void (), void ()* @__mix2
-// CHECK-DAG: @a1 = weak{{.*}} alias void (), void ()* @__a1
-// CHECK-DAG: @xxx = weak{{.*}} alias void (), void ()* @__xxx
-// CHECK-DAG: @undecfunc_alias1 = weak{{.*}} alias void (), void ()* @undecfunc
-// CHECK-DAG: @undecfunc_alias2 = weak{{.*}} alias void (), void ()* @undecfunc
-// CHECK-DAG: @undecfunc_alias3 = weak{{.*}} alias void (), void ()* @undecfunc
-// CHECK-DAG: @undecfunc_alias4 = weak{{.*}} alias void (), void ()* @undecfunc
+// CHECK-DAG: @both ={{.*}} alias void (), ptr @__both
+// CHECK-DAG: @both2 ={{.*}} alias void (), ptr @__both2
+// CHECK-DAG: @weakvar_alias = weak{{.*}} alias i32, ptr @__weakvar_alias
+// CHECK-DAG: @foo = weak{{.*}} alias void (), ptr @__foo
+// CHECK-DAG: @foo2 = weak{{.*}} alias void (), ptr @__foo2
+// CHECK-DAG: @stutter = weak{{.*}} alias void (), ptr @__stutter
+// CHECK-DAG: @stutter2 = weak{{.*}} alias void (), ptr @__stutter2
+// CHECK-DAG: @declfirst = weak{{.*}} alias void (), ptr @__declfirst
+// CHECK-DAG: @declfirstattr = weak{{.*}} alias void (), ptr @__declfirstattr
+// CHECK-DAG: @mix2 = weak{{.*}} alias void (), ptr @__mix2
+// CHECK-DAG: @a1 = weak{{.*}} alias void (), ptr @__a1
+// CHECK-DAG: @xxx = weak{{.*}} alias void (), ptr @__xxx
+// CHECK-DAG: @undecfunc_alias1 = weak{{.*}} alias void (), ptr @undecfunc
+// CHECK-DAG: @undecfunc_alias2 = weak{{.*}} alias void (), ptr @undecfunc
+// CHECK-DAG: @undecfunc_alias3 = weak{{.*}} alias void (), ptr @undecfunc
+// CHECK-DAG: @undecfunc_alias4 = weak{{.*}} alias void (), ptr @undecfunc
 
 
 
@@ -153,7 +153,7 @@ void undecfunc(void) { }
 void SHA512Pad(void *context) {}
 #pragma weak SHA384Pad = SHA512Pad
 void PR10878(void) { SHA384Pad(0); }
-// CHECK: call void @SHA384Pad(i8* noundef null)
+// CHECK: call void @SHA384Pad(ptr noundef null)
 
 
 // PR14046: Parse #pragma weak in function-local context

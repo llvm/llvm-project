@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-gnu-linux -x c++ -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
-// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-gnu-linux -x c++ -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-gnu-linux -x c++ -S -emit-llvm -fsanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
-// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-gnu-linux -x c++ -S -emit-llvm -fsanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
+// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
+// RUN: %clang_cc1 -triple aarch64-gnu-linux -x c++ -S -emit-llvm %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
+// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm -fsanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
+// RUN: %clang_cc1 -triple aarch64-gnu-linux -x c++ -S -emit-llvm -fsanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-AARCH
 
 // no-sanitize-memory-param-retval does NOT conflict with enable-noundef-analysis
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-gnu-linux -x c++ -S -emit-llvm -fno-sanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
+// RUN: %clang_cc1 -triple x86_64-gnu-linux -x c++ -S -emit-llvm -fno-sanitize-memory-param-retval %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-INTEL
 
 //************ Passing structs by value
 // TODO: No structs may currently be marked noundef
@@ -26,16 +26,16 @@ struct NoCopy {
 };
 NoCopy ret_nocopy() { return {}; }
 void pass_nocopy(NoCopy e) {}
-// CHECK: [[DEF]] void @{{.*}}ret_nocopy{{.*}}(%"struct.check_structs::NoCopy"* noalias sret({{[^)]+}}) align 4 %
-// CHECK: [[DEF]] void @{{.*}}pass_nocopy{{.*}}(%"struct.check_structs::NoCopy"* noundef %
+// CHECK: [[DEF]] void @{{.*}}ret_nocopy{{.*}}(ptr noalias sret({{[^)]+}}) align 4 %
+// CHECK: [[DEF]] void @{{.*}}pass_nocopy{{.*}}(ptr noundef %
 
 struct Huge {
   int a[1024];
 };
 Huge ret_huge() { return {}; }
 void pass_huge(Huge h) {}
-// CHECK: [[DEF]] void @{{.*}}ret_huge{{.*}}(%"struct.check_structs::Huge"* noalias sret({{[^)]+}}) align 4 %
-// CHECK: [[DEF]] void @{{.*}}pass_huge{{.*}}(%"struct.check_structs::Huge"* noundef
+// CHECK: [[DEF]] void @{{.*}}ret_huge{{.*}}(ptr noalias sret({{[^)]+}}) align 4 %
+// CHECK: [[DEF]] void @{{.*}}pass_huge{{.*}}(ptr noundef
 } // namespace check_structs
 
 //************ Passing unions by value
@@ -58,8 +58,8 @@ union NoCopy {
 };
 NoCopy ret_nocopy() { return {}; }
 void pass_nocopy(NoCopy e) {}
-// CHECK: [[DEF]] void @{{.*}}ret_nocopy{{.*}}(%"union.check_unions::NoCopy"* noalias sret({{[^)]+}}) align 4 %
-// CHECK: [[DEF]] void @{{.*}}pass_nocopy{{.*}}(%"union.check_unions::NoCopy"* noundef %
+// CHECK: [[DEF]] void @{{.*}}ret_nocopy{{.*}}(ptr noalias sret({{[^)]+}}) align 4 %
+// CHECK: [[DEF]] void @{{.*}}pass_nocopy{{.*}}(ptr noundef %
 } // namespace check_unions
 
 //************ Passing `this` pointers
@@ -85,9 +85,9 @@ void use_object() {
   obj.getData();
   obj.getThis();
 }
-// CHECK: define linkonce_odr void @{{.*}}Object{{.*}}(%"struct.check_this::Object"* noundef nonnull align 4 dereferenceable(1) %
-// CHECK: define linkonce_odr noundef i32 @{{.*}}Object{{.*}}getData{{.*}}(%"struct.check_this::Object"* noundef nonnull align 4 dereferenceable(1) %
-// CHECK: define linkonce_odr noundef %"struct.check_this::Object"* @{{.*}}Object{{.*}}getThis{{.*}}(%"struct.check_this::Object"* noundef nonnull align 4 dereferenceable(1) %
+// CHECK: define linkonce_odr void @{{.*}}Object{{.*}}(ptr noundef nonnull align 4 dereferenceable(1) %
+// CHECK: define linkonce_odr noundef i32 @{{.*}}Object{{.*}}getData{{.*}}(ptr noundef nonnull align 4 dereferenceable(1) %
+// CHECK: define linkonce_odr noundef ptr @{{.*}}Object{{.*}}getThis{{.*}}(ptr noundef nonnull align 4 dereferenceable(1) %
 } // namespace check_this
 
 //************ Passing vector types
@@ -145,8 +145,8 @@ void pass_large_BitInt(_BitInt(127) e) {
 }
 
 // Pointers to arrays/functions are always noundef
-// CHECK: [[DEF]] noundef [32 x i32]* @{{.*}}ret_arrptr{{.*}}()
-// CHECK: [[DEF]] noundef i32 (i32)* @{{.*}}ret_fnptr{{.*}}()
+// CHECK: [[DEF]] noundef ptr @{{.*}}ret_arrptr{{.*}}()
+// CHECK: [[DEF]] noundef ptr @{{.*}}ret_fnptr{{.*}}()
 
 // Pointers to members are never noundef
 // CHECK: [[DEF]] i64 @{{.*}}ret_mdptr{{.*}}()
@@ -154,8 +154,8 @@ void pass_large_BitInt(_BitInt(127) e) {
 // CHECK-AARCH: [[DEF]] [2 x i64] @{{.*}}ret_mfptr{{.*}}()
 
 // nullptr_t is never noundef
-// CHECK: [[DEF]] i8* @{{.*}}ret_npt{{.*}}()
-// CHECK: [[DEF]] void @{{.*}}pass_npt{{.*}}(i8* %
+// CHECK: [[DEF]] ptr @{{.*}}ret_npt{{.*}}()
+// CHECK: [[DEF]] void @{{.*}}pass_npt{{.*}}(ptr %
 
 // TODO: for now, ExtInt is only noundef if it is sign/zero-extended
 // CHECK-INTEL: [[DEF]] noundef signext i3 @{{.*}}ret_BitInt{{.*}}()

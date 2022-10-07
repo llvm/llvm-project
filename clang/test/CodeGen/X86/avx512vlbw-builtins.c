@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bw -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bw -target-feature +avx512vl -fno-signed-char -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bw -target-feature +avx512vl -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avx512bw -target-feature +avx512vl -fno-signed-char -emit-llvm -o - -Wall -Werror -Wsign-conversion | FileCheck %s
 
 #include <immintrin.h>
 
@@ -2498,121 +2498,121 @@ __m256i test_mm256_maskz_mov_epi8(__mmask32 __U, __m256i __A) {
 
 __m128i test_mm_loadu_epi16(void const *__P) {
   // CHECK-LABEL: @test_mm_loadu_epi16
-  // CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 1{{$}}
+  // CHECK: load <2 x i64>, ptr %{{.*}}, align 1{{$}}
   return _mm_loadu_epi16(__P);
 }
 
 __m128i test_mm_mask_loadu_epi16(__m128i __W, __mmask8 __U, void const *__P) {
   // CHECK-LABEL: @test_mm_mask_loadu_epi16
-  // CHECK: @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %{{.*}}, i32 1, <8 x i1> %{{.*}}, <8 x i16> %{{.*}})
+  // CHECK: @llvm.masked.load.v8i16.p0(ptr %{{.*}}, i32 1, <8 x i1> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_mask_loadu_epi16(__W, __U, __P); 
 }
 
 __m128i test_mm_maskz_loadu_epi16(__mmask8 __U, void const *__P) {
   // CHECK-LABEL: @test_mm_maskz_loadu_epi16
-  // CHECK: @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %{{.*}}, i32 1, <8 x i1> %{{.*}}, <8 x i16> %{{.*}})
+  // CHECK: @llvm.masked.load.v8i16.p0(ptr %{{.*}}, i32 1, <8 x i1> %{{.*}}, <8 x i16> %{{.*}})
   return _mm_maskz_loadu_epi16(__U, __P); 
 }
 
 __m256i test_mm256_loadu_epi16(void const *__P) {
   // CHECK-LABEL: @test_mm256_loadu_epi16
-  // CHECK: load <4 x i64>, <4 x i64>* %{{.*}}, align 1{{$}}
+  // CHECK: load <4 x i64>, ptr %{{.*}}, align 1{{$}}
   return _mm256_loadu_epi16(__P);
 }
 
 __m256i test_mm256_mask_loadu_epi16(__m256i __W, __mmask16 __U, void const *__P) {
   // CHECK-LABEL: @test_mm256_mask_loadu_epi16
-  // CHECK: @llvm.masked.load.v16i16.p0v16i16(<16 x i16>* %{{.*}}, i32 1, <16 x i1> %{{.*}}, <16 x i16> %{{.*}})
+  // CHECK: @llvm.masked.load.v16i16.p0(ptr %{{.*}}, i32 1, <16 x i1> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_mask_loadu_epi16(__W, __U, __P); 
 }
 
 __m256i test_mm256_maskz_loadu_epi16(__mmask16 __U, void const *__P) {
   // CHECK-LABEL: @test_mm256_maskz_loadu_epi16
-  // CHECK: @llvm.masked.load.v16i16.p0v16i16(<16 x i16>* %{{.*}}, i32 1, <16 x i1> %{{.*}}, <16 x i16> %{{.*}})
+  // CHECK: @llvm.masked.load.v16i16.p0(ptr %{{.*}}, i32 1, <16 x i1> %{{.*}}, <16 x i16> %{{.*}})
   return _mm256_maskz_loadu_epi16(__U, __P); 
 }
 
 __m128i test_mm_loadu_epi8(void const *__P) {
   // CHECK-LABEL: @test_mm_loadu_epi8
-  // CHECK: load <2 x i64>, <2 x i64>* %{{.*}}, align 1{{$}}
+  // CHECK: load <2 x i64>, ptr %{{.*}}, align 1{{$}}
   return _mm_loadu_epi8(__P);
 }
 
 __m128i test_mm_mask_loadu_epi8(__m128i __W, __mmask16 __U, void const *__P) {
   // CHECK-LABEL: @test_mm_mask_loadu_epi8
-  // CHECK: @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %{{.*}}, i32 1, <16 x i1> %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK: @llvm.masked.load.v16i8.p0(ptr %{{.*}}, i32 1, <16 x i1> %{{.*}}, <16 x i8> %{{.*}})
   return _mm_mask_loadu_epi8(__W, __U, __P); 
 }
 
 __m128i test_mm_maskz_loadu_epi8(__mmask16 __U, void const *__P) {
   // CHECK-LABEL: @test_mm_maskz_loadu_epi8
-  // CHECK: @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %{{.*}}, i32 1, <16 x i1> %{{.*}}, <16 x i8> %{{.*}})
+  // CHECK: @llvm.masked.load.v16i8.p0(ptr %{{.*}}, i32 1, <16 x i1> %{{.*}}, <16 x i8> %{{.*}})
   return _mm_maskz_loadu_epi8(__U, __P); 
 }
 
 __m256i test_mm256_loadu_epi8(void const *__P) {
   // CHECK-LABEL: @test_mm256_loadu_epi8
-  // CHECK: load <4 x i64>, <4 x i64>* %{{.*}}, align 1{{$}}
+  // CHECK: load <4 x i64>, ptr %{{.*}}, align 1{{$}}
   return _mm256_loadu_epi8(__P);
 }
 
 __m256i test_mm256_mask_loadu_epi8(__m256i __W, __mmask32 __U, void const *__P) {
   // CHECK-LABEL: @test_mm256_mask_loadu_epi8
-  // CHECK: @llvm.masked.load.v32i8.p0v32i8(<32 x i8>* %{{.*}}, i32 1, <32 x i1> %{{.*}}, <32 x i8> %{{.*}})
+  // CHECK: @llvm.masked.load.v32i8.p0(ptr %{{.*}}, i32 1, <32 x i1> %{{.*}}, <32 x i8> %{{.*}})
   return _mm256_mask_loadu_epi8(__W, __U, __P); 
 }
 
 __m256i test_mm256_maskz_loadu_epi8(__mmask32 __U, void const *__P) {
   // CHECK-LABEL: @test_mm256_maskz_loadu_epi8
-  // CHECK: @llvm.masked.load.v32i8.p0v32i8(<32 x i8>* %{{.*}}, i32 1, <32 x i1> %{{.*}}, <32 x i8> %{{.*}})
+  // CHECK: @llvm.masked.load.v32i8.p0(ptr %{{.*}}, i32 1, <32 x i1> %{{.*}}, <32 x i8> %{{.*}})
   return _mm256_maskz_loadu_epi8(__U, __P); 
 }
 
 void test_mm_storeu_epi16(void *__p, __m128i __a) {
   // check-label: @test_mm_storeu_epi16
-  // check: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  // check: store <2 x i64> %{{.*}}, ptr %{{.*}}, align 1{{$}}
   return _mm_storeu_epi16(__p, __a);
 }
 
 void test_mm_mask_storeu_epi16(void *__P, __mmask8 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_mask_storeu_epi16
-  // CHECK: @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %{{.*}}, <8 x i16>* %{{.*}}, i32 1, <8 x i1> %{{.*}})
+  // CHECK: @llvm.masked.store.v8i16.p0(<8 x i16> %{{.*}}, ptr %{{.*}}, i32 1, <8 x i1> %{{.*}})
   return _mm_mask_storeu_epi16(__P, __U, __A); 
 }
 
 void test_mm256_storeu_epi16(void *__P, __m256i __A) {
   // CHECK-LABEL: @test_mm256_storeu_epi16
-  // CHECK: store <4 x i64> %{{.*}}, <4 x i64>* %{{.*}}, align 1{{$}}
+  // CHECK: store <4 x i64> %{{.*}}, ptr %{{.*}}, align 1{{$}}
   return _mm256_storeu_epi16(__P, __A);
 }
 
 void test_mm256_mask_storeu_epi16(void *__P, __mmask16 __U, __m256i __A) {
   // CHECK-LABEL: @test_mm256_mask_storeu_epi16
-  // CHECK: @llvm.masked.store.v16i16.p0v16i16(<16 x i16> %{{.*}}, <16 x i16>* %{{.*}}, i32 1, <16 x i1> %{{.*}})
+  // CHECK: @llvm.masked.store.v16i16.p0(<16 x i16> %{{.*}}, ptr %{{.*}}, i32 1, <16 x i1> %{{.*}})
   return _mm256_mask_storeu_epi16(__P, __U, __A); 
 }
 
 void test_mm_storeu_epi8(void *__p, __m128i __a) {
   // check-label: @test_mm_storeu_epi8
-  // check: store <2 x i64> %{{.*}}, <2 x i64>* %{{.*}}, align 1{{$}}
+  // check: store <2 x i64> %{{.*}}, ptr %{{.*}}, align 1{{$}}
   return _mm_storeu_epi8(__p, __a);
 }
 
 void test_mm_mask_storeu_epi8(void *__P, __mmask16 __U, __m128i __A) {
   // CHECK-LABEL: @test_mm_mask_storeu_epi8
-  // CHECK: @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %{{.*}}, <16 x i8>* %{{.*}}, i32 1, <16 x i1> %{{.*}})
+  // CHECK: @llvm.masked.store.v16i8.p0(<16 x i8> %{{.*}}, ptr %{{.*}}, i32 1, <16 x i1> %{{.*}})
   return _mm_mask_storeu_epi8(__P, __U, __A); 
 }
 
 void test_mm256_storeu_epi8(void *__P, __m256i __A) {
   // CHECK-LABEL: @test_mm256_storeu_epi8
-  // CHECK: store <4 x i64> %{{.*}}, <4 x i64>* %{{.*}}, align 1{{$}}
+  // CHECK: store <4 x i64> %{{.*}}, ptr %{{.*}}, align 1{{$}}
   return _mm256_storeu_epi8(__P, __A);
 }
 
 void test_mm256_mask_storeu_epi8(void *__P, __mmask32 __U, __m256i __A) {
   // CHECK-LABEL: @test_mm256_mask_storeu_epi8
-  // CHECK: @llvm.masked.store.v32i8.p0v32i8(<32 x i8> %{{.*}}, <32 x i8>* %{{.*}}, i32 1, <32 x i1> %{{.*}})
+  // CHECK: @llvm.masked.store.v32i8.p0(<32 x i8> %{{.*}}, ptr %{{.*}}, i32 1, <32 x i1> %{{.*}})
   return _mm256_mask_storeu_epi8(__P, __U, __A); 
 }
 __mmask16 test_mm_test_epi8_mask(__m128i __A, __m128i __B) {
@@ -2738,14 +2738,12 @@ __mmask16 test_mm256_mask_testn_epi16_mask(__mmask16 __U, __m256i __A, __m256i _
 __mmask16 test_mm_movepi8_mask(__m128i __A) {
   // CHECK-LABEL: @test_mm_movepi8_mask
   // CHECK: [[CMP:%.*]] = icmp slt <16 x i8> %{{.*}}, zeroinitializer
-  // CHECK: bitcast <16 x i1> [[CMP]] to i16
   return _mm_movepi8_mask(__A); 
 }
 
 __mmask32 test_mm256_movepi8_mask(__m256i __A) {
   // CHECK-LABEL: @test_mm256_movepi8_mask
   // CHECK: [[CMP:%.*]] = icmp slt <32 x i8> %{{.*}}, zeroinitializer
-  // CHECK: bitcast <32 x i1> [[CMP]] to i32
   return _mm256_movepi8_mask(__A); 
 }
 
@@ -3132,14 +3130,12 @@ __m256i test_mm256_maskz_dbsad_epu8(__mmask16 __U, __m256i __A, __m256i __B) {
 __mmask8 test_mm_movepi16_mask(__m128i __A) {
   // CHECK-LABEL: @test_mm_movepi16_mask
   // CHECK: [[CMP:%.*]] = icmp slt <8 x i16> %{{.*}}, zeroinitializer
-  // CHECK: bitcast <8 x i1> [[CMP]] to i8
   return _mm_movepi16_mask(__A); 
 }
 
 __mmask16 test_mm256_movepi16_mask(__m256i __A) {
   // CHECK-LABEL: @test_mm256_movepi16_mask
   // CHECK: [[CMP:%.*]] = icmp slt <16 x i16> %{{.*}}, zeroinitializer
-  // CHECK: bitcast <16 x i1> [[CMP]] to i16
   return _mm256_movepi16_mask(__A); 
 }
 
