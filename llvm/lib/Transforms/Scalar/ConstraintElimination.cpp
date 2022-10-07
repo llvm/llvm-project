@@ -19,6 +19,7 @@
 #include "llvm/Analysis/ConstraintSystem.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -110,7 +111,11 @@ class ConstraintInfo {
   ConstraintSystem UnsignedCS;
   ConstraintSystem SignedCS;
 
+  const DataLayout &DL;
+
 public:
+  ConstraintInfo(const DataLayout &DL) : DL(DL) {}
+
   DenseMap<Value *, unsigned> &getValue2Index(bool Signed) {
     return Signed ? SignedValue2Index : UnsignedValue2Index;
   }
@@ -325,6 +330,14 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT &&
       Pred != CmpInst::ICMP_SLE && Pred != CmpInst::ICMP_SLT)
     return {};
+
+  // If both operands are known to be non-negative, change signed predicates to
+  // unsigned ones. This increases the reasoning effectiveness in combination
+  // with the signed <-> unsigned transfer logic.
+  if (CmpInst::isSigned(Pred) &&
+      isKnownNonNegative(Op0, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1) &&
+      isKnownNonNegative(Op1, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
+    Pred = CmpInst::getUnsignedPredicate(Pred);
 
   SmallVector<PreconditionTy, 4> Preconditions;
   bool IsSigned = CmpInst::isSigned(Pred);
@@ -646,8 +659,6 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
              A->printAsOperand(dbgs(), false); dbgs() << ", ";
              B->printAsOperand(dbgs(), false); dbgs() << "'\n");
   bool Added = false;
-  assert(CmpInst::isSigned(Pred) == R.IsSigned &&
-         "condition and constraint signs must match");
   auto &CSToUse = getCS(R.IsSigned);
   if (R.Coefficients.empty())
     return;
@@ -743,7 +754,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   bool Changed = false;
   DT.updateDFSNumbers();
 
-  ConstraintInfo Info;
+  ConstraintInfo Info(F.getParent()->getDataLayout());
   State S(DT);
 
   // First, collect conditions implied by branches and blocks with their
