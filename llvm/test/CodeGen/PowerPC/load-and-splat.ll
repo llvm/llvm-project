@@ -19,7 +19,7 @@
 ; RUN:   -check-prefix=P7-AIX32
 
 ; v2f64
-define dso_local void @test(<2 x double>* nocapture %c, double* nocapture readonly %a) local_unnamed_addr {
+define dso_local void @test(ptr nocapture %c, ptr nocapture readonly %a) local_unnamed_addr {
 ; P9-LABEL: test:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    addi r4, r4, 24
@@ -62,16 +62,16 @@ define dso_local void @test(<2 x double>* nocapture %c, double* nocapture readon
 ; P7-AIX32-NEXT:    stxvd2x vs0, 0, r3
 ; P7-AIX32-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds double, double* %a, i64 3
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %a, i64 3
+  %0 = load double, ptr %arrayidx, align 8
   %splat.splatinsert.i = insertelement <2 x double> undef, double %0, i32 0
   %splat.splat.i = shufflevector <2 x double> %splat.splatinsert.i, <2 x double> undef, <2 x i32> zeroinitializer
-  store <2 x double> %splat.splat.i, <2 x double>* %c, align 16
+  store <2 x double> %splat.splat.i, ptr %c, align 16
   ret void
 }
 
 ; v4f32
-define dso_local void @test2(<4 x float>* nocapture %c, float* nocapture readonly %a) local_unnamed_addr {
+define dso_local void @test2(ptr nocapture %c, ptr nocapture readonly %a) local_unnamed_addr {
 ; P9-LABEL: test2:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    addi r4, r4, 12
@@ -119,16 +119,16 @@ define dso_local void @test2(<4 x float>* nocapture %c, float* nocapture readonl
 ; P7-AIX32-NEXT:    stxvw4x vs0, 0, r3
 ; P7-AIX32-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds float, float* %a, i64 3
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %a, i64 3
+  %0 = load float, ptr %arrayidx, align 4
   %splat.splatinsert.i = insertelement <4 x float> undef, float %0, i32 0
   %splat.splat.i = shufflevector <4 x float> %splat.splatinsert.i, <4 x float> undef, <4 x i32> zeroinitializer
-  store <4 x float> %splat.splat.i, <4 x float>* %c, align 16
+  store <4 x float> %splat.splat.i, ptr %c, align 16
   ret void
 }
 
 ; v4i32
-define dso_local void @test3(<4 x i32>* nocapture %c, i32* nocapture readonly %a) local_unnamed_addr {
+define dso_local void @test3(ptr nocapture %c, ptr nocapture readonly %a) local_unnamed_addr {
 ; P9-LABEL: test3:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    addi r4, r4, 12
@@ -176,17 +176,17 @@ define dso_local void @test3(<4 x i32>* nocapture %c, i32* nocapture readonly %a
 ; P7-AIX32-NEXT:    stxvw4x vs0, 0, r3
 ; P7-AIX32-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 3
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 3
+  %0 = load i32, ptr %arrayidx, align 4
   %splat.splatinsert.i = insertelement <4 x i32> undef, i32 %0, i32 0
   %splat.splat.i = shufflevector <4 x i32> %splat.splatinsert.i, <4 x i32> undef, <4 x i32> zeroinitializer
-  store <4 x i32> %splat.splat.i, <4 x i32>* %c, align 16
+  store <4 x i32> %splat.splat.i, ptr %c, align 16
   ret void
 }
 
 
 ; v2i64
-define dso_local void @test4(<2 x i64>* nocapture %c, i64* nocapture readonly %a) local_unnamed_addr {
+define dso_local void @test4(ptr nocapture %c, ptr nocapture readonly %a) local_unnamed_addr {
 ; P9-LABEL: test4:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    addi r4, r4, 24
@@ -254,16 +254,16 @@ define dso_local void @test4(<2 x i64>* nocapture %c, i64* nocapture readonly %a
 ; P7-AIX32-NEXT:    stxvw4x v2, 0, r3
 ; P7-AIX32-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds i64, i64* %a, i64 3
-  %0 = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 3
+  %0 = load i64, ptr %arrayidx, align 8
   %splat.splatinsert.i = insertelement <2 x i64> undef, i64 %0, i32 0
   %splat.splat.i = shufflevector <2 x i64> %splat.splatinsert.i, <2 x i64> undef, <2 x i32> zeroinitializer
-  store <2 x i64> %splat.splat.i, <2 x i64>* %c, align 16
+  store <2 x i64> %splat.splat.i, ptr %c, align 16
   ret void
 }
 
 ; sext v2i64
-define void @test5(<2 x i64>* %a, i32* %in) {
+define void @test5(ptr %a, ptr %in) {
 ; P9-LABEL: test5:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    lfiwax f0, 0, r4
@@ -331,16 +331,16 @@ define void @test5(<2 x i64>* %a, i32* %in) {
 ; P7-AIX32-NEXT:    stxvw4x v2, 0, r3
 ; P7-AIX32-NEXT:    blr
 entry:
-  %0 = load i32, i32* %in, align 4
+  %0 = load i32, ptr %in, align 4
   %conv = sext i32 %0 to i64
   %splat.splatinsert.i = insertelement <2 x i64> poison, i64 %conv, i32 0
   %splat.splat.i = shufflevector <2 x i64> %splat.splatinsert.i, <2 x i64> poison, <2 x i32> zeroinitializer
-  store <2 x i64> %splat.splat.i, <2 x i64>* %a, align 16
+  store <2 x i64> %splat.splat.i, ptr %a, align 16
   ret void
 }
 
 ; zext v2i64
-define void @test6(<2 x i64>* %a, i32* %in) {
+define void @test6(ptr %a, ptr %in) {
 ; P9-LABEL: test6:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    lfiwzx f0, 0, r4
@@ -408,16 +408,16 @@ define void @test6(<2 x i64>* %a, i32* %in) {
 ; P7-AIX32-NEXT:    stxvw4x v2, 0, r3
 ; P7-AIX32-NEXT:    blr
 entry:
-  %0 = load i32, i32* %in, align 4
+  %0 = load i32, ptr %in, align 4
   %conv = zext i32 %0 to i64
   %splat.splatinsert.i = insertelement <2 x i64> poison, i64 %conv, i32 0
   %splat.splat.i = shufflevector <2 x i64> %splat.splatinsert.i, <2 x i64> poison, <2 x i32> zeroinitializer
-  store <2 x i64> %splat.splat.i, <2 x i64>* %a, align 16
+  store <2 x i64> %splat.splat.i, ptr %a, align 16
   ret void
 }
 
 ; v8i16
-define void @test7(<8 x i16>* %a, i16* %in) {
+define void @test7(ptr %a, ptr %in) {
 ; P9-LABEL: test7:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    lxsihzx v2, 0, r4
@@ -471,15 +471,15 @@ define void @test7(<8 x i16>* %a, i16* %in) {
 ; P7-AIX32-NEXT:    stxvw4x v2, 0, r3
 ; P7-AIX32-NEXT:    blr
 entry:
-  %0 = load i16, i16* %in, align 2
+  %0 = load i16, ptr %in, align 2
   %splat.splatinsert.i = insertelement <8 x i16> poison, i16 %0, i32 0
   %splat.splat.i = shufflevector <8 x i16> %splat.splatinsert.i, <8 x i16> poison, <8 x i32> zeroinitializer
-  store <8 x i16> %splat.splat.i, <8 x i16>* %a, align 16
+  store <8 x i16> %splat.splat.i, ptr %a, align 16
   ret void
 }
 
 ; v16i8
-define void @test8(<16 x i8>* %a, i8* %in) {
+define void @test8(ptr %a, ptr %in) {
 ; P9-LABEL: test8:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    lxsibzx v2, 0, r4
@@ -529,14 +529,14 @@ define void @test8(<16 x i8>* %a, i8* %in) {
 ; P7-AIX32-NEXT:    stxvw4x v2, 0, r3
 ; P7-AIX32-NEXT:    blr
 entry:
-  %0 = load i8, i8* %in, align 1
+  %0 = load i8, ptr %in, align 1
   %splat.splatinsert.i = insertelement <16 x i8> poison, i8 %0, i32 0
   %splat.splat.i = shufflevector <16 x i8> %splat.splatinsert.i, <16 x i8> poison, <16 x i32> zeroinitializer
-  store <16 x i8> %splat.splat.i, <16 x i8>* %a, align 16
+  store <16 x i8> %splat.splat.i, ptr %a, align 16
   ret void
 }
 
-define <16 x i8> @unadjusted_lxvwsx(i32* %s, i32* %t) {
+define <16 x i8> @unadjusted_lxvwsx(ptr %s, ptr %t) {
 ; P9-LABEL: unadjusted_lxvwsx:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    lxvwsx v2, 0, r3
@@ -571,13 +571,12 @@ define <16 x i8> @unadjusted_lxvwsx(i32* %s, i32* %t) {
 ; P7-AIX32-NEXT:    xxspltw v2, vs0, 1
 ; P7-AIX32-NEXT:    blr
   entry:
-    %0 = bitcast i32* %s to <4 x i8>*
-    %1 = load <4 x i8>, <4 x i8>* %0, align 4
-    %2 = shufflevector <4 x i8> %1, <4 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
-    ret <16 x i8> %2
+    %0 = load <4 x i8>, ptr %s, align 4
+    %1 = shufflevector <4 x i8> %0, <4 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+    ret <16 x i8> %1
 }
 
-define <16 x i8> @adjusted_lxvwsx(i64* %s, i64* %t) {
+define <16 x i8> @adjusted_lxvwsx(ptr %s, ptr %t) {
 ; P9-LABEL: adjusted_lxvwsx:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    addi r3, r3, 4
@@ -619,13 +618,12 @@ define <16 x i8> @adjusted_lxvwsx(i64* %s, i64* %t) {
 ; P7-AIX32-NEXT:    xxspltw v2, vs0, 1
 ; P7-AIX32-NEXT:    blr
   entry:
-    %0 = bitcast i64* %s to <8 x i8>*
-    %1 = load <8 x i8>, <8 x i8>* %0, align 8
-    %2 = shufflevector <8 x i8> %1, <8 x i8> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
-    ret <16 x i8> %2
+    %0 = load <8 x i8>, ptr %s, align 8
+    %1 = shufflevector <8 x i8> %0, <8 x i8> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
+    ret <16 x i8> %1
 }
 
-define <16 x i8> @unadjusted_lxvwsx_v16i8(<16 x i8> *%s, <16 x i8> %t) {
+define <16 x i8> @unadjusted_lxvwsx_v16i8(ptr %s, <16 x i8> %t) {
 ; P9-LABEL: unadjusted_lxvwsx_v16i8:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    lxvwsx v2, 0, r3
@@ -661,12 +659,12 @@ define <16 x i8> @unadjusted_lxvwsx_v16i8(<16 x i8> *%s, <16 x i8> %t) {
 ; P7-AIX32-NEXT:    xxspltw v2, vs0, 0
 ; P7-AIX32-NEXT:    blr
   entry:
-    %0 = load <16 x i8>, <16 x i8>* %s, align 16
+    %0 = load <16 x i8>, ptr %s, align 16
     %1 = shufflevector <16 x i8> %0, <16 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
     ret <16 x i8> %1
 }
 
-define <16 x i8> @adjusted_lxvwsx_v16i8(<16 x i8> *%s, <16 x i8> %t) {
+define <16 x i8> @adjusted_lxvwsx_v16i8(ptr %s, <16 x i8> %t) {
 ; P9-LABEL: adjusted_lxvwsx_v16i8:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    addi r3, r3, 4
@@ -704,12 +702,12 @@ define <16 x i8> @adjusted_lxvwsx_v16i8(<16 x i8> *%s, <16 x i8> %t) {
 ; P7-AIX32-NEXT:    xxspltw v2, vs0, 1
 ; P7-AIX32-NEXT:    blr
   entry:
-    %0 = load <16 x i8>, <16 x i8>* %s, align 16
+    %0 = load <16 x i8>, ptr %s, align 16
     %1 = shufflevector <16 x i8> %0, <16 x i8> undef, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
     ret <16 x i8> %1
 }
 
-define <16 x i8> @adjusted_lxvwsx_v16i8_2(<16 x i8> *%s, <16 x i8> %t) {
+define <16 x i8> @adjusted_lxvwsx_v16i8_2(ptr %s, <16 x i8> %t) {
 ; P9-LABEL: adjusted_lxvwsx_v16i8_2:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    addi r3, r3, 8
@@ -747,12 +745,12 @@ define <16 x i8> @adjusted_lxvwsx_v16i8_2(<16 x i8> *%s, <16 x i8> %t) {
 ; P7-AIX32-NEXT:    xxspltw v2, vs0, 2
 ; P7-AIX32-NEXT:    blr
   entry:
-    %0 = load <16 x i8>, <16 x i8>* %s, align 16
+    %0 = load <16 x i8>, ptr %s, align 16
     %1 = shufflevector <16 x i8> %0, <16 x i8> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 8, i32 9, i32 10, i32 11, i32 8, i32 9, i32 10, i32 11, i32 8, i32 9, i32 10, i32 11>
     ret <16 x i8> %1
 }
 
-define <16 x i8> @adjusted_lxvwsx_v16i8_3(<16 x i8> *%s, <16 x i8> %t) {
+define <16 x i8> @adjusted_lxvwsx_v16i8_3(ptr %s, <16 x i8> %t) {
 ; P9-LABEL: adjusted_lxvwsx_v16i8_3:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    addi r3, r3, 12
@@ -790,12 +788,12 @@ define <16 x i8> @adjusted_lxvwsx_v16i8_3(<16 x i8> *%s, <16 x i8> %t) {
 ; P7-AIX32-NEXT:    xxspltw v2, vs0, 3
 ; P7-AIX32-NEXT:    blr
   entry:
-    %0 = load <16 x i8>, <16 x i8>* %s, align 16
+    %0 = load <16 x i8>, ptr %s, align 16
     %1 = shufflevector <16 x i8> %0, <16 x i8> undef, <16 x i32> <i32 12, i32 13, i32 14, i32 15, i32 12, i32 13, i32 14, i32 15, i32 12, i32 13, i32 14, i32 15, i32 12, i32 13, i32 14, i32 15>
     ret <16 x i8> %1
 }
 
-define <16 x i8> @unadjusted_lxvdsx(i64* %s, i64* %t) {
+define <16 x i8> @unadjusted_lxvdsx(ptr %s, ptr %t) {
 ; P9-LABEL: unadjusted_lxvdsx:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    lxvdsx v2, 0, r3
@@ -851,13 +849,12 @@ define <16 x i8> @unadjusted_lxvdsx(i64* %s, i64* %t) {
 ; P7-AIX32-NEXT:    xxmrghd v2, vs0, vs0
 ; P7-AIX32-NEXT:    blr
   entry:
-    %0 = bitcast i64* %s to <8 x i8>*
-    %1 = load <8 x i8>, <8 x i8>* %0, align 8
-    %2 = shufflevector <8 x i8> %1, <8 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-    ret <16 x i8> %2
+    %0 = load <8 x i8>, ptr %s, align 8
+    %1 = shufflevector <8 x i8> %0, <8 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+    ret <16 x i8> %1
 }
 
-define <16 x i8> @unadjusted_lxvdsx_v16i8(<16 x i8> *%s, <16 x i8> %t) {
+define <16 x i8> @unadjusted_lxvdsx_v16i8(ptr %s, <16 x i8> %t) {
 ; P9-LABEL: unadjusted_lxvdsx_v16i8:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    lxvdsx v2, 0, r3
@@ -888,12 +885,12 @@ define <16 x i8> @unadjusted_lxvdsx_v16i8(<16 x i8> *%s, <16 x i8> %t) {
 ; P7-AIX32-NEXT:    lxvdsx v2, 0, r3
 ; P7-AIX32-NEXT:    blr
   entry:
-    %0 = load <16 x i8>, <16 x i8>* %s, align 16
+    %0 = load <16 x i8>, ptr %s, align 16
     %1 = shufflevector <16 x i8> %0, <16 x i8> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
     ret <16 x i8> %1
 }
 
-define <16 x i8> @adjusted_lxvdsx_v16i8(<16 x i8> *%s, <16 x i8> %t) {
+define <16 x i8> @adjusted_lxvdsx_v16i8(ptr %s, <16 x i8> %t) {
 ; P9-LABEL: adjusted_lxvdsx_v16i8:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    addi r3, r3, 8
@@ -930,12 +927,12 @@ define <16 x i8> @adjusted_lxvdsx_v16i8(<16 x i8> *%s, <16 x i8> %t) {
 ; P7-AIX32-NEXT:    lxvdsx v2, 0, r3
 ; P7-AIX32-NEXT:    blr
   entry:
-    %0 = load <16 x i8>, <16 x i8>* %s, align 16
+    %0 = load <16 x i8>, ptr %s, align 16
     %1 = shufflevector <16 x i8> %0, <16 x i8> undef, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
     ret <16 x i8> %1
 }
 
-define <8 x i16> @test_unaligned_v8i16(i16* %Ptr) {
+define <8 x i16> @test_unaligned_v8i16(ptr %Ptr) {
 ; P9-LABEL: test_unaligned_v8i16:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    addi r3, r3, 6
@@ -986,14 +983,14 @@ define <8 x i16> @test_unaligned_v8i16(i16* %Ptr) {
 ; P7-AIX32-NEXT:    vsplth v2, v2, 0
 ; P7-AIX32-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i16, i16* %Ptr, i64 3
-  %0 = load i16, i16* %add.ptr, align 16
+  %add.ptr = getelementptr inbounds i16, ptr %Ptr, i64 3
+  %0 = load i16, ptr %add.ptr, align 16
   %splat.splatinsert = insertelement <8 x i16> poison, i16 %0, i32 0
   %splat.splat = shufflevector <8 x i16> %splat.splatinsert, <8 x i16> poison, <8 x i32> zeroinitializer
   ret <8 x i16> %splat.splat
 }
 
-define <16 x i8> @test_unaligned_v16i8(i8* %Ptr) {
+define <16 x i8> @test_unaligned_v16i8(ptr %Ptr) {
 ; P9-LABEL: test_unaligned_v16i8:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    addi r3, r3, 3
@@ -1040,14 +1037,14 @@ define <16 x i8> @test_unaligned_v16i8(i8* %Ptr) {
 ; P7-AIX32-NEXT:    vspltb v2, v2, 0
 ; P7-AIX32-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %Ptr, i64 3
-  %0 = load i8, i8* %add.ptr, align 16
+  %add.ptr = getelementptr inbounds i8, ptr %Ptr, i64 3
+  %0 = load i8, ptr %add.ptr, align 16
   %splat.splatinsert = insertelement <16 x i8> poison, i8 %0, i32 0
   %splat.splat = shufflevector <16 x i8> %splat.splatinsert, <16 x i8> poison, <16 x i32> zeroinitializer
   ret <16 x i8> %splat.splat
 }
 
-define <8 x i16> @test_aligned_v8i16_1(i16* %Ptr) {
+define <8 x i16> @test_aligned_v8i16_1(ptr %Ptr) {
 ; P9-LABEL: test_aligned_v8i16_1:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    lxsihzx v2, 0, r3
@@ -1084,13 +1081,13 @@ define <8 x i16> @test_aligned_v8i16_1(i16* %Ptr) {
 ; P7-AIX32-NEXT:    vsplth v2, v2, 0
 ; P7-AIX32-NEXT:    blr
 entry:
-  %0 = load i16, i16* %Ptr, align 16
+  %0 = load i16, ptr %Ptr, align 16
   %splat.splatinsert = insertelement <8 x i16> poison, i16 %0, i32 0
   %splat.splat = shufflevector <8 x i16> %splat.splatinsert, <8 x i16> poison, <8 x i32> zeroinitializer
   ret <8 x i16> %splat.splat
 }
 
-define <8 x i16> @test_aligned_v8i16_2(i16* %Ptr) {
+define <8 x i16> @test_aligned_v8i16_2(ptr %Ptr) {
 ; P9-LABEL: test_aligned_v8i16_2:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    addi r3, r3, 32
@@ -1133,14 +1130,14 @@ define <8 x i16> @test_aligned_v8i16_2(i16* %Ptr) {
 ; P7-AIX32-NEXT:    vsplth v2, v2, 0
 ; P7-AIX32-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i16, i16* %Ptr, i64 16
-  %0 = load i16, i16* %add.ptr, align 16
+  %add.ptr = getelementptr inbounds i16, ptr %Ptr, i64 16
+  %0 = load i16, ptr %add.ptr, align 16
   %splat.splatinsert = insertelement <8 x i16> poison, i16 %0, i32 0
   %splat.splat = shufflevector <8 x i16> %splat.splatinsert, <8 x i16> poison, <8 x i32> zeroinitializer
   ret <8 x i16> %splat.splat
 }
 
-define <16 x i8> @test_aligned_v16i8_1(i8* %Ptr) {
+define <16 x i8> @test_aligned_v16i8_1(ptr %Ptr) {
 ; P9-LABEL: test_aligned_v16i8_1:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    lxsibzx v2, 0, r3
@@ -1177,13 +1174,13 @@ define <16 x i8> @test_aligned_v16i8_1(i8* %Ptr) {
 ; P7-AIX32-NEXT:    vspltb v2, v2, 0
 ; P7-AIX32-NEXT:    blr
 entry:
-  %0 = load i8, i8* %Ptr, align 16
+  %0 = load i8, ptr %Ptr, align 16
   %splat.splatinsert = insertelement <16 x i8> poison, i8 %0, i32 0
   %splat.splat = shufflevector <16 x i8> %splat.splatinsert, <16 x i8> poison, <16 x i32> zeroinitializer
   ret <16 x i8> %splat.splat
 }
 
-define <16 x i8> @test_aligned_v16i8_2(i8* %Ptr) {
+define <16 x i8> @test_aligned_v16i8_2(ptr %Ptr) {
 ; P9-LABEL: test_aligned_v16i8_2:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    addi r3, r3, 16
@@ -1226,8 +1223,8 @@ define <16 x i8> @test_aligned_v16i8_2(i8* %Ptr) {
 ; P7-AIX32-NEXT:    vspltb v2, v2, 0
 ; P7-AIX32-NEXT:    blr
 entry:
-  %add.ptr = getelementptr inbounds i8, i8* %Ptr, i64 16
-  %0 = load i8, i8* %add.ptr, align 16
+  %add.ptr = getelementptr inbounds i8, ptr %Ptr, i64 16
+  %0 = load i8, ptr %add.ptr, align 16
   %splat.splatinsert = insertelement <16 x i8> poison, i8 %0, i32 0
   %splat.splat = shufflevector <16 x i8> %splat.splatinsert, <16 x i8> poison, <16 x i32> zeroinitializer
   ret <16 x i8> %splat.splat
@@ -1237,7 +1234,7 @@ entry:
 ; as we cannot handle extending loads (from f32 to f64), and this test
 ; shows that there are multiple uses of the extending load (other than
 ; a build vector node). `lxvdsx` should not be produced in this case.
-define <2 x double> @test_v2f64_multiple_use(float* nocapture readonly %a, double* nocapture %b, double* nocapture %c) {
+define <2 x double> @test_v2f64_multiple_use(ptr nocapture readonly %a, ptr nocapture %b, ptr nocapture %c) {
 ; P9-LABEL: test_v2f64_multiple_use:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    lfs f0, 0(r3)
@@ -1310,20 +1307,20 @@ define <2 x double> @test_v2f64_multiple_use(float* nocapture readonly %a, doubl
 ; P7-AIX32-NEXT:    stfd f1, 0(r5)
 ; P7-AIX32-NEXT:    blr
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fpext float %0 to double
-  %1 = load double, double* %b, align 8
+  %1 = load double, ptr %b, align 8
   %add = fadd double %1, %conv
-  store double %add, double* %b, align 8
-  %2 = load double, double* %c, align 8
+  store double %add, ptr %b, align 8
+  %2 = load double, ptr %c, align 8
   %add2 = fadd double %2, %conv
-  store double %add2, double* %c, align 8
+  store double %add2, ptr %c, align 8
   %vecinit = insertelement <2 x double> undef, double %conv, i64 0
   %vecinit5 = shufflevector <2 x double> %vecinit, <2 x double> poison, <2 x i32> zeroinitializer
   ret <2 x double> %vecinit5
 }
 
-define <4 x i32> @test_splatW(<8 x i16>* %ptr) {
+define <4 x i32> @test_splatW(ptr %ptr) {
 ; P9-LABEL: test_splatW:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    lxvwsx v2, 0, r3
@@ -1359,13 +1356,13 @@ define <4 x i32> @test_splatW(<8 x i16>* %ptr) {
 ; P7-AIX32-NEXT:    xxspltw v2, vs0, 0
 ; P7-AIX32-NEXT:    blr
 entry:
-  %0 = load <8 x i16>, <8 x i16>* %ptr, align 16
+  %0 = load <8 x i16>, ptr %ptr, align 16
   %1 = shufflevector <8 x i16> %0, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
   %2 = bitcast<8 x i16> %1 to <4 x i32>
   ret <4 x i32> %2
 }
 
-define <4 x i32> @test_splatD(<8 x i16>* %ptr) {
+define <4 x i32> @test_splatD(ptr %ptr) {
 ; P9-LABEL: test_splatD:
 ; P9:       # %bb.0: # %entry
 ; P9-NEXT:    lxvdsx v2, 0, r3
@@ -1396,7 +1393,7 @@ define <4 x i32> @test_splatD(<8 x i16>* %ptr) {
 ; P7-AIX32-NEXT:    lxvdsx v2, 0, r3
 ; P7-AIX32-NEXT:    blr
 entry:
-  %0 = load <8 x i16>, <8 x i16>* %ptr, align 16
+  %0 = load <8 x i16>, ptr %ptr, align 16
   %1 = shufflevector <8 x i16> %0, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   %2 = bitcast<8 x i16> %1 to <4 x i32>
   ret <4 x i32> %2

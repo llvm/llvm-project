@@ -78,23 +78,23 @@ define dso_local signext i32 @test() nounwind {
 ; CHECK-NEXT:    ld 0, 16(1)
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
-%1 = load double, double* @a1, align 8
-%2 = load double, double* @a2, align 8
-%3 = load double, double* @a3, align 8
-%4 = load double, double* @a4, align 8
-%5 = load double, double* @a5, align 8
-%6 = load double, double* @a6, align 8
-%7 = load double, double* @a7, align 8
-%8 = load double, double* @a8, align 8
-%9 = load double, double* @a9, align 8
-%10 = load double, double* @a10, align 8
-%11 = load double, double* @a11, align 8
-%12 = load double, double* @a12, align 8
-%13 = load double, double* @a13, align 8
-%14 = load double, double* @a14, align 8
-%15 = load double, double* @a15, align 8
-%16 = load ppc_fp128, ppc_fp128* @a16, align 16
-%17 = load fp128, fp128* @a17, align 16
+%1 = load double, ptr @a1, align 8
+%2 = load double, ptr @a2, align 8
+%3 = load double, ptr @a3, align 8
+%4 = load double, ptr @a4, align 8
+%5 = load double, ptr @a5, align 8
+%6 = load double, ptr @a6, align 8
+%7 = load double, ptr @a7, align 8
+%8 = load double, ptr @a8, align 8
+%9 = load double, ptr @a9, align 8
+%10 = load double, ptr @a10, align 8
+%11 = load double, ptr @a11, align 8
+%12 = load double, ptr @a12, align 8
+%13 = load double, ptr @a13, align 8
+%14 = load double, ptr @a14, align 8
+%15 = load double, ptr @a15, align 8
+%16 = load ppc_fp128, ptr @a16, align 16
+%17 = load fp128, ptr @a17, align 16
 tail call void @_Z3fooddddddddddddddd(double %1, double %2, double %3, double %4, double %5, double %6, double %7, double %8, double %9, double %10, double %11, double %12, double %13, double %14, double %15, ppc_fp128 %16, fp128 %17)
 ret i32 0
 }

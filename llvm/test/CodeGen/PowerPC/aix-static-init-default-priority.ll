@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff < %s | FileCheck %s
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff < %s | FileCheck %s
 
-@llvm.global_ctors = appending global [2 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @init1, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @init2, i8* null }]
-@llvm.global_dtors = appending global [2 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @destruct1, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @destruct2, i8* null }]
+@llvm.global_ctors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @init1, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @init2, ptr null }]
+@llvm.global_dtors = appending global [2 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @destruct1, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @destruct2, ptr null }]
 
 define i32 @extFunc() {
 entry:

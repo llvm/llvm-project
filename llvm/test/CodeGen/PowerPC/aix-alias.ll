@@ -9,41 +9,40 @@
 ; RUN:   FileCheck --check-prefix=ASM %s
 
 @var = global i32 42
-@var1 = alias i32, i32* @var
-@var2 = alias i32, i32* @var1
-@var_l = linkonce_odr alias i32, i32* @var
-@var_i = internal alias i32, i32* @var
-@var_h = hidden alias i32, i32* @var
-@var_p = protected alias i32, i32* @var
+@var1 = alias i32, ptr @var
+@var2 = alias i32, ptr @var1
+@var_l = linkonce_odr alias i32, ptr @var
+@var_i = internal alias i32, ptr @var
+@var_h = hidden alias i32, ptr @var
+@var_p = protected alias i32, ptr @var
 
 @array = global [2 x i32] [i32 1, i32 2], align 4
-@x = global i32* bitcast (i8* getelementptr (i8, i8* bitcast ([2 x i32]* @array to i8*), i64 4) to i32*), align 4
-@bitcast_alias = alias i32*, i32** @x
+@x = global ptr getelementptr (i8, ptr @array, i64 4), align 4
+@bitcast_alias = alias ptr, ptr @x
 
 define i32 @fun() {
   ret i32 0
 }
 
 %FunTy = type i32()
-@fun_weak = weak alias %FunTy, %FunTy* @fun
-@fun_hidden = hidden alias %FunTy, %FunTy* @fun
-@fun_ptr = global i32()* @fun_weak
+@fun_weak = weak alias %FunTy, ptr @fun
+@fun_hidden = hidden alias %FunTy, ptr @fun
+@fun_ptr = global ptr @fun_weak
 
 define i32 @test() {
 entry:
-   %tmp = load i32, i32* @var1
-   %tmp1 = load i32, i32* @var2
-   %tmp0 = load i32, i32* @var_i
+   %tmp = load i32, ptr @var1
+   %tmp1 = load i32, ptr @var2
+   %tmp0 = load i32, ptr @var_i
    %tmp2 = call i32 @fun()
    %tmp3 = add i32 %tmp, %tmp2
    %tmp4 = call i32 @fun_weak()
    %tmp5 = add i32 %tmp3, %tmp4
    %tmp6 = add i32 %tmp1, %tmp5
    %tmp7 = add i32 %tmp6, %tmp0
-   %fun_ptr1 = alloca i32 ()*
-   store i32 ()* @fun_weak, i32 ()** %fun_ptr1
-   %callee.knr.cast = bitcast i32 ()** %fun_ptr1 to i32 ()*
-   %tmp8 = call i32 %callee.knr.cast()
+   %fun_ptr1 = alloca ptr
+   store ptr @fun_weak, ptr %fun_ptr1
+   %tmp8 = call i32 %fun_ptr1()
    %tmp9 = call i32 @fun_hidden()
    %tmp10 = add i32 %tmp7, %tmp8
    %tmp11 = add i32 %tmp10, %tmp9

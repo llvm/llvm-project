@@ -284,10 +284,9 @@ entry:
   %1 = call <512 x i1> @llvm.ppc.mma.xxsetaccz()
   %2 = call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
   %3 = call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %4 = getelementptr inbounds <512 x i1>, ptr %res, i64 0
-  %5 = getelementptr inbounds <512 x i1>, ptr %res, i64 1
-  store <512 x i1> %2, ptr %4, align 64
-  store <512 x i1> %3, ptr %5, align 64
+  %4 = getelementptr inbounds <512 x i1>, ptr %res, i64 1
+  store <512 x i1> %2, ptr %res, align 64
+  store <512 x i1> %3, ptr %4, align 64
   ret void
 }
 
@@ -332,10 +331,9 @@ entry:
   %1 = call <512 x i1> @llvm.ppc.mma.xxsetaccz()
   %2 = call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
   %3 = call <512 x i1> @llvm.ppc.mma.xvf32gerpn(<512 x i1> %1, <16 x i8> %vc, <16 x i8> %vc)
-  %4 = getelementptr inbounds <512 x i1>, ptr %res, i64 0
-  %5 = getelementptr inbounds <512 x i1>, ptr %res, i64 1
-  store <512 x i1> %2, ptr %4, align 64
-  store <512 x i1> %3, ptr %5, align 64
+  %4 = getelementptr inbounds <512 x i1>, ptr %res, i64 1
+  store <512 x i1> %2, ptr %res, align 64
+  store <512 x i1> %3, ptr %4, align 64
   ret void
 }
 
@@ -379,10 +377,9 @@ entry:
   %0 = call <512 x i1> @llvm.ppc.mma.xxsetaccz()
   %1 = call <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
   %2 = call <512 x i1> @llvm.ppc.mma.xvf32gerpn(<512 x i1> %0, <16 x i8> %vc, <16 x i8> %vc)
-  %3 = getelementptr inbounds <512 x i1>, ptr %res, i64 0
-  %4 = getelementptr inbounds <512 x i1>, ptr %res, i64 1
-  store <512 x i1> %1, ptr %3, align 64
-  store <512 x i1> %2, ptr %4, align 64
+  %3 = getelementptr inbounds <512 x i1>, ptr %res, i64 1
+  store <512 x i1> %1, ptr %res, align 64
+  store <512 x i1> %2, ptr %3, align 64
   ret void
 }
 

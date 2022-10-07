@@ -4,7 +4,7 @@
 ; RUN: llc -opaque-pointers -mtriple=powerpc64-unknown-unknown \
 ; RUN:   < %s 2>&1 | FileCheck %s
 
-define double @foo(double* %dp) {
+define double @foo(ptr %dp) {
 ; CHECK-LE-LABEL: foo:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    ld 3, 0(3)
@@ -24,6 +24,6 @@ define double @foo(double* %dp) {
 ; CHECK-NEXT:    lfd 1, -8(1)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load atomic double, double* %dp acquire, align 8
+  %0 = load atomic double, ptr %dp acquire, align 8
   ret double %0
 }
