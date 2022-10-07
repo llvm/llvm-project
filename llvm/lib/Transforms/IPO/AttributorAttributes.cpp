@@ -1516,13 +1516,15 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
   AAPointerInfoCallSiteArgument(const IRPosition &IRP, Attributor &A)
       : AAPointerInfoFloating(IRP, A) {}
 
-  /// See AbstractAttribute::updateImpl(...).
-  ChangeStatus updateImpl(Attributor &A) override {
-    using namespace AA::PointerInfo;
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    AAPointerInfoFloating::initialize(A);
+
     // We handle memory intrinsics explicitly, at least the first (=
     // destination) and second (=source) arguments as we know how they are
     // accessed.
     if (auto *MI = dyn_cast_or_null<MemIntrinsic>(getCtxI())) {
+      // TODO: Simplify the length.
       ConstantInt *Length = dyn_cast<ConstantInt>(MI->getLength());
       int64_t LengthVal = AA::OffsetAndSize::Unknown;
       if (Length)
@@ -1539,16 +1541,22 @@ struct AAPointerInfoCallSiteArgument final : AAPointerInfoFloating {
       } else {
         LLVM_DEBUG(dbgs() << "[AAPointerInfo] Unhandled memory intrinsic "
                           << *MI << "\n");
-        return indicatePessimisticFixpoint();
+        indicatePessimisticFixpoint();
       }
 
+      indicateOptimisticFixpoint();
+
       LLVM_DEBUG({
-        dbgs() << "Accesses by bin after update:\n";
+        dbgs() << "Accesses by bin after initialization:\n";
         dumpState(dbgs());
       });
-
-      return Changed;
+      return;
     }
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override {
+    using namespace AA::PointerInfo;
 
     // TODO: Once we have call site specific value information we can provide
     //       call site specific liveness information and then it makes
