@@ -1664,6 +1664,8 @@ private:
   bool validateSMEMOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateSOPLiteral(const MCInst &Inst) const;
   bool validateConstantBusLimitations(const MCInst &Inst, const OperandVector &Operands);
+  bool validateVOPDRegBankConstraints(const MCInst &Inst,
+                                      const OperandVector &Operands);
   bool validateIntClampSupported(const MCInst &Inst);
   bool validateMIMGAtomicDMask(const MCInst &Inst);
   bool validateMIMGGatherDMask(const MCInst &Inst);
@@ -3575,6 +3577,44 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(
   return false;
 }
 
+bool AMDGPUAsmParser::validateVOPDRegBankConstraints(
+    const MCInst &Inst, const OperandVector &Operands) {
+
+  const unsigned Opcode = Inst.getOpcode();
+  if (!isVOPD(Opcode))
+    return true;
+
+  const MCRegisterInfo *TRI = getContext().getRegisterInfo();
+
+  auto getVRegIdx = [&](unsigned, unsigned OperandIdx) {
+    const MCOperand &Opr = Inst.getOperand(OperandIdx);
+    return (Opr.isReg() && !isSGPR(mc2PseudoReg(Opr.getReg()), TRI))
+               ? Opr.getReg()
+               : MCRegister::NoRegister;
+  };
+
+  auto InstInfo = getVOPDInstInfo(Opcode, &MII);
+  auto InvalidOperandInfo = InstInfo.getInvalidOperandIndex(getVRegIdx);
+  if (!InvalidOperandInfo)
+    return true;
+
+  auto OprIdx = *InvalidOperandInfo;
+  auto ParsedIdx = std::max(InstInfo[VOPD::X].getParsedOperandIndex(OprIdx),
+                            InstInfo[VOPD::Y].getParsedOperandIndex(OprIdx));
+  assert(ParsedIdx > 0 && ParsedIdx < Operands.size());
+
+  auto Loc = ((AMDGPUOperand &)*Operands[ParsedIdx]).getStartLoc();
+  if (OprIdx == VOPD::Component::DST) {
+    Error(Loc, "one dst register must be even and the other odd");
+  } else {
+    auto SrcIdx = OprIdx - VOPD::Component::DST_NUM;
+    Error(Loc, Twine("src") + Twine(SrcIdx) +
+                   " operands must use different VGPR banks");
+  }
+
+  return false;
+}
+
 bool AMDGPUAsmParser::validateIntClampSupported(const MCInst &Inst) {
 
   const unsigned Opc = Inst.getOpcode();
@@ -4624,6 +4664,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
     return false;
   }
   if (!validateConstantBusLimitations(Inst, Operands)) {
+    return false;
+  }
+  if (!validateVOPDRegBankConstraints(Inst, Operands)) {
     return false;
   }
   if (!validateIntClampSupported(Inst)) {
@@ -8479,14 +8522,6 @@ OperandMatchResultTy AMDGPUAsmParser::parseVOPD(OperandVector &Operands) {
 }
 
 // Create VOPD MCInst operands using parsed assembler operands.
-// Parsed VOPD operands are ordered as follows:
-//   OpXMnemo dstX src0X [vsrc1X|imm vsrc1X|vsrc1X imm] '::'
-//   OpYMnemo dstY src0Y [vsrc1Y|imm vsrc1Y|vsrc1Y imm]
-// If both OpX and OpY have an imm, the first imm has a different name:
-//   OpXMnemo dstX src0X [vsrc1X|immDeferred vsrc1X|vsrc1X immDeferred] '::'
-//   OpYMnemo dstY src0Y [vsrc1Y|imm vsrc1Y|vsrc1Y imm]
-// MCInst operands have the following order:
-//   dstX, dstY, src0X [, other OpX operands], src0Y [, other OpY operands]
 void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
   auto addOp = [&](uint16_t i) { // NOLINT:function pointer
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
@@ -8498,71 +8533,23 @@ void AMDGPUAsmParser::cvtVOPD(MCInst &Inst, const OperandVector &Operands) {
       Op.addImmOperands(Inst, 1);
       return;
     }
-    // Handle tokens like 'offen' which are sometimes hard-coded into the
-    // asm string.  There are no MCInst operands for these.
-    if (Op.isToken()) {
-      return;
-    }
     llvm_unreachable("Unhandled operand type in cvtVOPD");
   };
 
-  // Indices into MCInst.Operands
-  const auto FmamkOpXImmMCIndex = 3; // dstX, dstY, src0X, imm, ...
-  const auto FmaakOpXImmMCIndex = 4; // dstX, dstY, src0X, src1X, imm, ...
-  const auto MinOpYImmMCIndex = 4;   // dstX, dstY, src0X, src0Y, imm, ...
+  auto InstInfo = getVOPDInstInfo(Inst.getOpcode(), &MII);
 
-  unsigned Opc = Inst.getOpcode();
-  bool HasVsrc1X =
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vsrc1X) != -1;
-  bool HasImmX =
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::immDeferred) != -1 ||
-      (HasVsrc1X && (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::imm) ==
-                         FmamkOpXImmMCIndex ||
-                     AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::imm) ==
-                         FmaakOpXImmMCIndex));
+  // MCInst operands are ordered as follows:
+  //   dstX, dstY, src0X [, other OpX operands], src0Y [, other OpY operands]
 
-  bool HasVsrc1Y =
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vsrc1Y) != -1;
-  bool HasImmY =
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::immDeferred) != -1 ||
-      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::imm) >=
-          MinOpYImmMCIndex + HasVsrc1X;
-
-  // Indices of parsed operands relative to dst
-  const auto DstIdx = 0;
-  const auto Src0Idx = 1;
-  const auto Vsrc1OrImmIdx = 2;
-
-  const auto OpXOperandsSize = 2 + HasImmX + HasVsrc1X;
-  const auto BridgeTokensSize = 2; // Special VOPD tokens ('::' and OpYMnemo)
-
-  // Offsets into parsed operands
-  const auto OpXFirstOperandOffset = 1;
-  const auto OpYFirstOperandOffset =
-      OpXFirstOperandOffset + OpXOperandsSize + BridgeTokensSize;
-
-  // Order of addOp calls determines MC operand order
-  addOp(OpXFirstOperandOffset + DstIdx); // vdstX
-  addOp(OpYFirstOperandOffset + DstIdx); // vdstY
-
-  addOp(OpXFirstOperandOffset + Src0Idx); // src0X
-  if (HasImmX) {
-    // immX then vsrc1X for fmamk, vsrc1X then immX for fmaak
-    addOp(OpXFirstOperandOffset + Vsrc1OrImmIdx);
-    addOp(OpXFirstOperandOffset + Vsrc1OrImmIdx + 1);
-  } else {
-    if (HasVsrc1X) // all except v_mov
-      addOp(OpXFirstOperandOffset + Vsrc1OrImmIdx); // vsrc1X
+  for (auto CompIdx : VOPD::COMPONENTS) {
+    addOp(InstInfo[CompIdx].getParsedDstIndex());
   }
 
-  addOp(OpYFirstOperandOffset + Src0Idx); // src0Y
-  if (HasImmY) {
-    // immY then vsrc1Y for fmamk, vsrc1Y then immY for fmaak
-    addOp(OpYFirstOperandOffset + Vsrc1OrImmIdx);
-    addOp(OpYFirstOperandOffset + Vsrc1OrImmIdx + 1);
-  } else {
-    if (HasVsrc1Y) // all except v_mov
-      addOp(OpYFirstOperandOffset + Vsrc1OrImmIdx); // vsrc1Y
+  for (auto CompIdx : VOPD::COMPONENTS) {
+    auto SrcOperandsNum = InstInfo[CompIdx].getSrcOperandsNum();
+    for (unsigned SrcIdx = 0; SrcIdx < SrcOperandsNum; ++SrcIdx) {
+      addOp(InstInfo[CompIdx].getParsedSrcIndex(SrcIdx));
+    }
   }
 }
 

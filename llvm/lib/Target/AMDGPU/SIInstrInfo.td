@@ -3040,6 +3040,11 @@ def VOPDComponentTable : GenericTable {
   let PrimaryKeyName = "getVOPDComponentHelper";
 }
 
+def getVOPDBaseFromComponent : SearchIndex {
+  let Table = VOPDComponentTable;
+  let Key = ["VOPDOp"];
+}
+
 def VOPDPairs : GenericTable {
   let FilterClass = "VOPD_Base";
   let CppTypeName = "VOPDInfo";
