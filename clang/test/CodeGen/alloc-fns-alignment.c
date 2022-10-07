@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -emit-llvm < %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm < %s | FileCheck %s
 
 // Note: this test originally asserted that malloc/calloc/realloc got alignment
 // attributes on their return pointer. However, that was reverted in
@@ -46,36 +46,36 @@ void *memalign_large_constant_test(size_t n) {
 }
 
 // CHECK-LABEL: @malloc_test
-// CHECK: call i8* @malloc
+// CHECK: call ptr @malloc
 
-// CHECK: declare i8* @malloc
+// CHECK: declare ptr @malloc
 
 // CHECK-LABEL: @calloc_test
-// CHECK: call i8* @calloc
+// CHECK: call ptr @calloc
 
-// CHECK: declare i8* @calloc
+// CHECK: declare ptr @calloc
 
 // CHECK-LABEL: @realloc_test
-// CHECK: call i8* @realloc
+// CHECK: call ptr @realloc
 
-// CHECK: declare i8* @realloc
+// CHECK: declare ptr @realloc
 
 // CHECK-LABEL: @aligned_alloc_variable_test
-// CHECK:      %[[ALLOCATED:.*]] = call i8* @aligned_alloc({{i32|i64}} noundef %[[ALIGN:.*]], {{i32|i64}} noundef %[[NBYTES:.*]])
-// CHECK-NEXT: call void @llvm.assume(i1 true) [ "align"(i8* %[[ALLOCATED]], {{i32|i64}} %[[ALIGN]]) ]
+// CHECK:      %[[ALLOCATED:.*]] = call ptr @aligned_alloc({{i32|i64}} noundef %[[ALIGN:.*]], {{i32|i64}} noundef %[[NBYTES:.*]])
+// CHECK-NEXT: call void @llvm.assume(i1 true) [ "align"(ptr %[[ALLOCATED]], {{i32|i64}} %[[ALIGN]]) ]
 
-// CHECK: declare i8* @aligned_alloc
+// CHECK: declare ptr @aligned_alloc
 
 // CHECK-LABEL: @memalign_variable_test
-// CHECK:      %[[ALLOCATED:.*]] = call i8* @memalign({{i32|i64}} noundef %[[ALIGN:.*]], {{i32|i64}} noundef %[[NBYTES:.*]])
-// CHECK-NEXT: call void @llvm.assume(i1 true) [ "align"(i8* %[[ALLOCATED]], {{i32|i64}} %[[ALIGN]]) ]
+// CHECK:      %[[ALLOCATED:.*]] = call ptr @memalign({{i32|i64}} noundef %[[ALIGN:.*]], {{i32|i64}} noundef %[[NBYTES:.*]])
+// CHECK-NEXT: call void @llvm.assume(i1 true) [ "align"(ptr %[[ALLOCATED]], {{i32|i64}} %[[ALIGN]]) ]
 
 // CHECK-LABEL: @aligned_alloc_constant_test
-// CHECK: call align 8 i8* @aligned_alloc
+// CHECK: call align 8 ptr @aligned_alloc
 
 // CHECK-LABEL: @aligned_alloc_large_constant_test
-// CHECK: call align 4096 i8* @aligned_alloc
+// CHECK: call align 4096 ptr @aligned_alloc
 
 // CHECK-LABEL: @memalign_large_constant_test
-// CHECK: align 4096 i8* @memalign
+// CHECK: align 4096 ptr @memalign
 

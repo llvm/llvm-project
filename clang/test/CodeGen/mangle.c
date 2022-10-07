@@ -73,6 +73,6 @@ extern int llvm_cas(volatile int*, int, int)
   __asm__("llvm.atomic.cmp.swap.i32.p0i32");
 
 int foo10(volatile int* add, int from, int to) {
-  // CHECK: call i32 @llvm.atomic.cmp.swap.i32.p0i32
+  // CHECK: call i32 @llvm.atomic.cmp.swap.i32.p0
   return llvm_cas(add, from, to);
 }

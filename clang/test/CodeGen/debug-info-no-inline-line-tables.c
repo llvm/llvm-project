@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-msvc -debug-info-kind=limited \
+// RUN: %clang_cc1 -triple x86_64-windows-msvc -debug-info-kind=limited \
 // RUN:   -gno-inline-line-tables -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang -gno-inline-line-tables -S -emit-llvm -o - %s | FileCheck %s \
 // RUN:   -check-prefix=INLINE-FLAG
@@ -17,7 +17,7 @@ int main(void) {
 // Check that clang emits the location of the call site and not the inlined
 // function in the debug info.
 // CHECK: define dso_local i32 @main()
-// CHECK: %{{.+}} = load i32, i32* @x, align 4, !dbg [[DbgLoc:![0-9]+]]
+// CHECK: %{{.+}} = load i32, ptr @x, align 4, !dbg [[DbgLoc:![0-9]+]]
 
 // Check that the no-inline-line-tables attribute is added.
 // CHECK: attributes #0 = {{.*}}"no-inline-line-tables"{{.*}}

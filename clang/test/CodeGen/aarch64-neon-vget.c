@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-darwin -target-feature +neon \
+// RUN: %clang_cc1 -triple arm64-apple-darwin -target-feature +neon \
 // RUN:   -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -mem2reg | FileCheck %s
 
@@ -72,13 +72,11 @@ float32_t test_vget_lane_f32(float32x2_t a) {
 // CHECK-LABEL: define{{.*}} float @test_vget_lane_f16(<4 x half> noundef %a) #0 {
 // CHECK:   [[__REINT_242:%.*]] = alloca <4 x half>, align 8
 // CHECK:   [[__REINT1_242:%.*]] = alloca i16, align 2
-// CHECK:   store <4 x half> %a, <4 x half>* [[__REINT_242]], align 8
-// CHECK:   [[TMP0:%.*]] = bitcast <4 x half>* [[__REINT_242]] to <4 x i16>*
-// CHECK:   [[TMP1:%.*]] = load <4 x i16>, <4 x i16>* [[TMP0]], align 8
+// CHECK:   store <4 x half> %a, ptr [[__REINT_242]], align 8
+// CHECK:   [[TMP1:%.*]] = load <4 x i16>, ptr [[__REINT_242]], align 8
 // CHECK:   [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP1]], i32 1
-// CHECK:   store i16 [[VGET_LANE]], i16* [[__REINT1_242]], align 2
-// CHECK:   [[TMP4:%.*]] = bitcast i16* [[__REINT1_242]] to half*
-// CHECK:   [[TMP5:%.*]] = load half, half* [[TMP4]], align 2
+// CHECK:   store i16 [[VGET_LANE]], ptr [[__REINT1_242]], align 2
+// CHECK:   [[TMP5:%.*]] = load half, ptr [[__REINT1_242]], align 2
 // CHECK:   [[CONV:%.*]] = fpext half [[TMP5]] to float
 // CHECK:   ret float [[CONV]]
 float32_t test_vget_lane_f16(float16x4_t a) {
@@ -151,13 +149,11 @@ float32_t test_vgetq_lane_f32(float32x4_t a) {
 // CHECK-LABEL: define{{.*}} float @test_vgetq_lane_f16(<8 x half> noundef %a) #1 {
 // CHECK:   [[__REINT_244:%.*]] = alloca <8 x half>, align 16
 // CHECK:   [[__REINT1_244:%.*]] = alloca i16, align 2
-// CHECK:   store <8 x half> %a, <8 x half>* [[__REINT_244]], align 16
-// CHECK:   [[TMP0:%.*]] = bitcast <8 x half>* [[__REINT_244]] to <8 x i16>*
-// CHECK:   [[TMP1:%.*]] = load <8 x i16>, <8 x i16>* [[TMP0]], align 16
+// CHECK:   store <8 x half> %a, ptr [[__REINT_244]], align 16
+// CHECK:   [[TMP1:%.*]] = load <8 x i16>, ptr [[__REINT_244]], align 16
 // CHECK:   [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP1]], i32 3
-// CHECK:   store i16 [[VGETQ_LANE]], i16* [[__REINT1_244]], align 2
-// CHECK:   [[TMP4:%.*]] = bitcast i16* [[__REINT1_244]] to half*
-// CHECK:   [[TMP5:%.*]] = load half, half* [[TMP4]], align 2
+// CHECK:   store i16 [[VGETQ_LANE]], ptr [[__REINT1_244]], align 2
+// CHECK:   [[TMP5:%.*]] = load half, ptr [[__REINT1_244]], align 2
 // CHECK:   [[CONV:%.*]] = fpext half [[TMP5]] to float
 // CHECK:   ret float [[CONV]]
 float32_t test_vgetq_lane_f16(float16x8_t a) {
@@ -256,21 +252,18 @@ float32x2_t test_vset_lane_f32(float32_t a, float32x2_t b) {
   return vset_lane_f32(a, b, 1);
 }
 
-// CHECK-LABEL: define{{.*}} <4 x half> @test_vset_lane_f16(half* noundef %a, <4 x half> noundef %b) #0 {
+// CHECK-LABEL: define{{.*}} <4 x half> @test_vset_lane_f16(ptr noundef %a, <4 x half> noundef %b) #0 {
 // CHECK:   [[__REINT_246:%.*]] = alloca half, align 2
 // CHECK:   [[__REINT1_246:%.*]] = alloca <4 x half>, align 8
 // CHECK:   [[__REINT2_246:%.*]] = alloca <4 x i16>, align 8
-// CHECK:   [[TMP0:%.*]] = load half, half* %a, align 2
-// CHECK:   store half [[TMP0]], half* [[__REINT_246]], align 2
-// CHECK:   store <4 x half> %b, <4 x half>* [[__REINT1_246]], align 8
-// CHECK:   [[TMP1:%.*]] = bitcast half* [[__REINT_246]] to i16*
-// CHECK:   [[TMP2:%.*]] = load i16, i16* [[TMP1]], align 2
-// CHECK:   [[TMP3:%.*]] = bitcast <4 x half>* [[__REINT1_246]] to <4 x i16>*
-// CHECK:   [[TMP4:%.*]] = load <4 x i16>, <4 x i16>* [[TMP3]], align 8
+// CHECK:   [[TMP0:%.*]] = load half, ptr %a, align 2
+// CHECK:   store half [[TMP0]], ptr [[__REINT_246]], align 2
+// CHECK:   store <4 x half> %b, ptr [[__REINT1_246]], align 8
+// CHECK:   [[TMP2:%.*]] = load i16, ptr [[__REINT_246]], align 2
+// CHECK:   [[TMP4:%.*]] = load <4 x i16>, ptr [[__REINT1_246]], align 8
 // CHECK:   [[VSET_LANE:%.*]] = insertelement <4 x i16> [[TMP4]], i16 [[TMP2]], i32 3
-// CHECK:   store <4 x i16> [[VSET_LANE]], <4 x i16>* [[__REINT2_246]], align 8
-// CHECK:   [[TMP7:%.*]] = bitcast <4 x i16>* [[__REINT2_246]] to <4 x half>*
-// CHECK:   [[TMP8:%.*]] = load <4 x half>, <4 x half>* [[TMP7]], align 8
+// CHECK:   store <4 x i16> [[VSET_LANE]], ptr [[__REINT2_246]], align 8
+// CHECK:   [[TMP8:%.*]] = load <4 x half>, ptr [[__REINT2_246]], align 8
 // CHECK:   ret <4 x half> [[TMP8]]
 float16x4_t test_vset_lane_f16(float16_t *a, float16x4_t b) {
   return vset_lane_f16(*a, b, 3);
@@ -339,21 +332,18 @@ float32x4_t test_vsetq_lane_f32(float32_t a, float32x4_t b) {
   return vsetq_lane_f32(a, b, 3);
 }
 
-// CHECK-LABEL: define{{.*}} <8 x half> @test_vsetq_lane_f16(half* noundef %a, <8 x half> noundef %b) #1 {
+// CHECK-LABEL: define{{.*}} <8 x half> @test_vsetq_lane_f16(ptr noundef %a, <8 x half> noundef %b) #1 {
 // CHECK:   [[__REINT_248:%.*]] = alloca half, align 2
 // CHECK:   [[__REINT1_248:%.*]] = alloca <8 x half>, align 16
 // CHECK:   [[__REINT2_248:%.*]] = alloca <8 x i16>, align 16
-// CHECK:   [[TMP0:%.*]] = load half, half* %a, align 2
-// CHECK:   store half [[TMP0]], half* [[__REINT_248]], align 2
-// CHECK:   store <8 x half> %b, <8 x half>* [[__REINT1_248]], align 16
-// CHECK:   [[TMP1:%.*]] = bitcast half* [[__REINT_248]] to i16*
-// CHECK:   [[TMP2:%.*]] = load i16, i16* [[TMP1]], align 2
-// CHECK:   [[TMP3:%.*]] = bitcast <8 x half>* [[__REINT1_248]] to <8 x i16>*
-// CHECK:   [[TMP4:%.*]] = load <8 x i16>, <8 x i16>* [[TMP3]], align 16
+// CHECK:   [[TMP0:%.*]] = load half, ptr %a, align 2
+// CHECK:   store half [[TMP0]], ptr [[__REINT_248]], align 2
+// CHECK:   store <8 x half> %b, ptr [[__REINT1_248]], align 16
+// CHECK:   [[TMP2:%.*]] = load i16, ptr [[__REINT_248]], align 2
+// CHECK:   [[TMP4:%.*]] = load <8 x i16>, ptr [[__REINT1_248]], align 16
 // CHECK:   [[VSET_LANE:%.*]] = insertelement <8 x i16> [[TMP4]], i16 [[TMP2]], i32 7
-// CHECK:   store <8 x i16> [[VSET_LANE]], <8 x i16>* [[__REINT2_248]], align 16
-// CHECK:   [[TMP7:%.*]] = bitcast <8 x i16>* [[__REINT2_248]] to <8 x half>*
-// CHECK:   [[TMP8:%.*]] = load <8 x half>, <8 x half>* [[TMP7]], align 16
+// CHECK:   store <8 x i16> [[VSET_LANE]], ptr [[__REINT2_248]], align 16
+// CHECK:   [[TMP8:%.*]] = load <8 x half>, ptr [[__REINT2_248]], align 16
 // CHECK:   ret <8 x half> [[TMP8]]
 float16x8_t test_vsetq_lane_f16(float16_t *a, float16x8_t b) {
   return vsetq_lane_f16(*a, b, 7);

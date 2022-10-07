@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=ITANIUM
-// RUN: %clang_cc1 -no-opaque-pointers -triple %ms_abi_triple -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=MSABI
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=ITANIUM
+// RUN: %clang_cc1 -triple %ms_abi_triple -emit-llvm -o - %s | FileCheck %s --check-prefix=CHECK --check-prefix=MSABI
 
 // Should be 3 hello strings, two global (of different sizes), the rest are
 // shared.
@@ -7,12 +7,12 @@
 // CHECK: @align = {{(dso_local )?}}global i8 [[ALIGN:[0-9]+]]
 // ITANIUM: @.str = private unnamed_addr constant [6 x i8] c"hello\00"
 // MSABI: @"??_C@_05CJBACGMB@hello?$AA@" = linkonce_odr dso_local unnamed_addr constant [6 x i8] c"hello\00", comdat, align 1
-// ITANIUM: @f1.x = internal global i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i32 0, i32 0)
-// MSABI: @f1.x = internal global i8* getelementptr inbounds ([6 x i8], [6 x i8]* @"??_C@_05CJBACGMB@hello?$AA@", i32 0, i32 0)
+// ITANIUM: @f1.x = internal global ptr @.str
+// MSABI: @f1.x = internal global ptr @"??_C@_05CJBACGMB@hello?$AA@"
 // CHECK: @f2.x = internal global [6 x i8] c"hello\00", align [[ALIGN]]
 // CHECK: @f3.x = internal global [8 x i8] c"hello\00\00\00", align [[ALIGN]]
-// ITANIUM: @f4.x = internal global %struct.s { i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i32 0, i32 0) }
-// MSABI: @f4.x = internal global %struct.s { i8* getelementptr inbounds ([6 x i8], [6 x i8]* @"??_C@_05CJBACGMB@hello?$AA@", i32 0, i32 0) }
+// ITANIUM: @f4.x = internal global %struct.s { ptr @.str }
+// MSABI: @f4.x = internal global %struct.s { ptr @"??_C@_05CJBACGMB@hello?$AA@" }
 // CHECK: @x = {{(dso_local )?}}global [3 x i8] c"ola", align [[ALIGN]]
 
 // XFAIL: hexagon
@@ -44,8 +44,8 @@ void f0(void) {
 void f1(void) {
   static char *x = "hello";
   bar(x);
-  // CHECK: [[T1:%.*]] = load i8*, i8** @f1.x
-  // CHECK: call {{.*}}void @bar(i8* noundef [[T1:%.*]])
+  // CHECK: [[T1:%.*]] = load ptr, ptr @f1.x
+  // CHECK: call {{.*}}void @bar(ptr noundef [[T1:%.*]])
 }
 
 // CHECK-LABEL: define {{.*}}void @f2()

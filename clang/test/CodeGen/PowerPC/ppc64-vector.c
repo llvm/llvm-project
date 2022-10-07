@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -target-feature +altivec -triple powerpc64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -target-feature +altivec -triple powerpc64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s
 
 typedef short v2i16 __attribute__((vector_size (4)));
 typedef short v3i16 __attribute__((vector_size (6)));
@@ -39,13 +39,13 @@ v8i16 test_v8i16(v8i16 x)
   return x;
 }
 
-// CHECK: define{{.*}} void @test_v16i16(<16 x i16>* noalias sret(<16 x i16>) align 32 %agg.result, <16 x i16>* noundef %0)
+// CHECK: define{{.*}} void @test_v16i16(ptr noalias sret(<16 x i16>) align 32 %agg.result, ptr noundef %0)
 v16i16 test_v16i16(v16i16 x)
 {
   return x;
 }
 
-// CHECK: define{{.*}} void @test_struct_v16i16(%struct.v16i16* noalias sret(%struct.v16i16) align 32 %agg.result, [2 x i128] %x.coerce)
+// CHECK: define{{.*}} void @test_struct_v16i16(ptr noalias sret(%struct.v16i16) align 32 %agg.result, [2 x i128] %x.coerce)
 struct v16i16 test_struct_v16i16(struct v16i16 x)
 {
   return x;
