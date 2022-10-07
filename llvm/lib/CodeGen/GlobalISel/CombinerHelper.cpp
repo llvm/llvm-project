@@ -3928,33 +3928,30 @@ bool CombinerHelper::matchExtractVecEltBuildVec(MachineInstr &MI,
   // and find the source register that the index maps to.
   Register SrcVec = MI.getOperand(1).getReg();
   LLT SrcTy = MRI.getType(SrcVec);
-  if (!isLegalOrBeforeLegalizer(
-          {TargetOpcode::G_BUILD_VECTOR, {SrcTy, SrcTy.getElementType()}}))
-    return false;
 
   auto Cst = getIConstantVRegValWithLookThrough(MI.getOperand(2).getReg(), MRI);
   if (!Cst || Cst->Value.getZExtValue() >= SrcTy.getNumElements())
     return false;
 
   unsigned VecIdx = Cst->Value.getZExtValue();
-  MachineInstr *BuildVecMI =
-      getOpcodeDef(TargetOpcode::G_BUILD_VECTOR, SrcVec, MRI);
-  if (!BuildVecMI) {
-    BuildVecMI = getOpcodeDef(TargetOpcode::G_BUILD_VECTOR_TRUNC, SrcVec, MRI);
-    if (!BuildVecMI)
-      return false;
-    LLT ScalarTy = MRI.getType(BuildVecMI->getOperand(1).getReg());
-    if (!isLegalOrBeforeLegalizer(
-            {TargetOpcode::G_BUILD_VECTOR_TRUNC, {SrcTy, ScalarTy}}))
-      return false;
+
+  // Check if we have a build_vector or build_vector_trunc with an optional
+  // trunc in front.
+  MachineInstr *SrcVecMI = MRI.getVRegDef(SrcVec);
+  if (SrcVecMI->getOpcode() == TargetOpcode::G_TRUNC) {
+    SrcVecMI = MRI.getVRegDef(SrcVecMI->getOperand(1).getReg());
   }
+
+  if (SrcVecMI->getOpcode() != TargetOpcode::G_BUILD_VECTOR &&
+      SrcVecMI->getOpcode() != TargetOpcode::G_BUILD_VECTOR_TRUNC)
+    return false;
 
   EVT Ty(getMVTForLLT(SrcTy));
   if (!MRI.hasOneNonDBGUse(SrcVec) &&
       !getTargetLowering().aggressivelyPreferBuildVectorSources(Ty))
     return false;
 
-  Reg = BuildVecMI->getOperand(VecIdx + 1).getReg();
+  Reg = SrcVecMI->getOperand(VecIdx + 1).getReg();
   return true;
 }
 

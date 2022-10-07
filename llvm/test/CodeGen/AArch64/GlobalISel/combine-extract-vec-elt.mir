@@ -31,6 +31,40 @@ body:             |
 
 ...
 ---
+name:            extract_from_trunc_build_vector
+alignment:       4
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0' }
+  - { reg: '$x1' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+machineFunctionInfo: {}
+body:             |
+  bb.0:
+    liveins: $x0, $x1
+
+    ; CHECK-LABEL: name: extract_from_trunc_build_vector
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %arg1:_(s64) = COPY $x0
+    ; CHECK-NEXT: %extract:_(s32) = G_TRUNC %arg1(s64)
+    ; CHECK-NEXT: %zext:_(s64) = G_ZEXT %extract(s32)
+    ; CHECK-NEXT: $x0 = COPY %zext(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %arg1:_(s64) = COPY $x0
+    %arg2:_(s64) = COPY $x1
+    %zero:_(s32) = G_CONSTANT i32 0
+    %bv:_(<2 x s64>) = G_BUILD_VECTOR %arg1(s64), %arg2(s64)
+    %truncbv:_(<2 x s32>) = G_TRUNC %bv
+    %extract:_(s32) = G_EXTRACT_VECTOR_ELT %truncbv(<2 x s32>), %zero(s32)
+    %zext:_(s64) = G_ZEXT %extract
+    $x0 = COPY %zext(s64)
+    RET_ReallyLR implicit $x0
+
+...
+---
 name:            extract_from_build_vector_idx1
 alignment:       4
 tracksRegLiveness: true
