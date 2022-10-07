@@ -40,10 +40,10 @@ class TestSwiftCoreGraphicsTypes(TestBase):
         lldbutil.run_to_source_breakpoint(
             self, 'Set breakpoint here', lldb.SBFileSpec('main.swift'))
 
-        self.expect('frame variable f', substrs=[' = 1'])
-        self.expect('frame variable p', substrs=[' = (x = 1, y = 1)'])
+        self.expect('frame variable f', substrs=[' f = 1'])
+        self.expect('frame variable p', substrs=[' p = (x = 1, y = 1)'])
         self.expect('frame variable r', substrs=[
-            ' = (origin = (x = 0, y = 0), size = (width = 0, height = 0))'])
+            ' r = (origin = (x = 0, y = 0), size = (width = 0, height = 0))'])
 
         self.expect('expr f', substrs=[' = 1'])
         self.expect('expr p', substrs=[' = (x = 1, y = 1)'])

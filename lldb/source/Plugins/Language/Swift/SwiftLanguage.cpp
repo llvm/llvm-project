@@ -553,6 +553,8 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
                    ConstString("CoreGraphics.CGFloat"), summary_flags);
   AddStringSummary(swift_category_sp, "${var.native}",
                    ConstString("Foundation.CGFloat"), summary_flags);
+  AddStringSummary(swift_category_sp, "${var.native}",
+                   ConstString("CoreFoundation.CGFloat"), summary_flags);
 }
 
 static void
