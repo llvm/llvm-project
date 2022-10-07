@@ -761,3 +761,42 @@ transform.sequence failures(propagate) {
 
 }
 
+// -----
+
+func.func @split_handles(%a: index, %b: index, %c: index) {
+  %0 = arith.muli %a, %b : index  
+  %1 = arith.muli %a, %c : index  
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%fun: !pdl.operation):
+  %muli = transform.structured.match ops{["arith.muli"]} in %fun
+  %h:2 = split_handles %muli in [2]
+  // expected-remark @below {{1}}
+  transform.test_print_number_of_associated_payload_ir_ops %h#0
+  %muli_2 = transform.structured.match ops{["arith.muli"]} in %fun
+  // expected-error @below {{expected to contain 3 operation handles but it only contains 2 handles}}
+  %h_2:3 = split_handles %muli_2 in [3]
+}
+
+// -----
+
+func.func @split_handles(%a: index, %b: index, %c: index) {
+  %0 = arith.muli %a, %b : index  
+  %1 = arith.muli %a, %c : index  
+  return
+}
+
+transform.sequence failures(suppress) {
+^bb1(%fun: !pdl.operation):
+  %muli = transform.structured.match ops{["arith.muli"]} in %fun
+  %h:2 = split_handles %muli in [2]
+  // expected-remark @below {{1}}
+  transform.test_print_number_of_associated_payload_ir_ops %h#0
+  %muli_2 = transform.structured.match ops{["arith.muli"]} in %fun
+  // Silenceable failure and all handles are now empty.
+  %h_2:3 = split_handles %muli_2 in [3]
+  // expected-remark @below {{0}}
+ transform.test_print_number_of_associated_payload_ir_ops %h_2#0
+}
