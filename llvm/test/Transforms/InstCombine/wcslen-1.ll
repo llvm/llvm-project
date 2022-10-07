@@ -217,10 +217,9 @@ define i64 @test_simplify12() {
 @ws = constant [10 x i32] [i32 9, i32 8, i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0]
 
 ; Fold wcslen(ws + 2) => 7.
-; FIXME: This fold is faulty, result should be 7 not 1.
 define i64 @fold_wcslen_1() {
 ; CHECK-LABEL: @fold_wcslen_1(
-; CHECK-NEXT:    ret i64 1
+; CHECK-NEXT:    ret i64 7
 ;
   %p = getelementptr inbounds [10 x i32], ptr @ws, i64 0, i64 2
   %len = tail call i64 @wcslen(ptr %p)
@@ -229,11 +228,11 @@ define i64 @fold_wcslen_1() {
 
 ; Should not crash on this, and no optimization expected (idea is to get into
 ; llvm::getConstantDataArrayInfo looking for an array with 32-bit elements but
-; with an offset that isn't a multiple of the element size).  FIXME: Looks a
-; bit weird. Don't think we should return 6 here.
+; with an offset that isn't a multiple of the element size).
 define i64 @no_fold_wcslen_1() {
 ; CHECK-LABEL: @no_fold_wcslen_1(
-; CHECK-NEXT:    ret i64 6
+; CHECK-NEXT:    %len = tail call i64 @wcslen(ptr nonnull getelementptr inbounds ([15 x i8], ptr @ws, i64 0, i64 3))
+; CHECK-NEXT:    ret i64 %len
 ;
   %p = getelementptr [15 x i8], ptr @ws, i64 0, i64 3
   %len = tail call i64 @wcslen(ptr %p)

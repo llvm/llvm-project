@@ -4232,10 +4232,14 @@ bool llvm::isGEPBasedOnPointerToString(const GEPOperator *GEP,
 // its initializer if the size of its elements equals ElementSize, or,
 // for ElementSize == 8, to its representation as an array of unsiged
 // char. Return true on success.
+// Offset is in the unit "nr of ElementSize sized elements".
 bool llvm::getConstantDataArrayInfo(const Value *V,
                                     ConstantDataArraySlice &Slice,
                                     unsigned ElementSize, uint64_t Offset) {
-  assert(V);
+  assert(V && "V should not be null.");
+  assert((ElementSize % 8) == 0 &&
+         "ElementSize expected to be a multiple of the size of a byte.");
+  unsigned ElementSizeInBytes = ElementSize / 8;
 
   // Drill down into the pointer expression V, ignoring any intervening
   // casts, and determine the identity of the object it references along
@@ -4259,15 +4263,19 @@ bool llvm::getConstantDataArrayInfo(const Value *V,
     // Fail if the constant offset is excessive.
     return false;
 
-  Offset += StartIdx;
+  // Off/StartIdx is in the unit of bytes. So we need to convert to number of
+  // elements. Simply bail out if that isn't possible.
+  if ((StartIdx % ElementSizeInBytes) != 0)
+    return false;
 
+  Offset += StartIdx / ElementSizeInBytes;
   ConstantDataArray *Array = nullptr;
   ArrayType *ArrayTy = nullptr;
 
   if (GV->getInitializer()->isNullValue()) {
     Type *GVTy = GV->getValueType();
     uint64_t SizeInBytes = DL.getTypeStoreSize(GVTy).getFixedSize();
-    uint64_t Length = SizeInBytes / (ElementSize / 8);
+    uint64_t Length = SizeInBytes / ElementSizeInBytes;
 
     Slice.Array = nullptr;
     Slice.Offset = 0;
