@@ -100,7 +100,7 @@ MLIR_SPARSETENSOR_FOREVERY_V(IMPL_EXPINSERT)
 
 #undef FATAL_PIV
 
-// TODO: try to unify this with `SparseTensorFile::assertMatchesShape`
+// TODO: try to unify this with `SparseTensorReader::assertMatchesShape`
 // (which is used by `openSparseTensorCOO`).  It's easy enough to resolve
 // the `std::vector` vs pointer mismatch for `dimSizes`; but it's trickier
 // to resolve the presence/absence of `perm` (without introducing extra
