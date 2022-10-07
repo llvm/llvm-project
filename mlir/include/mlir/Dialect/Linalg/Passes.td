@@ -187,19 +187,6 @@ def LinalgStrategyTilePass
   ];
 }
 
-def LinalgStrategyPadPass
-    : Pass<"linalg-strategy-pad-pass", "func::FuncOp"> {
-  let summary = "Configurable pass to apply padding and hoisting.";
-  let constructor = "mlir::createLinalgStrategyPadPass()";
-  let dependentDialects = ["linalg::LinalgDialect"];
-  let options = [
-    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
-      "Which func op is the anchor to latch on.">,
-    Option<"anchorOpName", "anchor-op", "std::string", /*default=*/"",
-      "Which linalg op within the func is the anchor to latch on.">,
-  ];
-}
-
 def LinalgStrategyRemoveMarkersPass
     : Pass<"linalg-strategy-remove-markers-pass", "func::FuncOp"> {
   let summary = "Cleanup pass that drops markers.";
