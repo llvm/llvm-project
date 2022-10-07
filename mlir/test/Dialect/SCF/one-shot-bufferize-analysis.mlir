@@ -630,3 +630,69 @@ func.func @same_enclosing_repetitive_region(%2: tensor<320xf32>,
   } {thread_dim_mapping = []}
   return %4 : tensor<320xf32>
 }
+
+// -----
+
+// CHECK-LABEL: different_repetitive_region_via_alias
+func.func @different_repetitive_region_via_alias(%arg0: tensor<4xf32>,
+                                                 %arg1: tensor<4xf32>,
+                                                 %arg2: index,
+                                                 %arg3: index,
+                                                 %arg4: index)
+  -> (tensor<4xf32>)
+{
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst2 = arith.constant 1.000000e+00 : f32
+  %0 = bufferization.alloc_tensor() : tensor<4xf32>
+
+  // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "false"]}
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<4xf32>) -> tensor<4xf32>
+
+  %2 = scf.for %arg5 = %arg2 to %arg3 step %arg4 iter_args(%arg6 = %arg1) -> (tensor<4xf32>) {
+    // CHECK: tensor.extract {{.*}} {__inplace_operands_attr__ = ["true", "none"]}
+    %4 = tensor.extract %1[%arg4] : tensor<4xf32>
+    vector.print %4 : f32
+    // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "true"]}
+    %5 = linalg.fill ins(%cst2 : f32) outs(%0 : tensor<4xf32>) -> tensor<4xf32>
+    scf.yield %5 : tensor<4xf32>
+  }
+
+  return %2 : tensor<4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: no_raw_conflict_after_repetitive_use
+func.func @no_raw_conflict_after_repetitive_use(%arg0: tensor<4xf32>,
+                                                %arg1: tensor<4xf32>,
+                                                %arg2: index,
+                                                %arg3: index,
+                                                %arg4: index)
+  -> (tensor<4xf32>, tensor<4xf32>)
+{
+  %cst = arith.constant 0.000000e+00 : f32
+  %cst2 = arith.constant 1.000000e+00 : f32
+  %cst3 = arith.constant 2.000000e+00 : f32
+  %0 = bufferization.alloc_tensor() : tensor<4xf32>
+
+  // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "true"]}
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<4xf32>) -> tensor<4xf32>
+
+  %2 = scf.for %arg5 = %arg2 to %arg3 step %arg4 iter_args(%arg6 = %arg1) -> (tensor<4xf32>) {
+    // CHECK: tensor.extract {{.*}} {__inplace_operands_attr__ = ["true", "none"]}
+    %4 = tensor.extract %1[%arg4] : tensor<4xf32>
+    vector.print %4 : f32
+    // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "false"]}
+    %5 = linalg.fill ins(%cst2 : f32) outs(%1 : tensor<4xf32>) -> tensor<4xf32>
+    scf.yield %5 : tensor<4xf32>
+  }
+
+  // The following is *not* a RaW conflict.
+  // CHECK: tensor.extract {{.*}} {__inplace_operands_attr__ = ["true", "none"]}
+  %6 = tensor.extract %1[%arg4] : tensor<4xf32>
+  vector.print %6 : f32
+  // CHECK: linalg.fill {__inplace_operands_attr__ = ["none", "true"]}
+  %7 = linalg.fill ins(%cst3 : f32) outs(%1 : tensor<4xf32>) -> tensor<4xf32>
+
+  return %2, %7 : tensor<4xf32>, tensor<4xf32>
+}
