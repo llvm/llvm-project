@@ -31,7 +31,6 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
-#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include <sstream>
@@ -355,7 +354,7 @@ public:
     const NamedDecl *AttrDecl;
 
     // Implicit object argument -- e.g. 'this'
-    llvm::PointerUnion<const Expr *, til::SExpr *> SelfArg = nullptr;
+    const Expr *SelfArg = nullptr;
 
     // Number of funArgs
     unsigned NumArgs = 0;
@@ -379,17 +378,9 @@ public:
   // Translate a clang expression in an attribute to a til::SExpr.
   // Constructs the context from D, DeclExp, and SelfDecl.
   CapabilityExpr translateAttrExpr(const Expr *AttrExp, const NamedDecl *D,
-                                   const Expr *DeclExp,
-                                   til::SExpr *Self = nullptr);
+                                   const Expr *DeclExp, VarDecl *SelfD=nullptr);
 
   CapabilityExpr translateAttrExpr(const Expr *AttrExp, CallingContext *Ctx);
-
-  // Translate a variable reference.
-  til::LiteralPtr *createVariable(const VarDecl *VD);
-
-  // Create placeholder for this: we don't know the VarDecl on construction yet.
-  std::pair<til::LiteralPtr *, StringRef>
-  createThisPlaceholder(const Expr *Exp);
 
   // Translate a clang statement or expression to a TIL expression.
   // Also performs substitution of variables; Ctx provides the context.
