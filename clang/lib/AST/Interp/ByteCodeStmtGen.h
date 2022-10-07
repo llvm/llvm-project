@@ -58,6 +58,10 @@ private:
   bool visitDeclStmt(const DeclStmt *DS);
   bool visitReturnStmt(const ReturnStmt *RS);
   bool visitIfStmt(const IfStmt *IS);
+  bool visitWhileStmt(const WhileStmt *S);
+  bool visitDoStmt(const DoStmt *S);
+  bool visitBreakStmt(const BreakStmt *S);
+  bool visitContinueStmt(const ContinueStmt *S);
 
   /// Compiles a variable declaration.
   bool visitVarDecl(const VarDecl *VD);
