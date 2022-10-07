@@ -2703,11 +2703,14 @@ static int showDebugInfoCorrelation(const std::string &Filename,
                                     OutputFormat OFormat, raw_fd_ostream &OS) {
   if (OFormat == OutputFormat::Json)
     exitWithError("JSON output is not supported for debug info correlation");
-  if (OFormat == OutputFormat::Yaml)
-    exitWithError("YAML output is not supported for debug info correlation");
   std::unique_ptr<InstrProfCorrelator> Correlator;
   if (auto Err = InstrProfCorrelator::get(Filename).moveInto(Correlator))
     exitWithError(std::move(Err), Filename);
+  if (OFormat == OutputFormat::Yaml) {
+    if (auto Err = Correlator->dumpYaml(OS))
+      exitWithError(std::move(Err), Filename);
+    return 0;
+  }
 
   if (auto Err = Correlator->correlateProfileData())
     exitWithError(std::move(Err), Filename);
