@@ -65,7 +65,7 @@ public:
   bool run();
 
   // Common integer type.
-  IntegerType *getIntTy() const;
+  IntegerType *getIntTy(unsigned Width = 32) const;
   // Byte type: either scalar (when Length = 0), or vector with given
   // element count.
   Type *getByteTy(int ElemCount = 0) const;
@@ -948,8 +948,8 @@ auto HexagonVectorCombine::run() -> bool {
   return Changed;
 }
 
-auto HexagonVectorCombine::getIntTy() const -> IntegerType * {
-  return Type::getInt32Ty(F.getContext());
+auto HexagonVectorCombine::getIntTy(unsigned Width) const -> IntegerType * {
+  return IntegerType::get(F.getContext(), Width);
 }
 
 auto HexagonVectorCombine::getByteTy(int ElemCount) const -> Type * {
@@ -1202,8 +1202,8 @@ auto HexagonVectorCombine::rescale(IRBuilder<> &Builder, Value *Mask,
   int ToCount = (FromCount * FromSize) / ToSize;
   assert((FromCount * FromSize) % ToSize == 0);
 
-  auto *FromITy = IntegerType::get(F.getContext(), FromSize * 8);
-  auto *ToITy = IntegerType::get(F.getContext(), ToSize * 8);
+  auto *FromITy = getIntTy(FromSize * 8);
+  auto *ToITy = getIntTy(ToSize * 8);
 
   // Mask <N x i1> -> sext to <N x FromTy> -> bitcast to <M x ToTy> ->
   // -> trunc to <M x i1>.
