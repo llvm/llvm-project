@@ -586,7 +586,7 @@ define <3 x i43> @ashr_sub_nsw_splat_undef(<3 x i43> %x, <3 x i43> %y) {
 define i8 @ashr_known_pos_exact(i8 %x, i8 %y) {
 ; CHECK-LABEL: @ashr_known_pos_exact(
 ; CHECK-NEXT:    [[P:%.*]] = and i8 [[X:%.*]], 127
-; CHECK-NEXT:    [[R:%.*]] = lshr i8 [[P]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 [[P]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %p = and i8 %x, 127
@@ -597,7 +597,7 @@ define i8 @ashr_known_pos_exact(i8 %x, i8 %y) {
 define <2 x i8> @ashr_known_pos_exact_vec(<2 x i8> %x, <2 x i8> %y) {
 ; CHECK-LABEL: @ashr_known_pos_exact_vec(
 ; CHECK-NEXT:    [[P:%.*]] = mul nsw <2 x i8> [[X:%.*]], [[X]]
-; CHECK-NEXT:    [[R:%.*]] = lshr <2 x i8> [[P]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i8> [[P]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %p = mul nsw <2 x i8> %x, %x
