@@ -3888,14 +3888,32 @@ Symbol *SubprogramVisitor::GetSpecificFromGeneric(const parser::Name &name) {
     } else if (auto *details{symbol->detailsIf<GenericDetails>()}) {
       // found generic, want specific procedure
       auto *specific{details->specific()};
-      if (specific && inInterfaceBlock() &&
-          specific->has<SubprogramNameDetails>() &&
-          specific->attrs().test(Attr::MODULE)) {
-        // The shadowed procedure is a separate module procedure that is
-        // actually defined later in this (sub)module.
-        // Define its interface now as a new symbol.
-        details->clear_specific();
-        specific = nullptr;
+      if (inInterfaceBlock()) {
+        if (specific) {
+          // Defining an interface in a generic of the same name which is
+          // already shadowing another procedure.  In some cases, the shadowed
+          // procedure is about to be replaced.
+          if (specific->has<SubprogramNameDetails>() &&
+              specific->attrs().test(Attr::MODULE)) {
+            // The shadowed procedure is a separate module procedure that is
+            // actually defined later in this (sub)module.
+            // Define its interface now as a new symbol.
+            specific = nullptr;
+          } else if (&specific->owner() != &symbol->owner()) {
+            // The shadowed procedure was from an enclosing scope and will be
+            // overridden by this interface definition.
+            specific = nullptr;
+          }
+          if (!specific) {
+            details->clear_specific();
+          }
+        } else if (const auto *dType{details->derivedType()}) {
+          if (&dType->owner() != &symbol->owner()) {
+            // The shadowed derived type was from an enclosing scope and
+            // will be overridden by this interface definition.
+            details->clear_derivedType();
+          }
+        }
       }
       if (!specific) {
         specific =

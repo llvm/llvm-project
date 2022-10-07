@@ -180,6 +180,7 @@ void GenericDetails::set_derivedType(Symbol &derivedType) {
   CHECK(!derivedType_);
   derivedType_ = &derivedType;
 }
+void GenericDetails::clear_derivedType() { derivedType_ = nullptr; }
 void GenericDetails::AddUse(const Symbol &use) {
   CHECK(use.has<UseDetails>());
   uses_.push_back(use);
