@@ -883,6 +883,11 @@ public:
     SourceLocExprScopeGuard SourceLocScope;
   };
 
+  struct CXXDefaultArgExprScope : SourceLocExprScopeGuard {
+    CXXDefaultArgExprScope(CIRGenFunction &CGF, const CXXDefaultArgExpr *E)
+        : SourceLocExprScopeGuard(E, CGF.CurSourceLocExprScope) {}
+  };
+
   LValue MakeNaturalAlignPointeeAddrLValue(mlir::Operation *Op,
                                            clang::QualType T);
 
