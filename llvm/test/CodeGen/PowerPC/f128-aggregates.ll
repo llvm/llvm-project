@@ -17,7 +17,7 @@
 @a1 = local_unnamed_addr global [3 x fp128] zeroinitializer, align 16
 
 ; Function Attrs: norecurse nounwind readonly
-define fp128 @testArray_01(fp128* nocapture readonly %sa) {
+define fp128 @testArray_01(ptr nocapture readonly %sa) {
 ; CHECK-LABEL: testArray_01:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 32(r3)
@@ -36,8 +36,8 @@ define fp128 @testArray_01(fp128* nocapture readonly %sa) {
 ; CHECK-P8-NEXT:    blr
 
 entry:
-  %arrayidx = getelementptr inbounds fp128, fp128* %sa, i64 2
-  %0 = load fp128, fp128* %arrayidx, align 16
+  %arrayidx = getelementptr inbounds fp128, ptr %sa, i64 2
+  %0 = load fp128, ptr %arrayidx, align 16
   ret fp128 %0
 }
 
@@ -67,7 +67,7 @@ define fp128 @testArray_02() {
 ; CHECK-P8-NEXT:    blr
 
 entry:
-  %0 = load fp128, fp128* getelementptr inbounds ([3 x fp128], [3 x fp128]* @a1,
+  %0 = load fp128, ptr getelementptr inbounds ([3 x fp128], ptr @a1,
                                                   i64 0, i64 2), align 16
   ret fp128 %0
 }
@@ -115,7 +115,7 @@ entry:
 ; Since we can only pass a max of 8 float128 value in VSX registers, ensure we
 ; store to stack if passing more.
 ; Function Attrs: norecurse nounwind readonly
-define fp128 @testStruct_03(%struct.With9fp128params* byval(%struct.With9fp128params) nocapture readonly align 16 %a) {
+define fp128 @testStruct_03(ptr byval(%struct.With9fp128params) nocapture readonly align 16 %a) {
 ; CHECK-LABEL: testStruct_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv v2, 128(r1)
@@ -160,8 +160,8 @@ define fp128 @testStruct_03(%struct.With9fp128params* byval(%struct.With9fp128pa
 
 entry:
   %a7 = getelementptr inbounds %struct.With9fp128params,
-                               %struct.With9fp128params* %a, i64 0, i32 6
-  %0 = load fp128, fp128* %a7, align 16
+                               ptr %a, i64 0, i32 6
+  %0 = load fp128, ptr %a7, align 16
   ret fp128 %0
 }
 
@@ -409,7 +409,7 @@ entry:
 
 
 ; Function Attrs: norecurse nounwind readonly
-define fp128 @testNestedAggregate(%struct.MixedC* byval(%struct.MixedC) nocapture readonly align 16 %a) {
+define fp128 @testNestedAggregate(ptr byval(%struct.MixedC) nocapture readonly align 16 %a) {
 ; CHECK-LABEL: testNestedAggregate:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    std r8, 72(r1)
@@ -453,8 +453,8 @@ define fp128 @testNestedAggregate(%struct.MixedC* byval(%struct.MixedC) nocaptur
 ; CHECK-P8-NEXT:    blr
 
 entry:
-  %c = getelementptr inbounds %struct.MixedC, %struct.MixedC* %a, i64 0, i32 1, i32 1
-  %0 = load fp128, fp128* %c, align 16
+  %c = getelementptr inbounds %struct.MixedC, ptr %a, i64 0, i32 1, i32 1
+  %0 = load fp128, ptr %c, align 16
   ret fp128 %0
 }
 
@@ -633,34 +633,31 @@ define fp128 @sum_float128(i32 signext %count, ...) {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %ap = alloca i8*, align 8
-  %0 = bitcast i8** %ap to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0) #2
+  %ap = alloca ptr, align 8
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %ap) #2
   %cmp = icmp slt i32 %count, 1
   br i1 %cmp, label %cleanup, label %if.end
 
 if.end:                                           ; preds = %entry
-  call void @llvm.va_start(i8* nonnull %0)
-  %argp.cur = load i8*, i8** %ap, align 8
-  %argp.next = getelementptr inbounds i8, i8* %argp.cur, i64 16
-  %1 = bitcast i8* %argp.cur to fp128*
-  %2 = load fp128, fp128* %1, align 8
-  %add = fadd fp128 %2, 0xL00000000000000000000000000000000
-  %argp.next3 = getelementptr inbounds i8, i8* %argp.cur, i64 32
-  store i8* %argp.next3, i8** %ap, align 8
-  %3 = bitcast i8* %argp.next to fp128*
-  %4 = load fp128, fp128* %3, align 8
-  %add4 = fadd fp128 %add, %4
-  call void @llvm.va_end(i8* nonnull %0)
+  call void @llvm.va_start(ptr nonnull %ap)
+  %argp.cur = load ptr, ptr %ap, align 8
+  %argp.next = getelementptr inbounds i8, ptr %argp.cur, i64 16
+  %0 = load fp128, ptr %argp.cur, align 8
+  %add = fadd fp128 %0, 0xL00000000000000000000000000000000
+  %argp.next3 = getelementptr inbounds i8, ptr %argp.cur, i64 32
+  store ptr %argp.next3, ptr %ap, align 8
+  %1 = load fp128, ptr %argp.next, align 8
+  %add4 = fadd fp128 %add, %1
+  call void @llvm.va_end(ptr nonnull %ap)
   br label %cleanup
 
 cleanup:                                          ; preds = %entry, %if.end
   %retval.0 = phi fp128 [ %add4, %if.end ], [ 0xL00000000000000000000000000000000, %entry ]
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %0) #2
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %ap) #2
   ret fp128 %retval.0
 }
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
-declare void @llvm.va_start(i8*) #2
-declare void @llvm.va_end(i8*) #2
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.va_start(ptr) #2
+declare void @llvm.va_end(ptr) #2
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1

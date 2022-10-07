@@ -4,7 +4,7 @@
 @h = external global ppc_fp128
 
 define void @f() {
-	%tmp = load ppc_fp128, ppc_fp128* @g
-	store ppc_fp128 %tmp, ppc_fp128* @h
+	%tmp = load ppc_fp128, ptr @g
+	store ppc_fp128 %tmp, ptr @h
 	ret void
 }

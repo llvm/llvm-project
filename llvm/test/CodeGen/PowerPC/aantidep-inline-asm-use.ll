@@ -112,9 +112,9 @@ _ZN10SubProcess12SafeSyscalls5closeEi.exit22:     ; preds = %_ZN10SubProcess12Sa
   br label %.thread
 
 .thread:                                          ; preds = %45, %.thread.outer
-  call void @llvm.memset.p0i8.i64(i8* align 8 undef, i8 0, i64 56, i1 false)
-  store i8* %21, i8** undef, align 8
-  store i32 1073741824, i32* undef, align 8
+  call void @llvm.memset.p0.i64(ptr align 8 undef, i8 0, i64 56, i1 false)
+  store ptr %21, ptr undef, align 8
+  store i32 1073741824, ptr undef, align 8
   %22 = call { i64, i64, i64, i64, i64, i64, i64 } asm sideeffect "sc\0A\09mfcr $0", "=&{r0},=&{r3},=&{r4},=&{r5},=&{r6},=&{r7},=&{r8},{r0},{r3},{r4},{r5},~{cr0},~{ctr},~{memory},~{r11},~{r12}"(i64 342, i64 80871424, i64 undef, i64 0) #2, !srcloc !1
   br i1 undef, label %.lr.ph, label %.critedge15.preheader
 
@@ -296,7 +296,7 @@ _ZN10SubProcess12SafeSyscalls5fcntlEiil.exit:     ; preds = %_ZN10SubProcess12Sa
 }
 
 ; Function Attrs: nounwind argmemonly
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) #1
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) #1
 
 attributes #0 = { nounwind "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pwr8" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+power8-vector,+vsx" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind argmemonly }

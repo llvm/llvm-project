@@ -386,7 +386,7 @@ define zeroext i32 @exttest8() #0 {
 ; CHECK-P10-NEXT:    clrldi r3, r3, 32
 ; CHECK-P10-NEXT:    blr
 entry:
-  %v0 = load i64, i64* undef, align 8
+  %v0 = load i64, ptr undef, align 8
   %sub = sub i64 80, %v0
   %div = lshr i64 %sub, 1
   %conv13 = trunc i64 %div to i32

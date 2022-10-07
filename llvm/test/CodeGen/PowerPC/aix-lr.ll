@@ -33,7 +33,7 @@ entry:
 
 
 
-  call void bitcast (void (...)* @foo to void ()*)()
+  call void @foo()
   ret void
 }
 
