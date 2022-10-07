@@ -8,5 +8,3 @@ RUN: llvm-readelf --section-headers %t | FileCheck %s
 CHECK: .text.bolt.extra.1
 CHECK: .rodata.bolt.extra.1
 CHECK: .data.bolt.extra.1
-CHECK: .bss.bolt.extra.1
-
