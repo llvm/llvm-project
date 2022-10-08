@@ -20,13 +20,18 @@ instrumentation.
 
 Contact: libfuzzer(#)googlegroups.com
 
+Status
+======
+
+The original authors of libFuzzer have stopped active work on it
+and switched to working on another fuzzing engine, Centipede_.
+LibFuzzer is still fully supported in a sence that important bugs will get fixed.
+However please do not expect major new features or code reviews, other than for bug fixes.
+
 Versions
 ========
 
-LibFuzzer is under active development so you will need the current
-(or at least a very recent) version of the Clang compiler (see `building Clang from trunk`_)
-
-Refer to https://releases.llvm.org/5.0.0/docs/LibFuzzer.html for documentation on the older version.
+LibFuzzer requires a matching version of Clang.
 
 
 Getting Started
@@ -846,4 +851,5 @@ Trophies
 .. _`value profile`: #value-profile
 .. _`caller-callee pairs`: https://clang.llvm.org/docs/SanitizerCoverage.html#caller-callee-coverage
 .. _BoringSSL: https://boringssl.googlesource.com/boringssl/
+.. _Centipede: https://github.com/google/centipede
 
