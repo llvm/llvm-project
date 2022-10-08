@@ -1563,16 +1563,16 @@ public:
 
         rewriter.create<linalg::YieldOp>(loc, result);
         return success();
-      } else {
-        y0x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x0);
-        y0x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x1);
-        y1x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x0);
-        y1x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x1);
+      }
+      y0x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x0);
+      y0x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x1);
+      y1x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x0);
+      y1x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x1);
 
-        if (resultElementTy.getIntOrFloatBitWidth() > 32) {
-          dx = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dx);
-          dy = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dy);
-        }
+      if (resultElementTy.getIntOrFloatBitWidth() > 32) {
+        dx = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dx);
+        dy = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dy);
+      }
 
         Value rightPart = dx;
         Value leftPart = rewriter.create<arith::SubIOp>(loc, xScaleN, dx);
@@ -1593,7 +1593,6 @@ public:
 
         rewriter.create<linalg::YieldOp>(loc, result);
         return success();
-      }
     }
 
     return failure();
