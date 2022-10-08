@@ -9423,9 +9423,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return TrueV;
 
     // (select (x in [0,1] == 0), y, (z ^ y) ) -> (-x & z ) ^ y
-    // (select (x in [0,1] != 0), (z ^ y) ), y -> (-x & z ) ^ y
+    // (select (x in [0,1] != 0), (z ^ y), y ) -> (-x & z ) ^ y
     // (select (x in [0,1] == 0), y, (z | y) ) -> (-x & z ) | y
-    // (select (x in [0,1] != 0), (z | y) ), y -> (-x & z ) | y
+    // (select (x in [0,1] != 0), (z | y), y ) -> (-x & z ) | y
     APInt Mask = APInt::getBitsSetFrom(LHS.getValueSizeInBits(), 1);
     if (isNullConstant(RHS) && ISD::isIntEqualitySetCC(CCVal) &&
         DAG.MaskedValueIsZero(LHS, Mask)) {
