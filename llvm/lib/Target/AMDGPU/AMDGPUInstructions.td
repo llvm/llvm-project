@@ -555,6 +555,7 @@ multiclass noret_op {
     (!cast<SDPatternOperator>(NAME) node:$ptr, node:$data)>;
 }
 
+
 multiclass global_addr_space_atomic_op {
   def "_noret_global_addrspace" :
     PatFrag<(ops node:$ptr, node:$data),
@@ -603,12 +604,14 @@ multiclass local_addr_space_atomic_op {
     }
 }
 
-defm int_amdgcn_flat_atomic_fadd : flat_addr_space_atomic_op;
+//defm int_amdgcn_flat_atomic_fadd : flat_addr_space_atomic_op;
+
+defm int_amdgcn_flat_atomic_fadd : noret_op;
+
 defm int_amdgcn_flat_atomic_fadd_v2bf16 : noret_op;
 defm int_amdgcn_flat_atomic_fmin : noret_op;
 defm int_amdgcn_flat_atomic_fmax : noret_op;
-defm int_amdgcn_global_atomic_fadd : global_addr_space_atomic_op;
-defm int_amdgcn_flat_atomic_fadd : global_addr_space_atomic_op;
+defm int_amdgcn_global_atomic_fadd : noret_op;
 defm int_amdgcn_global_atomic_fadd_v2bf16 : noret_op;
 defm int_amdgcn_global_atomic_fmin : noret_op;
 defm int_amdgcn_global_atomic_fmax : noret_op;
