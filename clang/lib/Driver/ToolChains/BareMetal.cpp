@@ -217,12 +217,21 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;
 
+  const Driver &D = getDriver();
   std::string SysRoot(computeSysRoot());
   if (SysRoot.empty())
     return;
 
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
+    // First check sysroot/usr/include/c++/v1 if it exists.
+    SmallString<128> TargetDir(SysRoot);
+    llvm::sys::path::append(TargetDir, "usr", "include", "c++", "v1");
+    if (D.getVFS().exists(TargetDir)) {
+      addSystemInclude(DriverArgs, CC1Args, TargetDir.str());
+      break;
+    }
+    // Add generic path if nothing else succeeded so far.
     SmallString<128> Dir(SysRoot);
     llvm::sys::path::append(Dir, "include", "c++", "v1");
     addSystemInclude(DriverArgs, CC1Args, Dir.str());
@@ -234,9 +243,8 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
     std::error_code EC;
     Generic_GCC::GCCVersion Version = {"", -1, -1, -1, "", "", ""};
     // Walk the subdirs, and find the one with the newest gcc version:
-    for (llvm::vfs::directory_iterator
-             LI = getDriver().getVFS().dir_begin(Dir.str(), EC),
-             LE;
+    for (llvm::vfs::directory_iterator LI = D.getVFS().dir_begin(Dir.str(), EC),
+                                       LE;
          !EC && LI != LE; LI = LI.increment(EC)) {
       StringRef VersionText = llvm::sys::path::filename(LI->path());
       auto CandidateVersion = Generic_GCC::GCCVersion::Parse(VersionText);

@@ -1,4 +1,4 @@
-; RUN: opt %s -S -scoped-noalias-aa -licm | FileCheck %s
+; RUN: opt %s -S -licm | FileCheck %s
 
 define i16 @main(i1 %a_b_mayalias, ptr %a, ptr %b) {
 ; CHECK:       scalar.body:

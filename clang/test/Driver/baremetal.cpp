@@ -77,6 +77,22 @@
 // CHECK-V6M-NDL-SAME: "-L{{[^"]*}}{{[/\\]+}}Inputs{{[/\\]+}}baremetal_arm{{[/\\]+}}lib"
 // CHECK-V6M-NDL-SAME: "-L[[RESOURCE_DIR]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
 
+// RUN: rm -rf %T/baremetal_cxx_sysroot
+// RUN: mkdir -p %T/baremetal_cxx_sysroot/usr/include/c++/v1
+// RUN: %clangxx %s -### 2>&1 \
+// RUN:     --target=armv6m-none-eabi \
+// RUN:     --sysroot=%T/baremetal_cxx_sysroot \
+// RUN:     -stdlib=libc++ \
+// RUN:   | FileCheck --check-prefix=CHECK-V6M-LIBCXX-USR %s
+// CHECK-V6M-LIBCXX-USR: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-V6M-LIBCXX-USR-NOT: "-internal-isystem" "{{[^"]+}}baremetal_cxx_sysroot{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}{{[^v].*}}"
+// CHECK-V6M-LIBCXX-USR-SAME: "-internal-isystem" "{{[^"]+}}baremetal_cxx_sysroot{{[/\\]+}}usr{{[/\\]+}}include{{[/\\]+}}c++{{[/\\]+}}v1"
+// CHECK-V6M-LIBCXX-USR: "{{[^"]*}}-Bstatic"
+// CHECK-V6M-LIBCXX-USR-SAME: "-L{{[^"]*}}{{[/\\]+}}baremetal_cxx_sysroot{{[/\\]+}}lib"
+// CHECK-V6M-LIBCXX-USR-SAME: "-L[[RESOURCE_DIR]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
+// CHECK-V6M-LIBCXX-USR-SAME: "-lc++" "-lc++abi" "-lunwind"
+// CHECK-V6M-LIBCXX-USR-SAME: "-lc" "-lm" "-lclang_rt.builtins-armv6m"
+
 // RUN: %clangxx --target=arm-none-eabi -v 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-THREAD-MODEL
 // CHECK-THREAD-MODEL: Thread model: posix

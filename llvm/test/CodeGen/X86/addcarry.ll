@@ -1397,13 +1397,10 @@ define i32 @addcarry_uge(i32 %a, i32 %b, i32 %x, i32 %y) nounwind {
 define { i64, i64 } @addcarry_commutative_1(i64 %x0, i64 %x1, i64 %y0, i64 %y1) nounwind {
 ; CHECK-LABEL: addcarry_commutative_1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    addq %rdx, %rax
 ; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    adcq %rcx, %rax
 ; CHECK-NEXT:    addq %rdx, %rdi
-; CHECK-NEXT:    adcq %rcx, %rsi
-; CHECK-NEXT:    movq %rsi, %rdx
+; CHECK-NEXT:    adcq %rcx, %rax
+; CHECK-NEXT:    movq %rax, %rdx
 ; CHECK-NEXT:    retq
   %z0 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %x0, i64 %y0)
   %k0 = extractvalue { i64, i1 } %z0, 1
@@ -1424,13 +1421,10 @@ define { i64, i64 } @addcarry_commutative_1(i64 %x0, i64 %x1, i64 %y0, i64 %y1) 
 define { i64, i64 } @addcarry_commutative_2(i64 %x0, i64 %x1, i64 %y0, i64 %y1) nounwind {
 ; CHECK-LABEL: addcarry_commutative_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    addq %rdx, %rax
 ; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    adcq %rcx, %rax
 ; CHECK-NEXT:    addq %rdx, %rdi
-; CHECK-NEXT:    adcq %rcx, %rsi
-; CHECK-NEXT:    movq %rsi, %rdx
+; CHECK-NEXT:    adcq %rcx, %rax
+; CHECK-NEXT:    movq %rax, %rdx
 ; CHECK-NEXT:    retq
   %z0 = call { i64, i1 } @llvm.uadd.with.overflow.i64(i64 %x0, i64 %y0)
   %k0 = extractvalue { i64, i1 } %z0, 1

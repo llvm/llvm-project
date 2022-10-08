@@ -1,5 +1,5 @@
-; RUN: opt < %s -data-layout="e-p:32:32:32-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-n8:16:32" -basic-aa -newgvn -S -dce | FileCheck %s
-; RUN: opt < %s -data-layout="E-p:32:32:32-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-n32"      -basic-aa -newgvn -S -dce | FileCheck %s
+; RUN: opt < %s -data-layout="e-p:32:32:32-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-n8:16:32" -newgvn -S -dce | FileCheck %s
+; RUN: opt < %s -data-layout="E-p:32:32:32-p1:16:16:16-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-n32"      -newgvn -S -dce | FileCheck %s
 ; memset -> i16 forwarding.
 define signext i16 @memset_to_i16_local(i16* %A) nounwind ssp {
 entry:
