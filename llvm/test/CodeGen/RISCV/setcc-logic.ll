@@ -4,7 +4,7 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64I
 
-define i1 @and_icmp_eq(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
+define i1 @and_icmp_eq(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d) nounwind {
 ; RV32I-LABEL: and_icmp_eq:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    xor a0, a0, a1
@@ -18,7 +18,6 @@ define i1 @and_icmp_eq(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    xor a1, a2, a3
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    seqz a0, a0
 ; RV64I-NEXT:    ret
   %cmp1 = icmp eq i32 %a, %b
@@ -27,7 +26,7 @@ define i1 @and_icmp_eq(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
   ret i1 %and
 }
 
-define i1 @or_icmp_ne(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
+define i1 @or_icmp_ne(i32 signext %a, i32 signext %b, i32 signext %c, i32 signext %d) nounwind {
 ; RV32I-LABEL: or_icmp_ne:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    xor a0, a0, a1
@@ -41,7 +40,6 @@ define i1 @or_icmp_ne(i32 %a, i32 %b, i32 %c, i32 %d) nounwind {
 ; RV64I-NEXT:    xor a0, a0, a1
 ; RV64I-NEXT:    xor a1, a2, a3
 ; RV64I-NEXT:    or a0, a0, a1
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    snez a0, a0
 ; RV64I-NEXT:    ret
   %cmp1 = icmp ne i32 %a, %b
