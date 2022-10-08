@@ -91,3 +91,14 @@ define i8 @shl1_nuw(i8 %x, i8 %y) {
   %div = sdiv exact i8 %x, %shl
   ret i8 %div
 }
+
+define i8 @shl1_nsw_not_exact(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl1_nsw_not_exact(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 1, [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X:%.*]], [[SHL]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %shl = shl nsw i8 1, %y
+  %div = sdiv i8 %x, %shl
+  ret i8 %div
+}
