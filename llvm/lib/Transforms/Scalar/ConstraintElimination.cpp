@@ -197,6 +197,25 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
     Value *Op0, *Op1;
     ConstantInt *CI;
 
+    // Handle the (gep (gep ....), C) case by incrementing the constant
+    // coefficient of the inner GEP, if C is a constant.
+    auto *InnerGEP = dyn_cast<GetElementPtrInst>(GEP->getPointerOperand());
+    if (InnerGEP && InnerGEP->getNumOperands() == 2 &&
+        isa<ConstantInt>(GEP->getOperand(1))) {
+      APInt Offset = cast<ConstantInt>(GEP->getOperand(1))->getValue();
+      auto Result = decompose(InnerGEP, Preconditions, IsSigned);
+      Result[0].Coefficient += Offset.getSExtValue();
+      if (Offset.isNegative()) {
+        // Add pre-condition ensuring the GEP is increasing monotonically and
+        // can be de-composed.
+        Preconditions.emplace_back(
+            CmpInst::ICMP_SGE, InnerGEP->getOperand(1),
+            ConstantInt::get(InnerGEP->getOperand(1)->getType(),
+                             -1 * Offset.getSExtValue()));
+      }
+      return Result;
+    }
+
     // If the index is zero-extended, it is guaranteed to be positive.
     if (match(GEP->getOperand(GEP->getNumOperands() - 1),
               m_ZExt(m_Value(Op0)))) {

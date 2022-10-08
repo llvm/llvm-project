@@ -12,7 +12,7 @@ define i1 @gep_sub_1_uge(ptr %dst, ptr %lower) {
 ; CHECK-NEXT:    [[CMP_SUB_1:%.*]] = icmp uge ptr [[DST_SUB_1]], [[LOWER]]
 ; CHECK-NEXT:    [[DST_SUB_3:%.*]] = getelementptr inbounds i8, ptr [[DST_ADD_3]], i64 -3
 ; CHECK-NEXT:    [[CMP_SUB_3:%.*]] = icmp uge ptr [[DST_SUB_3]], [[LOWER]]
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[CMP_SUB_1]], [[CMP_SUB_3]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[DST_SUB_4:%.*]] = getelementptr inbounds i8, ptr [[DST_ADD_3]], i64 -4
 ; CHECK-NEXT:    [[CMP_SUB_4:%.*]] = icmp uge ptr [[DST_SUB_4]], [[LOWER]]
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[CMP_SUB_4]]
@@ -42,7 +42,7 @@ define i1 @gep_sub_1_ult(ptr %dst, ptr %upper) {
 ; CHECK-NEXT:    [[CMP_SUB_1:%.*]] = icmp ult ptr [[DST_SUB_1]], [[UPPER]]
 ; CHECK-NEXT:    [[DST_SUB_3:%.*]] = getelementptr inbounds i8, ptr [[DST_ADD_3]], i64 -3
 ; CHECK-NEXT:    [[CMP_SUB_3:%.*]] = icmp ult ptr [[DST_SUB_3]], [[UPPER]]
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[CMP_SUB_1]], [[CMP_SUB_3]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    ret i1 [[RES_1]]
 ;
   %dst.add.4 = getelementptr inbounds i8, ptr %dst, i64 4
