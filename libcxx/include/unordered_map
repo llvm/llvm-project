@@ -1041,8 +1041,7 @@ private:
     typedef __hash_value_type<key_type, mapped_type>                          __value_type;
     typedef __unordered_map_hasher<key_type, __value_type, hasher, key_equal> __hasher;
     typedef __unordered_map_equal<key_type, __value_type, key_equal, hasher>  __key_equal;
-    typedef typename __rebind_alloc_helper<allocator_traits<allocator_type>,
-                                                 __value_type>::type          __allocator_type;
+    typedef __rebind_alloc<allocator_traits<allocator_type>, __value_type>    __allocator_type;
 
     typedef __hash_table<__value_type, __hasher,
                          __key_equal,  __allocator_type>   __table;
@@ -1058,6 +1057,10 @@ private:
     typedef __hash_map_node_destructor<__node_allocator>   _Dp;
     typedef unique_ptr<__node, _Dp>                         __node_holder;
     typedef allocator_traits<allocator_type>               __alloc_traits;
+
+    static_assert(is_same<allocator_type, __rebind_alloc<__alloc_traits, value_type> >::value,
+                  "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
+                  "original allocator");
 
     static_assert((is_same<typename __table::__container_value_type, value_type>::value), "");
     static_assert((is_same<typename __table::__node_value_type, __value_type>::value), "");
@@ -1931,8 +1934,7 @@ private:
     typedef __hash_value_type<key_type, mapped_type>                          __value_type;
     typedef __unordered_map_hasher<key_type, __value_type, hasher, key_equal> __hasher;
     typedef __unordered_map_equal<key_type, __value_type, key_equal, hasher>  __key_equal;
-    typedef typename __rebind_alloc_helper<allocator_traits<allocator_type>,
-                                                 __value_type>::type          __allocator_type;
+    typedef __rebind_alloc<allocator_traits<allocator_type>, __value_type>    __allocator_type;
 
     typedef __hash_table<__value_type, __hasher,
                          __key_equal,  __allocator_type>   __table;
@@ -1949,7 +1951,12 @@ private:
     static_assert((is_same<typename __node_traits::size_type,
                           typename __alloc_traits::size_type>::value),
                  "Allocator uses different size_type for different types");
-public:
+
+    static_assert(is_same<allocator_type, __rebind_alloc<__alloc_traits, value_type> >::value,
+                  "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
+                  "original allocator");
+
+  public:
     typedef typename __alloc_traits::pointer         pointer;
     typedef typename __alloc_traits::const_pointer   const_pointer;
     typedef typename __table::size_type              size_type;
