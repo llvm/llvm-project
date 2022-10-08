@@ -143,15 +143,6 @@ public:
   ConstraintTy getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                              SmallVectorImpl<Value *> &NewVariables) const;
 
-  /// Turn a condition \p CmpI into a vector of constraints, using indices from
-  /// the corresponding constraint system. New variables that need to be added
-  /// to the system are collected in \p NewVariables.
-  ConstraintTy getConstraint(CmpInst *Cmp,
-                             SmallVectorImpl<Value *> &NewVariables) {
-    return getConstraint(Cmp->getPredicate(), Cmp->getOperand(0),
-                         Cmp->getOperand(1), NewVariables);
-  }
-
   /// Try to add information from \p A \p Pred \p B to the unsigned/signed
   /// system if \p Pred is signed/unsigned.
   void transferToOtherSystem(CmpInst::Predicate Pred, Value *A, Value *B,
