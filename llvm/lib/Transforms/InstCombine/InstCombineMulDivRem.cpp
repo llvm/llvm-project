@@ -1199,6 +1199,11 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
       return BinaryOperator::CreateExactAShr(Op0, C);
     }
 
+    // sdiv exact X, (1<<ShAmt) --> ashr exact X, ShAmt (if shl is non-negative)
+    Value *ShAmt;
+    if (match(Op1, m_NSWShl(m_One(), m_Value(ShAmt))))
+      return BinaryOperator::CreateExactAShr(Op0, ShAmt);
+
     // sdiv exact X, -1<<C --> -(ashr exact X, C)
     if (match(Op1, m_NegatedPower2())) {
       Constant *NegPow2C = ConstantExpr::getNeg(cast<Constant>(Op1));

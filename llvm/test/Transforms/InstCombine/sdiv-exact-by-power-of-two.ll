@@ -70,16 +70,19 @@ define <2 x i8> @n6_vec_negative(<2 x i8> %x) {
   ret <2 x i8> %div
 }
 
+; sdiv exact X, (1<<ShAmt) --> ashr exact X, ShAmt (if shl is non-negative)
+
 define i8 @shl1_nsw(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl1_nsw(
-; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 1, [[Y:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X:%.*]], [[SHL]]
+; CHECK-NEXT:    [[DIV:%.*]] = ashr exact i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
   %shl = shl nsw i8 1, %y
   %div = sdiv exact i8 %x, %shl
   ret i8 %div
 }
+
+; negative test - must have nsw
 
 define i8 @shl1_nuw(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl1_nuw(
@@ -91,6 +94,8 @@ define i8 @shl1_nuw(i8 %x, i8 %y) {
   %div = sdiv exact i8 %x, %shl
   ret i8 %div
 }
+
+; negative test - must have exact
 
 define i8 @shl1_nsw_not_exact(i8 %x, i8 %y) {
 ; CHECK-LABEL: @shl1_nsw_not_exact(
