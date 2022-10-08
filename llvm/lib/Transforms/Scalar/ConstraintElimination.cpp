@@ -111,11 +111,7 @@ class ConstraintInfo {
   ConstraintSystem UnsignedCS;
   ConstraintSystem SignedCS;
 
-  const DataLayout &DL;
-
 public:
-  ConstraintInfo(const DataLayout &DL) : DL(DL) {}
-
   DenseMap<Value *, unsigned> &getValue2Index(bool Signed) {
     return Signed ? SignedValue2Index : UnsignedValue2Index;
   }
@@ -330,14 +326,6 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT &&
       Pred != CmpInst::ICMP_SLE && Pred != CmpInst::ICMP_SLT)
     return {};
-
-  // If both operands are known to be non-negative, change signed predicates to
-  // unsigned ones. This increases the reasoning effectiveness in combination
-  // with the signed <-> unsigned transfer logic.
-  if (CmpInst::isSigned(Pred) &&
-      isKnownNonNegative(Op0, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1) &&
-      isKnownNonNegative(Op1, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
-    Pred = CmpInst::getUnsignedPredicate(Pred);
 
   SmallVector<PreconditionTy, 4> Preconditions;
   bool IsSigned = CmpInst::isSigned(Pred);
@@ -754,7 +742,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   bool Changed = false;
   DT.updateDFSNumbers();
 
-  ConstraintInfo Info(F.getParent()->getDataLayout());
+  ConstraintInfo Info;
   State S(DT);
 
   // First, collect conditions implied by branches and blocks with their
@@ -837,7 +825,22 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
 
         LLVM_DEBUG(dbgs() << "Checking " << *Cmp << "\n");
         SmallVector<Value *> NewVariables;
-        auto R = Info.getConstraint(Cmp, NewVariables);
+        CmpInst::Predicate Pred = Cmp->getPredicate();
+        Value *A = Cmp->getOperand(0);
+        Value *B = Cmp->getOperand(1);
+        const DataLayout &DL = Cmp->getModule()->getDataLayout();
+
+        // If both operands are known to be non-negative, change signed
+        // predicates to unsigned ones. This increases the reasoning
+        // effectiveness in combination with the signed <-> unsigned transfer
+        // logic.
+        if (CmpInst::isSigned(Pred) &&
+            isKnownNonNegative(A, DL,
+                               /*Depth=*/MaxAnalysisRecursionDepth - 1) &&
+            isKnownNonNegative(B, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
+          Pred = CmpInst::getUnsignedPredicate(Pred);
+
+        auto R = Info.getConstraint(Pred, A, B, NewVariables);
         if (R.IsEq || R.empty() || !NewVariables.empty() || !R.isValid(Info))
           continue;
 
