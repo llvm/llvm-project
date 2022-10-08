@@ -1268,6 +1268,89 @@ static unsigned getFlatScratchSpillOpcode(const SIInstrInfo *TII,
   return LoadStoreOp;
 }
 
+bool SIRegisterInfo::buildLdsSpillLoadStore(MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator MI,
+                                            const DebugLoc &DL, bool IsLoad,
+                                            int Index, Register ValueReg,
+                                            bool IsKill, int64_t InstOffset,
+                                            MachineMemOperand *MMO) const {
+
+  const SIInstrInfo *TII = ST.getInstrInfo();
+
+  MachineFunction *MF = MBB.getParent();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  const SIMachineFunctionInfo *FuncInfo = MF->getInfo<SIMachineFunctionInfo>();
+
+  SIMachineFunctionInfo::LdsSpill LdsSpillInfo = FuncInfo->getLdsSpill();
+  int64_t LdsOffsetForIndex = LdsSpillInfo.LdsOffsets[Index];
+  if (LdsOffsetForIndex == -1)
+    return false;
+
+  if (LdsSpillInfo.M0SaveRestoreReg) {
+
+    // FIXME: If we could prove that there are no m0 defs/uses between two LDS
+    // spill instructions we could avoid doing some save/restore.
+
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32),
+            LdsSpillInfo.M0SaveRestoreReg)
+        .addReg(AMDGPU::M0, RegState::Kill);
+    if (LdsSpillInfo.M0InitVal == AMDGPU::NoRegister)
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0).addImm(0x0);
+    else
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+          .addImm(LdsSpillInfo.M0InitVal);
+  }
+
+  const TargetRegisterClass *RC = getRegClassForReg(MF->getRegInfo(), ValueReg);
+  unsigned EltCount = AMDGPU::getRegBitWidth(RC->getID()) / 32;
+
+  Align Alignment = MFI.getObjectAlign(Index);
+  const MachinePointerInfo &BasePtrInfo = MMO->getPointerInfo();
+  for (unsigned R = 0; R < EltCount; ++R) {
+    MachinePointerInfo PInfo = BasePtrInfo.getWithOffset(4 * R);
+    MachineMemOperand *NewMMO = MF->getMachineMemOperand(
+        PInfo, MMO->getFlags(), 4, commonAlignment(Alignment, 4 * R));
+
+    Register SubReg =
+        EltCount == 1 ? ValueReg
+                      : Register(getSubReg(ValueReg, getSubRegFromChannel(R)));
+
+    unsigned WorkGroupSize = ST.getFlatWorkGroupSizes(MF->getFunction()).second;
+    // The addtid addressing is as follows:
+    // LDS_Addr = LDS_BASE + {Inst_offset1, Inst_offset0} + TID(0..63)*4 + M0
+    // We calculate offset for the zeroth lane and make room for other lanes by
+    // multiplying by the wave size. The earlier m0 setup handles the case
+    // when the workgroup size is larger than thread size.
+
+    int64_t LdsOffsetForIndex = FuncInfo->getLdsSpill().LdsOffsets[Index];
+    assert(LdsOffsetForIndex != -1);
+
+    int64_t StackOffset = InstOffset + LdsOffsetForIndex + 4 * R;
+    int64_t StackOffsetZerothLane =
+        StackOffset * WorkGroupSize + FuncInfo->getLDSSize();
+
+    if (IsLoad) {
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::DS_READ_ADDTID_B32), SubReg)
+          .addImm(StackOffsetZerothLane)
+          .addImm(0 /* gds */)
+          .addMemOperand(NewMMO);
+
+    } else {
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::DS_WRITE_ADDTID_B32))
+          .addReg(SubReg, getKillRegState(R == EltCount - 1 ? IsKill : false))
+          .addImm(StackOffsetZerothLane)
+          .addImm(0 /* gds */)
+          .addMemOperand(NewMMO);
+    }
+  }
+
+  if (LdsSpillInfo.M0SaveRestoreReg) {
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+        .addReg(LdsSpillInfo.M0SaveRestoreReg, RegState::Kill);
+  }
+  return true;
+}
+
 void SIRegisterInfo::buildSpillLoadStore(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, const DebugLoc &DL,
     unsigned LoadStoreOp, int Index, Register ValueReg, bool IsKill,
@@ -2030,7 +2113,28 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_V128_SAVE:
     case AMDGPU::SI_SPILL_V96_SAVE:
     case AMDGPU::SI_SPILL_V64_SAVE:
-    case AMDGPU::SI_SPILL_V32_SAVE:
+    case AMDGPU::SI_SPILL_V32_SAVE: {
+      if (MFI->getLdsSpill().TotalSize > 0) {
+
+        const MachineOperand *VData =
+            TII->getNamedOperand(*MI, AMDGPU::OpName::vdata);
+        assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
+               MFI->getStackPtrOffsetReg());
+
+        bool ldsSpill = buildLdsSpillLoadStore(
+            *MBB, MI, DL, /*IsLoad*/ false, Index, VData->getReg(),
+            /*IsKill*/ VData->isKill(),
+            TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
+            *MI->memoperands_begin());
+
+        if (ldsSpill) {
+          MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(MI->getOpcode()));
+          MI->eraseFromParent();
+          break;
+        }
+      }
+      LLVM_FALLTHROUGH;
+    }
     case AMDGPU::SI_SPILL_A1024_SAVE:
     case AMDGPU::SI_SPILL_A512_SAVE:
     case AMDGPU::SI_SPILL_A256_SAVE:
@@ -2076,7 +2180,24 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_V224_RESTORE:
     case AMDGPU::SI_SPILL_V256_RESTORE:
     case AMDGPU::SI_SPILL_V512_RESTORE:
-    case AMDGPU::SI_SPILL_V1024_RESTORE:
+    case AMDGPU::SI_SPILL_V1024_RESTORE: {
+      if (MFI->getLdsSpill().TotalSize > 0) {
+        const MachineOperand *VData =
+            TII->getNamedOperand(*MI, AMDGPU::OpName::vdata);
+        assert(TII->getNamedOperand(*MI, AMDGPU::OpName::soffset)->getReg() ==
+               MFI->getStackPtrOffsetReg());
+
+        bool ldsSpill = buildLdsSpillLoadStore(
+            *MBB, MI, DL, /*IsLoad */ true, Index, VData->getReg(), false,
+            TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(),
+            *MI->memoperands_begin());
+        if (ldsSpill) {
+          MI->eraseFromParent();
+          break;
+        }
+      }
+      LLVM_FALLTHROUGH;
+    }
     case AMDGPU::SI_SPILL_A32_RESTORE:
     case AMDGPU::SI_SPILL_A64_RESTORE:
     case AMDGPU::SI_SPILL_A96_RESTORE:

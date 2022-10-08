@@ -70,6 +70,10 @@ private:
       Register PreloadedPrivateBufferReg, Register ScratchRsrcReg,
       Register ScratchWaveOffsetReg) const;
 
+  void setupLDSSpilling(MachineFunction &MF, MachineBasicBlock &MBB,
+                        MachineBasicBlock::iterator I,
+                        const DebugLoc &DL) const;
+
 public:
   bool hasFP(const MachineFunction &MF) const override;
 

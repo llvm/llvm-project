@@ -887,7 +887,11 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.SGPRSpill = MFI->getNumSpilledSGPRs();
   ProgInfo.VGPRSpill = MFI->getNumSpilledVGPRs();
 
-  ProgInfo.LDSSize = MFI->getLDSSize();
+  unsigned MaxWorkGroupSize = STM.getFlatWorkGroupSizes(F).second;
+  unsigned LDSSpillSize = MFI->getLdsSpill().TotalSize * MaxWorkGroupSize;
+
+  ProgInfo.LDSSize = MFI->getLDSSize() + LDSSpillSize;
+
   ProgInfo.LDSBlocks =
       alignTo(ProgInfo.LDSSize, 1ULL << LDSAlignShift) >> LDSAlignShift;
 

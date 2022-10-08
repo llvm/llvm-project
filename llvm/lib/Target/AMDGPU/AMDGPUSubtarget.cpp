@@ -799,6 +799,11 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   return getBaseMaxNumVGPRs(F, MFI.getWavesPerEU());
 }
 
+unsigned GCNSubtarget::getLdsSpillLimitDwords(const MachineFunction &MF) const {
+  const Function &F = MF.getFunction();
+  return AMDGPU::getIntegerAttribute(F, "amdgpu-lds-spill-limit-dwords", 0);
+}
+
 void GCNSubtarget::adjustSchedDependency(SUnit *Def, int DefOpIdx, SUnit *Use,
                                          int UseOpIdx, SDep &Dep) const {
   if (Dep.getKind() != SDep::Kind::Data || !Dep.getReg() ||

@@ -190,7 +190,8 @@ AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
     Info.UsesFlatScratch = false;
   }
 
-  Info.PrivateSegmentSize = FrameInfo.getStackSize();
+  unsigned LdsSpillTotalSize = MFI->getLdsSpill().TotalSize;
+  Info.PrivateSegmentSize = FrameInfo.getStackSize() - LdsSpillTotalSize;
 
   // Assume a big number if there are any unknown sized objects.
   Info.HasDynamicallySizedStack = FrameInfo.hasVarSizedObjects();
