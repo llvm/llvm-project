@@ -1507,6 +1507,27 @@ LogicalResult ASTVarDeclAttr::verify(
   return success();
 }
 
+::mlir::Attribute ASTRecordDeclAttr::parse(::mlir::AsmParser &parser,
+                                           ::mlir::Type type) {
+  // We cannot really parse anything AST related at this point
+  // since we have no serialization/JSON story.
+  return mlir::Attribute();
+}
+
+void ASTRecordDeclAttr::print(::mlir::AsmPrinter &printer) const {
+  // Nothing to print besides the mnemonics.
+}
+
+LogicalResult ASTRecordDeclAttr::verify(
+    ::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
+    const ::clang::RecordDecl *decl) {
+  if (!decl) {
+    emitError() << "expected non-null AST declaration";
+    return failure();
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd op method definitions
 //===----------------------------------------------------------------------===//
