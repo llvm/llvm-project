@@ -185,6 +185,10 @@ N: Jacques Pienaar
 E: jpienaar@google.com
 D: Lanai Backend
 
+N: Simon Pilgrim
+E: llvm-dev@redking.me.uk
+D: X86 Backend
+
 N: Philip Reames
 E: listmail@philipreames.com
 D: IndVar Simplify, Scalar Evolution
