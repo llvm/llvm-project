@@ -171,6 +171,17 @@ TEST_F(MainLoopTest, PendingCallbackTrigger) {
   ASSERT_TRUE(callback2_called);
 }
 
+// Regression test for assertion failure if a lot of callbacks end up
+// being queued after loop exits.
+TEST_F(MainLoopTest, PendingCallbackAfterLoopExited) {
+  MainLoop loop;
+  Status error;
+  ASSERT_TRUE(loop.Run().Success());
+  // Try to fill the pipe buffer in.
+  for (int i = 0; i < 65536; ++i)
+    loop.AddPendingCallback([&](MainLoopBase &loop) {});
+}
+
 #ifdef LLVM_ON_UNIX
 TEST_F(MainLoopTest, DetectsEOF) {
 
