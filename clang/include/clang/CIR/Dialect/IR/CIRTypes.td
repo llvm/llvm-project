@@ -77,7 +77,8 @@ def CIR_StructType : CIR_Type<"Struct", "struct"> {
 
   let parameters = (ins
     ArrayRefParameter<"mlir::Type", "members">:$members,
-    "mlir::StringAttr":$typeName
+    "mlir::StringAttr":$typeName,
+    "std::optional<::mlir::cir::ASTRecordDeclAttr>":$ast
   );
 
   let builders = [
@@ -85,7 +86,7 @@ def CIR_StructType : CIR_Type<"Struct", "struct"> {
       "ArrayRef<mlir::Type>":$members, "StringRef":$typeName
     ), [{
       auto id = mlir::StringAttr::get(context, typeName);
-      return StructType::get(context, members, id);
+      return StructType::get(context, members, id, std::nullopt);
     }]>
   ];
 
