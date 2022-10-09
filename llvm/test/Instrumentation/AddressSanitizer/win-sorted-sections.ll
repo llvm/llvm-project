@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck %s
+; RUN: opt < %s -passes=asan -S | FileCheck %s
 
 ; All of these globals should pass through uninstrumented because of their
 ; custom section name. The .CRT section is the standard way to register custom

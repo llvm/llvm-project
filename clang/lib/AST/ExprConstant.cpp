@@ -11613,15 +11613,17 @@ static bool isUserWritingOffTheEnd(const ASTContext &Ctx, const LValue &LVal) {
   //   conservative with the last element in structs (if it's an array), so our
   //   current behavior is more compatible than an explicit list approach would
   //   be.
-  int StrictFlexArraysLevel = Ctx.getLangOpts().StrictFlexArrays;
+  using FAMKind = LangOptions::StrictFlexArraysLevelKind;
+  FAMKind StrictFlexArraysLevel = Ctx.getLangOpts().getStrictFlexArraysLevel();
   return LVal.InvalidBase &&
          Designator.Entries.size() == Designator.MostDerivedPathLength &&
          Designator.MostDerivedIsArrayElement &&
          (Designator.isMostDerivedAnUnsizedArray() ||
           Designator.getMostDerivedArraySize() == 0 ||
           (Designator.getMostDerivedArraySize() == 1 &&
-           StrictFlexArraysLevel < 2) ||
-          StrictFlexArraysLevel == 0) &&
+           StrictFlexArraysLevel != FAMKind::Incomplete &&
+           StrictFlexArraysLevel != FAMKind::ZeroOrIncomplete) ||
+          StrictFlexArraysLevel == FAMKind::Default) &&
          isDesignatorAtObjectEnd(Ctx, LVal);
 }
 
@@ -14019,6 +14021,24 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
         !EvaluateFloat(E->getArg(1), RHS, Info))
       return false;
     Result.copySign(RHS);
+    return true;
+  }
+
+  case Builtin::BI__builtin_fmax:
+  case Builtin::BI__builtin_fmaxf:
+  case Builtin::BI__builtin_fmaxl:
+  case Builtin::BI__builtin_fmaxf16:
+  case Builtin::BI__builtin_fmaxf128: {
+    // TODO: Handle sNaN.
+    APFloat RHS(0.);
+    if (!EvaluateFloat(E->getArg(0), Result, Info) ||
+        !EvaluateFloat(E->getArg(1), RHS, Info))
+      return false;
+    // When comparing zeroes, return +0.0 if one of the zeroes is positive.
+    if (Result.isZero() && RHS.isZero() && Result.isNegative())
+      Result = RHS;
+    else if (Result.isNaN() || RHS > Result)
+      Result = RHS;
     return true;
   }
   }

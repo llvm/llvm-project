@@ -2,77 +2,77 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+v -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+v -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s
 
-declare <2 x i1> @llvm.vp.trunc.nxv2i16.nxv2i1(<2 x i16>, <2 x i1>, i32)
+declare <2 x i1> @llvm.vp.trunc.v2i1.v2i16(<2 x i16>, <2 x i1>, i32)
 
-define <2 x i1> @vtrunc_nxv2i1_nxv2i16(<2 x i16> %a, <2 x i1> %m, i32 zeroext %vl) {
-; CHECK-LABEL: vtrunc_nxv2i1_nxv2i16:
+define <2 x i1> @vtrunc_v2i1_v2i16(<2 x i16> %a, <2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vtrunc_v2i1_v2i16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
 ; CHECK-NEXT:    vand.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <2 x i1> @llvm.vp.trunc.nxv2i16.nxv2i1(<2 x i16> %a, <2 x i1> %m, i32 %vl)
+  %v = call <2 x i1> @llvm.vp.trunc.v2i1.v2i16(<2 x i16> %a, <2 x i1> %m, i32 %vl)
   ret <2 x i1> %v
 }
 
-define <2 x i1> @vtrunc_nxv2i1_nxv2i16_unmasked(<2 x i16> %a, i32 zeroext %vl) {
-; CHECK-LABEL: vtrunc_nxv2i1_nxv2i16_unmasked:
+define <2 x i1> @vtrunc_v2i1_v2i16_unmasked(<2 x i16> %a, i32 zeroext %vl) {
+; CHECK-LABEL: vtrunc_v2i1_v2i16_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
-  %v = call <2 x i1> @llvm.vp.trunc.nxv2i16.nxv2i1(<2 x i16> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> undef, i1 true, i32 0), <2 x i1> undef, <2 x i32> zeroinitializer), i32 %vl)
+  %v = call <2 x i1> @llvm.vp.trunc.v2i1.v2i16(<2 x i16> %a, <2 x i1> <i1 true, i1 true>, i32 %vl)
   ret <2 x i1> %v
 }
 
-declare <2 x i1> @llvm.vp.trunc.nxv2i1.nxv2i32(<2 x i32>, <2 x i1>, i32)
+declare <2 x i1> @llvm.vp.trunc.v2i1.v2i32(<2 x i32>, <2 x i1>, i32)
 
-define <2 x i1> @vtrunc_nxv2i1_nxv2i32(<2 x i32> %a, <2 x i1> %m, i32 zeroext %vl) {
-; CHECK-LABEL: vtrunc_nxv2i1_nxv2i32:
+define <2 x i1> @vtrunc_v2i1_v2i32(<2 x i32> %a, <2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vtrunc_v2i1_v2i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
 ; CHECK-NEXT:    vand.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <2 x i1> @llvm.vp.trunc.nxv2i1.nxv2i32(<2 x i32> %a, <2 x i1> %m, i32 %vl)
+  %v = call <2 x i1> @llvm.vp.trunc.v2i1.v2i32(<2 x i32> %a, <2 x i1> %m, i32 %vl)
   ret <2 x i1> %v
 }
 
-define <2 x i1> @vtrunc_nxv2i1_nxv2i32_unmasked(<2 x i32> %a, i32 zeroext %vl) {
-; CHECK-LABEL: vtrunc_nxv2i1_nxv2i32_unmasked:
+define <2 x i1> @vtrunc_v2i1_v2i32_unmasked(<2 x i32> %a, i32 zeroext %vl) {
+; CHECK-LABEL: vtrunc_v2i1_v2i32_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
-  %v = call <2 x i1> @llvm.vp.trunc.nxv2i1.nxv2i32(<2 x i32> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> undef, i1 true, i32 0), <2 x i1> undef, <2 x i32> zeroinitializer), i32 %vl)
+  %v = call <2 x i1> @llvm.vp.trunc.v2i1.v2i32(<2 x i32> %a, <2 x i1> <i1 true, i1 true>, i32 %vl)
   ret <2 x i1> %v
 }
 
-declare <2 x i1> @llvm.vp.trunc.nxv2i1.nxv2i64(<2 x i64>, <2 x i1>, i32)
+declare <2 x i1> @llvm.vp.trunc.v2i1.v2i64(<2 x i64>, <2 x i1>, i32)
 
-define <2 x i1> @vtrunc_nxv2i1_nxv2i64(<2 x i64> %a, <2 x i1> %m, i32 zeroext %vl) {
-; CHECK-LABEL: vtrunc_nxv2i1_nxv2i64:
+define <2 x i1> @vtrunc_v2i1_v2i64(<2 x i64> %a, <2 x i1> %m, i32 zeroext %vl) {
+; CHECK-LABEL: vtrunc_v2i1_v2i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
 ; CHECK-NEXT:    vand.vi v8, v8, 1, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <2 x i1> @llvm.vp.trunc.nxv2i1.nxv2i64(<2 x i64> %a, <2 x i1> %m, i32 %vl)
+  %v = call <2 x i1> @llvm.vp.trunc.v2i1.v2i64(<2 x i64> %a, <2 x i1> %m, i32 %vl)
   ret <2 x i1> %v
 }
 
-define <2 x i1> @vtrunc_nxv2i1_nxv2i64_unmasked(<2 x i64> %a, i32 zeroext %vl) {
-; CHECK-LABEL: vtrunc_nxv2i1_nxv2i64_unmasked:
+define <2 x i1> @vtrunc_v2i1_v2i64_unmasked(<2 x i64> %a, i32 zeroext %vl) {
+; CHECK-LABEL: vtrunc_v2i1_v2i64_unmasked:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vand.vi v8, v8, 1
 ; CHECK-NEXT:    vmsne.vi v0, v8, 0
 ; CHECK-NEXT:    ret
-  %v = call <2 x i1> @llvm.vp.trunc.nxv2i1.nxv2i64(<2 x i64> %a, <2 x i1> shufflevector (<2 x i1> insertelement (<2 x i1> undef, i1 true, i32 0), <2 x i1> undef, <2 x i32> zeroinitializer), i32 %vl)
+  %v = call <2 x i1> @llvm.vp.trunc.v2i1.v2i64(<2 x i64> %a, <2 x i1> <i1 true, i1 true>, i32 %vl)
   ret <2 x i1> %v
 }

@@ -20,29 +20,29 @@ program test_sync_memory
 
   !______ invalid sync-stat-lists: invalid stat= ____________
 
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   sync memory(status=sync_status)
 
   ! Invalid sync-stat-list: missing stat-variable
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   sync memory(stat)
 
   ! Invalid sync-stat-list: missing 'stat='
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   sync memory(sync_status)
 
   !______ invalid sync-stat-lists: invalid errmsg= ____________
 
   ! Invalid errmsg-variable keyword
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   sync memory(errormsg=error_message)
 
   ! Invalid sync-stat-list: missing 'errmsg='
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   sync memory(error_message)
 
   ! Invalid sync-stat-list: missing errmsg-variable
-  !ERROR: expected execution part construct
+  !ERROR: expected end of statement
   sync memory(errmsg)
 
 end program test_sync_memory

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -emit-llvm < %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm < %s | FileCheck %s
 
 typedef __SIZE_TYPE__ size_t;
 
@@ -30,7 +30,7 @@ void *memalign_test(size_t n, size_t a) {
 
 // CHECK: @malloc(i64 noundef) #1
 // CHECK: @calloc(i64 noundef, i64 noundef) #2
-// CHECK: @realloc(i8* noundef, i64 noundef) #3
+// CHECK: @realloc(ptr noundef, i64 noundef) #3
 // CHECK: @aligned_alloc(i64 noundef, i64 noundef) #3
 // CHECK: @memalign(i64 noundef, i64 noundef) #3
 

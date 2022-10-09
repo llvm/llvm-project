@@ -185,6 +185,10 @@ template <> struct FPBits<long double> {
     return bits;
   }
 
+  static long double build_quiet_nan(UIntType v) {
+    return build_nan(FloatProp::QUIET_NAN_MASK | v);
+  }
+
   inline static FPBits<long double>
   create_value(bool sign, UIntType unbiased_exp, UIntType mantissa) {
     FPBits<long double> result;

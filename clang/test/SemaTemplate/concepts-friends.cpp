@@ -394,3 +394,20 @@ namespace NamedDeclRefs {
     // expected-note@#NOREFOUTER{{previous definition is here}}
   }
 } // namespace NamedDeclRefs
+
+namespace RefersToParentInConstraint {
+  // No diagnostic, these aren't duplicates.
+  template<typename T, typename U>
+  concept similar = true;
+
+  template <typename X>
+  struct S{
+    friend void f(similar<S> auto && self){}
+    friend void f2(similar<S<X>> auto && self){}
+  };
+
+  void use() {
+    S<int> x;
+    S<long> y;
+  }
+} // namespace RefersToParentInConstraint

@@ -257,6 +257,22 @@ class PythonSynthDataFormatterTestCase(TestBase):
         self.expect("frame variable f00_1", matching=False,
                     substrs=['fake_a = '])
 
+        # check that we don't feed a regex into another regex when checking for
+        # existing conflicting synth/filters. The two following expressions
+        # accept different types: one will accept types that look like an array
+        # of MyType, the other will accept types that contain "MyType1" or
+        # "MyType2". But the second regex looks like an array of MyType, so
+        # lldb used to incorrectly reject it.
+        self.runCmd(r'type synth add -l fooSynthProvider -x "^MyType\[[0-9]+]$"')
+        self.runCmd(r'type filter add --child a -x "MyType[12]"')
+
+        # Same, but adding the filter first to verify the check when doing
+        # `type synth add`. We need to delete the synth from the previous test
+        # first.
+        self.runCmd(r'type synth delete "^MyType\[[0-9]+]$"')
+        self.runCmd(r'type filter add --child a -x "^MyType\[[0-9]+]$"')
+        self.runCmd(r'type synth add -l fooSynthProvider -x "MyType[12]"')
+
     def rdar10960550_formatter_commands(self):
         """Test that synthetic children persist stoppoints."""
         self.runCmd("file " + self.getBuildArtifact("a.out"), CURRENT_EXECUTABLE_SET)

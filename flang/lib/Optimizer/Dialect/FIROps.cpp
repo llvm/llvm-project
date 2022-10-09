@@ -1038,47 +1038,23 @@ mlir::LogicalResult fir::CoordinateOp::verify() {
 // DispatchOp
 //===----------------------------------------------------------------------===//
 
-mlir::FunctionType fir::DispatchOp::getFunctionType() {
-  return mlir::FunctionType::get(getContext(), getOperandTypes(),
-                                 getResultTypes());
-}
+mlir::LogicalResult fir::DispatchOp::verify() {
+  // Check that pass_arg_pos is in range of actual operands. pass_arg_pos is
+  // unsigned so check for less than zero is not needed.
+  if (getPassArgPos() && *getPassArgPos() > (getArgOperands().size() - 1))
+    return emitOpError(
+        "pass_arg_pos must be smaller than the number of operands");
 
-mlir::ParseResult fir::DispatchOp::parse(mlir::OpAsmParser &parser,
-                                         mlir::OperationState &result) {
-  mlir::FunctionType calleeType;
-  llvm::SmallVector<mlir::OpAsmParser::UnresolvedOperand> operands;
-  auto calleeLoc = parser.getNameLoc();
-  llvm::StringRef calleeName;
-  if (failed(parser.parseOptionalKeyword(&calleeName))) {
-    mlir::StringAttr calleeAttr;
-    if (parser.parseAttribute(calleeAttr,
-                              fir::DispatchOp::getMethodAttrNameStr(),
-                              result.attributes))
-      return mlir::failure();
-  } else {
-    result.addAttribute(fir::DispatchOp::getMethodAttrNameStr(),
-                        parser.getBuilder().getStringAttr(calleeName));
-  }
-  if (parser.parseOperandList(operands, mlir::OpAsmParser::Delimiter::Paren) ||
-      parser.parseOptionalAttrDict(result.attributes) ||
-      parser.parseColonType(calleeType) ||
-      parser.addTypesToList(calleeType.getResults(), result.types) ||
-      parser.resolveOperands(operands, calleeType.getInputs(), calleeLoc,
-                             result.operands))
-    return mlir::failure();
+  // Operand pointed by pass_arg_pos must have polymorphic type.
+  if (getPassArgPos() &&
+      !fir::isPolymorphicType(getArgOperands()[*getPassArgPos()].getType()))
+    return emitOpError("pass_arg_pos must be a polymorphic operand");
   return mlir::success();
 }
 
-void fir::DispatchOp::print(mlir::OpAsmPrinter &p) {
-  p << ' ' << getMethodAttr() << '(';
-  p.printOperand(getObject());
-  if (!getArgs().empty()) {
-    p << ", ";
-    p.printOperands(getArgs());
-  }
-  p << ") : ";
-  p.printFunctionalType(getOperation()->getOperandTypes(),
-                        getOperation()->getResultTypes());
+mlir::FunctionType fir::DispatchOp::getFunctionType() {
+  return mlir::FunctionType::get(getContext(), getOperandTypes(),
+                                 getResultTypes());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1275,6 +1251,9 @@ mlir::ParseResult fir::GlobalOp::parse(mlir::OpAsmParser &parser,
     result.addAttribute("constant", builder.getUnitAttr());
   }
 
+  if (succeeded(parser.parseOptionalKeyword("target")))
+    result.addAttribute(getTargetAttrNameStr(), builder.getUnitAttr());
+
   mlir::Type globalType;
   if (parser.parseColonType(globalType))
     return mlir::failure();
@@ -1303,6 +1282,8 @@ void fir::GlobalOp::print(mlir::OpAsmPrinter &p) {
     p << '(' << val << ')';
   if (getOperation()->getAttr(fir::GlobalOp::getConstantAttrNameStr()))
     p << " constant";
+  if (getOperation()->getAttr(getTargetAttrName()))
+    p << " target";
   p << " : ";
   p.printType(getType());
   if (hasInitializationBody()) {
@@ -1319,7 +1300,7 @@ void fir::GlobalOp::appendInitialValue(mlir::Operation *op) {
 
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
-                          bool isConstant, mlir::Type type,
+                          bool isConstant, bool isTarget, mlir::Type type,
                           mlir::Attribute initialVal, mlir::StringAttr linkage,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
   result.addRegion();
@@ -1331,6 +1312,8 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
   if (isConstant)
     result.addAttribute(getConstantAttrName(result.name),
                         builder.getUnitAttr());
+  if (isTarget)
+    result.addAttribute(getTargetAttrName(result.name), builder.getUnitAttr());
   if (initialVal)
     result.addAttribute(getInitValAttrName(result.name), initialVal);
   if (linkage)
@@ -1343,36 +1326,40 @@ void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::Type type, mlir::Attribute initialVal,
                           mlir::StringAttr linkage,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
-  build(builder, result, name, /*isConstant=*/false, type, {}, linkage, attrs);
+  build(builder, result, name, /*isConstant=*/false, /*isTarget=*/false, type,
+        {}, linkage, attrs);
 }
 
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
-                          bool isConstant, mlir::Type type,
+                          bool isConstant, bool isTarget, mlir::Type type,
                           mlir::StringAttr linkage,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
-  build(builder, result, name, isConstant, type, {}, linkage, attrs);
+  build(builder, result, name, isConstant, isTarget, type, {}, linkage, attrs);
 }
 
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
                           mlir::Type type, mlir::StringAttr linkage,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
-  build(builder, result, name, /*isConstant=*/false, type, {}, linkage, attrs);
+  build(builder, result, name, /*isConstant=*/false, /*isTarget=*/false, type,
+        {}, linkage, attrs);
 }
 
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
-                          bool isConstant, mlir::Type type,
+                          bool isConstant, bool isTarget, mlir::Type type,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
-  build(builder, result, name, isConstant, type, mlir::StringAttr{}, attrs);
+  build(builder, result, name, isConstant, isTarget, type, mlir::StringAttr{},
+        attrs);
 }
 
 void fir::GlobalOp::build(mlir::OpBuilder &builder,
                           mlir::OperationState &result, llvm::StringRef name,
                           mlir::Type type,
                           llvm::ArrayRef<mlir::NamedAttribute> attrs) {
-  build(builder, result, name, /*isConstant=*/false, type, attrs);
+  build(builder, result, name, /*isConstant=*/false, /*isTarget=*/false, type,
+        attrs);
 }
 
 mlir::ParseResult fir::GlobalOp::verifyValidLinkage(llvm::StringRef linkage) {

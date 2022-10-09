@@ -233,6 +233,13 @@ static cl::opt<bool> PredicateWidenableBranchGuards(
              "expressed as widenable branches to deoptimize blocks"),
     cl::init(true));
 
+static cl::opt<bool> InsertAssumesOfPredicatedGuardsConditions(
+    "loop-predication-insert-assumes-of-predicated-guards-conditions",
+    cl::Hidden,
+    cl::desc("Whether or not we should insert assumes of conditions of "
+             "predicated guards"),
+    cl::init(true));
+
 namespace {
 /// Represents an induction variable check:
 ///   icmp Pred, <induction variable>, <loop invariant limit>
@@ -817,6 +824,10 @@ bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
   Value *AllChecks = Builder.CreateAnd(Checks);
   auto *OldCond = Guard->getOperand(0);
   Guard->setOperand(0, AllChecks);
+  if (InsertAssumesOfPredicatedGuardsConditions) {
+    Builder.SetInsertPoint(&*++BasicBlock::iterator(Guard));
+    Builder.CreateAssumption(OldCond);
+  }
   RecursivelyDeleteTriviallyDeadInstructions(OldCond, nullptr /* TLI */, MSSAU);
 
   LLVM_DEBUG(dbgs() << "Widened checks = " << NumWidened << "\n");
@@ -828,6 +839,12 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
   assert(isGuardAsWidenableBranch(BI) && "Must be!");
   LLVM_DEBUG(dbgs() << "Processing guard:\n");
   LLVM_DEBUG(BI->dump());
+
+  Value *Cond, *WC;
+  BasicBlock *IfTrueBB, *IfFalseBB;
+  bool Parsed = parseWidenableBranch(BI, Cond, WC, IfTrueBB, IfFalseBB);
+  assert(Parsed && "Must be able to parse widenable branch");
+  (void)Parsed;
 
   TotalConsidered++;
   SmallVector<Value *, 4> Checks;
@@ -843,6 +860,10 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
   Value *AllChecks = Builder.CreateAnd(Checks);
   auto *OldCond = BI->getCondition();
   BI->setCondition(AllChecks);
+  if (InsertAssumesOfPredicatedGuardsConditions) {
+    Builder.SetInsertPoint(IfTrueBB, IfTrueBB->getFirstInsertionPt());
+    Builder.CreateAssumption(Cond);
+  }
   RecursivelyDeleteTriviallyDeadInstructions(OldCond, nullptr /* TLI */, MSSAU);
   assert(isGuardAsWidenableBranch(BI) &&
          "Stopped being a guard after transform?");

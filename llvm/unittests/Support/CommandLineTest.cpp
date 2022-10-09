@@ -1038,7 +1038,7 @@ TEST(CommandLineTest, ResponseFileEOLs) {
   }
 }
 
-TEST(CommandLineTest, SetDefautValue) {
+TEST(CommandLineTest, SetDefaultValue) {
   cl::ResetCommandLineParser();
 
   StackOption<std::string> Opt1("opt1", cl::init("true"));
@@ -1046,14 +1046,31 @@ TEST(CommandLineTest, SetDefautValue) {
   cl::alias Alias("alias", llvm::cl::aliasopt(Opt2));
   StackOption<int> Opt3("opt3", cl::init(3));
 
-  const char *args[] = {"prog", "-opt1=false", "-opt2", "-opt3"};
+  llvm::SmallVector<int, 3> IntVals = {1, 2, 3};
+  llvm::SmallVector<std::string, 3> StrVals = {"foo", "bar", "baz"};
+
+  StackOption<int, cl::list<int>> List1(
+      "list1", cl::list_init<int>(llvm::ArrayRef<int>(IntVals)),
+      cl::CommaSeparated);
+  StackOption<std::string, cl::list<std::string>> List2(
+      "list2", cl::list_init<std::string>(llvm::ArrayRef<std::string>(StrVals)),
+      cl::CommaSeparated);
+  cl::alias ListAlias("list-alias", llvm::cl::aliasopt(List2));
+
+  const char *args[] = {"prog",   "-opt1=false", "-list1", "4",
+                        "-list1", "5,6",         "-opt2",  "-opt3"};
 
   EXPECT_TRUE(
-    cl::ParseCommandLineOptions(2, args, StringRef(), &llvm::nulls()));
+      cl::ParseCommandLineOptions(7, args, StringRef(), &llvm::nulls()));
 
   EXPECT_EQ(Opt1, "false");
   EXPECT_TRUE(Opt2);
   EXPECT_EQ(Opt3, 3);
+
+  for (size_t I = 0, E = IntVals.size(); I < E; ++I) {
+    EXPECT_EQ(IntVals[I] + 3, List1[I]);
+    EXPECT_EQ(StrVals[I], List2[I]);
+  }
 
   Opt2 = false;
   Opt3 = 1;
@@ -1071,7 +1088,13 @@ TEST(CommandLineTest, SetDefautValue) {
   EXPECT_EQ(Opt1, "true");
   EXPECT_TRUE(Opt2);
   EXPECT_EQ(Opt3, 3);
+  for (size_t I = 0, E = IntVals.size(); I < E; ++I) {
+    EXPECT_EQ(IntVals[I], List1[I]);
+    EXPECT_EQ(StrVals[I], List2[I]);
+  }
+
   Alias.removeArgument();
+  ListAlias.removeArgument();
 }
 
 TEST(CommandLineTest, ReadConfigFile) {

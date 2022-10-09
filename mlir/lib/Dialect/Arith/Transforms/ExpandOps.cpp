@@ -225,12 +225,17 @@ struct ArithExpandOpsPass
 
 } // namespace
 
+void mlir::arith::populateCeilFloorDivExpandOpsPatterns(
+    RewritePatternSet &patterns) {
+  patterns
+      .add<CeilDivSIOpConverter, CeilDivUIOpConverter, FloorDivSIOpConverter>(
+          patterns.getContext());
+}
+
 void mlir::arith::populateArithExpandOpsPatterns(RewritePatternSet &patterns) {
+  populateCeilFloorDivExpandOpsPatterns(patterns);
   // clang-format off
   patterns.add<
-    CeilDivSIOpConverter,
-    CeilDivUIOpConverter,
-    FloorDivSIOpConverter,
     MaxMinFOpConverter<MaxFOp, arith::CmpFPredicate::UGT>,
     MaxMinFOpConverter<MinFOp, arith::CmpFPredicate::ULT>,
     MaxMinIOpConverter<MaxSIOp, arith::CmpIPredicate::sgt>,

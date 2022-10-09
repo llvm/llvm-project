@@ -755,6 +755,7 @@ public:
 
   bool matchBuildVectorIdentityFold(MachineInstr &MI, Register &MatchInfo);
   bool matchTruncBuildVectorFold(MachineInstr &MI, Register &MatchInfo);
+  bool matchTruncLshrBuildVectorFold(MachineInstr &MI, Register &MatchInfo);
 
   /// Transform:
   ///   (x + y) - y -> x

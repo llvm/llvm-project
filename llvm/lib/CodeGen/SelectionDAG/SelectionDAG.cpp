@@ -1461,6 +1461,10 @@ SDValue SelectionDAG::getPtrExtendInReg(SDValue Op, const SDLoc &DL, EVT VT) {
   return getZeroExtendInReg(Op, DL, VT);
 }
 
+SDValue SelectionDAG::getNegative(SDValue Val, const SDLoc &DL, EVT VT) {
+  return getNode(ISD::SUB, DL, VT, getConstant(0, DL, VT), Val);
+}
+
 /// getNOT - Create a bitwise NOT operation as (XOR Val, -1).
 SDValue SelectionDAG::getNOT(const SDLoc &DL, SDValue Val, EVT VT) {
   return getNode(ISD::XOR, DL, VT, Val, getAllOnesConstant(DL, VT));

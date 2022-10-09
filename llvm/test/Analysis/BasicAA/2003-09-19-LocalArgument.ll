@@ -1,6 +1,6 @@
 ; In this test, a local alloca cannot alias an incoming argument.
 
-; RUN: opt < %s -basic-aa -gvn -instcombine -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -gvn -instcombine -S | FileCheck %s
 
 ; CHECK:      define i32 @test
 ; CHECK-NEXT: ret i32 0

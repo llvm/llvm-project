@@ -144,6 +144,10 @@ public:
       ashrInPlace(Amt);
     return *this;
   }
+  APSInt relativeShr(unsigned Amt) const {
+    return IsUnsigned ? APSInt(relativeLShr(Amt), true)
+                      : APSInt(relativeAShr(Amt), false);
+  }
 
   inline bool operator<(const APSInt& RHS) const {
     assert(IsUnsigned == RHS.IsUnsigned && "Signedness mismatch!");
@@ -197,6 +201,10 @@ public:
   APSInt& operator<<=(unsigned Amt) {
     static_cast<APInt&>(*this) <<= Amt;
     return *this;
+  }
+  APSInt relativeShl(unsigned Amt) const {
+    return IsUnsigned ? APSInt(relativeLShl(Amt), true)
+                      : APSInt(relativeAShl(Amt), false);
   }
 
   APSInt& operator++() {

@@ -225,8 +225,11 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
   }
 
   transform::TransformResults results(transform->getNumResults());
+  // Compute the result but do not short-circuit the silenceable failure case as
+  // we still want the handles to propagate properly so the "suppress" mode can
+  // proceed on a best effort basis.
   DiagnosedSilenceableFailure result(transform.apply(results, *this));
-  if (!result.succeeded())
+  if (result.isDefiniteFailure())
     return result;
 
   // Remove the mapping for the operand if it is consumed by the operation. This
@@ -258,7 +261,7 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     DBGS() << "Top-level payload:\n";
     getTopLevel()->print(llvm::dbgs());
   });
-  return DiagnosedSilenceableFailure::success();
+  return result;
 }
 
 //===----------------------------------------------------------------------===//

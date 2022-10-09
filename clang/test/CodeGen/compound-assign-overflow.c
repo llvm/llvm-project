@@ -1,5 +1,5 @@
 // Verify proper type emitted for compound assignments
-// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -triple x86_64-apple-darwin10 -emit-llvm -o - %s  -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-recover=signed-integer-overflow,unsigned-integer-overflow | FileCheck %s
+// RUN: %clang_cc1 -ffreestanding -triple x86_64-apple-darwin10 -emit-llvm -o - %s  -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-recover=signed-integer-overflow,unsigned-integer-overflow | FileCheck %s
 
 #include <stdint.h>
 
@@ -15,19 +15,19 @@ int32_t x;
 void compaddsigned(void) {
 #line 100
   x += ((int32_t)1);
-  // CHECK: @__ubsan_handle_add_overflow(i8* bitcast ({{.*}} @[[LINE_100]] to i8*), {{.*}})
+  // CHECK: @__ubsan_handle_add_overflow(ptr @[[LINE_100]], {{.*}})
 }
 
 // CHECK: @compaddunsigned
 void compaddunsigned(void) {
 #line 200
   x += ((uint32_t)1U);
-  // CHECK: @__ubsan_handle_add_overflow(i8* bitcast ({{.*}} @[[LINE_200]] to i8*), {{.*}})
+  // CHECK: @__ubsan_handle_add_overflow(ptr @[[LINE_200]], {{.*}})
 }
 
 // CHECK: @compdiv
 void compdiv(void) {
 #line 300
   x /= x;
-  // CHECK: @__ubsan_handle_divrem_overflow(i8* bitcast ({{.*}} @[[LINE_300]] to i8*), {{.*}})
+  // CHECK: @__ubsan_handle_divrem_overflow(ptr @[[LINE_300]], {{.*}})
 }

@@ -1,21 +1,21 @@
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-version=51 -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefixes=ALL,NORMAL
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=51 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=51 -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=ALL,NORMAL
-// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-apple-darwin10 -fopenmp -fopenmp-version=51 -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-version=51 -fopenmp-enable-irbuilder -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefixes=ALL,IRBUILDER
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=51 -fopenmp-enable-irbuilder -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=51 -fopenmp-enable-irbuilder -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=ALL,IRBUILDER
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefixes=ALL,NORMAL
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=ALL,NORMAL
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fopenmp-version=51 -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s --check-prefix=TERM_DEBUG
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -fopenmp-enable-irbuilder -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck %s --check-prefixes=ALL,IRBUILDER
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -fopenmp-enable-irbuilder -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=51 -fopenmp-enable-irbuilder -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s --check-prefixes=ALL,IRBUILDER
 
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -fopenmp-version=51 -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-version=51 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-version=51 -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-apple-darwin10 -fopenmp-simd -fopenmp-version=51 -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=51 -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp-simd -fopenmp-version=51 -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
 #ifndef HEADER
 #define HEADER
 
-// ALL:       [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, i8* }
+// ALL:       [[IDENT_T_TY:%.+]] = type { i32, i32, i32, i32, ptr }
 
 // ALL:       define {{.*}}void [[FOO:@.+]]()
 
@@ -27,41 +27,41 @@ int main() {
   // ALL:      			[[A_ADDR:%.+]] = alloca i8
   char a;
 
-// ALL:       			[[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:@.+]])
-// ALL:       			[[RES:%.+]] = call {{.*}}i32 @__kmpc_masked([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], i32 0)
+// ALL:       			[[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num(ptr [[DEFAULT_LOC:@.+]])
+// ALL:       			[[RES:%.+]] = call {{.*}}i32 @__kmpc_masked(ptr [[DEFAULT_LOC]], i32 [[GTID]], i32 0)
 // ALL-NEXT:  			[[IS_MASKED:%.+]] = icmp ne i32 [[RES]], 0
 // ALL-NEXT:  			br i1 [[IS_MASKED]], label {{%?}}[[THEN:.+]], label {{%?}}[[EXIT:.+]]
 // ALL:       			[[THEN]]
-// ALL-NEXT:  			store i8 2, i8* [[A_ADDR]]
+// ALL-NEXT:  			store i8 2, ptr [[A_ADDR]]
 // IRBUILDER-NEXT:		br label %[[AFTER:[^ ,]+]]
 // IRBUILDER:			[[AFTER]]
-// ALL-NEXT:  			call {{.*}}void @__kmpc_end_masked([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
+// ALL-NEXT:  			call {{.*}}void @__kmpc_end_masked(ptr [[DEFAULT_LOC]], i32 [[GTID]])
 // ALL-NEXT:  			br label {{%?}}[[EXIT]]
 // ALL:       			[[EXIT]]
 #pragma omp masked
   a = 2;
-// IRBUILDER: 			[[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:@.+]])
-// ALL:       			[[RES:%.+]] = call {{.*}}i32 @__kmpc_masked([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], i32 2)
+// IRBUILDER: 			[[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num(ptr [[DEFAULT_LOC:@.+]])
+// ALL:       			[[RES:%.+]] = call {{.*}}i32 @__kmpc_masked(ptr [[DEFAULT_LOC]], i32 [[GTID]], i32 2)
 // ALL-NEXT:  			[[IS_MASKED:%.+]] = icmp ne i32 [[RES]], 0
 // ALL-NEXT:  			br i1 [[IS_MASKED]], label {{%?}}[[THEN:.+]], label {{%?}}[[EXIT:.+]]
 // ALL:       			[[THEN]]
 // IRBUILDER-NEXT:  call {{.*}}void [[FOO]]()
 // NORMAL-NEXT:  		invoke {{.*}}void [[FOO]]()
-// ALL:       			call {{.*}}void @__kmpc_end_masked([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
+// ALL:       			call {{.*}}void @__kmpc_end_masked(ptr [[DEFAULT_LOC]], i32 [[GTID]])
 // ALL-NEXT:  			br label {{%?}}[[EXIT]]
 // ALL:       			[[EXIT]]
 #pragma omp masked filter(2)
   foo();
-// ALL:                         store i32 9, i32* [[X:.+]],
-// ALL:                         [[X_VAL:%.+]] = load i32, i32* [[X]]
-// IRBUILDER: 			[[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num([[IDENT_T_TY]]* [[DEFAULT_LOC:@.+]])
-// ALL:       			[[RES:%.+]] = call {{.*}}i32 @__kmpc_masked([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]], i32 [[X_VAL]])
+// ALL:                         store i32 9, ptr [[X:.+]],
+// ALL:                         [[X_VAL:%.+]] = load i32, ptr [[X]]
+// IRBUILDER: 			[[GTID:%.+]] = call {{.*}}i32 @__kmpc_global_thread_num(ptr [[DEFAULT_LOC:@.+]])
+// ALL:       			[[RES:%.+]] = call {{.*}}i32 @__kmpc_masked(ptr [[DEFAULT_LOC]], i32 [[GTID]], i32 [[X_VAL]])
 // ALL-NEXT:  			[[IS_MASKED:%.+]] = icmp ne i32 [[RES]], 0
 // ALL-NEXT:  			br i1 [[IS_MASKED]], label {{%?}}[[THEN:.+]], label {{%?}}[[EXIT:.+]]
 // ALL:       			[[THEN]]
 // IRBUILDER-NEXT:  call {{.*}}void [[FOO]]()
 // NORMAL-NEXT:  		invoke {{.*}}void [[FOO]]()
-// ALL:       			call {{.*}}void @__kmpc_end_masked([[IDENT_T_TY]]* [[DEFAULT_LOC]], i32 [[GTID]])
+// ALL:       			call {{.*}}void @__kmpc_end_masked(ptr [[DEFAULT_LOC]], i32 [[GTID]])
 // ALL-NEXT:  			br label {{%?}}[[EXIT]]
 // ALL:       			[[EXIT]]
   int x = 9;

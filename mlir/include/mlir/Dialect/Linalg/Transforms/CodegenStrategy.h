@@ -64,34 +64,6 @@ private:
   linalg::LinalgTilingOptions options;
 };
 
-/// Represent one application of LinalgStrategyPadPass.
-struct Pad : public Transformation {
-  Pad(StringRef name, linalg::LinalgPaddingOptions options,
-      LinalgTransformationFilter::FilterFunction f = nullptr)
-      : Transformation(std::move(f)), opName(name),
-        options(std::move(options)) {}
-
-  void addToPassPipeline(OpPassManager &pm,
-                         LinalgTransformationFilter m) const override {
-    pm.addPass(createLinalgStrategyPadPass(opName, options, m));
-  }
-
-private:
-  std::string opName;
-  linalg::LinalgPaddingOptions options;
-};
-
-/// Represent one application of createLinalgStrategyDecomposePass.
-struct Decompose : public Transformation {
-  explicit Decompose(LinalgTransformationFilter::FilterFunction f = nullptr)
-      : Transformation(std::move(f)) {}
-
-  void addToPassPipeline(OpPassManager &pm,
-                         LinalgTransformationFilter m) const override {
-    pm.addPass(createLinalgStrategyDecomposePass(m));
-  }
-};
-
 /// Codegen strategy controls how a Linalg op is progressively lowered.
 struct CodegenStrategy {
   /// Append a pattern to tile the Op `opName` and fuse its producers with
@@ -125,33 +97,6 @@ struct CodegenStrategy {
   tileIf(bool b, StringRef opName, linalg::LinalgTilingOptions options,
          LinalgTransformationFilter::FilterFunction f = nullptr) {
     return b ? tile(opName, std::move(options), std::move(f)) : *this;
-  }
-  /// Append a pattern to pad and hoist the operands of Op `opName` with padding
-  /// `options`.
-  CodegenStrategy &
-  pad(StringRef opName, const linalg::LinalgPaddingOptions &options,
-      const LinalgTransformationFilter::FilterFunction &f = nullptr) {
-    transformationSequence.emplace_back(
-        std::make_unique<Pad>(opName, options, f));
-    return *this;
-  }
-  /// Conditionally append a pattern to pad and hoist the operands of Op
-  /// `opName` with padding `options`.
-  CodegenStrategy &
-  padIf(bool b, StringRef opName, linalg::LinalgPaddingOptions options,
-        LinalgTransformationFilter::FilterFunction f = nullptr) {
-    return b ? pad(opName, std::move(options), std::move(f)) : *this;
-  }
-  /// Append patterns to decompose convolutions.
-  CodegenStrategy &
-  decompose(const LinalgTransformationFilter::FilterFunction &f = nullptr) {
-    transformationSequence.emplace_back(std::make_unique<Decompose>(f));
-    return *this;
-  }
-  /// Conditionally append patterns to decompose convolutions.
-  CodegenStrategy &
-  decomposeIf(bool b, LinalgTransformationFilter::FilterFunction f = nullptr) {
-    return b ? decompose(std::move(f)) : *this;
   }
   /// Configure the post staged-patterns global enabling passes options.
   CodegenStrategy &

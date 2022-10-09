@@ -296,6 +296,6 @@
 "`3393 <https://wg21.link/LWG3393>`__","Missing/incorrect feature test macro for coroutines","Prague","|Complete|","14.0"
 "`3395 <https://wg21.link/LWG3395>`__","Definition for three-way comparison needs to be updated (US 152)","Prague","","","|spaceship|"
 "`3396 <https://wg21.link/LWG3396>`__","Clarify point of reference for ``source_location::current()``\  (DE 169)","Prague","",""
-"`3397 <https://wg21.link/LWG3397>`__","``ranges::basic_istream_view::iterator``\  should not provide ``iterator_category``\ ","Prague","","","|ranges|"
+"`3397 <https://wg21.link/LWG3397>`__","``ranges::basic_istream_view::iterator``\  should not provide ``iterator_category``\ ","Prague","|Complete|","16.0","|ranges|"
 "`3398 <https://wg21.link/LWG3398>`__","``tuple_element_t``\  is also wrong for ``const subrange``\ ","Prague","|Complete|","14.0","|ranges|"
 "`3446 <https://wg21.link/LWG3446>`__","``indirectly_readable_traits``\ ambiguity for types with both ``value_type``\ and ``element_type``\ ","November virtual meeting","|Complete|","13.0"

@@ -228,6 +228,19 @@ namespace std::ranges {
     inline constexpr unspecified lazy_split = unspecified;
   }
 
+  // [range.istream], istream view
+  template<movable Val, class CharT, class Traits = char_traits<CharT>>
+    requires see below
+  class basic_istream_view;
+
+  template<class Val>
+    using istream_view = basic_istream_view<Val, char>;
+
+  template<class Val>
+    using wistream_view = basic_istream_view<Val, wchar_t>;
+
+  namespace views { template<class T> inline constexpr unspecified istream = unspecified; }
+
   // [range.zip], zip view
   template<input_range... Views>
     requires (view<Views> && ...) && (sizeof...(Views) > 0)
@@ -304,6 +317,10 @@ namespace std {
 #include <__ranges/zip_view.h>
 #include <type_traits>
 #include <version>
+
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#include <__ranges/istream_view.h>
+#endif
 
 // standard-mandated includes
 

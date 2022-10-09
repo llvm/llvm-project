@@ -1,4 +1,4 @@
-// RUN:  %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm -O0 -o - %s | FileCheck %s
+// RUN:  %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -O0 -o - %s | FileCheck %s
 
 static union ibtt2
 {
@@ -9,6 +9,6 @@ static union ibtt2
 void callee_ibt0f(union ibtt2 ibtp5);
 
 void test(void) {
-// CHECK: = load i32, i32*
+// CHECK: = load i32, ptr
   callee_ibt0f(ibt15);
 }

@@ -229,7 +229,6 @@ __m64 test_m_from_int(int a) {
 
 __m64 test_m_from_int64(long long a) {
   // CHECK-LABEL: test_m_from_int64
-  // CHECK: bitcast
   return _m_from_int64(a);
 }
 
@@ -658,7 +657,6 @@ int test_m_to_int(__m64 a) {
 
 long long test_m_to_int64(__m64 a) {
   // CHECK-LABEL: test_m_to_int64
-  // CHECK: bitcast
   return _m_to_int64(a);
 }
 

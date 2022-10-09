@@ -3362,7 +3362,7 @@ void CodeViewDebug::emitDebugInfoForGlobal(const CVGlobalVariable &CVGV) {
   // in its name so that we can reference the variable in the command line
   // of the VS debugger.
   std::string QualifiedName =
-      (moduleIsInFortran() || isa<DILocalScope>(Scope))
+      (moduleIsInFortran() || (Scope && isa<DILocalScope>(Scope)))
           ? std::string(DIGV->getName())
           : getFullyQualifiedName(Scope, DIGV->getName());
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -licm -S | FileCheck %s
+; RUN: opt < %s -licm -S | FileCheck %s
 @b = external global i32, align 4
 @fn3.i = external global i32, align 4
 

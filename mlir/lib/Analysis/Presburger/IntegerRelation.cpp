@@ -787,7 +787,7 @@ Optional<SmallVector<MPInt, 8>> IntegerRelation::findIntegerSample() const {
   // to column echelon form is unimodular as well, so this is a suitable
   // transform to use in step 1 of the algorithm.
   std::pair<unsigned, LinearTransform> result =
-      LinearTransform::makeTransformToColumnEchelon(std::move(m));
+      LinearTransform::makeTransformToColumnEchelon(m);
   const LinearTransform &transform = result.second;
   // 1) Apply T to S to obtain S*T.
   IntegerRelation transformedSet = transform.applyTo(*this);

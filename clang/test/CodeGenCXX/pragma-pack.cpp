@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=i686-apple-darwin10 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=i686-apple-darwin10 -emit-llvm -o - | FileCheck %s
 
 struct Base {
   virtual ~Base();
@@ -10,7 +10,9 @@ struct Sub : virtual Base {
   char c;
 };
 
-// CHECK: %struct.Sub = type <{ i32 (...)**, i8, %struct.Base }>
-void f(Sub*) { }
+// CHECK: %struct.Sub = type <{ ptr, i8, %struct.Base }>
+Sub f(Sub x) {
+  return x;
+}
 
 static int i[sizeof(Sub) == 13 ? 1 : -1];
