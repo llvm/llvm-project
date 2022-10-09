@@ -137,6 +137,7 @@ add_gen_header(
     .llvm-libc-types.struct_sigaction
     .llvm-libc-types.__sighandler_t
     .llvm-libc-types.sigset_t
+    .llvm-libc-types.pid_t
 )
 
 add_gen_header(
@@ -175,6 +176,8 @@ add_gen_header(
     .llvm_libc_common_h
     .llvm-libc-macros.file_seek_macros
     .llvm-libc-macros.unistd_macros
+    .llvm-libc-types.__exec_argv_t
+    .llvm-libc-types.__exec_envp_t
     .llvm-libc-types.off_t
     .llvm-libc-types.pid_t
     .llvm-libc-types.size_t

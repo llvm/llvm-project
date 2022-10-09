@@ -3686,8 +3686,10 @@ public:
   // template, or just the current friend function. A 'lower' TemplateDepth in
   // the AST refers to a 'containing' template. As the constraint is
   // uninstantiated, this is relative to the 'top' of the TU.
-  bool ConstraintExpressionDependsOnEnclosingTemplate(unsigned TemplateDepth,
-                                                      const Expr *Constraint);
+  bool
+  ConstraintExpressionDependsOnEnclosingTemplate(const FunctionDecl *Friend,
+                                                 unsigned TemplateDepth,
+                                                 const Expr *Constraint);
 
   // Calculates whether the friend function depends on an enclosing template for
   // the purposes of [temp.friend] p9.

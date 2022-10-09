@@ -1482,8 +1482,11 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
     return R;
 
   // See if we can turn a signed shr into an unsigned shr.
-  if (MaskedValueIsZero(Op0, APInt::getSignMask(BitWidth), 0, &I))
-    return BinaryOperator::CreateLShr(Op0, Op1);
+  if (MaskedValueIsZero(Op0, APInt::getSignMask(BitWidth), 0, &I)) {
+    Instruction *Lshr = BinaryOperator::CreateLShr(Op0, Op1);
+    Lshr->setIsExact(I.isExact());
+    return Lshr;
+  }
 
   // ashr (xor %x, -1), %y  -->  xor (ashr %x, %y), -1
   if (match(Op0, m_OneUse(m_Not(m_Value(X))))) {

@@ -514,7 +514,7 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   // the way out.
   if (Args.hasArg(options::OPT_gdwarf_aranges)) {
     CmdArgs.push_back(
-        Args.MakeArgString("--plugin-opt=-generate-arange-section"));
+        Args.MakeArgString("-plugin-opt=-generate-arange-section"));
   }
 
   // Try to pass driver level flags relevant to LTO code generation down to

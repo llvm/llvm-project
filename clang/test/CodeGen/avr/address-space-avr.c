@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple avr -target-cpu atmega2560 -emit-llvm < %s | FileCheck %s
+// RUN: %clang_cc1 -triple avr -target-cpu atmega2560 -emit-llvm < %s | FileCheck %s
 
 // CHECK: @var0 {{.*}} addrspace(1) constant [3 x i16]
 // CHECK: @f3var0 {{.*}} addrspace(4) constant [3 x i16]
@@ -8,7 +8,7 @@
 // CHECK: @f3var1 {{.*}} addrspace(4) constant [3 x i16]
 
 // CHECK: define{{.*}} void @bar() addrspace(1)
-// CHECK: call addrspace(1) void bitcast (void (...) addrspace(1)* @foo to void (i16) addrspace(1)*)
+// CHECK: call addrspace(1) void @foo
 // CHECK: declare void @foo(...) addrspace(1)
 
 __flash const int var0[] = {999, 888, 777};

@@ -454,7 +454,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_REDUCE_SMIN, ISD::VP_REDUCE_UMAX, ISD::VP_REDUCE_UMIN,
         ISD::VP_MERGE,       ISD::VP_SELECT,      ISD::VP_FP_TO_SINT,
         ISD::VP_FP_TO_UINT,  ISD::VP_SETCC,       ISD::VP_SIGN_EXTEND,
-        ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE};
+        ISD::VP_ZERO_EXTEND, ISD::VP_TRUNCATE,    ISD::VP_SMIN,
+        ISD::VP_SMAX,        ISD::VP_UMIN,        ISD::VP_UMAX};
 
     static const unsigned FloatingPointVPOps[] = {
         ISD::VP_FADD,        ISD::VP_FSUB,        ISD::VP_FMUL,
@@ -465,7 +466,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_SETCC,       ISD::VP_FP_ROUND,    ISD::VP_FP_EXTEND,
         ISD::VP_SQRT,        ISD::VP_FMINNUM,     ISD::VP_FMAXNUM,
         ISD::VP_FCEIL,       ISD::VP_FFLOOR,      ISD::VP_FROUND,
-        ISD::VP_FROUNDEVEN,  ISD::VP_FCOPYSIGN};
+        ISD::VP_FROUNDEVEN,  ISD::VP_FCOPYSIGN,   ISD::VP_FROUNDTOZERO};
 
     static const unsigned IntegerVecReduceOps[] = {
         ISD::VECREDUCE_ADD,  ISD::VECREDUCE_AND,  ISD::VECREDUCE_OR,
@@ -1965,7 +1966,9 @@ static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
   case ISD::FROUNDEVEN:
   case ISD::VP_FROUNDEVEN:
     return RISCVFPRndMode::RNE;
-  case ISD::FTRUNC:     return RISCVFPRndMode::RTZ;
+  case ISD::FTRUNC:
+  case ISD::VP_FROUNDTOZERO:
+    return RISCVFPRndMode::RTZ;
   case ISD::FFLOOR:
   case ISD::VP_FFLOOR:
     return RISCVFPRndMode::RDN;
@@ -1981,8 +1984,8 @@ static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
 }
 
 // Expand vector FTRUNC, FCEIL, FFLOOR, FROUND, VP_FCEIL, VP_FFLOOR, VP_FROUND
-// and VP_FROUNDEVEN by converting to the integer domain and back. Taking care
-// to avoid converting values that are nan or already correct.
+// VP_FROUNDEVEN and VP_FROUNDTOZERO by converting to the integer domain and
+// back. Taking care to avoid converting values that are nan or already correct.
 static SDValue
 lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
@@ -2003,7 +2006,8 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   bool IsVP = Op->getOpcode() == ISD::VP_FCEIL ||
               Op->getOpcode() == ISD::VP_FFLOOR ||
               Op->getOpcode() == ISD::VP_FROUND ||
-              Op->getOpcode() == ISD::VP_FROUNDEVEN;
+              Op->getOpcode() == ISD::VP_FROUNDEVEN ||
+              Op->getOpcode() == ISD::VP_FROUNDTOZERO;
 
   if (IsVP) {
     Mask = Op.getOperand(1);
@@ -2053,7 +2057,8 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
   case ISD::VP_FROUND:
-  case ISD::VP_FROUNDEVEN: {
+  case ISD::VP_FROUNDEVEN:
+  case ISD::VP_FROUNDTOZERO: {
     RISCVFPRndMode::RoundingMode FRM = matchRoundingOp(Op.getOpcode());
     assert(FRM != RISCVFPRndMode::Invalid);
     Truncated = DAG.getNode(RISCVISD::VFCVT_X_F_VL, DL, IntVT, Src,
@@ -3254,8 +3259,7 @@ static SDValue lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op, SelectionDAG &DAG) {
   // For CTTZ_ZERO_UNDEF, we need to extract the lowest set bit using X & -X.
   // The trailing zero count is equal to log2 of this single bit value.
   if (Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF) {
-    SDValue Neg =
-        DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Src);
+    SDValue Neg = DAG.getNegative(Src, DL, VT);
     Src = DAG.getNode(ISD::AND, DL, VT, Src, Neg);
   }
 
@@ -3976,6 +3980,14 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     if (Op.getOperand(0).getSimpleValueType().getVectorElementType() == MVT::i1)
       return lowerVPSetCCMaskOp(Op, DAG);
     return lowerVPOp(Op, DAG, RISCVISD::SETCC_VL, /*HasMergeOp*/ true);
+  case ISD::VP_SMIN:
+    return lowerVPOp(Op, DAG, RISCVISD::SMIN_VL, /*HasMergeOp*/ true);
+  case ISD::VP_SMAX:
+    return lowerVPOp(Op, DAG, RISCVISD::SMAX_VL, /*HasMergeOp*/ true);
+  case ISD::VP_UMIN:
+    return lowerVPOp(Op, DAG, RISCVISD::UMIN_VL, /*HasMergeOp*/ true);
+  case ISD::VP_UMAX:
+    return lowerVPOp(Op, DAG, RISCVISD::UMAX_VL, /*HasMergeOp*/ true);
   case ISD::EXPERIMENTAL_VP_STRIDED_LOAD:
     return lowerVPStridedLoad(Op, DAG);
   case ISD::EXPERIMENTAL_VP_STRIDED_STORE:
@@ -3984,6 +3996,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_FFLOOR:
   case ISD::VP_FROUND:
   case ISD::VP_FROUNDEVEN:
+  case ISD::VP_FROUNDTOZERO:
     return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
   }
 }
@@ -8207,8 +8220,7 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, SelectionDAG &DAG,
       DAG.ComputeNumSignBits(Src.getOperand(0)) > 32) {
     SDLoc DL(N);
     SDValue Freeze = DAG.getFreeze(Src.getOperand(0));
-    SDValue Neg =
-        DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, MVT::i64), Freeze);
+    SDValue Neg = DAG.getNegative(Freeze, DL, VT);
     Neg = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Neg,
                       DAG.getValueType(MVT::i32));
     return DAG.getNode(ISD::SMAX, DL, MVT::i64, Freeze, Neg);
@@ -9411,9 +9423,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return TrueV;
 
     // (select (x in [0,1] == 0), y, (z ^ y) ) -> (-x & z ) ^ y
-    // (select (x in [0,1] != 0), (z ^ y) ), y -> (-x & z ) ^ y
+    // (select (x in [0,1] != 0), (z ^ y), y ) -> (-x & z ) ^ y
     // (select (x in [0,1] == 0), y, (z | y) ) -> (-x & z ) | y
-    // (select (x in [0,1] != 0), (z | y) ), y -> (-x & z ) | y
+    // (select (x in [0,1] != 0), (z | y), y ) -> (-x & z ) | y
     APInt Mask = APInt::getBitsSetFrom(LHS.getValueSizeInBits(), 1);
     if (isNullConstant(RHS) && ISD::isIntEqualitySetCC(CCVal) &&
         DAG.MaskedValueIsZero(LHS, Mask)) {
@@ -9458,8 +9470,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                             DAG.getConstant(1, DL, VT));
         else
           Neg = LHS;
-        SDValue Mask = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
-                                   Neg); // -(and (x, 0x1))
+        SDValue Mask = DAG.getNegative(Neg, DL, VT);               // -x
         SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
         return DAG.getNode(Opcode, DL, VT, And, Src2);           // And Op y
       }
@@ -9468,6 +9479,20 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (combine_CC(LHS, RHS, CC, DL, DAG, Subtarget))
       return DAG.getNode(RISCVISD::SELECT_CC, DL, N->getValueType(0),
                          {LHS, RHS, CC, TrueV, FalseV});
+
+    // (select c, -1, y) -> -c | y
+    if (isAllOnesConstant(TrueV)) {
+      SDValue C = DAG.getSetCC(DL, VT, LHS, RHS, CCVal);
+      SDValue Neg = DAG.getNegative(C, DL, VT);
+      return DAG.getNode(ISD::OR, DL, VT, Neg, FalseV);
+    }
+    // (select c, y, -1) -> -!c | y
+    if (isAllOnesConstant(FalseV)) {
+      SDValue C = DAG.getSetCC(DL, VT, LHS, RHS,
+                               ISD::getSetCCInverse(CCVal, VT));
+      SDValue Neg = DAG.getNegative(C, DL, VT);
+      return DAG.getNode(ISD::OR, DL, VT, Neg, TrueV);
+    }
 
     return SDValue();
   }

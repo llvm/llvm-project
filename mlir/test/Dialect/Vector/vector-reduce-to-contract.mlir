@@ -356,3 +356,32 @@ func.func @transpose_elementwise_diff_map(%a : vector<4x6x3x2xf32>, %b: vector<6
   %r = arith.addf %at, %bt : vector<6x4x2x3xf32>
   return %r : vector<6x4x2x3xf32>
 }
+
+// -----
+
+// CHECK-DAG: #[[$LHS_MAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>
+// CHECK-DAG: #[[$RHS_MAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+// CHECK-DAG: #[[$ACC_MAP:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d2, d1)>
+
+// CHECK-LABEL: func.func @contract_result_transpose
+//  CHECK-SAME: (%[[LHS:.+]]: vector<2x4x4xf32>, %[[RHS:.+]]: vector<4x8xf32>, %[[ACC:.+]]: vector<2x8x4xf32>)
+//       CHECK:   %[[CONTRACT:.+]] = vector.contract
+//  CHECK-SAME:     indexing_maps = [#[[$LHS_MAP]], #[[$RHS_MAP]], #[[$ACC_MAP]]]
+//  CHECK-SAME:     iterator_types = ["parallel", "parallel", "parallel", "reduction"]
+//  CHECK-SAME:     kind = #vector.kind<add>
+//  CHECK-SAME:     %[[LHS]], %[[RHS]], %[[ACC]]
+//       CHECK:   return %[[CONTRACT]]
+func.func @contract_result_transpose(%lhs : vector<2x4x4xf32>, %rhs: vector<4x8xf32>, %acc: vector<2x8x4xf32>) -> vector<2x8x4xf32> {
+  %accT = vector.transpose %acc, [0, 2, 1] : vector<2x8x4xf32> to vector<2x4x8xf32>
+  %contract = vector.contract {
+    indexing_maps = [
+      affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>,
+      affine_map<(d0, d1, d2, d3) -> (d3, d2)>,
+      affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+    ],
+    iterator_types = ["parallel", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>
+  } %lhs, %rhs, %accT : vector<2x4x4xf32>, vector<4x8xf32> into vector<2x4x8xf32>
+  %resT = vector.transpose %contract, [0, 2, 1] : vector<2x4x8xf32> to vector<2x8x4xf32>
+  return %resT : vector<2x8x4xf32>
+}

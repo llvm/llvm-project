@@ -2714,8 +2714,9 @@ private:
   /// Values used only by @llvm.assume calls.
   SmallPtrSet<const Value *, 32> EphValues;
 
-  /// Holds all of the instructions that we gathered.
-  SetVector<Instruction *> GatherShuffleSeq;
+  /// Holds all of the instructions that we gathered, shuffle instructions and
+  /// extractelements.
+  SetVector<Instruction *> GatherShuffleExtractSeq;
 
   /// A list of blocks that we are going to CSE.
   SetVector<BasicBlock *> CSEBlocks;
@@ -7786,7 +7787,7 @@ Value *BoUpSLP::gather(ArrayRef<Value *> VL) {
     auto *InsElt = dyn_cast<InsertElementInst>(Vec);
     if (!InsElt)
       return Vec;
-    GatherShuffleSeq.insert(InsElt);
+    GatherShuffleExtractSeq.insert(InsElt);
     CSEBlocks.insert(InsElt->getParent());
     // Add to our 'need-to-extract' list.
     if (TreeEntry *Entry = getTreeEntry(V)) {
@@ -7940,7 +7941,7 @@ Value *BoUpSLP::vectorizeTree(ArrayRef<Value *> VL) {
             V = Builder.CreateShuffleVector(V, UniformMask, "shrink.shuffle");
           }
           if (auto *I = dyn_cast<Instruction>(V)) {
-            GatherShuffleSeq.insert(I);
+            GatherShuffleExtractSeq.insert(I);
             CSEBlocks.insert(I->getParent());
           }
         }
@@ -8005,7 +8006,7 @@ Value *BoUpSLP::createBuildVector(ArrayRef<Value *> VL) {
     VL = UniqueValues;
   }
 
-  ShuffleInstructionBuilder ShuffleBuilder(Builder, VF, GatherShuffleSeq,
+  ShuffleInstructionBuilder ShuffleBuilder(Builder, VF, GatherShuffleExtractSeq,
                                            CSEBlocks);
   Value *Vec = gather(VL);
   if (!ReuseShuffleIndicies.empty()) {
@@ -8025,7 +8026,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
   bool NeedToShuffleReuses = !E->ReuseShuffleIndices.empty();
   unsigned VF = E->getVectorFactor();
-  ShuffleInstructionBuilder ShuffleBuilder(Builder, VF, GatherShuffleSeq,
+  ShuffleInstructionBuilder ShuffleBuilder(Builder, VF, GatherShuffleExtractSeq,
                                            CSEBlocks);
   if (E->State == TreeEntry::NeedToGather) {
     if (E->getMainOp())
@@ -8041,7 +8042,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Vec = Builder.CreateShuffleVector(Entries.front()->VectorizedValue,
                                         Entries.back()->VectorizedValue, Mask);
       if (auto *I = dyn_cast<Instruction>(Vec)) {
-        GatherShuffleSeq.insert(I);
+        GatherShuffleExtractSeq.insert(I);
         CSEBlocks.insert(I->getParent());
       }
     } else {
@@ -8173,7 +8174,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       if (!IsIdentity || NumElts != NumScalars) {
         V = Builder.CreateShuffleVector(V, Mask);
         if (auto *I = dyn_cast<Instruction>(V)) {
-          GatherShuffleSeq.insert(I);
+          GatherShuffleExtractSeq.insert(I);
           CSEBlocks.insert(I->getParent());
         }
       }
@@ -8191,7 +8192,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             V = Builder.CreateShuffleVector(
                 V, InsertMask, cast<Instruction>(E->Scalars.back())->getName());
             if (auto *I = dyn_cast<Instruction>(V)) {
-              GatherShuffleSeq.insert(I);
+              GatherShuffleExtractSeq.insert(I);
               CSEBlocks.insert(I->getParent());
             }
             // Create freeze for undef values.
@@ -8209,7 +8210,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               FirstInsert->getOperand(0), V, InsertMask,
               cast<Instruction>(E->Scalars.back())->getName());
           if (auto *I = dyn_cast<Instruction>(V)) {
-            GatherShuffleSeq.insert(I);
+            GatherShuffleExtractSeq.insert(I);
             CSEBlocks.insert(I->getParent());
           }
         }
@@ -8587,7 +8588,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       // instruction, if any.
       for (Value *V : {V0, V1}) {
         if (auto *I = dyn_cast<Instruction>(V)) {
-          GatherShuffleSeq.insert(I);
+          GatherShuffleExtractSeq.insert(I);
           CSEBlocks.insert(I->getParent());
         }
       }
@@ -8611,7 +8612,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *V = Builder.CreateShuffleVector(V0, V1, Mask);
       if (auto *I = dyn_cast<Instruction>(V)) {
         V = propagateMetadata(I, E->Scalars);
-        GatherShuffleSeq.insert(I);
+        GatherShuffleExtractSeq.insert(I);
         CSEBlocks.insert(I->getParent());
       }
       V = ShuffleBuilder.finalize(V);
@@ -8711,6 +8712,12 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
         } else {
           Ex = Builder.CreateExtractElement(Vec, Lane);
         }
+        // The then branch of the previous if may produce constants, since 0
+        // operand might be a constant.
+        if (auto *ExI = dyn_cast<Instruction>(Ex)) {
+          GatherShuffleExtractSeq.insert(ExI);
+          CSEBlocks.insert(ExI->getParent());
+        }
         // If necessary, sign-extend or zero-extend ScalarRoot
         // to the larger type.
         if (!MinBWs.count(ScalarRoot))
@@ -8740,7 +8747,6 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
         Builder.SetInsertPoint(&F->getEntryBlock().front());
       }
       Value *NewInst = ExtractAndExtendIfNeeded(Vec);
-      CSEBlocks.insert(cast<Instruction>(Scalar)->getParent());
       auto &NewInstLocs = ExternallyUsedValues[NewInst];
       auto It = ExternallyUsedValues.find(Scalar);
       assert(It != ExternallyUsedValues.end() &&
@@ -8832,20 +8838,17 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
               Builder.SetInsertPoint(PH->getIncomingBlock(i)->getTerminator());
             }
             Value *NewInst = ExtractAndExtendIfNeeded(Vec);
-            CSEBlocks.insert(PH->getIncomingBlock(i));
             PH->setOperand(i, NewInst);
           }
         }
       } else {
         Builder.SetInsertPoint(cast<Instruction>(User));
         Value *NewInst = ExtractAndExtendIfNeeded(Vec);
-        CSEBlocks.insert(cast<Instruction>(User)->getParent());
         User->replaceUsesOfWith(Scalar, NewInst);
       }
     } else {
       Builder.SetInsertPoint(&F->getEntryBlock().front());
       Value *NewInst = ExtractAndExtendIfNeeded(Vec);
-      CSEBlocks.insert(&F->getEntryBlock());
       User->replaceUsesOfWith(Scalar, NewInst);
     }
 
@@ -8959,7 +8962,7 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
           Op1, Op1 == Op2 ? PoisonValue::get(Op1->getType()) : Op2,
           CombinedMask1);
       if (auto *I = dyn_cast<Instruction>(Vec)) {
-        GatherShuffleSeq.insert(I);
+        GatherShuffleExtractSeq.insert(I);
         CSEBlocks.insert(I->getParent());
       }
       return Vec;
@@ -8974,7 +8977,7 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
         !IsIdentityMask(CombinedMask, cast<FixedVectorType>(Op->getType()))) {
       Value *Vec = Builder.CreateShuffleVector(Op, CombinedMask);
       if (auto *I = dyn_cast<Instruction>(Vec)) {
-        GatherShuffleSeq.insert(I);
+        GatherShuffleExtractSeq.insert(I);
         CSEBlocks.insert(I->getParent());
       }
       return Vec;
@@ -9114,10 +9117,10 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
 }
 
 void BoUpSLP::optimizeGatherSequence() {
-  LLVM_DEBUG(dbgs() << "SLP: Optimizing " << GatherShuffleSeq.size()
+  LLVM_DEBUG(dbgs() << "SLP: Optimizing " << GatherShuffleExtractSeq.size()
                     << " gather sequences instructions.\n");
   // LICM InsertElementInst sequences.
-  for (Instruction *I : GatherShuffleSeq) {
+  for (Instruction *I : GatherShuffleExtractSeq) {
     if (isDeleted(I))
       continue;
 
@@ -9219,7 +9222,7 @@ void BoUpSLP::optimizeGatherSequence() {
       if (isDeleted(&In))
         continue;
       if (!isa<InsertElementInst, ExtractElementInst, ShuffleVectorInst>(&In) &&
-          !GatherShuffleSeq.contains(&In))
+          !GatherShuffleExtractSeq.contains(&In))
         continue;
 
       // Check if we can replace this instruction with any of the
@@ -9238,7 +9241,7 @@ void BoUpSLP::optimizeGatherSequence() {
           break;
         }
         if (isa<ShuffleVectorInst>(In) && isa<ShuffleVectorInst>(V) &&
-            GatherShuffleSeq.contains(V) &&
+            GatherShuffleExtractSeq.contains(V) &&
             IsIdenticalOrLessDefined(V, &In, NewMask) &&
             DT->dominates(In.getParent(), V->getParent())) {
           In.moveAfter(V);
@@ -9259,7 +9262,7 @@ void BoUpSLP::optimizeGatherSequence() {
     }
   }
   CSEBlocks.clear();
-  GatherShuffleSeq.clear();
+  GatherShuffleExtractSeq.clear();
 }
 
 BoUpSLP::ScheduleData *

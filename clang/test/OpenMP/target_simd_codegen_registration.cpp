@@ -1,84 +1,84 @@
 // Test host codegen.
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
 // Test target simd codegen - host bc file has to be created first.
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s -check-prefix=TCHECK
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s -check-prefix=TCHECK
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s -check-prefix=TCHECK
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s -check-prefix=TCHECK
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s -check-prefix=TCHECK
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s -check-prefix=TCHECK
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s -check-prefix=TCHECK
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s -check-prefix=TCHECK
 
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck --check-prefix SIMD-ONLY1 %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck --check-prefix SIMD-ONLY1 %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -fopenmp-version=45 -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
 // SIMD-ONLY1-NOT: {{__kmpc|__tgt}}
 
 // Check that no target code is emitted if no omptests flag was provided.
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-NTARGET
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-NTARGET
 
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY2 %s
 // SIMD-ONLY2-NOT: {{__kmpc|__tgt}}
 
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
 // Test target simd codegen - host bc file has to be created first.
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s -check-prefix=TCHECK
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s -check-prefix=TCHECK
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s -check-prefix=TCHECK
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s -check-prefix=TCHECK
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s -check-prefix=TCHECK
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s -check-prefix=TCHECK
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck %s -check-prefix=TCHECK
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck %s -check-prefix=TCHECK
 
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck --check-prefix SIMD-ONLY1 %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck --check-prefix SIMD-ONLY1 %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm-bc %s -o %t-ppc-host.bc
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -fopenmp-targets=powerpc64le-ibm-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-ppc-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm-bc %s -o %t-x86-host.bc
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o - | FileCheck --check-prefix SIMD-ONLY1 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -emit-pch -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -o %t %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple i386-unknown-unknown -fopenmp-targets=i386-pc-linux-gnu -std=c++11 -fopenmp-is-device -fopenmp-host-ir-file-path %t-x86-host.bc -include-pch %t -verify %s -emit-llvm -o - | FileCheck --check-prefix SIMD-ONLY1 %s
 // SIMD-ONLY1-NOT: {{__kmpc|__tgt}}
 
 // Check that no target code is emitted if no omptests flag was provided.
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-NTARGET
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck %s -check-prefix=CHECK-NTARGET
 
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY2 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple powerpc64le-unknown-unknown -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY2 %s
 // SIMD-ONLY2-NOT: {{__kmpc|__tgt}}
 
 // expected-no-diagnostics
@@ -92,9 +92,9 @@
 // CHECK-DAG: [[SE:%.+]] = type { [64 x i32] }
 // CHECK-DAG: [[ST1:%.+]] = type { [228 x i32] }
 // CHECK-DAG: [[ST2:%.+]] = type { [1128 x i32] }
-// CHECK-DAG: [[ENTTY:%.+]] = type { i8*, i8*, i[[SZ:32|64]], i32, i32 }
+// CHECK-DAG: [[ENTTY:%.+]] = type { ptr, ptr, i[[SZ:32|64]], i32, i32 }
 
-// TCHECK:    [[ENTTY:%.+]] = type { i8*, i8*, i[[SZ:32|64]], i32, i32 }
+// TCHECK:    [[ENTTY:%.+]] = type { ptr, ptr, i[[SZ:32|64]], i32, i32 }
 
 // CHECK-DAG: [[A1:@.+]] = internal global [[SA]]
 // CHECK-DAG: [[A2:@.+]] ={{.*}} global [[SA]]
@@ -113,7 +113,7 @@
 // CHECK-NTARGET-DAG: [[SE:%.+]] = type { [64 x i32] }
 // CHECK-NTARGET-DAG: [[ST1:%.+]] = type { [228 x i32] }
 // CHECK-NTARGET-DAG: [[ST2:%.+]] = type { [1128 x i32] }
-// CHECK-NTARGET-NOT: type { i8*, i8*, %
+// CHECK-NTARGET-NOT: type { ptr, ptr, %
 // CHECK-NTARGET-NOT: type { i32, %
 
 // We have 7 target regions
@@ -160,62 +160,62 @@
 // CHECK-NTARGET-NOT: private unnamed_addr constant [1 x i
 
 // CHECK-DAG: [[NAMEPTR1:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME1:__omp_offloading_[0-9a-f]+_[0-9a-f]+__Z.+_l[0-9]+]]\00"
-// CHECK-DAG: [[ENTRY1:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* @{{.*}}, i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR1]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// CHECK-DAG: [[ENTRY1:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR1]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // CHECK-DAG: [[NAMEPTR2:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME2:.+]]\00"
-// CHECK-DAG: [[ENTRY2:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* @{{.*}}, i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR2]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// CHECK-DAG: [[ENTRY2:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR2]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // CHECK-DAG: [[NAMEPTR3:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME3:.+]]\00"
-// CHECK-DAG: [[ENTRY3:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* @{{.*}}, i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR3]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// CHECK-DAG: [[ENTRY3:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR3]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // CHECK-DAG: [[NAMEPTR4:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME4:.+]]\00"
-// CHECK-DAG: [[ENTRY4:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* @{{.*}}, i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR4]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// CHECK-DAG: [[ENTRY4:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR4]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // CHECK-DAG: [[NAMEPTR5:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME5:.+]]\00"
-// CHECK-DAG: [[ENTRY5:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* @{{.*}}, i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR5]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// CHECK-DAG: [[ENTRY5:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR5]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // CHECK-DAG: [[NAMEPTR6:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME6:.+]]\00"
-// CHECK-DAG: [[ENTRY6:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* @{{.*}}, i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR6]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// CHECK-DAG: [[ENTRY6:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR6]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // CHECK-DAG: [[NAMEPTR7:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME7:.+]]\00"
-// CHECK-DAG: [[ENTRY7:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* @{{.*}}, i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR7]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// CHECK-DAG: [[ENTRY7:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR7]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // CHECK-DAG: [[NAMEPTR8:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME8:.+]]\00"
-// CHECK-DAG: [[ENTRY8:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* @{{.*}}, i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR8]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// CHECK-DAG: [[ENTRY8:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR8]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // CHECK-DAG: [[NAMEPTR9:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME9:.+]]\00"
-// CHECK-DAG: [[ENTRY9:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* @{{.*}}, i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR9]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// CHECK-DAG: [[ENTRY9:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR9]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // CHECK-DAG: [[NAMEPTR10:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME10:.+]]\00"
-// CHECK-DAG: [[ENTRY10:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* @{{.*}}, i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR10]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// CHECK-DAG: [[ENTRY10:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR10]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // CHECK-DAG: [[NAMEPTR11:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME11:.+]]\00"
-// CHECK-DAG: [[ENTRY11:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* @{{.*}}, i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR11]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// CHECK-DAG: [[ENTRY11:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR11]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // CHECK-DAG: [[NAMEPTR12:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME12:.+]]\00"
-// CHECK-DAG: [[ENTRY12:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* @{{.*}}, i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR12]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// CHECK-DAG: [[ENTRY12:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR12]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 
 // TCHECK-DAG: [[NAMEPTR1:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME1:__omp_offloading_[0-9a-f]+_[0-9a-f]+__Z.+_l[0-9]+]]\00"
-// TCHECK-DAG: [[ENTRY1:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* bitcast (void (i[[SZ]])* @{{.*}} to i8*), i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR1]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// TCHECK-DAG: [[ENTRY1:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR1]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // TCHECK-DAG: [[NAMEPTR2:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME2:.+]]\00"
-// TCHECK-DAG: [[ENTRY2:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* bitcast (void (i[[SZ]])* @{{.*}} to i8*), i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR2]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// TCHECK-DAG: [[ENTRY2:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR2]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // TCHECK-DAG: [[NAMEPTR3:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME3:.+]]\00"
-// TCHECK-DAG: [[ENTRY3:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* bitcast (void (i[[SZ]])* @{{.*}} to i8*), i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR3]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// TCHECK-DAG: [[ENTRY3:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR3]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // TCHECK-DAG: [[NAMEPTR4:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME4:.+]]\00"
-// TCHECK-DAG: [[ENTRY4:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* bitcast (void (i[[SZ]])* @{{.*}} to i8*), i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR4]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// TCHECK-DAG: [[ENTRY4:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR4]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // TCHECK-DAG: [[NAMEPTR5:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME5:.+]]\00"
-// TCHECK-DAG: [[ENTRY5:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* bitcast (void (i[[SZ]])* @{{.*}} to i8*), i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR5]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// TCHECK-DAG: [[ENTRY5:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR5]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // TCHECK-DAG: [[NAMEPTR6:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME6:.+]]\00"
-// TCHECK-DAG: [[ENTRY6:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* bitcast (void (i[[SZ]])* @{{.*}} to i8*), i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR6]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// TCHECK-DAG: [[ENTRY6:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR6]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // TCHECK-DAG: [[NAMEPTR7:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME7:.+]]\00"
-// TCHECK-DAG: [[ENTRY7:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* bitcast (void (i[[SZ]])* @{{.*}} to i8*), i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR7]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// TCHECK-DAG: [[ENTRY7:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR7]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // TCHECK-DAG: [[NAMEPTR8:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME8:.+]]\00"
-// TCHECK-DAG: [[ENTRY8:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* bitcast (void (i[[SZ]])* @{{.*}} to i8*), i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR8]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// TCHECK-DAG: [[ENTRY8:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR8]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // TCHECK-DAG: [[NAMEPTR9:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME9:.+]]\00"
-// TCHECK-DAG: [[ENTRY9:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* bitcast (void (i[[SZ]])* @{{.*}} to i8*), i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR9]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// TCHECK-DAG: [[ENTRY9:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR9]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // TCHECK-DAG: [[NAMEPTR10:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME10:.+]]\00"
-// TCHECK-DAG: [[ENTRY10:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* bitcast (void (i[[SZ]])* @{{.*}} to i8*), i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR10]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// TCHECK-DAG: [[ENTRY10:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR10]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // TCHECK-DAG: [[NAMEPTR11:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME11:.+]]\00"
-// TCHECK-DAG: [[ENTRY11:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* bitcast (void (i[[SZ]])* @{{.*}} to i8*), i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR11]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// TCHECK-DAG: [[ENTRY11:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR11]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 // TCHECK-DAG: [[NAMEPTR12:@.+]] = internal unnamed_addr constant [{{.*}} x i8] c"[[NAME12:.+]]\00"
-// TCHECK-DAG: [[ENTRY12:@.+]] = weak{{.*}} constant [[ENTTY]] { i8* bitcast (void (i[[SZ]])* @{{.*}} to i8*), i8* getelementptr inbounds ([{{.*}} x i8], [{{.*}} x i8]* [[NAMEPTR12]], i32 0, i32 0), i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
+// TCHECK-DAG: [[ENTRY12:@.+]] = weak{{.*}} constant [[ENTTY]] { ptr @{{.*}}, ptr [[NAMEPTR12]], i[[SZ]] 0, i32 0, i32 0 }, section "omp_offloading_entries", align 1
 
 // We have 4 initializers, one for the 500 priority, another one for 501, or more for the default priority, and the last one for the offloading registration function.
-// CHECK: @llvm.global_ctors = appending global [4 x { i32, void ()*, i8* }] [
-// CHECK-SAME: { i32, void ()*, i8* } { i32 500, void ()* [[P500:@[^,]+]], i8* null },
-// CHECK-SAME: { i32, void ()*, i8* } { i32 501, void ()* [[P501:@[^,]+]], i8* null },
-// CHECK-SAME: { i32, void ()*, i8* } { i32 65535, void ()* [[PMAX:@[^,]+]], i8* null },
+// CHECK: @llvm.global_ctors = appending global [4 x { i32, ptr, ptr }] [
+// CHECK-SAME: { i32, ptr, ptr } { i32 500, ptr [[P500:@[^,]+]], ptr null },
+// CHECK-SAME: { i32, ptr, ptr } { i32 501, ptr [[P501:@[^,]+]], ptr null },
+// CHECK-SAME: { i32, ptr, ptr } { i32 65535, ptr [[PMAX:@[^,]+]], ptr null },
 
-// CHECK-NTARGET: @llvm.global_ctors = appending global [3   x { i32, void ()*, i8* }] [
+// CHECK-NTARGET: @llvm.global_ctors = appending global [3   x { i32, ptr, ptr }] [
 
 extern int *R;
 

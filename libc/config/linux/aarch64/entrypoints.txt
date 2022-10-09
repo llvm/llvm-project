@@ -377,6 +377,9 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.time.mktime
     libc.src.time.nanosleep
     libc.src.time.clock_gettime
+
+    # unistd.h entrypoints
+    libc.src.unistd.environ
   )
 endif()
 

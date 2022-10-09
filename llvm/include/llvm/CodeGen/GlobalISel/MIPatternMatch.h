@@ -22,12 +22,14 @@ namespace llvm {
 namespace MIPatternMatch {
 
 template <typename Reg, typename Pattern>
-bool mi_match(Reg R, const MachineRegisterInfo &MRI, Pattern &&P) {
+[[nodiscard]] bool mi_match(Reg R, const MachineRegisterInfo &MRI,
+                            Pattern &&P) {
   return P.match(MRI, R);
 }
 
 template <typename Pattern>
-bool mi_match(MachineInstr &MI, const MachineRegisterInfo &MRI, Pattern &&P) {
+[[nodiscard]] bool mi_match(MachineInstr &MI, const MachineRegisterInfo &MRI,
+                            Pattern &&P) {
   return P.match(MRI, &MI);
 }
 
@@ -236,6 +238,20 @@ inline SpecificConstantMatch m_AllOnesInt() {
   return SpecificConstantMatch(-1);
 }
 ///}
+
+/// Matcher for a specific register.
+struct SpecificRegisterMatch {
+  Register RequestedReg;
+  SpecificRegisterMatch(Register RequestedReg) : RequestedReg(RequestedReg) {}
+  bool match(const MachineRegisterInfo &MRI, Register Reg) {
+    return Reg == RequestedReg;
+  }
+};
+
+/// Matches a register only if it is equal to \p RequestedReg.
+inline SpecificRegisterMatch m_SpecificReg(Register RequestedReg) {
+  return SpecificRegisterMatch(RequestedReg);
+}
 
 // TODO: Rework this for different kinds of MachineOperand.
 // Currently assumes the Src for a match is a register.
@@ -620,7 +636,8 @@ inline UnaryOp_match<SrcTy, TargetOpcode::G_FSQRT> m_GFSqrt(const SrcTy &Src) {
 
 // General helper for generic MI compares, i.e. G_ICMP and G_FCMP
 // TODO: Allow checking a specific predicate.
-template <typename Pred_P, typename LHS_P, typename RHS_P, unsigned Opcode>
+template <typename Pred_P, typename LHS_P, typename RHS_P, unsigned Opcode,
+          bool Commutable = false>
 struct CompareOp_match {
   Pred_P P;
   LHS_P L;
@@ -639,9 +656,14 @@ struct CompareOp_match {
         static_cast<CmpInst::Predicate>(TmpMI->getOperand(1).getPredicate());
     if (!P.match(MRI, TmpPred))
       return false;
-
-    return L.match(MRI, TmpMI->getOperand(2).getReg()) &&
-           R.match(MRI, TmpMI->getOperand(3).getReg());
+    Register LHS = TmpMI->getOperand(2).getReg();
+    Register RHS = TmpMI->getOperand(3).getReg();
+    if (L.match(MRI, LHS) && R.match(MRI, RHS))
+      return true;
+    if (Commutable && L.match(MRI, RHS) && R.match(MRI, LHS) &&
+        P.match(MRI, CmpInst::getSwappedPredicate(TmpPred)))
+      return true;
+    return false;
   }
 };
 
@@ -655,6 +677,36 @@ template <typename Pred, typename LHS, typename RHS>
 inline CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_FCMP>
 m_GFCmp(const Pred &P, const LHS &L, const RHS &R) {
   return CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_FCMP>(P, L, R);
+}
+
+/// G_ICMP matcher that also matches commuted compares.
+/// E.g.
+///
+/// m_c_GICmp(m_Pred(...), m_GAdd(...), m_GSub(...))
+///
+/// Could match both of:
+///
+/// icmp ugt (add x, y) (sub a, b)
+/// icmp ult (sub a, b) (add x, y)
+template <typename Pred, typename LHS, typename RHS>
+inline CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_ICMP, true>
+m_c_GICmp(const Pred &P, const LHS &L, const RHS &R) {
+  return CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_ICMP, true>(P, L, R);
+}
+
+/// G_FCMP matcher that also matches commuted compares.
+/// E.g.
+///
+/// m_c_GFCmp(m_Pred(...), m_FAdd(...), m_GFMul(...))
+///
+/// Could match both of:
+///
+/// fcmp ogt (fadd x, y) (fmul a, b)
+/// fcmp olt (fmul a, b) (fadd x, y)
+template <typename Pred, typename LHS, typename RHS>
+inline CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_FCMP, true>
+m_c_GFCmp(const Pred &P, const LHS &L, const RHS &R) {
+  return CompareOp_match<Pred, LHS, RHS, TargetOpcode::G_FCMP, true>(P, L, R);
 }
 
 // Helper for checking if a Reg is of specific type.

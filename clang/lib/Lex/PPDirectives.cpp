@@ -910,6 +910,10 @@ Preprocessor::getHeaderToIncludeForDiagnostics(SourceLocation IncLoc,
         continue;
       }
 
+      // Don't suggest explicitly excluded headers.
+      if (Header.getRole() == ModuleMap::ExcludedHeader)
+        continue;
+
       // We'll suggest including textual headers below if they're
       // include-guarded.
       if (Header.getRole() & ModuleMap::TextualHeader)

@@ -460,6 +460,108 @@ int getVOPDFull(unsigned OpX, unsigned OpY) {
   return Info ? Info->Opcode : -1;
 }
 
+std::pair<unsigned, unsigned> getVOPDComponents(unsigned VOPDOpcode) {
+  const VOPDInfo *Info = getVOPDOpcodeHelper(VOPDOpcode);
+  assert(Info);
+  auto OpX = getVOPDBaseFromComponent(Info->OpX);
+  auto OpY = getVOPDBaseFromComponent(Info->OpY);
+  assert(OpX && OpY);
+  return {OpX->BaseVOP, OpY->BaseVOP};
+}
+
+namespace VOPD {
+
+ComponentProps::ComponentProps(const MCInstrDesc &OpDesc) {
+  assert(OpDesc.getNumDefs() == Component::DST_NUM);
+
+  assert(OpDesc.getOperandConstraint(Component::SRC0, MCOI::TIED_TO) == -1);
+  assert(OpDesc.getOperandConstraint(Component::SRC1, MCOI::TIED_TO) == -1);
+  auto TiedIdx = OpDesc.getOperandConstraint(Component::SRC2, MCOI::TIED_TO);
+  assert(TiedIdx == -1 || TiedIdx == Component::DST);
+  HasSrc2Acc = TiedIdx != -1;
+
+  SrcOperandsNum = OpDesc.getNumOperands() - OpDesc.getNumDefs() - HasSrc2Acc;
+  assert(SrcOperandsNum <= Component::MAX_SRC_NUM);
+
+  auto OperandsNum = OpDesc.getNumOperands() - HasSrc2Acc;
+  for (unsigned OprIdx = Component::SRC1; OprIdx < OperandsNum; ++OprIdx) {
+    if (OpDesc.OpInfo[OprIdx].OperandType == AMDGPU::OPERAND_KIMM32) {
+      MandatoryLiteralIdx = OprIdx;
+      break;
+    }
+  }
+}
+
+unsigned ComponentInfo::getParsedOperandIndex(unsigned OprIdx) const {
+  assert(OprIdx < Component::MAX_OPR_NUM);
+
+  if (OprIdx == Component::DST)
+    return getParsedDstIndex();
+
+  auto SrcIdx = OprIdx - Component::DST_NUM;
+  if (SrcIdx < getSrcOperandsNum())
+    return getParsedSrcIndex(SrcIdx);
+
+  // The specified operand does not exist.
+  return 0;
+}
+
+Optional<unsigned> InstInfo::getInvalidOperandIndex(
+    std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
+
+  auto OpXRegs = getRegIndices(ComponentIndex::X, GetRegIdx);
+  auto OpYRegs = getRegIndices(ComponentIndex::Y, GetRegIdx);
+
+  for (unsigned OprIdx = 0; OprIdx < Component::MAX_OPR_NUM; ++OprIdx) {
+    unsigned BanksNum = BANKS_NUM[OprIdx];
+    if (OpXRegs[OprIdx] && OpYRegs[OprIdx] &&
+        (OpXRegs[OprIdx] % BanksNum == OpYRegs[OprIdx] % BanksNum))
+      return OprIdx;
+  }
+
+  return {};
+}
+
+InstInfo::RegIndices InstInfo::getRegIndices(
+    unsigned ComponentIdx,
+    std::function<unsigned(unsigned, unsigned)> GetRegIdx) const {
+  assert(ComponentIdx < COMPONENTS_NUM);
+
+  auto Comp = CompInfo[ComponentIdx];
+
+  unsigned DstReg = GetRegIdx(ComponentIdx, Comp.getDstIndex());
+  unsigned Src0Reg = GetRegIdx(ComponentIdx, Comp.getSrcIndex(0));
+
+  unsigned Src1Reg = 0;
+  if (Comp.hasRegularSrcOperand(1))
+    Src1Reg = GetRegIdx(ComponentIdx, Comp.getSrcIndex(1));
+
+  unsigned Src2Reg = 0;
+  if (Comp.hasRegularSrcOperand(2))
+    Src2Reg = GetRegIdx(ComponentIdx, Comp.getSrcIndex(2));
+  else if (Comp.hasSrc2Acc())
+    Src2Reg = DstReg;
+
+  return {DstReg, Src0Reg, Src1Reg, Src2Reg};
+}
+
+} // namespace VOPD
+
+VOPD::InstInfo getVOPDInstInfo(const MCInstrDesc &OpX, const MCInstrDesc &OpY) {
+  return VOPD::InstInfo(OpX, OpY);
+}
+
+VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
+                               const MCInstrInfo *InstrInfo) {
+  auto [OpX, OpY] = getVOPDComponents(VOPDOpcode);
+  const auto &OpXDesc = InstrInfo->get(OpX);
+  const auto &OpYDesc = InstrInfo->get(OpY);
+  VOPD::ComponentInfo OpXInfo(OpXDesc, VOPD::ComponentKind::COMPONENT_X);
+  VOPD::ComponentInfo OpYInfo(OpYDesc, VOPD::ComponentKind::COMPONENT_Y,
+                              OpXInfo.getSrcOperandsNum());
+  return VOPD::InstInfo(OpXInfo, OpYInfo);
+}
+
 namespace IsaInfo {
 
 AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI)

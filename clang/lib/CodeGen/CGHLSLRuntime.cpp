@@ -212,4 +212,14 @@ void CGHLSLRuntime::generateGlobalCtorDtorCalls() {
     for (auto *Fn : DtorFns)
       B.CreateCall(FunctionCallee(Fn));
   }
+
+  // No need to keep global ctors/dtors for non-lib profile after call to
+  // ctors/dtors added for entry.
+  Triple T(M.getTargetTriple());
+  if (T.getEnvironment() != Triple::EnvironmentType::Library) {
+    if (auto *GV = M.getNamedGlobal("llvm.global_ctors"))
+      GV->eraseFromParent();
+    if (auto *GV = M.getNamedGlobal("llvm.global_dtors"))
+      GV->eraseFromParent();
+  }
 }

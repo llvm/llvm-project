@@ -234,13 +234,13 @@ define void @umin_test(i32 %0, i32 %1, <8 x i32> %2, <8 x i32> %3) {
 define void @vector_reductions(float %0, <8 x float> %1, <8 x i32> %2) {
   ; CHECK: "llvm.intr.vector.reduce.add"(%{{.*}}) : (vector<8xi32>) -> i32
   %4 = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> %2)
-  ; CHECK: "llvm.intr.vector.reduce.and"(%{{.*}}) : (vector<8xi32>) -> i32  
+  ; CHECK: "llvm.intr.vector.reduce.and"(%{{.*}}) : (vector<8xi32>) -> i32
   %5 = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> %2)
   ; CHECK: "llvm.intr.vector.reduce.fmax"(%{{.*}}) : (vector<8xf32>) -> f32
   %6 = call float @llvm.vector.reduce.fmax.v8f32(<8 x float> %1)
   ; CHECK: "llvm.intr.vector.reduce.fmin"(%{{.*}}) : (vector<8xf32>) -> f32
   %7 = call float @llvm.vector.reduce.fmin.v8f32(<8 x float> %1)
-  ; CHECK: "llvm.intr.vector.reduce.mul"(%{{.*}}) : (vector<8xi32>) -> i32  
+  ; CHECK: "llvm.intr.vector.reduce.mul"(%{{.*}}) : (vector<8xi32>) -> i32
   %8 = call i32 @llvm.vector.reduce.mul.v8i32(<8 x i32> %2)
   ; CHECK: "llvm.intr.vector.reduce.or"(%{{.*}}) : (vector<8xi32>) -> i32
   %9 = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> %2)
@@ -447,7 +447,7 @@ define void @coro_suspend(i32 %0, i1 %1, i8* %2) {
 
 ; CHECK-LABEL:  llvm.func @coro_end
 define void @coro_end(i8* %0, i1 %1) {
-  ; CHECK:  llvm.intr.coro.end 
+  ; CHECK:  llvm.intr.coro.end
   call i1 @llvm.coro.end(i8* %0, i1 %1)
   ret void
 }
@@ -489,11 +489,20 @@ define void @stack_restore(i8* %0) {
   ret void
 }
 
+; CHECK-LABEL: llvm.func @lifetime
+define void @lifetime(i8* %0) {
+  ; CHECK: llvm.intr.lifetime.start 16, %{{.*}} : !llvm.ptr<i8>
+  call void @llvm.lifetime.start.p0i8(i64 16, i8* %0)
+  ; CHECK: llvm.intr.lifetime.end 32, %{{.*}} : !llvm.ptr<i8>
+  call void @llvm.lifetime.end.p0i8(i64 32, i8* %0)
+  ret void
+}
+
 ; CHECK-LABEL:  llvm.func @vector_predication_intrinsics
 define void @vector_predication_intrinsics(<8 x i32> %0, <8 x i32> %1, <8 x float> %2, <8 x float> %3, <8 x i64> %4, <8 x double> %5, <8 x i32*> %6, i32 %7, float %8, i32* %9, float* %10, <8 x i1> %11, i32 %12) {
   ; CHECK: "llvm.intr.vp.add"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
   %14 = call <8 x i32> @llvm.vp.add.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.sub"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>  
+  ; CHECK: "llvm.intr.vp.sub"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
   %15 = call <8 x i32> @llvm.vp.sub.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
   ; CHECK: "llvm.intr.vp.mul"(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi32>, vector<8xi32>, vector<8xi1>, i32) -> vector<8xi32>
   %16 = call <8 x i32> @llvm.vp.mul.v8i32(<8 x i32> %0, <8 x i32> %1, <8 x i1> %11, i32 %12)
@@ -585,7 +594,7 @@ define void @vector_predication_intrinsics(<8 x i32> %0, <8 x i32> %1, <8 x floa
   %57 = call <8 x i64> @llvm.vp.fptosi.v8i64.v8f64(<8 x double> %5, <8 x i1> %11, i32 %12)
   ; CHECK: "llvm.intr.vp.ptrtoint"(%{{.*}}, %{{.*}}, %{{.*}}) : (!llvm.vec<8 x ptr<i32>>, vector<8xi1>, i32) -> vector<8xi64>
   %58 = call <8 x i64> @llvm.vp.ptrtoint.v8i64.v8p0i32(<8 x i32*> %6, <8 x i1> %11, i32 %12)
-  ; CHECK: "llvm.intr.vp.inttoptr"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi64>, vector<8xi1>, i32) -> !llvm.vec<8 x ptr<i32>>  
+  ; CHECK: "llvm.intr.vp.inttoptr"(%{{.*}}, %{{.*}}, %{{.*}}) : (vector<8xi64>, vector<8xi1>, i32) -> !llvm.vec<8 x ptr<i32>>
   %59 = call <8 x i32*> @llvm.vp.inttoptr.v8p0i32.v8i64(<8 x i64> %4, <8 x i1> %11, i32 %12)
   ret void
 }
@@ -662,7 +671,7 @@ declare <48 x float> @llvm.matrix.column.major.load.v48f32.i64(float* nocapture,
 declare void @llvm.matrix.column.major.store.v48f32.i64(<48 x float>, float* nocapture writeonly, i64, i1 immarg, i32 immarg, i32 immarg)
 declare <7 x i1> @llvm.get.active.lane.mask.v7i1.i64(i64, i64)
 declare <7 x float> @llvm.masked.load.v7f32.p0v7f32(<7 x float>*, i32 immarg, <7 x i1>, <7 x float>)
-declare void @llvm.masked.store.v7f32.p0v7f32(<7 x float>, <7 x float>*, i32 immarg, <7 x i1>) 
+declare void @llvm.masked.store.v7f32.p0v7f32(<7 x float>, <7 x float>*, i32 immarg, <7 x i1>)
 declare <7 x float> @llvm.masked.gather.v7f32.v7p0f32(<7 x float*>, i32 immarg, <7 x i1>, <7 x float>)
 declare void @llvm.masked.scatter.v7f32.v7p0f32(<7 x float>, <7 x float*>, i32 immarg, <7 x i1>)
 declare <7 x float> @llvm.masked.expandload.v7f32(float*, <7 x i1>, <7 x float>)
@@ -748,3 +757,5 @@ declare <8 x i64> @llvm.vp.fptoui.v8i64.v8f64(<8 x double>, <8 x i1>, i32)
 declare <8 x i64> @llvm.vp.fptosi.v8i64.v8f64(<8 x double>, <8 x i1>, i32)
 declare <8 x i64> @llvm.vp.ptrtoint.v8i64.v8p0i32(<8 x i32*>, <8 x i1>, i32)
 declare <8 x i32*> @llvm.vp.inttoptr.v8p0i32.v8i64(<8 x i64>, <8 x i1>, i32)
+declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)

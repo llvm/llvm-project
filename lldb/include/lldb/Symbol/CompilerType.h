@@ -121,6 +121,8 @@ public:
 
   bool IsIntegerOrEnumerationType(bool &is_signed) const;
 
+  bool IsBooleanType() const;
+
   bool IsPolymorphicClass() const;
 
   /// \param target_type    Can pass nullptr.

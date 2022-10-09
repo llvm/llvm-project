@@ -7,7 +7,7 @@ declare <vscale x 2 x i16> @llvm.vp.zext.nxv2i16.nxv2i8(<vscale x 2 x i8>, <vsca
 define <vscale x 2 x i16> @vzext_nxv2i8_nxv2i16(<vscale x 2 x i8> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vzext_nxv2i8_nxv2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v9, v8, v0.t
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -31,7 +31,7 @@ declare <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i8(<vscale x 2 x i8>, <vsca
 define <vscale x 2 x i32> @vzext_nxv2i8_nxv2i32(<vscale x 2 x i8> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vzext_nxv2i8_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vzext.vf4 v9, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
@@ -55,7 +55,7 @@ declare <vscale x 2 x i64> @llvm.vp.zext.nxv2i64.nxv2i8(<vscale x 2 x i8>, <vsca
 define <vscale x 2 x i64> @vzext_nxv2i8_nxv2i64(<vscale x 2 x i8> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vzext_nxv2i8_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf8 v10, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
@@ -79,7 +79,7 @@ declare <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i16(<vscale x 2 x i16>, <vs
 define <vscale x 2 x i32> @vzext_nxv2i16_nxv2i32(<vscale x 2 x i16> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vzext_nxv2i16_nxv2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v9, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v9
 ; CHECK-NEXT:    ret
@@ -103,7 +103,7 @@ declare <vscale x 2 x i64> @llvm.vp.zext.nxv2i64.nxv2i16(<vscale x 2 x i16>, <vs
 define <vscale x 2 x i64> @vzext_nxv2i16_nxv2i64(<vscale x 2 x i16> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vzext_nxv2i16_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf4 v10, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
@@ -127,7 +127,7 @@ declare <vscale x 2 x i64> @llvm.vp.zext.nxv2i64.nxv2i32(<vscale x 2 x i32>, <vs
 define <vscale x 2 x i64> @vzext_nxv2i32_nxv2i64(<vscale x 2 x i32> %a, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vzext_nxv2i32_nxv2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vzext.vf2 v10, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v10
 ; CHECK-NEXT:    ret
@@ -163,13 +163,13 @@ define <vscale x 32 x i32> @vzext_nxv32i8_nxv32i32(<vscale x 32 x i8> %a, <vscal
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a2, a3
 ; CHECK-NEXT:  .LBB12_2:
-; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; CHECK-NEXT:    vzext.vf4 v16, v10, v0.t
 ; CHECK-NEXT:    bltu a0, a1, .LBB12_4
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB12_4:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    vzext.vf4 v24, v8, v0.t
 ; CHECK-NEXT:    vmv.v.v v8, v24

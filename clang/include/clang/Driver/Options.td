@@ -1149,10 +1149,12 @@ def fapple_kext : Flag<["-"], "fapple-kext">, Group<f_Group>, Flags<[CC1Option]>
   MarshallingInfoFlag<LangOpts<"AppleKext">>;
 def fstrict_flex_arrays_EQ : Joined<["-"], "fstrict-flex-arrays=">, Group<f_Group>,
   MetaVarName<"<n>">, Values<"0,1,2">,
-  LangOpts<"StrictFlexArrays">,
+  LangOpts<"StrictFlexArraysLevel">,
   Flags<[CC1Option]>,
+  NormalizedValuesScope<"LangOptions::StrictFlexArraysLevelKind">,
+  NormalizedValues<["Default", "OneZeroOrIncomplete", "ZeroOrIncomplete"]>,
   HelpText<"Enable optimizations based on the strict definition of flexible arrays">,
-  MarshallingInfoInt<LangOpts<"StrictFlexArrays">>;
+  MarshallingInfoEnum<LangOpts<"StrictFlexArraysLevel">, "Default">;
 defm apple_pragma_pack : BoolFOption<"apple-pragma-pack",
   LangOpts<"ApplePragmaPack">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Enable Apple gcc-compatible #pragma pack handling">,

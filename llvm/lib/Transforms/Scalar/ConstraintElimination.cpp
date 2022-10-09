@@ -19,6 +19,7 @@
 #include "llvm/Analysis/ConstraintSystem.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -110,7 +111,11 @@ class ConstraintInfo {
   ConstraintSystem UnsignedCS;
   ConstraintSystem SignedCS;
 
+  const DataLayout &DL;
+
 public:
+  ConstraintInfo(const DataLayout &DL) : DL(DL) {}
+
   DenseMap<Value *, unsigned> &getValue2Index(bool Signed) {
     return Signed ? SignedValue2Index : UnsignedValue2Index;
   }
@@ -325,6 +330,14 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   if (Pred != CmpInst::ICMP_ULE && Pred != CmpInst::ICMP_ULT &&
       Pred != CmpInst::ICMP_SLE && Pred != CmpInst::ICMP_SLT)
     return {};
+
+  // If both operands are known to be non-negative, change signed predicates to
+  // unsigned ones. This increases the reasoning effectiveness in combination
+  // with the signed <-> unsigned transfer logic.
+  if (CmpInst::isSigned(Pred) &&
+      isKnownNonNegative(Op0, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1) &&
+      isKnownNonNegative(Op1, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
+    Pred = CmpInst::getUnsignedPredicate(Pred);
 
   SmallVector<PreconditionTy, 4> Preconditions;
   bool IsSigned = CmpInst::isSigned(Pred);
@@ -578,47 +591,47 @@ void State::addInfoFor(BasicBlock &BB) {
   if (!Br || !Br->isConditional())
     return;
 
-  // If the condition is a chain of ORs and the false successor only has
-  // the current block as predecessor, queue the negated conditions for the
-  // false successor.
+  Value *Cond = Br->getCondition();
+
+  // If the condition is a chain of ORs/AND and the successor only has the
+  // current block as predecessor, queue conditions for the successor.
   Value *Op0, *Op1;
-  if (match(Br->getCondition(), m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
-    BasicBlock *FalseSuccessor = Br->getSuccessor(1);
-    if (canAddSuccessor(BB, FalseSuccessor)) {
+  if (match(Cond, m_LogicalOr(m_Value(Op0), m_Value(Op1))) ||
+      match(Cond, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
+    bool IsOr = match(Cond, m_LogicalOr());
+    bool IsAnd = match(Cond, m_LogicalAnd());
+    // If there's a select that matches both AND and OR, we need to commit to
+    // one of the options. Arbitrarily pick OR.
+    if (IsOr && IsAnd)
+      IsAnd = false;
+
+    BasicBlock *Successor = Br->getSuccessor(IsOr ? 1 : 0);
+    if (canAddSuccessor(BB, Successor)) {
       SmallVector<Value *> CondWorkList;
       SmallPtrSet<Value *, 8> SeenCond;
       auto QueueValue = [&CondWorkList, &SeenCond](Value *V) {
         if (SeenCond.insert(V).second)
           CondWorkList.push_back(V);
       };
-      QueueValue(Op0);
       QueueValue(Op1);
+      QueueValue(Op0);
       while (!CondWorkList.empty()) {
         Value *Cur = CondWorkList.pop_back_val();
         if (auto *Cmp = dyn_cast<ICmpInst>(Cur)) {
-          WorkList.emplace_back(DT.getNode(FalseSuccessor), Cmp, true);
+          WorkList.emplace_back(DT.getNode(Successor), Cmp, IsOr);
           continue;
         }
-        if (match(Cur, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
-          QueueValue(Op0);
+        if (IsOr && match(Cur, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
           QueueValue(Op1);
+          QueueValue(Op0);
+          continue;
+        }
+        if (IsAnd && match(Cur, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
+          QueueValue(Op1);
+          QueueValue(Op0);
+          continue;
         }
       }
-    }
-    return;
-  }
-
-  // If the condition is an AND of 2 compares and the true successor only has
-  // the current block as predecessor, queue both conditions for the true
-  // successor.
-  if (match(Br->getCondition(), m_LogicalAnd(m_Value(Op0), m_Value(Op1))) &&
-      isa<ICmpInst>(Op0) && isa<ICmpInst>(Op1)) {
-    BasicBlock *TrueSuccessor = Br->getSuccessor(0);
-    if (canAddSuccessor(BB, TrueSuccessor)) {
-      WorkList.emplace_back(DT.getNode(TrueSuccessor), cast<ICmpInst>(Op0),
-                            false);
-      WorkList.emplace_back(DT.getNode(TrueSuccessor), cast<ICmpInst>(Op1),
-                            false);
     }
     return;
   }
@@ -646,8 +659,6 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
              A->printAsOperand(dbgs(), false); dbgs() << ", ";
              B->printAsOperand(dbgs(), false); dbgs() << "'\n");
   bool Added = false;
-  assert(CmpInst::isSigned(Pred) == R.IsSigned &&
-         "condition and constraint signs must match");
   auto &CSToUse = getCS(R.IsSigned);
   if (R.Coefficients.empty())
     return;
@@ -743,7 +754,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   bool Changed = false;
   DT.updateDFSNumbers();
 
-  ConstraintInfo Info;
+  ConstraintInfo Info(F.getParent()->getDataLayout());
   State S(DT);
 
   // First, collect conditions implied by branches and blocks with their

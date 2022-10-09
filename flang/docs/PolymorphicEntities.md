@@ -414,8 +414,8 @@ get_all_area = get_all_area + shapes(i)%item%get_area()
 
 **FIR**
 ```c
-%1 = fir.convert %0 : (!fir.ref<!fir.class<!fir.type<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32>>>) -> !fir.ref<!fir.box<none>>
-%2 = fir.dispatch "get_area"(%1) : (!fir.ref<!fir.box<none>>) -> f32
+%1 = fir.convert %0 : !fir.ref<!fir.class<!fir.type<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32>>>
+%2 = fir.dispatch "get_area"(%1 : !fir.class<!fir.type<_QMgeometryTtriangle{color:i32,isFilled:!fir.logical<4>,base:f32,height:f32>>) -> f32
 ```
 
 The type information is stored in the `f18Addendum` of the descriptor. The

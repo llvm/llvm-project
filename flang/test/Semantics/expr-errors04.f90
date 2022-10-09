@@ -14,6 +14,8 @@ program m
     complex :: c, c2(2)
     integer :: x, x2(2)
     character(10) :: s, s2(2)
+    real, pointer :: p
+    real, allocatable :: a
    contains
     procedure, nopass :: info1 => real_info1
     procedure, nopass :: info2 => real_info2
@@ -107,5 +109,18 @@ program m
   call t%t3%t2%t1(1:)%info2
   !ERROR: Reference to rank-2 object 't1' has 1 subscripts
   call t%t3%t2%t1(1:)%g1
+
+  !ERROR: An allocatable or pointer component reference must be applied to a scalar base
+  print *, t(1)%t3(1)%t2(1)%t1%p
+  !ERROR: An allocatable or pointer component reference must be applied to a scalar base
+  print *, t%t3(1)%t2(1)%t1(1,1)%p
+  !ERROR: An allocatable or pointer component reference must be applied to a scalar base
+  print *, t(1)%t3(1)%t2(1)%t1%a
+  !ERROR: An allocatable or pointer component reference must be applied to a scalar base
+  print *, t%t3(1)%t2(1)%t1(1,1)%a
+  !ERROR: An allocatable or pointer component reference must be applied to a scalar base
+  t(1)%t3(1)%t2(1)%t1%p => null()
+  !ERROR: An allocatable or pointer component reference must be applied to a scalar base
+  t%t3(1)%t2(1)%t1(1,1)%p => null()
 
 end

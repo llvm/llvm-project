@@ -130,6 +130,16 @@ public:
     return lldb::TypeNameSpecifierImplSP();
   }
 
+  /// Iterates through tiers in order, running `callback` on each element of
+  /// each tier.
+  void ForEach(std::function<bool(const TypeMatcher &,
+                                  const std::shared_ptr<FormatterImpl> &)>
+                   callback) {
+    for (auto sc : m_subcontainers) {
+      sc->ForEach(callback);
+    }
+  }
+
  private:
   std::array<std::shared_ptr<Subcontainer>, lldb::eLastFormatterMatchType + 1>
       m_subcontainers;
@@ -146,120 +156,36 @@ public:
   typedef uint16_t FormatCategoryItems;
   static const uint16_t ALL_ITEM_TYPES = UINT16_MAX;
 
-  template <typename T> class ForEachCallbacks {
-  public:
-    ForEachCallbacks() = default;
-    ~ForEachCallbacks() = default;
-
-    template <typename U = TypeFormatImpl>
-    typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
-    SetExact(FormatContainer::ForEachCallback callback) {
-      m_format_exact = std::move(callback);
-      return *this;
-    }
-    template <typename U = TypeFormatImpl>
-    typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
-    SetWithRegex(FormatContainer::ForEachCallback callback) {
-      m_format_regex = std::move(callback);
-      return *this;
-    }
-
-    template <typename U = TypeSummaryImpl>
-    typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
-    SetExact(SummaryContainer::ForEachCallback callback) {
-      m_summary_exact = std::move(callback);
-      return *this;
-    }
-    template <typename U = TypeSummaryImpl>
-    typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
-    SetWithRegex(SummaryContainer::ForEachCallback callback) {
-      m_summary_regex = std::move(callback);
-      return *this;
-    }
-
-    template <typename U = TypeFilterImpl>
-    typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
-    SetExact(FilterContainer::ForEachCallback callback) {
-      m_filter_exact = std::move(callback);
-      return *this;
-    }
-    template <typename U = TypeFilterImpl>
-    typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
-    SetWithRegex(FilterContainer::ForEachCallback callback) {
-      m_filter_regex = std::move(callback);
-      return *this;
-    }
-
-    template <typename U = SyntheticChildren>
-    typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
-    SetExact(SynthContainer::ForEachCallback callback) {
-      m_synth_exact = std::move(callback);
-      return *this;
-    }
-    template <typename U = SyntheticChildren>
-    typename std::enable_if<std::is_same<U, T>::value, ForEachCallbacks &>::type
-    SetWithRegex(SynthContainer::ForEachCallback callback) {
-      m_synth_regex = std::move(callback);
-      return *this;
-    }
-
-    FormatContainer::ForEachCallback GetFormatExactCallback() const {
-      return m_format_exact;
-    }
-    FormatContainer::ForEachCallback GetFormatRegexCallback() const {
-      return m_format_regex;
-    }
-
-    SummaryContainer::ForEachCallback GetSummaryExactCallback() const {
-      return m_summary_exact;
-    }
-    SummaryContainer::ForEachCallback GetSummaryRegexCallback() const {
-      return m_summary_regex;
-    }
-
-    FilterContainer::ForEachCallback GetFilterExactCallback() const {
-      return m_filter_exact;
-    }
-    FilterContainer::ForEachCallback GetFilterRegexCallback() const {
-      return m_filter_regex;
-    }
-
-    SynthContainer::ForEachCallback GetSynthExactCallback() const {
-      return m_synth_exact;
-    }
-    SynthContainer::ForEachCallback GetSynthRegexCallback() const {
-      return m_synth_regex;
-    }
-
-  private:
-    FormatContainer::ForEachCallback m_format_exact;
-    FormatContainer::ForEachCallback m_format_regex;
-
-    SummaryContainer::ForEachCallback m_summary_exact;
-    SummaryContainer::ForEachCallback m_summary_regex;
-
-    FilterContainer::ForEachCallback m_filter_exact;
-    FilterContainer::ForEachCallback m_filter_regex;
-
-    SynthContainer::ForEachCallback m_synth_exact;
-    SynthContainer::ForEachCallback m_synth_regex;
+  // TypeFilterImpl inherits from SyntheticChildren, so we can't simply overload
+  // ForEach on the type of the callback because it would result in "call to
+  // member function 'ForEach' is ambiguous" errors. Instead we use this
+  // templated struct to hold the formatter type and the callback.
+  template<typename T>
+  struct ForEachCallback {
+    // Make it constructible from any callable that fits. This allows us to use
+    // lambdas a bit more easily at the call site. For example:
+    // ForEachCallback<TypeFormatImpl> callback = [](...) {...};
+    template <typename Callable> ForEachCallback(Callable c) : callback(c) {}
+    std::function<bool(const TypeMatcher &, const std::shared_ptr<T> &)>
+        callback;
   };
 
   TypeCategoryImpl(IFormatChangeListener *clist, ConstString name);
 
-  template <typename T> void ForEach(const ForEachCallbacks<T> &foreach) {
-    GetTypeFormatsContainer()->ForEach(foreach.GetFormatExactCallback());
-    GetRegexTypeFormatsContainer()->ForEach(foreach.GetFormatRegexCallback());
+  void ForEach(ForEachCallback<TypeFormatImpl> callback) {
+    m_format_cont.ForEach(callback.callback);
+  }
 
-    GetTypeSummariesContainer()->ForEach(foreach.GetSummaryExactCallback());
-    GetRegexTypeSummariesContainer()->ForEach(
-        foreach.GetSummaryRegexCallback());
+  void ForEach(ForEachCallback<TypeSummaryImpl> callback) {
+    m_summary_cont.ForEach(callback.callback);
+  }
 
-    GetTypeFiltersContainer()->ForEach(foreach.GetFilterExactCallback());
-    GetRegexTypeFiltersContainer()->ForEach(foreach.GetFilterRegexCallback());
+  void ForEach(ForEachCallback<TypeFilterImpl> callback) {
+    m_filter_cont.ForEach(callback.callback);
+  }
 
-    GetTypeSyntheticsContainer()->ForEach(foreach.GetSynthExactCallback());
-    GetRegexTypeSyntheticsContainer()->ForEach(foreach.GetSynthRegexCallback());
+  void ForEach(ForEachCallback<SyntheticChildren> callback) {
+    m_synth_cont.ForEach(callback.callback);
   }
 
   FormatContainer::SubcontainerSP GetTypeFormatsContainer() {

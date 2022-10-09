@@ -1,7 +1,7 @@
 ; Test -asan-force-dynamic-shadow flag.
 ;
-; RUN: opt -passes='asan-pipeline' -S -asan-force-dynamic-shadow=1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-FDS
-; RUN: opt -passes='asan-pipeline' -S -asan-force-dynamic-shadow=0 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-NDS
+; RUN: opt -passes=asan -S -asan-force-dynamic-shadow=1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-FDS
+; RUN: opt -passes=asan -S -asan-force-dynamic-shadow=0 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-NDS
 
 target triple = "x86_64-unknown-linux-gnu"
 

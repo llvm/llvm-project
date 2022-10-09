@@ -1919,7 +1919,7 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
     Module::Header H = {std::string(key.Filename), "",
                         *FileMgr.getFile(Filename)};
     ModMap.addHeader(Mod, H, HeaderRole, /*Imported*/true);
-    HFI.isModuleHeader |= !(HeaderRole & ModuleMap::TextualHeader);
+    HFI.isModuleHeader |= ModuleMap::isModular(HeaderRole);
   }
 
   // This HeaderFileInfo was externally loaded.

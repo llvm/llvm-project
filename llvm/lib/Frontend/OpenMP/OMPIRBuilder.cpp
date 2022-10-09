@@ -3990,6 +3990,64 @@ void OpenMPIRBuilder::emitMapperCall(const LocationDescription &Loc,
                       ArgSizesGEP, MaptypesArg, MapnamesArg, NullPtr});
 }
 
+void OpenMPIRBuilder::emitOffloadingArraysArgument(IRBuilderBase &Builder,
+                                                   TargetDataRTArgs &RTArgs,
+                                                   TargetDataInfo &Info,
+                                                   bool EmitDebug,
+                                                   bool ForEndCall) {
+  assert((!ForEndCall || Info.separateBeginEndCalls()) &&
+         "expected region end call to runtime only when end call is separate");
+  auto VoidPtrTy = Type::getInt8PtrTy(M.getContext());
+  auto VoidPtrPtrTy = VoidPtrTy->getPointerTo(0);
+  auto Int64Ty = Type::getInt64Ty(M.getContext());
+  auto Int64PtrTy = Type::getInt64PtrTy(M.getContext());
+
+  if (!Info.NumberOfPtrs) {
+    RTArgs.BasePointersArray = ConstantPointerNull::get(VoidPtrPtrTy);
+    RTArgs.PointersArray = ConstantPointerNull::get(VoidPtrPtrTy);
+    RTArgs.SizesArray = ConstantPointerNull::get(Int64PtrTy);
+    RTArgs.MapTypesArray = ConstantPointerNull::get(Int64PtrTy);
+    RTArgs.MapNamesArray = ConstantPointerNull::get(VoidPtrPtrTy);
+    RTArgs.MappersArray = ConstantPointerNull::get(VoidPtrPtrTy);
+    return;
+  }
+
+  RTArgs.BasePointersArray = Builder.CreateConstInBoundsGEP2_32(
+      ArrayType::get(VoidPtrTy, Info.NumberOfPtrs),
+      Info.RTArgs.BasePointersArray,
+      /*Idx0=*/0, /*Idx1=*/0);
+  RTArgs.PointersArray = Builder.CreateConstInBoundsGEP2_32(
+      ArrayType::get(VoidPtrTy, Info.NumberOfPtrs), Info.RTArgs.PointersArray,
+      /*Idx0=*/0,
+      /*Idx1=*/0);
+  RTArgs.SizesArray = Builder.CreateConstInBoundsGEP2_32(
+      ArrayType::get(Int64Ty, Info.NumberOfPtrs), Info.RTArgs.SizesArray,
+      /*Idx0=*/0, /*Idx1=*/0);
+  RTArgs.MapTypesArray = Builder.CreateConstInBoundsGEP2_32(
+      ArrayType::get(Int64Ty, Info.NumberOfPtrs),
+      ForEndCall && Info.RTArgs.MapTypesArrayEnd ? Info.RTArgs.MapTypesArrayEnd
+                                                 : Info.RTArgs.MapTypesArray,
+      /*Idx0=*/0,
+      /*Idx1=*/0);
+
+  // Only emit the mapper information arrays if debug information is
+  // requested.
+  if (!EmitDebug)
+    RTArgs.MapNamesArray = ConstantPointerNull::get(VoidPtrPtrTy);
+  else
+    RTArgs.MapNamesArray = Builder.CreateConstInBoundsGEP2_32(
+        ArrayType::get(VoidPtrTy, Info.NumberOfPtrs), Info.RTArgs.MapNamesArray,
+        /*Idx0=*/0,
+        /*Idx1=*/0);
+  // If there is no user-defined mapper, set the mapper array to nullptr to
+  // avoid an unnecessary data privatization
+  if (!Info.HasMapper)
+    RTArgs.MappersArray = ConstantPointerNull::get(VoidPtrPtrTy);
+  else
+    RTArgs.MappersArray =
+        Builder.CreatePointerCast(Info.RTArgs.MappersArray, VoidPtrPtrTy);
+}
+
 bool OpenMPIRBuilder::checkAndEmitFlushAfterAtomic(
     const LocationDescription &Loc, llvm::AtomicOrdering AO, AtomicKind AK) {
   assert(!(AO == AtomicOrdering::NotAtomic ||

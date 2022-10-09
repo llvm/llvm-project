@@ -17,11 +17,11 @@
 ; RUN: llvm-dis %t.2.4.opt.bc -o - | FileCheck %s --check-prefixes=CSGEN,NOPREVAILING
 
 ;; Prevailing __llvm_profile_raw_version is kept by LTO.
-; PREVAILING: @__llvm_profile_raw_version = constant i64
+; PREVAILING: @__llvm_profile_raw_version = hidden constant i64
 
 ;; Non-prevailing __llvm_profile_raw_version is discarded by LTO. Ensure the
 ;; declaration is retained.
-; NOPREVAILING: @__llvm_profile_raw_version = external constant i64
+; NOPREVAILING: @__llvm_profile_raw_version = external hidden constant i64
 ; CSGEN: @__profc_
 ; CSGEN: @__profd_
 

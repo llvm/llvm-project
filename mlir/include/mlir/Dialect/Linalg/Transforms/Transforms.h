@@ -729,18 +729,9 @@ private:
 /// See `padding` for more details.
 struct LinalgPaddingPattern : public OpInterfaceRewritePattern<LinalgOp> {
   /// Construct a generic pattern applied to all LinalgOp that verify `filter`.
-  LinalgPaddingPattern(
-      MLIRContext *context,
-      LinalgPaddingOptions options = LinalgPaddingOptions(),
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      PatternBenefit benefit = 1);
-
-  /// Construct a pattern specifically applied to `opName`.
-  LinalgPaddingPattern(
-      StringRef opName, MLIRContext *context,
-      LinalgPaddingOptions options = LinalgPaddingOptions(),
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      PatternBenefit benefit = 1);
+  LinalgPaddingPattern(MLIRContext *context,
+                       LinalgPaddingOptions options = LinalgPaddingOptions(),
+                       PatternBenefit benefit = 1);
 
   /// `matchAndRewrite` implementation that returns the significant transformed
   /// pieces of IR.
@@ -753,8 +744,6 @@ struct LinalgPaddingPattern : public OpInterfaceRewritePattern<LinalgOp> {
   }
 
 private:
-  /// LinalgTransformMarker handles special attribute manipulations.
-  LinalgTransformationFilter filter;
   /// Options to control padding and hoisting.
   LinalgPaddingOptions options;
 };
@@ -764,11 +753,7 @@ private:
 template <typename Conv2DOp, typename Conv1DOp>
 struct DownscaleSizeOneWindowed2DConvolution final
     : public OpRewritePattern<Conv2DOp> {
-  DownscaleSizeOneWindowed2DConvolution(
-      MLIRContext *context,
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      PatternBenefit benefit = 1)
-      : OpRewritePattern<Conv2DOp>(context, benefit), filter(std::move(f)) {}
+  using OpRewritePattern<Conv2DOp>::OpRewritePattern;
 
   FailureOr<Conv1DOp> returningMatchAndRewrite(Conv2DOp convOp,
                                                PatternRewriter &rewriter) const;
@@ -777,10 +762,6 @@ struct DownscaleSizeOneWindowed2DConvolution final
                                 PatternRewriter &rewriter) const override {
     return returningMatchAndRewrite(convOp, rewriter);
   }
-
-private:
-  /// LinalgTransformMarker handles special attribute manipulations.
-  LinalgTransformationFilter filter;
 };
 
 extern template struct DownscaleSizeOneWindowed2DConvolution<Conv2DNhwcHwcfOp,
@@ -792,12 +773,9 @@ extern template struct DownscaleSizeOneWindowed2DConvolution<Conv2DNchwFchwOp,
 /// dimensions into 1-D depthwise convolution ops.
 struct DownscaleDepthwiseConv2DNhwcHwcOp final
     : public OpRewritePattern<DepthwiseConv2DNhwcHwcOp> {
-  DownscaleDepthwiseConv2DNhwcHwcOp(
-      MLIRContext *context,
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      PatternBenefit benefit = 1)
-      : OpRewritePattern<DepthwiseConv2DNhwcHwcOp>(context, benefit),
-        filter(std::move(f)) {}
+  DownscaleDepthwiseConv2DNhwcHwcOp(MLIRContext *context,
+                                    PatternBenefit benefit = 1)
+      : OpRewritePattern<DepthwiseConv2DNhwcHwcOp>(context, benefit) {}
 
   FailureOr<DepthwiseConv1DNwcWcOp>
   returningMatchAndRewrite(DepthwiseConv2DNhwcHwcOp convOp,
@@ -807,10 +785,6 @@ struct DownscaleDepthwiseConv2DNhwcHwcOp final
                                 PatternRewriter &rewriter) const override {
     return returningMatchAndRewrite(convOp, rewriter);
   }
-
-private:
-  /// LinalgTransformMarker handles special attribute manipulations.
-  LinalgTransformationFilter filter;
 };
 
 ///
@@ -1007,10 +981,8 @@ void populateLinalgNamedOpsGeneralizationPatterns(
 /// Populates patterns to decompose high-D convolution ops into low-D ones. This
 /// is a step in progressive lowering for convolution ops, afterwards we can
 /// vectorize the low-D convolution ops.
-void populateDecomposeConvolutionPatterns(
-    RewritePatternSet &patterns,
-    const LinalgTransformationFilter &filter = LinalgTransformationFilter(),
-    PatternBenefit benefit = 1);
+void populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
+                                          PatternBenefit benefit = 1);
 
 //===----------------------------------------------------------------------===//
 // Op-specific patterns.

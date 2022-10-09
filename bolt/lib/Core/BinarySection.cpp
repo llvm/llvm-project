@@ -26,6 +26,8 @@ extern cl::opt<bool> PrintRelocations;
 extern cl::opt<bool> HotData;
 } // namespace opts
 
+uint64_t BinarySection::Count = 0;
+
 bool BinarySection::isELF() const { return BC.isELF(); }
 
 bool BinarySection::isMachO() const { return BC.isMachO(); }

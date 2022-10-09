@@ -1,6 +1,6 @@
 // REQUIRES: x86-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-linux-gnu -O0 -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-pc-linux-gnu -O0 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu -O0 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-pc-linux-gnu -O0 -emit-llvm %s -o - | FileCheck %s
 
 int test1(int cond) {
   // CHECK-LABEL: define{{.*}} i32 @test1(
@@ -109,8 +109,8 @@ label_true:
 // is $2 (or rather ${2:l} because of the l output template) in the emitted asm
 // string, not $1.
 void *test7(void) {
-  // CHECK-LABEL: define{{.*}} i8* @test7(
-  // CHECK: %1 = callbr i8* asm "# $0\0A\09# ${2:l}", "=r,0,!i,~{dirflag},~{fpsr},~{flags}"(i8* %0)
+  // CHECK-LABEL: define{{.*}} ptr @test7(
+  // CHECK: %1 = callbr ptr asm "# $0\0A\09# ${2:l}", "=r,0,!i,~{dirflag},~{fpsr},~{flags}"(ptr %0)
   // CHECK-NEXT: to label %asm.fallthrough [label %foo]
   void *p = &&foo;
   asm goto ("# %0\n\t# %l2":"+r"(p):::foo);
@@ -121,8 +121,8 @@ foo:
 // test8 - the same as test7, but this time we use symbolic names rather than
 // numbered outputs.
 void *test8(void) {
-  // CHECK-LABEL: define{{.*}} i8* @test8(
-  // CHECK: %1 = callbr i8* asm "# $0\0A\09# ${2:l}", "=r,0,!i,~{dirflag},~{fpsr},~{flags}"(i8* %0)
+  // CHECK-LABEL: define{{.*}} ptr @test8(
+  // CHECK: %1 = callbr ptr asm "# $0\0A\09# ${2:l}", "=r,0,!i,~{dirflag},~{fpsr},~{flags}"(ptr %0)
   // CHECK-NEXT: to label %asm.fallthrough [label %foo]
   void *p = &&foo;
   asm goto ("# %0\n\t# %l[foo]":"+r"(p):::foo);

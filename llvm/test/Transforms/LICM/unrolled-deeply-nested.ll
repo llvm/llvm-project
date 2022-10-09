@@ -4,7 +4,7 @@
 ; loop.
 ;
 ; RUN: opt -S -aa-pipeline=basic-aa -passes='require<opt-remark-emit>,loop-mssa(licm)' < %s | FileCheck %s
-; RUN: opt -S -basic-aa -licm < %s | FileCheck %s
+; RUN: opt -S -licm < %s | FileCheck %s
 
 define i32 @test(ptr %a, i64 %n.0, i64 %n.0.0, i64 %n.0.0.0, i64 %n.0.0.0.0) nounwind uwtable readonly {
 ; CHECK-LABEL: define i32 @test

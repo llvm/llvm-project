@@ -43,6 +43,9 @@ class BinaryData;
 class BinarySection {
   friend class BinaryContext;
 
+  /// Count the number of sections created.
+  static uint64_t Count;
+
   BinaryContext &BC;           // Owning BinaryContext
   std::string Name;            // Section name
   const SectionRef Section;    // SectionRef (may be null)
@@ -86,6 +89,7 @@ class BinarySection {
   uint64_t OutputSize{0};          // Section size in the rewritten binary.
   uint64_t OutputFileOffset{0};    // File offset in the rewritten binary file.
   StringRef OutputContents;        // Rewritten section contents.
+  const uint64_t SectionNumber;    // Order in which the section was created.
   unsigned SectionID{-1u};         // Unique ID used for address mapping.
                                    // Set by ExecutableFileMemoryManager.
   uint32_t Index{0};               // Section index in the output file.
@@ -147,13 +151,14 @@ public:
         Size(Section.getSize()), Alignment(Section.getAlignment()),
         ELFType(Section.getELFType()), ELFFlags(Section.getELFFlags()),
         Relocations(Section.Relocations),
-        PendingRelocations(Section.PendingRelocations), OutputName(Name) {}
+        PendingRelocations(Section.PendingRelocations), OutputName(Name),
+        SectionNumber(++Count) {}
 
   BinarySection(BinaryContext &BC, SectionRef Section)
       : BC(BC), Name(getName(Section)), Section(Section),
         Contents(getContents(Section)), Address(Section.getAddress()),
         Size(Section.getSize()), Alignment(Section.getAlignment()),
-        OutputName(Name) {
+        OutputName(Name), SectionNumber(++Count) {
     if (isELF()) {
       ELFType = ELFSectionRef(Section).getType();
       ELFFlags = ELFSectionRef(Section).getFlags();
@@ -173,7 +178,7 @@ public:
         Contents(reinterpret_cast<const char *>(Data), Data ? Size : 0),
         Address(0), Size(Size), Alignment(Alignment), ELFType(ELFType),
         ELFFlags(ELFFlags), IsFinalized(true), OutputName(Name),
-        OutputSize(Size), OutputContents(Contents) {
+        OutputSize(Size), OutputContents(Contents), SectionNumber(++Count) {
     assert(Alignment > 0 && "section alignment must be > 0");
   }
 
@@ -207,10 +212,34 @@ public:
 
   // Order sections by their immutable properties.
   bool operator<(const BinarySection &Other) const {
-    return (getAddress() < Other.getAddress() ||
-            (getAddress() == Other.getAddress() &&
-             (getSize() < Other.getSize() ||
-              (getSize() == Other.getSize() && getName() < Other.getName()))));
+    // Allocatable before non-allocatable.
+    if (isAllocatable() != Other.isAllocatable())
+      return isAllocatable() > Other.isAllocatable();
+
+    // Input sections take precedence.
+    if (hasSectionRef() != Other.hasSectionRef())
+      return hasSectionRef() > Other.hasSectionRef();
+
+    // Compare allocatable input sections by their address.
+    if (getAddress() != Other.getAddress())
+      return getAddress() < Other.getAddress();
+    if (getAddress() && getSize() != Other.getSize())
+      return getSize() < Other.getSize();
+
+    // Code before data.
+    if (isText() != Other.isText())
+      return isText() > Other.isText();
+
+    // Read-only before writable.
+    if (isReadOnly() != Other.isReadOnly())
+      return isReadOnly() > Other.isReadOnly();
+
+    // BSS at the end.
+    if (isBSS() != Other.isBSS())
+      return isBSS() < Other.isBSS();
+
+    // Otherwise, preserve the order of creation.
+    return SectionNumber < Other.SectionNumber;
   }
 
   ///
@@ -228,13 +257,13 @@ public:
   bool isText() const {
     if (isELF())
       return (ELFFlags & ELF::SHF_EXECINSTR);
-    return getSectionRef().isText();
+    return hasSectionRef() && getSectionRef().isText();
   }
   bool isData() const {
     if (isELF())
       return (ELFType == ELF::SHT_PROGBITS &&
               (ELFFlags & (ELF::SHF_ALLOC | ELF::SHF_WRITE)));
-    return getSectionRef().isData();
+    return hasSectionRef() && getSectionRef().isData();
   }
   bool isBSS() const {
     return (ELFType == ELF::SHT_NOBITS &&
