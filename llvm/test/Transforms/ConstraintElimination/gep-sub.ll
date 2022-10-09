@@ -156,7 +156,7 @@ define i1 @gep_sub_ult_var_idx(ptr %dst, ptr %upper, i8 %idx) {
 ; CHECK-NEXT:    [[CMP_SUB_1:%.*]] = icmp ult ptr [[DST_SUB_1]], [[UPPER]]
 ; CHECK-NEXT:    [[DST_SUB_2:%.*]] = getelementptr inbounds i8, ptr [[DST_ADD_IDX]], i64 -2
 ; CHECK-NEXT:    [[CMP_SUB_2:%.*]] = icmp ult ptr [[DST_SUB_2]], [[UPPER]]
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[CMP_SUB_1]], [[CMP_SUB_2]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, [[CMP_SUB_2]]
 ; CHECK-NEXT:    [[DST_SUB_1_SUB_1:%.*]] = getelementptr inbounds i8, ptr [[DST_SUB_1]], i64 -1
 ; CHECK-NEXT:    [[CMP_SUB_1_SUB_1:%.*]] = icmp ult ptr [[DST_SUB_1_SUB_1]], [[UPPER]]
 ; CHECK-NEXT:    [[CMP_SUB_1_SUB_1_EQ:%.*]] = icmp eq ptr [[DST_SUB_1_SUB_1]], [[DST_SUB_2]]
@@ -232,7 +232,7 @@ define i1 @gep_sub_1_ult_var_idx_inbounds(ptr %dst, ptr %upper, i8 %len, i8 %idx
 ; CHECK-NEXT:    [[IDX_EXT:%.*]] = zext i8 [[IDX]] to i16
 ; CHECK-NEXT:    [[DST_ADD_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i16 [[IDX_EXT]]
 ; CHECK-NEXT:    [[CMP_IDX:%.*]] = icmp ult ptr [[DST_ADD_IDX]], [[UPPER]]
-; CHECK-NEXT:    ret i1 [[CMP_IDX]]
+; CHECK-NEXT:    ret i1 true
 ;
   %not.zero = icmp ne i8 %len, 0
   call void @llvm.assume(i1 %not.zero)
