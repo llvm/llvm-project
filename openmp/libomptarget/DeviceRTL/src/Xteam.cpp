@@ -307,7 +307,7 @@ template <typename T> void __local_xteam_sum(T inval, T *result_value) {
   if (omp_thread_num == 0) {
     T teamval = psums[0];
     __xteam_set_mem(omp_team_num, &teamval, sizeof(T), 0);
-    uint32_t td = atomic::inc(&teams_done, NumTeams - 1u, __ATOMIC_SEQ_CST);
+    uint32_t td = atomic::inc(&teams_done, NumTeams - 1u, atomic::seq_cst);
     if (td == (NumTeams - 1u))
       __is_last_team = true;
   }
@@ -381,7 +381,7 @@ template <typename T> void __local_xteam_max(T inval, T *result_value) {
   if (omp_thread_num == 0) {
     T teamval = psums[0];
     __xteam_set_mem(omp_team_num, &teamval, sizeof(T), 0);
-    uint32_t td = atomic::inc(&teams_done, NumTeams - 1u, __ATOMIC_SEQ_CST);
+    uint32_t td = atomic::inc(&teams_done, NumTeams - 1u, atomic::seq_cst);
     if (td == (NumTeams - 1u))
       __is_last_team = true;
   }
@@ -461,7 +461,7 @@ template <typename T> void __local_xteam_min(T inval, T *result_value) {
   if (omp_thread_num == 0) {
     T teamval = psums[0];
     __xteam_set_mem(omp_team_num, &teamval, sizeof(T), 0);
-    uint32_t td = atomic::inc(&teams_done, NumTeams - 1u, __ATOMIC_SEQ_CST);
+    uint32_t td = atomic::inc(&teams_done, NumTeams - 1u, atomic::seq_cst);
     if (td == (NumTeams - 1u))
       __is_last_team = true;
   }

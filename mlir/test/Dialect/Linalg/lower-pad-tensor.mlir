@@ -57,7 +57,7 @@ func.func @pad_tensor_detailed(%arg0: tensor<1x28x28x1xf32>) -> tensor<1x32x32x1
 // CHECK:      %[[R2c:.+]] = linalg.generic
 // CHECK-SAME:   indexing_maps = [#[[$MAP4]], #[[$MAP5]]]
 // CHECK-SAME:   iterator_types = ["parallel", "parallel", "parallel", "parallel"]
-// CHECK:        ins(%arg0 : tensor<1x28x28x1xf32>) outs(%1 : tensor<1x32x32x1xf32>)
-// CHECK:      ^bb0(%[[VAL:.+]]: f32, %arg2: f32)
+// CHECK:        ins(%{{.*}} : tensor<1x28x28x1xf32>) outs(%{{.*}} : tensor<1x32x32x1xf32>)
+// CHECK:      ^bb0(%[[VAL:.+]]: f32, %{{.*}}: f32)
 // CHECK:        linalg.yield %[[VAL]] : f32
 // CHECK:      return %[[R2c:.+]]

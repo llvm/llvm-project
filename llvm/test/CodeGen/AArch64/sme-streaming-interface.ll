@@ -360,4 +360,50 @@ define void @disable_tailcallopt() nounwind {
   ret void;
 }
 
+define i8 @call_to_non_streaming_pass_sve_objects(ptr nocapture noundef readnone %ptr) #1 {
+; CHECK-LABEL: call_to_non_streaming_pass_sve_objects:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    stp d15, d14, [sp, #-80]! // 16-byte Folded Spill
+; CHECK-NEXT:    stp d13, d12, [sp, #16] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d11, d10, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    stp d9, d8, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-3
+; CHECK-NEXT:    rdsvl x8, #1
+; CHECK-NEXT:    addvl x9, sp, #2
+; CHECK-NEXT:    addvl x10, sp, #1
+; CHECK-NEXT:    mov x11, sp
+; CHECK-NEXT:    smstop sm
+; CHECK-NEXT:    mov x0, x9
+; CHECK-NEXT:    mov x1, x10
+; CHECK-NEXT:    mov x2, x11
+; CHECK-NEXT:    mov x3, x8
+; CHECK-NEXT:    bl foo
+; CHECK-NEXT:    smstart sm
+; CHECK-NEXT:    ptrue p0.b
+; CHECK-NEXT:    ld1b { z0.b }, p0/z, [sp, #2, mul vl]
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    ldp x29, x30, [sp, #64] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d9, d8, [sp, #48] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d11, d10, [sp, #32] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d13, d12, [sp, #16] // 16-byte Folded Reload
+; CHECK-NEXT:    ldp d15, d14, [sp], #80 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %Data1 = alloca <vscale x 16 x i8>, align 16
+  %Data2 = alloca <vscale x 16 x i8>, align 16
+  %Data3 = alloca <vscale x 16 x i8>, align 16
+  %0 = tail call i64 @llvm.aarch64.sme.cntsb()
+  call void @foo(ptr noundef nonnull %Data1, ptr noundef nonnull %Data2, ptr noundef nonnull %Data3, i64 noundef %0)
+  %1 = load <vscale x 16 x i8>, ptr %Data1, align 16
+  %vecext = extractelement <vscale x 16 x i8> %1, i64 0
+  ret i8 %vecext
+}
+
+declare i64 @llvm.aarch64.sme.cntsb()
+
+declare void @foo(ptr noundef, ptr noundef, ptr noundef, i64 noundef)
+
 attributes #0 = { nounwind "target-features"="+sve" }
+attributes #1 = { nounwind vscale_range(1,16) "aarch64_pstate_sm_enabled" }

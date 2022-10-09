@@ -396,6 +396,7 @@ def Vector_MultiDimReductionOp :
   let assemblyFormat =
     "$kind `,` $source `,` $acc attr-dict $reduction_dims `:` type($source) `to` type($dest)";
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 

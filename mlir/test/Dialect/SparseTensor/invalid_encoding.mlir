@@ -6,7 +6,7 @@ func.func private @scalar(%arg0: tensor<f64, #a>) -> () // expected-error {{expe
 // -----
 
 #a = #sparse_tensor.encoding<{dimLevelType = ["dense", "compressed"]}>
-func.func private @tensor_size_mismatch(%arg0: tensor<8xi32, #a>) -> () // expected-error {{expected an array of size 1 for dimension level types}}
+func.func private @tensor_dimlevel_size_mismatch(%arg0: tensor<8xi32, #a>) -> () // expected-error {{expected an array of size 1 for dimension level types}}
 
 // -----
 
@@ -26,7 +26,12 @@ func.func private @tensor_value_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 // -----
 
 #a = #sparse_tensor.encoding<{dimOrdering = "wrong"}> // expected-error {{expected an affine map for dimension ordering}}
-func.func private @tensor_order_mismatch(%arg0: tensor<8xi32, #a>) -> ()
+func.func private @tensor_dimorder_mismatch(%arg0: tensor<8xi32, #a>) -> ()
+
+// -----
+
+#a = #sparse_tensor.encoding<{higherOrdering = "wrong"}> // expected-error {{expected an affine map for higher ordering}}
+func.func private @tensor_highorder_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
@@ -57,3 +62,9 @@ func.func private @tensor_invalid_int_index(%arg0: tensor<16x32xf32, #a>) -> ()
 
 #a = #sparse_tensor.encoding<{key = 1}> // expected-error {{unexpected key: key}}
 func.func private @tensor_invalid_key(%arg0: tensor<16x32xf32, #a>) -> ()
+
+// -----
+
+#a = #sparse_tensor.encoding<{dimLevelType = [ "compressed", "compressed", "dense", "dense" ], dimOrdering  = affine_map<(ii, jj, i, j) -> (ii, jj, i, j)>, higherOrdering = affine_map<(i, j) -> (j, i)>}> // expected-error {{unexpected higher ordering mapping from 2 to 2}}
+func.func private @tensor_invalid_key(%arg0: tensor<10x60xf32, #a>) -> ()
+

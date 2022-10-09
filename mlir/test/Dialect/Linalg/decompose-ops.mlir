@@ -28,9 +28,9 @@ func.func @simple_op(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?xf32>, %arg2 : ten
 //  CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1) -> (d1)>
 //  CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1) -> (d1, d0)>
 //      CHECK: func @simple_op(
-// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
-// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?xf32>
-// CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<?xf32>
+// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
+// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?xf32>
+// CHECK-SAME:     %[[ARG2:[a-zA-Z0-9_]+]]: tensor<?xf32>
 //  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
 //  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
 //  CHECK-DAG:   %[[D0:.+]] = tensor.dim %[[ARG0]], %[[C0]]
@@ -43,26 +43,26 @@ func.func @simple_op(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?xf32>, %arg2 : ten
 // CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]], %[[ARG2]] :
 // CHECK-SAME:       outs(%[[INIT1]], %[[INIT2]], %[[INIT1]] :
 // CHECK-NEXT:   ^bb0(
-// CHECK-SAME:       %[[B0:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B1:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B2:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B3:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B4:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B5:[a-zA-Z0-9]+]]: f32):
+// CHECK-SAME:       %[[B0:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B1:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B2:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B3:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B4:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B5:[a-zA-Z0-9_]+]]: f32):
 // CHECK-NEXT:     %[[S0:.+]] = arith.addf %[[B0]], %[[B1]]
-// CHECK-NEXT:     linalg.yield %[[S0]], %{{[a-zA-Z0-9]+}}, %[[S0]]
+// CHECK-NEXT:     linalg.yield %[[S0]], %{{[a-zA-Z0-9_]+}}, %[[S0]]
 //      CHECK:   %[[GENERIC2:.+]]:2 = linalg.generic
 // CHECK-SAME:       [#[[MAP0]], #[[MAP1]], #[[MAP2]], #[[MAP3]], #[[MAP3]], #[[MAP0]]]
 // CHECK-SAME:       ["parallel", "parallel"]
 // CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]], %[[ARG2]], %[[GENERIC1]]#2 :
 // CHECK-SAME:       outs(%[[INIT1]], %[[INIT2]] :
 // CHECK-NEXT:   ^bb0(
-// CHECK-SAME:       %[[B6:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B7:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B8:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B9:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B10:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B11:[a-zA-Z0-9]+]]: f32):
+// CHECK-SAME:       %[[B6:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B7:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B8:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B9:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B10:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B11:[a-zA-Z0-9_]+]]: f32):
 // CHECK-NEXT:     %[[S1:.+]] = arith.mulf %[[B9]], %[[B8]]
 // CHECK-NEXT:     linalg.yield %[[B9]], %[[S1]]
 //      CHECK:   return %[[GENERIC1]]#0, %[[GENERIC2]]#1
@@ -74,9 +74,9 @@ func.func @simple_op(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?xf32>, %arg2 : ten
 //  CANONICALIZECHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1) -> (d1, d0)>
 //  CANONICALIZECHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1) -> (d1)>
 //      CANONICALIZECHECK: func @simple_op(
-// CANONICALIZECHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
-// CANONICALIZECHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?xf32>
-// CANONICALIZECHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<?xf32>
+// CANONICALIZECHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
+// CANONICALIZECHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?xf32>
+// CANONICALIZECHECK-SAME:     %[[ARG2:[a-zA-Z0-9_]+]]: tensor<?xf32>
 //  CANONICALIZECHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
 //  CANONICALIZECHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
 //  CANONICALIZECHECK-DAG:   %[[D0:.+]] = tensor.dim %[[ARG0]], %[[C0]]
@@ -89,9 +89,9 @@ func.func @simple_op(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?xf32>, %arg2 : ten
 // CANONICALIZECHECK-SAME:       ins(%[[ARG0]], %[[ARG1]] :
 // CANONICALIZECHECK-SAME:       outs(%[[INIT1]] :
 // CANONICALIZECHECK-NEXT:   ^bb0(
-// CANONICALIZECHECK-SAME:       %[[B0:[a-zA-Z0-9]+]]: f32
-// CANONICALIZECHECK-SAME:       %[[B1:[a-zA-Z0-9]+]]: f32
-// CANONICALIZECHECK-SAME:       %[[B2:[a-zA-Z0-9]+]]: f32):
+// CANONICALIZECHECK-SAME:       %[[B0:[a-zA-Z0-9_]+]]: f32
+// CANONICALIZECHECK-SAME:       %[[B1:[a-zA-Z0-9_]+]]: f32
+// CANONICALIZECHECK-SAME:       %[[B2:[a-zA-Z0-9_]+]]: f32):
 // CANONICALIZECHECK-NEXT:     %[[S0:.+]] = arith.addf %[[B0]], %[[B1]]
 // CANONICALIZECHECK-NEXT:     linalg.yield %[[S0]]
 //      CANONICALIZECHECK:   %[[GENERIC2:.+]] = linalg.generic
@@ -100,9 +100,9 @@ func.func @simple_op(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?xf32>, %arg2 : ten
 // CANONICALIZECHECK-SAME:       ins(%[[ARG2]], %[[GENERIC1]] :
 // CANONICALIZECHECK-SAME:       outs(%[[INIT2]] :
 // CANONICALIZECHECK-NEXT:   ^bb0(
-// CANONICALIZECHECK-SAME:       %[[B3:[a-zA-Z0-9]+]]: f32
-// CANONICALIZECHECK-SAME:       %[[B4:[a-zA-Z0-9]+]]: f32
-// CANONICALIZECHECK-SAME:       %[[B5:[a-zA-Z0-9]+]]: f32):
+// CANONICALIZECHECK-SAME:       %[[B3:[a-zA-Z0-9_]+]]: f32
+// CANONICALIZECHECK-SAME:       %[[B4:[a-zA-Z0-9_]+]]: f32
+// CANONICALIZECHECK-SAME:       %[[B5:[a-zA-Z0-9_]+]]: f32):
 // CANONICALIZECHECK-NEXT:     %[[S1:.+]] = arith.mulf %[[B4]], %[[B3]]
 // CANONICALIZECHECK-NEXT:     linalg.yield %[[S1]]
 //      CANONICALIZECHECK:   return %[[GENERIC1]], %[[GENERIC2]]
@@ -137,9 +137,9 @@ func.func @simple_op_permuted_outputs(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x
 //  CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1) -> (d1)>
 //  CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1) -> (d1, d0)>
 //      CHECK: func @simple_op_permuted_outputs(
-// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
-// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?xf32>
-// CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<?xf32>
+// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
+// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?xf32>
+// CHECK-SAME:     %[[ARG2:[a-zA-Z0-9_]+]]: tensor<?xf32>
 //  CHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
 //  CHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
 //  CHECK-DAG:   %[[D0:.+]] = tensor.dim %[[ARG0]], %[[C0]]
@@ -152,27 +152,27 @@ func.func @simple_op_permuted_outputs(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x
 // CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]], %[[ARG2]] :
 // CHECK-SAME:       outs(%[[INIT1]], %[[INIT2]], %[[INIT2]], %[[INIT1]] :
 // CHECK-NEXT:   ^bb0(
-// CHECK-SAME:       %[[B0:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B1:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B2:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B3:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B4:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B5:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B6:[a-zA-Z0-9]+]]: f32):
+// CHECK-SAME:       %[[B0:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B1:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B2:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B3:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B4:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B5:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B6:[a-zA-Z0-9_]+]]: f32):
 // CHECK-NEXT:     %[[S0:.+]] = arith.addf %[[B0]], %[[B1]]
-// CHECK-NEXT:     linalg.yield %[[S0]], %{{[a-zA-Z0-9]+}}, %[[S0]]
+// CHECK-NEXT:     linalg.yield %[[S0]], %{{[a-zA-Z0-9_]+}}, %[[S0]]
 //      CHECK:   %[[GENERIC2:.+]]:3 = linalg.generic
 // CHECK-SAME:       [#[[MAP0]], #[[MAP1]], #[[MAP2]], #[[MAP3]], #[[MAP3]], #[[MAP0]], #[[MAP0]]]
 // CHECK-SAME:       ["parallel", "parallel"]
 // CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]], %[[ARG2]], %[[GENERIC1]]#3 :
 // CHECK-SAME:       outs(%[[INIT1]], %[[INIT2]], %[[INIT2]] :
 // CHECK-NEXT:   ^bb0(
-// CHECK-SAME:       %[[B7:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B8:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B9:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B10:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B11:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[B12:[a-zA-Z0-9]+]]: f32):
+// CHECK-SAME:       %[[B7:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B8:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B9:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B10:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B11:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[B12:[a-zA-Z0-9_]+]]: f32):
 // CHECK-NEXT:     %[[S1:.+]] = arith.mulf %[[B10]], %[[B9]]
 // CHECK-NEXT:     linalg.yield %[[B10]], %[[S1]], %[[B10]]
 //      CHECK:   return %[[GENERIC1]]#0, %[[GENERIC2]]#1, %[[GENERIC1]]#2
@@ -182,9 +182,9 @@ func.func @simple_op_permuted_outputs(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x
 //  CANONICALIZECHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1) -> (d1, d0)>
 //  CANONICALIZECHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1) -> (d1)>
 //      CANONICALIZECHECK: func @simple_op_permuted_outputs(
-// CANONICALIZECHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?x?xf32>
-// CANONICALIZECHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?xf32>
-// CANONICALIZECHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<?xf32>
+// CANONICALIZECHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
+// CANONICALIZECHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?xf32>
+// CANONICALIZECHECK-SAME:     %[[ARG2:[a-zA-Z0-9_]+]]: tensor<?xf32>
 //  CANONICALIZECHECK-DAG:   %[[C0:.+]] = arith.constant 0 : index
 //  CANONICALIZECHECK-DAG:   %[[C1:.+]] = arith.constant 1 : index
 //  CANONICALIZECHECK-DAG:   %[[D0:.+]] = tensor.dim %[[ARG0]], %[[C0]]
@@ -197,9 +197,9 @@ func.func @simple_op_permuted_outputs(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x
 // CANONICALIZECHECK-SAME:       ins(%[[ARG0]], %[[ARG1]] :
 // CANONICALIZECHECK-SAME:       outs(%[[INIT1]], %[[INIT2]] :
 // CANONICALIZECHECK-NEXT:   ^bb0(
-// CANONICALIZECHECK-SAME:       %[[B0:[a-zA-Z0-9]+]]: f32
-// CANONICALIZECHECK-SAME:       %[[B1:[a-zA-Z0-9]+]]: f32
-// CANONICALIZECHECK-SAME:       %[[B2:[a-zA-Z0-9]+]]: f32):
+// CANONICALIZECHECK-SAME:       %[[B0:[a-zA-Z0-9_]+]]: f32
+// CANONICALIZECHECK-SAME:       %[[B1:[a-zA-Z0-9_]+]]: f32
+// CANONICALIZECHECK-SAME:       %[[B2:[a-zA-Z0-9_]+]]: f32):
 // CANONICALIZECHECK-NEXT:     %[[S0:.+]] = arith.addf %[[B0]], %[[B1]]
 // CANONICALIZECHECK-NEXT:     linalg.yield %[[S0]], %[[S0]]
 //      CANONICALIZECHECK:   %[[GENERIC2:.+]] = linalg.generic
@@ -208,9 +208,9 @@ func.func @simple_op_permuted_outputs(%arg0 : tensor<?x?xf32>, %arg1 : tensor<?x
 // CANONICALIZECHECK-SAME:       ins(%[[ARG2]], %[[GENERIC1]]#0 :
 // CANONICALIZECHECK-SAME:       outs(%[[INIT2]] :
 // CANONICALIZECHECK-NEXT:   ^bb0(
-// CANONICALIZECHECK-SAME:       %[[B4:[a-zA-Z0-9]+]]: f32
-// CANONICALIZECHECK-SAME:       %[[B5:[a-zA-Z0-9]+]]: f32
-// CANONICALIZECHECK-SAME:       %[[B6:[a-zA-Z0-9]+]]: f32):
+// CANONICALIZECHECK-SAME:       %[[B4:[a-zA-Z0-9_]+]]: f32
+// CANONICALIZECHECK-SAME:       %[[B5:[a-zA-Z0-9_]+]]: f32
+// CANONICALIZECHECK-SAME:       %[[B6:[a-zA-Z0-9_]+]]: f32):
 // CANONICALIZECHECK-NEXT:     %[[S1:.+]] = arith.mulf %[[B5]], %[[B4]]
 // CANONICALIZECHECK-NEXT:     linalg.yield %[[S1]]
 //      CANONICALIZECHECK:   return %[[GENERIC1]]#0, %[[GENERIC2]], %[[GENERIC1]]#1
@@ -252,7 +252,7 @@ func.func @multi_statement(%arg0 : tensor<10x20xf32>, %arg1 : tensor<10xi32>) ->
 // CHECK-NEXT:     ^bb0(
 // CHECK-SAME:         %[[B0:.+]]: f32
 // CHECK-SAME:         %[[B1:.+]]: i32
-// CHECK-SAME:         %[[B2:[a-zA-Z0-9]+]]: f64
+// CHECK-SAME:         %[[B2:[a-zA-Z0-9_]+]]: f64
 // CHECK-SAME:         %[[B3:.+]]: f64
 // CHECK-NEXT:       %[[S0:.+]] = arith.sitofp %[[B1]] : i32 to f64
 // CHECK-NEXT:       linalg.yield %{{.+}}, %[[S0]]
@@ -264,8 +264,8 @@ func.func @multi_statement(%arg0 : tensor<10x20xf32>, %arg1 : tensor<10xi32>) ->
 // CHECK-NEXT:     ^bb0(
 // CHECK-SAME:         %[[B4:.+]]: f32
 // CHECK-SAME:         %[[B5:.+]]: i32
-// CHECK-SAME:         %[[B6:[a-zA-Z0-9]+]]: f64
-// CHECK-SAME:         %[[B7:[a-zA-Z0-9]+]]: f64
+// CHECK-SAME:         %[[B6:[a-zA-Z0-9_]+]]: f64
+// CHECK-SAME:         %[[B7:[a-zA-Z0-9_]+]]: f64
 // CHECK-SAME:         %[[B8:.+]]: f64
 // CHECK-NEXT:       %[[S1:.+]] = arith.extf %[[B4]] : f32 to f64
 // CHECK-NEXT:       linalg.yield %{{.+}}, %[[S1]]
@@ -277,8 +277,8 @@ func.func @multi_statement(%arg0 : tensor<10x20xf32>, %arg1 : tensor<10xi32>) ->
 // CHECK-NEXT:     ^bb0(
 // CHECK-SAME:         %[[B9:.+]]: f32
 // CHECK-SAME:         %[[B10:.+]]: i32
-// CHECK-SAME:         %[[B11:[a-zA-Z0-9]+]]: f64
-// CHECK-SAME:         %[[B12:[a-zA-Z0-9]+]]: f64
+// CHECK-SAME:         %[[B11:[a-zA-Z0-9_]+]]: f64
+// CHECK-SAME:         %[[B12:[a-zA-Z0-9_]+]]: f64
 // CHECK-SAME:         %[[B13:.+]]: f64
 // CHECK-NEXT:       %[[S2:.+]] = arith.addf %[[B11]], %[[B12]] : f64
 // CHECK-NEXT:       linalg.yield %[[S2]]
@@ -318,8 +318,8 @@ func.func @multi_statement(%arg0 : tensor<10x20xf32>, %arg1 : tensor<10xi32>) ->
 // CANONICALIZECHECK-SAME:       ins(%[[GENERIC0]], %[[GENERIC1]] :
 // CANONICALIZECHECK-SAME:       outs(%[[INIT0]] :
 // CANONICALIZECHECK-NEXT:     ^bb0(
-// CANONICALIZECHECK-SAME:         %[[B4:[a-zA-Z0-9]+]]: f64
-// CANONICALIZECHECK-SAME:         %[[B5:[a-zA-Z0-9]+]]: f64
+// CANONICALIZECHECK-SAME:         %[[B4:[a-zA-Z0-9_]+]]: f64
+// CANONICALIZECHECK-SAME:         %[[B5:[a-zA-Z0-9_]+]]: f64
 // CANONICALIZECHECK-SAME:         %[[B6:.+]]: f64
 // CANONICALIZECHECK-NEXT:       %[[S2:.+]] = arith.addf %[[B4]], %[[B5]] : f64
 // CANONICALIZECHECK-NEXT:       linalg.yield %[[S2]]
@@ -352,21 +352,21 @@ func.func @destination_passing_style(
 //  CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1) -> (d0, d1)>
 //  CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1) -> (d1, d0)>
 //      CHECK: func.func @destination_passing_style(
-// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?xf32>
-// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?xf32>
-// CHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<?x?xf32>
-// CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: tensor<?x?xf32>)
+// CHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?xf32>
+// CHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?xf32>
+// CHECK-SAME:     %[[ARG2:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
+// CHECK-SAME:     %[[ARG3:[a-zA-Z0-9_]+]]: tensor<?x?xf32>)
 //      CHECK:   %[[GENERIC1:.+]]:3 = linalg.generic
 // CHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]], #[[MAP2]], #[[MAP3]], #[[MAP2]]]
 // CHECK-SAME:       iterator_types = ["parallel", "parallel"]
 // CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]] :
 // CHECK-SAME:       outs(%[[ARG2]], %[[ARG3]], %[[ARG2]] :
 // CHECK-NEXT:   ^bb0(
-// CHECK-SAME:       %[[ARG4:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[ARG5:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[ARG6:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[ARG7:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[ARG8:[a-zA-Z0-9]+]]: f32
+// CHECK-SAME:       %[[ARG4:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[ARG5:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[ARG6:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[ARG7:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[ARG8:[a-zA-Z0-9_]+]]: f32
 // CHECK-NEXT:     %[[S1:.+]] = arith.addf %[[ARG4]], %[[ARG6]]
 // CHECK-NEXT:     linalg.yield %[[S1]], %{{.+}}, %[[S1]]
 //      CHECK:   %[[GENERIC2:.+]]:2 = linalg.generic
@@ -375,13 +375,13 @@ func.func @destination_passing_style(
 // CHECK-SAME:       ins(%[[ARG0]], %[[ARG1]], %[[GENERIC1]]#2 :
 // CHECK-SAME:       outs(%[[ARG2]], %[[ARG3]] :
 // CHECK-NEXT:   ^bb0(
-// CHECK-SAME:       %[[ARG9:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[ARG10:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[ARG11:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[ARG12:[a-zA-Z0-9]+]]: f32
-// CHECK-SAME:       %[[ARG13:[a-zA-Z0-9]+]]: f32
+// CHECK-SAME:       %[[ARG9:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[ARG10:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[ARG11:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[ARG12:[a-zA-Z0-9_]+]]: f32
+// CHECK-SAME:       %[[ARG13:[a-zA-Z0-9_]+]]: f32
 // CHECK-NEXT:     %[[S2:.+]] = arith.mulf %[[ARG10]], %[[ARG12]]
-// CHECK-NEXT:     linalg.yield %[[ARG6]], %[[S2]]
+// CHECK-NEXT:     linalg.yield %[[ARG11]], %[[S2]]
 //      CHECK:   return %[[GENERIC1]]#0, %[[GENERIC2]]#1
 
 //  CANONICALIZECHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1) -> (d0)>
@@ -389,18 +389,18 @@ func.func @destination_passing_style(
 //  CANONICALIZECHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1) -> (d1)>
 //  CANONICALIZECHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1) -> (d1, d0)>
 //      CANONICALIZECHECK: func.func @destination_passing_style(
-// CANONICALIZECHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: tensor<?xf32>
-// CANONICALIZECHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: tensor<?xf32>
-// CANONICALIZECHECK-SAME:     %[[ARG2:[a-zA-Z0-9]+]]: tensor<?x?xf32>
-// CANONICALIZECHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: tensor<?x?xf32>)
+// CANONICALIZECHECK-SAME:     %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?xf32>
+// CANONICALIZECHECK-SAME:     %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?xf32>
+// CANONICALIZECHECK-SAME:     %[[ARG2:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
+// CANONICALIZECHECK-SAME:     %[[ARG3:[a-zA-Z0-9_]+]]: tensor<?x?xf32>)
 //      CANONICALIZECHECK:   %[[GENERIC1:.+]] = linalg.generic
 // CANONICALIZECHECK-SAME:       indexing_maps = [#[[MAP0]], #[[MAP1]]]
 // CANONICALIZECHECK-SAME:       iterator_types = ["parallel", "parallel"]
 // CANONICALIZECHECK-SAME:       ins(%[[ARG0]] :
 // CANONICALIZECHECK-SAME:       outs(%[[ARG2]] :
 // CANONICALIZECHECK-NEXT:   ^bb0(
-// CANONICALIZECHECK-SAME:       %[[ARG4:[a-zA-Z0-9]+]]: f32
-// CANONICALIZECHECK-SAME:       %[[ARG5:[a-zA-Z0-9]+]]: f32
+// CANONICALIZECHECK-SAME:       %[[ARG4:[a-zA-Z0-9_]+]]: f32
+// CANONICALIZECHECK-SAME:       %[[ARG5:[a-zA-Z0-9_]+]]: f32
 // CANONICALIZECHECK-NEXT:     %[[S1:.+]] = arith.addf %[[ARG4]], %[[ARG5]]
 // CANONICALIZECHECK-NEXT:     linalg.yield %[[S1]]
 //      CANONICALIZECHECK:   %[[GENERIC2:.+]]:2 = linalg.generic
@@ -409,10 +409,10 @@ func.func @destination_passing_style(
 // CANONICALIZECHECK-SAME:       ins(%[[ARG1]], %[[GENERIC1]] :
 // CANONICALIZECHECK-SAME:       outs(%[[ARG2]], %[[ARG3]] :
 // CANONICALIZECHECK-NEXT:   ^bb0(
-// CANONICALIZECHECK-SAME:       %[[ARG4:[a-zA-Z0-9]+]]: f32
-// CANONICALIZECHECK-SAME:       %[[ARG5:[a-zA-Z0-9]+]]: f32
-// CANONICALIZECHECK-SAME:       %[[ARG6:[a-zA-Z0-9]+]]: f32
-// CANONICALIZECHECK-SAME:       %[[ARG7:[a-zA-Z0-9]+]]: f32
+// CANONICALIZECHECK-SAME:       %[[ARG4:[a-zA-Z0-9_]+]]: f32
+// CANONICALIZECHECK-SAME:       %[[ARG5:[a-zA-Z0-9_]+]]: f32
+// CANONICALIZECHECK-SAME:       %[[ARG6:[a-zA-Z0-9_]+]]: f32
+// CANONICALIZECHECK-SAME:       %[[ARG7:[a-zA-Z0-9_]+]]: f32
 // CANONICALIZECHECK-NEXT:     %[[S2:.+]] = arith.mulf %[[ARG4]], %[[ARG6]]
 // CANONICALIZECHECK-NEXT:     linalg.yield %[[ARG5]], %[[S2]]
 //      CANONICALIZECHECK:   return %[[GENERIC1]], %[[GENERIC2]]#1

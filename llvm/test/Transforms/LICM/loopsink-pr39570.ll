@@ -4,54 +4,54 @@
 ; CHECK: pr39570
 ; Make sure not to assert.
 
-%0 = type { i32, %1*, %2, %6*, %33* }
-%1 = type { i32 (...)** }
-%2 = type { %3* }
-%3 = type { %4, i32, %5* }
-%4 = type { i32 (...)**, i32 }
+%0 = type { i32, ptr, %2, ptr, ptr }
+%1 = type { ptr }
+%2 = type { ptr }
+%3 = type { %4, i32, ptr }
+%4 = type { ptr, i32 }
 %5 = type opaque
-%6 = type { %7, %1*, %31*, i8, %2, %32* }
-%7 = type <{ %8, %9*, %10, i32, %33*, %33*, %33*, %27, %28, i16 }>
-%8 = type { i32 (...)** }
+%6 = type { %7, ptr, ptr, i8, %2, ptr }
+%7 = type <{ %8, ptr, %10, i32, ptr, ptr, ptr, %27, %28, i16 }>
+%8 = type { ptr }
 %9 = type opaque
 %10 = type { %11, %16, %18, %19 }
-%11 = type { %12*, i32, i32, %13* }
-%12 = type { i32 (...)** }
-%13 = type { %14*, %14* }
+%11 = type { ptr, i32, i32, ptr }
+%12 = type { ptr }
+%13 = type { ptr, ptr }
 %14 = type { %15, i32 }
-%15 = type { %12*, i32, i32, i16* }
-%16 = type { %12*, i32, i32, %17* }
-%17 = type { %13, %14* }
-%18 = type { %12*, i32, i32, %14** }
-%19 = type { %20, %21, %12*, float, i32, i32, %22, %22, %24, i32, i32 }
+%15 = type { ptr, i32, i32, ptr }
+%16 = type { ptr, i32, i32, ptr }
+%17 = type { %13, ptr }
+%18 = type { ptr, i32, i32, ptr }
+%19 = type { %20, %21, ptr, float, i32, i32, %22, %22, %24, i32, i32 }
 %20 = type { i8 }
 %21 = type { i8 }
-%22 = type { %12*, %23*, %23* }
+%22 = type { ptr, ptr, ptr }
 %23 = type opaque
-%24 = type { %12*, i32, i32, %25* }
-%25 = type { %12*, i32, i32, %26* }
+%24 = type { ptr, i32, i32, ptr }
+%25 = type { ptr, i32, i32, ptr }
 %26 = type opaque
-%27 = type { %33* }
-%28 = type { %29, i32, i32, %14* }
+%27 = type { ptr }
+%28 = type { %29, i32, i32, ptr }
 %29 = type { %30 }
-%30 = type { i32 (...)** }
+%30 = type { ptr }
 %31 = type opaque
-%32 = type { i32 (...)** }
-%33 = type <{ %8, %9*, %10, i32, %33*, %33*, %33*, %27, %28, i16, [2 x i8] }>
+%32 = type { ptr }
+%33 = type <{ %8, ptr, %10, i32, ptr, ptr, ptr, %27, %28, i16, [2 x i8] }>
 
-define dso_local void @pr39570() local_unnamed_addr align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !prof !1 {
+define dso_local void @pr39570() local_unnamed_addr align 2 personality ptr @__gxx_personality_v0 !prof !1 {
   br i1 undef, label %8, label %1, !prof !2
 
 ; <label>:1:                                      ; preds = %0
-  %2 = load %0*, %0** undef, align 4
+  %2 = load ptr, ptr undef, align 4
   br label %3
 
 ; <label>:3:                                      ; preds = %7, %1
-  %4 = getelementptr inbounds %0, %0* %2, i32 undef, i32 0
+  %4 = getelementptr inbounds %0, ptr %2, i32 undef, i32 0
   br label %5
 
 ; <label>:5:                                      ; preds = %3
-  %6 = getelementptr inbounds %0, %0* %2, i32 undef, i32 4
+  %6 = getelementptr inbounds %0, ptr %2, i32 undef, i32 4
   br i1 undef, label %18, label %7, !prof !3
 
 ; <label>:7:                                      ; preds = %5
@@ -66,23 +66,23 @@ define dso_local void @pr39570() local_unnamed_addr align 2 personality i8* bitc
           to label %17 unwind label %10
 
 ; <label>:10:                                     ; preds = %9
-  %11 = landingpad { i8*, i32 }
-          catch i8* null
+  %11 = landingpad { ptr, i32 }
+          catch ptr null
   unreachable
 
 ; <label>:12:                                     ; preds = %8
-  %13 = landingpad { i8*, i32 }
+  %13 = landingpad { ptr, i32 }
           cleanup
   invoke void @bar()
           to label %16 unwind label %14
 
 ; <label>:14:                                     ; preds = %12
-  %15 = landingpad { i8*, i32 }
-          catch i8* null
+  %15 = landingpad { ptr, i32 }
+          catch ptr null
   unreachable
 
 ; <label>:16:                                     ; preds = %12
-  resume { i8*, i32 } %13
+  resume { ptr, i32 } %13
 
 ; <label>:17:                                     ; preds = %9
   br label %18
@@ -96,8 +96,8 @@ define dso_local void @pr39570() local_unnamed_addr align 2 personality i8* bitc
           to label %22 unwind label %20
 
 ; <label>:20:                                     ; preds = %19
-  %21 = landingpad { i8*, i32 }
-          catch i8* null
+  %21 = landingpad { ptr, i32 }
+          catch ptr null
   unreachable
 
 ; <label>:22:                                     ; preds = %19

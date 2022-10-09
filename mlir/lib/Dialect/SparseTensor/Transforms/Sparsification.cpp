@@ -1938,7 +1938,8 @@ private:
           op->getContext(), srcEnc.getDimLevelType(),
           permute(getContext(), op.getMatchingIndexingMap(t),
                   topSort), // new order
-          srcEnc.getPointerBitWidth(), srcEnc.getIndexBitWidth());
+          srcEnc.getHigherOrdering(), srcEnc.getPointerBitWidth(),
+          srcEnc.getIndexBitWidth());
       auto dstTp = RankedTensorType::get(srcTp.getShape(),
                                          srcTp.getElementType(), dstEnc);
       auto convert = rewriter.create<ConvertOp>(tval.getLoc(), dstTp, tval);

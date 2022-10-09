@@ -1473,7 +1473,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
       if (MRI->isReserved(Reg))
         continue;
       bool displacedAny = usePhysReg(MI, Reg);
-      if (!displacedAny && !MRI->isReserved(Reg))
+      if (!displacedAny)
         MO.setIsKill(true);
     }
   }
@@ -1525,12 +1525,7 @@ void RegAllocFast::allocateInstruction(MachineInstr &MI) {
     for (MachineOperand &MO : llvm::reverse(MI.operands())) {
       if (!MO.isReg() || !MO.isDef() || !MO.isEarlyClobber())
         continue;
-      // subreg defs don't free the full register. We left the subreg number
-      // around as a marker in setPhysReg() to recognize this case here.
-      if (MO.getSubReg() != 0) {
-        MO.setSubReg(0);
-        continue;
-      }
+      assert(!MO.getSubReg() && "should be already handled in def processing");
 
       Register Reg = MO.getReg();
       if (!Reg)

@@ -212,8 +212,8 @@ func.func @indexed_consumer_reshape_producer_fusion(%arg0 : tensor<?x?x4x?xi32>,
 //       CHECK: func @indexed_consumer_reshape_producer_fusion
 //       CHECK:   linalg.generic
 //       CHECK:   ^{{.*}}(
-//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: i32, %[[ARG4:[a-zA-Z0-9]+]]: i32,
-//  CHECK-SAME:     %[[ARG8:[a-zA-Z0-9]+]]: i32)
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9_]+]]: i32, %[[ARG4:[a-zA-Z0-9_]+]]: i32,
+//  CHECK-SAME:     %[[ARG8:[a-zA-Z0-9_]+]]: i32)
 //   CHECK-DAG:     %[[IDX0:.+]] = linalg.index 0 : index
 //   CHECK-DAG:     %[[IDX1:.+]] = linalg.index 1 : index
 //   CHECK-DAG:     %[[IDX2:.+]] = linalg.index 2 : index
@@ -261,8 +261,8 @@ func.func @indexed_producer_reshape_consumer_fusion(%arg0 : tensor<?x?xi32>,
 //       CHECK: func @indexed_producer_reshape_consumer_fusion
 //       CHECK:   linalg.generic
 //       CHECK:   ^{{.*}}(
-//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9]+]]: i32, %[[ARG4:[a-zA-Z0-9]+]]: i32,
-//  CHECK-SAME:     %[[ARG5:[a-zA-Z0-9]+]]: i32)
+//  CHECK-SAME:     %[[ARG3:[a-zA-Z0-9_]+]]: i32, %[[ARG4:[a-zA-Z0-9_]+]]: i32,
+//  CHECK-SAME:     %[[ARG5:[a-zA-Z0-9_]+]]: i32)
 //   CHECK-DAG:     %[[IDX0:.+]] = linalg.index 0 : index
 //   CHECK-DAG:     %[[IDX1:.+]] = linalg.index 1 : index
 //   CHECK-DAG:     %[[IDX2:.+]] = linalg.index 2 : index
@@ -331,8 +331,8 @@ func.func @reshape_as_consumer_permutation
 //  CHECK-SAME:     ins(%[[T1]], %[[T2]] : tensor<5x6x7x2x3x4xi32>, tensor<5x6x7x4xi32>)
 //  CHECK-SAME:     outs(%[[T3]] : tensor<2x3x4x5x6x7xi32>)
 //       CHECK:   ^{{.+}}(
-//  CHECK-SAME:     %[[ARG8:[a-zA-Z0-9]+]]: i32, %[[ARG9:[a-zA-Z0-9]+]]: i32,
-//  CHECK-SAME:     %[[ARG10:[a-zA-Z0-9]+]]: i32)
+//  CHECK-SAME:     %[[ARG8:[a-zA-Z0-9_]+]]: i32, %[[ARG9:[a-zA-Z0-9_]+]]: i32,
+//  CHECK-SAME:     %[[ARG10:[a-zA-Z0-9_]+]]: i32)
 //   CHECK-DAG:       %[[IDX0:.+]] = linalg.index 0 : index
 //   CHECK-DAG:       %[[IDX1:.+]] = linalg.index 1 : index
 //   CHECK-DAG:       %[[IDX2:.+]] = linalg.index 2 : index

@@ -18,6 +18,32 @@ define <2 x i16> @vwmul_v2i16(<2 x i8>* %x, <2 x i8>* %y) {
   ret <2 x i16> %e
 }
 
+define <2 x i16> @vwmul_v2i16_multiple_users(<2 x i8>* %x, <2 x i8>* %y, <2 x i8> *%z) {
+; CHECK-LABEL: vwmul_v2i16_multiple_users:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vle8.v v10, (a2)
+; CHECK-NEXT:    vsext.vf2 v11, v8
+; CHECK-NEXT:    vsext.vf2 v8, v9
+; CHECK-NEXT:    vsext.vf2 v9, v10
+; CHECK-NEXT:    vmul.vv v8, v11, v8
+; CHECK-NEXT:    vmul.vv v9, v11, v9
+; CHECK-NEXT:    vor.vv v8, v8, v9
+; CHECK-NEXT:    ret
+  %a = load <2 x i8>, <2 x i8>* %x
+  %b = load <2 x i8>, <2 x i8>* %y
+  %b2 = load <2 x i8>, <2 x i8>* %z
+  %c = sext <2 x i8> %a to <2 x i16>
+  %d = sext <2 x i8> %b to <2 x i16>
+  %d2 = sext <2 x i8> %b2 to <2 x i16>
+  %e = mul <2 x i16> %c, %d
+  %f = mul <2 x i16> %c, %d2
+  %g = or <2 x i16> %e, %f
+  ret <2 x i16> %g
+}
+
 define <4 x i16> @vwmul_v4i16(<4 x i8>* %x, <4 x i8>* %y) {
 ; CHECK-LABEL: vwmul_v4i16:
 ; CHECK:       # %bb.0:

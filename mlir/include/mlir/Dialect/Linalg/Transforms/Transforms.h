@@ -344,6 +344,9 @@ FailureOr<LinalgLoops> linalgOpToAffineLoops(PatternRewriter &rewriter,
 LogicalResult promoteSubviewsPrecondition(Operation *op,
                                           LinalgPromotionOptions options);
 
+/// Return success if the operation can be vectorized.
+LogicalResult vectorizeLinalgOpPrecondition(LinalgOp linalgOp);
+
 //===----------------------------------------------------------------------===//
 // Transformations exposed as rewrite patterns.
 //===----------------------------------------------------------------------===//
@@ -882,49 +885,6 @@ private:
 };
 
 ///
-/// Linalg peeling patterns.
-///
-
-/// Compute the loops to peel and return them in a SmallVector. Loops will be
-/// peeled in order of appearance in the SmallVector. This order will impact the
-/// output IR. If an inner-to-outer order is provided, the peeled iterations of
-/// the outer loops will also contain the peeled inner loops. If an
-/// outer-to-inner order is provided, the peeled iterations of the outer loops
-/// will not contain any peeled inner loops.
-using LoopsToPeelComputationFunction = std::function<void(
-    OpBuilder &, Operation *, SmallVectorImpl<scf::ForOp> &)>;
-
-struct LinalgPeelOptions {
-  LoopsToPeelComputationFunction loopsToPeelComputationFunction = nullptr;
-};
-
-/// `filter` controls LinalgTransformMarker matching and update when specified.
-struct LinalgPeelingPattern : public OpInterfaceRewritePattern<LinalgOp> {
-  /// Construct a generic pattern applied to all LinalgOp that verify `filter`.
-  LinalgPeelingPattern(
-      MLIRContext *context,
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      LinalgPeelOptions options = LinalgPeelOptions(),
-      PatternBenefit benefit = 1);
-
-  /// Construct a pattern specifically applied to `opName`.
-  LinalgPeelingPattern(
-      StringRef opName, MLIRContext *context,
-      LinalgPeelOptions options = LinalgPeelOptions(),
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      PatternBenefit benefit = 1);
-
-  LogicalResult matchAndRewrite(LinalgOp linalgOp,
-                                PatternRewriter &rewriter) const override;
-
-private:
-  /// LinalgTransformMarker handles special attribute manipulations.
-  const LinalgTransformationFilter filter;
-  /// Peeling options.
-  const LinalgPeelOptions options;
-};
-
-///
 /// Linalg vectorization patterns.
 ///
 /// Empty for now, used for SFINAE purposes only.
@@ -966,96 +926,6 @@ struct LinalgEnablingOptions {
   LinalgEnablingOptions &
   enableHoistRedundantVectorTransfersOnTensor(bool val = true) {
     hoistRedundantVectorTransfersOnTensor = val;
-    return *this;
-  }
-};
-
-/// Vector lowering options control how ops are lowered down to 1-D and scf.for
-/// form.
-struct LinalgVectorLoweringOptions {
-  /// Enable lowering of vector.contract.
-  /// In a progressive lowering of vectors, this would be the 1st step.
-  bool contractionLowering = false;
-  LinalgVectorLoweringOptions &enableContractionLowering(bool val = true) {
-    contractionLowering = val;
-    return *this;
-  }
-  /// Enable lowering of vector.multi_reduce.
-  /// In a progressive lowering of vectors, this would be the 2nd step.
-  bool multiReductionLowering = false;
-  LinalgVectorLoweringOptions &enableMultiReductionLowering(bool val = true) {
-    multiReductionLowering = val;
-    return *this;
-  }
-  /// Trigger full / partial vector.transfer splits.
-  /// In a progressive lowering of vectors, this would be the 3rd step.
-  bool transferPartialRewrite = false;
-  LinalgVectorLoweringOptions &enableTransferPartialRewrite(bool val = true) {
-    transferPartialRewrite = val;
-    return *this;
-  }
-  /// Enable lowering of vector.transfer to scf.
-  /// In a progressive lowering of vectors, this would be the 4th step.
-  bool transferToSCFConversion = false;
-  LinalgVectorLoweringOptions &enableTransferToSCFConversion(bool val = true) {
-    transferToSCFConversion = val;
-    return *this;
-  }
-  /// Maximal transfer rank under which we do not lower further.
-  int64_t maxTransferRank = 1;
-  LinalgVectorLoweringOptions &setMaxTransferRank(int64_t val) {
-    maxTransferRank = val;
-    return *this;
-  }
-  /// Vector lowering operations may result in surprising behavior when
-  /// composing multiple codegen strategies and must be enabled explicitly.
-  /// In a progressive lowering of vectors, this would be the 5th step.
-  bool transferLowering = true;
-  LinalgVectorLoweringOptions &enableTransferLowering(bool val = true) {
-    transferLowering = val;
-    return *this;
-  }
-  /// Enable lowering of vector.shape_cast to insert/extract.
-  /// In a progressive lowering of vectors, this would be the 6th step.
-  bool shapeCastLowering = true;
-  LinalgVectorLoweringOptions &enableShapeCastLowering(bool val = true) {
-    shapeCastLowering = val;
-    return *this;
-  }
-  /// Enable lowering of vector.transpose.
-  /// In a progressive lowering of vectors, this would be the 7th step.
-  bool transposeLowering = false;
-  LinalgVectorLoweringOptions &enableVectorTransposeLowering(bool val = true) {
-    transposeLowering = val;
-    return *this;
-  }
-  /// Enable AVX2-specific lowerings.
-  bool avx2Lowering = false;
-  LinalgVectorLoweringOptions &enableAVX2Lowering(bool val = true) {
-    avx2Lowering = val;
-    return *this;
-  }
-
-  /// Configure the post staged-patterns late vector.transfer to scf
-  /// conversion.
-  VectorTransferToSCFOptions vectorTransferToSCFOptions;
-  LinalgVectorLoweringOptions &
-  setVectorTransferToSCFOptions(VectorTransferToSCFOptions options) {
-    vectorTransferToSCFOptions = options;
-    return *this;
-  }
-  /// Configure late vector transformations.
-  vector::VectorTransformsOptions vectorTransformOptions;
-  LinalgVectorLoweringOptions &
-  setVectorTransformsOptions(vector::VectorTransformsOptions options) {
-    vectorTransformOptions = options;
-    return *this;
-  }
-  /// Configure specialized vector lowerings.
-  x86vector::avx2::LoweringOptions avx2LoweringOptions;
-  LinalgVectorLoweringOptions &
-  setAVX2LoweringOptions(x86vector::avx2::LoweringOptions options) {
-    avx2LoweringOptions = options;
     return *this;
   }
 };

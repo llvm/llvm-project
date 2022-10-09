@@ -236,7 +236,7 @@ __attribute__((flatten, always_inline)) void _xteam_reduction(
   __is_last_team = false;
   if (omp_thread_num == 0) {
     team_vals[omp_team_num] = xwave_lds[0];
-    uint32_t td = atomic::inc(teams_done_ptr, NumTeams - 1u, __ATOMIC_SEQ_CST);
+    uint32_t td = atomic::inc(teams_done_ptr, NumTeams - 1u, atomic::seq_cst);
     if (td == (NumTeams - 1u))
       __is_last_team = true;
   }

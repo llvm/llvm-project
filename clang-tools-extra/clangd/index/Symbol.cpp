@@ -61,12 +61,9 @@ SymbolSlab SymbolSlab::Builder::build() && {
     SortedSymbols.push_back(std::move(Entry.second));
   llvm::sort(SortedSymbols,
              [](const Symbol &L, const Symbol &R) { return L.ID < R.ID; });
-  // We may have unused strings from overwritten symbols. Build a new arena.
-  llvm::BumpPtrAllocator NewArena;
-  llvm::UniqueStringSaver Strings(NewArena);
-  for (auto &S : SortedSymbols)
-    own(S, Strings);
-  return SymbolSlab(std::move(NewArena), std::move(SortedSymbols));
+  // We may have unused strings from overwritten symbols.
+  // In practice, these are extremely small, it's not worth compacting.
+  return SymbolSlab(std::move(Arena), std::move(SortedSymbols));
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SymbolSlab &Slab) {
