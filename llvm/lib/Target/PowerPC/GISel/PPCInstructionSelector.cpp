@@ -15,8 +15,11 @@
 #include "PPCRegisterBankInfo.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelectorImpl.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/Support/Debug.h"
@@ -121,6 +124,32 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
   return true;
 }
 
+static unsigned selectLoadStoreOp(unsigned GenericOpc, unsigned RegBankID,
+                                  unsigned OpSize) {
+  const bool IsStore = GenericOpc == TargetOpcode::G_STORE;
+  switch (RegBankID) {
+  case PPC::GPRRegBankID:
+    switch (OpSize) {
+    case 64:
+      return IsStore ? PPC::STD : PPC::LD;
+    default:
+      llvm_unreachable("Unexpected size!");
+    }
+    break;
+  case PPC::FPRRegBankID:
+    switch (OpSize) {
+    case 64:
+      return IsStore ? PPC::STFD : PPC::LFD;
+    default:
+      llvm_unreachable("Unexpected size!");
+    }
+    break;
+  default:
+    llvm_unreachable("Unexpected register bank!");
+  }
+  return GenericOpc;
+}
+
 bool PPCInstructionSelector::selectIntToFP(MachineInstr &I,
                                            MachineBasicBlock &MBB,
                                            MachineRegisterInfo &MRI) const {
@@ -198,6 +227,43 @@ bool PPCInstructionSelector::select(MachineInstr &I) {
   switch (Opcode) {
   default:
     return false;
+  case TargetOpcode::G_LOAD:
+  case TargetOpcode::G_STORE: {
+    GLoadStore &LdSt = cast<GLoadStore>(I);
+    LLT PtrTy = MRI.getType(LdSt.getPointerReg());
+
+    if (PtrTy != LLT::pointer(0, 64)) {
+      LLVM_DEBUG(dbgs() << "Load/Store pointer has type: " << PtrTy
+                        << ", expected: " << LLT::pointer(0, 64) << '\n');
+      return false;
+    }
+
+    auto SelectLoadStoreAddressingMode = [&]() -> MachineInstr * {
+      const unsigned NewOpc = selectLoadStoreOp(
+          I.getOpcode(), RBI.getRegBank(LdSt.getReg(0), MRI, TRI)->getID(),
+          LdSt.getMemSizeInBits());
+
+      if (NewOpc == I.getOpcode())
+        return nullptr;
+
+      // For now, simply use DForm with load/store addr as base and 0 as imm.
+      // FIXME: optimize load/store with some specific address patterns.
+      I.setDesc(TII.get(NewOpc));
+      Register AddrReg = I.getOperand(1).getReg();
+      bool IsKill = I.getOperand(1).isKill();
+      I.getOperand(1).ChangeToImmediate(0);
+      I.addOperand(*I.getParent()->getParent(),
+                   MachineOperand::CreateReg(AddrReg, /* isDef */ false,
+                                             /* isImp */ false, IsKill));
+      return &I;
+    };
+
+    MachineInstr *LoadStore = SelectLoadStoreAddressingMode();
+    if (!LoadStore)
+      return false;
+
+    return constrainSelectedInstRegOperands(*LoadStore, TII, TRI, RBI);
+  }
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_UITOFP:
     return selectIntToFP(I, MBB, MRI);
