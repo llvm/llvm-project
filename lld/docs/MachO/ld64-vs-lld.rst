@@ -55,3 +55,11 @@ result in duplicate symbol errors. LLD does not check for duplicate aliases;
 instead we perform alias resolution first, and only then do we check for
 duplicate symbols. In particular, we will not report a duplicate symbol error if
 the aliased symbols turn out to be weak definitions, but ld64 will.
+
+``ZERO_AR_DATE`` enabled by default
+***********************************
+ld64 has a special mode where it sets some stabs modification times to 0 for
+hermetic builds, enabled by setting any value for the ``ZERO_AR_DATE``
+environment variable. LLD flips this default to perfer hermetic builds, but
+allows disabling this behavior by setting ``ZERO_AR_DATE=0``. Any other value
+of ``ZERO_AR_DATE`` will be ignored.
