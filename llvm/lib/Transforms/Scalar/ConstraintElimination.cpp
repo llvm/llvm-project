@@ -111,7 +111,11 @@ class ConstraintInfo {
   ConstraintSystem UnsignedCS;
   ConstraintSystem SignedCS;
 
+  const DataLayout &DL;
+
 public:
+  ConstraintInfo(const DataLayout &DL) : DL(DL) {}
+
   DenseMap<Value *, unsigned> &getValue2Index(bool Signed) {
     return Signed ? SignedValue2Index : UnsignedValue2Index;
   }
@@ -142,6 +146,16 @@ public:
   /// \p NewVariables.
   ConstraintTy getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                              SmallVectorImpl<Value *> &NewVariables) const;
+
+  /// Turns a comparison of the form \p Op0 \p Pred \p Op1 into a vector of
+  /// constraints using getConstraint. Returns an empty constraint if the result
+  /// cannot be used to query the existing constraint system, e.g. because it
+  /// would require adding new variables. Also tries to convert signed
+  /// predicates to unsigned ones if possible to allow using the unsigned system
+  /// which increases the effectiveness of the signed <-> unsigned transfer
+  /// logic.
+  ConstraintTy getConstraintForSolving(CmpInst::Predicate Pred, Value *Op0,
+                                       Value *Op1) const;
 
   /// Try to add information from \p A \p Pred \p B to the unsigned/signed
   /// system if \p Pred is signed/unsigned.
@@ -429,6 +443,24 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   return Res;
 }
 
+ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
+                                                     Value *Op0,
+                                                     Value *Op1) const {
+  // If both operands are known to be non-negative, change signed predicates to
+  // unsigned ones. This increases the reasoning effectiveness in combination
+  // with the signed <-> unsigned transfer logic.
+  if (CmpInst::isSigned(Pred) &&
+      isKnownNonNegative(Op0, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1) &&
+      isKnownNonNegative(Op1, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
+    Pred = CmpInst::getUnsignedPredicate(Pred);
+
+  SmallVector<Value *> NewVariables;
+  ConstraintTy R = getConstraint(Pred, Op0, Op1, NewVariables);
+  if (R.IsEq || !NewVariables.empty())
+    return {};
+  return R;
+}
+
 bool ConstraintTy::isValid(const ConstraintInfo &Info) const {
   return Coefficients.size() > 0 &&
          all_of(Preconditions, [&Info](const PreconditionTy &C) {
@@ -438,14 +470,9 @@ bool ConstraintTy::isValid(const ConstraintInfo &Info) const {
 
 bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A,
                               Value *B) const {
-  SmallVector<Value *> NewVariables;
-  auto R = getConstraint(Pred, A, B, NewVariables);
-
-  if (!NewVariables.empty())
-    return false;
-
-  return NewVariables.empty() && R.Preconditions.empty() && !R.IsEq &&
-         !R.empty() && getCS(R.IsSigned).isConditionImplied(R.Coefficients);
+  auto R = getConstraintForSolving(Pred, A, B);
+  return R.Preconditions.empty() && !R.empty() &&
+         getCS(R.IsSigned).isConditionImplied(R.Coefficients);
 }
 
 void ConstraintInfo::transferToOtherSystem(
@@ -698,9 +725,8 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
                           SmallVectorImpl<Instruction *> &ToRemove) {
   auto DoesConditionHold = [](CmpInst::Predicate Pred, Value *A, Value *B,
                               ConstraintInfo &Info) {
-    SmallVector<Value *> NewVariables;
-    auto R = Info.getConstraint(Pred, A, B, NewVariables);
-    if (R.size() < 2 || !NewVariables.empty() || !R.isValid(Info))
+    auto R = Info.getConstraintForSolving(Pred, A, B);
+    if (R.size() < 2 || !R.isValid(Info))
       return false;
 
     auto &CSToUse = Info.getCS(R.IsSigned);
@@ -752,7 +778,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   bool Changed = false;
   DT.updateDFSNumbers();
 
-  ConstraintInfo Info;
+  ConstraintInfo Info(F.getParent()->getDataLayout());
   State S(DT);
 
   // First, collect conditions implied by branches and blocks with their
@@ -834,24 +860,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
           continue;
 
         LLVM_DEBUG(dbgs() << "Checking " << *Cmp << "\n");
-        SmallVector<Value *> NewVariables;
-        CmpInst::Predicate Pred = Cmp->getPredicate();
-        Value *A = Cmp->getOperand(0);
-        Value *B = Cmp->getOperand(1);
-        const DataLayout &DL = Cmp->getModule()->getDataLayout();
-
-        // If both operands are known to be non-negative, change signed
-        // predicates to unsigned ones. This increases the reasoning
-        // effectiveness in combination with the signed <-> unsigned transfer
-        // logic.
-        if (CmpInst::isSigned(Pred) &&
-            isKnownNonNegative(A, DL,
-                               /*Depth=*/MaxAnalysisRecursionDepth - 1) &&
-            isKnownNonNegative(B, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
-          Pred = CmpInst::getUnsignedPredicate(Pred);
-
-        auto R = Info.getConstraint(Pred, A, B, NewVariables);
-        if (R.IsEq || R.empty() || !NewVariables.empty() || !R.isValid(Info))
+        auto R = Info.getConstraintForSolving(
+            Cmp->getPredicate(), Cmp->getOperand(0), Cmp->getOperand(1));
+        if (R.empty() || !R.isValid(Info))
           continue;
 
         auto &CSToUse = Info.getCS(R.IsSigned);
