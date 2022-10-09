@@ -35,6 +35,9 @@ PPCRegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
   case PPC::G8RCRegClassID:
   case PPC::G8RC_NOX0RegClassID:
   case PPC::G8RC_and_G8RC_NOX0RegClassID:
+  case PPC::GPRCRegClassID:
+  case PPC::GPRC_NOR0RegClassID:
+  case PPC::GPRC_and_GPRC_NOR0RegClassID:
     return getRegBank(PPC::GPRRegBankID);
   case PPC::VSFRCRegClassID:
   case PPC::SPILLTOVSRRC_and_VSFRCRegClassID:
@@ -81,6 +84,9 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_AND:
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR:
+    // Extension ops.
+  case TargetOpcode::G_SEXT:
+  case TargetOpcode::G_ZEXT:
     assert(NumOperands <= 3 &&
            "This code is for instructions with 3 or less operands");
     OperandsMapping = getValueMapping(PMI_GPR64);
@@ -120,6 +126,7 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case TargetOpcode::G_LOAD: {
+    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     // Check if that load feeds fp instructions.
     if (any_of(MRI.use_nodbg_instructions(MI.getOperand(0).getReg()),
                [&](const MachineInstr &UseMI) {
@@ -133,21 +140,26 @@ PPCRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                  return onlyUsesFP(UseMI, MRI, TRI);
                }))
       OperandsMapping = getOperandsMapping(
-          {getValueMapping(PMI_FPR64), getValueMapping(PMI_GPR64)});
+          {getValueMapping(Size == 64 ? PMI_FPR64 : PMI_FPR32),
+           getValueMapping(PMI_GPR64)});
     else
       OperandsMapping = getOperandsMapping(
-          {getValueMapping(PMI_GPR64), getValueMapping(PMI_GPR64)});
+          {getValueMapping(Size == 64 ? PMI_GPR64 : PMI_GPR32),
+           getValueMapping(PMI_GPR64)});
     break;
   }
   case TargetOpcode::G_STORE: {
     // Check if the store is fed by fp instructions.
     MachineInstr *DefMI = MRI.getVRegDef(MI.getOperand(0).getReg());
+    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
     if (onlyDefinesFP(*DefMI, MRI, TRI))
       OperandsMapping = getOperandsMapping(
-          {getValueMapping(PMI_FPR64), getValueMapping(PMI_GPR64)});
+          {getValueMapping(Size == 64 ? PMI_FPR64 : PMI_FPR32),
+           getValueMapping(PMI_GPR64)});
     else
       OperandsMapping = getOperandsMapping(
-          {getValueMapping(PMI_GPR64), getValueMapping(PMI_GPR64)});
+          {getValueMapping(Size == 64 ? PMI_GPR64 : PMI_GPR32),
+           getValueMapping(PMI_GPR64)});
     break;
   }
   default:

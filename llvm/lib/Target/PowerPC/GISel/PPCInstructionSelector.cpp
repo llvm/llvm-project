@@ -52,6 +52,9 @@ private:
   bool selectIntToFP(MachineInstr &I, MachineBasicBlock &MBB,
                   MachineRegisterInfo &MRI) const;
 
+  bool selectZExt(MachineInstr &I, MachineBasicBlock &MBB,
+                  MachineRegisterInfo &MRI) const;
+
   const PPCSubtarget &STI;
   const PPCInstrInfo &TII;
   const PPCRegisterInfo &TRI;
@@ -89,6 +92,8 @@ static const TargetRegisterClass *getRegClass(LLT Ty, const RegisterBank *RB) {
   if (RB->getID() == PPC::GPRRegBankID) {
     if (Ty.getSizeInBits() == 64)
       return &PPC::G8RCRegClass;
+    if (Ty.getSizeInBits() == 32)
+      return &PPC::GPRCRegClass;
   }
   if (RB->getID() == PPC::FPRRegBankID) {
     if (Ty.getSizeInBits() == 32)
@@ -130,6 +135,8 @@ static unsigned selectLoadStoreOp(unsigned GenericOpc, unsigned RegBankID,
   switch (RegBankID) {
   case PPC::GPRRegBankID:
     switch (OpSize) {
+    case 32:
+      return IsStore ? PPC::STW : PPC::LWZ;
     case 64:
       return IsStore ? PPC::STD : PPC::LD;
     default:
@@ -138,6 +145,8 @@ static unsigned selectLoadStoreOp(unsigned GenericOpc, unsigned RegBankID,
     break;
   case PPC::FPRRegBankID:
     switch (OpSize) {
+    case 32:
+      return IsStore ? PPC::STFS : PPC::LFS;
     case 64:
       return IsStore ? PPC::STFD : PPC::LFD;
     default:
@@ -207,6 +216,40 @@ bool PPCInstructionSelector::selectFPToInt(MachineInstr &I,
   return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
 }
 
+bool PPCInstructionSelector::selectZExt(MachineInstr &I, MachineBasicBlock &MBB,
+                                        MachineRegisterInfo &MRI) const {
+  const Register DstReg = I.getOperand(0).getReg();
+  const LLT DstTy = MRI.getType(DstReg);
+  const RegisterBank *DstRegBank = RBI.getRegBank(DstReg, MRI, TRI);
+
+  const Register SrcReg = I.getOperand(1).getReg();
+
+  assert(DstTy.getSizeInBits() == 64 && "Unexpected dest size!");
+  assert(MRI.getType(SrcReg).getSizeInBits() == 32 && "Unexpected src size!");
+
+  Register ImpDefReg =
+      MRI.createVirtualRegister(getRegClass(DstTy, DstRegBank));
+  BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::IMPLICIT_DEF),
+          ImpDefReg);
+
+  Register NewDefReg =
+      MRI.createVirtualRegister(getRegClass(DstTy, DstRegBank));
+  BuildMI(MBB, I, I.getDebugLoc(), TII.get(TargetOpcode::INSERT_SUBREG),
+          NewDefReg)
+      .addReg(ImpDefReg)
+      .addReg(SrcReg)
+      .addImm(PPC::sub_32);
+
+  MachineInstr *MI =
+      BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), DstReg)
+          .addReg(NewDefReg)
+          .addImm(0)
+          .addImm(32);
+
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+}
+
 bool PPCInstructionSelector::select(MachineInstr &I) {
   auto &MBB = *I.getParent();
   auto &MF = *MBB.getParent();
@@ -270,6 +313,9 @@ bool PPCInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
     return selectFPToInt(I, MBB, MRI);
+  // G_SEXT will be selected in tb-gen pattern.
+  case TargetOpcode::G_ZEXT:
+    return selectZExt(I, MBB, MRI);
   }
   return false;
 }
