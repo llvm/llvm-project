@@ -920,6 +920,9 @@ FormatToken *UnwrappedLineParser::parseBlock(
     return IfLBrace;
   }
 
+  const bool IsFunctionRBrace =
+      FormatTok->is(tok::r_brace) && Tok->is(TT_FunctionLBrace);
+
   auto RemoveBraces = [=]() mutable {
     if (!SimpleBlock)
       return false;
@@ -959,6 +962,17 @@ FormatToken *UnwrappedLineParser::parseBlock(
 
   // Munch the closing brace.
   nextToken(/*LevelDifference=*/-AddLevels);
+
+  // When this is a function block and there is an unnecessary semicolon
+  // afterwards then mark it as optional (so the RemoveSemi pass can get rid of
+  // it later).
+  if (Style.RemoveSemicolon && IsFunctionRBrace) {
+    while (FormatTok->is(tok::semi)) {
+      FormatTok->Optional = true;
+      nextToken();
+    }
+  }
+
   HandleVerilogBlockLabel();
 
   if (MacroBlock && FormatTok->is(tok::l_paren))

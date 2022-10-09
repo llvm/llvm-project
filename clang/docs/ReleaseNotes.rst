@@ -525,6 +525,7 @@ AST Matchers
 
 clang-format
 ------------
+- Add `RemoveSemicolon` option for removing `;` after a non-empty function definition.
 
 clang-extdef-mapping
 --------------------
