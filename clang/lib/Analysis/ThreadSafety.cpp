@@ -2087,6 +2087,19 @@ static Expr *buildFakeCtorCall(CXXConstructorDecl *CD, ArrayRef<Expr *> Args,
                                   SourceRange(Loc, Loc));
 }
 
+static Expr *UnpackConstruction(Expr *E) {
+  if (auto *CE = dyn_cast<CastExpr>(E))
+    if (CE->getCastKind() == CK_NoOp)
+      E = CE->getSubExpr()->IgnoreParens();
+  if (auto *CE = dyn_cast<CastExpr>(E))
+    if (CE->getCastKind() == CK_ConstructorConversion ||
+        CE->getCastKind() == CK_UserDefinedConversion)
+      E = CE->getSubExpr();
+  if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
+    E = BTE->getSubExpr();
+  return E;
+}
+
 void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
   // adjust the context
   LVarCtx = Analyzer->LocalVarMap.getNextContext(CtxIndex, S, LVarCtx);
@@ -2101,13 +2114,7 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
       // handle constructors that involve temporaries
       if (auto *EWC = dyn_cast<ExprWithCleanups>(E))
         E = EWC->getSubExpr()->IgnoreParens();
-      if (auto *CE = dyn_cast<CastExpr>(E))
-        if (CE->getCastKind() == CK_NoOp ||
-            CE->getCastKind() == CK_ConstructorConversion ||
-            CE->getCastKind() == CK_UserDefinedConversion)
-          E = CE->getSubExpr()->IgnoreParens();
-      if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
-        E = BTE->getSubExpr()->IgnoreParens();
+      E = UnpackConstruction(E);
 
       if (const auto *CE = dyn_cast<CXXConstructExpr>(E)) {
         const auto *CtorD = dyn_cast_or_null<NamedDecl>(CE->getConstructor());

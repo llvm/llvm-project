@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple msp430-elf -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple msp430-elf -emit-llvm %s -o - | FileCheck %s
 
 // MSP430 target prefers chars to be aligned to 8 bit and other types to 16 bit.
 
@@ -10,7 +10,7 @@
 // CHECK: @f ={{.*}}global float 1.000000e+00, align 2
 // CHECK: @d ={{.*}}global double 1.000000e+00, align 2
 // CHECK: @ld ={{.*}}global double 1.000000e+00, align 2
-// CHECK: @p ={{.*}}global i8* @c, align 2
+// CHECK: @p ={{.*}}global ptr @c, align 2
 
 char c = 1;
 short s = 266;

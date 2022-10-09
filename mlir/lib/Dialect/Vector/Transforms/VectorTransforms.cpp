@@ -1010,7 +1010,7 @@ struct MultiReduceToContract
   }
 };
 
-/// Merge TransposeOp into ContractionOp user.
+/// Merge LHS/RHS (A/B) TransposeOp into ContractionOp user.
 /// Ex:
 /// ```
 ///   %0 = vector.transpose %arg0, [2, 0, 1]
@@ -1033,7 +1033,7 @@ struct MultiReduceToContract
 ///    kind = add} %arg0, %arg1, %cst_f0
 ///    : vector<8x32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
 ///  ```
-struct CombineContractTranspose
+struct CombineContractABTranspose final
     : public OpRewritePattern<vector::ContractionOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -1050,8 +1050,6 @@ struct CombineContractTranspose
       auto transposeOp = operand->getDefiningOp<vector::TransposeOp>();
       if (!transposeOp)
         continue;
-      SmallVector<int64_t> perm;
-      transposeOp.getTransp(perm);
       AffineMap permutationMap = AffineMap::getPermutationMap(
           extractVector<unsigned>(transposeOp.getTransp()),
           contractOp.getContext());
@@ -1063,6 +1061,81 @@ struct CombineContractTranspose
       return failure();
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         contractOp, lhs, rhs, contractOp.getAcc(),
+        rewriter.getAffineMapArrayAttr(maps), contractOp.getIteratorTypes());
+    return success();
+  }
+};
+
+/// Merges accumulator and result transposes into contract.
+///
+/// For example:
+/// ```mlir
+/// %accT = vector.transpose %acc, [0, 2, 1]
+///   : vector<2x8x4xf32> to vector<2x4x8xf32>
+/// %contract = vector.contract {
+///   indexing_maps = [
+///     affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>,
+///     affine_map<(d0, d1, d2, d3) -> (d3, d2)>,
+///     affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+///   ],
+///   iterator_types = ["parallel", "parallel", "parallel", "reduction"],
+///   kind = #vector.kind<add>
+/// } %lhs, %rhs, %accT
+///   : vector<2x4x4xf32>, vector<4x8xf32> into vector<2x4x8xf32>
+/// %0 = vector.transpose %contract, [0, 2, 1]
+///   : vector<2x4x8xf32> to vector<2x8x4>
+/// ```
+/// Becomes:
+/// ```mlir
+/// %0 = vector.contract {
+///   indexing_maps = [
+///     affine_map<(d0, d1, d2, d3) -> (d0, d3, d1)>,
+///     affine_map<(d0, d1, d2, d3) -> (d3, d2)>,
+///     affine_map<(d0, d1, d2, d3) -> (d0, d2, d1)>
+///   ],
+///   iterator_types = ["parallel", "parallel", "parallel", "reduction"],
+///   kind = #vector.kind<add>
+/// } %lhs, %rhs, %acc
+///   : vector<2x4x4xf32>, vector<4x8xf32> into vector<2x8x4xf32>
+/// ```
+struct CombineContractResultTranspose final
+    : public OpRewritePattern<vector::TransposeOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::TransposeOp resTOp,
+                                PatternRewriter &rewriter) const override {
+    auto contractOp = resTOp.getVector().getDefiningOp<vector::ContractionOp>();
+    if (!contractOp || !contractOp->hasOneUse())
+      return failure();
+
+    auto accTOp = contractOp.getAcc().getDefiningOp<vector::TransposeOp>();
+    if (!accTOp)
+      return failure();
+
+    MLIRContext *context = contractOp.getContext();
+    auto maps = llvm::to_vector<3>(contractOp.getIndexingMapsArray());
+    AffineMap contractMap = maps.back();
+
+    // Accumulator transpose performs f(A) -> B. Contract performs g(C) -> B.
+    // To index into A in contract, we need revert(f)(g(C)) -> A.
+    auto accTMap = AffineMap::getPermutationMap(
+        extractVector<unsigned>(accTOp.getTransp()), context);
+
+    // Contract performs g(C) -> D. Result transpose performs h(D) -> E.
+    // To index into E in contract, we need h(g(C)) -> E.
+    auto resTMap = AffineMap::getPermutationMap(
+        extractVector<unsigned>(resTOp.getTransp()), context);
+    auto combinedResMap = resTMap.compose(contractMap);
+
+    // The accumulator and result share the same indexing map. So they should be
+    // the same to be able to merge. This means combinedResMap is the same as
+    // inversePermutation(accTMap).compose(contractMap), which means
+    if (inversePermutation(accTMap) != resTMap)
+      return failure();
+    maps.back() = combinedResMap;
+
+    rewriter.replaceOpWithNewOp<vector::ContractionOp>(
+        resTOp, contractOp.getLhs(), contractOp.getRhs(), accTOp.getVector(),
         rewriter.getAffineMapArrayAttr(maps), contractOp.getIteratorTypes());
     return success();
   }
@@ -1233,7 +1306,7 @@ struct ReorderCastOpsOnBroadcast
 
 /// Reorders elementwise(transpose) to transpose(elementwise). This makes
 /// transpose ops and contraction ops closer, which kicks in
-/// CombineContractTranspose pattern when elementwise ops are between these
+/// CombineContractABTranspose pattern when elementwise ops are between these
 /// operations. Ex:
 /// ```
 /// %at = vector.transpose %a, [1, 0]: vector<4x2xf32> to vector<2x4xf32>
@@ -2939,9 +3012,9 @@ void mlir::vector::populateVectorTransposeLoweringPatterns(
 void mlir::vector::populateVectorReductionToContractPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<MultiReduceToContract, CombineContractBroadcast,
-               CombineContractTranspose, ReorderCastOpsOnBroadcast,
-               ReorderElementwiseOpsOnTranspose>(patterns.getContext(),
-                                                 benefit);
+               CombineContractABTranspose, CombineContractResultTranspose,
+               ReorderCastOpsOnBroadcast, ReorderElementwiseOpsOnTranspose>(
+      patterns.getContext(), benefit);
 }
 
 void mlir::vector::

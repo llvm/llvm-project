@@ -2720,6 +2720,7 @@ void DWARFASTParserClang::ParseSingleMember(
       // TODO: Support float/double static members as well.
       if (!attrs.const_value_form || !ct.IsIntegerOrEnumerationType(unused))
         return;
+
       llvm::Expected<llvm::APInt> const_value_or_err =
           ExtractIntFromFormValue(ct, *attrs.const_value_form);
       if (!const_value_or_err) {
@@ -2728,7 +2729,13 @@ void DWARFASTParserClang::ParseSingleMember(
                        v->getQualifiedNameAsString());
         return;
       }
-      TypeSystemClang::SetIntegerInitializerForVariable(v, *const_value_or_err);
+
+      if (ct.IsBooleanType())
+        TypeSystemClang::SetBoolInitializerForVariable(
+            v, !const_value_or_err->isZero());
+      else
+        TypeSystemClang::SetIntegerInitializerForVariable(v,
+                                                          *const_value_or_err);
     }
     return;
   }

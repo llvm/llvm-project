@@ -96,6 +96,12 @@ private:
   bool InFunction() const {
     return innermostSymbol_ && IsFunction(*innermostSymbol_);
   }
+  bool InInterface() const {
+    const SubprogramDetails *subp{innermostSymbol_
+            ? innermostSymbol_->detailsIf<SubprogramDetails>()
+            : nullptr};
+    return subp && subp->isInterface();
+  }
   template <typename... A>
   void SayWithDeclaration(const Symbol &symbol, A &&...x) {
     if (parser::Message * msg{messages_.Say(std::forward<A>(x)...)}) {
@@ -247,35 +253,43 @@ void CheckHelper::Check(const Symbol &symbol) {
     CheckPointer(symbol);
   }
   if (InPure()) {
-    if (IsSaved(symbol)) {
-      if (IsInitialized(symbol)) {
-        messages_.Say(
-            "A pure subprogram may not initialize a variable"_err_en_US);
-      } else {
-        messages_.Say(
-            "A pure subprogram may not have a variable with the SAVE attribute"_err_en_US);
+    if (InInterface()) {
+      // Declarations in interface definitions "have no effect" if they
+      // are not pertinent to the characteristics of the procedure.
+      // Restrictions on entities in pure procedure interfaces don't need
+      // enforcement.
+    } else {
+      if (IsSaved(symbol)) {
+        if (IsInitialized(symbol)) {
+          messages_.Say(
+              "A pure subprogram may not initialize a variable"_err_en_US);
+        } else {
+          messages_.Say(
+              "A pure subprogram may not have a variable with the SAVE attribute"_err_en_US);
+        }
+      }
+      if (!IsDummy(symbol) && !IsFunctionResult(symbol)) {
+        if (IsPolymorphicAllocatable(symbol)) {
+          SayWithDeclaration(symbol,
+              "Deallocation of polymorphic object '%s' is not permitted in a pure subprogram"_err_en_US,
+              symbol.name());
+        } else if (derived) {
+          if (auto bad{FindPolymorphicAllocatableUltimateComponent(*derived)}) {
+            SayWithDeclaration(*bad,
+                "Deallocation of polymorphic object '%s%s' is not permitted in a pure subprogram"_err_en_US,
+                symbol.name(), bad.BuildResultDesignatorName());
+          }
+        }
       }
     }
-    if (symbol.attrs().test(Attr::VOLATILE)) {
+    if (symbol.attrs().test(Attr::VOLATILE) &&
+        (IsDummy(symbol) || !InInterface())) {
       messages_.Say(
           "A pure subprogram may not have a variable with the VOLATILE attribute"_err_en_US);
     }
     if (IsProcedure(symbol) && !IsPureProcedure(symbol) && IsDummy(symbol)) {
       messages_.Say(
           "A dummy procedure of a pure subprogram must be pure"_err_en_US);
-    }
-    if (!IsDummy(symbol) && !IsFunctionResult(symbol)) {
-      if (IsPolymorphicAllocatable(symbol)) {
-        SayWithDeclaration(symbol,
-            "Deallocation of polymorphic object '%s' is not permitted in a pure subprogram"_err_en_US,
-            symbol.name());
-      } else if (derived) {
-        if (auto bad{FindPolymorphicAllocatableUltimateComponent(*derived)}) {
-          SayWithDeclaration(*bad,
-              "Deallocation of polymorphic object '%s%s' is not permitted in a pure subprogram"_err_en_US,
-              symbol.name(), bad.BuildResultDesignatorName());
-        }
-      }
     }
   }
   if (type) { // Section 7.2, paragraph 7

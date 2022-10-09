@@ -8,6 +8,6 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: noinline nounwind uwtable
 define i32 @a() {
 entry:
-  %0 = load i32, i32* @baz, align 4
+  %0 = load i32, ptr @baz, align 4
   ret i32 %0
 }

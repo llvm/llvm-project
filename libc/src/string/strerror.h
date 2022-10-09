@@ -11,7 +11,7 @@
 
 namespace __llvm_libc {
 
-char *strerror(int errnum);
+char *strerror(int err_num);
 
 } // namespace __llvm_libc
 

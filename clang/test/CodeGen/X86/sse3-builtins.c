@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse3 -emit-llvm -o - -Wall -Werror | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse3 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +sse3 -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %clang_cc1 -flax-vector-conversions=none -ffreestanding %s -triple=i386-apple-darwin -target-feature +sse3 -emit-llvm -o - -Wall -Werror | FileCheck %s
 
 
 #include <immintrin.h>
@@ -44,13 +44,13 @@ __m128 test_mm_hsub_ps(__m128 A, __m128 B) {
 
 __m128i test_mm_lddqu_si128(__m128i const* P) {
   // CHECK-LABEL: test_mm_lddqu_si128
-  // CHECK: call <16 x i8> @llvm.x86.sse3.ldu.dq(i8* %{{.*}})
+  // CHECK: call <16 x i8> @llvm.x86.sse3.ldu.dq(ptr %{{.*}})
   return _mm_lddqu_si128(P);
 }
 
 __m128d test_mm_loaddup_pd(double const* P) {
   // CHECK-LABEL: test_mm_loaddup_pd
-  // CHECK: load double*
+  // CHECK: load ptr
   // CHECK: insertelement <2 x double> undef, double %{{.*}}, i32 0
   // CHECK: insertelement <2 x double> %{{.*}}, double %{{.*}}, i32 1
   return _mm_loaddup_pd(P);

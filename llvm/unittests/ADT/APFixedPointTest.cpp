@@ -132,6 +132,35 @@ FixedPointSemantics getPadULFractSema() {
                              /*hasUnsignedPadding=*/true);
 }
 
+FixedPointSemantics getU8Neg10() {
+  return FixedPointSemantics(/*width=*/8, /*lsb=*/FixedPointSemantics::Lsb{-10},
+                             /*isSigned=*/false,
+                             /*isSaturated=*/false,
+                             /*hasUnsignedPadding=*/false);
+}
+
+FixedPointSemantics getS16Neg18() {
+  return FixedPointSemantics(/*width=*/16,
+                             /*lsb=*/FixedPointSemantics::Lsb{-18},
+                             /*isSigned=*/true,
+                             /*isSaturated=*/false,
+                             /*hasUnsignedPadding=*/false);
+}
+
+FixedPointSemantics getU8Pos4() {
+  return FixedPointSemantics(/*width=*/8, /*lsb=*/FixedPointSemantics::Lsb{4},
+                             /*isSigned=*/false,
+                             /*isSaturated=*/false,
+                             /*hasUnsignedPadding=*/false);
+}
+
+FixedPointSemantics getS32Pos2() {
+  return FixedPointSemantics(/*width=*/32, /*lsb=*/FixedPointSemantics::Lsb{2},
+                             /*isSigned=*/true,
+                             /*isSaturated=*/false,
+                             /*hasUnsignedPadding=*/false);
+}
+
 void CheckUnpaddedMax(const FixedPointSemantics &Sema) {
   ASSERT_EQ(APFixedPoint::getMax(Sema).getValue(),
             APSInt::getMaxValue(Sema.getWidth(), !Sema.isSigned()));
@@ -160,6 +189,10 @@ TEST(FixedPointTest, getMax) {
   CheckUnpaddedMax(getUSFractSema());
   CheckUnpaddedMax(getUFractSema());
   CheckUnpaddedMax(getULFractSema());
+  CheckUnpaddedMax(getU8Neg10());
+  CheckUnpaddedMax(getS16Neg18());
+  CheckUnpaddedMax(getU8Pos4());
+  CheckUnpaddedMax(getS32Pos2());
 
   CheckPaddedMax(getPadUSAccumSema());
   CheckPaddedMax(getPadUAccumSema());
@@ -182,6 +215,10 @@ TEST(FixedPointTest, getMin) {
   CheckMin(getUSFractSema());
   CheckMin(getUFractSema());
   CheckMin(getULFractSema());
+  CheckMin(getU8Neg10());
+  CheckMin(getS16Neg18());
+  CheckMin(getU8Pos4());
+  CheckMin(getS32Pos2());
 
   CheckMin(getPadUSAccumSema());
   CheckMin(getPadUAccumSema());
@@ -191,30 +228,40 @@ TEST(FixedPointTest, getMin) {
   CheckMin(getPadULFractSema());
 }
 
+int64_t relativeShr(int64_t Int, int64_t Shift) {
+  return (Shift > 0) ? Int >> Shift : Int << -Shift;
+}
+
 void CheckIntPart(const FixedPointSemantics &Sema, int64_t IntPart) {
-  unsigned Scale = Sema.getScale();
+  int64_t FullFactPart =
+      (Sema.getLsbWeight() > 0) ? 0 : (1ULL << (-Sema.getLsbWeight() - 1));
 
   // Value with a fraction
-  APFixedPoint ValWithFract(APInt(Sema.getWidth(),
-                                  (IntPart << Scale) + (1ULL << (Scale - 1)),
-                                  Sema.isSigned()),
-                            Sema);
+  APFixedPoint ValWithFract(
+      APInt(Sema.getWidth(),
+            relativeShr(IntPart, Sema.getLsbWeight()) + FullFactPart,
+            Sema.isSigned()),
+      Sema);
   ASSERT_EQ(ValWithFract.getIntPart(), IntPart);
 
   // Just fraction
-  APFixedPoint JustFract(
-      APInt(Sema.getWidth(), (1ULL << (Scale - 1)), Sema.isSigned()), Sema);
+  APFixedPoint JustFract(APInt(Sema.getWidth(), FullFactPart, Sema.isSigned()),
+                         Sema);
   ASSERT_EQ(JustFract.getIntPart(), 0);
 
   // Whole number
-  APFixedPoint WholeNum(
-      APInt(Sema.getWidth(), (IntPart << Scale), Sema.isSigned()), Sema);
+  APFixedPoint WholeNum(APInt(Sema.getWidth(),
+                              relativeShr(IntPart, Sema.getLsbWeight()),
+                              Sema.isSigned()),
+                        Sema);
   ASSERT_EQ(WholeNum.getIntPart(), IntPart);
 
   // Negative
   if (Sema.isSigned()) {
-    APFixedPoint Negative(
-        APInt(Sema.getWidth(), (IntPart << Scale), Sema.isSigned()), Sema);
+    APFixedPoint Negative(APInt(Sema.getWidth(),
+                                relativeShr(IntPart, Sema.getLsbWeight()),
+                                Sema.isSigned()),
+                          Sema);
     ASSERT_EQ(Negative.getIntPart(), IntPart);
   }
 }
@@ -237,6 +284,8 @@ TEST(FixedPoint, getIntPart) {
   CheckIntPart(getUSAccumSema(), 2);
   CheckIntPart(getUAccumSema(), 2);
   CheckIntPart(getULAccumSema(), 2);
+  CheckIntPart(getU8Pos4(), 32);
+  CheckIntPart(getS32Pos2(), 32);
 
   // Zero
   CheckIntPart(getSAccumSema(), 0);
@@ -253,6 +302,11 @@ TEST(FixedPoint, getIntPart) {
   CheckIntPart(getUFractSema(), 0);
   CheckIntPart(getULFractSema(), 0);
 
+  CheckIntPart(getS16Neg18(), 0);
+  CheckIntPart(getU8Neg10(), 0);
+  CheckIntPart(getU8Pos4(), 0);
+  CheckIntPart(getS32Pos2(), 0);
+
   // Min
   CheckIntPartMin(getSAccumSema(), -256);
   CheckIntPartMin(getAccumSema(), -65536);
@@ -262,6 +316,8 @@ TEST(FixedPoint, getIntPart) {
   CheckIntPartMin(getFractSema(), -1);
   CheckIntPartMin(getLFractSema(), -1);
 
+  CheckIntPartMin(getS32Pos2(), -8589934592);
+
   // Max
   CheckIntPartMax(getSAccumSema(), 255);
   CheckIntPartMax(getAccumSema(), 65535);
@@ -269,6 +325,9 @@ TEST(FixedPoint, getIntPart) {
   CheckIntPartMax(getUSAccumSema(), 255);
   CheckIntPartMax(getUAccumSema(), 65535);
   CheckIntPartMax(getULAccumSema(), 4294967295);
+
+  CheckIntPartMax(getU8Pos4(), 255 << 4);
+  CheckIntPartMax(getS32Pos2(), 2147483647ull << 2);
 
   CheckIntPartMax(getSFractSema(), 0);
   CheckIntPartMax(getFractSema(), 0);
@@ -312,6 +371,13 @@ TEST(FixedPoint, compare) {
             APFixedPoint(5368709120, getLAccumSema()));
   ASSERT_EQ(APFixedPoint(0, getSAccumSema()), APFixedPoint(0, getLAccumSema()));
 
+  ASSERT_EQ(APFixedPoint(0, getS16Neg18()), APFixedPoint(0, getU8Neg10()));
+  ASSERT_EQ(APFixedPoint(256, getS16Neg18()), APFixedPoint(1, getU8Neg10()));
+  ASSERT_EQ(APFixedPoint(32512, getS16Neg18()),
+            APFixedPoint(127, getU8Neg10()));
+  ASSERT_EQ(APFixedPoint(4, getS32Pos2()), APFixedPoint(1, getU8Pos4()));
+  ASSERT_EQ(APFixedPoint(1020, getS32Pos2()), APFixedPoint(255, getU8Pos4()));
+
   // Across types (0.5)
   ASSERT_EQ(APFixedPoint(64, getSAccumSema()),
             APFixedPoint(64, getSFractSema()));
@@ -351,6 +417,8 @@ TEST(FixedPoint, compare) {
   ASSERT_LT(APFixedPoint(0, getUSAccumSema()), APFixedPoint(1, getAccumSema()));
   ASSERT_LT(APFixedPoint(0, getUSAccumSema()),
             APFixedPoint(1, getUAccumSema()));
+  ASSERT_LT(APFixedPoint(65280, getS16Neg18()),
+            APFixedPoint(255, getU8Neg10()));
 
   // Greater than
   ASSERT_GT(APFixedPoint(0, getAccumSema()), APFixedPoint(-1, getSAccumSema()));
@@ -371,10 +439,10 @@ void CheckUnsaturatedConversion(FixedPointSemantics Src,
   if (IsNegative)
     ScaledVal = -ScaledVal;
 
-  if (Dst.getScale() > Src.getScale()) {
-    ScaledVal <<= (Dst.getScale() - Src.getScale());
+  if (Dst.getLsbWeight() < Src.getLsbWeight()) {
+    ScaledVal <<= (Src.getLsbWeight() - Dst.getLsbWeight());
   } else {
-    ScaledVal >>= (Src.getScale() - Dst.getScale());
+    ScaledVal >>= (Dst.getLsbWeight() - Src.getLsbWeight());
   }
 
   if (IsNegative)
@@ -672,6 +740,26 @@ void CheckFloatToFixedConversion(APFloat &Val, const FixedPointSemantics &Sema,
   ASSERT_EQ(Ovf, false);
 }
 
+TEST(FixedPoint, toString) {
+  ASSERT_EQ(APFixedPoint::getMax(getS16Neg18()).toString(),
+            "0.124996185302734375");
+  ASSERT_EQ(APFixedPoint::getMin(getS16Neg18())
+                .add(APFixedPoint(1, getS16Neg18()))
+                .toString(),
+            "-0.124996185302734375");
+  ASSERT_EQ(APFixedPoint::getMin(getS16Neg18()).toString(), "-0.125");
+  ASSERT_EQ(APFixedPoint::getMax(getU8Neg10()).toString(), "0.2490234375");
+  ASSERT_EQ(APFixedPoint::getMin(getU8Neg10()).toString(), "0.0");
+  ASSERT_EQ(APFixedPoint::getMax(getS32Pos2()).toString(), "8589934588.0");
+  ASSERT_EQ(APFixedPoint::getMin(getS32Pos2())
+                .add(APFixedPoint(1, getS32Pos2()))
+                .toString(),
+            "-8589934588.0");
+  ASSERT_EQ(APFixedPoint::getMin(getS32Pos2()).toString(), "-8589934592.0");
+  ASSERT_EQ(APFixedPoint::getMax(getU8Pos4()).toString(), "4080.0");
+  ASSERT_EQ(APFixedPoint::getMin(getU8Pos4()).toString(), "0.0");
+}
+
 TEST(FixedPoint, FloatToFixed) {
   APFloat Val(0.0f);
 
@@ -693,6 +781,11 @@ TEST(FixedPoint, FloatToFixed) {
   CheckFloatToFixedConversion(Val, getUFractSema(),  3ULL << 14);
   CheckFloatToFixedConversion(Val, getULFractSema(), 3ULL << 30);
 
+  CheckFloatToFixedConversion(Val, getU8Neg10(), MaxSat);
+  CheckFloatToFixedConversion(Val, getU8Pos4(),  0);
+  CheckFloatToFixedConversion(Val, getS16Neg18(), MaxSat);
+  CheckFloatToFixedConversion(Val, getS32Pos2(), 0);
+
   // Simple negative exact fraction
   Val = APFloat(-0.75f);
   CheckFloatToFixedConversion(Val, getSAccumSema(), -3ULL << 5);
@@ -710,6 +803,11 @@ TEST(FixedPoint, FloatToFixed) {
   CheckFloatToFixedConversion(Val, getUSFractSema(), MinSat);
   CheckFloatToFixedConversion(Val, getUFractSema(),  MinSat);
   CheckFloatToFixedConversion(Val, getULFractSema(), MinSat);
+
+  CheckFloatToFixedConversion(Val, getU8Neg10(), MinSat);
+  CheckFloatToFixedConversion(Val, getU8Pos4(),  0);
+  CheckFloatToFixedConversion(Val, getS16Neg18(), MinSat);
+  CheckFloatToFixedConversion(Val, getS32Pos2(), 0);
 
   // Highly precise fraction
   Val = APFloat(0.999999940395355224609375f);
@@ -729,6 +827,11 @@ TEST(FixedPoint, FloatToFixed) {
   CheckFloatToFixedConversion(Val, getUFractSema(),  0xFFFFULL);
   CheckFloatToFixedConversion(Val, getULFractSema(), 0xFFFFFFULL << 8);
 
+  CheckFloatToFixedConversion(Val, getU8Neg10(), MaxSat);
+  CheckFloatToFixedConversion(Val, getU8Pos4(), 0);
+  CheckFloatToFixedConversion(Val, getS16Neg18(), MaxSat);
+  CheckFloatToFixedConversion(Val, getS32Pos2(), 0);
+
   // Integral and fraction
   Val = APFloat(17.99609375f);
   CheckFloatToFixedConversion(Val, getSAccumSema(), 0x11FFULL >> 1);
@@ -746,6 +849,11 @@ TEST(FixedPoint, FloatToFixed) {
   CheckFloatToFixedConversion(Val, getUSFractSema(), MaxSat);
   CheckFloatToFixedConversion(Val, getUFractSema(),  MaxSat);
   CheckFloatToFixedConversion(Val, getULFractSema(), MaxSat);
+
+  CheckFloatToFixedConversion(Val, getU8Neg10(), MaxSat);
+  CheckFloatToFixedConversion(Val, getU8Pos4(), 1);
+  CheckFloatToFixedConversion(Val, getS16Neg18(), MaxSat);
+  CheckFloatToFixedConversion(Val, getS32Pos2(), 1 << 2);
 
   // Negative integral and fraction
   Val = APFloat(-17.99609375f);
@@ -765,6 +873,11 @@ TEST(FixedPoint, FloatToFixed) {
   CheckFloatToFixedConversion(Val, getUFractSema(),  MinSat);
   CheckFloatToFixedConversion(Val, getULFractSema(), MinSat);
 
+  CheckFloatToFixedConversion(Val, getU8Neg10(), MinSat);
+  CheckFloatToFixedConversion(Val, getU8Pos4(), MinSat);
+  CheckFloatToFixedConversion(Val, getS16Neg18(), MinSat);
+  CheckFloatToFixedConversion(Val, getS32Pos2(), -4);
+
   // Very large value
   Val = APFloat(1.0e38f);
   CheckFloatToFixedConversion(Val, getSAccumSema(), MaxSat);
@@ -783,6 +896,11 @@ TEST(FixedPoint, FloatToFixed) {
   CheckFloatToFixedConversion(Val, getUFractSema(),  MaxSat);
   CheckFloatToFixedConversion(Val, getULFractSema(), MaxSat);
 
+  CheckFloatToFixedConversion(Val, getU8Neg10(), MaxSat);
+  CheckFloatToFixedConversion(Val, getU8Pos4(), MaxSat);
+  CheckFloatToFixedConversion(Val, getS16Neg18(), MaxSat);
+  CheckFloatToFixedConversion(Val, getS32Pos2(), MaxSat);
+
   // Very small value
   Val = APFloat(1.0e-38f);
   CheckFloatToFixedConversion(Val, getSAccumSema(), 0);
@@ -800,6 +918,11 @@ TEST(FixedPoint, FloatToFixed) {
   CheckFloatToFixedConversion(Val, getUSFractSema(), 0);
   CheckFloatToFixedConversion(Val, getUFractSema(),  0);
   CheckFloatToFixedConversion(Val, getULFractSema(), 0);
+
+  CheckFloatToFixedConversion(Val, getU8Neg10(), 0);
+  CheckFloatToFixedConversion(Val, getU8Pos4(), 0);
+  CheckFloatToFixedConversion(Val, getS16Neg18(), 0);
+  CheckFloatToFixedConversion(Val, getS32Pos2(), 0);
 
   // Half conversion
   Val = APFloat(0.99951171875f);
@@ -821,6 +944,23 @@ TEST(FixedPoint, FloatToFixed) {
   CheckFloatToFixedConversion(Val, getUSFractSema(), 0xFFULL);
   CheckFloatToFixedConversion(Val, getUFractSema(),  0xFFEULL << 4);
   CheckFloatToFixedConversion(Val, getULFractSema(), 0xFFEULL << 20);
+
+  CheckFloatToFixedConversion(Val, getU8Neg10(), MaxSat);
+  CheckFloatToFixedConversion(Val, getU8Pos4(), 0);
+  CheckFloatToFixedConversion(Val, getS16Neg18(), MaxSat);
+  CheckFloatToFixedConversion(Val, getS32Pos2(), 0);
+
+  Val = APFloat(0.124996185302734375);
+  CheckFloatToFixedConversion(Val, getU8Neg10(), 0x7f);
+  CheckFloatToFixedConversion(Val, getU8Pos4(), 0);
+  CheckFloatToFixedConversion(Val, getS16Neg18(), 0x7fff);
+  CheckFloatToFixedConversion(Val, getS32Pos2(), 0);
+
+  Val = APFloat(-0.124996185302734375);
+  CheckFloatToFixedConversion(Val, getU8Neg10(), MinSat);
+  CheckFloatToFixedConversion(Val, getU8Pos4(), 0);
+  CheckFloatToFixedConversion(Val, getS16Neg18(), -0x7fff);
+  CheckFloatToFixedConversion(Val, getS32Pos2(), 0);
 }
 
 void CheckFixedToFloatConversion(int64_t Val, const FixedPointSemantics &Sema,
@@ -853,6 +993,11 @@ TEST(FixedPoint, FixedToFloat) {
   CheckFixedToFloatConversion(Val, getULFractSema(),
                               0.00000000023283064365386962890625f);
 
+  CheckFixedToFloatConversion(Val, getU8Neg10(), 0.0009765625f);
+  CheckFixedToFloatConversion(Val, getU8Pos4(), 16.0f);
+  CheckFixedToFloatConversion(Val, getS16Neg18(), 0.000003814697265625f);
+  CheckFixedToFloatConversion(Val, getS32Pos2(), 4.0f);
+
   Val = 0x7FULL;
   CheckFixedToFloatConversion(Val, getSAccumSema(), 0.9921875f);
   CheckFixedToFloatConversion(Val, getFractSema(),  0.003875732421875f);
@@ -866,6 +1011,11 @@ TEST(FixedPoint, FixedToFloat) {
   CheckFixedToFloatConversion(Val, getULFractSema(),
                               0.00000002956949174404144287109375f);
 
+  CheckFixedToFloatConversion(Val, getU8Neg10(), 0.1240234375f);
+  CheckFixedToFloatConversion(Val, getU8Pos4(), 2032.0f);
+  CheckFixedToFloatConversion(Val, getS16Neg18(), 0.000484466552734375f);
+  CheckFixedToFloatConversion(Val, getS32Pos2(), 508.0f);
+
   Val = -0x1ULL;
   CheckFixedToFloatConversion(Val, getSAccumSema(), -0.0078125f);
   CheckFixedToFloatConversion(Val, getFractSema(),  -0.000030517578125f);
@@ -873,6 +1023,10 @@ TEST(FixedPoint, FixedToFloat) {
   CheckFixedToFloatConversion(Val, getLFractSema(),
                               -0.0000000004656612873077392578125f);
 
+  CheckFixedToFloatConversion(Val, getU8Neg10(), 0.249023437f);
+  CheckFixedToFloatConversion(Val, getU8Pos4(), 4080.0f);
+  CheckFixedToFloatConversion(Val, getS16Neg18(), -0.000003814697265625f);
+  CheckFixedToFloatConversion(Val, getS32Pos2(), -4.0f);
 
   CheckFixedToFloatConversion(-0x80ULL,       getSAccumSema(), -1.0f);
   CheckFixedToFloatConversion(-0x8000ULL,     getFractSema(),  -1.0f);
@@ -892,12 +1046,18 @@ TEST(FixedPoint, FixedToFloat) {
   CheckFixedToFloatConversion(Val, getULFractSema(),
                               0.0000006542541086673736572265625f);
 
+  CheckFixedToFloatConversion(Val, getS16Neg18(), 0.01071929931640625f);
+  CheckFixedToFloatConversion(Val, getS32Pos2(), 11240.0f);
+
   Val = -0xAFAULL;
   CheckFixedToFloatConversion(Val, getSAccumSema(), -21.953125f);
   CheckFixedToFloatConversion(Val, getFractSema(),  -0.08575439453125f);
   CheckFixedToFloatConversion(Val, getAccumSema(),  -0.08575439453125f);
   CheckFixedToFloatConversion(Val, getLFractSema(),
                               -0.000001308508217334747314453125f);
+
+  CheckFixedToFloatConversion(Val, getS16Neg18(), -0.01071929931640625f);
+  CheckFixedToFloatConversion(Val, getS32Pos2(), -11240.0f);
 
   Val = 0x40000080ULL;
   CheckFixedToFloatConversion(Val, getAccumSema(),  32768.00390625f);
@@ -908,6 +1068,8 @@ TEST(FixedPoint, FixedToFloat) {
   CheckFixedToFloatConversion(Val, getULFractSema(),
                               0.2500000298023223876953125f);
 
+  CheckFixedToFloatConversion(Val, getS32Pos2(), 4294967808.0f);
+
   Val = 0x40000040ULL;
   CheckFixedToFloatConversion(Val, getAccumSema(),  32768.0f);
   CheckFixedToFloatConversion(Val, getLFractSema(), 0.5f);
@@ -915,12 +1077,189 @@ TEST(FixedPoint, FixedToFloat) {
   CheckFixedToFloatConversion(Val, getUAccumSema(),  16384.0f);
   CheckFixedToFloatConversion(Val, getULFractSema(), 0.25f);
 
+  CheckFixedToFloatConversion(Val, getS32Pos2(), 4294967552.0f);
+
   Val = 0x7FF0ULL;
   CheckFixedToHalfConversion(Val, getAccumSema(), 0.99951171875f);
   CheckFixedToHalfConversion(Val, getLFractSema(), 0.000015251338481903076171875f);
 
   CheckFixedToHalfConversion(Val, getUAccumSema(), 0.499755859375f);
   CheckFixedToHalfConversion(Val, getULFractSema(), 0.0000076256692409515380859375f);
+
+  CheckFixedToFloatConversion(Val, getS32Pos2(), 131008.0f);
+}
+
+void CheckAdd(const APFixedPoint &Lhs, const APFixedPoint &Rhs,
+              const APFixedPoint &Res) {
+  bool Overflow = false;
+  APFixedPoint Result = Lhs.add(Rhs, &Overflow);
+  ASSERT_FALSE(Overflow);
+  ASSERT_EQ(Result.getSemantics(), Res.getSemantics());
+  ASSERT_EQ(Result, Res);
+}
+
+void CheckAddOverflow(const APFixedPoint &Lhs, const APFixedPoint &Rhs) {
+  bool Overflow = false;
+  APFixedPoint Result = Lhs.add(Rhs, &Overflow);
+  ASSERT_TRUE(Overflow);
+}
+
+TEST(FixedPoint, add) {
+  CheckAdd(APFixedPoint(1, getS32Pos2()), APFixedPoint(1, getS32Pos2()),
+           APFixedPoint(2, getS32Pos2()));
+  CheckAdd(APFixedPoint(1, getS16Neg18()), APFixedPoint(1, getS16Neg18()),
+           APFixedPoint(2, getS16Neg18()));
+  CheckAdd(APFixedPoint(1, getU8Neg10()), APFixedPoint(1, getU8Neg10()),
+           APFixedPoint(2, getU8Neg10()));
+  CheckAdd(APFixedPoint(1, getU8Pos4()), APFixedPoint(1, getU8Pos4()),
+           APFixedPoint(2, getU8Pos4()));
+
+  CheckAdd(APFixedPoint(11, getS32Pos2()), APFixedPoint(1, getS32Pos2()),
+           APFixedPoint(12, getS32Pos2()));
+  CheckAdd(APFixedPoint(11, getS16Neg18()), APFixedPoint(1, getS16Neg18()),
+           APFixedPoint(12, getS16Neg18()));
+  CheckAdd(APFixedPoint(11, getU8Neg10()), APFixedPoint(1, getU8Neg10()),
+           APFixedPoint(12, getU8Neg10()));
+  CheckAdd(APFixedPoint(11, getU8Pos4()), APFixedPoint(1, getU8Pos4()),
+           APFixedPoint(12, getU8Pos4()));
+
+  CheckAdd(APFixedPoint(11, getS32Pos2()), APFixedPoint(1, getS16Neg18()),
+           APFixedPoint(11534337,
+                        FixedPointSemantics(52, FixedPointSemantics::Lsb{-18},
+                                            true, false, false)));
+  CheckAdd(
+      APFixedPoint(11, getU8Neg10()), APFixedPoint(-9472, getS16Neg18()),
+      APFixedPoint(-6656, FixedPointSemantics(17, FixedPointSemantics::Lsb{-18},
+                                              true, false, false)));
+  CheckAddOverflow(
+      APFixedPoint::getMax(getU8Neg10()), APFixedPoint::getMax(getS16Neg18()));
+  CheckAdd(APFixedPoint::getMin(getU8Neg10()),
+           APFixedPoint::getMin(getS16Neg18()),
+           APFixedPoint::getMin(getS16Neg18())
+               .convert(FixedPointSemantics(17, FixedPointSemantics::Lsb{-18},
+                                            true, false, false)));
+  CheckAddOverflow(APFixedPoint::getMin(getS32Pos2()),
+                   APFixedPoint::getMin(getS16Neg18()));
+}
+
+void CheckMul(const APFixedPoint &Lhs, const APFixedPoint &Rhs,
+              const APFixedPoint &Res) {
+  bool Overflow = false;
+  APFixedPoint Result = Lhs.mul(Rhs, &Overflow);
+  ASSERT_FALSE(Overflow);
+  ASSERT_EQ(Result.getSemantics(), Res.getSemantics());
+  ASSERT_EQ(Result, Res);
+}
+
+void CheckMulOverflow(const APFixedPoint &Lhs, const APFixedPoint &Rhs) {
+  bool Overflow = false;
+  APFixedPoint Result = Lhs.mul(Rhs, &Overflow);
+  ASSERT_TRUE(Overflow);
+}
+
+TEST(FixedPoint, mul) {
+  CheckMul(APFixedPoint(1, getS32Pos2()), APFixedPoint(1, getS32Pos2()),
+           APFixedPoint(4, getS32Pos2()));
+  CheckMul(APFixedPoint(1, getS16Neg18()), APFixedPoint(1, getS16Neg18()),
+           APFixedPoint(0, getS16Neg18()));
+  CheckMul(APFixedPoint(1, getU8Neg10()), APFixedPoint(1, getU8Neg10()),
+           APFixedPoint(0, getU8Neg10()));
+  CheckMul(APFixedPoint(1, getU8Pos4()), APFixedPoint(1, getU8Pos4()),
+           APFixedPoint(16, getU8Pos4()));
+
+  CheckMul(APFixedPoint(11, getS32Pos2()), APFixedPoint(1, getS32Pos2()),
+           APFixedPoint(44, getS32Pos2()));
+  CheckMul(APFixedPoint(11, getS16Neg18()), APFixedPoint(1, getS16Neg18()),
+           APFixedPoint(0, getS16Neg18()));
+  CheckMul(APFixedPoint(11, getU8Neg10()), APFixedPoint(1, getU8Neg10()),
+           APFixedPoint(0, getU8Neg10()));
+  CheckMul(APFixedPoint(11, getU8Pos4()), APFixedPoint(1, getU8Pos4()),
+           APFixedPoint(176, getU8Pos4()));
+
+  CheckMul(APFixedPoint(512, getS16Neg18()), APFixedPoint(512, getS16Neg18()),
+           APFixedPoint(1, getS16Neg18()));
+  CheckMul(APFixedPoint(32, getU8Neg10()), APFixedPoint(32, getU8Neg10()),
+           APFixedPoint(1, getU8Neg10()));
+
+  CheckMul(APFixedPoint(11, getS32Pos2()), APFixedPoint(1, getS16Neg18()),
+           APFixedPoint(44,
+                        FixedPointSemantics(52, FixedPointSemantics::Lsb{-18},
+                                            true, false, false)));
+  CheckMul(
+      APFixedPoint(11, getU8Neg10()), APFixedPoint(-9472, getS16Neg18()),
+      APFixedPoint(-102, FixedPointSemantics(17, FixedPointSemantics::Lsb{-18},
+                                             true, false, false)));
+  CheckMul(
+      APFixedPoint::getMax(getU8Neg10()), APFixedPoint::getMax(getS16Neg18()),
+      APFixedPoint(8159, FixedPointSemantics(17, FixedPointSemantics::Lsb{-18},
+                                             true, false, false)));
+  CheckMul(
+      APFixedPoint::getMin(getU8Neg10()), APFixedPoint::getMin(getS16Neg18()),
+      APFixedPoint(0, FixedPointSemantics(17, FixedPointSemantics::Lsb{-18},
+                                          true, false, false)));
+  CheckMul(APFixedPoint::getMin(getS32Pos2()),
+           APFixedPoint::getMin(getS16Neg18()),
+           APFixedPoint(281474976710656,
+                        FixedPointSemantics(52, FixedPointSemantics::Lsb{-18},
+                                            true, false, false)));
+  CheckMulOverflow(APFixedPoint::getMax(getS32Pos2()), APFixedPoint::getMax(getU8Pos4()));
+  CheckMulOverflow(APFixedPoint::getMin(getS32Pos2()), APFixedPoint::getMax(getU8Pos4()));
+}
+
+void CheckDiv(const APFixedPoint &Lhs, const APFixedPoint &Rhs,
+              const APFixedPoint &Expected) {
+  bool Overflow = false;
+  APFixedPoint Result = Lhs.div(Rhs, &Overflow);
+  ASSERT_FALSE(Overflow);
+  ASSERT_EQ(Result.getSemantics(), Expected.getSemantics());
+  ASSERT_EQ(Result, Expected);
+}
+
+void CheckDivOverflow(const APFixedPoint &Lhs, const APFixedPoint &Rhs) {
+  bool Overflow = false;
+  APFixedPoint Result = Lhs.div(Rhs, &Overflow);
+  ASSERT_TRUE(Overflow);
+}
+
+TEST(FixedPoint, div) {
+  CheckDiv(APFixedPoint(1, getS32Pos2()), APFixedPoint(1, getS32Pos2()),
+           APFixedPoint(0, getS32Pos2()));
+  CheckDivOverflow(APFixedPoint(1, getS16Neg18()), APFixedPoint(1, getS16Neg18()));
+  CheckDivOverflow(APFixedPoint(1, getU8Neg10()), APFixedPoint(1, getU8Neg10()));
+  CheckDiv(APFixedPoint(1, getU8Pos4()), APFixedPoint(1, getU8Pos4()),
+           APFixedPoint(0, getU8Pos4()));
+
+  CheckDiv(APFixedPoint(11, getS32Pos2()), APFixedPoint(1, getS32Pos2()),
+           APFixedPoint(2, getS32Pos2()));
+  CheckDiv(APFixedPoint(11, getU8Pos4()), APFixedPoint(1, getU8Pos4()),
+           APFixedPoint(0, getU8Pos4()));
+
+  CheckDiv(APFixedPoint(11, getS32Pos2()), APFixedPoint(1, getS16Neg18()),
+           APFixedPoint(3023656976384,
+                        FixedPointSemantics(52, FixedPointSemantics::Lsb{-18},
+                                            true, false, false)));
+  CheckDiv(APFixedPoint(11, getU8Neg10()), APFixedPoint(-11264, getS16Neg18()),
+           APFixedPoint::getMin(FixedPointSemantics(
+               17, FixedPointSemantics::Lsb{-18}, true, false, false)));
+  CheckDiv(APFixedPoint(11, getU8Neg10()), APFixedPoint(11265, getS16Neg18()),
+           APFixedPoint(0xfffa,
+                        FixedPointSemantics(17, FixedPointSemantics::Lsb{-18},
+                                            true, false, false)));
+  CheckDivOverflow(APFixedPoint(11, getU8Neg10()),
+                   APFixedPoint(11264, getS16Neg18()));
+
+  CheckDivOverflow(APFixedPoint(11, getU8Neg10()),
+                   APFixedPoint(-9472, getS16Neg18()));
+  CheckDivOverflow(APFixedPoint::getMax(getU8Neg10()),
+                   APFixedPoint::getMax(getS16Neg18()));
+  CheckDiv(
+      APFixedPoint::getMin(getU8Neg10()), APFixedPoint::getMin(getS16Neg18()),
+      APFixedPoint(0, FixedPointSemantics(17, FixedPointSemantics::Lsb{-18},
+                                          true, false, false)));
+  CheckDiv(
+      APFixedPoint(1, getU8Neg10()), APFixedPoint::getMin(getS16Neg18()),
+      APFixedPoint(-2048, FixedPointSemantics(17, FixedPointSemantics::Lsb{-18},
+                                              true, false, false)));
 }
 
 } // namespace

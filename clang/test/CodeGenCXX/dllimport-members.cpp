@@ -875,3 +875,23 @@ USEMV(MemVarTmpl, StaticVar<ExplicitDecl_Imported>)
 // GNU-DAG: @_ZN10MemVarTmpl9StaticVarI21ExplicitSpec_ImportedEE        = external dllimport constant i32
 template<> __declspec(dllimport) const int MemVarTmpl::StaticVar<ExplicitSpec_Imported>;
 USEMV(MemVarTmpl, StaticVar<ExplicitSpec_Imported>)
+
+
+//===----------------------------------------------------------------------===//
+// Class template members
+//===----------------------------------------------------------------------===//
+
+template <typename> struct ClassTmplMem {
+  void __declspec(dllimport) importedNormal();
+  static void __declspec(dllimport) importedStatic();
+};
+// MSVC imports explicit specialization of imported class template member function; MinGW does not.
+// M32-DAG: declare dllimport x86_thiscallcc void @"?importedNormal@?$ClassTmplMem@H@@QAEXXZ"
+// G32-DAG: declare dso_local x86_thiscallcc void @_ZN12ClassTmplMemIiE14importedNormalEv
+template<> void ClassTmplMem<int>::importedNormal();
+USEMF(ClassTmplMem<int>, importedNormal);
+
+// M32-DAG: declare dllimport void @"?importedStatic@?$ClassTmplMem@H@@SAXXZ"
+// G32-DAG: declare dso_local void @_ZN12ClassTmplMemIiE14importedStaticEv
+template<> void ClassTmplMem<int>::importedStatic();
+USEMF(ClassTmplMem<int>, importedStatic);

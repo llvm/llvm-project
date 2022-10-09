@@ -447,7 +447,7 @@ walkCaptureCategories(T visitor, Fortran::lower::AbstractConverter &converter,
   if (Fortran::semantics::IsProcedure(sym))
     return CapturedProcedure::visit(visitor, converter, sym, ba);
   ba.analyze(sym);
-  if (Fortran::evaluate::IsAllocatableOrPointer(sym))
+  if (Fortran::semantics::IsAllocatableOrPointer(sym))
     return CapturedAllocatableAndPointer::visit(visitor, converter, sym, ba);
   if (ba.isArray())
     return CapturedArrays::visit(visitor, converter, sym, ba);

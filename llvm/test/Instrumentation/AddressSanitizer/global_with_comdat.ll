@@ -5,9 +5,9 @@
 ; enabled as indicator symbols will cause link time odr violations.
 ; This is to fix PR 47925.
 ;
-; RUN: opt < %s -passes='asan-pipeline'             -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,NOCOMDAT
+; RUN: opt < %s -passes=asan             -asan-globals-live-support=1 -S | FileCheck %s --check-prefixes=CHECK,NOCOMDAT
 ; Check that enabling odr indicators enables comdat for globals.
-; RUN: opt < %s -passes='asan-pipeline'             -asan-globals-live-support=1 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK,COMDAT
+; RUN: opt < %s -passes=asan             -asan-globals-live-support=1 -asan-use-odr-indicator=1 -S | FileCheck %s --check-prefixes=CHECK,COMDAT
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

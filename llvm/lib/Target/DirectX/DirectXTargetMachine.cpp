@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectXTargetMachine.h"
+#include "DXILResourceAnalysis.h"
 #include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
 #include "DirectXSubtarget.h"
@@ -25,6 +26,7 @@
 #include "llvm/MC/MCSectionDXContainer.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -39,6 +41,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeEmbedDXILPassPass(*PR);
   initializeDXILOpLoweringLegacyPass(*PR);
   initializeDXILTranslateMetadataPass(*PR);
+  initializeDXILResourceWrapperPass(*PR);
 }
 
 class DXILTargetObjectFile : public TargetLoweringObjectFile {
@@ -91,6 +94,22 @@ DirectXTargetMachine::DirectXTargetMachine(const Target &T, const Triple &TT,
 }
 
 DirectXTargetMachine::~DirectXTargetMachine() {}
+
+void DirectXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+  PB.registerPipelineParsingCallback(
+      [](StringRef PassName, ModulePassManager &PM,
+         ArrayRef<PassBuilder::PipelineElement>) {
+        if (PassName == "print-dxil-resource") {
+          PM.addPass(DXILResourcePrinterPass(dbgs()));
+          return true;
+        }
+        return false;
+      });
+
+  PB.registerAnalysisRegistrationCallback([](ModuleAnalysisManager &MAM) {
+    MAM.registerPass([&] { return DXILResourceAnalysis(); });
+  });
+}
 
 bool DirectXTargetMachine::addPassesToEmitFile(
     PassManagerBase &PM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,

@@ -149,7 +149,7 @@ define <2 x i8> @ashr_constant_op0(i8 %x) {
 define <2 x i8> @ashr_constant_op0_not_undef_lane(i8 %x) {
 ; CHECK-LABEL: @ashr_constant_op0_not_undef_lane(
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i8> undef, i8 [[X:%.*]], i64 1
-; CHECK-NEXT:    [[BO:%.*]] = lshr <2 x i8> <i8 5, i8 2>, [[INS]]
+; CHECK-NEXT:    [[BO:%.*]] = lshr exact <2 x i8> <i8 5, i8 2>, [[INS]]
 ; CHECK-NEXT:    ret <2 x i8> [[BO]]
 ;
   %ins = insertelement <2 x i8> undef, i8 %x, i32 1
