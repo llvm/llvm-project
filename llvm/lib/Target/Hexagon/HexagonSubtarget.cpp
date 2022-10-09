@@ -182,10 +182,12 @@ bool HexagonSubtarget::isHVXElementType(MVT Ty, bool IncludeBool) const {
   return llvm::is_contained(ElemTypes, Ty);
 }
 
-bool HexagonSubtarget::isHVXVectorType(MVT VecTy, bool IncludeBool) const {
+bool HexagonSubtarget::isHVXVectorType(EVT VecTy, bool IncludeBool) const {
+  if (!VecTy.isSimple())
+    return false;
   if (!VecTy.isVector() || !useHVXOps() || VecTy.isScalableVector())
     return false;
-  MVT ElemTy = VecTy.getVectorElementType();
+  MVT ElemTy = VecTy.getSimpleVT().getVectorElementType();
   if (!IncludeBool && ElemTy == MVT::i1)
     return false;
 

@@ -1,11 +1,11 @@
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -ast-print %s | FileCheck %s --check-prefix=AST
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -verify -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify=pch %s -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -verify -fopenmp -fopenmp-enable-irbuilder -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-enable-irbuilder -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -verify -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -fopenmp-enable-irbuilder -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify=pch %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -ast-print %s | FileCheck %s --check-prefix=AST
+// RUN: %clang_cc1 -fopenmp -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -verify -o %t %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify=pch %s -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -triple x86_64-apple-darwin10 -fopenmp -fexceptions -fcxx-exceptions -debug-info-kind=line-tables-only -x c++ -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-enable-irbuilder -x c++ -emit-llvm %s -fexceptions -fcxx-exceptions -triple x86_64-unknown-unknown -o - | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-enable-irbuilder -x c++ -std=c++11 -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -emit-pch -verify -o %t %s
+// RUN: %clang_cc1 -fopenmp -fopenmp-enable-irbuilder -x c++ -triple x86_64-unknown-unknown -fexceptions -fcxx-exceptions -std=c++11 -include-pch %t -verify=pch %s -emit-llvm -o - | FileCheck %s
 
 // pch-no-diagnostics
 
@@ -114,29 +114,29 @@ int lambda_outer() {
 // CHECK-SAME: [[attr0:#[0-9]]]
 // CHECK: define{{.*}} void @_Z3barv()
 // CHECK-SAME: [[attr1:#[0-9]]]
-// CHECK:   call{{.*}} @_ZN3BARC1Ev(%class.BAR*{{.*}} %b)
+// CHECK:   call{{.*}} @_ZN3BARC1Ev(ptr{{.*}} %b)
 // CHECK-SAME: [[attr9:#[0-9]]]
-// CHECK: define{{.*}} void @_ZN3BARC1Ev(%class.BAR*{{.*}} %this)
+// CHECK: define{{.*}} void @_ZN3BARC1Ev(ptr{{.*}} %this)
 // CHECK-SAME: [[attr2:#[0-9]]]
-// CHECK:   call{{.*}} @_ZN3BARC2Ev(%class.BAR*{{.*}} %this1)
+// CHECK:   call{{.*}} @_ZN3BARC2Ev(ptr{{.*}} %this1)
 // CHECK-SAME: [[attr9]]
-// CHECK: define{{.*}} void @_ZN3BARC2Ev(%class.BAR*{{.*}} %this)
+// CHECK: define{{.*}} void @_ZN3BARC2Ev(ptr{{.*}} %this)
 // CHECK-SAME: [[attr3:#[0-9]]]
 // CHECK: define{{.*}} void @_Z3bazv()
 // CHECK-SAME: [[attr4:#[0-9]]]
-// CHECK:   call{{.*}} @_ZN3BAZIfEC1Ev(%class.BAZ*{{.*}} %b)
+// CHECK:   call{{.*}} @_ZN3BAZIfEC1Ev(ptr{{.*}} %b)
 // CHECK-SAME: [[attr10:#[0-9]]]
-// CHECK: define{{.*}} void @_ZN3BAZIfEC1Ev(%class.BAZ*{{.*}} %this)
+// CHECK: define{{.*}} void @_ZN3BAZIfEC1Ev(ptr{{.*}} %this)
 // CHECK-SAME: [[attr5:#[0-9]]]
-// CHECK:   call{{.*}} @_ZN3BAZIfEC2Ev(%class.BAZ*{{.*}} %this1)
+// CHECK:   call{{.*}} @_ZN3BAZIfEC2Ev(ptr{{.*}} %this1)
 // CHECK-SAME: [[attr10]]
-// CHECK: define{{.*}} void @_ZN3BAZIfEC2Ev(%class.BAZ*{{.*}} %this)
+// CHECK: define{{.*}} void @_ZN3BAZIfEC2Ev(ptr{{.*}} %this)
 // CHECK-SAME: [[attr6:#[0-9]]]
 // CHECK: define{{.*}} i32 @_Z12lambda_outerv()
 // CHECK-SAME: [[attr7:#[0-9]]]
 // CHECK: call{{.*}} @"_ZZ12lambda_outervENK3$_0clEv"
 // CHECK-SAME: [[attr11:#[0-9]]]
-// CHECK: define{{.*}} i32 @"_ZZ12lambda_outervENK3$_0clEv"(%class.anon*{{.*}} %this)
+// CHECK: define{{.*}} i32 @"_ZZ12lambda_outervENK3$_0clEv"(ptr{{.*}} %this)
 // CHECK-SAME: [[attr8:#[0-9]]]
 
 // CHECK:     attributes [[attr0]]

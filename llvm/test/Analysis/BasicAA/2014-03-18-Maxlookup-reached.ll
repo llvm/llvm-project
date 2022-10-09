@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -gvn  -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -gvn  -S | FileCheck %s
 
 ; PR15967
 ; BasicAA claims no alias when there is (due to a problem when the MaxLookup

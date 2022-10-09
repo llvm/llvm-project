@@ -133,6 +133,17 @@ add_libc_unittest(
     libc.src.string.strerror
 )
 
+
+add_libc_unittest(
+  strerror_r_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strerror_r_test.cpp
+  DEPENDS
+    libc.src.string.strerror_r
+)
+
 add_libc_unittest(
   strlcat_test
   SUITE
@@ -232,6 +243,16 @@ add_libc_unittest(
     strrchr_test.cpp
   DEPENDS
     libc.src.string.strrchr
+)
+
+add_libc_unittest(
+  strsignal_test
+  SUITE
+    libc_string_unittests
+  SRCS
+    strsignal_test.cpp
+  DEPENDS
+    libc.src.string.strsignal
 )
 
 add_libc_unittest(

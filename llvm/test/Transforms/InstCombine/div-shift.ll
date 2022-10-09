@@ -572,3 +572,161 @@ define i5 @udiv_mul_shl_missing_nsw2(i5 %x, i5 %y, i5 %z) {
   %d = udiv i5 %m1, %m2
   ret i5 %d
 }
+
+define i8 @udiv_shl_nuw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_shl_nuw(
+; CHECK-NEXT:    [[S:%.*]] = shl nuw i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[S]]
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %s = shl nuw i8 %y, %z
+  %d = udiv i8 %x, %s
+  ret i8 %d
+}
+
+define <2 x i4> @udiv_shl_nuw_exact(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
+; CHECK-LABEL: @udiv_shl_nuw_exact(
+; CHECK-NEXT:    [[S:%.*]] = shl nuw <2 x i4> [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv exact <2 x i4> [[X:%.*]], [[S]]
+; CHECK-NEXT:    ret <2 x i4> [[D]]
+;
+  %s = shl nuw <2 x i4> %y, %z
+  %d = udiv exact <2 x i4> %x, %s
+  ret <2 x i4> %d
+}
+
+define i8 @udiv_shl(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_shl(
+; CHECK-NEXT:    [[S:%.*]] = shl i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[S]]
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %s = shl i8 %y, %z
+  %d = udiv i8 %x, %s
+  ret i8 %d
+}
+
+define i8 @udiv_shl_nuw_use(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_shl_nuw_use(
+; CHECK-NEXT:    [[S:%.*]] = shl nuw i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[S]]
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %s = shl nuw i8 %y, %z
+  call void @use(i8 %s)
+  %d = udiv i8 %x, %s
+  ret i8 %d
+}
+
+define i8 @udiv_lshr_mul_nuw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_lshr_mul_nuw(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[S]], [[X]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %m = mul nuw i8 %x, %y
+  %s = lshr i8 %m, %z
+  %div = udiv i8 %s, %x
+  ret i8 %div
+}
+
+define <2 x i4> @udiv_lshr_mul_nuw_commute1(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
+; CHECK-LABEL: @udiv_lshr_mul_nuw_commute1(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i4> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i4> [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv <2 x i4> [[S]], [[X]]
+; CHECK-NEXT:    ret <2 x i4> [[DIV]]
+;
+  %m = mul nuw <2 x i4> %y, %x
+  %s = lshr <2 x i4> %m, %z
+  %div = udiv <2 x i4> %s, %x
+  ret <2 x i4> %div
+}
+
+define i8 @udiv_lshr_mul_nuw_commute2(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_lshr_mul_nuw_commute2(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[Z:%.*]], [[M]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[S]], [[X]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %m = mul nuw i8 %y, %x
+  %s = lshr i8 %z, %m
+  %div = udiv i8 %s, %x
+  ret i8 %div
+}
+
+define i8 @udiv_lshr_mul_nuw_use1(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_lshr_mul_nuw_use1(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[M]])
+; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[S]], [[X]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %m = mul nuw i8 %x, %y
+  call void @use(i8 %m)
+  %s = lshr i8 %m, %z
+  %div = udiv i8 %s, %x
+  ret i8 %div
+}
+
+define i8 @udiv_lshr_mul_nuw_use2(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_lshr_mul_nuw_use2(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[S]], [[X]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %m = mul nuw i8 %x, %y
+  %s = lshr i8 %m, %z
+  call void @use(i8 %s)
+  %div = udiv i8 %s, %x
+  ret i8 %div
+}
+
+define i8 @udiv_lshr_mul_nuw_use3(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_lshr_mul_nuw_use3(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[M]])
+; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[S]])
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[S]], [[X]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %m = mul nuw i8 %x, %y
+  call void @use(i8 %m)
+  %s = lshr i8 %m, %z
+  call void @use(i8 %s)
+  %div = udiv i8 %s, %x
+  ret i8 %div
+}
+
+define i8 @udiv_lshr_mul_nsw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_lshr_mul_nsw(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i8 [[S]], [[X]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %m = mul nsw i8 %x, %y
+  %s = lshr i8 %m, %z
+  %div = udiv i8 %s, %x
+  ret i8 %div
+}
+
+define i8 @sdiv_lshr_mul_nsw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sdiv_lshr_mul_nsw(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = lshr i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[S]], [[X]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %m = mul nsw i8 %x, %y
+  %s = lshr i8 %m, %z
+  %div = sdiv i8 %s, %x
+  ret i8 %div
+}

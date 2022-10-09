@@ -15,6 +15,7 @@ define i8 @t0(i8 %x) {
   %div = sdiv exact i8 %x, -32
   ret i8 %div
 }
+
 define i8 @n1(i8 %x) {
 ; CHECK-LABEL: @n1(
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X:%.*]], -32

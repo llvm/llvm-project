@@ -634,14 +634,15 @@ typename V::R_SExpr Literal::traverse(V &Vs, typename V::R_Ctx Ctx) {
 /// At compile time, pointer literals are represented by symbolic names.
 class LiteralPtr : public SExpr {
 public:
-  LiteralPtr(const ValueDecl *D) : SExpr(COP_LiteralPtr), Cvdecl(D) {}
+  LiteralPtr(const ValueDecl *D) : SExpr(COP_LiteralPtr), Cvdecl(D) {
+    assert(D && "ValueDecl must not be null");
+  }
   LiteralPtr(const LiteralPtr &) = default;
 
   static bool classof(const SExpr *E) { return E->opcode() == COP_LiteralPtr; }
 
   // The clang declaration for the value that this pointer points to.
   const ValueDecl *clangDecl() const { return Cvdecl; }
-  void setClangDecl(const ValueDecl *VD) { Cvdecl = VD; }
 
   template <class V>
   typename V::R_SExpr traverse(V &Vs, typename V::R_Ctx Ctx) {
@@ -650,8 +651,6 @@ public:
 
   template <class C>
   typename C::CType compare(const LiteralPtr* E, C& Cmp) const {
-    if (!Cvdecl || !E->Cvdecl)
-      return Cmp.comparePointers(this, E);
     return Cmp.comparePointers(Cvdecl, E->Cvdecl);
   }
 

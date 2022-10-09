@@ -89,6 +89,15 @@ types and built-in templates. Clang is already designed to allow an attached
 ``ExternalSemaSource`` to lazily complete data types, which is a **huge**
 performance win for HLSL.
 
+If precompiled headers are used when compiling HLSL, the ``ExternalSemaSource``
+will be a ``MultiplexExternalSemaSource`` which includes both the ``ASTReader``
+and ``HLSLExternalSemaSource``. For Built-in declarations that are already
+completed in the serialized AST, the ``HLSLExternalSemaSource`` will reuse the
+existing declarations and not introduce new declarations. If the built-in types
+are not completed in the serialized AST, the ``HLSLExternalSemaSource`` will
+create new declarations and connect the de-serialized decls as the previous
+declaration.
+
 CodeGen
 -------
 

@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -gvn -instcombine -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -gvn -instcombine -S | FileCheck %s
 ; PR1600
 
 declare i16 @llvm.cttz.i16(i16, i1)

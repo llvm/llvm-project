@@ -23,6 +23,7 @@
 
 using namespace mlir;
 
+/// Custom parser for ReplicateOp.
 static ParseResult parsePDLOpTypedResults(
     OpAsmParser &parser, SmallVectorImpl<Type> &types,
     const SmallVectorImpl<OpAsmParser::UnresolvedOperand> &handles) {
@@ -30,8 +31,22 @@ static ParseResult parsePDLOpTypedResults(
   return success();
 }
 
+/// Custom printer for ReplicateOp.
 static void printPDLOpTypedResults(OpAsmPrinter &, Operation *, TypeRange,
                                    ValueRange) {}
+
+/// Custom parser for SplitHandlesOp.
+static ParseResult parseStaticNumPDLResults(OpAsmParser &parser,
+                                            SmallVectorImpl<Type> &types,
+                                            IntegerAttr numHandlesAttr) {
+  types.resize(numHandlesAttr.getInt(),
+               pdl::OperationType::get(parser.getContext()));
+  return success();
+}
+
+/// Custom printer for SplitHandlesOp.
+static void printStaticNumPDLResults(OpAsmPrinter &, Operation *, TypeRange,
+                                     IntegerAttr) {}
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
@@ -450,6 +465,46 @@ OpFoldResult transform::MergeHandlesOp::fold(ArrayRef<Attribute> operands) {
   // If deduplication is not required and there is only one operand, it can be
   // used directly instead of merging.
   return getHandles().front();
+}
+
+//===----------------------------------------------------------------------===//
+// SplitHandlesOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::SplitHandlesOp::apply(transform::TransformResults &results,
+                                 transform::TransformState &state) {
+  int64_t numResultHandles =
+      getHandle() ? state.getPayloadOps(getHandle()).size() : 0;
+  int64_t expectedNumResultHandles = getNumResultHandles();
+  if (numResultHandles != expectedNumResultHandles) {
+    // Failing case needs to propagate gracefully for both suppress and
+    // propagate modes.
+    for (int64_t idx = 0; idx < expectedNumResultHandles; ++idx)
+      results.set(getResults()[idx].cast<OpResult>(), {});
+    // Empty input handle corner case: always propagates empty handles in both
+    // suppress and propagate modes.
+    if (numResultHandles == 0)
+      return DiagnosedSilenceableFailure::success();
+    // If the input handle was not empty and the number of result handles does
+    // not match, this is a legit silenceable error.
+    return emitSilenceableError()
+           << getHandle() << " expected to contain " << expectedNumResultHandles
+           << " operation handles but it only contains " << numResultHandles
+           << " handles";
+  }
+  // Normal successful case.
+  for (auto en : llvm::enumerate(state.getPayloadOps(getHandle())))
+    results.set(getResults()[en.index()].cast<OpResult>(), en.value());
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::SplitHandlesOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getHandle(), effects);
+  producesHandle(getResults(), effects);
+  // There are no effects on the Payload IR as this is only a handle
+  // manipulation.
 }
 
 //===----------------------------------------------------------------------===//

@@ -647,20 +647,22 @@ ReprocessLoop:
         Instruction *Inst = &*I++;
         if (Inst == CI)
           continue;
+        bool InstInvariant = false;
         if (!L->makeLoopInvariant(
-                Inst, AnyInvariant,
+                Inst, InstInvariant,
                 Preheader ? Preheader->getTerminator() : nullptr, MSSAU)) {
           AllInvariant = false;
           break;
         }
+        if (InstInvariant && SE) {
+          // The loop disposition of all SCEV expressions that depend on any
+          // hoisted values have also changed.
+          SE->forgetBlockAndLoopDispositions(Inst);
+        }
+        AnyInvariant |= InstInvariant;
       }
-      if (AnyInvariant) {
+      if (AnyInvariant)
         Changed = true;
-        // The loop disposition of all SCEV expressions that depend on any
-        // hoisted values have also changed.
-        if (SE)
-          SE->forgetLoopDispositions();
-      }
       if (!AllInvariant) continue;
 
       // The block has now been cleared of all instructions except for

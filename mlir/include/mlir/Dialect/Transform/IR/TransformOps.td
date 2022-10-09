@@ -210,6 +210,34 @@ def MergeHandlesOp : TransformDialectOp<"merge_handles",
   let hasFolder = 1;
 }
 
+def SplitHandlesOp : TransformDialectOp<"split_handles",
+    [FunctionalStyleTransformOpTrait,
+     DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "Splits handles from a union of payload ops to a list";
+  let description = [{
+    Creates `num_result_handles` transform IR handles extracted from the 
+    `handle` operand. The resulting Payload IR operation handles are listed
+    in the same order as the operations appear in the source `handle`.
+    This is useful for ensuring a statically known number of operations are
+    tracked by the source `handle` and to extract them into individual handles
+    that can be further manipulated in isolation.
+
+    This operation succeeds and returns `num_result_handles` if the statically
+    specified `num_result_handles` corresponds to the dynamic number of 
+    operations contained in the source `handle`. Otherwise it silently fails.
+  }];
+
+  let arguments = (ins PDL_Operation:$handle,
+                       I64Attr:$num_result_handles);
+  let results = (outs Variadic<PDL_Operation>:$results);
+  let assemblyFormat = [{
+    $handle `in` `[` $num_result_handles `]` 
+    custom<StaticNumPDLResults>(type($results), ref($num_result_handles))
+    attr-dict
+  }];
+}
+
 def PDLMatchOp : TransformDialectOp<"pdl_match",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {

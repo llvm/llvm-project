@@ -3594,11 +3594,6 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
 
 void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
   if (BC->HasRelocations) {
-    ErrorOr<BinarySection &> TextSection =
-        BC->getUniqueSectionByName(BC->getMainCodeSectionName());
-    assert(TextSection && ".text section not found in output");
-    assert(TextSection->hasValidSectionID() && ".text section should be valid");
-
     // Map sections for functions with pre-assigned addresses.
     for (BinaryFunction *InjectedFunction : BC->getInjectedBinaryFunctions()) {
       const uint64_t OutputAddress = InjectedFunction->getOutputAddress();
@@ -3638,7 +3633,9 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
       }
 
       // Make sure we allocate enough space for huge pages.
-      if (opts::HotText) {
+      ErrorOr<BinarySection &> TextSection =
+          BC->getUniqueSectionByName(BC->getMainCodeSectionName());
+      if (opts::HotText && TextSection && TextSection->hasValidSectionID()) {
         uint64_t HotTextEnd =
             TextSection->getOutputAddress() + TextSection->getOutputSize();
         HotTextEnd = alignTo(HotTextEnd, BC->PageAlign);
@@ -3800,6 +3797,16 @@ void RewriteInstance::mapDataSections(RuntimeDyld &RTDyld) {
       ".gcc_except_table", ".rodata", ".rodata.cold"};
   if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary())
     RtLibrary->addRuntimeLibSections(Sections);
+
+  if (!EHFrameSection || !EHFrameSection->isFinalized()) {
+    ErrorOr<BinarySection &> OldEHFrameSection =
+        BC->getUniqueSectionByName(Twine(getOrgSecPrefix(), ".eh_frame").str());
+    if (OldEHFrameSection) {
+      RTDyld.reassignSectionAddress(OldEHFrameSection->getSectionID(),
+                                    NextAvailableAddress);
+      BC->deregisterSection(*OldEHFrameSection);
+    }
+  }
 
   for (std::string &SectionName : Sections) {
     ErrorOr<BinarySection &> Section = BC->getUniqueSectionByName(SectionName);
@@ -4733,26 +4740,28 @@ void RewriteInstance::updateELFSymbolTable(
     Expected<StringRef> SymbolName = Symbol.getName(StringSection);
     assert(SymbolName && "cannot get symbol name");
 
-    auto updateSymbolValue = [&](const StringRef Name, unsigned &IsUpdated) {
-      NewSymbol.st_value = getNewValueForSymbol(Name);
+    auto updateSymbolValue = [&](const StringRef Name,
+                                 Optional<uint64_t> Value = NoneType()) {
+      NewSymbol.st_value = Value ? *Value : getNewValueForSymbol(Name);
       NewSymbol.st_shndx = ELF::SHN_ABS;
       outs() << "BOLT-INFO: setting " << Name << " to 0x"
              << Twine::utohexstr(NewSymbol.st_value) << '\n';
-      ++IsUpdated;
     };
 
     if (opts::HotText &&
-        (*SymbolName == "__hot_start" || *SymbolName == "__hot_end"))
-      updateSymbolValue(*SymbolName, NumHotTextSymsUpdated);
-
-    if (opts::HotData &&
-        (*SymbolName == "__hot_data_start" || *SymbolName == "__hot_data_end"))
-      updateSymbolValue(*SymbolName, NumHotDataSymsUpdated);
-
-    if (*SymbolName == "_end") {
-      unsigned Ignored;
-      updateSymbolValue(*SymbolName, Ignored);
+        (*SymbolName == "__hot_start" || *SymbolName == "__hot_end")) {
+      updateSymbolValue(*SymbolName);
+      ++NumHotTextSymsUpdated;
     }
+
+    if (opts::HotData && (*SymbolName == "__hot_data_start" ||
+                          *SymbolName == "__hot_data_end")) {
+      updateSymbolValue(*SymbolName);
+      ++NumHotDataSymsUpdated;
+    }
+
+    if (*SymbolName == "_end")
+      updateSymbolValue(*SymbolName, NextAvailableAddress);
 
     if (IsDynSym)
       Write((&Symbol - cantFail(Obj.symbols(&SymTabSection)).begin()) *

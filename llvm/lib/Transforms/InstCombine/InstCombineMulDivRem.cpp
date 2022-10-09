@@ -1192,20 +1192,20 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
   if (match(Op1, m_SignMask()))
     return new ZExtInst(Builder.CreateICmpEQ(Op0, Op1), Ty);
 
-  // sdiv exact X,  1<<C  -->    ashr exact X, C   iff  1<<C  is non-negative
-  // sdiv exact X, -1<<C  -->  -(ashr exact X, C)
-  if (I.isExact() && ((match(Op1, m_Power2()) && match(Op1, m_NonNegative())) ||
-                      match(Op1, m_NegatedPower2()))) {
-    bool DivisorWasNegative = match(Op1, m_NegatedPower2());
-    if (DivisorWasNegative)
-      Op1 = ConstantExpr::getNeg(cast<Constant>(Op1));
-    auto *AShr = BinaryOperator::CreateExactAShr(
-        Op0, ConstantExpr::getExactLogBase2(cast<Constant>(Op1)), I.getName());
-    if (!DivisorWasNegative)
-      return AShr;
-    Builder.Insert(AShr);
-    AShr->setName(I.getName() + ".neg");
-    return BinaryOperator::CreateNeg(AShr, I.getName());
+  if (I.isExact()) {
+    // sdiv exact X, 1<<C --> ashr exact X, C   iff  1<<C  is non-negative
+    if (match(Op1, m_Power2()) && match(Op1, m_NonNegative())) {
+      Constant *C = ConstantExpr::getExactLogBase2(cast<Constant>(Op1));
+      return BinaryOperator::CreateExactAShr(Op0, C);
+    }
+
+    // sdiv exact X, -1<<C --> -(ashr exact X, C)
+    if (match(Op1, m_NegatedPower2())) {
+      Constant *NegPow2C = ConstantExpr::getNeg(cast<Constant>(Op1));
+      Constant *C = ConstantExpr::getExactLogBase2(NegPow2C);
+      Value *Ashr = Builder.CreateAShr(Op0, C, I.getName() + ".neg", true);
+      return BinaryOperator::CreateNeg(Ashr);
+    }
   }
 
   const APInt *Op1C;

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple armv8.2a-linux-gnu -target-abi apcs-gnu -target-feature +neon -target-feature +fullfp16 \
-// RUN: -fallow-half-arguments-and-returns -S -disable-O0-optnone -emit-llvm -o - %s \
+// RUN: %clang_cc1 -triple armv8.2a-linux-gnu -target-abi apcs-gnu -target-feature +neon -target-feature +fullfp16 \
+// RUN: -S -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -mem2reg \
 // RUN: | FileCheck %s
 
@@ -842,54 +842,54 @@ float16x8_t test_vbslq_f16(uint16x8_t a, float16x8_t b, float16x8_t c) {
 
 // CHECK-LABEL: test_vzip_f16
 // CHECK:  [[VZIP0:%.*]] = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 4, i32 1, i32 5>
-// CHECK:  store <4 x half> [[VZIP0]], <4 x half>* [[addr1:%.*]]
+// CHECK:  store <4 x half> [[VZIP0]], ptr [[addr1:%.*]]
 // CHECK:  [[VZIP1:%.*]] = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-// CHECK:  store <4 x half> [[VZIP1]], <4 x half>* [[addr2:%.*]]
+// CHECK:  store <4 x half> [[VZIP1]], ptr [[addr2:%.*]]
 float16x4x2_t test_vzip_f16(float16x4_t a, float16x4_t b) {
   return vzip_f16(a, b);
 }
 
 // CHECK-LABEL: test_vzipq_f16
 // CHECK:  [[VZIP0:%.*]] = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
-// CHECK:  store <8 x half> [[VZIP0]], <8 x half>* [[addr1:%.*]]
+// CHECK:  store <8 x half> [[VZIP0]], ptr [[addr1:%.*]]
 // CHECK:  [[VZIP1:%.*]] = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// CHECK:  store <8 x half> [[VZIP1]], <8 x half>* [[addr2:%.*]]
+// CHECK:  store <8 x half> [[VZIP1]], ptr [[addr2:%.*]]
 float16x8x2_t test_vzipq_f16(float16x8_t a, float16x8_t b) {
   return vzipq_f16(a, b);
 }
 
 // CHECK-LABEL: test_vuzp_f16
 // CHECK:  [[VUZP0:%.*]] = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-// CHECK:  store <4 x half> [[VUZP0]], <4 x half>* [[addr1:%.*]]
+// CHECK:  store <4 x half> [[VUZP0]], ptr [[addr1:%.*]]
 // CHECK:  [[VUZP1:%.*]] = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-// CHECK:  store <4 x half> [[VUZP1]], <4 x half>* [[addr1:%.*]]
+// CHECK:  store <4 x half> [[VUZP1]], ptr [[addr1:%.*]]
 float16x4x2_t test_vuzp_f16(float16x4_t a, float16x4_t b) {
   return vuzp_f16(a, b);
 }
 
 // CHECK-LABEL: test_vuzpq_f16
 // CHECK:   [[VUZP0:%.*]] = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-// CHECK:   store <8 x half> [[VUZP0]], <8 x half>* [[addr1:%.*]]
+// CHECK:   store <8 x half> [[VUZP0]], ptr [[addr1:%.*]]
 // CHECK:   [[VUZP1:%.*]] = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-// CHECK:   store <8 x half> [[VUZP1]], <8 x half>* [[addr2:%.*]]
+// CHECK:   store <8 x half> [[VUZP1]], ptr [[addr2:%.*]]
 float16x8x2_t test_vuzpq_f16(float16x8_t a, float16x8_t b) {
   return vuzpq_f16(a, b);
 }
 
 // CHECK-LABEL: test_vtrn_f16
 // CHECK:   [[VTRN0:%.*]] = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 4, i32 2, i32 6>
-// CHECK:   store <4 x half> [[VTRN0]], <4 x half>* [[addr1:%.*]]
+// CHECK:   store <4 x half> [[VTRN0]], ptr [[addr1:%.*]]
 // CHECK:   [[VTRN1:%.*]] = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-// CHECK:   store <4 x half> [[VTRN1]], <4 x half>* [[addr2:%.*]]
+// CHECK:   store <4 x half> [[VTRN1]], ptr [[addr2:%.*]]
 float16x4x2_t test_vtrn_f16(float16x4_t a, float16x4_t b) {
   return vtrn_f16(a, b);
 }
 
 // CHECK-LABEL: test_vtrnq_f16
 // CHECK:   [[VTRN0:%.*]] = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
-// CHECK:   store <8 x half> [[VTRN0]], <8 x half>* [[addr1:%.*]]
+// CHECK:   store <8 x half> [[VTRN0]], ptr [[addr1:%.*]]
 // CHECK:   [[VTRN1:%.*]] = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32>  <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-// CHECK:   store <8 x half> [[VTRN1]], <8 x half>* [[addr2:%.*]]
+// CHECK:   store <8 x half> [[VTRN1]], ptr [[addr2:%.*]]
 float16x8x2_t test_vtrnq_f16(float16x8_t a, float16x8_t b) {
   return vtrnq_f16(a, b);
 }
