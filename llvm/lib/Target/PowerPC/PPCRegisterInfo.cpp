@@ -237,8 +237,14 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
   // Standard calling convention CSRs.
   if (TM.isPPC64()) {
-    if (Subtarget.pairedVectorMemops())
+    if (Subtarget.pairedVectorMemops()) {
+      if (Subtarget.isAIXABI()) {
+        if (!TM.getAIXExtendedAltivecABI())
+          return SaveR2 ? CSR_PPC64_R2_SaveList : CSR_PPC64_SaveList;
+        return SaveR2 ? CSR_AIX64_R2_VSRP_SaveList : CSR_AIX64_VSRP_SaveList;
+      }
       return SaveR2 ? CSR_SVR464_R2_VSRP_SaveList : CSR_SVR464_VSRP_SaveList;
+    }
     if (Subtarget.hasAltivec() &&
         (!Subtarget.isAIXABI() || TM.getAIXExtendedAltivecABI())) {
       return SaveR2 ? CSR_PPC64_R2_Altivec_SaveList
@@ -248,6 +254,9 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   }
   // 32-bit targets.
   if (Subtarget.isAIXABI()) {
+    if (Subtarget.pairedVectorMemops())
+      return TM.getAIXExtendedAltivecABI() ? CSR_AIX32_VSRP_SaveList
+                                           : CSR_AIX32_SaveList;
     if (Subtarget.hasAltivec())
       return TM.getAIXExtendedAltivecABI() ? CSR_AIX32_Altivec_SaveList
                                            : CSR_AIX32_SaveList;
@@ -286,6 +295,11 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   }
 
   if (Subtarget.isAIXABI()) {
+    if (Subtarget.pairedVectorMemops()) {
+      if (!TM.getAIXExtendedAltivecABI())
+        return TM.isPPC64() ? CSR_PPC64_RegMask : CSR_AIX32_RegMask;
+      return TM.isPPC64() ? CSR_AIX64_VSRP_RegMask : CSR_AIX32_VSRP_RegMask;
+    }
     return TM.isPPC64()
                ? ((Subtarget.hasAltivec() && TM.getAIXExtendedAltivecABI())
                       ? CSR_PPC64_Altivec_RegMask

@@ -9,19 +9,7 @@ define dso_local noundef signext i32 @virtualCall(ptr noundef %b) #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
 ; CHECK-NEXT:    std 0, 16(1)
-; CHECK-NEXT:    stdu 1, -320(1)
-; CHECK-NEXT:    stxv 52, 128(1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv 53, 144(1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv 54, 160(1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv 55, 176(1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv 56, 192(1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv 57, 208(1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv 58, 224(1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv 59, 240(1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv 60, 256(1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv 61, 272(1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv 62, 288(1) # 16-byte Folded Spill
-; CHECK-NEXT:    stxv 63, 304(1) # 16-byte Folded Spill
+; CHECK-NEXT:    stdu 1, -128(1)
 ; CHECK-NEXT:    std 3, 120(1)
 ; CHECK-NEXT:    ld 3, 120(1)
 ; CHECK-NEXT:    ld 4, 0(3)
@@ -37,19 +25,7 @@ define dso_local noundef signext i32 @virtualCall(ptr noundef %b) #0 {
 ; CHECK-NEXT:    ld 2, 40(1)
 ; CHECK-NEXT:    # kill: def $r3 killed $r3 killed $x3
 ; CHECK-NEXT:    extsw 3, 3
-; CHECK-NEXT:    lxv 63, 304(1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv 62, 288(1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv 61, 272(1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv 60, 256(1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv 59, 240(1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv 58, 224(1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv 57, 208(1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv 56, 192(1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv 55, 176(1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv 54, 160(1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv 53, 144(1) # 16-byte Folded Reload
-; CHECK-NEXT:    lxv 52, 128(1) # 16-byte Folded Reload
-; CHECK-NEXT:    addi 1, 1, 320
+; CHECK-NEXT:    addi 1, 1, 128
 ; CHECK-NEXT:    ld 0, 16(1)
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
