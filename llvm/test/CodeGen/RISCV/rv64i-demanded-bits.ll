@@ -118,6 +118,45 @@ define signext i32 @andi_sub_cse(i32 signext %0, i32 signext %1, ptr %2) {
   ret i32 %5
 }
 
+define signext i32 @addi_sub_cse(i32 signext %0, i32 signext %1, ptr %2) {
+; CHECK-LABEL: addi_sub_cse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subw a0, a0, a1
+; CHECK-NEXT:    addiw a0, a0, -8
+; CHECK-NEXT:    sw a0, 0(a2)
+; CHECK-NEXT:    ret
+  %4 = add i32 %0, -8
+  %5 = sub i32 %4, %1
+  store i32 %5, ptr %2, align 4
+  ret i32 %5
+}
+
+define signext i32 @xori_sub_cse(i32 signext %0, i32 signext %1, ptr %2) {
+; CHECK-LABEL: xori_sub_cse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xori a0, a0, -8
+; CHECK-NEXT:    subw a0, a0, a1
+; CHECK-NEXT:    sw a0, 0(a2)
+; CHECK-NEXT:    ret
+  %4 = xor i32 %0, -8
+  %5 = sub i32 %4, %1
+  store i32 %5, ptr %2, align 4
+  ret i32 %5
+}
+
+define signext i32 @ori_sub_cse(i32 signext %0, i32 signext %1, ptr %2) {
+; CHECK-LABEL: ori_sub_cse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ori a0, a0, -8
+; CHECK-NEXT:    subw a0, a0, a1
+; CHECK-NEXT:    sw a0, 0(a2)
+; CHECK-NEXT:    ret
+  %4 = or i32 %0, -8
+  %5 = sub i32 %4, %1
+  store i32 %5, ptr %2, align 4
+  ret i32 %5
+}
+
 ; SimplifyDemandedBits breaks the ANDI by turning -8 into 0xfffffff8. This
 ; gets CSEd with the AND needed for type legalizing the lshr. This increases
 ; the use count of the AND with 0xfffffff8 making TargetShrinkDemandedConstant
