@@ -303,3 +303,17 @@ define i1 @add_minus_one_decomp_recursive() {
   %cmp = icmp uge i64 %add, 10
   ret i1 %cmp
 }
+
+define i1 @gep_decomp_large_index(ptr %a) {
+entry:
+  %gep.1 = getelementptr inbounds i64, ptr %a, i64 2147483646
+  %gep.2 = getelementptr inbounds i64, ptr %a, i64 2147483647
+  %ne = icmp ne ptr %gep.1, %gep.2
+  call void @llvm.assume(i1 %ne)
+  %cmp.ule = icmp ule ptr %gep.1, %gep.2
+  %cmp.uge = icmp uge ptr %gep.1, %gep.2
+  %res = xor i1 true, false
+  ret i1 %res
+}
+
+declare void @llvm.assume(i1)
