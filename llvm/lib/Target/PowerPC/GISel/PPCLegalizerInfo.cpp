@@ -19,6 +19,7 @@ using namespace LegalizeActions;
 
 PPCLegalizerInfo::PPCLegalizerInfo(const PPCSubtarget &ST) {
   using namespace TargetOpcode;
+  const LLT P0 = LLT::pointer(0, 64);
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
   getActionDefinitionsBuilder(G_IMPLICIT_DEF).legalFor({S64});
@@ -40,6 +41,11 @@ PPCLegalizerInfo::PPCLegalizerInfo(const PPCSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_SITOFP, G_UITOFP})
       .legalForCartesianProduct({S32, S64}, {S64});
+
+  // For now only handle 64 bit, we only support 64 bit integer and zext/sext is
+  // not ready.
+  getActionDefinitionsBuilder({G_LOAD, G_STORE})
+      .legalForTypesWithMemDesc({{S64, P0, S64, 8}});
 
   getLegacyLegalizerInfo().computeTables();
 }
