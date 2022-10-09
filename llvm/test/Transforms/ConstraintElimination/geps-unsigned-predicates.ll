@@ -510,7 +510,7 @@ define void @test.ult.gep.shl(ptr readonly %src, ptr readnone %max, i8 %idx) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[IDX:%.*]], 5
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CHECK_MAX:%.*]], label [[TRAP]]
 ; CHECK:       check.max:
-; CHECK-NEXT:    [[IDX_SHL_1:%.*]] = shl nuw i8 [[IDX]], 1
+; CHECK-NEXT:    [[IDX_SHL_1:%.*]] = shl nuw nsw i8 [[IDX]], 1
 ; CHECK-NEXT:    [[ADD_PTR_SHL_1:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i8 [[IDX_SHL_1]]
 ; CHECK-NEXT:    [[C_MAX_0:%.*]] = icmp ult ptr [[ADD_PTR_SHL_1]], [[MAX]]
 ; CHECK-NEXT:    call void @use(i1 true)
@@ -541,7 +541,7 @@ check.idx:
   br i1 %cmp, label %check.max, label %trap
 
 check.max:
-  %idx.shl.1 = shl nuw i8 %idx, 1
+  %idx.shl.1 = shl nsw nuw i8 %idx, 1
   %add.ptr.shl.1 = getelementptr inbounds i32, ptr %src, i8 %idx.shl.1
   %c.max.0 = icmp ult ptr %add.ptr.shl.1, %max
   call void @use(i1 %c.max.0)
