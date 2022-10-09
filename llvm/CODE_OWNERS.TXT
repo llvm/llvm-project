@@ -233,6 +233,10 @@ N: Craig Topper
 E: craig.topper@gmail.com
 D: X86 Backend
 
+N: Phoebe Wang
+E: phoebe.wang@intel.com
+D: X86 Backend
+
 N: Ulrich Weigand
 E: uweigand@de.ibm.com
 D: SystemZ Backend

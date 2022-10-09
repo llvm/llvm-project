@@ -524,6 +524,10 @@ E: lauro.venancio@indt.org.br
 D: ARM backend improvements
 D: Thread Local Storage implementation
 
+N: Phoebe Wang
+E: phoebe.wang@intel.com
+D: X86 bug fixes and new instruction support.
+
 N: Bill Wendling
 I: wendling
 E: isanbard@gmail.com
