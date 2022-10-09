@@ -170,7 +170,6 @@ define void @test27() {
 ; CHECK-NEXT:    br i1 true, label [[BB2:%.*]], label [[BB3:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[M:%.*]] = call noalias ptr @malloc(i64 10)
-; CHECK-NEXT:    store i8 1, ptr [[M]], align 1
 ; CHECK-NEXT:    br label [[BB3]]
 ; CHECK:       bb3:
 ; CHECK-NEXT:    [[R:%.*]] = phi ptr [ null, [[BB1:%.*]] ], [ [[M]], [[BB2]] ]
