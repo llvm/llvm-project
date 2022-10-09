@@ -341,6 +341,23 @@ static_assert(
         OptionalFileEntryRefDegradesToFileEntryPtr>::value,
     "OptionalFileEntryRefDegradesToFileEntryPtr should be trivially copyable");
 
+inline bool operator==(const FileEntry *LHS,
+                       const Optional<FileEntryRef> &RHS) {
+  return LHS == (RHS ? &RHS->getFileEntry() : nullptr);
+}
+inline bool operator==(const Optional<FileEntryRef> &LHS,
+                       const FileEntry *RHS) {
+  return (LHS ? &LHS->getFileEntry() : nullptr) == RHS;
+}
+inline bool operator!=(const FileEntry *LHS,
+                       const Optional<FileEntryRef> &RHS) {
+  return !(LHS == RHS);
+}
+inline bool operator!=(const Optional<FileEntryRef> &LHS,
+                       const FileEntry *RHS) {
+  return !(LHS == RHS);
+}
+
 /// Cached information about one file (either on disk
 /// or in the virtual file system).
 ///

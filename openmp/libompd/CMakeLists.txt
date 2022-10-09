@@ -10,6 +10,9 @@
 #//===----------------------------------------------------------------------===//
 #
 
+find_package (Python3 COMPONENTS Interpreter Development)
+option(LIBOMP_OMPD_GDB_SUPPORT "Build gdb-plugin code that enables OMPD support in GDB." ${Python3_FOUND})
+
 if(LIBOMP_OMPD_SUPPORT)
     set(OMPD_INCLUDE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/src/)
     add_subdirectory(src)
@@ -20,7 +23,7 @@ if(LIBOMP_OMPD_SUPPORT)
     set(LIBOMP_HWLOC_INSTALL_DIR /usr/local CACHE PATH
       "Install path for hwloc library")
 
-    if(NOT DISABLE_OMPD_GDB_PLUGIN)
+    if(LIBOMP_OMPD_GDB_SUPPORT)
         add_subdirectory(gdb-plugin)
     endif()
 endif()

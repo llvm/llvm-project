@@ -7,9 +7,9 @@
 define i8 @extractelt_v16i8(<16 x i8>* %x) nounwind {
 ; CHECK-LABEL: extractelt_v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 7
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -21,9 +21,9 @@ define i8 @extractelt_v16i8(<16 x i8>* %x) nounwind {
 define i16 @extractelt_v8i16(<8 x i16>* %x) nounwind {
 ; CHECK-LABEL: extractelt_v8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 7
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -35,9 +35,9 @@ define i16 @extractelt_v8i16(<8 x i16>* %x) nounwind {
 define i32 @extractelt_v4i32(<4 x i32>* %x) nounwind {
 ; CHECK-LABEL: extractelt_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -49,10 +49,10 @@ define i32 @extractelt_v4i32(<4 x i32>* %x) nounwind {
 define i64 @extractelt_v2i64(<2 x i64>* %x) nounwind {
 ; RV32-LABEL: extractelt_v2i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    li a0, 32
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vsrl.vx v9, v8, a0
 ; RV32-NEXT:    vmv.x.s a1, v9
 ; RV32-NEXT:    vmv.x.s a0, v8
@@ -60,7 +60,7 @@ define i64 @extractelt_v2i64(<2 x i64>* %x) nounwind {
 ;
 ; RV64-LABEL: extractelt_v2i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
@@ -72,9 +72,9 @@ define i64 @extractelt_v2i64(<2 x i64>* %x) nounwind {
 define half @extractelt_v8f16(<8 x half>* %x) nounwind {
 ; CHECK-LABEL: extractelt_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 7
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -86,9 +86,9 @@ define half @extractelt_v8f16(<8 x half>* %x) nounwind {
 define float @extractelt_v4f32(<4 x float>* %x) nounwind {
 ; CHECK-LABEL: extractelt_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -100,7 +100,7 @@ define float @extractelt_v4f32(<4 x float>* %x) nounwind {
 define double @extractelt_v2f64(<2 x double>* %x) nounwind {
 ; CHECK-LABEL: extractelt_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -113,9 +113,9 @@ define i8 @extractelt_v32i8(<32 x i8>* %x) nounwind {
 ; CHECK-LABEL: extractelt_v32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e8, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 7
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -127,9 +127,9 @@ define i8 @extractelt_v32i8(<32 x i8>* %x) nounwind {
 define i16 @extractelt_v16i16(<16 x i16>* %x) nounwind {
 ; CHECK-LABEL: extractelt_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 7
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -141,9 +141,9 @@ define i16 @extractelt_v16i16(<16 x i16>* %x) nounwind {
 define i32 @extractelt_v8i32(<8 x i32>* %x) nounwind {
 ; CHECK-LABEL: extractelt_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 6
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -155,9 +155,9 @@ define i32 @extractelt_v8i32(<8 x i32>* %x) nounwind {
 define i64 @extractelt_v4i64(<4 x i64>* %x) nounwind {
 ; RV32-LABEL: extractelt_v4i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 3
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    li a1, 32
@@ -167,9 +167,9 @@ define i64 @extractelt_v4i64(<4 x i64>* %x) nounwind {
 ;
 ; RV64-LABEL: extractelt_v4i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, mu
+; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 3
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
@@ -181,9 +181,9 @@ define i64 @extractelt_v4i64(<4 x i64>* %x) nounwind {
 define half @extractelt_v16f16(<16 x half>* %x) nounwind {
 ; CHECK-LABEL: extractelt_v16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 7
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -195,9 +195,9 @@ define half @extractelt_v16f16(<16 x half>* %x) nounwind {
 define float @extractelt_v8f32(<8 x float>* %x) nounwind {
 ; CHECK-LABEL: extractelt_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -209,7 +209,7 @@ define float @extractelt_v8f32(<8 x float>* %x) nounwind {
 define double @extractelt_v4f64(<4 x double>* %x) nounwind {
 ; CHECK-LABEL: extractelt_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -225,9 +225,9 @@ define double @extractelt_v4f64(<4 x double>* %x) nounwind {
 define i64 @extractelt_v3i64(<3 x i64>* %x) nounwind {
 ; RV32-LABEL: extractelt_v3i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vle32.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vi v10, v8, 4
 ; RV32-NEXT:    vmv.x.s a0, v10
 ; RV32-NEXT:    vslidedown.vi v8, v8, 5
@@ -236,9 +236,9 @@ define i64 @extractelt_v3i64(<3 x i64>* %x) nounwind {
 ;
 ; RV64-LABEL: extractelt_v3i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, mu
+; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
@@ -250,9 +250,9 @@ define i64 @extractelt_v3i64(<3 x i64>* %x) nounwind {
 define i8 @extractelt_v16i8_idx(<16 x i8>* %x, i32 signext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v16i8_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -264,9 +264,9 @@ define i8 @extractelt_v16i8_idx(<16 x i8>* %x, i32 signext %idx) nounwind {
 define i16 @extractelt_v8i16_idx(<8 x i16>* %x, i32 signext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v8i16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -278,10 +278,10 @@ define i16 @extractelt_v8i16_idx(<8 x i16>* %x, i32 signext %idx) nounwind {
 define i32 @extractelt_v4i32_idx(<4 x i32>* %x, i32 signext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v4i32_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -294,10 +294,10 @@ define i32 @extractelt_v4i32_idx(<4 x i32>* %x, i32 signext %idx) nounwind {
 define i64 @extractelt_v2i64_idx(<2 x i64>* %x, i32 signext %idx) nounwind {
 ; RV32-LABEL: extractelt_v2i64_idx:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    vadd.vv v8, v8, v8
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vx v8, v8, a1
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    li a1, 32
@@ -307,10 +307,10 @@ define i64 @extractelt_v2i64_idx(<2 x i64>* %x, i32 signext %idx) nounwind {
 ;
 ; RV64-LABEL: extractelt_v2i64_idx:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    vadd.vv v8, v8, v8
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vx v8, v8, a1
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
@@ -323,10 +323,10 @@ define i64 @extractelt_v2i64_idx(<2 x i64>* %x, i32 signext %idx) nounwind {
 define half @extractelt_v8f16_idx(<8 x half>* %x, i32 signext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v8f16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -339,10 +339,10 @@ define half @extractelt_v8f16_idx(<8 x half>* %x, i32 signext %idx) nounwind {
 define float @extractelt_v4f32_idx(<4 x float>* %x, i32 signext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v4f32_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -355,10 +355,10 @@ define float @extractelt_v4f32_idx(<4 x float>* %x, i32 signext %idx) nounwind {
 define double @extractelt_v2f64_idx(<2 x double>* %x, i32 signext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v2f64_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -372,9 +372,9 @@ define i8 @extractelt_v32i8_idx(<32 x i8>* %x, i32 signext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v32i8_idx:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a2, 32
-; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e8, m2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e8, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -386,9 +386,9 @@ define i8 @extractelt_v32i8_idx(<32 x i8>* %x, i32 signext %idx) nounwind {
 define i16 @extractelt_v16i16_idx(<16 x i16>* %x, i32 signext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v16i16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -400,10 +400,10 @@ define i16 @extractelt_v16i16_idx(<16 x i16>* %x, i32 signext %idx) nounwind {
 define i32 @extractelt_v8i32_idx(<8 x i32>* %x, i32 signext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v8i32_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -416,10 +416,10 @@ define i32 @extractelt_v8i32_idx(<8 x i32>* %x, i32 signext %idx) nounwind {
 define i64 @extractelt_v4i64_idx(<4 x i64>* %x, i32 signext %idx) nounwind {
 ; RV32-LABEL: extractelt_v4i64_idx:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    vadd.vv v8, v8, v8
-; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vx v8, v8, a1
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    li a1, 32
@@ -429,10 +429,10 @@ define i64 @extractelt_v4i64_idx(<4 x i64>* %x, i32 signext %idx) nounwind {
 ;
 ; RV64-LABEL: extractelt_v4i64_idx:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    vadd.vv v8, v8, v8
-; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, mu
+; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vx v8, v8, a1
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
@@ -445,10 +445,10 @@ define i64 @extractelt_v4i64_idx(<4 x i64>* %x, i32 signext %idx) nounwind {
 define half @extractelt_v16f16_idx(<16 x half>* %x, i32 signext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v16f16_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -461,10 +461,10 @@ define half @extractelt_v16f16_idx(<16 x half>* %x, i32 signext %idx) nounwind {
 define float @extractelt_v8f32_idx(<8 x float>* %x, i32 signext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v8f32_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -477,10 +477,10 @@ define float @extractelt_v8f32_idx(<8 x float>* %x, i32 signext %idx) nounwind {
 define double @extractelt_v4f64_idx(<4 x double>* %x, i32 signext %idx) nounwind {
 ; CHECK-LABEL: extractelt_v4f64_idx:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
 ; CHECK-NEXT:    vfadd.vv v8, v8, v8
-; CHECK-NEXT:    vsetivli zero, 1, e64, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vfmv.f.s fa0, v8
 ; CHECK-NEXT:    ret
@@ -497,11 +497,11 @@ define double @extractelt_v4f64_idx(<4 x double>* %x, i32 signext %idx) nounwind
 define i64 @extractelt_v3i64_idx(<3 x i64>* %x, i32 signext %idx) nounwind {
 ; RV32-LABEL: extractelt_v3i64_idx:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
 ; RV32-NEXT:    vadd.vv v8, v8, v8
 ; RV32-NEXT:    add a1, a1, a1
-; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; RV32-NEXT:    vslidedown.vx v10, v8, a1
 ; RV32-NEXT:    vmv.x.s a0, v10
 ; RV32-NEXT:    addi a1, a1, 1
@@ -511,10 +511,10 @@ define i64 @extractelt_v3i64_idx(<3 x i64>* %x, i32 signext %idx) nounwind {
 ;
 ; RV64-LABEL: extractelt_v3i64_idx:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, mu
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
 ; RV64-NEXT:    vadd.vv v8, v8, v8
-; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, mu
+; RV64-NEXT:    vsetivli zero, 1, e64, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vx v8, v8, a1
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
@@ -527,9 +527,9 @@ define i64 @extractelt_v3i64_idx(<3 x i64>* %x, i32 signext %idx) nounwind {
 define void @store_extractelt_v16i8(<16 x i8>* %x, i8* %p) nounwind {
 ; CHECK-LABEL: store_extractelt_v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 7
 ; CHECK-NEXT:    vse8.v v8, (a1)
 ; CHECK-NEXT:    ret
@@ -542,9 +542,9 @@ define void @store_extractelt_v16i8(<16 x i8>* %x, i8* %p) nounwind {
 define void @store_extractelt_v8i16(<8 x i16>* %x, i16* %p) nounwind {
 ; CHECK-LABEL: store_extractelt_v8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e16, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 7
 ; CHECK-NEXT:    vse16.v v8, (a1)
 ; CHECK-NEXT:    ret
@@ -557,9 +557,9 @@ define void @store_extractelt_v8i16(<8 x i16>* %x, i16* %p) nounwind {
 define void @store_extractelt_v4i32(<4 x i32>* %x, i32* %p) nounwind {
 ; CHECK-LABEL: store_extractelt_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vse32.v v8, (a1)
 ; CHECK-NEXT:    ret
@@ -573,9 +573,9 @@ define void @store_extractelt_v4i32(<4 x i32>* %x, i32* %p) nounwind {
 define void @store_extractelt_v2i64(<2 x i64>* %x, i64* %p) nounwind {
 ; RV32-LABEL: store_extractelt_v2i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV32-NEXT:    vle64.v v8, (a0)
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 1
 ; RV32-NEXT:    li a0, 32
 ; RV32-NEXT:    vsrl.vx v9, v8, a0
@@ -587,9 +587,9 @@ define void @store_extractelt_v2i64(<2 x i64>* %x, i64* %p) nounwind {
 ;
 ; RV64-LABEL: store_extractelt_v2i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    vle64.v v8, (a0)
-; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 1
 ; RV64-NEXT:    vse64.v v8, (a1)
 ; RV64-NEXT:    ret
@@ -602,9 +602,9 @@ define void @store_extractelt_v2i64(<2 x i64>* %x, i64* %p) nounwind {
 define void @store_extractelt_v2f64(<2 x double>* %x, double* %p) nounwind {
 ; CHECK-LABEL: store_extractelt_v2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    ret
@@ -617,7 +617,7 @@ define void @store_extractelt_v2f64(<2 x double>* %x, double* %p) nounwind {
 define i32 @extractelt_add_v4i32(<4 x i32> %x) {
 ; RV32-LABEL: extractelt_add_v4i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    addi a0, a0, 13
@@ -625,9 +625,9 @@ define i32 @extractelt_add_v4i32(<4 x i32> %x) {
 ;
 ; RV64-LABEL: extractelt_add_v4i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vadd.vi v8, v8, 13
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
@@ -639,7 +639,7 @@ define i32 @extractelt_add_v4i32(<4 x i32> %x) {
 define i32 @extractelt_sub_v4i32(<4 x i32> %x) {
 ; RV32-LABEL: extractelt_sub_v4i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; RV32-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    li a1, 13
@@ -648,9 +648,9 @@ define i32 @extractelt_sub_v4i32(<4 x i32> %x) {
 ;
 ; RV64-LABEL: extractelt_sub_v4i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vrsub.vi v8, v8, 13
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
@@ -663,16 +663,16 @@ define i32 @extractelt_mul_v4i32(<4 x i32> %x) {
 ; RV32NOM-LABEL: extractelt_mul_v4i32:
 ; RV32NOM:       # %bb.0:
 ; RV32NOM-NEXT:    li a0, 13
-; RV32NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; RV32NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32NOM-NEXT:    vmul.vx v8, v8, a0
-; RV32NOM-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; RV32NOM-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32NOM-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32NOM-NEXT:    vmv.x.s a0, v8
 ; RV32NOM-NEXT:    ret
 ;
 ; RV32M-LABEL: extractelt_mul_v4i32:
 ; RV32M:       # %bb.0:
-; RV32M-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; RV32M-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32M-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32M-NEXT:    vmv.x.s a0, v8
 ; RV32M-NEXT:    li a1, 13
@@ -682,9 +682,9 @@ define i32 @extractelt_mul_v4i32(<4 x i32> %x) {
 ; RV64-LABEL: extractelt_mul_v4i32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a0, 13
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vmul.vx v8, v8, a0
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
@@ -697,12 +697,12 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ; RV32NOM-LABEL: extractelt_sdiv_v4i32:
 ; RV32NOM:       # %bb.0:
 ; RV32NOM-NEXT:    li a0, -1
-; RV32NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; RV32NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32NOM-NEXT:    vmv.s.x v9, a0
 ; RV32NOM-NEXT:    vmv.v.i v10, 0
-; RV32NOM-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; RV32NOM-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; RV32NOM-NEXT:    vslideup.vi v10, v9, 3
-; RV32NOM-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; RV32NOM-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV32NOM-NEXT:    lui a0, %hi(.LCPI38_0)
 ; RV32NOM-NEXT:    addi a0, a0, %lo(.LCPI38_0)
 ; RV32NOM-NEXT:    vle32.v v9, (a0)
@@ -715,14 +715,14 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ; RV32NOM-NEXT:    vsra.vv v9, v8, v11
 ; RV32NOM-NEXT:    vsrl.vi v8, v8, 31
 ; RV32NOM-NEXT:    vadd.vv v8, v9, v8
-; RV32NOM-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; RV32NOM-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32NOM-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32NOM-NEXT:    vmv.x.s a0, v8
 ; RV32NOM-NEXT:    ret
 ;
 ; RV32M-LABEL: extractelt_sdiv_v4i32:
 ; RV32M:       # %bb.0:
-; RV32M-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; RV32M-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32M-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32M-NEXT:    vmv.x.s a0, v8
 ; RV32M-NEXT:    lui a1, 322639
@@ -736,12 +736,12 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ; RV64-LABEL: extractelt_sdiv_v4i32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a0, -1
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vmv.s.x v9, a0
 ; RV64-NEXT:    vmv.v.i v10, 0
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, tu, mu
+; RV64-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
 ; RV64-NEXT:    vslideup.vi v10, v9, 3
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV64-NEXT:    lui a0, %hi(.LCPI38_0)
 ; RV64-NEXT:    addi a0, a0, %lo(.LCPI38_0)
 ; RV64-NEXT:    vle32.v v9, (a0)
@@ -754,7 +754,7 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 ; RV64-NEXT:    vsra.vv v8, v8, v11
 ; RV64-NEXT:    vsrl.vi v9, v8, 31
 ; RV64-NEXT:    vadd.vv v8, v8, v9
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
@@ -766,12 +766,12 @@ define i32 @extractelt_sdiv_v4i32(<4 x i32> %x) {
 define i32 @extractelt_udiv_v4i32(<4 x i32> %x) {
 ; RV32NOM-LABEL: extractelt_udiv_v4i32:
 ; RV32NOM:       # %bb.0:
-; RV32NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; RV32NOM-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV32NOM-NEXT:    vsrl.vi v8, v8, 0
 ; RV32NOM-NEXT:    lui a0, 322639
 ; RV32NOM-NEXT:    addi a0, a0, -945
 ; RV32NOM-NEXT:    vmulhu.vx v8, v8, a0
-; RV32NOM-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; RV32NOM-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32NOM-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32NOM-NEXT:    vmv.x.s a0, v8
 ; RV32NOM-NEXT:    srli a0, a0, 2
@@ -779,7 +779,7 @@ define i32 @extractelt_udiv_v4i32(<4 x i32> %x) {
 ;
 ; RV32M-LABEL: extractelt_udiv_v4i32:
 ; RV32M:       # %bb.0:
-; RV32M-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; RV32M-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV32M-NEXT:    vslidedown.vi v8, v8, 2
 ; RV32M-NEXT:    vmv.x.s a0, v8
 ; RV32M-NEXT:    lui a1, 322639
@@ -790,13 +790,13 @@ define i32 @extractelt_udiv_v4i32(<4 x i32> %x) {
 ;
 ; RV64-LABEL: extractelt_udiv_v4i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; RV64-NEXT:    vsrl.vi v8, v8, 0
 ; RV64-NEXT:    lui a0, 322639
 ; RV64-NEXT:    addiw a0, a0, -945
 ; RV64-NEXT:    vmulhu.vx v8, v8, a0
 ; RV64-NEXT:    vsrl.vi v8, v8, 2
-; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; RV64-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 2
 ; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    ret
@@ -810,7 +810,7 @@ define float @extractelt_fadd_v4f32(<4 x float> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI40_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI40_0)(a0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s ft1, v8
 ; CHECK-NEXT:    fadd.s fa0, ft1, ft0
@@ -825,7 +825,7 @@ define float @extractelt_fsub_v4f32(<4 x float> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI41_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI41_0)(a0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s ft1, v8
 ; CHECK-NEXT:    fsub.s fa0, ft0, ft1
@@ -840,7 +840,7 @@ define float @extractelt_fmul_v4f32(<4 x float> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI42_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI42_0)(a0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s ft1, v8
 ; CHECK-NEXT:    fmul.s fa0, ft1, ft0
@@ -855,7 +855,7 @@ define float @extractelt_fdiv_v4f32(<4 x float> %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI43_0)
 ; CHECK-NEXT:    flw ft0, %lo(.LCPI43_0)(a0)
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vfmv.f.s ft1, v8
 ; CHECK-NEXT:    fdiv.s fa0, ft1, ft0

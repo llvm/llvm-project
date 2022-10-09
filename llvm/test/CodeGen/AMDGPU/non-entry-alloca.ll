@@ -65,8 +65,8 @@ define amdgpu_kernel void @kernel_non_entry_block_static_alloca_uniformly_reache
 ; FLATSCR-NEXT:    s_cmp_lg_u32 s5, 0
 ; FLATSCR-NEXT:    s_cbranch_scc1 .LBB0_3
 ; FLATSCR-NEXT:  ; %bb.2: ; %bb.1
-; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0
 ; FLATSCR-NEXT:    s_add_i32 s2, s32, 0x1000
+; FLATSCR-NEXT:    v_mov_b32_e32 v1, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v2, 1
 ; FLATSCR-NEXT:    s_lshl_b32 s3, s6, 2
 ; FLATSCR-NEXT:    s_mov_b32 s32, s2

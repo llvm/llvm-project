@@ -950,6 +950,12 @@ def trunc_buildvector_fold : GICombineRule<
       [{ return Helper.matchTruncBuildVectorFold(*${op}, ${matchinfo}); }]),
   (apply [{ Helper.replaceSingleDefInstWithReg(*${op}, ${matchinfo}); }])>;
 
+def trunc_lshr_buildvector_fold : GICombineRule<
+  (defs root:$op, register_matchinfo:$matchinfo),
+  (match (wip_match_opcode G_TRUNC):$op,
+      [{ return Helper.matchTruncLshrBuildVectorFold(*${op}, ${matchinfo}); }]),
+  (apply [{ Helper.replaceSingleDefInstWithReg(*${op}, ${matchinfo}); }])>;
+
 // Transform:
 //   (x + y) - y -> x
 //   (x + y) - x -> y
@@ -986,7 +992,8 @@ def identity_combines : GICombineGroup<[select_same_val, right_identity_zero,
                                         i2p_to_p2i, anyext_trunc_fold,
                                         fneg_fneg_fold, right_identity_one,
                                         add_sub_reg, buildvector_identity_fold,
-                                        trunc_buildvector_fold]>;
+                                        trunc_buildvector_fold,
+                                        trunc_lshr_buildvector_fold]>;
 
 def const_combines : GICombineGroup<[constant_fp_op, const_ptradd_to_i2p,
                                      overlapping_and, mulo_by_2, mulo_by_0,

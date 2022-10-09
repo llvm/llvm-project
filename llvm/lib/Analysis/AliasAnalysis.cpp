@@ -76,21 +76,9 @@ static const bool EnableAATrace = false;
 #endif
 
 AAResults::AAResults(AAResults &&Arg)
-    : TLI(Arg.TLI), AAs(std::move(Arg.AAs)), AADeps(std::move(Arg.AADeps)) {
-  for (auto &AA : AAs)
-    AA->setAAResults(this);
-}
+    : TLI(Arg.TLI), AAs(std::move(Arg.AAs)), AADeps(std::move(Arg.AADeps)) {}
 
-AAResults::~AAResults() {
-// FIXME; It would be nice to at least clear out the pointers back to this
-// aggregation here, but we end up with non-nesting lifetimes in the legacy
-// pass manager that prevent this from working. In the legacy pass manager
-// we'll end up with dangling references here in some cases.
-#if 0
-  for (auto &AA : AAs)
-    AA->setAAResults(nullptr);
-#endif
-}
+AAResults::~AAResults() {}
 
 bool AAResults::invalidate(Function &F, const PreservedAnalyses &PA,
                            FunctionAnalysisManager::Invalidator &Inv) {
@@ -118,7 +106,7 @@ bool AAResults::invalidate(Function &F, const PreservedAnalyses &PA,
 
 AliasResult AAResults::alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB) {
-  SimpleAAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP(*this);
   return alias(LocA, LocB, AAQIP);
 }
 
@@ -161,7 +149,7 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
 
 bool AAResults::pointsToConstantMemory(const MemoryLocation &Loc,
                                        bool OrLocal) {
-  SimpleAAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP(*this);
   return pointsToConstantMemory(Loc, AAQIP, OrLocal);
 }
 
@@ -189,7 +177,7 @@ ModRefInfo AAResults::getArgModRefInfo(const CallBase *Call, unsigned ArgIdx) {
 }
 
 ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2) {
-  SimpleAAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP(*this);
   return getModRefInfo(I, Call2, AAQIP);
 }
 
@@ -216,7 +204,7 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, const CallBase *Call2,
 
 ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
                                     const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP(*this);
   return getModRefInfo(Call, Loc, AAQIP);
 }
 
@@ -238,7 +226,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
 
   // We can completely ignore inaccessible memory here, because MemoryLocations
   // can only reference accessible memory.
-  auto MRB = getModRefBehavior(Call).getWithoutLoc(
+  auto MRB = getModRefBehavior(Call, AAQI).getWithoutLoc(
       FunctionModRefBehavior::InaccessibleMem);
   if (MRB.doesNotAccessMemory())
     return ModRefInfo::NoModRef;
@@ -276,7 +264,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
 
 ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
                                     const CallBase *Call2) {
-  SimpleAAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP(*this);
   return getModRefInfo(Call1, Call2, AAQIP);
 }
 
@@ -296,11 +284,11 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
   // aggregate set of AA results.
 
   // If Call1 or Call2 are readnone, they don't interact.
-  auto Call1B = getModRefBehavior(Call1);
+  auto Call1B = getModRefBehavior(Call1, AAQI);
   if (Call1B.doesNotAccessMemory())
     return ModRefInfo::NoModRef;
 
-  auto Call2B = getModRefBehavior(Call2);
+  auto Call2B = getModRefBehavior(Call2, AAQI);
   if (Call2B.doesNotAccessMemory())
     return ModRefInfo::NoModRef;
 
@@ -387,11 +375,12 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
   return Result;
 }
 
-FunctionModRefBehavior AAResults::getModRefBehavior(const CallBase *Call) {
+FunctionModRefBehavior AAResults::getModRefBehavior(const CallBase *Call,
+                                                    AAQueryInfo &AAQI) {
   FunctionModRefBehavior Result = FunctionModRefBehavior::unknown();
 
   for (const auto &AA : AAs) {
-    Result &= AA->getModRefBehavior(Call);
+    Result &= AA->getModRefBehavior(Call, AAQI);
 
     // Early-exit the moment we reach the bottom of the lattice.
     if (Result.doesNotAccessMemory())
@@ -399,6 +388,11 @@ FunctionModRefBehavior AAResults::getModRefBehavior(const CallBase *Call) {
   }
 
   return Result;
+}
+
+FunctionModRefBehavior AAResults::getModRefBehavior(const CallBase *Call) {
+  SimpleAAQueryInfo AAQI(*this);
+  return getModRefBehavior(Call, AAQI);
 }
 
 FunctionModRefBehavior AAResults::getModRefBehavior(const Function *F) {
@@ -478,7 +472,7 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, FunctionModRefBehavior FMRB) {
 
 ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
                                     const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP(*this);
   return getModRefInfo(L, Loc, AAQIP);
 }
 ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
@@ -501,7 +495,7 @@ ModRefInfo AAResults::getModRefInfo(const LoadInst *L,
 
 ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
                                     const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP(*this);
   return getModRefInfo(S, Loc, AAQIP);
 }
 ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
@@ -528,8 +522,9 @@ ModRefInfo AAResults::getModRefInfo(const StoreInst *S,
   return ModRefInfo::Mod;
 }
 
-ModRefInfo AAResults::getModRefInfo(const FenceInst *S, const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP;
+ModRefInfo AAResults::getModRefInfo(const FenceInst *S,
+                                    const MemoryLocation &Loc) {
+  SimpleAAQueryInfo AAQIP(*this);
   return getModRefInfo(S, Loc, AAQIP);
 }
 
@@ -545,7 +540,7 @@ ModRefInfo AAResults::getModRefInfo(const FenceInst *S,
 
 ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
                                     const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP(*this);
   return getModRefInfo(V, Loc, AAQIP);
 }
 
@@ -571,7 +566,7 @@ ModRefInfo AAResults::getModRefInfo(const VAArgInst *V,
 
 ModRefInfo AAResults::getModRefInfo(const CatchPadInst *CatchPad,
                                     const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP(*this);
   return getModRefInfo(CatchPad, Loc, AAQIP);
 }
 
@@ -591,7 +586,7 @@ ModRefInfo AAResults::getModRefInfo(const CatchPadInst *CatchPad,
 
 ModRefInfo AAResults::getModRefInfo(const CatchReturnInst *CatchRet,
                                     const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP(*this);
   return getModRefInfo(CatchRet, Loc, AAQIP);
 }
 
@@ -611,7 +606,7 @@ ModRefInfo AAResults::getModRefInfo(const CatchReturnInst *CatchRet,
 
 ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
                                     const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP(*this);
   return getModRefInfo(CX, Loc, AAQIP);
 }
 
@@ -635,7 +630,7 @@ ModRefInfo AAResults::getModRefInfo(const AtomicCmpXchgInst *CX,
 
 ModRefInfo AAResults::getModRefInfo(const AtomicRMWInst *RMW,
                                     const MemoryLocation &Loc) {
-  SimpleAAQueryInfo AAQIP;
+  SimpleAAQueryInfo AAQIP(*this);
   return getModRefInfo(RMW, Loc, AAQIP);
 }
 
@@ -662,7 +657,7 @@ ModRefInfo AAResults::getModRefInfo(const Instruction *I,
                                     AAQueryInfo &AAQIP) {
   if (OptLoc == None) {
     if (const auto *Call = dyn_cast<CallBase>(I))
-      return getModRefBehavior(Call).getModRef();
+      return getModRefBehavior(Call, AAQIP).getModRef();
   }
 
   const MemoryLocation &Loc = OptLoc.value_or(MemoryLocation());

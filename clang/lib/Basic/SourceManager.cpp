@@ -399,8 +399,7 @@ ContentCache &SourceManager::getOrCreateContentCache(FileEntryRef FileEnt,
   if (OverriddenFilesInfo) {
     // If the file contents are overridden with contents from another file,
     // pass that file to ContentCache.
-    llvm::DenseMap<const FileEntry *, const FileEntry *>::iterator
-        overI = OverriddenFilesInfo->OverriddenFiles.find(FileEnt);
+    auto overI = OverriddenFilesInfo->OverriddenFiles.find(FileEnt);
     if (overI == OverriddenFilesInfo->OverriddenFiles.end())
       new (Entry) ContentCache(FileEnt);
     else
@@ -695,14 +694,18 @@ void SourceManager::overrideFileContents(
 }
 
 void SourceManager::overrideFileContents(const FileEntry *SourceFile,
-                                         const FileEntry *NewFile) {
-  assert(SourceFile->getSize() == NewFile->getSize() &&
+                                         FileEntryRef NewFile) {
+  assert(SourceFile->getSize() == NewFile.getSize() &&
          "Different sizes, use the FileManager to create a virtual file with "
          "the correct size");
   assert(FileInfos.count(SourceFile) == 0 &&
          "This function should be called at the initialization stage, before "
          "any parsing occurs.");
-  getOverriddenFilesInfo().OverriddenFiles[SourceFile] = NewFile;
+  // FileEntryRef is not default-constructible.
+  auto Pair = getOverriddenFilesInfo().OverriddenFiles.insert(
+      std::make_pair(SourceFile, NewFile));
+  if (!Pair.second)
+    Pair.first->second = NewFile;
 }
 
 Optional<FileEntryRef>
@@ -790,24 +793,28 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
 
   // See if this is near the file point - worst case we start scanning from the
   // most newly created FileID.
-  const SrcMgr::SLocEntry *I;
 
-  if (LastFileIDLookup.ID < 0 ||
-      LocalSLocEntryTable[LastFileIDLookup.ID].getOffset() < SLocOffset) {
-    // Neither loc prunes our search.
-    I = LocalSLocEntryTable.end();
-  } else {
-    // Perhaps it is near the file point.
-    I = LocalSLocEntryTable.begin()+LastFileIDLookup.ID;
+  // LessIndex - This is the lower bound of the range that we're searching.
+  // We know that the offset corresponding to the FileID is is less than
+  // SLocOffset.
+  unsigned LessIndex = 0;
+  // upper bound of the search range.
+  unsigned GreaterIndex = LocalSLocEntryTable.size();
+  if (LastFileIDLookup.ID >= 0) {
+    // Use the LastFileIDLookup to prune the search space.
+    if (LocalSLocEntryTable[LastFileIDLookup.ID].getOffset() < SLocOffset)
+      LessIndex = LastFileIDLookup.ID;
+    else
+      GreaterIndex = LastFileIDLookup.ID;
   }
 
-  // Find the FileID that contains this.  "I" is an iterator that points to a
-  // FileID whose offset is known to be larger than SLocOffset.
+  // Find the FileID that contains this.
   unsigned NumProbes = 0;
   while (true) {
-    --I;
-    if (I->getOffset() <= SLocOffset) {
-      FileID Res = FileID::get(int(I - LocalSLocEntryTable.begin()));
+    --GreaterIndex;
+    assert(GreaterIndex < LocalSLocEntryTable.size());
+    if (LocalSLocEntryTable[GreaterIndex].getOffset() <= SLocOffset) {
+      FileID Res = FileID::get(int(GreaterIndex));
       // Remember it.  We have good locality across FileID lookups.
       LastFileIDLookup = Res;
       NumLinearScans += NumProbes+1;
@@ -817,13 +824,6 @@ FileID SourceManager::getFileIDLocal(SourceLocation::UIntTy SLocOffset) const {
       break;
   }
 
-  // Convert "I" back into an index.  We know that it is an entry whose index is
-  // larger than the offset we are looking for.
-  unsigned GreaterIndex = I - LocalSLocEntryTable.begin();
-  // LessIndex - This is the lower bound of the range that we're searching.
-  // We know that the offset corresponding to the FileID is is less than
-  // SLocOffset.
-  unsigned LessIndex = 0;
   NumProbes = 0;
   while (true) {
     unsigned MiddleIndex = (GreaterIndex-LessIndex)/2+LessIndex;
@@ -866,36 +866,38 @@ FileID SourceManager::getFileIDLoaded(SourceLocation::UIntTy SLocOffset) const {
   }
 
   // Essentially the same as the local case, but the loaded array is sorted
-  // in the other direction.
+  // in the other direction (decreasing order).
+  // GreaterIndex is the one where the offset is greater, which is actually a
+  // lower index!
+  unsigned GreaterIndex = 0;
+  unsigned LessIndex = LoadedSLocEntryTable.size();
+  if (LastFileIDLookup.ID < 0) {
+    // Prune the search space.
+    int LastID = LastFileIDLookup.ID;
+    if (getLoadedSLocEntryByID(LastID).getOffset() > SLocOffset)
+      GreaterIndex =
+          (-LastID - 2) + 1; // Exclude LastID, else we would have hit the cache
+    else
+      LessIndex = -LastID - 2;
+  }
 
   // First do a linear scan from the last lookup position, if possible.
-  unsigned I;
-  int LastID = LastFileIDLookup.ID;
-  if (LastID >= 0 || getLoadedSLocEntryByID(LastID).getOffset() < SLocOffset)
-    I = 0;
-  else
-    I = (-LastID - 2) + 1;
-
   unsigned NumProbes;
   bool Invalid = false;
-  for (NumProbes = 0; NumProbes < 8; ++NumProbes, ++I) {
+  for (NumProbes = 0; NumProbes < 8; ++NumProbes, ++GreaterIndex) {
     // Make sure the entry is loaded!
-    const SrcMgr::SLocEntry &E = getLoadedSLocEntry(I, &Invalid);
+    const SrcMgr::SLocEntry &E = getLoadedSLocEntry(GreaterIndex, &Invalid);
     if (Invalid)
       return FileID(); // invalid entry.
     if (E.getOffset() <= SLocOffset) {
-      FileID Res = FileID::get(-int(I) - 2);
+      FileID Res = FileID::get(-int(GreaterIndex) - 2);
       LastFileIDLookup = Res;
       NumLinearScans += NumProbes + 1;
       return Res;
     }
   }
 
-  // Linear scan failed. Do the binary search. Note the reverse sorting of the
-  // table: GreaterIndex is the one where the offset is greater, which is
-  // actually a lower index!
-  unsigned GreaterIndex = I;
-  unsigned LessIndex = LoadedSLocEntryTable.size();
+  // Linear scan failed. Do the binary search.
   NumProbes = 0;
   while (true) {
     ++NumProbes;

@@ -56,6 +56,7 @@ static_library("clangd") {
     "//clang/lib/Tooling",
     "//clang/lib/Tooling/Core",
     "//clang/lib/Tooling/Inclusions",
+    "//clang/lib/Tooling/Inclusions/Stdlib",
     "//clang/lib/Tooling/Refactoring",
     "//clang/lib/Tooling/Syntax",
     "//llvm/lib/Support",

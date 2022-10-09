@@ -15,6 +15,8 @@ unittest("ToolingTests") {
     "//clang/lib/Tooling",
     "//clang/lib/Tooling/Core",
     "//clang/lib/Tooling/DependencyScanning",
+    "//clang/lib/Tooling/Inclusions",
+    "//clang/lib/Tooling/Inclusions/Stdlib",
     "//clang/lib/Tooling/Refactoring",
     "//clang/lib/Tooling/Transformer",
     "//llvm/lib/Support",

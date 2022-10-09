@@ -283,6 +283,21 @@ void state::enterDataEnvironment(IdentTy *Ident) {
   unsigned TId = mapping::getThreadIdInBlock();
   ThreadStateTy *NewThreadState =
       static_cast<ThreadStateTy *>(__kmpc_alloc_shared(sizeof(ThreadStateTy)));
+#ifdef FIXME // breaks snap_red nested_par3 nest_call_par2
+  uintptr_t *ThreadStatesBitsPtr = reinterpret_cast<uintptr_t *>(&ThreadStates);
+  if (!atomic::load(ThreadStatesBitsPtr, atomic::seq_cst)) {
+    uint32_t Bytes = sizeof(ThreadStates[0]) * mapping::getBlockSize();
+    void *ThreadStatesPtr =
+        memory::allocGlobal(Bytes, "Thread state array allocation");
+    if (!atomic::cas(ThreadStatesBitsPtr, uintptr_t(0),
+                     reinterpret_cast<uintptr_t>(ThreadStatesPtr),
+                     atomic::seq_cst, atomic::seq_cst))
+      memory::freeGlobal(ThreadStatesPtr,
+                         "Thread state array allocated multiple times");
+    ASSERT(atomic::load(ThreadStatesBitsPtr, atomic::seq_cst) &&
+           "Expected valid thread states bit!");
+  }
+ #endif
   NewThreadState->init(ThreadStates[TId]);
   TeamState.HasThreadState = true;
   ThreadStates[TId] = NewThreadState;

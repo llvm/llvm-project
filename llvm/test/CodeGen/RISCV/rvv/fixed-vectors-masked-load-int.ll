@@ -400,11 +400,11 @@ define void @masked_load_v32i64(<32 x i64>* %a, <32 x i64>* %m_ptr, <32 x i64>* 
 ; RV32-LABEL: masked_load_v32i64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi a3, a1, 128
-; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
+; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV32-NEXT:    vle64.v v16, (a3)
 ; RV32-NEXT:    vle64.v v0, (a1)
 ; RV32-NEXT:    li a1, 32
-; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; RV32-NEXT:    vmv.v.i v24, 0
 ; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
 ; RV32-NEXT:    vmseq.vv v8, v0, v24

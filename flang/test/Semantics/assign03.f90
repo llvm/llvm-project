@@ -294,6 +294,12 @@ contains
     logical(kind=merge(1,-1,is_contiguous(pc(:)))) :: l8 ! known true
     logical(kind=merge(-1,1,is_contiguous(pc(1:10:2)))) :: l9 ! known false
     logical(kind=merge(-1,1,is_contiguous(pc(10:1:-1)))) :: l10 ! known false
+    logical(kind=merge(1,-1,is_contiguous(pc(1:10:1)))) :: l11 ! known true
+    logical(kind=merge(-1,1,is_contiguous(pc(10:1:-1)))) :: l12 ! known false
+    !ERROR: Must be a constant value
+    logical(kind=merge(-1,1,is_contiguous(pc(::-1)))) :: l13 ! unknown (could be empty)
+    logical(kind=merge(1,-1,is_contiguous(y(1,1)%a(::-1,1)))) :: l14 ! known true (empty)
+    logical(kind=merge(1,-1,is_contiguous(y(1,1)%a(1,::-1)))) :: l15 ! known true (empty)
   end
   subroutine test3(b)
     integer, intent(inout) :: b(..)

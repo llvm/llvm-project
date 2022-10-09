@@ -2252,7 +2252,7 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
                             uint64_t ValueCutoff, bool OnlyListBelow,
                             const std::string &ShowFunction, bool TextFormat,
                             bool ShowBinaryIds, bool ShowCovered,
-                            raw_fd_ostream &OS) {
+                            bool ShowProfileVersion, raw_fd_ostream &OS) {
   auto ReaderOrErr = InstrProfReader::create(Filename);
   std::vector<uint32_t> Cutoffs = std::move(DetailedSummaryCutoffs);
   if (ShowDetailedSummary && Cutoffs.empty()) {
@@ -2462,6 +2462,8 @@ static int showInstrProfile(const std::string &Filename, bool ShowCounts,
     if (Error E = Reader->printBinaryIds(OS))
       exitWithError(std::move(E), Filename);
 
+  if (ShowProfileVersion)
+    OS << "Profile version: " << Reader->getVersion() << "\n";
   return 0;
 }
 
@@ -2786,7 +2788,8 @@ static int show_main(int argc, const char *argv[]) {
   cl::opt<std::string> ProfiledBinary(
       "profiled-binary", cl::init(""),
       cl::desc("Path to binary from which the profile was collected."));
-
+  cl::opt<bool> ShowProfileVersion("profile-version", cl::init(false),
+                                   cl::desc("Show profile version. "));
   cl::ParseCommandLineOptions(argc, argv, "LLVM profile data summary\n");
 
   if (Filename.empty() && DebugInfoFilename.empty())
@@ -2817,7 +2820,7 @@ static int show_main(int argc, const char *argv[]) {
         Filename, ShowCounts, TopNFunctions, ShowIndirectCallTargets,
         ShowMemOPSizes, ShowDetailedSummary, DetailedSummaryCutoffs,
         ShowAllFunctions, ShowCS, ValueCutoff, OnlyListBelow, ShowFunction,
-        TextFormat, ShowBinaryIds, ShowCovered, OS);
+        TextFormat, ShowBinaryIds, ShowCovered, ShowProfileVersion, OS);
   if (ProfileKind == sample)
     return showSampleProfile(
         Filename, ShowCounts, TopNFunctions, ShowAllFunctions,
@@ -2826,7 +2829,8 @@ static int show_main(int argc, const char *argv[]) {
   return showMemProfProfile(Filename, ProfiledBinary, OS);
 }
 
-int main(int argc, const char *argv[]) {
+int llvm_profdata_main(int argc, char **argvNonConst) {
+  const char **argv = const_cast<const char **>(argvNonConst);
   InitLLVM X(argc, argv);
 
   StringRef ProgName(sys::path::filename(argv[0]));

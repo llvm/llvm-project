@@ -328,8 +328,18 @@ struct ElideUnitDimsInMultiDimReduction
     }
     Location loc = reductionOp.getLoc();
     Value acc = reductionOp.getAcc();
-    Value cast = rewriter.create<vector::ShapeCastOp>(
-        loc, reductionOp.getDestType(), reductionOp.getSource());
+    Value cast;
+    if (reductionOp.getDestType().isa<VectorType>()) {
+      cast = rewriter.create<vector::ShapeCastOp>(
+          loc, reductionOp.getDestType(), reductionOp.getSource());
+    } else {
+      // This means we are reducing all the dimensions, and all reduction
+      // dimensions are of size 1. So a simple extraction would do.
+      cast = rewriter.create<vector::ExtractOp>(
+          loc, reductionOp.getDestType(), reductionOp.getSource(),
+          rewriter.getI64ArrayAttr(SmallVector<int64_t>(shape.size(), 0)));
+    }
+
     Value result = vector::makeArithReduction(rewriter, loc,
                                               reductionOp.getKind(), acc, cast);
     rewriter.replaceOp(reductionOp, result);

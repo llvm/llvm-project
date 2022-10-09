@@ -9,7 +9,7 @@
 define void @complex_gep(ptr %p, <vscale x 2 x i64> %vec.ind, <vscale x 2 x i1> %m) {
 ; RV32-LABEL: complex_gep:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, mu
+; RV32-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
 ; RV32-NEXT:    vnsrl.wi v10, v8, 0
 ; RV32-NEXT:    li a1, 48
 ; RV32-NEXT:    vmul.vx v8, v10, a1
@@ -21,10 +21,10 @@ define void @complex_gep(ptr %p, <vscale x 2 x i64> %vec.ind, <vscale x 2 x i1> 
 ; RV64-LABEL: complex_gep:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    li a1, 56
-; RV64-NEXT:    vsetvli a2, zero, e64, m2, ta, mu
+; RV64-NEXT:    vsetvli a2, zero, e64, m2, ta, ma
 ; RV64-NEXT:    vmul.vx v8, v8, a1
 ; RV64-NEXT:    addi a0, a0, 32
-; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; RV64-NEXT:    vmv.v.i v10, 0
 ; RV64-NEXT:    vsoxei64.v v10, (a0), v8, v0.t
 ; RV64-NEXT:    ret
@@ -36,14 +36,14 @@ define void @complex_gep(ptr %p, <vscale x 2 x i64> %vec.ind, <vscale x 2 x i1> 
 define void @strided_store_zero_start(i64 %n, ptr %p) {
 ; RV32-LABEL: strided_store_zero_start:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vid.v v8
-; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vnsrl.wi v8, v8, 0
 ; RV32-NEXT:    li a0, 48
 ; RV32-NEXT:    vmul.vx v8, v8, a0
 ; RV32-NEXT:    addi a0, a2, 32
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v9, 0
 ; RV32-NEXT:    vsoxei32.v v9, (a0), v8
 ; RV32-NEXT:    ret
@@ -51,7 +51,7 @@ define void @strided_store_zero_start(i64 %n, ptr %p) {
 ; RV64-LABEL: strided_store_zero_start:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi a0, a1, 36
-; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, 0
 ; RV64-NEXT:    li a1, 56
 ; RV64-NEXT:    vsse64.v v8, (a0), a1
@@ -67,19 +67,19 @@ define void @strided_store_offset_start(i64 %n, ptr %p) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    vsetvli a3, zero, e64, m1, ta, mu
+; RV32-NEXT:    vsetvli a3, zero, e64, m1, ta, ma
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    sw a0, 8(sp)
 ; RV32-NEXT:    addi a0, sp, 8
 ; RV32-NEXT:    vlse64.v v8, (a0), zero
 ; RV32-NEXT:    vid.v v9
 ; RV32-NEXT:    vadd.vv v8, v9, v8
-; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vnsrl.wi v8, v8, 0
 ; RV32-NEXT:    li a0, 48
 ; RV32-NEXT:    vmul.vx v8, v8, a0
 ; RV32-NEXT:    addi a0, a2, 32
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v9, 0
 ; RV32-NEXT:    vsoxei32.v v9, (a0), v8
 ; RV32-NEXT:    addi sp, sp, 16
@@ -91,7 +91,7 @@ define void @strided_store_offset_start(i64 %n, ptr %p) {
 ; RV64-NEXT:    mul a0, a0, a2
 ; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    addi a0, a0, 36
-; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, 0
 ; RV64-NEXT:    vsse64.v v8, (a0), a2
 ; RV64-NEXT:    ret
@@ -107,19 +107,19 @@ define void @strided_store_offset_start(i64 %n, ptr %p) {
 define void @stride_one_store(i64 %n, ptr %p) {
 ; RV32-LABEL: stride_one_store:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; RV32-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vid.v v8
-; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, mu
+; RV32-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32-NEXT:    vnsrl.wi v8, v8, 0
 ; RV32-NEXT:    vsll.vi v8, v8, 3
-; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV32-NEXT:    vmv.v.i v9, 0
 ; RV32-NEXT:    vsoxei32.v v9, (a2), v8
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: stride_one_store:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
+; RV64-NEXT:    vsetvli a0, zero, e64, m1, ta, ma
 ; RV64-NEXT:    vmv.v.i v8, 0
 ; RV64-NEXT:    li a0, 8
 ; RV64-NEXT:    vsse64.v v8, (a1), a0

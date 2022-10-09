@@ -3462,6 +3462,8 @@ def warn_attribute_dll_redeclaration : Warning<
   InGroup<DiagGroup<"dll-attribute-on-redeclaration">>;
 def err_attribute_dllimport_function_definition : Error<
   "dllimport cannot be applied to non-inline function definition">;
+def err_attribute_dllimport_function_specialization_definition : Error<
+  "cannot define non-inline dllimport template specialization">;
 def err_attribute_dll_deleted : Error<
   "attribute %q0 cannot be applied to a deleted function">;
 def err_attribute_dllimport_data_definition : Error<
@@ -4696,6 +4698,8 @@ def ext_ovl_ambiguous_oper_binary_reversed : ExtWarn<
 def note_ovl_ambiguous_oper_binary_reversed_self : Note<
   "ambiguity is between a regular call to this operator and a call with the "
   "argument order reversed">;
+def note_ovl_ambiguous_eqeq_reversed_self_non_const : Note<
+  "mark 'operator==' as const or add a matching 'operator!=' to resolve the ambiguity">;
 def note_ovl_ambiguous_oper_binary_selected_candidate : Note<
   "candidate function with non-reversed arguments">;
 def note_ovl_ambiguous_oper_binary_reversed_candidate : Note<

@@ -365,6 +365,17 @@ public:
     All,
   };
 
+  enum class StrictFlexArraysLevelKind {
+    /// Any trailing array member is a FAM.
+    Default = 0,
+    /// Any trailing array member of undefined, 0, or 1 size is a FAM.
+    OneZeroOrIncomplete = 1,
+    /// Any trailing array member of undefined or 0 size is a FAM.
+    ZeroOrIncomplete = 2,
+    /// Any trailing array member of undefined size is a FAM.
+    Incomplete = 3,
+  };
+
 public:
   /// The used language standard.
   LangStandard::Kind LangStd;

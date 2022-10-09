@@ -9,7 +9,7 @@ declare <2 x i1> @llvm.vp.sub.v2i1(<2 x i1>, <2 x i1>, <2 x i1>, i32)
 define <2 x i1> @vsub_vv_v2i1(<2 x i1> %va, <2 x i1> %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_v2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <2 x i1> @llvm.vp.sub.v2i1(<2 x i1> %va, <2 x i1> %b, <2 x i1> %m, i32 %evl)
@@ -21,7 +21,7 @@ declare <4 x i1> @llvm.vp.sub.v4i1(<4 x i1>, <4 x i1>, <4 x i1>, i32)
 define <4 x i1> @vsub_vv_v4i1(<4 x i1> %va, <4 x i1> %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_v4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <4 x i1> @llvm.vp.sub.v4i1(<4 x i1> %va, <4 x i1> %b, <4 x i1> %m, i32 %evl)
@@ -33,7 +33,7 @@ declare <8 x i1> @llvm.vp.sub.v8i1(<8 x i1>, <8 x i1>, <8 x i1>, i32)
 define <8 x i1> @vsub_vv_v8i1(<8 x i1> %va, <8 x i1> %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_v8i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <8 x i1> @llvm.vp.sub.v8i1(<8 x i1> %va, <8 x i1> %b, <8 x i1> %m, i32 %evl)
@@ -45,7 +45,7 @@ declare <16 x i1> @llvm.vp.sub.v16i1(<16 x i1>, <16 x i1>, <16 x i1>, i32)
 define <16 x i1> @vsub_vv_v16i1(<16 x i1> %va, <16 x i1> %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_v16i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <16 x i1> @llvm.vp.sub.v16i1(<16 x i1> %va, <16 x i1> %b, <16 x i1> %m, i32 %evl)
@@ -57,7 +57,7 @@ declare <32 x i1> @llvm.vp.sub.v32i1(<32 x i1>, <32 x i1>, <32 x i1>, i32)
 define <32 x i1> @vsub_vv_v32i1(<32 x i1> %va, <32 x i1> %b, <32 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_v32i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <32 x i1> @llvm.vp.sub.v32i1(<32 x i1> %va, <32 x i1> %b, <32 x i1> %m, i32 %evl)
@@ -69,7 +69,7 @@ declare <64 x i1> @llvm.vp.sub.v64i1(<64 x i1>, <64 x i1>, <64 x i1>, i32)
 define <64 x i1> @vsub_vv_v64i1(<64 x i1> %va, <64 x i1> %b, <64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsub_vv_v64i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m4, ta, ma
 ; CHECK-NEXT:    vmxor.mm v0, v0, v8
 ; CHECK-NEXT:    ret
   %v = call <64 x i1> @llvm.vp.sub.v64i1(<64 x i1> %va, <64 x i1> %b, <64 x i1> %m, i32 %evl)

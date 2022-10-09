@@ -542,17 +542,50 @@ void IoChecker::Enter(const parser::IoControlSpec::Size &var) {
 
 void IoChecker::Enter(const parser::IoUnit &spec) {
   if (const parser::Variable * var{std::get_if<parser::Variable>(&spec.u)}) {
-    if (stmt_ == IoStmtKind::Write) {
-      CheckForDefinableVariable(*var, "Internal file");
+    // Only now after generic resolution can it be known whether a function
+    // call appearing as UNIT=f() is an integer scalar external unit number
+    // or a character pointer for internal I/O.
+    const auto *expr{GetExpr(context_, *var)};
+    std::optional<evaluate::DynamicType> dyType;
+    if (expr) {
+      dyType = expr->GetType();
     }
-    if (const auto *expr{GetExpr(context_, *var)}) {
+    if (dyType && dyType->category() == TypeCategory::Integer) {
+      if (expr->Rank() != 0) {
+        context_.Say(parser::FindSourceLocation(*var),
+            "I/O unit number must be scalar"_err_en_US);
+      }
+      // In the case of an integer unit number variable, rewrite the parse
+      // tree as if the unit had been parsed as a FileUnitNumber in order
+      // to ease lowering.
+      auto &mutableSpec{const_cast<parser::IoUnit &>(spec)};
+      auto &mutableVar{std::get<parser::Variable>(mutableSpec.u)};
+      auto source{mutableVar.GetSource()};
+      auto typedExpr{std::move(mutableVar.typedExpr)};
+      auto newExpr{common::visit(
+          [](auto &&indirection) {
+            return parser::Expr{std::move(indirection)};
+          },
+          std::move(mutableVar.u))};
+      newExpr.source = source;
+      newExpr.typedExpr = std::move(typedExpr);
+      mutableSpec.u = parser::FileUnitNumber{
+          parser::ScalarIntExpr{parser::IntExpr{std::move(newExpr)}}};
+    } else if (!dyType || dyType->category() != TypeCategory::Character) {
+      SetSpecifier(IoSpecKind::Unit);
+      context_.Say(parser::FindSourceLocation(*var),
+          "I/O unit must be a character variable or a scalar integer expression"_err_en_US);
+    } else { // CHARACTER variable (internal I/O)
+      if (stmt_ == IoStmtKind::Write) {
+        CheckForDefinableVariable(*var, "Internal file");
+      }
       if (HasVectorSubscript(*expr)) {
         context_.Say(parser::FindSourceLocation(*var), // C1201
             "Internal file must not have a vector subscript"_err_en_US);
       }
+      SetSpecifier(IoSpecKind::Unit);
+      flags_.set(Flag::InternalUnit);
     }
-    SetSpecifier(IoSpecKind::Unit);
-    flags_.set(Flag::InternalUnit);
   } else if (std::get_if<parser::Star>(&spec.u)) {
     SetSpecifier(IoSpecKind::Unit);
     flags_.set(Flag::StarUnit);

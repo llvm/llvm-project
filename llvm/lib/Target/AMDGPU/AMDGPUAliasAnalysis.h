@@ -20,9 +20,7 @@ class DataLayout;
 class MemoryLocation;
 
 /// A simple AA result that uses TBAA metadata to answer queries.
-class AMDGPUAAResult : public AAResultBase<AMDGPUAAResult> {
-  friend AAResultBase<AMDGPUAAResult>;
-
+class AMDGPUAAResult : public AAResultBase {
   const DataLayout &DL;
 
 public:

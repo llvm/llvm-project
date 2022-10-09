@@ -64,7 +64,7 @@ public:
 /// Bundle Entry ID (or, Offload Target String) has following components:
 ///  * Offload Kind - Host, OpenMP, or HIP
 ///  * Triple - Standard LLVM Triple
-///  * TargetID (Optional) - Processor name, followed by set of ON/OFF features
+///  * TargetID (Optional) - target ID, like gfx906:xnack+ or sm_30
 struct OffloadTargetInfo {
   llvm::StringRef OffloadKind;
   llvm::Triple Triple;
@@ -78,7 +78,7 @@ struct OffloadTargetInfo {
   bool isOffloadKindCompatible(const llvm::StringRef TargetOffloadKind) const;
   bool isTripleValid() const;
   bool operator==(const OffloadTargetInfo &Target) const;
-  std::string str();
+  std::string str() const;
 };
 
 } // namespace clang

@@ -672,6 +672,7 @@ define void @store_same_i32_to_mayalias_loc(ptr %q, ptr %p) {
 ; CHECK-LABEL: @store_same_i32_to_mayalias_loc(
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    store i32 [[V]], ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    store i32 [[V]], ptr [[P]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %v = load i32, ptr %p, align 4
@@ -697,6 +698,7 @@ define void @store_same_i12_to_mayalias_loc(ptr %q, ptr %p) {
 ; CHECK-LABEL: @store_same_i12_to_mayalias_loc(
 ; CHECK-NEXT:    [[V:%.*]] = load i12, ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    store i12 [[V]], ptr [[Q:%.*]], align 2
+; CHECK-NEXT:    store i12 [[V]], ptr [[P]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %v = load i12, ptr %p, align 2
@@ -722,6 +724,7 @@ define void @store_same_ptr_to_mayalias_loc(ptr %q, ptr %p) {
 ; CHECK-LABEL: @store_same_ptr_to_mayalias_loc(
 ; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    store ptr [[V]], ptr [[Q:%.*]], align 8
+; CHECK-NEXT:    store ptr [[V]], ptr [[P]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %v = load ptr, ptr %p, align 8

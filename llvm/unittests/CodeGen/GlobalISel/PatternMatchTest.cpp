@@ -769,6 +769,23 @@ TEST_F(AArch64GISelMITest, MatchNot) {
   EXPECT_TRUE(mi_match(AddInst.getReg(2), *MRI, m_Not(m_Reg(NotReg))));
   EXPECT_EQ(NotReg, Copies[0]);
 }
+
+TEST_F(AArch64GISelMITest, MatchSpecificReg) {
+  setUp();
+  if (!TM)
+    return;
+  auto Cst1 = B.buildConstant(LLT::scalar(64), 42);
+  auto Cst2 = B.buildConstant(LLT::scalar(64), 314);
+  Register Reg = Cst1.getReg(0);
+  // Basic case: Same register twice.
+  EXPECT_TRUE(mi_match(Reg, *MRI, m_SpecificReg(Reg)));
+  // Basic case: Two explicitly different registers.
+  EXPECT_FALSE(mi_match(Reg, *MRI, m_SpecificReg(Cst2.getReg(0))));
+  // Check that we can tell that an instruction uses a specific register.
+  auto Add = B.buildAdd(LLT::scalar(64), Cst1, Cst2);
+  EXPECT_TRUE(mi_match(Add.getReg(0), *MRI, m_GAdd(m_SpecificReg(Reg), m_Reg())));
+}
+
 } // namespace
 
 int main(int argc, char **argv) {

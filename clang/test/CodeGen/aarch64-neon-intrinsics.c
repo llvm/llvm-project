@@ -14035,8 +14035,8 @@ uint64_t test_vsqaddd_u64(uint64_t a, int64_t b) {
 }
 
 // CHECK-LABEL: @test_vqdmlalh_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 %c, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 %c, i64 0
 // CHECK:   [[VQDMLXL_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[LANE0_I:%.*]] = extractelement <4 x i32> [[VQDMLXL_I]], i64 0
 // CHECK:   [[VQDMLXL1_I:%.*]] = call i32 @llvm.aarch64.neon.sqadd.i32(i32 %a, i32 [[LANE0_I]])
@@ -14054,8 +14054,8 @@ int64_t test_vqdmlals_s32(int64_t a, int32_t b, int32_t c) {
 }
 
 // CHECK-LABEL: @test_vqdmlslh_s16(
-// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
-// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> undef, i16 %c, i64 0
+// CHECK:   [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
+// CHECK:   [[TMP1:%.*]] = insertelement <4 x i16> poison, i16 %c, i64 0
 // CHECK:   [[VQDMLXL_I:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[LANE0_I:%.*]] = extractelement <4 x i32> [[VQDMLXL_I]], i64 0
 // CHECK:   [[VQDMLXL1_I:%.*]] = call i32 @llvm.aarch64.neon.sqsub.i32(i32 %a, i32 [[LANE0_I]])

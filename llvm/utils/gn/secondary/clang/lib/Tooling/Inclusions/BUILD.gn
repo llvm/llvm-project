@@ -11,6 +11,5 @@ static_library("Inclusions") {
   sources = [
     "HeaderIncludes.cpp",
     "IncludeStyle.cpp",
-    "StandardLibrary.cpp",
   ]
 }

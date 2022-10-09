@@ -431,7 +431,8 @@ function(add_integration_test test_name)
       APPEND fq_deps_list
       libc.src.__support.threads.thread
       libc.src.stdlib.atexit
-      libc.src.stdlib.exit)
+      libc.src.stdlib.exit
+      libc.src.unistd.environ)
   list(REMOVE_DUPLICATES fq_deps_list)
 
   # We don't want memory functions to be dependencies on integration tests.
@@ -533,7 +534,8 @@ function(add_integration_test test_name)
   add_dependencies(${fq_target_name}
                    ${fq_target_name}.__copy_loader__
                    ${fq_libc_target_name}
-                   libc.utils.IntegrationTest.test)
+                   libc.utils.IntegrationTest.test
+                   ${INTEGRATION_TEST_DEPENDS})
 
   add_custom_command(
     TARGET ${fq_target_name}

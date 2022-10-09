@@ -21,7 +21,7 @@ LLVM_LIBC_FUNCTION(float, atanhf, (float x)) {
   // |x| >= 1.0
   if (unlikely(x_abs >= 0x3F80'0000U)) {
     if (xbits.is_nan()) {
-      return x + 1.0f;
+      return x;
     }
     // |x| == 0
     if (x_abs == 0x3F80'0000U) {

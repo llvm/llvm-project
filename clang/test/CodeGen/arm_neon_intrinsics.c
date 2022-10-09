@@ -4077,7 +4077,7 @@ poly16x4_t test_vld1_p16(poly16_t const * a) {
 
 // CHECK-LABEL: @test_vld1q_dup_u8(
 // CHECK:   [[TMP0:%.*]] = load i8, i8* %a, align 1
-// CHECK:   [[TMP1:%.*]] = insertelement <16 x i8> undef, i8 [[TMP0]], i32 0
+// CHECK:   [[TMP1:%.*]] = insertelement <16 x i8> poison, i8 [[TMP0]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> [[TMP1]], <16 x i32> zeroinitializer
 // CHECK:   ret <16 x i8> [[LANE]]
 uint8x16_t test_vld1q_dup_u8(uint8_t const * a) {
@@ -4088,7 +4088,7 @@ uint8x16_t test_vld1q_dup_u8(uint8_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast i16* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i16*
 // CHECK:   [[TMP2:%.*]] = load i16, i16* [[TMP1]], align 2
-// CHECK:   [[TMP3:%.*]] = insertelement <8 x i16> undef, i16 [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <8 x i16> poison, i16 [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <8 x i16> [[TMP3]], <8 x i16> [[TMP3]], <8 x i32> zeroinitializer
 // CHECK:   ret <8 x i16> [[LANE]]
 uint16x8_t test_vld1q_dup_u16(uint16_t const * a) {
@@ -4099,7 +4099,7 @@ uint16x8_t test_vld1q_dup_u16(uint16_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast i32* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i32*
 // CHECK:   [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
-// CHECK:   [[TMP3:%.*]] = insertelement <4 x i32> undef, i32 [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP3]], <4 x i32> zeroinitializer
 // CHECK:   ret <4 x i32> [[LANE]]
 uint32x4_t test_vld1q_dup_u32(uint32_t const * a) {
@@ -4110,7 +4110,7 @@ uint32x4_t test_vld1q_dup_u32(uint32_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast i64* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i64*
 // CHECK:   [[TMP2:%.*]] = load i64, i64* [[TMP1]], align 4
-// CHECK:   [[TMP3:%.*]] = insertelement <2 x i64> undef, i64 [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP3]], <2 x i32> zeroinitializer
 // CHECK:   ret <2 x i64> [[LANE]]
 uint64x2_t test_vld1q_dup_u64(uint64_t const * a) {
@@ -4119,7 +4119,7 @@ uint64x2_t test_vld1q_dup_u64(uint64_t const * a) {
 
 // CHECK-LABEL: @test_vld1q_dup_s8(
 // CHECK:   [[TMP0:%.*]] = load i8, i8* %a, align 1
-// CHECK:   [[TMP1:%.*]] = insertelement <16 x i8> undef, i8 [[TMP0]], i32 0
+// CHECK:   [[TMP1:%.*]] = insertelement <16 x i8> poison, i8 [[TMP0]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> [[TMP1]], <16 x i32> zeroinitializer
 // CHECK:   ret <16 x i8> [[LANE]]
 int8x16_t test_vld1q_dup_s8(int8_t const * a) {
@@ -4130,7 +4130,7 @@ int8x16_t test_vld1q_dup_s8(int8_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast i16* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i16*
 // CHECK:   [[TMP2:%.*]] = load i16, i16* [[TMP1]], align 2
-// CHECK:   [[TMP3:%.*]] = insertelement <8 x i16> undef, i16 [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <8 x i16> poison, i16 [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <8 x i16> [[TMP3]], <8 x i16> [[TMP3]], <8 x i32> zeroinitializer
 // CHECK:   ret <8 x i16> [[LANE]]
 int16x8_t test_vld1q_dup_s16(int16_t const * a) {
@@ -4141,7 +4141,7 @@ int16x8_t test_vld1q_dup_s16(int16_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast i32* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i32*
 // CHECK:   [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
-// CHECK:   [[TMP3:%.*]] = insertelement <4 x i32> undef, i32 [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> [[TMP3]], <4 x i32> zeroinitializer
 // CHECK:   ret <4 x i32> [[LANE]]
 int32x4_t test_vld1q_dup_s32(int32_t const * a) {
@@ -4152,7 +4152,7 @@ int32x4_t test_vld1q_dup_s32(int32_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast i64* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i64*
 // CHECK:   [[TMP2:%.*]] = load i64, i64* [[TMP1]], align 4
-// CHECK:   [[TMP3:%.*]] = insertelement <2 x i64> undef, i64 [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <2 x i64> poison, i64 [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> [[TMP3]], <2 x i32> zeroinitializer
 // CHECK:   ret <2 x i64> [[LANE]]
 int64x2_t test_vld1q_dup_s64(int64_t const * a) {
@@ -4163,7 +4163,7 @@ int64x2_t test_vld1q_dup_s64(int64_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast half* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to half*
 // CHECK:   [[TMP2:%.*]] = load half, half* [[TMP1]], align 2
-// CHECK:   [[TMP3:%.*]] = insertelement <8 x half> undef, half [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <8 x half> poison, half [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <8 x half> [[TMP3]], <8 x half> [[TMP3]], <8 x i32> zeroinitializer
 // CHECK:   ret <8 x half> [[LANE]]
 float16x8_t test_vld1q_dup_f16(float16_t const * a) {
@@ -4174,7 +4174,7 @@ float16x8_t test_vld1q_dup_f16(float16_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast float* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to float*
 // CHECK:   [[TMP2:%.*]] = load float, float* [[TMP1]], align 4
-// CHECK:   [[TMP3:%.*]] = insertelement <4 x float> undef, float [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x float> [[TMP3]], <4 x float> [[TMP3]], <4 x i32> zeroinitializer
 // CHECK:   ret <4 x float> [[LANE]]
 float32x4_t test_vld1q_dup_f32(float32_t const * a) {
@@ -4183,7 +4183,7 @@ float32x4_t test_vld1q_dup_f32(float32_t const * a) {
 
 // CHECK-LABEL: @test_vld1q_dup_p8(
 // CHECK:   [[TMP0:%.*]] = load i8, i8* %a, align 1
-// CHECK:   [[TMP1:%.*]] = insertelement <16 x i8> undef, i8 [[TMP0]], i32 0
+// CHECK:   [[TMP1:%.*]] = insertelement <16 x i8> poison, i8 [[TMP0]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> [[TMP1]], <16 x i32> zeroinitializer
 // CHECK:   ret <16 x i8> [[LANE]]
 poly8x16_t test_vld1q_dup_p8(poly8_t const * a) {
@@ -4194,7 +4194,7 @@ poly8x16_t test_vld1q_dup_p8(poly8_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast i16* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i16*
 // CHECK:   [[TMP2:%.*]] = load i16, i16* [[TMP1]], align 2
-// CHECK:   [[TMP3:%.*]] = insertelement <8 x i16> undef, i16 [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <8 x i16> poison, i16 [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <8 x i16> [[TMP3]], <8 x i16> [[TMP3]], <8 x i32> zeroinitializer
 // CHECK:   ret <8 x i16> [[LANE]]
 poly16x8_t test_vld1q_dup_p16(poly16_t const * a) {
@@ -4203,7 +4203,7 @@ poly16x8_t test_vld1q_dup_p16(poly16_t const * a) {
 
 // CHECK-LABEL: @test_vld1_dup_u8(
 // CHECK:   [[TMP0:%.*]] = load i8, i8* %a, align 1
-// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> undef, i8 [[TMP0]], i32 0
+// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 [[TMP0]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP1]], <8 x i32> zeroinitializer
 // CHECK:   ret <8 x i8> [[LANE]]
 uint8x8_t test_vld1_dup_u8(uint8_t const * a) {
@@ -4214,7 +4214,7 @@ uint8x8_t test_vld1_dup_u8(uint8_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast i16* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i16*
 // CHECK:   [[TMP2:%.*]] = load i16, i16* [[TMP1]], align 2
-// CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> undef, i16 [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> [[TMP3]], <4 x i32> zeroinitializer
 // CHECK:   ret <4 x i16> [[LANE]]
 uint16x4_t test_vld1_dup_u16(uint16_t const * a) {
@@ -4225,7 +4225,7 @@ uint16x4_t test_vld1_dup_u16(uint16_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast i32* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i32*
 // CHECK:   [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
-// CHECK:   [[TMP3:%.*]] = insertelement <2 x i32> undef, i32 [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> [[TMP3]], <2 x i32> zeroinitializer
 // CHECK:   ret <2 x i32> [[LANE]]
 uint32x2_t test_vld1_dup_u32(uint32_t const * a) {
@@ -4236,7 +4236,7 @@ uint32x2_t test_vld1_dup_u32(uint32_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast i64* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i64*
 // CHECK:   [[TMP2:%.*]] = load i64, i64* [[TMP1]], align 4
-// CHECK:   [[TMP3:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <1 x i64> poison, i64 [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <1 x i64> [[TMP3]], <1 x i64> [[TMP3]], <1 x i32> zeroinitializer
 // CHECK:   ret <1 x i64> [[LANE]]
 uint64x1_t test_vld1_dup_u64(uint64_t const * a) {
@@ -4245,7 +4245,7 @@ uint64x1_t test_vld1_dup_u64(uint64_t const * a) {
 
 // CHECK-LABEL: @test_vld1_dup_s8(
 // CHECK:   [[TMP0:%.*]] = load i8, i8* %a, align 1
-// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> undef, i8 [[TMP0]], i32 0
+// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 [[TMP0]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP1]], <8 x i32> zeroinitializer
 // CHECK:   ret <8 x i8> [[LANE]]
 int8x8_t test_vld1_dup_s8(int8_t const * a) {
@@ -4256,7 +4256,7 @@ int8x8_t test_vld1_dup_s8(int8_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast i16* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i16*
 // CHECK:   [[TMP2:%.*]] = load i16, i16* [[TMP1]], align 2
-// CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> undef, i16 [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> [[TMP3]], <4 x i32> zeroinitializer
 // CHECK:   ret <4 x i16> [[LANE]]
 int16x4_t test_vld1_dup_s16(int16_t const * a) {
@@ -4267,7 +4267,7 @@ int16x4_t test_vld1_dup_s16(int16_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast i32* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i32*
 // CHECK:   [[TMP2:%.*]] = load i32, i32* [[TMP1]], align 4
-// CHECK:   [[TMP3:%.*]] = insertelement <2 x i32> undef, i32 [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <2 x i32> poison, i32 [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> [[TMP3]], <2 x i32> zeroinitializer
 // CHECK:   ret <2 x i32> [[LANE]]
 int32x2_t test_vld1_dup_s32(int32_t const * a) {
@@ -4278,7 +4278,7 @@ int32x2_t test_vld1_dup_s32(int32_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast i64* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i64*
 // CHECK:   [[TMP2:%.*]] = load i64, i64* [[TMP1]], align 4
-// CHECK:   [[TMP3:%.*]] = insertelement <1 x i64> undef, i64 [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <1 x i64> poison, i64 [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <1 x i64> [[TMP3]], <1 x i64> [[TMP3]], <1 x i32> zeroinitializer
 // CHECK:   ret <1 x i64> [[LANE]]
 int64x1_t test_vld1_dup_s64(int64_t const * a) {
@@ -4289,7 +4289,7 @@ int64x1_t test_vld1_dup_s64(int64_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast half* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to half*
 // CHECK:   [[TMP2:%.*]] = load half, half* [[TMP1]], align 2
-// CHECK:   [[TMP3:%.*]] = insertelement <4 x half> undef, half [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <4 x half> poison, half [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x half> [[TMP3]], <4 x half> [[TMP3]], <4 x i32> zeroinitializer
 // CHECK:   ret <4 x half> [[LANE]]
 float16x4_t test_vld1_dup_f16(float16_t const * a) {
@@ -4300,7 +4300,7 @@ float16x4_t test_vld1_dup_f16(float16_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast float* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to float*
 // CHECK:   [[TMP2:%.*]] = load float, float* [[TMP1]], align 4
-// CHECK:   [[TMP3:%.*]] = insertelement <2 x float> undef, float [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP3]], <2 x i32> zeroinitializer
 // CHECK:   ret <2 x float> [[LANE]]
 float32x2_t test_vld1_dup_f32(float32_t const * a) {
@@ -4309,7 +4309,7 @@ float32x2_t test_vld1_dup_f32(float32_t const * a) {
 
 // CHECK-LABEL: @test_vld1_dup_p8(
 // CHECK:   [[TMP0:%.*]] = load i8, i8* %a, align 1
-// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> undef, i8 [[TMP0]], i32 0
+// CHECK:   [[TMP1:%.*]] = insertelement <8 x i8> poison, i8 [[TMP0]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <8 x i8> [[TMP1]], <8 x i8> [[TMP1]], <8 x i32> zeroinitializer
 // CHECK:   ret <8 x i8> [[LANE]]
 poly8x8_t test_vld1_dup_p8(poly8_t const * a) {
@@ -4320,7 +4320,7 @@ poly8x8_t test_vld1_dup_p8(poly8_t const * a) {
 // CHECK:   [[TMP0:%.*]] = bitcast i16* %a to i8*
 // CHECK:   [[TMP1:%.*]] = bitcast i8* [[TMP0]] to i16*
 // CHECK:   [[TMP2:%.*]] = load i16, i16* [[TMP1]], align 2
-// CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> undef, i16 [[TMP2]], i32 0
+// CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i32 0
 // CHECK:   [[LANE:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> [[TMP3]], <4 x i32> zeroinitializer
 // CHECK:   ret <4 x i16> [[LANE]]
 poly16x4_t test_vld1_dup_p16(poly16_t const * a) {

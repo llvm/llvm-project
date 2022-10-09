@@ -123,46 +123,46 @@ else:
   ret i1 false
 }
 
-define i1 @gep_decomp_i80(i8* %a) {
+define i1 @gep_decomp_i80(ptr %a) {
 ; CHECK-LABEL: @gep_decomp_i80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i80 1973801615886922022913
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8* [[GEP]], null
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i80 1973801615886922022913
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[GEP]], null
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, i8* [[A]], i80 1973801615886922022913
-; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8* [[GEP_1]], null
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i80 1973801615886922022913
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[GEP_1]], null
 ; CHECK-NEXT:    ret i1 [[C_1]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
-  %gep = getelementptr inbounds i8, i8* %a, i80 1973801615886922022913
-  %c = icmp eq i8* %gep, null
+  %gep = getelementptr inbounds i8, ptr %a, i80 1973801615886922022913
+  %c = icmp eq ptr %gep, null
   br i1 %c, label %then, label %else
 
 then:
-  %gep.1 = getelementptr inbounds i8, i8* %a, i80 1973801615886922022913
-  %c.1 = icmp eq i8* %gep.1, null
+  %gep.1 = getelementptr inbounds i8, ptr %a, i80 1973801615886922022913
+  %c.1 = icmp eq ptr %gep.1, null
   ret i1 %c.1
 
 else:
   ret i1 false
 }
 
-define i1 @gep_zext_shl_decomp_i80(i8* %a, i80 %v) {
+define i1 @gep_zext_shl_decomp_i80(ptr %a, i80 %v) {
 ; CHECK-LABEL: @gep_zext_shl_decomp_i80(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i80 [[V:%.*]], 1973801615886922022913
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i80 [[SHL]] to i128
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i128 [[EXT]]
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8* [[GEP]], null
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i128 [[EXT]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[GEP]], null
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[SHL_1:%.*]] = shl nuw i80 [[V]], 1973801615886922022913
 ; CHECK-NEXT:    [[EXT_1:%.*]] = zext i80 [[SHL_1]] to i128
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, i8* [[A]], i128 [[EXT_1]]
-; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8* [[GEP_1]], null
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i128 [[EXT_1]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[GEP_1]], null
 ; CHECK-NEXT:    ret i1 [[C_1]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
@@ -170,34 +170,34 @@ define i1 @gep_zext_shl_decomp_i80(i8* %a, i80 %v) {
 entry:
   %shl = shl nuw i80 %v, 1973801615886922022913
   %ext = zext i80 %shl to i128
-  %gep = getelementptr inbounds i8, i8* %a, i128 %ext
-  %c = icmp eq i8* %gep, null
+  %gep = getelementptr inbounds i8, ptr %a, i128 %ext
+  %c = icmp eq ptr %gep, null
   br i1 %c, label %then, label %else
 
 then:
   %shl.1 = shl nuw i80 %v, 1973801615886922022913
   %ext.1 = zext i80 %shl.1 to i128
-  %gep.1 = getelementptr inbounds i8, i8* %a, i128 %ext.1
-  %c.1 = icmp eq i8* %gep.1, null
+  %gep.1 = getelementptr inbounds i8, ptr %a, i128 %ext.1
+  %c.1 = icmp eq ptr %gep.1, null
   ret i1 %c.1
 
 else:
   ret i1 false
 }
 
-define i1 @gep_zext_add_decomp_i80(i8* %a, i80 %v) {
+define i1 @gep_zext_add_decomp_i80(ptr %a, i80 %v) {
 ; CHECK-LABEL: @gep_zext_add_decomp_i80(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i80 [[V:%.*]], 1973801615886922022913
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i80 [[ADD]] to i128
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i128 [[EXT]]
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8* [[GEP]], null
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i128 [[EXT]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[GEP]], null
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i80 [[V]], 1973801615886922022913
 ; CHECK-NEXT:    [[EXT_1:%.*]] = zext i80 [[ADD_1]] to i128
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, i8* [[A]], i128 [[EXT_1]]
-; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8* [[GEP_1]], null
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i128 [[EXT_1]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[GEP_1]], null
 ; CHECK-NEXT:    ret i1 [[C_1]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
@@ -205,77 +205,77 @@ define i1 @gep_zext_add_decomp_i80(i8* %a, i80 %v) {
 entry:
   %add = add nsw i80 %v, 1973801615886922022913
   %ext = zext i80 %add to i128
-  %gep = getelementptr inbounds i8, i8* %a, i128 %ext
-  %c = icmp eq i8* %gep, null
+  %gep = getelementptr inbounds i8, ptr %a, i128 %ext
+  %c = icmp eq ptr %gep, null
   br i1 %c, label %then, label %else
 
 then:
   %add.1 = add nsw i80 %v, 1973801615886922022913
   %ext.1 = zext i80 %add.1 to i128
-  %gep.1 = getelementptr inbounds i8, i8* %a, i128 %ext.1
-  %c.1 = icmp eq i8* %gep.1, null
+  %gep.1 = getelementptr inbounds i8, ptr %a, i128 %ext.1
+  %c.1 = icmp eq ptr %gep.1, null
   ret i1 %c.1
 
 else:
   ret i1 false
 }
 
-define i1 @gep_shl_decomp_i80(i8* %a, i80 %v) {
+define i1 @gep_shl_decomp_i80(ptr %a, i80 %v) {
 ; CHECK-LABEL: @gep_shl_decomp_i80(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i80 [[V:%.*]], 1973801615886922022913
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i80 [[SHL]]
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8* [[GEP]], null
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i80 [[SHL]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[GEP]], null
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[SHL_1:%.*]] = shl nuw i80 [[V]], 1973801615886922022913
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, i8* [[A]], i80 [[SHL_1]]
-; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8* [[GEP_1]], null
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i80 [[SHL_1]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[GEP_1]], null
 ; CHECK-NEXT:    ret i1 [[C_1]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %shl = shl nuw i80 %v, 1973801615886922022913
-  %gep = getelementptr inbounds i8, i8* %a, i80 %shl
-  %c = icmp eq i8* %gep, null
+  %gep = getelementptr inbounds i8, ptr %a, i80 %shl
+  %c = icmp eq ptr %gep, null
   br i1 %c, label %then, label %else
 
 then:
   %shl.1 = shl nuw i80 %v, 1973801615886922022913
-  %gep.1 = getelementptr inbounds i8, i8* %a, i80 %shl.1
-  %c.1 = icmp eq i8* %gep.1, null
+  %gep.1 = getelementptr inbounds i8, ptr %a, i80 %shl.1
+  %c.1 = icmp eq ptr %gep.1, null
   ret i1 %c.1
 
 else:
   ret i1 false
 }
 
-define i1 @gep_add_decomp_i80(i8* %a, i80 %v) {
+define i1 @gep_add_decomp_i80(ptr %a, i80 %v) {
 ; CHECK-LABEL: @gep_add_decomp_i80(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i80 [[V:%.*]], 1973801615886922022913
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, i8* [[A:%.*]], i80 [[ADD]]
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8* [[GEP]], null
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i80 [[ADD]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[GEP]], null
 ; CHECK-NEXT:    br i1 [[C]], label [[THEN:%.*]], label [[ELSE:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i80 [[V]], 1973801615886922022913
-; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, i8* [[A]], i80 [[ADD_1]]
-; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8* [[GEP_1]], null
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i8, ptr [[A]], i80 [[ADD_1]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[GEP_1]], null
 ; CHECK-NEXT:    ret i1 [[C_1]]
 ; CHECK:       else:
 ; CHECK-NEXT:    ret i1 false
 ;
 entry:
   %add = add nsw i80 %v, 1973801615886922022913
-  %gep = getelementptr inbounds i8, i8* %a, i80 %add
-  %c = icmp eq i8* %gep, null
+  %gep = getelementptr inbounds i8, ptr %a, i80 %add
+  %c = icmp eq ptr %gep, null
   br i1 %c, label %then, label %else
 
 then:
   %add.1 = add nsw i80 %v, 1973801615886922022913
-  %gep.1 = getelementptr inbounds i8, i8* %a, i80 %add.1
-  %c.1 = icmp eq i8* %gep.1, null
+  %gep.1 = getelementptr inbounds i8, ptr %a, i80 %add.1
+  %c.1 = icmp eq ptr %gep.1, null
   ret i1 %c.1
 
 else:

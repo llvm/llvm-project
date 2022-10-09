@@ -324,8 +324,8 @@ int32_t test_vqrdmulhs_laneq_s32(int32_t a, int32x4_t b) {
 
 // CHECK-LABEL: define{{.*}} i32 @test_vqdmlalh_lane_s16(i32 noundef %a, i16 noundef %b, <4 x i16> noundef %c) #0 {
 // CHECK:   [[LANE:%.*]] = extractelement <4 x i16> %c, i32 3
-// CHECK:   [[TMP2:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
-// CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> undef, i16 [[LANE]], i64 0
+// CHECK:   [[TMP2:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
+// CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[LANE]], i64 0
 // CHECK:   [[VQDMLXL:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP2]], <4 x i16> [[TMP3]])
 // CHECK:   [[LANE0:%.*]] = extractelement <4 x i32> [[VQDMLXL]], i64 0
 // CHECK:   [[VQDMLXL1:%.*]] = call i32 @llvm.aarch64.neon.sqadd.i32(i32 %a, i32 [[LANE0]])
@@ -345,8 +345,8 @@ int64_t test_vqdmlals_lane_s32(int64_t a, int32_t b, int32x2_t c) {
 
 // CHECK-LABEL: define{{.*}} i32 @test_vqdmlalh_laneq_s16(i32 noundef %a, i16 noundef %b, <8 x i16> noundef %c) #1 {
 // CHECK:   [[LANE:%.*]] = extractelement <8 x i16> %c, i32 7
-// CHECK:   [[TMP2:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
-// CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> undef, i16 [[LANE]], i64 0
+// CHECK:   [[TMP2:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
+// CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[LANE]], i64 0
 // CHECK:   [[VQDMLXL:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP2]], <4 x i16> [[TMP3]])
 // CHECK:   [[LANE0:%.*]] = extractelement <4 x i32> [[VQDMLXL]], i64 0
 // CHECK:   [[VQDMLXL1:%.*]] = call i32 @llvm.aarch64.neon.sqadd.i32(i32 %a, i32 [[LANE0]])
@@ -366,8 +366,8 @@ int64_t test_vqdmlals_laneq_s32(int64_t a, int32_t b, int32x4_t c) {
 
 // CHECK-LABEL: define{{.*}} i32 @test_vqdmlslh_lane_s16(i32 noundef %a, i16 noundef %b, <4 x i16> noundef %c) #0 {
 // CHECK:   [[LANE:%.*]] = extractelement <4 x i16> %c, i32 3
-// CHECK:   [[TMP2:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
-// CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> undef, i16 [[LANE]], i64 0
+// CHECK:   [[TMP2:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
+// CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[LANE]], i64 0
 // CHECK:   [[VQDMLXL:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP2]], <4 x i16> [[TMP3]])
 // CHECK:   [[LANE0:%.*]] = extractelement <4 x i32> [[VQDMLXL]], i64 0
 // CHECK:   [[VQDMLXL1:%.*]] = call i32 @llvm.aarch64.neon.sqsub.i32(i32 %a, i32 [[LANE0]])
@@ -387,8 +387,8 @@ int64_t test_vqdmlsls_lane_s32(int64_t a, int32_t b, int32x2_t c) {
 
 // CHECK-LABEL: define{{.*}} i32 @test_vqdmlslh_laneq_s16(i32 noundef %a, i16 noundef %b, <8 x i16> noundef %c) #1 {
 // CHECK:   [[LANE:%.*]] = extractelement <8 x i16> %c, i32 7
-// CHECK:   [[TMP2:%.*]] = insertelement <4 x i16> undef, i16 %b, i64 0
-// CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> undef, i16 [[LANE]], i64 0
+// CHECK:   [[TMP2:%.*]] = insertelement <4 x i16> poison, i16 %b, i64 0
+// CHECK:   [[TMP3:%.*]] = insertelement <4 x i16> poison, i16 [[LANE]], i64 0
 // CHECK:   [[VQDMLXL:%.*]] = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> [[TMP2]], <4 x i16> [[TMP3]])
 // CHECK:   [[LANE0:%.*]] = extractelement <4 x i32> [[VQDMLXL]], i64 0
 // CHECK:   [[VQDMLXL1:%.*]] = call i32 @llvm.aarch64.neon.sqsub.i32(i32 %a, i32 [[LANE0]])

@@ -46,6 +46,12 @@ using namespace llvm;
 
 STATISTIC(NumTailCalls, "Number of tail calls");
 
+static cl::opt<unsigned> ExtensionMaxWebSize(
+    DEBUG_TYPE "-ext-max-web-size", cl::Hidden,
+    cl::desc("Give the maximum size (in number of nodes) of the web of "
+             "instructions that we will consider for VW expansion"),
+    cl::init(18));
+
 static cl::opt<bool>
     AllowSplatInVW_W(DEBUG_TYPE "-form-vw-w-with-splat", cl::Hidden,
                      cl::desc("Allow the formation of VW_W operations (e.g., "
@@ -459,7 +465,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         ISD::VP_SETCC,       ISD::VP_FP_ROUND,    ISD::VP_FP_EXTEND,
         ISD::VP_SQRT,        ISD::VP_FMINNUM,     ISD::VP_FMAXNUM,
         ISD::VP_FCEIL,       ISD::VP_FFLOOR,      ISD::VP_FROUND,
-        ISD::VP_FROUNDEVEN,  ISD::VP_FCOPYSIGN};
+        ISD::VP_FROUNDEVEN,  ISD::VP_FCOPYSIGN,   ISD::VP_FROUNDTOZERO};
 
     static const unsigned IntegerVecReduceOps[] = {
         ISD::VECREDUCE_ADD,  ISD::VECREDUCE_AND,  ISD::VECREDUCE_OR,
@@ -1959,7 +1965,9 @@ static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
   case ISD::FROUNDEVEN:
   case ISD::VP_FROUNDEVEN:
     return RISCVFPRndMode::RNE;
-  case ISD::FTRUNC:     return RISCVFPRndMode::RTZ;
+  case ISD::FTRUNC:
+  case ISD::VP_FROUNDTOZERO:
+    return RISCVFPRndMode::RTZ;
   case ISD::FFLOOR:
   case ISD::VP_FFLOOR:
     return RISCVFPRndMode::RDN;
@@ -1975,8 +1983,8 @@ static RISCVFPRndMode::RoundingMode matchRoundingOp(unsigned Opc) {
 }
 
 // Expand vector FTRUNC, FCEIL, FFLOOR, FROUND, VP_FCEIL, VP_FFLOOR, VP_FROUND
-// and VP_FROUNDEVEN by converting to the integer domain and back. Taking care
-// to avoid converting values that are nan or already correct.
+// VP_FROUNDEVEN and VP_FROUNDTOZERO by converting to the integer domain and
+// back. Taking care to avoid converting values that are nan or already correct.
 static SDValue
 lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
@@ -1997,7 +2005,8 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   bool IsVP = Op->getOpcode() == ISD::VP_FCEIL ||
               Op->getOpcode() == ISD::VP_FFLOOR ||
               Op->getOpcode() == ISD::VP_FROUND ||
-              Op->getOpcode() == ISD::VP_FROUNDEVEN;
+              Op->getOpcode() == ISD::VP_FROUNDEVEN ||
+              Op->getOpcode() == ISD::VP_FROUNDTOZERO;
 
   if (IsVP) {
     Mask = Op.getOperand(1);
@@ -2047,7 +2056,8 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   case ISD::FROUND:
   case ISD::FROUNDEVEN:
   case ISD::VP_FROUND:
-  case ISD::VP_FROUNDEVEN: {
+  case ISD::VP_FROUNDEVEN:
+  case ISD::VP_FROUNDTOZERO: {
     RISCVFPRndMode::RoundingMode FRM = matchRoundingOp(Op.getOpcode());
     assert(FRM != RISCVFPRndMode::Invalid);
     Truncated = DAG.getNode(RISCVISD::VFCVT_X_F_VL, DL, IntVT, Src,
@@ -3248,8 +3258,7 @@ static SDValue lowerCTLZ_CTTZ_ZERO_UNDEF(SDValue Op, SelectionDAG &DAG) {
   // For CTTZ_ZERO_UNDEF, we need to extract the lowest set bit using X & -X.
   // The trailing zero count is equal to log2 of this single bit value.
   if (Op.getOpcode() == ISD::CTTZ_ZERO_UNDEF) {
-    SDValue Neg =
-        DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Src);
+    SDValue Neg = DAG.getNegative(Src, DL, VT);
     Src = DAG.getNode(ISD::AND, DL, VT, Src, Neg);
   }
 
@@ -3978,6 +3987,7 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::VP_FFLOOR:
   case ISD::VP_FROUND:
   case ISD::VP_FROUNDEVEN:
+  case ISD::VP_FROUNDTOZERO:
     return lowerFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
   }
 }
@@ -8201,8 +8211,7 @@ performSIGN_EXTEND_INREGCombine(SDNode *N, SelectionDAG &DAG,
       DAG.ComputeNumSignBits(Src.getOperand(0)) > 32) {
     SDLoc DL(N);
     SDValue Freeze = DAG.getFreeze(Src.getOperand(0));
-    SDValue Neg =
-        DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, MVT::i64), Freeze);
+    SDValue Neg = DAG.getNegative(Freeze, DL, VT);
     Neg = DAG.getNode(ISD::SIGN_EXTEND_INREG, DL, MVT::i64, Neg,
                       DAG.getValueType(MVT::i32));
     return DAG.getNode(ISD::SMAX, DL, MVT::i64, Freeze, Neg);
@@ -8472,6 +8481,7 @@ struct NodeExtensionHelper {
             Opc == RISCVISD::VWADDU_W_VL || Opc == RISCVISD::VWSUBU_W_VL;
         SupportsSExt = !SupportsZExt;
         std::tie(Mask, VL) = getMaskAndVL(Root);
+        CheckMask = true;
         // There's no existing extension here, so we don't have to worry about
         // making sure it gets removed.
         EnforceOneUse = false;
@@ -8485,11 +8495,13 @@ struct NodeExtensionHelper {
   }
 
   /// Check if this operand is compatible with the given vector length \p VL.
-  bool isVLCompatible(SDValue VL) const { return this->VL && this->VL == VL; }
+  bool isVLCompatible(SDValue VL) const {
+    return this->VL != SDValue() && this->VL == VL;
+  }
 
   /// Check if this operand is compatible with the given \p Mask.
   bool isMaskCompatible(SDValue Mask) const {
-    return !CheckMask || (this->Mask && this->Mask == Mask);
+    return !CheckMask || (this->Mask != SDValue() && this->Mask == Mask);
   }
 
   /// Helper function to get the Mask and VL from \p Root.
@@ -8547,9 +8559,9 @@ struct CombineResult {
   /// Root of the combine.
   SDNode *Root;
   /// LHS of the TargetOpcode.
-  const NodeExtensionHelper &LHS;
+  NodeExtensionHelper LHS;
   /// RHS of the TargetOpcode.
-  const NodeExtensionHelper &RHS;
+  NodeExtensionHelper RHS;
 
   CombineResult(unsigned TargetOpcode, SDNode *Root,
                 const NodeExtensionHelper &LHS, Optional<bool> SExtLHS,
@@ -8728,31 +8740,83 @@ combineBinOp_VLToVWBinOp_VL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
 
   assert(NodeExtensionHelper::isSupportedRoot(N) &&
          "Shouldn't have called this method");
+  SmallVector<SDNode *> Worklist;
+  SmallSet<SDNode *, 8> Inserted;
+  Worklist.push_back(N);
+  Inserted.insert(N);
+  SmallVector<CombineResult> CombinesToApply;
 
-  NodeExtensionHelper LHS(N, 0, DAG);
-  NodeExtensionHelper RHS(N, 1, DAG);
+  while (!Worklist.empty()) {
+    SDNode *Root = Worklist.pop_back_val();
+    if (!NodeExtensionHelper::isSupportedRoot(Root))
+      return SDValue();
 
-  if (LHS.needToPromoteOtherUsers() && !LHS.OrigOperand.hasOneUse())
-    return SDValue();
+    NodeExtensionHelper LHS(N, 0, DAG);
+    NodeExtensionHelper RHS(N, 1, DAG);
+    auto AppendUsersIfNeeded = [&Worklist,
+                                &Inserted](const NodeExtensionHelper &Op) {
+      if (Op.needToPromoteOtherUsers()) {
+        for (SDNode *TheUse : Op.OrigOperand->uses()) {
+          if (Inserted.insert(TheUse).second)
+            Worklist.push_back(TheUse);
+        }
+      }
+    };
+    AppendUsersIfNeeded(LHS);
+    AppendUsersIfNeeded(RHS);
 
-  if (RHS.needToPromoteOtherUsers() && !RHS.OrigOperand.hasOneUse())
-    return SDValue();
+    // Control the compile time by limiting the number of node we look at in
+    // total.
+    if (Inserted.size() > ExtensionMaxWebSize)
+      return SDValue();
 
-  SmallVector<NodeExtensionHelper::CombineToTry> FoldingStrategies =
-      NodeExtensionHelper::getSupportedFoldings(N);
+    SmallVector<NodeExtensionHelper::CombineToTry> FoldingStrategies =
+        NodeExtensionHelper::getSupportedFoldings(N);
 
-  assert(!FoldingStrategies.empty() && "Nothing to be folded");
-  for (int Attempt = 0; Attempt != 1 + NodeExtensionHelper::isCommutative(N);
-       ++Attempt) {
-    for (NodeExtensionHelper::CombineToTry FoldingStrategy :
-         FoldingStrategies) {
-      Optional<CombineResult> Res = FoldingStrategy(N, LHS, RHS);
-      if (Res)
-        return Res->materialize(DAG);
+    assert(!FoldingStrategies.empty() && "Nothing to be folded");
+    bool Matched = false;
+    for (int Attempt = 0;
+         (Attempt != 1 + NodeExtensionHelper::isCommutative(N)) && !Matched;
+         ++Attempt) {
+
+      for (NodeExtensionHelper::CombineToTry FoldingStrategy :
+           FoldingStrategies) {
+        Optional<CombineResult> Res = FoldingStrategy(N, LHS, RHS);
+        if (Res) {
+          Matched = true;
+          CombinesToApply.push_back(*Res);
+          break;
+        }
+      }
+      std::swap(LHS, RHS);
     }
-    std::swap(LHS, RHS);
+    // Right now we do an all or nothing approach.
+    if (!Matched)
+      return SDValue();
   }
-  return SDValue();
+  // Store the value for the replacement of the input node separately.
+  SDValue InputRootReplacement;
+  // We do the RAUW after we materialize all the combines, because some replaced
+  // nodes may be feeding some of the yet-to-be-replaced nodes. Put differently,
+  // some of these nodes may appear in the NodeExtensionHelpers of some of the
+  // yet-to-be-visited CombinesToApply roots.
+  SmallVector<std::pair<SDValue, SDValue>> ValuesToReplace;
+  ValuesToReplace.reserve(CombinesToApply.size());
+  for (CombineResult Res : CombinesToApply) {
+    SDValue NewValue = Res.materialize(DAG);
+    if (!InputRootReplacement) {
+      assert(Res.Root == N &&
+             "First element is expected to be the current node");
+      InputRootReplacement = NewValue;
+    } else {
+      ValuesToReplace.emplace_back(SDValue(Res.Root, 0), NewValue);
+    }
+  }
+  for (std::pair<SDValue, SDValue> OldNewValues : ValuesToReplace) {
+    DAG.ReplaceAllUsesOfValueWith(OldNewValues.first, OldNewValues.second);
+    DCI.AddToWorklist(OldNewValues.second.getNode());
+  }
+  return InputRootReplacement;
 }
 
 // Fold
@@ -9397,8 +9461,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                             DAG.getConstant(1, DL, VT));
         else
           Neg = LHS;
-        SDValue Mask = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
-                                   Neg); // -(and (x, 0x1))
+        SDValue Mask = DAG.getNegative(Neg, DL, VT);               // -x
         SDValue And = DAG.getNode(ISD::AND, DL, VT, Mask, Src1); // Mask & z
         return DAG.getNode(Opcode, DL, VT, And, Src2);           // And Op y
       }
@@ -9407,6 +9470,20 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (combine_CC(LHS, RHS, CC, DL, DAG, Subtarget))
       return DAG.getNode(RISCVISD::SELECT_CC, DL, N->getValueType(0),
                          {LHS, RHS, CC, TrueV, FalseV});
+
+    // (select c, -1, y) -> -c | y
+    if (isAllOnesConstant(TrueV)) {
+      SDValue C = DAG.getSetCC(DL, VT, LHS, RHS, CCVal);
+      SDValue Neg = DAG.getNegative(C, DL, VT);
+      return DAG.getNode(ISD::OR, DL, VT, Neg, FalseV);
+    }
+    // (select c, y, -1) -> -!c | y
+    if (isAllOnesConstant(FalseV)) {
+      SDValue C = DAG.getSetCC(DL, VT, LHS, RHS,
+                               ISD::getSetCCInverse(CCVal, VT));
+      SDValue Neg = DAG.getNegative(C, DL, VT);
+      return DAG.getNode(ISD::OR, DL, VT, Neg, TrueV);
+    }
 
     return SDValue();
   }
