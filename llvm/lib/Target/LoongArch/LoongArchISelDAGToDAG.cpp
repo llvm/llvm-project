@@ -88,6 +88,14 @@ bool LoongArchDAGToDAGISel::SelectBaseAddr(SDValue Addr, SDValue &Base) {
   return true;
 }
 
+bool LoongArchDAGToDAGISel::selectNonFIBaseAddr(SDValue Addr, SDValue &Base) {
+  // If this is FrameIndex, don't select it.
+  if (isa<FrameIndexSDNode>(Addr))
+    return false;
+  Base = Addr;
+  return true;
+}
+
 bool LoongArchDAGToDAGISel::selectShiftMask(SDValue N, unsigned ShiftWidth,
                                             SDValue &ShAmt) {
   // Shift instructions on LoongArch only read the lower 5 or 6 bits of the

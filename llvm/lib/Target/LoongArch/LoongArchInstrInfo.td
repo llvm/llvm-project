@@ -248,6 +248,7 @@ def ImmSubFrom32 : SDNodeXForm<imm, [{
 }]>;
 
 def BaseAddr : ComplexPattern<iPTR, 1, "SelectBaseAddr">;
+def NonFIBaseAddr : ComplexPattern<iPTR, 1, "selectNonFIBaseAddr">;
 
 def fma_nsz : PatFrag<(ops node:$fj, node:$fk, node:$fa),
                       (fma node:$fj, node:$fk, node:$fa), [{
@@ -987,8 +988,8 @@ defm : LdPat<load, LD_D, i64>;
 // LA64 register-register-addressed loads
 let Predicates = [IsLA64] in {
 class RegRegLdPat<PatFrag LoadOp, LAInst Inst, ValueType vt>
-  : Pat<(vt (LoadOp (add BaseAddr:$rj, GPR:$rk))),
-        (Inst BaseAddr:$rj, GPR:$rk)>;
+  : Pat<(vt (LoadOp (add NonFIBaseAddr:$rj, GPR:$rk))),
+        (Inst NonFIBaseAddr:$rj, GPR:$rk)>;
 
 def : RegRegLdPat<extloadi8, LDX_B, i64>;
 def : RegRegLdPat<sextloadi8, LDX_B, i64>;
@@ -1036,8 +1037,8 @@ def : Pat<(store (i64 GPR:$rd), (AddLike BaseAddr:$rj, simm14_lsl2:$imm14)),
 let Predicates = [IsLA64] in {
 class RegRegStPat<PatFrag StoreOp, LAInst Inst, RegisterClass StTy,
                   ValueType vt>
-  : Pat<(StoreOp (vt StTy:$rd), (add BaseAddr:$rj, GPR:$rk)),
-        (Inst StTy:$rd, BaseAddr:$rj, GPR:$rk)>;
+  : Pat<(StoreOp (vt StTy:$rd), (add NonFIBaseAddr:$rj, GPR:$rk)),
+        (Inst StTy:$rd, NonFIBaseAddr:$rj, GPR:$rk)>;
 
 def : RegRegStPat<truncstorei8, STX_B, GPR, i64>;
 def : RegRegStPat<truncstorei16, STX_H, GPR, i64>;
