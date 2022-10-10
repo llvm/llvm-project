@@ -6721,7 +6721,6 @@ cc_library(
         "include/mlir/ExecutionEngine/SparseTensor/File.h",
         "include/mlir/ExecutionEngine/SparseTensor/Storage.h",
     ],
-    copts = ["-Dmlir_sparse_tensor_utils_EXPORTS"],
     includes = ["include"],
     deps = [":mlir_float16_utils"],
 )
