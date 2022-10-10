@@ -610,7 +610,7 @@ struct FormatStyle {
     SLS_None,
     /// Only merge empty lambdas.
     /// \code
-    ///   auto lambda = [](int a) {}
+    ///   auto lambda = [](int a) {};
     ///   auto lambda2 = [](int a) {
     ///       return a;
     ///   };
@@ -621,12 +621,12 @@ struct FormatStyle {
     ///   auto lambda = [](int a) {
     ///       return a;
     ///   };
-    ///   sort(a.begin(), a.end(), ()[] { return x < y; })
+    ///   sort(a.begin(), a.end(), []() { return x < y; });
     /// \endcode
     SLS_Inline,
     /// Merge all lambdas fitting on a single line.
     /// \code
-    ///   auto lambda = [](int a) {}
+    ///   auto lambda = [](int a) {};
     ///   auto lambda2 = [](int a) { return a; };
     /// \endcode
     SLS_All,

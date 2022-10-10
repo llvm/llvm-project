@@ -14021,6 +14021,22 @@ void ScalarEvolution::verify() const {
       }
     }
   }
+
+  // Verify integrity of the block disposition cache.
+  for (const auto &It : BlockDispositions) {
+    const SCEV *S = It.first;
+    auto &Values = It.second;
+    for (auto &V : Values) {
+      auto CachedDisposition = V.getInt();
+      const BasicBlock *BB = V.getPointer();
+      const auto RecomputedDisposition = SE2.getBlockDisposition(S, BB);
+      if (CachedDisposition != RecomputedDisposition) {
+        dbgs() << "Cached disposition of " << *S << " for block %"
+               << BB->getName() << " is incorrect! \n";
+        std::abort();
+      }
+    }
+  }
 }
 
 bool ScalarEvolution::invalidate(
