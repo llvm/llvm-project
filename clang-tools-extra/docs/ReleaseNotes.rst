@@ -110,6 +110,11 @@ New checks
 
   Warns when a struct or class uses const or reference (lvalue or rvalue) data members.
 
+- New :doc:`cppcoreguidelines-avoid-do-while
+  <clang-tidy/checks/cppcoreguidelines/avoid-do-while>` check.
+
+  Warns when using ``do-while`` loops.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
