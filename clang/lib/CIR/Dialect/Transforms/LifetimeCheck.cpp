@@ -9,6 +9,7 @@
 #include "PassDetail.h"
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 
@@ -539,23 +540,122 @@ void LifetimeCheckPass::checkIf(IfOp ifOp) {
   joinPmaps(pmapOps);
 }
 
+template <class T> bool isStructAndHasAttr(mlir::Type ty) {
+  if (!ty.isa<mlir::cir::StructType>())
+    return false;
+  auto sTy = ty.cast<mlir::cir::StructType>();
+  auto recordDecl = sTy.getAst()->getAstDecl();
+  if (recordDecl->hasAttr<T>())
+    return true;
+  return false;
+}
+
+static bool isOwnerType(mlir::Type ty) {
+  // From 2.1:
+  //
+  // An Owner uniquely owns another object (cannot dangle). An Owner type is
+  // expressed using the annotation [[gsl::Owner(DerefType)]] where DerefType is
+  // the owned type (and (DerefType) may be omitted and deduced as below). For
+  // example:
+  //
+  // template<class T> class [[gsl::Owner(T)]] my_unique_smart_pointer;
+  //
+  // TODO: The following standard or other types are treated as-if annotated as
+  // Owners, if not otherwise annotated and if not SharedOwners:
+  //
+  // - Every type that satisfies the standard Container requirements and has a
+  // user-provided destructor. (Example: vector.) DerefType is ::value_type.
+  // - Every type that provides unary * and has a user-provided destructor.
+  // (Example: unique_ptr.) DerefType is the ref-unqualified return type of
+  // operator*.
+  // - Every type that has a data member or public base class of an Owner type.
+  // Additionally, for convenient adoption without modifying existing standard
+  // library headers, the following well known standard types are treated as-if
+  // annotated as Owners: stack, queue, priority_queue, optional, variant, any,
+  // and regex.
+  return isStructAndHasAttr<clang::OwnerAttr>(ty);
+}
+
+static bool isPointerType(AllocaOp allocaOp) {
+  // From 2.1:
+  //
+  // A Pointer is not an Owner and provides indirect access to an object it does
+  // not own (can dangle). A Pointer type is expressed using the annotation
+  // [[gsl::Pointer(DerefType)]] where DerefType is the pointed-to type (and
+  // (Dereftype) may be omitted and deduced as below). For example:
+  //
+  // template<class T> class [[gsl::Pointer(T)]] my_span;
+  //
+  // TODO: The following standard or other types are treated as-if annotated as
+  // Pointer, if not otherwise annotated and if not Owners:
+  //
+  // - Every type that satisfies the standard Iterator requirements. (Example:
+  // regex_iterator.) DerefType is the ref-unqualified return type of operator*.
+  // - Every type that satisfies the Ranges TS Range concept. (Example:
+  // basic_string_view.) DerefType is the ref-unqualified type of *begin().
+  // - Every type that satisfies the following concept. DerefType is the
+  // ref-unqualified return type of operator*.
+  //
+  //  template<typename T> concept
+  //  TriviallyCopyableAndNonOwningAndDereferenceable =
+  //  std::is_trivially_copyable_v<T> && std::is_copy_constructible_v<T> &&
+  //  std::is_copy_assignable_v<T> && requires(T t) { *t; };
+  //
+  // - Every closure type of a lambda that captures by reference or captures a
+  // Pointer by value. DerefType is void.
+  // - Every type that has a data member or public base class of a Pointer type.
+  // Additionally, for convenient adoption without modifying existing standard
+  // library headers, the following well- known standard types are treated as-if
+  // annotated as Pointers, in addition to raw pointers and references: ref-
+  // erence_wrapper, and vector<bool>::reference.
+  if (allocaOp.isPointerType())
+    return true;
+  return isStructAndHasAttr<clang::PointerAttr>(allocaOp.getAllocaType());
+}
+
 void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
   auto addr = allocaOp.getAddr();
   assert(!getPmap().count(addr) && "only one alloca for any given address");
-
   getPmap()[addr] = {};
-  if (!allocaOp.isPointerType()) {
+
+  enum TypeCategory {
+    Unknown = 0,
+    SharedOwner = 1,
+    Owner = 1 << 2,
+    Pointer = 1 << 3,
+    Indirection = 1 << 4,
+    Aggregate = 1 << 5,
+    Value = 1 << 6,
+  };
+
+  auto localStyle = [&]() {
+    if (isPointerType(allocaOp))
+      return TypeCategory::Pointer;
+    if (isOwnerType(allocaOp.getAllocaType()))
+      return TypeCategory::Owner;
+    return TypeCategory::Value;
+  }();
+
+  switch (localStyle) {
+  case TypeCategory::Pointer:
+    // 2.4.2 - When a non-parameter non-member Pointer p is declared, add
+    // (p, {invalid}) to pmap.
+    ptrs.insert(addr);
+    getPmap()[addr].insert(State::getInvalid());
+    pmapInvalidHist[addr] = std::make_pair(allocaOp.getLoc(), std::nullopt);
+    break;
+  case TypeCategory::Owner:
+    llvm_unreachable("NYI");
+    break;
+  case TypeCategory::Value: {
     // 2.4.2 - When a local Value x is declared, add (x, {x}) to pmap.
     getPmap()[addr].insert(State::getLocalValue(addr));
     currScope->localValues.push_back(addr);
     return;
   }
-
-  // 2.4.2 - When a non-parameter non-member Pointer p is declared, add
-  // (p, {invalid}) to pmap.
-  ptrs.insert(addr);
-  getPmap()[addr].insert(State::getInvalid());
-  pmapInvalidHist[addr] = std::make_pair(allocaOp.getLoc(), std::nullopt);
+  default:
+    llvm_unreachable("NYI");
+  }
 
   // If other styles of initialization gets added, required to add support
   // here.
