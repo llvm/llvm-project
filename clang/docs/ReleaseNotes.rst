@@ -61,6 +61,17 @@ code bases.
   into an error-only diagnostic in the next Clang release. Fixes
   `Issue 50055 <https://github.com/llvm/llvm-project/issues/50055>`_.
 
+- The ``-Wimplicit-function-declaration`` and ``-Wimplicit-int`` warnings
+  now default to an error in C99, C11, and C17. As of C2x,
+  support for implicit function declarations and implicit int has been removed,
+  and the warning options will have no effect. Specifying ``-Wimplicit-int`` in
+  C89 mode will now issue warnings instead of being a noop.
+
+  **NOTE**: We recommend that projects using configure scripts verify that the
+  results do not change before/after setting
+  ``-Werror=implicit-function-declarations`` or ``-Wimplicit-int`` to avoid
+  incompatibility with Clang 16.
+
 - ``-Wincompatible-function-pointer-types`` now defaults to an error in all C
   language modes. It may be downgraded to a warning with
   ``-Wno-error=incompatible-function-pointer-types`` or disabled entirely with
