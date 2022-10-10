@@ -64,7 +64,7 @@ code bases.
 - ``-Wincompatible-function-pointer-types`` now defaults to an error in all C
   language modes. It may be downgraded to a warning with
   ``-Wno-error=incompatible-function-pointer-types`` or disabled entirely with
-  ``-Wno-implicit-function-pointer-types``.
+  ``-Wno-incompatible-function-pointer-types``.
 
   **NOTE:** We recommend that projects using configure scripts verify that the
   results do not change before/after setting
