@@ -50,6 +50,10 @@ def ExecEnvpT : NamedType<"__exec_envp_t">;
 
 def AtForkCallbackT : NamedType<"__atfork_callback_t">;
 
+def PosixSpawnFileActionsT : NamedType<"posix_spawn_file_actions_t">;
+def PosixSpawnFileActionsTPtr : PtrType<PosixSpawnFileActionsT>;
+def PosixSpawnFileActionsTRestrictedPtr : RestrictedPtrType<PosixSpawnFileActionsT>;
+
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
   RestrictedPtrType RestrictedCharPtr = RestrictedPtrType<CharType>;
@@ -1045,6 +1049,41 @@ def POSIX : StandardSpec<"POSIX"> {
     []  // Functions
   >;
 
+  HeaderSpec Spawn = HeaderSpec<
+    "spawn.h",
+    [], // Macros
+    [PosixSpawnFileActionsT, ModeTType],
+    [], // Enumerations
+    [
+      FunctionSpec<
+        "posix_spawn_file_actions_addclose",
+        RetValSpec<IntType>,
+        [ArgSpec<PosixSpawnFileActionsTPtr>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+        "posix_spawn_file_actions_adddup2",
+        RetValSpec<IntType>,
+        [ArgSpec<PosixSpawnFileActionsTPtr>, ArgSpec<IntType>, ArgSpec<IntType>]
+      >,
+      FunctionSpec<
+        "posix_spawn_file_actions_addopen",
+        RetValSpec<IntType>,
+        [ArgSpec<PosixSpawnFileActionsTRestrictedPtr>, ArgSpec<IntType>,
+         ArgSpec<ConstCharRestrictedPtr>, ArgSpec<IntType>, ArgSpec<ModeTType>]
+      >,
+      FunctionSpec<
+        "posix_spawn_file_actions_destroy",
+        RetValSpec<IntType>,
+        [ArgSpec<PosixSpawnFileActionsTPtr>]
+      >,
+      FunctionSpec<
+        "posix_spawn_file_actions_init",
+        RetValSpec<IntType>,
+        [ArgSpec<PosixSpawnFileActionsTPtr>]
+      >,
+    ]
+  >;
+
   let Headers = [
     CType,
     Dirent,
@@ -1052,6 +1091,7 @@ def POSIX : StandardSpec<"POSIX"> {
     FCntl,
     PThread,
     Signal,
+    Spawn,
     StdIO,
     StdLib,
     SysIOctl,

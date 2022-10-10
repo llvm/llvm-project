@@ -26,5 +26,6 @@ endif()
 # since assert uses the signal API, we disable assert also.
 # add_subdirectory(assert)
 add_subdirectory(signal)
+add_subdirectory(spawn)
 add_subdirectory(threads)
 add_subdirectory(time)
