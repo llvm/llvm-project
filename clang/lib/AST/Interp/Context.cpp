@@ -39,11 +39,7 @@ bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
     }
   }
 
-  if (!Func->isConstexpr())
-    return false;
-
-  APValue Dummy;
-  return Run(Parent, Func, Dummy);
+  return Func->isConstexpr();
 }
 
 bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
