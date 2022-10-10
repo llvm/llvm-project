@@ -88,6 +88,10 @@ Type StructType::parse(mlir::AsmParser &parser) {
 void StructType::print(mlir::AsmPrinter &printer) const {
   printer << '<' << getTypeName() << ", ";
   llvm::interleaveComma(getMembers(), printer);
+  if (getAst()) {
+    printer << ", ";
+    printer.printAttributeWithoutType(*getAst());
+  }
   printer << '>';
 }
 

@@ -91,6 +91,16 @@ def CIR_StructType : CIR_Type<"Struct", "struct"> {
   ];
 
   let hasCustomAssemblyFormat = 1;
+
+  let extraClassDeclaration = [{
+    void dropAst();
+  }];
+
+  let extraClassDefinition = [{
+    void $cppClass::dropAst() {
+      getImpl()->ast = std::nullopt;
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//

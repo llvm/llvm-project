@@ -32,7 +32,12 @@ void DropASTPass::runOnOperation() {
   // carrying AST around.
   op->walk([&](Operation *op) {
     if (isa<cir::AllocaOp>(op)) {
-      cast<AllocaOp>(op).removeAstAttr();
+      auto alloca = cast<AllocaOp>(op);
+      alloca.removeAstAttr();
+      auto ty = alloca.getAllocaType().dyn_cast<mlir::cir::StructType>();
+      if (!ty)
+        return;
+      ty.dropAst();
     }
   });
 }
