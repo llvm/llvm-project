@@ -11,6 +11,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.stdio
     libc.include.stdlib
     libc.include.string
+    libc.include.sys_ioctl
     libc.include.sys_mman
     libc.include.sys_random
     libc.include.sys_syscall

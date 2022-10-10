@@ -353,6 +353,20 @@ add_libc_unittest(
 )
 
 add_libc_unittest(
+  isatty_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    isatty_test.cpp
+  DEPENDS
+    libc.src.unistd.isatty
+    libc.src.fcntl.open
+    libc.src.unistd.close
+    libc.include.errno
+    libc.src.errno.errno
+)
+
+add_libc_unittest(
   geteuid_test
   SUITE
     libc_unistd_unittests
