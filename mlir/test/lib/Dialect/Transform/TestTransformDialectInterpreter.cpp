@@ -57,10 +57,39 @@ public:
       llvm::cl::desc("perform expensive checks to better report errors in the "
                      "transform IR")};
 };
+
+struct TestTransformDialectEraseSchedulePass
+    : public PassWrapper<TestTransformDialectEraseSchedulePass,
+                         OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      TestTransformDialectEraseSchedulePass)
+
+  StringRef getArgument() const final {
+    return "test-transform-dialect-erase-schedule";
+  }
+
+  StringRef getDescription() const final {
+    return "erase transform dialect schedule from the IR";
+  }
+
+  void runOnOperation() override {
+    getOperation()->walk<WalkOrder::PreOrder>([&](Operation *nestedOp) {
+      if (isa<transform::TransformOpInterface>(nestedOp)) {
+        nestedOp->erase();
+        return WalkResult::skip();
+      }
+      return WalkResult::advance();
+    });
+  }
+};
 } // namespace
 
 namespace mlir {
 namespace test {
+/// Registers the test pass for erasing transform dialect ops.
+void registerTestTransformDialectEraseSchedulePass() {
+  PassRegistration<TestTransformDialectEraseSchedulePass> reg;
+}
 /// Registers the test pass for applying transform dialect ops.
 void registerTestTransformDialectInterpreterPass() {
   PassRegistration<TestTransformDialectInterpreterPass> reg;
