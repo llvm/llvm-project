@@ -13,6 +13,10 @@ if(POLICY CMP0116)
   cmake_policy(SET CMP0116 OLD)
 endif()
 
+if (OMIT_HEAVY_DEBUG_SYMBOLS)
+  add_definitions(-g0) # Lower object size
+endif()
+
 set(CMAKE_BUILD_WITH_INSTALL_NAME_DIR ON)
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)
