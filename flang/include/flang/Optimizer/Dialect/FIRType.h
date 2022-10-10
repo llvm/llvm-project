@@ -38,6 +38,9 @@ public:
   /// Returns the element type of this box type.
   mlir::Type getEleTy() const;
 
+  /// Unwrap element type from fir.heap, fir.ptr and fir.array.
+  mlir::Type unwrapInnerType() const;
+
   /// Methods for support type inquiry through isa, cast, and dyn_cast.
   static bool classof(mlir::Type type);
 };
@@ -272,6 +275,10 @@ bool isPointerType(mlir::Type ty);
 
 /// Return true iff `ty` is the type of an ALLOCATABLE entity or value.
 bool isAllocatableType(mlir::Type ty);
+
+/// Return true iff `ty` is the type of a boxed record type.
+/// e.g. !fir.box<!fir.type<derived>>
+bool isBoxedRecordType(mlir::Type ty);
 
 /// Return true iff `ty` is the type of an polymorphic entity or
 /// value.
