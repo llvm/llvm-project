@@ -1157,6 +1157,16 @@ Instruction *InstCombinerImpl::visitUDiv(BinaryOperator &I) {
       return BinaryOperator::CreateUDiv(A, X);
   }
 
+  // Look through a right-shift to find the common factor:
+  // ((Op1 *nuw A) >> B) / Op1 --> A >> B
+  if (match(Op0, m_LShr(m_NUWMul(m_Specific(Op1), m_Value(A)), m_Value(B))) ||
+      match(Op0, m_LShr(m_NUWMul(m_Value(A), m_Specific(Op1)), m_Value(B)))) {
+    Instruction *Lshr = BinaryOperator::CreateLShr(A, B);
+    if (I.isExact() && cast<PossiblyExactOperator>(Op0)->isExact())
+      Lshr->setIsExact();
+    return Lshr;
+  }
+
   // Op1 udiv Op2 -> Op1 lshr log2(Op2), if log2() folds away.
   if (takeLog2(Builder, Op1, /*Depth*/0, /*DoFold*/false)) {
     Value *Res = takeLog2(Builder, Op1, /*Depth*/0, /*DoFold*/true);
