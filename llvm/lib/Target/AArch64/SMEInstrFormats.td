@@ -1794,3 +1794,33 @@ multiclass sme2_int_cvt_vg4_single<string mnemonic, bits<3> op> {
 def _StoB : sme2_cvt_vg4_single<0b0, op, ZPR8, ZZZZ_s_mul_r, mnemonic>;
 def _DtoH : sme2_cvt_vg4_single<0b1, op, ZPR16, ZZZZ_d_mul_r, mnemonic>;
 }
+
+class sme2_fp_cvt_vg2_multi<string mnemonic, bits<3> op>
+    : I<(outs ZZ_s_mul_r:$Zd), (ins ZZ_s_mul_r:$Zn),
+         mnemonic, "\t$Zd, $Zn", "", []>, Sched<[]> {
+  bits<4> Zn;
+  bits<4> Zd;
+  let Inst{31-18} = 0b11000001001000;
+  let Inst{17-16} = op{2-1};
+  let Inst{15-10} = 0b111000;
+  let Inst{9-6}   = Zn;
+  let Inst{5}     = op{0};
+  let Inst{4-1}   = Zd;
+  let Inst{0}     = 0b0;
+}
+
+
+class sme2_fp_cvt_vg4_multi<string mnemonic, bits<3> op>
+    : I<(outs ZZZZ_s_mul_r:$Zd), (ins ZZZZ_s_mul_r:$Zn),
+         mnemonic, "\t$Zd, $Zn", "", []>, Sched<[]> {
+  bits<3> Zn;
+  bits<3> Zd;
+  let Inst{31-18} = 0b11000001001100;
+  let Inst{17-16} = op{2-1};
+  let Inst{15-10} = 0b111000;
+  let Inst{9-7}   = Zn;
+  let Inst{6}     = 0b0;
+  let Inst{5}     = op{0};
+  let Inst{4-2}   = Zd;
+  let Inst{1-0}   = 0b00;
+}
