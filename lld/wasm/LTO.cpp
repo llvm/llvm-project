@@ -142,7 +142,7 @@ std::vector<StringRef> BitcodeCompiler::compile() {
       cache));
 
   if (!config->thinLTOCacheDir.empty())
-    pruneCache(config->thinLTOCacheDir, config->thinLTOCachePolicy);
+    pruneCache(config->thinLTOCacheDir, config->thinLTOCachePolicy, files);
 
   std::vector<StringRef> ret;
   for (unsigned i = 0; i != maxTasks; ++i) {
