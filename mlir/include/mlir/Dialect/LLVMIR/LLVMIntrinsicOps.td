@@ -121,8 +121,20 @@ class LLVM_LifetimeBaseOp<string opName> : LLVM_ZeroResultIntrOp<opName> {
   let assemblyFormat = "$size `,` $ptr attr-dict `:` type($ptr)";
 }
 
-def LLVM_LifetimeStartOp : LLVM_LifetimeBaseOp<"lifetime.start">;
-def LLVM_LifetimeEndOp : LLVM_LifetimeBaseOp<"lifetime.end">;
+def LLVM_LifetimeStartOp : LLVM_LifetimeBaseOp<"lifetime.start"> {
+  // Custom builder to convert the size argument to an attribute.
+  string mlirBuilder = [{
+    $_builder.create<LLVM::LifetimeStartOp>(
+      $_location, $_int_attr($size), $ptr);
+  }];
+}
+def LLVM_LifetimeEndOp : LLVM_LifetimeBaseOp<"lifetime.end"> {
+  // Custom builder to convert the size argument to an attribute.
+  string mlirBuilder = [{
+    $_builder.create<LLVM::LifetimeEndOp>(
+      $_location, $_int_attr($size), $ptr);
+  }];
+}
 
 // Intrinsics with multiple returns.
 

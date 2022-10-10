@@ -3055,6 +3055,23 @@ struct FormatStyle {
   /// \version 14
   bool RemoveBracesLLVM;
 
+  /// Remove semicolons after the closing brace of a non-empty function.
+  /// \warning
+  ///  Setting this option to `true` could lead to incorrect code formatting due
+  ///  to clang-format's lack of complete semantic information. As such, extra
+  ///  care should be taken to review code changes made by this option.
+  /// \endwarning
+  /// \code
+  ///   false:                                     true:
+  ///
+  ///   int max(int a, int b) {                    int max(int a, int b) {
+  ///     return a > b ? a : b;                      return a > b ? a : b;
+  ///   };                                         }
+  ///
+  /// \endcode
+  /// \version 16
+  bool RemoveSemicolon;
+
   /// \brief The possible positions for the requires clause. The
   /// ``IndentRequires`` option is only used if the ``requires`` is put on the
   /// start of a line.
@@ -3969,6 +3986,7 @@ struct FormatStyle {
            RawStringFormats == R.RawStringFormats &&
            ReferenceAlignment == R.ReferenceAlignment &&
            RemoveBracesLLVM == R.RemoveBracesLLVM &&
+           RemoveSemicolon == R.RemoveSemicolon &&
            RequiresClausePosition == R.RequiresClausePosition &&
            SeparateDefinitionBlocks == R.SeparateDefinitionBlocks &&
            ShortNamespaceLines == R.ShortNamespaceLines &&

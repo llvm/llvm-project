@@ -412,6 +412,7 @@ set(files
   __memory/uninitialized_algorithms.h
   __memory/unique_ptr.h
   __memory/uses_allocator.h
+  __memory/uses_allocator_construction.h
   __memory/voidify.h
   __mutex_base
   __node_handle
@@ -480,6 +481,7 @@ set(files
   __ranges/enable_view.h
   __ranges/filter_view.h
   __ranges/iota_view.h
+  __ranges/istream_view.h
   __ranges/join_view.h
   __ranges/lazy_split_view.h
   __ranges/non_propagating_cache.h
@@ -493,6 +495,7 @@ set(files
   __ranges/size.h
   __ranges/subrange.h
   __ranges/take_view.h
+  __ranges/take_while_view.h
   __ranges/transform_view.h
   __ranges/view_interface.h
   __ranges/views.h

@@ -133,6 +133,10 @@ const NamedDecl *canonicalRenameDecl(const NamedDecl *D) {
     if (const VarDecl *OriginalVD = VD->getInstantiatedFromStaticDataMember())
       return canonicalRenameDecl(OriginalVD);
   }
+  if (const auto *UD = dyn_cast<UsingShadowDecl>(D)) {
+    if (const auto *TargetDecl = UD->getTargetDecl())
+      return canonicalRenameDecl(TargetDecl);
+  }
   return dyn_cast<NamedDecl>(D->getCanonicalDecl());
 }
 
@@ -155,6 +159,22 @@ llvm::DenseSet<const NamedDecl *> locateDeclAt(ParsedAST &AST,
     Result.insert(canonicalRenameDecl(D));
   }
   return Result;
+}
+
+void filterRenameTargets(llvm::DenseSet<const NamedDecl *> &Decls) {
+  // For something like
+  //     namespace ns { void foo(); }
+  //     void bar() { using ns::f^oo; foo(); }
+  // locateDeclAt() will return a UsingDecl and foo's actual declaration.
+  // For renaming, we're only interested in foo's declaration, so drop the other
+  // one. There should never be more than one UsingDecl here, otherwise the
+  // rename would be ambiguos anyway.
+  auto UD = std::find_if(Decls.begin(), Decls.end(), [](const NamedDecl *D) {
+    return llvm::isa<UsingDecl>(D);
+  });
+  if (UD != Decls.end()) {
+    Decls.erase(UD);
+  }
 }
 
 // By default, we exclude symbols from system headers and protobuf symbols as
@@ -737,6 +757,7 @@ llvm::Expected<RenameResult> rename(const RenameInputs &RInputs) {
     return makeError(ReasonToReject::UnsupportedSymbol);
 
   auto DeclsUnderCursor = locateDeclAt(AST, IdentifierToken->location());
+  filterRenameTargets(DeclsUnderCursor);
   if (DeclsUnderCursor.empty())
     return makeError(ReasonToReject::NoSymbolFound);
   if (DeclsUnderCursor.size() > 1)

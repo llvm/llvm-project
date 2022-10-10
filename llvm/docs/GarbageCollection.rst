@@ -505,7 +505,7 @@ The Statepoint Example GC
 
 This GC provides an example of how one might use the infrastructure provided
 by ``gc.statepoint``. This example GC is compatible with the
-:ref:`PlaceSafepoints` and :ref:`RewriteStatepointsForGC` utility passes
+:ref:`RewriteStatepointsForGC` utility passes
 which simplify ``gc.statepoint`` sequence insertion. If you need to build a
 custom GC strategy around the ``gc.statepoints`` mechanisms, it is recommended
 that you use this one as a starting point.

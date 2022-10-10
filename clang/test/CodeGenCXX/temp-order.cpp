@@ -1,5 +1,5 @@
 // Output file should have no calls to error() with folding.
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -mllvm -inline-threshold=1024 -O3 -emit-llvm -o %t %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -mllvm -inline-threshold=1024 -O3 -emit-llvm -o %t %s
 // RUN: FileCheck %s < %t
 
 static unsigned pow(unsigned Base, unsigned Power) {
@@ -157,47 +157,47 @@ extern "C" void print(const char *Name, unsigned N);
 #define ORDER5(a, b, c, d, e) (ORDER4(a, b, c, d) * pow(e, 5))
 #define ORDER6(a, b, c, d, e, f) (ORDER5(a, b, c, d, e) * pow(f, 6))
 void test() {
-// CHECK: call void @print(i8* noundef {{.*}}, i32 noundef 1176)
+// CHECK: call void @print(ptr noundef {{.*}}, i32 noundef 1176)
   print("f0", f0());
   if (f0() != ORDER3(3, 7, 2))
     error();
 
-// CHECK: call void @print(i8* noundef {{.*}}, i32 noundef 411600)
+// CHECK: call void @print(ptr noundef {{.*}}, i32 noundef 411600)
   print("f1", f1());
   if (f1() != ORDER4(3, 5, 7, 2))
     error();
 
-// CHECK: call void @print(i8* noundef {{.*}}, i32 noundef 246960)
+// CHECK: call void @print(ptr noundef {{.*}}, i32 noundef 246960)
   print("f2", f2());
   if (f2() != ORDER4(5, 3, 7, 2))
     error();
 
-// CHECK: call void @print(i8* noundef {{.*}}, i32 noundef 1341648)
+// CHECK: call void @print(ptr noundef {{.*}}, i32 noundef 1341648)
   print("f3", f3());
   if (f3() != ORDER4(7, 3, 11, 2))
     error();
 
-// CHECK: call void @print(i8* noundef {{.*}}, i32 noundef 1176)
+// CHECK: call void @print(ptr noundef {{.*}}, i32 noundef 1176)
   print("f4", f4());
   if (f4() != ORDER3(3, 7, 2))
     error();
 
-// CHECK: call void @print(i8* noundef {{.*}}, i32 noundef 246960)
+// CHECK: call void @print(ptr noundef {{.*}}, i32 noundef 246960)
   print("f5", f5());
   if (f5() != ORDER4(5, 3, 7, 2))
     error();
 
-// CHECK: call void @print(i8* noundef {{.*}}, i32 noundef 1251552576)
+// CHECK: call void @print(ptr noundef {{.*}}, i32 noundef 1251552576)
   print("f6", f6());
   if (f6() != ORDER6(3, 7, 11, 5, 13, 2))
     error();
 
-//  CHECK: call void @print(i8* noundef {{.*}}, i32 noundef 20)
+//  CHECK: call void @print(ptr noundef {{.*}}, i32 noundef 20)
   print("f7", f7());
   if (f7() != ORDER2(5, 2))
     error();
 
-//  CHECK: call void @print(i8* noundef {{.*}}, i32 noundef 20)
+//  CHECK: call void @print(ptr noundef {{.*}}, i32 noundef 20)
   print("f8", f8());
   if (f8() != ORDER2(5, 2))
     error();

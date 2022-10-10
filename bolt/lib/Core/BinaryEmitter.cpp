@@ -211,8 +211,6 @@ void BinaryEmitter::emitAll(StringRef OrgSecPrefix) {
   }
 
   emitDataSections(OrgSecPrefix);
-
-  Streamer.emitLabel(BC.Ctx->getOrCreateSymbol("_end"));
 }
 
 void BinaryEmitter::emitFunctions() {

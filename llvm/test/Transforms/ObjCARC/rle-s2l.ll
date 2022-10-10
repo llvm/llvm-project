@@ -1,4 +1,4 @@
-; RUN: opt -S -basic-aa -objc-arc < %s | FileCheck %s
+; RUN: opt -S -objc-arc < %s | FileCheck %s
 
 declare i8* @llvm.objc.loadWeak(i8**)
 declare i8* @llvm.objc.loadWeakRetained(i8**)

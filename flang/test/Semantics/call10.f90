@@ -17,6 +17,25 @@ module m
 
   real, volatile, target :: volatile
 
+  interface
+    ! Ensure no errors for "ignored" declarations in a pure interface.
+    ! These declarations do not contribute to the characteristics of
+    ! the procedure and must not elicit spurious errors about being used
+    ! in a pure procedure.
+    pure subroutine s05a
+      import polyAlloc
+      real, save :: v1
+      real :: v2 = 0.
+      real :: v3
+      data v3/0./
+      real :: v4
+      common /blk/ v4
+      save /blk/
+      type(polyAlloc) :: v5
+      real, volatile :: v6
+    end subroutine
+  end interface
+
  contains
 
   subroutine impure(x)

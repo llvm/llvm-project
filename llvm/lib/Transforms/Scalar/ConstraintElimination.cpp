@@ -19,8 +19,10 @@
 #include "llvm/Analysis/ConstraintSystem.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
@@ -110,7 +112,11 @@ class ConstraintInfo {
   ConstraintSystem UnsignedCS;
   ConstraintSystem SignedCS;
 
+  const DataLayout &DL;
+
 public:
+  ConstraintInfo(const DataLayout &DL) : DL(DL) {}
+
   DenseMap<Value *, unsigned> &getValue2Index(bool Signed) {
     return Signed ? SignedValue2Index : UnsignedValue2Index;
   }
@@ -142,14 +148,15 @@ public:
   ConstraintTy getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
                              SmallVectorImpl<Value *> &NewVariables) const;
 
-  /// Turn a condition \p CmpI into a vector of constraints, using indices from
-  /// the corresponding constraint system. New variables that need to be added
-  /// to the system are collected in \p NewVariables.
-  ConstraintTy getConstraint(CmpInst *Cmp,
-                             SmallVectorImpl<Value *> &NewVariables) {
-    return getConstraint(Cmp->getPredicate(), Cmp->getOperand(0),
-                         Cmp->getOperand(1), NewVariables);
-  }
+  /// Turns a comparison of the form \p Op0 \p Pred \p Op1 into a vector of
+  /// constraints using getConstraint. Returns an empty constraint if the result
+  /// cannot be used to query the existing constraint system, e.g. because it
+  /// would require adding new variables. Also tries to convert signed
+  /// predicates to unsigned ones if possible to allow using the unsigned system
+  /// which increases the effectiveness of the signed <-> unsigned transfer
+  /// logic.
+  ConstraintTy getConstraintForSolving(CmpInst::Predicate Pred, Value *Op0,
+                                       Value *Op1) const;
 
   /// Try to add information from \p A \p Pred \p B to the unsigned/signed
   /// system if \p Pred is signed/unsigned.
@@ -179,7 +186,7 @@ struct DecompEntry {
 // be decomposed, returns an empty vector.
 static SmallVector<DecompEntry, 4>
 decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
-          bool IsSigned) {
+          bool IsSigned, const DataLayout &DL) {
 
   auto CanUseSExt = [](ConstantInt *CI) {
     const APInt &Val = CI->getValue();
@@ -205,42 +212,69 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
     Value *Op0, *Op1;
     ConstantInt *CI;
 
+    // Bail out for scalable vectors for now.
+    auto GTI = gep_type_begin(GEP);
+    if (isa<ScalableVectorType>(GTI.getIndexedType()))
+      return {};
+
+    int64_t Scale = static_cast<int64_t>(
+        DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize());
+    int64_t MulRes;
+    // Handle the (gep (gep ....), C) case by incrementing the constant
+    // coefficient of the inner GEP, if C is a constant.
+    auto *InnerGEP = dyn_cast<GetElementPtrInst>(GEP->getPointerOperand());
+    if (InnerGEP && InnerGEP->getNumOperands() == 2 &&
+        isa<ConstantInt>(GEP->getOperand(1))) {
+      APInt Offset = cast<ConstantInt>(GEP->getOperand(1))->getValue();
+      auto Result = decompose(InnerGEP, Preconditions, IsSigned, DL);
+      if (!MulOverflow(Scale, Offset.getSExtValue(), MulRes)) {
+        Result[0].Coefficient += MulRes;
+        if (Offset.isNegative()) {
+          // Add pre-condition ensuring the GEP is increasing monotonically and
+          // can be de-composed.
+          Preconditions.emplace_back(
+              CmpInst::ICMP_SGE, InnerGEP->getOperand(1),
+              ConstantInt::get(InnerGEP->getOperand(1)->getType(),
+                               -1 * Offset.getSExtValue()));
+        }
+        return Result;
+      }
+    }
+
     // If the index is zero-extended, it is guaranteed to be positive.
     if (match(GEP->getOperand(GEP->getNumOperands() - 1),
               m_ZExt(m_Value(Op0)))) {
       if (match(Op0, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) &&
-          CanUseSExt(CI))
-        return {{0, nullptr},
-                {1, GEP->getPointerOperand()},
-                {int64_t(std::pow(int64_t(2), CI->getSExtValue())), Op1}};
+          CanUseSExt(CI) &&
+          !MulOverflow(Scale, int64_t(std::pow(int64_t(2), CI->getSExtValue())),
+                       MulRes))
+        return {{0, nullptr}, {1, GEP->getPointerOperand()}, {MulRes, Op1}};
       if (match(Op0, m_NSWAdd(m_Value(Op1), m_ConstantInt(CI))) &&
-          CanUseSExt(CI))
-        return {{CI->getSExtValue(), nullptr},
-                {1, GEP->getPointerOperand()},
-                {1, Op1}};
-      return {{0, nullptr}, {1, GEP->getPointerOperand()}, {1, Op0, true}};
+          CanUseSExt(CI) && match(Op0, m_NUWAdd(m_Value(), m_Value())) &&
+          !MulOverflow(Scale, CI->getSExtValue(), MulRes))
+        return {{MulRes, nullptr}, {1, GEP->getPointerOperand()}, {Scale, Op1}};
+      return {{0, nullptr}, {1, GEP->getPointerOperand()}, {Scale, Op0, true}};
     }
 
     if (match(GEP->getOperand(GEP->getNumOperands() - 1), m_ConstantInt(CI)) &&
-        !CI->isNegative() && CanUseSExt(CI))
-      return {{CI->getSExtValue(), nullptr}, {1, GEP->getPointerOperand()}};
+        !CI->isNegative() && CanUseSExt(CI) &&
+        !MulOverflow(Scale, CI->getSExtValue(), MulRes))
+      return {{MulRes, nullptr}, {1, GEP->getPointerOperand()}};
 
     SmallVector<DecompEntry, 4> Result;
     if (match(GEP->getOperand(GEP->getNumOperands() - 1),
-              m_NUWShl(m_Value(Op0), m_ConstantInt(CI))) &&
-        CanUseSExt(CI))
-      Result = {{0, nullptr},
-                {1, GEP->getPointerOperand()},
-                {int(std::pow(int64_t(2), CI->getSExtValue())), Op0}};
+              m_NSWShl(m_Value(Op0), m_ConstantInt(CI))) &&
+        CanUseSExt(CI) &&
+        !MulOverflow(Scale, int64_t(std::pow(int64_t(2), CI->getSExtValue())),
+                     MulRes))
+      Result = {{0, nullptr}, {1, GEP->getPointerOperand()}, {MulRes, Op0}};
     else if (match(GEP->getOperand(GEP->getNumOperands() - 1),
                    m_NSWAdd(m_Value(Op0), m_ConstantInt(CI))) &&
-             CanUseSExt(CI))
-      Result = {{CI->getSExtValue(), nullptr},
-                {1, GEP->getPointerOperand()},
-                {1, Op0}};
+             CanUseSExt(CI) && !MulOverflow(Scale, CI->getSExtValue(), MulRes))
+      Result = {{MulRes, nullptr}, {1, GEP->getPointerOperand()}, {Scale, Op0}};
     else {
       Op0 = GEP->getOperand(GEP->getNumOperands() - 1);
-      Result = {{0, nullptr}, {1, GEP->getPointerOperand()}, {1, Op0}};
+      Result = {{0, nullptr}, {1, GEP->getPointerOperand()}, {Scale, Op0}};
     }
     // If Op0 is signed non-negative, the GEP is increasing monotonically and
     // can be de-composed.
@@ -256,11 +290,11 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
     V = Op0;
   }
 
-  auto MergeResults = [&Preconditions, IsSigned](
-                          Value *A, Value *B,
-                          bool IsSignedB) -> SmallVector<DecompEntry, 4> {
-    auto ResA = decompose(A, Preconditions, IsSigned);
-    auto ResB = decompose(B, Preconditions, IsSignedB);
+  auto MergeResults = [&Preconditions, IsSigned,
+                       DL](Value *A, Value *B,
+                           bool IsSignedB) -> SmallVector<DecompEntry, 4> {
+    auto ResA = decompose(A, Preconditions, IsSigned, DL);
+    auto ResB = decompose(B, Preconditions, IsSignedB, DL);
     if (ResA.empty() || ResB.empty())
       return {};
     ResA[0].Coefficient += ResB[0].Coefficient;
@@ -330,9 +364,9 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   bool IsSigned = CmpInst::isSigned(Pred);
   auto &Value2Index = getValue2Index(IsSigned);
   auto ADec = decompose(Op0->stripPointerCastsSameRepresentation(),
-                        Preconditions, IsSigned);
+                        Preconditions, IsSigned, DL);
   auto BDec = decompose(Op1->stripPointerCastsSameRepresentation(),
-                        Preconditions, IsSigned);
+                        Preconditions, IsSigned, DL);
   // Skip if decomposing either of the values failed.
   if (ADec.empty() || BDec.empty())
     return {};
@@ -418,6 +452,24 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
   return Res;
 }
 
+ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
+                                                     Value *Op0,
+                                                     Value *Op1) const {
+  // If both operands are known to be non-negative, change signed predicates to
+  // unsigned ones. This increases the reasoning effectiveness in combination
+  // with the signed <-> unsigned transfer logic.
+  if (CmpInst::isSigned(Pred) &&
+      isKnownNonNegative(Op0, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1) &&
+      isKnownNonNegative(Op1, DL, /*Depth=*/MaxAnalysisRecursionDepth - 1))
+    Pred = CmpInst::getUnsignedPredicate(Pred);
+
+  SmallVector<Value *> NewVariables;
+  ConstraintTy R = getConstraint(Pred, Op0, Op1, NewVariables);
+  if (R.IsEq || !NewVariables.empty())
+    return {};
+  return R;
+}
+
 bool ConstraintTy::isValid(const ConstraintInfo &Info) const {
   return Coefficients.size() > 0 &&
          all_of(Preconditions, [&Info](const PreconditionTy &C) {
@@ -427,14 +479,9 @@ bool ConstraintTy::isValid(const ConstraintInfo &Info) const {
 
 bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A,
                               Value *B) const {
-  SmallVector<Value *> NewVariables;
-  auto R = getConstraint(Pred, A, B, NewVariables);
-
-  if (!NewVariables.empty())
-    return false;
-
-  return NewVariables.empty() && R.Preconditions.empty() && !R.IsEq &&
-         !R.empty() && getCS(R.IsSigned).isConditionImplied(R.Coefficients);
+  auto R = getConstraintForSolving(Pred, A, B);
+  return R.Preconditions.empty() && !R.empty() &&
+         getCS(R.IsSigned).isConditionImplied(R.Coefficients);
 }
 
 void ConstraintInfo::transferToOtherSystem(
@@ -578,33 +625,47 @@ void State::addInfoFor(BasicBlock &BB) {
   if (!Br || !Br->isConditional())
     return;
 
-  // If the condition is an OR of 2 compares and the false successor only has
-  // the current block as predecessor, queue both negated conditions for the
-  // false successor.
-  Value *Op0, *Op1;
-  if (match(Br->getCondition(), m_LogicalOr(m_Value(Op0), m_Value(Op1))) &&
-      isa<ICmpInst>(Op0) && isa<ICmpInst>(Op1)) {
-    BasicBlock *FalseSuccessor = Br->getSuccessor(1);
-    if (canAddSuccessor(BB, FalseSuccessor)) {
-      WorkList.emplace_back(DT.getNode(FalseSuccessor), cast<ICmpInst>(Op0),
-                            true);
-      WorkList.emplace_back(DT.getNode(FalseSuccessor), cast<ICmpInst>(Op1),
-                            true);
-    }
-    return;
-  }
+  Value *Cond = Br->getCondition();
 
-  // If the condition is an AND of 2 compares and the true successor only has
-  // the current block as predecessor, queue both conditions for the true
-  // successor.
-  if (match(Br->getCondition(), m_LogicalAnd(m_Value(Op0), m_Value(Op1))) &&
-      isa<ICmpInst>(Op0) && isa<ICmpInst>(Op1)) {
-    BasicBlock *TrueSuccessor = Br->getSuccessor(0);
-    if (canAddSuccessor(BB, TrueSuccessor)) {
-      WorkList.emplace_back(DT.getNode(TrueSuccessor), cast<ICmpInst>(Op0),
-                            false);
-      WorkList.emplace_back(DT.getNode(TrueSuccessor), cast<ICmpInst>(Op1),
-                            false);
+  // If the condition is a chain of ORs/AND and the successor only has the
+  // current block as predecessor, queue conditions for the successor.
+  Value *Op0, *Op1;
+  if (match(Cond, m_LogicalOr(m_Value(Op0), m_Value(Op1))) ||
+      match(Cond, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
+    bool IsOr = match(Cond, m_LogicalOr());
+    bool IsAnd = match(Cond, m_LogicalAnd());
+    // If there's a select that matches both AND and OR, we need to commit to
+    // one of the options. Arbitrarily pick OR.
+    if (IsOr && IsAnd)
+      IsAnd = false;
+
+    BasicBlock *Successor = Br->getSuccessor(IsOr ? 1 : 0);
+    if (canAddSuccessor(BB, Successor)) {
+      SmallVector<Value *> CondWorkList;
+      SmallPtrSet<Value *, 8> SeenCond;
+      auto QueueValue = [&CondWorkList, &SeenCond](Value *V) {
+        if (SeenCond.insert(V).second)
+          CondWorkList.push_back(V);
+      };
+      QueueValue(Op1);
+      QueueValue(Op0);
+      while (!CondWorkList.empty()) {
+        Value *Cur = CondWorkList.pop_back_val();
+        if (auto *Cmp = dyn_cast<ICmpInst>(Cur)) {
+          WorkList.emplace_back(DT.getNode(Successor), Cmp, IsOr);
+          continue;
+        }
+        if (IsOr && match(Cur, m_LogicalOr(m_Value(Op0), m_Value(Op1)))) {
+          QueueValue(Op1);
+          QueueValue(Op0);
+          continue;
+        }
+        if (IsAnd && match(Cur, m_LogicalAnd(m_Value(Op0), m_Value(Op1)))) {
+          QueueValue(Op1);
+          QueueValue(Op0);
+          continue;
+        }
+      }
     }
     return;
   }
@@ -632,8 +693,6 @@ void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
              A->printAsOperand(dbgs(), false); dbgs() << ", ";
              B->printAsOperand(dbgs(), false); dbgs() << "'\n");
   bool Added = false;
-  assert(CmpInst::isSigned(Pred) == R.IsSigned &&
-         "condition and constraint signs must match");
   auto &CSToUse = getCS(R.IsSigned);
   if (R.Coefficients.empty())
     return;
@@ -675,9 +734,8 @@ tryToSimplifyOverflowMath(IntrinsicInst *II, ConstraintInfo &Info,
                           SmallVectorImpl<Instruction *> &ToRemove) {
   auto DoesConditionHold = [](CmpInst::Predicate Pred, Value *A, Value *B,
                               ConstraintInfo &Info) {
-    SmallVector<Value *> NewVariables;
-    auto R = Info.getConstraint(Pred, A, B, NewVariables);
-    if (R.size() < 2 || !NewVariables.empty() || !R.isValid(Info))
+    auto R = Info.getConstraintForSolving(Pred, A, B);
+    if (R.size() < 2 || !R.isValid(Info))
       return false;
 
     auto &CSToUse = Info.getCS(R.IsSigned);
@@ -729,7 +787,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   bool Changed = false;
   DT.updateDFSNumbers();
 
-  ConstraintInfo Info;
+  ConstraintInfo Info(F.getParent()->getDataLayout());
   State S(DT);
 
   // First, collect conditions implied by branches and blocks with their
@@ -743,10 +801,20 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
   // Next, sort worklist by dominance, so that dominating blocks and conditions
   // come before blocks and conditions dominated by them. If a block and a
   // condition have the same numbers, the condition comes before the block, as
-  // it holds on entry to the block.
-  stable_sort(S.WorkList, [](const ConstraintOrBlock &A, const ConstraintOrBlock &B) {
-    return std::tie(A.NumIn, A.IsBlock) < std::tie(B.NumIn, B.IsBlock);
-  });
+  // it holds on entry to the block. Also make sure conditions with constant
+  // operands come before conditions without constant operands. This increases
+  // the effectiveness of the current signed <-> unsigned fact transfer logic.
+  stable_sort(
+      S.WorkList, [](const ConstraintOrBlock &A, const ConstraintOrBlock &B) {
+        auto HasNoConstOp = [](const ConstraintOrBlock &B) {
+          return !B.IsBlock && !isa<ConstantInt>(B.Condition->getOperand(0)) &&
+                 !isa<ConstantInt>(B.Condition->getOperand(1));
+        };
+        bool NoConstOpA = HasNoConstOp(A);
+        bool NoConstOpB = HasNoConstOp(B);
+        return std::tie(A.NumIn, A.IsBlock, NoConstOpA) <
+               std::tie(B.NumIn, B.IsBlock, NoConstOpB);
+      });
 
   SmallVector<Instruction *> ToRemove;
 
@@ -801,9 +869,9 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
           continue;
 
         LLVM_DEBUG(dbgs() << "Checking " << *Cmp << "\n");
-        SmallVector<Value *> NewVariables;
-        auto R = Info.getConstraint(Cmp, NewVariables);
-        if (R.IsEq || R.empty() || !NewVariables.empty() || !R.isValid(Info))
+        auto R = Info.getConstraintForSolving(
+            Cmp->getPredicate(), Cmp->getOperand(0), Cmp->getOperand(1));
+        if (R.empty() || !R.isValid(Info))
           continue;
 
         auto &CSToUse = Info.getCS(R.IsSigned);

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++98 %s -triple armv7-none-eabi -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 %s -triple armv7-none-eabi -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++1z %s -triple armv7-none-eabi -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++98 %s -triple armv7-none-eabi -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 %s -triple armv7-none-eabi -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++1z %s -triple armv7-none-eabi -emit-llvm -o - | FileCheck %s
 
 struct A {
   virtual void f();
@@ -15,7 +15,7 @@ A g();
 void f(A a, A *ap, A& ar) {
   // This should not be a virtual function call.
   
-  // CHECK: call void @_ZN1A1fEv(%struct.A* {{[^,]*}} %a)
+  // CHECK: call void @_ZN1A1fEv(ptr {{[^,]*}} %a)
   a.f();
 
   // CHECK: call void %  
@@ -46,10 +46,10 @@ struct XD { D d; };
 D gd();
 
 void fd(D d, XD xd, D *p) {
-  // CHECK: call void @_ZN1A1fEv(%struct.A*
+  // CHECK: call void @_ZN1A1fEv(ptr
   d.f();
 
-  // CHECK: call void @_ZN1D1gEv(%struct.D*
+  // CHECK: call void @_ZN1D1gEv(ptr
   d.g();
 
   // CHECK: call void @_ZN1A1fEv
@@ -127,7 +127,7 @@ namespace test2 {
 
   void f(bar *b) {
     // CHECK: call void @_ZN5test23foo1fEv
-    // CHECK: call noundef %"struct.test2::foo"* @_ZN5test23fooD1Ev
+    // CHECK: call noundef ptr @_ZN5test23fooD1Ev
     b->foo::f();
     b->foo::~foo();
   }

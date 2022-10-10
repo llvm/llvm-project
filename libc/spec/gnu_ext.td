@@ -63,6 +63,11 @@ def GnuExtensions : StandardSpec<"GNUExtensions"> {
             RetValSpec<VoidPtr>,
             [ArgSpec<VoidPtr>, ArgSpec<IntType>, ArgSpec<SizeTType>]
         >,
+        FunctionSpec<
+            "strerror_r",
+            RetValSpec<CharPtr>,
+            [ArgSpec<IntType>, ArgSpec<CharPtr>, ArgSpec<SizeTType>]
+        >,
       ]
   >;
 

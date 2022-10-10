@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -fcxx-exceptions -fexceptions -emit-llvm -std=c++98 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=x86_64-apple-darwin10 -fcxx-exceptions -fexceptions -emit-llvm -std=c++11 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -fcxx-exceptions -fexceptions -emit-llvm -std=c++98 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK98 %s
+// RUN: %clang_cc1 %s -triple=x86_64-apple-darwin10 -fcxx-exceptions -fexceptions -emit-llvm -std=c++11 -o - | FileCheck -check-prefix=CHECK -check-prefix=CHECK11 %s
 
 // Reduced from a crash on boost::interprocess's node_allocator_test.cpp.
 namespace test0 {
@@ -12,22 +12,21 @@ namespace test0 {
     // CHECK-NEXT: [[X:%.*]] = alloca i32
     // CHECK-NEXT: [[Y:%.*]] = alloca [[A:%.*]],
     // CHECK-NEXT: [[Z:%.*]] = alloca [[A]]
-    // CHECK-NEXT: [[EXN:%.*]] = alloca i8*
+    // CHECK-NEXT: [[EXN:%.*]] = alloca ptr
     // CHECK-NEXT: [[SEL:%.*]] = alloca i32
-    // CHECK-NEXT: [[V:%.*]] = alloca [[V:%.*]]*,
+    // CHECK-NEXT: [[V:%.*]] = alloca ptr,
     // CHECK-NEXT: [[TMP:%.*]] = alloca [[A]]
     // CHECK-NEXT: [[CLEANUPACTIVE:%.*]] = alloca i1
-    // CHECK:      call void @_ZN5test01AC1Ev([[A]]* {{[^,]*}} [[Y]])
-    // CHECK-NEXT: invoke void @_ZN5test01AC1Ev([[A]]* {{[^,]*}} [[Z]])
-    // CHECK:      [[NEW:%.*]] = invoke noalias noundef nonnull i8* @_Znwm(i64 noundef 1)
-    // CHECK:      store i1 true, i1* [[CLEANUPACTIVE]]
-    // CHECK:      [[NEWCAST:%.*]] = bitcast i8* [[NEW]] to [[V]]*
-    // CHECK-NEXT: invoke void @_ZN5test01AC1Ev([[A]]* {{[^,]*}} [[TMP]])
-    // CHECK:      invoke void @_ZN5test01VC1ERKNS_1AE([[V]]* {{[^,]*}} [[NEWCAST]], [[A]]* noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[TMP]])
-    // CHECK:      store i1 false, i1* [[CLEANUPACTIVE]]
+    // CHECK:      call void @_ZN5test01AC1Ev(ptr {{[^,]*}} [[Y]])
+    // CHECK-NEXT: invoke void @_ZN5test01AC1Ev(ptr {{[^,]*}} [[Z]])
+    // CHECK:      [[NEW:%.*]] = invoke noalias noundef nonnull ptr @_Znwm(i64 noundef 1)
+    // CHECK:      store i1 true, ptr [[CLEANUPACTIVE]]
+    // CHECK-NEXT: invoke void @_ZN5test01AC1Ev(ptr {{[^,]*}} [[TMP]])
+    // CHECK:      invoke void @_ZN5test01VC1ERKNS_1AE(ptr {{[^,]*}} [[NEW]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[TMP]])
+    // CHECK:      store i1 false, ptr [[CLEANUPACTIVE]]
 
-    // CHECK98-NEXT: invoke void @_ZN5test01AD1Ev([[A]]* {{[^,]*}} [[TMP]])
-    // CHECK11-NEXT: call void @_ZN5test01AD1Ev([[A]]* {{[^,]*}} [[TMP]])
+    // CHECK98-NEXT: invoke void @_ZN5test01AD1Ev(ptr {{[^,]*}} [[TMP]])
+    // CHECK11-NEXT: call void @_ZN5test01AD1Ev(ptr {{[^,]*}} [[TMP]])
     A y;
     try {
       A z;

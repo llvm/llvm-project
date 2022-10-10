@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %std_cxx11-14 -no-opaque-pointers -no-enable-noundef-analysis -triple armv7-none-eabi -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,PRE17
-// RUN: %clang_cc1 %std_cxx17- -no-opaque-pointers -no-enable-noundef-analysis -triple armv7-none-eabi -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CXX17
+// RUN: %clang_cc1 %std_cxx11-14 -no-enable-noundef-analysis -triple armv7-none-eabi -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,PRE17
+// RUN: %clang_cc1 %std_cxx17- -no-enable-noundef-analysis -triple armv7-none-eabi -emit-llvm -o - %s | FileCheck %s --check-prefixes=CHECK,CXX17
 
 struct A { int x; A(int); ~A(); };
 A f() { return A(0); }
@@ -22,7 +22,7 @@ namespace no_elide_base {
     Derived(const Other &O);
   };
 
-  // CHECK: define {{.*}} @_ZN13no_elide_base7DerivedC1ERKNS_5OtherE(%"struct.no_elide_base::Derived"* {{[^,]*}} returned {{[^,]*}} %this, %"struct.no_elide_base::Other"* nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %O) unnamed_addr
+  // CHECK: define {{.*}} @_ZN13no_elide_base7DerivedC1ERKNS_5OtherE(ptr {{[^,]*}} returned {{[^,]*}} %this, ptr nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %O) unnamed_addr
   Derived::Derived(const Other &O) 
     // CHECK: call {{.*}} @_ZNK13no_elide_base5OthercvNS_4BaseEEv
     // PRE17: call {{.*}} @_ZN13no_elide_base4BaseC2ERKS0_
@@ -68,7 +68,7 @@ namespace PR12139 {
   // CHECK-LABEL: define{{.*}} i32 @_ZN7PR121394testEv
   int test() {
     // CHECK: call void @_ZN7PR121391A5makeAEv
-    // CHECK-NEXT: call %"struct.PR12139::A"* @_ZN7PR121391AC1ERKS0_i
+    // CHECK-NEXT: call ptr @_ZN7PR121391AC1ERKS0_i
     A a(A::makeA(), 3);
     // CHECK-NEXT: getelementptr inbounds
     // CHECK-NEXT: load

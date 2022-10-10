@@ -1266,6 +1266,15 @@ bool RISCVInstrInfo::verifyInstruction(const MachineInstr &MI,
       ErrInfo = "policy operand w/o VL operand?";
       return false;
     }
+
+    // VecPolicy operands can only exist on instructions with passthru/merge
+    // arguments. Note that not all arguments with passthru have vec policy
+    // operands- some instructions have implicit policies.
+    unsigned UseOpIdx;
+    if (!MI.isRegTiedToUseOperand(0, &UseOpIdx)) {
+      ErrInfo = "policy operand w/o tied operand?";
+      return false;
+    }
   }
 
   return true;

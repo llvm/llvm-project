@@ -1002,6 +1002,78 @@ public:
                       struct MapperAllocas &MapperAllocas, int64_t DeviceID,
                       unsigned NumOperands);
 
+  /// Container for the arguments used to pass data to the runtime library.
+  struct TargetDataRTArgs {
+    explicit TargetDataRTArgs() {}
+    /// The array of base pointer passed to the runtime library.
+    Value *BasePointersArray = nullptr;
+    /// The array of section pointers passed to the runtime library.
+    Value *PointersArray = nullptr;
+    /// The array of sizes passed to the runtime library.
+    Value *SizesArray = nullptr;
+    /// The array of map types passed to the runtime library for the beginning
+    /// of the region or for the entire region if there are no separate map
+    /// types for the region end.
+    Value *MapTypesArray = nullptr;
+    /// The array of map types passed to the runtime library for the end of the
+    /// region, or nullptr if there are no separate map types for the region
+    /// end.
+    Value *MapTypesArrayEnd = nullptr;
+    /// The array of user-defined mappers passed to the runtime library.
+    Value *MappersArray = nullptr;
+    /// The array of original declaration names of mapped pointers sent to the
+    /// runtime library for debugging
+    Value *MapNamesArray = nullptr;
+  };
+
+  /// Struct that keeps the information that should be kept throughout
+  /// a 'target data' region.
+  class TargetDataInfo {
+    /// Set to true if device pointer information have to be obtained.
+    bool RequiresDevicePointerInfo = false;
+    /// Set to true if Clang emits separate runtime calls for the beginning and
+    /// end of the region.  These calls might have separate map type arrays.
+    bool SeparateBeginEndCalls = false;
+
+  public:
+    TargetDataRTArgs RTArgs;
+
+    /// Indicate whether any user-defined mapper exists.
+    bool HasMapper = false;
+    /// The total number of pointers passed to the runtime library.
+    unsigned NumberOfPtrs = 0u;
+
+    explicit TargetDataInfo() {}
+    explicit TargetDataInfo(bool RequiresDevicePointerInfo,
+                            bool SeparateBeginEndCalls)
+        : RequiresDevicePointerInfo(RequiresDevicePointerInfo),
+          SeparateBeginEndCalls(SeparateBeginEndCalls) {}
+    /// Clear information about the data arrays.
+    void clearArrayInfo() {
+      RTArgs = TargetDataRTArgs();
+      HasMapper = false;
+      NumberOfPtrs = 0u;
+    }
+    /// Return true if the current target data information has valid arrays.
+    bool isValid() {
+      return RTArgs.BasePointersArray && RTArgs.PointersArray &&
+             RTArgs.SizesArray && RTArgs.MapTypesArray &&
+             (!HasMapper || RTArgs.MappersArray) && NumberOfPtrs;
+    }
+    bool requiresDevicePointerInfo() { return RequiresDevicePointerInfo; }
+    bool separateBeginEndCalls() { return SeparateBeginEndCalls; }
+  };
+
+  /// Emit the arguments to be passed to the runtime library based on the
+  /// arrays of base pointers, pointers, sizes, map types, and mappers.  If
+  /// ForEndCall, emit map types to be passed for the end of the region instead
+  /// of the beginning.
+  void emitOffloadingArraysArgument(IRBuilderBase &Builder,
+                                    OpenMPIRBuilder::TargetDataRTArgs &RTArgs,
+                                    OpenMPIRBuilder::TargetDataInfo &Info,
+                                    bool EmitDebug = false,
+                                    bool ForEndCall = false);
+
 public:
   /// Generator for __kmpc_copyprivate
   ///

@@ -40,7 +40,6 @@ else:
   ret i1 0
 }
 
-; FIXME: currently adding extra facts is dependent on the visitation order of facts.
 define i1 @len_known_positive_via_idx_2(i8 %len, i8 %idx) {
 ; CHECK-LABEL: @len_known_positive_via_idx_2(
 ; CHECK-NEXT:  entry:
@@ -53,7 +52,7 @@ define i1 @len_known_positive_via_idx_2(i8 %len, i8 %idx) {
 ; CHECK-NEXT:    [[T_2:%.*]] = icmp sge i8 [[LEN]], 0
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sge i8 [[LEN]], 2
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sge i8 [[LEN]], 2
-; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[T_1]], true
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    [[RES_2:%.*]] = xor i1 [[RES_1]], [[C_1]]
 ; CHECK-NEXT:    [[RES_3:%.*]] = xor i1 [[RES_2]], [[C_2]]
 ; CHECK-NEXT:    ret i1 [[RES_3]]

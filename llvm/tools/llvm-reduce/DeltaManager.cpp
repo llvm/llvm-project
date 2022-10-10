@@ -19,6 +19,7 @@
 #include "deltas/ReduceArguments.h"
 #include "deltas/ReduceAttributes.h"
 #include "deltas/ReduceBasicBlocks.h"
+#include "deltas/ReduceDIMetadata.h"
 #include "deltas/ReduceFunctionBodies.h"
 #include "deltas/ReduceFunctions.h"
 #include "deltas/ReduceGlobalObjects.h"
@@ -65,6 +66,7 @@ static cl::opt<std::string>
     DELTA_PASS("global-objects", reduceGlobalObjectsDeltaPass)                 \
     DELTA_PASS("global-initializers", reduceGlobalsInitializersDeltaPass)      \
     DELTA_PASS("global-variables", reduceGlobalsDeltaPass)                     \
+    DELTA_PASS("di-metadata", reduceDIMetadataDeltaPass)                       \
     DELTA_PASS("metadata", reduceMetadataDeltaPass)                            \
     DELTA_PASS("arguments", reduceArgumentsDeltaPass)                          \
     DELTA_PASS("instructions", reduceInstructionsDeltaPass)                    \

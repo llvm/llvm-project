@@ -250,7 +250,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
     if (ResolveForwardRefDSOLocalEquivalents(Iter.first, Iter.second))
       return true;
   }
-  ForwardRefDSOLocalEquivalentNames.clear();
+  ForwardRefDSOLocalEquivalentIDs.clear();
   ForwardRefDSOLocalEquivalentNames.clear();
 
   for (const auto &NT : NumberedTypes)

@@ -1,5 +1,5 @@
-; RUN: llvm-reduce --delta-passes=basic-blocks --test %python --test-arg %p/remove-bbs-sequence.py %s -o %t
-; RUN: cat %t | FileCheck %s
+; RUN: llvm-reduce -abort-on-invalid-reduction --delta-passes=basic-blocks --test %python --test-arg %p/remove-bbs-sequence.py %s -o %t
+; RUN: FileCheck %s < %t
 
 ; The interestingness test is that the CFG contains a loop. Verify that the
 ; unnecessary bb2 and bb3 are removed while still maintaining a loop.

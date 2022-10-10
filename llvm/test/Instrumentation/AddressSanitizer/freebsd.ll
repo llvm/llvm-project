@@ -1,19 +1,19 @@
-; RUN: opt < %s -passes='asan-pipeline' -S \
+; RUN: opt < %s -passes=asan -S \
 ; RUN:     -mtriple=i386-unknown-freebsd \
 ; RUN:     -data-layout="e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128" | \
 ; RUN:     FileCheck --check-prefix=CHECK-32 %s
 
-; RUN: opt < %s -passes='asan-pipeline' -S \
+; RUN: opt < %s -passes=asan -S \
 ; RUN:     -mtriple=x86_64-unknown-freebsd \
 ; RUN:     -data-layout="e-m:e-i64:64-f80:128-n8:16:32:64-S128" | \
 ; RUN:     FileCheck --check-prefix=CHECK-64 %s
 
-; RUN: opt < %s -passes='asan-pipeline' -S \
+; RUN: opt < %s -passes=asan -S \
 ; RUN:     -mtriple=aarch64-unknown-freebsd \
 ; RUN:     -data-layout="e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128" | \
 ; RUN:     FileCheck --check-prefix=CHECK-AARCH64 %s
 
-; RUN: opt < %s -passes='asan-pipeline' -S \
+; RUN: opt < %s -passes=asan -S \
 ; RUN:     -mtriple=mips64-unknown-freebsd \
 ; RUN:     -data-layout="E-m:e-i64:64-n32:64-S128" | \
 ; RUN:     FileCheck --check-prefix=CHECK-MIPS64 %s

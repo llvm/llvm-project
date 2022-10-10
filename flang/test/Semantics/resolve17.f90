@@ -11,7 +11,7 @@ module m2
   interface s
   end interface
 contains
-  !ERROR: 's' may not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic
+  !WARNING: 's' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic
   subroutine s
   end subroutine
 end module

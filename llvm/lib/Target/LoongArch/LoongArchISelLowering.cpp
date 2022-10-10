@@ -142,6 +142,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FSINCOS, MVT::f64, Expand);
     setOperationAction(ISD::FPOW, MVT::f64, Expand);
     setOperationAction(ISD::FREM, MVT::f64, Expand);
+    setTruncStoreAction(MVT::f64, MVT::f32, Expand);
   }
 
   setOperationAction(ISD::BR_JT, MVT::Other, Expand);
@@ -1826,8 +1827,7 @@ SDValue LoongArchTargetLowering::LowerReturn(
 
 bool LoongArchTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
                                            bool ForCodeSize) const {
-  assert((VT == MVT::f32 || VT == MVT::f64) && "Unexpected VT");
-
+  // TODO: Maybe need more checks here after vector extension is supported.
   if (VT == MVT::f32 && !Subtarget.hasBasicF())
     return false;
   if (VT == MVT::f64 && !Subtarget.hasBasicD())

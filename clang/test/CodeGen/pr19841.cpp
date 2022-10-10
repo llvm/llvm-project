@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm %s -o -  | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o -  | FileCheck %s
 
 namespace Common {
 enum RenderMode {
@@ -23,7 +23,7 @@ A::A() {
       ? b
       : _highlightColorTableVGA;
 // Make sure the PHI value is casted correctly to the PHI type
-// CHECK: %{{.*}} = phi [0 x i8]* [ bitcast ([1 x i8]* [[Common_A_b]] to [0 x i8]*), %{{.*}} ], [ %{{.*}}, %{{.*}} ]
+// CHECK: %{{.*}} = phi ptr [ [[Common_A_b]], %{{.*}} ], [ %{{.*}}, %{{.*}} ]
 }
 const unsigned char A::b[] = { 0 };
 }

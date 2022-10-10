@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='asan-pipeline' -asan-use-after-return=never -S | FileCheck %s
+; RUN: opt < %s -passes=asan -asan-use-after-return=never -S | FileCheck %s
 
 ; Checks that llvm.dbg.declare instructions are updated
 ; accordingly as we merge allocas.

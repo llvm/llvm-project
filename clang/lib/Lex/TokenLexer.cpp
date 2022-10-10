@@ -25,6 +25,7 @@
 #include "clang/Lex/Token.h"
 #include "clang/Lex/VariadicMacroSupport.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
@@ -1006,62 +1007,57 @@ static void updateConsecutiveMacroArgTokens(SourceManager &SM,
                                             SourceLocation InstLoc,
                                             Token *&begin_tokens,
                                             Token * end_tokens) {
-  assert(begin_tokens < end_tokens);
+  assert(begin_tokens + 1 < end_tokens);
+  SourceLocation BeginLoc = begin_tokens->getLocation();
+  llvm::MutableArrayRef<Token> All(begin_tokens, end_tokens);
+  llvm::MutableArrayRef<Token> Partition;
 
-  SourceLocation FirstLoc = begin_tokens->getLocation();
-  SourceLocation CurLoc = FirstLoc;
-
-  // Compare the source location offset of tokens and group together tokens that
-  // are close, even if their locations point to different FileIDs. e.g.
-  //
-  //  |bar    |  foo | cake   |  (3 tokens from 3 consecutive FileIDs)
-  //  ^                    ^
-  //  |bar       foo   cake|     (one SLocEntry chunk for all tokens)
-  //
-  // we can perform this "merge" since the token's spelling location depends
-  // on the relative offset.
-
-  Token *NextTok = begin_tokens + 1;
-  for (; NextTok < end_tokens; ++NextTok) {
-    SourceLocation NextLoc = NextTok->getLocation();
-    if (CurLoc.isFileID() != NextLoc.isFileID())
-      break; // Token from different kind of FileID.
-
-    SourceLocation::IntTy RelOffs;
-    if (!SM.isInSameSLocAddrSpace(CurLoc, NextLoc, &RelOffs))
-      break; // Token from different local/loaded location.
-    // Check that token is not before the previous token or more than 50
-    // "characters" away.
-    if (RelOffs < 0 || RelOffs > 50)
-      break;
-
-    if (CurLoc.isMacroID() && !SM.isWrittenInSameFile(CurLoc, NextLoc))
-      break; // Token from a different macro.
-
-    CurLoc = NextLoc;
+  // Partition the tokens by their FileID.
+  // This is a hot function, and calling getFileID can be expensive, the
+  // implementation is optimized by reducing the number of getFileID.
+  if (BeginLoc.isFileID()) {
+    // Consecutive tokens not written in macros must be from the same file.
+    // (Neither #include nor eof can occur inside a macro argument.)
+    Partition = All.take_while([&](const Token &T) {
+      return T.getLocation().isFileID();
+    });
+  } else {
+    // Call getFileID once to calculate the bounds, and use the cheaper
+    // sourcelocation-against-bounds comparison.
+    FileID BeginFID = SM.getFileID(BeginLoc);
+    SourceLocation Limit =
+        SM.getComposedLoc(BeginFID, SM.getFileIDSize(BeginFID));
+    Partition = All.take_while([&](const Token &T) {
+      return T.getLocation() >= BeginLoc && T.getLocation() < Limit;
+    });
   }
+  assert(!Partition.empty());
 
   // For the consecutive tokens, find the length of the SLocEntry to contain
   // all of them.
-  Token &LastConsecutiveTok = *(NextTok-1);
-  SourceLocation::IntTy LastRelOffs = 0;
-  SM.isInSameSLocAddrSpace(FirstLoc, LastConsecutiveTok.getLocation(),
-                           &LastRelOffs);
   SourceLocation::UIntTy FullLength =
-      LastRelOffs + LastConsecutiveTok.getLength();
-
+      Partition.back().getEndLoc().getRawEncoding() -
+      Partition.front().getLocation().getRawEncoding();
   // Create a macro expansion SLocEntry that will "contain" all of the tokens.
   SourceLocation Expansion =
-      SM.createMacroArgExpansionLoc(FirstLoc, InstLoc,FullLength);
+      SM.createMacroArgExpansionLoc(BeginLoc, InstLoc, FullLength);
 
+#ifdef EXPENSIVE_CHECKS
+  assert(llvm::all_of(Partition.drop_front(),
+                      [&SM, ID = SM.getFileID(Partition.front().getLocation())](
+                          const Token &T) {
+                        return ID == SM.getFileID(T.getLocation());
+                      }) &&
+         "Must have the same FIleID!");
+#endif
   // Change the location of the tokens from the spelling location to the new
   // expanded location.
-  for (; begin_tokens < NextTok; ++begin_tokens) {
-    Token &Tok = *begin_tokens;
-    SourceLocation::IntTy RelOffs = 0;
-    SM.isInSameSLocAddrSpace(FirstLoc, Tok.getLocation(), &RelOffs);
-    Tok.setLocation(Expansion.getLocWithOffset(RelOffs));
+  for (Token& T : Partition) {
+    SourceLocation::IntTy RelativeOffset =
+        T.getLocation().getRawEncoding() - BeginLoc.getRawEncoding();
+    T.setLocation(Expansion.getLocWithOffset(RelativeOffset));
   }
+  begin_tokens = &Partition.back() + 1;
 }
 
 /// Creates SLocEntries and updates the locations of macro argument

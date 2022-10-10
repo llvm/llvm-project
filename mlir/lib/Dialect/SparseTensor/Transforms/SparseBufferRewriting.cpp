@@ -28,9 +28,19 @@ using namespace mlir::sparse_tensor;
 // Helper methods for the actual rewriting rules.
 //===---------------------------------------------------------------------===//
 
-constexpr uint64_t loIdx = 0;
-constexpr uint64_t hiIdx = 1;
-constexpr uint64_t xStartIdx = 2;
+static constexpr uint64_t loIdx = 0;
+static constexpr uint64_t hiIdx = 1;
+static constexpr uint64_t xStartIdx = 2;
+
+static constexpr const char kMaySwapFuncNamePrefix[] = "_sparse_may_swap_";
+static constexpr const char kLessThanFuncNamePrefix[] = "_sparse_less_than_";
+static constexpr const char kPartitionFuncNamePrefix[] = "_sparse_partition_";
+static constexpr const char kBinarySearchFuncNamePrefix[] =
+    "_sparse_binary_search_";
+static constexpr const char kSortNonstableFuncNamePrefix[] =
+    "_sparse_sort_nonstable_";
+static constexpr const char kSortStableFuncNamePrefix[] =
+    "_sparse_sort_stable_";
 
 typedef function_ref<void(OpBuilder &, ModuleOp, func::FuncOp, size_t)>
     FuncGeneratorType;
@@ -201,6 +211,79 @@ static void createLessThanFunc(OpBuilder &builder, ModuleOp unused,
   builder.create<func::ReturnOp>(loc, topIfOp.getResult(0));
 }
 
+/// Creates a function to use a binary search to find the insertion point for
+/// inserting xs[hi] to the sorted values xs[lo..hi).
+//
+// The generate IR corresponds to this C like algorithm:
+//   p = hi
+//   while (lo < hi)
+//      mid = (lo + hi) >> 1
+//      if (xs[p] < xs[mid])
+//        hi = mid
+//      else
+//        lo = mid - 1
+//   return lo;
+//
+static void createBinarySearchFunc(OpBuilder &builder, ModuleOp module,
+                                   func::FuncOp func, size_t dim) {
+  OpBuilder::InsertionGuard insertionGuard(builder);
+  Block *entryBlock = func.addEntryBlock();
+  builder.setInsertionPointToStart(entryBlock);
+
+  Location loc = func.getLoc();
+  ValueRange args = entryBlock->getArguments();
+  Value p = args[hiIdx];
+  SmallVector<Type, 2> types(2, p.getType());
+  scf::WhileOp whileOp = builder.create<scf::WhileOp>(
+      loc, types, SmallVector<Value, 2>{args[loIdx], args[hiIdx]});
+
+  // The before-region of the WhileOp.
+  Block *before =
+      builder.createBlock(&whileOp.getBefore(), {}, types, {loc, loc});
+  builder.setInsertionPointToEnd(before);
+  Value cond1 = builder.create<arith::CmpIOp>(loc, arith::CmpIPredicate::ult,
+                                              before->getArgument(0),
+                                              before->getArgument(1));
+  builder.create<scf::ConditionOp>(loc, cond1, before->getArguments());
+
+  // The after-region of the WhileOp.
+  Block *after =
+      builder.createBlock(&whileOp.getAfter(), {}, types, {loc, loc});
+  builder.setInsertionPointToEnd(after);
+  Value lo = after->getArgument(0);
+  Value hi = after->getArgument(1);
+  // Compute mid = (lo + hi) >> 1.
+  Value c1 = constantIndex(builder, loc, 1);
+  Value mid = builder.create<arith::ShRUIOp>(
+      loc, builder.create<arith::AddIOp>(loc, lo, hi), c1);
+  Value midp1 = builder.create<arith::AddIOp>(loc, mid, c1);
+
+  // Compare xs[p] < xs[mid].
+  SmallVector<Value, 6> compareOperands{p, mid};
+  compareOperands.append(args.begin() + xStartIdx,
+                         args.begin() + xStartIdx + dim);
+  Type i1Type = IntegerType::get(module.getContext(), 1, IntegerType::Signless);
+  FlatSymbolRefAttr lessThanFunc =
+      getMangledSortHelperFunc(builder, func, {i1Type}, kLessThanFuncNamePrefix,
+                               dim, compareOperands, createLessThanFunc);
+  Value cond2 = builder
+                    .create<func::CallOp>(loc, lessThanFunc, TypeRange{i1Type},
+                                          compareOperands)
+                    .getResult(0);
+
+  // Update lo and hi for the WhileOp as follows:
+  //   if (xs[p] < xs[mid]))
+  //     hi = mid;
+  //   else
+  //     lo = mid + 1;
+  Value newLo = builder.create<arith::SelectOp>(loc, cond2, lo, midp1);
+  Value newHi = builder.create<arith::SelectOp>(loc, cond2, mid, hi);
+  builder.create<scf::YieldOp>(loc, ValueRange{newLo, newHi});
+
+  builder.setInsertionPointAfter(whileOp);
+  builder.create<func::ReturnOp>(loc, whileOp.getResult(0));
+}
+
 /// Creates a function to perform quick sort partition on the values in the
 /// range of index [lo, hi), assuming lo < hi.
 //
@@ -243,7 +326,7 @@ static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
   compareOperands.append(xs.begin(), xs.end());
   Type i1Type = IntegerType::get(context, 1, IntegerType::Signless);
   FlatSymbolRefAttr lessThanFunc =
-      getMangledSortHelperFunc(builder, func, {i1Type}, "_sparse_less_than_",
+      getMangledSortHelperFunc(builder, func, {i1Type}, kLessThanFuncNamePrefix,
                                dim, compareOperands, createLessThanFunc);
   Value cond = builder
                    .create<func::CallOp>(loc, lessThanFunc, TypeRange{i1Type},
@@ -258,9 +341,9 @@ static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
       builder.create<arith::AddIOp>(loc, forOp.getRegionIterArgs().front(), c1);
   SmallVector<Value, 6> swapOperands{i1, j};
   swapOperands.append(args.begin() + xStartIdx, args.end());
-  FlatSymbolRefAttr swapFunc =
-      getMangledSortHelperFunc(builder, func, TypeRange(), "_sparse_may_swap_",
-                               dim, swapOperands, createMaySwapFunc);
+  FlatSymbolRefAttr swapFunc = getMangledSortHelperFunc(
+      builder, func, TypeRange(), kMaySwapFuncNamePrefix, dim, swapOperands,
+      createMaySwapFunc);
   builder.create<func::CallOp>(loc, swapFunc, TypeRange(), swapOperands);
   builder.create<scf::YieldOp>(loc, i1);
 
@@ -292,8 +375,8 @@ static void createPartitionFunc(OpBuilder &builder, ModuleOp module,
 //        quickSort(p + 1, hi, data);
 //   }
 // }
-static void createSortFunc(OpBuilder &builder, ModuleOp module,
-                           func::FuncOp func, size_t dim) {
+static void createSortNonstableFunc(OpBuilder &builder, ModuleOp module,
+                                    func::FuncOp func, size_t dim) {
   OpBuilder::InsertionGuard insertionGuard(builder);
   Block *entryBlock = func.addEntryBlock();
   builder.setInsertionPointToStart(entryBlock);
@@ -310,8 +393,8 @@ static void createSortFunc(OpBuilder &builder, ModuleOp module,
   // The if-stmt true branch.
   builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
   FlatSymbolRefAttr partitionFunc = getMangledSortHelperFunc(
-      builder, func, {IndexType::get(context)}, "_sparse_partition_", dim, args,
-      createPartitionFunc);
+      builder, func, {IndexType::get(context)}, kPartitionFuncNamePrefix, dim,
+      args, createPartitionFunc);
   auto p = builder.create<func::CallOp>(
       loc, partitionFunc, TypeRange{IndexType::get(context)}, ValueRange(args));
 
@@ -328,6 +411,78 @@ static void createSortFunc(OpBuilder &builder, ModuleOp module,
 
   // After the if-stmt.
   builder.setInsertionPointAfter(ifOp);
+  builder.create<func::ReturnOp>(loc);
+}
+
+/// Creates a function to perform insertion sort on the values in the range of
+/// index [lo, hi).
+//
+// The generate IR corresponds to this C like algorithm:
+// void insertionSort(lo, hi, data) {
+//   for (i = lo+1; i < hi; i++) {
+//      d = data[i];
+//      p = binarySearch(lo, i-1, data)
+//      for (j = 0; j > i - p; j++)
+//        data[i-j] = data[i-j-1]
+//      data[p] = d
+//   }
+// }
+static void createSortStableFunc(OpBuilder &builder, ModuleOp module,
+                                 func::FuncOp func, size_t dim) {
+  OpBuilder::InsertionGuard insertionGuard(builder);
+  Block *entryBlock = func.addEntryBlock();
+  builder.setInsertionPointToStart(entryBlock);
+
+  MLIRContext *context = module.getContext();
+  Location loc = func.getLoc();
+  ValueRange args = entryBlock->getArguments();
+  Value c1 = constantIndex(builder, loc, 1);
+  Value lo = args[loIdx];
+  Value hi = args[hiIdx];
+  Value lop1 = builder.create<arith::AddIOp>(loc, lo, c1);
+
+  // Start the outer for-stmt with induction variable i.
+  scf::ForOp forOpI = builder.create<scf::ForOp>(loc, lop1, hi, c1);
+  builder.setInsertionPointToStart(forOpI.getBody());
+  Value i = forOpI.getInductionVar();
+
+  // Binary search to find the insertion point p.
+  SmallVector<Value, 6> operands{lo, i};
+  operands.append(args.begin() + xStartIdx, args.begin() + xStartIdx + dim);
+  FlatSymbolRefAttr searchFunc = getMangledSortHelperFunc(
+      builder, func, {IndexType::get(context)}, kBinarySearchFuncNamePrefix,
+      dim, operands, createBinarySearchFunc);
+  Value p = builder
+                .create<func::CallOp>(loc, searchFunc, TypeRange{c1.getType()},
+                                      operands)
+                .getResult(0);
+
+  // Move the value at data[i] to a temporary location.
+  ValueRange data = args.drop_front(xStartIdx);
+  SmallVector<Value, 6> d;
+  for (Value v : data)
+    d.push_back(builder.create<memref::LoadOp>(loc, v, i));
+
+  // Start the inner for-stmt with induction variable j, for moving data[p..i)
+  // to data[p+1..i+1).
+  Value imp = builder.create<arith::SubIOp>(loc, i, p);
+  Value c0 = constantIndex(builder, loc, 0);
+  scf::ForOp forOpJ = builder.create<scf::ForOp>(loc, c0, imp, c1);
+  builder.setInsertionPointToStart(forOpJ.getBody());
+  Value j = forOpJ.getInductionVar();
+  Value imj = builder.create<arith::SubIOp>(loc, i, j);
+  Value imjm1 = builder.create<arith::SubIOp>(loc, imj, c1);
+  for (Value v : data) {
+    Value t = builder.create<memref::LoadOp>(loc, v, imjm1);
+    builder.create<memref::StoreOp>(loc, t, v, imj);
+  }
+
+  // Store the value at data[i] to data[p].
+  builder.setInsertionPointAfter(forOpJ);
+  for (auto it : llvm::zip(d, data))
+    builder.create<memref::StoreOp>(loc, std::get<0>(it), std::get<1>(it), p);
+
+  builder.setInsertionPointAfter(forOpI);
   builder.create<func::ReturnOp>(loc);
 }
 
@@ -425,9 +580,13 @@ public:
     addValues(xs);
     addValues(op.getYs());
     auto insertPoint = op->getParentOfType<func::FuncOp>();
-    FlatSymbolRefAttr func = getMangledSortHelperFunc(
-        rewriter, insertPoint, TypeRange(), "_sparse_sort_", xs.size(),
-        operands, createSortFunc);
+    SmallString<32> funcName(op.getStable() ? kSortStableFuncNamePrefix
+                                            : kSortNonstableFuncNamePrefix);
+    FuncGeneratorType funcGenerator =
+        op.getStable() ? createSortStableFunc : createSortNonstableFunc;
+    FlatSymbolRefAttr func =
+        getMangledSortHelperFunc(rewriter, insertPoint, TypeRange(), funcName,
+                                 xs.size(), operands, funcGenerator);
     rewriter.replaceOpWithNewOp<func::CallOp>(op, func, TypeRange(), operands);
     return success();
   }

@@ -152,6 +152,9 @@ public:
   /// Convert a header role to a kind.
   static Module::HeaderKind headerRoleToKind(ModuleHeaderRole Role);
 
+  /// Check if the header with the given role is a modular one.
+  static bool isModular(ModuleHeaderRole Role);
+
   /// A header that is known to reside within a given module,
   /// whether it was included or excluded.
   class KnownHeader {
@@ -176,7 +179,7 @@ public:
 
     /// Whether this header is available in the module.
     bool isAvailable() const {
-      return getModule()->isAvailable();
+      return getRole() != ExcludedHeader && getModule()->isAvailable();
     }
 
     /// Whether this header is accessible from the specified module.
@@ -690,9 +693,6 @@ public:
   /// \param Role The role of the header wrt the module.
   void addHeader(Module *Mod, Module::Header Header,
                  ModuleHeaderRole Role, bool Imported = false);
-
-  /// Marks this header as being excluded from the given module.
-  void excludeHeader(Module *Mod, Module::Header Header);
 
   /// Parse the given module map file, and record any modules we
   /// encounter.

@@ -2,7 +2,7 @@
 ; unreachable blocks.
 ;
 ; RUN: llvm-reduce --abort-on-invalid-reduction --delta-passes=basic-blocks --test FileCheck --test-arg --check-prefixes=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
-; RUN: cat %t | FileCheck %s
+; RUN: FileCheck %s < %t
 
 ; CHECK-INTERESTINGNESS: test
 

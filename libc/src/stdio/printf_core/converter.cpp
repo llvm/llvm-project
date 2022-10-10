@@ -43,9 +43,9 @@ int convert(Writer *writer, const FormatSection &to_conv) {
   case 'X':
     return convert_int(writer, to_conv);
 #ifndef LLVM_LIBC_PRINTF_DISABLE_FLOAT
-  // case 'f':
-  // case 'F':
-  // return convert_float_decimal(writer, to_conv);
+  case 'f':
+  case 'F':
+    return convert_float_decimal(writer, to_conv);
   // case 'e':
   // case 'E':
   // return convert_float_dec_exp(writer, to_conv);

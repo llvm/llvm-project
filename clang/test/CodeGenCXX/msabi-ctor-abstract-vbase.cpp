@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-msvc %s -emit-llvm -fexceptions -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-windows-msvc %s -emit-llvm -fexceptions -o - | FileCheck %s
 
 // PR41065: As background, when constructing a complete object, virtual bases
 // are constructed first. If an exception is thrown while constructing a
@@ -52,7 +52,7 @@ C::C(int n) : B(n) { may_throw(); }
 
 // No branches, no constructor calls before may_throw();
 //
-// CHECK-LABEL: define dso_local noundef %struct.C* @"??0C@@QEAA@H@Z"(%struct.C* {{[^,]*}} returned align 8 dereferenceable(8) %this, i32 noundef %n, i32 noundef %is_most_derived)
+// CHECK-LABEL: define dso_local noundef ptr @"??0C@@QEAA@H@Z"(ptr {{[^,]*}} returned align 8 dereferenceable(8) %this, i32 noundef %n, i32 noundef %is_most_derived)
 // CHECK-NOT: br i1
 // CHECK-NOT: {{call.*@"\?0}}
 // CHECK: call void @"?may_throw@@YAXXZ"()
@@ -63,12 +63,12 @@ D::D(int n) : C(n), B(n) { may_throw(); }
 
 // Conditionally construct (and destroy) vbase B, unconditionally C.
 //
-// CHECK-LABEL: define dso_local noundef %struct.D* @"??0D@@QEAA@H@Z"(%struct.D* {{[^,]*}} returned align 8 dereferenceable(8) %this, i32 noundef %n, i32 noundef %is_most_derived)
+// CHECK-LABEL: define dso_local noundef ptr @"??0D@@QEAA@H@Z"(ptr {{[^,]*}} returned align 8 dereferenceable(8) %this, i32 noundef %n, i32 noundef %is_most_derived)
 // CHECK: icmp ne i32 {{.*}}, 0
 // CHECK: br i1
-// CHECK: call noundef %struct.B* @"??0B@@QEAA@H@Z"
+// CHECK: call noundef ptr @"??0B@@QEAA@H@Z"
 // CHECK: br label
-// CHECK: invoke noundef %struct.C* @"??0C@@QEAA@H@Z"
+// CHECK: invoke noundef ptr @"??0C@@QEAA@H@Z"
 // CHECK: invoke void @"?may_throw@@YAXXZ"()
 // CHECK: cleanuppad
 // CHECK: call void @"??1C@@UEAA@XZ"

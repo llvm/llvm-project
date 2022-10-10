@@ -396,23 +396,14 @@ mlir::linalg::LinalgTilingPattern::returningMatchAndRewrite(
 
 /// Linalg padding pattern.
 mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
-    MLIRContext *context, LinalgPaddingOptions options,
-    LinalgTransformationFilter f, PatternBenefit benefit)
+    MLIRContext *context, LinalgPaddingOptions options, PatternBenefit benefit)
     : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
-      filter(std::move(f)), options(std::move(options)) {}
-
-mlir::linalg::LinalgPaddingPattern::LinalgPaddingPattern(
-    StringRef opName, MLIRContext *context, LinalgPaddingOptions options,
-    LinalgTransformationFilter f, PatternBenefit benefit)
-    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
-      filter(f.addOpNameFilter(opName)), options(std::move(options)) {}
+      options(std::move(options)) {}
 
 FailureOr<LinalgOp>
 mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
     LinalgOp linalgOp, PatternRewriter &rewriter) const {
   if (!linalgOp.hasTensorSemantics())
-    return failure();
-  if (failed(filter.checkAndNotify(rewriter, linalgOp)))
     return failure();
 
   // Pad the operation.
@@ -448,93 +439,12 @@ mlir::linalg::LinalgPaddingPattern::returningMatchAndRewrite(
     if (failed(newResult))
       continue;
     rewriter.replaceOp(padOp, *newResult);
-
-    // Do not apply hoist padding to the newly introduced transpose operations.
-    for (GenericOp transposeOp : transposeOps)
-      filter.replaceLinalgTransformationFilter(rewriter, transposeOp);
   }
 
   // Replace the original operation to pad.
   rewriter.replaceOp(linalgOp, *newResults);
-  filter.replaceLinalgTransformationFilter(rewriter, paddedOp);
 
   return paddedOp;
-}
-
-/// Linalg tile and fuse tensor ops pattern.
-mlir::linalg::LinalgTileAndFuseTensorOpsPattern::
-    LinalgTileAndFuseTensorOpsPattern(MLIRContext *context,
-                                      LinalgTilingAndFusionOptions options,
-                                      LinalgTransformationFilter f,
-                                      PatternBenefit benefit)
-    : RewritePattern(MatchAnyOpTypeTag(), benefit, context),
-      filter(std::move(f)), options(std::move(options)) {}
-
-mlir::linalg::LinalgTileAndFuseTensorOpsPattern::
-    LinalgTileAndFuseTensorOpsPattern(StringRef opName, MLIRContext *context,
-                                      LinalgTilingAndFusionOptions options,
-                                      LinalgTransformationFilter f,
-                                      PatternBenefit benefit)
-    : RewritePattern(opName, benefit, context), filter(std::move(f)),
-      options(std::move(options)) {}
-
-FailureOr<mlir::linalg::TileLoopNest>
-mlir::linalg::LinalgTileAndFuseTensorOpsPattern::returningMatchAndRewrite(
-    Operation *op, PatternRewriter &rewriter) const {
-  LinalgOp rootOp = dyn_cast<LinalgOp>(op);
-  if (!rootOp)
-    return failure();
-  if (failed(filter.checkAndNotify(rewriter, op)))
-    return failure();
-
-  // Check `tileSizes` contains a tile size for every `rootOp` loop dimension.
-  if (options.tileSizes.size() < rootOp.getNumLoops())
-    return rewriter.notifyMatchFailure(op, "expect #tile sizes >= #loops");
-
-  // Check `tileInterchange` contains no entries or as many as `tileSizes`.
-  if (!options.tileInterchange.empty() &&
-      options.tileInterchange.size() != options.tileSizes.size())
-    return rewriter.notifyMatchFailure(
-        op, "expect the number of tile sizes and interchange dims to match");
-
-  // Copy the `tileSizes` and `tileInterchange` prefixes needed for `rootOp`.
-  SmallVector<int64_t> rootTileSizes(options.tileSizes.begin(),
-                                     options.tileSizes.begin() +
-                                         rootOp.getNumLoops());
-  SmallVector<int64_t> rootInterchange =
-      options.tileInterchange.empty()
-          ? llvm::to_vector<6>(llvm::seq<int64_t>(0, rootOp.getNumLoops()))
-          : SmallVector<int64_t>(options.tileInterchange.begin(),
-                                 options.tileInterchange.begin() +
-                                     rootOp.getNumLoops());
-
-  // Check `rootTileSizes` contains non-zero tile sizes.
-  if (llvm::count(rootTileSizes, 0) == static_cast<long>(rootTileSizes.size()))
-    return rewriter.notifyMatchFailure(
-        op, "expect at least one non-zero tile size");
-
-  // Check `rootInterchange` is a permutation of the `rootOp` loop dimensions.
-  // It has to be a permutation since the tiling cannot tile the same loop
-  // dimension multiple times.
-  if (!isPermutation(rootInterchange))
-    return rewriter.notifyMatchFailure(
-        op, "expect the tile interchange permutes the root loops");
-
-  // Tile `rootOp` and fuse its producers.
-  FailureOr<TileLoopNest> tileLoopNest =
-      tileConsumerAndFuseProducers(rewriter, rootOp, rootTileSizes,
-                                   rootInterchange, options.tileDistribution);
-  if (failed(tileLoopNest))
-    return rewriter.notifyMatchFailure(
-        op, "tileConsumerAndFuseProducers failed unexpectedly");
-
-  // Replace all uses of the tiled loop operation.
-  rootOp->replaceAllUsesWith(tileLoopNest->getRootOpReplacementResults());
-
-  // Apply the filter if specified.
-  for (LinalgOp linalgOp : tileLoopNest->getAllTiledAndFusedOps())
-    filter.replaceLinalgTransformationFilter(rewriter, linalgOp);
-  return tileLoopNest;
 }
 
 /// Linalg generalization pattern.
@@ -782,8 +692,6 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
 template <typename Conv2DOp, typename Conv1DOp>
 FailureOr<Conv1DOp> DownscaleSizeOneWindowed2DConvolution<Conv2DOp, Conv1DOp>::
     returningMatchAndRewrite(Conv2DOp convOp, PatternRewriter &rewriter) const {
-  if (failed(filter.checkAndNotify(rewriter, convOp)))
-    return failure();
   if (convOp.hasBufferSemantics())
     return failure(); // To be implemented.
 
@@ -867,7 +775,6 @@ FailureOr<Conv1DOp> DownscaleSizeOneWindowed2DConvolution<Conv2DOp, Conv1DOp>::
       rewriter, loc, conv1DOp.getResult(0), output);
   rewriter.replaceOp(convOp, inserted);
 
-  filter.replaceLinalgTransformationFilter(rewriter, conv1DOp);
   return conv1DOp;
 }
 
@@ -879,8 +786,6 @@ template struct linalg::DownscaleSizeOneWindowed2DConvolution<Conv2DNchwFchwOp,
 FailureOr<DepthwiseConv1DNwcWcOp>
 DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
     DepthwiseConv2DNhwcHwcOp convOp, PatternRewriter &rewriter) const {
-  if (failed(filter.checkAndNotify(rewriter, convOp)))
-    return failure();
   if (convOp.hasBufferSemantics())
     return failure(); // To be implemented.
 
@@ -943,17 +848,15 @@ DownscaleDepthwiseConv2DNhwcHwcOp::returningMatchAndRewrite(
       rewriter, loc, conv1DOp.getResult(0), output);
   rewriter.replaceOp(convOp, inserted);
 
-  filter.replaceLinalgTransformationFilter(rewriter, conv1DOp);
   return conv1DOp;
 }
 
-void linalg::populateDecomposeConvolutionPatterns(
-    RewritePatternSet &patterns, const LinalgTransformationFilter &filter,
-    PatternBenefit benefit) {
+void linalg::populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
+                                                  PatternBenefit benefit) {
   patterns.add<DownscaleSizeOneWindowed2DConvolution<linalg::Conv2DNhwcHwcfOp,
                                                      Conv1DNwcWcfOp>,
                DownscaleSizeOneWindowed2DConvolution<linalg::Conv2DNchwFchwOp,
                                                      Conv1DNcwFcwOp>,
-               DownscaleDepthwiseConv2DNhwcHwcOp>(patterns.getContext(), filter,
+               DownscaleDepthwiseConv2DNhwcHwcOp>(patterns.getContext(),
                                                   benefit);
 }

@@ -401,9 +401,9 @@ getNamelistGroup(Fortran::lower::AbstractConverter &converter,
   if (groupIsLocal) {
     groupFunc(builder);
   } else {
-    fir::GlobalOp group =
-        builder.createGlobal(loc, groupTy, groupMangleName,
-                             /*isConst=*/true, groupFunc, linkOnce);
+    fir::GlobalOp group = builder.createGlobal(
+        loc, groupTy, groupMangleName,
+        /*isConst=*/true, /*isTarget=*/false, groupFunc, linkOnce);
     groupAddr = builder.create<fir::AddrOfOp>(loc, group.resultType(),
                                               group.getSymbol());
   }

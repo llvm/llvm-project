@@ -19,7 +19,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifndef _LIBCPP_CXX03_LANG
+#if _LIBCPP_STD_VER > 14
 
 enum class _LIBCPP_ENUM_VIS chars_format
 {
@@ -70,7 +70,7 @@ operator^=(chars_format& __x, chars_format __y) {
   return __x;
 }
 
-#endif // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_STD_VER > 14
 
 _LIBCPP_END_NAMESPACE_STD
 

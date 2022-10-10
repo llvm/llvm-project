@@ -18,7 +18,7 @@
 define <2 x i16> @vwmul_v2i16_multiple_users(<2 x i8>* %x, <2 x i8>* %y, <2 x i8> *%z) {
 ; NO_FOLDING-LABEL: vwmul_v2i16_multiple_users:
 ; NO_FOLDING:       # %bb.0:
-; NO_FOLDING-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
+; NO_FOLDING-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; NO_FOLDING-NEXT:    vle8.v v8, (a0)
 ; NO_FOLDING-NEXT:    vle8.v v9, (a1)
 ; NO_FOLDING-NEXT:    vle8.v v10, (a2)
@@ -34,14 +34,14 @@ define <2 x i16> @vwmul_v2i16_multiple_users(<2 x i8>* %x, <2 x i8>* %y, <2 x i8
 ;
 ; FOLDING-LABEL: vwmul_v2i16_multiple_users:
 ; FOLDING:       # %bb.0:
-; FOLDING-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
+; FOLDING-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; FOLDING-NEXT:    vle8.v v8, (a0)
 ; FOLDING-NEXT:    vle8.v v9, (a1)
 ; FOLDING-NEXT:    vle8.v v10, (a2)
 ; FOLDING-NEXT:    vwmul.vv v11, v8, v9
 ; FOLDING-NEXT:    vwadd.vv v9, v8, v10
 ; FOLDING-NEXT:    vwsub.vv v12, v8, v10
-; FOLDING-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
+; FOLDING-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; FOLDING-NEXT:    vor.vv v8, v11, v9
 ; FOLDING-NEXT:    vor.vv v8, v8, v12
 ; FOLDING-NEXT:    ret

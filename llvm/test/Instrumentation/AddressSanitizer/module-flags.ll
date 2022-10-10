@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck %s
+; RUN: opt < %s -passes=asan -S | FileCheck %s
 
 target triple = "x86_64-unknown-linux-gnu"
 

@@ -53,8 +53,8 @@ struct SCFTilingOptions {
   SCFTilingOptions &setTileSizes(ArrayRef<int64_t> ts);
 
   /// The interchange vector to reorder the tiled loops.
-  SmallVector<unsigned> interchangeVector = {};
-  SCFTilingOptions &setInterchange(ArrayRef<unsigned> interchange) {
+  SmallVector<int64_t> interchangeVector = {};
+  SCFTilingOptions &setInterchange(ArrayRef<int64_t> interchange) {
     interchangeVector = llvm::to_vector(interchange);
     return *this;
   }

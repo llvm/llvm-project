@@ -31,10 +31,13 @@ std::unique_ptr<Pass> createConstantBufferizePass(uint64_t alignment = 0);
 void populateWideIntEmulationPatterns(WideIntEmulationConverter &typeConverter,
                                       RewritePatternSet &patterns);
 
-/// Add patterns to expand Arith ops for LLVM lowering.
+/// Add patterns to expand Arith ceil/floor division ops.
+void populateCeilFloorDivExpandOpsPatterns(RewritePatternSet &patterns);
+
+/// Add patterns to expand Arith ops.
 void populateArithExpandOpsPatterns(RewritePatternSet &patterns);
 
-/// Create a pass to legalize Arith ops for LLVM lowering.
+/// Create a pass to legalize Arith ops.
 std::unique_ptr<Pass> createArithExpandOpsPass();
 
 /// Create a pass to replace signed ops with unsigned ones where they are proven

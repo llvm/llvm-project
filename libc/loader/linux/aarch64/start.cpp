@@ -20,6 +20,7 @@
 #include <stdint.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
+#include <unistd.h>
 
 extern "C" int main(int, char **, char **);
 
@@ -146,6 +147,9 @@ __attribute__((noinline)) static void do_start() {
   app.envPtr = env_ptr;
   while (*env_end_marker)
     ++env_end_marker;
+
+  // Initialize the POSIX global declared in unistd.h
+  environ = reinterpret_cast<char **>(env_ptr);
 
   // After the env array, is the aux-vector. The end of the aux-vector is
   // denoted by an AT_NULL entry.

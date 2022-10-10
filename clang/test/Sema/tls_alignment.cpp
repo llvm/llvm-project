@@ -1,6 +1,6 @@
 // TLS variable cannot be aligned to more than 32 bytes on PS4.
 
-// RUN: %clang_cc1 -triple x86_64-scei-ps4 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-scei-ps4 -std=c++17 -fsyntax-only -verify %s
 
 
 // A non-aligned type.
@@ -17,6 +17,12 @@ struct __attribute__(( aligned(64) )) aligned_struct {
 struct  struct_with_aligned_field {
     int some_aligned_data[12] __attribute__(( aligned(64) )); // 48 bytes of stuff, aligned to 64.
 };
+
+// A templated type
+template <typename>
+struct templated_struct {};
+// expected-note@-1{{candidate template ignored: couldn't infer template argument ''}}
+// expected-note@-2{{candidate function template not viable: requires 1 argument, but 0 were provided}}
 
 // A typedef of the aligned struct.
 typedef aligned_struct another_aligned_struct;
@@ -41,6 +47,9 @@ __thread another_aligned_struct            bar4; // expected-error{{alignment (6
 
 // Variable aligned because of typedef, second case.
 __thread yet_another_aligned_struct        bar5; // expected-error{{alignment (64) of thread-local variable}}
+
+// No crash for undeduced type.
+__thread templated_struct                  bar6; // expected-error{{no viable constructor or deduction guide for deduction of template arguments of 'templated_struct'}}
 
 int baz ()
 {

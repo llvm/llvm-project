@@ -47,7 +47,7 @@ define i32 @test_srem_odd_bit30(i32 %X) nounwind {
 ; CHECK-LABEL: test_srem_odd_bit30:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #43691
-; CHECK-NEXT:    orr w9, wzr, #0x1
+; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    movk w8, #27306, lsl #16
 ; CHECK-NEXT:    madd w8, w0, w8, w9
 ; CHECK-NEXT:    cmp w8, #3
@@ -64,7 +64,7 @@ define i32 @test_srem_odd_bit31(i32 %X) nounwind {
 ; CHECK-LABEL: test_srem_odd_bit31:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #21845
-; CHECK-NEXT:    orr w9, wzr, #0x1
+; CHECK-NEXT:    mov w9, #1
 ; CHECK-NEXT:    movk w8, #54613, lsl #16
 ; CHECK-NEXT:    madd w8, w0, w8, w9
 ; CHECK-NEXT:    cmp w8, #3
@@ -122,7 +122,7 @@ define i32 @test_srem_even_bit30(i32 %X) nounwind {
 ; CHECK-LABEL: test_srem_even_bit30:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #20165
-; CHECK-NEXT:    orr w9, wzr, #0x8
+; CHECK-NEXT:    mov w9, #8
 ; CHECK-NEXT:    movk w8, #64748, lsl #16
 ; CHECK-NEXT:    madd w8, w0, w8, w9
 ; CHECK-NEXT:    ror w8, w8, #3
@@ -140,7 +140,7 @@ define i32 @test_srem_even_bit31(i32 %X) nounwind {
 ; CHECK-LABEL: test_srem_even_bit31:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #1285
-; CHECK-NEXT:    orr w9, wzr, #0x2
+; CHECK-NEXT:    mov w9, #2
 ; CHECK-NEXT:    movk w8, #50437, lsl #16
 ; CHECK-NEXT:    madd w8, w0, w8, w9
 ; CHECK-NEXT:    ror w8, w8, #1

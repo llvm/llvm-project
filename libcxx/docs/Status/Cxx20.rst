@@ -40,6 +40,7 @@ Paper Status
 
 .. note::
 
+   .. [#note-P0591] P0591: The changes in [mem.poly.allocator.mem] are missing.
    .. [#note-P0600] P0600: The missing bits in P0600 are in |sect|\ [mem.res.class] and |sect|\ [mem.poly.allocator.class].
    .. [#note-P0645] P0645: The paper is implemented but still marked as an incomplete feature
       (the feature-test macro is not set and the libary is only available when built with ``-fexperimental-library``).

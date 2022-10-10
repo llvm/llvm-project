@@ -10498,11 +10498,11 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         // updated before vectorising the epilogue loop.
         for (VPRecipeBase &R : Header->phis()) {
           if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
-            if (auto *Resume = MainILV.getReductionResumeValue(
-                    ReductionPhi->getRecurrenceDescriptor())) {
-              VPValue *StartVal = BestEpiPlan.getOrAddExternalDef(Resume);
-              ReductionPhi->setOperand(0, StartVal);
-            }
+            Value *Resume = MainILV.getReductionResumeValue(
+                ReductionPhi->getRecurrenceDescriptor());
+            assert(Resume && "Must have a resume value.");
+            VPValue *StartVal = BestEpiPlan.getOrAddExternalDef(Resume);
+            ReductionPhi->setOperand(0, StartVal);
           }
         }
 
