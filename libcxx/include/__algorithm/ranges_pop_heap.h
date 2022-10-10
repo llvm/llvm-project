@@ -32,7 +32,7 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -46,7 +46,7 @@ struct __fn {
     auto __last_iter = ranges::next(__first, __last);
     auto __len = __last_iter - __first;
 
-    auto&& __projected_comp = ranges::__make_projected_comp(__comp, __proj);
+    auto&& __projected_comp = std::__make_projected(__comp, __proj);
     std::__pop_heap<_RangeAlgPolicy>(std::move(__first), __last_iter, __projected_comp, __len);
 
     return __last_iter;
@@ -76,6 +76,6 @@ inline namespace __cpo {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 17
 
 #endif // _LIBCPP___ALGORITHM_RANGES_POP_HEAP_H

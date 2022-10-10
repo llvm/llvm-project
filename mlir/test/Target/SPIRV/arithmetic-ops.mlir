@@ -1,89 +1,89 @@
 // RUN: mlir-translate -test-spirv-roundtrip %s | FileCheck %s
 
-spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], []> {
-  spv.func @fmul(%arg0 : f32, %arg1 : f32) "None" {
-    // CHECK: {{%.*}}= spv.FMul {{%.*}}, {{%.*}} : f32
-    %0 = spv.FMul %arg0, %arg1 : f32
-    spv.Return
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], []> {
+  spirv.func @fmul(%arg0 : f32, %arg1 : f32) "None" {
+    // CHECK: {{%.*}}= spirv.FMul {{%.*}}, {{%.*}} : f32
+    %0 = spirv.FMul %arg0, %arg1 : f32
+    spirv.Return
   }
-  spv.func @fadd(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) "None" {
-    // CHECK: {{%.*}} = spv.FAdd {{%.*}}, {{%.*}} : vector<4xf32>
-    %0 = spv.FAdd %arg0, %arg1 : vector<4xf32>
-    spv.Return
+  spirv.func @fadd(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.FAdd {{%.*}}, {{%.*}} : vector<4xf32>
+    %0 = spirv.FAdd %arg0, %arg1 : vector<4xf32>
+    spirv.Return
   }
-  spv.func @fdiv(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) "None" {
-    // CHECK: {{%.*}} = spv.FDiv {{%.*}}, {{%.*}} : vector<4xf32>
-    %0 = spv.FDiv %arg0, %arg1 : vector<4xf32>
-    spv.Return
+  spirv.func @fdiv(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.FDiv {{%.*}}, {{%.*}} : vector<4xf32>
+    %0 = spirv.FDiv %arg0, %arg1 : vector<4xf32>
+    spirv.Return
   }
-  spv.func @fmod(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) "None" {
-    // CHECK: {{%.*}} = spv.FMod {{%.*}}, {{%.*}} : vector<4xf32>
-    %0 = spv.FMod %arg0, %arg1 : vector<4xf32>
-    spv.Return
+  spirv.func @fmod(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.FMod {{%.*}}, {{%.*}} : vector<4xf32>
+    %0 = spirv.FMod %arg0, %arg1 : vector<4xf32>
+    spirv.Return
   }
-  spv.func @fnegate(%arg0 : vector<4xf32>) "None" {
-    // CHECK: {{%.*}} = spv.FNegate {{%.*}} : vector<4xf32>
-    %0 = spv.FNegate %arg0 : vector<4xf32>
-    spv.Return
+  spirv.func @fnegate(%arg0 : vector<4xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.FNegate {{%.*}} : vector<4xf32>
+    %0 = spirv.FNegate %arg0 : vector<4xf32>
+    spirv.Return
   }
-  spv.func @fsub(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) "None" {
-    // CHECK: {{%.*}} = spv.FSub {{%.*}}, {{%.*}} : vector<4xf32>
-    %0 = spv.FSub %arg0, %arg1 : vector<4xf32>
-    spv.Return
+  spirv.func @fsub(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.FSub {{%.*}}, {{%.*}} : vector<4xf32>
+    %0 = spirv.FSub %arg0, %arg1 : vector<4xf32>
+    spirv.Return
   }
-  spv.func @frem(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) "None" {
-    // CHECK: {{%.*}} = spv.FRem {{%.*}}, {{%.*}} : vector<4xf32>
-    %0 = spv.FRem %arg0, %arg1 : vector<4xf32>
-    spv.Return
+  spirv.func @frem(%arg0 : vector<4xf32>, %arg1 : vector<4xf32>) "None" {
+    // CHECK: {{%.*}} = spirv.FRem {{%.*}}, {{%.*}} : vector<4xf32>
+    %0 = spirv.FRem %arg0, %arg1 : vector<4xf32>
+    spirv.Return
   }
-  spv.func @iadd(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
-    // CHECK: {{%.*}} = spv.IAdd {{%.*}}, {{%.*}} : vector<4xi32>
-    %0 = spv.IAdd %arg0, %arg1 : vector<4xi32>
-    spv.Return
+  spirv.func @iadd(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.IAdd {{%.*}}, {{%.*}} : vector<4xi32>
+    %0 = spirv.IAdd %arg0, %arg1 : vector<4xi32>
+    spirv.Return
   }
-  spv.func @isub(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
-    // CHECK: {{%.*}} = spv.ISub {{%.*}}, {{%.*}} : vector<4xi32>
-    %0 = spv.ISub %arg0, %arg1 : vector<4xi32>
-    spv.Return
+  spirv.func @isub(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.ISub {{%.*}}, {{%.*}} : vector<4xi32>
+    %0 = spirv.ISub %arg0, %arg1 : vector<4xi32>
+    spirv.Return
   }
-  spv.func @imul(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
-    // CHECK: {{%.*}} = spv.IMul {{%.*}}, {{%.*}} : vector<4xi32>
-    %0 = spv.IMul %arg0, %arg1 : vector<4xi32>
-    spv.Return
+  spirv.func @imul(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.IMul {{%.*}}, {{%.*}} : vector<4xi32>
+    %0 = spirv.IMul %arg0, %arg1 : vector<4xi32>
+    spirv.Return
   }
-  spv.func @udiv(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
-    // CHECK: {{%.*}} = spv.UDiv {{%.*}}, {{%.*}} : vector<4xi32>
-    %0 = spv.UDiv %arg0, %arg1 : vector<4xi32>
-    spv.Return
+  spirv.func @udiv(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.UDiv {{%.*}}, {{%.*}} : vector<4xi32>
+    %0 = spirv.UDiv %arg0, %arg1 : vector<4xi32>
+    spirv.Return
   }
-  spv.func @umod(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
-    // CHECK: {{%.*}} = spv.UMod {{%.*}}, {{%.*}} : vector<4xi32>
-    %0 = spv.UMod %arg0, %arg1 : vector<4xi32>
-    spv.Return
+  spirv.func @umod(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.UMod {{%.*}}, {{%.*}} : vector<4xi32>
+    %0 = spirv.UMod %arg0, %arg1 : vector<4xi32>
+    spirv.Return
   }
-  spv.func @sdiv(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
-    // CHECK: {{%.*}} = spv.SDiv {{%.*}}, {{%.*}} : vector<4xi32>
-    %0 = spv.SDiv %arg0, %arg1 : vector<4xi32>
-    spv.Return
+  spirv.func @sdiv(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.SDiv {{%.*}}, {{%.*}} : vector<4xi32>
+    %0 = spirv.SDiv %arg0, %arg1 : vector<4xi32>
+    spirv.Return
   }
-  spv.func @smod(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
-    // CHECK: {{%.*}} = spv.SMod {{%.*}}, {{%.*}} : vector<4xi32>
-    %0 = spv.SMod %arg0, %arg1 : vector<4xi32>
-    spv.Return
+  spirv.func @smod(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.SMod {{%.*}}, {{%.*}} : vector<4xi32>
+    %0 = spirv.SMod %arg0, %arg1 : vector<4xi32>
+    spirv.Return
   }
-  spv.func @snegate(%arg0 : vector<4xi32>) "None" {
-    // CHECK: {{%.*}} = spv.SNegate {{%.*}} : vector<4xi32>
-    %0 = spv.SNegate %arg0 : vector<4xi32>
-    spv.Return
+  spirv.func @snegate(%arg0 : vector<4xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.SNegate {{%.*}} : vector<4xi32>
+    %0 = spirv.SNegate %arg0 : vector<4xi32>
+    spirv.Return
   }
-  spv.func @srem(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
-    // CHECK: {{%.*}} = spv.SRem {{%.*}}, {{%.*}} : vector<4xi32>
-    %0 = spv.SRem %arg0, %arg1 : vector<4xi32>
-    spv.Return
+  spirv.func @srem(%arg0 : vector<4xi32>, %arg1 : vector<4xi32>) "None" {
+    // CHECK: {{%.*}} = spirv.SRem {{%.*}}, {{%.*}} : vector<4xi32>
+    %0 = spirv.SRem %arg0, %arg1 : vector<4xi32>
+    spirv.Return
   }
-  spv.func @vector_times_scalar(%arg0 : vector<4xf32>, %arg1 : f32) "None" {
-    // CHECK: {{%.*}} = spv.VectorTimesScalar {{%.*}}, {{%.*}} : (vector<4xf32>, f32) -> vector<4xf32>
-    %0 = spv.VectorTimesScalar %arg0, %arg1 : (vector<4xf32>, f32) -> vector<4xf32>
-    spv.Return
+  spirv.func @vector_times_scalar(%arg0 : vector<4xf32>, %arg1 : f32) "None" {
+    // CHECK: {{%.*}} = spirv.VectorTimesScalar {{%.*}}, {{%.*}} : (vector<4xf32>, f32) -> vector<4xf32>
+    %0 = spirv.VectorTimesScalar %arg0, %arg1 : (vector<4xf32>, f32) -> vector<4xf32>
+    spirv.Return
   }
 }

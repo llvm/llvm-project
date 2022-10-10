@@ -161,6 +161,27 @@ bool guardNextTokenNotElse(const GuardParams &P) {
   return symbolToToken(P.Lookahead) != tok::kw_else;
 }
 
+bool specifiesStructuredBinding(const GuardParams &P) {
+  const auto DSS = P.RHS[0];
+  assert(DSS->symbol() == Symbol::decl_specifier_seq);
+
+  auto Length = P.RHS[1]->startTokenIndex() - DSS->startTokenIndex();
+  for (const auto &T :
+       P.Tokens.tokens().slice(DSS->startTokenIndex(), Length)) {
+    switch (T.Kind) {
+    case clang::tok::kw_static:
+    case clang::tok::kw_thread_local:
+    case clang::tok::kw_auto:
+    case clang::tok::kw_const:
+    case clang::tok::kw_volatile:
+      break;
+    default:
+      return false;
+    }
+  }
+  return true;
+}
+
 // Whether this e.g. decl-specifier contains an "exclusive" type such as a class
 // name, and thus can't combine with a second exclusive type.
 //
@@ -311,6 +332,26 @@ llvm::DenseMap<ExtensionID, RuleGuard> buildGuards() {
       {rule::selection_statement::
            IF__CONSTEXPR__L_PAREN__init_statement__condition__R_PAREN__statement,
        guardNextTokenNotElse},
+
+      // Implement C++ [basic.lookup.qual.general]:
+      //   If a name, template-id, or decltype-specifier is followed by a
+      //   ​::​, it shall designate a namespace, class, enumeration, or
+      //   dependent type, and the ​::​ is never interpreted as a complete
+      //   nested-name-specifier.
+      {rule::nested_name_specifier::COLONCOLON,
+       TOKEN_GUARD(coloncolon, Tok.prev().Kind != tok::identifier)},
+
+      // Implement C++ [dcl.pre#6]:
+      //   A simple-declaration with an identifier-list is called a structured
+      //   binding declaration ([dcl.struct.bind]). If the decl-specifier-seq
+      //   contains any decl-specifier other than static, thread_­local, auto,
+      //   or cv-qualifiers, the program is ill-formed.
+      {rule::simple_declaration::
+           decl_specifier_seq__ref_qualifier__L_SQUARE__identifier_list__R_SQUARE__initializer__SEMI,
+       specifiesStructuredBinding},
+      {rule::simple_declaration::
+           decl_specifier_seq__L_SQUARE__identifier_list__R_SQUARE__initializer__SEMI,
+       specifiesStructuredBinding},
 
       // The grammar distinguishes (only) user-defined vs plain string literals,
       // where the clang lexer distinguishes (only) encoding types.

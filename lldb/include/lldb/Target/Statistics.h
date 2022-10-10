@@ -118,6 +118,7 @@ struct ModuleStats {
   bool debug_info_index_saved_to_cache = false;
   bool debug_info_enabled = true;
   bool symtab_stripped = false;
+  bool debug_info_had_variable_errors = false;
 };
 
 struct ConstStringStats {
@@ -133,6 +134,7 @@ public:
   void SetLaunchOrAttachTime();
   void SetFirstPrivateStopTime();
   void SetFirstPublicStopTime();
+  void IncreaseSourceMapDeduceCount();
 
   StatsDuration &GetCreateTime() { return m_create_time; }
   StatsSuccessFail &GetExpressionStats() { return m_expr_eval; }
@@ -146,6 +148,7 @@ protected:
   StatsSuccessFail m_expr_eval{"expressionEvaluation"};
   StatsSuccessFail m_frame_var{"frameVariable"};
   std::vector<intptr_t> m_module_identifiers;
+  uint32_t m_source_map_deduce_count = 0;
   void CollectStats(Target &target);
 };
 

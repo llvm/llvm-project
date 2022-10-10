@@ -54,10 +54,8 @@ void test_throwing() {
 }
 #endif // TEST_HAS_NO_EXCEPTIONS
 
-int main(int, char**) {
-#ifndef TEST_HAS_NO_EXCEPTIONS
-  test_throwing();
-#endif
+TEST_CONSTEXPR_CXX20 bool tests()
+{
   {
     std::vector<int> d(10, 1);
     std::vector<int>::iterator i = d.insert(d.cbegin() + 2, {3, 4, 5, 6});
@@ -101,5 +99,16 @@ int main(int, char**) {
     assert(d[13] == 1);
   }
 
+    return true;
+}
+
+int main(int, char**) {
+#ifndef TEST_HAS_NO_EXCEPTIONS
+  test_throwing();
+#endif
+  tests();
+#if TEST_STD_VER > 17
+  static_assert(tests());
+#endif
   return 0;
 }

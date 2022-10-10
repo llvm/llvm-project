@@ -944,6 +944,22 @@ void __sanitizer_dtor_callback(const void *data, uptr size) {
   }
 }
 
+void __sanitizer_dtor_callback_fields(const void *data, uptr size) {
+  if (flags()->poison_in_dtor) {
+    GET_MALLOC_STACK_TRACE;
+    stack.tag = STACK_TRACE_TAG_FIELDS;
+    PoisonMemory(data, size, &stack);
+  }
+}
+
+void __sanitizer_dtor_callback_vptr(const void *data) {
+  if (flags()->poison_in_dtor) {
+    GET_MALLOC_STACK_TRACE;
+    stack.tag = STACK_TRACE_TAG_VPTR;
+    PoisonMemory(data, sizeof(void *), &stack);
+  }
+}
+
 template <class Mmap>
 static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
                               int prot, int flags, int fd, OFF64_T offset) {

@@ -23,14 +23,15 @@ protected:
       __llvm_libc::printf_core::StringWriter(str);
   __llvm_libc::printf_core::Writer writer = __llvm_libc::printf_core::Writer(
       reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
+      __llvm_libc::printf_core::StringWriter::write_str,
+      __llvm_libc::printf_core::StringWriter::write_chars,
+      __llvm_libc::printf_core::StringWriter::write_char);
 };
 
 TEST_F(LlvmLibcPrintfConverterTest, SimpleRawConversion) {
   __llvm_libc::printf_core::FormatSection raw_section;
   raw_section.has_conv = false;
   raw_section.raw_string = "abc";
-  raw_section.raw_len = 3;
 
   __llvm_libc::printf_core::convert(&writer, raw_section);
 
@@ -196,17 +197,10 @@ TEST_F(LlvmLibcPrintfConverterTest, IntConversionSimple) {
   ASSERT_EQ(writer.get_chars_written(), 5);
 }
 
-TEST(LlvmLibcPrintfConverterTest, HexConversion) {
-  char str[20];
-  __llvm_libc::printf_core::StringWriter str_writer(str);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
-
+TEST_F(LlvmLibcPrintfConverterTest, HexConversion) {
   __llvm_libc::printf_core::FormatSection section;
   section.has_conv = true;
   section.raw_string = "%#018x";
-  section.raw_len = 6;
   section.conv_name = 'x';
   section.flags = static_cast<__llvm_libc::printf_core::FormatFlags>(
       __llvm_libc::printf_core::FormatFlags::ALTERNATE_FORM |
@@ -220,17 +214,11 @@ TEST(LlvmLibcPrintfConverterTest, HexConversion) {
   ASSERT_EQ(writer.get_chars_written(), 18);
 }
 
-TEST(LlvmLibcPrintfConverterTest, PointerConversion) {
-  char str[20];
-  __llvm_libc::printf_core::StringWriter str_writer(str);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
+TEST_F(LlvmLibcPrintfConverterTest, PointerConversion) {
 
   __llvm_libc::printf_core::FormatSection section;
   section.has_conv = true;
   section.raw_string = "%p";
-  section.raw_len = 2;
   section.conv_name = 'p';
   section.conv_val_ptr = (void *)(0x123456ab);
   __llvm_libc::printf_core::convert(&writer, section);
@@ -240,17 +228,11 @@ TEST(LlvmLibcPrintfConverterTest, PointerConversion) {
   ASSERT_EQ(writer.get_chars_written(), 10);
 }
 
-TEST(LlvmLibcPrintfConverterTest, OctConversion) {
-  char str[20];
-  __llvm_libc::printf_core::StringWriter str_writer(str);
-  __llvm_libc::printf_core::Writer writer(
-      reinterpret_cast<void *>(&str_writer),
-      __llvm_libc::printf_core::write_to_string);
+TEST_F(LlvmLibcPrintfConverterTest, OctConversion) {
 
   __llvm_libc::printf_core::FormatSection section;
   section.has_conv = true;
   section.raw_string = "%o";
-  section.raw_len = 2;
   section.conv_name = 'o';
   section.conv_val_raw = 01234;
   __llvm_libc::printf_core::convert(&writer, section);

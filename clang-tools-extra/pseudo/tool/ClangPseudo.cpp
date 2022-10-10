@@ -8,6 +8,7 @@
 
 #include "clang-pseudo/Bracket.h"
 #include "clang-pseudo/DirectiveTree.h"
+#include "clang-pseudo/Disambiguate.h"
 #include "clang-pseudo/Forest.h"
 #include "clang-pseudo/GLR.h"
 #include "clang-pseudo/Language.h"
@@ -45,6 +46,8 @@ static opt<bool>
 static opt<bool>
     StripDirectives("strip-directives",
                     desc("Strip directives and select conditional sections"));
+static opt<bool> Disambiguate("disambiguate",
+                              desc("Choose best tree from parse forest"));
 static opt<bool> PrintStatistics("print-statistics", desc("Print GLR parser statistics"));
 static opt<bool> PrintForest("print-forest", desc("Print parse forest"));
 static opt<bool> ForestAbbrev("forest-abbrev", desc("Abbreviate parse forest"),
@@ -70,7 +73,8 @@ namespace clang {
 namespace pseudo {
 // Defined in HTMLForest.cpp
 void writeHTMLForest(llvm::raw_ostream &OS, const Grammar &,
-                     const ForestNode &Root, const TokenStream &);
+                     const ForestNode &Root, const Disambiguation &,
+                     const TokenStream &);
 namespace {
 
 struct NodeStats {
@@ -156,8 +160,12 @@ int main(int argc, char *argv[]) {
     auto &Root =
         glrParse(clang::pseudo::ParseParams{*ParseableStream, Arena, GSS},
                  *StartSymID, Lang);
-    if (PrintForest)
+    // If we're disambiguating, we'll print at the end instead.
+    if (PrintForest && !Disambiguate)
       llvm::outs() << Root.dumpRecursive(Lang.G, /*Abbreviated=*/ForestAbbrev);
+    clang::pseudo::Disambiguation Disambig;
+    if (Disambiguate)
+      Disambig = clang::pseudo::disambiguate(&Root, {});
 
     if (HTMLForest.getNumOccurrences()) {
       std::error_code EC;
@@ -167,7 +175,8 @@ int main(int argc, char *argv[]) {
                      << "\n";
         return 2;
       }
-      clang::pseudo::writeHTMLForest(HTMLOut, Lang.G, Root, *ParseableStream);
+      clang::pseudo::writeHTMLForest(HTMLOut, Lang.G, Root, Disambig,
+                                     *ParseableStream);
     }
 
     if (PrintStatistics) {
@@ -218,6 +227,14 @@ int main(int argc, char *argv[]) {
                                     double(Misparses) / Len);
       llvm::outs() << llvm::formatv("Unparsed: {0}%\n",
                                     100.0 * UnparsedTokens / Len);
+    }
+
+    if (Disambiguate && PrintForest) {
+      ForestNode *DisambigRoot = &Root;
+      removeAmbiguities(DisambigRoot, Disambig);
+      llvm::outs() << "Disambiguated tree:\n";
+      llvm::outs() << DisambigRoot->dumpRecursive(Lang.G,
+                                                  /*Abbreviated=*/ForestAbbrev);
     }
   }
 

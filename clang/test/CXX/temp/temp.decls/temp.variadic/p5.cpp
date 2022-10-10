@@ -469,3 +469,25 @@ int fn() {
   bar(b);
 }
 }
+
+namespace pr56094 {
+template <typename... T> struct D {
+  template <typename... U> using B = int(int (*...p)(T, U));
+  // expected-error@-1 {{pack expansion contains parameter packs 'T' and 'U' that have different lengths (1 vs. 2)}}
+  template <typename U1, typename U2> D(B<U1, U2> *);
+  // expected-note@-1 {{in instantiation of template type alias 'B' requested here}}
+};
+using t1 = D<float>::B<int>;
+// expected-note@-1 {{in instantiation of template class 'pr56094::D<float>' requested here}}
+
+template <bool...> struct F {};
+template <class...> struct G {};
+template <bool... I> struct E {
+  template <bool... U> using B = G<F<I, U>...>;
+  // expected-error@-1 {{pack expansion contains parameter packs 'I' and 'U' that have different lengths (1 vs. 2)}}
+  template <bool U1, bool U2> E(B<U1, U2> *);
+  // expected-note@-1 {{in instantiation of template type alias 'B' requested here}}
+};
+using t2 = E<true>::B<false>;
+// expected-note@-1 {{in instantiation of template class 'pr56094::E<true>' requested here}}
+} // namespace pr56094

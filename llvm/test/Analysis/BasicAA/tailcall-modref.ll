@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -gvn -instcombine -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -gvn -instcombine -S | FileCheck %s
 
 define i32 @test() {
 ; CHECK: ret i32 0

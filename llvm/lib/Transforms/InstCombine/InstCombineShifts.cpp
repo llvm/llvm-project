@@ -730,13 +730,34 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
     return BinaryOperator::Create(
         I.getOpcode(), Builder.CreateBinOp(I.getOpcode(), C2, C1), X);
 
+  bool IsLeftShift = I.getOpcode() == Instruction::Shl;
+  Type *Ty = I.getType();
+  unsigned TypeBits = Ty->getScalarSizeInBits();
+
+  // (X / +DivC) >> (Width - 1) --> ext (X <= -DivC)
+  // (X / -DivC) >> (Width - 1) --> ext (X >= +DivC)
+  const APInt *DivC;
+  if (!IsLeftShift && match(C1, m_SpecificIntAllowUndef(TypeBits - 1)) &&
+      match(Op0, m_SDiv(m_Value(X), m_APInt(DivC))) && !DivC->isZero() &&
+      !DivC->isMinSignedValue()) {
+    Constant *NegDivC = ConstantInt::get(Ty, -(*DivC));
+    ICmpInst::Predicate Pred =
+        DivC->isNegative() ? ICmpInst::ICMP_SGE : ICmpInst::ICMP_SLE;
+    Value *Cmp = Builder.CreateICmp(Pred, X, NegDivC);
+    auto ExtOpcode = (I.getOpcode() == Instruction::AShr) ? Instruction::SExt
+                                                          : Instruction::ZExt;
+    return CastInst::Create(ExtOpcode, Cmp, Ty);
+  }
+
   const APInt *Op1C;
   if (!match(C1, m_APInt(Op1C)))
     return nullptr;
 
+  assert(!Op1C->uge(TypeBits) &&
+         "Shift over the type width should have been removed already");
+
   // See if we can propagate this shift into the input, this covers the trivial
   // cast of lshr(shl(x,c1),c2) as well as other more complex cases.
-  bool IsLeftShift = I.getOpcode() == Instruction::Shl;
   if (I.getOpcode() != Instruction::AShr &&
       canEvaluateShifted(Op0, Op1C->getZExtValue(), IsLeftShift, *this, &I)) {
     LLVM_DEBUG(
@@ -747,14 +768,6 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
     return replaceInstUsesWith(
         I, getShiftedValue(Op0, Op1C->getZExtValue(), IsLeftShift, *this, DL));
   }
-
-  // See if we can simplify any instructions used by the instruction whose sole
-  // purpose is to compute bits we don't care about.
-  Type *Ty = I.getType();
-  unsigned TypeBits = Ty->getScalarSizeInBits();
-  assert(!Op1C->uge(TypeBits) &&
-         "Shift over the type width should have been removed already");
-  (void)TypeBits;
 
   if (Instruction *FoldedShift = foldBinOpIntoSelectOrPhi(I))
     return FoldedShift;
@@ -1469,8 +1482,11 @@ Instruction *InstCombinerImpl::visitAShr(BinaryOperator &I) {
     return R;
 
   // See if we can turn a signed shr into an unsigned shr.
-  if (MaskedValueIsZero(Op0, APInt::getSignMask(BitWidth), 0, &I))
-    return BinaryOperator::CreateLShr(Op0, Op1);
+  if (MaskedValueIsZero(Op0, APInt::getSignMask(BitWidth), 0, &I)) {
+    Instruction *Lshr = BinaryOperator::CreateLShr(Op0, Op1);
+    Lshr->setIsExact(I.isExact());
+    return Lshr;
+  }
 
   // ashr (xor %x, -1), %y  -->  xor (ashr %x, %y), -1
   if (match(Op0, m_OneUse(m_Not(m_Value(X))))) {

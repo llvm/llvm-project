@@ -41,6 +41,24 @@ func.func @test_nonnorm(%arg0 : memref<1x16x14x14xf32, #map0>) -> () {
     return
 }
 
+// Test with op_nonnorm whose memref map layouts are identity. This op_nonnorm
+// does not block the normalization of other operations.
+
+// CHECK-LABEL: test_nonnorm_identity_layout
+// CHECK-SAME: (%[[ARG0:.*]]: memref<1x16x1x1x32x64xf32>)
+func.func @test_nonnorm_identity_layout(%arg0 : memref<1x16x14x14xf32, #map0>) -> () {
+    %0 = memref.alloc() : memref<1x16x14x14xf32>
+    "test.op_nonnorm"(%0, %0) : (memref<1x16x14x14xf32>, memref<1x16x14x14xf32>) -> ()
+    "test.op_norm"(%arg0, %0) : (memref<1x16x14x14xf32, #map0>, memref<1x16x14x14xf32>) -> ()
+    memref.dealloc %0 :  memref<1x16x14x14xf32>
+
+    // CHECK: %[[v0:.*]] = memref.alloc() : memref<1x16x14x14xf32>
+    // CHECK: "test.op_nonnorm"(%[[v0]], %[[v0]]) : (memref<1x16x14x14xf32>, memref<1x16x14x14xf32>) -> ()
+    // CHECK: "test.op_norm"(%[[ARG0]], %[[v0]]) : (memref<1x16x1x1x32x64xf32>, memref<1x16x14x14xf32>) -> ()
+    // CHECK: memref.dealloc %[[v0]] : memref<1x16x14x14xf32>
+    return
+}
+
 // Test with op_norm, with maps in the operations in the function.
 
 // CHECK-LABEL: test_norm_mix

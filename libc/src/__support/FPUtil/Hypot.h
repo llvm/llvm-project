@@ -12,10 +12,10 @@
 #include "BasicOperations.h"
 #include "FEnvImpl.h"
 #include "FPBits.h"
-#include "builtin_wrappers.h"
-#include "src/__support/CPP/Bit.h"
-#include "src/__support/CPP/TypeTraits.h"
-#include "src/__support/CPP/UInt128.h"
+#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/type_traits.h"
+#include "src/__support/UInt128.h"
+#include "src/__support/builtin_wrappers.h"
 
 namespace __llvm_libc {
 namespace fputil {
@@ -97,8 +97,7 @@ template <> struct DoubleLength<uint64_t> {
 //   - HYPOT(x, y) is +Inf if x or y is +Inf or -Inf; else
 //   - HYPOT(x, y) is NaN if x or y is NaN.
 //
-template <typename T,
-          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
+template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
 static inline T hypot(T x, T y) {
   using FPBits_t = FPBits<T>;
   using UIntType = typename FPBits<T>::UIntType;
@@ -190,7 +189,10 @@ static inline T hypot(T x, T y) {
       sum >>= 2;
       ++out_exp;
       if (out_exp >= FPBits_t::MAX_EXPONENT) {
-        return T(FPBits_t::inf());
+        if (int round_mode = get_round();
+            round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
+          return T(FPBits_t::inf());
+        return T(FPBits_t(FPBits_t::MAX_NORMAL));
       }
     } else {
       // For denormal result, we simply move the leading bit of the result to
@@ -228,7 +230,8 @@ static inline T hypot(T x, T y) {
   y_new >>= 1;
 
   // Round to the nearest, tie to even.
-  switch (get_round()) {
+  int round_mode = get_round();
+  switch (round_mode) {
   case FE_TONEAREST:
     // Round to nearest, ties to even
     if (round_bit && (lsb || sticky_bits || (r != 0)))
@@ -244,12 +247,14 @@ static inline T hypot(T x, T y) {
     y_new -= ONE >> 1;
     ++out_exp;
     if (out_exp >= FPBits_t::MAX_EXPONENT) {
-      return T(FPBits_t::inf());
+      if (round_mode == FE_TONEAREST || round_mode == FE_UPWARD)
+        return T(FPBits_t::inf());
+      return T(FPBits_t(FPBits_t::MAX_NORMAL));
     }
   }
 
   y_new |= static_cast<UIntType>(out_exp) << MantissaWidth<T>::VALUE;
-  return __llvm_libc::bit_cast<T>(y_new);
+  return cpp::bit_cast<T>(y_new);
 }
 
 } // namespace fputil

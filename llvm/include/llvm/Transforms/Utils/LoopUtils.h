@@ -21,12 +21,12 @@ namespace llvm {
 
 template <typename T> class DomTreeNodeBase;
 using DomTreeNode = DomTreeNodeBase<BasicBlock>;
+class AssumptionCache;
 class StringRef;
 class AnalysisUsage;
 class TargetTransformInfo;
 class AAResults;
 class BasicBlock;
-class BlockFrequencyInfo;
 class ICFLoopSafetyInfo;
 class IRBuilderBase;
 class Loop;
@@ -141,24 +141,23 @@ protected:
 /// reverse depth first order w.r.t the DominatorTree. This allows us to visit
 /// uses before definitions, allowing us to sink a loop body in one pass without
 /// iteration. Takes DomTreeNode, AAResults, LoopInfo, DominatorTree,
-/// BlockFrequencyInfo, TargetLibraryInfo, Loop, AliasSet information for all
+/// TargetLibraryInfo, Loop, AliasSet information for all
 /// instructions of the loop and loop safety information as
 /// arguments. Diagnostics is emitted via \p ORE. It returns changed status.
 /// \p CurLoop is a loop to do sinking on. \p OutermostLoop is used only when
 /// this function is called by \p sinkRegionForLoopNest.
 bool sinkRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
-                BlockFrequencyInfo *, TargetLibraryInfo *,
-                TargetTransformInfo *, Loop *CurLoop, MemorySSAUpdater &,
-                ICFLoopSafetyInfo *, SinkAndHoistLICMFlags &,
-                OptimizationRemarkEmitter *, Loop *OutermostLoop = nullptr);
+                TargetLibraryInfo *, TargetTransformInfo *, Loop *CurLoop,
+                MemorySSAUpdater &, ICFLoopSafetyInfo *,
+                SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *,
+                Loop *OutermostLoop = nullptr);
 
 /// Call sinkRegion on loops contained within the specified loop
 /// in order from innermost to outermost.
 bool sinkRegionForLoopNest(DomTreeNode *, AAResults *, LoopInfo *,
-                           DominatorTree *, BlockFrequencyInfo *,
-                           TargetLibraryInfo *, TargetTransformInfo *, Loop *,
-                           MemorySSAUpdater &, ICFLoopSafetyInfo *,
-                           SinkAndHoistLICMFlags &,
+                           DominatorTree *, TargetLibraryInfo *,
+                           TargetTransformInfo *, Loop *, MemorySSAUpdater &,
+                           ICFLoopSafetyInfo *, SinkAndHoistLICMFlags &,
                            OptimizationRemarkEmitter *);
 
 /// Walk the specified region of the CFG (defined by all blocks
@@ -166,13 +165,13 @@ bool sinkRegionForLoopNest(DomTreeNode *, AAResults *, LoopInfo *,
 /// first order w.r.t the DominatorTree.  This allows us to visit definitions
 /// before uses, allowing us to hoist a loop body in one pass without iteration.
 /// Takes DomTreeNode, AAResults, LoopInfo, DominatorTree,
-/// BlockFrequencyInfo, TargetLibraryInfo, Loop, AliasSet information for all
+/// TargetLibraryInfo, Loop, AliasSet information for all
 /// instructions of the loop and loop safety information as arguments.
 /// Diagnostics is emitted via \p ORE. It returns changed status.
 /// \p AllowSpeculation is whether values should be hoisted even if they are not
 /// guaranteed to execute in the loop, but are safe to speculatively execute.
 bool hoistRegion(DomTreeNode *, AAResults *, LoopInfo *, DominatorTree *,
-                 BlockFrequencyInfo *, TargetLibraryInfo *, Loop *,
+                 AssumptionCache *, TargetLibraryInfo *, Loop *,
                  MemorySSAUpdater &, ScalarEvolution *, ICFLoopSafetyInfo *,
                  SinkAndHoistLICMFlags &, OptimizationRemarkEmitter *, bool,
                  bool AllowSpeculation);
@@ -210,9 +209,10 @@ void breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
 bool promoteLoopAccessesToScalars(
     const SmallSetVector<Value *, 8> &, SmallVectorImpl<BasicBlock *> &,
     SmallVectorImpl<Instruction *> &, SmallVectorImpl<MemoryAccess *> &,
-    PredIteratorCache &, LoopInfo *, DominatorTree *, const TargetLibraryInfo *,
-    Loop *, MemorySSAUpdater &, ICFLoopSafetyInfo *,
-    OptimizationRemarkEmitter *, bool AllowSpeculation);
+    PredIteratorCache &, LoopInfo *, DominatorTree *, AssumptionCache *AC,
+    const TargetLibraryInfo *, TargetTransformInfo *, Loop *,
+    MemorySSAUpdater &, ICFLoopSafetyInfo *, OptimizationRemarkEmitter *,
+    bool AllowSpeculation);
 
 /// Does a BFS from a given node to all of its children inside a given loop.
 /// The returned vector of nodes includes the starting point.
@@ -508,11 +508,9 @@ addRuntimeChecks(Instruction *Loc, Loop *TheLoop,
                  const SmallVectorImpl<RuntimePointerCheck> &PointerChecks,
                  SCEVExpander &Expander);
 
-Value *
-addDiffRuntimeChecks(Instruction *Loc, Loop *TheLoop,
-                     ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
-                     function_ref<Value *(IRBuilderBase &, unsigned)> GetVF,
-                     unsigned IC);
+Value *addDiffRuntimeChecks(
+    Instruction *Loc, ArrayRef<PointerDiffInfo> Checks, SCEVExpander &Expander,
+    function_ref<Value *(IRBuilderBase &, unsigned)> GetVF, unsigned IC);
 
 /// Struct to hold information about a partially invariant condition.
 struct IVConditionInfo {

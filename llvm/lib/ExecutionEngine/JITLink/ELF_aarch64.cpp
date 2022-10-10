@@ -413,7 +413,7 @@ public:
 private:
   Section &getTLSInfoSection(LinkGraph &G) {
     if (!TLSInfoTable)
-      TLSInfoTable = &G.createSection(getSectionName(), MemProt::Read);
+      TLSInfoTable = &G.createSection(getSectionName(), orc::MemProt::Read);
     return *TLSInfoTable;
   }
 
@@ -481,14 +481,13 @@ public:
 private:
   Section &getTLSDescSection(LinkGraph &G) {
     if (!GOTSection)
-      GOTSection = &G.createSection(getSectionName(), MemProt::Read);
+      GOTSection = &G.createSection(getSectionName(), orc::MemProt::Read);
     return *GOTSection;
   }
 
   Symbol &getTLSDescResolver(LinkGraph &G) {
     if (!TLSDescResolver)
-      TLSDescResolver =
-          &G.addExternalSymbol("__tlsdesc_resolver", 8, Linkage::Strong);
+      TLSDescResolver = &G.addExternalSymbol("__tlsdesc_resolver", 8, false);
     return *TLSDescResolver;
   }
 

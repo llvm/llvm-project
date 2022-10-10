@@ -6,9 +6,9 @@
 define void @func(i1 %arg) {
 ; CHECK-ALL: entry:
 ; CHECK-INTERESTINGNESS: call void @foo({{.*}}blockaddress
-; CHECK-FINAL: call void @foo(i8* blockaddress(@func, %bb5))
+; CHECK-FINAL: call void @foo(ptr blockaddress(@func, %bb5))
 entry:
-  call void @foo(i8* blockaddress(@func, %bb5))
+  call void @foo(ptr blockaddress(@func, %bb5))
   ret void
 
 ; CHECK-ALL: bb5:
@@ -17,4 +17,4 @@ bb5:
   ret void
 }
 
-declare void @foo(i8*)
+declare void @foo(ptr)

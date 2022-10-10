@@ -70,8 +70,6 @@ public:
     return 0;
   }
 
-  void Dump(lldb_private::Stream *s) const override;
-
   lldb::ObjectFileSP GetObjectFile(const lldb_private::FileSpec *file) override;
 
   // PluginInterface protocol

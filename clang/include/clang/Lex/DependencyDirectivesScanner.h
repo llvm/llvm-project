@@ -82,12 +82,15 @@ enum DirectiveKind : uint8_t {
   cxx_import_decl,
   cxx_export_module_decl,
   cxx_export_import_decl,
+  /// Indicates that there are tokens present between the last scanned directive
+  /// and eof. The \p Directive::Tokens array will be empty for this kind.
+  tokens_present_before_eof,
   pp_eof,
 };
 
 /// Represents a directive that's lexed as part of the dependency directives
 /// scanning. It's used to track various preprocessor directives that could
-/// potentially have an effect on the depedencies.
+/// potentially have an effect on the dependencies.
 struct Directive {
   ArrayRef<Token> Tokens;
 

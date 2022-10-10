@@ -40,13 +40,6 @@ bool NameAllowlistCoverageFilter::matches(
   return Allowlist.inSection("llvmcov", "allowlist_fun", Function.Name);
 }
 
-// TODO: remove this when -name-whitelist option is removed.
-bool NameWhitelistCoverageFilter::matches(
-    const coverage::CoverageMapping &,
-    const coverage::FunctionRecord &Function) const {
-  return Whitelist.inSection("llvmcov", "whitelist_fun", Function.Name);
-}
-
 bool RegionCoverageFilter::matches(
     const coverage::CoverageMapping &CM,
     const coverage::FunctionRecord &Function) const {

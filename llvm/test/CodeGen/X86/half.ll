@@ -228,13 +228,24 @@ define i64 @test_fptosi_i64(ptr %p) #0 {
 ;
 ; CHECK-I686-LABEL: test_fptosi_i64:
 ; CHECK-I686:       # %bb.0:
-; CHECK-I686-NEXT:    subl $12, %esp
+; CHECK-I686-NEXT:    subl $28, %esp
 ; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-I686-NEXT:    pinsrw $0, (%eax), %xmm0
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
-; CHECK-I686-NEXT:    calll __fixhfdi
-; CHECK-I686-NEXT:    addl $12, %esp
+; CHECK-I686-NEXT:    calll __extendhfsf2
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    orl $3072, %eax # imm = 0xC00
+; CHECK-I686-NEXT:    movw %ax, {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fistpll {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; CHECK-I686-NEXT:    addl $28, %esp
 ; CHECK-I686-NEXT:    retl
   %a = load half, ptr %p, align 2
   %r = fptosi half %a to i64
@@ -315,13 +326,36 @@ define i64 @test_fptoui_i64(ptr %p) #0 {
 ;
 ; CHECK-I686-LABEL: test_fptoui_i64:
 ; CHECK-I686:       # %bb.0:
-; CHECK-I686-NEXT:    subl $12, %esp
+; CHECK-I686-NEXT:    subl $28, %esp
 ; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-I686-NEXT:    pinsrw $0, (%eax), %xmm0
 ; CHECK-I686-NEXT:    pextrw $0, %xmm0, %eax
 ; CHECK-I686-NEXT:    movw %ax, (%esp)
-; CHECK-I686-NEXT:    calll __fixunshfdi
-; CHECK-I686-NEXT:    addl $12, %esp
+; CHECK-I686-NEXT:    calll __extendhfsf2
+; CHECK-I686-NEXT:    fstps {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-I686-NEXT:    ucomiss %xmm1, %xmm0
+; CHECK-I686-NEXT:    jae .LBB9_2
+; CHECK-I686-NEXT:  # %bb.1:
+; CHECK-I686-NEXT:    xorps %xmm1, %xmm1
+; CHECK-I686-NEXT:  .LBB9_2:
+; CHECK-I686-NEXT:    subss %xmm1, %xmm0
+; CHECK-I686-NEXT:    movss %xmm0, {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    setae %al
+; CHECK-I686-NEXT:    flds {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fnstcw {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; CHECK-I686-NEXT:    orl $3072, %ecx # imm = 0xC00
+; CHECK-I686-NEXT:    movw %cx, {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fistpll {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    fldcw {{[0-9]+}}(%esp)
+; CHECK-I686-NEXT:    movzbl %al, %edx
+; CHECK-I686-NEXT:    shll $31, %edx
+; CHECK-I686-NEXT:    xorl {{[0-9]+}}(%esp), %edx
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    addl $28, %esp
 ; CHECK-I686-NEXT:    retl
   %a = load half, ptr %p, align 2
   %r = fptoui half %a to i64
@@ -1295,6 +1329,32 @@ define <8 x half> @select(i1 %c, <8 x half> %x, <8 x half> %y) {
 ; CHECK-I686-NEXT:    retl
   %s = select i1 %c, <8 x half> %x, <8 x half> %y
   ret <8 x half> %s
+}
+
+define <8 x half> @shuffle(ptr %p) {
+; CHECK-LIBCALL-LABEL: shuffle:
+; CHECK-LIBCALL:       # %bb.0:
+; CHECK-LIBCALL-NEXT:    movdqu (%rdi), %xmm0
+; CHECK-LIBCALL-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,4,4]
+; CHECK-LIBCALL-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; CHECK-LIBCALL-NEXT:    retq
+;
+; BWON-F16C-LABEL: shuffle:
+; BWON-F16C:       # %bb.0:
+; BWON-F16C-NEXT:    vpshufhw {{.*#+}} xmm0 = mem[0,1,2,3,4,4,4,4]
+; BWON-F16C-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; BWON-F16C-NEXT:    retq
+;
+; CHECK-I686-LABEL: shuffle:
+; CHECK-I686:       # %bb.0:
+; CHECK-I686-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-I686-NEXT:    movdqu (%eax), %xmm0
+; CHECK-I686-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,4,4,4]
+; CHECK-I686-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,2,2]
+; CHECK-I686-NEXT:    retl
+  %1 = load <8 x half>, ptr %p, align 8
+  %2 = shufflevector <8 x half> %1, <8 x half> poison, <8 x i32> <i32 4, i32 4, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  ret <8 x half> %2
 }
 
 attributes #0 = { nounwind }

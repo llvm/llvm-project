@@ -228,12 +228,16 @@ Position sourceLocToPosition(const SourceManager &SM, SourceLocation Loc) {
 }
 
 bool isSpelledInSource(SourceLocation Loc, const SourceManager &SM) {
-  if (Loc.isMacroID()) {
-    std::string PrintLoc = SM.getSpellingLoc(Loc).printToString(SM);
-    if (llvm::StringRef(PrintLoc).startswith("<scratch") ||
-        llvm::StringRef(PrintLoc).startswith("<command line>"))
-      return false;
-  }
+  if (Loc.isFileID())
+    return true;
+  auto Spelling = SM.getDecomposedSpellingLoc(Loc);
+  StringRef SpellingFile = SM.getSLocEntry(Spelling.first).getFile().getName();
+  if (SpellingFile == "<scratch space>")
+    return false;
+  if (SpellingFile == "<built-in>")
+    // __STDC__ etc are considered spelled, but BAR in arg -DFOO=BAR is not.
+    return !SM.isWrittenInCommandLineFile(
+        SM.getComposedLoc(Spelling.first, Spelling.second));
   return true;
 }
 
@@ -696,14 +700,14 @@ void parseNamespaceEvents(llvm::StringRef Code, const LangOptions &LangOpts,
       switch (State) {
       case UsingNamespace:
         NSName.clear();
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case UsingNamespaceName:
         NSName.append(Tok.text(SM).str());
         State = UsingNamespaceName;
         break;
       case Namespace:
         NSName.clear();
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case NamespaceName:
         NSName.append(Tok.text(SM).str());
         State = NamespaceName;
@@ -720,7 +724,7 @@ void parseNamespaceEvents(llvm::StringRef Code, const LangOptions &LangOpts,
       switch (State) {
       case UsingNamespace:
         NSName.clear();
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case UsingNamespaceName:
         NSName.append("::");
         State = UsingNamespaceName;
@@ -865,7 +869,7 @@ llvm::StringSet<> collectWords(llvm::StringRef Content) {
     switch (Roles[I]) {
     case Head:
       Flush();
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Tail:
       Word.push_back(Content[I]);
       break;

@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %p/Inputs/undef.s -o %t2.o
-# RUN: not ld.lld %t.o %t2.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: not ld.lld --threads=1 %t.o %t2.o -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK: error: undefined symbol: zed2
 # CHECK-NEXT: >>> referenced by undef-multi.s
@@ -24,7 +24,7 @@
 # RUN: echo "  call zed2" >> %t.moreref.s
 # RUN: echo "  call zed2" >> %t.moreref.s
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %t.moreref.s -o %t3.o
-# RUN: not ld.lld %t.o %t2.o %t3.o -o /dev/null -error-limit=2 2>&1 | \
+# RUN: not ld.lld --threads=1 %t.o %t2.o %t3.o -o /dev/null -error-limit=2 2>&1 | \
 # RUN:     FileCheck --check-prefix=LIMIT %s
 
 # LIMIT: error: undefined symbol: zed2

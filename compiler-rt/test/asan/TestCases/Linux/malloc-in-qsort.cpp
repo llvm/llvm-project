@@ -41,12 +41,12 @@ int main() {
 
 // Fast unwind may not unwind through qsort.
 // CHECK-FAST: ERROR: AddressSanitizer: heap-buffer-overflow
-// CHECK-FAST: is located 0 bytes to the right
+// CHECK-FAST: is located 0 bytes after
 // CHECK-FAST: #0{{.*}}operator new
 // CHECK-FAST-NEXT: #1{{.*}}QsortCallback
 
 // CHECK-SLOW: ERROR: AddressSanitizer: heap-buffer-overflow
-// CHECK-SLOW: is located 0 bytes to the right
+// CHECK-SLOW: is located 0 bytes after
 // CHECK-SLOW: #0{{.*}}operator new
 // CHECK-SLOW-NEXT: #1{{.*}}QsortCallback
 // CHECK-SLOW: #{{.*}}MyQsort

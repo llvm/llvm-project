@@ -6,7 +6,7 @@
 // RUN:   -convert-func-to-llvm -reconcile-unrealized-casts |\
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext |\
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext |\
 // RUN: FileCheck %s
 
 func.func @test_unary(%input: tensor<?xcomplex<f32>>,

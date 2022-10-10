@@ -27,9 +27,21 @@ func.func @sparse_dce_convert(%arg0: tensor<64xf32>) {
 //   CHECK-NOT: sparse_tensor.values
 //       CHECK: return
 func.func @sparse_dce_getters(%arg0: tensor<64xf32, #SparseVector>) {
-  %c = arith.constant 0 : index
-  %0 = sparse_tensor.pointers %arg0, %c : tensor<64xf32, #SparseVector> to memref<?xindex>
-  %1 = sparse_tensor.indices %arg0, %c : tensor<64xf32, #SparseVector> to memref<?xindex>
+  %0 = sparse_tensor.pointers %arg0 { dimension = 0 : index } : tensor<64xf32, #SparseVector> to memref<?xindex>
+  %1 = sparse_tensor.indices %arg0 { dimension = 0 : index } : tensor<64xf32, #SparseVector> to memref<?xindex>
   %2 = sparse_tensor.values %arg0 : tensor<64xf32, #SparseVector> to memref<?xf32>
   return
 }
+// CHECK-LABEL: func @sparse_concat_dce(
+//   CHECK-NOT: sparse_tensor.concatenate
+//       CHECK: return
+func.func @sparse_concat_dce(%arg0: tensor<2xf64, #SparseVector>,
+                             %arg1: tensor<3xf64, #SparseVector>,
+                             %arg2: tensor<4xf64, #SparseVector>) {
+  %0 = sparse_tensor.concatenate %arg0, %arg1, %arg2 {dimension = 0 : index}
+       : tensor<2xf64, #SparseVector>,
+         tensor<3xf64, #SparseVector>,
+         tensor<4xf64, #SparseVector> to tensor<9xf64, #SparseVector>
+  return
+}
+

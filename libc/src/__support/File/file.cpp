@@ -8,7 +8,7 @@
 
 #include "file.h"
 
-#include "src/__support/CPP/ArrayRef.h"
+#include "src/__support/CPP/span.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -26,17 +26,18 @@ size_t File::write_unlocked(const void *data, size_t len) {
   prev_op = FileOp::WRITE;
 
   if (bufmode == _IOFBF) { // fully buffered
-    return write_unlocked_fbf(data, len);
+    return write_unlocked_fbf(static_cast<const uint8_t *>(data), len);
   } else if (bufmode == _IOLBF) { // line buffered
-    return write_unlocked_lbf(data, len);
+    return write_unlocked_lbf(static_cast<const uint8_t *>(data), len);
   } else /*if (bufmode == _IONBF) */ { // unbuffered
-    size_t ret_val = write_unlocked_nbf(data, len);
+    size_t ret_val =
+        write_unlocked_nbf(static_cast<const uint8_t *>(data), len);
     flush_unlocked();
     return ret_val;
   }
 }
 
-size_t File::write_unlocked_nbf(const void *data, size_t len) {
+size_t File::write_unlocked_nbf(const uint8_t *data, size_t len) {
   if (pos > 0) { // If the buffer is not empty
     // Flush the buffer
     const size_t write_size = pos;
@@ -55,7 +56,7 @@ size_t File::write_unlocked_nbf(const void *data, size_t len) {
   return written;
 }
 
-size_t File::write_unlocked_fbf(const void *data, size_t len) {
+size_t File::write_unlocked_fbf(const uint8_t *data, size_t len) {
   const size_t init_pos = pos;
   const size_t bufspace = bufsize - pos;
 
@@ -71,15 +72,15 @@ size_t File::write_unlocked_fbf(const void *data, size_t len) {
   // before flushing. It will always fit into the buffer, since the split point
   // is defined as being min(len, bufspace), and it will always exist if len is
   // non-zero.
-  cpp::ArrayRef<uint8_t> primary(data, split_point);
+  cpp::span<const uint8_t> primary(data, split_point);
 
   // The second piece is the remainder of |data|. It is written to the buffer if
   // it fits, or written directly to the output if it doesn't. If the primary
   // piece fits entirely in the buffer, the remainder may be nothing.
-  cpp::ArrayRef<uint8_t> remainder(
+  cpp::span<const uint8_t> remainder(
       static_cast<const uint8_t *>(data) + split_point, len - split_point);
 
-  cpp::MutableArrayRef<uint8_t> bufref(buf, bufsize);
+  cpp::span<uint8_t> bufref(static_cast<uint8_t *>(buf), bufsize);
 
   // Copy the first piece into the buffer.
   // TODO: Replace the for loop below with a call to internal memcpy.
@@ -127,11 +128,11 @@ size_t File::write_unlocked_fbf(const void *data, size_t len) {
   return len;
 }
 
-size_t File::write_unlocked_lbf(const void *data, size_t len) {
-  constexpr char NEWLINE_CHAR = '\n';
+size_t File::write_unlocked_lbf(const uint8_t *data, size_t len) {
+  constexpr uint8_t NEWLINE_CHAR = '\n';
   size_t last_newline = len;
-  for (size_t i = len; i > 1; --i) {
-    if (static_cast<const char *>(data)[i - 1] == NEWLINE_CHAR) {
+  for (size_t i = len; i >= 1; --i) {
+    if (data[i - 1] == NEWLINE_CHAR) {
       last_newline = i - 1;
       break;
     }
@@ -148,11 +149,11 @@ size_t File::write_unlocked_lbf(const void *data, size_t len) {
 
   // The primary piece is everything in |data| up to the newline. It's written
   // unbuffered to the output.
-  cpp::ArrayRef<uint8_t> primary(data, split_point);
+  cpp::span<const uint8_t> primary(data, split_point);
 
   // The second piece is the remainder of |data|. It is written fully buffered,
   // meaning it may stay in the buffer if it fits.
-  cpp::ArrayRef<uint8_t> remainder(
+  cpp::span<const uint8_t> remainder(
       static_cast<const uint8_t *>(data) + split_point, len - split_point);
 
   size_t written = 0;
@@ -183,8 +184,8 @@ size_t File::read_unlocked(void *data, size_t len) {
 
   prev_op = FileOp::READ;
 
-  cpp::MutableArrayRef<uint8_t> bufref(buf, bufsize);
-  cpp::MutableArrayRef<uint8_t> dataref(data, len);
+  cpp::span<uint8_t> bufref(static_cast<uint8_t *>(buf), bufsize);
+  cpp::span<uint8_t> dataref(static_cast<uint8_t *>(data), len);
 
   // Because read_limit is always greater than equal to pos,
   // available_data is never a wrapped around value.
@@ -290,7 +291,7 @@ int File::close() {
 void File::set_buffer(void *buffer, size_t size, bool owned) {
   if (own_buf)
     free(buf);
-  buf = buffer;
+  buf = static_cast<uint8_t *>(buffer);
   bufsize = size;
   own_buf = owned;
 }

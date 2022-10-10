@@ -109,8 +109,7 @@ bool GDBRemoteCommunicationServerPlatform::PortMap::empty() const {
 // GDBRemoteCommunicationServerPlatform constructor
 GDBRemoteCommunicationServerPlatform::GDBRemoteCommunicationServerPlatform(
     const Socket::SocketProtocol socket_protocol, const char *socket_scheme)
-    : GDBRemoteCommunicationServerCommon("gdb-remote.server",
-                                         "gdb-remote.server.rx_packet"),
+    : GDBRemoteCommunicationServerCommon(),
       m_socket_protocol(socket_protocol), m_socket_scheme(socket_scheme),
       m_spawned_pids_mutex(), m_port_map(), m_port_offset(0) {
   m_pending_gdb_server.pid = LLDB_INVALID_PROCESS_ID;
@@ -587,7 +586,8 @@ GDBRemoteCommunicationServerPlatform::GetDomainSocketPath(const char *prefix) {
   FileSpec socket_path_spec(GetDomainSocketDir());
   socket_path_spec.AppendPathComponent(socket_name.c_str());
 
-  llvm::sys::fs::createUniqueFile(socket_path_spec.GetCString(), socket_path);
+  llvm::sys::fs::createUniqueFile(socket_path_spec.GetPath().c_str(),
+                                  socket_path);
   return FileSpec(socket_path.c_str());
 }
 

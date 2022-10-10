@@ -1,5 +1,5 @@
 ; RUN: llc %s --filetype=asm -o - | FileCheck %s
-target triple = "dxil-unknown-unknown"
+target triple = "dxil-unknown-shadermodel6.7-library"
 
 ; CHECK: Function Attrs: nounwind readnone
 ; Function Attrs: norecurse nounwind readnone willreturn

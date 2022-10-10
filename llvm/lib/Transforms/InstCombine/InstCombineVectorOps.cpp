@@ -105,7 +105,7 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
   // 2) Possibly more ExtractElements with the same index.
   // 3) Another operand, which will feed back into the PHI.
   Instruction *PHIUser = nullptr;
-  for (auto U : PN->users()) {
+  for (auto *U : PN->users()) {
     if (ExtractElementInst *EU = dyn_cast<ExtractElementInst>(U)) {
       if (EI.getIndexOperand() == EU->getIndexOperand())
         Extracts.push_back(EU);
@@ -171,7 +171,7 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
     }
   }
 
-  for (auto E : Extracts)
+  for (auto *E : Extracts)
     replaceInstUsesWith(*E, scalarPHI);
 
   return &EI;
@@ -191,8 +191,7 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
 
   // If we are casting an integer to vector and extracting a portion, that is
   // a shift-right and truncate.
-  // TODO: Allow FP dest type by casting the trunc to FP?
-  if (X->getType()->isIntegerTy() && DestTy->isIntegerTy() &&
+  if (X->getType()->isIntegerTy() &&
       isDesirableIntType(X->getType()->getPrimitiveSizeInBits())) {
     assert(isa<FixedVectorType>(Ext.getVectorOperand()->getType()) &&
            "Expected fixed vector type for bitcast from scalar integer");
@@ -205,6 +204,12 @@ Instruction *InstCombinerImpl::foldBitcastExtElt(ExtractElementInst &Ext) {
     unsigned ShiftAmountC = ExtIndexC * DestTy->getPrimitiveSizeInBits();
     if (!ShiftAmountC || Ext.getVectorOperand()->hasOneUse()) {
       Value *Lshr = Builder.CreateLShr(X, ShiftAmountC, "extelt.offset");
+      if (DestTy->isFloatingPointTy()) {
+        Type *DstIntTy = IntegerType::getIntNTy(
+            Lshr->getContext(), DestTy->getPrimitiveSizeInBits());
+        Value *Trunc = Builder.CreateTrunc(Lshr, DstIntTy);
+        return new BitCastInst(Trunc, DestTy);
+      }
       return new TruncInst(Lshr, DestTy);
     }
   }
@@ -859,8 +864,7 @@ Instruction *InstCombinerImpl::foldAggregateConstructionIntoAggregateReuse(
 
   // Do we know values for each element of the aggregate?
   auto KnowAllElts = [&AggElts]() {
-    return all_of(AggElts,
-                  [](Optional<Instruction *> Elt) { return Elt != NotFound; });
+    return !llvm::is_contained(AggElts, NotFound);
   };
 
   int Depth = 0;
@@ -1653,7 +1657,7 @@ static bool canEvaluateShuffled(Value *V, ArrayRef<int> Mask,
       // from an undefined element in an operand.
       if (llvm::is_contained(Mask, -1))
         return false;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Instruction::Add:
     case Instruction::FAdd:
     case Instruction::Sub:
@@ -1700,8 +1704,8 @@ static bool canEvaluateShuffled(Value *V, ArrayRef<int> Mask,
       // Verify that 'CI' does not occur twice in Mask. A single 'insertelement'
       // can't put an element into multiple indices.
       bool SeenOnce = false;
-      for (int i = 0, e = Mask.size(); i != e; ++i) {
-        if (Mask[i] == ElementNumber) {
+      for (int I : Mask) {
+        if (I == ElementNumber) {
           if (SeenOnce)
             return false;
           SeenOnce = true;
@@ -1957,6 +1961,53 @@ static BinopElts getAlternateBinop(BinaryOperator *BO, const DataLayout &DL) {
   return {};
 }
 
+/// A select shuffle of a select shuffle with a shared operand can be reduced
+/// to a single select shuffle. This is an obvious improvement in IR, and the
+/// backend is expected to lower select shuffles efficiently.
+static Instruction *foldSelectShuffleOfSelectShuffle(ShuffleVectorInst &Shuf) {
+  assert(Shuf.isSelect() && "Must have select-equivalent shuffle");
+
+  Value *Op0 = Shuf.getOperand(0), *Op1 = Shuf.getOperand(1);
+  SmallVector<int, 16> Mask;
+  Shuf.getShuffleMask(Mask);
+  unsigned NumElts = Mask.size();
+
+  // Canonicalize a select shuffle with common operand as Op1.
+  auto *ShufOp = dyn_cast<ShuffleVectorInst>(Op0);
+  if (ShufOp && ShufOp->isSelect() &&
+      (ShufOp->getOperand(0) == Op1 || ShufOp->getOperand(1) == Op1)) {
+    std::swap(Op0, Op1);
+    ShuffleVectorInst::commuteShuffleMask(Mask, NumElts);
+  }
+
+  ShufOp = dyn_cast<ShuffleVectorInst>(Op1);
+  if (!ShufOp || !ShufOp->isSelect() ||
+      (ShufOp->getOperand(0) != Op0 && ShufOp->getOperand(1) != Op0))
+    return nullptr;
+
+  Value *X = ShufOp->getOperand(0), *Y = ShufOp->getOperand(1);
+  SmallVector<int, 16> Mask1;
+  ShufOp->getShuffleMask(Mask1);
+  assert(Mask1.size() == NumElts && "Vector size changed with select shuffle");
+
+  // Canonicalize common operand (Op0) as X (first operand of first shuffle).
+  if (Y == Op0) {
+    std::swap(X, Y);
+    ShuffleVectorInst::commuteShuffleMask(Mask1, NumElts);
+  }
+
+  // If the mask chooses from X (operand 0), it stays the same.
+  // If the mask chooses from the earlier shuffle, the other mask value is
+  // transferred to the combined select shuffle:
+  // shuf X, (shuf X, Y, M1), M --> shuf X, Y, M'
+  SmallVector<int, 16> NewMask(NumElts);
+  for (unsigned i = 0; i != NumElts; ++i)
+    NewMask[i] = Mask[i] < (signed)NumElts ? Mask[i] : Mask1[i];
+
+  assert(ShuffleVectorInst::isSelectMask(NewMask) && "Unexpected shuffle mask");
+  return new ShuffleVectorInst(X, Y, NewMask);
+}
+
 static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf) {
   assert(Shuf.isSelect() && "Must have select-equivalent shuffle");
 
@@ -2060,6 +2111,9 @@ Instruction *InstCombinerImpl::foldSelectShuffle(ShuffleVectorInst &Shuf) {
     Shuf.commute();
     return &Shuf;
   }
+
+  if (Instruction *I = foldSelectShuffleOfSelectShuffle(Shuf))
+    return I;
 
   if (Instruction *I = foldSelectShuffleWith1Binop(Shuf))
     return I;

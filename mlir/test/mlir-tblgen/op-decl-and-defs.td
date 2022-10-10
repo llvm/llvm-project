@@ -12,7 +12,6 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "NS";
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 class NS_Op<string mnemonic, list<Trait> traits> :
     Op<Test_Dialect, mnemonic, traits>;
@@ -78,12 +77,12 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK:     return ::llvm::StringLiteral("test.a_op");
 // CHECK:   }
 // CHECK:   ::mlir::Operation::operand_range getODSOperands(unsigned index);
-// CHECK:   ::mlir::Value getA();
+// CHECK:   ::mlir::TypedValue<::mlir::IntegerType> getA();
 // CHECK:   ::mlir::Operation::operand_range getB();
 // CHECK:   ::mlir::MutableOperandRange getAMutable();
 // CHECK:   ::mlir::MutableOperandRange getBMutable();
 // CHECK:   ::mlir::Operation::result_range getODSResults(unsigned index);
-// CHECK:   ::mlir::Value getR();
+// CHECK:   ::mlir::TypedValue<::mlir::IntegerType> getR();
 // CHECK:   ::mlir::Region &getSomeRegion();
 // CHECK:   ::mlir::MutableArrayRef<::mlir::Region> getSomeRegions();
 // CHECK:   ::mlir::IntegerAttr getAttr1Attr()
@@ -169,7 +168,7 @@ def NS_EOp : NS_Op<"op_with_optionals", []> {
 // CHECK-LABEL: NS::EOp declarations
 // CHECK:   ::mlir::Value getA();
 // CHECK:   ::mlir::MutableOperandRange getAMutable();
-// CHECK:   ::mlir::Value getB();
+// CHECK:   ::mlir::TypedValue<::mlir::FloatType> getB();
 // CHECK:   static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, /*optional*/::mlir::Type b, /*optional*/::mlir::Value a)
 
 // Check that all types match constraint results in generating builder.

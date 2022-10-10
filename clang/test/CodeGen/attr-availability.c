@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fvisibility hidden "-triple" "x86_64-apple-darwin8.0.0" -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-10_4 %s
-// RUN: %clang_cc1 -fvisibility hidden "-triple" "x86_64-apple-darwin9.0.0" -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-10_5 %s
-// RUN: %clang_cc1 -fvisibility hidden "-triple" "x86_64-apple-darwin10.0.0" -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-10_6 %s
+// RUN: %clang_cc1 -fvisibility=hidden "-triple" "x86_64-apple-darwin8.0.0" -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-10_4 %s
+// RUN: %clang_cc1 -fvisibility=hidden "-triple" "x86_64-apple-darwin9.0.0" -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-10_5 %s
+// RUN: %clang_cc1 -fvisibility=hidden "-triple" "x86_64-apple-darwin10.0.0" -emit-llvm -o - %s | FileCheck -check-prefix=CHECK-10_6 %s
 
 // CHECK-10_4-LABEL: define hidden void @f2
 // CHECK-10_5-LABEL: define hidden void @f2

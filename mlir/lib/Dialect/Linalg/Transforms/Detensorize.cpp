@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Linalg/Passes.h"
+
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Func/Transforms/FuncConversions.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
-#include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -18,6 +19,11 @@
 #include <iterator>
 #include <memory>
 #include <utility>
+
+namespace mlir {
+#define GEN_PASS_DEF_LINALGDETENSORIZE
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -65,13 +71,13 @@ public:
     Block *originalBlock = op->getBlock();
 
     // Gather some information about the op before inling its region.
-    Block *opEntryBlock = &*op.region().begin();
-    YieldOp yieldOp = dyn_cast<YieldOp>(op.region().back().getTerminator());
+    Block *opEntryBlock = &*op.getRegion().begin();
+    YieldOp yieldOp = dyn_cast<YieldOp>(op.getRegion().back().getTerminator());
 
     // Split the op's region before the op. This way, we have a clear insertion
     // point in which the op can be inlined.
     Block *newBlock = rewriter.splitBlock(originalBlock, Block::iterator(op));
-    rewriter.inlineRegionBefore(op.region(), newBlock);
+    rewriter.inlineRegionBefore(op.getRegion(), newBlock);
     // Now that op's region is inlined, the operands of its YieldOp are mapped
     // to the materialized target values. Therefore, we can replace the op's
     // uses with those of its YielOp's operands.
@@ -100,7 +106,7 @@ struct FunctionNonEntryBlockConversion
   matchAndRewrite(FunctionOpInterface op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const override {
     rewriter.startRootUpdate(op);
-    Region &region = op.getBody();
+    Region &region = op.getFunctionBody();
     SmallVector<TypeConverter::SignatureConversion, 2> conversions;
 
     for (Block &block : llvm::drop_begin(region, 1)) {
@@ -158,7 +164,8 @@ public:
 };
 
 /// @see LinalgDetensorize in Linalg/Passes.td for more details.
-struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
+struct LinalgDetensorize
+    : public impl::LinalgDetensorizeBase<LinalgDetensorize> {
   LinalgDetensorize() = default;
 
   class CostModel {
@@ -181,7 +188,7 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
     /// For the following snippet:
     /// ...
     /// ^bb1(%6: tensor<i32>, %9: tensor<i32>):
-    ///   %7 = linalg.init_tensor [] : tensor<i32>
+    ///   %7 = tensor.empty() : tensor<i32>
     ///   %8 = linalg.generic #attrs
     ///     ins(%6, %6 : tensor<i32>, tensor<i32>)
     ///     outs(%7 : tensor<i32>) {
@@ -379,7 +386,7 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
           }
 
           opsToDetensor.insert(genericOp);
-          llvm::append_range(workList, genericOp.inputs());
+          llvm::append_range(workList, genericOp.getInputs());
           continue;
         }
 
@@ -390,7 +397,7 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
         // Note: No need to check whether the result type of this op is
         // detensorable since if it wasn't we wouldn't reach that point in the
         // work list.
-        if (dyn_cast<tensor::FromElementsOp>(currentItemDefiningOp))
+        if (isa<tensor::FromElementsOp>(currentItemDefiningOp))
           continue;
 
         // 2.4 - The current item is the result of a scalar op, add all its
@@ -454,7 +461,7 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
           opsToDetensor.insert(genericOp);
       });
 
-      for (Block &block : llvm::drop_begin(func.getBody(), 1))
+      for (Block &block : llvm::drop_begin(func.getFunctionBody(), 1))
         for (BlockArgument blockArgument : block.getArguments())
           blockArgsToDetensor.insert(blockArgument);
     }
@@ -493,7 +500,7 @@ struct LinalgDetensorize : public LinalgDetensorizeBase<LinalgDetensorize> {
       // boundaries, which we conservatively approximate as all function
       // signatures.
       if (auto funcOp = dyn_cast<FunctionOpInterface>(op)) {
-        Region &body = funcOp.getBody();
+        Region &body = funcOp.getFunctionBody();
         return llvm::all_of(llvm::drop_begin(body, 1), [&](Block &block) {
           return !llvm::any_of(
               blockArgsToDetensor, [&](BlockArgument blockArgument) {

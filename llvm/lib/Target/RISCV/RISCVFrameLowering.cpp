@@ -39,8 +39,8 @@ static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
   // Do not save RA to the SCS if it's not saved to the regular stack,
   // i.e. RA is not at risk of being overwritten.
   std::vector<CalleeSavedInfo> &CSI = MF.getFrameInfo().getCalleeSavedInfo();
-  if (std::none_of(CSI.begin(), CSI.end(),
-                   [&](CalleeSavedInfo &CSR) { return CSR.getReg() == RAReg; }))
+  if (llvm::none_of(
+          CSI, [&](CalleeSavedInfo &CSR) { return CSR.getReg() == RAReg; }))
     return;
 
   Register SCSPReg = RISCVABI::getSCSPReg();
@@ -89,8 +89,8 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
 
   // See emitSCSPrologue() above.
   std::vector<CalleeSavedInfo> &CSI = MF.getFrameInfo().getCalleeSavedInfo();
-  if (std::none_of(CSI.begin(), CSI.end(),
-                   [&](CalleeSavedInfo &CSR) { return CSR.getReg() == RAReg; }))
+  if (llvm::none_of(
+          CSI, [&](CalleeSavedInfo &CSR) { return CSR.getReg() == RAReg; }))
     return;
 
   Register SCSPReg = RISCVABI::getSCSPReg();
@@ -381,7 +381,8 @@ void RISCVFrameLowering::adjustStackForRVV(MachineFunction &MF,
   }
   // 1. Multiply the number of v-slots to the length of registers
   Register FactorRegister =
-      TII->getVLENFactoredAmount(MF, MBB, MBBI, DL, Amount, Flag);
+      MF.getRegInfo().createVirtualRegister(&RISCV::GPRRegClass);
+  TII->getVLENFactoredAmount(MF, MBB, MBBI, DL, FactorRegister, Amount, Flag);
   // 2. SP = SP - RVV stack size
   BuildMI(MBB, MBBI, DL, TII->get(Opc), SPReg)
       .addReg(SPReg)
@@ -996,61 +997,6 @@ static unsigned getScavSlotsNumForRVV(MachineFunction &MF) {
   return MaxScavSlotsNum;
 }
 
-void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
-    MachineFunction &MF, RegScavenger *RS) const {
-  const RISCVRegisterInfo *RegInfo =
-      MF.getSubtarget<RISCVSubtarget>().getRegisterInfo();
-  MachineFrameInfo &MFI = MF.getFrameInfo();
-  const TargetRegisterClass *RC = &RISCV::GPRRegClass;
-  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
-
-  int64_t RVVStackSize;
-  Align RVVStackAlign;
-  std::tie(RVVStackSize, RVVStackAlign) = assignRVVStackObjectOffsets(MF);
-
-  RVFI->setRVVStackSize(RVVStackSize);
-  RVFI->setRVVStackAlign(RVVStackAlign);
-
-  // Ensure the entire stack is aligned to at least the RVV requirement: some
-  // scalable-vector object alignments are not considered by the
-  // target-independent code.
-  MFI.ensureMaxAlignment(RVVStackAlign);
-
-  // estimateStackSize has been observed to under-estimate the final stack
-  // size, so give ourselves wiggle-room by checking for stack size
-  // representable an 11-bit signed field rather than 12-bits.
-  // FIXME: It may be possible to craft a function with a small stack that
-  // still needs an emergency spill slot for branch relaxation. This case
-  // would currently be missed.
-  // RVV loads & stores have no capacity to hold the immediate address offsets
-  // so we must always reserve an emergency spill slot if the MachineFunction
-  // contains any RVV spills.
-  unsigned ScavSlotsNum = 0;
-  if (!isInt<11>(MFI.estimateStackSize(MF)))
-    ScavSlotsNum = 1;
-
-  ScavSlotsNum = std::max(ScavSlotsNum, getScavSlotsNumForRVV(MF));
-  for (unsigned i = 0; i < ScavSlotsNum; i++) {
-    RS->addScavengingFrameIndex(MFI.CreateStackObject(
-        RegInfo->getSpillSize(*RC), RegInfo->getSpillAlign(*RC), false));
-  }
-
-  if (MFI.getCalleeSavedInfo().empty() || RVFI->useSaveRestoreLibCalls(MF)) {
-    RVFI->setCalleeSavedStackSize(0);
-    return;
-  }
-
-  unsigned Size = 0;
-  for (const auto &Info : MFI.getCalleeSavedInfo()) {
-    int FrameIdx = Info.getFrameIdx();
-    if (MFI.getStackID(FrameIdx) != TargetStackID::Default)
-      continue;
-
-    Size += MFI.getObjectSize(FrameIdx);
-  }
-  RVFI->setCalleeSavedStackSize(Size);
-}
-
 static bool hasRVVFrameObject(const MachineFunction &MF) {
   // Originally, the function will scan all the stack objects to check whether
   // if there is any scalable vector object on the stack or not. However, it
@@ -1068,6 +1014,110 @@ static bool hasRVVFrameObject(const MachineFunction &MF) {
   //
   // Refer to https://github.com/llvm/llvm-project/issues/53016.
   return MF.getSubtarget<RISCVSubtarget>().hasVInstructions();
+}
+
+static unsigned estimateFunctionSizeInBytes(const MachineFunction &MF,
+                                            const RISCVInstrInfo &TII) {
+  unsigned FnSize = 0;
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      // Far branches over 20-bit offset will be relaxed in branch relaxation
+      // pass. In the worst case, conditional branches will be relaxed into
+      // the following instruction sequence. Unconditional branches are
+      // relaxed in the same way, with the exception that there is no first
+      // branch instruction.
+      //
+      //        foo
+      //        bne     t5, t6, .rev_cond # `TII->getInstSizeInBytes(MI)` bytes
+      //        sd      s11, 0(sp)        # 4 bytes, or 2 bytes in RVC
+      //        jump    .restore, s11     # 8 bytes
+      // .rev_cond
+      //        bar
+      //        j       .dest_bb          # 4 bytes, or 2 bytes in RVC
+      // .restore:
+      //        ld      s11, 0(sp)        # 4 bytes, or 2 bytes in RVC
+      // .dest:
+      //        baz
+      if (MI.isConditionalBranch())
+        FnSize += TII.getInstSizeInBytes(MI);
+      if (MI.isConditionalBranch() || MI.isUnconditionalBranch()) {
+        if (MF.getSubtarget<RISCVSubtarget>().hasStdExtC())
+          FnSize += 2 + 8 + 2 + 2;
+        else
+          FnSize += 4 + 8 + 4 + 4;
+        continue;
+      }
+
+      FnSize += TII.getInstSizeInBytes(MI);
+    }
+  }
+  return FnSize;
+}
+
+void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
+    MachineFunction &MF, RegScavenger *RS) const {
+  const RISCVRegisterInfo *RegInfo =
+      MF.getSubtarget<RISCVSubtarget>().getRegisterInfo();
+  const RISCVInstrInfo *TII = MF.getSubtarget<RISCVSubtarget>().getInstrInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  const TargetRegisterClass *RC = &RISCV::GPRRegClass;
+  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+
+  int64_t RVVStackSize;
+  Align RVVStackAlign;
+  std::tie(RVVStackSize, RVVStackAlign) = assignRVVStackObjectOffsets(MF);
+
+  RVFI->setRVVStackSize(RVVStackSize);
+  RVFI->setRVVStackAlign(RVVStackAlign);
+
+  if (hasRVVFrameObject(MF)) {
+    // Ensure the entire stack is aligned to at least the RVV requirement: some
+    // scalable-vector object alignments are not considered by the
+    // target-independent code.
+    MFI.ensureMaxAlignment(RVVStackAlign);
+  }
+
+  unsigned ScavSlotsNum = 0;
+
+  // estimateStackSize has been observed to under-estimate the final stack
+  // size, so give ourselves wiggle-room by checking for stack size
+  // representable an 11-bit signed field rather than 12-bits.
+  if (!isInt<11>(MFI.estimateStackSize(MF)))
+    ScavSlotsNum = 1;
+
+  // Far branches over 20-bit offset require a spill slot for scratch register.
+  bool IsLargeFunction = !isInt<20>(estimateFunctionSizeInBytes(MF, *TII));
+  if (IsLargeFunction)
+    ScavSlotsNum = std::max(ScavSlotsNum, 1u);
+
+  // RVV loads & stores have no capacity to hold the immediate address offsets
+  // so we must always reserve an emergency spill slot if the MachineFunction
+  // contains any RVV spills.
+  ScavSlotsNum = std::max(ScavSlotsNum, getScavSlotsNumForRVV(MF));
+
+  for (unsigned I = 0; I < ScavSlotsNum; I++) {
+    int FI = MFI.CreateStackObject(RegInfo->getSpillSize(*RC),
+                                   RegInfo->getSpillAlign(*RC), false);
+    RS->addScavengingFrameIndex(FI);
+
+    if (IsLargeFunction && RVFI->getBranchRelaxationScratchFrameIndex() == -1)
+      RVFI->setBranchRelaxationScratchFrameIndex(FI);
+  }
+
+  if (MFI.getCalleeSavedInfo().empty() || RVFI->useSaveRestoreLibCalls(MF)) {
+    RVFI->setCalleeSavedStackSize(0);
+    return;
+  }
+
+  unsigned Size = 0;
+  for (const auto &Info : MFI.getCalleeSavedInfo()) {
+    int FrameIdx = Info.getFrameIdx();
+    if (MFI.getStackID(FrameIdx) != TargetStackID::Default)
+      continue;
+
+    Size += MFI.getObjectSize(FrameIdx);
+  }
+  RVFI->setCalleeSavedStackSize(Size);
 }
 
 // Not preserve stack space within prologue for outgoing variables when the

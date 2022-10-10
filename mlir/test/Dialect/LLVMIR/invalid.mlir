@@ -146,6 +146,13 @@ func.func @gep_non_function_type(%pos : i64, %base : !llvm.ptr<f32>) {
 
 // -----
 
+func.func @gep_too_few_dynamic(%base : !llvm.ptr<f32>) {
+  // expected-error@+1 {{expected as many dynamic indices as specified in 'rawConstantIndices'}}
+  %1 = "llvm.getelementptr"(%base) {rawConstantIndices = array<i32: -2147483648>} : (!llvm.ptr<f32>) -> !llvm.ptr<f32>
+}
+
+// -----
+
 func.func @load_non_llvm_type(%foo : memref<f32>) {
   // expected-error@+1 {{expected LLVM pointer type}}
   llvm.load %foo : memref<f32>
@@ -184,6 +191,7 @@ func.func @store_malformed_elem_type(%foo: !llvm.ptr, %bar: f32) {
 func.func @call_non_function_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
   // expected-error@+1 {{expected function type}}
   llvm.call %callee(%arg) : !llvm.func<i8 (i8)>
+  llvm.return
 }
 
 // -----
@@ -191,6 +199,7 @@ func.func @call_non_function_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
 func.func @invalid_call() {
   // expected-error@+1 {{'llvm.call' op must have either a `callee` attribute or at least an operand}}
   "llvm.call"() : () -> ()
+  llvm.return
 }
 
 // -----
@@ -198,6 +207,7 @@ func.func @invalid_call() {
 func.func @call_non_function_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
   // expected-error@+1 {{expected function type}}
   llvm.call %callee(%arg) : !llvm.func<i8 (i8)>
+  llvm.return
 }
 
 // -----
@@ -205,6 +215,7 @@ func.func @call_non_function_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
 func.func @call_unknown_symbol() {
   // expected-error@+1 {{'llvm.call' op 'missing_callee' does not reference a symbol in the current scope}}
   llvm.call @missing_callee() : () -> ()
+  llvm.return
 }
 
 // -----
@@ -214,6 +225,7 @@ func.func private @standard_func_callee()
 func.func @call_non_llvm() {
   // expected-error@+1 {{'llvm.call' op 'standard_func_callee' does not reference a valid LLVM function}}
   llvm.call @standard_func_callee() : () -> ()
+  llvm.return
 }
 
 // -----
@@ -221,6 +233,7 @@ func.func @call_non_llvm() {
 func.func @call_non_llvm_indirect(%arg0 : tensor<*xi32>) {
   // expected-error@+1 {{'llvm.call' op operand #0 must be LLVM dialect-compatible type}}
   "llvm.call"(%arg0) : (tensor<*xi32>) -> ()
+  llvm.return
 }
 
 // -----
@@ -230,6 +243,7 @@ llvm.func @callee_func(i8) -> ()
 func.func @callee_arg_mismatch(%arg0 : i32) {
   // expected-error@+1 {{'llvm.call' op operand type mismatch for operand 0: 'i32' != 'i8'}}
   llvm.call @callee_func(%arg0) : (i32) -> ()
+  llvm.return
 }
 
 // -----
@@ -237,6 +251,7 @@ func.func @callee_arg_mismatch(%arg0 : i32) {
 func.func @indirect_callee_arg_mismatch(%arg0 : i32, %callee : !llvm.ptr<func<void(i8)>>) {
   // expected-error@+1 {{'llvm.call' op operand type mismatch for operand 0: 'i32' != 'i8'}}
   "llvm.call"(%callee, %arg0) : (!llvm.ptr<func<void(i8)>>, i32) -> ()
+  llvm.return
 }
 
 // -----
@@ -246,6 +261,7 @@ llvm.func @callee_func() -> (i8)
 func.func @callee_return_mismatch() {
   // expected-error@+1 {{'llvm.call' op result type mismatch: 'i32' != 'i8'}}
   %res = llvm.call @callee_func() : () -> (i32)
+  llvm.return
 }
 
 // -----
@@ -253,6 +269,7 @@ func.func @callee_return_mismatch() {
 func.func @indirect_callee_return_mismatch(%callee : !llvm.ptr<func<i8()>>) {
   // expected-error@+1 {{'llvm.call' op result type mismatch: 'i32' != 'i8'}}
   "llvm.call"(%callee) : (!llvm.ptr<func<i8()>>) -> (i32)
+  llvm.return
 }
 
 // -----
@@ -260,6 +277,7 @@ func.func @indirect_callee_return_mismatch(%callee : !llvm.ptr<func<i8()>>) {
 func.func @call_too_many_results(%callee : () -> (i32,i32)) {
   // expected-error@+1 {{expected function with 0 or 1 result}}
   llvm.call %callee() : () -> (i32, i32)
+  llvm.return
 }
 
 // -----
@@ -267,6 +285,7 @@ func.func @call_too_many_results(%callee : () -> (i32,i32)) {
 func.func @call_non_llvm_result(%callee : () -> (tensor<*xi32>)) {
   // expected-error@+1 {{expected result to have LLVM type}}
   llvm.call %callee() : () -> (tensor<*xi32>)
+  llvm.return
 }
 
 // -----
@@ -274,6 +293,7 @@ func.func @call_non_llvm_result(%callee : () -> (tensor<*xi32>)) {
 func.func @call_non_llvm_input(%callee : (tensor<*xi32>) -> (), %arg : tensor<*xi32>) {
   // expected-error@+1 {{expected LLVM types as inputs}}
   llvm.call %callee(%arg) : (tensor<*xi32>) -> ()
+  llvm.return
 }
 
 // -----
@@ -325,7 +345,7 @@ llvm.func @array_attribute_one_element() -> !llvm.struct<(f64, f64)> {
 // -----
 
 llvm.func @array_attribute_two_different_types() -> !llvm.struct<(f64, f64)> {
-  // expected-error @+1 {{expected array attribute with two elements, representing a complex constant}}
+  // expected-error @+1 {{expected array attribute with two elements of the same type}}
   %0 = llvm.mlir.constant([1.0 : f64, 1.0 : f32]) : !llvm.struct<(f64, f64)>
   llvm.return %0 : !llvm.struct<(f64, f64)>
 }
@@ -365,44 +385,28 @@ llvm.func @struct_wrong_element_types() -> !llvm.struct<(!llvm.array<2 x f64>, !
 // -----
 
 func.func @insertvalue_non_llvm_type(%a : i32, %b : i32) {
-  // expected-error@+1 {{expected LLVM IR Dialect type}}
+  // expected-error@+2 {{expected LLVM IR Dialect type}}
   llvm.insertvalue %a, %b[0] : tensor<*xi32>
 }
 
 // -----
 
-func.func @insertvalue_non_array_position() {
-  // Note the double-type, otherwise attribute parsing consumes the trailing
-  // type of the op as the (wrong) attribute type.
-  // expected-error@+1 {{invalid kind of attribute specified}}
-  llvm.insertvalue %a, %b 0 : i32 : !llvm.struct<(i32)>
-}
-
-// -----
-
-func.func @insertvalue_non_integer_position() {
-  // expected-error@+1 {{expected an array of integer literals}}
-  llvm.insertvalue %a, %b[0.0] : !llvm.struct<(i32)>
-}
-
-// -----
-
 func.func @insertvalue_struct_out_of_bounds() {
-  // expected-error@+1 {{position out of bounds}}
+  // expected-error@+2 {{position out of bounds}}
   llvm.insertvalue %a, %b[1] : !llvm.struct<(i32)>
 }
 
 // -----
 
 func.func @insertvalue_array_out_of_bounds() {
-  // expected-error@+1 {{position out of bounds}}
+  // expected-error@+2 {{position out of bounds}}
   llvm.insertvalue %a, %b[1] : !llvm.array<1 x i32>
 }
 
 // -----
 
 func.func @insertvalue_wrong_nesting() {
-  // expected-error@+1 {{expected LLVM IR structure/array type}}
+  // expected-error@+2 {{expected LLVM IR structure/array type}}
   llvm.insertvalue %a, %b[0,0] : !llvm.struct<(i32)>
 }
 
@@ -410,7 +414,7 @@ func.func @insertvalue_wrong_nesting() {
 
 func.func @insertvalue_invalid_type(%a : !llvm.array<1 x i32>) -> !llvm.array<1 x i32> {
   // expected-error@+1 {{'llvm.insertvalue' op Type mismatch: cannot insert '!llvm.array<1 x i32>' into '!llvm.array<1 x i32>'}}
-  %b = "llvm.insertvalue"(%a, %a) {position = [0]} : (!llvm.array<1 x i32>, !llvm.array<1 x i32>) -> !llvm.array<1 x i32>
+  %b = "llvm.insertvalue"(%a, %a) {position = array<i64: 0>} : (!llvm.array<1 x i32>, !llvm.array<1 x i32>) -> !llvm.array<1 x i32>
   return %b : !llvm.array<1 x i32>
 }
 
@@ -418,7 +422,7 @@ func.func @insertvalue_invalid_type(%a : !llvm.array<1 x i32>) -> !llvm.array<1 
 
 func.func @extractvalue_invalid_type(%a : !llvm.array<4 x vector<8xf32>>) -> !llvm.array<4 x vector<8xf32>> {
   // expected-error@+1 {{'llvm.extractvalue' op Type mismatch: extracting from '!llvm.array<4 x vector<8xf32>>' should produce 'vector<8xf32>' but this op returns '!llvm.array<4 x vector<8xf32>>'}}
-  %b = "llvm.extractvalue"(%a) {position = [1]}
+  %b = "llvm.extractvalue"(%a) {position = array<i64: 1>}
             : (!llvm.array<4 x vector<8xf32>>) -> !llvm.array<4 x vector<8xf32>>
   return %b : !llvm.array<4 x vector<8xf32>>
 }
@@ -427,72 +431,55 @@ func.func @extractvalue_invalid_type(%a : !llvm.array<4 x vector<8xf32>>) -> !ll
 // -----
 
 func.func @extractvalue_non_llvm_type(%a : i32, %b : tensor<*xi32>) {
-  // expected-error@+1 {{expected LLVM IR Dialect type}}
+  // expected-error@+2 {{expected LLVM IR Dialect type}}
   llvm.extractvalue %b[0] : tensor<*xi32>
 }
-
-// -----
-
-func.func @extractvalue_non_array_position() {
-  // Note the double-type, otherwise attribute parsing consumes the trailing
-  // type of the op as the (wrong) attribute type.
-  // expected-error@+1 {{invalid kind of attribute specified}}
-  llvm.extractvalue %b 0 : i32 : !llvm.struct<(i32)>
-}
-
-// -----
-
-func.func @extractvalue_non_integer_position() {
-  // expected-error@+1 {{expected an array of integer literals}}
-  llvm.extractvalue %b[0.0] : !llvm.struct<(i32)>
-}
-
 // -----
 
 func.func @extractvalue_struct_out_of_bounds() {
-  // expected-error@+1 {{position out of bounds}}
+  // expected-error@+2 {{position out of bounds}}
   llvm.extractvalue %b[1] : !llvm.struct<(i32)>
 }
 
 // -----
 
 func.func @extractvalue_array_out_of_bounds() {
-  // expected-error@+1 {{position out of bounds}}
+  // expected-error@+2 {{position out of bounds}}
   llvm.extractvalue %b[1] : !llvm.array<1 x i32>
 }
 
 // -----
 
 func.func @extractvalue_wrong_nesting() {
-  // expected-error@+1 {{expected LLVM IR structure/array type}}
+  // expected-error@+2 {{expected LLVM IR structure/array type}}
   llvm.extractvalue %b[0,0] : !llvm.struct<(i32)>
 }
 
 // -----
 
 func.func @invalid_vector_type_1(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{expected LLVM dialect-compatible vector type for operand #1}}
+  // expected-error@+1 {{'vector' must be LLVM dialect-compatible vector}}
   %0 = llvm.extractelement %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
 func.func @invalid_vector_type_2(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{expected LLVM dialect-compatible vector type for operand #1}}
+  // expected-error@+1 {{'vector' must be LLVM dialect-compatible vector}}
   %0 = llvm.insertelement %arg2, %arg2[%arg1 : i32] : f32
 }
 
 // -----
 
 func.func @invalid_vector_type_3(%arg0: vector<4xf32>, %arg1: i32, %arg2: f32) {
-  // expected-error@+1 {{expected LLVM IR dialect vector type for operand #1}}
-  %0 = llvm.shufflevector %arg2, %arg2 [0 : i32, 0 : i32, 0 : i32, 0 : i32, 7 : i32] : f32, f32
+  // expected-error@+2 {{expected an LLVM compatible vector type}}
+  %0 = llvm.shufflevector %arg2, %arg2 [0, 0, 0, 0, 7] : f32
 }
 
 // -----
 
 func.func @invalid_vector_type_4(%a : vector<4xf32>, %idx : i32) -> vector<4xf32> {
-  // expected-error@+1 {{'llvm.extractelement' op Type mismatch: extracting from 'vector<4xf32>' should produce 'f32' but this op returns 'vector<4xf32>'}}
+  // expected-error@+1 {{failed to verify that result type matches vector element type}}
   %b = "llvm.extractelement"(%a, %idx) : (vector<4xf32>, i32) -> vector<4xf32>
   return %b : vector<4xf32>
 }
@@ -500,7 +487,7 @@ func.func @invalid_vector_type_4(%a : vector<4xf32>, %idx : i32) -> vector<4xf32
 // -----
 
 func.func @invalid_vector_type_5(%a : vector<4xf32>, %idx : i32) -> vector<4xf32> {
-  // expected-error@+1 {{'llvm.insertelement' op Type mismatch: cannot insert 'vector<4xf32>' into 'vector<4xf32>'}}
+  // expected-error@+1 {{failed to verify that argument type matches vector element type}}
   %b = "llvm.insertelement"(%a, %a, %idx) : (vector<4xf32>, vector<4xf32>, i32) -> vector<4xf32>
   return %b : vector<4xf32>
 }
@@ -540,7 +527,7 @@ func.func @nvvm_invalid_mma_0(%a0 : f16, %a1 : f16,
                          %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
                          %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // expected-error@+1 {{Could not match types for the A operands; expected one of 2xvector<2xf16> but got f16, f16}}
-  %0 = nvvm.mma.sync A[%a0, %a1] B[%b0, %b1] C[%c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7] 
+  %0 = nvvm.mma.sync A[%a0, %a1] B[%b0, %b1] C[%c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7]
     {layoutA=#nvvm.mma_layout<row>, layoutB=#nvvm.mma_layout<col>, shape = #nvvm.shape<m = 8, n = 8, k = 4>} : (f16, vector<2xf16>, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
   llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
@@ -564,7 +551,7 @@ func.func @nvvm_invalid_mma_2(%a0 : vector<2xf16>, %a1 : vector<2xf16>,
                          %c0 : f32, %c1 : f32, %c2 : f32, %c3 : f32,
                          %c4 : f32, %c5 : f32, %c6 : f32, %c7 : f32) {
   // expected-error@+1 {{op requires attribute 'layoutA'}}
-  %0 = nvvm.mma.sync A[%a0, %a1] B[%b0, %b1] C[%c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7] 
+  %0 = nvvm.mma.sync A[%a0, %a1] B[%b0, %b1] C[%c0, %c1, %c2, %c3, %c4, %c5, %c6, %c7]
     {shape = #nvvm.shape<m = 8, n = 8, k = 4>}: (vector<2xf16>, vector<2xf16>, f32) -> !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
   llvm.return %0 : !llvm.struct<(f32, f32, f32, f32, f32, f32, f32, f32)>
 }
@@ -587,7 +574,7 @@ func.func @nvvm_invalid_mma_8(%a0 : i32, %a1 : i32,
   // expected-error@+1 {{op requires b1Op attribute}}
   %0 = nvvm.mma.sync A[%a0, %a1] B[%b0] C[%c0, %c1, %c2, %c3]
     {layoutA = #nvvm.mma_layout<row>, layoutB = #nvvm.mma_layout<col>,
-     multiplicandAPtxType = #nvvm.mma_type<b1>, multiplicandBPtxType = #nvvm.mma_type<b1>,     
+     multiplicandAPtxType = #nvvm.mma_type<b1>, multiplicandBPtxType = #nvvm.mma_type<b1>,
      shape = #nvvm.shape<m = 16, n = 8, k = 128>} : (i32, i32, i32) -> !llvm.struct<(i32,i32,i32,i32)>
   llvm.return %0 : !llvm.struct<(i32,i32,i32,i32)>
 }
@@ -1287,7 +1274,7 @@ func.func @gep_out_of_bounds(%ptr: !llvm.ptr<struct<(i32, struct<(i32, f32)>)>>,
 
 func.func @non_splat_shuffle_on_scalable_vector(%arg0: vector<[4]xf32>) {
   // expected-error@below {{expected a splat operation for scalable vectors}}
-  %0 = llvm.shufflevector %arg0, %arg0 [0 : i32, 0 : i32, 0 : i32, 1 : i32] : vector<[4]xf32>, vector<[4]xf32>
+  %0 = llvm.shufflevector %arg0, %arg0 [0, 0, 0, 1] : vector<[4]xf32>
   return
 }
 

@@ -3954,14 +3954,14 @@ AST_POLYMORPHIC_MATCHER_P_OVERLOAD(
 ///
 /// \code
 /// auto x = int(3);
-/// \code
+/// \endcode
 /// cxxTemporaryObjectExpr(hasTypeLoc(loc(asString("int"))))
 ///   matches int(3)
 ///
 /// \code
 /// struct Foo { Foo(int, int); };
 /// auto x = Foo(1, 2);
-/// \code
+/// \endcode
 /// cxxFunctionalCastExpr(hasTypeLoc(loc(asString("struct Foo"))))
 ///   matches Foo(1, 2)
 ///
@@ -4175,7 +4175,7 @@ AST_MATCHER_P(DeclRefExpr, to, internal::Matcher<Decl>,
 ///   namespace a { class X{}; }
 ///   using a::X;
 ///   X x;
-/// \code
+/// \endcode
 /// typeLoc(loc(usingType(throughUsingDecl(anything()))))
 ///   matches \c X
 ///
@@ -4722,7 +4722,7 @@ AST_MATCHER_P(LambdaExpr, hasAnyCapture, internal::Matcher<LambdaCapture>,
 /// In the matcher
 /// lambdaExpr(hasAnyCapture(lambdaCapture(capturesVar(hasName("x")))),
 /// capturesVar(hasName("x")) matches `x` and `x = 1`.
-AST_MATCHER_P(LambdaCapture, capturesVar, internal::Matcher<VarDecl>,
+AST_MATCHER_P(LambdaCapture, capturesVar, internal::Matcher<ValueDecl>,
               InnerMatcher) {
   auto *capturedVar = Node.getCapturedVar();
   return capturedVar && InnerMatcher.matches(*capturedVar, Finder, Builder);

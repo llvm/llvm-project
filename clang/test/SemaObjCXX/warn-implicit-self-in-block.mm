@@ -39,4 +39,8 @@ void escapeFunc(BlockTy);
     noescapeFunc(^{ [&](){ (void)_bar; }(); });
     escapeFunc(^{ [&](){ (void)_bar; }(); }); // expected-warning {{block implicitly retains 'self'; explicitly mention 'self' to indicate this is intended behavior}}
   }
+
+  - (BlockTy)testDeclType{
+    return ^{ decltype(_bar) i = 12; (void)i; };
+  }
 @end

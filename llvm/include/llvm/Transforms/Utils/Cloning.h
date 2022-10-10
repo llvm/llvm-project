@@ -63,6 +63,10 @@ struct ClonedCodeInfo {
   /// This is set to true if the cloned code contains a normal call instruction.
   bool ContainsCalls = false;
 
+  /// This is set to true if there is memprof related metadata (memprof or
+  /// callsite metadata) in the cloned code.
+  bool ContainsMemProfMetadata = false;
+
   /// This is set to true if the cloned code contains a 'dynamic' alloca.
   /// Dynamic allocas are allocas that are either not in the entry block or they
   /// are in the entry block but are not a constant size.
@@ -260,7 +264,11 @@ public:
 /// and all varargs at the callsite will be passed to any calls to
 /// ForwardVarArgsTo. The caller of InlineFunction has to make sure any varargs
 /// are only used by ForwardVarArgsTo.
+///
+/// The callee's function attributes are merged into the callers' if
+/// MergeAttributes is set to true.
 InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
+                            bool MergeAttributes = false,
                             AAResults *CalleeAAR = nullptr,
                             bool InsertLifetime = true,
                             Function *ForwardVarArgsTo = nullptr);

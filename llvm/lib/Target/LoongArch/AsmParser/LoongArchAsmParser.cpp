@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/LoongArchInstPrinter.h"
+#include "MCTargetDesc/LoongArchMCExpr.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -17,6 +18,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
 
@@ -62,6 +64,8 @@ class LoongArchAsmParser : public MCTargetAsmParser {
 
   OperandMatchResultTy parseRegister(OperandVector &Operands);
   OperandMatchResultTy parseImmediate(OperandVector &Operands);
+  OperandMatchResultTy parseOperandWithModifier(OperandVector &Operands);
+  OperandMatchResultTy parseSImm26Operand(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
@@ -74,6 +78,9 @@ public:
 #include "LoongArchGenAsmMatcher.inc"
 #undef GET_OPERAND_DIAGNOSTIC_TYPES
   };
+
+  static bool classifySymbolRef(const MCExpr *Expr,
+                                LoongArchMCExpr::VariantKind &Kind);
 
   LoongArchAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                      const MCInstrInfo &MII, const MCTargetOptions &Options)
@@ -120,7 +127,13 @@ public:
   bool isMem() const override { return false; }
   void setReg(MCRegister PhysReg) { Reg.RegNum = PhysReg; }
 
-  static bool evaluateConstantImm(const MCExpr *Expr, int64_t &Imm) {
+  static bool evaluateConstantImm(const MCExpr *Expr, int64_t &Imm,
+                                  LoongArchMCExpr::VariantKind &VK) {
+    if (auto *LE = dyn_cast<LoongArchMCExpr>(Expr)) {
+      VK = LE->getKind();
+      return false;
+    }
+
     if (auto CE = dyn_cast<MCConstantExpr>(Expr)) {
       Imm = CE->getValue();
       return true;
@@ -134,8 +147,10 @@ public:
       return false;
 
     int64_t Imm;
-    bool IsConstantImm = evaluateConstantImm(getImm(), Imm);
-    return IsConstantImm && isUInt<N>(Imm - P);
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isUInt<N>(Imm - P) &&
+           VK == LoongArchMCExpr::VK_LoongArch_None;
   }
 
   template <unsigned N, unsigned S = 0> bool isSImm() const {
@@ -143,8 +158,10 @@ public:
       return false;
 
     int64_t Imm;
-    bool IsConstantImm = evaluateConstantImm(getImm(), Imm);
-    return IsConstantImm && isShiftedInt<N, S>(Imm);
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isShiftedInt<N, S>(Imm) &&
+           VK == LoongArchMCExpr::VK_LoongArch_None;
   }
 
   bool isUImm2() const { return isUImm<2>(); }
@@ -153,16 +170,184 @@ public:
   bool isUImm5() const { return isUImm<5>(); }
   bool isUImm6() const { return isUImm<6>(); }
   bool isUImm8() const { return isUImm<8>(); }
+  bool isSImm12() const { return isSImm<12>(); }
+
+  bool isSImm12addlike() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
+                       VK == LoongArchMCExpr::VK_LoongArch_PCALA_LO12 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_LO12;
+    return IsConstantImm
+               ? isInt<12>(Imm) && IsValidKind
+               : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+                     IsValidKind;
+  }
+
+  bool isSImm12lu52id() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
+                       VK == LoongArchMCExpr::VK_LoongArch_ABS64_HI12 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_PCALA64_HI12 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_GOT64_HI12 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_GOT64_PC_HI12 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LE64_HI12 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE64_HI12 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE64_PC_HI12;
+    return IsConstantImm
+               ? isInt<12>(Imm) && IsValidKind
+               : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+                     IsValidKind;
+  }
+
   bool isUImm12() const { return isUImm<12>(); }
+
+  bool isUImm12ori() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
+                       VK == LoongArchMCExpr::VK_LoongArch_ABS_LO12 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_PCALA_LO12 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_GOT_LO12 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_GOT_PC_LO12 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LE_LO12 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE_LO12 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_LO12;
+    return IsConstantImm
+               ? isUInt<12>(Imm) && IsValidKind
+               : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+                     IsValidKind;
+  }
+
   bool isUImm14() const { return isUImm<14>(); }
   bool isUImm15() const { return isUImm<15>(); }
-  bool isSImm12() const { return isSImm<12>(); }
+
   bool isSImm14lsl2() const { return isSImm<14, 2>(); }
   bool isSImm16() const { return isSImm<16>(); }
-  bool isSImm16lsl2() const { return isSImm<16, 2>(); }
+
+  bool isSImm16lsl2() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
+                       VK == LoongArchMCExpr::VK_LoongArch_B16;
+    return IsConstantImm
+               ? isShiftedInt<16, 2>(Imm) && IsValidKind
+               : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+                     IsValidKind;
+  }
+
   bool isSImm20() const { return isSImm<20>(); }
-  bool isSImm21lsl2() const { return isSImm<21, 2>(); }
-  bool isSImm26lsl2() const { return isSImm<26, 2>(); }
+
+  bool isSImm20pcalau12i() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
+                       VK == LoongArchMCExpr::VK_LoongArch_PCALA_HI20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_GOT_PC_HI20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE_PC_HI20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LD_PC_HI20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_GD_PC_HI20;
+    return IsConstantImm
+               ? isInt<20>(Imm) && IsValidKind
+               : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+                     IsValidKind;
+  }
+
+  bool isSImm20lu12iw() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
+                       VK == LoongArchMCExpr::VK_LoongArch_ABS_HI20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_GOT_HI20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_GD_HI20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LD_HI20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE_HI20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LE_HI20;
+    return IsConstantImm
+               ? isInt<20>(Imm) && IsValidKind
+               : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+                     IsValidKind;
+  }
+
+  bool isSImm20lu32id() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
+                       VK == LoongArchMCExpr::VK_LoongArch_ABS64_LO20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_PCALA64_LO20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_GOT64_LO20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_GOT64_PC_LO20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE64_LO20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_IE64_PC_LO20 ||
+                       VK == LoongArchMCExpr::VK_LoongArch_TLS_LE64_LO20;
+
+    return IsConstantImm
+               ? isInt<20>(Imm) && IsValidKind
+               : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+                     IsValidKind;
+  }
+
+  bool isSImm21lsl2() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
+                       VK == LoongArchMCExpr::VK_LoongArch_B21;
+    return IsConstantImm
+               ? isShiftedInt<21, 2>(Imm) && IsValidKind
+               : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+                     IsValidKind;
+  }
+
+  bool isSImm26Operand() const {
+    if (!isImm())
+      return false;
+
+    int64_t Imm;
+    LoongArchMCExpr::VariantKind VK = LoongArchMCExpr::VK_LoongArch_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    bool IsValidKind = VK == LoongArchMCExpr::VK_LoongArch_None ||
+                       VK == LoongArchMCExpr::VK_LoongArch_CALL ||
+                       VK == LoongArchMCExpr::VK_LoongArch_CALL_PLT ||
+                       VK == LoongArchMCExpr::VK_LoongArch_B26;
+    return IsConstantImm
+               ? isShiftedInt<26, 2>(Imm) && IsValidKind
+               : LoongArchAsmParser::classifySymbolRef(getImm(), VK) &&
+                     IsValidKind;
+  }
 
   /// Gets location of the first token of this operand.
   SMLoc getStartLoc() const override { return StartLoc; }
@@ -289,6 +474,21 @@ OperandMatchResultTy LoongArchAsmParser::tryParseRegister(unsigned &RegNo,
   llvm_unreachable("Unimplemented function.");
 }
 
+bool LoongArchAsmParser::classifySymbolRef(const MCExpr *Expr,
+                                           LoongArchMCExpr::VariantKind &Kind) {
+  Kind = LoongArchMCExpr::VK_LoongArch_None;
+
+  if (const LoongArchMCExpr *RE = dyn_cast<LoongArchMCExpr>(Expr)) {
+    Kind = RE->getKind();
+    Expr = RE->getSubExpr();
+  }
+
+  MCValue Res;
+  if (Expr->evaluateAsRelocatable(Res, nullptr, nullptr))
+    return Res.getRefKind() == LoongArchMCExpr::VK_LoongArch_None;
+  return false;
+}
+
 OperandMatchResultTy
 LoongArchAsmParser::parseRegister(OperandVector &Operands) {
   if (getLexer().getTok().isNot(AsmToken::Dollar))
@@ -319,9 +519,91 @@ LoongArchAsmParser::parseImmediate(OperandVector &Operands) {
   SMLoc E;
   const MCExpr *Res;
 
-  if (getParser().parseExpression(Res, E))
+  switch (getLexer().getKind()) {
+  default:
+    return MatchOperand_NoMatch;
+  case AsmToken::LParen:
+  case AsmToken::Dot:
+  case AsmToken::Minus:
+  case AsmToken::Plus:
+  case AsmToken::Exclaim:
+  case AsmToken::Tilde:
+  case AsmToken::Integer:
+  case AsmToken::String:
+  case AsmToken::Identifier:
+    if (getParser().parseExpression(Res, E))
+      return MatchOperand_ParseFail;
+    break;
+  case AsmToken::Percent:
+    return parseOperandWithModifier(Operands);
+  }
+
+  Operands.push_back(LoongArchOperand::createImm(Res, S, E));
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy
+LoongArchAsmParser::parseOperandWithModifier(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  SMLoc E;
+
+  if (getLexer().getKind() != AsmToken::Percent) {
+    Error(getLoc(), "expected '%' for operand modifier");
+    return MatchOperand_ParseFail;
+  }
+
+  getParser().Lex(); // Eat '%'
+
+  if (getLexer().getKind() != AsmToken::Identifier) {
+    Error(getLoc(), "expected valid identifier for operand modifier");
+    return MatchOperand_ParseFail;
+  }
+  StringRef Identifier = getParser().getTok().getIdentifier();
+  LoongArchMCExpr::VariantKind VK =
+      LoongArchMCExpr::getVariantKindForName(Identifier);
+  if (VK == LoongArchMCExpr::VK_LoongArch_Invalid) {
+    Error(getLoc(), "unrecognized operand modifier");
+    return MatchOperand_ParseFail;
+  }
+
+  getParser().Lex(); // Eat the identifier
+  if (getLexer().getKind() != AsmToken::LParen) {
+    Error(getLoc(), "expected '('");
+    return MatchOperand_ParseFail;
+  }
+  getParser().Lex(); // Eat '('
+
+  const MCExpr *SubExpr;
+  if (getParser().parseParenExpression(SubExpr, E)) {
+    return MatchOperand_ParseFail;
+  }
+
+  const MCExpr *ModExpr = LoongArchMCExpr::create(SubExpr, VK, getContext());
+  Operands.push_back(LoongArchOperand::createImm(ModExpr, S, E));
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy
+LoongArchAsmParser::parseSImm26Operand(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  const MCExpr *Res;
+
+  if (getLexer().getKind() == AsmToken::Percent)
+    return parseOperandWithModifier(Operands);
+
+  if (getLexer().getKind() != AsmToken::Identifier)
+    return MatchOperand_NoMatch;
+
+  StringRef Identifier;
+  if (getParser().parseIdentifier(Identifier))
     return MatchOperand_ParseFail;
 
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
+
+  MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
+  Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+  Res = LoongArchMCExpr::create(Res, LoongArchMCExpr::VK_LoongArch_CALL,
+                                getContext());
   Operands.push_back(LoongArchOperand::createImm(Res, S, E));
   return MatchOperand_Success;
 }
@@ -330,6 +612,15 @@ LoongArchAsmParser::parseImmediate(OperandVector &Operands) {
 /// information, adding to Operands. Return true upon an error.
 bool LoongArchAsmParser::parseOperand(OperandVector &Operands,
                                       StringRef Mnemonic) {
+  // Check if the current operand has a custom associated parser, if so, try to
+  // custom parse the operand, or fallback to the general approach.
+  OperandMatchResultTy Result =
+      MatchOperandParserImpl(Operands, Mnemonic, /*ParseForAllFeatures=*/true);
+  if (Result == MatchOperand_Success)
+    return false;
+  if (Result == MatchOperand_ParseFail)
+    return true;
+
   if (parseRegister(Operands) == MatchOperand_Success ||
       parseImmediate(Operands) == MatchOperand_Success)
     return false;
@@ -518,12 +809,30 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidUImm12:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 12) - 1);
+  case Match_InvalidUImm12ori:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/0,
+        /*Upper=*/(1 << 12) - 1,
+        "operand must be a symbol with modifier (e.g. %abs_lo12) or an "
+        "integer in the range");
   case Match_InvalidUImm15:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 15) - 1);
   case Match_InvalidSImm12:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/-(1 << 11),
                                       /*Upper=*/(1 << 11) - 1);
+  case Match_InvalidSImm12addlike:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 11),
+        /*Upper=*/(1 << 11) - 1,
+        "operand must be a symbol with modifier (e.g. %pc_lo12) or an integer "
+        "in the range");
+  case Match_InvalidSImm12lu52id:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 11),
+        /*Upper=*/(1 << 11) - 1,
+        "operand must be a symbol with modifier (e.g. %pc64_hi12) or an "
+        "integer in the range");
   case Match_InvalidSImm14lsl2:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, /*Lower=*/-(1 << 15), /*Upper=*/(1 << 15) - 4,
@@ -534,18 +843,39 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm16lsl2:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, /*Lower=*/-(1 << 17), /*Upper=*/(1 << 17) - 4,
-        "immediate must be a multiple of 4 in the range");
+        "operand must be a symbol with modifier (e.g. %b16) or an integer "
+        "in the range");
   case Match_InvalidSImm20:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/-(1 << 19),
                                       /*Upper=*/(1 << 19) - 1);
+  case Match_InvalidSImm20lu12iw:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 19),
+        /*Upper=*/(1 << 19) - 1,
+        "operand must be a symbol with modifier (e.g. %abs_hi20) or an integer "
+        "in the range");
+  case Match_InvalidSImm20lu32id:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 19),
+        /*Upper=*/(1 << 19) - 1,
+        "operand must be a symbol with modifier (e.g. %abs64_lo20) or an "
+        "integer in the range");
+  case Match_InvalidSImm20pcalau12i:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, /*Lower=*/-(1 << 19),
+        /*Upper=*/(1 << 19) - 1,
+        "operand must be a symbol with modifier (e.g. %pc_hi20) or an integer "
+        "in the range");
   case Match_InvalidSImm21lsl2:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, /*Lower=*/-(1 << 22), /*Upper=*/(1 << 22) - 4,
-        "immediate must be a multiple of 4 in the range");
-  case Match_InvalidSImm26lsl2:
+        "operand must be a symbol with modifier (e.g. %b21) or an integer "
+        "in the range");
+  case Match_InvalidSImm26Operand:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, /*Lower=*/-(1 << 27), /*Upper=*/(1 << 27) - 4,
-        "immediate must be a multiple of 4 in the range");
+        "operand must be a bare symbol name or an immediate must be a multiple "
+        "of 4 in the range");
   }
   llvm_unreachable("Unknown match type detected!");
 }

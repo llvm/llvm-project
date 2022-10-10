@@ -2013,7 +2013,7 @@ void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
       case OO_LessLessEqual:
       case OO_GreaterGreaterEqual:
         checkAccess(OE->getArg(1), AK_Read);
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case OO_PlusPlus:
       case OO_MinusMinus:
         checkAccess(OE->getArg(0), AK_Written);
@@ -2026,7 +2026,7 @@ void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
           // Grrr.  operator* can be multiplication...
           checkPtAccess(OE->getArg(0), AK_Read);
         }
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       default: {
         // TODO: get rid of this, and rely on pass-by-ref instead.
         const Expr *Obj = OE->getArg(0);
@@ -2087,6 +2087,19 @@ static Expr *buildFakeCtorCall(CXXConstructorDecl *CD, ArrayRef<Expr *> Args,
                                   SourceRange(Loc, Loc));
 }
 
+static Expr *UnpackConstruction(Expr *E) {
+  if (auto *CE = dyn_cast<CastExpr>(E))
+    if (CE->getCastKind() == CK_NoOp)
+      E = CE->getSubExpr()->IgnoreParens();
+  if (auto *CE = dyn_cast<CastExpr>(E))
+    if (CE->getCastKind() == CK_ConstructorConversion ||
+        CE->getCastKind() == CK_UserDefinedConversion)
+      E = CE->getSubExpr();
+  if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
+    E = BTE->getSubExpr();
+  return E;
+}
+
 void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
   // adjust the context
   LVarCtx = Analyzer->LocalVarMap.getNextContext(CtxIndex, S, LVarCtx);
@@ -2101,13 +2114,7 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
       // handle constructors that involve temporaries
       if (auto *EWC = dyn_cast<ExprWithCleanups>(E))
         E = EWC->getSubExpr()->IgnoreParens();
-      if (auto *CE = dyn_cast<CastExpr>(E))
-        if (CE->getCastKind() == CK_NoOp ||
-            CE->getCastKind() == CK_ConstructorConversion ||
-            CE->getCastKind() == CK_UserDefinedConversion)
-          E = CE->getSubExpr()->IgnoreParens();
-      if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
-        E = BTE->getSubExpr()->IgnoreParens();
+      E = UnpackConstruction(E);
 
       if (const auto *CE = dyn_cast<CXXConstructExpr>(E)) {
         const auto *CtorD = dyn_cast_or_null<NamedDecl>(CE->getConstructor());

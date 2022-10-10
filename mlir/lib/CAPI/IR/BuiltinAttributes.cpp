@@ -312,6 +312,106 @@ int64_t mlirElementsAttrGetNumElements(MlirAttribute attr) {
 }
 
 //===----------------------------------------------------------------------===//
+// Dense array attribute.
+//===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
+// IsA support.
+
+bool mlirAttributeIsADenseBoolArray(MlirAttribute attr) {
+  return unwrap(attr).isa<DenseBoolArrayAttr>();
+}
+bool mlirAttributeIsADenseI8Array(MlirAttribute attr) {
+  return unwrap(attr).isa<DenseI8ArrayAttr>();
+}
+bool mlirAttributeIsADenseI16Array(MlirAttribute attr) {
+  return unwrap(attr).isa<DenseI16ArrayAttr>();
+}
+bool mlirAttributeIsADenseI32Array(MlirAttribute attr) {
+  return unwrap(attr).isa<DenseI32ArrayAttr>();
+}
+bool mlirAttributeIsADenseI64Array(MlirAttribute attr) {
+  return unwrap(attr).isa<DenseI64ArrayAttr>();
+}
+bool mlirAttributeIsADenseF32Array(MlirAttribute attr) {
+  return unwrap(attr).isa<DenseF32ArrayAttr>();
+}
+bool mlirAttributeIsADenseF64Array(MlirAttribute attr) {
+  return unwrap(attr).isa<DenseF64ArrayAttr>();
+}
+
+//===----------------------------------------------------------------------===//
+// Constructors.
+
+MlirAttribute mlirDenseBoolArrayGet(MlirContext ctx, intptr_t size,
+                                    int const *values) {
+  SmallVector<bool, 4> elements(values, values + size);
+  return wrap(DenseBoolArrayAttr::get(unwrap(ctx), elements));
+}
+MlirAttribute mlirDenseI8ArrayGet(MlirContext ctx, intptr_t size,
+                                  int8_t const *values) {
+  return wrap(
+      DenseI8ArrayAttr::get(unwrap(ctx), ArrayRef<int8_t>(values, size)));
+}
+MlirAttribute mlirDenseI16ArrayGet(MlirContext ctx, intptr_t size,
+                                   int16_t const *values) {
+  return wrap(
+      DenseI16ArrayAttr::get(unwrap(ctx), ArrayRef<int16_t>(values, size)));
+}
+MlirAttribute mlirDenseI32ArrayGet(MlirContext ctx, intptr_t size,
+                                   int32_t const *values) {
+  return wrap(
+      DenseI32ArrayAttr::get(unwrap(ctx), ArrayRef<int32_t>(values, size)));
+}
+MlirAttribute mlirDenseI64ArrayGet(MlirContext ctx, intptr_t size,
+                                   int64_t const *values) {
+  return wrap(
+      DenseI64ArrayAttr::get(unwrap(ctx), ArrayRef<int64_t>(values, size)));
+}
+MlirAttribute mlirDenseF32ArrayGet(MlirContext ctx, intptr_t size,
+                                   float const *values) {
+  return wrap(
+      DenseF32ArrayAttr::get(unwrap(ctx), ArrayRef<float>(values, size)));
+}
+MlirAttribute mlirDenseF64ArrayGet(MlirContext ctx, intptr_t size,
+                                   double const *values) {
+  return wrap(
+      DenseF64ArrayAttr::get(unwrap(ctx), ArrayRef<double>(values, size)));
+}
+
+//===----------------------------------------------------------------------===//
+// Accessors.
+
+intptr_t mlirDenseArrayGetNumElements(MlirAttribute attr) {
+  return unwrap(attr).cast<DenseArrayAttr>().size();
+}
+
+//===----------------------------------------------------------------------===//
+// Indexed accessors.
+
+bool mlirDenseBoolArrayGetElement(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<DenseBoolArrayAttr>()[pos];
+}
+int8_t mlirDenseI8ArrayGetElement(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<DenseI8ArrayAttr>()[pos];
+}
+int16_t mlirDenseI16ArrayGetElement(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<DenseI16ArrayAttr>()[pos];
+}
+int32_t mlirDenseI32ArrayGetElement(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<DenseI32ArrayAttr>()[pos];
+}
+int64_t mlirDenseI64ArrayGetElement(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<DenseI64ArrayAttr>()[pos];
+}
+float mlirDenseF32ArrayGetElement(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<DenseF32ArrayAttr>()[pos];
+}
+double mlirDenseF64ArrayGetElement(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<DenseF64ArrayAttr>()[pos];
+}
+
+//===----------------------------------------------------------------------===//
 // Dense elements attribute.
 //===----------------------------------------------------------------------===//
 
@@ -599,14 +699,6 @@ const void *mlirDenseElementsAttrGetRawData(MlirAttribute attr) {
 }
 
 //===----------------------------------------------------------------------===//
-// Opaque elements attribute.
-//===----------------------------------------------------------------------===//
-
-bool mlirAttributeIsAOpaqueElements(MlirAttribute attr) {
-  return unwrap(attr).isa<OpaqueElementsAttr>();
-}
-
-//===----------------------------------------------------------------------===//
 // Sparse elements attribute.
 //===----------------------------------------------------------------------===//
 
@@ -629,4 +721,32 @@ MlirAttribute mlirSparseElementsAttrGetIndices(MlirAttribute attr) {
 
 MlirAttribute mlirSparseElementsAttrGetValues(MlirAttribute attr) {
   return wrap(unwrap(attr).cast<SparseElementsAttr>().getValues());
+}
+
+//===----------------------------------------------------------------------===//
+// Strided layout attribute.
+//===----------------------------------------------------------------------===//
+
+bool mlirAttributeIsAStridedLayout(MlirAttribute attr) {
+  return unwrap(attr).isa<StridedLayoutAttr>();
+}
+
+MlirAttribute mlirStridedLayoutAttrGet(MlirContext ctx, int64_t offset,
+                                       intptr_t numStrides,
+                                       const int64_t *strides) {
+  return wrap(StridedLayoutAttr::get(unwrap(ctx), offset,
+                                     ArrayRef<int64_t>(strides, numStrides)));
+}
+
+int64_t mlirStridedLayoutAttrGetOffset(MlirAttribute attr) {
+  return unwrap(attr).cast<StridedLayoutAttr>().getOffset();
+}
+
+intptr_t mlirStridedLayoutAttrGetNumStrides(MlirAttribute attr) {
+  return static_cast<intptr_t>(
+      unwrap(attr).cast<StridedLayoutAttr>().getStrides().size());
+}
+
+int64_t mlirStridedLayoutAttrGetStride(MlirAttribute attr, intptr_t pos) {
+  return unwrap(attr).cast<StridedLayoutAttr>().getStrides()[pos];
 }

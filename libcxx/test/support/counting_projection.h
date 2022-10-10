@@ -28,7 +28,7 @@ public:
   template <class T>
   constexpr decltype(auto) operator()(T&& value) const {
     ++(*count_);
-    return proj_(std::forward<T>(value));
+    return std::invoke(proj_, std::forward<T>(value));
   }
 };
 

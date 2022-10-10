@@ -53,8 +53,12 @@ struct Session {
     StringMap<MemoryRegionInfo> GOTEntryInfos;
   };
 
+  using DynLibJDMap = std::map<std::string, orc::JITDylib *>;
   using SymbolInfoMap = StringMap<MemoryRegionInfo>;
   using FileInfoMap = StringMap<FileInfo>;
+
+  Expected<orc::JITDylib *> getOrLoadDynamicLibrary(StringRef LibPath);
+  Error loadAndLinkDynamicLibrary(orc::JITDylib &JD, StringRef LibPath);
 
   Expected<FileInfo &> findFileInfo(StringRef FileName);
   Expected<MemoryRegionInfo &> findSectionInfo(StringRef FileName,
@@ -67,6 +71,8 @@ struct Session {
   bool isSymbolRegistered(StringRef Name);
   Expected<MemoryRegionInfo &> findSymbolInfo(StringRef SymbolName,
                                               Twine ErrorMsgStem);
+
+  DynLibJDMap DynLibJDs;
 
   SymbolInfoMap SymbolInfos;
   FileInfoMap FileInfos;

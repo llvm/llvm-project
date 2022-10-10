@@ -663,28 +663,28 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
   using I = Iter;
 
-  test(simple_in, [&](I b, I e) { std::any_of(b, e, is_neg); });
-  test(simple_in, [&](I b, I e) { std::all_of(b, e, is_neg); });
-  test(simple_in, [&](I b, I e) { std::none_of(b, e, is_neg); });
-  test(simple_in, [&](I b, I e) { std::find(b, e, T{1}); });
-  test(simple_in, [&](I b, I e) { std::find_if(b, e, is_neg); });
-  test(simple_in, [&](I b, I e) { std::find_if_not(b, e, is_neg); });
+  test(simple_in, [&](I b, I e) { (void) std::any_of(b, e, is_neg); });
+  test(simple_in, [&](I b, I e) { (void) std::all_of(b, e, is_neg); });
+  test(simple_in, [&](I b, I e) { (void) std::none_of(b, e, is_neg); });
+  test(simple_in, [&](I b, I e) { (void) std::find(b, e, T{1}); });
+  test(simple_in, [&](I b, I e) { (void) std::find_if(b, e, is_neg); });
+  test(simple_in, [&](I b, I e) { (void) std::find_if_not(b, e, is_neg); });
   // TODO: find_first_of
-  test(simple_in, [&](I b, I e) { std::adjacent_find(b, e); });
+  test(simple_in, [&](I b, I e) { (void) std::adjacent_find(b, e); });
   // TODO: mismatch
   // TODO: equal
   // TODO: lexicographical_compare
   // TODO: partition_point
-  test(sorted_in, [&](I b, I e) { std::lower_bound(b, e, x); });
-  test(sorted_in, [&](I b, I e) { std::upper_bound(b, e, x); });
-  test(sorted_in, [&](I b, I e) { std::equal_range(b, e, x); });
-  test(sorted_in, [&](I b, I e) { std::binary_search(b, e, x); });
+  test(sorted_in, [&](I b, I e) { (void) std::lower_bound(b, e, x); });
+  test(sorted_in, [&](I b, I e) { (void) std::upper_bound(b, e, x); });
+  test(sorted_in, [&](I b, I e) { (void) std::equal_range(b, e, x); });
+  test(sorted_in, [&](I b, I e) { (void) std::binary_search(b, e, x); });
   // `min`, `max` and `minmax` don't use iterators.
-  test(simple_in, [&](I b, I e) { std::min_element(b, e); });
-  test(simple_in, [&](I b, I e) { std::max_element(b, e); });
-  test(simple_in, [&](I b, I e) { std::minmax_element(b, e); });
-  test(simple_in, [&](I b, I e) { std::count(b, e, x); });
-  test(simple_in, [&](I b, I e) { std::count_if(b, e, is_neg); });
+  test(simple_in, [&](I b, I e) { (void) std::min_element(b, e); });
+  test(simple_in, [&](I b, I e) { (void) std::max_element(b, e); });
+  test(simple_in, [&](I b, I e) { (void) std::minmax_element(b, e); });
+  test(simple_in, [&](I b, I e) { (void) std::count(b, e, x); });
+  test(simple_in, [&](I b, I e) { (void) std::count_if(b, e, is_neg); });
   // TODO: search
   // TODO: search_n
   // TODO: find_end
@@ -696,27 +696,27 @@ TEST_CONSTEXPR_CXX20 bool test() {
   // TODO: is_heap_until
   // `clamp` doesn't use iterators.
   // TODO: is_permutation
-  test(simple_in, [&](I b, I e) { std::for_each(b, e, is_neg); });
+  test(simple_in, [&](I b, I e) { (void) std::for_each(b, e, is_neg); });
 #if TEST_STD_VER > 14
-  test_n(simple_in, [&](I b, size_t n) { std::for_each_n(b, n, is_neg); });
+  test_n(simple_in, [&](I b, size_t n) { (void) std::for_each_n(b, n, is_neg); });
 #endif
-  test(simple_in, [&](I b, I e) { std::copy(b, e, out); });
-  test_n(simple_in, [&](I b, size_t n) { std::copy_n(b, n, out); });
-  test(simple_in, [&](I b, I e) { std::copy_backward(b, e, out + N); });
-  test(simple_in, [&](I b, I e) { std::copy_if(b, e, out, is_neg); });
-  test(simple_in, [&](I b, I e) { std::move(b, e, out); });
-  test(simple_in, [&](I b, I e) { std::move_backward(b, e, out + N); });
-  test(simple_in, [&](I b, I e) { std::transform(b, e, out, identity); });
-  test(simple_in, [&](I b, I e) { std::generate(b, e, gen); });
-  test_n(simple_in, [&](I b, size_t n) { std::generate_n(b, n, gen); });
-  test(simple_in, [&](I b, I e) { std::remove_copy(b, e, out, x); });
-  test(simple_in, [&](I b, I e) { std::remove_copy_if(b, e, out, is_neg); });
-  test(simple_in, [&](I b, I e) { std::replace(b, e, x, y); });
-  test(simple_in, [&](I b, I e) { std::replace_if(b, e, is_neg, y); });
-  test(simple_in, [&](I b, I e) { std::replace_copy(b, e, out, x, y); });
-  test(simple_in, [&](I b, I e) { std::replace_copy_if(b, e, out, is_neg, y); });
+  test(simple_in, [&](I b, I e) { (void) std::copy(b, e, out); });
+  test_n(simple_in, [&](I b, size_t n) { (void) std::copy_n(b, n, out); });
+  test(simple_in, [&](I b, I e) { (void) std::copy_backward(b, e, out + N); });
+  test(simple_in, [&](I b, I e) { (void) std::copy_if(b, e, out, is_neg); });
+  test(simple_in, [&](I b, I e) { (void) std::move(b, e, out); });
+  test(simple_in, [&](I b, I e) { (void) std::move_backward(b, e, out + N); });
+  test(simple_in, [&](I b, I e) { (void) std::transform(b, e, out, identity); });
+  test(simple_in, [&](I b, I e) { (void) std::generate(b, e, gen); });
+  test_n(simple_in, [&](I b, size_t n) { (void) std::generate_n(b, n, gen); });
+  test(simple_in, [&](I b, I e) { (void) std::remove_copy(b, e, out, x); });
+  test(simple_in, [&](I b, I e) { (void) std::remove_copy_if(b, e, out, is_neg); });
+  test(simple_in, [&](I b, I e) { (void) std::replace(b, e, x, y); });
+  test(simple_in, [&](I b, I e) { (void) std::replace_if(b, e, is_neg, y); });
+  test(simple_in, [&](I b, I e) { (void) std::replace_copy(b, e, out, x, y); });
+  test(simple_in, [&](I b, I e) { (void) std::replace_copy_if(b, e, out, is_neg, y); });
   // TODO: swap_ranges
-  test(simple_in, [&](I b, I e) { std::reverse_copy(b, e, out); });
+  test(simple_in, [&](I b, I e) { (void) std::reverse_copy(b, e, out); });
   // TODO: rotate_copy
   // TODO: sample
   // TODO: unique_copy
@@ -727,29 +727,29 @@ TEST_CONSTEXPR_CXX20 bool test() {
   // TODO: set_intersection
   // TODO: set_symmetric_difference
   // TODO: set_union
-  test(simple_in, [&](I b, I e) { std::remove(b, e, x); });
-  test(simple_in, [&](I b, I e) { std::remove_if(b, e, is_neg); });
-  test(simple_in, [&](I b, I e) { std::reverse(b, e); });
+  test(simple_in, [&](I b, I e) { (void) std::remove(b, e, x); });
+  test(simple_in, [&](I b, I e) { (void) std::remove_if(b, e, is_neg); });
+  test(simple_in, [&](I b, I e) { (void) std::reverse(b, e); });
   // TODO: rotate
   if (!TEST_IS_CONSTANT_EVALUATED)
-    test(simple_in, [&](I b, I e) { std::shuffle(b, e, rand_gen()); });
+    test(simple_in, [&](I b, I e) { (void) std::shuffle(b, e, rand_gen()); });
   // TODO: unique
-  test(simple_in, [&](I b, I e) { std::partition(b, e, is_neg); });
+  test(simple_in, [&](I b, I e) { (void) std::partition(b, e, is_neg); });
   if (!TEST_IS_CONSTANT_EVALUATED)
-    test(simple_in, [&](I b, I e) { std::stable_partition(b, e, is_neg); });
+    test(simple_in, [&](I b, I e) { (void) std::stable_partition(b, e, is_neg); });
   if (!TEST_IS_CONSTANT_EVALUATED)
-    test(sort_test_in, [&](I b, I e) { std::sort(b, e); });
+    test(sort_test_in, [&](I b, I e) { (void) std::sort(b, e); });
   if (!TEST_IS_CONSTANT_EVALUATED)
-    test(sort_test_in, [&](I b, I e) { std::stable_sort(b, e); });
+    test(sort_test_in, [&](I b, I e) { (void) std::stable_sort(b, e); });
   // TODO: partial_sort
   // TODO: nth_element
   // TODO: inplace_merge
-  test(simple_in, [&](I b, I e) { std::make_heap(b, e); });
+  test(simple_in, [&](I b, I e) { (void) std::make_heap(b, e); });
   // TODO: push_heap
   // TODO: pop_heap
   // TODO: sort_heap
-  test(simple_in, [&](I b, I e) { std::prev_permutation(b, e); });
-  test(simple_in, [&](I b, I e) { std::next_permutation(b, e); });
+  test(simple_in, [&](I b, I e) { (void) std::prev_permutation(b, e); });
+  test(simple_in, [&](I b, I e) { (void) std::next_permutation(b, e); });
 
   // TODO: algorithms in `<numeric>`
   // TODO: algorithms in `<memory>`

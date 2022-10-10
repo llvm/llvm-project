@@ -15,9 +15,7 @@ Node0x1 [shape=record,label=
         "environment": null,
         "store": null,
         "constraints": null,
-        "dynamic_types": null,
-        "constructing_objects": null,
-        "index_of_element": null,
+        "dynamic_types": null,        
         "checker_messages": [
           { "checker": "FooChecker", "messages": [
             "Foo: Bar"
@@ -74,9 +72,7 @@ Node0x4 [shape=record,label=
         "environment": null,
         "store": null,
         "constraints": null,
-        "dynamic_types": null,
-        "constructing_objects": null,
-        "index_of_element": null,
+        "dynamic_types": null,        
         "checker_messages": [
           { "checker": "FooChecker", "messages": [
             "Foo: Bar",

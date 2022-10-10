@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -triple x86_64-windows-msvc %s -filetype=obj -o %t.obj
-# RUN: lld-link %t.obj -opt:noref -guard:cf -out:%t.exe -entry:main 2>&1 | FileCheck %s --check-prefix=ERRS
+# RUN: lld-link %t.obj -opt:noref -guard:cf,nolongjmp -out:%t.exe -entry:main 2>&1 | FileCheck %s --check-prefix=ERRS
 # RUN: llvm-readobj --file-headers --coff-load-config %t.exe | FileCheck %s
 
 # ERRS: warning: ignoring .gfids$y symbol table index section in object {{.*}}gfids-corrupt{{.*}}
@@ -15,7 +15,10 @@
 # CHECK:   GuardCFCheckDispatch: 0x0
 # CHECK:   GuardCFFunctionTable: 0x14000{{.*}}
 # CHECK:   GuardCFFunctionCount: 2
-# CHECK:   GuardFlags: 0x500
+# CHECK:   GuardFlags [ (0x500)
+# CHECK:     CF_FUNCTION_TABLE_PRESENT (0x400)
+# CHECK:     CF_INSTRUMENTED (0x100)
+# CHECK:   ]
 # CHECK:   GuardAddressTakenIatEntryTable: 0x0
 # CHECK:   GuardAddressTakenIatEntryCount: 0
 # CHECK:   GuardLongJumpTargetTable: 0x0

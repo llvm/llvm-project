@@ -1,4 +1,4 @@
-# RUN: SUPPORT_LIB=%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext \
+# RUN: SUPPORT_LIB=%mlir_lib_dir/libmlir_c_runner_utils%shlibext \
 # RUN:   %PYTHON %s | FileCheck %s
 
 import ctypes
@@ -183,18 +183,17 @@ def main():
   # CHECK-LABEL: TEST: test_stress
   print("\nTEST: test_stress")
   with ir.Context() as ctx, ir.Location.unknown():
-    par = 0
-    vec = 0
     vl = 1
     e = False
     # Disable direct sparse2sparse conversion, because it doubles the time!
     # TODO: While direct s2s is far too slow for per-commit testing,
     # we should have some framework ensure that we run this test with
     # `s2s=0` on a regular basis, to ensure that it does continue to work.
+    # TODO: be sure to test s2s=0 together with singletons.
     s2s = 1
     sparsification_options = (
-        f'parallelization-strategy={par} '
-        f'vectorization-strategy={vec} '
+        f'parallelization-strategy=none '
+        f'vectorization-strategy=none '
         f'vl={vl} '
         f'enable-simd-index32={e} '
         f's2s-strategy={s2s}')
@@ -202,10 +201,12 @@ def main():
         options=sparsification_options, opt_level=0, shared_libs=[support_lib])
     f64 = ir.F64Type.get()
     # Be careful about increasing this because
-    #     len(types) = 1 + 2^rank * rank! * len(bitwidths)^2
+    #     len(types) = 1 + len(level_choices)^rank * rank! * len(bitwidths)^2
     shape = range(2, 6)
     rank = len(shape)
     # All combinations.
+    # TODO: add singleton here too; which requires updating how `np_arg0`
+    # is initialized below.
     levels = list(itertools.product(*itertools.repeat(
       [st.DimLevelType.dense, st.DimLevelType.compressed], rank)))
     # All permutations.
@@ -218,7 +219,7 @@ def main():
       for ordering in orderings:
         for pwidth in bitwidths:
           for iwidth in bitwidths:
-            attr = st.EncodingAttr.get(level, ordering, pwidth, iwidth)
+            attr = st.EncodingAttr.get(level, ordering, None, pwidth, iwidth)
             types.append(ir.RankedTensorType.get(shape, f64, attr))
     #
     # For exhaustiveness we should have one or more StressTest, such

@@ -534,8 +534,8 @@ define <16 x float> @test_masked_permps_v16f32(ptr %vp, <16 x float> %vec2) {
 define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; SKX64-LABEL: test_demandedelts_pshufb_v32i8_v16i8:
 ; SKX64:       # %bb.0:
-; SKX64-NEXT:    vmovdqa 32(%rdi), %xmm0
-; SKX64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[12,13,14,15,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; SKX64-NEXT:    vpbroadcastd 44(%rdi), %xmm0
+; SKX64-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; SKX64-NEXT:    vmovdqa %ymm0, 672(%rsi)
 ; SKX64-NEXT:    vmovdqa 208(%rdi), %xmm0
 ; SKX64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
@@ -545,11 +545,11 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ;
 ; KNL64-LABEL: test_demandedelts_pshufb_v32i8_v16i8:
 ; KNL64:       # %bb.0:
-; KNL64-NEXT:    vmovdqa 32(%rdi), %xmm0
-; KNL64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[12,13,14,15,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; KNL64-NEXT:    vpbroadcastd 44(%rdi), %xmm0
+; KNL64-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; KNL64-NEXT:    vmovdqa %ymm0, 672(%rsi)
-; KNL64-NEXT:    vmovdqa 208(%rdi), %xmm0
-; KNL64-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
+; KNL64-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,0,2,3]
+; KNL64-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; KNL64-NEXT:    vmovdqa %ymm0, 832(%rsi)
 ; KNL64-NEXT:    retq
 ;
@@ -557,8 +557,8 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; SKX32:       # %bb.0:
 ; SKX32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SKX32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; SKX32-NEXT:    vmovdqa 32(%ecx), %xmm0
-; SKX32-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[12,13,14,15,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; SKX32-NEXT:    vpbroadcastd 44(%ecx), %xmm0
+; SKX32-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; SKX32-NEXT:    vmovdqa %ymm0, 672(%eax)
 ; SKX32-NEXT:    vmovdqa 208(%ecx), %xmm0
 ; SKX32-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
@@ -569,13 +569,13 @@ define void @test_demandedelts_pshufb_v32i8_v16i8(ptr %src, ptr %dst) {
 ; KNL32-LABEL: test_demandedelts_pshufb_v32i8_v16i8:
 ; KNL32:       # %bb.0:
 ; KNL32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL32-NEXT:    vmovdqa 32(%eax), %xmm0
-; KNL32-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[12,13,14,15,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
 ; KNL32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; KNL32-NEXT:    vmovdqa %ymm0, 672(%ecx)
-; KNL32-NEXT:    vmovdqa 208(%eax), %xmm0
-; KNL32-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7,0,1,2,3],zero,zero,zero,zero,zero,zero,zero,zero
-; KNL32-NEXT:    vmovdqa %ymm0, 832(%ecx)
+; KNL32-NEXT:    vpbroadcastd 44(%ecx), %xmm0
+; KNL32-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; KNL32-NEXT:    vmovdqa %ymm0, 672(%eax)
+; KNL32-NEXT:    vpshufd {{.*#+}} xmm0 = mem[1,0,2,3]
+; KNL32-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
+; KNL32-NEXT:    vmovdqa %ymm0, 832(%eax)
 ; KNL32-NEXT:    retl
   %t87 = load <16 x i32>, ptr %src, align 64
   %t88 = extractelement <16 x i32> %t87, i64 11

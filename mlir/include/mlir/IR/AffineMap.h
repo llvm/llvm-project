@@ -243,10 +243,19 @@ public:
 
   /// Returns a new AffineMap with the same number of dims and symbols and one
   /// less result at `pos`, dropped.
-  AffineMap dropResult(unsigned pos) {
+  AffineMap dropResult(int64_t pos) {
     auto exprs = llvm::to_vector<4>(getResults());
     exprs.erase(exprs.begin() + pos);
     return AffineMap::get(getNumDims(), getNumSymbols(), exprs, getContext());
+  }
+
+  // Returns a new AffineMap with the same number of dims and symbols, but all
+  // positions in `positions` dropped from results.
+  AffineMap dropResults(ArrayRef<int64_t> positions) {
+    AffineMap resultMap = *this;
+    for (int64_t pos : positions)
+      resultMap = resultMap.dropResult(pos);
+    return resultMap;
   }
 
   /// Returns a new AffineMap with the same number of dims and symbols and an
@@ -317,6 +326,12 @@ public:
   /// Returns the null AffineMap if `numResults` == 0.
   /// Returns `*this` if `numResults` >= `this->getNumResults()`.
   AffineMap getMinorSubMap(unsigned numResults) const;
+
+  /// Get the largest known divisor of all map expressions.
+  /// For eg: for (d0, d1) -> (8*d0 + 4, 4*d1 + 2), the result is 2.
+  /// In the case of maps with no expressions or all zero constant expressions,
+  /// the largest known divisor is trivially the max uint64_t value.
+  uint64_t getLargestKnownDivisorOfMapExprs();
 
   friend ::llvm::hash_code hash_value(AffineMap arg);
 

@@ -848,18 +848,19 @@ Constant *llvm::ConstantFoldUnaryInstruction(unsigned Opcode, Constant *C) {
 
     Type *Ty = IntegerType::get(VTy->getContext(), 32);
     // Fast path for splatted constants.
-    if (Constant *Splat = C->getSplatValue()) {
-      Constant *Elt = ConstantExpr::get(Opcode, Splat);
-      return ConstantVector::getSplat(VTy->getElementCount(), Elt);
-    }
+    if (Constant *Splat = C->getSplatValue())
+      if (Constant *Elt = ConstantFoldUnaryInstruction(Opcode, Splat))
+        return ConstantVector::getSplat(VTy->getElementCount(), Elt);
 
     // Fold each element and create a vector constant from those constants.
     SmallVector<Constant *, 16> Result;
     for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i) {
       Constant *ExtractIdx = ConstantInt::get(Ty, i);
       Constant *Elt = ConstantExpr::getExtractElement(C, ExtractIdx);
-
-      Result.push_back(ConstantExpr::get(Opcode, Elt));
+      Constant *Res = ConstantFoldUnaryInstruction(Opcode, Elt);
+      if (!Res)
+        return nullptr;
+      Result.push_back(Res);
     }
 
     return ConstantVector::get(Result);
@@ -903,7 +904,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         // Handle undef ^ undef -> 0 special case. This is a common
         // idiom (misuse).
         return Constant::getNullValue(C1->getType());
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Instruction::Add:
     case Instruction::Sub:
       return UndefValue::get(C1->getType());
@@ -979,7 +980,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       // -0.0 - undef --> undef (consistent with "fneg undef")
       if (match(C1, m_NegZeroFP()) && isa<UndefValue>(C2))
         return C2;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Instruction::FAdd:
     case Instruction::FMul:
     case Instruction::FDiv:
@@ -1513,7 +1514,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
       if (const GlobalValue *GV = dyn_cast<GlobalValue>(CE1Op0))
         if (const GlobalValue *GV2 = dyn_cast<GlobalValue>(V2))
           return areGlobalsPotentiallyEqual(GV, GV2);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Instruction::UIToFP:
     case Instruction::SIToFP:
     case Instruction::ZExt:

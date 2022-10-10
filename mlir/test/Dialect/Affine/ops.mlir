@@ -103,8 +103,8 @@ func.func @valid_symbols(%arg0: index, %arg1: index, %arg2: index) {
     affine.for %arg4 = 0 to %13 step 264 {
       %18 = memref.dim %0, %c0 : memref<?x?xf32>
       %20 = memref.subview %0[%c0, %c0][%18,%arg4][%c1,%c1] : memref<?x?xf32>
-                          to memref<?x?xf32, offset : ?, strides : [?, ?]>
-      %24 = memref.dim %20, %c0 : memref<?x?xf32, offset : ?, strides : [?, ?]>
+                          to memref<?x?xf32, strided<[?, ?], offset: ?>>
+      %24 = memref.dim %20, %c0 : memref<?x?xf32, strided<[?, ?], offset: ?>>
       affine.for %arg5 = 0 to %24 step 768 {
         "foo"() : () -> ()
       }
@@ -260,3 +260,12 @@ func.func @affine_for_multiple_yield(%buffer: memref<1024xf32>) -> (f32, f32) {
 // CHECK-NEXT:   %[[res2:.*]] = arith.addf %{{.*}}, %[[iter_arg2]] : f32
 // CHECK-NEXT:   affine.yield %[[res1]], %[[res2]] : f32, f32
 // CHECK-NEXT: }
+
+// -----
+
+// CHECK-LABEL: func @delinearize
+func.func @delinearize(%linear_idx: index, %basis0: index, %basis1 :index) -> (index, index) {
+  // CHECK: affine.delinearize_index %{{.+}} into (%{{.+}}, %{{.+}}) : index, index
+  %1:2 = affine.delinearize_index %linear_idx into (%basis0, %basis1) : index, index
+  return %1#0, %1#1 : index, index
+}

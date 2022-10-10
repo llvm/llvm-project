@@ -93,6 +93,10 @@ void InstrProfSummaryBuilder::addRecord(const InstrProfRecord &R) {
   // instrumentation profiles.
   // Eventually MaxFunctionCount will become obsolete and this can be
   // removed.
+
+  if (R.getCountPseudoKind() != InstrProfRecord::NotPseudo)
+    return;
+
   addEntryCount(R.Counts[0]);
   for (size_t I = 1, E = R.Counts.size(); I < E; ++I)
     addInternalCount(R.Counts[I]);
@@ -220,22 +224,17 @@ std::unique_ptr<ProfileSummary> InstrProfSummaryBuilder::getSummary() {
 }
 
 void InstrProfSummaryBuilder::addEntryCount(uint64_t Count) {
+  assert(Count <= getInstrMaxCountValue() &&
+         "Count value should be less than the max count value.");
   NumFunctions++;
-
-  // Skip invalid count.
-  if (Count == (uint64_t)-1)
-    return;
-
   addCount(Count);
   if (Count > MaxFunctionCount)
     MaxFunctionCount = Count;
 }
 
 void InstrProfSummaryBuilder::addInternalCount(uint64_t Count) {
-  // Skip invalid count.
-  if (Count == (uint64_t)-1)
-    return;
-
+  assert(Count <= getInstrMaxCountValue() &&
+         "Count value should be less than the max count value.");
   addCount(Count);
   if (Count > MaxInternalBlockCount)
     MaxInternalBlockCount = Count;

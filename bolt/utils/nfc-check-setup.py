@@ -26,7 +26,10 @@ def main():
             Passes the options through to llvm-bolt-wrapper.
             '''))
     parser.add_argument('build_dir', nargs='?', default=os.getcwd(),
-                        help='Path to BOLT build directory, default is current directory')
+                        help='Path to BOLT build directory, default is current '
+                             'directory')
+    parser.add_argument('--switch-back', default=False, action='store_true',
+                        help='Checkout back to the starting revision')
     args, wrapper_args = parser.parse_known_args()
     bolt_path = f'{args.build_dir}/bin/llvm-bolt'
 
@@ -50,8 +53,13 @@ def main():
     # memorize the old hash for logging
     old_ref = get_git_ref_or_rev(source_dir)
 
-    # save local changes before checkout
-    subprocess.run(shlex.split("git stash"), cwd=source_dir)
+    # determine whether a stash is needed
+    stash = subprocess.run(shlex.split("git status --porcelain"), cwd=source_dir,
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                           text=True).stdout
+    if stash:
+        # save local changes before checkout
+        subprocess.run(shlex.split("git stash push -u"), cwd=source_dir)
     # check out the previous commit
     subprocess.run(shlex.split("git checkout -f HEAD^"), cwd=source_dir)
     # get the parent commit hash for logging
@@ -65,17 +73,22 @@ def main():
     ini = subprocess.check_output(
         shlex.split(
             f"{wrapper_path} {bolt_path}.old {bolt_path}.new") + wrapper_args,
-        text=True)
+            text=True)
     with open(f'{args.build_dir}/bin/llvm-bolt-wrapper.ini', 'w') as f:
         f.write(ini)
     # symlink llvm-bolt-wrapper
     os.symlink(wrapper_path, bolt_path)
-    print(f"The repository {source_dir} has been switched from rev {old_ref} "
-          f"to {new_ref}. Local changes were stashed. Switch back using\n\t"
-          f"git checkout {old_ref}\n"
-          "Current build directory is ready to run BOLT tests, e.g.\n\t"
-          "bin/llvm-lit -sv tools/bolt/test\nor\n\t"
-          "bin/llvm-lit -sv tools/bolttests")
+    if args.switch_back:
+        if stash:
+            subprocess.run(shlex.split("git stash pop"), cwd=source_dir)
+        subprocess.run(shlex.split(f"git checkout {old_ref}"), cwd=source_dir)
+    else:
+        print(f"The repository {source_dir} has been switched from {old_ref} "
+              f"to {new_ref}. Local changes were stashed. Switch back using\n\t"
+              f"git checkout {old_ref}\n")
+    print(f"Build directory {args.build_dir} is ready to run BOLT tests, e.g.\n"
+          "\tbin/llvm-lit -sv tools/bolt/test\nor\n"
+          "\tbin/llvm-lit -sv tools/bolttests")
 
 
 if __name__ == "__main__":

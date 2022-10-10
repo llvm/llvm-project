@@ -57,6 +57,9 @@ LogicalResult verifyFillInterface(Operation *op);
 /// Verify that `op` conforms to the invariants of StructuredOpInterface
 LogicalResult verifyStructuredOpInterface(Operation *op);
 
+/// Verify that `op` conforms to the invariants of DestinationStyleOpInterface
+LogicalResult verifyDestinationStyleOpInterface(Operation *op);
+
 } // namespace detail
 } // namespace linalg
 } // namespace mlir

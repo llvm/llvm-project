@@ -313,17 +313,17 @@ define <2 x i8> @test13c(i8 %x1, i8 %x2) {
 
 define void @test14(i16 %conv10) {
 ; CHECK-LABEL: @test14(
-; CHECK-NEXT:    store <4 x i16> <i16 poison, i16 poison, i16 poison, i16 23>, <4 x i16>* undef, align 8
+; CHECK-NEXT:    store <4 x i16> <i16 poison, i16 poison, i16 poison, i16 23>, ptr undef, align 8
 ; CHECK-NEXT:    ret void
 ;
   %t = alloca <4 x i16>, align 8
   %vecinit6 = insertelement <4 x i16> poison, i16 23, i32 3
-  store <4 x i16> %vecinit6, <4 x i16>* undef
-  %t1 = load <4 x i16>, <4 x i16>* undef
+  store <4 x i16> %vecinit6, ptr undef
+  %t1 = load <4 x i16>, ptr undef
   %vecinit11 = insertelement <4 x i16> poison, i16 %conv10, i32 3
   %div = udiv <4 x i16> %t1, %vecinit11
-  store <4 x i16> %div, <4 x i16>* %t
-  %t4 = load <4 x i16>, <4 x i16>* %t
+  store <4 x i16> %div, ptr %t
+  %t4 = load <4 x i16>, ptr %t
   %t5 = shufflevector <4 x i16> %t4, <4 x i16> poison, <2 x i32> <i32 2, i32 0>
   %cmp = icmp ule <2 x i16> %t5, undef
   %sext = sext <2 x i1> %cmp to <2 x i16>
@@ -779,21 +779,21 @@ define <4 x i32> @pr20059(<4 x i32> %p1, <4 x i32> %p2) {
 define <4 x i32> @pr20114(<4 x i32> %__mask) {
 ; CHECK-LABEL: @pr20114(
 ; CHECK-NEXT:    [[MASK01_I:%.*]] = shufflevector <4 x i32> [[__MASK:%.*]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
-; CHECK-NEXT:    [[MASKED_NEW_I_I_I:%.*]] = and <4 x i32> [[MASK01_I]], bitcast (<2 x i64> <i64 ptrtoint (<4 x i32> (<4 x i32>)* @pr20114 to i64), i64 ptrtoint (<4 x i32> (<4 x i32>)* @pr20114 to i64)> to <4 x i32>)
+; CHECK-NEXT:    [[MASKED_NEW_I_I_I:%.*]] = and <4 x i32> [[MASK01_I]], bitcast (<2 x i64> <i64 ptrtoint (ptr @pr20114 to i64), i64 ptrtoint (ptr @pr20114 to i64)> to <4 x i32>)
 ; CHECK-NEXT:    ret <4 x i32> [[MASKED_NEW_I_I_I]]
 ;
   %mask01.i = shufflevector <4 x i32> %__mask, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
-  %masked_new.i.i.i = and <4 x i32> bitcast (<2 x i64> <i64 ptrtoint (<4 x i32> (<4 x i32>)* @pr20114 to i64), i64 ptrtoint (<4 x i32> (<4 x i32>)* @pr20114 to i64)> to <4 x i32>), %mask01.i
+  %masked_new.i.i.i = and <4 x i32> bitcast (<2 x i64> <i64 ptrtoint (ptr @pr20114 to i64), i64 ptrtoint (ptr @pr20114 to i64)> to <4 x i32>), %mask01.i
   ret <4 x i32> %masked_new.i.i.i
 }
 
-define <2 x i32*> @pr23113(<4 x i32*> %A) {
+define <2 x ptr> @pr23113(<4 x ptr> %A) {
 ; CHECK-LABEL: @pr23113(
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32*> [[A:%.*]], <4 x i32*> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    ret <2 x i32*> [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x ptr> [[A:%.*]], <4 x ptr> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    ret <2 x ptr> [[TMP1]]
 ;
-  %1 = shufflevector <4 x i32*> %A, <4 x i32*> poison, <2 x i32> <i32 0, i32 1>
-  ret <2 x i32*> %1
+  %1 = shufflevector <4 x ptr> %A, <4 x ptr> poison, <2 x i32> <i32 0, i32 1>
+  ret <2 x ptr> %1
 }
 
 ; Unused lanes in the new binop should not kill the entire op (although it may simplify anyway as shown here).
@@ -1455,17 +1455,17 @@ define <4 x double> @not_insert_subvector_shuffles_with_same_size(<2 x double> %
 ; Demanded vector elements may not be able to simplify a shuffle mask
 ; before we try to narrow it. This used to crash.
 
-define <4 x float> @insert_subvector_crash_invalid_mask_elt(<2 x float> %x, <4 x float>* %p) {
+define <4 x float> @insert_subvector_crash_invalid_mask_elt(<2 x float> %x, ptr %p) {
 ; CHECK-LABEL: @insert_subvector_crash_invalid_mask_elt(
 ; CHECK-NEXT:    [[WIDEN:%.*]] = shufflevector <2 x float> [[X:%.*]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[I:%.*]] = shufflevector <2 x float> [[X]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
-; CHECK-NEXT:    store <4 x float> [[I]], <4 x float>* [[P:%.*]], align 16
+; CHECK-NEXT:    store <4 x float> [[I]], ptr [[P:%.*]], align 16
 ; CHECK-NEXT:    ret <4 x float> [[WIDEN]]
 ;
   %widen = shufflevector <2 x float> %x, <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %ext2 = extractelement <2 x float> %x, i32 0
   %I = insertelement <4 x float> %widen, float %ext2, i16 0
-  store <4 x float> %I, <4 x float>* %p
+  store <4 x float> %I, ptr %p
   ret <4 x float> %widen
 }
 
@@ -1780,11 +1780,11 @@ define <4 x i32> @splat_assoc_add_mul(<4 x i32> %x, <4 x i32> %y) {
 define <4 x i32> @PR46872(<4 x i32> %x) {
 ; CHECK-LABEL: @PR46872(
 ; CHECK-NEXT:    [[S:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 undef, i32 0, i32 1, i32 1>
-; CHECK-NEXT:    [[A:%.*]] = and <4 x i32> [[S]], bitcast (<2 x i64> <i64 ptrtoint (<4 x i32> (<4 x i32>)* @PR46872 to i64), i64 ptrtoint (<4 x i32> (<4 x i32>)* @PR46872 to i64)> to <4 x i32>)
+; CHECK-NEXT:    [[A:%.*]] = and <4 x i32> [[S]], bitcast (<2 x i64> <i64 ptrtoint (ptr @PR46872 to i64), i64 ptrtoint (ptr @PR46872 to i64)> to <4 x i32>)
 ; CHECK-NEXT:    ret <4 x i32> [[A]]
 ;
   %s = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 undef, i32 0, i32 1, i32 1>
-  %a = and <4 x i32> %s, bitcast (<2 x i64> <i64 ptrtoint (<4 x i32> (<4 x i32>)* @PR46872 to i64), i64 ptrtoint (<4 x i32> (<4 x i32>)* @PR46872 to i64)> to <4 x i32>)
+  %a = and <4 x i32> %s, bitcast (<2 x i64> <i64 ptrtoint (ptr @PR46872 to i64), i64 ptrtoint (ptr @PR46872 to i64)> to <4 x i32>)
   ret <4 x i32> %a
 }
 

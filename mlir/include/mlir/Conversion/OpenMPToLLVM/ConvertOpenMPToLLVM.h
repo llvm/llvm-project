@@ -19,6 +19,9 @@ template <typename T>
 class OperationPass;
 class RewritePatternSet;
 
+#define GEN_PASS_DECL_CONVERTOOPENMPTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+
 /// Configure dynamic conversion legality of regionless operations from OpenMP
 /// to LLVM.
 void configureOpenMPToLLVMConversionLegality(ConversionTarget &target,

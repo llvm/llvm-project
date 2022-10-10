@@ -16,6 +16,7 @@
 #include <climits>
 #include <iterator>
 #include <memory>
+#include <new>
 
 #include "test_macros.h"
 

@@ -31,10 +31,16 @@ struct X86_64 : TargetInfo {
   void relocateOne(uint8_t *loc, const Reloc &, uint64_t va,
                    uint64_t relocVA) const override;
 
-  void writeStub(uint8_t *buf, const Symbol &) const override;
+  void writeStub(uint8_t *buf, const Symbol &,
+                 uint64_t pointerVA) const override;
   void writeStubHelperHeader(uint8_t *buf) const override;
   void writeStubHelperEntry(uint8_t *buf, const Symbol &,
                             uint64_t entryAddr) const override;
+
+  void writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
+                            uint64_t stubOffset, uint64_t selrefsVA,
+                            uint64_t selectorIndex, uint64_t gotAddr,
+                            uint64_t msgSendIndex) const override;
 
   void relaxGotLoad(uint8_t *loc, uint8_t type) const override;
   uint64_t getPageSize() const override { return 4 * 1024; }
@@ -133,11 +139,11 @@ static constexpr uint8_t stub[] = {
     0xff, 0x25, 0, 0, 0, 0, // jmpq *__la_symbol_ptr(%rip)
 };
 
-void X86_64::writeStub(uint8_t *buf, const Symbol &sym) const {
+void X86_64::writeStub(uint8_t *buf, const Symbol &sym,
+                       uint64_t pointerVA) const {
   memcpy(buf, stub, 2); // just copy the two nonzero bytes
   uint64_t stubAddr = in.stubs->addr + sym.stubsIndex * sizeof(stub);
-  writeRipRelative({&sym, "stub"}, buf, stubAddr, sizeof(stub),
-                   in.lazyPointers->addr + sym.stubsIndex * LP64::wordSize);
+  writeRipRelative({&sym, "stub"}, buf, stubAddr, sizeof(stub), pointerVA);
 }
 
 static constexpr uint8_t stubHelperHeader[] = {
@@ -170,6 +176,24 @@ void X86_64::writeStubHelperEntry(uint8_t *buf, const Symbol &sym,
                    sizeof(stubHelperEntry), in.stubHelper->addr);
 }
 
+static constexpr uint8_t objcStubsFastCode[] = {
+    0x48, 0x8b, 0x35, 0, 0, 0, 0, // 0x0: movq selrefs@selector(%rip), %rsi
+    0xff, 0x25, 0,    0, 0, 0,    // 0x7: jmpq *_objc_msgSend@GOT(%rip)
+};
+
+void X86_64::writeObjCMsgSendStub(uint8_t *buf, Symbol *sym, uint64_t stubsAddr,
+                                  uint64_t stubOffset, uint64_t selrefsVA,
+                                  uint64_t selectorIndex, uint64_t gotAddr,
+                                  uint64_t msgSendIndex) const {
+  memcpy(buf, objcStubsFastCode, sizeof(objcStubsFastCode));
+  SymbolDiagnostic d = {sym, sym->getName()};
+  uint64_t stubAddr = stubsAddr + stubOffset;
+  writeRipRelative(d, buf, stubAddr, 7,
+                   selrefsVA + selectorIndex * LP64::wordSize);
+  writeRipRelative(d, buf, stubAddr, 0xd,
+                   gotAddr + msgSendIndex * LP64::wordSize);
+}
+
 void X86_64::relaxGotLoad(uint8_t *loc, uint8_t type) const {
   // Convert MOVQ to LEAQ
   if (loc[-2] != 0x8b)
@@ -188,6 +212,9 @@ X86_64::X86_64() : TargetInfo(LP64()) {
   stubSize = sizeof(stub);
   stubHelperHeaderSize = sizeof(stubHelperHeader);
   stubHelperEntrySize = sizeof(stubHelperEntry);
+
+  objcStubsFastSize = sizeof(objcStubsFastCode);
+  objcStubsAlignment = 1;
 
   relocAttrs = {relocAttrsArray.data(), relocAttrsArray.size()};
 }

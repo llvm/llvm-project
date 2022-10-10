@@ -10,6 +10,8 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 
+#include "mlir/Dialect/Utils/DialectUtilsEnums.cpp.inc"
+
 using namespace mlir;
 
 bool mlir::isRowMajorMatmul(ArrayAttr indexingMaps) {

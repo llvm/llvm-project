@@ -17,7 +17,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld2.nxv32i8(<vscale x 16 x i1
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 2
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8*
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv32i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -29,7 +29,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld2.nxv32i8_lower_bound(<vsca
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 -16
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv32i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -41,7 +41,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld2.nxv32i8_upper_bound(<vsca
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 14
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv32i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -53,7 +53,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld2.nxv32i8_not_multiple_of_2
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 3
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv32i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -65,7 +65,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld2.nxv32i8_outside_lower_bou
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 -18
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv32i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -77,7 +77,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8> } @ld2.nxv32i8_outside_upper_bou
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 16
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv32i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -90,7 +90,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16> } @ld2.nxv16i16(<vscale x 8 x i1
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x i16>, <vscale x 8 x i16>* %addr, i64 14
   %base_ptr = bitcast <vscale x 8 x i16>* %base to i16 *
-  %res = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld2.sret.nxv16i16.nxv8i1.p0i16(<vscale x 8 x i1> %Pg, i16 *%base_ptr)
+  %res = call { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld2.sret.nxv8i16(<vscale x 8 x i1> %Pg, i16 *%base_ptr)
   ret { <vscale x 8 x i16>, <vscale x 8 x i16> } %res
 }
 
@@ -102,7 +102,7 @@ define { <vscale x 8 x half>, <vscale x 8 x half> } @ld2.nxv16f16(<vscale x 8 x 
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x half>, <vscale x 8 x half>* %addr, i64 -16
   %base_ptr = bitcast <vscale x 8 x half>* %base to half *
-  %res = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld2.sret.nxv16f16.nxv8i1.p0f16(<vscale x 8 x i1> %Pg, half *%base_ptr)
+  %res = call { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld2.sret.nxv8f16(<vscale x 8 x i1> %Pg, half *%base_ptr)
   ret { <vscale x 8 x half>, <vscale x 8 x half> } %res
 }
 
@@ -114,7 +114,7 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @ld2.nxv16bf16(<vscale x
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* %addr, i64 12
   %base_ptr = bitcast <vscale x 8 x bfloat>* %base to bfloat *
-  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld2.sret.nxv16bf16.nxv8i1.p0bf16(<vscale x 8 x i1> %Pg, bfloat *%base_ptr)
+  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld2.sret.nxv8bf16(<vscale x 8 x i1> %Pg, bfloat *%base_ptr)
   ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
 }
 
@@ -127,7 +127,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32> } @ld2.nxv8i32(<vscale x 4 x i1>
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %addr, i64 14
   %base_ptr = bitcast <vscale x 4 x i32>* %base to i32 *
-  %res = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld2.sret.nxv8i32.nxv4i1.p0i32(<vscale x 4 x i1> %Pg, i32 *%base_ptr)
+  %res = call { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld2.sret.nxv4i32(<vscale x 4 x i1> %Pg, i32 *%base_ptr)
   ret { <vscale x 4 x i32>, <vscale x 4 x i32> } %res
 }
 
@@ -139,7 +139,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float> } @ld2.nxv8f32(<vscale x 4 x
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 4 x float>, <vscale x 4 x float>* %addr, i64 -16
   %base_ptr = bitcast <vscale x 4 x float>* %base to float *
-  %res = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld2.sret.nxv8f32.nxv4i1.p0f32(<vscale x 4 x i1> %Pg, float *%base_ptr)
+  %res = call { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld2.sret.nxv4f32(<vscale x 4 x i1> %Pg, float *%base_ptr)
   ret { <vscale x 4 x float>, <vscale x 4 x float> } %res
 }
 
@@ -152,7 +152,7 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64> } @ld2.nxv4i64(<vscale x 2 x i1>
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 2 x i64>, <vscale x 2 x i64>* %addr, i64 14
   %base_ptr = bitcast <vscale x 2 x i64>* %base to i64 *
-  %res = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld2.sret.nxv4i64.nxv2i1.p0i64(<vscale x 2 x i1> %Pg, i64 *%base_ptr)
+  %res = call { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld2.sret.nxv2i64(<vscale x 2 x i1> %Pg, i64 *%base_ptr)
   ret { <vscale x 2 x i64>, <vscale x 2 x i64> } %res
 }
 
@@ -164,7 +164,7 @@ define { <vscale x 2 x double>, <vscale x 2 x double> } @ld2.nxv4f64(<vscale x 2
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 2 x double>, <vscale x 2 x double>* %addr, i64 -16
   %base_ptr = bitcast <vscale x 2 x double>* %base to double *
-  %res = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld2.sret.nxv4f64.nxv2i1.p0f64(<vscale x 2 x i1> %Pg, double *%base_ptr)
+  %res = call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld2.sret.nxv2f64(<vscale x 2 x i1> %Pg, double *%base_ptr)
   ret { <vscale x 2 x double>, <vscale x 2 x double> } %res
 }
 
@@ -177,7 +177,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3.nxv48
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 3
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv48i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -189,7 +189,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3.nxv48
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 -24
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv48i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -201,7 +201,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3.nxv48
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 21
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv48i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -213,7 +213,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3.nxv48
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 4
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv48i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -225,7 +225,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3.nxv48
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 5
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv48i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -237,7 +237,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3.nxv48
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 -27
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv48i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -249,7 +249,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @ld3.nxv48
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 24
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv48i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -262,7 +262,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @ld3.nxv24
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x i16>, <vscale x 8 x i16>* %addr, i64 21
   %base_ptr = bitcast <vscale x 8 x i16>* %base to i16 *
-  %res = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld3.sret.nxv24i16.nxv8i1.p0i16(<vscale x 8 x i1> %Pg, i16 *%base_ptr)
+  %res = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld3.sret.nxv8i16(<vscale x 8 x i1> %Pg, i16 *%base_ptr)
   ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %res
 }
 
@@ -274,7 +274,7 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @ld3.nx
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x half>, <vscale x 8 x half>* %addr, i64 21
   %base_ptr = bitcast <vscale x 8 x half>* %base to half *
-  %res = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld3.sret.nxv24f16.nxv8i1.p0f16(<vscale x 8 x i1> %Pg, half *%base_ptr)
+  %res = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld3.sret.nxv8f16(<vscale x 8 x i1> %Pg, half *%base_ptr)
   ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %res
 }
 
@@ -286,7 +286,7 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* %addr, i64 -24
   %base_ptr = bitcast <vscale x 8 x bfloat>* %base to bfloat *
-  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld3.sret.nxv24bf16.nxv8i1.p0bf16(<vscale x 8 x i1> %Pg, bfloat *%base_ptr)
+  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld3.sret.nxv8bf16(<vscale x 8 x i1> %Pg, bfloat *%base_ptr)
   ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
 }
 
@@ -299,7 +299,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @ld3.nxv12
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %addr, i64 21
   %base_ptr = bitcast <vscale x 4 x i32>* %base to i32 *
-  %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld3.sret.nxv12i32.nxv4i1.p0i32(<vscale x 4 x i1> %Pg, i32 *%base_ptr)
+  %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld3.sret.nxv4i32(<vscale x 4 x i1> %Pg, i32 *%base_ptr)
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %res
 }
 
@@ -311,7 +311,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @ld3
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 4 x float>, <vscale x 4 x float>* %addr, i64 -24
   %base_ptr = bitcast <vscale x 4 x float>* %base to float *
-  %res = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld3.sret.nxv12f32.nxv4i1.p0f32(<vscale x 4 x i1> %Pg, float *%base_ptr)
+  %res = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld3.sret.nxv4f32(<vscale x 4 x i1> %Pg, float *%base_ptr)
   ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } %res
 }
 
@@ -324,7 +324,7 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @ld3.nxv6i
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 2 x i64>, <vscale x 2 x i64>* %addr, i64 21
   %base_ptr = bitcast <vscale x 2 x i64>* %base to i64 *
-  %res = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld3.sret.nxv6i64.nxv2i1.p0i64(<vscale x 2 x i1> %Pg, i64 *%base_ptr)
+  %res = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld3.sret.nxv2i64(<vscale x 2 x i1> %Pg, i64 *%base_ptr)
   ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } %res
 }
 
@@ -336,7 +336,7 @@ define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 2 x double>, <vscale x 2 x double>* %addr, i64 -24
   %base_ptr = bitcast <vscale x 2 x double>* %base to double *
-  %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld3.sret.nxv6f64.nxv2i1.p0f64(<vscale x 2 x i1> %Pg, double *%base_ptr)
+  %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld3.sret.nxv2f64(<vscale x 2 x i1> %Pg, double *%base_ptr)
   ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %res
 }
 
@@ -349,7 +349,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 4
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv64i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -361,7 +361,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 -32
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv64i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -373,7 +373,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 28
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv64i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -385,7 +385,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 5
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv64i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -397,7 +397,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 6
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv64i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -409,7 +409,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 7
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv64i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -428,7 +428,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; xOFFSET = RDVL * 2^-4 * -9 * 2^6 = RDVL * -36
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 -36
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv64i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -447,7 +447,7 @@ define { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 1
 ; xOFFSET = RDVL * 2^-4 * 2^9 = RDVL * 32
   %base = getelementptr <vscale x 16 x i8>, <vscale x 16 x i8>* %addr, i64 32
   %base_ptr = bitcast <vscale x 16 x i8>* %base to i8 *
-  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv64i8.nxv16i1.p0i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
+  %res = call { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv16i8(<vscale x 16 x i1> %Pg, i8 *%base_ptr)
   ret { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } %res
 }
 
@@ -460,7 +460,7 @@ define { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x i16>, <vscale x 8 x i16>* %addr, i64 8
   %base_ptr = bitcast <vscale x 8 x i16>* %base to i16 *
-  %res = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld4.sret.nxv32i16.nxv8i1.p0i16(<vscale x 8 x i1> %Pg, i16 *%base_ptr)
+  %res = call { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld4.sret.nxv8i16(<vscale x 8 x i1> %Pg, i16 *%base_ptr)
   ret { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } %res
 }
 
@@ -472,7 +472,7 @@ define { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale 
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x half>, <vscale x 8 x half>* %addr, i64 28
   %base_ptr = bitcast <vscale x 8 x half>* %base to half *
-  %res = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld4.sret.nxv32f16.nxv8i1.p0f16(<vscale x 8 x i1> %Pg, half *%base_ptr)
+  %res = call { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld4.sret.nxv8f16(<vscale x 8 x i1> %Pg, half *%base_ptr)
   ret { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } %res
 }
 
@@ -484,7 +484,7 @@ define { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <v
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x bfloat>, <vscale x 8 x bfloat>* %addr, i64 -32
   %base_ptr = bitcast <vscale x 8 x bfloat>* %base to bfloat *
-  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld4.sret.nxv32bf16.nxv8i1.p0bf16(<vscale x 8 x i1> %Pg, bfloat *%base_ptr)
+  %res = call { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld4.sret.nxv8bf16(<vscale x 8 x i1> %Pg, bfloat *%base_ptr)
   ret { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } %res
 }
 
@@ -497,7 +497,7 @@ define { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 4 x i32>, <vscale x 4 x i32>* %addr, i64 28
   %base_ptr = bitcast <vscale x 4 x i32>* %base to i32 *
-  %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld4.sret.nxv16i32.nxv4i1.p0i32(<vscale x 4 x i1> %Pg, i32 *%base_ptr)
+  %res = call { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld4.sret.nxv4i32(<vscale x 4 x i1> %Pg, i32 *%base_ptr)
   ret { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } %res
 }
 
@@ -509,7 +509,7 @@ define { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vsca
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 4 x float>, <vscale x 4 x float>* %addr, i64 -32
   %base_ptr = bitcast <vscale x 4 x float>* %base to float *
-  %res = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld4.sret.nxv16f32.nxv4i1.p0f32(<vscale x 4 x i1> %Pg, float *%base_ptr)
+  %res = call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld4.sret.nxv4f32(<vscale x 4 x i1> %Pg, float *%base_ptr)
   ret { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } %res
 }
 
@@ -522,7 +522,7 @@ define { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 2 x i64>, <vscale x 2 x i64>* %addr, i64 28
   %base_ptr = bitcast <vscale x 2 x i64>* %base to i64 *
-  %res = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld4.sret.nxv8i64.nxv2i1.p0i64(<vscale x 2 x i1> %Pg, i64 *%base_ptr)
+  %res = call { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld4.sret.nxv2i64(<vscale x 2 x i1> %Pg, i64 *%base_ptr)
   ret { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } %res
 }
 
@@ -534,36 +534,36 @@ define { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <v
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 2 x double>, <vscale x 2 x double>* %addr, i64 -32
   %base_ptr = bitcast <vscale x 2 x double>* %base to double *
-  %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld4.sret.nxv8f64.nxv2i1.p0f64(<vscale x 2 x i1> %Pg, double * %base_ptr)
+  %res = call { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %Pg, double * %base_ptr)
   ret { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %res
 }
 
-declare { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv32i8.nxv16i1.p0i8(<vscale x 16 x i1>, i8*)
-declare { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld2.sret.nxv16i16.nxv8i1.p0i16(<vscale x 8 x i1>, i16*)
-declare { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld2.sret.nxv8i32.nxv4i1.p0i32(<vscale x 4 x i1>, i32*)
-declare { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld2.sret.nxv4i64.nxv2i1.p0i64(<vscale x 2 x i1>, i64*)
-declare { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld2.sret.nxv16f16.nxv8i1.p0f16(<vscale x 8 x i1>, half*)
-declare { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld2.sret.nxv16bf16.nxv8i1.p0bf16(<vscale x 8 x i1>, bfloat*)
-declare { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld2.sret.nxv8f32.nxv4i1.p0f32(<vscale x 4 x i1>, float*)
-declare { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld2.sret.nxv4f64.nxv2i1.p0f64(<vscale x 2 x i1>, double*)
+declare { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld2.sret.nxv16i8(<vscale x 16 x i1>, i8*)
+declare { <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld2.sret.nxv8i16(<vscale x 8 x i1>, i16*)
+declare { <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld2.sret.nxv4i32(<vscale x 4 x i1>, i32*)
+declare { <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld2.sret.nxv2i64(<vscale x 2 x i1>, i64*)
+declare { <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld2.sret.nxv8f16(<vscale x 8 x i1>, half*)
+declare { <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld2.sret.nxv8bf16(<vscale x 8 x i1>, bfloat*)
+declare { <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld2.sret.nxv4f32(<vscale x 4 x i1>, float*)
+declare { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld2.sret.nxv2f64(<vscale x 2 x i1>, double*)
 
-declare { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv48i8.nxv16i1.p0i8(<vscale x 16 x i1>, i8*)
-declare { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld3.sret.nxv24i16.nxv8i1.p0i16(<vscale x 8 x i1>, i16*)
-declare { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld3.sret.nxv12i32.nxv4i1.p0i32(<vscale x 4 x i1>, i32*)
-declare { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld3.sret.nxv6i64.nxv2i1.p0i64(<vscale x 2 x i1>, i64*)
-declare { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld3.sret.nxv24f16.nxv8i1.p0f16(<vscale x 8 x i1>, half*)
-declare { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld3.sret.nxv24bf16.nxv8i1.p0bf16(<vscale x 8 x i1>, bfloat*)
-declare { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld3.sret.nxv12f32.nxv4i1.p0f32(<vscale x 4 x i1>, float*)
-declare { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld3.sret.nxv6f64.nxv2i1.p0f64(<vscale x 2 x i1>, double*)
+declare { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld3.sret.nxv16i8(<vscale x 16 x i1>, i8*)
+declare { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld3.sret.nxv8i16(<vscale x 8 x i1>, i16*)
+declare { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld3.sret.nxv4i32(<vscale x 4 x i1>, i32*)
+declare { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld3.sret.nxv2i64(<vscale x 2 x i1>, i64*)
+declare { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld3.sret.nxv8f16(<vscale x 8 x i1>, half*)
+declare { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld3.sret.nxv8bf16(<vscale x 8 x i1>, bfloat*)
+declare { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld3.sret.nxv4f32(<vscale x 4 x i1>, float*)
+declare { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld3.sret.nxv2f64(<vscale x 2 x i1>, double*)
 
-declare { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv64i8.nxv16i1.p0i8(<vscale x 16 x i1>, i8*)
-declare { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld4.sret.nxv32i16.nxv8i1.p0i16(<vscale x 8 x i1>, i16*)
-declare { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld4.sret.nxv16i32.nxv4i1.p0i32(<vscale x 4 x i1>, i32*)
-declare { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld4.sret.nxv8i64.nxv2i1.p0i64(<vscale x 2 x i1>, i64*)
-declare { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld4.sret.nxv32f16.nxv8i1.p0f16(<vscale x 8 x i1>, half*)
-declare { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld4.sret.nxv32bf16.nxv8i1.p0bf16(<vscale x 8 x i1>, bfloat*)
-declare { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld4.sret.nxv16f32.nxv4i1.p0f32(<vscale x 4 x i1>, float*)
-declare { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld4.sret.nxv8f64.nxv2i1.p0f64(<vscale x 2 x i1>, double*)
+declare { <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.aarch64.sve.ld4.sret.nxv16i8(<vscale x 16 x i1>, i8*)
+declare { <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16> } @llvm.aarch64.sve.ld4.sret.nxv8i16(<vscale x 8 x i1>, i16*)
+declare { <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32> } @llvm.aarch64.sve.ld4.sret.nxv4i32(<vscale x 4 x i1>, i32*)
+declare { <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64> } @llvm.aarch64.sve.ld4.sret.nxv2i64(<vscale x 2 x i1>, i64*)
+declare { <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half> } @llvm.aarch64.sve.ld4.sret.nxv8f16(<vscale x 8 x i1>, half*)
+declare { <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat> } @llvm.aarch64.sve.ld4.sret.nxv8bf16(<vscale x 8 x i1>, bfloat*)
+declare { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld4.sret.nxv4f32(<vscale x 4 x i1>, float*)
+declare { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1>, double*)
 
 ; +bf16 is required for the bfloat version.
 attributes #0 = { "target-features"="+bf16" }

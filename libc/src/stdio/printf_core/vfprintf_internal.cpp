@@ -22,7 +22,9 @@ int vfprintf_internal(::FILE *__restrict stream, const char *__restrict format,
                       internal::ArgList &args) {
   FileWriter file_writer(stream);
   printf_core::Writer writer(reinterpret_cast<void *>(&file_writer),
-                             printf_core::write_to_file);
+                             printf_core::FileWriter::write_str,
+                             printf_core::FileWriter::write_chars,
+                             printf_core::FileWriter::write_char);
   return printf_core::printf_main(&writer, format, args);
 }
 

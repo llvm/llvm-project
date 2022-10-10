@@ -90,13 +90,13 @@ AMDGPUAsmPrinter::AMDGPUAsmPrinter(TargetMachine &TM,
     : AsmPrinter(TM, std::move(Streamer)) {
   if (TM.getTargetTriple().getOS() == Triple::AMDHSA) {
     if (isHsaAbiVersion2(getGlobalSTI())) {
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerV2());
+      HSAMetadataStream.reset(new HSAMD::MetadataStreamerYamlV2());
     } else if (isHsaAbiVersion3(getGlobalSTI())) {
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerV3());
+      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV3());
     } else if (isHsaAbiVersion5(getGlobalSTI())) {
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerV5());
+      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV5());
     } else {
-      HSAMetadataStream.reset(new HSAMD::MetadataStreamerV4());
+      HSAMetadataStream.reset(new HSAMD::MetadataStreamerMsgPackV4());
     }
   }
 }
@@ -949,7 +949,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
 static unsigned getRsrcReg(CallingConv::ID CallConv) {
   switch (CallConv) {
-  default: LLVM_FALLTHROUGH;
+  default: [[fallthrough]];
   case CallingConv::AMDGPU_CS: return R_00B848_COMPUTE_PGM_RSRC1;
   case CallingConv::AMDGPU_LS: return R_00B528_SPI_SHADER_PGM_RSRC1_LS;
   case CallingConv::AMDGPU_HS: return R_00B428_SPI_SHADER_PGM_RSRC1_HS;

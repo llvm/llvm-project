@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr outer-iterator& outer-iterator::operator++();
 // constexpr decltype(auto) outer-iterator::operator++(int);

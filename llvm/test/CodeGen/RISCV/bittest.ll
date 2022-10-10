@@ -156,11 +156,17 @@ define i64 @bittest_31_i64(i64 %a) nounwind {
 ; RV32-NEXT:    li a1, 0
 ; RV32-NEXT:    ret
 ;
-; RV64-LABEL: bittest_31_i64:
-; RV64:       # %bb.0:
-; RV64-NEXT:    not a0, a0
-; RV64-NEXT:    srliw a0, a0, 31
-; RV64-NEXT:    ret
+; RV64I-LABEL: bittest_31_i64:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    not a0, a0
+; RV64I-NEXT:    srliw a0, a0, 31
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: bittest_31_i64:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    not a0, a0
+; RV64ZBS-NEXT:    bexti a0, a0, 31
+; RV64ZBS-NEXT:    ret
   %shr = lshr i64 %a, 31
   %not = xor i64 %shr, -1
   %and = and i64 %not, 1

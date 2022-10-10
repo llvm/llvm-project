@@ -68,13 +68,13 @@ UUID MinidumpParser::GetModuleUUID(const minidump::Module *module) {
       return UUID();
     if (GetArchitecture().GetTriple().isOSBinFormatELF()) {
       if (pdb70_uuid->Age != 0)
-        return UUID::fromOptionalData(pdb70_uuid, sizeof(*pdb70_uuid));
-      return UUID::fromOptionalData(&pdb70_uuid->Uuid,
+        return UUID(pdb70_uuid, sizeof(*pdb70_uuid));
+      return UUID(&pdb70_uuid->Uuid,
                                     sizeof(pdb70_uuid->Uuid));
     }
-    return UUID::fromCvRecord(*pdb70_uuid);
+    return UUID(*pdb70_uuid);
   } else if (cv_signature == CvSignature::ElfBuildId)
-    return UUID::fromOptionalData(cv_record);
+    return UUID(cv_record);
 
   return UUID();
 }
@@ -351,7 +351,7 @@ std::vector<const minidump::Module *> MinidumpParser::GetFilteredModuleList() {
 
   // Create memory regions from the linux maps only. We do this to avoid issues
   // with breakpad generated minidumps where if someone has mmap'ed a shared
-  // library into memory to accesss its data in the object file, we can get a
+  // library into memory to access its data in the object file, we can get a
   // minidump with two mappings for a binary: one whose base image points to a
   // memory region that is read + execute and one that is read only.
   MemoryRegionInfos linux_regions;

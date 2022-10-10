@@ -5,230 +5,229 @@
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
 
-declare i8* @memset(i8*, i32, i32)
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i32, i1)
-declare noalias i8* @malloc(i32) #1
+declare ptr @memset(ptr, i32, i32)
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i32, i1)
+declare noalias ptr @malloc(i32) #1
 
 ; Check memset(mem1, val, size) -> llvm.memset(mem1, val, size, 1).
 
-define i8* @test_simplify1(i8* %mem, i32 %val, i32 %size) {
+define ptr @test_simplify1(ptr %mem, i32 %val, i32 %size) {
 ; CHECK-LABEL: @test_simplify1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[VAL:%.*]] to i8
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[MEM:%.*]], i8 [[TMP1]], i32 [[SIZE:%.*]], i1 false)
-; CHECK-NEXT:    ret i8* [[MEM]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[MEM:%.*]], i8 [[TMP1]], i32 [[SIZE:%.*]], i1 false)
+; CHECK-NEXT:    ret ptr [[MEM]]
 ;
-  %ret = call i8* @memset(i8* %mem, i32 %val, i32 %size)
-  ret i8* %ret
+  %ret = call ptr @memset(ptr %mem, i32 %val, i32 %size)
+  ret ptr %ret
 }
 
-define i8* @test_simplify1_tail(i8* %mem, i32 %val, i32 %size) {
+define ptr @test_simplify1_tail(ptr %mem, i32 %val, i32 %size) {
 ; CHECK-LABEL: @test_simplify1_tail(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[VAL:%.*]] to i8
-; CHECK-NEXT:    tail call void @llvm.memset.p0i8.i32(i8* align 1 [[MEM:%.*]], i8 [[TMP1]], i32 [[SIZE:%.*]], i1 false)
-; CHECK-NEXT:    ret i8* [[MEM]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr align 1 [[MEM:%.*]], i8 [[TMP1]], i32 [[SIZE:%.*]], i1 false)
+; CHECK-NEXT:    ret ptr [[MEM]]
 ;
-  %ret = tail call i8* @memset(i8* %mem, i32 %val, i32 %size)
-  ret i8* %ret
+  %ret = tail call ptr @memset(ptr %mem, i32 %val, i32 %size)
+  ret ptr %ret
 }
 
-define i8* @test_simplify1_musttail(i8* %mem, i32 %val, i32 %size) {
+define ptr @test_simplify1_musttail(ptr %mem, i32 %val, i32 %size) {
 ; CHECK-LABEL: @test_simplify1_musttail(
-; CHECK-NEXT:    %ret = musttail call i8* @memset(i8* %mem, i32 %val, i32 %size)
-; CHECK-NEXT:    ret i8* %ret
+; CHECK-NEXT:    [[RET:%.*]] = musttail call ptr @memset(ptr [[MEM:%.*]], i32 [[VAL:%.*]], i32 [[SIZE:%.*]])
+; CHECK-NEXT:    ret ptr [[RET]]
 ;
-  %ret = musttail call i8* @memset(i8* %mem, i32 %val, i32 %size)
-  ret i8* %ret
+  %ret = musttail call ptr @memset(ptr %mem, i32 %val, i32 %size)
+  ret ptr %ret
 }
 
 ; Malloc + memset pattern is now handled by DSE in a more general way.
 
-define i8* @pr25892_lite(i32 %size) #0 {
+define ptr @pr25892_lite(i32 %size) #0 {
 ; CHECK-LABEL: @pr25892_lite(
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i32 [[SIZE:%.*]])
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[CALL]], i8 0, i32 [[SIZE]], i1 false)
+; CHECK-NEXT:    [[CALL1:%.*]] = call ptr @malloc(i32 [[SIZE:%.*]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[CALL1]], i8 0, i32 [[SIZE]], i1 false) #[[ATTR0]]
+; CHECK-NEXT:    ret ptr [[CALL1]]
 ;
-  %call1 = call i8* @malloc(i32 %size) #1
-  %call2 = call i8* @memset(i8* %call1, i32 0, i32 %size) #1
-  ret i8* %call2
+  %call1 = call ptr @malloc(i32 %size) #1
+  %call2 = call ptr @memset(ptr %call1, i32 0, i32 %size) #1
+  ret ptr %call2
 }
 
 ; A memset intrinsic should be handled similarly to a memset() libcall.
 ; Notice that malloc + memset pattern is now handled by DSE in a more general way.
 
-define i8* @malloc_and_memset_intrinsic(i32 %n) #0 {
+define ptr @malloc_and_memset_intrinsic(i32 %n) #0 {
 ; CHECK-LABEL: @malloc_and_memset_intrinsic(
-; CHECK-NEXT:    [[CALL:%.*]] = call i8* @malloc(i32 [[N:%.*]])
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[CALL]], i8 0, i32 [[N]], i1 false)
-; CHECK-NEXT:    ret i8* [[CALL]]
+; CHECK-NEXT:    [[CALL:%.*]] = call ptr @malloc(i32 [[N:%.*]])
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[CALL]], i8 0, i32 [[N]], i1 false)
+; CHECK-NEXT:    ret ptr [[CALL]]
 ;
-  %call = call i8* @malloc(i32 %n)
-  call void @llvm.memset.p0i8.i32(i8* %call, i8 0, i32 %n, i32 1, i1 false)
-  ret i8* %call
+  %call = call ptr @malloc(i32 %n)
+  call void @llvm.memset.p0.i32(ptr %call, i8 0, i32 %n, i32 1, i1 false)
+  ret ptr %call
 }
 
 ; This should not create a calloc and should not crash the compiler.
 ; Notice that malloc + memset pattern is now handled by DSE in a more general way.
 
-define i8* @notmalloc_memset(i32 %size, i8*(i32)* %notmalloc) {
+define ptr @notmalloc_memset(i32 %size, ptr %notmalloc) {
 ; CHECK-LABEL: @notmalloc_memset(
-; CHECK-NEXT:    [[CALL1:%.*]] = call i8* [[NOTMALLOC:%.*]](i32 [[SIZE:%.*]]) [[ATTR0:#.*]]
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[CALL1]], i8 0, i32 [[SIZE]], i1 false) [[ATTR0]]
-; CHECK-NEXT:    ret i8* [[CALL1]]
+; CHECK-NEXT:    [[CALL1:%.*]] = call ptr [[NOTMALLOC:%.*]](i32 [[SIZE:%.*]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[CALL1]], i8 0, i32 [[SIZE]], i1 false) #[[ATTR0]]
+; CHECK-NEXT:    ret ptr [[CALL1]]
 ;
-  %call1 = call i8* %notmalloc(i32 %size) #1
-  %call2 = call i8* @memset(i8* %call1, i32 0, i32 %size) #1
-  ret i8* %call2
+  %call1 = call ptr %notmalloc(i32 %size) #1
+  %call2 = call ptr @memset(ptr %call1, i32 0, i32 %size) #1
+  ret ptr %call2
 }
 
 ; This doesn't fire currently because the malloc has more than one use.
 ; Notice that malloc + memset pattern is now handled by DSE in a more general way.
 
-define float* @pr25892(i32 %size) #0 {
+define ptr @pr25892(i32 %size) #0 {
 ; CHECK-LABEL: @pr25892(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i8* @malloc(i32 [[SIZE:%.*]]) [[ATTR0]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[CALL]], null
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ptr @malloc(i32 [[SIZE:%.*]]) #[[ATTR0]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[CALL]], null
 ; CHECK-NEXT:    br i1 [[CMP]], label [[CLEANUP:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[BC:%.*]] = bitcast i8* [[CALL]] to float*
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* nonnull align 1 [[CALL]], i8 0, i32 [[SIZE]], i1 false) [[ATTR0]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr nonnull align 1 [[CALL]], i8 0, i32 [[SIZE]], i1 false) #[[ATTR0]]
 ; CHECK-NEXT:    br label [[CLEANUP]]
 ; CHECK:       cleanup:
-; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi float* [ [[BC]], [[IF_END]] ], [ null, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    ret float* [[RETVAL_0]]
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi ptr [ [[CALL]], [[IF_END]] ], [ null, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret ptr [[RETVAL_0]]
 ;
 entry:
-  %call = tail call i8* @malloc(i32 %size) #1
-  %cmp = icmp eq i8* %call, null
+  %call = tail call ptr @malloc(i32 %size) #1
+  %cmp = icmp eq ptr %call, null
   br i1 %cmp, label %cleanup, label %if.end
 if.end:
-  %bc = bitcast i8* %call to float*
-  %call2 = tail call i8* @memset(i8* nonnull %call, i32 0, i32 %size) #1
+  %call2 = tail call ptr @memset(ptr nonnull %call, i32 0, i32 %size) #1
   br label %cleanup
 cleanup:
-  %retval.0 = phi float* [ %bc, %if.end ], [ null, %entry ]
-  ret float* %retval.0
+  %retval.0 = phi ptr [ %call, %if.end ], [ null, %entry ]
+  ret ptr %retval.0
 }
 
 ; If there's a calloc transform, the store must also be eliminated.
 
-define i8* @buffer_is_modified_then_memset(i32 %size) {
+define ptr @buffer_is_modified_then_memset(i32 %size) {
 ; CHECK-LABEL: @buffer_is_modified_then_memset(
-; CHECK-NEXT:    [[PTR:%.*]] = tail call i8* @malloc(i32 [[SIZE:%.*]]) [[ATTR0]]
-; CHECK-NEXT:    store i8 1, i8* [[PTR]], align 1
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* nonnull align 1 [[PTR]], i8 0, i32 [[SIZE]], i1 false) [[ATTR0]]
-; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK-NEXT:    [[PTR:%.*]] = tail call ptr @malloc(i32 [[SIZE:%.*]]) #[[ATTR0]]
+; CHECK-NEXT:    store i8 1, ptr [[PTR]], align 1
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr nonnull align 1 [[PTR]], i8 0, i32 [[SIZE]], i1 false) #[[ATTR0]]
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
-  %ptr = tail call i8* @malloc(i32 %size) #1
-  store i8 1, i8* %ptr           ;; fdata[0] = 1;
-  %memset = tail call i8* @memset(i8* nonnull %ptr, i32 0, i32 %size) #1
-  ret i8* %memset
+  %ptr = tail call ptr @malloc(i32 %size) #1
+  store i8 1, ptr %ptr           ;; fdata[0] = 1;
+  %memset = tail call ptr @memset(ptr nonnull %ptr, i32 0, i32 %size) #1
+  ret ptr %memset
 }
 
-define i8* @memset_size_select(i1 %b, i8* %ptr) {
+define ptr @memset_size_select(i1 %b, ptr %ptr) {
 ; CHECK-LABEL: @memset_size_select(
 ; CHECK-NEXT:    [[SIZE:%.*]] = select i1 [[B:%.*]], i32 10, i32 50
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(10) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false) [[ATTR0]]
-; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(10) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false) #[[ATTR0]]
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %size = select i1 %b, i32 10, i32 50
-  %memset = tail call i8* @memset(i8* nonnull %ptr, i32 0, i32 %size) #1
-  ret i8* %memset
+  %memset = tail call ptr @memset(ptr nonnull %ptr, i32 0, i32 %size) #1
+  ret ptr %memset
 }
 
 
-define i8* @memset_size_select2(i1 %b, i8* %ptr) {
+define ptr @memset_size_select2(i1 %b, ptr %ptr) {
 ; CHECK-LABEL: @memset_size_select2(
 ; CHECK-NEXT:    [[SIZE:%.*]] = select i1 [[B:%.*]], i32 10, i32 50
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(80) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false) [[ATTR0]]
-; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(80) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false) #[[ATTR0]]
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %size = select i1 %b, i32 10, i32 50
-  %memset = tail call i8* @memset(i8* nonnull dereferenceable(80) %ptr, i32 0, i32 %size) #1
-  ret i8* %memset
+  %memset = tail call ptr @memset(ptr nonnull dereferenceable(80) %ptr, i32 0, i32 %size) #1
+  ret ptr %memset
 }
 
-define i8* @memset_size_select3(i1 %b, i8* %ptr) {
+define ptr @memset_size_select3(i1 %b, ptr %ptr) {
 ; CHECK-LABEL: @memset_size_select3(
 ; CHECK-NEXT:    [[SIZE:%.*]] = select i1 [[B:%.*]], i32 10, i32 50
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(40) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false)
-; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(40) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false)
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %size = select i1 %b, i32 10, i32 50
-  %memset = tail call i8* @memset(i8* dereferenceable_or_null(40) %ptr, i32 0, i32 %size)
-  ret i8* %memset
+  %memset = tail call ptr @memset(ptr dereferenceable_or_null(40) %ptr, i32 0, i32 %size)
+  ret ptr %memset
 }
 
-define i8* @memset_size_select4(i1 %b, i8* %ptr) {
+define ptr @memset_size_select4(i1 %b, ptr %ptr) {
 ; CHECK-LABEL: @memset_size_select4(
 ; CHECK-NEXT:    [[SIZE:%.*]] = select i1 [[B:%.*]], i32 10, i32 50
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(40) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false) [[ATTR0]]
-; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(40) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false) #[[ATTR0]]
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %size = select i1 %b, i32 10, i32 50
-  %memset = tail call i8* @memset(i8* nonnull dereferenceable_or_null(40) %ptr, i32 0, i32 %size) #1
-  ret i8* %memset
+  %memset = tail call ptr @memset(ptr nonnull dereferenceable_or_null(40) %ptr, i32 0, i32 %size) #1
+  ret ptr %memset
 }
 
-define i8* @memset_size_ashr(i1 %b, i8* %ptr, i32 %v) {
+define ptr @memset_size_ashr(i1 %b, ptr %ptr, i32 %v) {
 ; CHECK-LABEL: @memset_size_ashr(
 ; CHECK-NEXT:    [[SIZE:%.*]] = ashr i32 -2, [[V:%.*]]
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* noundef nonnull align 1 [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false) [[ATTR0]]
-; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr noundef nonnull align 1 dereferenceable(1) [[PTR:%.*]], i8 0, i32 [[SIZE]], i1 false) #[[ATTR0]]
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
   %size = ashr i32 -2, %v
-  %memset = tail call i8* @memset(i8* nonnull %ptr, i32 0, i32 %size) #1
-  ret i8* %memset
+  %memset = tail call ptr @memset(ptr nonnull %ptr, i32 0, i32 %size) #1
+  ret ptr %memset
 }
 
-define i8* @memset_attrs1(i1 %b, i8* %ptr, i32 %size) {
+define ptr @memset_attrs1(i1 %b, ptr %ptr, i32 %size) {
 ; CHECK-LABEL: @memset_attrs1(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 dereferenceable_or_null(40) [[PTR:%.*]], i8 0, i32 [[SIZE:%.*]], i1 false) [[ATTR0]]
-; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr align 1 dereferenceable_or_null(40) [[PTR:%.*]], i8 0, i32 [[SIZE:%.*]], i1 false) #[[ATTR0]]
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
-  %memset = tail call i8* @memset(i8* dereferenceable_or_null(40) %ptr, i32 0, i32 %size) #1
-  ret i8* %memset
+  %memset = tail call ptr @memset(ptr dereferenceable_or_null(40) %ptr, i32 0, i32 %size) #1
+  ret ptr %memset
 }
 
 ; be sure to drop nonnull since size is unknown and can be 0
 ; do not change dereferenceable attribute
-define i8* @memset_attrs2(i1 %b, i8* %ptr, i32 %size) {
+define ptr @memset_attrs2(i1 %b, ptr %ptr, i32 %size) {
 ; CHECK-LABEL: @memset_attrs2(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* nonnull align 1 dereferenceable(40) [[PTR:%.*]], i8 0, i32 [[SIZE:%.*]], i1 false) [[ATTR0]]
-; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr nonnull align 1 dereferenceable(40) [[PTR:%.*]], i8 0, i32 [[SIZE:%.*]], i1 false) #[[ATTR0]]
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
-  %memset = tail call i8* @memset(i8* nonnull dereferenceable(40) %ptr, i32 0, i32 %size) #1
-  ret i8* %memset
+  %memset = tail call ptr @memset(ptr nonnull dereferenceable(40) %ptr, i32 0, i32 %size) #1
+  ret ptr %memset
 }
 
 ; size is unknown, just copy attrs, no changes in attrs
-define i8* @memset_attrs3(i1 %b, i8* %ptr, i32 %size) {
+define ptr @memset_attrs3(i1 %b, ptr %ptr, i32 %size) {
 ; CHECK-LABEL: @memset_attrs3(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* nonnull align 1 dereferenceable_or_null(40) [[PTR:%.*]], i8 0, i32 [[SIZE:%.*]], i1 false) [[ATTR0]]
-; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr nonnull align 1 dereferenceable_or_null(40) [[PTR:%.*]], i8 0, i32 [[SIZE:%.*]], i1 false) #[[ATTR0]]
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
-  %memset = tail call i8* @memset(i8* nonnull dereferenceable_or_null(40) %ptr, i32 0, i32 %size) #1
-  ret i8* %memset
+  %memset = tail call ptr @memset(ptr nonnull dereferenceable_or_null(40) %ptr, i32 0, i32 %size) #1
+  ret ptr %memset
 }
 
 ; be sure to drop nonnull since size is unknown and can be 0
-define i8* @memset_attrs4(i1 %b, i8* %ptr, i32 %size) {
+define ptr @memset_attrs4(i1 %b, ptr %ptr, i32 %size) {
 ; CHECK-LABEL: @memset_attrs4(
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* nonnull align 1 [[PTR:%.*]], i8 0, i32 [[SIZE:%.*]], i1 false) [[ATTR0]]
-; CHECK-NEXT:    ret i8* [[PTR]]
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i32(ptr nonnull align 1 [[PTR:%.*]], i8 0, i32 [[SIZE:%.*]], i1 false) #[[ATTR0]]
+; CHECK-NEXT:    ret ptr [[PTR]]
 ;
-  %memset = tail call i8* @memset(i8* nonnull %ptr, i32 0, i32 %size) #1
-  ret i8* %memset
+  %memset = tail call ptr @memset(ptr nonnull %ptr, i32 0, i32 %size) #1
+  ret ptr %memset
 }
 
-define i8* @test_no_incompatible_attr(i8* %mem, i32 %val, i32 %size) {
+define ptr @test_no_incompatible_attr(ptr %mem, i32 %val, i32 %size) {
 ; CHECK-LABEL: @test_no_incompatible_attr(
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i32 [[VAL:%.*]] to i8
-; CHECK-NEXT:    call void @llvm.memset.p0i8.i32(i8* align 1 [[MEM:%.*]], i8 [[TMP1]], i32 [[SIZE:%.*]], i1 false)
-; CHECK-NEXT:    ret i8* [[MEM]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i32(ptr align 1 [[MEM:%.*]], i8 [[TMP1]], i32 [[SIZE:%.*]], i1 false)
+; CHECK-NEXT:    ret ptr [[MEM]]
 ;
-  %ret = call dereferenceable(1) i8* @memset(i8* %mem, i32 %val, i32 %size)
-  ret i8* %ret
+  %ret = call dereferenceable(1) ptr @memset(ptr %mem, i32 %val, i32 %size)
+  ret ptr %ret
 }
 
 attributes #0 = { nounwind ssp uwtable }

@@ -264,10 +264,10 @@ static void genShuffleBland(MVT VT, ArrayRef<int> Mask,
   assert(VT.getSizeInBits() >= 256 &&
          "This function doesn't accept width smaller then 256");
   unsigned NumOfElm = VT.getVectorNumElements();
-  for (unsigned i = 0; i < Mask.size(); i++)
-    Out.push_back(Mask[i] + LowOffset);
-  for (unsigned i = 0; i < Mask.size(); i++)
-    Out.push_back(Mask[i] + HighOffset + NumOfElm);
+  for (int I : Mask)
+    Out.push_back(I + LowOffset);
+  for (int I : Mask)
+    Out.push_back(I + HighOffset + NumOfElm);
 }
 
 // reorderSubVector returns the data to is the original state. And de-facto is

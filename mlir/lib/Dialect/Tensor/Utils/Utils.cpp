@@ -13,7 +13,7 @@
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 
 using namespace mlir;
 using namespace mlir::tensor;
@@ -67,4 +67,15 @@ SmallVector<Value> mlir::tensor::createDynamicDimValues(OpBuilder &b,
           b.create<tensor::DimOp>(loc, rankedTensor, en.index()));
   }
   return dynamicDims;
+}
+
+SmallVector<Value> mlir::tensor::createDimValues(OpBuilder &b, Location loc,
+                                                 Value rankedTensor) {
+  auto tensorTy = rankedTensor.getType().cast<RankedTensorType>();
+  SmallVector<Value> dims;
+  for (const auto &en : llvm::enumerate(tensorTy.getShape())) {
+    dims.push_back(
+        b.createOrFold<tensor::DimOp>(loc, rankedTensor, en.index()));
+  }
+  return dims;
 }

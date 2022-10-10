@@ -21,7 +21,7 @@ int test_function() {
 // FIXME: Currently it says "4 bytes ... left of 172-byte region",
 //        should be "8 bytes ... left of 168-byte region", see
 //        https://code.google.com/p/address-sanitizer/issues/detail?id=314
-// CHECK: [[ADDR]] is located {{.*}} bytes to the left of {{(172|176)}}-byte region
+// CHECK: [[ADDR]] is located {{.*}} bytes before {{(172|176)}}-byte region
 // FIXME: Should get rid of the malloc/free frames called from the inside of
 // operator new/delete in DLLs when using -MT CRT.
 // FIXME: The operator new frame should have [].

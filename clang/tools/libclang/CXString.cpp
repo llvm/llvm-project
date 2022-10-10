@@ -78,13 +78,22 @@ CXString createDup(const char *String) {
 }
 
 CXString createRef(StringRef String) {
+  if (!String.data())
+    return createNull();
+
+  // If the string is empty, it might point to a position in another string
+  // while having zero length. Make sure we don't create a reference to the
+  // larger string.
+  if (String.empty())
+    return createEmpty();
+
   // If the string is not nul-terminated, we have to make a copy.
 
   // FIXME: This is doing a one past end read, and should be removed! For memory
   // we don't manage, the API string can become unterminated at any time outside
   // our control.
 
-  if (!String.empty() && String.data()[String.size()] != 0)
+  if (String.data()[String.size()] != 0)
     return createDup(String);
 
   CXString Result;

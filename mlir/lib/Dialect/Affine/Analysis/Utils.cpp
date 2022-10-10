@@ -17,7 +17,7 @@
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/IntegerSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
@@ -45,18 +45,15 @@ void mlir::getLoopIVs(Operation &op, SmallVectorImpl<AffineForOp> *loops) {
   std::reverse(loops->begin(), loops->end());
 }
 
-/// Populates 'ops' with IVs of the loops surrounding `op`, along with
-/// `affine.if` operations interleaved between these loops, ordered from the
-/// outermost `affine.for` operation to the innermost one.
-void mlir::getEnclosingAffineForAndIfOps(Operation &op,
-                                         SmallVectorImpl<Operation *> *ops) {
+void mlir::getEnclosingAffineOps(Operation &op,
+                                 SmallVectorImpl<Operation *> *ops) {
   ops->clear();
   Operation *currOp = op.getParentOp();
 
-  // Traverse up the hierarchy collecting all `affine.for` and `affine.if`
-  // operations.
+  // Traverse up the hierarchy collecting all `affine.for`, `affine.if`, and
+  // affine.parallel operations.
   while (currOp) {
-    if (isa<AffineIfOp, AffineForOp>(currOp))
+    if (isa<AffineIfOp, AffineForOp, AffineParallelOp>(currOp))
       ops->push_back(currOp);
     currOp = currOp->getParentOp();
   }
@@ -374,7 +371,7 @@ Optional<int64_t> MemRefRegion::getConstantBoundingSizeAndShape(
   for (unsigned d = 0; d < rank; d++) {
     SmallVector<int64_t, 4> lb;
     Optional<int64_t> diff =
-        cstWithShapeBounds.getConstantBoundOnDimSize(d, &lb, &lbDivisor);
+        cstWithShapeBounds.getConstantBoundOnDimSize64(d, &lb, &lbDivisor);
     if (diff.has_value()) {
       diffConstant = diff.value();
       assert(diffConstant >= 0 && "Dim size bound can't be negative");

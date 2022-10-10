@@ -19,7 +19,6 @@
 #include "lldb/Host/File.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Predicate.h"
-#include "lldb/Utility/ReproducerProvider.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
@@ -59,19 +58,17 @@ IOHandler::IOHandler(Debugger &debugger, IOHandler::Type type)
                 FileSP(),       // Adopt STDIN from top input reader
                 StreamFileSP(), // Adopt STDOUT from top input reader
                 StreamFileSP(), // Adopt STDERR from top input reader
-                0,              // Flags
-                nullptr         // Shadow file recorder
+                0               // Flags
+
       ) {}
 
 IOHandler::IOHandler(Debugger &debugger, IOHandler::Type type,
                      const lldb::FileSP &input_sp,
                      const lldb::StreamFileSP &output_sp,
-                     const lldb::StreamFileSP &error_sp, uint32_t flags,
-                     repro::DataRecorder *data_recorder)
+                     const lldb::StreamFileSP &error_sp, uint32_t flags)
     : m_debugger(debugger), m_input_sp(input_sp), m_output_sp(output_sp),
-      m_error_sp(error_sp), m_data_recorder(data_recorder), m_popped(false),
-      m_flags(flags), m_type(type), m_user_data(nullptr), m_done(false),
-      m_active(false) {
+      m_error_sp(error_sp), m_popped(false), m_flags(flags), m_type(type),
+      m_user_data(nullptr), m_done(false), m_active(false) {
   // If any files are not specified, then adopt them from the top input reader.
   if (!m_input_sp || !m_output_sp || !m_error_sp)
     debugger.AdoptTopIOHandlerFilesIfInvalid(m_input_sp, m_output_sp,
@@ -146,7 +143,7 @@ IOHandlerConfirm::IOHandlerConfirm(Debugger &debugger, llvm::StringRef prompt,
           llvm::StringRef(), // No continuation prompt
           false,             // Multi-line
           false, // Don't colorize the prompt (i.e. the confirm message.)
-          0, *this, nullptr),
+          0, *this),
       m_default_response(default_response), m_user_response(default_response) {
   StreamString prompt_stream;
   prompt_stream.PutCString(prompt);
@@ -231,7 +228,7 @@ IOHandlerEditline::IOHandlerEditline(
     const char *editline_name, // Used for saving history files
     llvm::StringRef prompt, llvm::StringRef continuation_prompt,
     bool multi_line, bool color_prompts, uint32_t line_number_start,
-    IOHandlerDelegate &delegate, repro::DataRecorder *data_recorder)
+    IOHandlerDelegate &delegate)
     : IOHandlerEditline(debugger, type,
                         FileSP(),       // Inherit input from top input reader
                         StreamFileSP(), // Inherit output from top input reader
@@ -239,7 +236,7 @@ IOHandlerEditline::IOHandlerEditline(
                         0,              // Flags
                         editline_name,  // Used for saving history files
                         prompt, continuation_prompt, multi_line, color_prompts,
-                        line_number_start, delegate, data_recorder) {}
+                        line_number_start, delegate) {}
 
 IOHandlerEditline::IOHandlerEditline(
     Debugger &debugger, IOHandler::Type type, const lldb::FileSP &input_sp,
@@ -248,9 +245,8 @@ IOHandlerEditline::IOHandlerEditline(
     const char *editline_name, // Used for saving history files
     llvm::StringRef prompt, llvm::StringRef continuation_prompt,
     bool multi_line, bool color_prompts, uint32_t line_number_start,
-    IOHandlerDelegate &delegate, repro::DataRecorder *data_recorder)
-    : IOHandler(debugger, type, input_sp, output_sp, error_sp, flags,
-                data_recorder),
+    IOHandlerDelegate &delegate)
+    : IOHandler(debugger, type, input_sp, output_sp, error_sp, flags),
 #if LLDB_ENABLE_LIBEDIT
       m_editline_up(),
 #endif
@@ -354,10 +350,7 @@ static Optional<std::string> SplitLineEOF(std::string &line_buffer) {
 bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
 #if LLDB_ENABLE_LIBEDIT
   if (m_editline_up) {
-    bool b = m_editline_up->GetLine(line, interrupted);
-    if (b && m_data_recorder)
-      m_data_recorder->Record(line, true);
-    return b;
+    return m_editline_up->GetLine(line, interrupted);
   }
 #endif
 
@@ -437,8 +430,6 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
 
   if (got_line) {
     line = *got_line;
-    if (m_data_recorder)
-      m_data_recorder->Record(line, true);
   }
 
   return (bool)got_line;

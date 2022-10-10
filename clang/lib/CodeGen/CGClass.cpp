@@ -1505,7 +1505,7 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
     }
 
     // Fallthrough: act like we're in the base variant.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case Dtor_Base:
     assert(Body);
@@ -1649,21 +1649,56 @@ namespace {
     }
   };
 
-  static void EmitSanitizerDtorCallback(CodeGenFunction &CGF, llvm::Value *Ptr,
-                                        CharUnits::QuantityType PoisonSize) {
+  class DeclAsInlineDebugLocation {
+    CGDebugInfo *DI;
+    llvm::MDNode *InlinedAt;
+    llvm::Optional<ApplyDebugLocation> Location;
+
+  public:
+    DeclAsInlineDebugLocation(CodeGenFunction &CGF, const NamedDecl &Decl)
+        : DI(CGF.getDebugInfo()) {
+      if (!DI)
+        return;
+      InlinedAt = DI->getInlinedAt();
+      DI->setInlinedAt(CGF.Builder.getCurrentDebugLocation());
+      Location.emplace(CGF, Decl.getLocation());
+    }
+
+    ~DeclAsInlineDebugLocation() {
+      if (!DI)
+        return;
+      Location.reset();
+      DI->setInlinedAt(InlinedAt);
+    }
+  };
+
+  static void EmitSanitizerDtorCallback(
+      CodeGenFunction &CGF, StringRef Name, llvm::Value *Ptr,
+      llvm::Optional<CharUnits::QuantityType> PoisonSize = {}) {
     CodeGenFunction::SanitizerScope SanScope(&CGF);
     // Pass in void pointer and size of region as arguments to runtime
     // function
-    llvm::Value *Args[] = {CGF.Builder.CreateBitCast(Ptr, CGF.VoidPtrTy),
-                           llvm::ConstantInt::get(CGF.SizeTy, PoisonSize)};
+    SmallVector<llvm::Value *, 2> Args = {
+        CGF.Builder.CreateBitCast(Ptr, CGF.VoidPtrTy)};
+    SmallVector<llvm::Type *, 2> ArgTypes = {CGF.VoidPtrTy};
 
-    llvm::Type *ArgTypes[] = {CGF.VoidPtrTy, CGF.SizeTy};
+    if (PoisonSize.has_value()) {
+      Args.emplace_back(llvm::ConstantInt::get(CGF.SizeTy, *PoisonSize));
+      ArgTypes.emplace_back(CGF.SizeTy);
+    }
 
     llvm::FunctionType *FnType =
         llvm::FunctionType::get(CGF.VoidTy, ArgTypes, false);
-    llvm::FunctionCallee Fn =
-        CGF.CGM.CreateRuntimeFunction(FnType, "__sanitizer_dtor_callback");
+    llvm::FunctionCallee Fn = CGF.CGM.CreateRuntimeFunction(FnType, Name);
+
     CGF.EmitNounwindRuntimeCall(Fn, Args);
+  }
+
+  static void
+  EmitSanitizerDtorFieldsCallback(CodeGenFunction &CGF, llvm::Value *Ptr,
+                                  CharUnits::QuantityType PoisonSize) {
+    EmitSanitizerDtorCallback(CGF, "__sanitizer_dtor_callback_fields", Ptr,
+                              PoisonSize);
   }
 
   /// Poison base class with a trivial destructor.
@@ -1687,7 +1722,11 @@ namespace {
       if (!BaseSize.isPositive())
         return;
 
-      EmitSanitizerDtorCallback(CGF, Addr.getPointer(), BaseSize.getQuantity());
+      // Use the base class declaration location as inline DebugLocation. All
+      // fields of the class are destroyed.
+      DeclAsInlineDebugLocation InlineHere(CGF, *BaseClass);
+      EmitSanitizerDtorFieldsCallback(CGF, Addr.getPointer(),
+                                      BaseSize.getQuantity());
 
       // Prevent the current stack frame from disappearing from the stack trace.
       CGF.CurFn->addFnAttr("disable-tail-calls", "true");
@@ -1735,7 +1774,10 @@ namespace {
       if (!PoisonSize.isPositive())
         return;
 
-      EmitSanitizerDtorCallback(CGF, OffsetPtr, PoisonSize.getQuantity());
+      // Use the top field declaration location as inline DebugLocation.
+      DeclAsInlineDebugLocation InlineHere(
+          CGF, **std::next(Dtor->getParent()->field_begin(), StartIndex));
+      EmitSanitizerDtorFieldsCallback(CGF, OffsetPtr, PoisonSize.getQuantity());
 
       // Prevent the current stack frame from disappearing from the stack trace.
       CGF.CurFn->addFnAttr("disable-tail-calls", "true");
@@ -1752,15 +1794,13 @@ namespace {
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       assert(Dtor->getParent()->isDynamicClass());
       (void)Dtor;
-      ASTContext &Context = CGF.getContext();
       // Poison vtable and vtable ptr if they exist for this class.
       llvm::Value *VTablePtr = CGF.LoadCXXThis();
 
-      CharUnits::QuantityType PoisonSize =
-          Context.toCharUnitsFromBits(CGF.PointerWidthInBits).getQuantity();
       // Pass in void pointer and size of region as arguments to runtime
       // function
-      EmitSanitizerDtorCallback(CGF, VTablePtr, PoisonSize);
+      EmitSanitizerDtorCallback(CGF, "__sanitizer_dtor_callback_vptr",
+                                VTablePtr);
     }
  };
 
@@ -2955,7 +2995,7 @@ void CodeGenFunction::EmitLambdaBlockInvokeBody() {
   CallArgs.add(RValue::get(ThisPtr.getPointer()), ThisType);
 
   // Add the rest of the parameters.
-  for (auto param : BD->parameters())
+  for (auto *param : BD->parameters())
     EmitDelegateCallArg(CallArgs, param, param->getBeginLoc());
 
   assert(!Lambda->isGenericLambda() &&
@@ -2969,12 +3009,13 @@ void CodeGenFunction::EmitLambdaDelegatingInvokeBody(const CXXMethodDecl *MD) {
   // Start building arguments for forwarding call
   CallArgList CallArgs;
 
-  QualType ThisType = getContext().getPointerType(getContext().getRecordType(Lambda));
-  llvm::Value *ThisPtr = llvm::UndefValue::get(getTypes().ConvertType(ThisType));
-  CallArgs.add(RValue::get(ThisPtr), ThisType);
+  QualType LambdaType = getContext().getRecordType(Lambda);
+  QualType ThisType = getContext().getPointerType(LambdaType);
+  Address ThisPtr = CreateMemTemp(LambdaType, "unused.capture");
+  CallArgs.add(RValue::get(ThisPtr.getPointer()), ThisType);
 
   // Add the rest of the parameters.
-  for (auto Param : MD->parameters())
+  for (auto *Param : MD->parameters())
     EmitDelegateCallArg(CallArgs, Param, Param->getBeginLoc());
 
   const CXXMethodDecl *CallOp = Lambda->getLambdaCallOperator();

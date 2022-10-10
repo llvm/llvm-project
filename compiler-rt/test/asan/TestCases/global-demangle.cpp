@@ -11,7 +11,7 @@ char YYY::ZZZ[] = "abc";
 int main(int argc, char **argv) {
   return (int)XXX::YYY::ZZZ[argc + 5];  // BOOM
   // CHECK: {{READ of size 1 at 0x.*}}
-  // CHECK: {{0x.* is located 2 bytes to the right of global variable}}
+  // CHECK: {{0x.* is located 2 bytes after global variable}}
   // CHECK: '{{.*}}XXX::YYY::ZZZ{{.*}}' {{.*}} of size 4
   // CHECK: '{{.*}}XXX::YYY::ZZZ{{.*}}' is ascii string 'abc'
 }

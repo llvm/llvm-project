@@ -154,6 +154,69 @@ static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
   return true;
 }
 
+/// Try to replace signed instructions with their unsigned equivalent.
+static bool replaceSignedInst(SCCPSolver &Solver,
+                              SmallPtrSetImpl<Value *> &InsertedValues,
+                              Instruction &Inst) {
+  // Determine if a signed value is known to be >= 0.
+  auto isNonNegative = [&Solver](Value *V) {
+    // If this value was constant-folded, it may not have a solver entry.
+    // Handle integers. Otherwise, return false.
+    if (auto *C = dyn_cast<Constant>(V)) {
+      auto *CInt = dyn_cast<ConstantInt>(C);
+      return CInt && !CInt->isNegative();
+    }
+    const ValueLatticeElement &IV = Solver.getLatticeValueFor(V);
+    return IV.isConstantRange(/*UndefAllowed=*/false) &&
+           IV.getConstantRange().isAllNonNegative();
+  };
+
+  Instruction *NewInst = nullptr;
+  switch (Inst.getOpcode()) {
+  // Note: We do not fold sitofp -> uitofp here because that could be more
+  // expensive in codegen and may not be reversible in the backend.
+  case Instruction::SExt: {
+    // If the source value is not negative, this is a zext.
+    Value *Op0 = Inst.getOperand(0);
+    if (InsertedValues.count(Op0) || !isNonNegative(Op0))
+      return false;
+    NewInst = new ZExtInst(Op0, Inst.getType(), "", &Inst);
+    break;
+  }
+  case Instruction::AShr: {
+    // If the shifted value is not negative, this is a logical shift right.
+    Value *Op0 = Inst.getOperand(0);
+    if (InsertedValues.count(Op0) || !isNonNegative(Op0))
+      return false;
+    NewInst = BinaryOperator::CreateLShr(Op0, Inst.getOperand(1), "", &Inst);
+    break;
+  }
+  case Instruction::SDiv:
+  case Instruction::SRem: {
+    // If both operands are not negative, this is the same as udiv/urem.
+    Value *Op0 = Inst.getOperand(0), *Op1 = Inst.getOperand(1);
+    if (InsertedValues.count(Op0) || InsertedValues.count(Op1) ||
+        !isNonNegative(Op0) || !isNonNegative(Op1))
+      return false;
+    auto NewOpcode = Inst.getOpcode() == Instruction::SDiv ? Instruction::UDiv
+                                                           : Instruction::URem;
+    NewInst = BinaryOperator::Create(NewOpcode, Op0, Op1, "", &Inst);
+    break;
+  }
+  default:
+    return false;
+  }
+
+  // Wire up the new instruction and update state.
+  assert(NewInst && "Expected replacement instruction");
+  NewInst->takeName(&Inst);
+  InsertedValues.insert(NewInst);
+  Inst.replaceAllUsesWith(NewInst);
+  Solver.removeLatticeValueFor(&Inst);
+  Inst.eraseFromParent();
+  return true;
+}
+
 static bool simplifyInstsInBlock(SCCPSolver &Solver, BasicBlock &BB,
                                  SmallPtrSetImpl<Value *> &InsertedValues,
                                  Statistic &InstRemovedStat,
@@ -168,23 +231,9 @@ static bool simplifyInstsInBlock(SCCPSolver &Solver, BasicBlock &BB,
 
       MadeChanges = true;
       ++InstRemovedStat;
-    } else if (isa<SExtInst>(&Inst)) {
-      Value *ExtOp = Inst.getOperand(0);
-      if (isa<Constant>(ExtOp) || InsertedValues.count(ExtOp))
-        continue;
-      const ValueLatticeElement &IV = Solver.getLatticeValueFor(ExtOp);
-      if (!IV.isConstantRange(/*UndefAllowed=*/false))
-        continue;
-      if (IV.getConstantRange().isAllNonNegative()) {
-        auto *ZExt = new ZExtInst(ExtOp, Inst.getType(), "", &Inst);
-        ZExt->takeName(&Inst);
-        InsertedValues.insert(ZExt);
-        Inst.replaceAllUsesWith(ZExt);
-        Solver.removeLatticeValueFor(&Inst);
-        Inst.eraseFromParent();
-        InstReplacedStat++;
-        MadeChanges = true;
-      }
+    } else if (replaceSignedInst(Solver, InsertedValues, Inst)) {
+      MadeChanges = true;
+      ++InstReplacedStat;
     }
   }
   return MadeChanges;
@@ -671,7 +720,7 @@ bool llvm::runIPSCCP(
       findReturnsToZap(*F, ReturnsToZap, Solver);
   }
 
-  for (auto F : Solver.getMRVFunctionsTracked()) {
+  for (auto *F : Solver.getMRVFunctionsTracked()) {
     assert(F->getReturnType()->isStructTy() &&
            "The return type should be a struct");
     StructType *STy = cast<StructType>(F->getReturnType());
@@ -681,9 +730,9 @@ bool llvm::runIPSCCP(
 
   // Zap all returns which we've identified as zap to change.
   SmallSetVector<Function *, 8> FuncZappedReturn;
-  for (unsigned i = 0, e = ReturnsToZap.size(); i != e; ++i) {
-    Function *F = ReturnsToZap[i]->getParent()->getParent();
-    ReturnsToZap[i]->setOperand(0, UndefValue::get(F->getReturnType()));
+  for (ReturnInst *RI : ReturnsToZap) {
+    Function *F = RI->getParent()->getParent();
+    RI->setOperand(0, UndefValue::get(F->getReturnType()));
     // Record all functions that are zapped.
     FuncZappedReturn.insert(F);
   }
@@ -705,7 +754,7 @@ bool llvm::runIPSCCP(
 
   // If we inferred constant or undef values for globals variables, we can
   // delete the global and any stores that remain to it.
-  for (auto &I : make_early_inc_range(Solver.getTrackedGlobals())) {
+  for (const auto &I : make_early_inc_range(Solver.getTrackedGlobals())) {
     GlobalVariable *GV = I.first;
     if (isOverdefined(I.second))
       continue;

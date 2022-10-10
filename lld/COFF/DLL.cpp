@@ -31,8 +31,7 @@ using namespace llvm::object;
 using namespace llvm::support::endian;
 using namespace llvm::COFF;
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 namespace {
 
 // Import table
@@ -492,8 +491,8 @@ public:
 
     auto *e = (export_directory_table_entry *)(buf);
     e->NameRVA = dllName->getRVA();
-    e->OrdinalBase = 0;
-    e->AddressTableEntries = maxOrdinal + 1;
+    e->OrdinalBase = 1;
+    e->AddressTableEntries = maxOrdinal;
     e->NumberOfNamePointers = nameTabSize;
     e->ExportAddressTableRVA = addressTab->getRVA();
     e->NamePointerRVA = nameTab->getRVA();
@@ -510,14 +509,16 @@ public:
 
 class AddressTableChunk : public NonSectionChunk {
 public:
-  explicit AddressTableChunk(size_t maxOrdinal) : size(maxOrdinal + 1) {}
+  explicit AddressTableChunk(size_t maxOrdinal) : size(maxOrdinal) {}
   size_t getSize() const override { return size * 4; }
 
   void writeTo(uint8_t *buf) const override {
     memset(buf, 0, getSize());
 
     for (const Export &e : config->exports) {
-      uint8_t *p = buf + e.ordinal * 4;
+      assert(e.ordinal != 0 && "Export symbol has invalid ordinal");
+      // OrdinalBase is 1, so subtract 1 to get the index.
+      uint8_t *p = buf + (e.ordinal - 1) * 4;
       uint32_t bit = 0;
       // Pointer to thumb code must have the LSB set, so adjust it.
       if (config->machine == ARMNT && !e.data)
@@ -561,7 +562,9 @@ public:
     for (Export &e : config->exports) {
       if (e.noname)
         continue;
-      write16le(buf, e.ordinal);
+      assert(e.ordinal != 0 && "Export symbol has invalid ordinal");
+      // This table stores unbiased indices, so subtract 1 (OrdinalBase).
+      write16le(buf, e.ordinal - 1);
       buf += 2;
     }
   }
@@ -656,10 +659,10 @@ void DelayLoadContents::create(COFFLinkerContext &ctx, Defined *h) {
         auto *c = make<HintNameChunk>(extName, 0);
         names.push_back(make<LookupChunk>(c));
         hintNames.push_back(c);
-        // Add a syntentic symbol for this load thunk, using the "__imp_load"
+        // Add a syntentic symbol for this load thunk, using the "__imp___load"
         // prefix, in case this thunk needs to be added to the list of valid
         // call targets for Control Flow Guard.
-        StringRef symName = saver().save("__imp_load_" + extName);
+        StringRef symName = saver().save("__imp___load_" + extName);
         s->loadThunkSym =
             cast<DefinedSynthetic>(ctx.symtab.addSynthetic(symName, t));
       }
@@ -752,5 +755,4 @@ EdataContents::EdataContents() {
   chunks.insert(chunks.end(), forwards.begin(), forwards.end());
 }
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff

@@ -1,15 +1,22 @@
 # Build for all components of the ORC runtime support library.
 
-# ORC runtime library implementation files.
-set(ORC_SOURCES
+# ORC runtime library common implementation files.
+set(ORC_COMMON_SOURCES
   debug.cpp
   extensible_rtti.cpp
   log_error_to_stderr.cpp
-  macho_ehframe_registration.cpp
-  macho_platform.cpp
-  elfnix_platform.cpp
   run_program_wrapper.cpp
   dlfcn_wrapper.cpp
+  )
+
+# ORC runtime library implementation files for all ORC architectures.s
+set(ALL_ORC_SOURCES
+  ${ORC_COMMON_SOURCES}
+  coff_platform.cpp
+  coff_platform.per_jd.cpp
+  elfnix_platform.cpp
+  macho_ehframe_registration.cpp
+  macho_platform.cpp
   )
 
 # Implementation files for all ORC architectures.
@@ -17,30 +24,37 @@ set(ALL_ORC_ASM_SOURCES
   macho_tlv.x86-64.S
   macho_tlv.arm64.S
   elfnix_tls.x86-64.S
-)
+  elfnix_tls.aarch64.S
+  )
 
-set(ORC_IMPL_HEADERS
-# Implementation headers will go here.
+# Common implementation headers will go here.
+set(ORC_COMMON_IMPL_HEADERS
   adt.h
-  c_api.h
   common.h
   compiler.h
   endianness.h
   error.h
   executor_address.h
   extensible_rtti.h
-  macho_platform.h
   simple_packed_serialization.h
   stl_extras.h
   wrapper_function_utils.h
-)
+  )
+
+# Implementation headers for all ORC architectures.
+set(ALL_ORC_IMPL_HEADERS
+  ${ORC_COMMON_IMPL_HEADERS}
+  macho_platform.h
+  coff_platform.h
+  elfnix_platform.h
+  )
 
 # Create list of all source files for
 # consumption by tests.
 set(ORC_ALL_SOURCE_FILES
-  ${ORC_SOURCES}
+  ${ALL_ORC_SOURCES}
   ${ALL_ORC_ASM_SOURCES}
-  ${ORC_IMPL_HEADERS}
+  ${ALL_ORC_IMPL_HEADERS}
   )
 
 list(REMOVE_DUPLICATES ORC_ALL_SOURCE_FILES)
@@ -75,6 +89,17 @@ if (APPLE)
     macho_tlv.arm64.S
     )
 
+  set(ORC_IMPL_HEADERS
+    ${ORC_COMMON_IMPL_HEADERS}
+    macho_platform.h
+    )
+
+  set(ORC_SOURCES
+    ${ORC_COMMON_SOURCES}
+    macho_ehframe_registration.cpp
+    macho_platform.cpp
+    )
+
   add_compiler_rt_object_libraries(RTOrc
     OS ${ORC_SUPPORTED_OS}
     ARCHS ${ORC_SUPPORTED_ARCH}
@@ -83,7 +108,7 @@ if (APPLE)
     CFLAGS ${ORC_CFLAGS}
     DEPS ${ORC_DEPS})
 
-  add_compiler_rt_runtime(clang_rt.orc
+  add_compiler_rt_runtime(orc_rt
     STATIC
     OS ${ORC_SUPPORTED_OS}
     ARCHS ${ORC_SUPPORTED_ARCH}
@@ -93,10 +118,41 @@ if (APPLE)
     LINK_LIBS ${ORC_LINK_LIBS}
     PARENT_TARGET orc)
 else() # not Apple
-  add_asm_sources(ORC_ASM_SOURCES 
-    elfnix_tls.x86-64.S
-    elfnix_tls.aarch64.S
-    )
+  if (WIN32)
+    set(ORC_BUILD_TYPE STATIC)
+
+    set(ORC_IMPL_HEADERS
+      ${ORC_COMMON_IMPL_HEADERS}
+      coff_platform.h
+      )
+
+    set(ORC_SOURCES
+      ${ORC_COMMON_SOURCES}
+      coff_platform.cpp
+      coff_platform.per_jd.cpp
+      )
+
+    if (MSVC)
+      set(ORC_CFLAGS "${ORC_CFLAGS} /MD")
+    endif()
+  else()
+    set(ORC_BUILD_TYPE STATIC)
+
+    set(ORC_IMPL_HEADERS
+      ${ORC_COMMON_IMPL_HEADERS}
+      elfnix_platform.h
+      )
+
+    set(ORC_SOURCES
+      ${ORC_COMMON_SOURCES}
+      elfnix_platform.cpp
+      )
+
+    add_asm_sources(ORC_ASM_SOURCES
+      elfnix_tls.x86-64.S
+      elfnix_tls.aarch64.S
+      )
+  endif()
 
   foreach(arch ${ORC_SUPPORTED_ARCH})
     if(NOT CAN_TARGET_${arch})
@@ -111,17 +167,15 @@ else() # not Apple
       DEPS ${ORC_DEPS})
 
     # Common ORC archive for instrumented binaries.
-    add_compiler_rt_runtime(clang_rt.orc
-     STATIC
-     ARCHS ${arch}
-     CFLAGS ${ORC_CFLAGS}
-     LINK_FLAGS ${ORC_LINK_FLAGS}
-     LINK_LIBS ${ORC_LINK_LIBS}
-     OBJECT_LIBS ${ORC_COMMON_RUNTIME_OBJECT_LIBS} RTOrc
-     PARENT_TARGET orc)
+    add_compiler_rt_runtime(orc_rt
+      ${ORC_BUILD_TYPE}
+      ARCHS ${arch}
+      CFLAGS ${ORC_CFLAGS}
+      LINK_FLAGS ${ORC_LINK_FLAGS}
+      LINK_LIBS ${ORC_LINK_LIBS}
+      OBJECT_LIBS ${ORC_COMMON_RUNTIME_OBJECT_LIBS} RTOrc
+      PARENT_TARGET orc)
   endforeach()
 endif() # not Apple
 
-if(COMPILER_RT_INCLUDE_TESTS)
-  add_subdirectory(unittests)
-endif()
+add_subdirectory(tests)

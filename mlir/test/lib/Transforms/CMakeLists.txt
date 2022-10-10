@@ -1,9 +1,11 @@
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestTransforms
+  TestCommutativityUtils.cpp
   TestConstantFold.cpp
   TestControlFlowSink.cpp
   TestInlining.cpp
   TestIntRangeInference.cpp
+  TestTopologicalSort.cpp
 
   EXCLUDE_FROM_LIBMLIR
 

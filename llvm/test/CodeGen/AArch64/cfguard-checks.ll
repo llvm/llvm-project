@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=aarch64-pc-windows-msvc | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-w64-windows-gnu | FileCheck %s
 ; Control Flow Guard is currently only available on Windows
 
 ; Test that Control Flow Guard checks are correctly added when required.

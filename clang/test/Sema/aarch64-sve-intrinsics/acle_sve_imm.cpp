@@ -1,7 +1,7 @@
 // REQUIRES: aarch64-registered-target
 
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -verify -verify-ignore-unexpected=error %s
-// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -fsyntax-only -verify -verify-ignore-unexpected=error %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -fsyntax-only -verify -verify-ignore-unexpected=error %s
+// RUN: %clang_cc1 -DSVE_OVERLOADED_FORMS -triple aarch64-none-linux-gnu -target-feature +sve -fsyntax-only -verify -verify-ignore-unexpected=error %s
 
 #ifdef SVE_OVERLOADED_FORMS
 // A simple used,unused... macro, long enough to represent any SVE builtin.
@@ -206,19 +206,19 @@ void test_range_0_13(svbool_t pg, const void *const_void_ptr)
 {
   // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 13]}}
   svprfb(pg, const_void_ptr, svprfop(14));
-  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 13]}}
+  // expected-error-re@+1 {{must be a constant integer}}
   svprfb_vnum(pg, const_void_ptr, 0, svprfop(-1));
   // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 13]}}
   svprfd(pg, const_void_ptr, svprfop(14));
-  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 13]}}
+  // expected-error-re@+1 {{must be a constant integer}}
   svprfd_vnum(pg, const_void_ptr, 0, svprfop(-1));
   // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 13]}}
   svprfh(pg, const_void_ptr, svprfop(14));
-  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 13]}}
+  // expected-error-re@+1 {{must be a constant integer}}
   svprfh_vnum(pg, const_void_ptr, 0, svprfop(-1));
   // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 13]}}
   svprfw(pg, const_void_ptr, svprfop(14));
-  // expected-error-re@+1 {{argument value {{[0-9]+}} is outside the valid range [0, 13]}}
+  // expected-error-re@+1 {{must be a constant integer}}
   svprfw_vnum(pg, const_void_ptr, 0, svprfop(-1));
 }
 

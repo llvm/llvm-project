@@ -471,7 +471,7 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
       return addMappingFromTable<1>(MI, MRI, {{ 0 }}, Table);
     }
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case TargetOpcode::G_FCONSTANT:
   case TargetOpcode::G_FRAME_INDEX:
@@ -1806,6 +1806,7 @@ AMDGPURegisterBankInfo::splitBufferOffsets(MachineIRBuilder &B,
   unsigned ImmOffset;
   const LLT S32 = LLT::scalar(32);
 
+  // TODO: Use AMDGPU::getBaseWithConstantOffset() instead.
   std::tie(BaseReg, ImmOffset) = getBaseWithConstantOffset(*B.getMRI(),
                                                            OrigOffset);
 
@@ -2367,7 +2368,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
         llvm_unreachable("lowerAbsToMaxNeg should have succeeded");
       return;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case AMDGPU::G_ADD:
   case AMDGPU::G_SUB:
@@ -2538,7 +2539,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     LLT SrcTy = MRI.getType(SrcReg);
     const bool Signed = Opc == AMDGPU::G_SEXT;
 
-    assert(empty(OpdMapper.getVRegs(1)));
+    assert(OpdMapper.getVRegs(1).empty());
 
     MachineIRBuilder B(MI);
     const RegisterBank *SrcBank =
@@ -2612,69 +2613,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     }
 
     break;
-  }
-  case AMDGPU::G_BUILD_VECTOR:
-  case AMDGPU::G_BUILD_VECTOR_TRUNC: {
-    Register DstReg = MI.getOperand(0).getReg();
-    LLT DstTy = MRI.getType(DstReg);
-    if (DstTy != LLT::fixed_vector(2, 16))
-      break;
-
-    assert(MI.getNumOperands() == 3 && OpdMapper.getVRegs(0).empty());
-    substituteSimpleCopyRegs(OpdMapper, 1);
-    substituteSimpleCopyRegs(OpdMapper, 2);
-
-    const RegisterBank *DstBank =
-      OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
-    if (DstBank == &AMDGPU::SGPRRegBank)
-      break; // Can use S_PACK_* instructions.
-
-    MachineIRBuilder B(MI);
-
-    Register Lo = MI.getOperand(1).getReg();
-    Register Hi = MI.getOperand(2).getReg();
-    const LLT S32 = LLT::scalar(32);
-
-    const RegisterBank *BankLo =
-      OpdMapper.getInstrMapping().getOperandMapping(1).BreakDown[0].RegBank;
-    const RegisterBank *BankHi =
-      OpdMapper.getInstrMapping().getOperandMapping(2).BreakDown[0].RegBank;
-
-    Register ZextLo;
-    Register ShiftHi;
-
-    if (Opc == AMDGPU::G_BUILD_VECTOR) {
-      ZextLo = B.buildZExt(S32, Lo).getReg(0);
-      MRI.setRegBank(ZextLo, *BankLo);
-
-      Register ZextHi = B.buildZExt(S32, Hi).getReg(0);
-      MRI.setRegBank(ZextHi, *BankHi);
-
-      auto ShiftAmt = B.buildConstant(S32, 16);
-      MRI.setRegBank(ShiftAmt.getReg(0), *BankHi);
-
-      ShiftHi = B.buildShl(S32, ZextHi, ShiftAmt).getReg(0);
-      MRI.setRegBank(ShiftHi, *BankHi);
-    } else {
-      Register MaskLo = B.buildConstant(S32, 0xffff).getReg(0);
-      MRI.setRegBank(MaskLo, *BankLo);
-
-      auto ShiftAmt = B.buildConstant(S32, 16);
-      MRI.setRegBank(ShiftAmt.getReg(0), *BankHi);
-
-      ShiftHi = B.buildShl(S32, Hi, ShiftAmt).getReg(0);
-      MRI.setRegBank(ShiftHi, *BankHi);
-
-      ZextLo = B.buildAnd(S32, Lo, MaskLo).getReg(0);
-      MRI.setRegBank(ZextLo, *BankLo);
-    }
-
-    auto Or = B.buildOr(S32, ZextLo, ShiftHi);
-    MRI.setRegBank(Or.getReg(0), *DstBank);
-
-    B.buildBitcast(DstReg, Or);
-    MI.eraseFromParent();
-    return;
   }
   case AMDGPU::G_EXTRACT_VECTOR_ELT: {
     SmallVector<Register, 2> DstRegs(OpdMapper.getVRegs(0));
@@ -3717,7 +3655,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case AMDGPU::G_PTR_ADD:
   case AMDGPU::G_PTRMASK:
@@ -3743,7 +3681,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_UBFX:
     if (isSALUMapping(MI))
       return getDefaultMappingSOP(MI);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case AMDGPU::G_SADDSAT: // FIXME: Could lower sat ops for SALU
   case AMDGPU::G_SSUBSAT:
@@ -3906,7 +3844,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case AMDGPU::G_MERGE_VALUES:
   case AMDGPU::G_CONCAT_VECTORS: {
@@ -4353,7 +4291,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       unsigned IdxSize = MRI.getType(IdxReg).getSizeInBits();
       unsigned IdxBank = getRegBankID(IdxReg, MRI, AMDGPU::SGPRRegBankID);
       OpdsMapping[3] = AMDGPU::getValueMapping(IdxBank, IdxSize);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case Intrinsic::amdgcn_readfirstlane: {
       unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
@@ -4572,7 +4510,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_flat_atomic_fadd_v2bf16:
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_ds_ordered_add:
-    case Intrinsic::amdgcn_ds_ordered_swap: {
+    case Intrinsic::amdgcn_ds_ordered_swap:
+    case Intrinsic::amdgcn_ds_fadd_v2bf16: {
       unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::VGPRRegBankID, DstSize);
       unsigned M0Bank = getRegBankID(MI.getOperand(2).getReg(), MRI,
@@ -4744,6 +4683,20 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
       OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;
+    case Intrinsic::amdgcn_ds_bvh_stack_rtn: {
+      OpdsMapping[0] =
+          getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI); // %vdst
+      OpdsMapping[1] =
+          getVGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI); // %addr
+      OpdsMapping[3] =
+          getVGPROpMapping(MI.getOperand(3).getReg(), MRI, *TRI); // %addr
+      OpdsMapping[4] =
+          getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI); // %data0
+      OpdsMapping[5] =
+          getVGPROpMapping(MI.getOperand(5).getReg(), MRI, *TRI); // %data1
+      break;
+    }
+
     default:
       return getInvalidInstructionMapping();
     }

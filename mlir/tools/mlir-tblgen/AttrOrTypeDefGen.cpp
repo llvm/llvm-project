@@ -41,7 +41,7 @@ static void collectAllDefs(StringRef selectedDialect,
   if (selectedDialect.empty()) {
     // If a dialect was not specified, ensure that all found defs belong to the
     // same dialect.
-    if (!llvm::is_splat(llvm::map_range(
+    if (!llvm::all_equal(llvm::map_range(
             defs, [](const auto &def) { return def.getDialect(); }))) {
       llvm::PrintFatalError("defs belonging to more than one dialect. Must "
                             "select one via '--(attr|type)defs-dialect'");
@@ -295,11 +295,7 @@ void DefGen::emitAccessors() {
     // class. Otherwise, let the user define the exact accessor definition.
     if (!def.genStorageClass())
       continue;
-    auto scope = m->body().indent().scope("return getImpl()->", ";");
-    if (isa<AttributeSelfTypeParameter>(param))
-      m->body() << formatv("getType().cast<{0}>()", param.getCppType());
-    else
-      m->body() << param.getName();
+    m->body().indent() << "return getImpl()->" << param.getName() << ";";
   }
 }
 
@@ -450,37 +446,8 @@ void DefGen::emitTraitMethod(const InterfaceMethod &method) {
 void DefGen::emitStorageConstructor() {
   Constructor *ctor =
       storageCls->addConstructor<Method::Inline>(getBuilderParams({}));
-  if (auto *attrDef = dyn_cast<AttrDef>(&def)) {
-    // For attributes, a parameter marked with AttributeSelfTypeParameter is
-    // the type initializer that must be passed to the parent constructor.
-    const auto isSelfType = [](const AttrOrTypeParameter &param) {
-      return isa<AttributeSelfTypeParameter>(param);
-    };
-    auto *selfTypeParam = llvm::find_if(params, isSelfType);
-    if (std::count_if(selfTypeParam, params.end(), isSelfType) > 1) {
-      PrintFatalError(def.getLoc(),
-                      "Only one attribute parameter can be marked as "
-                      "AttributeSelfTypeParameter");
-    }
-    // Alternatively, if a type builder was specified, use that instead.
-    std::string attrStorageInit =
-        selfTypeParam == params.end() ? "" : selfTypeParam->getName().str();
-    if (attrDef->getTypeBuilder()) {
-      FmtContext ctx;
-      for (auto &param : params)
-        ctx.addSubst(strfmt("_{0}", param.getName()), param.getName());
-      attrStorageInit = tgfmt(*attrDef->getTypeBuilder(), &ctx);
-    }
-    ctor->addMemberInitializer("::mlir::AttributeStorage",
-                               std::move(attrStorageInit));
-    // Initialize members that aren't the attribute's type.
-    for (auto &param : params)
-      if (selfTypeParam == params.end() || *selfTypeParam != param)
-        ctor->addMemberInitializer(param.getName(), param.getName());
-  } else {
-    for (auto &param : params)
-      ctor->addMemberInitializer(param.getName(), param.getName());
-  }
+  for (auto &param : params)
+    ctor->addMemberInitializer(param.getName(), param.getName());
 }
 
 void DefGen::emitKeyType() {
@@ -498,9 +465,7 @@ void DefGen::emitEquals() {
   auto &body = eq->body().indent();
   auto scope = body.scope("return (", ");");
   const auto eachFn = [&](auto it) {
-    FmtContext ctx({{"_lhs", isa<AttributeSelfTypeParameter>(it.value())
-                                 ? "getType()"
-                                 : it.value().getName()},
+    FmtContext ctx({{"_lhs", it.value().getName()},
                     {"_rhs", strfmt("std::get<{0}>(tblgenKey)", it.index())}});
     body << tgfmt(it.value().getComparator(), &ctx);
   };
@@ -566,8 +531,7 @@ void DefGen::emitStorageClass() {
   // Emit the storage class members as public, at the very end of the struct.
   storageCls->finalize();
   for (auto &param : params)
-    if (!isa<AttributeSelfTypeParameter>(param))
-      storageCls->declare<Field>(param.getCppType(), param.getName());
+    storageCls->declare<Field>(param.getCppType(), param.getName());
 }
 
 //===----------------------------------------------------------------------===//
@@ -696,7 +660,7 @@ static const char *const dialectDefaultAttrPrinterParserDispatch = R"(
   {{
     ::mlir::Attribute attr;
     auto parseResult = generatedAttributeParser(parser, &attrTag, type, attr);
-    if (parseResult.hasValue())
+    if (parseResult.has_value())
       return attr;
   }
   {1}
@@ -718,8 +682,8 @@ static const char *const dialectDynamicAttrParserDispatch = R"(
   {
     ::mlir::Attribute genAttr;
     auto parseResult = parseOptionalDynamicAttr(attrTag, parser, genAttr);
-    if (parseResult.hasValue()) {
-      if (::mlir::succeeded(parseResult.getValue()))
+    if (parseResult.has_value()) {
+      if (::mlir::succeeded(parseResult.value()))
         return genAttr;
       return Attribute();
     }
@@ -743,7 +707,7 @@ static const char *const dialectDefaultTypePrinterParserDispatch = R"(
   ::llvm::StringRef mnemonic;
   ::mlir::Type genType;
   auto parseResult = generatedTypeParser(parser, &mnemonic, genType);
-  if (parseResult.hasValue())
+  if (parseResult.has_value())
     return genType;
   {1}
   parser.emitError(typeLoc) << "unknown  type `"

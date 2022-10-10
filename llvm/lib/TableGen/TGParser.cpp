@@ -161,7 +161,7 @@ bool TGParser::AddValue(Record *CurRec, SMLoc Loc, const RecordVal &RV) {
 /// Return true on error, false on success.
 bool TGParser::SetValue(Record *CurRec, SMLoc Loc, Init *ValName,
                         ArrayRef<unsigned> BitList, Init *V,
-                        bool AllowSelfAssignment) {
+                        bool AllowSelfAssignment, bool OverrideDefLoc) {
   if (!V) return false;
 
   if (!CurRec) CurRec = &CurMultiClass->Rec;
@@ -211,7 +211,7 @@ bool TGParser::SetValue(Record *CurRec, SMLoc Loc, Init *ValName,
     V = BitsInit::get(Records, NewBits);
   }
 
-  if (RV->setValue(V, Loc)) {
+  if (OverrideDefLoc ? RV->setValue(V, Loc) : RV->setValue(V)) {
     std::string InitType;
     if (BitsInit *BI = dyn_cast<BitsInit>(V))
       InitType = (Twine("' of type bit initializer with length ") +
@@ -404,7 +404,7 @@ bool TGParser::resolve(const ForeachLoop &Loop, SubstStack &Substs,
   }
 
   bool Error = false;
-  for (auto Elt : *LI) {
+  for (auto *Elt : *LI) {
     if (Loop.IterVar)
       Substs.emplace_back(Loop.IterVar->getNameInit(), Elt);
     Error = resolve(Loop.Entries, Substs, Final, Dest);
@@ -586,6 +586,8 @@ Record *TGParser::ParseClassID() {
                Lex.getCurStrVal() + "'");
     else
       TokError(Msg);
+  } else if (TrackReferenceLocs) {
+    Result->appendReferenceLoc(Lex.getLocRange());
   }
 
   Lex.Lex();
@@ -867,11 +869,14 @@ RecTy *TGParser::ParseType() {
 }
 
 /// ParseIDValue
-Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMLoc NameLoc,
+Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMRange NameLoc,
                              IDParseMode Mode) {
   if (CurRec) {
-    if (const RecordVal *RV = CurRec->getValue(Name))
+    if (RecordVal *RV = CurRec->getValue(Name)) {
+      if (TrackReferenceLocs)
+        RV->addReferenceLoc(NameLoc);
       return VarInit::get(Name, RV->getType());
+    }
   }
 
   if ((CurRec && CurRec->isClass()) || CurMultiClass) {
@@ -887,6 +892,8 @@ Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMLoc NameLoc,
       RecordVal *RV = TemplateRec->getValue(TemplateArgName);
       assert(RV && "Template arg doesn't exist??");
       RV->setUsed(true);
+      if (TrackReferenceLocs)
+        RV->addReferenceLoc(NameLoc);
       return VarInit::get(TemplateArgName, RV->getType());
     } else if (Name->getValue() == "NAME") {
       return VarInit::get(TemplateArgName, StringRecTy::get(Records));
@@ -909,8 +916,14 @@ Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMLoc NameLoc,
   if (Mode == ParseNameMode)
     return Name;
 
-  if (Init *I = Records.getGlobal(Name->getValue()))
+  if (Init *I = Records.getGlobal(Name->getValue())) {
+    // Add a reference to the global if it's a record.
+    if (TrackReferenceLocs) {
+      if (auto *Def = dyn_cast<DefInit>(I))
+        Def->getDef()->appendReferenceLoc(NameLoc);
+    }
     return I;
+  }
 
   // Allow self-references of concrete defs, but delay the lookup so that we
   // get the correct type.
@@ -918,7 +931,7 @@ Init *TGParser::ParseIDValue(Record *CurRec, StringInit *Name, SMLoc NameLoc,
       CurRec->getNameInit() == Name)
     return UnOpInit::get(UnOpInit::CAST, Name, CurRec->getType());
 
-  Error(NameLoc, "Variable not defined: '" + Name->getValue() + "'");
+  Error(NameLoc.Start, "Variable not defined: '" + Name->getValue() + "'");
   return nullptr;
 }
 
@@ -1146,6 +1159,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
   case tgtok::XADD:
   case tgtok::XSUB:
   case tgtok::XMUL:
+  case tgtok::XDIV:
   case tgtok::XAND:
   case tgtok::XOR:
   case tgtok::XXOR:
@@ -1174,6 +1188,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XADD:    Code = BinOpInit::ADD; break;
     case tgtok::XSUB:    Code = BinOpInit::SUB; break;
     case tgtok::XMUL:    Code = BinOpInit::MUL; break;
+    case tgtok::XDIV:    Code = BinOpInit::DIV; break;
     case tgtok::XAND:    Code = BinOpInit::AND; break;
     case tgtok::XOR:     Code = BinOpInit::OR; break;
     case tgtok::XXOR:    Code = BinOpInit::XOR; break;
@@ -1212,6 +1227,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
     case tgtok::XADD:
     case tgtok::XSUB:
     case tgtok::XMUL:
+    case tgtok::XDIV:
       Type = IntRecTy::get(Records);
       ArgType = IntRecTy::get(Records);
       break;
@@ -1371,7 +1387,7 @@ Init *TGParser::ParseOperation(Record *CurRec, RecTy *ItemType) {
             Code != BinOpInit::AND && Code != BinOpInit::OR &&
             Code != BinOpInit::XOR && Code != BinOpInit::SRA &&
             Code != BinOpInit::SRL && Code != BinOpInit::SHL &&
-            Code != BinOpInit::MUL)
+            Code != BinOpInit::MUL && Code != BinOpInit::DIV)
           ArgType = Resolved;
       }
 
@@ -2126,6 +2142,7 @@ Init *TGParser::ParseOperationCond(Record *CurRec, RecTy *ItemType) {
 ///   SimpleValue ::= '(' IDValue DagArgList ')'
 ///   SimpleValue ::= CONCATTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= ADDTOK '(' Value ',' Value ')'
+///   SimpleValue ::= DIVTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= SUBTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= SHLTOK '(' Value ',' Value ')'
 ///   SimpleValue ::= SRATOK '(' Value ',' Value ')'
@@ -2184,7 +2201,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
     Lex.Lex();
     break;
   case tgtok::Id: {
-    SMLoc NameLoc = Lex.getLoc();
+    SMRange NameLoc = Lex.getLocRange();
     StringInit *Name = StringInit::get(Records, Lex.getCurStrVal());
     if (Lex.Lex() != tgtok::less)  // consume the Id.
       return ParseIDValue(CurRec, Name, NameLoc, Mode);    // Value ::= IDValue
@@ -2194,7 +2211,8 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
     // from the class with the template arguments, but no body.
     Record *Class = Records.getClass(Name->getValue());
     if (!Class) {
-      Error(NameLoc, "Expected a class name, got '" + Name->getValue() + "'");
+      Error(NameLoc.Start,
+            "Expected a class name, got '" + Name->getValue() + "'");
       return nullptr;
     }
 
@@ -2203,7 +2221,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
     if (ParseTemplateArgValueList(Args, CurRec, Class))
       return nullptr; // Error parsing value list.
 
-    if (CheckTemplateArgValues(Args, NameLoc, Class))
+    if (CheckTemplateArgValues(Args, NameLoc.Start, Class))
       return nullptr; // Error checking template argument values.
 
     // Loop through the arguments that were not specified and make sure
@@ -2211,14 +2229,16 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
     ArrayRef<Init *> TArgs = Class->getTemplateArgs();
     for (unsigned I = Args.size(), E = TArgs.size(); I < E; ++I) {
       RecordVal *Arg = Class->getValue(TArgs[I]);
-      if (!Arg->getValue()->isComplete()) 
-        Error(NameLoc, "Value not specified for template argument '" +
-                           TArgs[I]->getAsUnquotedString() + "' (#" + Twine(I) +
-                           ") of parent class '" +
-                           Class->getNameInitAsString() + "'");
-              
+      if (!Arg->getValue()->isComplete()) {
+        Error(NameLoc.Start, "Value not specified for template argument '" +
+                                 TArgs[I]->getAsUnquotedString() + "' (#" +
+                                 Twine(I) + ") of parent class '" +
+                                 Class->getNameInitAsString() + "'");
+      }
     }
 
+    if (TrackReferenceLocs)
+      Class->appendReferenceLoc(NameLoc);
     return VarDefInit::get(Class, Args)->Fold();
   }
   case tgtok::l_brace: {           // Value ::= '{' ValueList '}'
@@ -2411,6 +2431,7 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
   case tgtok::XADD:
   case tgtok::XSUB:
   case tgtok::XMUL:
+  case tgtok::XDIV:
   case tgtok::XNOT:
   case tgtok::XAND:
   case tgtok::XOR:
@@ -2510,12 +2531,27 @@ Init *TGParser::ParseValue(Record *CurRec, RecTy *ItemType, IDParseMode Mode) {
         TokError("expected field identifier after '.'");
         return nullptr;
       }
+      SMRange FieldNameLoc = Lex.getLocRange();
       StringInit *FieldName = StringInit::get(Records, Lex.getCurStrVal());
       if (!Result->getFieldType(FieldName)) {
         TokError("Cannot access field '" + Lex.getCurStrVal() + "' of value '" +
                  Result->getAsString() + "'");
         return nullptr;
       }
+
+      // Add a reference to this field if we know the record class.
+      if (TrackReferenceLocs) {
+        if (auto *DI = dyn_cast<DefInit>(Result)) {
+          DI->getDef()->getValue(FieldName)->addReferenceLoc(FieldNameLoc);
+        } else if (auto *TI = dyn_cast<TypedInit>(Result)) {
+          if (auto *RecTy = dyn_cast<RecordRecTy>(TI->getType())) {
+            for (Record *R : RecTy->getClasses())
+              if (auto *RV = R->getValue(FieldName))
+                RV->addReferenceLoc(FieldNameLoc);
+          }
+        }
+      }
+
       Result = FieldInit::get(Result, FieldName)->Fold(CurRec);
       Lex.Lex();  // eat field name
       break;
@@ -2780,11 +2816,13 @@ Init *TGParser::ParseDeclaration(Record *CurRec,
     SMLoc ValLoc = Lex.getLoc();
     Init *Val = ParseValue(CurRec, Type);
     if (!Val ||
-        SetValue(CurRec, ValLoc, DeclName, None, Val))
+        SetValue(CurRec, ValLoc, DeclName, None, Val,
+                 /*AllowSelfAssignment=*/false, /*OverrideDefLoc=*/false)) {
       // Return the name, even if an error is thrown.  This is so that we can
       // continue to make some progress, even without the value having been
       // initialized.
       return DeclName;
+    }
   }
 
   return DeclName;
@@ -3078,17 +3116,24 @@ bool TGParser::ParseDef(MultiClass *CurMultiClass) {
   assert(Lex.getCode() == tgtok::Def && "Unknown tok");
   Lex.Lex();  // Eat the 'def' token.
 
+  // If the name of the def is an Id token, use that for the location.
+  // Otherwise, the name is more complex and we use the location of the 'def'
+  // token.
+  SMLoc NameLoc = Lex.getCode() == tgtok::Id ? Lex.getLoc() : DefLoc;
+
   // Parse ObjectName and make a record for it.
   std::unique_ptr<Record> CurRec;
   Init *Name = ParseObjectName(CurMultiClass);
   if (!Name)
     return true;
 
-  if (isa<UnsetInit>(Name))
-    CurRec = std::make_unique<Record>(Records.getNewAnonymousName(), DefLoc, Records,
+  if (isa<UnsetInit>(Name)) {
+    CurRec =
+        std::make_unique<Record>(Records.getNewAnonymousName(), DefLoc, Records,
                                  /*Anonymous=*/true);
-  else
-    CurRec = std::make_unique<Record>(Name, DefLoc, Records);
+  } else {
+    CurRec = std::make_unique<Record>(Name, NameLoc, Records);
+  }
 
   if (ParseObjectBody(CurRec.get()))
     return true;

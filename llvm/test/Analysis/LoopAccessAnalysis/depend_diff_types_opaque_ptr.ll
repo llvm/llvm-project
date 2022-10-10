@@ -1,4 +1,4 @@
-; RUN: opt -S -disable-output --opaque-pointers -passes='print-access-info' < %s 2>&1 | FileCheck %s
+; RUN: opt -S -disable-output --opaque-pointers -passes='print<access-info>' < %s 2>&1 | FileCheck %s
 
 ; In the function below some of the accesses are done as float types and some
 ; are done as i32 types. When doing dependence analysis the type should not

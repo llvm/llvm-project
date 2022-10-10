@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -fsanitize=memory -no-enable-noundef-analysis -o - %s | \
 // RUN:     FileCheck %s --check-prefix=CLEAN
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -fsanitize=memory -o - %s | \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -fsanitize=memory -fno-sanitize-memory-param-retval -o - %s | \
 // RUN:     FileCheck %s --check-prefixes=NOUNDEF,NOUNDEF_ONLY
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -fsanitize=memory -mllvm -msan-eager-checks -o - %s | \
 // RUN:     FileCheck %s --check-prefixes=NOUNDEF,EAGER
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -fsanitize=memory -no-enable-noundef-analysis -fsanitize-memory-param-retval -o - %s | \
 // RUN:     FileCheck %s --check-prefixes=CLEAN
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -fsanitize=memory -fsanitize-memory-param-retval -o - %s | \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -S -emit-llvm -fsanitize=memory -o - %s | \
 // RUN:     FileCheck %s --check-prefixes=NOUNDEF,EAGER
 
 void bar(int x) {

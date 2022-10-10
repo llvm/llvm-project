@@ -17,6 +17,9 @@
 namespace mlir {
 namespace nvgpu {
 
+#define GEN_PASS_DECL
+#include "mlir/Dialect/NVGPU/Passes.h.inc"
+
 /// Create a pass to optimize shared memory reads and writes.
 std::unique_ptr<Pass> createOptimizeSharedMemoryPass();
 

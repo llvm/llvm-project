@@ -122,10 +122,10 @@ def PDL_AttributeOp : PDL_Op<"attribute"> {
     ```
   }];
 
-  let arguments = (ins Optional<PDL_Type>:$type,
+  let arguments = (ins Optional<PDL_Type>:$valueType,
                        OptionalAttr<AnyAttr>:$value);
   let results = (outs PDL_Attribute:$attr);
-  let assemblyFormat = "(`:` $type^)? (`=` $value^)? attr-dict-with-keyword";
+  let assemblyFormat = "(`:` $valueType^)? (`=` $value^)? attr-dict-with-keyword";
 
   let builders = [
     OpBuilder<(ins CArg<"Value", "Value()">:$type), [{
@@ -156,8 +156,8 @@ def PDL_EraseOp : PDL_Op<"erase", [HasParent<"pdl::RewriteOp">]> {
     pdl.erase %root
     ```
   }];
-  let arguments = (ins PDL_Operation:$operation);
-  let assemblyFormat = "$operation attr-dict";
+  let arguments = (ins PDL_Operation:$opValue);
+  let assemblyFormat = "$opValue attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
@@ -187,9 +187,9 @@ def PDL_OperandOp
     ```
   }];
 
-  let arguments = (ins Optional<PDL_Type>:$type);
-  let results = (outs PDL_Value:$val);
-  let assemblyFormat = "(`:` $type^)? attr-dict";
+  let arguments = (ins Optional<PDL_Type>:$valueType);
+  let results = (outs PDL_Value:$value);
+  let assemblyFormat = "(`:` $valueType^)? attr-dict";
 
   let builders = [
     OpBuilder<(ins), [{
@@ -226,9 +226,9 @@ def PDL_OperandsOp
     ```
   }];
 
-  let arguments = (ins Optional<PDL_RangeOf<PDL_Type>>:$type);
-  let results = (outs PDL_RangeOf<PDL_Value>:$val);
-  let assemblyFormat = "(`:` $type^)? attr-dict";
+  let arguments = (ins Optional<PDL_RangeOf<PDL_Type>>:$valueType);
+  let results = (outs PDL_RangeOf<PDL_Value>:$value);
+  let assemblyFormat = "(`:` $valueType^)? attr-dict";
 
   let builders = [
     OpBuilder<(ins), [{
@@ -341,16 +341,16 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
     ```
   }];
 
-  let arguments = (ins OptionalAttr<StrAttr>:$name,
-                       Variadic<PDL_InstOrRangeOf<PDL_Value>>:$operands,
-                       Variadic<PDL_Attribute>:$attributes,
-                       StrArrayAttr:$attributeNames,
-                       Variadic<PDL_InstOrRangeOf<PDL_Type>>:$types);
+  let arguments = (ins OptionalAttr<StrAttr>:$opName,
+                       Variadic<PDL_InstOrRangeOf<PDL_Value>>:$operandValues,
+                       Variadic<PDL_Attribute>:$attributeValues,
+                       StrArrayAttr:$attributeValueNames,
+                       Variadic<PDL_InstOrRangeOf<PDL_Type>>:$typeValues);
   let results = (outs PDL_Operation:$op);
   let assemblyFormat = [{
-    ($name^)? (`(` $operands^ `:` type($operands) `)`)?
-    custom<OperationOpAttributes>($attributes, $attributeNames)
-    (`->` `(` $types^ `:` type($types) `)`)? attr-dict
+    ($opName^)? (`(` $operandValues^ `:` type($operandValues) `)`)?
+    custom<OperationOpAttributes>($attributeValues, $attributeValueNames)
+    (`->` `(` $typeValues^ `:` type($typeValues) `)`)? attr-dict
   }];
 
   let builders = [
@@ -369,7 +369,7 @@ def PDL_OperationOp : PDL_Op<"operation", [AttrSizedOperandSegments]> {
     /// Returns true if the operation type referenced supports result type
     /// inference.
     bool hasTypeInference();
-    
+
     /// Returns true if the operation type referenced might support result type
     /// inference, i.e. it supports type reference or is currently not
     /// registered in the context. Returns false if the root operation name
@@ -411,11 +411,11 @@ def PDL_PatternOp : PDL_Op<"pattern", [
     ```
   }];
 
-  let arguments = (ins Confined<I16Attr, [IntNonNegative]>:$benefit,
+  let arguments = (ins ConfinedAttr<I16Attr, [IntNonNegative]>:$benefit,
                        OptionalAttr<SymbolNameAttr>:$sym_name);
-  let regions = (region SizedRegion<1>:$body);
+  let regions = (region SizedRegion<1>:$bodyRegion);
   let assemblyFormat = [{
-    ($sym_name^)? `:` `benefit` `(` $benefit `)` attr-dict-with-keyword $body
+    ($sym_name^)? `:` `benefit` `(` $benefit `)` attr-dict-with-keyword $bodyRegion
   }];
 
   let builders = [
@@ -467,11 +467,11 @@ def PDL_ReplaceOp : PDL_Op<"replace", [
     pdl.replace %root with %otherOp
     ```
   }];
-  let arguments = (ins PDL_Operation:$operation,
+  let arguments = (ins PDL_Operation:$opValue,
                        Optional<PDL_Operation>:$replOperation,
                        Variadic<PDL_InstOrRangeOf<PDL_Value>>:$replValues);
   let assemblyFormat = [{
-    $operation `with` (`(` $replValues^ `:` type($replValues) `)`)?
+    $opValue `with` (`(` $replValues^ `:` type($replValues) `)`)?
     ($replOperation^)? attr-dict
   }];
   let hasVerifier = 1;
@@ -603,10 +603,10 @@ def PDL_RewriteOp : PDL_Op<"rewrite", [
   let arguments = (ins Optional<PDL_Operation>:$root,
                        OptionalAttr<StrAttr>:$name,
                        Variadic<PDL_AnyType>:$externalArgs);
-  let regions = (region AnyRegion:$body);
+  let regions = (region AnyRegion:$bodyRegion);
   let assemblyFormat = [{
     ($root^)? (`with` $name^ (`(` $externalArgs^ `:` type($externalArgs) `)`)?)?
-              ($body^)?
+              ($bodyRegion^)?
     attr-dict-with-keyword
   }];
   let hasRegionVerifier = 1;
@@ -635,9 +635,9 @@ def PDL_TypeOp : PDL_Op<"type"> {
     ```
   }];
 
-  let arguments = (ins OptionalAttr<TypeAttr>:$type);
+  let arguments = (ins OptionalAttr<TypeAttr>:$constantType);
   let results = (outs PDL_Type:$result);
-  let assemblyFormat = "attr-dict (`:` $type^)?";
+  let assemblyFormat = "attr-dict (`:` $constantType^)?";
   let hasVerifier = 1;
 }
 
@@ -664,9 +664,9 @@ def PDL_TypesOp : PDL_Op<"types"> {
     ```
   }];
 
-  let arguments = (ins OptionalAttr<TypeArrayAttr>:$types);
+  let arguments = (ins OptionalAttr<TypeArrayAttr>:$constantTypes);
   let results = (outs PDL_RangeOf<PDL_Type>:$result);
-  let assemblyFormat = "attr-dict (`:` $types^)?";
+  let assemblyFormat = "attr-dict (`:` $constantTypes^)?";
   let hasVerifier = 1;
 }
 

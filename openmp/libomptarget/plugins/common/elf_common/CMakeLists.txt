@@ -10,7 +10,7 @@
 #
 ##===----------------------------------------------------------------------===##
 
-add_library(elf_common OBJECT elf_common.cpp)
+add_library(elf_common OBJECT elf_common.cpp ELFSymbols.cpp)
 
 # Build elf_common with PIC to be able to link it with plugin shared libraries.
 set_property(TARGET elf_common PROPERTY POSITION_INDEPENDENT_CODE ON)

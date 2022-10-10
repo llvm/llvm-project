@@ -376,17 +376,6 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   for (auto &PassPlugin : PassPlugins)
     PassPlugin.registerPassBuilderCallbacks(PB);
 
-  PB.registerPipelineParsingCallback(
-      [](StringRef Name, ModulePassManager &MPM,
-         ArrayRef<PassBuilder::PipelineElement>) {
-        AddressSanitizerOptions Opts;
-        if (Name == "asan-pipeline") {
-          MPM.addPass(ModuleAddressSanitizerPass(Opts));
-          return true;
-        }
-        return false;
-      });
-
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
 #include "llvm/Support/Extension.def"
@@ -394,34 +383,9 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   // Specially handle the alias analysis manager so that we can register
   // a custom pipeline of AA passes with it.
   AAManager AA;
-  if (Passes.empty()) {
-    if (auto Err = PB.parseAAPipeline(AA, AAPipeline)) {
-      errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
-      return false;
-    }
-  }
-
-  // For compatibility with the legacy PM AA pipeline.
-  // AAResultsWrapperPass by default provides basic-aa in the legacy PM
-  // unless -disable-basic-aa is specified.
-  // TODO: remove this once tests implicitly requiring basic-aa use -passes= and
-  // -aa-pipeline=basic-aa.
-  if (!Passes.empty() && !DisableBasicAA) {
-    if (auto Err = PB.parseAAPipeline(AA, "basic-aa")) {
-      errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
-      return false;
-    }
-  }
-
-  // For compatibility with legacy pass manager.
-  // Alias analyses are not specially specified when using the legacy PM.
-  for (auto PassName : Passes) {
-    if (PB.isAAPassName(PassName)) {
-      if (auto Err = PB.parseAAPipeline(AA, PassName)) {
-        errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
-        return false;
-      }
-    }
+  if (auto Err = PB.parseAAPipeline(AA, AAPipeline)) {
+    errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
+    return false;
   }
 
   // Register the AA manager first so that our version is the one used.
@@ -459,22 +423,7 @@ bool llvm::runPassPipeline(StringRef Arg0, Module &M, TargetMachine *TM,
   // deprecated, i.e. when all lit tests running opt (and not using
   // -enable-new-pm=0) have been updated to use -passes.
   for (auto PassName : Passes) {
-    std::string ModifiedPassName(PassName.begin(), PassName.end());
-    if (PB.isAnalysisPassName(PassName))
-      ModifiedPassName = "require<" + ModifiedPassName + ">";
-    // FIXME: These translations are supposed to be removed when lit tests that
-    // use these names have been updated to use the -passes syntax (and when the
-    // support for using the old syntax to specify passes is considered as
-    // deprecated for the new PM).
-    if (ModifiedPassName == "early-cse-memssa")
-      ModifiedPassName = "early-cse<memssa>";
-    else if (ModifiedPassName == "post-inline-ee-instrument")
-      ModifiedPassName = "ee-instrument<post-inline>";
-    else if (ModifiedPassName == "loop-extract-single")
-      ModifiedPassName = "loop-extract<single>";
-    else if (ModifiedPassName == "lower-matrix-intrinsics-minimal")
-      ModifiedPassName = "lower-matrix-intrinsics<minimal>";
-    if (auto Err = PB.parsePassPipeline(MPM, ModifiedPassName)) {
+    if (auto Err = PB.parsePassPipeline(MPM, PassName)) {
       errs() << Arg0 << ": " << toString(std::move(Err)) << "\n";
       return false;
     }

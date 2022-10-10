@@ -30,8 +30,87 @@ start:
   ret { i128, i8 } %5
 }
 
-; Function Attrs: nounwind readnone speculatable
+; PR56403
+; We avoid lowering the intrinsic as a libcall because this function has the same name as
+; the libcall we wanted to generate (that would create an infinite loop).
+
+define i128 @__muloti4(i128 %0, i128 %1, i32* nocapture nonnull writeonly align 4 %2) #2 {
+; AARCH-LABEL: __muloti4:
+; AARCH:       // %bb.0: // %Entry
+; AARCH-NEXT:    asr x9, x1, #63
+; AARCH-NEXT:    asr x10, x3, #63
+; AARCH-NEXT:    umulh x14, x0, x2
+; AARCH-NEXT:    mov x8, x1
+; AARCH-NEXT:    mul x11, x2, x9
+; AARCH-NEXT:    str wzr, [x4]
+; AARCH-NEXT:    umulh x12, x10, x0
+; AARCH-NEXT:    umulh x13, x2, x9
+; AARCH-NEXT:    madd x12, x10, x1, x12
+; AARCH-NEXT:    add x13, x13, x11
+; AARCH-NEXT:    mul x10, x10, x0
+; AARCH-NEXT:    madd x9, x3, x9, x13
+; AARCH-NEXT:    add x12, x12, x10
+; AARCH-NEXT:    adds x10, x10, x11
+; AARCH-NEXT:    mul x11, x1, x2
+; AARCH-NEXT:    adc x9, x12, x9
+; AARCH-NEXT:    umulh x13, x1, x2
+; AARCH-NEXT:    mul x12, x0, x3
+; AARCH-NEXT:    adds x11, x11, x14
+; AARCH-NEXT:    umulh x14, x0, x3
+; AARCH-NEXT:    cinc x13, x13, hs
+; AARCH-NEXT:    adds x1, x12, x11
+; AARCH-NEXT:    mul x12, x8, x3
+; AARCH-NEXT:    cinc x11, x14, hs
+; AARCH-NEXT:    mul x0, x0, x2
+; AARCH-NEXT:    adds x11, x13, x11
+; AARCH-NEXT:    umulh x13, x8, x3
+; AARCH-NEXT:    cset w14, hs
+; AARCH-NEXT:    adds x11, x12, x11
+; AARCH-NEXT:    adc x12, x13, x14
+; AARCH-NEXT:    adds x10, x11, x10
+; AARCH-NEXT:    adc x9, x12, x9
+; AARCH-NEXT:    asr x11, x1, #63
+; AARCH-NEXT:    eor x9, x9, x11
+; AARCH-NEXT:    eor x10, x10, x11
+; AARCH-NEXT:    orr x9, x10, x9
+; AARCH-NEXT:    cmp x9, #0
+; AARCH-NEXT:    cset w9, ne
+; AARCH-NEXT:    tbz x8, #63, .LBB1_2
+; AARCH-NEXT:  // %bb.1: // %Entry
+; AARCH-NEXT:    eor x8, x3, #0x8000000000000000
+; AARCH-NEXT:    orr x8, x2, x8
+; AARCH-NEXT:    cbz x8, .LBB1_3
+; AARCH-NEXT:  .LBB1_2: // %Else2
+; AARCH-NEXT:    cbz w9, .LBB1_4
+; AARCH-NEXT:  .LBB1_3: // %Then7
+; AARCH-NEXT:    mov w8, #1
+; AARCH-NEXT:    str w8, [x4]
+; AARCH-NEXT:  .LBB1_4: // %Block9
+; AARCH-NEXT:    ret
+Entry:
+  store i32 0, i32* %2, align 4
+  %.fr = freeze i128 %1
+  %mul = tail call { i128, i1 } @llvm.smul.with.overflow.i128(i128 %0, i128 %.fr)
+  %3 = icmp slt i128 %0, 0
+  %4 = icmp eq i128 %.fr, -170141183460469231731687303715884105728
+  %5 = and i1 %3, %4
+  br i1 %5, label %Then7, label %Else2
+
+Else2:                                            ; preds = %Entry
+  %mul.ov = extractvalue { i128, i1 } %mul, 1
+  br i1 %mul.ov, label %Then7, label %Block9
+
+Then7:                                            ; preds = %Else2, %Entry
+  store i32 1, i32* %2, align 4
+  br label %Block9
+
+Block9:                                           ; preds = %Else2, %Then7
+  %mul.val = extractvalue { i128, i1 } %mul, 0
+  ret i128 %mul.val
+}
+
 declare { i128, i1 } @llvm.umul.with.overflow.i128(i128, i128) #1
+declare { i128, i1 } @llvm.smul.with.overflow.i128(i128, i128) #1
 
 attributes #0 = { nounwind readnone uwtable }
 attributes #1 = { nounwind readnone speculatable }

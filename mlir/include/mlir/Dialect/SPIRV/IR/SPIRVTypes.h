@@ -29,6 +29,7 @@ namespace detail {
 struct ArrayTypeStorage;
 struct CooperativeMatrixTypeStorage;
 struct ImageTypeStorage;
+struct JointMatrixTypeStorage;
 struct MatrixTypeStorage;
 struct PointerTypeStorage;
 struct RuntimeArrayTypeStorage;
@@ -270,7 +271,7 @@ public:
 ///
 /// would be represented in MLIR as:
 ///
-/// !spv.struct<A, (!spv.ptr<!spv.struct<A>, Generic>)>
+/// !spirv.struct<A, (!spirv.ptr<!spirv.struct<A>, Generic>)>
 ///
 /// In the above, expressing recursive struct types is accomplished by giving a
 /// recursive struct a unique identified and using that identifier in the struct
@@ -413,6 +414,33 @@ public:
   unsigned getRows() const;
   /// return the number of columns of the matrix.
   unsigned getColumns() const;
+
+  void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
+                     Optional<StorageClass> storage = llvm::None);
+  void getCapabilities(SPIRVType::CapabilityArrayRefVector &capabilities,
+                       Optional<StorageClass> storage = llvm::None);
+};
+
+// SPIR-V joint matrix type
+class JointMatrixINTELType
+    : public Type::TypeBase<JointMatrixINTELType, CompositeType,
+                            detail::JointMatrixTypeStorage> {
+public:
+  using Base::Base;
+
+  static JointMatrixINTELType get(Type elementType, Scope scope, unsigned rows,
+                                  unsigned columns, MatrixLayout matrixLayout);
+  Type getElementType() const;
+
+  /// Return the scope of the joint matrix.
+  Scope getScope() const;
+  /// return the number of rows of the matrix.
+  unsigned getRows() const;
+  /// return the number of columns of the matrix.
+  unsigned getColumns() const;
+
+  /// return the layout of the matrix
+  MatrixLayout getMatrixLayout() const;
 
   void getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
                      Optional<StorageClass> storage = llvm::None);

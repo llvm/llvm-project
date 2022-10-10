@@ -20,19 +20,18 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR typename remove_reference<_Tp>::type&&
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR __libcpp_remove_reference_t<_Tp>&&
 move(_Tp&& __t) _NOEXCEPT {
-  typedef _LIBCPP_NODEBUG typename remove_reference<_Tp>::type _Up;
+  typedef _LIBCPP_NODEBUG __libcpp_remove_reference_t<_Tp> _Up;
   return static_cast<_Up&&>(__t);
 }
 
 template <class _Tp>
 using __move_if_noexcept_result_t =
-    typename conditional<!is_nothrow_move_constructible<_Tp>::value && is_copy_constructible<_Tp>::value, const _Tp&,
-                         _Tp&&>::type;
+    __conditional_t<!is_nothrow_move_constructible<_Tp>::value && is_copy_constructible<_Tp>::value, const _Tp&, _Tp&&>;
 
 template <class _Tp>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11 __move_if_noexcept_result_t<_Tp>
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14 __move_if_noexcept_result_t<_Tp>
 move_if_noexcept(_Tp& __x) _NOEXCEPT {
   return _VSTD::move(__x);
 }

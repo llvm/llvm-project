@@ -30,7 +30,6 @@
 #include "llvm/Support/Endian.h"
 #include <limits>
 #include <type_traits>
-#include <vector>
 
 namespace clang {
 namespace interp {
@@ -152,6 +151,36 @@ bool Mul(InterpState &S, CodePtr OpPC) {
   const T &LHS = S.Stk.pop<T>();
   const unsigned Bits = RHS.bitWidth() * 2;
   return AddSubMulHelper<T, T::mul, std::multiplies>(S, OpPC, Bits, LHS, RHS);
+}
+
+//===----------------------------------------------------------------------===//
+// Inv
+//===----------------------------------------------------------------------===//
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool Inv(InterpState &S, CodePtr OpPC) {
+  using BoolT = PrimConv<PT_Bool>::T;
+  const T &Val = S.Stk.pop<T>();
+  const unsigned Bits = Val.bitWidth();
+  Boolean R;
+  Boolean::inv(BoolT::from(Val, Bits), &R);
+
+  S.Stk.push<BoolT>(R);
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
+// Neg
+//===----------------------------------------------------------------------===//
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool Neg(InterpState &S, CodePtr OpPC) {
+  const T &Val = S.Stk.pop<T>();
+  T Result;
+  T::neg(Val, &Result);
+
+  S.Stk.push<T>(Result);
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -691,6 +720,9 @@ bool InitPop(InterpState &S, CodePtr OpPC) {
   return true;
 }
 
+/// 1) Pops the value from the stack
+/// 2) Peeks a pointer and gets its index \Idx
+/// 3) Sets the value on the pointer, leaving the pointer on the stack.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
@@ -702,6 +734,7 @@ bool InitElem(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   return true;
 }
 
+/// The same as InitElem, but pops the pointer as well.
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool InitElemPop(InterpState &S, CodePtr OpPC, uint32_t Idx) {
   const T &Value = S.Stk.pop<T>();
@@ -754,18 +787,24 @@ template <class T, bool Add> bool OffsetHelper(InterpState &S, CodePtr OpPC) {
     return false;
   };
 
-  // If the new offset would be negative, bail out.
-  if (Add && Offset.isNegative() && (Offset.isMin() || -Offset > Index))
-    return InvalidOffset();
-  if (!Add && Offset.isPositive() && Index < Offset)
-    return InvalidOffset();
-
-  // If the new offset would be out of bounds, bail out.
   unsigned MaxOffset = MaxIndex - Ptr.getIndex();
-  if (Add && Offset.isPositive() && Offset > MaxOffset)
-    return InvalidOffset();
-  if (!Add && Offset.isNegative() && (Offset.isMin() || -Offset > MaxOffset))
-    return InvalidOffset();
+  if constexpr (Add) {
+    // If the new offset would be negative, bail out.
+    if (Offset.isNegative() && (Offset.isMin() || -Offset > Index))
+      return InvalidOffset();
+
+    // If the new offset would be out of bounds, bail out.
+    if (Offset.isPositive() && Offset > MaxOffset)
+      return InvalidOffset();
+  } else {
+    // If the new offset would be negative, bail out.
+    if (Offset.isPositive() && Index < Offset)
+      return InvalidOffset();
+
+    // If the new offset would be out of bounds, bail out.
+    if (Offset.isNegative() && (Offset.isMin() || -Offset > MaxOffset))
+      return InvalidOffset();
+  }
 
   // Offset is valid - compute it on unsigned.
   int64_t WideIndex = static_cast<int64_t>(Index);
@@ -954,17 +993,13 @@ inline bool ExpandPtr(InterpState &S, CodePtr OpPC) {
 // Read opcode arguments
 //===----------------------------------------------------------------------===//
 
-template <typename T>
-inline std::enable_if_t<!std::is_pointer<T>::value, T> ReadArg(InterpState &S,
-                                                               CodePtr OpPC) {
-  return OpPC.read<T>();
-}
-
-template <typename T>
-inline std::enable_if_t<std::is_pointer<T>::value, T> ReadArg(InterpState &S,
-                                                              CodePtr OpPC) {
-  uint32_t ID = OpPC.read<uint32_t>();
-  return reinterpret_cast<T>(S.P.getNativePointer(ID));
+template <typename T> inline T ReadArg(InterpState &S, CodePtr &OpPC) {
+  if constexpr (std::is_pointer<T>::value) {
+    uint32_t ID = OpPC.read<uint32_t>();
+    return reinterpret_cast<T>(S.P.getNativePointer(ID));
+  } else {
+    return OpPC.read<T>();
+  }
 }
 
 /// Interpreter entry point.

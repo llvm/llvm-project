@@ -24,6 +24,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
@@ -248,6 +249,9 @@ private:
 
   uint32_t getSizeOfInitializedData();
 
+  void checkLoadConfig();
+  template <typename T> void checkLoadConfigGuardData(const T *loadConfig);
+
   std::unique_ptr<FileOutputBuffer> &buffer;
   std::map<PartialSectionKey, PartialSection *> partialSections;
   std::vector<char> strtab;
@@ -395,7 +399,7 @@ getThunk(DenseMap<uint64_t, Defined *> &lastThunks, Defined *target, uint64_t p,
   default:
     llvm_unreachable("Unexpected architecture");
   }
-  Defined *d = make<DefinedSynthetic>("", c);
+  Defined *d = make<DefinedSynthetic>("range_extension_thunk", c);
   lastThunk = d;
   return {d, true};
 }
@@ -451,11 +455,8 @@ static bool createThunks(OutputSection *os, int margin) {
       if (isInRange(rel.Type, s, p, margin))
         continue;
 
-      // If the target isn't in range, hook it up to an existing or new
-      // thunk.
-      Defined *thunk;
-      bool wasNew;
-      std::tie(thunk, wasNew) = getThunk(lastThunks, sym, p, rel.Type, margin);
+      // If the target isn't in range, hook it up to an existing or new thunk.
+      auto [thunk, wasNew] = getThunk(lastThunks, sym, p, rel.Type, margin);
       if (wasNew) {
         Chunk *thunkChunk = thunk->getChunk();
         thunkChunk->setRVA(
@@ -627,6 +628,7 @@ void Writer::run() {
     writeHeader<pe32_header>();
   }
   writeSections();
+  checkLoadConfig();
   sortExceptionTable();
 
   // Fix up the alignment in the TLS Directory's characteristic field,
@@ -650,7 +652,8 @@ void Writer::run() {
 
   ScopedTimer t2(ctx.outputCommitTimer);
   if (auto e = buffer->commit())
-    fatal("failed to write the output file: " + toString(std::move(e)));
+    fatal("failed to write output '" + buffer->getPath() +
+          "': " + toString(std::move(e)));
 }
 
 static StringRef getOutputSectionName(StringRef name) {
@@ -1137,16 +1140,20 @@ size_t Writer::addEntryToStringTable(StringRef str) {
 Optional<coff_symbol16> Writer::createSymbol(Defined *def) {
   coff_symbol16 sym;
   switch (def->kind()) {
-  case Symbol::DefinedAbsoluteKind:
-    sym.Value = def->getRVA();
+  case Symbol::DefinedAbsoluteKind: {
+    auto *da = dyn_cast<DefinedAbsolute>(def);
+    // Note: COFF symbol can only store 32-bit values, so 64-bit absolute
+    // values will be truncated.
+    sym.Value = da->getVA();
     sym.SectionNumber = IMAGE_SYM_ABSOLUTE;
     break;
-  case Symbol::DefinedSyntheticKind:
-    // Relative symbols are unrepresentable in a COFF symbol table.
-    return None;
+  }
   default: {
     // Don't write symbols that won't be written to the output to the symbol
     // table.
+    // We also try to write DefinedSynthetic as a normal symbol. Some of these
+    // symbols do point to an actual chunk, like __safe_se_handler_table. Others
+    // like __ImageBase are outside of sections and thus cannot be represented.
     Chunk *c = def->getChunk();
     if (!c)
       return None;
@@ -1180,6 +1187,10 @@ Optional<coff_symbol16> Writer::createSymbol(Defined *def) {
     COFFSymbolRef ref = d->getCOFFSymbol();
     sym.Type = ref.getType();
     sym.StorageClass = ref.getStorageClass();
+  } else if (def->kind() == Symbol::DefinedImportThunkKind) {
+    sym.Type = (IMAGE_SYM_DTYPE_FUNCTION << SCT_COMPLEX_TYPE_SHIFT) |
+               IMAGE_SYM_TYPE_NULL;
+    sym.StorageClass = IMAGE_SYM_CLASS_EXTERNAL;
   } else {
     sym.Type = IMAGE_SYM_TYPE_NULL;
     sym.StorageClass = IMAGE_SYM_CLASS_EXTERNAL;
@@ -1226,6 +1237,14 @@ void Writer::createSymbolAndStringTable() {
 
         if (Optional<coff_symbol16> sym = createSymbol(d))
           outputSymtab.push_back(*sym);
+
+        if (auto *dthunk = dyn_cast<DefinedImportThunk>(d)) {
+          if (!dthunk->wrappedSym->writtenToSymtab) {
+            dthunk->wrappedSym->writtenToSymtab = true;
+            if (Optional<coff_symbol16> sym = createSymbol(dthunk->wrappedSym))
+              outputSymtab.push_back(*sym);
+          }
+        }
       }
     }
   }
@@ -1712,12 +1731,12 @@ void Writer::createGuardCFTables() {
 
   // Set __guard_flags, which will be used in the load config to indicate that
   // /guard:cf was enabled.
-  uint32_t guardFlags = uint32_t(coff_guard_flags::CFInstrumented) |
-                        uint32_t(coff_guard_flags::HasFidTable);
+  uint32_t guardFlags = uint32_t(GuardFlags::CF_INSTRUMENTED) |
+                        uint32_t(GuardFlags::CF_FUNCTION_TABLE_PRESENT);
   if (config->guardCF & GuardCFLevel::LongJmp)
-    guardFlags |= uint32_t(coff_guard_flags::HasLongJmpTable);
+    guardFlags |= uint32_t(GuardFlags::CF_LONGJUMP_TABLE_PRESENT);
   if (config->guardCF & GuardCFLevel::EHCont)
-    guardFlags |= uint32_t(coff_guard_flags::HasEHContTable);
+    guardFlags |= uint32_t(GuardFlags::EH_CONTINUATION_TABLE_PRESENT);
   Symbol *flagSym = ctx.symtab.findUnderscore("__guard_flags");
   cast<DefinedAbsolute>(flagSym)->setVA(guardFlags);
 }
@@ -2109,4 +2128,87 @@ void Writer::fixTlsAlignment() {
         reinterpret_cast<object::coff_tls_directory32 *>(&secBuf[tlsOffset]);
     tlsDir->setAlignment(tlsAlignment);
   }
+}
+
+void Writer::checkLoadConfig() {
+  Symbol *sym = ctx.symtab.findUnderscore("_load_config_used");
+  auto *b = cast_if_present<DefinedRegular>(sym);
+  if (!b) {
+    if (config->guardCF != GuardCFLevel::Off)
+      warn("Control Flow Guard is enabled but '_load_config_used' is missing");
+    return;
+  }
+
+  OutputSection *sec = ctx.getOutputSection(b->getChunk());
+  uint8_t *buf = buffer->getBufferStart();
+  uint8_t *secBuf = buf + sec->getFileOff();
+  uint8_t *symBuf = secBuf + (b->getRVA() - sec->getRVA());
+  uint32_t expectedAlign = config->is64() ? 8 : 4;
+  if (b->getChunk()->getAlignment() < expectedAlign)
+    warn("'_load_config_used' is misaligned (expected alignment to be " +
+         Twine(expectedAlign) + " bytes, got " +
+         Twine(b->getChunk()->getAlignment()) + " instead)");
+  else if (!isAligned(Align(expectedAlign), b->getRVA()))
+    warn("'_load_config_used' is misaligned (RVA is 0x" +
+         Twine::utohexstr(b->getRVA()) + " not aligned to " +
+         Twine(expectedAlign) + " bytes)");
+
+  if (config->is64())
+    checkLoadConfigGuardData(
+        reinterpret_cast<const coff_load_configuration64 *>(symBuf));
+  else
+    checkLoadConfigGuardData(
+        reinterpret_cast<const coff_load_configuration32 *>(symBuf));
+}
+
+template <typename T>
+void Writer::checkLoadConfigGuardData(const T *loadConfig) {
+  size_t loadConfigSize = loadConfig->Size;
+
+#define RETURN_IF_NOT_CONTAINS(field)                                          \
+  if (loadConfigSize < offsetof(T, field) + sizeof(T::field)) {                \
+    warn("'_load_config_used' structure too small to include " #field);        \
+    return;                                                                    \
+  }
+
+#define IF_CONTAINS(field)                                                     \
+  if (loadConfigSize >= offsetof(T, field) + sizeof(T::field))
+
+#define CHECK_VA(field, sym)                                                   \
+  if (auto *s = dyn_cast<DefinedSynthetic>(ctx.symtab.findUnderscore(sym)))    \
+    if (loadConfig->field != config->imageBase + s->getRVA())                  \
+      warn(#field " not set correctly in '_load_config_used'");
+
+#define CHECK_ABSOLUTE(field, sym)                                             \
+  if (auto *s = dyn_cast<DefinedAbsolute>(ctx.symtab.findUnderscore(sym)))     \
+    if (loadConfig->field != s->getVA())                                       \
+      warn(#field " not set correctly in '_load_config_used'");
+
+  if (config->guardCF == GuardCFLevel::Off)
+    return;
+  RETURN_IF_NOT_CONTAINS(GuardFlags)
+  CHECK_VA(GuardCFFunctionTable, "__guard_fids_table")
+  CHECK_ABSOLUTE(GuardCFFunctionCount, "__guard_fids_count")
+  CHECK_ABSOLUTE(GuardFlags, "__guard_flags")
+  IF_CONTAINS(GuardAddressTakenIatEntryCount) {
+    CHECK_VA(GuardAddressTakenIatEntryTable, "__guard_iat_table")
+    CHECK_ABSOLUTE(GuardAddressTakenIatEntryCount, "__guard_iat_count")
+  }
+
+  if (!(config->guardCF & GuardCFLevel::LongJmp))
+    return;
+  RETURN_IF_NOT_CONTAINS(GuardLongJumpTargetCount)
+  CHECK_VA(GuardLongJumpTargetTable, "__guard_longjmp_table")
+  CHECK_ABSOLUTE(GuardLongJumpTargetCount, "__guard_longjmp_count")
+
+  if (!(config->guardCF & GuardCFLevel::EHCont))
+    return;
+  RETURN_IF_NOT_CONTAINS(GuardEHContinuationCount)
+  CHECK_VA(GuardEHContinuationTable, "__guard_eh_cont_table")
+  CHECK_ABSOLUTE(GuardEHContinuationCount, "__guard_eh_cont_count")
+
+#undef RETURN_IF_NOT_CONTAINS
+#undef IF_CONTAINS
+#undef CHECK_VA
+#undef CHECK_ABSOLUTE
 }

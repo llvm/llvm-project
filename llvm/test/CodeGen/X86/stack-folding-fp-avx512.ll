@@ -336,7 +336,7 @@ define <8 x double> @stack_fold_cmppd_mask(<8 x double> %a0, <8 x double> %a1, p
 ; CHECK-NEXT:    kmovw %esi, %k1
 ; CHECK-NEXT:    kandb %k0, %k1, %k1
 ; CHECK-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; CHECK-NEXT:    vmovupd (%rsp), %zmm1  # 64-byte Reload
+; CHECK-NEXT:    vmovupd (%rsp), %zmm1 # 64-byte Reload
 ; CHECK-NEXT:    vmovapd %zmm1, %zmm0 {%k1}
 ; CHECK-NEXT:    addq $136, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8

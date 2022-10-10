@@ -54,7 +54,7 @@ protected:
 
 TEST_F(ForestTest, DumpBasic) {
   build(R"cpp(
-    _ := add-expression
+    _ := add-expression EOF
     add-expression := id-expression + id-expression
     id-expression := IDENTIFIER
   )cpp");
@@ -64,7 +64,7 @@ TEST_F(ForestTest, DumpBasic) {
       cook(lex("a + b", clang::LangOptions()), clang::LangOptions());
 
   auto T = Arena.createTerminals(TS);
-  ASSERT_EQ(T.size(), 3u);
+  ASSERT_EQ(T.size(), 4u);
   const auto *Left = &Arena.createSequence(
       symbol("id-expression"), ruleFor("id-expression"), {&T.front()});
   const auto *Right = &Arena.createSequence(symbol("id-expression"),
@@ -89,9 +89,9 @@ TEST_F(ForestTest, DumpBasic) {
 
 TEST_F(ForestTest, DumpAmbiguousAndRefs) {
   build(R"cpp(
-    _ := type
-    type := class-type # rule 3
-    type := enum-type # rule 4
+    _ := type EOF
+    type := class-type # rule 4
+    type := enum-type # rule 5
     class-type := shared-type
     enum-type := shared-type
     shared-type := IDENTIFIER)cpp");
@@ -100,7 +100,7 @@ TEST_F(ForestTest, DumpAmbiguousAndRefs) {
   const auto &TS = cook(lex("abc", clang::LangOptions()), clang::LangOptions());
 
   auto Terminals = Arena.createTerminals(TS);
-  ASSERT_EQ(Terminals.size(), 1u);
+  ASSERT_EQ(Terminals.size(), 2u);
 
   const auto *SharedType = &Arena.createSequence(
       symbol("shared-type"), ruleFor("shared-type"), {Terminals.begin()});
@@ -109,9 +109,9 @@ TEST_F(ForestTest, DumpAmbiguousAndRefs) {
   const auto *EnumType = &Arena.createSequence(
       symbol("enum-type"), ruleFor("enum-type"), {SharedType});
   const auto *Alternative1 =
-      &Arena.createSequence(symbol("type"), /*RuleID=*/3, {ClassType});
+      &Arena.createSequence(symbol("type"), /*RuleID=*/4, {ClassType});
   const auto *Alternative2 =
-      &Arena.createSequence(symbol("type"), /*RuleID=*/4, {EnumType});
+      &Arena.createSequence(symbol("type"), /*RuleID=*/5, {EnumType});
   const auto *Type =
       &Arena.createAmbiguous(symbol("type"), {Alternative1, Alternative2});
   EXPECT_EQ(Type->dumpRecursive(G),

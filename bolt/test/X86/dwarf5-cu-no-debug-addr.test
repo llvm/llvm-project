@@ -1,0 +1,20 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-cu-no-debug-addr-main.s -o %t1main.o
+# RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-cu-no-debug-addr-helper.s -o %t1helper.o
+# RUN: %clang %cflags -dwarf-5 %t1main.o %t1helper.o -o %t.exe -Wl,-q
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe  | FileCheck --check-prefix=PRECHECK %s
+# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
+
+# This tests checks that we handle correctly, don't crash, DWARF5 CUs that does not access .debug_addr.
+
+# PRECHECK: DW_TAG_compile_unit
+# PRECHECK: DW_AT_addr_base
+# PRECHECK: DW_TAG_compile_unit
+# PRECHECK-NOT: DW_AT_addr_base
+
+# POSTCHECK: DW_TAG_compile_unit
+# POSTCHECK: DW_AT_addr_base
+# POSTCHECK: DW_TAG_compile_unit
+# POSTCHECK-NOT: DW_AT_addr_base

@@ -1,5 +1,5 @@
 // Test -fsanitize-memory-use-after-dtor
-// RUN: %clang_cc1 -fsanitize=memory -fsanitize-memory-use-after-dtor -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fsanitize=memory -fsanitize-memory-use-after-dtor -std=c++11 -triple=x86_64-pc-linux -emit-llvm -debug-info-kind=line-tables-only -o - %s | FileCheck %s --implicit-check-not="call void @__sanitizer_"
 
 // Sanitizing dtor is emitted in dtor for every class, and only
 // poisons once.
@@ -56,18 +56,20 @@ Defaulted_Non_Trivial def_non_trivial;
 // instrumentation inserted.
 // CHECK-LABEL: define {{.*}}SimpleD2Ev
 // CHECK-NOT: store i{{[0-9]+}} 0, {{.*}}@__msan_param_tls
-// CHECK: call void @__sanitizer_dtor_callback
-// CHECK-NOT: call void @__sanitizer_dtor_callback
+// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}, !dbg ![[DI1:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}InlinedD2Ev
 // CHECK-NOT: store i{{[0-9]+}} 0, {{.*}}@__msan_param_tls
-// CHECK: call void @__sanitizer_dtor_callback
-// CHECK-NOT: call void @__sanitizer_dtor_callback
+// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}, !dbg ![[DI2:[0-9]+]]
 // CHECK: ret void
 
 // CHECK-LABEL: define {{.*}}Defaulted_Non_TrivialD2Ev
-// CHECK-NOT: store i{{[0-9]+}} 0, {{.*}}@__msan_param_tls
-// CHECK: call void @__sanitizer_dtor_callback
-// CHECK-NOT: call void @__sanitizer_dtor_callback
+// CHECK: call void @__sanitizer_dtor_callback_fields({{.*}}, !dbg ![[DI3:[0-9]+]]
 // CHECK: ret void
+
+// CHECK-LABEL: !DIFile{{.*}}cpp
+
+// CHECK-DAG: ![[DI1]] = {{.*}}line: [[@LINE-65]]
+// CHECK-DAG: ![[DI2]] = {{.*}}line: [[@LINE-56]]
+// CHECK-DAG: ![[DI3]] = {{.*}}line: [[@LINE-34]]

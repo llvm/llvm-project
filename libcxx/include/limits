@@ -106,10 +106,6 @@ template<> class numeric_limits<cv long double>;
 #include <__config>
 #include <type_traits>
 
-#if defined(_LIBCPP_COMPILER_MSVC)
-#include "__support/win32/limits_msvc_win32.h"
-#endif // _LIBCPP_MSVCRT
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
@@ -451,9 +447,9 @@ protected:
 
 template <class _Tp>
 class _LIBCPP_TEMPLATE_VIS numeric_limits
-    : private __libcpp_numeric_limits<typename remove_cv<_Tp>::type>
+    : private __libcpp_numeric_limits<__remove_cv_t<_Tp> >
 {
-    typedef __libcpp_numeric_limits<typename remove_cv<_Tp>::type> __base;
+    typedef __libcpp_numeric_limits<__remove_cv_t<_Tp> > __base;
     typedef typename __base::type type;
 public:
     static _LIBCPP_CONSTEXPR const bool is_specialized = __base::is_specialized;

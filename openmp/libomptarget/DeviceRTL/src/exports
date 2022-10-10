@@ -1,3 +1,10 @@
 omp_*
 *llvm_*
 __kmpc_*
+
+__keep_alive
+IsSPMDMode
+
+memcmp
+printf
+__assert_fail

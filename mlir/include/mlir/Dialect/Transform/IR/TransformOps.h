@@ -16,6 +16,13 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 
+namespace mlir {
+namespace transform {
+enum class FailurePropagationMode : uint32_t;
+class FailurePropagationModeAttr;
+} // namespace transform
+} // namespace mlir
+
 #define GET_OP_CLASSES
 #include "mlir/Dialect/Transform/IR/TransformOps.h.inc"
 

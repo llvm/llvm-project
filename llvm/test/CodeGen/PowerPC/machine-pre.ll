@@ -83,11 +83,11 @@ define dso_local signext i32 @foo(i32 signext %x, i32 signext %y) nounwind {
 ; CHECK-P9-NEXT:    bge cr0, .LBB1_7
 ; CHECK-P9-NEXT:  .LBB1_4: # %while.cond
 ; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    extsw r3, r29
+; CHECK-P9-NEXT:    mr r3, r29
 ; CHECK-P9-NEXT:    bl bar
 ; CHECK-P9-NEXT:    nop
 ; CHECK-P9-NEXT:    mr r29, r3
-; CHECK-P9-NEXT:    extsw r3, r30
+; CHECK-P9-NEXT:    mr r3, r30
 ; CHECK-P9-NEXT:    bl bar
 ; CHECK-P9-NEXT:    nop
 ; CHECK-P9-NEXT:    mr r30, r3

@@ -927,8 +927,16 @@ code. This issue is expected to be rectified soon.
       </tr>
       <tr> <!-- from Cologne -->
         <td><a href="https://wg21.link/p0848r3">P0848R3</a></td>
-        <td rowspan="1" class="none" align="center">No</td>
-      </tr>
+        <td rowspan="1" class="unreleased" align="center">
+          <details>
+            <summary>Clang 16 (Partial)</summary>
+            Because of other concepts implementation deficits, the __cpp_concepts macro is not yet set to 202002L.
+            Also, the related defect reports <a href="https://wg21.link/cwg1496">DR1496</a> and
+            <a href="https://wg21.link/cwg1734">DR1734</a> are not yet implemented. Accordingly, deleted
+            special member functions are treated as eligible even though they shouldn't be.
+          </details>
+        </td>
+        </tr>
       <tr>
         <td><a href="https://wg21.link/p1616r1">P1616R1</a></td>
         <td rowspan="2" class="full" align="center">Clang 10</td>
@@ -951,11 +959,7 @@ code. This issue is expected to be rectified soon.
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2092r0">P2092R0</a></td>
-        <td rowspan="1" class="partial" align="center">
-          <details><summary>Partial</summary>
-            <tt>typename</tt> not yet optional (depends on P0634R3).
-          </details>
-        </td>
+        <td rowspan="1" class="unreleased" align="center">Clang 16</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p2113r0">P2113R0</a></td>
@@ -1044,7 +1048,7 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td><tt>typename</tt> optional in more contexts</td>
       <td><a href="https://wg21.link/p0634r3">P0634R3</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>Pack expansion in lambda <i>init-capture</i></td>
@@ -1120,7 +1124,7 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td rowspan=2>Immediate functions (<tt>consteval</tt>)</td>
       <td><a href="https://wg21.link/p1073r3">P1073R3</a></td>
-      <td class="unreleased" align="center">Clang 15</td>
+      <td class="full" align="center">Clang 15</td>
     </tr>
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p1937r2">P1937R2</a></td>
@@ -1140,7 +1144,7 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td rowspan="2">Structured binding extensions</td>
       <td><a href="https://wg21.link/p1091r3">P1091R3</a></td>
-      <td rowspan="2" class="partial" align="center">Partial</td>
+      <td rowspan="2" class="unreleased" align="center">Clang 16</td>
     </tr>
       <tr>
         <td><a href="https://wg21.link/p1381r1">P1381R1</a></td>
@@ -1164,7 +1168,7 @@ code. This issue is expected to be rectified soon.
     <tr>
       <td rowspan="10">Modules</td>
       <td><a href="https://wg21.link/p1103r3">P1103R3</a></td>
-      <td class="unreleased" align="center">Clang 15</td>
+      <td class="full" align="center">Clang 15</td>
     </tr>
       <tr> <!-- from Cologne -->
         <td><a href="https://wg21.link/p1766r1">P1766R1</a> (<a href="#dr">DR</a>)</td>
@@ -1180,7 +1184,7 @@ code. This issue is expected to be rectified soon.
       </tr>
       <tr> <!-- from Belfast -->
         <td><a href="https://wg21.link/p1874r1">P1874R1</a></td>
-        <td class="unreleased" align="center">Clang 15</td>
+        <td class="full" align="center">Clang 15</td>
       </tr>
       <tr> <!-- from Belfast -->
         <td><a href="https://wg21.link/p1979r0">P1979R0</a></td>
@@ -1188,7 +1192,7 @@ code. This issue is expected to be rectified soon.
       </tr>
       <tr> <!-- from Prague -->
         <td><a href="https://wg21.link/p1779r3">P1779R3</a></td>
-        <td class="unreleased" align="center">Clang 15</td>
+        <td class="full" align="center">Clang 15</td>
       </tr>
       <tr>
         <td><a href="https://wg21.link/p1857r3">P1857R3</a></td>
@@ -1362,12 +1366,12 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>Multidimensional subscript operator</td>
       <td><a href="https://wg21.link/P2128R6">P2128R6</a></td>
-      <td class="unreleased" align="center">Clang 15</td>
+      <td class="full" align="center">Clang 15</td>
     </tr>
     <tr>
       <td>Non-literal variables (and labels and gotos) in constexpr functions</td>
       <td><a href="https://wg21.link/P2242R3">P2242R3</a></td>
-      <td class="unreleased" align="center">Clang 15</td>
+      <td class="full" align="center">Clang 15</td>
     </tr>
     <tr>
       <td>Character encoding of diagnostic text</td>
@@ -1397,7 +1401,7 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>auto(x): decay-copy in the language</td>
       <td><a href="https://wg21.link/P0849R8">P0849R8</a></td>
-      <td class="unreleased" align="center">Clang 15</td>
+      <td class="full" align="center">Clang 15</td>
     </tr>
     <!-- February 2022 papers -->
     <tr>
@@ -1433,7 +1437,7 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>De-deprecating volatile compound operations</td>
       <td><a href="https://wg21.link/P2327R1">P2327R1</a></td>
-      <td class="unreleased" align="center">Clang 15</td>
+      <td class="full" align="center">Clang 15</td>
     </tr>
     <tr>
       <td>Support for <code>#warning</code></td>
@@ -1448,17 +1452,17 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>Labels at the end of compound statements</td>
       <td><a href="https://wg21.link/P2324R2">P2324R2</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>Delimited escape sequences</td>
       <td><a href="https://wg21.link/P2290R3">P2290R3</a></td>
-      <td class="unreleased" align="center">Clang 15</td>
+      <td class="full" align="center">Clang 15</td>
     </tr>
     <tr>
       <td>Named universal character escapes</td>
       <td><a href="https://wg21.link/P2071R2">P2071R2</a></td>
-      <td class="unreleased" align="center">Clang 15</td>
+      <td class="full" align="center">Clang 15</td>
     </tr>
     <tr>
       <td>Relaxing some constexpr restrictions</td>
@@ -1473,7 +1477,7 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>static <code>operator()</code></td>
       <td><a href="https://wg21.link/P1169R4">P1169R4</a></td>
-      <td class="none" align="center">No</td>
+      <td class="unreleased" align="center">Clang 16</td>
     </tr>
     <tr>
       <td>Extended floating-point types and standard names</td>
@@ -1493,7 +1497,7 @@ C++20, informally referred to as C++2b.</p>
     <tr>
       <td>Support for UTF-8 as a portable source file encoding</td>
       <td><a href="https://wg21.link/P2295R6">P2295R6</a></td>
-      <td class="unreleased" align="center">Clang 15</td>
+      <td class="full" align="center">Clang 15</td>
     </tr>
     <tr>
       <td><code>char8_t</code> Compatibility and Portability Fix</td>

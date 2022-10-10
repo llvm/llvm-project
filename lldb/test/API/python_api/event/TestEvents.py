@@ -2,9 +2,6 @@
 Test lldb Python event APIs.
 """
 
-from __future__ import print_function
-
-
 import re
 import lldb
 from lldbsuite.test.decorators import *

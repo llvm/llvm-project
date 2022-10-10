@@ -303,7 +303,7 @@ GCNILPScheduler::schedule(ArrayRef<const SUnit*> BotRoots,
   for (const SUnit &SU : SUnits)
     CalcNodeSethiUllmanNumber(&SU, SUNumbers);
 
-  for (auto SU : BotRoots) {
+  for (const auto *SU : BotRoots) {
     AvailQueue.push_back(
       *new (Alloc.Allocate()) Candidate(const_cast<SUnit*>(SU)));
   }

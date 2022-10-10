@@ -60,11 +60,12 @@ static bool ProcessAliasOptionsArgs(lldb::CommandObjectSP &cmd_obj_sp,
 
   if (!options_string.empty()) {
     if (cmd_obj_sp->WantsRawCommandString())
-      option_arg_vector->emplace_back("<argument>", -1, options_string);
+      option_arg_vector->emplace_back(CommandInterpreter::g_argument, 
+                                      -1, options_string);
     else {
       for (auto &entry : args.entries()) {
         if (!entry.ref().empty())
-          option_arg_vector->emplace_back(std::string("<argument>"), -1,
+          option_arg_vector->emplace_back(std::string(CommandInterpreter::g_argument), -1,
                                           std::string(entry.ref()));
       }
     }
@@ -153,11 +154,12 @@ void CommandAlias::GetAliasExpansion(StreamString &help_string) const {
 
   for (const auto &opt_entry : *options) {
     std::tie(opt, std::ignore, value) = opt_entry;
-    if (opt == "<argument>") {
+    if (opt == CommandInterpreter::g_argument) {
       help_string.Printf(" %s", value.c_str());
     } else {
       help_string.Printf(" %s", opt.c_str());
-      if ((value != "<no-argument>") && (value != "<need-argument")) {
+      if ((value != CommandInterpreter::g_no_argument) 
+           && (value != CommandInterpreter::g_need_argument)) {
         help_string.Printf(" %s", value.c_str());
       }
     }
@@ -178,7 +180,7 @@ bool CommandAlias::IsDashDashCommand() {
 
   for (const auto &opt_entry : *GetOptionArguments()) {
     std::tie(opt, std::ignore, value) = opt_entry;
-    if (opt == "<argument>" && !value.empty() &&
+    if (opt == CommandInterpreter::g_argument && !value.empty() &&
         llvm::StringRef(value).endswith("--")) {
       m_is_dashdash_alias = eLazyBoolYes;
       break;
@@ -206,6 +208,8 @@ std::pair<lldb::CommandObjectSP, OptionArgVectorSP> CommandAlias::Desugar() {
     return {nullptr, nullptr};
 
   if (underlying->IsAlias()) {
+    // FIXME: This doesn't work if the original alias fills a slot in the
+    // underlying alias, since this just appends the two lists.
     auto desugared = ((CommandAlias *)underlying.get())->Desugar();
     auto options = GetOptionArguments();
     options->insert(options->begin(), desugared.second->begin(),

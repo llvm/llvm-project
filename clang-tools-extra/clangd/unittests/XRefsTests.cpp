@@ -1801,7 +1801,7 @@ TEST(FindImplementations, Inheritance) {
   }
 }
 
-TEST(FindImplementations, CaptureDefintion) {
+TEST(FindImplementations, CaptureDefinition) {
   llvm::StringRef Test = R"cpp(
     struct Base {
       virtual void F^oo();
@@ -1829,8 +1829,9 @@ TEST(FindType, All) {
     struct $Target[[Target]] { operator int() const; };
     struct Aggregate { Target a, b; };
     Target t;
+    Target make();
 
-    template <typename T> class $smart_ptr[[smart_ptr]] {
+    template <typename T> struct $smart_ptr[[smart_ptr]] {
       T& operator*();
       T* operator->();
       T* get();
@@ -1858,6 +1859,8 @@ TEST(FindType, All) {
            "void x() { ^if (t) {} }",
            "void x() { ^while (t) {} }",
            "void x() { ^do { } while (t); }",
+           "void x() { ^make(); }",
+           "void x(smart_ptr<Target> &t) { t.^get(); }",
            "^auto x = []() { return t; };",
            "Target* ^tptr = &t;",
            "Target ^tarray[3];",
@@ -2088,6 +2091,14 @@ TEST(FindReferences, WithinAST) {
           ns::S s;
           bar<ns::S>(s);
           [[f^oo]](s);
+        }
+      )cpp",
+      R"cpp(// unresolved member expression
+        struct Foo {
+          template <typename T> void $decl[[b^ar]](T t); 
+        };
+        template <typename T> void test(Foo F, T t) {
+          F.[[bar]](t);
         }
       )cpp",
 

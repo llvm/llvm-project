@@ -195,6 +195,53 @@ static bool wasDifferentDeclUsedForInlining(CallEventRef<> Call,
   return RuntimeCallee->getCanonicalDecl() != StaticDecl->getCanonicalDecl();
 }
 
+// Returns the number of elements in the array currently being destructed.
+// If the element count is not found 0 will be returned.
+static unsigned getElementCountOfArrayBeingDestructed(
+    const CallEvent &Call, const ProgramStateRef State, SValBuilder &SVB) {
+  assert(isa<CXXDestructorCall>(Call) &&
+         "The call event is not a destructor call!");
+
+  const auto &DtorCall = cast<CXXDestructorCall>(Call);
+
+  auto ThisVal = DtorCall.getCXXThisVal();
+
+  if (auto ThisElementRegion = dyn_cast<ElementRegion>(ThisVal.getAsRegion())) {
+    auto ArrayRegion = ThisElementRegion->getAsArrayOffset().getRegion();
+    auto ElementType = ThisElementRegion->getElementType();
+
+    auto ElementCount =
+        getDynamicElementCount(State, ArrayRegion, SVB, ElementType);
+
+    if (!ElementCount.isConstant())
+      return 0;
+
+    return ElementCount.getAsInteger()->getLimitedValue();
+  }
+
+  return 0;
+}
+
+ProgramStateRef ExprEngine::removeStateTraitsUsedForArrayEvaluation(
+    ProgramStateRef State, const CXXConstructExpr *E,
+    const LocationContext *LCtx) {
+
+  assert(LCtx && "Location context must be provided!");
+
+  if (E) {
+    if (getPendingInitLoop(State, E, LCtx))
+      State = removePendingInitLoop(State, E, LCtx);
+
+    if (getIndexOfElementToConstruct(State, E, LCtx))
+      State = removeIndexOfElementToConstruct(State, E, LCtx);
+  }
+
+  if (getPendingArrayDestruction(State, LCtx))
+    State = removePendingArrayDestruction(State, LCtx);
+
+  return State;
+}
+
 /// The call exit is simulated with a sequence of nodes, which occur between
 /// CallExitBegin and CallExitEnd. The following operations occur between the
 /// two program points:
@@ -234,6 +281,16 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
   // but we want to evaluate it as many times as many elements the array has.
   bool ShouldRepeatCall = false;
 
+  if (const auto *DtorDecl =
+          dyn_cast_or_null<CXXDestructorDecl>(Call->getDecl())) {
+    if (auto Idx = getPendingArrayDestruction(state, callerCtx)) {
+      ShouldRepeatCall = *Idx > 0;
+
+      auto ThisVal = svalBuilder.getCXXThis(DtorDecl->getParent(), calleeCtx);
+      state = state->killBinding(ThisVal);
+    }
+  }
+
   // If the callee returns an expression, bind its value to CallExpr.
   if (CE) {
     if (const ReturnStmt *RS = dyn_cast_or_null<ReturnStmt>(LastSt)) {
@@ -264,14 +321,6 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
       state = state->BindExpr(CCE, callerCtx, ThisV);
 
       ShouldRepeatCall = shouldRepeatCtorCall(state, CCE, callerCtx);
-
-      if (!ShouldRepeatCall) {
-        if (getIndexOfElementToConstruct(state, CCE, callerCtx))
-          state = removeIndexOfElementToConstruct(state, CCE, callerCtx);
-
-        if (getPendingInitLoop(state, CCE, callerCtx))
-          state = removePendingInitLoop(state, CCE, callerCtx);
-      }
     }
 
     if (const auto *CNE = dyn_cast<CXXNewExpr>(CE)) {
@@ -288,6 +337,11 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
       state = addObjectUnderConstruction(state, CNE, calleeCtx->getParent(),
                                          AllocV);
     }
+  }
+
+  if (!ShouldRepeatCall) {
+    state = removeStateTraitsUsedForArrayEvaluation(
+        state, dyn_cast_or_null<CXXConstructExpr>(CE), callerCtx);
   }
 
   // Step 3: BindedRetNode -> CleanedNodes
@@ -720,9 +774,9 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     SVal Target;
     assert(RTC->getStmt() == Call.getOriginExpr());
     EvalCallOptions CallOpts; // FIXME: We won't really need those.
-    std::tie(State, Target) =
-        handleConstructionContext(Call.getOriginExpr(), State, LCtx,
-                                  RTC->getConstructionContext(), CallOpts);
+    std::tie(State, Target) = handleConstructionContext(
+        Call.getOriginExpr(), State, currBldrCtx, LCtx,
+        RTC->getConstructionContext(), CallOpts);
     const MemRegion *TargetR = Target.getAsRegion();
     assert(TargetR);
     // Invalidate the region so that it didn't look uninitialized. If this is
@@ -761,6 +815,11 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
       SVal Size =
           svalBuilder.evalBinOp(State, BO_Mul, ElementCount, ElementSize,
                                 svalBuilder.getArrayIndexType());
+
+      // FIXME: This line is to prevent a crash. For more details please check
+      // issue #56264.
+      if (Size.isUndef())
+        Size = UnknownVal();
 
       State = setDynamicExtent(State, MR, Size.castAs<DefinedOrUnknownSVal>(),
                                svalBuilder);
@@ -813,11 +872,6 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
         !Opts.MayInlineCXXAllocator)
       return CIP_DisallowedOnce;
 
-    // FIXME: We don't handle constructors or destructors for arrays properly.
-    // Even once we do, we still need to be careful about implicitly-generated
-    // initializers for array fields in default move/copy constructors.
-    // We still allow construction into ElementRegion targets when they don't
-    // represent array elements.
     if (CallOpts.IsArrayCtorOrDtor) {
       if (!shouldInlineArrayConstruction(Pred->getState(), CtorExpr, CurLC))
         return CIP_DisallowedOnce;
@@ -872,9 +926,12 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     assert(ADC->getCFGBuildOptions().AddImplicitDtors && "No CFG destructors");
     (void)ADC;
 
-    // FIXME: We don't handle destructors for arrays properly.
-    if (CallOpts.IsArrayCtorOrDtor)
-      return CIP_DisallowedOnce;
+    if (CallOpts.IsArrayCtorOrDtor) {
+      if (!shouldInlineArrayDestruction(getElementCountOfArrayBeingDestructed(
+              Call, Pred->getState(), svalBuilder))) {
+        return CIP_DisallowedOnce;
+      }
+    }
 
     // Allow disabling temporary destructor inlining with a separate option.
     if (CallOpts.IsTemporaryCtorOrDtor &&
@@ -889,7 +946,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
     break;
   }
   case CE_CXXDeallocator:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case CE_CXXAllocator:
     if (Opts.MayInlineCXXAllocator)
       break;
@@ -1091,20 +1148,34 @@ bool ExprEngine::shouldInlineArrayConstruction(const ProgramStateRef State,
   if (!CE)
     return false;
 
-  auto Type = CE->getType();
-
   // FIXME: Handle other arrays types.
-  if (const auto *CAT = dyn_cast<ConstantArrayType>(Type)) {
-    unsigned Size = getContext().getConstantArrayElementCount(CAT);
+  if (const auto *CAT = dyn_cast<ConstantArrayType>(CE->getType())) {
+    unsigned ArrSize = getContext().getConstantArrayElementCount(CAT);
 
-    return Size <= AMgr.options.maxBlockVisitOnPath;
+    // This might seem conter-intuitive at first glance, but the functions are
+    // closely related. Reasoning about destructors depends only on the type
+    // of the expression that initialized the memory region, which is the
+    // CXXConstructExpr. So to avoid code repetition, the work is delegated
+    // to the function that reasons about destructor inlining. Also note that
+    // if the constructors of the array elements are inlined, the destructors
+    // can also be inlined and if the destructors can be inline, it's safe to
+    // inline the constructors.
+    return shouldInlineArrayDestruction(ArrSize);
   }
 
   // Check if we're inside an ArrayInitLoopExpr, and it's sufficiently small.
   if (auto Size = getPendingInitLoop(State, CE, LCtx))
-    return *Size <= AMgr.options.maxBlockVisitOnPath;
+    return shouldInlineArrayDestruction(*Size);
 
   return false;
+}
+
+bool ExprEngine::shouldInlineArrayDestruction(uint64_t Size) {
+
+  uint64_t maxAllowedSize = AMgr.options.maxBlockVisitOnPath;
+
+  // Declaring a 0 element array is also possible.
+  return Size <= maxAllowedSize && Size > 0;
 }
 
 bool ExprEngine::shouldRepeatCtorCall(ProgramStateRef State,
@@ -1189,7 +1260,12 @@ void ExprEngine::defaultEvalCall(NodeBuilder &Bldr, ExplodedNode *Pred,
     }
   }
 
-  // If we can't inline it, handle the return value and invalidate the regions.
+  // If we can't inline it, clean up the state traits used only if the function
+  // is inlined.
+  State = removeStateTraitsUsedForArrayEvaluation(
+      State, dyn_cast_or_null<CXXConstructExpr>(E), Call->getLocationContext());
+
+  // Also handle the return value and invalidate the regions.
   conservativeEvalCall(*Call, Bldr, Pred, State);
 }
 

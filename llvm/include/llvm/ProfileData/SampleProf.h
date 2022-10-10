@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Function.h"
@@ -1331,6 +1332,26 @@ template <> struct DenseMapInfo<SampleContext> {
     return LHS == RHS;
   }
 };
+
+// Prepend "__uniq" before the hash for tools like profilers to understand
+// that this symbol is of internal linkage type.  The "__uniq" is the
+// pre-determined prefix that is used to tell tools that this symbol was
+// created with -funique-internal-linakge-symbols and the tools can strip or
+// keep the prefix as needed.
+inline std::string getUniqueInternalLinkagePostfix(const StringRef &FName) {
+  llvm::MD5 Md5;
+  Md5.update(FName);
+  llvm::MD5::MD5Result R;
+  Md5.final(R);
+  SmallString<32> Str;
+  llvm::MD5::stringifyResult(R, Str);
+  // Convert MD5hash to Decimal. Demangler suffixes can either contain
+  // numbers or characters but not both.
+  llvm::APInt IntHash(128, Str.str(), 16);
+  return toString(IntHash, /* Radix = */ 10, /* Signed = */ false)
+      .insert(0, FunctionSamples::UniqSuffix);
+}
+
 } // end namespace llvm
 
 #endif // LLVM_PROFILEDATA_SAMPLEPROF_H

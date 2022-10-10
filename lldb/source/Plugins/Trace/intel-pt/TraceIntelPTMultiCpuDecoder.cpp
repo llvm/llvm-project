@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TraceIntelPTMultiCpuDecoder.h"
-
 #include "TraceIntelPT.h"
-
 #include "llvm/Support/Error.h"
 
 using namespace lldb;
@@ -63,8 +61,7 @@ Expected<DecodedThreadSP> TraceIntelPTMultiCpuDecoder::Decode(Thread &thread) {
 
   TraceIntelPTSP trace_sp = GetTrace();
 
-  return trace_sp
-      ->GetThreadTimer(thread.GetID())
+  return trace_sp->GetThreadTimer(thread.GetID())
       .TimeTask("Decoding instructions", [&]() -> Expected<DecodedThreadSP> {
         auto it = m_decoded_threads.find(thread.GetID());
         if (it != m_decoded_threads.end())
@@ -92,23 +89,23 @@ Expected<DecodedThreadSP> TraceIntelPTMultiCpuDecoder::Decode(Thread &thread) {
       });
 }
 
-static Expected<std::vector<IntelPTThreadSubtrace>>
-GetIntelPTSubtracesForCpu(TraceIntelPT &trace, cpu_id_t cpu_id) {
-  std::vector<IntelPTThreadSubtrace> intel_pt_subtraces;
+static Expected<std::vector<PSBBlock>> GetPSBBlocksForCPU(TraceIntelPT &trace,
+                                                          cpu_id_t cpu_id) {
+  std::vector<PSBBlock> psb_blocks;
   Error err = trace.OnCpuBinaryDataRead(
       cpu_id, IntelPTDataKinds::kIptTrace,
       [&](ArrayRef<uint8_t> data) -> Error {
-        Expected<std::vector<IntelPTThreadSubtrace>> split_trace =
-            SplitTraceInContinuousExecutions(trace, data);
+        Expected<std::vector<PSBBlock>> split_trace =
+            SplitTraceIntoPSBBlock(trace, data, /*expect_tscs=*/true);
         if (!split_trace)
           return split_trace.takeError();
 
-        intel_pt_subtraces = std::move(*split_trace);
+        psb_blocks = std::move(*split_trace);
         return Error::success();
       });
   if (err)
     return std::move(err);
-  return intel_pt_subtraces;
+  return psb_blocks;
 }
 
 Expected<DenseMap<lldb::tid_t, std::vector<IntelPTThreadContinousExecution>>>
@@ -127,24 +124,24 @@ TraceIntelPTMultiCpuDecoder::DoCorrelateContextSwitchesAndIntelPtTraces() {
   LinuxPerfZeroTscConversion tsc_conversion = *conv_opt;
 
   for (cpu_id_t cpu_id : trace_sp->GetTracedCpus()) {
-    Expected<std::vector<IntelPTThreadSubtrace>> intel_pt_subtraces =
-        GetIntelPTSubtracesForCpu(*trace_sp, cpu_id);
-    if (!intel_pt_subtraces)
-      return intel_pt_subtraces.takeError();
+    Expected<std::vector<PSBBlock>> psb_blocks =
+        GetPSBBlocksForCPU(*trace_sp, cpu_id);
+    if (!psb_blocks)
+      return psb_blocks.takeError();
 
-    m_total_psb_blocks += intel_pt_subtraces->size();
+    m_total_psb_blocks += psb_blocks->size();
     // We'll be iterating through the thread continuous executions and the intel
     // pt subtraces sorted by time.
-    auto it = intel_pt_subtraces->begin();
+    auto it = psb_blocks->begin();
     auto on_new_thread_execution =
         [&](const ThreadContinuousExecution &thread_execution) {
           IntelPTThreadContinousExecution execution(thread_execution);
 
-          for (; it != intel_pt_subtraces->end() &&
-                 it->tsc < thread_execution.GetEndTSC();
+          for (; it != psb_blocks->end() &&
+                 *it->tsc < thread_execution.GetEndTSC();
                it++) {
-            if (it->tsc > thread_execution.GetStartTSC()) {
-              execution.intelpt_subtraces.push_back(*it);
+            if (*it->tsc > thread_execution.GetStartTSC()) {
+              execution.psb_blocks.push_back(*it);
             } else {
               m_unattributed_psb_blocks++;
             }
@@ -166,7 +163,7 @@ TraceIntelPTMultiCpuDecoder::DoCorrelateContextSwitchesAndIntelPtTraces() {
     if (err)
       return std::move(err);
 
-    m_unattributed_psb_blocks += intel_pt_subtraces->end() - it;
+    m_unattributed_psb_blocks += psb_blocks->end() - it;
   }
   // We now sort the executions of each thread to have them ready for
   // instruction decoding
@@ -227,7 +224,7 @@ TraceIntelPTMultiCpuDecoder::GePSBBlocksCountForThread(lldb::tid_t tid) const {
   if (it == m_continuous_executions_per_thread->end())
     return 0;
   for (const IntelPTThreadContinousExecution &execution : it->second)
-    count += execution.intelpt_subtraces.size();
+    count += execution.psb_blocks.size();
   return count;
 }
 

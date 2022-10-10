@@ -27,7 +27,7 @@ class RemQuoTestTemplate : public __llvm_libc::testing::Test {
   const T neg_zero = T(__llvm_libc::fputil::FPBits<T>::neg_zero());
   const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
   const T neg_inf = T(__llvm_libc::fputil::FPBits<T>::neg_inf());
-  const T nan = T(__llvm_libc::fputil::FPBits<T>::build_nan(1));
+  const T nan = T(__llvm_libc::fputil::FPBits<T>::build_quiet_nan(1));
 
 public:
   typedef T (*RemQuoFunc)(T, T, int *);

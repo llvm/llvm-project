@@ -5,6 +5,8 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.fenv
     libc.include.inttypes
     libc.include.math
+    libc.include.pthread
+    libc.include.sched
     libc.include.signal
     libc.include.stdio
     libc.include.stdlib

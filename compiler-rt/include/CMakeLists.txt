@@ -37,7 +37,7 @@ endif(COMPILER_RT_BUILD_XRAY)
 
 if (COMPILER_RT_BUILD_ORC)
   set(ORC_HEADERS
-    orc/c_api.h
+    orc_rt/c_api.h
     )
 endif(COMPILER_RT_BUILD_ORC)
 

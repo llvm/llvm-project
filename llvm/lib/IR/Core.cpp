@@ -541,8 +541,8 @@ LLVMTypeKind LLVMGetTypeKind(LLVMTypeRef Ty) {
     return LLVMTokenTypeKind;
   case Type::ScalableVectorTyID:
     return LLVMScalableVectorTypeKind;
-  case Type::DXILPointerTyID:
-    llvm_unreachable("DXIL pointers are unsupported via the C API");
+  case Type::TypedPointerTyID:
+    llvm_unreachable("Typed pointers are unsupported via the C API");
   }
   llvm_unreachable("Unhandled TypeID.");
 }
@@ -1548,10 +1548,6 @@ LLVMValueRef LLVMConstNUWNeg(LLVMValueRef ConstantVal) {
   return wrap(ConstantExpr::getNUWNeg(unwrap<Constant>(ConstantVal)));
 }
 
-
-LLVMValueRef LLVMConstFNeg(LLVMValueRef ConstantVal) {
-  return wrap(ConstantExpr::getFNeg(unwrap<Constant>(ConstantVal)));
-}
 
 LLVMValueRef LLVMConstNot(LLVMValueRef ConstantVal) {
   return wrap(ConstantExpr::getNot(unwrap<Constant>(ConstantVal)));

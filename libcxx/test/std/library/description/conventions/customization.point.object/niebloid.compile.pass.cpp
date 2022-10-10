@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 // REQUIRES: stdlib=libc++
 
 // [algorithms.requirements]/2
@@ -56,7 +55,6 @@ int a[10];
 auto odd = [](int x) { return x % 2 != 0; };
 auto triple = [](int x) { return 3*x; };
 auto gen = [] { return 42; };
-//auto plus = [](int x, int y) { return x == y; };
 std::mt19937 g;
 
 // [algorithm.syn]
@@ -65,7 +63,7 @@ static_assert(test(std::ranges::adjacent_find, a));
 static_assert(test(std::ranges::all_of, a, odd));
 static_assert(test(std::ranges::any_of, a, odd));
 static_assert(test(std::ranges::binary_search, a, 42));
-//static_assert(test(std::ranges::clamp, 42, 42, 42));
+static_assert(test(std::ranges::clamp, 42, 42, 42));
 static_assert(test(std::ranges::copy, a, a));
 static_assert(test(std::ranges::copy_backward, a, a));
 static_assert(test(std::ranges::copy_if, a, a, odd));
@@ -79,7 +77,7 @@ static_assert(test(std::ranges::fill, a, 42));
 static_assert(test(std::ranges::fill_n, a, 10, 42));
 static_assert(test(std::ranges::find, a, 42));
 static_assert(test(std::ranges::find_end, a, a));
-//static_assert(test(std::ranges::find_first_of, a, a));
+static_assert(test(std::ranges::find_first_of, a, a));
 static_assert(test(std::ranges::find_if, a, odd));
 static_assert(test(std::ranges::find_if_not, a, odd));
 static_assert(test(std::ranges::for_each, a, odd));
@@ -87,11 +85,11 @@ static_assert(test(std::ranges::for_each_n, a, 10, odd));
 static_assert(test(std::ranges::generate, a, gen));
 static_assert(test(std::ranges::generate_n, a, 10, gen));
 static_assert(test(std::ranges::includes, a, a));
-//static_assert(test(std::ranges::inplace_merge, a, a+5));
+static_assert(test(std::ranges::inplace_merge, a, a+5));
 static_assert(test(std::ranges::is_heap, a));
 static_assert(test(std::ranges::is_heap_until, a));
 static_assert(test(std::ranges::is_partitioned, a, odd));
-//static_assert(test(std::ranges::is_permutation, a, a));
+static_assert(test(std::ranges::is_permutation, a, a));
 static_assert(test(std::ranges::is_sorted, a));
 static_assert(test(std::ranges::is_sorted_until, a));
 static_assert(test(std::ranges::lexicographical_compare, a, a));
@@ -107,30 +105,30 @@ static_assert(test(std::ranges::minmax_element, a));
 static_assert(test(std::ranges::mismatch, a, a));
 static_assert(test(std::ranges::move, a, a));
 static_assert(test(std::ranges::move_backward, a, a));
-//static_assert(test(std::ranges::next_permutation, a));
+static_assert(test(std::ranges::next_permutation, a));
 static_assert(test(std::ranges::none_of, a, odd));
 static_assert(test(std::ranges::nth_element, a, a+5));
 static_assert(test(std::ranges::partial_sort, a, a+5));
-//static_assert(test(std::ranges::partial_sort_copy, a, a));
+static_assert(test(std::ranges::partial_sort_copy, a, a));
 static_assert(test(std::ranges::partition, a, odd));
 static_assert(test(std::ranges::partition_copy, a, a, a, odd));
 static_assert(test(std::ranges::partition_point, a, odd));
 static_assert(test(std::ranges::pop_heap, a));
-//static_assert(test(std::ranges::prev_permutation, a));
+static_assert(test(std::ranges::prev_permutation, a));
 static_assert(test(std::ranges::push_heap, a));
 static_assert(test(std::ranges::remove, a, 42));
-//static_assert(test(std::ranges::remove_copy, a, a, 42));
-//static_assert(test(std::ranges::remove_copy_if, a, a, odd));
+static_assert(test(std::ranges::remove_copy, a, a, 42));
+static_assert(test(std::ranges::remove_copy_if, a, a, odd));
 static_assert(test(std::ranges::remove_if, a, odd));
 static_assert(test(std::ranges::replace, a, 42, 43));
-//static_assert(test(std::ranges::replace_copy, a, a, 42, 43));
-//static_assert(test(std::ranges::replace_copy_if, a, a, odd, 43));
+static_assert(test(std::ranges::replace_copy, a, a, 42, 43));
+static_assert(test(std::ranges::replace_copy_if, a, a, odd, 43));
 static_assert(test(std::ranges::replace_if, a, odd, 43));
 static_assert(test(std::ranges::reverse, a));
 static_assert(test(std::ranges::reverse_copy, a, a));
-//static_assert(test(std::ranges::rotate, a, a+5));
+static_assert(test(std::ranges::rotate, a, a+5));
 static_assert(test(std::ranges::rotate_copy, a, a+5, a));
-//static_assert(test(std::ranges::sample, a, a, 5));
+static_assert(test(std::ranges::sample, a, a, 5, g));
 static_assert(test(std::ranges::search, a, a));
 static_assert(test(std::ranges::search_n, a, 10, 42));
 static_assert(test(std::ranges::set_difference, a, a, a));
@@ -145,8 +143,8 @@ static_assert(test(std::ranges::stable_sort, a));
 //static_assert(test(std::ranges::starts_with, a, a));
 static_assert(test(std::ranges::swap_ranges, a, a));
 static_assert(test(std::ranges::transform, a, a, triple));
-//static_assert(test(std::ranges::unique, a));
-//static_assert(test(std::ranges::unique_copy, a, a));
+static_assert(test(std::ranges::unique, a));
+static_assert(test(std::ranges::unique_copy, a, a));
 static_assert(test(std::ranges::upper_bound, a, 42));
 
 // [memory.syn]

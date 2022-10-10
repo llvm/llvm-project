@@ -273,10 +273,11 @@ void ModFileWriter::PutSymbol(
               }
             } else {
               PutGeneric(symbol);
-              if (x.specific()) {
+              if (x.specific() && &x.specific()->owner() == &symbol.owner()) {
                 PutSymbol(typeBindings, *x.specific());
               }
-              if (x.derivedType()) {
+              if (x.derivedType() &&
+                  &x.derivedType()->owner() == &symbol.owner()) {
                 PutSymbol(typeBindings, *x.derivedType());
               }
             }
@@ -927,49 +928,64 @@ Scope *ModFileReader::Read(const SourceName &name,
       return scope;
     }
     ancestorName = ancestor->GetName().value().ToString();
-  } else {
-    if (!isIntrinsic.value_or(false)) {
-      auto it{context_.globalScope().find(name)};
-      if (it != context_.globalScope().end()) {
-        Scope *scope{it->second->scope()};
-        if (scope->kind() == Scope::Kind::Module) {
-          return scope;
-        } else {
-          notAModule = scope->symbol();
-          // USE, NON_INTRINSIC global name isn't a module?
-          fatalError = isIntrinsic.has_value();
-        }
-      }
-    }
-    if (isIntrinsic.value_or(true)) {
-      auto it{context_.intrinsicModulesScope().find(name)};
-      if (it != context_.intrinsicModulesScope().end()) {
-        return it->second->scope();
+  }
+  if (!isIntrinsic.value_or(false) && !ancestor) {
+    // Already present in the symbol table as a usable non-intrinsic module?
+    auto it{context_.globalScope().find(name)};
+    if (it != context_.globalScope().end()) {
+      Scope *scope{it->second->scope()};
+      if (scope->kind() == Scope::Kind::Module) {
+        return scope;
+      } else {
+        notAModule = scope->symbol();
+        // USE, NON_INTRINSIC global name isn't a module?
+        fatalError = isIntrinsic.has_value();
       }
     }
   }
+  auto path{ModFileName(name, ancestorName, context_.moduleFileSuffix())};
   parser::Parsing parsing{context_.allCookedSources()};
   parser::Options options;
   options.isModuleFile = true;
   options.features.Enable(common::LanguageFeature::BackslashEscapes);
   options.features.Enable(common::LanguageFeature::OpenMP);
   if (!isIntrinsic.value_or(false) && !notAModule) {
-    // Scan non-intrinsic module directories
+    // The search for this module file will scan non-intrinsic module
+    // directories.  If a directory is in both the intrinsic and non-intrinsic
+    // directory lists, the intrinsic module directory takes precedence.
     options.searchDirectories = context_.searchDirectories();
-    // If a directory is in both lists, the intrinsic module directory
-    // takes precedence.
     for (const auto &dir : context_.intrinsicModuleDirectories()) {
       std::remove(options.searchDirectories.begin(),
           options.searchDirectories.end(), dir);
     }
     options.searchDirectories.insert(options.searchDirectories.begin(), "."s);
   }
+  bool foundNonIntrinsicModuleFile{false};
+  if (!isIntrinsic) {
+    std::list<std::string> searchDirs;
+    for (const auto &d : options.searchDirectories) {
+      searchDirs.push_back(d);
+    }
+    foundNonIntrinsicModuleFile =
+        parser::LocateSourceFile(path, searchDirs).has_value();
+  }
+  if (isIntrinsic.value_or(!foundNonIntrinsicModuleFile)) {
+    // Explicitly intrinsic, or not specified and not found in the search
+    // path; see whether it's already in the symbol table as an intrinsic
+    // module.
+    auto it{context_.intrinsicModulesScope().find(name)};
+    if (it != context_.intrinsicModulesScope().end()) {
+      return it->second->scope();
+    }
+  }
+  // We don't have this module in the symbol table yet.
+  // Find its module file and parse it.  Define or extend the search
+  // path with intrinsic module directories, if appropriate.
   if (isIntrinsic.value_or(true)) {
     for (const auto &dir : context_.intrinsicModuleDirectories()) {
       options.searchDirectories.push_back(dir);
     }
   }
-  auto path{ModFileName(name, ancestorName, context_.moduleFileSuffix())};
   const auto *sourceFile{fatalError ? nullptr : parsing.Prescan(path, options)};
   if (fatalError || parsing.messages().AnyFatalError()) {
     if (!silent) {
@@ -1169,6 +1185,12 @@ void SubprogramSymbolCollector::DoSymbol(
                         DoSymbol(*object);
                       }
                     },
+                    [this](const ProcEntityDetails &details) {
+                      if (const Symbol * symbol{details.interface().symbol()}) {
+                        DoSymbol(*symbol);
+                      }
+                      DoType(details.interface().type());
+                    },
                     [](const auto &) {},
                 },
       symbol.details());
@@ -1224,6 +1246,8 @@ void SubprogramSymbolCollector::DoParamValue(const ParamValue &paramValue) {
 bool SubprogramSymbolCollector::NeedImport(
     const SourceName &name, const Symbol &symbol) {
   if (!isInterface_) {
+    return false;
+  } else if (&symbol == scope_.symbol()) {
     return false;
   } else if (symbol.owner().Contains(scope_)) {
     return true;

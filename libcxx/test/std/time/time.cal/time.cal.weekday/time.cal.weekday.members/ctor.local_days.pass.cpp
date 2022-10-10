@@ -21,7 +21,7 @@
 //
 // [Example:
 //  If dp represents 1970-01-01, the constructed weekday represents Thursday by storing 4 in wd_.
-// —end example]
+// -end example]
 
 #include <chrono>
 #include <type_traits>

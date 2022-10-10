@@ -158,6 +158,12 @@ struct TypeInterfaceGenerator : public InterfaceGenerator {
 // GEN: Interface definitions
 //===----------------------------------------------------------------------===//
 
+static void emitInterfaceMethodDoc(const InterfaceMethod &method,
+                                   raw_ostream &os, StringRef prefix = "") {
+  if (Optional<StringRef> description = method.getDescription())
+    tblgen::emitDescriptionComment(*description, os, prefix);
+}
+
 static void emitInterfaceDef(const Interface &interface, StringRef valueType,
                              raw_ostream &os) {
   StringRef interfaceName = interface.getName();
@@ -167,6 +173,7 @@ static void emitInterfaceDef(const Interface &interface, StringRef valueType,
   // Insert the method definitions.
   bool isOpInterface = isa<OpInterface>(interface);
   for (auto &method : interface.getMethods()) {
+    emitInterfaceMethodDoc(method, os);
     emitCPPType(method.getReturnType(), os);
     if (!cppNamespace.empty())
       os << cppNamespace << "::";
@@ -401,6 +408,7 @@ void InterfaceGenerator::emitTraitDecl(const Interface &interface,
     if (!defaultImpl)
       continue;
 
+    emitInterfaceMethodDoc(method, os, "    ");
     os << "    " << (method.isStatic() ? "static " : "");
     emitCPPType(method.getReturnType(), os);
     emitMethodNameAndArgs(method, os, valueType, /*addThisArg=*/false,
@@ -470,6 +478,7 @@ void InterfaceGenerator::emitInterfaceDecl(const Interface &interface) {
   // Insert the method declarations.
   bool isOpInterface = isa<OpInterface>(interface);
   for (auto &method : interface.getMethods()) {
+    emitInterfaceMethodDoc(method, os, "  ");
     emitCPPType(method.getReturnType(), os << "  ");
     emitMethodNameAndArgs(method, os, valueType, /*addThisArg=*/false,
                           /*addConst=*/!isOpInterface);

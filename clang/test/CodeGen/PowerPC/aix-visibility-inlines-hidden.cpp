@@ -6,11 +6,11 @@
 // RUN: FileCheck -check-prefixes=VISIBILITY-IR,HIDDENINLINE-IR %s
 
 // RUN: %clang_cc1 -triple powerpc-unknown-aix -mcmodel=large -fvisibility-inlines-hidden \
-// RUN:            -fvisibility default -emit-llvm -o - -x c++ %s  | \
+// RUN:            -fvisibility=default -emit-llvm -o - -x c++ %s  | \
 // RUN: FileCheck -check-prefixes=VISIBILITY-IR,HIDDENINLINE-IR %s
 
 // RUN: %clang_cc1 -triple powerpc-unknown-aix -mcmodel=large -mignore-xcoff-visibility -emit-llvm \
-// RUN:            -fvisibility-inlines-hidden -fvisibility default -o - -x c++ %s  | \
+// RUN:            -fvisibility-inlines-hidden -fvisibility=default -o - -x c++ %s  | \
 // RUN: FileCheck -check-prefix=NOVISIBILITY-IR %s
 
 int x = 66;

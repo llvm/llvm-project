@@ -38,15 +38,15 @@ entry:
 
 ; GCN-LABEL: {{^}}double4_extelt:
 ; GCN-NOT: buffer_
-; GCN-DAG: s_cmp_eq_u32 [[IDX:s[0-9]+]], 1
-; GCN-DAG: s_cselect_b64 [[C1:[^,]+]], -1, 0
-; GCN-DAG: s_cmp_eq_u32 [[IDX]], 2
-; GCN-DAG: s_cselect_b64 [[C2:[^,]+]], -1, 0
-; GCN-DAG: s_cmp_eq_u32 [[IDX]], 3
-; GCN-DAG: s_cselect_b64 [[C3:[^,]+]], -1, 0
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C1]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C2]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C3]]
+; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 1
+; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x3f847ae1
+; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x47ae147b
+; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 2
+; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, 0xe147ae14, s{{[0-9]+}}
+; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, 0x4000147a, s{{[0-9]+}}
+; GCN-DAG: s_cmp_eq_u32 s{{[[0-9]+}}, 3
+; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, 0x40100a3d, s{{[0-9]+}}
+; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, 0x70a3d70a, s{{[0-9]+}}
 ; GCN: store_dwordx2 v[{{[0-9:]+}}]
 define amdgpu_kernel void @double4_extelt(double addrspace(1)* %out, i32 %sel) {
 entry:
@@ -57,18 +57,17 @@ entry:
 
 ; GCN-LABEL: {{^}}double5_extelt:
 ; GCN-NOT: buffer_
-; GCN-DAG: s_cmp_eq_u32 [[IDX:s[0-9]+]], 1
-; GCN-DAG: s_cselect_b64 [[C1:[^,]+]], -1, 0
-; GCN-DAG: s_cmp_eq_u32 [[IDX]], 2
-; GCN-DAG: s_cselect_b64 [[C2:[^,]+]], -1, 0
-; GCN-DAG: s_cmp_eq_u32 [[IDX]], 3
-; GCN-DAG: s_cselect_b64 [[C3:[^,]+]], -1, 0
-; GCN-DAG: s_cmp_eq_u32 [[IDX]], 4
-; GCN-DAG: s_cselect_b64 [[C4:[^,]+]], -1, 0
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C1]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C2]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C3]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C4]]
+; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 1
+; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x3f847ae1
+; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x47ae147b
+; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 2
+; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, 0xe147ae14, s{{[0-9]+}}
+; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, 0x4000147a, s{{[0-9]+}}
+; GCN-DAG: s_cmp_eq_u32 s{{[[0-9]+}}, 3
+; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, 0x40100a3d, s{{[0-9]+}}
+; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, 0x70a3d70a, s{{[0-9]+}}
+; GCN-DAG: s_cmp_eq_u32 s{{[[0-9]+}}, 4
+; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, 0x40140a3d, s{{[0-9]+}}
 ; GCN: store_dwordx2 v[{{[0-9:]+}}]
 define amdgpu_kernel void @double5_extelt(double addrspace(1)* %out, i32 %sel) {
 entry:
@@ -107,10 +106,9 @@ entry:
 
 ; GCN-LABEL: {{^}}double2_extelt:
 ; GCN-NOT: buffer_
-; GCN-DAG: s_cmp_eq_u32 [[IDX:s[0-9]+]], 1
-; GCN-DAG: s_cselect_b64 [[C1:[^,]+]], -1, 0
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C1]]
-; GCN-DAG: v_cndmask_b32_e{{32|64}} v{{[0-9]+}}, {{[^,]+}}, {{[^,]+}}, [[C1]]
+; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 1
+; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x3f847ae1
+; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x47ae147b
 ; GCN: store_dwordx2 v[{{[0-9:]+}}]
 define amdgpu_kernel void @double2_extelt(double addrspace(1)* %out, i32 %sel) {
 entry:

@@ -39,7 +39,10 @@ namespace format {
   TYPE(CastRParen)                                                             \
   TYPE(ClassLBrace)                                                            \
   TYPE(CompoundRequirementLBrace)                                              \
+  /* ternary ?: expression */                                                  \
   TYPE(ConditionalExpr)                                                        \
+  /* the condition in an if statement */                                       \
+  TYPE(ConditionLParen)                                                        \
   TYPE(ConflictAlternative)                                                    \
   TYPE(ConflictEnd)                                                            \
   TYPE(ConflictStart)                                                          \
@@ -67,6 +70,9 @@ namespace format {
   TYPE(FunctionLBrace)                                                         \
   TYPE(FunctionLikeOrFreestandingMacro)                                        \
   TYPE(FunctionTypeLParen)                                                     \
+  /* The colon at the end of a goto label or a case label. Currently only used \
+   * for Verilog. */                                                           \
+  TYPE(GotoLabelColon)                                                         \
   TYPE(IfMacro)                                                                \
   TYPE(ImplicitStringLiteral)                                                  \
   TYPE(InheritanceColon)                                                       \
@@ -135,6 +141,16 @@ namespace format {
   TYPE(UnaryOperator)                                                          \
   TYPE(UnionLBrace)                                                            \
   TYPE(UntouchableMacroFunc)                                                   \
+  /* like in begin : block */                                                  \
+  TYPE(VerilogBlockLabelColon)                                                 \
+  /* The square bracket for the dimension part of the type name.               \
+   * In 'logic [1:0] x[1:0]', only the first '['. This way we can have space   \
+   * before the first bracket but not the second. */                           \
+  TYPE(VerilogDimensionedTypeName)                                             \
+  /* for the base in a number literal, not including the quote */              \
+  TYPE(VerilogNumberBase)                                                      \
+  /* Things inside the table in user-defined primitives. */                    \
+  TYPE(VerilogTableItem)                                                       \
   TYPE(Unknown)
 
 /// Determines the semantic type of a syntactic token, e.g. whether "<" is a
@@ -368,6 +384,9 @@ public:
   }
   bool isTypeFinalized() const { return TypeIsFinalized; }
 
+  /// Used to set an operator precedence explicitly.
+  prec::Level ForcedPrecedence = prec::Unknown;
+
   /// The number of newlines immediately before the \c Token.
   ///
   /// This can be used to determine what the user wrote in the original code
@@ -565,8 +584,12 @@ public:
   }
 
   bool isAccessSpecifier(bool ColonRequired = true) const {
-    return isOneOf(tok::kw_public, tok::kw_protected, tok::kw_private) &&
-           (!ColonRequired || (Next && Next->is(tok::colon)));
+    if (!isOneOf(tok::kw_public, tok::kw_protected, tok::kw_private))
+      return false;
+    if (!ColonRequired)
+      return true;
+    const auto NextNonComment = getNextNonComment();
+    return NextNonComment && NextNonComment->is(tok::colon);
   }
 
   bool canBePointerOrReferenceQualifier() const {
@@ -577,9 +600,9 @@ public:
   }
 
   /// Determine whether the token is a simple-type-specifier.
-  LLVM_NODISCARD bool isSimpleTypeSpecifier() const;
+  [[nodiscard]] bool isSimpleTypeSpecifier() const;
 
-  LLVM_NODISCARD bool isTypeOrIdentifier() const;
+  [[nodiscard]] bool isTypeOrIdentifier() const;
 
   bool isObjCAccessSpecifier() const {
     return is(tok::at) && Next &&
@@ -658,7 +681,8 @@ public:
     case tok::kw_static_assert:
     case tok::kw__Atomic:
     case tok::kw___attribute:
-    case tok::kw___underlying_type:
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
+#include "clang/Basic/TransformTypeTraits.def"
     case tok::kw_requires:
       return true;
     default:
@@ -697,12 +721,14 @@ public:
   }
 
   prec::Level getPrecedence() const {
+    if (ForcedPrecedence != prec::Unknown)
+      return ForcedPrecedence;
     return getBinOpPrecedence(Tok.getKind(), /*GreaterThanIsOperator=*/true,
                               /*CPlusPlus11=*/true);
   }
 
   /// Returns the previous token ignoring comments.
-  LLVM_NODISCARD FormatToken *getPreviousNonComment() const {
+  [[nodiscard]] FormatToken *getPreviousNonComment() const {
     FormatToken *Tok = Previous;
     while (Tok && Tok->is(tok::comment))
       Tok = Tok->Previous;
@@ -710,7 +736,7 @@ public:
   }
 
   /// Returns the next token ignoring comments.
-  LLVM_NODISCARD const FormatToken *getNextNonComment() const {
+  [[nodiscard]] const FormatToken *getNextNonComment() const {
     const FormatToken *Tok = Next;
     while (Tok && Tok->is(tok::comment))
       Tok = Tok->Next;
@@ -719,7 +745,7 @@ public:
 
   /// Returns \c true if this tokens starts a block-type list, i.e. a
   /// list that should be indented with a block indent.
-  LLVM_NODISCARD bool opensBlockOrBlockTypeList(const FormatStyle &Style) const;
+  [[nodiscard]] bool opensBlockOrBlockTypeList(const FormatStyle &Style) const;
 
   /// Returns whether the token is the left square bracket of a C++
   /// structured binding declaration.
@@ -988,6 +1014,7 @@ struct AdditionalKeywords {
     kw_when = &IdentTable.get("when");
     kw_where = &IdentTable.get("where");
 
+    // Verilog keywords
     kw_always = &IdentTable.get("always");
     kw_always_comb = &IdentTable.get("always_comb");
     kw_always_ff = &IdentTable.get("always_ff");
@@ -1119,6 +1146,7 @@ struct AdditionalKeywords {
     // Symbols that are treated as keywords.
     kw_verilogHash = &IdentTable.get("#");
     kw_verilogHashHash = &IdentTable.get("##");
+    kw_apostrophe = &IdentTable.get("\'");
 
     // Keep this at the end of the constructor to make sure everything here
     // is
@@ -1511,11 +1539,14 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_verilogHash;
   IdentifierInfo *kw_verilogHashHash;
 
+  // Symbols in Verilog that don't exist in C++.
+  IdentifierInfo *kw_apostrophe;
+
   /// Returns \c true if \p Tok is a keyword or an identifier.
   bool isWordLike(const FormatToken &Tok) const {
     // getIdentifierinfo returns non-null for keywords as well as identifiers.
     return Tok.Tok.getIdentifierInfo() != nullptr &&
-           !Tok.isOneOf(kw_verilogHash, kw_verilogHashHash);
+           !Tok.isOneOf(kw_verilogHash, kw_verilogHashHash, kw_apostrophe);
   }
 
   /// Returns \c true if \p Tok is a true JavaScript identifier, returns
@@ -1644,6 +1675,11 @@ struct AdditionalKeywords {
     }
   }
 
+  bool isVerilogWordOperator(const FormatToken &Tok) const {
+    return Tok.isOneOf(kw_before, kw_intersect, kw_dist, kw_iff, kw_inside,
+                       kw_with);
+  }
+
   bool isVerilogIdentifier(const FormatToken &Tok) const {
     switch (Tok.Tok.getKind()) {
     case tok::kw_case:
@@ -1722,6 +1758,31 @@ struct AdditionalKeywords {
                        kw_endprogram, kw_endproperty, kw_endsequence,
                        kw_endspecify, kw_endtable, kw_endtask, kw_join,
                        kw_join_any, kw_join_none);
+  }
+
+  /// Returns whether \p Tok is a Verilog keyword that opens a module, etc.
+  bool isVerilogHierarchy(const FormatToken &Tok) const {
+    if (Tok.endsSequence(kw_function, kw_with))
+      return false;
+    if (Tok.is(kw_property)) {
+      const FormatToken *Prev = Tok.getPreviousNonComment();
+      return !(Prev &&
+               Prev->isOneOf(tok::kw_restrict, kw_assert, kw_assume, kw_cover));
+    }
+    return Tok.isOneOf(tok::kw_case, tok::kw_class, kw_function, kw_module,
+                       kw_interface, kw_package, kw_casex, kw_casez, kw_checker,
+                       kw_clocking, kw_covergroup, kw_macromodule, kw_primitive,
+                       kw_program, kw_property, kw_randcase, kw_randsequence,
+                       kw_task);
+  }
+
+  bool isVerilogEndOfLabel(const FormatToken &Tok) const {
+    const FormatToken *Next = Tok.getNextNonComment();
+    // In Verilog the colon in a default label is optional.
+    return Tok.is(TT_GotoLabelColon) ||
+           (Tok.is(tok::kw_default) &&
+            !(Next && Next->isOneOf(tok::colon, tok::semi, kw_clocking, kw_iff,
+                                    kw_input, kw_output, kw_sequence)));
   }
 
   /// Whether the token begins a block.

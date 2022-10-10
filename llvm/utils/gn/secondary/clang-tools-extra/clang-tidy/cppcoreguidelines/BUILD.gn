@@ -16,6 +16,8 @@ static_library("cppcoreguidelines") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "AvoidConstOrRefDataMembersCheck.cpp",
+    "AvoidDoWhileCheck.cpp",
     "AvoidGotoCheck.cpp",
     "AvoidNonConstGlobalVariablesCheck.cpp",
     "CppCoreGuidelinesTidyModule.cpp",

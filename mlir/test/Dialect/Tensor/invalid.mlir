@@ -377,3 +377,148 @@ func.func @invalid_splat(%v : vector<8xf32>) {
   %w = tensor.splat %v : tensor<8xvector<8xf32>>
   return
 }
+
+// -----
+
+func.func @gather_empty_dims(
+    %source : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+  // expected-error@+1 {{gather_dims must be non-empty}}
+  %out = tensor.gather %source[%indices] gather_dims([]):
+    (tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2xf32>
+  return
+}
+
+// -----
+
+func.func @gather_coordinate_rank_overflow(
+    %source : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+  // expected-error@+1 {{gather_dims overflow source rank}}
+  %out = tensor.gather %source[%indices] gather_dims([0, 1, 2, 3]):
+    (tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2xf32>
+  return
+}
+
+// -----
+
+func.func @gather_coordinate_negative(
+    %source : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+  // expected-error@+1 {{gather_dims value must be non-negative}}
+  %out = tensor.gather %source[%indices] gather_dims([-1]):
+    (tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1x1x1xf32>
+  return
+}
+
+// -----
+
+func.func @gather_coordinate_overflow(
+    %source : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+  // expected-error@+1 {{gather_dims value must be smaller than source rank}}
+  %out = tensor.gather %source[%indices] gather_dims([42]):
+    (tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1x1x1xf32>
+  return
+}
+
+// -----
+
+func.func @gather_coordinate_overflow(
+    %source : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+  // expected-error@+1 {{gather_dims values must be strictly increasing}}
+  %out = tensor.gather %source[%indices] gather_dims([1, 0]):
+    (tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1x1x1xf32>
+  return
+}
+
+// -----
+
+func.func @gather_wrong_result_type(
+    %source : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+  // expected-error@+1 {{result type mismatch: expected 'tensor<1x2x1x5x1xf32>' or its rank-reduced variant 'tensor<1x2x5xf32>' (got: 'tensor<1x2x1xf32>')}}
+  %out = tensor.gather %source[%indices] gather_dims([0, 2]):
+    (tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1xf32>
+  return
+}
+
+// -----
+
+func.func @scatter_empty_dims(
+    %source : tensor<f32>, 
+    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+  // expected-error@+1 {{scatter_dims must be non-empty}}
+  %out = tensor.scatter %source into %dest[%indices] scatter_dims([]) unique:
+    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2xf32>
+  return
+}
+
+// -----
+
+func.func @scatter_coordinate_rank_overflow(
+    %source : tensor<f32>, 
+    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+  // expected-error@+1 {{scatter_dims overflow dest rank}}
+  %out = tensor.scatter %source into %dest[%indices] scatter_dims([0, 1, 2, 3]) unique:
+    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2xf32>
+  return
+}
+
+// -----
+
+func.func @scatter_coordinate_negative(
+    %source : tensor<f32>, 
+    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+  // expected-error@+1 {{scatter_dims value must be non-negative}}
+  %out = tensor.scatter %source into %dest[%indices] scatter_dims([-1]) unique:
+    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1x1x1xf32>
+  return
+}
+
+// -----
+
+func.func @scatter_coordinate_overflow(
+    %source : tensor<f32>, 
+    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+  // expected-error@+1 {{scatter_dims value must be smaller than dest rank}}
+  %out = tensor.scatter %source into %dest[%indices] scatter_dims([42]) unique:
+    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1x1x1xf32>
+  return
+}
+
+// -----
+
+func.func @scatter_coordinate_overflow(
+    %source : tensor<f32>, 
+    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+  // expected-error@+1 {{scatter_dims values must be strictly increasing}}
+  %out = tensor.scatter %source into %dest[%indices] scatter_dims([1, 0]) unique:
+    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1x1x1xf32>
+  return
+}
+
+// -----
+
+func.func @scatter_missing_unique(
+    %source : tensor<f32>, 
+    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+  // expected-error@+1 {{requires 'unique' attribute to be set}}
+  %out = tensor.scatter %source into %dest[%indices] scatter_dims([0, 2]):
+    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1xf32>
+  return
+}
+
+// -----
+
+func.func @scatter_wrong_result_type(
+    %source : tensor<f32>, 
+    %dest : tensor<4x5x6xf32>, %indices: tensor<1x2x3xindex>) {
+  // expected-error@+1 {{source type mismatch: expected 'tensor<1x2x1x5x1xf32>' or its rank-reduced variant 'tensor<1x2x5xf32>' (got: 'tensor<f32>')}}
+  %out = tensor.scatter %source into %dest[%indices] scatter_dims([0, 2]) unique:
+    (tensor<f32>, tensor<4x5x6xf32>, tensor<1x2x3xindex>) -> tensor<1x2x1xf32>
+  return
+}
+
+// -----
+
+func.func @empty_wrong_number_of_operands(%sz : index) {
+  // expected-error@+1 {{incorrect number of dynamic sizes, has 1, expected 2}}
+  %out = tensor.empty(%sz) : tensor<2x?x?x5xf32>
+  return
+}

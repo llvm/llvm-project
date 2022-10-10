@@ -54,6 +54,9 @@ using ::testing::UnorderedElementsAre;
   return Field(&Diag::Fixes, UnorderedElementsAre(FixMatcher1, FixMatcher2));
 }
 
+::testing::Matcher<const Diag &> withID(unsigned ID) {
+  return Field(&Diag::ID, ID);
+}
 ::testing::Matcher<const Diag &>
 withNote(::testing::Matcher<Note> NoteMatcher) {
   return Field(&Diag::Notes, ElementsAre(NoteMatcher));
@@ -1462,11 +1465,12 @@ TEST(IncludeFixerTest, NoCrashOnTemplateInstantiations) {
 TEST(IncludeFixerTest, HeaderNamedInDiag) {
   Annotations Test(R"cpp(
     $insert[[]]int main() {
-      [[printf]](""); // error-ok
+      [[printf]]("");
     }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
-  TU.ExtraArgs = {"-xc"};
+  TU.ExtraArgs = {"-xc", "-std=c99",
+                  "-Wno-error=implicit-function-declaration"};
   auto Index = buildIndexWithSymbol({});
   TU.ExternalIndex = Index.get();
 
@@ -1479,13 +1483,22 @@ TEST(IncludeFixerTest, HeaderNamedInDiag) {
                              "declarations"),
           withFix(Fix(Test.range("insert"), "#include <stdio.h>\n",
                       "Include <stdio.h> for symbol printf")))));
+
+  TU.ExtraArgs = {"-xc", "-std=c89"};
+  EXPECT_THAT(
+      *TU.build().getDiagnostics(),
+      ElementsAre(AllOf(
+          Diag(Test.range(), "implicitly declaring library function 'printf' "
+                             "with type 'int (const char *, ...)'"),
+          withFix(Fix(Test.range("insert"), "#include <stdio.h>\n",
+                      "Include <stdio.h> for symbol printf")))));
 }
 
 TEST(IncludeFixerTest, CImplicitFunctionDecl) {
-  Annotations Test("void x() { [[foo]](); /* error-ok */ }");
+  Annotations Test("void x() { [[foo]](); }");
   auto TU = TestTU::withCode(Test.code());
   TU.Filename = "test.c";
-  TU.ExtraArgs.push_back("-std=c99");
+  TU.ExtraArgs = {"-std=c99", "-Wno-error=implicit-function-declaration"};
 
   Symbol Sym = func("foo");
   Sym.Flags |= Symbol::IndexedForCodeCompletion;
@@ -1506,6 +1519,13 @@ TEST(IncludeFixerTest, CImplicitFunctionDecl) {
                "support implicit function declarations"),
           withFix(Fix(Range{}, "#include \"foo.h\"\n",
                       "Include \"foo.h\" for symbol foo")))));
+
+  TU.ExtraArgs = {"-std=c89", "-Wall"};
+  EXPECT_THAT(*TU.build().getDiagnostics(),
+              ElementsAre(AllOf(
+                  Diag(Test.range(), "implicit declaration of function 'foo'"),
+                  withFix(Fix(Range{}, "#include \"foo.h\"\n",
+                              "Include \"foo.h\" for symbol foo")))));
 }
 
 TEST(DiagsInHeaders, DiagInsideHeader) {
@@ -1869,6 +1889,20 @@ TEST(DiagnosticsTest, FixItFromHeader) {
                       "'int' to 'int *' for 1st argument; take the address of "
                       "the argument with &")))));
 }
+
+TEST(DiagnosticsTest, UnusedInHeader) {
+  // Clang diagnoses unused static inline functions outside headers.
+  auto TU = TestTU::withCode("static inline void foo(void) {}");
+  TU.ExtraArgs.push_back("-Wunused-function");
+  TU.Filename = "test.c";
+  EXPECT_THAT(*TU.build().getDiagnostics(),
+              ElementsAre(withID(diag::warn_unused_function)));
+  // Sema should recognize a *.h file open in clangd as a header.
+  // https://github.com/clangd/vscode-clangd/issues/360
+  TU.Filename = "test.h";
+  EXPECT_THAT(*TU.build().getDiagnostics(), IsEmpty());
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

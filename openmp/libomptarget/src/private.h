@@ -49,6 +49,8 @@ extern void handleTargetOutcome(bool Success, ident_t *Loc);
 extern bool checkDeviceAndCtors(int64_t &DeviceID, ident_t *Loc);
 extern void *targetAllocExplicit(size_t Size, int DeviceNum, int Kind,
                                  const char *Name);
+extern void targetFreeExplicit(void *DevicePtr, int DeviceNum, int Kind,
+                               const char *Name);
 
 // This structure stores information of a mapped memory region.
 struct MapComponentInfoTy {
@@ -67,7 +69,7 @@ struct MapComponentInfoTy {
 // components are dynamically decided, so we utilize C++ STL vector
 // implementation here.
 struct MapperComponentsTy {
-  std::vector<MapComponentInfoTy> Components;
+  llvm::SmallVector<MapComponentInfoTy> Components;
   int32_t size() { return Components.size(); }
 };
 
@@ -187,7 +189,6 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
   }
 }
 
-#ifdef OMPTARGET_PROFILE_ENABLED
 #include "llvm/Support/TimeProfiler.h"
 #define TIMESCOPE() llvm::TimeTraceScope TimeScope(__FUNCTION__)
 #define TIMESCOPE_WITH_IDENT(IDENT)                                            \
@@ -200,6 +201,5 @@ printKernelArguments(const ident_t *Loc, const int64_t DeviceId,
 #define TIMESCOPE()
 #define TIMESCOPE_WITH_IDENT(IDENT)
 #define TIMESCOPE_WITH_NAME_AND_IDENT(NAME, IDENT)
-#endif
 
 #endif

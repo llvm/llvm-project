@@ -404,13 +404,13 @@ getFunctionDiffListAsJSON(const SmallVector<FunctionDiff> &FunctionDiffs,
     InstCountA = InstCountB = StackSizeA = StackSizeB = 0;
     switch (WhichFiles) {
     case BOTH:
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case A:
       InstCountA = Diff.getInstCountA();
       StackSizeA = Diff.getStackSizeA();
       if (WhichFiles != BOTH)
         break;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case B:
       InstCountB = Diff.getInstCountB();
       StackSizeB = Diff.getStackSizeB();

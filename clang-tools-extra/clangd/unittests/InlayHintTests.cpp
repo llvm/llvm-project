@@ -820,6 +820,15 @@ TEST(ParameterHints, Macros) {
     }
   )cpp",
                        ExpectedHint{"param: ", "param"});
+
+  // If the macro expands to multiple arguments, don't hint it.
+  assertParameterHints(R"cpp(
+    void foo(double x, double y);
+    #define CONSTANTS 3.14, 2.72
+    void bar() {
+      foo(CONSTANTS);
+    }
+  )cpp");
 }
 
 TEST(ParameterHints, ConstructorParens) {
@@ -1415,6 +1424,17 @@ TEST(DesignatorHints, OnlyAggregateInit) {
     struct Constructible { Constructible(int x); };
     Constructible x{42};
   )cpp" /*no designator hints expected (but param hints!)*/);
+}
+
+TEST(DesignatorHints, NoCrash) {
+  assertDesignatorHints(R"cpp(
+    /*error-ok*/
+    struct A {};
+    struct Foo {int a; int b;};
+    void test() {
+      Foo f{A(), $b[[1]]};
+    }
+  )cpp", ExpectedHint{".b=", "b"});
 }
 
 TEST(InlayHints, RestrictRange) {

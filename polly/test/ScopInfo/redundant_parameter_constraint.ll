@@ -1,6 +1,6 @@
 ; RUN: opt %loadPolly -polly-print-scops -disable-output < %s | FileCheck %s
 ;
-; The constraint that r2 has to be bigger than r1 is implicitly containted in
+; The constraint that r2 has to be bigger than r1 is implicitly contained in
 ; the domain, hence we do not want to see it explicitly.
 ;
 ; CHECK-NOT:  r2 >= 1 + r1

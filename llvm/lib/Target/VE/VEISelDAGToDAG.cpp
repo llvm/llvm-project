@@ -142,6 +142,12 @@ public:
   bool selectADDRri(SDValue N, SDValue &Base, SDValue &Offset);
   bool selectADDRzi(SDValue N, SDValue &Base, SDValue &Offset);
 
+  /// SelectInlineAsmMemoryOperand - Implement addressing mode selection for
+  /// inline asm expressions.
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    unsigned ConstraintID,
+                                    std::vector<SDValue> &OutOps) override;
+
   StringRef getPassName() const override {
     return "VE DAG->DAG Pattern Instruction Selection";
   }
@@ -378,6 +384,33 @@ void VEDAGToDAGISel::Select(SDNode *N) {
   }
 
   SelectCode(N);
+}
+
+/// SelectInlineAsmMemoryOperand - Implement addressing mode selection for
+/// inline asm expressions.
+bool
+VEDAGToDAGISel::SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                             unsigned ConstraintID,
+                                             std::vector<SDValue> &OutOps) {
+  SDValue Op0, Op1;
+  switch (ConstraintID) {
+  default:
+    llvm_unreachable("Unexpected asm memory constraint");
+  case InlineAsm::Constraint_o:
+  case InlineAsm::Constraint_m: // memory
+    // Try to match ADDRri since reg+imm style is safe for all VE instructions
+    // with a memory operand.
+    if (selectADDRri(Op, Op0, Op1)) {
+      OutOps.push_back(Op0);
+      OutOps.push_back(Op1);
+      return false;
+    }
+    // Otherwise, require the address to be in a register and immediate 0.
+    OutOps.push_back(Op);
+    OutOps.push_back(CurDAG->getTargetConstant(0, SDLoc(Op), MVT::i32));
+    return false;
+  }
+  return true;
 }
 
 SDNode *VEDAGToDAGISel::getGlobalBaseReg() {

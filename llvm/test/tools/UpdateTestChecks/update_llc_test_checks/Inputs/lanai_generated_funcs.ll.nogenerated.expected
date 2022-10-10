@@ -7,6 +7,7 @@
 define dso_local i32 @check_boundaries() #0 {
 ; CHECK-LABEL: check_boundaries:
 ; CHECK:       .Lcheck_boundaries$local:
+; CHECK-NEXT:    .type .Lcheck_boundaries$local,@function
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0:
 ; CHECK-NEXT:    st %fp, [--%sp]
@@ -90,6 +91,7 @@ define dso_local i32 @check_boundaries() #0 {
 define dso_local i32 @main() #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       .Lmain$local:
+; CHECK-NEXT:    .type .Lmain$local,@function
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  ! %bb.0:
 ; CHECK-NEXT:    st %fp, [--%sp]

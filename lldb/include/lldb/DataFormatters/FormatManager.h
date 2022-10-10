@@ -162,8 +162,8 @@ public:
   static FormattersMatchVector
   GetPossibleMatches(ValueObject &valobj, lldb::DynamicValueType use_dynamic) {
     FormattersMatchVector matches;
-    GetPossibleMatches(valobj, valobj.GetCompilerType(),
-                       use_dynamic, matches, false, false, false, true);
+    GetPossibleMatches(valobj, valobj.GetCompilerType(), use_dynamic, matches,
+                       FormattersMatchCandidate::Flags(), true);
     return matches;
   }
 
@@ -179,8 +179,7 @@ private:
                                  CompilerType compiler_type,
                                  lldb::DynamicValueType use_dynamic,
                                  FormattersMatchVector &entries,
-                                 bool did_strip_ptr, bool did_strip_ref,
-                                 bool did_strip_typedef,
+                                 FormattersMatchCandidate::Flags current_flags,
                                  bool root_level = false);
 
   std::atomic<uint32_t> m_last_revision;

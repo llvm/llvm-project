@@ -1,5 +1,10 @@
-; RUN: sed -e 's/SLHATTR/speculative_load_hardening/' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu | FileCheck %s --check-prefixes=CHECK,SLH
-; RUN: sed -e 's/SLHATTR//' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu | FileCheck %s --check-prefixes=CHECK,NOSLH
+; RUN: sed -e 's/SLHATTR/speculative_load_hardening/' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu 2>&1 | FileCheck %s --check-prefixes=CHECK,SLH
+; RUN: sed -e 's/SLHATTR//' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu 2>&1 | FileCheck %s --check-prefixes=CHECK,NOSLH
+
+; As SLH is falling back to a technique that doesn't use X16, we shouldn't see any warnings about clobbers.
+; (this would come from f_clobbered_reg_w16, but warnings are first in the output)
+; CHECK-NOT: warning: inline asm clobber list contains reserved registers: W16
+; CHECK-NOT: warning: inline asm clobber list contains reserved registers: X16
 
 declare i64 @g(i64, i64) local_unnamed_addr
 define i64 @f_using_reserved_reg_x16(i64 %a, i64 %b) local_unnamed_addr SLHATTR {

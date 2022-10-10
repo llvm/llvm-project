@@ -408,12 +408,7 @@ public:
 
   Expected<Effect> apply(const Selection &Sel) override {
     const SourceManager &SM = Sel.AST->getSourceManager();
-    auto MainFileName =
-        getCanonicalPath(SM.getFileEntryForID(SM.getMainFileID()), SM);
-    if (!MainFileName)
-      return error("Couldn't get absolute path for main file.");
-
-    auto CCFile = getSourceFile(*MainFileName, Sel);
+    auto CCFile = getSourceFile(Sel.AST->tuPath(), Sel);
 
     if (!CCFile)
       return error("Couldn't find a suitable implementation file.");

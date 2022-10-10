@@ -7,20 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 // Test that entities declared [[nodiscard]] as at extension by libc++, are
-// only actually declared such when _LIBCPP_ENABLE_NODISCARD is specified.
+// declared as such when _LIBCPP_DISABLE_NODISCARD_EXT is specified.
 
 // This test intentionally leaks memory, so it is unsupported under ASAN.
 // UNSUPPORTED: asan
 
 // All entities to which libc++ applies [[nodiscard]] as an extension should
-// be tested here and in nodiscard_extensions.fail.cpp. They should also
+// be tested here and in nodiscard_extensions.verify.cpp. They should also
 // be listed in `UsingLibcxx.rst` in the documentation for the extension.
 
 // Disable any builtin recognition of std::* in the compiler, that might also
 // trigger -Wunused-value warnings.
 // ADDITIONAL_COMPILE_FLAGS: -fno-builtin
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS -D_LIBCPP_DISABLE_NODISCARD_EXT
 
 #include <algorithm>
 #include <bit> // bit_cast

@@ -9,23 +9,23 @@ target datalayout = "E-p:64:64:64-p1:64:64:64-p2:32:32:32-a0:0:8-f32:32:32-f64:6
 
 define <2 x i64> @static_hem() {
 ; CHECK-LABEL: @static_hem(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* getelementptr (<2 x i64>, <2 x i64>* @x, i64 7), align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr getelementptr (<2 x i64>, ptr @x, i64 7), align 16
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
-  %t = getelementptr <2 x i64>, <2 x i64>* @x, i32 7
-  %tmp1 = load <2 x i64>, <2 x i64>* %t, align 1
+  %t = getelementptr <2 x i64>, ptr @x, i32 7
+  %tmp1 = load <2 x i64>, ptr %t, align 1
   ret <2 x i64> %tmp1
 }
 
 define <2 x i64> @hem(i32 %i) {
 ; CHECK-LABEL: @hem(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
-; CHECK-NEXT:    [[T:%.*]] = getelementptr <2 x i64>, <2 x i64>* @x, i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[T]], align 16
+; CHECK-NEXT:    [[T:%.*]] = getelementptr <2 x i64>, ptr @x, i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[T]], align 16
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
-  %t = getelementptr <2 x i64>, <2 x i64>* @x, i32 %i
-  %tmp1 = load <2 x i64>, <2 x i64>* %t, align 1
+  %t = getelementptr <2 x i64>, ptr @x, i32 %i
+  %tmp1 = load <2 x i64>, ptr %t, align 1
   ret <2 x i64> %tmp1
 }
 
@@ -33,56 +33,56 @@ define <2 x i64> @hem_2d(i32 %i, i32 %j) {
 ; CHECK-LABEL: @hem_2d(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[J:%.*]] to i64
-; CHECK-NEXT:    [[T:%.*]] = getelementptr [13 x <2 x i64>], [13 x <2 x i64>]* @xx, i64 [[TMP1]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[T]], align 16
+; CHECK-NEXT:    [[T:%.*]] = getelementptr [13 x <2 x i64>], ptr @xx, i64 [[TMP1]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[T]], align 16
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
-  %t = getelementptr [13 x <2 x i64>], [13 x <2 x i64>]* @xx, i32 %i, i32 %j
-  %tmp1 = load <2 x i64>, <2 x i64>* %t, align 1
+  %t = getelementptr [13 x <2 x i64>], ptr @xx, i32 %i, i32 %j
+  %tmp1 = load <2 x i64>, ptr %t, align 1
   ret <2 x i64> %tmp1
 }
 
 define <2 x i64> @foo() {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* @x, align 16
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr @x, align 16
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
-  %tmp1 = load <2 x i64>, <2 x i64>* @x, align 1
+  %tmp1 = load <2 x i64>, ptr @x, align 1
   ret <2 x i64> %tmp1
 }
 
 define <2 x i64> @bar() {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:    [[T:%.*]] = alloca <2 x i64>, align 16
-; CHECK-NEXT:    call void @kip(<2 x i64>* nonnull [[T]])
-; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, <2 x i64>* [[T]], align 16
+; CHECK-NEXT:    call void @kip(ptr nonnull [[T]])
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i64>, ptr [[T]], align 16
 ; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
 ;
   %t = alloca <2 x i64>
-  call void @kip(<2 x i64>* %t)
-  %tmp1 = load <2 x i64>, <2 x i64>* %t, align 1
+  call void @kip(ptr %t)
+  %tmp1 = load <2 x i64>, ptr %t, align 1
   ret <2 x i64> %tmp1
 }
 
 define void @static_hem_store(<2 x i64> %y) {
 ; CHECK-LABEL: @static_hem_store(
-; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], <2 x i64>* getelementptr (<2 x i64>, <2 x i64>* @x, i64 7), align 16
+; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr getelementptr (<2 x i64>, ptr @x, i64 7), align 16
 ; CHECK-NEXT:    ret void
 ;
-  %t = getelementptr <2 x i64>, <2 x i64>* @x, i32 7
-  store <2 x i64> %y, <2 x i64>* %t, align 1
+  %t = getelementptr <2 x i64>, ptr @x, i32 7
+  store <2 x i64> %y, ptr %t, align 1
   ret void
 }
 
 define void @hem_store(i32 %i, <2 x i64> %y) {
 ; CHECK-LABEL: @hem_store(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
-; CHECK-NEXT:    [[T:%.*]] = getelementptr <2 x i64>, <2 x i64>* @x, i64 [[TMP1]]
-; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], <2 x i64>* [[T]], align 16
+; CHECK-NEXT:    [[T:%.*]] = getelementptr <2 x i64>, ptr @x, i64 [[TMP1]]
+; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr [[T]], align 16
 ; CHECK-NEXT:    ret void
 ;
-  %t = getelementptr <2 x i64>, <2 x i64>* @x, i32 %i
-  store <2 x i64> %y, <2 x i64>* %t, align 1
+  %t = getelementptr <2 x i64>, ptr @x, i32 %i
+  store <2 x i64> %y, ptr %t, align 1
   ret void
 }
 
@@ -90,35 +90,35 @@ define void @hem_2d_store(i32 %i, i32 %j, <2 x i64> %y) {
 ; CHECK-LABEL: @hem_2d_store(
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[I:%.*]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = sext i32 [[J:%.*]] to i64
-; CHECK-NEXT:    [[T:%.*]] = getelementptr [13 x <2 x i64>], [13 x <2 x i64>]* @xx, i64 [[TMP1]], i64 [[TMP2]]
-; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], <2 x i64>* [[T]], align 16
+; CHECK-NEXT:    [[T:%.*]] = getelementptr [13 x <2 x i64>], ptr @xx, i64 [[TMP1]], i64 [[TMP2]]
+; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr [[T]], align 16
 ; CHECK-NEXT:    ret void
 ;
-  %t = getelementptr [13 x <2 x i64>], [13 x <2 x i64>]* @xx, i32 %i, i32 %j
-  store <2 x i64> %y, <2 x i64>* %t, align 1
+  %t = getelementptr [13 x <2 x i64>], ptr @xx, i32 %i, i32 %j
+  store <2 x i64> %y, ptr %t, align 1
   ret void
 }
 
 define void @foo_store(<2 x i64> %y) {
 ; CHECK-LABEL: @foo_store(
-; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], <2 x i64>* @x, align 16
+; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr @x, align 16
 ; CHECK-NEXT:    ret void
 ;
-  store <2 x i64> %y, <2 x i64>* @x, align 1
+  store <2 x i64> %y, ptr @x, align 1
   ret void
 }
 
 define void @bar_store(<2 x i64> %y) {
 ; CHECK-LABEL: @bar_store(
 ; CHECK-NEXT:    [[T:%.*]] = alloca <2 x i64>, align 16
-; CHECK-NEXT:    call void @kip(<2 x i64>* nonnull [[T]])
-; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], <2 x i64>* [[T]], align 16
+; CHECK-NEXT:    call void @kip(ptr nonnull [[T]])
+; CHECK-NEXT:    store <2 x i64> [[Y:%.*]], ptr [[T]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %t = alloca <2 x i64>
-  call void @kip(<2 x i64>* %t)
-  store <2 x i64> %y, <2 x i64>* %t, align 1
+  call void @kip(ptr %t)
+  store <2 x i64> %y, ptr %t, align 1
   ret void
 }
 
-declare void @kip(<2 x i64>* %t)
+declare void @kip(ptr %t)

@@ -13,6 +13,8 @@
 // explicit codecvt_byname(const char* nm, size_t refs = 0);
 // explicit codecvt_byname(const string& nm, size_t refs = 0);
 
+// REQUIRES: locale.en_US.UTF-8
+
 #include <locale>
 #include <cassert>
 
@@ -40,12 +42,12 @@ int my_facet::count = 0;
 int main(int, char**)
 {
     {
-        std::locale l(std::locale::classic(), new my_facet(LOCALE_en_US));
+        std::locale l(std::locale::classic(), new my_facet(LOCALE_en_US_UTF_8));
         assert(my_facet::count == 1);
     }
     assert(my_facet::count == 0);
     {
-        my_facet f(LOCALE_en_US, 1);
+        my_facet f(LOCALE_en_US_UTF_8, 1);
         assert(my_facet::count == 1);
         {
             std::locale l(std::locale::classic(), &f);
@@ -55,12 +57,12 @@ int main(int, char**)
     }
     assert(my_facet::count == 0);
     {
-        std::locale l(std::locale::classic(), new my_facet(std::string(LOCALE_en_US)));
+        std::locale l(std::locale::classic(), new my_facet(std::string(LOCALE_en_US_UTF_8)));
         assert(my_facet::count == 1);
     }
     assert(my_facet::count == 0);
     {
-        my_facet f(std::string(LOCALE_en_US), 1);
+        my_facet f(std::string(LOCALE_en_US_UTF_8), 1);
         assert(my_facet::count == 1);
         {
             std::locale l(std::locale::classic(), &f);

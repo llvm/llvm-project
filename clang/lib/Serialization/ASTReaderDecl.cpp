@@ -322,6 +322,7 @@ namespace clang {
     void VisitNamedDecl(NamedDecl *ND);
     void VisitLabelDecl(LabelDecl *LD);
     void VisitNamespaceDecl(NamespaceDecl *D);
+    void VisitHLSLBufferDecl(HLSLBufferDecl *D);
     void VisitUsingDirectiveDecl(UsingDirectiveDecl *D);
     void VisitNamespaceAliasDecl(NamespaceAliasDecl *D);
     void VisitTypeDecl(TypeDecl *TD);
@@ -929,9 +930,11 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
   FD->setHasSkippedBody(Record.readInt());
   FD->setIsMultiVersion(Record.readInt());
   FD->setLateTemplateParsed(Record.readInt());
+  FD->setFriendConstraintRefersToEnclosingTemplate(Record.readInt());
 
   FD->setCachedLinkage(static_cast<Linkage>(Record.readInt()));
   FD->EndRangeLoc = readSourceLocation();
+  FD->setDefaultLoc(readSourceLocation());
 
   FD->ODRHash = Record.readInt();
   FD->setHasODRHash(true);
@@ -1733,6 +1736,15 @@ void ASTDeclReader::VisitNamespaceDecl(NamespaceDecl *D) {
     if (!Record.isModule())
       D->setAnonymousNamespace(Anon);
   }
+}
+
+void ASTDeclReader::VisitHLSLBufferDecl(HLSLBufferDecl *D) {
+  VisitNamedDecl(D);
+  VisitDeclContext(D);
+  D->IsCBuffer = Record.readBool();
+  D->KwLoc = readSourceLocation();
+  D->LBraceLoc = readSourceLocation();
+  D->RBraceLoc = readSourceLocation();
 }
 
 void ASTDeclReader::VisitNamespaceAliasDecl(NamespaceAliasDecl *D) {
@@ -2859,6 +2871,8 @@ public:
     return Reader.readInt();
   }
 
+  bool readBool() { return Reader.readBool(); }
+
   SourceRange readSourceRange() {
     return Reader.readSourceRange();
   }
@@ -3852,6 +3866,9 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     break;
   case DECL_OBJC_TYPE_PARAM:
     D = ObjCTypeParamDecl::CreateDeserialized(Context, ID);
+    break;
+  case DECL_HLSL_BUFFER:
+    D = HLSLBufferDecl::CreateDeserialized(Context, ID);
     break;
   }
 

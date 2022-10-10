@@ -15,6 +15,8 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/IR/Instructions.h"
 
+#include <cmath>
+
 namespace llvm {
 
 static const unsigned heatSize = 100;

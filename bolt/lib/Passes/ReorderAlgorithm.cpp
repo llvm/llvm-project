@@ -15,6 +15,7 @@
 #include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Utils/CodeLayout.h"
 #include <queue>
 #include <random>
 #include <stack>
@@ -75,7 +76,7 @@ void ClusterAlgorithm::computeClusterAverageFrequency(const BinaryContext &BC) {
   for (uint32_t I = 0, E = Clusters.size(); I < E; ++I) {
     double Freq = 0.0;
     uint64_t ClusterSize = 0;
-    for (BinaryBasicBlock *BB : Clusters[I]) {
+    for (const BinaryBasicBlock *BB : Clusters[I]) {
       if (BB->getNumNonPseudos() > 0) {
         Freq += BB->getExecutionCount();
         // Estimate the size of a block in bytes at run time
@@ -94,7 +95,7 @@ void ClusterAlgorithm::printClusters() const {
       errs() << " (frequency: " << AvgFreq[I] << ")";
     errs() << " : ";
     const char *Sep = "";
-    for (BinaryBasicBlock *BB : Clusters[I]) {
+    for (const BinaryBasicBlock *BB : Clusters[I]) {
       errs() << Sep << BB->getName();
       Sep = ", ";
     }
@@ -122,7 +123,7 @@ bool GreedyClusterAlgorithm::EdgeEqual::operator()(const EdgeTy &A,
   return A.Src == B.Src && A.Dst == B.Dst;
 }
 
-void GreedyClusterAlgorithm::clusterBasicBlocks(const BinaryFunction &BF,
+void GreedyClusterAlgorithm::clusterBasicBlocks(BinaryFunction &BF,
                                                 bool ComputeEdges) {
   reset();
 
@@ -148,7 +149,7 @@ void GreedyClusterAlgorithm::clusterBasicBlocks(const BinaryFunction &BF,
     BBToClusterMap[BB] = I;
     // Populate priority queue with edges.
     auto BI = BB->branch_info_begin();
-    for (BinaryBasicBlock *&I : BB->successors()) {
+    for (const BinaryBasicBlock *I : BB->successors()) {
       assert(BI->Count != BinaryBasicBlock::COUNT_NO_PROFILE &&
              "attempted reordering blocks of function with no profile data");
       Queue.emplace_back(EdgeTy(BB, I, BI->Count));
@@ -191,7 +192,7 @@ void GreedyClusterAlgorithm::clusterBasicBlocks(const BinaryFunction &BF,
     if (areClustersCompatible(ClusterA, ClusterB, E)) {
       // Case 3: SrcBB is at the end of a cluster and DstBB is at the start,
       // allowing us to merge two clusters.
-      for (BinaryBasicBlock *BB : ClusterB)
+      for (const BinaryBasicBlock *BB : ClusterB)
         BBToClusterMap[BB] = I;
       ClusterA.insert(ClusterA.end(), ClusterB.begin(), ClusterB.end());
       ClusterB.clear();
@@ -250,7 +251,6 @@ void PHGreedyClusterAlgorithm::initQueue(std::vector<EdgeTy> &Queue,
 void PHGreedyClusterAlgorithm::adjustQueue(std::vector<EdgeTy> &Queue,
                                            const BinaryFunction &BF) {
   // Nothing to do.
-  return;
 }
 
 bool PHGreedyClusterAlgorithm::areClustersCompatible(const ClusterTy &Front,
@@ -399,7 +399,7 @@ void MinBranchGreedyClusterAlgorithm::reset() {
   Weight.clear();
 }
 
-void TSPReorderAlgorithm::reorderBasicBlocks(const BinaryFunction &BF,
+void TSPReorderAlgorithm::reorderBasicBlocks(BinaryFunction &BF,
                                              BasicBlockOrder &Order) const {
   std::vector<std::vector<uint64_t>> Weight;
   std::vector<BinaryBasicBlock *> IndexToBB;
@@ -414,7 +414,7 @@ void TSPReorderAlgorithm::reorderBasicBlocks(const BinaryFunction &BF,
     IndexToBB.push_back(BB);
   }
   Weight.resize(N);
-  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
+  for (const BinaryBasicBlock *BB : BF.getLayout().blocks()) {
     auto BI = BB->branch_info_begin();
     Weight[BB->getLayoutIndex()].resize(N);
     for (BinaryBasicBlock *SuccBB : BB->successors()) {
@@ -501,8 +501,58 @@ void TSPReorderAlgorithm::reorderBasicBlocks(const BinaryFunction &BF,
       Order.push_back(BB);
 }
 
+void ExtTSPReorderAlgorithm::reorderBasicBlocks(BinaryFunction &BF,
+                                                BasicBlockOrder &Order) const {
+  if (BF.getLayout().block_empty())
+    return;
+
+  // Do not change layout of functions w/o profile information
+  if (!BF.hasValidProfile() || BF.getLayout().block_size() <= 2) {
+    for (BinaryBasicBlock *BB : BF.getLayout().blocks())
+      Order.push_back(BB);
+    return;
+  }
+
+  // Create a separate MCCodeEmitter to allow lock-free execution
+  BinaryContext::IndependentCodeEmitter Emitter;
+  if (!opts::NoThreads)
+    Emitter = BF.getBinaryContext().createIndependentMCCodeEmitter();
+
+  // Initialize CFG nodes and their data
+  std::vector<uint64_t> BlockSizes;
+  std::vector<uint64_t> BlockCounts;
+  BasicBlockOrder OrigOrder;
+  BF.getLayout().updateLayoutIndices();
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
+    uint64_t Size = std::max<uint64_t>(BB->estimateSize(Emitter.MCE.get()), 1);
+    BlockSizes.push_back(Size);
+    BlockCounts.push_back(BB->getKnownExecutionCount());
+    OrigOrder.push_back(BB);
+  }
+
+  // Initialize CFG edges
+  using JumpT = std::pair<uint64_t, uint64_t>;
+  std::vector<std::pair<JumpT, uint64_t>> JumpCounts;
+  for (BinaryBasicBlock *BB : BF.getLayout().blocks()) {
+    auto BI = BB->branch_info_begin();
+    for (BinaryBasicBlock *SuccBB : BB->successors()) {
+      assert(BI->Count != BinaryBasicBlock::COUNT_NO_PROFILE &&
+             "missing profile for a jump");
+      auto It = std::make_pair(BB->getLayoutIndex(), SuccBB->getLayoutIndex());
+      JumpCounts.push_back(std::make_pair(It, BI->Count));
+      ++BI;
+    }
+  }
+
+  // Run the layout algorithm
+  auto Result = applyExtTspLayout(BlockSizes, BlockCounts, JumpCounts);
+  Order.reserve(BF.getLayout().block_size());
+  for (uint64_t R : Result)
+    Order.push_back(OrigOrder[R]);
+}
+
 void OptimizeReorderAlgorithm::reorderBasicBlocks(
-    const BinaryFunction &BF, BasicBlockOrder &Order) const {
+    BinaryFunction &BF, BasicBlockOrder &Order) const {
   if (BF.getLayout().block_empty())
     return;
 
@@ -518,7 +568,7 @@ void OptimizeReorderAlgorithm::reorderBasicBlocks(
 }
 
 void OptimizeBranchReorderAlgorithm::reorderBasicBlocks(
-    const BinaryFunction &BF, BasicBlockOrder &Order) const {
+    BinaryFunction &BF, BasicBlockOrder &Order) const {
   if (BF.getLayout().block_empty())
     return;
 
@@ -623,7 +673,7 @@ void OptimizeBranchReorderAlgorithm::reorderBasicBlocks(
 }
 
 void OptimizeCacheReorderAlgorithm::reorderBasicBlocks(
-    const BinaryFunction &BF, BasicBlockOrder &Order) const {
+    BinaryFunction &BF, BasicBlockOrder &Order) const {
   if (BF.getLayout().block_empty())
     return;
 
@@ -676,7 +726,7 @@ void OptimizeCacheReorderAlgorithm::reorderBasicBlocks(
   }
 }
 
-void ReverseReorderAlgorithm::reorderBasicBlocks(const BinaryFunction &BF,
+void ReverseReorderAlgorithm::reorderBasicBlocks(BinaryFunction &BF,
                                                  BasicBlockOrder &Order) const {
   if (BF.getLayout().block_empty())
     return;
@@ -688,7 +738,7 @@ void ReverseReorderAlgorithm::reorderBasicBlocks(const BinaryFunction &BF,
 }
 
 void RandomClusterReorderAlgorithm::reorderBasicBlocks(
-    const BinaryFunction &BF, BasicBlockOrder &Order) const {
+    BinaryFunction &BF, BasicBlockOrder &Order) const {
   if (BF.getLayout().block_empty())
     return;
 

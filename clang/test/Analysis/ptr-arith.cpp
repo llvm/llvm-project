@@ -134,10 +134,10 @@ struct parse_t {
 int parse(parse_t *p) {
   unsigned copy = p->bits2;
   clang_analyzer_dump(copy);
-  // expected-warning@-1 {{reg_$1<unsigned int SymRegion{reg_$0<parse_t * p>}.bits2>}}
+  // expected-warning@-1 {{reg_$1<unsigned int Element{SymRegion{reg_$0<parse_t * p>},0 S64b,struct Bug_55934::parse_t}.bits2>}}
   header *bits = (header *)&copy;
   clang_analyzer_dump(bits->b);
-  // expected-warning@-1 {{derived_$2{reg_$1<unsigned int SymRegion{reg_$0<parse_t * p>}.bits2>,Element{copy,0 S64b,struct Bug_55934::header}.b}}}
+  // expected-warning@-1 {{derived_$2{reg_$1<unsigned int Element{SymRegion{reg_$0<parse_t * p>},0 S64b,struct Bug_55934::parse_t}.bits2>,Element{copy,0 S64b,struct Bug_55934::header}.b}}}
   return bits->b; // no-warning
 }
 } // namespace Bug_55934

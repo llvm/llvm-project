@@ -952,8 +952,8 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
   Value *CmpLHS = ICI->getOperand(0);
   Value *CmpRHS = ICI->getOperand(1);
 
-  // Check if the condition value compares a value for equality against zero.
-  if (!ICI->isEquality() || !match(CmpRHS, m_Zero()))
+  // Check if the select condition compares a value for equality.
+  if (!ICI->isEquality())
     return nullptr;
 
   Value *SelectArg = FalseVal;
@@ -969,8 +969,15 @@ static Value *foldSelectCttzCtlz(ICmpInst *ICI, Value *TrueVal, Value *FalseVal,
 
   // Check that 'Count' is a call to intrinsic cttz/ctlz. Also check that the
   // input to the cttz/ctlz is used as LHS for the compare instruction.
-  if (!match(Count, m_Intrinsic<Intrinsic::cttz>(m_Specific(CmpLHS))) &&
-      !match(Count, m_Intrinsic<Intrinsic::ctlz>(m_Specific(CmpLHS))))
+  Value *X;
+  if (!match(Count, m_Intrinsic<Intrinsic::cttz>(m_Value(X))) &&
+      !match(Count, m_Intrinsic<Intrinsic::ctlz>(m_Value(X))))
+    return nullptr;
+
+  // (X == 0) ? BitWidth : ctz(X)
+  // (X == -1) ? BitWidth : ctz(~X)
+  if ((X != CmpLHS || !match(CmpRHS, m_Zero())) &&
+      (!match(X, m_Not(m_Specific(CmpLHS))) || !match(CmpRHS, m_AllOnes())))
     return nullptr;
 
   IntrinsicInst *II = cast<IntrinsicInst>(Count);
@@ -1157,10 +1164,7 @@ static Instruction *canonicalizeSPF(SelectInst &Sel, ICmpInst &Cmp,
 /// TODO: Wrapping flags could be preserved in some cases with better analysis.
 Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
                                                           ICmpInst &Cmp) {
-  // Value equivalence substitution requires an all-or-nothing replacement.
-  // It does not make sense for a vector compare where each lane is chosen
-  // independently.
-  if (!Cmp.isEquality() || Cmp.getType()->isVectorTy())
+  if (!Cmp.isEquality())
     return nullptr;
 
   // Canonicalize the pattern to ICMP_EQ by swapping the select operands.
@@ -1190,7 +1194,9 @@ Instruction *InstCombinerImpl::foldSelectValueEquivalence(SelectInst &Sel,
     // undefined behavior). Only do this if CmpRHS is a constant, as
     // profitability is not clear for other cases.
     // FIXME: The replacement could be performed recursively.
-    if (match(CmpRHS, m_ImmConstant()) && !match(CmpLHS, m_ImmConstant()))
+    // FIXME: Support vectors.
+    if (match(CmpRHS, m_ImmConstant()) && !match(CmpLHS, m_ImmConstant()) &&
+        !Cmp.getType()->isVectorTy())
       if (auto *I = dyn_cast<Instruction>(TrueVal))
         if (I->hasOneUse() && isSafeToSpeculativelyExecute(I))
           for (Use &U : I->operands())
@@ -1371,7 +1377,7 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
                                       C2->getType()->getScalarSizeInBits()))))
       return nullptr; // Can't do, have signed max element[s].
     C2 = InstCombiner::AddOne(C2);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ICmpInst::Predicate::ICMP_SGE:
     // Also non-canonical, but here we don't need to change C2,
     // so we don't have any restrictions on C2, so we can just handle it.
@@ -2602,10 +2608,14 @@ foldRoundUpIntegerWithPow2Alignment(SelectInst &SI,
   if (!match(XLowBits, m_And(m_Specific(X), m_APIntAllowUndef(LowBitMaskCst))))
     return nullptr;
 
+  // Match even if the AND and ADD are swapped.
   const APInt *BiasCst, *HighBitMaskCst;
   if (!match(XBiasedHighBits,
              m_And(m_Add(m_Specific(X), m_APIntAllowUndef(BiasCst)),
-                   m_APIntAllowUndef(HighBitMaskCst))))
+                   m_APIntAllowUndef(HighBitMaskCst))) &&
+      !match(XBiasedHighBits,
+             m_Add(m_And(m_Specific(X), m_APIntAllowUndef(HighBitMaskCst)),
+                   m_APIntAllowUndef(BiasCst))))
     return nullptr;
 
   if (!LowBitMaskCst->isMask())
@@ -2650,6 +2660,45 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   if (Instruction *I = canonicalizeScalarSelectOfVecs(SI, *this))
     return I;
+
+  // If the type of select is not an integer type or if the condition and
+  // the selection type are not both scalar nor both vector types, there is no
+  // point in attempting to match these patterns.
+  Type *CondType = CondVal->getType();
+  if (!isa<Constant>(CondVal) && SelType->isIntOrIntVectorTy() &&
+      CondType->isVectorTy() == SelType->isVectorTy()) {
+    if (Value *S = simplifyWithOpReplaced(TrueVal, CondVal,
+                                          ConstantInt::getTrue(CondType), SQ,
+                                          /* AllowRefinement */ true))
+      return replaceOperand(SI, 1, S);
+
+    if (Value *S = simplifyWithOpReplaced(FalseVal, CondVal,
+                                          ConstantInt::getFalse(CondType), SQ,
+                                          /* AllowRefinement */ true))
+      return replaceOperand(SI, 2, S);
+
+    // Handle patterns involving sext/zext + not explicitly,
+    // as simplifyWithOpReplaced() only looks past one instruction.
+    Value *NotCond;
+
+    // select a, sext(!a), b -> select !a, b, 0
+    // select a, zext(!a), b -> select !a, b, 0
+    if (match(TrueVal, m_ZExtOrSExt(m_CombineAnd(m_Value(NotCond),
+                                                 m_Not(m_Specific(CondVal))))))
+      return SelectInst::Create(NotCond, FalseVal,
+                                Constant::getNullValue(SelType));
+
+    // select a, b, zext(!a) -> select !a, 1, b
+    if (match(FalseVal, m_ZExt(m_CombineAnd(m_Value(NotCond),
+                                            m_Not(m_Specific(CondVal))))))
+      return SelectInst::Create(NotCond, ConstantInt::get(SelType, 1), TrueVal);
+
+    // select a, b, sext(!a) -> select !a, -1, b
+    if (match(FalseVal, m_SExt(m_CombineAnd(m_Value(NotCond),
+                                            m_Not(m_Specific(CondVal))))))
+      return SelectInst::Create(NotCond, Constant::getAllOnesValue(SelType),
+                                TrueVal);
+  }
 
   // Avoid potential infinite loops by checking for non-constant condition.
   // TODO: Can we assert instead by improving canonicalizeSelectToShuffle()?
@@ -2700,20 +2749,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return SelectInst::Create(NotCond, One, TrueVal);
     }
 
-    // select a, a, b -> select a, true, b
-    if (CondVal == TrueVal)
-      return replaceOperand(SI, 1, One);
-    // select a, b, a -> select a, b, false
-    if (CondVal == FalseVal)
-      return replaceOperand(SI, 2, Zero);
-
-    // select a, !a, b -> select !a, b, false
-    if (match(TrueVal, m_Not(m_Specific(CondVal))))
-      return SelectInst::Create(TrueVal, FalseVal, Zero);
-    // select a, b, !a -> select !a, true, b
-    if (match(FalseVal, m_Not(m_Specific(CondVal))))
-      return SelectInst::Create(FalseVal, One, TrueVal);
-
     Value *A, *B;
 
     // DeMorgan in select form: !a && !b --> !(a || b)
@@ -2751,15 +2786,6 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         CondVal->hasOneUse()) {
       TrueVal = Builder.CreateFreeze(TrueVal);
       return BinaryOperator::CreateAnd(FalseVal, Builder.CreateOr(C, TrueVal));
-    }
-
-    if (!SelType->isVectorTy()) {
-      if (Value *S = simplifyWithOpReplaced(TrueVal, CondVal, One, SQ,
-                                            /* AllowRefinement */ true))
-        return replaceOperand(SI, 1, S);
-      if (Value *S = simplifyWithOpReplaced(FalseVal, CondVal, Zero, SQ,
-                                            /* AllowRefinement */ true))
-        return replaceOperand(SI, 2, S);
     }
 
     if (match(FalseVal, m_Zero()) || match(TrueVal, m_One())) {

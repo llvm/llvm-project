@@ -483,9 +483,14 @@ protected:
     // might clear the StackFrameList for the thread.  So hold onto a shared
     // pointer to the frame so it stays alive.
 
+    Status error;
     VariableList *variable_list =
-        frame->GetVariableList(m_option_variable.show_globals);
+        frame->GetVariableList(m_option_variable.show_globals, &error);
 
+    if (error.Fail() && (!variable_list || variable_list->GetSize() == 0)) {
+      result.AppendError(error.AsCString());
+
+    }
     VariableSP var_sp;
     ValueObjectSP valobj_sp;
 
@@ -814,7 +819,8 @@ functions 'read', 'write' and 'close' follows:
     def get_recognized_arguments(self, frame):
       if frame.name in ["read", "write", "close"]:
         fd = frame.EvaluateExpression("$arg1").unsigned
-        value = lldb.target.CreateValueFromExpression("fd", "(int)%d" % fd)
+        target = frame.thread.process.target
+        value = target.CreateValueFromExpression("fd", "(int)%d" % fd)
         return [value]
       return []
 

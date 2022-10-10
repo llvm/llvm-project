@@ -113,6 +113,9 @@ public:
 
   /// The validator version for dxil.
   std::string DxilValidatorVersion;
+
+  /// The entry point name for HLSL shader being compiled as specified by -E.
+  std::string HLSLEntry;
 };
 
 } // end namespace clang

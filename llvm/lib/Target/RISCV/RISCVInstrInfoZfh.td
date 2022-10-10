@@ -108,7 +108,7 @@ defm : FPFMADynFrmAlias_m<FMSUB_H,  "fmsub.h",  HINX>;
 defm : FPFMADynFrmAlias_m<FNMSUB_H, "fnmsub.h", HINX>;
 defm : FPFMADynFrmAlias_m<FNMADD_H, "fnmadd.h", HINX>;
 
-let SchedRW = [WriteFALU16, ReadFALU16, ReadFALU16] in {
+let SchedRW = [WriteFAdd16, ReadFAdd16, ReadFAdd16] in {
 defm FADD_H : FPALU_rr_frm_m<0b0000010, "fadd.h", HINX, /*Commutable*/1>;
 defm FSUB_H : FPALU_rr_frm_m<0b0000110, "fsub.h", HINX>;
 }
@@ -336,7 +336,7 @@ def : PatSetCC<FPR16, any_fsetccs, SETOLT, FLT_H>;
 def : PatSetCC<FPR16, any_fsetccs, SETLE, FLE_H>;
 def : PatSetCC<FPR16, any_fsetccs, SETOLE, FLE_H>;
 
-def Select_FPR16_Using_CC_GPR : SelectCC_rrirr<FPR16, GPR>;
+defm Select_FPR16 : SelectCC_GPR_rrirr<FPR16>;
 } // Predicates = [HasStdExtZfh]
 
 let Predicates = [HasStdExtZfhOrZfhmin] in {

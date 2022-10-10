@@ -139,6 +139,33 @@ TEST(Hover, Structured) {
          HI.Definition = "int bar";
          HI.Type = "int";
        }},
+      // Predefined variable
+      {R"cpp(
+          void foo() {
+            [[__f^unc__]];
+          }
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "__func__";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.Documentation =
+             "Name of the current function (predefined variable)";
+         HI.Value = "\"foo\"";
+         HI.Type = "const char[4]";
+       }},
+      // Predefined variable (dependent)
+      {R"cpp(
+          template<int> void foo() {
+            [[__f^unc__]];
+          }
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "__func__";
+         HI.Kind = index::SymbolKind::Variable;
+         HI.Documentation =
+             "Name of the current function (predefined variable)";
+         HI.Type = "const char[]";
+       }},
       // Anon namespace and local scope.
       {R"cpp(
           namespace ns1 { namespace {
@@ -478,15 +505,60 @@ class Foo final {})cpp";
          HI.Definition = "Foo<int>";
        }},
 
-      // macro
+      // empty macro
+      {R"cpp(
+        #define MACRO
+        [[MAC^RO]]
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "MACRO";
+         HI.Kind = index::SymbolKind::Macro;
+         HI.Definition = "#define MACRO";
+       }},
+
+      // object-like macro
+      {R"cpp(
+        #define MACRO 41
+        int x = [[MAC^RO]];
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "MACRO";
+         HI.Kind = index::SymbolKind::Macro;
+         HI.Definition = "#define MACRO 41\n\n"
+                         "// Expands to\n"
+                         "41";
+       }},
+
+      // function-like macro
       {R"cpp(
         // Best MACRO ever.
-        #define MACRO(x,y,z) void foo(x, y, z);
+        #define MACRO(x,y,z) void foo(x, y, z)
         [[MAC^RO]](int, double d, bool z = false);
         )cpp",
        [](HoverInfo &HI) {
-         HI.Name = "MACRO", HI.Kind = index::SymbolKind::Macro,
-         HI.Definition = "#define MACRO(x, y, z) void foo(x, y, z);";
+         HI.Name = "MACRO";
+         HI.Kind = index::SymbolKind::Macro;
+         HI.Definition = "#define MACRO(x, y, z) void foo(x, y, z)\n\n"
+                         "// Expands to\n"
+                         "void foo(int, double d, bool z = false)";
+       }},
+
+      // nested macro
+      {R"cpp(
+        #define STRINGIFY_AUX(s) #s
+        #define STRINGIFY(s) STRINGIFY_AUX(s)
+        #define DECL_STR(NAME, VALUE) const char *v_##NAME = STRINGIFY(VALUE)
+        #define FOO 41
+
+        [[DECL^_STR]](foo, FOO);
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "DECL_STR";
+         HI.Kind = index::SymbolKind::Macro;
+         HI.Definition = "#define DECL_STR(NAME, VALUE) const char *v_##NAME = "
+                         "STRINGIFY(VALUE)\n\n"
+                         "// Expands to\n"
+                         "const char *v_foo = \"41\"";
        }},
 
       // constexprs
@@ -1559,6 +1631,38 @@ TEST(Hover, All) {
             HI.Definition = "int foo";
           }},
       {
+          R"cpp(// Function definition via using declaration
+            namespace ns { 
+              void foo(); 
+            }
+            int main() {
+              using ns::foo;
+              ^[[foo]]();
+            }
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "foo";
+            HI.Kind = index::SymbolKind::Function;
+            HI.NamespaceScope = "ns::";
+            HI.Type = "void ()";
+            HI.Definition = "void foo()";
+            HI.Documentation = "";
+            HI.ReturnType = "void";
+            HI.Parameters = std::vector<HoverInfo::Param>{};
+          }},
+      {
+          R"cpp( // using declaration and two possible function declarations
+            namespace ns { void foo(int); void foo(char); }
+            using ns::foo;
+            template <typename T> void bar() { [[f^oo]](T{}); }
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "foo";
+            HI.Kind = index::SymbolKind::Using;
+            HI.NamespaceScope = "";
+            HI.Definition = "using ns::foo";
+          }},
+      {
           R"cpp(// Macro
             #define MACRO 0
             int main() { return ^[[MACRO]]; }
@@ -1566,7 +1670,9 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "MACRO";
             HI.Kind = index::SymbolKind::Macro;
-            HI.Definition = "#define MACRO 0";
+            HI.Definition = "#define MACRO 0\n\n"
+                            "// Expands to\n"
+                            "0";
           }},
       {
           R"cpp(// Macro
@@ -1577,6 +1683,8 @@ TEST(Hover, All) {
             HI.Name = "MACRO";
             HI.Kind = index::SymbolKind::Macro;
             HI.Definition = "#define MACRO 0";
+            // NOTE MACRO doesn't have expansion since it technically isn't
+            // expanded here
           }},
       {
           R"cpp(// Macro
@@ -1590,7 +1698,10 @@ TEST(Hover, All) {
             HI.Kind = index::SymbolKind::Macro;
             HI.Definition =
                 R"cpp(#define MACRO                                                                  \
-  { return 0; })cpp";
+  { return 0; }
+
+// Expands to
+{ return 0; })cpp";
           }},
       {
           R"cpp(// Forward class declaration
@@ -1643,6 +1754,25 @@ TEST(Hover, All) {
               ONE, TWO, THREE,
             };
             void foo() {
+              Hello hello = [[O^NE]];
+            }
+          )cpp",
+          [](HoverInfo &HI) {
+            HI.Name = "ONE";
+            HI.Kind = index::SymbolKind::EnumConstant;
+            HI.NamespaceScope = "";
+            HI.LocalScope = "Hello::";
+            HI.Type = "enum Hello";
+            HI.Definition = "ONE";
+            HI.Value = "0";
+          }},
+      {
+          R"cpp(// C++20's using enum
+            enum class Hello {
+              ONE, TWO, THREE,
+            };
+            void foo() {
+              using enum Hello;
               Hello hello = [[O^NE]];
             }
           )cpp",
@@ -1861,7 +1991,7 @@ TEST(Hover, All) {
           [](HoverInfo &HI) {
             HI.Name = "auto";
             HI.Kind = index::SymbolKind::TypeAlias;
-            HI.Definition = "class std::initializer_list<int>";
+            HI.Definition = "std::initializer_list<int>";
           }},
       {
           R"cpp(// User defined conversion to auto
@@ -2964,6 +3094,21 @@ int foo = 3)",
       },
       {
           [](HoverInfo &HI) {
+            HI.Kind = index::SymbolKind::Macro;
+            HI.Name = "PLUS_ONE";
+            HI.Definition = "#define PLUS_ONE(X) (X+1)\n\n"
+                            "// Expands to\n"
+                            "(1 + 1)";
+          },
+          R"(macro PLUS_ONE
+
+#define PLUS_ONE(X) (X+1)
+
+// Expands to
+(1 + 1))",
+      },
+      {
+          [](HoverInfo &HI) {
             HI.Kind = index::SymbolKind::Variable;
             HI.Name = "foo";
             HI.Definition = "int foo = 3";
@@ -3205,6 +3350,48 @@ TEST(Hover, HideBigInitializers) {
 
   ASSERT_TRUE(H);
   EXPECT_EQ(H->Definition, "int arr[]");
+}
+
+#if defined(__aarch64__)
+// FIXME: AARCH64 sanitizer buildbots are broken after 72142fbac4.
+#define PREDEFINEMACROS_TEST(x) DISABLED_##x
+#else
+#define PREDEFINEMACROS_TEST(x) x
+#endif
+
+TEST(Hover, PREDEFINEMACROS_TEST(GlobalVarEnumeralCastNoCrash)) {
+  Annotations T(R"cpp(
+    using uintptr_t = __UINTPTR_TYPE__;
+    enum Test : uintptr_t {};
+    unsigned global_var;
+    void foo() {
+      Test v^al = static_cast<Test>(reinterpret_cast<uintptr_t>(&global_var));
+    }
+  )cpp");
+
+  TestTU TU = TestTU::withCode(T.code());
+  TU.PredefineMacros = true;
+  auto AST = TU.build();
+  auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(HI);
+  EXPECT_EQ(*HI->Value, "&global_var");
+}
+
+TEST(Hover, PREDEFINEMACROS_TEST(GlobalVarIntCastNoCrash)) {
+  Annotations T(R"cpp(
+    using uintptr_t = __UINTPTR_TYPE__;
+    unsigned global_var;
+    void foo() {
+      uintptr_t a^ddress = reinterpret_cast<uintptr_t>(&global_var);
+    }
+  )cpp");
+
+  TestTU TU = TestTU::withCode(T.code());
+  TU.PredefineMacros = true;
+  auto AST = TU.build();
+  auto HI = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(HI);
+  EXPECT_EQ(*HI->Value, "&global_var");
 }
 
 TEST(Hover, Typedefs) {

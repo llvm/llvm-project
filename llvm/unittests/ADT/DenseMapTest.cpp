@@ -7,9 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <map>
 #include <set>
+#include <utility>
+#include <variant>
 
 using namespace llvm;
 
@@ -706,5 +710,19 @@ TEST(DenseMapCustomTest, SFINAEMapInfo) {
   EXPECT_EQ(Map.find(Keys[0]), Map.end());
   EXPECT_EQ(Map.find(Keys[1]), Map.end());
   EXPECT_EQ(Map.find(Keys[2]), Map.end());
+}
+
+TEST(DenseMapCustomTest, VariantSupport) {
+  using variant = std::variant<int, int>;
+  DenseMap<variant, int> Map;
+  variant Keys[] = {
+      variant(std::in_place_index<0>, 1),
+      variant(std::in_place_index<1>, 1),
+  };
+  Map.try_emplace(Keys[0], 0);
+  Map.try_emplace(Keys[1], 1);
+  EXPECT_THAT(Map, testing::SizeIs(2));
+  EXPECT_NE(DenseMapInfo<variant>::getHashValue(Keys[0]),
+            DenseMapInfo<variant>::getHashValue(Keys[1]));
 }
 } // namespace

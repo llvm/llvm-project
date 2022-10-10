@@ -89,7 +89,8 @@ class TokenAnalyzer : public UnwrappedLineConsumer {
 public:
   TokenAnalyzer(const Environment &Env, const FormatStyle &Style);
 
-  std::pair<tooling::Replacements, unsigned> process();
+  std::pair<tooling::Replacements, unsigned>
+  process(bool SkipAnnotation = false);
 
 protected:
   virtual std::pair<tooling::Replacements, unsigned>

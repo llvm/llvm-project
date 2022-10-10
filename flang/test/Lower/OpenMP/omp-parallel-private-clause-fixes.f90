@@ -20,18 +20,22 @@
 ! CHECK:             %[[VAL_9:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
 ! CHECK:             %[[VAL_10:.*]] = fir.convert %[[VAL_9]] : (i32) -> index
 ! CHECK:             %[[VAL_11:.*]] = arith.constant 1 : index
-! CHECK:             %[[VAL_12:.*]] = fir.do_loop %[[VAL_13:.*]] = %[[VAL_8]] to %[[VAL_10]] step %[[VAL_11]] -> index {
-! CHECK:               %[[VAL_14:.*]] = fir.convert %[[VAL_13]] : (index) -> i32
-! CHECK:               fir.store %[[VAL_14]] to %[[PRIV_J]] : !fir.ref<i32>
+! CHECK:             %[[LB:.*]] = fir.convert %[[VAL_8]] : (index) -> i32
+! CHECK:             %[[VAL_12:.*]]:2 = fir.do_loop %[[VAL_13:[^ ]*]] =
+! CHECK-SAME:            %[[VAL_8]] to %[[VAL_10]] step %[[VAL_11]]
+! CHECK-SAME:            iter_args(%[[IV:.*]] = %[[LB]]) -> (index, i32) {
+! CHECK:               fir.store %[[IV]] to %[[PRIV_J]] : !fir.ref<i32>
 ! CHECK:               %[[LOAD:.*]] = fir.load %[[PRIV_I]] : !fir.ref<i32>
 ! CHECK:               %[[VAL_15:.*]] = fir.load %[[PRIV_J]] : !fir.ref<i32>
 ! CHECK:               %[[VAL_16:.*]] = arith.addi %[[LOAD]], %[[VAL_15]] : i32
 ! CHECK:               fir.store %[[VAL_16]] to %[[PRIV_X]] : !fir.ref<i32>
 ! CHECK:               %[[VAL_17:.*]] = arith.addi %[[VAL_13]], %[[VAL_11]] : index
-! CHECK:               fir.result %[[VAL_17]] : index
+! CHECK:               %[[STEPCAST:.*]] = fir.convert %[[VAL_11]] : (index) -> i32
+! CHECK:               %[[IVLOAD:.*]] = fir.load %[[PRIV_J]] : !fir.ref<i32>
+! CHECK:               %[[IVINC:.*]] = arith.addi %[[IVLOAD]], %[[STEPCAST]]
+! CHECK:               fir.result %[[VAL_17]], %[[IVINC]] : index, i32
 ! CHECK:             }
-! CHECK:             %[[VAL_18:.*]] = fir.convert %[[VAL_19:.*]] : (index) -> i32
-! CHECK:             fir.store %[[VAL_18]] to %[[PRIV_J]] : !fir.ref<i32>
+! CHECK:             fir.store %[[VAL_12]]#1 to %[[PRIV_J]] : !fir.ref<i32>
 ! CHECK:             omp.yield
 ! CHECK:           }
 ! CHECK:           omp.terminator

@@ -206,7 +206,7 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
         ExplodedNodeSet dstPostCheckers;
         getCheckerManager().runCheckersForObjCMessageNil(dstPostCheckers, Pred,
                                                          *Msg, *this);
-        for (auto I : dstPostCheckers)
+        for (auto *I : dstPostCheckers)
           finishArgumentConstruction(Dst, I, *Msg);
         return;
       }
@@ -270,7 +270,7 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
 
   // If there were constructors called for object-type arguments, clean them up.
   ExplodedNodeSet dstArgCleanup;
-  for (auto I : dstEval)
+  for (auto *I : dstEval)
     finishArgumentConstruction(dstArgCleanup, I, *Msg);
 
   ExplodedNodeSet dstPostvisit;

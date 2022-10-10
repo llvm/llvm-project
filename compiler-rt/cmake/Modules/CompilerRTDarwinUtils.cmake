@@ -413,6 +413,12 @@ macro(darwin_add_builtin_libraries)
                       ../profile/InstrProfilingInternal.c
                       ../profile/InstrProfilingVersionVar.c)
   foreach (os ${ARGN})
+    set(macosx_sdk_version 99999)
+    if ("${os}" STREQUAL "osx")
+      find_darwin_sdk_version(macosx_sdk_version "macosx")
+    endif()
+    add_security_warnings(CFLAGS ${macosx_sdk_version})
+
     list_intersect(DARWIN_BUILTIN_ARCHS DARWIN_${os}_BUILTIN_ARCHS BUILTIN_SUPPORTED_ARCH)
 
     if((arm64 IN_LIST DARWIN_BUILTIN_ARCHS OR arm64e IN_LIST DARWIN_BUILTIN_ARCHS) AND NOT TARGET lse_builtin_symlinks)

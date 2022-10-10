@@ -259,7 +259,14 @@ entry:
   ret <2 x i1> %int
 }
 
-
+define <4 x float> @poisonc(<4 x float> %a) {
+entry:
+  %new0 = shl i1 0, 1
+  %last = zext i1 %new0 to i32
+  %var27 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %last)
+  %var33 = select <4 x i1> %var27, <4 x float> %a, <4 x float> zeroinitializer
+  ret <4 x float> %var33
+}
 
 declare <2 x i1> @llvm.arm.mve.vctp64(i32)
 declare <4 x i1> @llvm.arm.mve.vctp32(i32)

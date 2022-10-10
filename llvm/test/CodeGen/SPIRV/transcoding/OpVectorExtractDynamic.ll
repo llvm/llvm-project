@@ -9,7 +9,6 @@
 
 ; CHECK-SPIRV: %[[#res]] = OpVectorExtractDynamic %[[#float]] %[[#vec]] %[[#index]]
 
-; Function Attrs: nounwind
 define spir_kernel void @test(float addrspace(1)* nocapture %out, <2 x float> %vec, i32 %index) {
 entry:
   %res = extractelement <2 x float> %vec, i32 %index

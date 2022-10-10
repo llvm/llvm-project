@@ -17,6 +17,9 @@ class LLVMTypeConverter;
 class RewritePatternSet;
 class Pass;
 
+#define GEN_PASS_DECL_CONVERTMATHTOLLVM
+#include "mlir/Conversion/Passes.h.inc"
+
 void populateMathToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                           RewritePatternSet &patterns);
 

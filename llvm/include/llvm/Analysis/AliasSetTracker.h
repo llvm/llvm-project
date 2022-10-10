@@ -37,6 +37,7 @@ class AliasSetTracker;
 class AnyMemSetInst;
 class AnyMemTransferInst;
 class BasicBlock;
+class BatchAAResults;
 class LoadInst;
 class raw_ostream;
 class StoreInst;
@@ -310,8 +311,8 @@ public:
   /// If the specified pointer "may" (or must) alias one of the members in the
   /// set return the appropriate AliasResult. Otherwise return NoAlias.
   AliasResult aliasesPointer(const Value *Ptr, LocationSize Size,
-                             const AAMDNodes &AAInfo, AAResults &AA) const;
-  bool aliasesUnknownInst(const Instruction *Inst, AAResults &AA) const;
+                             const AAMDNodes &AAInfo, BatchAAResults &AA) const;
+  bool aliasesUnknownInst(const Instruction *Inst, BatchAAResults &AA) const;
 };
 
 inline raw_ostream& operator<<(raw_ostream &OS, const AliasSet &AS) {

@@ -165,12 +165,25 @@ struct SignalDesc {
 
 struct ThreadSignalContext {
   int int_signal_send;
-  atomic_uintptr_t in_blocking_func;
   SignalDesc pending_signals[kSigCount];
   // emptyset and oldset are too big for stack.
   __sanitizer_sigset_t emptyset;
   __sanitizer_sigset_t oldset;
 };
+
+void EnterBlockingFunc(ThreadState *thr) {
+  for (;;) {
+    // The order is important to not delay a signal infinitely if it's
+    // delivered right before we set in_blocking_func. Note: we can't call
+    // ProcessPendingSignals when in_blocking_func is set, or we can handle
+    // a signal synchronously when we are already handling a signal.
+    atomic_store(&thr->in_blocking_func, 1, memory_order_relaxed);
+    if (atomic_load(&thr->pending_signals, memory_order_relaxed) == 0)
+      break;
+    atomic_store(&thr->in_blocking_func, 0, memory_order_relaxed);
+    ProcessPendingSignals(thr);
+  }
+}
 
 // The sole reason tsan wraps atexit callbacks is to establish synchronization
 // between callback setup and callback execution.
@@ -245,8 +258,18 @@ static ThreadSignalContext *SigCtx(ThreadState *thr) {
 
 ScopedInterceptor::ScopedInterceptor(ThreadState *thr, const char *fname,
                                      uptr pc)
-    : thr_(thr), in_ignored_lib_(false), ignoring_(false) {
+    : thr_(thr) {
   LazyInitialize(thr);
+  if (UNLIKELY(atomic_load(&thr->in_blocking_func, memory_order_relaxed))) {
+    // pthread_join is marked as blocking, but it's also known to call other
+    // intercepted functions (mmap, free). If we don't reset in_blocking_func
+    // we can get deadlocks and memory corruptions if we deliver a synchronous
+    // signal inside of an mmap/free interceptor.
+    // So reset it and restore it back in the destructor.
+    // See https://github.com/google/sanitizers/issues/1540
+    atomic_store(&thr->in_blocking_func, 0, memory_order_relaxed);
+    in_blocking_func_ = true;
+  }
   if (!thr_->is_inited) return;
   if (!thr_->ignore_interceptors) FuncEntry(thr, pc);
   DPrintf("#%d: intercept %s()\n", thr_->tid, fname);
@@ -259,6 +282,8 @@ ScopedInterceptor::ScopedInterceptor(ThreadState *thr, const char *fname,
 ScopedInterceptor::~ScopedInterceptor() {
   if (!thr_->is_inited) return;
   DisableIgnores();
+  if (UNLIKELY(in_blocking_func_))
+    EnterBlockingFunc(thr_);
   if (!thr_->ignore_interceptors) {
     ProcessPendingSignals(thr_);
     FuncExit(thr_);
@@ -321,15 +346,8 @@ void ScopedInterceptor::DisableIgnoresImpl() {
 
 struct BlockingCall {
   explicit BlockingCall(ThreadState *thr)
-      : thr(thr)
-      , ctx(SigCtx(thr)) {
-    for (;;) {
-      atomic_store(&ctx->in_blocking_func, 1, memory_order_relaxed);
-      if (atomic_load(&thr->pending_signals, memory_order_relaxed) == 0)
-        break;
-      atomic_store(&ctx->in_blocking_func, 0, memory_order_relaxed);
-      ProcessPendingSignals(thr);
-    }
+      : thr(thr) {
+    EnterBlockingFunc(thr);
     // When we are in a "blocking call", we process signals asynchronously
     // (right when they arrive). In this context we do not expect to be
     // executing any user/runtime code. The known interceptor sequence when
@@ -340,11 +358,10 @@ struct BlockingCall {
 
   ~BlockingCall() {
     thr->ignore_interceptors--;
-    atomic_store(&ctx->in_blocking_func, 0, memory_order_relaxed);
+    atomic_store(&thr->in_blocking_func, 0, memory_order_relaxed);
   }
 
   ThreadState *thr;
-  ThreadSignalContext *ctx;
 };
 
 TSAN_INTERCEPTOR(unsigned, sleep, unsigned sec) {
@@ -517,9 +534,7 @@ static void SetJmp(ThreadState *thr, uptr sp) {
   buf->shadow_stack_pos = thr->shadow_stack_pos;
   ThreadSignalContext *sctx = SigCtx(thr);
   buf->int_signal_send = sctx ? sctx->int_signal_send : 0;
-  buf->in_blocking_func = sctx ?
-      atomic_load(&sctx->in_blocking_func, memory_order_relaxed) :
-      false;
+  buf->in_blocking_func = atomic_load(&thr->in_blocking_func, memory_order_relaxed);
   buf->in_signal_handler = atomic_load(&thr->in_signal_handler,
       memory_order_relaxed);
 }
@@ -535,11 +550,10 @@ static void LongJmp(ThreadState *thr, uptr *env) {
       while (thr->shadow_stack_pos > buf->shadow_stack_pos)
         FuncExit(thr);
       ThreadSignalContext *sctx = SigCtx(thr);
-      if (sctx) {
+      if (sctx)
         sctx->int_signal_send = buf->int_signal_send;
-        atomic_store(&sctx->in_blocking_func, buf->in_blocking_func,
-            memory_order_relaxed);
-      }
+      atomic_store(&thr->in_blocking_func, buf->in_blocking_func,
+          memory_order_relaxed);
       atomic_store(&thr->in_signal_handler, buf->in_signal_handler,
           memory_order_relaxed);
       JmpBufGarbageCollect(thr, buf->sp - 1);  // do not collect buf->sp
@@ -1198,9 +1212,8 @@ void CondMutexUnlockCtx<Fn>::Unlock() const {
   // tsan code. Also ScopedInterceptor and BlockingCall destructors won't run
   // since the thread is cancelled, so we have to manually execute them
   // (the thread still can run some user code due to pthread_cleanup_push).
-  ThreadSignalContext *ctx = SigCtx(thr);
-  CHECK_EQ(atomic_load(&ctx->in_blocking_func, memory_order_relaxed), 1);
-  atomic_store(&ctx->in_blocking_func, 0, memory_order_relaxed);
+  CHECK_EQ(atomic_load(&thr->in_blocking_func, memory_order_relaxed), 1);
+  atomic_store(&thr->in_blocking_func, 0, memory_order_relaxed);
   MutexPostLock(thr, pc, (uptr)m, MutexFlagDoPreLockOnPostLock);
   // Undo BlockingCall ctor effects.
   thr->ignore_interceptors--;
@@ -2089,12 +2102,12 @@ void sighandler(int sig, __sanitizer_siginfo *info, void *ctx) {
       // If we are in blocking function, we can safely process it now
       // (but check if we are in a recursive interceptor,
       // i.e. pthread_join()->munmap()).
-      (sctx && atomic_load(&sctx->in_blocking_func, memory_order_relaxed))) {
+      atomic_load(&thr->in_blocking_func, memory_order_relaxed)) {
     atomic_fetch_add(&thr->in_signal_handler, 1, memory_order_relaxed);
-    if (sctx && atomic_load(&sctx->in_blocking_func, memory_order_relaxed)) {
-      atomic_store(&sctx->in_blocking_func, 0, memory_order_relaxed);
+    if (atomic_load(&thr->in_blocking_func, memory_order_relaxed)) {
+      atomic_store(&thr->in_blocking_func, 0, memory_order_relaxed);
       CallUserSignalHandler(thr, sync, true, sig, info, ctx);
-      atomic_store(&sctx->in_blocking_func, 1, memory_order_relaxed);
+      atomic_store(&thr->in_blocking_func, 1, memory_order_relaxed);
     } else {
       // Be very conservative with when we do acquire in this case.
       // It's unsafe to do acquire in async handlers, because ThreadState
@@ -3029,7 +3042,9 @@ void InitializeInterceptors() {
 constexpr u32 kBarrierThreadBits = 10;
 constexpr u32 kBarrierThreads = 1 << kBarrierThreadBits;
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tsan_testonly_barrier_init(
+extern "C" {
+
+SANITIZER_INTERFACE_ATTRIBUTE void __tsan_testonly_barrier_init(
     atomic_uint32_t *barrier, u32 num_threads) {
   if (num_threads >= kBarrierThreads) {
     Printf("barrier_init: count is too large (%d)\n", num_threads);
@@ -3044,7 +3059,7 @@ static u32 barrier_epoch(u32 value) {
   return (value >> kBarrierThreadBits) / (value & (kBarrierThreads - 1));
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tsan_testonly_barrier_wait(
+SANITIZER_INTERFACE_ATTRIBUTE void __tsan_testonly_barrier_wait(
     atomic_uint32_t *barrier) {
   u32 old = atomic_fetch_add(barrier, kBarrierThreads, memory_order_relaxed);
   u32 old_epoch = barrier_epoch(old);
@@ -3058,4 +3073,24 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tsan_testonly_barrier_wait(
       return;
     FutexWait(barrier, cur);
   }
+}
+
+void *__tsan_memcpy(void *dst, const void *src, uptr size) {
+  void *ctx;
+#if PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE
+  COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, dst, src, size);
+#else
+  COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, dst, src, size);
+#endif
+}
+
+void *__tsan_memset(void *dst, int c, uptr size) {
+  void *ctx;
+  COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, dst, c, size);
+}
+
+void *__tsan_memmove(void *dst, const void *src, uptr size) {
+  void *ctx;
+  COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, dst, src, size);
+}
 }

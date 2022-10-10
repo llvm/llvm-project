@@ -171,7 +171,7 @@ RegisterContextLinux_x86_64::RegisterContextLinux_x86_64(
   d_register_infos.push_back(orig_ax);
 }
 
-size_t RegisterContextLinux_x86_64::GetGPRSize() const { return sizeof(GPR); }
+size_t RegisterContextLinux_x86_64::GetGPRSizeStatic() { return sizeof(GPR); }
 
 const std::vector<lldb_private::RegisterInfo> *
 RegisterContextLinux_x86_64::GetDynamicRegisterInfoP() const {

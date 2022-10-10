@@ -5,9 +5,14 @@
 # to another. The altered instructions are labeled below.
 #
 # CHECK: ![[ARG1:.*]] = !DILocalVariable(name: "arg1"
+# CHECK: ![[VAR1:.*]] = !DILocalVariable(name: "var1"
 # CHECK: DBG_VALUE $ebx, $noreg, ![[ARG1]], !DIExpression(), debug-location
+# CHECK: DBG_VALUE_LIST ![[VAR1]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $ebx, $r13d
 # CHECK: $r12d = MOV32rr killed $ebx, implicit-def $r12
+# CHECK-NEXT: DBG_VALUE_LIST !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $r12d, $r13d
 # CHECK-NEXT: DBG_VALUE $r12d, $noreg, ![[ARG1]], !DIExpression(), debug-location
+# CHECK: $r10d = MOV32rr killed $r13d, implicit-def $r10
+# CHECK-NEXT: DBG_VALUE_LIST !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $r12d, $r10d
 --- |
   ; ModuleID = 'live-debug-values-reg-copy.ll'
   source_filename = "live-debug-values-reg-copy.c"
@@ -88,8 +93,9 @@
   !8 = !DISubroutineType(types: !9)
   !9 = !{!10, !10}
   !10 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
-  !11 = !{!12}
+  !11 = !{!12, !13}
   !12 = !DILocalVariable(name: "arg1", arg: 1, scope: !7, file: !1, line: 6, type: !10)
+  !13 = !DILocalVariable(name: "var1", arg: 1, scope: !7, file: !1, line: 6, type: !10)
   !15 = !DILocation(line: 6, column: 13, scope: !7)
   !20 = !{!21, !21, i64 0}
   !21 = !{!"int", !22, i64 0}
@@ -108,13 +114,14 @@ tracksRegLiveness: true
 registers:
 liveins:
   - { reg: '$edi', virtual-reg: '' }
+  - { reg: '$r8d', virtual-reg: '' }
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
   hasStackMap:     false
   hasPatchPoint:   false
-  stackSize:       40
-  offsetAdjustment: -40
+  stackSize:       48
+  offsetAdjustment: -48
   maxAlignment:    4
   adjustsStack:    true
   hasCalls:        true
@@ -126,12 +133,16 @@ frameInfo:
   savePoint:       ''
   restorePoint:    ''
 fixedStack:
-  - { id: 0, type: spill-slot, offset: -32, size: 8, alignment: 16, stack-id: default,
+  - { id: 0, type: spill-slot, offset: -48, size: 8, alignment: 16, stack-id: default,
       callee-saved-register: '$rbx', callee-saved-restored: true }
-  - { id: 1, type: spill-slot, offset: -24, size: 8, alignment: 8, stack-id: default,
+  - { id: 1, type: spill-slot, offset: -40, size: 8, alignment: 8, stack-id: default,
       callee-saved-register: '$r12', callee-saved-restored: true }
-  - { id: 2, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default,
+  - { id: 2, type: spill-slot, offset: -32, size: 8, alignment: 16, stack-id: default,
       callee-saved-register: '$rbp', callee-saved-restored: true }
+  - { id: 3, type: spill-slot, offset: -24, size: 8, alignment: 16, stack-id: default,
+      callee-saved-register: '$r13', callee-saved-restored: true }
+  - { id: 4, type: spill-slot, offset: -16, size: 8, alignment: 16, stack-id: default,
+      callee-saved-register: '$r10', callee-saved-restored: true }
 stack:
   - { id: 0, name: local1, type: default, offset: -36, size: 4, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -140,27 +151,39 @@ constants:
 body:             |
   bb.0.entry:
     successors: %bb.1(0x40000000), %bb.2(0x40000000)
-    liveins: $edi, $rbp, $r12, $rbx
+    liveins: $edi, $rbp, $r8, $r10, $r13, $r12, $rbx
 
     DBG_VALUE $edi, $noreg, !12, !DIExpression(), debug-location !15
-    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    DBG_VALUE_LIST !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $edi, $r8d, debug-location !15
+    frame-setup PUSH64r killed $r10, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
-    frame-setup PUSH64r killed $r12, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $r13, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 24
-    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 32
-    $rsp = frame-setup SUB64ri8 $rsp, 16, implicit-def dead $eflags
+    frame-setup PUSH64r killed $r12, implicit-def $rsp, implicit $rsp
+    CFI_INSTRUCTION def_cfa_offset 40
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 48
-    CFI_INSTRUCTION offset $rbx, -32
-    CFI_INSTRUCTION offset $r12, -24
-    CFI_INSTRUCTION offset $rbp, -16
+    $rsp = frame-setup SUB64ri8 $rsp, 16, implicit-def dead $eflags
+    CFI_INSTRUCTION def_cfa_offset 56
+    CFI_INSTRUCTION offset $rbx, -48
+    CFI_INSTRUCTION offset $rbx, -40
+    CFI_INSTRUCTION offset $r12, -32
+    CFI_INSTRUCTION offset $rbp, -24
+    CFI_INSTRUCTION offset $r13,  -16
     renamable $ebx = COPY $edi, implicit-def $rbx
+    renamable $r13d = COPY $r8d, implicit-def $r13
     DBG_VALUE $ebx, $noreg, !12, !DIExpression(), debug-location !15
+    DBG_VALUE_LIST !13, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), $ebx, $r13d, debug-location !15
     renamable $rdi = LEA64r $rsp, 1, $noreg, 12, $noreg
+    renamable $r8 = LEA64r $rsp, 1, $noreg, 12, $noreg
     CALL64pcrel32 @init, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, debug-location !15
     renamable $edi = MOV32rm $rsp, 1, $noreg, 12, $noreg :: (dereferenceable load (s32) from %ir.local1, !tbaa !20)
     renamable $edi = ADD32rr killed renamable $edi, renamable $ebx, implicit-def dead $eflags, debug-location !15
-    CALL64pcrel32 @coeficient, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !15
+    renamable $r8d = MOV32rm $rsp, 1, $noreg, 12, $noreg :: (dereferenceable load (s32) from %ir.local1, !tbaa !20)
+    renamable $r8d = ADD32rr killed renamable $r8d, renamable $r13d, implicit-def dead $eflags, debug-location !15
+    CALL64pcrel32 @coeficient, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $r8d, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !15
     renamable $ebp = COPY $eax, debug-location !15
     CMP32ri8 $eax, 33, implicit-def $eflags, debug-location !15
     JCC_1 %bb.2, 12, implicit killed $eflags, debug-location !15
@@ -168,9 +191,10 @@ body:             |
 
   bb.1.if.then:
     successors: %bb.3(0x80000000)
-    liveins: $ebp, $rbx
+    liveins: $ebp, $rbx, $r13
 
     $edi = COPY renamable $ebx, debug-location !15
+    $r8d = COPY renamable $r13d, debug-location !15
     CALL64pcrel32 @externFunc, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !15
     renamable $eax = KILL $eax, implicit-def $rax, debug-location !15
     renamable $eax = nsw ADD32rm renamable $eax, $rsp, 1, $noreg, 12, $noreg, implicit-def dead $eflags, implicit killed $rax, implicit-def $rax, debug-location !15 :: (dereferenceable load (s32) from %ir.local1, !tbaa !20)
@@ -178,26 +202,32 @@ body:             |
 
   bb.2.if.else:
     successors: %bb.3(0x80000000)
-    liveins: $ebp, $rbx
+    liveins: $ebp, $r13, $rbx
 
     $edi = COPY renamable $ebx, debug-location !15
+    $r8d = COPY renamable $r13d, debug-location !15
     CALL64pcrel32 @externFunc2, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax, debug-location !15
     renamable $eax = KILL $eax, implicit-def $rax, debug-location !15
     renamable $eax = nsw ADD32rm renamable $eax, $rsp, 1, $noreg, 12, $noreg, implicit-def dead $eflags, implicit killed $rax, implicit-def $rax, debug-location !15 :: (dereferenceable load (s32) from %ir.local1, !tbaa !20)
 
   bb.3.if.end:
-    liveins: $ebp, $rax, $rbx, $r12
+    liveins: $ebp, $rax, $rbx, $r13, $r12, $r10
     ; Instruction below is added in order to test moving variable's value from one register to another.
     $r12d = MOV32rr killed $ebx, implicit-def $r12
+    $r10d = MOV32rr killed $r13d, implicit-def $r10
     renamable $eax = nsw LEA64_32r killed renamable $rax, 4, killed renamable $rbx, 0, $noreg, debug-location !15
     renamable $eax = nsw IMUL32rr killed renamable $eax, killed renamable $ebp, implicit-def dead $eflags, debug-location !15
     $rsp = frame-destroy ADD64ri8 $rsp, 16, implicit-def dead $eflags, debug-location !15
-    CFI_INSTRUCTION def_cfa_offset 32, debug-location !15
+    CFI_INSTRUCTION def_cfa_offset 48, debug-location !15
     $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !15
-    CFI_INSTRUCTION def_cfa_offset 24, debug-location !15
+    CFI_INSTRUCTION def_cfa_offset 40, debug-location !15
     $r12 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !15
-    CFI_INSTRUCTION def_cfa_offset 16, debug-location !15
+    CFI_INSTRUCTION def_cfa_offset 32, debug-location !15
     $rbp = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !15
+    CFI_INSTRUCTION def_cfa_offset 24, debug-location !15
+    $r13 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !15
+    CFI_INSTRUCTION def_cfa_offset 16, debug-location !15
+    $r13 = frame-destroy POP64r implicit-def $rsp, implicit $rsp, debug-location !15
     CFI_INSTRUCTION def_cfa_offset 8, debug-location !15
     RET 0, $eax, debug-location !15
 

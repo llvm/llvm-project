@@ -1,5 +1,4 @@
 
-import unittest2
 import os
 import shutil
 
@@ -11,7 +10,7 @@ from lldbsuite.test import lldbutil
 
 class TestClangModuleUpdate(TestBase):
 
-    @skipIf(debug_info=no_match(["gmodules"]))
+    @add_test_categories(["gmodules"])
     @skipIfDarwin # rdar://76540904
     def test_expr(self):
         with open(self.getBuildArtifact("module.modulemap"), "w") as f:

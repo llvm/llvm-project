@@ -20,7 +20,7 @@ func.func @matmul_split(%A : tensor<?x256xf32>, %B: tensor<256x32xf32>, %C: tens
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
     %1:4 = transform.structured.split_reduction %0 

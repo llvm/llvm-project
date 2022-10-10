@@ -61,7 +61,7 @@ define i8* @test_simplify4() {
 
 define i8* @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @__memset_chk(i8* bitcast (%struct.T* @t to i8*), i32 0, i64 1824, i64 400)
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @__memset_chk(i8* nonnull bitcast (%struct.T* @t to i8*), i32 0, i64 1824, i64 400)
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
   %dst = bitcast %struct.T* @t to i8*
@@ -72,7 +72,7 @@ define i8* @test_no_simplify1() {
 
 define i8* @test_no_simplify2() {
 ; CHECK-LABEL: @test_no_simplify2(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @__memset_chk(i8* bitcast (%struct.T* @t to i8*), i32 0, i64 1824, i64 0)
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @__memset_chk(i8* nonnull bitcast (%struct.T* @t to i8*), i32 0, i64 1824, i64 0)
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
   %dst = bitcast %struct.T* @t to i8*

@@ -9,10 +9,10 @@
 #ifndef LIBC_SRC_SUPPORT_STR_TO_FLOAT_H
 #define LIBC_SRC_SUPPORT_STR_TO_FLOAT_H
 
-#include "src/__support/CPP/Limits.h"
-#include "src/__support/CPP/UInt128.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/builtin_wrappers.h"
+#include "src/__support/UInt128.h"
+#include "src/__support/builtin_wrappers.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/detailed_powers_of_ten.h"
 #include "src/__support/high_precision_decimal.h"
@@ -52,11 +52,11 @@ template <class T> uint32_t inline leading_zeroes(T inputNumber) {
 }
 
 template <> uint32_t inline leading_zeroes<uint32_t>(uint32_t inputNumber) {
-  return fputil::safe_clz(inputNumber);
+  return safe_clz(inputNumber);
 }
 
 template <> uint32_t inline leading_zeroes<uint64_t>(uint64_t inputNumber) {
-  return fputil::safe_clz(inputNumber);
+  return safe_clz(inputNumber);
 }
 
 static inline uint64_t low64(const UInt128 &num) {
@@ -67,9 +67,7 @@ static inline uint64_t high64(const UInt128 &num) {
   return static_cast<uint64_t>(num >> 64);
 }
 
-template <class T> inline void set_implicit_bit(fputil::FPBits<T> &result) {
-  return;
-}
+template <class T> inline void set_implicit_bit(fputil::FPBits<T> &) { return; }
 
 #if defined(SPECIAL_X86_LONG_DOUBLE)
 template <>
@@ -738,7 +736,7 @@ decimal_string_to_float(const char *__restrict src, const char DECIMAL_POINT,
 
   // The loop fills the mantissa with as many digits as it can hold
   const BitsType bitstype_max_div_by_base =
-      __llvm_libc::cpp::NumericLimits<BitsType>::max() / BASE;
+      cpp::numeric_limits<BitsType>::max() / BASE;
   while (true) {
     if (isdigit(*src)) {
       uint32_t digit = *src - '0';
@@ -828,7 +826,7 @@ static inline bool hexadecimal_string_to_float(
 
   // The loop fills the mantissa with as many digits as it can hold
   const BitsType bitstype_max_div_by_base =
-      __llvm_libc::cpp::NumericLimits<BitsType>::max() / BASE;
+      cpp::numeric_limits<BitsType>::max() / BASE;
   while (true) {
     if (isalnum(*src)) {
       uint32_t digit = b36_char_to_int(*src);
@@ -973,11 +971,11 @@ static inline T strtofloatingpoint(const char *__restrict src,
       }
       nan_mantissa |= fputil::FloatProperties<T>::QUIET_NAN_MASK;
       if (result.get_sign()) {
-        result = fputil::FPBits<T>(result.build_nan(nan_mantissa));
+        result = fputil::FPBits<T>(result.build_quiet_nan(nan_mantissa));
         result.set_sign(true);
       } else {
         result.set_sign(false);
-        result = fputil::FPBits<T>(result.build_nan(nan_mantissa));
+        result = fputil::FPBits<T>(result.build_quiet_nan(nan_mantissa));
       }
     }
   } else if ((*src | 32) == 'i') { // INF

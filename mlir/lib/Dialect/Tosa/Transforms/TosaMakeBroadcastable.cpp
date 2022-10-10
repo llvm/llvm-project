@@ -10,13 +10,20 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Tosa/IR//TosaOps.h"
-#include "mlir/Dialect/Tosa/Transforms/PassDetail.h"
+#include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
+namespace mlir {
+namespace tosa {
+#define GEN_PASS_DEF_TOSAMAKEBROADCASTABLE
+#include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"
+} // namespace tosa
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -232,7 +239,7 @@ namespace {
 /// Pass that enables broadcast by making all input arrays have the same
 /// number of dimensions. Insert RESHAPE operations to lower rank operand
 struct TosaMakeBroadcastable
-    : public TosaMakeBroadcastableBase<TosaMakeBroadcastable> {
+    : public tosa::impl::TosaMakeBroadcastableBase<TosaMakeBroadcastable> {
 public:
   void runOnOperation() override {
     auto func = getOperation();

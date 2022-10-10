@@ -7,8 +7,8 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_FWD_STRING_VIEW_H
-#define _LIBCPP_FWD_STRING_VIEW_H
+#ifndef _LIBCPP___FWD_STRING_VIEW_H
+#define _LIBCPP___FWD_STRING_VIEW_H
 
 #include <__config>
 #include <iosfwd> // char_traits
@@ -34,4 +34,4 @@ typedef basic_string_view<wchar_t>  wstring_view;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_FWD_STRING_VIEW_H
+#endif // _LIBCPP___FWD_STRING_VIEW_H

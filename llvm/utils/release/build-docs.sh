@@ -113,7 +113,7 @@ ninja -C $builddir \
                doxygen-polly
 
 cmake -G Ninja $srcdir/../runtimes -B $builddir/runtimes-doc \
-               -DLLVM_ENABLE_RUNTIMES="libcxx" \
+               -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
                -DLLVM_ENABLE_SPHINX=ON \
                -DSPHINX_WARNINGS_AS_ERRORS=OFF
 

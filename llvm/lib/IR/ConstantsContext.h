@@ -41,11 +41,11 @@
 
 namespace llvm {
 
-/// UnaryConstantExpr - This class is private to Constants.cpp, and is used
-/// behind the scenes to implement unary constant exprs.
-class UnaryConstantExpr final : public ConstantExpr {
+/// CastConstantExpr - This class is private to Constants.cpp, and is used
+/// behind the scenes to implement cast constant exprs.
+class CastConstantExpr final : public ConstantExpr {
 public:
-  UnaryConstantExpr(unsigned Opcode, Constant *C, Type *Ty)
+  CastConstantExpr(unsigned Opcode, Constant *C, Type *Ty)
     : ConstantExpr(Ty, Opcode, &Op<0>(), 1) {
     Op<0>() = C;
   }
@@ -57,8 +57,7 @@ public:
   DECLARE_TRANSPARENT_OPERAND_ACCESSORS(Value);
 
   static bool classof(const ConstantExpr *CE) {
-    return Instruction::isCast(CE->getOpcode()) ||
-           Instruction::isUnaryOp(CE->getOpcode());
+    return Instruction::isCast(CE->getOpcode());
   }
   static bool classof(const Value *V) {
     return isa<ConstantExpr>(V) && classof(cast<ConstantExpr>(V));
@@ -272,9 +271,9 @@ public:
 };
 
 template <>
-struct OperandTraits<UnaryConstantExpr>
-    : public FixedNumOperandTraits<UnaryConstantExpr, 1> {};
-DEFINE_TRANSPARENT_OPERAND_ACCESSORS(UnaryConstantExpr, Value)
+struct OperandTraits<CastConstantExpr>
+    : public FixedNumOperandTraits<CastConstantExpr, 1> {};
+DEFINE_TRANSPARENT_OPERAND_ACCESSORS(CastConstantExpr, Value)
 
 template <>
 struct OperandTraits<BinaryConstantExpr>
@@ -518,10 +517,8 @@ public:
   ConstantExpr *create(TypeClass *Ty) const {
     switch (Opcode) {
     default:
-      if (Instruction::isCast(Opcode) ||
-          (Opcode >= Instruction::UnaryOpsBegin &&
-           Opcode < Instruction::UnaryOpsEnd))
-        return new UnaryConstantExpr(Opcode, Ops[0], Ty);
+      if (Instruction::isCast(Opcode))
+        return new CastConstantExpr(Opcode, Ops[0], Ty);
       if ((Opcode >= Instruction::BinaryOpsBegin &&
            Opcode < Instruction::BinaryOpsEnd))
         return new BinaryConstantExpr(Opcode, Ops[0], Ops[1],

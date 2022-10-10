@@ -269,21 +269,6 @@ func.func @generic_result_tensor_type(%arg0: memref<?xf32, affine_map<(i)[off]->
 
 // -----
 
-func.func @generic_result_tensor_type(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>,
-                                 %arg1: tensor<?xf32>) {
-  // expected-error @+1 {{unexpected output tensor expression in indexing map #0 a.k.a 'd0' is function of reduction iterator 'd0'}}
-  %0 = linalg.generic {
-    indexing_maps = [ affine_map<(i) -> (i)> , affine_map<(i) -> (i)> ],
-    iterator_types = ["reduction"]}
-       ins(%arg0 : memref<?xf32, affine_map<(i)[off]->(off + i)>>)
-      outs(%arg1 : tensor<?xf32>) {
-    ^bb(%i: f32, %j: f32):
-      linalg.yield %i: f32
-  } -> tensor<?xf32>
-}
-
-// -----
-
 func.func @generic(%arg0: memref<?x?xf32>) {
   // expected-error @+6 {{block with no terminator, has %0 = "arith.addf"(%arg1, %arg1) : (f32, f32) -> f32}}
   linalg.generic  {
@@ -338,36 +323,9 @@ func.func @matching_inits(%m: memref<?x?xf32>, %t: tensor<?x?xf32>) {
 
 // -----
 
-func.func @init_tensor_err(%arg0 : index, %arg1 : index)
-{
-  // expected-error @+1 {{specified type 'tensor<4x?x?x5xf32>' does not match the inferred type 'tensor<4x5x?x?xf32>'}}
-  %1 = linalg.init_tensor [4, 5, %arg0, %arg1] : tensor<4x?x?x5xf32>
-  return
-}
-
-// -----
-
-func.func @init_tensor_err(%arg0 : index)
-{
-  // expected-error @+1 {{expected 4 sizes values}}
-  %1 = linalg.init_tensor [4, 5, %arg0] : tensor<4x?x?x5xf32>
-  return
-}
-
-// -----
-
-func.func @init_tensor_err(%arg0 : index)
-{
-  // expected-error @+1 {{expected 2 dynamic sizes values}}
-  %1 = "linalg.init_tensor"(%arg0) {static_sizes = [4, -1, -1, 5]} : (index) -> tensor<4x?x?x5xf32>
-  return
-}
-
-// -----
-
 func.func @illegal_fill_tensor_no_return(%arg0 : index, %arg1 : index, %arg2 : f32)
 {
-  %0 = linalg.init_tensor [%arg0, %arg1] : tensor<?x?xf32>
+  %0 = tensor.empty(%arg0, %arg1) : tensor<?x?xf32>
   // expected-error @+1 {{expected the number of results (0) to be equal to the number of output tensors (1)}}
   linalg.fill ins(%arg2 : f32) outs(%0 : tensor<?x?xf32>)
 }
@@ -429,4 +387,176 @@ func.func @invalid_reverse(%A: memref<5xf32>, %B: memref<5xf32>) {
                 linalg.yield %a : f32
         }
         return
+}
+
+// -----
+
+func.func @reduce_input_vs_init_dimension_mismatch(
+    %input: tensor<16x32x64xf32>,
+    %init: tensor<16x64xf32>)  -> tensor<16x64xf32> {
+  // expected-error @+1 {{'linalg.reduce' op init dimensions [16, 64] doesn't match input dimensions after reduction [16, 32]}}
+  %reduce = linalg.reduce
+      ins(%input:tensor<16x32x64xf32>)
+      outs(%init:tensor<16x64xf32>)
+      dimensions = [2]
+      (%in: f32, %out: f32) {
+        %0 = arith.addf %in, %out: f32
+        linalg.yield %0: f32
+      }
+  func.return %reduce : tensor<16x64xf32>
+}
+
+// -----
+
+func.func @reduce_dimensions_out_of_range(%input: tensor<16x32x64xf32>,
+    %init: tensor<16x64xf32>)  -> tensor<16x64xf32> {
+  // expected-error @+1 {{'linalg.reduce' op dimensions for reduction should be in the range [0, 2].}}
+  %reduce = linalg.reduce
+      ins(%input:tensor<16x32x64xf32>)
+      outs(%init:tensor<16x64xf32>)
+      dimensions = [3]
+      (%in: f32, %out: f32) {
+        %0 = arith.addf %in, %out: f32
+        linalg.yield %0: f32
+      }
+  func.return %reduce : tensor<16x64xf32>
+}
+
+// -----
+
+func.func @reduce_duplicate_dimensions(%input: tensor<16x32x64xf32>,
+    %init: tensor<16xf32>)  -> tensor<16xf32> {
+  // expected-error @+1 {{'linalg.reduce' op attribute 'dimensions' failed to satisfy constraint: i64 dense array attribute should be in increasing order}}
+  %reduce = linalg.reduce
+      ins(%input:tensor<16x32x64xf32>)
+      outs(%init:tensor<16xf32>)
+      dimensions = [1, 1]
+      (%in: f32, %out: f32) {
+        %0 = arith.addf %in, %out: f32
+        linalg.yield %0: f32
+      }
+  func.return %reduce : tensor<16xf32>
+}
+
+// -----
+
+func.func @reduce_non_increasing_dimensions(%input: tensor<16x32x64xf32>,
+    %init: tensor<16xf32>)  -> tensor<16xf32> {
+  // expected-error @+1 {{'linalg.reduce' op attribute 'dimensions' failed to satisfy constraint: i64 dense array attribute should be in increasing order}}
+  %reduce = linalg.reduce
+      ins(%input:tensor<16x32x64xf32>)
+      outs(%init:tensor<16xf32>)
+      dimensions = [2, 1]
+      (%in: f32, %out: f32) {
+        %0 = arith.addf %in, %out: f32
+        linalg.yield %0: f32
+      }
+  func.return %reduce : tensor<16xf32>
+}
+
+// -----
+
+func.func @reduce_reduced_input_init_rank_mismatch(%input: tensor<16x32x64xf32>,
+    %init: tensor<16x64xf32>)  -> tensor<16x64xf32> {
+  // expected-error @+1 {{'linalg.reduce' op number of dimensions after reduction 1 doesn't match the init rank 2}}
+  %reduce = linalg.reduce
+      ins(%input:tensor<16x32x64xf32>)
+      outs(%init:tensor<16x64xf32>)
+      dimensions = [1, 2]
+      (%in: f32, %out: f32) {
+        %0 = arith.addf %in, %out: f32
+        linalg.yield %0: f32
+      }
+  func.return %reduce : tensor<16x64xf32>
+}
+
+// -----
+
+func.func @reduce_wrong_number_of_block_arguments(
+    %input1: tensor<16x32x64xf32>,
+    %init1: tensor<16x64xf32>, %input2: tensor<16x32x64xf32>,
+    %init2: tensor<16x64xf32>)  -> (tensor<16x64xf32>, tensor<16x64xf32>) {
+  // expected-error @+1{{'linalg.reduce' op mismatching number of operands and block arguments}}
+  %reduce, %reduce2 = linalg.reduce
+      ins(%input1, %input2 : tensor<16x32x64xf32>, tensor<16x32x64xf32>)
+      outs(%init1, %init2 : tensor<16x64xf32>, tensor<16x64xf32>)
+      dimensions = [1]
+      (%in: f32, %out: f32) {
+        %0 = arith.addf %in, %out: f32
+        linalg.yield %0: f32
+      }
+  func.return %reduce, %reduce2 : tensor<16x64xf32>, tensor<16x64xf32>
+}
+
+// -----
+
+func.func @reduce_wrong_block_argument_input_type(
+    %input1: tensor<16x32x64xf32>,
+    %init1: tensor<16x64xf32>, %input2: tensor<16x32x64xf32>,
+    %init2: tensor<16x64xf32>)  -> (tensor<16x64xf32>, tensor<16x64xf32>) {
+  // expected-error @+1{{'linalg.reduce' op input element type 'f32' does not match corresponding block argument type 'f64'}}
+  %reduce, %reduce2 = linalg.reduce
+      ins(%input1, %input2 : tensor<16x32x64xf32>, tensor<16x32x64xf32>)
+      outs(%init1, %init2 : tensor<16x64xf32>, tensor<16x64xf32>)
+      dimensions = [1]
+      (%in1: f32, %in2: f64, %out1: f32, %out2: f64) {
+        %0 = arith.addf %in1, %out1: f32
+        %1 = arith.addf %in2, %out2: f64
+        linalg.yield %0, %1: f32, f64
+      }
+  func.return %reduce, %reduce2 : tensor<16x64xf32>, tensor<16x64xf32>
+}
+
+// -----
+
+func.func @reduce_wrong_block_argument_output_type(
+    %input1: tensor<16x32x64xf32>,
+    %init1: tensor<16x64xf32>, %input2: tensor<16x32x64xf32>,
+    %init2: tensor<16x64xf64>)  -> (tensor<16x64xf32>, tensor<16x64xf32>) {
+  // expected-error @+1{{'linalg.reduce' op output element type 'f64' does not match corresponding block argument type 'f32'}}
+  %reduce, %reduce2 = linalg.reduce
+      ins(%input1, %input2 : tensor<16x32x64xf32>, tensor<16x32x64xf32>)
+      outs(%init1, %init2 : tensor<16x64xf32>, tensor<16x64xf64>)
+      dimensions = [1]
+      (%in1: f32, %in2: f32, %out1: f32, %out2: f32) {
+        %0 = arith.addf %in1, %out1: f32
+        linalg.yield %0, %out2: f32, f32
+      }
+  func.return %reduce, %reduce2 : tensor<16x64xf32>, tensor<16x64xf64>
+}
+
+// -----
+
+func.func @reduce_different_input_shapes(%input1: tensor<16x32x64xf32>,
+    %init1: tensor<16x64xf32>, %input2: tensor<17x32x64xf32>,
+    %init2: tensor<17x64xf32>)  -> (tensor<16x64xf32>, tensor<17x64xf32>) {
+  // expected-error @+1{{'linalg.reduce' op expects all inputs to have the same shapes. Shape at input-index 1 is not equal to the shape at input-index 0.}}
+  %reduce, %reduce2 = linalg.reduce
+      ins(%input1, %input2 : tensor<16x32x64xf32>, tensor<17x32x64xf32>)
+      outs(%init1, %init2 : tensor<16x64xf32>, tensor<17x64xf32>)
+      dimensions = [1]
+      (%in1: f32, %in2: f32, %out1: f32, %out2: f32) {
+        %0 = arith.addf %in1, %out1: f32
+        %1 = arith.addf %in2, %out2: f32
+        linalg.yield %0, %1: f32, f32
+      }
+  func.return %reduce, %reduce2 : tensor<16x64xf32>, tensor<17x64xf32>
+}
+
+// -----
+
+func.func @reduce_different_output_shapes(%input1: tensor<16x32x64xf32>,
+    %init1: tensor<16x64xf32>, %input2: tensor<16x32x64xf32>,
+    %init2: tensor<17x64xf32>)  -> (tensor<16x64xf32>, tensor<17x64xf32>) {
+  // expected-error @+1{{'linalg.reduce' op expects all outputs to have the same shapes. Shape at output-index 1 is not equal to the shape at output-index 0.}}
+  %reduce, %reduce2 = linalg.reduce
+      ins(%input1, %input2 : tensor<16x32x64xf32>, tensor<16x32x64xf32>)
+      outs(%init1, %init2 : tensor<16x64xf32>, tensor<17x64xf32>)
+      dimensions = [1]
+      (%in1: f32, %in2: f32, %out1: f32, %out2: f32) {
+        %0 = arith.addf %in1, %out1: f32
+        %1 = arith.addf %in2, %out2: f32
+        linalg.yield %0, %1: f32, f32
+      }
+  func.return %reduce, %reduce2 : tensor<16x64xf32>, tensor<17x64xf32>
 }

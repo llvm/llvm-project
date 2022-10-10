@@ -20,14 +20,11 @@ if(POLLY_STANDALONE_BUILD)
 
   # Sources available, too?
   if (LLVM_BUILD_MAIN_SRC_DIR)
-    set(LLVM_SOURCE_ROOT ${LLVM_BUILD_MAIN_SRC_DIR} CACHE PATH
-      "Path to LLVM source tree")
+    set(default_llvm_src "${LLVM_BUILD_MAIN_SRC_DIR}")
   else()
-    execute_process(COMMAND "${LLVM_TOOLS_BINARY_DIR}/llvm-config" --src-root
-      OUTPUT_VARIABLE MAIN_SRC_DIR
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-    set(LLVM_SOURCE_ROOT ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
+    set(default_llvm_src "${CMAKE_CURRENT_SOURCE_DIR}/../llvm")
   endif()
+  set(LLVM_SOURCE_ROOT ${default_llvm_src} CACHE PATH "Path to LLVM source tree")
 
   # Enable unit tests if available.
   set(POLLY_GTEST_AVAIL 0)

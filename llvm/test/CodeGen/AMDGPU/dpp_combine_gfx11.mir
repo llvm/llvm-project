@@ -100,6 +100,22 @@ body:             |
 
 ...
 
+# GCN-LABEL: name: fmac_e64
+# GCN: %5:vgpr_32 = V_FMAC_F32_e64_dpp %3, 2, %0, 2, %1, 2, %2, 1, 2, 1, 15, 15, 1, implicit $mode, implicit $exec
+name: fmac_e64
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:vgpr_32 = COPY $vgpr2
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:vgpr_32 = V_MOV_B32_dpp %3, %0, 1, 15, 15, 1, implicit $exec
+    %6:vgpr_32 = V_FMAC_F32_e64 2, %4, 2, %1, 2, %2, 1, 2, implicit $mode, implicit $exec
+...
+
 # when the DPP source isn't a src0 operand the operation should be commuted if possible
 # GCN-LABEL: name: dpp_commute_shrink
 # GCN: %4:vgpr_32 = V_MUL_U32_U24_dpp %1, %0, %1, 1, 14, 15, 0, implicit $exec

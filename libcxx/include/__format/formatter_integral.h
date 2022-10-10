@@ -13,11 +13,12 @@
 #include <__concepts/arithmetic.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__format/concepts.h>
 #include <__format/format_error.h>
-#include <__format/formatter.h> // for __char_type TODO FMT Move the concept?
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
 #include <__utility/unreachable.h>
+#include <array>
 #include <charconv>
 #include <limits>
 #include <string>
@@ -112,7 +113,7 @@ _LIBCPP_HIDE_FROM_ABI inline string __determine_grouping(ptrdiff_t __size, const
 // Char
 //
 
-template <__formatter::__char_type _CharT>
+template <__fmt_char_type _CharT>
 _LIBCPP_HIDE_FROM_ABI auto __format_char(
     integral auto __value,
     output_iterator<const _CharT&> auto __out_it,
@@ -243,7 +244,7 @@ _LIBCPP_HIDE_FROM_ABI auto __format_integer(
     // The zero padding is done like:
     // - Write [sign][prefix]
     // - Write data right aligned with '0' as fill character.
-    __out_it             = _VSTD::copy(__begin, __first, _VSTD::move(__out_it));
+    __out_it             = __formatter::__copy(__begin, __first, _VSTD::move(__out_it));
     __specs.__alignment_ = __format_spec::__alignment::__right;
     __specs.__fill_      = _CharT('0');
     int32_t __size       = __first - __begin;

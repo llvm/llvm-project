@@ -22,8 +22,10 @@ using namespace llvm;
 void LiveRegUnits::removeRegsNotPreserved(const uint32_t *RegMask) {
   for (unsigned U = 0, E = TRI->getNumRegUnits(); U != E; ++U) {
     for (MCRegUnitRootIterator RootReg(U, TRI); RootReg.isValid(); ++RootReg) {
-      if (MachineOperand::clobbersPhysReg(RegMask, *RootReg))
+      if (MachineOperand::clobbersPhysReg(RegMask, *RootReg)) {
         Units.reset(U);
+        break;
+      }
     }
   }
 }
@@ -31,42 +33,54 @@ void LiveRegUnits::removeRegsNotPreserved(const uint32_t *RegMask) {
 void LiveRegUnits::addRegsInMask(const uint32_t *RegMask) {
   for (unsigned U = 0, E = TRI->getNumRegUnits(); U != E; ++U) {
     for (MCRegUnitRootIterator RootReg(U, TRI); RootReg.isValid(); ++RootReg) {
-      if (MachineOperand::clobbersPhysReg(RegMask, *RootReg))
+      if (MachineOperand::clobbersPhysReg(RegMask, *RootReg)) {
         Units.set(U);
+        break;
+      }
     }
   }
 }
 
 void LiveRegUnits::stepBackward(const MachineInstr &MI) {
   // Remove defined registers and regmask kills from the set.
-  for (const MachineOperand &MOP : phys_regs_and_masks(MI)) {
+  for (const MachineOperand &MOP : MI.operands()) {
+    if (MOP.isReg()) {
+      if (MOP.isDef() && MOP.getReg().isPhysical())
+        removeReg(MOP.getReg());
+      continue;
+    }
+
     if (MOP.isRegMask()) {
       removeRegsNotPreserved(MOP.getRegMask());
       continue;
     }
-
-    if (MOP.isDef())
-      removeReg(MOP.getReg());
   }
 
   // Add uses to the set.
-  for (const MachineOperand &MOP : phys_regs_and_masks(MI)) {
+  for (const MachineOperand &MOP : MI.operands()) {
     if (!MOP.isReg() || !MOP.readsReg())
       continue;
-    addReg(MOP.getReg());
+
+    if (MOP.getReg().isPhysical())
+      addReg(MOP.getReg());
   }
 }
 
 void LiveRegUnits::accumulate(const MachineInstr &MI) {
   // Add defs, uses and regmask clobbers to the set.
-  for (const MachineOperand &MOP : phys_regs_and_masks(MI)) {
+  for (const MachineOperand &MOP : MI.operands()) {
+    if (MOP.isReg()) {
+      if (!MOP.getReg().isPhysical())
+        continue;
+      if (MOP.isDef() || MOP.readsReg())
+        addReg(MOP.getReg());
+      continue;
+    }
+
     if (MOP.isRegMask()) {
       addRegsInMask(MOP.getRegMask());
       continue;
     }
-    if (!MOP.isDef() && !MOP.readsReg())
-      continue;
-    addReg(MOP.getReg());
   }
 }
 

@@ -63,23 +63,20 @@ tools = [
     'clang-tblgen', 'clang-scan-deps', 'opt', 'llvm-ifs', 'yaml2obj', 'clang-linker-wrapper',
     ToolSubst('%clang_extdef_map', command=FindTool(
         'clang-extdef-mapping'), unresolved='ignore'),
-    ToolSubst('%clang_dxc', command=config.clang,
-        extra_args=['--driver-mode=dxc']),
 ]
 
 if config.clang_examples:
     config.available_features.add('examples')
 
-def have_host_jit_support():
+def have_host_jit_feature_support(feature_name):
     clang_repl_exe = lit.util.which('clang-repl', config.clang_tools_dir)
 
     if not clang_repl_exe:
-        print('clang-repl not found')
         return False
 
     try:
         clang_repl_cmd = subprocess.Popen(
-            [clang_repl_exe, '--host-supports-jit'], stdout=subprocess.PIPE)
+            [clang_repl_exe, '--host-supports-' + feature_name], stdout=subprocess.PIPE)
     except OSError:
         print('could not exec clang-repl')
         return False
@@ -89,7 +86,7 @@ def have_host_jit_support():
 
     return 'true' in clang_repl_out
 
-if have_host_jit_support():
+if have_host_jit_feature_support('jit'):
     config.available_features.add('host-supports-jit')
 
 if config.clang_staticanalyzer:
@@ -129,13 +126,13 @@ if config.has_plugins and config.llvm_plugin_ext:
 if config.clang_default_pie_on_linux:
     config.available_features.add('default-pie-on-linux')
 
-if config.clang_enable_opaque_pointers:
-    config.available_features.add('enable-opaque-pointers')
+if config.clang_default_std_cxx != '':
+    config.available_features.add('default-std-cxx')
 
 # Set available features we allow tests to conditionalize on.
 #
 if config.clang_default_cxx_stdlib != '':
-    config.available_features.add('default-cxx-stdlib-set')
+    config.available_features.add('default-cxx-stdlib={}'.format(config.clang_default_cxx_stdlib))
 
 # As of 2011.08, crash-recovery tests still do not pass on FreeBSD.
 if platform.system() not in ['FreeBSD']:
@@ -274,3 +271,18 @@ if 'AIXTHREAD_STK' in os.environ:
     config.environment['AIXTHREAD_STK'] = os.environ['AIXTHREAD_STK']
 elif platform.system() == 'AIX':
     config.environment['AIXTHREAD_STK'] = '4194304'
+
+# The llvm-nm tool supports an environment variable "OBJECT_MODE" on AIX OS, which
+# controls the kind of objects they will support. If there is no "OBJECT_MODE"
+# environment variable specified, the default behaviour is to support 32-bit
+# objects only. In order to not affect most test cases, which expect to support
+# 32-bit and 64-bit objects by default, set the environment variable
+# "OBJECT_MODE" to 'any' for llvm-nm on AIX OS.
+
+if 'system-aix' in config.available_features:
+        config.substitutions.append(('llvm-nm', 'env OBJECT_MODE=any llvm-nm'))
+
+# It is not realistically possible to account for all options that could
+# possibly be present in system and user configuration files, so disable
+# default configs for the test runs.
+config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"

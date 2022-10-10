@@ -114,3 +114,34 @@ func.func @complex_exp_log() -> complex<f32> {
   %exp = complex.exp %log : complex<f32>
   return %exp : complex<f32>
 }
+
+// CHECK-LABEL: func @complex_conj_conj
+func.func @complex_conj_conj() -> complex<f32> {
+  %complex1 = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
+  // CHECK: %[[CPLX:.*]] = complex.constant [1.000000e+00 : f32, 0.000000e+00 : f32] : complex<f32>
+  // CHECK-NEXT: return %[[CPLX:.*]] : complex<f32>
+  %conj1 = complex.conj %complex1 : complex<f32>
+  %conj2 = complex.conj %conj1 : complex<f32>
+  return %conj2 : complex<f32>
+}
+
+// CHECK-LABEL: func @complex_add_zero
+func.func @complex_add_zero() -> complex<f32> {
+  %complex1 = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
+  %complex2 = complex.constant [0.0 : f32, 0.0 : f32] : complex<f32>
+  // CHECK: %[[CPLX:.*]] = complex.constant [1.000000e+00 : f32, 0.000000e+00 : f32] : complex<f32>
+  // CHECK-NEXT: return %[[CPLX:.*]] : complex<f32>
+  %add = complex.add %complex1, %complex2 : complex<f32>
+  return %add : complex<f32>
+}
+
+// CHECK-LABEL: func @complex_sub_add_lhs
+func.func @complex_sub_add_lhs() -> complex<f32> {
+  %complex1 = complex.constant [1.0 : f32, 0.0 : f32] : complex<f32>
+  %complex2 = complex.constant [0.0 : f32, 2.0 : f32] : complex<f32>
+  // CHECK: %[[CPLX:.*]] = complex.constant [1.000000e+00 : f32, 0.000000e+00 : f32] : complex<f32>
+  // CHECK-NEXT: return %[[CPLX:.*]] : complex<f32>
+  %add = complex.add %complex1, %complex2 : complex<f32>
+  %sub = complex.sub %add, %complex2 : complex<f32>
+  return %sub : complex<f32>
+}

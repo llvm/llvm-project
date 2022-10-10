@@ -31,8 +31,6 @@ static_library("Utility") {
     "ProcessInfo.cpp",
     "RegisterValue.cpp",
     "RegularExpression.cpp",
-    "Reproducer.cpp",
-    "ReproducerProvider.cpp",
     "Scalar.cpp",
     "SelectHelper.cpp",
     "State.cpp",

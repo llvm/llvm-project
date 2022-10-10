@@ -114,6 +114,11 @@ public:
     return success(parser.consumeIf(Token::comma));
   }
 
+  /// Parses a `...`.
+  ParseResult parseEllipsis() override {
+    return parser.parseToken(Token::ellipsis, "expected '...'");
+  }
+
   /// Parses a `...` if present.
   ParseResult parseOptionalEllipsis() override {
     return success(parser.consumeIf(Token::ellipsis));
@@ -460,7 +465,7 @@ public:
   /// Parse a handle to a resource within the assembly format.
   FailureOr<AsmDialectResourceHandle>
   parseResourceHandle(Dialect *dialect) override {
-    const auto *interface = dyn_cast_or_null<OpAsmDialectInterface>(dialect);
+    const auto *interface = dyn_cast<OpAsmDialectInterface>(dialect);
     if (!interface) {
       return parser.emitError() << "dialect '" << dialect->getNamespace()
                                 << "' does not expect resource handles";

@@ -363,8 +363,8 @@ TEST_F(LogChannelEnabledTest, LogGetLogThread) {
 
   // Try fetching the log mask on one thread. Concurrently, try disabling the
   // log channel.
-  uint32_t mask;
-  std::thread log_thread([this, &mask] { mask = getLog()->GetMask().Get(); });
+  uint64_t mask;
+  std::thread log_thread([this, &mask] { mask = getLog()->GetMask(); });
   EXPECT_TRUE(DisableChannel("chan", {}, err));
   log_thread.join();
 

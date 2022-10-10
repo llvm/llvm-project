@@ -189,8 +189,8 @@ public:
         add(S->getUnderlyingDecl(), Flags);
       Flags |= Rel::Alias; // continue with the alias.
     } else if (const UsingEnumDecl *UED = dyn_cast<UsingEnumDecl>(D)) {
-      add(UED->getEnumDecl(), Flags);
-      Flags |= Rel::Alias; // continue with the alias.
+      // UsingEnumDecl is not an alias at all, just a reference.
+      D = UED->getEnumDecl();
     } else if (const auto *NAD = dyn_cast<NamespaceAliasDecl>(D)) {
       add(NAD->getUnderlyingDecl(), Flags | Rel::Underlying);
       Flags |= Rel::Alias; // continue with the alias
@@ -207,9 +207,12 @@ public:
       // templates.
       Flags |= Rel::Alias;
     } else if (const UsingShadowDecl *USD = dyn_cast<UsingShadowDecl>(D)) {
-      // Include the Introducing decl, but don't traverse it. This may end up
-      // including *all* shadows, which we don't want.
-      report(USD->getIntroducer(), Flags | Rel::Alias);
+      // Include the introducing UsingDecl, but don't traverse it. This may end
+      // up including *all* shadows, which we don't want.
+      // Don't apply this logic to UsingEnumDecl, which can't easily be
+      // conflated with the aliases it introduces.
+      if (llvm::isa<UsingDecl>(USD->getIntroducer()))
+        report(USD->getIntroducer(), Flags | Rel::Alias);
       // Shadow decls are synthetic and not themselves interesting.
       // Record the underlying decl instead, if allowed.
       D = USD->getTargetDecl();
@@ -453,6 +456,10 @@ public:
           if (auto *TD = TST->getTemplateName().getAsTemplateDecl())
             Outer.add(TD->getTemplatedDecl(), Flags | Rel::TemplatePattern);
         }
+      }
+      void
+      VisitSubstTemplateTypeParmType(const SubstTemplateTypeParmType *STTPT) {
+        Outer.add(STTPT->getReplacementType(), Flags);
       }
       void VisitTemplateTypeParmType(const TemplateTypeParmType *TTPT) {
         Outer.add(TTPT->getDecl(), Flags);

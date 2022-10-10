@@ -96,7 +96,7 @@ static Expected<BitVector> scan(StringRef &S, StringRef Original) {
     // Eat this character and fall through below to treat it like a non-meta
     // character.
     S = S.substr(1);
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     BitVector BV(256, false);
     BV[(uint8_t)S[0]] = true;

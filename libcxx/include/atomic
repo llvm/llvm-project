@@ -534,10 +534,6 @@ template <class T>
 # include <__threading_support>
 #endif
 
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
-#  include <chrono>
-#endif
-
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
@@ -948,13 +944,13 @@ void __cxx_atomic_store(__cxx_atomic_base_impl<_Tp> * __a, _Tp __val, memory_ord
 template<class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 _Tp __cxx_atomic_load(__cxx_atomic_base_impl<_Tp> const volatile* __a, memory_order __order) _NOEXCEPT {
-    using __ptr_type = typename remove_const<decltype(__a->__a_value)>::type*;
+    using __ptr_type = __remove_const_t<decltype(__a->__a_value)>*;
     return __c11_atomic_load(const_cast<__ptr_type>(&__a->__a_value), static_cast<__memory_order_underlying_t>(__order));
 }
 template<class _Tp>
 _LIBCPP_INLINE_VISIBILITY
 _Tp __cxx_atomic_load(__cxx_atomic_base_impl<_Tp> const* __a, memory_order __order) _NOEXCEPT {
-    using __ptr_type = typename remove_const<decltype(__a->__a_value)>::type*;
+    using __ptr_type = __remove_const_t<decltype(__a->__a_value)>*;
     return __c11_atomic_load(const_cast<__ptr_type>(&__a->__a_value), static_cast<__memory_order_underlying_t>(__order));
 }
 
@@ -1112,6 +1108,12 @@ _Tp kill_dependency(_Tp __y) _NOEXCEPT
 # define ATOMIC_LLONG_LOCK_FREE     __GCC_ATOMIC_LLONG_LOCK_FREE
 # define ATOMIC_POINTER_LOCK_FREE   __GCC_ATOMIC_POINTER_LOCK_FREE
 #endif
+
+template <class _Tp>
+struct __libcpp_is_always_lock_free {
+  // __atomic_always_lock_free is available in all Standard modes
+  static const bool __value = __atomic_always_lock_free(sizeof(_Tp), 0);
+};
 
 #ifdef _LIBCPP_ATOMIC_ONLY_USE_BUILTINS
 
@@ -1404,42 +1406,8 @@ _Tp __cxx_atomic_fetch_xor(__cxx_atomic_lock_impl<_Tp>* __a,
   return __old;
 }
 
-#ifdef __cpp_lib_atomic_is_always_lock_free
-
-template<typename _Tp> struct __cxx_is_always_lock_free {
-    enum { __value = __atomic_always_lock_free(sizeof(_Tp), 0) }; };
-
-#else
-
-template<typename _Tp> struct __cxx_is_always_lock_free { enum { __value = false }; };
-// Implementations must match the C ATOMIC_*_LOCK_FREE macro values.
-template<> struct __cxx_is_always_lock_free<bool> { enum { __value = 2 == ATOMIC_BOOL_LOCK_FREE }; };
-template<> struct __cxx_is_always_lock_free<char> { enum { __value = 2 == ATOMIC_CHAR_LOCK_FREE }; };
-template<> struct __cxx_is_always_lock_free<signed char> { enum { __value = 2 == ATOMIC_CHAR_LOCK_FREE }; };
-template<> struct __cxx_is_always_lock_free<unsigned char> { enum { __value = 2 == ATOMIC_CHAR_LOCK_FREE }; };
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
-template<> struct __cxx_is_always_lock_free<char8_t> { enum { __value = 2 == ATOMIC_CHAR8_T_LOCK_FREE }; };
-#endif
-template<> struct __cxx_is_always_lock_free<char16_t> { enum { __value = 2 == ATOMIC_CHAR16_T_LOCK_FREE }; };
-template<> struct __cxx_is_always_lock_free<char32_t> { enum { __value = 2 == ATOMIC_CHAR32_T_LOCK_FREE }; };
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-template<> struct __cxx_is_always_lock_free<wchar_t> { enum { __value = 2 == ATOMIC_WCHAR_T_LOCK_FREE }; };
-#endif
-template<> struct __cxx_is_always_lock_free<short> { enum { __value = 2 == ATOMIC_SHORT_LOCK_FREE }; };
-template<> struct __cxx_is_always_lock_free<unsigned short> { enum { __value = 2 == ATOMIC_SHORT_LOCK_FREE }; };
-template<> struct __cxx_is_always_lock_free<int> { enum { __value = 2 == ATOMIC_INT_LOCK_FREE }; };
-template<> struct __cxx_is_always_lock_free<unsigned int> { enum { __value = 2 == ATOMIC_INT_LOCK_FREE }; };
-template<> struct __cxx_is_always_lock_free<long> { enum { __value = 2 == ATOMIC_LONG_LOCK_FREE }; };
-template<> struct __cxx_is_always_lock_free<unsigned long> { enum { __value = 2 == ATOMIC_LONG_LOCK_FREE }; };
-template<> struct __cxx_is_always_lock_free<long long> { enum { __value = 2 == ATOMIC_LLONG_LOCK_FREE }; };
-template<> struct __cxx_is_always_lock_free<unsigned long long> { enum { __value = 2 == ATOMIC_LLONG_LOCK_FREE }; };
-template<typename _Tp> struct __cxx_is_always_lock_free<_Tp*> { enum { __value = 2 == ATOMIC_POINTER_LOCK_FREE }; };
-template<> struct __cxx_is_always_lock_free<std::nullptr_t> { enum { __value = 2 == ATOMIC_POINTER_LOCK_FREE }; };
-
-#endif //__cpp_lib_atomic_is_always_lock_free
-
 template <typename _Tp,
-          typename _Base = typename conditional<__cxx_is_always_lock_free<_Tp>::__value,
+          typename _Base = typename conditional<__libcpp_is_always_lock_free<_Tp>::__value,
                                                 __cxx_atomic_base_impl<_Tp>,
                                                 __cxx_atomic_lock_impl<_Tp> >::type>
 #else
@@ -1463,17 +1431,7 @@ struct __cxx_atomic_impl : public _Base {
 
 using __cxx_atomic_contention_t = __cxx_atomic_impl<__cxx_contention_t>;
 
-#if defined(_LIBCPP_HAS_NO_THREADS)
-#   define _LIBCPP_HAS_NO_PLATFORM_WAIT
-#endif
-
-// TODO:
-// _LIBCPP_HAS_NO_PLATFORM_WAIT is currently a "dead" macro, in the sense that
-// it is not tied anywhere into the build system or even documented. We should
-// clean it up because it is technically never defined except when threads are
-// disabled. We should clean it up in its own changeset in case we break "bad"
-// users.
-#ifndef _LIBCPP_HAS_NO_PLATFORM_WAIT
+#ifndef _LIBCPP_HAS_NO_THREADS
 
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_one(void const volatile*);
 _LIBCPP_AVAILABILITY_SYNC _LIBCPP_EXPORTED_FROM_ABI void __cxx_atomic_notify_all(void const volatile*);
@@ -1515,7 +1473,7 @@ _LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp* __a, _Fn && __test_fn)
     return __libcpp_thread_poll_with_backoff(__test_fn, __backoff_fn);
 }
 
-#else // _LIBCPP_HAS_NO_PLATFORM_WAIT
+#else // _LIBCPP_HAS_NO_THREADS
 
 template <class _Tp>
 _LIBCPP_INLINE_VISIBILITY void __cxx_atomic_notify_all(__cxx_atomic_impl<_Tp> const volatile*) { }
@@ -1524,15 +1482,10 @@ _LIBCPP_INLINE_VISIBILITY void __cxx_atomic_notify_one(__cxx_atomic_impl<_Tp> co
 template <class _Atp, class _Fn>
 _LIBCPP_INLINE_VISIBILITY bool __cxx_atomic_wait(_Atp*, _Fn && __test_fn)
 {
-#if defined(_LIBCPP_HAS_NO_THREADS)
-    using _Policy = __spinning_backoff_policy;
-#else
-    using _Policy = __libcpp_timed_backoff_policy;
-#endif
-    return __libcpp_thread_poll_with_backoff(__test_fn, _Policy());
+    return __libcpp_thread_poll_with_backoff(__test_fn, __spinning_backoff_policy());
 }
 
-#endif // _LIBCPP_HAS_NO_PLATFORM_WAIT
+#endif // _LIBCPP_HAS_NO_THREADS
 
 template <class _Atp, class _Tp>
 struct __cxx_atomic_wait_test_fn_impl {
@@ -1561,7 +1514,7 @@ struct __atomic_base  // false
     mutable __cxx_atomic_impl<_Tp> __a_;
 
 #if defined(__cpp_lib_atomic_is_always_lock_free)
-  static _LIBCPP_CONSTEXPR bool is_always_lock_free = __atomic_always_lock_free(sizeof(__a_), 0);
+  static _LIBCPP_CONSTEXPR bool is_always_lock_free = __libcpp_is_always_lock_free<__cxx_atomic_impl<_Tp> >::__value;
 #endif
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1673,7 +1626,7 @@ struct __atomic_base<_Tp, true>
 {
     typedef __atomic_base<_Tp, false> __base;
 
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
     __atomic_base() _NOEXCEPT = default;
 
     _LIBCPP_INLINE_VISIBILITY
@@ -1806,28 +1759,28 @@ struct atomic<_Tp*>
     _LIBCPP_INLINE_VISIBILITY
     _Tp* fetch_add(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
         // __atomic_fetch_add accepts function pointers, guard against them.
-        static_assert(!is_function<typename remove_pointer<_Tp>::type>::value, "Pointer to function isn't allowed");
+        static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
         return __cxx_atomic_fetch_add(&this->__a_, __op, __m);
     }
 
     _LIBCPP_INLINE_VISIBILITY
     _Tp* fetch_add(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
         // __atomic_fetch_add accepts function pointers, guard against them.
-        static_assert(!is_function<typename remove_pointer<_Tp>::type>::value, "Pointer to function isn't allowed");
+        static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
         return __cxx_atomic_fetch_add(&this->__a_, __op, __m);
     }
 
     _LIBCPP_INLINE_VISIBILITY
     _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) volatile _NOEXCEPT {
         // __atomic_fetch_add accepts function pointers, guard against them.
-        static_assert(!is_function<typename remove_pointer<_Tp>::type>::value, "Pointer to function isn't allowed");
+        static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
         return __cxx_atomic_fetch_sub(&this->__a_, __op, __m);
     }
 
     _LIBCPP_INLINE_VISIBILITY
     _Tp* fetch_sub(ptrdiff_t __op, memory_order __m = memory_order_seq_cst) _NOEXCEPT {
         // __atomic_fetch_add accepts function pointers, guard against them.
-        static_assert(!is_function<typename remove_pointer<_Tp>::type>::value, "Pointer to function isn't allowed");
+        static_assert(!is_function<__remove_pointer_t<_Tp> >::value, "Pointer to function isn't allowed");
         return __cxx_atomic_fetch_sub(&this->__a_, __op, __m);
     }
 
@@ -2664,23 +2617,23 @@ typedef atomic<uintmax_t> atomic_uintmax_t;
 // atomic_*_lock_free : prefer the contention type most highly, then the largest lock-free type
 
 #ifdef __cpp_lib_atomic_is_always_lock_free
-# define _LIBCPP_CONTENTION_LOCK_FREE __atomic_always_lock_free(sizeof(__cxx_contention_t), 0)
+# define _LIBCPP_CONTENTION_LOCK_FREE ::std::__libcpp_is_always_lock_free<__cxx_contention_t>::__value
 #else
 # define _LIBCPP_CONTENTION_LOCK_FREE false
 #endif
 
 #if ATOMIC_LLONG_LOCK_FREE == 2
-typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, long long>::type          __libcpp_signed_lock_free;
-typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned long long>::type __libcpp_unsigned_lock_free;
+typedef __conditional_t<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, long long>          __libcpp_signed_lock_free;
+typedef __conditional_t<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned long long> __libcpp_unsigned_lock_free;
 #elif ATOMIC_INT_LOCK_FREE == 2
-typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, int>::type                __libcpp_signed_lock_free;
-typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned int>::type       __libcpp_unsigned_lock_free;
+typedef __conditional_t<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, int>                __libcpp_signed_lock_free;
+typedef __conditional_t<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned int>       __libcpp_unsigned_lock_free;
 #elif ATOMIC_SHORT_LOCK_FREE == 2
-typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, short>::type              __libcpp_signed_lock_free;
-typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned short>::type     __libcpp_unsigned_lock_free;
+typedef __conditional_t<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, short>              __libcpp_signed_lock_free;
+typedef __conditional_t<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned short>     __libcpp_unsigned_lock_free;
 #elif ATOMIC_CHAR_LOCK_FREE == 2
-typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, char>::type               __libcpp_signed_lock_free;
-typedef conditional<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned char>::type      __libcpp_unsigned_lock_free;
+typedef __conditional_t<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, char>               __libcpp_signed_lock_free;
+typedef __conditional_t<_LIBCPP_CONTENTION_LOCK_FREE, __cxx_contention_t, unsigned char>      __libcpp_unsigned_lock_free;
 #else
     // No signed/unsigned lock-free types
 #define _LIBCPP_NO_LOCK_FREE_TYPES
@@ -2701,5 +2654,14 @@ typedef atomic<__libcpp_unsigned_lock_free> atomic_unsigned_lock_free;
 #endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_DISABLE_DEPRECATION_WARNINGS)
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
+#  include <chrono>
+#endif
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cmath>
+#  include <compare>
+#endif
 
 #endif // _LIBCPP_ATOMIC

@@ -203,7 +203,7 @@ static void checkAndNestUnderRewriteOp(OpBuilder &builder, Value rootExpr,
     pdl::RewriteOp rewrite =
         builder.create<pdl::RewriteOp>(loc, rootExpr, /*name=*/StringAttr(),
                                        /*externalArgs=*/ValueRange());
-    builder.createBlock(&rewrite.body());
+    builder.createBlock(&rewrite.getBodyRegion());
   }
 }
 

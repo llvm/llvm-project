@@ -20,11 +20,14 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/Symbolize/Markup.h"
+#include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/Debuginfod/Debuginfod.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
@@ -32,9 +35,11 @@
 using namespace llvm;
 using namespace llvm::symbolize;
 
-MarkupFilter::MarkupFilter(raw_ostream &OS, Optional<bool> ColorsEnabled)
-    : OS(OS), ColorsEnabled(ColorsEnabled.value_or(
-                  WithColor::defaultAutoDetectFunction()(OS))) {}
+MarkupFilter::MarkupFilter(raw_ostream &OS, LLVMSymbolizer &Symbolizer,
+                           Optional<bool> ColorsEnabled)
+    : OS(OS), Symbolizer(Symbolizer),
+      ColorsEnabled(
+          ColorsEnabled.value_or(WithColor::defaultAutoDetectFunction()(OS))) {}
 
 void MarkupFilter::filter(StringRef Line) {
   this->Line = Line;
@@ -94,10 +99,10 @@ bool MarkupFilter::tryMMap(const MarkupNode &Node,
   if (!ParsedMMap)
     return true;
 
-  if (const MMap *M = overlappingMMap(*ParsedMMap)) {
+  if (const MMap *M = getOverlappingMMap(*ParsedMMap)) {
     WithColor::error(errs())
-        << formatv("overlapping mmap: #{0:x} [{1:x},{2:x})\n", M->Mod->ID,
-                   M->Addr, M->Addr + M->Size);
+        << formatv("overlapping mmap: #{0:x} [{1:x}-{2:x}]\n", M->Mod->ID,
+                   M->Addr, M->Addr + M->Size - 1);
     reportLocation(Node.Fields[0].begin());
     return true;
   }
@@ -160,18 +165,17 @@ bool MarkupFilter::tryModule(const MarkupNode &Node,
     filterNode(Node);
   beginModuleInfoLine(&Module);
   OS << "; BuildID=";
-  highlightValue();
-  OS << toHex(Module.BuildID, /*LowerCase=*/true);
-  highlight();
+  printValue(toHex(Module.BuildID, /*LowerCase=*/true));
   return true;
 }
 
 void MarkupFilter::beginModuleInfoLine(const Module *M) {
   highlight();
   OS << "[[[ELF module";
-  highlightValue();
-  OS << formatv(" #{0:x} \"{1}\"", M->ID, M->Name);
-  highlight();
+  printValue(formatv(" #{0:x} ", M->ID));
+  OS << '"';
+  printValue(M->Name);
+  OS << '"';
   MIL = ModuleInfoLine{M};
 }
 
@@ -182,14 +186,13 @@ void MarkupFilter::endAnyModuleInfoLine() {
     return A->Addr < B->Addr;
   });
   for (const MMap *M : MIL->MMaps) {
-    OS << (M == MIL->MMaps.front() ? ' ' : '-');
-    highlightValue();
-    OS << formatv("{0:x}", M->Addr);
-    highlight();
-    OS << '(';
-    highlightValue();
-    OS << M->Mode;
-    highlight();
+    OS << (M == MIL->MMaps.front() ? ' ' : ',');
+    OS << '[';
+    printValue(formatv("{0:x}", M->Addr));
+    OS << '-';
+    printValue(formatv("{0:x}", M->Addr + M->Size - 1));
+    OS << "](";
+    printValue(M->Mode);
     OS << ')';
   }
   OS << "]]]" << lineEnding();
@@ -210,7 +213,13 @@ void MarkupFilter::filterNode(const MarkupNode &Node) {
 }
 
 bool MarkupFilter::tryPresentation(const MarkupNode &Node) {
-  return trySymbol(Node);
+  if (trySymbol(Node))
+    return true;
+  if (tryPC(Node))
+    return true;
+  if (tryBackTrace(Node))
+    return true;
+  return tryData(Node);
 }
 
 bool MarkupFilter::trySymbol(const MarkupNode &Node) {
@@ -221,6 +230,172 @@ bool MarkupFilter::trySymbol(const MarkupNode &Node) {
 
   highlight();
   OS << llvm::demangle(Node.Fields.front().str());
+  restoreColor();
+  return true;
+}
+
+bool MarkupFilter::tryPC(const MarkupNode &Node) {
+  if (Node.Tag != "pc")
+    return false;
+  if (!checkNumFieldsAtLeast(Node, 1))
+    return true;
+  if (!checkNumFieldsAtMost(Node, 2))
+    return true;
+
+  Optional<uint64_t> Addr = parseAddr(Node.Fields[0]);
+  if (!Addr)
+    return true;
+
+  // PC addresses that aren't part of a backtrace are assumed to be precise code
+  // locations.
+  PCType Type = PCType::PreciseCode;
+  if (Node.Fields.size() == 2) {
+    Optional<PCType> ParsedType = parsePCType(Node.Fields[1]);
+    if (!ParsedType)
+      return true;
+    Type = *ParsedType;
+  }
+  *Addr = adjustAddr(*Addr, Type);
+
+  const MMap *MMap = getContainingMMap(*Addr);
+  if (!MMap) {
+    WithColor::error() << "no mmap covers address\n";
+    reportLocation(Node.Fields[0].begin());
+    printRawElement(Node);
+    return true;
+  }
+
+  Expected<DILineInfo> LI = Symbolizer.symbolizeCode(
+      MMap->Mod->BuildID, {MMap->getModuleRelativeAddr(*Addr)});
+  if (!LI) {
+    WithColor::defaultErrorHandler(LI.takeError());
+    printRawElement(Node);
+    return true;
+  }
+  if (!*LI) {
+    printRawElement(Node);
+    return true;
+  }
+
+  highlight();
+  printValue(LI->FunctionName);
+  OS << '[';
+  printValue(LI->FileName);
+  OS << ':';
+  printValue(Twine(LI->Line));
+  OS << ']';
+  restoreColor();
+  return true;
+}
+
+bool MarkupFilter::tryBackTrace(const MarkupNode &Node) {
+  if (Node.Tag != "bt")
+    return false;
+  if (!checkNumFieldsAtLeast(Node, 2))
+    return true;
+  if (!checkNumFieldsAtMost(Node, 3))
+    return true;
+
+  Optional<uint64_t> FrameNumber = parseFrameNumber(Node.Fields[0]);
+  if (!FrameNumber)
+    return true;
+
+  Optional<uint64_t> Addr = parseAddr(Node.Fields[1]);
+  if (!Addr)
+    return true;
+
+  // Backtrace addresses are assumed to be return addresses by default.
+  PCType Type = PCType::ReturnAddress;
+  if (Node.Fields.size() == 3) {
+    Optional<PCType> ParsedType = parsePCType(Node.Fields[2]);
+    if (!ParsedType)
+      return true;
+    Type = *ParsedType;
+  }
+  *Addr = adjustAddr(*Addr, Type);
+
+  const MMap *MMap = getContainingMMap(*Addr);
+  if (!MMap) {
+    WithColor::error() << "no mmap covers address\n";
+    reportLocation(Node.Fields[0].begin());
+    printRawElement(Node);
+    return true;
+  }
+  uint64_t MRA = MMap->getModuleRelativeAddr(*Addr);
+
+  Expected<DIInliningInfo> II =
+      Symbolizer.symbolizeInlinedCode(MMap->Mod->BuildID, {MRA});
+  if (!II) {
+    WithColor::defaultErrorHandler(II.takeError());
+    printRawElement(Node);
+    return true;
+  }
+
+  highlight();
+  for (unsigned I = 0, E = II->getNumberOfFrames(); I != E; ++I) {
+    auto Header = formatv("{0, +6}", formatv("#{0}", FrameNumber)).sstr<16>();
+    // Don't highlight the # sign as a value.
+    size_t NumberIdx = Header.find("#") + 1;
+    OS << Header.substr(0, NumberIdx);
+    printValue(Header.substr(NumberIdx));
+    if (I == E - 1) {
+      OS << "   ";
+    } else {
+      OS << '.';
+      printValue(formatv("{0, -2}", I + 1));
+    }
+    printValue(formatv(" {0:x16} ", *Addr));
+
+    DILineInfo LI = II->getFrame(I);
+    if (LI) {
+      printValue(LI.FunctionName);
+      OS << ' ';
+      printValue(LI.FileName);
+      OS << ':';
+      printValue(Twine(LI.Line));
+      OS << ':';
+      printValue(Twine(LI.Column));
+      OS << ' ';
+    }
+    OS << '(';
+    printValue(MMap->Mod->Name);
+    OS << "+";
+    printValue(formatv("{0:x}", MRA));
+    OS << ')';
+    if (I != E - 1)
+      OS << lineEnding();
+  }
+  restoreColor();
+  return true;
+}
+
+bool MarkupFilter::tryData(const MarkupNode &Node) {
+  if (Node.Tag != "data")
+    return false;
+  if (!checkNumFields(Node, 1))
+    return true;
+  Optional<uint64_t> Addr = parseAddr(Node.Fields[0]);
+  if (!Addr)
+    return true;
+
+  const MMap *MMap = getContainingMMap(*Addr);
+  if (!MMap) {
+    WithColor::error() << "no mmap covers address\n";
+    reportLocation(Node.Fields[0].begin());
+    printRawElement(Node);
+    return true;
+  }
+
+  Expected<DIGlobal> Symbol = Symbolizer.symbolizeData(
+      MMap->Mod->BuildID, {MMap->getModuleRelativeAddr(*Addr)});
+  if (!Symbol) {
+    WithColor::defaultErrorHandler(Symbol.takeError());
+    printRawElement(Node);
+    return true;
+  }
+
+  highlight();
+  OS << Symbol->Name;
   restoreColor();
   return true;
 }
@@ -295,6 +470,24 @@ void MarkupFilter::resetColor() {
   Bold = false;
   if (ColorsEnabled)
     OS.resetColor();
+}
+
+void MarkupFilter::printRawElement(const MarkupNode &Element) {
+  highlight();
+  OS << "[[[";
+  printValue(Element.Tag);
+  for (StringRef Field : Element.Fields) {
+    OS << ':';
+    printValue(Field);
+  }
+  OS << "]]]";
+  restoreColor();
+}
+
+void MarkupFilter::printValue(Twine Value) {
+  highlightValue();
+  OS << Value;
+  highlight();
 }
 
 // This macro helps reduce the amount of indirection done through Optional
@@ -392,6 +585,16 @@ Optional<uint64_t> MarkupFilter::parseSize(StringRef Str) const {
   return ID;
 }
 
+// Parse a frame number (%i in the spec).
+Optional<uint64_t> MarkupFilter::parseFrameNumber(StringRef Str) const {
+  uint64_t ID;
+  if (Str.getAsInteger(10, ID)) {
+    reportTypeError(Str, "frame number");
+    return None;
+  }
+  return ID;
+}
+
 // Parse a build ID (%x in the spec).
 Optional<SmallVector<uint8_t>> MarkupFilter::parseBuildID(StringRef Str) const {
   std::string Bytes;
@@ -430,6 +633,17 @@ Optional<std::string> MarkupFilter::parseMode(StringRef Str) const {
   return Str.lower();
 }
 
+Optional<MarkupFilter::PCType> MarkupFilter::parsePCType(StringRef Str) const {
+  Optional<MarkupFilter::PCType> Type =
+      StringSwitch<Optional<MarkupFilter::PCType>>(Str)
+          .Case("ra", MarkupFilter::PCType::ReturnAddress)
+          .Case("pc", MarkupFilter::PCType::PreciseCode)
+          .Default(None);
+  if (!Type)
+    reportTypeError(Str, "PC type");
+  return Type;
+}
+
 bool MarkupFilter::checkTag(const MarkupNode &Node) const {
   if (any_of(Node.Tag, [](char C) { return C < 'a' || C > 'z'; })) {
     WithColor::error(errs()) << "tags must be all lowercase characters\n";
@@ -442,7 +656,7 @@ bool MarkupFilter::checkTag(const MarkupNode &Node) const {
 bool MarkupFilter::checkNumFields(const MarkupNode &Element,
                                   size_t Size) const {
   if (Element.Fields.size() != Size) {
-    WithColor::error(errs()) << "expected " << Size << " fields; found "
+    WithColor::error(errs()) << "expected " << Size << " field(s); found "
                              << Element.Fields.size() << "\n";
     reportLocation(Element.Tag.end());
     return false;
@@ -454,7 +668,19 @@ bool MarkupFilter::checkNumFieldsAtLeast(const MarkupNode &Element,
                                          size_t Size) const {
   if (Element.Fields.size() < Size) {
     WithColor::error(errs())
-        << "expected at least " << Size << " fields; found "
+        << "expected at least " << Size << " field(s); found "
+        << Element.Fields.size() << "\n";
+    reportLocation(Element.Tag.end());
+    return false;
+  }
+  return true;
+}
+
+bool MarkupFilter::checkNumFieldsAtMost(const MarkupNode &Element,
+                                        size_t Size) const {
+  if (Element.Fields.size() > Size) {
+    WithColor::error(errs())
+        << "expected at most " << Size << " field(s); found "
         << Element.Fields.size() << "\n";
     reportLocation(Element.Tag.end());
     return false;
@@ -479,7 +705,8 @@ void MarkupFilter::reportLocation(StringRef::iterator Loc) const {
 
 // Checks for an existing mmap that overlaps the given one and returns a
 // pointer to one of them.
-const MarkupFilter::MMap *MarkupFilter::overlappingMMap(const MMap &Map) const {
+const MarkupFilter::MMap *
+MarkupFilter::getOverlappingMMap(const MMap &Map) const {
   // If the given map contains the start of another mmap, they overlap.
   auto I = MMaps.upper_bound(Map.Addr);
   if (I != MMaps.end() && Map.contains(I->second.Addr))
@@ -495,10 +722,37 @@ const MarkupFilter::MMap *MarkupFilter::overlappingMMap(const MMap &Map) const {
   return nullptr;
 }
 
+// Returns the MMap that contains the given address or nullptr if none.
+const MarkupFilter::MMap *MarkupFilter::getContainingMMap(uint64_t Addr) const {
+  // Find the first mmap starting >= Addr.
+  auto I = MMaps.lower_bound(Addr);
+  if (I != MMaps.end() && I->second.contains(Addr))
+    return &I->second;
+
+  // The previous mmap is the last one starting < Addr.
+  if (I == MMaps.begin())
+    return nullptr;
+  --I;
+  return I->second.contains(Addr) ? &I->second : nullptr;
+}
+
+uint64_t MarkupFilter::adjustAddr(uint64_t Addr, PCType Type) const {
+  // Decrementing return addresses by one moves them into the call instruction.
+  // The address doesn't have to be the start of the call instruction, just some
+  // byte on the inside. Subtracting one avoids needing detailed instruction
+  // length information here.
+  return Type == MarkupFilter::PCType::ReturnAddress ? Addr - 1 : Addr;
+}
+
 StringRef MarkupFilter::lineEnding() const {
   return Line.endswith("\r\n") ? "\r\n" : "\n";
 }
 
 bool MarkupFilter::MMap::contains(uint64_t Addr) const {
   return this->Addr <= Addr && Addr < this->Addr + Size;
+}
+
+// Returns the module-relative address for a given virtual address.
+uint64_t MarkupFilter::MMap::getModuleRelativeAddr(uint64_t Addr) const {
+  return Addr - this->Addr + ModuleRelativeAddr;
 }

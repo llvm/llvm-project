@@ -2,7 +2,6 @@
 
 
 
-import unittest2
 import os
 import lldb
 from lldbsuite.test.decorators import *

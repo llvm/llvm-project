@@ -74,7 +74,9 @@ define i64 @predicate(i64* nocapture readonly %arg, i32 %length, i64* nocapture 
 ; CHECK:       Header:
 ; CHECK-NEXT:    [[RESULT_IN3:%.*]] = phi i64* [ [[ARG2:%.*]], [[ENTRY:%.*]] ], [ [[ARG:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    [[J2:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[J_NEXT:%.*]], [[LATCH]] ]
+; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i64 [[J2]], [[LENGTH_EXT]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[INNERCMP:%.*]] = icmp eq i64 [[J2]], [[N_PRE]]
 ; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J2]], 1
 ; CHECK-NEXT:    br i1 [[INNERCMP]], label [[LATCH]], label [[EXIT:%.*]]

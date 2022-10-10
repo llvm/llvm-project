@@ -16,7 +16,7 @@
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/ParallelLoopMapper.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -248,15 +248,15 @@ void AffineLoopToGpuConverter::createLaunch(AffineForOp rootForOp,
   terminator.erase();
   builder.setInsertionPointToEnd(innermostForOp.getBody());
   builder.create<gpu::TerminatorOp>(terminatorLoc, llvm::None);
-  launchOp.body().front().getOperations().splice(
-      launchOp.body().front().begin(),
+  launchOp.getBody().front().getOperations().splice(
+      launchOp.getBody().front().begin(),
       innermostForOp.getBody()->getOperations());
 
   // Remap the loop iterators to use block/thread identifiers instead.  Loops
   // may iterate from LB with step S whereas GPU thread/block ids always iterate
   // from 0 to N with step 1.  Therefore, loop induction variables are replaced
   // with (gpu-thread/block-id * S) + LB.
-  builder.setInsertionPointToStart(&launchOp.body().front());
+  builder.setInsertionPointToStart(&launchOp.getBody().front());
   auto *lbArgumentIt = lbs.begin();
   auto *stepArgumentIt = steps.begin();
   for (const auto &en : llvm::enumerate(ivs)) {
@@ -328,6 +328,13 @@ static Value deriveStaticUpperBound(Value upperBound,
     }
   }
 
+  if (auto minOp = upperBound.getDefiningOp<arith::MinSIOp>()) {
+    for (Value operand : {minOp.getLhs(), minOp.getRhs()}) {
+      if (auto staticBound = deriveStaticUpperBound(operand, rewriter))
+        return staticBound;
+    }
+  }
+
   if (auto multiplyOp = upperBound.getDefiningOp<arith::MulIOp>()) {
     if (auto lhs = dyn_cast_or_null<arith::ConstantIndexOp>(
             deriveStaticUpperBound(multiplyOp.getOperand(0), rewriter)
@@ -336,8 +343,8 @@ static Value deriveStaticUpperBound(Value upperBound,
               deriveStaticUpperBound(multiplyOp.getOperand(1), rewriter)
                   .getDefiningOp())) {
         // Assumptions about the upper bound of minimum computations no longer
-        // work if multiplied by a negative value, so abort in this case.
-        if (lhs.value() < 0 || rhs.value() < 0)
+        // work if multiplied by mixed signs, so abort in this case.
+        if ((lhs.value() < 0) != (rhs.value() < 0))
           return {};
 
         return rewriter.create<arith::ConstantIndexOp>(
@@ -440,7 +447,7 @@ static LogicalResult processParallelLoop(
     if (isMappedToProcessor(processor)) {
       // Use the corresponding thread/grid index as replacement for the loop iv.
       Value operand =
-          launchOp.body().getArgument(getLaunchOpArgumentNum(processor));
+          launchOp.getBody().getArgument(getLaunchOpArgumentNum(processor));
       // Take the indexmap and add the lower bound and step computations in.
       // This computes operand * step + lowerBound.
       // Use an affine map here so that it composes nicely with the provided
@@ -603,9 +610,9 @@ ParallelToGpuLaunchLowering::matchAndRewrite(ParallelOp parallelOp,
   gpu::LaunchOp launchOp = rewriter.create<gpu::LaunchOp>(
       parallelOp.getLoc(), constantOne, constantOne, constantOne, constantOne,
       constantOne, constantOne);
-  rewriter.setInsertionPointToEnd(&launchOp.body().front());
+  rewriter.setInsertionPointToEnd(&launchOp.getBody().front());
   rewriter.create<gpu::TerminatorOp>(loc);
-  rewriter.setInsertionPointToStart(&launchOp.body().front());
+  rewriter.setInsertionPointToStart(&launchOp.getBody().front());
 
   BlockAndValueMapping cloningMap;
   llvm::DenseMap<gpu::Processor, Value> launchBounds;

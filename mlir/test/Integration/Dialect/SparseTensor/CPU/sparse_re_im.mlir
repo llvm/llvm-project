@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --sparse-compiler | \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{dimLevelType = ["compressed"]}>
@@ -52,7 +52,7 @@ module {
     %values = sparse_tensor.values %arg0 : tensor<?xf32, #SparseVector> to memref<?xf32>
     %0 = vector.transfer_read %values[%c0], %d0: memref<?xf32>, vector<4xf32>
     vector.print %0 : vector<4xf32>
-    %indices = sparse_tensor.indices %arg0, %c0 : tensor<?xf32, #SparseVector> to memref<?xindex>
+    %indices = sparse_tensor.indices %arg0 { dimension = 0 : index } : tensor<?xf32, #SparseVector> to memref<?xindex>
     %1 = vector.transfer_read %indices[%c0], %c0: memref<?xindex>, vector<4xindex>
     vector.print %1 : vector<4xindex>
     return

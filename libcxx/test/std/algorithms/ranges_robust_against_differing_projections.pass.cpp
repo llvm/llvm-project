@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // <algorithm>
 //
@@ -56,7 +55,7 @@ constexpr bool test_all() {
 
   test(std::ranges::equal, in, in2, eq, proj1, proj2);
   test(std::ranges::lexicographical_compare, in, in2, eq, proj1, proj2);
-  //test(std::ranges::is_permutation, in, in2, eq, proj1, proj2);
+  test(std::ranges::is_permutation, in, in2, eq, proj1, proj2);
   test(std::ranges::includes, in, in2, less, proj1, proj2);
   test(std::ranges::find_first_of, in, in2, eq, proj1, proj2);
   test(std::ranges::mismatch, in, in2, eq, proj1, proj2);
@@ -64,7 +63,7 @@ constexpr bool test_all() {
   test(std::ranges::find_end, in, in2, eq, proj1, proj2);
   test(std::ranges::transform, in, in2, out, sum, proj1, proj2);
   test(std::ranges::transform, in, in2, out2, sum, proj1, proj2);
-  //test(std::ranges::partial_sort_copy, in, in2, output2.begin(), output2.end(), less, proj1, proj2);
+  test(std::ranges::partial_sort_copy, in, in2, less, proj1, proj2);
   test(std::ranges::merge, in, in2, out, less, proj1, proj2);
   test(std::ranges::merge, in, in2, out2, less, proj1, proj2);
   test(std::ranges::set_intersection, in, in2, out, less, proj1, proj2);
@@ -75,6 +74,8 @@ constexpr bool test_all() {
   test(std::ranges::set_symmetric_difference, in, in2, out2, less, proj1, proj2);
   test(std::ranges::set_union, in, in2, out, less, proj1, proj2);
   test(std::ranges::set_union, in, in2, out2, less, proj1, proj2);
+  //test(std::ranges::starts_with, in, in2, eq, proj1, proj2);
+  //test(std::ranges::ends_with, in, in2, eq, proj1, proj2);
 
   return true;
 }

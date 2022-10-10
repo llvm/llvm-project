@@ -17,6 +17,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <vector>
 
@@ -141,7 +142,7 @@ void Heatmap::print(raw_ostream &OS) const {
   Range[NumRanges - 1] = std::max((uint64_t)NumRanges, MaxValue);
 
   // Print scaled value
-  auto printValue = [&](uint64_t Value, bool ResetColor = false) {
+  auto printValue = [&](uint64_t Value, char Character, bool ResetColor) {
     assert(Value && "should only print positive values");
     for (unsigned I = 0; I < sizeof(Range) / sizeof(Range[0]); ++I) {
       if (Value <= Range[I]) {
@@ -150,9 +151,9 @@ void Heatmap::print(raw_ostream &OS) const {
       }
     }
     if (Value <= Range[0])
-      OS << 'o';
+      OS << static_cast<char>(std::tolower(Character));
     else
-      OS << 'O';
+      OS << static_cast<char>(std::toupper(Character));
 
     if (ResetColor)
       changeColor(DefaultColor);
@@ -168,7 +169,7 @@ void Heatmap::print(raw_ostream &OS) const {
   for (unsigned I = 0; I < sizeof(Range) / sizeof(Range[0]); ++I) {
     const uint64_t Value = Range[I];
     OS << "  ";
-    printValue(Value, true);
+    printValue(Value, 'o', /*ResetColor=*/true);
     OS << " : (" << PrevValue << ", " << Value << "]\n";
     PrevValue = Value;
   }
@@ -193,17 +194,31 @@ void Heatmap::print(raw_ostream &OS) const {
   for (unsigned I = 5; I > 0; --I)
     printHeader(I);
 
+  auto SectionStart = TextSections.begin();
   uint64_t PrevAddress = 0;
   for (auto MI = Map.begin(), ME = Map.end(); MI != ME; ++MI) {
     const std::pair<const uint64_t, uint64_t> &Entry = *MI;
     uint64_t Address = Entry.first * BucketSize;
+    char Character = 'o';
+
+    // Check if address is in the current or any later section.
+    auto Section = std::find_if(
+        SectionStart, TextSections.end(), [&](const SectionNameAndRange &S) {
+          return Address >= S.BeginAddress && Address < S.EndAddress;
+        });
+    if (Section != TextSections.end()) {
+      // Shift the section forward (if SectionStart is different from Section).
+      // This works, because TextSections is sorted by start address.
+      SectionStart = Section;
+      Character = 'a' + ((Section - TextSections.begin()) % 26);
+    }
 
     if (PrevAddress)
       fillRange(PrevAddress, Address);
     else
       startLine(Address);
 
-    printValue(Entry.second);
+    printValue(Entry.second, Character, /*ResetColor=*/false);
 
     PrevAddress = Address;
   }

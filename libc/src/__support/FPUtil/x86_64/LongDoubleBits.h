@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_LONG_DOUBLE_BITS_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_X86_64_LONG_DOUBLE_BITS_H
 
-#include "src/__support/CPP/Bit.h"
-#include "src/__support/CPP/UInt128.h"
+#include "src/__support/CPP/bit.h"
+#include "src/__support/UInt128.h"
 #include "src/__support/architectures.h"
 
 #if !defined(LLVM_LIBC_ARCH_X86)
@@ -100,18 +100,18 @@ template <> struct FPBits<long double> {
   FPBits() : bits(0) {}
 
   template <typename XType,
-            cpp::EnableIfType<cpp::IsSame<long double, XType>::Value, int> = 0>
-  explicit FPBits(XType x) : bits(__llvm_libc::bit_cast<UIntType>(x)) {
+            cpp::enable_if_t<cpp::is_same_v<long double, XType>, int> = 0>
+  explicit FPBits(XType x) : bits(cpp::bit_cast<UIntType>(x)) {
     // bits starts uninitialized, and setting it to a long double only
     // overwrites the first 80 bits. This clears those upper bits.
     bits = bits & ((UIntType(1) << 80) - 1);
   }
 
   template <typename XType,
-            cpp::EnableIfType<cpp::IsSame<XType, UIntType>::Value, int> = 0>
+            cpp::enable_if_t<cpp::is_same_v<XType, UIntType>, int> = 0>
   explicit FPBits(XType x) : bits(x) {}
 
-  operator long double() { return __llvm_libc::bit_cast<long double>(bits); }
+  operator long double() { return cpp::bit_cast<long double>(bits); }
 
   UIntType uintval() {
     // We zero the padding bits as they can contain garbage.
@@ -183,6 +183,19 @@ template <> struct FPBits<long double> {
     bits.set_implicit_bit(1);
     bits.set_mantissa(v);
     return bits;
+  }
+
+  static long double build_quiet_nan(UIntType v) {
+    return build_nan(FloatProp::QUIET_NAN_MASK | v);
+  }
+
+  inline static FPBits<long double>
+  create_value(bool sign, UIntType unbiased_exp, UIntType mantissa) {
+    FPBits<long double> result;
+    result.set_sign(sign);
+    result.set_unbiased_exponent(unbiased_exp);
+    result.set_mantissa(mantissa);
+    return result;
   }
 };
 

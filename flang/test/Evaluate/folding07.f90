@@ -25,9 +25,11 @@ module m
   real(8), parameter :: &
     eps8 = epsilon(0._8), zeps8 = real(z'3cb0000000000000', kind=8), &
     deps8 = 2.2204460492503130808472633361816406250e-16_8
+#if __x86_64__
   real(10), parameter :: &
     eps10 = epsilon(0._10), zeps10 = real(z'3fc08000000000000000', kind=10), &
     deps10 = 1.08420217248550443400745280086994171142578125e-19_10
+#endif
   real(16), parameter :: &
     eps16 = epsilon(0._16), &
     zeps16 = real(z'3f8f0000000000000000000000000000', kind=16), &
@@ -36,7 +38,9 @@ module m
   logical, parameter :: test_eps3 = eps3 == zeps3 .and. eps3 == deps3
   logical, parameter :: test_eps4 = eps4 == zeps4 .and. eps4 == deps4
   logical, parameter :: test_eps8 = eps8 == zeps8 .and. eps8 == deps8
+#if __x86_64__
   logical, parameter :: test_eps10 = eps10 == zeps10 .and. eps10 == deps10
+#endif
   logical, parameter :: test_eps16 = eps16 == zeps16 .and. eps16 == deps16
 
   integer(1), parameter :: &
@@ -73,6 +77,7 @@ module m
                &1540458953514382464234321326889464182768467546703537516986049910576551282076245490090389328944075868&
                &5084551339423045832369032229481658085593321233482747978262041447231687381771809192998812504040261841&
                &24858368e308_8
+#if __x86_64__
   real(10), parameter :: &
     ahuge10 = huge(0._10), zahuge10 = real(z'7ffeffffffffffffffff', kind=10), &
     dahuge10 = 1.1897314953572317650212638530309702051690633222946242004403237338917370055229707226164102903365288828&
@@ -125,6 +130,7 @@ module m
                 &8416350972529537091114317204887747405539054009425375424119317944175137064689643861517718849867010341&
                 &5325423859110896247108853858086888377772586485641459342621210866475884892600317623459607695088491496&
                 &6244415660441955208681198977024e4932_10
+#endif
   real(16), parameter :: &
     ahuge16 = huge(0._16), zahuge16 = real(z'7ffeffffffffffffffffffffffffffff', kind=16), &
     dahuge16 = 1.1897314953572317650857593266280070161964690526416940455296988842121635797553123923249740128484620735&
@@ -181,20 +187,26 @@ module m
   logical, parameter :: test_ahuge3 = ahuge3 == zahuge3 .and. ahuge3 == dahuge3
   logical, parameter :: test_ahuge4 = ahuge4 == zahuge4 .and. ahuge4 == dahuge4
   logical, parameter :: test_ahuge8 = ahuge8 == zahuge8 .and. ahuge8 == dahuge8
+#if __x86_64__
   logical, parameter :: test_ahuge10 = ahuge10 == zahuge10 .and. ahuge10 == dahuge10
+#endif
   logical, parameter :: test_ahuge16 = ahuge16 == zahuge16 .and. ahuge16 == dahuge16
 
   real(2), parameter :: tiny2 = tiny(0._2), ztiny2 = real(z'0400', kind=2)
   real(3), parameter :: tiny3 = tiny(0._3), ztiny3 = real(z'0080', kind=3)
   real(4), parameter :: tiny4 = tiny(0._4), ztiny4 = real(z'00800000', kind=4)
   real(8), parameter :: tiny8 = tiny(0._8), ztiny8 = real(z'0010000000000000', kind=8)
+#if __x86_64__
   real(10), parameter :: tiny10 = tiny(0._10), ztiny10 = real(z'00018000000000000000', kind=10)
+#endif
   real(16), parameter :: tiny16 = tiny(0._16), ztiny16 = real(z'00010000000000000000000000000000', kind=16)
   logical, parameter :: test_tiny2 = tiny2 == ztiny2
   logical, parameter :: test_tiny3 = tiny3 == ztiny3
   logical, parameter :: test_tiny4 = tiny4 == ztiny4
   logical, parameter :: test_tiny8 = tiny8 == ztiny8
+#if __x86_64__
   logical, parameter :: test_tiny10 = tiny10 == ztiny10
+#endif
   logical, parameter :: test_tiny16 = tiny16 == ztiny16
 
   real,    parameter :: nan = real(z'7fc12345')
@@ -222,13 +234,17 @@ module m
     max3 = maxexponent(0._3), &
     max4 = maxexponent(0._4), &
     max8 = maxexponent(0._8), &
-    max10 = maxexponent(0._10), &
     max16 = maxexponent(0._16)
+#if __x86_64__
+  integer, parameter :: max10 = maxexponent(0._10)
+#endif
   logical, parameter :: test_max2 = max2 == 16
   logical, parameter :: test_max3 = max3 == 128
   logical, parameter :: test_max4 = max4 == 128
   logical, parameter :: test_max8 = max8 == 1024
+#if __x86_64__
   logical, parameter :: test_max10 = max10 == 16384
+#endif
   logical, parameter :: test_max16 = max16 == 16384
 
   integer, parameter :: &
@@ -236,13 +252,17 @@ module m
     min3 = minexponent(0._3), &
     min4 = minexponent(0._4), &
     min8 = minexponent(0._8), &
-    min10 = minexponent(0._10), &
     min16 = minexponent(0._16)
+#if __x86_64__
+  integer, parameter :: min10 = minexponent(0._10)
+#endif
   logical, parameter :: test_min2 = min2 == -13
   logical, parameter :: test_min3 = min3 == -125
   logical, parameter :: test_min4 = min4 == -125
   logical, parameter :: test_min8 = min8 == -1021
+#if __x86_64__
   logical, parameter :: test_min10 = min10 == -16381
+#endif
   logical, parameter :: test_min16 = min16 == -16381
 
   integer, parameter :: &
@@ -262,13 +282,18 @@ module m
     arange3 = range(0._3), zrange3 = range((0._3, 0._3)), &
     arange4 = range(0._4), zrange4 = range((0._4, 0._4)), &
     arange8 = range(0._8), zrange8 = range((0._8, 0._8)), &
-    arange10 = range(0._10), zrange10 = range((0._10, 0._10)), &
     arange16 = range(0._16), zrange16 = range((0._16, 0._16))
+#if __x86_64__
+  integer, parameter :: arange10 = &
+    range(0._10), zrange10 = range((0._10, 0._10))
+#endif
   logical, parameter :: test_arange2 = arange2 == 4 .and. zrange2 == 4
   logical, parameter :: test_arange3 = arange3 == 37 .and. zrange3 == 37
   logical, parameter :: test_zrange4 = arange4 == 37 .and. zrange4 == 37
   logical, parameter :: test_zrange8 = arange8 == 307 .and. zrange8 == 307
+#if __x86_64__
   logical, parameter :: test_zrange10 = arange10 == 4931 .and. zrange10 == 4931
+#endif
   logical, parameter :: test_zrange16 = arange16 == 4931 .and. zrange16 == 4931
 
   logical, parameter :: test_set_exponent_z = set_exponent(0., 999) == 0.
@@ -280,5 +305,6 @@ module m
   logical, parameter :: test_set_exponent_0 = set_exponent(1., 0) == 0.5
   logical, parameter :: test_set_exponent_1 = set_exponent(1., 1) == 1.
   logical, parameter :: test_set_exponent_2 = set_exponent(1., 2) == 2.
+  logical, parameter :: test_set_exponent_min = set_exponent(1., -149) == 1.40129846432481707092372958328991613128026194187651577175706828388979108268586060148663818836212158203125e-45_4
 
 end module

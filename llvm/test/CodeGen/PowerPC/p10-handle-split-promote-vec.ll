@@ -8,90 +8,91 @@
 define i32 @SplitPromoteVectorTest(i32 %Opc) align 2 {
 ; CHECK-LABEL: SplitPromoteVectorTest:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    plxv v3, .LCPI0_0@PCREL(0), 1
-; CHECK-NEXT:    mtvsrws v2, r3
-; CHECK-NEXT:    li r5, 4
+; CHECK-NEXT:    plxv v2, .LCPI0_0@PCREL(0), 1
+; CHECK-NEXT:    plxv v4, .LCPI0_1@PCREL(0), 1
+; CHECK-NEXT:    mtvsrws v3, r3
+; CHECK-NEXT:    li r5, 12
 ; CHECK-NEXT:    li r8, 0
-; CHECK-NEXT:    vcmpequw v3, v2, v3
-; CHECK-NEXT:    vextubrx r6, r5, v3
-; CHECK-NEXT:    vextubrx r4, r8, v3
-; CHECK-NEXT:    rlwimi r4, r6, 1, 30, 30
-; CHECK-NEXT:    li r6, 8
-; CHECK-NEXT:    vextubrx r7, r6, v3
-; CHECK-NEXT:    rlwimi r4, r7, 2, 29, 29
-; CHECK-NEXT:    li r7, 12
-; CHECK-NEXT:    vextubrx r9, r7, v3
-; CHECK-NEXT:    plxv v3, .LCPI0_1@PCREL(0), 1
-; CHECK-NEXT:    rlwimi r4, r9, 3, 28, 28
-; CHECK-NEXT:    vcmpequw v3, v2, v3
-; CHECK-NEXT:    vextubrx r9, r8, v3
-; CHECK-NEXT:    rlwimi r4, r9, 4, 27, 27
-; CHECK-NEXT:    vextubrx r9, r5, v3
-; CHECK-NEXT:    rlwimi r4, r9, 5, 26, 26
-; CHECK-NEXT:    vextubrx r9, r6, v3
-; CHECK-NEXT:    rlwimi r4, r9, 6, 25, 25
-; CHECK-NEXT:    vextubrx r9, r7, v3
-; CHECK-NEXT:    plxv v3, .LCPI0_2@PCREL(0), 1
-; CHECK-NEXT:    rlwimi r4, r9, 7, 24, 24
-; CHECK-NEXT:    vcmpequw v3, v2, v3
-; CHECK-NEXT:    vextubrx r9, r8, v3
-; CHECK-NEXT:    rlwimi r4, r9, 8, 23, 23
-; CHECK-NEXT:    vextubrx r9, r5, v3
-; CHECK-NEXT:    rlwimi r4, r9, 9, 22, 22
-; CHECK-NEXT:    vextubrx r9, r6, v3
-; CHECK-NEXT:    rlwimi r4, r9, 10, 21, 21
-; CHECK-NEXT:    vextubrx r9, r7, v3
-; CHECK-NEXT:    plxv v3, .LCPI0_3@PCREL(0), 1
-; CHECK-NEXT:    rlwimi r4, r9, 11, 20, 20
-; CHECK-NEXT:    vcmpequw v3, v2, v3
-; CHECK-NEXT:    vextubrx r9, r8, v3
-; CHECK-NEXT:    rlwimi r4, r9, 12, 19, 19
-; CHECK-NEXT:    vextubrx r9, r5, v3
-; CHECK-NEXT:    rlwimi r4, r9, 13, 18, 18
-; CHECK-NEXT:    vextubrx r9, r6, v3
-; CHECK-NEXT:    rlwimi r4, r9, 14, 17, 17
-; CHECK-NEXT:    vextubrx r9, r7, v3
-; CHECK-NEXT:    plxv v3, .LCPI0_4@PCREL(0), 1
+; CHECK-NEXT:    vcmpequw v2, v3, v2
+; CHECK-NEXT:    plxv v5, .LCPI0_2@PCREL(0), 1
+; CHECK-NEXT:    vcmpequw v4, v3, v4
+; CHECK-NEXT:    vcmpequw v5, v3, v5
+; CHECK-NEXT:    vextubrx r4, r5, v2
+; CHECK-NEXT:    vextubrx r6, r5, v4
+; CHECK-NEXT:    or r9, r6, r4
+; CHECK-NEXT:    li r6, 4
+; CHECK-NEXT:    vextubrx r4, r8, v5
+; CHECK-NEXT:    vextubrx r7, r6, v5
+; CHECK-NEXT:    rlwimi r4, r7, 1, 30, 30
+; CHECK-NEXT:    li r7, 8
+; CHECK-NEXT:    vextubrx r10, r7, v5
+; CHECK-NEXT:    rlwimi r4, r10, 2, 29, 29
+; CHECK-NEXT:    vextubrx r10, r5, v5
+; CHECK-NEXT:    plxv v5, .LCPI0_3@PCREL(0), 1
+; CHECK-NEXT:    rlwimi r4, r10, 3, 28, 28
+; CHECK-NEXT:    vcmpequw v5, v3, v5
+; CHECK-NEXT:    vextubrx r10, r8, v5
+; CHECK-NEXT:    rlwimi r4, r10, 4, 27, 27
+; CHECK-NEXT:    vextubrx r10, r6, v5
+; CHECK-NEXT:    rlwimi r4, r10, 5, 26, 26
+; CHECK-NEXT:    vextubrx r10, r7, v5
+; CHECK-NEXT:    rlwimi r4, r10, 6, 25, 25
+; CHECK-NEXT:    vextubrx r10, r5, v5
+; CHECK-NEXT:    plxv v5, .LCPI0_4@PCREL(0), 1
+; CHECK-NEXT:    rlwimi r4, r10, 7, 24, 24
+; CHECK-NEXT:    vcmpequw v5, v3, v5
+; CHECK-NEXT:    vextubrx r10, r8, v5
+; CHECK-NEXT:    rlwimi r4, r10, 8, 23, 23
+; CHECK-NEXT:    vextubrx r10, r6, v5
+; CHECK-NEXT:    rlwimi r4, r10, 9, 22, 22
+; CHECK-NEXT:    vextubrx r10, r7, v5
+; CHECK-NEXT:    rlwimi r4, r10, 10, 21, 21
+; CHECK-NEXT:    vextubrx r10, r5, v5
+; CHECK-NEXT:    rlwimi r4, r10, 11, 20, 20
+; CHECK-NEXT:    vextubrx r10, r8, v4
+; CHECK-NEXT:    rlwimi r4, r10, 12, 19, 19
+; CHECK-NEXT:    vextubrx r10, r6, v4
+; CHECK-NEXT:    rlwimi r4, r10, 13, 18, 18
+; CHECK-NEXT:    vextubrx r10, r7, v4
+; CHECK-NEXT:    plxv v4, .LCPI0_5@PCREL(0), 1
+; CHECK-NEXT:    rlwimi r4, r10, 14, 17, 17
 ; CHECK-NEXT:    rlwimi r4, r9, 15, 0, 16
-; CHECK-NEXT:    vcmpequw v3, v2, v3
-; CHECK-NEXT:    vextubrx r10, r5, v3
+; CHECK-NEXT:    vcmpequw v4, v3, v4
+; CHECK-NEXT:    vextubrx r10, r8, v4
+; CHECK-NEXT:    vextubrx r9, r6, v4
+; CHECK-NEXT:    clrlwi r10, r10, 31
+; CHECK-NEXT:    rlwimi r10, r9, 1, 30, 30
+; CHECK-NEXT:    vextubrx r9, r7, v4
+; CHECK-NEXT:    rlwimi r10, r9, 2, 29, 29
+; CHECK-NEXT:    vextubrx r9, r5, v4
+; CHECK-NEXT:    plxv v4, .LCPI0_6@PCREL(0), 1
+; CHECK-NEXT:    rlwimi r10, r9, 3, 28, 28
+; CHECK-NEXT:    vcmpequw v4, v3, v4
+; CHECK-NEXT:    vextubrx r9, r8, v4
+; CHECK-NEXT:    rlwimi r10, r9, 4, 27, 27
+; CHECK-NEXT:    vextubrx r9, r6, v4
+; CHECK-NEXT:    rlwimi r10, r9, 5, 26, 26
+; CHECK-NEXT:    vextubrx r9, r7, v4
+; CHECK-NEXT:    rlwimi r10, r9, 6, 25, 25
+; CHECK-NEXT:    vextubrx r9, r5, v4
+; CHECK-NEXT:    plxv v4, .LCPI0_7@PCREL(0), 1
+; CHECK-NEXT:    rlwimi r10, r9, 7, 24, 24
+; CHECK-NEXT:    vcmpequw v3, v3, v4
 ; CHECK-NEXT:    vextubrx r9, r8, v3
-; CHECK-NEXT:    rlwimi r9, r10, 1, 30, 30
-; CHECK-NEXT:    vextubrx r10, r6, v3
-; CHECK-NEXT:    rlwimi r9, r10, 2, 29, 29
-; CHECK-NEXT:    vextubrx r10, r7, v3
-; CHECK-NEXT:    plxv v3, .LCPI0_5@PCREL(0), 1
-; CHECK-NEXT:    rlwimi r9, r10, 3, 28, 28
-; CHECK-NEXT:    vcmpequw v3, v2, v3
-; CHECK-NEXT:    vextubrx r10, r8, v3
-; CHECK-NEXT:    rlwimi r9, r10, 4, 27, 27
-; CHECK-NEXT:    vextubrx r10, r5, v3
-; CHECK-NEXT:    rlwimi r9, r10, 5, 26, 26
-; CHECK-NEXT:    vextubrx r10, r6, v3
-; CHECK-NEXT:    rlwimi r9, r10, 6, 25, 25
-; CHECK-NEXT:    vextubrx r10, r7, v3
-; CHECK-NEXT:    plxv v3, .LCPI0_6@PCREL(0), 1
-; CHECK-NEXT:    rlwimi r9, r10, 7, 24, 24
-; CHECK-NEXT:    vcmpequw v3, v2, v3
-; CHECK-NEXT:    vextubrx r10, r8, v3
-; CHECK-NEXT:    rlwimi r9, r10, 8, 23, 23
-; CHECK-NEXT:    vextubrx r10, r5, v3
-; CHECK-NEXT:    rlwimi r9, r10, 9, 22, 22
-; CHECK-NEXT:    vextubrx r10, r6, v3
-; CHECK-NEXT:    rlwimi r9, r10, 10, 21, 21
-; CHECK-NEXT:    vextubrx r10, r7, v3
-; CHECK-NEXT:    plxv v3, .LCPI0_7@PCREL(0), 1
-; CHECK-NEXT:    rlwimi r9, r10, 11, 20, 20
-; CHECK-NEXT:    vcmpequw v2, v2, v3
-; CHECK-NEXT:    vextubrx r8, r8, v2
-; CHECK-NEXT:    vextubrx r5, r5, v2
-; CHECK-NEXT:    rlwimi r9, r8, 12, 19, 19
-; CHECK-NEXT:    rlwimi r9, r5, 13, 18, 18
+; CHECK-NEXT:    vextubrx r5, r5, v3
+; CHECK-NEXT:    rlwimi r10, r9, 8, 23, 23
+; CHECK-NEXT:    vextubrx r9, r6, v3
+; CHECK-NEXT:    rlwimi r10, r9, 9, 22, 22
+; CHECK-NEXT:    vextubrx r9, r7, v3
+; CHECK-NEXT:    rlwimi r10, r9, 10, 21, 21
+; CHECK-NEXT:    rlwimi r10, r5, 11, 20, 20
+; CHECK-NEXT:    vextubrx r5, r8, v2
+; CHECK-NEXT:    rlwimi r10, r5, 12, 19, 19
 ; CHECK-NEXT:    vextubrx r5, r6, v2
-; CHECK-NEXT:    rlwimi r9, r5, 14, 17, 17
+; CHECK-NEXT:    rlwimi r10, r5, 13, 18, 18
 ; CHECK-NEXT:    vextubrx r5, r7, v2
-; CHECK-NEXT:    rlwimi r9, r5, 15, 0, 16
-; CHECK-NEXT:    or r4, r9, r4
+; CHECK-NEXT:    rlwimi r10, r5, 14, 17, 17
+; CHECK-NEXT:    or r4, r4, r10
 ; CHECK-NEXT:    andi. r4, r4, 65535
 ; CHECK-NEXT:    iseleq r3, 0, r3
 ; CHECK-NEXT:    blr

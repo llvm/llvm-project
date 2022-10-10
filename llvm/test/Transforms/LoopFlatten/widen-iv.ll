@@ -53,6 +53,37 @@ define void @foo(i32* %A, i32 %N, i32 %M) {
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ;
+; DONTWIDEN-LABEL: @foo(
+; DONTWIDEN-NEXT:  entry:
+; DONTWIDEN-NEXT:    [[CMP17:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; DONTWIDEN-NEXT:    br i1 [[CMP17]], label [[FOR_COND1_PREHEADER_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; DONTWIDEN:       for.cond1.preheader.lr.ph:
+; DONTWIDEN-NEXT:    [[CMP215:%.*]] = icmp sgt i32 [[M:%.*]], 0
+; DONTWIDEN-NEXT:    br i1 [[CMP215]], label [[FOR_COND1_PREHEADER_US_PREHEADER:%.*]], label [[FOR_COND_CLEANUP]]
+; DONTWIDEN:       for.cond1.preheader.us.preheader:
+; DONTWIDEN-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
+; DONTWIDEN:       for.cond1.preheader.us:
+; DONTWIDEN-NEXT:    [[I_018_US:%.*]] = phi i32 [ [[INC6_US:%.*]], [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US:%.*]] ], [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER]] ]
+; DONTWIDEN-NEXT:    [[MUL_US:%.*]] = mul nsw i32 [[I_018_US]], [[M]]
+; DONTWIDEN-NEXT:    br label [[FOR_BODY4_US:%.*]]
+; DONTWIDEN:       for.body4.us:
+; DONTWIDEN-NEXT:    [[J_016_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ], [ [[INC_US:%.*]], [[FOR_BODY4_US]] ]
+; DONTWIDEN-NEXT:    [[ADD_US:%.*]] = add nsw i32 [[J_016_US]], [[MUL_US]]
+; DONTWIDEN-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[ADD_US]] to i64
+; DONTWIDEN-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IDXPROM_US]]
+; DONTWIDEN-NEXT:    tail call void @f(i32* [[ARRAYIDX_US]])
+; DONTWIDEN-NEXT:    [[INC_US]] = add nuw nsw i32 [[J_016_US]], 1
+; DONTWIDEN-NEXT:    [[CMP2_US:%.*]] = icmp slt i32 [[INC_US]], [[M]]
+; DONTWIDEN-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY4_US]], label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]]
+; DONTWIDEN:       for.cond1.for.cond.cleanup3_crit_edge.us:
+; DONTWIDEN-NEXT:    [[INC6_US]] = add nuw nsw i32 [[I_018_US]], 1
+; DONTWIDEN-NEXT:    [[CMP_US:%.*]] = icmp slt i32 [[INC6_US]], [[N]]
+; DONTWIDEN-NEXT:    br i1 [[CMP_US]], label [[FOR_COND1_PREHEADER_US]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; DONTWIDEN:       for.cond.cleanup.loopexit:
+; DONTWIDEN-NEXT:    br label [[FOR_COND_CLEANUP]]
+; DONTWIDEN:       for.cond.cleanup:
+; DONTWIDEN-NEXT:    ret void
+;
 entry:
   %cmp17 = icmp sgt i32 %N, 0
   br i1 %cmp17, label %for.cond1.preheader.lr.ph, label %for.cond.cleanup
@@ -152,6 +183,47 @@ define void @foo2_sext(i32* nocapture readonly %A, i32 %N, i32 %M) {
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
+;
+; DONTWIDEN-LABEL: @foo2_sext(
+; DONTWIDEN-NEXT:  entry:
+; DONTWIDEN-NEXT:    [[CMP17:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; DONTWIDEN-NEXT:    br i1 [[CMP17]], label [[FOR_COND1_PREHEADER_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; DONTWIDEN:       for.cond1.preheader.lr.ph:
+; DONTWIDEN-NEXT:    [[CMP215:%.*]] = icmp sgt i32 [[M:%.*]], 0
+; DONTWIDEN-NEXT:    br i1 [[CMP215]], label [[FOR_COND1_PREHEADER_US_PREHEADER:%.*]], label [[FOR_COND1_PREHEADER_PREHEADER:%.*]]
+; DONTWIDEN:       for.cond1.preheader.preheader:
+; DONTWIDEN-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
+; DONTWIDEN:       for.cond1.preheader.us.preheader:
+; DONTWIDEN-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
+; DONTWIDEN:       for.cond1.preheader.us:
+; DONTWIDEN-NEXT:    [[I_018_US:%.*]] = phi i32 [ [[INC6_US:%.*]], [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US:%.*]] ], [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER]] ]
+; DONTWIDEN-NEXT:    [[MUL_US:%.*]] = mul nsw i32 [[I_018_US]], [[M]]
+; DONTWIDEN-NEXT:    br label [[FOR_BODY4_US:%.*]]
+; DONTWIDEN:       for.body4.us:
+; DONTWIDEN-NEXT:    [[J_016_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ], [ [[INC_US:%.*]], [[FOR_BODY4_US]] ]
+; DONTWIDEN-NEXT:    [[ADD_US:%.*]] = add nsw i32 [[J_016_US]], [[MUL_US]]
+; DONTWIDEN-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[ADD_US]] to i64
+; DONTWIDEN-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IDXPROM_US]]
+; DONTWIDEN-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX_US]], align 4
+; DONTWIDEN-NEXT:    tail call void @g(i32 [[TMP0]])
+; DONTWIDEN-NEXT:    [[INC_US]] = add nuw nsw i32 [[J_016_US]], 1
+; DONTWIDEN-NEXT:    [[CMP2_US:%.*]] = icmp slt i32 [[INC_US]], [[M]]
+; DONTWIDEN-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY4_US]], label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]]
+; DONTWIDEN:       for.cond1.for.cond.cleanup3_crit_edge.us:
+; DONTWIDEN-NEXT:    [[INC6_US]] = add nuw nsw i32 [[I_018_US]], 1
+; DONTWIDEN-NEXT:    [[CMP_US:%.*]] = icmp slt i32 [[INC6_US]], [[N]]
+; DONTWIDEN-NEXT:    br i1 [[CMP_US]], label [[FOR_COND1_PREHEADER_US]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; DONTWIDEN:       for.cond1.preheader:
+; DONTWIDEN-NEXT:    [[I_018:%.*]] = phi i32 [ [[INC6:%.*]], [[FOR_COND1_PREHEADER]] ], [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ]
+; DONTWIDEN-NEXT:    [[INC6]] = add nuw nsw i32 [[I_018]], 1
+; DONTWIDEN-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INC6]], [[N]]
+; DONTWIDEN-NEXT:    br i1 [[CMP]], label [[FOR_COND1_PREHEADER]], label [[FOR_COND_CLEANUP_LOOPEXIT19:%.*]]
+; DONTWIDEN:       for.cond.cleanup.loopexit:
+; DONTWIDEN-NEXT:    br label [[FOR_COND_CLEANUP]]
+; DONTWIDEN:       for.cond.cleanup.loopexit19:
+; DONTWIDEN-NEXT:    br label [[FOR_COND_CLEANUP]]
+; DONTWIDEN:       for.cond.cleanup:
+; DONTWIDEN-NEXT:    ret void
 ;
 entry:
   %cmp17 = icmp sgt i32 %N, 0
@@ -259,6 +331,47 @@ define void @foo2_zext(i32* nocapture readonly %A, i32 %N, i32 %M) {
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ;
+; DONTWIDEN-LABEL: @foo2_zext(
+; DONTWIDEN-NEXT:  entry:
+; DONTWIDEN-NEXT:    [[CMP17_NOT:%.*]] = icmp eq i32 [[N:%.*]], 0
+; DONTWIDEN-NEXT:    br i1 [[CMP17_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND1_PREHEADER_LR_PH:%.*]]
+; DONTWIDEN:       for.cond1.preheader.lr.ph:
+; DONTWIDEN-NEXT:    [[CMP215_NOT:%.*]] = icmp eq i32 [[M:%.*]], 0
+; DONTWIDEN-NEXT:    br i1 [[CMP215_NOT]], label [[FOR_COND1_PREHEADER_PREHEADER:%.*]], label [[FOR_COND1_PREHEADER_US_PREHEADER:%.*]]
+; DONTWIDEN:       for.cond1.preheader.us.preheader:
+; DONTWIDEN-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
+; DONTWIDEN:       for.cond1.preheader.preheader:
+; DONTWIDEN-NEXT:    br label [[FOR_COND1_PREHEADER:%.*]]
+; DONTWIDEN:       for.cond1.preheader.us:
+; DONTWIDEN-NEXT:    [[I_018_US:%.*]] = phi i32 [ [[INC6_US:%.*]], [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US:%.*]] ], [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER]] ]
+; DONTWIDEN-NEXT:    [[MUL_US:%.*]] = mul i32 [[I_018_US]], [[M]]
+; DONTWIDEN-NEXT:    br label [[FOR_BODY4_US:%.*]]
+; DONTWIDEN:       for.body4.us:
+; DONTWIDEN-NEXT:    [[J_016_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ], [ [[INC_US:%.*]], [[FOR_BODY4_US]] ]
+; DONTWIDEN-NEXT:    [[ADD_US:%.*]] = add i32 [[J_016_US]], [[MUL_US]]
+; DONTWIDEN-NEXT:    [[IDXPROM_US:%.*]] = zext i32 [[ADD_US]] to i64
+; DONTWIDEN-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IDXPROM_US]]
+; DONTWIDEN-NEXT:    [[TMP0:%.*]] = load i32, i32* [[ARRAYIDX_US]], align 4
+; DONTWIDEN-NEXT:    tail call void @g(i32 [[TMP0]])
+; DONTWIDEN-NEXT:    [[INC_US]] = add nuw i32 [[J_016_US]], 1
+; DONTWIDEN-NEXT:    [[CMP2_US:%.*]] = icmp ult i32 [[INC_US]], [[M]]
+; DONTWIDEN-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY4_US]], label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]]
+; DONTWIDEN:       for.cond1.for.cond.cleanup3_crit_edge.us:
+; DONTWIDEN-NEXT:    [[INC6_US]] = add i32 [[I_018_US]], 1
+; DONTWIDEN-NEXT:    [[CMP_US:%.*]] = icmp ult i32 [[INC6_US]], [[N]]
+; DONTWIDEN-NEXT:    br i1 [[CMP_US]], label [[FOR_COND1_PREHEADER_US]], label [[FOR_COND_CLEANUP_LOOPEXIT19:%.*]]
+; DONTWIDEN:       for.cond1.preheader:
+; DONTWIDEN-NEXT:    [[I_018:%.*]] = phi i32 [ [[INC6:%.*]], [[FOR_COND1_PREHEADER]] ], [ 0, [[FOR_COND1_PREHEADER_PREHEADER]] ]
+; DONTWIDEN-NEXT:    [[INC6]] = add i32 [[I_018]], 1
+; DONTWIDEN-NEXT:    [[CMP:%.*]] = icmp ult i32 [[INC6]], [[N]]
+; DONTWIDEN-NEXT:    br i1 [[CMP]], label [[FOR_COND1_PREHEADER]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; DONTWIDEN:       for.cond.cleanup.loopexit:
+; DONTWIDEN-NEXT:    br label [[FOR_COND_CLEANUP]]
+; DONTWIDEN:       for.cond.cleanup.loopexit19:
+; DONTWIDEN-NEXT:    br label [[FOR_COND_CLEANUP]]
+; DONTWIDEN:       for.cond.cleanup:
+; DONTWIDEN-NEXT:    ret void
+;
 entry:
   %cmp17.not = icmp eq i32 %N, 0
   br i1 %cmp17.not, label %for.cond.cleanup, label %for.cond1.preheader.lr.ph
@@ -346,6 +459,36 @@ define void @zext(i32 %N, i16* nocapture %A, i16 %val) {
 ; CHECK-NEXT:    br label [[FOR_END9]]
 ; CHECK:       for.end9:
 ; CHECK-NEXT:    ret void
+;
+; DONTWIDEN-LABEL: @zext(
+; DONTWIDEN-NEXT:  entry:
+; DONTWIDEN-NEXT:    [[CMP20_NOT:%.*]] = icmp eq i32 [[N:%.*]], 0
+; DONTWIDEN-NEXT:    br i1 [[CMP20_NOT]], label [[FOR_END9:%.*]], label [[FOR_COND1_PREHEADER_US_PREHEADER:%.*]]
+; DONTWIDEN:       for.cond1.preheader.us.preheader:
+; DONTWIDEN-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
+; DONTWIDEN:       for.cond1.preheader.us:
+; DONTWIDEN-NEXT:    [[I_021_US:%.*]] = phi i32 [ [[INC8_US:%.*]], [[FOR_COND1_FOR_INC7_CRIT_EDGE_US:%.*]] ], [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER]] ]
+; DONTWIDEN-NEXT:    [[MUL_US:%.*]] = mul i32 [[I_021_US]], [[N]]
+; DONTWIDEN-NEXT:    br label [[FOR_BODY3_US:%.*]]
+; DONTWIDEN:       for.body3.us:
+; DONTWIDEN-NEXT:    [[J_019_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ], [ [[INC_US:%.*]], [[FOR_BODY3_US]] ]
+; DONTWIDEN-NEXT:    [[ADD_US:%.*]] = add i32 [[J_019_US]], [[MUL_US]]
+; DONTWIDEN-NEXT:    [[IDXPROM_US:%.*]] = zext i32 [[ADD_US]] to i64
+; DONTWIDEN-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i16, i16* [[A:%.*]], i64 [[IDXPROM_US]]
+; DONTWIDEN-NEXT:    [[TMP0:%.*]] = load i16, i16* [[ARRAYIDX_US]], align 2
+; DONTWIDEN-NEXT:    [[ADD5_US:%.*]] = add i16 [[TMP0]], [[VAL:%.*]]
+; DONTWIDEN-NEXT:    store i16 [[ADD5_US]], i16* [[ARRAYIDX_US]], align 2
+; DONTWIDEN-NEXT:    [[INC_US]] = add nuw i32 [[J_019_US]], 1
+; DONTWIDEN-NEXT:    [[CMP2_US:%.*]] = icmp ult i32 [[INC_US]], [[N]]
+; DONTWIDEN-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY3_US]], label [[FOR_COND1_FOR_INC7_CRIT_EDGE_US]]
+; DONTWIDEN:       for.cond1.for.inc7_crit_edge.us:
+; DONTWIDEN-NEXT:    [[INC8_US]] = add i32 [[I_021_US]], 1
+; DONTWIDEN-NEXT:    [[CMP_US:%.*]] = icmp ult i32 [[INC8_US]], [[N]]
+; DONTWIDEN-NEXT:    br i1 [[CMP_US]], label [[FOR_COND1_PREHEADER_US]], label [[FOR_END9_LOOPEXIT:%.*]]
+; DONTWIDEN:       for.end9.loopexit:
+; DONTWIDEN-NEXT:    br label [[FOR_END9]]
+; DONTWIDEN:       for.end9:
+; DONTWIDEN-NEXT:    ret void
 ;
 entry:
   %cmp20.not = icmp eq i32 %N, 0
@@ -438,6 +581,45 @@ define void @test(i8 %n, i8 %m) {
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
+;
+; DONTWIDEN-LABEL: @test(
+; DONTWIDEN-NEXT:  entry:
+; DONTWIDEN-NEXT:    [[CMP25_NOT:%.*]] = icmp eq i8 [[N:%.*]], 0
+; DONTWIDEN-NEXT:    br i1 [[CMP25_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND3_PREHEADER_LR_PH:%.*]]
+; DONTWIDEN:       for.cond3.preheader.lr.ph:
+; DONTWIDEN-NEXT:    [[CMP623_NOT:%.*]] = icmp eq i8 [[M:%.*]], 0
+; DONTWIDEN-NEXT:    br i1 [[CMP623_NOT]], label [[FOR_COND3_PREHEADER_PREHEADER:%.*]], label [[FOR_COND3_PREHEADER_US_PREHEADER:%.*]]
+; DONTWIDEN:       for.cond3.preheader.preheader:
+; DONTWIDEN-NEXT:    br label [[FOR_COND3_PREHEADER:%.*]]
+; DONTWIDEN:       for.cond3.preheader.us.preheader:
+; DONTWIDEN-NEXT:    br label [[FOR_COND3_PREHEADER_US:%.*]]
+; DONTWIDEN:       for.cond3.preheader.us:
+; DONTWIDEN-NEXT:    [[I_026_US:%.*]] = phi i8 [ [[INC16_US:%.*]], [[FOR_COND3_FOR_COND_CLEANUP8_CRIT_EDGE_US:%.*]] ], [ 0, [[FOR_COND3_PREHEADER_US_PREHEADER]] ]
+; DONTWIDEN-NEXT:    [[MUL_US:%.*]] = mul i8 [[I_026_US]], [[M]]
+; DONTWIDEN-NEXT:    br label [[FOR_BODY9_US:%.*]]
+; DONTWIDEN:       for.body9.us:
+; DONTWIDEN-NEXT:    [[J_024_US:%.*]] = phi i8 [ 0, [[FOR_COND3_PREHEADER_US]] ], [ [[INC_US:%.*]], [[FOR_BODY9_US]] ]
+; DONTWIDEN-NEXT:    [[ADD_US:%.*]] = add i8 [[J_024_US]], [[MUL_US]]
+; DONTWIDEN-NEXT:    [[CONV14_US:%.*]] = zext i8 [[ADD_US]] to i32
+; DONTWIDEN-NEXT:    [[CALL_US:%.*]] = tail call i32 @use_32(i32 [[CONV14_US]])
+; DONTWIDEN-NEXT:    [[INC_US]] = add nuw i8 [[J_024_US]], 1
+; DONTWIDEN-NEXT:    [[CMP6_US:%.*]] = icmp ult i8 [[INC_US]], [[M]]
+; DONTWIDEN-NEXT:    br i1 [[CMP6_US]], label [[FOR_BODY9_US]], label [[FOR_COND3_FOR_COND_CLEANUP8_CRIT_EDGE_US]]
+; DONTWIDEN:       for.cond3.for.cond.cleanup8_crit_edge.us:
+; DONTWIDEN-NEXT:    [[INC16_US]] = add i8 [[I_026_US]], 1
+; DONTWIDEN-NEXT:    [[CMP_US:%.*]] = icmp ult i8 [[INC16_US]], [[N]]
+; DONTWIDEN-NEXT:    br i1 [[CMP_US]], label [[FOR_COND3_PREHEADER_US]], label [[FOR_COND_CLEANUP_LOOPEXIT1:%.*]]
+; DONTWIDEN:       for.cond3.preheader:
+; DONTWIDEN-NEXT:    [[I_026:%.*]] = phi i8 [ [[INC16:%.*]], [[FOR_COND3_PREHEADER]] ], [ 0, [[FOR_COND3_PREHEADER_PREHEADER]] ]
+; DONTWIDEN-NEXT:    [[INC16]] = add i8 [[I_026]], 1
+; DONTWIDEN-NEXT:    [[CMP:%.*]] = icmp ult i8 [[INC16]], [[N]]
+; DONTWIDEN-NEXT:    br i1 [[CMP]], label [[FOR_COND3_PREHEADER]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; DONTWIDEN:       for.cond.cleanup.loopexit:
+; DONTWIDEN-NEXT:    br label [[FOR_COND_CLEANUP]]
+; DONTWIDEN:       for.cond.cleanup.loopexit1:
+; DONTWIDEN-NEXT:    br label [[FOR_COND_CLEANUP]]
+; DONTWIDEN:       for.cond.cleanup:
+; DONTWIDEN-NEXT:    ret void
 ;
 entry:
   %cmp25.not = icmp eq i8 %n, 0
@@ -547,6 +729,51 @@ define void @test3(i8 %n, i8 %m) {
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
+;
+; DONTWIDEN-LABEL: @test3(
+; DONTWIDEN-NEXT:  entry:
+; DONTWIDEN-NEXT:    [[CMP37_NOT:%.*]] = icmp eq i8 [[N:%.*]], 0
+; DONTWIDEN-NEXT:    br i1 [[CMP37_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_COND3_PREHEADER_LR_PH:%.*]]
+; DONTWIDEN:       for.cond3.preheader.lr.ph:
+; DONTWIDEN-NEXT:    [[CMP635_NOT:%.*]] = icmp eq i8 [[M:%.*]], 0
+; DONTWIDEN-NEXT:    br i1 [[CMP635_NOT]], label [[FOR_COND3_PREHEADER_PREHEADER:%.*]], label [[FOR_COND3_PREHEADER_US_PREHEADER:%.*]]
+; DONTWIDEN:       for.cond3.preheader.preheader:
+; DONTWIDEN-NEXT:    br label [[FOR_COND3_PREHEADER:%.*]]
+; DONTWIDEN:       for.cond3.preheader.us.preheader:
+; DONTWIDEN-NEXT:    br label [[FOR_COND3_PREHEADER_US:%.*]]
+; DONTWIDEN:       for.cond3.preheader.us:
+; DONTWIDEN-NEXT:    [[I_038_US:%.*]] = phi i8 [ [[INC24_US:%.*]], [[FOR_COND3_FOR_COND_CLEANUP8_CRIT_EDGE_US:%.*]] ], [ 0, [[FOR_COND3_PREHEADER_US_PREHEADER]] ]
+; DONTWIDEN-NEXT:    [[MUL_US:%.*]] = mul i8 [[I_038_US]], [[M]]
+; DONTWIDEN-NEXT:    br label [[FOR_BODY9_US:%.*]]
+; DONTWIDEN:       for.body9.us:
+; DONTWIDEN-NEXT:    [[J_036_US:%.*]] = phi i8 [ 0, [[FOR_COND3_PREHEADER_US]] ], [ [[INC_US:%.*]], [[FOR_BODY9_US]] ]
+; DONTWIDEN-NEXT:    [[ADD_US:%.*]] = add i8 [[J_036_US]], [[MUL_US]]
+; DONTWIDEN-NEXT:    [[CONV14_US:%.*]] = zext i8 [[ADD_US]] to i32
+; DONTWIDEN-NEXT:    [[CALL_US:%.*]] = tail call i32 @use_32(i32 [[CONV14_US]])
+; DONTWIDEN-NEXT:    [[CONV15_US:%.*]] = zext i8 [[ADD_US]] to i16
+; DONTWIDEN-NEXT:    [[CALL16_US:%.*]] = tail call i32 @use_16(i16 [[CONV15_US]])
+; DONTWIDEN-NEXT:    [[CALL18_US:%.*]] = tail call i32 @use_32(i32 [[CONV14_US]])
+; DONTWIDEN-NEXT:    [[CALL20_US:%.*]] = tail call i32 @use_16(i16 [[CONV15_US]])
+; DONTWIDEN-NEXT:    [[CONV21_US:%.*]] = zext i8 [[ADD_US]] to i64
+; DONTWIDEN-NEXT:    [[CALL22_US:%.*]] = tail call i32 @use_64(i64 [[CONV21_US]])
+; DONTWIDEN-NEXT:    [[INC_US]] = add nuw i8 [[J_036_US]], 1
+; DONTWIDEN-NEXT:    [[CMP6_US:%.*]] = icmp ult i8 [[INC_US]], [[M]]
+; DONTWIDEN-NEXT:    br i1 [[CMP6_US]], label [[FOR_BODY9_US]], label [[FOR_COND3_FOR_COND_CLEANUP8_CRIT_EDGE_US]]
+; DONTWIDEN:       for.cond3.for.cond.cleanup8_crit_edge.us:
+; DONTWIDEN-NEXT:    [[INC24_US]] = add i8 [[I_038_US]], 1
+; DONTWIDEN-NEXT:    [[CMP_US:%.*]] = icmp ult i8 [[INC24_US]], [[N]]
+; DONTWIDEN-NEXT:    br i1 [[CMP_US]], label [[FOR_COND3_PREHEADER_US]], label [[FOR_COND_CLEANUP_LOOPEXIT1:%.*]]
+; DONTWIDEN:       for.cond3.preheader:
+; DONTWIDEN-NEXT:    [[I_038:%.*]] = phi i8 [ [[INC24:%.*]], [[FOR_COND3_PREHEADER]] ], [ 0, [[FOR_COND3_PREHEADER_PREHEADER]] ]
+; DONTWIDEN-NEXT:    [[INC24]] = add i8 [[I_038]], 1
+; DONTWIDEN-NEXT:    [[CMP:%.*]] = icmp ult i8 [[INC24]], [[N]]
+; DONTWIDEN-NEXT:    br i1 [[CMP]], label [[FOR_COND3_PREHEADER]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; DONTWIDEN:       for.cond.cleanup.loopexit:
+; DONTWIDEN-NEXT:    br label [[FOR_COND_CLEANUP]]
+; DONTWIDEN:       for.cond.cleanup.loopexit1:
+; DONTWIDEN-NEXT:    br label [[FOR_COND_CLEANUP]]
+; DONTWIDEN:       for.cond.cleanup:
+; DONTWIDEN-NEXT:    ret void
 ;
 entry:
   %cmp37.not = icmp eq i8 %n, 0
@@ -662,6 +889,50 @@ define void @test4(i16 %n, i16 %m) {
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
 ;
+; DONTWIDEN-LABEL: @test4(
+; DONTWIDEN-NEXT:  entry:
+; DONTWIDEN-NEXT:    [[CMP38:%.*]] = icmp sgt i16 [[N:%.*]], 0
+; DONTWIDEN-NEXT:    br i1 [[CMP38]], label [[FOR_COND3_PREHEADER_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; DONTWIDEN:       for.cond3.preheader.lr.ph:
+; DONTWIDEN-NEXT:    [[CMP636:%.*]] = icmp sgt i16 [[M:%.*]], 0
+; DONTWIDEN-NEXT:    br i1 [[CMP636]], label [[FOR_COND3_PREHEADER_US_PREHEADER:%.*]], label [[FOR_COND3_PREHEADER_PREHEADER:%.*]]
+; DONTWIDEN:       for.cond3.preheader.preheader:
+; DONTWIDEN-NEXT:    br label [[FOR_COND3_PREHEADER:%.*]]
+; DONTWIDEN:       for.cond3.preheader.us.preheader:
+; DONTWIDEN-NEXT:    br label [[FOR_COND3_PREHEADER_US:%.*]]
+; DONTWIDEN:       for.cond3.preheader.us:
+; DONTWIDEN-NEXT:    [[I_039_US:%.*]] = phi i16 [ [[INC22_US:%.*]], [[FOR_COND3_FOR_COND_CLEANUP8_CRIT_EDGE_US:%.*]] ], [ 0, [[FOR_COND3_PREHEADER_US_PREHEADER]] ]
+; DONTWIDEN-NEXT:    [[MUL_US:%.*]] = mul i16 [[I_039_US]], [[M]]
+; DONTWIDEN-NEXT:    br label [[FOR_BODY9_US:%.*]]
+; DONTWIDEN:       for.body9.us:
+; DONTWIDEN-NEXT:    [[J_037_US:%.*]] = phi i16 [ 0, [[FOR_COND3_PREHEADER_US]] ], [ [[INC_US:%.*]], [[FOR_BODY9_US]] ]
+; DONTWIDEN-NEXT:    [[ADD_US:%.*]] = add i16 [[J_037_US]], [[MUL_US]]
+; DONTWIDEN-NEXT:    [[CONV14_US:%.*]] = sext i16 [[ADD_US]] to i32
+; DONTWIDEN-NEXT:    [[CALL_US:%.*]] = tail call i32 @use_32(i32 [[CONV14_US]])
+; DONTWIDEN-NEXT:    [[CALL15_US:%.*]] = tail call i32 @use_16(i16 [[ADD_US]])
+; DONTWIDEN-NEXT:    [[CALL17_US:%.*]] = tail call i32 @use_32(i32 [[CONV14_US]])
+; DONTWIDEN-NEXT:    [[CALL18_US:%.*]] = tail call i32 @use_16(i16 [[ADD_US]])
+; DONTWIDEN-NEXT:    [[CONV19_US:%.*]] = sext i16 [[ADD_US]] to i64
+; DONTWIDEN-NEXT:    [[CALL20_US:%.*]] = tail call i32 @use_64(i64 [[CONV19_US]])
+; DONTWIDEN-NEXT:    [[INC_US]] = add nuw nsw i16 [[J_037_US]], 1
+; DONTWIDEN-NEXT:    [[CMP6_US:%.*]] = icmp slt i16 [[INC_US]], [[M]]
+; DONTWIDEN-NEXT:    br i1 [[CMP6_US]], label [[FOR_BODY9_US]], label [[FOR_COND3_FOR_COND_CLEANUP8_CRIT_EDGE_US]]
+; DONTWIDEN:       for.cond3.for.cond.cleanup8_crit_edge.us:
+; DONTWIDEN-NEXT:    [[INC22_US]] = add i16 [[I_039_US]], 1
+; DONTWIDEN-NEXT:    [[CMP_US:%.*]] = icmp slt i16 [[INC22_US]], [[N]]
+; DONTWIDEN-NEXT:    br i1 [[CMP_US]], label [[FOR_COND3_PREHEADER_US]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; DONTWIDEN:       for.cond3.preheader:
+; DONTWIDEN-NEXT:    [[I_039:%.*]] = phi i16 [ [[INC22:%.*]], [[FOR_COND3_PREHEADER]] ], [ 0, [[FOR_COND3_PREHEADER_PREHEADER]] ]
+; DONTWIDEN-NEXT:    [[INC22]] = add i16 [[I_039]], 1
+; DONTWIDEN-NEXT:    [[CMP:%.*]] = icmp slt i16 [[INC22]], [[N]]
+; DONTWIDEN-NEXT:    br i1 [[CMP]], label [[FOR_COND3_PREHEADER]], label [[FOR_COND_CLEANUP_LOOPEXIT1:%.*]]
+; DONTWIDEN:       for.cond.cleanup.loopexit:
+; DONTWIDEN-NEXT:    br label [[FOR_COND_CLEANUP]]
+; DONTWIDEN:       for.cond.cleanup.loopexit1:
+; DONTWIDEN-NEXT:    br label [[FOR_COND_CLEANUP]]
+; DONTWIDEN:       for.cond.cleanup:
+; DONTWIDEN-NEXT:    ret void
+;
 entry:
   %cmp38 = icmp sgt i16 %n, 0
   br i1 %cmp38, label %for.cond3.preheader.lr.ph, label %for.cond.cleanup
@@ -732,6 +1003,25 @@ define i32 @constTripCount() {
 ; CHECK:       i.loopdone:
 ; CHECK-NEXT:    ret i32 0
 ;
+; DONTWIDEN-LABEL: @constTripCount(
+; DONTWIDEN-NEXT:  entry:
+; DONTWIDEN-NEXT:    br label [[I_LOOP:%.*]]
+; DONTWIDEN:       i.loop:
+; DONTWIDEN-NEXT:    [[I:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[I_INC:%.*]], [[J_LOOPDONE:%.*]] ]
+; DONTWIDEN-NEXT:    br label [[J_LOOP:%.*]]
+; DONTWIDEN:       j.loop:
+; DONTWIDEN-NEXT:    [[J:%.*]] = phi i8 [ 0, [[I_LOOP]] ], [ [[J_INC:%.*]], [[J_LOOP]] ]
+; DONTWIDEN-NEXT:    call void @payload()
+; DONTWIDEN-NEXT:    [[J_INC]] = add i8 [[J]], 1
+; DONTWIDEN-NEXT:    [[J_ATEND:%.*]] = icmp eq i8 [[J_INC]], 20
+; DONTWIDEN-NEXT:    br i1 [[J_ATEND]], label [[J_LOOPDONE]], label [[J_LOOP]]
+; DONTWIDEN:       j.loopdone:
+; DONTWIDEN-NEXT:    [[I_INC]] = add i8 [[I]], 1
+; DONTWIDEN-NEXT:    [[I_ATEND:%.*]] = icmp eq i8 [[I_INC]], 20
+; DONTWIDEN-NEXT:    br i1 [[I_ATEND]], label [[I_LOOPDONE:%.*]], label [[I_LOOP]]
+; DONTWIDEN:       i.loopdone:
+; DONTWIDEN-NEXT:    ret i32 0
+;
 entry:
   br label %i.loop
 
@@ -795,6 +1085,38 @@ define void @foo_M_sext(i32* %A, i32 %N, i16 %M) {
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP]]
 ; CHECK:       for.cond.cleanup:
 ; CHECK-NEXT:    ret void
+;
+; DONTWIDEN-LABEL: @foo_M_sext(
+; DONTWIDEN-NEXT:  entry:
+; DONTWIDEN-NEXT:    [[M2:%.*]] = sext i16 [[M:%.*]] to i32
+; DONTWIDEN-NEXT:    [[CMP17:%.*]] = icmp sgt i32 [[N:%.*]], 0
+; DONTWIDEN-NEXT:    br i1 [[CMP17]], label [[FOR_COND1_PREHEADER_LR_PH:%.*]], label [[FOR_COND_CLEANUP:%.*]]
+; DONTWIDEN:       for.cond1.preheader.lr.ph:
+; DONTWIDEN-NEXT:    [[CMP215:%.*]] = icmp sgt i32 [[M2]], 0
+; DONTWIDEN-NEXT:    br i1 [[CMP215]], label [[FOR_COND1_PREHEADER_US_PREHEADER:%.*]], label [[FOR_COND_CLEANUP]]
+; DONTWIDEN:       for.cond1.preheader.us.preheader:
+; DONTWIDEN-NEXT:    br label [[FOR_COND1_PREHEADER_US:%.*]]
+; DONTWIDEN:       for.cond1.preheader.us:
+; DONTWIDEN-NEXT:    [[I_018_US:%.*]] = phi i32 [ [[INC6_US:%.*]], [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US:%.*]] ], [ 0, [[FOR_COND1_PREHEADER_US_PREHEADER]] ]
+; DONTWIDEN-NEXT:    [[MUL_US:%.*]] = mul nsw i32 [[I_018_US]], [[M2]]
+; DONTWIDEN-NEXT:    br label [[FOR_BODY4_US:%.*]]
+; DONTWIDEN:       for.body4.us:
+; DONTWIDEN-NEXT:    [[J_016_US:%.*]] = phi i32 [ 0, [[FOR_COND1_PREHEADER_US]] ], [ [[INC_US:%.*]], [[FOR_BODY4_US]] ]
+; DONTWIDEN-NEXT:    [[ADD_US:%.*]] = add nsw i32 [[J_016_US]], [[MUL_US]]
+; DONTWIDEN-NEXT:    [[IDXPROM_US:%.*]] = sext i32 [[ADD_US]] to i64
+; DONTWIDEN-NEXT:    [[ARRAYIDX_US:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i64 [[IDXPROM_US]]
+; DONTWIDEN-NEXT:    tail call void @f(i32* [[ARRAYIDX_US]])
+; DONTWIDEN-NEXT:    [[INC_US]] = add nuw nsw i32 [[J_016_US]], 1
+; DONTWIDEN-NEXT:    [[CMP2_US:%.*]] = icmp slt i32 [[INC_US]], [[M2]]
+; DONTWIDEN-NEXT:    br i1 [[CMP2_US]], label [[FOR_BODY4_US]], label [[FOR_COND1_FOR_COND_CLEANUP3_CRIT_EDGE_US]]
+; DONTWIDEN:       for.cond1.for.cond.cleanup3_crit_edge.us:
+; DONTWIDEN-NEXT:    [[INC6_US]] = add nuw nsw i32 [[I_018_US]], 1
+; DONTWIDEN-NEXT:    [[CMP_US:%.*]] = icmp slt i32 [[INC6_US]], [[N]]
+; DONTWIDEN-NEXT:    br i1 [[CMP_US]], label [[FOR_COND1_PREHEADER_US]], label [[FOR_COND_CLEANUP_LOOPEXIT:%.*]]
+; DONTWIDEN:       for.cond.cleanup.loopexit:
+; DONTWIDEN-NEXT:    br label [[FOR_COND_CLEANUP]]
+; DONTWIDEN:       for.cond.cleanup:
+; DONTWIDEN-NEXT:    ret void
 ;
 entry:
   %M2 = sext i16 %M to i32

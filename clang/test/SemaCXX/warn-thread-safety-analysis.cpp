@@ -1683,6 +1683,13 @@ struct TestScopedLockable {
     a = 5;
   }
 
+#ifdef __cpp_guaranteed_copy_elision
+  void const_lock() {
+    const MutexLock mulock = MutexLock(&mu1);
+    a = 5;
+  }
+#endif
+
   void foo2() {
     ReaderMutexLock mulock1(&mu1);
     if (getBool()) {

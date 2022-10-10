@@ -7,17 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "IntelPTSingleBufferTrace.h"
-
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StreamString.h"
-
 #include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
-
-#include <sstream>
-
 #include <linux/perf_event.h>
+#include <sstream>
 #include <sys/syscall.h>
 #include <unistd.h>
 
@@ -255,7 +251,7 @@ Expected<IntelPTSingleBufferTrace> IntelPTSingleBufferTrace::Start(
       (request.ipt_trace_size + page_size - 1) / page_size));
 
   Expected<perf_event_attr> attr = CreateIntelPTPerfEventConfiguration(
-      request.enable_tsc, request.psb_period.map([](int value) {
+      request.enable_tsc, request.psb_period.transform([](int value) {
         return static_cast<uint64_t>(value);
       }));
   if (!attr)

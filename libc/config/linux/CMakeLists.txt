@@ -1,6 +1,6 @@
-add_header(
+add_header_library(
   app_h
-  HDR
+  HDRS
     app.h
   DEPENDS
     libc.src.__support.common

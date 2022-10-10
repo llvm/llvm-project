@@ -10,13 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/DynamicLibrary.h"
+
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <dlfcn.h>
 #include <ffi.h>
-#include <gelf.h>
 #include <link.h>
 #include <list>
 #include <string>
@@ -24,6 +25,9 @@
 
 #include "Debug.h"
 #include "omptargetplugin.h"
+
+using namespace llvm;
+using namespace llvm::sys;
 
 #ifndef TARGET_NAME
 #define TARGET_NAME Generic ELF - 64bit
@@ -37,17 +41,18 @@
 #include "elf_common.h"
 
 #define NUMBER_OF_DEVICES 4
-#define OFFLOADSECTIONNAME "omp_offloading_entries"
+#define OFFLOAD_SECTION_NAME "omp_offloading_entries"
 
 /// Array of Dynamic libraries loaded for this target.
 struct DynLibTy {
   std::string FileName;
-  void *Handle;
+  std::unique_ptr<DynamicLibrary> DynLib;
 };
 
 /// Keep entries table per device.
 struct FuncOrGblEntryTy {
   __tgt_target_table Table;
+  SmallVector<__tgt_offload_entry> Entries;
 };
 
 /// Class containing all the device information.
@@ -58,15 +63,16 @@ public:
   std::list<DynLibTy> DynLibs;
 
   // Record entry point associated with device.
-  void createOffloadTable(int32_t DeviceId, __tgt_offload_entry *Begin,
-                          __tgt_offload_entry *End) {
+  void createOffloadTable(int32_t DeviceId,
+                          SmallVector<__tgt_offload_entry> &&Entries) {
     assert(DeviceId < (int32_t)FuncGblEntries.size() &&
            "Unexpected device id!");
     FuncGblEntries[DeviceId].emplace_back();
     FuncOrGblEntryTy &E = FuncGblEntries[DeviceId].back();
 
-    E.Table.EntriesBegin = Begin;
-    E.Table.EntriesEnd = End;
+    E.Entries = Entries;
+    E.Table.EntriesBegin = E.Entries.begin();
+    E.Table.EntriesEnd = E.Entries.end();
   }
 
   // Return true if the entry is associated with device.
@@ -99,10 +105,8 @@ public:
   ~RTLDeviceInfoTy() {
     // Close dynamic libraries
     for (auto &Lib : DynLibs) {
-      if (Lib.Handle) {
-        dlclose(Lib.Handle);
+      if (Lib.DynLib->isValid())
         remove(Lib.FileName.c_str());
-      }
     }
   }
 };
@@ -135,57 +139,6 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
   assert(DeviceId >= 0 && DeviceId < NUMBER_OF_DEVICES && "bad dev id");
 
   size_t ImageSize = (size_t)Image->ImageEnd - (size_t)Image->ImageStart;
-  size_t NumEntries = (size_t)(Image->EntriesEnd - Image->EntriesBegin);
-  DP("Expecting to have %zd entries defined.\n", NumEntries);
-
-  // Is the library version incompatible with the header file?
-  if (elf_version(EV_CURRENT) == EV_NONE) {
-    DP("Incompatible ELF library!\n");
-    return NULL;
-  }
-
-  // Obtain elf handler
-  Elf *E = elf_memory((char *)Image->ImageStart, ImageSize);
-  if (!E) {
-    DP("Unable to get ELF handle: %s!\n", elf_errmsg(-1));
-    return NULL;
-  }
-
-  if (elf_kind(E) != ELF_K_ELF) {
-    DP("Invalid Elf kind!\n");
-    elf_end(E);
-    return NULL;
-  }
-
-  // Find the entries section offset
-  Elf_Scn *Section = 0;
-  Elf64_Off EntriesOffset = 0;
-
-  size_t Shstrndx;
-
-  if (elf_getshdrstrndx(E, &Shstrndx)) {
-    DP("Unable to get ELF strings index!\n");
-    elf_end(E);
-    return NULL;
-  }
-
-  while ((Section = elf_nextscn(E, Section))) {
-    GElf_Shdr Hdr;
-    gelf_getshdr(Section, &Hdr);
-
-    if (!strcmp(elf_strptr(E, Shstrndx, Hdr.sh_name), OFFLOADSECTIONNAME)) {
-      EntriesOffset = Hdr.sh_addr;
-      break;
-    }
-  }
-
-  if (!EntriesOffset) {
-    DP("Entries Section Offset Not Found\n");
-    elf_end(E);
-    return NULL;
-  }
-
-  DP("Offset of entries section is (" DPxMOD ").\n", DPxPTR(EntriesOffset));
 
   // load dynamic library and get the entry points. We use the dl library
   // to do the loading of the library, but we could do it directly to avoid the
@@ -196,57 +149,49 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
   char TmpName[] = "/tmp/tmpfile_XXXXXX";
   int TmpFd = mkstemp(TmpName);
 
-  if (TmpFd == -1) {
-    elf_end(E);
-    return NULL;
-  }
+  if (TmpFd == -1)
+    return nullptr;
 
   FILE *Ftmp = fdopen(TmpFd, "wb");
 
-  if (!Ftmp) {
-    elf_end(E);
-    return NULL;
-  }
+  if (!Ftmp)
+    return nullptr;
 
   fwrite(Image->ImageStart, ImageSize, 1, Ftmp);
   fclose(Ftmp);
 
-  DynLibTy Lib = {TmpName, dlopen(TmpName, RTLD_LAZY)};
+  std::string ErrMsg;
+  auto DynLib = std::make_unique<sys::DynamicLibrary>(
+      sys::DynamicLibrary::getPermanentLibrary(TmpName, &ErrMsg));
+  DynLibTy Lib = {TmpName, std::move(DynLib)};
 
-  if (!Lib.Handle) {
-    DP("Target library loading error: %s\n", dlerror());
-    elf_end(E);
+  if (!Lib.DynLib->isValid()) {
+    DP("Target library loading error: %s\n", ErrMsg.c_str());
     return NULL;
   }
 
-  DeviceInfo.DynLibs.push_back(Lib);
+  __tgt_offload_entry *HostBegin = Image->EntriesBegin;
+  __tgt_offload_entry *HostEnd = Image->EntriesEnd;
 
-  struct link_map *LibInfo = (struct link_map *)Lib.Handle;
+  // Create a new offloading entry list using the device symbol address.
+  SmallVector<__tgt_offload_entry> Entries;
+  for (__tgt_offload_entry *E = HostBegin; E != HostEnd; ++E) {
+    if (!E->addr)
+      return nullptr;
 
-  // The place where the entries info is loaded is the library base address
-  // plus the offset determined from the ELF file.
-  Elf64_Addr EntriesAddr = LibInfo->l_addr + EntriesOffset;
+    __tgt_offload_entry Entry = *E;
 
-  DP("Pointer to first entry to be loaded is (" DPxMOD ").\n",
-     DPxPTR(EntriesAddr));
+    void *DevAddr = Lib.DynLib->getAddressOfSymbol(E->name);
+    Entry.addr = DevAddr;
 
-  // Table of pointers to all the entries in the target.
-  __tgt_offload_entry *EntriesTable = (__tgt_offload_entry *)EntriesAddr;
+    DP("Entry point " DPxMOD " maps to global %s (" DPxMOD ")\n",
+       DPxPTR(E - HostBegin), E->name, DPxPTR(DevAddr));
 
-  __tgt_offload_entry *EntriesBegin = &EntriesTable[0];
-  __tgt_offload_entry *EntriesEnd = EntriesBegin + NumEntries;
-
-  if (!EntriesBegin) {
-    DP("Can't obtain entries begin\n");
-    elf_end(E);
-    return NULL;
+    Entries.emplace_back(Entry);
   }
 
-  DP("Entries table range is (" DPxMOD ")->(" DPxMOD ")\n",
-     DPxPTR(EntriesBegin), DPxPTR(EntriesEnd));
-  DeviceInfo.createOffloadTable(DeviceId, EntriesBegin, EntriesEnd);
-
-  elf_end(E);
+  DeviceInfo.createOffloadTable(DeviceId, std::move(Entries));
+  DeviceInfo.DynLibs.emplace_back(std::move(Lib));
 
   return DeviceInfo.getOffloadEntriesTable(DeviceId);
 }
@@ -287,7 +232,7 @@ int32_t __tgt_rtl_data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
   return OFFLOAD_SUCCESS;
 }
 
-int32_t __tgt_rtl_data_delete(int32_t DeviceId, void *TgtPtr) {
+int32_t __tgt_rtl_data_delete(int32_t DeviceId, void *TgtPtr, int32_t) {
   free(TgtPtr);
   return OFFLOAD_SUCCESS;
 }

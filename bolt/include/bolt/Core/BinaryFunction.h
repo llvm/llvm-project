@@ -34,8 +34,11 @@
 #include "bolt/Core/JumpTable.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Utils/NameResolver.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDwarf.h"
@@ -44,9 +47,11 @@
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <iterator>
 #include <limits>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 using namespace llvm::object;
@@ -142,7 +147,8 @@ public:
     uint64_t Action;
   };
 
-  using CallSitesType = SmallVector<CallSite, 0>;
+  using CallSitesList = SmallVector<std::pair<FragmentNum, CallSite>, 0>;
+  using CallSitesRange = iterator_range<CallSitesList::const_iterator>;
 
   using IslandProxiesType =
       std::map<BinaryFunction *, std::map<const MCSymbol *, MCSymbol *>>;
@@ -231,9 +237,6 @@ private:
 
   /// Size of the function in the output file.
   uint64_t OutputSize{0};
-
-  /// Offset in the file.
-  uint64_t FileOffset{0};
 
   /// Maximum size this function is allowed to have.
   uint64_t MaxSize{std::numeric_limits<uint64_t>::max()};
@@ -345,14 +348,6 @@ private:
   /// This attribute is only valid when hasCFG() == true.
   bool HasCanonicalCFG{true};
 
-  /// The address for the code for this function in codegen memory.
-  /// Used for functions that are emitted in a dedicated section with a fixed
-  /// address. E.g. for functions that are overwritten in-place.
-  uint64_t ImageAddress{0};
-
-  /// The size of the code in memory.
-  uint64_t ImageSize{0};
-
   /// Name for the section this function code should reside in.
   std::string CodeSectionName;
 
@@ -392,6 +387,9 @@ private:
 
   /// Original LSDA address for the function.
   uint64_t LSDAAddress{0};
+
+  /// Original LSDA type encoding
+  unsigned LSDATypeEncoding{dwarf::DW_EH_PE_omit};
 
   /// Containing compilation unit for the function.
   DWARFUnit *DwarfUnit{nullptr};
@@ -503,8 +501,7 @@ private:
   DenseMap<int32_t, SmallVector<int32_t, 4>> FrameRestoreEquivalents;
 
   // For tracking exception handling ranges.
-  CallSitesType CallSites;
-  CallSitesType ColdCallSites;
+  CallSitesList CallSites;
 
   /// Binary blobs representing action, type, and type index tables for this
   /// function' LSDA (exception handling).
@@ -518,9 +515,9 @@ private:
   /// addressing.
   LSDATypeTableTy LSDATypeAddressTable;
 
-  /// Marking for the beginning of language-specific data area for the function.
-  MCSymbol *LSDASymbol{nullptr};
-  MCSymbol *ColdLSDASymbol{nullptr};
+  /// Marking for the beginnings of language-specific data areas for each
+  /// fragment of the function.
+  SmallVector<MCSymbol *, 0> LSDASymbols;
 
   /// Map to discover which CFIs are attached to a given instruction offset.
   /// Maps an instruction offset into a FrameInstructions offset.
@@ -568,13 +565,10 @@ private:
   };
   SmallVector<BasicBlockOffset, 0> BasicBlockOffsets;
 
-  MCSymbol *ColdSymbol{nullptr};
+  SmallVector<MCSymbol *, 0> ColdSymbols;
 
-  /// Symbol at the end of the function.
-  mutable MCSymbol *FunctionEndLabel{nullptr};
-
-  /// Symbol at the end of the cold part of split function.
-  mutable MCSymbol *FunctionColdEndLabel{nullptr};
+  /// Symbol at the end of each fragment of a split function.
+  mutable SmallVector<MCSymbol *, 0> FunctionEndLabels;
 
   /// Unique number associated with the function.
   uint64_t FunctionNumber;
@@ -730,7 +724,6 @@ private:
       BB->releaseCFG();
 
     clearList(CallSites);
-    clearList(ColdCallSites);
     clearList(LSDATypeTable);
     clearList(LSDATypeAddressTable);
 
@@ -994,7 +987,7 @@ public:
   bool hasName(const std::string &FunctionName) const {
     auto Res =
         forEachName([&](StringRef Name) { return Name == FunctionName; });
-    return Res.hasValue();
+    return Res.has_value();
   }
 
   /// Check if any of function names matches the given regex.
@@ -1005,7 +998,7 @@ public:
   Optional<StringRef> hasRestoredNameRegex(const StringRef NameRegex) const;
 
   /// Return a vector of all possible names for the function.
-  const std::vector<StringRef> getNames() const {
+  std::vector<StringRef> getNames() const {
     std::vector<StringRef> AllNames;
     forEachName([&AllNames](StringRef Name) {
       AllNames.push_back(Name);
@@ -1063,7 +1056,9 @@ public:
   }
 
   /// Return offset of the function body in the binary file.
-  uint64_t getFileOffset() const { return FileOffset; }
+  uint64_t getFileOffset() const {
+    return getLayout().getMainFragment().getFileOffset();
+  }
 
   /// Return (original) byte size of the function.
   uint64_t getSize() const { return Size; }
@@ -1079,9 +1074,33 @@ public:
     return N;
   }
 
+  /// Return true if function has instructions to emit.
+  bool hasNonPseudoInstructions() const {
+    for (const BinaryBasicBlock &BB : blocks())
+      if (BB.getNumNonPseudos() > 0)
+        return true;
+    return false;
+  }
+
   /// Return MC symbol associated with the function.
   /// All references to the function should use this symbol.
-  MCSymbol *getSymbol() { return Symbols[0]; }
+  MCSymbol *getSymbol(const FragmentNum Fragment = FragmentNum::main()) {
+    if (Fragment == FragmentNum::main())
+      return Symbols[0];
+
+    size_t ColdSymbolIndex = Fragment.get() - 1;
+    if (ColdSymbolIndex >= ColdSymbols.size())
+      ColdSymbols.resize(ColdSymbolIndex + 1);
+
+    MCSymbol *&ColdSymbol = ColdSymbols[ColdSymbolIndex];
+    if (ColdSymbol == nullptr) {
+      SmallString<10> Appendix = formatv(".cold.{0}", ColdSymbolIndex);
+      ColdSymbol = BC.Ctx->getOrCreateSymbol(
+          NameResolver::append(Symbols[0]->getName(), Appendix));
+    }
+
+    return ColdSymbol;
+  }
 
   /// Return MC symbol associated with the function (const version).
   /// All references to the function should use this symbol.
@@ -1135,33 +1154,26 @@ public:
   /// Return true of all callbacks returned true, false otherwise.
   bool forEachEntryPoint(EntryPointCallbackTy Callback) const;
 
-  MCSymbol *getColdSymbol() {
-    if (ColdSymbol)
-      return ColdSymbol;
-
-    ColdSymbol = BC.Ctx->getOrCreateSymbol(
-        NameResolver::append(getSymbol()->getName(), ".cold.0"));
-
-    return ColdSymbol;
-  }
-
   /// Return MC symbol associated with the end of the function.
-  MCSymbol *getFunctionEndLabel() const {
+  MCSymbol *
+  getFunctionEndLabel(const FragmentNum Fragment = FragmentNum::main()) const {
     assert(BC.Ctx && "cannot be called with empty context");
+
+    size_t LabelIndex = Fragment.get();
+    if (LabelIndex >= FunctionEndLabels.size()) {
+      FunctionEndLabels.resize(LabelIndex + 1);
+    }
+
+    MCSymbol *&FunctionEndLabel = FunctionEndLabels[LabelIndex];
     if (!FunctionEndLabel) {
       std::unique_lock<std::shared_timed_mutex> Lock(BC.CtxMutex);
-      FunctionEndLabel = BC.Ctx->createNamedTempSymbol("func_end");
+      if (Fragment == FragmentNum::main())
+        FunctionEndLabel = BC.Ctx->createNamedTempSymbol("func_end");
+      else
+        FunctionEndLabel = BC.Ctx->createNamedTempSymbol(
+            formatv("func_cold_end.{0}", Fragment.get() - 1));
     }
     return FunctionEndLabel;
-  }
-
-  /// Return MC symbol associated with the end of the cold part of the function.
-  MCSymbol *getFunctionColdEndLabel() const {
-    if (!FunctionColdEndLabel) {
-      std::unique_lock<std::shared_timed_mutex> Lock(BC.CtxMutex);
-      FunctionColdEndLabel = BC.Ctx->createNamedTempSymbol("func_cold_end");
-    }
-    return FunctionColdEndLabel;
   }
 
   /// Return a label used to identify where the constant island was emitted
@@ -1310,31 +1322,29 @@ public:
   }
 
   /// Return internal section name for this function.
-  StringRef getCodeSectionName() const { return StringRef(CodeSectionName); }
+  SmallString<32>
+  getCodeSectionName(const FragmentNum Fragment = FragmentNum::main()) const {
+    if (Fragment == FragmentNum::main())
+      return SmallString<32>(CodeSectionName);
+    if (Fragment == FragmentNum::cold())
+      return SmallString<32>(ColdCodeSectionName);
+    return formatv("{0}.{1}", ColdCodeSectionName, Fragment.get() - 1);
+  }
 
   /// Assign a code section name to the function.
-  void setCodeSectionName(StringRef Name) {
-    CodeSectionName = std::string(Name);
+  void setCodeSectionName(const StringRef Name) {
+    CodeSectionName = Name.str();
   }
 
   /// Get output code section.
-  ErrorOr<BinarySection &> getCodeSection() const {
-    return BC.getUniqueSectionByName(getCodeSectionName());
-  }
-
-  /// Return cold code section name for the function.
-  StringRef getColdCodeSectionName() const {
-    return StringRef(ColdCodeSectionName);
+  ErrorOr<BinarySection &>
+  getCodeSection(const FragmentNum Fragment = FragmentNum::main()) const {
+    return BC.getUniqueSectionByName(getCodeSectionName(Fragment));
   }
 
   /// Assign a section name for the cold part of the function.
-  void setColdCodeSectionName(StringRef Name) {
-    ColdCodeSectionName = std::string(Name);
-  }
-
-  /// Get output code section for cold code of this function.
-  ErrorOr<BinarySection &> getColdCodeSection() const {
-    return BC.getUniqueSectionByName(getColdCodeSectionName());
+  void setColdCodeSectionName(const StringRef Name) {
+    ColdCodeSectionName = Name.str();
   }
 
   /// Return true iif the function will halt execution on entry.
@@ -1423,21 +1433,29 @@ public:
 
   uint8_t getPersonalityEncoding() const { return PersonalityEncoding; }
 
-  const CallSitesType &getCallSites() const { return CallSites; }
+  CallSitesRange getCallSites(const FragmentNum F) const {
+    return make_range(std::equal_range(CallSites.begin(), CallSites.end(),
+                                       std::make_pair(F, CallSite()),
+                                       llvm::less_first()));
+  }
 
-  const CallSitesType &getColdCallSites() const { return ColdCallSites; }
+  void
+  addCallSites(const ArrayRef<std::pair<FragmentNum, CallSite>> NewCallSites) {
+    llvm::copy(NewCallSites, std::back_inserter(CallSites));
+    llvm::stable_sort(CallSites, llvm::less_first());
+  }
 
-  const ArrayRef<uint8_t> getLSDAActionTable() const { return LSDAActionTable; }
+  ArrayRef<uint8_t> getLSDAActionTable() const { return LSDAActionTable; }
 
   const LSDATypeTableTy &getLSDATypeTable() const { return LSDATypeTable; }
+
+  unsigned getLSDATypeEncoding() const { return LSDATypeEncoding; }
 
   const LSDATypeTableTy &getLSDATypeAddressTable() const {
     return LSDATypeAddressTable;
   }
 
-  const ArrayRef<uint8_t> getLSDATypeIndexTable() const {
-    return LSDATypeIndexTable;
-  }
+  ArrayRef<uint8_t> getLSDATypeIndexTable() const { return LSDATypeIndexTable; }
 
   const LabelsMapType &getLabels() const { return Labels; }
 
@@ -1597,7 +1615,7 @@ public:
 
   /// Print function information to the \p OS stream.
   void print(raw_ostream &OS, std::string Annotation = "",
-             bool PrintInstructions = true) const;
+             bool PrintInstructions = true);
 
   /// Print all relocations between \p Offset and \p Offset + \p Size in
   /// this function.
@@ -1652,7 +1670,6 @@ public:
     }
     OffsetToCFI.emplace(Offset, FrameInstructions.size());
     FrameInstructions.emplace_back(std::forward<MCCFIInstruction>(Inst));
-    return;
   }
 
   BinaryBasicBlock::iterator addCFIInstruction(BinaryBasicBlock *BB,
@@ -1697,7 +1714,7 @@ public:
                                              int64_t NewOffset);
 
   BinaryFunction &setFileOffset(uint64_t Offset) {
-    FileOffset = Offset;
+    getLayout().getMainFragment().setFileOffset(Offset);
     return *this;
   }
 
@@ -1784,20 +1801,24 @@ public:
   uint16_t getMaxColdAlignmentBytes() const { return MaxColdAlignmentBytes; }
 
   BinaryFunction &setImageAddress(uint64_t Address) {
-    ImageAddress = Address;
+    getLayout().getMainFragment().setImageAddress(Address);
     return *this;
   }
 
   /// Return the address of this function' image in memory.
-  uint64_t getImageAddress() const { return ImageAddress; }
+  uint64_t getImageAddress() const {
+    return getLayout().getMainFragment().getImageAddress();
+  }
 
   BinaryFunction &setImageSize(uint64_t Size) {
-    ImageSize = Size;
+    getLayout().getMainFragment().setImageSize(Size);
     return *this;
   }
 
   /// Return the size of this function' image in memory.
-  uint64_t getImageSize() const { return ImageSize; }
+  uint64_t getImageSize() const {
+    return getLayout().getMainFragment().getImageSize();
+  }
 
   /// Return true if the function is a secondary fragment of another function.
   bool isFragment() const { return IsFragment; }
@@ -1826,9 +1847,11 @@ public:
     return *this;
   }
 
-  /// Set LSDA symbol for the function.
+  /// Set main LSDA symbol for the function.
   BinaryFunction &setLSDASymbol(MCSymbol *Symbol) {
-    LSDASymbol = Symbol;
+    if (LSDASymbols.empty())
+      LSDASymbols.resize(1);
+    LSDASymbols.front() = Symbol;
     return *this;
   }
 
@@ -1852,29 +1875,25 @@ public:
   uint64_t getLSDAAddress() const { return LSDAAddress; }
 
   /// Return symbol pointing to function's LSDA.
-  MCSymbol *getLSDASymbol() {
-    if (LSDASymbol)
-      return LSDASymbol;
-    if (CallSites.empty())
+  MCSymbol *getLSDASymbol(const FragmentNum F) {
+    if (F.get() < LSDASymbols.size() && LSDASymbols[F.get()] != nullptr)
+      return LSDASymbols[F.get()];
+    if (getCallSites(F).empty())
       return nullptr;
 
-    LSDASymbol = BC.Ctx->getOrCreateSymbol(
-        Twine("GCC_except_table") + Twine::utohexstr(getFunctionNumber()));
+    if (F.get() >= LSDASymbols.size())
+      LSDASymbols.resize(F.get() + 1);
 
-    return LSDASymbol;
-  }
+    SmallString<256> SymbolName;
+    if (F == FragmentNum::main())
+      SymbolName = formatv("GCC_except_table{0:x-}", getFunctionNumber());
+    else
+      SymbolName = formatv("GCC_cold_except_table{0:x-}.{1}",
+                           getFunctionNumber(), F.get());
 
-  /// Return symbol pointing to function's LSDA for the cold part.
-  MCSymbol *getColdLSDASymbol() {
-    if (ColdLSDASymbol)
-      return ColdLSDASymbol;
-    if (ColdCallSites.empty())
-      return nullptr;
+    LSDASymbols[F.get()] = BC.Ctx->getOrCreateSymbol(SymbolName);
 
-    ColdLSDASymbol = BC.Ctx->getOrCreateSymbol(
-        Twine("GCC_cold_except_table") + Twine::utohexstr(getFunctionNumber()));
-
-    return ColdLSDASymbol;
+    return LSDASymbols[F.get()];
   }
 
   void setOutputDataAddress(uint64_t Address) { OutputDataOffset = Address; }
@@ -2015,7 +2034,9 @@ public:
     return Size;
   }
 
-  bool hasIslandsInfo() const { return !!Islands; }
+  bool hasIslandsInfo() const {
+    return Islands && (hasConstantIsland() || !Islands->Dependency.empty());
+  }
 
   bool hasConstantIsland() const {
     return Islands && !Islands->DataOffsets.empty();
@@ -2039,6 +2060,19 @@ public:
   ///
   /// Returns false if disassembly failed.
   bool disassemble();
+
+  void handlePCRelOperand(MCInst &Instruction, uint64_t Address, uint64_t Size);
+
+  MCSymbol *handleExternalReference(MCInst &Instruction, uint64_t Size,
+                                    uint64_t Offset, uint64_t TargetAddress,
+                                    bool &IsCall);
+
+  void handleIndirectBranch(MCInst &Instruction, uint64_t Size,
+                            uint64_t Offset);
+
+  // Check for linker veneers, which lack relocations and need manual
+  // adjustments.
+  void handleAArch64IndirectCall(MCInst &Instruction, const uint64_t Offset);
 
   /// Scan function for references to other functions. In relocation mode,
   /// add relocations for external references.
@@ -2088,6 +2122,12 @@ public:
   /// Return true upon successful processing, or false if the control flow
   /// cannot be statically evaluated for any given indirect branch.
   bool postProcessIndirectBranches(MCPlusBuilder::AllocatorIdTy AllocId);
+
+  /// Validate that all data references to function offsets are claimed by
+  /// recognized jump tables. Register externally referenced blocks as entry
+  /// points. Returns true if there are no unclaimed externally referenced
+  /// offsets.
+  bool validateExternallyReferencedOffsets();
 
   /// Return all call site profile info for this function.
   IndirectCallSiteProfile &getAllCallSites() { return AllCallSites; }
@@ -2285,33 +2325,6 @@ public:
   bool isAArch64Veneer() const;
 
   virtual ~BinaryFunction();
-
-  /// Info for fragmented functions.
-  class FragmentInfo {
-  private:
-    uint64_t Address{0};
-    uint64_t ImageAddress{0};
-    uint64_t ImageSize{0};
-    uint64_t FileOffset{0};
-
-  public:
-    uint64_t getAddress() const { return Address; }
-    uint64_t getImageAddress() const { return ImageAddress; }
-    uint64_t getImageSize() const { return ImageSize; }
-    uint64_t getFileOffset() const { return FileOffset; }
-
-    void setAddress(uint64_t VAddress) { Address = VAddress; }
-    void setImageAddress(uint64_t Address) { ImageAddress = Address; }
-    void setImageSize(uint64_t Size) { ImageSize = Size; }
-    void setFileOffset(uint64_t Offset) { FileOffset = Offset; }
-  };
-
-  /// Cold fragment of the function.
-  FragmentInfo ColdFragment;
-
-  FragmentInfo &cold() { return ColdFragment; }
-
-  const FragmentInfo &cold() const { return ColdFragment; }
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS,

@@ -82,9 +82,9 @@ bb3:
 }
 
 ;CHECK-LABEL: myCall_w4:
-;YESCOLOR: subq  $120, %rsp
-;NOFIRSTUSE: subq  $200, %rsp
-;NOCOLOR: subq  $408, %rsp
+;YESCOLOR: subq  $112, %rsp
+;NOFIRSTUSE: subq  $208, %rsp
+;NOCOLOR: subq  $400, %rsp
 
 define i32 @myCall_w4(i32 %in) {
 entry:

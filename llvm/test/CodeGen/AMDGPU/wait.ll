@@ -5,8 +5,7 @@
 ; The ilpmax scheduler is used for the second test to get the ordering we want for the test.
 
 ; DEFAULT-LABEL: {{^}}main:
-; DEFAULT: s_load_dwordx4
-; DEFAULT: s_load_dwordx4
+; DEFAULT: s_load_dwordx8
 ; DEFAULT: s_waitcnt lgkmcnt(0)
 ; DEFAULT: buffer_load_format_xyzw
 ; DEFAULT: buffer_load_format_xyzw
@@ -39,11 +38,9 @@ main_body:
 }
 
 ; ILPMAX-LABEL: {{^}}main2:
-; ILPMAX: s_load_dwordx4
+; ILPMAX: s_load_dwordx8
 ; ILPMAX: s_waitcnt lgkmcnt(0)
 ; ILPMAX: buffer_load
-; ILPMAX: s_load_dwordx4
-; ILPMAX: s_waitcnt lgkmcnt(0)
 ; ILPMAX: buffer_load
 ; ILPMAX: s_waitcnt vmcnt(0)
 ; ILPMAX: exp pos0

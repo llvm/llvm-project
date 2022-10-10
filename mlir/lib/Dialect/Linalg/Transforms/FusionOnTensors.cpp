@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
@@ -39,7 +38,7 @@ static SmallVector<int64_t> getTiledSliceDims(OpOperand *consumerOperand,
                                               ArrayRef<int64_t> tiledLoopDims) {
   // Get the consumer operand indexing map.
   LinalgOp consumerOp = consumerOperand->getOwner();
-  AffineMap indexingMap = consumerOp.getTiedIndexingMap(consumerOperand);
+  AffineMap indexingMap = consumerOp.getMatchingIndexingMap(consumerOperand);
 
   // Search the slice dimensions tiled by a tile loop dimension.
   DenseSet<int64_t> tiledSliceDimIndices;
@@ -69,7 +68,7 @@ getTiledProducerLoops(OpResult producerResult,
 
   // Get the indexing map of the `producerOp` output operand that matches
   // ´producerResult´.
-  AffineMap producerIndexingMap = producerOp.getTiedIndexingMap(
+  AffineMap producerIndexingMap = producerOp.getMatchingIndexingMap(
       producerOp.getOutputOperand(producerResult.getResultNumber()));
 
   // Keep only the tiled result slice dimensions of `producerIndexingMap`.
@@ -352,7 +351,7 @@ FailureOr<LinalgOp> TileLoopNest::fuseProducer(OpBuilder &b,
 
   // Check `consumerOpOperand` is not shape-only to avoid fusion if the data is
   // not used by the `consumerOp` computation.
-  BlockArgument bbArg = consumerOp.getTiedBlockArgument(consumerOpOperand);
+  BlockArgument bbArg = consumerOp.getMatchingBlockArgument(consumerOpOperand);
   if (bbArg.getUses().empty())
     return failure();
 
@@ -414,72 +413,4 @@ SmallVector<LinalgOp> TileLoopNest::getAllTiledAndFusedOps() {
     result.push_back(linalgOp);
   }
   return result;
-}
-
-//===----------------------------------------------------------------------===//
-// Tile and fuse entry-points.
-//===----------------------------------------------------------------------===//
-
-FailureOr<TileLoopNest> mlir::linalg::tileConsumerAndFuseProducers(
-    OpBuilder &b, LinalgOp consumerOp, ArrayRef<int64_t> tileSizes,
-    ArrayRef<int64_t> tileInterchange,
-    const Optional<LinalgLoopDistributionOptions> &tileDistribution) {
-  assert(tileSizes.size() == tileInterchange.size() &&
-         "expect the number of tile sizes and interchange dims to match");
-  assert(isPermutation(tileInterchange) &&
-         "expect tile interchange is a permutation");
-
-  // Create an empty tile loop nest.
-  TileLoopNest tileLoopNest(consumerOp);
-
-  // Search the number of outer parallel loops to separate them from possible
-  // inner reduction dimensions.
-  SmallVector<StringAttr> iterTypes =
-      llvm::to_vector<6>(consumerOp.iterator_types().getAsRange<StringAttr>());
-  applyPermutationToVector(iterTypes, tileInterchange);
-  auto *it = find_if(iterTypes, [&](StringAttr iterType) {
-    return !isParallelIterator(iterType);
-  });
-  int64_t split = std::distance(iterTypes.begin(), it);
-
-  // Helper to fuse the producers greedily using a queue of fusion candidates.
-  auto fuseProducersGreedily = [&](ArrayRef<OpOperand *> operands) {
-    SmallVector<OpOperand *> candidates(operands.begin(), operands.end());
-    while (!candidates.empty()) {
-      FailureOr<LinalgOp> fusedProducer =
-          tileLoopNest.fuseProducer(b, candidates.pop_back_val());
-      if (failed(fusedProducer))
-        continue;
-      candidates.append(fusedProducer->getInputAndOutputOperands());
-    }
-  };
-
-  // Perform tiling and fusion in two steps. We need to respect the loop
-  // interchange here; filter parellel dimensions based on their order *after*
-  // permutation but pass in the original configuration *before* permuation,
-  // given the tiling and interchange happen together.
-  SmallVector<int64_t> outerTileSizes(tileSizes.size(), 0);
-  SmallVector<int64_t> innerTileSizes(tileSizes.size(), 0);
-  for (int64_t i : tileInterchange.take_front(split))
-    outerTileSizes[i] = tileSizes[i];
-  for (int64_t i : tileInterchange.drop_front(split))
-    innerTileSizes[i] = tileSizes[i];
-
-  // Tile the outer parallel loops and fuse the output operands.
-  if (failed(tileLoopNest.tileRootOp(b, outerTileSizes, tileInterchange,
-                                     tileDistribution)))
-    return failure();
-  fuseProducersGreedily(tileLoopNest.getRootOp().getOutputOperands());
-
-  // Tile the remaining loops and fuse the input operands.
-  if (failed(tileLoopNest.tileRootOp(b, innerTileSizes, tileInterchange,
-                                     tileDistribution)))
-    return failure();
-  fuseProducersGreedily(tileLoopNest.getRootOp().getInputOperands());
-
-  // Exit if the tile loop nest is empty since all tile sizes are zero.
-  if (tileLoopNest.isEmpty())
-    return failure();
-
-  return tileLoopNest;
 }

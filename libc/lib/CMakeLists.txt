@@ -1,7 +1,12 @@
 add_entrypoint_library(
-  llvmlibc
+  ${LIBC_TARGET}
   DEPENDS
   ${TARGET_LLVMLIBC_ENTRYPOINTS}
+)
+set_target_properties(
+  ${LIBC_TARGET}
+  PROPERTIES
+    ARCHIVE_OUTPUT_NAME ${LIBC_ARCHIVE_NAME}
 )
 
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR)
@@ -11,13 +16,7 @@ else()
 endif()
 
 install(
-  TARGETS llvmlibc
+  TARGETS ${LIBC_TARGET}
   ARCHIVE DESTINATION "${LIBC_INSTALL_LIBRARY_DIR}"
-  COMPONENT llvmlibc
-)
-
-add_llvm_install_targets(
-  install-llvmlibc
-  DEPENDS llvmlibc
-  COMPONENT llvmlibc
+  COMPONENT ${LIBC_COMPONENT}
 )

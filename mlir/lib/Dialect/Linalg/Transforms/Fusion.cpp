@@ -10,9 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Linalg/Analysis/DependenceAnalysis.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
@@ -81,7 +80,7 @@ getShapeDefiningLoopRange(LinalgOp op, unsigned loopDepth,
             opOperand->get().getDefiningOp()))
       continue;
 
-    AffineMap map = op.getTiedIndexingMap(opOperand);
+    AffineMap map = op.getMatchingIndexingMap(opOperand);
     LLVM_DEBUG(llvm::dbgs() << "getShapeDefiningLoopRange I/O idx: "
                             << opOperand->getOperandNumber() << "\n");
     LLVM_DEBUG(llvm::dbgs()
@@ -443,7 +442,7 @@ mlir::linalg::fuseProducerOfTensor(OpBuilder &b, OpResult producerOpResult,
   OpOperand *opOperand =
       producerOp.getOutputOperand(producerOpResult.getResultNumber());
   LinalgOp fusedProducer =
-      fuse(b, producerOp, producerOp.getTiedIndexingMap(opOperand),
+      fuse(b, producerOp, producerOp.getMatchingIndexingMap(opOperand),
            consumerOpOperand);
 
   // Replace use.

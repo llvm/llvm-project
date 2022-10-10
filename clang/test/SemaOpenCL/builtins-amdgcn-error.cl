@@ -65,6 +65,18 @@ void test_sched_barrier(int x)
   __builtin_amdgcn_sched_barrier(x); // expected-error {{argument to '__builtin_amdgcn_sched_barrier' must be a constant integer}}
 }
 
+void test_sched_group_barrier(int x)
+{
+  __builtin_amdgcn_sched_group_barrier(x, 0, 1); // expected-error {{argument to '__builtin_amdgcn_sched_group_barrier' must be a constant integer}}
+  __builtin_amdgcn_sched_group_barrier(0, x, 1); // expected-error {{argument to '__builtin_amdgcn_sched_group_barrier' must be a constant integer}}
+  __builtin_amdgcn_sched_group_barrier(0, 1, x); // expected-error {{argument to '__builtin_amdgcn_sched_group_barrier' must be a constant integer}}
+}
+
+void test_iglp_opt(int x)
+{
+  __builtin_amdgcn_iglp_opt(x); // expected-error {{argument to '__builtin_amdgcn_iglp_opt' must be a constant integer}}
+}
+
 void test_sicmp_i32(global ulong* out, int a, int b, uint c)
 {
   *out = __builtin_amdgcn_sicmp(a, b, c); // expected-error {{argument to '__builtin_amdgcn_sicmp' must be a constant integer}}

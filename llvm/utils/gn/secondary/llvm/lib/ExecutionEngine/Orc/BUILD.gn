@@ -11,8 +11,11 @@ static_library("Orc") {
     "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Transforms/Utils",
+    "//llvm/lib/WindowsDriver",
   ]
   sources = [
+    "COFFPlatform.cpp",
+    "COFFVCRuntimeSupport.cpp",
     "CompileOnDemandLayer.cpp",
     "CompileUtils.cpp",
     "Core.cpp",

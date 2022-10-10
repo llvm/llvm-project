@@ -301,6 +301,11 @@ void Command::setEnvironment(llvm::ArrayRef<const char *> NewEnvironment) {
   Environment.push_back(nullptr);
 }
 
+void Command::setRedirectFiles(
+    const std::vector<Optional<std::string>> &Redirects) {
+  RedirectFiles = Redirects;
+}
+
 void Command::PrintFileNames() const {
   if (PrintInputFilenames) {
     for (const auto &Arg : InputInfoList)
@@ -352,6 +357,22 @@ int Command::Execute(ArrayRef<llvm::Optional<StringRef>> Redirects,
   }
 
   auto Args = llvm::toStringRefArray(Argv.data());
+
+  // Use Job-specific redirect files if they are present.
+  if (!RedirectFiles.empty()) {
+    std::vector<Optional<StringRef>> RedirectFilesOptional;
+    for (const auto &Ele : RedirectFiles)
+      if (Ele)
+        RedirectFilesOptional.push_back(Optional<StringRef>(*Ele));
+      else
+        RedirectFilesOptional.push_back(None);
+
+    return llvm::sys::ExecuteAndWait(Executable, Args, Env,
+                                     makeArrayRef(RedirectFilesOptional),
+                                     /*secondsToWait=*/0, /*memoryLimit=*/0,
+                                     ErrMsg, ExecutionFailed, &ProcStat);
+  }
+
   return llvm::sys::ExecuteAndWait(Executable, Args, Env, Redirects,
                                    /*secondsToWait*/ 0, /*memoryLimit*/ 0,
                                    ErrMsg, ExecutionFailed, &ProcStat);

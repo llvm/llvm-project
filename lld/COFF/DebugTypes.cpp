@@ -647,7 +647,7 @@ void TpiSource::mergeUniqueTypeRecords(ArrayRef<uint8_t> typeRecords,
                                        TypeIndex beginIndex) {
   // Re-sort the list of unique types by index.
   if (kind == PDB)
-    assert(std::is_sorted(uniqueTypes.begin(), uniqueTypes.end()));
+    assert(llvm::is_sorted(uniqueTypes));
   else
     llvm::sort(uniqueTypes);
 
@@ -953,15 +953,13 @@ public:
 };
 } // namespace
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 /// This type is just a wrapper around GHashTable with external linkage so it
 /// can be used from a header.
 struct GHashState {
   GHashTable table;
 };
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 GHashTable::~GHashTable() { delete[] table; }
 
@@ -1096,8 +1094,7 @@ void TypeMerger::mergeTypesWithGHash() {
               entries.size(), tableSize));
 
   // Find out how many type and item indices there are.
-  auto mid =
-      std::lower_bound(entries.begin(), entries.end(), GHashCell(true, 0, 0));
+  auto mid = llvm::lower_bound(entries, GHashCell(true, 0, 0));
   assert((mid == entries.end() || mid->isItem()) &&
          (mid == entries.begin() || !std::prev(mid)->isItem()) &&
          "midpoint is not midpoint");

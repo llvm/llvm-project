@@ -12,7 +12,7 @@
 // UNSUPPORTED: c++03
 
 // TODO: Investigate this failure, which happens only with the Bootstrapping build.
-// UNSUPPORTED: clang-13, clang-14, clang-15
+// UNSUPPORTED: clang-14, clang-15, clang-16
 
 // TODO: Investigate this failure on GCC 12 (in Ubuntu Jammy)
 // UNSUPPORTED: gcc-12
@@ -643,17 +643,14 @@ void shared_ptr_test() {
 
 void streampos_test() {
   std::streampos test0 = 67;
-  ComparePrettyPrintToChars(
-      test0, "std::fpos with stream offset:67 with state: {count:0 value:0}");
+  ComparePrettyPrintToRegex(test0, "^std::fpos with stream offset:67( with state: {count:0 value:0})?$");
   std::istringstream input("testing the input stream here");
   std::streampos test1 = input.tellg();
-  ComparePrettyPrintToChars(
-      test1, "std::fpos with stream offset:0 with state: {count:0 value:0}");
+  ComparePrettyPrintToRegex(test1, "^std::fpos with stream offset:0( with state: {count:0 value:0})?$");
   std::unique_ptr<char[]> buffer(new char[5]);
   input.read(buffer.get(), 5);
   test1 = input.tellg();
-  ComparePrettyPrintToChars(
-      test1, "std::fpos with stream offset:5 with state: {count:0 value:0}");
+  ComparePrettyPrintToRegex(test1, "^std::fpos with stream offset:5( with state: {count:0 value:0})?$");
 }
 
 int main(int, char**) {

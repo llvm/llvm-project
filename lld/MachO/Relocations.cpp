@@ -52,7 +52,7 @@ bool macho::validateSymbolRelocation(const Symbol *sym,
 // This is implemented as a slow linear search through OutputSegments,
 // OutputSections, and finally the InputSections themselves. However, this
 // function should be called only on error paths, so some overhead is fine.
-static InputSection *offsetToInputSection(uint64_t *off) {
+InputSection *macho::offsetToInputSection(uint64_t *off) {
   for (OutputSegment *seg : outputSegments) {
     if (*off < seg->fileOff || *off >= seg->fileOff + seg->fileSize)
       continue;

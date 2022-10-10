@@ -62,8 +62,10 @@ Expected<Function *> ByteCodeEmitter::compileFunc(const FunctionDecl *F) {
     // Return a dummy function if compilation failed.
     if (BailLocation)
       return llvm::make_error<ByteCodeGenError>(*BailLocation);
-    else
+    else {
+      Func->setIsFullyCompiled(true);
       return Func;
+    }
   } else {
     // Create scopes from descriptors.
     llvm::SmallVector<Scope, 2> Scopes;
@@ -74,6 +76,7 @@ Expected<Function *> ByteCodeEmitter::compileFunc(const FunctionDecl *F) {
     // Set the function's code.
     Func->setCode(NextLocalOffset, std::move(Code), std::move(SrcMap),
                   std::move(Scopes));
+    Func->setIsFullyCompiled(true);
     return Func;
   }
 }
@@ -126,30 +129,28 @@ bool ByteCodeEmitter::bail(const SourceLocation &Loc) {
 /// Helper to write bytecode and bail out if 32-bit offsets become invalid.
 /// Pointers will be automatically marshalled as 32-bit IDs.
 template <typename T>
-static std::enable_if_t<!std::is_pointer<T>::value, void>
-emit(Program &P, std::vector<char> &Code, const T &Val, bool &Success) {
-  size_t Size = sizeof(Val);
+static void emit(Program &P, std::vector<char> &Code, const T &Val,
+                 bool &Success) {
+  size_t Size;
+
+  if constexpr (std::is_pointer_v<T>)
+    Size = sizeof(uint32_t);
+  else
+    Size = sizeof(T);
+
   if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
     Success = false;
     return;
   }
 
-  const char *Data = reinterpret_cast<const char *>(&Val);
-  Code.insert(Code.end(), Data, Data + Size);
-}
-
-template <typename T>
-static std::enable_if_t<std::is_pointer<T>::value, void>
-emit(Program &P, std::vector<char> &Code, const T &Val, bool &Success) {
-  size_t Size = sizeof(uint32_t);
-  if (Code.size() + Size > std::numeric_limits<unsigned>::max()) {
-    Success = false;
-    return;
+  if constexpr (!std::is_pointer_v<T>) {
+    const char *Data = reinterpret_cast<const char *>(&Val);
+    Code.insert(Code.end(), Data, Data + Size);
+  } else {
+    uint32_t ID = P.getOrCreateNativePointer(Val);
+    const char *Data = reinterpret_cast<const char *>(&ID);
+    Code.insert(Code.end(), Data, Data + Size);
   }
-
-  uint32_t ID = P.getOrCreateNativePointer(Val);
-  const char *Data = reinterpret_cast<const char *>(&ID);
-  Code.insert(Code.end(), Data, Data + Size);
 }
 
 template <typename... Tys>

@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
-#include "SPIRVGlobalRegistry.h"
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
@@ -190,11 +189,12 @@ static SPIRVType *propagateSPIRVType(MachineInstr *MI, SPIRVGlobalRegistry *GR,
 // Insert ASSIGN_TYPE instuction between Reg and its definition, set NewReg as
 // a dst of the definition, assign SPIRVType to both registers. If SpirvTy is
 // provided, use it as SPIRVType in ASSIGN_TYPE, otherwise create it from Ty.
+// It's used also in SPIRVBuiltins.cpp.
 // TODO: maybe move to SPIRVUtils.
-static Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
-                                  SPIRVGlobalRegistry *GR,
-                                  MachineIRBuilder &MIB,
-                                  MachineRegisterInfo &MRI) {
+namespace llvm {
+Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
+                           SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
+                           MachineRegisterInfo &MRI) {
   MachineInstr *Def = MRI.getVRegDef(Reg);
   assert((Ty || SpirvTy) && "Either LLVM or SPIRV type is expected.");
   MIB.setInsertPt(*Def->getParent(),
@@ -208,14 +208,19 @@ static Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
   // This is to make it convenient for Legalizer to get the SPIRVType
   // when processing the actual MI (i.e. not pseudo one).
   GR->assignSPIRVTypeToVReg(SpirvTy, NewReg, MIB.getMF());
+  // Copy MIFlags from Def to ASSIGN_TYPE instruction. It's required to keep
+  // the flags after instruction selection.
+  const uint16_t Flags = Def->getFlags();
   MIB.buildInstr(SPIRV::ASSIGN_TYPE)
       .addDef(Reg)
       .addUse(NewReg)
-      .addUse(GR->getSPIRVTypeID(SpirvTy));
+      .addUse(GR->getSPIRVTypeID(SpirvTy))
+      .setMIFlags(Flags);
   Def->getOperand(0).setReg(NewReg);
   MRI.setRegClass(Reg, &SPIRV::ANYIDRegClass);
   return NewReg;
 }
+} // namespace llvm
 
 static void generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                                  MachineIRBuilder MIB) {
@@ -364,11 +369,19 @@ static void processInstrsWithTypeFolding(MachineFunction &MF,
       if (MI.getOpcode() != SPIRV::ASSIGN_TYPE)
         continue;
       Register SrcReg = MI.getOperand(1).getReg();
-      if (!isTypeFoldingSupported(MRI.getVRegDef(SrcReg)->getOpcode()))
+      unsigned Opcode = MRI.getVRegDef(SrcReg)->getOpcode();
+      if (!isTypeFoldingSupported(Opcode))
         continue;
       Register DstReg = MI.getOperand(0).getReg();
       if (MRI.getType(DstReg).isVector())
         MRI.setRegClass(DstReg, &SPIRV::IDRegClass);
+      // Don't need to reset type of register holding constant and used in
+      // G_ADDRSPACE_CAST, since it braaks legalizer.
+      if (Opcode == TargetOpcode::G_CONSTANT && MRI.hasOneUse(DstReg)) {
+        MachineInstr &UseMI = *MRI.use_instr_begin(DstReg);
+        if (UseMI.getOpcode() == TargetOpcode::G_ADDRSPACE_CAST)
+          continue;
+      }
       MRI.setType(DstReg, LLT::scalar(32));
     }
   }
@@ -409,6 +422,15 @@ static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         // Set the first successor as default MBB to support empty switches.
         DefaultMBBs[Reg] = *MBB.succ_begin();
       }
+      // Process G_SUB coming from switch range-compare lowering.
+      if (MI.getOpcode() == TargetOpcode::G_SUB && MI.getOperand(1).isReg() &&
+          SwitchRegs.contains(MI.getOperand(1).getReg())) {
+        assert(MI.getOperand(0).isReg() && MI.getOperand(1).isReg());
+        Register Dst = MI.getOperand(0).getReg();
+        SwitchRegs.insert(Dst);
+        SPIRVType *Ty = GR->getSPIRVTypeForVReg(MI.getOperand(1).getReg());
+        insertAssignInstr(Dst, nullptr, Ty, GR, MIB, MRI);
+      }
       // Process only ICMPs that relate to spv_switches.
       if (MI.getOpcode() == TargetOpcode::G_ICMP && MI.getOperand(2).isReg() &&
           SwitchRegs.contains(MI.getOperand(2).getReg())) {
@@ -426,8 +448,8 @@ static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         Register CmpReg = MI.getOperand(2).getReg();
         MachineOperand &PredOp = MI.getOperand(1);
         const auto CC = static_cast<CmpInst::Predicate>(PredOp.getPredicate());
-        assert(CC == CmpInst::ICMP_EQ && MRI.hasOneUse(Dst) &&
-               MRI.hasOneDef(CmpReg));
+        assert((CC == CmpInst::ICMP_EQ || CC == CmpInst::ICMP_ULE) &&
+               MRI.hasOneUse(Dst) && MRI.hasOneDef(CmpReg));
         uint64_t Val = getIConstVal(MI.getOperand(3).getReg(), &MRI);
         MachineInstr *CBr = MRI.use_begin(Dst)->getParent();
         assert(CBr->getOpcode() == SPIRV::G_BRCOND &&
@@ -465,6 +487,8 @@ static void processSwitches(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         Register CReg = MI.getOperand(i).getReg();
         uint64_t Val = getIConstVal(CReg, &MRI);
         MachineInstr *ConstInstr = getDefInstrMaybeConstant(CReg, &MRI);
+        if (!SwitchRegToMBB[Reg][Val])
+          continue;
         Vals.push_back(ConstInstr->getOperand(1).getCImm());
         MBBs.push_back(SwitchRegToMBB[Reg][Val]);
       }
@@ -489,8 +513,8 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   foldConstantsIntoIntrinsics(MF);
   insertBitcasts(MF, GR, MIB);
   generateAssignInstrs(MF, GR, MIB);
-  processInstrsWithTypeFolding(MF, GR, MIB);
   processSwitches(MF, GR, MIB);
+  processInstrsWithTypeFolding(MF, GR, MIB);
 
   return true;
 }

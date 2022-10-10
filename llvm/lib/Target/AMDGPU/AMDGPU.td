@@ -622,6 +622,13 @@ def FeatureAtomicPkFaddNoRtnInsts
   [FeatureFlatGlobalInsts]
 >;
 
+def FeatureFlatAtomicFaddF32Inst
+  : SubtargetFeature<"flat-atomic-fadd-f32-inst",
+  "HasFlatAtomicFaddF32Inst",
+  "true",
+  "Has flat_atomic_add_f32 instruction"
+>;
+
 def FeatureSupportsSRAMECC : SubtargetFeature<"sramecc-support",
   "SupportsSRAMECC",
   "true",
@@ -686,6 +693,12 @@ def FeatureNoDataDepHazard : SubtargetFeature<"no-data-dep-hazard",
   "HasNoDataDepHazard",
   "true",
   "Does not need SW waitstates"
+>;
+
+def FeatureGFX11FullVGPRs : SubtargetFeature<"gfx11-full-vgprs",
+  "HasGFX11FullVGPRs",
+  "true",
+  "GFX11 with 50% more physical VGPRs and 50% larger allocation granule than GFX10"
 >;
 
 class SubtargetFeatureNSAMaxSize <int Value> : SubtargetFeature <
@@ -789,6 +802,12 @@ def FeatureAutoWaitcntBeforeBarrier : SubtargetFeature <
   "AutoWaitcntBeforeBarrier",
   "true",
   "Hardware automatically inserts waitcnt before barrier"
+>;
+
+def FeatureBackOffBarrier : SubtargetFeature <"back-off-barrier",
+  "BackOffBarrier",
+  "true",
+  "Hardware supports backing off s_barrier if an exception occurs"
 >;
 
 def FeatureTrigReducedRange : SubtargetFeature<"trig-reduced-range",
@@ -1101,7 +1120,8 @@ def FeatureISAVersion9_0_A : FeatureSet<
    FeatureMadMacF32Insts,
    FeatureSupportsSRAMECC,
    FeaturePackedTID,
-   FullRate64Ops]>;
+   FullRate64Ops,
+   FeatureBackOffBarrier]>;
 
 def FeatureISAVersion9_0_C : FeatureSet<
   [FeatureGFX9,
@@ -1135,10 +1155,12 @@ def FeatureISAVersion9_4_0 : FeatureSet<
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
    FeatureAtomicPkFaddNoRtnInsts,
+   FeatureFlatAtomicFaddF32Inst,
    FeatureSupportsSRAMECC,
    FeaturePackedTID,
    FeatureArchitectedFlatScratch,
-   FullRate64Ops]>;
+   FullRate64Ops,
+   FeatureBackOffBarrier]>;
 
 // TODO: Organize more features into groups.
 def FeatureGroup {
@@ -1173,7 +1195,8 @@ def FeatureISAVersion10_1_0 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureSupportsXNACK])>;
+     FeatureSupportsXNACK,
+     FeatureBackOffBarrier])>;
 
 def FeatureISAVersion10_1_1 : FeatureSet<
   !listconcat(FeatureGroup.GFX10_1_Bugs,
@@ -1195,7 +1218,8 @@ def FeatureISAVersion10_1_1 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureSupportsXNACK])>;
+     FeatureSupportsXNACK,
+     FeatureBackOffBarrier])>;
 
 def FeatureISAVersion10_1_2 : FeatureSet<
   !listconcat(FeatureGroup.GFX10_1_Bugs,
@@ -1217,7 +1241,8 @@ def FeatureISAVersion10_1_2 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureSupportsXNACK])>;
+     FeatureSupportsXNACK,
+     FeatureBackOffBarrier])>;
 
 def FeatureISAVersion10_1_3 : FeatureSet<
   !listconcat(FeatureGroup.GFX10_1_Bugs,
@@ -1235,7 +1260,8 @@ def FeatureISAVersion10_1_3 : FeatureSet<
      FeatureMadMacF32Insts,
      FeatureDsSrc2Insts,
      FeatureLdsMisalignedBug,
-     FeatureSupportsXNACK])>;
+     FeatureSupportsXNACK,
+     FeatureBackOffBarrier])>;
 
 def FeatureISAVersion10_3_0 : FeatureSet<
   [FeatureGFX10,
@@ -1252,7 +1278,8 @@ def FeatureISAVersion10_3_0 : FeatureSet<
    FeatureNSAEncoding,
    FeatureNSAMaxSize13,
    FeatureWavefrontSize32,
-   FeatureShaderCyclesRegister]>;
+   FeatureShaderCyclesRegister,
+   FeatureBackOffBarrier]>;
 
 def FeatureISAVersion11_Common : FeatureSet<
   [FeatureGFX11,
@@ -1268,27 +1295,35 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureArchitectedFlatScratch,
    FeatureAtomicFaddRtnInsts,
    FeatureAtomicFaddNoRtnInsts,
+   FeatureFlatAtomicFaddF32Inst,
    FeatureImageInsts,
    FeaturePackedTID,
-   FeatureVcmpxPermlaneHazard]>;
+   FeatureVcmpxPermlaneHazard,
+   FeatureBackOffBarrier]>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [FeatureUserSGPRInit16Bug])>;
+    [FeatureGFX11FullVGPRs,
+     FeatureUserSGPRInit16Bug])>;
 
 def FeatureISAVersion11_0_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
-    [])>;
+    [FeatureGFX11FullVGPRs])>;
 
 def FeatureISAVersion11_0_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureUserSGPRInit16Bug])>;
+
+def FeatureISAVersion11_0_3 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [])>;
 
 //===----------------------------------------------------------------------===//
 
 def AMDGPUInstrInfo : InstrInfo {
   let guessInstructionProperties = 1;
   let noNamedPositionallyEncodedOperands = 1;
+  let useDeprecatedPositionallyEncodedOperands = 1;
 }
 
 def AMDGPUAsmParser : AsmParser {
@@ -1491,11 +1526,6 @@ def isGFX908orGFX90A :
 def isGFX940Plus :
   Predicate<"Subtarget->hasGFX940Insts()">,
   AssemblerPredicate<(all_of FeatureGFX940Insts)>;
-
-def isGFX940GFX11Plus :
-  Predicate<"Subtarget->hasGFX940Insts() ||"
-            "Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
-  AssemblerPredicate<(any_of FeatureGFX940Insts, FeatureGFX11Insts)>;
 
 def isGFX8GFX9NotGFX940 :
   Predicate<"!Subtarget->hasGFX940Insts() &&"
@@ -1733,6 +1763,9 @@ def HasAtomicFaddNoRtnInsts : Predicate<"Subtarget->hasAtomicFaddNoRtnInsts()">,
 def HasAtomicPkFaddNoRtnInsts
   : Predicate<"Subtarget->hasAtomicPkFaddNoRtnInsts()">,
   AssemblerPredicate<(all_of FeatureAtomicPkFaddNoRtnInsts)>;
+def HasFlatAtomicFaddF32Inst
+  : Predicate<"Subtarget->hasFlatAtomicFaddF32Inst()">,
+  AssemblerPredicate<(all_of FeatureFlatAtomicFaddF32Inst)>;
 
 def HasDsSrc2Insts : Predicate<"!Subtarget->hasDsSrc2Insts()">,
   AssemblerPredicate<(all_of FeatureDsSrc2Insts)>;

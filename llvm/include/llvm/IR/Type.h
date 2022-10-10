@@ -75,7 +75,7 @@ public:
     ArrayTyID,          ///< Arrays
     FixedVectorTyID,    ///< Fixed width SIMD vector type
     ScalableVectorTyID, ///< Scalable SIMD vector type
-    DXILPointerTyID,    ///< DXIL typed pointer used by DirectX target
+    TypedPointerTyID,   ///< Typed pointer used by some GPU targets
   };
 
 private:
@@ -143,6 +143,11 @@ public:
 
   /// Return true if this is 'bfloat', a 16-bit bfloat type.
   bool isBFloatTy() const { return getTypeID() == BFloatTyID; }
+
+  /// Return true if this is a 16-bit float type.
+  bool is16bitFPTy() const {
+    return getTypeID() == BFloatTyID || getTypeID() == HalfTyID;
+  }
 
   /// Return true if this is 'float', a 32-bit IEEE fp type.
   bool isFloatTy() const { return getTypeID() == FloatTyID; }

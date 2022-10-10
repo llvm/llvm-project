@@ -100,7 +100,7 @@ public:
     if (Head->Used <= Head->Capacity)
       return new (PP) T(std::forward<Args>(ConstructorArgs)...);
 
-    static_assert(Size < AllocUnit, "");
+    static_assert(Size < AllocUnit);
     addNode(AllocUnit);
     Head->Used = Size;
     return new (Head->Buf) T(std::forward<Args>(ConstructorArgs)...);

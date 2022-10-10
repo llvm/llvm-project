@@ -1,3 +1,4 @@
+// UNSUPPORTED: system-darwin
 // RUN: %clang %target_itanium_abi_host_triple %s -c -o - -gdwarf-4 -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params -std=c++20 \
 // RUN:   | llvm-dwarfdump --verify -
 // RUN: %clang %target_itanium_abi_host_triple %s -c -o - -gdwarf-4 -Xclang -gsimple-template-names=mangled -Xclang -debug-forward-template-params -std=c++20 -gmlt -fdebug-info-for-profiling \
@@ -25,9 +26,9 @@ struct udt { };
 }
 template<template<typename> class T>
 void ttp_user() { }
-enum Enumeration { Enumerator1, Enumerator2, Enumerator3 = 1 };
+enum Enumeration : int { Enumerator1, Enumerator2, Enumerator3 = 1 };
 enum class EnumerationClass { Enumerator1, Enumerator2, Enumerator3 = 1 };
-enum { AnonEnum1, AnonEnum2, AnonEnum3 = 1 };
+enum : int { AnonEnum1, AnonEnum2, AnonEnum3 = 1 };
 enum EnumerationSmall : unsigned char { kNeg = 0xff };
 }
 template <typename... Ts>

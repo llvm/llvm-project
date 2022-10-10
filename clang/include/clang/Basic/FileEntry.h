@@ -24,6 +24,8 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 
+#include <utility>
+
 namespace llvm {
 
 class MemoryBuffer;
@@ -59,11 +61,21 @@ class FileEntry;
 /// accessed by the FileManager's client.
 class FileEntryRef {
 public:
-  StringRef getName() const { return ME->first(); }
+  /// The name of this FileEntry. If a VFS uses 'use-external-name', this is
+  /// the redirected name. See getRequestedName().
+  StringRef getName() const { return getBaseMapEntry().first(); }
+
+  /// The name of this FileEntry, as originally requested without applying any
+  /// remappings for VFS 'use-external-name'.
+  ///
+  /// FIXME: this should be the semantics of getName(). See comment in
+  /// FileManager::getFileRef().
+  StringRef getNameAsRequested() const { return ME->first(); }
+
   const FileEntry &getFileEntry() const {
-    return *ME->second->V.get<FileEntry *>();
+    return *getBaseMapEntry().second->V.get<FileEntry *>();
   }
-  DirectoryEntryRef getDir() const { return *ME->second->Dir; }
+  DirectoryEntryRef getDir() const { return *getBaseMapEntry().second->Dir; }
 
   inline off_t getSize() const;
   inline unsigned getUID() const;
@@ -150,12 +162,19 @@ public:
   explicit FileEntryRef(const MapEntry &ME) : ME(&ME) {
     assert(ME.second && "Expected payload");
     assert(ME.second->V && "Expected non-null");
-    assert(ME.second->V.is<FileEntry *>() && "Expected FileEntry");
   }
 
   /// Expose the underlying MapEntry to simplify packing in a PointerIntPair or
   /// PointerUnion and allow construction in Optional.
   const clang::FileEntryRef::MapEntry &getMapEntry() const { return *ME; }
+
+  /// Retrieve the base MapEntry after redirects.
+  const MapEntry &getBaseMapEntry() const {
+    const MapEntry *ME = this->ME;
+    while (const void *Next = ME->second->V.dyn_cast<const void *>())
+      ME = static_cast<const MapEntry *>(Next);
+    return *ME;
+  }
 
 private:
   friend class FileMgr::MapEntryOptionalStorage<FileEntryRef>;
@@ -205,8 +224,8 @@ public:
   OptionalStorage() = default;
 
   template <class... ArgTypes>
-  explicit OptionalStorage(in_place_t, ArgTypes &&...Args)
-      : StorageImpl(in_place_t{}, std::forward<ArgTypes>(Args)...) {}
+  explicit OptionalStorage(std::in_place_t, ArgTypes &&...Args)
+      : StorageImpl(std::in_place_t{}, std::forward<ArgTypes>(Args)...) {}
 
   OptionalStorage &operator=(clang::FileEntryRef Ref) {
     StorageImpl::operator=(Ref);
@@ -321,6 +340,23 @@ static_assert(
     std::is_trivially_copyable<
         OptionalFileEntryRefDegradesToFileEntryPtr>::value,
     "OptionalFileEntryRefDegradesToFileEntryPtr should be trivially copyable");
+
+inline bool operator==(const FileEntry *LHS,
+                       const Optional<FileEntryRef> &RHS) {
+  return LHS == (RHS ? &RHS->getFileEntry() : nullptr);
+}
+inline bool operator==(const Optional<FileEntryRef> &LHS,
+                       const FileEntry *RHS) {
+  return (LHS ? &LHS->getFileEntry() : nullptr) == RHS;
+}
+inline bool operator!=(const FileEntry *LHS,
+                       const Optional<FileEntryRef> &RHS) {
+  return !(LHS == RHS);
+}
+inline bool operator!=(const Optional<FileEntryRef> &LHS,
+                       const FileEntry *RHS) {
+  return !(LHS == RHS);
+}
 
 /// Cached information about one file (either on disk
 /// or in the virtual file system).

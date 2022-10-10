@@ -128,19 +128,21 @@ static uint32_t getEFlags(InputFile *f) {
 uint32_t RISCV::calcEFlags() const {
   // If there are only binary input files (from -b binary), use a
   // value of 0 for the ELF header flags.
-  if (ctx->objectFiles.empty())
+  if (ctx.objectFiles.empty())
     return 0;
 
-  uint32_t target = getEFlags(ctx->objectFiles.front());
+  uint32_t target = getEFlags(ctx.objectFiles.front());
 
-  for (InputFile *f : ctx->objectFiles) {
+  for (InputFile *f : ctx.objectFiles) {
     uint32_t eflags = getEFlags(f);
     if (eflags & EF_RISCV_RVC)
       target |= EF_RISCV_RVC;
 
     if ((eflags & EF_RISCV_FLOAT_ABI) != (target & EF_RISCV_FLOAT_ABI))
-      error(toString(f) +
-            ": cannot link object files with different floating-point ABI");
+      error(
+          toString(f) +
+          ": cannot link object files with different floating-point ABI from " +
+          toString(ctx.objectFiles[0]));
 
     if ((eflags & EF_RISCV_RVE) != (target & EF_RISCV_RVE))
       error(toString(f) +
@@ -159,8 +161,12 @@ int64_t RISCV::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_RISCV_32:
   case R_RISCV_TLS_DTPMOD32:
   case R_RISCV_TLS_DTPREL32:
+  case R_RISCV_TLS_TPREL32:
     return SignExtend64<32>(read32le(buf));
   case R_RISCV_64:
+  case R_RISCV_TLS_DTPMOD64:
+  case R_RISCV_TLS_DTPREL64:
+  case R_RISCV_TLS_TPREL64:
     return read64le(buf);
   case R_RISCV_RELATIVE:
   case R_RISCV_IRELATIVE:
@@ -518,7 +524,7 @@ static void initSymbolAnchors() {
   }
   // Store anchors (st_value and st_value+st_size) for symbols relative to text
   // sections.
-  for (InputFile *file : ctx->objectFiles)
+  for (InputFile *file : ctx.objectFiles)
     for (Symbol *sym : file->getSymbols()) {
       auto *d = dyn_cast<Defined>(sym);
       if (!d || d->file != file)
@@ -612,11 +618,11 @@ static bool relax(InputSection &sec) {
   DenseMap<const Defined *, uint64_t> valueDelta;
   ArrayRef<SymbolAnchor> sa = makeArrayRef(aux.anchors);
   uint32_t delta = 0;
-  for (auto it : llvm::enumerate(sec.relocations)) {
-    for (; sa.size() && sa[0].offset <= it.value().offset; sa = sa.slice(1))
+  for (auto [i, r] : llvm::enumerate(sec.relocations)) {
+    for (; sa.size() && sa[0].offset <= r.offset; sa = sa.slice(1))
       if (!sa[0].end)
         valueDelta[sa[0].d] = delta;
-    delta = aux.relocDeltas[it.index()];
+    delta = aux.relocDeltas[i];
   }
   for (const SymbolAnchor &sa : sa)
     if (!sa.end)
@@ -626,9 +632,7 @@ static bool relax(InputSection &sec) {
 
   std::fill_n(aux.relocTypes.get(), sec.relocations.size(), R_RISCV_NONE);
   aux.writes.clear();
-  for (auto it : llvm::enumerate(sec.relocations)) {
-    Relocation &r = it.value();
-    const size_t i = it.index();
+  for (auto [i, r] : llvm::enumerate(sec.relocations)) {
     const uint64_t loc = secAddr + r.offset - delta;
     uint32_t &cur = aux.relocDeltas[i], remove = 0;
     switch (r.type) {
@@ -750,12 +754,13 @@ void elf::riscvFinalizeRelax(int passes) {
         p += size;
 
         // For R_RISCV_ALIGN, we will place `offset` in a location (among NOPs)
-        // to satisfy the alignment requirement. If `remove` is a multiple of 4,
-        // it is as if we have skipped some NOPs. Otherwise we are in the middle
-        // of a 4-byte NOP, and we need to rewrite the NOP sequence.
+        // to satisfy the alignment requirement. If both `remove` and r.addend
+        // are multiples of 4, it is as if we have skipped some NOPs. Otherwise
+        // we are in the middle of a 4-byte NOP, and we need to rewrite the NOP
+        // sequence.
         int64_t skip = 0;
         if (r.type == R_RISCV_ALIGN) {
-          if (remove % 4 != 0) {
+          if (remove % 4 || r.addend % 4) {
             skip = r.addend - remove;
             int64_t j = 0;
             for (; j + 4 <= skip; j += 4)

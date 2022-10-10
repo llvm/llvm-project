@@ -22,94 +22,96 @@
 namespace mlir {
 namespace presburger {
 
-/// This class represents a multi-affine function whose domain is given by an
-/// IntegerPolyhedron. This can be thought of as an IntegerPolyhedron with a
-/// tuple of integer values attached to every point in the polyhedron, with the
-/// value of each element of the tuple given by an affine expression in the vars
-/// of the polyhedron. For example we could have the domain
-///
-/// (x, y) : (x >= 5, y >= x)
-///
-/// and a tuple of three integers defined at every point in the polyhedron:
+/// This class represents a multi-affine function with the domain as Z^d, where
+/// `d` is the number of domain variables of the function. For example:
 ///
 /// (x, y) -> (x + 2, 2*x - 3y + 5, 2*x + y).
 ///
-/// In this way every point in the polyhedron has a tuple of integers associated
-/// with it. If the integer polyhedron has local vars, then the output
-/// expressions can use them as well. The output expressions are represented as
-/// a matrix with one row for every element in the output vector one column for
-/// each var, and an extra column at the end for the constant term.
+/// The output expressions are represented as a matrix with one row for every
+/// output, one column for each var including division variables, and an extra
+/// column at the end for the constant term.
 ///
 /// Checking equality of two such functions is supported, as well as finding the
 /// value of the function at a specified point.
 class MultiAffineFunction {
 public:
-  MultiAffineFunction(const IntegerPolyhedron &domain, const Matrix &output)
-      : domainSet(domain), output(output) {}
-  MultiAffineFunction(const Matrix &output, const PresburgerSpace &space)
-      : domainSet(space), output(output) {}
-
-  unsigned getNumInputs() const { return domainSet.getNumDimAndSymbolVars(); }
-  unsigned getNumOutputs() const { return output.getNumRows(); }
-  bool isConsistent() const {
-    return output.getNumColumns() == domainSet.getNumVars() + 1;
+  MultiAffineFunction(const PresburgerSpace &space, const Matrix &output)
+      : space(space), output(output),
+        divs(space.getNumVars() - space.getNumRangeVars()) {
+    assertIsConsistent();
   }
 
-  /// Get the space of the input domain of this function.
-  const PresburgerSpace &getDomainSpace() const { return domainSet.getSpace(); }
-  /// Get the input domain of this function.
-  const IntegerPolyhedron &getDomain() const { return domainSet; }
+  MultiAffineFunction(const PresburgerSpace &space, const Matrix &output,
+                      const DivisionRepr &divs)
+      : space(space), output(output), divs(divs) {
+    assertIsConsistent();
+  }
+
+  unsigned getNumDomainVars() const { return space.getNumDomainVars(); }
+  unsigned getNumSymbolVars() const { return space.getNumSymbolVars(); }
+  unsigned getNumOutputs() const { return space.getNumRangeVars(); }
+  unsigned getNumDivs() const { return space.getNumLocalVars(); }
+
+  /// Get the space of this function.
+  const PresburgerSpace &getSpace() const { return space; }
+  /// Get the domain/output space of the function. The returned space is a set
+  /// space.
+  PresburgerSpace getDomainSpace() const { return space.getDomainSpace(); }
+  PresburgerSpace getOutputSpace() const { return space.getRangeSpace(); }
+
   /// Get a matrix with each row representing row^th output expression.
   const Matrix &getOutputMatrix() const { return output; }
   /// Get the `i^th` output expression.
-  ArrayRef<int64_t> getOutputExpr(unsigned i) const { return output.getRow(i); }
+  ArrayRef<MPInt> getOutputExpr(unsigned i) const { return output.getRow(i); }
 
-  /// Insert `num` variables of the specified kind at position `pos`.
-  /// Positions are relative to the kind of variable. The coefficient columns
-  /// corresponding to the added variables are initialized to zero. Return the
-  /// absolute column position (i.e., not relative to the kind of variable)
-  /// of the first added variable.
-  unsigned insertVar(VarKind kind, unsigned pos, unsigned num = 1);
+  // Remove the specified range of outputs.
+  void removeOutputs(unsigned start, unsigned end);
 
-  /// Remove the specified range of vars.
-  void removeVarRange(VarKind kind, unsigned varStart, unsigned varLimit);
+  /// Given a MAF `other`, merges division variables such that both functions
+  /// have the union of the division vars that exist in the functions.
+  void mergeDivs(MultiAffineFunction &other);
 
-  /// Given a MAF `other`, merges local variables such that both funcitons
-  /// have union of local vars, without changing the set of points in domain or
-  /// the output.
-  void mergeLocalVars(MultiAffineFunction &other);
+  //// Return the output of the function at the given point.
+  SmallVector<MPInt, 8> valueAt(ArrayRef<MPInt> point) const;
+  SmallVector<MPInt, 8> valueAt(ArrayRef<int64_t> point) const {
+    return valueAt(getMPIntVec(point));
+  }
 
-  /// Return whether the outputs of `this` and `other` agree wherever both
-  /// functions are defined, i.e., the outputs should be equal for all points in
-  /// the intersection of the domains.
-  bool isEqualWhereDomainsOverlap(MultiAffineFunction other) const;
-
-  /// Return whether the `this` and `other` are equal. This is the case if
-  /// they lie in the same space, i.e. have the same dimensions, and their
-  /// domains are identical and their outputs are equal on their domain.
+  /// Return whether the `this` and `other` are equal when the domain is
+  /// restricted to `domain`. This is the case if they lie in the same space,
+  /// and their outputs are equal for every point in `domain`.
   bool isEqual(const MultiAffineFunction &other) const;
+  bool isEqual(const MultiAffineFunction &other,
+               const IntegerPolyhedron &domain) const;
+  bool isEqual(const MultiAffineFunction &other,
+               const PresburgerSet &domain) const;
 
-  /// Get the value of the function at the specified point. If the point lies
-  /// outside the domain, an empty optional is returned.
-  Optional<SmallVector<int64_t, 8>> valueAt(ArrayRef<int64_t> point) const;
+  void subtract(const MultiAffineFunction &other);
 
-  /// Truncate the output dimensions to the first `count` dimensions.
-  ///
-  /// TODO: refactor so that this can be accomplished through removeVarRange.
-  void truncateOutput(unsigned count);
+  /// Get this function as a relation.
+  IntegerRelation getAsRelation() const;
 
   void print(raw_ostream &os) const;
   void dump() const;
 
 private:
-  /// The IntegerPolyhedron representing the domain over which the function is
-  /// defined.
-  IntegerPolyhedron domainSet;
+  /// Assert that the MAF is consistent.
+  void assertIsConsistent() const;
+
+  /// The space of this function. The domain variables are considered as the
+  /// input variables of the function. The range variables are considered as
+  /// the outputs. The symbols parametrize the function and locals are used to
+  /// represent divisions. Each local variable has a corressponding division
+  /// representation stored in `divs`.
+  PresburgerSpace space;
 
   /// The function's output is a tuple of integers, with the ith element of the
   /// tuple defined by the affine expression given by the ith row of this output
   /// matrix.
   Matrix output;
+
+  /// Storage for division representation for each local variable in space.
+  DivisionRepr divs;
 };
 
 /// This class represents a piece-wise MultiAffineFunction. This can be thought
@@ -132,44 +134,56 @@ private:
 /// finding the value of the function at a point.
 class PWMAFunction {
 public:
-  PWMAFunction(const PresburgerSpace &space, unsigned numOutputs)
-      : space(space), numOutputs(numOutputs) {
-    assert(space.getNumDomainVars() == 0 &&
-           "Set type space should have zero domain vars.");
+  struct Piece {
+    PresburgerSet domain;
+    MultiAffineFunction output;
+
+    bool isConsistent() const {
+      return domain.getSpace().isCompatible(output.getDomainSpace());
+    }
+  };
+
+  PWMAFunction(const PresburgerSpace &space) : space(space) {
     assert(space.getNumLocalVars() == 0 &&
            "PWMAFunction cannot have local vars.");
-    assert(numOutputs >= 1 && "The function must output something!");
   }
 
+  // Get the space of this function.
   const PresburgerSpace &getSpace() const { return space; }
 
-  void addPiece(const MultiAffineFunction &piece);
-  void addPiece(const IntegerPolyhedron &domain, const Matrix &output);
-  void addPiece(const PresburgerSet &domain, const Matrix &output);
+  // Add a piece ([domain, output] pair) to this function.
+  void addPiece(const Piece &piece);
 
-  const MultiAffineFunction &getPiece(unsigned i) const { return pieces[i]; }
   unsigned getNumPieces() const { return pieces.size(); }
-  unsigned getNumOutputs() const { return numOutputs; }
-  unsigned getNumInputs() const { return space.getNumVars(); }
-  MultiAffineFunction &getPiece(unsigned i) { return pieces[i]; }
+  unsigned getNumVarKind(VarKind kind) const {
+    return space.getNumVarKind(kind);
+  }
+  unsigned getNumDomainVars() const { return space.getNumDomainVars(); }
+  unsigned getNumOutputs() const { return space.getNumRangeVars(); }
+  unsigned getNumSymbolVars() const { return space.getNumSymbolVars(); }
+
+  /// Remove the specified range of outputs.
+  void removeOutputs(unsigned start, unsigned end);
+
+  /// Get the domain/output space of the function. The returned space is a set
+  /// space.
+  PresburgerSpace getDomainSpace() const { return space.getDomainSpace(); }
+  PresburgerSpace getOutputSpace() const { return space.getDomainSpace(); }
 
   /// Return the domain of this piece-wise MultiAffineFunction. This is the
   /// union of the domains of all the pieces.
   PresburgerSet getDomain() const;
 
-  /// Return the value at the specified point and an empty optional if the
-  /// point does not lie in the domain.
-  Optional<SmallVector<int64_t, 8>> valueAt(ArrayRef<int64_t> point) const;
+  /// Return the output of the function at the given point.
+  Optional<SmallVector<MPInt, 8>> valueAt(ArrayRef<MPInt> point) const;
+  Optional<SmallVector<MPInt, 8>> valueAt(ArrayRef<int64_t> point) const {
+    return valueAt(getMPIntVec(point));
+  }
 
   /// Return whether `this` and `other` are equal as PWMAFunctions, i.e. whether
   /// they have the same dimensions, the same domain and they take the same
   /// value at every point in the domain.
   bool isEqual(const PWMAFunction &other) const;
-
-  /// Truncate the output dimensions to the first `count` dimensions.
-  ///
-  /// TODO: refactor so that this can be accomplished through removeVarRange.
-  void truncateOutput(unsigned count);
 
   /// Return a function defined on the union of the domains of this and func,
   /// such that when only one of the functions is defined, it outputs the same
@@ -178,8 +192,8 @@ public:
   /// function is not defined either.
   ///
   /// Currently this does not support PWMAFunctions which have pieces containing
-  /// local variables.
-  /// TODO: Support local variables in peices.
+  /// divisions.
+  /// TODO: Support division in pieces.
   PWMAFunction unionLexMin(const PWMAFunction &func);
   PWMAFunction unionLexMax(const PWMAFunction &func);
 
@@ -200,19 +214,17 @@ private:
   ///
   /// The PresburgerSet returned by `tiebreak` should be disjoint.
   /// TODO: Remove this constraint of returning disjoint set.
-  PWMAFunction
-  unionFunction(const PWMAFunction &func,
-                llvm::function_ref<PresburgerSet(MultiAffineFunction mafA,
-                                                 MultiAffineFunction mafB)>
-                    tiebreak) const;
+  PWMAFunction unionFunction(
+      const PWMAFunction &func,
+      llvm::function_ref<PresburgerSet(Piece mafA, Piece mafB)> tiebreak) const;
 
+  /// The space of this function. The domain variables are considered as the
+  /// input variables of the function. The range variables are considered as
+  /// the outputs. The symbols paramterize the function.
   PresburgerSpace space;
 
-  /// The list of pieces in this piece-wise MultiAffineFunction.
-  SmallVector<MultiAffineFunction, 4> pieces;
-
-  /// The number of output vars.
-  unsigned numOutputs;
+  // The pieces of the PWMAFunction.
+  SmallVector<Piece, 4> pieces;
 };
 
 } // namespace presburger

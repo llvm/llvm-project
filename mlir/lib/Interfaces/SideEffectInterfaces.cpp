@@ -128,6 +128,26 @@ template bool mlir::hasSingleEffect<MemoryEffects::Free>(Operation *, Value);
 template bool mlir::hasSingleEffect<MemoryEffects::Read>(Operation *, Value);
 template bool mlir::hasSingleEffect<MemoryEffects::Write>(Operation *, Value);
 
+template <typename... EffectTys>
+bool mlir::hasEffect(Operation *op, Value value) {
+  auto memOp = dyn_cast<MemoryEffectOpInterface>(op);
+  if (!memOp)
+    return false;
+  SmallVector<SideEffects::EffectInstance<MemoryEffects::Effect>, 4> effects;
+  memOp.getEffects(effects);
+  return llvm::any_of(effects, [&](MemoryEffects::EffectInstance &effect) {
+    if (value && effect.getValue() != value)
+      return false;
+    return isa<EffectTys...>(effect.getEffect());
+  });
+}
+template bool mlir::hasEffect<MemoryEffects::Allocate>(Operation *, Value);
+template bool mlir::hasEffect<MemoryEffects::Free>(Operation *, Value);
+template bool mlir::hasEffect<MemoryEffects::Read>(Operation *, Value);
+template bool mlir::hasEffect<MemoryEffects::Write>(Operation *, Value);
+template bool
+mlir::hasEffect<MemoryEffects::Write, MemoryEffects::Free>(Operation *, Value);
+
 bool mlir::wouldOpBeTriviallyDead(Operation *op) {
   if (op->mightHaveTrait<OpTrait::IsTerminator>())
     return false;

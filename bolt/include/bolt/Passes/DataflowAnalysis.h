@@ -439,13 +439,18 @@ public:
 /// Define an iterator for navigating the expressions calculated by a
 /// dataflow analysis at each program point, when they are backed by a
 /// BitVector.
-class ExprIterator
-    : public std::iterator<std::forward_iterator_tag, const MCInst *> {
+class ExprIterator {
   const BitVector *BV;
   const std::vector<MCInst *> &Expressions;
   int Idx;
 
 public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = const MCInst *;
+  using difference_type = std::ptrdiff_t;
+  using pointer = value_type *;
+  using reference = value_type &;
+
   ExprIterator &operator++() {
     assert(Idx != -1 && "Iterator already at the end");
     Idx = BV->find_next(Idx);

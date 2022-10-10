@@ -16,13 +16,13 @@ def ExpandOps : Pass<"memref-expand"> {
   let constructor = "mlir::memref::createExpandOpsPass()";
 }
 
-def FoldSubViewOps : Pass<"fold-memref-subview-ops"> {
-  let summary = "Fold memref.subview ops into consumer load/store ops";
+def FoldMemRefAliasOps : Pass<"fold-memref-alias-ops"> {
+  let summary = "Fold memref alias ops into consumer load/store ops";
   let description = [{
-    The pass folds loading/storing from/to subview ops to loading/storing
+    The pass folds loading/storing from/to memref aliasing ops to loading/storing
     from/to the original memref.
   }];
-  let constructor = "mlir::memref::createFoldSubViewOpsPass()";
+  let constructor = "mlir::memref::createFoldMemRefAliasOpsPass()";
   let dependentDialects = [
       "AffineDialect", "memref::MemRefDialect", "vector::VectorDialect"
   ];
@@ -173,5 +173,18 @@ def ResolveShapedTypeResultDims : Pass<"resolve-shaped-type-result-dims"> {
   ];
 }
 
+def SimplifyExtractStridedMetadata : Pass<"simplify-extract-strided-metadata"> {
+  let summary = "Simplify extract_strided_metadata ops";
+  let description = [{
+    The pass simplifies extract_strided_metadata(other_op(memref)) to
+    extract_strided_metadata(memref) when it is possible to model the effect
+    of other_op directly with affine maps applied to the result of
+    extract_strided_metadata.
+  }];
+  let constructor = "mlir::memref::createSimplifyExtractStridedMetadataPass()";
+  let dependentDialects = [
+      "AffineDialect", "memref::MemRefDialect"
+  ];
+}
 #endif // MLIR_DIALECT_MEMREF_TRANSFORMS_PASSES
 

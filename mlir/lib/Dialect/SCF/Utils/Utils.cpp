@@ -12,7 +12,7 @@
 
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Analysis/SliceAnalysis.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/BlockAndValueMapping.h"
@@ -40,7 +40,8 @@ struct LoopParams {
 scf::ForOp
 mlir::replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
                                ValueRange newIterOperands,
-                               const NewYieldValueFn &newYieldValuesFn) {
+                               const NewYieldValueFn &newYieldValuesFn,
+                               bool replaceIterOperandsUsesInLoop) {
   // Create a new loop before the existing one, with the extra operands.
   OpBuilder::InsertionGuard g(builder);
   builder.setInsertionPoint(loop);
@@ -79,13 +80,15 @@ mlir::replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
        llvm::zip(bbArgs, newLoopBody->getArguments().take_front(bbArgs.size())))
     std::get<0>(it).replaceAllUsesWith(std::get<1>(it));
 
-  // Replace all uses of `newIterOperands` with the corresponding basic block
-  // arguments.
-  for (auto it : llvm::zip(newIterOperands, newBBArgs)) {
-    std::get<0>(it).replaceUsesWithIf(std::get<1>(it), [&](OpOperand &use) {
-      Operation *user = use.getOwner();
-      return newLoop->isProperAncestor(user);
-    });
+  if (replaceIterOperandsUsesInLoop) {
+    // Replace all uses of `newIterOperands` with the corresponding basic block
+    // arguments.
+    for (auto it : llvm::zip(newIterOperands, newBBArgs)) {
+      std::get<0>(it).replaceUsesWithIf(std::get<1>(it), [&](OpOperand &use) {
+        Operation *user = use.getOwner();
+        return newLoop->isProperAncestor(user);
+      });
+    }
   }
 
   // Replace all uses of the original loop with corresponding values from the
@@ -104,26 +107,70 @@ mlir::replaceLoopWithNewYields(OpBuilder &builder, scf::ForOp loop,
 
 SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
     OpBuilder &builder, ArrayRef<scf::ForOp> loopNest,
-    ValueRange newIterOperands, NewYieldValueFn newYieldValueFn) {
+    ValueRange newIterOperands, const NewYieldValueFn &newYieldValueFn,
+    bool replaceIterOperandsUsesInLoop) {
   if (loopNest.empty())
     return {};
-  SmallVector<scf::ForOp> newLoopNest(loopNest.size());
+  // This method is recursive (to make it more readable). Adding an
+  // assertion here to limit the recursion. (See
+  // https://discourse.llvm.org/t/rfc-update-to-mlir-developer-policy-on-recursion/62235)
+  assert(loopNest.size() <= 6 &&
+         "exceeded recursion limit when yielding value from loop nest");
 
-  newLoopNest.back() = replaceLoopWithNewYields(
-      builder, loopNest.back(), newIterOperands, newYieldValueFn);
-
-  for (unsigned loopDepth :
-       llvm::reverse(llvm::seq<unsigned>(0, loopNest.size() - 1))) {
-    NewYieldValueFn fn = [&](OpBuilder &innerBuilder, Location loc,
-                             ArrayRef<BlockArgument> innerNewBBArgs) {
-      SmallVector<Value> newYields(
-          newLoopNest[loopDepth + 1]->getResults().take_back(
-              newIterOperands.size()));
-      return newYields;
-    };
-    newLoopNest[loopDepth] = replaceLoopWithNewYields(
-        builder, loopNest[loopDepth], newIterOperands, fn);
+  // To yield a value from a perfectly nested loop nest, the following
+  // pattern needs to be created, i.e. starting with
+  //
+  // ```mlir
+  //  scf.for .. {
+  //    scf.for .. {
+  //      scf.for .. {
+  //        %value = ...
+  //      }
+  //    }
+  //  }
+  // ```
+  //
+  // needs to be modified to
+  //
+  // ```mlir
+  // %0 = scf.for .. iter_args(%arg0 = %init) {
+  //   %1 = scf.for .. iter_args(%arg1 = %arg0) {
+  //     %2 = scf.for .. iter_args(%arg2 = %arg1) {
+  //       %value = ...
+  //       scf.yield %value
+  //     }
+  //     scf.yield %2
+  //   }
+  //   scf.yield %1
+  // }
+  // ```
+  //
+  // The inner most loop is handled using the `replaceLoopWithNewYields`
+  // that works on a single loop.
+  if (loopNest.size() == 1) {
+    auto innerMostLoop = replaceLoopWithNewYields(
+        builder, loopNest.back(), newIterOperands, newYieldValueFn,
+        replaceIterOperandsUsesInLoop);
+    return {innerMostLoop};
   }
+  // The outer loops are modified by calling this method recursively
+  // - The return value of the inner loop is the value yielded by this loop.
+  // - The region iter args of this loop are the init_args for the inner loop.
+  SmallVector<scf::ForOp> newLoopNest;
+  NewYieldValueFn fn =
+      [&](OpBuilder &innerBuilder, Location loc,
+          ArrayRef<BlockArgument> innerNewBBArgs) -> SmallVector<Value> {
+    newLoopNest = replaceLoopNestWithNewYields(builder, loopNest.drop_front(),
+                                               innerNewBBArgs, newYieldValueFn,
+                                               replaceIterOperandsUsesInLoop);
+    return llvm::to_vector(llvm::map_range(
+        newLoopNest.front().getResults().take_back(innerNewBBArgs.size()),
+        [](OpResult r) -> Value { return r; }));
+  };
+  scf::ForOp outerMostLoop =
+      replaceLoopWithNewYields(builder, loopNest.front(), newIterOperands, fn,
+                               replaceIterOperandsUsesInLoop);
+  newLoopNest.insert(newLoopNest.begin(), outerMostLoop);
   return newLoopNest;
 }
 
@@ -297,7 +344,7 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
       builder.create<arith::ConstantIndexOp>(loc, divisor - 1);
   Value divisorCst = builder.create<arith::ConstantIndexOp>(loc, divisor);
   Value sum = builder.create<arith::AddIOp>(loc, dividend, divisorMinusOneCst);
-  return builder.create<arith::DivSIOp>(loc, sum, divisorCst);
+  return builder.create<arith::DivUIOp>(loc, sum, divisorCst);
 }
 
 // Build the IR that performs ceil division of a positive value by another
@@ -311,7 +358,7 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
   Value cstOne = builder.create<arith::ConstantIndexOp>(loc, 1);
   Value divisorMinusOne = builder.create<arith::SubIOp>(loc, divisor, cstOne);
   Value sum = builder.create<arith::AddIOp>(loc, dividend, divisorMinusOne);
-  return builder.create<arith::DivSIOp>(loc, sum, divisor);
+  return builder.create<arith::DivUIOp>(loc, sum, divisor);
 }
 
 /// Helper to replace uses of loop carried values (iter_args) and loop
@@ -428,7 +475,7 @@ LogicalResult mlir::loopUnrollByFactor(
   // 'upperBoundUnrolled' and 'stepUnrolled' for static and dynamic cases.
   OpBuilder boundsBuilder(forOp);
   auto loc = forOp.getLoc();
-  auto step = forOp.getStep();
+  Value step = forOp.getStep();
   Value upperBoundUnrolled;
   Value stepUnrolled;
   bool generateEpilogueLoop = true;
@@ -555,14 +602,13 @@ static LoopParams normalizeLoop(OpBuilder &boundsBuilder,
   // Compute the number of iterations the loop executes: ceildiv(ub - lb, step)
   // assuming the step is strictly positive.  Update the bounds and the step
   // of the loop to go from 0 to the number of iterations, if necessary.
-  // TODO: introduce support for negative steps or emit dynamic asserts
-  // on step positivity, whatever gets implemented first.
   if (isZeroBased && isStepOne)
     return {/*lowerBound=*/lowerBound, /*upperBound=*/upperBound,
             /*step=*/step};
 
   Value diff = boundsBuilder.create<arith::SubIOp>(loc, upperBound, lowerBound);
-  Value newUpperBound = ceilDivPositive(boundsBuilder, loc, diff, step);
+  Value newUpperBound =
+      boundsBuilder.create<arith::CeilDivSIOp>(loc, diff, step);
 
   Value newLowerBound =
       isZeroBased ? lowerBound

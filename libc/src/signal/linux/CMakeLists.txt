@@ -1,12 +1,34 @@
+add_header_library(
+  signal_utils
+  HDRS
+    signal_utils.h
+  DEPENDS
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  kill
+  SRCS
+    kill.cpp
+  HDRS
+    ../kill.h
+  DEPENDS
+    libc.include.signal
+    libc.include.errno
+    libc.src.errno.errno
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+)
 
 add_entrypoint_object(
   raise
   SRCS
     raise.cpp
   HDRS
-    signal.h
     ../raise.h
   DEPENDS
+    .signal_utils
     libc.include.signal
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -34,7 +56,6 @@ add_entrypoint_object(
   SRCS
     sigaction.cpp
   HDRS
-    signal.h
     ../sigaction.h
   DEPENDS
     .__restore
@@ -49,9 +70,9 @@ add_entrypoint_object(
   SRCS
     sigprocmask.cpp
   HDRS
-    signal.h
     ../sigprocmask.h
   DEPENDS
+    .signal_utils
     libc.include.signal
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
@@ -63,9 +84,9 @@ add_entrypoint_object(
   SRCS
     sigemptyset.cpp
   HDRS
-    signal.h
     ../sigemptyset.h
   DEPENDS
+    .signal_utils
     libc.include.errno
     libc.include.signal
     libc.src.errno.errno
@@ -76,9 +97,9 @@ add_entrypoint_object(
   SRCS
     sigaddset.cpp
   HDRS
-    signal.h
     ../sigaddset.h
   DEPENDS
+    .signal_utils
     libc.include.errno
     libc.include.signal
     libc.src.errno.errno
@@ -89,7 +110,6 @@ add_entrypoint_object(
   SRCS
     signal.cpp
   HDRS
-    signal.h
     ../signal.h
   DEPENDS
     .sigaction
@@ -101,9 +121,9 @@ add_entrypoint_object(
   SRCS
     sigfillset.cpp
   HDRS
-    signal.h
     ../sigfillset.h
   DEPENDS
+    .signal_utils
     libc.include.errno
     libc.include.signal
     libc.src.errno.errno
@@ -114,9 +134,9 @@ add_entrypoint_object(
   SRCS
     sigdelset.cpp
   HDRS
-    signal.h
     ../sigdelset.h
   DEPENDS
+    .signal_utils
     libc.include.errno
     libc.include.signal
     libc.src.errno.errno

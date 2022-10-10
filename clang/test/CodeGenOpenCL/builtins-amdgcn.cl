@@ -409,6 +409,32 @@ void test_sched_barrier()
   __builtin_amdgcn_sched_barrier(15);
 }
 
+// CHECK-LABEL: @test_sched_group_barrier
+// CHECK: call void @llvm.amdgcn.sched.group.barrier(i32 0, i32 1, i32 2)
+// CHECK: call void @llvm.amdgcn.sched.group.barrier(i32 1, i32 2, i32 4)
+// CHECK: call void @llvm.amdgcn.sched.group.barrier(i32 4, i32 8, i32 16)
+// CHECK: call void @llvm.amdgcn.sched.group.barrier(i32 15, i32 10000, i32 -1)
+void test_sched_group_barrier()
+{
+  __builtin_amdgcn_sched_group_barrier(0, 1, 2);
+  __builtin_amdgcn_sched_group_barrier(1, 2, 4);
+  __builtin_amdgcn_sched_group_barrier(4, 8, 16);
+  __builtin_amdgcn_sched_group_barrier(15, 10000, -1);
+}
+
+// CHECK-LABEL: @test_iglp_opt
+// CHECK: call void @llvm.amdgcn.iglp.opt(i32 0)
+// CHECK: call void @llvm.amdgcn.iglp.opt(i32 1)
+// CHECK: call void @llvm.amdgcn.iglp.opt(i32 4)
+// CHECK: call void @llvm.amdgcn.iglp.opt(i32 15)
+void test_iglp_opt()
+{
+  __builtin_amdgcn_iglp_opt(0);
+  __builtin_amdgcn_iglp_opt(1);
+  __builtin_amdgcn_iglp_opt(4);
+  __builtin_amdgcn_iglp_opt(15);
+}
+
 // CHECK-LABEL: @test_s_sleep
 // CHECK: call void @llvm.amdgcn.s.sleep(i32 1)
 // CHECK: call void @llvm.amdgcn.s.sleep(i32 15)

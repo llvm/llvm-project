@@ -4,7 +4,7 @@
 ; HELP_TEST: 	  OVERVIEW: Resource Converter
 ; HELP_TEST-DAG:  USAGE: llvm-cvtres [options] file...
 ; HELP_TEST-DAG:  OPTIONS:
-; HELP_TEST-NEXT:   /DEFINE:symbol Not implemented
+; HELP_TEST-NEXT:   /{{DEFINE}}:symbol Not implemented
 ; HELP_TEST-NEXT:   /FOLDDUPS: Not implemented
 ; HELP_TEST-NEXT:   /HELP Display available options
 ; HELP_TEST-NEXT:   /MACHINE:{ARM|ARM64|EBC|IA64|X64|X86}

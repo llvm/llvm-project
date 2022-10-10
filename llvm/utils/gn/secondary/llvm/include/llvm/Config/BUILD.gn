@@ -2,6 +2,7 @@ import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/lib/Target/targets.gni")
 import("//llvm/lib/Target/targets_with_asm_parsers.gni")
 import("//llvm/lib/Target/targets_with_disassemblers.gni")
+import("//llvm/lib/Target/targets_with_exegesis.gni")
 import("//llvm/lib/Target/targets_with_mcas.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
@@ -95,7 +96,6 @@ write_cmake_config("config") {
     "HAVE_LIBPSAPI=",
     "HAVE_MALLCTL=",
     "HAVE_SIGNAL_H=1",
-    "HAVE_STD_IS_TRIVIALLY_COPYABLE=1",
     "HAVE_STRERROR=1",
     "HAVE_SYS_STAT_H=1",
     "HAVE_SYS_TYPES_H=1",
@@ -327,9 +327,9 @@ write_cmake_config("llvm-config") {
     "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
     "LLVM_HAVE_TF_API=",
+    "LLVM_HAVE_TFLITE=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_NATIVE_ARCH=$native_target",
-    "LLVM_UNREACHABLE_OPTIMIZE=1",
     "LLVM_USE_INTEL_JITEVENTS=",
     "LLVM_USE_OPROFILE=",
     "LLVM_USE_PERF=",
@@ -339,6 +339,12 @@ write_cmake_config("llvm-config") {
     "LLVM_WITH_Z3=",
     "PACKAGE_VERSION=${llvm_version}git",
   ]
+
+  if (llvm_enable_assertions) {
+    values += [ "LLVM_UNREACHABLE_OPTIMIZE=" ]
+  } else {
+    values += [ "LLVM_UNREACHABLE_OPTIMIZE=1" ]
+  }
 
   if (llvm_build_native) {
     values += [
@@ -466,6 +472,12 @@ write_target_def_file("TargetMCAs.def") {
   all_targets = targets_with_mcas
 }
 
+write_target_def_file("TargetExegesis.def") {
+  key = "LLVM_ENUM_EXEGESIS"
+  value = "LLVM_EXEGESIS"
+  all_targets = targets_with_exegesis
+}
+
 group("write_target_def_files") {
   visibility = [
     "//llvm/lib/Support",
@@ -475,6 +487,7 @@ group("write_target_def_files") {
     ":AsmParsers.def",
     ":AsmPrinters.def",
     ":Disassemblers.def",
+    ":TargetExegesis.def",
     ":TargetMCAs.def",
     ":Targets.def",
   ]

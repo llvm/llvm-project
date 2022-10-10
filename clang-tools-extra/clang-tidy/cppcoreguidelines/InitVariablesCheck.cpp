@@ -79,7 +79,7 @@ void InitVariablesCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   QualType TypePtr = MatchedDecl->getType();
-  llvm::Optional<const char *> InitializationString = llvm::None;
+  llvm::Optional<const char *> InitializationString;
   bool AddMathInclude = false;
 
   if (TypePtr->isEnumeralType())

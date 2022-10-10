@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
@@ -106,9 +107,9 @@ class IRPromoter {
   SetVector<Value *> &Sources;
   SetVector<Instruction *> &Sinks;
   SmallPtrSetImpl<Instruction *> &SafeWrap;
+  SmallPtrSetImpl<Instruction *> &InstsToRemove;
   IntegerType *ExtTy = nullptr;
   SmallPtrSet<Value *, 8> NewInsts;
-  SmallPtrSet<Instruction *, 4> InstsToRemove;
   DenseMap<Value *, SmallVector<Type *, 4>> TruncTysMap;
   SmallPtrSet<Value *, 8> Promoted;
 
@@ -120,12 +121,12 @@ class IRPromoter {
   void Cleanup();
 
 public:
-  IRPromoter(LLVMContext &C, unsigned Width,
-             SetVector<Value *> &visited, SetVector<Value *> &sources,
-             SetVector<Instruction *> &sinks,
-             SmallPtrSetImpl<Instruction *> &wrap)
-      : Ctx(C), PromotedWidth(Width), Visited(visited),
-        Sources(sources), Sinks(sinks), SafeWrap(wrap) {
+  IRPromoter(LLVMContext &C, unsigned Width, SetVector<Value *> &visited,
+             SetVector<Value *> &sources, SetVector<Instruction *> &sinks,
+             SmallPtrSetImpl<Instruction *> &wrap,
+             SmallPtrSetImpl<Instruction *> &instsToRemove)
+      : Ctx(C), PromotedWidth(Width), Visited(visited), Sources(sources),
+        Sinks(sinks), SafeWrap(wrap), InstsToRemove(instsToRemove) {
     ExtTy = IntegerType::get(Ctx, PromotedWidth);
   }
 
@@ -139,6 +140,7 @@ class TypePromotion : public FunctionPass {
   SmallPtrSet<Value *, 16> AllVisited;
   SmallPtrSet<Instruction *, 8> SafeToPromote;
   SmallPtrSet<Instruction *, 4> SafeWrap;
+  SmallPtrSet<Instruction *, 4> InstsToRemove;
 
   // Does V have the same size result type as TypeSize.
   bool EqualTypeSize(Value *V);
@@ -166,7 +168,7 @@ class TypePromotion : public FunctionPass {
   // Is V an instruction thats result can trivially promoted, or has safe
   // wrapping.
   bool isLegalToPromote(Value *V);
-  bool TryToPromote(Value *V, unsigned PromotedWidth);
+  bool TryToPromote(Value *V, unsigned PromotedWidth, const LoopInfo &LI);
 
 public:
   static char ID;
@@ -174,9 +176,11 @@ public:
   TypePromotion() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
     AU.setPreservesCFG();
+    AU.addPreserved<LoopInfoWrapperPass>();
   }
 
   StringRef getPassName() const override { return PASS_NAME; }
@@ -551,8 +555,13 @@ void IRPromoter::TruncateSinks() {
     }
 
     // Don't insert a trunc for a zext which can still legally promote.
+    // Nor insert a trunc when the input value to that trunc has the same width
+    // as the zext we are inserting it for.  When this happens the input operand
+    // for the zext will be promoted to the same width as the zext's return type
+    // rendering that zext unnecessary.  This zext gets removed before the end
+    // of the pass.
     if (auto ZExt = dyn_cast<ZExtInst>(I))
-      if (ZExt->getType()->getScalarSizeInBits() > PromotedWidth)
+      if (ZExt->getType()->getScalarSizeInBits() >= PromotedWidth)
         continue;
 
     // Now handle the others.
@@ -599,7 +608,6 @@ void IRPromoter::Cleanup() {
   for (auto *I : InstsToRemove) {
     LLVM_DEBUG(dbgs() << "IR Promotion: Removing " << *I << "\n");
     I->dropAllReferences();
-    I->eraseFromParent();
   }
 }
 
@@ -754,7 +762,8 @@ bool TypePromotion::isLegalToPromote(Value *V) {
   return false;
 }
 
-bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
+bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth,
+                                 const LoopInfo &LI) {
   Type *OrigTy = V->getType();
   TypeSize = OrigTy->getPrimitiveSizeInBits().getFixedSize();
   SafeToPromote.clear();
@@ -848,30 +857,39 @@ bool TypePromotion::TryToPromote(Value *V, unsigned PromotedWidth) {
 
   unsigned ToPromote = 0;
   unsigned NonFreeArgs = 0;
+  unsigned NonLoopSources = 0, LoopSinks = 0;
   SmallPtrSet<BasicBlock *, 4> Blocks;
-  for (auto *V : CurrentVisited) {
-    if (auto *I = dyn_cast<Instruction>(V))
+  for (auto *CV : CurrentVisited) {
+    if (auto *I = dyn_cast<Instruction>(CV))
       Blocks.insert(I->getParent());
 
-    if (Sources.count(V)) {
-      if (auto *Arg = dyn_cast<Argument>(V))
+    if (Sources.count(CV)) {
+      if (auto *Arg = dyn_cast<Argument>(CV))
         if (!Arg->hasZExtAttr() && !Arg->hasSExtAttr())
           ++NonFreeArgs;
+      if (!isa<Instruction>(CV) ||
+          !LI.getLoopFor(cast<Instruction>(CV)->getParent()))
+        ++NonLoopSources;
       continue;
     }
 
-    if (Sinks.count(cast<Instruction>(V)))
+    if (isa<PHINode>(CV))
+      continue;
+    if (LI.getLoopFor(cast<Instruction>(CV)->getParent()))
+      ++LoopSinks;
+    if (Sinks.count(cast<Instruction>(CV)))
       continue;
     ++ToPromote;
   }
 
   // DAG optimizations should be able to handle these cases better, especially
   // for function arguments.
-  if (ToPromote < 2 || (Blocks.size() == 1 && (NonFreeArgs > SafeWrap.size())))
+  if (!isa<PHINode>(V) && !(LoopSinks && NonLoopSources) &&
+      (ToPromote < 2 || (Blocks.size() == 1 && NonFreeArgs > SafeWrap.size())))
     return false;
 
   IRPromoter Promoter(*Ctx, PromotedWidth, CurrentVisited, Sources, Sinks,
-                      SafeWrap);
+                      SafeWrap, InstsToRemove);
   Promoter.Mutate();
   return true;
 }
@@ -896,46 +914,82 @@ bool TypePromotion::runOnFunction(Function &F) {
   const TargetLowering *TLI = SubtargetInfo->getTargetLowering();
   const TargetTransformInfo &TII =
       getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  const LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   RegisterBitWidth =
       TII.getRegisterBitWidth(TargetTransformInfo::RGK_Scalar).getFixedSize();
   Ctx = &F.getParent()->getContext();
 
-  // Search up from icmps to try to promote their operands.
+  // Return the preferred integer width of the instruction, or zero if we
+  // shouldn't try.
+  auto GetPromoteWidth = [&](Instruction *I) -> uint32_t {
+    if (!isa<IntegerType>(I->getType()))
+      return 0;
+
+    EVT SrcVT = TLI->getValueType(DL, I->getType());
+    if (SrcVT.isSimple() && TLI->isTypeLegal(SrcVT.getSimpleVT()))
+      return 0;
+
+    if (TLI->getTypeAction(*Ctx, SrcVT) != TargetLowering::TypePromoteInteger)
+      return 0;
+
+    EVT PromotedVT = TLI->getTypeToTransformTo(*Ctx, SrcVT);
+    if (RegisterBitWidth < PromotedVT.getFixedSizeInBits()) {
+      LLVM_DEBUG(dbgs() << "IR Promotion: Couldn't find target register "
+                        << "for promoted type\n");
+      return 0;
+    }
+
+    // TODO: Should we prefer to use RegisterBitWidth instead?
+    return PromotedVT.getFixedSizeInBits();
+  };
+
+  auto BBIsInLoop = [&](BasicBlock *BB) -> bool {
+    for (auto *L : LI)
+      if (L->contains(BB))
+        return true;
+    return false;
+  };
+
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       if (AllVisited.count(&I))
         continue;
 
-      if (!isa<ICmpInst>(&I))
-        continue;
+      if (isa<ZExtInst>(&I) && isa<PHINode>(I.getOperand(0)) &&
+          isa<IntegerType>(I.getType()) && BBIsInLoop(&BB)) {
+        LLVM_DEBUG(dbgs() << "IR Promotion: Searching from: " << I.getOperand(0)
+                          << "\n");
+        EVT ZExtVT = TLI->getValueType(DL, I.getType());
+        Instruction *Phi = static_cast<Instruction *>(I.getOperand(0));
+        auto PromoteWidth = ZExtVT.getFixedSizeInBits();
+        if (RegisterBitWidth < PromoteWidth) {
+          LLVM_DEBUG(dbgs() << "IR Promotion: Couldn't find target "
+                            << "register for ZExt type\n");
+          continue;
+        }
+        MadeChange |= TryToPromote(Phi, PromoteWidth, LI);
+      } else if (auto *ICmp = dyn_cast<ICmpInst>(&I)) {
+        // Search up from icmps to try to promote their operands.
+        // Skip signed or pointer compares
+        if (ICmp->isSigned())
+          continue;
 
-      auto *ICmp = cast<ICmpInst>(&I);
-      // Skip signed or pointer compares
-      if (ICmp->isSigned() || !isa<IntegerType>(ICmp->getOperand(0)->getType()))
-        continue;
+        LLVM_DEBUG(dbgs() << "IR Promotion: Searching from: " << *ICmp << "\n");
 
-      LLVM_DEBUG(dbgs() << "IR Promotion: Searching from: " << *ICmp << "\n");
-
-      for (auto &Op : ICmp->operands()) {
-        if (auto *I = dyn_cast<Instruction>(Op)) {
-          EVT SrcVT = TLI->getValueType(DL, I->getType());
-          if (SrcVT.isSimple() && TLI->isTypeLegal(SrcVT.getSimpleVT()))
-            break;
-
-          if (TLI->getTypeAction(*Ctx, SrcVT) !=
-              TargetLowering::TypePromoteInteger)
-            break;
-          EVT PromotedVT = TLI->getTypeToTransformTo(*Ctx, SrcVT);
-          if (RegisterBitWidth < PromotedVT.getFixedSizeInBits()) {
-            LLVM_DEBUG(dbgs() << "IR Promotion: Couldn't find target register "
-                              << "for promoted type\n");
-            break;
+        for (auto &Op : ICmp->operands()) {
+          if (auto *OpI = dyn_cast<Instruction>(Op)) {
+            if (auto PromotedWidth = GetPromoteWidth(OpI)) {
+              MadeChange |= TryToPromote(OpI, PromotedWidth, LI);
+              break;
+            }
           }
-
-          MadeChange |= TryToPromote(I, PromotedVT.getFixedSizeInBits());
-          break;
         }
       }
+    }
+    if (!InstsToRemove.empty()) {
+      for (auto *I : InstsToRemove)
+        I->eraseFromParent();
+      InstsToRemove.clear();
     }
   }
 

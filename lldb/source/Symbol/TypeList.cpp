@@ -92,9 +92,9 @@ void TypeList::ForEach(
 }
 
 void TypeList::Dump(Stream *s, bool show_context) {
-  for (iterator pos = m_types.begin(), end = m_types.end(); pos != end; ++pos) {
-    pos->get()->Dump(s, show_context);
-  }
+  for (iterator pos = m_types.begin(), end = m_types.end(); pos != end; ++pos)
+    if (Type *t = pos->get())
+      t->Dump(s, show_context);
 }
 
 void TypeList::RemoveMismatchedTypes(llvm::StringRef qualified_typename,

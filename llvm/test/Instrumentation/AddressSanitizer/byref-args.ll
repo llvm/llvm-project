@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='asan-pipeline' -S | FileCheck %s
+; RUN: opt < %s -passes=asan -S | FileCheck %s
 
 ; Test that for call instructions, the byref arguments are not
 ; instrumented, as no copy is implied.

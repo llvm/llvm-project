@@ -2,6 +2,7 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-full unroll-full-threshold=2" | FileCheck %s --check-prefix SHORT
 // RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-factor=4" | FileCheck %s --check-prefix UNROLL-BY-4
 // RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-factor=1" | FileCheck %s --check-prefix UNROLL-BY-1
+// RUN: mlir-opt -allow-unregistered-dialect %s -affine-loop-unroll="unroll-factor=5 cleanup-unroll=true" | FileCheck %s --check-prefix UNROLL-CLEANUP-LOOP
 
 // UNROLL-FULL-DAG: [[$MAP0:#map[0-9]+]] = affine_map<(d0) -> (d0 + 1)>
 // UNROLL-FULL-DAG: [[$MAP1:#map[0-9]+]] = affine_map<(d0) -> (d0 + 2)>
@@ -688,4 +689,61 @@ func.func @unroll_zero_trip_count_case() {
   affine.for %i = 0 to 0 {
   }
   return
+}
+
+// UNROLL-CLEANUP-LOOP-LABEL: func @unroll_cleanup_loop_with_larger_unroll_factor()
+func.func @unroll_cleanup_loop_with_larger_unroll_factor() {
+  affine.for %i = 0 to 3 {
+    %x = "foo"(%i) : (index) -> i32
+  }
+  return
+// UNROLL-CLEANUP-LOOP-NEXT: %[[C0:.*]] = arith.constant 0 : index
+// UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[C0]]) : (index) -> i32
+// UNROLL-CLEANUP-LOOP-NEXT: %[[V1:.*]] = affine.apply {{.*}}
+// UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[V1]]) : (index) -> i32
+// UNROLL-CLEANUP-LOOP-NEXT: %[[V2:.*]] = affine.apply {{.*}}
+// UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[V2]]) : (index) -> i32
+// UNROLL-CLEANUP-LOOP-NEXT: return
+}
+
+// UNROLL-CLEANUP-LOOP-LABEL: func @unroll_cleanup_loop_with_smaller_unroll_factor()
+func.func @unroll_cleanup_loop_with_smaller_unroll_factor() {
+  affine.for %i = 0 to 7 {
+    %x = "foo"(%i) : (index) -> i32
+  }
+  return
+// UNROLL-CLEANUP-LOOP-NEXT: %[[C0:.*]] = arith.constant 0 : index
+// UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[C0]]) : (index) -> i32
+// UNROLL-CLEANUP-LOOP-NEXT: %[[V1:.*]] = affine.apply {{.*}}
+// UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[V1]]) : (index) -> i32
+// UNROLL-CLEANUP-LOOP-NEXT: %[[V2:.*]] = affine.apply {{.*}}
+// UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[V2]]) : (index) -> i32
+// UNROLL-CLEANUP-LOOP-NEXT: %[[V3:.*]] = affine.apply {{.*}}
+// UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[V3]]) : (index) -> i32
+// UNROLL-CLEANUP-LOOP-NEXT: %[[V4:.*]] = affine.apply {{.*}}
+// UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[V4]]) : (index) -> i32
+// UNROLL-CLEANUP-LOOP-NEXT: %[[V5:.*]] = affine.apply {{.*}}
+// UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[V5]]) : (index) -> i32
+// UNROLL-CLEANUP-LOOP-NEXT: %[[V6:.*]] = affine.apply {{.*}}
+// UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[V6]]) : (index) -> i32
+// UNROLL-CLEANUP-LOOP-NEXT: return
+}
+
+// UNROLL-CLEANUP-LOOP-LABEL: func @unroll_cleanup_loop_with_identical_unroll_factor()
+func.func @unroll_cleanup_loop_with_identical_unroll_factor() {
+  affine.for %i = 0 to 5 {
+    %x = "foo"(%i) : (index) -> i32
+  }
+  return
+// UNROLL-CLEANUP-LOOP-NEXT: %[[C0:.*]] = arith.constant 0 : index
+// UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[C0]]) : (index) -> i32
+// UNROLL-CLEANUP-LOOP-NEXT: %[[V1:.*]] = affine.apply {{.*}}
+// UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[V1]]) : (index) -> i32
+// UNROLL-CLEANUP-LOOP-NEXT: %[[V2:.*]] = affine.apply {{.*}}
+// UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[V2]]) : (index) -> i32
+// UNROLL-CLEANUP-LOOP-NEXT: %[[V3:.*]] = affine.apply {{.*}}
+// UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[V3]]) : (index) -> i32
+// UNROLL-CLEANUP-LOOP-NEXT: %[[V4:.*]] = affine.apply {{.*}}
+// UNROLL-CLEANUP-LOOP-NEXT: {{.*}} = "foo"(%[[V4]]) : (index) -> i32
+// UNROLL-CLEANUP-LOOP-NEXT: return
 }

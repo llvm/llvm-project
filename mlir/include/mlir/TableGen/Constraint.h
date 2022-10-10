@@ -71,6 +71,9 @@ public:
 
   Kind getKind() const { return kind; }
 
+  /// Return the underlying def.
+  const llvm::Record &getDef() const { return *def; }
+
 protected:
   // The TableGen definition of this constraint.
   const llvm::Record *def;

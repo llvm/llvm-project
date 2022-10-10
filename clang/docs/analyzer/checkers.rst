@@ -245,6 +245,22 @@ Check for uninitialized values being returned to the caller.
    return x; // warn
  }
 
+.. _core-uninitialized-NewArraySize:
+
+core.uninitialized.NewArraySize (C++)
+"""""""""""""""""""""""""""""""""""""
+
+Check if the element count in new[] is garbage or undefined.
+
+.. code-block:: cpp
+
+  void test() {
+    int n;
+    int *arr = new int[n]; // warn: Element count in new[] is a garbage value
+    delete[] arr;
+  }
+
+
 .. _cplusplus-checkers:
 
 
@@ -2699,7 +2715,7 @@ Check stream handling functions: ``fopen, tmpfile, fclose, fread, fwrite, fseek,
 
 alpha.unix.cstring.BufferOverlap (C)
 """"""""""""""""""""""""""""""""""""
-Checks for overlap in two buffer arguments. Applies to:  ``memcpy, mempcpy, wmemcpy``.
+Checks for overlap in two buffer arguments. Applies to:  ``memcpy, mempcpy, wmemcpy, wmempcpy``.
 
 .. code-block:: c
 

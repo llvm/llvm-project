@@ -5,6 +5,31 @@
 // RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=59" -split-input-file -o /dev/null
 // RUN: mlir-opt %s -one-shot-bufferize="test-analysis-only analysis-fuzzer-seed=91" -split-input-file -o /dev/null
 
+// Test without analysis: Insert a copy on every buffer write.
+// RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="allow-unknown-ops copy-before-write" -split-input-file | FileCheck %s --check-prefix=CHECK-COPY-BEFORE-WRITE
+
+// CHECK-LABEL: func @no_conflict
+//       CHECK:   memref.alloc
+//       CHECK:   memref.store
+//  CHECK-NEXT:   memref.store
+//  CHECK-NEXT:   memref.store
+//  CHECK-NEXT:   memref.store
+// CHECK-COPY-BEFORE-WRITE-LABEL: func @no_conflict
+//       CHECK-COPY-BEFORE-WRITE:   memref.alloc
+//       CHECK-COPY-BEFORE-WRITE:   memref.store
+//       CHECK-COPY-BEFORE-WRITE:   memref.store
+//       CHECK-COPY-BEFORE-WRITE:   memref.store
+//       CHECK-COPY-BEFORE-WRITE:   memref.alloc
+//       CHECK-COPY-BEFORE-WRITE:   memref.copy
+//       CHECK-COPY-BEFORE-WRITE:   memref.store
+func.func @no_conflict(%fill: f32, %f: f32, %idx: index) -> tensor<3xf32> {
+  %t = tensor.from_elements %fill, %fill, %fill : tensor<3xf32>
+  %i = tensor.insert %f into %t[%idx] : tensor<3xf32>
+  return %i : tensor<3xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @use_tensor_func_arg(
 //  CHECK-SAME:     %[[A:.*]]: tensor<?xf32>
 func.func @use_tensor_func_arg(%A : tensor<?xf32>) -> (vector<4xf32>) {
@@ -109,12 +134,12 @@ func.func @copy_deallocated() -> tensor<10xf32> {
 // CHECK-LABEL: func @select_different_tensors(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?xf32>
 func.func @select_different_tensors(%t: tensor<?xf32>, %sz: index, %c: i1) -> tensor<?xf32> {
-  // CHECK-DAG: %[[m:.*]] = bufferization.to_memref %[[t]] : memref<?xf32, #{{.*}}>
+  // CHECK-DAG: %[[m:.*]] = bufferization.to_memref %[[t]] : memref<?xf32, strided{{.*}}>
   // CHECK-DAG: %[[alloc:.*]] = memref.alloc(%{{.*}}) {{.*}} : memref<?xf32>
   %0 = bufferization.alloc_tensor(%sz) : tensor<?xf32>
 
   // A cast must be inserted because %t and %0 have different memref types.
-  // CHECK: %[[casted:.*]] = memref.cast %[[alloc]] : memref<?xf32> to memref<?xf32, #{{.*}}>
+  // CHECK: %[[casted:.*]] = memref.cast %[[alloc]] : memref<?xf32> to memref<?xf32, strided{{.*}}>
   // CHECK: arith.select %{{.*}}, %[[casted]], %[[m]]
   %1 = arith.select %c, %0, %t : tensor<?xf32>
   return %1 : tensor<?xf32>

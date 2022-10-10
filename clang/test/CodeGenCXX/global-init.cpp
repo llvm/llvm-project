@@ -1,9 +1,10 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-apple-darwin10 -emit-llvm -fexceptions %s -o - |FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-apple-darwin10 -emit-llvm %s -o - |FileCheck -check-prefix CHECK-NOEXC %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-apple-darwin10 -emit-llvm -mframe-pointer=non-leaf %s -o - \
+// RUN: %clang_cc1 %std_cxx98-14 -no-opaque-pointers -triple=x86_64-apple-darwin10 -emit-llvm -fexceptions %s -o - |FileCheck %s --check-prefixes=CHECK,PRE17
+// RUN: %clang_cc1 %std_cxx98-14 -no-opaque-pointers -triple=x86_64-apple-darwin10 -emit-llvm %s -o - |FileCheck %s --check-prefixes=CHECK-NOEXC,PRE17
+// RUN: %clang_cc1 %std_cxx98-14 -no-opaque-pointers -triple=x86_64-apple-darwin10 -emit-llvm -mframe-pointer=non-leaf %s -o - \
 // RUN:   | FileCheck -check-prefix CHECK-FP %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-apple-darwin10 -emit-llvm %s -o - -fno-builtin \
+// RUN: %clang_cc1 %std_cxx98-14 -no-opaque-pointers -triple=x86_64-apple-darwin10 -emit-llvm %s -o - -fno-builtin \
 // RUN:   | FileCheck -check-prefix CHECK-NOBUILTIN %s
+// RUN: %clang_cc1 %std_cxx17- -no-opaque-pointers -triple=x86_64-apple-darwin10 -emit-llvm -fexceptions %s -o - | FileCheck %s
 
 struct A {
   A();
@@ -169,11 +170,11 @@ namespace test7 {
   const int b3 = B().n;
 
   // CHECK-NOT: @_ZN5test7L2c1E
-  // CHECK: call void @llvm.memset{{.*}} @_ZN5test7L2c1E
+  // PRE17: call void @llvm.memset{{.*}} @_ZN5test7L2c1E
   // CHECK-NOT: @_ZN5test7L2c1E
   // CHECK: @_ZN5test7L2c2E
   // CHECK-NOT: @_ZN5test7L2c3E
-  // CHECK: @_ZN5test7L2c4E
+  // PRE17: @_ZN5test7L2c4E
   const C c1 = C();
   const C c2 = static_cast<const C&>(C());
   const int c3 = C().n;

@@ -13,9 +13,7 @@ define i32 @c() {
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_ELSE:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    callbr void asm sideeffect "", "!i"()
-; CHECK-NEXT:    to label [[NORMAL:%.*]] [label %if.then2]
-; CHECK:       normal:
-; CHECK-NEXT:    br label [[IF_THEN2:%.*]]
+; CHECK-NEXT:    to label [[IF_THEN2:%.*]] [label %if.then2]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @b()
 ; CHECK-NEXT:    [[PHITMP:%.*]] = icmp ne i32 [[CALL]], 0

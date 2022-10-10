@@ -16,8 +16,7 @@
 
 #include "llvm/BinaryFormat/MachO.h"
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 struct ARM64Common : TargetInfo {
   template <class LP> ARM64Common(LP lp) : TargetInfo(lp) {}
@@ -76,18 +75,26 @@ inline void encodePage21(uint32_t *loc, SymbolDiagnostic d, uint32_t base,
                                             bitField(va, 14, 19, 5));
 }
 
+void reportUnalignedLdrStr(void *loc, const Reloc &, uint64_t va, int align);
+void reportUnalignedLdrStr(void *loc, SymbolDiagnostic, uint64_t va, int align);
+
 //                      21                   10
 // +-------------------+-----------------------+-------------------+
 // |                   |         imm12         |                   |
 // +-------------------+-----------------------+-------------------+
 
-inline void encodePageOff12(uint32_t *loc, uint32_t base, uint64_t va) {
+template <typename Target>
+inline void encodePageOff12(uint32_t *loc, Target t, uint32_t base,
+                            uint64_t va) {
   int scale = 0;
   if ((base & 0x3b00'0000) == 0x3900'0000) { // load/store
     scale = base >> 30;
     if (scale == 0 && (base & 0x0480'0000) == 0x0480'0000) // 128-bit variant
       scale = 4;
   }
+  const int size = 1 << scale;
+  if ((va & (size - 1)) != 0)
+    reportUnalignedLdrStr(loc, t, va, size);
 
   // TODO(gkm): extract embedded addend and warn if != 0
   // uint64_t addend = ((base & 0x003FFC00) >> 10);
@@ -100,18 +107,15 @@ inline uint64_t pageBits(uint64_t address) {
   return address & pageMask;
 }
 
-template <class LP>
 inline void writeStub(uint8_t *buf8, const uint32_t stubCode[3],
-                      const macho::Symbol &sym) {
+                      const macho::Symbol &sym, uint64_t pointerVA) {
   auto *buf32 = reinterpret_cast<uint32_t *>(buf8);
   constexpr size_t stubCodeSize = 3 * sizeof(uint32_t);
+  SymbolDiagnostic d = {&sym, "stub"};
   uint64_t pcPageBits =
       pageBits(in.stubs->addr + sym.stubsIndex * stubCodeSize);
-  uint64_t lazyPointerVA =
-      in.lazyPointers->addr + sym.stubsIndex * LP::wordSize;
-  encodePage21(&buf32[0], {&sym, "stub"}, stubCode[0],
-               pageBits(lazyPointerVA) - pcPageBits);
-  encodePageOff12(&buf32[1], stubCode[1], lazyPointerVA);
+  encodePage21(&buf32[0], d, stubCode[0], pageBits(pointerVA) - pcPageBits);
+  encodePageOff12(&buf32[1], d, stubCode[1], pointerVA);
   buf32[2] = stubCode[2];
 }
 
@@ -126,13 +130,13 @@ inline void writeStubHelperHeader(uint8_t *buf8,
   SymbolDiagnostic d = {nullptr, "stub header helper"};
   encodePage21(&buf32[0], d, stubHelperHeaderCode[0],
                pageBits(loaderVA) - pcPageBits(0));
-  encodePageOff12(&buf32[1], stubHelperHeaderCode[1], loaderVA);
+  encodePageOff12(&buf32[1], d, stubHelperHeaderCode[1], loaderVA);
   buf32[2] = stubHelperHeaderCode[2];
   uint64_t binderVA =
       in.got->addr + in.stubHelper->stubBinder->gotIndex * LP::wordSize;
   encodePage21(&buf32[3], d, stubHelperHeaderCode[3],
                pageBits(binderVA) - pcPageBits(3));
-  encodePageOff12(&buf32[4], stubHelperHeaderCode[4], binderVA);
+  encodePageOff12(&buf32[4], d, stubHelperHeaderCode[4], binderVA);
   buf32[5] = stubHelperHeaderCode[5];
 }
 
@@ -148,7 +152,33 @@ inline void writeStubHelperEntry(uint8_t *buf8,
   buf32[2] = sym.lazyBindOffset;
 }
 
-} // namespace macho
-} // namespace lld
+template <class LP>
+inline void
+writeObjCMsgSendStub(uint8_t *buf, const uint32_t objcStubsFastCode[8],
+                     Symbol *sym, uint64_t stubsAddr, uint64_t stubOffset,
+                     uint64_t selrefsVA, uint64_t selectorIndex,
+                     uint64_t gotAddr, uint64_t msgSendIndex) {
+  SymbolDiagnostic d = {sym, sym->getName()};
+  auto *buf32 = reinterpret_cast<uint32_t *>(buf);
+
+  auto pcPageBits = [stubsAddr, stubOffset](int i) {
+    return pageBits(stubsAddr + stubOffset + i * sizeof(uint32_t));
+  };
+
+  uint64_t selectorOffset = selectorIndex * LP::wordSize;
+  encodePage21(&buf32[0], d, objcStubsFastCode[0],
+               pageBits(selrefsVA + selectorOffset) - pcPageBits(0));
+  encodePageOff12(&buf32[1], d, objcStubsFastCode[1],
+                  selrefsVA + selectorOffset);
+  encodePage21(&buf32[2], d, objcStubsFastCode[2],
+               pageBits(gotAddr) - pcPageBits(2));
+  encodePage21(&buf32[3], d, objcStubsFastCode[3], msgSendIndex * LP::wordSize);
+  buf32[4] = objcStubsFastCode[4];
+  buf32[5] = objcStubsFastCode[5];
+  buf32[6] = objcStubsFastCode[6];
+  buf32[7] = objcStubsFastCode[7];
+}
+
+} // namespace lld::macho
 
 #endif

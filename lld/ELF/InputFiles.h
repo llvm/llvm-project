@@ -160,9 +160,10 @@ private:
 
 class ELFFileBase : public InputFile {
 public:
-  ELFFileBase(Kind k, MemoryBufferRef m);
+  ELFFileBase(Kind k, ELFKind ekind, MemoryBufferRef m);
   static bool classof(const InputFile *f) { return f->isElf(); }
 
+  void init();
   template <typename ELFT> llvm::object::ELFFile<ELFT> getObj() const {
     return check(llvm::object::ELFFile<ELFT>::create(mb.getBuffer()));
   }
@@ -196,7 +197,7 @@ public:
 
 protected:
   // Initializes this class's member variables.
-  template <typename ELFT> void init();
+  template <typename ELFT> void init(InputFile::Kind k);
 
   StringRef stringTable;
   const void *elfShdrs = nullptr;
@@ -221,7 +222,8 @@ public:
     return this->ELFFileBase::getObj<ELFT>();
   }
 
-  ObjFile(MemoryBufferRef m, StringRef archiveName) : ELFFileBase(ObjKind, m) {
+  ObjFile(ELFKind ekind, MemoryBufferRef m, StringRef archiveName)
+      : ELFFileBase(ObjKind, ekind, m) {
     this->archiveName = archiveName;
   }
 
@@ -274,7 +276,7 @@ public:
   // Get cached DWARF information.
   DWARFCache *getDwarf();
 
-  void initializeLocalSymbols();
+  void initSectionsAndLocalSyms(bool ignoreComdats);
   void postParse();
 
 private:
@@ -304,9 +306,6 @@ private:
   // If the section does not exist (which is common), the array is empty.
   ArrayRef<Elf_Word> shndxTable;
 
-  // Storage for local symbols.
-  std::unique_ptr<SymbolUnion[]> localSymStorage;
-
   // Debugging information to retrieve source file and line for error
   // reporting. Linker may find reasonable number of errors in a
   // single object file, so we cache debugging information in order to
@@ -320,7 +319,7 @@ public:
   BitcodeFile(MemoryBufferRef m, StringRef archiveName,
               uint64_t offsetInArchive, bool lazy);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
-  template <class ELFT> void parse();
+  void parse();
   void parseLazy();
   void postParse();
   std::unique_ptr<llvm::lto::InputFile> obj;
@@ -330,9 +329,7 @@ public:
 // .so file.
 class SharedFile : public ELFFileBase {
 public:
-  SharedFile(MemoryBufferRef m, StringRef defaultSoName)
-      : ELFFileBase(SharedKind, m), soName(defaultSoName),
-        isNeeded(!config->asNeeded) {}
+  SharedFile(MemoryBufferRef m, StringRef defaultSoName);
 
   // This is actually a vector of Elf_Verdef pointers.
   SmallVector<const void *, 0> verdefs;

@@ -69,7 +69,7 @@ BreakpointLocationList::FindByID(lldb::break_id_t break_id) const {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   collection::const_iterator end = m_locations.end();
   collection::const_iterator pos =
-      std::lower_bound(m_locations.begin(), end, break_id, Compare);
+      llvm::lower_bound(m_locations, break_id, Compare);
   if (pos != end && (*pos)->GetID() == break_id)
     return *(pos);
   else
@@ -174,6 +174,12 @@ uint32_t BreakpointLocationList::GetHitCount() const {
   for (pos = m_locations.begin(); pos != end; ++pos)
     hit_count += (*pos)->GetHitCount();
   return hit_count;
+}
+
+void BreakpointLocationList::ResetHitCount() {
+  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  for (auto &loc : m_locations)
+    loc->ResetHitCount();
 }
 
 size_t BreakpointLocationList::GetNumResolvedLocations() const {

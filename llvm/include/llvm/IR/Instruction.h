@@ -149,6 +149,13 @@ public:
   /// it takes constant time.
   bool comesBefore(const Instruction *Other) const;
 
+  /// Get the first insertion point at which the result of this instruction
+  /// is defined. This is *not* the directly following instruction in a number
+  /// of cases, e.g. phi nodes or terminators that return values. This function
+  /// may return null if the insertion after the definition is not possible,
+  /// e.g. due to a catchswitch terminator.
+  Instruction *getInsertionPointAfterDef();
+
   //===--------------------------------------------------------------------===//
   // Subclass classification.
   //===--------------------------------------------------------------------===//
@@ -334,11 +341,6 @@ public:
 
   /// Sets the AA metadata on this instruction from the AAMDNodes structure.
   void setAAMetadata(const AAMDNodes &N);
-
-  /// Retrieve the raw weight values of a conditional branch or select.
-  /// Returns true on success with profile weights filled in.
-  /// Returns false if no metadata or invalid metadata was found.
-  bool extractProfMetadata(uint64_t &TrueVal, uint64_t &FalseVal) const;
 
   /// Retrieve total raw weight values of a branch.
   /// Returns true on success with profile total weights filled in.

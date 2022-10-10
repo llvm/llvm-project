@@ -8,9 +8,7 @@
 # LLVM:      ProgramHeaders [
 # LLVM-NEXT: ]
 
-# GNU:       There are 0 program headers
-# GNU:       Program Headers:
-# GNU-NEXT:    Type Offset VirtAddr PhysAddr FileSiz MemSiz Flg Align
+# GNU: There are no program headers in this file.
 # GNU-EMPTY:
 # GNU-NEXT:  Section to Segment mapping:
 # GNU-NEXT:    Segment Sections...

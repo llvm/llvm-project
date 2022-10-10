@@ -31,7 +31,6 @@ Token::Index findRecoveryEndpoint(ExtensionID Strategy, Token::Index Begin,
                                   const TokenStream &Tokens,
                                   const Language &Lang) {
   assert(Strategy != 0);
-  assert(Begin > 0);
   if (auto S = Lang.RecoveryStrategies.lookup(Strategy))
     return S(Begin, Tokens);
   return Token::Invalid;
@@ -95,17 +94,19 @@ void glrRecover(llvm::ArrayRef<const GSS::Node *> OldHeads,
   auto WalkUp = [&](const GSS::Node *N, Token::Index NextTok, auto &WalkUp) {
     if (!Seen.insert(N).second)
       return;
-    for (auto Strategy : Lang.Table.getRecovery(N->State)) {
-      Options.push_back(PlaceholderRecovery{
-          NextTok,
-          Strategy.Result,
-          Strategy.Strategy,
-          N,
-          Path,
-      });
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Option: recover " << Lang.G.symbolName(Strategy.Result)
-                 << " at token " << NextTok << "\n");
+    if (!N->Recovered) { // Don't recover the same way twice!
+      for (auto Strategy : Lang.Table.getRecovery(N->State)) {
+        Options.push_back(PlaceholderRecovery{
+            NextTok,
+            Strategy.Result,
+            Strategy.Strategy,
+            N,
+            Path,
+        });
+        LLVM_DEBUG(llvm::dbgs()
+                   << "Option: recover " << Lang.G.symbolName(Strategy.Result)
+                   << " at token " << NextTok << "\n");
+      }
     }
     Path.push_back(N->Payload);
     for (const GSS::Node *Parent : N->parents())
@@ -180,6 +181,7 @@ void glrRecover(llvm::ArrayRef<const GSS::Node *> OldHeads,
   // There are various options, including simply breaking ties between options.
   // For now it's obscure enough to ignore.
   for (const PlaceholderRecovery *Option : BestOptions) {
+    Option->RecoveryNode->Recovered = true;
     const ForestNode &Placeholder =
         Params.Forest.createOpaque(Option->Symbol, RecoveryRange->Begin);
     LRTable::StateID OldState = Option->RecoveryNode->State;
@@ -403,6 +405,10 @@ public:
   GLRReduce(const ParseParams &Params, const Language &Lang)
       : Params(Params), Lang(Lang) {}
 
+  // Reduce Heads, resulting in new nodes that are appended to Heads.
+  // The "consumed" nodes are not removed!
+  // Only reduce rules compatible with the Lookahead are applied, though
+  // tokenSymbol(tok::unknown) will match any rule.
   void operator()(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead) {
     assert(isToken(Lookahead));
 
@@ -583,14 +589,17 @@ private:
     auto NextState = Lang.Table.getGoToState(Base->State, Rule.Target);
     assert(NextState.has_value() && "goto must succeed after reduce!");
     Heads->push_back(Params.GSStack.addNode(*NextState, Parsed, {Base}));
+    LLVM_DEBUG(llvm::dbgs()
+               << "  Reduce (trivial) " << Lang.G.dumpRule(*RID) << "\n"
+               << "    --> S" << Heads->back()->State << "\n");
     return true;
   }
 };
 
 } // namespace
 
-const ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
-                           const Language &Lang) {
+ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
+                     const Language &Lang) {
   GLRReduce Reduce(Params, Lang);
   assert(isNonterminal(StartSymbol) && "Start symbol must be a nonterminal");
   llvm::ArrayRef<ForestNode> Terminals = Params.Forest.createTerminals(Params.Code);
@@ -601,6 +610,10 @@ const ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
   std::vector<const GSS::Node *> Heads = {GSS.addNode(/*State=*/StartState,
                                                       /*ForestNode=*/nullptr,
                                                       {})};
+  // Invariant: Heads is partitioned by source: {shifted | reduced}.
+  // HeadsPartition is the index of the first head formed by reduction.
+  // We use this to discard and recreate the reduced heads during recovery.
+  unsigned HeadsPartition = Heads.size();
   std::vector<const GSS::Node *> NextHeads;
   auto MaybeGC = [&, Roots(std::vector<const GSS::Node *>{}), I(0u)]() mutable {
     assert(NextHeads.empty() && "Running GC at the wrong time!");
@@ -623,8 +636,17 @@ const ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
     // If we weren't able to consume the token, try to skip over some tokens
     // so we can keep parsing.
     if (NextHeads.empty()) {
-      // FIXME: Heads may not be fully reduced, because our reductions were
-      // constrained by lookahead (but lookahead is meaningless to recovery).
+      // The reduction in the previous round was constrained by lookahead.
+      // On valid code this only rejects dead ends, but on broken code we should
+      // consider all possibilities.
+      //
+      // We discard all heads formed by reduction, and recreate them without
+      // this constraint. This may duplicate some nodes, but it's rare.
+      LLVM_DEBUG(llvm::dbgs() << "Shift failed, will attempt recovery. "
+                                 "Re-reducing without lookahead.\n");
+      Heads.resize(HeadsPartition);
+      Reduce(Heads, /*allow all reductions*/ tokenSymbol(tok::unknown));
+
       glrRecover(Heads, I, Params, Lang, NextHeads);
       if (NextHeads.empty())
         // FIXME: Ensure the `_ := start-symbol` rules have a fallback
@@ -636,6 +658,7 @@ const ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
     // Form nonterminals containing the token we just consumed.
     SymbolID Lookahead =
         I == Terminals.size() ? tokenSymbol(tok::eof) : Terminals[I].symbol();
+    HeadsPartition = NextHeads.size();
     Reduce(NextHeads, Lookahead);
     // Prepare for the next token.
     std::swap(Heads, NextHeads);
@@ -644,34 +667,26 @@ const ForestNode &glrParse(const ParseParams &Params, SymbolID StartSymbol,
   }
   LLVM_DEBUG(llvm::dbgs() << llvm::formatv("Reached eof\n"));
 
-  // The parse was successful if we're in state `_ := start-symbol .`
-  auto AcceptState = Lang.Table.getGoToState(StartState, StartSymbol);
-  assert(AcceptState.has_value() && "goto must succeed after start symbol!");
+  // The parse was successful if in state `_ := start-symbol EOF .`
+  // The GSS parent has `_ := start-symbol . EOF`; its payload is the parse.
+  auto AfterStart = Lang.Table.getGoToState(StartState, StartSymbol);
+  assert(AfterStart.has_value() && "goto must succeed after start symbol!");
+  auto Accept = Lang.Table.getShiftState(*AfterStart, tokenSymbol(tok::eof));
+  assert(Accept.has_value() && "shift EOF must succeed!");
   auto SearchForAccept = [&](llvm::ArrayRef<const GSS::Node *> Heads) {
     const ForestNode *Result = nullptr;
     for (const auto *Head : Heads) {
-      if (Head->State == *AcceptState) {
-        assert(Head->Payload->symbol() == StartSymbol);
+      if (Head->State == *Accept) {
+        assert(Head->Payload->symbol() == tokenSymbol(tok::eof));
         assert(Result == nullptr && "multiple results!");
-        Result = Head->Payload;
+        Result = Head->parents().front()->Payload;
+        assert(Result->symbol() == StartSymbol);
       }
     }
     return Result;
   };
   if (auto *Result = SearchForAccept(Heads))
-    return *Result;
-  // Failed to parse the input, attempt to run recovery.
-  // FIXME: this awkwardly repeats the recovery in the loop, when shift fails.
-  // More elegant is to include EOF in the token stream, and make the
-  // augmented rule: `_ := translation-unit EOF`. In this way recovery at EOF
-  // would not be a special case: it show up as a failure to shift the EOF
-  // token.
-  unsigned I = Terminals.size();
-  glrRecover(Heads, I, Params, Lang, NextHeads);
-  Reduce(NextHeads, tokenSymbol(tok::eof));
-  if (auto *Result = SearchForAccept(NextHeads))
-    return *Result;
-
+    return *const_cast<ForestNode *>(Result); // Safe: we created all nodes.
   // We failed to parse the input, returning an opaque forest node for recovery.
   // FIXME: as above, we can add fallback error handling so this is impossible.
   return Params.Forest.createOpaque(StartSymbol, /*Token::Index=*/0);
@@ -684,10 +699,11 @@ void glrReduce(std::vector<const GSS::Node *> &Heads, SymbolID Lookahead,
 }
 
 const GSS::Node *GSS::addNode(LRTable::StateID State, const ForestNode *Symbol,
-
                               llvm::ArrayRef<const Node *> Parents) {
-  Node *Result = new (allocate(Parents.size()))
-      Node({State, GCParity, static_cast<uint16_t>(Parents.size())});
+  Node *Result = new (allocate(Parents.size())) Node();
+  Result->State = State;
+  Result->GCParity = GCParity;
+  Result->ParentCount = Parents.size();
   Alive.push_back(Result);
   ++NodesCreated;
   Result->Payload = Symbol;

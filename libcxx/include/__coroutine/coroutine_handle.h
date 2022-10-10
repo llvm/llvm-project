@@ -115,7 +115,7 @@ public:
 
     _LIBCPP_HIDE_FROM_ABI
     static coroutine_handle from_promise(_Promise& __promise) {
-        using _RawPromise = typename remove_cv<_Promise>::type;
+        using _RawPromise = __remove_cv_t<_Promise>;
         coroutine_handle __tmp;
         __tmp.__handle_ =
             __builtin_coro_promise(_VSTD::addressof(const_cast<_RawPromise&>(__promise)), alignof(_Promise), true);

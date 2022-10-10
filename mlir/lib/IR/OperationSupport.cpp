@@ -342,8 +342,7 @@ MutableArrayRef<OpOperand> detail::OperandStorage::resize(Operation *owner,
 
   // Move the current operands to the new storage.
   MutableArrayRef<OpOperand> newOperands(newOperandStorage, newSize);
-  std::uninitialized_copy(std::make_move_iterator(origOperands.begin()),
-                          std::make_move_iterator(origOperands.end()),
+  std::uninitialized_move(origOperands.begin(), origOperands.end(),
                           newOperands.begin());
 
   // Destroy the original operands.
@@ -377,7 +376,7 @@ unsigned OperandRange::getBeginOperandIndex() const {
   return base->getOperandNumber();
 }
 
-OperandRangeRange OperandRange::split(ElementsAttr segmentSizes) const {
+OperandRangeRange OperandRange::split(DenseI32ArrayAttr segmentSizes) const {
   return OperandRangeRange(*this, segmentSizes);
 }
 
@@ -387,18 +386,18 @@ OperandRangeRange OperandRange::split(ElementsAttr segmentSizes) const {
 OperandRangeRange::OperandRangeRange(OperandRange operands,
                                      Attribute operandSegments)
     : OperandRangeRange(OwnerT(operands.getBase(), operandSegments), 0,
-                        operandSegments.cast<DenseElementsAttr>().size()) {}
+                        operandSegments.cast<DenseI32ArrayAttr>().size()) {}
 
 OperandRange OperandRangeRange::join() const {
   const OwnerT &owner = getBase();
-  auto sizeData = owner.second.cast<DenseElementsAttr>().getValues<uint32_t>();
+  ArrayRef<int32_t> sizeData = owner.second.cast<DenseI32ArrayAttr>();
   return OperandRange(owner.first,
                       std::accumulate(sizeData.begin(), sizeData.end(), 0));
 }
 
 OperandRange OperandRangeRange::dereference(const OwnerT &object,
                                             ptrdiff_t index) {
-  auto sizeData = object.second.cast<DenseElementsAttr>().getValues<uint32_t>();
+  ArrayRef<int32_t> sizeData = object.second.cast<DenseI32ArrayAttr>();
   uint32_t startIndex =
       std::accumulate(sizeData.begin(), sizeData.begin() + index, 0);
   return OperandRange(object.first + startIndex, *(sizeData.begin() + index));
@@ -490,11 +489,11 @@ void MutableOperandRange::updateLength(unsigned newLength) {
 
   // Update any of the provided segment attributes.
   for (OperandSegment &segment : operandSegments) {
-    auto attr = segment.second.getValue().cast<DenseIntElementsAttr>();
-    SmallVector<int32_t, 8> segments(attr.getValues<int32_t>());
+    auto attr = segment.second.getValue().cast<DenseI32ArrayAttr>();
+    SmallVector<int32_t, 8> segments(attr.asArrayRef());
     segments[segment.first] += diff;
     segment.second.setValue(
-        DenseIntElementsAttr::get(attr.getType(), segments));
+        DenseI32ArrayAttr::get(attr.getContext(), segments));
     owner->setAttr(segment.second.getName(), segment.second.getValue());
   }
 }
@@ -506,21 +505,20 @@ MutableOperandRangeRange::MutableOperandRangeRange(
     const MutableOperandRange &operands, NamedAttribute operandSegmentAttr)
     : MutableOperandRangeRange(
           OwnerT(operands, operandSegmentAttr), 0,
-          operandSegmentAttr.getValue().cast<DenseElementsAttr>().size()) {}
+          operandSegmentAttr.getValue().cast<DenseI32ArrayAttr>().size()) {}
 
 MutableOperandRange MutableOperandRangeRange::join() const {
   return getBase().first;
 }
 
 MutableOperandRangeRange::operator OperandRangeRange() const {
-  return OperandRangeRange(
-      getBase().first, getBase().second.getValue().cast<DenseElementsAttr>());
+  return OperandRangeRange(getBase().first, getBase().second.getValue());
 }
 
 MutableOperandRange MutableOperandRangeRange::dereference(const OwnerT &object,
                                                           ptrdiff_t index) {
-  auto sizeData =
-      object.second.getValue().cast<DenseElementsAttr>().getValues<uint32_t>();
+  ArrayRef<int32_t> sizeData =
+      object.second.getValue().cast<DenseI32ArrayAttr>();
   uint32_t startIndex =
       std::accumulate(sizeData.begin(), sizeData.begin() + index, 0);
   return object.first.slice(

@@ -17,9 +17,9 @@ func.func @permute() {
 }
 // The old memref alloc should disappear.
 // CHECK-NOT:  memref<64x256xf32>
-// CHECK:      [[MEM:%[0-9]+]] = memref.alloc() : memref<256x64xf32>
-// CHECK-NEXT: affine.for %[[I:arg[0-9]+]] = 0 to 64 {
-// CHECK-NEXT:   affine.for %[[J:arg[0-9]+]] = 0 to 256 {
+// CHECK:      [[MEM:%[0-9a-zA-Z_]+]] = memref.alloc() : memref<256x64xf32>
+// CHECK-NEXT: affine.for %[[I:arg[0-9a-zA-Z_]+]] = 0 to 64 {
+// CHECK-NEXT:   affine.for %[[J:arg[0-9a-zA-Z_]+]] = 0 to 256 {
 // CHECK-NEXT:     affine.load [[MEM]][%[[J]], %[[I]]] : memref<256x64xf32>
 // CHECK-NEXT:     "prevent.dce"
 // CHECK-NEXT:   }
@@ -45,11 +45,11 @@ func.func @shift(%idx : index) {
 func.func @high_dim_permute() {
   // CHECK-NOT: memref<64x128x256xf32,
   %A = memref.alloc() : memref<64x128x256xf32, affine_map<(d0, d1, d2) -> (d2, d0, d1)>>
-  // CHECK: %[[I:arg[0-9]+]]
+  // CHECK: %[[I:arg[0-9a-zA-Z_]+]]
   affine.for %i = 0 to 64 {
-    // CHECK: %[[J:arg[0-9]+]]
+    // CHECK: %[[J:arg[0-9a-zA-Z_]+]]
     affine.for %j = 0 to 128 {
-      // CHECK: %[[K:arg[0-9]+]]
+      // CHECK: %[[K:arg[0-9a-zA-Z_]+]]
       affine.for %k = 0 to 256 {
         %1 = affine.load %A[%i, %j, %k] : memref<64x128x256xf32, affine_map<(d0, d1, d2) -> (d2, d0, d1)>>
         // CHECK: %{{.*}} = affine.load %{{.*}}[%[[K]], %[[I]], %[[J]]] : memref<256x64x128xf32>
@@ -132,7 +132,7 @@ func.func @semi_affine_layout_map(%s0: index, %s1: index) {
   %A = memref.alloc()[%s0, %s1] : memref<256x1024xf32, affine_map<(d0, d1)[s0, s1] -> (d0*s0 + d1*s1)>>
   affine.for %i = 0 to 256 {
     affine.for %j = 0 to 1024 {
-      // CHECK: memref<256x1024xf32, #map{{[0-9]+}}>
+      // CHECK: memref<256x1024xf32, #map{{[0-9a-zA-Z_]+}}>
       affine.load %A[%i, %j] : memref<256x1024xf32, affine_map<(d0, d1)[s0, s1] -> (d0*s0 + d1*s1)>>
     }
   }
@@ -152,7 +152,7 @@ func.func @alignment() {
 
 // Test case 1: Check normalization for multiple memrefs in a function argument list.
 // CHECK-LABEL: func @multiple_argument_type
-// CHECK-SAME:  (%[[A:arg[0-9]+]]: memref<4x4xf64>, %[[B:arg[0-9]+]]: f64, %[[C:arg[0-9]+]]: memref<2x4xf64>, %[[D:arg[0-9]+]]: memref<24xf64>) -> f64
+// CHECK-SAME:  (%[[A:arg[0-9a-zA-Z_]+]]: memref<4x4xf64>, %[[B:arg[0-9a-zA-Z_]+]]: f64, %[[C:arg[0-9a-zA-Z_]+]]: memref<2x4xf64>, %[[D:arg[0-9a-zA-Z_]+]]: memref<24xf64>) -> f64
 func.func @multiple_argument_type(%A: memref<16xf64, #tile>, %B: f64, %C: memref<8xf64, #tile>, %D: memref<24xf64>) -> f64 {
   %a = affine.load %A[0] : memref<16xf64, #tile>
   %p = arith.mulf %a, %a : f64
@@ -161,15 +161,15 @@ func.func @multiple_argument_type(%A: memref<16xf64, #tile>, %B: f64, %C: memref
   return %B : f64
 }
 
-// CHECK: %[[a:[0-9]+]] = affine.load %[[A]][0, 0] : memref<4x4xf64>
-// CHECK: %[[p:[0-9]+]] = arith.mulf %[[a]], %[[a]] : f64
+// CHECK: %[[a:[0-9a-zA-Z_]+]] = affine.load %[[A]][0, 0] : memref<4x4xf64>
+// CHECK: %[[p:[0-9a-zA-Z_]+]] = arith.mulf %[[a]], %[[a]] : f64
 // CHECK: affine.store %[[p]], %[[A]][2, 2] : memref<4x4xf64>
 // CHECK: call @single_argument_type(%[[C]]) : (memref<2x4xf64>) -> ()
 // CHECK: return %[[B]] : f64
 
 // Test case 2: Check normalization for single memref argument in a function.
 // CHECK-LABEL: func @single_argument_type
-// CHECK-SAME: (%[[C:arg[0-9]+]]: memref<2x4xf64>)
+// CHECK-SAME: (%[[C:arg[0-9a-zA-Z_]+]]: memref<2x4xf64>)
 func.func @single_argument_type(%C : memref<8xf64, #tile>) {
   %a = memref.alloc(): memref<8xf64, #tile>
   %b = memref.alloc(): memref<16xf64, #tile>
@@ -181,17 +181,17 @@ func.func @single_argument_type(%C : memref<8xf64, #tile>) {
   return
 }
 
-// CHECK: %[[a:[0-9]+]] = memref.alloc() : memref<2x4xf64>
-// CHECK: %[[b:[0-9]+]] = memref.alloc() : memref<4x4xf64>
+// CHECK: %[[a:[0-9a-zA-Z_]+]] = memref.alloc() : memref<2x4xf64>
+// CHECK: %[[b:[0-9a-zA-Z_]+]] = memref.alloc() : memref<4x4xf64>
 // CHECK: %cst = arith.constant 2.300000e+01 : f64
-// CHECK: %[[e:[0-9]+]] = memref.alloc() : memref<24xf64>
+// CHECK: %[[e:[0-9a-zA-Z_]+]] = memref.alloc() : memref<24xf64>
 // CHECK: call @single_argument_type(%[[a]]) : (memref<2x4xf64>) -> ()
 // CHECK: call @single_argument_type(%[[C]]) : (memref<2x4xf64>) -> ()
 // CHECK: call @multiple_argument_type(%[[b]], %cst, %[[a]], %[[e]]) : (memref<4x4xf64>, f64, memref<2x4xf64>, memref<24xf64>) -> f64
 
 // Test case 3: Check function returning any other type except memref.
 // CHECK-LABEL: func @non_memref_ret
-// CHECK-SAME: (%[[C:arg[0-9]+]]: memref<2x4xf64>) -> i1
+// CHECK-SAME: (%[[C:arg[0-9a-zA-Z_]+]]: memref<2x4xf64>) -> i1
 func.func @non_memref_ret(%A: memref<8xf64, #tile>) -> i1 {
   %d = arith.constant 1 : i1
   return %d : i1
@@ -201,7 +201,7 @@ func.func @non_memref_ret(%A: memref<8xf64, #tile>) -> i1 {
 
 // Test case 4: Check successful memref normalization in case of inter/intra-recursive calls.
 // CHECK-LABEL: func @ret_multiple_argument_type
-// CHECK-SAME: (%[[A:arg[0-9]+]]: memref<4x4xf64>, %[[B:arg[0-9]+]]: f64, %[[C:arg[0-9]+]]: memref<2x4xf64>) -> (memref<2x4xf64>, f64)
+// CHECK-SAME: (%[[A:arg[0-9a-zA-Z_]+]]: memref<4x4xf64>, %[[B:arg[0-9a-zA-Z_]+]]: f64, %[[C:arg[0-9a-zA-Z_]+]]: memref<2x4xf64>) -> (memref<2x4xf64>, f64)
 func.func @ret_multiple_argument_type(%A: memref<16xf64, #tile>, %B: f64, %C: memref<8xf64, #tile>) -> (memref<8xf64, #tile>, f64) {
   %a = affine.load %A[0] : memref<16xf64, #tile>
   %p = arith.mulf %a, %a : f64
@@ -214,18 +214,18 @@ func.func @ret_multiple_argument_type(%A: memref<16xf64, #tile>, %B: f64, %C: me
     return %C, %p: memref<8xf64, #tile>, f64
 }
 
-// CHECK:   %[[a:[0-9]+]] = affine.load %[[A]][0, 0] : memref<4x4xf64>
-// CHECK:   %[[p:[0-9]+]] = arith.mulf %[[a]], %[[a]] : f64
+// CHECK:   %[[a:[0-9a-zA-Z_]+]] = affine.load %[[A]][0, 0] : memref<4x4xf64>
+// CHECK:   %[[p:[0-9a-zA-Z_]+]] = arith.mulf %[[a]], %[[a]] : f64
 // CHECK:   %true = arith.constant true
 // CHECK:   cf.cond_br %true, ^bb1, ^bb2
 // CHECK: ^bb1:  // pred: ^bb0
-// CHECK:   %[[res:[0-9]+]]:2 = call @ret_single_argument_type(%[[C]]) : (memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
+// CHECK:   %[[res:[0-9a-zA-Z_]+]]:2 = call @ret_single_argument_type(%[[C]]) : (memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
 // CHECK:   return %[[res]]#1, %[[p]] : memref<2x4xf64>, f64
 // CHECK: ^bb2:  // pred: ^bb0
 // CHECK:   return %{{.*}}, %{{.*}} : memref<2x4xf64>, f64
 
 // CHECK-LABEL: func @ret_single_argument_type
-// CHECK-SAME: (%[[C:arg[0-9]+]]: memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
+// CHECK-SAME: (%[[C:arg[0-9a-zA-Z_]+]]: memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
 func.func @ret_single_argument_type(%C: memref<8xf64, #tile>) -> (memref<16xf64, #tile>, memref<8xf64, #tile>){
   %a = memref.alloc() : memref<8xf64, #tile>
   %b = memref.alloc() : memref<16xf64, #tile>
@@ -237,18 +237,18 @@ func.func @ret_single_argument_type(%C: memref<8xf64, #tile>) -> (memref<16xf64,
   return %b, %a: memref<16xf64, #tile>, memref<8xf64, #tile>
 }
 
-// CHECK: %[[a:[0-9]+]] = memref.alloc() : memref<2x4xf64>
-// CHECK: %[[b:[0-9]+]] = memref.alloc() : memref<4x4xf64>
+// CHECK: %[[a:[0-9a-zA-Z_]+]] = memref.alloc() : memref<2x4xf64>
+// CHECK: %[[b:[0-9a-zA-Z_]+]] = memref.alloc() : memref<4x4xf64>
 // CHECK: %cst = arith.constant 2.300000e+01 : f64
-// CHECK: %[[resA:[0-9]+]]:2 = call @ret_single_argument_type(%[[a]]) : (memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
-// CHECK: %[[resB:[0-9]+]]:2 = call @ret_single_argument_type(%[[C]]) : (memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
-// CHECK: %[[resC:[0-9]+]]:2 = call @ret_multiple_argument_type(%[[b]], %cst, %[[a]]) : (memref<4x4xf64>, f64, memref<2x4xf64>) -> (memref<2x4xf64>, f64)
-// CHECK: %[[resD:[0-9]+]]:2 = call @ret_single_argument_type(%[[resC]]#0) : (memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
+// CHECK: %[[resA:[0-9a-zA-Z_]+]]:2 = call @ret_single_argument_type(%[[a]]) : (memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
+// CHECK: %[[resB:[0-9a-zA-Z_]+]]:2 = call @ret_single_argument_type(%[[C]]) : (memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
+// CHECK: %[[resC:[0-9a-zA-Z_]+]]:2 = call @ret_multiple_argument_type(%[[b]], %cst, %[[a]]) : (memref<4x4xf64>, f64, memref<2x4xf64>) -> (memref<2x4xf64>, f64)
+// CHECK: %[[resD:[0-9a-zA-Z_]+]]:2 = call @ret_single_argument_type(%[[resC]]#0) : (memref<2x4xf64>) -> (memref<4x4xf64>, memref<2x4xf64>)
 // CHECK: return %{{.*}}, %{{.*}} : memref<4x4xf64>, memref<2x4xf64>
 
 // Test case set #5: To check normalization in a chain of interconnected functions.
 // CHECK-LABEL: func @func_A
-// CHECK-SAME: (%[[A:arg[0-9]+]]: memref<2x4xf64>)
+// CHECK-SAME: (%[[A:arg[0-9a-zA-Z_]+]]: memref<2x4xf64>)
 func.func @func_A(%A: memref<8xf64, #tile>) {
   call @func_B(%A) : (memref<8xf64, #tile>) -> ()
   return
@@ -256,7 +256,7 @@ func.func @func_A(%A: memref<8xf64, #tile>) {
 // CHECK: call @func_B(%[[A]]) : (memref<2x4xf64>) -> ()
 
 // CHECK-LABEL: func @func_B
-// CHECK-SAME: (%[[A:arg[0-9]+]]: memref<2x4xf64>)
+// CHECK-SAME: (%[[A:arg[0-9a-zA-Z_]+]]: memref<2x4xf64>)
 func.func @func_B(%A: memref<8xf64, #tile>) {
   call @func_C(%A) : (memref<8xf64, #tile>) -> ()
   return
@@ -264,31 +264,31 @@ func.func @func_B(%A: memref<8xf64, #tile>) {
 // CHECK: call @func_C(%[[A]]) : (memref<2x4xf64>) -> ()
 
 // CHECK-LABEL: func @func_C
-// CHECK-SAME: (%[[A:arg[0-9]+]]: memref<2x4xf64>)
+// CHECK-SAME: (%[[A:arg[0-9a-zA-Z_]+]]: memref<2x4xf64>)
 func.func @func_C(%A: memref<8xf64, #tile>) {
   return
 }
 
 // Test case set #6: Checking if no normalization takes place in a scenario: A -> B -> C and B has an unsupported type.
 // CHECK-LABEL: func @some_func_A
-// CHECK-SAME: (%[[A:arg[0-9]+]]: memref<8xf64, #map{{[0-9]+}}>)
+// CHECK-SAME: (%[[A:arg[0-9a-zA-Z_]+]]: memref<8xf64, #map{{[0-9a-zA-Z_]+}}>)
 func.func @some_func_A(%A: memref<8xf64, #tile>) {
   call @some_func_B(%A) : (memref<8xf64, #tile>) -> ()
   return
 }
-// CHECK: call @some_func_B(%[[A]]) : (memref<8xf64, #map{{[0-9]+}}>) -> ()
+// CHECK: call @some_func_B(%[[A]]) : (memref<8xf64, #map{{[0-9a-zA-Z_]+}}>) -> ()
 
 // CHECK-LABEL: func @some_func_B
-// CHECK-SAME: (%[[A:arg[0-9]+]]: memref<8xf64, #map{{[0-9]+}}>)
+// CHECK-SAME: (%[[A:arg[0-9a-zA-Z_]+]]: memref<8xf64, #map{{[0-9a-zA-Z_]+}}>)
 func.func @some_func_B(%A: memref<8xf64, #tile>) {
   "test.test"(%A) : (memref<8xf64, #tile>) -> ()
   call @some_func_C(%A) : (memref<8xf64, #tile>) -> ()
   return
 }
-// CHECK: call @some_func_C(%[[A]]) : (memref<8xf64, #map{{[0-9]+}}>) -> ()
+// CHECK: call @some_func_C(%[[A]]) : (memref<8xf64, #map{{[0-9a-zA-Z_]+}}>) -> ()
 
 // CHECK-LABEL: func @some_func_C
-// CHECK-SAME: (%[[A:arg[0-9]+]]: memref<8xf64, #map{{[0-9]+}}>)
+// CHECK-SAME: (%[[A:arg[0-9a-zA-Z_]+]]: memref<8xf64, #map{{[0-9a-zA-Z_]+}}>)
 func.func @some_func_C(%A: memref<8xf64, #tile>) {
   return
 }
@@ -308,16 +308,16 @@ func.func @simply_call_external() {
   call @external_func_A(%a) : (memref<16xf64, #tile>) -> ()
   return
 }
-// CHECK: %[[a:[0-9]+]] = memref.alloc() : memref<4x4xf64>
+// CHECK: %[[a:[0-9a-zA-Z_]+]] = memref.alloc() : memref<4x4xf64>
 // CHECK: call @external_func_A(%[[a]]) : (memref<4x4xf64>) -> ()
 
 // CHECK-LABEL: func @use_value_of_external
-// CHECK-SAME: (%[[A:arg[0-9]+]]: memref<4x4xf64>, %[[B:arg[0-9]+]]: f64) -> memref<2x4xf64>
+// CHECK-SAME: (%[[A:arg[0-9a-zA-Z_]+]]: memref<4x4xf64>, %[[B:arg[0-9a-zA-Z_]+]]: f64) -> memref<2x4xf64>
 func.func @use_value_of_external(%A: memref<16xf64, #tile>, %B: f64) -> (memref<8xf64, #tile>) {
   %res = call @external_func_B(%A, %B) : (memref<16xf64, #tile>, f64) -> (memref<8xf64, #tile>)
   return %res : memref<8xf64, #tile>
 }
-// CHECK: %[[res:[0-9]+]] = call @external_func_B(%[[A]], %[[B]]) : (memref<4x4xf64>, f64) -> memref<2x4xf64>
+// CHECK: %[[res:[0-9a-zA-Z_]+]] = call @external_func_B(%[[A]], %[[B]]) : (memref<4x4xf64>, f64) -> memref<2x4xf64>
 // CHECK: return %{{.*}} : memref<2x4xf64>
 
 // CHECK-LABEL: func @affine_parallel_norm
@@ -331,4 +331,24 @@ func.func @affine_parallel_norm() ->  memref<8xf32, #tile> {
     affine.yield %a : memref<8xf32, #tile>
   }
   return %1 : memref<8xf32, #tile>
+}
+
+#map = affine_map<(d0, d1)[s0] -> (d0 * 3 + s0 + d1)>
+// CHECK-LABEL: func.func @map_symbol
+func.func @map_symbol() -> memref<2x3xf32, #map> {
+  %c1 = arith.constant 1 : index
+  // The constant isn't propagated here and the utility can't compute a constant
+  // upper bound for the memref dimension in the absence of that.
+  // CHECK: memref.alloc()[%{{.*}}]
+  %0 = memref.alloc()[%c1] : memref<2x3xf32, #map>
+  return %0 : memref<2x3xf32, #map>
+}
+
+#neg = affine_map<(d0, d1) -> (d0, d1 - 100)>
+// CHECK-LABEL: func.func @neg_map
+func.func @neg_map() -> memref<2x3xf32, #neg> {
+  // This isn't a valid map for normalization.
+  // CHECK: memref.alloc() : memref<2x3xf32, #{{.*}}>
+  %0 = memref.alloc() : memref<2x3xf32, #neg>
+  return %0 : memref<2x3xf32, #neg>
 }

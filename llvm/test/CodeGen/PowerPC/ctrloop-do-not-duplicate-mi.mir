@@ -1,0 +1,185 @@
+# RUN: llc -ppc-asm-full-reg-names -mtriple=powerpc64le-unknown-linux-gnu \
+# RUN:   -run-pass=early-tailduplication,ppc-ctrloops %s -o - -verify-machineinstrs 2>&1 | FileCheck %s
+
+--- |
+  target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
+  target triple = "powerpc64le-unknown-linux-gnu"
+  
+  define dso_local void @test() local_unnamed_addr #0 {
+  test_entry:
+    %_val_domain_ = load i32, i32* undef, align 4
+    %_conv765 = sext i32 %_val_domain_ to i64
+    br i1 undef, label %_label_42, label %_loop_40_loopHeader_
+  
+  _loop_40_loopHeader_:                             ; preds = %test_entry
+    %_val_flags_1020 = load i32, i32* undef, align 4
+    %0 = and i32 %_val_flags_1020, 1
+    %_cond_conv_1022.not = icmp eq i32 %0, 0
+    %1 = sub i64 1, %_conv765
+    %smax = call i64 @llvm.smax.i64(i64 %1, i64 1)
+    br label %_label_43
+  
+  _label_43.loopexit:                               ; preds = %_loop_44_loopHeader_
+    %lsr.iv.next = add i64 %lsr.iv, -1
+    br label %_label_43
+  
+  _label_43:                                        ; preds = %_label_43.loopexit, %_loop_40_loopHeader_
+    %lsr.iv = phi i64 [ %lsr.iv.next, %_label_43.loopexit ], [ undef, %_loop_40_loopHeader_ ]
+    call void @llvm.set.loop.iterations.i64(i64 %smax)
+    br label %_loop_44_do_
+  
+  _loop_44_loopHeader_:                             ; preds = %_loop_44_do_
+    %2 = call i1 @llvm.loop.decrement.i64(i64 1)
+    br i1 %2, label %_loop_44_do_, label %_label_43.loopexit
+  
+  _loop_44_do_:                                     ; preds = %_loop_44_loopHeader_, %_label_43
+    br i1 %_cond_conv_1022.not, label %_label_42.loopexit, label %_loop_44_loopHeader_
+  
+  _label_42.loopexit:                               ; preds = %_loop_44_do_
+    %3 = trunc i64 %lsr.iv to i32
+    store i32 %3, i32* undef, align 4
+    unreachable
+  
+  _label_42:                                        ; preds = %test_entry
+    unreachable
+  }
+  
+  ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
+  declare i64 @llvm.smax.i64(i64, i64) #1
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare void @llvm.set.loop.iterations.i64(i64) #2
+  
+  ; Function Attrs: nocallback noduplicate nofree nosync nounwind willreturn
+  declare i1 @llvm.loop.decrement.i64(i64) #2
+  
+  attributes #0 = { "unsafe-fp-math"="true" }
+  attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+  attributes #2 = { nocallback noduplicate nofree nosync nounwind willreturn }
+  
+  !llvm.ident = !{!0}
+  
+  !0 = !{!""}
+
+...
+---
+name:            test
+# CHECK: test
+alignment:       16
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+failsVerification: false
+tracksDebugUserValues: false
+registers:
+  - { id: 0, class: g8rc, preferred-register: '' }
+  - { id: 1, class: crbitrc, preferred-register: '' }
+  - { id: 2, class: g8rc, preferred-register: '' }
+  - { id: 3, class: g8rc, preferred-register: '' }
+  - { id: 4, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 5, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 6, class: crbitrc, preferred-register: '' }
+  - { id: 7, class: g8rc, preferred-register: '' }
+  - { id: 8, class: gprc, preferred-register: '' }
+  - { id: 9, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 10, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 11, class: crrc, preferred-register: '' }
+  - { id: 12, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 13, class: crbitrc, preferred-register: '' }
+  - { id: 14, class: g8rc_and_g8rc_nox0, preferred-register: '' }
+  - { id: 15, class: gprc, preferred-register: '' }
+liveins:         []
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       0
+  offsetAdjustment: 0
+  maxAlignment:    1
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 4294967295
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           []
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.test_entry:
+    successors: %bb.7(0x40000000), %bb.1(0x40000000)
+  
+    %5:g8rc_and_g8rc_nox0 = IMPLICIT_DEF
+    %0:g8rc = LWA 0, killed %5 :: (load (s32) from `i32* undef`)
+    %6:crbitrc = IMPLICIT_DEF
+    BC killed %6, %bb.7
+    B %bb.1
+  
+  bb.1._loop_40_loopHeader_:
+    successors: %bb.3(0x80000000)
+  
+    %9:g8rc_and_g8rc_nox0 = IMPLICIT_DEF
+    %8:gprc = LWZ 0, %9 :: (load (s32) from `i32* undef`)
+    %15:gprc = ANDI_rec %8, 1, implicit-def $cr0
+    %1:crbitrc = COPY $cr0eq
+    %10:g8rc_and_g8rc_nox0 = SUBFIC8 %0, 1, implicit-def dead $carry
+    %11:crrc = CMPDI %10, 1
+    %12:g8rc_and_g8rc_nox0 = LI8 1
+    %2:g8rc = ISEL8 %10, %12, %11.sub_gt
+    %7:g8rc = IMPLICIT_DEF
+    B %bb.3
+  
+  bb.2._label_43.loopexit:
+    successors: %bb.3(0x80000000)
+  
+    %3:g8rc = ADDI8 %4, -1
+  
+  bb.3._label_43:
+    successors: %bb.5(0x80000000)
+  
+    %4:g8rc_and_g8rc_nox0 = PHI %7, %bb.1, %3, %bb.2
+    MTCTR8loop %2, implicit-def dead $ctr8
+    B %bb.5
+  
+  bb.4._loop_44_loopHeader_:
+    successors: %bb.5(0x7c000000), %bb.2(0x04000000)
+  
+    %13:crbitrc = DecreaseCTR8loop 1, implicit-def dead $ctr8, implicit $ctr8
+    BCn killed %13, %bb.2
+    B %bb.5
+  
+  bb.5._loop_44_do_:
+    successors: %bb.6(0x00000000), %bb.4(0x80000000)
+  
+    BCn %1, %bb.4
+    B %bb.6
+  
+  bb.6._label_42.loopexit:
+    successors: 
+  
+    %14:g8rc_and_g8rc_nox0 = IMPLICIT_DEF
+    STW8 %4, 0, killed %14 :: (store (s32) into `i32* undef`)
+  
+  bb.7._label_42:
+
+...

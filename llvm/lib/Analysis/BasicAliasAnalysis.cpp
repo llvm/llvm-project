@@ -387,7 +387,7 @@ static LinearExpression GetLinearExpression(
                                BOp, DT))
           return Val;
 
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case Instruction::Add: {
         E = GetLinearExpression(Val.withValue(BOp->getOperand(0)), DL,
                                 Depth + 1, AC, DT);
@@ -585,13 +585,6 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 
     assert(GEPOp->getSourceElementType()->isSized() && "GEP must be sized");
 
-    // Don't attempt to analyze GEPs if index scale is not a compile-time
-    // constant.
-    if (isa<ScalableVectorType>(GEPOp->getSourceElementType())) {
-      Decomposed.Base = V;
-      return Decomposed;
-    }
-
     unsigned AS = GEPOp->getPointerAddressSpace();
     // Walk the indices of the GEP, accumulating them into BaseOff/VarIndices.
     gep_type_iterator GTI = gep_type_begin(GEPOp);
@@ -616,10 +609,23 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
       if (const ConstantInt *CIdx = dyn_cast<ConstantInt>(Index)) {
         if (CIdx->isZero())
           continue;
-        Decomposed.Offset +=
-            DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize() *
-            CIdx->getValue().sextOrTrunc(MaxIndexSize);
+
+        // Don't attempt to analyze GEPs if the scalable index is not zero.
+        TypeSize AllocTypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
+        if (AllocTypeSize.isScalable()) {
+          Decomposed.Base = V;
+          return Decomposed;
+        }
+
+        Decomposed.Offset += AllocTypeSize.getFixedSize() *
+                             CIdx->getValue().sextOrTrunc(MaxIndexSize);
         continue;
+      }
+
+      TypeSize AllocTypeSize = DL.getTypeAllocSize(GTI.getIndexedType());
+      if (AllocTypeSize.isScalable()) {
+        Decomposed.Base = V;
+        return Decomposed;
       }
 
       GepHasConstantOffset = false;
@@ -633,8 +639,7 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
           CastedValue(Index, 0, SExtBits, TruncBits), DL, 0, AC, DT);
 
       // Scale by the type size.
-      unsigned TypeSize =
-          DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize();
+      unsigned TypeSize = AllocTypeSize.getFixedSize();
       LE = LE.mul(APInt(IndexSize, TypeSize), GEPOp->isInBounds());
       Decomposed.Offset += LE.Offset.sext(MaxIndexSize);
       APInt Scale = LE.Scale.sext(MaxIndexSize);
@@ -682,16 +687,15 @@ BasicAAResult::DecomposeGEPExpression(const Value *V, const DataLayout &DL,
 bool BasicAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
                                            AAQueryInfo &AAQI, bool OrLocal) {
   assert(Visited.empty() && "Visited must be cleared after use!");
+  auto _ = make_scope_exit([&]{ Visited.clear(); });
 
   unsigned MaxLookup = 8;
   SmallVector<const Value *, 16> Worklist;
   Worklist.push_back(Loc.Ptr);
   do {
     const Value *V = getUnderlyingObject(Worklist.pop_back_val());
-    if (!Visited.insert(V).second) {
-      Visited.clear();
+    if (!Visited.insert(V).second)
       return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
-    }
 
     // An alloca instruction defines local memory.
     if (OrLocal && isa<AllocaInst>(V))
@@ -702,10 +706,8 @@ bool BasicAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
       // Note: this doesn't require GV to be "ODR" because it isn't legal for a
       // global to be marked constant in some modules and non-constant in
       // others.  GV may even be a declaration, not a definition.
-      if (!GV->isConstant()) {
-        Visited.clear();
+      if (!GV->isConstant())
         return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
-      }
       continue;
     }
 
@@ -720,20 +722,16 @@ bool BasicAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
     // the phi.
     if (const PHINode *PN = dyn_cast<PHINode>(V)) {
       // Don't bother inspecting phi nodes with many operands.
-      if (PN->getNumIncomingValues() > MaxLookup) {
-        Visited.clear();
+      if (PN->getNumIncomingValues() > MaxLookup)
         return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
-      }
       append_range(Worklist, PN->incoming_values());
       continue;
     }
 
     // Otherwise be conservative.
-    Visited.clear();
     return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
   } while (!Worklist.empty() && --MaxLookup);
 
-  Visited.clear();
   return Worklist.empty();
 }
 
@@ -742,35 +740,41 @@ static bool isIntrinsicCall(const CallBase *Call, Intrinsic::ID IID) {
   return II && II->getIntrinsicID() == IID;
 }
 
+static FunctionModRefBehavior getModRefBehaviorFromAttrs(AttributeSet Attrs) {
+  if (Attrs.hasAttribute(Attribute::ReadNone))
+    return FunctionModRefBehavior::none();
+
+  ModRefInfo MR = ModRefInfo::ModRef;
+  if (Attrs.hasAttribute(Attribute::ReadOnly))
+    MR = ModRefInfo::Ref;
+  else if (Attrs.hasAttribute(Attribute::WriteOnly))
+    MR = ModRefInfo::Mod;
+
+  if (Attrs.hasAttribute(Attribute::ArgMemOnly))
+    return FunctionModRefBehavior::argMemOnly(MR);
+  if (Attrs.hasAttribute(Attribute::InaccessibleMemOnly))
+    return FunctionModRefBehavior::inaccessibleMemOnly(MR);
+  if (Attrs.hasAttribute(Attribute::InaccessibleMemOrArgMemOnly))
+    return FunctionModRefBehavior::inaccessibleOrArgMemOnly(MR);
+  return FunctionModRefBehavior(MR);
+}
+
 /// Returns the behavior when calling the given call site.
-FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call) {
-  if (Call->doesNotAccessMemory())
-    // Can't do better than this.
-    return FMRB_DoesNotAccessMemory;
+FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call,
+                                                        AAQueryInfo &AAQI) {
+  FunctionModRefBehavior Min =
+      getModRefBehaviorFromAttrs(Call->getAttributes().getFnAttrs());
 
-  FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
-
-  // If the callsite knows it only reads memory, don't return worse
-  // than that.
-  if (Call->onlyReadsMemory())
-    Min = FMRB_OnlyReadsMemory;
-  else if (Call->onlyWritesMemory())
-    Min = FMRB_OnlyWritesMemory;
-
-  if (Call->onlyAccessesArgMemory())
-    Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesArgumentPointees);
-  else if (Call->onlyAccessesInaccessibleMemory())
-    Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesInaccessibleMem);
-  else if (Call->onlyAccessesInaccessibleMemOrArgMem())
-    Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesInaccessibleOrArgMem);
-
-  // If the call has operand bundles then aliasing attributes from the function
-  // it calls do not directly apply to the call.  This can be made more precise
-  // in the future.
-  if (!Call->hasOperandBundles())
-    if (const Function *F = Call->getCalledFunction())
-      Min =
-          FunctionModRefBehavior(Min & getBestAAResults().getModRefBehavior(F));
+  if (const Function *F = dyn_cast<Function>(Call->getCalledOperand())) {
+    FunctionModRefBehavior FMRB = AAQI.AAR.getModRefBehavior(F);
+    // Operand bundles on the call may also read or write memory, in addition
+    // to the behavior of the called function.
+    if (Call->hasReadingOperandBundles())
+      FMRB |= FunctionModRefBehavior::readOnly();
+    if (Call->hasClobberingOperandBundles())
+      FMRB |= FunctionModRefBehavior::writeOnly();
+    Min &= FMRB;
+  }
 
   return Min;
 }
@@ -778,26 +782,16 @@ FunctionModRefBehavior BasicAAResult::getModRefBehavior(const CallBase *Call) {
 /// Returns the behavior when calling the given function. For use when the call
 /// site is not known.
 FunctionModRefBehavior BasicAAResult::getModRefBehavior(const Function *F) {
-  // If the function declares it doesn't access memory, we can't do better.
-  if (F->doesNotAccessMemory())
-    return FMRB_DoesNotAccessMemory;
+  switch (F->getIntrinsicID()) {
+  case Intrinsic::experimental_guard:
+  case Intrinsic::experimental_deoptimize:
+    // These intrinsics can read arbitrary memory, and additionally modref
+    // inaccessible memory to model control dependence.
+    return FunctionModRefBehavior::readOnly() |
+           FunctionModRefBehavior::inaccessibleMemOnly(ModRefInfo::ModRef);
+  }
 
-  FunctionModRefBehavior Min = FMRB_UnknownModRefBehavior;
-
-  // If the function declares it only reads memory, go with that.
-  if (F->onlyReadsMemory())
-    Min = FMRB_OnlyReadsMemory;
-  else if (F->onlyWritesMemory())
-    Min = FMRB_OnlyWritesMemory;
-
-  if (F->onlyAccessesArgMemory())
-    Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesArgumentPointees);
-  else if (F->onlyAccessesInaccessibleMemory())
-    Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesInaccessibleMem);
-  else if (F->onlyAccessesInaccessibleMemOrArgMem())
-    Min = FunctionModRefBehavior(Min & FMRB_OnlyAccessesInaccessibleOrArgMem);
-
-  return Min;
+  return getModRefBehaviorFromAttrs(F->getAttributes().getFnAttrs());
 }
 
 /// Returns true if this is a writeonly (i.e Mod only) parameter.
@@ -912,7 +906,6 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
     // Optimistically assume that call doesn't touch Object and check this
     // assumption in the following loop.
     ModRefInfo Result = ModRefInfo::NoModRef;
-    bool IsMustAlias = true;
 
     unsigned OperandNo = 0;
     for (auto CI = Call->data_operands_begin(), CE = Call->data_operands_end();
@@ -932,23 +925,21 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
 
       // If this is a no-capture pointer argument, see if we can tell that it
       // is impossible to alias the pointer we're checking.
-      AliasResult AR = getBestAAResults().alias(
-          MemoryLocation::getBeforeOrAfter(*CI),
-          MemoryLocation::getBeforeOrAfter(Object), AAQI);
-      if (AR != AliasResult::MustAlias)
-        IsMustAlias = false;
+      AliasResult AR =
+          AAQI.AAR.alias(MemoryLocation::getBeforeOrAfter(*CI),
+                         MemoryLocation::getBeforeOrAfter(Object), AAQI);
       // Operand doesn't alias 'Object', continue looking for other aliases
       if (AR == AliasResult::NoAlias)
         continue;
       // Operand aliases 'Object', but call doesn't modify it. Strengthen
       // initial assumption and keep looking in case if there are more aliases.
       if (Call->onlyReadsMemory(OperandNo)) {
-        Result = setRef(Result);
+        Result |= ModRefInfo::Ref;
         continue;
       }
       // Operand aliases 'Object' but call only writes into it.
       if (Call->onlyWritesMemory(OperandNo)) {
-        Result = setMod(Result);
+        Result |= ModRefInfo::Mod;
         continue;
       }
       // This operand aliases 'Object' and call reads and writes into it.
@@ -958,17 +949,9 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
       break;
     }
 
-    // No operand aliases, reset Must bit. Add below if at least one aliases
-    // and all aliases found are MustAlias.
-    if (isNoModRef(Result))
-      IsMustAlias = false;
-
     // Early return if we improved mod ref information
-    if (!isModAndRefSet(Result)) {
-      if (isNoModRef(Result))
-        return ModRefInfo::NoModRef;
-      return IsMustAlias ? setMust(Result) : clearMust(Result);
-    }
+    if (!isModAndRefSet(Result))
+      return Result;
   }
 
   // If the call is malloc/calloc like, we can assume that it doesn't
@@ -980,43 +963,10 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call,
   if (isMallocOrCallocLikeFn(Call, &TLI)) {
     // Be conservative if the accessed pointer may alias the allocation -
     // fallback to the generic handling below.
-    if (getBestAAResults().alias(MemoryLocation::getBeforeOrAfter(Call), Loc,
-                                 AAQI) == AliasResult::NoAlias)
+    if (AAQI.AAR.alias(MemoryLocation::getBeforeOrAfter(Call), Loc, AAQI) ==
+        AliasResult::NoAlias)
       return ModRefInfo::NoModRef;
   }
-
-  // Ideally, there should be no need to special case for memcpy/memove
-  // intrinsics here since general machinery (based on memory attributes) should
-  // already handle it just fine. Unfortunately, it doesn't due to deficiency in
-  // operand bundles support. At the moment it's not clear if complexity behind
-  // enhancing general mechanism worths it.
-  // TODO: Consider improving operand bundles support in general mechanism.
-  if (auto *Inst = dyn_cast<AnyMemTransferInst>(Call)) {
-    AliasResult SrcAA =
-        getBestAAResults().alias(MemoryLocation::getForSource(Inst), Loc, AAQI);
-    AliasResult DestAA =
-        getBestAAResults().alias(MemoryLocation::getForDest(Inst), Loc, AAQI);
-    // It's also possible for Loc to alias both src and dest, or neither.
-    ModRefInfo rv = ModRefInfo::NoModRef;
-    if (SrcAA != AliasResult::NoAlias || Call->hasReadingOperandBundles())
-      rv = setRef(rv);
-    if (DestAA != AliasResult::NoAlias || Call->hasClobberingOperandBundles())
-      rv = setMod(rv);
-    return rv;
-  }
-
-  // Guard intrinsics are marked as arbitrarily writing so that proper control
-  // dependencies are maintained but they never mods any particular memory
-  // location.
-  //
-  // *Unlike* assumes, guard intrinsics are modeled as reading memory since the
-  // heap state at the point the guard is issued needs to be consistent in case
-  // the guard invokes the "deopt" continuation.
-  if (isIntrinsicCall(Call, Intrinsic::experimental_guard))
-    return ModRefInfo::Ref;
-  // The same applies to deoptimize which is essentially a guard(false).
-  if (isIntrinsicCall(Call, Intrinsic::experimental_deoptimize))
-    return ModRefInfo::Ref;
 
   // Like assumes, invariant.start intrinsics were also marked as arbitrarily
   // writing so that proper control dependencies are maintained but they never
@@ -1063,12 +1013,12 @@ ModRefInfo BasicAAResult::getModRefInfo(const CallBase *Call1,
   // possibilities for guard intrinsics.
 
   if (isIntrinsicCall(Call1, Intrinsic::experimental_guard))
-    return isModSet(createModRefInfo(getModRefBehavior(Call2)))
+    return isModSet(getModRefBehavior(Call2, AAQI).getModRef())
                ? ModRefInfo::Ref
                : ModRefInfo::NoModRef;
 
   if (isIntrinsicCall(Call2, Intrinsic::experimental_guard))
-    return isModSet(createModRefInfo(getModRefBehavior(Call1)))
+    return isModSet(getModRefBehavior(Call1, AAQI).getModRef())
                ? ModRefInfo::Mod
                : ModRefInfo::NoModRef;
 
@@ -1107,9 +1057,9 @@ AliasResult BasicAAResult::aliasGEP(
 
     // If both accesses have unknown size, we can only check whether the base
     // objects don't alias.
-    AliasResult BaseAlias = getBestAAResults().alias(
-        MemoryLocation::getBeforeOrAfter(UnderlyingV1),
-        MemoryLocation::getBeforeOrAfter(UnderlyingV2), AAQI);
+    AliasResult BaseAlias =
+        AAQI.AAR.alias(MemoryLocation::getBeforeOrAfter(UnderlyingV1),
+                       MemoryLocation::getBeforeOrAfter(UnderlyingV2), AAQI);
     return BaseAlias == AliasResult::NoAlias ? AliasResult::NoAlias
                                              : AliasResult::MayAlias;
   }
@@ -1143,14 +1093,13 @@ AliasResult BasicAAResult::aliasGEP(
   // For GEPs with identical offsets, we can preserve the size and AAInfo
   // when performing the alias check on the underlying objects.
   if (DecompGEP1.Offset == 0 && DecompGEP1.VarIndices.empty())
-    return getBestAAResults().alias(MemoryLocation(DecompGEP1.Base, V1Size),
-                                    MemoryLocation(DecompGEP2.Base, V2Size),
-                                    AAQI);
+    return AAQI.AAR.alias(MemoryLocation(DecompGEP1.Base, V1Size),
+                          MemoryLocation(DecompGEP2.Base, V2Size), AAQI);
 
   // Do the base pointers alias?
-  AliasResult BaseAlias = getBestAAResults().alias(
-      MemoryLocation::getBeforeOrAfter(DecompGEP1.Base),
-      MemoryLocation::getBeforeOrAfter(DecompGEP2.Base), AAQI);
+  AliasResult BaseAlias =
+      AAQI.AAR.alias(MemoryLocation::getBeforeOrAfter(DecompGEP1.Base),
+                     MemoryLocation::getBeforeOrAfter(DecompGEP2.Base), AAQI);
 
   // If we get a No or May, then return it immediately, no amount of analysis
   // will improve this situation.
@@ -1355,28 +1304,27 @@ BasicAAResult::aliasSelect(const SelectInst *SI, LocationSize SISize,
   // check: just check for aliases between the values on corresponding arms.
   if (const SelectInst *SI2 = dyn_cast<SelectInst>(V2))
     if (SI->getCondition() == SI2->getCondition()) {
-      AliasResult Alias = getBestAAResults().alias(
-          MemoryLocation(SI->getTrueValue(), SISize),
-          MemoryLocation(SI2->getTrueValue(), V2Size), AAQI);
+      AliasResult Alias =
+          AAQI.AAR.alias(MemoryLocation(SI->getTrueValue(), SISize),
+                         MemoryLocation(SI2->getTrueValue(), V2Size), AAQI);
       if (Alias == AliasResult::MayAlias)
         return AliasResult::MayAlias;
-      AliasResult ThisAlias = getBestAAResults().alias(
-          MemoryLocation(SI->getFalseValue(), SISize),
-          MemoryLocation(SI2->getFalseValue(), V2Size), AAQI);
+      AliasResult ThisAlias =
+          AAQI.AAR.alias(MemoryLocation(SI->getFalseValue(), SISize),
+                         MemoryLocation(SI2->getFalseValue(), V2Size), AAQI);
       return MergeAliasResults(ThisAlias, Alias);
     }
 
   // If both arms of the Select node NoAlias or MustAlias V2, then returns
   // NoAlias / MustAlias. Otherwise, returns MayAlias.
-  AliasResult Alias =
-      getBestAAResults().alias(MemoryLocation(SI->getTrueValue(), SISize),
-                               MemoryLocation(V2, V2Size), AAQI);
+  AliasResult Alias = AAQI.AAR.alias(MemoryLocation(SI->getTrueValue(), SISize),
+                                     MemoryLocation(V2, V2Size), AAQI);
   if (Alias == AliasResult::MayAlias)
     return AliasResult::MayAlias;
 
   AliasResult ThisAlias =
-      getBestAAResults().alias(MemoryLocation(SI->getFalseValue(), SISize),
-                               MemoryLocation(V2, V2Size), AAQI);
+      AAQI.AAR.alias(MemoryLocation(SI->getFalseValue(), SISize),
+                     MemoryLocation(V2, V2Size), AAQI);
   return MergeAliasResults(ThisAlias, Alias);
 }
 
@@ -1394,7 +1342,7 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
     if (PN2->getParent() == PN->getParent()) {
       Optional<AliasResult> Alias;
       for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-        AliasResult ThisAlias = getBestAAResults().alias(
+        AliasResult ThisAlias = AAQI.AAR.alias(
             MemoryLocation(PN->getIncomingValue(i), PNSize),
             MemoryLocation(
                 PN2->getIncomingValueForBlock(PN->getIncomingBlock(i)), V2Size),
@@ -1497,8 +1445,8 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   AAQueryInfo NewAAQI = AAQI.withEmptyCache();
   AAQueryInfo *UseAAQI = BlockInserted ? &NewAAQI : &AAQI;
 
-  AliasResult Alias = getBestAAResults().alias(
-      MemoryLocation(V1Srcs[0], PNSize), MemoryLocation(V2, V2Size), *UseAAQI);
+  AliasResult Alias = AAQI.AAR.alias(MemoryLocation(V1Srcs[0], PNSize),
+                                     MemoryLocation(V2, V2Size), *UseAAQI);
 
   // Early exit if the check of the first PHI source against V2 is MayAlias.
   // Other results are not possible.
@@ -1514,7 +1462,7 @@ AliasResult BasicAAResult::aliasPHI(const PHINode *PN, LocationSize PNSize,
   for (unsigned i = 1, e = V1Srcs.size(); i != e; ++i) {
     Value *V = V1Srcs[i];
 
-    AliasResult ThisAlias = getBestAAResults().alias(
+    AliasResult ThisAlias = AAQI.AAR.alias(
         MemoryLocation(V, PNSize), MemoryLocation(V2, V2Size), *UseAAQI);
     Alias = MergeAliasResults(ThisAlias, Alias);
     if (Alias == AliasResult::MayAlias)

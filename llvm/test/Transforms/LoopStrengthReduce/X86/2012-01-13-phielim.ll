@@ -23,7 +23,7 @@ define i32 @test(i8* %base) nounwind uwtable ssp {
 ; CHECK-NEXT:    .cfi_offset %r13, -32
 ; CHECK-NEXT:    .cfi_offset %r14, -24
 ; CHECK-NEXT:    .cfi_offset %r15, -16
-; CHECK-NEXT:    movq %rdi, %r14
+; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    leaq 16(%rdi), %r15
 ; CHECK-NEXT:    movl $16, %eax
 ; CHECK-NEXT:    xorl %r12d, %r12d
@@ -31,23 +31,23 @@ define i32 @test(i8* %base) nounwind uwtable ssp {
 ; CHECK-NEXT:  .LBB0_1: # %while.body.i
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB0_2 Depth 2
-; CHECK-NEXT:    movslq %r12d, %r13
+; CHECK-NEXT:    movslq %r12d, %r14
 ; CHECK-NEXT:    movq %rax, %r12
-; CHECK-NEXT:    leaq (%r15,%r13), %rbx
-; CHECK-NEXT:    addq $16, %r13
+; CHECK-NEXT:    leaq (%r15,%r14), %r13
+; CHECK-NEXT:    addq $16, %r14
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB0_2: # %for.body.i
 ; CHECK-NEXT:    # Parent Loop BB0_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    callq check@PLT
-; CHECK-NEXT:    incq %rbx
+; CHECK-NEXT:    incq %r13
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB0_2
 ; CHECK-NEXT:  # %bb.3: # %for.end.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    addq %r14, %r13
-; CHECK-NEXT:    movq %r13, %rdi
-; CHECK-NEXT:    movq %r13, %rsi
+; CHECK-NEXT:    addq %rbx, %r14
+; CHECK-NEXT:    movq %r14, %rdi
+; CHECK-NEXT:    movq %r14, %rsi
 ; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:    testb $1, %al
 ; CHECK-NEXT:    je .LBB0_5

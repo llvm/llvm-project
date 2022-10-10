@@ -53,7 +53,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_char8_t
-#     error "__cpp_lib_char8_t should not be defined when defined(__cpp_char8_t) is not defined!"
+#     error "__cpp_lib_char8_t should not be defined when the requirement 'defined(__cpp_char8_t)' is not met!"
 #   endif
 # endif
 
@@ -68,7 +68,7 @@
 #   endif
 # else
 #   ifdef __cpp_lib_char8_t
-#     error "__cpp_lib_char8_t should not be defined when defined(__cpp_char8_t) is not defined!"
+#     error "__cpp_lib_char8_t should not be defined when the requirement 'defined(__cpp_char8_t)' is not met!"
 #   endif
 # endif
 

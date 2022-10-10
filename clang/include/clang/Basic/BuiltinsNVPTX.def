@@ -23,7 +23,13 @@
 #pragma push_macro("SM_75")
 #pragma push_macro("SM_80")
 #pragma push_macro("SM_86")
-#define SM_86 "sm_86"
+#pragma push_macro("SM_87")
+#pragma push_macro("SM_89")
+#pragma push_macro("SM_90")
+#define SM_90 "sm_90"
+#define SM_89 "sm_89|" SM_90
+#define SM_87 "sm_87|" SM_89
+#define SM_86 "sm_86|" SM_87
 #define SM_80 "sm_80|" SM_86
 #define SM_75 "sm_75|" SM_80
 #define SM_72 "sm_72|" SM_75
@@ -45,7 +51,13 @@
 #pragma push_macro("PTX73")
 #pragma push_macro("PTX74")
 #pragma push_macro("PTX75")
-#define PTX75 "ptx75"
+#pragma push_macro("PTX76")
+#pragma push_macro("PTX77")
+#pragma push_macro("PTX78")
+#define PTX78 "ptx78"
+#define PTX77 "ptx77|" PTX78
+#define PTX76 "ptx76|" PTX77
+#define PTX75 "ptx75|" PTX76
 #define PTX74 "ptx74|" PTX75
 #define PTX73 "ptx73|" PTX74
 #define PTX72 "ptx72|" PTX73
@@ -853,7 +865,7 @@ TARGET_BUILTIN(__hmma_m8n32k16_mma_f16f32, "vi*iC*iC*fC*IiIi", "", AND(SM_70,PTX
 TARGET_BUILTIN(__bmma_m8n8k128_ld_a_b1, "vi*iC*UiIi", "", AND(SM_75,PTX63))
 TARGET_BUILTIN(__bmma_m8n8k128_ld_b_b1, "vi*iC*UiIi", "", AND(SM_75,PTX63))
 TARGET_BUILTIN(__bmma_m8n8k128_ld_c, "vi*iC*UiIi", "", AND(SM_75,PTX63))
-TARGET_BUILTIN(__bmma_m8n8k128_mma_and_popc_b1, "vi*iC*iC*iC*Ii", "", AND(SM_75,PTX71))
+TARGET_BUILTIN(__bmma_m8n8k128_mma_and_popc_b1, "vi*iC*iC*iC*Ii", "", AND(SM_80,PTX71))
 TARGET_BUILTIN(__bmma_m8n8k128_mma_xor_popc_b1, "vi*iC*iC*iC*Ii", "", AND(SM_75,PTX63))
 TARGET_BUILTIN(__bmma_m8n8k128_st_c_i32, "vi*iC*UiIi", "", AND(SM_75,PTX63))
 TARGET_BUILTIN(__imma_m16n16k16_ld_a_s8, "vi*iC*UiIi", "", AND(SM_72,PTX63))
@@ -944,6 +956,9 @@ TARGET_BUILTIN(__nvvm_neg_bf16x2, "ZUiZUi", "", AND(SM_80,PTX70))
 #pragma pop_macro("SM_75")
 #pragma pop_macro("SM_80")
 #pragma pop_macro("SM_86")
+#pragma pop_macro("SM_87")
+#pragma pop_macro("SM_89")
+#pragma pop_macro("SM_90")
 #pragma pop_macro("PTX42")
 #pragma pop_macro("PTX60")
 #pragma pop_macro("PTX61")
@@ -956,3 +971,6 @@ TARGET_BUILTIN(__nvvm_neg_bf16x2, "ZUiZUi", "", AND(SM_80,PTX70))
 #pragma pop_macro("PTX73")
 #pragma pop_macro("PTX74")
 #pragma pop_macro("PTX75")
+#pragma pop_macro("PTX76")
+#pragma pop_macro("PTX77")
+#pragma pop_macro("PTX78")

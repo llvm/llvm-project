@@ -76,12 +76,18 @@ define dso_local void()* @dsolocal_func() nounwind {
 ;
 ; PIC-LABEL: dsolocal_func:
 ; PIC:       .Ldsolocal_func$local:
+; PIC-NEXT:    .type .Ldsolocal_func$local,@function
 ; PIC-NEXT:  // %bb.0:
 ; PIC-NEXT:    adrp x0, .Ldsolocal_func$local
 ; PIC-NEXT:    add x0, x0, :lo12:.Ldsolocal_func$local
 ; PIC-NEXT:    ret
   ret void()* bitcast(void()*()* @dsolocal_func to void()*)
 }
+; UTC-ARGS: --disable
+; PIC: [[END_LABEL:.Lfunc_end.+]]:
+; PIC-NEXT: .size	dsolocal_func, [[END_LABEL]]-dsolocal_func
+; PIC-NEXT: .size	.Ldsolocal_func$local, [[END_LABEL]]-dsolocal_func
+; UTC-ARGS: --enable
 
 define weak dso_local void()* @weak_dsolocal_func() nounwind {
 ; CHECK-LABEL: weak_dsolocal_func:
@@ -104,6 +110,7 @@ define dso_local void @call_dsolocal_func() nounwind {
 ;
 ; PIC-LABEL: call_dsolocal_func:
 ; PIC:       .Lcall_dsolocal_func$local:
+; PIC-NEXT:    .type .Lcall_dsolocal_func$local,@function
 ; PIC-NEXT:  // %bb.0:
 ; PIC-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; PIC-NEXT:    bl .Ldsolocal_func$local
@@ -112,3 +119,8 @@ define dso_local void @call_dsolocal_func() nounwind {
   call void()* @dsolocal_func()
   ret void
 }
+; UTC-ARGS: --disable
+; PIC: [[END_LABEL:.Lfunc_end.+]]:
+; PIC-NEXT: .size	call_dsolocal_func, [[END_LABEL]]-call_dsolocal_func
+; PIC-NEXT: .size	.Lcall_dsolocal_func$local, [[END_LABEL]]-call_dsolocal_func
+; UTC-ARGS: --enable

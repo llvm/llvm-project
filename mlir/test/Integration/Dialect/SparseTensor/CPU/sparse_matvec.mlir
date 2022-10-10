@@ -1,18 +1,18 @@
 // RUN: mlir-opt %s --sparse-compiler | \
-// RUN: TENSOR0="%mlir_integration_test_dir/data/wide.mtx" \
+// RUN: TENSOR0="%mlir_src_dir/test/Integration/data/wide.mtx" \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 //
 // Do the same run, but now with SIMDization as well. This should not change the outcome.
 //
 // RUN: mlir-opt %s \
-// RUN:   --sparse-compiler="vectorization-strategy=2 vl=16 enable-simd-index32" | \
-// RUN: TENSOR0="%mlir_integration_test_dir/data/wide.mtx" \
+// RUN:   --sparse-compiler="vectorization-strategy=any-storage-inner-loop vl=16 enable-simd-index32" | \
+// RUN: TENSOR0="%mlir_src_dir/test/Integration/data/wide.mtx" \
 // RUN: mlir-cpu-runner \
 // RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
+// RUN:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
 !Filename = !llvm.ptr<i8>
@@ -75,18 +75,17 @@ module {
     %a = sparse_tensor.new %fileName : !Filename to tensor<?x?xi32, #SparseMatrix>
 
     // Initialize dense vectors.
-    %init_256 = bufferization.alloc_tensor(%c256) : tensor<?xi32>
-    %b = scf.for %i = %c0 to %c256 step %c1 iter_args(%t = %init_256) -> tensor<?xi32> {
+    %b = tensor.generate %c256 {
+    ^bb0(%i : index):
       %k = arith.addi %i, %c1 : index
       %j = arith.index_cast %k : index to i32
-      %t2 = tensor.insert %j into %t[%i] : tensor<?xi32>
-      scf.yield %t2 : tensor<?xi32>
-    }
-    %init_4 = bufferization.alloc_tensor(%c4) : tensor<?xi32>
-    %x = scf.for %i = %c0 to %c4 step %c1 iter_args(%t = %init_4) -> tensor<?xi32> {
-      %t2 = tensor.insert %i0 into %t[%i] : tensor<?xi32>
-      scf.yield %t2 : tensor<?xi32>
-    }
+      tensor.yield %j : i32
+    } : tensor<?xi32>
+
+    %x = tensor.generate %c4 {
+      ^bb0(%i : index):
+        tensor.yield %i0 : i32
+    } : tensor<?xi32>
 
     // Call kernel.
     %0 = call @kernel_matvec(%a, %b, %x)
@@ -101,6 +100,10 @@ module {
 
     // Release the resources.
     bufferization.dealloc_tensor %a : tensor<?x?xi32, #SparseMatrix>
+
+    // TODO(springerm): auto release!
+    bufferization.dealloc_tensor %b : tensor<?xi32>
+    bufferization.dealloc_tensor %x : tensor<?xi32>
 
     return
   }

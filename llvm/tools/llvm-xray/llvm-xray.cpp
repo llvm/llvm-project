@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     if (*SC) {
       // If no subcommand was provided, we need to explicitly check if this is
       // the top-level subcommand.
-      if (SC == &*cl::TopLevelSubCommand) {
+      if (SC == &cl::SubCommand::getTopLevel()) {
         cl::PrintHelpMessage(false, true);
         return 0;
       }

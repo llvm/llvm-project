@@ -20,12 +20,18 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Sema.h"
 
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
+
+#if defined(_AIX)
+#define CLANG_INTERPRETER_NO_SUPPORT_EXEC
+#endif
 
 namespace {
 using Args = std::vector<const char *>;
@@ -182,6 +188,14 @@ static std::string MangleName(NamedDecl *ND) {
   return RawStr.str();
 }
 
+static bool HostSupportsJit() {
+  auto J = llvm::orc::LLJITBuilder().create();
+  if (J)
+    return true;
+  LLVMConsumeError(llvm::wrap(J.takeError()));
+  return false;
+}
+
 struct LLVMInitRAII {
   LLVMInitRAII() {
     llvm::InitializeNativeTarget();
@@ -190,7 +204,7 @@ struct LLVMInitRAII {
   ~LLVMInitRAII() { llvm::llvm_shutdown(); }
 } LLVMInit;
 
-#ifdef _AIX
+#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
 TEST(IncrementalProcessing, DISABLED_FindMangledNameSymbol) {
 #else
 TEST(IncrementalProcessing, FindMangledNameSymbol) {
@@ -201,6 +215,11 @@ TEST(IncrementalProcessing, FindMangledNameSymbol) {
   auto &PTU(cantFail(Interp->Parse("int f(const char*) {return 0;}")));
   EXPECT_EQ(1U, DeclsSize(PTU.TUPart));
   auto R1DeclRange = PTU.TUPart->decls();
+
+  // We cannot execute on the platform.
+  if (!HostSupportsJit()) {
+    return;
+  }
 
   NamedDecl *FD = cast<FunctionDecl>(*R1DeclRange.begin());
   // Lower the PTU
@@ -252,7 +271,7 @@ static NamedDecl *LookupSingleName(Interpreter &Interp, const char *Name) {
   return R.getFoundDecl();
 }
 
-#ifdef _AIX
+#ifdef CLANG_INTERPRETER_NO_SUPPORT_EXEC
 TEST(IncrementalProcessing, DISABLED_InstantiateTemplate) {
 #else
 TEST(IncrementalProcessing, InstantiateTemplate) {
@@ -273,6 +292,11 @@ TEST(IncrementalProcessing, InstantiateTemplate) {
   auto &PTU = llvm::cantFail(Interp->Parse("auto _t = &B::callme<A*>;"));
   auto PTUDeclRange = PTU.TUPart->decls();
   EXPECT_EQ(1, std::distance(PTUDeclRange.begin(), PTUDeclRange.end()));
+
+  // We cannot execute on the platform.
+  if (!HostSupportsJit()) {
+    return;
+  }
 
   // Lower the PTU
   if (llvm::Error Err = Interp->Execute(PTU)) {

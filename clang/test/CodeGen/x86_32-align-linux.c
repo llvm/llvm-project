@@ -1,18 +1,18 @@
-// RUN: %clang_cc1 -no-opaque-pointers -w -fblocks -ffreestanding -triple i386-pc-linux-gnu -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -w -fblocks -ffreestanding -triple i386-pc-linux-gnu -target-feature +avx -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -w -fblocks -ffreestanding -triple i386-pc-linux-gnu -target-feature +avx512f -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -w -fblocks -ffreestanding -triple i386-pc-linux-mingw -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -w -fblocks -ffreestanding -triple i386-pc-linux-mingw -target-feature +avx -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -w -fblocks -ffreestanding -triple i386-pc-linux-mingw -target-feature +avx512f -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -w -fblocks -ffreestanding -triple i386-pc-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -w -fblocks -ffreestanding -triple i386-pc-linux-gnu -target-feature +avx -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -w -fblocks -ffreestanding -triple i386-pc-linux-gnu -target-feature +avx512f -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -w -fblocks -ffreestanding -triple i386-pc-linux-mingw -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -w -fblocks -ffreestanding -triple i386-pc-linux-mingw -target-feature +avx -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -w -fblocks -ffreestanding -triple i386-pc-linux-mingw -target-feature +avx512f -emit-llvm -o - %s | FileCheck %s
 
 #include <immintrin.h>
 
 // CHECK-LABEL: define dso_local void @testm128
-// CHECK-LABEL: %argp.cur = load i8*, i8** %args, align 4
-// CHECK-NEXT:  %0 = ptrtoint i8* %argp.cur to i32
+// CHECK-LABEL: %argp.cur = load ptr, ptr %args, align 4
+// CHECK-NEXT:  %0 = ptrtoint ptr %argp.cur to i32
 // CHECK-NEXT:  %1 = add i32 %0, 15
 // CHECK-NEXT:  %2 = and i32 %1, -16
-// CHECK-NEXT:  %argp.cur.aligned = inttoptr i32 %2 to i8*
+// CHECK-NEXT:  %argp.cur.aligned = inttoptr i32 %2 to ptr
 void testm128(int argCount, ...) {
   __m128 res;
   __builtin_va_list args;
@@ -22,11 +22,11 @@ void testm128(int argCount, ...) {
 }
 
 // CHECK-LABEL: define dso_local void @testm256
-// CHECK-LABEL: %argp.cur = load i8*, i8** %args, align 4
-// CHECK-NEXT:  %0 = ptrtoint i8* %argp.cur to i32
+// CHECK-LABEL: %argp.cur = load ptr, ptr %args, align 4
+// CHECK-NEXT:  %0 = ptrtoint ptr %argp.cur to i32
 // CHECK-NEXT:  %1 = add i32 %0, 31
 // CHECK-NEXT:  %2 = and i32 %1, -32
-// CHECK-NEXT:  %argp.cur.aligned = inttoptr i32 %2 to i8*
+// CHECK-NEXT:  %argp.cur.aligned = inttoptr i32 %2 to ptr
 void testm256(int argCount, ...) {
   __m256 res;
   __builtin_va_list args;
@@ -36,11 +36,11 @@ void testm256(int argCount, ...) {
 }
 
 // CHECK-LABEL: define dso_local void @testm512
-// CHECK-LABEL: %argp.cur = load i8*, i8** %args, align 4
-// CHECK-NEXT:  %0 = ptrtoint i8* %argp.cur to i32
+// CHECK-LABEL: %argp.cur = load ptr, ptr %args, align 4
+// CHECK-NEXT:  %0 = ptrtoint ptr %argp.cur to i32
 // CHECK-NEXT:  %1 = add i32 %0, 63
 // CHECK-NEXT:  %2 = and i32 %1, -64
-// CHECK-NEXT:  %argp.cur.aligned = inttoptr i32 %2 to i8*
+// CHECK-NEXT:  %argp.cur.aligned = inttoptr i32 %2 to ptr
 void testm512(int argCount, ...) {
   __m512 res;
   __builtin_va_list args;

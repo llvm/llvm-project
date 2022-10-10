@@ -51,7 +51,7 @@ body: |
     %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`, addrspace 4)
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:sgpr_128 = REG_SEQUENCE %1, %2, %3
+    %4:sgpr_128 = REG_SEQUENCE %1, %subreg.sub0, %2, %subreg.sub1, %3, %subreg.sub2
 
     %5:vgpr_32 = COPY $vgpr0
     %6:vgpr_32 = COPY $vgpr1
@@ -82,7 +82,7 @@ body: |
     %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`, addrspace 4)
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:sgpr_128 = REG_SEQUENCE %1, %2, %3
+    %4:sgpr_128 = REG_SEQUENCE %1, %subreg.sub0, %2, %subreg.sub1, %3, %subreg.sub2
 
     %5:vgpr_32 = COPY $vgpr0
     %6:vgpr_32 = COPY $vgpr1
@@ -113,7 +113,7 @@ body: |
     %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`, addrspace 4)
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:sgpr_128 = REG_SEQUENCE %1, %2, %3
+    %4:sgpr_128 = REG_SEQUENCE %1, %subreg.sub0, %2, %subreg.sub1, %3, %subreg.sub2
 
     %5:vgpr_32 = COPY $vgpr0
     %6:vgpr_32 = COPY $vgpr1
@@ -143,7 +143,7 @@ body: |
     %1:sgpr_64 = S_LOAD_DWORDX2_IMM %1, 36, 0 :: (dereferenceable invariant load (s64) from `i64 addrspace(4)* undef`, addrspace 4)
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
-    %4:sgpr_128 = REG_SEQUENCE %1, %2, %3
+    %4:sgpr_128 = REG_SEQUENCE %1, %subreg.sub0, %2, %subreg.sub1, %3, %subreg.sub2
 
     %5:vgpr_32 = COPY $vgpr0
     %6:vgpr_32 = COPY $vgpr1

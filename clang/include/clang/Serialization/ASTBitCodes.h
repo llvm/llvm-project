@@ -41,7 +41,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 21;
+const unsigned VERSION_MAJOR = 22;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -342,9 +342,6 @@ enum ControlRecordTypes {
   /// generate the AST file, including both its file ID and its
   /// name.
   ORIGINAL_FILE,
-
-  /// The directory that the PCH was originally created in.
-  ORIGINAL_PCH_DIR,
 
   /// Record code for file ID of the file or buffer that was used to
   /// generate the AST file.
@@ -832,6 +829,9 @@ enum SubmoduleRecordTypes {
   /// Specifies the name of the module that will eventually
   /// re-export the entities in this module.
   SUBMODULE_EXPORT_AS = 17,
+
+  /// Specifies affecting modules that were not imported.
+  SUBMODULE_AFFECTING_MODULES = 18,
 };
 
 /// Record types used within a comments block.
@@ -1511,7 +1511,10 @@ enum DeclCode {
   /// A UnnamedGlobalConstantDecl record.
   DECL_UNNAMED_GLOBAL_CONSTANT,
 
-  DECL_LAST = DECL_UNNAMED_GLOBAL_CONSTANT
+  /// A HLSLBufferDecl record.
+  DECL_HLSL_BUFFER,
+
+  DECL_LAST = DECL_HLSL_BUFFER
 };
 
 /// Record codes for each kind of statement or expression.

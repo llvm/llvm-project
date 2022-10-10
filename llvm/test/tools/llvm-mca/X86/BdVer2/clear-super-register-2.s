@@ -39,7 +39,7 @@ vandps %xmm4, %xmm1, %xmm0
 # CHECK:      Dispatch Width:    4
 # CHECK-NEXT: uOps Per Cycle:    1.06
 # CHECK-NEXT: IPC:               0.56
-# CHECK-NEXT: Block RThroughput: 25.5
+# CHECK-NEXT: Block RThroughput: 24.5
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -67,7 +67,7 @@ vandps %xmm4, %xmm1, %xmm0
 # CHECK-NEXT:  2      5     1.00                        vaddps	%ymm3, %ymm1, %ymm4
 # CHECK-NEXT:  2      5     1.00                        vaddps	%ymm3, %ymm1, %ymm4
 # CHECK-NEXT:  2      5     1.00                        vaddps	%ymm3, %ymm1, %ymm4
-# CHECK-NEXT:  1      2     1.00                        vandps	%xmm4, %xmm1, %xmm0
+# CHECK-NEXT:  1      2     0.50                        vandps	%xmm4, %xmm1, %xmm0
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          0123456789          0123456789

@@ -10,7 +10,7 @@
 //   - tree nodes correspond to language grammar constructs.
 //
 // The tree is initially built from an AST. Each node of a newly built tree
-// covers a continous subrange of expanded tokens (i.e. tokens after
+// covers a continuous subrange of expanded tokens (i.e. tokens after
 // preprocessing), the specific tokens coverered are stored in the leaf nodes of
 // a tree. A post-order traversal of a tree will visit leaf nodes in an order
 // corresponding the original order of expanded tokens.

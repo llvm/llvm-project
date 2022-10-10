@@ -261,8 +261,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}i128_sle:
-; GCN: v_cmp_le_u64
 ; GCN: v_cmp_le_i64
+; CGV: v_cndmask
 ; SI: v_cmp_eq_u64
 ; VI: s_cmp_eq_u64
 define amdgpu_kernel void @i128_sle(i32 addrspace(1)* %out, i128 %a, i128 %b) #0 {

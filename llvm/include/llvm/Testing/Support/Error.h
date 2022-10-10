@@ -207,7 +207,7 @@ testing::Matcher<const detail::ErrorHolder &> Failed(M Matcher) {
 
 template <typename... M>
 testing::Matcher<const detail::ErrorHolder &> FailedWithMessage(M... Matcher) {
-  static_assert(sizeof...(M) > 0, "");
+  static_assert(sizeof...(M) > 0);
   return MakeMatcher(
       new detail::ErrorMessageMatches(testing::ElementsAre(Matcher...)));
 }

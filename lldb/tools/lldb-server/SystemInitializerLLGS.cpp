@@ -41,6 +41,11 @@ using HostObjectFile = ObjectFileELF;
 #include "Plugins/Instruction/MIPS/EmulateInstructionMIPS.h"
 #endif
 
+#if defined(__riscv)
+#define LLDB_TARGET_RISCV
+#include "Plugins/Instruction/RISCV/EmulateInstructionRISCV.h"
+#endif
+
 using namespace lldb_private;
 
 llvm::Error SystemInitializerLLGS::Initialize() {
@@ -58,6 +63,9 @@ llvm::Error SystemInitializerLLGS::Initialize() {
 #if defined(LLDB_TARGET_MIPS64)
   EmulateInstructionMIPS64::Initialize();
 #endif
+#if defined(LLDB_TARGET_RISCV)
+  EmulateInstructionRISCV::Initialize();
+#endif
 
   return llvm::Error::success();
 }
@@ -73,6 +81,9 @@ void SystemInitializerLLGS::Terminate() {
 #endif
 #if defined(LLDB_TARGET_MIPS64)
   EmulateInstructionMIPS64::Terminate();
+#endif
+#if defined(LLDB_TARGET_RISCV)
+  EmulateInstructionRISCV::Terminate();
 #endif
 
   SystemInitializerCommon::Terminate();

@@ -401,7 +401,7 @@ protected:
           m_options.log_file, flags, lldb::eFilePermissionsFileDefault, false);
       if (!file) {
         result.AppendErrorWithFormat("Unable to open log file '%s': %s",
-                                     m_options.log_file.GetCString(),
+                                     m_options.log_file.GetPath().c_str(),
                                      llvm::toString(file.takeError()).c_str());
         return false;
       }

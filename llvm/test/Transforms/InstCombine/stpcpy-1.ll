@@ -11,7 +11,6 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @b = common global [32 x i8] zeroinitializer, align 1
 @percent_s = constant [3 x i8] c"%s\00"
 
-declare i32 @sprintf(i8**, i32*, ...)
 declare i8* @stpcpy(i8*, i8*)
 
 define i8* @test_simplify1() {
@@ -48,7 +47,7 @@ define void @test_simplify3(i8* %dst) {
 
 define i8* @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @stpcpy(i8* getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0), i8* getelementptr inbounds ([32 x i8], [32 x i8]* @b, i32 0, i32 0))
+; CHECK-NEXT:    [[RET:%.*]] = call i8* @stpcpy(i8* nonnull getelementptr inbounds ([32 x i8], [32 x i8]* @a, i32 0, i32 0), i8* nonnull getelementptr inbounds ([32 x i8], [32 x i8]* @b, i32 0, i32 0))
 ; CHECK-NEXT:    ret i8* [[RET]]
 ;
   %dst = getelementptr [32 x i8], [32 x i8]* @a, i32 0, i32 0
@@ -75,22 +74,4 @@ define i8* @test_no_incompatible_attr() {
   %src = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
   %ret = call dereferenceable(1) i8* @stpcpy(i8* %dst, i8* %src)
   ret i8* %ret
-}
-
-; The libcall prototype checker does not check for exact pointer type
-; (just pointer of some type), so we identify this as a standard sprintf
-; call. This requires a cast to operate on mismatched pointer types.
-
-define i32 @PR51200(i8** %p, i32* %p2) {
-; CHECK-LABEL: @PR51200(
-; CHECK-NEXT:    [[CSTR:%.*]] = bitcast i8** [[P:%.*]] to i8*
-; CHECK-NEXT:    [[CSTR1:%.*]] = bitcast i32* [[P2:%.*]] to i8*
-; CHECK-NEXT:    [[STPCPY:%.*]] = call i8* @stpcpy(i8* [[CSTR]], i8* [[CSTR1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint i8* [[STPCPY]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint i8** [[P]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret i32 [[TMP3]]
-;
-  %call = call i32 (i8**, i32*, ...) @sprintf(i8** %p, i32* bitcast ([3 x i8]* @percent_s to i32*), i32* %p2)
-  ret i32 %call
 }

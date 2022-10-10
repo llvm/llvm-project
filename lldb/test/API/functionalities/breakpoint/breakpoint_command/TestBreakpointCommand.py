@@ -8,7 +8,10 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+import json
+import os
 import side_effect
+
 
 
 class BreakpointCommandTestCase(TestBase):
@@ -30,6 +33,79 @@ class BreakpointCommandTestCase(TestBase):
     def test_commands_on_creation(self):
         self.build()
         self.breakpoint_commands_on_creation()
+
+    @skipIf(oslist=["windows"])
+    @no_debug_info_test
+    def test_breakpoints_with_relative_path_line_tables(self):
+        """
+            Test that we can set breakpoints using a full or partial path when
+            line tables in the debug information has relative paths where the
+            relative path is either fully contained in the specified path, or if
+            the specified path also a relative path that is shorter than the
+            path in the debug info.
+
+            The "relative.yaml" contains a line table that is:
+
+            Line table for a/b/c/main.cpp in `a.out
+            0x0000000100003f94: a/b/c/main.cpp:1
+            0x0000000100003fb0: a/b/c/main.cpp:2:3
+            0x0000000100003fb8: a/b/c/main.cpp:2:3
+
+            So the line table contains relative paths. We should be able to set
+            breakpoints with any source path that matches this path which
+            includes paths that are longer than "a/b/c/main.cpp", but also any
+            relative path that is shorter than this while all specified relative
+            path components still match.
+        """
+        src_dir = self.getSourceDir()
+        yaml_path = os.path.join(src_dir, "relative.yaml")
+        yaml_base, ext = os.path.splitext(yaml_path)
+        obj_path = self.getBuildArtifact("a.out")
+        self.yaml2obj(yaml_path, obj_path)
+
+        # Create a target with the object file we just created from YAML
+        target = self.dbg.CreateTarget(obj_path)
+        # We now have debug information with line table paths that start are
+        # "./a/b/c/main.cpp".
+
+        # Make sure that all of the following paths create a breakpoint
+        # successfully. We have paths that are longer than our path, and also
+        # that are shorter where all relative directories still match.
+        valid_paths = [
+            "/x/a/b/c/main.cpp",
+            "/x/y/a/b/c/main.cpp",
+            "./x/y/a/b/c/main.cpp",
+            "x/y/a/b/c/main.cpp",
+            "./y/a/b/c/main.cpp",
+            "y/a/b/c/main.cpp",
+            "./a/b/c/main.cpp",
+            "a/b/c/main.cpp",
+            "./b/c/main.cpp",
+            "b/c/main.cpp",
+            "./c/main.cpp",
+            "c/main.cpp",
+            "./main.cpp",
+            "main.cpp",
+        ]
+        for path in valid_paths:
+            bkpt = target.BreakpointCreateByLocation(path, 2)
+            self.assertTrue(bkpt.GetNumLocations() > 0,
+                'Couldn\'t resolve breakpoint using full path "%s" in executate "%s" with '
+                'debug info that has relative path with matching suffix' % (path, self.getBuildArtifact("a.out")))
+        invalid_paths = [
+            "/x/b/c/main.cpp",
+            "/x/c/main.cpp",
+            "/x/main.cpp",
+            "./x/y/a/d/c/main.cpp",
+        ]
+        # Reset source map.
+        self.runCmd("settings clear target.source-map")
+        for path in invalid_paths:
+            bkpt = target.BreakpointCreateByLocation(path, 2)
+            self.assertTrue(bkpt.GetNumLocations() == 0,
+                'Incorrectly resolved a breakpoint using full path "%s" with '
+                'debug info that has relative path with matching suffix' % (path))
+
 
     def setUp(self):
         # Call super's setUp().
@@ -240,8 +316,9 @@ class BreakpointCommandTestCase(TestBase):
                     substrs=['stopped',
                              'stop reason = breakpoint'])
 
-        # The breakpoint should have a hit count of 2.
-        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 2)
+        # The breakpoint should have a hit count of 1, since we reset counts
+        # for each run.
+        lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
     def breakpoint_command_script_parameters(self):
         """Test that the frame and breakpoint location are being properly passed to the script breakpoint command function."""
@@ -307,8 +384,8 @@ class BreakpointCommandTestCase(TestBase):
         for id in bp_ids:
             self.expect("breakpoint command list {0}".format(id),
                         patterns=["bktptcmd.function"])
-        
-        
+
+
 
     def test_breakpoint_delete_disabled(self):
         """Test 'break delete --disabled' works"""
@@ -355,3 +432,82 @@ class BreakpointCommandTestCase(TestBase):
 
         bp_3 = target.FindBreakpointByID(bp_id_3)
         self.assertFalse(bp_3.IsValid(), "Didn't delete disabled breakpoint 3")
+
+
+    def get_source_map_json(self):
+        stream = lldb.SBStream()
+        self.dbg.GetSetting("target.source-map").GetAsJSON(stream)
+        return json.loads(stream.GetData())
+
+    def verify_source_map_entry_pair(self, entry, original, replacement):
+        self.assertEquals(entry[0], original,
+            "source map entry 'original' does not match")
+        self.assertEquals(entry[1], replacement,
+            "source map entry 'replacement' does not match")
+
+    def verify_source_map_deduce_statistics(self, target, expected_count):
+        stream = lldb.SBStream()
+        res = target.GetStatistics().GetAsJSON(stream)
+        self.assertTrue(res.Success())
+        debug_stats = json.loads(stream.GetData())
+        self.assertEqual('targets' in debug_stats, True,
+                'Make sure the "targets" key in in target.GetStatistics()')
+        target_stats = debug_stats['targets'][0]
+        self.assertNotEqual(target_stats, None)
+        self.assertEqual(target_stats['sourceMapDeduceCount'], expected_count)
+
+
+    @skipIf(oslist=["windows"])
+    @no_debug_info_test
+    def test_breakpoints_auto_source_map_relative(self):
+        """
+            Test that with target.auto-source-map-relative settings.
+
+            The "relative.yaml" contains a line table that is:
+
+            Line table for a/b/c/main.cpp in `a.out
+            0x0000000100003f94: a/b/c/main.cpp:1
+            0x0000000100003fb0: a/b/c/main.cpp:2:3
+            0x0000000100003fb8: a/b/c/main.cpp:2:3
+        """
+        src_dir = self.getSourceDir()
+        yaml_path = os.path.join(src_dir, "relative.yaml")
+        yaml_base, ext = os.path.splitext(yaml_path)
+        obj_path = self.getBuildArtifact("a.out")
+        self.yaml2obj(yaml_path, obj_path)
+
+        # Create a target with the object file we just created from YAML
+        target = self.dbg.CreateTarget(obj_path)
+        # We now have debug information with line table paths that start are
+        # "./a/b/c/main.cpp".
+
+        source_map_json = self.get_source_map_json()
+        self.assertEquals(len(source_map_json), 0, "source map should be empty initially")
+        self.verify_source_map_deduce_statistics(target, 0)
+
+        # Verify auto deduced source map when file path in debug info
+        # is a suffix of request breakpoint file path
+        path = "/x/y/a/b/c/main.cpp"
+        bp = target.BreakpointCreateByLocation(path, 2)
+        self.assertTrue(bp.GetNumLocations() > 0,
+                'Couldn\'t resolve breakpoint using full path "%s" in executate "%s" with '
+                'debug info that has relative path with matching suffix' % (path, self.getBuildArtifact("a.out")))
+
+        source_map_json = self.get_source_map_json()
+        self.assertEquals(len(source_map_json), 1, "source map should not be empty")
+        self.verify_source_map_entry_pair(source_map_json[0], ".", "/x/y")
+        self.verify_source_map_deduce_statistics(target, 1)
+
+        # Reset source map.
+        self.runCmd("settings clear target.source-map")
+
+        # Verify source map will not auto deduced when file path of request breakpoint
+        # equals the file path in debug info.
+        path = "a/b/c/main.cpp"
+        bp = target.BreakpointCreateByLocation(path, 2)
+        self.assertTrue(bp.GetNumLocations() > 0,
+                'Couldn\'t resolve breakpoint using full path "%s" in executate "%s" with '
+                'debug info that has relative path with matching suffix' % (path, self.getBuildArtifact("a.out")))
+
+        source_map_json = self.get_source_map_json()
+        self.assertEquals(len(source_map_json), 0, "source map should not be deduced")

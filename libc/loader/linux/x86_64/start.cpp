@@ -9,6 +9,8 @@
 #include "config/linux/app.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/threads/thread.h"
+#include "src/stdlib/atexit.h"
+#include "src/stdlib/exit.h"
 #include "src/string/memory_utils/memcpy_implementations.h"
 
 #include <asm/prctl.h>
@@ -17,6 +19,7 @@
 #include <stdint.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
+#include <unistd.h>
 
 extern "C" int main(int, char **, char **);
 
@@ -56,13 +59,13 @@ void init_tls(TLSDescriptor &tls_descriptor) {
   // We cannot call the mmap function here as the functions set errno on
   // failure. Since errno is implemented via a thread local variable, we cannot
   // use errno before TLS is setup.
-  long mmapRetVal = __llvm_libc::syscall(
+  long mmapRetVal = __llvm_libc::syscall_impl(
       mmapSyscallNumber, nullptr, tlsSizeWithAddr, PROT_READ | PROT_WRITE,
       MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   // We cannot check the return value with MAP_FAILED as that is the return
   // of the mmap function and not the mmap syscall.
   if (mmapRetVal < 0 && static_cast<uintptr_t>(mmapRetVal) > -app.pageSize)
-    __llvm_libc::syscall(SYS_exit, 1);
+    __llvm_libc::syscall_impl(SYS_exit, 1);
   uintptr_t *tlsAddr = reinterpret_cast<uintptr_t *>(mmapRetVal);
 
   // x86_64 TLS faces down from the thread pointer with the first entry
@@ -81,13 +84,43 @@ void init_tls(TLSDescriptor &tls_descriptor) {
 void cleanup_tls(uintptr_t addr, uintptr_t size) {
   if (size == 0)
     return;
-  __llvm_libc::syscall(SYS_munmap, addr, size);
+  __llvm_libc::syscall_impl(SYS_munmap, addr, size);
 }
 
 // Sets the thread pointer to |val|. Returns true on success, false on failure.
 static bool set_thread_ptr(uintptr_t val) {
-  return __llvm_libc::syscall(SYS_arch_prctl, ARCH_SET_FS, val) == -1 ? false
-                                                                      : true;
+  return __llvm_libc::syscall_impl(SYS_arch_prctl, ARCH_SET_FS, val) == -1
+             ? false
+             : true;
+}
+
+using InitCallback = void(int, char **, char **);
+using FiniCallback = void(void);
+
+extern "C" {
+// These arrays are present in the .init_array and .fini_array sections.
+// The symbols are inserted by linker when it sees references to them.
+extern uintptr_t __preinit_array_start[];
+extern uintptr_t __preinit_array_end[];
+extern uintptr_t __init_array_start[];
+extern uintptr_t __init_array_end[];
+extern uintptr_t __fini_array_start[];
+extern uintptr_t __fini_array_end[];
+}
+
+static void call_init_array_callbacks(int argc, char **argv, char **env) {
+  size_t preinit_array_size = __preinit_array_end - __preinit_array_start;
+  for (size_t i = 0; i < preinit_array_size; ++i)
+    reinterpret_cast<InitCallback *>(__preinit_array_start[i])(argc, argv, env);
+  size_t init_array_size = __init_array_end - __init_array_start;
+  for (size_t i = 0; i < init_array_size; ++i)
+    reinterpret_cast<InitCallback *>(__init_array_start[i])(argc, argv, env);
+}
+
+static void call_fini_array_callbacks() {
+  size_t fini_array_size = __fini_array_end - __fini_array_start;
+  for (size_t i = fini_array_size; i > 0; --i)
+    reinterpret_cast<FiniCallback *>(__fini_array_start[i - 1])();
 }
 
 } // namespace __llvm_libc
@@ -121,9 +154,9 @@ extern "C" void _start() {
   __asm__ __volatile__("andq $0xfffffffffffffff0, %%rsp\n\t" ::: "%rsp");
   __asm__ __volatile__("andq $0xfffffffffffffff0, %%rbp\n\t" ::: "%rbp");
 
-  auto tid = __llvm_libc::syscall(SYS_gettid);
+  auto tid = __llvm_libc::syscall_impl(SYS_gettid);
   if (tid <= 0)
-    __llvm_libc::syscall(SYS_exit, 1);
+    __llvm_libc::syscall_impl(SYS_exit, 1);
   __llvm_libc::main_thread_attrib.tid = tid;
 
   // After the argv array, is a 8-byte long NULL value before the array of env
@@ -134,6 +167,9 @@ extern "C" void _start() {
   app.envPtr = env_ptr;
   while (*env_end_marker)
     ++env_end_marker;
+
+  // Initialize the POSIX global declared in unistd.h
+  environ = reinterpret_cast<char **>(env_ptr);
 
   // After the env array, is the aux-vector. The end of the aux-vector is
   // denoted by an AT_NULL entry.
@@ -171,12 +207,28 @@ extern "C" void _start() {
   __llvm_libc::TLSDescriptor tls;
   __llvm_libc::init_tls(tls);
   if (tls.size != 0 && !__llvm_libc::set_thread_ptr(tls.tp))
-    __llvm_libc::syscall(SYS_exit, 1);
+    __llvm_libc::syscall_impl(SYS_exit, 1);
 
   __llvm_libc::self.attrib = &__llvm_libc::main_thread_attrib;
+  __llvm_libc::main_thread_attrib.atexit_callback_mgr =
+      __llvm_libc::internal::get_thread_atexit_callback_mgr();
+
+  // We want the fini array callbacks to be run after other atexit
+  // callbacks are run. So, we register them before running the init
+  // array callbacks as they can potentially register their own atexit
+  // callbacks.
+  __llvm_libc::atexit(&__llvm_libc::call_fini_array_callbacks);
+
+  __llvm_libc::call_init_array_callbacks(
+      app.args->argc, reinterpret_cast<char **>(app.args->argv),
+      reinterpret_cast<char **>(env_ptr));
 
   int retval = main(app.args->argc, reinterpret_cast<char **>(app.args->argv),
                     reinterpret_cast<char **>(env_ptr));
+
+  // TODO: TLS cleanup should be done after all other atexit callbacks
+  // are run. So, register a cleanup callback for it with atexit before
+  // everything else.
   __llvm_libc::cleanup_tls(tls.addr, tls.size);
-  __llvm_libc::syscall(SYS_exit, retval);
+  __llvm_libc::exit(retval);
 }

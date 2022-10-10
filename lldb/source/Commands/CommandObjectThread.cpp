@@ -62,15 +62,13 @@ public:
       const int short_option = m_getopt_table[option_idx].val;
 
       switch (short_option) {
-      case 'c': {
-        int32_t input_count = 0;
-        if (option_arg.getAsInteger(0, m_count)) {
+      case 'c':
+        if (option_arg.getAsInteger(0, m_count) || (m_count < 0)) {
           m_count = UINT32_MAX;
           error.SetErrorStringWithFormat(
               "invalid integer value for option '%c'", short_option);
-        } else if (input_count < 0)
-          m_count = UINT32_MAX;
-      } break;
+        }
+        break;
       case 's':
         if (option_arg.getAsInteger(0, m_start))
           error.SetErrorStringWithFormat(
@@ -991,7 +989,7 @@ protected:
         }
 
         LineEntry function_start;
-        uint32_t index_ptr = 0, end_ptr;
+        uint32_t index_ptr = 0, end_ptr = UINT32_MAX;
         std::vector<addr_t> address_list;
 
         // Find the beginning & end index of the function, but first make
@@ -2178,6 +2176,11 @@ public:
         m_dumper_options.json = true;
         break;
       }
+      case 'E': {
+        m_dumper_options.only_events = true;
+        m_dumper_options.show_events = true;
+        break;
+      }
       case 'C': {
         m_continue = true;
         break;
@@ -2269,17 +2272,17 @@ protected:
       m_options.m_dumper_options.id = m_last_id;
     }
 
-    llvm::Expected<TraceCursorUP> cursor_or_error =
+    llvm::Expected<TraceCursorSP> cursor_or_error =
         m_exe_ctx.GetTargetSP()->GetTrace()->CreateNewCursor(*thread_sp);
 
     if (!cursor_or_error) {
       result.AppendError(llvm::toString(cursor_or_error.takeError()));
       return false;
     }
-    TraceCursorUP &cursor_up = *cursor_or_error;
+    TraceCursorSP &cursor_sp = *cursor_or_error;
 
     if (m_options.m_dumper_options.id &&
-        !cursor_up->HasId(*m_options.m_dumper_options.id)) {
+        !cursor_sp->HasId(*m_options.m_dumper_options.id)) {
       result.AppendError("invalid instruction id\n");
       return false;
     }
@@ -2295,10 +2298,10 @@ protected:
       // We need to stop processing data when we already ran out of instructions
       // in a previous command. We can fake this by setting the cursor past the
       // end of the trace.
-      cursor_up->Seek(1, TraceCursor::SeekType::End);
+      cursor_sp->Seek(1, lldb::eTraceCursorSeekTypeEnd);
     }
 
-    TraceDumper dumper(std::move(cursor_up),
+    TraceDumper dumper(std::move(cursor_sp),
                        out_file ? *out_file : result.GetOutputStream(),
                        m_options.m_dumper_options);
 

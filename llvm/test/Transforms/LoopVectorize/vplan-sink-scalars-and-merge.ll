@@ -253,7 +253,7 @@ define void @uniform_gep(i64 %k, i16* noalias %A, i16* noalias %B) {
 ; CHECK-NEXT:   EMIT vp<[[WIDE_CAN_IV:%.+]]> = WIDEN-CANONICAL-INDUCTION vp<[[CAN_IV]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK:%.+]]> = icmp ule vp<[[WIDE_CAN_IV]]> vp<[[BTC]]>
 ; CHECK-NEXT:   CLONE ir<%gep.A.uniform> = getelementptr ir<%A>, ir<0>
-; CHECK-NEXT:   REPLICATE ir<%lv> = load ir<%gep.A.uniform>
+; CHECK-NEXT:   CLONE ir<%lv> = load ir<%gep.A.uniform>
 ; CHECK-NEXT:   WIDEN ir<%cmp> = icmp ir<%iv>, ir<%k>
 ; CHECK-NEXT: Successor(s): loop.then
 ; CHECK-EMPTY:
@@ -571,13 +571,17 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT: Successor(s): next.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: next.0:
+; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.0>
+; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = select vp<[[MASK1]]> vp<[[NOT]]> ir<false>
+; CHECK-NEXT:   BLEND %p = ir<0>/vp<%14> vp<%12>/vp<%9>
 ; CHECK-NEXT: Successor(s): then.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT: then.1:
-; CHECK-NEXT:   EMIT vp<[[NOT:%.+]]> = not ir<%c.0>
-; CHECK-NEXT:   EMIT vp<[[MASK3:%.+]]> = select vp<[[MASK1]]> vp<[[NOT]]> ir<false>
 ; CHECK-NEXT:   EMIT vp<[[MASK4:%.+]]> = or vp<[[MASK2]]> vp<[[MASK3]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK5:%.+]]> = select vp<[[MASK4]]> ir<%c.0> ir<false>
+; CHECK-NEXT: Successor(s): then.1.0
+; CHECK-EMPTY:
+; CHECK-NEXT: then.1.0:
 ; CHECK-NEXT: Successor(s): pred.store
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.store: {
@@ -588,14 +592,16 @@ define void @pred_cfg3(i32 %k, i32 %j) {
 ; CHECK-NEXT:   pred.store.if:
 ; CHECK-NEXT:     REPLICATE ir<%gep.a> = getelementptr ir<@a>, ir<0>, ir<%mul>
 ; CHECK-NEXT:     REPLICATE store ir<0>, ir<%gep.a>
+; CHECK-NEXT:     REPLICATE ir<%gep.c> = getelementptr ir<@c>, ir<0>, ir<%mul>
+; CHECK-NEXT:     REPLICATE store ir<%p>, ir<%gep.c>
 ; CHECK-NEXT:   Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:   pred.store.continue:
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
-; CHECK-NEXT: Successor(s): then.1.0
+; CHECK-NEXT: Successor(s): then.1.1
 ; CHECK-EMPTY:
-; CHECK-NEXT: then.1.0:
+; CHECK-NEXT: then.1.1:
 ; CHECK-NEXT: Successor(s): next.1
 ; CHECK-EMPTY:
 ; CHECK-NEXT: next.1:
@@ -612,6 +618,7 @@ loop:
   %gep.b = getelementptr inbounds [2048 x i32], [2048 x i32]* @b, i32 0, i32 %iv
   %mul = mul i32 %iv, 10
   %gep.a = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i32 0, i32 %mul
+  %gep.c = getelementptr inbounds [2048 x i32], [2048 x i32]* @c, i32 0, i32 %mul
   %c.0 = icmp ult i32 %iv, %j
   br i1 %c.0, label %then.0, label %next.0
 
@@ -620,10 +627,12 @@ then.0:
   br label %next.0
 
 next.0:
+  %p = phi i32 [ 0, %loop ], [ %lv.b, %then.0 ]
   br i1 %c.0, label %then.1, label %next.1
 
 then.1:
   store i32 0, i32* %gep.a, align 4
+  store i32 %p, i32* %gep.c, align 4
   br label %next.1
 
 next.1:

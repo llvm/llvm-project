@@ -3316,7 +3316,7 @@ llvm::Constant *CGObjCGNU::MakeBitField(ArrayRef<bool> bits) {
   auto fields = builder.beginStruct();
   fields.addInt(Int32Ty, values.size());
   auto array = fields.beginArray();
-  for (auto v : values) array.add(v);
+  for (auto *v : values) array.add(v);
   array.finishAndAddTo(fields);
 
   llvm::Constant *GS =

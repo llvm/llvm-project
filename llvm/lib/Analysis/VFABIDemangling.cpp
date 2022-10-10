@@ -417,8 +417,8 @@ Optional<VFInfo> VFABI::tryDemangleForVFABI(StringRef MangledName,
   // this parser:
   // 1. Uniqueness.
   // 2. Must be the last in the parameter list.
-  const auto NGlobalPreds = std::count_if(
-      Parameters.begin(), Parameters.end(), [](const VFParameter PK) {
+  const auto NGlobalPreds =
+      llvm::count_if(Parameters, [](const VFParameter &PK) {
         return PK.ParamKind == VFParamKind::GlobalPredicate;
       });
   assert(NGlobalPreds < 2 && "Cannot have more than one global predicate.");

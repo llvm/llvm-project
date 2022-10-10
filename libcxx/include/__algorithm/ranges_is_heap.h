@@ -26,7 +26,7 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -39,7 +39,7 @@ struct __fn {
   _LIBCPP_HIDE_FROM_ABI constexpr
   static bool __is_heap_fn_impl(_Iter __first, _Sent __last, _Comp& __comp, _Proj& __proj) {
     auto __last_iter = ranges::next(__first, __last);
-    auto&& __projected_comp = ranges::__make_projected_comp(__comp, __proj);
+    auto&& __projected_comp = std::__make_projected(__comp, __proj);
 
     auto __result = std::__is_heap_until(std::move(__first), std::move(__last_iter), __projected_comp);
     return __result == __last;
@@ -69,6 +69,6 @@ inline namespace __cpo {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 17
 
 #endif // _LIBCPP___ALGORITHM_RANGES_IS_HEAP_H

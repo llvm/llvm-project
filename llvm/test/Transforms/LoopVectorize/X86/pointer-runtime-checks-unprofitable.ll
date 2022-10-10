@@ -1,6 +1,5 @@
+; RUN: opt -passes="loop-vectorize" -mtriple=x86_64-unknown-linux -S -debug %s 2>&1 | FileCheck %s
 ; REQUIRES: asserts
-
-; RUN: opt -passes='loop-vectorize' -mtriple=x86_64-unknown-linux -S -debug %s 2>&1 | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -60,7 +59,7 @@ define void @test(double* nocapture %A, double* nocapture %B, double* nocapture 
 ; CHECK-NEXT:  1  for   {{.+}} = or i1
 ; CHECK-NEXT: Total cost of runtime checks: 35
 
-; CHECK: LV: Vectorization is not beneficial: expected trip count < minimum profitable VF (16 < 70)
+; CHECK: LV: Vectorization is not beneficial: expected trip count < minimum profitable VF (16 < 24)
 ;
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT: entry:

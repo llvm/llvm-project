@@ -37,13 +37,13 @@ define float @f(<2 x float> %x) {
 
 define float @f_used_out_of_tree(<2 x float> %x) {
 ; CHECK-LABEL: @f_used_out_of_tree(
-; CHECK-NEXT:    [[X0:%.*]] = extractelement <2 x float> [[X:%.*]], i32 0
-; CHECK-NEXT:    [[X1:%.*]] = extractelement <2 x float> [[X]], i32 1
-; CHECK-NEXT:    [[X0X0:%.*]] = fmul float [[X0]], [[X0]]
-; CHECK-NEXT:    [[X1X1:%.*]] = fmul float [[X1]], [[X1]]
-; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X0X0]], [[X1X1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X:%.*]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x float> [[X]], [[X]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x float> [[TMP2]], i32 1
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    store float [[ADD]], float* @a, align 4
-; CHECK-NEXT:    ret float [[X0]]
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
 ; THRESH1-LABEL: @f_used_out_of_tree(
 ; THRESH1-NEXT:    [[TMP1:%.*]] = extractelement <2 x float> [[X:%.*]], i32 0

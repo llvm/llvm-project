@@ -30,7 +30,7 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -84,7 +84,7 @@ struct __fn {
         _OutIter,
         _Comp,
         _Proj1,
-        _Proj2> 
+        _Proj2>
   _LIBCPP_HIDE_FROM_ABI constexpr set_union_result<borrowed_iterator_t<_Range1>,
                                                    borrowed_iterator_t<_Range2>,
                                                    _OutIter>
@@ -115,6 +115,6 @@ inline namespace __cpo {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 17
 
 #endif // _LIBCPP___ALGORITHM_RANGES_SET_UNION_H

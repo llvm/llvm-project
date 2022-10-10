@@ -4786,54 +4786,54 @@ define <8 x float> @uitofp_load_8i64_to_8f32(ptr%a) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovapd (%rdi), %ymm2
 ; AVX1-NEXT:    vmovapd 32(%rdi), %ymm3
-; AVX1-NEXT:    vmovapd {{.*#+}} ymm8 = [1,1,1,1]
-; AVX1-NEXT:    vandpd %ymm3, %ymm8, %ymm5
-; AVX1-NEXT:    vmovdqa (%rdi), %xmm9
+; AVX1-NEXT:    vmovapd {{.*#+}} ymm4 = [1,1,1,1]
+; AVX1-NEXT:    vandpd %ymm4, %ymm3, %ymm5
+; AVX1-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX1-NEXT:    vmovdqa 16(%rdi), %xmm1
 ; AVX1-NEXT:    vmovdqa 32(%rdi), %xmm6
 ; AVX1-NEXT:    vpsrlq $1, %xmm6, %xmm7
-; AVX1-NEXT:    vmovdqa 48(%rdi), %xmm4
-; AVX1-NEXT:    vpsrlq $1, %xmm4, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm7, %ymm0
-; AVX1-NEXT:    vorpd %ymm5, %ymm0, %ymm0
-; AVX1-NEXT:    vblendvpd %ymm3, %ymm0, %ymm3, %ymm0
-; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
+; AVX1-NEXT:    vmovdqa 48(%rdi), %xmm8
+; AVX1-NEXT:    vpsrlq $1, %xmm8, %xmm9
+; AVX1-NEXT:    vinsertf128 $1, %xmm9, %ymm7, %ymm7
+; AVX1-NEXT:    vorpd %ymm5, %ymm7, %ymm5
+; AVX1-NEXT:    vblendvpd %ymm3, %ymm5, %ymm3, %ymm3
+; AVX1-NEXT:    vpextrq $1, %xmm3, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm10, %xmm5
+; AVX1-NEXT:    vmovq %xmm3, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm10, %xmm7
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm5 = xmm7[0],xmm5[0],xmm7[2,3]
+; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm3
+; AVX1-NEXT:    vmovq %xmm3, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm10, %xmm7
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm5 = xmm5[0,1],xmm7[0],xmm5[3]
+; AVX1-NEXT:    vpextrq $1, %xmm3, %rax
 ; AVX1-NEXT:    vcvtsi2ss %rax, %xmm10, %xmm3
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    vcvtsi2ss %rax, %xmm10, %xmm5
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm3 = xmm5[0],xmm3[0],xmm5[2,3]
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    vcvtsi2ss %rax, %xmm10, %xmm5
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1],xmm5[0],xmm3[3]
-; AVX1-NEXT:    vpextrq $1, %xmm0, %rax
-; AVX1-NEXT:    vcvtsi2ss %rax, %xmm10, %xmm0
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm3[0,1,2],xmm0[0]
-; AVX1-NEXT:    vaddps %xmm0, %xmm0, %xmm3
-; AVX1-NEXT:    vpackssdw %xmm4, %xmm6, %xmm4
-; AVX1-NEXT:    vblendvps %xmm4, %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vandpd %ymm2, %ymm8, %ymm3
-; AVX1-NEXT:    vpsrlq $1, %xmm9, %xmm4
-; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm5
-; AVX1-NEXT:    vinsertf128 $1, %xmm5, %ymm4, %ymm4
-; AVX1-NEXT:    vorpd %ymm3, %ymm4, %ymm3
-; AVX1-NEXT:    vblendvpd %ymm2, %ymm3, %ymm2, %ymm2
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm3 = xmm5[0,1,2],xmm3[0]
+; AVX1-NEXT:    vaddps %xmm3, %xmm3, %xmm5
+; AVX1-NEXT:    vpackssdw %xmm8, %xmm6, %xmm6
+; AVX1-NEXT:    vblendvps %xmm6, %xmm5, %xmm3, %xmm3
+; AVX1-NEXT:    vandpd %ymm4, %ymm2, %ymm4
+; AVX1-NEXT:    vpsrlq $1, %xmm0, %xmm5
+; AVX1-NEXT:    vpsrlq $1, %xmm1, %xmm6
+; AVX1-NEXT:    vinsertf128 $1, %xmm6, %ymm5, %ymm5
+; AVX1-NEXT:    vorpd %ymm4, %ymm5, %ymm4
+; AVX1-NEXT:    vblendvpd %ymm2, %ymm4, %ymm2, %ymm2
 ; AVX1-NEXT:    vpextrq $1, %xmm2, %rax
-; AVX1-NEXT:    vcvtsi2ss %rax, %xmm10, %xmm3
-; AVX1-NEXT:    vmovq %xmm2, %rax
 ; AVX1-NEXT:    vcvtsi2ss %rax, %xmm10, %xmm4
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm3 = xmm4[0],xmm3[0],xmm4[2,3]
+; AVX1-NEXT:    vmovq %xmm2, %rax
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm10, %xmm5
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm4 = xmm5[0],xmm4[0],xmm5[2,3]
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm2
 ; AVX1-NEXT:    vmovq %xmm2, %rax
-; AVX1-NEXT:    vcvtsi2ss %rax, %xmm10, %xmm4
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm3 = xmm3[0,1],xmm4[0],xmm3[3]
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm10, %xmm5
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm4 = xmm4[0,1],xmm5[0],xmm4[3]
 ; AVX1-NEXT:    vpextrq $1, %xmm2, %rax
 ; AVX1-NEXT:    vcvtsi2ss %rax, %xmm10, %xmm2
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm3[0,1,2],xmm2[0]
-; AVX1-NEXT:    vaddps %xmm2, %xmm2, %xmm3
-; AVX1-NEXT:    vpackssdw %xmm1, %xmm9, %xmm1
-; AVX1-NEXT:    vblendvps %xmm1, %xmm3, %xmm2, %xmm1
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm2 = xmm4[0,1,2],xmm2[0]
+; AVX1-NEXT:    vaddps %xmm2, %xmm2, %xmm4
+; AVX1-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vblendvps %xmm0, %xmm4, %xmm2, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: uitofp_load_8i64_to_8f32:

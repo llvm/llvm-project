@@ -221,6 +221,12 @@ OPTIONS
   ``auto``, which detects whether standard output supports color. Specifying
   ``--color`` alone is equivalent to ``--color=always``.
 
+.. option:: --debug-file-directory <path>
+
+  Provide a path to a directory with a `.build-id` subdirectory to search for
+  debug information for stripped binaries. Multiple instances of this argument
+  are searched in the order given.
+
 .. option:: --debuginfod, --no-debuginfod
 
   Whether or not to try debuginfod lookups for debug binaries. Unless specified,
@@ -251,13 +257,24 @@ OPTIONS
 
   Reads from standard input, converts contained
   :doc:`Symbolizer Markup </SymbolizerMarkupFormat>` into human-readable form,
-  and prints the results to standard output. Presently, only the following
-  markup elements are supported:
+  and prints the results to standard output. The following markup elements are
+  not yet supported:
 
-  * ``{{symbol}}``
-  * ``{{reset}}``
-  * ``{{module}}``
-  * ``{{mmap}}``
+  * ``{{{hexdict}}}``
+  * ``{{{dumpfile}}}``
+
+  The ``{{{bt}}}`` backtrace element reports frames using the following syntax:
+
+  ``#<number>[.<inline>] <address> <function> <file>:<line>:<col> (<module>+<relative address>)``
+
+  ``<inline>`` provides frame numbers for calls inlined into the caller
+  coresponding to ``<number>``. The inlined call numbers start at 1 and increase
+  from callee to caller.
+
+  ``<address>`` is an address inside the call instruction to the function.  The
+  address may not be the start of the instruction.  ``<relative address>`` is
+  the corresponding virtual offset in the ``<module>`` loaded at that address.
+
 
 .. _llvm-symbolizer-opt-f:
 

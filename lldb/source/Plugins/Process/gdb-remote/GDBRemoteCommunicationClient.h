@@ -23,6 +23,7 @@
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/TraceGDBRemotePackets.h"
+#include "lldb/Utility/UUID.h"
 #if defined(_WIN32)
 #include "lldb/Host/windows/PosixApi.h"
 #endif
@@ -79,8 +80,6 @@ public:
 
   lldb::pid_t GetCurrentProcessID(bool allow_lazy = true);
 
-  bool GetLaunchSuccess(std::string &error_str);
-
   bool LaunchGDBServer(const char *remote_accept_hostname, lldb::pid_t &pid,
                        uint16_t &port, std::string &socket_name);
 
@@ -89,19 +88,11 @@ public:
 
   bool KillSpawnedProcess(lldb::pid_t pid);
 
-  /// Sends a GDB remote protocol 'A' packet that delivers program
-  /// arguments to the remote server.
+  /// Launch the process using the provided arguments.
   ///
-  /// \param[in] launch_info
-  ///     A NULL terminated array of const C strings to use as the
-  ///     arguments.
-  ///
-  /// \return
-  ///     Zero if the response was "OK", a positive value if the
-  ///     the response was "Exx" where xx are two hex digits, or
-  ///     -1 if the call is unsupported or any other unexpected
-  ///     response was received.
-  int SendArgumentsPacket(const ProcessLaunchInfo &launch_info);
+  /// \param[in] args
+  ///     A list of program arguments. The first entry is the program being run.
+  llvm::Error LaunchProcess(const Args &args);
 
   /// Sends a "QEnvironment:NAME=VALUE" packet that will build up the
   /// environment that will get used when launching an application
@@ -220,6 +211,8 @@ public:
   bool GetProcessStandaloneBinary(UUID &uuid, lldb::addr_t &value,
                                   bool &value_is_offset);
 
+  std::vector<lldb::addr_t> GetProcessStandaloneBinaries();
+
   void GetRemoteQSupported();
 
   bool GetVContSupported(char flavor);
@@ -336,6 +329,8 @@ public:
   bool GetQXferMemoryMapReadSupported();
 
   bool GetQXferSigInfoReadSupported();
+
+  bool GetMultiprocessSupported();
 
   LazyBool SupportsAllocDeallocMemory() // const
   {
@@ -593,6 +588,7 @@ protected:
   UUID m_process_standalone_uuid;
   lldb::addr_t m_process_standalone_value = LLDB_INVALID_ADDRESS;
   bool m_process_standalone_value_is_offset = false;
+  std::vector<lldb::addr_t> m_binary_addresses;
   llvm::VersionTuple m_os_version;
   llvm::VersionTuple m_maccatalyst_version;
   std::string m_os_build;

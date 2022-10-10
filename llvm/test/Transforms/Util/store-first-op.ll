@@ -10,9 +10,9 @@ entry:
 ; %getU is a store TO %getU. There are valid reasons to have an llvm.dbg.value here, but if the pass
 ; is changed to emit such, a more specific check should be added to make sure that any llvm.dbg.value
 ; is correct.
-; CHECK-NOT: @llvm.dbg.value(metadata %foo* %getU
-  call void @llvm.dbg.declare(metadata %foo* %getU, metadata !3, metadata !6), !dbg !7
-  store %foo* %getU, %foo** undef, align 8, !tbaa !8
+; CHECK-NOT: @llvm.dbg.value(metadata ptr %getU
+  call void @llvm.dbg.declare(metadata ptr %getU, metadata !3, metadata !6), !dbg !7
+  store ptr %getU, ptr undef, align 8, !tbaa !8
   unreachable
 }
 

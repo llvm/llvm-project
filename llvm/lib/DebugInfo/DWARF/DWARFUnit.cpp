@@ -134,11 +134,11 @@ void DWARFUnitVector::addUnitsImpl(
 }
 
 DWARFUnit *DWARFUnitVector::addUnit(std::unique_ptr<DWARFUnit> Unit) {
-  auto I = std::upper_bound(begin(), end(), Unit,
-                            [](const std::unique_ptr<DWARFUnit> &LHS,
-                               const std::unique_ptr<DWARFUnit> &RHS) {
-                              return LHS->getOffset() < RHS->getOffset();
-                            });
+  auto I = llvm::upper_bound(*this, Unit,
+                             [](const std::unique_ptr<DWARFUnit> &LHS,
+                                const std::unique_ptr<DWARFUnit> &RHS) {
+                               return LHS->getOffset() < RHS->getOffset();
+                             });
   return this->insert(I, std::move(Unit))->get();
 }
 
@@ -192,7 +192,7 @@ DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
                      bool IsDWO, const DWARFUnitVector &UnitVector)
     : Context(DC), InfoSection(Section), Header(Header), Abbrev(DA),
       RangeSection(RS), LineSection(LS), StringSection(SS),
-      StringOffsetSection(SOS), AddrOffsetSection(AOS), isLittleEndian(LE),
+      StringOffsetSection(SOS), AddrOffsetSection(AOS), IsLittleEndian(LE),
       IsDWO(IsDWO), UnitVector(UnitVector) {
   clear();
 }
@@ -200,7 +200,7 @@ DWARFUnit::DWARFUnit(DWARFContext &DC, const DWARFSection &Section,
 DWARFUnit::~DWARFUnit() = default;
 
 DWARFDataExtractor DWARFUnit::getDebugInfoExtractor() const {
-  return DWARFDataExtractor(Context.getDWARFObj(), InfoSection, isLittleEndian,
+  return DWARFDataExtractor(Context.getDWARFObj(), InfoSection, IsLittleEndian,
                             getAddressByteSize());
 }
 
@@ -222,7 +222,7 @@ DWARFUnit::getAddrOffsetSectionItem(uint32_t Index) const {
   if (AddrOffsetSection->Data.size() < Offset + getAddressByteSize())
     return None;
   DWARFDataExtractor DA(Context.getDWARFObj(), *AddrOffsetSection,
-                        isLittleEndian, getAddressByteSize());
+                        IsLittleEndian, getAddressByteSize());
   uint64_t Section;
   uint64_t Address = DA.getRelocatedAddress(&Offset, &Section);
   return {{Address, Section}};
@@ -240,7 +240,7 @@ Expected<uint64_t> DWARFUnit::getStringOffsetSectionItem(uint32_t Index) const {
                                        ", which is too large",
                                    inconvertibleErrorCode());
   DWARFDataExtractor DA(Context.getDWARFObj(), StringOffsetSection,
-                        isLittleEndian, 0);
+                        IsLittleEndian, 0);
   return DA.getRelocatedValue(ItemSize, &Offset);
 }
 
@@ -367,7 +367,7 @@ Error DWARFUnit::extractRangeList(uint64_t RangeListOffset,
   // Require that compile unit is extracted.
   assert(!DieArray.empty());
   DWARFDataExtractor RangesData(Context.getDWARFObj(), *RangeSection,
-                                isLittleEndian, getAddressByteSize());
+                                IsLittleEndian, getAddressByteSize());
   uint64_t ActualRangeListOffset = RangeSectionBase + RangeListOffset;
   return RangeList.extract(RangesData, &ActualRangeListOffset);
 }
@@ -521,7 +521,7 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
   // In both cases we need to determine the format of the contribution,
   // which may differ from the unit's format.
   DWARFDataExtractor DA(Context.getDWARFObj(), StringOffsetSection,
-                        isLittleEndian, 0);
+                        IsLittleEndian, 0);
   if (IsDWO || getVersion() >= 5) {
     auto StringOffsetOrError =
         IsDWO ? determineStringOffsetsTableContributionDWO(DA)
@@ -566,7 +566,7 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
               Header.getVersion() >= 5 ? DW_SECT_LOCLISTS : DW_SECT_EXT_LOC))
         Data = Data.substr(C->Offset, C->Length);
 
-    DWARFDataExtractor DWARFData(Data, isLittleEndian, getAddressByteSize());
+    DWARFDataExtractor DWARFData(Data, IsLittleEndian, getAddressByteSize());
     LocTable =
         std::make_unique<DWARFDebugLoclists>(DWARFData, Header.getVersion());
     LocSectionBase = DWARFListTableHeader::getHeaderSize(Header.getFormat());
@@ -574,12 +574,12 @@ Error DWARFUnit::tryExtractDIEsIfNeeded(bool CUDieOnly) {
     LocTable = std::make_unique<DWARFDebugLoclists>(
         DWARFDataExtractor(Context.getDWARFObj(),
                            Context.getDWARFObj().getLoclistsSection(),
-                           isLittleEndian, getAddressByteSize()),
+                           IsLittleEndian, getAddressByteSize()),
         getVersion());
   } else {
     LocTable = std::make_unique<DWARFDebugLoc>(DWARFDataExtractor(
         Context.getDWARFObj(), Context.getDWARFObj().getLocSection(),
-        isLittleEndian, getAddressByteSize()));
+        IsLittleEndian, getAddressByteSize()));
   }
 
   // Don't fall back to DW_AT_GNU_ranges_base: it should be ignored for
@@ -650,7 +650,7 @@ DWARFUnit::findRnglistFromOffset(uint64_t Offset) {
     return RangeList.getAbsoluteRanges(getBaseAddress());
   }
   DWARFDataExtractor RangesData(Context.getDWARFObj(), *RangeSection,
-                                isLittleEndian, Header.getAddressByteSize());
+                                IsLittleEndian, Header.getAddressByteSize());
   DWARFDebugRnglistTable RnglistTable;
   auto RangeListOrError = RnglistTable.findList(RangesData, Offset);
   if (RangeListOrError)
@@ -877,39 +877,66 @@ const DWARFUnitIndex &llvm::getDWARFUnitIndex(DWARFContext &Context,
 }
 
 DWARFDie DWARFUnit::getParent(const DWARFDebugInfoEntry *Die) {
+  if (const DWARFDebugInfoEntry *Entry = getParentEntry(Die))
+    return DWARFDie(this, Entry);
+
+  return DWARFDie();
+}
+
+const DWARFDebugInfoEntry *
+DWARFUnit::getParentEntry(const DWARFDebugInfoEntry *Die) const {
   if (!Die)
-    return DWARFDie();
+    return nullptr;
+  assert(Die >= DieArray.data() && Die < DieArray.data() + DieArray.size());
 
   if (Optional<uint32_t> ParentIdx = Die->getParentIdx()) {
     assert(*ParentIdx < DieArray.size() &&
            "ParentIdx is out of DieArray boundaries");
-    return DWARFDie(this, &DieArray[*ParentIdx]);
+    return getDebugInfoEntry(*ParentIdx);
   }
+
+  return nullptr;
+}
+
+DWARFDie DWARFUnit::getSibling(const DWARFDebugInfoEntry *Die) {
+  if (const DWARFDebugInfoEntry *Sibling = getSiblingEntry(Die))
+    return DWARFDie(this, Sibling);
 
   return DWARFDie();
 }
 
-DWARFDie DWARFUnit::getSibling(const DWARFDebugInfoEntry *Die) {
+const DWARFDebugInfoEntry *
+DWARFUnit::getSiblingEntry(const DWARFDebugInfoEntry *Die) const {
   if (!Die)
-    return DWARFDie();
+    return nullptr;
+  assert(Die >= DieArray.data() && Die < DieArray.data() + DieArray.size());
 
   if (Optional<uint32_t> SiblingIdx = Die->getSiblingIdx()) {
     assert(*SiblingIdx < DieArray.size() &&
            "SiblingIdx is out of DieArray boundaries");
-    return DWARFDie(this, &DieArray[*SiblingIdx]);
+    return &DieArray[*SiblingIdx];
   }
+
+  return nullptr;
+}
+
+DWARFDie DWARFUnit::getPreviousSibling(const DWARFDebugInfoEntry *Die) {
+  if (const DWARFDebugInfoEntry *Sibling = getPreviousSiblingEntry(Die))
+    return DWARFDie(this, Sibling);
 
   return DWARFDie();
 }
 
-DWARFDie DWARFUnit::getPreviousSibling(const DWARFDebugInfoEntry *Die) {
+const DWARFDebugInfoEntry *
+DWARFUnit::getPreviousSiblingEntry(const DWARFDebugInfoEntry *Die) const {
   if (!Die)
-    return DWARFDie();
+    return nullptr;
+  assert(Die >= DieArray.data() && Die < DieArray.data() + DieArray.size());
 
   Optional<uint32_t> ParentIdx = Die->getParentIdx();
   if (!ParentIdx)
     // Die is a root die, there is no previous sibling.
-    return DWARFDie();
+    return nullptr;
 
   assert(*ParentIdx < DieArray.size() &&
          "ParentIdx is out of DieArray boundaries");
@@ -918,7 +945,7 @@ DWARFDie DWARFUnit::getPreviousSibling(const DWARFDebugInfoEntry *Die) {
   uint32_t PrevDieIdx = getDIEIndex(Die) - 1;
   if (PrevDieIdx == *ParentIdx)
     // Immediately previous node is parent, there is no previous sibling.
-    return DWARFDie();
+    return nullptr;
 
   while (DieArray[PrevDieIdx].getParentIdx() != *ParentIdx) {
     PrevDieIdx = *DieArray[PrevDieIdx].getParentIdx();
@@ -929,32 +956,56 @@ DWARFDie DWARFUnit::getPreviousSibling(const DWARFDebugInfoEntry *Die) {
            "PrevDieIdx is not a child of parent of Die");
   }
 
-  return DWARFDie(this, &DieArray[PrevDieIdx]);
+  return &DieArray[PrevDieIdx];
 }
 
 DWARFDie DWARFUnit::getFirstChild(const DWARFDebugInfoEntry *Die) {
+  if (const DWARFDebugInfoEntry *Child = getFirstChildEntry(Die))
+    return DWARFDie(this, Child);
+
+  return DWARFDie();
+}
+
+const DWARFDebugInfoEntry *
+DWARFUnit::getFirstChildEntry(const DWARFDebugInfoEntry *Die) const {
+  if (!Die)
+    return nullptr;
+  assert(Die >= DieArray.data() && Die < DieArray.data() + DieArray.size());
+
   if (!Die->hasChildren())
-    return DWARFDie();
+    return nullptr;
 
   // TODO: Instead of checking here for invalid die we might reject
   // invalid dies at parsing stage(DWARFUnit::extractDIEsToVector).
   // We do not want access out of bounds when parsing corrupted debug data.
   size_t I = getDIEIndex(Die) + 1;
   if (I >= DieArray.size())
-    return DWARFDie();
-  return DWARFDie(this, &DieArray[I]);
+    return nullptr;
+  return &DieArray[I];
 }
 
 DWARFDie DWARFUnit::getLastChild(const DWARFDebugInfoEntry *Die) {
+  if (const DWARFDebugInfoEntry *Child = getLastChildEntry(Die))
+    return DWARFDie(this, Child);
+
+  return DWARFDie();
+}
+
+const DWARFDebugInfoEntry *
+DWARFUnit::getLastChildEntry(const DWARFDebugInfoEntry *Die) const {
+  if (!Die)
+    return nullptr;
+  assert(Die >= DieArray.data() && Die < DieArray.data() + DieArray.size());
+
   if (!Die->hasChildren())
-    return DWARFDie();
+    return nullptr;
 
   if (Optional<uint32_t> SiblingIdx = Die->getSiblingIdx()) {
     assert(*SiblingIdx < DieArray.size() &&
            "SiblingIdx is out of DieArray boundaries");
     assert(DieArray[*SiblingIdx - 1].getTag() == dwarf::DW_TAG_null &&
            "Bad end of children marker");
-    return DWARFDie(this, &DieArray[*SiblingIdx - 1]);
+    return &DieArray[*SiblingIdx - 1];
   }
 
   // If SiblingIdx is set for non-root dies we could be sure that DWARF is
@@ -969,11 +1020,13 @@ DWARFDie DWARFUnit::getLastChild(const DWARFDebugInfoEntry *Die) {
   if (getDIEIndex(Die) == 0 && DieArray.size() > 1 &&
       DieArray.back().getTag() == dwarf::DW_TAG_null) {
     // For the unit die we might take last item from DieArray.
-    assert(getDIEIndex(Die) == getDIEIndex(getUnitDIE()) && "Bad unit die");
-    return DWARFDie(this, &DieArray.back());
+    assert(getDIEIndex(Die) ==
+               getDIEIndex(const_cast<DWARFUnit *>(this)->getUnitDIE()) &&
+           "Bad unit die");
+    return &DieArray.back();
   }
 
-  return DWARFDie();
+  return nullptr;
 }
 
 const DWARFAbbreviationDeclarationSet *DWARFUnit::getAbbreviations() const {
@@ -1122,10 +1175,10 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor & DA) {
 }
 
 Optional<uint64_t> DWARFUnit::getRnglistOffset(uint32_t Index) {
-  DataExtractor RangesData(RangeSection->Data, isLittleEndian,
+  DataExtractor RangesData(RangeSection->Data, IsLittleEndian,
                            getAddressByteSize());
   DWARFDataExtractor RangesDA(Context.getDWARFObj(), *RangeSection,
-                              isLittleEndian, 0);
+                              IsLittleEndian, 0);
   if (Optional<uint64_t> Off = llvm::DWARFListTableHeader::getOffsetEntry(
           RangesData, RangeSectionBase, getFormat(), Index))
     return *Off + RangeSectionBase;

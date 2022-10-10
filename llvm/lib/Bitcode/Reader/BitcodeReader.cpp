@@ -1298,6 +1298,9 @@ static FastMathFlags getDecodedFastMathFlags(unsigned Val) {
 }
 
 static void upgradeDLLImportExportLinkage(GlobalValue *GV, unsigned Val) {
+  // A GlobalValue with local linkage cannot have a DLL storage class.
+  if (GV->hasLocalLinkage())
+    return;
   switch (Val) {
   case 5: GV->setDLLStorageClass(GlobalValue::DLLImportStorageClass); break;
   case 6: GV->setDLLStorageClass(GlobalValue::DLLExportStorageClass); break;
@@ -1385,10 +1388,15 @@ static bool isConstExprSupported(uint8_t Opcode) {
   if (Opcode >= BitcodeConstant::FirstSpecialOpcode)
     return true;
 
+  // If -expand-constant-exprs is set, we want to consider all expressions
+  // as unsupported.
+  if (ExpandConstantExprs)
+    return false;
+
   if (Instruction::isBinaryOp(Opcode))
     return ConstantExpr::isSupportedBinOp(Opcode);
 
-  return !ExpandConstantExprs;
+  return Opcode != Instruction::FNeg;
 }
 
 Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
@@ -1449,8 +1457,6 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
         C = UpgradeBitCastExpr(BC->Opcode, ConstOps[0], BC->getType());
         if (!C)
           C = ConstantExpr::getCast(BC->Opcode, ConstOps[0], BC->getType());
-      } else if (Instruction::isUnaryOp(BC->Opcode)) {
-        C = ConstantExpr::get(BC->Opcode, ConstOps[0], BC->Flags);
       } else if (Instruction::isBinaryOp(BC->Opcode)) {
         C = ConstantExpr::get(BC->Opcode, ConstOps[0], ConstOps[1], BC->Flags);
       } else {
@@ -1577,8 +1583,6 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
         I->setIsExact();
     } else {
       switch (BC->Opcode) {
-      case BitcodeConstant::ConstantStructOpcode:
-      case BitcodeConstant::ConstantArrayOpcode:
       case BitcodeConstant::ConstantVectorOpcode: {
         Type *IdxTy = Type::getInt32Ty(BC->getContext());
         Value *V = PoisonValue::get(BC->getType());
@@ -1587,6 +1591,15 @@ Expected<Value *> BitcodeReader::materializeValue(unsigned StartValID,
           V = InsertElementInst::Create(V, Pair.value(), Idx, "constexpr.ins",
                                         InsertBB);
         }
+        I = cast<Instruction>(V);
+        break;
+      }
+      case BitcodeConstant::ConstantStructOpcode:
+      case BitcodeConstant::ConstantArrayOpcode: {
+        Value *V = PoisonValue::get(BC->getType());
+        for (auto Pair : enumerate(Ops))
+          V = InsertValueInst::Create(V, Pair.value(), Pair.index(),
+                                      "constexpr.ins", InsertBB);
         I = cast<Instruction>(V);
         break;
       }
@@ -1919,6 +1932,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoCfCheck;
   case bitc::ATTR_KIND_NO_PROFILE:
     return Attribute::NoProfile;
+  case bitc::ATTR_KIND_SKIP_PROFILE:
+    return Attribute::SkipProfile;
   case bitc::ATTR_KIND_NO_UNWIND:
     return Attribute::NoUnwind;
   case bitc::ATTR_KIND_NO_SANITIZE_BOUNDS:
@@ -2778,7 +2793,7 @@ Error BitcodeReader::resolveGlobalAndIndirectSymbolInits() {
       } else if (auto *GI = dyn_cast<GlobalIFunc>(GV)) {
         Type *ResolverFTy =
             GlobalIFunc::getResolverFunctionType(GI->getValueType());
-        // Transparently fix up the type for compatiblity with older bitcode
+        // Transparently fix up the type for compatibility with older bitcode
         GI->setResolver(
             ConstantExpr::getBitCast(C, ResolverFTy->getPointerTo()));
       } else {
@@ -3443,7 +3458,7 @@ Error BitcodeReader::parseUseLists() {
       break;
     case bitc::USELIST_CODE_BB:
       IsBB = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case bitc::USELIST_CODE_DEFAULT: {
       unsigned RecordLength = Record.size();
       if (RecordLength < 3)
@@ -3752,10 +3767,14 @@ Error BitcodeReader::parseGlobalVarRecord(ArrayRef<uint64_t> Record) {
   NewGV->setVisibility(Visibility);
   NewGV->setUnnamedAddr(UnnamedAddr);
 
-  if (Record.size() > 10)
-    NewGV->setDLLStorageClass(getDecodedDLLStorageClass(Record[10]));
-  else
+  if (Record.size() > 10) {
+    // A GlobalValue with local linkage cannot have a DLL storage class.
+    if (!NewGV->hasLocalLinkage()) {
+      NewGV->setDLLStorageClass(getDecodedDLLStorageClass(Record[10]));
+    }
+  } else {
     upgradeDLLImportExportLinkage(NewGV, RawLinkage);
+  }
 
   ValueList.push_back(NewGV, getVirtualTypeID(NewGV->getType(), TyID));
 
@@ -3916,10 +3935,14 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   if (Record.size() > 10)
     OperandInfo.Prologue = Record[10];
 
-  if (Record.size() > 11)
-    Func->setDLLStorageClass(getDecodedDLLStorageClass(Record[11]));
-  else
+  if (Record.size() > 11) {
+    // A GlobalValue with local linkage cannot have a DLL storage class.
+    if (!Func->hasLocalLinkage()) {
+      Func->setDLLStorageClass(getDecodedDLLStorageClass(Record[11]));
+    }
+  } else {
     upgradeDLLImportExportLinkage(Func, RawLinkage);
+  }
 
   if (Record.size() > 12) {
     if (unsigned ComdatID = Record[12]) {
@@ -4022,8 +4045,12 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
   }
   if (BitCode == bitc::MODULE_CODE_ALIAS ||
       BitCode == bitc::MODULE_CODE_ALIAS_OLD) {
-    if (OpNum != Record.size())
-      NewGA->setDLLStorageClass(getDecodedDLLStorageClass(Record[OpNum++]));
+    if (OpNum != Record.size()) {
+      auto S = Record[OpNum++];
+      // A GlobalValue with local linkage cannot have a DLL storage class.
+      if (!NewGA->hasLocalLinkage())
+        NewGA->setDLLStorageClass(getDecodedDLLStorageClass(S));
+    }
     else
       upgradeDLLImportExportLinkage(NewGA, Linkage);
     if (OpNum != Record.size())
@@ -6337,7 +6364,7 @@ OutOfRecordLoop:
       // We found at least one unresolved value.  Nuke them all to avoid leaks.
       for (unsigned i = ModuleValueListSize, e = ValueList.size(); i != e; ++i){
         if ((A = dyn_cast_or_null<Argument>(ValueList[i])) && !A->getParent()) {
-          A->replaceAllUsesWith(UndefValue::get(A->getType()));
+          A->replaceAllUsesWith(PoisonValue::get(A->getType()));
           delete A;
         }
       }

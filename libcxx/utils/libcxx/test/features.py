@@ -24,6 +24,11 @@ def _hasSuitableClangTidy(cfg):
   except ConfigurationRuntimeError:
     return False
 
+def _hasSuitableClangQuery(cfg):
+  try:
+    return int(re.search('[0-9]+', commandOutput(cfg, ['clang-query --version'])).group()) >= 13
+  except ConfigurationRuntimeError:
+    return False
 
 DEFAULT_FEATURES = [
   Feature(name='fcoroutines-ts',
@@ -38,6 +43,18 @@ DEFAULT_FEATURES = [
   Feature(name='diagnose-if-support',
           when=lambda cfg: hasCompileFlag(cfg, '-Wuser-defined-warnings'),
           actions=[AddCompileFlag('-Wuser-defined-warnings')]),
+
+  # Tests to validate whether the compiler has a way to set the maximum number
+  # of steps during constant evaluation. Since the flag differs per compiler
+  # store the "valid" flag as a feature. This allows passing the proper compile
+  # flag to the compiler:
+  # // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=12345678
+  # // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=12345678
+  Feature(name='has-fconstexpr-steps',
+          when=lambda cfg: hasCompileFlag(cfg, '-fconstexpr-steps=1')),
+
+  Feature(name='has-fconstexpr-ops-limit',
+          when=lambda cfg: hasCompileFlag(cfg, '-fconstexpr-ops-limit=1')),
 
   Feature(name='has-fblocks',                   when=lambda cfg: hasCompileFlag(cfg, '-fblocks')),
   Feature(name='-fsized-deallocation',          when=lambda cfg: hasCompileFlag(cfg, '-fsized-deallocation')),
@@ -94,7 +111,7 @@ DEFAULT_FEATURES = [
   # Check for a Windows UCRT bug (fixed in UCRT/Windows 10.0.19041.0).
   # https://developercommunity.visualstudio.com/t/printf-formatting-with-g-outputs-too/1660837
   Feature(name='win32-broken-printf-g-precision',
-          when=lambda cfg: not '_LIBCPP_HAS_NO_LOCALIZATION' in compilerMacros(cfg) and '_WIN32' in compilerMacros(cfg) and not programSucceeds(cfg, """
+          when=lambda cfg: '_WIN32' in compilerMacros(cfg) and not programSucceeds(cfg, """
             #include <stdio.h>
             #include <string.h>
             int main(int, char**) {
@@ -137,6 +154,8 @@ DEFAULT_FEATURES = [
           when=lambda cfg: runScriptExitCode(cfg, ['%{exec} bash -c \'bash --version\'']) != 0),
   Feature(name='has-clang-tidy',
           when=_hasSuitableClangTidy),
+  Feature(name='has-clang-query',
+          when=_hasSuitableClangQuery),
 
   Feature(name='apple-clang',                                                                                                      when=_isAppleClang),
   Feature(name=lambda cfg: 'apple-clang-{__clang_major__}'.format(**compilerMacros(cfg)),                                          when=_isAppleClang),
@@ -217,7 +236,7 @@ for locale, alts in locales.items():
                                   when=lambda cfg, alts=alts: hasAnyLocale(cfg, alts)))
 
 
-# Add features representing the platform name: darwin, linux, windows, etc...
+# Add features representing the target platform name: darwin, linux, windows, etc...
 DEFAULT_FEATURES += [
   Feature(name='darwin', when=lambda cfg: '__APPLE__' in compilerMacros(cfg)),
   Feature(name='windows', when=lambda cfg: '_WIN32' in compilerMacros(cfg)),

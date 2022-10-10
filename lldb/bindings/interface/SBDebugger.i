@@ -225,6 +225,8 @@ public:
         }
     }
 
+    lldb::SBStructuredData GetSetting(const char *setting = nullptr);
+
     SBError
     SetInputString (const char* data);
 

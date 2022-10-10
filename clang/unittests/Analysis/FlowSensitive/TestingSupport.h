@@ -37,6 +37,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -56,36 +57,141 @@ std::ostream &operator<<(std::ostream &OS,
 
 namespace test {
 
-// Returns assertions based on annotations that are present after statements in
-// `AnnotatedCode`.
+/// Returns the environment at the program point marked with `Annotation` from
+/// the mapping of annotated program points to analysis state.
+///
+/// Requirements:
+///
+///   `Annotation` must be present as a key in `AnnotationStates`.
+template <typename LatticeT>
+const Environment &getEnvironmentAtAnnotation(
+    const llvm::StringMap<DataflowAnalysisState<LatticeT>> &AnnotationStates,
+    llvm::StringRef Annotation) {
+  auto It = AnnotationStates.find(Annotation);
+  assert(It != AnnotationStates.end());
+  return It->getValue().Env;
+}
+
+/// Contains data structures required and produced by a dataflow analysis run.
+struct AnalysisOutputs {
+  /// Input code that is analyzed. Points within the code may be marked with
+  /// annotations to facilitate testing.
+  ///
+  /// Example:
+  /// void target(int *x) {
+  ///   *x; // [[p]]
+  /// }
+  /// From the annotation `p`, the line number and analysis state immediately
+  /// after the statement `*x` can be retrieved and verified.
+  llvm::Annotations Code;
+  /// AST context generated from `Code`.
+  ASTContext &ASTCtx;
+  /// The function whose body is analyzed.
+  const FunctionDecl *Target;
+  /// Contains the control flow graph built from the body of the `Target`
+  /// function and is analyzed.
+  const ControlFlowContext &CFCtx;
+  /// The analysis to be run.
+  TypeErasedDataflowAnalysis &Analysis;
+  /// Initial state to start the analysis.
+  const Environment &InitEnv;
+  // Stores the state of a CFG block if it has been evaluated by the analysis.
+  // The indices correspond to the block IDs.
+  llvm::ArrayRef<llvm::Optional<TypeErasedDataflowAnalysisState>> BlockStates;
+};
+
+/// Arguments for building the dataflow analysis.
+template <typename AnalysisT> struct AnalysisInputs {
+  /// Required fields are set in constructor.
+  AnalysisInputs(
+      llvm::StringRef CodeArg,
+      ast_matchers::internal::Matcher<FunctionDecl> TargetFuncMatcherArg,
+      std::function<AnalysisT(ASTContext &, Environment &)> MakeAnalysisArg)
+      : Code(CodeArg), TargetFuncMatcher(std::move(TargetFuncMatcherArg)),
+        MakeAnalysis(std::move(MakeAnalysisArg)) {}
+
+  /// Optional fields can be set with methods of the form `withFieldName(...)`.
+  AnalysisInputs<AnalysisT> &&
+  withSetupTest(std::function<llvm::Error(AnalysisOutputs &)> Arg) && {
+    SetupTest = std::move(Arg);
+    return std::move(*this);
+  }
+  AnalysisInputs<AnalysisT> &&
+  withPostVisitCFG(std::function<void(ASTContext &, const CFGElement &,
+                                      const TypeErasedDataflowAnalysisState &)>
+                       Arg) && {
+    PostVisitCFG = std::move(Arg);
+    return std::move(*this);
+  }
+  AnalysisInputs<AnalysisT> &&withASTBuildArgs(ArrayRef<std::string> Arg) && {
+    ASTBuildArgs = std::move(Arg);
+    return std::move(*this);
+  }
+  AnalysisInputs<AnalysisT> &&
+  withASTBuildVirtualMappedFiles(tooling::FileContentMappings Arg) && {
+    ASTBuildVirtualMappedFiles = std::move(Arg);
+    return std::move(*this);
+  }
+
+  /// Required. Input code that is analyzed.
+  llvm::StringRef Code;
+  /// Required. The body of the function which matches this matcher is analyzed.
+  ast_matchers::internal::Matcher<FunctionDecl> TargetFuncMatcher;
+  /// Required. The analysis to be run is constructed with this function that
+  /// takes as argument the AST generated from the code being analyzed and the
+  /// initial state from which the analysis starts with.
+  std::function<AnalysisT(ASTContext &, Environment &)> MakeAnalysis;
+  /// Optional. If provided, this function is executed immediately before
+  /// running the dataflow analysis to allow for additional setup. All fields in
+  /// the `AnalysisOutputs` argument will be initialized except for the
+  /// `BlockStates` field which is only computed later during the analysis.
+  std::function<llvm::Error(AnalysisOutputs &)> SetupTest = nullptr;
+  /// Optional. If provided, this function is applied on each CFG element after
+  /// the analysis has been run.
+  std::function<void(ASTContext &, const CFGElement &,
+                     const TypeErasedDataflowAnalysisState &)>
+      PostVisitCFG = nullptr;
+
+  /// Optional. Options for building the AST context.
+  ArrayRef<std::string> ASTBuildArgs = {};
+  /// Optional. Options for building the AST context.
+  tooling::FileContentMappings ASTBuildVirtualMappedFiles = {};
+};
+
+/// Returns assertions based on annotations that are present after statements in
+/// `AnnotatedCode`.
 llvm::Expected<llvm::DenseMap<const Stmt *, std::string>>
 buildStatementToAnnotationMapping(const FunctionDecl *Func,
                                   llvm::Annotations AnnotatedCode);
 
-struct AnalysisData {
-  ASTContext &ASTCtx;
-  const ControlFlowContext &CFCtx;
-  const Environment &Env;
-  TypeErasedDataflowAnalysis &Analysis;
-  llvm::DenseMap<const clang::Stmt *, std::string> &Annotations;
-  std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>> &BlockStates;
-};
+/// Returns line numbers and content of the annotations in `AnnotatedCode`.
+llvm::DenseMap<unsigned, std::string>
+buildLineToAnnotationMapping(SourceManager &SM,
+                             llvm::Annotations AnnotatedCode);
 
+/// Runs dataflow specified from `AI.MakeAnalysis` and `AI.PostVisitCFG` on the
+/// body of the function that matches `AI.TargetFuncMatcher` in `AI.Code`.
+/// Given the analysis outputs, `VerifyResults` checks that the results from the
+/// analysis are correct.
+///
+/// Requirements:
+///
+///   `AnalysisT` contains a type `Lattice`.
+///
+///   `Code`, `TargetFuncMatcher` and `MakeAnalysis` must be provided in `AI`.
+///
+///   `VerifyResults` must be provided.
 template <typename AnalysisT>
-llvm::Error checkDataflow(
-    llvm::StringRef Code,
-    ast_matchers::internal::Matcher<FunctionDecl> TargetFuncMatcher,
-    std::function<AnalysisT(ASTContext &, Environment &)> MakeAnalysis,
-    std::function<void(ASTContext &, const Stmt *,
-                       const TypeErasedDataflowAnalysisState &)>
-        PostVisitStmt,
-    std::function<void(AnalysisData)> VerifyResults, ArrayRef<std::string> Args,
-    const tooling::FileContentMappings &VirtualMappedFiles = {}) {
-  llvm::Annotations AnnotatedCode(Code);
+llvm::Error
+checkDataflow(AnalysisInputs<AnalysisT> AI,
+              std::function<void(const AnalysisOutputs &)> VerifyResults) {
+  // Build AST context from code.
+  llvm::Annotations AnnotatedCode(AI.Code);
   auto Unit = tooling::buildASTFromCodeWithArgs(
-      AnnotatedCode.code(), Args, "input.cc", "clang-dataflow-test",
+      AnnotatedCode.code(), AI.ASTBuildArgs, "input.cc", "clang-dataflow-test",
       std::make_shared<PCHContainerOperations>(),
-      tooling::getClangStripDependencyFileAdjuster(), VirtualMappedFiles);
+      tooling::getClangStripDependencyFileAdjuster(),
+      AI.ASTBuildVirtualMappedFiles);
   auto &Context = Unit->getASTContext();
 
   if (Context.getDiagnostics().getClient()->getNumErrors() != 0) {
@@ -94,130 +200,167 @@ llvm::Error checkDataflow(
                                       "they were printed to the test log");
   }
 
-  const FunctionDecl *F = ast_matchers::selectFirst<FunctionDecl>(
-      "target",
-      ast_matchers::match(ast_matchers::functionDecl(
-                              ast_matchers::isDefinition(), TargetFuncMatcher)
-                              .bind("target"),
-                          Context));
-  if (F == nullptr)
+  // Get AST node of target function.
+  const FunctionDecl *Target = ast_matchers::selectFirst<FunctionDecl>(
+      "target", ast_matchers::match(
+                    ast_matchers::functionDecl(ast_matchers::isDefinition(),
+                                               AI.TargetFuncMatcher)
+                        .bind("target"),
+                    Context));
+  if (Target == nullptr)
     return llvm::make_error<llvm::StringError>(
         llvm::errc::invalid_argument, "Could not find target function.");
 
-  auto CFCtx = ControlFlowContext::build(F, F->getBody(), &F->getASTContext());
-  if (!CFCtx)
-    return CFCtx.takeError();
+  // Build control flow graph from body of target function.
+  auto MaybeCFCtx =
+      ControlFlowContext::build(Target, *Target->getBody(), Context);
+  if (!MaybeCFCtx)
+    return MaybeCFCtx.takeError();
+  auto &CFCtx = *MaybeCFCtx;
 
+  // Initialize states for running dataflow analysis.
   DataflowAnalysisContext DACtx(std::make_unique<WatchedLiteralsSolver>());
-  Environment Env(DACtx, *F);
-  auto Analysis = MakeAnalysis(Context, Env);
-
-  std::function<void(const Stmt *, const TypeErasedDataflowAnalysisState &)>
-      PostVisitStmtClosure = nullptr;
-  if (PostVisitStmt != nullptr) {
-    PostVisitStmtClosure = [&PostVisitStmt, &Context](
-                               const Stmt *Stmt,
-                               const TypeErasedDataflowAnalysisState &State) {
-      PostVisitStmt(Context, Stmt, State);
-    };
+  Environment InitEnv(DACtx, *Target);
+  auto Analysis = AI.MakeAnalysis(Context, InitEnv);
+  std::function<void(const CFGElement &,
+                     const TypeErasedDataflowAnalysisState &)>
+      PostVisitCFGClosure = nullptr;
+  if (AI.PostVisitCFG) {
+    PostVisitCFGClosure =
+        [&AI, &Context](const CFGElement &Element,
+                        const TypeErasedDataflowAnalysisState &State) {
+          AI.PostVisitCFG(Context, Element, State);
+        };
   }
 
-  llvm::Expected<llvm::DenseMap<const clang::Stmt *, std::string>>
-      StmtToAnnotations = buildStatementToAnnotationMapping(F, AnnotatedCode);
-  if (!StmtToAnnotations)
-    return StmtToAnnotations.takeError();
-  auto &Annotations = *StmtToAnnotations;
+  // Additional test setup.
+  AnalysisOutputs AO{AnnotatedCode, Context, Target, CFCtx,
+                     Analysis,      InitEnv, {}};
+  if (AI.SetupTest) {
+    if (auto Error = AI.SetupTest(AO))
+      return Error;
+  }
 
+  // If successful, the dataflow analysis returns a mapping from block IDs to
+  // the post-analysis states for the CFG blocks that have been evaluated.
   llvm::Expected<std::vector<llvm::Optional<TypeErasedDataflowAnalysisState>>>
-      MaybeBlockStates = runTypeErasedDataflowAnalysis(*CFCtx, Analysis, Env,
-                                                       PostVisitStmtClosure);
+      MaybeBlockStates = runTypeErasedDataflowAnalysis(CFCtx, Analysis, InitEnv,
+                                                       PostVisitCFGClosure);
   if (!MaybeBlockStates)
     return MaybeBlockStates.takeError();
-  auto &BlockStates = *MaybeBlockStates;
+  AO.BlockStates = *MaybeBlockStates;
 
-  AnalysisData AnalysisData{Context,  *CFCtx,      Env,
-                            Analysis, Annotations, BlockStates};
-  VerifyResults(AnalysisData);
+  // Verify dataflow analysis outputs.
+  VerifyResults(AO);
   return llvm::Error::success();
 }
 
-// Runs dataflow on the body of the function that matches `TargetFuncMatcher` in
-// code snippet `Code`. Requires: `AnalysisT` contains a type `Lattice`.
+/// Runs dataflow specified from `AI.MakeAnalysis` and `AI.PostVisitCFG` on the
+/// body of the function that matches `AI.TargetFuncMatcher` in `AI.Code`. Given
+/// the annotation line numbers and analysis outputs, `VerifyResults` checks
+/// that the results from the analysis are correct.
+///
+/// Requirements:
+///
+///   `AnalysisT` contains a type `Lattice`.
+///
+///   `Code`, `TargetFuncMatcher` and `MakeAnalysis` must be provided in `AI`.
+///
+///   `VerifyResults` must be provided.
 template <typename AnalysisT>
-llvm::Error checkDataflow(
-    llvm::StringRef Code,
-    ast_matchers::internal::Matcher<FunctionDecl> TargetFuncMatcher,
-    std::function<AnalysisT(ASTContext &, Environment &)> MakeAnalysis,
-    std::function<void(
-        llvm::ArrayRef<std::pair<
-            std::string, DataflowAnalysisState<typename AnalysisT::Lattice>>>,
-        ASTContext &)>
-        VerifyResults,
-    ArrayRef<std::string> Args,
-    const tooling::FileContentMappings &VirtualMappedFiles = {}) {
-  using StateT = DataflowAnalysisState<typename AnalysisT::Lattice>;
-
-  return checkDataflow(
-      Code, std::move(TargetFuncMatcher), std::move(MakeAnalysis),
-      /*PostVisitStmt=*/nullptr,
-      [&VerifyResults](AnalysisData AnalysisData) {
-        if (AnalysisData.BlockStates.empty()) {
-          VerifyResults({}, AnalysisData.ASTCtx);
-          return;
-        }
-
-        auto &Annotations = AnalysisData.Annotations;
-
-        // Compute a map from statement annotations to the state computed for
-        // the program point immediately after the annotated statement.
-        std::vector<std::pair<std::string, StateT>> Results;
-        for (const CFGBlock *Block : AnalysisData.CFCtx.getCFG()) {
-          // Skip blocks that were not evaluated.
-          if (!AnalysisData.BlockStates[Block->getBlockID()])
-            continue;
-
-          transferBlock(
-              AnalysisData.CFCtx, AnalysisData.BlockStates, *Block,
-              AnalysisData.Env, AnalysisData.Analysis,
-              [&Results,
-               &Annotations](const clang::CFGStmt &Stmt,
-                             const TypeErasedDataflowAnalysisState &State) {
-                auto It = Annotations.find(Stmt.getStmt());
-                if (It == Annotations.end())
-                  return;
-                auto *Lattice = llvm::any_cast<typename AnalysisT::Lattice>(
-                    &State.Lattice.Value);
-                Results.emplace_back(It->second, StateT{*Lattice, State.Env});
-              });
-        }
-        VerifyResults(Results, AnalysisData.ASTCtx);
-      },
-      Args, VirtualMappedFiles);
+llvm::Error
+checkDataflow(AnalysisInputs<AnalysisT> AI,
+              std::function<void(const llvm::DenseMap<unsigned, std::string> &,
+                                 const AnalysisOutputs &)>
+                  VerifyResults) {
+  return checkDataflow<AnalysisT>(
+      std::move(AI), [&VerifyResults](const AnalysisOutputs &AO) {
+        auto AnnotationLinesAndContent =
+            buildLineToAnnotationMapping(AO.ASTCtx.getSourceManager(), AO.Code);
+        VerifyResults(AnnotationLinesAndContent, AO);
+      });
 }
 
-// Runs dataflow on the body of the function named `target_fun` in code snippet
-// `code`.
+/// Runs dataflow specified from `AI.MakeAnalysis` and `AI.PostVisitCFG` on the
+/// body of the function that matches `AI.TargetFuncMatcher` in `AI.Code`. Given
+/// the state computed at each annotated statement and analysis outputs,
+/// `VerifyResults` checks that the results from the analysis are correct.
+///
+/// Requirements:
+///
+///   `AnalysisT` contains a type `Lattice`.
+///
+///   `Code`, `TargetFuncMatcher` and `MakeAnalysis` must be provided in `AI`.
+///
+///   `VerifyResults` must be provided.
+///
+///   Any annotations appearing in `Code` must come after a statement.
+///
+///   There can be at most one annotation attached per statement.
+///
+///   Annotations must not be repeated.
 template <typename AnalysisT>
-llvm::Error checkDataflow(
-    llvm::StringRef Code, llvm::StringRef TargetFun,
-    std::function<AnalysisT(ASTContext &, Environment &)> MakeAnalysis,
-    std::function<void(
-        llvm::ArrayRef<std::pair<
-            std::string, DataflowAnalysisState<typename AnalysisT::Lattice>>>,
-        ASTContext &)>
-        VerifyResults,
-    ArrayRef<std::string> Args,
-    const tooling::FileContentMappings &VirtualMappedFiles = {}) {
-  return checkDataflow(Code, ast_matchers::hasName(TargetFun),
-                       std::move(MakeAnalysis), std::move(VerifyResults), Args,
-                       VirtualMappedFiles);
+llvm::Error
+checkDataflow(AnalysisInputs<AnalysisT> AI,
+              std::function<void(const llvm::StringMap<DataflowAnalysisState<
+                                     typename AnalysisT::Lattice>> &,
+                                 const AnalysisOutputs &)>
+                  VerifyResults) {
+  // Compute mapping from nodes of annotated statements to the content in the
+  // annotation.
+  llvm::DenseMap<const Stmt *, std::string> StmtToAnnotations;
+  auto SetupTest = [&StmtToAnnotations,
+                    PrevSetupTest = std::move(AI.SetupTest)](
+                       AnalysisOutputs &AO) -> llvm::Error {
+    auto MaybeStmtToAnnotations = buildStatementToAnnotationMapping(
+        cast<FunctionDecl>(AO.InitEnv.getDeclCtx()), AO.Code);
+    if (!MaybeStmtToAnnotations) {
+      return MaybeStmtToAnnotations.takeError();
+    }
+    StmtToAnnotations = std::move(*MaybeStmtToAnnotations);
+    return PrevSetupTest ? PrevSetupTest(AO) : llvm::Error::success();
+  };
+
+  using StateT = DataflowAnalysisState<typename AnalysisT::Lattice>;
+
+  // Save the states computed for program points immediately following annotated
+  // statements. The saved states are keyed by the content of the annotation.
+  llvm::StringMap<StateT> AnnotationStates;
+  auto PostVisitCFG = [&StmtToAnnotations, &AnnotationStates,
+                       PrevPostVisitCFG = std::move(AI.PostVisitCFG)](
+                          ASTContext &Ctx, const CFGElement &Elt,
+                          const TypeErasedDataflowAnalysisState &State) {
+    if (PrevPostVisitCFG) {
+      PrevPostVisitCFG(Ctx, Elt, State);
+    }
+    // FIXME: Extend retrieval of state for non statement constructs.
+    auto Stmt = Elt.getAs<CFGStmt>();
+    if (!Stmt)
+      return;
+    auto It = StmtToAnnotations.find(Stmt->getStmt());
+    if (It == StmtToAnnotations.end())
+      return;
+    auto *Lattice =
+        llvm::any_cast<typename AnalysisT::Lattice>(&State.Lattice.Value);
+    auto [_, InsertSuccess] =
+        AnnotationStates.insert({It->second, StateT{*Lattice, State.Env}});
+    (void)InsertSuccess;
+    assert(InsertSuccess);
+  };
+  return checkDataflow<AnalysisT>(
+      std::move(AI)
+          .withSetupTest(std::move(SetupTest))
+          .withPostVisitCFG(std::move(PostVisitCFG)),
+      [&VerifyResults, &AnnotationStates](const AnalysisOutputs &AO) {
+        VerifyResults(AnnotationStates, AO);
+      });
 }
 
 /// Returns the `ValueDecl` for the given identifier.
 ///
 /// Requirements:
 ///
-///  `Name` must be unique in `ASTCtx`.
+///   `Name` must be unique in `ASTCtx`.
 const ValueDecl *findValueDecl(ASTContext &ASTCtx, llvm::StringRef Name);
 
 /// Creates and owns constraints which are boolean values.

@@ -552,6 +552,8 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "dim") {
     return FoldElementalIntrinsic<T, T, T>(
         context, std::move(funcRef), &Scalar<T>::DIM);
+  } else if (name == "dot_product") {
+    return FoldDotProduct<T>(context, std::move(funcRef));
   } else if (name == "dshiftl" || name == "dshiftr") {
     const auto fptr{
         name == "dshiftl" ? &Scalar<T>::DSHIFTL : &Scalar<T>::DSHIFTR};
@@ -762,6 +764,17 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                 return i.ISHFTC(countVal);
               }));
     }
+  } else if (name == "izext" || name == "jzext") {
+    if (args.size() == 1) {
+      if (auto *expr{UnwrapExpr<Expr<SomeInteger>>(args[0])}) {
+        // Rewrite to IAND(INT(n,k),255_k) for k=KIND(T)
+        intrinsic->name = "iand";
+        auto converted{ConvertToType<T>(std::move(*expr))};
+        *expr = Fold(context, Expr<SomeInteger>{std::move(converted)});
+        args.emplace_back(AsGenericExpr(Expr<T>{Scalar<T>{255}}));
+        return FoldIntrinsicFunction(context, std::move(funcRef));
+      }
+    }
   } else if (name == "lbound") {
     return LBOUND(context, std::move(funcRef));
   } else if (name == "leadz" || name == "trailz" || name == "poppar" ||
@@ -787,7 +800,10 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
                   "missing case to fold intrinsic function %s", name.c_str());
             }
             return FoldElementalIntrinsic<T, TI>(context, std::move(funcRef),
-                ScalarFunc<T, TI>([&fptr](const Scalar<TI> &i) -> Scalar<T> {
+                // `i` should be declared as `const Scalar<TI>&`.
+                // We declare it as `auto` to workaround an msvc bug:
+                // https://developercommunity.visualstudio.com/t/Regression:-nested-closure-assumes-wrong/10130223
+                ScalarFunc<T, TI>([&fptr](const auto &i) -> Scalar<T> {
                   return Scalar<T>{std::invoke(fptr, i)};
                 }));
           },

@@ -45,13 +45,11 @@ void FileIndexRecord::addMacroOccurence(SymbolRoleSet Roles, unsigned Offset,
 }
 
 void FileIndexRecord::removeHeaderGuardMacros() {
-  auto It =
-      std::remove_if(Decls.begin(), Decls.end(), [](const DeclOccurrence &D) {
-        if (const auto *MI = D.DeclOrMacro.dyn_cast<const MacroInfo *>())
-          return MI->isUsedForHeaderGuard();
-        return false;
-      });
-  Decls.erase(It, Decls.end());
+  llvm::erase_if(Decls, [](const DeclOccurrence &D) {
+    if (const auto *MI = D.DeclOrMacro.dyn_cast<const MacroInfo *>())
+      return MI->isUsedForHeaderGuard();
+    return false;
+  });
 }
 
 void FileIndexRecord::print(llvm::raw_ostream &OS, SourceManager &SM) const {

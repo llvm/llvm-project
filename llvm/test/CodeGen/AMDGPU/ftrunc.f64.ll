@@ -11,7 +11,7 @@ declare <16 x double> @llvm.trunc.v16f64(<16 x double>) nounwind readnone
 
 ; FUNC-LABEL: {{^}}v_ftrunc_f64:
 ; CI: v_trunc_f64
-; SI: v_bfe_u32 {{v[0-9]+}}, {{v[0-9]+}}, 20, 11
+; SI: s_bfe_u32 {{s[0-9]+}}, {{s[0-9]+}}, 0xb0014
 ; SI: s_endpgm
 define amdgpu_kernel void @v_ftrunc_f64(double addrspace(1)* %out, double addrspace(1)* %in) {
   %x = load double, double addrspace(1)* %in, align 8
@@ -29,11 +29,11 @@ define amdgpu_kernel void @v_ftrunc_f64(double addrspace(1)* %out, double addrsp
 ; SI-DAG: s_lshr_b64 s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], [[SEXP1]]
 ; SI-DAG: s_andn2_b64
 ; SI-DAG: cmp_gt_i32
-; SI-DAG: cndmask_b32
-; SI-DAG: cndmask_b32
+; SI-DAG: s_cselect_b32
+; SI-DAG: s_cselect_b32
 ; SI-DAG: cmp_lt_i32
-; SI-DAG: cndmask_b32
-; SI-DAG: cndmask_b32
+; SI-DAG: s_cselect_b32
+; SI-DAG: s_cselect_b32
 ; SI: s_endpgm
 define amdgpu_kernel void @ftrunc_f64(double addrspace(1)* %out, double %x) {
   %y = call double @llvm.trunc.f64(double %x) nounwind readnone

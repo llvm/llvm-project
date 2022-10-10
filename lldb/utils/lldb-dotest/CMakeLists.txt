@@ -3,7 +3,8 @@ add_custom_target(lldb-dotest)
 add_dependencies(lldb-dotest lldb-test-depends)
 set_target_properties(lldb-dotest PROPERTIES FOLDER "lldb utils")
 
-get_property(LLDB_DOTEST_ARGS GLOBAL PROPERTY LLDB_DOTEST_ARGS_PROPERTY)
+get_property(LLDB_TEST_USER_ARGS GLOBAL PROPERTY LLDB_TEST_USER_ARGS_PROPERTY)
+get_property(LLDB_TEST_COMMON_ARGS GLOBAL PROPERTY LLDB_TEST_COMMON_ARGS_PROPERTY)
 set(LLDB_LIBS_DIR "${LLVM_LIBRARY_OUTPUT_INTDIR}")
 
 llvm_canonicalize_cmake_booleans(
@@ -12,7 +13,8 @@ llvm_canonicalize_cmake_booleans(
 
 set(LLVM_TOOLS_DIR "${LLVM_TOOLS_BINARY_DIR}")
 set(vars
-  LLDB_DOTEST_ARGS
+  LLDB_TEST_COMMON_ARGS
+  LLDB_TEST_USER_ARGS
   LLDB_SOURCE_DIR
   LLDB_FRAMEWORK_DIR
   LLDB_TEST_BUILD_DIRECTORY

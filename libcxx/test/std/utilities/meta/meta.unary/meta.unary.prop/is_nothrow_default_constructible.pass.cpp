@@ -13,6 +13,8 @@
 #include <type_traits>
 #include "test_macros.h"
 
+#include "common.h"
+
 template <class T>
 void test_is_nothrow_default_constructible()
 {
@@ -43,22 +45,6 @@ void test_has_not_nothrow_default_constructor()
 #endif
 }
 
-class Empty
-{
-};
-
-union Union {};
-
-struct bit_zero
-{
-    int :  0;
-};
-
-struct A
-{
-    A();
-};
-
 #if TEST_STD_VER >= 11
 struct DThrows
 {
@@ -74,6 +60,10 @@ int main(int, char**)
     test_has_not_nothrow_default_constructor<A>();
 #if TEST_STD_VER >= 11
     test_has_not_nothrow_default_constructor<DThrows>(); // This is LWG2116
+// TODO: enable the test for GCC once https://gcc.gnu.org/bugzilla/show_bug.cgi?id=106611 is resolved
+#ifndef TEST_COMPILER_GCC
+    test_has_not_nothrow_default_constructor<TrivialNotNoexcept>();
+#endif
 #endif
 
     test_is_nothrow_default_constructible<Union>();

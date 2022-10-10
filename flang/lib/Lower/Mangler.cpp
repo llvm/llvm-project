@@ -222,7 +222,7 @@ std::string Fortran::lower::mangle::mangleArrayLiteral(
     const Fortran::evaluate::ConstantSubscripts &shape,
     Fortran::common::TypeCategory cat, int kind,
     Fortran::common::ConstantSubscript charLen) {
-  std::string typeId = "";
+  std::string typeId;
   for (Fortran::evaluate::ConstantSubscript extent : shape)
     typeId.append(std::to_string(extent)).append("x");
   if (charLen >= 0)

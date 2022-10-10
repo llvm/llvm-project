@@ -1,14 +1,14 @@
-; RUN: opt < %s -tbaa -licm -S | FileCheck %s
+; RUN: opt < %s -licm -S | FileCheck %s
 ; PR9634
 
 @g_58 = common global i32 0, align 4
-@g_116 = common global i32* null, align 8
+@g_116 = common global ptr null, align 8
 
 define void @f() nounwind {
 
 ; CHECK: entry:
 ; CHECK: alloca [9 x i16]
-; CHECK: load i32, i32* @g_58
+; CHECK: load i32, ptr @g_58
 ; CHECK: br label %for.body
 
 entry:
@@ -17,11 +17,11 @@ entry:
 
 for.body:                                         ; preds = %entry, %for.inc
   %inc12 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  store i32* @g_58, i32** @g_116, align 8, !tbaa !0
-  %tmp2 = load i32*, i32** @g_116, align 8, !tbaa !0
-  %tmp3 = load i32, i32* %tmp2, !tbaa !4
+  store ptr @g_58, ptr @g_116, align 8, !tbaa !0
+  %tmp2 = load ptr, ptr @g_116, align 8, !tbaa !0
+  %tmp3 = load i32, ptr %tmp2, !tbaa !4
   %or = or i32 %tmp3, 10
-  store i32 %or, i32* %tmp2, !tbaa !4
+  store i32 %or, ptr %tmp2, !tbaa !4
   %inc = add nsw i32 %inc12, 1
   %cmp = icmp slt i32 %inc, 4
   br i1 %cmp, label %for.body, label %for.end

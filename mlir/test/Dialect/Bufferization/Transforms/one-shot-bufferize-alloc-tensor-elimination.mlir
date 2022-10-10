@@ -23,8 +23,8 @@ func.func @buffer_forwarding_conflict(
   %f = linalg.fill ins(%f0 : f32) outs(%a : tensor<?xf32>) -> tensor<?xf32>
 
   //     CHECK: memref.copy %[[FUNC_ARG]], %[[ALLOC]] : memref<?xf32> to memref<?xf32>
-  //     CHECK: %[[SV0_ALLOC:.*]] = memref.subview %[[ALLOC]][0] [%[[sz]]] [1] : memref<?xf32> to memref<?xf32>
-  //     CHECK: memref.copy %[[EXTRACT_SLICE_ALLOC]], %[[SV0_ALLOC]] : memref<?xf32> to memref<?xf32>
+  //     CHECK: %[[SV0_ALLOC:.*]] = memref.subview %[[ALLOC]][0] [%[[sz]]] [1] : memref<?xf32> to memref<?xf32, strided<[1]>>
+  //     CHECK: memref.copy %[[EXTRACT_SLICE_ALLOC]], %[[SV0_ALLOC]] : memref<?xf32> to memref<?xf32, strided<[1]>>
   %r0 = tensor.insert_slice %f into %t[0][%sz][1]: tensor<?xf32> into tensor<?xf32>
 
   //     CHECK: %[[T_SUBVIEW:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
@@ -47,7 +47,8 @@ func.func @buffer_forwarding_no_conflict(
   %f0 = arith.constant 0.0: f32
 
   // alloc_tensor itself does not alloc but forwards to the insert_slice.
-  // InitTensorOp replaces the alloc_tensor with an inplace extract_slice.
+  // AllocTensorOpElimination replaces the alloc_tensor with an inplace
+  // extract_slice.
   // CHECK: %[[T_SUBVIEW:.*]] =  memref.subview %[[FUNC_ARG]][42] [%[[sz]]] [1]
   %a = bufferization.alloc_tensor(%sz) : tensor<?xf32>
 
@@ -63,7 +64,7 @@ func.func @buffer_forwarding_no_conflict(
 // -----
 
 //      CHECK: func @insertion_point_inside_loop(
-// CHECK-SAME:     %[[t:.*]]: memref<?xf32, #{{.*}}>, %[[sz:.*]]: index)
+// CHECK-SAME:     %[[t:.*]]: memref<?xf32, strided{{.*}}>, %[[sz:.*]]: index)
 func.func @insertion_point_inside_loop(%t : tensor<?xf32>, %sz : index) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -92,9 +93,9 @@ func.func @insertion_point_inside_loop(%t : tensor<?xf32>, %sz : index) -> (tens
 // -----
 
 //      CHECK: func @insertion_point_outside_loop(
-// CHECK-SAME:     %[[t:.*]]: memref<?xf32, #{{.*}}>, %[[sz:.*]]: index, %[[idx:.*]]: index)
+// CHECK-SAME:     %[[t:.*]]: memref<?xf32, strided{{.*}}>, %[[sz:.*]]: index, %[[idx:.*]]: index)
 func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
-                                   %idx : index) -> (tensor<?xf32>) {
+                                        %idx : index) -> (tensor<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c5 = arith.constant 5 : index
@@ -117,4 +118,22 @@ func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
   }
 
   return %r : tensor<?xf32>
+}
+
+// -----
+
+// AllocTensorElimination does currently not apply to chains where the type is
+// changing. This test just ensures that we do not crash or generate IR that
+// does not verify.
+
+// CHECK-LABEL: func @shape_mismatch
+func.func @shape_mismatch(%t: tensor<5x6x128xf32>) -> tensor<5x6x128xf32> {
+  %cst = arith.constant 8.0 : f32
+  %0 = bufferization.alloc_tensor() : tensor<128xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<128xf32>) -> tensor<128xf32>
+  %2 = tensor.expand_shape %1 [[0, 1, 2]]
+      : tensor<128xf32> into tensor<1x1x128xf32>
+  %3 = tensor.insert_slice %2 into %t[2, 3, 0][1, 1, 128][1, 1, 1]
+      : tensor<1x1x128xf32> into tensor<5x6x128xf32>
+  return %3 : tensor<5x6x128xf32>
 }

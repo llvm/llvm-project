@@ -42,11 +42,11 @@ Sections:
 ## Check we can redefine fields of the first SHT_NULL section.
 
 # RUN: yaml2obj --docnum=3 %s -o %t3
-# RUN: llvm-readelf --sections %t3 | FileCheck %s --check-prefix=REDEFINE
+# RUN: llvm-readelf --sections %t3 | FileCheck %s --check-prefix=REDEF
 
-# REDEFINE:      Section Headers:
-# REDEFINE-NEXT:  [Nr] Name Type Address          Off    Size   ES Flg Lk Inf Al
-# REDEFINE-NEXT:  [ 0] .foo NULL 0000000000000006 000000 000002 03   A 4   5  1
+# REDEF:      Section Headers:
+# REDEF-NEXT:  [Nr] Name Type Address          Off    Size   ES Flg Lk Inf Al
+# REDEF-NEXT:  [ 0] .foo NULL 0000000000000006 000000 000002 03   A 4   5  1
 
 --- !ELF
 FileHeader:

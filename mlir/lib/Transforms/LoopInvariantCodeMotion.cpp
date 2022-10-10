@@ -10,18 +10,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
-#include "mlir/Transforms/Passes.h"
 #include "mlir/Transforms/SideEffectUtils.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_LOOPINVARIANTCODEMOTION
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
 namespace {
 /// Loop invariant code motion (LICM) pass.
 struct LoopInvariantCodeMotion
-    : public LoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
+    : public impl::LoopInvariantCodeMotionBase<LoopInvariantCodeMotion> {
   void runOnOperation() override;
 };
 } // namespace

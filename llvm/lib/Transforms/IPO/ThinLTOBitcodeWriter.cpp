@@ -153,7 +153,7 @@ void promoteTypeIds(Module &M, StringRef ModuleId) {
     GO.getMetadata(LLVMContext::MD_type, MDs);
 
     GO.eraseMetadata(LLVMContext::MD_type);
-    for (auto MD : MDs) {
+    for (auto *MD : MDs) {
       auto I = LocalToGlobal.find(MD->getOperand(1));
       if (I == LocalToGlobal.end()) {
         GO.addMetadata(LLVMContext::MD_type, *MD);
@@ -318,8 +318,8 @@ void splitAndWriteThinLTOBitcode(
             return;
         }
         if (!F->isDeclaration() &&
-            computeFunctionBodyMemoryAccess(*F, AARGetter(*F)) ==
-                FMRB_DoesNotAccessMemory)
+            computeFunctionBodyMemoryAccess(*F, AARGetter(*F))
+                .doesNotAccessMemory())
           EligibleVirtualFns.insert(F);
       });
     }
@@ -376,7 +376,7 @@ void splitAndWriteThinLTOBitcode(
 
   auto &Ctx = MergedM->getContext();
   SmallVector<MDNode *, 8> CfiFunctionMDs;
-  for (auto V : CfiFunctions) {
+  for (auto *V : CfiFunctions) {
     Function &F = *cast<Function>(V);
     SmallVector<MDNode *, 2> Types;
     F.getMetadata(LLVMContext::MD_type, Types);
@@ -398,7 +398,7 @@ void splitAndWriteThinLTOBitcode(
 
   if(!CfiFunctionMDs.empty()) {
     NamedMDNode *NMD = MergedM->getOrInsertNamedMetadata("cfi.functions");
-    for (auto MD : CfiFunctionMDs)
+    for (auto *MD : CfiFunctionMDs)
       NMD->addOperand(MD);
   }
 
@@ -423,7 +423,7 @@ void splitAndWriteThinLTOBitcode(
 
   if (!FunctionAliases.empty()) {
     NamedMDNode *NMD = MergedM->getOrInsertNamedMetadata("aliases");
-    for (auto MD : FunctionAliases)
+    for (auto *MD : FunctionAliases)
       NMD->addOperand(MD);
   }
 
@@ -439,7 +439,7 @@ void splitAndWriteThinLTOBitcode(
 
   if (!Symvers.empty()) {
     NamedMDNode *NMD = MergedM->getOrInsertNamedMetadata("symvers");
-    for (auto MD : Symvers)
+    for (auto *MD : Symvers)
       NMD->addOperand(MD);
   }
 
@@ -546,53 +546,7 @@ void writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
     writeThinLinkBitcodeToFile(M, *ThinLinkOS, *Index, ModHash);
 }
 
-class WriteThinLTOBitcode : public ModulePass {
-  raw_ostream &OS; // raw_ostream to print on
-  // The output stream on which to emit a minimized module for use
-  // just in the thin link, if requested.
-  raw_ostream *ThinLinkOS = nullptr;
-
-public:
-  static char ID; // Pass identification, replacement for typeid
-  WriteThinLTOBitcode() : ModulePass(ID), OS(dbgs()) {
-    initializeWriteThinLTOBitcodePass(*PassRegistry::getPassRegistry());
-  }
-
-  explicit WriteThinLTOBitcode(raw_ostream &o, raw_ostream *ThinLinkOS)
-      : ModulePass(ID), OS(o), ThinLinkOS(ThinLinkOS) {
-    initializeWriteThinLTOBitcodePass(*PassRegistry::getPassRegistry());
-  }
-
-  StringRef getPassName() const override { return "ThinLTO Bitcode Writer"; }
-
-  bool runOnModule(Module &M) override {
-    const ModuleSummaryIndex *Index =
-        &(getAnalysis<ModuleSummaryIndexWrapperPass>().getIndex());
-    writeThinLTOBitcode(OS, ThinLinkOS, LegacyAARGetter(*this), M, Index);
-    return true;
-  }
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<ModuleSummaryIndexWrapperPass>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-  }
-};
 } // anonymous namespace
-
-char WriteThinLTOBitcode::ID = 0;
-INITIALIZE_PASS_BEGIN(WriteThinLTOBitcode, "write-thinlto-bitcode",
-                      "Write ThinLTO Bitcode", false, true)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(ModuleSummaryIndexWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(WriteThinLTOBitcode, "write-thinlto-bitcode",
-                    "Write ThinLTO Bitcode", false, true)
-
-ModulePass *llvm::createWriteThinLTOBitcodePass(raw_ostream &Str,
-                                                raw_ostream *ThinLinkOS) {
-  return new WriteThinLTOBitcode(Str, ThinLinkOS);
-}
 
 PreservedAnalyses
 llvm::ThinLTOBitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // test if zip_view models input_range, forward_range, bidirectional_range,
 //                         random_access_range, contiguous_range, common_range
@@ -318,8 +317,8 @@ static_assert(std::ranges::output_range<OutputView, int>);
 static_assert(!std::ranges::input_range<OutputView>);
 
 template <class... Ts>
-concept zippable = requires { 
-  typename std::ranges::zip_view<Ts...>;  
+concept zippable = requires {
+  typename std::ranges::zip_view<Ts...>;
 };
 
 // output_range is not supported

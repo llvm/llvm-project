@@ -6,10 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "flang/Optimizer/CodeGen/CodeGen.h"
+
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
-#include "flang/Optimizer/CodeGen/CodeGen.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -18,6 +18,11 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace fir {
+#define GEN_PASS_DEF_BOXEDPROCEDUREPASS
+#include "flang/Optimizer/CodeGen/CGPasses.h.inc"
+} // namespace fir
 
 #define DEBUG_TYPE "flang-procedure-pointer"
 
@@ -62,8 +67,7 @@ public:
       return false;
     }
     if (auto recTy = ty.dyn_cast<RecordType>()) {
-      if (llvm::any_of(visitedTypes,
-                       [&](mlir::Type rt) { return rt == recTy; }))
+      if (llvm::is_contained(visitedTypes, recTy))
         return false;
       bool result = false;
       visitedTypes.push_back(recTy);
@@ -170,7 +174,8 @@ private:
 /// the frame pointer during execution. In LLVM IR, the frame pointer is
 /// designated with the `nest` attribute. The thunk's address will then be used
 /// as the call target instead of the original function's address directly.
-class BoxedProcedurePass : public BoxedProcedurePassBase<BoxedProcedurePass> {
+class BoxedProcedurePass
+    : public fir::impl::BoxedProcedurePassBase<BoxedProcedurePass> {
 public:
   BoxedProcedurePass() { options = {true}; }
   BoxedProcedurePass(bool useThunks) { options = {useThunks}; }

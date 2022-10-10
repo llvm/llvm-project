@@ -112,7 +112,7 @@ void ProperlySeededRandomGeneratorCheck::checkSeed(
 
   const std::string SeedType(
       Func->getArg(0)->IgnoreCasts()->getType().getAsString());
-  if (llvm::find(DisallowedSeedTypes, SeedType) != DisallowedSeedTypes.end()) {
+  if (llvm::is_contained(DisallowedSeedTypes, SeedType)) {
     diag(Func->getExprLoc(),
          "random number generator seeded with a disallowed source of seed "
          "value will generate a predictable sequence of values");

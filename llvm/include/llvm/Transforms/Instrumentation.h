@@ -150,8 +150,16 @@ struct SanitizerCoverageOptions {
   bool StackDepth = false;
   bool TraceLoads = false;
   bool TraceStores = false;
+  bool CollectControlFlow = false;
 
   SanitizerCoverageOptions() = default;
+};
+
+/// Options for SanitizerBinaryMetadata.
+struct SanitizerBinaryMetadataOptions {
+  bool Covered = false;
+  bool Atomics = false;
+  SanitizerBinaryMetadataOptions() = default;
 };
 
 /// Calculate what to divide by to scale counts.

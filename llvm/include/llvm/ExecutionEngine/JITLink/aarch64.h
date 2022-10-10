@@ -15,7 +15,7 @@
 
 #include "TableManager.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
-#include "llvm/ExecutionEngine/JITLink/MemoryFlags.h"
+#include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 
 namespace llvm {
 namespace jitlink {
@@ -238,14 +238,17 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E) {
   default:
     return make_error<JITLinkError>(
         "In graph " + G.getName() + ", section " + B.getSection().getName() +
-        "unsupported edge kind" + getEdgeKindName(E.getKind()));
+        " unsupported edge kind " + getEdgeKindName(E.getKind()));
   }
 
   return Error::success();
 }
 
+/// aarch64 pointer size.
+constexpr uint64_t PointerSize = 8;
+
 /// AArch64 null pointer content.
-extern const uint8_t NullGOTEntryContent[8];
+extern const uint8_t NullGOTEntryContent[PointerSize];
 
 /// AArch64 PLT stub content.
 extern const uint8_t StubContent[8];
@@ -306,8 +309,8 @@ public:
 private:
   Section &getGOTSection(LinkGraph &G) {
     if (!GOTSection)
-      GOTSection =
-          &G.createSection(getSectionName(), MemProt::Read | MemProt::Exec);
+      GOTSection = &G.createSection(getSectionName(),
+                                    orc::MemProt::Read | orc::MemProt::Exec);
     return *GOTSection;
   }
 
@@ -351,8 +354,8 @@ public:
 public:
   Section &getStubsSection(LinkGraph &G) {
     if (!StubsSection)
-      StubsSection =
-          &G.createSection(getSectionName(), MemProt::Read | MemProt::Exec);
+      StubsSection = &G.createSection(getSectionName(),
+                                      orc::MemProt::Read | orc::MemProt::Exec);
     return *StubsSection;
   }
 

@@ -37,8 +37,6 @@ def NVVM_Dialect : Dialect {
   }];
 
   let useDefaultAttributePrinterParser = 1;
-
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 //===----------------------------------------------------------------------===//
@@ -168,6 +166,15 @@ def NVVM_VoteBallotOp :
             llvm::Intrinsic::nvvm_vote_ballot_sync, {$mask, $pred});
   }];
   let hasCustomAssemblyFormat = 1;
+}
+
+def NVVM_SyncWarpOp : 
+  NVVM_Op<"bar.warp.sync">,
+  Arguments<(ins LLVM_Type:$mask)> {
+  string llvmBuilder = [{
+      createIntrinsicCall(builder, llvm::Intrinsic::nvvm_bar_warp_sync, {$mask});
+  }];
+  let assemblyFormat = "$mask attr-dict `:` type($mask)";
 }
 
 

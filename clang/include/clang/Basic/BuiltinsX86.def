@@ -1791,7 +1791,7 @@ TARGET_BUILTIN(__builtin_ia32_cmpph512_mask, "UiV32xV32xIiUiIi", "ncV:512:", "av
 TARGET_BUILTIN(__builtin_ia32_cmpph256_mask, "UsV16xV16xIiUs", "ncV:256:", "avx512fp16,avx512vl")
 TARGET_BUILTIN(__builtin_ia32_cmpph128_mask, "UcV8xV8xIiUc", "ncV:128:", "avx512fp16,avx512vl")
 TARGET_BUILTIN(__builtin_ia32_cmpsh_mask, "UcV8xV8xIiUcIi", "ncV:128:", "avx512fp16")
-TARGET_BUILTIN(__builtin_ia32_loadsh128_mask, "V8xV8x*V8xUc", "nV:128:", "avx512fp16")
+TARGET_BUILTIN(__builtin_ia32_loadsh128_mask, "V8xV8xC*V8xUc", "nV:128:", "avx512fp16")
 TARGET_BUILTIN(__builtin_ia32_storesh128_mask, "vV8x*V8xUc", "nV:128:", "avx512fp16")
 
 TARGET_BUILTIN(__builtin_ia32_rcpph128_mask, "V8xV8xV8xUc", "ncV:128:", "avx512fp16,avx512vl")

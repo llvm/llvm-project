@@ -392,7 +392,7 @@ int32_t __tgt_rtl_data_retrieve(int32_t ID, void *HostPtr, void *TargetPtr,
 
 // De-allocate the data referenced by target ptr on the device. In case of
 // success, return zero. Otherwise, return an error code.
-int32_t __tgt_rtl_data_delete(int32_t ID, void *TargetPtr) {
+int32_t __tgt_rtl_data_delete(int32_t ID, void *TargetPtr, int32_t) {
   int ret = veo_free_mem(DeviceInfo.ProcHandles[ID], (uint64_t)TargetPtr);
 
   if (ret != 0) {

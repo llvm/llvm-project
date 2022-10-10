@@ -20,6 +20,7 @@
 #include <new>
 #include <type_traits>
 #include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 #include "incomplete_type_helper.h"

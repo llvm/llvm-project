@@ -11,26 +11,32 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/MathToSPIRV/MathToSPIRVPass.h"
-#include "../PassDetail.h"
+
 #include "mlir/Conversion/MathToSPIRV/MathToSPIRV.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTMATHTOSPIRV
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
 namespace {
 /// A pass converting MLIR Math operations into the SPIR-V dialect.
 class ConvertMathToSPIRVPass
-    : public ConvertMathToSPIRVBase<ConvertMathToSPIRVPass> {
+    : public impl::ConvertMathToSPIRVBase<ConvertMathToSPIRVPass> {
   void runOnOperation() override;
 };
 } // namespace
 
 void ConvertMathToSPIRVPass::runOnOperation() {
   MLIRContext *context = &getContext();
-  ModuleOp module = getOperation();
+  Operation *op = getOperation();
 
-  auto targetAttr = spirv::lookupTargetEnvOrDefault(module);
+  auto targetAttr = spirv::lookupTargetEnvOrDefault(op);
   std::unique_ptr<ConversionTarget> target =
       SPIRVConversionTarget::get(targetAttr);
 
@@ -50,10 +56,10 @@ void ConvertMathToSPIRVPass::runOnOperation() {
   RewritePatternSet patterns(context);
   populateMathToSPIRVPatterns(typeConverter, patterns);
 
-  if (failed(applyPartialConversion(module, *target, std::move(patterns))))
+  if (failed(applyPartialConversion(op, *target, std::move(patterns))))
     return signalPassFailure();
 }
 
-std::unique_ptr<OperationPass<ModuleOp>> mlir::createConvertMathToSPIRVPass() {
+std::unique_ptr<OperationPass<>> mlir::createConvertMathToSPIRVPass() {
   return std::make_unique<ConvertMathToSPIRVPass>();
 }

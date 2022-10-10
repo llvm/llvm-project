@@ -71,7 +71,7 @@ void SubgroupSizeOp::inferResultRanges(ArrayRef<ConstantIntRanges>,
 
 void LaunchOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                  SetIntRangeFn setResultRange) {
-  auto setRange = [&](ConstantIntRanges argRange, Value dimResult,
+  auto setRange = [&](const ConstantIntRanges &argRange, Value dimResult,
                       Value idxResult) {
     if (argRange.umin().getBitWidth() != IndexType::kInternalStorageBitWidth)
       return;
@@ -83,7 +83,7 @@ void LaunchOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
     setResultRange(idxResult, idxRange);
   };
 
-  argRanges = argRanges.drop_front(asyncDependencies().size());
+  argRanges = argRanges.drop_front(getAsyncDependencies().size());
   KernelDim3 gridDims = getGridSize();
   KernelDim3 blockIds = getBlockIds();
   setRange(argRanges[0], gridDims.x, blockIds.x);

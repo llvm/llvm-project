@@ -70,11 +70,9 @@ enum GDBRemoteServerError {
 // GDBRemoteCommunicationServerLLGS constructor
 GDBRemoteCommunicationServerLLGS::GDBRemoteCommunicationServerLLGS(
     MainLoop &mainloop, const NativeProcessProtocol::Factory &process_factory)
-    : GDBRemoteCommunicationServerCommon("gdb-remote.server",
-                                         "gdb-remote.server.rx_packet"),
-      m_mainloop(mainloop), m_process_factory(process_factory),
-      m_current_process(nullptr), m_continue_process(nullptr),
-      m_stdio_communication("process.stdio") {
+    : GDBRemoteCommunicationServerCommon(), m_mainloop(mainloop),
+      m_process_factory(process_factory), m_current_process(nullptr),
+      m_continue_process(nullptr), m_stdio_communication() {
   RegisterPacketHandlers();
 }
 
@@ -1503,7 +1501,7 @@ GDBRemoteCommunicationServerLLGS::Handle_qGetWorkingDir(
   FileSpec working_dir{m_process_launch_info.GetWorkingDirectory()};
   if (working_dir) {
     StreamString response;
-    response.PutStringAsRawHex8(working_dir.GetCString());
+    response.PutStringAsRawHex8(working_dir.GetPath().c_str());
     return SendPacketNoLock(response.GetString());
   }
 
@@ -1733,7 +1731,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
       if (thread_action.signal == 0)
         return SendIllFormedResponse(
             packet, "Could not parse signal in vCont packet C action");
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     case 'c':
       // Continue
@@ -1745,7 +1743,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
       if (thread_action.signal == 0)
         return SendIllFormedResponse(
             packet, "Could not parse signal in vCont packet S action");
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
 
     case 's':
       // Step
@@ -1762,6 +1760,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
       break;
     }
 
+    // If there's no thread-id (e.g. "vCont;c"), it's "p-1.-1".
     lldb::pid_t pid = StringExtractorGDBRemote::AllProcesses;
     lldb::tid_t tid = StringExtractorGDBRemote::AllThreads;
 
@@ -1770,7 +1769,7 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
       // Consume the separator.
       packet.GetChar();
 
-      auto pid_tid = packet.GetPidTid(StringExtractorGDBRemote::AllProcesses);
+      auto pid_tid = packet.GetPidTid(LLDB_INVALID_PROCESS_ID);
       if (!pid_tid)
         return SendIllFormedResponse(packet, "Malformed thread-id");
 
@@ -1784,29 +1783,35 @@ GDBRemoteCommunicationServerLLGS::Handle_vCont(
           packet, "'t' action not supported for individual threads");
     }
 
-    if (pid == StringExtractorGDBRemote::AllProcesses) {
-      if (m_debugged_processes.size() > 1)
-        return SendIllFormedResponse(
-            packet, "Resuming multiple processes not supported yet");
+    // If we get TID without PID, it's the current process.
+    if (pid == LLDB_INVALID_PROCESS_ID) {
       if (!m_continue_process) {
-        LLDB_LOG(log, "no debugged process");
+        LLDB_LOG(log, "no process selected via Hc");
         return SendErrorResponse(0x36);
       }
       pid = m_continue_process->GetID();
     }
 
+    assert(pid != LLDB_INVALID_PROCESS_ID);
     if (tid == StringExtractorGDBRemote::AllThreads)
       tid = LLDB_INVALID_THREAD_ID;
-
     thread_action.tid = tid;
 
-    thread_actions[pid].Append(thread_action);
+    if (pid == StringExtractorGDBRemote::AllProcesses) {
+      if (tid != LLDB_INVALID_THREAD_ID)
+        return SendIllFormedResponse(
+            packet, "vCont: p-1 is not valid with a specific tid");
+      for (auto &process_it : m_debugged_processes)
+        thread_actions[process_it.first].Append(thread_action);
+    } else
+      thread_actions[pid].Append(thread_action);
   }
 
   assert(thread_actions.size() >= 1);
-  if (thread_actions.size() > 1)
+  if (thread_actions.size() > 1 && !m_non_stop)
     return SendIllFormedResponse(
-        packet, "Resuming multiple processes not supported yet");
+        packet,
+        "Resuming multiple processes is supported in non-stop mode only");
 
   for (std::pair<lldb::pid_t, ResumeActionList> x : thread_actions) {
     auto process_it = m_debugged_processes.find(x.first);
@@ -2434,7 +2439,7 @@ GDBRemoteCommunicationServerLLGS::Handle_I(StringExtractorGDBRemote &packet) {
     // remote host
     ConnectionStatus status;
     Status error;
-    m_stdio_communication.Write(tmp, read, status, &error);
+    m_stdio_communication.WriteAll(tmp, read, status, &error);
     if (error.Fail()) {
       return SendErrorResponse(0x15);
     }
@@ -3061,19 +3066,24 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
 
   StreamString response;
 
-  response.Printf("<?xml version=\"1.0\"?>");
-  response.Printf("<target version=\"1.0\">");
+  response.Printf("<?xml version=\"1.0\"?>\n");
+  response.Printf("<target version=\"1.0\">\n");
+  response.IndentMore();
 
-  response.Printf("<architecture>%s</architecture>",
+  response.Indent();
+  response.Printf("<architecture>%s</architecture>\n",
                   m_current_process->GetArchitecture()
                       .GetTriple()
                       .getArchName()
                       .str()
                       .c_str());
 
-  response.Printf("<feature>");
+  response.Indent("<feature>\n");
 
   const int registers_count = reg_context.GetUserRegisterCount();
+  if (registers_count)
+    response.IndentMore();
+
   for (int reg_index = 0; reg_index < registers_count; reg_index++) {
     const RegisterInfo *reg_info =
         reg_context.GetRegisterInfoAtIndex(reg_index);
@@ -3085,7 +3095,9 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
       continue;
     }
 
-    response.Printf("<reg name=\"%s\" bitsize=\"%" PRIu32 "\" regnum=\"%d\" ",
+    response.Indent();
+    response.Printf("<reg name=\"%s\" bitsize=\"%" PRIu32
+                    "\" regnum=\"%d\" ",
                     reg_info->name, reg_info->byte_size * 8, reg_index);
 
     if (!reg_context.RegisterOffsetIsDynamic())
@@ -3134,11 +3146,15 @@ GDBRemoteCommunicationServerLLGS::BuildTargetXml() {
       response.Printf("\" ");
     }
 
-    response.Printf("/>");
+    response.Printf("/>\n");
   }
 
-  response.Printf("</feature>");
-  response.Printf("</target>");
+  if (registers_count)
+    response.IndentLess();
+
+  response.Indent("</feature>\n");
+  response.IndentLess();
+  response.Indent("</target>\n");
   return MemoryBuffer::getMemBufferCopy(response.GetString(), "target.xml");
 }
 
@@ -3510,19 +3526,17 @@ GDBRemoteCommunicationServerLLGS::Handle_vRun(
               arg.c_str());
   }
 
-  if (!argv.empty()) {
-    m_process_launch_info.GetExecutableFile().SetFile(
-        m_process_launch_info.GetArguments()[0].ref(), FileSpec::Style::native);
-    m_process_launch_error = LaunchProcess();
-    if (m_process_launch_error.Success()) {
-      assert(m_current_process);
-      return SendStopReasonForState(*m_current_process,
-                                    m_current_process->GetState(),
-                                    /*force_synchronous=*/true);
-    }
-    LLDB_LOG(log, "failed to launch exe: {0}", m_process_launch_error);
-  }
-  return SendErrorResponse(8);
+  if (argv.empty())
+    return SendErrorResponse(Status("No arguments"));
+  m_process_launch_info.GetExecutableFile().SetFile(
+      m_process_launch_info.GetArguments()[0].ref(), FileSpec::Style::native);
+  m_process_launch_error = LaunchProcess();
+  if (m_process_launch_error.Fail())
+    return SendErrorResponse(m_process_launch_error);
+  assert(m_current_process);
+  return SendStopReasonForState(*m_current_process,
+                                m_current_process->GetState(),
+                                /*force_synchronous=*/true);
 }
 
 GDBRemoteCommunication::PacketResult

@@ -34,7 +34,7 @@ class MemoryBuffer;
 
 namespace mlir {
 
-class ModuleOp;
+class Operation;
 
 /// A simple object cache following Lang's LLJITWithObjectCache example.
 class SimpleObjectCache : public llvm::ObjectCache {
@@ -51,10 +51,10 @@ private:
 };
 
 struct ExecutionEngineOptions {
-  /// If `llvmModuleBuilder` is provided, it will be used to create LLVM module
-  /// from the given MLIR module. Otherwise, a default `translateModuleToLLVMIR`
-  /// function will be used to translate MLIR module to LLVM IR.
-  llvm::function_ref<std::unique_ptr<llvm::Module>(ModuleOp,
+  /// If `llvmModuleBuilder` is provided, it will be used to create an LLVM
+  /// module from the given MLIR IR. Otherwise, a default
+  /// `translateModuleToLLVMIR` function will be used to translate to LLVM IR.
+  llvm::function_ref<std::unique_ptr<llvm::Module>(Operation *,
                                                    llvm::LLVMContext &)>
       llvmModuleBuilder = nullptr;
 
@@ -89,9 +89,9 @@ struct ExecutionEngineOptions {
   bool enablePerfNotificationListener = true;
 };
 
-/// JIT-backed execution engine for MLIR modules.  Assumes the module can be
-/// converted to LLVM IR.  For each function, creates a wrapper function with
-/// the fixed interface
+/// JIT-backed execution engine for MLIR. Assumes the IR can be converted to
+/// LLVM IR. For each function, creates a wrapper function with the fixed
+/// interface
 ///
 ///     void _mlir_funcName(void **)
 ///
@@ -104,9 +104,9 @@ public:
   ExecutionEngine(bool enableObjectCache, bool enableGDBNotificationListener,
                   bool enablePerfNotificationListener);
 
-  /// Creates an execution engine for the given module.
+  /// Creates an execution engine for the given MLIR IR.
   static llvm::Expected<std::unique_ptr<ExecutionEngine>>
-  create(ModuleOp m, const ExecutionEngineOptions &options = {});
+  create(Operation *op, const ExecutionEngineOptions &options = {});
 
   /// Looks up a packed-argument function wrapping the function with the given
   /// name and returns a pointer to it. Propagates errors in case of failure.
@@ -172,9 +172,7 @@ public:
     llvm::SmallVector<void *> argsArray;
     // Pack every arguments in an array of pointers. Delegate the packing to a
     // trait so that it can be overridden per argument type.
-    // TODO: replace with a fold expression when migrating to C++17.
-    int dummy[] = {0, ((void)Argument<Args>::pack(argsArray, args), 0)...};
-    (void)dummy;
+    (Argument<Args>::pack(argsArray, args), ...);
     return invokePacked(adapterName, argsArray);
   }
 

@@ -118,6 +118,7 @@ LogicalResult DeadCodeAnalysis::initialize(Operation *top) {
 }
 
 void DeadCodeAnalysis::initializeSymbolCallables(Operation *top) {
+  analysisScope = top;
   auto walkFn = [&](Operation *symTable, bool allUsesVisible) {
     Region &symbolTableRegion = symTable->getRegion(0);
     Block *symbolTableBlock = &symbolTableRegion.front();
@@ -278,14 +279,14 @@ LogicalResult DeadCodeAnalysis::visit(ProgramPoint point) {
 }
 
 void DeadCodeAnalysis::visitCallOperation(CallOpInterface call) {
-  Operation *callableOp = nullptr;
-  if (Value callableValue = call.getCallableForCallee().dyn_cast<Value>())
-    callableOp = callableValue.getDefiningOp();
-  else
-    callableOp = call.resolveCallable(&symbolTable);
+  Operation *callableOp = call.resolveCallable(&symbolTable);
 
   // A call to a externally-defined callable has unknown predecessors.
-  const auto isExternalCallable = [](Operation *op) {
+  const auto isExternalCallable = [this](Operation *op) {
+    // A callable outside the analysis scope is an external callable.
+    if (!analysisScope->isAncestor(op))
+      return true;
+    // Otherwise, check if the callable region is defined.
     if (auto callable = dyn_cast<CallableOpInterface>(op))
       return !callable.getCallableRegion();
     return false;
@@ -317,7 +318,7 @@ static Optional<SmallVector<Attribute>> getOperandValuesImpl(
   for (Value operand : op->getOperands()) {
     const Lattice<ConstantValue> *cv = getLattice(operand);
     // If any of the operands' values are uninitialized, bail out.
-    if (cv->isUninitialized())
+    if (cv->getValue().isUninitialized())
       return {};
     operands.push_back(cv->getValue().getConstantValue());
   }

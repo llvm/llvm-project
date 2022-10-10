@@ -373,8 +373,8 @@ declare {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
 define i1 @uadd_add(i8 %a, i8 %b, i8* %p) {
 ; CHECK-LABEL: uadd_add:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    and w8, w8, #0xff
+; CHECK-NEXT:    mov w8, #255
+; CHECK-NEXT:    bic w8, w8, w0
 ; CHECK-NEXT:    add w8, w8, w1, uxtb
 ; CHECK-NEXT:    lsr w0, w8, #8
 ; CHECK-NEXT:    add w8, w8, #1

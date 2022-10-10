@@ -1543,17 +1543,23 @@ void TextNodeDumper::VisitUnresolvedUsingType(const UnresolvedUsingType *T) {
 
 void TextNodeDumper::VisitUsingType(const UsingType *T) {
   dumpDeclRef(T->getFoundDecl());
+  if (!T->typeMatchesDecl())
+    OS << " divergent";
 }
 
 void TextNodeDumper::VisitTypedefType(const TypedefType *T) {
   dumpDeclRef(T->getDecl());
+  if (!T->typeMatchesDecl())
+    OS << " divergent";
 }
 
 void TextNodeDumper::VisitUnaryTransformType(const UnaryTransformType *T) {
   switch (T->getUTTKind()) {
-  case UnaryTransformType::EnumUnderlyingType:
-    OS << " underlying_type";
+#define TRANSFORM_TYPE_TRAIT_DEF(Enum, Trait)                                  \
+  case UnaryTransformType::Enum:                                               \
+    OS << " " #Trait;                                                          \
     break;
+#include "clang/Basic/TransformTypeTraits.def"
   }
 }
 
@@ -1566,6 +1572,12 @@ void TextNodeDumper::VisitTemplateTypeParmType(const TemplateTypeParmType *T) {
   if (T->isParameterPack())
     OS << " pack";
   dumpDeclRef(T->getDecl());
+}
+
+void TextNodeDumper::VisitSubstTemplateTypeParmType(
+    const SubstTemplateTypeParmType *T) {
+  if (auto PackIndex = T->getPackIndex())
+    OS << " pack_index " << *PackIndex;
 }
 
 void TextNodeDumper::VisitAutoType(const AutoType *T) {
@@ -2379,4 +2391,12 @@ void TextNodeDumper::VisitCompoundStmt(const CompoundStmt *S) {
   VisitStmt(S);
   if (S->hasStoredFPFeatures())
     printFPOptions(S->getStoredFPFeatures());
+}
+
+void TextNodeDumper::VisitHLSLBufferDecl(const HLSLBufferDecl *D) {
+  if (D->isCBuffer())
+    OS << " cbuffer";
+  else
+    OS << " tbuffer";
+  dumpName(D);
 }

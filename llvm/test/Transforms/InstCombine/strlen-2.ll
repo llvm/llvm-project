@@ -7,14 +7,13 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 
 @hello = constant [6 x i8] c"hello\00"
 
-declare i32 @strlen(i8*, i32)
+declare i32 @strlen(ptr, i32)
 
 define i32 @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[HELLO_L:%.*]] = call i32 @strlen(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i32 187)
+; CHECK-NEXT:    [[HELLO_L:%.*]] = call i32 @strlen(ptr nonnull @hello, i32 187)
 ; CHECK-NEXT:    ret i32 [[HELLO_L]]
 ;
-  %hello_p = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  %hello_l = call i32 @strlen(i8* %hello_p, i32 187)
+  %hello_l = call i32 @strlen(ptr @hello, i32 187)
   ret i32 %hello_l
 }

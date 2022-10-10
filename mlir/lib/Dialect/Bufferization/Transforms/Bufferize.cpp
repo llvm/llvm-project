@@ -6,14 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
-#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 #include "mlir/Dialect/Bufferization/Transforms/TensorCopyInsertion.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -21,6 +20,15 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
+
+namespace mlir {
+namespace bufferization {
+#define GEN_PASS_DEF_FINALIZINGBUFFERIZE
+#define GEN_PASS_DEF_BUFFERIZATIONBUFFERIZE
+#define GEN_PASS_DEF_ONESHOTBUFFERIZE
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
+} // namespace bufferization
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -122,7 +130,8 @@ void mlir::bufferization::populateEliminateBufferizeMaterializationsPatterns(
 
 namespace {
 struct FinalizingBufferizePass
-    : public FinalizingBufferizeBase<FinalizingBufferizePass> {
+    : public bufferization::impl::FinalizingBufferizeBase<
+          FinalizingBufferizePass> {
   using FinalizingBufferizeBase<
       FinalizingBufferizePass>::FinalizingBufferizeBase;
 
@@ -164,8 +173,8 @@ parseLayoutMapOption(const std::string &s) {
 }
 
 struct OneShotBufferizePass
-    : public OneShotBufferizeBase<OneShotBufferizePass> {
-  OneShotBufferizePass() : OneShotBufferizeBase<OneShotBufferizePass>() {}
+    : public bufferization::impl::OneShotBufferizeBase<OneShotBufferizePass> {
+  OneShotBufferizePass() = default;
 
   explicit OneShotBufferizePass(const OneShotBufferizationOptions &options)
       : options(options) {}
@@ -184,6 +193,7 @@ struct OneShotBufferizePass
       opt.allowReturnAllocs = allowReturnAllocs;
       opt.allowUnknownOps = allowUnknownOps;
       opt.analysisFuzzerSeed = analysisFuzzerSeed;
+      opt.copyBeforeWrite = copyBeforeWrite;
       opt.createDeallocs = createDeallocs;
       opt.functionBoundaryTypeConversion =
           parseLayoutMapOption(functionBoundaryTypeConversion);
@@ -255,7 +265,8 @@ private:
 
 namespace {
 struct BufferizationBufferizePass
-    : public BufferizationBufferizeBase<BufferizationBufferizePass> {
+    : public bufferization::impl::BufferizationBufferizeBase<
+          BufferizationBufferizePass> {
   void runOnOperation() override {
     BufferizationOptions options = getPartialBufferizationOptions();
     options.opFilter.allowDialect<BufferizationDialect>();
@@ -350,17 +361,6 @@ protected:
     auto const &options = analysisState.getOptions();
     if (!options.isOpAllowed(op) || (opFilter && !opFilter->isOpAllowed(op)))
       return;
-
-#ifndef NDEBUG
-    // Read-only tensor ops may be created during bufferization. Ops that are
-    // writing should not be created because such ops were never analyzed.
-    // Bufferizing such ops could introduce a RaW conflict.
-    for (OpOperand &operand : op->getOpOperands())
-      if (operand.get().getType().isa<TensorType>())
-        assert(!analysisState.bufferizesToMemoryWrite(operand) &&
-               "creating tensor ops that bufferize to a memory write is not "
-               "allowed during bufferization");
-#endif // NDEBUG
 
     // Add op to worklist.
     worklist.push_back(op);

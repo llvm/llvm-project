@@ -35,10 +35,11 @@ public:
   const Item *item; // in original declaration order
 };
 
-// Look ahead on input for an identifier followed by a '=', '(', or '%'
+// Look ahead on input for a '/' or an identifier followed by a '=', '(', or '%'
 // character; for use in disambiguating a name-like value (e.g. F or T) from a
-// NAMELIST group item name.  Always false when not reading a NAMELIST.
-bool IsNamelistName(IoStatementState &);
+// NAMELIST group item name and for coping with short arrays.  Always false
+// when not reading a NAMELIST.
+bool IsNamelistNameOrSlash(IoStatementState &);
 
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_NAMELIST_H_

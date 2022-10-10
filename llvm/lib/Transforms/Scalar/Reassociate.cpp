@@ -833,9 +833,14 @@ void ReassociatePass::RewriteExprTree(BinaryOperator *I,
 /// additional opportunities have been exposed.
 static Value *NegateValue(Value *V, Instruction *BI,
                           ReassociatePass::OrderedSet &ToRedo) {
-  if (auto *C = dyn_cast<Constant>(V))
-    return C->getType()->isFPOrFPVectorTy() ? ConstantExpr::getFNeg(C) :
-                                              ConstantExpr::getNeg(C);
+  if (auto *C = dyn_cast<Constant>(V)) {
+    const DataLayout &DL = BI->getModule()->getDataLayout();
+    Constant *Res = C->getType()->isFPOrFPVectorTy()
+                        ? ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL)
+                        : ConstantExpr::getNeg(C);
+    if (Res)
+      return Res;
+  }
 
   // We are trying to expose opportunity for reassociation.  One of the things
   // that we want to do to achieve this is to push a negation as deep into an
@@ -880,46 +885,29 @@ static Value *NegateValue(Value *V, Instruction *BI,
     // this use.  We do this by moving it to the entry block (if it is a
     // non-instruction value) or right after the definition.  These negates will
     // be zapped by reassociate later, so we don't need much finesse here.
-    Instruction *TheNeg = cast<Instruction>(U);
+    Instruction *TheNeg = dyn_cast<Instruction>(U);
 
-    // Verify that the negate is in this function, V might be a constant expr.
-    if (TheNeg->getParent()->getParent() != BI->getParent()->getParent())
+    // We can't safely propagate a vector zero constant with poison/undef lanes.
+    Constant *C;
+    if (match(TheNeg, m_BinOp(m_Constant(C), m_Value())) &&
+        C->containsUndefOrPoisonElement())
       continue;
 
-    bool FoundCatchSwitch = false;
+    // Verify that the negate is in this function, V might be a constant expr.
+    if (!TheNeg ||
+        TheNeg->getParent()->getParent() != BI->getParent()->getParent())
+      continue;
 
-    BasicBlock::iterator InsertPt;
+    Instruction *InsertPt;
     if (Instruction *InstInput = dyn_cast<Instruction>(V)) {
-      if (InvokeInst *II = dyn_cast<InvokeInst>(InstInput)) {
-        InsertPt = II->getNormalDest()->begin();
-      } else {
-        InsertPt = ++InstInput->getIterator();
-      }
-
-      const BasicBlock *BB = InsertPt->getParent();
-
-      // Make sure we don't move anything before PHIs or exception
-      // handling pads.
-      while (InsertPt != BB->end() && (isa<PHINode>(InsertPt) ||
-                                       InsertPt->isEHPad())) {
-        if (isa<CatchSwitchInst>(InsertPt))
-          // A catchswitch cannot have anything in the block except
-          // itself and PHIs.  We'll bail out below.
-          FoundCatchSwitch = true;
-        ++InsertPt;
-      }
+      InsertPt = InstInput->getInsertionPointAfterDef();
+      if (!InsertPt)
+        continue;
     } else {
-      InsertPt = TheNeg->getParent()->getParent()->getEntryBlock().begin();
+      InsertPt = &*TheNeg->getFunction()->getEntryBlock().begin();
     }
 
-    // We found a catchswitch in the block where we want to move the
-    // neg.  We cannot move anything into that block.  Bail and just
-    // create the neg before BI, as if we hadn't found an existing
-    // neg.
-    if (FoundCatchSwitch)
-      break;
-
-    TheNeg->moveBefore(&*InsertPt);
+    TheNeg->moveBefore(InsertPt);
     if (TheNeg->getOpcode() == Instruction::Sub) {
       TheNeg->setHasNoUnsignedWrap(false);
       TheNeg->setHasNoSignedWrap(false);
@@ -1898,10 +1886,10 @@ ReassociatePass::buildMinimalMultiplyDAG(IRBuilderBase &Builder,
   // Iteratively collect the base of each factor with an add power into the
   // outer product, and halve each power in preparation for squaring the
   // expression.
-  for (unsigned Idx = 0, Size = Factors.size(); Idx != Size; ++Idx) {
-    if (Factors[Idx].Power & 1)
-      OuterProduct.push_back(Factors[Idx].Base);
-    Factors[Idx].Power >>= 1;
+  for (Factor &F : Factors) {
+    if (F.Power & 1)
+      OuterProduct.push_back(F.Base);
+    F.Power >>= 1;
   }
   if (Factors[0].Power) {
     Value *SquareRoot = buildMinimalMultiplyDAG(Builder, Factors);
@@ -2027,7 +2015,7 @@ void ReassociatePass::RecursivelyEraseDeadInsts(Instruction *I,
   RedoInsts.remove(I);
   llvm::salvageDebugInfo(*I);
   I->eraseFromParent();
-  for (auto Op : Ops)
+  for (auto *Op : Ops)
     if (Instruction *OpInst = dyn_cast<Instruction>(Op))
       if (OpInst->use_empty())
         Insts.insert(OpInst);

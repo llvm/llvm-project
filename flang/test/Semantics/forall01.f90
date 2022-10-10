@@ -41,6 +41,7 @@ subroutine forall3
   end forall
   forall(i=1:10)
     forall(j=1:10)
+      !WARNING: FORALL index variable 'j' not used on left-hand side of assignment
       !ERROR: Cannot redefine FORALL variable 'i'
       i = 1
     end forall
@@ -81,14 +82,18 @@ subroutine forall5
     x(i) = y(i)
   end forall
   forall(i=1:10)
-    x = y  ! warning: i not used on LHS
+    !WARNING: FORALL index variable 'i' not used on left-hand side of assignment
+    x = y
     forall(j=1:10)
-      x(i) = y(i)  ! warning: j not used on LHS
-      x(j) = y(j)  ! warning: i not used on LHS
+      !WARNING: FORALL index variable 'j' not used on left-hand side of assignment
+      x(i) = y(i)
+      !WARNING: FORALL index variable 'i' not used on left-hand side of assignment
+      x(j) = y(j)
     endforall
   endforall
   do concurrent(i=1:10)
     x = y
+    !WARNING: FORALL index variable 'i' not used on left-hand side of assignment
     forall(i=1:10) x = y
   end do
 end
@@ -101,6 +106,29 @@ subroutine forall6
   real, target :: b(10)
   forall(i=1:10)
     a(i)%p => b(i)
-    a(1)%p => b(i)  ! warning: i not used on LHS
+    !WARNING: FORALL index variable 'i' not used on left-hand side of assignment
+    a(1)%p => b(i)
   end forall
 end
+
+subroutine forall7(x)
+  integer :: iarr(1)
+  real :: a(10)
+  class(*) :: x
+  associate (j => iarr(1))
+    forall (j=1:size(a))
+      a(j) = a(j) + 1
+    end forall
+  end associate
+  associate (j => iarr(1) + 1)
+    forall (j=1:size(a))
+      a(j) = a(j) + 1
+    end forall
+  end associate
+  select type (j => x)
+  type is (integer)
+    forall (j=1:size(a))
+      a(j) = a(j) + 1
+    end forall
+  end select
+end subroutine

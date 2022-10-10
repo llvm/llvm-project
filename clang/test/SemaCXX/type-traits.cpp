@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++11 -Wno-deprecated-builtins -fms-extensions -Wno-microsoft %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++14 -Wno-deprecated-builtins -fms-extensions -Wno-microsoft %s
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++1z -Wno-deprecated-builtins -fms-extensions -Wno-microsoft %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++11 -fblocks -Wno-deprecated-builtins -fms-extensions -Wno-microsoft %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++14 -fblocks -Wno-deprecated-builtins -fms-extensions -Wno-microsoft %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=gnu++1z -fblocks -Wno-deprecated-builtins -fms-extensions -Wno-microsoft %s
 
 #define T(b) (b) ? 1 : -1
 #define F(b) (b) ? -1 : 1
@@ -14,6 +14,9 @@ typedef NonPOD NonPODArMB[10][2];
 enum Enum { EV };
 enum SignedEnum : signed int { };
 enum UnsignedEnum : unsigned int { };
+enum class EnumClass { EV };
+enum class SignedEnumClass : signed int {};
+enum class UnsignedEnumClass : unsigned int {};
 struct POD { Enum e; int i; float f; NonPOD* p; };
 struct Empty {};
 struct IncompleteStruct;
@@ -2915,3 +2918,694 @@ static_assert(__is_trivially_relocatable(TrivialAbiNontrivialMoveCtor), "");
 static_assert(__is_trivially_relocatable(TrivialAbiNontrivialMoveCtor[]), "");
 
 } // namespace is_trivially_relocatable
+
+struct S {};
+template <class T> using remove_const_t = __remove_const(T);
+
+void check_remove_const() {
+  static_assert(__is_same(remove_const_t<void>, void), "");
+  static_assert(__is_same(remove_const_t<const void>, void), "");
+  static_assert(__is_same(remove_const_t<int>, int), "");
+  static_assert(__is_same(remove_const_t<const int>, int), "");
+  static_assert(__is_same(remove_const_t<volatile int>, volatile int), "");
+  static_assert(__is_same(remove_const_t<const volatile int>, volatile int), "");
+  static_assert(__is_same(remove_const_t<int *>, int *), "");
+  static_assert(__is_same(remove_const_t<int *const>, int *), "");
+  static_assert(__is_same(remove_const_t<int const *const>, int const *), "");
+  static_assert(__is_same(remove_const_t<int const *const __restrict>, int const *__restrict), "");
+  static_assert(__is_same(remove_const_t<int &>, int &), "");
+  static_assert(__is_same(remove_const_t<int const &>, int const &), "");
+  static_assert(__is_same(remove_const_t<int &&>, int &&), "");
+  static_assert(__is_same(remove_const_t<int const &&>, int const &&), "");
+  static_assert(__is_same(remove_const_t<int()>, int()), "");
+  static_assert(__is_same(remove_const_t<int (*const)()>, int (*)()), "");
+  static_assert(__is_same(remove_const_t<int (&)()>, int (&)()), "");
+
+  static_assert(__is_same(remove_const_t<S>, S), "");
+  static_assert(__is_same(remove_const_t<const S>, S), "");
+  static_assert(__is_same(remove_const_t<volatile S>, volatile S), "");
+  static_assert(__is_same(remove_const_t<S *__restrict>, S *__restrict), "");
+  static_assert(__is_same(remove_const_t<const volatile S>, volatile S), "");
+  static_assert(__is_same(remove_const_t<S *const volatile __restrict>, S *volatile __restrict), "");
+  static_assert(__is_same(remove_const_t<int S::*const>, int S::*), "");
+  static_assert(__is_same(remove_const_t<int (S::*const)()>, int(S::*)()), "");
+}
+
+template <class T> using remove_restrict_t = __remove_restrict(T);
+
+void check_remove_restrict() {
+  static_assert(__is_same(remove_restrict_t<void>, void), "");
+  static_assert(__is_same(remove_restrict_t<int>, int), "");
+  static_assert(__is_same(remove_restrict_t<const int>, const int), "");
+  static_assert(__is_same(remove_restrict_t<volatile int>, volatile int), "");
+  static_assert(__is_same(remove_restrict_t<int *__restrict>, int *), "");
+  static_assert(__is_same(remove_restrict_t<int *const volatile __restrict>, int *const volatile), "");
+  static_assert(__is_same(remove_restrict_t<int *>, int *), "");
+  static_assert(__is_same(remove_restrict_t<int *__restrict>, int *), "");
+  static_assert(__is_same(remove_restrict_t<int &>, int &), "");
+  static_assert(__is_same(remove_restrict_t<int &__restrict>, int &), "");
+  static_assert(__is_same(remove_restrict_t<int &&>, int &&), "");
+  static_assert(__is_same(remove_restrict_t<int &&__restrict>, int &&), "");
+  static_assert(__is_same(remove_restrict_t<int()>, int()), "");
+  static_assert(__is_same(remove_restrict_t<int (*const volatile)()>, int (*const volatile)()), "");
+  static_assert(__is_same(remove_restrict_t<int (&)()>, int (&)()), "");
+
+  static_assert(__is_same(remove_restrict_t<S>, S), "");
+  static_assert(__is_same(remove_restrict_t<const S>, const S), "");
+  static_assert(__is_same(remove_restrict_t<volatile S>, volatile S), "");
+  static_assert(__is_same(remove_restrict_t<S *__restrict>, S *), "");
+  static_assert(__is_same(remove_restrict_t<S *const volatile __restrict>, S *const volatile), "");
+  static_assert(__is_same(remove_restrict_t<int S::*__restrict>, int S::*), "");
+  static_assert(__is_same(remove_restrict_t<int (S::*const volatile)()>, int(S::*const volatile)()), "");
+}
+
+template <class T> using remove_volatile_t = __remove_volatile(T);
+
+void check_remove_volatile() {
+  static_assert(__is_same(remove_volatile_t<void>, void), "");
+  static_assert(__is_same(remove_volatile_t<volatile void>, void), "");
+  static_assert(__is_same(remove_volatile_t<int>, int), "");
+  static_assert(__is_same(remove_volatile_t<const int>, const int), "");
+  static_assert(__is_same(remove_volatile_t<volatile int>, int), "");
+  static_assert(__is_same(remove_volatile_t<int *__restrict>, int *__restrict), "");
+  static_assert(__is_same(remove_volatile_t<const volatile int>, const int), "");
+  static_assert(__is_same(remove_volatile_t<int *const volatile __restrict>, int *const __restrict), "");
+  static_assert(__is_same(remove_volatile_t<int *>, int *), "");
+  static_assert(__is_same(remove_volatile_t<int *volatile>, int *), "");
+  static_assert(__is_same(remove_volatile_t<int volatile *volatile>, int volatile *), "");
+  static_assert(__is_same(remove_volatile_t<int &>, int &), "");
+  static_assert(__is_same(remove_volatile_t<int volatile &>, int volatile &), "");
+  static_assert(__is_same(remove_volatile_t<int &&>, int &&), "");
+  static_assert(__is_same(remove_volatile_t<int volatile &&>, int volatile &&), "");
+  static_assert(__is_same(remove_volatile_t<int()>, int()), "");
+  static_assert(__is_same(remove_volatile_t<int (*volatile)()>, int (*)()), "");
+  static_assert(__is_same(remove_volatile_t<int (&)()>, int (&)()), "");
+
+  static_assert(__is_same(remove_volatile_t<S>, S), "");
+  static_assert(__is_same(remove_volatile_t<const S>, const S), "");
+  static_assert(__is_same(remove_volatile_t<volatile S>, S), "");
+  static_assert(__is_same(remove_volatile_t<const volatile S>, const S), "");
+  static_assert(__is_same(remove_volatile_t<int S::*volatile>, int S::*), "");
+  static_assert(__is_same(remove_volatile_t<int (S::*volatile)()>, int(S::*)()), "");
+}
+
+template <class T> using remove_cv_t = __remove_cv(T);
+
+void check_remove_cv() {
+  static_assert(__is_same(remove_cv_t<void>, void), "");
+  static_assert(__is_same(remove_cv_t<const volatile void>, void), "");
+  static_assert(__is_same(remove_cv_t<int>, int), "");
+  static_assert(__is_same(remove_cv_t<const int>, int), "");
+  static_assert(__is_same(remove_cv_t<volatile int>, int), "");
+  static_assert(__is_same(remove_cv_t<const volatile int>, int), "");
+  static_assert(__is_same(remove_cv_t<int *>, int *), "");
+  static_assert(__is_same(remove_cv_t<int *const volatile>, int *), "");
+  static_assert(__is_same(remove_cv_t<int const *const volatile>, int const *), "");
+  static_assert(__is_same(remove_cv_t<int const *const volatile __restrict>, int const *__restrict), "");
+  static_assert(__is_same(remove_cv_t<int const *const volatile _Nonnull>, int const *_Nonnull), "");
+  static_assert(__is_same(remove_cv_t<int &>, int &), "");
+  static_assert(__is_same(remove_cv_t<int const volatile &>, int const volatile &), "");
+  static_assert(__is_same(remove_cv_t<int &&>, int &&), "");
+  static_assert(__is_same(remove_cv_t<int const volatile &&>, int const volatile &&), "");
+  static_assert(__is_same(remove_cv_t<int()>, int()), "");
+  static_assert(__is_same(remove_cv_t<int (*const volatile)()>, int (*)()), "");
+  static_assert(__is_same(remove_cv_t<int (&)()>, int (&)()), "");
+
+  static_assert(__is_same(remove_cv_t<S>, S), "");
+  static_assert(__is_same(remove_cv_t<const S>, S), "");
+  static_assert(__is_same(remove_cv_t<volatile S>, S), "");
+  static_assert(__is_same(remove_cv_t<const volatile S>, S), "");
+  static_assert(__is_same(remove_cv_t<int S::*const volatile>, int S::*), "");
+  static_assert(__is_same(remove_cv_t<int (S::*const volatile)()>, int(S::*)()), "");
+}
+
+template <class T> using add_pointer_t = __add_pointer(T);
+
+void add_pointer() {
+  static_assert(__is_same(add_pointer_t<void>, void *), "");
+  static_assert(__is_same(add_pointer_t<const void>, const void *), "");
+  static_assert(__is_same(add_pointer_t<volatile void>, volatile void *), "");
+  static_assert(__is_same(add_pointer_t<const volatile void>, const volatile void *), "");
+  static_assert(__is_same(add_pointer_t<int>, int *), "");
+  static_assert(__is_same(add_pointer_t<const int>, const int *), "");
+  static_assert(__is_same(add_pointer_t<volatile int>, volatile int *), "");
+  static_assert(__is_same(add_pointer_t<const volatile int>, const volatile int *), "");
+  static_assert(__is_same(add_pointer_t<int *>, int **), "");
+  static_assert(__is_same(add_pointer_t<int &>, int *), "");
+  static_assert(__is_same(add_pointer_t<int &&>, int *), "");
+  static_assert(__is_same(add_pointer_t<int()>, int (*)()), "");
+  static_assert(__is_same(add_pointer_t<int (*)()>, int (**)()), "");
+  static_assert(__is_same(add_pointer_t<int (&)()>, int (*)()), "");
+
+  static_assert(__is_same(add_pointer_t<S>, S *), "");
+  static_assert(__is_same(add_pointer_t<const S>, const S *), "");
+  static_assert(__is_same(add_pointer_t<volatile S>, volatile S *), "");
+  static_assert(__is_same(add_pointer_t<const volatile S>, const volatile S *), "");
+  static_assert(__is_same(add_pointer_t<int S::*>, int S::**), "");
+  static_assert(__is_same(add_pointer_t<int (S::*)()>, int(S::**)()), "");
+
+  static_assert(__is_same(add_pointer_t<int __attribute__((address_space(1)))>, int __attribute__((address_space(1))) *), "");
+  static_assert(__is_same(add_pointer_t<S __attribute__((address_space(2)))>, S __attribute__((address_space(2))) *), "");
+}
+
+template <class T> using remove_pointer_t = __remove_pointer(T);
+
+void remove_pointer() {
+  static_assert(__is_same(remove_pointer_t<void>, void), "");
+  static_assert(__is_same(remove_pointer_t<const void>, const void), "");
+  static_assert(__is_same(remove_pointer_t<volatile void>, volatile void), "");
+  static_assert(__is_same(remove_pointer_t<const volatile void>, const volatile void), "");
+  static_assert(__is_same(remove_pointer_t<int>, int), "");
+  static_assert(__is_same(remove_pointer_t<const int>, const int), "");
+  static_assert(__is_same(remove_pointer_t<volatile int>, volatile int), "");
+  static_assert(__is_same(remove_pointer_t<const volatile int>, const volatile int), "");
+  static_assert(__is_same(remove_pointer_t<int *>, int), "");
+  static_assert(__is_same(remove_pointer_t<const int *>, const int), "");
+  static_assert(__is_same(remove_pointer_t<volatile int *>, volatile int), "");
+  static_assert(__is_same(remove_pointer_t<const volatile int *>, const volatile int), "");
+  static_assert(__is_same(remove_pointer_t<int *const>, int), "");
+  static_assert(__is_same(remove_pointer_t<int *volatile>, int), "");
+  static_assert(__is_same(remove_pointer_t<int *const volatile>, int), "");
+  static_assert(__is_same(remove_pointer_t<int &>, int &), "");
+  static_assert(__is_same(remove_pointer_t<int &&>, int &&), "");
+  static_assert(__is_same(remove_pointer_t<int()>, int()), "");
+  static_assert(__is_same(remove_pointer_t<int (*)()>, int()), "");
+  static_assert(__is_same(remove_pointer_t<int (&)()>, int (&)()), "");
+
+  static_assert(__is_same(remove_pointer_t<S>, S), "");
+  static_assert(__is_same(remove_pointer_t<const S>, const S), "");
+  static_assert(__is_same(remove_pointer_t<volatile S>, volatile S), "");
+  static_assert(__is_same(remove_pointer_t<const volatile S>, const volatile S), "");
+  static_assert(__is_same(remove_pointer_t<int S::*>, int S::*), "");
+  static_assert(__is_same(remove_pointer_t<int (S::*)()>, int(S::*)()), "");
+
+  static_assert(__is_same(remove_pointer_t<int __attribute__((address_space(1))) *>, int __attribute__((address_space(1)))), "");
+  static_assert(__is_same(remove_pointer_t<S __attribute__((address_space(2))) *>, S  __attribute__((address_space(2)))), "");
+
+  static_assert(__is_same(remove_pointer_t<int (^)(char)>, int (^)(char)), "");
+}
+
+template <class T> using add_lvalue_reference_t = __add_lvalue_reference(T);
+
+void add_lvalue_reference() {
+  static_assert(__is_same(add_lvalue_reference_t<void>, void), "");
+  static_assert(__is_same(add_lvalue_reference_t<const void>, const void), "");
+  static_assert(__is_same(add_lvalue_reference_t<volatile void>, volatile void), "");
+  static_assert(__is_same(add_lvalue_reference_t<const volatile void>, const volatile void), "");
+  static_assert(__is_same(add_lvalue_reference_t<int>, int &), "");
+  static_assert(__is_same(add_lvalue_reference_t<const int>, const int &), "");
+  static_assert(__is_same(add_lvalue_reference_t<volatile int>, volatile int &), "");
+  static_assert(__is_same(add_lvalue_reference_t<const volatile int>, const volatile int &), "");
+  static_assert(__is_same(add_lvalue_reference_t<int *>, int *&), "");
+  static_assert(__is_same(add_lvalue_reference_t<int &>, int &), "");
+  static_assert(__is_same(add_lvalue_reference_t<int &&>, int &), ""); // reference collapsing
+  static_assert(__is_same(add_lvalue_reference_t<int()>, int (&)()), "");
+  static_assert(__is_same(add_lvalue_reference_t<int (*)()>, int (*&)()), "");
+  static_assert(__is_same(add_lvalue_reference_t<int (&)()>, int (&)()), "");
+
+  static_assert(__is_same(add_lvalue_reference_t<S>, S &), "");
+  static_assert(__is_same(add_lvalue_reference_t<const S>, const S &), "");
+  static_assert(__is_same(add_lvalue_reference_t<volatile S>, volatile S &), "");
+  static_assert(__is_same(add_lvalue_reference_t<const volatile S>, const volatile S &), "");
+  static_assert(__is_same(add_lvalue_reference_t<int S::*>, int S::*&), "");
+  static_assert(__is_same(add_lvalue_reference_t<int (S::*)()>, int(S::*&)()), "");
+}
+
+template <class T> using add_rvalue_reference_t = __add_rvalue_reference(T);
+
+void add_rvalue_reference() {
+  static_assert(__is_same(add_rvalue_reference_t<void>, void), "");
+  static_assert(__is_same(add_rvalue_reference_t<const void>, const void), "");
+  static_assert(__is_same(add_rvalue_reference_t<volatile void>, volatile void), "");
+  static_assert(__is_same(add_rvalue_reference_t<const volatile void>, const volatile void), "");
+  static_assert(__is_same(add_rvalue_reference_t<int>, int &&), "");
+  static_assert(__is_same(add_rvalue_reference_t<const int>, const int &&), "");
+  static_assert(__is_same(add_rvalue_reference_t<volatile int>, volatile int &&), "");
+  static_assert(__is_same(add_rvalue_reference_t<const volatile int>, const volatile int &&), "");
+  static_assert(__is_same(add_rvalue_reference_t<int *>, int *&&), "");
+  static_assert(__is_same(add_rvalue_reference_t<int &>, int &), ""); // reference collapsing
+  static_assert(__is_same(add_rvalue_reference_t<int &&>, int &&), "");
+  static_assert(__is_same(add_rvalue_reference_t<int()>, int(&&)()), "");
+  static_assert(__is_same(add_rvalue_reference_t<int (*)()>, int (*&&)()), "");
+  static_assert(__is_same(add_rvalue_reference_t<int (&)()>, int (&)()), ""); // reference collapsing
+
+  static_assert(__is_same(add_rvalue_reference_t<S>, S &&), "");
+  static_assert(__is_same(add_rvalue_reference_t<const S>, const S &&), "");
+  static_assert(__is_same(add_rvalue_reference_t<volatile S>, volatile S &&), "");
+  static_assert(__is_same(add_rvalue_reference_t<const volatile S>, const volatile S &&), "");
+  static_assert(__is_same(add_rvalue_reference_t<int S::*>, int S::*&&), "");
+  static_assert(__is_same(add_rvalue_reference_t<int (S::*)()>, int(S::* &&)()), "");
+}
+
+template <class T> using remove_reference_t = __remove_reference_t(T);
+
+void check_remove_reference() {
+  static_assert(__is_same(remove_reference_t<void>, void), "");
+  static_assert(__is_same(remove_reference_t<const volatile void>, const volatile void), "");
+  static_assert(__is_same(remove_reference_t<int>, int), "");
+  static_assert(__is_same(remove_reference_t<const int>, const int), "");
+  static_assert(__is_same(remove_reference_t<volatile int>, volatile int), "");
+  static_assert(__is_same(remove_reference_t<const volatile int>, const volatile int), "");
+  static_assert(__is_same(remove_reference_t<int *>, int *), "");
+  static_assert(__is_same(remove_reference_t<int *const volatile>, int *const volatile), "");
+  static_assert(__is_same(remove_reference_t<int const *const volatile>, int const *const volatile), "");
+  static_assert(__is_same(remove_reference_t<int &>, int), "");
+  static_assert(__is_same(remove_reference_t<int const volatile &>, int const volatile), "");
+  static_assert(__is_same(remove_reference_t<int &&>, int), "");
+  static_assert(__is_same(remove_reference_t<int const volatile &&>, int const volatile), "");
+  static_assert(__is_same(remove_reference_t<int()>, int()), "");
+  static_assert(__is_same(remove_reference_t<int (*const volatile)()>, int (*const volatile)()), "");
+  static_assert(__is_same(remove_reference_t<int (&)()>, int()), "");
+
+  static_assert(__is_same(remove_reference_t<S>, S), "");
+  static_assert(__is_same(remove_reference_t<S &>, S), "");
+  static_assert(__is_same(remove_reference_t<S &&>, S), "");
+  static_assert(__is_same(remove_reference_t<const S>, const S), "");
+  static_assert(__is_same(remove_reference_t<const S &>, const S), "");
+  static_assert(__is_same(remove_reference_t<const S &&>, const S), "");
+  static_assert(__is_same(remove_reference_t<volatile S>, volatile S), "");
+  static_assert(__is_same(remove_reference_t<volatile S &>, volatile S), "");
+  static_assert(__is_same(remove_reference_t<volatile S &&>, volatile S), "");
+  static_assert(__is_same(remove_reference_t<const volatile S>, const volatile S), "");
+  static_assert(__is_same(remove_reference_t<const volatile S &>, const volatile S), "");
+  static_assert(__is_same(remove_reference_t<const volatile S &&>, const volatile S), "");
+  static_assert(__is_same(remove_reference_t<int S::*const volatile &>, int S::*const volatile), "");
+  static_assert(__is_same(remove_reference_t<int (S::*const volatile &)()>, int(S::*const volatile)()), "");
+  static_assert(__is_same(remove_reference_t<int (S::*const volatile &&)() &>, int(S::*const volatile)() &), "");
+}
+
+template <class T> using remove_cvref_t = __remove_cvref(T);
+
+void check_remove_cvref() {
+  static_assert(__is_same(remove_cvref_t<void>, void), "");
+  static_assert(__is_same(remove_cvref_t<const volatile void>, void), "");
+  static_assert(__is_same(remove_cvref_t<int>, int), "");
+  static_assert(__is_same(remove_cvref_t<const int>, int), "");
+  static_assert(__is_same(remove_cvref_t<volatile int>, int), "");
+  static_assert(__is_same(remove_cvref_t<const volatile int>, int), "");
+  static_assert(__is_same(remove_cvref_t<int *>, int *), "");
+  static_assert(__is_same(remove_cvref_t<int *const volatile>, int *), "");
+  static_assert(__is_same(remove_cvref_t<int const *const volatile>, int const *), "");
+  static_assert(__is_same(remove_cvref_t<int const *const volatile __restrict>, int const *__restrict), "");
+  static_assert(__is_same(remove_cvref_t<int const *const volatile _Nonnull>, int const *_Nonnull), "");
+  static_assert(__is_same(remove_cvref_t<int &>, int), "");
+  static_assert(__is_same(remove_cvref_t<int const volatile &>, int), "");
+  static_assert(__is_same(remove_cvref_t<int &&>, int), "");
+  static_assert(__is_same(remove_cvref_t<int const volatile &&>, int), "");
+  static_assert(__is_same(remove_cvref_t<int()>, int()), "");
+  static_assert(__is_same(remove_cvref_t<int (*const volatile)()>, int (*)()), "");
+  static_assert(__is_same(remove_cvref_t<int (&)()>, int()), "");
+
+  static_assert(__is_same(remove_cvref_t<S>, S), "");
+  static_assert(__is_same(remove_cvref_t<S &>, S), "");
+  static_assert(__is_same(remove_cvref_t<S &&>, S), "");
+  static_assert(__is_same(remove_cvref_t<const S>, S), "");
+  static_assert(__is_same(remove_cvref_t<const S &>, S), "");
+  static_assert(__is_same(remove_cvref_t<const S &&>, S), "");
+  static_assert(__is_same(remove_cvref_t<volatile S>, S), "");
+  static_assert(__is_same(remove_cvref_t<volatile S &>, S), "");
+  static_assert(__is_same(remove_cvref_t<volatile S &&>, S), "");
+  static_assert(__is_same(remove_cvref_t<const volatile S>, S), "");
+  static_assert(__is_same(remove_cvref_t<const volatile S &>, S), "");
+  static_assert(__is_same(remove_cvref_t<const volatile S &&>, S), "");
+  static_assert(__is_same(remove_cvref_t<int S::*const volatile>, int S::*), "");
+  static_assert(__is_same(remove_cvref_t<int (S::*const volatile)()>, int(S::*)()), "");
+  static_assert(__is_same(remove_cvref_t<int (S::*const volatile)() &>, int(S::*)() &), "");
+  static_assert(__is_same(remove_cvref_t<int (S::*const volatile)() &&>, int(S::*)() &&), "");
+}
+
+template <class T> using decay_t = __decay(T);
+template <class T> struct dne;
+
+void check_decay() {
+  static_assert(__is_same(decay_t<void>, void), "");
+  static_assert(__is_same(decay_t<const volatile void>, void), "");
+  static_assert(__is_same(decay_t<int>, int), "");
+  static_assert(__is_same(decay_t<const int>, int), "");
+  static_assert(__is_same(decay_t<volatile int>, int), "");
+  static_assert(__is_same(decay_t<const volatile int>, int), "");
+  static_assert(__is_same(decay_t<int *>, int *), "");
+  static_assert(__is_same(decay_t<int *const volatile>, int *), "");
+  static_assert(__is_same(decay_t<int *const volatile __restrict>, int *), "");
+  static_assert(__is_same(decay_t<int const *const volatile>, int const *), "");
+  static_assert(__is_same(decay_t<int const *const volatile _Nonnull>, int const *), "");
+  static_assert(__is_same(decay_t<int &>, int), "");
+  static_assert(__is_same(decay_t<int const volatile &>, int), "");
+  static_assert(__is_same(decay_t<int &&>, int), "");
+  static_assert(__is_same(decay_t<int const volatile &&>, int), "");
+  static_assert(__is_same(decay_t<int()>, int (*)()), "");
+  static_assert(__is_same(decay_t<int (*)()>, int (*)()), "");
+  static_assert(__is_same(decay_t<int (*const)()>, int (*)()), "");
+  static_assert(__is_same(decay_t<int (*volatile)()>, int (*)()), "");
+  static_assert(__is_same(decay_t<int (*const volatile)()>, int (*)()), "");
+  static_assert(__is_same(decay_t<int (&)()>, int (*)()), "");
+  static_assert(__is_same(decay_t<IntAr>, int *), "");
+  static_assert(__is_same(decay_t<IntArNB>, int *), "");
+
+  static_assert(__is_same(decay_t<S>, S), "");
+  static_assert(__is_same(decay_t<S &>, S), "");
+  static_assert(__is_same(decay_t<S &&>, S), "");
+  static_assert(__is_same(decay_t<const S>, S), "");
+  static_assert(__is_same(decay_t<const S &>, S), "");
+  static_assert(__is_same(decay_t<const S &&>, S), "");
+  static_assert(__is_same(decay_t<volatile S>, S), "");
+  static_assert(__is_same(decay_t<volatile S &>, S), "");
+  static_assert(__is_same(decay_t<volatile S &&>, S), "");
+  static_assert(__is_same(decay_t<const volatile S>, S), "");
+  static_assert(__is_same(decay_t<const volatile S &>, S), "");
+  static_assert(__is_same(decay_t<const volatile S &&>, S), "");
+  static_assert(__is_same(decay_t<int S::*const volatile>, int S::*), "");
+  static_assert(__is_same(decay_t<int (S::*const volatile)()>, int(S::*)()), "");
+  static_assert(__is_same(decay_t<int S::*const volatile &>, int S::*), "");
+  static_assert(__is_same(decay_t<int (S::*const volatile &)()>, int(S::*)()), "");
+  static_assert(__is_same(decay_t<int S::*const volatile &&>, int S::*), "");
+}
+
+template <class T> struct CheckAbominableFunction {};
+template <class M>
+struct CheckAbominableFunction<M S::*> {
+  static void checks() {
+    static_assert(__is_same(add_lvalue_reference_t<M>, M), "");
+    static_assert(__is_same(add_pointer_t<M>, M), "");
+    static_assert(__is_same(add_rvalue_reference_t<M>, M), "");
+    static_assert(__is_same(decay_t<M>, M), "");
+    static_assert(__is_same(remove_const_t<M>, M), "");
+    static_assert(__is_same(remove_volatile_t<M>, M), "");
+    static_assert(__is_same(remove_cv_t<M>, M), "");
+    static_assert(__is_same(remove_cvref_t<M>, M), "");
+    static_assert(__is_same(remove_pointer_t<M>, M), "");
+    static_assert(__is_same(remove_reference_t<M>, M), "");
+  }
+};
+
+void check_abominable_function() {
+  { CheckAbominableFunction<int (S::*)() &> x; }
+  { CheckAbominableFunction<int (S::*)() &&> x; }
+  { CheckAbominableFunction<int (S::*)() const> x; }
+  { CheckAbominableFunction<int (S::*)() const &> x; }
+  { CheckAbominableFunction<int (S::*)() const &&> x; }
+  { CheckAbominableFunction<int (S::*)() volatile> x; }
+  { CheckAbominableFunction<int (S::*)() volatile &> x; }
+  { CheckAbominableFunction<int (S::*)() volatile &&> x; }
+  { CheckAbominableFunction<int (S::*)() const volatile> x; }
+  { CheckAbominableFunction<int (S::*)() const volatile &> x; }
+  { CheckAbominableFunction<int (S::*)() const volatile &&> x; }
+}
+
+template <class T> using make_signed_t = __make_signed(T);
+template <class T, class Expected>
+void check_make_signed() {
+  static_assert(__is_same(make_signed_t<T>, Expected), "");
+  static_assert(__is_same(make_signed_t<const T>, const Expected), "");
+  static_assert(__is_same(make_signed_t<volatile T>, volatile Expected), "");
+  static_assert(__is_same(make_signed_t<const volatile T>, const volatile Expected), "");
+}
+
+#if defined(__ILP32__) || defined(__LLP64__)
+  using Int64 = long long;
+  using UInt64 = unsigned long long;
+#elif defined(__LP64__) || defined(__ILP64__) || defined(__SILP64__)
+  using Int64 = long;
+  using UInt64 = unsigned long;
+#else
+#error Programming model currently unsupported; please add a new entry.
+#endif
+
+enum UnscopedBool : bool {}; // deliberately char
+enum class ScopedBool : bool {}; // deliberately char
+enum UnscopedChar : char {}; // deliberately char
+enum class ScopedChar : char {}; // deliberately char
+enum UnscopedUChar : unsigned char {};
+enum class ScopedUChar : unsigned char {};
+enum UnscopedLongLong : long long {};
+enum UnscopedULongLong : unsigned long long {};
+enum class ScopedLongLong : long long {};
+enum class ScopedULongLong : unsigned long long {};
+enum class UnscopedInt128 : __int128 {};
+enum class ScopedInt128 : __int128 {};
+enum class UnscopedUInt128 : unsigned __int128 {};
+enum class ScopedUInt128 : unsigned __int128 {};
+enum UnscopedBit : unsigned _BitInt(1) {};
+enum ScopedBit : unsigned _BitInt(1) {};
+enum UnscopedIrregular : _BitInt(21) {};
+enum UnscopedUIrregular : unsigned _BitInt(21) {};
+enum class ScopedIrregular : _BitInt(21) {};
+enum class ScopedUIrregular : unsigned _BitInt(21) {};
+
+void make_signed() {
+  check_make_signed<char, signed char>();
+  check_make_signed<signed char, signed char>();
+  check_make_signed<unsigned char, signed char>();
+  check_make_signed<short, short>();
+  check_make_signed<unsigned short, short>();
+  check_make_signed<int, int>();
+  check_make_signed<unsigned int, int>();
+  check_make_signed<long, long>();
+  check_make_signed<unsigned long, long>();
+  check_make_signed<long long, long long>();
+  check_make_signed<unsigned long long, long long>();
+  check_make_signed<__int128, __int128>();
+  check_make_signed<__uint128_t, __int128>();
+  check_make_signed<_BitInt(65), _BitInt(65)>();
+  check_make_signed<unsigned _BitInt(65), _BitInt(65)>();
+
+  check_make_signed<wchar_t, int>();
+#if __cplusplus >= 202002L
+  check_make_signed<char8_t, signed char>();
+#endif
+#if __cplusplus >= 201103L
+  check_make_signed<char16_t, short>();
+  check_make_signed<char32_t, int>();
+#endif
+
+  check_make_signed<UnscopedChar, signed char>();
+  check_make_signed<ScopedChar, signed char>();
+  check_make_signed<UnscopedUChar, signed char>();
+  check_make_signed<ScopedUChar, signed char>();
+
+  check_make_signed<UnscopedLongLong, Int64>();
+  check_make_signed<UnscopedULongLong, Int64>();
+  check_make_signed<ScopedLongLong, Int64>();
+  check_make_signed<ScopedULongLong, Int64>();
+
+  check_make_signed<UnscopedInt128, __int128>();
+  check_make_signed<ScopedInt128, __int128>();
+  check_make_signed<UnscopedUInt128, __int128>();
+  check_make_signed<ScopedUInt128, __int128>();
+
+  check_make_signed<UnscopedIrregular, _BitInt(21)>();
+  check_make_signed<UnscopedUIrregular, _BitInt(21)>();
+  check_make_signed<ScopedIrregular, _BitInt(21)>();
+  check_make_signed<ScopedUIrregular, _BitInt(21)>();
+
+  { using ExpectedError = __make_signed(bool); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'bool'}}
+  { using ExpectedError = __make_signed(UnscopedBool); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'UnscopedBool' whose underlying type is 'bool'}}
+  { using ExpectedError = __make_signed(ScopedBool); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'ScopedBool' whose underlying type is 'bool'}}
+  { using ExpectedError = __make_signed(unsigned _BitInt(1)); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-_BitInt(1) integers and enum types, but was given 'unsigned _BitInt(1)'}}
+  { using ExpectedError = __make_signed(UnscopedBit); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-_BitInt(1) integers and enum types, but was given 'UnscopedBit' whose underlying type is 'unsigned _BitInt(1)'}}
+  { using ExpectedError = __make_signed(ScopedBit); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-_BitInt(1) integers and enum types, but was given 'ScopedBit' whose underlying type is 'unsigned _BitInt(1)'}}
+  { using ExpectedError = __make_signed(int[]); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'int[]'}}
+  { using ExpectedError = __make_signed(int[5]); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'int[5]'}}
+  { using ExpectedError = __make_signed(void); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'void'}}
+  { using ExpectedError = __make_signed(int *); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'int *'}}
+  { using ExpectedError = __make_signed(int &); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'int &'}}
+  { using ExpectedError = __make_signed(int &&); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'int &&'}}
+  { using ExpectedError = __make_signed(float); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'float'}}
+  { using ExpectedError = __make_signed(double); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'double'}}
+  { using ExpectedError = __make_signed(long double); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'long double'}}
+  { using ExpectedError = __make_signed(S); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'S'}}
+  { using ExpectedError = __make_signed(S *); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'S *'}}
+  { using ExpectedError = __make_signed(int S::*); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'int S::*'}}
+  { using ExpectedError = __make_signed(int(S::*)()); }
+  // expected-error@*:*{{'make_signed' is only compatible with non-bool integers and enum types, but was given 'int (S::*)()'}}
+}
+
+template <class T>
+using make_unsigned_t = __make_unsigned(T);
+
+template <class T, class Expected>
+void check_make_unsigned() {
+  static_assert(__is_same(make_unsigned_t<T>, Expected), "");
+  static_assert(__is_same(make_unsigned_t<const T>, const Expected), "");
+  static_assert(__is_same(make_unsigned_t<volatile T>, volatile Expected), "");
+  static_assert(__is_same(make_unsigned_t<const volatile T>, const volatile Expected), "");
+}
+
+void make_unsigned() {
+  check_make_unsigned<char, unsigned char>();
+  check_make_unsigned<signed char, unsigned char>();
+  check_make_unsigned<unsigned char, unsigned char>();
+  check_make_unsigned<short, unsigned short>();
+  check_make_unsigned<unsigned short, unsigned short>();
+  check_make_unsigned<int, unsigned int>();
+  check_make_unsigned<unsigned int, unsigned int>();
+  check_make_unsigned<long, unsigned long>();
+  check_make_unsigned<unsigned long, unsigned long>();
+  check_make_unsigned<long long, unsigned long long>();
+  check_make_unsigned<unsigned long long, unsigned long long>();
+  check_make_unsigned<__int128, __uint128_t>();
+  check_make_unsigned<__uint128_t, __uint128_t>();
+  check_make_unsigned<_BitInt(65), unsigned _BitInt(65)>();
+  check_make_unsigned<unsigned _BitInt(65), unsigned _BitInt(65)>();
+
+  check_make_unsigned<wchar_t, unsigned int>();
+#if __cplusplus >= 202002L
+  check_make_unsigned<char8_t, unsigned char>();
+#endif
+#if __cplusplus >= 201103L
+  check_make_unsigned<char16_t, unsigned short>();
+  check_make_unsigned<char32_t, unsigned int>();
+#endif
+
+  check_make_unsigned<UnscopedChar, unsigned char>();
+  check_make_unsigned<ScopedChar, unsigned char>();
+  check_make_unsigned<UnscopedUChar, unsigned char>();
+  check_make_unsigned<ScopedUChar, unsigned char>();
+
+  check_make_unsigned<UnscopedLongLong, UInt64>();
+  check_make_unsigned<UnscopedULongLong, UInt64>();
+  check_make_unsigned<ScopedLongLong, UInt64>();
+  check_make_unsigned<ScopedULongLong, UInt64>();
+
+  check_make_unsigned<UnscopedInt128, unsigned __int128>();
+  check_make_unsigned<ScopedInt128, unsigned __int128>();
+  check_make_unsigned<UnscopedUInt128, unsigned __int128>();
+  check_make_unsigned<ScopedUInt128, unsigned __int128>();
+
+  check_make_unsigned<UnscopedIrregular, unsigned _BitInt(21)>();
+  check_make_unsigned<UnscopedUIrregular, unsigned _BitInt(21)>();
+  check_make_unsigned<ScopedIrregular, unsigned _BitInt(21)>();
+  check_make_unsigned<ScopedUIrregular, unsigned _BitInt(21)>();
+
+  { using ExpectedError = __make_unsigned(bool); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'bool'}}
+  { using ExpectedError = __make_unsigned(UnscopedBool); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'UnscopedBool' whose underlying type is 'bool'}}
+  { using ExpectedError = __make_unsigned(ScopedBool); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'ScopedBool' whose underlying type is 'bool'}}
+  { using ExpectedError = __make_unsigned(unsigned _BitInt(1)); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-_BitInt(1) integers and enum types, but was given 'unsigned _BitInt(1)'}}
+  { using ExpectedError = __make_unsigned(UnscopedBit); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-_BitInt(1) integers and enum types, but was given 'UnscopedBit'}}
+  { using ExpectedError = __make_unsigned(ScopedBit); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-_BitInt(1) integers and enum types, but was given 'ScopedBit'}}
+  { using ExpectedError = __make_unsigned(int[]); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'int[]'}}
+  { using ExpectedError = __make_unsigned(int[5]); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'int[5]'}}
+  { using ExpectedError = __make_unsigned(void); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'void'}}
+  { using ExpectedError = __make_unsigned(int *); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'int *'}}
+  { using ExpectedError = __make_unsigned(int &); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'int &'}}
+  { using ExpectedError = __make_unsigned(int &&); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'int &&'}}
+  { using ExpectedError = __make_unsigned(float); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'float'}}
+  { using ExpectedError = __make_unsigned(double); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'double'}}
+  { using ExpectedError = __make_unsigned(long double); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'long double'}}
+  { using ExpectedError = __make_unsigned(S); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'S'}}
+  { using ExpectedError = __make_unsigned(S *); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'S *'}}
+  { using ExpectedError = __make_unsigned(int S::*); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'int S::*'}}
+  { using ExpectedError = __make_unsigned(int(S::*)()); }
+  // expected-error@*:*{{'make_unsigned' is only compatible with non-bool integers and enum types, but was given 'int (S::*)()'}}
+}
+
+template <class T> using remove_extent_t = __remove_extent(T);
+
+void remove_extent() {
+  static_assert(__is_same(remove_extent_t<void>, void), "");
+  static_assert(__is_same(remove_extent_t<int>, int), "");
+  static_assert(__is_same(remove_extent_t<int[]>, int), "");
+  static_assert(__is_same(remove_extent_t<int[1]>, int), "");
+  static_assert(__is_same(remove_extent_t<int[1][2]>, int[2]), "");
+  static_assert(__is_same(remove_extent_t<int[][2]>, int[2]), "");
+  static_assert(__is_same(remove_extent_t<const int[]>, const int), "");
+  static_assert(__is_same(remove_extent_t<const int[1]>, const int), "");
+  static_assert(__is_same(remove_extent_t<const int[1][2]>, const int[2]), "");
+  static_assert(__is_same(remove_extent_t<const int[][2]>, const int[2]), "");
+  static_assert(__is_same(remove_extent_t<volatile int[]>, volatile int), "");
+  static_assert(__is_same(remove_extent_t<volatile int[1]>, volatile int), "");
+  static_assert(__is_same(remove_extent_t<volatile int[1][2]>, volatile int[2]), "");
+  static_assert(__is_same(remove_extent_t<volatile int[][2]>, volatile int[2]), "");
+  static_assert(__is_same(remove_extent_t<const volatile int[]>, const volatile int), "");
+  static_assert(__is_same(remove_extent_t<const volatile int[1]>, const volatile int), "");
+  static_assert(__is_same(remove_extent_t<const volatile int[1][2]>, const volatile int[2]), "");
+  static_assert(__is_same(remove_extent_t<const volatile int[][2]>, const volatile int[2]), "");
+  static_assert(__is_same(remove_extent_t<int *>, int *), "");
+  static_assert(__is_same(remove_extent_t<int &>, int &), "");
+  static_assert(__is_same(remove_extent_t<int &&>, int &&), "");
+  static_assert(__is_same(remove_extent_t<int()>, int()), "");
+  static_assert(__is_same(remove_extent_t<int (*)()>, int (*)()), "");
+  static_assert(__is_same(remove_extent_t<int (&)()>, int (&)()), "");
+
+  static_assert(__is_same(remove_extent_t<S>, S), "");
+  static_assert(__is_same(remove_extent_t<int S::*>, int S::*), "");
+  static_assert(__is_same(remove_extent_t<int (S::*)()>, int(S::*)()), "");
+
+  using SomeArray = int[1][2];
+  static_assert(__is_same(remove_extent_t<const SomeArray>, const int[2]), "");
+}
+
+template <class T> using remove_all_extents_t = __remove_all_extents(T);
+
+void remove_all_extents() {
+  static_assert(__is_same(remove_all_extents_t<void>, void), "");
+  static_assert(__is_same(remove_all_extents_t<int>, int), "");
+  static_assert(__is_same(remove_all_extents_t<const int>, const int), "");
+  static_assert(__is_same(remove_all_extents_t<volatile int>, volatile int), "");
+  static_assert(__is_same(remove_all_extents_t<const volatile int>, const volatile int), "");
+  static_assert(__is_same(remove_all_extents_t<int[]>, int), "");
+  static_assert(__is_same(remove_all_extents_t<int[1]>, int), "");
+  static_assert(__is_same(remove_all_extents_t<int[1][2]>, int), "");
+  static_assert(__is_same(remove_all_extents_t<int[][2]>, int), "");
+  static_assert(__is_same(remove_all_extents_t<const int[]>, const int), "");
+  static_assert(__is_same(remove_all_extents_t<const int[1]>, const int), "");
+  static_assert(__is_same(remove_all_extents_t<const int[1][2]>, const int), "");
+  static_assert(__is_same(remove_all_extents_t<const int[][2]>, const int), "");
+  static_assert(__is_same(remove_all_extents_t<volatile int[]>, volatile int), "");
+  static_assert(__is_same(remove_all_extents_t<volatile int[1]>, volatile int), "");
+  static_assert(__is_same(remove_all_extents_t<volatile int[1][2]>, volatile int), "");
+  static_assert(__is_same(remove_all_extents_t<volatile int[][2]>, volatile int), "");
+  static_assert(__is_same(remove_all_extents_t<const volatile int[]>, const volatile int), "");
+  static_assert(__is_same(remove_all_extents_t<const volatile int[1]>, const volatile int), "");
+  static_assert(__is_same(remove_all_extents_t<const volatile int[1][2]>, const volatile int), "");
+  static_assert(__is_same(remove_all_extents_t<const volatile int[][2]>, const volatile int), "");
+  static_assert(__is_same(remove_all_extents_t<int *>, int *), "");
+  static_assert(__is_same(remove_all_extents_t<int &>, int &), "");
+  static_assert(__is_same(remove_all_extents_t<int &&>, int &&), "");
+  static_assert(__is_same(remove_all_extents_t<int()>, int()), "");
+  static_assert(__is_same(remove_all_extents_t<int (*)()>, int (*)()), "");
+  static_assert(__is_same(remove_all_extents_t<int (&)()>, int (&)()), "");
+
+  static_assert(__is_same(remove_all_extents_t<S>, S), "");
+  static_assert(__is_same(remove_all_extents_t<int S::*>, int S::*), "");
+  static_assert(__is_same(remove_all_extents_t<int (S::*)()>, int(S::*)()), "");
+
+  using SomeArray = int[1][2];
+  static_assert(__is_same(remove_all_extents_t<const SomeArray>, const int), "");
+}

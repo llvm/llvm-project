@@ -45,9 +45,15 @@ static bool isLUIADDI(const MachineInstr *FirstMI,
   if (SecondMI.getOperand(1).getReg() != FirstDest)
     return false;
 
+  // If the input is virtual make sure this is the only user.
+  if (FirstDest.isVirtual()) {
+    auto &MRI = SecondMI.getMF()->getRegInfo();
+    return MRI.hasOneNonDBGUse(FirstDest);
+  }
+
   // If the FirstMI destination is non-virtual, it should match the SecondMI
   // destination.
-  return FirstDest.isVirtual() || SecondMI.getOperand(0).getReg() == FirstDest;
+  return SecondMI.getOperand(0).getReg() == FirstDest;
 }
 
 static bool shouldScheduleAdjacent(const TargetInstrInfo &TII,

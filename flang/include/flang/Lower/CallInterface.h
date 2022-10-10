@@ -159,6 +159,10 @@ public:
     bool mayBeModifiedByCall() const;
     /// Can the argument be read by the callee ?
     bool mayBeReadByCall() const;
+    /// Is the argument INTENT(OUT)
+    bool isIntentOut() const;
+    /// Does the argument have the CONTIGUOUS attribute or have explicit shape ?
+    bool mustBeMadeContiguous() const;
     /// How entity is passed by.
     PassEntityBy passBy;
     /// What is the entity (SymbolRef for callee/ActualArgument* for caller)
@@ -406,6 +410,10 @@ getOrDeclareFunction(llvm::StringRef name,
 /// functions).
 mlir::Type getDummyProcedureType(const Fortran::semantics::Symbol &dummyProc,
                                  Fortran::lower::AbstractConverter &);
+
+/// Return true if \p ty is "!fir.ref<i64>", which is the interface for
+/// type(C_PTR/C_FUNPTR) passed by value.
+bool isCPtrArgByValueType(mlir::Type ty);
 
 /// Is it required to pass \p proc as a tuple<function address, result length> ?
 // This is required to convey  the length of character functions passed as dummy

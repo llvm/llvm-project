@@ -404,14 +404,14 @@ define float @reduce_precision_multi_use_0(float %x, float %y) {
 ; CHECK-LABEL: @reduce_precision_multi_use_0(
 ; CHECK-NEXT:    [[X_EXT:%.*]] = fpext float [[X:%.*]] to double
 ; CHECK-NEXT:    [[Y_EXT:%.*]] = fpext float [[Y:%.*]] to double
-; CHECK-NEXT:    store double [[X_EXT]], double* undef, align 8
+; CHECK-NEXT:    store double [[X_EXT]], ptr undef, align 8
 ; CHECK-NEXT:    [[MAXNUM:%.*]] = call double @llvm.maxnum.f64(double [[X_EXT]], double [[Y_EXT]])
 ; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[MAXNUM]] to float
 ; CHECK-NEXT:    ret float [[TRUNC]]
 ;
   %x.ext = fpext float %x to double
   %y.ext = fpext float %y to double
-  store double %x.ext, double* undef
+  store double %x.ext, ptr undef
   %maxnum = call double @llvm.maxnum.f64(double %x.ext, double %y.ext)
   %trunc = fptrunc double %maxnum to float
   ret float %trunc
@@ -421,14 +421,14 @@ define float @reduce_precision_multi_use_1(float %x, float %y) {
 ; CHECK-LABEL: @reduce_precision_multi_use_1(
 ; CHECK-NEXT:    [[X_EXT:%.*]] = fpext float [[X:%.*]] to double
 ; CHECK-NEXT:    [[Y_EXT:%.*]] = fpext float [[Y:%.*]] to double
-; CHECK-NEXT:    store double [[Y_EXT]], double* undef, align 8
+; CHECK-NEXT:    store double [[Y_EXT]], ptr undef, align 8
 ; CHECK-NEXT:    [[MAXNUM:%.*]] = call double @llvm.maxnum.f64(double [[X_EXT]], double [[Y_EXT]])
 ; CHECK-NEXT:    [[TRUNC:%.*]] = fptrunc double [[MAXNUM]] to float
 ; CHECK-NEXT:    ret float [[TRUNC]]
 ;
   %x.ext = fpext float %x to double
   %y.ext = fpext float %y to double
-  store double %y.ext, double* undef
+  store double %y.ext, ptr undef
   %maxnum = call double @llvm.maxnum.f64(double %x.ext, double %y.ext)
   %trunc = fptrunc double %maxnum to float
   ret float %trunc

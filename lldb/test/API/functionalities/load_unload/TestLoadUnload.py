@@ -2,9 +2,6 @@
 Test that breakpoint by symbol name works correctly with dynamic libs.
 """
 
-from __future__ import print_function
-
-
 import os
 import re
 import lldb
@@ -325,7 +322,7 @@ class LoadUnloadTestCase(TestBase):
         # The breakpoint should have a hit count of 1.
         lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
-        # Issue the 'continue' command.  We should stop agaian at a_function.
+        # Issue the 'continue' command.  We should stop again at a_function.
         # The stop reason of the thread should be breakpoint and at a_function.
         self.runCmd("continue")
 

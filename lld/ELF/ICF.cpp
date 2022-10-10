@@ -460,7 +460,7 @@ template <class ELFT> void ICF<ELFT>::run() {
   // cannot be merged with the later computeIsPreemptible() pass which is used
   // by scanRelocations().
   if (config->hasDynSymTab)
-    for (Symbol *sym : symtab->symbols())
+    for (Symbol *sym : symtab.getSymbols())
       sym->isPreemptible = computeIsPreemptible(*sym);
 
   // Two text sections may have identical content and relocations but different
@@ -478,8 +478,8 @@ template <class ELFT> void ICF<ELFT>::run() {
 
   // Collect sections to merge.
   for (InputSectionBase *sec : inputSections) {
-    auto *s = cast<InputSection>(sec);
-    if (s->eqClass[0] == 0) {
+    auto *s = dyn_cast<InputSection>(sec);
+    if (s && s->eqClass[0] == 0) {
       if (isEligible(s))
         sections.push_back(s);
       else
@@ -558,9 +558,9 @@ template <class ELFT> void ICF<ELFT>::run() {
           d->folded = true;
         }
   };
-  for (Symbol *sym : symtab->symbols())
+  for (Symbol *sym : symtab.getSymbols())
     fold(sym);
-  parallelForEach(ctx->objectFiles, [&](ELFFileBase *file) {
+  parallelForEach(ctx.objectFiles, [&](ELFFileBase *file) {
     for (Symbol *sym : file->getLocalSymbols())
       fold(sym);
   });

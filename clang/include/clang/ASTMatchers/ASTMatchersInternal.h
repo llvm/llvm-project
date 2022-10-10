@@ -1396,20 +1396,6 @@ struct VariadicOperatorMatcherFunc {
   }
 };
 
-template <typename F, typename Tuple, std::size_t... I>
-constexpr auto applyMatcherImpl(F &&f, Tuple &&args,
-                                std::index_sequence<I...>) {
-  return std::forward<F>(f)(std::get<I>(std::forward<Tuple>(args))...);
-}
-
-template <typename F, typename Tuple>
-constexpr auto applyMatcher(F &&f, Tuple &&args) {
-  return applyMatcherImpl(
-      std::forward<F>(f), std::forward<Tuple>(args),
-      std::make_index_sequence<
-          std::tuple_size<typename std::decay<Tuple>::type>::value>());
-}
-
 template <typename T, bool IsBaseOf, typename Head, typename Tail>
 struct GetCladeImpl {
   using Type = Head;
@@ -1428,12 +1414,11 @@ struct MapAnyOfMatcherImpl {
   template <typename... InnerMatchers>
   BindableMatcher<CladeType>
   operator()(InnerMatchers &&... InnerMatcher) const {
-    // TODO: Use std::apply from c++17
-    return VariadicAllOfMatcher<CladeType>()(applyMatcher(
+    return VariadicAllOfMatcher<CladeType>()(std::apply(
         internal::VariadicOperatorMatcherFunc<
             0, std::numeric_limits<unsigned>::max()>{
             internal::DynTypedMatcher::VO_AnyOf},
-        applyMatcher(
+        std::apply(
             [&](auto... Matcher) {
               return std::make_tuple(Matcher(InnerMatcher...)...);
             },
@@ -1981,8 +1966,8 @@ template <typename Ty, typename Enable = void> struct GetBodyMatcher {
 };
 
 template <typename Ty>
-struct GetBodyMatcher<Ty, typename std::enable_if<
-                              std::is_base_of<FunctionDecl, Ty>::value>::type> {
+struct GetBodyMatcher<
+    Ty, std::enable_if_t<std::is_base_of<FunctionDecl, Ty>::value>> {
   static const Stmt *get(const Ty &Node) {
     return Node.doesThisDeclarationHaveABody() ? Node.getBody() : nullptr;
   }

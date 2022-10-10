@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/Config/config.h"
-#if defined(LLVM_HAVE_TF_API)
+#if defined(LLVM_HAVE_TF_API) && !defined(LLVM_HAVE_TFLITE)
 
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/Utils/TFUtils.h"
@@ -22,22 +22,12 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "google/protobuf/struct.pb.h"
-#include "google/protobuf/text_format.h"
 #include "tensorflow/c/c_api.h"
 #include "tensorflow/c/c_api_experimental.h"
-#include "tensorflow/core/example/example.pb.h"
 #include <cassert>
 #include <numeric>
 
 using namespace llvm;
-
-using google::protobuf::Message;
-using google::protobuf::TextFormat;
-
-static cl::opt<bool>
-    ProtobufTextMode("tfutils-text-log", cl::init(false), cl::Hidden,
-                     cl::desc("Output textual (human-readable) protobuf."));
 
 namespace {
 
@@ -70,14 +60,6 @@ TFStatusPtr createTFStatus() {
 
 TFSessionOptionsPtr createTFSessionOptions() {
   return TFSessionOptionsPtr(TF_NewSessionOptions(), &TF_DeleteSessionOptions);
-}
-
-void serialize(const Message &SE, std::string *OutStr) {
-  if (ProtobufTextMode) {
-    TextFormat::PrintToString(SE, OutStr);
-  } else {
-    *OutStr = SE.SerializeAsString();
-  }
 }
 
 int getTFTypeIndex(TensorType TType) {
@@ -182,99 +164,6 @@ private:
                                 const TensorSpec &OutputSpec);
 };
 
-class LoggerDataImpl {
-  const std::vector<LoggedFeatureSpec> LoggedFeatureSpecs;
-  const TensorSpec RewardSpec;
-  const bool IncludeReward;
-
-  std::vector<tensorflow::FeatureList> FeatureLists;
-  tensorflow::FeatureList Reward;
-
-  bool isSelfConsistent(const tensorflow::SequenceExample &SE,
-                        size_t NrRecords) const {
-    bool Ret = true;
-    for (const auto &TSpecs : LoggedFeatureSpecs) {
-      const auto &Name = TSpecs.getLoggingName();
-      const auto &FL = SE.feature_lists().feature_list().at(Name).feature();
-      if (NrRecords != static_cast<size_t>(FL.size())) {
-        dbgs() << "[TF-UTILS]: " << Name << " has missing records. Expected "
-               << NrRecords << " got " << FL.size() << "\n";
-        Ret = false;
-      }
-    }
-    if (IncludeReward && static_cast<size_t>(SE.feature_lists()
-                                                 .feature_list()
-                                                 .at(RewardSpec.name())
-                                                 .feature()
-                                                 .size()) != NrRecords) {
-      dbgs() << "[TF-UTILS]: reward is missing records.\n";
-      Ret = false;
-    }
-    return Ret;
-  }
-
-  void transferLog(tensorflow::SequenceExample &SE) {
-    auto *FL = SE.mutable_feature_lists()->mutable_feature_list();
-    if (IncludeReward)
-      (*FL)[RewardSpec.name()] = std::move(Reward);
-    assert(FeatureLists.size() == LoggedFeatureSpecs.size());
-    for (size_t I = 0; I < FeatureLists.size(); ++I) {
-      const auto &LFS = LoggedFeatureSpecs[I];
-      (*FL)[LFS.getLoggingName()] = std::move(FeatureLists[I]);
-    }
-  }
-
-public:
-  LoggerDataImpl(const std::vector<LoggedFeatureSpec> &LoggedSpecs,
-                 const TensorSpec &RewardSpec, bool IncludeReward)
-      : LoggedFeatureSpecs(LoggedSpecs), RewardSpec(RewardSpec),
-        IncludeReward(IncludeReward), FeatureLists(LoggedFeatureSpecs.size()) {}
-
-  // flush the logged info to a stream and clear the log contents.
-  void flush(std::string *Str) {
-    size_t NrRecords = getNrRecords();
-    (void)NrRecords;
-    tensorflow::SequenceExample SE;
-    transferLog(SE);
-    assert(isSelfConsistent(SE, NrRecords));
-    serialize(SE, Str);
-  }
-
-  char *addNewTensor(size_t FeatureID) {
-    const auto &Spec = LoggedFeatureSpecs[FeatureID].Spec;
-    if (Spec.isElementType<float>()) {
-      auto *RF = FeatureLists[FeatureID]
-                     .add_feature()
-                     ->mutable_float_list()
-                     ->mutable_value();
-      RF->Resize(Spec.getElementCount(), 0.0);
-      return reinterpret_cast<char *>(RF->mutable_data());
-    } else if (Spec.isElementType<int32_t>() || Spec.isElementType<int64_t>()) {
-      auto *RF = FeatureLists[FeatureID]
-                     .add_feature()
-                     ->mutable_int64_list()
-                     ->mutable_value();
-      RF->Resize(Spec.getElementCount(), 0);
-      return reinterpret_cast<char *>(RF->mutable_data());
-    }
-    llvm_unreachable("Unsupported tensor type.");
-  }
-
-  template <typename T> void logReward(T Value) {
-    assert(IncludeReward);
-    if (RewardSpec.isElementType<float>())
-      Reward.add_feature()->mutable_float_list()->add_value(Value);
-    else if (RewardSpec.isElementType<int32_t>() ||
-             RewardSpec.isElementType<int64_t>())
-      Reward.add_feature()->mutable_int64_list()->add_value(Value);
-    else
-      llvm_unreachable("Unsupported tensor type.");
-  }
-
-  size_t getNrRecords() const {
-    return FeatureLists.empty() ? 0 : FeatureLists[0].feature().size();
-  }
-};
 } // namespace llvm
 
 TFModelEvaluatorImpl::TFModelEvaluatorImpl(
@@ -427,97 +316,4 @@ TFModelEvaluator::EvaluationResult::getUntypedTensorValue(size_t Index) const {
 TFModelEvaluator::EvaluationResult::~EvaluationResult() {}
 TFModelEvaluator::~TFModelEvaluator() {}
 
-Logger::Logger(const std::vector<LoggedFeatureSpec> &FeatureSpecs,
-               const TensorSpec &RewardSpec, bool IncludeReward)
-    : FeatureSpecs(FeatureSpecs), RewardSpec(RewardSpec),
-      IncludeReward(IncludeReward),
-      LoggerData(std::make_unique<LoggerDataImpl>(FeatureSpecs, RewardSpec,
-                                                  IncludeReward)) {}
-
-Logger::~Logger() {}
-
-#define LOG_REWARD(NAME, TYPE)                                                 \
-  void Logger::log##NAME##Reward(TYPE Value) {                                 \
-    assert(IncludeReward);                                                     \
-    LoggerData->logReward(Value);                                              \
-  }
-
-LOG_REWARD(Float, float)
-LOG_REWARD(Int32, int32_t)
-LOG_REWARD(Int64, int64_t)
-#undef LOG_REWARD
-
-#define LOG_FINAL_REWARD(NAME, TYPE)                                           \
-  void Logger::log##NAME##FinalReward(TYPE Value) {                            \
-    assert(RewardSpec.isElementType<TYPE>());                                  \
-    for (size_t I = 1; I < LoggerData->getNrRecords(); ++I)                    \
-      log##NAME##Reward(0);                                                    \
-    log##NAME##Reward(Value);                                                  \
-  }
-
-LOG_FINAL_REWARD(Float, float)
-LOG_FINAL_REWARD(Int32, int32_t)
-LOG_FINAL_REWARD(Int64, int64_t)
-#undef LOG_FINAL_REWARD
-
-void Logger::logFloatValue(size_t FeatureID, const float *Value) {
-  assert(FeatureSpecs[FeatureID].Spec.isElementType<float>());
-  logSpecifiedTensorValue(FeatureID, reinterpret_cast<const char *>(Value));
-}
-
-void Logger::logInt64Value(size_t FeatureID, const int64_t *Value) {
-  assert(FeatureSpecs[FeatureID].Spec.isElementType<int64_t>());
-  logSpecifiedTensorValue(FeatureID, reinterpret_cast<const char *>(Value));
-}
-
-void Logger::logInt32Value(size_t FeatureID, const int32_t *Value) {
-  assert(FeatureSpecs[FeatureID].Spec.isElementType<int32_t>());
-  logSpecifiedTensorValue(FeatureID, reinterpret_cast<const char *>(Value));
-}
-
-void Logger::logSpecifiedTensorValue(size_t FeatureID, const char *RawData) {
-  const auto &Spec = FeatureSpecs[FeatureID].Spec;
-  char *Buff = addEntryAndGetFloatOrInt64Buffer(FeatureID);
-  if (Spec.isElementType<int32_t>())
-    for (size_t I = 0; I < Spec.getElementCount(); ++I)
-      (reinterpret_cast<int64_t *>(Buff))[I] =
-          static_cast<int64_t>((reinterpret_cast<const int32_t *>(RawData))[I]);
-  else if (Spec.isElementType<int64_t>() || Spec.isElementType<float>())
-    std::memcpy(Buff, RawData,
-                Spec.getElementCount() * Spec.getElementByteSize());
-  else
-    llvm_unreachable("Unsupported tensor type");
-}
-
-char *Logger::addEntryAndGetFloatOrInt64Buffer(size_t FeatureID) {
-  return reinterpret_cast<char *>(LoggerData->addNewTensor(FeatureID));
-}
-
-void Logger::flush(std::string *Str) { LoggerData->flush(Str); }
-
-void Logger::flush(raw_ostream &OS) {
-  std::string Buff;
-  LoggerData->flush(&Buff);
-  OS << Buff;
-}
-
-void Logger::flushLogs(raw_ostream &OS,
-                       const StringMap<std::unique_ptr<Logger>> &Loggers) {
-  google::protobuf::Struct Msg;
-  for (const auto &NamedLogger : Loggers) {
-    tensorflow::SequenceExample SE;
-    const auto &Logger = NamedLogger.second;
-    std::string Unencoded;
-    if (Logger->LoggerData->getNrRecords() > 0)
-      Logger->flush(&Unencoded);
-
-    (*Msg.mutable_fields())[NamedLogger.first().str()]
-        .mutable_string_value()
-        ->append(ProtobufTextMode ? Unencoded : encodeBase64(Unencoded));
-  }
-
-  std::string OutStr;
-  serialize(Msg, &OutStr);
-  OS << OutStr;
-}
 #endif // defined(LLVM_HAVE_TF_API)

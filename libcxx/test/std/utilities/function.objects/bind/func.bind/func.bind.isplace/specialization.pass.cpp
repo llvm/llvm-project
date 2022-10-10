@@ -16,9 +16,10 @@
 //   to indicate that T should be treated as a placeholder type.
 //   https://llvm.org/PR51753
 
-#include <functional>
 #include <cassert>
+#include <functional>
 #include <type_traits>
+#include <utility>
 
 struct My2 {};
 template<> struct std::is_placeholder<My2> : std::integral_constant<int, 2> {};

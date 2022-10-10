@@ -76,7 +76,8 @@ static void ExpandResponseFiles(
     llvm::StringSaver &saver, llvm::SmallVectorImpl<const char *> &args) {
   // We're defaulting to the GNU syntax, since we don't have a CL mode.
   llvm::cl::TokenizerCallback tokenizer = &llvm::cl::TokenizeGNUCommandLine;
-  llvm::cl::ExpandResponseFiles(saver, tokenizer, args, /* MarkEOLs=*/false);
+  llvm::cl::ExpansionContext ExpCtx(saver.getAllocator(), tokenizer);
+  ExpCtx.expandResponseFiles(args);
 }
 
 int main(int argc, const char **argv) {

@@ -45,6 +45,8 @@ def diasdkdir : P<"diasdkdir", "Set the location of the DIA SDK">;
 def entry   : P<"entry", "Name of entry point symbol">;
 def errorlimit : P<"errorlimit",
     "Maximum number of errors to emit before stopping (0 = no limit)">;
+def exclude_symbols  : P<"exclude-symbols", "Exclude symbols from automatic export">,
+    MetaVarName<"<symbol[,symbol,...]>">;
 def export  : P<"export", "Export a function">;
 // No help text because /failifmismatch is not intended to be used by the user.
 def failifmismatch : P<"failifmismatch", "">;
@@ -285,6 +287,7 @@ def lldmap : F<"lldmap">;
 def lldmap_file : P_priv<"lldmap">;
 def map : F<"map">;
 def map_file : P_priv<"map">;
+def map_info : P<"mapinfo", "Include the specified information in a map file">;
 def show_timing : F<"time">;
 def summary : F<"summary">;
 
@@ -294,18 +297,21 @@ def summary : F<"summary">;
 
 def ignoreidl : F<"ignoreidl">;
 def ltcg : F<"ltcg">;
+def assemblydebug : F<"assemblydebug">;
 def nologo : F<"nologo">;
 def throwingnew : F<"throwingnew">;
 def editandcontinue : F<"editandcontinue">;
 def fastfail : F<"fastfail">;
 def kernel : F<"kernel">;
 def pdbcompress : F<"pdbcompress">;
+def emitpogophaseinfo : F<"emitpogophaseinfo">;
 
 def delay : P_priv<"delay">;
 def errorreport : P_priv<"errorreport">;
 def idlout : P_priv<"idlout">;
 def ilk : P_priv<"ilk">;
 def ltcg_opt : P_priv<"ltcg">;
+def assemblydebug_opt : P_priv<"assemblydebug">;
 def ltcgout : P_priv<"ltcgout">;
 def maxilksize : P_priv<"maxilksize">;
 def tlbid : P_priv<"tlbid">;

@@ -347,7 +347,7 @@ const UnmangledFuncInfo UnmangledFuncInfo::Table[] = {
 };
 
 const unsigned UnmangledFuncInfo::TableSize =
-    array_lengthof(UnmangledFuncInfo::Table);
+    std::size(UnmangledFuncInfo::Table);
 
 static AMDGPULibFunc::Param getRetType(AMDGPULibFunc::EFuncId id,
                                        const AMDGPULibFunc::Param (&Leads)[2]) {
@@ -555,7 +555,7 @@ static AMDGPULibFunc::ENamePrefix parseNamePrefix(StringRef& mangledName) {
 }
 
 StringMap<int> ManglingRule::buildManglingRulesMap() {
-  StringMap<int> Map(array_lengthof(manglingRules));
+  StringMap<int> Map(std::size(manglingRules));
   int Id = 0;
   for (auto Rule : manglingRules)
     Map.insert({Rule.Name, Id++});

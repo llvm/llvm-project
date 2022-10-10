@@ -81,7 +81,6 @@ check_cxx_compiler_flag(-fvisibility=hidden  COMPILER_RT_HAS_FVISIBILITY_HIDDEN_
 check_cxx_compiler_flag(-frtti               COMPILER_RT_HAS_FRTTI_FLAG)
 check_cxx_compiler_flag(-fno-rtti            COMPILER_RT_HAS_FNO_RTTI_FLAG)
 check_cxx_compiler_flag("-Werror -fno-function-sections" COMPILER_RT_HAS_FNO_FUNCTION_SECTIONS_FLAG)
-check_cxx_compiler_flag(-std=c++14           COMPILER_RT_HAS_STD_CXX14_FLAG)
 check_cxx_compiler_flag(-ftls-model=initial-exec COMPILER_RT_HAS_FTLS_MODEL_INITIAL_EXEC)
 check_cxx_compiler_flag(-fno-lto             COMPILER_RT_HAS_FNO_LTO_FLAG)
 check_cxx_compiler_flag(-fno-profile-generate COMPILER_RT_HAS_FNO_PROFILE_GENERATE_FLAG)
@@ -138,6 +137,22 @@ check_cxx_compiler_flag(/wd4391 COMPILER_RT_HAS_WD4391_FLAG)
 check_cxx_compiler_flag(/wd4722 COMPILER_RT_HAS_WD4722_FLAG)
 check_cxx_compiler_flag(/wd4800 COMPILER_RT_HAS_WD4800_FLAG)
 
+check_cxx_compiler_flag(-Werror -Warray-bounds COMPILER_RT_HAS_ARRAY_BOUNDS_FLAG)
+check_cxx_compiler_flag(-Werror -Wuninitialized COMPILER_RT_HAS_UNINITIALIZED_FLAG)
+check_cxx_compiler_flag(-Werror -Wshadow COMPILER_RT_HAS_SHADOW_FLAG)
+check_cxx_compiler_flag(-Werror -Wempty-body COMPILER_RT_HAS_EMPTY_BODY_FLAG)
+check_cxx_compiler_flag(-Werror -Wsizeof-pointer-memaccess COMPILER_RT_HAS_SIZEOF_POINTER_MEMACCESS_FLAG)
+check_cxx_compiler_flag(-Werror -Wsizeof-array-argument COMPILER_RT_HAS_SIZEOF_ARRAY_ARGUMENT_FLAG)
+check_cxx_compiler_flag(-Werror -Wsuspicious-memaccess COMPILER_RT_HAS_SUSPICIOUS_MEMACCESS_FLAG)
+check_cxx_compiler_flag(-Werror -Wbuiltin-memcpy-chk-size COMPILER_RT_HAS_BUILTIN_MEMCPY_CHK_SIZE_FLAG)
+check_cxx_compiler_flag(-Werror -Warray-bounds-pointer-arithmetic COMPILER_RT_HAS_ARRAY_BOUNDS_POINTER_ARITHMETIC_FLAG)
+check_cxx_compiler_flag(-Werror -Wreturn-stack-address COMPILER_RT_HAS_RETURN_STACK_ADDRESS_FLAG)
+check_cxx_compiler_flag(-Werror -Wsizeof-array-decay COMPILER_RT_HAS_SIZEOF_ARRAY_DECAY_FLAG)
+check_cxx_compiler_flag(-Werror -Wformat-insufficient-args COMPILER_RT_HAS_FORMAT_INSUFFICIENT_ARGS_FLAG)
+check_cxx_compiler_flag(-Werror -Wformat-security COMPILER_RT_HAS_BUILTIN_FORMAL_SECURITY_FLAG)
+check_cxx_compiler_flag(-Werror -Wsizeof-array-div COMPILER_RT_HAS_SIZEOF_ARRAY_DIV_FLAG)
+check_cxx_compiler_flag(-Werror -Wsizeof-pointer-div COMPILER_RT_HAS_SIZEOF_POINTER_DIV_FLAG)
+
 # Symbols.
 check_symbol_exists(__func__ "" COMPILER_RT_HAS_FUNC_SYMBOL)
 
@@ -176,12 +191,12 @@ check_library_exists(c++ __cxa_throw "" COMPILER_RT_HAS_LIBCXX)
 check_library_exists(stdc++ __cxa_throw "" COMPILER_RT_HAS_LIBSTDCXX)
 
 # Linker flags.
-llvm_check_compiler_linker_flag(CXX "-Wl,-z,text" COMPILER_RT_HAS_Z_TEXT)
-llvm_check_compiler_linker_flag(CXX "-fuse-ld=lld" COMPILER_RT_HAS_FUSE_LD_LLD_FLAG)
+llvm_check_compiler_linker_flag(C "-Wl,-z,text" COMPILER_RT_HAS_Z_TEXT)
+llvm_check_compiler_linker_flag(C "-fuse-ld=lld" COMPILER_RT_HAS_FUSE_LD_LLD_FLAG)
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
   set(VERS_COMPAT_OPTION "-Wl,-z,gnu-version-script-compat")
-  llvm_check_compiler_linker_flag(CXX "${VERS_COMPAT_OPTION}" COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
+  llvm_check_compiler_linker_flag(C "${VERS_COMPAT_OPTION}" COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
 endif()
 
 set(DUMMY_VERS ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/dummy.vers)
@@ -192,10 +207,10 @@ if(COMPILER_RT_HAS_GNU_VERSION_SCRIPT_COMPAT)
   # -z gnu-version-script-compat.
   string(APPEND VERS_OPTION " ${VERS_COMPAT_OPTION}")
 endif()
-llvm_check_compiler_linker_flag(CXX "${VERS_OPTION}" COMPILER_RT_HAS_VERSION_SCRIPT)
+llvm_check_compiler_linker_flag(C "${VERS_OPTION}" COMPILER_RT_HAS_VERSION_SCRIPT)
 
 if(ANDROID)
-  llvm_check_compiler_linker_flag(CXX "-Wl,-z,global" COMPILER_RT_HAS_Z_GLOBAL)
+  llvm_check_compiler_linker_flag(C "-Wl,-z,global" COMPILER_RT_HAS_Z_GLOBAL)
   check_library_exists(log __android_log_write "" COMPILER_RT_HAS_LIBLOG)
 endif()
 
@@ -456,7 +471,7 @@ if(APPLE)
     -lc++
     -lc++abi)
 
-  llvm_check_compiler_linker_flag(CXX "-fapplication-extension" COMPILER_RT_HAS_APP_EXTENSION)
+  llvm_check_compiler_linker_flag(C "-fapplication-extension" COMPILER_RT_HAS_APP_EXTENSION)
   if(COMPILER_RT_HAS_APP_EXTENSION)
     list(APPEND DARWIN_COMMON_LINK_FLAGS "-fapplication-extension")
   endif()

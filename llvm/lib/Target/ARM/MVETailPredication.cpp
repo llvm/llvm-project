@@ -418,7 +418,7 @@ bool MVETailPredication::TryConvertActiveLaneMask(Value *TripCount) {
   // Remove dead instructions and now dead phis.
   for (auto *II : ActiveLaneMasks)
     RecursivelyDeleteTriviallyDeadInstructions(II);
-  for (auto I : L->blocks())
+  for (auto *I : L->blocks())
     DeleteDeadPHIs(I);
   return true;
 }

@@ -162,7 +162,7 @@ static llvm::FastMathFlags getFastmathFlags(FastmathFlagsInterface &op) {
   llvm::FastMathFlags ret;
   auto fmf = op.getFastmathFlags();
   for (auto it : handlers)
-    if (bitEnumContains(fmf, it.first))
+    if (bitEnumContainsAll(fmf, it.first))
       (ret.*(it.second))(true);
   return ret;
 }
@@ -251,16 +251,16 @@ static void setLoopMetadata(Operation &opInst, llvm::Instruction &llvmInst,
   }
 }
 
+/// Convert the value of a DenseI64ArrayAttr to a vector of unsigned indices.
+static SmallVector<unsigned> extractPosition(ArrayRef<int64_t> indices) {
+  SmallVector<unsigned> position;
+  llvm::append_range(position, indices);
+  return position;
+}
+
 static LogicalResult
 convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
-  auto extractPosition = [](ArrayAttr attr) {
-    SmallVector<unsigned, 4> position;
-    position.reserve(attr.size());
-    for (Attribute v : attr)
-      position.push_back(v.cast<IntegerAttr>().getValue().getZExtValue());
-    return position;
-  };
 
   llvm::IRBuilder<>::FastMathFlagGuard fmfGuard(builder);
   if (auto fmf = dyn_cast<FastmathFlagsInterface>(opInst))
@@ -466,8 +466,10 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
   // operation and store it in the MLIR-to-LLVM value mapping.  This does not
   // emit any LLVM instruction.
   if (auto addressOfOp = dyn_cast<LLVM::AddressOfOp>(opInst)) {
-    LLVM::GlobalOp global = addressOfOp.getGlobal();
-    LLVM::LLVMFuncOp function = addressOfOp.getFunction();
+    LLVM::GlobalOp global =
+        addressOfOp.getGlobal(moduleTranslation.symbolTable());
+    LLVM::LLVMFuncOp function =
+        addressOfOp.getFunction(moduleTranslation.symbolTable());
 
     // The verifier should not have allowed this.
     assert((global || function) &&

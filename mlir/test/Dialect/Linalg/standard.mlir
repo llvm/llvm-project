@@ -1,30 +1,26 @@
 // RUN: mlir-opt %s -convert-linalg-to-std | FileCheck %s
 
-// CHECK-DAG: #[[$map0:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
-// CHECK-DAG: #[[$map6:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-// CHECK-DAG: #[[$map7:.*]] = affine_map<()[s0] -> (s0)>
-
-func.func @dot(%arg0: memref<?xf32, offset: ?, strides: [1]>,
-          %arg1: memref<?xf32, offset: ?, strides: [1]>,
+func.func @dot(%arg0: memref<?xf32, strided<[1], offset: ?>>,
+          %arg1: memref<?xf32, strided<[1], offset: ?>>,
           %arg2: memref<f32>) {
-  linalg.dot ins(%arg0, %arg1: memref<?xf32, offset: ?, strides: [1]>,
-                               memref<?xf32, offset: ?, strides: [1]>)
+  linalg.dot ins(%arg0, %arg1: memref<?xf32, strided<[1], offset: ?>>,
+                               memref<?xf32, strided<[1], offset: ?>>)
              outs(%arg2: memref<f32>)
   return
 }
 // CHECK-LABEL: func @dot(
-//  CHECK-SAME: %[[arg0:[a-zA-z0-9]*]]: memref<?xf32, #[[$map0]]>,
-//  CHECK-SAME: %[[arg1:[a-zA-z0-9]*]]: memref<?xf32, #[[$map0]]>,
+//  CHECK-SAME: %[[arg0:[a-zA-z0-9]*]]: memref<?xf32, strided<[1], offset: ?>>,
+//  CHECK-SAME: %[[arg1:[a-zA-z0-9]*]]: memref<?xf32, strided<[1], offset: ?>>,
 //  CHECK-SAME: %[[arg2:[a-zA-z0-9]*]]: memref<f32>) {
 //       CHECK:   %[[o0:.*]] = memref.cast %[[arg0]] :
-//  CHECK-SAME:     memref<?xf32, #[[$map0]]> to memref<?xf32, #[[$map6]]>
+//  CHECK-SAME:     memref<?xf32, strided<[1], offset: ?>> to memref<?xf32, strided<[?], offset: ?>>
 //       CHECK:   %[[o1:.*]] = memref.cast %[[arg1]] :
-//  CHECK-SAME:     memref<?xf32, #[[$map0]]> to memref<?xf32, #[[$map6]]>
+//  CHECK-SAME:     memref<?xf32, strided<[1], offset: ?>> to memref<?xf32, strided<[?], offset: ?>>
 //       CHECK:   %[[o2:.*]] = memref.cast %[[arg2]] :
-//  CHECK-SAME:     memref<f32> to memref<f32, #[[$map7]]>
+//  CHECK-SAME:     memref<f32> to memref<f32, strided<[], offset: ?>>
 //       CHECK:   call @linalg_dot_viewsxf32_viewsxf32_viewf32(
 //  CHECK-SAME:     %[[o0]], %[[o1]], %[[o2]]) :
-//  CHECK-SAME:   memref<?xf32, #[[$map6]]>, memref<?xf32, #[[$map6]]>, memref<f32, #[[$map7]]>
+//  CHECK-SAME:   memref<?xf32, strided<[?], offset: ?>>, memref<?xf32, strided<[?], offset: ?>>, memref<f32, strided<[], offset: ?>>
 
 #matmul_accesses = [
   affine_map<(m, n, k) -> (m, k)>,

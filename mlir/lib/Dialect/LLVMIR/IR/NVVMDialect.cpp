@@ -233,9 +233,9 @@ void MmaOp::build(OpBuilder &builder, OperationState &result, Type resultType,
   result.addTypes(resultType);
   result.addAttribute(
       MmaOp::getOperandSegmentSizeAttr(),
-      builder.getI32VectorAttr({static_cast<int32_t>(operandA.size()),
-                                static_cast<int32_t>(operandB.size()),
-                                static_cast<int32_t>(operandC.size())}));
+      builder.getDenseI32ArrayAttr({static_cast<int32_t>(operandA.size()),
+                                    static_cast<int32_t>(operandB.size()),
+                                    static_cast<int32_t>(operandC.size())}));
 }
 
 // <operation> :=
@@ -326,7 +326,7 @@ ParseResult MmaOp::parse(OpAsmParser &parser, OperationState &result) {
   if (!namedAttributes.empty())
     result.addAttributes(namedAttributes);
   result.addAttribute(MmaOp::getOperandSegmentSizeAttr(),
-                      builder.getI32VectorAttr({
+                      builder.getDenseI32ArrayAttr({
                           static_cast<int32_t>(frags[0].regs.size()),
                           static_cast<int32_t>(frags[1].regs.size()),
                           static_cast<int32_t>(frags[2].regs.size()),
@@ -459,8 +459,7 @@ LogicalResult MmaOp::verify() {
 
   // Check that we matched an existing shape/dtype combination.
   if (expectedA.empty() || expectedB.empty() || expectedC.empty() ||
-      !llvm::any_of(allowedShapes,
-                    [&](const auto &allowed) { return allowed == mmaShape; })) {
+      !llvm::is_contained(allowedShapes, mmaShape)) {
     errorStream << "unimplemented variant for MMA shape <";
     llvm::interleaveComma(mmaShape, errorStream);
     errorStream << ">";
@@ -475,10 +474,7 @@ LogicalResult MmaOp::verify() {
     SmallVector<Type, 4> operandTySeg(operand_type_begin() + spec.first,
                                       operand_type_begin() + spec.first +
                                           spec.second);
-    bool match =
-        llvm::any_of(iter.value(), [&](const SmallVector<Type, 4> &typeSet) {
-          return typeSet == operandTySeg;
-        });
+    bool match = llvm::is_contained(iter.value(), operandTySeg);
 
     if (!match) {
       errorStream << "Could not match types for the "

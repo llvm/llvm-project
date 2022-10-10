@@ -59,7 +59,7 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
 
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
 
-llvm::Optional<PrimType> Context::classify(QualType T) {
+llvm::Optional<PrimType> Context::classify(QualType T) const {
   if (T->isReferenceType() || T->isPointerType()) {
     return PT_Ptr;
   }

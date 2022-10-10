@@ -14,6 +14,9 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit-lldb-init.in
   ${CMAKE_CURRENT_BINARY_DIR}/lit-lldb-init)
 
+file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/lit-lldb-init-quiet
+  "command source -C --silent-run true lit-lldb-init\n")
+
 add_lit_testsuite(check-lldb-shell "Running lldb shell test suite"
   ${CMAKE_CURRENT_BINARY_DIR}
   EXCLUDE_FROM_CHECK_ALL

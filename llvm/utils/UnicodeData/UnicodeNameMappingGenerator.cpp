@@ -8,7 +8,7 @@
 //
 // This file is used to generate lib/Support/UnicodeNameToCodepointGenerated.cpp
 // using UnicodeData.txt and NameAliases.txt available at
-// https://unicode.org/Public/14.0.0/ucd/
+// https://unicode.org/Public/15.0.0/ucd/
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/Optional.h"
@@ -97,8 +97,8 @@ public:
     Node *N = Root.get();
     for (auto Ch : Name) {
       std::string Label(1, Ch);
-      auto It = std::find_if(N->Children.begin(), N->Children.end(),
-                             [&](const auto &C) { return C->Name == Label; });
+      auto It = llvm::find_if(N->Children,
+                              [&](const auto &C) { return C->Name == Label; });
       if (It == N->Children.end()) {
         It = N->Children.insert(It, std::make_unique<Node>(Label, N));
       }
@@ -247,7 +247,7 @@ public:
       } else {
         // When there is no value (that's most intermediate nodes)
         // Dispense of the 3 values bytes, and only store
-        // 1 byte to track whether the node has sibling and chidren
+        // 1 byte to track whether the node has sibling and children
         // + 2 bytes for the index of the first children if necessary.
         // That index also uses bytes 0-6 of the previous byte.
         uint8_t Byte =
@@ -340,9 +340,9 @@ int main(int argc, char **argv) {
          "Usage: %s UnicodeData.txt NameAliases.txt output\n\n",
          argv[0]);
   printf("NameAliases.txt can be found at "
-         "https://unicode.org/Public/14.0.0/ucd/NameAliases.txt\n"
+         "https://unicode.org/Public/15.0.0/ucd/NameAliases.txt\n"
          "UnicodeData.txt can be found at "
-         "https://unicode.org/Public/14.0.0/ucd/UnicodeData.txt\n\n");
+         "https://unicode.org/Public/15.0.0/ucd/UnicodeData.txt\n\n");
 
   if (argc != 4)
     return EXIT_FAILURE;
@@ -361,7 +361,7 @@ int main(int argc, char **argv) {
     char32_t Codepoint = Entry.first;
     const std::string &Name = Entry.second;
     // Ignore names which are not valid.
-    if (Name.empty() || !std::all_of(Name.begin(), Name.end(), [](char C) {
+    if (Name.empty() || !llvm::all_of(Name, [](char C) {
           return llvm::is_contained(Letters, C);
         })) {
       continue;

@@ -485,9 +485,9 @@ CallEvent::getReturnValueUnderConstruction() const {
 
   EvalCallOptions CallOpts;
   ExprEngine &Engine = getState()->getStateManager().getOwningEngine();
-  SVal RetVal =
-    Engine.computeObjectUnderConstruction(getOriginExpr(), getState(),
-                                          getLocationContext(), CC, CallOpts);
+  SVal RetVal = Engine.computeObjectUnderConstruction(
+      getOriginExpr(), getState(), &Engine.getBuilderContext(),
+      getLocationContext(), CC, CallOpts);
   return RetVal;
 }
 
@@ -1124,7 +1124,7 @@ static const ObjCMethodDecl *findDefiningRedecl(const ObjCMethodDecl *MD) {
 
   // Find the redeclaration that defines the method.
   if (!MD->hasBody()) {
-    for (auto I : MD->redecls())
+    for (auto *I : MD->redecls())
       if (I->hasBody())
         MD = cast<ObjCMethodDecl>(I);
   }

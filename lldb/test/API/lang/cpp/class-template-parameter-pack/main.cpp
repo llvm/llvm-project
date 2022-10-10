@@ -26,7 +26,13 @@ template <> struct D<int, int, bool> : D<int, int> {
   bool argsAre_Int_bool() { return true; }
 };
 
+template <typename... Args> struct OnlyPack {};
+template <typename T, typename... Args> struct EmptyPack {};
+
 int main(int argc, char const *argv[]) {
+  EmptyPack<int> emptyPack;
+  OnlyPack<int, char, double, D<int, int, bool>> onlyPack;
+
   C<int, 16, 32> myC;
   C<int, 16> myLesserC;
   myC.member = 64;
@@ -34,7 +40,7 @@ int main(int argc, char const *argv[]) {
   (void)C<int, 16>().argsAre_16_32();
   (void)(myC.member != 64);
   D<int, int, bool> myD;
-  D<int, int> myLesserD;
+  D<int, int> myLesserD; // breakpoint here
   myD.member = 64;
   (void)D<int, int, bool>().argsAre_Int_bool();
   (void)D<int, int>().argsAre_Int_bool();

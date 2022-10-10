@@ -18,6 +18,7 @@
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugAbbrev.h"
@@ -432,7 +433,7 @@ size_t DWARFDebugInfoEntry::GetAttributes(DWARFUnit *cu,
           // curr_depth is not zero
           break;
         }
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       default:
         attributes.Append(form_value, offset, attr);
         break;
@@ -544,6 +545,17 @@ uint64_t DWARFDebugInfoEntry::GetAttributeValueAsUnsigned(
                         check_specification_or_abstract_origin))
     return form_value.Unsigned();
   return fail_value;
+}
+
+llvm::Optional<uint64_t>
+DWARFDebugInfoEntry::GetAttributeValueAsOptionalUnsigned(
+    const DWARFUnit *cu, const dw_attr_t attr,
+    bool check_specification_or_abstract_origin) const {
+  DWARFFormValue form_value;
+  if (GetAttributeValue(cu, attr, form_value, nullptr,
+                        check_specification_or_abstract_origin))
+    return form_value.Unsigned();
+  return llvm::None;
 }
 
 // GetAttributeValueAsReference

@@ -17,6 +17,7 @@
 #include "PPCInstrBuilder.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -310,7 +311,7 @@ static const uint16_t FMAOpIdxInfo[][6] = {
 // Check if an opcode is a FMA instruction. If it is, return the index in array
 // FMAOpIdxInfo. Otherwise, return -1.
 int16_t PPCInstrInfo::getFMAOpIdxInfo(unsigned Opcode) const {
-  for (unsigned I = 0; I < array_lengthof(FMAOpIdxInfo); I++)
+  for (unsigned I = 0; I < std::size(FMAOpIdxInfo); I++)
     if (FMAOpIdxInfo[I][InfoArrayIdxFMAInst] == Opcode)
       return I;
   return -1;
@@ -2331,7 +2332,7 @@ bool PPCInstrInfo::ClobbersPredicate(MachineInstr &MI,
 
   bool Found = false;
   for (const MachineOperand &MO : MI.operands()) {
-    for (unsigned c = 0; c < array_lengthof(RCs) && !Found; ++c) {
+    for (unsigned c = 0; c < std::size(RCs) && !Found; ++c) {
       const TargetRegisterClass *RC = RCs[c];
       if (MO.isReg()) {
         if (MO.isDef() && RC->contains(MO.getReg())) {
@@ -2423,15 +2424,15 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   bool noSub = false;
   if (isPPC64) {
     if (is32BitSignedCompare) {
-      // We can perform this optimization only if MI is sign-extending.
-      if (isSignExtended(*MI))
+      // We can perform this optimization only if SrcReg is sign-extending.
+      if (isSignExtended(SrcReg, MRI))
         noSub = true;
       else
         return false;
     } else if (is32BitUnsignedCompare) {
-      // We can perform this optimization, equality only, if MI is
+      // We can perform this optimization, equality only, if SrcReg is
       // zero-extending.
-      if (isZeroExtended(*MI)) {
+      if (isZeroExtended(SrcReg, MRI)) {
         noSub = true;
         equalityOnly = true;
       } else
@@ -2537,7 +2538,12 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     else
       return false;
 
-    PredsToUpdate.push_back(std::make_pair(&(UseMI->getOperand(0)), Pred));
+    // Convert the comparison and its user to a compare against zero with the
+    // appropriate predicate on the branch. Zero comparison might provide
+    // optimization opportunities post-RA (see optimization in
+    // PPCPreEmitPeephole.cpp).
+    UseMI->getOperand(0).setImm(Pred);
+    CmpInstr.getOperand(2).setImm(0);
   }
 
   // Search for Sub.
@@ -3022,7 +3028,7 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     // BUILD_UACC is expanded to 4 copies of the underlying vsx registers.
     // So after building the 4 copies, we can replace the BUILD_UACC instruction
     // with a NOP.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case PPC::KILL_PAIR: {
     MI.setDesc(get(PPC::UNENCODED_NOP));
@@ -4259,7 +4265,7 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
         }
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case PPC::XFLOADf32:
       III.ImmOpcode = PPC::DFLOADf32;
       break;
@@ -4273,7 +4279,7 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
         }
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case PPC::XFLOADf64:
       III.ImmOpcode = PPC::DFLOADf64;
       break;
@@ -4291,7 +4297,7 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
         }
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case PPC::XFSTOREf32:
       III.ImmOpcode = PPC::DFSTOREf32;
       break;
@@ -4305,7 +4311,7 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
         }
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case PPC::XFSTOREf64:
       III.ImmOpcode = PPC::DFSTOREf64;
       break;
@@ -5128,51 +5134,87 @@ int PPCInstrInfo::getRecordFormOpcode(unsigned Opcode) {
   return PPC::getRecordFormOpcode(Opcode);
 }
 
-// This function returns true if the machine instruction
-// always outputs a value by sign-extending a 32 bit value,
-// i.e. 0 to 31-th bits are same as 32-th bit.
-static bool isSignExtendingOp(const MachineInstr &MI) {
-  int Opcode = MI.getOpcode();
-  if (Opcode == PPC::LI || Opcode == PPC::LI8 || Opcode == PPC::LIS ||
-      Opcode == PPC::LIS8 || Opcode == PPC::SRAW || Opcode == PPC::SRAW_rec ||
-      Opcode == PPC::SRAWI || Opcode == PPC::SRAWI_rec || Opcode == PPC::LWA ||
-      Opcode == PPC::LWAX || Opcode == PPC::LWA_32 || Opcode == PPC::LWAX_32 ||
-      Opcode == PPC::LHA || Opcode == PPC::LHAX || Opcode == PPC::LHA8 ||
-      Opcode == PPC::LHAX8 || Opcode == PPC::LBZ || Opcode == PPC::LBZX ||
-      Opcode == PPC::LBZ8 || Opcode == PPC::LBZX8 || Opcode == PPC::LBZU ||
-      Opcode == PPC::LBZUX || Opcode == PPC::LBZU8 || Opcode == PPC::LBZUX8 ||
-      Opcode == PPC::LHZ || Opcode == PPC::LHZX || Opcode == PPC::LHZ8 ||
-      Opcode == PPC::LHZX8 || Opcode == PPC::LHZU || Opcode == PPC::LHZUX ||
-      Opcode == PPC::LHZU8 || Opcode == PPC::LHZUX8 || Opcode == PPC::EXTSB ||
-      Opcode == PPC::EXTSB_rec || Opcode == PPC::EXTSH ||
-      Opcode == PPC::EXTSH_rec || Opcode == PPC::EXTSB8 ||
-      Opcode == PPC::EXTSH8 || Opcode == PPC::EXTSW ||
-      Opcode == PPC::EXTSW_rec || Opcode == PPC::SETB || Opcode == PPC::SETB8 ||
-      Opcode == PPC::EXTSH8_32_64 || Opcode == PPC::EXTSW_32_64 ||
-      Opcode == PPC::EXTSB8_32_64)
+static bool isOpZeroOfSubwordPreincLoad(int Opcode) {
+  return (Opcode == PPC::LBZU || Opcode == PPC::LBZUX || Opcode == PPC::LBZU8 ||
+          Opcode == PPC::LBZUX8 || Opcode == PPC::LHZU ||
+          Opcode == PPC::LHZUX || Opcode == PPC::LHZU8 ||
+          Opcode == PPC::LHZUX8);
+}
+
+// This function checks for sign extension from 32 bits to 64 bits.
+static bool definedBySignExtendingOp(const unsigned Reg,
+                                     const MachineRegisterInfo *MRI) {
+  if (!Register::isVirtualRegister(Reg))
+    return false;
+
+  MachineInstr *MI = MRI->getVRegDef(Reg);
+  if (!MI)
+    return false;
+
+  int Opcode = MI->getOpcode();
+  const PPCInstrInfo *TII =
+      MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
+  if (TII->isSExt32To64(Opcode))
     return true;
 
-  if (Opcode == PPC::RLDICL && MI.getOperand(3).getImm() >= 33)
+  // The first def of LBZU/LHZU is sign extended.
+  if (isOpZeroOfSubwordPreincLoad(Opcode) && MI->getOperand(0).getReg() == Reg)
     return true;
 
+  // RLDICL generates sign-extended output if it clears at least
+  // 33 bits from the left (MSB).
+  if (Opcode == PPC::RLDICL && MI->getOperand(3).getImm() >= 33)
+    return true;
+
+  // If at least one bit from left in a lower word is masked out,
+  // all of 0 to 32-th bits of the output are cleared.
+  // Hence the output is already sign extended.
   if ((Opcode == PPC::RLWINM || Opcode == PPC::RLWINM_rec ||
        Opcode == PPC::RLWNM || Opcode == PPC::RLWNM_rec) &&
-      MI.getOperand(3).getImm() > 0 &&
-      MI.getOperand(3).getImm() <= MI.getOperand(4).getImm())
+      MI->getOperand(3).getImm() > 0 &&
+      MI->getOperand(3).getImm() <= MI->getOperand(4).getImm())
     return true;
+
+  // If the most significant bit of immediate in ANDIS is zero,
+  // all of 0 to 32-th bits are cleared.
+  if (Opcode == PPC::ANDIS_rec || Opcode == PPC::ANDIS8_rec) {
+    uint16_t Imm = MI->getOperand(2).getImm();
+    if ((Imm & 0x8000) == 0)
+      return true;
+  }
 
   return false;
 }
 
-// This function returns true if the machine instruction
-// always outputs zeros in higher 32 bits.
-static bool isZeroExtendingOp(const MachineInstr &MI) {
-  int Opcode = MI.getOpcode();
+// This function checks the machine instruction that defines the input register
+// Reg. If that machine instruction always outputs a value that has only zeros
+// in the higher 32 bits then this function will return true.
+static bool definedByZeroExtendingOp(const unsigned Reg,
+                                     const MachineRegisterInfo *MRI) {
+  if (!Register::isVirtualRegister(Reg))
+    return false;
+
+  MachineInstr *MI = MRI->getVRegDef(Reg);
+  if (!MI)
+    return false;
+
+  int Opcode = MI->getOpcode();
+  const PPCInstrInfo *TII =
+      MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
+  if (TII->isZExt32To64(Opcode))
+    return true;
+
+  // The first def of LBZU/LHZU/LWZU are zero extended.
+  if ((isOpZeroOfSubwordPreincLoad(Opcode) || Opcode == PPC::LWZU ||
+       Opcode == PPC::LWZUX || Opcode == PPC::LWZU8 || Opcode == PPC::LWZUX8) &&
+      MI->getOperand(0).getReg() == Reg)
+    return true;
+
   // The 16-bit immediate is sign-extended in li/lis.
   // If the most significant bit is zero, all higher bits are zero.
   if (Opcode == PPC::LI  || Opcode == PPC::LI8 ||
       Opcode == PPC::LIS || Opcode == PPC::LIS8) {
-    int64_t Imm = MI.getOperand(1).getImm();
+    int64_t Imm = MI->getOperand(1).getImm();
     if (((uint64_t)Imm & ~0x7FFFuLL) == 0)
       return true;
   }
@@ -5182,44 +5224,18 @@ static bool isZeroExtendingOp(const MachineInstr &MI) {
   if ((Opcode == PPC::RLDICL || Opcode == PPC::RLDICL_rec ||
        Opcode == PPC::RLDCL || Opcode == PPC::RLDCL_rec ||
        Opcode == PPC::RLDICL_32_64) &&
-      MI.getOperand(3).getImm() >= 32)
+      MI->getOperand(3).getImm() >= 32)
     return true;
 
   if ((Opcode == PPC::RLDIC || Opcode == PPC::RLDIC_rec) &&
-      MI.getOperand(3).getImm() >= 32 &&
-      MI.getOperand(3).getImm() <= 63 - MI.getOperand(2).getImm())
+      MI->getOperand(3).getImm() >= 32 &&
+      MI->getOperand(3).getImm() <= 63 - MI->getOperand(2).getImm())
     return true;
 
   if ((Opcode == PPC::RLWINM || Opcode == PPC::RLWINM_rec ||
        Opcode == PPC::RLWNM || Opcode == PPC::RLWNM_rec ||
        Opcode == PPC::RLWINM8 || Opcode == PPC::RLWNM8) &&
-      MI.getOperand(3).getImm() <= MI.getOperand(4).getImm())
-    return true;
-
-  // There are other instructions that clear higher 32-bits.
-  if (Opcode == PPC::CNTLZW || Opcode == PPC::CNTLZW_rec ||
-      Opcode == PPC::CNTTZW || Opcode == PPC::CNTTZW_rec ||
-      Opcode == PPC::CNTLZW8 || Opcode == PPC::CNTTZW8 ||
-      Opcode == PPC::CNTLZD || Opcode == PPC::CNTLZD_rec ||
-      Opcode == PPC::CNTTZD || Opcode == PPC::CNTTZD_rec ||
-      Opcode == PPC::POPCNTD || Opcode == PPC::POPCNTW || Opcode == PPC::SLW ||
-      Opcode == PPC::SLW_rec || Opcode == PPC::SRW || Opcode == PPC::SRW_rec ||
-      Opcode == PPC::SLW8 || Opcode == PPC::SRW8 || Opcode == PPC::SLWI ||
-      Opcode == PPC::SLWI_rec || Opcode == PPC::SRWI ||
-      Opcode == PPC::SRWI_rec || Opcode == PPC::LWZ || Opcode == PPC::LWZX ||
-      Opcode == PPC::LWZU || Opcode == PPC::LWZUX || Opcode == PPC::LWBRX ||
-      Opcode == PPC::LHBRX || Opcode == PPC::LHZ || Opcode == PPC::LHZX ||
-      Opcode == PPC::LHZU || Opcode == PPC::LHZUX || Opcode == PPC::LBZ ||
-      Opcode == PPC::LBZX || Opcode == PPC::LBZU || Opcode == PPC::LBZUX ||
-      Opcode == PPC::LWZ8 || Opcode == PPC::LWZX8 || Opcode == PPC::LWZU8 ||
-      Opcode == PPC::LWZUX8 || Opcode == PPC::LWBRX8 || Opcode == PPC::LHBRX8 ||
-      Opcode == PPC::LHZ8 || Opcode == PPC::LHZX8 || Opcode == PPC::LHZU8 ||
-      Opcode == PPC::LHZUX8 || Opcode == PPC::LBZ8 || Opcode == PPC::LBZX8 ||
-      Opcode == PPC::LBZU8 || Opcode == PPC::LBZUX8 ||
-      Opcode == PPC::ANDI_rec || Opcode == PPC::ANDIS_rec ||
-      Opcode == PPC::ROTRWI || Opcode == PPC::ROTRWI_rec ||
-      Opcode == PPC::EXTLWI || Opcode == PPC::EXTLWI_rec ||
-      Opcode == PPC::MFVSRWZ)
+      MI->getOperand(3).getImm() <= MI->getOperand(4).getImm())
     return true;
 
   return false;
@@ -5242,98 +5258,126 @@ bool PPCInstrInfo::isTOCSaveMI(const MachineInstr &MI) const {
 
 // We limit the max depth to track incoming values of PHIs or binary ops
 // (e.g. AND) to avoid excessive cost.
-const unsigned MAX_DEPTH = 1;
+const unsigned MAX_BINOP_DEPTH = 1;
+// The isSignOrZeroExtended function is recursive. The parameter BinOpDepth
+// does not count all of the recursions. The parameter BinOpDepth is incremented
+// only when isSignOrZeroExtended calls itself more than once. This is done to
+// prevent expontential recursion. There is no parameter to track linear
+// recursion.
+std::pair<bool, bool>
+PPCInstrInfo::isSignOrZeroExtended(const unsigned Reg,
+                                   const unsigned BinOpDepth,
+                                   const MachineRegisterInfo *MRI) const {
+  if (!Register::isVirtualRegister(Reg))
+    return std::pair<bool, bool>(false, false);
 
-bool
-PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
-                                   const unsigned Depth) const {
-  const MachineFunction *MF = MI.getParent()->getParent();
-  const MachineRegisterInfo *MRI = &MF->getRegInfo();
+  MachineInstr *MI = MRI->getVRegDef(Reg);
+  if (!MI)
+    return std::pair<bool, bool>(false, false);
 
-  // If we know this instruction returns sign- or zero-extended result,
-  // return true.
-  if (SignExt ? isSignExtendingOp(MI):
-                isZeroExtendingOp(MI))
-    return true;
+  bool IsSExt = definedBySignExtendingOp(Reg, MRI);
+  bool IsZExt = definedByZeroExtendingOp(Reg, MRI);
 
-  switch (MI.getOpcode()) {
+  // If we know the instruction always returns sign- and zero-extended result,
+  // return here.
+  if (IsSExt && IsZExt)
+    return std::pair<bool, bool>(IsSExt, IsZExt);
+
+  switch (MI->getOpcode()) {
   case PPC::COPY: {
-    Register SrcReg = MI.getOperand(1).getReg();
+    Register SrcReg = MI->getOperand(1).getReg();
 
     // In both ELFv1 and v2 ABI, method parameters and the return value
     // are sign- or zero-extended.
-    if (MF->getSubtarget<PPCSubtarget>().isSVR4ABI()) {
-      const PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
-      // We check the ZExt/SExt flags for a method parameter.
-      if (MI.getParent()->getBasicBlock() ==
-          &MF->getFunction().getEntryBlock()) {
-        Register VReg = MI.getOperand(0).getReg();
-        if (MF->getRegInfo().isLiveIn(VReg))
-          return SignExt ? FuncInfo->isLiveInSExt(VReg) :
-                           FuncInfo->isLiveInZExt(VReg);
-      }
+    const MachineFunction *MF = MI->getMF();
 
-      // For a method return value, we check the ZExt/SExt flags in attribute.
-      // We assume the following code sequence for method call.
-      //   ADJCALLSTACKDOWN 32, implicit dead %r1, implicit %r1
-      //   BL8_NOP @func,...
-      //   ADJCALLSTACKUP 32, 0, implicit dead %r1, implicit %r1
-      //   %5 = COPY %x3; G8RC:%5
-      if (SrcReg == PPC::X3) {
-        const MachineBasicBlock *MBB = MI.getParent();
-        MachineBasicBlock::const_instr_iterator II =
-          MachineBasicBlock::const_instr_iterator(&MI);
-        if (II != MBB->instr_begin() &&
-            (--II)->getOpcode() == PPC::ADJCALLSTACKUP) {
-          const MachineInstr &CallMI = *(--II);
-          if (CallMI.isCall() && CallMI.getOperand(0).isGlobal()) {
-            const Function *CalleeFn =
-              dyn_cast<Function>(CallMI.getOperand(0).getGlobal());
-            if (!CalleeFn)
-              return false;
-            const IntegerType *IntTy =
-              dyn_cast<IntegerType>(CalleeFn->getReturnType());
-            const AttributeSet &Attrs = CalleeFn->getAttributes().getRetAttrs();
-            if (IntTy && IntTy->getBitWidth() <= 32)
-              return Attrs.hasAttribute(SignExt ? Attribute::SExt :
-                                                  Attribute::ZExt);
-          }
-        }
+    if (!MF->getSubtarget<PPCSubtarget>().isSVR4ABI()) {
+      // If this is a copy from another register, we recursively check source.
+      auto SrcExt = isSignOrZeroExtended(SrcReg, BinOpDepth, MRI);
+      return std::pair<bool, bool>(SrcExt.first || IsSExt,
+                                   SrcExt.second || IsZExt);
+    }
+
+    // From here on everything is SVR4ABI
+    const PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
+    // We check the ZExt/SExt flags for a method parameter.
+    if (MI->getParent()->getBasicBlock() ==
+        &MF->getFunction().getEntryBlock()) {
+      Register VReg = MI->getOperand(0).getReg();
+      if (MF->getRegInfo().isLiveIn(VReg)) {
+        IsSExt |= FuncInfo->isLiveInSExt(VReg);
+        IsZExt |= FuncInfo->isLiveInZExt(VReg);
+        return std::pair<bool, bool>(IsSExt, IsZExt);
       }
     }
 
-    // If this is a copy from another register, we recursively check source.
-    if (!Register::isVirtualRegister(SrcReg))
-      return false;
-    const MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
-    if (SrcMI != nullptr)
-      return isSignOrZeroExtended(*SrcMI, SignExt, Depth);
+    if (SrcReg != PPC::X3) {
+      // If this is a copy from another register, we recursively check source.
+      auto SrcExt = isSignOrZeroExtended(SrcReg, BinOpDepth, MRI);
+      return std::pair<bool, bool>(SrcExt.first || IsSExt,
+                                   SrcExt.second || IsZExt);
+    }
 
-    return false;
+    // For a method return value, we check the ZExt/SExt flags in attribute.
+    // We assume the following code sequence for method call.
+    //   ADJCALLSTACKDOWN 32, implicit dead %r1, implicit %r1
+    //   BL8_NOP @func,...
+    //   ADJCALLSTACKUP 32, 0, implicit dead %r1, implicit %r1
+    //   %5 = COPY %x3; G8RC:%5
+    const MachineBasicBlock *MBB = MI->getParent();
+    std::pair<bool, bool> IsExtendPair = std::pair<bool, bool>(IsSExt, IsZExt);
+    MachineBasicBlock::const_instr_iterator II =
+        MachineBasicBlock::const_instr_iterator(MI);
+    if (II == MBB->instr_begin() || (--II)->getOpcode() != PPC::ADJCALLSTACKUP)
+      return IsExtendPair;
+
+    const MachineInstr &CallMI = *(--II);
+    if (!CallMI.isCall() || !CallMI.getOperand(0).isGlobal())
+      return IsExtendPair;
+
+    const Function *CalleeFn =
+        dyn_cast_if_present<Function>(CallMI.getOperand(0).getGlobal());
+    if (!CalleeFn)
+      return IsExtendPair;
+    const IntegerType *IntTy = dyn_cast<IntegerType>(CalleeFn->getReturnType());
+    if (IntTy && IntTy->getBitWidth() <= 32) {
+      const AttributeSet &Attrs = CalleeFn->getAttributes().getRetAttrs();
+      IsSExt |= Attrs.hasAttribute(Attribute::SExt);
+      IsZExt |= Attrs.hasAttribute(Attribute::ZExt);
+      return std::pair<bool, bool>(IsSExt, IsZExt);
+    }
+
+    return IsExtendPair;
   }
 
-  case PPC::ANDI_rec:
-  case PPC::ANDIS_rec:
+  // OR, XOR with 16-bit immediate does not change the upper 48 bits.
+  // So, we track the operand register as we do for register copy.
   case PPC::ORI:
-  case PPC::ORIS:
   case PPC::XORI:
-  case PPC::XORIS:
-  case PPC::ANDI8_rec:
-  case PPC::ANDIS8_rec:
   case PPC::ORI8:
-  case PPC::ORIS8:
-  case PPC::XORI8:
-  case PPC::XORIS8: {
-    // logical operation with 16-bit immediate does not change the upper bits.
-    // So, we track the operand register as we do for register copy.
-    Register SrcReg = MI.getOperand(1).getReg();
-    if (!Register::isVirtualRegister(SrcReg))
-      return false;
-    const MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
-    if (SrcMI != nullptr)
-      return isSignOrZeroExtended(*SrcMI, SignExt, Depth);
+  case PPC::XORI8: {
+    unsigned SrcReg = MI->getOperand(1).getReg();
+    auto SrcExt = isSignOrZeroExtended(SrcReg, BinOpDepth, MRI);
+    return std::pair<bool, bool>(SrcExt.first || IsSExt,
+                                 SrcExt.second || IsZExt);
+  }
 
-    return false;
+  // OR, XOR with shifted 16-bit immediate does not change the upper
+  // 32 bits. So, we track the operand register for zero extension.
+  // For sign extension when the MSB of the immediate is zero, we also
+  // track the operand register since the upper 33 bits are unchanged.
+  case PPC::ORIS:
+  case PPC::XORIS:
+  case PPC::ORIS8:
+  case PPC::XORIS8: {
+    unsigned SrcReg = MI->getOperand(1).getReg();
+    auto SrcExt = isSignOrZeroExtended(SrcReg, BinOpDepth, MRI);
+    uint16_t Imm = MI->getOperand(2).getImm();
+    if (Imm & 0x8000)
+      return std::pair<bool, bool>(false, SrcExt.second || IsZExt);
+    else
+      return std::pair<bool, bool>(SrcExt.first || IsSExt,
+                                   SrcExt.second || IsZExt);
   }
 
   // If all incoming values are sign-/zero-extended,
@@ -5342,31 +5386,29 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
   case PPC::OR8:
   case PPC::ISEL:
   case PPC::PHI: {
-    if (Depth >= MAX_DEPTH)
-      return false;
+    if (BinOpDepth >= MAX_BINOP_DEPTH)
+      return std::pair<bool, bool>(false, false);
 
     // The input registers for PHI are operand 1, 3, ...
     // The input registers for others are operand 1 and 2.
-    unsigned E = 3, D = 1;
-    if (MI.getOpcode() == PPC::PHI) {
-      E = MI.getNumOperands();
-      D = 2;
+    unsigned OperandEnd = 3, OperandStride = 1;
+    if (MI->getOpcode() == PPC::PHI) {
+      OperandEnd = MI->getNumOperands();
+      OperandStride = 2;
     }
 
-    for (unsigned I = 1; I != E; I += D) {
-      if (MI.getOperand(I).isReg()) {
-        Register SrcReg = MI.getOperand(I).getReg();
-        if (!Register::isVirtualRegister(SrcReg))
-          return false;
-        const MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
-        if (SrcMI == nullptr ||
-            !isSignOrZeroExtended(*SrcMI, SignExt, Depth + 1))
-          return false;
-      }
-      else
-        return false;
+    IsSExt = true;
+    IsZExt = true;
+    for (unsigned I = 1; I != OperandEnd; I += OperandStride) {
+      if (!MI->getOperand(I).isReg())
+        return std::pair<bool, bool>(false, false);
+
+      unsigned SrcReg = MI->getOperand(I).getReg();
+      auto SrcExt = isSignOrZeroExtended(SrcReg, BinOpDepth + 1, MRI);
+      IsSExt &= SrcExt.first;
+      IsZExt &= SrcExt.second;
     }
-    return true;
+    return std::pair<bool, bool>(IsSExt, IsZExt);
   }
 
   // If at least one of the incoming values of an AND is zero extended
@@ -5374,35 +5416,21 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
   // are sign-extended then the output is also sign extended.
   case PPC::AND:
   case PPC::AND8: {
-    if (Depth >= MAX_DEPTH)
-       return false;
+    if (BinOpDepth >= MAX_BINOP_DEPTH)
+      return std::pair<bool, bool>(false, false);
 
-    assert(MI.getOperand(1).isReg() && MI.getOperand(2).isReg());
-
-    Register SrcReg1 = MI.getOperand(1).getReg();
-    Register SrcReg2 = MI.getOperand(2).getReg();
-
-    if (!Register::isVirtualRegister(SrcReg1) ||
-        !Register::isVirtualRegister(SrcReg2))
-      return false;
-
-    const MachineInstr *MISrc1 = MRI->getVRegDef(SrcReg1);
-    const MachineInstr *MISrc2 = MRI->getVRegDef(SrcReg2);
-    if (!MISrc1 || !MISrc2)
-        return false;
-
-    if(SignExt)
-        return isSignOrZeroExtended(*MISrc1, SignExt, Depth+1) &&
-               isSignOrZeroExtended(*MISrc2, SignExt, Depth+1);
-    else
-        return isSignOrZeroExtended(*MISrc1, SignExt, Depth+1) ||
-               isSignOrZeroExtended(*MISrc2, SignExt, Depth+1);
+    unsigned SrcReg1 = MI->getOperand(1).getReg();
+    unsigned SrcReg2 = MI->getOperand(2).getReg();
+    auto Src1Ext = isSignOrZeroExtended(SrcReg1, BinOpDepth + 1, MRI);
+    auto Src2Ext = isSignOrZeroExtended(SrcReg2, BinOpDepth + 1, MRI);
+    return std::pair<bool, bool>(Src1Ext.first && Src2Ext.first,
+                                 Src1Ext.second || Src2Ext.second);
   }
 
   default:
     break;
   }
-  return false;
+  return std::pair<bool, bool>(IsSExt, IsZExt);
 }
 
 bool PPCInstrInfo::isBDNZ(unsigned Opcode) const {

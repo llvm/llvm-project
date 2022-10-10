@@ -7,8 +7,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-import six
-
 class ListenToModuleLoadedEvents (TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 

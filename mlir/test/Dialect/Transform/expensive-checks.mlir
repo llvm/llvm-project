@@ -1,8 +1,8 @@
 // RUN: mlir-opt --test-transform-dialect-interpreter='enable-expensive-checks=1' --split-input-file --verify-diagnostics %s
 
-// expected-note @below {{ancestor op}}
+// expected-note @below {{ancestor payload op}}
 func.func @func() {
-  // expected-note @below {{nested op}}
+  // expected-note @below {{nested payload op}}
   return
 }
 
@@ -15,13 +15,14 @@ transform.with_pdl_patterns {
     rewrite %2 with "transform.dialect"
   }
 
-  sequence %arg0 {
+  sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
-    // expected-note @below {{other handle}}
+    // expected-note @below {{handle to invalidated ops}}
     %0 = pdl_match @return in %arg1
     %1 = get_closest_isolated_parent %0
-    // expected-error @below {{invalidated the handle to payload operations nested in the payload operation associated with its operand #0}}
+    // expected-note @below {{invalidated by this transform op that consumes its operand #0}}
     test_consume_operand %1
+    // expected-error @below {{op uses a handle invalidated by a previously executed transform op}}
     test_print_remark_at_operand %0, "remark"
   }
 }
@@ -49,7 +50,7 @@ transform.with_pdl_patterns {
     rewrite %2 with "transform.dialect"
   }
 
-  sequence %arg0 {
+  sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = pdl_match @func in %arg1
     %1 = pdl_match @return in %arg1
@@ -57,5 +58,44 @@ transform.with_pdl_patterns {
     // expected-error @below {{a handle passed as operand #0 and consumed by this operation points to a payload operation more than once}}
     test_consume_operand %2
     test_print_remark_at_operand %0, "remark"
+  }
+}
+
+
+// -----
+
+// expected-note @below {{ancestor payload op}}
+// expected-note @below {{nested payload op}}
+module {
+
+  transform.sequence failures(propagate) {
+  ^bb0(%0: !pdl.operation):
+    %1 = transform.test_copy_payload %0
+    // expected-note @below {{handle to invalidated ops}}
+    %2 = transform.test_copy_payload %0
+    // expected-note @below {{invalidated by this transform op that consumes its operand #0}}
+    transform.test_consume_operand %1
+    // expected-error @below {{op uses a handle invalidated by a previously executed transform op}}
+    transform.test_consume_operand %2
+  }
+}
+
+// -----
+
+// expected-note @below {{ancestor payload op}}
+// expected-note @below {{nested payload op}}
+module {
+
+  transform.sequence failures(propagate) {
+  ^bb0(%0: !pdl.operation):
+    %1 = transform.test_copy_payload %0
+    // expected-note @below {{handle to invalidated ops}}
+    %2 = transform.test_copy_payload %0
+    // Consuming two handles in the same operation is invalid if they point
+    // to overlapping sets of payload IR ops.
+    //
+    // expected-error @below {{op uses a handle invalidated by a previously executed transform op}}
+    // expected-note @below {{invalidated by this transform op that consumes its operand #0 and invalidates handles}}
+    transform.test_consume_operand %1, %2
   }
 }

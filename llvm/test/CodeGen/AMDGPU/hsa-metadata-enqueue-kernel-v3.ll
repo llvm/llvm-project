@@ -47,16 +47,13 @@ define amdgpu_kernel void @test_non_enqueue_kernel_caller(i8 %a) #0
 ; CHECK-NEXT:       - .offset:         24
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         32
+; CHECK-NEXT:       - .offset:         32
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_hostcall_buffer
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         40
+; CHECK-NEXT:       - .offset:         40
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_default_queue
-; CHECK-NEXT:       - .address_space:  global
-; CHECK-NEXT:         .offset:         48
+; CHECK-NEXT:       - .offset:         48
 ; CHECK-NEXT:         .size:           8
 ; CHECK-NEXT:         .value_kind:     hidden_completion_action
 ; CHECK:          .language:       OpenCL C

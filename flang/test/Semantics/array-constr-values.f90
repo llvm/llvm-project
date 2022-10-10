@@ -3,7 +3,7 @@
 ! C7110, C7111, C7112, C7113, C7114, C7115
 
 subroutine arrayconstructorvalues()
-  integer :: intarray(5)
+  integer :: intarray(4)
   integer(KIND=8) :: k8 = 20
 
   TYPE EMPLOYEE

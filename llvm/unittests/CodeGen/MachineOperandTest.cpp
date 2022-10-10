@@ -7,6 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
@@ -15,13 +20,18 @@
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
 
 namespace {
+
+// Include helper functions to ease the manipulation of MachineFunctions.
+#include "MFCommon.inc"
 
 TEST(MachineOperandTest, ChangeToTargetIndexTest) {
   // Creating a MachineOperand to change it to TargetIndex
@@ -46,13 +56,17 @@ TEST(MachineOperandTest, ChangeToTargetIndexTest) {
 }
 
 TEST(MachineOperandTest, PrintRegisterMask) {
-  uint32_t Dummy;
-  MachineOperand MO = MachineOperand::CreateRegMask(&Dummy);
+  LLVMContext Ctx;
+  Module Mod("Module", Ctx);
+  auto MF = createMachineFunction(Ctx, Mod);
+
+  uint32_t *Dummy = MF->allocateRegMask();
+  MachineOperand MO = MachineOperand::CreateRegMask(Dummy);
 
   // Checking some preconditions on the newly created
   // MachineOperand.
   ASSERT_TRUE(MO.isRegMask());
-  ASSERT_TRUE(MO.getRegMask() == &Dummy);
+  ASSERT_TRUE(MO.getRegMask() == Dummy);
 
   // Print a MachineOperand containing a RegMask. Here we check that without a
   // TRI and IntrinsicInfo we still print a less detailed regmask.

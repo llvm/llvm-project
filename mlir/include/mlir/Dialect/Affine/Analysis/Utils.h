@@ -38,11 +38,14 @@ class Value;
 //  TODO: handle 'affine.if' ops.
 void getLoopIVs(Operation &op, SmallVectorImpl<AffineForOp> *loops);
 
-/// Populates 'ops' with IVs of the loops surrounding `op`, along with
-/// `affine.if` operations interleaved between these loops, ordered from the
-/// outermost `affine.for` or `affine.if` operation to the innermost one.
-void getEnclosingAffineForAndIfOps(Operation &op,
-                                   SmallVectorImpl<Operation *> *ops);
+/// Populates 'ops' with affine operations enclosing `op` ordered from outermost
+/// to innermost. affine.for, affine.if, or affine.parallel ops comprise such
+/// surrounding affine ops.
+/// TODO: Change this to return a list of enclosing ops up until the op that
+/// starts an `AffineScope`. In such a case, `ops` is guaranteed by design to
+/// have a successive chain of affine parent ops, and this is primarily what is
+/// needed for most analyses.
+void getEnclosingAffineOps(Operation &op, SmallVectorImpl<Operation *> *ops);
 
 /// Returns the nesting depth of this operation, i.e., the number of loops
 /// surrounding this operation.
@@ -317,7 +320,7 @@ struct MemRefRegion {
                             SmallVectorImpl<int64_t> *lb = nullptr,
                             int64_t *lbFloorDivisor = nullptr) const {
     assert(pos < getRank() && "invalid position");
-    return cst.getConstantBoundOnDimSize(pos, lb);
+    return cst.getConstantBoundOnDimSize64(pos, lb);
   }
 
   /// Returns the size of this MemRefRegion in bytes.

@@ -137,7 +137,7 @@ public:
                        llvm::StringLiteral description, Cat mask)
         : name(name), description(description), flag(MaskType(mask)) {
       static_assert(
-          std::is_same<Log::MaskType, std::underlying_type_t<Cat>>::value, "");
+          std::is_same<Log::MaskType, std::underlying_type_t<Cat>>::value);
     }
   };
 
@@ -157,7 +157,7 @@ public:
         : log_ptr(nullptr), categories(categories),
           default_flags(MaskType(default_flags)) {
       static_assert(
-          std::is_same<Log::MaskType, std::underlying_type_t<Cat>>::value, "");
+          std::is_same<Log::MaskType, std::underlying_type_t<Cat>>::value);
     }
 
     // This function is safe to call at any time. If the channel is disabled
@@ -166,7 +166,7 @@ public:
     // output will be discarded.
     Log *GetLog(MaskType mask) {
       Log *log = log_ptr.load(std::memory_order_relaxed);
-      if (log && log->GetMask().AnySet(mask))
+      if (log && ((log->GetMask() & mask) != 0))
         return log;
       return nullptr;
     }
@@ -243,7 +243,7 @@ public:
 
   const Flags GetOptions() const;
 
-  const Flags GetMask() const;
+  MaskType GetMask() const;
 
   bool GetVerbose() const;
 
@@ -276,9 +276,9 @@ private:
   }
 
   void Enable(const std::shared_ptr<LogHandler> &handler_sp, uint32_t options,
-              uint32_t flags);
+              MaskType flags);
 
-  void Disable(uint32_t flags);
+  void Disable(MaskType flags);
 
   bool Dump(llvm::raw_ostream &stream);
 
@@ -291,8 +291,9 @@ private:
 
   static void ListCategories(llvm::raw_ostream &stream,
                              const ChannelMap::value_type &entry);
-  static uint32_t GetFlags(llvm::raw_ostream &stream, const ChannelMap::value_type &entry,
-                           llvm::ArrayRef<const char *> categories);
+  static Log::MaskType GetFlags(llvm::raw_ostream &stream,
+                                const ChannelMap::value_type &entry,
+                                llvm::ArrayRef<const char *> categories);
 
   Log(const Log &) = delete;
   void operator=(const Log &) = delete;
@@ -306,8 +307,8 @@ template <typename Cat> Log::Channel &LogChannelFor() = delete;
 /// Returns a valid Log object if any of the provided categories are enabled.
 /// Otherwise, returns nullptr.
 template <typename Cat> Log *GetLog(Cat mask) {
-  static_assert(std::is_same<Log::MaskType, std::underlying_type_t<Cat>>::value,
-                "");
+  static_assert(
+      std::is_same<Log::MaskType, std::underlying_type_t<Cat>>::value);
   return LogChannelFor<Cat>().GetLog(Log::MaskType(mask));
 }
 

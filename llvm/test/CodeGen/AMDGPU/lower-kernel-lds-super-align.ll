@@ -12,6 +12,8 @@
 ; SUPER-ALIGN_OFF: @lds.unused = addrspace(3) global i32 undef, align 2
 @lds.unused = addrspace(3) global i32 undef, align 2
 
+@llvm.used = appending global [1 x i8*] [i8* addrspacecast (i32 addrspace(3)* @lds.unused to i8*)], section "llvm.metadata"
+
 ; CHECK-NOT: @lds.1
 @lds.1 = internal unnamed_addr addrspace(3) global [32 x i8] undef, align 1
 

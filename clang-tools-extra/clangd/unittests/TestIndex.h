@@ -39,6 +39,8 @@ Symbol objcSym(llvm::StringRef Name, index::SymbolKind Kind,
                llvm::StringRef USRPrefix);
 // Create an @interface or @implementation.
 Symbol objcClass(llvm::StringRef Name);
+// Create an @interface or @implementation category.
+Symbol objcCategory(llvm::StringRef Name, llvm::StringRef CategoryName);
 // Create an @protocol.
 Symbol objcProtocol(llvm::StringRef Name);
 

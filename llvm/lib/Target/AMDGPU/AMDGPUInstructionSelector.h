@@ -99,7 +99,7 @@ private:
   bool selectG_EXTRACT(MachineInstr &I) const;
   bool selectG_MERGE_VALUES(MachineInstr &I) const;
   bool selectG_UNMERGE_VALUES(MachineInstr &I) const;
-  bool selectG_BUILD_VECTOR_TRUNC(MachineInstr &I) const;
+  bool selectG_BUILD_VECTOR(MachineInstr &I) const;
   bool selectG_PTR_ADD(MachineInstr &I) const;
   bool selectG_IMPLICIT_DEF(MachineInstr &I) const;
   bool selectG_INSERT(MachineInstr &I) const;
@@ -120,6 +120,7 @@ private:
   bool selectDSGWSIntrinsic(MachineInstr &MI, Intrinsic::ID IID) const;
   bool selectDSAppendConsume(MachineInstr &MI, bool IsAppend) const;
   bool selectSBarrier(MachineInstr &MI) const;
+  bool selectDSBvhStackIntrinsic(MachineInstr &MI) const;
 
   bool selectImageIntrinsic(MachineInstr &MI,
                             const AMDGPU::ImageDimIntrinsicInfo *Intr) const;
@@ -138,10 +139,6 @@ private:
   bool selectG_PTRMASK(MachineInstr &I) const;
   bool selectG_EXTRACT_VECTOR_ELT(MachineInstr &I) const;
   bool selectG_INSERT_VECTOR_ELT(MachineInstr &I) const;
-  bool selectG_SHUFFLE_VECTOR(MachineInstr &I) const;
-  bool selectAMDGPU_BUFFER_ATOMIC_FADD(MachineInstr &I) const;
-  bool selectGlobalAtomicFadd(MachineInstr &I, MachineOperand &AddrOp,
-                              MachineOperand &DataOp) const;
   bool selectBufferLoadLds(MachineInstr &MI) const;
   bool selectGlobalLoadLds(MachineInstr &MI) const;
   bool selectBVHIntrinsic(MachineInstr &I) const;
@@ -294,6 +291,7 @@ private:
 
   ComplexRendererFns selectSMRDBufferImm(MachineOperand &Root) const;
   ComplexRendererFns selectSMRDBufferImm32(MachineOperand &Root) const;
+  ComplexRendererFns selectSMRDBufferSgprImm(MachineOperand &Root) const;
 
   void renderTruncImm32(MachineInstrBuilder &MIB, const MachineInstr &MI,
                         int OpIdx = -1) const;

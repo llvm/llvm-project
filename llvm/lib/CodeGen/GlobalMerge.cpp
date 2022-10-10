@@ -62,6 +62,7 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -181,7 +182,7 @@ namespace {
     void collectUsedGlobalVariables(Module &M, StringRef Name);
 
     /// Keep track of the GlobalVariable that must not be merged away
-    SmallPtrSet<const GlobalVariable *, 16> MustKeepGlobalVariables;
+    SmallSetVector<const GlobalVariable *, 16> MustKeepGlobalVariables;
 
   public:
     static char ID;             // Pass identification, replacement for typeid.
@@ -619,9 +620,8 @@ bool GlobalMerge::doInitialization(Module &M) {
   LLVM_DEBUG({
       dbgs() << "Number of GV that must be kept:  " <<
                 MustKeepGlobalVariables.size() << "\n";
-      for (auto KeptGV = MustKeepGlobalVariables.begin();
-           KeptGV != MustKeepGlobalVariables.end(); KeptGV++)
-        dbgs() << "Kept: " << **KeptGV << "\n";
+      for (const GlobalVariable *KeptGV : MustKeepGlobalVariables)
+        dbgs() << "Kept: " << *KeptGV << "\n";
   });
   // Grab all non-const globals.
   for (auto &GV : M.globals()) {

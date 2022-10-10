@@ -37,8 +37,8 @@ protected:
 
   Section &getCommonSection() {
     if (!CommonSection)
-      CommonSection =
-          &G->createSection(CommonSectionName, MemProt::Read | MemProt::Write);
+      CommonSection = &G->createSection(
+          CommonSectionName, orc::MemProt::Read | orc::MemProt::Write);
     return *CommonSection;
   }
 
@@ -310,11 +310,11 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySections() {
     });
 
     // Get the section's memory protection flags.
-    MemProt Prot;
+    orc::MemProt Prot;
     if (Sec.sh_flags & ELF::SHF_EXECINSTR)
-      Prot = MemProt::Read | MemProt::Exec;
+      Prot = orc::MemProt::Read | orc::MemProt::Exec;
     else
-      Prot = MemProt::Read | MemProt::Write;
+      Prot = orc::MemProt::Read | orc::MemProt::Write;
 
     // Look for existing sections first.
     auto *GraphSec = G->findSectionByName(*Name);
@@ -402,26 +402,27 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
 
     // Handle common symbols specially.
     if (Sym.isCommon()) {
-      Symbol &GSym = G->addCommonSymbol(*Name, Scope::Default,
-                                        getCommonSection(), orc::ExecutorAddr(),
-                                        Sym.st_size, Sym.getValue(), false);
+      Symbol &GSym = G->addDefinedSymbol(
+          G->createZeroFillBlock(getCommonSection(), Sym.st_size,
+                                 orc::ExecutorAddr(), Sym.getValue(), 0),
+          0, *Name, Sym.st_size, Linkage::Strong, Scope::Default, false, false);
       setGraphSymbol(SymIndex, GSym);
       continue;
     }
-
-    // Map Visibility and Binding to Scope and Linkage:
-    Linkage L;
-    Scope S;
-
-    if (auto LSOrErr = getSymbolLinkageAndScope(Sym, *Name))
-      std::tie(L, S) = *LSOrErr;
-    else
-      return LSOrErr.takeError();
 
     if (Sym.isDefined() &&
         (Sym.getType() == ELF::STT_NOTYPE || Sym.getType() == ELF::STT_FUNC ||
          Sym.getType() == ELF::STT_OBJECT ||
          Sym.getType() == ELF::STT_SECTION || Sym.getType() == ELF::STT_TLS)) {
+
+      // Map Visibility and Binding to Scope and Linkage:
+      Linkage L;
+      Scope S;
+      if (auto LSOrErr = getSymbolLinkageAndScope(Sym, *Name))
+        std::tie(L, S) = *LSOrErr;
+      else
+        return LSOrErr.takeError();
+
       // Handle extended tables.
       unsigned Shndx = Sym.st_shndx;
       if (Shndx == ELF::SHN_XINDEX) {
@@ -460,7 +461,18 @@ template <typename ELFT> Error ELFLinkGraphBuilder<ELFT>::graphifySymbols() {
                << ": Creating external graph symbol for ELF symbol \"" << *Name
                << "\"\n";
       });
-      auto &GSym = G->addExternalSymbol(*Name, Sym.st_size, L);
+
+      if (Sym.getBinding() != ELF::STB_GLOBAL &&
+          Sym.getBinding() != ELF::STB_WEAK)
+        return make_error<StringError>(
+            "Invalid symbol binding " +
+                Twine(static_cast<int>(Sym.getBinding())) +
+                " for external symbol " + *Name,
+            inconvertibleErrorCode());
+
+      // If L is Linkage::Weak that means this is a weakly referenced symbol.
+      auto &GSym = G->addExternalSymbol(*Name, Sym.st_size,
+                                        Sym.getBinding() == ELF::STB_WEAK);
       setGraphSymbol(SymIndex, GSym);
     } else {
       LLVM_DEBUG({

@@ -8,7 +8,7 @@ define <4 x i32> @vpgather_v4i32(<4 x i32*> %ptrs, <4 x i1> %m, i32 zeroext %evl
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <4 x i32> [[DOTSPLATINSERT]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i32> <i32 0, i32 1, i32 2, i32 3>, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i1> [[TMP1]], [[M:%.*]]
-; CHECK-NEXT:    [[V1:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[PTRS:%.*]], i32 4, <4 x i1> [[TMP2]], <4 x i32> undef)
+; CHECK-NEXT:    [[V1:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> [[PTRS:%.*]], i32 4, <4 x i1> [[TMP2]], <4 x i32> poison)
 ; CHECK-NEXT:    ret <4 x i32> [[V1]]
 ;
   %v = call <4 x i32> @llvm.vp.gather.v4i32.v4p0i32(<4 x i32*> %ptrs, <4 x i1> %m, i32 %evl)
@@ -21,7 +21,7 @@ define <2 x i64> @vpgather_v2i64(<2 x i64*> %ptrs, <2 x i1> %m, i32 zeroext %evl
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x i32> [[DOTSPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> <i32 0, i32 1>, [[DOTSPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <2 x i1> [[TMP1]], [[M:%.*]]
-; CHECK-NEXT:    [[V1:%.*]] = call <2 x i64> @llvm.masked.gather.v2i64.v2p0i64(<2 x i64*> [[PTRS:%.*]], i32 8, <2 x i1> [[TMP2]], <2 x i64> undef)
+; CHECK-NEXT:    [[V1:%.*]] = call <2 x i64> @llvm.masked.gather.v2i64.v2p0i64(<2 x i64*> [[PTRS:%.*]], i32 8, <2 x i1> [[TMP2]], <2 x i64> poison)
 ; CHECK-NEXT:    ret <2 x i64> [[V1]]
 ;
   %v = call <2 x i64> @llvm.vp.gather.v2i64.v2p0i64(<2 x i64*> %ptrs, <2 x i1> %m, i32 %evl)
@@ -61,7 +61,7 @@ define <vscale x 2 x i32> @vpgather_nxv2i32(<vscale x 2 x i32*> %ptrs, <vscale x
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <vscale x 2 x i1> [[TMP1]], [[M:%.*]]
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[SCALABLE_SIZE:%.*]] = mul nuw i32 [[VSCALE]], 2
-; CHECK-NEXT:    [[V1:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0i32(<vscale x 2 x i32*> [[PTRS:%.*]], i32 4, <vscale x 2 x i1> [[TMP2]], <vscale x 2 x i32> undef)
+; CHECK-NEXT:    [[V1:%.*]] = call <vscale x 2 x i32> @llvm.masked.gather.nxv2i32.nxv2p0i32(<vscale x 2 x i32*> [[PTRS:%.*]], i32 4, <vscale x 2 x i1> [[TMP2]], <vscale x 2 x i32> poison)
 ; CHECK-NEXT:    ret <vscale x 2 x i32> [[V1]]
 ;
   %v = call <vscale x 2 x i32> @llvm.vp.gather.nxv2i32.nxv2p0i32(<vscale x 2 x i32*> %ptrs, <vscale x 2 x i1> %m, i32 %evl)
@@ -74,7 +74,7 @@ define <vscale x 1 x i64> @vpgather_nxv1i64(<vscale x 1 x i64*> %ptrs, <vscale x
 ; CHECK-NEXT:    [[TMP2:%.*]] = and <vscale x 1 x i1> [[TMP1]], [[M:%.*]]
 ; CHECK-NEXT:    [[VSCALE:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[SCALABLE_SIZE:%.*]] = mul nuw i32 [[VSCALE]], 1
-; CHECK-NEXT:    [[V1:%.*]] = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0i64(<vscale x 1 x i64*> [[PTRS:%.*]], i32 8, <vscale x 1 x i1> [[TMP2]], <vscale x 1 x i64> undef)
+; CHECK-NEXT:    [[V1:%.*]] = call <vscale x 1 x i64> @llvm.masked.gather.nxv1i64.nxv1p0i64(<vscale x 1 x i64*> [[PTRS:%.*]], i32 8, <vscale x 1 x i1> [[TMP2]], <vscale x 1 x i64> poison)
 ; CHECK-NEXT:    ret <vscale x 1 x i64> [[V1]]
 ;
   %v = call <vscale x 1 x i64> @llvm.vp.gather.nxv1i64.nxv1p0i64(<vscale x 1 x i64*> %ptrs, <vscale x 1 x i1> %m, i32 %evl)

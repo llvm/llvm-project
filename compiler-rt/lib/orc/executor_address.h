@@ -24,39 +24,76 @@
 
 namespace __orc_rt {
 
-/// Represents the difference between two addresses in the executor process.
-class ExecutorAddrDiff {
-public:
-  ExecutorAddrDiff() = default;
-  explicit ExecutorAddrDiff(uint64_t Value) : Value(Value) {}
-
-  uint64_t getValue() const { return Value; }
-
-private:
-  int64_t Value = 0;
-};
+using ExecutorAddrDiff = uint64_t;
 
 /// Represents an address in the executor process.
 class ExecutorAddr {
 public:
+  /// A wrap/unwrap function that leaves pointers unmodified.
+  template <typename T> using rawPtr = __orc_rt::identity<T *>;
+
+  /// Default wrap function to use on this host.
+  template <typename T> using defaultWrap = rawPtr<T>;
+
+  /// Default unwrap function to use on this host.
+  template <typename T> using defaultUnwrap = rawPtr<T>;
+
+  /// Merges a tag into the raw address value:
+  ///   P' = P | (TagValue << TagOffset).
+  class Tag {
+  public:
+    constexpr Tag(uintptr_t TagValue, uintptr_t TagOffset)
+        : TagMask(TagValue << TagOffset) {}
+
+    template <typename T> constexpr T *operator()(T *P) {
+      return reinterpret_cast<T *>(reinterpret_cast<uintptr_t>(P) | TagMask);
+    }
+
+  private:
+    uintptr_t TagMask;
+  };
+
+  /// Strips a tag of the given length from the given offset within the pointer:
+  /// P' = P & ~(((1 << TagLen) -1) << TagOffset)
+  class Untag {
+  public:
+    constexpr Untag(uintptr_t TagLen, uintptr_t TagOffset)
+        : UntagMask(~(((uintptr_t(1) << TagLen) - 1) << TagOffset)) {}
+
+    template <typename T> constexpr T *operator()(T *P) {
+      return reinterpret_cast<T *>(reinterpret_cast<uintptr_t>(P) & UntagMask);
+    }
+
+  private:
+    uintptr_t UntagMask;
+  };
+
   ExecutorAddr() = default;
   explicit ExecutorAddr(uint64_t Addr) : Addr(Addr) {}
 
   /// Create an ExecutorAddr from the given pointer.
-  /// Warning: This should only be used when JITing in-process.
-  template <typename T> static ExecutorAddr fromPtr(T *Value) {
+  template <typename T, typename UnwrapFn = defaultUnwrap<T>>
+  static ExecutorAddr fromPtr(T *Ptr, UnwrapFn &&Unwrap = UnwrapFn()) {
     return ExecutorAddr(
-        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Value)));
+        static_cast<uint64_t>(reinterpret_cast<uintptr_t>(Unwrap(Ptr))));
   }
 
   /// Cast this ExecutorAddr to a pointer of the given type.
-  /// Warning: This should only be esude when JITing in-process.
-  template <typename T> T toPtr() const {
-    static_assert(std::is_pointer<T>::value, "T must be a pointer type");
+  template <typename T, typename WrapFn = defaultWrap<std::remove_pointer_t<T>>>
+  std::enable_if_t<std::is_pointer<T>::value, T>
+  toPtr(WrapFn &&Wrap = WrapFn()) const {
     uintptr_t IntPtr = static_cast<uintptr_t>(Addr);
-    assert(IntPtr == Addr &&
-           "JITTargetAddress value out of range for uintptr_t");
-    return reinterpret_cast<T>(IntPtr);
+    assert(IntPtr == Addr && "ExecutorAddr value out of range for uintptr_t");
+    return Wrap(reinterpret_cast<T>(IntPtr));
+  }
+
+  /// Cast this ExecutorAddr to a pointer of the given function type.
+  template <typename T, typename WrapFn = defaultWrap<T>>
+  std::enable_if_t<std::is_function<T>::value, T *>
+  toPtr(WrapFn &&Wrap = WrapFn()) const {
+    uintptr_t IntPtr = static_cast<uintptr_t>(Addr);
+    assert(IntPtr == Addr && "ExecutorAddr value out of range for uintptr_t");
+    return Wrap(reinterpret_cast<T *>(IntPtr));
   }
 
   uint64_t getValue() const { return Addr; }
@@ -101,12 +138,12 @@ public:
   ExecutorAddr operator--(int) { return ExecutorAddr(Addr++); }
 
   ExecutorAddr &operator+=(const ExecutorAddrDiff Delta) {
-    Addr += Delta.getValue();
+    Addr += Delta;
     return *this;
   }
 
   ExecutorAddr &operator-=(const ExecutorAddrDiff Delta) {
-    Addr -= Delta.getValue();
+    Addr -= Delta;
     return *this;
   }
 
@@ -123,13 +160,13 @@ inline ExecutorAddrDiff operator-(const ExecutorAddr &LHS,
 /// Adding an offset and an address yields an address.
 inline ExecutorAddr operator+(const ExecutorAddr &LHS,
                               const ExecutorAddrDiff &RHS) {
-  return ExecutorAddr(LHS.getValue() + RHS.getValue());
+  return ExecutorAddr(LHS.getValue() + RHS);
 }
 
 /// Adding an address and an offset yields an address.
 inline ExecutorAddr operator+(const ExecutorAddrDiff &LHS,
                               const ExecutorAddr &RHS) {
-  return ExecutorAddr(LHS.getValue() + RHS.getValue());
+  return ExecutorAddr(LHS + RHS.getValue());
 }
 
 /// Represents an address range in the exceutor process.
@@ -157,9 +194,9 @@ struct ExecutorAddrRange {
   }
 
   template <typename T> span<T> toSpan() const {
-    assert(size().getValue() % sizeof(T) == 0 &&
+    assert(size() % sizeof(T) == 0 &&
            "AddressRange is not a multiple of sizeof(T)");
-    return span<T>(Start.toPtr<T *>(), size().getValue() / sizeof(T));
+    return span<T>(Start.toPtr<T *>(), size() / sizeof(T));
   }
 
   ExecutorAddr Start;

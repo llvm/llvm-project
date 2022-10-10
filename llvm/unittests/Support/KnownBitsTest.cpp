@@ -508,4 +508,29 @@ TEST(KnownBitsTest, CommonBitsSet) {
   });
 }
 
+TEST(KnownBitsTest, ConcatBits) {
+  unsigned Bits = 4;
+  for (unsigned LoBits = 1; LoBits < Bits; ++LoBits) {
+    unsigned HiBits = Bits - LoBits;
+    ForeachKnownBits(LoBits, [&](const KnownBits &KnownLo) {
+      ForeachKnownBits(HiBits, [&](const KnownBits &KnownHi) {
+        KnownBits KnownAll = KnownHi.concat(KnownLo);
+
+        EXPECT_EQ(KnownLo.countMinPopulation() + KnownHi.countMinPopulation(),
+                  KnownAll.countMinPopulation());
+        EXPECT_EQ(KnownLo.countMaxPopulation() + KnownHi.countMaxPopulation(),
+                  KnownAll.countMaxPopulation());
+
+        KnownBits ExtractLo = KnownAll.extractBits(LoBits, 0);
+        KnownBits ExtractHi = KnownAll.extractBits(HiBits, LoBits);
+
+        EXPECT_EQ(KnownLo.One.getZExtValue(), ExtractLo.One.getZExtValue());
+        EXPECT_EQ(KnownHi.One.getZExtValue(), ExtractHi.One.getZExtValue());
+        EXPECT_EQ(KnownLo.Zero.getZExtValue(), ExtractLo.Zero.getZExtValue());
+        EXPECT_EQ(KnownHi.Zero.getZExtValue(), ExtractHi.Zero.getZExtValue());
+      });
+    });
+  }
+}
+
 } // end anonymous namespace

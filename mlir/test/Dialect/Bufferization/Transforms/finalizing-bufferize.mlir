@@ -29,51 +29,45 @@ func.func @unable_to_convert_lone_tensor_load(%arg0: memref<f32>) {
 
 // -----
 
-//       CHECK: #[[$map1:.*]] = affine_map<(d0)[s0] -> (d0 + s0)>
 // CHECK-LABEL: func @dyn_layout_to_no_layout_cast(
-//  CHECK-SAME:     %[[arg:.*]]: memref<?xf32, #[[$map1]]>)
+//  CHECK-SAME:     %[[arg:.*]]: memref<?xf32, strided<[1], offset: ?>>)
 //       CHECK:   %[[c0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[dim:.*]] = memref.dim %[[arg]], %[[c0]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%[[dim]]) : memref<?xf32>
 //       CHECK:   memref.copy %[[arg]], %[[alloc]]
 //       CHECK:   return %[[alloc]]
-#map1 = affine_map<(d0)[s0] -> (d0 + s0)>
-func.func @dyn_layout_to_no_layout_cast(%m: memref<?xf32, #map1>) -> memref<?xf32> {
-  %0 = bufferization.to_tensor %m : memref<?xf32, #map1>
+func.func @dyn_layout_to_no_layout_cast(%m: memref<?xf32, strided<[1], offset: ?>>) -> memref<?xf32> {
+  %0 = bufferization.to_tensor %m : memref<?xf32, strided<[1], offset: ?>>
   %1 = bufferization.to_memref %0 : memref<?xf32>
   return %1 : memref<?xf32>
 }
 
 // -----
 
-//       CHECK: #[[$map2:.*]] = affine_map<(d0)[s0] -> (d0 * 100 + s0)>
 // CHECK-LABEL: func @fancy_layout_to_no_layout_cast(
-//  CHECK-SAME:     %[[arg:.*]]: memref<?xf32, #[[$map2]]>)
+//  CHECK-SAME:     %[[arg:.*]]: memref<?xf32, strided<[100], offset: ?>>)
 //       CHECK:   %[[c0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[dim:.*]] = memref.dim %[[arg]], %[[c0]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%[[dim]]) : memref<?xf32>
 //       CHECK:   memref.copy %[[arg]], %[[alloc]]
 //       CHECK:   return %[[alloc]]
-#map2 = affine_map<(d0)[s0] -> (d0 * 100 + s0)>
-func.func @fancy_layout_to_no_layout_cast(%m: memref<?xf32, #map2>) -> memref<?xf32> {
-  %0 = bufferization.to_tensor %m : memref<?xf32, #map2>
+func.func @fancy_layout_to_no_layout_cast(%m: memref<?xf32, strided<[100], offset: ?>>) -> memref<?xf32> {
+  %0 = bufferization.to_tensor %m : memref<?xf32, strided<[100], offset: ?>>
   %1 = bufferization.to_memref %0 : memref<?xf32>
   return %1 : memref<?xf32>
 }
 
 // -----
 
-//       CHECK: #[[$map3:.*]] = affine_map<(d0)[s0] -> (d0 + 25)>
 // CHECK-LABEL: func @static_layout_to_no_layout_cast(
-//  CHECK-SAME:     %[[arg:.*]]: memref<?xf32, #[[$map3]]>)
+//  CHECK-SAME:     %[[arg:.*]]: memref<?xf32, strided<[1], offset: 25>>)
 //       CHECK:   %[[c0:.*]] = arith.constant 0 : index
 //       CHECK:   %[[dim:.*]] = memref.dim %[[arg]], %[[c0]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc(%[[dim]]) : memref<?xf32>
 //       CHECK:   memref.copy %[[arg]], %[[alloc]]
 //       CHECK:   return %[[alloc]]
-#map3 = affine_map<(d0)[s0] -> (d0 + 25)>
-func.func @static_layout_to_no_layout_cast(%m: memref<?xf32, #map3>) -> memref<?xf32> {
-  %0 = bufferization.to_tensor %m : memref<?xf32, #map3>
+func.func @static_layout_to_no_layout_cast(%m: memref<?xf32, strided<[1], offset: 25>>) -> memref<?xf32> {
+  %0 = bufferization.to_tensor %m : memref<?xf32, strided<[1], offset: 25>>
   %1 = bufferization.to_memref %0 : memref<?xf32>
   return %1 : memref<?xf32>
 }
@@ -82,13 +76,12 @@ func.func @static_layout_to_no_layout_cast(%m: memref<?xf32, #map3>) -> memref<?
 
 // TODO: to_memref with layout maps not supported yet. This should fold to a
 // memref.cast.
-#map4 = affine_map<(d0)[s0] -> (d0 + s0)>
-func.func @no_layout_to_dyn_layout_cast(%m: memref<?xf32>) -> memref<?xf32, #map4> {
+func.func @no_layout_to_dyn_layout_cast(%m: memref<?xf32>) -> memref<?xf32, strided<[1], offset: ?>> {
   %0 = bufferization.to_tensor %m : memref<?xf32>
   // expected-error @+1 {{failed to materialize conversion for result #0 of operation 'bufferization.to_memref' that remained live after conversion}}
-  %1 = bufferization.to_memref %0 : memref<?xf32, #map4>
+  %1 = bufferization.to_memref %0 : memref<?xf32, strided<[1], offset: ?>>
   // expected-note @+1 {{see existing live user here}}
-  return %1 : memref<?xf32, #map4>
+  return %1 : memref<?xf32, strided<[1], offset: ?>>
 }
 
 // -----

@@ -113,9 +113,7 @@ private:
 
   bool isChecked() const { return ErrPtr & 0x1; }
 
-  void setChecked(bool Checked) {
-    ErrPtr = (reinterpret_cast<uintptr_t>(ErrPtr) & ~uintptr_t(1)) | Checked;
-  }
+  void setChecked(bool Checked) { ErrPtr = (ErrPtr & ~uintptr_t(1)) | Checked; }
 
   template <typename ErrT = ErrorInfoBase> std::unique_ptr<ErrT> takePayload() {
     static_assert(std::is_base_of<ErrorInfoBase, ErrT>::value,

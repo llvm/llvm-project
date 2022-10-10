@@ -6,7 +6,7 @@
 define i32 @mul_add_imm(i32 %a, i32 %b) {
 ; CHECK-LABEL: mul_add_imm:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    orr w8, wzr, #0x4
+; CHECK-NEXT:    mov w8, #4
 ; CHECK-NEXT:    madd w0, w0, w1, w8
 ; CHECK-NEXT:    ret
   %1 = mul i32 %a, %b
@@ -39,7 +39,7 @@ define void @mul_add_imm2() {
 ; CHECK-FAST-LABEL: mul_add_imm2:
 ; CHECK-FAST:       ; %bb.0: ; %entry
 ; CHECK-FAST-NEXT:    mov x8, #-3
-; CHECK-FAST-NEXT:    orr x9, xzr, #0xfffffffffffffffd
+; CHECK-FAST-NEXT:    mov x9, #-3
 ; CHECK-FAST-NEXT:    madd x8, x8, x8, x9
 ; CHECK-FAST-NEXT:    mov x9, #45968
 ; CHECK-FAST-NEXT:    movk x9, #48484, lsl #16

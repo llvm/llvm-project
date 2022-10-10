@@ -422,7 +422,7 @@ public:
 
     %feature("autodoc", "
     Allocates a block of memory within the process, with size and
-    access permissions specified in the arguments. The permisssions
+    access permissions specified in the arguments. The permissions
     argument is an or-combination of zero or more of
     lldb.ePermissionsWritable, lldb.ePermissionsReadable, and
     lldb.ePermissionsExecutable. Returns the address

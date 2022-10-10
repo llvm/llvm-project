@@ -87,6 +87,9 @@ public:
   /// Return the current Hit Count.
   uint32_t GetHitCount() const { return m_hit_counter.GetValue(); }
 
+  /// Resets the current Hit Count.
+  void ResetHitCount() { m_hit_counter.Reset(); }
+
   /// Return the current Ignore Count.
   ///
   /// \return

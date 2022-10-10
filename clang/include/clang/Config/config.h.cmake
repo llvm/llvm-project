@@ -53,8 +53,8 @@
 /* Default architecture for SystemZ. */
 #define CLANG_SYSTEMZ_DEFAULT_ARCH "${CLANG_SYSTEMZ_DEFAULT_ARCH}"
 
-/* Multilib suffix for libdir. */
-#define CLANG_LIBDIR_SUFFIX "${CLANG_LIBDIR_SUFFIX}"
+/* Multilib basename for libdir. */
+#define CLANG_INSTALL_LIBDIR_BASENAME "${CLANG_INSTALL_LIBDIR_BASENAME}"
 
 /* Relative directory for resource files */
 #define CLANG_RESOURCE_DIR "${CLANG_RESOURCE_DIR}"
@@ -100,8 +100,5 @@
 
 /* Spawn a new process clang.exe for the CC1 tool invocation, when necessary */
 #cmakedefine01 CLANG_SPAWN_CC1
-
-/* Whether to enable opaque pointers by default */
-#cmakedefine01 CLANG_ENABLE_OPAQUE_POINTERS_INTERNAL
 
 #endif

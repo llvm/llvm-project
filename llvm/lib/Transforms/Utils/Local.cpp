@@ -1090,17 +1090,77 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     }
   }
 
-  // We cannot fold the block if it's a branch to an already present callbr
-  // successor because that creates duplicate successors.
-  for (BasicBlock *PredBB : predecessors(BB)) {
-    if (auto *CBI = dyn_cast<CallBrInst>(PredBB->getTerminator())) {
-      if (Succ == CBI->getDefaultDest())
-        return false;
-      for (unsigned i = 0, e = CBI->getNumIndirectDests(); i != e; ++i)
-        if (Succ == CBI->getIndirectDest(i))
-          return false;
-    }
-  }
+  // 'BB' and 'BB->Pred' are loop latches, bail out to presrve inner loop
+  // metadata.
+  //
+  // FIXME: This is a stop-gap solution to preserve inner-loop metadata given
+  // current status (that loop metadata is implemented as metadata attached to
+  // the branch instruction in the loop latch block). To quote from review
+  // comments, "the current representation of loop metadata (using a loop latch
+  // terminator attachment) is known to be fundamentally broken. Loop latches
+  // are not uniquely associated with loops (both in that a latch can be part of
+  // multiple loops and a loop may have multiple latches). Loop headers are. The
+  // solution to this problem is also known: Add support for basic block
+  // metadata, and attach loop metadata to the loop header."
+  //
+  // Why bail out:
+  // In this case, we expect 'BB' is the latch for outer-loop and 'BB->Pred' is
+  // the latch for inner-loop (see reason below), so bail out to prerserve
+  // inner-loop metadata rather than eliminating 'BB' and attaching its metadata
+  // to this inner-loop.
+  // - The reason we believe 'BB' and 'BB->Pred' have different inner-most
+  // loops: assuming 'BB' and 'BB->Pred' are from the same inner-most loop L,
+  // then 'BB' is the header and latch of 'L' and thereby 'L' must consist of
+  // one self-looping basic block, which is contradictory with the assumption.
+  //
+  // To illustrate how inner-loop metadata is dropped:
+  //
+  // CFG Before
+  //
+  // BB is while.cond.exit, attached with loop metdata md2.
+  // BB->Pred is for.body, attached with loop metadata md1.
+  //
+  //      entry
+  //        |
+  //        v
+  // ---> while.cond   ------------->  while.end
+  // |       |
+  // |       v
+  // |   while.body
+  // |       |
+  // |       v
+  // |    for.body <---- (md1)
+  // |       |  |______|
+  // |       v
+  // |    while.cond.exit (md2)
+  // |       |
+  // |_______|
+  //
+  // CFG After
+  //
+  // while.cond1 is the merge of while.cond.exit and while.cond above.
+  // for.body is attached with md2, and md1 is dropped.
+  // If LoopSimplify runs later (as a part of loop pass), it could create
+  // dedicated exits for inner-loop (essentially adding `while.cond.exit`
+  // back), but won't it won't see 'md1' nor restore it for the inner-loop.
+  //
+  //       entry
+  //         |
+  //         v
+  // ---> while.cond1  ------------->  while.end
+  // |       |
+  // |       v
+  // |   while.body
+  // |       |
+  // |       v
+  // |    for.body <---- (md2)
+  // |_______|  |______|
+  if (Instruction *TI = BB->getTerminator())
+    if (TI->hasMetadata(LLVMContext::MD_loop))
+      for (BasicBlock *Pred : predecessors(BB))
+        if (Instruction *PredTI = Pred->getTerminator())
+          if (PredTI->hasMetadata(LLVMContext::MD_loop))
+            return false;
 
   LLVM_DEBUG(dbgs() << "Killing Trivial BB: \n" << *BB);
 
@@ -1587,7 +1647,7 @@ bool llvm::LowerDbgDeclare(Function &F) {
     WorkList.push_back(AI);
     while (!WorkList.empty()) {
       const Value *V = WorkList.pop_back_val();
-      for (auto &AIUse : V->uses()) {
+      for (const auto &AIUse : V->uses()) {
         User *U = AIUse.getUser();
         if (StoreInst *SI = dyn_cast<StoreInst>(U)) {
           if (AIUse.getOperandNo() == 1)
@@ -1653,12 +1713,12 @@ void llvm::insertDebugValuesForPHIs(BasicBlock *BB,
   // propagate the info through the new PHI. If we use more than one new PHI in
   // a single destination BB with the same old dbg.value, merge the updates so
   // that we get a single new dbg.value with all the new PHIs.
-  for (auto PHI : InsertedPHIs) {
+  for (auto *PHI : InsertedPHIs) {
     BasicBlock *Parent = PHI->getParent();
     // Avoid inserting an intrinsic into an EH block.
     if (Parent->getFirstNonPHI()->isEHPad())
       continue;
-    for (auto VI : PHI->operand_values()) {
+    for (auto *VI : PHI->operand_values()) {
       auto V = DbgValueMap.find(VI);
       if (V != DbgValueMap.end()) {
         auto *DbgII = cast<DbgVariableIntrinsic>(V->second);
@@ -1735,8 +1795,8 @@ void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
           replaceOneDbgValueForAlloca(DVI, NewAllocaAddress, Builder, Offset);
 }
 
-/// Where possible to salvage debug information for \p I do so
-/// and return True. If not possible mark undef and return False.
+/// Where possible to salvage debug information for \p I do so.
+/// If not possible mark undef.
 void llvm::salvageDebugInfo(Instruction &I) {
   SmallVector<DbgVariableIntrinsic *, 1> DbgUsers;
   findDbgUsers(DbgUsers, &I);

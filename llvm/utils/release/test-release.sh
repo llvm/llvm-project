@@ -35,6 +35,7 @@ do_libcxxabi="yes"
 do_libunwind="yes"
 do_test_suite="yes"
 do_openmp="yes"
+do_bolt="no"
 do_lld="yes"
 do_lldb="yes"
 do_polly="yes"
@@ -163,6 +164,12 @@ while [ $# -gt 0 ]; do
         -no-openmp )
             do_openmp="no"
             ;;
+        -bolt )
+            do_bolt="yes"
+            ;;
+        -no-bolt )
+            do_bolt="no"
+            ;;
         -no-lld )
             do_lld="no"
             ;;
@@ -264,6 +271,9 @@ if [ $do_libs = "yes" ]; then
 fi
 if [ $do_openmp = "yes" ]; then
   projects="$projects openmp"
+fi
+if [ $do_bolt = "yes" ]; then
+  projects="$projects bolt"
 fi
 if [ $do_lld = "yes" ]; then
   projects="$projects lld"

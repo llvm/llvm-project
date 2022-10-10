@@ -51,7 +51,7 @@ int main(int argc, char **argv) {
 
 TEST(CommandLineInitTest, GetPresetOptions) {
   StringMap<cl::Option *> &Map =
-      cl::getRegisteredOptions(*cl::TopLevelSubCommand);
+      cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
 
   for (auto *Str :
        {"help", "help-hidden", "help-list", "help-list-hidden", "version"})

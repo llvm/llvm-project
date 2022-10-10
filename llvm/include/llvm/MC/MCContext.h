@@ -190,7 +190,8 @@ private:
   SmallString<128> CompilationDir;
 
   /// Prefix replacement map for source file information.
-  std::map<const std::string, const std::string> DebugPrefixMap;
+  std::map<std::string, const std::string, std::greater<std::string>>
+      DebugPrefixMap;
 
   /// The main file name if passed in explicitly.
   std::string MainFileName;
@@ -697,6 +698,9 @@ public:
 
   /// Add an entry to the debug prefix map.
   void addDebugPrefixMapEntry(const std::string &From, const std::string &To);
+
+  /// Remap one path in-place as per the debug prefix map.
+  void remapDebugPath(SmallVectorImpl<char> &Path);
 
   // Remaps all debug directory paths in-place as per the debug prefix map.
   void RemapDebugPaths();

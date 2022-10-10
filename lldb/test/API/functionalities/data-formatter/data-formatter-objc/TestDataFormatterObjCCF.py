@@ -27,6 +27,8 @@ class ObjCDataFormatterCF(ObjCDataFormatterTestCase):
             STOPPED_DUE_TO_BREAKPOINT,
             substrs=['stopped', 'stop reason = breakpoint'])
 
+        self.runCmd('settings set target.prefer-dynamic-value no-dynamic-values')
+
         # check formatters for common Objective-C types
         expect_strings = [
             '(CFGregorianUnits) cf_greg_units = 1 years, 3 months, 5 days, 12 hours, 5 minutes 7 seconds',

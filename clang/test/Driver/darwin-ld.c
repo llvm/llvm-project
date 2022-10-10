@@ -67,6 +67,10 @@
 // LINK_IOSSIM_3_0-NOT: -lbundle1.o
 // LINK_IOSSIM_3_0: -lSystem
 
+// RUN: %clang -target arm64-apple-darwin -fuse-ld= -mlinker-version=700 -### -arch arm64 -mios-simulator-version-min=15.0 %t.o 2>&1 | FileCheck -check-prefix=LINK_IOSSIM_ARM64 %s
+
+// LINK_IOSSIM_ARM64: "-platform_version" "ios-simulator" "15.0.0" "15.0.0"
+
 // RUN: %clang -target i386-apple-darwin9 -### -fpie %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_EXPLICIT_PIE %s < %t.log
 //

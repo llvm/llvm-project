@@ -11,7 +11,9 @@
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
 #include "llvm/Support/WindowsError.h"
 
-#if defined(LLVM_ON_UNIX)
+#include <algorithm>
+
+#if defined(LLVM_ON_UNIX) && !defined(__ANDROID__)
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -60,7 +62,9 @@ char *InProcessMemoryMapper::prepare(ExecutorAddr Addr, size_t ContentSize) {
 void InProcessMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
                                        OnInitializedFunction OnInitialized) {
   ExecutorAddr MinAddr(~0ULL);
+  ExecutorAddr MaxAddr(0);
 
+  // FIXME: Release finalize lifetime segments.
   for (auto &Segment : AI.Segments) {
     auto Base = AI.MappingBase + Segment.Offset;
     auto Size = Segment.ContentSize + Segment.ZeroFillSize;
@@ -68,14 +72,18 @@ void InProcessMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
     if (Base < MinAddr)
       MinAddr = Base;
 
+    if (Base + Size > MaxAddr)
+      MaxAddr = Base + Size;
+
     std::memset((Base + Segment.ContentSize).toPtr<void *>(), 0,
                 Segment.ZeroFillSize);
 
-    if (auto EC = sys::Memory::protectMappedMemory({Base.toPtr<void *>(), Size},
-                                                   Segment.Prot)) {
+    if (auto EC = sys::Memory::protectMappedMemory(
+            {Base.toPtr<void *>(), Size},
+            toSysMemoryProtectionFlags(Segment.AG.getMemProt()))) {
       return OnInitialized(errorCodeToError(EC));
     }
-    if (Segment.Prot & sys::Memory::MF_EXEC)
+    if ((Segment.AG.getMemProt() & MemProt::Exec) == MemProt::Exec)
       sys::Memory::InvalidateInstructionCache(Base.toPtr<void *>(), Size);
   }
 
@@ -85,6 +93,9 @@ void InProcessMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
 
   {
     std::lock_guard<std::mutex> Lock(Mutex);
+
+    // This is the maximum range whose permission have been possibly modified
+    Allocations[MinAddr].Size = MaxAddr - MinAddr;
     Allocations[MinAddr].DeinitializationActions =
         std::move(*DeinitializeActions);
     Reservations[AI.MappingBase.toPtr<void *>()].Allocations.push_back(MinAddr);
@@ -101,11 +112,19 @@ void InProcessMemoryMapper::deinitialize(
   {
     std::lock_guard<std::mutex> Lock(Mutex);
 
-    for (auto Base : Bases) {
+    for (auto Base : llvm::reverse(Bases)) {
 
       if (Error Err = shared::runDeallocActions(
               Allocations[Base].DeinitializationActions)) {
         AllErr = joinErrors(std::move(AllErr), std::move(Err));
+      }
+
+      // Reset protections to read/write so the area can be reused
+      if (auto EC = sys::Memory::protectMappedMemory(
+              {Base.toPtr<void *>(), Allocations[Base].Size},
+              sys::Memory::ProtectionFlags::MF_READ |
+                  sys::Memory::ProtectionFlags::MF_WRITE)) {
+        AllErr = joinErrors(std::move(AllErr), errorCodeToError(EC));
       }
 
       Allocations.erase(Base);
@@ -173,20 +192,30 @@ InProcessMemoryMapper::~InProcessMemoryMapper() {
 
 SharedMemoryMapper::SharedMemoryMapper(ExecutorProcessControl &EPC,
                                        SymbolAddrs SAs, size_t PageSize)
-    : EPC(EPC), SAs(SAs), PageSize(PageSize) {}
+    : EPC(EPC), SAs(SAs), PageSize(PageSize) {
+#if (!defined(LLVM_ON_UNIX) || defined(__ANDROID__)) && !defined(_WIN32)
+  llvm_unreachable("SharedMemoryMapper is not supported on this platform yet");
+#endif
+}
 
 Expected<std::unique_ptr<SharedMemoryMapper>>
 SharedMemoryMapper::Create(ExecutorProcessControl &EPC, SymbolAddrs SAs) {
+#if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)
   auto PageSize = sys::Process::getPageSize();
   if (!PageSize)
     return PageSize.takeError();
 
   return std::make_unique<SharedMemoryMapper>(EPC, SAs, *PageSize);
+#else
+  return make_error<StringError>(
+      "SharedMemoryMapper is not supported on this platform yet",
+      inconvertibleErrorCode());
+#endif
 }
 
 void SharedMemoryMapper::reserve(size_t NumBytes,
                                  OnReservedFunction OnReserved) {
-#if defined(LLVM_ON_UNIX) || defined(_WIN32)
+#if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)
 
   EPC.callSPSWrapperAsync<
       rt::SPSExecutorSharedMemoryMapperServiceReserveSignature>(
@@ -265,7 +294,7 @@ void SharedMemoryMapper::reserve(size_t NumBytes,
 
 char *SharedMemoryMapper::prepare(ExecutorAddr Addr, size_t ContentSize) {
   auto R = Reservations.upper_bound(Addr);
-  assert(R != Reservations.begin() && "Attempt to prepare unknown range");
+  assert(R != Reservations.begin() && "Attempt to prepare unreserved range");
   R--;
 
   ExecutorAddrDiff Offset = Addr - R->first;
@@ -275,9 +304,11 @@ char *SharedMemoryMapper::prepare(ExecutorAddr Addr, size_t ContentSize) {
 
 void SharedMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
                                     OnInitializedFunction OnInitialized) {
-  auto Reservation = Reservations.find(AI.MappingBase);
-  assert(Reservation != Reservations.end() &&
-         "Attempt to initialize unreserved range");
+  auto Reservation = Reservations.upper_bound(AI.MappingBase);
+  assert(Reservation != Reservations.begin() && "Attempt to initialize unreserved range");
+  Reservation--;
+
+  auto AllocationOffset = AI.MappingBase - Reservation->first;
 
   tpctypes::SharedMemoryFinalizeRequest FR;
 
@@ -286,13 +317,12 @@ void SharedMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
   FR.Segments.reserve(AI.Segments.size());
 
   for (auto Segment : AI.Segments) {
-    char *Base =
-        static_cast<char *>(Reservation->second.LocalAddr) + Segment.Offset;
+    char *Base = static_cast<char *>(Reservation->second.LocalAddr) +
+                 AllocationOffset + Segment.Offset;
     std::memset(Base + Segment.ContentSize, 0, Segment.ZeroFillSize);
 
     tpctypes::SharedMemorySegFinalizeRequest SegReq;
-    SegReq.Prot = tpctypes::toWireProtectionFlags(
-        static_cast<sys::Memory::ProtectionFlags>(Segment.Prot));
+    SegReq.AG = Segment.AG;
     SegReq.Addr = AI.MappingBase + Segment.Offset;
     SegReq.Size = Segment.ContentSize + Segment.ZeroFillSize;
 
@@ -311,7 +341,7 @@ void SharedMemoryMapper::initialize(MemoryMapper::AllocInfo &AI,
 
         OnInitialized(std::move(Result));
       },
-      SAs.Instance, AI.MappingBase, std::move(FR));
+      SAs.Instance, Reservation->first, std::move(FR));
 }
 
 void SharedMemoryMapper::deinitialize(
@@ -334,7 +364,7 @@ void SharedMemoryMapper::deinitialize(
 
 void SharedMemoryMapper::release(ArrayRef<ExecutorAddr> Bases,
                                  OnReleasedFunction OnReleased) {
-#if defined(LLVM_ON_UNIX) || defined(_WIN32)
+#if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)
   Error Err = Error::success();
 
   {
@@ -351,8 +381,8 @@ void SharedMemoryMapper::release(ArrayRef<ExecutorAddr> Bases,
 #elif defined(_WIN32)
 
       if (!UnmapViewOfFile(Reservations[Base].LocalAddr))
-        joinErrors(std::move(Err),
-                   errorCodeToError(mapWindowsError(GetLastError())));
+        Err = joinErrors(std::move(Err),
+                         errorCodeToError(mapWindowsError(GetLastError())));
 
 #endif
 
@@ -382,23 +412,19 @@ void SharedMemoryMapper::release(ArrayRef<ExecutorAddr> Bases,
 }
 
 SharedMemoryMapper::~SharedMemoryMapper() {
-  std::vector<ExecutorAddr> ReservationAddrs;
-  if (!Reservations.empty()) {
-    std::lock_guard<std::mutex> Lock(Mutex);
-    {
-      ReservationAddrs.reserve(Reservations.size());
-      for (const auto &R : Reservations) {
-        ReservationAddrs.push_back(R.first);
-      }
-    }
-  }
+  std::lock_guard<std::mutex> Lock(Mutex);
+  for (const auto &R : Reservations) {
 
-  std::promise<MSVCPError> P;
-  auto F = P.get_future();
-  release(ReservationAddrs, [&](Error Err) { P.set_value(std::move(Err)); });
-  // FIXME: Release can actually fail. The error should be propagated.
-  // Meanwhile, a better option is to explicitly call release().
-  cantFail(F.get());
+#if defined(LLVM_ON_UNIX) && !defined(__ANDROID__)
+
+    munmap(R.second.LocalAddr, R.second.Size);
+
+#elif defined(_WIN32)
+
+    UnmapViewOfFile(R.second.LocalAddr);
+
+#endif
+  }
 }
 
 } // namespace orc

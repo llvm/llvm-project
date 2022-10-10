@@ -2530,13 +2530,36 @@ INTERCEPTOR(int, __b64_pton, char const *src, char *target, SIZE_T targsize) {
 #define INIT___B64_TO
 #endif  // SANITIZER_INTERCEPT___B64_TO
 
-#if SANITIZER_INTERCEPT___DN_EXPAND
+#if SANITIZER_INTERCEPT_DN_COMP_EXPAND
 #  if __GLIBC_PREREQ(2, 34)
 // Changed with https://sourceware.org/git/?p=glibc.git;h=640bbdf
+#    define DN_COMP_INTERCEPTOR_NAME dn_comp
 #    define DN_EXPAND_INTERCEPTOR_NAME dn_expand
 #  else
+#    define DN_COMP_INTERCEPTOR_NAME __dn_comp
 #    define DN_EXPAND_INTERCEPTOR_NAME __dn_expand
 #  endif
+INTERCEPTOR(int, DN_COMP_INTERCEPTOR_NAME, unsigned char *exp_dn,
+            unsigned char *comp_dn, int length, unsigned char **dnptrs,
+            unsigned char **lastdnptr) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, DN_COMP_INTERCEPTOR_NAME, exp_dn, comp_dn,
+                           length, dnptrs, lastdnptr);
+  int res = REAL(DN_COMP_INTERCEPTOR_NAME)(exp_dn, comp_dn, length, dnptrs,
+                                           lastdnptr);
+  if (res >= 0) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, comp_dn, res);
+    if (dnptrs && lastdnptr) {
+      unsigned char **p = dnptrs;
+      for (; p != lastdnptr && *p; ++p)
+        ;
+      if (p != lastdnptr)
+        ++p;
+      COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dnptrs, (p - dnptrs) * sizeof(*p));
+    }
+  }
+  return res;
+}
 INTERCEPTOR(int, DN_EXPAND_INTERCEPTOR_NAME, unsigned char const *base,
             unsigned char const *end, unsigned char const *src, char *dest,
             int space) {
@@ -2549,11 +2572,12 @@ INTERCEPTOR(int, DN_EXPAND_INTERCEPTOR_NAME, unsigned char const *base,
     COMMON_INTERCEPTOR_WRITE_RANGE(ctx, dest, internal_strlen(dest) + 1);
   return res;
 }
-#  define INIT___DN_EXPAND \
+#  define INIT_DN_COMP_EXPAND                            \
+    COMMON_INTERCEPT_FUNCTION(DN_COMP_INTERCEPTOR_NAME); \
     COMMON_INTERCEPT_FUNCTION(DN_EXPAND_INTERCEPTOR_NAME);
-#else  // SANITIZER_INTERCEPT___DN_EXPAND
-#  define INIT___DN_EXPAND
-#endif  // SANITIZER_INTERCEPT___DN_EXPAND
+#else  // SANITIZER_INTERCEPT_DN_COMP_EXPAND
+#  define INIT_DN_COMP_EXPAND
+#endif  // SANITIZER_INTERCEPT_DN_COMP_EXPAND
 
 #if SANITIZER_INTERCEPT_POSIX_SPAWN
 
@@ -6703,7 +6727,7 @@ INTERCEPTOR(int, sem_init, __sanitizer_sem_t *s, int pshared, unsigned value) {
   COMMON_INTERCEPTOR_ENTER(ctx, sem_init, s, pshared, value);
   // Workaround a bug in glibc's "old" semaphore implementation by
   // zero-initializing the sem_t contents. This has to be done here because
-  // interceptors bind to the lowest symbols version by default, hitting the
+  // interceptors bind to the lowest version before glibc 2.36, hitting the
   // buggy code path while the non-sanitized build of the same code works fine.
   REAL(memset)(s, 0, sizeof(*s));
   int res = REAL(sem_init)(s, pshared, value);
@@ -10513,7 +10537,7 @@ static void InitializeCommonInterceptors() {
   INIT_GLOB;
   INIT_GLOB64;
   INIT___B64_TO;
-  INIT___DN_EXPAND;
+  INIT_DN_COMP_EXPAND;
   INIT_POSIX_SPAWN;
   INIT_WAIT;
   INIT_WAIT4;

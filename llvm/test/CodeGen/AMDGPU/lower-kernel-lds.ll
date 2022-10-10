@@ -4,14 +4,12 @@
 @lds.size.1.align.1 = internal unnamed_addr addrspace(3) global [1 x i8] undef, align 1
 @lds.size.2.align.2 = internal unnamed_addr addrspace(3) global [2 x i8] undef, align 2
 @lds.size.4.align.4 = internal unnamed_addr addrspace(3) global [4 x i8] undef, align 4
-@lds.size.8.align.8 = internal unnamed_addr addrspace(3) global [8 x i8] undef, align 8
 @lds.size.16.align.16 = internal unnamed_addr addrspace(3) global [16 x i8] undef, align 16
 
 ; CHECK: %llvm.amdgcn.kernel.k0.lds.t = type { [16 x i8], [4 x i8], [2 x i8], [1 x i8] }
 ; CHECK: %llvm.amdgcn.kernel.k1.lds.t = type { [16 x i8], [4 x i8], [2 x i8] }
 
 ;.
-; CHECK: @lds.size.8.align.8 = internal unnamed_addr addrspace(3) global [8 x i8] undef, align 8
 ; CHECK: @lds.k2 = addrspace(3) global [1 x i8] undef, align 1
 ; CHECK: @llvm.amdgcn.kernel.k0.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k0.lds.t undef, align 16
 ; CHECK: @llvm.amdgcn.kernel.k1.lds = internal addrspace(3) global %llvm.amdgcn.kernel.k1.lds.t undef, align 16

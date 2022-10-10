@@ -43,9 +43,9 @@ using namespace llvm::AMDGPU;
 char llvm::AMDGPUResourceUsageAnalysis::ID = 0;
 char &llvm::AMDGPUResourceUsageAnalysisID = AMDGPUResourceUsageAnalysis::ID;
 
-// We need to tell the runtime some amount ahead of time if we don't know the
-// true stack size. Assume a smaller number if this is only due to dynamic /
-// non-entry block allocas.
+// In code object v4 and older, we need to tell the runtime some amount ahead of
+// time if we don't know the true stack size. Assume a smaller number if this is
+// only due to dynamic / non-entry block allocas.
 static cl::opt<uint32_t> AssumedStackSizeForExternalCall(
     "amdgpu-assume-external-call-stack-size",
     cl::desc("Assumed stack use of any external call (in bytes)"), cl::Hidden,
@@ -109,6 +109,15 @@ bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {
   CallGraph CG = CallGraph(M);
   auto End = po_end(&CG);
 
+  // By default, for code object v5 and later, track only the minimum scratch
+  // size
+  if (AMDGPU::getAmdhsaCodeObjectVersion() >= 5) {
+    if (!AssumedStackSizeForDynamicSizeObjects.getNumOccurrences())
+      AssumedStackSizeForDynamicSizeObjects = 0;
+    if (!AssumedStackSizeForExternalCall.getNumOccurrences())
+      AssumedStackSizeForExternalCall = 0;
+  }
+
   for (auto IT = po_begin(&CG); IT != End; ++IT) {
     Function *F = IT->getFunction();
     if (!F || F->isDeclaration())
@@ -121,6 +130,26 @@ bool AMDGPUResourceUsageAnalysis::runOnModule(Module &M) {
         std::make_pair(F, SIFunctionResourceInfo()));
     SIFunctionResourceInfo &Info = CI.first->second;
     assert(CI.second && "should only be called once per function");
+    Info = analyzeResourceUsage(*MF, TM);
+    HasIndirectCall |= Info.HasIndirectCall;
+  }
+
+  // It's possible we have unreachable functions in the module which weren't
+  // visited by the PO traversal. Make sure we have some resource counts to
+  // report.
+  for (const auto &IT : CG) {
+    const Function *F = IT.first;
+    if (!F || F->isDeclaration())
+      continue;
+
+    auto CI = CallGraphResourceInfo.insert(
+      std::make_pair(F, SIFunctionResourceInfo()));
+    if (!CI.second) // Skip already visited functions
+      continue;
+
+    SIFunctionResourceInfo &Info = CI.first->second;
+    MachineFunction *MF = MMI.getMachineFunction(*F);
+    assert(MF && "function must have been generated already");
     Info = analyzeResourceUsage(*MF, TM);
     HasIndirectCall |= Info.HasIndirectCall;
   }

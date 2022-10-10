@@ -15,7 +15,7 @@
 
 // template <class ...Types> class variant;
 
-// variant& operator=(variant&&) noexcept(see below); // constexpr in C++20
+// constexpr variant& operator=(variant&&) noexcept(see below);
 
 #include <cassert>
 #include <string>
@@ -195,7 +195,6 @@ void test_move_assignment_sfinae() {
   }
 
   // Make sure we properly propagate triviality (see P0602R4).
-#if TEST_STD_VER > 17
   {
     using V = std::variant<int, long>;
     static_assert(std::is_trivially_move_assignable<V>::value, "");
@@ -221,7 +220,6 @@ void test_move_assignment_sfinae() {
     using V = std::variant<int, CopyOnly>;
     static_assert(std::is_trivially_move_assignable<V>::value, "");
   }
-#endif // > C++17
 }
 
 void test_move_assignment_empty_empty() {
@@ -344,7 +342,6 @@ void test_move_assignment_same_index() {
 #endif // TEST_HAS_NO_EXCEPTIONS
 
   // Make sure we properly propagate triviality, which implies constexpr-ness (see P0602R4).
-#if TEST_STD_VER > 17
   {
     struct {
       constexpr Result<int> operator()() const {
@@ -387,7 +384,6 @@ void test_move_assignment_same_index() {
     static_assert(result.index == 1, "");
     static_assert(result.value == 42, "");
   }
-#endif // > C++17
 }
 
 void test_move_assignment_different_index() {
@@ -438,7 +434,6 @@ void test_move_assignment_different_index() {
 #endif // TEST_HAS_NO_EXCEPTIONS
 
   // Make sure we properly propagate triviality, which implies constexpr-ness (see P0602R4).
-#if TEST_STD_VER > 17
   {
     struct {
       constexpr Result<long> operator()() const {
@@ -467,7 +462,6 @@ void test_move_assignment_different_index() {
     static_assert(result.index == 1, "");
     static_assert(result.value == 42, "");
   }
-#endif // > C++17
 }
 
 template <size_t NewIdx, class ValueType>
@@ -484,7 +478,6 @@ constexpr bool test_constexpr_assign_imp(
 
 void test_constexpr_move_assignment() {
   // Make sure we properly propagate triviality, which implies constexpr-ness (see P0602R4).
-#if TEST_STD_VER > 17
   using V = std::variant<long, void*, int>;
   static_assert(std::is_trivially_copyable<V>::value, "");
   static_assert(std::is_trivially_move_assignable<V>::value, "");
@@ -492,7 +485,6 @@ void test_constexpr_move_assignment() {
   static_assert(test_constexpr_assign_imp<0>(V(nullptr), 101l), "");
   static_assert(test_constexpr_assign_imp<1>(V(42l), nullptr), "");
   static_assert(test_constexpr_assign_imp<2>(V(42l), 101), "");
-#endif // > C++17
 }
 
 int main(int, char**) {

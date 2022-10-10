@@ -12,7 +12,7 @@ vandps (%rdi), %ymm1, %ymm2
 # CHECK:      Dispatch Width:    4
 # CHECK-NEXT: uOps Per Cycle:    0.40
 # CHECK-NEXT: IPC:               0.20
-# CHECK-NEXT: Block RThroughput: 2.0
+# CHECK-NEXT: Block RThroughput: 1.5
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps

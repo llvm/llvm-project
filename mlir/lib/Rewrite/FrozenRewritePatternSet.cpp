@@ -18,7 +18,7 @@ using namespace mlir;
 
 static LogicalResult convertPDLToPDLInterp(ModuleOp pdlModule) {
   // Skip the conversion if the module doesn't contain pdl.
-  if (llvm::empty(pdlModule.getOps<pdl::PatternOp>()))
+  if (pdlModule.getOps<pdl::PatternOp>().empty())
     return success();
 
   // Simplify the provided PDL module. Note that we can't use the canonicalizer

@@ -339,8 +339,6 @@ void BinaryFunction::inferFallThroughCounts() {
       }
     }
   }
-
-  return;
 }
 
 void BinaryFunction::clearProfile() {

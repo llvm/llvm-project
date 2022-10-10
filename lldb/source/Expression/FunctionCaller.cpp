@@ -44,7 +44,8 @@ FunctionCaller::FunctionCaller(ExecutionContextScope &exe_scope,
       m_function_return_type(return_type),
       m_wrapper_function_name("__lldb_caller_function"),
       m_wrapper_struct_name("__lldb_caller_struct"), m_wrapper_args_addrs(),
-      m_struct_valid(false), m_arg_values(arg_value_list), m_compiled(false),
+      m_struct_valid(false), m_struct_size(0), m_return_size(0),
+      m_return_offset(0), m_arg_values(arg_value_list), m_compiled(false),
       m_JITted(false) {
   m_jit_process_wp = lldb::ProcessWP(exe_scope.CalculateProcess());
   // Can't make a FunctionCaller without a process.
@@ -98,10 +99,10 @@ bool FunctionCaller::WriteFunctionWrapper(
     if (jit_module_sp) {
       ConstString const_func_name(FunctionName());
       FileSpec jit_file;
-      jit_file.GetFilename() = const_func_name;
+      jit_file.SetFilename(const_func_name);
       jit_module_sp->SetFileSpecAndObjectName(jit_file, ConstString());
       m_jit_module_wp = jit_module_sp;
-      process->GetTarget().GetImages().Append(jit_module_sp, 
+      process->GetTarget().GetImages().Append(jit_module_sp,
                                               true /* notify */);
     }
   }

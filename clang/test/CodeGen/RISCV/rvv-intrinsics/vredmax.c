@@ -927,3 +927,75 @@ vuint64m1_t test_vredmaxu_vs_u64m8_u64m1_m(vbool8_t mask, vuint64m1_t dst,
                                            vuint64m1_t scalar, size_t vl) {
   return vredmaxu_vs_u64m8_u64m1_m(mask, dst, vector, scalar, vl);
 }
+
+// CHECK-RV64-LABEL: @test_vredmax_vs_i32mf2_i32m1_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vredmax.nxv2i32.nxv1i32.i64(<vscale x 2 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[VECTOR:%.*]], <vscale x 2 x i32> [[SCALAR:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
+//
+vint32m1_t test_vredmax_vs_i32mf2_i32m1_tu(vint32m1_t merge, vint32mf2_t vector, vint32m1_t scalar, size_t vl) {
+  return vredmax_vs_i32mf2_i32m1_tu(merge, vector, scalar, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vredmaxu_vs_u32mf2_u32m1_tu(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vredmaxu.nxv2i32.nxv1i32.i64(<vscale x 2 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[VECTOR:%.*]], <vscale x 2 x i32> [[SCALAR:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
+//
+vuint32m1_t test_vredmaxu_vs_u32mf2_u32m1_tu(vuint32m1_t merge, vuint32mf2_t vector, vuint32m1_t scalar, size_t vl) {
+  return vredmaxu_vs_u32mf2_u32m1_tu(merge, vector, scalar, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vredmax_vs_i32mf2_i32m1_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vredmax.nxv2i32.nxv1i32.i64(<vscale x 2 x i32> undef, <vscale x 1 x i32> [[VECTOR:%.*]], <vscale x 2 x i32> [[SCALAR:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
+//
+vint32m1_t test_vredmax_vs_i32mf2_i32m1_ta(vint32mf2_t vector, vint32m1_t scalar, size_t vl) {
+  return vredmax_vs_i32mf2_i32m1_ta(vector, scalar, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vredmaxu_vs_u32mf2_u32m1_ta(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vredmaxu.nxv2i32.nxv1i32.i64(<vscale x 2 x i32> undef, <vscale x 1 x i32> [[VECTOR:%.*]], <vscale x 2 x i32> [[SCALAR:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
+//
+vuint32m1_t test_vredmaxu_vs_u32mf2_u32m1_ta(vuint32mf2_t vector, vuint32m1_t scalar, size_t vl) {
+  return vredmaxu_vs_u32mf2_u32m1_ta(vector, scalar, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vredmax_vs_i32mf2_i32m1_tum(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vredmax.mask.nxv2i32.nxv1i32.i64(<vscale x 2 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[VECTOR:%.*]], <vscale x 2 x i32> [[SCALAR:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
+//
+vint32m1_t test_vredmax_vs_i32mf2_i32m1_tum(vbool64_t mask, vint32m1_t merge, vint32mf2_t vector, vint32m1_t scalar, size_t vl) {
+  return vredmax_vs_i32mf2_i32m1_tum(mask, merge, vector, scalar, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vredmaxu_vs_u32mf2_u32m1_tum(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vredmaxu.mask.nxv2i32.nxv1i32.i64(<vscale x 2 x i32> [[MERGE:%.*]], <vscale x 1 x i32> [[VECTOR:%.*]], <vscale x 2 x i32> [[SCALAR:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
+//
+vuint32m1_t test_vredmaxu_vs_u32mf2_u32m1_tum(vbool64_t mask, vuint32m1_t merge, vuint32mf2_t vector, vuint32m1_t scalar, size_t vl) {
+  return vredmaxu_vs_u32mf2_u32m1_tum(mask, merge, vector, scalar, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vredmax_vs_i32mf2_i32m1_tam(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vredmax.mask.nxv2i32.nxv1i32.i64(<vscale x 2 x i32> undef, <vscale x 1 x i32> [[VECTOR:%.*]], <vscale x 2 x i32> [[SCALAR:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
+//
+vint32m1_t test_vredmax_vs_i32mf2_i32m1_tam(vbool64_t mask, vint32mf2_t vector, vint32m1_t scalar, size_t vl) {
+  return vredmax_vs_i32mf2_i32m1_tam(mask, vector, scalar, vl);
+}
+
+// CHECK-RV64-LABEL: @test_vredmaxu_vs_u32mf2_u32m1_tam(
+// CHECK-RV64-NEXT:  entry:
+// CHECK-RV64-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vredmaxu.mask.nxv2i32.nxv1i32.i64(<vscale x 2 x i32> undef, <vscale x 1 x i32> [[VECTOR:%.*]], <vscale x 2 x i32> [[SCALAR:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]])
+// CHECK-RV64-NEXT:    ret <vscale x 2 x i32> [[TMP0]]
+//
+vuint32m1_t test_vredmaxu_vs_u32mf2_u32m1_tam(vbool64_t mask, vuint32mf2_t vector, vuint32m1_t scalar, size_t vl) {
+  return vredmaxu_vs_u32mf2_u32m1_tam(mask, vector, scalar, vl);
+}

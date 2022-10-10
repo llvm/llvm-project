@@ -11,27 +11,43 @@
 // the parameters of the patterns for Fortran programs.
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
+namespace fir {
+#define GEN_PASS_DEF_ALGEBRAICSIMPLIFICATION
+#include "flang/Optimizer/Transforms/Passes.h.inc"
+} // namespace fir
 
 using namespace mlir;
 
 namespace {
 struct AlgebraicSimplification
-    : public fir::AlgebraicSimplificationBase<AlgebraicSimplification> {
+    : public fir::impl::AlgebraicSimplificationBase<AlgebraicSimplification> {
+  AlgebraicSimplification(const GreedyRewriteConfig &rewriteConfig) {
+    config = rewriteConfig;
+  }
 
   void runOnOperation() override;
+
+  mlir::GreedyRewriteConfig config;
 };
 } // namespace
 
 void AlgebraicSimplification::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   populateMathAlgebraicSimplificationPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns),
+                                     config);
 }
 
 std::unique_ptr<mlir::Pass> fir::createAlgebraicSimplificationPass() {
-  return std::make_unique<AlgebraicSimplification>();
+  return std::make_unique<AlgebraicSimplification>(GreedyRewriteConfig());
+}
+
+std::unique_ptr<mlir::Pass> fir::createAlgebraicSimplificationPass(
+    const mlir::GreedyRewriteConfig &config) {
+  return std::make_unique<AlgebraicSimplification>(config);
 }

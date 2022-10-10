@@ -314,7 +314,7 @@ define <4 x double> @convert_low_s_v4f64(<8 x i32> %x) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    f64x2.convert_low_i32x4_s
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    local.get 0
@@ -334,7 +334,7 @@ define <4 x double> @convert_low_u_v4f64(<8 x i32> %x) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    f64x2.convert_low_i32x4_u
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    local.get 0
@@ -355,7 +355,7 @@ define <4 x double> @convert_low_s_v4f64_2(<8 x i32> %x) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    f64x2.convert_low_i32x4_s
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    local.get 0
@@ -375,7 +375,7 @@ define <4 x double> @convert_low_u_v4f64_2(<8 x i32> %x) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    f64x2.convert_low_i32x4_u
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    local.get 0
@@ -395,7 +395,7 @@ define <4 x double> @promote_low_v4f64(<8 x float> %x) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    local.get 0
@@ -415,7 +415,7 @@ define <4 x double> @promote_low_v4f64_2(<8 x float> %x) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    v128.store 16
 ; CHECK-NEXT:    local.get 0
@@ -434,7 +434,7 @@ define <2 x double> @promote_mixed_v2f64(<4 x float> %x, <4 x float> %y) {
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 28, 29, 30, 31, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 28, 29, 30, 31, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    f64x2.promote_low_f32x4
 ; CHECK-NEXT:    # fallthrough-return
   %v = shufflevector <4 x float> %x, <4 x float> %y, <2 x i32> <i32 2, i32 7>

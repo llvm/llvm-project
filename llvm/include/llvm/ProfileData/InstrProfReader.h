@@ -103,6 +103,9 @@ public:
   InstrProfIterator<> begin() { return InstrProfIterator<>(this); }
   InstrProfIterator<> end() { return InstrProfIterator<>(); }
 
+  /// Return the profile version.
+  virtual uint64_t getVersion() const = 0;
+
   virtual bool isIRLevelProfile() const = 0;
 
   virtual bool hasCSIRLevelProfile() const = 0;
@@ -117,6 +120,9 @@ public:
 
   /// Return true if the profile only instruments function entries.
   virtual bool functionEntryOnly() const = 0;
+
+  /// Return true if profile includes a memory profile.
+  virtual bool hasMemoryProfile() const = 0;
 
   /// Returns a BitsetEnum describing the attributes of the profile. To check
   /// individual attributes prefer using the helpers above.
@@ -212,6 +218,9 @@ public:
   /// Return true if the given buffer is in text instrprof format.
   static bool hasFormat(const MemoryBuffer &Buffer);
 
+  // Text format does not have version, so return 0.
+  uint64_t getVersion() const override { return 0; }
+
   bool isIRLevelProfile() const override {
     return static_cast<bool>(ProfileKind & InstrProfKind::IRInstrumentation);
   }
@@ -231,6 +240,11 @@ public:
 
   bool functionEntryOnly() const override {
     return static_cast<bool>(ProfileKind & InstrProfKind::FunctionEntryOnly);
+  }
+
+  bool hasMemoryProfile() const override {
+    // TODO: Add support for text format memory profiles.
+    return false;
   }
 
   InstrProfKind getProfileKind() const override { return ProfileKind; }
@@ -298,6 +312,8 @@ public:
   Error readNextRecord(NamedInstrProfRecord &Record) override;
   Error printBinaryIds(raw_ostream &OS) override;
 
+  uint64_t getVersion() const override { return Version; }
+
   bool isIRLevelProfile() const override {
     return (Version & VARIANT_MASK_IR_PROF) != 0;
   }
@@ -320,6 +336,12 @@ public:
 
   bool functionEntryOnly() const override {
     return (Version & VARIANT_MASK_FUNCTION_ENTRY_ONLY) != 0;
+  }
+
+  bool hasMemoryProfile() const override {
+    // Memory profiles have a separate raw format, so this should never be set.
+    assert(!(Version & VARIANT_MASK_MEMPROF));
+    return false;
   }
 
   /// Returns a BitsetEnum describing the attributes of the raw instr profile.
@@ -466,6 +488,7 @@ struct InstrProfReaderIndexBase {
   virtual bool instrEntryBBEnabled() const = 0;
   virtual bool hasSingleByteCoverage() const = 0;
   virtual bool functionEntryOnly() const = 0;
+  virtual bool hasMemoryProfile() const = 0;
   virtual InstrProfKind getProfileKind() const = 0;
   virtual Error populateSymtab(InstrProfSymtab &) = 0;
 };
@@ -532,6 +555,10 @@ public:
     return (FormatVersion & VARIANT_MASK_FUNCTION_ENTRY_ONLY) != 0;
   }
 
+  bool hasMemoryProfile() const override {
+    return (FormatVersion & VARIANT_MASK_MEMPROF) != 0;
+  }
+
   InstrProfKind getProfileKind() const override;
 
   Error populateSymtab(InstrProfSymtab &Symtab) override {
@@ -589,7 +616,7 @@ public:
   IndexedInstrProfReader &operator=(const IndexedInstrProfReader &) = delete;
 
   /// Return the profile version.
-  uint64_t getVersion() const { return Index->getVersion(); }
+  uint64_t getVersion() const override { return Index->getVersion(); }
   bool isIRLevelProfile() const override { return Index->isIRLevelProfile(); }
   bool hasCSIRLevelProfile() const override {
     return Index->hasCSIRLevelProfile();
@@ -604,6 +631,8 @@ public:
   }
 
   bool functionEntryOnly() const override { return Index->functionEntryOnly(); }
+
+  bool hasMemoryProfile() const override { return Index->hasMemoryProfile(); }
 
   /// Returns a BitsetEnum describing the attributes of the indexed instr
   /// profile.

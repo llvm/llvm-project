@@ -3,6 +3,6 @@ add_mlir_unittest(MLIRPDLToPDLInterpTests
 )
 target_link_libraries(MLIRPDLToPDLInterpTests
   PRIVATE
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRPDLToPDLInterp
 )

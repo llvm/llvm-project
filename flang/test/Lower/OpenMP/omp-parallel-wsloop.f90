@@ -87,7 +87,6 @@ subroutine parallel_do_with_privatisation_clauses(cond,nt)
   ! CHECK:    %[[PRIVATE_NT_REF:.*]] = fir.alloca i32 {bindc_name = "nt", pinned, uniq_name = "_QFparallel_do_with_privatisation_clausesEnt"}
   ! CHECK:    %[[NT_VAL:.*]] = fir.load %[[NT_REF]] : !fir.ref<i32>
   ! CHECK:    fir.store %[[NT_VAL]] to %[[PRIVATE_NT_REF]] : !fir.ref<i32>
-  ! CHECK:    omp.barrier
   ! CHECK:    %[[WS_LB:.*]] = arith.constant 1 : i32
   ! CHECK:    %[[WS_UB:.*]] = arith.constant 9 : i32
   ! CHECK:    %[[WS_STEP:.*]] = arith.constant 1 : i32
@@ -138,7 +137,6 @@ end subroutine parallel_private_do
 ! CHECK:             %[[NT_ADDR:.*]] = fir.alloca i32 {bindc_name = "nt", pinned, uniq_name = "_QFparallel_private_doEnt"}
 ! CHECK:             %[[NT:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
 ! CHECK:             fir.store %[[NT]] to %[[NT_ADDR]] : !fir.ref<i32>
-! CHECK:             omp.barrier
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 9 : i32
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 1 : i32
@@ -153,8 +151,7 @@ end subroutine parallel_private_do
 ! CHECK:         }
 
 !===============================================================================
-! Checking for the following construct - multiple firstprivate clauses must emit
-! only one barrier
+! Checking for the following construct
 !   !$omp parallel
 !   !$omp do firstprivate(...) firstprivate(...)
 !===============================================================================
@@ -182,7 +179,6 @@ end subroutine omp_parallel_multiple_firstprivate_do
 ! CHECK:             %[[B_PRIV_ADDR:.*]] = fir.alloca i32 {bindc_name = "b", pinned, uniq_name = "_QFomp_parallel_multiple_firstprivate_doEb"}
 ! CHECK:             %[[B:.*]] = fir.load %[[B_ADDR]] : !fir.ref<i32>
 ! CHECK:             fir.store %[[B]] to %[[B_PRIV_ADDR]] : !fir.ref<i32>
-! CHECK:             omp.barrier
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 10 : i32
 ! CHECK:             %[[VAL_10:.*]] = arith.constant 1 : i32
@@ -224,7 +220,6 @@ end subroutine parallel_do_private
 ! CHECK:             %[[NT_ADDR:.*]] = fir.alloca i32 {bindc_name = "nt", pinned, uniq_name = "_QFparallel_do_privateEnt"}
 ! CHECK:             %[[NT:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
 ! CHECK:             fir.store %[[NT]] to %[[NT_ADDR]] : !fir.ref<i32>
-! CHECK:             omp.barrier
 ! CHECK:             %[[I_PRIV_ADDR:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 ! CHECK:             %[[VAL_7:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 9 : i32
@@ -240,8 +235,7 @@ end subroutine parallel_do_private
 ! CHECK:         }
 
 !===============================================================================
-! Checking for the following construct - multiple firstprivate clauses must emit
-! only one barrier
+! Checking for the following construct
 !   !$omp parallel
 !   !$omp do firstprivate(...) firstprivate(...)
 !===============================================================================
@@ -268,8 +262,6 @@ end subroutine omp_parallel_do_multiple_firstprivate
 ! CHECK:             %[[B_PRIV_ADDR:.*]] = fir.alloca i32 {bindc_name = "b", pinned, uniq_name = "_QFomp_parallel_do_multiple_firstprivateEb"}
 ! CHECK:             %[[B:.*]] = fir.load %[[B_ADDR]] : !fir.ref<i32>
 ! CHECK:             fir.store %[[B]] to %[[B_PRIV_ADDR]] : !fir.ref<i32>
-! CHECK:             omp.barrier
-! CHECK-NOT:         omp.barrier
 ! CHECK:             %[[I_PRIV_ADDR:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 ! CHECK:             %[[VAL_8:.*]] = arith.constant 1 : i32
 ! CHECK:             %[[VAL_9:.*]] = arith.constant 10 : i32

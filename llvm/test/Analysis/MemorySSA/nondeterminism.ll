@@ -90,22 +90,22 @@ bb2.split:                                        ; preds = %bb2.bb2.split_crit_
 
 bb4:                                              ; preds = %bb2.split, %bb6
   %i.4.01 = phi i16 [ 0, %bb2.split ]
-  %_tmp16 = getelementptr [1 x [1 x %rec9]], [1 x [1 x %rec9]]* @a, i16 0, i16 %h.3.0, i16 %i.4.01, i32 0
-  %_tmp17 = load i16, i16* %_tmp16, align 1
+  %_tmp16 = getelementptr [1 x [1 x %rec9]], ptr @a, i16 0, i16 %h.3.0, i16 %i.4.01, i32 0
+  %_tmp17 = load i16, ptr %_tmp16, align 1
   br label %g.exit4.critedge
 
 bb1.i:                                            ; preds = %bb4
   br label %g.exit4
 
 g.exit4.critedge:                                 ; preds = %bb4
-  %_tmp28.c = getelementptr [1 x [1 x %rec9]], [1 x [1 x %rec9]]* @a, i16 0, i16 %h.3.0, i16 %i.4.01, i32 1
-  %_tmp29.c = load i32, i32* %_tmp28.c, align 1
+  %_tmp28.c = getelementptr [1 x [1 x %rec9]], ptr @a, i16 0, i16 %h.3.0, i16 %i.4.01, i32 1
+  %_tmp29.c = load i32, ptr %_tmp28.c, align 1
   %_tmp30.c = trunc i32 %_tmp29.c to i16
   br label %g.exit4
 
 g.exit4:                                          ; preds = %g.exit4.critedge, %bb1.i
   %i.4.02 = phi i16 [ %i.4.01, %g.exit4.critedge ], [ %i.4.01, %bb1.i ]
-  %_tmp41 = getelementptr [1 x [1 x %rec9]], [1 x [1 x %rec9]]* @a, i16 0, i16 %h.3.0, i16 %i.4.02, i32 2
+  %_tmp41 = getelementptr [1 x [1 x %rec9]], ptr @a, i16 0, i16 %h.3.0, i16 %i.4.02, i32 2
   br label %bb6
 
 bb5:                                              ; preds = %g.exit4

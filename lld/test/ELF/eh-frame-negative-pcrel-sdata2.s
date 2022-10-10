@@ -23,9 +23,9 @@
 # CHECK-NEXT:   AddressAlignment:
 # CHECK-NEXT:   EntrySize:
 # CHECK-NEXT:   SectionData (
-# CHECK-NEXT:     0000: 14000000 00000000 017A5200 01010101
-# CHECK-NEXT:     0010: 1A000000 00000000 0C000000 1C000000
-# CHECK-NEXT:     0020: DFFFFFFF
+# CHECK-NEXT:     0000: 10000000 00000000 017A5200 01010101
+# CHECK-NEXT:     0010: 1A000000 0A000000 18000000 E3FFFFFF
+# CHECK-NEXT:     0020: 00000000 0000
 #                       ^
 #   DFFFFFFF = _start(0x1000) - PC(.eh_frame(0x1001) + 0x20)
 
@@ -36,21 +36,21 @@
 # CHECK-NEXT:   Flags [
 # CHECK-NEXT:     SHF_ALLOC
 # CHECK-NEXT:   ]
-# CHECK-NEXT:   Address: 0x1030
-# CHECK-NEXT:   Offset: 0x1030
+# CHECK-NEXT:   Address: 0x1028
+# CHECK-NEXT:   Offset: 0x1028
 # CHECK-NEXT:   Size: 20
 # CHECK-NEXT:   Link: 0
 # CHECK-NEXT:   Info: 0
 # CHECK-NEXT:   AddressAlignment: 4
 # CHECK-NEXT:   EntrySize: 0
 # CHECK-NEXT:   SectionData (
-# CHECK-NEXT:     0000: 011B033B CDFFFFFF 01000000 D0FFFFFF
-# CHECK-NEXT:     0010: E9FFFFFF
+# CHECK-NEXT:     0000: 011B033B D5FFFFFF 01000000 D8FFFFFF
+# CHECK-NEXT:     0010: EDFFFFFF
 #   Header (always 4 bytes): 011B033B
-#   CDFFFFFF = .eh_frame(0x1001) - .eh_frame_hdr(0x1030) - 4
+#   D5FFFFFF = .eh_frame(0x1001) - .eh_frame_hdr(0x1028) - 4
 #   01000000 = 1 = the number of FDE pointers in the table.
-#   D0FFFFFF = _start(0x1000) - .eh_frame_hdr(0x1030)
-#   E9FFFFFF = FDE(.eh_frame(0x1001) + 0x18) - .eh_frame_hdr(0x1030)
+#   D8FFFFFF = _start(0x1000) - .eh_frame_hdr(0x1028)
+#   EDFFFFFF = FDE(.eh_frame(0x1001) + 0x18) - .eh_frame_hdr(0x1028)
 
 .text
 .global _start

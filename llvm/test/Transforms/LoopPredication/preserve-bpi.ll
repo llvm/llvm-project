@@ -7,14 +7,14 @@
 ; LoopStandardAnalysisResults).
 declare void @llvm.experimental.guard(i1, ...)
 
-; CHECK: Running pass: LoopPredicationPass on Loop at depth 1
-; CHECK-NEXT: Running pass: LICMPass on Loop at depth 1
-; CHECK-NEXT: Running pass: SimpleLoopUnswitchPass on Loop at depth 1
-; CHECK-NEXT: Running pass: LoopPredicationPass on Loop at depth 1
-; CHECK-NEXT: Running pass: LICMPass on Loop at depth 1
-; CHECK-NEXT: Running pass: SimpleLoopUnswitchPass on Loop at depth 1
-; CHECK-NEXT: Running pass: LoopSimplifyCFGPass on Loop at depth 1
-
+; CHECK: Running pass: LoopPredicationPass on loop
+; CHECK-NEXT: Running pass: LICMPass on loop
+; CHECK-NEXT: Running pass: SimpleLoopUnswitchPass on loop
+; CHECK-NEXT: Running analysis: OuterAnalysisManagerProxy
+; CHECK-NEXT: Running pass: LoopPredicationPass on loop
+; CHECK-NEXT: Running pass: LICMPass on loop
+; CHECK-NEXT: Running pass: SimpleLoopUnswitchPass on loop
+; CHECK-NEXT: Running pass: LoopSimplifyCFGPass on loop
 
 define i32 @unsigned_loop_0_to_n_ult_check(i32* %array, i32 %length, i32 %n) {
 entry:

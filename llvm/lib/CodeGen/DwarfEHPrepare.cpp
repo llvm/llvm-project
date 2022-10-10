@@ -25,6 +25,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -247,6 +248,13 @@ bool DwarfEHPrepare::InsertUnwindResumeCalls() {
     // Call the rewind function.
     CallInst *CI =
         CallInst::Create(RewindFunction, RewindFunctionArgs, "", UnwindBB);
+    // The verifier requires that all calls of debug-info-bearing functions
+    // from debug-info-bearing functions have a debug location (for inlining
+    // purposes). Assign a dummy location to satisfy the constraint.
+    Function *RewindFn = dyn_cast<Function>(RewindFunction.getCallee());
+    if (RewindFn && RewindFn->getSubprogram())
+      if (DISubprogram *SP = F.getSubprogram())
+        CI->setDebugLoc(DILocation::get(SP->getContext(), 0, 0, SP));
     CI->setCallingConv(RewindFunctionCallingConv);
 
     // We never expect _Unwind_Resume to return.

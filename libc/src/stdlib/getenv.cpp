@@ -8,7 +8,7 @@
 
 #include "src/stdlib/getenv.h"
 #include "config/linux/app.h"
-#include "src/__support/CPP/StringView.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/common.h"
 
 #include <stddef.h> // For size_t.
@@ -21,11 +21,11 @@ LLVM_LIBC_FUNCTION(char *, getenv, (const char *name)) {
   if (name == nullptr || env_ptr == nullptr)
     return nullptr;
 
-  __llvm_libc::cpp::StringView env_var_name(name);
+  __llvm_libc::cpp::string_view env_var_name(name);
   if (env_var_name.size() == 0)
     return nullptr;
   for (char **env = env_ptr; *env != nullptr; env++) {
-    __llvm_libc::cpp::StringView cur(*env);
+    __llvm_libc::cpp::string_view cur(*env);
     if (!cur.starts_with(env_var_name))
       continue;
 

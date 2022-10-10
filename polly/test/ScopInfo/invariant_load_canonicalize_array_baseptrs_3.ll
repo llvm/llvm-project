@@ -4,7 +4,7 @@
 
 ; Verify that we canonicalize accesses even tough one of the accesses (even
 ; the canonical base) has a partial execution context. This is correct as
-; the combined execution context still coveres both accesses.
+; the combined execution context still covers both accesses.
 
 ; CHECK:      Invariant Accesses: {
 ; CHECK-NEXT:         ReadAccess :=	[Reduction Type: NONE] [Scalar: 0]

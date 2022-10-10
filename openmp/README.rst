@@ -137,7 +137,7 @@ Options for all Libraries
 Options for ``libomp``
 ----------------------
 
-**LIBOMP_ARCH** = ``aarch64|arm|i386|mic|mips|mips64|ppc64|ppc64le|x86_64|riscv64``
+**LIBOMP_ARCH** = ``aarch64|arm|i386|loongarch64|mic|mips|mips64|ppc64|ppc64le|x86_64|riscv64``
   The default value for this option is chosen based on probing the compiler for
   architecture macros (e.g., is ``__x86_64__`` predefined by compiler?).
 
@@ -194,7 +194,7 @@ Optional Features
 **LIBOMP_OMPT_SUPPORT** = ``ON|OFF``
   Include support for the OpenMP Tools Interface (OMPT).
   This option is supported and ``ON`` by default for x86, x86_64, AArch64,
-  PPC64 and RISCV64 on Linux* and macOS*.
+  PPC64, RISCV64 and LoongArch64 on Linux* and macOS*.
   This option is ``OFF`` if this feature is not supported for the platform.
 
 **LIBOMP_OMPT_OPTIONAL** = ``ON|OFF``

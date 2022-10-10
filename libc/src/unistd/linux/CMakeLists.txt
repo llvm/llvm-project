@@ -1,4 +1,30 @@
 add_entrypoint_object(
+  access
+  SRCS
+    access.cpp
+  HDRS
+    ../access.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  chdir
+  SRCS
+    chdir.cpp
+  HDRS
+    ../chdir.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   close
   SRCS
     close.cpp
@@ -6,6 +32,101 @@ add_entrypoint_object(
     ../close.h
   DEPENDS
     libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  dup
+  SRCS
+    dup.cpp
+  HDRS
+    ../dup.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  dup2
+  SRCS
+    dup2.cpp
+  HDRS
+    ../dup2.h
+  DEPENDS
+    libc.include.fcntl
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  dup3
+  SRCS
+    dup3.cpp
+  HDRS
+    ../dup3.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fchdir
+  SRCS
+    fchdir.cpp
+  HDRS
+    ../fchdir.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  fork
+  SRCS
+    fork.cpp
+  HDRS
+    ../fork.h
+  DEPENDS
+    libc.include.errno
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.threads.thread
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  execv
+  SRCS
+    execv.cpp
+  HDRS
+    ../execv.h
+  DEPENDS
+    libc.include.errno
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+    libc.src.unistd.environ
+)
+
+add_entrypoint_object(
+  execve
+  SRCS
+    execve.cpp
+  HDRS
+    ../execve.h
+  DEPENDS
+    libc.include.errno
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
@@ -25,11 +146,126 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ftruncate
+  SRCS
+    ftruncate.cpp
+  HDRS
+    ../ftruncate.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  geteuid
+  SRCS
+    geteuid.cpp
+  HDRS
+    ../geteuid.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  getpid
+  SRCS
+    getpid.cpp
+  HDRS
+    ../getpid.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  getppid
+  SRCS
+    getppid.cpp
+  HDRS
+    ../getppid.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  getuid
+  SRCS
+    getuid.cpp
+  HDRS
+    ../getuid.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  link
+  SRCS
+    link.cpp
+  HDRS
+    ../link.h
+  DEPENDS
+    libc.include.fcntl
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  linkat
+  SRCS
+    linkat.cpp
+  HDRS
+    ../linkat.h
+  DEPENDS
+    libc.include.fcntl
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   lseek
   SRCS
     lseek.cpp
   HDRS
     ../lseek.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  pread
+  SRCS
+    pread.cpp
+  HDRS
+    ../pread.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  pwrite
+  SRCS
+    pwrite.cpp
+  HDRS
+    ../pwrite.h
   DEPENDS
     libc.include.unistd
     libc.include.sys_syscall
@@ -58,6 +294,87 @@ add_entrypoint_object(
     ../rmdir.h
   DEPENDS
     libc.include.fcntl
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  readlink
+  SRCS
+    readlink.cpp
+  HDRS
+    ../readlink.h
+  DEPENDS
+    libc.include.fcntl
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  readlinkat
+  SRCS
+    readlinkat.cpp
+  HDRS
+    ../readlinkat.h
+  DEPENDS
+    libc.include.fcntl
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  symlink
+  SRCS
+    symlink.cpp
+  HDRS
+    ../symlink.h
+  DEPENDS
+    libc.include.fcntl
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  symlinkat
+  SRCS
+    symlinkat.cpp
+  HDRS
+    ../symlinkat.h
+  DEPENDS
+    libc.include.fcntl
+    libc.include.unistd
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  __llvm_libc_syscall
+  SRCS
+    syscall.cpp
+  HDRS
+    ../syscall.h
+  DEPENDS
+    libc.include.unistd
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  truncate
+  SRCS
+    truncate.cpp
+  HDRS
+    ../truncate.h
+  DEPENDS
     libc.include.unistd
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil

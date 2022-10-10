@@ -34,7 +34,6 @@
 ; CHECK-O: Running pass: CalledValuePropagationPass
 ; CHECK-O: Running pass: GlobalOptPass
 ; CHECK-O: Running pass: PromotePass
-; CHECK-O: Running pass: DeadArgumentEliminationPass
 ; CHECK-O: Running pass: InstCombinePass on main
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Running pass: InlinerPass on (main)
@@ -74,6 +73,7 @@
 ; CHECK-O: Running pass: LCSSAPass on main
 ; CHECK-O: Running pass: SimplifyCFGPass on main
 ; CHECK-O: Running pass: InstCombinePass on main
+; CHECK-O: Running pass: DeadArgumentEliminationPass
 ; CHECK-O: Running pass: GlobalOptPass
 ; CHECK-O: Running pass: GlobalDCEPass
 ; CHECK-O: Running pass: EliminateAvailableExternallyPass
@@ -83,7 +83,7 @@
 ; CHECK-O: Running pass: LowerConstantIntrinsicsPass on main
 ; CHECK-O: Running pass: LoopSimplifyPass on main
 ; CHECK-O: Running pass: LCSSAPass on main
-; CHECK-O: Running pass: LoopRotatePass on Loop at depth 1 containing: %b
+; CHECK-O: Running pass: LoopRotatePass on b
 ; CHECK-O: Running pass: LoopDistributePass on main
 ; CHECK-O: Running pass: InjectTLIMappings on main
 ; CHECK-O: Running pass: LoopVectorizePass on main
@@ -99,7 +99,7 @@
 ; CHECK-O: Running pass: RequireAnalysisPass<{{.*}}OptimizationRemarkEmitterAnalysis
 ; CHECK-O: Running pass: LoopSimplifyPass on main
 ; CHECK-O: Running pass: LCSSAPass on main
-; CHECK-O: Running pass: LICMPass on Loop at depth 1 containing: %b
+; CHECK-O: Running pass: LICMPass on b
 ; CHECK-O: Running pass: AlignmentFromAssumptionsPass on main
 ; CHECK-O: Running pass: LoopSinkPass on main
 ; CHECK-O: Running pass: InstSimplifyPass on main

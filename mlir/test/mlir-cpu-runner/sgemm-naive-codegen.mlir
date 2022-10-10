@@ -1,4 +1,4 @@
-// RUN: mlir-opt -pass-pipeline="func.func(convert-linalg-to-loops,lower-affine,convert-scf-to-cf,convert-arith-to-llvm),convert-vector-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts" %s | mlir-cpu-runner -O3 -e main -entry-point-result=void -shared-libs=%mlir_runner_utils_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="func.func(convert-linalg-to-loops,lower-affine,convert-scf-to-cf,convert-arith-to-llvm),convert-vector-to-llvm,convert-memref-to-llvm,convert-func-to-llvm,reconcile-unrealized-casts" %s | mlir-cpu-runner -O3 -e main -entry-point-result=void -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | FileCheck %s
 
 func.func @main() {
   %A = memref.alloc() : memref<16x16xf32>

@@ -98,7 +98,7 @@ FunctionModRefBehavior ObjCARCAAResult::getModRefBehavior(const Function *F) {
 
   switch (GetFunctionClass(F)) {
   case ARCInstKind::NoopCast:
-    return FMRB_DoesNotAccessMemory;
+    return FunctionModRefBehavior::none();
   default:
     break;
   }

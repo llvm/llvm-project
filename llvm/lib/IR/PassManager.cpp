@@ -121,12 +121,7 @@ PreservedAnalyses ModuleToFunctionPassAdaptor::run(Module &M,
     if (!PI.runBeforePass<Function>(*Pass, F))
       continue;
 
-    PreservedAnalyses PassPA;
-    {
-      TimeTraceScope TimeScope(Pass->name(), F.getName());
-      PassPA = Pass->run(F, FAM);
-    }
-
+    PreservedAnalyses PassPA = Pass->run(F, FAM);
     PI.runAfterPass(*Pass, F, PassPA);
 
     // We know that the function pass couldn't have invalidated any other

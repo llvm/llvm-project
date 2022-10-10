@@ -16,6 +16,7 @@
 #include "lldb/Utility/Timer.h"
 #include "Utility/UuidCompatibility.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FileSystem.h"
@@ -167,8 +168,7 @@ bool HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec) {
     }
   }
 
-  file_spec.GetDirectory().SetString(
-      llvm::StringRef(raw_path.c_str(), raw_path.size()));
+  file_spec.SetDirectory(raw_path);
   return (bool)file_spec.GetDirectory();
 }
 
@@ -185,8 +185,7 @@ bool HostInfoMacOSX::ComputeHeaderDirectory(FileSpec &file_spec) {
     raw_path.resize(framework_pos);
     raw_path.append("/Headers");
   }
-  file_spec.GetDirectory().SetString(
-      llvm::StringRef(raw_path.c_str(), raw_path.size()));
+  file_spec.SetDirectory(raw_path);
   return true;
 }
 
@@ -204,15 +203,14 @@ bool HostInfoMacOSX::ComputeSystemPluginsDirectory(FileSpec &file_spec) {
   framework_pos += strlen("LLDB.framework");
   raw_path.resize(framework_pos);
   raw_path.append("/Resources/PlugIns");
-  file_spec.GetDirectory().SetString(
-      llvm::StringRef(raw_path.c_str(), raw_path.size()));
+  file_spec.SetDirectory(raw_path);
   return true;
 }
 
 bool HostInfoMacOSX::ComputeUserPluginsDirectory(FileSpec &file_spec) {
   FileSpec temp_file("~/Library/Application Support/LLDB/PlugIns");
   FileSystem::Instance().Resolve(temp_file);
-  file_spec.GetDirectory().SetCString(temp_file.GetPath().c_str());
+  file_spec.SetDirectory(temp_file.GetPathAsConstString());
   return true;
 }
 
@@ -262,8 +260,8 @@ void HostInfoMacOSX::ComputeHostArchitectureSupport(ArchSpec &arch_32,
       arch_32.SetArchitecture(eArchTypeMachO, cputype & ~(CPU_ARCH_MASK),
                               cpusubtype32);
 
-      if (cputype == CPU_TYPE_ARM || 
-          cputype == CPU_TYPE_ARM64 || 
+      if (cputype == CPU_TYPE_ARM ||
+          cputype == CPU_TYPE_ARM64 ||
           cputype == CPU_TYPE_ARM64_32) {
 // When running on a watch or tv, report the host os correctly
 #if defined(TARGET_OS_TV) && TARGET_OS_TV == 1
@@ -523,20 +521,33 @@ public:
   SharedCacheInfo();
 
 private:
+  bool CreateSharedCacheInfoWithInstrospectionSPIs();
+
   llvm::StringMap<SharedCacheImageInfo> m_images;
   UUID m_uuid;
 };
 }
 
-SharedCacheInfo::SharedCacheInfo() {
+bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
 #if defined(SDK_HAS_NEW_DYLD_INTROSPECTION_SPIS)
   if (__builtin_available(macOS 12, *)) {
     if (dyld_process_create_for_current_task) {
-      auto dyld_process = dyld_process_create_for_current_task();
-      auto snapshot =
+      dyld_process_t dyld_process = dyld_process_create_for_current_task();
+      if (!dyld_process)
+        return false;
+
+      dyld_process_snapshot_t snapshot =
           dyld_process_snapshot_create_for_process(dyld_process, nullptr);
-      auto shared_cache = dyld_process_snapshot_get_shared_cache(snapshot);
-      assert(dyld_process && snapshot && shared_cache);
+      if (!snapshot)
+        return false;
+
+      auto on_exit = llvm::make_scope_exit(
+          [&]() { dyld_process_snapshot_dispose(snapshot); });
+
+      dyld_shared_cache_t shared_cache =
+          dyld_process_snapshot_get_shared_cache(snapshot);
+      if (!shared_cache)
+        return false;
 
       dyld_shared_cache_for_each_image(shared_cache, ^(dyld_image_t image) {
         __block uint64_t minVmAddr = UINT64_MAX;
@@ -554,27 +565,32 @@ SharedCacheInfo::SharedCacheInfo() {
         assert(minVmAddr != UINT_MAX);
         assert(maxVmAddr != 0);
         m_images[dyld_image_get_installname(image)] = SharedCacheImageInfo{
-            UUID::fromData(uuid, 16),
+            UUID(uuid, 16),
             std::make_shared<DataBufferUnowned>((uint8_t *)minVmAddr,
                                                 maxVmAddr - minVmAddr)};
       });
-      dyld_process_snapshot_dispose(snapshot);
-      return;
+      return true;
     }
   }
 #endif
+  return false;
+}
+
+SharedCacheInfo::SharedCacheInfo() {
+  if (CreateSharedCacheInfoWithInstrospectionSPIs())
+    return;
 
   size_t shared_cache_size;
   uint8_t *shared_cache_start =
       _dyld_get_shared_cache_range(&shared_cache_size);
   uuid_t dsc_uuid;
   _dyld_get_shared_cache_uuid(dsc_uuid);
-  m_uuid = UUID::fromData(dsc_uuid);
+  m_uuid = UUID(dsc_uuid);
 
   dyld_shared_cache_iterate_text(
       dsc_uuid, ^(const dyld_shared_cache_dylib_text_info *info) {
         m_images[info->path] = SharedCacheImageInfo{
-            UUID::fromData(info->dylibUuid, 16),
+            UUID(info->dylibUuid, 16),
             std::make_shared<DataBufferUnowned>(
                 shared_cache_start + info->textSegmentOffset,
                 shared_cache_size - info->textSegmentOffset)};

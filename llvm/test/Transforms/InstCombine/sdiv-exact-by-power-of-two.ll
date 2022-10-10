@@ -15,6 +15,7 @@ define i8 @t0(i8 %x) {
   %div = sdiv exact i8 %x, 32
   ret i8 %div
 }
+
 define i8 @n1(i8 %x) {
 ; CHECK-LABEL: @n1(
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X:%.*]], 32
@@ -23,6 +24,7 @@ define i8 @n1(i8 %x) {
   %div = sdiv i8 %x, 32 ; not exact
   ret i8 %div
 }
+
 define i8 @n2(i8 %x) {
 ; CHECK-LABEL: @n2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], -128
@@ -58,6 +60,7 @@ define <2 x i8> @n5_vec_undef(<2 x i8> %x) {
   %div = sdiv exact <2 x i8> %x, <i8 32, i8 undef>
   ret <2 x i8> %div
 }
+
 define <2 x i8> @n6_vec_negative(<2 x i8> %x) {
 ; CHECK-LABEL: @n6_vec_negative(
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact <2 x i8> [[X:%.*]], <i8 32, i8 -128>
@@ -65,4 +68,42 @@ define <2 x i8> @n6_vec_negative(<2 x i8> %x) {
 ;
   %div = sdiv exact <2 x i8> %x, <i8 32, i8 128> ; non-non-negative divisor
   ret <2 x i8> %div
+}
+
+; sdiv exact X, (1<<ShAmt) --> ashr exact X, ShAmt (if shl is non-negative)
+
+define i8 @shl1_nsw(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl1_nsw(
+; CHECK-NEXT:    [[DIV:%.*]] = ashr exact i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %shl = shl nsw i8 1, %y
+  %div = sdiv exact i8 %x, %shl
+  ret i8 %div
+}
+
+; negative test - must have nsw
+
+define i8 @shl1_nuw(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl1_nuw(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 1, [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X:%.*]], [[SHL]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %shl = shl nuw i8 1, %y
+  %div = sdiv exact i8 %x, %shl
+  ret i8 %div
+}
+
+; negative test - must have exact
+
+define i8 @shl1_nsw_not_exact(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl1_nsw_not_exact(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 1, [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X:%.*]], [[SHL]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %shl = shl nsw i8 1, %y
+  %div = sdiv i8 %x, %shl
+  ret i8 %div
 }

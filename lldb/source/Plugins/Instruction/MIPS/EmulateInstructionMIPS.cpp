@@ -585,9 +585,9 @@ const char *EmulateInstructionMIPS::GetRegisterName(unsigned reg_num,
   return nullptr;
 }
 
-bool EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
-                                             uint32_t reg_num,
-                                             RegisterInfo &reg_info) {
+llvm::Optional<RegisterInfo>
+EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
+                                        uint32_t reg_num) {
   if (reg_kind == eRegisterKindGeneric) {
     switch (reg_num) {
     case LLDB_REGNUM_GENERIC_PC:
@@ -611,11 +611,12 @@ bool EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
       reg_num = dwarf_sr_mips;
       break;
     default:
-      return false;
+      return {};
     }
   }
 
   if (reg_kind == eRegisterKindDWARF) {
+    RegisterInfo reg_info;
     ::memset(&reg_info, 0, sizeof(RegisterInfo));
     ::memset(reg_info.kinds, LLDB_INVALID_REGNUM, sizeof(reg_info.kinds));
 
@@ -636,7 +637,7 @@ bool EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
       reg_info.format = eFormatVectorOfUInt8;
       reg_info.encoding = eEncodingVector;
     } else {
-      return false;
+      return {};
     }
 
     reg_info.name = GetRegisterName(reg_num, false);
@@ -662,9 +663,9 @@ bool EmulateInstructionMIPS::GetRegisterInfo(RegisterKind reg_kind,
     default:
       break;
     }
-    return true;
+    return reg_info;
   }
-  return false;
+  return {};
 }
 
 EmulateInstructionMIPS::MipsOpcode *
@@ -1196,10 +1197,10 @@ bool EmulateInstructionMIPS::Emulate_ADDiu(llvm::MCInst &insn) {
     /* Check if this is daddiu sp, sp, imm16 */
     if (dst == dwarf_sp_mips) {
       uint64_t result = src_opd_val + imm;
-      RegisterInfo reg_info_sp;
-
-      if (GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips, reg_info_sp))
-        context.SetRegisterPlusOffset(reg_info_sp, imm);
+      llvm::Optional<RegisterInfo> reg_info_sp =
+          GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips);
+      if (reg_info_sp)
+        context.SetRegisterPlusOffset(*reg_info_sp, imm);
 
       /* We are allocating bytes on stack */
       context.type = eContextAdjustStackPointer;
@@ -1228,13 +1229,12 @@ bool EmulateInstructionMIPS::Emulate_SW(llvm::MCInst &insn) {
   int32_t address;
   Context bad_vaddr_context;
 
-  RegisterInfo reg_info_base;
-
   src = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   base = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
 
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base,
-                       reg_info_base))
+  llvm::Optional<RegisterInfo> reg_info_base =
+      GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base);
+  if (!reg_info_base)
     return false;
 
   /* read base register */
@@ -1253,29 +1253,28 @@ bool EmulateInstructionMIPS::Emulate_SW(llvm::MCInst &insn) {
 
   /* We look for sp based non-volatile register stores */
   if (nonvolatile_reg_p(src)) {
-
-    RegisterInfo reg_info_src;
-
-    if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src,
-                         reg_info_src))
+    llvm::Optional<RegisterInfo> reg_info_src =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src);
+    if (!reg_info_src)
       return false;
 
     Context context;
     RegisterValue data_src;
     context.type = eContextPushRegisterOnStack;
-    context.SetRegisterToRegisterPlusOffset(reg_info_src, reg_info_base, 0);
+    context.SetRegisterToRegisterPlusOffset(*reg_info_src, *reg_info_base, 0);
 
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
     Status error;
 
-    if (!ReadRegister(&reg_info_base, data_src))
+    if (!ReadRegister(&(*reg_info_base), data_src))
       return false;
 
-    if (data_src.GetAsMemoryData(&reg_info_src, buffer, reg_info_src.byte_size,
-                                 eByteOrderLittle, error) == 0)
+    if (data_src.GetAsMemoryData(&(*reg_info_src), buffer,
+                                 reg_info_src->byte_size, eByteOrderLittle,
+                                 error) == 0)
       return false;
 
-    if (!WriteMemory(context, address, buffer, reg_info_src.byte_size))
+    if (!WriteMemory(context, address, buffer, reg_info_src->byte_size))
       return false;
 
     return true;
@@ -1294,9 +1293,7 @@ bool EmulateInstructionMIPS::Emulate_LW(llvm::MCInst &insn) {
   base = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
   imm = insn.getOperand(2).getImm();
 
-  RegisterInfo reg_info_base;
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base,
-                       reg_info_base))
+  if (GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base))
     return false;
 
   /* read base register */
@@ -1315,17 +1312,16 @@ bool EmulateInstructionMIPS::Emulate_LW(llvm::MCInst &insn) {
 
   if (nonvolatile_reg_p(src)) {
     RegisterValue data_src;
-    RegisterInfo reg_info_src;
-
-    if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src,
-                         reg_info_src))
+    llvm::Optional<RegisterInfo> reg_info_src =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src);
+    if (!reg_info_src)
       return false;
 
     Context context;
     context.type = eContextPopRegisterOffStack;
     context.SetAddress(address);
 
-    return WriteRegister(context, &reg_info_src, data_src);
+    return WriteRegister(context, &(*reg_info_src), data_src);
   }
 
   return false;
@@ -1366,9 +1362,10 @@ bool EmulateInstructionMIPS::Emulate_SUBU_ADDU(llvm::MCInst &insn) {
       result = src_opd_val + rt_opd_val;
 
     Context context;
-    RegisterInfo reg_info_sp;
-    if (GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips, reg_info_sp))
-      context.SetRegisterPlusOffset(reg_info_sp, rt_opd_val);
+    llvm::Optional<RegisterInfo> reg_info_sp =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips);
+    if (reg_info_sp)
+      context.SetRegisterPlusOffset(*reg_info_sp, rt_opd_val);
 
     /* We are allocating bytes on stack */
     context.type = eContextAdjustStackPointer;
@@ -1441,9 +1438,10 @@ bool EmulateInstructionMIPS::Emulate_ADDIUSP(llvm::MCInst &insn) {
   result = src_opd_val + imm9;
 
   Context context;
-  RegisterInfo reg_info_sp;
-  if (GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips, reg_info_sp))
-    context.SetRegisterPlusOffset(reg_info_sp, imm9);
+  llvm::Optional<RegisterInfo> reg_info_sp =
+      GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips);
+  if (reg_info_sp)
+    context.SetRegisterPlusOffset(*reg_info_sp, imm9);
 
   // We are adjusting the stack.
   context.type = eContextAdjustStackPointer;
@@ -1472,9 +1470,10 @@ bool EmulateInstructionMIPS::Emulate_ADDIUS5(llvm::MCInst &insn) {
     result = src_opd_val + imm4;
 
     Context context;
-    RegisterInfo reg_info_sp;
-    if (GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips, reg_info_sp))
-      context.SetRegisterPlusOffset(reg_info_sp, imm4);
+    llvm::Optional<RegisterInfo> reg_info_sp =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips);
+    if (reg_info_sp)
+      context.SetRegisterPlusOffset(*reg_info_sp, imm4);
 
     // We are adjusting the stack.
     context.type = eContextAdjustStackPointer;
@@ -1495,10 +1494,9 @@ bool EmulateInstructionMIPS::Emulate_SWSP(llvm::MCInst &insn) {
   src = m_reg_info->getEncodingValue(insn.getOperand(0).getReg());
   base = m_reg_info->getEncodingValue(insn.getOperand(1).getReg());
 
-  RegisterInfo reg_info_base;
-
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base,
-                       reg_info_base))
+  llvm::Optional<RegisterInfo> reg_info_base =
+      GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base);
+  if (!reg_info_base)
     return false;
 
   // read base register
@@ -1523,12 +1521,12 @@ bool EmulateInstructionMIPS::Emulate_SWSP(llvm::MCInst &insn) {
     Context context;
     RegisterValue data_src;
     context.type = eContextPushRegisterOnStack;
-    context.SetRegisterToRegisterPlusOffset(reg_info_src, reg_info_base, 0);
+    context.SetRegisterToRegisterPlusOffset(reg_info_src, *reg_info_base, 0);
 
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
     Status error;
 
-    if (!ReadRegister(&reg_info_base, data_src))
+    if (!ReadRegister(&(*reg_info_base), data_src))
       return false;
 
     if (data_src.GetAsMemoryData(&reg_info_src, buffer, reg_info_src.byte_size,
@@ -1568,11 +1566,9 @@ bool EmulateInstructionMIPS::Emulate_SWM16_32(llvm::MCInst &insn) {
   // offset is always the last operand.
   uint32_t offset = insn.getOperand(num_operands - 1).getImm();
 
-  RegisterInfo reg_info_base;
-  RegisterInfo reg_info_src;
-
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base,
-                       reg_info_base))
+  llvm::Optional<RegisterInfo> reg_info_base =
+      GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base);
+  if (!reg_info_base)
     return false;
 
   // read SP
@@ -1599,30 +1595,32 @@ bool EmulateInstructionMIPS::Emulate_SWM16_32(llvm::MCInst &insn) {
     if (!nonvolatile_reg_p(src))
       return false;
 
-    if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src,
-                         reg_info_src))
+    llvm::Optional<RegisterInfo> reg_info_src =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src);
+    if (!reg_info_src)
       return false;
 
     Context context;
     RegisterValue data_src;
     context.type = eContextPushRegisterOnStack;
-    context.SetRegisterToRegisterPlusOffset(reg_info_src, reg_info_base, 0);
+    context.SetRegisterToRegisterPlusOffset(*reg_info_src, *reg_info_base, 0);
 
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
     Status error;
 
-    if (!ReadRegister(&reg_info_base, data_src))
+    if (!ReadRegister(&(*reg_info_base), data_src))
       return false;
 
-    if (data_src.GetAsMemoryData(&reg_info_src, buffer, reg_info_src.byte_size,
-                                 eByteOrderLittle, error) == 0)
+    if (data_src.GetAsMemoryData(&(*reg_info_src), buffer,
+                                 reg_info_src->byte_size, eByteOrderLittle,
+                                 error) == 0)
       return false;
 
-    if (!WriteMemory(context, base_address, buffer, reg_info_src.byte_size))
+    if (!WriteMemory(context, base_address, buffer, reg_info_src->byte_size))
       return false;
 
     // Stack address for next register
-    base_address = base_address + reg_info_src.byte_size;
+    base_address = base_address + reg_info_src->byte_size;
   }
   return true;
 }
@@ -1634,9 +1632,7 @@ bool EmulateInstructionMIPS::Emulate_LWSP(llvm::MCInst &insn) {
   uint32_t imm5 = insn.getOperand(2).getImm();
   Context bad_vaddr_context;
 
-  RegisterInfo reg_info_base;
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base,
-                       reg_info_base))
+  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base))
     return false;
 
   // read base register
@@ -1656,17 +1652,16 @@ bool EmulateInstructionMIPS::Emulate_LWSP(llvm::MCInst &insn) {
 
   if (base == dwarf_sp_mips && nonvolatile_reg_p(src)) {
     RegisterValue data_src;
-    RegisterInfo reg_info_src;
-
-    if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src,
-                         reg_info_src))
+    llvm::Optional<RegisterInfo> reg_info_src =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + src);
+    if (!reg_info_src)
       return false;
 
     Context context;
     context.type = eContextPopRegisterOffStack;
     context.SetAddress(base_address);
 
-    return WriteRegister(context, &reg_info_src, data_src);
+    return WriteRegister(context, &(*reg_info_src), data_src);
   }
 
   return false;
@@ -1703,7 +1698,6 @@ bool EmulateInstructionMIPS::Emulate_LWM16_32(llvm::MCInst &insn) {
   base_address = base_address + imm;
 
   RegisterValue data_dst;
-  RegisterInfo reg_info_dst;
 
   // Total no of registers to be re-stored are num_operands-2.
   for (uint32_t i = 0; i < num_operands - 2; i++) {
@@ -1720,15 +1714,16 @@ bool EmulateInstructionMIPS::Emulate_LWM16_32(llvm::MCInst &insn) {
     if (!nonvolatile_reg_p(dst))
       return false;
 
-    if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + dst,
-                         reg_info_dst))
+    llvm::Optional<RegisterInfo> reg_info_dst =
+        GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + dst);
+    if (!reg_info_dst)
       return false;
 
     Context context;
     context.type = eContextPopRegisterOffStack;
     context.SetAddress(base_address + (i * 4));
 
-    if (!WriteRegister(context, &reg_info_dst, data_dst))
+    if (!WriteRegister(context, &(*reg_info_dst), data_dst))
       return false;
   }
 
@@ -1765,9 +1760,10 @@ bool EmulateInstructionMIPS::Emulate_JRADDIUSP(llvm::MCInst &insn) {
                              ra_val))
     return false;
 
-  RegisterInfo reg_info_sp;
-  if (GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips, reg_info_sp))
-    context.SetRegisterPlusOffset(reg_info_sp, imm5);
+  llvm::Optional<RegisterInfo> reg_info_sp =
+      GetRegisterInfo(eRegisterKindDWARF, dwarf_sp_mips);
+  if (reg_info_sp)
+    context.SetRegisterPlusOffset(*reg_info_sp, imm5);
 
   // We are adjusting stack
   context.type = eContextAdjustStackPointer;
@@ -2983,9 +2979,7 @@ bool EmulateInstructionMIPS::Emulate_LDST_Imm(llvm::MCInst &insn) {
       m_reg_info->getEncodingValue(insn.getOperand(num_operands - 2).getReg());
   imm = insn.getOperand(num_operands - 1).getImm();
 
-  RegisterInfo reg_info_base;
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base,
-                       reg_info_base))
+  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base))
     return false;
 
   /* read base register */
@@ -3017,13 +3011,10 @@ bool EmulateInstructionMIPS::Emulate_LDST_Reg(llvm::MCInst &insn) {
   index =
       m_reg_info->getEncodingValue(insn.getOperand(num_operands - 1).getReg());
 
-  RegisterInfo reg_info_base, reg_info_index;
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base,
-                       reg_info_base))
+  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + base))
     return false;
 
-  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + index,
-                       reg_info_index))
+  if (!GetRegisterInfo(eRegisterKindDWARF, dwarf_zero_mips + index))
     return false;
 
   /* read base register */

@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=i686-pc-windows-msvc | FileCheck %s -check-prefix=X32
+; RUN: llc < %s -mtriple=i686-w64-windows-gnu | FileCheck %s -check-prefix=X32
 ; Control Flow Guard is currently only available on Windows
 
 

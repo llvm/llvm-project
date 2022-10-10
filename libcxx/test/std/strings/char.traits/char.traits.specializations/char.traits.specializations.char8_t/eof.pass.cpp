@@ -20,7 +20,7 @@
 
 int main(int, char**)
 {
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     std::char_traits<char8_t>::int_type i = std::char_traits<char8_t>::eof();
     ((void)i); // Prevent unused warning
 #endif

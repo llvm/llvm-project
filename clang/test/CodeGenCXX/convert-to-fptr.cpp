@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -std=c++11 -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -std=c++11 -emit-llvm %s -o - | \
 // RUN: FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-darwin -std=c++11 -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -triple i386-apple-darwin -std=c++11 -emit-llvm %s -o - | \
 // RUN: FileCheck %s
 
 extern "C" int printf(...);
@@ -38,5 +38,5 @@ int main()
  return 0;
 }
 
-// CHECK: call noundef i32 (i32)* @_ZN1AcvPFiiEEv
-// CHECK: call noundef nonnull i32 (i32)* @_ZN1BcvRFiiEEv
+// CHECK: call noundef ptr @_ZN1AcvPFiiEEv
+// CHECK: call noundef nonnull ptr @_ZN1BcvRFiiEEv

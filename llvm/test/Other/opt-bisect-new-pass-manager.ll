@@ -99,6 +99,10 @@
 ; RUN: opt %s -opt-bisect-limit=0 -passes=early-cse -S | FileCheck %s -check-prefix=CHECK-OUTPUT
 ; CHECK-OUTPUT: define void @f1
 
+; Make sure we write ThinLTO bitcode
+; RUN: opt %s -opt-bisect-limit=0 -disable-verify -thinlto-bc -o /dev/null 2>&1 | FileCheck --allow-empty %s -check-prefix=CHECK-THINLTO
+; CHECK-THINLTO-NOT: NOT running pass
+
 declare i32 @g()
 
 define void @f1() {

@@ -1,7 +1,7 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 subroutine s1
-  !ERROR: Array 'z' without ALLOCATABLE or POINTER attribute must have explicit shape
-  common x, y(4), z(:)
+  !ERROR: Array 'x' without ALLOCATABLE or POINTER attribute must have explicit shape
+  common x(:), y(4), z
 end
 
 subroutine s2
@@ -28,9 +28,9 @@ subroutine s5
 end
 
 function f6(x) result(r)
-  !ERROR: Dummy argument 'x' may not appear in a COMMON block
   !ERROR: ALLOCATABLE object 'y' may not appear in a COMMON block
-  common x,y,z
+  !ERROR: Dummy argument 'x' may not appear in a COMMON block
+  common y,x,z
   allocatable y
   !ERROR: Function result 'r' may not appear in a COMMON block
   common r

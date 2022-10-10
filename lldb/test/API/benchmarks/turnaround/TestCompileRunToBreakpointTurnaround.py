@@ -1,8 +1,5 @@
 """Benchmark the turnaround time starting a debugger and run to the breakpoint with lldb vs. gdb."""
 
-from __future__ import print_function
-
-
 import sys
 import lldb
 from lldbsuite.test.lldbbench import *

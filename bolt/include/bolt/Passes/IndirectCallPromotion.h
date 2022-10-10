@@ -217,6 +217,10 @@ public:
   bool shouldPrint(const BinaryFunction &BF) const override {
     return BinaryFunctionPass::shouldPrint(BF) && Modified.count(&BF) > 0;
   }
+  bool shouldOptimize(const BinaryFunction &BF) const override {
+    return BF.isSimple() && !BF.isIgnored() && BF.hasProfile() &&
+           !BF.hasUnknownControlFlow();
+  }
   void runOnFunctions(BinaryContext &BC) override;
 };
 

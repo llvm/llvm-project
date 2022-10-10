@@ -21,6 +21,7 @@
 #include <map>
 #include <mutex>
 #include <sstream>
+#include <string_view>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -136,16 +137,18 @@ private:
     std::vector<JITDylibState *> Deps;
     AtExitsVector AtExits;
     const objc_image_info *ObjCImageInfo = nullptr;
+    std::unordered_map<void *, std::vector<char>> DataSectionContent;
+    std::unordered_map<void *, size_t> ZeroInitRanges;
     std::vector<span<void (*)()>> ModInitsSections;
     std::vector<span<void (*)()>> ModInitsSectionsNew;
     std::vector<span<uintptr_t>> ObjCClassListSections;
     std::vector<span<uintptr_t>> ObjCClassListSectionsNew;
     std::vector<span<uintptr_t>> ObjCSelRefsSections;
     std::vector<span<uintptr_t>> ObjCSelRefsSectionsNew;
-    std::vector<span<char>> Swift5ProtoSections;
-    std::vector<span<char>> Swift5ProtoSectionsNew;
-    std::vector<span<char>> Swift5ProtosSections;
-    std::vector<span<char>> Swift5ProtosSectionsNew;
+    std::vector<span<char>> Swift5ProtocolsSections;
+    std::vector<span<char>> Swift5ProtocolsSectionsNew;
+    std::vector<span<char>> Swift5ProtocolConformancesSections;
+    std::vector<span<char>> Swift5ProtocolConformancesSectionsNew;
     std::vector<span<char>> Swift5TypesSections;
     std::vector<span<char>> Swift5TypesSectionsNew;
 
@@ -174,15 +177,15 @@ public:
   Error deregisterThreadDataSection(span<const char> ThreadDataSection);
   Error registerObjectPlatformSections(
       ExecutorAddr HeaderAddr,
-      std::vector<std::pair<string_view, ExecutorAddrRange>> Secs);
+      std::vector<std::pair<std::string_view, ExecutorAddrRange>> Secs);
   Error deregisterObjectPlatformSections(
       ExecutorAddr HeaderAddr,
-      std::vector<std::pair<string_view, ExecutorAddrRange>> Secs);
+      std::vector<std::pair<std::string_view, ExecutorAddrRange>> Secs);
 
   const char *dlerror();
-  void *dlopen(string_view Name, int Mode);
+  void *dlopen(std::string_view Name, int Mode);
   int dlclose(void *DSOHandle);
-  void *dlsym(void *DSOHandle, string_view Symbol);
+  void *dlsym(void *DSOHandle, std::string_view Symbol);
 
   int registerAtExit(void (*F)(void *), void *Arg, void *DSOHandle);
   void runAtExits(JITDylibState &JDS);
@@ -194,10 +197,10 @@ public:
 
 private:
   JITDylibState *getJITDylibStateByHeader(void *DSOHandle);
-  JITDylibState *getJITDylibStateByName(string_view Path);
+  JITDylibState *getJITDylibStateByName(std::string_view Path);
 
   Expected<ExecutorAddr> lookupSymbolInJITDylib(void *DSOHandle,
-                                                string_view Symbol);
+                                                std::string_view Symbol);
 
   static Error registerObjCSelectors(JITDylibState &JDS);
   static Error registerObjCClasses(JITDylibState &JDS);
@@ -206,7 +209,7 @@ private:
   static Error registerSwift5Types(JITDylibState &JDS);
   static Error runModInits(JITDylibState &JDS);
 
-  Expected<void *> dlopenImpl(string_view Path, int Mode);
+  Expected<void *> dlopenImpl(std::string_view Path, int Mode);
   Error dlopenFull(JITDylibState &JDS);
   Error dlopenInitialize(JITDylibState &JDS, MachOJITDylibDepInfoMap &DepInfo);
 
@@ -220,7 +223,7 @@ private:
 
   std::recursive_mutex JDStatesMutex;
   std::unordered_map<void *, JITDylibState> JDStates;
-  std::unordered_map<string_view, void *> JDNameToHeader;
+  std::unordered_map<std::string_view, void *> JDNameToHeader;
 
   std::mutex ThreadDataSectionsMutex;
   std::map<const char *, size_t> ThreadDataSections;
@@ -321,7 +324,7 @@ Error MachOPlatformRuntimeState::deregisterThreadDataSection(
 
 Error MachOPlatformRuntimeState::registerObjectPlatformSections(
     ExecutorAddr HeaderAddr,
-    std::vector<std::pair<string_view, ExecutorAddrRange>> Secs) {
+    std::vector<std::pair<std::string_view, ExecutorAddrRange>> Secs) {
   ORC_RT_DEBUG({
     printdbg("MachOPlatform: Registering object sections for %p.\n",
              HeaderAddr.toPtr<void *>());
@@ -339,7 +342,17 @@ Error MachOPlatformRuntimeState::registerObjectPlatformSections(
 
   for (auto &KV : Secs) {
     // FIXME: Validate section ranges?
-    if (KV.first == "__DATA,__thread_data") {
+    if (KV.first == "__DATA,__data") {
+      assert(!JDS->DataSectionContent.count(KV.second.Start.toPtr<char *>()) &&
+             "Address already registered.");
+      auto S = KV.second.toSpan<char>();
+      JDS->DataSectionContent[KV.second.Start.toPtr<char *>()] =
+          std::vector<char>(S.begin(), S.end());
+    } else if (KV.first == "__DATA,__common") {
+      // fprintf(stderr, "Adding zero-init range %llx -- %llx\n",
+      // KV.second.Start.getValue(), KV.second.size());
+      JDS->ZeroInitRanges[KV.second.Start.toPtr<char *>()] = KV.second.size();
+    } else if (KV.first == "__DATA,__thread_data") {
       if (auto Err = registerThreadDataSection(KV.second.toSpan<const char>()))
         return Err;
     } else if (KV.first == "__DATA,__objc_selrefs")
@@ -347,9 +360,10 @@ Error MachOPlatformRuntimeState::registerObjectPlatformSections(
     else if (KV.first == "__DATA,__objc_classlist")
       JDS->ObjCClassListSectionsNew.push_back(KV.second.toSpan<uintptr_t>());
     else if (KV.first == "__TEXT,__swift5_protos")
-      JDS->Swift5ProtosSectionsNew.push_back(KV.second.toSpan<char>());
+      JDS->Swift5ProtocolsSectionsNew.push_back(KV.second.toSpan<char>());
     else if (KV.first == "__TEXT,__swift5_proto")
-      JDS->Swift5ProtoSectionsNew.push_back(KV.second.toSpan<char>());
+      JDS->Swift5ProtocolConformancesSectionsNew.push_back(
+          KV.second.toSpan<char>());
     else if (KV.first == "__TEXT,__swift5_types")
       JDS->Swift5TypesSectionsNew.push_back(KV.second.toSpan<char>());
     else if (KV.first == "__DATA,__mod_init_func")
@@ -382,7 +396,7 @@ bool removeIfPresent(std::vector<span<T>> &V, ExecutorAddrRange R) {
 
 Error MachOPlatformRuntimeState::deregisterObjectPlatformSections(
     ExecutorAddr HeaderAddr,
-    std::vector<std::pair<string_view, ExecutorAddrRange>> Secs) {
+    std::vector<std::pair<std::string_view, ExecutorAddrRange>> Secs) {
   // TODO: Make this more efficient? (maybe unnecessary if removal is rare?)
   // TODO: Add a JITDylib prepare-for-teardown operation that clears all
   //       registered sections, causing this function to take the fast-path.
@@ -404,9 +418,17 @@ Error MachOPlatformRuntimeState::deregisterObjectPlatformSections(
   // FIXME: Implement faster-path by returning immediately if JDS is being
   // torn down entirely?
 
+  // TODO: Make library permanent (i.e. not able to be dlclosed) if it contains
+  // any Swift or ObjC. Once this happens we can clear (and no longer record)
+  // data section content, as the library could never be re-initialized.
+
   for (auto &KV : Secs) {
     // FIXME: Validate section ranges?
-    if (KV.first == "__DATA,__thread_data") {
+    if (KV.first == "__DATA,__data") {
+      JDS->DataSectionContent.erase(KV.second.Start.toPtr<char *>());
+    } else if (KV.first == "__DATA,__common") {
+      JDS->ZeroInitRanges.erase(KV.second.Start.toPtr<char *>());
+    } else if (KV.first == "__DATA,__thread_data") {
       if (auto Err =
               deregisterThreadDataSection(KV.second.toSpan<const char>()))
         return Err;
@@ -417,11 +439,11 @@ Error MachOPlatformRuntimeState::deregisterObjectPlatformSections(
       if (!removeIfPresent(JDS->ObjCClassListSections, KV.second))
         removeIfPresent(JDS->ObjCClassListSectionsNew, KV.second);
     } else if (KV.first == "__TEXT,__swift5_protos") {
-      if (!removeIfPresent(JDS->Swift5ProtosSections, KV.second))
-        removeIfPresent(JDS->Swift5ProtosSectionsNew, KV.second);
+      if (!removeIfPresent(JDS->Swift5ProtocolsSections, KV.second))
+        removeIfPresent(JDS->Swift5ProtocolsSectionsNew, KV.second);
     } else if (KV.first == "__TEXT,__swift5_proto") {
-      if (!removeIfPresent(JDS->Swift5ProtoSections, KV.second))
-        removeIfPresent(JDS->Swift5ProtoSectionsNew, KV.second);
+      if (!removeIfPresent(JDS->Swift5ProtocolConformancesSections, KV.second))
+        removeIfPresent(JDS->Swift5ProtocolConformancesSectionsNew, KV.second);
     } else if (KV.first == "__TEXT,__swift5_types") {
       if (!removeIfPresent(JDS->Swift5TypesSections, KV.second))
         removeIfPresent(JDS->Swift5TypesSectionsNew, KV.second);
@@ -441,7 +463,7 @@ Error MachOPlatformRuntimeState::deregisterObjectPlatformSections(
 
 const char *MachOPlatformRuntimeState::dlerror() { return DLFcnError.c_str(); }
 
-void *MachOPlatformRuntimeState::dlopen(string_view Path, int Mode) {
+void *MachOPlatformRuntimeState::dlopen(std::string_view Path, int Mode) {
   ORC_RT_DEBUG({
     std::string S(Path.data(), Path.size());
     printdbg("MachOPlatform::dlopen(\"%s\")\n", S.c_str());
@@ -476,7 +498,8 @@ int MachOPlatformRuntimeState::dlclose(void *DSOHandle) {
   return 0;
 }
 
-void *MachOPlatformRuntimeState::dlsym(void *DSOHandle, string_view Symbol) {
+void *MachOPlatformRuntimeState::dlsym(void *DSOHandle,
+                                       std::string_view Symbol) {
   auto Addr = lookupSymbolInJITDylib(DSOHandle, Symbol);
   if (!Addr) {
     DLFcnError = toString(Addr.takeError());
@@ -547,7 +570,7 @@ MachOPlatformRuntimeState::getJITDylibStateByHeader(void *DSOHandle) {
 }
 
 MachOPlatformRuntimeState::JITDylibState *
-MachOPlatformRuntimeState::getJITDylibStateByName(string_view Name) {
+MachOPlatformRuntimeState::getJITDylibStateByName(std::string_view Name) {
   // FIXME: Avoid creating string once we have C++20.
   auto I = JDNameToHeader.find(std::string(Name.data(), Name.size()));
   if (I != JDNameToHeader.end())
@@ -557,7 +580,7 @@ MachOPlatformRuntimeState::getJITDylibStateByName(string_view Name) {
 
 Expected<ExecutorAddr>
 MachOPlatformRuntimeState::lookupSymbolInJITDylib(void *DSOHandle,
-                                                  string_view Sym) {
+                                                  std::string_view Sym) {
   Expected<ExecutorAddr> Result((ExecutorAddr()));
   if (auto Err = WrapperFunction<SPSExpected<SPSExecutorAddr>(
           SPSExecutorAddr, SPSString)>::call(&__orc_rt_macho_symbol_lookup_tag,
@@ -640,40 +663,42 @@ Error MachOPlatformRuntimeState::registerObjCClasses(JITDylibState &JDS) {
 
 Error MachOPlatformRuntimeState::registerSwift5Protocols(JITDylibState &JDS) {
 
-  if (JDS.Swift5ProtosSectionsNew.empty())
+  if (JDS.Swift5ProtocolsSectionsNew.empty())
     return Error::success();
 
   if (ORC_RT_UNLIKELY(!swift_registerProtocols))
     return make_error<StringError>("swift_registerProtocols is not available");
 
-  for (const auto &Swift5Protocols : JDS.Swift5ProtoSectionsNew)
+  for (const auto &Swift5Protocols : JDS.Swift5ProtocolsSectionsNew)
     swift_registerProtocols(
         reinterpret_cast<const ProtocolRecord *>(Swift5Protocols.data()),
         reinterpret_cast<const ProtocolRecord *>(Swift5Protocols.data() +
                                                  Swift5Protocols.size()));
 
-  moveAppendSections(JDS.Swift5ProtoSections, JDS.Swift5ProtoSectionsNew);
+  moveAppendSections(JDS.Swift5ProtocolsSections,
+                     JDS.Swift5ProtocolsSectionsNew);
   return Error::success();
 }
 
 Error MachOPlatformRuntimeState::registerSwift5ProtocolConformances(
     JITDylibState &JDS) {
 
-  if (JDS.Swift5ProtosSectionsNew.empty())
+  if (JDS.Swift5ProtocolConformancesSectionsNew.empty())
     return Error::success();
 
   if (ORC_RT_UNLIKELY(!swift_registerProtocolConformances))
     return make_error<StringError>(
         "swift_registerProtocolConformances is not available");
 
-  for (const auto &ProtoConfSec : JDS.Swift5ProtosSectionsNew)
+  for (const auto &ProtoConfSec : JDS.Swift5ProtocolConformancesSectionsNew)
     swift_registerProtocolConformances(
         reinterpret_cast<const ProtocolConformanceRecord *>(
             ProtoConfSec.data()),
         reinterpret_cast<const ProtocolConformanceRecord *>(
             ProtoConfSec.data() + ProtoConfSec.size()));
 
-  moveAppendSections(JDS.Swift5ProtosSections, JDS.Swift5ProtosSectionsNew);
+  moveAppendSections(JDS.Swift5ProtocolConformancesSections,
+                     JDS.Swift5ProtocolConformancesSectionsNew);
   return Error::success();
 }
 
@@ -707,7 +732,7 @@ Error MachOPlatformRuntimeState::runModInits(JITDylibState &JDS) {
   return Error::success();
 }
 
-Expected<void *> MachOPlatformRuntimeState::dlopenImpl(string_view Path,
+Expected<void *> MachOPlatformRuntimeState::dlopenImpl(std::string_view Path,
                                                        int Mode) {
   // Try to find JITDylib state by name.
   auto *JDS = getJITDylibStateByName(Path);
@@ -869,6 +894,12 @@ Error MachOPlatformRuntimeState::dlcloseDeinitialize(JITDylibState &JDS) {
   moveAppendSections(JDS.ModInitsSections, JDS.ModInitsSectionsNew);
   JDS.ModInitsSectionsNew = std::move(JDS.ModInitsSections);
 
+  // Reset data section contents.
+  for (auto &KV : JDS.DataSectionContent)
+    memcpy(KV.first, KV.second.data(), KV.second.size());
+  for (auto &KV : JDS.ZeroInitRanges)
+    memset(KV.first, 0, KV.second);
+
   // Deinitialize any dependencies.
   for (auto *DepJDS : JDS.Deps) {
     --DepJDS->LinkedAgainstRefCount;
@@ -973,7 +1004,8 @@ __orc_rt_macho_register_object_platform_sections(char *ArgData,
                                   SPSMachOObjectPlatformSectionsMap)>::
       handle(ArgData, ArgSize,
              [](ExecutorAddr HeaderAddr,
-                std::vector<std::pair<string_view, ExecutorAddrRange>> &Secs) {
+                std::vector<std::pair<std::string_view, ExecutorAddrRange>>
+                    &Secs) {
                return MachOPlatformRuntimeState::get()
                    .registerObjectPlatformSections(HeaderAddr, std::move(Secs));
              })
@@ -987,7 +1019,8 @@ __orc_rt_macho_deregister_object_platform_sections(char *ArgData,
                                   SPSMachOObjectPlatformSectionsMap)>::
       handle(ArgData, ArgSize,
              [](ExecutorAddr HeaderAddr,
-                std::vector<std::pair<string_view, ExecutorAddrRange>> &Secs) {
+                std::vector<std::pair<std::string_view, ExecutorAddrRange>>
+                    &Secs) {
                return MachOPlatformRuntimeState::get()
                    .deregisterObjectPlatformSections(HeaderAddr,
                                                      std::move(Secs));

@@ -217,8 +217,7 @@ std::string MakeOpName(SourceName name) {
 
 bool IsCommonBlockContaining(const Symbol &block, const Symbol &object) {
   const auto &objects{block.get<CommonBlockDetails>().objects()};
-  auto found{std::find(objects.begin(), objects.end(), object)};
-  return found != objects.end();
+  return llvm::is_contained(objects, object);
 }
 
 bool IsUseAssociated(const Symbol &symbol, const Scope &scope) {
@@ -253,6 +252,12 @@ bool IsHostAssociated(const Symbol &symbol, const Scope &scope) {
   return DoesScopeContain(
       &GetProgramUnitOrBlockConstructContaining(FollowHostAssoc(symbol)),
       GetProgramUnitOrBlockConstructContaining(scope));
+}
+
+bool IsHostAssociatedIntoSubprogram(const Symbol &symbol, const Scope &scope) {
+  return DoesScopeContain(
+      &GetProgramUnitOrBlockConstructContaining(FollowHostAssoc(symbol)),
+      GetProgramUnitContaining(scope));
 }
 
 bool IsInStmtFunction(const Symbol &symbol) {
@@ -450,9 +455,25 @@ const Symbol *FindInterface(const Symbol &symbol) {
   return common::visit(
       common::visitors{
           [](const ProcEntityDetails &details) {
-            return details.interface().symbol();
+            const Symbol *interface {
+              details.interface().symbol()
+            };
+            return interface ? FindInterface(*interface) : nullptr;
           },
-          [](const ProcBindingDetails &details) { return &details.symbol(); },
+          [](const ProcBindingDetails &details) {
+            return FindInterface(details.symbol());
+          },
+          [&](const SubprogramDetails &) { return &symbol; },
+          [](const UseDetails &details) {
+            return FindInterface(details.symbol());
+          },
+          [](const HostAssocDetails &details) {
+            return FindInterface(details.symbol());
+          },
+          [](const GenericDetails &details) {
+            return details.specific() ? FindInterface(*details.specific())
+                                      : nullptr;
+          },
           [](const auto &) -> const Symbol * { return nullptr; },
       },
       symbol.details());
@@ -477,6 +498,10 @@ const Symbol *FindSubprogram(const Symbol &symbol) {
           },
           [](const HostAssocDetails &details) {
             return FindSubprogram(details.symbol());
+          },
+          [](const GenericDetails &details) {
+            return details.specific() ? FindSubprogram(*details.specific())
+                                      : nullptr;
           },
           [](const auto &) -> const Symbol * { return nullptr; },
       },
@@ -1034,6 +1059,13 @@ bool HasCoarray(const parser::Expr &expression) {
   return false;
 }
 
+bool IsAssumedType(const Symbol &symbol) {
+  if (const DeclTypeSpec * type{symbol.GetType()}) {
+    return type->IsAssumedType();
+  }
+  return false;
+}
+
 bool IsPolymorphic(const Symbol &symbol) {
   if (const DeclTypeSpec * type{symbol.GetType()}) {
     return type->IsPolymorphic();
@@ -1123,6 +1155,14 @@ ProcedureDefinitionClass ClassifyProcedure(const Symbol &symbol) { // 15.2.2
       return ProcedureDefinitionClass::Dummy;
     } else if (IsPointer(ultimate)) {
       return ProcedureDefinitionClass::Pointer;
+    }
+  } else if (const auto *nameDetails{
+                 ultimate.detailsIf<SubprogramNameDetails>()}) {
+    switch (nameDetails->kind()) {
+    case SubprogramKind::Module:
+      return ProcedureDefinitionClass::Module;
+    case SubprogramKind::Internal:
+      return ProcedureDefinitionClass::Internal;
     }
   } else if (const Symbol * subp{FindSubprogram(symbol)}) {
     if (const auto *subpDetails{subp->detailsIf<SubprogramDetails>()}) {
@@ -1268,7 +1308,7 @@ template <ComponentKind componentKind>
 std::string
 ComponentIterator<componentKind>::const_iterator::BuildResultDesignatorName()
     const {
-  std::string designator{""};
+  std::string designator;
   for (const auto &node : componentPath_) {
     designator += "%" + DEREF(node.component()).name().ToString();
   }

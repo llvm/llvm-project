@@ -8,12 +8,16 @@
 
 #include "mlir/Dialect/Linalg/Passes.h"
 
-#include "PassDetail.h"
-#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTELEMENTWISETOLINALG
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -33,7 +37,7 @@ static bool isElementwiseMappableOpOnRankedTensors(Operation *op) {
 ///   1. `v.getType() == t`
 ///   2. If an operand of `op` has type `t`, let `operand_first` be the first
 ///      such operand. Then`v == operand_first`.
-///   3. Otherwise, v is a newly created `linalg::InitTensorOp` with:
+///   3. Otherwise, v is a newly created `tensor::EmptyOp` with:
 ///        a. Static and dynamic dims extracted from the first operand of `op`.
 ///        b. Elemental type equal to the elemental type of `t`.
 ///
@@ -67,8 +71,8 @@ getOrCreateOperandsMatchingResultTypes(OpBuilder &b, Operation *op) {
     auto staticShape = llvm::to_vector<4>(rankedTensorType.getShape());
     auto dynamicShape = linalg::getDynOperands(loc, firstOperand, b);
 
-    res.push_back(b.create<linalg::InitTensorOp>(
-        loc, dynamicShape, staticShape, rankedTensorType.getElementType()));
+    res.push_back(b.create<tensor::EmptyOp>(
+        loc, staticShape, rankedTensorType.getElementType(), dynamicShape));
   }
   return res;
 }
@@ -121,7 +125,8 @@ void mlir::linalg::populateElementwiseToLinalgConversionPatterns(
 
 namespace {
 class ConvertElementwiseToLinalgPass
-    : public ConvertElementwiseToLinalgBase<ConvertElementwiseToLinalgPass> {
+    : public impl::ConvertElementwiseToLinalgBase<
+          ConvertElementwiseToLinalgPass> {
 
   void runOnOperation() final {
     auto *func = getOperation();

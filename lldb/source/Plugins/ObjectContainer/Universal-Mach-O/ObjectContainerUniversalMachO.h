@@ -51,8 +51,6 @@ public:
   // Member Functions
   bool ParseHeader() override;
 
-  void Dump(lldb_private::Stream *s) const override;
-
   size_t GetNumArchitectures() const override;
 
   bool GetArchitectureAtIndex(uint32_t cpu_idx,

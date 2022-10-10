@@ -47,7 +47,7 @@ static void TestFileFindings(const PathMappingList &map,
                              llvm::ArrayRef<Matches> matches,
                              llvm::ArrayRef<FileSpec> fails) {
   for (const auto &fail : fails) {
-    SCOPED_TRACE(fail.GetCString());
+    SCOPED_TRACE(fail.GetPath().c_str());
     EXPECT_FALSE(map.FindFile(fail));
   }
 

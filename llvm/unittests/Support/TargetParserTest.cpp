@@ -20,21 +20,20 @@ using namespace llvm;
 
 namespace {
 const char *ARMArch[] = {
-    "armv2",       "armv2a",         "armv3",       "armv3m",    "armv4",
-    "armv4t",      "armv5",          "armv5t",      "armv5e",    "armv5te",
-    "armv5tej",    "armv6",          "armv6j",      "armv6k",    "armv6hl",
-    "armv6t2",     "armv6kz",        "armv6z",      "armv6zk",   "armv6-m",
-    "armv6m",      "armv6sm",        "armv6s-m",    "armv7-a",   "armv7",
-    "armv7a",      "armv7ve",        "armv7hl",     "armv7l",    "armv7-r",
-    "armv7r",      "armv7-m",        "armv7m",      "armv7k",    "armv7s",
-    "armv7e-m",    "armv7em",        "armv8-a",     "armv8",     "armv8a",
-    "armv8l",      "armv8.1-a",      "armv8.1a",    "armv8.2-a", "armv8.2a",
-    "armv8.3-a",   "armv8.3a",       "armv8.4-a",   "armv8.4a",  "armv8.5-a",
-    "armv8.5a",    "armv8.6-a",      "armv8.6a",    "armv8.7-a", "armv8.7a",
-    "armv8.8-a",   "armv8.8a",       "armv8-r",     "armv8r",    "armv8-m.base",
-    "armv8m.base", "armv8-m.main",   "armv8m.main", "iwmmxt",    "iwmmxt2",
-    "xscale",      "armv8.1-m.main", "armv9-a",     "armv9",     "armv9a",
-    "armv9.1-a",   "armv9.1a",       "armv9.2-a",   "armv9.2a",
+    "armv4",        "armv4t",      "armv5",          "armv5t",      "armv5e",
+    "armv5te",      "armv5tej",    "armv6",          "armv6j",      "armv6k",
+    "armv6hl",      "armv6t2",     "armv6kz",        "armv6z",      "armv6zk",
+    "armv6-m",      "armv6m",      "armv6sm",        "armv6s-m",    "armv7-a",
+    "armv7",        "armv7a",      "armv7ve",        "armv7hl",     "armv7l",
+    "armv7-r",      "armv7r",      "armv7-m",        "armv7m",      "armv7k",
+    "armv7s",       "armv7e-m",    "armv7em",        "armv8-a",     "armv8",
+    "armv8a",       "armv8l",      "armv8.1-a",      "armv8.1a",    "armv8.2-a",
+    "armv8.2a",     "armv8.3-a",   "armv8.3a",       "armv8.4-a",   "armv8.4a",
+    "armv8.5-a",    "armv8.5a",    "armv8.6-a",      "armv8.6a",    "armv8.7-a",
+    "armv8.7a",     "armv8.8-a",   "armv8.8a",       "armv8-r",     "armv8r",
+    "armv8-m.base", "armv8m.base", "armv8-m.main",   "armv8m.main", "iwmmxt",
+    "iwmmxt2",      "xscale",      "armv8.1-m.main", "armv9-a",     "armv9",
+    "armv9a",       "armv9.1-a",   "armv9.1a",       "armv9.2-a",   "armv9.2a",
 };
 
 template <ARM::ISAKind ISAKind>
@@ -439,14 +438,6 @@ bool testARMArch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,
 
 TEST(TargetParserTest, testARMArch) {
   EXPECT_TRUE(
-      testARMArch("armv2", "generic", "v2", ARMBuildAttrs::CPUArch::Pre_v4));
-  EXPECT_TRUE(
-      testARMArch("armv2a", "generic", "v2a", ARMBuildAttrs::CPUArch::Pre_v4));
-  EXPECT_TRUE(
-      testARMArch("armv3", "generic", "v3", ARMBuildAttrs::CPUArch::Pre_v4));
-  EXPECT_TRUE(
-      testARMArch("armv3m", "generic", "v3m", ARMBuildAttrs::CPUArch::Pre_v4));
-  EXPECT_TRUE(
       testARMArch("armv4", "strongarm", "v4",
                           ARMBuildAttrs::CPUArch::v4));
   EXPECT_TRUE(
@@ -492,7 +483,7 @@ TEST(TargetParserTest, testARMArch) {
       testARMArch("armv7e-m", "cortex-m4", "v7em",
                           ARMBuildAttrs::CPUArch::v7E_M));
   EXPECT_TRUE(
-      testARMArch("armv8-a", "generic", "v8",
+      testARMArch("armv8-a", "generic", "v8a",
                           ARMBuildAttrs::CPUArch::v8_A));
   EXPECT_TRUE(
       testARMArch("armv8.1-a", "generic", "v8.1a",
@@ -603,10 +594,6 @@ TEST(TargetParserTest, testARMExtension) {
   EXPECT_FALSE(testARMExtension("xscale", ARM::ArchKind::INVALID, "crc"));
   EXPECT_FALSE(testARMExtension("swift", ARM::ArchKind::INVALID, "crc"));
 
-  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV2, "thumb"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV2A, "thumb"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV3, "thumb"));
-  EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV3M, "thumb"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV4, "dsp"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV4T, "dsp"));
   EXPECT_FALSE(testARMExtension("generic", ARM::ArchKind::ARMV5T, "simd"));
@@ -749,7 +736,7 @@ TEST(TargetParserTest, ARMArchExtFeature) {
                               {"mve", "nomve", "+mve", "-mve"},
                               {"mve.fp", "nomve.fp", "+mve.fp", "-mve.fp"}};
 
-  for (unsigned i = 0; i < array_lengthof(ArchExt); i++) {
+  for (unsigned i = 0; i < std::size(ArchExt); i++) {
     EXPECT_EQ(StringRef(ArchExt[i][2]), ARM::getArchExtFeature(ArchExt[i][0]));
     EXPECT_EQ(StringRef(ArchExt[i][3]), ARM::getArchExtFeature(ArchExt[i][1]));
   }
@@ -780,7 +767,7 @@ TEST(TargetParserTest, ARMArchExtDependencies) {
 TEST(TargetParserTest, ARMparseHWDiv) {
   const char *hwdiv[] = {"thumb", "arm", "arm,thumb", "thumb,arm"};
 
-  for (unsigned i = 0; i < array_lengthof(hwdiv); i++)
+  for (unsigned i = 0; i < std::size(hwdiv); i++)
     EXPECT_NE(ARM::AEK_INVALID, ARM::parseHWDiv((StringRef)hwdiv[i]));
 }
 
@@ -798,7 +785,7 @@ TEST(TargetParserTest, ARMparseArchEndianAndISA) {
       "v8.7a",     "v8.8-a", "v8.8a", "v8-r",   "v8m.base", "v8m.main",
       "v8.1m.main"};
 
-  for (unsigned i = 0; i < array_lengthof(Arch); i++) {
+  for (unsigned i = 0; i < std::size(Arch); i++) {
     std::string arm_1 = "armeb" + (std::string)(Arch[i]);
     std::string arm_2 = "arm" + (std::string)(Arch[i]) + "eb";
     std::string arm_3 = "arm" + (std::string)(Arch[i]);
@@ -837,7 +824,7 @@ TEST(TargetParserTest, ARMparseArchEndianAndISA) {
 }
 
 TEST(TargetParserTest, ARMparseArchProfile) {
-  for (unsigned i = 0; i < array_lengthof(ARMArch); i++) {
+  for (unsigned i = 0; i < std::size(ARMArch); i++) {
     switch (ARM::parseArch(ARMArch[i])) {
     case ARM::ArchKind::ARMV6M:
     case ARM::ArchKind::ARMV7M:
@@ -877,7 +864,7 @@ TEST(TargetParserTest, ARMparseArchProfile) {
 }
 
 TEST(TargetParserTest, ARMparseArchVersion) {
-  for (unsigned i = 0; i < array_lengthof(ARMArch); i++)
+  for (unsigned i = 0; i < std::size(ARMArch); i++)
     if (((std::string)ARMArch[i]).substr(0, 4) == "armv")
       EXPECT_EQ((ARMArch[i][4] - 48u), ARM::parseArchVersion(ARMArch[i]));
     else
@@ -1039,6 +1026,17 @@ INSTANTIATE_TEST_SUITE_P(
                 AArch64::AEK_PROFILE | AArch64::AEK_RAND |
                 AArch64::AEK_FP16FML | AArch64::AEK_I8MM,
             "8.4-A"),
+        ARMCPUTestParams(
+            "neoverse-v2", "armv9-a", "neon-fp-armv8",
+            AArch64::AEK_RAS | AArch64::AEK_SVE | AArch64::AEK_SSBS |
+                AArch64::AEK_RCPC | AArch64::AEK_CRC | AArch64::AEK_FP |
+                AArch64::AEK_SIMD | AArch64::AEK_MTE | AArch64::AEK_LSE |
+                AArch64::AEK_RDM | AArch64::AEK_RCPC | AArch64::AEK_DOTPROD |
+                AArch64::AEK_FP16 | AArch64::AEK_BF16 | AArch64::AEK_SVE2 |
+                AArch64::AEK_PROFILE | AArch64::AEK_FP16FML |
+                AArch64::AEK_I8MM | AArch64::AEK_SVE2BITPERM |
+                AArch64::AEK_RAND,
+            "9-A"),
         ARMCPUTestParams("cortex-r82", "armv8-r", "crypto-neon-fp-armv8",
                          AArch64::AEK_CRC | AArch64::AEK_RDM |
                              AArch64::AEK_SSBS | AArch64::AEK_DOTPROD |
@@ -1125,6 +1123,24 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_DOTPROD | AArch64::AEK_FP16 |
                              AArch64::AEK_FP16FML | AArch64::AEK_SHA3,
                          "8.5-A"),
+        ARMCPUTestParams("apple-a15", "armv8.5-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
+                             AArch64::AEK_FP | AArch64::AEK_SIMD |
+                             AArch64::AEK_LSE | AArch64::AEK_RAS |
+                             AArch64::AEK_RDM | AArch64::AEK_RCPC |
+                             AArch64::AEK_DOTPROD | AArch64::AEK_FP16 |
+                             AArch64::AEK_FP16FML | AArch64::AEK_SHA3 |
+                             AArch64::AEK_BF16 | AArch64::AEK_I8MM,
+                         "8.5-A"),
+        ARMCPUTestParams("apple-a16", "armv8.5-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
+                             AArch64::AEK_FP | AArch64::AEK_SIMD |
+                             AArch64::AEK_LSE | AArch64::AEK_RAS |
+                             AArch64::AEK_RDM | AArch64::AEK_RCPC |
+                             AArch64::AEK_DOTPROD | AArch64::AEK_FP16 |
+                             AArch64::AEK_FP16FML | AArch64::AEK_SHA3 |
+                             AArch64::AEK_BF16 | AArch64::AEK_I8MM,
+                         "8.5-A"),
         ARMCPUTestParams("apple-m1", "armv8.5-a", "crypto-neon-fp-armv8",
                          AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
                              AArch64::AEK_FP | AArch64::AEK_SIMD |
@@ -1132,6 +1148,15 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_RDM | AArch64::AEK_RCPC |
                              AArch64::AEK_DOTPROD | AArch64::AEK_FP16 |
                              AArch64::AEK_FP16FML | AArch64::AEK_SHA3,
+                         "8.5-A"),
+        ARMCPUTestParams("apple-m2", "armv8.5-a", "crypto-neon-fp-armv8",
+                         AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
+                             AArch64::AEK_FP | AArch64::AEK_SIMD |
+                             AArch64::AEK_LSE | AArch64::AEK_RAS |
+                             AArch64::AEK_RDM | AArch64::AEK_RCPC |
+                             AArch64::AEK_DOTPROD | AArch64::AEK_FP16 |
+                             AArch64::AEK_FP16FML | AArch64::AEK_SHA3 |
+                             AArch64::AEK_BF16 | AArch64::AEK_I8MM,
                          "8.5-A"),
         ARMCPUTestParams("apple-s4", "armv8.3-a", "crypto-neon-fp-armv8",
                          AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
@@ -1270,7 +1295,7 @@ INSTANTIATE_TEST_SUITE_P(
                              AArch64::AEK_LSE | AArch64::AEK_RDM,
                          "8.2-A")));
 
-static constexpr unsigned NumAArch64CPUArchs = 54;
+static constexpr unsigned NumAArch64CPUArchs = 58;
 
 TEST(TargetParserTest, testAArch64CPUArchList) {
   SmallVector<StringRef, NumAArch64CPUArchs> List;
@@ -1294,7 +1319,7 @@ bool testAArch64Arch(StringRef Arch, StringRef DefaultCPU, StringRef SubArch,
 }
 
 TEST(TargetParserTest, testAArch64Arch) {
-  EXPECT_TRUE(testAArch64Arch("armv8-a", "cortex-a53", "v8",
+  EXPECT_TRUE(testAArch64Arch("armv8-a", "cortex-a53", "v8a",
                               ARMBuildAttrs::CPUArch::v8_A));
   EXPECT_TRUE(testAArch64Arch("armv8.1-a", "generic", "v8.1a",
                               ARMBuildAttrs::CPUArch::v8_A));
@@ -1559,6 +1584,27 @@ TEST(TargetParserTest, AArch64ArchFeatures) {
   }
 }
 
+TEST(TargetParserTest, AArch64ArchV9toV8Conversion) {
+  for (auto AK : AArch64::ArchKinds) {
+    if (AK == AArch64::ArchKind::INVALID)
+      EXPECT_EQ(AK, AArch64::convertV9toV8(AK));
+    else if (AK < AArch64::ArchKind::ARMV9A)
+      EXPECT_EQ(AK, AArch64::convertV9toV8(AK));
+    else if (AK >= AArch64::ArchKind::ARMV8R)
+      EXPECT_EQ(AArch64::ArchKind::INVALID, AArch64::convertV9toV8(AK));
+    else
+      EXPECT_TRUE(AArch64::convertV9toV8(AK) < AArch64::ArchKind::ARMV9A);
+  }
+  EXPECT_EQ(AArch64::ArchKind::ARMV8_5A,
+              AArch64::convertV9toV8(AArch64::ArchKind::ARMV9A));
+  EXPECT_EQ(AArch64::ArchKind::ARMV8_6A,
+              AArch64::convertV9toV8(AArch64::ArchKind::ARMV9_1A));
+  EXPECT_EQ(AArch64::ArchKind::ARMV8_7A,
+              AArch64::convertV9toV8(AArch64::ArchKind::ARMV9_2A));
+  EXPECT_EQ(AArch64::ArchKind::ARMV8_8A,
+              AArch64::convertV9toV8(AArch64::ArchKind::ARMV9_3A));
+}
+
 TEST(TargetParserTest, AArch64ArchExtFeature) {
   const char *ArchExt[][4] = {
       {"crc", "nocrc", "+crc", "-crc"},
@@ -1598,7 +1644,7 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"pmuv3", "nopmuv3", "+perfmon", "-perfmon"},
   };
 
-  for (unsigned i = 0; i < array_lengthof(ArchExt); i++) {
+  for (unsigned i = 0; i < std::size(ArchExt); i++) {
     EXPECT_EQ(StringRef(ArchExt[i][2]),
               AArch64::getArchExtFeature(ArchExt[i][0]));
     EXPECT_EQ(StringRef(ArchExt[i][3]),

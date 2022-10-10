@@ -1439,11 +1439,11 @@ the configuration (without a prefix: ``Auto``).
     .. code-block:: c++
 
       true:
-      class foo {};
-
-      false:
       class foo
       {};
+
+      false:
+      class foo {};
 
   * ``BraceWrappingAfterControlStatementStyle AfterControlStatement``
     Wrap control statements (``if``/``for``/``while``/``switch``/..).
@@ -1697,6 +1697,23 @@ the configuration (without a prefix: ``Auto``).
      @Partial                       vs.     @Partial @Mock DataLoad loader;
      @Mock
      DataLoad loader;
+
+**BreakArrays** (``Boolean``) :versionbadge:`clang-format 16`
+  If ``true``, clang-format will always break after a Json array `[`
+  otherwise it will scan until the closing `]` to determine if it should add
+  newlines between elements (prettier compatible).
+
+  NOTE: This is currently only for formatting JSON.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     [                          vs.      [1, 2, 3, 4]
+       1,
+       2,
+       3,
+       4
+     ]
 
 **BreakBeforeBinaryOperators** (``BinaryOperatorStyle``) :versionbadge:`clang-format 3.6`
   The way to wrap binary operators.
@@ -3567,7 +3584,7 @@ the configuration (without a prefix: ``Auto``).
 
     .. code-block:: yaml
 
-      QualifierOrder: ['inline', 'static' , 'type', 'const']
+      QualifierOrder: ['inline', 'static', 'type', 'const']
 
 
     .. code-block:: c++
@@ -3670,7 +3687,7 @@ the configuration (without a prefix: ``Auto``).
 
 
 
-**ReflowComments** (``Boolean``) :versionbadge:`clang-format 4`
+**ReflowComments** (``Boolean``) :versionbadge:`clang-format 3.8`
   If ``true``, clang-format will attempt to re-flow comments.
 
   .. code-block:: c++
@@ -3740,6 +3757,23 @@ the configuration (without a prefix: ``Auto``).
         e();
       }
     }
+
+**RemoveSemicolon** (``Boolean``) :versionbadge:`clang-format 16`
+  Remove semicolons after the closing brace of a non-empty function.
+
+  .. warning:: 
+
+   Setting this option to `true` could lead to incorrect code formatting due
+   to clang-format's lack of complete semantic information. As such, extra
+   care should be taken to review code changes made by this option.
+
+  .. code-block:: c++
+
+    false:                                     true:
+
+    int max(int a, int b) {                    int max(int a, int b) {
+      return a > b ? a : b;                      return a > b ? a : b;
+    };                                         }
 
 **RequiresClausePosition** (``RequiresClausePositionStyle``) :versionbadge:`clang-format 15`
   The position of the ``requires`` clause.
@@ -3910,7 +3944,7 @@ the configuration (without a prefix: ``Auto``).
        int bar;                           int bar;
      } // namespace b                   } // namespace b
 
-**SortIncludes** (``SortIncludesOptions``) :versionbadge:`clang-format 4`
+**SortIncludes** (``SortIncludesOptions``) :versionbadge:`clang-format 3.8`
   Controls if and how clang-format will sort ``#includes``.
   If ``Never``, includes are never sorted.
   If ``CaseInsensitive``, includes are sorted in an ASCIIbetical or case

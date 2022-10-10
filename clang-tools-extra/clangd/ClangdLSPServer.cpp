@@ -26,6 +26,8 @@
 #include "support/Trace.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/FunctionExtras.h"
+#include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
@@ -464,6 +466,35 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   if (Server)
     return Reply(llvm::make_error<LSPError>("server already initialized",
                                             ErrorCode::InvalidRequest));
+
+  Opts.CodeComplete.EnableSnippets = Params.capabilities.CompletionSnippets;
+  Opts.CodeComplete.IncludeFixIts = Params.capabilities.CompletionFixes;
+  if (!Opts.CodeComplete.BundleOverloads)
+    Opts.CodeComplete.BundleOverloads = Params.capabilities.HasSignatureHelp;
+  Opts.CodeComplete.DocumentationFormat =
+      Params.capabilities.CompletionDocumentationFormat;
+  Opts.SignatureHelpDocumentationFormat =
+      Params.capabilities.SignatureHelpDocumentationFormat;
+  DiagOpts.EmbedFixesInDiagnostics = Params.capabilities.DiagnosticFixes;
+  DiagOpts.SendDiagnosticCategory = Params.capabilities.DiagnosticCategory;
+  DiagOpts.EmitRelatedLocations =
+      Params.capabilities.DiagnosticRelatedInformation;
+  if (Params.capabilities.WorkspaceSymbolKinds)
+    SupportedSymbolKinds |= *Params.capabilities.WorkspaceSymbolKinds;
+  if (Params.capabilities.CompletionItemKinds)
+    SupportedCompletionItemKinds |= *Params.capabilities.CompletionItemKinds;
+  SupportsCodeAction = Params.capabilities.CodeActionStructure;
+  SupportsHierarchicalDocumentSymbol =
+      Params.capabilities.HierarchicalDocumentSymbol;
+  SupportFileStatus = Params.initializationOptions.FileStatus;
+  HoverContentFormat = Params.capabilities.HoverContentFormat;
+  Opts.LineFoldingOnly = Params.capabilities.LineFoldingOnly;
+  SupportsOffsetsInSignatureHelp = Params.capabilities.OffsetsInSignatureHelp;
+  if (Params.capabilities.WorkDoneProgress)
+    BackgroundIndexProgressState = BackgroundIndexProgress::Empty;
+  BackgroundIndexSkipCreate = Params.capabilities.ImplicitProgressCreation;
+  Opts.ImplicitCancellation = !Params.capabilities.CancelsStaleRequests;
+
   if (Opts.UseDirBasedCDB) {
     DirectoryBasedGlobalCompilationDatabase::Options CDBOpts(TFS);
     if (const auto &Dir = Params.initializationOptions.compilationDatabasePath)
@@ -490,33 +521,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     Server.emplace(*CDB, TFS, Opts,
                    static_cast<ClangdServer::Callbacks *>(this));
   }
-
-  Opts.CodeComplete.EnableSnippets = Params.capabilities.CompletionSnippets;
-  Opts.CodeComplete.IncludeFixIts = Params.capabilities.CompletionFixes;
-  if (!Opts.CodeComplete.BundleOverloads)
-    Opts.CodeComplete.BundleOverloads = Params.capabilities.HasSignatureHelp;
-  Opts.CodeComplete.DocumentationFormat =
-      Params.capabilities.CompletionDocumentationFormat;
-  Opts.SignatureHelpDocumentationFormat =
-      Params.capabilities.SignatureHelpDocumentationFormat;
-  DiagOpts.EmbedFixesInDiagnostics = Params.capabilities.DiagnosticFixes;
-  DiagOpts.SendDiagnosticCategory = Params.capabilities.DiagnosticCategory;
-  DiagOpts.EmitRelatedLocations =
-      Params.capabilities.DiagnosticRelatedInformation;
-  if (Params.capabilities.WorkspaceSymbolKinds)
-    SupportedSymbolKinds |= *Params.capabilities.WorkspaceSymbolKinds;
-  if (Params.capabilities.CompletionItemKinds)
-    SupportedCompletionItemKinds |= *Params.capabilities.CompletionItemKinds;
-  SupportsCodeAction = Params.capabilities.CodeActionStructure;
-  SupportsHierarchicalDocumentSymbol =
-      Params.capabilities.HierarchicalDocumentSymbol;
-  SupportFileStatus = Params.initializationOptions.FileStatus;
-  HoverContentFormat = Params.capabilities.HoverContentFormat;
-  SupportsOffsetsInSignatureHelp = Params.capabilities.OffsetsInSignatureHelp;
-  if (Params.capabilities.WorkDoneProgress)
-    BackgroundIndexProgressState = BackgroundIndexProgress::Empty;
-  BackgroundIndexSkipCreate = Params.capabilities.ImplicitProgressCreation;
-  Opts.ImplicitCancellation = !Params.capabilities.CancelsStaleRequests;
 
   llvm::json::Object ServerCaps{
       {"textDocumentSync",
@@ -571,12 +575,17 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
       {"referencesProvider", true},
       {"astProvider", true}, // clangd extension
       {"typeHierarchyProvider", true},
-      {"memoryUsageProvider", true}, // clangd extension
-      {"compilationDatabase",        // clangd extension
+      // Unfortunately our extension made use of the same capability name as the
+      // standard. Advertise this capability to tell clients that implement our
+      // extension we really have support for the standardized one as well.
+      {"standardTypeHierarchyProvider", true}, // clangd extension
+      {"memoryUsageProvider", true},           // clangd extension
+      {"compilationDatabase",                  // clangd extension
        llvm::json::Object{{"automaticReload", true}}},
       {"callHierarchyProvider", true},
       {"clangdInlayHintsProvider", true},
       {"inlayHintProvider", true},
+      {"foldingRangeProvider", true},
   };
 
   {
@@ -597,7 +606,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   // Per LSP, codeActionProvider can be either boolean or CodeActionOptions.
   // CodeActionOptions is only valid if the client supports action literal
   // via textDocument.codeAction.codeActionLiteralSupport.
-  llvm::json::Value CodeActionProvider = true;
   ServerCaps["codeActionProvider"] =
       Params.capabilities.CodeActionStructure
           ? llvm::json::Object{{"codeActionKinds",
@@ -606,8 +614,6 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                                  CodeAction::INFO_KIND}}}
           : llvm::json::Value(true);
 
-  if (Opts.FoldingRanges)
-    ServerCaps["foldingRangeProvider"] = true;
 
   std::vector<llvm::StringRef> Commands;
   for (llvm::StringRef Command : Handlers.CommandHandlers.keys())
@@ -1183,18 +1189,94 @@ void ClangdLSPServer::onHover(const TextDocumentPositionParams &Params,
                     });
 }
 
-void ClangdLSPServer::onTypeHierarchy(
-    const TypeHierarchyParams &Params,
-    Callback<Optional<TypeHierarchyItem>> Reply) {
+// Our extension has a different representation on the wire than the standard.
+// https://clangd.llvm.org/extensions#type-hierarchy
+llvm::json::Value serializeTHIForExtension(TypeHierarchyItem THI) {
+  llvm::json::Object Result{{
+      {"name", std::move(THI.name)},
+      {"kind", static_cast<int>(THI.kind)},
+      {"uri", std::move(THI.uri)},
+      {"range", THI.range},
+      {"selectionRange", THI.selectionRange},
+      {"data", std::move(THI.data)},
+  }};
+  if (THI.deprecated)
+    Result["deprecated"] = THI.deprecated;
+  if (THI.detail)
+    Result["detail"] = std::move(*THI.detail);
+
+  if (THI.parents) {
+    llvm::json::Array Parents;
+    for (auto &Parent : *THI.parents)
+      Parents.emplace_back(serializeTHIForExtension(std::move(Parent)));
+    Result["parents"] = std::move(Parents);
+  }
+
+  if (THI.children) {
+    llvm::json::Array Children;
+    for (auto &child : *THI.children)
+      Children.emplace_back(serializeTHIForExtension(std::move(child)));
+    Result["children"] = std::move(Children);
+  }
+  return Result;
+}
+
+void ClangdLSPServer::onTypeHierarchy(const TypeHierarchyPrepareParams &Params,
+                                      Callback<llvm::json::Value> Reply) {
+  auto Serialize =
+      [Reply = std::move(Reply)](
+          llvm::Expected<std::vector<TypeHierarchyItem>> Resp) mutable {
+        if (!Resp) {
+          Reply(Resp.takeError());
+          return;
+        }
+        if (Resp->empty()) {
+          Reply(nullptr);
+          return;
+        }
+        Reply(serializeTHIForExtension(std::move(Resp->front())));
+      };
   Server->typeHierarchy(Params.textDocument.uri.file(), Params.position,
-                        Params.resolve, Params.direction, std::move(Reply));
+                        Params.resolve, Params.direction, std::move(Serialize));
 }
 
 void ClangdLSPServer::onResolveTypeHierarchy(
     const ResolveTypeHierarchyItemParams &Params,
-    Callback<Optional<TypeHierarchyItem>> Reply) {
+    Callback<llvm::json::Value> Reply) {
+  auto Serialize =
+      [Reply = std::move(Reply)](
+          llvm::Expected<llvm::Optional<TypeHierarchyItem>> Resp) mutable {
+        if (!Resp) {
+          Reply(Resp.takeError());
+          return;
+        }
+        if (!*Resp) {
+          Reply(std::move(*Resp));
+          return;
+        }
+        Reply(serializeTHIForExtension(std::move(**Resp)));
+      };
   Server->resolveTypeHierarchy(Params.item, Params.resolve, Params.direction,
-                               std::move(Reply));
+                               std::move(Serialize));
+}
+
+void ClangdLSPServer::onPrepareTypeHierarchy(
+    const TypeHierarchyPrepareParams &Params,
+    Callback<std::vector<TypeHierarchyItem>> Reply) {
+  Server->typeHierarchy(Params.textDocument.uri.file(), Params.position,
+                        Params.resolve, Params.direction, std::move(Reply));
+}
+
+void ClangdLSPServer::onSuperTypes(
+    const ResolveTypeHierarchyItemParams &Params,
+    Callback<llvm::Optional<std::vector<TypeHierarchyItem>>> Reply) {
+  Server->superTypes(Params.item, std::move(Reply));
+}
+
+void ClangdLSPServer::onSubTypes(
+    const ResolveTypeHierarchyItemParams &Params,
+    Callback<std::vector<TypeHierarchyItem>> Reply) {
+  Server->subTypes(Params.item, std::move(Reply));
 }
 
 void ClangdLSPServer::onPrepareCallHierarchy(
@@ -1523,6 +1605,9 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
   Bind.method("textDocument/symbolInfo", this, &ClangdLSPServer::onSymbolInfo);
   Bind.method("textDocument/typeHierarchy", this, &ClangdLSPServer::onTypeHierarchy);
   Bind.method("typeHierarchy/resolve", this, &ClangdLSPServer::onResolveTypeHierarchy);
+  Bind.method("textDocument/prepareTypeHierarchy", this, &ClangdLSPServer::onPrepareTypeHierarchy);
+  Bind.method("typeHierarchy/supertypes", this, &ClangdLSPServer::onSuperTypes);
+  Bind.method("typeHierarchy/subtypes", this, &ClangdLSPServer::onSubTypes);
   Bind.method("textDocument/prepareCallHierarchy", this, &ClangdLSPServer::onPrepareCallHierarchy);
   Bind.method("callHierarchy/incomingCalls", this, &ClangdLSPServer::onCallHierarchyIncomingCalls);
   Bind.method("textDocument/selectionRange", this, &ClangdLSPServer::onSelectionRange);
@@ -1532,8 +1617,7 @@ void ClangdLSPServer::bindMethods(LSPBinder &Bind,
   Bind.method("clangd/inlayHints", this, &ClangdLSPServer::onClangdInlayHints);
   Bind.method("textDocument/inlayHint", this, &ClangdLSPServer::onInlayHint);
   Bind.method("$/memoryUsage", this, &ClangdLSPServer::onMemoryUsage);
-  if (Opts.FoldingRanges)
-    Bind.method("textDocument/foldingRange", this, &ClangdLSPServer::onFoldingRange);
+  Bind.method("textDocument/foldingRange", this, &ClangdLSPServer::onFoldingRange);
   Bind.command(ApplyFixCommand, this, &ClangdLSPServer::onCommandApplyEdit);
   Bind.command(ApplyTweakCommand, this, &ClangdLSPServer::onCommandApplyTweak);
 

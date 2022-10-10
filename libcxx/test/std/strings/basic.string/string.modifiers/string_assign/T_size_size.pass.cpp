@@ -70,59 +70,38 @@ test_npos(S s, SV sv, typename S::size_type pos, S expected)
 #endif
 }
 
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  typedef std::string_view SV;
+  test(S(), SV(), 0, 0, S());
+  test(S(), SV(), 1, 0, S());
+  test(S(), SV("12345"), 0, 3, S("123"));
+  test(S(), SV("12345"), 1, 4, S("2345"));
+  test(S(), SV("12345"), 3, 15, S("45"));
+  test(S(), SV("12345"), 5, 15, S(""));
+  test(S(), SV("12345"), 6, 15, S("not happening"));
+  test(S(), SV("12345678901234567890"), 0, 0, S());
+  test(S(), SV("12345678901234567890"), 1, 1, S("2"));
+  test(S(), SV("12345678901234567890"), 2, 3, S("345"));
+  test(S(), SV("12345678901234567890"), 12, 13, S("34567890"));
+  test(S(), SV("12345678901234567890"), 21, 13, S("not happening"));
+
+  test(S("12345"), SV(), 0, 0, S());
+  test(S("12345"), SV("12345"), 2, 2, S("34"));
+  test(S("12345"), SV("1234567890"), 0, 100, S("1234567890"));
+
+  test(S("12345678901234567890"), SV(), 0, 0, S());
+  test(S("12345678901234567890"), SV("12345"), 1, 3, S("234"));
+  test(S("12345678901234567890"), SV("12345678901234567890"), 5, 10,
+        S("6789012345"));
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    typedef std::string_view SV;
-    test(S(), SV(), 0, 0, S());
-    test(S(), SV(), 1, 0, S());
-    test(S(), SV("12345"), 0, 3, S("123"));
-    test(S(), SV("12345"), 1, 4, S("2345"));
-    test(S(), SV("12345"), 3, 15, S("45"));
-    test(S(), SV("12345"), 5, 15, S(""));
-    test(S(), SV("12345"), 6, 15, S("not happening"));
-    test(S(), SV("12345678901234567890"), 0, 0, S());
-    test(S(), SV("12345678901234567890"), 1, 1, S("2"));
-    test(S(), SV("12345678901234567890"), 2, 3, S("345"));
-    test(S(), SV("12345678901234567890"), 12, 13, S("34567890"));
-    test(S(), SV("12345678901234567890"), 21, 13, S("not happening"));
-
-    test(S("12345"), SV(), 0, 0, S());
-    test(S("12345"), SV("12345"), 2, 2, S("34"));
-    test(S("12345"), SV("1234567890"), 0, 100, S("1234567890"));
-
-    test(S("12345678901234567890"), SV(), 0, 0, S());
-    test(S("12345678901234567890"), SV("12345"), 1, 3, S("234"));
-    test(S("12345678901234567890"), SV("12345678901234567890"), 5, 10,
-         S("6789012345"));
-  }
+  test_string<std::string>();
 #if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string     <char, std::char_traits<char>, min_allocator<char>> S;
-    typedef std::basic_string_view<char, std::char_traits<char> > SV;
-    test(S(), SV(), 0, 0, S());
-    test(S(), SV(), 1, 0, S());
-    test(S(), SV("12345"), 0, 3, S("123"));
-    test(S(), SV("12345"), 1, 4, S("2345"));
-    test(S(), SV("12345"), 3, 15, S("45"));
-    test(S(), SV("12345"), 5, 15, S(""));
-    test(S(), SV("12345"), 6, 15, S("not happening"));
-    test(S(), SV("12345678901234567890"), 0, 0, S());
-    test(S(), SV("12345678901234567890"), 1, 1, S("2"));
-    test(S(), SV("12345678901234567890"), 2, 3, S("345"));
-    test(S(), SV("12345678901234567890"), 12, 13, S("34567890"));
-    test(S(), SV("12345678901234567890"), 21, 13, S("not happening"));
-
-    test(S("12345"), SV(), 0, 0, S());
-    test(S("12345"), SV("12345"), 2, 2, S("34"));
-    test(S("12345"), SV("1234567890"), 0, 100, S("1234567890"));
-
-    test(S("12345678901234567890"), SV(), 0, 0, S());
-    test(S("12345678901234567890"), SV("12345"), 1, 3, S("234"));
-    test(S("12345678901234567890"), SV("12345678901234567890"), 5, 10,
-         S("6789012345"));
-  }
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
 #endif
+
   {
     typedef std::string S;
     typedef std::string_view SV;
@@ -190,7 +169,6 @@ TEST_CONSTEXPR_CXX20 bool test() {
     s.assign(sv, 0, std::string::npos);
     assert(s == "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
   }
-
   return true;
 }
 

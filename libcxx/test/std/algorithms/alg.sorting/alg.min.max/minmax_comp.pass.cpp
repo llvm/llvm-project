@@ -14,8 +14,9 @@
 //   minmax(const T& a, const T& b, Compare comp);
 
 #include <algorithm>
-#include <functional>
 #include <cassert>
+#include <functional>
+#include <utility>
 
 #include "test_macros.h"
 

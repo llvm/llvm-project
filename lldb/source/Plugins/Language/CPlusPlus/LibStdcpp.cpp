@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LibStdcpp.h"
+#include "LibCxx.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/ValueObject.h"
@@ -169,19 +170,16 @@ lldb_private::formatters::LibstdcppMapIteratorSyntheticFrontEndCreator(
 SyntheticChildrenFrontEnd *
 lldb_private::formatters::LibStdcppVectorIteratorSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  static ConstString g_item_name;
-  if (!g_item_name)
-    g_item_name.SetCString("_M_current");
-  return (valobj_sp
-              ? new VectorIteratorSyntheticFrontEnd(valobj_sp, g_item_name)
-              : nullptr);
+  return (valobj_sp ? new VectorIteratorSyntheticFrontEnd(
+                          valobj_sp, {ConstString("_M_current")})
+                    : nullptr);
 }
 
 lldb_private::formatters::VectorIteratorSyntheticFrontEnd::
     VectorIteratorSyntheticFrontEnd(lldb::ValueObjectSP valobj_sp,
-                                    ConstString item_name)
+                                    llvm::ArrayRef<ConstString> item_names)
     : SyntheticChildrenFrontEnd(*valobj_sp), m_exe_ctx_ref(),
-      m_item_name(item_name), m_item_sp() {
+      m_item_names(item_names), m_item_sp() {
   if (valobj_sp)
     Update();
 }
@@ -196,7 +194,8 @@ bool VectorIteratorSyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return false;
 
-  ValueObjectSP item_ptr(valobj_sp->GetChildMemberWithName(m_item_name, true));
+  ValueObjectSP item_ptr =
+      formatters::GetChildMemberWithName(*valobj_sp, m_item_names);
   if (!item_ptr)
     return false;
   if (item_ptr->GetValueAsUnsigned(0) == 0)

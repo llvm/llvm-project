@@ -19,6 +19,9 @@
 namespace mlir {
 class Pass;
 
+#define GEN_PASS_DECL_VIEWOPGRAPH
+#include "mlir/Transforms/Passes.h.inc"
+
 /// Creates a pass to print op graphs.
 std::unique_ptr<Pass> createPrintOpGraphPass(raw_ostream &os = llvm::errs());
 

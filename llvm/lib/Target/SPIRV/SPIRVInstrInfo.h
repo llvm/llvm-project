@@ -32,6 +32,9 @@ public:
   bool isConstantInstr(const MachineInstr &MI) const;
   bool isTypeDeclInstr(const MachineInstr &MI) const;
   bool isDecorationInstr(const MachineInstr &MI) const;
+  bool canUseFastMathFlags(const MachineInstr &MI) const;
+  bool canUseNSW(const MachineInstr &MI) const;
+  bool canUseNUW(const MachineInstr &MI) const;
 
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,

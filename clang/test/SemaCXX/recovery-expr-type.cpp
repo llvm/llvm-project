@@ -149,7 +149,8 @@ enum Circular {             // expected-note {{not complete until the closing '}
   Circular_A = Circular(1), // expected-error {{'Circular' is an incomplete type}}
 };
 // Enumerators can be evaluated (they evaluate as zero, but we don't care).
-static_assert(Circular_A == 0 && Circular_A != 0, ""); // expected-error {{static assertion failed}}
+static_assert(Circular_A == 0 && Circular_A != 0, ""); // expected-error {{static assertion failed}} \
+                                                       // expected-note {{evaluates to '0 != 0'}}
 }
 
 namespace test14 {
@@ -159,5 +160,14 @@ extern "C" void *memset(void *, int b, unsigned long) {
   memset(c, 0, *c); // crash1
 
   b = __builtin_object_size(c, 0); // crash2
+}
+}
+
+namespace test15 {
+void f() {
+  struct {
+    void m(int (&)[undefined()]) {} // expected-error {{undeclared identifier}}
+  } S;
+  S.m(1); // no crash
 }
 }

@@ -77,6 +77,9 @@ public:
   }
 };
 
+bool fromJSON(const llvm::json::Value &, SymbolID &, llvm::json::Path);
+llvm::json::Value toJSON(const SymbolID &);
+
 // URI in "file" scheme for a file.
 struct URIForFile {
   URIForFile() = default;
@@ -433,6 +436,12 @@ struct ClientCapabilities {
   /// Client supports signature help.
   /// textDocument.signatureHelp
   bool HasSignatureHelp = false;
+
+  /// Client signals that it only supports folding complete lines.
+  /// Client will ignore specified `startCharacter` and `endCharacter`
+  /// properties in a FoldingRange.
+  /// textDocument.foldingRange.lineFoldingOnly
+  bool LineFoldingOnly = false;
 
   /// Client supports processing label offsets instead of a simple label string.
   /// textDocument.signatureHelp.signatureInformation.parameterInformation.labelOffsetSupport
@@ -1093,6 +1102,10 @@ struct SymbolDetails {
   std::string USR;
 
   SymbolID ID;
+
+  llvm::Optional<Location> declarationRange;
+
+  llvm::Optional<Location> definitionRange;
 };
 llvm::json::Value toJSON(const SymbolDetails &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const SymbolDetails &);
@@ -1375,58 +1388,66 @@ bool fromJSON(const llvm::json::Value &E, TypeHierarchyDirection &Out,
 /// The type hierarchy params is an extension of the
 /// `TextDocumentPositionsParams` with optional properties which can be used to
 /// eagerly resolve the item when requesting from the server.
-struct TypeHierarchyParams : public TextDocumentPositionParams {
+struct TypeHierarchyPrepareParams : public TextDocumentPositionParams {
   /// The hierarchy levels to resolve. `0` indicates no level.
+  /// This is a clangd extension.
   int resolve = 0;
 
   /// The direction of the hierarchy levels to resolve.
+  /// This is a clangd extension.
   TypeHierarchyDirection direction = TypeHierarchyDirection::Parents;
 };
-bool fromJSON(const llvm::json::Value &, TypeHierarchyParams &,
+bool fromJSON(const llvm::json::Value &, TypeHierarchyPrepareParams &,
               llvm::json::Path);
 
 struct TypeHierarchyItem {
-  /// The human readable name of the hierarchy item.
+  /// The name of this item.
   std::string name;
 
-  /// Optional detail for the hierarchy item. It can be, for instance, the
-  /// signature of a function or method.
-  llvm::Optional<std::string> detail;
-
-  /// The kind of the hierarchy item. For instance, class or interface.
+  /// The kind of this item.
   SymbolKind kind;
 
-  /// `true` if the hierarchy item is deprecated. Otherwise, `false`.
-  bool deprecated = false;
+  /// More detail for this item, e.g. the signature of a function.
+  llvm::Optional<std::string> detail;
 
-  /// The URI of the text document where this type hierarchy item belongs to.
+  /// The resource identifier of this item.
   URIForFile uri;
 
-  /// The range enclosing this type hierarchy item not including
-  /// leading/trailing whitespace but everything else like comments. This
-  /// information is typically used to determine if the client's cursor is
-  /// inside the type hierarch item to reveal in the symbol in the UI.
+  /// The range enclosing this symbol not including leading/trailing whitespace
+  /// but everything else, e.g. comments and code.
   Range range;
 
-  /// The range that should be selected and revealed when this type hierarchy
-  /// item is being picked, e.g. the name of a function. Must be contained by
-  /// the `range`.
+  /// The range that should be selected and revealed when this symbol is being
+  /// picked, e.g. the name of a function. Must be contained by the `range`.
   Range selectionRange;
 
-  /// If this type hierarchy item is resolved, it contains the direct parents.
-  /// Could be empty if the item does not have direct parents. If not defined,
-  /// the parents have not been resolved yet.
+  /// Used to resolve a client provided item back.
+  struct ResolveParams {
+    SymbolID symbolID;
+    /// None means parents aren't resolved and empty is no parents.
+    llvm::Optional<std::vector<ResolveParams>> parents;
+  };
+  /// A data entry field that is preserved between a type hierarchy prepare and
+  /// supertypes or subtypes requests. It could also be used to identify the
+  /// type hierarchy in the server, helping improve the performance on resolving
+  /// supertypes and subtypes.
+  ResolveParams data;
+
+  /// `true` if the hierarchy item is deprecated. Otherwise, `false`.
+  /// This is a clangd exntesion.
+  bool deprecated = false;
+
+  /// This is a clangd exntesion.
   llvm::Optional<std::vector<TypeHierarchyItem>> parents;
 
   /// If this type hierarchy item is resolved, it contains the direct children
   /// of the current item. Could be empty if the item does not have any
   /// descendants. If not defined, the children have not been resolved.
+  /// This is a clangd exntesion.
   llvm::Optional<std::vector<TypeHierarchyItem>> children;
-
-  /// An optional 'data' field, which can be used to identify a type hierarchy
-  /// item in a resolve request.
-  llvm::Optional<std::string> data;
 };
+llvm::json::Value toJSON(const TypeHierarchyItem::ResolveParams &);
+bool fromJSON(const TypeHierarchyItem::ResolveParams &);
 llvm::json::Value toJSON(const TypeHierarchyItem &);
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const TypeHierarchyItem &);
 bool fromJSON(const llvm::json::Value &, TypeHierarchyItem &, llvm::json::Path);
@@ -1772,6 +1793,10 @@ struct FoldingRange {
   unsigned startCharacter;
   unsigned endLine = 0;
   unsigned endCharacter;
+
+  const static llvm::StringLiteral REGION_KIND;
+  const static llvm::StringLiteral COMMENT_KIND;
+  const static llvm::StringLiteral IMPORT_KIND;
   std::string kind;
 };
 llvm::json::Value toJSON(const FoldingRange &Range);

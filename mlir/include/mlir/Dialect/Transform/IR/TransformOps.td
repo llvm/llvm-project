@@ -13,6 +13,7 @@ include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SymbolInterfaces.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
+include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
@@ -118,12 +119,17 @@ def ForeachOp : TransformDialectOp<"foreach",
     the entire sequence fails immediately leaving the payload IR in potentially
     invalid state, i.e., this operation offers no transformation rollback
     capabilities.
+
+    This op generates as many handles as the terminating YieldOp has operands.
+    For each result, the payload ops of the corresponding YieldOp operand are
+    merged and mapped to the same resulting handle.
   }];
 
   let arguments = (ins PDL_Operation:$target);
-  let results = (outs);
+  let results = (outs Variadic<PDL_Operation>:$results);
   let regions = (region SizedRegion<1>:$body);
-  let assemblyFormat = "$target $body attr-dict";
+  let assemblyFormat = "$target (`->` type($results)^)? $body attr-dict";
+  let hasVerifier = 1;
 
   let extraClassDeclaration = [{
     /// Allow the dialect prefix to be omitted.
@@ -132,6 +138,8 @@ def ForeachOp : TransformDialectOp<"foreach",
     BlockArgument getIterationVariable() {
       return getBody().front().getArgument(0);
     }
+
+    transform::YieldOp getYieldOp();
   }];
 }
 
@@ -161,6 +169,25 @@ def GetClosestIsolatedParentOp : TransformDialectOp<"get_closest_isolated_parent
   let assemblyFormat = "$target attr-dict";
 }
 
+def GetProducerOfOperand : TransformDialectOp<"get_producer_of_operand",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     NavigationTransformOpTrait, MemoryEffectsOpInterface]> {
+  let summary = "Get handle to the producer of this operation's operand number";
+  let description = [{
+    The handle defined by this Transform op corresponds to operation that
+    produces the SSA value defined by the `target` and `operand_number`
+    arguments. If the origin of the SSA value is not an operations (i.e. it is
+    a block argument), the transform silently fails.
+    The return handle points to only the subset of successfully produced
+    computational operations, which can be empty.
+  }];
+
+  let arguments = (ins PDL_Operation:$target,
+                       I64Attr:$operand_number);
+  let results = (outs PDL_Operation:$parent);
+  let assemblyFormat = "$target `[` $operand_number `]` attr-dict";
+}
+
 def MergeHandlesOp : TransformDialectOp<"merge_handles",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
@@ -183,8 +210,37 @@ def MergeHandlesOp : TransformDialectOp<"merge_handles",
   let hasFolder = 1;
 }
 
+def SplitHandlesOp : TransformDialectOp<"split_handles",
+    [FunctionalStyleTransformOpTrait,
+     DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "Splits handles from a union of payload ops to a list";
+  let description = [{
+    Creates `num_result_handles` transform IR handles extracted from the 
+    `handle` operand. The resulting Payload IR operation handles are listed
+    in the same order as the operations appear in the source `handle`.
+    This is useful for ensuring a statically known number of operations are
+    tracked by the source `handle` and to extract them into individual handles
+    that can be further manipulated in isolation.
+
+    This operation succeeds and returns `num_result_handles` if the statically
+    specified `num_result_handles` corresponds to the dynamic number of 
+    operations contained in the source `handle`. Otherwise it silently fails.
+  }];
+
+  let arguments = (ins PDL_Operation:$handle,
+                       I64Attr:$num_result_handles);
+  let results = (outs Variadic<PDL_Operation>:$results);
+  let assemblyFormat = [{
+    $handle `in` `[` $num_result_handles `]` 
+    custom<StaticNumPDLResults>(type($results), ref($num_result_handles))
+    attr-dict
+  }];
+}
+
 def PDLMatchOp : TransformDialectOp<"pdl_match",
-    [DeclareOpInterfaceMethods<TransformOpInterface>]> {
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
   let summary = "Finds ops that match the named PDL pattern";
   let description = [{
     Find Payload IR ops nested within the Payload IR op associated with the
@@ -204,12 +260,10 @@ def PDLMatchOp : TransformDialectOp<"pdl_match",
   }];
 
   let arguments = (ins
-    Arg<PDL_Operation, "Payload IR scope to match within",
-        [TransformMappingRead, PayloadIRRead]>:$root, 
+    Arg<PDL_Operation, "Payload IR scope to match within">:$root, 
     SymbolRefAttr:$pattern_name);
   let results = (outs
-    Res<PDL_Operation, "Handle to the matched Payload IR ops",
-        [TransformMappingAlloc, TransformMappingWrite]>:$matched);
+    Res<PDL_Operation, "Handle to the matched Payload IR ops">:$matched);
 
   let assemblyFormat = "$pattern_name `in` $root attr-dict";
 }
@@ -263,9 +317,20 @@ def SequenceOp : TransformDialectOp<"sequence",
     The transformations indicated by the sequence are applied in order of their
     appearance. Each value produced by a transformation within the sequence
     corresponds to an operation or a group of operations in the payload IR.
-    During application, if any transformation in the sequence fails, the entire
-    sequence fails immediately leaving the payload IR in potentially invalid
-    state, i.e., this operation offers no transformation rollback capabilities.
+    The behavior of the operation when a nested transformation produces a
+    silenceable error is controlled by the `failure_propagation_mode` attribute.
+    When set to `propagate`, the failure of any nested transformation in the
+    sequence implies immediate failure of the entire sequence with a silenceable
+    error, and no further transformation is attempted. When set to `suppress`,
+    silenceable errors in nested operations are ignored and further
+    transformations are applied. Beware that even silenceable errors may leave
+    the payload IR in a state unsuitable for further transformations. It is
+    the responsibility of the caller to ensure the following transformations
+    are robust enough when errors are suppressed. Definite errors reported by
+    nested transformations abort the sequence regardless of the propagation
+    mode. The set of modes may be extended in the future, e.g., to collect
+    silenceable errors and report them after attempting all transformations in
+    the sequence.
 
     The entry block of this operation has a single argument that maps to either
     the operand if provided or the top-level container operation of the payload
@@ -274,12 +339,13 @@ def SequenceOp : TransformDialectOp<"sequence",
     another sequence.
   }];
 
-  let arguments = (ins Optional<PDL_Operation>:$root);
+  let arguments = (ins FailurePropagationMode:$failure_propagation_mode,
+                       Optional<PDL_Operation>:$root);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$body);
 
   let assemblyFormat =
-    "($root^)? attr-dict-with-keyword regions (`:` type($results)^)?";
+    "($root^)? `failures` `(` $failure_propagation_mode `)` attr-dict-with-keyword regions (`:` type($results)^)?";
 
   let extraClassDeclaration = [{
     /// Allow the dialect prefix to be omitted.
@@ -309,7 +375,7 @@ def WithPDLPatternsOp : TransformDialectOp<"with_pdl_patterns",
         pdl.rewrite %0 with "transform.dialect"
       }
 
-      sequence %arg0 {
+      sequence %arg0 failures(propagate) {
       ^bb0(%arg1: !pdl.operation):
         %1 = pdl_match @my_pattern in %arg1
         // Use %1 as handle

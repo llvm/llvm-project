@@ -30,8 +30,6 @@
 //   operator/(const month_weekday_last& mwdl, int y) noexcept;
 // Returns: year(y) / mwdl.
 
-
-
 #include <chrono>
 #include <type_traits>
 #include <cassert>

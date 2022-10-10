@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr auto begin();
 // constexpr auto begin() const
-//    requires input_­range<const V> &&
+//    requires input_range<const V> &&
 //             is_reference_v<range_reference_t<const V>>;
 
 #include <cassert>
@@ -120,7 +119,7 @@ constexpr bool test() {
     static_assert(HasConstBegin<decltype(jv)>);
   }
 
-  // !input_­range<const V>
+  // !input_range<const V>
   {
     std::ranges::join_view jv{ConstNotRange{}};
     static_assert(!HasConstBegin<decltype(jv)>);

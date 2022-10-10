@@ -4,8 +4,6 @@ Test stopping at a breakpoint in an expression, and unwinding from there.
 
 
 
-import unittest2
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *

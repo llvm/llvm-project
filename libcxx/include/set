@@ -480,15 +480,12 @@ erase_if(multiset<Key, Compare, Allocator>& c, Predicate pred);  // C++20
 #include <__iterator/erase_if_container.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
+#include <__memory/allocator.h>
 #include <__node_handle>
 #include <__tree>
+#include <__type_traits/is_allocator.h>
 #include <__utility/forward.h>
 #include <version>
-
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
-#  include <functional>
-#  include <iterator>
-#endif
 
 // standard-mandated includes
 
@@ -1577,5 +1574,10 @@ inline _LIBCPP_INLINE_VISIBILITY
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <functional>
+#  include <iterator>
+#endif
 
 #endif // _LIBCPP_SET

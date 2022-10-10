@@ -535,11 +535,6 @@ __OMP_ATTRS_SET(InaccessibleArgOnlyAttrs,
                                    EnumAttr(WillReturn), EnumAttr(NoFree))
                     : AttributeSet(EnumAttr(NoUnwind)))
 
-__OMP_ATTRS_SET(NoCaptureAttrs,
-                OptimisticAttributes
-                    ? AttributeSet(EnumAttr(NoCapture))
-                    : AttributeSet(EnumAttr(NoCapture)))
-
 __OMP_ATTRS_SET(AlwaysInlineAttrs,
                 OptimisticAttributes
                     ? AttributeSet(EnumAttr(AlwaysInline))
@@ -683,7 +678,7 @@ __OMP_RTL_ATTRS(omp_get_partition_num_places, GetterAttrs, AttributeSet(),
                 ParamAttrs())
 __OMP_RTL_ATTRS(omp_get_partition_place_nums, GetterAttrs, AttributeSet(),
                 ParamAttrs())
-__OMP_RTL_ATTRS(omp_get_wtime, GetterAttrs, AttributeSet(), ParamAttrs())
+__OMP_RTL_ATTRS(omp_get_wtime, GetterArgWriteAttrs, AttributeSet(), ParamAttrs())
 
 __OMP_RTL_ATTRS(omp_set_num_threads, SetterAttrs, AttributeSet(), ParamAttrs())
 __OMP_RTL_ATTRS(omp_set_dynamic, SetterAttrs, AttributeSet(), ParamAttrs())
@@ -925,7 +920,7 @@ __OMP_RTL_ATTRS(__kmpc_alloc_shared, AttributeSet(
   EnumAttr(NoSync),
   AllocSizeAttr(0, None)), ReturnPtrAttrs, ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_free_shared, DeviceAllocAttrs, AttributeSet(),
-                ParamAttrs(NoCaptureAttrs))
+                ParamAttrs(AttributeSet(EnumAttr(NoCapture), EnumAttr(AllocatedPointer))))
 
 __OMP_RTL_ATTRS(__kmpc_alloc, DefaultAttrs, ReturnPtrAttrs, ParamAttrs())
 __OMP_RTL_ATTRS(__kmpc_aligned_alloc, DefaultAttrs, ReturnPtrAttrs,

@@ -137,13 +137,13 @@ false:
 ; CHECK-NEXT: successors: %[[BB_L1:bb.[0-9]+]](0x80000000)
 ;
 ; Check basic block L1 has 2 successors: BBL1 and BBL2
-; CHECK: [[BB_L1]].{{[a-zA-Z0-9.]+}} (address-taken):
+; CHECK: [[BB_L1]].{{[a-zA-Z0-9.]+}} (ir-block-address-taken %ir-block.{{[a-zA-Z0-9.]+}}):
 ; CHECK-NEXT: successors: %[[BB_L1]](0x40000000),
 ; CHECK:                  %[[BB_L2:bb.[0-9]+]](0x40000000)
 ; CHECK: G_BRINDIRECT %{{[0-9]+}}(p0)
 ;
 ; Check basic block L2 is the return basic block
-; CHECK: [[BB_L2]].{{[a-zA-Z0-9.]+}} (address-taken):
+; CHECK: [[BB_L2]].{{[a-zA-Z0-9.]+}} (ir-block-address-taken %ir-block.{{[a-zA-Z0-9.]+}}):
 ; CHECK-NEXT: RET_ReallyLR
 
 @indirectbr.L = internal unnamed_addr constant [3 x i8*] [i8* blockaddress(@indirectbr, %L1), i8* blockaddress(@indirectbr, %L2), i8* null], align 8

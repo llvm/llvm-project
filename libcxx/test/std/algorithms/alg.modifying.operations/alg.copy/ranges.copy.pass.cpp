@@ -9,7 +9,6 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<input_iterator I, sentinel_for<I> S, weakly_incrementable O>
 //   requires indirectly_copyable<I, O>
@@ -95,13 +94,20 @@ constexpr void test_iterators() {
   }
 }
 
+template <class In, class Out>
+constexpr void test_sentinels() {
+  test_iterators<In, Out>();
+  test_iterators<In, Out, sized_sentinel<In>>();
+  test_iterators<In, Out, sentinel_wrapper<In>>();
+}
+
 template <class Out>
 constexpr void test_in_iterators() {
   test_iterators<cpp20_input_iterator<int*>, Out, sentinel_wrapper<cpp20_input_iterator<int*>>>();
-  test_iterators<forward_iterator<int*>, Out>();
-  test_iterators<bidirectional_iterator<int*>, Out>();
-  test_iterators<random_access_iterator<int*>, Out>();
-  test_iterators<contiguous_iterator<int*>, Out>();
+  test_sentinels<forward_iterator<int*>, Out>();
+  test_sentinels<bidirectional_iterator<int*>, Out>();
+  test_sentinels<random_access_iterator<int*>, Out>();
+  test_sentinels<contiguous_iterator<int*>, Out>();
 }
 
 template <class Out>

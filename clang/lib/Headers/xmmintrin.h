@@ -3005,7 +3005,6 @@ do { \
 #define _m_pavgw _mm_avg_pu16
 #define _m_psadbw _mm_sad_pu8
 #define _m_ _mm_
-#define _m_ _mm_
 
 #undef __DEFAULT_FN_ATTRS
 #undef __DEFAULT_FN_ATTRS_MMX

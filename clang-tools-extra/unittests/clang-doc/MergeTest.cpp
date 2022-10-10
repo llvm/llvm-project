@@ -78,11 +78,12 @@ TEST(MergeTest, mergeNamespaceInfos) {
 TEST(MergeTest, mergeRecordInfos) {
   RecordInfo One;
   One.Name = "r";
+  One.IsTypeDef = true;
   One.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
   One.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
 
-  One.Members.emplace_back("int", "X", AccessSpecifier::AS_private);
+  One.Members.emplace_back(TypeInfo("int"), "X", AccessSpecifier::AS_private);
   One.TagType = TagTypeKind::TTK_Class;
   One.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
   One.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
@@ -119,12 +120,14 @@ TEST(MergeTest, mergeRecordInfos) {
 
   auto Expected = std::make_unique<RecordInfo>();
   Expected->Name = "r";
+  Expected->IsTypeDef = true;
   Expected->Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
   Expected->DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   Expected->Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  Expected->Members.emplace_back("int", "X", AccessSpecifier::AS_private);
+  Expected->Members.emplace_back(TypeInfo("int"), "X",
+                                 AccessSpecifier::AS_private);
   Expected->TagType = TagTypeKind::TTK_Class;
   Expected->Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
   Expected->VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
@@ -178,8 +181,8 @@ TEST(MergeTest, mergeFunctionInfos) {
 
   Two.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  Two.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
-  Two.Params.emplace_back("int", "P");
+  Two.ReturnType = TypeInfo("void");
+  Two.Params.emplace_back(TypeInfo("int"), "P");
 
   Two.Description.emplace_back();
   auto TwoFullComment = &Two.Description.back();
@@ -203,8 +206,8 @@ TEST(MergeTest, mergeFunctionInfos) {
   Expected->DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   Expected->Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  Expected->ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
-  Expected->Params.emplace_back("int", "P");
+  Expected->ReturnType = TypeInfo("void");
+  Expected->Params.emplace_back(TypeInfo("int"), "P");
   Expected->IsMethod = true;
   Expected->Parent = Reference(EmptySID, "Parent", InfoType::IT_namespace);
 

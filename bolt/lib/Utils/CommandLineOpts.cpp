@@ -135,12 +135,9 @@ OutputFilename("o",
   cl::Optional,
   cl::cat(BoltOutputCategory));
 
-cl::opt<std::string>
-PerfData("perfdata",
-  cl::desc("<data file>"),
-  cl::Optional,
-  cl::cat(AggregatorCategory),
-  cl::sub(*cl::AllSubCommands));
+cl::opt<std::string> PerfData("perfdata", cl::desc("<data file>"), cl::Optional,
+                              cl::cat(AggregatorCategory),
+                              cl::sub(cl::SubCommand::getAll()));
 
 static cl::alias
 PerfDataA("p",
@@ -156,6 +153,15 @@ cl::opt<bool> PrintCacheMetrics(
 cl::opt<bool> PrintSections("print-sections",
                             cl::desc("print all registered sections"),
                             cl::Hidden, cl::cat(BoltCategory));
+
+cl::opt<ProfileFormatKind> ProfileFormat(
+    "profile-format",
+    cl::desc(
+        "format to dump profile output in aggregation mode, default is fdata"),
+    cl::init(PF_Fdata),
+    cl::values(clEnumValN(PF_Fdata, "fdata", "offset-based plaintext format"),
+               clEnumValN(PF_YAML, "yaml", "dense YAML reprensentation")),
+    cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
 cl::opt<bool> SplitEH("split-eh", cl::desc("split C++ exception handling code"),
                       cl::Hidden, cl::cat(BoltOptCategory));
@@ -181,12 +187,9 @@ cl::opt<bool> UpdateDebugSections(
     cl::cat(BoltCategory));
 
 cl::opt<unsigned>
-Verbosity("v",
-  cl::desc("set verbosity level for diagnostic output"),
-  cl::init(0),
-  cl::ZeroOrMore,
-  cl::cat(BoltCategory),
-  cl::sub(*cl::AllSubCommands));
+    Verbosity("v", cl::desc("set verbosity level for diagnostic output"),
+              cl::init(0), cl::ZeroOrMore, cl::cat(BoltCategory),
+              cl::sub(cl::SubCommand::getAll()));
 
 bool processAllFunctions() {
   if (opts::AggregateOnly)

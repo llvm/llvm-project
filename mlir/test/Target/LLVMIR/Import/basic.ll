@@ -1,26 +1,29 @@
 ; RUN: mlir-translate -import-llvm %s | FileCheck %s
+; RUN: mlir-translate -import-llvm -mlir-print-debuginfo %s | FileCheck %s --check-prefix=CHECK-DBG
+
+; CHECK-DBG: #[[UNKNOWNLOC:.+]] = loc(unknown)
 
 %struct.t = type {}
 %struct.s = type { %struct.t, i64 }
 
-; CHECK: llvm.mlir.global external @g1() {alignment = 8 : i64} : !llvm.struct<"struct.s", (struct<"struct.t", ()>, i64)>
+; CHECK: llvm.mlir.global external @g1() {addr_space = 0 : i32, alignment = 8 : i64} : !llvm.struct<"struct.s", (struct<"struct.t", ()>, i64)>
 @g1 = external global %struct.s, align 8
-; CHECK: llvm.mlir.global external @g2() {alignment = 8 : i64} : f64
+; CHECK: llvm.mlir.global external @g2() {addr_space = 0 : i32, alignment = 8 : i64} : f64
 @g2 = external global double, align 8
 ; CHECK: llvm.mlir.global internal @g3("string")
 @g3 = internal global [6 x i8] c"string"
 
-; CHECK: llvm.mlir.global external @g5() : vector<8xi32>
+; CHECK: llvm.mlir.global external @g5() {addr_space = 0 : i32} : vector<8xi32>
 @g5 = external global <8 x i32>
 
-; CHECK: llvm.mlir.global private @alig32(42 : i64) {alignment = 32 : i64, dso_local} : i64
+; CHECK: llvm.mlir.global private @alig32(42 : i64) {addr_space = 0 : i32, alignment = 32 : i64, dso_local} : i64
 @alig32 = private global i64 42, align 32
 
-; CHECK: llvm.mlir.global private @alig64(42 : i64) {alignment = 64 : i64, dso_local} : i64
+; CHECK: llvm.mlir.global private @alig64(42 : i64) {addr_space = 0 : i32, alignment = 64 : i64, dso_local} : i64
 @alig64 = private global i64 42, align 64
 
 @g4 = external global i32, align 8
-; CHECK: llvm.mlir.global internal constant @int_gep() {dso_local} : !llvm.ptr<i32> {
+; CHECK: llvm.mlir.global internal constant @int_gep() {addr_space = 0 : i32, dso_local} : !llvm.ptr<i32> {
 ; CHECK-DAG:   %[[addr:[0-9]+]] = llvm.mlir.addressof @g4 : !llvm.ptr<i32>
 ; CHECK-DAG:   %[[c2:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
 ; CHECK-NEXT:  %[[gepinit:[0-9]+]] = llvm.getelementptr %[[addr]][%[[c2]]] : (!llvm.ptr<i32>, i32) -> !llvm.ptr<i32>
@@ -32,14 +35,14 @@
 ; dso_local attribute
 ;
 
-; CHECK: llvm.mlir.global external @dso_local_var() {dso_local} : !llvm.struct<"struct.s", (struct<"struct.t", ()>, i64)>
+; CHECK: llvm.mlir.global external @dso_local_var() {addr_space = 0 : i32, dso_local} : !llvm.struct<"struct.s", (struct<"struct.t", ()>, i64)>
 @dso_local_var = external dso_local global %struct.s
 
 ;
 ; thread_local attribute
 ;
 
-; CHECK: llvm.mlir.global external thread_local @thread_local_var() : !llvm.struct<"struct.s", (struct<"struct.t", ()>, i64)>
+; CHECK: llvm.mlir.global external thread_local @thread_local_var() {addr_space = 0 : i32} : !llvm.struct<"struct.s", (struct<"struct.t", ()>, i64)>
 @thread_local_var = external thread_local global %struct.s
 
 ;
@@ -53,27 +56,27 @@
 ; Linkage attribute.
 ;
 
-; CHECK: llvm.mlir.global private @private(42 : i32) {dso_local} : i32
+; CHECK: llvm.mlir.global private @private(42 : i32) {addr_space = 0 : i32, dso_local} : i32
 @private = private global i32 42
-; CHECK: llvm.mlir.global internal @internal(42 : i32) {dso_local} : i32
+; CHECK: llvm.mlir.global internal @internal(42 : i32) {addr_space = 0 : i32, dso_local} : i32
 @internal = internal global i32 42
-; CHECK: llvm.mlir.global available_externally @available_externally(42 : i32) : i32
+; CHECK: llvm.mlir.global available_externally @available_externally(42 : i32) {addr_space = 0 : i32}  : i32
 @available_externally = available_externally global i32 42
-; CHECK: llvm.mlir.global linkonce @linkonce(42 : i32) : i32
+; CHECK: llvm.mlir.global linkonce @linkonce(42 : i32) {addr_space = 0 : i32} : i32
 @linkonce = linkonce global i32 42
-; CHECK: llvm.mlir.global weak @weak(42 : i32) : i32
+; CHECK: llvm.mlir.global weak @weak(42 : i32) {addr_space = 0 : i32} : i32
 @weak = weak global i32 42
-; CHECK: llvm.mlir.global common @common(0 : i32) : i32
+; CHECK: llvm.mlir.global common @common(0 : i32) {addr_space = 0 : i32} : i32
 @common = common global i32 zeroinitializer
-; CHECK: llvm.mlir.global appending @appending(dense<[0, 1]> : tensor<2xi32>) : !llvm.array<2 x i32>
+; CHECK: llvm.mlir.global appending @appending(dense<[0, 1]> : tensor<2xi32>) {addr_space = 0 : i32} : !llvm.array<2 x i32>
 @appending = appending global [2 x i32] [i32 0, i32 1]
-; CHECK: llvm.mlir.global extern_weak @extern_weak() : i32
+; CHECK: llvm.mlir.global extern_weak @extern_weak() {addr_space = 0 : i32} : i32
 @extern_weak = extern_weak global i32
-; CHECK: llvm.mlir.global linkonce_odr @linkonce_odr(42 : i32) : i32
+; CHECK: llvm.mlir.global linkonce_odr @linkonce_odr(42 : i32) {addr_space = 0 : i32} : i32
 @linkonce_odr = linkonce_odr global i32 42
-; CHECK: llvm.mlir.global weak_odr @weak_odr(42 : i32) : i32
+; CHECK: llvm.mlir.global weak_odr @weak_odr(42 : i32) {addr_space = 0 : i32} : i32
 @weak_odr = weak_odr global i32 42
-; CHECK: llvm.mlir.global external @external() : i32
+; CHECK: llvm.mlir.global external @external() {addr_space = 0 : i32} : i32
 @external = external global i32
 
 ;
@@ -81,33 +84,33 @@
 ;
 
 
-; CHECK: llvm.mlir.global private constant @no_unnamed_addr(42 : i64) {dso_local} : i64
+; CHECK: llvm.mlir.global private constant @no_unnamed_addr(42 : i64) {addr_space = 0 : i32, dso_local} : i64
 @no_unnamed_addr = private constant i64 42
-; CHECK: llvm.mlir.global private local_unnamed_addr constant @local_unnamed_addr(42 : i64) {dso_local} : i64
+; CHECK: llvm.mlir.global private local_unnamed_addr constant @local_unnamed_addr(42 : i64) {addr_space = 0 : i32, dso_local} : i64
 @local_unnamed_addr = private local_unnamed_addr constant i64 42
-; CHECK: llvm.mlir.global private unnamed_addr constant @unnamed_addr(42 : i64) {dso_local} : i64
+; CHECK: llvm.mlir.global private unnamed_addr constant @unnamed_addr(42 : i64) {addr_space = 0 : i32, dso_local} : i64
 @unnamed_addr = private unnamed_addr constant i64 42
 
 ;
 ; Section attribute
 ;
 
-; CHECK: llvm.mlir.global internal constant @sectionvar("teststring") {dso_local, section = ".mysection"}
+; CHECK: llvm.mlir.global internal constant @sectionvar("teststring") {addr_space = 0 : i32, dso_local, section = ".mysection"}
 @sectionvar = internal constant [10 x i8] c"teststring", section ".mysection"
 
 ;
 ; Sequential constants.
 ;
 
-; CHECK: llvm.mlir.global internal constant @vector_constant(dense<[1, 2]> : vector<2xi32>) {dso_local} : vector<2xi32>
+; CHECK: llvm.mlir.global internal constant @vector_constant(dense<[1, 2]> : vector<2xi32>) {addr_space = 0 : i32, dso_local} : vector<2xi32>
 @vector_constant = internal constant <2 x i32> <i32 1, i32 2>
-; CHECK: llvm.mlir.global internal constant @array_constant(dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>) {dso_local} : !llvm.array<2 x f32>
+; CHECK: llvm.mlir.global internal constant @array_constant(dense<[1.000000e+00, 2.000000e+00]> : tensor<2xf32>) {addr_space = 0 : i32, dso_local} : !llvm.array<2 x f32>
 @array_constant = internal constant [2 x float] [float 1., float 2.]
-; CHECK: llvm.mlir.global internal constant @nested_array_constant(dense<[{{\[}}1, 2], [3, 4]]> : tensor<2x2xi32>) {dso_local} : !llvm.array<2 x array<2 x i32>>
+; CHECK: llvm.mlir.global internal constant @nested_array_constant(dense<[{{\[}}1, 2], [3, 4]]> : tensor<2x2xi32>) {addr_space = 0 : i32, dso_local} : !llvm.array<2 x array<2 x i32>>
 @nested_array_constant = internal constant [2 x [2 x i32]] [[2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4]]
-; CHECK: llvm.mlir.global internal constant @nested_array_constant3(dense<[{{\[}}[1, 2], [3, 4]]]> : tensor<1x2x2xi32>) {dso_local} : !llvm.array<1 x array<2 x array<2 x i32>>>
+; CHECK: llvm.mlir.global internal constant @nested_array_constant3(dense<[{{\[}}[1, 2], [3, 4]]]> : tensor<1x2x2xi32>) {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x array<2 x i32>>>
 @nested_array_constant3 = internal constant [1 x [2 x [2 x i32]]] [[2 x [2 x i32]] [[2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4]]]
-; CHECK: llvm.mlir.global internal constant @nested_array_vector(dense<[{{\[}}[1, 2], [3, 4]]]> : vector<1x2x2xi32>) {dso_local} : !llvm.array<1 x array<2 x vector<2xi32>>>
+; CHECK: llvm.mlir.global internal constant @nested_array_vector(dense<[{{\[}}[1, 2], [3, 4]]]> : vector<1x2x2xi32>) {addr_space = 0 : i32, dso_local} : !llvm.array<1 x array<2 x vector<2xi32>>>
 @nested_array_vector = internal constant [1 x [2 x <2 x i32>]] [[2 x <2 x i32>] [<2 x i32> <i32 1, i32 2>, <2 x i32> <i32 3, i32 4>]]
 
 ;
@@ -129,6 +132,7 @@ define internal spir_func void @spir_func_internal() {
 
 ; FIXME: function attributes.
 ; CHECK-LABEL: llvm.func internal @f1(%arg0: i64) -> i32 attributes {dso_local} {
+; CHECK-DBG: llvm.func internal @f1(%arg0: i64 loc(unknown)) -> i32 attributes {dso_local} {
 ; CHECK-DAG: %[[c2:[0-9]+]] = llvm.mlir.constant(2 : i32) : i32
 ; CHECK-DAG: %[[c42:[0-9]+]] = llvm.mlir.constant(42 : i32) : i32
 ; CHECK-DAG: %[[c1:[0-9]+]] = llvm.mlir.constant(true) : i1
@@ -137,6 +141,7 @@ define internal dso_local i32 @f1(i64 %a) norecurse {
 entry:
 ; CHECK: %{{[0-9]+}} = llvm.inttoptr %arg0 : i64 to !llvm.ptr<i64>
   %aa = inttoptr i64 %a to i64*
+; CHECK-DBG: llvm.mlir.addressof @g2 : !llvm.ptr<f64> loc(#[[UNKNOWNLOC]])
 ; %[[addrof:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<f64>
 ; %[[addrof2:[0-9]+]] = llvm.mlir.addressof @g2 : !llvm.ptr<f64>
 ; %{{[0-9]+}} = llvm.inttoptr %arg0 : i64 to !llvm.ptr<i64>
@@ -145,6 +150,7 @@ entry:
   %bb = ptrtoint double* @g2 to i64
   %cc = getelementptr double, double* @g2, i32 2
 ; CHECK: %[[b:[0-9]+]] = llvm.trunc %arg0 : i64 to i32
+; CHECK-DBG: llvm.trunc %arg0 : i64 to i32 loc(#[[UNKNOWNLOC]])
   %b = trunc i64 %a to i32
 ; CHECK: %[[c:[0-9]+]] = llvm.call @fe(%[[b]]) : (i32) -> f32
   %c = call float @fe(i32 %b)
@@ -168,6 +174,7 @@ if.end:
 ; CHECK: llvm.return %[[c43]]
   ret i32 43
 }
+; CHECK-DBG: } loc(#[[UNKNOWNLOC]])
 
 ; Test that instructions that dominate can be out of sequential order.
 ; CHECK-LABEL: llvm.func @f2(%arg0: i64) -> i64 {
@@ -557,10 +564,10 @@ define float @insert_extract_value_struct({{i32},{float, double}}* %p) {
   ; CHECK: %[[C0:.+]] = llvm.mlir.constant(2.000000e+00 : f64)
   ; CHECK: %[[VT:.+]] = llvm.load %{{.+}}
   %t = load {{i32},{float, double}}, {{i32},{float, double}}* %p
-  ; CHECK: %[[EV:.+]] = llvm.extractvalue %[[VT]][1 : i32, 0 : i32] :
+  ; CHECK: %[[EV:.+]] = llvm.extractvalue %[[VT]][1, 0] :
   ; CHECK-SAME: !llvm.struct<(struct<(i32)>, struct<(f32, f64)>)>
   %s = extractvalue {{i32},{float, double}} %t, 1, 0
-  ; CHECK: %[[IV:.+]] = llvm.insertvalue %[[C0]], %[[VT]][1 : i32, 1 : i32] :
+  ; CHECK: %[[IV:.+]] = llvm.insertvalue %[[C0]], %[[VT]][1, 1] :
   ; CHECK-SAME: !llvm.struct<(struct<(i32)>, struct<(f32, f64)>)>
   %r = insertvalue {{i32},{float, double}} %t, double 2.0, 1, 1
   ; CHECK: llvm.store %[[IV]], %{{.+}}
@@ -572,11 +579,11 @@ define float @insert_extract_value_struct({{i32},{float, double}}* %p) {
 ; CHECK-LABEL: llvm.func @insert_extract_value_array
 define void @insert_extract_value_array([4 x [4 x i8]] %x1) {
   ; CHECK: %[[C0:.+]] = llvm.mlir.constant(0 : i8)
-  ; CHECK: llvm.insertvalue %[[C0]], %{{.+}}[0 : i32, 0 : i32] : !llvm.array<4 x array<4 x i8>>
+  ; CHECK: llvm.insertvalue %[[C0]], %{{.+}}[0, 0] : !llvm.array<4 x array<4 x i8>>
   %res1 = insertvalue [4 x [4 x i8 ]] %x1, i8 0, 0, 0
-  ; CHECK: llvm.extractvalue %{{.+}}[1 : i32] : !llvm.array<4 x array<4 x i8>>
+  ; CHECK: llvm.extractvalue %{{.+}}[1] : !llvm.array<4 x array<4 x i8>>
   %res2 = extractvalue [4 x [4 x i8 ]] %x1, 1
-  ; CHECK: llvm.extractvalue %{{.+}}[0 : i32, 1 : i32] : !llvm.array<4 x array<4 x i8>>
+  ; CHECK: llvm.extractvalue %{{.+}}[0, 1] : !llvm.array<4 x array<4 x i8>>
   %res3 = extractvalue [4 x [4 x i8 ]] %x1, 0, 1
   ret void
 }
@@ -588,7 +595,7 @@ define <4 x half> @shuffle_vec(<4 x half>* %arg0, <4 x half>* %arg1) {
   %val0 = load <4 x half>, <4 x half>* %arg0
   ; CHECK: %[[V1:.+]] = llvm.load %{{.+}} : !llvm.ptr<vector<4xf16>>
   %val1 = load <4 x half>, <4 x half>* %arg1
-  ; CHECK: llvm.shufflevector %[[V0]], %[[V1]] [2 : i32, 3 : i32, -1 : i32, -1 : i32] : vector<4xf16>, vector<4xf16>
+  ; CHECK: llvm.shufflevector %[[V0]], %[[V1]] [2, 3, -1, -1] : vector<4xf16>
   %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
   ret <4 x half> %shuffle
 }
@@ -658,5 +665,48 @@ define void @variadic_function(i32 %X, ...) {
   ; CHECK: llvm.intr.vaend %[[CAST0]]
   call void @llvm.va_end(i8* %ap2)
   ; CHECK: llvm.return
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @atomic_rmw
+define void @atomic_rmw(i32* %ptr0, i32 %v, float* %ptr1, float %f) {
+  ; CHECK: llvm.atomicrmw add %arg0, %arg1 acquire  : i32
+  %1 = atomicrmw add i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw add %arg0, %arg1 release  : i32
+  %2 = atomicrmw add i32* %ptr0, i32 %v release
+
+  ; CHECK: llvm.atomicrmw sub %arg0, %arg1 acquire  : i32
+  %3 = atomicrmw sub i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw xchg %arg0, %arg1 acquire  : i32
+  %4 = atomicrmw xchg i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw _and %arg0, %arg1 acquire  : i32
+  %5 = atomicrmw and i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw nand %arg0, %arg1 acquire  : i32
+  %6 = atomicrmw nand i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw _or %arg0, %arg1 acquire  : i32
+  %7 = atomicrmw or i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw _xor %arg0, %arg1 acquire  : i32
+  %8 = atomicrmw xor i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw max %arg0, %arg1 acquire  : i32
+  %9 = atomicrmw max i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw min %arg0, %arg1 acquire  : i32
+  %10 = atomicrmw min i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw umax %arg0, %arg1 acquire  : i32
+  %11 = atomicrmw umax i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw umin %arg0, %arg1 acquire  : i32
+  %12 = atomicrmw umin i32* %ptr0, i32 %v acquire
+  ; CHECK: llvm.atomicrmw fadd %arg2, %arg3 acquire  : f32
+  %13 = atomicrmw fadd float* %ptr1, float %f acquire
+  ; CHECK: llvm.atomicrmw fsub %arg2, %arg3 acquire  : f32
+  %14 = atomicrmw fsub float* %ptr1, float %f acquire
+  ret void
+}
+
+; CHECK-LABEL: llvm.func @atomic_cmpxchg
+define void @atomic_cmpxchg(i32* %ptr0, i32 %v, i32 %c) {
+  ; CHECK: llvm.cmpxchg %arg0, %arg2, %arg1 seq_cst seq_cst : i32
+  %1 = cmpxchg i32* %ptr0, i32 %c, i32 %v seq_cst seq_cst
+  ; CHECK: llvm.cmpxchg %arg0, %arg2, %arg1 monotonic seq_cst : i32
+  %2 = cmpxchg i32* %ptr0, i32 %c, i32 %v monotonic seq_cst
   ret void
 }

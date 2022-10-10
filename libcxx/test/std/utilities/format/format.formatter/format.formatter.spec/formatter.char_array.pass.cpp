@@ -22,6 +22,7 @@
 #include <concepts>
 #include <type_traits>
 
+#include "test_format_context.h"
 #include "test_macros.h"
 #include "make_string.h"
 
@@ -57,7 +58,8 @@ struct Tester {
     // Note not too found of this hack
     Str* data = reinterpret_cast<Str*>(const_cast<CharT*>(buffer.c_str()));
 
-    auto format_ctx = std::__format_context_create<decltype(out), CharT>(out, std::make_format_args<FormatCtxT>(*data));
+    FormatCtxT format_ctx =
+        test_format_context_create<decltype(out), CharT>(out, std::make_format_args<FormatCtxT>(*data));
     formatter.format(*data, format_ctx);
     assert(result == expected);
   }
@@ -76,6 +78,9 @@ struct Tester {
     test(expected, fmt);
   }
 };
+
+template <size_t N>
+Tester(const char (&)[N]) -> Tester<N>;
 
 template <Tester t, class CharT>
 void test_helper_wrapper(std::basic_string<CharT> expected, std::basic_string<CharT> fmt) {

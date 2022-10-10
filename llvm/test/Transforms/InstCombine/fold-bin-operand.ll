@@ -6,7 +6,7 @@ define i1 @f(i1 %x) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %b = and i1 %x, icmp eq (i8* inttoptr (i32 1 to i8*), i8* inttoptr (i32 2 to i8*))
+  %b = and i1 %x, icmp eq (ptr inttoptr (i32 1 to ptr), ptr inttoptr (i32 2 to ptr))
   ret i1 %b
 }
 
@@ -14,7 +14,7 @@ define i1 @f_logical(i1 %x) {
 ; CHECK-LABEL: @f_logical(
 ; CHECK-NEXT:    ret i1 false
 ;
-  %b = select i1 %x, i1 icmp eq (i8* inttoptr (i32 1 to i8*), i8* inttoptr (i32 2 to i8*)), i1 false
+  %b = select i1 %x, i1 icmp eq (ptr inttoptr (i32 1 to ptr), ptr inttoptr (i32 2 to ptr)), i1 false
   ret i1 %b
 }
 
@@ -22,7 +22,7 @@ define i32 @g(i32 %x) {
 ; CHECK-LABEL: @g(
 ; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
-  %b = add i32 %x, zext (i1 icmp eq (i8* inttoptr (i32 1000000 to i8*), i8* inttoptr (i32 2000000 to i8*)) to i32)
+  %b = add i32 %x, zext (i1 icmp eq (ptr inttoptr (i32 1000000 to ptr), ptr inttoptr (i32 2000000 to ptr)) to i32)
   ret i32 %b
 }
 

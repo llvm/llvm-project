@@ -31,8 +31,8 @@ constexpr bool test() {
     constexpr int N = 3;
     int a[N] = {0, 1, 2};
 
-    std::reverse_iterator rb(a + N);
-    std::reverse_iterator re(a + 1);
+    std::reverse_iterator<int*> rb(a + N);
+    std::reverse_iterator<int*> re(a + 1);
     assert(a[0] == 0);
     assert(a[2] == 2);
 

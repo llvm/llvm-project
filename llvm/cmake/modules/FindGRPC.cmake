@@ -1,4 +1,4 @@
-option(ENABLE_GRPC_REFLECTION "Link clangd-index-server to gRPC Reflection library" OFF)
+option(ENABLE_GRPC_REFLECTION "Link to gRPC Reflection library" OFF)
 
 # FIXME(kirillbobyrev): Check if gRPC and Protobuf headers can be included at
 # configure time.
@@ -42,7 +42,7 @@ else()
   find_program(GRPC_CPP_PLUGIN grpc_cpp_plugin)
   find_program(PROTOC protoc)
   if (NOT GRPC_CPP_PLUGIN OR NOT PROTOC)
-    message(FATAL_ERROR "gRPC C++ Plugin and Protoc must be on $PATH for Clangd remote index build.")
+    message(FATAL_ERROR "gRPC C++ Plugin and Protoc must be on $PATH for gRPC-enabled build.")
   endif()
   # On macOS the libraries are typically installed via Homebrew and are not on
   # the system path.
@@ -132,7 +132,7 @@ function(generate_protos LibraryName ProtoFile)
         ARGS ${Flags} "${ProtoSourceAbsolutePath}"
         DEPENDS "${ProtoSourceAbsolutePath}")
 
-  add_clang_library(${LibraryName} ${GeneratedProtoSource}
+  add_llvm_library(${LibraryName} ${GeneratedProtoSource}
     PARTIAL_SOURCES_INTENDED
     LINK_LIBS PUBLIC grpc++ protobuf)
 

@@ -27,9 +27,9 @@ TEST_F(LLVMIRTest, MutualReferencedSubElementTypes) {
 
   // Created two structs that are referencing each other.
   Type fooBody[] = {LLVMPointerType::get(barStructTy)};
-  ASSERT_TRUE(succeeded(fooStructTy.setBody(fooBody, /*packed=*/false)));
+  ASSERT_TRUE(succeeded(fooStructTy.setBody(fooBody, /*isPacked=*/false)));
   Type barBody[] = {LLVMPointerType::get(fooStructTy)};
-  ASSERT_TRUE(succeeded(barStructTy.setBody(barBody, /*packed=*/false)));
+  ASSERT_TRUE(succeeded(barStructTy.setBody(barBody, /*isPacked=*/false)));
 
   auto subElementInterface = fooStructTy.dyn_cast<SubElementTypeInterface>();
   ASSERT_TRUE(bool(subElementInterface));

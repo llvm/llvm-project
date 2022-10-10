@@ -19,7 +19,7 @@ entry:
 ; expect this test case to stop after one round of inlining with a final
 ; argument of '1'.
 ; CHECK-NOT:     call
-; CHECK:         call void @test1_b(i8* bitcast (void (i8*, i1, i32)* @test1_b to i8*), i1 false, i32 1)
+; CHECK:         call void @test1_b(i8* nonnull bitcast (void (i8*, i1, i32)* @test1_b to i8*), i1 false, i32 1)
 ; CHECK-NOT:     call
 
   ret void
@@ -63,7 +63,7 @@ entry:
 ; break the cycle by inspecting the last paramater that gets incremented with
 ; each inlined function body.
 ; CHECK-NOT:     call
-; CHECK:         call void @test2_b(i8* bitcast (void (i8*, i8*, i1, i32)* @test2_b to i8*), i8* bitcast (void (i8*, i8*, i1, i32)* @test2_c to i8*), i1 false, i32 2)
+; CHECK:         call void @test2_b(i8* nonnull bitcast (void (i8*, i8*, i1, i32)* @test2_b to i8*), i8* nonnull bitcast (void (i8*, i8*, i1, i32)* @test2_c to i8*), i1 false, i32 2)
 ; CHECK-NOT:     call
   ret void
 }

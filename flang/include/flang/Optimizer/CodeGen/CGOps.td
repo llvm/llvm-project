@@ -68,20 +68,20 @@ def fircg_XEmboxOp : fircg_Op<"ext_embox", [AttrSizedOperandSegments]> {
 
   let extraClassDeclaration = [{
     // The rank of the entity being emboxed
-    unsigned getRank() { return shape().size(); }
+    unsigned getRank() { return getShape().size(); }
 
     // The rank of the result. A slice op can reduce the rank.
     unsigned getOutRank();
 
     // The shape operands are mandatory and always start at 1.
     unsigned shapeOffset() { return 1; }
-    unsigned shiftOffset() { return shapeOffset() + shape().size(); }
-    unsigned sliceOffset() { return shiftOffset() + shift().size(); }
-    unsigned subcomponentOffset() { return sliceOffset() + slice().size(); }
+    unsigned shiftOffset() { return shapeOffset() + getShape().size(); }
+    unsigned sliceOffset() { return shiftOffset() + getShift().size(); }
+    unsigned subcomponentOffset() { return sliceOffset() + getSlice().size(); }
     unsigned substrOffset() {
-      return subcomponentOffset() + subcomponent().size();
+      return subcomponentOffset() + getSubcomponent().size();
     }
-    unsigned lenParamOffset() { return substrOffset() + substr().size(); }
+    unsigned lenParamOffset() { return substrOffset() + getSubstr().size(); }
   }];
 }
 
@@ -129,11 +129,11 @@ def fircg_XReboxOp : fircg_Op<"ext_rebox", [AttrSizedOperandSegments]> {
     unsigned getOutRank();
 
     unsigned shapeOffset() { return 1; }
-    unsigned shiftOffset() { return shapeOffset() + shape().size(); }
-    unsigned sliceOffset() { return shiftOffset() + shift().size(); }
-    unsigned subcomponentOffset() { return sliceOffset() + slice().size(); }
+    unsigned shiftOffset() { return shapeOffset() + getShape().size(); }
+    unsigned sliceOffset() { return shiftOffset() + getShift().size(); }
+    unsigned subcomponentOffset() { return sliceOffset() + getSlice().size(); }
     unsigned substrOffset() {
-      return subcomponentOffset() + subcomponent().size();
+      return subcomponentOffset() + getSubcomponent().size();
     }
   }];
 }
@@ -187,13 +187,13 @@ def fircg_XArrayCoorOp : fircg_Op<"ext_array_coor", [AttrSizedOperandSegments]> 
 
     // Shape is optional, but if it exists, it will be at offset 1.
     unsigned shapeOffset() { return 1; }
-    unsigned shiftOffset() { return shapeOffset() + shape().size(); }
-    unsigned sliceOffset() { return shiftOffset() + shift().size(); }
-    unsigned subcomponentOffset() { return sliceOffset() + slice().size(); }
+    unsigned shiftOffset() { return shapeOffset() + getShape().size(); }
+    unsigned sliceOffset() { return shiftOffset() + getShift().size(); }
+    unsigned subcomponentOffset() { return sliceOffset() + getSlice().size(); }
     unsigned indicesOffset() {
-      return subcomponentOffset() + subcomponent().size();
+      return subcomponentOffset() + getSubcomponent().size();
     }
-    unsigned lenParamsOffset() { return indicesOffset() + indices().size(); }
+    unsigned lenParamsOffset() { return indicesOffset() + getIndices().size(); }
   }];
 }
 

@@ -54,7 +54,7 @@ public:
   }
 
   constexpr FeatureBitset &operator&=(const FeatureBitset &RHS) {
-    for (unsigned I = 0, E = array_lengthof(Bits); I != E; ++I) {
+    for (unsigned I = 0, E = std::size(Bits); I != E; ++I) {
       // GCC <6.2 crashes if this is written in a single statement.
       uint32_t NewBits = Bits[I] & RHS.Bits[I];
       Bits[I] = NewBits;
@@ -63,7 +63,7 @@ public:
   }
 
   constexpr FeatureBitset &operator|=(const FeatureBitset &RHS) {
-    for (unsigned I = 0, E = array_lengthof(Bits); I != E; ++I) {
+    for (unsigned I = 0, E = std::size(Bits); I != E; ++I) {
       // GCC <6.2 crashes if this is written in a single statement.
       uint32_t NewBits = Bits[I] | RHS.Bits[I];
       Bits[I] = NewBits;
@@ -74,7 +74,7 @@ public:
   // gcc 5.3 miscompiles this if we try to write this using operator&=.
   constexpr FeatureBitset operator&(const FeatureBitset &RHS) const {
     FeatureBitset Result;
-    for (unsigned I = 0, E = array_lengthof(Bits); I != E; ++I)
+    for (unsigned I = 0, E = std::size(Bits); I != E; ++I)
       Result.Bits[I] = Bits[I] & RHS.Bits[I];
     return Result;
   }
@@ -82,20 +82,20 @@ public:
   // gcc 5.3 miscompiles this if we try to write this using operator&=.
   constexpr FeatureBitset operator|(const FeatureBitset &RHS) const {
     FeatureBitset Result;
-    for (unsigned I = 0, E = array_lengthof(Bits); I != E; ++I)
+    for (unsigned I = 0, E = std::size(Bits); I != E; ++I)
       Result.Bits[I] = Bits[I] | RHS.Bits[I];
     return Result;
   }
 
   constexpr FeatureBitset operator~() const {
     FeatureBitset Result;
-    for (unsigned I = 0, E = array_lengthof(Bits); I != E; ++I)
+    for (unsigned I = 0, E = std::size(Bits); I != E; ++I)
       Result.Bits[I] = ~Bits[I];
     return Result;
   }
 
   constexpr bool operator!=(const FeatureBitset &RHS) const {
-    for (unsigned I = 0, E = array_lengthof(Bits); I != E; ++I)
+    for (unsigned I = 0, E = std::size(Bits); I != E; ++I)
       if (Bits[I] != RHS.Bits[I])
         return true;
     return false;
@@ -203,10 +203,10 @@ constexpr FeatureBitset FeaturesTigerlake =
     FeatureCLWB | FeatureMOVDIRI | FeatureSHSTK | FeatureKL | FeatureWIDEKL;
 constexpr FeatureBitset FeaturesSapphireRapids =
     FeaturesICLServer | FeatureAMX_BF16 | FeatureAMX_INT8 | FeatureAMX_TILE |
-    FeatureAVX512BF16 | FeatureAVX512FP16 | FeatureAVX512VP2INTERSECT |
-    FeatureAVXVNNI | FeatureCLDEMOTE | FeatureENQCMD | FeatureMOVDIR64B |
-    FeatureMOVDIRI | FeaturePTWRITE | FeatureSERIALIZE | FeatureSHSTK |
-    FeatureTSXLDTRK | FeatureUINTR | FeatureWAITPKG;
+    FeatureAVX512BF16 | FeatureAVX512FP16 | FeatureAVXVNNI | FeatureCLDEMOTE |
+    FeatureENQCMD | FeatureMOVDIR64B | FeatureMOVDIRI | FeaturePTWRITE |
+    FeatureSERIALIZE | FeatureSHSTK | FeatureTSXLDTRK | FeatureUINTR |
+    FeatureWAITPKG;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
@@ -321,7 +321,7 @@ constexpr ProcInfo Processors[] = {
   { {"prescott"}, CK_Prescott, ~0U, FeaturesPrescott },
   { {"nocona"}, CK_Nocona, ~0U, FeaturesNocona },
   // Core microarchitecture based processors.
-  { {"core2"}, CK_Core2, ~0U, FeaturesCore2 },
+  { {"core2"}, CK_Core2, FEATURE_SSSE3, FeaturesCore2 },
   { {"penryn"}, CK_Penryn, ~0U, FeaturesPenryn },
   // Atom processors
   { {"bonnell"}, CK_Bonnell, FEATURE_SSSE3, FeaturesBonnell },
@@ -367,7 +367,7 @@ constexpr ProcInfo Processors[] = {
   // Tigerlake microarchitecture based processors.
   { {"tigerlake"}, CK_Tigerlake, FEATURE_AVX512VP2INTERSECT, FeaturesTigerlake },
   // Sapphire Rapids microarchitecture based processors.
-  { {"sapphirerapids"}, CK_SapphireRapids, FEATURE_AVX512VP2INTERSECT, FeaturesSapphireRapids },
+  { {"sapphirerapids"}, CK_SapphireRapids, FEATURE_AVX512BF16, FeaturesSapphireRapids },
   // Alderlake microarchitecture based processors.
   { {"alderlake"}, CK_Alderlake, FEATURE_AVX2, FeaturesAlderlake },
   // Knights Landing processor.
@@ -692,7 +692,7 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
 #include "llvm/Support/X86TargetParser.def"
       std::numeric_limits<unsigned>::max() // Need to consume last comma.
   };
-  std::array<unsigned, array_lengthof(Priorities) - 1> HelperList;
+  std::array<unsigned, std::size(Priorities) - 1> HelperList;
   std::iota(HelperList.begin(), HelperList.end(), 0);
   assert(std::is_permutation(HelperList.begin(), HelperList.end(),
                              std::begin(Priorities),

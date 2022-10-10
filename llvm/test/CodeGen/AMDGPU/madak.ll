@@ -244,9 +244,8 @@ define amdgpu_kernel void @no_madak_src1_modifier_f32(float addrspace(1)* noalia
 ; because the implicit immediate already uses the constant bus.
 ; On GFX10+ we can use two scalar operands.
 ; GCN-LABEL: {{^}}madak_constant_bus_violation:
-; GCN:       s_load_dword [[SGPR0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0x12|0x48}}
-
 ; GCN:       {{buffer|flat|global}}_load_dword [[VGPR:v[0-9]+]]
+; GCN:       s_load_dword [[SGPR0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0x12|0x48}}
 ; MAD:       v_mov_b32_e32 [[MADAK:v[0-9]+]], 0x42280000
 ; MAD:       v_mac_f32_e64 [[MADAK]], [[SGPR0]], 0.5
 ; GFX10:     v_mov_b32_e32 [[SGPR0_VCOPY:v[0-9]+]], [[SGPR0]]

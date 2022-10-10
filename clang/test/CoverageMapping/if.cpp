@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -std=c++1z -triple %itanium_abi_triple -main-file-name if.cpp %s | FileCheck %s
+// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -std=c++2b -triple %itanium_abi_triple -main-file-name if.cpp %s | FileCheck %s
 
 int nop() { return 0; }
 
@@ -13,6 +13,22 @@ void foo() {                    // CHECK-NEXT: Gap,File 0, [[@LINE+1]]:21 -> [[@
     ++j;                        // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:7 -> [[@LINE-1]]:8 = #1, (#0 - #1)
 }                               // CHECK-NEXT: [[@LINE-2]]:9 -> [[@LINE-1]]:5 = #1
                                 // CHECK-NEXT: [[@LINE-2]]:5 -> [[@LINE-2]]:8 = #1
+
+// FIXME: Do not generate coverage for discarded branches in if consteval and if constexpr statements
+constexpr int check_consteval(int i) {
+    if consteval {
+      i++;
+    }
+    if !consteval {
+      i++;
+    }
+    if consteval {
+        return 42;
+    } else {
+        return i;
+    }
+}
+
 // CHECK-LABEL: main:
 int main() {                    // CHECK: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 = #0
   int i = 0;
@@ -49,6 +65,10 @@ int main() {                    // CHECK: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 =
                                 // CHECK-NEXT: Branch,File 0, [[@LINE+2]]:7 -> [[@LINE+2]]:13 = #6, (#0 - #6)
                                 // CHECK-NEXT: File 0, [[@LINE+1]]:14 -> [[@LINE+1]]:20 = #6
   i = i == 0?i + 12:i + 10;     // CHECK-NEXT: File 0, [[@LINE]]:21 -> [[@LINE]]:27 = (#0 - #6)
+
+  // GH-57377
+  constexpr int c_i = check_consteval(0);
+  check_consteval(i);
 
   return 0;
 }

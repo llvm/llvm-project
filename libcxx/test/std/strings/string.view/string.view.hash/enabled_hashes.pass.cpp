@@ -16,9 +16,13 @@
 
 #include <string_view>
 
+#include "constexpr_char_traits.h"
 #include "poisoned_hash_helper.h"
-
 #include "test_macros.h"
+
+struct MyChar {
+  char c;
+};
 
 int main(int, char**) {
   test_library_hash_specializations_available();
@@ -27,11 +31,13 @@ int main(int, char**) {
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test_hash_enabled_for_type<std::wstring_view>();
 #endif
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
     test_hash_enabled_for_type<std::u8string_view>();
 #endif
     test_hash_enabled_for_type<std::u16string_view>();
     test_hash_enabled_for_type<std::u32string_view>();
+    test_hash_disabled_for_type<std::basic_string_view<MyChar, std::char_traits<MyChar>>>();
+    test_hash_disabled_for_type<std::basic_string_view<char, constexpr_char_traits<char>>>();
   }
 
   return 0;

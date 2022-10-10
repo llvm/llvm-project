@@ -10,13 +10,13 @@ preheader:
   br label %l39
 
 l39:
-  %v40 = phi float (float)* [ @foo, %preheader ], [ %v43, %crit_edge ]
+  %v40 = phi ptr [ @foo, %preheader ], [ %v43, %crit_edge ]
   %v41 = call float %v40(float undef)
-  %v42 = load i32, i32* undef, align 8
+  %v42 = load i32, ptr undef, align 8
   br i1 undef, label %crit_edge, label %loopexit
 
 crit_edge:
-  %v43 = load float (float)*, float (float)** undef, align 8
+  %v43 = load ptr, ptr undef, align 8
   br label %l39
 
 loopexit:

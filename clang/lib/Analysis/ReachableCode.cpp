@@ -218,7 +218,7 @@ static bool isConfigurationValue(const Stmt *S,
       return isConfigurationValue(cast<DeclRefExpr>(S)->getDecl(), PP);
     case Stmt::ObjCBoolLiteralExprClass:
       IgnoreYES_NO = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Stmt::CXXBoolLiteralExprClass:
     case Stmt::IntegerLiteralClass: {
       const Expr *E = cast<Expr>(S);
@@ -299,6 +299,12 @@ static bool shouldTreatSuccessorsAsReachable(const CFGBlock *B,
     if (isa<BinaryOperator>(Term)) {
       return isConfigurationValue(Term, PP);
     }
+    // Do not treat constexpr if statement successors as unreachable in warnings
+    // since the point of these statements is to determine branches at compile
+    // time.
+    if (const auto *IS = dyn_cast<IfStmt>(Term);
+        IS != nullptr && IS->isConstexpr())
+      return true;
   }
 
   const Stmt *Cond = B->getTerminatorCondition(/* stripParens */ false);

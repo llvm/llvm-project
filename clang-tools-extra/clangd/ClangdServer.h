@@ -161,8 +161,8 @@ public:
     /// fetch system include path.
     std::vector<std::string> QueryDriverGlobs;
 
-    /// Enable preview of FoldingRanges feature.
-    bool FoldingRanges = false;
+    // Whether the client supports folding only complete lines.
+    bool LineFoldingOnly = false;
 
     FeatureModuleSet *FeatureModules = nullptr;
     /// If true, use the dirty buffer contents when building Preambles.
@@ -253,7 +253,13 @@ public:
   /// Get information about type hierarchy for a given position.
   void typeHierarchy(PathRef File, Position Pos, int Resolve,
                      TypeHierarchyDirection Direction,
-                     Callback<llvm::Optional<TypeHierarchyItem>> CB);
+                     Callback<std::vector<TypeHierarchyItem>> CB);
+  /// Get direct parents of a type hierarchy item.
+  void superTypes(const TypeHierarchyItem &Item,
+                  Callback<llvm::Optional<std::vector<TypeHierarchyItem>>> CB);
+  /// Get direct children of a type hierarchy item.
+  void subTypes(const TypeHierarchyItem &Item,
+                Callback<std::vector<TypeHierarchyItem>> CB);
 
   /// Resolve type hierarchy item in the given direction.
   void resolveTypeHierarchy(TypeHierarchyItem Item, int Resolve,
@@ -390,7 +396,7 @@ public:
   // Returns false if the timeout expires.
   // FIXME: various subcomponents each get the full timeout, so it's more of
   // an order of magnitude than a hard deadline.
-  LLVM_NODISCARD bool
+  [[nodiscard]] bool
   blockUntilIdleForTest(llvm::Optional<double> TimeoutSeconds = 10);
 
   /// Builds a nested representation of memory used by components.
@@ -422,6 +428,9 @@ private:
   TidyProviderRef ClangTidyProvider;
 
   bool UseDirtyHeaders = false;
+
+  // Whether the client supports folding only complete lines.
+  bool LineFoldingOnly = false;
 
   bool PreambleParseForwardingFunctions = false;
 

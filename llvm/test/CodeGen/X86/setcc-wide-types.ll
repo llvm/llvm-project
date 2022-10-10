@@ -80,21 +80,21 @@ define i32 @ne_i256(<4 x i64> %x, <4 x i64> %y) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm4, %rcx
 ; SSE2-NEXT:    movq %xmm0, %rdx
-; SSE2-NEXT:    movq %xmm1, %r8
+; SSE2-NEXT:    movq %xmm1, %rsi
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rdi
 ; SSE2-NEXT:    xorq %rax, %rdi
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,2,3]
-; SSE2-NEXT:    movq %xmm0, %rsi
-; SSE2-NEXT:    xorq %rcx, %rsi
-; SSE2-NEXT:    orq %rdi, %rsi
+; SSE2-NEXT:    movq %xmm0, %r8
+; SSE2-NEXT:    xorq %rcx, %r8
+; SSE2-NEXT:    orq %rdi, %r8
 ; SSE2-NEXT:    movq %xmm2, %rax
 ; SSE2-NEXT:    xorq %rdx, %rax
 ; SSE2-NEXT:    movq %xmm3, %rcx
-; SSE2-NEXT:    xorq %r8, %rcx
+; SSE2-NEXT:    xorq %rsi, %rcx
 ; SSE2-NEXT:    orq %rax, %rcx
 ; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    orq %rsi, %rcx
+; SSE2-NEXT:    orq %r8, %rcx
 ; SSE2-NEXT:    setne %al
 ; SSE2-NEXT:    retq
 ;
@@ -103,19 +103,19 @@ define i32 @ne_i256(<4 x i64> %x, <4 x i64> %y) {
 ; SSE41-NEXT:    movq %xmm0, %rax
 ; SSE41-NEXT:    movq %xmm1, %rcx
 ; SSE41-NEXT:    pextrq $1, %xmm0, %rdx
-; SSE41-NEXT:    pextrq $1, %xmm1, %r8
+; SSE41-NEXT:    pextrq $1, %xmm1, %rsi
 ; SSE41-NEXT:    movq %xmm2, %rdi
 ; SSE41-NEXT:    xorq %rax, %rdi
-; SSE41-NEXT:    movq %xmm3, %rsi
-; SSE41-NEXT:    xorq %rcx, %rsi
-; SSE41-NEXT:    orq %rdi, %rsi
+; SSE41-NEXT:    movq %xmm3, %r8
+; SSE41-NEXT:    xorq %rcx, %r8
+; SSE41-NEXT:    orq %rdi, %r8
 ; SSE41-NEXT:    pextrq $1, %xmm2, %rax
 ; SSE41-NEXT:    xorq %rdx, %rax
 ; SSE41-NEXT:    pextrq $1, %xmm3, %rcx
-; SSE41-NEXT:    xorq %r8, %rcx
+; SSE41-NEXT:    xorq %rsi, %rcx
 ; SSE41-NEXT:    orq %rax, %rcx
 ; SSE41-NEXT:    xorl %eax, %eax
-; SSE41-NEXT:    orq %rsi, %rcx
+; SSE41-NEXT:    orq %r8, %rcx
 ; SSE41-NEXT:    setne %al
 ; SSE41-NEXT:    retq
 ;
@@ -160,21 +160,21 @@ define i32 @eq_i256(<4 x i64> %x, <4 x i64> %y) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm4, %rcx
 ; SSE2-NEXT:    movq %xmm0, %rdx
-; SSE2-NEXT:    movq %xmm1, %r8
+; SSE2-NEXT:    movq %xmm1, %rsi
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rdi
 ; SSE2-NEXT:    xorq %rax, %rdi
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[2,3,2,3]
-; SSE2-NEXT:    movq %xmm0, %rsi
-; SSE2-NEXT:    xorq %rcx, %rsi
-; SSE2-NEXT:    orq %rdi, %rsi
+; SSE2-NEXT:    movq %xmm0, %r8
+; SSE2-NEXT:    xorq %rcx, %r8
+; SSE2-NEXT:    orq %rdi, %r8
 ; SSE2-NEXT:    movq %xmm2, %rax
 ; SSE2-NEXT:    xorq %rdx, %rax
 ; SSE2-NEXT:    movq %xmm3, %rcx
-; SSE2-NEXT:    xorq %r8, %rcx
+; SSE2-NEXT:    xorq %rsi, %rcx
 ; SSE2-NEXT:    orq %rax, %rcx
 ; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    orq %rsi, %rcx
+; SSE2-NEXT:    orq %r8, %rcx
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
@@ -183,19 +183,19 @@ define i32 @eq_i256(<4 x i64> %x, <4 x i64> %y) {
 ; SSE41-NEXT:    movq %xmm0, %rax
 ; SSE41-NEXT:    movq %xmm1, %rcx
 ; SSE41-NEXT:    pextrq $1, %xmm0, %rdx
-; SSE41-NEXT:    pextrq $1, %xmm1, %r8
+; SSE41-NEXT:    pextrq $1, %xmm1, %rsi
 ; SSE41-NEXT:    movq %xmm2, %rdi
 ; SSE41-NEXT:    xorq %rax, %rdi
-; SSE41-NEXT:    movq %xmm3, %rsi
-; SSE41-NEXT:    xorq %rcx, %rsi
-; SSE41-NEXT:    orq %rdi, %rsi
+; SSE41-NEXT:    movq %xmm3, %r8
+; SSE41-NEXT:    xorq %rcx, %r8
+; SSE41-NEXT:    orq %rdi, %r8
 ; SSE41-NEXT:    pextrq $1, %xmm2, %rax
 ; SSE41-NEXT:    xorq %rdx, %rax
 ; SSE41-NEXT:    pextrq $1, %xmm3, %rcx
-; SSE41-NEXT:    xorq %r8, %rcx
+; SSE41-NEXT:    xorq %rsi, %rcx
 ; SSE41-NEXT:    orq %rax, %rcx
 ; SSE41-NEXT:    xorl %eax, %eax
-; SSE41-NEXT:    orq %rsi, %rcx
+; SSE41-NEXT:    orq %r8, %rcx
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
@@ -242,14 +242,14 @@ define i32 @ne_i512(<8 x i64> %x, <8 x i64> %y) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm8, %rdi
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm3[2,3,2,3]
-; SSE2-NEXT:    movq %xmm8, %rax
-; SSE2-NEXT:    movq %xmm0, %r11
+; SSE2-NEXT:    movq %xmm8, %r8
+; SSE2-NEXT:    movq %xmm0, %r9
 ; SSE2-NEXT:    movq %xmm2, %r10
-; SSE2-NEXT:    movq %xmm1, %r9
-; SSE2-NEXT:    movq %xmm3, %r8
+; SSE2-NEXT:    movq %xmm1, %rcx
+; SSE2-NEXT:    movq %xmm3, %rax
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[2,3,2,3]
-; SSE2-NEXT:    movq %xmm0, %rcx
-; SSE2-NEXT:    xorq %rdx, %rcx
+; SSE2-NEXT:    movq %xmm0, %r11
+; SSE2-NEXT:    xorq %rdx, %r11
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rdx
 ; SSE2-NEXT:    xorq %rsi, %rdx
@@ -258,23 +258,23 @@ define i32 @ne_i512(<8 x i64> %x, <8 x i64> %y) {
 ; SSE2-NEXT:    xorq %rdi, %rsi
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm7[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rdi
-; SSE2-NEXT:    xorq %rax, %rdi
+; SSE2-NEXT:    xorq %r8, %rdi
 ; SSE2-NEXT:    orq %rsi, %rdi
 ; SSE2-NEXT:    orq %rdx, %rdi
-; SSE2-NEXT:    orq %rcx, %rdi
-; SSE2-NEXT:    movq %xmm4, %rax
-; SSE2-NEXT:    xorq %r11, %rax
-; SSE2-NEXT:    movq %xmm6, %rcx
-; SSE2-NEXT:    xorq %r10, %rcx
-; SSE2-NEXT:    movq %xmm5, %rdx
+; SSE2-NEXT:    orq %r11, %rdi
+; SSE2-NEXT:    movq %xmm4, %rdx
 ; SSE2-NEXT:    xorq %r9, %rdx
-; SSE2-NEXT:    movq %xmm7, %rsi
-; SSE2-NEXT:    xorq %r8, %rsi
-; SSE2-NEXT:    orq %rdx, %rsi
-; SSE2-NEXT:    orq %rcx, %rsi
-; SSE2-NEXT:    orq %rax, %rsi
+; SSE2-NEXT:    movq %xmm6, %rsi
+; SSE2-NEXT:    xorq %r10, %rsi
+; SSE2-NEXT:    movq %xmm5, %r8
+; SSE2-NEXT:    xorq %rcx, %r8
+; SSE2-NEXT:    movq %xmm7, %rcx
+; SSE2-NEXT:    xorq %rax, %rcx
+; SSE2-NEXT:    orq %r8, %rcx
+; SSE2-NEXT:    orq %rsi, %rcx
+; SSE2-NEXT:    orq %rdx, %rcx
 ; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    orq %rdi, %rsi
+; SSE2-NEXT:    orq %rdi, %rcx
 ; SSE2-NEXT:    setne %al
 ; SSE2-NEXT:    retq
 ;
@@ -284,12 +284,12 @@ define i32 @ne_i512(<8 x i64> %x, <8 x i64> %y) {
 ; SSE41-NEXT:    movq %xmm2, %rcx
 ; SSE41-NEXT:    movq %xmm1, %rdx
 ; SSE41-NEXT:    movq %xmm3, %rsi
-; SSE41-NEXT:    pextrq $1, %xmm0, %r11
+; SSE41-NEXT:    pextrq $1, %xmm0, %rdi
 ; SSE41-NEXT:    pextrq $1, %xmm2, %r8
 ; SSE41-NEXT:    pextrq $1, %xmm1, %r9
 ; SSE41-NEXT:    pextrq $1, %xmm3, %r10
-; SSE41-NEXT:    movq %xmm4, %rdi
-; SSE41-NEXT:    xorq %rax, %rdi
+; SSE41-NEXT:    movq %xmm4, %r11
+; SSE41-NEXT:    xorq %rax, %r11
 ; SSE41-NEXT:    movq %xmm6, %rax
 ; SSE41-NEXT:    xorq %rcx, %rax
 ; SSE41-NEXT:    movq %xmm5, %rcx
@@ -298,9 +298,9 @@ define i32 @ne_i512(<8 x i64> %x, <8 x i64> %y) {
 ; SSE41-NEXT:    xorq %rsi, %rdx
 ; SSE41-NEXT:    orq %rcx, %rdx
 ; SSE41-NEXT:    orq %rax, %rdx
-; SSE41-NEXT:    orq %rdi, %rdx
+; SSE41-NEXT:    orq %r11, %rdx
 ; SSE41-NEXT:    pextrq $1, %xmm4, %rax
-; SSE41-NEXT:    xorq %r11, %rax
+; SSE41-NEXT:    xorq %rdi, %rax
 ; SSE41-NEXT:    pextrq $1, %xmm6, %rcx
 ; SSE41-NEXT:    xorq %r8, %rcx
 ; SSE41-NEXT:    pextrq $1, %xmm5, %rsi
@@ -322,13 +322,13 @@ define i32 @ne_i512(<8 x i64> %x, <8 x i64> %y) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
 ; AVX1-NEXT:    vmovq %xmm4, %rdi
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
-; AVX1-NEXT:    vmovq %xmm5, %rax
-; AVX1-NEXT:    vpextrq $1, %xmm0, %r11
+; AVX1-NEXT:    vmovq %xmm5, %r8
+; AVX1-NEXT:    vpextrq $1, %xmm0, %r9
 ; AVX1-NEXT:    vpextrq $1, %xmm1, %r10
-; AVX1-NEXT:    vpextrq $1, %xmm4, %r9
-; AVX1-NEXT:    vpextrq $1, %xmm5, %r8
-; AVX1-NEXT:    vmovq %xmm2, %rcx
-; AVX1-NEXT:    xorq %rdx, %rcx
+; AVX1-NEXT:    vpextrq $1, %xmm4, %rcx
+; AVX1-NEXT:    vpextrq $1, %xmm5, %rax
+; AVX1-NEXT:    vmovq %xmm2, %r11
+; AVX1-NEXT:    xorq %rdx, %r11
 ; AVX1-NEXT:    vmovq %xmm3, %rdx
 ; AVX1-NEXT:    xorq %rsi, %rdx
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm0
@@ -336,23 +336,23 @@ define i32 @ne_i512(<8 x i64> %x, <8 x i64> %y) {
 ; AVX1-NEXT:    xorq %rdi, %rsi
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm1
 ; AVX1-NEXT:    vmovq %xmm1, %rdi
-; AVX1-NEXT:    xorq %rax, %rdi
+; AVX1-NEXT:    xorq %r8, %rdi
 ; AVX1-NEXT:    orq %rsi, %rdi
 ; AVX1-NEXT:    orq %rdx, %rdi
-; AVX1-NEXT:    orq %rcx, %rdi
-; AVX1-NEXT:    vpextrq $1, %xmm2, %rax
-; AVX1-NEXT:    xorq %r11, %rax
-; AVX1-NEXT:    vpextrq $1, %xmm3, %rcx
-; AVX1-NEXT:    xorq %r10, %rcx
-; AVX1-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX1-NEXT:    orq %r11, %rdi
+; AVX1-NEXT:    vpextrq $1, %xmm2, %rdx
 ; AVX1-NEXT:    xorq %r9, %rdx
-; AVX1-NEXT:    vpextrq $1, %xmm1, %rsi
-; AVX1-NEXT:    xorq %r8, %rsi
-; AVX1-NEXT:    orq %rdx, %rsi
-; AVX1-NEXT:    orq %rcx, %rsi
-; AVX1-NEXT:    orq %rax, %rsi
+; AVX1-NEXT:    vpextrq $1, %xmm3, %rsi
+; AVX1-NEXT:    xorq %r10, %rsi
+; AVX1-NEXT:    vpextrq $1, %xmm0, %r8
+; AVX1-NEXT:    xorq %rcx, %r8
+; AVX1-NEXT:    vpextrq $1, %xmm1, %rcx
+; AVX1-NEXT:    xorq %rax, %rcx
+; AVX1-NEXT:    orq %r8, %rcx
+; AVX1-NEXT:    orq %rsi, %rcx
+; AVX1-NEXT:    orq %rdx, %rcx
 ; AVX1-NEXT:    xorl %eax, %eax
-; AVX1-NEXT:    orq %rdi, %rsi
+; AVX1-NEXT:    orq %rdi, %rcx
 ; AVX1-NEXT:    setne %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -364,13 +364,13 @@ define i32 @ne_i512(<8 x i64> %x, <8 x i64> %y) {
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm4
 ; AVX2-NEXT:    vmovq %xmm4, %rdi
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm5
-; AVX2-NEXT:    vmovq %xmm5, %rax
-; AVX2-NEXT:    vpextrq $1, %xmm0, %r11
+; AVX2-NEXT:    vmovq %xmm5, %r8
+; AVX2-NEXT:    vpextrq $1, %xmm0, %r9
 ; AVX2-NEXT:    vpextrq $1, %xmm1, %r10
-; AVX2-NEXT:    vpextrq $1, %xmm4, %r9
-; AVX2-NEXT:    vpextrq $1, %xmm5, %r8
-; AVX2-NEXT:    vmovq %xmm2, %rcx
-; AVX2-NEXT:    xorq %rdx, %rcx
+; AVX2-NEXT:    vpextrq $1, %xmm4, %rcx
+; AVX2-NEXT:    vpextrq $1, %xmm5, %rax
+; AVX2-NEXT:    vmovq %xmm2, %r11
+; AVX2-NEXT:    xorq %rdx, %r11
 ; AVX2-NEXT:    vmovq %xmm3, %rdx
 ; AVX2-NEXT:    xorq %rsi, %rdx
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm0
@@ -378,23 +378,23 @@ define i32 @ne_i512(<8 x i64> %x, <8 x i64> %y) {
 ; AVX2-NEXT:    xorq %rdi, %rsi
 ; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm1
 ; AVX2-NEXT:    vmovq %xmm1, %rdi
-; AVX2-NEXT:    xorq %rax, %rdi
+; AVX2-NEXT:    xorq %r8, %rdi
 ; AVX2-NEXT:    orq %rsi, %rdi
 ; AVX2-NEXT:    orq %rdx, %rdi
-; AVX2-NEXT:    orq %rcx, %rdi
-; AVX2-NEXT:    vpextrq $1, %xmm2, %rax
-; AVX2-NEXT:    xorq %r11, %rax
-; AVX2-NEXT:    vpextrq $1, %xmm3, %rcx
-; AVX2-NEXT:    xorq %r10, %rcx
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX2-NEXT:    orq %r11, %rdi
+; AVX2-NEXT:    vpextrq $1, %xmm2, %rdx
 ; AVX2-NEXT:    xorq %r9, %rdx
-; AVX2-NEXT:    vpextrq $1, %xmm1, %rsi
-; AVX2-NEXT:    xorq %r8, %rsi
-; AVX2-NEXT:    orq %rdx, %rsi
-; AVX2-NEXT:    orq %rcx, %rsi
-; AVX2-NEXT:    orq %rax, %rsi
+; AVX2-NEXT:    vpextrq $1, %xmm3, %rsi
+; AVX2-NEXT:    xorq %r10, %rsi
+; AVX2-NEXT:    vpextrq $1, %xmm0, %r8
+; AVX2-NEXT:    xorq %rcx, %r8
+; AVX2-NEXT:    vpextrq $1, %xmm1, %rcx
+; AVX2-NEXT:    xorq %rax, %rcx
+; AVX2-NEXT:    orq %r8, %rcx
+; AVX2-NEXT:    orq %rsi, %rcx
+; AVX2-NEXT:    orq %rdx, %rcx
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    orq %rdi, %rsi
+; AVX2-NEXT:    orq %rdi, %rcx
 ; AVX2-NEXT:    setne %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -433,14 +433,14 @@ define i32 @eq_i512(<8 x i64> %x, <8 x i64> %y) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm1[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm8, %rdi
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm3[2,3,2,3]
-; SSE2-NEXT:    movq %xmm8, %rax
-; SSE2-NEXT:    movq %xmm0, %r11
+; SSE2-NEXT:    movq %xmm8, %r8
+; SSE2-NEXT:    movq %xmm0, %r9
 ; SSE2-NEXT:    movq %xmm2, %r10
-; SSE2-NEXT:    movq %xmm1, %r9
-; SSE2-NEXT:    movq %xmm3, %r8
+; SSE2-NEXT:    movq %xmm1, %rcx
+; SSE2-NEXT:    movq %xmm3, %rax
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[2,3,2,3]
-; SSE2-NEXT:    movq %xmm0, %rcx
-; SSE2-NEXT:    xorq %rdx, %rcx
+; SSE2-NEXT:    movq %xmm0, %r11
+; SSE2-NEXT:    xorq %rdx, %r11
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm6[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rdx
 ; SSE2-NEXT:    xorq %rsi, %rdx
@@ -449,23 +449,23 @@ define i32 @eq_i512(<8 x i64> %x, <8 x i64> %y) {
 ; SSE2-NEXT:    xorq %rdi, %rsi
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm7[2,3,2,3]
 ; SSE2-NEXT:    movq %xmm0, %rdi
-; SSE2-NEXT:    xorq %rax, %rdi
+; SSE2-NEXT:    xorq %r8, %rdi
 ; SSE2-NEXT:    orq %rsi, %rdi
 ; SSE2-NEXT:    orq %rdx, %rdi
-; SSE2-NEXT:    orq %rcx, %rdi
-; SSE2-NEXT:    movq %xmm4, %rax
-; SSE2-NEXT:    xorq %r11, %rax
-; SSE2-NEXT:    movq %xmm6, %rcx
-; SSE2-NEXT:    xorq %r10, %rcx
-; SSE2-NEXT:    movq %xmm5, %rdx
+; SSE2-NEXT:    orq %r11, %rdi
+; SSE2-NEXT:    movq %xmm4, %rdx
 ; SSE2-NEXT:    xorq %r9, %rdx
-; SSE2-NEXT:    movq %xmm7, %rsi
-; SSE2-NEXT:    xorq %r8, %rsi
-; SSE2-NEXT:    orq %rdx, %rsi
-; SSE2-NEXT:    orq %rcx, %rsi
-; SSE2-NEXT:    orq %rax, %rsi
+; SSE2-NEXT:    movq %xmm6, %rsi
+; SSE2-NEXT:    xorq %r10, %rsi
+; SSE2-NEXT:    movq %xmm5, %r8
+; SSE2-NEXT:    xorq %rcx, %r8
+; SSE2-NEXT:    movq %xmm7, %rcx
+; SSE2-NEXT:    xorq %rax, %rcx
+; SSE2-NEXT:    orq %r8, %rcx
+; SSE2-NEXT:    orq %rsi, %rcx
+; SSE2-NEXT:    orq %rdx, %rcx
 ; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    orq %rdi, %rsi
+; SSE2-NEXT:    orq %rdi, %rcx
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
@@ -475,12 +475,12 @@ define i32 @eq_i512(<8 x i64> %x, <8 x i64> %y) {
 ; SSE41-NEXT:    movq %xmm2, %rcx
 ; SSE41-NEXT:    movq %xmm1, %rdx
 ; SSE41-NEXT:    movq %xmm3, %rsi
-; SSE41-NEXT:    pextrq $1, %xmm0, %r11
+; SSE41-NEXT:    pextrq $1, %xmm0, %rdi
 ; SSE41-NEXT:    pextrq $1, %xmm2, %r8
 ; SSE41-NEXT:    pextrq $1, %xmm1, %r9
 ; SSE41-NEXT:    pextrq $1, %xmm3, %r10
-; SSE41-NEXT:    movq %xmm4, %rdi
-; SSE41-NEXT:    xorq %rax, %rdi
+; SSE41-NEXT:    movq %xmm4, %r11
+; SSE41-NEXT:    xorq %rax, %r11
 ; SSE41-NEXT:    movq %xmm6, %rax
 ; SSE41-NEXT:    xorq %rcx, %rax
 ; SSE41-NEXT:    movq %xmm5, %rcx
@@ -489,9 +489,9 @@ define i32 @eq_i512(<8 x i64> %x, <8 x i64> %y) {
 ; SSE41-NEXT:    xorq %rsi, %rdx
 ; SSE41-NEXT:    orq %rcx, %rdx
 ; SSE41-NEXT:    orq %rax, %rdx
-; SSE41-NEXT:    orq %rdi, %rdx
+; SSE41-NEXT:    orq %r11, %rdx
 ; SSE41-NEXT:    pextrq $1, %xmm4, %rax
-; SSE41-NEXT:    xorq %r11, %rax
+; SSE41-NEXT:    xorq %rdi, %rax
 ; SSE41-NEXT:    pextrq $1, %xmm6, %rcx
 ; SSE41-NEXT:    xorq %r8, %rcx
 ; SSE41-NEXT:    pextrq $1, %xmm5, %rsi
@@ -513,13 +513,13 @@ define i32 @eq_i512(<8 x i64> %x, <8 x i64> %y) {
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm4
 ; AVX1-NEXT:    vmovq %xmm4, %rdi
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm5
-; AVX1-NEXT:    vmovq %xmm5, %rax
-; AVX1-NEXT:    vpextrq $1, %xmm0, %r11
+; AVX1-NEXT:    vmovq %xmm5, %r8
+; AVX1-NEXT:    vpextrq $1, %xmm0, %r9
 ; AVX1-NEXT:    vpextrq $1, %xmm1, %r10
-; AVX1-NEXT:    vpextrq $1, %xmm4, %r9
-; AVX1-NEXT:    vpextrq $1, %xmm5, %r8
-; AVX1-NEXT:    vmovq %xmm2, %rcx
-; AVX1-NEXT:    xorq %rdx, %rcx
+; AVX1-NEXT:    vpextrq $1, %xmm4, %rcx
+; AVX1-NEXT:    vpextrq $1, %xmm5, %rax
+; AVX1-NEXT:    vmovq %xmm2, %r11
+; AVX1-NEXT:    xorq %rdx, %r11
 ; AVX1-NEXT:    vmovq %xmm3, %rdx
 ; AVX1-NEXT:    xorq %rsi, %rdx
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm0
@@ -527,23 +527,23 @@ define i32 @eq_i512(<8 x i64> %x, <8 x i64> %y) {
 ; AVX1-NEXT:    xorq %rdi, %rsi
 ; AVX1-NEXT:    vextractf128 $1, %ymm3, %xmm1
 ; AVX1-NEXT:    vmovq %xmm1, %rdi
-; AVX1-NEXT:    xorq %rax, %rdi
+; AVX1-NEXT:    xorq %r8, %rdi
 ; AVX1-NEXT:    orq %rsi, %rdi
 ; AVX1-NEXT:    orq %rdx, %rdi
-; AVX1-NEXT:    orq %rcx, %rdi
-; AVX1-NEXT:    vpextrq $1, %xmm2, %rax
-; AVX1-NEXT:    xorq %r11, %rax
-; AVX1-NEXT:    vpextrq $1, %xmm3, %rcx
-; AVX1-NEXT:    xorq %r10, %rcx
-; AVX1-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX1-NEXT:    orq %r11, %rdi
+; AVX1-NEXT:    vpextrq $1, %xmm2, %rdx
 ; AVX1-NEXT:    xorq %r9, %rdx
-; AVX1-NEXT:    vpextrq $1, %xmm1, %rsi
-; AVX1-NEXT:    xorq %r8, %rsi
-; AVX1-NEXT:    orq %rdx, %rsi
-; AVX1-NEXT:    orq %rcx, %rsi
-; AVX1-NEXT:    orq %rax, %rsi
+; AVX1-NEXT:    vpextrq $1, %xmm3, %rsi
+; AVX1-NEXT:    xorq %r10, %rsi
+; AVX1-NEXT:    vpextrq $1, %xmm0, %r8
+; AVX1-NEXT:    xorq %rcx, %r8
+; AVX1-NEXT:    vpextrq $1, %xmm1, %rcx
+; AVX1-NEXT:    xorq %rax, %rcx
+; AVX1-NEXT:    orq %r8, %rcx
+; AVX1-NEXT:    orq %rsi, %rcx
+; AVX1-NEXT:    orq %rdx, %rcx
 ; AVX1-NEXT:    xorl %eax, %eax
-; AVX1-NEXT:    orq %rdi, %rsi
+; AVX1-NEXT:    orq %rdi, %rcx
 ; AVX1-NEXT:    sete %al
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    retq
@@ -555,13 +555,13 @@ define i32 @eq_i512(<8 x i64> %x, <8 x i64> %y) {
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm4
 ; AVX2-NEXT:    vmovq %xmm4, %rdi
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm5
-; AVX2-NEXT:    vmovq %xmm5, %rax
-; AVX2-NEXT:    vpextrq $1, %xmm0, %r11
+; AVX2-NEXT:    vmovq %xmm5, %r8
+; AVX2-NEXT:    vpextrq $1, %xmm0, %r9
 ; AVX2-NEXT:    vpextrq $1, %xmm1, %r10
-; AVX2-NEXT:    vpextrq $1, %xmm4, %r9
-; AVX2-NEXT:    vpextrq $1, %xmm5, %r8
-; AVX2-NEXT:    vmovq %xmm2, %rcx
-; AVX2-NEXT:    xorq %rdx, %rcx
+; AVX2-NEXT:    vpextrq $1, %xmm4, %rcx
+; AVX2-NEXT:    vpextrq $1, %xmm5, %rax
+; AVX2-NEXT:    vmovq %xmm2, %r11
+; AVX2-NEXT:    xorq %rdx, %r11
 ; AVX2-NEXT:    vmovq %xmm3, %rdx
 ; AVX2-NEXT:    xorq %rsi, %rdx
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm0
@@ -569,23 +569,23 @@ define i32 @eq_i512(<8 x i64> %x, <8 x i64> %y) {
 ; AVX2-NEXT:    xorq %rdi, %rsi
 ; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm1
 ; AVX2-NEXT:    vmovq %xmm1, %rdi
-; AVX2-NEXT:    xorq %rax, %rdi
+; AVX2-NEXT:    xorq %r8, %rdi
 ; AVX2-NEXT:    orq %rsi, %rdi
 ; AVX2-NEXT:    orq %rdx, %rdi
-; AVX2-NEXT:    orq %rcx, %rdi
-; AVX2-NEXT:    vpextrq $1, %xmm2, %rax
-; AVX2-NEXT:    xorq %r11, %rax
-; AVX2-NEXT:    vpextrq $1, %xmm3, %rcx
-; AVX2-NEXT:    xorq %r10, %rcx
-; AVX2-NEXT:    vpextrq $1, %xmm0, %rdx
+; AVX2-NEXT:    orq %r11, %rdi
+; AVX2-NEXT:    vpextrq $1, %xmm2, %rdx
 ; AVX2-NEXT:    xorq %r9, %rdx
-; AVX2-NEXT:    vpextrq $1, %xmm1, %rsi
-; AVX2-NEXT:    xorq %r8, %rsi
-; AVX2-NEXT:    orq %rdx, %rsi
-; AVX2-NEXT:    orq %rcx, %rsi
-; AVX2-NEXT:    orq %rax, %rsi
+; AVX2-NEXT:    vpextrq $1, %xmm3, %rsi
+; AVX2-NEXT:    xorq %r10, %rsi
+; AVX2-NEXT:    vpextrq $1, %xmm0, %r8
+; AVX2-NEXT:    xorq %rcx, %r8
+; AVX2-NEXT:    vpextrq $1, %xmm1, %rcx
+; AVX2-NEXT:    xorq %rax, %rcx
+; AVX2-NEXT:    orq %r8, %rcx
+; AVX2-NEXT:    orq %rsi, %rcx
+; AVX2-NEXT:    orq %rdx, %rcx
 ; AVX2-NEXT:    xorl %eax, %eax
-; AVX2-NEXT:    orq %rdi, %rsi
+; AVX2-NEXT:    orq %rdi, %rcx
 ; AVX2-NEXT:    sete %al
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -736,59 +736,59 @@ define i32 @eq_i128_pair(ptr %a, ptr %b) {
 define i32 @ne_i256_pair(ptr %a, ptr %b) {
 ; SSE2-LABEL: ne_i256_pair:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq 16(%rdi), %r9
-; SSE2-NEXT:    movq 24(%rdi), %r11
-; SSE2-NEXT:    movq (%rdi), %r8
-; SSE2-NEXT:    movq 8(%rdi), %r10
-; SSE2-NEXT:    xorq 8(%rsi), %r10
-; SSE2-NEXT:    xorq 24(%rsi), %r11
-; SSE2-NEXT:    xorq (%rsi), %r8
-; SSE2-NEXT:    xorq 16(%rsi), %r9
-; SSE2-NEXT:    movq 48(%rdi), %rcx
-; SSE2-NEXT:    movq 32(%rdi), %rax
-; SSE2-NEXT:    movq 56(%rdi), %rdx
+; SSE2-NEXT:    movq 16(%rdi), %rcx
+; SSE2-NEXT:    movq 24(%rdi), %rdx
+; SSE2-NEXT:    movq (%rdi), %rax
+; SSE2-NEXT:    movq 8(%rdi), %r8
+; SSE2-NEXT:    xorq 8(%rsi), %r8
+; SSE2-NEXT:    xorq 24(%rsi), %rdx
+; SSE2-NEXT:    xorq (%rsi), %rax
+; SSE2-NEXT:    xorq 16(%rsi), %rcx
+; SSE2-NEXT:    movq 48(%rdi), %r9
+; SSE2-NEXT:    movq 32(%rdi), %r10
+; SSE2-NEXT:    movq 56(%rdi), %r11
 ; SSE2-NEXT:    movq 40(%rdi), %rdi
 ; SSE2-NEXT:    xorq 40(%rsi), %rdi
-; SSE2-NEXT:    xorq 56(%rsi), %rdx
-; SSE2-NEXT:    orq %r11, %rdx
-; SSE2-NEXT:    orq %rdi, %rdx
-; SSE2-NEXT:    orq %r10, %rdx
-; SSE2-NEXT:    xorq 32(%rsi), %rax
-; SSE2-NEXT:    xorq 48(%rsi), %rcx
-; SSE2-NEXT:    orq %r9, %rcx
-; SSE2-NEXT:    orq %rax, %rcx
-; SSE2-NEXT:    orq %r8, %rcx
+; SSE2-NEXT:    xorq 56(%rsi), %r11
+; SSE2-NEXT:    orq %rdx, %r11
+; SSE2-NEXT:    orq %rdi, %r11
+; SSE2-NEXT:    orq %r8, %r11
+; SSE2-NEXT:    xorq 32(%rsi), %r10
+; SSE2-NEXT:    xorq 48(%rsi), %r9
+; SSE2-NEXT:    orq %rcx, %r9
+; SSE2-NEXT:    orq %r10, %r9
+; SSE2-NEXT:    orq %rax, %r9
 ; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    orq %rdx, %rcx
+; SSE2-NEXT:    orq %r11, %r9
 ; SSE2-NEXT:    setne %al
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: ne_i256_pair:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movq 16(%rdi), %r9
-; SSE41-NEXT:    movq 24(%rdi), %r11
-; SSE41-NEXT:    movq (%rdi), %r8
-; SSE41-NEXT:    movq 8(%rdi), %r10
-; SSE41-NEXT:    xorq 8(%rsi), %r10
-; SSE41-NEXT:    xorq 24(%rsi), %r11
-; SSE41-NEXT:    xorq (%rsi), %r8
-; SSE41-NEXT:    xorq 16(%rsi), %r9
-; SSE41-NEXT:    movq 48(%rdi), %rcx
-; SSE41-NEXT:    movq 32(%rdi), %rax
-; SSE41-NEXT:    movq 56(%rdi), %rdx
+; SSE41-NEXT:    movq 16(%rdi), %rcx
+; SSE41-NEXT:    movq 24(%rdi), %rdx
+; SSE41-NEXT:    movq (%rdi), %rax
+; SSE41-NEXT:    movq 8(%rdi), %r8
+; SSE41-NEXT:    xorq 8(%rsi), %r8
+; SSE41-NEXT:    xorq 24(%rsi), %rdx
+; SSE41-NEXT:    xorq (%rsi), %rax
+; SSE41-NEXT:    xorq 16(%rsi), %rcx
+; SSE41-NEXT:    movq 48(%rdi), %r9
+; SSE41-NEXT:    movq 32(%rdi), %r10
+; SSE41-NEXT:    movq 56(%rdi), %r11
 ; SSE41-NEXT:    movq 40(%rdi), %rdi
 ; SSE41-NEXT:    xorq 40(%rsi), %rdi
-; SSE41-NEXT:    xorq 56(%rsi), %rdx
-; SSE41-NEXT:    orq %r11, %rdx
-; SSE41-NEXT:    orq %rdi, %rdx
-; SSE41-NEXT:    orq %r10, %rdx
-; SSE41-NEXT:    xorq 32(%rsi), %rax
-; SSE41-NEXT:    xorq 48(%rsi), %rcx
-; SSE41-NEXT:    orq %r9, %rcx
-; SSE41-NEXT:    orq %rax, %rcx
-; SSE41-NEXT:    orq %r8, %rcx
+; SSE41-NEXT:    xorq 56(%rsi), %r11
+; SSE41-NEXT:    orq %rdx, %r11
+; SSE41-NEXT:    orq %rdi, %r11
+; SSE41-NEXT:    orq %r8, %r11
+; SSE41-NEXT:    xorq 32(%rsi), %r10
+; SSE41-NEXT:    xorq 48(%rsi), %r9
+; SSE41-NEXT:    orq %rcx, %r9
+; SSE41-NEXT:    orq %r10, %r9
+; SSE41-NEXT:    orq %rax, %r9
 ; SSE41-NEXT:    xorl %eax, %eax
-; SSE41-NEXT:    orq %rdx, %rcx
+; SSE41-NEXT:    orq %r11, %r9
 ; SSE41-NEXT:    setne %al
 ; SSE41-NEXT:    retq
 ;
@@ -850,59 +850,59 @@ define i32 @ne_i256_pair(ptr %a, ptr %b) {
 define i32 @eq_i256_pair(ptr %a, ptr %b) {
 ; SSE2-LABEL: eq_i256_pair:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movq 16(%rdi), %r9
-; SSE2-NEXT:    movq 24(%rdi), %r11
-; SSE2-NEXT:    movq (%rdi), %r8
-; SSE2-NEXT:    movq 8(%rdi), %r10
-; SSE2-NEXT:    xorq 8(%rsi), %r10
-; SSE2-NEXT:    xorq 24(%rsi), %r11
-; SSE2-NEXT:    xorq (%rsi), %r8
-; SSE2-NEXT:    xorq 16(%rsi), %r9
-; SSE2-NEXT:    movq 48(%rdi), %rcx
-; SSE2-NEXT:    movq 32(%rdi), %rax
-; SSE2-NEXT:    movq 56(%rdi), %rdx
+; SSE2-NEXT:    movq 16(%rdi), %rcx
+; SSE2-NEXT:    movq 24(%rdi), %rdx
+; SSE2-NEXT:    movq (%rdi), %rax
+; SSE2-NEXT:    movq 8(%rdi), %r8
+; SSE2-NEXT:    xorq 8(%rsi), %r8
+; SSE2-NEXT:    xorq 24(%rsi), %rdx
+; SSE2-NEXT:    xorq (%rsi), %rax
+; SSE2-NEXT:    xorq 16(%rsi), %rcx
+; SSE2-NEXT:    movq 48(%rdi), %r9
+; SSE2-NEXT:    movq 32(%rdi), %r10
+; SSE2-NEXT:    movq 56(%rdi), %r11
 ; SSE2-NEXT:    movq 40(%rdi), %rdi
 ; SSE2-NEXT:    xorq 40(%rsi), %rdi
-; SSE2-NEXT:    xorq 56(%rsi), %rdx
-; SSE2-NEXT:    orq %r11, %rdx
-; SSE2-NEXT:    orq %rdi, %rdx
-; SSE2-NEXT:    orq %r10, %rdx
-; SSE2-NEXT:    xorq 32(%rsi), %rax
-; SSE2-NEXT:    xorq 48(%rsi), %rcx
-; SSE2-NEXT:    orq %r9, %rcx
-; SSE2-NEXT:    orq %rax, %rcx
-; SSE2-NEXT:    orq %r8, %rcx
+; SSE2-NEXT:    xorq 56(%rsi), %r11
+; SSE2-NEXT:    orq %rdx, %r11
+; SSE2-NEXT:    orq %rdi, %r11
+; SSE2-NEXT:    orq %r8, %r11
+; SSE2-NEXT:    xorq 32(%rsi), %r10
+; SSE2-NEXT:    xorq 48(%rsi), %r9
+; SSE2-NEXT:    orq %rcx, %r9
+; SSE2-NEXT:    orq %r10, %r9
+; SSE2-NEXT:    orq %rax, %r9
 ; SSE2-NEXT:    xorl %eax, %eax
-; SSE2-NEXT:    orq %rdx, %rcx
+; SSE2-NEXT:    orq %r11, %r9
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: eq_i256_pair:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movq 16(%rdi), %r9
-; SSE41-NEXT:    movq 24(%rdi), %r11
-; SSE41-NEXT:    movq (%rdi), %r8
-; SSE41-NEXT:    movq 8(%rdi), %r10
-; SSE41-NEXT:    xorq 8(%rsi), %r10
-; SSE41-NEXT:    xorq 24(%rsi), %r11
-; SSE41-NEXT:    xorq (%rsi), %r8
-; SSE41-NEXT:    xorq 16(%rsi), %r9
-; SSE41-NEXT:    movq 48(%rdi), %rcx
-; SSE41-NEXT:    movq 32(%rdi), %rax
-; SSE41-NEXT:    movq 56(%rdi), %rdx
+; SSE41-NEXT:    movq 16(%rdi), %rcx
+; SSE41-NEXT:    movq 24(%rdi), %rdx
+; SSE41-NEXT:    movq (%rdi), %rax
+; SSE41-NEXT:    movq 8(%rdi), %r8
+; SSE41-NEXT:    xorq 8(%rsi), %r8
+; SSE41-NEXT:    xorq 24(%rsi), %rdx
+; SSE41-NEXT:    xorq (%rsi), %rax
+; SSE41-NEXT:    xorq 16(%rsi), %rcx
+; SSE41-NEXT:    movq 48(%rdi), %r9
+; SSE41-NEXT:    movq 32(%rdi), %r10
+; SSE41-NEXT:    movq 56(%rdi), %r11
 ; SSE41-NEXT:    movq 40(%rdi), %rdi
 ; SSE41-NEXT:    xorq 40(%rsi), %rdi
-; SSE41-NEXT:    xorq 56(%rsi), %rdx
-; SSE41-NEXT:    orq %r11, %rdx
-; SSE41-NEXT:    orq %rdi, %rdx
-; SSE41-NEXT:    orq %r10, %rdx
-; SSE41-NEXT:    xorq 32(%rsi), %rax
-; SSE41-NEXT:    xorq 48(%rsi), %rcx
-; SSE41-NEXT:    orq %r9, %rcx
-; SSE41-NEXT:    orq %rax, %rcx
-; SSE41-NEXT:    orq %r8, %rcx
+; SSE41-NEXT:    xorq 56(%rsi), %r11
+; SSE41-NEXT:    orq %rdx, %r11
+; SSE41-NEXT:    orq %rdi, %r11
+; SSE41-NEXT:    orq %r8, %r11
+; SSE41-NEXT:    xorq 32(%rsi), %r10
+; SSE41-NEXT:    xorq 48(%rsi), %r9
+; SSE41-NEXT:    orq %rcx, %r9
+; SSE41-NEXT:    orq %r10, %r9
+; SSE41-NEXT:    orq %rax, %r9
 ; SSE41-NEXT:    xorl %eax, %eax
-; SSE41-NEXT:    orq %rdx, %rcx
+; SSE41-NEXT:    orq %r11, %r9
 ; SSE41-NEXT:    sete %al
 ; SSE41-NEXT:    retq
 ;
@@ -964,54 +964,54 @@ define i32 @eq_i256_pair(ptr %a, ptr %b) {
 define i32 @ne_i512_pair(ptr %a, ptr %b) {
 ; NO512-LABEL: ne_i512_pair:
 ; NO512:       # %bb.0:
-; NO512-NEXT:    movq 32(%rdi), %r8
-; NO512-NEXT:    movq 48(%rdi), %r9
+; NO512-NEXT:    movq 32(%rdi), %rax
+; NO512-NEXT:    movq 48(%rdi), %rcx
 ; NO512-NEXT:    movq 40(%rdi), %rdx
-; NO512-NEXT:    movq 56(%rdi), %rcx
-; NO512-NEXT:    xorq 56(%rsi), %rcx
-; NO512-NEXT:    movq 120(%rdi), %rax
-; NO512-NEXT:    xorq 120(%rsi), %rax
-; NO512-NEXT:    orq %rcx, %rax
-; NO512-NEXT:    movq 88(%rdi), %rcx
-; NO512-NEXT:    xorq 88(%rsi), %rcx
-; NO512-NEXT:    orq %rcx, %rax
-; NO512-NEXT:    movq 24(%rdi), %rcx
-; NO512-NEXT:    xorq 24(%rsi), %rcx
+; NO512-NEXT:    movq 56(%rdi), %r8
+; NO512-NEXT:    xorq 56(%rsi), %r8
+; NO512-NEXT:    movq 120(%rdi), %r9
+; NO512-NEXT:    xorq 120(%rsi), %r9
+; NO512-NEXT:    orq %r8, %r9
+; NO512-NEXT:    movq 88(%rdi), %r8
+; NO512-NEXT:    xorq 88(%rsi), %r8
+; NO512-NEXT:    orq %r8, %r9
+; NO512-NEXT:    movq 24(%rdi), %r8
+; NO512-NEXT:    xorq 24(%rsi), %r8
 ; NO512-NEXT:    xorq 40(%rsi), %rdx
-; NO512-NEXT:    orq %rcx, %rax
-; NO512-NEXT:    movq 104(%rdi), %rcx
-; NO512-NEXT:    xorq 104(%rsi), %rcx
-; NO512-NEXT:    orq %rdx, %rcx
+; NO512-NEXT:    orq %r8, %r9
+; NO512-NEXT:    movq 104(%rdi), %r8
+; NO512-NEXT:    xorq 104(%rsi), %r8
+; NO512-NEXT:    orq %rdx, %r8
 ; NO512-NEXT:    movq 72(%rdi), %rdx
 ; NO512-NEXT:    xorq 72(%rsi), %rdx
-; NO512-NEXT:    orq %rdx, %rcx
-; NO512-NEXT:    movq 16(%rdi), %r10
-; NO512-NEXT:    orq %rax, %rcx
-; NO512-NEXT:    movq 8(%rdi), %rax
-; NO512-NEXT:    xorq 8(%rsi), %rax
-; NO512-NEXT:    xorq 48(%rsi), %r9
-; NO512-NEXT:    orq %rax, %rcx
-; NO512-NEXT:    movq 112(%rdi), %rax
-; NO512-NEXT:    xorq 112(%rsi), %rax
-; NO512-NEXT:    orq %r9, %rax
-; NO512-NEXT:    movq 80(%rdi), %rdx
-; NO512-NEXT:    xorq 80(%rsi), %rdx
-; NO512-NEXT:    orq %rdx, %rax
-; NO512-NEXT:    movq (%rdi), %r9
-; NO512-NEXT:    xorq 16(%rsi), %r10
-; NO512-NEXT:    xorq (%rsi), %r9
-; NO512-NEXT:    xorq 32(%rsi), %r8
-; NO512-NEXT:    orq %r10, %rax
+; NO512-NEXT:    orq %rdx, %r8
+; NO512-NEXT:    movq 16(%rdi), %rdx
+; NO512-NEXT:    orq %r9, %r8
+; NO512-NEXT:    movq 8(%rdi), %r9
+; NO512-NEXT:    xorq 8(%rsi), %r9
+; NO512-NEXT:    xorq 48(%rsi), %rcx
+; NO512-NEXT:    orq %r9, %r8
+; NO512-NEXT:    movq 112(%rdi), %r9
+; NO512-NEXT:    xorq 112(%rsi), %r9
+; NO512-NEXT:    orq %rcx, %r9
+; NO512-NEXT:    movq 80(%rdi), %rcx
+; NO512-NEXT:    xorq 80(%rsi), %rcx
+; NO512-NEXT:    orq %rcx, %r9
+; NO512-NEXT:    movq (%rdi), %rcx
+; NO512-NEXT:    xorq 16(%rsi), %rdx
+; NO512-NEXT:    xorq (%rsi), %rcx
+; NO512-NEXT:    xorq 32(%rsi), %rax
+; NO512-NEXT:    orq %rdx, %r9
 ; NO512-NEXT:    movq 96(%rdi), %rdx
 ; NO512-NEXT:    movq 64(%rdi), %rdi
 ; NO512-NEXT:    xorq 64(%rsi), %rdi
 ; NO512-NEXT:    xorq 96(%rsi), %rdx
-; NO512-NEXT:    orq %r8, %rdx
-; NO512-NEXT:    orq %rdi, %rdx
 ; NO512-NEXT:    orq %rax, %rdx
+; NO512-NEXT:    orq %rdi, %rdx
 ; NO512-NEXT:    orq %r9, %rdx
-; NO512-NEXT:    xorl %eax, %eax
 ; NO512-NEXT:    orq %rcx, %rdx
+; NO512-NEXT:    xorl %eax, %eax
+; NO512-NEXT:    orq %r8, %rdx
 ; NO512-NEXT:    setne %al
 ; NO512-NEXT:    retq
 ;
@@ -1058,54 +1058,54 @@ define i32 @ne_i512_pair(ptr %a, ptr %b) {
 define i32 @eq_i512_pair(ptr %a, ptr %b) {
 ; NO512-LABEL: eq_i512_pair:
 ; NO512:       # %bb.0:
-; NO512-NEXT:    movq 32(%rdi), %r8
-; NO512-NEXT:    movq 48(%rdi), %r9
+; NO512-NEXT:    movq 32(%rdi), %rax
+; NO512-NEXT:    movq 48(%rdi), %rcx
 ; NO512-NEXT:    movq 40(%rdi), %rdx
-; NO512-NEXT:    movq 56(%rdi), %rcx
-; NO512-NEXT:    xorq 56(%rsi), %rcx
-; NO512-NEXT:    movq 120(%rdi), %rax
-; NO512-NEXT:    xorq 120(%rsi), %rax
-; NO512-NEXT:    orq %rcx, %rax
-; NO512-NEXT:    movq 88(%rdi), %rcx
-; NO512-NEXT:    xorq 88(%rsi), %rcx
-; NO512-NEXT:    orq %rcx, %rax
-; NO512-NEXT:    movq 24(%rdi), %rcx
-; NO512-NEXT:    xorq 24(%rsi), %rcx
+; NO512-NEXT:    movq 56(%rdi), %r8
+; NO512-NEXT:    xorq 56(%rsi), %r8
+; NO512-NEXT:    movq 120(%rdi), %r9
+; NO512-NEXT:    xorq 120(%rsi), %r9
+; NO512-NEXT:    orq %r8, %r9
+; NO512-NEXT:    movq 88(%rdi), %r8
+; NO512-NEXT:    xorq 88(%rsi), %r8
+; NO512-NEXT:    orq %r8, %r9
+; NO512-NEXT:    movq 24(%rdi), %r8
+; NO512-NEXT:    xorq 24(%rsi), %r8
 ; NO512-NEXT:    xorq 40(%rsi), %rdx
-; NO512-NEXT:    orq %rcx, %rax
-; NO512-NEXT:    movq 104(%rdi), %rcx
-; NO512-NEXT:    xorq 104(%rsi), %rcx
-; NO512-NEXT:    orq %rdx, %rcx
+; NO512-NEXT:    orq %r8, %r9
+; NO512-NEXT:    movq 104(%rdi), %r8
+; NO512-NEXT:    xorq 104(%rsi), %r8
+; NO512-NEXT:    orq %rdx, %r8
 ; NO512-NEXT:    movq 72(%rdi), %rdx
 ; NO512-NEXT:    xorq 72(%rsi), %rdx
-; NO512-NEXT:    orq %rdx, %rcx
-; NO512-NEXT:    movq 16(%rdi), %r10
-; NO512-NEXT:    orq %rax, %rcx
-; NO512-NEXT:    movq 8(%rdi), %rax
-; NO512-NEXT:    xorq 8(%rsi), %rax
-; NO512-NEXT:    xorq 48(%rsi), %r9
-; NO512-NEXT:    orq %rax, %rcx
-; NO512-NEXT:    movq 112(%rdi), %rax
-; NO512-NEXT:    xorq 112(%rsi), %rax
-; NO512-NEXT:    orq %r9, %rax
-; NO512-NEXT:    movq 80(%rdi), %rdx
-; NO512-NEXT:    xorq 80(%rsi), %rdx
-; NO512-NEXT:    orq %rdx, %rax
-; NO512-NEXT:    movq (%rdi), %r9
-; NO512-NEXT:    xorq 16(%rsi), %r10
-; NO512-NEXT:    xorq (%rsi), %r9
-; NO512-NEXT:    xorq 32(%rsi), %r8
-; NO512-NEXT:    orq %r10, %rax
+; NO512-NEXT:    orq %rdx, %r8
+; NO512-NEXT:    movq 16(%rdi), %rdx
+; NO512-NEXT:    orq %r9, %r8
+; NO512-NEXT:    movq 8(%rdi), %r9
+; NO512-NEXT:    xorq 8(%rsi), %r9
+; NO512-NEXT:    xorq 48(%rsi), %rcx
+; NO512-NEXT:    orq %r9, %r8
+; NO512-NEXT:    movq 112(%rdi), %r9
+; NO512-NEXT:    xorq 112(%rsi), %r9
+; NO512-NEXT:    orq %rcx, %r9
+; NO512-NEXT:    movq 80(%rdi), %rcx
+; NO512-NEXT:    xorq 80(%rsi), %rcx
+; NO512-NEXT:    orq %rcx, %r9
+; NO512-NEXT:    movq (%rdi), %rcx
+; NO512-NEXT:    xorq 16(%rsi), %rdx
+; NO512-NEXT:    xorq (%rsi), %rcx
+; NO512-NEXT:    xorq 32(%rsi), %rax
+; NO512-NEXT:    orq %rdx, %r9
 ; NO512-NEXT:    movq 96(%rdi), %rdx
 ; NO512-NEXT:    movq 64(%rdi), %rdi
 ; NO512-NEXT:    xorq 64(%rsi), %rdi
 ; NO512-NEXT:    xorq 96(%rsi), %rdx
-; NO512-NEXT:    orq %r8, %rdx
-; NO512-NEXT:    orq %rdi, %rdx
 ; NO512-NEXT:    orq %rax, %rdx
+; NO512-NEXT:    orq %rdi, %rdx
 ; NO512-NEXT:    orq %r9, %rdx
-; NO512-NEXT:    xorl %eax, %eax
 ; NO512-NEXT:    orq %rcx, %rdx
+; NO512-NEXT:    xorl %eax, %eax
+; NO512-NEXT:    orq %r8, %rdx
 ; NO512-NEXT:    sete %al
 ; NO512-NEXT:    retq
 ;
@@ -1178,18 +1178,18 @@ define i1 @eq_i256_args(i256 %a, i256 %b) {
 define i1 @eq_i512_args(i512 %a, i512 %b) {
 ; ANY-LABEL: eq_i512_args:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; ANY-NEXT:    movq {{[0-9]+}}(%rsp), %rax
-; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
+; ANY-NEXT:    movq {{[0-9]+}}(%rsp), %r10
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
 ; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rcx
-; ANY-NEXT:    orq %rax, %rcx
+; ANY-NEXT:    orq %r10, %rcx
 ; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r9
 ; ANY-NEXT:    orq %rcx, %r9
 ; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rsi
 ; ANY-NEXT:    orq %r9, %rsi
-; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
 ; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdx
-; ANY-NEXT:    orq %r10, %rdx
+; ANY-NEXT:    orq %rax, %rdx
 ; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r8
 ; ANY-NEXT:    orq %rdx, %r8
 ; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rdi
@@ -1305,24 +1305,24 @@ define i1 @eq_i256_load_arg(ptr%p, i256 %b) {
 define i1 @eq_i512_load_arg(ptr%p, i512 %b) {
 ; ANY-LABEL: eq_i512_load_arg:
 ; ANY:       # %bb.0:
-; ANY-NEXT:    movq 40(%rdi), %r10
-; ANY-NEXT:    movq 48(%rdi), %rax
+; ANY-NEXT:    movq 40(%rdi), %rax
+; ANY-NEXT:    movq 48(%rdi), %r10
 ; ANY-NEXT:    movq 56(%rdi), %r11
 ; ANY-NEXT:    xorq 24(%rdi), %r8
 ; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r11
 ; ANY-NEXT:    orq %r8, %r11
 ; ANY-NEXT:    xorq 8(%rdi), %rdx
-; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
-; ANY-NEXT:    orq %r11, %r10
-; ANY-NEXT:    orq %rdx, %r10
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
+; ANY-NEXT:    orq %r11, %rax
+; ANY-NEXT:    orq %rdx, %rax
 ; ANY-NEXT:    xorq 32(%rdi), %r9
 ; ANY-NEXT:    xorq (%rdi), %rsi
 ; ANY-NEXT:    xorq 16(%rdi), %rcx
-; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %rax
-; ANY-NEXT:    orq %rcx, %rax
-; ANY-NEXT:    orq %r9, %rax
-; ANY-NEXT:    orq %rsi, %rax
-; ANY-NEXT:    orq %r10, %rax
+; ANY-NEXT:    xorq {{[0-9]+}}(%rsp), %r10
+; ANY-NEXT:    orq %rcx, %r10
+; ANY-NEXT:    orq %r9, %r10
+; ANY-NEXT:    orq %rsi, %r10
+; ANY-NEXT:    orq %rax, %r10
 ; ANY-NEXT:    sete %al
 ; ANY-NEXT:    retq
   %a = load i512, ptr %p

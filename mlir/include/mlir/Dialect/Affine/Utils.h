@@ -240,12 +240,11 @@ LogicalResult replaceAllMemRefUsesWith(Value oldMemRef, Value newMemRef,
 /// escape (while leaving the IR in a valid state).
 LogicalResult normalizeMemRef(memref::AllocOp *op);
 
-/// Uses the old memref type map layout and computes the new memref type to have
-/// a new shape and a layout map, where the old layout map has been normalized
-/// to an identity layout map. It returns the old memref in case no
-/// normalization was needed or a failure occurs while transforming the old map
-/// layout to an identity layout map.
-MemRefType normalizeMemRefType(MemRefType memrefType, OpBuilder builder,
+/// Normalizes `memrefType` so that the affine layout map of the memref is
+/// transformed to an identity map with a new shape being computed for the
+/// normalized memref type and returns it. The old memref type is simplify
+/// returned if the normalization failed.
+MemRefType normalizeMemRefType(MemRefType memrefType,
                                unsigned numSymbolicOperands);
 
 /// Creates and inserts into 'builder' a new AffineApplyOp, with the number of
@@ -304,6 +303,30 @@ Optional<SmallVector<Value, 8>> expandAffineMap(OpBuilder &builder,
                                                 AffineMap affineMap,
                                                 ValueRange operands);
 
+/// Holds the result of (div a, b)  and (mod a, b).
+struct DivModValue {
+  Value quotient;
+  Value remainder;
+};
+
+/// Create IR to calculate (div lhs, rhs) and (mod lhs, rhs).
+DivModValue getDivMod(OpBuilder &b, Location loc, Value lhs, Value rhs);
+
+/// Generate the IR to delinearize `linearIndex` given the `basis` and return
+/// the multi-index.
+FailureOr<SmallVector<Value>> delinearizeIndex(OpBuilder &b, Location loc,
+                                               Value linearIndex,
+                                               ArrayRef<Value> basis);
+
+/// Ensure that all operations that could be executed after `start`
+/// (noninclusive) and prior to `memOp` (e.g. on a control flow/op path
+/// between the operations) do not have the potential memory effect
+/// `EffectType` on `memOp`. `memOp`  is an operation that reads or writes to
+/// a memref. For example, if `EffectType` is MemoryEffects::Write, this method
+/// will check if there is no write to the memory between `start` and `memOp`
+/// that would change the read within `memOp`.
+template <typename EffectType, typename T>
+bool hasNoInterveningEffect(Operation *start, T memOp);
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AFFINE_UTILS_H

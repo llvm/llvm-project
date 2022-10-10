@@ -14,6 +14,7 @@
 #ifndef MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H
 #define MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H
 
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
@@ -373,6 +374,92 @@ private:
   }
 };
 
+/// The input parameters `offsets`, `sizes`, `strides` specify a rectangular
+/// non rank-reducing slice of the collapse_shape output. Try to find which
+/// dimensions have been sliced and which dimensions are not sliced (offset = 0,
+/// size = dim, size = 1). Note that this conservative as it cannot detect if a
+/// dynamic size corresponds to the full tensor dimension or not.
+llvm::SmallBitVector getSlicedDimensions(ArrayRef<OpFoldResult> sliceInputShape,
+                                         ArrayRef<Range> sliceParams);
+
+/// Determine which dimensions are linearized by a `tensor.collapse_shape` op by
+/// inspecting its reassociation indices.
+llvm::SmallBitVector
+getLinearizedDimensions(ArrayRef<ReassociationIndices> reassociationIndices);
+
+/// Given the parameters for both operations in a `CollapseShape->ExtractSlice`
+/// chain and reified source and result shapes of the CollapseShapeOp, this
+/// class provides two functions that assist with directly forming the result
+/// of the extract slice by "tiling the CollapseShapeOp by 1".
+//// Example:
+// clang-format off
+/// ```
+/// %0 = linalg.generic ... -> tensor<3x7x11x10xf32>
+/// %1 = tensor.collapse_shape %0 [[0, 1, 2], [3]] : ... to tensor<341x10xf32>
+/// %2 = tensor.extract_slice %1 [13, 0] [10, 10] [2, 1] : .... tensor<10x10xf32>
+/// ```
+/// This class helps build the below IR to replace %2:
+/// ```
+/// %dest = tensor.empty() : tensor<10x10xf32>
+/// %2 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%arg0) -> tensor<10x10xf32> {
+///    %linear_index = affine.apply affine_map<(d0)[]->(d0*2 + 11)>(%iv)
+///    %3:3 = arith.delinearize_index %iv into (3, 7, 11)
+///
+///    // This function takes %3 (multiIndices) and the parameters for the slice below.
+///    %4 = tensor.extract_slice %0 [%3#0, %3#1, %3#2, 0] [1, 1, 1, 10] [1, 1, 1, 1] :
+///          tensor<3x7x11x10xf32> to tensor<1x1x1x10xf32>
+///
+///    %5 = tensor.collapse_shape %4 [[0, 1, 2], [3]] : 
+///          tensor<1x1x1x10xf32> into tensor<1x10xf32>
+///    %6 = tensor.insert_slice %5 into %arg0 [%iv, 0] [1, 10] [1, 1] :
+///          tensor<1x10xf32> into tensor<10x10xf32>
+///    scf.yield %6 : tensor<10x10xf32>
+/// }
+/// ```
+// clang-format on
+class SliceFromCollapseHelper {
+public:
+  SliceFromCollapseHelper(ArrayRef<ReassociationIndices> reassociationIndices,
+                          ArrayRef<OpFoldResult> collapseShapeInputShape,
+                          ArrayRef<OpFoldResult> collapseShapeOutputShape,
+                          ArrayRef<Range> extractSliceParams)
+      : reassociationIndices(reassociationIndices),
+        collapseShapeInputShape(collapseShapeInputShape),
+        collapseShapeOutputShape(collapseShapeOutputShape),
+        sliceParams(extractSliceParams),
+        linearizedDimensions(getLinearizedDimensions(reassociationIndices)),
+        slicedDimensions(getSlicedDimensions(collapseShapeOutputShape,
+                                             extractSliceParams)) {}
+
+  /// This function takes multi-indices and maps them to ExtractSlice parameters
+  /// in the index space of the CollapseShape's source tensor. This function's
+  /// signature can be described by `(D_0, D_1,.. D_{n-1}) -> (offsets, sizes,
+  /// strides)` where `n` the number of "tiled dimensions", which are the
+  /// dimensions of the output that are linearized by the collapse shape op and
+  /// are also sliced. Each `D_i` is a tuple that must represent a valid
+  /// multi-index for the `i-th` tiled dimension. In the example above, there is
+  /// only one tiled dimension (D_0) and `arith.delinearize_index` produces the
+  /// multi-index (%3) that would be passed to this function to generate the
+  /// parameters for the `tensor.extract_slice` op (%4).
+  SmallVector<Range> getExtractSliceParams(MLIRContext *ctx,
+                                           ArrayRef<ValueRange> multiIndices);
+
+  /// This function takes indices in the index space of the "tiled dimensions"
+  /// described above and returns a set of Range variables that describe how the
+  /// slice should be inserted into the destination. In the example above, `%iv`
+  /// would be passed to this function to generate the parameters for the
+  /// `tensor.insert_slice` op producing %6.
+  SmallVector<Range> getInsertSliceParams(MLIRContext *ctx,
+                                          ValueRange tileIndices);
+
+private:
+  SmallVector<ReassociationIndices> reassociationIndices;
+  SmallVector<OpFoldResult> collapseShapeInputShape;
+  SmallVector<OpFoldResult> collapseShapeOutputShape;
+  SmallVector<Range> sliceParams;
+  llvm::SmallBitVector linearizedDimensions;
+  llvm::SmallBitVector slicedDimensions;
+};
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_RESHAPEOPSUTILS_H

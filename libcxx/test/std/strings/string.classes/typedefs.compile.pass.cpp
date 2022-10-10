@@ -26,7 +26,7 @@ static_assert((std::is_same<std::string, std::basic_string<char> >::value), "");
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
 static_assert((std::is_same<std::wstring, std::basic_string<wchar_t> >::value), "");
 #endif
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
 static_assert((std::is_same<std::u8string, std::basic_string<char8_t> >::value), "");
 #endif
 static_assert((std::is_same<std::u16string, std::basic_string<char16_t> >::value), "");

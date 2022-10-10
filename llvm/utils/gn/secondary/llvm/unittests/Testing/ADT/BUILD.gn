@@ -1,0 +1,9 @@
+import("//llvm/utils/unittest/unittest.gni")
+
+unittest("TestingADTTests") {
+  deps = [ "//llvm/lib/Support" ]
+  sources = [
+    "StringMapEntryTest.cpp",
+    "StringMapTest.cpp",
+  ]
+}

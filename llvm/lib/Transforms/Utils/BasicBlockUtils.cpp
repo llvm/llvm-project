@@ -149,7 +149,7 @@ bool llvm::FoldSingleEntryPHINodes(BasicBlock *BB,
     if (PN->getIncomingValue(0) != PN)
       PN->replaceAllUsesWith(PN->getIncomingValue(0));
     else
-      PN->replaceAllUsesWith(UndefValue::get(PN->getType()));
+      PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
 
     if (MemDep)
       MemDep->removeInstruction(PN);  // Memdep updates AA itself.
@@ -1126,13 +1126,13 @@ SplitBlockPredecessorsImpl(BasicBlock *BB, ArrayRef<BasicBlock *> Preds,
     BI->setDebugLoc(BB->getFirstNonPHIOrDbg()->getDebugLoc());
 
   // Move the edges from Preds to point to NewBB instead of BB.
-  for (unsigned i = 0, e = Preds.size(); i != e; ++i) {
+  for (BasicBlock *Pred : Preds) {
     // This is slightly more strict than necessary; the minimum requirement
     // is that there be no more than one indirectbr branching to BB. And
     // all BlockAddress uses would need to be updated.
-    assert(!isa<IndirectBrInst>(Preds[i]->getTerminator()) &&
+    assert(!isa<IndirectBrInst>(Pred->getTerminator()) &&
            "Cannot split an edge from an IndirectBrInst");
-    Preds[i]->getTerminator()->replaceSuccessorWith(BB, NewBB);
+    Pred->getTerminator()->replaceSuccessorWith(BB, NewBB);
   }
 
   // Insert a new PHI node into NewBB for every PHI node in BB and that new PHI
@@ -1208,13 +1208,13 @@ static void SplitLandingPadPredecessorsImpl(
   BI1->setDebugLoc(OrigBB->getFirstNonPHI()->getDebugLoc());
 
   // Move the edges from Preds to point to NewBB1 instead of OrigBB.
-  for (unsigned i = 0, e = Preds.size(); i != e; ++i) {
+  for (BasicBlock *Pred : Preds) {
     // This is slightly more strict than necessary; the minimum requirement
     // is that there be no more than one indirectbr branching to BB. And
     // all BlockAddress uses would need to be updated.
-    assert(!isa<IndirectBrInst>(Preds[i]->getTerminator()) &&
+    assert(!isa<IndirectBrInst>(Pred->getTerminator()) &&
            "Cannot split an edge from an IndirectBrInst");
-    Preds[i]->getTerminator()->replaceUsesOfWith(OrigBB, NewBB1);
+    Pred->getTerminator()->replaceUsesOfWith(OrigBB, NewBB1);
   }
 
   bool HasLoopExit = false;
@@ -1592,7 +1592,7 @@ static void reconnectPhis(BasicBlock *Out, BasicBlock *GuardBlock,
     auto NewPhi =
         PHINode::Create(Phi->getType(), Incoming.size(),
                         Phi->getName() + ".moved", &FirstGuardBlock->back());
-    for (auto In : Incoming) {
+    for (auto *In : Incoming) {
       Value *V = UndefValue::get(Phi->getType());
       if (In == Out) {
         V = NewPhi;
@@ -1686,7 +1686,7 @@ static void convertToGuardPredicates(
     GuardPredicates[Out] = Phi;
   }
 
-  for (auto In : Incoming) {
+  for (auto *In : Incoming) {
     Value *Condition;
     BasicBlock *Succ0;
     BasicBlock *Succ1;
@@ -1771,9 +1771,9 @@ BasicBlock *llvm::CreateControlFlowHub(
 
   SmallVector<DominatorTree::UpdateType, 16> Updates;
   if (DTU) {
-    for (auto In : Incoming) {
+    for (auto *In : Incoming) {
       Updates.push_back({DominatorTree::Insert, In, FirstGuardBlock});
-      for (auto Succ : successors(In)) {
+      for (auto *Succ : successors(In)) {
         if (Outgoing.count(Succ))
           Updates.push_back({DominatorTree::Delete, In, Succ});
       }

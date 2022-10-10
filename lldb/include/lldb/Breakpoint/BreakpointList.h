@@ -138,6 +138,9 @@ public:
 
   void ClearAllBreakpointSites();
 
+  /// Resets the hit count of all breakpoints.
+  void ResetHitCounts();
+
   /// Sets the passed in Locker to hold the Breakpoint List mutex.
   ///
   /// \param[in] lock

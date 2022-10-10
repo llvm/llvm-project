@@ -129,8 +129,8 @@ class _LIBCPP_EXCEPTION_ABI bad_alloc
 {
 public:
     bad_alloc() _NOEXCEPT;
-    virtual ~bad_alloc() _NOEXCEPT;
-    virtual const char* what() const _NOEXCEPT;
+    ~bad_alloc() _NOEXCEPT override;
+    const char* what() const _NOEXCEPT override;
 };
 
 class _LIBCPP_EXCEPTION_ABI bad_array_new_length
@@ -138,15 +138,33 @@ class _LIBCPP_EXCEPTION_ABI bad_array_new_length
 {
 public:
     bad_array_new_length() _NOEXCEPT;
-    virtual ~bad_array_new_length() _NOEXCEPT;
-    virtual const char* what() const _NOEXCEPT;
+    ~bad_array_new_length() _NOEXCEPT override;
+    const char* what() const _NOEXCEPT override;
 };
 
 typedef void (*new_handler)();
 _LIBCPP_FUNC_VIS new_handler set_new_handler(new_handler) _NOEXCEPT;
 _LIBCPP_FUNC_VIS new_handler get_new_handler() _NOEXCEPT;
 
-#endif // !_LIBCPP_ABI_VCRUNTIME
+#elif defined(_HAS_EXCEPTIONS) && _HAS_EXCEPTIONS == 0 // !_LIBCPP_ABI_VCRUNTIME
+
+// When _HAS_EXCEPTIONS == 0, these complete definitions are needed,
+// since they would normally be provided in vcruntime_exception.h
+class bad_alloc : public exception {
+public:
+  bad_alloc() noexcept : exception("bad allocation") {}
+
+private:
+  friend class bad_array_new_length;
+
+  bad_alloc(char const* const __message) noexcept : exception(__message) {}
+};
+
+class bad_array_new_length : public bad_alloc {
+public:
+  bad_array_new_length() noexcept : bad_alloc("bad array new length") {}
+};
+#endif // defined(_LIBCPP_ABI_VCRUNTIME) && defined(_HAS_EXCEPTIONS) && _HAS_EXCEPTIONS == 0
 
 _LIBCPP_NORETURN _LIBCPP_FUNC_VIS void __throw_bad_alloc();  // not in C++ spec
 
@@ -347,7 +365,7 @@ _LIBCPP_NODISCARD_AFTER_CXX17 inline _LIBCPP_HIDE_FROM_ABI
 _LIBCPP_CONSTEXPR _Tp* __launder(_Tp* __p) _NOEXCEPT
 {
     static_assert (!(is_function<_Tp>::value), "can't launder functions" );
-    static_assert (!(is_same<void, typename remove_cv<_Tp>::type>::value), "can't launder cv-void" );
+    static_assert (!(is_same<void, __remove_cv_t<_Tp> >::value), "can't launder cv-void" );
     return __builtin_launder(__p);
 }
 

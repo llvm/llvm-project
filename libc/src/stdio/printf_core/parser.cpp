@@ -12,7 +12,8 @@
 
 #include "src/__support/arg_list.h"
 
-#include "src/__support/CPP/Bit.h"
+#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/str_to_integer.h"
@@ -28,7 +29,6 @@ namespace printf_core {
 
 FormatSection Parser::get_next_section() {
   FormatSection section;
-  section.raw_string = str + cur_pos;
   size_t starting_pos = cur_pos;
   if (str[cur_pos] == '%') {
     // format section
@@ -132,10 +132,11 @@ FormatSection Parser::get_next_section() {
     case ('G'):
       if (lm != LengthModifier::L)
         section.conv_val_raw =
-            bit_cast<uint64_t>(GET_ARG_VAL_SIMPLEST(double, conv_index));
+            cpp::bit_cast<uint64_t>(GET_ARG_VAL_SIMPLEST(double, conv_index));
       else
-        section.conv_val_raw = bit_cast<fputil::FPBits<long double>::UIntType>(
-            GET_ARG_VAL_SIMPLEST(long double, conv_index));
+        section.conv_val_raw =
+            cpp::bit_cast<fputil::FPBits<long double>::UIntType>(
+                GET_ARG_VAL_SIMPLEST(long double, conv_index));
       break;
 #endif // LLVM_LIBC_PRINTF_DISABLE_FLOAT
 #ifndef LLVM_LIBC_PRINTF_DISABLE_WRITE_INT
@@ -157,7 +158,7 @@ FormatSection Parser::get_next_section() {
     while (str[cur_pos] != '%' && str[cur_pos] != '\0')
       ++cur_pos;
   }
-  section.raw_len = cur_pos - starting_pos;
+  section.raw_string = {str + starting_pos, cur_pos - starting_pos};
   return section;
 }
 

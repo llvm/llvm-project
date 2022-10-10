@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // friend constexpr decltype(auto) iter_move(const iterator& i);
 
@@ -28,7 +27,7 @@ constexpr bool test() {
   }
 
   {
-    // iter_move calls inner's iter_move and calls 
+    // iter_move calls inner's iter_move and calls
     // iter_move on the correct inner iterator
     IterMoveSwapAwareView inners[2] = {buffer[0], buffer[1]};
     std::ranges::join_view jv(inners);

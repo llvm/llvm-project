@@ -1,7 +1,7 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -enable-amdgpu-aa=0 -misched=gcn-minreg -verify-machineinstrs < %s | FileCheck --check-prefix=SI-MINREG %s
-; RUN: llc -march=amdgcn -mcpu=tahiti -enable-amdgpu-aa=0 -misched=gcn-max-occupancy-experimental -verify-machineinstrs < %s | FileCheck --check-prefix=SI-MAXOCC %s
-; RUN: llc -march=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -misched=gcn-minreg -verify-machineinstrs < %s | FileCheck --check-prefix=VI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -misched=gcn-max-occupancy-experimental -verify-machineinstrs < %s | FileCheck --check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -enable-amdgpu-aa=0 -misched=gcn-iterative-minreg -verify-machineinstrs < %s | FileCheck --check-prefix=SI-MINREG %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -enable-amdgpu-aa=0 -misched=gcn-iterative-max-occupancy-experimental -verify-machineinstrs < %s | FileCheck --check-prefix=SI-MAXOCC %s
+; RUN: llc -march=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -misched=gcn-iterative-minreg -verify-machineinstrs < %s | FileCheck --check-prefix=VI %s
+; RUN: llc -march=amdgcn -mcpu=fiji -enable-amdgpu-aa=0 -misched=gcn-iterative-max-occupancy-experimental -verify-machineinstrs < %s | FileCheck --check-prefix=VI %s
 
 ; SI-MINREG: NumSgprs: {{[1-9]$}}
 ; SI-MINREG: NumVgprs: {{[1-9]$}}

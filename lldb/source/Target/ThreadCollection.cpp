@@ -34,10 +34,10 @@ void ThreadCollection::AddThreadSortedByIndexID(const ThreadSP &thread_sp) {
     m_threads.push_back(thread_sp);
   else {
     m_threads.insert(
-        std::upper_bound(m_threads.begin(), m_threads.end(), thread_sp,
-                         [](const ThreadSP &lhs, const ThreadSP &rhs) -> bool {
-                           return lhs->GetIndexID() < rhs->GetIndexID();
-                         }),
+        llvm::upper_bound(m_threads, thread_sp,
+                          [](const ThreadSP &lhs, const ThreadSP &rhs) -> bool {
+                            return lhs->GetIndexID() < rhs->GetIndexID();
+                          }),
         thread_sp);
   }
 }

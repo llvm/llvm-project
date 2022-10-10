@@ -11,8 +11,9 @@ let Component = "AST" in {
 // Constant expression diagnostics. These (and their users) belong in Sema.
 def note_expr_divide_by_zero : Note<"division by zero">;
 def note_constexpr_invalid_cast : Note<
-  "%select{reinterpret_cast|dynamic_cast|cast that performs the conversions of"
-  " a reinterpret_cast|cast from %1}0 is not allowed in a constant expression"
+  "%select{reinterpret_cast|dynamic_cast|%select{this conversion|cast that"
+  " performs the conversions of a reinterpret_cast}1|cast from %1}0"
+  " is not allowed in a constant expression"
   "%select{| in C++ standards before C++20||}0">;
 def note_constexpr_invalid_downcast : Note<
   "cannot cast object of dynamic type %0 to type %1">;
@@ -375,6 +376,9 @@ def warn_integer_constant_overflow : Warning<
 def warn_fixedpoint_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,
   InGroup<DiagGroup<"fixed-point-overflow">>;
+def warn_constexpr_unscoped_enum_out_of_range : Warning<
+  "integer value %0 is outside the valid range of values [%1, %2] for this "
+  "enumeration type">, DefaultError, InGroup<DiagGroup<"enum-constexpr-conversion">>;
 
 // This is a temporary diagnostic, and shall be removed once our
 // implementation is complete, and like the preceding constexpr notes belongs
@@ -562,6 +566,301 @@ def warn_odr_non_type_parameter_type_inconsistent : Warning<
   "translation units (%0 vs. %1)">,
   InGroup<ODR>;
 def err_unsupported_ast_node: Error<"cannot import unsupported AST node %0">;
+
+// Compare ODR hashes
+def err_module_odr_violation_different_definitions : Error<
+  "%q0 has different definitions in different modules; "
+  "%select{definition in module '%2' is here|defined here}1">;
+def note_first_module_difference : Note<
+  "in first definition, possible difference is here">;
+def note_module_odr_violation_different_definitions : Note<
+  "definition in module '%0' is here">;
+def note_second_module_difference : Note<
+  "in second definition, possible difference is here">;
+
+def err_module_odr_violation_definition_data : Error <
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "%4 base %plural{1:class|:classes}4|"
+  "%4 virtual base %plural{1:class|:classes}4|"
+  "%ordinal4 base class with type %5|"
+  "%ordinal4 %select{non-virtual|virtual}5 base class %6|"
+  "%ordinal4 base class %5 with "
+  "%select{public|protected|private|no}6 access specifier}3">;
+
+def note_module_odr_violation_definition_data : Note <
+  "but in '%0' found "
+  "%select{"
+  "%2 base %plural{1:class|:classes}2|"
+  "%2 virtual base %plural{1:class|:classes}2|"
+  "%ordinal2 base class with different type %3|"
+  "%ordinal2 %select{non-virtual|virtual}3 base class %4|"
+  "%ordinal2 base class %3 with "
+  "%select{public|protected|private|no}4 access specifier}1">;
+
+def err_module_odr_violation_template_parameter : Error <
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "unnamed template parameter|"
+  "template parameter %5|"
+  "template parameter with %select{no |}4default argument|"
+  "template parameter with default argument}3">;
+
+def note_module_odr_violation_template_parameter : Note <
+  "but in '%0' found "
+  "%select{"
+  "unnamed template parameter %2|"
+  "template parameter %3|"
+  "template parameter with %select{no |}2default argument|"
+  "template parameter with different default argument}1">;
+
+def err_module_odr_violation_mismatch_decl : Error<
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{end of class|public access specifier|private access specifier|"
+  "protected access specifier|static assert|field|method|type alias|typedef|"
+  "data member|friend declaration|function template}3">;
+def note_module_odr_violation_mismatch_decl : Note<"but in '%0' found "
+  "%select{end of class|public access specifier|private access specifier|"
+  "protected access specifier|static assert|field|method|type alias|typedef|"
+  "data member|friend declaration|function template}1">;
+
+def err_module_odr_violation_record : Error<
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "static assert with condition|"
+  "static assert with message|"
+  "static assert with %select{|no }4message|"
+  "%select{method %5|constructor|destructor}4|"
+  "%select{method %5|constructor|destructor}4 "
+    "is %select{not deleted|deleted}6|"
+  "%select{method %5|constructor|destructor}4 "
+    "is %select{not defaulted|defaulted}6|"
+  "%select{method %5|constructor|destructor}4 "
+    "is %select{|pure }6%select{not virtual|virtual}7|"
+  "%select{method %5|constructor|destructor}4 "
+    "is %select{not static|static}6|"
+  "%select{method %5|constructor|destructor}4 "
+    "is %select{not volatile|volatile}6|"
+  "%select{method %5|constructor|destructor}4 "
+    "is %select{not const|const}6|"
+  "%select{method %5|constructor|destructor}4 "
+    "is %select{not inline|inline}6|"
+  "%select{method %5|constructor|destructor}4 "
+    "that has %6 parameter%s6|"
+  "%select{method %5|constructor|destructor}4 "
+    "with %ordinal6 parameter of type %7%select{| decayed from %9}8|"
+  "%select{method %5|constructor|destructor}4 "
+    "with %ordinal6 parameter named %7|"
+  "%select{method %5|constructor|destructor}4 "
+    "with %ordinal6 parameter with%select{out|}7 a default argument|"
+  "%select{method %5|constructor|destructor}4 "
+    "with %ordinal6 parameter with a default argument|"
+  "%select{method %5|constructor|destructor}4 "
+    "with %select{no |}6template arguments|"
+  "%select{method %5|constructor|destructor}4 "
+    "with %6 template argument%s6|"
+  "%select{method %5|constructor|destructor}4 "
+    "with %6 for %ordinal7 template argument|"
+  "%select{method %5|constructor|destructor}4 "
+    "with %select{no body|body}6|"
+  "%select{method %5|constructor|destructor}4 "
+    "with body|"
+  "friend %select{class|function}4|"
+  "friend %4|"
+  "friend function %4|"
+  "function template %4 with %5 template parameter%s5|"
+  "function template %4 with %ordinal5 template parameter being a "
+    "%select{type|non-type|template}6 template parameter|"
+  "function template %4 with %ordinal5 template parameter "
+    "%select{with no name|named %7}6|"
+  "function template %4 with %ordinal5 template parameter with "
+    "%select{no |}6default argument|"
+  "function template %4 with %ordinal5 template parameter with "
+    "default argument %6|"
+  "function template %4 with %ordinal5 template parameter with one type|"
+  "function template %4 with %ordinal5 template parameter %select{not |}6"
+    "being a template parameter pack|"
+  "}3">;
+
+def note_module_odr_violation_record : Note<"but in '%0' found "
+  "%select{"
+  "static assert with different condition|"
+  "static assert with different message|"
+  "static assert with %select{|no }2message|"
+  "%select{method %3|constructor|destructor}2|"
+  "%select{method %3|constructor|destructor}2 "
+    "is %select{not deleted|deleted}4|"
+  "%select{method %3|constructor|destructor}2 "
+    "is %select{not defaulted|defaulted}4|"
+  "%select{method %3|constructor|destructor}2 "
+    "is %select{|pure }4%select{not virtual|virtual}5|"
+  "%select{method %3|constructor|destructor}2 "
+    "is %select{not static|static}4|"
+  "%select{method %3|constructor|destructor}2 "
+    "is %select{not volatile|volatile}4|"
+  "%select{method %3|constructor|destructor}2 "
+    "is %select{not const|const}4|"
+  "%select{method %3|constructor|destructor}2 "
+    "is %select{not inline|inline}4|"
+  "%select{method %3|constructor|destructor}2 "
+    "that has %4 parameter%s4|"
+  "%select{method %3|constructor|destructor}2 "
+    "with %ordinal4 parameter of type %5%select{| decayed from %7}6|"
+  "%select{method %3|constructor|destructor}2 "
+    "with %ordinal4 parameter named %5|"
+  "%select{method %3|constructor|destructor}2 "
+    "with %ordinal4 parameter with%select{out|}5 a default argument|"
+  "%select{method %3|constructor|destructor}2 "
+    "with %ordinal4 parameter with a different default argument|"
+  "%select{method %3|constructor|destructor}2 "
+    "with %select{no |}4template arguments|"
+  "%select{method %3|constructor|destructor}2 "
+    "with %4 template argument%s4|"
+  "%select{method %3|constructor|destructor}2 "
+    "with %4 for %ordinal5 template argument|"
+  "%select{method %3|constructor|destructor}2 "
+    "with %select{no body|body}4|"
+  "%select{method %3|constructor|destructor}2 "
+    "with different body|"
+  "friend %select{class|function}2|"
+  "friend %2|"
+  "friend function %2|"
+  "function template %2 with %3 template parameter%s3|"
+  "function template %2 with %ordinal3 template paramter being a "
+    "%select{type|non-type|template}4 template parameter|"
+  "function template %2 with %ordinal3 template parameter "
+    "%select{with no name|named %5}4|"
+  "function template %2 with %ordinal3 template parameter with "
+    "%select{no |}4default argument|"
+  "function template %2 with %ordinal3 template parameter with "
+    "default argument %4|"
+  "function template %2 with %ordinal3 template parameter with different type|"
+  "function template %2 with %ordinal3 template parameter %select{not |}4"
+    "being a template parameter pack|"
+  "}1">;
+
+def err_module_odr_violation_field : Error<
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "field %4|"
+  "field %4 with type %5|"
+  "%select{non-|}5bitfield %4|"
+  "bitfield %4 with one width expression|"
+  "%select{non-|}5mutable field %4|"
+  "field %4 with %select{no|an}5 initalizer|"
+  "field %4 with an initializer"
+  "}3">;
+def note_module_odr_violation_field : Note<"but in '%0' found "
+  "%select{"
+  "field %2|"
+  "field %2 with type %3|"
+  "%select{non-|}3bitfield %2|"
+  "bitfield %2 with different width expression|"
+  "%select{non-|}3mutable field %2|"
+  "field %2 with %select{no|an}3 initializer|"
+  "field %2 with a different initializer"
+  "}1">;
+
+def err_module_odr_violation_typedef : Error<
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "%select{typedef|type alias}4 name %5|"
+  "%select{typedef|type alias}4 %5 with underlying type %6"
+  "}3">;
+def note_module_odr_violation_typedef : Note<"but in '%0' found "
+  "%select{"
+  "%select{typedef|type alias}2 name %3|"
+  "%select{typedef|type alias}2 %3 with different underlying type %4"
+  "}1">;
+
+def err_module_odr_violation_variable : Error<
+  "%q0 has different definitions in different modules; first difference is "
+  "%select{definition in module '%2'|defined here}1 found "
+  "%select{"
+  "data member with name %4|"
+  "data member %4 with type %5|"
+  "data member %4 with%select{out|}5 an initializer|"
+  "data member %4 with an initializer|"
+  "data member %4 %select{is constexpr|is not constexpr}5"
+  "}3">;
+def note_module_odr_violation_variable : Note<"but in '%0' found "
+  "%select{"
+  "data member with name %2|"
+  "data member %2 with different type %3|"
+  "data member %2 with%select{out|}3 an initializer|"
+  "data member %2 with a different initializer|"
+  "data member %2 %select{is constexpr|is not constexpr}3"
+  "}1">;
+
+def err_module_odr_violation_function : Error<
+  "%q0 has different definitions in different modules; "
+  "%select{definition in module '%2'|defined here}1 "
+  "first difference is "
+  "%select{"
+  "return type is %4|"
+  "%ordinal4 parameter with name %5|"
+  "%ordinal4 parameter with type %5%select{| decayed from %7}6|"
+  "%ordinal4 parameter with%select{out|}5 a default argument|"
+  "%ordinal4 parameter with a default argument|"
+  "function body"
+  "}3">;
+
+def note_module_odr_violation_function : Note<"but in '%0' found "
+  "%select{"
+  "different return type %2|"
+  "%ordinal2 parameter with name %3|"
+  "%ordinal2 parameter with type %3%select{| decayed from %5}4|"
+  "%ordinal2 parameter with%select{out|}3 a default argument|"
+  "%ordinal2 parameter with a different default argument|"
+  "a different body"
+  "}1">;
+
+def err_module_odr_violation_enum : Error<
+  "%q0 has different definitions in different modules; "
+  "%select{definition in module '%2'|defined here}1 "
+  "first difference is "
+  "%select{"
+  "enum that is %select{not scoped|scoped}4|"
+  "enum scoped with keyword %select{struct|class}4|"
+  "enum %select{without|with}4 specified type|"
+  "enum with specified type %4|"
+  "enum with %4 element%s4|"
+  "%ordinal4 element has name %5|"
+  "%ordinal4 element %5 %select{has|does not have}6 an initializer|"
+  "%ordinal4 element %5 has an initializer|"
+  "}3">;
+
+def note_module_odr_violation_enum : Note<"but in '%0' found "
+  "%select{"
+  "enum that is %select{not scoped|scoped}2|"
+  "enum scoped with keyword %select{struct|class}2|"
+  "enum %select{without|with}2 specified type|"
+  "enum with specified type %2|"
+  "enum with %2 element%s2|"
+  "%ordinal2 element has name %3|"
+  "%ordinal2 element %3 %select{has|does not have}4 an initializer|"
+  "%ordinal2 element %3 has different initializer|"
+  "}1">;
+
+def err_module_odr_violation_mismatch_decl_unknown : Error<
+  "%q0 %select{with definition in module '%2'|defined here}1 has different "
+  "definitions in different modules; first difference is this "
+  "%select{||||static assert|field|method|type alias|typedef|data member|"
+  "friend declaration|function template|"
+  "unexpected decl}3">;
+def note_module_odr_violation_mismatch_decl_unknown : Note<
+  "but in '%0' found "
+  "%select{||||different static assert|different field|different method|"
+  "different type alias|different typedef|different data member|"
+  "different friend declaration|different function template|"
+  "another unexpected decl}1">;
+
 
 def remark_sanitize_address_insert_extra_padding_accepted : Remark<
     "-fsanitize-address-field-padding applied to %0">, ShowInSystemHeader,

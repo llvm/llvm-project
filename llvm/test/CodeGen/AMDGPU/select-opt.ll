@@ -9,10 +9,11 @@
 ; GCN: s_cselect_b64 [[CMP1:s\[[0-9]+:[0-9]+\]]], -1, 0
 ; GCN-DAG: s_cmp_lg_u32
 ; GCN: s_cselect_b64 [[CMP2:s\[[0-9]+:[0-9]+\]]], -1, 0
-; GCN: s_and_b64 vcc, [[CMP1]], [[CMP2]]
-; GCN: v_cndmask_b32_e32 [[RESULT:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
-; GCN-NOT: [[RESULT]]
-; GCN: buffer_store_dword [[RESULT]]
+; GCN: s_and_b64 [[AND1:s\[[0-9]+:[0-9]+\]]], [[CMP1]], [[CMP2]]
+; GCN: s_and_b64 [[AND2:s\[[0-9]+:[0-9]+\]]], [[AND1]], exec
+; GCN: s_cselect_b32 [[RESULT:s[0-9]+]]
+; GCN: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[RESULT]]
+; GCN: buffer_store_dword [[VRESULT]]
 define amdgpu_kernel void @opt_select_i32_and_cmp_i32(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %x, i32 %y) #0 {
   %icmp0 = icmp ne i32 %a, %b
   %icmp1 = icmp ne i32 %a, %c
@@ -25,10 +26,11 @@ define amdgpu_kernel void @opt_select_i32_and_cmp_i32(i32 addrspace(1)* %out, i3
 ; GCN-LABEL: {{^}}opt_select_i32_and_cmp_f32:
 ; GCN-DAG: v_cmp_lg_f32_e32 vcc
 ; GCN-DAG: v_cmp_lg_f32_e64 [[CMP1:s\[[0-9]+:[0-9]+\]]]
-; GCN: s_and_b64 vcc, vcc, [[CMP1]]
-; GCN: v_cndmask_b32_e32 [[RESULT:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
-; GCN-NOT: [[RESULT]]
-; GCN: buffer_store_dword [[RESULT]]
+; GCN: s_and_b64 [[CMP1]], vcc, [[CMP1]]
+; GCN: s_and_b64 [[AND:s\[[0-9]+:[0-9]+\]]], [[CMP1]], exec
+; GCN: s_cselect_b32 [[RESULT:s[0-9]+]]
+; GCN: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[RESULT]]
+; GCN: buffer_store_dword [[VRESULT]]
 define amdgpu_kernel void @opt_select_i32_and_cmp_f32(i32 addrspace(1)* %out, float %a, float %b, float %c, i32 %x, i32 %y) #0 {
   %fcmp0 = fcmp one float %a, %b
   %fcmp1 = fcmp one float %a, %c
@@ -43,10 +45,13 @@ define amdgpu_kernel void @opt_select_i32_and_cmp_f32(i32 addrspace(1)* %out, fl
 ; GCN: s_cselect_b64 [[CMP1:s\[[0-9]+:[0-9]+\]]], -1, 0
 ; GCN-DAG: s_cmp_lg_u32
 ; GCN: s_cselect_b64 [[CMP2:s\[[0-9]+:[0-9]+\]]], -1, 0
-; GCN: s_and_b64 vcc, [[CMP1]], [[CMP2]]
-; GCN: v_cndmask_b32_e32 v[[RESULT1:[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
-; GCN: v_cndmask_b32_e32 v[[RESULT0:[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
-; GCN: buffer_store_dwordx2 v[[[RESULT0]]:[[RESULT1]]]
+; GCN: s_and_b64 [[AND1:s\[[0-9]+:[0-9]+\]]], [[CMP1]], [[CMP2]]
+; GCN: s_and_b64 [[AND2:s\[[0-9]+:[0-9]+\]]], [[AND1]], exec
+; GCN-DAG: s_cselect_b32 [[RESULT0:s[0-9]+]]
+; GCN-DAG: s_cselect_b32 [[RESULT1:s[0-9]+]]
+; GCN-DAG: v_mov_b32_e32 v[[VRESULT1:[0-9]+]], [[RESULT0]]
+; GCN-DAG: v_mov_b32_e32 v[[VRESULT0:[0-9]+]], [[RESULT1]]
+; GCN: buffer_store_dwordx2 v[[[VRESULT0]]:[[VRESULT1]]]
 define amdgpu_kernel void @opt_select_i64_and_cmp_i32(i64 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i64 %x, i64 %y) #0 {
   %icmp0 = icmp ne i32 %a, %b
   %icmp1 = icmp ne i32 %a, %c
@@ -59,10 +64,13 @@ define amdgpu_kernel void @opt_select_i64_and_cmp_i32(i64 addrspace(1)* %out, i3
 ; GCN-LABEL: {{^}}opt_select_i64_and_cmp_f32:
 ; GCN-DAG: v_cmp_lg_f32_e32 vcc,
 ; GCN-DAG: v_cmp_lg_f32_e64 [[CMP1:s\[[0-9]+:[0-9]+\]]]
-; GCN: s_and_b64 vcc, vcc, [[CMP1]]
-; GCN: v_cndmask_b32_e32 v[[RESULT1:[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
-; GCN: v_cndmask_b32_e32 v[[RESULT0:[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
-; GCN: buffer_store_dwordx2 v[[[RESULT0]]:[[RESULT1]]]
+; GCN: s_and_b64 [[AND1:s\[[0-9]+:[0-9]+\]]], vcc, [[CMP1]]
+; GCN: s_and_b64 [[AND2:s\[[0-9]+:[0-9]+\]]], [[AND1]], exec
+; GCN-DAG: s_cselect_b32 [[RESULT0:s[0-9]+]]
+; GCN-DAG: s_cselect_b32 [[RESULT1:s[0-9]+]]
+; GCN-DAG: v_mov_b32_e32 v[[VRESULT1:[0-9]+]], [[RESULT0]]
+; GCN-DAG: v_mov_b32_e32 v[[VRESULT0:[0-9]+]], [[RESULT1]]
+; GCN: buffer_store_dwordx2 v[[[VRESULT0]]:[[VRESULT1]]]
 define amdgpu_kernel void @opt_select_i64_and_cmp_f32(i64 addrspace(1)* %out, float %a, float %b, float %c, i64 %x, i64 %y) #0 {
   %fcmp0 = fcmp one float %a, %b
   %fcmp1 = fcmp one float %a, %c
@@ -77,10 +85,11 @@ define amdgpu_kernel void @opt_select_i64_and_cmp_f32(i64 addrspace(1)* %out, fl
 ; GCN: s_cselect_b64 [[CMP1:s\[[0-9]+:[0-9]+\]]], -1, 0
 ; GCN-DAG: s_cmp_lg_u32
 ; GCN: s_cselect_b64 [[CMP2:s\[[0-9]+:[0-9]+\]]], -1, 0
-; GCN: s_or_b64 vcc, [[CMP1]], [[CMP2]]
-; GCN: v_cndmask_b32_e32 [[RESULT:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
-; GCN-NOT: [[RESULT]]
-; GCN: buffer_store_dword [[RESULT]]
+; GCN: s_or_b64 [[OR:s\[[0-9]+:[0-9]+\]]], [[CMP1]], [[CMP2]]
+; GCN: s_and_b64 [[AND:s\[[0-9]+:[0-9]+\]]], [[OR]], exec
+; GCN-DAG: s_cselect_b32 [[RESULT:s[0-9]+]]
+; GCN-DAG: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[RESULT]]
+; GCN: buffer_store_dword [[VRESULT]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @opt_select_i32_or_cmp_i32(i32 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i32 %x, i32 %y) #0 {
   %icmp0 = icmp ne i32 %a, %b
@@ -94,10 +103,11 @@ define amdgpu_kernel void @opt_select_i32_or_cmp_i32(i32 addrspace(1)* %out, i32
 ; GCN-LABEL: {{^}}opt_select_i32_or_cmp_f32:
 ; GCN-DAG: v_cmp_lg_f32_e32 vcc
 ; GCN-DAG: v_cmp_lg_f32_e64 [[CMP1:s\[[0-9]+:[0-9]+\]]]
-; GCN: s_or_b64 vcc, vcc, [[CMP1]]
-; GCN: v_cndmask_b32_e32 [[RESULT:v[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
-; GCN-NOT: [[RESULT]]
-; GCN: buffer_store_dword [[RESULT]]
+; GCN: s_or_b64 [[OR:s\[[0-9]+:[0-9]+\]]], vcc, [[CMP1]]
+; GCN: s_and_b64 [[AND:s\[[0-9]+:[0-9]+\]]], [[OR]], exec
+; GCN-DAG: s_cselect_b32 [[RESULT:s[0-9]+]]
+; GCN-DAG: v_mov_b32_e32 [[VRESULT:v[0-9]+]], [[RESULT]]
+; GCN: buffer_store_dword [[VRESULT]]
 define amdgpu_kernel void @opt_select_i32_or_cmp_f32(i32 addrspace(1)* %out, float %a, float %b, float %c, i32 %x, i32 %y) #0 {
   %fcmp0 = fcmp one float %a, %b
   %fcmp1 = fcmp one float %a, %c
@@ -112,10 +122,13 @@ define amdgpu_kernel void @opt_select_i32_or_cmp_f32(i32 addrspace(1)* %out, flo
 ; GCN: s_cselect_b64 [[CMP1:s\[[0-9]+:[0-9]+\]]], -1, 0
 ; GCN-DAG: s_cmp_lg_u32
 ; GCN: s_cselect_b64 [[CMP2:s\[[0-9]+:[0-9]+\]]], -1, 0
-; GCN: s_or_b64 vcc, [[CMP1]], [[CMP2]]
-; GCN: v_cndmask_b32_e32 v[[RESULT1:[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
-; GCN: v_cndmask_b32_e32 v[[RESULT0:[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
-; GCN: buffer_store_dwordx2 v[[[RESULT0]]:[[RESULT1]]]
+; GCN: s_or_b64 [[OR:s\[[0-9]+:[0-9]+\]]], [[CMP1]], [[CMP2]]
+; GCN: s_and_b64 [[AND:s\[[0-9]+:[0-9]+\]]], [[OR]], exec
+; GCN-DAG: s_cselect_b32 [[RESULT0:s[0-9]+]]
+; GCN-DAG: s_cselect_b32 [[RESULT1:s[0-9]+]]
+; GCN-DAG: v_mov_b32_e32 v[[VRESULT1:[0-9]+]], [[RESULT0]]
+; GCN-DAG: v_mov_b32_e32 v[[VRESULT0:[0-9]+]], [[RESULT1]]
+; GCN: buffer_store_dwordx2 v[[[VRESULT0]]:[[VRESULT1]]]
 define amdgpu_kernel void @opt_select_i64_or_cmp_i32(i64 addrspace(1)* %out, i32 %a, i32 %b, i32 %c, i64 %x, i64 %y) #0 {
   %icmp0 = icmp ne i32 %a, %b
   %icmp1 = icmp ne i32 %a, %c
@@ -128,10 +141,13 @@ define amdgpu_kernel void @opt_select_i64_or_cmp_i32(i64 addrspace(1)* %out, i32
 ; GCN-LABEL: {{^}}opt_select_i64_or_cmp_f32:
 ; GCN-DAG: v_cmp_lg_f32_e32 vcc,
 ; GCN-DAG: v_cmp_lg_f32_e64 [[CMP1:s\[[0-9]+:[0-9]+\]]]
-; GCN: s_or_b64 vcc, vcc, [[CMP1]]
-; GCN: v_cndmask_b32_e32 v[[RESULT1:[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
-; GCN: v_cndmask_b32_e32 v[[RESULT0:[0-9]+]], {{v[0-9]+}}, {{v[0-9]+}}, vcc
-; GCN: buffer_store_dwordx2 v[[[RESULT0]]:[[RESULT1]]]
+; GCN: s_or_b64 [[OR:s\[[0-9]+:[0-9]+\]]], vcc, [[CMP1]]
+; GCN: s_and_b64 [[AND:s\[[0-9]+:[0-9]+\]]], [[OR]], exec
+; GCN-DAG: s_cselect_b32 [[RESULT0:s[0-9]+]]
+; GCN-DAG: s_cselect_b32 [[RESULT1:s[0-9]+]]
+; GCN-DAG: v_mov_b32_e32 v[[VRESULT1:[0-9]+]], [[RESULT0]]
+; GCN-DAG: v_mov_b32_e32 v[[VRESULT0:[0-9]+]], [[RESULT1]]
+; GCN: buffer_store_dwordx2 v[[[VRESULT0]]:[[VRESULT1]]]
 define amdgpu_kernel void @opt_select_i64_or_cmp_f32(i64 addrspace(1)* %out, float %a, float %b, float %c, i64 %x, i64 %y) #0 {
   %fcmp0 = fcmp one float %a, %b
   %fcmp1 = fcmp one float %a, %c
@@ -143,8 +159,6 @@ define amdgpu_kernel void @opt_select_i64_or_cmp_f32(i64 addrspace(1)* %out, flo
 
 ; GCN-LABEL: {{^}}regression:
 ; GCN: v_cmp_neq_f32_e64 s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}}, 1.0
-; GCN: v_cmp_neq_f32_e64 s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}}, 0
-; GCN: v_cmp_eq_f32_e64 s{{\[[0-9]+:[0-9]+\]}}, s{{[0-9]+}}, 0
 
 define amdgpu_kernel void @regression(float addrspace(1)* %out, float %c0, float %c1) #0 {
 entry:

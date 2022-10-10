@@ -19,6 +19,8 @@ check_cxx_symbol_exists(__NR_process_vm_readv "sys/syscall.h" HAVE_NR_PROCESS_VM
 
 check_library_exists(compression compression_encode_buffer "" HAVE_LIBCOMPRESSION)
 
+set(LLDB_INSTALL_LIBDIR_BASENAME "lib${LLDB_LIBDIR_SUFFIX}")
+
 # These checks exist in LLVM's configuration, so I want to match the LLVM names
 # so that the check isn't duplicated, but we translate them into the LLDB names
 # so that I don't have to change all the uses at the moment.

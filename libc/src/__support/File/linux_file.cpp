@@ -53,7 +53,7 @@ namespace {
 
 size_t write_func(File *f, const void *data, size_t size) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  long ret = __llvm_libc::syscall(SYS_write, lf->get_fd(), data, size);
+  long ret = __llvm_libc::syscall_impl(SYS_write, lf->get_fd(), data, size);
   if (ret < 0) {
     errno = -ret;
     return 0;
@@ -63,7 +63,7 @@ size_t write_func(File *f, const void *data, size_t size) {
 
 size_t read_func(File *f, void *buf, size_t size) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  long ret = __llvm_libc::syscall(SYS_read, lf->get_fd(), buf, size);
+  long ret = __llvm_libc::syscall_impl(SYS_read, lf->get_fd(), buf, size);
   if (ret < 0) {
     errno = -ret;
     return 0;
@@ -74,11 +74,11 @@ size_t read_func(File *f, void *buf, size_t size) {
 int seek_func(File *f, long offset, int whence) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
 #ifdef SYS_lseek
-  long ret = __llvm_libc::syscall(SYS_lseek, lf->get_fd(), offset, whence);
+  long ret = __llvm_libc::syscall_impl(SYS_lseek, lf->get_fd(), offset, whence);
 #elif defined(SYS__llseek)
   long result;
-  long ret = __llvm_libc::syscall(SYS__lseek, lf->get_fd(), offset >> 32,
-                                  offset, &result, whence);
+  long ret = __llvm_libc::syscall_impl(SYS__llseek, lf->get_fd(), offset >> 32,
+                                       offset, &result, whence);
 #else
 #error "lseek and _llseek syscalls not available to perform a seek operation."
 #endif
@@ -92,7 +92,7 @@ int seek_func(File *f, long offset, int whence) {
 
 int close_func(File *f) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  long ret = __llvm_libc::syscall(SYS_close, lf->get_fd());
+  long ret = __llvm_libc::syscall_impl(SYS_close, lf->get_fd());
   if (ret < 0) {
     errno = -ret;
     return -1;
@@ -102,7 +102,7 @@ int close_func(File *f) {
 
 int flush_func(File *f) {
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  long ret = __llvm_libc::syscall(SYS_fsync, lf->get_fd());
+  long ret = __llvm_libc::syscall_impl(SYS_fsync, lf->get_fd());
   if (ret < 0) {
     errno = -ret;
     return -1;
@@ -144,10 +144,10 @@ File *openfile(const char *path, const char *mode) {
       S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH;
 
 #ifdef SYS_open
-  int fd = __llvm_libc::syscall(SYS_open, path, open_flags, OPEN_MODE);
+  int fd = __llvm_libc::syscall_impl(SYS_open, path, open_flags, OPEN_MODE);
 #elif defined(SYS_openat)
-  int fd =
-      __llvm_libc::syscall(SYS_openat, AT_FDCWD, path, open_flags, OPEN_MODE);
+  int fd = __llvm_libc::syscall_impl(SYS_openat, AT_FDCWD, path, open_flags,
+                                     OPEN_MODE);
 #else
 #error "SYS_open and SYS_openat syscalls not available to perform a file open."
 #endif

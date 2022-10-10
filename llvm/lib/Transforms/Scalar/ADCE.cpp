@@ -295,7 +295,7 @@ void AggressiveDeadCodeElimination::initialize() {
   // return of the function.
   // We do this by seeing which of the postdomtree root children exit the
   // program, and for all others, mark the subtree live.
-  for (auto &PDTChild : children<DomTreeNode *>(PDT.getRootNode())) {
+  for (const auto &PDTChild : children<DomTreeNode *>(PDT.getRootNode())) {
     auto *BB = PDTChild->getBlock();
     auto &Info = BlockInfo[BB];
     // Real function return
@@ -306,7 +306,7 @@ void AggressiveDeadCodeElimination::initialize() {
     }
 
     // This child is something else, like an infinite loop.
-    for (auto DFNode : depth_first(PDTChild))
+    for (auto *DFNode : depth_first(PDTChild))
       markLive(BlockInfo[DFNode->getBlock()].Terminator);
   }
 

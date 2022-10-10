@@ -83,8 +83,8 @@ public:
   /// @{
 
   /// Get the address space size of the given section, as it effects
-  /// layout. This may differ from the size reported by \see getSectionSize() by
-  /// not including section tail padding.
+  /// layout. This may differ from the size reported by \see
+  /// getSectionFileSize() by not including section tail padding.
   uint64_t getSectionAddressSize(const MCSection *Sec) const;
 
   /// Get the data size of the given section, as emitted to the object

@@ -37,7 +37,8 @@ static std::string ComputeClangResourceDir(std::string lldb_shlib_path,
 TEST_F(ClangHostTest, ComputeClangResourceDirectory) {
 #if !defined(_WIN32)
   std::string path_to_liblldb = "/foo/bar/lib/";
-  std::string path_to_clang_dir = "/foo/bar/lib" LLDB_LIBDIR_SUFFIX "/clang/" CLANG_VERSION_STRING;
+  std::string path_to_clang_dir =
+      "/foo/bar/" LLDB_INSTALL_LIBDIR_BASENAME "/clang/" CLANG_VERSION_STRING;
 #else
   std::string path_to_liblldb = "C:\\foo\\bar\\lib";
   std::string path_to_clang_dir = "C:\\foo\\bar\\lib\\clang\\" CLANG_VERSION_STRING;

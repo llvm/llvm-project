@@ -15,14 +15,17 @@
 #include "x86_64/syscall.h"
 #elif defined(LLVM_LIBC_ARCH_AARCH64)
 #include "aarch64/syscall.h"
+#elif defined(LLVM_LIBC_ARCH_ARM)
+#include "arm/syscall.h"
 #endif
 
 namespace __llvm_libc {
 
 template <typename... Ts>
-__attribute__((always_inline)) inline long syscall(long __number, Ts... ts) {
+__attribute__((always_inline)) inline long syscall_impl(long __number,
+                                                        Ts... ts) {
   static_assert(sizeof...(Ts) <= 6, "Too many arguments for syscall");
-  return syscall(__number, (long)ts...);
+  return syscall_impl(__number, (long)ts...);
 }
 
 } // namespace __llvm_libc

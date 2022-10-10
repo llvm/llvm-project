@@ -1,7 +1,7 @@
-// RUN: %clangxx_msan -O0 %s -o %t && %run %t >%t.out 2>&1
-// RUN: %clangxx_msan -O1 %s -o %t && %run %t >%t.out 2>&1
-// RUN: %clangxx_msan -O2 %s -o %t && %run %t >%t.out 2>&1
-// RUN: %clangxx_msan -O3 %s -o %t && %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -O0 %s -o %t && %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -O1 %s -o %t && %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -O2 %s -o %t && %run %t >%t.out 2>&1
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -O3 %s -o %t && %run %t >%t.out 2>&1
 
 // Test that (no_sanitize_memory) functions DO NOT propagate shadow.
 

@@ -9,6 +9,7 @@ unittest("LexTests") {
     "//clang/lib/Parse",
     "//clang/lib/Sema",
     "//llvm/lib/Support",
+    "//llvm/lib/Testing/Support",
   ]
   sources = [
     "DependencyDirectivesScannerTest.cpp",
@@ -17,6 +18,7 @@ unittest("LexTests") {
     "LexerTest.cpp",
     "PPCallbacksTest.cpp",
     "PPConditionalDirectiveRecordTest.cpp",
+    "PPDependencyDirectivesTest.cpp",
     "PPMemoryAllocationsTest.cpp",
   ]
 }

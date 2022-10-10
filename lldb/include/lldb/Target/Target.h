@@ -141,6 +141,8 @@ public:
 
   PathMappingList &GetSourcePathMap() const;
 
+  bool GetAutoSourceMapRelative() const;
+
   FileSpecList GetExecutableSearchPaths();
 
   void AppendExecutableSearchPaths(const FileSpec &);
@@ -162,7 +164,7 @@ public:
   bool GetEnableNotifyAboutFixIts() const;
 
   FileSpec GetSaveJITObjectsDir() const;
-  
+
   bool GetEnableSyntheticValue() const;
 
   uint32_t GetMaxZeroPaddingInFloatFormat() const;
@@ -260,7 +262,7 @@ private:
   void DisableASLRValueChangedCallback();
   void InheritTCCValueChangedCallback();
   void DisableSTDIOValueChangedCallback();
-  
+
   // Settings checker for target.jit-save-objects-dir:
   void CheckJITObjectsDir();
 
@@ -479,7 +481,8 @@ public:
     eBroadcastBitModulesLoaded = (1 << 1),
     eBroadcastBitModulesUnloaded = (1 << 2),
     eBroadcastBitWatchpointChanged = (1 << 3),
-    eBroadcastBitSymbolsLoaded = (1 << 4)
+    eBroadcastBitSymbolsLoaded = (1 << 4),
+    eBroadcastBitSymbolsChanged = (1 << 5),
   };
 
   // These two functions fill out the Broadcaster interface:
@@ -779,6 +782,9 @@ public:
 
   bool RemoveBreakpointByID(lldb::break_id_t break_id);
 
+  /// Resets the hit count of all breakpoints.
+  void ResetBreakpointHitCounts();
+
   // The flag 'end_to_end', default to true, signifies that the operation is
   // performed end to end, for both the debugger and the debuggee.
 
@@ -981,7 +987,7 @@ public:
   ModuleIsExcludedForUnconstrainedSearches(const lldb::ModuleSP &module_sp);
 
   const ArchSpec &GetArchitecture() const { return m_arch.GetSpec(); }
-  
+
   /// Returns the name of the target's ABI plugin.
   llvm::StringRef GetABIName() const;
 
@@ -1008,9 +1014,14 @@ public:
   ///     currently selected platform isn't compatible (in case it might be
   ///     manually set following this function call).
   ///
+  /// \param[in] merged
+  ///     If true, arch_spec is merged with the current
+  ///     architecture. Otherwise it's replaced.
+  ///
   /// \return
   ///     \b true if the architecture was successfully set, \b false otherwise.
-  bool SetArchitecture(const ArchSpec &arch_spec, bool set_platform = false);
+  bool SetArchitecture(const ArchSpec &arch_spec, bool set_platform = false,
+                       bool merge = true);
 
   bool MergeArchitecture(const ArchSpec &arch_spec);
 
@@ -1425,30 +1436,30 @@ protected:
     LazyBool pass = eLazyBoolCalculate;
     LazyBool notify = eLazyBoolCalculate;
     LazyBool stop = eLazyBoolCalculate;
-    DummySignalValues(LazyBool pass, LazyBool notify, LazyBool stop) : 
-        pass(pass), notify(notify), stop(stop) {}
+    DummySignalValues(LazyBool pass, LazyBool notify, LazyBool stop)
+        : pass(pass), notify(notify), stop(stop) {}
     DummySignalValues() = default;
   };
   using DummySignalElement = llvm::StringMapEntry<DummySignalValues>;
-  static bool UpdateSignalFromDummy(lldb::UnixSignalsSP signals_sp, 
-      const DummySignalElement &element);
-  static bool ResetSignalFromDummy(lldb::UnixSignalsSP signals_sp, 
-      const DummySignalElement &element);
+  static bool UpdateSignalFromDummy(lldb::UnixSignalsSP signals_sp,
+                                    const DummySignalElement &element);
+  static bool ResetSignalFromDummy(lldb::UnixSignalsSP signals_sp,
+                                   const DummySignalElement &element);
 
 public:
   /// Add a signal to the Target's list of stored signals/actions.  These
   /// values will get copied into any processes launched from
   /// this target.
-  void AddDummySignal(llvm::StringRef name, LazyBool pass, LazyBool print, 
+  void AddDummySignal(llvm::StringRef name, LazyBool pass, LazyBool print,
                       LazyBool stop);
   /// Updates the signals in signals_sp using the stored dummy signals.
   /// If warning_stream_sp is not null, if any stored signals are not found in
   /// the current process, a warning will be emitted here.
-  void UpdateSignalsFromDummy(lldb::UnixSignalsSP signals_sp, 
+  void UpdateSignalsFromDummy(lldb::UnixSignalsSP signals_sp,
                               lldb::StreamSP warning_stream_sp);
   /// Clear the dummy signals in signal_names from the target, or all signals
   /// if signal_names is empty.  Also remove the behaviors they set from the
-  /// process's signals if it exists. 
+  /// process's signals if it exists.
   void ClearDummySignals(Args &signal_names);
   /// Print all the signals set in this target.
   void PrintDummySignals(Stream &strm, Args &signals);
@@ -1533,7 +1544,7 @@ protected:
   lldb::TraceSP m_trace_sp;
   /// Stores the frame recognizers of this target.
   lldb::StackFrameRecognizerManagerUP m_frame_recognizer_manager_up;
-  /// These are used to set the signal state when you don't have a process and 
+  /// These are used to set the signal state when you don't have a process and
   /// more usefully in the Dummy target where you can't know exactly what
   /// signals you will have.
   llvm::StringMap<DummySignalValues> m_dummy_signals;

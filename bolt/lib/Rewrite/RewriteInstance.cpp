@@ -12,6 +12,7 @@
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Core/DebugData.h"
 #include "bolt/Core/Exceptions.h"
+#include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/MCPlusBuilder.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Core/Relocation.h"
@@ -30,6 +31,7 @@
 #include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
@@ -91,12 +93,6 @@ cl::opt<std::string>
            cl::desc("add any string to tag this execution in the "
                     "output binary via bolt info section"),
            cl::cat(BoltCategory));
-
-cl::opt<bool>
-AllowStripped("allow-stripped",
-  cl::desc("allow processing of stripped binaries"),
-  cl::Hidden,
-  cl::cat(BoltCategory));
 
 cl::opt<bool> DumpDotAll(
     "dump-dot-all",
@@ -307,11 +303,9 @@ MCPlusBuilder *createMCPlusBuilder(const Triple::ArchType Arch,
 namespace {
 
 bool refersToReorderedSection(ErrorOr<BinarySection &> Section) {
-  auto Itr =
-      llvm::find_if(opts::ReorderData, [&](const std::string &SectionName) {
-        return (Section && Section->getName() == SectionName);
-      });
-  return Itr != opts::ReorderData.end();
+  return llvm::any_of(opts::ReorderData, [&](const std::string &SectionName) {
+    return Section && Section->getName() == SectionName;
+  });
 }
 
 } // anonymous namespace
@@ -362,7 +356,7 @@ RewriteInstance::RewriteInstance(ELFObjectFileBase *File, const int Argc,
   BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(createMCPlusBuilder(
       BC->TheTriple->getArch(), BC->MIA.get(), BC->MII.get(), BC->MRI.get())));
 
-  BAT = std::make_unique<BoltAddressTranslation>(*BC);
+  BAT = std::make_unique<BoltAddressTranslation>();
 
   if (opts::UpdateDebugSections)
     DebugInfoRewriter = std::make_unique<DWARFRewriter>(*BC);
@@ -1158,7 +1152,6 @@ void RewriteInstance::discoverFileObjects() {
                << Twine::utohexstr(Address) << ") does not have any section\n";
         continue;
       }
-      assert(Section && "section for functions must be registered");
 
       // Skip symbols from zero-sized sections.
       if (!Section->getSize())
@@ -1436,10 +1429,17 @@ void RewriteInstance::adjustFunctionBoundaries() {
         Function.hasRestoredNameRegex(".*\\.cold(\\.[0-9]+)?");
     if (FragName) {
       static bool PrintedWarning = false;
-      if (BC->HasRelocations && !PrintedWarning) {
-        errs() << "BOLT-WARNING: split function detected on input : "
-               << *FragName << ". The support is limited in relocation mode.\n";
+      if (!PrintedWarning) {
         PrintedWarning = true;
+        errs() << "BOLT-WARNING: split function detected on input : "
+               << *FragName;
+        if (BC->HasRelocations)
+          errs() << ". The support is limited in relocation mode";
+        if (opts::Lite) {
+          opts::Lite = false;
+          errs() << "\nBOLT-WARNING: disabling lite mode (-lite) when split "
+                 << "functions are present\n";
+        }
       }
       Function.IsFragment = true;
     }
@@ -1562,6 +1562,7 @@ Error RewriteInstance::readSpecialSections() {
                      TimerGroupName, TimerGroupDesc, opts::TimeRewrite);
 
   bool HasTextRelocations = false;
+  bool HasSymbolTable = false;
   bool HasDebugInfo = false;
 
   // Process special sections.
@@ -1593,6 +1594,7 @@ Error RewriteInstance::readSpecialSections() {
   }
 
   HasTextRelocations = (bool)BC->getUniqueSectionByName(".rela.text");
+  HasSymbolTable = (bool)BC->getUniqueSectionByName(".symtab");
   LSDASection = BC->getUniqueSectionByName(".gcc_except_table");
   EHFrameSection = BC->getUniqueSectionByName(".eh_frame");
   GOTPLTSection = BC->getUniqueSectionByName(".got.plt");
@@ -1629,6 +1631,8 @@ Error RewriteInstance::readSpecialSections() {
   BC->HasRelocations =
       HasTextRelocations && (opts::RelocationMode != cl::BOU_FALSE);
 
+  BC->IsStripped = !HasSymbolTable;
+
   // Force non-relocation mode for heatmap generation
   if (opts::HeatmapMode)
     BC->HasRelocations = false;
@@ -1636,6 +1640,10 @@ Error RewriteInstance::readSpecialSections() {
   if (BC->HasRelocations)
     outs() << "BOLT-INFO: enabling " << (opts::StrictMode ? "strict " : "")
            << "relocation mode\n";
+
+  if (BC->IsStripped)
+    outs() << "BOLT-INFO: input binary is stripped. The support is limited and "
+           << "is considered experimental.\n";
 
   // Read EH frame for function boundaries info.
   Expected<const DWARFDebugFrame *> EHFrameOrError = BC->DwCtx->getEHFrame();
@@ -2264,6 +2272,30 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
   }
 }
 
+void RewriteInstance::printRelocationInfo(const RelocationRef &Rel,
+                                          StringRef SymbolName,
+                                          uint64_t SymbolAddress,
+                                          uint64_t Addend,
+                                          uint64_t ExtractedValue) const {
+  SmallString<16> TypeName;
+  Rel.getTypeName(TypeName);
+  const uint64_t Address = SymbolAddress + Addend;
+  const uint64_t Offset = Rel.getOffset();
+  ErrorOr<BinarySection &> Section = BC->getSectionForAddress(SymbolAddress);
+  BinaryFunction *Func =
+      BC->getBinaryFunctionContainingAddress(Offset, false, BC->isAArch64());
+  dbgs() << formatv("Relocation: offset = {0:x}; type = {1}; value = {2:x}; ",
+                    Offset, TypeName, ExtractedValue)
+         << formatv("symbol = {0} ({1}); symbol address = {2:x}; ", SymbolName,
+                    Section ? Section->getName() : "", SymbolAddress)
+         << formatv("addend = {0:x}; address = {1:x}; in = ", Addend, Address);
+  if (Func)
+    dbgs() << Func->getPrintName();
+  else
+    dbgs() << BC->getSectionForAddress(Rel.getOffset())->getName();
+  dbgs() << '\n';
+}
+
 void RewriteInstance::readRelocations(const SectionRef &Section) {
   LLVM_DEBUG({
     StringRef SectionName = cantFail(Section.getName());
@@ -2297,373 +2329,347 @@ void RewriteInstance::readRelocations(const SectionRef &Section) {
     return;
   }
 
+  for (const RelocationRef &Rel : Section.relocations())
+    handleRelocation(RelocatedSection, Rel);
+}
+
+void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
+                                       const RelocationRef &Rel) {
   const bool IsAArch64 = BC->isAArch64();
   const bool IsFromCode = RelocatedSection.isText();
 
-  auto printRelocationInfo = [&](const RelocationRef &Rel,
-                                 StringRef SymbolName,
-                                 uint64_t SymbolAddress,
-                                 uint64_t Addend,
-                                 uint64_t ExtractedValue) {
-    SmallString<16> TypeName;
-    Rel.getTypeName(TypeName);
-    const uint64_t Address = SymbolAddress + Addend;
-    ErrorOr<BinarySection &> Section = BC->getSectionForAddress(SymbolAddress);
-    dbgs() << "Relocation: offset = 0x"
-           << Twine::utohexstr(Rel.getOffset())
-           << "; type = " << TypeName
-           << "; value = 0x" << Twine::utohexstr(ExtractedValue)
-           << "; symbol = " << SymbolName
-           << " (" << (Section ? Section->getName() : "") << ")"
-           << "; symbol address = 0x" << Twine::utohexstr(SymbolAddress)
-           << "; addend = 0x" << Twine::utohexstr(Addend)
-           << "; address = 0x" << Twine::utohexstr(Address)
-           << "; in = ";
-    if (BinaryFunction *Func = BC->getBinaryFunctionContainingAddress(
-            Rel.getOffset(), false, IsAArch64))
-      dbgs() << Func->getPrintName() << "\n";
-    else
-      dbgs() << BC->getSectionForAddress(Rel.getOffset())->getName() << "\n";
-  };
+  SmallString<16> TypeName;
+  Rel.getTypeName(TypeName);
+  uint64_t RType = Rel.getType();
+  if (Relocation::skipRelocationType(RType))
+    return;
 
-  for (const RelocationRef &Rel : Section.relocations()) {
-    SmallString<16> TypeName;
-    Rel.getTypeName(TypeName);
-    uint64_t RType = Rel.getType();
-    if (Relocation::skipRelocationType(RType))
-      continue;
+  // Adjust the relocation type as the linker might have skewed it.
+  if (BC->isX86() && (RType & ELF::R_X86_64_converted_reloc_bit)) {
+    if (opts::Verbosity >= 1)
+      dbgs() << "BOLT-WARNING: ignoring R_X86_64_converted_reloc_bit\n";
+    RType &= ~ELF::R_X86_64_converted_reloc_bit;
+  }
 
-    // Adjust the relocation type as the linker might have skewed it.
-    if (BC->isX86() && (RType & ELF::R_X86_64_converted_reloc_bit)) {
+  if (Relocation::isTLS(RType)) {
+    // No special handling required for TLS relocations on X86.
+    if (BC->isX86())
+      return;
+
+    // The non-got related TLS relocations on AArch64 also could be skipped.
+    if (!Relocation::isGOT(RType))
+      return;
+  }
+
+  if (!IsAArch64 && BC->getDynamicRelocationAt(Rel.getOffset())) {
+    LLVM_DEBUG({
+      dbgs() << formatv("BOLT-DEBUG: address {0:x} has a ", Rel.getOffset())
+             << "dynamic relocation against it. Ignoring static relocation.\n";
+    });
+    return;
+  }
+
+  std::string SymbolName;
+  uint64_t SymbolAddress;
+  int64_t Addend;
+  uint64_t ExtractedValue;
+  bool IsSectionRelocation;
+  bool Skip;
+  if (!analyzeRelocation(Rel, RType, SymbolName, IsSectionRelocation,
+                         SymbolAddress, Addend, ExtractedValue, Skip)) {
+    LLVM_DEBUG({
+      dbgs() << "BOLT-WARNING: failed to analyze relocation @ offset = "
+             << formatv("{0:x}; type name = {1}\n", Rel.getOffset(), TypeName);
+    });
+    ++NumFailedRelocations;
+    return;
+  }
+
+  if (Skip) {
+    LLVM_DEBUG({
+      dbgs() << "BOLT-DEBUG: skipping relocation @ offset = "
+             << formatv("{0:x}; type name = {1}\n", Rel.getOffset(), TypeName);
+    });
+    return;
+  }
+
+  const uint64_t Address = SymbolAddress + Addend;
+
+  LLVM_DEBUG({
+    dbgs() << "BOLT-DEBUG: ";
+    printRelocationInfo(Rel, SymbolName, SymbolAddress, Addend, ExtractedValue);
+  });
+
+  BinaryFunction *ContainingBF = nullptr;
+  if (IsFromCode) {
+    ContainingBF =
+        BC->getBinaryFunctionContainingAddress(Rel.getOffset(),
+                                               /*CheckPastEnd*/ false,
+                                               /*UseMaxSize*/ true);
+    assert(ContainingBF && "cannot find function for address in code");
+    if (!IsAArch64 && !ContainingBF->containsAddress(Rel.getOffset())) {
       if (opts::Verbosity >= 1)
-        dbgs() << "BOLT-WARNING: ignoring R_X86_64_converted_reloc_bit\n";
-      RType &= ~ELF::R_X86_64_converted_reloc_bit;
+        outs() << formatv("BOLT-INFO: {0} has relocations in padding area\n",
+                          *ContainingBF);
+      ContainingBF->setSize(ContainingBF->getMaxSize());
+      ContainingBF->setSimple(false);
+      return;
     }
+  }
 
-    if (Relocation::isTLS(RType)) {
-      // No special handling required for TLS relocations on X86.
-      if (BC->isX86())
-        continue;
+  MCSymbol *ReferencedSymbol = nullptr;
+  if (!IsSectionRelocation)
+    if (BinaryData *BD = BC->getBinaryDataByName(SymbolName))
+      ReferencedSymbol = BD->getSymbol();
 
-      // The non-got related TLS relocations on AArch64 also could be skipped.
-      if (!Relocation::isGOT(RType))
-        continue;
-    }
+  ErrorOr<BinarySection &> ReferencedSection =
+      BC->getSectionForAddress(SymbolAddress);
 
-    if (!IsAArch64 && BC->getDynamicRelocationAt(Rel.getOffset())) {
-      LLVM_DEBUG(
-          dbgs() << "BOLT-DEBUG: address 0x"
-                 << Twine::utohexstr(Rel.getOffset())
-                 << " has a dynamic relocation against it. Ignoring static "
-                    "relocation.\n");
-      continue;
-    }
+  const bool IsToCode = ReferencedSection && ReferencedSection->isText();
 
-    std::string SymbolName;
-    uint64_t SymbolAddress;
-    int64_t Addend;
-    uint64_t ExtractedValue;
-    bool IsSectionRelocation;
-    bool Skip;
-    if (!analyzeRelocation(Rel, RType, SymbolName, IsSectionRelocation,
-                           SymbolAddress, Addend, ExtractedValue, Skip)) {
-      LLVM_DEBUG(dbgs() << "BOLT-WARNING: failed to analyze relocation @ "
-                        << "offset = 0x" << Twine::utohexstr(Rel.getOffset())
-                        << "; type name = " << TypeName << '\n');
-      ++NumFailedRelocations;
-      continue;
-    }
-
-    if (Skip) {
-      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: skipping relocation @ offset = 0x"
-                        << Twine::utohexstr(Rel.getOffset())
-                        << "; type name = " << TypeName << '\n');
-      continue;
-    }
-
-    const uint64_t Address = SymbolAddress + Addend;
-
-    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: "; printRelocationInfo(
-                   Rel, SymbolName, SymbolAddress, Addend, ExtractedValue));
-
-    BinaryFunction *ContainingBF = nullptr;
-    if (IsFromCode) {
-      ContainingBF =
-          BC->getBinaryFunctionContainingAddress(Rel.getOffset(),
-                                                 /*CheckPastEnd*/ false,
-                                                 /*UseMaxSize*/ true);
-      assert(ContainingBF && "cannot find function for address in code");
-      if (!IsAArch64 && !ContainingBF->containsAddress(Rel.getOffset())) {
-        if (opts::Verbosity >= 1)
-          outs() << "BOLT-INFO: " << *ContainingBF
-                 << " has relocations in padding area\n";
-        ContainingBF->setSize(ContainingBF->getMaxSize());
-        ContainingBF->setSimple(false);
-        continue;
-      }
-    }
-
-    MCSymbol *ReferencedSymbol = nullptr;
-    if (!IsSectionRelocation)
-      if (BinaryData *BD = BC->getBinaryDataByName(SymbolName))
-        ReferencedSymbol = BD->getSymbol();
-
-    ErrorOr<BinarySection &> ReferencedSection =
-        BC->getSectionForAddress(SymbolAddress);
-
-    const bool IsToCode = ReferencedSection && ReferencedSection->isText();
-
-    // Special handling of PC-relative relocations.
-    if (!IsAArch64 && Relocation::isPCRelative(RType)) {
-      if (!IsFromCode && IsToCode) {
-        // PC-relative relocations from data to code are tricky since the
-        // original information is typically lost after linking, even with
-        // '--emit-relocs'. Such relocations are normally used by PIC-style
-        // jump tables and they reference both the jump table and jump
-        // targets by computing the difference between the two. If we blindly
-        // apply the relocation, it will appear that it references an arbitrary
-        // location in the code, possibly in a different function from the one
-        // containing the jump table.
-        //
-        // For that reason, we only register the fact that there is a
-        // PC-relative relocation at a given address against the code.
-        // The actual referenced label/address will be determined during jump
-        // table analysis.
-        BC->addPCRelativeDataRelocation(Rel.getOffset());
-      } else if (ContainingBF && !IsSectionRelocation && ReferencedSymbol) {
-        // If we know the referenced symbol, register the relocation from
-        // the code. It's required  to properly handle cases where
-        // "symbol + addend" references an object different from "symbol".
-        ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol, RType,
-                                    Addend, ExtractedValue);
-      } else {
-        LLVM_DEBUG(
-            dbgs() << "BOLT-DEBUG: not creating PC-relative relocation at 0x"
-                   << Twine::utohexstr(Rel.getOffset()) << " for " << SymbolName
-                   << "\n");
-      }
-
-      continue;
-    }
-
-    bool ForceRelocation = BC->forceSymbolRelocations(SymbolName);
-    if (BC->isAArch64() && Relocation::isGOT(RType))
-      ForceRelocation = true;
-
-    if (!ReferencedSection && !ForceRelocation) {
-      LLVM_DEBUG(
-          dbgs() << "BOLT-DEBUG: cannot determine referenced section.\n");
-      continue;
-    }
-
-    // Occasionally we may see a reference past the last byte of the function
-    // typically as a result of __builtin_unreachable(). Check it here.
-    BinaryFunction *ReferencedBF = BC->getBinaryFunctionContainingAddress(
-        Address, /*CheckPastEnd*/ true, /*UseMaxSize*/ IsAArch64);
-
-    if (!IsSectionRelocation) {
-      if (BinaryFunction *BF =
-              BC->getBinaryFunctionContainingAddress(SymbolAddress)) {
-        if (BF != ReferencedBF) {
-          // It's possible we are referencing a function without referencing any
-          // code, e.g. when taking a bitmask action on a function address.
-          errs() << "BOLT-WARNING: non-standard function reference (e.g. "
-                    "bitmask) detected against function "
-                 << *BF;
-          if (IsFromCode)
-            errs() << " from function " << *ContainingBF << '\n';
-          else
-            errs() << " from data section at 0x"
-                   << Twine::utohexstr(Rel.getOffset()) << '\n';
-          LLVM_DEBUG(printRelocationInfo(Rel, SymbolName, SymbolAddress, Addend,
-                                         ExtractedValue));
-          ReferencedBF = BF;
-        }
-      }
-    } else if (ReferencedBF) {
-      assert(ReferencedSection && "section expected for section relocation");
-      if (*ReferencedBF->getOriginSection() != *ReferencedSection) {
-        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ignoring false function reference\n");
-        ReferencedBF = nullptr;
-      }
-    }
-
-    // Workaround for a member function pointer de-virtualization bug. We check
-    // if a non-pc-relative relocation in the code is pointing to (fptr - 1).
-    if (IsToCode && ContainingBF && !Relocation::isPCRelative(RType) &&
-        (!ReferencedBF || (ReferencedBF->getAddress() != Address))) {
-      if (const BinaryFunction *RogueBF =
-              BC->getBinaryFunctionAtAddress(Address + 1)) {
-        // Do an extra check that the function was referenced previously.
-        // It's a linear search, but it should rarely happen.
-        bool Found = false;
-        for (const auto &RelKV : ContainingBF->Relocations) {
-          const Relocation &Rel = RelKV.second;
-          if (Rel.Symbol == RogueBF->getSymbol() &&
-              !Relocation::isPCRelative(Rel.Type)) {
-            Found = true;
-            break;
-          }
-        }
-
-        if (Found) {
-          errs() << "BOLT-WARNING: detected possible compiler "
-                    "de-virtualization bug: -1 addend used with "
-                    "non-pc-relative relocation against function "
-                 << *RogueBF << " in function " << *ContainingBF << '\n';
-          continue;
-        }
-      }
-    }
-
-    if (ForceRelocation) {
-      std::string Name = Relocation::isGOT(RType) ? "Zero" : SymbolName;
-      ReferencedSymbol = BC->registerNameAtAddress(Name, 0, 0, 0);
-      SymbolAddress = 0;
-      if (Relocation::isGOT(RType))
-        Addend = Address;
-      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: forcing relocation against symbol "
-                        << SymbolName << " with addend " << Addend << '\n');
-    } else if (ReferencedBF) {
-      ReferencedSymbol = ReferencedBF->getSymbol();
-      uint64_t RefFunctionOffset = 0;
-
-      // Adjust the point of reference to a code location inside a function.
-      if (ReferencedBF->containsAddress(Address, /*UseMaxSize = */true)) {
-        RefFunctionOffset = Address - ReferencedBF->getAddress();
-        if (RefFunctionOffset) {
-          if (ContainingBF && ContainingBF != ReferencedBF) {
-            ReferencedSymbol =
-                ReferencedBF->addEntryPointAtOffset(RefFunctionOffset);
-          } else {
-            ReferencedSymbol =
-                ReferencedBF->getOrCreateLocalLabel(Address,
-                                                    /*CreatePastEnd =*/true);
-            ReferencedBF->registerReferencedOffset(RefFunctionOffset);
-          }
-          if (opts::Verbosity > 1 &&
-              !BinarySection(*BC, RelocatedSection).isReadOnly())
-            errs() << "BOLT-WARNING: writable reference into the middle of "
-                   << "the function " << *ReferencedBF
-                   << " detected at address 0x"
-                   << Twine::utohexstr(Rel.getOffset()) << '\n';
-        }
-        SymbolAddress = Address;
-        Addend = 0;
-      }
-      LLVM_DEBUG(
-        dbgs() << "  referenced function " << *ReferencedBF;
-        if (Address != ReferencedBF->getAddress())
-          dbgs() << " at offset 0x" << Twine::utohexstr(RefFunctionOffset);
-        dbgs() << '\n'
-      );
-    } else {
-      if (IsToCode && SymbolAddress) {
-        // This can happen e.g. with PIC-style jump tables.
-        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: no corresponding function for "
-                             "relocation against code\n");
-      }
-
-      // In AArch64 there are zero reasons to keep a reference to the
-      // "original" symbol plus addend. The original symbol is probably just a
-      // section symbol. If we are here, this means we are probably accessing
-      // data, so it is imperative to keep the original address.
-      if (IsAArch64) {
-        SymbolName = ("SYMBOLat0x" + Twine::utohexstr(Address)).str();
-        SymbolAddress = Address;
-        Addend = 0;
-      }
-
-      if (BinaryData *BD = BC->getBinaryDataContainingAddress(SymbolAddress)) {
-        // Note: this assertion is trying to check sanity of BinaryData objects
-        // but AArch64 has inferred and incomplete object locations coming from
-        // GOT/TLS or any other non-trivial relocation (that requires creation
-        // of sections and whose symbol address is not really what should be
-        // encoded in the instruction). So we essentially disabled this check
-        // for AArch64 and live with bogus names for objects.
-        assert((IsAArch64 || IsSectionRelocation ||
-                BD->nameStartsWith(SymbolName) ||
-                BD->nameStartsWith("PG" + SymbolName) ||
-                (BD->nameStartsWith("ANONYMOUS") &&
-                 (BD->getSectionName().startswith(".plt") ||
-                  BD->getSectionName().endswith(".plt")))) &&
-               "BOLT symbol names of all non-section relocations must match "
-               "up with symbol names referenced in the relocation");
-
-        if (IsSectionRelocation)
-          BC->markAmbiguousRelocations(*BD, Address);
-
-        ReferencedSymbol = BD->getSymbol();
-        Addend += (SymbolAddress - BD->getAddress());
-        SymbolAddress = BD->getAddress();
-        assert(Address == SymbolAddress + Addend);
-      } else {
-        // These are mostly local data symbols but undefined symbols
-        // in relocation sections can get through here too, from .plt.
-        assert(
-            (IsAArch64 || IsSectionRelocation ||
-             BC->getSectionNameForAddress(SymbolAddress)->startswith(".plt")) &&
-            "known symbols should not resolve to anonymous locals");
-
-        if (IsSectionRelocation) {
-          ReferencedSymbol =
-              BC->getOrCreateGlobalSymbol(SymbolAddress, "SYMBOLat");
-        } else {
-          SymbolRef Symbol = *Rel.getSymbol();
-          const uint64_t SymbolSize =
-              IsAArch64 ? 0 : ELFSymbolRef(Symbol).getSize();
-          const uint64_t SymbolAlignment =
-              IsAArch64 ? 1 : Symbol.getAlignment();
-          const uint32_t SymbolFlags = cantFail(Symbol.getFlags());
-          std::string Name;
-          if (SymbolFlags & SymbolRef::SF_Global) {
-            Name = SymbolName;
-          } else {
-            if (StringRef(SymbolName)
-                    .startswith(BC->AsmInfo->getPrivateGlobalPrefix()))
-              Name = NR.uniquify("PG" + SymbolName);
-            else
-              Name = NR.uniquify(SymbolName);
-          }
-          ReferencedSymbol = BC->registerNameAtAddress(
-              Name, SymbolAddress, SymbolSize, SymbolAlignment, SymbolFlags);
-        }
-
-        if (IsSectionRelocation) {
-          BinaryData *BD = BC->getBinaryDataByName(ReferencedSymbol->getName());
-          BC->markAmbiguousRelocations(*BD, Address);
-        }
-      }
-    }
-
-    auto checkMaxDataRelocations = [&]() {
-      ++NumDataRelocations;
-      if (opts::MaxDataRelocations &&
-          NumDataRelocations + 1 == opts::MaxDataRelocations) {
-        LLVM_DEBUG(dbgs() << "BOLT-DEBUG: processing ending on data relocation "
-                          << NumDataRelocations << ": ");
-        printRelocationInfo(Rel, ReferencedSymbol->getName(), SymbolAddress,
-                            Addend, ExtractedValue);
-      }
-
-      return (!opts::MaxDataRelocations ||
-              NumDataRelocations < opts::MaxDataRelocations);
-    };
-
-    if ((ReferencedSection && refersToReorderedSection(ReferencedSection)) ||
-        (opts::ForceToDataRelocations && checkMaxDataRelocations()))
-      ForceRelocation = true;
-
-    if (IsFromCode) {
+  // Special handling of PC-relative relocations.
+  if (!IsAArch64 && Relocation::isPCRelative(RType)) {
+    if (!IsFromCode && IsToCode) {
+      // PC-relative relocations from data to code are tricky since the
+      // original information is typically lost after linking, even with
+      // '--emit-relocs'. Such relocations are normally used by PIC-style
+      // jump tables and they reference both the jump table and jump
+      // targets by computing the difference between the two. If we blindly
+      // apply the relocation, it will appear that it references an arbitrary
+      // location in the code, possibly in a different function from the one
+      // containing the jump table.
+      //
+      // For that reason, we only register the fact that there is a
+      // PC-relative relocation at a given address against the code.
+      // The actual referenced label/address will be determined during jump
+      // table analysis.
+      BC->addPCRelativeDataRelocation(Rel.getOffset());
+    } else if (ContainingBF && !IsSectionRelocation && ReferencedSymbol) {
+      // If we know the referenced symbol, register the relocation from
+      // the code. It's required  to properly handle cases where
+      // "symbol + addend" references an object different from "symbol".
       ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol, RType,
                                   Addend, ExtractedValue);
-    } else if (IsToCode || ForceRelocation) {
-      BC->addRelocation(Rel.getOffset(), ReferencedSymbol, RType, Addend,
-                        ExtractedValue);
     } else {
-      LLVM_DEBUG(
-          dbgs() << "BOLT-DEBUG: ignoring relocation from data to data\n");
+      LLVM_DEBUG({
+        dbgs() << "BOLT-DEBUG: not creating PC-relative relocation at"
+               << formatv("{0:x} for {1}\n", Rel.getOffset(), SymbolName);
+      });
     }
+
+    return;
+  }
+
+  bool ForceRelocation = BC->forceSymbolRelocations(SymbolName);
+  if (BC->isAArch64() && Relocation::isGOT(RType))
+    ForceRelocation = true;
+
+  if (!ReferencedSection && !ForceRelocation) {
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: cannot determine referenced section.\n");
+    return;
+  }
+
+  // Occasionally we may see a reference past the last byte of the function
+  // typically as a result of __builtin_unreachable(). Check it here.
+  BinaryFunction *ReferencedBF = BC->getBinaryFunctionContainingAddress(
+      Address, /*CheckPastEnd*/ true, /*UseMaxSize*/ IsAArch64);
+
+  if (!IsSectionRelocation) {
+    if (BinaryFunction *BF =
+            BC->getBinaryFunctionContainingAddress(SymbolAddress)) {
+      if (BF != ReferencedBF) {
+        // It's possible we are referencing a function without referencing any
+        // code, e.g. when taking a bitmask action on a function address.
+        errs() << "BOLT-WARNING: non-standard function reference (e.g. bitmask)"
+               << formatv(" detected against function {0} from ", *BF);
+        if (IsFromCode)
+          errs() << formatv("function {0}\n", *ContainingBF);
+        else
+          errs() << formatv("data section at {0:x}\n", Rel.getOffset());
+        LLVM_DEBUG(printRelocationInfo(Rel, SymbolName, SymbolAddress, Addend,
+                                       ExtractedValue));
+        ReferencedBF = BF;
+      }
+    }
+  } else if (ReferencedBF) {
+    assert(ReferencedSection && "section expected for section relocation");
+    if (*ReferencedBF->getOriginSection() != *ReferencedSection) {
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ignoring false function reference\n");
+      ReferencedBF = nullptr;
+    }
+  }
+
+  // Workaround for a member function pointer de-virtualization bug. We check
+  // if a non-pc-relative relocation in the code is pointing to (fptr - 1).
+  if (IsToCode && ContainingBF && !Relocation::isPCRelative(RType) &&
+      (!ReferencedBF || (ReferencedBF->getAddress() != Address))) {
+    if (const BinaryFunction *RogueBF =
+            BC->getBinaryFunctionAtAddress(Address + 1)) {
+      // Do an extra check that the function was referenced previously.
+      // It's a linear search, but it should rarely happen.
+      bool Found =
+          llvm::any_of(llvm::make_second_range(ContainingBF->Relocations),
+                       [&](const Relocation &Rel) {
+                         return Rel.Symbol == RogueBF->getSymbol() &&
+                                !Relocation::isPCRelative(Rel.Type);
+                       });
+
+      if (Found) {
+        errs() << "BOLT-WARNING: detected possible compiler de-virtualization "
+                  "bug: -1 addend used with non-pc-relative relocation against "
+               << formatv("function {0} in function {1}\n", *RogueBF,
+                          *ContainingBF);
+        return;
+      }
+    }
+  }
+
+  if (ForceRelocation) {
+    std::string Name = Relocation::isGOT(RType) ? "Zero" : SymbolName;
+    ReferencedSymbol = BC->registerNameAtAddress(Name, 0, 0, 0);
+    SymbolAddress = 0;
+    if (Relocation::isGOT(RType))
+      Addend = Address;
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: forcing relocation against symbol "
+                      << SymbolName << " with addend " << Addend << '\n');
+  } else if (ReferencedBF) {
+    ReferencedSymbol = ReferencedBF->getSymbol();
+    uint64_t RefFunctionOffset = 0;
+
+    // Adjust the point of reference to a code location inside a function.
+    if (ReferencedBF->containsAddress(Address, /*UseMaxSize = */ true)) {
+      RefFunctionOffset = Address - ReferencedBF->getAddress();
+      if (RefFunctionOffset) {
+        if (ContainingBF && ContainingBF != ReferencedBF) {
+          ReferencedSymbol =
+              ReferencedBF->addEntryPointAtOffset(RefFunctionOffset);
+        } else {
+          ReferencedSymbol =
+              ReferencedBF->getOrCreateLocalLabel(Address,
+                                                  /*CreatePastEnd =*/true);
+          ReferencedBF->registerReferencedOffset(RefFunctionOffset);
+        }
+        if (opts::Verbosity > 1 &&
+            !BinarySection(*BC, RelocatedSection).isReadOnly())
+          errs() << "BOLT-WARNING: writable reference into the middle of the "
+                 << formatv("function {0} detected at address {1:x}\n",
+                            *ReferencedBF, Rel.getOffset());
+      }
+      SymbolAddress = Address;
+      Addend = 0;
+    }
+    LLVM_DEBUG({
+      dbgs() << "  referenced function " << *ReferencedBF;
+      if (Address != ReferencedBF->getAddress())
+        dbgs() << formatv(" at offset {0:x}", RefFunctionOffset);
+      dbgs() << '\n';
+    });
+  } else {
+    if (IsToCode && SymbolAddress) {
+      // This can happen e.g. with PIC-style jump tables.
+      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: no corresponding function for "
+                           "relocation against code\n");
+    }
+
+    // In AArch64 there are zero reasons to keep a reference to the
+    // "original" symbol plus addend. The original symbol is probably just a
+    // section symbol. If we are here, this means we are probably accessing
+    // data, so it is imperative to keep the original address.
+    if (IsAArch64) {
+      SymbolName = formatv("SYMBOLat{0:x}", Address);
+      SymbolAddress = Address;
+      Addend = 0;
+    }
+
+    if (BinaryData *BD = BC->getBinaryDataContainingAddress(SymbolAddress)) {
+      // Note: this assertion is trying to check sanity of BinaryData objects
+      // but AArch64 has inferred and incomplete object locations coming from
+      // GOT/TLS or any other non-trivial relocation (that requires creation
+      // of sections and whose symbol address is not really what should be
+      // encoded in the instruction). So we essentially disabled this check
+      // for AArch64 and live with bogus names for objects.
+      assert((IsAArch64 || IsSectionRelocation ||
+              BD->nameStartsWith(SymbolName) ||
+              BD->nameStartsWith("PG" + SymbolName) ||
+              (BD->nameStartsWith("ANONYMOUS") &&
+               (BD->getSectionName().startswith(".plt") ||
+                BD->getSectionName().endswith(".plt")))) &&
+             "BOLT symbol names of all non-section relocations must match up "
+             "with symbol names referenced in the relocation");
+
+      if (IsSectionRelocation)
+        BC->markAmbiguousRelocations(*BD, Address);
+
+      ReferencedSymbol = BD->getSymbol();
+      Addend += (SymbolAddress - BD->getAddress());
+      SymbolAddress = BD->getAddress();
+      assert(Address == SymbolAddress + Addend);
+    } else {
+      // These are mostly local data symbols but undefined symbols
+      // in relocation sections can get through here too, from .plt.
+      assert(
+          (IsAArch64 || IsSectionRelocation ||
+           BC->getSectionNameForAddress(SymbolAddress)->startswith(".plt")) &&
+          "known symbols should not resolve to anonymous locals");
+
+      if (IsSectionRelocation) {
+        ReferencedSymbol =
+            BC->getOrCreateGlobalSymbol(SymbolAddress, "SYMBOLat");
+      } else {
+        SymbolRef Symbol = *Rel.getSymbol();
+        const uint64_t SymbolSize =
+            IsAArch64 ? 0 : ELFSymbolRef(Symbol).getSize();
+        const uint64_t SymbolAlignment = IsAArch64 ? 1 : Symbol.getAlignment();
+        const uint32_t SymbolFlags = cantFail(Symbol.getFlags());
+        std::string Name;
+        if (SymbolFlags & SymbolRef::SF_Global) {
+          Name = SymbolName;
+        } else {
+          if (StringRef(SymbolName)
+                  .startswith(BC->AsmInfo->getPrivateGlobalPrefix()))
+            Name = NR.uniquify("PG" + SymbolName);
+          else
+            Name = NR.uniquify(SymbolName);
+        }
+        ReferencedSymbol = BC->registerNameAtAddress(
+            Name, SymbolAddress, SymbolSize, SymbolAlignment, SymbolFlags);
+      }
+
+      if (IsSectionRelocation) {
+        BinaryData *BD = BC->getBinaryDataByName(ReferencedSymbol->getName());
+        BC->markAmbiguousRelocations(*BD, Address);
+      }
+    }
+  }
+
+  auto checkMaxDataRelocations = [&]() {
+    ++NumDataRelocations;
+    if (opts::MaxDataRelocations &&
+        NumDataRelocations + 1 == opts::MaxDataRelocations) {
+      LLVM_DEBUG({
+        dbgs() << "BOLT-DEBUG: processing ending on data relocation "
+               << NumDataRelocations << ": ";
+      });
+      printRelocationInfo(Rel, ReferencedSymbol->getName(), SymbolAddress,
+                          Addend, ExtractedValue);
+    }
+
+    return (!opts::MaxDataRelocations ||
+            NumDataRelocations < opts::MaxDataRelocations);
+  };
+
+  if ((ReferencedSection && refersToReorderedSection(ReferencedSection)) ||
+      (opts::ForceToDataRelocations && checkMaxDataRelocations()))
+    ForceRelocation = true;
+
+  if (IsFromCode) {
+    ContainingBF->addRelocation(Rel.getOffset(), ReferencedSymbol, RType,
+                                Addend, ExtractedValue);
+  } else if (IsToCode || ForceRelocation) {
+    BC->addRelocation(Rel.getOffset(), ReferencedSymbol, RType, Addend,
+                      ExtractedValue);
+  } else {
+    LLVM_DEBUG(dbgs() << "BOLT-DEBUG: ignoring relocation from data to data\n");
   }
 }
 
@@ -2737,7 +2743,7 @@ void RewriteInstance::selectFunctionsToProcess() {
           Function.forEachName([&ForceFunctionsNR](StringRef Name) {
             return ForceFunctionsNR.count(Name.str());
           });
-      return Match.hasValue();
+      return Match.has_value();
     }
 
     for (std::string &Name : opts::SkipFunctionNames)
@@ -2805,13 +2811,11 @@ void RewriteInstance::preprocessProfileData() {
   if (Error E = ProfileReader->preprocessProfile(*BC.get()))
     report_error("cannot pre-process profile", std::move(E));
 
-  if (!BC->hasSymbolsWithFileName() && ProfileReader->hasLocalsWithFileName() &&
-      !opts::AllowStripped) {
+  if (!BC->hasSymbolsWithFileName() && ProfileReader->hasLocalsWithFileName()) {
     errs() << "BOLT-ERROR: input binary does not have local file symbols "
               "but profile data includes function names with embedded file "
               "names. It appears that the input binary was stripped while a "
-              "profiled binary was not. If you know what you are doing and "
-              "wish to proceed, use -allow-stripped option.\n";
+              "profiled binary was not\n";
     exit(1);
   }
 }
@@ -2839,6 +2843,11 @@ void RewriteInstance::processProfileData() {
 
   if (!opts::SaveProfile.empty()) {
     YAMLProfileWriter PW(opts::SaveProfile);
+    PW.writeProfile(*this);
+  }
+  if (opts::AggregateOnly &&
+      opts::ProfileFormat == opts::ProfileFormatKind::PF_YAML) {
+    YAMLProfileWriter PW(opts::OutputFilename);
     PW.writeProfile(*this);
   }
 
@@ -3182,12 +3191,15 @@ void RewriteInstance::emitAndLink() {
     if (Section)
       BC->deregisterSection(*Section);
     assert(Function->getOriginSectionName() && "expected origin section");
-    Function->CodeSectionName = std::string(*Function->getOriginSectionName());
-    if (Function->isSplit()) {
-      if (ErrorOr<BinarySection &> ColdSection = Function->getColdCodeSection())
+    Function->CodeSectionName = Function->getOriginSectionName()->str();
+    for (const FunctionFragment &FF :
+         Function->getLayout().getSplitFragments()) {
+      if (ErrorOr<BinarySection &> ColdSection =
+              Function->getCodeSection(FF.getFragmentNum()))
         BC->deregisterSection(*ColdSection);
-      Function->ColdCodeSectionName = std::string(getBOLTTextSectionName());
     }
+    if (Function->getLayout().isSplit())
+      Function->setColdCodeSectionName(getBOLTTextSectionName());
   }
 
   if (opts::PrintCacheMetrics) {
@@ -3582,11 +3594,6 @@ std::vector<BinarySection *> RewriteInstance::getCodeSections() {
 
 void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
   if (BC->HasRelocations) {
-    ErrorOr<BinarySection &> TextSection =
-        BC->getUniqueSectionByName(BC->getMainCodeSectionName());
-    assert(TextSection && ".text section not found in output");
-    assert(TextSection->hasValidSectionID() && ".text section should be valid");
-
     // Map sections for functions with pre-assigned addresses.
     for (BinaryFunction *InjectedFunction : BC->getInjectedBinaryFunctions()) {
       const uint64_t OutputAddress = InjectedFunction->getOutputAddress();
@@ -3626,7 +3633,9 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
       }
 
       // Make sure we allocate enough space for huge pages.
-      if (opts::HotText) {
+      ErrorOr<BinarySection &> TextSection =
+          BC->getUniqueSectionByName(BC->getMainCodeSectionName());
+      if (opts::HotText && TextSection && TextSection->hasValidSectionID()) {
         uint64_t HotTextEnd =
             TextSection->getOutputAddress() + TextSection->getOutputSize();
         HotTextEnd = alignTo(HotTextEnd, BC->PageAlign);
@@ -3723,34 +3732,38 @@ void RewriteInstance::mapCodeSections(RuntimeDyld &RTDyld) {
     if (!Function.isSplit())
       continue;
 
-    ErrorOr<BinarySection &> ColdSection = Function.getColdCodeSection();
+    assert(Function.getLayout().isHotColdSplit() &&
+           "Cannot allocate more than two fragments per function in "
+           "non-relocation mode.");
+
+    FunctionFragment &FF =
+        Function.getLayout().getFragment(FragmentNum::cold());
+    ErrorOr<BinarySection &> ColdSection =
+        Function.getCodeSection(FF.getFragmentNum());
     assert(ColdSection && "cannot find section for cold part");
     // Cold fragments are aligned at 16 bytes.
     NextAvailableAddress = alignTo(NextAvailableAddress, 16);
-    BinaryFunction::FragmentInfo &ColdPart = Function.cold();
     if (TooLarge) {
       // The corresponding FDE will refer to address 0.
-      ColdPart.setAddress(0);
-      ColdPart.setImageAddress(0);
-      ColdPart.setImageSize(0);
-      ColdPart.setFileOffset(0);
+      FF.setAddress(0);
+      FF.setImageAddress(0);
+      FF.setImageSize(0);
+      FF.setFileOffset(0);
     } else {
-      ColdPart.setAddress(NextAvailableAddress);
-      ColdPart.setImageAddress(ColdSection->getAllocAddress());
-      ColdPart.setImageSize(ColdSection->getOutputSize());
-      ColdPart.setFileOffset(getFileOffsetForAddress(NextAvailableAddress));
-      ColdSection->setOutputAddress(ColdPart.getAddress());
+      FF.setAddress(NextAvailableAddress);
+      FF.setImageAddress(ColdSection->getAllocAddress());
+      FF.setImageSize(ColdSection->getOutputSize());
+      FF.setFileOffset(getFileOffsetForAddress(NextAvailableAddress));
+      ColdSection->setOutputAddress(FF.getAddress());
     }
 
-    LLVM_DEBUG(dbgs() << "BOLT: mapping cold fragment 0x"
-                      << Twine::utohexstr(ColdPart.getImageAddress())
-                      << " to 0x" << Twine::utohexstr(ColdPart.getAddress())
-                      << " with size "
-                      << Twine::utohexstr(ColdPart.getImageSize()) << '\n');
-    RTDyld.reassignSectionAddress(ColdSection->getSectionID(),
-                                  ColdPart.getAddress());
+    LLVM_DEBUG(
+        dbgs() << formatv(
+            "BOLT: mapping cold fragment {0:x+} to {1:x+} with size {2:x+}\n",
+            FF.getImageAddress(), FF.getAddress(), FF.getImageSize()));
+    RTDyld.reassignSectionAddress(ColdSection->getSectionID(), FF.getAddress());
 
-    NextAvailableAddress += ColdPart.getImageSize();
+    NextAvailableAddress += FF.getImageSize();
   }
 
   // Add the new text section aggregating all existing code sections.
@@ -3784,6 +3797,16 @@ void RewriteInstance::mapDataSections(RuntimeDyld &RTDyld) {
       ".gcc_except_table", ".rodata", ".rodata.cold"};
   if (RuntimeLibrary *RtLibrary = BC->getRuntimeLibrary())
     RtLibrary->addRuntimeLibSections(Sections);
+
+  if (!EHFrameSection || !EHFrameSection->isFinalized()) {
+    ErrorOr<BinarySection &> OldEHFrameSection =
+        BC->getUniqueSectionByName(Twine(getOrgSecPrefix(), ".eh_frame").str());
+    if (OldEHFrameSection) {
+      RTDyld.reassignSectionAddress(OldEHFrameSection->getSectionID(),
+                                    NextAvailableAddress);
+      BC->deregisterSection(*OldEHFrameSection);
+    }
+  }
 
   for (std::string &SectionName : Sections) {
     ErrorOr<BinarySection &> Section = BC->getUniqueSectionByName(SectionName);
@@ -4163,7 +4186,7 @@ void RewriteInstance::encodeBATSection() {
   std::string DescStr;
   raw_string_ostream DescOS(DescStr);
 
-  BAT->write(DescOS);
+  BAT->write(*BC, DescOS);
   DescOS.flush();
 
   const std::string BoltInfo =
@@ -4511,18 +4534,23 @@ void RewriteInstance::updateELFSymbolTable(
       ICFSymbol.st_shndx = ICFParent->getCodeSection()->getIndex();
       Symbols.emplace_back(ICFSymbol);
     }
-    if (Function.isSplit() && Function.cold().getAddress()) {
-      ELFSymTy NewColdSym = FunctionSymbol;
-      SmallVector<char, 256> Buf;
-      NewColdSym.st_name =
-          AddToStrTab(Twine(cantFail(FunctionSymbol.getName(StringSection)))
-                          .concat(".cold.0")
-                          .toStringRef(Buf));
-      NewColdSym.st_shndx = Function.getColdCodeSection()->getIndex();
-      NewColdSym.st_value = Function.cold().getAddress();
-      NewColdSym.st_size = Function.cold().getImageSize();
-      NewColdSym.setBindingAndType(ELF::STB_LOCAL, ELF::STT_FUNC);
-      Symbols.emplace_back(NewColdSym);
+    if (Function.isSplit()) {
+      for (const FunctionFragment &FF :
+           Function.getLayout().getSplitFragments()) {
+        if (FF.getAddress()) {
+          ELFSymTy NewColdSym = FunctionSymbol;
+          const SmallString<256> SymbolName = formatv(
+              "{0}.cold.{1}", cantFail(FunctionSymbol.getName(StringSection)),
+              FF.getFragmentNum().get() - 1);
+          NewColdSym.st_name = AddToStrTab(SymbolName);
+          NewColdSym.st_shndx =
+              Function.getCodeSection(FF.getFragmentNum())->getIndex();
+          NewColdSym.st_value = FF.getAddress();
+          NewColdSym.st_size = FF.getImageSize();
+          NewColdSym.setBindingAndType(ELF::STB_LOCAL, ELF::STT_FUNC);
+          Symbols.emplace_back(NewColdSym);
+        }
+      }
     }
     if (Function.hasConstantIsland()) {
       uint64_t DataMark = Function.getOutputDataAddress();
@@ -4637,17 +4665,35 @@ void RewriteInstance::updateELFSymbolTable(
               : nullptr;
 
       if (Function && Function->isEmitted()) {
+        assert(Function->getLayout().isHotColdSplit() &&
+               "Adding symbols based on cold fragment when there are more than "
+               "2 fragments");
         const uint64_t OutputAddress =
             Function->translateInputToOutputAddress(Symbol.st_value);
 
         NewSymbol.st_value = OutputAddress;
         // Force secondary entry points to have zero size.
         NewSymbol.st_size = 0;
+
+        // Find fragment containing entrypoint
+        FunctionLayout::fragment_const_iterator FF = llvm::find_if(
+            Function->getLayout().fragments(), [&](const FunctionFragment &FF) {
+              uint64_t Lo = FF.getAddress();
+              uint64_t Hi = Lo + FF.getImageSize();
+              return Lo <= OutputAddress && OutputAddress < Hi;
+            });
+
+        if (FF == Function->getLayout().fragment_end()) {
+          assert(
+              OutputAddress >= Function->getCodeSection()->getOutputAddress() &&
+              OutputAddress < (Function->getCodeSection()->getOutputAddress() +
+                               Function->getCodeSection()->getOutputSize()) &&
+              "Cannot locate fragment containg secondary entrypoint");
+          FF = Function->getLayout().fragment_begin();
+        }
+
         NewSymbol.st_shndx =
-            OutputAddress >= Function->cold().getAddress() &&
-                    OutputAddress < Function->cold().getImageSize()
-                ? Function->getColdCodeSection()->getIndex()
-                : Function->getCodeSection()->getIndex();
+            Function->getCodeSection(FF->getFragmentNum())->getIndex();
       } else {
         // Check if the symbol belongs to moved data object and update it.
         BinaryData *BD = opts::ReorderData.empty()
@@ -4694,26 +4740,28 @@ void RewriteInstance::updateELFSymbolTable(
     Expected<StringRef> SymbolName = Symbol.getName(StringSection);
     assert(SymbolName && "cannot get symbol name");
 
-    auto updateSymbolValue = [&](const StringRef Name, unsigned &IsUpdated) {
-      NewSymbol.st_value = getNewValueForSymbol(Name);
+    auto updateSymbolValue = [&](const StringRef Name,
+                                 Optional<uint64_t> Value = NoneType()) {
+      NewSymbol.st_value = Value ? *Value : getNewValueForSymbol(Name);
       NewSymbol.st_shndx = ELF::SHN_ABS;
       outs() << "BOLT-INFO: setting " << Name << " to 0x"
              << Twine::utohexstr(NewSymbol.st_value) << '\n';
-      ++IsUpdated;
     };
 
     if (opts::HotText &&
-        (*SymbolName == "__hot_start" || *SymbolName == "__hot_end"))
-      updateSymbolValue(*SymbolName, NumHotTextSymsUpdated);
-
-    if (opts::HotData &&
-        (*SymbolName == "__hot_data_start" || *SymbolName == "__hot_data_end"))
-      updateSymbolValue(*SymbolName, NumHotDataSymsUpdated);
-
-    if (*SymbolName == "_end") {
-      unsigned Ignored;
-      updateSymbolValue(*SymbolName, Ignored);
+        (*SymbolName == "__hot_start" || *SymbolName == "__hot_end")) {
+      updateSymbolValue(*SymbolName);
+      ++NumHotTextSymsUpdated;
     }
+
+    if (opts::HotData && (*SymbolName == "__hot_data_start" ||
+                          *SymbolName == "__hot_data_end")) {
+      updateSymbolValue(*SymbolName);
+      ++NumHotDataSymsUpdated;
+    }
+
+    if (*SymbolName == "_end")
+      updateSymbolValue(*SymbolName, NextAvailableAddress);
 
     if (IsDynSym)
       Write((&Symbol - cantFail(Obj.symbols(&SymTabSection)).begin()) *
@@ -4744,13 +4792,18 @@ void RewriteInstance::updateELFSymbolTable(
     Symbols.emplace_back(NewSymbol);
 
     if (Function->isSplit()) {
+      assert(Function->getLayout().isHotColdSplit() &&
+             "Adding symbols based on cold fragment when there are more than "
+             "2 fragments");
       ELFSymTy NewColdSym = NewSymbol;
       NewColdSym.setType(ELF::STT_NOTYPE);
       SmallVector<char, 256> Buf;
       NewColdSym.st_name = AddToStrTab(
           Twine(Function->getPrintName()).concat(".cold.0").toStringRef(Buf));
-      NewColdSym.st_value = Function->cold().getAddress();
-      NewColdSym.st_size = Function->cold().getImageSize();
+      const FunctionFragment &ColdFF =
+          Function->getLayout().getFragment(FragmentNum::cold());
+      NewColdSym.st_value = ColdFF.getAddress();
+      NewColdSym.st_size = ColdFF.getImageSize();
       Symbols.emplace_back(NewColdSym);
     }
   }
@@ -5054,7 +5107,7 @@ void RewriteInstance::patchELFDynamic(ELFObjectFile<ELFT> *File) {
 
   // Locate DYNAMIC by looking through program headers.
   uint64_t DynamicOffset = 0;
-  const Elf_Phdr *DynamicPhdr = 0;
+  const Elf_Phdr *DynamicPhdr = nullptr;
   for (const Elf_Phdr &Phdr : cantFail(Obj.program_headers())) {
     if (Phdr.p_type == ELF::PT_DYNAMIC) {
       DynamicOffset = Phdr.p_offset;
@@ -5139,7 +5192,7 @@ Error RewriteInstance::readELFDynamic(ELFObjectFile<ELFT> *File) {
   using Elf_Dyn = typename ELFFile<ELFT>::Elf_Dyn;
 
   // Locate DYNAMIC by looking through program headers.
-  const Elf_Phdr *DynamicPhdr = 0;
+  const Elf_Phdr *DynamicPhdr = nullptr;
   for (const Elf_Phdr &Phdr : cantFail(Obj.program_headers())) {
     if (Phdr.p_type == ELF::PT_DYNAMIC) {
       DynamicPhdr = &Phdr;
@@ -5276,9 +5329,22 @@ void RewriteInstance::rewriteFile() {
       continue;
     }
 
-    if (Function->isSplit() && (Function->cold().getImageAddress() == 0 ||
-                                Function->cold().getImageSize() == 0))
+    const auto HasAddress = [](const FunctionFragment &FF) {
+      return FF.empty() ||
+             (FF.getImageAddress() != 0 && FF.getImageSize() != 0);
+    };
+    const bool SplitFragmentsHaveAddress =
+        llvm::all_of(Function->getLayout().getSplitFragments(), HasAddress);
+    if (Function->isSplit() && !SplitFragmentsHaveAddress) {
+      const auto HasNoAddress = [](const FunctionFragment &FF) {
+        return FF.getImageAddress() == 0 && FF.getImageSize() == 0;
+      };
+      assert(llvm::all_of(Function->getLayout().getSplitFragments(),
+                          HasNoAddress) &&
+             "Some split fragments have an address while others do not");
+      (void)HasNoAddress;
       continue;
+    }
 
     OverwrittenScore += Function->getFunctionScore();
     // Overwrite function in the output file.
@@ -5310,12 +5376,14 @@ void RewriteInstance::rewriteFile() {
 
     // Write cold part
     if (opts::Verbosity >= 2)
-      outs() << "BOLT: rewriting function \"" << *Function
-             << "\" (cold part)\n";
+      outs() << formatv("BOLT: rewriting function \"{0}\" (split parts)\n",
+                        *Function);
 
-    OS.pwrite(reinterpret_cast<char *>(Function->cold().getImageAddress()),
-              Function->cold().getImageSize(),
-              Function->cold().getFileOffset());
+    for (const FunctionFragment &FF :
+         Function->getLayout().getSplitFragments()) {
+      OS.pwrite(reinterpret_cast<char *>(FF.getImageAddress()),
+                FF.getImageSize(), FF.getFileOffset());
+    }
 
     ++CountOverwrittenFunctions;
     if (opts::MaxFunctions && CountOverwrittenFunctions == opts::MaxFunctions) {

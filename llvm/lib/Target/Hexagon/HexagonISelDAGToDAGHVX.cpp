@@ -1149,7 +1149,7 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
 
   // Check if we can shuffle vector halves around to get the used elements
   // into a single vector.
-  SmallVector<int,128> MaskH(SM.Mask.begin(), SM.Mask.end());
+  SmallVector<int, 128> MaskH(SM.Mask);
   SmallVector<unsigned, 4> SegList = getInputSegmentList(SM.Mask, SegLen);
   unsigned SegCount = SegList.size();
   SmallVector<unsigned, 4> SegMap = getOutputSegmentMap(SM.Mask, SegLen);
@@ -1271,11 +1271,11 @@ OpRef HvxSelector::packs(ShuffleMask SM, OpRef Va, OpRef Vb,
 
   ShuffleMask SMH(MaskH);
   assert(SMH.Mask.size() == VecLen);
-  SmallVector<int,128> MaskA(SMH.Mask.begin(), SMH.Mask.end());
+  SmallVector<int, 128> MaskA(SMH.Mask);
 
   if (SMH.MaxSrc - SMH.MinSrc >= static_cast<int>(HwLen)) {
     // valign(Lo=Va,Hi=Vb) won't work. Try swapping Va/Vb.
-    SmallVector<int,128> Swapped(SMH.Mask.begin(), SMH.Mask.end());
+    SmallVector<int, 128> Swapped(SMH.Mask);
     ShuffleVectorSDNode::commuteMask(Swapped);
     ShuffleMask SW(Swapped);
     if (SW.MaxSrc - SW.MinSrc < static_cast<int>(HwLen)) {
@@ -1998,7 +1998,7 @@ OpRef HvxSelector::perfect(ShuffleMask SM, OpRef Va, ResultStack &Results) {
   // a vector pair, but the two vectors in the pair are swapped.
   // The code below that identifies perfect shuffles will reject
   // it, unless the order is reversed.
-  SmallVector<int,128> MaskStorage(SM.Mask.begin(), SM.Mask.end());
+  SmallVector<int, 128> MaskStorage(SM.Mask);
   bool InvertedPair = false;
   if (HavePairs && SM.Mask[0] >= int(HwLen)) {
     for (int i = 0, e = SM.Mask.size(); i != e; ++i) {

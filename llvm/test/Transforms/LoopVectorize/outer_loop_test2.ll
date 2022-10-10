@@ -27,7 +27,7 @@
 ; CHECK: br i1 %[[ZeroTripChk]], label %[[InnerForPh:.*]], label %[[OuterInc:.*]]
 
 ; CHECK: [[InnerForPh]]:
-; CHECK: %[[WideAVal:.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %[[AAddr]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+; CHECK: %[[WideAVal:.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %[[AAddr]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
 ; CHECK: %[[VecIndTr:.*]] = trunc <4 x i64> %[[VecInd]] to <4 x i32>
 ; CHECK: br label %[[InnerForBody:.*]]
 
@@ -35,7 +35,7 @@
 ; CHECK: %[[InnerInd:.*]] = phi <4 x i64> [ zeroinitializer, %[[InnerForPh]] ], [ %[[InnerIndNext:.*]], %[[InnerForBody]] ]
 ; CHECK: %[[AccumPhi:.*]] = phi <4 x i32> [ %[[WideAVal]], %[[InnerForPh]] ], [ %[[AccumPhiNext:.*]], %[[InnerForBody]] ]
 ; CHECK: %[[BAddr:.*]] = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, <4 x i64> %[[InnerInd]]
-; CHECK: %[[WideBVal:.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %[[BAddr]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> undef)
+; CHECK: %[[WideBVal:.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0i32(<4 x i32*> %[[BAddr]], i32 4, <4 x i1> <i1 true, i1 true, i1 true, i1 true>, <4 x i32> poison)
 ; CHECK: %[[Add1:.*]] = add nsw <4 x i32> %[[WideBVal]], %[[VecIndTr]]
 ; CHECK: %[[AccumPhiNext]] = add nsw <4 x i32> %[[Add1]], %[[AccumPhi]]
 ; CHECK: %[[InnerIndNext]] = add nuw nsw <4 x i64> %[[InnerInd]], <i64 1, i64 1, i64 1, i64 1>

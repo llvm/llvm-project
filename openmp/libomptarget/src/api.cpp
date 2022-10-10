@@ -62,33 +62,24 @@ EXTERN void *llvm_omp_target_alloc_shared(size_t Size, int DeviceNum) {
   return targetAllocExplicit(Size, DeviceNum, TARGET_ALLOC_SHARED, __func__);
 }
 
+EXTERN void omp_target_free(void *Ptr, int DeviceNum) {
+  return targetFreeExplicit(Ptr, DeviceNum, TARGET_ALLOC_DEFAULT, __func__);
+}
+
+EXTERN void llvm_omp_target_free_device(void *Ptr, int DeviceNum) {
+  return targetFreeExplicit(Ptr, DeviceNum, TARGET_ALLOC_DEVICE, __func__);
+}
+
+EXTERN void llvm_omp_target_free_host(void *Ptr, int DeviceNum) {
+  return targetFreeExplicit(Ptr, DeviceNum, TARGET_ALLOC_HOST, __func__);
+}
+
+EXTERN void llvm_omp_target_free_shared(void *Ptre, int DeviceNum) {
+  return targetFreeExplicit(Ptre, DeviceNum, TARGET_ALLOC_SHARED, __func__);
+}
+
 EXTERN void *llvm_omp_target_dynamic_shared_alloc() { return nullptr; }
 EXTERN void *llvm_omp_get_dynamic_shared() { return nullptr; }
-
-EXTERN void omp_target_free(void *DevicePtr, int DeviceNum) {
-  TIMESCOPE();
-  DP("Call to omp_target_free for device %d and address " DPxMOD "\n",
-     DeviceNum, DPxPTR(DevicePtr));
-
-  if (!DevicePtr) {
-    DP("Call to omp_target_free with NULL ptr\n");
-    return;
-  }
-
-  if (DeviceNum == omp_get_initial_device()) {
-    free(DevicePtr);
-    DP("omp_target_free deallocated host ptr\n");
-    return;
-  }
-
-  if (!deviceIsReady(DeviceNum)) {
-    DP("omp_target_free returns, nothing to do\n");
-    return;
-  }
-
-  PM->Devices[DeviceNum]->deleteData(DevicePtr);
-  DP("omp_target_free deallocated device ptr\n");
-}
 
 EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
   TIMESCOPE();
@@ -125,13 +116,7 @@ EXTERN int omp_target_is_present(const void *Ptr, int DeviceNum) {
       Device.getTgtPtrBegin(const_cast<void *>(Ptr), 1, IsLast,
                             /*UpdateRefCount=*/false,
                             /*UseHoldRefCount=*/false, IsHostPtr);
-  int Rc = (TPR.TargetPointer != NULL);
-  // Under unified memory the host pointer can be returned by the
-  // getTgtPtrBegin() function which means that there is no device
-  // corresponding point for ptr. This function should return false
-  // in that situation.
-  if (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)
-    Rc = !IsHostPtr;
+  int Rc = TPR.isPresent();
   DP("Call to omp_target_is_present returns %d\n", Rc);
   return Rc;
 }

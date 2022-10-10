@@ -3,12 +3,12 @@
 ! This test checks the lowering of atomic read
 
 !CHECK: func @_QQmain() {
-!CHECK: %[[VAR_A:.*]] = fir.address_of(@_QFEa) : !fir.ref<!fir.char<1>>
-!CHECK: %[[VAR_B:.*]] = fir.address_of(@_QFEb) : !fir.ref<!fir.char<1>>
+!CHECK: %[[VAR_A:.*]] = fir.alloca !fir.char<1> {bindc_name = "a", uniq_name = "_QFEa"}
+!CHECK: %[[VAR_B:.*]] = fir.alloca !fir.char<1> {bindc_name = "b", uniq_name = "_QFEb"}
 !CHECK: %[[VAR_C:.*]] = fir.alloca !fir.logical<4> {bindc_name = "c", uniq_name = "_QFEc"}
 !CHECK: %[[VAR_D:.*]] = fir.alloca !fir.logical<4> {bindc_name = "d", uniq_name = "_QFEd"}
-!CHECK: %[[VAR_E:.*]] = fir.address_of(@_QFEe) : !fir.ref<!fir.char<1,8>>
-!CHECK: %[[VAR_F:.*]] = fir.address_of(@_QFEf) : !fir.ref<!fir.char<1,8>>
+!CHECK: %[[VAR_E:.*]] = fir.alloca !fir.char<1,8> {bindc_name = "e", uniq_name = "_QFEe"}
+!CHECK: %[[VAR_F:.*]] = fir.alloca !fir.char<1,8> {bindc_name = "f", uniq_name = "_QFEf"}
 !CHECK: %[[VAR_G:.*]] = fir.alloca f32 {bindc_name = "g", uniq_name = "_QFEg"}
 !CHECK: %[[VAR_H:.*]] = fir.alloca f32 {bindc_name = "h", uniq_name = "_QFEh"}
 !CHECK: %[[VAR_X:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFEx"}

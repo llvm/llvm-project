@@ -30,13 +30,13 @@ declare void @doThingWithoutReading() readnone
 declare i8 @getValue() readnone
 declare i1 @getBool() readnone
 
-define hidden void @testcase(i8* %Arg) {
+define hidden void @testcase(ptr %Arg) {
 Entry:
   call void @doThingWithoutReading()
   %Val.Entry = call i8 @getValue()
 ; CHECK: 1 = MemoryDef(liveOnEntry)
 ; CHECK-NEXT: store i8 %Val.Entry
-  store i8 %Val.Entry, i8* %Arg
+  store i8 %Val.Entry, ptr %Arg
   call void @doThingWithoutReading()
   br label %OuterLoop
 
@@ -46,7 +46,7 @@ OuterLoop:
   %Val.Outer = call i8 @getValue()
 ; CHECK: 2 = MemoryDef(5)
 ; CHECK-NEXT: store i8 %Val.Outer
-  store i8 %Val.Outer, i8* %Arg
+  store i8 %Val.Outer, ptr %Arg
   call void @doThingWithoutReading()
   br label %InnerLoop
 
@@ -54,11 +54,11 @@ InnerLoop:
 ; CHECK: 4 = MemoryPhi({OuterLoop,2},{InnerLoop,3})
 ; CHECK-NEXT: ; MemoryUse(4)
 ; CHECK-NEXT: %StartingAccess = load
-  %StartingAccess = load i8, i8* %Arg, align 4
+  %StartingAccess = load i8, ptr %Arg, align 4
   %Val.Inner = call i8 @getValue()
 ; CHECK: 3 = MemoryDef(4)
 ; CHECK-NEXT: store i8 %Val.Inner
-  store i8 %Val.Inner, i8* %Arg
+  store i8 %Val.Inner, ptr %Arg
   call void @doThingWithoutReading()
   %KeepGoing = call i1 @getBool()
   br i1 %KeepGoing, label %InnerLoop.Tail, label %InnerLoop

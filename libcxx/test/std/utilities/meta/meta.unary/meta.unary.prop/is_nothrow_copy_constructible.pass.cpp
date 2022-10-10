@@ -13,6 +13,8 @@
 #include <type_traits>
 #include "test_macros.h"
 
+#include "common.h"
+
 template <class T>
 void test_is_nothrow_copy_constructible()
 {
@@ -39,26 +41,13 @@ void test_has_not_nothrow_copy_constructor()
 #endif
 }
 
-class Empty
-{
-};
-
-union Union {};
-
-struct bit_zero
-{
-    int :  0;
-};
-
-struct A
-{
-    A(const A&);
-};
-
 int main(int, char**)
 {
     test_has_not_nothrow_copy_constructor<void>();
     test_has_not_nothrow_copy_constructor<A>();
+#if TEST_STD_VER >= 11
+    test_has_not_nothrow_copy_constructor<TrivialNotNoexcept>();
+#endif
 
     test_is_nothrow_copy_constructible<int&>();
     test_is_nothrow_copy_constructible<Union>();

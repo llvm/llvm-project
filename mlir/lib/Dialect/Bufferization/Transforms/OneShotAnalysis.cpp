@@ -351,18 +351,29 @@ static bool happensBefore(Operation *a, Operation *b,
   return false;
 }
 
-/// For each given value, find the closest enclosing repetitive region. If this
-/// is the same region for each value, return it. Otherwise return None.
-/// Note: If there is no enclosing repetitive region, return nullptr.
-static Optional<Region *>
-getCommonEnclosingRepetitiveRegion(ArrayRef<Value> values) {
-  if (values.empty())
-    return None;
-  Region *r = getEnclosingRepetitiveRegion(values.front());
-  for (Value value : values.drop_front())
-    if (getEnclosingRepetitiveRegion(value) != r)
-      return None;
-  return r;
+static Region *
+getEnclosingRepetitiveRegion(Operation *op,
+                             const BufferizationOptions &options) {
+  while (Region *region = op->getParentRegion()) {
+    op = region->getParentOp();
+    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
+      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
+        return region;
+  }
+  return nullptr;
+}
+
+static Region *
+getEnclosingRepetitiveRegion(Value value, const BufferizationOptions &options) {
+  Region *region = value.getParentRegion();
+  while (region) {
+    Operation *op = region->getParentOp();
+    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
+      if (bufferizableOp.isRepetitiveRegion(region->getRegionNumber()))
+        return region;
+    region = op->getParentRegion();
+  }
+  return nullptr;
 }
 
 /// Return `true` if the given tensor value is a memory write. Most values are
@@ -376,6 +387,122 @@ static bool isMemoryWrite(Value value, const AnalysisState &state) {
   if (!bufferizableOp)
     return true;
   return bufferizableOp.isMemoryWrite(opResult, state);
+}
+
+/// Return `true` if op dominance can be used to rule out read-after-write
+/// conflicts wrt. the given reads and writes.
+///
+/// Op dominance can often be used to rule out potential conflicts such as
+/// "read" happens before "write". E.g., the following IR is not a RaW conflict
+/// because the the read happens *before* the write.
+///
+/// %0 = ... : tensor<?xf32>
+/// "reading_op"(%0) : tensor<?xf32>
+/// %1 = "writing_op"(%0) : tensor<?xf32> -> tensor<?xf32>
+///
+/// This is no longer true inside loops (or repetitive regions). In such cases,
+/// there may not be a meaningful `happensBefore` relationship because ops
+/// could be executed multiple times. E.g.:
+///
+/// %0 = ... : tensor<?xf32>
+/// scf.for ... {
+///   "reading_op"(%0) : tensor<?xf32>
+///   %1 = "writing_op"(%0) : tensor<?xf32> -> tensor<?xf32>
+///   ...
+/// }
+///
+/// In the above example, reading_op happens before writing_op according to
+/// op dominance. However, both ops may happen multiple times; in
+/// particular, the second execution of reading_op happens after the first
+/// execution of writing_op. This is problematic because the tensor %0 they
+/// operate on (i.e., the "definition") is defined outside of the loop.
+///
+/// Counter example:
+///
+/// scf.for ... {
+///   %0 = ... : tensor<?xf32>
+///   "reading_op"(%0) : tensor<?xf32>
+///   %1 = "writing_op"(%0) : tensor<?xf32> -> tensor<?xf32>
+///   ...
+/// }
+///
+/// In this example, the definition %0 is in the same repetitive region as
+/// "writing_op", so op dominance can be used to compute the `happensBefore`
+/// relationship.
+///
+/// Whether op dominance can be used or not is decided as follows: Find the
+/// closest enclosing repetitive region of all buffer writes wrt. the given
+/// tensor reads and writes. (The given sets of reads and writes contain the
+/// entire alias set.) In case of a read, we look at the op that defines the
+/// read value. In case of a write, we look at the op that is writing. If all of
+/// those ops are in the same closest enclosing repetitive region (nullptr in
+/// case of "no repetitive region" found at all), then op dominance can be used.
+/// Otherwise, it cannot be used.
+///
+/// Example: The common enclosing repetitive region is the scf.for loop.
+///          Op dominance can be used.
+/// scf.for ... {
+///   %0 = tensor.generate
+///   "read"(%0)
+/// }
+///
+/// Example: The common enclosing repetitive region is nullptr: There is no
+///          repetitive region around the tensor.generate. Op dominance can be
+///          used.
+/// %0 = tensor.generate
+/// scf.for ... { "read"(%0) }
+///
+/// Example: The common enclosing repetitive regions of tensor.generate and
+///          "write" differ. Op dominance cannot be used.
+/// %0 = tensor.generate
+/// scf.for ... {
+///   "read"(%0)
+///   "write"(%0)
+/// }
+///
+/// Example: The common enclosing repetitive regions of tensor.generate and
+///          "write" differ, but there is no read of %0, so op dominance can be
+///          used.
+/// %0 = tensor.generate
+/// scf.for ... {
+///   "write"(%0)
+/// }
+///
+/// Note: iter_args of loops are not aliases of their respective block
+/// arguments, so op domanice can be used when analyzing ops that operate
+/// on them.
+bool canUseOpDominance(const DenseSet<OpOperand *> &usesRead,
+                       const DenseSet<OpOperand *> &usesWrite,
+                       const AnalysisState &state) {
+  const BufferizationOptions &options = state.getOptions();
+  Optional<Region *> commonEnclosingRegion = None;
+
+  // In case of a write, take the region in which the write takes place.
+  for (OpOperand *uWrite : usesWrite) {
+    Region *r = getEnclosingRepetitiveRegion(uWrite->getOwner(), options);
+    if (!commonEnclosingRegion.has_value()) {
+      commonEnclosingRegion = r;
+      continue;
+    }
+    if (*commonEnclosingRegion != r)
+      return false;
+  }
+
+  // In case of a read, take the region which the read value is defined.
+  for (OpOperand *uRead : usesRead) {
+    // Optimization: Skip reads of values that have no defined contents.
+    if (!isMemoryWrite(uRead->get(), state))
+      continue;
+    Region *r = getEnclosingRepetitiveRegion(uRead->get(), options);
+    if (!commonEnclosingRegion.has_value()) {
+      commonEnclosingRegion = r;
+      continue;
+    }
+    if (*commonEnclosingRegion != r)
+      return false;
+  }
+
+  return commonEnclosingRegion.has_value();
 }
 
 /// Annotate IR with details about the detected RaW conflict.
@@ -424,15 +551,8 @@ static bool hasReadAfterWriteInterference(
     AnalysisState &state, const BufferizationAliasInfo &aliasInfo) {
   const BufferizationOptions &options = state.getOptions();
 
-  // Gather all written aliases. Skip over aliases that are not actual writes.
-  SmallVector<Value> writtenAliases;
-  for (OpOperand *uWrite : usesWrite)
-    if (isMemoryWrite(uWrite->get(), state))
-      writtenAliases.push_back(uWrite->get());
-  // Find the inner-most enclosing repetitive region of each alias. If this is
-  // the same region for every alias, save it in `repetitiveRegionOfWrites`.
-  Optional<Region *> repetitiveRegionOfWrites =
-      getCommonEnclosingRepetitiveRegion(writtenAliases);
+  // Check if op dominance can be used to rule out read-after-write conflicts.
+  bool useDominance = canUseOpDominance(usesRead, usesWrite, state);
 
   for (OpOperand *uRead : usesRead) {
     Operation *readingOp = uRead->getOwner();
@@ -456,66 +576,36 @@ static bool hasReadAfterWriteInterference(
       // met for uConflictingWrite to be an actual conflict.
       Operation *conflictingWritingOp = uConflictingWrite->getOwner();
 
-      // Check if conflictingWritingOp is in the same repetitive region as all
-      // written aliases. If this is not the case, there is no meaningful
-      // `happensBefore` relationship because conflictingWritingOp may be
-      // executed multiple times. E.g.:
-      //
-      // %0 = ... : tensor<?xf32>
-      // scf.for ... {
-      //   "reading_op"(%0) : tensor<?xf32>
-      //   %1 = "writing_op"(%0) : tensor<?xf32> -> tensor<?xf32>
-      //   ...
-      // }
-      //
-      // In the above example, reading_op happens before writing_op according to
-      // op dominance. However, both ops may happen multiple times; in
-      // particular, the second execution of reading_op happens after the first
-      // execution of writing_op. This is problematic if the tensor they operate
-      // on (%0) is defined outside of the loop.
-      //
-      // Counter example:
-      //
-      // scf.for ... {
-      //   %0 = ... : tensor<?xf32>
-      //   "reading_op"(%0) : tensor<?xf32>
-      //   %1 = "writing_op"(%0) : tensor<?xf32> -> tensor<?xf32>
-      //   ...
-      // }
-      //
-      // In this example, %0 is in the same repetitive region as
-      // conflictingWritingOp, so op dominance can be used to compute the
-      // `happensBefore` relationship.
-      //
-      // Note: iter_args of loops are not aliases of their respective block
-      // arguments, so op domanice can be used when analyzing ops that operate
-      // on them.
-      //
-      // Note: If `writtenAliases` is empty, there are no memory writes outside
-      // of the repetitive region of conflictingWritingOp, which means that all
-      // relevant aliases are inside the same repetitive region.
-      bool canUseOpDominance =
-          writtenAliases.empty() ||
-          repetitiveRegionOfWrites ==
-              getEnclosingRepetitiveRegion(conflictingWritingOp);
+      // Inside of repetitive regions, ops may be executed multiple times and op
+      // dominance cannot be used to rule out conflicts.
+      if (useDominance) {
+        // No conflict if the readingOp dominates conflictingWritingOp, i.e.,
+        // the write is not visible when reading.
+        //
+        // Note: If ops are executed multiple times (e.g., because they are
+        //       inside a loop), there may be no meaningful `happensBefore`
+        //       relationship.
+        if (happensBefore(readingOp, conflictingWritingOp, domInfo))
+          continue;
 
-      // No conflict if the readingOp dominates conflictingWritingOp, i.e., the
-      // write is not visible when reading.
-      //
-      // Note: If ops are executed multiple times (e.g., because they are inside
-      //       a loop), there may be no meaningful `happensBefore` relationship.
-      if (canUseOpDominance &&
-          happensBefore(readingOp, conflictingWritingOp, domInfo))
-        continue;
+        // No conflict if the reading use equals the use of the conflicting
+        // write. A use cannot conflict with itself.
+        //
+        // Note: Just being the same op is not enough. It has to be the same
+        //       use.
+        // Note: If the op is executed multiple times (e.g., because it is
+        //       inside a loop), it may be conflicting with itself.
+        if (uConflictingWrite == uRead)
+          continue;
 
-      // No conflict if the reading use equals the use of the conflicting write.
-      // A use cannot conflict with itself.
-      //
-      // Note: Just being the same op is not enough. It has to be the same use.
-      // Note: If the op is executed multiple times (e.g., because it is inside
-      //       a loop), it may be conflicting with itself.
-      if (canUseOpDominance && uConflictingWrite == uRead)
-        continue;
+        // Ops are not conflicting if they are in mutually exclusive regions.
+        //
+        // Note: If ops are executed multiple times (e.g., because they are
+        //       inside a loop), mutually exclusive regions may be executed
+        //       multiple times.
+        if (insideMutuallyExclusiveRegions(readingOp, conflictingWritingOp))
+          continue;
+      }
 
       // No conflict if the op interface says so.
       if (auto bufferizableOp = options.dynCastBufferizableOp(readingOp))
@@ -527,15 +617,6 @@ static bool hasReadAfterWriteInterference(
                 options.dynCastBufferizableOp(conflictingWritingOp))
           if (bufferizableOp.isNotConflicting(uRead, uConflictingWrite, state))
             continue;
-
-      // Ops are not conflicting if they are in mutually exclusive regions.
-      //
-      // Note: If ops are executed multiple times (e.g., because they are inside
-      //       a loop), mutually exclusive regions may be executed multiple
-      //       times.
-      if (canUseOpDominance &&
-          insideMutuallyExclusiveRegions(readingOp, conflictingWritingOp))
-        continue;
 
       // Check all possible last writes.
       for (Value lastWrite : lastWrites) {
@@ -832,27 +913,37 @@ checkAliasInfoConsistency(Operation *op, const DominanceInfo &domInfo,
                           AnalysisState &state,
                           const BufferizationAliasInfo &aliasInfo) {
   const BufferizationOptions &options = state.getOptions();
-  Operation *inconsistentOp = nullptr;
-  WalkResult walkResult = op->walk([&](Operation *op) {
-    if (auto bufferizableOp = options.dynCastBufferizableOp(op))
-      for (OpOperand &opOperand : op->getOpOperands())
-        if (opOperand.get().getType().isa<TensorType>()) {
-          if (wouldCreateReadAfterWriteInterference(
-                  opOperand, domInfo, state, aliasInfo,
-                  /*checkConsistencyOnly=*/true)) {
-            // This error can happen if certain "mustBufferizeInPlace" interface
-            // methods are implemented incorrectly, such that the IR already has
-            // a RaW conflict before making any bufferization decisions.
-            inconsistentOp = op;
-            return WalkResult::interrupt();
-          }
+
+  WalkResult walkResult = op->walk([&](BufferizableOpInterface op) {
+    // Skip ops that are not in the filter.
+    if (!options.isOpAllowed(op.getOperation()))
+      return WalkResult::advance();
+
+    // Input IR may not contain any ToMemrefOps. These are not supported because
+    // the analysis cannot follow the data flow through memrefs.
+    if (isa<ToMemrefOp>(op.getOperation())) {
+      op->emitError("to_memref ops not supported during One-Shot Analysis");
+      return WalkResult::interrupt();
+    }
+
+    for (OpOperand &opOperand : op->getOpOperands()) {
+      if (opOperand.get().getType().isa<TensorType>()) {
+        if (wouldCreateReadAfterWriteInterference(
+                opOperand, domInfo, state, aliasInfo,
+                /*checkConsistencyOnly=*/true)) {
+          // This error can happen if certain "mustBufferizeInPlace" interface
+          // methods are implemented incorrectly, such that the IR already has
+          // a RaW conflict before making any bufferization decisions.
+          op->emitError("input IR has RaW conflict");
+          return WalkResult::interrupt();
         }
+      }
+    }
+
     return WalkResult::advance();
   });
 
-  if (walkResult.wasInterrupted())
-    return inconsistentOp->emitError("input IR has RaW conflict");
-  return success();
+  return success(!walkResult.wasInterrupted());
 }
 
 /// Annotate the IR with the result of the analysis. For testing/debugging only.
@@ -989,10 +1080,15 @@ LogicalResult bufferization::analyzeOp(Operation *op,
 LogicalResult
 bufferization::runOneShotBufferize(Operation *op,
                                    const OneShotBufferizationOptions &options) {
-  OneShotAnalysisState state(op, options);
-  if (failed(insertTensorCopies(op, options)))
-    return failure();
+  assert(!(options.copyBeforeWrite && options.testAnalysisOnly) &&
+         "invalid combination of bufferization flags");
+  if (!options.copyBeforeWrite) {
+    // If a buffer is copied before every write, no analysis is needed.
+    OneShotAnalysisState state(op, options);
+    if (failed(insertTensorCopies(op, options)))
+      return failure();
+  }
   if (options.testAnalysisOnly)
     return success();
-  return bufferizeOp(op, options, /*copyBeforeWrite=*/false);
+  return bufferizeOp(op, options, /*copyBeforeWrite=*/options.copyBeforeWrite);
 }

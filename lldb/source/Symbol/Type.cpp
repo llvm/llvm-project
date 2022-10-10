@@ -184,7 +184,7 @@ void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
     }
   }
 
-  // Call the get byte size accesor so we resolve our byte size
+  // Call the get byte size accessor so we resolve our byte size
   if (GetByteSize(exe_scope))
     s->Printf(", byte-size = %" PRIu64, m_byte_size);
   bool show_fullpaths = (level == lldb::eDescriptionLevelVerbose);

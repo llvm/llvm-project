@@ -1,7 +1,6 @@
 """Test that importing modules in C++ works as expected."""
 
 
-import unittest2
 import lldb
 import shutil
 

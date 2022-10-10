@@ -70,6 +70,7 @@ class ARMAttributeParser : public ELFAttributeParser {
   Error PACRET_use(ARMBuildAttrs::AttrType tag);
   Error BTI_use(ARMBuildAttrs::AttrType tag);
   Error nodefaults(ARMBuildAttrs::AttrType tag);
+  Error also_compatible_with(ARMBuildAttrs::AttrType tag);
 
 public:
   ARMAttributeParser(ScopedPrinter *sw)

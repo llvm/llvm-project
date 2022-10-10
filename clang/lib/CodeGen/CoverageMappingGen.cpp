@@ -1377,19 +1377,23 @@ struct CounterCoverageMappingBuilder
 
     // Extend into the condition before we propagate through it below - this is
     // needed to handle macros that generate the "if" but not the condition.
-    extendRegion(S->getCond());
+    if (!S->isConsteval())
+      extendRegion(S->getCond());
 
     Counter ParentCount = getRegion().getCounter();
     Counter ThenCount = getRegionCounter(S);
 
-    // Emitting a counter for the condition makes it easier to interpret the
-    // counter for the body when looking at the coverage.
-    propagateCounts(ParentCount, S->getCond());
+    if (!S->isConsteval()) {
+      // Emitting a counter for the condition makes it easier to interpret the
+      // counter for the body when looking at the coverage.
+      propagateCounts(ParentCount, S->getCond());
 
-    // The 'then' count applies to the area immediately after the condition.
-    auto Gap = findGapAreaBetween(S->getRParenLoc(), getStart(S->getThen()));
-    if (Gap)
-      fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), ThenCount);
+      // The 'then' count applies to the area immediately after the condition.
+      Optional<SourceRange> Gap =
+          findGapAreaBetween(S->getRParenLoc(), getStart(S->getThen()));
+      if (Gap)
+        fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), ThenCount);
+    }
 
     extendRegion(S->getThen());
     Counter OutCount = propagateCounts(ThenCount, S->getThen());
@@ -1398,9 +1402,9 @@ struct CounterCoverageMappingBuilder
     if (const Stmt *Else = S->getElse()) {
       bool ThenHasTerminateStmt = HasTerminateStmt;
       HasTerminateStmt = false;
-
       // The 'else' count applies to the area immediately after the 'then'.
-      Gap = findGapAreaBetween(getEnd(S->getThen()), getStart(Else));
+      Optional<SourceRange> Gap =
+          findGapAreaBetween(getEnd(S->getThen()), getStart(Else));
       if (Gap)
         fillGapAreaWithCount(Gap->getBegin(), Gap->getEnd(), ElseCount);
       extendRegion(Else);
@@ -1416,9 +1420,11 @@ struct CounterCoverageMappingBuilder
       GapRegionCounter = OutCount;
     }
 
-    // Create Branch Region around condition.
-    createBranchRegion(S->getCond(), ThenCount,
-                       subtractCounters(ParentCount, ThenCount));
+    if (!S->isConsteval()) {
+      // Create Branch Region around condition.
+      createBranchRegion(S->getCond(), ThenCount,
+                         subtractCounters(ParentCount, ThenCount));
+    }
   }
 
   void VisitCXXTryStmt(const CXXTryStmt *S) {

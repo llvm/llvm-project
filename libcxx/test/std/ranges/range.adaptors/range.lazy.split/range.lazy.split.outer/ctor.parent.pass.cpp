@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // explicit std::ranges::lazy_split_view::outer-iterator::outer-iterator(Parent& parent)
 //   requires (!forward_range<Base>)

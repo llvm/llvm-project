@@ -224,10 +224,10 @@ static llvm::CachePruningPolicy getLTOCachePolicy(InputArgList &args) {
     val.toVector(ltoPolicy);
   };
   for (const Arg *arg :
-       args.filtered(OPT_thinlto_cache_policy, OPT_prune_interval_lto,
+       args.filtered(OPT_thinlto_cache_policy_eq, OPT_prune_interval_lto,
                      OPT_prune_after_lto, OPT_max_relative_cache_size_lto)) {
     switch (arg->getOption().getID()) {
-    case OPT_thinlto_cache_policy:
+    case OPT_thinlto_cache_policy_eq:
       add(arg->getValue());
       break;
     case OPT_prune_interval_lto:
@@ -463,6 +463,9 @@ static void addFramework(StringRef name, bool isNeeded, bool isWeak,
 // flags. This directly parses the flags instead of using the standard argument
 // parser to improve performance.
 void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
+  if (config->ignoreAutoLink)
+    return;
+
   SmallVector<StringRef, 4> argv;
   size_t offset = 0;
   for (unsigned i = 0; i < argc && offset < data.size(); ++i) {
@@ -526,7 +529,7 @@ static void initLLVM() {
   InitializeAllAsmParsers();
 }
 
-static void compileBitcodeFiles() {
+static bool compileBitcodeFiles() {
   TimeTraceScope timeScope("LTO");
   auto *lto = make<BitcodeCompiler>();
   for (InputFile *file : inputFiles)
@@ -534,8 +537,11 @@ static void compileBitcodeFiles() {
       if (!file->lazy)
         lto->add(*bitcodeFile);
 
-  for (ObjFile *file : lto->compile())
+  std::vector<ObjFile *> compiled = lto->compile();
+  for (ObjFile *file : compiled)
     inputFiles.insert(file);
+
+  return !compiled.empty();
 }
 
 // Replaces common symbols with defined symbols residing in __common sections.
@@ -721,10 +727,7 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
         MachO::Target(getArchitectureFromName(archName), PLATFORM_MACCATALYST);
   }
 
-  uint32_t cpuType;
-  uint32_t cpuSubtype;
-  std::tie(cpuType, cpuSubtype) = getCPUTypeFromArchitecture(config->arch());
-
+  auto [cpuType, cpuSubtype] = getCPUTypeFromArchitecture(config->arch());
   switch (cpuType) {
   case CPU_TYPE_X86_64:
     return createX86_64TargetInfo();
@@ -779,6 +782,17 @@ static ICFLevel getICFLevel(const ArgList &args) {
     icfLevel = ICFLevel::none;
   }
   return icfLevel;
+}
+
+static ObjCStubsMode getObjCStubsMode(const ArgList &args) {
+  const Arg *arg = args.getLastArg(OPT_objc_stubs_fast, OPT_objc_stubs_small);
+  if (!arg)
+    return ObjCStubsMode::fast;
+
+  if (arg->getOption().getID() == OPT_objc_stubs_small)
+    warn("-objc_stubs_small is not yet implemented, defaulting to "
+         "-objc_stubs_fast");
+  return ObjCStubsMode::fast;
 }
 
 static void warnIfDeprecatedOption(const Option &opt) {
@@ -914,12 +928,12 @@ PlatformType macho::removeSimulator(PlatformType platform) {
 }
 
 static bool dataConstDefault(const InputArgList &args) {
-  static const std::vector<std::pair<PlatformType, VersionTuple>> minVersion = {
-      {PLATFORM_MACOS, VersionTuple(10, 15)},
-      {PLATFORM_IOS, VersionTuple(13, 0)},
-      {PLATFORM_TVOS, VersionTuple(13, 0)},
-      {PLATFORM_WATCHOS, VersionTuple(6, 0)},
-      {PLATFORM_BRIDGEOS, VersionTuple(4, 0)}};
+  static const std::array<std::pair<PlatformType, VersionTuple>, 5> minVersion =
+      {{{PLATFORM_MACOS, VersionTuple(10, 15)},
+        {PLATFORM_IOS, VersionTuple(13, 0)},
+        {PLATFORM_TVOS, VersionTuple(13, 0)},
+        {PLATFORM_WATCHOS, VersionTuple(6, 0)},
+        {PLATFORM_BRIDGEOS, VersionTuple(4, 0)}}};
   PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
   auto it = llvm::find_if(minVersion,
                           [&](const auto &p) { return p.first == platform; });
@@ -944,6 +958,47 @@ static bool dataConstDefault(const InputArgList &args) {
         "unsupported output type for determining data-const default");
   }
   return false;
+}
+
+static bool shouldEmitChainedFixups(const InputArgList &args) {
+  const Arg *arg = args.getLastArg(OPT_fixup_chains, OPT_no_fixup_chains);
+  if (arg && arg->getOption().matches(OPT_no_fixup_chains))
+    return false;
+
+  bool isRequested = arg != nullptr;
+
+  // Version numbers taken from the Xcode 13.3 release notes.
+  static const std::array<std::pair<PlatformType, VersionTuple>, 4> minVersion =
+      {{{PLATFORM_MACOS, VersionTuple(11, 0)},
+        {PLATFORM_IOS, VersionTuple(13, 4)},
+        {PLATFORM_TVOS, VersionTuple(14, 0)},
+        {PLATFORM_WATCHOS, VersionTuple(7, 0)}}};
+  PlatformType platform = removeSimulator(config->platformInfo.target.Platform);
+  auto it = llvm::find_if(minVersion,
+                          [&](const auto &p) { return p.first == platform; });
+  if (it != minVersion.end() && it->second > config->platformInfo.minimum) {
+    if (!isRequested)
+      return false;
+
+    warn("-fixup_chains requires " + getPlatformName(config->platform()) + " " +
+         it->second.getAsString() + ", which is newer than target minimum of " +
+         config->platformInfo.minimum.getAsString());
+  }
+
+  if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64}, config->arch())) {
+    if (isRequested)
+      error("-fixup_chains is only supported on x86_64 and arm64 targets");
+    return false;
+  }
+
+  if (!config->isPic) {
+    if (isRequested)
+      error("-fixup_chains is incompatible with -no_pie");
+    return false;
+  }
+
+  // TODO: Enable by default once stable.
+  return isRequested;
 }
 
 void SymbolPatterns::clear() {
@@ -1092,6 +1147,11 @@ static void gatherInputSections() {
         if (auto *isec = dyn_cast<ConcatInputSection>(subsection.isec)) {
           if (isec->isCoalescedWeak())
             continue;
+          if (config->emitInitOffsets &&
+              sectionType(isec->getFlags()) == S_MOD_INIT_FUNC_POINTERS) {
+            in.initOffsets->addInput(isec);
+            continue;
+          }
           isec->outSecOff = inputOrder++;
           if (!osec)
             osec = ConcatOutputSection::getOrCreateForInput(isec);
@@ -1099,9 +1159,15 @@ static void gatherInputSections() {
           inputSections.push_back(isec);
         } else if (auto *isec =
                        dyn_cast<CStringInputSection>(subsection.isec)) {
-          if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
-            in.cStringSection->inputOrder = inputOrder++;
-          in.cStringSection->addInput(isec);
+          if (isec->getName() == section_names::objcMethname) {
+            if (in.objcMethnameSection->inputOrder == UnspecifiedInputOrder)
+              in.objcMethnameSection->inputOrder = inputOrder++;
+            in.objcMethnameSection->addInput(isec);
+          } else {
+            if (in.cStringSection->inputOrder == UnspecifiedInputOrder)
+              in.cStringSection->inputOrder = inputOrder++;
+            in.cStringSection->addInput(isec);
+          }
         } else if (auto *isec =
                        dyn_cast<WordLiteralInputSection>(subsection.isec)) {
           if (in.wordLiteralSection->inputOrder == UnspecifiedInputOrder)
@@ -1124,8 +1190,37 @@ static void foldIdenticalLiterals() {
   // true. If it isn't, we simply create a non-deduplicating CStringSection.
   // Either way, we must unconditionally finalize it here.
   in.cStringSection->finalizeContents();
+  in.objcMethnameSection->finalizeContents();
   if (in.wordLiteralSection)
     in.wordLiteralSection->finalizeContents();
+}
+
+static void addSynthenticMethnames() {
+  std::string &data = *make<std::string>();
+  llvm::raw_string_ostream os(data);
+  const int prefixLength = ObjCStubsSection::symbolPrefix.size();
+  for (Symbol *sym : symtab->getSymbols())
+    if (isa<Undefined>(sym))
+      if (sym->getName().startswith(ObjCStubsSection::symbolPrefix))
+        os << sym->getName().drop_front(prefixLength) << '\0';
+
+  if (data.empty())
+    return;
+
+  const auto *buf = reinterpret_cast<const uint8_t *>(data.c_str());
+  Section &section = *make<Section>(/*file=*/nullptr, segment_names::text,
+                                    section_names::objcMethname,
+                                    S_CSTRING_LITERALS, /*addr=*/0);
+
+  auto *isec =
+      make<CStringInputSection>(section, ArrayRef<uint8_t>{buf, data.size()},
+                                /*align=*/1, /*dedupLiterals=*/true);
+  isec->splitIntoPieces();
+  for (auto &piece : isec->pieces)
+    piece.live = true;
+  section.subsections.push_back({0, isec});
+  in.objcMethnameSection->addInput(isec);
+  in.objcMethnameSection->isec->markLive(0);
 }
 
 static void referenceStubBinder() {
@@ -1140,9 +1235,83 @@ static void referenceStubBinder() {
   // dyld_stub_binder is in libSystem.dylib, which is usually linked in. This
   // isn't needed for correctness, but the presence of that symbol suppresses
   // "no symbols" diagnostics from `nm`.
-  // StubHelperSection::setup() adds a reference and errors out if
+  // StubHelperSection::setUp() adds a reference and errors out if
   // dyld_stub_binder doesn't exist in case it is actually needed.
   symtab->addUndefined("dyld_stub_binder", /*file=*/nullptr, /*isWeak=*/false);
+}
+
+static void createAliases() {
+  for (const auto &pair : config->aliasedSymbols) {
+    if (const auto &sym = symtab->find(pair.first)) {
+      if (const auto &defined = dyn_cast<Defined>(sym)) {
+        symtab->aliasDefined(defined, pair.second, defined->getFile())
+            ->noDeadStrip = true;
+      } else {
+        error("TODO: support aliasing to symbols of kind " +
+              Twine(sym->kind()));
+      }
+    } else {
+      warn("undefined base symbol '" + pair.first + "' for alias '" +
+           pair.second + "'\n");
+    }
+  }
+
+  for (const InputFile *file : inputFiles) {
+    if (auto *objFile = dyn_cast<ObjFile>(file)) {
+      for (const AliasSymbol *alias : objFile->aliases) {
+        if (const auto &aliased = symtab->find(alias->getAliasedName())) {
+          if (const auto &defined = dyn_cast<Defined>(aliased)) {
+            symtab->aliasDefined(defined, alias->getName(), alias->getFile(),
+                                 alias->privateExtern);
+          } else {
+            // Common, dylib, and undefined symbols are all valid alias
+            // referents (undefineds can become valid Defined symbols later on
+            // in the link.)
+            error("TODO: support aliasing to symbols of kind " +
+                  Twine(aliased->kind()));
+          }
+        } else {
+          // This shouldn't happen since MC generates undefined symbols to
+          // represent the alias referents. Thus we fatal() instead of just
+          // warning here.
+          fatal("unable to find alias referent " + alias->getAliasedName() +
+                " for " + alias->getName());
+        }
+      }
+    }
+  }
+}
+
+static void handleExplicitExports() {
+  if (config->hasExplicitExports) {
+    parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
+      if (auto *defined = dyn_cast<Defined>(sym)) {
+        StringRef symbolName = defined->getName();
+        if (config->exportedSymbols.match(symbolName)) {
+          if (defined->privateExtern) {
+            if (defined->weakDefCanBeHidden) {
+              // weak_def_can_be_hidden symbols behave similarly to
+              // private_extern symbols in most cases, except for when
+              // it is explicitly exported.
+              // The former can be exported but the latter cannot.
+              defined->privateExtern = false;
+            } else {
+              warn("cannot export hidden symbol " + toString(*defined) +
+                   "\n>>> defined in " + toString(defined->getFile()));
+            }
+          }
+        } else {
+          defined->privateExtern = true;
+        }
+      }
+    });
+  } else if (!config->unexportedSymbols.empty()) {
+    parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
+      if (auto *defined = dyn_cast<Defined>(sym))
+        if (config->unexportedSymbols.match(defined->getName()))
+          defined->privateExtern = true;
+    });
+  }
 }
 
 bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
@@ -1252,6 +1421,11 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     }
   }
 
+  config->isPic = config->outputType == MH_DYLIB ||
+                  config->outputType == MH_BUNDLE ||
+                  (config->outputType == MH_EXECUTE &&
+                   args.hasFlag(OPT_pie, OPT_no_pie, true));
+
   // Must be set before any InputSections and Symbols are created.
   config->deadStrip = args.hasArg(OPT_dead_strip);
 
@@ -1313,6 +1487,17 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     addFile(arg->getValue(), LoadType::CommandLine, /*isLazy=*/false,
             /*isExplicit=*/false, /*isBundleLoader=*/true);
   }
+  for (auto *arg : args.filtered(OPT_dyld_env)) {
+    StringRef envPair(arg->getValue());
+    if (!envPair.contains('='))
+      error("-dyld_env's argument is  malformed. Expected "
+            "-dyld_env <ENV_VAR>=<VALUE>, got `" +
+            envPair + "`");
+    config->dyldEnvs.push_back(envPair);
+  }
+  if (!config->dyldEnvs.empty() && config->outputType != MH_EXECUTE)
+    error("-dyld_env can only be used when creating executable output");
+
   if (const Arg *arg = args.getLastArg(OPT_umbrella)) {
     if (config->outputType != MH_DYLIB)
       warn("-umbrella used, but not creating dylib");
@@ -1340,16 +1525,24 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->emitBitcodeBundle = args.hasArg(OPT_bitcode_bundle);
   config->emitDataInCodeInfo =
       args.hasFlag(OPT_data_in_code_info, OPT_no_data_in_code_info, true);
+  config->emitChainedFixups = shouldEmitChainedFixups(args);
+  config->emitInitOffsets =
+      config->emitChainedFixups || args.hasArg(OPT_init_offsets);
   config->icfLevel = getICFLevel(args);
   config->dedupLiterals =
       args.hasFlag(OPT_deduplicate_literals, OPT_icf_eq, false) ||
       config->icfLevel != ICFLevel::none;
+  config->deadStripDuplicates = args.hasArg(OPT_dead_strip_duplicates);
   config->warnDylibInstallName = args.hasFlag(
       OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
   config->ignoreOptimizationHints = args.hasArg(OPT_ignore_optimization_hints);
   config->callGraphProfileSort = args.hasFlag(
       OPT_call_graph_profile_sort, OPT_no_call_graph_profile_sort, true);
-  config->printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order);
+  config->printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order_eq);
+  config->forceExactCpuSubtypeMatch =
+      getenv("LD_DYLIB_CPU_SUBTYPES_MUST_MATCH");
+  config->objcStubsMode = getObjCStubsMode(args);
+  config->ignoreAutoLink = args.hasArg(OPT_ignore_auto_link);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
     config->aliasedSymbols.push_back(
@@ -1558,11 +1751,6 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     initLLVM(); // must be run before any call to addFile()
     createFiles(args);
 
-    config->isPic = config->outputType == MH_DYLIB ||
-                    config->outputType == MH_BUNDLE ||
-                    (config->outputType == MH_EXECUTE &&
-                     args.hasFlag(OPT_pie, OPT_no_pie, true));
-
     // Now that all dylibs have been loaded, search for those that should be
     // re-exported.
     {
@@ -1593,7 +1781,21 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     for (const Arg *arg : args.filtered(OPT_mllvm))
       parseClangOption(arg->getValue(), arg->getSpelling());
 
-    compileBitcodeFiles();
+    createSyntheticSections();
+    createSyntheticSymbols();
+    addSynthenticMethnames();
+
+    createAliases();
+    // If we are in "explicit exports" mode, hide everything that isn't
+    // explicitly exported. Do this before running LTO so that LTO can better
+    // optimize.
+    handleExplicitExports();
+    // LTO may emit a non-hidden (extern) object file symbol even if the
+    // corresponding bitcode symbol is hidden. In particular, this happens for
+    // cross-module references to hidden symbols under ThinLTO. Thus, if we
+    // compiled any bitcode files, we must redo the symbol hiding.
+    if (compileBitcodeFiles())
+      handleExplicitExports();
     replaceCommonSymbols();
 
     StringRef orderFile = args.getLastArgValue(OPT_order_file);
@@ -1604,51 +1806,6 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     // FIXME: should terminate the link early based on errors encountered so
     // far?
-
-    createSyntheticSections();
-    createSyntheticSymbols();
-
-    for (const auto &pair : config->aliasedSymbols) {
-      if (const auto &sym = symtab->find(pair.first)) {
-        if (const auto &defined = dyn_cast<Defined>(sym)) {
-          symtab->aliasDefined(defined, pair.second);
-          continue;
-        }
-      }
-
-      warn("undefined base symbol '" + pair.first + "' for alias '" +
-           pair.second + "'\n");
-    }
-
-    if (config->hasExplicitExports) {
-      parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
-        if (auto *defined = dyn_cast<Defined>(sym)) {
-          StringRef symbolName = defined->getName();
-          if (config->exportedSymbols.match(symbolName)) {
-            if (defined->privateExtern) {
-              if (defined->weakDefCanBeHidden) {
-                // weak_def_can_be_hidden symbols behave similarly to
-                // private_extern symbols in most cases, except for when
-                // it is explicitly exported.
-                // The former can be exported but the latter cannot.
-                defined->privateExtern = false;
-              } else {
-                warn("cannot export hidden symbol " + toString(*defined) +
-                     "\n>>> defined in " + toString(defined->getFile()));
-              }
-            }
-          } else {
-            defined->privateExtern = true;
-          }
-        }
-      });
-    } else if (!config->unexportedSymbols.empty()) {
-      parallelForEach(symtab->getSymbols(), [](Symbol *sym) {
-        if (auto *defined = dyn_cast<Defined>(sym))
-          if (config->unexportedSymbols.match(defined->getName()))
-            defined->privateExtern = true;
-      });
-    }
 
     for (const Arg *arg : args.filtered(OPT_sectcreate)) {
       StringRef segName = arg->getValue(0);

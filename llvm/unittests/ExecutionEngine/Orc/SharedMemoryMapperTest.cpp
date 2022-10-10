@@ -18,7 +18,7 @@ using namespace llvm::orc;
 using namespace llvm::orc::shared;
 using namespace llvm::orc::rt_bootstrap;
 
-#if defined(LLVM_ON_UNIX) || defined(_WIN32)
+#if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)
 
 // A basic function to be used as both initializer/deinitializer
 orc::shared::CWrapperFunctionResult incrementWrapper(const char *ArgData,
@@ -81,7 +81,7 @@ TEST(SharedMemoryMapperTest, MemReserveInitializeDeinitializeRelease) {
         SI.Offset = 0;
         SI.ContentSize = TestString.size() + 1;
         SI.ZeroFillSize = PageSize - SI.ContentSize;
-        SI.Prot = sys::Memory::MF_READ | sys::Memory::MF_WRITE;
+        SI.AG = MemProt::Read | MemProt::Write;
 
         AI.MappingBase = Reservation.Start;
         AI.Segments.push_back(SI);

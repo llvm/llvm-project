@@ -275,8 +275,7 @@ public:
   /// for pre-order erasure. See Operation::walk for more details.
   template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
             typename RetT = detail::walkResultType<FnT>>
-  typename std::enable_if<std::is_same<RetT, void>::value, RetT>::type
-  walk(FnT &&callback) {
+  std::enable_if_t<std::is_same<RetT, void>::value, RetT> walk(FnT &&callback) {
     for (auto &block : *this)
       block.walk<Order>(callback);
   }
@@ -294,7 +293,7 @@ public:
   /// See Operation::walk for more details.
   template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
             typename RetT = detail::walkResultType<FnT>>
-  typename std::enable_if<std::is_same<RetT, WalkResult>::value, RetT>::type
+  std::enable_if_t<std::is_same<RetT, WalkResult>::value, RetT>
   walk(FnT &&callback) {
     for (auto &block : *this)
       if (block.walk<Order>(callback).wasInterrupted())

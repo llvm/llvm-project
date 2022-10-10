@@ -155,54 +155,54 @@ Exit:           ; preds = %Loop
   ret i32 0
 }
 
-define i32* @test8({ i32, i32 } *%A, i1 %b) {
+define ptr @test8(ptr %A, i1 %b) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  BB0:
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[BB1:%.*]], label [[BB2:%.*]]
 ; CHECK:       BB1:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       BB2:
-; CHECK-NEXT:    [[B:%.*]] = getelementptr { i32, i32 }, { i32, i32 }* [[A:%.*]], i64 0, i32 1
-; CHECK-NEXT:    ret i32* [[B]]
+; CHECK-NEXT:    [[B:%.*]] = getelementptr { i32, i32 }, ptr [[A:%.*]], i64 0, i32 1
+; CHECK-NEXT:    ret ptr [[B]]
 ;
 BB0:
-  %X = getelementptr inbounds { i32, i32 }, { i32, i32 } *%A, i32 0, i32 1
+  %X = getelementptr inbounds { i32, i32 }, ptr %A, i32 0, i32 1
   br i1 %b, label %BB1, label %BB2
 
 BB1:
-  %Y = getelementptr { i32, i32 }, { i32, i32 } *%A, i32 0, i32 1
+  %Y = getelementptr { i32, i32 }, ptr %A, i32 0, i32 1
   br label %BB2
 
 BB2:
   ;; Suck GEPs into phi
-  %B = phi i32* [ %X, %BB0 ], [ %Y, %BB1 ]
-  ret i32* %B
+  %B = phi ptr [ %X, %BB0 ], [ %Y, %BB1 ]
+  ret ptr %B
 }
 
-define i32 @test9(i32* %A, i32* %B) {
+define i32 @test9(ptr %A, ptr %B) {
 ; CHECK-LABEL: @test9(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32* [[A:%.*]], null
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A:%.*]], null
 ; CHECK-NEXT:    br i1 [[C]], label [[BB1:%.*]], label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[E_IN:%.*]] = phi i32* [ [[B:%.*]], [[BB]] ], [ [[A]], [[BB1]] ]
-; CHECK-NEXT:    [[E:%.*]] = load i32, i32* [[E_IN]], align 1
+; CHECK-NEXT:    [[E_IN:%.*]] = phi ptr [ [[B:%.*]], [[BB]] ], [ [[A]], [[BB1]] ]
+; CHECK-NEXT:    [[E:%.*]] = load i32, ptr [[E_IN]], align 1
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
 entry:
-  %c = icmp eq i32* %A, null
+  %c = icmp eq ptr %A, null
   br i1 %c, label %bb1, label %bb
 
 bb:
-  %C = load i32, i32* %B, align 1
+  %C = load i32, ptr %B, align 1
   br label %bb2
 
 bb1:
-  %D = load i32, i32* %A, align 1
+  %D = load i32, ptr %A, align 1
   br label %bb2
 
 bb2:
@@ -211,30 +211,30 @@ bb2:
 
 }
 
-define i32 @test10(i32* %A, i32* %B) {
+define i32 @test10(ptr %A, ptr %B) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i32* [[A:%.*]], null
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A:%.*]], null
 ; CHECK-NEXT:    br i1 [[C]], label [[BB1:%.*]], label [[BB:%.*]]
 ; CHECK:       bb:
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb1:
 ; CHECK-NEXT:    br label [[BB2]]
 ; CHECK:       bb2:
-; CHECK-NEXT:    [[E_IN:%.*]] = phi i32* [ [[B:%.*]], [[BB]] ], [ [[A]], [[BB1]] ]
-; CHECK-NEXT:    [[E:%.*]] = load i32, i32* [[E_IN]], align 16
+; CHECK-NEXT:    [[E_IN:%.*]] = phi ptr [ [[B:%.*]], [[BB]] ], [ [[A]], [[BB1]] ]
+; CHECK-NEXT:    [[E:%.*]] = load i32, ptr [[E_IN]], align 16
 ; CHECK-NEXT:    ret i32 [[E]]
 ;
 entry:
-  %c = icmp eq i32* %A, null
+  %c = icmp eq ptr %A, null
   br i1 %c, label %bb1, label %bb
 
 bb:
-  %C = load i32, i32* %B, align 16
+  %C = load i32, ptr %B, align 16
   br label %bb2
 
 bb1:
-  %D = load i32, i32* %A, align 32
+  %D = load i32, ptr %A, align 32
   br label %bb2
 
 bb2:
@@ -263,7 +263,7 @@ define i1 @test11() {
 ;
 entry:
   %a = alloca i32
-  %i = ptrtoint i32* %a to i64
+  %i = ptrtoint ptr %a to i64
   %b = call i1 @test11a()
   br i1 %b, label %one, label %two
 
@@ -281,14 +281,14 @@ end:
   %f = phi i64 [ %x, %one], [%y, %two]
   ; Change the %f to %i, and the optimizer suddenly becomes a lot smarter
   ; even though %f must equal %i at this point
-  %g = inttoptr i64 %f to i32*
-  store i32 10, i32* %g
+  %g = inttoptr i64 %f to ptr
+  store i32 10, ptr %g
   %z = call i1 @test11a()
   ret i1 %z
 }
 
 
-define i64 @test12(i1 %cond, i8* %Ptr, i64 %Val) {
+define i64 @test12(i1 %cond, ptr %Ptr, i64 %Val) {
 ; CHECK-LABEL: @test12(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[END:%.*]], label [[TWO:%.*]]
@@ -296,12 +296,12 @@ define i64 @test12(i1 %cond, i8* %Ptr, i64 %Val) {
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[T869_0_OFF64:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[VAL:%.*]], [[TWO]] ]
-; CHECK-NEXT:    [[T41:%.*]] = ptrtoint i8* [[PTR:%.*]] to i64
+; CHECK-NEXT:    [[T41:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[T2:%.*]] = add i64 [[T869_0_OFF64]], [[T41]]
 ; CHECK-NEXT:    ret i64 [[T2]]
 ;
 entry:
-  %t41 = ptrtoint i8* %Ptr to i64
+  %t41 = ptrtoint ptr %Ptr to i64
   %t42 = zext i64 %t41 to i128
   br i1 %cond, label %end, label %two
 
@@ -455,68 +455,68 @@ end:
 }
 
 ; PR6512 - Shouldn't merge loads from different addr spaces.
-define i32 @test16(i32 addrspace(1)* %pointer1, i32 %flag, i32* %pointer2)
+define i32 @test16(ptr addrspace(1) %pointer1, i32 %flag, ptr %pointer2)
 ; CHECK-LABEL: @test16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[POINTER1_ADDR:%.*]] = alloca i32 addrspace(1)*, align 8
-; CHECK-NEXT:    [[POINTER2_ADDR:%.*]] = alloca i32*, align 8
-; CHECK-NEXT:    store i32 addrspace(1)* [[POINTER1:%.*]], i32 addrspace(1)** [[POINTER1_ADDR]], align 8
-; CHECK-NEXT:    store i32* [[POINTER2:%.*]], i32** [[POINTER2_ADDR]], align 8
+; CHECK-NEXT:    [[POINTER1_ADDR:%.*]] = alloca ptr addrspace(1), align 8
+; CHECK-NEXT:    [[POINTER2_ADDR:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    store ptr addrspace(1) [[POINTER1:%.*]], ptr [[POINTER1_ADDR]], align 8
+; CHECK-NEXT:    store ptr [[POINTER2:%.*]], ptr [[POINTER2_ADDR]], align 8
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[FLAG:%.*]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       return:
-; CHECK-NEXT:    [[T7:%.*]] = load i32, i32* [[RETVAL]], align 4
+; CHECK-NEXT:    [[T7:%.*]] = load i32, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    ret i32 [[T7]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ [[T5:%.*]], [[IF_ELSE]] ], [ [[T2:%.*]], [[IF_THEN]] ]
-; CHECK-NEXT:    store i32 [[STOREMERGE]], i32* [[RETVAL]], align 4
+; CHECK-NEXT:    store i32 [[STOREMERGE]], ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[T1:%.*]] = load i32 addrspace(1)*, i32 addrspace(1)** [[POINTER1_ADDR]], align 8
-; CHECK-NEXT:    [[T2]] = load i32, i32 addrspace(1)* [[T1]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = load ptr addrspace(1), ptr [[POINTER1_ADDR]], align 8
+; CHECK-NEXT:    [[T2]] = load i32, ptr addrspace(1) [[T1]], align 4
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       if.else:
-; CHECK-NEXT:    [[T3:%.*]] = load i32*, i32** [[POINTER2_ADDR]], align 8
-; CHECK-NEXT:    [[T5]] = load i32, i32* [[T3]], align 4
+; CHECK-NEXT:    [[T3:%.*]] = load ptr, ptr [[POINTER2_ADDR]], align 8
+; CHECK-NEXT:    [[T5]] = load i32, ptr [[T3]], align 4
 ; CHECK-NEXT:    br label [[IF_END]]
 ;
 nounwind {
 entry:
-  %retval = alloca i32, align 4                   ; <i32*> [#uses=2]
-  %pointer1.addr = alloca i32 addrspace(1)*, align 4 ; <i32 addrspace(1)**>
-  %flag.addr = alloca i32, align 4                ; <i32*> [#uses=2]
-  %pointer2.addr = alloca i32*, align 4           ; <i32**> [#uses=2]
-  %res = alloca i32, align 4                      ; <i32*> [#uses=4]
-  store i32 addrspace(1)* %pointer1, i32 addrspace(1)** %pointer1.addr
-  store i32 %flag, i32* %flag.addr
-  store i32* %pointer2, i32** %pointer2.addr
-  store i32 10, i32* %res
-  %t = load i32, i32* %flag.addr                     ; <i32> [#uses=1]
+  %retval = alloca i32, align 4                   ; <ptr> [#uses=2]
+  %pointer1.addr = alloca ptr addrspace(1), align 4 ; <ptr>
+  %flag.addr = alloca i32, align 4                ; <ptr> [#uses=2]
+  %pointer2.addr = alloca ptr, align 4           ; <ptr> [#uses=2]
+  %res = alloca i32, align 4                      ; <ptr> [#uses=4]
+  store ptr addrspace(1) %pointer1, ptr %pointer1.addr
+  store i32 %flag, ptr %flag.addr
+  store ptr %pointer2, ptr %pointer2.addr
+  store i32 10, ptr %res
+  %t = load i32, ptr %flag.addr                     ; <i32> [#uses=1]
   %tobool = icmp ne i32 %t, 0                   ; <i1> [#uses=1]
   br i1 %tobool, label %if.then, label %if.else
 
 return:                                           ; preds = %if.end
-  %t7 = load i32, i32* %retval                       ; <i32> [#uses=1]
+  %t7 = load i32, ptr %retval                       ; <i32> [#uses=1]
   ret i32 %t7
 
 if.end:                                           ; preds = %if.else, %if.then
-  %t6 = load i32, i32* %res                          ; <i32> [#uses=1]
-  store i32 %t6, i32* %retval
+  %t6 = load i32, ptr %res                          ; <i32> [#uses=1]
+  store i32 %t6, ptr %retval
   br label %return
 
 if.then:                                          ; preds = %entry
-  %t1 = load i32 addrspace(1)*, i32 addrspace(1)** %pointer1.addr  ; <i32 addrspace(1)*>
-  %arrayidx = getelementptr i32, i32 addrspace(1)* %t1, i32 0 ; <i32 addrspace(1)*> [#uses=1]
-  %t2 = load i32, i32 addrspace(1)* %arrayidx        ; <i32> [#uses=1]
-  store i32 %t2, i32* %res
+  %t1 = load ptr addrspace(1), ptr %pointer1.addr  ; <ptr addrspace(1)>
+  %arrayidx = getelementptr i32, ptr addrspace(1) %t1, i32 0 ; <ptr addrspace(1)> [#uses=1]
+  %t2 = load i32, ptr addrspace(1) %arrayidx        ; <i32> [#uses=1]
+  store i32 %t2, ptr %res
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %t3 = load i32*, i32** %pointer2.addr               ; <i32*> [#uses=1]
-  %arrayidx4 = getelementptr i32, i32* %t3, i32 0    ; <i32*> [#uses=1]
-  %t5 = load i32, i32* %arrayidx4                    ; <i32> [#uses=1]
-  store i32 %t5, i32* %res
+  %t3 = load ptr, ptr %pointer2.addr               ; <ptr> [#uses=1]
+  %arrayidx4 = getelementptr i32, ptr %t3, i32 0    ; <ptr> [#uses=1]
+  %t5 = load i32, ptr %arrayidx4                    ; <i32> [#uses=1]
+  store i32 %t5, ptr %res
   br label %if.end
 }
 
@@ -548,21 +548,24 @@ bb2:        ; preds = %bb1, %entry
 }
 
 ; Atomic and non-atomic loads should not be combined.
-define i32 @PR51435(i32* %ptr, i32* %atomic_ptr, i1 %c) {
+define i32 @PR51435(ptr %ptr, ptr %atomic_ptr, i1 %c) {
 ; CHECK-LABEL: @PR51435(
-; CHECK:       entry:
-; CHECK-NEXT:    [[NON_ATOMIC:%.*]] = load i32, i32* %ptr, align 4
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[ATOMIC:%.*]] = load atomic i32, i32* %atomic_ptr acquire, align 4
+; CHECK-NEXT:    [[Y:%.*]] = load atomic i32, ptr [[ATOMIC_PTR:%.*]] acquire, align 4
+; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[NON_ATOMIC]], %entry ], [ [[ATOMIC]], %if ]
+; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[X]], [[ENTRY:%.*]] ], [ [[Y]], [[IF]] ]
 ; CHECK-NEXT:    ret i32 [[COND]]
+;
 entry:
-  %x = load i32, i32* %ptr, align 4
+  %x = load i32, ptr %ptr, align 4
   br i1 %c, label %if, label %end
 
 if:
-  %y = load atomic i32, i32* %atomic_ptr acquire, align 4
+  %y = load atomic i32, ptr %atomic_ptr acquire, align 4
   br label %end
 
 end:
@@ -588,8 +591,8 @@ true:
 false:
   br label %ret
 ret:
-  %ptr = phi i32* [ %zero, %true ] , [ %one, %false ]
-  %isnull = icmp eq i32* %ptr, null
+  %ptr = phi ptr [ %zero, %true ] , [ %one, %false ]
+  %isnull = icmp eq ptr %ptr, null
   ret i1 %isnull
 }
 
@@ -633,8 +636,8 @@ true:
 false:
   br label %ret
 ret:
-  %p = phi i32* [ %a, %true ], [ %b, %false ]
-  %r = icmp eq i32* %p, %c
+  %p = phi ptr [ %a, %true ], [ %b, %false ]
+  %r = icmp eq ptr %p, %c
   ret i1 %r
 }
 
@@ -659,8 +662,8 @@ true:
 false:
   br label %loop
 loop:
-  %p = phi i32* [ %a, %true ], [ %b, %false ], [ %p, %loop ]
-  %r = icmp eq i32* %p, %c
+  %p = phi ptr [ %a, %true ], [ %b, %false ], [ %p, %loop ]
+  %r = icmp eq ptr %p, %c
   br i1 %c2, label %ret, label %loop
 ret:
   ret i1 %r
@@ -691,14 +694,14 @@ ret:
   ret void
 }
 
-define i32 @test23(i32 %A, i1 %pb, i32 * %P) {
+define i32 @test23(i32 %A, i1 %pb, ptr %P) {
 ; CHECK-LABEL: @test23(
 ; CHECK-NEXT:  BB0:
-; CHECK-NEXT:    [[PHI_BO:%.*]] = add i32 [[A:%.*]], 19
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[A:%.*]], 19
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       Loop:
-; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[PHI_BO]], [[BB0:%.*]] ], [ 61, [[LOOP]] ]
-; CHECK-NEXT:    store i32 [[B]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[B:%.*]] = phi i32 [ [[TMP0]], [[BB0:%.*]] ], [ 61, [[LOOP]] ]
+; CHECK-NEXT:    store i32 [[B]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br i1 [[PB:%.*]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       Exit:
 ; CHECK-NEXT:    ret i32 [[B]]
@@ -710,7 +713,7 @@ Loop:           ; preds = %Loop, %BB0
   ; PHI has same value always.
   %B = phi i32 [ %A, %BB0 ], [ 42, %Loop ]
   %D = add i32 %B, 19
-  store i32 %D, i32* %P
+  store i32 %D, ptr %P
   br i1 %pb, label %Loop, label %Exit
 
 Exit:           ; preds = %Loop
@@ -761,7 +764,7 @@ define i1 @test25() {
 ;
 entry:
   %a = alloca i32
-  %i = ptrtoint i32* %a to i64
+  %i = ptrtoint ptr %a to i64
   %b = call i1 @test25a()
   br i1 %b, label %one, label %two
 
@@ -779,8 +782,8 @@ end:
   %f = phi i64 [ %x, %one], [%y, %two]
   ; Change the %f to %i, and the optimizer suddenly becomes a lot smarter
   ; even though %f must equal %i at this point
-  %g = inttoptr i64 %f to i32*
-  store i32 10, i32* %g
+  %g = inttoptr i64 %f to ptr
+  store i32 10, ptr %g
   %z = call i1 @test25a()
   ret i1 %z
 }
@@ -813,7 +816,7 @@ define i1 @test26(i32 %n) {
 ;
 entry:
   %a = alloca i32
-  %i = ptrtoint i32* %a to i64
+  %i = ptrtoint ptr %a to i64
   %b = call i1 @test26a()
   br label %one
 
@@ -842,8 +845,8 @@ end:
   %f = phi i64 [ %x, %one], [%y, %two]
   ; Change the %f to %i, and the optimizer suddenly becomes a lot smarter
   ; even though %f must equal %i at this point
-  %g = inttoptr i64 %f to i32*
-  store i32 10, i32* %g
+  %g = inttoptr i64 %f to ptr
+  store i32 10, ptr %g
   %z = call i1 @test26a()
   ret i1 %z
 }
@@ -1079,7 +1082,7 @@ if.end:                                           ; preds = %if.else, %if.then
   ret i1 %cmp1
 }
 
-define i1 @phi_allnonzerononconstant(i1 %c, i32 %a, i32* nonnull %b1, i32* nonnull %b2) {
+define i1 @phi_allnonzerononconstant(i1 %c, i32 %a, ptr nonnull %b1, ptr nonnull %b2) {
 ; CHECK-LABEL: @phi_allnonzerononconstant(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
@@ -1103,14 +1106,14 @@ if.else:                                          ; preds = %entry
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  %x.0 = phi i32* [ %b1, %if.then ], [ %b2, %if.else ]
-  %cmp1 = icmp eq i32* %x.0, null
+  %x.0 = phi ptr [ %b1, %if.then ], [ %b2, %if.else ]
+  %cmp1 = icmp eq ptr %x.0, null
   ret i1 %cmp1
 }
 
 declare void @dummy()
 
-define i1 @phi_knownnonzero_eq(i32 %n, i32 %s, i32* nocapture readonly %P) {
+define i1 @phi_knownnonzero_eq(i32 %n, i32 %s, ptr nocapture readonly %P) {
 ; CHECK-LABEL: @phi_knownnonzero_eq(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp slt i32 [[N:%.*]], [[S:%.*]]
@@ -1127,7 +1130,7 @@ entry:
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  %0 = load i32, i32* %P
+  %0 = load i32, ptr %P
   %cmp = icmp eq i32 %n, %0
   %1 = select i1 %cmp, i32 1, i32 2
   br label %if.end
@@ -1138,7 +1141,7 @@ if.end:                                           ; preds = %entry, %if.then
   ret i1  %cmp1
 }
 
-define i1 @phi_knownnonzero_ne(i32 %n, i32 %s, i32* nocapture readonly %P) {
+define i1 @phi_knownnonzero_ne(i32 %n, i32 %s, ptr nocapture readonly %P) {
 ; CHECK-LABEL: @phi_knownnonzero_ne(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp slt i32 [[N:%.*]], [[S:%.*]]
@@ -1155,7 +1158,7 @@ entry:
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  %0 = load i32, i32* %P
+  %0 = load i32, ptr %P
   %cmp = icmp eq i32 %n, %0
   %1 = select i1 %cmp, i32 1, i32 2
   br label %if.end
@@ -1166,7 +1169,7 @@ if.end:                                           ; preds = %entry, %if.then
   ret i1  %cmp1
 }
 
-define i1 @phi_knownnonzero_eq_2(i32 %n, i32 %s, i32* nocapture readonly %P) {
+define i1 @phi_knownnonzero_eq_2(i32 %n, i32 %s, ptr nocapture readonly %P) {
 ; CHECK-LABEL: @phi_knownnonzero_eq_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp slt i32 [[N:%.*]], [[S:%.*]]
@@ -1189,7 +1192,7 @@ if.then:
   br i1 %tobool2, label %if.else, label %if.end
 
 if.else:                                          ; preds = %entry
-  %0 = load i32, i32* %P
+  %0 = load i32, ptr %P
   %cmp = icmp eq i32 %n, %0
   %1 = select i1 %cmp, i32 1, i32 2
   br label %if.end
@@ -1200,7 +1203,7 @@ if.end:                                           ; preds = %entry, %if.then
   ret i1  %cmp1
 }
 
-define i1 @phi_knownnonzero_ne_2(i32 %n, i32 %s, i32* nocapture readonly %P) {
+define i1 @phi_knownnonzero_ne_2(i32 %n, i32 %s, ptr nocapture readonly %P) {
 ; CHECK-LABEL: @phi_knownnonzero_ne_2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp slt i32 [[N:%.*]], [[S:%.*]]
@@ -1223,7 +1226,7 @@ if.then:
   br i1 %tobool2, label %if.else, label %if.end
 
 if.else:                                          ; preds = %entry
-  %0 = load i32, i32* %P
+  %0 = load i32, ptr %P
   %cmp = icmp eq i32 %n, %0
   %1 = select i1 %cmp, i32 1, i32 2
   br label %if.end
@@ -1266,6 +1269,152 @@ g.exit:
   br label %for.cond
 
 for.end:
-  store double %p, double* undef
+  store double %p, ptr undef
+  ret void
+}
+
+define i1 @pr57488_icmp_of_phi(ptr %ptr.base, i64 %len) {
+; CHECK-LABEL: @pr57488_icmp_of_phi(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[END:%.*]] = getelementptr inbounds i64, ptr [[PTR_BASE:%.*]], i64 [[LEN:%.*]]
+; CHECK-NEXT:    [[LEN_ZERO:%.*]] = icmp eq i64 [[LEN]], 0
+; CHECK-NEXT:    br i1 [[LEN_ZERO]], label [[EXIT:%.*]], label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[ACCUM:%.*]] = phi i1 [ [[AND:%.*]], [[LOOP]] ], [ true, [[START:%.*]] ]
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], [[LOOP]] ], [ [[PTR_BASE]], [[START]] ]
+; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i64, ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[VAL:%.*]] = load i64, ptr [[PTR]], align 8
+; CHECK-NEXT:    [[VAL_ZERO:%.*]] = icmp eq i64 [[VAL]], 0
+; CHECK-NEXT:    [[AND]] = and i1 [[ACCUM]], [[VAL_ZERO]]
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq ptr [[PTR_NEXT]], [[END]]
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label [[EXIT]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RES:%.*]] = phi i1 [ true, [[START]] ], [ [[AND]], [[LOOP]] ]
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+start:
+  %end = getelementptr inbounds i64, ptr %ptr.base, i64 %len
+  %len.zero = icmp eq i64 %len, 0
+  br i1 %len.zero, label %exit, label %loop
+
+loop:
+  %accum = phi i8 [ %accum.next, %loop ], [ 1, %start ]
+  %ptr = phi ptr [ %ptr.next, %loop ], [ %ptr.base, %start ]
+  %ptr.next = getelementptr inbounds i64, ptr %ptr, i64 1
+  %accum.bool = icmp ne i8 %accum, 0
+  %val = load i64, ptr %ptr, align 8
+  %val.zero = icmp eq i64 %val, 0
+  %and = and i1 %accum.bool, %val.zero
+  %accum.next = zext i1 %and to i8
+  %exit.cond = icmp eq ptr %ptr.next, %end
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  %res = phi i1 [ true, %start ], [ %and, %loop ]
+  ret i1 %res
+}
+
+declare void @use(i32)
+
+define i32 @phi_op_self_simplify() {
+; CHECK-LABEL: @phi_op_self_simplify(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 1, [[ENTRY:%.*]] ], [ [[IV_ADD2:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_ADD:%.*]] = xor i32 [[IV]], -1
+; CHECK-NEXT:    call void @use(i32 [[IV_ADD]])
+; CHECK-NEXT:    [[IV_ADD2]] = xor i32 [[IV]], -1
+; CHECK-NEXT:    br label [[LOOP]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 1, %entry ], [ %iv.add2, %loop ]
+  %iv.add = xor i32 %iv, -1
+  call void @use(i32 %iv.add)
+  %iv.add2 = xor i32 %iv, -1
+  br label %loop
+}
+
+; Caused an infinite loop with D134954.
+define i64 @inttoptr_of_phi(i1 %c, ptr %arg.ptr, ptr %arg.ptr2) {
+; CHECK-LABEL: @inttoptr_of_phi(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[ARG_PTR2_VAL:%.*]] = load i64, ptr [[ARG_PTR2:%.*]], align 8
+; CHECK-NEXT:    [[ARG_PTR2_VAL_PTR:%.*]] = inttoptr i64 [[ARG_PTR2_VAL]] to ptr
+; CHECK-NEXT:    br label [[JOIN:%.*]]
+; CHECK:       else:
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    [[INT_PTR_PTR:%.*]] = phi ptr [ [[ARG_PTR2_VAL_PTR]], [[IF]] ], [ [[ARG_PTR:%.*]], [[ELSE]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i64, ptr [[INT_PTR_PTR]], align 8
+; CHECK-NEXT:    ret i64 [[V]]
+;
+entry:
+  br i1 %c, label %if, label %else
+
+if:
+  %arg.ptr2.val = load i64, ptr %arg.ptr2, align 8
+  br label %join
+
+else:
+  %arg.int.ptr = ptrtoint ptr %arg.ptr to i64
+  br label %join
+
+join:
+  %int.ptr = phi i64 [ %arg.ptr2.val, %if ], [ %arg.int.ptr, %else ]
+  %ptr = inttoptr i64 %int.ptr to ptr
+  %v = load i64, ptr %ptr, align 8
+  ret i64 %v
+}
+
+define void @simplify_context_instr(ptr %ptr.base, i64 %n) {
+; CHECK-LABEL: @simplify_context_instr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[PTR_END:%.*]] = getelementptr inbounds i8, ptr [[PTR_BASE:%.*]], i64 [[N:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[PTR_NEXT:%.*]], [[LATCH:%.*]] ], [ [[PTR_BASE]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i1 [ [[CMP:%.*]], [[LATCH]] ], [ true, [[ENTRY]] ]
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[PTR]], align 1
+; CHECK-NEXT:    [[CMP]] = icmp eq i8 [[V]], 95
+; CHECK-NEXT:    br i1 [[CMP]], label [[LATCH]], label [[IF:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[PHI]], i32 117, i32 100
+; CHECK-NEXT:    call void @use(i32 [[SEL]])
+; CHECK-NEXT:    br label [[LATCH]]
+; CHECK:       latch:
+; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr inbounds i8, ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[CMP_I_NOT:%.*]] = icmp eq ptr [[PTR_NEXT]], [[PTR_END]]
+; CHECK-NEXT:    br i1 [[CMP_I_NOT]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %ptr.end = getelementptr inbounds i8, ptr %ptr.base, i64 %n
+  br label %loop
+
+loop:
+  %ptr = phi ptr [ %ptr.next, %latch ], [ %ptr.base, %entry ]
+  %phi = phi i1 [ %cmp, %latch ], [ true, %entry ]
+  %v = load i8, ptr %ptr, align 1
+  %cmp = icmp eq i8 %v, 95
+  br i1 %cmp, label %latch, label %if
+
+if:
+  %sel = select i1 %phi, i32 117, i32 100
+  call void @use(i32 %sel)
+  br label %latch
+
+latch:
+  %ptr.next = getelementptr inbounds i8, ptr %ptr, i64 1
+  %cmp.i.not = icmp eq ptr %ptr.next, %ptr.end
+  br i1 %cmp.i.not, label %exit, label %loop
+
+exit:
   ret void
 }

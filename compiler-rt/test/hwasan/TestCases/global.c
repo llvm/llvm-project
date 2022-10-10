@@ -36,11 +36,11 @@ int atoi(const char *);
 
 int main(int argc, char **argv) {
   // CHECK: Cause: global-overflow
-  // RSYM: is located 0 bytes to the right of 4-byte global variable x {{.*}} in {{.*}}global.c.tmp
-  // RNOSYM: is located to the right of a 4-byte global variable in
+  // RSYM: is located 0 bytes after a 4-byte global variable x {{.*}} in {{.*}}global.c.tmp
+  // RNOSYM: is located after a 4-byte global variable in
   // RNOSYM-NEXT: #0 0x{{.*}} ({{.*}}global.c.tmp+{{.*}})
-  // LSYM: is located 4 bytes to the left of 4-byte global variable x {{.*}} in {{.*}}global.c.tmp
-  // LNOSYM: is located to the left of a 4-byte global variable in
+  // LSYM: is located 4 bytes before a 4-byte global variable x {{.*}} in {{.*}}global.c.tmp
+  // LNOSYM: is located before a 4-byte global variable in
   // LNOSYM-NEXT: #0 0x{{.*}} ({{.*}}global.c.tmp+{{.*}})
   // CHECK-NOT: can not describe
   (&x)[atoi(argv[1])] = 1;

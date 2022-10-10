@@ -18,9 +18,10 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 
-using namespace llvm;
+namespace llvm {
 
 // The following functions are used to add these string literals as a series of
 // 32-bit integer operands with the correct format, and unpack them if necessary
@@ -114,7 +115,7 @@ static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
 }
 
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
-                     llvm::SPIRV::Decoration Dec,
+                     SPIRV::Decoration::Decoration Dec,
                      const std::vector<uint32_t> &DecArgs, StringRef StrImm) {
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                  .addUse(Reg)
@@ -123,7 +124,7 @@ void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
 }
 
 void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
-                     llvm::SPIRV::Decoration Dec,
+                     SPIRV::Decoration::Decoration Dec,
                      const std::vector<uint32_t> &DecArgs, StringRef StrImm) {
   MachineBasicBlock &MBB = *I.getParent();
   auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpDecorate))
@@ -134,7 +135,7 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
 
 // TODO: maybe the following two functions should be handled in the subtarget
 // to allow for different OpenCL vs Vulkan handling.
-unsigned storageClassToAddressSpace(SPIRV::StorageClass SC) {
+unsigned storageClassToAddressSpace(SPIRV::StorageClass::StorageClass SC) {
   switch (SC) {
   case SPIRV::StorageClass::Function:
     return 0;
@@ -153,7 +154,8 @@ unsigned storageClassToAddressSpace(SPIRV::StorageClass SC) {
   }
 }
 
-SPIRV::StorageClass addressSpaceToStorageClass(unsigned AddrSpace) {
+SPIRV::StorageClass::StorageClass
+addressSpaceToStorageClass(unsigned AddrSpace) {
   switch (AddrSpace) {
   case 0:
     return SPIRV::StorageClass::Function;
@@ -172,7 +174,8 @@ SPIRV::StorageClass addressSpaceToStorageClass(unsigned AddrSpace) {
   }
 }
 
-SPIRV::MemorySemantics getMemSemanticsForStorageClass(SPIRV::StorageClass SC) {
+SPIRV::MemorySemantics::MemorySemantics
+getMemSemanticsForStorageClass(SPIRV::StorageClass::StorageClass SC) {
   switch (SC) {
   case SPIRV::StorageClass::StorageBuffer:
   case SPIRV::StorageClass::Uniform:
@@ -190,7 +193,7 @@ SPIRV::MemorySemantics getMemSemanticsForStorageClass(SPIRV::StorageClass SC) {
   }
 }
 
-SPIRV::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
+SPIRV::MemorySemantics::MemorySemantics getMemSemantics(AtomicOrdering Ord) {
   switch (Ord) {
   case AtomicOrdering::Acquire:
     return SPIRV::MemorySemantics::Acquire;
@@ -236,3 +239,116 @@ bool isSpvIntrinsic(MachineInstr &MI, Intrinsic::ID IntrinsicID) {
 Type *getMDOperandAsType(const MDNode *N, unsigned I) {
   return cast<ValueAsMetadata>(N->getOperand(I))->getType();
 }
+
+// The set of names is borrowed from the SPIR-V translator.
+// TODO: may be implemented in SPIRVBuiltins.td.
+static bool isPipeOrAddressSpaceCastBI(const StringRef MangledName) {
+  return MangledName == "write_pipe_2" || MangledName == "read_pipe_2" ||
+         MangledName == "write_pipe_2_bl" || MangledName == "read_pipe_2_bl" ||
+         MangledName == "write_pipe_4" || MangledName == "read_pipe_4" ||
+         MangledName == "reserve_write_pipe" ||
+         MangledName == "reserve_read_pipe" ||
+         MangledName == "commit_write_pipe" ||
+         MangledName == "commit_read_pipe" ||
+         MangledName == "work_group_reserve_write_pipe" ||
+         MangledName == "work_group_reserve_read_pipe" ||
+         MangledName == "work_group_commit_write_pipe" ||
+         MangledName == "work_group_commit_read_pipe" ||
+         MangledName == "get_pipe_num_packets_ro" ||
+         MangledName == "get_pipe_max_packets_ro" ||
+         MangledName == "get_pipe_num_packets_wo" ||
+         MangledName == "get_pipe_max_packets_wo" ||
+         MangledName == "sub_group_reserve_write_pipe" ||
+         MangledName == "sub_group_reserve_read_pipe" ||
+         MangledName == "sub_group_commit_write_pipe" ||
+         MangledName == "sub_group_commit_read_pipe" ||
+         MangledName == "to_global" || MangledName == "to_local" ||
+         MangledName == "to_private";
+}
+
+static bool isEnqueueKernelBI(const StringRef MangledName) {
+  return MangledName == "__enqueue_kernel_basic" ||
+         MangledName == "__enqueue_kernel_basic_events" ||
+         MangledName == "__enqueue_kernel_varargs" ||
+         MangledName == "__enqueue_kernel_events_varargs";
+}
+
+static bool isKernelQueryBI(const StringRef MangledName) {
+  return MangledName == "__get_kernel_work_group_size_impl" ||
+         MangledName == "__get_kernel_sub_group_count_for_ndrange_impl" ||
+         MangledName == "__get_kernel_max_sub_group_size_for_ndrange_impl" ||
+         MangledName == "__get_kernel_preferred_work_group_size_multiple_impl";
+}
+
+static bool isNonMangledOCLBuiltin(StringRef Name) {
+  if (!Name.startswith("__"))
+    return false;
+
+  return isEnqueueKernelBI(Name) || isKernelQueryBI(Name) ||
+         isPipeOrAddressSpaceCastBI(Name.drop_front(2)) ||
+         Name == "__translate_sampler_initializer";
+}
+
+std::string getOclOrSpirvBuiltinDemangledName(StringRef Name) {
+  bool IsNonMangledOCL = isNonMangledOCLBuiltin(Name);
+  bool IsNonMangledSPIRV = Name.startswith("__spirv_");
+  bool IsMangled = Name.startswith("_Z");
+
+  if (!IsNonMangledOCL && !IsNonMangledSPIRV && !IsMangled)
+    return std::string();
+
+  // Try to use the itanium demangler.
+  size_t n;
+  int Status;
+  char *DemangledName = itaniumDemangle(Name.data(), nullptr, &n, &Status);
+
+  if (Status == demangle_success) {
+    std::string Result = DemangledName;
+    free(DemangledName);
+    return Result;
+  }
+  free(DemangledName);
+  // Otherwise use simple demangling to return the function name.
+  if (IsNonMangledOCL || IsNonMangledSPIRV)
+    return Name.str();
+
+  // Autocheck C++, maybe need to do explicit check of the source language.
+  // OpenCL C++ built-ins are declared in cl namespace.
+  // TODO: consider using 'St' abbriviation for cl namespace mangling.
+  // Similar to ::std:: in C++.
+  size_t Start, Len = 0;
+  size_t DemangledNameLenStart = 2;
+  if (Name.startswith("_ZN")) {
+    // Skip CV and ref qualifiers.
+    size_t NameSpaceStart = Name.find_first_not_of("rVKRO", 3);
+    // All built-ins are in the ::cl:: namespace.
+    if (Name.substr(NameSpaceStart, 11) != "2cl7__spirv")
+      return std::string();
+    DemangledNameLenStart = NameSpaceStart + 11;
+  }
+  Start = Name.find_first_not_of("0123456789", DemangledNameLenStart);
+  Name.substr(DemangledNameLenStart, Start - DemangledNameLenStart)
+      .getAsInteger(10, Len);
+  return Name.substr(Start, Len).str();
+}
+
+static bool isOpenCLBuiltinType(const StructType *SType) {
+  return SType->isOpaque() && SType->hasName() &&
+         SType->getName().startswith("opencl.");
+}
+
+static bool isSPIRVBuiltinType(const StructType *SType) {
+  return SType->isOpaque() && SType->hasName() &&
+         SType->getName().startswith("spirv.");
+}
+
+bool isSpecialOpaqueType(const Type *Ty) {
+  if (auto PType = dyn_cast<PointerType>(Ty)) {
+    if (!PType->isOpaque())
+      Ty = PType->getNonOpaquePointerElementType();
+  }
+  if (auto SType = dyn_cast<StructType>(Ty))
+    return isOpenCLBuiltinType(SType) || isSPIRVBuiltinType(SType);
+  return false;
+}
+} // namespace llvm

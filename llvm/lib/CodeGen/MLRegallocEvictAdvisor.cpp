@@ -18,7 +18,9 @@
 #if defined(LLVM_HAVE_TF_AOT_REGALLOCEVICTMODEL) || defined(LLVM_HAVE_TF_API)
 #include "llvm/Analysis/ModelUnderTrainingRunner.h"
 #include "llvm/Analysis/NoInferenceModelRunner.h"
+#include "llvm/Analysis/Utils/TrainingLogger.h"
 #endif
+#include "MLRegallocEvictAdvisor.h"
 #include "llvm/Analysis/ReleaseModeModelRunner.h"
 #include "llvm/CodeGen/CalcSpillWeights.h"
 #include "llvm/CodeGen/LiveRegMatrix.h"
@@ -63,6 +65,13 @@ static cl::opt<std::string> ModelUnderTraining(
     "regalloc-model", cl::Hidden,
     cl::desc("The model being trained for register allocation eviction"));
 
+static cl::opt<bool> EnableDevelopmentFeatures(
+    "regalloc-enable-development-features", cl::Hidden,
+    cl::desc("Whether or not to enable features under development for the ML "
+             "regalloc advisor"));
+
+#else
+static const bool EnableDevelopmentFeatures = false;
 #endif // #ifdef LLVM_HAVE_TF_API
 
 extern cl::opt<unsigned> EvictInterferenceCutoff;
@@ -89,6 +98,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
     AU.addRequired<RegAllocEvictionAdvisorAnalysis>();
+    AU.addRequired<RegAllocPriorityAdvisorAnalysis>();
     AU.addRequired<MachineBlockFrequencyInfo>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -109,20 +119,9 @@ INITIALIZE_PASS(RegAllocScoring, "regallocscoringpass",
 // Common ML Advisor declarations
 // ===================================
 namespace {
-// This is the maximum number of interfererring ranges. That's the number of
-// distinct AllocationOrder values, which comes from MCRegisterClass::RegsSize.
-// For X86, that's 32.
-// TODO: find a way to get this, statically, in a programmatic way.
-static const int64_t MaxInterferences = 32;
-
-// Logically, we can think of the feature set given to the evaluator as a 2D
-// matrix. The rows are the features (see next). The columns correspond to the
-// interferences. We treat the candidate virt reg as an 'interference', too, as
-// its feature set is the same as that of the interferring ranges. So we'll have
-// MaxInterferences + 1 columns and by convention, we will use the last column
-// for the virt reg seeking allocation.
-static const int64_t CandidateVirtRegPos = MaxInterferences;
-static const int64_t NumberOfInterferences = CandidateVirtRegPos + 1;
+// The model can only accept a specified number of opcodes and will error it if
+// fed an opcode it hasn't seen before. This constant sets the current cutoff.
+static const int OpcodeValueCutoff = 17716;
 
 // Most features are as described above, so we'll reuse this vector in defining
 // them.
@@ -192,25 +191,48 @@ static const std::vector<int64_t> PerLiveRangeShape{1, NumberOfInterferences};
     "lowest stage of an interval in this LR")                                  \
   M(float, progress, {1}, "ratio of current queue size to initial size")
 
-// The model learns to pick one of the mask == 1 interferences. This is the name
-// of the output tensor.
-// The contract with the model is that the output will be guaranteed to be to a
-// mask == 1 position.
-// Using a macro here to avoid 'not used' warnings (and keep cond compilation to
-// a minimum)
+#ifdef LLVM_HAVE_TF_API
+#define RA_EVICT_FIRST_DEVELOPMENT_FEATURE(M)                                  \
+  M(int64_t, instructions, InstructionsShape,                                  \
+    "Opcodes of the instructions covered by the eviction problem")
+
+#define RA_EVICT_REST_DEVELOPMENT_FEATURES(M)                                  \
+  M(int64_t, instructions_mapping, InstructionsMappingShape,                   \
+    "A binary matrix mapping LRs to instruction opcodes")                      \
+  M(float, mbb_frequencies, MBBFrequencyShape,                                 \
+    "A vector of machine basic block frequencies")                             \
+  M(int64_t, mbb_mapping, InstructionsShape,                                   \
+    "A vector of indicies mapping instructions to MBBs")
+#else
+#define RA_EVICT_FIRST_DEVELOPMENT_FEATURE(M)
+#define RA_EVICT_REST_DEVELOPMENT_FEATURES(M)
+#endif
+
+// The model learns to pick one of the mask == 1 interferences. This is the
+// name of the output tensor. The contract with the model is that the output
+// will be guaranteed to be to a mask == 1 position. Using a macro here to
+// avoid 'not used' warnings (and keep cond compilation to a minimum)
 #define DecisionName "index_to_evict"
 
 // Named features index.
 enum FeatureIDs {
-#define _FEATURE_IDX(_, name, __, ___) name,
-  RA_EVICT_FEATURES_LIST(_FEATURE_IDX)
+#define _FEATURE_IDX_SIMPLE(_, name, __, ___) name
+#define _FEATURE_IDX(A, B, C, D) _FEATURE_IDX_SIMPLE(A, B, C, D),
+  RA_EVICT_FEATURES_LIST(_FEATURE_IDX) FeatureCount,
+#ifdef LLVM_HAVE_TF_API
+  RA_EVICT_FIRST_DEVELOPMENT_FEATURE(_FEATURE_IDX_SIMPLE) = FeatureCount,
+#else
+  RA_EVICT_FIRST_DEVELOPMENT_FEATURE(_FEATURE_IDX)
+#endif // #ifdef LLVM_HAVE_TF_API
+  RA_EVICT_REST_DEVELOPMENT_FEATURES(_FEATURE_IDX) FeaturesWithDevelopmentCount
 #undef _FEATURE_IDX
-      FeatureCount
+#undef _FEATURE_IDX_SIMPLE
 };
 
 // The ML advisor will typically have a sparse input to the evaluator, because
 // various phys regs won't be available. It's easier (maintenance-wise) to
-// bulk-reset the state of the evaluator each time we are about to use it again.
+// bulk-reset the state of the evaluator each time we are about to use it
+// again.
 template <typename T> size_t getTotalSize(const std::vector<int64_t> &Shape) {
   size_t Ret = sizeof(T);
   for (const auto V : Shape)
@@ -223,11 +245,15 @@ void resetInputs(MLModelRunner &Runner) {
   std::memset(Runner.getTensorUntyped(FeatureIDs::NAME), 0,                    \
               getTotalSize<TYPE>(SHAPE));
   RA_EVICT_FEATURES_LIST(_RESET)
+  if (EnableDevelopmentFeatures) {
+    RA_EVICT_FIRST_DEVELOPMENT_FEATURE(_RESET)
+    RA_EVICT_REST_DEVELOPMENT_FEATURES(_RESET)
 #undef _RESET
+  }
 }
 
-// Per-live interval components that get aggregated into the feature values that
-// will be passed to the evaluator.
+// Per-live interval components that get aggregated into the feature values
+// that will be passed to the evaluator.
 struct LIFeatureComponents {
   double R = 0;
   double W = 0;
@@ -241,7 +267,8 @@ struct LIFeatureComponents {
 
 using CandidateRegList =
     std::array<std::pair<MCRegister, bool>, NumberOfInterferences>;
-using FeaturesListNormalizer = std::array<float, FeatureIDs::FeatureCount>;
+using FeaturesListNormalizer =
+    llvm::SmallVector<float, FeatureIDs::FeatureCount>;
 
 /// The ML evictor (commonalities between release and development mode)
 class MLEvictAdvisor : public RegAllocEvictionAdvisor {
@@ -259,10 +286,10 @@ protected:
   // error, and we shouldn't be asking for it here.
   const MLModelRunner &getRunner() const { return *Runner; }
 
-  /// This just calls Evaluate on the Runner, but in the development mode case,
-  /// if we're just capturing the log of the default advisor, it needs to call
-  /// the latter instead, so we need to pass all the necessary parameters for
-  /// it. In the development case, it will also log.
+  /// This just calls Evaluate on the Runner, but in the development mode
+  /// case, if we're just capturing the log of the default advisor, it needs
+  /// to call the latter instead, so we need to pass all the necessary
+  /// parameters for it. In the development case, it will also log.
   virtual int64_t
   tryFindEvictionCandidatePosition(const LiveInterval &VirtReg,
                                    const AllocationOrder &Order,
@@ -274,8 +301,8 @@ protected:
   bool
   loadInterferenceFeatures(const LiveInterval &VirtReg, MCRegister PhysReg,
                            bool IsHint, const SmallVirtRegSet &FixedRegisters,
-                           std::array<float, FeatureIDs::FeatureCount> &Largest,
-                           size_t Pos) const;
+                           llvm::SmallVectorImpl<float> &Largest, size_t Pos,
+                           SmallVectorImpl<LRStartEndInfo> &LRPosInfo) const;
 
 private:
   static float getInitialQueueSize(const MachineFunction &MF);
@@ -286,11 +313,12 @@ private:
       const SmallVirtRegSet &FixedRegisters) const override;
 
   void extractFeatures(const SmallVectorImpl<const LiveInterval *> &Intervals,
-                       std::array<float, FeatureIDs::FeatureCount> &Largest,
-                       size_t Pos, int64_t IsHint, int64_t LocalIntfsCount,
-                       float NrUrgent) const;
+                       llvm::SmallVectorImpl<float> &Largest, size_t Pos,
+                       int64_t IsHint, int64_t LocalIntfsCount, float NrUrgent,
+                       SmallVectorImpl<LRStartEndInfo> &LRPosInfo) const;
 
-  // Point-in-time: we didn't learn this, so we always delegate to the default.
+  // Point-in-time: we didn't learn this, so we always delegate to the
+  // default.
   bool canEvictHintInterference(
       const LiveInterval &VirtReg, MCRegister PhysReg,
       const SmallVirtRegSet &FixedRegisters) const override {
@@ -302,9 +330,9 @@ private:
   getLIFeatureComponents(const LiveInterval &LI) const;
 
   // Hold on to a default advisor for:
-  // 1) the implementation of canEvictHintInterference, because we didn't learn
-  // that nuance yet;
-  // 2) for bootstrapping (logging) in the development mode case.
+  // 1) the implementation of canEvictHintInterference, because we didn't
+  // learn that nuance yet; 2) for bootstrapping (logging) in the development
+  // mode case.
   const DefaultEvictionAdvisor DefaultAdvisor;
   MLModelRunner *const Runner;
   const MachineBlockFrequencyInfo &MBFI;
@@ -322,10 +350,6 @@ private:
 #define _DECL_FEATURES(type, name, shape, _)                                   \
   TensorSpec::createSpec<type>(#name, shape),
 
-static const std::vector<TensorSpec> InputFeatures{
-    {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)},
-};
-#undef _DECL_FEATURES
 // ===================================
 // Release (AOT) - specifics
 // ===================================
@@ -333,13 +357,23 @@ class ReleaseModeEvictionAdvisorAnalysis final
     : public RegAllocEvictionAdvisorAnalysis {
 public:
   ReleaseModeEvictionAdvisorAnalysis()
-      : RegAllocEvictionAdvisorAnalysis(AdvisorMode::Release) {}
+      : RegAllocEvictionAdvisorAnalysis(AdvisorMode::Release) {
+    if (EnableDevelopmentFeatures) {
+      InputFeatures = {RA_EVICT_FEATURES_LIST(
+          _DECL_FEATURES) RA_EVICT_FIRST_DEVELOPMENT_FEATURE(_DECL_FEATURES)
+                           RA_EVICT_REST_DEVELOPMENT_FEATURES(_DECL_FEATURES)};
+    } else {
+      InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
+    }
+  }
   // support for isa<> and dyn_cast.
   static bool classof(const RegAllocEvictionAdvisorAnalysis *R) {
     return R->getAdvisorMode() == AdvisorMode::Release;
   }
 
 private:
+  std::vector<TensorSpec> InputFeatures;
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBlockFrequencyInfo>();
     AU.addRequired<MachineLoopInfo>();
@@ -369,18 +403,11 @@ static const TensorSpec Output =
 static const TensorSpec Reward = TensorSpec::createSpec<float>("reward", {1});
 
 // Features we bind on the model. The tensor names have a prefix, and we also
-// need to include some tensors that are expected to be present by the training
-// algo.
+// need to include some tensors that are expected to be present by the
+// training algo.
 // TODO: can we just get rid of these?
 #define _DECL_TRAIN_FEATURES(type, name, shape, _)                             \
   TensorSpec::createSpec<type>(std::string("action_") + #name, shape),
-
-static const std::vector<TensorSpec> TrainingInputFeatures{
-    {RA_EVICT_FEATURES_LIST(_DECL_TRAIN_FEATURES)
-         TensorSpec::createSpec<float>("action_discount", {1}),
-     TensorSpec::createSpec<int32_t>("action_step_type", {1}),
-     TensorSpec::createSpec<float>("action_reward", {1})}};
-#undef _DECL_TRAIN_FEATURES
 
 class DevelopmentModeEvictAdvisor : public MLEvictAdvisor {
 public:
@@ -403,7 +430,27 @@ class DevelopmentModeEvictionAdvisorAnalysis final
     : public RegAllocEvictionAdvisorAnalysis {
 public:
   DevelopmentModeEvictionAdvisorAnalysis()
-      : RegAllocEvictionAdvisorAnalysis(AdvisorMode::Development) {}
+      : RegAllocEvictionAdvisorAnalysis(AdvisorMode::Development) {
+    if (EnableDevelopmentFeatures) {
+      InputFeatures = {RA_EVICT_FEATURES_LIST(
+          _DECL_FEATURES) RA_EVICT_FIRST_DEVELOPMENT_FEATURE(_DECL_FEATURES)
+                           RA_EVICT_REST_DEVELOPMENT_FEATURES(_DECL_FEATURES)};
+      TrainingInputFeatures = {
+          RA_EVICT_FEATURES_LIST(_DECL_TRAIN_FEATURES)
+              RA_EVICT_FIRST_DEVELOPMENT_FEATURE(_DECL_TRAIN_FEATURES)
+                  RA_EVICT_REST_DEVELOPMENT_FEATURES(_DECL_TRAIN_FEATURES)
+                      TensorSpec::createSpec<float>("action_discount", {1}),
+          TensorSpec::createSpec<int32_t>("action_step_type", {1}),
+          TensorSpec::createSpec<float>("action_reward", {1})};
+    } else {
+      InputFeatures = {RA_EVICT_FEATURES_LIST(_DECL_FEATURES)};
+      TrainingInputFeatures = {
+          RA_EVICT_FEATURES_LIST(_DECL_TRAIN_FEATURES)
+              TensorSpec::createSpec<float>("action_discount", {1}),
+          TensorSpec::createSpec<int32_t>("action_step_type", {1}),
+          TensorSpec::createSpec<float>("action_reward", {1})};
+    }
+  }
   // support for isa<> and dyn_cast.
   static bool classof(const RegAllocEvictionAdvisorAnalysis *R) {
     return R->getAdvisorMode() == AdvisorMode::Development;
@@ -418,7 +465,16 @@ public:
     return I->second.get();
   }
 
+  void logRewardIfNeeded(const MachineFunction &MF,
+                         llvm::function_ref<float()> GetReward) override {
+    if (auto *Log = this->getLogger(MF))
+      Log->logFloatFinalReward(GetReward());
+  }
+
 private:
+  std::vector<TensorSpec> InputFeatures;
+  std::vector<TensorSpec> TrainingInputFeatures;
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineBlockFrequencyInfo>();
     AU.addRequired<MachineLoopInfo>();
@@ -485,6 +541,7 @@ private:
   std::unique_ptr<MLModelRunner> Runner;
   StringMap<std::unique_ptr<Logger>> LogMap;
 };
+
 #endif //#ifdef LLVM_HAVE_TF_API
 } // namespace
 
@@ -528,8 +585,9 @@ int64_t MLEvictAdvisor::tryFindEvictionCandidatePosition(
 
 bool MLEvictAdvisor::loadInterferenceFeatures(
     const LiveInterval &VirtReg, MCRegister PhysReg, bool IsHint,
-    const SmallVirtRegSet &FixedRegisters, FeaturesListNormalizer &Largest,
-    size_t Pos) const {
+    const SmallVirtRegSet &FixedRegisters,
+    llvm::SmallVectorImpl<float> &Largest, size_t Pos,
+    llvm::SmallVectorImpl<LRStartEndInfo> &LRPosInfo) const {
   // It is only possible to evict virtual register interference.
   if (Matrix->checkInterference(VirtReg, PhysReg) > LiveRegMatrix::IK_VirtReg) {
     // leave unavailable
@@ -546,8 +604,8 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
   SmallVector<const LiveInterval *, MaxInterferences> InterferingIntervals;
   for (MCRegUnitIterator Units(PhysReg, TRI); Units.isValid(); ++Units) {
     LiveIntervalUnion::Query &Q = Matrix->query(VirtReg, *Units);
-    // Different from the default heuristic, we don't make any assumptions about
-    // what having more than 10 results in the query may mean.
+    // Different from the default heuristic, we don't make any assumptions
+    // about what having more than 10 results in the query may mean.
     const auto &IFIntervals = Q.interferingVRegs(EvictInterferenceCutoff);
     if (IFIntervals.empty() && InterferingIntervals.empty())
       continue;
@@ -588,7 +646,7 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
   // OK, so if we made it this far, this LR is an eviction candidate, load its
   // features.
   extractFeatures(InterferingIntervals, Largest, Pos, IsHint, LocalIntfs,
-                  NrUrgent);
+                  NrUrgent, LRPosInfo);
   return true;
 }
 
@@ -604,14 +662,14 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   // max<uint8_t>, then any of the costs of the legally-evictable intervals
   // would be lower. When that happens, one of those will be selected.
   // Therefore, we allow the candidate be selected, unless the candidate is
-  // unspillable, in which case it would be incorrect to not find a register for
-  // it.
+  // unspillable, in which case it would be incorrect to not find a register
+  // for it.
   const bool MustFindEviction =
       (!VirtReg.isSpillable() && CostPerUseLimit == static_cast<uint8_t>(~0u));
   // Number of available candidates - if 0, no need to continue.
   size_t Available = 0;
-  // Make sure we don't have leftover partial state from an attempt where we had
-  // no available candidates and bailed out early.
+  // Make sure we don't have leftover partial state from an attempt where we
+  // had no available candidates and bailed out early.
   resetInputs(*Runner);
 
   // Track the index->register mapping because AllocationOrder doesn't do that
@@ -624,16 +682,15 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   // only normalize (some of) the float features, but it's just simpler to
   // dimension 'Largest' to all the features, especially since we have the
   // 'DoNotNormalize' list.
-  FeaturesListNormalizer Largest;
-  Largest.fill(0.0);
+  FeaturesListNormalizer Largest(FeatureIDs::FeatureCount, 0.0);
 
-  // Same overal idea as in the default eviction policy - we visit the values of
-  // AllocationOrder one at a time. If it's not legally available, we mask off
-  // the corresponding feature column (==do nothing because we already reset all
-  // the features to 0)
-  // Use Pos to capture the column we load features at - in AllocationOrder
-  // order.
+  // Same overal idea as in the default eviction policy - we visit the values
+  // of AllocationOrder one at a time. If it's not legally available, we mask
+  // off the corresponding feature column (==do nothing because we already
+  // reset all the features to 0) Use Pos to capture the column we load
+  // features at - in AllocationOrder order.
   size_t Pos = 0;
+  SmallVector<LRStartEndInfo, NumberOfInterferences> LRPosInfo;
   for (auto I = Order.begin(), E = Order.getOrderLimitEnd(OrderLimit); I != E;
        ++I, ++Pos) {
     MCRegister PhysReg = *I;
@@ -643,7 +700,7 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
       continue;
     }
     if (loadInterferenceFeatures(VirtReg, PhysReg, I.isHint(), FixedRegisters,
-                                 Largest, Pos)) {
+                                 Largest, Pos, LRPosInfo)) {
       ++Available;
       Regs[Pos] = std::make_pair(PhysReg, true);
     }
@@ -659,10 +716,39 @@ MCRegister MLEvictAdvisor::tryFindEvictionCandidate(
   Regs[CandidateVirtRegPos].second = !MustFindEviction;
   if (!MustFindEviction)
     extractFeatures(SmallVector<const LiveInterval *, 1>(1, &VirtReg), Largest,
-                    CandidateVirtRegPos, /*IsHint*/ 0, /*LocalIntfsCount*/ 0,
-                    /*NrUrgent*/ 0.0);
+                    CandidateVirtRegPos, /*IsHint*/ 0,
+                    /*LocalIntfsCount*/ 0,
+                    /*NrUrgent*/ 0.0, LRPosInfo);
   assert(InitialQSize > 0.0 && "We couldn't have gotten here if we had "
                                "nothing to allocate initially.");
+#ifdef LLVM_HAVE_TF_API
+  if (EnableDevelopmentFeatures) {
+    extractInstructionFeatures(
+        LRPosInfo, Runner,
+        [this](SlotIndex InputIndex) -> int {
+          auto *CurrentMachineInstruction =
+              LIS->getInstructionFromIndex(InputIndex);
+          if (!CurrentMachineInstruction) {
+            return -1;
+          }
+          return CurrentMachineInstruction->getOpcode();
+        },
+        [this](SlotIndex InputIndex) -> float {
+          auto *CurrentMachineInstruction =
+              LIS->getInstructionFromIndex(InputIndex);
+          return MBFI.getBlockFreqRelativeToEntryBlock(
+              CurrentMachineInstruction->getParent());
+        },
+        [this](SlotIndex InputIndex) -> MachineBasicBlock * {
+          auto *CurrentMachineInstruction =
+              LIS->getInstructionFromIndex(InputIndex);
+          return CurrentMachineInstruction->getParent();
+        },
+        FeatureIDs::instructions, FeatureIDs::instructions_mapping,
+        FeatureIDs::mbb_frequencies, FeatureIDs::mbb_mapping,
+        LIS->getSlotIndexes()->getLastIndex());
+  }
+#endif // #ifdef LLVM_HAVE_TF_API
   // Normalize the features.
   for (auto &V : Largest)
     V = V ? V : 1.0;
@@ -746,8 +832,9 @@ MLEvictAdvisor::getLIFeatureComponents(const LiveInterval &LI) const {
 // of accummulating the various features, we keep them separate.
 void MLEvictAdvisor::extractFeatures(
     const SmallVectorImpl<const LiveInterval *> &Intervals,
-    std::array<float, FeatureIDs::FeatureCount> &Largest, size_t Pos,
-    int64_t IsHint, int64_t LocalIntfsCount, float NrUrgent) const {
+    llvm::SmallVectorImpl<float> &Largest, size_t Pos, int64_t IsHint,
+    int64_t LocalIntfsCount, float NrUrgent,
+    SmallVectorImpl<LRStartEndInfo> &LRPosInfo) const {
   int64_t NrDefsAndUses = 0;
   int64_t NrBrokenHints = 0;
   double R = 0.0;
@@ -794,6 +881,13 @@ void MLEvictAdvisor::extractFeatures(
 
     HintWeights += LIFC.HintWeights;
     NrRematerializable += LIFC.IsRemat;
+
+    if (EnableDevelopmentFeatures) {
+      for (auto CurrentSegment : LI) {
+        LRPosInfo.push_back(
+            LRStartEndInfo{CurrentSegment.start, CurrentSegment.end, Pos});
+      }
+    }
   }
   size_t Size = 0;
   if (!Intervals.empty()) {
@@ -836,8 +930,143 @@ void MLEvictAdvisor::extractFeatures(
 #undef SET
 }
 
+void extractInstructionFeatures(
+    SmallVectorImpl<LRStartEndInfo> &LRPosInfo, MLModelRunner *RegallocRunner,
+    function_ref<int(SlotIndex)> GetOpcode,
+    function_ref<float(SlotIndex)> GetMBBFreq,
+    function_ref<MachineBasicBlock *(SlotIndex)> GetMBBReference,
+    const int InstructionsIndex, const int InstructionsMappingIndex,
+    const int MBBFreqIndex, const int MBBMappingIndex,
+    const SlotIndex LastIndex) {
+  // This function extracts instruction based features relevant to the eviction
+  // problem currently being solved. This function ends up extracting two
+  // tensors.
+  // 1 - A vector of size max instruction count. It contains the opcodes of the
+  // instructions spanned by all the intervals in the current instance of the
+  // eviction problem.
+  // 2 - A binary mapping matrix of size (LR count * max
+  // instruction count) which maps where the LRs are live to the actual opcodes
+  // for which they are live.
+  // 3 - A vector of size max supported MBB count storing MBB frequencies,
+  // encompassing all of the MBBs covered by the eviction problem.
+  // 4 - A vector of size max instruction count of indices to members of the MBB
+  // frequency vector, mapping each instruction to its associated MBB.
+
+  // Start off by sorting the segments based on the beginning slot index.
+  std::sort(
+      LRPosInfo.begin(), LRPosInfo.end(),
+      [](LRStartEndInfo A, LRStartEndInfo B) { return A.Begin < B.Begin; });
+  size_t InstructionIndex = 0;
+  size_t CurrentSegmentIndex = 0;
+  SlotIndex CurrentIndex = LRPosInfo[0].Begin;
+  std::map<MachineBasicBlock *, size_t> VisitedMBBs;
+  size_t CurrentMBBIndex = 0;
+  // This loop processes all the segments sequentially by starting at the
+  // beginning slot index of the first segment, iterating through all the slot
+  // indices before the end slot index of that segment (while checking for
+  // overlaps with segments that start at greater slot indices). After hitting
+  // that end index, the current segment being processed gets bumped until they
+  // are all processed or the max instruction count is hit, where everything is
+  // just truncated.
+  while (true) {
+    // If the index that we are currently at is within the current segment and
+    // we haven't hit the max instruction count, continue processing the current
+    // segment.
+    while (CurrentIndex <= LRPosInfo[CurrentSegmentIndex].End &&
+           InstructionIndex < ModelMaxSupportedInstructionCount) {
+      int CurrentOpcode = GetOpcode(CurrentIndex);
+      // If the current machine instruction is null, skip it
+      if (CurrentOpcode == -1) {
+        // If we're currently at the last index in the SlotIndex analysis,
+        // we can't go any further, so return from the function
+        if (CurrentIndex >= LastIndex) {
+          return;
+        }
+        CurrentIndex = CurrentIndex.getNextIndex();
+        continue;
+      }
+      MachineBasicBlock *CurrentMBBReference = GetMBBReference(CurrentIndex);
+      if (VisitedMBBs.count(CurrentMBBReference) == 0) {
+        VisitedMBBs[CurrentMBBReference] = CurrentMBBIndex;
+        ++CurrentMBBIndex;
+      }
+      extractMBBFrequency(CurrentIndex, InstructionIndex, VisitedMBBs,
+                          GetMBBFreq, CurrentMBBReference, RegallocRunner,
+                          MBBFreqIndex, MBBMappingIndex);
+      // Current code assumes we're not going to get any disjointed segments
+      assert(LRPosInfo[CurrentSegmentIndex].Begin <= CurrentIndex);
+      RegallocRunner->getTensor<int64_t>(InstructionsIndex)[InstructionIndex] =
+          CurrentOpcode < OpcodeValueCutoff ? CurrentOpcode : 0;
+      // set value in the binary mapping matrix for the current instruction
+      auto CurrentSegmentPosition = LRPosInfo[CurrentSegmentIndex].Pos;
+      RegallocRunner->getTensor<int64_t>(
+          InstructionsMappingIndex)[CurrentSegmentPosition *
+                                        ModelMaxSupportedInstructionCount +
+                                    InstructionIndex] = 1;
+      // All of the segments are sorted based on the beginning slot index, but
+      // this doesn't mean that the beginning slot index of the next segment is
+      // after the end segment of the one being currently processed. This while
+      // loop checks for overlapping segments and modifies the portion of the
+      // column in the mapping matrix for the currently processed instruction
+      // for the LR it is checking. Also make sure that the beginning of the
+      // current segment we're checking for overlap in is less than the current
+      // index, otherwise we're done checking overlaps.
+      size_t OverlapCheckCurrentSegment = CurrentSegmentIndex + 1;
+      while (OverlapCheckCurrentSegment < LRPosInfo.size() &&
+             LRPosInfo[OverlapCheckCurrentSegment].Begin <= CurrentIndex) {
+        auto OverlapCurrentSegmentPosition =
+            LRPosInfo[OverlapCheckCurrentSegment].Pos;
+        if (LRPosInfo[OverlapCheckCurrentSegment].End >= CurrentIndex) {
+          RegallocRunner->getTensor<int64_t>(
+              InstructionsMappingIndex)[OverlapCurrentSegmentPosition *
+                                            ModelMaxSupportedInstructionCount +
+                                        InstructionIndex] = 1;
+        }
+        ++OverlapCheckCurrentSegment;
+      }
+      ++InstructionIndex;
+      if (CurrentIndex >= LastIndex) {
+        return;
+      }
+      CurrentIndex = CurrentIndex.getNextIndex();
+    }
+    // if we've just finished processing through the last segment or if we've
+    // hit the maximum number of instructions, break out of the loop.
+    if (CurrentSegmentIndex == LRPosInfo.size() - 1 ||
+        InstructionIndex >= ModelMaxSupportedInstructionCount) {
+      break;
+    }
+    // If the segments are not overlapping, we need to move to the beginning
+    // index of the next segment to avoid having instructions not attached to
+    // any register.
+    if (LRPosInfo[CurrentSegmentIndex + 1].Begin >
+        LRPosInfo[CurrentSegmentIndex].End) {
+      CurrentIndex = LRPosInfo[CurrentSegmentIndex + 1].Begin;
+    }
+    ++CurrentSegmentIndex;
+  }
+}
+
+void extractMBBFrequency(const SlotIndex CurrentIndex,
+                         const size_t CurrentInstructionIndex,
+                         std::map<MachineBasicBlock *, size_t> &VisitedMBBs,
+                         function_ref<float(SlotIndex)> GetMBBFreq,
+                         MachineBasicBlock *CurrentMBBReference,
+                         MLModelRunner *RegallocRunner, const int MBBFreqIndex,
+                         const int MBBMappingIndex) {
+  size_t CurrentMBBIndex = VisitedMBBs[CurrentMBBReference];
+  float CurrentMBBFreq = GetMBBFreq(CurrentIndex);
+  if (CurrentMBBIndex < ModelMaxSupportedMBBCount) {
+    RegallocRunner->getTensor<float>(MBBFreqIndex)[CurrentMBBIndex] =
+        CurrentMBBFreq;
+    RegallocRunner->getTensor<int64_t>(
+        MBBMappingIndex)[CurrentInstructionIndex] = CurrentMBBIndex;
+  }
+}
+
 // Development mode-specific implementations
 #ifdef LLVM_HAVE_TF_API
+
 RegAllocEvictionAdvisorAnalysis *llvm::createDevelopmentModeAdvisor() {
   return new DevelopmentModeEvictionAdvisorAnalysis();
 }
@@ -853,9 +1082,9 @@ int64_t DevelopmentModeEvictAdvisor::tryFindEvictionCandidatePosition(
   } else {
     MCRegister PhysReg = getDefaultAdvisor().tryFindEvictionCandidate(
         VirtReg, Order, CostPerUseLimit, FixedRegisters);
-    // Find the index of the selected PhysReg. We need it for logging, otherwise
-    // this is wasted cycles (but so would starting development mode without a
-    // model nor logging)
+    // Find the index of the selected PhysReg. We need it for logging,
+    // otherwise this is wasted cycles (but so would starting development mode
+    // without a model nor logging)
     if (!PhysReg)
       Ret = CandidateVirtRegPos;
     else
@@ -867,7 +1096,10 @@ int64_t DevelopmentModeEvictAdvisor::tryFindEvictionCandidatePosition(
   if (TrainingLog.empty())
     return Ret;
   size_t CurrentFeature = 0;
-  for (; CurrentFeature < FeatureIDs::FeatureCount; ++CurrentFeature) {
+  size_t FeatureCount = EnableDevelopmentFeatures
+                            ? FeatureIDs::FeaturesWithDevelopmentCount
+                            : FeatureIDs::FeatureCount;
+  for (; CurrentFeature < FeatureCount; ++CurrentFeature) {
     Log->logSpecifiedTensorValue(
         CurrentFeature, reinterpret_cast<const char *>(
                             getRunner().getTensorUntyped(CurrentFeature)));
@@ -885,13 +1117,19 @@ int64_t DevelopmentModeEvictAdvisor::tryFindEvictionCandidatePosition(
 }
 
 bool RegAllocScoring::runOnMachineFunction(MachineFunction &MF) {
-  if (auto *DevModeAnalysis = dyn_cast<DevelopmentModeEvictionAdvisorAnalysis>(
-          &getAnalysis<RegAllocEvictionAdvisorAnalysis>()))
-    if (auto *Log = DevModeAnalysis->getLogger(MF))
-      Log->logFloatFinalReward(static_cast<float>(
+  Optional<float> CachedReward;
+  auto GetReward = [&]() {
+    if (!CachedReward)
+      CachedReward = static_cast<float>(
           calculateRegAllocScore(MF, getAnalysis<MachineBlockFrequencyInfo>())
-              .getScore()));
+              .getScore());
+    return *CachedReward;
+  };
 
+  getAnalysis<RegAllocEvictionAdvisorAnalysis>().logRewardIfNeeded(MF,
+                                                                   GetReward);
+  getAnalysis<RegAllocPriorityAdvisorAnalysis>().logRewardIfNeeded(MF,
+                                                                   GetReward);
   return false;
 }
 #endif // #ifdef LLVM_HAVE_TF_API

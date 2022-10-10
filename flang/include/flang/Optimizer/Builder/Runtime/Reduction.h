@@ -39,6 +39,13 @@ void genAnyDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
                       mlir::Value resultBox, mlir::Value maskBox,
                       mlir::Value dim);
 
+/// Generate call to `ParityDim` runtime routine.
+/// This calls the descriptor based runtime call implementation of the `parity`
+/// intrinsic.
+void genParityDescriptor(fir::FirOpBuilder &builder, mlir::Location loc,
+                         mlir::Value resultBox, mlir::Value maskBox,
+                         mlir::Value dim);
+
 /// Generate call to `All` runtime routine. This version of `all` is specialized
 /// for rank 1 mask arguments.
 /// This calls the version that returns a scalar logical value.
@@ -128,6 +135,12 @@ void genMinvalDim(fir::FirOpBuilder &builder, mlir::Location loc,
                   mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
                   mlir::Value maskBox);
 
+/// Generate call to `Parity` runtime routine. This version of `parity` is
+/// specialized for rank 1 mask arguments.
+/// This calls the version that returns a scalar logical value.
+mlir::Value genParity(fir::FirOpBuilder &builder, mlir::Location loc,
+                      mlir::Value maskBox, mlir::Value dim);
+
 /// Generate call to `Product` intrinsic runtime routine. This is the version
 /// that does not take a dim argument.
 mlir::Value genProduct(fir::FirOpBuilder &builder, mlir::Location loc,
@@ -151,6 +164,42 @@ mlir::Value genSum(fir::FirOpBuilder &builder, mlir::Location loc,
 void genSumDim(fir::FirOpBuilder &builder, mlir::Location loc,
                mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
                mlir::Value maskBox);
+
+/// Generate call to `IAll` intrinsic runtime routine. This is the version
+/// that does not take a dim argument.
+mlir::Value genIAll(fir::FirOpBuilder &builder, mlir::Location loc,
+                    mlir::Value arrayBox, mlir::Value maskBox,
+                    mlir::Value resultBox);
+
+/// Generate call to `IAllDim` intrinsic runtime routine. This is the version
+/// that takes arrays of any rank with a dim argument specified.
+void genIAllDim(fir::FirOpBuilder &builder, mlir::Location loc,
+                mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
+                mlir::Value maskBox);
+
+/// Generate call to `IAny` intrinsic runtime routine. This is the version
+/// that does not take a dim argument.
+mlir::Value genIAny(fir::FirOpBuilder &builder, mlir::Location loc,
+                    mlir::Value arrayBox, mlir::Value maskBox,
+                    mlir::Value resultBox);
+
+/// Generate call to `IAnyDim` intrinsic runtime routine. This is the version
+/// that takes arrays of any rank with a dim argument specified.
+void genIAnyDim(fir::FirOpBuilder &builder, mlir::Location loc,
+                mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
+                mlir::Value maskBox);
+
+/// Generate call to `IParity` intrinsic runtime routine. This is the version
+/// that does not take a dim argument.
+mlir::Value genIParity(fir::FirOpBuilder &builder, mlir::Location loc,
+                       mlir::Value arrayBox, mlir::Value maskBox,
+                       mlir::Value resultBox);
+
+/// Generate call to `IParityDim` intrinsic runtime routine. This is the version
+/// that takes arrays of any rank with a dim argument specified.
+void genIParityDim(fir::FirOpBuilder &builder, mlir::Location loc,
+                   mlir::Value resultBox, mlir::Value arrayBox, mlir::Value dim,
+                   mlir::Value maskBox);
 
 } // namespace fir::runtime
 

@@ -169,6 +169,17 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_Z_Xlinker__no_demangle))
     CmdArgs.push_back("--no-demangle");
 
+  if (Arg *A = Args.getLastArg(options::OPT_mguard_EQ)) {
+    StringRef GuardArgs = A->getValue();
+    if (GuardArgs == "none")
+      CmdArgs.push_back("--no-guard-cf");
+    else if (GuardArgs == "cf" || GuardArgs == "cf-nochecks")
+      CmdArgs.push_back("--guard-cf");
+    else
+      D.Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << GuardArgs;
+  }
+
   CmdArgs.push_back("-o");
   const char *OutputFile = Output.getFilename();
   // GCC implicitly adds an .exe extension if it is given an output file name
@@ -482,15 +493,19 @@ bool toolchains::MinGW::HasNativeLLVMSupport() const {
   return NativeLLVMSupport;
 }
 
-bool toolchains::MinGW::IsUnwindTablesDefault(const ArgList &Args) const {
+ToolChain::UnwindTableLevel
+toolchains::MinGW::getDefaultUnwindTableLevel(const ArgList &Args) const {
   Arg *ExceptionArg = Args.getLastArg(options::OPT_fsjlj_exceptions,
                                       options::OPT_fseh_exceptions,
                                       options::OPT_fdwarf_exceptions);
   if (ExceptionArg &&
       ExceptionArg->getOption().matches(options::OPT_fseh_exceptions))
-    return true;
-  return getArch() == llvm::Triple::x86_64 || getArch() == llvm::Triple::arm ||
-         getArch() == llvm::Triple::thumb || getArch() == llvm::Triple::aarch64;
+    return UnwindTableLevel::Asynchronous;
+
+  if (getArch() == llvm::Triple::x86_64 || getArch() == llvm::Triple::arm ||
+      getArch() == llvm::Triple::thumb || getArch() == llvm::Triple::aarch64)
+    return UnwindTableLevel::Asynchronous;
+  return UnwindTableLevel::None;
 }
 
 bool toolchains::MinGW::isPICDefault() const {
@@ -605,6 +620,26 @@ void toolchains::MinGW::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
                    Base + SubdirName + llvm::sys::path::get_separator() + "usr/include");
 
   addSystemInclude(DriverArgs, CC1Args, Base + "include");
+}
+
+void toolchains::MinGW::addClangTargetOptions(
+    const llvm::opt::ArgList &DriverArgs, llvm::opt::ArgStringList &CC1Args,
+    Action::OffloadKind DeviceOffloadKind) const {
+  if (Arg *A = DriverArgs.getLastArg(options::OPT_mguard_EQ)) {
+    StringRef GuardArgs = A->getValue();
+    if (GuardArgs == "none") {
+      // Do nothing.
+    } else if (GuardArgs == "cf") {
+      // Emit CFG instrumentation and the table of address-taken functions.
+      CC1Args.push_back("-cfguard");
+    } else if (GuardArgs == "cf-nochecks") {
+      // Emit only the table of address-taken functions.
+      CC1Args.push_back("-cfguard-no-checks");
+    } else {
+      getDriver().Diag(diag::err_drv_unsupported_option_argument)
+          << A->getSpelling() << GuardArgs;
+    }
+  }
 }
 
 void toolchains::MinGW::AddClangCXXStdlibIncludeArgs(

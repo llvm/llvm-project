@@ -17,17 +17,17 @@
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
-class SPV_CastOp<string mnemonic, Type resultType, Type operandType,
-                 list<Trait> traits = []> :
-      SPV_Op<mnemonic,
+class SPIRV_CastOp<string mnemonic, Type resultType, Type operandType,
+                   list<Trait> traits = []> :
+      SPIRV_Op<mnemonic,
              !listconcat(traits,
                          [NoSideEffect, SameOperandsAndResultShape])> {
   let arguments = (ins
-    SPV_ScalarOrVectorOrCoopMatrixOf<operandType>:$operand
+    SPIRV_ScalarOrVectorOrCoopMatrixOf<operandType>:$operand
   );
 
   let results = (outs
-    SPV_ScalarOrVectorOrCoopMatrixOf<resultType>:$result
+    SPIRV_ScalarOrVectorOrCoopMatrixOf<resultType>:$result
   );
   let assemblyFormat = [{
     $operand attr-dict `:` type($operand) `to` type($result)
@@ -36,7 +36,7 @@ class SPV_CastOp<string mnemonic, Type resultType, Type operandType,
 
 // -----
 
-def SPV_BitcastOp : SPV_Op<"Bitcast", [NoSideEffect]> {
+def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [NoSideEffect]> {
   let summary = "Bit pattern-preserving type conversion.";
 
   let description = [{
@@ -64,25 +64,25 @@ def SPV_BitcastOp : SPV_Op<"Bitcast", [NoSideEffect]> {
     <!-- End of AutoGen section -->
 
     ```
-    bitcast-op ::= ssa-id `=` `spv.Bitcast` ssa-use
+    bitcast-op ::= ssa-id `=` `spirv.Bitcast` ssa-use
                    `:` operand-type `to` result-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.Bitcast %0 : f32 to i32
-    %1 = spv.Bitcast %0 : vector<2xf32> to i64
-    %1 = spv.Bitcast %0 : !spv.ptr<f32, Function> to !spv.ptr<i32, Function>
+    %1 = spirv.Bitcast %0 : f32 to i32
+    %1 = spirv.Bitcast %0 : vector<2xf32> to i64
+    %1 = spirv.Bitcast %0 : !spirv.ptr<f32, Function> to !spirv.ptr<i32, Function>
     ```
   }];
 
   let arguments = (ins
-    SPV_ScalarOrVectorOrPtr:$operand
+    SPIRV_ScalarOrVectorOrPtr:$operand
   );
 
   let results = (outs
-    SPV_ScalarOrVectorOrPtr:$result
+    SPIRV_ScalarOrVectorOrPtr:$result
   );
 
   let assemblyFormat = [{
@@ -93,7 +93,7 @@ def SPV_BitcastOp : SPV_Op<"Bitcast", [NoSideEffect]> {
 
 // -----
 
-def SPV_ConvertFToSOp : SPV_CastOp<"ConvertFToS", SPV_Integer, SPV_Float, []> {
+def SPIRV_ConvertFToSOp : SPIRV_CastOp<"ConvertFToS", SPIRV_Integer, SPIRV_Float, []> {
   let summary = [{
     Convert value numerically from floating point to signed integer, with
     round toward 0.0.
@@ -110,22 +110,22 @@ def SPV_ConvertFToSOp : SPV_CastOp<"ConvertFToS", SPV_Integer, SPV_Float, []> {
     <!-- End of AutoGen section -->
 
     ```
-    convert-f-to-s-op ::= ssa-id `=` `spv.ConvertFToSOp` ssa-use
+    convert-f-to-s-op ::= ssa-id `=` `spirv.ConvertFToSOp` ssa-use
                           `:` operand-type `to` result-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.ConvertFToS %0 : f32 to i32
-    %3 = spv.ConvertFToS %2 : vector<3xf32> to vector<3xi32>
+    %1 = spirv.ConvertFToS %0 : f32 to i32
+    %3 = spirv.ConvertFToS %2 : vector<3xf32> to vector<3xi32>
     ```
   }];
 }
 
 // -----
 
-def SPV_ConvertFToUOp : SPV_CastOp<"ConvertFToU", SPV_Integer, SPV_Float, []> {
+def SPIRV_ConvertFToUOp : SPIRV_CastOp<"ConvertFToU", SPIRV_Integer, SPIRV_Float, []> {
   let summary = [{
     Convert value numerically from floating point to unsigned integer, with
     round toward 0.0.
@@ -143,24 +143,24 @@ def SPV_ConvertFToUOp : SPV_CastOp<"ConvertFToU", SPV_Integer, SPV_Float, []> {
     <!-- End of AutoGen section -->
 
     ```
-    convert-f-to-u-op ::= ssa-id `=` `spv.ConvertFToUOp` ssa-use
+    convert-f-to-u-op ::= ssa-id `=` `spirv.ConvertFToUOp` ssa-use
                           `:` operand-type `to` result-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.ConvertFToU %0 : f32 to i32
-    %3 = spv.ConvertFToU %2 : vector<3xf32> to vector<3xi32>
+    %1 = spirv.ConvertFToU %0 : f32 to i32
+    %3 = spirv.ConvertFToU %2 : vector<3xf32> to vector<3xi32>
     ```
   }];
 }
 
 // -----
 
-def SPV_ConvertSToFOp : SPV_CastOp<"ConvertSToF",
-                                   SPV_Float,
-                                   SPV_Integer,
+def SPIRV_ConvertSToFOp : SPIRV_CastOp<"ConvertSToF",
+                                   SPIRV_Float,
+                                   SPIRV_Integer,
                                    [SignedOp]> {
   let summary = [{
     Convert value numerically from signed integer to floating point.
@@ -177,24 +177,24 @@ def SPV_ConvertSToFOp : SPV_CastOp<"ConvertSToF",
     <!-- End of AutoGen section -->
 
     ```
-    convert-s-to-f-op ::= ssa-id `=` `spv.ConvertSToFOp` ssa-use
+    convert-s-to-f-op ::= ssa-id `=` `spirv.ConvertSToFOp` ssa-use
                           `:` operand-type `to` result-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.ConvertSToF %0 : i32 to f32
-    %3 = spv.ConvertSToF %2 : vector<3xi32> to vector<3xf32>
+    %1 = spirv.ConvertSToF %0 : i32 to f32
+    %3 = spirv.ConvertSToF %2 : vector<3xi32> to vector<3xf32>
     ```
   }];
 }
 
 // -----
 
-def SPV_ConvertUToFOp : SPV_CastOp<"ConvertUToF",
-                                   SPV_Float,
-                                   SPV_Integer,
+def SPIRV_ConvertUToFOp : SPIRV_CastOp<"ConvertUToF",
+                                   SPIRV_Float,
+                                   SPIRV_Integer,
                                    [UnsignedOp]> {
   let summary = [{
     Convert value numerically from unsigned integer to floating point.
@@ -211,24 +211,24 @@ def SPV_ConvertUToFOp : SPV_CastOp<"ConvertUToF",
     <!-- End of AutoGen section -->
 
     ```
-    convert-u-to-f-op ::= ssa-id `=` `spv.ConvertUToFOp` ssa-use
+    convert-u-to-f-op ::= ssa-id `=` `spirv.ConvertUToFOp` ssa-use
                           `:` operand-type `to` result-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.ConvertUToF %0 : i32 to f32
-    %3 = spv.ConvertUToF %2 : vector<3xi32> to vector<3xf32>
+    %1 = spirv.ConvertUToF %0 : i32 to f32
+    %3 = spirv.ConvertUToF %2 : vector<3xi32> to vector<3xf32>
     ```
   }];
 }
 
 // -----
 
-def SPV_FConvertOp : SPV_CastOp<"FConvert",
-                                SPV_Float,
-                                SPV_Float,
+def SPIRV_FConvertOp : SPIRV_CastOp<"FConvert",
+                                SPIRV_Float,
+                                SPIRV_Float,
                                 [UsableInSpecConstantOp]> {
   let summary = [{
     Convert value numerically from one floating-point width to another
@@ -247,24 +247,24 @@ def SPV_FConvertOp : SPV_CastOp<"FConvert",
     <!-- End of AutoGen section -->
 
     ```
-    f-convert-op ::= ssa-id `=` `spv.FConvertOp` ssa-use
+    f-convert-op ::= ssa-id `=` `spirv.FConvertOp` ssa-use
                      `:` operand-type `to` result-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.FConvertOp %0 : f32 to f64
-    %3 = spv.FConvertOp %2 : vector<3xf32> to vector<3xf64>
+    %1 = spirv.FConvertOp %0 : f32 to f64
+    %3 = spirv.FConvertOp %2 : vector<3xf32> to vector<3xf64>
     ```
   }];
 }
 
 // -----
 
-def SPV_SConvertOp : SPV_CastOp<"SConvert",
-                                SPV_Integer,
-                                SPV_Integer,
+def SPIRV_SConvertOp : SPIRV_CastOp<"SConvert",
+                                SPIRV_Integer,
+                                SPIRV_Integer,
                                 [UsableInSpecConstantOp, SignedOp]> {
   let summary = [{
     Convert signed width.  This is either a truncate or a sign extend.
@@ -282,24 +282,24 @@ def SPV_SConvertOp : SPV_CastOp<"SConvert",
     <!-- End of AutoGen section -->
 
     ```
-    s-convert-op ::= ssa-id `=` `spv.SConvertOp` ssa-use
+    s-convert-op ::= ssa-id `=` `spirv.SConvertOp` ssa-use
                      `:` operand-type `to` result-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.SConvertOp %0 : i32 to i64
-    %3 = spv.SConvertOp %2 : vector<3xi32> to vector<3xi64>
+    %1 = spirv.SConvertOp %0 : i32 to i64
+    %3 = spirv.SConvertOp %2 : vector<3xi32> to vector<3xi64>
     ```
   }];
 }
 
 // -----
 
-def SPV_UConvertOp : SPV_CastOp<"UConvert",
-                                SPV_Integer,
-                                SPV_Integer,
+def SPIRV_UConvertOp : SPIRV_CastOp<"UConvert",
+                                SPIRV_Integer,
+                                SPIRV_Integer,
                                 [UnsignedOp, UsableInSpecConstantOp]> {
   let summary = [{
     Convert unsigned width. This is either a truncate or a zero extend.
@@ -318,17 +318,157 @@ def SPV_UConvertOp : SPV_CastOp<"UConvert",
     <!-- End of AutoGen section -->
 
     ```
-    u-convert-op ::= ssa-id `=` `spv.UConvertOp` ssa-use
+    u-convert-op ::= ssa-id `=` `spirv.UConvertOp` ssa-use
                  `:` operand-type `to` result-type
     ```
 
     #### Example:
 
     ```mlir
-    %1 = spv.UConvertOp %0 : i32 to i64
-    %3 = spv.UConvertOp %2 : vector<3xi32> to vector<3xi64>
+    %1 = spirv.UConvertOp %0 : i32 to i64
+    %3 = spirv.UConvertOp %2 : vector<3xi32> to vector<3xi64>
     ```
   }];
+}
+
+// -----
+def SPIRV_PtrCastToGenericOp : SPIRV_Op<"PtrCastToGeneric", [NoSideEffect]> {
+  let summary = "Convert a pointer’s Storage Class to Generic.";
+
+  let description = [{
+    Result Type must be an OpTypePointer. Its Storage Class must be Generic.
+
+    Pointer must point to the Workgroup, CrossWorkgroup, or Function Storage
+    Class.
+
+    Result Type and Pointer must point to the same type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %1 = spirv.PtrCastToGenericOp %0 : !spirv.ptr<f32, CrossWorkGroup> to
+         !spirv.ptr<f32, Generic>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Kernel]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer
+  );
+
+  let results = (outs
+    SPIRV_AnyPtr:$result
+  );
+
+  let assemblyFormat = [{
+    $pointer attr-dict `:` type($pointer) `to` type($result)
+  }];
+}
+
+// -----
+
+def SPIRV_GenericCastToPtrOp : SPIRV_Op<"GenericCastToPtr", [NoSideEffect]> {
+  let summary = "Convert a pointer’s Storage Class to a non-Generic class.";
+
+  let description = [{
+    Result Type must be an OpTypePointer. Its Storage Class must be
+    Workgroup, CrossWorkgroup, or Function.
+
+    Pointer must point to the Generic Storage Class.
+
+    Result Type and Pointer must point to the same type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+       %1 = spirv.GenericCastToPtrOp %0 : !spirv.ptr<f32, Generic> to
+       !spirv.ptr<f32, CrossWorkGroup>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Kernel]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer
+  );
+
+  let results = (outs
+    SPIRV_AnyPtr:$result
+  );
+
+  let assemblyFormat = [{
+    $pointer attr-dict `:` type($pointer) `to` type($result)
+  }];
+}
+
+// -----
+
+def SPIRV_GenericCastToPtrExplicitOp : SPIRV_Op<"GenericCastToPtrExplicit", [NoSideEffect]> {
+  let summary = [{
+    Attempts to explicitly convert Pointer to Storage storage-class pointer
+    value.
+  }];
+
+  let description = [{
+    Result Type must be an OpTypePointer. Its Storage Class must be Storage.
+
+    Pointer must have a type of OpTypePointer whose Type is the same as the
+    Type of Result Type.Pointer must point to the Generic Storage Class. If
+    the cast fails, the instruction result is an OpConstantNull pointer in
+    the Storage Storage Class.
+
+    Storage must be one of the following literal values from Storage Class:
+    Workgroup, CrossWorkgroup, or Function.
+
+    <!-- End of AutoGen section -->
+
+    ```
+    [TODO]
+    ```mlir
+
+    #### Example:
+
+    ```mlir
+       %1 = spirv.GenericCastToPtrExplicitOp %0 : !spirv.ptr<f32, Generic> to
+       !spirv.ptr<f32, CrossWorkGroup>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Kernel]>
+  ];
+
+  let arguments = (ins
+    SPIRV_AnyPtr:$pointer
+  );
+
+  let results = (outs
+    SPIRV_AnyPtr:$result
+  );
+
+  let assemblyFormat = [{
+    $pointer attr-dict `:` type($pointer) `to` type($result)
+  }];
+
+  let autogenSerialization = 0;
 }
 
 #endif // MLIR_DIALECT_SPIRV_IR_CAST_OPS

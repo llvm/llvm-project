@@ -14,11 +14,11 @@
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;
@@ -369,8 +369,7 @@ AVRToolChain::AVRToolChain(const Driver &D, const llvm::Triple &Triple,
     : Generic_ELF(D, Triple, Args) {
   GCCInstallation.init(Triple, Args);
 
-  std::string CPU = getCPUName(D, Args, Triple);
-  if (CPU.empty())
+  if (getCPUName(D, Args, Triple).empty())
     D.Diag(diag::warn_drv_avr_mcu_not_specified);
 
   // Only add default libraries if the user hasn't explicitly opted out.
@@ -418,6 +417,23 @@ Tool *AVRToolChain::buildLinker() const {
   return new tools::AVR::Linker(getTriple(), *this);
 }
 
+std::string
+AVRToolChain::getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
+                            FileType Type = ToolChain::FT_Static) const {
+  assert(Type == ToolChain::FT_Static && "AVR only supports static libraries");
+  // Since AVR can never be a host environment, its compiler-rt library files
+  // should always have ".a" suffix, even on windows.
+  SmallString<32> File("/libclang_rt.");
+  File += Component.str();
+  File += ".a";
+  // Return the default compiler-rt path appended with
+  // "avr/libclang_rt.$COMPONENT.a".
+  SmallString<256> Path(ToolChain::getCompilerRTPath());
+  llvm::sys::path::append(Path, "avr");
+  llvm::sys::path::append(Path, File.str());
+  return std::string(Path.str());
+}
+
 void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                const InputInfo &Output,
                                const InputInfoList &Inputs, const ArgList &Args,
@@ -448,6 +464,12 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
 
+  // Currently we only support libgcc and compiler-rt.
+  auto RtLib = TC.GetRuntimeLibType(Args);
+  assert(
+      (RtLib == ToolChain::RLT_Libgcc || RtLib == ToolChain::RLT_CompilerRT) &&
+      "unknown runtime library");
+
   // Only add default libraries if the user hasn't explicitly opted out.
   bool LinkStdlib = false;
   if (!Args.hasArg(options::OPT_nostdlib) &&
@@ -463,10 +485,12 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         D.Diag(diag::warn_drv_avr_libc_not_found);
       } else {
         std::string SubPath = GetMCUSubPath(CPU);
+        // Add path of avr-libc.
         CmdArgs.push_back(
             Args.MakeArgString(Twine("-L") + *AVRLibcRoot + "/lib/" + SubPath));
-        CmdArgs.push_back(
-            Args.MakeArgString("-L" + TC.getGCCInstallPath() + "/" + SubPath));
+        if (RtLib == ToolChain::RLT_Libgcc)
+          CmdArgs.push_back(Args.MakeArgString("-L" + TC.getGCCInstallPath() +
+                                               "/" + SubPath));
         LinkStdlib = true;
       }
     }
@@ -495,14 +519,29 @@ void AVR::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     std::string CrtFileName = std::string("-l:crt") + CPU + std::string(".o");
     CmdArgs.push_back(Args.MakeArgString(CrtFileName));
 
-    CmdArgs.push_back("-lgcc");
+    // Link to libgcc.
+    if (RtLib == ToolChain::RLT_Libgcc)
+      CmdArgs.push_back("-lgcc");
+
+    // Link to generic libraries of avr-libc.
     CmdArgs.push_back("-lm");
     CmdArgs.push_back("-lc");
 
     // Add the link library specific to the MCU.
     CmdArgs.push_back(Args.MakeArgString(std::string("-l") + CPU));
 
+    // Add the relocatable inputs.
     AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
+
+    // We directly use libclang_rt.builtins.a as input file, instead of using
+    // '-lclang_rt.builtins'.
+    if (RtLib == ToolChain::RLT_CompilerRT) {
+      std::string RtLib =
+          getToolChain().getCompilerRT(Args, "builtins", ToolChain::FT_Static);
+      if (llvm::sys::fs::exists(RtLib))
+        CmdArgs.push_back(Args.MakeArgString(RtLib));
+    }
+
     CmdArgs.push_back("--end-group");
 
     // Add user specified linker script.

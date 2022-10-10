@@ -96,7 +96,7 @@ inline CppTypeFor<CAT, KIND> GetTotalReduction(const Descriptor &x,
 // result(j,k) = SUM(array(j,:,k)), possibly modified if the array has
 // lower bounds other than one.  This utility subroutine creates an
 // array of subscripts [j,_,k] for result subscripts [j,k] so that the
-// elemets of array(j,:,k) can be reduced.
+// elements of array(j,:,k) can be reduced.
 inline void GetExpandedSubscripts(SubscriptValue at[],
     const Descriptor &descriptor, int zeroBasedDim,
     const SubscriptValue from[]) {
@@ -162,8 +162,8 @@ inline void ReduceDimMaskToScalar(const Descriptor &x, int zeroBasedDim,
 // Utility: establishes & allocates the result array for a partial
 // reduction (i.e., one with DIM=).
 static void CreatePartialReductionResult(Descriptor &result,
-    const Descriptor &x, int dim, Terminator &terminator, const char *intrinsic,
-    TypeCode typeCode) {
+    const Descriptor &x, std::size_t resultElementSize, int dim,
+    Terminator &terminator, const char *intrinsic, TypeCode typeCode) {
   int xRank{x.rank()};
   if (dim < 1 || dim > xRank) {
     terminator.Crash(
@@ -177,8 +177,8 @@ static void CreatePartialReductionResult(Descriptor &result,
   for (int j{zeroBasedDim + 1}; j < xRank; ++j) {
     resultExtent[j - 1] = x.GetDimension(j).Extent();
   }
-  result.Establish(typeCode, x.ElementBytes(), nullptr, xRank - 1, resultExtent,
-      CFI_attribute_allocatable);
+  result.Establish(typeCode, resultElementSize, nullptr, xRank - 1,
+      resultExtent, CFI_attribute_allocatable);
   for (int j{0}; j + 1 < xRank; ++j) {
     result.GetDimension(j).SetBounds(1, resultExtent[j]);
   }
@@ -191,11 +191,11 @@ static void CreatePartialReductionResult(Descriptor &result,
 // Partial reductions with DIM=
 
 template <typename ACCUMULATOR, TypeCategory CAT, int KIND>
-inline void PartialReduction(Descriptor &result, const Descriptor &x, int dim,
-    const Descriptor *mask, Terminator &terminator, const char *intrinsic,
-    ACCUMULATOR &accumulator) {
-  CreatePartialReductionResult(
-      result, x, dim, terminator, intrinsic, TypeCode{CAT, KIND});
+inline void PartialReduction(Descriptor &result, const Descriptor &x,
+    std::size_t resultElementSize, int dim, const Descriptor *mask,
+    Terminator &terminator, const char *intrinsic, ACCUMULATOR &accumulator) {
+  CreatePartialReductionResult(result, x, resultElementSize, dim, terminator,
+      intrinsic, TypeCode{CAT, KIND});
   SubscriptValue at[maxRank];
   result.GetLowerBounds(at);
   INTERNAL_CHECK(result.rank() == 0 || at[0] == 1);
@@ -238,8 +238,10 @@ struct PartialIntegerReductionHelper {
       using Accumulator =
           ACCUM<CppTypeFor<TypeCategory::Integer, Intermediate>>;
       Accumulator accumulator{x};
-      PartialReduction<Accumulator, TypeCategory::Integer, KIND>(
-          result, x, dim, mask, terminator, intrinsic, accumulator);
+      // Element size of the destination descriptor is the same
+      // as the element size of the source.
+      PartialReduction<Accumulator, TypeCategory::Integer, KIND>(result, x,
+          x.ElementBytes(), dim, mask, terminator, intrinsic, accumulator);
     }
   };
 };
@@ -263,8 +265,10 @@ struct PartialFloatingReductionHelper {
         const char *intrinsic) const {
       using Accumulator = ACCUM<CppTypeFor<TypeCategory::Real, Intermediate>>;
       Accumulator accumulator{x};
-      PartialReduction<Accumulator, CAT, KIND>(
-          result, x, dim, mask, terminator, intrinsic, accumulator);
+      // Element size of the destination descriptor is the same
+      // as the element size of the source.
+      PartialReduction<Accumulator, CAT, KIND>(result, x, x.ElementBytes(), dim,
+          mask, terminator, intrinsic, accumulator);
     }
   };
 };
@@ -314,8 +318,11 @@ template <typename ACCUMULATOR> struct PartialLocationHelper {
     void operator()(Descriptor &result, const Descriptor &x, int dim,
         const Descriptor *mask, Terminator &terminator, const char *intrinsic,
         ACCUMULATOR &accumulator) const {
-      PartialReduction<ACCUMULATOR, TypeCategory::Integer, KIND>(
-          result, x, dim, mask, terminator, intrinsic, accumulator);
+      // Element size of the destination descriptor is the size
+      // of {TypeCategory::Integer, KIND}.
+      PartialReduction<ACCUMULATOR, TypeCategory::Integer, KIND>(result, x,
+          Descriptor::BytesFor(TypeCategory::Integer, KIND), dim, mask,
+          terminator, intrinsic, accumulator);
     }
   };
 };

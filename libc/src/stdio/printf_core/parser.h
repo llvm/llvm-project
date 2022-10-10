@@ -11,7 +11,7 @@
 
 #include "src/__support/arg_list.h"
 #include "src/stdio/printf_core/core_structs.h"
-#include "src/string/memory_utils/memset_implementations.h"
+#include "src/stdio/printf_core/printf_config.h"
 
 #include <stddef.h>
 
@@ -42,14 +42,16 @@ class Parser {
       return (size == other.size) && (primary_type == other.primary_type);
     }
   };
-  // TODO: Make this size configurable via a compile option.
-  static constexpr size_t DESC_ARR_LEN = 32;
+
+  // Defined in printf_config.h
+  static constexpr size_t DESC_ARR_LEN = LLVM_LIBC_PRINTF_INDEX_ARR_LEN;
+
   // desc_arr stores the sizes of the variables in the ArgList. This is used in
   // index mode to reduce repeated string parsing. The sizes are stored as
   // TypeDesc objects, which store the size as well as minimal type information.
   // This is necessary because some systems separate the floating point and
   // integer values in va_args.
-  TypeDesc desc_arr[DESC_ARR_LEN];
+  TypeDesc desc_arr[DESC_ARR_LEN] = {{0, Integer}};
 
   // TODO: Look into object stores for optimization.
 
@@ -58,10 +60,7 @@ class Parser {
 public:
 #ifndef LLVM_LIBC_PRINTF_DISABLE_INDEX_MODE
   Parser(const char *__restrict new_str, internal::ArgList &args)
-      : str(new_str), args_cur(args), args_start(args) {
-    inline_memset(reinterpret_cast<char *>(desc_arr), 0,
-                  DESC_ARR_LEN * sizeof(TypeDesc));
-  }
+      : str(new_str), args_cur(args), args_start(args) {}
 #else
   Parser(const char *__restrict new_str, internal::ArgList &args)
       : str(new_str), args_cur(args) {}

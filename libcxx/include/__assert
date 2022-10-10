@@ -10,8 +10,8 @@
 #ifndef _LIBCPP___ASSERT
 #define _LIBCPP___ASSERT
 
-#include <__availability>
 #include <__config>
+#include <__verbose_abort>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -45,7 +45,7 @@
 # define _LIBCPP_ASSERT(expression, message)                                        \
     (__builtin_expect(static_cast<bool>(expression), 1) ?                           \
       (void)0 :                                                                     \
-      ::std::__libcpp_assertion_handler("%s:%d: assertion %s failed: %s", __FILE__, __LINE__, #expression, message))
+      ::std::__libcpp_verbose_abort("%s:%d: assertion %s failed: %s", __FILE__, __LINE__, #expression, message))
 #elif !defined(_LIBCPP_ASSERTIONS_DISABLE_ASSUME) && __has_builtin(__builtin_assume)
 # define _LIBCPP_ASSERT(expression, message)                                        \
     (_LIBCPP_DIAGNOSTIC_PUSH                                                        \
@@ -55,12 +55,5 @@
 #else
 # define _LIBCPP_ASSERT(expression, message) ((void)0)
 #endif
-
-_LIBCPP_BEGIN_NAMESPACE_STD
-
-_LIBCPP_OVERRIDABLE_FUNC_VIS _LIBCPP_AVAILABILITY_ASSERTION_HANDLER _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 1, 2)
-void __libcpp_assertion_handler(const char *__format, ...);
-
-_LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP___ASSERT

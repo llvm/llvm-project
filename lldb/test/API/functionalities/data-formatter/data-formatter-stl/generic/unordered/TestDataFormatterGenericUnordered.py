@@ -47,12 +47,17 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             "corrupt_map", ['%s::unordered_map' %
                     ns, 'size=0 {}'])
 
-        self.look_for_content_and_continue(
-            "map", ['%s::unordered_map' %
-                    ns, 'size=5 {', 'hello', 'world', 'this', 'is', 'me'])
+        must_not_contain__cc = r'(?s)^(?!.*\b__cc = )'
 
         self.look_for_content_and_continue(
-            "mmap", ['%s::unordered_multimap' % ns, 'size=6 {', 'first = 3', 'second = "this"',
+            "map", ['%s::unordered_map' % ns,
+                    must_not_contain__cc,
+                    'size=5 {', 'hello', 'world', 'this', 'is', 'me'])
+
+        self.look_for_content_and_continue(
+            "mmap", ['%s::unordered_multimap' % ns,
+                     must_not_contain__cc,
+                     'size=6 {', 'first = 3', 'second = "this"',
                      'first = 2', 'second = "hello"'])
 
         self.look_for_content_and_continue(

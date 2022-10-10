@@ -31,7 +31,8 @@ for adding this configuration.
    https://docs.bazel.build/versions/main/install.html.
 3. `cd utils/bazel`
 4. `bazel build --config=generic_clang @llvm-project//...` (if building on Unix
-   with Clang). `--config=generic_gcc` and `--config=msvc` are also available.
+   with Clang/LLD). `--config=generic_gcc` and `--config=msvc` are also
+   available.
 
 
 # Configuration
@@ -54,7 +55,7 @@ build --disk_cache=~/.cache/bazel-disk-cache
 
 You can instruct Bazel to use a ramdisk for its sandboxing operations via
 [--sandbox_base](https://docs.bazel.build/versions/main/command-line-reference.html#flag--sandbox_base),
-which can help avoid IO bottlenecks for the symlink stragegy used for
+which can help avoid IO bottlenecks for the symlink strategy used for
 sandboxing. This is especially important with many inputs and many cores (see
 https://github.com/bazelbuild/bazel/issues/11868):
 
@@ -64,6 +65,12 @@ build --sandbox_base=/dev/shm
 
 Bear in mind that this requires that your ramdisk is of sufficient size to hold
 any temporary files. Anecdotally, 1GB should be sufficient.
+
+To specify a specific local compiler to use, add the following bazel flag:
+
+```.bazelrc
+build --repo_env=CC=$PATH_TO_CC
+```
 
 # Coverage
 
@@ -75,7 +82,7 @@ configuration you'd like to use that isn't supported, please send a patch.
 
 # Continuous Testing
 
-A [Buildkite pipeline](https://buildkite.com/llvm-project/upstream-bazel-rbe)
+A [Buildkite pipeline](https://buildkite.com/llvm-project/upstream-bazel)
 runs the full Bazel build on every commit to the main branch. Notifications of
 failures are sent to the
 [llvm-bazel-alerts google group](https://groups.google.com/g/llvm-bazel-alerts),

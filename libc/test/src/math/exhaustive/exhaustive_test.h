@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include "utils/UnitTest/Test.h"
@@ -21,7 +21,7 @@ template <typename T, typename FloatType = float>
 struct LlvmLibcExhaustiveTest : public __llvm_libc::testing::Test {
   static constexpr T increment = (1 << 20);
   static_assert(
-      __llvm_libc::cpp::IsSameV<
+      __llvm_libc::cpp::is_same_v<
           T, typename __llvm_libc::fputil::FPBits<FloatType>::UIntType>,
       "Types are not consistent");
   // Break [start, stop) into `nthreads` subintervals and apply *check to each

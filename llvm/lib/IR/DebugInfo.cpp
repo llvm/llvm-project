@@ -161,7 +161,7 @@ void DebugInfoFinder::processModule(const Module &M) {
 void DebugInfoFinder::processCompileUnit(DICompileUnit *CU) {
   if (!addCompileUnit(CU))
     return;
-  for (auto DIG : CU->getGlobalVariables()) {
+  for (auto *DIG : CU->getGlobalVariables()) {
     if (!addGlobalVariable(DIG))
       continue;
     auto *GV = DIG->getVariable();
@@ -421,12 +421,11 @@ static MDNode *stripDebugLocFromLoopID(MDNode *N) {
 
   // If there is only the debug location without any actual loop metadata, we
   // can remove the metadata.
-  if (std::all_of(
-          N->op_begin() + 1, N->op_end(),
-          [&Visited, &DILocationReachable](const MDOperand &Op) {
-            return isDILocationReachable(Visited, DILocationReachable,
-                                         Op.get());
-          }))
+  if (llvm::all_of(llvm::drop_begin(N->operands()),
+                   [&Visited, &DILocationReachable](const MDOperand &Op) {
+                     return isDILocationReachable(Visited, DILocationReachable,
+                                                  Op.get());
+                   }))
     return nullptr;
 
   return updateLoopMetadataDebugLocationsImpl(
@@ -824,7 +823,14 @@ void Instruction::dropLocation() {
 
   // If this isn't a call, drop the location to allow a location from a
   // preceding instruction to propagate.
-  if (!isa<CallBase>(this)) {
+  bool MayLowerToCall = false;
+  if (isa<CallBase>(this)) {
+    auto *II = dyn_cast<IntrinsicInst>(this);
+    MayLowerToCall =
+        !II || IntrinsicInst::mayLowerToFunctionCall(II->getIntrinsicID());
+  }
+
+  if (!MayLowerToCall) {
     setDebugLoc(DebugLoc());
     return;
   }

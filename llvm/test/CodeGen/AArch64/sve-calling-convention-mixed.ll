@@ -29,10 +29,26 @@ define float @foo1(double* %x0, double* %x1, double* %x2) nounwind {
 entry:
   %0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %1 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
-  %2 = call <vscale x 8 x double> @llvm.aarch64.sve.ld4.nxv8f64.nxv2i1(<vscale x 2 x i1> %1, double* %x0)
-  %3 = call <vscale x 8 x double> @llvm.aarch64.sve.ld4.nxv8f64.nxv2i1(<vscale x 2 x i1> %1, double* %x1)
+  %2 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, double* %x0)
+  %3 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, double* %x1)
   %4 = call <vscale x 2 x double> @llvm.aarch64.sve.ld1.nxv2f64(<vscale x 2 x i1> %1, double* %x2)
-  %call = call float @callee1(float 1.000000e+00, <vscale x 8 x double> %2, <vscale x 8 x double> %3, <vscale x 2 x double> %4)
+  %5 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  0
+  %6 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  1
+  %7 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  2
+  %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  3
+  %9 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> poison, <vscale x 2 x double> %5, i64 0)
+  %10 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %9, <vscale x 2 x double> %6, i64 2)
+  %11 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %10, <vscale x 2 x double> %7, i64 4)
+  %12 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %11, <vscale x 2 x double> %8, i64 6)
+  %13 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %3,  0
+  %14 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %3,  1
+  %15 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %3,  2
+  %16 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %3,  3
+  %17 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> undef, <vscale x 2 x double> %13, i64 0)
+  %18 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %17, <vscale x 2 x double> %14, i64 2)
+  %19 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %18, <vscale x 2 x double> %15, i64 4)
+  %20 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %19, <vscale x 2 x double> %16, i64 6)
+  %call = call float @callee1(float 1.000000e+00, <vscale x 8 x double> %12, <vscale x 8 x double> %20, <vscale x 2 x double> %4)
   ret float %call
 }
 
@@ -73,9 +89,25 @@ define float @foo2(double* %x0, double* %x1) nounwind {
 entry:
   %0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %1 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
-  %2 = call <vscale x 8 x double> @llvm.aarch64.sve.ld4.nxv8f64.nxv2i1(<vscale x 2 x i1> %1, double* %x0)
-  %3 = call <vscale x 8 x double> @llvm.aarch64.sve.ld4.nxv8f64.nxv2i1(<vscale x 2 x i1> %1, double* %x1)
-  %call = call float @callee2(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, float 1.000000e+00, <vscale x 8 x double> %2, <vscale x 8 x double> %3)
+  %2 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, double* %x0)
+  %3 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, double* %x1)
+  %4 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  0
+  %5 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  1
+  %6 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  2
+  %7 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  3
+  %8 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> poison, <vscale x 2 x double> %4, i64 0)
+  %9 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %8, <vscale x 2 x double> %5, i64 2)
+  %10 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %9, <vscale x 2 x double> %6, i64 4)
+  %11 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %10, <vscale x 2 x double> %7, i64 6)
+  %12 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %3,  0
+  %13 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %3,  1
+  %14 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %3,  2
+  %15 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %3,  3
+  %16 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> poison, <vscale x 2 x double> %12, i64 0)
+  %17 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %16, <vscale x 2 x double> %13, i64 2)
+  %18 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %17, <vscale x 2 x double> %14, i64 4)
+  %19 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %18, <vscale x 2 x double> %15, i64 6)
+  %call = call float @callee2(i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, float 1.000000e+00, <vscale x 8 x double> %11, <vscale x 8 x double> %19)
   ret float %call
 }
 
@@ -102,10 +134,24 @@ define float @foo3(double* %x0, double* %x1, double* %x2) nounwind {
 entry:
   %0 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %1 = call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> %0)
-  %2 = call <vscale x 8 x double> @llvm.aarch64.sve.ld4.nxv8f64.nxv2i1(<vscale x 2 x i1> %1, double* %x0)
-  %3 = call <vscale x 6 x double> @llvm.aarch64.sve.ld3.nxv6f64.nxv2i1(<vscale x 2 x i1> %1, double* %x1)
+  %2 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1> %1, double* %x0)
+  %3 = call {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld3.sret.nxv2f64(<vscale x 2 x i1> %1, double* %x1)
   %4 = call <vscale x 2 x double> @llvm.aarch64.sve.ld1.nxv2f64(<vscale x 2 x i1> %1, double* %x2)
-  %call = call float @callee3(float 1.000000e+00, float 2.000000e+00, <vscale x 8 x double> %2, <vscale x 6 x double> %3, <vscale x 2 x double> %4)
+  %5 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  0
+  %6 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  1
+  %7 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  2
+  %8 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %2,  3
+  %9 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> poison, <vscale x 2 x double> %5, i64 0)
+  %10 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %9, <vscale x 2 x double> %6, i64 2)
+  %11 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %10, <vscale x 2 x double> %7, i64 4)
+  %12 = call <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double> %11, <vscale x 2 x double> %8, i64 6)
+  %13 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} %3,  0
+  %14 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %3,  1
+  %15 = extractvalue { <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double> } %3,  2
+  %16 = call <vscale x 6 x double> @llvm.vector.insert.nxv6f64.nx2f64(<vscale x 6 x double> poison, <vscale x 2 x double> %13, i64 0)
+  %17 = call <vscale x 6 x double> @llvm.vector.insert.nxv6f64.nx2f64(<vscale x 6 x double> %16 , <vscale x 2 x double> %14, i64 2)
+  %18 = call <vscale x 6 x double> @llvm.vector.insert.nxv6f64.nx2f64(<vscale x 6 x double> %17 , <vscale x 2 x double> %15, i64 4)
+  %call = call float @callee3(float 1.000000e+00, float 2.000000e+00, <vscale x 8 x double> %12, <vscale x 6 x double> %18, <vscale x 2 x double> %4)
   ret float %call
 }
 
@@ -334,7 +380,46 @@ entry:
   ret void
 }
 
-; Use AAPCS, no SVE register in z0-7 used (floats occupy z0-z7)
+; Use AAVPCS, SVE register used in return
+
+define <vscale x 4 x float> @aavpcs5(float %s0, float %s1, float %s2, float %s3, float %s4, float %s5, float %s6, float %s7, <vscale x 4 x float> %s8, <vscale x 4 x float> %s9, <vscale x 4 x float> %s10, <vscale x 4 x float> %s11, <vscale x 4 x float> %s12, <vscale x 4 x float> %s13, <vscale x 4 x float> %s14, <vscale x 4 x float> %s15, <vscale x 4 x float> %s16, <vscale x 4 x float> %s17, float * %ptr) nounwind {
+; CHECK-LABEL: aavpcs5:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ldr x8, [sp]
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x8]
+; CHECK-NEXT:    ld1w { z2.s }, p0/z, [x7]
+; CHECK-NEXT:    ld1w { z3.s }, p0/z, [x6]
+; CHECK-NEXT:    ld1w { z4.s }, p0/z, [x5]
+; CHECK-NEXT:    ld1w { z5.s }, p0/z, [x4]
+; CHECK-NEXT:    ld1w { z6.s }, p0/z, [x3]
+; CHECK-NEXT:    ld1w { z7.s }, p0/z, [x2]
+; CHECK-NEXT:    ld1w { z24.s }, p0/z, [x1]
+; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    ldr x8, [sp, #16]
+; CHECK-NEXT:    st1w { z0.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z24.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z7.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z6.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z5.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z4.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z3.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z2.s }, p0, [x8]
+; CHECK-NEXT:    st1w { z1.s }, p0, [x8]
+; CHECK-NEXT:    ret
+entry:
+  %ptr1.bc = bitcast float * %ptr to <vscale x 4 x float> *
+  store volatile <vscale x 4 x float> %s8, <vscale x 4 x float>* %ptr1.bc
+  store volatile <vscale x 4 x float> %s9, <vscale x 4 x float>* %ptr1.bc
+  store volatile <vscale x 4 x float> %s10, <vscale x 4 x float>* %ptr1.bc
+  store volatile <vscale x 4 x float> %s11, <vscale x 4 x float>* %ptr1.bc
+  store volatile <vscale x 4 x float> %s12, <vscale x 4 x float>* %ptr1.bc
+  store volatile <vscale x 4 x float> %s13, <vscale x 4 x float>* %ptr1.bc
+  store volatile <vscale x 4 x float> %s14, <vscale x 4 x float>* %ptr1.bc
+  store volatile <vscale x 4 x float> %s15, <vscale x 4 x float>* %ptr1.bc
+  store volatile <vscale x 4 x float> %s16, <vscale x 4 x float>* %ptr1.bc
+  ret <vscale x 4 x float> %s8
+}
 
 define void @aapcs1(float %s0, float %s1, float %s2, float %s3, float %s4, float %s5, float %s6, float %s7, <vscale x 4 x float> %s8, <vscale x 4 x float> %s9, <vscale x 4 x float> %s10, <vscale x 4 x float> %s11, <vscale x 4 x float> %s12, <vscale x 4 x float> %s13, <vscale x 4 x float> %s14, <vscale x 4 x float> %s15, <vscale x 4 x float> %s16, <vscale x 4 x float> %s17, float * %ptr) nounwind {
 ; CHECK-LABEL: aapcs1:
@@ -375,15 +460,271 @@ entry:
   ret void
 }
 
+declare void @non_sve_callee_high_range(float %f0, float %f1, float %f2, float %f3, float %f4, float %f5, float %f6, float %f7, <vscale x 4 x float> %v0, <vscale x 4 x float> %v1)
+
+define void @non_sve_caller_non_sve_callee_high_range()  {
+; CHECK-LABEL: non_sve_caller_non_sve_callee_high_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    fmov s1, #1.00000000
+; CHECK-NEXT:    fmov s2, #2.00000000
+; CHECK-NEXT:    fmov s3, #3.00000000
+; CHECK-NEXT:    fmov s4, #4.00000000
+; CHECK-NEXT:    fmov s5, #5.00000000
+; CHECK-NEXT:    fmov s6, #6.00000000
+; CHECK-NEXT:    fmov s7, #7.00000000
+; CHECK-NEXT:    mov x1, sp
+; CHECK-NEXT:    addvl x0, sp, #1
+; CHECK-NEXT:    bl non_sve_callee_high_range
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  call void @non_sve_callee_high_range(float 0.0, float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, <vscale x 4 x float> undef, <vscale x 4 x float> undef)
+  ret void
+}
+
+define void @non_sve_caller_high_range_non_sve_callee_high_range(float %f0, float %f1, float %f2, float %f3, float %f4, float %f5, float %f6, float %f7, <vscale x 4 x float> %v0, <vscale x 4 x float> %v1)  {
+; CHECK-LABEL: non_sve_caller_high_range_non_sve_callee_high_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    ld1w { z16.s }, p0/z, [x0]
+; CHECK-NEXT:    ld1w { z17.s }, p0/z, [x1]
+; CHECK-NEXT:    fmov s1, #1.00000000
+; CHECK-NEXT:    fmov s2, #2.00000000
+; CHECK-NEXT:    fmov s3, #3.00000000
+; CHECK-NEXT:    fmov s4, #4.00000000
+; CHECK-NEXT:    fmov s5, #5.00000000
+; CHECK-NEXT:    fmov s6, #6.00000000
+; CHECK-NEXT:    fmov s7, #7.00000000
+; CHECK-NEXT:    mov x1, sp
+; CHECK-NEXT:    addvl x0, sp, #1
+; CHECK-NEXT:    st1w { z17.s }, p0, [sp]
+; CHECK-NEXT:    st1w { z16.s }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    bl non_sve_callee_high_range
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  call void @non_sve_callee_high_range(float 0.0, float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, <vscale x 4 x float> %v0, <vscale x 4 x float> %v1)
+  ret void
+}
+
+define <vscale x 4 x float> @sve_caller_non_sve_callee_high_range(<vscale x 4 x float> %v0, <vscale x 4 x float> %v1)  {
+; CHECK-LABEL: sve_caller_non_sve_callee_high_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-18
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 144 * VG
+; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z20, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z19, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z18, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z17, [sp, #8, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z16, [sp, #9, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z15, [sp, #10, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z14, [sp, #11, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z13, [sp, #12, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z12, [sp, #13, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z11, [sp, #14, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 16 - 16 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 16 - 24 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4b, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 16 - 32 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4c, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 16 - 40 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 16 - 48 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 16 - 56 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 16 - 64 * VG
+; CHECK-NEXT:    addvl sp, sp, #-3
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0xa8, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 168 * VG
+; CHECK-NEXT:    mov z25.d, z0.d
+; CHECK-NEXT:    str z0, [sp] // 16-byte Folded Spill
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    mov z24.d, z1.d
+; CHECK-NEXT:    fmov s1, #1.00000000
+; CHECK-NEXT:    fmov s2, #2.00000000
+; CHECK-NEXT:    fmov s3, #3.00000000
+; CHECK-NEXT:    fmov s4, #4.00000000
+; CHECK-NEXT:    fmov s5, #5.00000000
+; CHECK-NEXT:    fmov s6, #6.00000000
+; CHECK-NEXT:    fmov s7, #7.00000000
+; CHECK-NEXT:    addvl x0, sp, #2
+; CHECK-NEXT:    addvl x1, sp, #1
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    st1w { z24.s }, p0, [sp, #1, mul vl]
+; CHECK-NEXT:    st1w { z25.s }, p0, [sp, #2, mul vl]
+; CHECK-NEXT:    bl non_sve_callee_high_range
+; CHECK-NEXT:    ldr z0, [sp] // 16-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #3
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z16, [sp, #9, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z15, [sp, #10, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z14, [sp, #11, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z13, [sp, #12, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z12, [sp, #13, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z11, [sp, #14, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #18
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  call void @non_sve_callee_high_range(float 0.0, float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, <vscale x 4 x float> %v0, <vscale x 4 x float> %v1)
+  ret <vscale x 4 x float> %v0
+}
+
+define <vscale x 4 x float> @sve_ret_caller_non_sve_callee_high_range()  {
+; CHECK-LABEL: sve_ret_caller_non_sve_callee_high_range:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset w30, -8
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    addvl sp, sp, #-18
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x90, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 144 * VG
+; CHECK-NEXT:    str p15, [sp, #4, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p14, [sp, #5, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p13, [sp, #6, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p12, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p11, [sp, #8, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p10, [sp, #9, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p9, [sp, #10, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p8, [sp, #11, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p7, [sp, #12, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p6, [sp, #13, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p5, [sp, #14, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p4, [sp, #15, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str z23, [sp, #2, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z22, [sp, #3, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z21, [sp, #4, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z20, [sp, #5, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z19, [sp, #6, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z18, [sp, #7, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z17, [sp, #8, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z16, [sp, #9, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z15, [sp, #10, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z14, [sp, #11, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z13, [sp, #12, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z12, [sp, #13, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z11, [sp, #14, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z10, [sp, #15, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z9, [sp, #16, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    str z8, [sp, #17, mul vl] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_escape 0x10, 0x48, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x78, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d8 @ cfa - 16 - 8 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x49, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x70, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d9 @ cfa - 16 - 16 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4a, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x68, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d10 @ cfa - 16 - 24 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4b, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x60, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d11 @ cfa - 16 - 32 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4c, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x58, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d12 @ cfa - 16 - 40 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4d, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x50, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d13 @ cfa - 16 - 48 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4e, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x48, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d14 @ cfa - 16 - 56 * VG
+; CHECK-NEXT:    .cfi_escape 0x10, 0x4f, 0x0a, 0x11, 0x70, 0x22, 0x11, 0x40, 0x92, 0x2e, 0x00, 0x1e, 0x22 // $d15 @ cfa - 16 - 64 * VG
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0xa0, 0x01, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 160 * VG
+; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    fmov s1, #1.00000000
+; CHECK-NEXT:    fmov s2, #2.00000000
+; CHECK-NEXT:    fmov s3, #3.00000000
+; CHECK-NEXT:    fmov s4, #4.00000000
+; CHECK-NEXT:    fmov s5, #5.00000000
+; CHECK-NEXT:    fmov s6, #6.00000000
+; CHECK-NEXT:    fmov s7, #7.00000000
+; CHECK-NEXT:    mov x1, sp
+; CHECK-NEXT:    addvl x0, sp, #1
+; CHECK-NEXT:    bl non_sve_callee_high_range
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr p15, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p14, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p13, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p12, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p11, [sp, #8, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p10, [sp, #9, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p9, [sp, #10, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p8, [sp, #11, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p7, [sp, #12, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #13, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #14, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #15, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr z23, [sp, #2, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z22, [sp, #3, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z21, [sp, #4, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z20, [sp, #5, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z19, [sp, #6, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z18, [sp, #7, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z17, [sp, #8, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z16, [sp, #9, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z15, [sp, #10, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z14, [sp, #11, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z13, [sp, #12, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z12, [sp, #13, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z11, [sp, #14, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z10, [sp, #15, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z9, [sp, #16, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    ldr z8, [sp, #17, mul vl] // 16-byte Folded Reload
+; CHECK-NEXT:    addvl sp, sp, #18
+; CHECK-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+  call void @non_sve_callee_high_range(float 0.0, float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, <vscale x 4 x float> undef, <vscale x 4 x float> undef)
+  ret <vscale x 4 x float> undef
+}
+
 declare float @callee1(float, <vscale x 8 x double>, <vscale x 8 x double>, <vscale x 2 x double>)
 declare float @callee2(i32, i32, i32, i32, i32, i32, i32, i32, float, <vscale x 8 x double>, <vscale x 8 x double>)
 declare float @callee3(float, float, <vscale x 8 x double>, <vscale x 6 x double>, <vscale x 2 x double>)
 
 declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 immarg)
 declare <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1>)
-declare <vscale x 8 x double> @llvm.aarch64.sve.ld4.nxv8f64.nxv2i1(<vscale x 2 x i1>, double*)
-declare <vscale x 6 x double> @llvm.aarch64.sve.ld3.nxv6f64.nxv2i1(<vscale x 2 x i1>, double*)
+declare {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld4.sret.nxv2f64(<vscale x 2 x i1>, double*)
+declare {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.aarch64.sve.ld3.sret.nxv2f64(<vscale x 2 x i1>, double*)
 declare <vscale x 2 x double> @llvm.aarch64.sve.ld1.nxv2f64(<vscale x 2 x i1>, double*)
 declare double @llvm.aarch64.sve.faddv.nxv2f64(<vscale x 2 x i1>, <vscale x 2 x double>)
-declare <vscale x 2 x double> @llvm.aarch64.sve.tuple.get.nxv2f64.nxv8f64(<vscale x 8 x double>, i32 immarg)
-declare <vscale x 2 x double> @llvm.aarch64.sve.tuple.get.nxv2f64.nxv6f64(<vscale x 6 x double>, i32 immarg)
+declare <vscale x 8 x double> @llvm.vector.insert.nxv8f64.nx2f64(<vscale x 8 x double>, <vscale x 2 x double>, i64)
+declare <vscale x 6 x double> @llvm.vector.insert.nxv6f64.nx2f64(<vscale x 6 x double>, <vscale x 2 x double>, i64)

@@ -22,7 +22,7 @@ llvm::cl::list<std::string>
 } // anonymous namespace
 
 bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
-  OS << "#include \"TypeTraits.h\"\n";
+  OS << "#include \"type_traits.h\"\n";
   llvm_libc::APIIndexer G(records);
   std::unordered_set<std::string> headerFileSet;
   for (const auto &entrypoint : EntrypointNamesOption) {
@@ -73,7 +73,7 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
     if (llvm::StringRef(returnType).contains("_Noreturn"))
       returnType = "void";
 
-    OS << "  static_assert(__llvm_libc::cpp::IsSame<" << returnType << '(';
+    OS << "  static_assert(__llvm_libc::cpp::is_same_v<" << returnType << '(';
     auto args = functionSpec->getValueAsListOfDefs("Args");
     for (size_t i = 0, size = args.size(); i < size; ++i) {
       llvm::Record *argType = args[i]->getValueAsDef("ArgType");
@@ -81,7 +81,7 @@ bool TestGeneratorMain(llvm::raw_ostream &OS, llvm::RecordKeeper &records) {
       if (i < size - 1)
         OS << ", ";
     }
-    OS << "), decltype(" << entrypoint << ")>::Value, ";
+    OS << "), decltype(" << entrypoint << ")>, ";
     OS << '"' << entrypoint
        << " prototype in TableGen does not match public header" << '"';
     OS << ");\n";

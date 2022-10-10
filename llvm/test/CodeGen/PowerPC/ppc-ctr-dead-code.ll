@@ -31,7 +31,7 @@ cleanup:                                          ; preds = %for.body, %for.cond
 ; CHECK-LABEL: limit_loop
 ; CHECK: mtctr
 ; CHECK-NOT: addi {{[0-9]+}}, {{[0-9]+}}, 1
-; CHECK: bdnz
+; CHECK: bdzlr
 ; CHECK: blr
 }
 

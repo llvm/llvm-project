@@ -304,6 +304,8 @@ define amdgpu_kernel void @v_icmp_i16_sle(i64 addrspace(1)* %out, i16 %src) {
 ; GCN: s_cselect_b64 s[[C1:\[[0-9]+:[0-9]+\]]], -1, 0
 ; GCN: s_and_b64 s[[SRC:\[[0-9]+:[0-9]+\]]], s[[C0]], s[[C1]]
 ; SI-NEXT: s_mov_b32 s{{[0-9]+}}, -1
+; SI-NEXT: s_mov_b32
+; SI-NEXT: s_mov_b32
 ; GCN-NEXT: v_mov_b32_e32
 ; GCN-NEXT: v_mov_b32_e32
 ; GCN: {{global|flat|buffer}}_store_dwordx2

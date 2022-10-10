@@ -371,6 +371,7 @@ private:
         DeadInstructions.emplace_back(LandingPad);
 
       for (Instruction *I : DeadInstructions) {
+        SE.forgetBlockAndLoopDispositions(I);
         I->replaceAllUsesWith(PoisonValue::get(I->getType()));
         I->eraseFromParent();
       }
@@ -474,7 +475,7 @@ private:
     NumLoopBlocksDeleted += DeadLoopBlocks.size();
   }
 
-  /// Constant-fold terminators of blocks acculumated in FoldCandidates into the
+  /// Constant-fold terminators of blocks accumulated in FoldCandidates into the
   /// unconditional branches.
   void foldTerminators() {
     for (BasicBlock *BB : FoldCandidates) {
@@ -594,6 +595,9 @@ public:
 
     LLVM_DEBUG(dbgs() << "Constant-folding " << FoldCandidates.size()
                       << " terminators in loop " << Header->getName() << "\n");
+
+    if (!DeadLoopBlocks.empty())
+      SE.forgetBlockAndLoopDispositions();
 
     // Make the actual transforms.
     handleDeadExits();

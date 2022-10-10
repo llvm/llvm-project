@@ -15,7 +15,6 @@
 #include "RegAllocScore.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/STLForwardCompat.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/ilist_iterator.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"

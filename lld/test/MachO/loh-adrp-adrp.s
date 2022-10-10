@@ -17,6 +17,11 @@
 ## Not an adrp instruction (invalid)
 # CHECK-NEXT: nop
 # CHECK-NEXT: adrp x4
+## Other relaxations take precedence over AdrpAdrp
+# CHECK-NEXT: adr x6
+# CHECK-NEXT: nop
+# CHECK-NEXT: adr x6
+# CHECK-NEXT: nop
 
 .text
 .align 2
@@ -39,6 +44,14 @@ L7:
   nop
 L8:
   adrp x4, _baz@PAGE
+L9:
+  adrp x5, _foo@PAGE
+L10:
+  add  x6, x5, _foo@PAGEOFF
+L11:
+  adrp x5, _bar@PAGE
+L12:
+  add  x6, x5, _bar@PAGEOFF
 
 .data
 .align 12
@@ -54,3 +67,6 @@ _baz:
 .loh AdrpAdrp L3, L4
 .loh AdrpAdrp L5, L6
 .loh AdrpAdrp L7, L8
+.loh AdrpAdrp L9, L11
+.loh AdrpAdd  L9, L10
+.loh AdrpAdd  L11, L12

@@ -8,6 +8,9 @@
 
 #include "llvm/IR/PrintPasses.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Program.h"
 #include <unordered_set>
 
 using namespace llvm;
@@ -73,11 +76,24 @@ cl::opt<ChangePrinter> llvm::PrintChanged(
         // Sentinel value for unspecified option.
         clEnumValN(ChangePrinter::Verbose, "", "")));
 
+// An option for specifying the diff used by print-changed=[diff | diff-quiet]
+static cl::opt<std::string>
+    DiffBinary("print-changed-diff-path", cl::Hidden, cl::init("diff"),
+               cl::desc("system diff used by change reporters"));
+
 static cl::opt<bool>
     PrintModuleScope("print-module-scope",
                      cl::desc("When printing IR for print-[before|after]{-all} "
                               "always print a module IR"),
                      cl::init(false), cl::Hidden);
+
+// See the description for -print-changed for an explanation of the use
+// of this option.
+static cl::list<std::string> FilterPasses(
+    "filter-passes", cl::value_desc("pass names"),
+    cl::desc("Only consider IR changes for passes whose names "
+             "match the specified value. No-op without -print-changed"),
+    cl::CommaSeparated, cl::Hidden);
 
 static cl::list<std::string>
     PrintFuncsList("filter-print-funcs", cl::value_desc("function names"),
@@ -124,9 +140,80 @@ std::vector<std::string> llvm::printAfterPasses() {
 
 bool llvm::forcePrintModuleIR() { return PrintModuleScope; }
 
+bool llvm::isPassInPrintList(StringRef PassName) {
+  static std::unordered_set<std::string> Set(FilterPasses.begin(),
+                                             FilterPasses.end());
+  return Set.empty() || Set.count(std::string(PassName));
+}
+
+bool llvm::isFilterPassesEmpty() { return FilterPasses.empty(); }
+
 bool llvm::isFunctionInPrintList(StringRef FunctionName) {
   static std::unordered_set<std::string> PrintFuncNames(PrintFuncsList.begin(),
                                                         PrintFuncsList.end());
   return PrintFuncNames.empty() ||
          PrintFuncNames.count(std::string(FunctionName));
+}
+
+std::string llvm::doSystemDiff(StringRef Before, StringRef After,
+                               StringRef OldLineFormat, StringRef NewLineFormat,
+                               StringRef UnchangedLineFormat) {
+  StringRef SR[2]{Before, After};
+  // Store the 2 bodies into temporary files and call diff on them
+  // to get the body of the node.
+  const unsigned NumFiles = 3;
+  static std::string FileName[NumFiles];
+  static int FD[NumFiles]{-1, -1, -1};
+  for (unsigned I = 0; I < NumFiles; ++I) {
+    if (FD[I] == -1) {
+      SmallVector<char, 200> SV;
+      std::error_code EC =
+          sys::fs::createTemporaryFile("tmpdiff", "txt", FD[I], SV);
+      if (EC)
+        return "Unable to create temporary file.";
+      FileName[I] = Twine(SV).str();
+    }
+    // The third file is used as the result of the diff.
+    if (I == NumFiles - 1)
+      break;
+
+    std::error_code EC = sys::fs::openFileForWrite(FileName[I], FD[I]);
+    if (EC)
+      return "Unable to open temporary file for writing.";
+
+    raw_fd_ostream OutStream(FD[I], /*shouldClose=*/true);
+    if (FD[I] == -1)
+      return "Error opening file for writing.";
+    OutStream << SR[I];
+  }
+
+  static ErrorOr<std::string> DiffExe = sys::findProgramByName(DiffBinary);
+  if (!DiffExe)
+    return "Unable to find diff executable.";
+
+  SmallString<128> OLF, NLF, ULF;
+  ("--old-line-format=" + OldLineFormat).toVector(OLF);
+  ("--new-line-format=" + NewLineFormat).toVector(NLF);
+  ("--unchanged-line-format=" + UnchangedLineFormat).toVector(ULF);
+
+  StringRef Args[] = {DiffBinary, "-w", "-d",        OLF,
+                      NLF,        ULF,  FileName[0], FileName[1]};
+  Optional<StringRef> Redirects[] = {None, StringRef(FileName[2]), None};
+  int Result = sys::ExecuteAndWait(*DiffExe, Args, None, Redirects);
+  if (Result < 0)
+    return "Error executing system diff.";
+  std::string Diff;
+  auto B = MemoryBuffer::getFile(FileName[2]);
+  if (B && *B)
+    Diff = (*B)->getBuffer().str();
+  else
+    return "Unable to read result.";
+
+  // Clean up.
+  for (const std::string &I : FileName) {
+    std::error_code EC = sys::fs::remove(I);
+    if (EC)
+      return "Unable to remove temporary file.";
+  }
+  return Diff;
 }

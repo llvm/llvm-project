@@ -72,7 +72,7 @@ These functions operate on files on the host's system, without using the
 =============  =========
 Function_Name  Available
 =============  =========
-remove
+remove         YES
 rename
 tmpnam
 =============  =========
@@ -91,7 +91,7 @@ fgets
 getchar
 fread          YES
 (f)putc
-(f)puts
+(f)puts        YES
 putchar
 fwrite         YES
 ungetc

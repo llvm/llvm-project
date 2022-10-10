@@ -843,6 +843,94 @@ TEST_F(LibclangParseTest, clang_Cursor_hasVarDeclExternalStorageTrue) {
       },
       nullptr);
 }
+
+TEST_F(LibclangParseTest, clang_getUnqualifiedTypeRemovesQualifiers) {
+  std::string Header = "header.h";
+  WriteFile(Header, "void foo1(const int);\n"
+                    "void foo2(volatile int);\n"
+                    "void foo3(const volatile int);\n"
+                    "void foo4(int* const);\n"
+                    "void foo5(int* volatile);\n"
+                    "void foo6(int* restrict);\n"
+                    "void foo7(int* const volatile);\n"
+                    "void foo8(int* volatile restrict);\n"
+                    "void foo9(int* const restrict);\n"
+                    "void foo10(int* const volatile restrict);\n");
+
+  auto is_qualified = [](CXType type) -> bool {
+    return clang_isConstQualifiedType(type) ||
+           clang_isVolatileQualifiedType(type) ||
+           clang_isRestrictQualifiedType(type);
+  };
+
+  auto from_CXString = [](CXString cx_string) -> std::string {
+    std::string string{clang_getCString(cx_string)};
+
+    clang_disposeString(cx_string);
+
+    return string;
+  };
+
+  ClangTU = clang_parseTranslationUnit(Index, Header.c_str(), nullptr, 0,
+                                       nullptr, 0, TUFlags);
+
+  Traverse([&is_qualified, &from_CXString](CXCursor cursor, CXCursor) {
+    if (clang_getCursorKind(cursor) == CXCursor_FunctionDecl) {
+      CXType arg_type = clang_getArgType(clang_getCursorType(cursor), 0);
+      EXPECT_TRUE(is_qualified(arg_type))
+          << "Input data '" << from_CXString(clang_getCursorSpelling(cursor))
+          << "' first argument does not have a qualified type.";
+
+      CXType unqualified_arg_type = clang_getUnqualifiedType(arg_type);
+      EXPECT_FALSE(is_qualified(unqualified_arg_type))
+          << "The type '" << from_CXString(clang_getTypeSpelling(arg_type))
+          << "' was not unqualified after a call to clang_getUnqualifiedType.";
+    }
+
+    return CXChildVisit_Continue;
+  });
+}
+
+TEST_F(LibclangParseTest, clang_getNonReferenceTypeRemovesRefQualifiers) {
+  std::string Header = "header.h";
+  WriteFile(Header, "void foo1(int&);\n"
+                    "void foo2(int&&);\n");
+
+  auto is_ref_qualified = [](CXType type) -> bool {
+    return (type.kind == CXType_LValueReference) ||
+           (type.kind == CXType_RValueReference);
+  };
+
+  auto from_CXString = [](CXString cx_string) -> std::string {
+    std::string string{clang_getCString(cx_string)};
+
+    clang_disposeString(cx_string);
+
+    return string;
+  };
+
+  const char *Args[] = {"-xc++"};
+  ClangTU = clang_parseTranslationUnit(Index, Header.c_str(), Args, 1, nullptr,
+                                       0, TUFlags);
+
+  Traverse([&is_ref_qualified, &from_CXString](CXCursor cursor, CXCursor) {
+    if (clang_getCursorKind(cursor) == CXCursor_FunctionDecl) {
+      CXType arg_type = clang_getArgType(clang_getCursorType(cursor), 0);
+      EXPECT_TRUE(is_ref_qualified(arg_type))
+          << "Input data '" << from_CXString(clang_getCursorSpelling(cursor))
+          << "' first argument does not have a ref-qualified type.";
+
+      CXType non_reference_arg_type = clang_getNonReferenceType(arg_type);
+      EXPECT_FALSE(is_ref_qualified(non_reference_arg_type))
+          << "The type '" << from_CXString(clang_getTypeSpelling(arg_type))
+          << "' ref-qualifier was not removed after a call to "
+             "clang_getNonReferenceType.";
+    }
+
+    return CXChildVisit_Continue;
+  });
+}
+
 class LibclangRewriteTest : public LibclangParseTest {
 public:
   CXRewriter Rew = nullptr;

@@ -86,11 +86,16 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
 
   uint32_t TId = mapping::getThreadIdInBlock();
 
+  // Assert the parallelism level is zero if disabled by the user.
+  ASSERT((config::mayUseNestedParallelism() || icv::Level == 0) &&
+         "nested parallelism while disabled");
+
   // Handle the serialized case first, same for SPMD/non-SPMD:
   // 1) if-clause(0)
-  // 2) nested parallel regions
-  // 3) parallel in task or other thread state inducing construct
-  if (OMP_UNLIKELY(!if_expr || icv::Level || state::HasThreadState)) {
+  // 2) parallel in task or other thread state inducing construct
+  // 3) nested parallel regions
+  if (OMP_UNLIKELY(!if_expr || state::HasThreadState ||
+                   (config::mayUseNestedParallelism() && icv::Level))) {
     state::DateEnvironmentRAII DERAII(ident);
     ++icv::Level;
     invokeMicrotask(TId, 0, fn, args, nargs);
@@ -243,7 +248,8 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
     __kmpc_end_sharing_variables();
 }
 
-bool __kmpc_kernel_parallel(ParallelRegionFnTy *WorkFn) {
+__attribute__((noinline)) bool
+__kmpc_kernel_parallel(ParallelRegionFnTy *WorkFn) {
   FunctionTracingRAII();
   // Work function and arguments for L1 parallel region.
   *WorkFn = state::ParallelRegionFn;
@@ -258,7 +264,7 @@ bool __kmpc_kernel_parallel(ParallelRegionFnTy *WorkFn) {
   return ThreadIsActive;
 }
 
-void __kmpc_kernel_end_parallel() {
+__attribute__((noinline)) void __kmpc_kernel_end_parallel() {
   FunctionTracingRAII();
   // In case we have modified an ICV for this thread before a ThreadState was
   // created. We drop it now to not contaminate the next parallel region.

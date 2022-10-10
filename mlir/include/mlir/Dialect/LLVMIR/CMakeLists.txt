@@ -37,7 +37,8 @@ add_public_tablegen_target(MLIRLLVMConversionsIncGen)
 
 set(LLVM_TARGET_DEFINITIONS LLVMIntrinsicOps.td)
 mlir_tablegen(LLVMIntrinsicConversions.inc -gen-llvmir-conversions)
-mlir_tablegen(LLVMIntrinsicToLLVMIROpPairs.inc -gen-llvmintrinsic-to-llvmirop-pairs)
+mlir_tablegen(LLVMIntrinsicFromLLVMIRConversions.inc -gen-intr-from-llvmir-conversions)
+mlir_tablegen(LLVMConvertibleLLVMIRIntrinsics.inc -gen-convertible-llvmir-intrinsics)
 add_public_tablegen_target(MLIRLLVMIntrinsicConversionsIncGen)
 
 add_mlir_dialect(NVVMOps nvvm)
@@ -55,4 +56,3 @@ add_mlir_doc(ROCDLOps ROCDLDialect Dialects/ -gen-dialect-doc -dialect=rocdl)
 set(LLVM_TARGET_DEFINITIONS ROCDLOps.td)
 mlir_tablegen(ROCDLConversions.inc -gen-llvmir-conversions)
 add_public_tablegen_target(MLIRROCDLConversionsIncGen)
-

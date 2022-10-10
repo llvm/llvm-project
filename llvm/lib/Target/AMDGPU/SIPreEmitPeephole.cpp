@@ -209,7 +209,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
       }
     }
     assert(Found && "conditional branch is not terminator");
-    for (auto BranchMI : ToRemove) {
+    for (auto *BranchMI : ToRemove) {
       MachineOperand &Dst = BranchMI->getOperand(0);
       assert(Dst.isMBB() && "destination is not basic block");
       Parent->removeSuccessor(Dst.getMBB());

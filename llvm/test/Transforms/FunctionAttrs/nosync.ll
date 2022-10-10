@@ -71,7 +71,7 @@ define i8 @test6(i8* %p) {
 
 ; negative case - explicit sync
 define void @test7(i8* %p) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nounwind willreturn
+; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nounwind willreturn
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[TMP1:%.*]] = atomicrmw add i8* [[P:%.*]], i8 0 seq_cst, align 1
 ; CHECK-NEXT:    ret void
@@ -211,7 +211,7 @@ declare void @nosync_function() noinline nounwind uwtable nosync
 define void @call_nosync_function() nounwind uwtable noinline {
 ; CHECK: Function Attrs: noinline nosync nounwind uwtable
 ; CHECK-LABEL: @call_nosync_function(
-; CHECK-NEXT:    tail call void @nosync_function() #[[ATTR9:[0-9]+]]
+; CHECK-NEXT:    tail call void @nosync_function() #[[ATTR10:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @nosync_function() noinline nounwind uwtable
@@ -225,7 +225,7 @@ declare void @might_sync() noinline nounwind uwtable
 define void @call_might_sync() nounwind uwtable noinline {
 ; CHECK: Function Attrs: noinline nounwind uwtable
 ; CHECK-LABEL: @call_might_sync(
-; CHECK-NEXT:    tail call void @might_sync() #[[ATTR9]]
+; CHECK-NEXT:    tail call void @might_sync() #[[ATTR10]]
 ; CHECK-NEXT:    ret void
 ;
   tail call void @might_sync() noinline nounwind uwtable

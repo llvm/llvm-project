@@ -38,8 +38,7 @@
 ; RUN: ls %t.cache | count 3
 
 ; Check that we remove the least recently used file first.
-; RUN: rm -fr %t.cache
-; RUN: mkdir %t.cache
+; RUN: rm -fr %t.cache && mkdir %t.cache
 ; RUN: echo xyz > %t.cache/llvmcache-old
 ; RUN: touch -t 198002011200 %t.cache/llvmcache-old
 ; RUN: echo xyz > %t.cache/llvmcache-newer
@@ -50,6 +49,37 @@
 ; CHECK-NOT: llvmcache-old
 ; CHECK: llvmcache-newer
 ; CHECK-NOT: llvmcache-old
+
+;; Check that mllvm options participate in the cache key
+; RUN: rm -rf %t.cache && mkdir %t.cache
+; RUN: ld.lld --thinlto-cache-dir=%t.cache -o %t3 %t2.o %t.o
+; RUN: ls %t.cache | count 3
+; RUN: ld.lld --thinlto-cache-dir=%t.cache -o %t3 %t2.o %t.o -mllvm -enable-ml-inliner=default
+; RUN: ls %t.cache | count 5
+
+;; Adding another option resuls in 2 more cache entries
+; RUN: rm -rf %t.cache && mkdir %t.cache
+; RUN: ld.lld --thinlto-cache-dir=%t.cache -o %t3 %t2.o %t.o
+; RUN: ls %t.cache | count 3
+; RUN: ld.lld --thinlto-cache-dir=%t.cache -o %t3 %t2.o %t.o -mllvm -enable-ml-inliner=default
+; RUN: ls %t.cache | count 5
+; RUN: ld.lld --thinlto-cache-dir=%t.cache -o %t3 %t2.o %t.o -mllvm -enable-ml-inliner=default -mllvm -max-devirt-iterations=1
+; RUN: ls %t.cache | count 7
+
+;; Changing order may matter - e.g. if overriding -mllvm options - so we get 2 more entries
+; RUN: ld.lld --thinlto-cache-dir=%t.cache -o %t3 %t2.o %t.o -mllvm -max-devirt-iterations=1 -mllvm -enable-ml-inliner=default
+; RUN: ls %t.cache | count 9
+
+;; Going back to a pre-cached order doesn't create more entries.
+; RUN: ld.lld --thinlto-cache-dir=%t.cache -o %t3 %t2.o %t.o -mllvm -enable-ml-inliner=default -mllvm -max-devirt-iterations=1
+; RUN: ls %t.cache | count 9
+
+;; Different flag values matter
+; RUN: rm -rf %t.cache && mkdir %t.cache
+; RUN: ld.lld --thinlto-cache-dir=%t.cache -o %t3 %t2.o %t.o -mllvm -enable-ml-inliner=default -mllvm -max-devirt-iterations=2
+; RUN: ls %t.cache | count 3
+; RUN: ld.lld --thinlto-cache-dir=%t.cache -o %t3 %t2.o %t.o -mllvm -enable-ml-inliner=default -mllvm -max-devirt-iterations=1
+; RUN: ls %t.cache | count 5
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"

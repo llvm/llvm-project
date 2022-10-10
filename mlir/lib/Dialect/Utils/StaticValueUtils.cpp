@@ -7,11 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/APSInt.h"
 
 namespace mlir {
+
+std::tuple<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>,
+           SmallVector<OpFoldResult>>
+getOffsetsSizesAndStrides(ArrayRef<Range> ranges) {
+  SmallVector<OpFoldResult> offsets, sizes, strides;
+  offsets.reserve(ranges.size());
+  sizes.reserve(ranges.size());
+  strides.reserve(ranges.size());
+  for (const auto &[offset, size, stride] : ranges) {
+    offsets.push_back(offset);
+    sizes.push_back(size);
+    strides.push_back(stride);
+  }
+  return std::make_tuple(offsets, sizes, strides);
+}
 
 /// Helper function to dispatch an OpFoldResult into `staticVec` if:
 ///   a) it is an IntegerAttr
@@ -62,7 +78,7 @@ OpFoldResult getAsOpFoldResult(Value val) {
 
 /// Given an array of values, try to extract a constant Attribute from each
 /// value. If this fails, return the original value.
-SmallVector<OpFoldResult> getAsOpFoldResult(ArrayRef<Value> values) {
+SmallVector<OpFoldResult> getAsOpFoldResult(ValueRange values) {
   return llvm::to_vector<4>(
       llvm::map_range(values, [](Value v) { return getAsOpFoldResult(v); }));
 }
@@ -108,5 +124,17 @@ bool isEqualConstantIntOrValue(OpFoldResult ofr1, OpFoldResult ofr2) {
     return true;
   auto v1 = ofr1.dyn_cast<Value>(), v2 = ofr2.dyn_cast<Value>();
   return v1 && v1 == v2;
+}
+
+/// Helper function to convert a vector of `OpFoldResult`s into a vector of
+/// `Value`s. For each `OpFoldResult` in `valueOrAttrVec` return the fold result
+/// if it casts to  a `Value` or create an index-type constant if it casts to
+/// `IntegerAttr`. No other attribute types are supported.
+SmallVector<Value> getAsValues(OpBuilder &b, Location loc,
+                               ArrayRef<OpFoldResult> valueOrAttrVec) {
+  return llvm::to_vector<4>(
+      llvm::map_range(valueOrAttrVec, [&](OpFoldResult value) -> Value {
+        return getValueOrCreateConstantIndexOp(b, loc, value);
+      }));
 }
 } // namespace mlir

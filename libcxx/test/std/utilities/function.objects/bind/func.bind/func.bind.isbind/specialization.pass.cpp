@@ -16,9 +16,10 @@
 //   be treated as a subexpression in a bind call.
 //   https://llvm.org/PR51753
 
-#include <functional>
 #include <cassert>
+#include <functional>
 #include <type_traits>
+#include <utility>
 
 struct MyBind {
     int operator()(int x, int y) const { return 10*x + y; }

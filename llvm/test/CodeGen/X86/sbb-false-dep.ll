@@ -10,11 +10,9 @@ define i32 @mallocbench_gs(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 n
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %r15
 ; CHECK-NEXT:    pushq %r14
-; CHECK-NEXT:    pushq %r13
 ; CHECK-NEXT:    pushq %r12
 ; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movl %r8d, %r13d
+; CHECK-NEXT:    movl %r8d, %ebp
 ; CHECK-NEXT:    movl %ecx, %r14d
 ; CHECK-NEXT:    movl %edx, %r15d
 ; CHECK-NEXT:    movq %rsi, %rbx
@@ -24,16 +22,16 @@ define i32 @mallocbench_gs(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 n
 ; CHECK-NEXT:    movq %rbx, %rdx
 ; CHECK-NEXT:    callq foo1@PLT
 ; CHECK-NEXT:    movq 8(%rbx), %rax
-; CHECK-NEXT:    movq (%rax), %rdx
-; CHECK-NEXT:    xorl %ebp, %ebp
-; CHECK-NEXT:    movl %r13d, %ecx
+; CHECK-NEXT:    movq (%rax), %rax
+; CHECK-NEXT:    xorl %r10d, %r10d
+; CHECK-NEXT:    movl %ebp, %ecx
 ; CHECK-NEXT:    negl %ecx
-; CHECK-NEXT:    movl $0, %eax
-; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    orq %rdx, %rax
-; CHECK-NEXT:    cmpl $1, %r13d
-; CHECK-NEXT:    sbbq %rbp, %rbp
-; CHECK-NEXT:    orq %rdx, %rbp
+; CHECK-NEXT:    movl $0, %r11d
+; CHECK-NEXT:    sbbq %r11, %r11
+; CHECK-NEXT:    orq %rax, %r11
+; CHECK-NEXT:    cmpl $1, %ebp
+; CHECK-NEXT:    sbbq %r10, %r10
+; CHECK-NEXT:    orq %rax, %r10
 ; CHECK-NEXT:    subq $8, %rsp
 ; CHECK-NEXT:    movq %r12, %rdi
 ; CHECK-NEXT:    movl %r15d, %esi
@@ -41,14 +39,13 @@ define i32 @mallocbench_gs(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 n
 ; CHECK-NEXT:    xorl %ecx, %ecx
 ; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    xorl %r9d, %r9d
-; CHECK-NEXT:    pushq %rbp
-; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    pushq %r10
+; CHECK-NEXT:    pushq %r11
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    callq foo2@PLT
-; CHECK-NEXT:    addq $40, %rsp
+; CHECK-NEXT:    addq $32, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
-; CHECK-NEXT:    popq %r13
 ; CHECK-NEXT:    popq %r14
 ; CHECK-NEXT:    popq %r15
 ; CHECK-NEXT:    popq %rbp
@@ -59,11 +56,9 @@ define i32 @mallocbench_gs(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 n
 ; IDIOM-NEXT:    pushq %rbp
 ; IDIOM-NEXT:    pushq %r15
 ; IDIOM-NEXT:    pushq %r14
-; IDIOM-NEXT:    pushq %r13
 ; IDIOM-NEXT:    pushq %r12
 ; IDIOM-NEXT:    pushq %rbx
-; IDIOM-NEXT:    pushq %rax
-; IDIOM-NEXT:    movl %r8d, %r13d
+; IDIOM-NEXT:    movl %r8d, %ebp
 ; IDIOM-NEXT:    movl %ecx, %r14d
 ; IDIOM-NEXT:    movl %edx, %r15d
 ; IDIOM-NEXT:    movq %rsi, %rbx
@@ -73,14 +68,14 @@ define i32 @mallocbench_gs(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 n
 ; IDIOM-NEXT:    movq %rbx, %rdx
 ; IDIOM-NEXT:    callq foo1@PLT
 ; IDIOM-NEXT:    movq 8(%rbx), %rax
-; IDIOM-NEXT:    movq (%rax), %rdx
-; IDIOM-NEXT:    movl %r13d, %ecx
+; IDIOM-NEXT:    movq (%rax), %rax
+; IDIOM-NEXT:    movl %ebp, %ecx
 ; IDIOM-NEXT:    negl %ecx
-; IDIOM-NEXT:    sbbq %rbp, %rbp
-; IDIOM-NEXT:    orq %rdx, %rbp
-; IDIOM-NEXT:    cmpl $1, %r13d
-; IDIOM-NEXT:    sbbq %rax, %rax
-; IDIOM-NEXT:    orq %rdx, %rax
+; IDIOM-NEXT:    sbbq %r10, %r10
+; IDIOM-NEXT:    orq %rax, %r10
+; IDIOM-NEXT:    cmpl $1, %ebp
+; IDIOM-NEXT:    sbbq %r11, %r11
+; IDIOM-NEXT:    orq %rax, %r11
 ; IDIOM-NEXT:    subq $8, %rsp
 ; IDIOM-NEXT:    movq %r12, %rdi
 ; IDIOM-NEXT:    movl %r15d, %esi
@@ -88,14 +83,13 @@ define i32 @mallocbench_gs(ptr noundef %0, ptr noundef %1, i32 noundef %2, i32 n
 ; IDIOM-NEXT:    xorl %ecx, %ecx
 ; IDIOM-NEXT:    xorl %r8d, %r8d
 ; IDIOM-NEXT:    xorl %r9d, %r9d
-; IDIOM-NEXT:    pushq %rax
-; IDIOM-NEXT:    pushq %rbp
+; IDIOM-NEXT:    pushq %r11
+; IDIOM-NEXT:    pushq %r10
 ; IDIOM-NEXT:    pushq %rbx
 ; IDIOM-NEXT:    callq foo2@PLT
-; IDIOM-NEXT:    addq $40, %rsp
+; IDIOM-NEXT:    addq $32, %rsp
 ; IDIOM-NEXT:    popq %rbx
 ; IDIOM-NEXT:    popq %r12
-; IDIOM-NEXT:    popq %r13
 ; IDIOM-NEXT:    popq %r14
 ; IDIOM-NEXT:    popq %r15
 ; IDIOM-NEXT:    popq %rbp

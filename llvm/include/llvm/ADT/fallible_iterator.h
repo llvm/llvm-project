@@ -68,7 +68,7 @@ namespace llvm {
 template <typename Underlying> class fallible_iterator {
 private:
   template <typename T>
-  using enable_if_struct_deref_supported = std::enable_if<
+  using enable_if_struct_deref_supported = std::enable_if_t<
       !std::is_void<decltype(std::declval<T>().operator->())>::value,
       decltype(std::declval<T>().operator->())>;
 
@@ -104,14 +104,14 @@ public:
   /// Forward structure dereference to the underlying iterator (if the
   /// underlying iterator supports it).
   template <typename T = Underlying>
-  typename enable_if_struct_deref_supported<T>::type operator->() {
+  enable_if_struct_deref_supported<T> operator->() {
     return I.operator->();
   }
 
   /// Forward const structure dereference to the underlying iterator (if the
   /// underlying iterator supports it).
   template <typename T = Underlying>
-  typename enable_if_struct_deref_supported<const T>::type operator->() const {
+  enable_if_struct_deref_supported<const T> operator->() const {
     return I.operator->();
   }
 

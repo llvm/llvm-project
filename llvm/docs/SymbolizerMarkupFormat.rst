@@ -32,8 +32,8 @@ or end of a markup element should rarely if ever appear incidentally in logging
 text. It's specifically intended not to require sanitizing plain text, such as
 the HTML/XML requirement to replace ``<`` with ``&lt;`` and the like.
 
-:manpage:`llvm-symbolizer(1)` includes a symbolizing filter via its ``--filter``
-option.
+:doc:`llvm-symbolizer <CommandGuide/llvm-symbolizer>` includes a symbolizing
+filter via its ``--filter`` option.
 
 Scope and assumptions
 =====================
@@ -184,7 +184,7 @@ human-readable symbolic form.
     {{{symbol:_ZN7Mangled4NameEv}}}
     {{{symbol:foobar}}}
 
-``{{{pc:%p}}}``, ``{{{pc:%p:ra}}}``, ``{{{pc:%p:pc}}}`` [#not_yet_implemented]_
+``{{{pc:%p}}}``, ``{{{pc:%p:ra}}}``, ``{{{pc:%p:pc}}}``
 
   Here ``%p`` is the memory address of a code location. It might be presented as a
   function name and source location. The second two forms distinguish the kind of
@@ -195,7 +195,7 @@ human-readable symbolic form.
     {{{pc:0x12345678}}}
     {{{pc:0xffffffff9abcdef0}}}
 
-``{{{data:%p}}}`` [#not_yet_implemented]_
+``{{{data:%p}}}``
 
   Here ``%p`` is the memory address of a data location. It might be presented as
   the name of a global variable at that location.
@@ -205,7 +205,7 @@ human-readable symbolic form.
     {{{data:0x12345678}}}
     {{{data:0xffffffff9abcdef0}}}
 
-``{{{bt:%u:%p}}}``, ``{{{bt:%u:%p:ra}}}``, ``{{{bt:%u:%p:pc}}}`` [#not_yet_implemented]_
+``{{{bt:%u:%p}}}``, ``{{{bt:%u:%p:ra}}}``, ``{{{bt:%u:%p:pc}}}``
 
   This represents one frame in a backtrace. It usually appears on a line by
   itself (surrounded only by whitespace), in a sequence of such lines with
@@ -431,4 +431,4 @@ over the raw logging stream, accumulating context and massaging text as it goes.
 .. rubric:: Footnotes
 
 .. [#not_yet_implemented] This markup element is not yet implemented in
-  :manpage:`llvm-symbolizer(1)`.
+  :doc:`llvm-symbolizer <CommandGuide/llvm-symbolizer>`.

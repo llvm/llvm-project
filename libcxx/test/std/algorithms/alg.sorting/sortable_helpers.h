@@ -17,7 +17,7 @@
 #include <compare>
 #include <iterator>
 #include "test_iterators.h"
-#endif 
+#endif
 
 struct TrivialSortable {
     int value;
@@ -112,7 +112,7 @@ struct NonBorrowedRange {
 
   // TODO: some algorithms calls std::__copy
   // std::__copy(contiguous_iterator<int*>, sentinel_wrapper<contiguous_iterator<int*>>, contiguous_iterator<int*>) doesn't seem to work.
-  // It seems that it unwraps contiguous_iterator<int*> into int*, and then it failed because there is no == between int* and 
+  // It seems that it unwraps contiguous_iterator<int*> into int*, and then it failed because there is no == between int* and
   // sentinel_wrapper<contiguous_iterator<int*>>
   using Sent = std::conditional_t<std::contiguous_iterator<Iter>, Iter, sentinel_wrapper<Iter>>;
 

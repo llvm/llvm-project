@@ -372,7 +372,7 @@ define float @unary_neg_mul_multi_use(float %x, float %y) {
 }
 
 ; Don't crash when attempting to cast a constant FMul to an instruction.
-define void @test8(i32* %inout, i1 %c1) {
+define void @test8(ptr %inout, i1 %c1) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
@@ -386,7 +386,7 @@ define void @test8(i32* %inout, i1 %c1) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load i32, i32* %inout, align 4
+  %0 = load i32, ptr %inout, align 4
   %conv = uitofp i32 %0 to float
   %vecinit = insertelement <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef>, float %conv, i32 3
   %sub = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %vecinit
@@ -665,12 +665,12 @@ define float @fdiv_constant_numerator_fmul(float %x) {
 define float @fdiv_constant_numerator_fmul_extra_use(float %x) {
 ; CHECK-LABEL: @fdiv_constant_numerator_fmul_extra_use(
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast float 1.000000e+00, [[X:%.*]]
-; CHECK-NEXT:    store float [[DIV]], float* @fmul2_external, align 4
+; CHECK-NEXT:    store float [[DIV]], ptr @fmul2_external, align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[DIV]], 2.000000e+00
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %div = fdiv fast float 1.0, %x
-  store float %div, float* @fmul2_external
+  store float %div, ptr @fmul2_external
   %mul = fmul fast float %div, 2.0
   ret float %mul
 }
@@ -1053,14 +1053,15 @@ define float @fmul_fdiv_factor_extra_use(float %x, float %y) {
 
 ; Avoid infinite looping by moving negation out of a constant expression.
 
-@g = external global {[2 x i8*]}, align 1
+@g = external global {[2 x ptr]}, align 1
 
 define double @fmul_negated_constant_expression(double %x) {
 ; CHECK-LABEL: @fmul_negated_constant_expression(
-; CHECK-NEXT:    [[R:%.*]] = fmul double [[X:%.*]], fneg (double bitcast (i64 ptrtoint (i8** getelementptr inbounds ({ [2 x i8*] }, { [2 x i8*] }* @g, i64 0, inrange i32 0, i64 2) to i64) to double))
+; CHECK-NEXT:    [[FSUB:%.*]] = fneg double bitcast (i64 ptrtoint (ptr getelementptr inbounds ({ [2 x ptr] }, ptr @g, i64 0, inrange i32 0, i64 2) to i64) to double)
+; CHECK-NEXT:    [[R:%.*]] = fmul double [[FSUB]], [[X:%.*]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %fsub = fsub double -0.000000e+00, bitcast (i64 ptrtoint (i8** getelementptr inbounds ({ [2 x i8*] }, { [2 x i8*] }* @g, i64 0, inrange i32 0, i64 2) to i64) to double)
+  %fsub = fsub double -0.000000e+00, bitcast (i64 ptrtoint (ptr getelementptr inbounds ({ [2 x ptr] }, ptr @g, i64 0, inrange i32 0, i64 2) to i64) to double)
   %r = fmul double %x, %fsub
   ret double %r
 }

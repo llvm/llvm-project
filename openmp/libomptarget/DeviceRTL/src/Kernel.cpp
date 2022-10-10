@@ -35,7 +35,7 @@ static void genericStateMachine(IdentTy *Ident) {
   uint32_t TId = mapping::getThreadIdInBlock();
 
   do {
-    ParallelRegionFnTy WorkFn = 0;
+    ParallelRegionFnTy WorkFn = nullptr;
 
     // Wait for the signal that we have a new work function.
     synchronize::threads();
@@ -100,8 +100,20 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
   // doing any work.  mapping::getBlockSize() does not include any of the main
   // thread's warp, so none of its threads can ever be active worker threads.
   if (UseGenericStateMachine &&
-      mapping::getThreadIdInBlock() < mapping::getBlockSize(IsSPMD))
+      mapping::getThreadIdInBlock() < mapping::getBlockSize(IsSPMD)) {
     genericStateMachine(Ident);
+  } else {
+    // Retrieve the work function just to ensure we always call
+    // __kmpc_kernel_parallel even if a custom state machine is used.
+    // TODO: this is not super pretty. The problem is we create the call to
+    // __kmpc_kernel_parallel in the openmp-opt pass but while we optimize it is
+    // not there yet. Thus, we assume we never reach it from
+    // __kmpc_target_deinit. That allows us to remove the store in there to
+    // ParallelRegionFn, which leads to bad results later on.
+    ParallelRegionFnTy WorkFn = nullptr;
+    __kmpc_kernel_parallel(&WorkFn);
+    ASSERT(WorkFn == nullptr);
+  }
 
   return mapping::getThreadIdInBlock();
 }

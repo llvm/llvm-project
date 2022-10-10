@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple %itanium_abi_triple -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple %itanium_abi_triple -Wno-incompatible-function-pointer-types -emit-llvm %s -o - | FileCheck %s
 // CHECK: _Z1fPA10_1X
 // CHECK: _Z1fPFvvE
 
@@ -43,16 +43,16 @@ void addrof_single(char *a) __attribute__((overloadable));
 
 // CHECK-LABEL: define {{(dso_local )?}}void @foo
 void foo(void) {
-  // CHECK: store void (i8*)* @_Z11addrof_manyPc
+  // CHECK: store ptr @_Z11addrof_manyPc
   void (*p1)(char *) = &addrof_many;
-  // CHECK: store void (i8*)* @_Z11addrof_manyPv
+  // CHECK: store ptr @_Z11addrof_manyPv
   void (*p2)(void *) = &addrof_many;
-  // CHECK: void (i8*)* @_Z11addrof_manyPc
+  // CHECK: ptr @_Z11addrof_manyPc
   void *vp1 = (void (*)(char *)) & addrof_many;
-  // CHECK: void (i8*)* @_Z11addrof_manyPv
+  // CHECK: ptr @_Z11addrof_manyPv
   void *vp2 = (void (*)(void *)) & addrof_many;
 
-  // CHECK: store void (i8*)* @_Z13addrof_singlePc
+  // CHECK: store ptr @_Z13addrof_singlePc
   void (*p3)(char *) = &addrof_single;
   // CHECK: @_Z13addrof_singlePc
   void (*p4)(int *) = &addrof_single;

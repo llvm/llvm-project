@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -mtriple=amdgcn-- -basic-aa -loop-unroll | FileCheck %s
+; RUN: opt < %s -S -mtriple=amdgcn-- -loop-unroll | FileCheck %s
 
 ; Check that the loop in unroll_default is not fully unrolled using the default
 ; unroll threshold

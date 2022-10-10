@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommandObjectTraceStartIntelPT.h"
-
 #include "TraceIntelPT.h"
 #include "TraceIntelPTConstants.h"
 #include "lldb/Host/OptionParser.h"

@@ -41,6 +41,7 @@ class MachODumper {
   void dumpExportTrie(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpSymbols(std::unique_ptr<MachOYAML::Object> &Y);
   void dumpIndirectSymbols(std::unique_ptr<MachOYAML::Object> &Y);
+  void dumpDataInCode(std::unique_ptr<MachOYAML::Object> &Y);
 
   template <typename SectionType>
   Expected<MachOYAML::Section> constructSectionCommon(SectionType Sec,
@@ -356,6 +357,7 @@ void MachODumper::dumpLinkEdit(std::unique_ptr<MachOYAML::Object> &Y) {
   dumpSymbols(Y);
   dumpIndirectSymbols(Y);
   dumpFunctionStarts(Y);
+  dumpDataInCode(Y);
 }
 
 void MachODumper::dumpFunctionStarts(std::unique_ptr<MachOYAML::Object> &Y) {
@@ -386,7 +388,7 @@ void MachODumper::dumpRebaseOpcodes(std::unique_ptr<MachOYAML::Object> &Y) {
       ULEB = decodeULEB128(OpCode + 1, &Count);
       RebaseOp.ExtraData.push_back(ULEB);
       OpCode += Count;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     // Intentionally no break here -- This opcode has two ULEB values
     case MachO::REBASE_OPCODE_SET_SEGMENT_AND_OFFSET_ULEB:
     case MachO::REBASE_OPCODE_ADD_ADDR_ULEB:
@@ -434,7 +436,7 @@ void MachODumper::dumpBindOpcodes(
       ULEB = decodeULEB128(OpCode + 1, &Count);
       BindOp.ULEBExtraData.push_back(ULEB);
       OpCode += Count;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     // Intentionally no break here -- this opcode has two ULEB values
 
     case MachO::BIND_OPCODE_SET_DYLIB_ORDINAL_ULEB:
@@ -618,6 +620,19 @@ void MachODumper::dumpIndirectSymbols(std::unique_ptr<MachOYAML::Object> &Y) {
   MachO::dysymtab_command DLC = Obj.getDysymtabLoadCommand();
   for (unsigned i = 0; i < DLC.nindirectsyms; ++i)
     LEData.IndirectSymbols.push_back(Obj.getIndirectSymbolTableEntry(DLC, i));
+}
+
+void MachODumper::dumpDataInCode(std::unique_ptr<MachOYAML::Object> &Y) {
+  MachOYAML::LinkEditData &LEData = Y->LinkEdit;
+
+  MachO::linkedit_data_command DIC = Obj.getDataInCodeLoadCommand();
+  uint32_t NumEntries = DIC.datasize / sizeof(MachO::data_in_code_entry);
+  for (uint32_t Idx = 0; Idx < NumEntries; ++Idx) {
+    MachO::data_in_code_entry DICE =
+        Obj.getDataInCodeTableEntry(DIC.dataoff, Idx);
+    MachOYAML::DataInCodeEntry Entry{DICE.offset, DICE.length, DICE.kind};
+    LEData.DataInCode.emplace_back(Entry);
+  }
 }
 
 Error macho2yaml(raw_ostream &Out, const object::MachOObjectFile &Obj,

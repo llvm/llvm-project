@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test bitset<N>& operator^=(const bitset<N>& rhs);
+// bitset<N>& operator^=(const bitset<N>& rhs); // constexpr since C++23
 
 #include <bitset>
 #include <cassert>
@@ -17,7 +17,7 @@
 #include "test_macros.h"
 
 template <std::size_t N>
-void test_op_xor_eq() {
+TEST_CONSTEXPR_CXX23 bool test_op_xor_eq() {
     std::vector<std::bitset<N> > const cases = get_test_cases<N>();
     for (std::size_t c1 = 0; c1 != cases.size(); ++c1) {
         for (std::size_t c2 = 0; c2 != cases.size(); ++c2) {
@@ -29,18 +29,29 @@ void test_op_xor_eq() {
                 assert(v1[i] == (v3[i] != v2[i]));
         }
     }
+    return true;
 }
 
 int main(int, char**) {
-    test_op_xor_eq<0>();
-    test_op_xor_eq<1>();
-    test_op_xor_eq<31>();
-    test_op_xor_eq<32>();
-    test_op_xor_eq<33>();
-    test_op_xor_eq<63>();
-    test_op_xor_eq<64>();
-    test_op_xor_eq<65>();
-    test_op_xor_eq<1000>();
+  test_op_xor_eq<0>();
+  test_op_xor_eq<1>();
+  test_op_xor_eq<31>();
+  test_op_xor_eq<32>();
+  test_op_xor_eq<33>();
+  test_op_xor_eq<63>();
+  test_op_xor_eq<64>();
+  test_op_xor_eq<65>();
+  test_op_xor_eq<1000>(); // not in constexpr because of constexpr evaluation step limits
+#if TEST_STD_VER > 20
+  static_assert(test_op_xor_eq<0>());
+  static_assert(test_op_xor_eq<1>());
+  static_assert(test_op_xor_eq<31>());
+  static_assert(test_op_xor_eq<32>());
+  static_assert(test_op_xor_eq<33>());
+  static_assert(test_op_xor_eq<63>());
+  static_assert(test_op_xor_eq<64>());
+  static_assert(test_op_xor_eq<65>());
+#endif
 
-    return 0;
+  return 0;
 }

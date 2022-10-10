@@ -546,9 +546,9 @@ protected:
   /// they would like to be notified about certain types of mutations.
 
   /// Notify the rewriter that the specified operation is about to be replaced
-  /// with another set of operations. This is called before the uses of the
-  /// operation have been changed.
-  virtual void notifyRootReplaced(Operation *op) {}
+  /// with the set of values potentially produced by new operations. This is
+  /// called before the uses of the operation have been changed.
+  virtual void notifyRootReplaced(Operation *op, ValueRange replacement) {}
 
   /// This is called on an operation that a rewrite is removing, right before
   /// the operation is deleted. At this point, the operation has zero uses.
@@ -1079,15 +1079,10 @@ LogicalResult verifyAsArgs(PatternRewriter &rewriter, ArrayRef<PDLValue> values,
   auto errorFn = [&](const Twine &msg) {
     return rewriter.notifyMatchFailure(rewriter.getUnknownLoc(), msg);
   };
-  LogicalResult result = success();
-  (void)std::initializer_list<int>{
-      (result =
-           succeeded(result)
-               ? ProcessPDLValue<typename FnTraitsT::template arg_t<I + 1>>::
-                     verifyAsArg(errorFn, values[I], I)
-               : failure(),
-       0)...};
-  return result;
+  return success(
+      (succeeded(ProcessPDLValue<typename FnTraitsT::template arg_t<I + 1>>::
+                     verifyAsArg(errorFn, values[I], I)) &&
+       ...));
 }
 
 /// Assert that the given PDLValues match the constraints defined by the
@@ -1102,10 +1097,10 @@ void assertArgs(PatternRewriter &rewriter, ArrayRef<PDLValue> values,
   auto errorFn = [&](const Twine &msg) -> LogicalResult {
     llvm::report_fatal_error(msg);
   };
-  (void)std::initializer_list<int>{
-      (assert(succeeded(ProcessPDLValue<typename FnTraitsT::template arg_t<
-                            I + 1>>::verifyAsArg(errorFn, values[I], I))),
-       0)...};
+  (void)errorFn;
+  assert((succeeded(ProcessPDLValue<typename FnTraitsT::template arg_t<I + 1>>::
+                        verifyAsArg(errorFn, values[I], I)) &&
+          ...));
 #endif
 }
 
@@ -1134,12 +1129,9 @@ template <typename... Ts>
 static void processResults(PatternRewriter &rewriter, PDLResultList &results,
                            std::tuple<Ts...> &&tuple) {
   auto applyFn = [&](auto &&...args) {
-    // TODO: Use proper fold expressions when we have C++17. For now we use a
-    // bogus std::initializer_list to work around C++14 limitations.
-    (void)std::initializer_list<int>{
-        (processResults(rewriter, results, std::move(args)), 0)...};
+    (processResults(rewriter, results, std::move(args)), ...);
   };
-  llvm::apply_tuple(applyFn, std::move(tuple));
+  std::apply(applyFn, std::move(tuple));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1412,14 +1404,10 @@ public:
             typename = std::enable_if_t<sizeof...(Ts) != 0>>
   RewritePatternSet &add(ConstructorArg &&arg, ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
-    // types 'Ts'. This magic is necessary due to a limitation in the places
-    // that a parameter pack can be expanded in c++11.
-    // FIXME: In c++17 this can be simplified by using 'fold expressions'.
-    (void)std::initializer_list<int>{
-        0, (addImpl<Ts>(/*debugLabels=*/llvm::None,
-                        std::forward<ConstructorArg>(arg),
-                        std::forward<ConstructorArgs>(args)...),
-            0)...};
+    // types 'Ts'.
+    (addImpl<Ts>(/*debugLabels=*/llvm::None, std::forward<ConstructorArg>(arg),
+                 std::forward<ConstructorArgs>(args)...),
+     ...);
     return *this;
   }
   /// An overload of the above `add` method that allows for attaching a set
@@ -1433,11 +1421,8 @@ public:
                                   ConstructorArg &&arg,
                                   ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
-    // types 'Ts'. This magic is necessary due to a limitation in the places
-    // that a parameter pack can be expanded in c++11.
-    // FIXME: In c++17 this can be simplified by using 'fold expressions'.
-    (void)std::initializer_list<int>{
-        0, (addImpl<Ts>(debugLabels, arg, args...), 0)...};
+    // types 'Ts'.
+    (addImpl<Ts>(debugLabels, arg, args...), ...);
     return *this;
   }
 
@@ -1445,7 +1430,7 @@ public:
   /// `this` for chaining insertions.
   template <typename... Ts>
   RewritePatternSet &add() {
-    (void)std::initializer_list<int>{0, (addImpl<Ts>(), 0)...};
+    (addImpl<Ts>(), ...);
     return *this;
   }
 
@@ -1498,11 +1483,8 @@ public:
             typename = std::enable_if_t<sizeof...(Ts) != 0>>
   RewritePatternSet &insert(ConstructorArg &&arg, ConstructorArgs &&...args) {
     // The following expands a call to emplace_back for each of the pattern
-    // types 'Ts'. This magic is necessary due to a limitation in the places
-    // that a parameter pack can be expanded in c++11.
-    // FIXME: In c++17 this can be simplified by using 'fold expressions'.
-    (void)std::initializer_list<int>{
-        0, (addImpl<Ts>(/*debugLabels=*/llvm::None, arg, args...), 0)...};
+    // types 'Ts'.
+    (addImpl<Ts>(/*debugLabels=*/llvm::None, arg, args...), ...);
     return *this;
   }
 
@@ -1510,7 +1492,7 @@ public:
   /// `this` for chaining insertions.
   template <typename... Ts>
   RewritePatternSet &insert() {
-    (void)std::initializer_list<int>{0, (addImpl<Ts>(), 0)...};
+    (addImpl<Ts>(), ...);
     return *this;
   }
 

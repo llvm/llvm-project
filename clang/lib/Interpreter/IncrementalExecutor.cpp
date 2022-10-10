@@ -76,6 +76,12 @@ llvm::Error IncrementalExecutor::removeModule(PartialTranslationUnit &PTU) {
   return llvm::Error::success();
 }
 
+// Clean up the JIT instance.
+llvm::Error IncrementalExecutor::cleanUp() {
+  // This calls the global dtors of registered modules.
+  return Jit->deinitialize(Jit->getMainJITDylib());
+}
+
 llvm::Error IncrementalExecutor::runCtors() const {
   return Jit->initialize(Jit->getMainJITDylib());
 }

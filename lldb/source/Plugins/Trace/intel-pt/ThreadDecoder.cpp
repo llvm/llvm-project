@@ -6,13 +6,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "ThreadDecoder.h"
-
-#include "llvm/Support/MemoryBuffer.h"
-
 #include "../common/ThreadPostMortemTrace.h"
 #include "LibiptDecoder.h"
 #include "TraceIntelPT.h"
-
+#include "llvm/Support/MemoryBuffer.h"
 #include <utility>
 
 using namespace lldb;
@@ -51,19 +48,18 @@ Expected<DecodedThreadSP> ThreadDecoder::Decode() {
 
 llvm::Expected<DecodedThreadSP> ThreadDecoder::DoDecode() {
   return m_trace.GetThreadTimer(m_thread_sp->GetID())
-      .TimeTask(
-          "Decoding instructions", [&]() -> Expected<DecodedThreadSP> {
-            DecodedThreadSP decoded_thread_sp = std::make_shared<DecodedThread>(
-                m_thread_sp, m_trace.GetPerfZeroTscConversion());
+      .TimeTask("Decoding instructions", [&]() -> Expected<DecodedThreadSP> {
+        DecodedThreadSP decoded_thread_sp = std::make_shared<DecodedThread>(
+            m_thread_sp, m_trace.GetPerfZeroTscConversion());
 
-            Error err = m_trace.OnThreadBufferRead(
-                m_thread_sp->GetID(), [&](llvm::ArrayRef<uint8_t> data) {
-                  return DecodeSingleTraceForThread(*decoded_thread_sp, m_trace,
-                                                    data);
-                });
+        Error err = m_trace.OnThreadBufferRead(
+            m_thread_sp->GetID(), [&](llvm::ArrayRef<uint8_t> data) {
+              return DecodeSingleTraceForThread(*decoded_thread_sp, m_trace,
+                                                data);
+            });
 
-            if (err)
-              return std::move(err);
-            return decoded_thread_sp;
-          });
+        if (err)
+          return std::move(err);
+        return decoded_thread_sp;
+      });
 }

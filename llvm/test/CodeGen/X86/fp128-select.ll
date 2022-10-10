@@ -92,16 +92,16 @@ define fp128 @test_select_cc(fp128, fp128) {
 ; NOSSE-NEXT:    .cfi_offset %r14, -32
 ; NOSSE-NEXT:    .cfi_offset %r15, -24
 ; NOSSE-NEXT:    .cfi_offset %rbp, -16
-; NOSSE-NEXT:    movq %rcx, %r12
-; NOSSE-NEXT:    movq %rdx, %rbx
-; NOSSE-NEXT:    movq %rsi, %r14
-; NOSSE-NEXT:    movq %rdi, %r15
+; NOSSE-NEXT:    movq %rcx, %r15
+; NOSSE-NEXT:    movq %rdx, %r12
+; NOSSE-NEXT:    movq %rsi, %rbx
+; NOSSE-NEXT:    movq %rdi, %r14
 ; NOSSE-NEXT:    callq __netf2@PLT
 ; NOSSE-NEXT:    movl %eax, %ebp
-; NOSSE-NEXT:    movq %r15, %rdi
-; NOSSE-NEXT:    movq %r14, %rsi
-; NOSSE-NEXT:    movq %rbx, %rdx
-; NOSSE-NEXT:    movq %r12, %rcx
+; NOSSE-NEXT:    movq %r14, %rdi
+; NOSSE-NEXT:    movq %rbx, %rsi
+; NOSSE-NEXT:    movq %r12, %rdx
+; NOSSE-NEXT:    movq %r15, %rcx
 ; NOSSE-NEXT:    callq __eqtf2@PLT
 ; NOSSE-NEXT:    movl %eax, %ecx
 ; NOSSE-NEXT:    xorl %eax, %eax
@@ -111,8 +111,8 @@ define fp128 @test_select_cc(fp128, fp128) {
 ; NOSSE-NEXT:    testl %ebp, %ebp
 ; NOSSE-NEXT:    je .LBB1_2
 ; NOSSE-NEXT:  # %bb.1:
-; NOSSE-NEXT:    movq %r15, %rax
-; NOSSE-NEXT:    movq %r14, %rdx
+; NOSSE-NEXT:    movq %r14, %rax
+; NOSSE-NEXT:    movq %rbx, %rdx
 ; NOSSE-NEXT:  .LBB1_2: # %BB2
 ; NOSSE-NEXT:    popq %rbx
 ; NOSSE-NEXT:    .cfi_def_cfa_offset 40

@@ -1619,7 +1619,7 @@ define i32 @sqdmlal_lane_1s(i32 %A, i16 %B, <4 x i16> %C) nounwind {
 ; CHECK-NEXT:    fmov s1, w1
 ; CHECK-NEXT:    fmov s2, w0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    sqdmlal.4s v2, v1, v0[1]
+; CHECK-NEXT:    sqdmlal.h s2, h1, v0[1]
 ; CHECK-NEXT:    fmov w0, s2
 ; CHECK-NEXT:    ret
   %lhs = insertelement <4 x i16> undef, i16 %B, i32 0
@@ -1637,7 +1637,7 @@ define i32 @sqdmlsl_lane_1s(i32 %A, i16 %B, <4 x i16> %C) nounwind {
 ; CHECK-NEXT:    fmov s1, w1
 ; CHECK-NEXT:    fmov s2, w0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    sqdmlsl.4s v2, v1, v0[1]
+; CHECK-NEXT:    sqdmlsl.h s2, h1, v0[1]
 ; CHECK-NEXT:    fmov w0, s2
 ; CHECK-NEXT:    ret
   %lhs = insertelement <4 x i16> undef, i16 %B, i32 0
@@ -1648,6 +1648,38 @@ define i32 @sqdmlsl_lane_1s(i32 %A, i16 %B, <4 x i16> %C) nounwind {
   ret i32 %res
 }
 declare i32 @llvm.aarch64.neon.sqsub.i32(i32, i32)
+
+define i32 @sqadd_lane1_sqdmull4s(i32 %A, <4 x i16> %B, <4 x i16> %C) nounwind {
+; CHECK-LABEL: sqadd_lane1_sqdmull4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmull.4s v0, v0, v1
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    mov.s w8, v0[1]
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    sqadd s0, s1, s0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+  %prod.vec = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %B, <4 x i16> %C)
+  %prod = extractelement <4 x i32> %prod.vec, i32 1
+  %res = call i32 @llvm.aarch64.neon.sqadd.i32(i32 %A, i32 %prod)
+  ret i32 %res
+}
+
+define i32 @sqsub_lane1_sqdmull4s(i32 %A, <4 x i16> %B, <4 x i16> %C) nounwind {
+; CHECK-LABEL: sqsub_lane1_sqdmull4s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sqdmull.4s v0, v0, v1
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    mov.s w8, v0[1]
+; CHECK-NEXT:    fmov s0, w8
+; CHECK-NEXT:    sqsub s0, s1, s0
+; CHECK-NEXT:    fmov w0, s0
+; CHECK-NEXT:    ret
+  %prod.vec = call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %B, <4 x i16> %C)
+  %prod = extractelement <4 x i32> %prod.vec, i32 1
+  %res = call i32 @llvm.aarch64.neon.sqsub.i32(i32 %A, i32 %prod)
+  ret i32 %res
+}
 
 define i64 @sqdmlal_lane_1d(i64 %A, i32 %B, <2 x i32> %C) nounwind {
 ; CHECK-LABEL: sqdmlal_lane_1d:
@@ -2894,6 +2926,23 @@ define <1 x double> @test_fdiv_v1f64(<1 x double> %L, <1 x double> %R) nounwind 
   ret <1 x double> %prod
 }
 
+define i32 @sqdmlal_s(i16 %A, i16 %B, i32 %C) nounwind {
+; CHECK-LABEL: sqdmlal_s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w1
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s2, w2
+; CHECK-NEXT:    sqdmlal.h s2, h1, v0[0]
+; CHECK-NEXT:    fmov w0, s2
+; CHECK-NEXT:    ret
+  %tmp1 = insertelement <4 x i16> undef, i16 %A, i64 0
+  %tmp2 = insertelement <4 x i16> undef, i16 %B, i64 0
+  %tmp3 = tail call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %tmp1, <4 x i16> %tmp2)
+  %tmp4 = extractelement <4 x i32> %tmp3, i64 0
+  %tmp5 = tail call i32 @llvm.aarch64.neon.sqadd.i32(i32 %C, i32 %tmp4)
+  ret i32 %tmp5
+}
+
 define i64 @sqdmlal_d(i32 %A, i32 %B, i64 %C) nounwind {
 ; CHECK-LABEL: sqdmlal_d:
 ; CHECK:       // %bb.0:
@@ -2906,6 +2955,23 @@ define i64 @sqdmlal_d(i32 %A, i32 %B, i64 %C) nounwind {
   %tmp4 = call i64 @llvm.aarch64.neon.sqdmulls.scalar(i32 %A, i32 %B)
   %tmp5 = call i64 @llvm.aarch64.neon.sqadd.i64(i64 %C, i64 %tmp4)
   ret i64 %tmp5
+}
+
+define i32 @sqdmlsl_s(i16 %A, i16 %B, i32 %C) nounwind {
+; CHECK-LABEL: sqdmlsl_s:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov s0, w1
+; CHECK-NEXT:    fmov s1, w0
+; CHECK-NEXT:    fmov s2, w2
+; CHECK-NEXT:    sqdmlsl.h s2, h1, v0[0]
+; CHECK-NEXT:    fmov w0, s2
+; CHECK-NEXT:    ret
+  %tmp1 = insertelement <4 x i16> undef, i16 %A, i64 0
+  %tmp2 = insertelement <4 x i16> undef, i16 %B, i64 0
+  %tmp3 = tail call <4 x i32> @llvm.aarch64.neon.sqdmull.v4i32(<4 x i16> %tmp1, <4 x i16> %tmp2)
+  %tmp4 = extractelement <4 x i32> %tmp3, i64 0
+  %tmp5 = tail call i32 @llvm.aarch64.neon.sqsub.i32(i32 %C, i32 %tmp4)
+  ret i32 %tmp5
 }
 
 define i64 @sqdmlsl_d(i32 %A, i32 %B, i64 %C) nounwind {
@@ -2925,9 +2991,9 @@ define i64 @sqdmlsl_d(i32 %A, i32 %B, i64 %C) nounwind {
 define <16 x i8> @test_pmull_64(i64 %l, i64 %r) nounwind {
 ; CHECK-LABEL: test_pmull_64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmov d0, x0
-; CHECK-NEXT:    fmov d1, x1
-; CHECK-NEXT:    pmull.1q v0, v0, v1
+; CHECK-NEXT:    fmov d0, x1
+; CHECK-NEXT:    fmov d1, x0
+; CHECK-NEXT:    pmull.1q v0, v1, v0
 ; CHECK-NEXT:    ret
   %val = call <16 x i8> @llvm.aarch64.neon.pmull64(i64 %l, i64 %r)
   ret <16 x i8> %val

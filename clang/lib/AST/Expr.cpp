@@ -203,6 +203,79 @@ bool Expr::isKnownToHaveBooleanValue(bool Semantic) const {
   return false;
 }
 
+bool Expr::isFlexibleArrayMemberLike(
+    ASTContext &Context,
+    LangOptions::StrictFlexArraysLevelKind StrictFlexArraysLevel,
+    bool IgnoreTemplateOrMacroSubstitution) const {
+
+  // For compatibility with existing code, we treat arrays of length 0 or
+  // 1 as flexible array members.
+  if (const auto *CAT = Context.getAsConstantArrayType(getType())) {
+    llvm::APInt Size = CAT->getSize();
+
+    // GCC extension, only allowed to represent a FAM.
+    if (Size == 0)
+      return true;
+
+    // FIXME: While the default -fstrict-flex-arrays=0 permits Size>1 trailing
+    // arrays to be treated as flexible-array-members, we still emit diagnostics
+    // as if they are not. Pending further discussion...
+    using FAMKind = LangOptions::StrictFlexArraysLevelKind;
+    if (StrictFlexArraysLevel == FAMKind::ZeroOrIncomplete || Size.uge(2))
+      return false;
+
+  } else if (!Context.getAsIncompleteArrayType(getType()))
+    return false;
+
+  const Expr *E = IgnoreParens();
+
+  const NamedDecl *ND = nullptr;
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    ND = DRE->getDecl();
+  else if (const auto *ME = dyn_cast<MemberExpr>(E))
+    ND = ME->getMemberDecl();
+  else if (const auto *IRE = dyn_cast<ObjCIvarRefExpr>(E))
+    return IRE->getDecl()->getNextIvar() == nullptr;
+
+  if (!ND)
+    return false;
+
+  // A flexible array member must be the last member in the class.
+  // FIXME: If the base type of the member expr is not FD->getParent(),
+  // this should not be treated as a flexible array member access.
+  if (const auto *FD = dyn_cast<FieldDecl>(ND)) {
+    if (FD->getParent()->isUnion())
+      return true;
+
+    // Don't consider sizes resulting from macro expansions or template argument
+    // substitution to form C89 tail-padded arrays.
+    if (IgnoreTemplateOrMacroSubstitution) {
+      TypeSourceInfo *TInfo = FD->getTypeSourceInfo();
+      while (TInfo) {
+        TypeLoc TL = TInfo->getTypeLoc();
+        // Look through typedefs.
+        if (TypedefTypeLoc TTL = TL.getAsAdjusted<TypedefTypeLoc>()) {
+          const TypedefNameDecl *TDL = TTL.getTypedefNameDecl();
+          TInfo = TDL->getTypeSourceInfo();
+          continue;
+        }
+        if (ConstantArrayTypeLoc CTL = TL.getAs<ConstantArrayTypeLoc>()) {
+          const Expr *SizeExpr = dyn_cast<IntegerLiteral>(CTL.getSizeExpr());
+          if (!SizeExpr || SizeExpr->getExprLoc().isMacroID())
+            return false;
+        }
+        break;
+      }
+    }
+
+    RecordDecl::field_iterator FI(
+        DeclContext::decl_iterator(const_cast<FieldDecl *>(FD)));
+    return ++FI == FD->getParent()->field_end();
+  }
+
+  return false;
+}
+
 const ValueDecl *
 Expr::getAsBuiltinConstantDeclRef(const ASTContext &Context) const {
   Expr::EvalResult Eval;
@@ -277,7 +350,7 @@ ConstantExpr::getStorageKind(const APValue &Value) {
   case APValue::Int:
     if (!Value.getInt().needsCleanup())
       return ConstantExpr::RSK_Int64;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     return ConstantExpr::RSK_APValue;
   }
@@ -2633,7 +2706,7 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     }
 
     // Fallthrough for generic call handling.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case CallExprClass:
   case CXXMemberCallExprClass:
@@ -3609,7 +3682,7 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
         DCE->getCastKind() == CK_Dynamic)
       return true;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ImplicitCastExprClass:
   case CStyleCastExprClass:
   case CXXStaticCastExprClass:
@@ -4831,7 +4904,7 @@ RecoveryExpr::RecoveryExpr(ASTContext &Ctx, QualType T, SourceLocation BeginLoc,
            OK_Ordinary),
       BeginLoc(BeginLoc), EndLoc(EndLoc), NumExprs(SubExprs.size()) {
   assert(!T.isNull());
-  assert(llvm::all_of(SubExprs, [](Expr* E) { return E != nullptr; }));
+  assert(!llvm::is_contained(SubExprs, nullptr));
 
   llvm::copy(SubExprs, getTrailingObjects<Expr *>());
   setDependence(computeDependence(this));

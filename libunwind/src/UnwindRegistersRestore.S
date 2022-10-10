@@ -441,7 +441,7 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind13Registers_ppc6jumptoEv)
 //  thread_state pointer is in r3
 //
 
-  // restore integral registerrs
+  // restore integral registers
   // skip r0 for now
   // skip r1 for now
   lwz     2,  16(3)

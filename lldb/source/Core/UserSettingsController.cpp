@@ -53,10 +53,17 @@ Status Properties::SetPropertyValue(const ExecutionContext *exe_ctx,
 }
 
 void Properties::DumpAllPropertyValues(const ExecutionContext *exe_ctx,
-                                       Stream &strm, uint32_t dump_mask) {
+                                       Stream &strm, uint32_t dump_mask,
+                                       bool is_json) {
   OptionValuePropertiesSP properties_sp(GetValueProperties());
-  if (properties_sp)
-    return properties_sp->DumpValue(exe_ctx, strm, dump_mask);
+  if (!properties_sp)
+    return;
+
+  if (is_json) {
+    llvm::json::Value json = properties_sp->ToJSON(exe_ctx);
+    strm.Printf("%s", llvm::formatv("{0:2}", json).str().c_str());
+  } else
+    properties_sp->DumpValue(exe_ctx, strm, dump_mask);
 }
 
 void Properties::DumpAllDescriptions(CommandInterpreter &interpreter,
@@ -71,11 +78,11 @@ void Properties::DumpAllDescriptions(CommandInterpreter &interpreter,
 Status Properties::DumpPropertyValue(const ExecutionContext *exe_ctx,
                                      Stream &strm,
                                      llvm::StringRef property_path,
-                                     uint32_t dump_mask) {
+                                     uint32_t dump_mask, bool is_json) {
   OptionValuePropertiesSP properties_sp(GetValueProperties());
   if (properties_sp) {
     return properties_sp->DumpPropertyValue(exe_ctx, strm, property_path,
-                                            dump_mask);
+                                            dump_mask, is_json);
   }
   Status error;
   error.SetErrorString("empty property list");

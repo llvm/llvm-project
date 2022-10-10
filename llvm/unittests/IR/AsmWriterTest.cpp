@@ -24,14 +24,14 @@ TEST(AsmWriterTest, DebugPrintDetachedInstruction) {
   // has metadata attached but no parent.
   LLVMContext Ctx;
   auto Ty = Type::getInt32Ty(Ctx);
-  auto Undef = UndefValue::get(Ty);
-  std::unique_ptr<BinaryOperator> Add(BinaryOperator::CreateAdd(Undef, Undef));
+  auto Poison = PoisonValue::get(Ty);
+  std::unique_ptr<BinaryOperator> Add(BinaryOperator::CreateAdd(Poison, Poison));
   Add->setMetadata(
       "", MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(Ty, 1))}));
   std::string S;
   raw_string_ostream OS(S);
   Add->print(OS);
-  std::size_t r = OS.str().find("<badref> = add i32 undef, undef, !<empty");
+  std::size_t r = OS.str().find("<badref> = add i32 poison, poison, !<empty");
   EXPECT_TRUE(r != std::string::npos);
 }
 

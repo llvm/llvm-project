@@ -466,27 +466,6 @@ let Command = "log dump" in {
     Desc<"Set the destination file to dump to.">;
 }
 
-let Command = "reproducer dump" in {
-  def reproducer_provider : Option<"provider", "p">, Group<1>,
-    EnumArg<"ReproducerProvider">,
-    Required, Desc<"The reproducer provider to dump.">;
-  def reproducer_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
-    Desc<"The reproducer path. If a reproducer is replayed and no path is "
-    "provided, that reproducer is dumped.">;
-}
-
-let Command = "reproducer verify" in {
-  def reproducer_verify_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
-    Desc<"The reproducer path. If a reproducer is replayed and no path is "
-    "provided, that reproducer is dumped.">;
-}
-
-let Command = "reproducer xcrash" in {
-  def reproducer_signal : Option<"signal", "s">, Group<1>,
-    EnumArg<"ReproducerSignal">,
-    Required, Desc<"The signal to crash the debugger.">;
-}
-
 let Command = "memory read" in {
   def memory_read_num_per_line : Option<"num-per-line", "l">, Group<1>,
     Arg<"NumberPerLine">, Desc<"The number of items per line to display.">;
@@ -1160,6 +1139,10 @@ let Command = "thread trace dump instructions" in {
   def thread_trace_dump_instructions_show_events : Option<"events", "e">,
     Group<1>,
     Desc<"Dump the events that happened during the execution of the target.">;
+  def thread_trace_dump_instruction_only_events : Option<"only-events", "E">,
+    Group<1>,
+    Desc<"Dump only the events that happened during the execution of the "
+    "target. No instrutions are dumped.">;
   def thread_trace_dump_instructions_continue: Option<"continue", "C">,
     Group<1>,
     Desc<"Continue dumping instructions right where the previous invocation of "

@@ -17,6 +17,7 @@
 #include "flang/Frontend/FrontendOptions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
 #include "flang/Frontend/TargetOptions.h"
+#include "flang/Lower/LoweringOptions.h"
 #include "flang/Parser/parsing.h"
 #include "flang/Semantics/semantics.h"
 #include "clang/Basic/Diagnostic.h"
@@ -67,6 +68,9 @@ class CompilerInvocation : public CompilerInvocationBase {
   // TODO: Merge with or translate to frontendOpts. We shouldn't need two sets
   // of options.
   Fortran::parser::Options parserOpts;
+
+  /// Options controlling lowering.
+  Fortran::lower::LoweringOptions loweringOpts;
 
   /// Options controlling the target.
   Fortran::frontend::TargetOptions targetOpts;
@@ -135,6 +139,11 @@ public:
 
   CodeGenOptions &getCodeGenOpts() { return codeGenOpts; }
   const CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
+
+  Fortran::lower::LoweringOptions &getLoweringOpts() { return loweringOpts; }
+  const Fortran::lower::LoweringOptions &getLoweringOpts() const {
+    return loweringOpts;
+  }
 
   Fortran::semantics::SemanticsContext &getSemanticsContext() {
     return *semanticsContext;
@@ -226,6 +235,10 @@ public:
 
   /// Set the Semantic Options
   void setSemanticsOpts(Fortran::parser::AllCookedSources &);
+
+  /// Set \p loweringOptions controlling lowering behavior based
+  /// on the \p optimizationLevel.
+  void setLoweringOptions();
 };
 
 } // end namespace Fortran::frontend

@@ -53,6 +53,7 @@ enum class ErrorCode {
   // Defined by the protocol.
   RequestCancelled = -32800,
   ContentModified = -32801,
+  RequestFailed = -32803,
 };
 
 /// Defines how the host (editor) should sync document changes to the language
@@ -103,14 +104,19 @@ public:
   /// Try to build a URIForFile from the given URI string.
   static llvm::Expected<URIForFile> fromURI(StringRef uri);
 
-  /// Try to build a URIForFile from the given absolute file path.
-  static llvm::Expected<URIForFile> fromFile(StringRef absoluteFilepath);
+  /// Try to build a URIForFile from the given absolute file path and optional
+  /// scheme.
+  static llvm::Expected<URIForFile> fromFile(StringRef absoluteFilepath,
+                                             StringRef scheme = "file");
 
   /// Returns the absolute path to the file.
   StringRef file() const { return filePath; }
 
   /// Returns the original uri of the file.
   StringRef uri() const { return uriStr; }
+
+  /// Return the scheme of the uri.
+  StringRef scheme() const;
 
   explicit operator bool() const { return !filePath.empty(); }
 
@@ -123,6 +129,11 @@ public:
   friend bool operator<(const URIForFile &lhs, const URIForFile &rhs) {
     return lhs.filePath < rhs.filePath;
   }
+
+  /// Register a supported URI scheme. The protocol supports `file` by default,
+  /// so this is only necessary for any additional schemes that a server wants
+  /// to support.
+  static void registerSupportedScheme(StringRef scheme);
 
 private:
   explicit URIForFile(std::string &&filePath, std::string &&uriStr)

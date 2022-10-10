@@ -9,6 +9,7 @@
 // UNSUPPORTED: c++03
 
 #include <memory>
+#include <type_traits>
 
 template <int> struct Tag {};
 

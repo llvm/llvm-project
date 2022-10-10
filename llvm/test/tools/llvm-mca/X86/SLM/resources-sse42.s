@@ -58,8 +58,8 @@ pcmpgtq     (%rax), %xmm2
 # CHECK-NEXT:  7      20    17.00   *                   pcmpistri	$1, (%rax), %xmm2
 # CHECK-NEXT:  5      13    13.00                       pcmpistrm	$1, %xmm0, %xmm2
 # CHECK-NEXT:  6      16    13.00   *                   pcmpistrm	$1, (%rax), %xmm2
-# CHECK-NEXT:  1      1     0.50                        pcmpgtq	%xmm0, %xmm2
-# CHECK-NEXT:  1      4     1.00    *                   pcmpgtq	(%rax), %xmm2
+# CHECK-NEXT:  1      5     2.00                        pcmpgtq	%xmm0, %xmm2
+# CHECK-NEXT:  2      8     2.00    *                   pcmpgtq	(%rax), %xmm2
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SLMDivider
@@ -73,7 +73,7 @@ pcmpgtq     (%rax), %xmm2
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]
-# CHECK-NEXT:  -      -      -     137.00 1.00    -     10.00  10.00
+# CHECK-NEXT:  -      -      -     140.00  -      -     10.00  10.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    Instructions:
@@ -95,5 +95,5 @@ pcmpgtq     (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     17.00   -      -      -     1.00   pcmpistri	$1, (%rax), %xmm2
 # CHECK-NEXT:  -      -      -     13.00   -      -      -      -     pcmpistrm	$1, %xmm0, %xmm2
 # CHECK-NEXT:  -      -      -     13.00   -      -      -     1.00   pcmpistrm	$1, (%rax), %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -     pcmpgtq	%xmm0, %xmm2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     1.00   pcmpgtq	(%rax), %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -      -     pcmpgtq	%xmm0, %xmm2
+# CHECK-NEXT:  -      -      -     2.00    -      -      -     1.00   pcmpgtq	(%rax), %xmm2

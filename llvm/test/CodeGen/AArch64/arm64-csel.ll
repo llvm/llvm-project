@@ -264,6 +264,60 @@ entry:
   ret i64 %.
 }
 
+; Regression test for TrueVal + 1 overflow
+define i64 @foo18_overflow1(i64 %a, i64 %b) nounwind readnone optsize ssp {
+; CHECK-LABEL: foo18_overflow1:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmp x0, x1
+; CHECK-NEXT:    mov x8, #9223372036854775807
+; CHECK-NEXT:    csel x0, x8, xzr, gt
+; CHECK-NEXT:    ret
+entry:
+  %cmp = icmp sgt i64 %a, %b
+  %. = select i1 %cmp, i64 9223372036854775807, i64 0
+  ret i64 %.
+}
+
+; Regression test for FalseVal + 1 overflow
+define i64 @foo18_overflow2(i64 %a, i64 %b) nounwind readnone optsize ssp {
+; CHECK-LABEL: foo18_overflow2:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmp x0, x1
+; CHECK-NEXT:    mov x8, #9223372036854775807
+; CHECK-NEXT:    csel x0, xzr, x8, gt
+; CHECK-NEXT:    ret
+entry:
+  %cmp = icmp sgt i64 %a, %b
+  %. = select i1 %cmp, i64 0, i64 9223372036854775807
+  ret i64 %.
+}
+
+; Regression test for FalseVal - TrueVal overflow
+define i64 @foo18_overflow3(i1 %cmp) nounwind readnone optsize ssp {
+; CHECK-LABEL: foo18_overflow3:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, #-9223372036854775808 
+; CHECK-NEXT:    tst w0, #0x1 
+; CHECK-NEXT:    csel x0, x8, xzr, ne 
+; CHECK-NEXT:    ret
+entry:
+  %. = select i1 %cmp, i64 -9223372036854775808, i64 0
+  ret i64 %.
+}
+
+; Regression test for TrueVal - FalseVal overflow
+define i64 @foo18_overflow4(i1 %cmp) nounwind readnone optsize ssp {
+; CHECK-LABEL: foo18_overflow4:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov x8, #-9223372036854775808 
+; CHECK-NEXT:    tst w0, #0x1 
+; CHECK-NEXT:    csel x0, xzr, x8, ne 
+; CHECK-NEXT:    ret
+entry:
+  %. = select i1 %cmp, i64 0, i64 -9223372036854775808
+  ret i64 %.
+}
+
 define i64 @foo19(i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: foo19:
 ; CHECK:       // %bb.0: // %entry

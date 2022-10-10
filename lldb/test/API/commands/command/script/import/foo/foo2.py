@@ -1,6 +1,3 @@
-from __future__ import print_function
-
-
 def foo2_function(debugger, args, result, dict):
     print("foo2 says " + args, file=result)
     return None

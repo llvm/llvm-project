@@ -24,7 +24,6 @@
 #endif
 
 #include "visit.h"
-#include "llvm/Support/Compiler.h"
 #include <functional>
 #include <list>
 #include <memory>
@@ -125,11 +124,11 @@ template <typename A> struct ListItemCount {
 
 #define ENUM_CLASS(NAME, ...) \
   enum class NAME { __VA_ARGS__ }; \
-  LLVM_ATTRIBUTE_UNUSED static constexpr std::size_t NAME##_enumSize{[] { \
+  [[maybe_unused]] static constexpr std::size_t NAME##_enumSize{[] { \
     enum { __VA_ARGS__ }; \
     return Fortran::common::ListItemCount{__VA_ARGS__}.value; \
   }()}; \
-  LLVM_ATTRIBUTE_UNUSED static inline std::string EnumToString(NAME e) { \
+  [[maybe_unused]] static inline std::string EnumToString(NAME e) { \
     return Fortran::common::EnumIndexToString( \
         static_cast<int>(e), #__VA_ARGS__); \
   }

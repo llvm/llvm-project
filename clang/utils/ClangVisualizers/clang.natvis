@@ -2,7 +2,7 @@
 <!--
 Visual Studio Native Debugging Visualizers for LLVM
 
-For Visual Studio 2013 only, put this file into 
+For Visual Studio 2013 only, put this file into
 "%USERPROFILE%\Documents\Visual Studio 2013\Visualizers" or create a symbolic link so it updates automatically.
 
 For later versions of Visual Studio, no setup is required-->
@@ -11,8 +11,8 @@ For later versions of Visual Studio, no setup is required-->
   <Type Name="clang::Type">
     <!-- To visualize clang::Types, we need to look at TypeBits.TC to determine the actual
          type subclass and manually dispatch accordingly (Visual Studio can't identify the real type
-         because clang::Type has no virtual members hence no RTTI). 
-         
+         because clang::Type has no virtual members hence no RTTI).
+
          Views:
            "cmn": Visualization that is common to all clang::Type subclasses
            "poly": Visualization that is specific to the actual clang::Type subclass. The subtype-specific
@@ -160,7 +160,7 @@ For later versions of Visual Studio, no setup is required-->
   <Type Name="clang::AttributedType">
     <DisplayString>{ModifiedType} Attribute={(clang::AttributedType::Kind)AttributedTypeBits.AttrKind}</DisplayString>
   </Type>
-  
+
   <!-- Unfortunately, Visual Studio has trouble seeing the PointerBitMask member PointerIntUnion, so I hardwire it to 2 bits-->
   <Type Name="clang::DeclContext">
     <DisplayString>{(clang::Decl::Kind)DeclContextBits.DeclKind,en}Decl</DisplayString>
@@ -201,7 +201,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString IncludeView="DefaultArg">{{InheritedInitializer}}</DisplayString>
     <DisplayString IncludeView="Initializer" Condition="DefaultArgument.ValueOrInherited.Val.Value&amp;~3LL">= {this,view(DefaultArg)na}</DisplayString>
     <DisplayString IncludeView="Initializer"></DisplayString>
-    <DisplayString>{*this,view(TorC)} {*this,view(MaybeEllipses)}{Name,view(cpp)} {this,view(Initializer)na}</DisplayString> 
+    <DisplayString>{*this,view(TorC)} {*this,view(MaybeEllipses)}{Name,view(cpp)} {this,view(Initializer)na}</DisplayString>
   </Type>
   <Type Name="clang::TemplateDecl">
     <DisplayString IncludeView="cpp">{*TemplatedDecl,view(cpp)}</DisplayString>
@@ -694,7 +694,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString Condition="(Ptr &amp; PtrMask) == StoredCXXConstructorName">C++ Constructor {{{(clang::detail::CXXSpecialNameExtra *)(Ptr &amp; ~PtrMask),view(cpp)na}}}</DisplayString>
     <DisplayString Condition="(Ptr &amp; PtrMask) == StoredCXXDestructorName">C++ Destructor {{*(clang::detail::CXXSpecialNameExtra *)(Ptr &amp; ~PtrMask)}}</DisplayString>
     <DisplayString Condition="(Ptr &amp; PtrMask) == StoredCXXConversionFunctionName">C++ Conversion function {{*(clang::detail::CXXSpecialNameExtra *)(Ptr &amp; ~PtrMask)}}</DisplayString>
-    <DisplayString Condition="(Ptr &amp; PtrMask) == StoredCXXOperatorName">C++ Operator {{*(clang::detail::CXXOperatorIdName *)(Ptr &amp; ~PtrMask)}}</DisplayString>    
+    <DisplayString Condition="(Ptr &amp; PtrMask) == StoredCXXOperatorName">C++ Operator {{*(clang::detail::CXXOperatorIdName *)(Ptr &amp; ~PtrMask)}}</DisplayString>
     <DisplayString Condition="(Ptr &amp; PtrMask) == StoredDeclarationNameExtra"
                    IncludeView="cpp">{*(clang::detail::DeclarationNameExtra *)(Ptr &amp; ~PtrMask),view(cpp)}</DisplayString>
     <DisplayString Condition="(Ptr &amp; PtrMask) == StoredDeclarationNameExtra">{{Extra ({*(clang::detail::DeclarationNameExtra *)(Ptr &amp; ~PtrMask)})}}</DisplayString>
@@ -706,7 +706,7 @@ For later versions of Visual Studio, no setup is required-->
       <Item Condition="(Ptr &amp; PtrMask) == StoredCXXConstructorName" Name="[C++ Constructor]">*(clang::detail::CXXSpecialNameExtra *)(Ptr &amp; ~PtrMask),na</Item>
       <Item Condition="(Ptr &amp; PtrMask) == StoredCXXDestructorName" Name="[C++ Destructor]">*(clang::detail::CXXSpecialNameExtra *)(Ptr &amp; ~PtrMask),na</Item>
       <Item Condition="(Ptr &amp; PtrMask) == StoredCXXConversionFunctionName" Name="[C++ Conversion function]">*(clang::detail::CXXSpecialNameExtra *)(Ptr &amp; ~PtrMask),na</Item>
-      <Item Condition="(Ptr &amp; PtrMask) == StoredCXXOperatorName" Name="[C++ Operator]">*(clang::detail::CXXOperatorIdName *)(Ptr &amp; ~PtrMask),na</Item>      
+      <Item Condition="(Ptr &amp; PtrMask) == StoredCXXOperatorName" Name="[C++ Operator]">*(clang::detail::CXXOperatorIdName *)(Ptr &amp; ~PtrMask),na</Item>
       <Item Condition="(Ptr &amp; PtrMask) == StoredDeclarationNameExtra" Name="[Extra]">(clang::detail::DeclarationNameExtra *)(Ptr &amp; ~PtrMask),na</Item>
     </Expand>
   </Type>
@@ -718,7 +718,7 @@ For later versions of Visual Studio, no setup is required-->
       {(CXXDeductionGuideNameExtra *)this,nand}
     </DisplayString>
     <DisplayString Condition="ExtraKindOrNumArgs == CXXLiteralOperatorName">C++ Literal operator</DisplayString>
-    <DisplayString Condition="ExtraKindOrNumArgs == CXXUsingDirective">C++ Using directive</DisplayString>  
+    <DisplayString Condition="ExtraKindOrNumArgs == CXXUsingDirective">C++ Using directive</DisplayString>
     <DisplayString>{(clang::detail::DeclarationNameExtra::ExtraKind)ExtraKindOrNumArgs,en}{"  ",sb}{*this,view(cpp)}</DisplayString>
     <Expand>
       <ExpandedItem Condition="ExtraKindOrNumArgs == CXXDeductionGuideName">(CXXDeductionGuideNameExtra *)this</ExpandedItem>
@@ -809,7 +809,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString>[{this,view(default)na}{this,view(capture0)na}]</DisplayString>
   </Type>
   <Type Name="clang::DeclSpec">
-    <DisplayString IncludeView="extra" Condition="TypeSpecType == TST_typename || TypeSpecType == TST_typeofType || TypeSpecType == TST_underlyingType || TypeSpecType == TST_atomic">
+    <DisplayString IncludeView="extra" Condition="TypeSpecType == TST_typename || TypeSpecType == TST_typeofType || TypeSpecType == TST_underlying_type || TypeSpecType == TST_atomic">
       , [{TypeRep}]
     </DisplayString>
     <DisplayString IncludeView="extra" Condition="TypeSpecType == TST_typeofExpr || TypeSpecType == TST_decltype">
@@ -823,7 +823,7 @@ For later versions of Visual Studio, no setup is required-->
     <Expand>
       <Item Name="StorageClassSpec">(clang::DeclSpec::SCS)StorageClassSpec</Item>
       <Item Name="TypeSpecType">(clang::TypeSpecifierType)TypeSpecType</Item>
-      <Item Name="TypeRep" Condition="TypeSpecType == TST_typename || TypeSpecType == TST_typeofType || TypeSpecType == TST_underlyingType || TypeSpecType == TST_atomic">
+      <Item Name="TypeRep" Condition="TypeSpecType == TST_typename || TypeSpecType == TST_typeofType || TypeSpecType == TST_underlying_type || TypeSpecType == TST_atomic">
         TypeRep
       </Item>
       <Item Name="ExprRep" Condition="TypeSpecType == TST_typeofExpr || TypeSpecType == TST_decltype">

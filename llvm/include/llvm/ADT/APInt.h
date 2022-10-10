@@ -19,6 +19,7 @@
 #include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <climits>
+#include <cmath>
 #include <cstring>
 #include <utility>
 
@@ -72,7 +73,7 @@ inline APInt operator-(APInt);
 ///     shifts are defined, but sign extension and ashr is not.  Zero bit values
 ///     compare and hash equal to themselves, and countLeadingZeros returns 0.
 ///
-class LLVM_NODISCARD APInt {
+class [[nodiscard]] APInt {
 public:
   typedef uint64_t WordType;
 
@@ -855,6 +856,28 @@ public:
     APInt R(*this);
     R <<= shiftAmt;
     return R;
+  }
+
+  /// relative logical shift right
+  APInt relativeLShr(int RelativeShift) const {
+    int Shift = std::abs(RelativeShift);
+    return RelativeShift > 0 ? lshr(Shift) : shl(Shift);
+  }
+
+  /// relative logical shift left
+  APInt relativeLShl(int RelativeShift) const {
+    return relativeLShr(-RelativeShift);
+  }
+
+  /// relative arithmetic shift right
+  APInt relativeAShr(int RelativeShift) const {
+    int Shift = std::abs(RelativeShift);
+    return RelativeShift > 0 ? ashr(Shift) : shl(Shift);
+  }
+
+  /// relative arithmetic shift left
+  APInt relativeAShl(int RelativeShift) const {
+    return relativeAShr(-RelativeShift);
   }
 
   /// Rotate left by rotateAmt.

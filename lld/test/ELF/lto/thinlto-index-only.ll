@@ -42,6 +42,21 @@
 ; RUN: ld.lld --plugin-opt=thinlto-index-only -shared dummy.o --start-lib 1.o --end-lib -o /dev/null
 ; RUN: ls 1.o.thinlto.bc
 
+;; Ensure when the same bitcode object is given as both lazy and non-lazy,
+;; LLD does not generate an empty index for the lazy object.
+; RUN: rm -f 2.o.thinlto.bc
+; RUN: ld.lld --plugin-opt=thinlto-index-only -shared 1.o 2.o --start-lib 2.o --end-lib -o /dev/null
+; RUN: llvm-dis < 2.o.thinlto.bc | grep -q '\^0 = module:'
+; RUN: rm -f 2.o.thinlto.bc
+; RUN: ld.lld --plugin-opt=thinlto-index-only -shared --start-lib 2.o --end-lib 2.o 1.o -o /dev/null
+; RUN: llvm-dis < 2.o.thinlto.bc | grep -q '\^0 = module:'
+
+;; Ensure when the same lazy bitcode object is given multiple times,
+;; no empty index file is generated if one of the copies is linked.
+; RUN: rm -f 2.o.thinlto.bc
+; RUN: ld.lld --plugin-opt=thinlto-index-only -shared 1.o --start-lib 2.o --end-lib --start-lib 2.o --end-lib -o /dev/null
+; RUN: llvm-dis < 2.o.thinlto.bc | grep -q '\^0 = module:'
+
 ; NM: T f
 
 ;; The backend index for this module contains summaries from itself and

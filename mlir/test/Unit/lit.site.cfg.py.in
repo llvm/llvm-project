@@ -2,15 +2,9 @@
 
 import sys
 
-config.llvm_src_root = "@LLVM_SOURCE_DIR@"
-config.llvm_obj_root = "@LLVM_BINARY_DIR@"
 config.llvm_tools_dir = lit_config.substitute("@LLVM_TOOLS_DIR@")
 config.llvm_build_mode = lit_config.substitute("@LLVM_BUILD_MODE@")
-config.enable_shared = @ENABLE_SHARED@
-config.shlibdir = lit_config.substitute("@SHLIBDIR@")
-config.mlir_src_root = "@MLIR_SOURCE_DIR@"
 config.mlir_obj_root = "@MLIR_BINARY_DIR@"
-config.mlir_tools_dir = "@MLIR_TOOLS_DIR@"
 
 # Let the main config do the real work.
 lit_config.load_config(config, "@MLIR_SOURCE_DIR@/test/Unit/lit.cfg.py")

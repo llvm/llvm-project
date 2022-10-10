@@ -782,7 +782,7 @@ ObjCTypeParamList *Sema::actOnObjCTypeParamList(Scope *S,
   // scope until later (after the instance variable block), but we want the
   // diagnostics to occur right after we parse the type parameter list.
   llvm::SmallDenseMap<IdentifierInfo *, ObjCTypeParamDecl *> knownParams;
-  for (auto typeParam : typeParams) {
+  for (auto *typeParam : typeParams) {
     auto known = knownParams.find(typeParam->getIdentifier());
     if (known != knownParams.end()) {
       Diag(typeParam->getLocation(), diag::err_objc_type_param_redecl)
@@ -803,7 +803,7 @@ ObjCTypeParamList *Sema::actOnObjCTypeParamList(Scope *S,
 }
 
 void Sema::popObjCTypeParamList(Scope *S, ObjCTypeParamList *typeParamList) {
-  for (auto typeParam : *typeParamList) {
+  for (auto *typeParam : *typeParamList) {
     if (!typeParam->isInvalidDecl()) {
       S->RemoveDecl(typeParam);
       IdResolver.RemoveDecl(typeParam);
@@ -1029,7 +1029,7 @@ ObjCInterfaceDecl *Sema::ActOnStartClassInterface(
 
         // Clone the type parameter list.
         SmallVector<ObjCTypeParamDecl *, 4> clonedTypeParams;
-        for (auto typeParam : *prevTypeParamList) {
+        for (auto *typeParam : *prevTypeParamList) {
           clonedTypeParams.push_back(
             ObjCTypeParamDecl::Create(
               Context,
@@ -1502,7 +1502,7 @@ void Sema::actOnObjCTypeArgsOrProtocolQualifiers(
       llvm::SmallPtrSet<ObjCProtocolDecl*, 8> knownProtocols;
       Context.CollectInheritedProtocols(baseClass, knownProtocols);
       bool allProtocolsDeclared = true;
-      for (auto proto : protocols) {
+      for (auto *proto : protocols) {
         if (knownProtocols.count(static_cast<ObjCProtocolDecl *>(proto)) == 0) {
           allProtocolsDeclared = false;
           break;
@@ -3754,7 +3754,7 @@ Sema::SelectorsForTypoCorrection(Selector Sel,
 
 /// DiagnoseDuplicateIvars -
 /// Check for duplicate ivars in the entire class at the start of
-/// \@implementation. This becomes necesssary because class extension can
+/// \@implementation. This becomes necessary because class extension can
 /// add ivars to a class in random order which will not be known until
 /// class's \@implementation is seen.
 void Sema::DiagnoseDuplicateIvars(ObjCInterfaceDecl *ID,
@@ -3855,7 +3855,7 @@ static void DiagnoseVariableSizedIvars(Sema &S, ObjCContainerDecl *OCD) {
 
   // Check if variable sized ivar is in interface and visible to subclasses.
   if (!isa<ObjCInterfaceDecl>(OCD)) {
-    for (auto ivar : Ivars) {
+    for (auto *ivar : Ivars) {
       if (!ivar->isInvalidDecl() && IsVariableSizedType(ivar->getType())) {
         S.Diag(ivar->getLocation(), diag::warn_variable_sized_ivar_visibility)
             << ivar->getDeclName() << ivar->getType();
@@ -3990,7 +3990,7 @@ Decl *Sema::ActOnAtEnd(Scope *S, SourceRange AtEnd, ArrayRef<Decl *> allMethods,
   // they are overridden by an explicit method that is encountered
   // later.
   if (auto *OID = dyn_cast<ObjCImplementationDecl>(CurContext)) {
-    for (auto PropImpl : OID->property_impls()) {
+    for (auto *PropImpl : OID->property_impls()) {
       if (auto *Getter = PropImpl->getGetterMethodDecl())
         if (Getter->isSynthesizedAccessorStub())
           OID->addDecl(Getter);

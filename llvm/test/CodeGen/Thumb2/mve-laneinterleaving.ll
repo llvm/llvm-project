@@ -335,39 +335,36 @@ define arm_aapcs_vfpcc <4 x i32> @ext_ops_trunc_i32(<4 x i32> %a, <4 x i32> %b) 
 ; CHECK-NEXT:    vmov.f32 s10, s7
 ; CHECK-NEXT:    vmov r10, s8
 ; CHECK-NEXT:    vmov.f32 s8, s6
-; CHECK-NEXT:    vmov r6, s2
+; CHECK-NEXT:    vmov r7, s2
 ; CHECK-NEXT:    vmov.f32 s2, s1
 ; CHECK-NEXT:    vmov.f32 s6, s5
 ; CHECK-NEXT:    vmov r2, s8
 ; CHECK-NEXT:    asr.w r0, r10, #31
-; CHECK-NEXT:    asrs r7, r6, #31
+; CHECK-NEXT:    asrs r5, r7, #31
 ; CHECK-NEXT:    adds.w r4, r10, r2
+; CHECK-NEXT:    eor.w r6, r10, r2
 ; CHECK-NEXT:    adc r3, r0, #0
 ; CHECK-NEXT:    asrl r4, r3, r2
 ; CHECK-NEXT:    subs r0, r4, r2
 ; CHECK-NEXT:    sbc lr, r3, #0
 ; CHECK-NEXT:    vmov r3, s10
 ; CHECK-NEXT:    umull r0, r8, r0, r2
-; CHECK-NEXT:    adds r4, r6, r3
-; CHECK-NEXT:    eor.w r1, r6, r3
-; CHECK-NEXT:    adc r5, r7, #0
-; CHECK-NEXT:    eor.w r7, r10, r2
+; CHECK-NEXT:    adds r4, r7, r3
+; CHECK-NEXT:    eor.w r1, r7, r3
+; CHECK-NEXT:    adc r5, r5, #0
 ; CHECK-NEXT:    asrl r4, r5, r3
-; CHECK-NEXT:    orr.w r7, r7, r10, asr #31
 ; CHECK-NEXT:    subs r4, r4, r3
-; CHECK-NEXT:    orr.w r1, r1, r6, asr #31
 ; CHECK-NEXT:    sbc r5, r5, #0
-; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    orrs.w r6, r6, r10, asr #31
 ; CHECK-NEXT:    umull r4, r12, r4, r3
 ; CHECK-NEXT:    csetm r9, eq
-; CHECK-NEXT:    movs r7, #0
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    bfi r7, r9, #0, #8
+; CHECK-NEXT:    orrs.w r1, r1, r7, asr #31
+; CHECK-NEXT:    mov.w r6, #0
 ; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r7, r1, #8, #8
+; CHECK-NEXT:    bfi r6, r9, #0, #8
 ; CHECK-NEXT:    mla r5, r5, r3, r12
-; CHECK-NEXT:    rsbs r1, r6, #0
-; CHECK-NEXT:    vmsr p0, r7
+; CHECK-NEXT:    bfi r6, r1, #8, #8
+; CHECK-NEXT:    rsbs r1, r7, #0
 ; CHECK-NEXT:    mla r7, lr, r2, r8
 ; CHECK-NEXT:    lsll r4, r5, r1
 ; CHECK-NEXT:    rsb.w r1, r10, #0
@@ -376,8 +373,9 @@ define arm_aapcs_vfpcc <4 x i32> @ext_ops_trunc_i32(<4 x i32> %a, <4 x i32> %b) 
 ; CHECK-NEXT:    vmov r1, s6
 ; CHECK-NEXT:    lsll r0, r7, r2
 ; CHECK-NEXT:    lsll r4, r5, r3
-; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:    vmsr p0, r6
 ; CHECK-NEXT:    vmov q3[2], q3[0], r0, r4
+; CHECK-NEXT:    mov.w r12, #0
 ; CHECK-NEXT:    vpsel q2, q3, q2
 ; CHECK-NEXT:    adds.w r2, lr, r1
 ; CHECK-NEXT:    asr.w r0, lr, #31
@@ -396,12 +394,10 @@ define arm_aapcs_vfpcc <4 x i32> @ext_ops_trunc_i32(<4 x i32> %a, <4 x i32> %b) 
 ; CHECK-NEXT:    sbc r8, r5, #0
 ; CHECK-NEXT:    mla r5, r7, r1, r6
 ; CHECK-NEXT:    eor.w r6, lr, r1
-; CHECK-NEXT:    orr.w r6, r6, lr, asr #31
+; CHECK-NEXT:    orrs.w r6, r6, lr, asr #31
 ; CHECK-NEXT:    eor.w r7, r2, r3
-; CHECK-NEXT:    cmp r6, #0
-; CHECK-NEXT:    orr.w r7, r7, r2, asr #31
 ; CHECK-NEXT:    csetm r6, eq
-; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    orrs.w r7, r7, r2, asr #31
 ; CHECK-NEXT:    csetm r7, eq
 ; CHECK-NEXT:    rsb.w lr, lr, #0
 ; CHECK-NEXT:    bfi r12, r7, #0, #8
@@ -578,46 +574,46 @@ entry:
 define arm_aapcs_vfpcc <8 x half> @ext_fpintrinsics_trunc_half(<8 x half> %a, <8 x half> %b) {
 ; CHECK-LABEL: ext_fpintrinsics_trunc_half:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    .vsave {d8, d9}
-; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vcvtb.f32.f16 q2, q0
 ; CHECK-NEXT:    vcvtb.f32.f16 q4, q1
-; CHECK-NEXT:    vabs.f32 q3, q2
-; CHECK-NEXT:    vcvtt.f32.f16 q0, q0
+; CHECK-NEXT:    vrintm.f32 q3, q2
+; CHECK-NEXT:    vrintx.f32 q5, q4
+; CHECK-NEXT:    vabs.f32 q3, q3
+; CHECK-NEXT:    vrinta.f32 q4, q4
 ; CHECK-NEXT:    vminnm.f32 q3, q3, q2
+; CHECK-NEXT:    vrintp.f32 q2, q2
+; CHECK-NEXT:    vmaxnm.f32 q3, q3, q5
+; CHECK-NEXT:    vcvtt.f32.f16 q0, q0
+; CHECK-NEXT:    vfma.f32 q2, q3, q4
+; CHECK-NEXT:    vrintm.f32 q3, q0
+; CHECK-NEXT:    vabs.f32 q3, q3
 ; CHECK-NEXT:    vcvtt.f32.f16 q1, q1
-; CHECK-NEXT:    vmaxnm.f32 q3, q3, q4
-; CHECK-NEXT:    vfma.f32 q4, q3, q2
-; CHECK-NEXT:    vabs.f32 q3, q0
 ; CHECK-NEXT:    vminnm.f32 q3, q3, q0
-; CHECK-NEXT:    vrintp.f32 q2, q4
-; CHECK-NEXT:    vmaxnm.f32 q3, q3, q1
-; CHECK-NEXT:    vrintm.f32 q2, q2
-; CHECK-NEXT:    vfma.f32 q1, q3, q0
-; CHECK-NEXT:    vrintx.f32 q2, q2
-; CHECK-NEXT:    vrintp.f32 q0, q1
-; CHECK-NEXT:    vrinta.f32 q2, q2
-; CHECK-NEXT:    vrintm.f32 q0, q0
+; CHECK-NEXT:    vrintx.f32 q4, q1
+; CHECK-NEXT:    vmaxnm.f32 q3, q3, q4
+; CHECK-NEXT:    vrinta.f32 q1, q1
+; CHECK-NEXT:    vrintp.f32 q0, q0
 ; CHECK-NEXT:    vrintz.f32 q2, q2
-; CHECK-NEXT:    vrintx.f32 q0, q0
-; CHECK-NEXT:    vrinta.f32 q0, q0
+; CHECK-NEXT:    vfma.f32 q0, q3, q1
 ; CHECK-NEXT:    vrintz.f32 q1, q0
 ; CHECK-NEXT:    vcvtb.f16.f32 q0, q2
 ; CHECK-NEXT:    vcvtt.f16.f32 q0, q1
-; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    bx lr
 entry:
   %sa = fpext <8 x half> %a to <8 x float>
   %sb = fpext <8 x half> %b to <8 x float>
-  %abs = call <8 x float> @llvm.fabs.v8f32(<8 x float> %sa)
+  %floor = call <8 x float> @llvm.floor.v8f32(<8 x float> %sa)
+  %rint = call <8 x float> @llvm.rint.v8f32(<8 x float> %sb)
+  %ceil = call <8 x float> @llvm.ceil.v8f32(<8 x float> %sa)
+  %round = call <8 x float> @llvm.round.v8f32(<8 x float> %sb)
+  %abs = call <8 x float> @llvm.fabs.v8f32(<8 x float> %floor)
   %min = call <8 x float> @llvm.minnum.v8f32(<8 x float> %abs, <8 x float> %sa)
-  %max = call <8 x float> @llvm.maxnum.v8f32(<8 x float> %min, <8 x float> %sb)
-  %fma = call <8 x float> @llvm.fma.v8f32(<8 x float> %max, <8 x float> %sa, <8 x float> %sb)
-  %ceil = call <8 x float> @llvm.ceil.v8f32(<8 x float> %fma)
-  %floor = call <8 x float> @llvm.floor.v8f32(<8 x float> %ceil)
-  %rint = call <8 x float> @llvm.rint.v8f32(<8 x float> %floor)
-  %round = call <8 x float> @llvm.round.v8f32(<8 x float> %rint)
-  %trunc = call <8 x float> @llvm.trunc.v8f32(<8 x float> %round)
+  %max = call <8 x float> @llvm.maxnum.v8f32(<8 x float> %min, <8 x float> %rint)
+  %fma = call <8 x float> @llvm.fma.v8f32(<8 x float> %max, <8 x float> %round, <8 x float> %ceil)
+  %trunc = call <8 x float> @llvm.trunc.v8f32(<8 x float> %fma)
   %t = fptrunc <8 x float> %trunc to <8 x half>
   ret <8 x half> %t
 }

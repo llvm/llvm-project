@@ -194,20 +194,22 @@ template <class T, class Allocator, class Predicate>
 #include <__iterator/next.h>
 #include <__iterator/prev.h>
 #include <__iterator/reverse_iterator.h>
+#include <__memory/addressof.h>
+#include <__memory/allocator.h>
+#include <__memory/allocator_traits.h>
+#include <__memory/compressed_pair.h>
+#include <__memory/pointer_traits.h>
+#include <__memory/shared_ptr.h>
 #include <__memory/swap_allocator.h>
+#include <__memory/unique_ptr.h>
+#include <__type_traits/is_allocator.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
+#include <cstring>
 #include <limits>
-#include <memory>
 #include <type_traits>
 #include <version>
-
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
-#  include <algorithm>
-#  include <functional>
-#  include <iterator>
-#endif
 
 // standard-mandated includes
 
@@ -237,26 +239,19 @@ template <class _Tp, class _VoidPtr> struct __list_node_base;
 
 template <class _Tp, class _VoidPtr>
 struct __list_node_pointer_traits {
-  typedef typename __rebind_pointer<_VoidPtr, __list_node<_Tp, _VoidPtr> >::type
+  typedef __rebind_pointer_t<_VoidPtr, __list_node<_Tp, _VoidPtr> >
         __node_pointer;
-  typedef typename __rebind_pointer<_VoidPtr, __list_node_base<_Tp, _VoidPtr> >::type
+  typedef __rebind_pointer_t<_VoidPtr, __list_node_base<_Tp, _VoidPtr> >
         __base_pointer;
 
 #if defined(_LIBCPP_ABI_LIST_REMOVE_NODE_POINTER_UB)
   typedef __base_pointer __link_pointer;
 #else
-  typedef typename conditional<
-          is_pointer<_VoidPtr>::value,
-          __base_pointer,
-          __node_pointer
-  >::type __link_pointer;
+  typedef __conditional_t<is_pointer<_VoidPtr>::value, __base_pointer, __node_pointer> __link_pointer;
 #endif
 
-  typedef typename conditional<
-          is_same<__link_pointer, __node_pointer>::value,
-          __base_pointer,
-          __node_pointer
-  >::type __non_link_pointer;
+  typedef __conditional_t<is_same<__link_pointer, __node_pointer>::value, __base_pointer, __node_pointer>
+      __non_link_pointer;
 
   static _LIBCPP_INLINE_VISIBILITY
   __link_pointer __unsafe_link_pointer_cast(__link_pointer __p) {
@@ -340,7 +335,7 @@ public:
     typedef bidirectional_iterator_tag       iterator_category;
     typedef _Tp                              value_type;
     typedef value_type&                      reference;
-    typedef typename __rebind_pointer<_VoidPtr, value_type>::type pointer;
+    typedef __rebind_pointer_t<_VoidPtr, value_type> pointer;
     typedef typename pointer_traits<pointer>::difference_type difference_type;
 
     _LIBCPP_INLINE_VISIBILITY
@@ -448,7 +443,7 @@ public:
     typedef bidirectional_iterator_tag       iterator_category;
     typedef _Tp                              value_type;
     typedef const value_type&                reference;
-    typedef typename __rebind_pointer<_VoidPtr, const value_type>::type pointer;
+    typedef __rebind_pointer_t<_VoidPtr, const value_type> pointer;
     typedef typename pointer_traits<pointer>::difference_type difference_type;
 
     _LIBCPP_INLINE_VISIBILITY
@@ -2363,5 +2358,11 @@ inline constexpr bool __format::__enable_insertable<std::list<wchar_t>> = true;
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <algorithm>
+#  include <functional>
+#  include <iterator>
+#endif
 
 #endif // _LIBCPP_LIST

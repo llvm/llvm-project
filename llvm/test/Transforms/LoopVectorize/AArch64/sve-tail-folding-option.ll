@@ -213,6 +213,59 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
+define void @interleave(float* noalias %dst, float* noalias %src, i64 %n) #0 {
+; CHECK-NOTF-LABEL: @interleave(
+; CHECK-NOTF:       vector.body:
+; CHECK-NOTF:         %[[LOAD:.*]] = load <8 x float>, <8 x float>
+; CHECK-NOTF:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NOTF:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+
+; CHECK-TF-LABEL: @interleave(
+; CHECK-TF:       vector.body:
+; CHECK-TF:         %[[LOAD:.*]] = load <8 x float>, <8 x float>
+; CHECK-TF:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-TF:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+
+; CHECK-TF-NORED-LABEL: @interleave(
+; CHECK-TF-NORED:       vector.body:
+; CHECK-TF-NORED:         %[[LOAD:.*]] = load <8 x float>, <8 x float>
+; CHECK-TF-NORED:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-TF-NORED:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+
+; CHECK-TF-NOREC-LABEL: @interleave(
+; CHECK-TF-NOREC:       vector.body:
+; CHECK-TF-NOREC:         %[[LOAD:.*]] = load <8 x float>, <8 x float>
+; CHECK-TF-NOREC:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-TF-NOREC:         %{{.*}} = shufflevector <8 x float> %[[LOAD]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %i.021 = phi i64 [ %inc, %for.body ], [ 0, %entry ]
+  %mul = shl nuw nsw i64 %i.021, 1
+  %arrayidx = getelementptr inbounds float, float* %src, i64 %mul
+  %0 = load float, float* %arrayidx, align 4
+  %mul1 = mul nuw nsw i64 %i.021, 3
+  %arrayidx2 = getelementptr inbounds float, float* %dst, i64 %mul1
+  store float %0, float* %arrayidx2, align 4
+  %add = or i64 %mul, 1
+  %arrayidx4 = getelementptr inbounds float, float* %src, i64 %add
+  %1 = load float, float* %arrayidx4, align 4
+  %add6 = add nuw nsw i64 %mul1, 1
+  %arrayidx7 = getelementptr inbounds float, float* %dst, i64 %add6
+  store float %1, float* %arrayidx7, align 4
+  %add9 = add nuw nsw i64 %mul1, 2
+  %arrayidx10 = getelementptr inbounds float, float* %dst, i64 %add9
+  store float 3.000000e+00, float* %arrayidx10, align 4
+  %inc = add nuw nsw i64 %i.021, 1
+  %exitcond.not = icmp eq i64 %inc, %n
+  br i1 %exitcond.not, label %for.end, label %for.body
+
+for.end:                                          ; preds = %for.body, %entry
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve" }
 
 !0 = distinct !{!0, !1, !2, !3, !4}

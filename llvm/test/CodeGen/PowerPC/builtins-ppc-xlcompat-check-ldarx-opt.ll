@@ -14,17 +14,14 @@ define dso_local signext i32 @main() local_unnamed_addr {
 ; CHECK-NEXT:    li 4, 0
 ; CHECK-NEXT:    std 3, -8(1)
 ; CHECK-NEXT:    addi 3, 1, -8
-; CHECK-NEXT:    .p2align 5
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %do.body
 ; CHECK-NEXT:    #
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    ldarx 5, 0, 3
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    stdcx. 4, 0, 3
-; CHECK-NEXT:    mfocrf 5, 128
-; CHECK-NEXT:    srwi 5, 5, 28
-; CHECK-NEXT:    cmplwi 5, 0
-; CHECK-NEXT:    beq 0, .LBB0_1
+; CHECK-NEXT:    bne 0, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %do.end
 ; CHECK-NEXT:    ld 3, -8(1)
 ; CHECK-NEXT:    li 4, 55
@@ -39,17 +36,14 @@ define dso_local signext i32 @main() local_unnamed_addr {
 ; CHECK-AIX-NEXT:    li 4, 0
 ; CHECK-AIX-NEXT:    std 3, -8(1)
 ; CHECK-AIX-NEXT:    addi 3, 1, -8
-; CHECK-AIX-NEXT:    .align 5
+; CHECK-AIX-NEXT:    .align 4
 ; CHECK-AIX-NEXT:  L..BB0_1: # %do.body
 ; CHECK-AIX-NEXT:    #
 ; CHECK-AIX-NEXT:    #APP
 ; CHECK-AIX-NEXT:    ldarx 5, 0, 3
 ; CHECK-AIX-NEXT:    #NO_APP
 ; CHECK-AIX-NEXT:    stdcx. 4, 0, 3
-; CHECK-AIX-NEXT:    mfocrf 5, 128
-; CHECK-AIX-NEXT:    srwi 5, 5, 28
-; CHECK-AIX-NEXT:    cmplwi 5, 0
-; CHECK-AIX-NEXT:    beq 0, L..BB0_1
+; CHECK-AIX-NEXT:    bne 0, L..BB0_1
 ; CHECK-AIX-NEXT:  # %bb.2: # %do.end
 ; CHECK-AIX-NEXT:    ld 3, -8(1)
 ; CHECK-AIX-NEXT:    li 4, 55

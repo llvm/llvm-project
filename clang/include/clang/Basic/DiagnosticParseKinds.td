@@ -295,8 +295,18 @@ def note_missing_selector_name : Note<
 def note_force_empty_selector_name : Note<
   "or insert whitespace before ':' to use %0 as parameter name "
   "and have an empty entry in the selector">;
-def err_label_end_of_compound_statement : Error<
-  "label at end of compound statement: expected statement">;
+def ext_c_label_end_of_compound_statement : ExtWarn<
+  "label at end of compound statement is a C2x extension">,
+   InGroup<C2x>;
+def ext_cxx_label_end_of_compound_statement : ExtWarn<
+  "label at end of compound statement is a C++2b extension">,
+   InGroup<CXX2b>;
+def warn_c2x_compat_label_end_of_compound_statement : Warning<
+  "label at end of compound statement is incompatible with C standards before C2x">,
+  InGroup<CPre2xCompat>, DefaultIgnore;
+def warn_cxx20_compat_label_end_of_compound_statement : Warning<
+  "label at end of compound statement is incompatible with C++ standards before C++2b">,
+  InGroup<CXXPre2bCompat>, DefaultIgnore;
 def err_address_of_label_outside_fn : Error<
   "use of address-of-label extension outside of a function body">;
 def err_asm_operand_wide_string_literal : Error<
@@ -361,6 +371,9 @@ def warn_cxx11_compat_decltype_auto_type_specifier : Warning<
 def ext_auto_type : Extension<
   "'__auto_type' is a GNU extension">,
   InGroup<GNUAutoType>;
+def warn_c2x_compat_typeof_type_specifier : Warning<
+  "'%select{typeof|typeof_unqual}0' is incompatible with C standards before "
+  "C2x">, InGroup<CPre2xCompat>, DefaultIgnore;
 def ext_for_range : ExtWarn<
   "range-based for loop is a C++11 extension">, InGroup<CXX11>;
 def warn_cxx98_compat_for_range : Warning<
@@ -597,6 +610,9 @@ def warn_cxx17_compat_using_enum_declaration : Warning<
 def ext_using_enum_declaration : ExtWarn<
   "using enum declaration is a C++20 extension">,
   InGroup<CXX20>;
+def err_using_enum_expect_identifier : Error<
+  "using enum %select{requires an enum or typedef name|"
+  "does not permit an elaborated enum specifier}0">;
 def err_constructor_bad_name : Error<
   "missing return type for function %0; did you mean the constructor name %1?">;
 def err_destructor_tilde_identifier : Error<
@@ -775,7 +791,8 @@ def warn_cxx14_compat_template_template_param_typename : Warning<
 def err_template_spec_syntax_non_template : Error<
   "identifier followed by '<' indicates a class template specialization but "
   "%0 %select{does not refer to a template|refers to a function template|"
-  "<unused>|refers to a variable template|<unused>|refers to a concept}1">;
+  "<unused>|refers to a variable template|<unused>|<unused>|"
+  "refers to a concept}1">;
 def err_id_after_template_in_nested_name_spec : Error<
   "expected template name after 'template' keyword in nested name specifier">;
 def err_unexpected_template_in_unqualified_id : Error<
@@ -987,7 +1004,8 @@ def warn_cxx98_compat_lambda : Warning<
   "lambda expressions are incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def err_lambda_decl_specifier_repeated : Error<
-  "%select{'mutable'|'constexpr'|'consteval'}0 cannot appear multiple times in a lambda declarator">;
+  "%select{'mutable'|'static'|'constexpr'|'consteval'}0 cannot "
+  "appear multiple times in a lambda declarator">;
 def err_lambda_capture_misplaced_ellipsis : Error<
   "ellipsis in pack %select{|init-}0capture must appear %select{after|before}0 "
   "the name of the capture">;
@@ -1025,6 +1043,17 @@ def warn_cxx17_compat_lambda_template_parameter_list: Warning<
   "C++ standards before C++20">, InGroup<CXXPre20Compat>, DefaultIgnore;
 def err_lambda_template_parameter_list_empty : Error<
   "lambda template parameter list cannot be empty">;
+
+// C++2b static lambdas
+def err_static_lambda: ExtWarn<
+  "static lambdas are a C++2b extension">, InGroup<CXX2b>;
+def warn_cxx20_compat_static_lambda: ExtWarn<
+  "static lambdas are incompatible with C++ standards before C++2b">,
+  InGroup<CXXPre2bCompat>, DefaultIgnore;
+def err_static_mutable_lambda : Error<
+  "lambda cannot be both mutable and static">;
+def err_static_lambda_captures : Error<
+  "a static lambda cannot have any captures">;
 
 // Availability attribute
 def err_expected_version : Error<
@@ -1605,7 +1634,10 @@ def note_max_tokens_total_override : Note<"total token limit set here">;
 
 def err_expected_semantic_identifier : Error<
   "expected HLSL Semantic identifier">;
+def err_invalid_declaration_in_hlsl_buffer : Error<
+  "invalid declaration inside %select{tbuffer|cbuffer}0">;
 def err_unknown_hlsl_semantic : Error<"unknown HLSL semantic %0">;
+def err_hlsl_separate_attr_arg_and_number : Error<"wrong argument format for hlsl attribute, use %0 instead">;
 def ext_hlsl_access_specifiers : ExtWarn<
   "access specifiers are a clang HLSL extension">,
   InGroup<HLSLExtension>;

@@ -22,9 +22,9 @@ static std::optional<Expr<SomeType>> ZeroExtend(const Constant<T> &c) {
       Constant<LargestInt>(std::move(exts), ConstantSubscripts(c.shape())));
 }
 
-// for ALL & ANY
+// for ALL, ANY & PARITY
 template <typename T>
-static Expr<T> FoldAllAny(FoldingContext &context, FunctionRef<T> &&ref,
+static Expr<T> FoldAllAnyParity(FoldingContext &context, FunctionRef<T> &&ref,
     Scalar<T> (Scalar<T>::*operation)(const Scalar<T> &) const,
     Scalar<T> identity) {
   static_assert(T::category == TypeCategory::Logical);
@@ -52,10 +52,10 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
   std::string name{intrinsic->name};
   using SameInt = Type<TypeCategory::Integer, KIND>;
   if (name == "all") {
-    return FoldAllAny(
+    return FoldAllAnyParity(
         context, std::move(funcRef), &Scalar<T>::AND, Scalar<T>{true});
   } else if (name == "any") {
-    return FoldAllAny(
+    return FoldAllAnyParity(
         context, std::move(funcRef), &Scalar<T>::OR, Scalar<T>{false});
   } else if (name == "associated") {
     bool gotConstant{true};
@@ -140,6 +140,8 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
           },
           ix->u);
     }
+  } else if (name == "dot_product") {
+    return FoldDotProduct<T>(context, std::move(funcRef));
   } else if (name == "extends_type_of") {
     // Type extension testing with EXTENDS_TYPE_OF() ignores any type
     // parameters. Returns a constant truth value when the result is known now.
@@ -178,8 +180,8 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
   } else if (name == "is_contiguous") {
     if (args.at(0)) {
       if (auto *expr{args[0]->UnwrapExpr()}) {
-        if (IsSimplyContiguous(*expr, context)) {
-          return Expr<T>{true};
+        if (auto contiguous{IsContiguous(*expr, context)}) {
+          return Expr<T>{*contiguous};
         }
       }
     }
@@ -203,6 +205,9 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "merge") {
     return FoldMerge<T>(context, std::move(funcRef));
+  } else if (name == "parity") {
+    return FoldAllAnyParity(
+        context, std::move(funcRef), &Scalar<T>::NEQV, Scalar<T>{false});
   } else if (name == "same_type_as") {
     // Type equality testing with SAME_TYPE_AS() ignores any type parameters.
     // Returns a constant truth value when the result is known now.
@@ -228,7 +233,7 @@ Expr<Type<TypeCategory::Logical, KIND>> FoldIntrinsicFunction(
       name == "__builtin_ieee_support_underflow_control") {
     return Expr<T>{true};
   }
-  // TODO: dot_product, is_iostat_end,
+  // TODO: is_iostat_end,
   // is_iostat_eor, logical, matmul, out_of_range,
   // parity
   return Expr<T>{std::move(funcRef)};

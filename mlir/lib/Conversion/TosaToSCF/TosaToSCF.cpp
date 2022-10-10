@@ -35,8 +35,7 @@ static void inlineIfCase(Region &srcRegion, Region &dstRegion,
   rewriter.create<scf::YieldOp>(yield.getLoc(), yield.getInputs());
   rewriter.eraseOp(yield);
 
-  headBlock->eraseArguments(
-      llvm::to_vector<4>(llvm::seq<unsigned>(0, headBlock->getNumArguments())));
+  headBlock->eraseArguments(0, headBlock->getNumArguments());
 }
 
 static void inlineWhileCase(Region &srcRegion, Region &dstRegion,

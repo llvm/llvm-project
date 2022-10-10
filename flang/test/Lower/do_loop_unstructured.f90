@@ -205,9 +205,10 @@ end subroutine
 ! CHECK:   %[[COND:.*]] = arith.cmpi sgt, %[[TRIP_VAR]], %[[ZERO]] : i32
 ! CHECK:   cf.cond_br %[[COND]], ^[[BODY:.*]], ^[[EXIT:.*]]
 ! CHECK: ^[[BODY]]:
-! CHECK:   %{{.*}} = fir.do_loop %[[J_INDEX:.*]] = %{{.*}} to %{{.*}} step %{{.*}} -> index {
-! CHECK:     %[[J_INDEX_CVT:.*]] = fir.convert %[[J_INDEX]] : (index) -> i32
-! CHECK:     fir.store %[[J_INDEX_CVT]] to %[[LOOP_VAR_J_REF]] : !fir.ref<i32>
+! CHECK:   %{{.*}} = fir.do_loop %[[J_INDEX:[^ ]*]] =
+! CHECK-SAME: %{{.*}} to %{{.*}} step %{{[^ ]*}}
+! CHECK-SAME: iter_args(%[[J_IV:.*]] = %{{.*}}) -> (index, i32) {
+! CHECK:     fir.store %[[J_IV]] to %[[LOOP_VAR_J_REF]] : !fir.ref<i32>
 ! CHECK:   }
 ! CHECK:   %[[TRIP_VAR_I:.*]] = fir.load %[[TRIP_VAR_I_REF]] : !fir.ref<i32>
 ! CHECK:   %[[C1_3:.*]] = arith.constant 1 : i32

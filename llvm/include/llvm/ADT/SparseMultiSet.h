@@ -84,8 +84,7 @@ template<typename ValueT,
          typename KeyFunctorT = identity<unsigned>,
          typename SparseT = uint8_t>
 class SparseMultiSet {
-  static_assert(std::numeric_limits<SparseT>::is_integer &&
-                !std::numeric_limits<SparseT>::is_signed,
+  static_assert(std::is_unsigned_v<SparseT>,
                 "SparseT must be an unsigned integer type");
 
   /// The actual data that's stored, as a doubly-linked list implemented via

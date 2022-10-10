@@ -8,7 +8,8 @@
 
 #include "LibcTest.h"
 
-#include "src/__support/CPP/UInt128.h"
+#include "src/__support/CPP/string_view.h"
+#include "src/__support/UInt128.h"
 #include "utils/testutils/ExecuteFunction.h"
 #include <cassert>
 #include <iostream>
@@ -36,18 +37,23 @@ namespace internal {
 
 // When the value is of integral type, just display it as normal.
 template <typename ValType>
-cpp::EnableIfType<cpp::IsIntegral<ValType>::Value, std::string>
+cpp::enable_if_t<cpp::is_integral_v<ValType>, std::string>
 describeValue(ValType Value) {
   return std::to_string(Value);
 }
 
 std::string describeValue(std::string Value) { return std::string(Value); }
+std::string describeValue(cpp::string_view Value) {
+  return std::string(Value.data(), Value.size());
+}
 
 // When the value is UInt128 or __uint128_t, show its hexadecimal digits.
 // We cannot just use a UInt128 specialization as that resolves to only
 // one type, UInt<128> or __uint128_t. We want both overloads as we want to
 // be able to unittest UInt<128> on platforms where UInt128 resolves to
 // UInt128.
+// TODO(lntue): Investigate why UInt<128> was printed backward, with the lower
+// 64-bits first.
 template <typename UInt128Type>
 std::string describeValue128(UInt128Type Value) {
   std::string S(sizeof(UInt128) * 2, '0');
@@ -275,6 +281,12 @@ template bool test<__llvm_libc::cpp::UInt<128>>(
     RunContext *Ctx, TestCondition Cond, __llvm_libc::cpp::UInt<128> LHS,
     __llvm_libc::cpp::UInt<128> RHS, const char *LHSStr, const char *RHSStr,
     const char *File, unsigned long Line);
+
+template bool test<__llvm_libc::cpp::string_view>(RunContext *Ctx, TestCondition Cond,
+                                       __llvm_libc::cpp::string_view LHS,
+                                       __llvm_libc::cpp::string_view RHS,
+                                       const char *LHSStr, const char *RHSStr,
+                                       const char *File, unsigned long Line);
 
 } // namespace internal
 

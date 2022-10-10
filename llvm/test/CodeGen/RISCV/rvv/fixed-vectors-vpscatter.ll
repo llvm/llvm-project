@@ -9,13 +9,13 @@ declare void @llvm.vp.scatter.v2i8.v2p0i8(<2 x i8>, <2 x i8*>, <2 x i1>, i32)
 define void @vpscatter_v2i8(<2 x i8> %val, <2 x i8*> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v2i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v2i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v9, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v2i8.v2p0i8(<2 x i8> %val, <2 x i8*> %ptrs, <2 x i1> %m, i32 %evl)
@@ -25,17 +25,17 @@ define void @vpscatter_v2i8(<2 x i8> %val, <2 x i8*> %ptrs, <2 x i1> %m, i32 zer
 define void @vpscatter_v2i16_truncstore_v2i8(<2 x i16> %val, <2 x i8*> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v2i16_truncstore_v2i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v8, v8
-; RV32-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
+; RV32-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; RV32-NEXT:    vnsrl.wi v8, v8, 0
+; RV32-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v2i16_truncstore_v2i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e8, mf8, ta, mu
-; RV64-NEXT:    vncvt.x.x.w v8, v8
-; RV64-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; RV64-NEXT:    vnsrl.wi v8, v8, 0
+; RV64-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v9, v0.t
 ; RV64-NEXT:    ret
   %tval = trunc <2 x i16> %val to <2 x i8>
@@ -46,21 +46,21 @@ define void @vpscatter_v2i16_truncstore_v2i8(<2 x i16> %val, <2 x i8*> %ptrs, <2
 define void @vpscatter_v2i32_truncstore_v2i8(<2 x i32> %val, <2 x i8*> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v2i32_truncstore_v2i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v8, v8
-; RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v8, v8
-; RV32-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
+; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV32-NEXT:    vnsrl.wi v8, v8, 0
+; RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; RV32-NEXT:    vnsrl.wi v8, v8, 0
+; RV32-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v2i32_truncstore_v2i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
-; RV64-NEXT:    vncvt.x.x.w v8, v8
-; RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
-; RV64-NEXT:    vncvt.x.x.w v8, v8
-; RV64-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV64-NEXT:    vnsrl.wi v8, v8, 0
+; RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; RV64-NEXT:    vnsrl.wi v8, v8, 0
+; RV64-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v9, v0.t
 ; RV64-NEXT:    ret
   %tval = trunc <2 x i32> %val to <2 x i8>
@@ -71,25 +71,25 @@ define void @vpscatter_v2i32_truncstore_v2i8(<2 x i32> %val, <2 x i8*> %ptrs, <2
 define void @vpscatter_v2i64_truncstore_v2i8(<2 x i64> %val, <2 x i8*> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v2i64_truncstore_v2i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v8, v8
-; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v8, v8
-; RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v8, v8
-; RV32-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vnsrl.wi v8, v8, 0
+; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; RV32-NEXT:    vnsrl.wi v8, v8, 0
+; RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; RV32-NEXT:    vnsrl.wi v8, v8, 0
+; RV32-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v2i64_truncstore_v2i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; RV64-NEXT:    vncvt.x.x.w v8, v8
-; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; RV64-NEXT:    vncvt.x.x.w v8, v8
-; RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, mu
-; RV64-NEXT:    vncvt.x.x.w v8, v8
-; RV64-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vnsrl.wi v8, v8, 0
+; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; RV64-NEXT:    vnsrl.wi v8, v8, 0
+; RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; RV64-NEXT:    vnsrl.wi v8, v8, 0
+; RV64-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v9, v0.t
 ; RV64-NEXT:    ret
   %tval = trunc <2 x i64> %val to <2 x i8>
@@ -102,13 +102,13 @@ declare void @llvm.vp.scatter.v4i8.v4p0i8(<4 x i8>, <4 x i8*>, <4 x i1>, i32)
 define void @vpscatter_v4i8(<4 x i8> %val, <4 x i8*> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v4i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v4i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v10, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v4i8.v4p0i8(<4 x i8> %val, <4 x i8*> %ptrs, <4 x i1> %m, i32 %evl)
@@ -118,13 +118,13 @@ define void @vpscatter_v4i8(<4 x i8> %val, <4 x i8*> %ptrs, <4 x i1> %m, i32 zer
 define void @vpscatter_truemask_v4i8(<4 x i8> %val, <4 x i8*> %ptrs, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_truemask_v4i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_truemask_v4i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v10
 ; RV64-NEXT:    ret
   %mhead = insertelement <4 x i1> poison, i1 1, i32 0
@@ -138,13 +138,13 @@ declare void @llvm.vp.scatter.v8i8.v8p0i8(<8 x i8>, <8 x i8*>, <8 x i1>, i32)
 define void @vpscatter_v8i8(<8 x i8> %val, <8 x i8*> %ptrs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v8i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v8i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v12, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v8i8.v8p0i8(<8 x i8> %val, <8 x i8*> %ptrs, <8 x i1> %m, i32 %evl)
@@ -154,17 +154,17 @@ define void @vpscatter_v8i8(<8 x i8> %val, <8 x i8*> %ptrs, <8 x i1> %m, i32 zer
 define void @vpscatter_baseidx_v8i8(<8 x i8> %val, i8* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8i8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf4 v10, v9
-; RV32-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf8 v12, v9
-; RV64-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds i8, i8* %base, <8 x i8> %idxs
@@ -177,13 +177,13 @@ declare void @llvm.vp.scatter.v2i16.v2p0i16(<2 x i16>, <2 x i16*>, <2 x i1>, i32
 define void @vpscatter_v2i16(<2 x i16> %val, <2 x i16*> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v2i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v9, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v2i16.v2p0i16(<2 x i16> %val, <2 x i16*> %ptrs, <2 x i1> %m, i32 %evl)
@@ -193,17 +193,17 @@ define void @vpscatter_v2i16(<2 x i16> %val, <2 x i16*> %ptrs, <2 x i1> %m, i32 
 define void @vpscatter_v2i32_truncstore_v2i16(<2 x i32> %val, <2 x i16*> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v2i32_truncstore_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v8, v8
-; RV32-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV32-NEXT:    vnsrl.wi v8, v8, 0
+; RV32-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v2i32_truncstore_v2i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, mu
-; RV64-NEXT:    vncvt.x.x.w v8, v8
-; RV64-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV64-NEXT:    vnsrl.wi v8, v8, 0
+; RV64-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v9, v0.t
 ; RV64-NEXT:    ret
   %tval = trunc <2 x i32> %val to <2 x i16>
@@ -214,21 +214,21 @@ define void @vpscatter_v2i32_truncstore_v2i16(<2 x i32> %val, <2 x i16*> %ptrs, 
 define void @vpscatter_v2i64_truncstore_v2i16(<2 x i64> %val, <2 x i16*> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v2i64_truncstore_v2i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v8, v8
-; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v8, v8
-; RV32-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vnsrl.wi v8, v8, 0
+; RV32-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; RV32-NEXT:    vnsrl.wi v8, v8, 0
+; RV32-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v2i64_truncstore_v2i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; RV64-NEXT:    vncvt.x.x.w v8, v8
-; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; RV64-NEXT:    vncvt.x.x.w v8, v8
-; RV64-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vnsrl.wi v8, v8, 0
+; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; RV64-NEXT:    vnsrl.wi v8, v8, 0
+; RV64-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v9, v0.t
 ; RV64-NEXT:    ret
   %tval = trunc <2 x i64> %val to <2 x i16>
@@ -241,13 +241,13 @@ declare void @llvm.vp.scatter.v3i16.v3p0i16(<3 x i16>, <3 x i16*>, <3 x i1>, i32
 define void @vpscatter_v3i16(<3 x i16> %val, <3 x i16*> %ptrs, <3 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v3i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v3i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v10, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v3i16.v3p0i16(<3 x i16> %val, <3 x i16*> %ptrs, <3 x i1> %m, i32 %evl)
@@ -257,13 +257,13 @@ define void @vpscatter_v3i16(<3 x i16> %val, <3 x i16*> %ptrs, <3 x i1> %m, i32 
 define void @vpscatter_truemask_v3i16(<3 x i16> %val, <3 x i16*> %ptrs, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_truemask_v3i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_truemask_v3i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v10
 ; RV64-NEXT:    ret
   %mhead = insertelement <3 x i1> poison, i1 1, i32 0
@@ -277,13 +277,13 @@ declare void @llvm.vp.scatter.v4i16.v4p0i16(<4 x i16>, <4 x i16*>, <4 x i1>, i32
 define void @vpscatter_v4i16(<4 x i16> %val, <4 x i16*> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v4i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v4i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v10, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v4i16.v4p0i16(<4 x i16> %val, <4 x i16*> %ptrs, <4 x i1> %m, i32 %evl)
@@ -293,13 +293,13 @@ define void @vpscatter_v4i16(<4 x i16> %val, <4 x i16*> %ptrs, <4 x i1> %m, i32 
 define void @vpscatter_truemask_v4i16(<4 x i16> %val, <4 x i16*> %ptrs, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_truemask_v4i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_truemask_v4i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v10
 ; RV64-NEXT:    ret
   %mhead = insertelement <4 x i1> poison, i1 1, i32 0
@@ -313,13 +313,13 @@ declare void @llvm.vp.scatter.v8i16.v8p0i16(<8 x i16>, <8 x i16*>, <8 x i1>, i32
 define void @vpscatter_v8i16(<8 x i16> %val, <8 x i16*> %ptrs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v8i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v8i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v12, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v8i16.v8p0i16(<8 x i16> %val, <8 x i16*> %ptrs, <8 x i1> %m, i32 %evl)
@@ -329,19 +329,19 @@ define void @vpscatter_v8i16(<8 x i16> %val, <8 x i16*> %ptrs, <8 x i1> %m, i32 
 define void @vpscatter_baseidx_v8i8_v8i16(<8 x i16> %val, i16* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8i8_v8i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf4 v10, v9
 ; RV32-NEXT:    vadd.vv v10, v10, v10
-; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8i8_v8i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf8 v12, v9
 ; RV64-NEXT:    vadd.vv v12, v12, v12
-; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds i16, i16* %base, <8 x i8> %idxs
@@ -352,19 +352,19 @@ define void @vpscatter_baseidx_v8i8_v8i16(<8 x i16> %val, i16* %base, <8 x i8> %
 define void @vpscatter_baseidx_sext_v8i8_v8i16(<8 x i16> %val, i16* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_sext_v8i8_v8i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf4 v10, v9
 ; RV32-NEXT:    vadd.vv v10, v10, v10
-; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_sext_v8i8_v8i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf8 v12, v9
 ; RV64-NEXT:    vadd.vv v12, v12, v12
-; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = sext <8 x i8> %idxs to <8 x i16>
@@ -376,19 +376,19 @@ define void @vpscatter_baseidx_sext_v8i8_v8i16(<8 x i16> %val, i16* %base, <8 x 
 define void @vpscatter_baseidx_zext_v8i8_v8i16(<8 x i16> %val, i16* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_zext_v8i8_v8i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vzext.vf4 v10, v9
 ; RV32-NEXT:    vadd.vv v10, v10, v10
-; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_zext_v8i8_v8i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vzext.vf8 v12, v9
 ; RV64-NEXT:    vadd.vv v12, v12, v12
-; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = zext <8 x i8> %idxs to <8 x i16>
@@ -400,19 +400,19 @@ define void @vpscatter_baseidx_zext_v8i8_v8i16(<8 x i16> %val, i16* %base, <8 x 
 define void @vpscatter_baseidx_v8i16(<8 x i16> %val, i16* %base, <8 x i16> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8i16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf2 v10, v9
 ; RV32-NEXT:    vadd.vv v10, v10, v10
-; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf4 v12, v9
 ; RV64-NEXT:    vadd.vv v12, v12, v12
-; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds i16, i16* %base, <8 x i16> %idxs
@@ -425,13 +425,13 @@ declare void @llvm.vp.scatter.v2i32.v2p0i32(<2 x i32>, <2 x i32*>, <2 x i1>, i32
 define void @vpscatter_v2i32(<2 x i32> %val, <2 x i32*> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v2i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v9, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v2i32.v2p0i32(<2 x i32> %val, <2 x i32*> %ptrs, <2 x i1> %m, i32 %evl)
@@ -441,17 +441,17 @@ define void @vpscatter_v2i32(<2 x i32> %val, <2 x i32*> %ptrs, <2 x i1> %m, i32 
 define void @vpscatter_v2i64_truncstore_v2i32(<2 x i64> %val, <2 x i32*> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v2i64_truncstore_v2i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v8, v8
-; RV32-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vnsrl.wi v8, v8, 0
+; RV32-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v2i64_truncstore_v2i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, mu
-; RV64-NEXT:    vncvt.x.x.w v8, v8
-; RV64-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vnsrl.wi v8, v8, 0
+; RV64-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v9, v0.t
 ; RV64-NEXT:    ret
   %tval = trunc <2 x i64> %val to <2 x i32>
@@ -464,13 +464,13 @@ declare void @llvm.vp.scatter.v4i32.v4p0i32(<4 x i32>, <4 x i32*>, <4 x i1>, i32
 define void @vpscatter_v4i32(<4 x i32> %val, <4 x i32*> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v4i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v4i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v10, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v4i32.v4p0i32(<4 x i32> %val, <4 x i32*> %ptrs, <4 x i1> %m, i32 %evl)
@@ -480,13 +480,13 @@ define void @vpscatter_v4i32(<4 x i32> %val, <4 x i32*> %ptrs, <4 x i1> %m, i32 
 define void @vpscatter_truemask_v4i32(<4 x i32> %val, <4 x i32*> %ptrs, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_truemask_v4i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_truemask_v4i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v10
 ; RV64-NEXT:    ret
   %mhead = insertelement <4 x i1> poison, i1 1, i32 0
@@ -500,13 +500,13 @@ declare void @llvm.vp.scatter.v8i32.v8p0i32(<8 x i32>, <8 x i32*>, <8 x i1>, i32
 define void @vpscatter_v8i32(<8 x i32> %val, <8 x i32*> %ptrs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v8i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v8i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v12, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v8i32.v8p0i32(<8 x i32> %val, <8 x i32*> %ptrs, <8 x i1> %m, i32 %evl)
@@ -516,19 +516,19 @@ define void @vpscatter_v8i32(<8 x i32> %val, <8 x i32*> %ptrs, <8 x i1> %m, i32 
 define void @vpscatter_baseidx_v8i8_v8i32(<8 x i32> %val, i32* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8i8_v8i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf4 v12, v10
 ; RV32-NEXT:    vsll.vi v10, v12, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8i8_v8i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf8 v12, v10
 ; RV64-NEXT:    vsll.vi v12, v12, 2
-; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds i32, i32* %base, <8 x i8> %idxs
@@ -539,19 +539,19 @@ define void @vpscatter_baseidx_v8i8_v8i32(<8 x i32> %val, i32* %base, <8 x i8> %
 define void @vpscatter_baseidx_sext_v8i8_v8i32(<8 x i32> %val, i32* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_sext_v8i8_v8i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf4 v12, v10
 ; RV32-NEXT:    vsll.vi v10, v12, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_sext_v8i8_v8i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf8 v12, v10
 ; RV64-NEXT:    vsll.vi v12, v12, 2
-; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = sext <8 x i8> %idxs to <8 x i32>
@@ -563,19 +563,19 @@ define void @vpscatter_baseidx_sext_v8i8_v8i32(<8 x i32> %val, i32* %base, <8 x 
 define void @vpscatter_baseidx_zext_v8i8_v8i32(<8 x i32> %val, i32* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_zext_v8i8_v8i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vzext.vf4 v12, v10
 ; RV32-NEXT:    vsll.vi v10, v12, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_zext_v8i8_v8i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vzext.vf8 v12, v10
 ; RV64-NEXT:    vsll.vi v12, v12, 2
-; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = zext <8 x i8> %idxs to <8 x i32>
@@ -587,19 +587,19 @@ define void @vpscatter_baseidx_zext_v8i8_v8i32(<8 x i32> %val, i32* %base, <8 x 
 define void @vpscatter_baseidx_v8i16_v8i32(<8 x i32> %val, i32* %base, <8 x i16> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8i16_v8i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf2 v12, v10
 ; RV32-NEXT:    vsll.vi v10, v12, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8i16_v8i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf4 v12, v10
 ; RV64-NEXT:    vsll.vi v12, v12, 2
-; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds i32, i32* %base, <8 x i16> %idxs
@@ -610,19 +610,19 @@ define void @vpscatter_baseidx_v8i16_v8i32(<8 x i32> %val, i32* %base, <8 x i16>
 define void @vpscatter_baseidx_sext_v8i16_v8i32(<8 x i32> %val, i32* %base, <8 x i16> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_sext_v8i16_v8i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf2 v12, v10
 ; RV32-NEXT:    vsll.vi v10, v12, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_sext_v8i16_v8i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf4 v12, v10
 ; RV64-NEXT:    vsll.vi v12, v12, 2
-; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = sext <8 x i16> %idxs to <8 x i32>
@@ -634,19 +634,19 @@ define void @vpscatter_baseidx_sext_v8i16_v8i32(<8 x i32> %val, i32* %base, <8 x
 define void @vpscatter_baseidx_zext_v8i16_v8i32(<8 x i32> %val, i32* %base, <8 x i16> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_zext_v8i16_v8i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vzext.vf2 v12, v10
 ; RV32-NEXT:    vsll.vi v10, v12, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_zext_v8i16_v8i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vzext.vf4 v12, v10
 ; RV64-NEXT:    vsll.vi v12, v12, 2
-; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = zext <8 x i16> %idxs to <8 x i32>
@@ -658,18 +658,18 @@ define void @vpscatter_baseidx_zext_v8i16_v8i32(<8 x i32> %val, i32* %base, <8 x
 define void @vpscatter_baseidx_v8i32(<8 x i32> %val, i32* %base, <8 x i32> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsll.vi v10, v10, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8i32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf2 v12, v10
 ; RV64-NEXT:    vsll.vi v12, v12, 2
-; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds i32, i32* %base, <8 x i32> %idxs
@@ -682,13 +682,13 @@ declare void @llvm.vp.scatter.v2i64.v2p0i64(<2 x i64>, <2 x i64*>, <2 x i1>, i32
 define void @vpscatter_v2i64(<2 x i64> %val, <2 x i64*> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v2i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v2i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v9, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v2i64.v2p0i64(<2 x i64> %val, <2 x i64*> %ptrs, <2 x i1> %m, i32 %evl)
@@ -700,13 +700,13 @@ declare void @llvm.vp.scatter.v4i64.v4p0i64(<4 x i64>, <4 x i64*>, <4 x i1>, i32
 define void @vpscatter_v4i64(<4 x i64> %val, <4 x i64*> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v4i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v4i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v10, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v4i64.v4p0i64(<4 x i64> %val, <4 x i64*> %ptrs, <4 x i1> %m, i32 %evl)
@@ -716,13 +716,13 @@ define void @vpscatter_v4i64(<4 x i64> %val, <4 x i64*> %ptrs, <4 x i1> %m, i32 
 define void @vpscatter_truemask_v4i64(<4 x i64> %val, <4 x i64*> %ptrs, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_truemask_v4i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_truemask_v4i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v10
 ; RV64-NEXT:    ret
   %mhead = insertelement <4 x i1> poison, i1 1, i32 0
@@ -736,13 +736,13 @@ declare void @llvm.vp.scatter.v8i64.v8p0i64(<8 x i64>, <8 x i64*>, <8 x i1>, i32
 define void @vpscatter_v8i64(<8 x i64> %val, <8 x i64*> %ptrs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v8i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v12, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v8i64.v8p0i64(<8 x i64> %val, <8 x i64*> %ptrs, <8 x i1> %m, i32 %evl)
@@ -752,19 +752,19 @@ define void @vpscatter_v8i64(<8 x i64> %val, <8 x i64*> %ptrs, <8 x i1> %m, i32 
 define void @vpscatter_baseidx_v8i8_v8i64(<8 x i64> %val, i64* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8i8_v8i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf4 v14, v12
 ; RV32-NEXT:    vsll.vi v12, v14, 3
-; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8i8_v8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf8 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds i64, i64* %base, <8 x i8> %idxs
@@ -775,21 +775,19 @@ define void @vpscatter_baseidx_v8i8_v8i64(<8 x i64> %val, i64* %base, <8 x i8> %
 define void @vpscatter_baseidx_sext_v8i8_v8i64(<8 x i64> %val, i64* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_sext_v8i8_v8i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; RV32-NEXT:    vsext.vf8 v16, v12
-; RV32-NEXT:    vsll.vi v12, v16, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v12
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vsext.vf4 v14, v12
+; RV32-NEXT:    vsll.vi v12, v14, 3
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_sext_v8i8_v8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf8 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = sext <8 x i8> %idxs to <8 x i64>
@@ -801,21 +799,19 @@ define void @vpscatter_baseidx_sext_v8i8_v8i64(<8 x i64> %val, i64* %base, <8 x 
 define void @vpscatter_baseidx_zext_v8i8_v8i64(<8 x i64> %val, i64* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_zext_v8i8_v8i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; RV32-NEXT:    vzext.vf8 v16, v12
-; RV32-NEXT:    vsll.vi v12, v16, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v12
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vzext.vf4 v14, v12
+; RV32-NEXT:    vsll.vi v12, v14, 3
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_zext_v8i8_v8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vzext.vf8 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = zext <8 x i8> %idxs to <8 x i64>
@@ -827,19 +823,19 @@ define void @vpscatter_baseidx_zext_v8i8_v8i64(<8 x i64> %val, i64* %base, <8 x 
 define void @vpscatter_baseidx_v8i16_v8i64(<8 x i64> %val, i64* %base, <8 x i16> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8i16_v8i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf2 v14, v12
 ; RV32-NEXT:    vsll.vi v12, v14, 3
-; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8i16_v8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf4 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds i64, i64* %base, <8 x i16> %idxs
@@ -850,21 +846,19 @@ define void @vpscatter_baseidx_v8i16_v8i64(<8 x i64> %val, i64* %base, <8 x i16>
 define void @vpscatter_baseidx_sext_v8i16_v8i64(<8 x i64> %val, i64* %base, <8 x i16> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_sext_v8i16_v8i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; RV32-NEXT:    vsext.vf4 v16, v12
-; RV32-NEXT:    vsll.vi v12, v16, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v12
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vsext.vf2 v14, v12
+; RV32-NEXT:    vsll.vi v12, v14, 3
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_sext_v8i16_v8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf4 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = sext <8 x i16> %idxs to <8 x i64>
@@ -876,21 +870,19 @@ define void @vpscatter_baseidx_sext_v8i16_v8i64(<8 x i64> %val, i64* %base, <8 x
 define void @vpscatter_baseidx_zext_v8i16_v8i64(<8 x i64> %val, i64* %base, <8 x i16> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_zext_v8i16_v8i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; RV32-NEXT:    vzext.vf4 v16, v12
-; RV32-NEXT:    vsll.vi v12, v16, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v12
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vzext.vf2 v14, v12
+; RV32-NEXT:    vsll.vi v12, v14, 3
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_zext_v8i16_v8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vzext.vf4 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = zext <8 x i16> %idxs to <8 x i64>
@@ -902,18 +894,18 @@ define void @vpscatter_baseidx_zext_v8i16_v8i64(<8 x i64> %val, i64* %base, <8 x
 define void @vpscatter_baseidx_v8i32_v8i64(<8 x i64> %val, i64* %base, <8 x i32> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8i32_v8i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsll.vi v12, v12, 3
-; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8i32_v8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf2 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds i64, i64* %base, <8 x i32> %idxs
@@ -924,21 +916,18 @@ define void @vpscatter_baseidx_v8i32_v8i64(<8 x i64> %val, i64* %base, <8 x i32>
 define void @vpscatter_baseidx_sext_v8i32_v8i64(<8 x i64> %val, i64* %base, <8 x i32> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_sext_v8i32_v8i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; RV32-NEXT:    vsext.vf2 v16, v12
-; RV32-NEXT:    vsll.vi v12, v16, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v12
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vsll.vi v12, v12, 3
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_sext_v8i32_v8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf2 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = sext <8 x i32> %idxs to <8 x i64>
@@ -950,21 +939,18 @@ define void @vpscatter_baseidx_sext_v8i32_v8i64(<8 x i64> %val, i64* %base, <8 x
 define void @vpscatter_baseidx_zext_v8i32_v8i64(<8 x i64> %val, i64* %base, <8 x i32> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_zext_v8i32_v8i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; RV32-NEXT:    vzext.vf2 v16, v12
-; RV32-NEXT:    vsll.vi v12, v16, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v12
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vsll.vi v12, v12, 3
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_zext_v8i32_v8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vzext.vf2 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = zext <8 x i32> %idxs to <8 x i64>
@@ -976,19 +962,18 @@ define void @vpscatter_baseidx_zext_v8i32_v8i64(<8 x i64> %val, i64* %base, <8 x
 define void @vpscatter_baseidx_v8i64(<8 x i64> %val, i64* %base, <8 x i64> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; RV32-NEXT:    vsll.vi v12, v12, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v12
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vnsrl.wi v16, v12, 0
+; RV32-NEXT:    vsll.vi v12, v16, 3
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsll.vi v12, v12, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds i64, i64* %base, <8 x i64> %idxs
@@ -1001,13 +986,13 @@ declare void @llvm.vp.scatter.v2f16.v2p0f16(<2 x half>, <2 x half*>, <2 x i1>, i
 define void @vpscatter_v2f16(<2 x half> %val, <2 x half*> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v2f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v2f16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v9, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v2f16.v2p0f16(<2 x half> %val, <2 x half*> %ptrs, <2 x i1> %m, i32 %evl)
@@ -1019,13 +1004,13 @@ declare void @llvm.vp.scatter.v4f16.v4p0f16(<4 x half>, <4 x half*>, <4 x i1>, i
 define void @vpscatter_v4f16(<4 x half> %val, <4 x half*> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v4f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v4f16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v10, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v4f16.v4p0f16(<4 x half> %val, <4 x half*> %ptrs, <4 x i1> %m, i32 %evl)
@@ -1035,13 +1020,13 @@ define void @vpscatter_v4f16(<4 x half> %val, <4 x half*> %ptrs, <4 x i1> %m, i3
 define void @vpscatter_truemask_v4f16(<4 x half> %val, <4 x half*> %ptrs, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_truemask_v4f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_truemask_v4f16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v10
 ; RV64-NEXT:    ret
   %mhead = insertelement <4 x i1> poison, i1 1, i32 0
@@ -1055,13 +1040,13 @@ declare void @llvm.vp.scatter.v8f16.v8p0f16(<8 x half>, <8 x half*>, <8 x i1>, i
 define void @vpscatter_v8f16(<8 x half> %val, <8 x half*> %ptrs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v8f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v8f16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v12, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v8f16.v8p0f16(<8 x half> %val, <8 x half*> %ptrs, <8 x i1> %m, i32 %evl)
@@ -1071,19 +1056,19 @@ define void @vpscatter_v8f16(<8 x half> %val, <8 x half*> %ptrs, <8 x i1> %m, i3
 define void @vpscatter_baseidx_v8i8_v8f16(<8 x half> %val, half* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8i8_v8f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf4 v10, v9
 ; RV32-NEXT:    vadd.vv v10, v10, v10
-; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8i8_v8f16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf8 v12, v9
 ; RV64-NEXT:    vadd.vv v12, v12, v12
-; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds half, half* %base, <8 x i8> %idxs
@@ -1094,19 +1079,19 @@ define void @vpscatter_baseidx_v8i8_v8f16(<8 x half> %val, half* %base, <8 x i8>
 define void @vpscatter_baseidx_sext_v8i8_v8f16(<8 x half> %val, half* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_sext_v8i8_v8f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf4 v10, v9
 ; RV32-NEXT:    vadd.vv v10, v10, v10
-; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_sext_v8i8_v8f16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf8 v12, v9
 ; RV64-NEXT:    vadd.vv v12, v12, v12
-; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = sext <8 x i8> %idxs to <8 x i16>
@@ -1118,19 +1103,19 @@ define void @vpscatter_baseidx_sext_v8i8_v8f16(<8 x half> %val, half* %base, <8 
 define void @vpscatter_baseidx_zext_v8i8_v8f16(<8 x half> %val, half* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_zext_v8i8_v8f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vzext.vf4 v10, v9
 ; RV32-NEXT:    vadd.vv v10, v10, v10
-; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_zext_v8i8_v8f16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vzext.vf8 v12, v9
 ; RV64-NEXT:    vadd.vv v12, v12, v12
-; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = zext <8 x i8> %idxs to <8 x i16>
@@ -1142,19 +1127,19 @@ define void @vpscatter_baseidx_zext_v8i8_v8f16(<8 x half> %val, half* %base, <8 
 define void @vpscatter_baseidx_v8f16(<8 x half> %val, half* %base, <8 x i16> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8f16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf2 v10, v9
 ; RV32-NEXT:    vadd.vv v10, v10, v10
-; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8f16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf4 v12, v9
 ; RV64-NEXT:    vadd.vv v12, v12, v12
-; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds half, half* %base, <8 x i16> %idxs
@@ -1167,13 +1152,13 @@ declare void @llvm.vp.scatter.v2f32.v2p0f32(<2 x float>, <2 x float*>, <2 x i1>,
 define void @vpscatter_v2f32(<2 x float> %val, <2 x float*> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v2f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v2f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v9, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v2f32.v2p0f32(<2 x float> %val, <2 x float*> %ptrs, <2 x i1> %m, i32 %evl)
@@ -1185,13 +1170,13 @@ declare void @llvm.vp.scatter.v4f32.v4p0f32(<4 x float>, <4 x float*>, <4 x i1>,
 define void @vpscatter_v4f32(<4 x float> %val, <4 x float*> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v4f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v4f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v10, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v4f32.v4p0f32(<4 x float> %val, <4 x float*> %ptrs, <4 x i1> %m, i32 %evl)
@@ -1201,13 +1186,13 @@ define void @vpscatter_v4f32(<4 x float> %val, <4 x float*> %ptrs, <4 x i1> %m, 
 define void @vpscatter_truemask_v4f32(<4 x float> %val, <4 x float*> %ptrs, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_truemask_v4f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_truemask_v4f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v10
 ; RV64-NEXT:    ret
   %mhead = insertelement <4 x i1> poison, i1 1, i32 0
@@ -1221,13 +1206,13 @@ declare void @llvm.vp.scatter.v8f32.v8p0f32(<8 x float>, <8 x float*>, <8 x i1>,
 define void @vpscatter_v8f32(<8 x float> %val, <8 x float*> %ptrs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v8f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v8f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v12, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v8f32.v8p0f32(<8 x float> %val, <8 x float*> %ptrs, <8 x i1> %m, i32 %evl)
@@ -1237,19 +1222,19 @@ define void @vpscatter_v8f32(<8 x float> %val, <8 x float*> %ptrs, <8 x i1> %m, 
 define void @vpscatter_baseidx_v8i8_v8f32(<8 x float> %val, float* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8i8_v8f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf4 v12, v10
 ; RV32-NEXT:    vsll.vi v10, v12, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8i8_v8f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf8 v12, v10
 ; RV64-NEXT:    vsll.vi v12, v12, 2
-; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds float, float* %base, <8 x i8> %idxs
@@ -1260,19 +1245,19 @@ define void @vpscatter_baseidx_v8i8_v8f32(<8 x float> %val, float* %base, <8 x i
 define void @vpscatter_baseidx_sext_v8i8_v8f32(<8 x float> %val, float* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_sext_v8i8_v8f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf4 v12, v10
 ; RV32-NEXT:    vsll.vi v10, v12, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_sext_v8i8_v8f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf8 v12, v10
 ; RV64-NEXT:    vsll.vi v12, v12, 2
-; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = sext <8 x i8> %idxs to <8 x i32>
@@ -1284,19 +1269,19 @@ define void @vpscatter_baseidx_sext_v8i8_v8f32(<8 x float> %val, float* %base, <
 define void @vpscatter_baseidx_zext_v8i8_v8f32(<8 x float> %val, float* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_zext_v8i8_v8f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vzext.vf4 v12, v10
 ; RV32-NEXT:    vsll.vi v10, v12, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_zext_v8i8_v8f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vzext.vf8 v12, v10
 ; RV64-NEXT:    vsll.vi v12, v12, 2
-; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = zext <8 x i8> %idxs to <8 x i32>
@@ -1308,19 +1293,19 @@ define void @vpscatter_baseidx_zext_v8i8_v8f32(<8 x float> %val, float* %base, <
 define void @vpscatter_baseidx_v8i16_v8f32(<8 x float> %val, float* %base, <8 x i16> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8i16_v8f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf2 v12, v10
 ; RV32-NEXT:    vsll.vi v10, v12, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8i16_v8f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf4 v12, v10
 ; RV64-NEXT:    vsll.vi v12, v12, 2
-; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds float, float* %base, <8 x i16> %idxs
@@ -1331,19 +1316,19 @@ define void @vpscatter_baseidx_v8i16_v8f32(<8 x float> %val, float* %base, <8 x 
 define void @vpscatter_baseidx_sext_v8i16_v8f32(<8 x float> %val, float* %base, <8 x i16> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_sext_v8i16_v8f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf2 v12, v10
 ; RV32-NEXT:    vsll.vi v10, v12, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_sext_v8i16_v8f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf4 v12, v10
 ; RV64-NEXT:    vsll.vi v12, v12, 2
-; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = sext <8 x i16> %idxs to <8 x i32>
@@ -1355,19 +1340,19 @@ define void @vpscatter_baseidx_sext_v8i16_v8f32(<8 x float> %val, float* %base, 
 define void @vpscatter_baseidx_zext_v8i16_v8f32(<8 x float> %val, float* %base, <8 x i16> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_zext_v8i16_v8f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vzext.vf2 v12, v10
 ; RV32-NEXT:    vsll.vi v10, v12, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_zext_v8i16_v8f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vzext.vf4 v12, v10
 ; RV64-NEXT:    vsll.vi v12, v12, 2
-; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = zext <8 x i16> %idxs to <8 x i32>
@@ -1379,18 +1364,18 @@ define void @vpscatter_baseidx_zext_v8i16_v8f32(<8 x float> %val, float* %base, 
 define void @vpscatter_baseidx_v8f32(<8 x float> %val, float* %base, <8 x i32> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8f32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsll.vi v10, v10, 2
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8f32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf2 v12, v10
 ; RV64-NEXT:    vsll.vi v12, v12, 2
-; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds float, float* %base, <8 x i32> %idxs
@@ -1403,13 +1388,13 @@ declare void @llvm.vp.scatter.v2f64.v2p0f64(<2 x double>, <2 x double*>, <2 x i1
 define void @vpscatter_v2f64(<2 x double> %val, <2 x double*> %ptrs, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v2f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v9, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v2f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v9, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v2f64.v2p0f64(<2 x double> %val, <2 x double*> %ptrs, <2 x i1> %m, i32 %evl)
@@ -1421,13 +1406,13 @@ declare void @llvm.vp.scatter.v4f64.v4p0f64(<4 x double>, <4 x double*>, <4 x i1
 define void @vpscatter_v4f64(<4 x double> %val, <4 x double*> %ptrs, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v4f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v10, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v4f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v10, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v4f64.v4p0f64(<4 x double> %val, <4 x double*> %ptrs, <4 x i1> %m, i32 %evl)
@@ -1437,13 +1422,13 @@ define void @vpscatter_v4f64(<4 x double> %val, <4 x double*> %ptrs, <4 x i1> %m
 define void @vpscatter_truemask_v4f64(<4 x double> %val, <4 x double*> %ptrs, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_truemask_v4f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v10
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_truemask_v4f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v10
 ; RV64-NEXT:    ret
   %mhead = insertelement <4 x i1> poison, i1 1, i32 0
@@ -1457,13 +1442,13 @@ declare void @llvm.vp.scatter.v8f64.v8p0f64(<8 x double>, <8 x double*>, <8 x i1
 define void @vpscatter_v8f64(<8 x double> %val, <8 x double*> %ptrs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_v8f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_v8f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v12, v0.t
 ; RV64-NEXT:    ret
   call void @llvm.vp.scatter.v8f64.v8p0f64(<8 x double> %val, <8 x double*> %ptrs, <8 x i1> %m, i32 %evl)
@@ -1473,19 +1458,19 @@ define void @vpscatter_v8f64(<8 x double> %val, <8 x double*> %ptrs, <8 x i1> %m
 define void @vpscatter_baseidx_v8i8_v8f64(<8 x double> %val, double* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8i8_v8f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf4 v14, v12
 ; RV32-NEXT:    vsll.vi v12, v14, 3
-; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8i8_v8f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf8 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds double, double* %base, <8 x i8> %idxs
@@ -1496,21 +1481,19 @@ define void @vpscatter_baseidx_v8i8_v8f64(<8 x double> %val, double* %base, <8 x
 define void @vpscatter_baseidx_sext_v8i8_v8f64(<8 x double> %val, double* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_sext_v8i8_v8f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; RV32-NEXT:    vsext.vf8 v16, v12
-; RV32-NEXT:    vsll.vi v12, v16, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v12
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vsext.vf4 v14, v12
+; RV32-NEXT:    vsll.vi v12, v14, 3
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_sext_v8i8_v8f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf8 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = sext <8 x i8> %idxs to <8 x i64>
@@ -1522,21 +1505,19 @@ define void @vpscatter_baseidx_sext_v8i8_v8f64(<8 x double> %val, double* %base,
 define void @vpscatter_baseidx_zext_v8i8_v8f64(<8 x double> %val, double* %base, <8 x i8> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_zext_v8i8_v8f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; RV32-NEXT:    vzext.vf8 v16, v12
-; RV32-NEXT:    vsll.vi v12, v16, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v12
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vzext.vf4 v14, v12
+; RV32-NEXT:    vsll.vi v12, v14, 3
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_zext_v8i8_v8f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vzext.vf8 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = zext <8 x i8> %idxs to <8 x i64>
@@ -1548,19 +1529,19 @@ define void @vpscatter_baseidx_zext_v8i8_v8f64(<8 x double> %val, double* %base,
 define void @vpscatter_baseidx_v8i16_v8f64(<8 x double> %val, double* %base, <8 x i16> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8i16_v8f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsext.vf2 v14, v12
 ; RV32-NEXT:    vsll.vi v12, v14, 3
-; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8i16_v8f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf4 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds double, double* %base, <8 x i16> %idxs
@@ -1571,21 +1552,19 @@ define void @vpscatter_baseidx_v8i16_v8f64(<8 x double> %val, double* %base, <8 
 define void @vpscatter_baseidx_sext_v8i16_v8f64(<8 x double> %val, double* %base, <8 x i16> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_sext_v8i16_v8f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; RV32-NEXT:    vsext.vf4 v16, v12
-; RV32-NEXT:    vsll.vi v12, v16, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v12
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vsext.vf2 v14, v12
+; RV32-NEXT:    vsll.vi v12, v14, 3
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_sext_v8i16_v8f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf4 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = sext <8 x i16> %idxs to <8 x i64>
@@ -1597,21 +1576,19 @@ define void @vpscatter_baseidx_sext_v8i16_v8f64(<8 x double> %val, double* %base
 define void @vpscatter_baseidx_zext_v8i16_v8f64(<8 x double> %val, double* %base, <8 x i16> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_zext_v8i16_v8f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; RV32-NEXT:    vzext.vf4 v16, v12
-; RV32-NEXT:    vsll.vi v12, v16, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v12
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vzext.vf2 v14, v12
+; RV32-NEXT:    vsll.vi v12, v14, 3
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_zext_v8i16_v8f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vzext.vf4 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = zext <8 x i16> %idxs to <8 x i64>
@@ -1623,18 +1600,18 @@ define void @vpscatter_baseidx_zext_v8i16_v8f64(<8 x double> %val, double* %base
 define void @vpscatter_baseidx_v8i32_v8f64(<8 x double> %val, double* %base, <8 x i32> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8i32_v8f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
 ; RV32-NEXT:    vsll.vi v12, v12, 3
-; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8i32_v8f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf2 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds double, double* %base, <8 x i32> %idxs
@@ -1645,21 +1622,18 @@ define void @vpscatter_baseidx_v8i32_v8f64(<8 x double> %val, double* %base, <8 
 define void @vpscatter_baseidx_sext_v8i32_v8f64(<8 x double> %val, double* %base, <8 x i32> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_sext_v8i32_v8f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; RV32-NEXT:    vsext.vf2 v16, v12
-; RV32-NEXT:    vsll.vi v12, v16, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v12
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vsll.vi v12, v12, 3
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_sext_v8i32_v8f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsext.vf2 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = sext <8 x i32> %idxs to <8 x i64>
@@ -1671,21 +1645,18 @@ define void @vpscatter_baseidx_sext_v8i32_v8f64(<8 x double> %val, double* %base
 define void @vpscatter_baseidx_zext_v8i32_v8f64(<8 x double> %val, double* %base, <8 x i32> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_zext_v8i32_v8f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; RV32-NEXT:    vzext.vf2 v16, v12
-; RV32-NEXT:    vsll.vi v12, v16, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v12
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vsll.vi v12, v12, 3
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_zext_v8i32_v8f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vzext.vf2 v16, v12
 ; RV64-NEXT:    vsll.vi v12, v16, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %eidxs = zext <8 x i32> %idxs to <8 x i64>
@@ -1697,19 +1668,18 @@ define void @vpscatter_baseidx_zext_v8i32_v8f64(<8 x double> %val, double* %base
 define void @vpscatter_baseidx_v8f64(<8 x double> %val, double* %base, <8 x i64> %idxs, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_v8f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; RV32-NEXT:    vsll.vi v12, v12, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v12
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vnsrl.wi v16, v12, 0
+; RV32-NEXT:    vsll.vi v12, v16, 3
+; RV32-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
+; RV32-NEXT:    vsoxei32.v v8, (a0), v12, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_v8f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vsll.vi v12, v12, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v12, v0.t
 ; RV64-NEXT:    ret
   %ptrs = getelementptr inbounds double, double* %base, <8 x i64> %idxs
@@ -1723,7 +1693,7 @@ define void @vpscatter_v32f64(<32 x double> %val, <32 x double*> %ptrs, <32 x i1
 ; RV32-LABEL: vpscatter_v32f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a2, 32
-; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, mu
+; RV32-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; RV32-NEXT:    vle32.v v24, (a0)
 ; RV32-NEXT:    li a0, 16
 ; RV32-NEXT:    mv a2, a1
@@ -1732,18 +1702,18 @@ define void @vpscatter_v32f64(<32 x double> %val, <32 x double*> %ptrs, <32 x i1
 ; RV32-NEXT:    li a2, 16
 ; RV32-NEXT:  .LBB79_2:
 ; RV32-NEXT:    li a0, 0
-; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, mu
+; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    addi a2, a1, -16
 ; RV32-NEXT:    vsoxei32.v v8, (zero), v24, v0.t
 ; RV32-NEXT:    bltu a1, a2, .LBB79_4
 ; RV32-NEXT:  # %bb.3:
 ; RV32-NEXT:    mv a0, a2
 ; RV32-NEXT:  .LBB79_4:
-; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, mu
+; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v24, 16
-; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32-NEXT:    vslidedown.vi v0, v0, 2
-; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; RV32-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; RV32-NEXT:    vsoxei32.v v16, (zero), v8, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -1754,7 +1724,7 @@ define void @vpscatter_v32f64(<32 x double> %val, <32 x double*> %ptrs, <32 x i1
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    slli a1, a1, 4
 ; RV64-NEXT:    sub sp, sp, a1
-; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
+; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vle64.v v24, (a0)
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    slli a1, a1, 3
@@ -1772,7 +1742,7 @@ define void @vpscatter_v32f64(<32 x double> %val, <32 x double*> %ptrs, <32 x i1
 ; RV64-NEXT:  .LBB79_2:
 ; RV64-NEXT:    li a3, 0
 ; RV64-NEXT:    vle64.v v16, (a0)
-; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV64-NEXT:    addi a0, a2, -16
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    slli a1, a1, 3
@@ -1784,9 +1754,9 @@ define void @vpscatter_v32f64(<32 x double> %val, <32 x double*> %ptrs, <32 x i1
 ; RV64-NEXT:  # %bb.3:
 ; RV64-NEXT:    mv a3, a0
 ; RV64-NEXT:  .LBB79_4:
-; RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV64-NEXT:    vslidedown.vi v0, v0, 2
-; RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, mu
+; RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; RV64-NEXT:    addi a0, sp, 16
 ; RV64-NEXT:    vl8re8.v v8, (a0) # Unknown-size Folded Reload
 ; RV64-NEXT:    vsoxei64.v v8, (zero), v16, v0.t
@@ -1803,28 +1773,28 @@ define void @vpscatter_baseidx_v32i32_v32f64(<32 x double> %val, double* %base, 
 ; RV32-LABEL: vpscatter_baseidx_v32i32_v32f64:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    li a3, 32
-; RV32-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
+; RV32-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; RV32-NEXT:    vle32.v v24, (a1)
-; RV32-NEXT:    li a3, 16
-; RV32-NEXT:    mv a1, a2
-; RV32-NEXT:    bltu a2, a3, .LBB80_2
-; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    li a1, 16
-; RV32-NEXT:  .LBB80_2:
-; RV32-NEXT:    li a3, 0
 ; RV32-NEXT:    vsll.vi v24, v24, 3
-; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
-; RV32-NEXT:    addi a1, a2, -16
+; RV32-NEXT:    mv a3, a2
+; RV32-NEXT:    bltu a2, a1, .LBB80_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    li a3, 16
+; RV32-NEXT:  .LBB80_2:
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
+; RV32-NEXT:    addi a3, a2, -16
 ; RV32-NEXT:    vsoxei32.v v8, (a0), v24, v0.t
-; RV32-NEXT:    bltu a2, a1, .LBB80_4
+; RV32-NEXT:    bltu a2, a3, .LBB80_4
 ; RV32-NEXT:  # %bb.3:
-; RV32-NEXT:    mv a3, a1
+; RV32-NEXT:    mv a1, a3
 ; RV32-NEXT:  .LBB80_4:
-; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32-NEXT:    vslidedown.vi v0, v0, 2
-; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, mu
+; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; RV32-NEXT:    vslidedown.vi v8, v24, 16
-; RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, mu
+; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV32-NEXT:    vsoxei32.v v16, (a0), v8, v0.t
 ; RV32-NEXT:    ret
 ;
@@ -1833,57 +1803,52 @@ define void @vpscatter_baseidx_v32i32_v32f64(<32 x double> %val, double* %base, 
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    csrr a3, vlenb
-; RV64-NEXT:    li a4, 10
-; RV64-NEXT:    mul a3, a3, a4
+; RV64-NEXT:    slli a3, a3, 4
 ; RV64-NEXT:    sub sp, sp, a3
 ; RV64-NEXT:    li a3, 32
-; RV64-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
+; RV64-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; RV64-NEXT:    vle32.v v24, (a1)
 ; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    slli a1, a1, 3
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vs8r.v v24, (a1) # Unknown-size Folded Spill
-; RV64-NEXT:    li a1, 16
-; RV64-NEXT:    addi a3, sp, 16
-; RV64-NEXT:    vs1r.v v0, (a3) # Unknown-size Folded Spill
-; RV64-NEXT:    mv a3, a2
-; RV64-NEXT:    bltu a2, a1, .LBB80_2
-; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
+; RV64-NEXT:    addi a1, sp, 16
+; RV64-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
+; RV64-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV64-NEXT:    vslidedown.vi v16, v24, 16
+; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV64-NEXT:    vsext.vf2 v8, v16
+; RV64-NEXT:    vsext.vf2 v16, v24
 ; RV64-NEXT:    li a3, 16
+; RV64-NEXT:    vsll.vi v24, v16, 3
+; RV64-NEXT:    mv a1, a2
+; RV64-NEXT:    bltu a2, a3, .LBB80_2
+; RV64-NEXT:  # %bb.1:
+; RV64-NEXT:    li a1, 16
 ; RV64-NEXT:  .LBB80_2:
-; RV64-NEXT:    li a1, 0
-; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
-; RV64-NEXT:    csrr a4, vlenb
-; RV64-NEXT:    add a4, sp, a4
-; RV64-NEXT:    addi a4, a4, 16
-; RV64-NEXT:    vl8re8.v v0, (a4) # Unknown-size Folded Reload
-; RV64-NEXT:    vsext.vf2 v24, v0
-; RV64-NEXT:    vsll.vi v24, v24, 3
-; RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, mu
-; RV64-NEXT:    addi a3, a2, -16
+; RV64-NEXT:    li a3, 0
+; RV64-NEXT:    vsll.vi v16, v8, 3
+; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; RV64-NEXT:    addi a1, a2, -16
 ; RV64-NEXT:    addi a4, sp, 16
-; RV64-NEXT:    vl1r.v v0, (a4) # Unknown-size Folded Reload
+; RV64-NEXT:    vl8re8.v v8, (a4) # Unknown-size Folded Reload
 ; RV64-NEXT:    vsoxei64.v v8, (a0), v24, v0.t
-; RV64-NEXT:    bltu a2, a3, .LBB80_4
+; RV64-NEXT:    bltu a2, a1, .LBB80_4
 ; RV64-NEXT:  # %bb.3:
-; RV64-NEXT:    mv a1, a3
+; RV64-NEXT:    mv a3, a1
 ; RV64-NEXT:  .LBB80_4:
-; RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV64-NEXT:    vslidedown.vi v0, v0, 2
-; RV64-NEXT:    vsetivli zero, 16, e32, m8, ta, mu
-; RV64-NEXT:    csrr a2, vlenb
-; RV64-NEXT:    add a2, sp, a2
-; RV64-NEXT:    addi a2, a2, 16
-; RV64-NEXT:    vl8re8.v v8, (a2) # Unknown-size Folded Reload
-; RV64-NEXT:    vslidedown.vi v8, v8, 16
-; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
-; RV64-NEXT:    vsext.vf2 v24, v8
-; RV64-NEXT:    vsll.vi v8, v24, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
-; RV64-NEXT:    vsoxei64.v v16, (a0), v8, v0.t
+; RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
+; RV64-NEXT:    csrr a1, vlenb
+; RV64-NEXT:    slli a1, a1, 3
+; RV64-NEXT:    add a1, sp, a1
+; RV64-NEXT:    addi a1, a1, 16
+; RV64-NEXT:    vl8re8.v v8, (a1) # Unknown-size Folded Reload
+; RV64-NEXT:    vsoxei64.v v8, (a0), v16, v0.t
 ; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    li a1, 10
-; RV64-NEXT:    mul a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 4
 ; RV64-NEXT:    add sp, sp, a0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
@@ -1895,62 +1860,30 @@ define void @vpscatter_baseidx_v32i32_v32f64(<32 x double> %val, double* %base, 
 define void @vpscatter_baseidx_sext_v32i32_v32f64(<32 x double> %val, double* %base, <32 x i32> %idxs, <32 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_sext_v32i32_v32f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    csrr a3, vlenb
-; RV32-NEXT:    slli a3, a3, 4
-; RV32-NEXT:    sub sp, sp, a3
 ; RV32-NEXT:    li a3, 32
-; RV32-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
+; RV32-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; RV32-NEXT:    vle32.v v24, (a1)
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 3
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
-; RV32-NEXT:    addi a1, sp, 16
-; RV32-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
-; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, mu
-; RV32-NEXT:    vslidedown.vi v8, v24, 16
-; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
-; RV32-NEXT:    li a3, 16
-; RV32-NEXT:    vsext.vf2 v16, v24
-; RV32-NEXT:    mv a1, a2
-; RV32-NEXT:    bltu a2, a3, .LBB81_2
-; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    li a1, 16
+; RV32-NEXT:    vsll.vi v24, v24, 3
+; RV32-NEXT:    mv a3, a2
+; RV32-NEXT:    bltu a2, a1, .LBB81_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    li a3, 16
 ; RV32-NEXT:  .LBB81_2:
-; RV32-NEXT:    li a3, 0
-; RV32-NEXT:    vsext.vf2 v24, v8
-; RV32-NEXT:    vsll.vi v8, v16, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m4, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v8
-; RV32-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
-; RV32-NEXT:    addi a1, a2, -16
-; RV32-NEXT:    addi a4, sp, 16
-; RV32-NEXT:    vl8re8.v v8, (a4) # Unknown-size Folded Reload
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
-; RV32-NEXT:    bltu a2, a1, .LBB81_4
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
+; RV32-NEXT:    addi a3, a2, -16
+; RV32-NEXT:    vsoxei32.v v8, (a0), v24, v0.t
+; RV32-NEXT:    bltu a2, a3, .LBB81_4
 ; RV32-NEXT:  # %bb.3:
-; RV32-NEXT:    mv a3, a1
+; RV32-NEXT:    mv a1, a3
 ; RV32-NEXT:  .LBB81_4:
-; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
-; RV32-NEXT:    vsll.vi v8, v24, 3
-; RV32-NEXT:    vsetvli zero, a3, e32, m4, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v8
-; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32-NEXT:    vslidedown.vi v0, v0, 2
-; RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, mu
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 3
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl8re8.v v8, (a1) # Unknown-size Folded Reload
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
-; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    slli a0, a0, 4
-; RV32-NEXT:    add sp, sp, a0
-; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV32-NEXT:    vslidedown.vi v8, v24, 16
+; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; RV32-NEXT:    vsoxei32.v v16, (a0), v8, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_sext_v32i32_v32f64:
@@ -1958,65 +1891,53 @@ define void @vpscatter_baseidx_sext_v32i32_v32f64(<32 x double> %val, double* %b
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    csrr a3, vlenb
-; RV64-NEXT:    li a4, 24
-; RV64-NEXT:    mul a3, a3, a4
+; RV64-NEXT:    slli a3, a3, 4
 ; RV64-NEXT:    sub sp, sp, a3
 ; RV64-NEXT:    li a3, 32
-; RV64-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
+; RV64-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; RV64-NEXT:    vle32.v v24, (a1)
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a1, a1, 4
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    slli a1, a1, 3
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
-; RV64-NEXT:    vsetivli zero, 16, e32, m8, ta, mu
-; RV64-NEXT:    vslidedown.vi v8, v24, 16
+; RV64-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
 ; RV64-NEXT:    addi a1, sp, 16
 ; RV64-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
-; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
-; RV64-NEXT:    li a3, 16
+; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV64-NEXT:    vsext.vf2 v16, v24
+; RV64-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV64-NEXT:    vslidedown.vi v24, v24, 16
+; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vsext.vf2 v8, v24
+; RV64-NEXT:    li a3, 16
+; RV64-NEXT:    vsll.vi v24, v16, 3
 ; RV64-NEXT:    mv a1, a2
 ; RV64-NEXT:    bltu a2, a3, .LBB81_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    li a1, 16
 ; RV64-NEXT:  .LBB81_2:
 ; RV64-NEXT:    li a3, 0
-; RV64-NEXT:    addi a4, sp, 16
-; RV64-NEXT:    vl8re8.v v24, (a4) # Unknown-size Folded Reload
-; RV64-NEXT:    vsext.vf2 v16, v24
-; RV64-NEXT:    vsll.vi v8, v8, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; RV64-NEXT:    vsll.vi v16, v8, 3
+; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV64-NEXT:    addi a1, a2, -16
-; RV64-NEXT:    csrr a4, vlenb
-; RV64-NEXT:    slli a4, a4, 3
-; RV64-NEXT:    add a4, sp, a4
-; RV64-NEXT:    addi a4, a4, 16
-; RV64-NEXT:    vl8re8.v v24, (a4) # Unknown-size Folded Reload
-; RV64-NEXT:    vsoxei64.v v24, (a0), v8, v0.t
+; RV64-NEXT:    addi a4, sp, 16
+; RV64-NEXT:    vl8re8.v v8, (a4) # Unknown-size Folded Reload
+; RV64-NEXT:    vsoxei64.v v8, (a0), v24, v0.t
 ; RV64-NEXT:    bltu a2, a1, .LBB81_4
 ; RV64-NEXT:  # %bb.3:
 ; RV64-NEXT:    mv a3, a1
 ; RV64-NEXT:  .LBB81_4:
-; RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV64-NEXT:    vslidedown.vi v0, v0, 2
-; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
-; RV64-NEXT:    vsll.vi v8, v16, 3
-; RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, mu
+; RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a1, a1, 4
+; RV64-NEXT:    slli a1, a1, 3
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8re8.v v16, (a1) # Unknown-size Folded Reload
-; RV64-NEXT:    vsoxei64.v v16, (a0), v8, v0.t
+; RV64-NEXT:    vl8re8.v v8, (a1) # Unknown-size Folded Reload
+; RV64-NEXT:    vsoxei64.v v8, (a0), v16, v0.t
 ; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    li a1, 24
-; RV64-NEXT:    mul a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 4
 ; RV64-NEXT:    add sp, sp, a0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret
@@ -2029,62 +1950,30 @@ define void @vpscatter_baseidx_sext_v32i32_v32f64(<32 x double> %val, double* %b
 define void @vpscatter_baseidx_zext_v32i32_v32f64(<32 x double> %val, double* %base, <32 x i32> %idxs, <32 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vpscatter_baseidx_zext_v32i32_v32f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    csrr a3, vlenb
-; RV32-NEXT:    slli a3, a3, 4
-; RV32-NEXT:    sub sp, sp, a3
 ; RV32-NEXT:    li a3, 32
-; RV32-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
+; RV32-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; RV32-NEXT:    vle32.v v24, (a1)
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 3
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
-; RV32-NEXT:    addi a1, sp, 16
-; RV32-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
-; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, mu
-; RV32-NEXT:    vslidedown.vi v8, v24, 16
-; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
-; RV32-NEXT:    li a3, 16
-; RV32-NEXT:    vzext.vf2 v16, v24
-; RV32-NEXT:    mv a1, a2
-; RV32-NEXT:    bltu a2, a3, .LBB82_2
-; RV32-NEXT:  # %bb.1:
 ; RV32-NEXT:    li a1, 16
+; RV32-NEXT:    vsll.vi v24, v24, 3
+; RV32-NEXT:    mv a3, a2
+; RV32-NEXT:    bltu a2, a1, .LBB82_2
+; RV32-NEXT:  # %bb.1:
+; RV32-NEXT:    li a3, 16
 ; RV32-NEXT:  .LBB82_2:
-; RV32-NEXT:    li a3, 0
-; RV32-NEXT:    vzext.vf2 v24, v8
-; RV32-NEXT:    vsll.vi v8, v16, 3
-; RV32-NEXT:    vsetvli zero, a1, e32, m4, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v8
-; RV32-NEXT:    vsetvli zero, zero, e64, m8, ta, mu
-; RV32-NEXT:    addi a1, a2, -16
-; RV32-NEXT:    addi a4, sp, 16
-; RV32-NEXT:    vl8re8.v v8, (a4) # Unknown-size Folded Reload
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
-; RV32-NEXT:    bltu a2, a1, .LBB82_4
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
+; RV32-NEXT:    addi a3, a2, -16
+; RV32-NEXT:    vsoxei32.v v8, (a0), v24, v0.t
+; RV32-NEXT:    bltu a2, a3, .LBB82_4
 ; RV32-NEXT:  # %bb.3:
-; RV32-NEXT:    mv a3, a1
+; RV32-NEXT:    mv a1, a3
 ; RV32-NEXT:  .LBB82_4:
-; RV32-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
-; RV32-NEXT:    vsll.vi v8, v24, 3
-; RV32-NEXT:    vsetvli zero, a3, e32, m4, ta, mu
-; RV32-NEXT:    vncvt.x.x.w v16, v8
-; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV32-NEXT:    vslidedown.vi v0, v0, 2
-; RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, mu
-; RV32-NEXT:    csrr a1, vlenb
-; RV32-NEXT:    slli a1, a1, 3
-; RV32-NEXT:    add a1, sp, a1
-; RV32-NEXT:    addi a1, a1, 16
-; RV32-NEXT:    vl8re8.v v8, (a1) # Unknown-size Folded Reload
-; RV32-NEXT:    vsoxei32.v v8, (a0), v16, v0.t
-; RV32-NEXT:    csrr a0, vlenb
-; RV32-NEXT:    slli a0, a0, 4
-; RV32-NEXT:    add sp, sp, a0
-; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV32-NEXT:    vslidedown.vi v8, v24, 16
+; RV32-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
+; RV32-NEXT:    vsoxei32.v v16, (a0), v8, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vpscatter_baseidx_zext_v32i32_v32f64:
@@ -2092,65 +1981,53 @@ define void @vpscatter_baseidx_zext_v32i32_v32f64(<32 x double> %val, double* %b
 ; RV64-NEXT:    addi sp, sp, -16
 ; RV64-NEXT:    .cfi_def_cfa_offset 16
 ; RV64-NEXT:    csrr a3, vlenb
-; RV64-NEXT:    li a4, 24
-; RV64-NEXT:    mul a3, a3, a4
+; RV64-NEXT:    slli a3, a3, 4
 ; RV64-NEXT:    sub sp, sp, a3
 ; RV64-NEXT:    li a3, 32
-; RV64-NEXT:    vsetvli zero, a3, e32, m8, ta, mu
+; RV64-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
 ; RV64-NEXT:    vle32.v v24, (a1)
-; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a1, a1, 4
-; RV64-NEXT:    add a1, sp, a1
-; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
 ; RV64-NEXT:    csrr a1, vlenb
 ; RV64-NEXT:    slli a1, a1, 3
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
-; RV64-NEXT:    vsetivli zero, 16, e32, m8, ta, mu
-; RV64-NEXT:    vslidedown.vi v8, v24, 16
+; RV64-NEXT:    vs8r.v v16, (a1) # Unknown-size Folded Spill
 ; RV64-NEXT:    addi a1, sp, 16
 ; RV64-NEXT:    vs8r.v v8, (a1) # Unknown-size Folded Spill
-; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
-; RV64-NEXT:    li a3, 16
+; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
+; RV64-NEXT:    vzext.vf2 v16, v24
+; RV64-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
+; RV64-NEXT:    vslidedown.vi v24, v24, 16
+; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vzext.vf2 v8, v24
+; RV64-NEXT:    li a3, 16
+; RV64-NEXT:    vsll.vi v24, v16, 3
 ; RV64-NEXT:    mv a1, a2
 ; RV64-NEXT:    bltu a2, a3, .LBB82_2
 ; RV64-NEXT:  # %bb.1:
 ; RV64-NEXT:    li a1, 16
 ; RV64-NEXT:  .LBB82_2:
 ; RV64-NEXT:    li a3, 0
-; RV64-NEXT:    addi a4, sp, 16
-; RV64-NEXT:    vl8re8.v v24, (a4) # Unknown-size Folded Reload
-; RV64-NEXT:    vzext.vf2 v16, v24
-; RV64-NEXT:    vsll.vi v8, v8, 3
-; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; RV64-NEXT:    vsll.vi v16, v8, 3
+; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV64-NEXT:    addi a1, a2, -16
-; RV64-NEXT:    csrr a4, vlenb
-; RV64-NEXT:    slli a4, a4, 3
-; RV64-NEXT:    add a4, sp, a4
-; RV64-NEXT:    addi a4, a4, 16
-; RV64-NEXT:    vl8re8.v v24, (a4) # Unknown-size Folded Reload
-; RV64-NEXT:    vsoxei64.v v24, (a0), v8, v0.t
+; RV64-NEXT:    addi a4, sp, 16
+; RV64-NEXT:    vl8re8.v v8, (a4) # Unknown-size Folded Reload
+; RV64-NEXT:    vsoxei64.v v8, (a0), v24, v0.t
 ; RV64-NEXT:    bltu a2, a1, .LBB82_4
 ; RV64-NEXT:  # %bb.3:
 ; RV64-NEXT:    mv a3, a1
 ; RV64-NEXT:  .LBB82_4:
-; RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, mu
+; RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV64-NEXT:    vslidedown.vi v0, v0, 2
-; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, mu
-; RV64-NEXT:    vsll.vi v8, v16, 3
-; RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, mu
+; RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; RV64-NEXT:    csrr a1, vlenb
-; RV64-NEXT:    slli a1, a1, 4
+; RV64-NEXT:    slli a1, a1, 3
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    addi a1, a1, 16
-; RV64-NEXT:    vl8re8.v v16, (a1) # Unknown-size Folded Reload
-; RV64-NEXT:    vsoxei64.v v16, (a0), v8, v0.t
+; RV64-NEXT:    vl8re8.v v8, (a1) # Unknown-size Folded Reload
+; RV64-NEXT:    vsoxei64.v v8, (a0), v16, v0.t
 ; RV64-NEXT:    csrr a0, vlenb
-; RV64-NEXT:    li a1, 24
-; RV64-NEXT:    mul a0, a0, a1
+; RV64-NEXT:    slli a0, a0, 4
 ; RV64-NEXT:    add sp, sp, a0
 ; RV64-NEXT:    addi sp, sp, 16
 ; RV64-NEXT:    ret

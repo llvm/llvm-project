@@ -464,8 +464,8 @@ func.func @dyn_shape_fold(%L : index, %M : index) -> (memref<4 x ? x 8 x ? x ? x
   affine.for %i = 0 to %L {
     // CHECK-NEXT: affine.for
     affine.for %j = 0 to 10 {
-      // CHECK-NEXT: memref.load %0[%arg2, %arg3] : memref<?x1024xf32>
-      // CHECK-NEXT: memref.store %{{.*}}, %1[%c0, %c0, %arg2, %arg3, %c0] : memref<4x1024x8x512x?xf32>
+      // CHECK-NEXT: memref.load %{{.*}}[%arg2, %arg3] : memref<?x1024xf32>
+      // CHECK-NEXT: memref.store %{{.*}}, %{{.*}}[%c0, %c0, %arg2, %arg3, %c0] : memref<4x1024x8x512x?xf32>
       %v = memref.load %a[%i, %j] : memref<?x?xf32>
       memref.store %v, %b[%zero, %zero, %i, %j, %zero] : memref<4x?x8x?x?xf32>
     }
@@ -473,10 +473,6 @@ func.func @dyn_shape_fold(%L : index, %M : index) -> (memref<4 x ? x 8 x ? x ? x
 
   return %b, %c, %d, %e : memref<4 x ? x 8 x ? x ? x f32>, memref<? x ? x i32>, memref<? x ? x f32>, memref<4 x ? x 8 x ? x ? x f32>
 }
-
-#map1 = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
-#map2 = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s2 + d1 * s1 + d2 + s0)>
-#map3 = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
 
 // CHECK-LABEL: func @dim_op_fold(
 // CHECK-SAME: %[[ARG0:[a-z0-9]*]]: index
@@ -499,15 +495,15 @@ func.func @dim_op_fold(%arg0: index, %arg1: index, %arg2: index, %BUF: memref<?x
     affine.for %arg4 = 0 to %ub {
       %s = memref.dim %0, %c0 : memref<?x?xf32>
       %v = memref.view %3[%c0][%arg4, %s] : memref<?xi8> to memref<?x?xf32>
-      %sv = memref.subview %0[%c0, %c0][%s,%arg4][%c1,%c1] : memref<?x?xf32> to memref<?x?xf32, #map1>
+      %sv = memref.subview %0[%c0, %c0][%s,%arg4][%c1,%c1] : memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
       %l = memref.dim %v, %c1 : memref<?x?xf32>
-      %u = memref.dim %sv, %c0 : memref<?x?xf32, #map1>
+      %u = memref.dim %sv, %c0 : memref<?x?xf32, strided<[?, ?], offset: ?>>
       affine.for %arg5 = %l to %u {
         "foo"() : () -> ()
       }
-      %sv2 = memref.subview %0[0, 0][17, %arg4][1, 1] : memref<?x?xf32> to memref<17x?xf32, #map3>
+      %sv2 = memref.subview %0[0, 0][17, %arg4][1, 1] : memref<?x?xf32> to memref<17x?xf32, strided<[?, 1], offset: ?>>
       %l2 = memref.dim %v, %c1 : memref<?x?xf32>
-      %u2 = memref.dim %sv2, %c1 : memref<17x?xf32, #map3>
+      %u2 = memref.dim %sv2, %c1 : memref<17x?xf32, strided<[?, 1], offset: ?>>
       scf.for %arg5 = %l2 to %u2 step %c1 {
         "foo"() : () -> ()
       }
@@ -733,18 +729,6 @@ func.func @view(%arg0 : index) -> (f32, f32, f32, f32) {
 
 // -----
 
-// CHECK-DAG: #[[$BASE_MAP0:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2)>
-// CHECK-DAG: #[[$SUBVIEW_MAP0:map[0-9]+]] = affine_map<(d0, d1, d2)[s0] -> (d0 * 64 + s0 + d1 * 4 + d2)>
-// CHECK-DAG: #[[$SUBVIEW_MAP1:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d0 * 64 + d1 * 4 + d2 + 79)>
-// CHECK-DAG: #[[$SUBVIEW_MAP2:map[0-9]+]] = affine_map<(d0, d1, d2) -> (d0 * 128 + d1 * 28 + d2 * 11)>
-// CHECK-DAG: #[[$SUBVIEW_MAP3:map[0-9]+]] = affine_map<(d0, d1, d2)[s0, s1, s2, s3] -> (d0 * s1 + s0 + d1 * s2 + d2 * s3)>
-// CHECK-DAG: #[[$SUBVIEW_MAP4:map[0-9]+]] = affine_map<(d0, d1, d2)[s0] -> (d0 * 128 + s0 + d1 * 28 + d2 * 11)>
-// CHECK-DAG: #[[$SUBVIEW_MAP5:map[0-9]+]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s0 + d1 * s1 + d2 * s2 + 79)>
-// CHECK-DAG: #[[$SUBVIEW_MAP6:map[0-9]+]] = affine_map<(d0, d1, d2)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2 + d2 * 2)>
-// CHECK-DAG: #[[$SUBVIEW_MAP7:map[0-9]+]] = affine_map<(d0, d1)[s0] -> (d0 * 4 + s0 + d1)>
-// CHECK-DAG: #[[$SUBVIEW_MAP8:map[0-9]+]] = affine_map<(d0, d1) -> (d0 * 4 + d1 + 12)>
-
-
 // CHECK-LABEL: func @subview
 // CHECK-SAME: %[[ARG0:.*]]: index, %[[ARG1:.*]]: index
 func.func @subview(%arg0 : index, %arg1 : index) -> (index, index) {
@@ -764,115 +748,115 @@ func.func @subview(%arg0 : index, %arg1 : index) -> (index, index) {
   %c15 = arith.constant 15 : index
 
   // CHECK: %[[ALLOC0:.*]] = memref.alloc()
-  %0 = memref.alloc() : memref<8x16x4xf32, offset : 0, strides : [64, 4, 1]>
+  %0 = memref.alloc() : memref<8x16x4xf32, strided<[64, 4, 1], offset: 0>>
 
   // Test: subview with constant base memref and constant operands is folded.
   // Note that the subview uses the base memrefs layout map because it used
   // zero offset and unit stride arguments.
   // CHECK: memref.subview %[[ALLOC0]][0, 0, 0] [7, 11, 2] [1, 1, 1] :
-  // CHECK-SAME: memref<8x16x4xf32, #[[$BASE_MAP0]]>
-  // CHECK-SAME: to memref<7x11x2xf32, #[[$BASE_MAP0]]>
+  // CHECK-SAME: memref<8x16x4xf32, strided<[64, 4, 1]>>
+  // CHECK-SAME: to memref<7x11x2xf32, strided<[64, 4, 1]>>
   %1 = memref.subview %0[%c0, %c0, %c0] [%c7, %c11, %c2] [%c1, %c1, %c1]
-    : memref<8x16x4xf32, offset : 0, strides : [64, 4, 1]> to
-      memref<?x?x?xf32, offset : ?, strides : [?, ?, ?]>
-  %v0 = memref.load %1[%c0, %c0, %c0] : memref<?x?x?xf32, offset : ?, strides : [?, ?, ?]>
+    : memref<8x16x4xf32, strided<[64, 4, 1], offset: 0>> to
+      memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+  %v0 = memref.load %1[%c0, %c0, %c0] : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 
   // Test: subview with one dynamic operand can also be folded.
   // CHECK: memref.subview %[[ALLOC0]][0, %[[ARG0]], 0] [7, 11, 15] [1, 1, 1] :
-  // CHECK-SAME: memref<8x16x4xf32, #[[$BASE_MAP0]]>
-  // CHECK-SAME: to memref<7x11x15xf32, #[[$SUBVIEW_MAP0]]>
+  // CHECK-SAME: memref<8x16x4xf32, strided<[64, 4, 1]>>
+  // CHECK-SAME: to memref<7x11x15xf32, strided<[64, 4, 1], offset: ?>>
   %2 = memref.subview %0[%c0, %arg0, %c0] [%c7, %c11, %c15] [%c1, %c1, %c1]
-    : memref<8x16x4xf32, offset : 0, strides : [64, 4, 1]> to
-      memref<?x?x?xf32, offset : ?, strides : [?, ?, ?]>
-  memref.store %v0, %2[%c0, %c0, %c0] : memref<?x?x?xf32, offset : ?, strides : [?, ?, ?]>
+    : memref<8x16x4xf32, strided<[64, 4, 1], offset: 0>> to
+      memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+  memref.store %v0, %2[%c0, %c0, %c0] : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 
   // CHECK: %[[ALLOC1:.*]] = memref.alloc(%[[ARG0]])
-  %3 = memref.alloc(%arg0) : memref<?x16x4xf32, offset : 0, strides : [64, 4, 1]>
+  %3 = memref.alloc(%arg0) : memref<?x16x4xf32, strided<[64, 4, 1], offset: 0>>
   // Test: subview with constant operands but dynamic base memref is folded as long as the strides and offset of the base memref are static.
   // CHECK: memref.subview %[[ALLOC1]][0, 0, 0] [7, 11, 15] [1, 1, 1] :
-  // CHECK-SAME: memref<?x16x4xf32, #[[$BASE_MAP0]]>
-  // CHECK-SAME: to memref<7x11x15xf32, #[[$BASE_MAP0]]>
+  // CHECK-SAME: memref<?x16x4xf32, strided<[64, 4, 1]>>
+  // CHECK-SAME: to memref<7x11x15xf32, strided<[64, 4, 1]>>
   %4 = memref.subview %3[%c0, %c0, %c0] [%c7, %c11, %c15] [%c1, %c1, %c1]
-    : memref<?x16x4xf32, offset : 0, strides : [64, 4, 1]> to
-      memref<?x?x?xf32, offset : ?, strides : [?, ?, ?]>
-  memref.store %v0, %4[%c0, %c0, %c0] : memref<?x?x?xf32, offset : ?, strides : [?, ?, ?]>
+    : memref<?x16x4xf32, strided<[64, 4, 1], offset: 0>> to
+      memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+  memref.store %v0, %4[%c0, %c0, %c0] : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 
   // Test: subview offset operands are folded correctly w.r.t. base strides.
   // CHECK: memref.subview %[[ALLOC0]][1, 2, 7] [7, 11, 2] [1, 1, 1] :
-  // CHECK-SAME: memref<8x16x4xf32, #[[$BASE_MAP0]]> to
-  // CHECK-SAME: memref<7x11x2xf32, #[[$SUBVIEW_MAP1]]>
+  // CHECK-SAME: memref<8x16x4xf32, strided<[64, 4, 1]>> to
+  // CHECK-SAME: memref<7x11x2xf32, strided<[64, 4, 1], offset: 79>>
   %5 = memref.subview %0[%c1, %c2, %c7] [%c7, %c11, %c2] [%c1, %c1, %c1]
-    : memref<8x16x4xf32, offset : 0, strides : [64, 4, 1]> to
-      memref<?x?x?xf32, offset : ?, strides : [?, ?, ?]>
-  memref.store %v0, %5[%c0, %c0, %c0] : memref<?x?x?xf32, offset : ?, strides : [?, ?, ?]>
+    : memref<8x16x4xf32, strided<[64, 4, 1], offset: 0>> to
+      memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+  memref.store %v0, %5[%c0, %c0, %c0] : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 
   // Test: subview stride operands are folded correctly w.r.t. base strides.
   // CHECK: memref.subview %[[ALLOC0]][0, 0, 0] [7, 11, 2] [2, 7, 11] :
-  // CHECK-SAME: memref<8x16x4xf32, #[[$BASE_MAP0]]>
-  // CHECK-SAME: to memref<7x11x2xf32, #[[$SUBVIEW_MAP2]]>
+  // CHECK-SAME: memref<8x16x4xf32, strided<[64, 4, 1]>>
+  // CHECK-SAME: to memref<7x11x2xf32, strided<[128, 28, 11]>>
   %6 = memref.subview %0[%c0, %c0, %c0] [%c7, %c11, %c2] [%c2, %c7, %c11]
-    : memref<8x16x4xf32, offset : 0, strides : [64, 4, 1]> to
-      memref<?x?x?xf32, offset : ?, strides : [?, ?, ?]>
-  memref.store %v0, %6[%c0, %c0, %c0] : memref<?x?x?xf32, offset : ?, strides : [?, ?, ?]>
+    : memref<8x16x4xf32, strided<[64, 4, 1], offset: 0>> to
+      memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+  memref.store %v0, %6[%c0, %c0, %c0] : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 
   // Test: subview shape are folded, but offsets and strides are not even if base memref is static
   // CHECK: memref.subview %[[ALLOC0]][%[[ARG0]], %[[ARG0]], %[[ARG0]]] [7, 11, 2] [%[[ARG1]], %[[ARG1]], %[[ARG1]]] :
-  // CHECK-SAME: memref<8x16x4xf32, #[[$BASE_MAP0]]> to
-  // CHECK-SAME: memref<7x11x2xf32, #[[$SUBVIEW_MAP3]]>
+  // CHECK-SAME: memref<8x16x4xf32, strided<[64, 4, 1]>> to
+  // CHECK-SAME: memref<7x11x2xf32, strided<[?, ?, ?], offset: ?>>
   %10 = memref.subview %0[%arg0, %arg0, %arg0] [%c7, %c11, %c2] [%arg1, %arg1, %arg1] :
-    memref<8x16x4xf32, offset:0, strides:[64, 4, 1]> to
-    memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>
+    memref<8x16x4xf32, strided<[64, 4, 1], offset: 0>> to
+    memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
   memref.store %v0, %10[%arg1, %arg1, %arg1] :
-    memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>
+    memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 
   // Test: subview strides are folded, but offsets and shape are not even if base memref is static
   // CHECK: memref.subview %[[ALLOC0]][%[[ARG0]], %[[ARG0]], %[[ARG0]]] [%[[ARG1]], %[[ARG1]], %[[ARG1]]] [2, 7, 11] :
-  // CHECK-SAME: memref<8x16x4xf32, #[[$BASE_MAP0]]> to
-  // CHECK-SAME: memref<?x?x?xf32, #[[$SUBVIEW_MAP4]]
+  // CHECK-SAME: memref<8x16x4xf32, strided<[64, 4, 1]>> to
+  // CHECK-SAME: memref<?x?x?xf32, strided<[128, 28, 11], offset: ?>>
   %11 = memref.subview %0[%arg0, %arg0, %arg0] [%arg1, %arg1, %arg1] [%c2, %c7, %c11] :
-    memref<8x16x4xf32, offset:0, strides:[64, 4, 1]> to
-    memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>
+    memref<8x16x4xf32, strided<[64, 4, 1], offset: 0>> to
+    memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
   memref.store %v0, %11[%arg0, %arg0, %arg0] :
-    memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>
+    memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 
   // Test: subview offsets are folded, but strides and shape are not even if base memref is static
   // CHECK: memref.subview %[[ALLOC0]][1, 2, 7] [%[[ARG1]], %[[ARG1]], %[[ARG1]]] [%[[ARG0]], %[[ARG0]], %[[ARG0]]] :
-  // CHECK-SAME: memref<8x16x4xf32, #[[$BASE_MAP0]]> to
-  // CHECK-SAME: memref<?x?x?xf32, #[[$SUBVIEW_MAP5]]
+  // CHECK-SAME: memref<8x16x4xf32, strided<[64, 4, 1]>> to
+  // CHECK-SAME: memref<?x?x?xf32, strided<[?, ?, ?], offset: 79>>
   %13 = memref.subview %0[%c1, %c2, %c7] [%arg1, %arg1, %arg1] [%arg0, %arg0, %arg0] :
-    memref<8x16x4xf32, offset:0, strides:[64, 4, 1]> to
-    memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>
+    memref<8x16x4xf32, strided<[64, 4, 1], offset: 0>> to
+    memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
   memref.store %v0, %13[%arg1, %arg1, %arg1] :
-    memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>
+    memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 
   // CHECK: %[[ALLOC2:.*]] = memref.alloc(%[[ARG0]], %[[ARG0]], %[[ARG1]])
   %14 = memref.alloc(%arg0, %arg0, %arg1) : memref<?x?x?xf32>
   // Test: subview shape are folded, even if base memref is not static
   // CHECK: memref.subview %[[ALLOC2]][%[[ARG0]], %[[ARG0]], %[[ARG0]]] [7, 11, 2] [%[[ARG1]], %[[ARG1]], %[[ARG1]]] :
   // CHECK-SAME: memref<?x?x?xf32> to
-  // CHECK-SAME: memref<7x11x2xf32, #[[$SUBVIEW_MAP3]]>
+  // CHECK-SAME: memref<7x11x2xf32, strided<[?, ?, ?], offset: ?>>
   %15 = memref.subview %14[%arg0, %arg0, %arg0] [%c7, %c11, %c2] [%arg1, %arg1, %arg1] :
     memref<?x?x?xf32> to
-    memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>
-  memref.store %v0, %15[%arg1, %arg1, %arg1] : memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>
+    memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+  memref.store %v0, %15[%arg1, %arg1, %arg1] : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 
   // TEST: subview strides are folded, in the type only the most minor stride is folded.
   // CHECK: memref.subview %[[ALLOC2]][%[[ARG0]], %[[ARG0]], %[[ARG0]]] [%[[ARG1]], %[[ARG1]], %[[ARG1]]] [2, 2, 2] :
   // CHECK-SAME: memref<?x?x?xf32> to
-  // CHECK-SAME: memref<?x?x?xf32, #[[$SUBVIEW_MAP6]]
+  // CHECK-SAME: memref<?x?x?xf32, strided<[?, ?, 2], offset: ?>>
   %16 = memref.subview %14[%arg0, %arg0, %arg0] [%arg1, %arg1, %arg1] [%c2, %c2, %c2] :
     memref<?x?x?xf32> to
-    memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>
-  memref.store %v0, %16[%arg0, %arg0, %arg0] : memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>
+    memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+  memref.store %v0, %16[%arg0, %arg0, %arg0] : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 
   // TEST: subview offsets are folded but the type offset remains dynamic, when the base memref is not static
   // CHECK: memref.subview %[[ALLOC2]][1, 1, 1] [%[[ARG0]], %[[ARG0]], %[[ARG0]]] [%[[ARG1]], %[[ARG1]], %[[ARG1]]] :
   // CHECK-SAME: memref<?x?x?xf32> to
-  // CHECK-SAME: memref<?x?x?xf32, #[[$SUBVIEW_MAP3]]
+  // CHECK-SAME: memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
   %17 = memref.subview %14[%c1, %c1, %c1] [%arg0, %arg0, %arg0] [%arg1, %arg1, %arg1] :
     memref<?x?x?xf32> to
-    memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>
-  memref.store %v0, %17[%arg0, %arg0, %arg0] : memref<?x?x?xf32, offset: ?, strides: [?, ?, ?]>
+    memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+  memref.store %v0, %17[%arg0, %arg0, %arg0] : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 
   // CHECK: %[[ALLOC3:.*]] = memref.alloc() : memref<12x4xf32>
   %18 = memref.alloc() : memref<12x4xf32>
@@ -881,24 +865,24 @@ func.func @subview(%arg0 : index, %arg1 : index) -> (index, index) {
   // TEST: subview strides are maintained when sizes are folded
   // CHECK: memref.subview %[[ALLOC3]][%arg1, %arg1] [2, 4] [1, 1] :
   // CHECK-SAME: memref<12x4xf32> to
-  // CHECK-SAME: memref<2x4xf32, #[[$SUBVIEW_MAP7]]>
+  // CHECK-SAME: memref<2x4xf32, strided<[4, 1], offset: ?>
   %19 = memref.subview %18[%arg1, %arg1] [%c2, %c4] [1, 1] :
     memref<12x4xf32> to
-    memref<?x?xf32, offset: ?, strides:[4, 1]>
-  memref.store %v0, %19[%arg1, %arg1] : memref<?x?xf32, offset: ?, strides:[4, 1]>
+    memref<?x?xf32, strided<[4, 1], offset: ?>>
+  memref.store %v0, %19[%arg1, %arg1] : memref<?x?xf32, strided<[4, 1], offset: ?>>
 
   // TEST: subview strides and sizes are maintained when offsets are folded
   // CHECK: memref.subview %[[ALLOC3]][2, 4] [12, 4] [1, 1] :
   // CHECK-SAME: memref<12x4xf32> to
-  // CHECK-SAME: memref<12x4xf32, #[[$SUBVIEW_MAP8]]>
+  // CHECK-SAME: memref<12x4xf32, strided<[4, 1], offset: 12>>
   %20 = memref.subview %18[%c2, %c4] [12, 4] [1, 1] :
     memref<12x4xf32> to
-    memref<12x4xf32, offset: ?, strides:[4, 1]>
-  memref.store %v0, %20[%arg1, %arg1] : memref<12x4xf32, offset: ?, strides:[4, 1]>
+    memref<12x4xf32, strided<[4, 1], offset: ?>>
+  memref.store %v0, %20[%arg1, %arg1] : memref<12x4xf32, strided<[4, 1], offset: ?>>
 
   // Test: dim on subview is rewritten to size operand.
-  %7 = memref.dim %4, %c0 : memref<?x?x?xf32, offset : ?, strides : [?, ?, ?]>
-  %8 = memref.dim %4, %c1 : memref<?x?x?xf32, offset : ?, strides : [?, ?, ?]>
+  %7 = memref.dim %4, %c0 : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+  %8 = memref.dim %4, %c1 : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
 
   // CHECK: return %[[C7]], %[[C11]]
   return %7, %8 : index, index
@@ -1049,28 +1033,24 @@ func.func @tensor_arith.ceildivui_by_one(%arg0: tensor<4x5xi32>) -> tensor<4x5xi
 // -----
 
 // CHECK-LABEL: func @memref_cast_folding_subview
-func.func @memref_cast_folding_subview(%arg0: memref<4x5xf32>, %i: index) -> (memref<?x?xf32, offset:? , strides: [?, ?]>) {
+func.func @memref_cast_folding_subview(%arg0: memref<4x5xf32>, %i: index) -> (memref<?x?xf32, strided<[?, ?], offset: ?>>) {
   %0 = memref.cast %arg0 : memref<4x5xf32> to memref<?x?xf32>
   // CHECK-NEXT: memref.subview %{{.*}}: memref<4x5xf32>
-  %1 = memref.subview %0[%i, %i][%i, %i][%i, %i]: memref<?x?xf32> to memref<?x?xf32, offset:? , strides: [?, ?]>
-  // CHECK-NEXT: return %{{.*}}
-  return %1: memref<?x?xf32, offset:? , strides: [?, ?]>
+  %1 = memref.subview %0[%i, %i][%i, %i][%i, %i]: memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
+  return %1: memref<?x?xf32, strided<[?, ?], offset: ?>>
 }
 
 // -----
 
-// CHECK-DAG: #[[$map0:.*]] = affine_map<(d0, d1) -> (d0 * 16 + d1)>
-// CHECK-DAG: #[[$map1:.*]] = affine_map<(d0, d1)[s0, s1] -> (d0 * s1 + s0 + d1)>
-
 // CHECK-LABEL: func @memref_cast_folding_subview_static(
 func.func @memref_cast_folding_subview_static(%V: memref<16x16xf32>, %a: index, %b: index)
-  -> memref<3x4xf32, offset:?, strides:[?, 1]>
+  -> memref<3x4xf32, strided<[?, 1], offset: ?>>
 {
   %0 = memref.cast %V : memref<16x16xf32> to memref<?x?xf32>
-  %1 = memref.subview %0[0, 0][3, 4][1, 1] : memref<?x?xf32> to memref<3x4xf32, offset:?, strides:[?, 1]>
+  %1 = memref.subview %0[0, 0][3, 4][1, 1] : memref<?x?xf32> to memref<3x4xf32, strided<[?, 1], offset: ?>>
 
-  // CHECK:  memref.subview{{.*}}: memref<16x16xf32> to memref<3x4xf32, #[[$map0]]>
-  return %1: memref<3x4xf32, offset:?, strides:[?, 1]>
+  // CHECK:  memref.subview{{.*}}: memref<16x16xf32> to memref<3x4xf32, strided<[16, 1]>>
+  return %1: memref<3x4xf32, strided<[?, 1], offset: ?>>
 }
 
 // -----

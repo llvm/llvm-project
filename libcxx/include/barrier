@@ -48,10 +48,19 @@ namespace std
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__availability>
 #include <__config>
+#include <__memory/unique_ptr.h>
 #include <__thread/timed_backoff_policy.h>
+#include <__utility/move.h>
 #include <atomic>
 #include <limits>
-#include <memory>
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <concepts>
+#  include <iterator>
+#  include <memory>
+#  include <stdexcept>
+#  include <variant>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -283,7 +292,7 @@ public:
 template<class _CompletionF = __empty_completion>
 class barrier {
 
-    __barrier_base<_CompletionF> __b;
+    __barrier_base<_CompletionF> __b_;
 public:
     using arrival_token = typename __barrier_base<_CompletionF>::arrival_token;
 
@@ -293,7 +302,7 @@ public:
 
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
-        : __b(__count, _VSTD::move(__completion)) {
+        : __b_(__count, _VSTD::move(__completion)) {
     }
 
     barrier(barrier const&) = delete;
@@ -302,12 +311,12 @@ public:
     [[nodiscard]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     arrival_token arrive(ptrdiff_t __update = 1)
     {
-        return __b.arrive(__update);
+        return __b_.arrive(__update);
     }
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void wait(arrival_token&& __phase) const
     {
-        __b.wait(_VSTD::move(__phase));
+        __b_.wait(_VSTD::move(__phase));
     }
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void arrive_and_wait()
@@ -317,7 +326,7 @@ public:
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     void arrive_and_drop()
     {
-        __b.arrive_and_drop();
+        __b_.arrive_and_drop();
     }
 };
 

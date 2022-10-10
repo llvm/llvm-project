@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -convert-linalg-to-loops -convert-scf-to-cf -convert-linalg-to-llvm -convert-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-cpu-runner -O3 -e main -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_integration_test_dir/libmlir_runner_utils%shlibext \
+// RUN:   -shared-libs=%mlir_lib_dir/libmlir_runner_utils%shlibext \
 // RUN: | FileCheck %s
 
 func.func private @printMemrefF32(memref<*xf32>)
@@ -18,13 +18,13 @@ func.func @main() {
   memref.store %f1, %A[%c0, %c1] : memref<?x?xf32>
   memref.store %f2, %A[%c1, %c0] : memref<?x?xf32>
   memref.store %f3, %A[%c1, %c1] : memref<?x?xf32>
-  %B = memref.subview %A[%c1, 0][1, %c2][1, 1] : memref<?x?xf32> to memref<?xf32, offset: ?, strides: [1]>
-  %C = memref.subview %A[0, %c1][%c2, 1][1, 1] : memref<?x?xf32> to memref<?xf32, offset: ?, strides: [?]>
+  %B = memref.subview %A[%c1, 0][1, %c2][1, 1] : memref<?x?xf32> to memref<?xf32, strided<[1], offset: ?>>
+  %C = memref.subview %A[0, %c1][%c2, 1][1, 1] : memref<?x?xf32> to memref<?xf32, strided<[?], offset: ?>>
   %A_ = memref.cast %A : memref<?x?xf32> to memref<*xf32>
   call @printMemrefF32(%A_) : (memref<*xf32>) -> ()
-  %B_ = memref.cast %B : memref<?xf32, offset: ?, strides: [1]> to memref<*xf32>
+  %B_ = memref.cast %B : memref<?xf32, strided<[1], offset: ?>> to memref<*xf32>
   call @printMemrefF32(%B_) : (memref<*xf32>) -> ()
-  %C_ = memref.cast %C : memref<?xf32, offset: ?, strides: [?]> to memref<*xf32>
+  %C_ = memref.cast %C : memref<?xf32, strided<[?], offset: ?>> to memref<*xf32>
   call @printMemrefF32(%C_) : (memref<*xf32>) -> ()
   memref.dealloc %A : memref<?x?xf32>
   return

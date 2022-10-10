@@ -26,6 +26,10 @@ struct RenameOptions {
   size_t LimitFiles = 50;
   /// If true, format the rename edits, only meaningful in ClangdServer layer.
   bool WantFormat = false;
+  /// Allow rename of virtual method hierarchies.
+  /// Disable to support broken index implementations with missing relations.
+  /// FIXME: fix those implementations and remove this option.
+  bool RenameVirtual = true;
 };
 
 struct RenameInputs {

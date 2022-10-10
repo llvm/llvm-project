@@ -592,7 +592,7 @@ ModuleSP DynamicLoaderPOSIXDYLD::LoadModuleAtAddress(const FileSpec &file,
   // (e.g. com.example.myapplication) instead of the main process binary
   // (/system/bin/app_process(32)). The logic is not sound in general (it
   // assumes base_addr is the real address, even though it actually is a load
-  // bias), but it happens to work on adroid because app_process has a file
+  // bias), but it happens to work on android because app_process has a file
   // address of zero.
   // This should be removed after we drop support for android-23.
   if (m_process->GetTarget().GetArchitecture().GetTriple().isAndroid()) {
@@ -650,7 +650,7 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
       LLDB_LOGF(
           log,
           "DynamicLoaderPOSIXDYLD::%s failed loading module %s at 0x%" PRIx64,
-          __FUNCTION__, I->file_spec.GetCString(), I->base_addr);
+          __FUNCTION__, I->file_spec.GetPath().c_str(), I->base_addr);
     }
   }
 

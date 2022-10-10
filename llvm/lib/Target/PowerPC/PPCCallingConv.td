@@ -206,13 +206,8 @@ def CC_PPC32_SVR4_Common : CallingConv<[
   
   CCIfType<[i32], CCAssignToStack<4, 4>>,
   
-  // Floats are stored in double precision format, thus they have the same
-  // alignment and size as doubles.
-  // With SPE floats are stored as single precision, so have alignment and
-  // size of int.
-  CCIfType<[f32,f64], CCIfNotSubtarget<"hasSPE()", CCAssignToStack<8, 8>>>,
-  CCIfType<[f32], CCIfSubtarget<"hasSPE()", CCAssignToStack<4, 4>>>,
-  CCIfType<[f64], CCIfSubtarget<"hasSPE()", CCAssignToStack<8, 8>>>,
+  CCIfType<[f32], CCAssignToStack<4, 4>>,
+  CCIfType<[f64], CCAssignToStack<8, 8>>,
 
   // Vectors and float128 get 16-byte stack slots that are 16-byte aligned.
   CCIfType<[v16i8, v8i16, v4i32, v4f32, v2f64, v2i64], CCAssignToStack<16, 16>>,
@@ -277,12 +272,18 @@ def CSR_SVR432 :  CalleeSavedRegs<(add CSR_SVR432_COMM, F14, F15, F16, F17, F18,
                                         F27, F28, F29, F30, F31
                                    )>;
 def CSR_SPE : CalleeSavedRegs<(add S14, S15, S16, S17, S18, S19, S20, S21, S22,
-                                   S23, S24, S25, S26, S27, S28, S29, S30, S31
+                                   S23, S24, S25, S26, S27, S28, S29, S30 
                               )>;
+
+def CSR_SPE_NO_S30_31 : CalleeSavedRegs<(add S14, S15, S16, S17, S18, S19, S20, S21,
+				          S22, S23, S24, S25, S26, S27, S28, S29
+			      )>;
 
 def CSR_SVR432_Altivec : CalleeSavedRegs<(add CSR_SVR432, CSR_Altivec)>;
 
 def CSR_SVR432_SPE : CalleeSavedRegs<(add CSR_SVR432_COMM, CSR_SPE)>;
+
+def CSR_SVR432_SPE_NO_S30_31 : CalleeSavedRegs<(add CSR_SVR432_COMM, CSR_SPE_NO_S30_31)>;
 
 def CSR_AIX32 : CalleeSavedRegs<(add R13, R14, R15, R16, R17, R18, R19, R20,
                                      R21, R22, R23, R24, R25, R26, R27, R28,
@@ -385,3 +386,9 @@ def CSR_SVR64_ColdCC_R2_VSRP : CalleeSavedRegs<(add CSR_SVR64_ColdCC_VSRP, X2)>;
 
 def CSR_64_AllRegs_VSRP :
   CalleeSavedRegs<(add CSR_64_AllRegs_VSX, CSR_ALL_VSRP)>;
+
+def CSR_AIX64_VSRP : CalleeSavedRegs<(add CSR_PPC64_Altivec, CSR_VSRP)>;
+
+def CSR_AIX64_R2_VSRP : CalleeSavedRegs<(add CSR_AIX64_VSRP, X2)>;
+
+def CSR_AIX32_VSRP : CalleeSavedRegs<(add CSR_AIX32_Altivec, CSR_VSRP)>;

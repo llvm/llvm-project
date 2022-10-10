@@ -1,17 +1,16 @@
-// RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -DOFFSET=0 -O3 %s -o %t && \
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -fsanitize-memory-track-origins=2 -DOFFSET=0 -O3 %s -o %t && \
 // RUN:     not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-Z1 --check-prefix=CHECK-%short-stack < %t.out
 
-// RUN: %clangxx_msan -fsanitize-memory-track-origins=2 -DOFFSET=10 -O3 %s -o %t && \
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -fsanitize-memory-track-origins=2 -DOFFSET=10 -O3 %s -o %t && \
 // RUN:     not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-Z2 --check-prefix=CHECK-%short-stack < %t.out
 
-
-// RUN: %clangxx_msan -mllvm -msan-instrumentation-with-call-threshold=0 -fsanitize-memory-track-origins=2 -DOFFSET=0 -O3 %s -o %t && \
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -mllvm -msan-instrumentation-with-call-threshold=0 -fsanitize-memory-track-origins=2 -DOFFSET=0 -O3 %s -o %t && \
 // RUN:     not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-Z1 --check-prefix=CHECK-%short-stack < %t.out
 
-// RUN: %clangxx_msan -mllvm -msan-instrumentation-with-call-threshold=0 -fsanitize-memory-track-origins=2 -DOFFSET=10 -O3 %s -o %t && \
+// RUN: %clangxx_msan -fno-sanitize-memory-param-retval -mllvm -msan-instrumentation-with-call-threshold=0 -fsanitize-memory-track-origins=2 -DOFFSET=10 -O3 %s -o %t && \
 // RUN:     not %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-Z2 --check-prefix=CHECK-%short-stack < %t.out
 
@@ -57,6 +56,7 @@ int main(int argc, char *argv[]) {
 // CHECK-FULL-STACK: {{#1 .* in fn_f.*chained_origin_memcpy.cpp:}}[[@LINE-25]]
 // CHECK-SHORT-STACK: {{#0 .* in fn_g.*chained_origin_memcpy.cpp:}}[[@LINE-31]]
 
-// CHECK-Z1: Uninitialized value was created by an allocation of 'z1' in the stack frame of function 'main'
-// CHECK-Z2: Uninitialized value was created by an allocation of 'z2' in the stack frame of function 'main'
-// CHECK: {{#0 .* in main.*chained_origin_memcpy.cpp:}}[[@LINE-22]]
+// CHECK-Z1: Uninitialized value was created by an allocation of 'z1' in the stack frame
+// CHECK-Z2: Uninitialized value was created by an allocation of 'z2' in the stack frame
+// CHECK-Z1: {{#0 .* in main.*chained_origin_memcpy.cpp:}}[[@LINE-21]]
+// CHECK-Z2: {{#0 .* in main.*chained_origin_memcpy.cpp:}}[[@LINE-21]]

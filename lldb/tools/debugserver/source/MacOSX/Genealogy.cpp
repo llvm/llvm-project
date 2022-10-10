@@ -129,7 +129,7 @@ void Genealogy::GetActivities(pid_t pid, const MachThreadList &thread_list,
                           return true;
                         });
 
-                    // Collect all the Activites
+                    // Collect all the Activities
                     m_os_activity_iterate_activities(
                         process_info->activities, process_info,
                         ^bool(os_activity_entry_t activity) {

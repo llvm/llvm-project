@@ -139,7 +139,7 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
     ```
   }];
 
-  let arguments = (ins AnyAttr:$value);
+  let arguments = (ins EmitC_OpaqueOrTypedAttr:$value);
   let results = (outs AnyType);
 
   let hasFolder = 1;
@@ -212,7 +212,7 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
     ```
   }];
 
-  let arguments = (ins AnyAttr:$value);
+  let arguments = (ins EmitC_OpaqueOrTypedAttr:$value);
   let results = (outs AnyType);
 
   let hasVerifier = 1;

@@ -568,7 +568,7 @@ addr_t ClangExpressionDeclMap::GetSymbolAddress(Target &target,
           reexport_module_sp =
               target.GetImages().FindFirstModule(reexport_module_spec);
           if (!reexport_module_sp) {
-            reexport_module_spec.GetPlatformFileSpec().GetDirectory().Clear();
+            reexport_module_spec.GetPlatformFileSpec().ClearDirectory();
             reexport_module_sp =
                 target.GetImages().FindFirstModule(reexport_module_spec);
           }
@@ -866,7 +866,7 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
   // emit DW_AT_object_pointer
   // for C++ so it hasn't actually been tested.
 
-  VariableList *vars = frame->GetVariableList(false);
+  VariableList *vars = frame->GetVariableList(false, nullptr);
 
   lldb::VariableSP this_var = vars->FindVariable(ConstString("this"));
 
@@ -951,7 +951,7 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context) {
   // In that case, just look up the "self" variable in the current scope
   // and use its type.
 
-  VariableList *vars = frame->GetVariableList(false);
+  VariableList *vars = frame->GetVariableList(false, nullptr);
 
   lldb::VariableSP self_var = vars->FindVariable(ConstString("self"));
 
@@ -1915,7 +1915,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
       // We failed to copy the type we found
       LLDB_LOG(log,
                "  Failed to import the function type '{0}' ({1:x})"
-               " into the expression parser AST contenxt",
+               " into the expression parser AST context",
                function_type->GetName(), function_type->GetID());
 
       return;

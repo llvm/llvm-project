@@ -17,15 +17,21 @@
 #include <__functional/unary_function.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
+#include <__memory/allocator.h>
 #include <__memory/allocator_traits.h>
+#include <__memory/builtin_new_allocator.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/shared_ptr.h>
+#include <__memory/unique_ptr.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
+#include <__utility/piecewise_construct.h>
 #include <__utility/swap.h>
 #include <exception>
-#include <memory> // TODO: replace with <__memory/__builtin_new_allocator.h>
+#include <new>
+#include <tuple>
 #include <type_traits>
+#include <typeinfo>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -45,13 +51,13 @@ public:
 // bad_function_call will end up containing a weak definition of the vtable and
 // typeinfo.
 #ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_KEY_FUNCTION
-    virtual ~bad_function_call() _NOEXCEPT;
+    ~bad_function_call() _NOEXCEPT override;
 #else
-    virtual ~bad_function_call() _NOEXCEPT {}
+    ~bad_function_call() _NOEXCEPT override {}
 #endif
 
 #ifdef _LIBCPP_ABI_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE
-    virtual const char* what() const _NOEXCEPT;
+    const char* what() const _NOEXCEPT override;
 #endif
 };
 _LIBCPP_DIAGNOSTIC_POP
@@ -670,8 +676,7 @@ struct __policy
 // Used to choose between perfect forwarding or pass-by-value. Pass-by-value is
 // faster for types that can be passed in registers.
 template <typename _Tp>
-using __fast_forward =
-    typename conditional<is_scalar<_Tp>::value, _Tp, _Tp&&>::type;
+using __fast_forward = __conditional_t<is_scalar<_Tp>::value, _Tp, _Tp&&>;
 
 // __policy_invoker calls an instance of __alloc_func held in __policy_storage.
 
@@ -968,7 +973,7 @@ class _LIBCPP_TEMPLATE_VIS function<_Rp(_ArgTypes...)>
     __func __f_;
 
     template <class _Fp, bool = _And<
-        _IsNotSame<__uncvref_t<_Fp>, function>,
+        _IsNotSame<__remove_cvref_t<_Fp>, function>,
         __invokable<_Fp, _ArgTypes...>
     >::value>
     struct __callable;

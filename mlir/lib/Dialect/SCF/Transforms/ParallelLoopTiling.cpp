@@ -10,13 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
+
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_SCFPARALLELLOOPTILING
+#include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::scf;
@@ -89,12 +94,10 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
   SmallVector<Value, 2> newBounds;
   newBounds.reserve(op.getUpperBound().size());
   bool needInboundCheck = false;
-  for (auto dim :
+  for (auto [lowerBound, upperBound, newStep, iv, step, tileSizeConstant] :
        llvm::zip(outerLoop.getLowerBound(), outerLoop.getUpperBound(),
                  outerLoop.getStep(), outerLoop.getInductionVars(),
                  op.getStep(), tileSizeConstants)) {
-    Value lowerBound, upperBound, newStep, iv, step, tileSizeConstant;
-    std::tie(lowerBound, upperBound, newStep, iv, step, tileSizeConstant) = dim;
     // Collect the statically known loop bounds
     auto lowerBoundConstant =
         dyn_cast_or_null<arith::ConstantIndexOp>(lowerBound.getDefiningOp());
@@ -139,11 +142,9 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
     // Insert in-bound check
     Value inbound =
         b.create<arith::ConstantIntOp>(op.getLoc(), 1, b.getIntegerType(1));
-    for (auto dim :
+    for (auto [outerUpperBound, outerIV, innerIV, innerStep] :
          llvm::zip(outerLoop.getUpperBound(), outerLoop.getInductionVars(),
                    innerLoop.getInductionVars(), innerLoop.getStep())) {
-      Value outerUpperBound, outerIV, innerIV, innerStep;
-      std::tie(outerUpperBound, outerIV, innerIV, innerStep) = dim;
       // %in_bound = %in_bound &&
       //             (%inner_iv * %inner_step + %outer_iv < %outer_upper_bound)
       Value index = b.create<arith::AddIOp>(
@@ -166,8 +167,7 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
       thenBlock.getArgument(ivs.index())
           .replaceAllUsesExcept(newIndex, newIndex);
     }
-    thenBlock.eraseArguments(llvm::to_vector<4>(
-        llvm::seq((unsigned)0, thenBlock.getNumArguments())));
+    thenBlock.eraseArguments(0, thenBlock.getNumArguments());
   } else {
     innerLoop.getRegion().takeBody(op.getRegion());
     b.setInsertionPointToStart(innerLoop.getBody());
@@ -186,7 +186,7 @@ mlir::scf::tileParallelLoop(ParallelOp op, ArrayRef<int64_t> tileSizes,
 
 namespace {
 struct ParallelLoopTiling
-    : public SCFParallelLoopTilingBase<ParallelLoopTiling> {
+    : public impl::SCFParallelLoopTilingBase<ParallelLoopTiling> {
   ParallelLoopTiling() = default;
   explicit ParallelLoopTiling(ArrayRef<int64_t> tileSizes,
                               bool noMinMaxBounds = false) {

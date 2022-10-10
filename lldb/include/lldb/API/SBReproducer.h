@@ -32,9 +32,6 @@ public:
 
   void SetCheckVersion(bool check);
   bool GetCheckVersion() const;
-
-private:
-  std::unique_ptr<lldb_private::repro::ReplayOptions> m_opaque_up;
 };
 
 /// The SBReproducer class is special because it bootstraps the capture and

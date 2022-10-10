@@ -12,6 +12,7 @@
 
 #include <__config>
 #include <__memory/addressof.h>
+#include <cstddef>
 #include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -24,8 +25,7 @@ template <class _Tp, class = void>
 struct __has_element_type : false_type {};
 
 template <class _Tp>
-struct __has_element_type<_Tp,
-              typename __void_t<typename _Tp::element_type>::type> : true_type {};
+struct __has_element_type<_Tp, __void_t<typename _Tp::element_type> > : true_type {};
 
 template <class _Ptr, bool = __has_element_type<_Ptr>::value>
 struct __pointer_traits_element_type;
@@ -52,8 +52,7 @@ template <class _Tp, class = void>
 struct __has_difference_type : false_type {};
 
 template <class _Tp>
-struct __has_difference_type<_Tp,
-            typename __void_t<typename _Tp::difference_type>::type> : true_type {};
+struct __has_difference_type<_Tp, __void_t<typename _Tp::difference_type> > : true_type {};
 
 template <class _Ptr, bool = __has_difference_type<_Ptr>::value>
 struct __pointer_traits_difference_type
@@ -122,9 +121,8 @@ struct _LIBCPP_TEMPLATE_VIS pointer_traits
 private:
     struct __nat {};
 public:
-    _LIBCPP_INLINE_VISIBILITY
-    static pointer pointer_to(typename conditional<is_void<element_type>::value,
-                                           __nat, element_type>::type& __r)
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+    static pointer pointer_to(__conditional_t<is_void<element_type>::value, __nat, element_type>& __r)
         {return pointer::pointer_to(__r);}
 };
 
@@ -144,20 +142,18 @@ struct _LIBCPP_TEMPLATE_VIS pointer_traits<_Tp*>
 private:
     struct __nat {};
 public:
-    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
-    static pointer pointer_to(typename conditional<is_void<element_type>::value,
-                                      __nat, element_type>::type& __r) _NOEXCEPT
+    _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
+    static pointer pointer_to(__conditional_t<is_void<element_type>::value, __nat, element_type>& __r) _NOEXCEPT
         {return _VSTD::addressof(__r);}
 };
 
-template <class _From, class _To>
-struct __rebind_pointer {
 #ifndef _LIBCPP_CXX03_LANG
-    typedef typename pointer_traits<_From>::template rebind<_To>        type;
+template <class _From, class _To>
+using __rebind_pointer_t = typename pointer_traits<_From>::template rebind<_To>;
 #else
-    typedef typename pointer_traits<_From>::template rebind<_To>::other type;
+template <class _From, class _To>
+using __rebind_pointer_t = typename pointer_traits<_From>::template rebind<_To>::other;
 #endif
-};
 
 // to_address
 
@@ -171,9 +167,30 @@ _Tp* __to_address(_Tp* __p) _NOEXCEPT {
     return __p;
 }
 
+template <class _Pointer, class = void>
+struct _HasToAddress : false_type {};
+
+template <class _Pointer>
+struct _HasToAddress<_Pointer,
+    decltype((void)pointer_traits<_Pointer>::to_address(declval<const _Pointer&>()))
+> : true_type {};
+
+template <class _Pointer, class = void>
+struct _HasArrow : false_type {};
+
+template <class _Pointer>
+struct _HasArrow<_Pointer,
+    decltype((void)declval<const _Pointer&>().operator->())
+> : true_type {};
+
+template <class _Pointer>
+struct _IsFancyPointer {
+  static const bool value = _HasArrow<_Pointer>::value || _HasToAddress<_Pointer>::value;
+};
+
 // enable_if is needed here to avoid instantiating checks for fancy pointers on raw pointers
 template <class _Pointer, class = __enable_if_t<
-    !is_pointer<_Pointer>::value && !is_array<_Pointer>::value && !is_function<_Pointer>::value
+    _And<is_class<_Pointer>, _IsFancyPointer<_Pointer> >::value
 > >
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 typename decay<decltype(__to_address_helper<_Pointer>::__call(declval<const _Pointer&>()))>::type
@@ -208,7 +225,7 @@ auto to_address(_Tp *__p) noexcept {
 
 template <class _Pointer>
 inline _LIBCPP_INLINE_VISIBILITY constexpr
-auto to_address(const _Pointer& __p) noexcept {
+auto to_address(const _Pointer& __p) noexcept -> decltype(std::__to_address(__p)) {
     return _VSTD::__to_address(__p);
 }
 #endif

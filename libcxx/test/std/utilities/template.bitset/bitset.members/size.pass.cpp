@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test size_t count() const;
+// size_t count() const; // constexpr since C++23
 
 #include <bitset>
 #include <cassert>
@@ -14,21 +14,30 @@
 #include "test_macros.h"
 
 template <std::size_t N>
-void test_size() {
+TEST_CONSTEXPR_CXX23 void test_size() {
     const std::bitset<N> v;
     assert(v.size() == N);
 }
 
-int main(int, char**) {
-    test_size<0>();
-    test_size<1>();
-    test_size<31>();
-    test_size<32>();
-    test_size<33>();
-    test_size<63>();
-    test_size<64>();
-    test_size<65>();
-    test_size<1000>();
+TEST_CONSTEXPR_CXX23 bool test() {
+  test_size<0>();
+  test_size<1>();
+  test_size<31>();
+  test_size<32>();
+  test_size<33>();
+  test_size<63>();
+  test_size<64>();
+  test_size<65>();
+  test_size<1000>();
 
-    return 0;
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER > 20
+  static_assert(test());
+#endif
+
+  return 0;
 }

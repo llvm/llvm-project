@@ -264,7 +264,6 @@ public:
     StringRef USR = API.recordUSR(Decl);
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-    AvailabilityInfo Availability = getAvailability(Decl);
     LinkageInfo Linkage = Decl->getLinkageAndVisibility();
     DocComment Comment;
     if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
@@ -278,7 +277,7 @@ public:
         DeclarationFragmentsBuilder::getSubHeading(Decl);
 
     // Add the global variable record to the API set.
-    API.addGlobalVar(Name, USR, Loc, Availability, Linkage, Comment,
+    API.addGlobalVar(Name, USR, Loc, AvailabilitySet(Decl), Linkage, Comment,
                      Declaration, SubHeading);
     return true;
   }
@@ -325,7 +324,6 @@ public:
     StringRef USR = API.recordUSR(Decl);
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-    AvailabilityInfo Availability = getAvailability(Decl);
     LinkageInfo Linkage = Decl->getLinkageAndVisibility();
     DocComment Comment;
     if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
@@ -341,8 +339,8 @@ public:
         DeclarationFragmentsBuilder::getFunctionSignature(Decl);
 
     // Add the function record to the API set.
-    API.addGlobalFunction(Name, USR, Loc, Availability, Linkage, Comment,
-                          Declaration, SubHeading, Signature);
+    API.addGlobalFunction(Name, USR, Loc, AvailabilitySet(Decl), Linkage,
+                          Comment, Declaration, SubHeading, Signature);
     return true;
   }
 
@@ -366,7 +364,6 @@ public:
     StringRef USR = API.recordUSR(Decl);
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-    AvailabilityInfo Availability = getAvailability(Decl);
     DocComment Comment;
     if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
       Comment = RawComment->getFormattedLines(Context.getSourceManager(),
@@ -379,8 +376,8 @@ public:
         DeclarationFragmentsBuilder::getSubHeading(Decl);
 
     EnumRecord *EnumRecord =
-        API.addEnum(API.copyString(Name), USR, Loc, Availability, Comment,
-                    Declaration, SubHeading);
+        API.addEnum(API.copyString(Name), USR, Loc, AvailabilitySet(Decl),
+                    Comment, Declaration, SubHeading);
 
     // Now collect information about the enumerators in this enum.
     recordEnumConstants(EnumRecord, Decl->enumerators());
@@ -407,7 +404,6 @@ public:
     StringRef USR = API.recordUSR(Decl);
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-    AvailabilityInfo Availability = getAvailability(Decl);
     DocComment Comment;
     if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
       Comment = RawComment->getFormattedLines(Context.getSourceManager(),
@@ -419,8 +415,9 @@ public:
     DeclarationFragments SubHeading =
         DeclarationFragmentsBuilder::getSubHeading(Decl);
 
-    StructRecord *StructRecord = API.addStruct(
-        Name, USR, Loc, Availability, Comment, Declaration, SubHeading);
+    StructRecord *StructRecord =
+        API.addStruct(Name, USR, Loc, AvailabilitySet(Decl), Comment,
+                      Declaration, SubHeading);
 
     // Now collect information about the fields in this struct.
     recordStructFields(StructRecord, Decl->fields());
@@ -441,7 +438,6 @@ public:
     StringRef USR = API.recordUSR(Decl);
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-    AvailabilityInfo Availability = getAvailability(Decl);
     LinkageInfo Linkage = Decl->getLinkageAndVisibility();
     DocComment Comment;
     if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
@@ -462,8 +458,8 @@ public:
     }
 
     ObjCInterfaceRecord *ObjCInterfaceRecord =
-        API.addObjCInterface(Name, USR, Loc, Availability, Linkage, Comment,
-                             Declaration, SubHeading, SuperClass);
+        API.addObjCInterface(Name, USR, Loc, AvailabilitySet(Decl), Linkage,
+                             Comment, Declaration, SubHeading, SuperClass);
 
     // Record all methods (selectors). This doesn't include automatically
     // synthesized property methods.
@@ -488,7 +484,6 @@ public:
     StringRef USR = API.recordUSR(Decl);
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-    AvailabilityInfo Availability = getAvailability(Decl);
     DocComment Comment;
     if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
       Comment = RawComment->getFormattedLines(Context.getSourceManager(),
@@ -500,8 +495,9 @@ public:
     DeclarationFragments SubHeading =
         DeclarationFragmentsBuilder::getSubHeading(Decl);
 
-    ObjCProtocolRecord *ObjCProtocolRecord = API.addObjCProtocol(
-        Name, USR, Loc, Availability, Comment, Declaration, SubHeading);
+    ObjCProtocolRecord *ObjCProtocolRecord =
+        API.addObjCProtocol(Name, USR, Loc, AvailabilitySet(Decl), Comment,
+                            Declaration, SubHeading);
 
     recordObjCMethods(ObjCProtocolRecord, Decl->methods());
     recordObjCProperties(ObjCProtocolRecord, Decl->properties());
@@ -524,7 +520,6 @@ public:
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Decl->getLocation());
     StringRef Name = Decl->getName();
-    AvailabilityInfo Availability = getAvailability(Decl);
     StringRef USR = API.recordUSR(Decl);
     DocComment Comment;
     if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
@@ -536,7 +531,7 @@ public:
         TypedefUnderlyingTypeResolver(Context).getSymbolReferenceForType(Type,
                                                                          API);
 
-    API.addTypedef(Name, USR, Loc, Availability, Comment,
+    API.addTypedef(Name, USR, Loc, AvailabilitySet(Decl), Comment,
                    DeclarationFragmentsBuilder::getFragmentsForTypedef(Decl),
                    DeclarationFragmentsBuilder::getSubHeading(Decl), SymRef);
 
@@ -549,7 +544,6 @@ public:
     StringRef USR = API.recordUSR(Decl);
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Decl->getLocation());
-    AvailabilityInfo Availability = getAvailability(Decl);
     DocComment Comment;
     if (auto *RawComment = Context.getRawCommentForDeclNoCache(Decl))
       Comment = RawComment->getFormattedLines(Context.getSourceManager(),
@@ -565,8 +559,8 @@ public:
                               API.recordUSR(InterfaceDecl));
 
     ObjCCategoryRecord *ObjCCategoryRecord =
-        API.addObjCCategory(Name, USR, Loc, Availability, Comment, Declaration,
-                            SubHeading, Interface);
+        API.addObjCCategory(Name, USR, Loc, AvailabilitySet(Decl), Comment,
+                            Declaration, SubHeading, Interface);
 
     recordObjCMethods(ObjCCategoryRecord, Decl->methods());
     recordObjCProperties(ObjCCategoryRecord, Decl->properties());
@@ -577,37 +571,6 @@ public:
   }
 
 private:
-  /// Get availability information of the declaration \p D.
-  AvailabilityInfo getAvailability(const Decl *D) const {
-    StringRef PlatformName = Context.getTargetInfo().getPlatformName();
-
-    AvailabilityInfo Availability;
-    // Collect availability attributes from all redeclarations.
-    for (const auto *RD : D->redecls()) {
-      for (const auto *A : RD->specific_attrs<AvailabilityAttr>()) {
-        if (A->getPlatform()->getName() != PlatformName)
-          continue;
-        Availability = AvailabilityInfo(A->getIntroduced(), A->getDeprecated(),
-                                        A->getObsoleted(), A->getUnavailable(),
-                                        /* UnconditionallyDeprecated */ false,
-                                        /* UnconditionallyUnavailable */ false);
-        break;
-      }
-
-      if (const auto *A = RD->getAttr<UnavailableAttr>())
-        if (!A->isImplicit()) {
-          Availability.Unavailable = true;
-          Availability.UnconditionallyUnavailable = true;
-        }
-
-      if (const auto *A = RD->getAttr<DeprecatedAttr>())
-        if (!A->isImplicit())
-          Availability.UnconditionallyDeprecated = true;
-    }
-
-    return Availability;
-  }
-
   /// Collect API information for the enum constants and associate with the
   /// parent enum.
   void recordEnumConstants(EnumRecord *EnumRecord,
@@ -618,7 +581,6 @@ private:
       StringRef USR = API.recordUSR(Constant);
       PresumedLoc Loc =
           Context.getSourceManager().getPresumedLoc(Constant->getLocation());
-      AvailabilityInfo Availability = getAvailability(Constant);
       DocComment Comment;
       if (auto *RawComment = Context.getRawCommentForDeclNoCache(Constant))
         Comment = RawComment->getFormattedLines(Context.getSourceManager(),
@@ -630,8 +592,8 @@ private:
       DeclarationFragments SubHeading =
           DeclarationFragmentsBuilder::getSubHeading(Constant);
 
-      API.addEnumConstant(EnumRecord, Name, USR, Loc, Availability, Comment,
-                          Declaration, SubHeading);
+      API.addEnumConstant(EnumRecord, Name, USR, Loc, AvailabilitySet(Constant),
+                          Comment, Declaration, SubHeading);
     }
   }
 
@@ -645,7 +607,6 @@ private:
       StringRef USR = API.recordUSR(Field);
       PresumedLoc Loc =
           Context.getSourceManager().getPresumedLoc(Field->getLocation());
-      AvailabilityInfo Availability = getAvailability(Field);
       DocComment Comment;
       if (auto *RawComment = Context.getRawCommentForDeclNoCache(Field))
         Comment = RawComment->getFormattedLines(Context.getSourceManager(),
@@ -657,8 +618,8 @@ private:
       DeclarationFragments SubHeading =
           DeclarationFragmentsBuilder::getSubHeading(Field);
 
-      API.addStructField(StructRecord, Name, USR, Loc, Availability, Comment,
-                         Declaration, SubHeading);
+      API.addStructField(StructRecord, Name, USR, Loc, AvailabilitySet(Field),
+                         Comment, Declaration, SubHeading);
     }
   }
 
@@ -675,7 +636,6 @@ private:
       StringRef USR = API.recordUSR(Method);
       PresumedLoc Loc =
           Context.getSourceManager().getPresumedLoc(Method->getLocation());
-      AvailabilityInfo Availability = getAvailability(Method);
       DocComment Comment;
       if (auto *RawComment = Context.getRawCommentForDeclNoCache(Method))
         Comment = RawComment->getFormattedLines(Context.getSourceManager(),
@@ -689,8 +649,8 @@ private:
       FunctionSignature Signature =
           DeclarationFragmentsBuilder::getFunctionSignature(Method);
 
-      API.addObjCMethod(Container, Name, USR, Loc, Availability, Comment,
-                        Declaration, SubHeading, Signature,
+      API.addObjCMethod(Container, Name, USR, Loc, AvailabilitySet(Method),
+                        Comment, Declaration, SubHeading, Signature,
                         Method->isInstanceMethod());
     }
   }
@@ -702,7 +662,6 @@ private:
       StringRef USR = API.recordUSR(Property);
       PresumedLoc Loc =
           Context.getSourceManager().getPresumedLoc(Property->getLocation());
-      AvailabilityInfo Availability = getAvailability(Property);
       DocComment Comment;
       if (auto *RawComment = Context.getRawCommentForDeclNoCache(Property))
         Comment = RawComment->getFormattedLines(Context.getSourceManager(),
@@ -728,8 +687,8 @@ private:
         Attributes |= ObjCPropertyRecord::Class;
 
       API.addObjCProperty(
-          Container, Name, USR, Loc, Availability, Comment, Declaration,
-          SubHeading,
+          Container, Name, USR, Loc, AvailabilitySet(Property), Comment,
+          Declaration, SubHeading,
           static_cast<ObjCPropertyRecord::AttributeKind>(Attributes),
           GetterName, SetterName, Property->isOptional());
     }
@@ -745,7 +704,6 @@ private:
       StringRef USR = API.recordUSR(Ivar);
       PresumedLoc Loc =
           Context.getSourceManager().getPresumedLoc(Ivar->getLocation());
-      AvailabilityInfo Availability = getAvailability(Ivar);
       DocComment Comment;
       if (auto *RawComment = Context.getRawCommentForDeclNoCache(Ivar))
         Comment = RawComment->getFormattedLines(Context.getSourceManager(),
@@ -760,8 +718,9 @@ private:
       ObjCInstanceVariableRecord::AccessControl Access =
           Ivar->getCanonicalAccessControl();
 
-      API.addObjCInstanceVariable(Container, Name, USR, Loc, Availability,
-                                  Comment, Declaration, SubHeading, Access);
+      API.addObjCInstanceVariable(Container, Name, USR, Loc,
+                                  AvailabilitySet(Ivar), Comment, Declaration,
+                                  SubHeading, Access);
     }
   }
 
@@ -890,6 +849,11 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
   CI.getPreprocessor().addPPCallbacks(std::make_unique<MacroCallback>(
       CI.getSourceManager(), *LCF, *API, CI.getPreprocessor()));
+
+  // Do not include location in anonymous decls.
+  PrintingPolicy Policy = CI.getASTContext().getPrintingPolicy();
+  Policy.AnonymousTagLocations = false;
+  CI.getASTContext().setPrintingPolicy(Policy);
 
   return std::make_unique<ExtractAPIConsumer>(CI.getASTContext(),
                                               std::move(LCF), *API);

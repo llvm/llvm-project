@@ -11,9 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
+
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Attributes.h"
@@ -23,6 +24,11 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_LINALGGENERALIZATION
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+} // namespace mlir
 
 #define DEBUG_TYPE "linalg-generalization"
 
@@ -47,8 +53,7 @@ FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
   SmallVector<Value> inputOperands = linalgOp.getInputOperands();
   SmallVector<Value> outputOperands = linalgOp.getOutputOperands();
   SmallVector<AffineMap> indexingMaps = linalgOp.getIndexingMapsArray();
-  SmallVector<StringRef> iterators = llvm::to_vector<4>(
-      linalgOp.iterator_types().getAsValueRange<StringAttr>());
+  SmallVector<StringRef> iterators = linalgOp.getIteratorTypesArray();
   SmallVector<RankedTensorType> resultTypes = linalgOp.getOutputTensorTypes();
   SmallVector<Type> types(resultTypes.begin(), resultTypes.end());
 
@@ -58,8 +63,8 @@ FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
   GenericOp genericOp =
       rewriter.create<GenericOp>(linalgOp.getLoc(), types, inputOperands,
                                  outputOperands, indexingMaps, iterators);
-  rewriter.inlineRegionBefore(linalgOp->getRegion(0), genericOp.region(),
-                              genericOp.region().begin());
+  rewriter.inlineRegionBefore(linalgOp->getRegion(0), genericOp.getRegion(),
+                              genericOp.getRegion().begin());
   rewriter.replaceOp(linalgOp, genericOp->getResults());
   return genericOp;
 }
@@ -67,7 +72,7 @@ FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
 namespace {
 
 struct LinalgGeneralizationPass
-    : public LinalgGeneralizationBase<LinalgGeneralizationPass> {
+    : public impl::LinalgGeneralizationBase<LinalgGeneralizationPass> {
   void runOnOperation() override;
 };
 

@@ -783,27 +783,27 @@ public:
 
     DataVisualization::Categories::ForEach(
         [this, &request](const lldb::TypeCategoryImplSP &category_sp) {
-          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemValue))
+          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemFormat)) {
             category_sp->GetTypeFormatsContainer()->AutoComplete(request);
-          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemRegexValue))
             category_sp->GetRegexTypeFormatsContainer()->AutoComplete(request);
+          }
 
-          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemSummary))
+          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemSummary)) {
             category_sp->GetTypeSummariesContainer()->AutoComplete(request);
-          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemRegexSummary))
             category_sp->GetRegexTypeSummariesContainer()->AutoComplete(
                 request);
+          }
 
-          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemFilter))
+          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemFilter)) {
             category_sp->GetTypeFiltersContainer()->AutoComplete(request);
-          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemRegexFilter))
             category_sp->GetRegexTypeFiltersContainer()->AutoComplete(request);
+          }
 
-          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemSynth))
+          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemSynth)) {
             category_sp->GetTypeSyntheticsContainer()->AutoComplete(request);
-          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemRegexSynth))
             category_sp->GetRegexTypeSyntheticsContainer()->AutoComplete(
                 request);
+          }
           return true;
         });
   }
@@ -958,9 +958,7 @@ class CommandObjectTypeFormatDelete : public CommandObjectTypeFormatterDelete {
 public:
   CommandObjectTypeFormatDelete(CommandInterpreter &interpreter)
       : CommandObjectTypeFormatterDelete(
-            interpreter,
-            eFormatCategoryItemValue | eFormatCategoryItemRegexValue,
-            "type format delete",
+            interpreter, eFormatCategoryItemFormat, "type format delete",
             "Delete an existing formatting style for a type.") {}
 
   ~CommandObjectTypeFormatDelete() override = default;
@@ -971,10 +969,9 @@ public:
 class CommandObjectTypeFormatClear : public CommandObjectTypeFormatterClear {
 public:
   CommandObjectTypeFormatClear(CommandInterpreter &interpreter)
-      : CommandObjectTypeFormatterClear(
-            interpreter,
-            eFormatCategoryItemValue | eFormatCategoryItemRegexValue,
-            "type format clear", "Delete all existing format styles.") {}
+      : CommandObjectTypeFormatterClear(interpreter, eFormatCategoryItemFormat,
+                                        "type format clear",
+                                        "Delete all existing format styles.") {}
 };
 
 #define LLDB_OPTIONS_type_formatter_list
@@ -1100,36 +1097,20 @@ protected:
           "-----------------------\nCategory: %s%s\n-----------------------\n",
           category->GetName(), category->IsEnabled() ? "" : " (disabled)");
 
-      TypeCategoryImpl::ForEachCallbacks<FormatterType> foreach;
-      foreach
-        .SetExact([&result, &formatter_regex, &any_printed](
-                      const TypeMatcher &type_matcher,
-                      const FormatterSharedPointer &format_sp) -> bool {
-          if (ShouldListItem(type_matcher.GetMatchString().GetStringRef(),
-                             formatter_regex.get())) {
-            any_printed = true;
-            result.GetOutputStream().Printf(
-                "%s: %s\n", type_matcher.GetMatchString().GetCString(),
-                format_sp->GetDescription().c_str());
-          }
-          return true;
-        });
-
-      foreach
-        .SetWithRegex([&result, &formatter_regex, &any_printed](
-                          const TypeMatcher &type_matcher,
-                          const FormatterSharedPointer &format_sp) -> bool {
-          if (ShouldListItem(type_matcher.GetMatchString().GetStringRef(),
-                             formatter_regex.get())) {
-            any_printed = true;
-            result.GetOutputStream().Printf(
-                "%s: %s\n", type_matcher.GetMatchString().GetCString(),
-                format_sp->GetDescription().c_str());
-          }
-          return true;
-        });
-
-      category->ForEach(foreach);
+      TypeCategoryImpl::ForEachCallback<FormatterType> print_formatter =
+          [&result, &formatter_regex,
+           &any_printed](const TypeMatcher &type_matcher,
+                         const FormatterSharedPointer &format_sp) -> bool {
+        if (ShouldListItem(type_matcher.GetMatchString().GetStringRef(),
+                           formatter_regex.get())) {
+          any_printed = true;
+          result.GetOutputStream().Printf(
+              "%s: %s\n", type_matcher.GetMatchString().GetCString(),
+              format_sp->GetDescription().c_str());
+        }
+        return true;
+      };
+      category->ForEach(print_formatter);
     };
 
     if (m_options.m_category_language.OptionWasSet()) {
@@ -1629,9 +1610,8 @@ class CommandObjectTypeSummaryDelete : public CommandObjectTypeFormatterDelete {
 public:
   CommandObjectTypeSummaryDelete(CommandInterpreter &interpreter)
       : CommandObjectTypeFormatterDelete(
-            interpreter,
-            eFormatCategoryItemSummary | eFormatCategoryItemRegexSummary,
-            "type summary delete", "Delete an existing summary for a type.") {}
+            interpreter, eFormatCategoryItemSummary, "type summary delete",
+            "Delete an existing summary for a type.") {}
 
   ~CommandObjectTypeSummaryDelete() override = default;
 
@@ -1646,10 +1626,9 @@ protected:
 class CommandObjectTypeSummaryClear : public CommandObjectTypeFormatterClear {
 public:
   CommandObjectTypeSummaryClear(CommandInterpreter &interpreter)
-      : CommandObjectTypeFormatterClear(
-            interpreter,
-            eFormatCategoryItemSummary | eFormatCategoryItemRegexSummary,
-            "type summary clear", "Delete all existing summaries.") {}
+      : CommandObjectTypeFormatterClear(interpreter, eFormatCategoryItemSummary,
+                                        "type summary clear",
+                                        "Delete all existing summaries.") {}
 
 protected:
   void FormatterSpecificDeletion() override {
@@ -2181,9 +2160,8 @@ class CommandObjectTypeFilterDelete : public CommandObjectTypeFormatterDelete {
 public:
   CommandObjectTypeFilterDelete(CommandInterpreter &interpreter)
       : CommandObjectTypeFormatterDelete(
-            interpreter,
-            eFormatCategoryItemFilter | eFormatCategoryItemRegexFilter,
-            "type filter delete", "Delete an existing filter for a type.") {}
+            interpreter, eFormatCategoryItemFilter, "type filter delete",
+            "Delete an existing filter for a type.") {}
 
   ~CommandObjectTypeFilterDelete() override = default;
 };
@@ -2196,9 +2174,7 @@ class CommandObjectTypeSynthDelete : public CommandObjectTypeFormatterDelete {
 public:
   CommandObjectTypeSynthDelete(CommandInterpreter &interpreter)
       : CommandObjectTypeFormatterDelete(
-            interpreter,
-            eFormatCategoryItemSynth | eFormatCategoryItemRegexSynth,
-            "type synthetic delete",
+            interpreter, eFormatCategoryItemSynth, "type synthetic delete",
             "Delete an existing synthetic provider for a type.") {}
 
   ~CommandObjectTypeSynthDelete() override = default;
@@ -2211,10 +2187,9 @@ public:
 class CommandObjectTypeFilterClear : public CommandObjectTypeFormatterClear {
 public:
   CommandObjectTypeFilterClear(CommandInterpreter &interpreter)
-      : CommandObjectTypeFormatterClear(
-            interpreter,
-            eFormatCategoryItemFilter | eFormatCategoryItemRegexFilter,
-            "type filter clear", "Delete all existing filter.") {}
+      : CommandObjectTypeFormatterClear(interpreter, eFormatCategoryItemFilter,
+                                        "type filter clear",
+                                        "Delete all existing filter.") {}
 };
 
 #if LLDB_ENABLE_PYTHON
@@ -2224,9 +2199,7 @@ class CommandObjectTypeSynthClear : public CommandObjectTypeFormatterClear {
 public:
   CommandObjectTypeSynthClear(CommandInterpreter &interpreter)
       : CommandObjectTypeFormatterClear(
-            interpreter,
-            eFormatCategoryItemSynth | eFormatCategoryItemRegexSynth,
-            "type synthetic clear",
+            interpreter, eFormatCategoryItemSynth, "type synthetic clear",
             "Delete all existing synthetic providers.") {}
 };
 
@@ -2346,14 +2319,17 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
       type = eRegexSynth;
   }
 
-  if (category->AnyMatches(
-          type_name, eFormatCategoryItemFilter | eFormatCategoryItemRegexFilter,
-          false)) {
-    if (error)
-      error->SetErrorStringWithFormat("cannot add synthetic for type %s when "
-                                      "filter is defined in same category!",
-                                      type_name.AsCString());
-    return false;
+  // Only check for conflicting filters in the same category if `type_name` is
+  // an actual type name. Matching a regex string against registered regexes
+  // doesn't work.
+  if (type == eRegularSynth) {
+    if (category->AnyMatches(type_name, eFormatCategoryItemFilter, false)) {
+      if (error)
+        error->SetErrorStringWithFormat("cannot add synthetic for type %s when "
+                                        "filter is defined in same category!",
+                                        type_name.AsCString());
+      return false;
+    }
   }
 
   if (type == eRegexSynth) {
@@ -2471,15 +2447,18 @@ private:
         type = eRegexFilter;
     }
 
-    if (category->AnyMatches(
-            type_name, eFormatCategoryItemSynth | eFormatCategoryItemRegexSynth,
-            false)) {
-      if (error)
-        error->SetErrorStringWithFormat("cannot add filter for type %s when "
-                                        "synthetic is defined in same "
-                                        "category!",
-                                        type_name.AsCString());
-      return false;
+    // Only check for conflicting synthetic child providers in the same category
+    // if `type_name` is an actual type name. Matching a regex string against
+    // registered regexes doesn't work.
+    if (type == eRegularFilter) {
+      if (category->AnyMatches(type_name, eFormatCategoryItemSynth, false)) {
+        if (error)
+          error->SetErrorStringWithFormat("cannot add filter for type %s when "
+                                          "synthetic is defined in same "
+                                          "category!",
+                                          type_name.AsCString());
+        return false;
+      }
     }
 
     if (type == eRegexFilter) {

@@ -113,7 +113,7 @@ define void @preserve_vector_nuw_nsw(float* noalias nocapture readonly %input,
 ; CHECK-NEXT:    [[TMP6:%.*]] = mul nuw nsw <4 x i64> [[TMP5]], <i64 2, i64 2, i64 2, i64 2>
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, float* [[INPUT:%.*]], <4 x i64> [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = xor <4 x i1> [[TMP4]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> [[TMP7]], i32 4, <4 x i1> [[TMP8]], <4 x float> undef), !invariant.load !0
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> [[TMP7]], i32 4, <4 x i1> [[TMP8]], <4 x float> poison), !invariant.load !0
 entry:
   br label %loop.header
 
@@ -288,7 +288,7 @@ define void @preserve_vector_exact_no_addr(float* noalias nocapture readonly %in
 ; CHECK-NEXT:    [[TMP8:%.*]] = sdiv exact <4 x i64> [[VEC_IND]], <i64 2, i64 2, i64 2, i64 2>
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds float, float* [[INPUT:%.*]], <4 x i64> [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = xor <4 x i1> [[TMP7]], <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> [[TMP9]], i32 4, <4 x i1> [[TMP10]], <4 x float> undef), !invariant.load !0
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0f32(<4 x float*> [[TMP9]], i32 4, <4 x i1> [[TMP10]], <4 x float> poison), !invariant.load !0
 ;
 entry:
   br label %loop.header

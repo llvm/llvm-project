@@ -37,9 +37,10 @@ LogicalResult YieldOp::verify() {
   // Get the underlying value types from async values returned from the
   // parent `async.execute` operation.
   auto executeOp = (*this)->getParentOfType<ExecuteOp>();
-  auto types = llvm::map_range(executeOp.results(), [](const OpResult &result) {
-    return result.getType().cast<ValueType>().getValueType();
-  });
+  auto types =
+      llvm::map_range(executeOp.getBodyResults(), [](const OpResult &result) {
+        return result.getType().cast<ValueType>().getValueType();
+      });
 
   if (getOperandTypes() != types)
     return emitOpError("operand types do not match the types returned from "
@@ -61,7 +62,7 @@ constexpr char kOperandSegmentSizesAttr[] = "operand_segment_sizes";
 
 OperandRange ExecuteOp::getSuccessorEntryOperands(Optional<unsigned> index) {
   assert(index && *index == 0 && "invalid region index");
-  return operands();
+  return getBodyOperands();
 }
 
 bool ExecuteOp::areTypesCompatible(Type lhs, Type rhs) {
@@ -79,12 +80,13 @@ void ExecuteOp::getSuccessorRegions(Optional<unsigned> index,
   // The `body` region branch back to the parent operation.
   if (index) {
     assert(*index == 0 && "invalid region index");
-    regions.push_back(RegionSuccessor(results()));
+    regions.push_back(RegionSuccessor(getBodyResults()));
     return;
   }
 
   // Otherwise the successor is the body region.
-  regions.push_back(RegionSuccessor(&body(), body().getArguments()));
+  regions.push_back(
+      RegionSuccessor(&getBodyRegion(), getBodyRegion().getArguments()));
 }
 
 void ExecuteOp::build(OpBuilder &builder, OperationState &result,
@@ -97,9 +99,8 @@ void ExecuteOp::build(OpBuilder &builder, OperationState &result,
   // Add derived `operand_segment_sizes` attribute based on parsed operands.
   int32_t numDependencies = dependencies.size();
   int32_t numOperands = operands.size();
-  auto operandSegmentSizes = DenseIntElementsAttr::get(
-      VectorType::get({2}, builder.getIntegerType(32)),
-      {numDependencies, numOperands});
+  auto operandSegmentSizes =
+      builder.getDenseI32ArrayAttr({numDependencies, numOperands});
   result.addAttribute(kOperandSegmentSizesAttr, operandSegmentSizes);
 
   // First result is always a token, and then `resultTypes` wrapped into
@@ -135,17 +136,18 @@ void ExecuteOp::build(OpBuilder &builder, OperationState &result,
 
 void ExecuteOp::print(OpAsmPrinter &p) {
   // [%tokens,...]
-  if (!dependencies().empty())
-    p << " [" << dependencies() << "]";
+  if (!getDependencies().empty())
+    p << " [" << getDependencies() << "]";
 
   // (%value as %unwrapped: !async.value<!arg.type>, ...)
-  if (!operands().empty()) {
+  if (!getBodyOperands().empty()) {
     p << " (";
-    Block *entry = body().empty() ? nullptr : &body().front();
-    llvm::interleaveComma(operands(), p, [&, n = 0](Value operand) mutable {
-      Value argument = entry ? entry->getArgument(n++) : Value();
-      p << operand << " as " << argument << ": " << operand.getType();
-    });
+    Block *entry = getBodyRegion().empty() ? nullptr : &getBodyRegion().front();
+    llvm::interleaveComma(
+        getBodyOperands(), p, [&, n = 0](Value operand) mutable {
+          Value argument = entry ? entry->getArgument(n++) : Value();
+          p << operand << " as " << argument << ": " << operand.getType();
+        });
     p << ")";
   }
 
@@ -154,7 +156,7 @@ void ExecuteOp::print(OpAsmPrinter &p) {
   p.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
                                      {kOperandSegmentSizesAttr});
   p << ' ';
-  p.printRegion(body(), /*printEntryBlockArgs=*/false);
+  p.printRegion(getBodyRegion(), /*printEntryBlockArgs=*/false);
 }
 
 ParseResult ExecuteOp::parse(OpAsmParser &parser, OperationState &result) {
@@ -203,9 +205,8 @@ ParseResult ExecuteOp::parse(OpAsmParser &parser, OperationState &result) {
   int32_t numOperands = valueArgs.size();
 
   // Add derived `operand_segment_sizes` attribute based on parsed operands.
-  auto operandSegmentSizes = DenseIntElementsAttr::get(
-      VectorType::get({2}, parser.getBuilder().getI32Type()),
-      {numDependencies, numOperands});
+  auto operandSegmentSizes =
+      parser.getBuilder().getDenseI32ArrayAttr({numDependencies, numOperands});
   result.addAttribute(kOperandSegmentSizesAttr, operandSegmentSizes);
 
   // Parse the types of results returned from the async execute op.
@@ -228,12 +229,12 @@ ParseResult ExecuteOp::parse(OpAsmParser &parser, OperationState &result) {
 
 LogicalResult ExecuteOp::verifyRegions() {
   // Unwrap async.execute value operands types.
-  auto unwrappedTypes = llvm::map_range(operands(), [](Value operand) {
+  auto unwrappedTypes = llvm::map_range(getBodyOperands(), [](Value operand) {
     return operand.getType().cast<ValueType>().getValueType();
   });
 
   // Verify that unwrapped argument types matches the body region arguments.
-  if (body().getArgumentTypes() != unwrappedTypes)
+  if (getBodyRegion().getArgumentTypes() != unwrappedTypes)
     return emitOpError("async body region argument types do not match the "
                        "execute operation arguments types");
 
@@ -302,7 +303,7 @@ static void printAwaitResultType(OpAsmPrinter &p, Operation *op,
 }
 
 LogicalResult AwaitOp::verify() {
-  Type argType = operand().getType();
+  Type argType = getOperand().getType();
 
   // Awaiting on a token does not have any results.
   if (argType.isa<TokenType>() && !getResultTypes().empty())

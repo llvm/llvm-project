@@ -23,12 +23,13 @@
 #include <__ranges/dangling.h>
 #include <__type_traits/decay.h>
 #include <__utility/move.h>
+#include <__utility/pair.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER > 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -71,7 +72,7 @@ struct __fn {
       class _Comp  = less,
       class _Proj1 = identity,
       class _Proj2 = identity>
-    requires mergeable<iterator_t<_Range1>, iterator_t<_Range2>, _OutIter, _Comp, _Proj1, _Proj2> 
+    requires mergeable<iterator_t<_Range1>, iterator_t<_Range2>, _OutIter, _Comp, _Proj1, _Proj2>
   _LIBCPP_HIDE_FROM_ABI constexpr set_difference_result<borrowed_iterator_t<_Range1>, _OutIter>
     operator()(
         _Range1&& __range1,
@@ -100,5 +101,5 @@ inline namespace __cpo {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER > 17
 #endif // _LIBCPP___ALGORITHM_RANGES_SET_DIFFERENCE_H

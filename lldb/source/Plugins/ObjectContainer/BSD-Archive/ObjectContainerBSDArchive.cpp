@@ -511,30 +511,6 @@ bool ObjectContainerBSDArchive::ParseHeader() {
   return m_archive_sp.get() != nullptr;
 }
 
-void ObjectContainerBSDArchive::Dump(Stream *s) const {
-  s->Printf("%p: ", static_cast<const void *>(this));
-  s->Indent();
-  const size_t num_archs = GetNumArchitectures();
-  const size_t num_objects = GetNumObjects();
-  s->Printf("ObjectContainerBSDArchive, num_archs = %" PRIu64
-            ", num_objects = %" PRIu64 "",
-            (uint64_t)num_archs, (uint64_t)num_objects);
-  uint32_t i;
-  ArchSpec arch;
-  s->IndentMore();
-  for (i = 0; i < num_archs; i++) {
-    s->Indent();
-    GetArchitectureAtIndex(i, arch);
-    s->Printf("arch[%u] = %s\n", i, arch.GetArchitectureName());
-  }
-  for (i = 0; i < num_objects; i++) {
-    s->Indent();
-    s->Printf("object[%u] = %s\n", i, GetObjectNameAtIndex(i));
-  }
-  s->IndentLess();
-  s->EOL();
-}
-
 FileSpec GetChildFileSpecificationsFromThin(llvm::StringRef childPath,
                                             const FileSpec &parentFileSpec) {
   llvm::SmallString<128> FullPath;

@@ -20,14 +20,14 @@ target triple = "s390x-ibm-linux"
 declare dso_local void @safe_lshift_func_int16_t_s_s()
 declare dso_local i8 @safe_div_func_int8_t_s_s()
 
-define dso_local void @func_47(%0* %arg) {
+define dso_local void @func_47(ptr %arg) {
 bb:
   %tmp = alloca i32, align 4
   br label %bb1
 
 bb1:                                              ; preds = %bb12, %bb
-  %tmp2 = getelementptr inbounds %0, %0* %arg, i32 0, i32 3
-  store i16 undef, i16* %tmp2, align 1
+  %tmp2 = getelementptr inbounds %0, ptr %arg, i32 0, i32 3
+  store i16 undef, ptr %tmp2, align 1
   %tmp3 = call signext i8 @safe_div_func_int8_t_s_s()
   %tmp7 = icmp ne i8 %tmp3, 0
   br i1 %tmp7, label %bb8, label %bb10
@@ -38,13 +38,13 @@ bb8:                                              ; preds = %bb1
 
 bb10:                                             ; preds = %bb10, %bb1
   call void @safe_lshift_func_int16_t_s_s()
-  %tmp11 = getelementptr inbounds %0, %0* %arg, i32 0, i32 3
-  store i16 0, i16* %tmp11, align 1
-  store i8 0, i8* getelementptr inbounds (%0, %0* bitcast (<{ i64, i8, i64, i8, i8 }>* @g_101 to %0*), i32 0, i32 1), align 2
+  %tmp11 = getelementptr inbounds %0, ptr %arg, i32 0, i32 3
+  store i16 0, ptr %tmp11, align 1
+  store i8 0, ptr getelementptr inbounds (%0, ptr @g_101, i32 0, i32 1), align 2
   br label %bb10
 
 bb12:                                             ; preds = %bb8
-  store i16 0, i16* @g_54, align 2
+  store i16 0, ptr @g_54, align 2
   br label %bb1
 
 bb13:                                             ; preds = %bb8

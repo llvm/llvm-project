@@ -22,7 +22,7 @@ AMDGPUFrameLowering::~AMDGPUFrameLowering() = default;
 unsigned AMDGPUFrameLowering::getStackWidth(const MachineFunction &MF) const {
   // XXX: Hardcoding to 1 for now.
   //
-  // I think the StackWidth should stored as metadata associated with the
+  // I think the StackWidth should be stored as metadata associated with the
   // MachineFunction.  This metadata can either be added by a frontend, or
   // calculated by a R600 specific LLVM IR pass.
   //

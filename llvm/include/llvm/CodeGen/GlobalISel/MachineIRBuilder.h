@@ -50,6 +50,8 @@ struct MachineIRBuilderState {
   MachineRegisterInfo *MRI = nullptr;
   /// Debug location to be set to any instruction we create.
   DebugLoc DL;
+  /// PC sections metadata to be set to any instruction we create.
+  MDNode *PCSections = nullptr;
 
   /// \name Fields describing the insertion point.
   /// @{
@@ -341,6 +343,7 @@ public:
     assert(MI.getParent() && "Instruction is not part of a basic block");
     setMBB(*MI.getParent());
     State.II = MI.getIterator();
+    setPCSections(MI.getPCSections());
   }
   /// @}
 
@@ -363,6 +366,12 @@ public:
 
   /// Get the current instruction's debug location.
   const DebugLoc &getDebugLoc() { return State.DL; }
+
+  /// Set the PC sections metadata to \p MD for all the next build instructions.
+  void setPCSections(MDNode *MD) { State.PCSections = MD; }
+
+  /// Get the current instruction's PC sections metadata.
+  MDNode *getPCSections() { return State.PCSections; }
 
   /// Build and insert <empty> = \p Opcode <empty>.
   /// The insertion point is the one set by the last call of either

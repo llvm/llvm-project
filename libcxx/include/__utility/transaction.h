@@ -52,13 +52,13 @@ struct __transaction {
     __transaction() = delete;
 
     _LIBCPP_HIDE_FROM_ABI
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 explicit __transaction(_Rollback __rollback)
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 explicit __transaction(_Rollback __rollback)
         : __rollback_(_VSTD::move(__rollback))
         , __completed_(false)
     { }
 
     _LIBCPP_HIDE_FROM_ABI
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 __transaction(__transaction&& __other)
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 __transaction(__transaction&& __other)
         _NOEXCEPT_(is_nothrow_move_constructible<_Rollback>::value)
         : __rollback_(_VSTD::move(__other.__rollback_))
         , __completed_(__other.__completed_)
@@ -71,12 +71,12 @@ struct __transaction {
     __transaction& operator=(__transaction&&) = delete;
 
     _LIBCPP_HIDE_FROM_ABI
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 void __complete() _NOEXCEPT {
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 void __complete() _NOEXCEPT {
         __completed_ = true;
     }
 
     _LIBCPP_HIDE_FROM_ABI
-    _LIBCPP_CONSTEXPR_AFTER_CXX17 ~__transaction() {
+    _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__transaction() {
         if (!__completed_)
             __rollback_();
     }
@@ -85,6 +85,7 @@ private:
     _Rollback __rollback_;
     bool __completed_;
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__transaction);
 
 template <class _Rollback>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __transaction<_Rollback> __make_transaction(_Rollback __rollback) {

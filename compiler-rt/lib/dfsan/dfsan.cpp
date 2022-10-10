@@ -417,11 +417,59 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void dfsan_mem_origin_transfer(
   __dfsan_mem_origin_transfer(dst, src, len);
 }
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void dfsan_mem_shadow_transfer(
-    void *dst, const void *src, uptr len) {
+static void CopyShadow(void *dst, const void *src, uptr len) {
   internal_memcpy((void *)__dfsan::shadow_for(dst),
                   (const void *)__dfsan::shadow_for(src),
                   len * sizeof(dfsan_label));
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void dfsan_mem_shadow_transfer(
+    void *dst, const void *src, uptr len) {
+  CopyShadow(dst, src, len);
+}
+
+// Copy shadow and origins of the len bytes from src to dst.
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__dfsan_mem_shadow_origin_transfer(void *dst, const void *src, uptr size) {
+  if (src == dst)
+    return;
+  CopyShadow(dst, src, size);
+  if (dfsan_get_track_origins()) {
+    // Duplicating code instead of calling __dfsan_mem_origin_transfer
+    // so that the getting the caller stack frame works correctly.
+    GET_CALLER_PC_BP;
+    GET_STORE_STACK_TRACE_PC_BP(pc, bp);
+    MoveOrigin(dst, src, size, &stack);
+  }
+}
+
+// Copy shadow and origins as per __atomic_compare_exchange.
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__dfsan_mem_shadow_origin_conditional_exchange(u8 condition, void *target,
+                                               void *expected,
+                                               const void *desired, uptr size) {
+  void *dst;
+  const void *src;
+  // condition is result of native call to __atomic_compare_exchange
+  if (condition) {
+    // Copy desired into target
+    dst = target;
+    src = desired;
+  } else {
+    // Copy target into expected
+    dst = expected;
+    src = target;
+  }
+  if (src == dst)
+    return;
+  CopyShadow(dst, src, size);
+  if (dfsan_get_track_origins()) {
+    // Duplicating code instead of calling __dfsan_mem_origin_transfer
+    // so that the getting the caller stack frame works correctly.
+    GET_CALLER_PC_BP;
+    GET_STORE_STACK_TRACE_PC_BP(pc, bp);
+    MoveOrigin(dst, src, size, &stack);
+  }
 }
 
 namespace __dfsan {

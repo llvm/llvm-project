@@ -9181,12 +9181,29 @@ let ExeDomain = GenericDomain, Uses = [MXCSR], mayRaiseFPException = 1 in {
 
 multiclass avx512_cvtps2ph_sae<X86VectorVTInfo _dest, X86VectorVTInfo _src,
                                SchedWrite Sched> {
-  let hasSideEffects = 0, Uses = [MXCSR] in
-  defm rrb : AVX512_maskable_in_asm<0x1D, MRMDestReg, _dest,
-                   (outs _dest.RC:$dst),
-                   (ins _src.RC:$src1, i32u8imm:$src2),
-                   "vcvtps2ph", "$src2, {sae}, $src1", "$src1, {sae}, $src2", []>,
-                   EVEX_B, AVX512AIi8Base, Sched<[Sched]>;
+  let hasSideEffects = 0, Uses = [MXCSR] in {
+    def rrb : AVX512AIi8<0x1D, MRMDestReg, (outs _dest.RC:$dst),
+              (ins _src.RC:$src1, i32u8imm:$src2),
+              "vcvtps2ph\t{$src2, {sae}, $src1, $dst|$dst, $src1, {sae}, $src2}",
+              [(set _dest.RC:$dst,
+                    (X86cvtps2phSAE (_src.VT _src.RC:$src1), (i32 timm:$src2)))]>,
+              EVEX_B, Sched<[Sched]>;
+    let Constraints = "$src0 = $dst" in
+    def rrbk : AVX512AIi8<0x1D, MRMDestReg, (outs _dest.RC:$dst),
+              (ins _dest.RC:$src0, _src.KRCWM:$mask, _src.RC:$src1, i32u8imm:$src2),
+              "vcvtps2ph\t{$src2, {sae}, $src1, $dst {${mask}}|$dst {${mask}}, $src1, {sae}, $src2}",
+              [(set _dest.RC:$dst,
+                    (X86mcvtps2phSAE (_src.VT _src.RC:$src1), (i32 timm:$src2),
+                                  _dest.RC:$src0, _src.KRCWM:$mask))]>,
+              EVEX_B, Sched<[Sched]>, EVEX_K;
+    def rrbkz : AVX512AIi8<0x1D, MRMDestReg, (outs _dest.RC:$dst),
+              (ins _src.KRCWM:$mask, _src.RC:$src1, i32u8imm:$src2),
+              "vcvtps2ph\t{$src2, {sae}, $src1, $dst {${mask}} {z}|$dst {${mask}} {z}, $src1, {sae}, $src2}",
+              [(set _dest.RC:$dst,
+                    (X86mcvtps2phSAE (_src.VT _src.RC:$src1), (i32 timm:$src2),
+                                  _dest.ImmAllZerosV, _src.KRCWM:$mask))]>,
+              EVEX_B, Sched<[Sched]>, EVEX_KZ;
+}
 }
 
 let Predicates = [HasAVX512] in {

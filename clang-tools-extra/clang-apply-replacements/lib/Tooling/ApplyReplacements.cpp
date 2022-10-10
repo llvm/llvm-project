@@ -24,6 +24,7 @@
 #include "clang/Tooling/ReplacementsYaml.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -140,7 +141,7 @@ std::error_code collectReplacementsFromDirectory(
 static llvm::DenseMap<const FileEntry *, std::vector<tooling::Replacement>>
 groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
                   const clang::SourceManager &SM) {
-  std::set<StringRef> Warned;
+  llvm::StringSet<> Warned;
   llvm::DenseMap<const FileEntry *, std::vector<tooling::Replacement>>
       GroupedReplacements;
 
@@ -156,11 +157,15 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
                         const tooling::TranslationUnitDiagnostics *SourceTU,
                         const llvm::Optional<std::string> BuildDir) {
     // Use the file manager to deduplicate paths. FileEntries are
-    // automatically canonicalized.
-    auto PrevWorkingDir = SM.getFileManager().getFileSystemOpts().WorkingDir;
+    // automatically canonicalized. Since relative paths can come from different
+    // build directories, make them absolute immediately.
+    SmallString<128> Path = R.getFilePath();
     if (BuildDir)
-      SM.getFileManager().getFileSystemOpts().WorkingDir = std::move(*BuildDir);
-    if (auto Entry = SM.getFileManager().getFile(R.getFilePath())) {
+      llvm::sys::fs::make_absolute(*BuildDir, Path);
+    else
+      SM.getFileManager().makeAbsolutePath(Path);
+
+    if (auto Entry = SM.getFileManager().getFile(Path)) {
       if (SourceTU) {
         auto &Replaces = DiagReplacements[*Entry];
         auto It = Replaces.find(R);
@@ -171,11 +176,10 @@ groupReplacements(const TUReplacements &TUs, const TUDiagnostics &TUDs,
           return;
       }
       GroupedReplacements[*Entry].push_back(R);
-    } else if (Warned.insert(R.getFilePath()).second) {
+    } else if (Warned.insert(Path).second) {
       errs() << "Described file '" << R.getFilePath()
              << "' doesn't exist. Ignoring...\n";
     }
-    SM.getFileManager().getFileSystemOpts().WorkingDir = PrevWorkingDir;
   };
 
   for (const auto &TU : TUs)

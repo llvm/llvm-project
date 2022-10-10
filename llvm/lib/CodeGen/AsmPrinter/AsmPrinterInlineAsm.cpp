@@ -411,6 +411,14 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
         LocCookie, Msg, DiagnosticSeverity::DS_Warning));
     MMI->getModule()->getContext().diagnose(
         DiagnosticInfoInlineAsm(LocCookie, Note, DiagnosticSeverity::DS_Note));
+
+    for (const Register RR : RestrRegs) {
+      if (llvm::Optional<std::string> reason =
+              TRI->explainReservedReg(*MF, RR)) {
+        MMI->getModule()->getContext().diagnose(DiagnosticInfoInlineAsm(
+            LocCookie, *reason, DiagnosticSeverity::DS_Note));
+      }
+    }
   }
 
   emitInlineAsm(OS.str(), getSubtargetInfo(), TM.Options.MCOptions, LocMD,
@@ -480,7 +488,7 @@ bool AsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
         PrintAsmMemoryOperand(MI, OpNo, nullptr, O);
         return false;
       }
-      LLVM_FALLTHROUGH; // GCC allows '%a' to behave like '%c' with immediates.
+      [[fallthrough]]; // GCC allows '%a' to behave like '%c' with immediates.
     case 'c': // Substitute immediate value without immediate syntax
       if (MO.isImm()) {
         O << MO.getImm();

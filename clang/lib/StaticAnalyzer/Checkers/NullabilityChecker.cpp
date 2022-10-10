@@ -285,8 +285,11 @@ NullabilityChecker::getTrackRegion(SVal Val, bool CheckSuperRegion) const {
   const MemRegion *Region = RegionSVal->getRegion();
 
   if (CheckSuperRegion) {
-    if (auto FieldReg = Region->getAs<FieldRegion>())
+    if (const SubRegion *FieldReg = Region->getAs<FieldRegion>()) {
+      if (const auto *ER = dyn_cast<ElementRegion>(FieldReg->getSuperRegion()))
+        FieldReg = ER;
       return dyn_cast<SymbolicRegion>(FieldReg->getSuperRegion());
+    }
     if (auto ElementReg = Region->getAs<ElementRegion>())
       return dyn_cast<SymbolicRegion>(ElementReg->getSuperRegion());
   }
@@ -907,7 +910,7 @@ void NullabilityChecker::checkPostObjCMessage(const ObjCMethodCall &M,
     // this class of methods reduced the emitted diagnostics by about 30% on
     // some projects (and all of that was false positives).
     if (Name.contains("String")) {
-      for (auto Param : M.parameters()) {
+      for (auto *Param : M.parameters()) {
         if (Param->getName() == "encoding") {
           State = State->set<NullabilityMap>(ReturnRegion,
                                              Nullability::Contradicted);

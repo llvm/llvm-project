@@ -35,8 +35,8 @@ int main() {
 // CHECK: addr=[[ADDR:0x[0-9,a-f]+]]
 // CHECK: WARNING: ThreadSanitizer: data race
 // CHECK:   Write of size 3 at [[ADDR]] by thread T2:
-// CHECK:     #0 {{(memcpy|memmove)}}
+// CHECK:     #0 {{.*mem(cpy|move)}}
 // CHECK:     #{{[12]}} Thread2
 // CHECK:   Previous read of size 1 at [[ADDR]] by thread T1:
-// CHECK:     #0 memcmp
+// CHECK:     #0 {{.*}}memcmp
 // CHECK:     #{{[12]}} Thread1

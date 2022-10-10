@@ -221,6 +221,7 @@ Thread::Thread(Process &process, lldb::tid_t tid, bool use_invalid_index_id)
                   Thread::GetStaticBroadcasterClass().AsCString()),
       m_process_wp(process.shared_from_this()), m_stop_info_sp(),
       m_stop_info_stop_id(0), m_stop_info_override_stop_id(0),
+      m_should_run_before_public_stop(false),
       m_index_id(use_invalid_index_id ? LLDB_INVALID_INDEX32
                                       : process.GetNextThreadIndexID(tid)),
       m_reg_context_sp(), m_state(eStateUnloaded), m_state_mutex(),
@@ -369,7 +370,10 @@ void Thread::CalculatePublicStopInfo() {
   SetStopInfo(GetStopInfo());
 }
 
-lldb::StopInfoSP Thread::GetPrivateStopInfo() {
+lldb::StopInfoSP Thread::GetPrivateStopInfo(bool calculate) {
+  if (!calculate)
+    return m_stop_info_sp;
+
   if (m_destroy_called)
     return m_stop_info_sp;
 
@@ -377,9 +381,15 @@ lldb::StopInfoSP Thread::GetPrivateStopInfo() {
   if (process_sp) {
     const uint32_t process_stop_id = process_sp->GetStopID();
     if (m_stop_info_stop_id != process_stop_id) {
+      // We preserve the old stop info for a variety of reasons:
+      // 1) Someone has already updated it by the time we get here
+      // 2) We didn't get to execute the breakpoint instruction we stopped at
+      // 3) This is a virtual step so we didn't actually run
+      // 4) If this thread wasn't allowed to run the last time round.
       if (m_stop_info_sp) {
         if (m_stop_info_sp->IsValid() || IsStillAtLastBreakpointHit() ||
-            GetCurrentPlan()->IsVirtualStep())
+            GetCurrentPlan()->IsVirtualStep()
+            || GetTemporaryResumeState() == eStateSuspended)
           SetStopInfo(m_stop_info_sp);
         else
           m_stop_info_sp.reset();
@@ -723,7 +733,11 @@ bool Thread::ShouldResume(StateType resume_state) {
   return need_to_resume;
 }
 
-void Thread::DidResume() { SetResumeSignal(LLDB_INVALID_SIGNAL_NUMBER); }
+void Thread::DidResume() { 
+  SetResumeSignal(LLDB_INVALID_SIGNAL_NUMBER);
+  // This will get recomputed each time when we stop.
+  SetShouldRunBeforePublicStop(false);
+}
 
 void Thread::DidStop() { SetState(eStateStopped); }
 
@@ -763,6 +777,9 @@ bool Thread::ShouldStop(Event *event_ptr) {
                                    : LLDB_INVALID_ADDRESS);
     return false;
   }
+  
+  // Clear the "must run me before stop" if it was set:
+  SetShouldRunBeforePublicStop(false);
 
   if (log) {
     LLDB_LOGF(log,
@@ -845,9 +862,14 @@ bool Thread::ShouldStop(Event *event_ptr) {
             // stack below.
             done_processing_current_plan =
                 (plan_ptr->IsControllingPlan() && !plan_ptr->OkayToDiscard());
-          } else
+          } else {
+            bool should_force_run = plan_ptr->ShouldRunBeforePublicStop();
+            if (should_force_run) {
+              SetShouldRunBeforePublicStop(true);
+              should_stop = false;
+            }
             done_processing_current_plan = true;
-
+          }
           break;
         }
       }

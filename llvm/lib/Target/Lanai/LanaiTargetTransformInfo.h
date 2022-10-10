@@ -92,19 +92,16 @@ public:
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
-      TTI::OperandValueKind Opd1Info = TTI::OK_AnyValue,
-      TTI::OperandValueKind Opd2Info = TTI::OK_AnyValue,
-      TTI::OperandValueProperties Opd1PropInfo = TTI::OP_None,
-      TTI::OperandValueProperties Opd2PropInfo = TTI::OP_None,
+      TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
+      TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = ArrayRef<const Value *>(),
       const Instruction *CxtI = nullptr) {
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
 
     switch (ISD) {
     default:
-      return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
-                                           Opd2Info,
-                                           Opd1PropInfo, Opd2PropInfo);
+      return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
+                                           Op2Info);
     case ISD::MUL:
     case ISD::SDIV:
     case ISD::UDIV:
@@ -114,9 +111,8 @@ public:
       // instruction cost was arbitrarily chosen to reduce the desirability
       // of emitting arithmetic instructions that are emulated in software.
       // TODO: Investigate the performance impact given specialized lowerings.
-      return 64 * BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
-                                                Opd2Info,
-                                                Opd1PropInfo, Opd2PropInfo);
+      return 64 * BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
+                                                Op2Info);
     }
   }
 };

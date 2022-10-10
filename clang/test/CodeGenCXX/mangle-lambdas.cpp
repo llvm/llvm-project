@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -triple x86_64-apple-macosx10.7.0 -emit-llvm -o - %s -w | FileCheck %s
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-macosx10.7.0 -emit-llvm -o - %s -w | FileCheck %s
 
 // CHECK-LABEL: define linkonce_odr void @_Z11inline_funci
 inline void inline_func(int n) {
@@ -26,7 +26,7 @@ void call_inline_func() {
   inline_func(17);
 }
 
-// CHECK-LABEL: define linkonce_odr noundef i32* @_ZNK10inline_varMUlvE_clEv(
+// CHECK-LABEL: define linkonce_odr noundef ptr @_ZNK10inline_varMUlvE_clEv(
 // CHECK: @_ZZNK10inline_varMUlvE_clEvE1n
 inline auto inline_var = [] {
   static int n = 5;
@@ -35,7 +35,7 @@ inline auto inline_var = [] {
 
 int *use_inline_var = inline_var();
 
-// CHECK-LABEL: define linkonce_odr noundef i32* @_ZNK12var_templateIiEMUlvE_clEv(
+// CHECK-LABEL: define linkonce_odr noundef ptr @_ZNK12var_templateIiEMUlvE_clEv(
 // CHECK: @_ZZNK12var_templateIiEMUlvE_clEvE1n
 template<typename T> auto var_template = [] {
   static int n = 9;
@@ -162,7 +162,7 @@ template float StaticMembers<float>::z;
 
 // CHECK-LABEL: define internal void @__cxx_global_var_init
 // CHECK: call {{.*}} @_ZNK13StaticMembersIfE1fMUlvE_cvPFivEEv
-// CHECK-LABEL: define linkonce_odr noundef i32 ()* @_ZNK13StaticMembersIfE1fMUlvE_cvPFivEEv
+// CHECK-LABEL: define linkonce_odr noundef ptr @_ZNK13StaticMembersIfE1fMUlvE_cvPFivEEv
 template int (*StaticMembers<float>::f)();
 
 // CHECK-LABEL: define internal void @__cxx_global_var_init
@@ -196,9 +196,9 @@ namespace PR12123 {
   void B::h() { f(); j(); }
 }
 
-// CHECK-LABEL: define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %"struct.PR12123::A"* @_ZZN7PR121231B1fERKSt9type_infoEd_NKUlvE_clEv
-// CHECK-LABEL: define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %"struct.PR12123::A"* @_ZZN7PR121231B1jEbEd_NKUlvE_clEv
-// CHECK-LABEL: define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) %"struct.PR12123::C"* @_ZZN7PR121231B1jEbEd_NKUlvE0_clEv
+// CHECK-LABEL: define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZZN7PR121231B1fERKSt9type_infoEd_NKUlvE_clEv
+// CHECK-LABEL: define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZZN7PR121231B1jEbEd_NKUlvE_clEv
+// CHECK-LABEL: define linkonce_odr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZZN7PR121231B1jEbEd_NKUlvE0_clEv
 
 // CHECK-LABEL: define {{.*}} @_Z{{[0-9]*}}testVarargsLambdaNumberingv(
 inline int testVarargsLambdaNumbering() {
@@ -209,6 +209,84 @@ inline int testVarargsLambdaNumbering() {
   return a() + b();
 }
 int k = testVarargsLambdaNumbering();
+
+
+template<typename = int>
+void ft1(int = [](int p = [] { return 42; } ()) {
+                 return p;
+               } ());
+void test_ft1() {
+  // CHECK: call noundef i32 @"_ZZZ3ft1IiEviENK3$_4clEiEd_NKUlvE_clEv"
+  // CHECK: call noundef i32 @"_ZZ3ft1IiEviENK3$_4clEi"
+  ft1();
+}
+// CHECK-LABEL: define internal noundef i32 @"_ZZ3ft1IiEviENK3$_4clEi"
+// CHECK-LABEL: define internal noundef i32 @"_ZZZ3ft1IiEviENK3$_4clEiEd_NKUlvE_clEv"
+
+struct c1 {
+  template<typename = int>
+  void mft1(int = [](int p = [] { return 42; } ()) {
+                    return p;
+                  } ());
+};
+void test_c1_mft1() {
+  // CHECK: call noundef i32 @_ZZZN2c14mft1IiEEviEd_NKUliE_clEiEd_NKUlvE_clEv
+  // CHECK: call noundef i32 @_ZZN2c14mft1IiEEviEd_NKUliE_clEi
+  c1{}.mft1();
+}
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZN2c14mft1IiEEviEd_NKUliE_clEi
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZZN2c14mft1IiEEviEd_NKUliE_clEiEd_NKUlvE_clEv
+
+template<typename = int>
+struct ct1 {
+  void mf1(int = [](int p = [] { return 42; } ()) {
+                   return p;
+                 } ());
+  friend void ff(ct1, int = [](int p = [] { return 0; }()) { return p; }()) {}
+};
+void test_ct1_mft1() {
+  // CHECK: call noundef i32 @_ZZZN3ct1IiE3mf1EiEd_NKUliE_clEiEd_NKUlvE_clEv
+  // CHECK: call noundef i32 @_ZZN3ct1IiE3mf1EiEd_NKUliE_clEi
+  ct1<>{}.mf1();
+  // CHECK: call noundef i32 @_ZZZ2ff3ct1IiEiEd_NKUliE_clEiEd_NKUlvE_clEv
+  // CHECK: call noundef i32 @_ZZ2ff3ct1IiEiEd_NKUliE_clEi
+  ff(ct1<>{});
+}
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZN3ct1IiE3mf1EiEd_NKUliE_clEi
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZZN3ct1IiE3mf1EiEd_NKUliE_clEiEd_NKUlvE_clEv
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZ2ff3ct1IiEiEd_NKUliE_clEi
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZZ2ff3ct1IiEiEd_NKUliE_clEiEd_NKUlvE_clEv
+
+template<typename = int>
+void ft2() {
+  [](int p = [] { return 42; } ()) { return p; } ();
+}
+template void ft2<>();
+// CHECK: call noundef i32 @_ZZZ3ft2IiEvvENKUliE_clEiEd_NKUlvE_clEv
+// CHECK: call noundef i32 @_ZZ3ft2IiEvvENKUliE_clEi
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZ3ft2IiEvvENKUliE_clEi
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZZ3ft2IiEvvENKUliE_clEiEd_NKUlvE_clEv
+
+template<typename>
+void ft3() {
+  void f(int = []{ return 0; }());
+  f();
+}
+template void ft3<int>();
+// CHECK: call noundef i32 @"_ZZ1fiENK3$_5clEv"
+// CHECK-LABEL: define internal noundef i32 @"_ZZ1fiENK3$_5clEv"
+
+template<typename>
+void ft4() {
+  struct lc {
+    void mf(int = []{ return 0; }()) {}
+  };
+  lc().mf();
+}
+template void ft4<int>();
+// CHECK: call noundef i32 @_ZZZ3ft4IiEvvEN2lc2mfEiEd_NKUlvE_clEv
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZZ3ft4IiEvvEN2lc2mfEiEd_NKUlvE_clEv
+
 
 // Check linkage of the various lambdas.
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZZ11inline_funciENKUlvE_clEv

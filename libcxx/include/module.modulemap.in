@@ -59,7 +59,10 @@ module std [system] {
     // FIXME: <stdalign.h> is missing.
     // <signal.h> provided by C library.
     // <stdarg.h> provided by compiler.
-    // <stdbool.h> provided by compiler.
+    module stdbool_h {
+      // <stdbool.h>'s __bool_true_false_are_defined macro requires textual inclusion.
+      textual header "stdbool.h"
+    }
     module stddef_h {
       // <stddef.h>'s __need_* macros require textual inclusion.
       textual header "stddef.h"
@@ -280,7 +283,10 @@ module std [system] {
       module is_sorted                       { private header "__algorithm/is_sorted.h" }
       module is_sorted_until                 { private header "__algorithm/is_sorted_until.h" }
       module iter_swap                       { private header "__algorithm/iter_swap.h" }
-      module iterator_operations             { private header "__algorithm/iterator_operations.h" }
+      module iterator_operations             {
+        private header "__algorithm/iterator_operations.h"
+        export *
+      }
       module lexicographical_compare         { private header "__algorithm/lexicographical_compare.h" }
       module lower_bound                     { private header "__algorithm/lower_bound.h" }
       module make_heap                       { private header "__algorithm/make_heap.h" }
@@ -311,6 +317,7 @@ module std [system] {
       module ranges_all_of                   { private header "__algorithm/ranges_all_of.h" }
       module ranges_any_of                   { private header "__algorithm/ranges_any_of.h" }
       module ranges_binary_search            { private header "__algorithm/ranges_binary_search.h" }
+      module ranges_clamp                    { private header "__algorithm/ranges_clamp.h" }
       module ranges_copy                     { private header "__algorithm/ranges_copy.h" }
       module ranges_copy_backward            { private header "__algorithm/ranges_copy_backward.h" }
       module ranges_copy_if                  { private header "__algorithm/ranges_copy_if.h" }
@@ -335,6 +342,7 @@ module std [system] {
       module ranges_is_heap                  { private header "__algorithm/ranges_is_heap.h" }
       module ranges_is_heap_until            { private header "__algorithm/ranges_is_heap_until.h" }
       module ranges_is_partitioned           { private header "__algorithm/ranges_is_partitioned.h" }
+      module ranges_is_permutation           { private header "__algorithm/ranges_is_permutation.h" }
       module ranges_is_sorted                { private header "__algorithm/ranges_is_sorted.h" }
       module ranges_is_sorted_until          { private header "__algorithm/ranges_is_sorted_until.h" }
       module ranges_iterator_concept         { private header "__algorithm/ranges_iterator_concept.h" }
@@ -351,6 +359,7 @@ module std [system] {
       module ranges_mismatch                 { private header "__algorithm/ranges_mismatch.h" }
       module ranges_move                     { private header "__algorithm/ranges_move.h" }
       module ranges_move_backward            { private header "__algorithm/ranges_move_backward.h" }
+      module ranges_next_permutation         { private header "__algorithm/ranges_next_permutation.h" }
       module ranges_none_of                  { private header "__algorithm/ranges_none_of.h" }
       module ranges_nth_element              { private header "__algorithm/ranges_nth_element.h" }
       module ranges_partial_sort             { private header "__algorithm/ranges_partial_sort.h" }
@@ -359,6 +368,7 @@ module std [system] {
       module ranges_partition_copy           { private header "__algorithm/ranges_partition_copy.h" }
       module ranges_partition_point          { private header "__algorithm/ranges_partition_point.h" }
       module ranges_pop_heap                 { private header "__algorithm/ranges_pop_heap.h" }
+      module ranges_prev_permutation         { private header "__algorithm/ranges_prev_permutation.h" }
       module ranges_push_heap                { private header "__algorithm/ranges_push_heap.h" }
       module ranges_remove                   { private header "__algorithm/ranges_remove.h" }
       module ranges_remove_copy              { private header "__algorithm/ranges_remove_copy.h" }
@@ -370,7 +380,9 @@ module std [system] {
       module ranges_replace_if               { private header "__algorithm/ranges_replace_if.h" }
       module ranges_reverse                  { private header "__algorithm/ranges_reverse.h" }
       module ranges_reverse_copy             { private header "__algorithm/ranges_reverse_copy.h" }
+      module ranges_rotate                   { private header "__algorithm/ranges_rotate.h" }
       module ranges_rotate_copy              { private header "__algorithm/ranges_rotate_copy.h" }
+      module ranges_sample                   { private header "__algorithm/ranges_sample.h" }
       module ranges_search                   { private header "__algorithm/ranges_search.h" }
       module ranges_search_n                 { private header "__algorithm/ranges_search_n.h" }
       module ranges_set_difference           { private header "__algorithm/ranges_set_difference.h" }
@@ -384,6 +396,9 @@ module std [system] {
       module ranges_stable_sort              { private header "__algorithm/ranges_stable_sort.h" }
       module ranges_swap_ranges              { private header "__algorithm/ranges_swap_ranges.h" }
       module ranges_transform                { private header "__algorithm/ranges_transform.h" }
+      module uniform_random_bit_generator_adaptor {
+        private header "__algorithm/uniform_random_bit_generator_adaptor.h"
+      }
       module ranges_unique                   { private header "__algorithm/ranges_unique.h" }
       module ranges_unique_copy              { private header "__algorithm/ranges_unique_copy.h" }
       module ranges_upper_bound              { private header "__algorithm/ranges_upper_bound.h" }
@@ -419,6 +434,7 @@ module std [system] {
       module unique                          { private header "__algorithm/unique.h" }
       module unique_copy                     { private header "__algorithm/unique_copy.h" }
       module unwrap_iter                     { private header "__algorithm/unwrap_iter.h" }
+      module unwrap_range                    { private header "__algorithm/unwrap_range.h" }
       module upper_bound                     { private header "__algorithm/upper_bound.h" }
     }
   }
@@ -430,6 +446,8 @@ module std [system] {
     header "array"
     export initializer_list
     export *
+
+    module array_fwd { private header "__fwd/array.h" }
   }
   module atomic {
     header "atomic"
@@ -474,29 +492,43 @@ module std [system] {
     export *
 
     module __chrono {
-      module calendar              { private header "__chrono/calendar.h" }
-      module convert_to_timespec   { private header "__chrono/convert_to_timespec.h" }
-      module day                   { private header "__chrono/day.h" }
-      module duration              { private header "__chrono/duration.h" }
-      module file_clock            { private header "__chrono/file_clock.h" }
-      module hh_mm_ss              { private header "__chrono/hh_mm_ss.h" }
-      module high_resolution_clock {
+      module calendar               { private header "__chrono/calendar.h" }
+      module convert_to_timespec    { private header "__chrono/convert_to_timespec.h" }
+      module convert_to_tm          { private header "__chrono/convert_to_tm.h" }
+      module day                    { private header "__chrono/day.h" }
+      module duration               { private header "__chrono/duration.h" }
+      module file_clock             { private header "__chrono/file_clock.h" }
+      module formatter              {
+        @requires_LIBCXX_ENABLE_LOCALIZATION@
+        private header "__chrono/formatter.h"
+      }
+      module hh_mm_ss               { private header "__chrono/hh_mm_ss.h" }
+      module high_resolution_clock  {
         private header "__chrono/high_resolution_clock.h"
         export steady_clock
         export system_clock
       }
-      module literals              { private header "__chrono/literals.h" }
-      module month                 { private header "__chrono/month.h" }
-      module month_weekday         { private header "__chrono/month_weekday.h" }
-      module monthday              { private header "__chrono/monthday.h" }
-      module steady_clock          { private header "__chrono/steady_clock.h" }
-      module system_clock          { private header "__chrono/system_clock.h" }
-      module time_point            { private header "__chrono/time_point.h" }
-      module weekday               { private header "__chrono/weekday.h" }
-      module year                  { private header "__chrono/year.h" }
-      module year_month            { private header "__chrono/year_month.h" }
-      module year_month_day        { private header "__chrono/year_month_day.h" }
-      module year_month_weekday    { private header "__chrono/year_month_weekday.h" }
+      module literals               { private header "__chrono/literals.h" }
+      module month                  { private header "__chrono/month.h" }
+      module month_weekday          { private header "__chrono/month_weekday.h" }
+      module monthday               { private header "__chrono/monthday.h" }
+      module ostream                {
+        @requires_LIBCXX_ENABLE_LOCALIZATION@
+        private header "__chrono/ostream.h"
+      }
+      module parser_std_format_spec {
+        @requires_LIBCXX_ENABLE_LOCALIZATION@
+        private header "__chrono/parser_std_format_spec.h"
+      }
+      module statically_widen       { private header "__chrono/statically_widen.h" }
+      module steady_clock           { private header "__chrono/steady_clock.h" }
+      module system_clock           { private header "__chrono/system_clock.h" }
+      module time_point             { private header "__chrono/time_point.h" }
+      module weekday                { private header "__chrono/weekday.h" }
+      module year                   { private header "__chrono/year.h" }
+      module year_month             { private header "__chrono/year_month.h" }
+      module year_month_day         { private header "__chrono/year_month_day.h" }
+      module year_month_weekday     { private header "__chrono/year_month_weekday.h" }
     }
   }
   module codecvt {
@@ -629,10 +661,14 @@ module std [system] {
         export locale
       }
       module format_error                    { private header "__format/format_error.h" }
+      module format_functions                { private header "__format/format_functions.h" }
       module format_fwd                      { private header "__format/format_fwd.h" }
       module format_parse_context            { private header "__format/format_parse_context.h" }
       module format_string                   { private header "__format/format_string.h" }
-      module format_to_n_result              { private header "__format/format_to_n_result.h" }
+      module format_to_n_result {
+        private header "__format/format_to_n_result.h"
+        export iterator.__iterator.incrementable_traits
+      }
       module formatter                       { private header "__format/formatter.h" }
       module formatter_bool                  { private header "__format/formatter_bool.h" }
       module formatter_char                  { private header "__format/formatter_char.h" }
@@ -673,6 +709,7 @@ module std [system] {
       module default_searcher           { private header "__functional/default_searcher.h" }
       module function                   { private header "__functional/function.h" }
       module hash                       { private header "__functional/hash.h" }
+      module hash_fwd                   { private header "__fwd/hash.h" }
       module identity                   { private header "__functional/identity.h" }
       module invoke                     { private header "__functional/invoke.h" }
       module is_transparent             { private header "__functional/is_transparent.h" }
@@ -817,6 +854,7 @@ module std [system] {
 
     module __memory {
       module addressof                       { private header "__memory/addressof.h" }
+      module align                           { private header "__memory/align.h" }
       module allocate_at_least               { private header "__memory/allocate_at_least.h" }
       module allocation_guard                { private header "__memory/allocation_guard.h" }
       module allocator                       { private header "__memory/allocator.h" }
@@ -824,19 +862,23 @@ module std [system] {
       module allocator_traits                { private header "__memory/allocator_traits.h" }
       module assume_aligned                  { private header "__memory/assume_aligned.h" }
       module auto_ptr                        { private header "__memory/auto_ptr.h" }
+      module builtin_new_allocator           { private header "__memory/builtin_new_allocator.h" }
       module compressed_pair                 { private header "__memory/compressed_pair.h" }
       module concepts                        { private header "__memory/concepts.h" }
       module construct_at                    { private header "__memory/construct_at.h" }
+      module destruct_n                      { private header "__memory/destruct_n.h" }
       module pointer_traits                  { private header "__memory/pointer_traits.h" }
       module ranges_construct_at             { private header "__memory/ranges_construct_at.h" }
       module ranges_uninitialized_algorithms { private header "__memory/ranges_uninitialized_algorithms.h" }
       module raw_storage_iterator            { private header "__memory/raw_storage_iterator.h" }
       module shared_ptr                      { private header "__memory/shared_ptr.h" }
       module swap_allocator                  { private header "__memory/swap_allocator.h" }
+      module temp_value                      { private header "__memory/temp_value.h" }
       module temporary_buffer                { private header "__memory/temporary_buffer.h" }
       module uninitialized_algorithms        { private header "__memory/uninitialized_algorithms.h" }
       module unique_ptr                      { private header "__memory/unique_ptr.h" }
       module uses_allocator                  { private header "__memory/uses_allocator.h" }
+      module uses_allocator_construction     { private header "__memory/uses_allocator_construction.h" }
       module voidify                         { private header "__memory/voidify.h" }
     }
   }
@@ -901,7 +943,10 @@ module std [system] {
       module clamp_to_integral               { private header "__random/clamp_to_integral.h" }
       module default_random_engine           { private header "__random/default_random_engine.h" }
       module discard_block_engine            { private header "__random/discard_block_engine.h" }
-      module discrete_distribution           { private header "__random/discrete_distribution.h" }
+      module discrete_distribution {
+        private header "__random/discrete_distribution.h"
+        export vector
+      }
       module exponential_distribution        { private header "__random/exponential_distribution.h" }
       module extreme_value_distribution      { private header "__random/extreme_value_distribution.h" }
       module fisher_f_distribution           { private header "__random/fisher_f_distribution.h" }
@@ -918,8 +963,14 @@ module std [system] {
       module mersenne_twister_engine         { private header "__random/mersenne_twister_engine.h" }
       module negative_binomial_distribution  { private header "__random/negative_binomial_distribution.h" }
       module normal_distribution             { private header "__random/normal_distribution.h" }
-      module piecewise_constant_distribution { private header "__random/piecewise_constant_distribution.h" }
-      module piecewise_linear_distribution   { private header "__random/piecewise_linear_distribution.h" }
+      module piecewise_constant_distribution {
+        private header "__random/piecewise_constant_distribution.h"
+        export vector
+      }
+      module piecewise_linear_distribution {
+        private header "__random/piecewise_linear_distribution.h"
+        export vector
+      }
       module poisson_distribution            { private header "__random/poisson_distribution.h" }
       module random_device                   { private header "__random/random_device.h" }
       module ranlux                          { private header "__random/ranlux.h" }
@@ -963,6 +1014,10 @@ module std [system] {
       module enable_view            { private header "__ranges/enable_view.h" }
       module filter_view            { private header "__ranges/filter_view.h" }
       module iota_view              { private header "__ranges/iota_view.h" }
+      module istream_view           {
+        @requires_LIBCXX_ENABLE_LOCALIZATION@
+        private header "__ranges/istream_view.h"
+      }
       module join_view              { private header "__ranges/join_view.h" }
       module lazy_split_view        { private header "__ranges/lazy_split_view.h" }
       module non_propagating_cache  { private header "__ranges/non_propagating_cache.h" }
@@ -976,6 +1031,7 @@ module std [system] {
       module size                   { private header "__ranges/size.h" }
       module subrange               { private header "__ranges/subrange.h" }
       module take_view              { private header "__ranges/take_view.h" }
+      module take_while_view        { private header "__ranges/take_while_view.h" }
       module transform_view         {
         private header "__ranges/transform_view.h"
         export functional.__functional.bind_back
@@ -1079,128 +1135,150 @@ module std [system] {
   module tuple {
     header "tuple"
     export *
+
+    module apply_cv         { private header "__tuple/apply_cv.h" }
+    module get_fwd          { private header "__fwd/get.h" }
+    module make_tuple_types { private header "__tuple/make_tuple_types.h" }
+    module sfinae_helpers   { private header "__tuple/sfinae_helpers.h" }
+    module tuple_element    { private header "__tuple/tuple_element.h" }
+    module tuple_fwd        { private header "__fwd/tuple.h" }
+    module tuple_indices    { private header "__tuple/tuple_indices.h" }
+    module tuple_like       { private header "__tuple/tuple_like.h" }
+    module tuple_size       { private header "__tuple/tuple_size.h" }
+    module tuple_types      { private header "__tuple/tuple_types.h" }
   }
   module type_traits {
     header "type_traits"
     export functional.__functional.unwrap_ref
     export *
 
-    module add_const                          { private header "__type_traits/add_const.h" }
-    module add_cv                             { private header "__type_traits/add_cv.h" }
-    module add_lvalue_reference               { private header "__type_traits/add_lvalue_reference.h" }
-    module add_pointer                        { private header "__type_traits/add_pointer.h" }
-    module add_rvalue_reference               { private header "__type_traits/add_rvalue_reference.h" }
-    module add_volatile                       { private header "__type_traits/add_volatile.h" }
-    module aligned_storage                    { private header "__type_traits/aligned_storage.h" }
-    module aligned_union                      { private header "__type_traits/aligned_union.h" }
-    module alignment_of                       { private header "__type_traits/alignment_of.h" }
-    module apply_cv                           { private header "__type_traits/apply_cv.h" }
-    module common_reference                   { private header "__type_traits/common_reference.h" }
-    module common_type                        { private header "__type_traits/common_type.h" }
-    module conditional                        { private header "__type_traits/conditional.h" }
-    module conjunction                        { private header "__type_traits/conjunction.h" }
-    module copy_cv                            { private header "__type_traits/copy_cv.h" }
-    module copy_cvref                         { private header "__type_traits/copy_cvref.h" }
-    module decay                              { private header "__type_traits/decay.h" }
-    module disjunction                        { private header "__type_traits/disjunction.h" }
-    module enable_if                          { private header "__type_traits/enable_if.h" }
-    module extent                             { private header "__type_traits/extent.h" }
-    module has_unique_object_representation   { private header "__type_traits/has_unique_object_representation.h" }
-    module has_virtual_destructor             { private header "__type_traits/has_virtual_destructor.h" }
-    module integral_constant                  { private header "__type_traits/integral_constant.h" }
-    module is_abstract                        { private header "__type_traits/is_abstract.h" }
-    module is_aggregate                       { private header "__type_traits/is_aggregate.h" }
-    module is_arithmetic                      { private header "__type_traits/is_arithmetic.h" }
-    module is_array                           { private header "__type_traits/is_array.h" }
-    module is_assignable                      { private header "__type_traits/is_assignable.h" }
-    module is_base_of                         { private header "__type_traits/is_base_of.h" }
-    module is_bounded_array                   { private header "__type_traits/is_bounded_array.h" }
-    module is_callable                        { private header "__type_traits/is_callable.h" }
-    module is_class                           { private header "__type_traits/is_class.h" }
-    module is_compound                        { private header "__type_traits/is_compound.h" }
-    module is_const                           { private header "__type_traits/is_const.h" }
-    module is_constant_evaluated              { private header "__type_traits/is_constant_evaluated.h" }
-    module is_constructible                   { private header "__type_traits/is_constructible.h" }
-    module is_convertible                     { private header "__type_traits/is_convertible.h" }
-    module is_copy_assignable                 { private header "__type_traits/is_copy_assignable.h" }
-    module is_copy_constructible              { private header "__type_traits/is_copy_constructible.h" }
-    module is_core_convertible                { private header "__type_traits/is_core_convertible.h" }
-    module is_default_constructible           { private header "__type_traits/is_default_constructible.h" }
-    module is_destructible                    { private header "__type_traits/is_destructible.h" }
-    module is_empty                           { private header "__type_traits/is_empty.h" }
-    module is_enum                            { private header "__type_traits/is_enum.h" }
-    module is_final                           { private header "__type_traits/is_final.h" }
-    module is_floating_point                  { private header "__type_traits/is_floating_point.h" }
-    module is_function                        { private header "__type_traits/is_function.h" }
-    module is_fundamental                     { private header "__type_traits/is_fundamental.h" }
-    module is_integral                        { private header "__type_traits/is_integral.h" }
-    module is_literal_type                    { private header "__type_traits/is_literal_type.h" }
-    module is_member_function_pointer         { private header "__type_traits/is_member_function_pointer.h" }
-    module is_member_object_pointer           { private header "__type_traits/is_member_object_pointer.h" }
-    module is_member_pointer                  { private header "__type_traits/is_member_pointer.h" }
-    module is_move_assignable                 { private header "__type_traits/is_move_assignable.h" }
-    module is_move_constructible              { private header "__type_traits/is_move_constructible.h" }
-    module is_nothrow_assignable              { private header "__type_traits/is_nothrow_assignable.h" }
-    module is_nothrow_constructible           { private header "__type_traits/is_nothrow_constructible.h" }
-    module is_nothrow_convertible             { private header "__type_traits/is_nothrow_convertible.h" }
-    module is_nothrow_copy_assignable         { private header "__type_traits/is_nothrow_copy_assignable.h" }
-    module is_nothrow_copy_constructible      { private header "__type_traits/is_nothrow_copy_constructible.h" }
-    module is_nothrow_default_constructible   { private header "__type_traits/is_nothrow_default_constructible.h" }
-    module is_nothrow_destructible            { private header "__type_traits/is_nothrow_destructible.h" }
-    module is_nothrow_move_assignable         { private header "__type_traits/is_nothrow_move_assignable.h" }
-    module is_nothrow_move_constructible      { private header "__type_traits/is_nothrow_move_constructible.h" }
-    module is_null_pointer                    { private header "__type_traits/is_null_pointer.h" }
-    module is_object                          { private header "__type_traits/is_object.h" }
-    module is_pod                             { private header "__type_traits/is_pod.h" }
-    module is_pointer                         { private header "__type_traits/is_pointer.h" }
-    module is_polymorphic                     { private header "__type_traits/is_polymorphic.h" }
-    module is_primary_template                { private header "__type_traits/is_primary_template.h" }
-    module is_reference                       { private header "__type_traits/is_reference.h" }
-    module is_reference_wrapper               { private header "__type_traits/is_reference_wrapper.h" }
-    module is_referenceable                   { private header "__type_traits/is_referenceable.h" }
-    module is_same                            { private header "__type_traits/is_same.h" }
-    module is_scalar                          { private header "__type_traits/is_scalar.h" }
-    module is_scoped_enum                     { private header "__type_traits/is_scoped_enum.h" }
-    module is_signed                          { private header "__type_traits/is_signed.h" }
-    module is_signed_integer                  { private header "__type_traits/is_signed_integer.h" }
-    module is_standard_layout                 { private header "__type_traits/is_standard_layout.h" }
-    module is_trivial                         { private header "__type_traits/is_trivial.h" }
-    module is_trivially_assignable            { private header "__type_traits/is_trivially_assignable.h" }
-    module is_trivially_constructible         { private header "__type_traits/is_trivially_constructible.h" }
-    module is_trivially_copy_assignable       { private header "__type_traits/is_trivially_copy_assignable.h" }
-    module is_trivially_copy_constructible    { private header "__type_traits/is_trivially_copy_constructible.h" }
-    module is_trivially_copyable              { private header "__type_traits/is_trivially_copyable.h" }
-    module is_trivially_default_constructible { private header "__type_traits/is_trivially_default_constructible.h" }
-    module is_trivially_destructible          { private header "__type_traits/is_trivially_destructible.h" }
-    module is_trivially_move_assignable       { private header "__type_traits/is_trivially_move_assignable.h" }
-    module is_trivially_move_constructible    { private header "__type_traits/is_trivially_move_constructible.h" }
-    module is_unbounded_array                 { private header "__type_traits/is_unbounded_array.h" }
-    module is_union                           { private header "__type_traits/is_union.h" }
-    module is_unsigned                        { private header "__type_traits/is_unsigned.h" }
-    module is_unsigned_integer                { private header "__type_traits/is_unsigned_integer.h" }
-    module is_valid_expansion                 { private header "__type_traits/is_valid_expansion.h" }
-    module is_void                            { private header "__type_traits/is_void.h" }
-    module is_volatile                        { private header "__type_traits/is_volatile.h" }
-    module lazy                               { private header "__type_traits/lazy.h" }
-    module make_32_64_or_128_bit              { private header "__type_traits/make_32_64_or_128_bit.h" }
-    module make_signed                        { private header "__type_traits/make_signed.h" }
-    module make_unsigned                      { private header "__type_traits/make_unsigned.h" }
-    module nat                                { private header "__type_traits/nat.h" }
-    module negation                           { private header "__type_traits/negation.h" }
-    module promote                            { private header "__type_traits/promote.h" }
-    module rank                               { private header "__type_traits/rank.h" }
-    module remove_all_extents                 { private header "__type_traits/remove_all_extents.h" }
-    module remove_const                       { private header "__type_traits/remove_const.h" }
-    module remove_cv                          { private header "__type_traits/remove_cv.h" }
-    module remove_cvref                       { private header "__type_traits/remove_cvref.h" }
-    module remove_extent                      { private header "__type_traits/remove_extent.h" }
-    module remove_pointer                     { private header "__type_traits/remove_pointer.h" }
-    module remove_reference                   { private header "__type_traits/remove_reference.h" }
-    module remove_volatile                    { private header "__type_traits/remove_volatile.h" }
-    module type_identity                      { private header "__type_traits/type_identity.h" }
-    module type_list                          { private header "__type_traits/type_list.h" }
-    module underlying_type                    { private header "__type_traits/underlying_type.h" }
-    module void_t                             { private header "__type_traits/void_t.h" }
+    module add_const                           { private header "__type_traits/add_const.h" }
+    module add_cv                              { private header "__type_traits/add_cv.h" }
+    module add_lvalue_reference                { private header "__type_traits/add_lvalue_reference.h" }
+    module add_pointer                         { private header "__type_traits/add_pointer.h" }
+    module add_rvalue_reference                { private header "__type_traits/add_rvalue_reference.h" }
+    module add_volatile                        { private header "__type_traits/add_volatile.h" }
+    module aligned_storage                     { private header "__type_traits/aligned_storage.h" }
+    module aligned_union                       { private header "__type_traits/aligned_union.h" }
+    module alignment_of                        { private header "__type_traits/alignment_of.h" }
+    module apply_cv                            { private header "__type_traits/apply_cv.h" }
+    module can_extract_key                     { private header "__type_traits/can_extract_key.h" }
+    module common_reference                    { private header "__type_traits/common_reference.h" }
+    module common_type                         { private header "__type_traits/common_type.h" }
+    module conditional                         { private header "__type_traits/conditional.h" }
+    module conjunction                         { private header "__type_traits/conjunction.h" }
+    module copy_cv                             { private header "__type_traits/copy_cv.h" }
+    module copy_cvref                          { private header "__type_traits/copy_cvref.h" }
+    module decay                               { private header "__type_traits/decay.h" }
+    module dependent_type                      { private header "__type_traits/dependent_type.h" }
+    module disjunction                         { private header "__type_traits/disjunction.h" }
+    module enable_if                           { private header "__type_traits/enable_if.h" }
+    module extent                              { private header "__type_traits/extent.h" }
+    module has_unique_object_representation    { private header "__type_traits/has_unique_object_representation.h" }
+    module has_virtual_destructor              { private header "__type_traits/has_virtual_destructor.h" }
+    module integral_constant                   { private header "__type_traits/integral_constant.h" }
+    module is_abstract                         { private header "__type_traits/is_abstract.h" }
+    module is_aggregate                        { private header "__type_traits/is_aggregate.h" }
+    module is_allocator                        { private header "__type_traits/is_allocator.h" }
+    module is_arithmetic                       { private header "__type_traits/is_arithmetic.h" }
+    module is_array                            { private header "__type_traits/is_array.h" }
+    module is_assignable                       { private header "__type_traits/is_assignable.h" }
+    module is_base_of                          { private header "__type_traits/is_base_of.h" }
+    module is_bounded_array                    { private header "__type_traits/is_bounded_array.h" }
+    module is_callable                         { private header "__type_traits/is_callable.h" }
+    module is_char_like_type                   { private header "__type_traits/is_char_like_type.h" }
+    module is_class                            { private header "__type_traits/is_class.h" }
+    module is_compound                         { private header "__type_traits/is_compound.h" }
+    module is_const                            { private header "__type_traits/is_const.h" }
+    module is_constant_evaluated               { private header "__type_traits/is_constant_evaluated.h" }
+    module is_constructible                    { private header "__type_traits/is_constructible.h" }
+    module is_convertible                      { private header "__type_traits/is_convertible.h" }
+    module is_copy_assignable                  { private header "__type_traits/is_copy_assignable.h" }
+    module is_copy_constructible               { private header "__type_traits/is_copy_constructible.h" }
+    module is_core_convertible                 { private header "__type_traits/is_core_convertible.h" }
+    module is_default_constructible            { private header "__type_traits/is_default_constructible.h" }
+    module is_destructible                     { private header "__type_traits/is_destructible.h" }
+    module is_empty                            { private header "__type_traits/is_empty.h" }
+    module is_enum                             { private header "__type_traits/is_enum.h" }
+    module is_final                            { private header "__type_traits/is_final.h" }
+    module is_floating_point                   { private header "__type_traits/is_floating_point.h" }
+    module is_function                         { private header "__type_traits/is_function.h" }
+    module is_fundamental                      { private header "__type_traits/is_fundamental.h" }
+    module is_implicitly_default_constructible { private header "__type_traits/is_implicitly_default_constructible.h" }
+    module is_integral                         { private header "__type_traits/is_integral.h" }
+    module is_literal_type                     { private header "__type_traits/is_literal_type.h" }
+    module is_member_function_pointer          { private header "__type_traits/is_member_function_pointer.h" }
+    module is_member_object_pointer            { private header "__type_traits/is_member_object_pointer.h" }
+    module is_member_pointer                   { private header "__type_traits/is_member_pointer.h" }
+    module is_move_assignable                  { private header "__type_traits/is_move_assignable.h" }
+    module is_move_constructible               { private header "__type_traits/is_move_constructible.h" }
+    module is_nothrow_assignable               { private header "__type_traits/is_nothrow_assignable.h" }
+    module is_nothrow_constructible            { private header "__type_traits/is_nothrow_constructible.h" }
+    module is_nothrow_convertible              { private header "__type_traits/is_nothrow_convertible.h" }
+    module is_nothrow_copy_assignable          { private header "__type_traits/is_nothrow_copy_assignable.h" }
+    module is_nothrow_copy_constructible       { private header "__type_traits/is_nothrow_copy_constructible.h" }
+    module is_nothrow_default_constructible    { private header "__type_traits/is_nothrow_default_constructible.h" }
+    module is_nothrow_destructible             { private header "__type_traits/is_nothrow_destructible.h" }
+    module is_nothrow_move_assignable          { private header "__type_traits/is_nothrow_move_assignable.h" }
+    module is_nothrow_move_constructible       { private header "__type_traits/is_nothrow_move_constructible.h" }
+    module is_null_pointer                     { private header "__type_traits/is_null_pointer.h" }
+    module is_object                           { private header "__type_traits/is_object.h" }
+    module is_pod                              { private header "__type_traits/is_pod.h" }
+    module is_pointer                          { private header "__type_traits/is_pointer.h" }
+    module is_polymorphic                      { private header "__type_traits/is_polymorphic.h" }
+    module is_primary_template                 { private header "__type_traits/is_primary_template.h" }
+    module is_reference                        { private header "__type_traits/is_reference.h" }
+    module is_reference_wrapper                { private header "__type_traits/is_reference_wrapper.h" }
+    module is_referenceable                    { private header "__type_traits/is_referenceable.h" }
+    module is_same                             { private header "__type_traits/is_same.h" }
+    module is_scalar                           { private header "__type_traits/is_scalar.h" }
+    module is_scoped_enum                      { private header "__type_traits/is_scoped_enum.h" }
+    module is_signed                           { private header "__type_traits/is_signed.h" }
+    module is_signed_integer                   { private header "__type_traits/is_signed_integer.h" }
+    module is_standard_layout                  { private header "__type_traits/is_standard_layout.h" }
+    module is_swappable                        { private header "__type_traits/is_swappable.h" }
+    module is_trivial                          { private header "__type_traits/is_trivial.h" }
+    module is_trivially_assignable             { private header "__type_traits/is_trivially_assignable.h" }
+    module is_trivially_constructible          { private header "__type_traits/is_trivially_constructible.h" }
+    module is_trivially_copy_assignable        { private header "__type_traits/is_trivially_copy_assignable.h" }
+    module is_trivially_copy_constructible     { private header "__type_traits/is_trivially_copy_constructible.h" }
+    module is_trivially_copyable               { private header "__type_traits/is_trivially_copyable.h" }
+    module is_trivially_default_constructible  { private header "__type_traits/is_trivially_default_constructible.h" }
+    module is_trivially_destructible           { private header "__type_traits/is_trivially_destructible.h" }
+    module is_trivially_move_assignable        { private header "__type_traits/is_trivially_move_assignable.h" }
+    module is_trivially_move_constructible     { private header "__type_traits/is_trivially_move_constructible.h" }
+    module is_unbounded_array                  { private header "__type_traits/is_unbounded_array.h" }
+    module is_union                            { private header "__type_traits/is_union.h" }
+    module is_unsigned                         { private header "__type_traits/is_unsigned.h" }
+    module is_unsigned_integer                 { private header "__type_traits/is_unsigned_integer.h" }
+    module is_valid_expansion                  { private header "__type_traits/is_valid_expansion.h" }
+    module is_void                             { private header "__type_traits/is_void.h" }
+    module is_volatile                         { private header "__type_traits/is_volatile.h" }
+    module lazy                                { private header "__type_traits/lazy.h" }
+    module make_32_64_or_128_bit               { private header "__type_traits/make_32_64_or_128_bit.h" }
+    module make_const_lvalue_ref               { private header "__type_traits/make_const_lvalue_ref.h" }
+    module make_signed                         { private header "__type_traits/make_signed.h" }
+    module make_unsigned                       { private header "__type_traits/make_unsigned.h" }
+    module maybe_const                         { private header "__type_traits/maybe_const.h" }
+    module nat                                 { private header "__type_traits/nat.h" }
+    module negation                            { private header "__type_traits/negation.h" }
+    module noexcept_move_assign_container      { private header "__type_traits/noexcept_move_assign_container.h" }
+    module promote                             { private header "__type_traits/promote.h" }
+    module rank                                { private header "__type_traits/rank.h" }
+    module remove_all_extents                  { private header "__type_traits/remove_all_extents.h" }
+    module remove_const                        { private header "__type_traits/remove_const.h" }
+    module remove_const_ref                    { private header "__type_traits/remove_const_ref.h" }
+    module remove_cv                           { private header "__type_traits/remove_cv.h" }
+    module remove_cvref                        { private header "__type_traits/remove_cvref.h" }
+    module remove_extent                       { private header "__type_traits/remove_extent.h" }
+    module remove_pointer                      { private header "__type_traits/remove_pointer.h" }
+    module remove_reference                    { private header "__type_traits/remove_reference.h" }
+    module remove_volatile                     { private header "__type_traits/remove_volatile.h" }
+    module result_of                           { private header "__type_traits/result_of.h" }
+    module type_identity                       { private header "__type_traits/type_identity.h" }
+    module type_list                           { private header "__type_traits/type_list.h" }
+    module underlying_type                     { private header "__type_traits/underlying_type.h" }
+    module void_t                              { private header "__type_traits/void_t.h" }
   }
   module typeindex {
     header "typeindex"
@@ -1229,13 +1307,16 @@ module std [system] {
       module as_const            { private header "__utility/as_const.h" }
       module auto_cast           { private header "__utility/auto_cast.h" }
       module cmp                 { private header "__utility/cmp.h" }
+      module convert_to_integral { private header "__utility/convert_to_integral.h" }
       module declval             { private header "__utility/declval.h" }
       module exchange            { private header "__utility/exchange.h" }
       module forward             { private header "__utility/forward.h" }
+      module forward_like        { private header "__utility/forward_like.h" }
       module in_place            { private header "__utility/in_place.h" }
       module integer_sequence    { private header "__utility/integer_sequence.h" }
       module move                { private header "__utility/move.h" }
       module pair                { private header "__utility/pair.h" }
+      module pair_fwd            { private header "__fwd/pair.h" }
       module piecewise_construct { private header "__utility/piecewise_construct.h" }
       module priority_tag        { private header "__utility/priority_tag.h" }
       module rel_ops             { private header "__utility/rel_ops.h" }
@@ -1290,8 +1371,8 @@ module std [system] {
   }
   module __threading_support {         header "__threading_support" export * }
   module __tree              {         header "__tree"              export * }
-  module __tuple             { private header "__tuple"             export * }
   module __undef_macros      {         header "__undef_macros"      export * }
+  module __verbose_abort     {         header "__verbose_abort"     export * }
 
   module experimental {
     requires cplusplus11

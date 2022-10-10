@@ -32,6 +32,8 @@ class ObjCTypeQueryTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
+        self.runCmd("settings set target.prefer-dynamic-value no-dynamic-values")
+
         # Now do a NSArry type query from the 'main.m' compile uint.
         self.expect("expression (NSArray*)array_token",
                     substrs=['(NSArray *) $0 = 0x'])

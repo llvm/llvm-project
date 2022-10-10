@@ -5,12 +5,12 @@
 define i1 @extractelt_nxv1i1(<vscale x 1 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_nxv1i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli a2, zero, e8, mf8, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -23,12 +23,12 @@ define i1 @extractelt_nxv1i1(<vscale x 1 x i8>* %x, i64 %idx) nounwind {
 define i1 @extractelt_nxv2i1(<vscale x 2 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_nxv2i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli a2, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -41,12 +41,12 @@ define i1 @extractelt_nxv2i1(<vscale x 2 x i8>* %x, i64 %idx) nounwind {
 define i1 @extractelt_nxv4i1(<vscale x 4 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_nxv4i1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -60,11 +60,11 @@ define i1 @extractelt_nxv8i1(<vscale x 8 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_nxv8i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl1r.v v8, (a0)
-; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -78,11 +78,11 @@ define i1 @extractelt_nxv16i1(<vscale x 16 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_nxv16i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl2r.v v8, (a0)
-; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 1, e8, m2, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -96,11 +96,11 @@ define i1 @extractelt_nxv32i1(<vscale x 32 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_nxv32i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl4r.v v8, (a0)
-; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 1, e8, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
@@ -114,16 +114,58 @@ define i1 @extractelt_nxv64i1(<vscale x 64 x i8>* %x, i64 %idx) nounwind {
 ; CHECK-LABEL: extractelt_nxv64i1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vl8r.v v8, (a0)
-; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vmerge.vim v8, v8, 1, v0
-; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, mu
+; CHECK-NEXT:    vsetivli zero, 1, e8, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v8, v8, a1
 ; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
   %a = load <vscale x 64 x i8>, <vscale x 64 x i8>* %x
   %b = icmp eq <vscale x 64 x i8> %a, zeroinitializer
   %c = extractelement <vscale x 64 x i1> %b, i64 %idx
+  ret i1 %c
+}
+
+define i1 @extractelt_nxv128i1(<vscale x 128 x i8>* %x, i64 %idx) nounwind {
+; CHECK-LABEL: extractelt_nxv128i1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrr a2, vlenb
+; CHECK-NEXT:    slli a3, a2, 4
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    bltu a1, a3, .LBB7_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:  .LBB7_2:
+; CHECK-NEXT:    addi sp, sp, -64
+; CHECK-NEXT:    addi s0, sp, 64
+; CHECK-NEXT:    csrr a3, vlenb
+; CHECK-NEXT:    slli a3, a3, 4
+; CHECK-NEXT:    sub sp, sp, a3
+; CHECK-NEXT:    andi sp, sp, -64
+; CHECK-NEXT:    addi a3, sp, 64
+; CHECK-NEXT:    slli a2, a2, 3
+; CHECK-NEXT:    add a4, a0, a2
+; CHECK-NEXT:    vl8r.v v16, (a4)
+; CHECK-NEXT:    vl8r.v v24, (a0)
+; CHECK-NEXT:    add a0, a3, a1
+; CHECK-NEXT:    vsetvli a1, zero, e8, m8, ta, ma
+; CHECK-NEXT:    vmseq.vi v8, v16, 0
+; CHECK-NEXT:    vmseq.vi v0, v24, 0
+; CHECK-NEXT:    vmv.v.i v16, 0
+; CHECK-NEXT:    vmerge.vim v24, v16, 1, v0
+; CHECK-NEXT:    vs8r.v v24, (a3)
+; CHECK-NEXT:    add a1, a3, a2
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmerge.vim v8, v16, 1, v0
+; CHECK-NEXT:    vs8r.v v8, (a1)
+; CHECK-NEXT:    lb a0, 0(a0)
+; CHECK-NEXT:    addi sp, s0, -64
+; CHECK-NEXT:    addi sp, sp, 64
+; CHECK-NEXT:    ret
+  %a = load <vscale x 128 x i8>, <vscale x 128 x i8>* %x
+  %b = icmp eq <vscale x 128 x i8> %a, zeroinitializer
+  %c = extractelement <vscale x 128 x i1> %b, i64 %idx
   ret i1 %c
 }

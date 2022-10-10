@@ -16,7 +16,6 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
-#include "llvm/ADT/StringSwitch.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -234,7 +233,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["dot5-insts"] = true;
       Features["dot6-insts"] = true;
       Features["dot7-insts"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case GK_GFX1013:
     case GK_GFX1010:
       Features["dl-insts"] = true;
@@ -251,30 +250,30 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX940:
       Features["gfx940-insts"] = true;
       Features["fp8-insts"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case GK_GFX90A:
       Features["gfx90a-insts"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case GK_GFX908:
       Features["dot3-insts"] = true;
       Features["dot4-insts"] = true;
       Features["dot5-insts"] = true;
       Features["dot6-insts"] = true;
       Features["mai-insts"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case GK_GFX906:
       Features["dl-insts"] = true;
       Features["dot1-insts"] = true;
       Features["dot2-insts"] = true;
       Features["dot7-insts"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case GK_GFX90C:
     case GK_GFX909:
     case GK_GFX904:
     case GK_GFX902:
     case GK_GFX900:
       Features["gfx9-insts"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case GK_GFX810:
     case GK_GFX805:
     case GK_GFX803:
@@ -284,7 +283,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["16-bit-insts"] = true;
       Features["dpp"] = true;
       Features["s-memrealtime"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case GK_GFX705:
     case GK_GFX704:
     case GK_GFX703:
@@ -293,7 +292,7 @@ bool AMDGPUTargetInfo::initFeatureMap(
     case GK_GFX700:
       Features["ci-insts"] = true;
       Features["flat-address-space"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case GK_GFX602:
     case GK_GFX601:
     case GK_GFX600:

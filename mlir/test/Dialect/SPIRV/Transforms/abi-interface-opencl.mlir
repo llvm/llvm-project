@@ -1,18 +1,18 @@
 // RUN: mlir-opt -spirv-lower-abi-attrs -verify-diagnostics %s -o - | FileCheck %s
 
 module attributes {
-  spv.target_env = #spv.target_env<#spv.vce<v1.0, [Kernel, Addresses], []>, #spv.resource_limits<>>
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Kernel, Addresses], []>, #spirv.resource_limits<>>
 } {
-  spv.module Physical64 OpenCL {
-    // CHECK-LABEL: spv.module
-    //       CHECK:   spv.func [[FN:@.*]]({{%.*}}: f32, {{%.*}}: !spv.ptr<!spv.struct<(!spv.array<12 x f32>)>, CrossWorkgroup>
-    //       CHECK:   spv.EntryPoint "Kernel" [[FN]]
-    //       CHECK:   spv.ExecutionMode [[FN]] "LocalSize", 32, 1, 1
-    spv.func @kernel(
+  spirv.module Physical64 OpenCL {
+    // CHECK-LABEL: spirv.module
+    //       CHECK:   spirv.func [[FN:@.*]]({{%.*}}: f32, {{%.*}}: !spirv.ptr<!spirv.struct<(!spirv.array<12 x f32>)>, CrossWorkgroup>
+    //       CHECK:   spirv.EntryPoint "Kernel" [[FN]]
+    //       CHECK:   spirv.ExecutionMode [[FN]] "LocalSize", 32, 1, 1
+    spirv.func @kernel(
       %arg0: f32,
-      %arg1: !spv.ptr<!spv.struct<(!spv.array<12 x f32>)>, CrossWorkgroup>) "None"
-    attributes {spv.entry_point_abi = #spv.entry_point_abi<local_size = dense<[32, 1, 1]> : vector<3xi32>>} {
-      spv.Return
+      %arg1: !spirv.ptr<!spirv.struct<(!spirv.array<12 x f32>)>, CrossWorkgroup>) "None"
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<local_size = dense<[32, 1, 1]> : vector<3xi32>>} {
+      spirv.Return
     }
   }
 }

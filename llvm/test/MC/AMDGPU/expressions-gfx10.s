@@ -20,7 +20,7 @@ v_cmp_f_i32 s[10:11], (i1+100)*2, v2
 // GFX10: v_cmp_f_i32_e64 s[10:11], 0xca, v2   ; encoding: [0x0a,0x00,0x80,0xd4,0xff,0x04,0x02,0x00,0xca,0x00,0x00,0x00]
 
 v_cmpx_f_i64 v[1:2], i1+100
-// GFX10: v_cmpx_f_i64_e64 v[1:2], 0x65   ; encoding: [0x00,0x00,0xb0,0xd4,0x01,0xff,0x01,0x00,0x65,0x00,0x00,0x00]
+// GFX10: v_cmpx_f_i64_e64 v[1:2], 0x65   ; encoding: [0x7e,0x00,0xb0,0xd4,0x01,0xff,0x01,0x00,0x65,0x00,0x00,0x00]
 
 v_lshlrev_b64 v[5:6], i1+0xFFE, v[2:3]
 // GFX10: v_lshlrev_b64 v[5:6], 0xfff, v[2:3] ; encoding: [0x05,0x00,0xff,0xd6,0xff,0x04,0x02,0x00,0xff,0x0f,0x00,0x00]
@@ -55,19 +55,19 @@ v_lshlrev_b64 v[5:6], u-1, v[2:3]
 //===----------------------------------------------------------------------===//
 
 s_sub_u32 s0, 123, u
-// NOGFX10: error: only one literal operand is allowed
+// NOGFX10: error: only one unique literal operand is allowed
 
 s_sub_u32 s0, u, u
-// NOGFX10: error: only one literal operand is allowed
+// NOGFX10: error: only one unique literal operand is allowed
 
 s_sub_u32 s0, u, u1
-// NOGFX10: error: only one literal operand is allowed
+// NOGFX10: error: only one unique literal operand is allowed
 
 v_bfe_u32 v0, v2, 123, u
-// NOGFX10: error: only one literal operand is allowed
+// NOGFX10: error: only one unique literal operand is allowed
 
 v_bfe_u32 v0, v2, u, u
-// NOGFX10: error: only one literal operand is allowed
+// NOGFX10: error: only one unique literal operand is allowed
 
 v_bfe_u32 v0, v2, u, u1
-// NOGFX10: error: only one literal operand is allowed
+// NOGFX10: error: only one unique literal operand is allowed

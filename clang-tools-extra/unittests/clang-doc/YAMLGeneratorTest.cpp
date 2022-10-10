@@ -76,19 +76,33 @@ TEST(YAMLGeneratorTest, emitRecordYAML) {
   RecordInfo I;
   I.Name = "r";
   I.Path = "path/to/A";
+  I.IsTypeDef = true;
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  I.Members.emplace_back("int", "path/to/int", "X",
+  I.Members.emplace_back(TypeInfo("int", "path/to/int"), "X",
                          AccessSpecifier::AS_private);
+
+  // Member documentation.
+  CommentInfo TopComment;
+  TopComment.Kind = "FullComment";
+  TopComment.Children.emplace_back(std::make_unique<CommentInfo>());
+  CommentInfo *Brief = TopComment.Children.back().get();
+  Brief->Kind = "ParagraphComment";
+  Brief->Children.emplace_back(std::make_unique<CommentInfo>());
+  Brief->Children.back()->Kind = "TextComment";
+  Brief->Children.back()->Name = "ParagraphComment";
+  Brief->Children.back()->Text = "Value of the thing.";
+  I.Members.back().Description.push_back(std::move(TopComment));
+
   I.TagType = TagTypeKind::TTK_Class;
   I.Bases.emplace_back(EmptySID, "F", "path/to/F", true,
                        AccessSpecifier::AS_public, true);
   I.Bases.back().ChildFunctions.emplace_back();
   I.Bases.back().ChildFunctions.back().Name = "InheritedFunctionOne";
-  I.Bases.back().Members.emplace_back("int", "path/to/int", "N",
+  I.Bases.back().Members.emplace_back(TypeInfo("int", "path/to/int"), "N",
                                       AccessSpecifier::AS_private);
   // F is in the global namespace
   I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record, "");
@@ -123,16 +137,26 @@ Location:
   - LineNumber:      12
     Filename:        'test.cpp'
 TagType:         Class
+IsTypeDef:       true
 Members:
   - Type:
       Name:            'int'
       Path:            'path/to/int'
     Name:            'X'
     Access:          Private
+    Description:
+      - Kind:            'FullComment'
+        Children:
+          - Kind:            'ParagraphComment'
+            Children:
+              - Kind:            'TextComment'
+                Text:            'Value of the thing.'
+                Name:            'ParagraphComment'
 Bases:
   - USR:             '0000000000000000000000000000000000000000'
     Name:            'F'
     Path:            'path/to/F'
+    TagType:         Struct
     Members:
       - Type:
           Name:            'int'
@@ -150,7 +174,6 @@ Bases:
 Parents:
   - Type:            Record
     Name:            'F'
-    IsInGlobalNamespace: true
 VirtualParents:
   - Type:            Record
     Name:            'G'
@@ -182,9 +205,11 @@ TEST(YAMLGeneratorTest, emitFunctionYAML) {
 
   I.Access = AccessSpecifier::AS_none;
 
-  I.ReturnType =
-      TypeInfo(EmptySID, "void", InfoType::IT_default, "path/to/void");
-  I.Params.emplace_back("int", "path/to/int", "P");
+  I.ReturnType = TypeInfo(
+      Reference(EmptySID, "void", InfoType::IT_default, "path/to/void"));
+  I.Params.emplace_back(TypeInfo("int", "path/to/int"), "P");
+  I.Params.emplace_back(TypeInfo("double", "path/to/double"), "D");
+  I.Params.back().DefaultValue = "2.0 * M_PI";
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
 
@@ -216,6 +241,11 @@ Params:
       Name:            'int'
       Path:            'path/to/int'
     Name:            'P'
+  - Type:
+      Name:            'double'
+      Path:            'path/to/double'
+    Name:            'D'
+    DefaultValue:    '2.0 * M_PI'
 ReturnType:
   Type:
     Name:            'void'
@@ -225,7 +255,11 @@ ReturnType:
   EXPECT_EQ(Expected, Actual.str());
 }
 
-TEST(YAMLGeneratorTest, emitEnumYAML) {
+// Tests the equivalent of:
+// namespace A {
+// enum e { X };
+// }
+TEST(YAMLGeneratorTest, emitSimpleEnumYAML) {
   EnumInfo I;
   I.Name = "e";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
@@ -234,7 +268,7 @@ TEST(YAMLGeneratorTest, emitEnumYAML) {
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
   I.Members.emplace_back("X");
-  I.Scoped = true;
+  I.Scoped = false;
 
   auto G = getYAMLGenerator();
   assert(G);
@@ -255,9 +289,42 @@ DefLocation:
 Location:
   - LineNumber:      12
     Filename:        'test.cpp'
-Scoped:          true
 Members:
-  - 'X'
+  - Name:            'X'
+    Value:           '0'
+...
+)raw";
+  EXPECT_EQ(Expected, Actual.str());
+}
+
+// Tests the equivalent of:
+// enum class e : short { X = FOO_BAR + 2 };
+TEST(YAMLGeneratorTest, enumTypedScopedEnumYAML) {
+  EnumInfo I;
+  I.Name = "e";
+
+  I.Members.emplace_back("X", "-9876", "FOO_BAR + 2");
+  I.Scoped = true;
+  I.BaseType = TypeInfo("short");
+
+  auto G = getYAMLGenerator();
+  assert(G);
+  std::string Buffer;
+  llvm::raw_string_ostream Actual(Buffer);
+  auto Err = G->generateDocForInfo(&I, Actual, ClangDocContext());
+  assert(!Err);
+  std::string Expected =
+      R"raw(---
+USR:             '0000000000000000000000000000000000000000'
+Name:            'e'
+Scoped:          true
+BaseType:
+  Type:
+    Name:            'short'
+Members:
+  - Name:            'X'
+    Value:           '-9876'
+    Expr:            'FOO_BAR + 2'
 ...
 )raw";
   EXPECT_EQ(Expected, Actual.str());
@@ -267,9 +334,9 @@ TEST(YAMLGeneratorTest, emitCommentYAML) {
   FunctionInfo I;
   I.Name = "f";
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
-  I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
-  I.Params.emplace_back("int", "I");
-  I.Params.emplace_back("int", "J");
+  I.ReturnType = TypeInfo("void");
+  I.Params.emplace_back(TypeInfo("int"), "I");
+  I.Params.emplace_back(TypeInfo("int"), "J");
   I.Access = AccessSpecifier::AS_none;
 
   CommentInfo Top;

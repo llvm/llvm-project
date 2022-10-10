@@ -129,9 +129,6 @@ class alignas(8) AttributeStorage : public StorageUniquer::BaseStorage {
   friend StorageUniquer;
 
 public:
-  /// Get the type of this attribute.
-  Type getType() const { return type; }
-
   /// Return the abstract descriptor for this attribute.
   const AbstractAttribute &getAbstractAttribute() const {
     assert(abstractAttribute && "Malformed attribute storage object.");
@@ -139,15 +136,6 @@ public:
   }
 
 protected:
-  /// Construct a new attribute storage instance with the given type.
-  /// Note: All attributes require a valid type. If no type is provided here,
-  ///       the type of the attribute will automatically default to NoneType
-  ///       upon initialization in the uniquer.
-  AttributeStorage(Type type = nullptr) : type(type) {}
-
-  /// Set the type of this attribute.
-  void setType(Type newType) { type = newType; }
-
   /// Set the abstract attribute for this storage instance. This is used by the
   /// AttributeUniquer when initializing a newly constructed storage object.
   void initializeAbstractAttribute(const AbstractAttribute &abstractAttr) {
@@ -159,9 +147,6 @@ protected:
   void initialize(MLIRContext *context) {}
 
 private:
-  /// The type of the attribute value.
-  Type type;
-
   /// The abstract descriptor for this attribute.
   const AbstractAttribute *abstractAttribute = nullptr;
 };

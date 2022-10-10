@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRAffineTransforms
   AffineDataCopyGeneration.cpp
+  AffineExpandIndexOps.cpp
   AffineLoopInvariantCodeMotion.cpp
   AffineLoopNormalize.cpp
   AffineParallelize.cpp
@@ -25,7 +26,7 @@ add_mlir_dialect_library(MLIRAffineTransforms
   MLIRAffineDialect
   MLIRAffineAnalysis
   MLIRAffineUtils
-  MLIRArithmeticDialect
+  MLIRArithDialect
   MLIRIR
   MLIRMemRefDialect
   MLIRPass

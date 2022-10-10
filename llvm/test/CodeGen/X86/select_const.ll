@@ -206,9 +206,9 @@ define i32 @select_C_Cplus1_signext(i1 signext %cond) {
 define i32 @select_lea_2(i1 zeroext %cond) {
 ; CHECK-LABEL: select_lea_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    xorb $1, %dil
-; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    leal -1(%rax,%rax), %eax
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    orl $1, %eax
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, i32 -1, i32 1
   ret i32 %sel
@@ -268,9 +268,9 @@ define i8 @sel_1_neg1(i32 %x) {
 ; CHECK-LABEL: sel_1_neg1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpl $43, %edi
-; CHECK-NEXT:    setge %al
-; CHECK-NEXT:    shlb $2, %al
-; CHECK-NEXT:    decb %al
+; CHECK-NEXT:    setl %al
+; CHECK-NEXT:    negb %al
+; CHECK-NEXT:    orb $3, %al
 ; CHECK-NEXT:    retq
   %cmp = icmp sgt i32 %x, 42
   %sel = select i1 %cmp, i8 3, i8 -1
@@ -429,6 +429,17 @@ define i32 @select_C1_C2_signext(i1 signext %cond) {
   ret i32 %sel
 }
 
+define i32 @select_n_or_minus1(i1 signext %cond) {
+; CHECK-LABEL: select_n_or_minus1:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    notl %eax
+; CHECK-NEXT:    orl $12414, %eax # imm = 0x307E
+; CHECK-NEXT:    retq
+  %sel = select i1 %cond, i32 12414, i32 -1
+  ret i32 %sel
+}
+
 ; select (x == 2), 2, (x + 1) --> select (x == 2), x, (x + 1)
 
 define i64 @select_2_or_inc(i64 %x) {
@@ -448,11 +459,11 @@ define <4 x i32> @sel_constants_add_constant_vec(i1 %cond) {
 ; CHECK-LABEL: sel_constants_add_constant_vec:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne .LBB36_1
+; CHECK-NEXT:    jne .LBB37_1
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [12,13,14,15]
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB36_1:
+; CHECK-NEXT:  .LBB37_1:
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [4294967293,14,4,4]
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, <4 x i32> <i32 -4, i32 12, i32 1, i32 0>, <4 x i32> <i32 11, i32 11, i32 11, i32 11>
@@ -464,11 +475,11 @@ define <2 x double> @sel_constants_fmul_constant_vec(i1 %cond) {
 ; CHECK-LABEL: sel_constants_fmul_constant_vec:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne .LBB37_1
+; CHECK-NEXT:    jne .LBB38_1
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.1883E+2,3.4539999999999999E+1]
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB37_1:
+; CHECK-NEXT:  .LBB38_1:
 ; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [-2.0399999999999999E+1,3.768E+1]
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, <2 x double> <double -4.0, double 12.0>, <2 x double> <double 23.3, double 11.0>
@@ -509,4 +520,3 @@ define float @select_undef_fp(float %x) {
   %f = select i1 undef, float 4.0, float %x
   ret float %f
 }
-

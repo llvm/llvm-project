@@ -1,6 +1,6 @@
 // REQUIRES: webassembly-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple wasm64-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 %s -triple wasm64-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 | FileCheck %s
 
 void may_throw();
 void dont_throw() noexcept;
@@ -20,7 +20,7 @@ void test0() {
   }
 }
 
-// CHECK-LABEL: define void @_Z5test0v() {{.*}} personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*)
+// CHECK-LABEL: define void @_Z5test0v() {{.*}} personality ptr @__gxx_wasm_personality_v0
 
 // CHECK:   %[[INT_ALLOCA:.*]] = alloca i32
 // CHECK:   invoke void @_Z9may_throwv()
@@ -30,20 +30,19 @@ void test0() {
 // CHECK-NEXT:   %[[CATCHSWITCH:.*]] = catchswitch within none [label %[[CATCHSTART_BB:.*]]] unwind to caller
 
 // CHECK: [[CATCHSTART_BB]]:
-// CHECK-NEXT:   %[[CATCHPAD:.*]] = catchpad within %[[CATCHSWITCH]] [i8* bitcast (i8** @_ZTIi to i8*), i8* bitcast (i8** @_ZTId to i8*)]
-// CHECK-NEXT:   %[[EXN:.*]] = call i8* @llvm.wasm.get.exception(token %[[CATCHPAD]])
-// CHECK-NEXT:   store i8* %[[EXN]], i8** %exn.slot
+// CHECK-NEXT:   %[[CATCHPAD:.*]] = catchpad within %[[CATCHSWITCH]] [ptr @_ZTIi, ptr @_ZTId]
+// CHECK-NEXT:   %[[EXN:.*]] = call ptr @llvm.wasm.get.exception(token %[[CATCHPAD]])
+// CHECK-NEXT:   store ptr %[[EXN]], ptr %exn.slot
 // CHECK-NEXT:   %[[SELECTOR:.*]] = call i32 @llvm.wasm.get.ehselector(token %[[CATCHPAD]])
-// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)) #2
+// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #2
 // CHECK-NEXT:   %[[MATCHES:.*]] = icmp eq i32 %[[SELECTOR]], %[[TYPEID]]
 // CHECK-NEXT:   br i1 %[[MATCHES]], label %[[CATCH_INT_BB:.*]], label %[[CATCH_FALLTHROUGH_BB:.*]]
 
 // CHECK: [[CATCH_INT_BB]]:
-// CHECK-NEXT:   %[[EXN:.*]] = load i8*, i8** %exn.slot
-// CHECK-NEXT:   %[[ADDR:.*]] = call i8* @__cxa_begin_catch(i8* %[[EXN]]) {{.*}} [ "funclet"(token %[[CATCHPAD]]) ]
-// CHECK-NEXT:   %[[ADDR_CAST:.*]] = bitcast i8* %[[ADDR]] to i32*
-// CHECK-NEXT:   %[[INT_VAL:.*]] = load i32, i32* %[[ADDR_CAST]]
-// CHECK-NEXT:   store i32 %[[INT_VAL]], i32* %[[INT_ALLOCA]]
+// CHECK-NEXT:   %[[EXN:.*]] = load ptr, ptr %exn.slot
+// CHECK-NEXT:   %[[ADDR:.*]] = call ptr @__cxa_begin_catch(ptr %[[EXN]]) {{.*}} [ "funclet"(token %[[CATCHPAD]]) ]
+// CHECK-NEXT:   %[[INT_VAL:.*]] = load i32, ptr %[[ADDR]]
+// CHECK-NEXT:   store i32 %[[INT_VAL]], ptr %[[INT_ALLOCA]]
 // CHECK-NEXT:   call void @_Z10dont_throwv() {{.*}} [ "funclet"(token %[[CATCHPAD]]) ]
 // CHECK-NEXT:   call void @__cxa_end_catch() {{.*}} [ "funclet"(token %[[CATCHPAD]]) ]
 // CHECK-NEXT:   catchret from %[[CATCHPAD]] to label %[[CATCHRET_DEST_BB0:.*]]
@@ -52,7 +51,7 @@ void test0() {
 // CHECK-NEXT:   br label %[[TRY_CONT_BB:.*]]
 
 // CHECK: [[CATCH_FALLTHROUGH_BB]]
-// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTId to i8*)) #2
+// CHECK-NEXT:   %[[TYPEID:.*]] = call i32 @llvm.eh.typeid.for(ptr @_ZTId) #2
 // CHECK-NEXT:   %[[MATCHES:.*]] = icmp eq i32 %[[SELECTOR]], %[[TYPEID]]
 // CHECK-NEXT:   br i1 %[[MATCHES]], label %[[CATCH_FLOAT_BB:.*]], label %[[RETHROW_BB:.*]]
 
@@ -80,7 +79,7 @@ void test1() {
 // CHECK:   %[[CATCHSWITCH:.*]] = catchswitch within none [label %[[CATCHSTART_BB:.*]]] unwind to caller
 
 // CHECK: [[CATCHSTART_BB]]:
-// CHECK-NEXT:   %[[CATCHPAD:.*]] = catchpad within %[[CATCHSWITCH]] [i8* null]
+// CHECK-NEXT:   %[[CATCHPAD:.*]] = catchpad within %[[CATCHSWITCH]] [ptr null]
 // CHECK:   br label %[[CATCH_ALL_BB:.*]]
 
 // CHECK: [[CATCH_ALL_BB]]:
@@ -102,7 +101,7 @@ void test2() {
 // CHECK:   %[[CATCHSWITCH:.*]] = catchswitch within none [label %[[CATCHSTART_BB:.*]]] unwind to caller
 
 // CHECK: [[CATCHSTART_BB]]:
-// CHECK-NEXT:   %[[CATCHPAD:.*]] = catchpad within %[[CATCHSWITCH]] [i8* bitcast (i8** @_ZTIi to i8*), i8* null]
+// CHECK-NEXT:   %[[CATCHPAD:.*]] = catchpad within %[[CATCHSWITCH]] [ptr @_ZTIi, ptr null]
 // CHECK:   br i1 %{{.*}}, label %[[CATCH_INT_BB:.*]], label %[[CATCH_ALL_BB:.*]]
 
 // CHECK: [[CATCH_INT_BB]]:
@@ -124,7 +123,7 @@ void test3() {
 
 // CHECK: [[EHCLEANUP_BB]]:
 // CHECK-NEXT:   %[[CLEANUPPAD:.*]] = cleanuppad within none []
-// CHECK-NEXT:   call noundef %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* {{[^,]*}} %{{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD]]) ]
+// CHECK-NEXT:   call noundef ptr @_ZN7CleanupD1Ev(ptr {{[^,]*}} %{{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD]]) ]
 // CHECK-NEXT:   cleanupret from %[[CLEANUPPAD]] unwind to caller
 
 // Possibly throwing function call within a catch
@@ -141,7 +140,7 @@ void test4() {
 // CHECK:   %[[CATCHSWITCH]] = catchswitch within none [label %[[CATCHSTART_BB]]] unwind to caller
 
 // CHECK: [[CATCHSTART_BB]]:
-// CHECK:   %[[CATCHPAD:.*]] = catchpad within %[[CATCHSWITCH]] [i8* bitcast (i8** @_ZTIi to i8*)]
+// CHECK:   %[[CATCHPAD:.*]] = catchpad within %[[CATCHSWITCH]] [ptr @_ZTIi]
 
 // CHECK:   invoke void @_Z9may_throwv() [ "funclet"(token %[[CATCHPAD]]) ]
 // CHECK-NEXT:           to label %[[INVOKE_CONT_BB:.*]] unwind label %[[EHCLEANUP_BB:.*]]
@@ -169,7 +168,7 @@ void test5() {
 // CHECK:   %[[CATCHSWITCH:.*]] = catchswitch within none [label %[[CATCHSTART_BB]]] unwind to caller
 
 // CHECK: [[CATCHSTART_BB]]:
-// CHECK:   %[[CATCHPAD:.*]] = catchpad within %[[CATCHSWITCH]] [i8* null]
+// CHECK:   %[[CATCHPAD:.*]] = catchpad within %[[CATCHSWITCH]] [ptr null]
 
 // CHECK:   invoke void @_Z9may_throwv() [ "funclet"(token %[[CATCHPAD]]) ]
 // CHECK-NEXT:           to label %[[INVOKE_CONT_BB0:.*]] unwind label %[[EHCLEANUP_BB:.*]]
@@ -209,14 +208,14 @@ void test6() {
 
 // CHECK: [[EHCLEANUP_BB0]]:
 // CHECK-NEXT:   %[[CLEANUPPAD0:.*]] = cleanuppad within none []
-// CHECK-NEXT:   call noundef %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* {{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD0]]) ]
+// CHECK-NEXT:   call noundef ptr @_ZN7CleanupD1Ev(ptr {{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD0]]) ]
 // CHECK-NEXT:   cleanupret from %[[CLEANUPPAD0]] unwind label %[[CATCH_DISPATCH_BB:.*]]
 
 // CHECK: [[CATCH_DISPATCH_BB]]:
 // CHECK-NEXT:  %[[CATCHSWITCH:.*]] = catchswitch within none [label %[[CATCHSTART_BB:.*]]] unwind label %[[EHCLEANUP_BB1:.*]]
 
 // CHECK: [[CATCHSTART_BB]]:
-// CHECK-NEXT:   %[[CATCHPAD:.*]] = catchpad within %[[CATCHSWITCH]] [i8* bitcast (i8** @_ZTIi to i8*)]
+// CHECK-NEXT:   %[[CATCHPAD:.*]] = catchpad within %[[CATCHSWITCH]] [ptr @_ZTIi]
 // CHECK:   br i1 %{{.*}}, label %[[CATCH_INT_BB:.*]], label %[[RETHROW_BB:.*]]
 
 // CHECK: [[CATCH_INT_BB]]:
@@ -232,7 +231,7 @@ void test6() {
 
 // CHECK: [[EHCLEANUP_BB2]]:
 // CHECK-NEXT:   %[[CLEANUPPAD2:.*]] = cleanuppad within %[[CATCHPAD]] []
-// CHECK-NEXT:   call noundef %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* {{[^,]*}} %{{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD2]]) ]
+// CHECK-NEXT:   call noundef ptr @_ZN7CleanupD1Ev(ptr {{[^,]*}} %{{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD2]]) ]
 // CHECK-NEXT:   cleanupret from %[[CLEANUPPAD2]] unwind label %[[EHCLEANUP_BB3:.*]]
 
 // CHECK: [[EHCLEANUP_BB3]]:
@@ -241,7 +240,7 @@ void test6() {
 
 // CHECK: [[EHCLEANUP_BB1]]:
 // CHECK-NEXT:   %[[CLEANUPPAD1:.*]] = cleanuppad within none []
-// CHECK-NEXT:   call noundef %struct.Cleanup* @_ZN7CleanupD1Ev(%struct.Cleanup* {{[^,]*}} %{{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD1]]) ]
+// CHECK-NEXT:   call noundef ptr @_ZN7CleanupD1Ev(ptr {{[^,]*}} %{{.*}}) {{.*}} [ "funclet"(token %[[CLEANUPPAD1]]) ]
 // CHECK-NEXT:   cleanupret from %[[CLEANUPPAD1]] unwind to caller
 
 // CHECK: [[UNREACHABLE_BB]]:
@@ -281,7 +280,7 @@ void test7() {
 
 // CHECK:   %[[CATCHSWITCH0:.*]] = catchswitch within none
 
-// CHECK:   %[[CATCHPAD0:.*]] = catchpad within %[[CATCHSWITCH0]] [i8* bitcast (i8** @_ZTIi to i8*), i8* bitcast (i8** @_ZTId to i8*)]
+// CHECK:   %[[CATCHPAD0:.*]] = catchpad within %[[CATCHSWITCH0]] [ptr @_ZTIi, ptr @_ZTId]
 
 // CHECK:   invoke void @_Z9may_throwv() [ "funclet"(token %[[CATCHPAD0]]) ]
 
@@ -304,7 +303,7 @@ void test7() {
 
 // CHECK:   %[[CATCHSWITCH1:.*]] = catchswitch within none
 
-// CHECK:   %[[CATCHPAD1:.*]] = catchpad within %[[CATCHSWITCH1]] [i8* bitcast (i8** @_ZTIi to i8*), i8* null]
+// CHECK:   %[[CATCHPAD1:.*]] = catchpad within %[[CATCHSWITCH1]] [ptr @_ZTIi, ptr null]
 
 // CHECK:   invoke void @_Z9may_throwv() [ "funclet"(token %[[CATCHPAD1]]) ]
 
@@ -351,13 +350,13 @@ void test8() {
 
 // CHECK:   %[[CATCHSWITCH0:.*]] = catchswitch within none
 
-// CHECK:   %[[CATCHPAD0:.*]] = catchpad within %[[CATCHSWITCH0]] [i8* bitcast (i8** @_ZTIi to i8*)]
+// CHECK:   %[[CATCHPAD0:.*]] = catchpad within %[[CATCHSWITCH0]] [ptr @_ZTIi]
 
 // CHECK:   invoke void @_Z9may_throwv() [ "funclet"(token %[[CATCHPAD0]]) ]
 
 // CHECK:   %[[CATCHSWITCH1:.*]] = catchswitch within %[[CATCHPAD0]]
 
-// CHECK:   %[[CATCHPAD1:.*]] = catchpad within %[[CATCHSWITCH1]] [i8* bitcast (i8** @_ZTIi to i8*)]
+// CHECK:   %[[CATCHPAD1:.*]] = catchpad within %[[CATCHSWITCH1]] [ptr @_ZTIi]
 
 // CHECK:   invoke void @_Z9may_throwv() [ "funclet"(token %[[CATCHPAD1]]) ]
 
@@ -378,10 +377,10 @@ void test8() {
 
 // CHECK:   unreachable
 
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-DEFAULT
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -Wwasm-exception-spec -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-ON
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -Wno-wasm-exception-spec -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-OFF
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple wasm32-unknown-unknown -fexceptions -fcxx-exceptions -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=EM-EH-WARNING
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-DEFAULT
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -Wwasm-exception-spec -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-ON
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -exception-model=wasm -target-feature +exception-handling -Wno-wasm-exception-spec -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=WARNING-OFF
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fexceptions -fcxx-exceptions -emit-llvm -o - -std=c++11 2>&1 | FileCheck %s --check-prefix=EM-EH-WARNING
 
 // Wasm EH ignores dynamic exception specifications with types at the moment.
 // This is controlled by -Wwasm-exception-spec, which is on by default. This
@@ -405,7 +404,7 @@ void test10() throw() {
 // Here we only check if the command enables wasm exception handling in the
 // backend so that exception handling instructions can be generated in .s file.
 
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -S -o - -std=c++11 | FileCheck %s --check-prefix=ASSEMBLY
+// RUN: %clang_cc1 %s -triple wasm32-unknown-unknown -fms-extensions -fexceptions -fcxx-exceptions -mllvm -wasm-enable-eh -exception-model=wasm -target-feature +exception-handling -S -o - -std=c++11 | FileCheck %s --check-prefix=ASSEMBLY
 
 // ASSEMBLY: try
 // ASSEMBLY: catch

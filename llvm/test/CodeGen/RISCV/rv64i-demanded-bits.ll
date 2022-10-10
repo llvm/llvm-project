@@ -98,3 +98,97 @@ define void @xor_signbit(ptr nocapture noundef %0) {
   store i32 %3, ptr %0, align 4
   ret void
 }
+
+; Type legalization inserts a sext_inreg after the sub. This causes the
+; constant for the AND to be turned into 0xfffffff8. Then SimplifyDemandedBits
+; removes the sext_inreg from the path to the store. This prevents
+; TargetShrinkDemandedConstant from being able to restore the lost upper bits
+; from the and mask to allow andi. ISel is able to recover the lost sext_inreg
+; using hasAllWUsers. We also use hasAllWUsers to recover the ANDI.
+define signext i32 @andi_sub_cse(i32 signext %0, i32 signext %1, ptr %2) {
+; CHECK-LABEL: andi_sub_cse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, -8
+; CHECK-NEXT:    subw a0, a0, a1
+; CHECK-NEXT:    sw a0, 0(a2)
+; CHECK-NEXT:    ret
+  %4 = and i32 %0, -8
+  %5 = sub i32 %4, %1
+  store i32 %5, ptr %2, align 4
+  ret i32 %5
+}
+
+define signext i32 @addi_sub_cse(i32 signext %0, i32 signext %1, ptr %2) {
+; CHECK-LABEL: addi_sub_cse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subw a0, a0, a1
+; CHECK-NEXT:    addiw a0, a0, -8
+; CHECK-NEXT:    sw a0, 0(a2)
+; CHECK-NEXT:    ret
+  %4 = add i32 %0, -8
+  %5 = sub i32 %4, %1
+  store i32 %5, ptr %2, align 4
+  ret i32 %5
+}
+
+define signext i32 @xori_sub_cse(i32 signext %0, i32 signext %1, ptr %2) {
+; CHECK-LABEL: xori_sub_cse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xori a0, a0, -8
+; CHECK-NEXT:    subw a0, a0, a1
+; CHECK-NEXT:    sw a0, 0(a2)
+; CHECK-NEXT:    ret
+  %4 = xor i32 %0, -8
+  %5 = sub i32 %4, %1
+  store i32 %5, ptr %2, align 4
+  ret i32 %5
+}
+
+define signext i32 @ori_sub_cse(i32 signext %0, i32 signext %1, ptr %2) {
+; CHECK-LABEL: ori_sub_cse:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ori a0, a0, -8
+; CHECK-NEXT:    subw a0, a0, a1
+; CHECK-NEXT:    sw a0, 0(a2)
+; CHECK-NEXT:    ret
+  %4 = or i32 %0, -8
+  %5 = sub i32 %4, %1
+  store i32 %5, ptr %2, align 4
+  ret i32 %5
+}
+
+; SimplifyDemandedBits breaks the ANDI by turning -8 into 0xfffffff8. This
+; gets CSEd with the AND needed for type legalizing the lshr. This increases
+; the use count of the AND with 0xfffffff8 making TargetShrinkDemandedConstant
+; unable to restore it to 0xffffffff for the lshr and -8 for the AND to use
+; ANDI.
+; Instead we rely on ISel to form srliw even though the AND has multiple uses
+; and the mask has missing 1s where bits will be shifted out. This reduces the
+; use count of the AND and we can use hasAllWUsers to form ANDI.
+define signext i32 @andi_srliw(i32 signext %0, ptr %1, i32 signext %2) {
+; CHECK-LABEL: andi_srliw:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a3, a0, -8
+; CHECK-NEXT:    srliw a4, a0, 3
+; CHECK-NEXT:    addw a0, a3, a2
+; CHECK-NEXT:    sw a4, 0(a1)
+; CHECK-NEXT:    ret
+  %4 = and i32 %0, -8
+  %5 = lshr i32 %0, 3
+  store i32 %5, ptr %1, align 4
+  %6 = add i32 %4, %2
+  ret i32 %6
+}
+
+define i32 @and_or(i32 signext %x) {
+; CHECK-LABEL: and_or:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ori a0, a0, 255
+; CHECK-NEXT:    slli a0, a0, 48
+; CHECK-NEXT:    srli a0, a0, 48
+; CHECK-NEXT:    ret
+entry:
+  %and = and i32 %x, 65280
+  %or = or i32 %and, 255
+  ret i32 %or
+}

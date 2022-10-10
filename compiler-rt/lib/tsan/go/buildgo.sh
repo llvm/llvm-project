@@ -59,9 +59,11 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 		ARCHCFLAGS="-m64 -mcpu=power8 -fno-function-sections"
 	elif [ "`uname -a | grep x86_64`" != "" ]; then
 		SUFFIX="linux_amd64"
-		# -msse3 used below to ensure continued support of older
-		# cpus for now, see https://github.com/golang/go/issues/53743.
-		ARCHCFLAGS="-m64 -msse3"
+		if [ "$GOAMD64" = "v3" ]; then
+			ARCHCFLAGS="-m64 -msse4.2"
+		else
+			ARCHCFLAGS="-m64 -msse3"
+		fi
 		OSCFLAGS="$OSCFLAGS -ffreestanding -Wno-unused-const-variable -Wno-unknown-warning-option"
 	elif [ "`uname -a | grep aarch64`" != "" ]; then
 		SUFFIX="linux_arm64"
@@ -176,7 +178,7 @@ for F in $SRCS; do
 	cat $F
 done > $DIR/gotsan.cpp
 
-FLAGS=" -I../rtl -I../.. -I../../sanitizer_common -I../../../include -std=c++14 -Wall -fno-exceptions -fno-rtti -DSANITIZER_GO=1 -DSANITIZER_DEADLOCK_DETECTOR_VERSION=2 $OSCFLAGS $ARCHCFLAGS $EXTRA_CFLAGS"
+FLAGS=" -I../rtl -I../.. -I../../sanitizer_common -I../../../include -std=c++17 -Wall -fno-exceptions -fno-rtti -DSANITIZER_GO=1 -DSANITIZER_DEADLOCK_DETECTOR_VERSION=2 $OSCFLAGS $ARCHCFLAGS $EXTRA_CFLAGS"
 DEBUG_FLAGS="$FLAGS -DSANITIZER_DEBUG=1 -g"
 FLAGS="$FLAGS -DSANITIZER_DEBUG=0 -O3 -fomit-frame-pointer"
 

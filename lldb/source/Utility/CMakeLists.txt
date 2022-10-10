@@ -48,9 +48,7 @@ add_lldb_library(lldbUtility
   ProcessInfo.cpp
   RegisterValue.cpp
   RegularExpression.cpp
-  Reproducer.cpp
   Instrumentation.cpp
-  ReproducerProvider.cpp
   Scalar.cpp
   SelectHelper.cpp
   State.cpp

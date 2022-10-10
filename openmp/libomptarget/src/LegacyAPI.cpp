@@ -77,7 +77,7 @@ EXTERN int __tgt_target_mapper(ident_t *Loc, int64_t DeviceId, void *HostPtr,
                                map_var_info_t *ArgNames, void **ArgMappers) {
   TIMESCOPE_WITH_IDENT(Loc);
   __tgt_kernel_arguments KernelArgs{
-      1, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames, ArgMappers, -1};
+      1, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames, ArgMappers, 0};
   return __tgt_target_kernel(Loc, DeviceId, -1, -1, HostPtr, &KernelArgs);
 }
 
@@ -120,7 +120,7 @@ EXTERN int __tgt_target_teams_mapper(ident_t *Loc, int64_t DeviceId,
   TIMESCOPE_WITH_IDENT(Loc);
 
   __tgt_kernel_arguments KernelArgs{
-      1, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames, ArgMappers, -1};
+      1, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames, ArgMappers, 0};
   return __tgt_target_kernel(Loc, DeviceId, NumTeams, ThreadLimit, HostPtr,
                              &KernelArgs);
 }
@@ -165,17 +165,7 @@ EXTERN int __tgt_target_teams_nowait_mapper(
 EXTERN void __kmpc_push_target_tripcount_mapper(ident_t *Loc, int64_t DeviceId,
                                                 uint64_t LoopTripcount) {
   TIMESCOPE_WITH_IDENT(Loc);
-  if (checkDeviceAndCtors(DeviceId, Loc)) {
-    DP("Not offloading to device %" PRId64 "\n", DeviceId);
-    return;
-  }
-
-  DP("__kmpc_push_target_tripcount(%" PRId64 ", %" PRIu64 ")\n", DeviceId,
-     LoopTripcount);
-  PM->TblMapMtx.lock();
-  PM->Devices[DeviceId]->LoopTripCnt.emplace(__kmpc_global_thread_num(NULL),
-                                             LoopTripcount);
-  PM->TblMapMtx.unlock();
+  DP("WARNING: __kmpc_push_target_tripcount has been deprecated and is a noop");
 }
 
 EXTERN void __kmpc_push_target_tripcount(int64_t DeviceId,

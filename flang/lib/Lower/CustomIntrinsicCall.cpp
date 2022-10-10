@@ -22,7 +22,7 @@
 /// arguments.
 static bool isMinOrMaxWithDynamicallyOptionalArg(
     llvm::StringRef name, const Fortran::evaluate::ProcedureRef &procRef,
-    Fortran::evaluate::FoldingContext &foldingContex) {
+    Fortran::evaluate::FoldingContext &foldingContext) {
   if (name != "min" && name != "max")
     return false;
   const auto &args = procRef.arguments();
@@ -32,7 +32,7 @@ static bool isMinOrMaxWithDynamicallyOptionalArg(
   for (std::size_t i = 2; i < argSize; ++i) {
     if (auto *expr =
             Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(args[i]))
-      if (Fortran::evaluate::MayBePassedAsAbsentOptional(*expr, foldingContex))
+      if (Fortran::evaluate::MayBePassedAsAbsentOptional(*expr, foldingContext))
         return true;
   }
   return false;
@@ -43,31 +43,13 @@ static bool isMinOrMaxWithDynamicallyOptionalArg(
 /// when absent is not zero.
 static bool isIshftcWithDynamicallyOptionalArg(
     llvm::StringRef name, const Fortran::evaluate::ProcedureRef &procRef,
-    Fortran::evaluate::FoldingContext &foldingContex) {
+    Fortran::evaluate::FoldingContext &foldingContext) {
   if (name != "ishftc" || procRef.arguments().size() < 3)
     return false;
   auto *expr = Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(
       procRef.arguments()[2]);
   return expr &&
-         Fortran::evaluate::MayBePassedAsAbsentOptional(*expr, foldingContex);
-}
-
-/// Is this a call to the RANDOM_SEED intrinsic with arguments that may be
-/// absent at runtime? This is a special case because that aspect cannot
-/// be delegated to the runtime via a null fir.box or address given the current
-/// runtime entry point.
-static bool isRandomSeedWithDynamicallyOptionalArg(
-    llvm::StringRef name, const Fortran::evaluate::ProcedureRef &procRef,
-    Fortran::evaluate::FoldingContext &foldingContex) {
-  if (name != "random_seed")
-    return false;
-  for (const auto &arg : procRef.arguments()) {
-    auto *expr = Fortran::evaluate::UnwrapExpr<Fortran::lower::SomeExpr>(arg);
-    if (expr &&
-        Fortran::evaluate::MayBePassedAsAbsentOptional(*expr, foldingContex))
-      return true;
-  }
-  return false;
+         Fortran::evaluate::MayBePassedAsAbsentOptional(*expr, foldingContext);
 }
 
 bool Fortran::lower::intrinsicRequiresCustomOptionalHandling(
@@ -77,8 +59,7 @@ bool Fortran::lower::intrinsicRequiresCustomOptionalHandling(
   llvm::StringRef name = intrinsic.name;
   Fortran::evaluate::FoldingContext &fldCtx = converter.getFoldingContext();
   return isMinOrMaxWithDynamicallyOptionalArg(name, procRef, fldCtx) ||
-         isIshftcWithDynamicallyOptionalArg(name, procRef, fldCtx) ||
-         isRandomSeedWithDynamicallyOptionalArg(name, procRef, fldCtx);
+         isIshftcWithDynamicallyOptionalArg(name, procRef, fldCtx);
 }
 
 static void prepareMinOrMaxArguments(
@@ -229,13 +210,10 @@ void Fortran::lower::prepareCustomIntrinsicArgument(
     return prepareMinOrMaxArguments(procRef, intrinsic, retTy,
                                     prepareOptionalArgument,
                                     prepareOtherArgument, converter);
-  if (name == "ishftc")
-    return prepareIshftcArguments(procRef, intrinsic, retTy,
-                                  prepareOptionalArgument, prepareOtherArgument,
-                                  converter);
-  TODO(converter.getCurrentLocation(),
-       "unhandled dynamically optional arguments in SYSTEM_CLOCK or "
-       "RANDOM_SEED");
+  assert(name == "ishftc" && "unexpected custom intrinsic argument call");
+  return prepareIshftcArguments(procRef, intrinsic, retTy,
+                                prepareOptionalArgument, prepareOtherArgument,
+                                converter);
 }
 
 fir::ExtendedValue Fortran::lower::lowerCustomIntrinsic(
@@ -246,9 +224,7 @@ fir::ExtendedValue Fortran::lower::lowerCustomIntrinsic(
   if (name == "min" || name == "max")
     return lowerMinOrMax(builder, loc, name, retTy, isPresentCheck, getOperand,
                          numOperands, stmtCtx);
-  if (name == "ishftc")
-    return lowerIshftc(builder, loc, name, retTy, isPresentCheck, getOperand,
-                       numOperands, stmtCtx);
-  TODO(loc, "unhandled dynamically optional arguments in SYSTEM_CLOCK or "
-            "RANDOM_SEED");
+  assert(name == "ishftc" && "unexpected custom intrinsic call");
+  return lowerIshftc(builder, loc, name, retTy, isPresentCheck, getOperand,
+                     numOperands, stmtCtx);
 }

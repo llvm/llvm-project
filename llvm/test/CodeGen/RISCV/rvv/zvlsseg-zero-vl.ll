@@ -90,7 +90,7 @@ declare {<vscale x 16 x i16>,<vscale x 16 x i16>, i64} @llvm.riscv.vlseg2ff.mask
 define <vscale x 16 x i16> @test_vlseg2ff_nxv16i16(i16* %base, i64* %outvl) {
 ; CHECK-LABEL: test_vlseg2ff_nxv16i16:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, ma
 ; CHECK-NEXT:    vlseg2e16ff.v v4, (a0)
 ; CHECK-NEXT:    csrr a0, vl
 ; CHECK-NEXT:    sd a0, 0(a1)
@@ -130,7 +130,7 @@ define void @test_vsseg2_nxv16i16(<vscale x 16 x i16> %val, i16* %base) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0)
 ; CHECK-NEXT:    ret
 entry:
@@ -143,7 +143,7 @@ define void @test_vsseg2_mask_nxv16i16(<vscale x 16 x i16> %val, i16* %base, <vs
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, ma
 ; CHECK-NEXT:    vsseg2e16.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -159,7 +159,7 @@ define void @test_vssseg2_nxv16i16(<vscale x 16 x i16> %val, i16* %base, i64 %of
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1
 ; CHECK-NEXT:    ret
 entry:
@@ -172,7 +172,7 @@ define void @test_vssseg2_mask_nxv16i16(<vscale x 16 x i16> %val, i16* %base, i6
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, ma
 ; CHECK-NEXT:    vssseg2e16.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -189,7 +189,7 @@ define void @test_vsoxseg2_nxv16i16_nxv16i16(<vscale x 16 x i16> %val, i16* %bas
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v8m4_v12m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v16, v12
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, ma
 ; CHECK-NEXT:    vsoxseg2ei16.v v8, (a0), v16
 ; CHECK-NEXT:    ret
 entry:
@@ -203,7 +203,7 @@ define void @test_vsoxseg2_mask_nxv16i16_nxv16i16(<vscale x 16 x i16> %val, i16*
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v8m4_v12m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v16, v12
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, ma
 ; CHECK-NEXT:    vsoxseg2ei16.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    ret
 entry:
@@ -220,7 +220,7 @@ define void @test_vsuxseg2_nxv16i16_nxv16i16(<vscale x 16 x i16> %val, i16* %bas
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v8m4_v12m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v16, v12
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, ma
 ; CHECK-NEXT:    vsuxseg2ei16.v v8, (a0), v16
 ; CHECK-NEXT:    ret
 entry:
@@ -234,7 +234,7 @@ define void @test_vsuxseg2_mask_nxv16i16_nxv16i16(<vscale x 16 x i16> %val, i16*
 ; CHECK-NEXT:    # kill: def $v8m4 killed $v8m4 killed $v8m4_v12m4 def $v8m4_v12m4
 ; CHECK-NEXT:    vmv4r.v v16, v12
 ; CHECK-NEXT:    vmv4r.v v12, v8
-; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, mu
+; CHECK-NEXT:    vsetivli zero, 0, e16, m4, ta, ma
 ; CHECK-NEXT:    vsuxseg2ei16.v v8, (a0), v16, v0.t
 ; CHECK-NEXT:    ret
 entry:

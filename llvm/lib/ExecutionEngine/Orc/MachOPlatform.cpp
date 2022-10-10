@@ -85,7 +85,7 @@ public:
     auto G = std::make_unique<jitlink::LinkGraph>(
         "<MachOHeaderMU>", TT, PointerSize, Endianness,
         jitlink::getGenericEdgeKindName);
-    auto &HeaderSection = G->createSection("__header", jitlink::MemProt::Read);
+    auto &HeaderSection = G->createSection("__header", MemProt::Read);
     auto &HeaderBlock = createHeaderBlock(*G, HeaderSection);
 
     // Init symbol is header-start symbol.
@@ -163,6 +163,8 @@ private:
 constexpr MachOHeaderMaterializationUnit::HeaderSymbol
     MachOHeaderMaterializationUnit::AdditionalHeaderSymbols[];
 
+StringRef DataCommonSectionName = "__DATA,__common";
+StringRef DataDataSectionName = "__DATA,__data";
 StringRef EHFrameSectionName = "__TEXT,__eh_frame";
 StringRef ModInitFuncSectionName = "__DATA,__mod_init_func";
 StringRef ObjCClassListSectionName = "__DATA,__objc_classlist";
@@ -440,24 +442,17 @@ void MachOPlatform::pushInitializersLoop(
   if (NewInitSymbols.empty()) {
 
     // To make the list intelligible to the runtime we need to convert all
-    // JITDylib pointers to their header addresses.
+    // JITDylib pointers to their header addresses. Only include JITDylibs
+    // that appear in the JITDylibToHeaderAddr map (i.e. those that have been
+    // through setupJITDylib) -- bare JITDylibs aren't managed by the platform.
     DenseMap<JITDylib *, ExecutorAddr> HeaderAddrs;
     HeaderAddrs.reserve(JDDepMap.size());
     {
       std::lock_guard<std::mutex> Lock(PlatformMutex);
       for (auto &KV : JDDepMap) {
         auto I = JITDylibToHeaderAddr.find(KV.first);
-        if (I == JITDylibToHeaderAddr.end()) {
-          // The header address should have been materialized by the previous
-          // round, but we need to handle the pathalogical case where someone
-          // removes the symbol on another thread while we're running.
-          SendResult(
-              make_error<StringError>("JITDylib " + KV.first->getName() +
-                                          " has no registered header address",
-                                      inconvertibleErrorCode()));
-          return;
-        }
-        HeaderAddrs[KV.first] = I->second;
+        if (I != JITDylibToHeaderAddr.end())
+          HeaderAddrs[KV.first] = I->second;
       }
     }
 
@@ -465,12 +460,16 @@ void MachOPlatform::pushInitializersLoop(
     MachOJITDylibDepInfoMap DIM;
     DIM.reserve(JDDepMap.size());
     for (auto &KV : JDDepMap) {
-      assert(HeaderAddrs.count(KV.first) && "Missing header addr");
-      auto H = HeaderAddrs[KV.first];
+      auto HI = HeaderAddrs.find(KV.first);
+      // Skip unmanaged JITDylibs.
+      if (HI == HeaderAddrs.end())
+        continue;
+      auto H = HI->second;
       MachOJITDylibDepInfo DepInfo;
       for (auto &Dep : KV.second) {
-        assert(HeaderAddrs.count(Dep) && "Missing header addr");
-        DepInfo.DepHeaders.push_back(HeaderAddrs[Dep]);
+        auto HJ = HeaderAddrs.find(Dep);
+        if (HJ != HeaderAddrs.end())
+          DepInfo.DepHeaders.push_back(HJ->second);
       }
       DIM.push_back(std::make_pair(H, std::move(DepInfo)));
     }
@@ -747,7 +746,7 @@ Error MachOPlatform::MachOPlatformPlugin::processObjCImageInfo(
   auto ObjCImageInfoBlocks = ObjCImageInfo->blocks();
 
   // Check that the section is not empty if present.
-  if (llvm::empty(ObjCImageInfoBlocks))
+  if (ObjCImageInfoBlocks.empty())
     return make_error<StringError>("Empty " + ObjCImageInfoSectionName +
                                        " section in " + G.getName(),
                                    inconvertibleErrorCode());
@@ -913,8 +912,19 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
     }
   }
 
+  // Collect data sections to register.
+  StringRef DataSections[] = {DataDataSectionName, DataCommonSectionName};
+  for (auto &SecName : DataSections) {
+    if (auto *Sec = G.findSectionByName(SecName)) {
+      jitlink::SectionRange R(*Sec);
+      if (!R.empty())
+        MachOPlatformSecs.push_back({SecName, R.getRange()});
+    }
+  }
+
   // If any platform sections were found then add an allocation action to call
   // the registration function.
+  bool RegistrationRequired = false;
   StringRef PlatformSections[] = {
       ModInitFuncSectionName,   ObjCClassListSectionName,
       ObjCImageInfoSectionName, ObjCSelRefsSectionName,
@@ -930,6 +940,7 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
     if (R.empty())
       continue;
 
+    RegistrationRequired = true;
     MachOPlatformSecs.push_back({SecName, R.getRange()});
   }
 
@@ -942,9 +953,16 @@ Error MachOPlatform::MachOPlatformPlugin::registerObjectPlatformSections(
         HeaderAddr = I->second;
     }
 
-    if (!HeaderAddr)
+    if (!HeaderAddr) {
+      // If we only found data sections and we're not done bootstrapping yet
+      // then continue -- this must be a data section for the runtime itself,
+      // and we don't need to register those.
+      if (MP.State != MachOPlatform::Initialized && !RegistrationRequired)
+        return Error::success();
+
       return make_error<StringError>("Missing header for " + JD.getName(),
                                      inconvertibleErrorCode());
+    }
 
     // Dump the scraped inits.
     LLVM_DEBUG({

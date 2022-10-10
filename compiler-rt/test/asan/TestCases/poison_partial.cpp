@@ -16,4 +16,4 @@ int main(int argc, char **argv) {
   int *y = (int*)x;
   return y[5];
 }
-// CHECK: 0 bytes to the right
+// CHECK: 0 bytes after

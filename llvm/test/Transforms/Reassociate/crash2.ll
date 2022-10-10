@@ -7,7 +7,10 @@
 
 define float @undef1() {
 ; CHECK-LABEL: @undef1(
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    [[FACTOR1:%.*]] = fmul fast float -1.000000e+00, bitcast (i32 ptrtoint (i32* @g to i32) to float)
+; CHECK-NEXT:    [[REASS_ADD:%.*]] = fadd fast float [[FACTOR1]], bitcast (i32 ptrtoint (i32* @g to i32) to float)
+; CHECK-NEXT:    [[REASS_MUL:%.*]] = fmul fast float [[REASS_ADD]], 2.000000e+00
+; CHECK-NEXT:    ret float [[REASS_MUL]]
 ;
   %t0 = fadd fast float bitcast (i32 ptrtoint (i32* @g to i32) to float), bitcast (i32 ptrtoint (i32* @g to i32) to float)
   %t1 = fsub fast float bitcast (i32 ptrtoint (i32* @g to i32) to float), %t0

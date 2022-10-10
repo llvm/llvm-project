@@ -14,7 +14,6 @@
 ; CHECK-SPIRV: OpSwitch %[[#X]] %[[#DEFAULT:]]{{$}}
 ; CHECK-SPIRV: %[[#DEFAULT]] = OpLabel
 
-; Function Attrs: nounwind
 define spir_func void @kk(i32 %x) {
 entry:
   switch i32 %x, label %sw.default [

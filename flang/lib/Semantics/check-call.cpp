@@ -387,17 +387,13 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     reason = "INTENT(OUT)";
   } else if (dummy.intent == common::Intent::InOut) {
     reason = "INTENT(IN OUT)";
-  } else if (dummyIsAsynchronous) {
-    reason = "ASYNCHRONOUS";
-  } else if (dummyIsVolatile) {
-    reason = "VOLATILE";
   }
   if (reason && scope) {
     bool vectorSubscriptIsOk{isElemental || dummyIsValue}; // 15.5.2.4(21)
     if (auto why{WhyNotModifiable(
             messages.at(), actual, *scope, vectorSubscriptIsOk)}) {
       if (auto *msg{messages.Say(
-              "Actual argument associated with %s %s must be definable"_err_en_US, // C1158
+              "Actual argument associated with %s %s must be definable"_err_en_US,
               reason, dummyName)}) {
         msg->Attach(*why);
       }
@@ -665,7 +661,9 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
     if (interface.HasExplicitInterface() && dummyIsPointer &&
         dummy.intent != common::Intent::In) {
       const Symbol *last{GetLastSymbol(*expr)};
-      if (!(last && IsProcedurePointer(*last))) {
+      if (!(last && IsProcedurePointer(*last)) &&
+          !(dummy.intent == common::Intent::Default &&
+              IsNullProcedurePointer(*expr))) {
         // 15.5.2.9(5) -- dummy procedure POINTER
         // Interface compatibility has already been checked above
         messages.Say(
@@ -733,13 +731,13 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                     IsBOZLiteral(*expr)) {
                   // ok
                 } else if (object.type.type().IsTypelessIntrinsicArgument() &&
-                    evaluate::IsNullPointer(*expr)) {
+                    evaluate::IsNullObjectPointer(*expr)) {
                   // ok, ASSOCIATED(NULL())
                 } else if ((object.attrs.test(characteristics::DummyDataObject::
                                     Attr::Pointer) ||
                                object.attrs.test(characteristics::
                                        DummyDataObject::Attr::Optional)) &&
-                    evaluate::IsNullPointer(*expr)) {
+                    evaluate::IsNullObjectPointer(*expr)) {
                   // ok, FOO(NULL())
                 } else if (object.attrs.test(characteristics::DummyDataObject::
                                    Attr::Allocatable) &&
@@ -933,9 +931,10 @@ parser::Messages CheckExplicitInterface(const characteristics::Procedure &proc,
 bool CheckInterfaceForGeneric(const characteristics::Procedure &proc,
     evaluate::ActualArguments &actuals, const evaluate::FoldingContext &context,
     bool allowActualArgumentConversions) {
-  return !CheckExplicitInterface(
-      proc, actuals, context, nullptr, nullptr, allowActualArgumentConversions)
-              .AnyFatalError();
+  return proc.HasExplicitInterface() &&
+      !CheckExplicitInterface(proc, actuals, context, nullptr, nullptr,
+          allowActualArgumentConversions)
+           .AnyFatalError();
 }
 
 void CheckArguments(const characteristics::Procedure &proc,

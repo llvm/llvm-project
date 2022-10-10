@@ -18,7 +18,7 @@ entry:
   ret void
 }
 
-; CHECK: private constant [6 x i64*] [{{.*}}@foo{{.*}}blockaddress{{.*}}blockaddress{{.*}}], section "__sancov_pcs", comdat($foo), align 8
+; CHECK: private constant [6 x i64*] [i64* bitcast (void (i32*)* @foo to i64*), i64* inttoptr (i64 1 to i64*), i64* bitcast (i8* blockaddress(@foo, %entry.if.end_crit_edge) to i64*), i64* null, i64* bitcast (i8* blockaddress(@foo, %if.then) to i64*), i64* null], section "__sancov_pcs", comdat($foo), align 8
 ; CHECK:      @__start___sancov_pcs = extern_weak hidden global i64
 ; CHECK-NEXT: @__stop___sancov_pcs = extern_weak hidden global i64
 ; CHECK: define internal void @sancov.module_ctor

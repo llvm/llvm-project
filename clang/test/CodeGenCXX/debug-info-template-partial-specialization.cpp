@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple %s -o - -debug-info-kind=standalone | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple %s -o - -debug-info-kind=standalone %std_cxx98-14 | FileCheck %s --check-prefixes=CHECK,PRE17
+// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple %s -o - -debug-info-kind=standalone %std_cxx17- | FileCheck %s --check-prefixes=CHECK,CXX17
 namespace __pointer_type_imp
 {
   template <class _Tp, class _Dp, bool > struct __pointer_type1 {};
@@ -17,7 +18,8 @@ struct __pointer_type2
   // Test that the bool template type parameter is emitted.
   //
   // CHECK: ![[PARAMS]] = !{!{{.*}}, !{{.*}}, ![[FALSE:[0-9]+]]}
-  // CHECK: ![[FALSE]] = !DITemplateValueParameter(type: !{{[0-9]+}}, value: i8 0)
+  // PRE17: ![[FALSE]] = !DITemplateValueParameter(type: !{{[0-9]+}}, value: i8 0)
+  // CXX17: ![[FALSE]] = !DITemplateValueParameter(type: !{{[0-9]+}}, value: i1 false)
   typedef typename __pointer_type_imp::__pointer_type1<_Tp, _Dp, false>::type type;
 };
 template <class _Tp> struct default_delete {};

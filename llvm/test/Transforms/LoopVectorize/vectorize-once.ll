@@ -10,7 +10,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; This test checks that we add metadata to vectorized loops
 ; CHECK-LABEL: @_Z4foo1Pii(
 ; CHECK: <4 x i32>
-; CHECK: llvm.loop
+; CHECK: br i1 %{{.*}}, label %{{.*}}, label %vector.body, !llvm.loop [[VEC_LOOP1:![0-9]+]]
+;
+; CHECK: br i1 %{{.*}}, label %{{.*}}, label %for.body.i, !llvm.loop [[SCALAR_LOOP1:![0-9]+]]
 ; CHECK: ret
 
 ; This test comes from the loop:
@@ -42,7 +44,7 @@ _ZSt10accumulateIPiiET0_T_S2_S1_.exit:            ; preds = %for.body.i, %entry
 ; This test checks that we don't vectorize loops that are marked with the "width" == 1 metadata.
 ; CHECK-LABEL: @_Z4foo2Pii(
 ; CHECK-NOT: <4 x i32>
-; CHECK: llvm.loop
+; CHECK: br i1 %{{.*}}, label %{{.*}}, label %for.body.i, !llvm.loop [[SCALAR_LOOP2:![0-9]+]]
 ; CHECK: ret
 define i32 @_Z4foo2Pii(i32* %A, i32 %n) #0 {
 entry:
@@ -67,10 +69,12 @@ _ZSt10accumulateIPiiET0_T_S2_S1_.exit:            ; preds = %for.body.i, %entry
 
 attributes #0 = { nounwind readonly ssp uwtable "fp-contract-model"="standard" "frame-pointer"="non-leaf" "realign-stack" "relocation-model"="pic" "ssp-buffers-size"="8" }
 
-; CHECK: !0 = distinct !{!0, !1}
-; CHECK: !1 = !{!"llvm.loop.isvectorized", i32 1}
-; CHECK: !2 = distinct !{!2, !3, !1}
-; CHECK: !3 = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK:      [[VEC_LOOP1]] = distinct !{[[VEC_LOOP1]], [[MD_IS_VEC:![0-9]+]]}
+; CHECK-NEXT: [[MD_IS_VEC:![0-9]+]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK-NEXT: [[SCALAR_LOOP1]] = distinct !{[[SCALAR_LOOP1]], [[MD_RT_UNROLL_DIS:![0-9]+]], [[MD_IS_VEC]]}
+; CHECK-NEXT: [[MD_RT_UNROLL_DIS]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK-NEXT: [[SCALAR_LOOP2]] = distinct !{[[SCALAR_LOOP2]], [[VEC_WIDTH_1:![0-9]+]]}
+; CHECK-NEXT: [[VEC_WIDTH_1]] = !{!"llvm.loop.vectorize.width", i32 1}
 
 !0 = !{!0, !1}
 !1 = !{!"llvm.loop.vectorize.width", i32 1}

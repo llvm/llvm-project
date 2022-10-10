@@ -13,3 +13,73 @@ add_header(
   HDR
     file-seek-macros.h
 )
+
+add_header(
+  sched_macros
+  HDR
+    sched-macros.h
+  DEPENDS
+    .linux.sched_macros
+)
+
+add_header(
+  signal_macros
+  HDR
+    signal-macros.h
+  DEPENDS
+    .linux.signal_macros
+)
+
+add_header(
+  stdlib_macros
+  HDR
+    stdlib-macros.h
+)
+
+add_header(
+  sys_stat_macros
+  HDR
+    sys-stat-macros.h
+  DEPENDS
+    .linux.sys_stat_macros
+)
+
+add_header(
+  sys_mman_macros
+  HDR
+    sys-mman-macros.h
+  DEPENDS
+    .linux.sys_mman_macros
+)
+
+add_header(
+  sys_resource_macros
+  HDR
+    sys-resource-macros.h
+  DEPENDS
+    .linux.sys_resource_macros
+)
+
+add_header(
+  sys_wait_macros
+  HDR
+    sys-wait-macros.h
+  DEPENDS
+    .linux.sys_wait_macros
+)
+
+add_header(
+  time_macros
+  HDR
+    time-macros.h
+  DEPENDS
+    .linux.time_macros
+)
+
+add_header(
+  unistd_macros
+  HDR
+    unistd-macros.h
+  DEPENDS
+    .linux.unistd_macros
+)

@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangExtractAPI
   API.cpp
+  AvailabilityInfo.cpp
   ExtractAPIConsumer.cpp
   DeclarationFragments.cpp
   Serialization/SerializerBase.cpp

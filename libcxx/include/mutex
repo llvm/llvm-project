@@ -188,19 +188,15 @@ template<class Callable, class ...Args>
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__memory/shared_ptr.h>
 #include <__mutex_base>
 #include <__threading_support>
 #include <__utility/forward.h>
 #include <cstdint>
-#include <memory>
 #ifndef _LIBCPP_CXX03_LANG
 # include <tuple>
 #endif
 #include <version>
-
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
-#  include <functional>
-#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -329,7 +325,7 @@ recursive_timed_mutex::try_lock_until(const chrono::time_point<_Clock, _Duration
 }
 
 template <class _L0, class _L1>
-int
+_LIBCPP_HIDE_FROM_ABI int
 try_lock(_L0& __l0, _L1& __l1)
 {
     unique_lock<_L0> __u0(__l0, try_to_lock);
@@ -349,7 +345,7 @@ try_lock(_L0& __l0, _L1& __l1)
 #ifndef _LIBCPP_CXX03_LANG
 
 template <class _L0, class _L1, class _L2, class... _L3>
-int
+_LIBCPP_HIDE_FROM_ABI int
 try_lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3)
 {
     int __r = 0;
@@ -368,7 +364,7 @@ try_lock(_L0& __l0, _L1& __l1, _L2& __l2, _L3&... __l3)
 #endif // _LIBCPP_CXX03_LANG
 
 template <class _L0, class _L1>
-void
+_LIBCPP_HIDE_FROM_ABI void
 lock(_L0& __l0, _L1& __l1)
 {
     while (true)
@@ -546,6 +542,7 @@ private:
 
     _MutexTuple __t_;
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(scoped_lock);
 
 #endif // _LIBCPP_STD_VER > 14
 #endif // !_LIBCPP_HAS_NO_THREADS
@@ -705,5 +702,9 @@ call_once(once_flag& __flag, const _Callable& __func)
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <functional>
+#endif
 
 #endif // _LIBCPP_MUTEX

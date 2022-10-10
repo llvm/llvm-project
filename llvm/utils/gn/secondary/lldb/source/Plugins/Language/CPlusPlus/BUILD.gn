@@ -23,6 +23,7 @@ static_library("CPlusPlus") {
     "BlockPointer.cpp",
     "CPlusPlusLanguage.cpp",
     "CPlusPlusNameParser.cpp",
+    "Coroutines.cpp",
     "CxxStringTypes.cpp",
     "GenericBitset.cpp",
     "GenericOptional.cpp",

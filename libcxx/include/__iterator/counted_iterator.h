@@ -263,7 +263,7 @@ public:
   }
 
   template<common_with<_Iter> _I2>
-  friend constexpr strong_ordering operator<=>(
+  _LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering operator<=>(
     const counted_iterator& __lhs, const counted_iterator<_I2>& __rhs)
   {
     return __rhs.__count_ <=> __lhs.__count_;
@@ -288,6 +288,7 @@ public:
     return ranges::iter_swap(__x.__current_, __y.__current_);
   }
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(counted_iterator);
 
 template<input_iterator _Iter>
   requires same_as<_ITER_TRAITS<_Iter>, iterator_traits<_Iter>>

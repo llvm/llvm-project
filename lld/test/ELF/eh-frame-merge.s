@@ -10,30 +10,30 @@
 # RUN: llvm-readelf -S -r %t2.so | FileCheck %s
 
 # CHECK:       Name      Type     Address              Off      Size   ES Flg Lk Inf Al
-# CHECK:      .eh_frame  PROGBITS [[#%x,]]             [[#%x,]] 000064 00   A  0   0  8
+# CHECK:      .eh_frame  PROGBITS [[#%x,]]             [[#%x,]] 000058 00   A  0   0  8
 # CHECK:      foo        PROGBITS {{0*}}[[#%x,FOO:]]   [[#%x,]] 000002 00  AX  0   0  1
 # CHECK-NEXT: bar        PROGBITS {{0*}}[[#%x,FOO+2]]  [[#%x,]] 000002 00  AX  0   0  1
 
 # RELOC:        Offset             Info     Type          Symbol's Value  Symbol's Name + Addend
 # RELOC-NEXT: {{0*}}[[#%x,OFF:]]   [[#%x,]] R_X86_64_PC32 [[#%x,]]        foo + 0
-# RELOC-NEXT: {{0*}}[[#%x,OFF+24]] [[#%x,]] R_X86_64_PC32 [[#%x,]]        bar + 0
-# RELOC-NEXT: {{0*}}[[#OFF+48]]    [[#%x,]] R_X86_64_PC32 [[#%x,]]        foo + 1
+# RELOC-NEXT: {{0*}}[[#%x,OFF+20]] [[#%x,]] R_X86_64_PC32 [[#%x,]]        bar + 0
+# RELOC-NEXT: {{0*}}[[#OFF+40]]    [[#%x,]] R_X86_64_PC32 [[#%x,]]        foo + 1
 # RELOC-NEXT: {{0*}}[[#%x,OFF-24]] [[#%x,]] R_X86_64_NONE 0{{$}}
 
 # EH:          Format:                DWARF32
-# EH:        00000018 00000014 0000001c FDE cie=00000000 pc={{0*}}[[#%x,FOO:]]...
+# EH:        00000018 00000010 0000001c FDE cie=00000000 pc={{0*}}[[#%x,FOO:]]...
 # EH-SAME:   {{0*}}[[#%x,FOO+1]]
-# EH-COUNT-7:  DW_CFA_nop:
+# EH-COUNT-3:  DW_CFA_nop:
 # EH-EMPTY:  
-# EH:        00000030 00000014 00000034 FDE cie=00000000 pc={{0*}}[[#%x,FOO+2]]...{{0*}}[[#%x,FOO+4]]
-# EH-COUNT-7:  DW_CFA_nop:
+# EH:        0000002c 00000010 00000030 FDE cie=00000000 pc={{0*}}[[#%x,FOO+2]]...{{0*}}[[#%x,FOO+4]]
+# EH-COUNT-3:  DW_CFA_nop:
 # EH-EMPTY:
-# EH:        00000048 00000014 0000004c FDE cie=00000000 pc={{0*}}[[#%x,FOO+1]]...{{0*}}[[#%x,FOO+2]]
-# EH-COUNT-7:  DW_CFA_nop:
+# EH:        00000040 00000010 00000044 FDE cie=00000000 pc={{0*}}[[#%x,FOO+1]]...{{0*}}[[#%x,FOO+2]]
+# EH-COUNT-3:  DW_CFA_nop:
 # EH-EMPTY:
 # EH-NEXT:     0x[[#%x,]]: CFA=RSP+8: RIP=[CFA-8]
 # EH-EMPTY:
-# EH-NEXT:   00000060 ZERO terminator
+# EH-NEXT:   00000054 ZERO terminator
 
         .section	foo,"ax",@progbits
 	.cfi_startproc

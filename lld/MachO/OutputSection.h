@@ -16,8 +16,7 @@
 
 #include <limits>
 
-namespace lld {
-namespace macho {
+namespace lld::macho {
 
 class Defined;
 class InputSection;
@@ -98,7 +97,6 @@ private:
   Kind sectionKind;
 };
 
-} // namespace macho
-} // namespace lld
+} // namespace lld::macho
 
 #endif

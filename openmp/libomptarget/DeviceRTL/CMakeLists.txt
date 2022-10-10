@@ -28,11 +28,12 @@ if (LLVM_DIR)
   # Builds that use pre-installed LLVM have LLVM_DIR set.
   # A standalone or LLVM_ENABLE_RUNTIMES=openmp build takes this route
   find_program(CLANG_TOOL clang PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
-  find_program(LINK_TOOL llvm-link PATHS ${LLVM_TOOLS_BINARY_DIR}
-    NO_DEFAULT_PATH)
+  find_program(PACKAGER_TOOL clang-offload-packager PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
+  find_program(LINK_TOOL llvm-link PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
   find_program(OPT_TOOL opt PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
-  if ((NOT CLANG_TOOL) OR (NOT LINK_TOOL) OR (NOT OPT_TOOL))
-    libomptarget_say("Not building DeviceRTL. Missing clang: ${CLANG_TOOL}, llvm-link: ${LINK_TOOL} or opt: ${OPT_TOOL}")
+  find_program(EXTRACT_TOOL llvm-extract PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH)
+  if ((NOT CLANG_TOOL) OR (NOT LINK_TOOL) OR (NOT OPT_TOOL) OR (NOT EXTRACT_TOOL) OR (NOT PACKAGER_TOOL))
+    libomptarget_say("Not building DeviceRTL. Missing clang: ${CLANG_TOOL}, llvm-link: ${LINK_TOOL}, opt: ${OPT_TOOL}, llvm-extract: ${EXTRACT_TOOL}, or clang-offload-packager: ${PACKAGER_TOOL}")
     return()
   else()
     libomptarget_say("Building DeviceRTL. Using clang: ${CLANG_TOOL}, llvm-link: ${LINK_TOOL} and opt: ${OPT_TOOL}")
@@ -41,8 +42,10 @@ elseif (LLVM_TOOL_CLANG_BUILD AND NOT CMAKE_CROSSCOMPILING AND NOT OPENMP_STANDA
   # LLVM in-tree builds may use CMake target names to discover the tools.
   # A LLVM_ENABLE_PROJECTS=openmp build takes this route
   set(CLANG_TOOL $<TARGET_FILE:clang>)
+  set(PACKAGER_TOOL $<TARGET_FILE:clang-offload-packager>)
   set(LINK_TOOL $<TARGET_FILE:llvm-link>)
   set(OPT_TOOL $<TARGET_FILE:opt>)
+  set(EXTRACT_TOOL $<TARGET_FILE:llvm-extract>)
   libomptarget_say("Building DeviceRTL. Using clang from in-tree build")
 else()
   libomptarget_say("Not building DeviceRTL. No appropriate clang found")
@@ -77,19 +80,16 @@ foreach(sm ${nvptx_sm_list})
   endif()
 endforeach()
 
-set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx90c gfx940 gfx1010 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036)
+set(amdgpu_mcpus gfx700 gfx701 gfx801 gfx803 gfx900 gfx902 gfx906 gfx908 gfx90a gfx90c gfx940 gfx1010 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103)
 if (DEFINED LIBOMPTARGET_AMDGCN_GFXLIST)
   set(amdgpu_mcpus ${LIBOMPTARGET_AMDGCN_GFXLIST})
 endif()
-
-# Activate RTL message dumps if requested by the user.
-set(LIBOMPTARGET_DEVICE_DEBUG FALSE CACHE BOOL
-  "Activate DeviceRTL debug messages.")
 
 set(include_files
   ${include_directory}/Configuration.h
   ${include_directory}/Debug.h
   ${include_directory}/Interface.h
+  ${include_directory}/LibC.h
   ${include_directory}/Mapping.h
   ${include_directory}/State.h
   ${include_directory}/Synchronization.h
@@ -101,6 +101,7 @@ set(src_files
   ${source_directory}/Configuration.cpp
   ${source_directory}/Debug.cpp
   ${source_directory}/Kernel.cpp
+  ${source_directory}/LibC.cpp
   ${source_directory}/Mapping.cpp
   ${source_directory}/Misc.cpp
   ${source_directory}/Parallelism.cpp
@@ -115,6 +116,7 @@ set(src_files
 set(clang_opt_flags -O3 -mllvm -openmp-opt-disable -DSHARED_SCRATCHPAD_SIZE=512)
 set(link_opt_flags  -O3        -openmp-opt-disable)
 set(link_export_flag -passes=internalize -internalize-public-api-file=${source_directory}/exports)
+set(link_extract_flag --func='__keep_alive' --delete)
 
 # Prepend -I to each list element
 set (LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL "${LIBOMPTARGET_LLVM_INCLUDE_DIRS}")
@@ -130,13 +132,9 @@ set(bc_flags -c -emit-llvm -std=c++17 -fvisibility=hidden
              ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
 )
 
-if(${LIBOMPTARGET_DEVICE_DEBUG})
-  list(APPEND bc_flags -DOMPTARGET_DEBUG=-1)
-else()
-  list(APPEND bc_flags -DOMPTARGET_DEBUG=0)
-endif()
-
-function(compileDeviceRTLLibrary target_cpu target_name)
+# first create an object target
+add_library(omptarget.devicertl.all_objs OBJECT IMPORTED)
+function(compileDeviceRTLLibrary target_cpu target_name target_triple)
   set(target_bc_flags ${ARGN})
 
   set(bc_files "")
@@ -194,6 +192,34 @@ function(compileDeviceRTLLibrary target_cpu target_name)
       COMMENT "Optimizing LLVM bitcode ${bclib_name}"
   )
 
+  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/extracted_${bclib_name}
+      COMMAND ${EXTRACT_TOOL} ${link_extract_flag} ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
+                      -o ${CMAKE_CURRENT_BINARY_DIR}/extracted_${bclib_name}
+      DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
+      COMMENT "Extracting LLVM bitcode ${bclib_name}"
+  )
+
+  # Package the bitcode in the bitcode and embed it in an ELF for the static library
+  add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/packaged_${bclib_name}
+      COMMAND ${PACKAGER_TOOL} -o ${CMAKE_CURRENT_BINARY_DIR}/packaged_${bclib_name}
+        "--image=file=${CMAKE_CURRENT_BINARY_DIR}/extracted_${bclib_name},triple=${target_triple},arch=${target_cpu},kind=openmp"
+      DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/extracted_${bclib_name}
+      COMMENT "Packaging LLVM offloading binary ${bclib_name}.out"
+  )
+
+  set(output_name "${CMAKE_CURRENT_BINARY_DIR}/devicertl-${target_name}-${target_cpu}.o")
+  add_custom_command(OUTPUT ${output_name}
+    COMMAND ${CLANG_TOOL} --std=c++17 -c -nostdlib
+            -Xclang -fembed-offload-object=${CMAKE_CURRENT_BINARY_DIR}/packaged_${bclib_name}
+            -o ${output_name}
+            ${source_directory}/Stub.cpp
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/packaged_${bclib_name}
+    COMMENT "Embedding LLVM offloading binary in ${output_name}"
+    VERBATIM
+  )
+  set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${output_name})
+  set_property(TARGET omptarget.devicertl.all_objs APPEND PROPERTY IMPORTED_OBJECTS ${output_name})
+
   # Add a file-level dependency to ensure that llvm-link and opt are up-to-date.
   # By default, add_custom_command only builds the tool if the executable is missing
   if("${LINK_TOOL}" STREQUAL "$<TARGET_FILE:llvm-link>")
@@ -204,6 +230,21 @@ function(compileDeviceRTLLibrary target_cpu target_name)
   if("${OPT_TOOL}" STREQUAL "$<TARGET_FILE:opt>")
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
       DEPENDS opt
+      APPEND)
+  endif()
+  if("${EXTRACT_TOOL}" STREQUAL "$<TARGET_FILE:llvm-extract>")
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/extracted_${bclib_name}
+      DEPENDS llvm-extract
+      APPEND)
+  endif()
+  if("${PACKAGER_TOOL}" STREQUAL "$<TARGET_FILE:clang-offload-packager>")
+    add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/packaged_${bclib_name}
+      DEPENDS clang-offload-packager
+      APPEND)
+  endif()
+  if("${CLANG_TOOL}" STREQUAL "$<TARGET_FILE:clang>")
+    add_custom_command(OUTPUT ${output_name}
+      DEPENDS clang
       APPEND)
   endif()
 
@@ -226,59 +267,15 @@ endfunction()
 # Generate a Bitcode library for all the compute capabilities the user requested
 add_custom_target(omptarget.devicertl.nvptx)
 foreach(sm ${nvptx_sm_list})
-  compileDeviceRTLLibrary(sm_${sm} nvptx -fopenmp-targets=nvptx64-nvidia-cuda -DLIBOMPTARGET_BC_TARGET --cuda-feature=+ptx61)
+  compileDeviceRTLLibrary(sm_${sm} nvptx nvptx64-nvidia-cuda -fopenmp-targets=nvptx64-nvidia-cuda --cuda-feature=+ptx61)
 endforeach()
 
 add_custom_target(omptarget.devicertl.amdgpu)
 foreach(mcpu ${amdgpu_mcpus})
-  compileDeviceRTLLibrary(${mcpu} amdgpu -fopenmp-targets=amdgcn-amd-amdhsa -DLIBOMPTARGET_BC_TARGET -D__AMDGCN__ -nogpulib)
+  compileDeviceRTLLibrary(${mcpu} amdgpu amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa)
 endforeach()
 
-# Set the flags to build the device runtime from clang.
-set(clang_lib_flags -fopenmp -fopenmp-cuda-mode -foffload-lto -fvisibility=hidden -Xopenmp-target=nvptx64-nvidia-cuda --cuda-feature=+ptx61 -nocudalib -nogpulib -nostdinc ${clang_opt_flags})
-foreach(arch ${nvptx_sm_list})
-  set(clang_lib_flags ${clang_lib_flags} --offload-arch=sm_${arch})
-endforeach()
-foreach(arch ${amdgpu_mcpus})
-  set(clang_lib_flags ${clang_lib_flags} --offload-arch=${arch})
-endforeach()
-
-# Build the static library version of the device runtime.
-# first create an object target
-add_library(omptarget.devicertl.all_objs OBJECT IMPORTED)
-foreach(src ${src_files})
-  get_filename_component(infile ${src} ABSOLUTE)
-  get_filename_component(outfile ${src} NAME)
-  set(outfile "${outfile}.o")
-  set(outfile_full_path "${CMAKE_CURRENT_BINARY_DIR}/${outfile}")
-
-  add_custom_command(OUTPUT ${outfile_full_path}
-    COMMAND ${CLANG_TOOL} ${clang_lib_flags} --std=c++17 -c
-            -o ${outfile_full_path}
-            -I${include_directory}
-            -I${devicertl_base_directory}/../include
-            ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
-            ${infile}
-    DEPENDS ${infile} ${include_files}
-    IMPLICIT_DEPENDS CXX ${infile}
-    COMMENT "Building device code ${outfile}"
-    VERBATIM
-  )
-  if("${CLANG_TOOL}" STREQUAL "$<TARGET_FILE:clang>")
-    # Add a file-level dependency to ensure that clang is up-to-date.
-    # By default, add_custom_command only builds clang if the
-    # executable is missing.
-    add_custom_command(OUTPUT ${outfile_full_path}
-      DEPENDS clang
-      APPEND
-    )
-  endif()
-  set_property(DIRECTORY APPEND PROPERTY ADDITIONAL_MAKE_CLEAN_FILES ${outfile_full_path})
-
-  set_property(TARGET omptarget.devicertl.all_objs APPEND PROPERTY IMPORTED_OBJECTS ${outfile_full_path})
-endforeach()
-
-# second archive all the object files into a static library
+# Archive all the object files generated above into a static library
 add_library(omptarget.devicertl STATIC)
 set_target_properties(omptarget.devicertl PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(omptarget.devicertl PRIVATE omptarget.devicertl.all_objs)

@@ -121,6 +121,18 @@ SelfExecutorProcessControl::runAsMain(ExecutorAddr MainFnAddr,
   return orc::runAsMain(MainFnAddr.toPtr<MainTy>(), Args);
 }
 
+Expected<int32_t>
+SelfExecutorProcessControl::runAsVoidFunction(ExecutorAddr VoidFnAddr) {
+  using VoidTy = int (*)();
+  return orc::runAsVoidFunction(VoidFnAddr.toPtr<VoidTy>());
+}
+
+Expected<int32_t>
+SelfExecutorProcessControl::runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) {
+  using IntTy = int (*)(int);
+  return orc::runAsIntFunction(IntFnAddr.toPtr<IntTy>(), Arg);
+}
+
 void SelfExecutorProcessControl::callWrapperAsync(ExecutorAddr WrapperFnAddr,
                                                   IncomingWFRHandler SendResult,
                                                   ArrayRef<char> ArgBuffer) {

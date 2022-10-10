@@ -10,14 +10,20 @@
 // canonicalizations of named ops.
 //
 //===----------------------------------------------------------------------===//
-#include "PassDetail.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
+
 #include "mlir/Dialect/Linalg/Passes.h"
+
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/TypeSwitch.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_LINALGNAMEDOPCONVERSION
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -67,28 +73,30 @@ matchAndReplaceDepthwiseConv(Operation *operation, Value input, Value kernel,
   auto collapsedInit = rewriter.create<tensor::CollapseShapeOp>(
       loc, newInitTy, init, collapsedInitDims);
 
-  Value newConv;
-  if (isa<DepthwiseConv2DNhwcHwcmOp>(operation)) {
-    newConv = rewriter
-                  .create<DepthwiseConv2DNhwcHwcOp>(
-                      loc, newInitTy, ValueRange{input, collapsedKernel},
-                      ValueRange{collapsedInit}, stride, dilation)
-                  .getResult(0);
-  } else if (isa<DepthwiseConv2DNhwcHwcmQOp>(operation)) {
-    newConv =
-        rewriter
-            .create<DepthwiseConv2DNhwcHwcQOp>(
+  SmallVector<NamedAttribute> preservedAttrs;
+  Operation *newConv =
+      TypeSwitch<Operation *, Operation *>(operation)
+          .Case<DepthwiseConv2DNhwcHwcmOp>([&](auto op) {
+            preservedAttrs = getPrunedAttributeList(op);
+            return rewriter.create<DepthwiseConv2DNhwcHwcOp>(
+                loc, newInitTy, ValueRange{input, collapsedKernel},
+                ValueRange{collapsedInit}, stride, dilation);
+          })
+          .Case<DepthwiseConv2DNhwcHwcmQOp>([&](auto op) {
+            preservedAttrs = getPrunedAttributeList(op);
+            return rewriter.create<DepthwiseConv2DNhwcHwcQOp>(
                 loc, newInitTy, ValueRange{input, collapsedKernel, iZp, kZp},
-                ValueRange{collapsedInit}, stride, dilation)
-            .getResult(0);
-  }
-
+                ValueRange{collapsedInit}, stride, dilation);
+          })
+          .Default([](Operation *op) { return nullptr; });
   if (!newConv)
     return failure();
+  for (auto attr : preservedAttrs)
+    newConv->setAttr(attr.getName(), attr.getValue());
 
   // Expand dimensions back out to
   rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
-      operation, resultTy, newConv, collapsedInitDims);
+      operation, resultTy, newConv->getResult(0), collapsedInitDims);
   return success();
 }
 
@@ -104,8 +112,8 @@ struct SimplifyDepthwiseConvOp
     Value kernel = op.getInputOperand(1)->get();
     Value init = op.getOutputOperand(0)->get();
 
-    auto stride = op.strides();
-    auto dilation = op.dilations();
+    auto stride = op.getStrides();
+    auto dilation = op.getDilations();
 
     return matchAndReplaceDepthwiseConv(operation, input, kernel, nullptr,
                                         nullptr, init, stride, dilation,
@@ -126,8 +134,8 @@ struct SimplifyDepthwiseConvQOp
     Value kZp = op.getInputOperand(3)->get();
     Value init = op.getOutputOperand(0)->get();
 
-    auto stride = op.strides();
-    auto dilation = op.dilations();
+    auto stride = op.getStrides();
+    auto dilation = op.getDilations();
 
     return matchAndReplaceDepthwiseConv(operation, input, kernel, iZp, kZp,
                                         init, stride, dilation, rewriter);
@@ -135,7 +143,7 @@ struct SimplifyDepthwiseConvQOp
 };
 
 struct LinalgNamedOpConversionPass
-    : public LinalgNamedOpConversionBase<LinalgNamedOpConversionPass> {
+    : public impl::LinalgNamedOpConversionBase<LinalgNamedOpConversionPass> {
   LinalgNamedOpConversionPass() = default;
   LinalgNamedOpConversionPass(const LinalgNamedOpConversionPass &) = default;
 

@@ -100,7 +100,8 @@ class VPRecipeBuilder {
   /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
   /// if it can. The function should only be called if the cost-model indicates
   /// that widening should be performed.
-  VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands) const;
+  VPRecipeBase *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
+                           VPBasicBlock *VPBB, VPlanPtr &Plan);
 
   /// Return a VPRecipeOrValueTy with VPRecipeBase * being set. This can be used to force the use as VPRecipeBase* for recipe sub-types that also inherit from VPValue.
   VPRecipeOrVPValueTy toVPRecipeResult(VPRecipeBase *R) const { return R; }
@@ -119,7 +120,8 @@ public:
   /// VPRecipeOrVPValueTy with nullptr.
   VPRecipeOrVPValueTy tryToCreateWidenRecipe(Instruction *Instr,
                                              ArrayRef<VPValue *> Operands,
-                                             VFRange &Range, VPlanPtr &Plan);
+                                             VFRange &Range, VPBasicBlock *VPBB,
+                                             VPlanPtr &Plan);
 
   /// Set the recipe created for given ingredient. This operation is a no-op for
   /// ingredients that were not marked using a nullptr entry in the map.

@@ -13,7 +13,9 @@
 #ifndef LLVM_CLANG_AST_INTERP_INTERPSTACK_H
 #define LLVM_CLANG_AST_INTERP_INTERPSTACK_H
 
+#include "PrimType.h"
 #include <memory>
+#include <vector>
 
 namespace clang {
 namespace interp {
@@ -29,10 +31,18 @@ public:
   /// Constructs a value in place on the top of the stack.
   template <typename T, typename... Tys> void push(Tys &&... Args) {
     new (grow(aligned_size<T>())) T(std::forward<Tys>(Args)...);
+#ifndef NDEBUG
+    ItemTypes.push_back(toPrimType<T>());
+#endif
   }
 
   /// Returns the value from the top of the stack and removes it.
   template <typename T> T pop() {
+#ifndef NDEBUG
+    assert(!ItemTypes.empty());
+    assert(ItemTypes.back() == toPrimType<T>());
+    ItemTypes.pop_back();
+#endif
     auto *Ptr = &peek<T>();
     auto Value = std::move(*Ptr);
     Ptr->~T();
@@ -42,18 +52,22 @@ public:
 
   /// Discards the top value from the stack.
   template <typename T> void discard() {
+#ifndef NDEBUG
+    assert(ItemTypes.back() == toPrimType<T>());
+    ItemTypes.pop_back();
+#endif
     auto *Ptr = &peek<T>();
     Ptr->~T();
     shrink(aligned_size<T>());
   }
 
   /// Returns a reference to the value on the top of the stack.
-  template <typename T> T &peek() {
+  template <typename T> T &peek() const {
     return *reinterpret_cast<T *>(peek(aligned_size<T>()));
   }
 
   /// Returns a pointer to the top object.
-  void *top() { return Chunk ? peek(0) : nullptr; }
+  void *top() const { return Chunk ? peek(0) : nullptr; }
 
   /// Returns the size of the stack in bytes.
   size_t size() const { return StackSize; }
@@ -72,7 +86,7 @@ private:
   /// Grows the stack to accommodate a value and returns a pointer to it.
   void *grow(size_t Size);
   /// Returns a pointer from the top of the stack.
-  void *peek(size_t Size);
+  void *peek(size_t Size) const;
   /// Shrinks the stack.
   void shrink(size_t Size);
 
@@ -94,10 +108,13 @@ private:
         : Next(nullptr), Prev(Prev), End(reinterpret_cast<char *>(this + 1)) {}
 
     /// Returns the size of the chunk, minus the header.
-    size_t size() { return End - start(); }
+    size_t size() const { return End - start(); }
 
     /// Returns a pointer to the start of the data region.
     char *start() { return reinterpret_cast<char *>(this + 1); }
+    const char *start() const {
+      return reinterpret_cast<const char *>(this + 1);
+    }
   };
   static_assert(sizeof(StackChunk) < ChunkSize, "Invalid chunk size");
 
@@ -105,6 +122,45 @@ private:
   StackChunk *Chunk = nullptr;
   /// Total size of the stack.
   size_t StackSize = 0;
+
+#ifndef NDEBUG
+  /// vector recording the type of data we pushed into the stack.
+  std::vector<PrimType> ItemTypes;
+
+  template <typename T> static constexpr PrimType toPrimType() {
+    if constexpr (std::is_same_v<T, Pointer>)
+      return PT_Ptr;
+    else if constexpr (std::is_same_v<T, bool> ||
+                       std::is_same_v<T, Boolean>)
+      return PT_Bool;
+    else if constexpr (std::is_same_v<T, int8_t> ||
+                       std::is_same_v<T, Integral<8, true>>)
+      return PT_Sint8;
+    else if constexpr (std::is_same_v<T, uint8_t> ||
+                       std::is_same_v<T, Integral<8, false>>)
+      return PT_Uint8;
+    else if constexpr (std::is_same_v<T, int16_t> ||
+                       std::is_same_v<T, Integral<16, true>>)
+      return PT_Sint16;
+    else if constexpr (std::is_same_v<T, uint16_t> ||
+                       std::is_same_v<T, Integral<16, false>>)
+      return PT_Uint16;
+    else if constexpr (std::is_same_v<T, int32_t> ||
+                       std::is_same_v<T, Integral<32, true>>)
+      return PT_Sint32;
+    else if constexpr (std::is_same_v<T, uint32_t> ||
+                       std::is_same_v<T, Integral<32, false>>)
+      return PT_Uint32;
+    else if constexpr (std::is_same_v<T, int64_t> ||
+                       std::is_same_v<T, Integral<64, true>>)
+      return PT_Sint64;
+    else if constexpr (std::is_same_v<T, uint64_t> ||
+                       std::is_same_v<T, Integral<64, false>>)
+      return PT_Uint64;
+
+    llvm_unreachable("unknown type push()'ed into InterpStack");
+  }
+#endif
 };
 
 } // namespace interp

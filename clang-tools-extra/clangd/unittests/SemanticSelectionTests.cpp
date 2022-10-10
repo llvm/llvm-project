@@ -196,7 +196,7 @@ TEST(SemanticSelection, RunViaClangdServer) {
               ElementsAre(SourceAnnotations.range("empty")));
 }
 
-TEST(FoldingRanges, All) {
+TEST(FoldingRanges, ASTAll) {
   const char *Tests[] = {
       R"cpp(
         #define FOO int foo() {\
@@ -265,7 +265,7 @@ TEST(FoldingRanges, All) {
   }
 }
 
-TEST(FoldingRangesPseudoParser, All) {
+TEST(FoldingRanges, PseudoParserWithoutLineFoldings) {
   const char *Tests[] = {
       R"cpp(
         #define FOO int foo() {\
@@ -335,16 +335,124 @@ TEST(FoldingRangesPseudoParser, All) {
           ]]}   \
         ]]};
       )cpp",
+      R"cpp(
+        /*[[ Multi 
+          * line
+          *  comment 
+          ]]*/
+      )cpp",
+      R"cpp(
+        //[[ Comment
+        // 1]]
+        
+        //[[ Comment
+        // 2]]
+        
+        // No folding for single line comment.
+
+        /*[[ comment 3
+        ]]*/
+
+        /*[[ comment 4
+        ]]*/
+
+        /*[[ foo */
+        /* bar ]]*/
+
+        /*[[ foo */
+        // baz
+        /* bar ]]*/
+
+        /*[[ foo */
+        /* bar*/
+        // baz]]
+
+        //[[ foo
+        /* bar */]]
+      )cpp",
   };
   for (const char *Test : Tests) {
     auto T = Annotations(Test);
-    EXPECT_THAT(
-        gatherFoldingRanges(llvm::cantFail(getFoldingRanges(T.code().str()))),
-        UnorderedElementsAreArray(T.ranges()))
+    EXPECT_THAT(gatherFoldingRanges(llvm::cantFail(getFoldingRanges(
+                    T.code().str(), /*LineFoldingsOnly=*/false))),
+                UnorderedElementsAreArray(T.ranges()))
         << Test;
   }
 }
 
+TEST(FoldingRanges, PseudoParserLineFoldingsOnly) {
+  const char *Tests[] = {
+      R"cpp(
+        void func(int a) {[[
+            a++;]]
+        }
+      )cpp",
+      R"cpp(
+        // Always exclude last line for brackets.
+        void func(int a) {[[
+          if(a == 1) {[[
+            a++;]]
+          } else if (a == 2){[[
+            a--;]]
+          } else {  // No folding for 2 line bracketed ranges.
+          }]]
+        }
+      )cpp",
+      R"cpp(
+        /*[[ comment
+        * comment]]
+        */
+
+        /* No folding for this comment.
+        */
+
+        // No folding for this comment.
+
+        //[[ 2 single line comment.
+        // 2 single line comment.]]
+
+        //[[ >=2 line comments.
+        // >=2 line comments.
+        // >=2 line comments.]]
+
+        //[[ foo\
+        bar\
+        baz]]
+
+        /*[[ foo */
+        /* bar */]]
+        /* baz */
+
+        /*[[ foo */
+        /* bar]]
+        * This does not fold me */
+
+        //[[ foo
+        /* bar */]]
+      )cpp",
+      // FIXME: Support folding template arguments.
+      // R"cpp(
+      // template <[[typename foo, class bar]]> struct baz {};
+      // )cpp",
+
+  };
+  auto StripColumns = [](const std::vector<Range> &Ranges) {
+    std::vector<Range> Res;
+    for (Range R : Ranges) {
+      R.start.character = R.end.character = 0;
+      Res.push_back(R);
+    }
+    return Res;
+  };
+  for (const char *Test : Tests) {
+    auto T = Annotations(Test);
+    EXPECT_THAT(
+        StripColumns(gatherFoldingRanges(llvm::cantFail(
+            getFoldingRanges(T.code().str(), /*LineFoldingsOnly=*/true)))),
+        UnorderedElementsAreArray(StripColumns(T.ranges())))
+        << Test;
+  }
+}
 } // namespace
 } // namespace clangd
 } // namespace clang

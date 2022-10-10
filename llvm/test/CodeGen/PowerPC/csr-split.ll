@@ -113,7 +113,6 @@ define dso_local signext i32 @test2(i32* %p1) local_unnamed_addr  {
 ; CHECK-PWR9-NEXT:    bl callNonVoid
 ; CHECK-PWR9-NEXT:    nop
 ; CHECK-PWR9-NEXT:  .LBB1_3: # %return
-; CHECK-PWR9-NEXT:    extsw r3, r3
 ; CHECK-PWR9-NEXT:    addi r1, r1, 48
 ; CHECK-PWR9-NEXT:    ld r0, 16(r1)
 ; CHECK-PWR9-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
@@ -146,7 +145,6 @@ define dso_local signext i32 @test2(i32* %p1) local_unnamed_addr  {
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:  .LBB1_3: # %return
 ; CHECK-NEXT:    ld r30, 112(r1) # 8-byte Folded Reload
-; CHECK-NEXT:    extsw r3, r3
 ; CHECK-NEXT:    addi r1, r1, 128
 ; CHECK-NEXT:    ld r0, 16(r1)
 ; CHECK-NEXT:    mtlr r0
@@ -190,7 +188,6 @@ define dso_local i8* @test3(i8** nocapture %p1, i8 zeroext %p2) local_unnamed_ad
 ; CHECK-PWR9-NEXT:    beq cr0, .LBB2_2
 ; CHECK-PWR9-NEXT:  # %bb.1: # %land.rhs
 ; CHECK-PWR9-NEXT:    mr r29, r3
-; CHECK-PWR9-NEXT:    clrldi r4, r4, 32
 ; CHECK-PWR9-NEXT:    mr r3, r30
 ; CHECK-PWR9-NEXT:    bl bar
 ; CHECK-PWR9-NEXT:    nop
@@ -220,7 +217,6 @@ define dso_local i8* @test3(i8** nocapture %p1, i8 zeroext %p2) local_unnamed_ad
 ; CHECK-NEXT:    beq cr0, .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %land.rhs
 ; CHECK-NEXT:    mr r29, r3
-; CHECK-NEXT:    clrldi r4, r4, 32
 ; CHECK-NEXT:    mr r3, r30
 ; CHECK-NEXT:    bl bar
 ; CHECK-NEXT:    nop

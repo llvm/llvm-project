@@ -49,8 +49,9 @@ LLDB_BASE_DIR := $(THIS_FILE_DIR)/../../../../../
 #----------------------------------------------------------------------
 # If OS is not defined, use 'uname -s' to determine the OS name.
 #
-# uname on Windows gives "windows32" or "server version windows32", but most
-# environments standardize on "Windows_NT", so we'll make it consistent here.
+# GNUWin32 uname gives "windows32" or "server version windows32" while
+# some versions of MSYS uname return "MSYS_NT*", but most environments
+# standardize on "Windows_NT", so we'll make it consistent here. 
 # When running tests from Visual Studio, the environment variable isn't
 # inherited all the way down to the process spawned for make.
 #----------------------------------------------------------------------
@@ -58,6 +59,11 @@ HOST_OS := $(shell uname -s)
 ifneq (,$(findstring windows32,$(HOST_OS)))
 	HOST_OS := Windows_NT
 endif
+
+ifneq (,$(findstring MSYS_NT,$(HOST_OS)))
+	HOST_OS := Windows_NT
+endif
+
 ifeq "$(OS)" ""
 	OS := $(HOST_OS)
 endif
@@ -68,9 +74,12 @@ endif
 # Some versions of make on Windows will search for other shells such as
 # C:\cygwin\bin\sh.exe. This shell fails for numerous different reasons
 # so default to using cmd.exe.
+# Also reset BUILDDIR value because "pwd" returns cygwin or msys path
+# which needs to be converted to windows path.
 #----------------------------------------------------------------------
 ifeq "$(OS)" "Windows_NT"
 	SHELL = $(WINDIR)\system32\cmd.exe
+	BUILDDIR := $(shell echo %cd%)
 endif
 
 #----------------------------------------------------------------------
@@ -378,28 +387,50 @@ endif
 #----------------------------------------------------------------------
 # C++ standard library options
 #----------------------------------------------------------------------
+ifneq ($(and $(USE_LIBSTDCPP), $(USE_LIBCPP)),)
+	$(error Libcxx and Libstdc++ cannot be used together)
+endif
+
+ifeq (1, $(USE_SYSTEM_STDLIB))
+	ifneq ($(or $(USE_LIBSTDCPP), $(USE_LIBCPP)),)
+		$(error Cannot use system's standard library and a custom standard library together)
+	endif
+endif
+
 ifeq (1,$(USE_LIBSTDCPP))
 	# Clang requires an extra flag: -stdlib=libstdc++
 	ifneq (,$(findstring clang,$(CC)))
-		CXXFLAGS += -stdlib=libstdc++ -DLLDB_USING_LIBSTDCPP
+		CXXFLAGS += -stdlib=libstdc++
 		LDFLAGS += -stdlib=libstdc++
 	endif
 endif
 
 ifeq (1,$(USE_LIBCPP))
-	# TODO: Teach LLDB to handle ABI tags in libc++ namespaces.
-	CXXFLAGS += -DLLDB_USING_LIBCPP -D_LIBCPP_NO_ABI_TAG
-	ifeq "$(OS)" "Android"
-		# Nothing to do, this is already handled in
-		# Android.rules.
+	ifneq ($(and $(LIBCPP_INCLUDE_DIR), $(LIBCPP_LIBRARY_DIR)),)
+		CXXFLAGS += -nostdlib++ -nostdinc++ -cxx-isystem $(LIBCPP_INCLUDE_DIR)
+		LDFLAGS += -L$(LLVM_LIBS_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
 	else
-		CXXFLAGS += -stdlib=libc++
-		LDFLAGS += -stdlib=libc++
-	endif
-	ifneq (,$(filter $(OS), FreeBSD Linux NetBSD))
-		ifneq (,$(LLVM_LIBS_DIR))
-			LDFLAGS += -Wl,-rpath,$(LLVM_LIBS_DIR)
+		ifeq "$(OS)" "Android"
+				# Nothing to do, this is already handled in
+				# Android.rules.
+		else
+				CXXFLAGS += -stdlib=libc++
+				LDFLAGS += -stdlib=libc++
 		endif
+		ifneq (,$(filter $(OS), FreeBSD Linux NetBSD))
+				ifneq (,$(LLVM_LIBS_DIR))
+				LDFLAGS += -Wl,-rpath,$(LLVM_LIBS_DIR)
+				endif
+		endif
+	endif
+endif
+
+# If no explicit request was made, but we have paths to a custom libcxx, use
+# them.
+ifeq ($(or $(USE_LIBSTDCPP), $(USE_LIBCPP), $(USE_SYSTEM_STDLIB)),)
+	ifneq ($(and $(LIBCPP_INCLUDE_DIR), $(LIBCPP_LIBRARY_DIR)),)
+		CXXFLAGS += -nostdlib++ -nostdinc++ -cxx-isystem $(LIBCPP_INCLUDE_DIR)
+		LDFLAGS += -L$(LLVM_LIBS_DIR) -Wl,-rpath,$(LIBCPP_LIBRARY_DIR) -lc++
 	endif
 endif
 

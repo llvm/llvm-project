@@ -2,7 +2,7 @@
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1:2 = transform.structured.split %0 after 42 { dimension = 0 }
@@ -76,7 +76,7 @@ func.func @one_d_static_overflow(%arg0: tensor<10xf32>, %arg1: tensor<10xf32>) -
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1 = transform.structured.match ops{["func.call"]} in %arg1
@@ -102,8 +102,8 @@ func.func @dynamic(%arg0: tensor<100xf32>, %arg1: tensor<100xf32>) -> tensor<100
   // CHECK: %[[PARTIAL:.+]] = tensor.insert_slice %[[RES_SLICE_LOW]] into %[[OUT]][0] [%[[SPLIT_LOW]]] [1]
   //
   // CHECK: %[[SPLIT_HIGH_2:.+]] = affine.apply #[[$MAP_S_MINUS_100]]()[%[[SPLIT_LOW]]]
-  // CHECK: %[[IN_SLICE_HIGH:.+]] = tensor.extract_slice %[[IN:.+]][%[[SPLIT_LOW]]] [%[[SPLIT_HIGH_2]]] [1] : tensor<100xf32> to tensor<?xf32>
   // CHECK: %[[SPLIT_HIGH_3:.+]] = affine.apply #[[$MAP_S_MINUS_100]]()[%[[SPLIT_LOW]]]
+  // CHECK: %[[IN_SLICE_HIGH:.+]] = tensor.extract_slice %[[IN:.+]][%[[SPLIT_LOW]]] [%[[SPLIT_HIGH_2]]] [1] : tensor<100xf32> to tensor<?xf32>
   // CHECK: %[[OUT_SLICE_HIGH:.+]] = tensor.extract_slice %[[PARTIAL:.+]][%[[SPLIT_LOW]]] [%[[SPLIT_HIGH_3]]] [1] : tensor<100xf32> to tensor<?xf32>
   // CHECK: %[[RES_SLICE_HIGH:.+]] = linalg.generic
   // CHECK:   ins(%[[IN_SLICE_HIGH]]
@@ -127,7 +127,7 @@ func.func @dynamic(%arg0: tensor<100xf32>, %arg1: tensor<100xf32>) -> tensor<100
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1:2 = transform.structured.split %0 after 4 { dimension = 0}
@@ -153,14 +153,14 @@ func.func @two_d(%arg0: tensor<10x34xf32>,
   // CHECK:      %[[OUT_2:.+]] = tensor.extract_slice %[[PARTIAL_1]]
   // Note that `extract_slice` taking a slice from another `extract_slice` result
   // is folded to use the operand of the first `extract_slice`.
-  // CHECK:      %[[IN_21:.+]] = tensor.extract_slice %[[IN]]
-  // CHECK:      %[[OUT_21:.+]] = tensor.extract_slice %[[PARTIAL_1]]
+  // CHECK:      %[[IN_21:.+]] = tensor.extract_slice %[[IN_2]]
+  // CHECK:      %[[OUT_21:.+]] = tensor.extract_slice %[[OUT_2]]
   // CHECK:      %[[RES_21:.+]] = linalg.generic
   // CHECK-SAME:   ins(%[[IN_21]] : tensor<6x16xf32>)
   // CHECK-SAME:   outs(%[[OUT_21]] : tensor<6x16xf32>)
   // CHECK:      %[[PARTIAL_21:.+]] = tensor.insert_slice %[[RES_21]] into %[[OUT_2]]
   //
-  // CHECK:      %[[IN_22:.+]] = tensor.extract_slice %[[IN]]
+  // CHECK:      %[[IN_22:.+]] = tensor.extract_slice %[[IN_2]]
   // CHECK:      %[[OUT_22:.+]] = tensor.extract_slice %[[PARTIAL_21]]
   // CHECK:      %[[RES_22:.+]] = linalg.generic
   // CHECK-SAME:   ins(%[[IN_22]] : tensor<6x18xf32>)
@@ -185,7 +185,7 @@ func.func @two_d(%arg0: tensor<10x34xf32>,
 
 // -----
 
-transform.sequence {
+transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   // expected-error @below {{expects either a dynamic or a static split point to be provided}}
   %0:2 = "transform.structured.split"(%arg1) { dimension = 1, static_split_point = -1 } : (!pdl.operation) -> (!pdl.operation, !pdl.operation)
@@ -195,7 +195,7 @@ transform.sequence {
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1 = transform.structured.match ops{["func.call"]} in %arg1
@@ -224,7 +224,7 @@ func.func @dynamic(%arg0: tensor<100xf32>, %arg1: tensor<100xf32>) -> tensor<100
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1 = transform.structured.match ops{["func.call"]} in %arg1
@@ -258,7 +258,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %2 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["func.return"]} in %arg1
     // expected-error @below {{only applies to structured ops}}
@@ -282,7 +282,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %2 with "transform.dialect"
   }
 
-  transform.sequence %arg0 {
+  transform.sequence %arg0 failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     // expected-error @below {{dimension 1 does not exist in target op}}

@@ -16,15 +16,13 @@
 // failures when back-deploying.
 // XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0|12.0}}
 
-#include <cassert>
+#include <cstdlib>
 
-bool handler_called = false;
-void std::__libcpp_assertion_handler(char const*, ...) {
-  handler_called = true;
+void std::__libcpp_verbose_abort(char const*, ...) {
+  std::exit(EXIT_SUCCESS);
 }
 
 int main(int, char**) {
   _LIBCPP_ASSERT(false, "message");
-  assert(handler_called);
-  return 0;
+  return EXIT_FAILURE;
 }

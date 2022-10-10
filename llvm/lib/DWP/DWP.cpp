@@ -252,16 +252,23 @@ static std::string buildDWODescription(StringRef Name, StringRef DWPName,
   std::string Text = "\'";
   Text += Name;
   Text += '\'';
-  if (!DWPName.empty()) {
+  bool HasDWO = !DWOName.empty();
+  bool HasDWP = !DWPName.empty();
+  if (HasDWO || HasDWP) {
     Text += " (from ";
-    if (!DWOName.empty()) {
+    if (HasDWO) {
       Text += '\'';
       Text += DWOName;
-      Text += "' in ";
+      Text += '\'';
     }
-    Text += '\'';
-    Text += DWPName;
-    Text += "')";
+    if (HasDWO && HasDWP)
+      Text += " in ";
+    if (!DWPName.empty()) {
+      Text += '\'';
+      Text += DWPName;
+      Text += '\'';
+    }
+    Text += ")";
   }
   return Text;
 }
@@ -400,7 +407,7 @@ void writeIndexTable(
     const MapVector<uint64_t, UnitIndexEntry> &IndexEntries,
     uint32_t DWARFUnitIndex::Entry::SectionContribution::*Field) {
   for (const auto &E : IndexEntries)
-    for (size_t I = 0; I != array_lengthof(E.second.Contributions); ++I)
+    for (size_t I = 0; I != std::size(E.second.Contributions); ++I)
       if (ContributionOffsets[I])
         Out.emitIntValue(E.second.Contributions[I].*Field, 4);
 }
@@ -579,8 +586,12 @@ Error write(MCStreamer &Out, ArrayRef<std::string> Inputs) {
 
   for (const auto &Input : Inputs) {
     auto ErrOrObj = object::ObjectFile::createObjectFile(Input);
-    if (!ErrOrObj)
-      return ErrOrObj.takeError();
+    if (!ErrOrObj) {
+      return handleErrors(ErrOrObj.takeError(),
+                          [&](std::unique_ptr<ECError> EC) -> Error {
+                            return createFileError(Input, Error(std::move(EC)));
+                          });
+    }
 
     auto &Obj = *ErrOrObj->getBinary();
     Objects.push_back(std::move(*ErrOrObj));

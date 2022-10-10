@@ -1,13 +1,10 @@
-===============================================
-llvm-libc: An ISO C-conformant Standard Library
-===============================================
+==================
+The LLVM C Library
+==================
 
-**llvm-libc library is not complete.  If you need a fully functioning libc right
-now, you should continue to use your standard system libc.**
-
-.. contents:: Table of Contents
-  :depth: 4
-  :local:
+.. warning::
+  The libc is not complete.  If you need a fully functioning C library right
+  now, you should continue to use your standard system libraries.
 
 Introduction
 ============
@@ -36,34 +33,57 @@ Platform Support
 ================
 
 Most development is currently targeting x86_64 and aarch64 on Linux.  Several
-functions in llvm-libc have been tested on Windows.  The Fuchsia platform is
-slowly replacing functions from its bundled libc with functions from llvm-libc.
+functions in the libc have been tested on Windows.  The Fuchsia platform is
+slowly replacing functions from its bundled libc with functions from this
+project.
 
 ABI Compatibility
 =================
 
-llvm-libc is written to be ABI independent.  Interfaces are generated using
+The libc is written to be ABI independent.  Interfaces are generated using
 LLVM's tablegen, so supporting arbitrary ABIs is possible.  In it's initial
-stages llvm-libc is not offering ABI stability in any form.
-
-Other Interesting Documentation
-===============================
+stages there is no ABI stability in any form.
 
 .. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Using
 
-    build_system
-    clang_tidy_checks
-    entrypoints
-    fuzzing
-    ground_truth_specification
-    header_generation
-    implementation_standard
-    api_test
-    layering
-    mechanics_of_public_api
-    redirectors
-    source_layout
-    strings
-    runtimes_build
-    stdio
-    math
+   runtimes_build
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Status
+
+   date_and_time
+   math
+   strings
+   stdio
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: Development
+
+   build_system
+   clang_tidy_checks
+   entrypoints
+   fuzzing
+   ground_truth_specification
+   header_generation
+   implementation_standard
+   api_test
+   layering
+   mechanics_of_public_api
+   redirectors
+   source_layout
+
+.. toctree::
+   :hidden:
+   :maxdepth: 1
+   :caption: External Links
+
+   Source Code <https://github.com/llvm/llvm-project/tree/main/libc>
+   Bug Reports <https://github.com/llvm/llvm-project/labels/libc>
+   Buildbot <https://lab.llvm.org/buildbot/#/builders?tags=libc>

@@ -19,6 +19,7 @@ include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 
 // Base Tablegen class for Linalg ops.
 // Linalg ops that correspond to library calls operate on ShapedType as their
@@ -28,6 +29,7 @@ class LinalgStructuredBase_Op<string mnemonic, list<Trait> props>
   : Op<Linalg_Dialect, mnemonic, !listconcat([
        SingleBlockImplicitTerminator<"YieldOp">,
        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+       DestinationStyleOpInterface,
        LinalgStructuredInterface,
        RegionBranchOpInterface,
        ReifyRankedShapedTypeOpInterface], props)> {
@@ -56,7 +58,9 @@ class LinalgStructuredBase_Op<string mnemonic, list<Trait> props>
 // Generic Linalg ops.
 //===----------------------------------------------------------------------===//
 
-def GenericOp : LinalgStructuredBase_Op<"generic", [AttrSizedOperandSegments]> {
+def GenericOp : LinalgStructuredBase_Op<"generic", [
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmBlockArgumentNames"]>,
+    AttrSizedOperandSegments]> {
   let description = [{
     Generic Linalg op form where the key properties of the computation are
     specified as attributes. In pretty form, a `linalg.generic` op is written
@@ -202,8 +206,8 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [AttrSizedOperandSegments]> {
       };
     }
     std::string getLibraryCallName() {
-      return library_call() ?
-        library_call()->str() : "op_has_no_registered_library_name";
+      return getLibraryCall() ?
+        getLibraryCall()->str() : "op_has_no_registered_library_name";
     }
 
     static std::function<void(ImplicitLocOpBuilder &,
@@ -216,6 +220,73 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [AttrSizedOperandSegments]> {
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
+  let hasVerifier = 1;
+}
+
+
+//===----------------------------------------------------------------------===//
+// Reduce op.
+//===----------------------------------------------------------------------===//
+
+def TensorOrMemref :
+  AnyTypeOf<[AnyMemRef, AnyRankedTensor], "", "::mlir::ShapedType">;
+
+def ReduceOp : LinalgStructuredBase_Op<"reduce", [
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
+    DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmBlockArgumentNames"]>,
+    SameVariadicOperandSize,
+    SingleBlockImplicitTerminator<"YieldOp">]> {
+  let summary = "Reduce operator";
+  let description = [{
+    Executes `combiner` on the `dimensions` of `inputs` and returns the
+    reduced result. The `dimensions` attribute needs to list the reduction
+    dimensions in increasing order.
+
+    Example:
+    ```
+      %reduce = linalg.reduce
+          ins(%input:tensor<16x32x64xf32>)
+          outs(%init:tensor<16x64xf32>)
+          dimensions = [1]
+          (%in: f32, %out: f32) {
+            %0 = arith.addf %in, %out: f32
+            linalg.yield %0: f32
+          }
+    ```
+  }];
+
+  let arguments = (ins
+    // Input arg
+    Variadic<TensorOrMemref>:$inputs,
+    // Output arg
+    Variadic<TensorOrMemref>:$inits,
+
+    ConfinedAttr<DenseI64ArrayAttr,
+                 [DenseArrayStrictlySorted<DenseI64ArrayAttr>]>:$dimensions
+  );
+  let results = (outs Variadic<TensorOrMemref>);
+  let regions = (region SizedRegion<1>:$combiner);
+
+  let extraClassDeclaration = structuredOpsBaseDecls # [{
+    // Declare functions necessary for LinalgStructuredInterface.
+    ArrayAttr getIteratorTypes();
+    ArrayAttr getIndexingMaps();
+    std::string getLibraryCallName() {
+      return "op_has_no_registered_library_name";
+    }
+
+    // Implement functions necessary for DestinationStyleOpInterface.
+    mlir::ValueRange getOutputs() { return getInits(); }
+    unsigned getNumInputs() { return getInputs().size(); };
+    unsigned getNumOutputs() { return getInits().size(); };
+    static std::function<void(mlir::ImplicitLocOpBuilder &, mlir::Block &,
+                              mlir::ArrayRef<mlir::NamedAttribute>)>
+    getRegionBuilder() {
+      return nullptr;
+    }
+  }];
+
+  let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 }
 

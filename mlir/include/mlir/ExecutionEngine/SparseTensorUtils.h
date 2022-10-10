@@ -1,4 +1,4 @@
-//===- SparseTensorUtils.h - Enums shared with the runtime ------*- C++ -*-===//
+//===- SparseTensorUtils.h - SparseTensor runtime support lib ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,119 +7,24 @@
 //===----------------------------------------------------------------------===//
 //
 // This header file provides the enums and functions which comprise the
-// public API of `ExecutionEngine/SparseUtils.cpp`.
+// public API of the `ExecutionEngine/SparseTensorUtils.cpp` runtime
+// support library for the SparseTensor dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_EXECUTIONENGINE_SPARSETENSORUTILS_H_
-#define MLIR_EXECUTIONENGINE_SPARSETENSORUTILS_H_
+#ifndef MLIR_EXECUTIONENGINE_SPARSETENSORUTILS_H
+#define MLIR_EXECUTIONENGINE_SPARSETENSORUTILS_H
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
-#include "mlir/ExecutionEngine/Float16bits.h"
+#include "mlir/ExecutionEngine/SparseTensor/Enums.h"
 
 #include <cinttypes>
 #include <complex>
 #include <vector>
 
+using namespace mlir::sparse_tensor;
+
 extern "C" {
-
-//===----------------------------------------------------------------------===//
-//
-// Typedefs and enums.  These are required to be public so that they
-// can be shared with `Transforms/SparseTensorConversion.cpp`, since
-// they define the arguments to the public functions declared later on.
-//
-// This section also defines x-macros <https://en.wikipedia.org/wiki/X_Macro>
-// so that we can generate variations of the public functions for each
-// supported primary- and/or overhead-type.
-//
-//===----------------------------------------------------------------------===//
-
-/// This type is used in the public API at all places where MLIR expects
-/// values with the built-in type "index". For now, we simply assume that
-/// type is 64-bit, but targets with different "index" bit widths should
-/// link with an alternatively built runtime support library.
-// TODO: support such targets?
-using index_type = uint64_t;
-
-/// Encoding of overhead types (both pointer overhead and indices
-/// overhead), for "overloading" @newSparseTensor.
-enum class OverheadType : uint32_t {
-  kIndex = 0,
-  kU64 = 1,
-  kU32 = 2,
-  kU16 = 3,
-  kU8 = 4
-};
-
-// This x-macro calls its argument on every overhead type which has
-// fixed-width.  It excludes `index_type` because that type is often
-// handled specially (e.g., by translating it into the architecture-dependent
-// equivalent fixed-width overhead type).
-#define FOREVERY_FIXED_O(DO)                                                   \
-  DO(64, uint64_t)                                                             \
-  DO(32, uint32_t)                                                             \
-  DO(16, uint16_t)                                                             \
-  DO(8, uint8_t)
-
-// This x-macro calls its argument on every overhead type, including
-// `index_type`.
-#define FOREVERY_O(DO)                                                         \
-  FOREVERY_FIXED_O(DO)                                                         \
-  DO(0, index_type)
-
-// These are not just shorthands but indicate the particular
-// implementation used (e.g., as opposed to C99's `complex double`,
-// or MLIR's `ComplexType`).
-using complex64 = std::complex<double>;
-using complex32 = std::complex<float>;
-
-/// Encoding of the elemental type, for "overloading" @newSparseTensor.
-enum class PrimaryType : uint32_t {
-  kF64 = 1,
-  kF32 = 2,
-  kF16 = 3,
-  kBF16 = 4,
-  kI64 = 5,
-  kI32 = 6,
-  kI16 = 7,
-  kI8 = 8,
-  kC64 = 9,
-  kC32 = 10
-};
-
-// This x-macro includes all `V` types.
-#define FOREVERY_V(DO)                                                         \
-  DO(F64, double)                                                              \
-  DO(F32, float)                                                               \
-  DO(F16, f16)                                                                 \
-  DO(BF16, bf16)                                                               \
-  DO(I64, int64_t)                                                             \
-  DO(I32, int32_t)                                                             \
-  DO(I16, int16_t)                                                             \
-  DO(I8, int8_t)                                                               \
-  DO(C64, complex64)                                                           \
-  DO(C32, complex32)
-
-/// The actions performed by @newSparseTensor.
-enum class Action : uint32_t {
-  kEmpty = 0,
-  kFromFile = 1,
-  kFromCOO = 2,
-  kSparseToSparse = 3,
-  kEmptyCOO = 4,
-  kToCOO = 5,
-  kToIterator = 6
-};
-
-/// This enum mimics `SparseTensorEncodingAttr::DimLevelType` for
-/// breaking dependency cycles.  `SparseTensorEncodingAttr::DimLevelType`
-/// is the source of truth and this enum should be kept consistent with it.
-enum class DimLevelType : uint8_t {
-  kDense = 0,
-  kCompressed = 1,
-  kSingleton = 2
-};
 
 //===----------------------------------------------------------------------===//
 //
@@ -160,7 +65,7 @@ _mlir_ciface_newSparseTensor(StridedMemRefType<DimLevelType, 1> *aref, // NOLINT
 #define DECL_SPARSEVALUES(VNAME, V)                                            \
   MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_sparseValues##VNAME(              \
       StridedMemRefType<V, 1> *out, void *tensor);
-FOREVERY_V(DECL_SPARSEVALUES)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_SPARSEVALUES)
 #undef DECL_SPARSEVALUES
 
 /// Tensor-storage method to obtain direct access to the pointers array
@@ -168,7 +73,7 @@ FOREVERY_V(DECL_SPARSEVALUES)
 #define DECL_SPARSEPOINTERS(PNAME, P)                                          \
   MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_sparsePointers##PNAME(            \
       StridedMemRefType<P, 1> *out, void *tensor, index_type d);
-FOREVERY_O(DECL_SPARSEPOINTERS)
+MLIR_SPARSETENSOR_FOREVERY_O(DECL_SPARSEPOINTERS)
 #undef DECL_SPARSEPOINTERS
 
 /// Tensor-storage method to obtain direct access to the indices array
@@ -176,7 +81,7 @@ FOREVERY_O(DECL_SPARSEPOINTERS)
 #define DECL_SPARSEINDICES(INAME, I)                                           \
   MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_sparseIndices##INAME(             \
       StridedMemRefType<I, 1> *out, void *tensor, index_type d);
-FOREVERY_O(DECL_SPARSEINDICES)
+MLIR_SPARSETENSOR_FOREVERY_O(DECL_SPARSEINDICES)
 #undef DECL_SPARSEINDICES
 
 /// Coordinate-scheme method for adding a new element.
@@ -185,7 +90,7 @@ FOREVERY_O(DECL_SPARSEINDICES)
       void *coo, StridedMemRefType<V, 0> *vref,                                \
       StridedMemRefType<index_type, 1> *iref,                                  \
       StridedMemRefType<index_type, 1> *pref);
-FOREVERY_V(DECL_ADDELT)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_ADDELT)
 #undef DECL_ADDELT
 
 /// Coordinate-scheme method for getting the next element while iterating.
@@ -193,7 +98,7 @@ FOREVERY_V(DECL_ADDELT)
   MLIR_CRUNNERUTILS_EXPORT bool _mlir_ciface_getNext##VNAME(                   \
       void *coo, StridedMemRefType<index_type, 1> *iref,                       \
       StridedMemRefType<V, 0> *vref);
-FOREVERY_V(DECL_GETNEXT)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_GETNEXT)
 #undef DECL_GETNEXT
 
 /// Tensor-storage method to insert elements in lexicographical index order.
@@ -201,7 +106,7 @@ FOREVERY_V(DECL_GETNEXT)
   MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_lexInsert##VNAME(                 \
       void *tensor, StridedMemRefType<index_type, 1> *cref,                    \
       StridedMemRefType<V, 0> *vref);
-FOREVERY_V(DECL_LEXINSERT)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_LEXINSERT)
 #undef DECL_LEXINSERT
 
 /// Tensor-storage method to insert using expansion.
@@ -210,7 +115,7 @@ FOREVERY_V(DECL_LEXINSERT)
       void *tensor, StridedMemRefType<index_type, 1> *cref,                    \
       StridedMemRefType<V, 1> *vref, StridedMemRefType<bool, 1> *fref,         \
       StridedMemRefType<index_type, 1> *aref, index_type count);
-FOREVERY_V(DECL_EXPINSERT)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_EXPINSERT)
 #undef DECL_EXPINSERT
 
 //===----------------------------------------------------------------------===//
@@ -233,16 +138,16 @@ MLIR_CRUNNERUTILS_EXPORT void endInsert(void *tensor);
 #define DECL_OUTSPARSETENSOR(VNAME, V)                                         \
   MLIR_CRUNNERUTILS_EXPORT void outSparseTensor##VNAME(void *coo, void *dest,  \
                                                        bool sort);
-FOREVERY_V(DECL_OUTSPARSETENSOR)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_OUTSPARSETENSOR)
 #undef DECL_OUTSPARSETENSOR
 
 /// Releases the memory for the tensor-storage object.
-void delSparseTensor(void *tensor);
+MLIR_CRUNNERUTILS_EXPORT void delSparseTensor(void *tensor);
 
 /// Releases the memory for the coordinate-scheme object.
 #define DECL_DELCOO(VNAME, V)                                                  \
   MLIR_CRUNNERUTILS_EXPORT void delSparseTensorCOO##VNAME(void *coo);
-FOREVERY_V(DECL_DELCOO)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_DELCOO)
 #undef DECL_DELCOO
 
 /// Helper function to read a sparse tensor filename from the environment,
@@ -278,7 +183,7 @@ MLIR_CRUNNERUTILS_EXPORT void readSparseTensorShape(char *filename,
   MLIR_CRUNNERUTILS_EXPORT void *convertToMLIRSparseTensor##VNAME(             \
       uint64_t rank, uint64_t nse, uint64_t *shape, V *values,                 \
       uint64_t *indices, uint64_t *perm, uint8_t *sparse);
-FOREVERY_V(DECL_CONVERTTOMLIRSPARSETENSOR)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_CONVERTTOMLIRSPARSETENSOR)
 #undef DECL_CONVERTTOMLIRSPARSETENSOR
 
 /// Converts a sparse tensor to COO-flavored format expressed using
@@ -297,9 +202,9 @@ FOREVERY_V(DECL_CONVERTTOMLIRSPARSETENSOR)
   MLIR_CRUNNERUTILS_EXPORT void convertFromMLIRSparseTensor##VNAME(            \
       void *tensor, uint64_t *pRank, uint64_t *pNse, uint64_t **pShape,        \
       V **pValues, uint64_t **pIndices);
-FOREVERY_V(DECL_CONVERTFROMMLIRSPARSETENSOR)
+MLIR_SPARSETENSOR_FOREVERY_V(DECL_CONVERTFROMMLIRSPARSETENSOR)
 #undef DECL_CONVERTFROMMLIRSPARSETENSOR
 
 } // extern "C"
 
-#endif // MLIR_EXECUTIONENGINE_SPARSETENSORUTILS_H_
+#endif // MLIR_EXECUTIONENGINE_SPARSETENSORUTILS_H

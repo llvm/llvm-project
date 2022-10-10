@@ -52,9 +52,22 @@ REM   For LLDB, SWIG version <= 3.0.8 needs to be used to work around
 REM   https://github.com/swig/swig/issues/769
 
 
-REM You need to modify the paths below:
-set vsdevcmd=C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\Common7\Tools\VsDevCmd.bat
+set vsdevcmd=
+set vs_2019_prefix=C:\Program Files (x86)\Microsoft Visual Studio\2019
+:: try potential activated visual studio, then 2019, with different editions
+call :find_visual_studio "%VSINSTALLDIR%"
+call :find_visual_studio "%vs_2019_prefix%\Enterprise"
+call :find_visual_studio "%vs_2019_prefix%\Professional"
+call :find_visual_studio "%vs_2019_prefix%\Community"
+call :find_visual_studio "%vs_2019_prefix%\BuildTools"
+if not exist "%vsdevcmd%" (
+  echo Can't find any installation of Visual Studio
+  exit /b 1
+)
+echo Using VS devcmd: %vsdevcmd%
 
+:: start echoing what we do
+@echo on
 set python32_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310-32
 set python64_dir=C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310
 
@@ -66,14 +79,13 @@ echo Revision: %revision%
 echo Package version: %package_version%
 echo Build dir: %build_dir%
 echo.
-pause
 
 if exist %build_dir% (
   echo Build directory already exists: %build_dir%
   exit /b 1
 )
 mkdir %build_dir%
-cd %build_dir%
+cd %build_dir% || exit /b 1
 
 echo Checking out %revision%
 curl -L https://github.com/llvm/llvm-project/archive/%revision%.zip -o src.zip || exit /b 1
@@ -122,9 +134,11 @@ REM TODO: Run the "check-all" tests.
 REM Set Python environment
 set PYTHONHOME=%python32_dir%
 set PATH=%PYTHONHOME%;%PATH%
+%python32_dir%/python.exe --version || exit /b 1
 
 set "VSCMD_START_DIR=%build_dir%"
-call "%vsdevcmd%" -arch=x86
+call "%vsdevcmd%" -arch=x86 || exit /b 1
+@echo on
 mkdir build32_stage0
 cd build32_stage0
 
@@ -191,9 +205,11 @@ set PATH=%OLDPATH%
 REM Set Python environment
 set PYTHONHOME=%python64_dir%
 set PATH=%PYTHONHOME%;%PATH%
+%python64_dir%/python.exe --version || exit /b 1
 
 set "VSCMD_START_DIR=%build_dir%"
-call "%vsdevcmd%" -arch=amd64
+call "%vsdevcmd%" -arch=amd64 || exit /b 1
+@echo on
 mkdir build64_stage0
 cd build64_stage0
 
@@ -251,3 +267,73 @@ cd ..
 
 exit /b 0
 ::==============================================================================
+
+::=============================================================================
+:: Parse command line arguments.
+:: The format for the arguments is:
+::   Boolean: --option
+::   Value:   --option<separator>value
+::     with <separator> being: space, colon, semicolon or equal sign
+::
+:: Command line usage example:
+::   my-batch-file.bat --build --type=release --version 123
+:: It will create 3 variables:
+::   'build' with the value 'true'
+::   'type' with the value 'release'
+::   'version' with the value '123'
+::
+:: Usage:
+::   set "build="
+::   set "type="
+::   set "version="
+::
+::   REM Parse arguments.
+::   call :parse_args %*
+::
+::   if defined build (
+::     ...
+::   )
+::   if %type%=='release' (
+::     ...
+::   )
+::   if %version%=='123' (
+::     ...
+::   )
+::=============================================================================
+:parse_args
+  set "arg_name="
+  :parse_args_start
+  if "%1" == "" (
+    :: Set a seen boolean argument.
+    if "%arg_name%" neq "" (
+      set "%arg_name%=true"
+    )
+    goto :parse_args_done
+  )
+  set aux=%1
+  if "%aux:~0,2%" == "--" (
+    :: Set a seen boolean argument.
+    if "%arg_name%" neq "" (
+      set "%arg_name%=true"
+    )
+    set "arg_name=%aux:~2,250%"
+  ) else (
+    set "%arg_name%=%1"
+    set "arg_name="
+  )
+  shift
+  goto :parse_args_start
+
+:parse_args_done
+exit /b 0
+::==============================================================================
+:find_visual_studio
+set "vs_install=%~1"
+if "%vs_install%" == "" exit /b 1
+
+if "%vsdevcmd%" NEQ "" exit /b 0 :: already found
+
+set "candidate=%vs_install%\Common7\Tools\VsDevCmd.bat"
+echo trying VS devcmd: %candidate%
+if exist "%candidate%" set "vsdevcmd=%candidate%"
+exit /b 0

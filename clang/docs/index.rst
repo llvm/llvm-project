@@ -40,13 +40,14 @@ Using Clang as a Compiler
    SafeStack
    ShadowCallStack
    SourceBasedCodeCoverage
+   StandardCPlusPlusModules
    Modules
    MSVCCompatibility
    MisExpect
    OpenCLSupport
    OpenMPSupport
    SYCLSupport
-   HLSLSupport
+   HLSL/HLSLDocs
    ThinLTO
    APINotes
    DebuggingCoroutines
@@ -97,6 +98,7 @@ Design Documents
 .. toctree::
    :maxdepth: 1
 
+   CodeOwners
    InternalsManual
    DriverInternals
    OffloadingDesign

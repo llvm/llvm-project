@@ -27,10 +27,10 @@ func.func @boxcharparams(%arg0 : !fir.boxchar<1>, %arg1 : !fir.boxchar<1>) -> i6
 // Test that we rewrite the signatures and bodies of functions that return a
 // boxchar.
 // INT32-LABEL: @boxcharsret
-// INT32-SAME: ([[ARG0:%[0-9A-Za-z]+]]: !fir.ref<!fir.char<1,?>> {llvm.sret}, [[ARG1:%[0-9A-Za-z]+]]: i32, [[ARG2:%[0-9A-Za-z]+]]: !fir.ref<!fir.char<1,?>>, [[ARG3:%[0-9A-Za-z]+]]: i32)
+// INT32-SAME: ([[ARG0:%[0-9A-Za-z]+]]: !fir.ref<!fir.char<1,?>> {llvm.sret = !fir.char<1,?>}, [[ARG1:%[0-9A-Za-z]+]]: i32, [[ARG2:%[0-9A-Za-z]+]]: !fir.ref<!fir.char<1,?>>, [[ARG3:%[0-9A-Za-z]+]]: i32)
 // INT64-LABEL: @boxcharsret
-// INT64-SAME: ([[ARG0:%[0-9A-Za-z]+]]: !fir.ref<!fir.char<1,?>> {llvm.sret}, [[ARG1:%[0-9A-Za-z]+]]: i64, [[ARG2:%[0-9A-Za-z]+]]: !fir.ref<!fir.char<1,?>>, [[ARG3:%[0-9A-Za-z]+]]: i64)
-func.func @boxcharsret(%arg0 : !fir.boxchar<1> {llvm.sret}, %arg1 : !fir.boxchar<1>) {
+// INT64-SAME: ([[ARG0:%[0-9A-Za-z]+]]: !fir.ref<!fir.char<1,?>> {llvm.sret = !fir.char<1,?>}, [[ARG1:%[0-9A-Za-z]+]]: i64, [[ARG2:%[0-9A-Za-z]+]]: !fir.ref<!fir.char<1,?>>, [[ARG3:%[0-9A-Za-z]+]]: i64)
+func.func @boxcharsret(%arg0 : !fir.boxchar<1> {llvm.sret = !fir.char<1,?>}, %arg1 : !fir.boxchar<1>) {
   // INT32-DAG: [[B0:%[0-9]+]] = fir.emboxchar [[ARG0]], [[ARG1]] : (!fir.ref<!fir.char<1,?>>, i32) -> !fir.boxchar<1>
   // INT32-DAG: [[B1:%[0-9]+]] = fir.emboxchar [[ARG2]], [[ARG3]] : (!fir.ref<!fir.char<1,?>>, i32) -> !fir.boxchar<1>
   // INT32-DAG: fir.unboxchar [[B0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.array<?x!fir.char<1>>>, i64)
@@ -57,10 +57,10 @@ func.func @boxcharsret(%arg0 : !fir.boxchar<1> {llvm.sret}, %arg1 : !fir.boxchar
 // Test that we rewrite the signatures of functions with a sret parameter and
 // several other parameters.
 // INT32-LABEL: @boxcharmultiple
-// INT32-SAME: ({{%[0-9A-Za-z]+}}: !fir.ref<!fir.char<1,?>> {llvm.sret}, {{%[0-9A-Za-z]+}}: i32, {{%[0-9A-Za-z]+}}: !fir.ref<!fir.char<1,?>>, {{%[0-9A-Za-z]+}}: !fir.ref<!fir.char<1,?>>, {{%[0-9A-Za-z]+}}: i32, {{%[0-9A-Za-z]+}}: i32)
+// INT32-SAME: ({{%[0-9A-Za-z]+}}: !fir.ref<!fir.char<1,?>> {llvm.sret = !fir.char<1,?>}, {{%[0-9A-Za-z]+}}: i32, {{%[0-9A-Za-z]+}}: !fir.ref<!fir.char<1,?>>, {{%[0-9A-Za-z]+}}: !fir.ref<!fir.char<1,?>>, {{%[0-9A-Za-z]+}}: i32, {{%[0-9A-Za-z]+}}: i32)
 // INT64-LABEL: @boxcharmultiple
-// INT64-SAME: ({{%[0-9A-Za-z]+}}: !fir.ref<!fir.char<1,?>> {llvm.sret}, {{%[0-9A-Za-z]+}}: i64, {{%[0-9A-Za-z]+}}: !fir.ref<!fir.char<1,?>>, {{%[0-9A-Za-z]+}}: !fir.ref<!fir.char<1,?>>, {{%[0-9A-Za-z]+}}: i64, {{%[0-9A-Za-z]+}}: i64)
-func.func @boxcharmultiple(%arg0 : !fir.boxchar<1> {llvm.sret}, %arg1 : !fir.boxchar<1>, %arg2 : !fir.boxchar<1>) {
+// INT64-SAME: ({{%[0-9A-Za-z]+}}: !fir.ref<!fir.char<1,?>> {llvm.sret = !fir.char<1,?>}, {{%[0-9A-Za-z]+}}: i64, {{%[0-9A-Za-z]+}}: !fir.ref<!fir.char<1,?>>, {{%[0-9A-Za-z]+}}: !fir.ref<!fir.char<1,?>>, {{%[0-9A-Za-z]+}}: i64, {{%[0-9A-Za-z]+}}: i64)
+func.func @boxcharmultiple(%arg0 : !fir.boxchar<1> {llvm.sret = !fir.char<1,?>}, %arg1 : !fir.boxchar<1>, %arg2 : !fir.boxchar<1>) {
   return
 }
 

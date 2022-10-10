@@ -240,3 +240,14 @@ public:
   Test9(const Test9 &other) = default;
   Test9(Test9 &&other) = default;
 };
+
+
+template <typename T>
+class Test10 {
+public:
+  enum E {};
+  E e;
+
+  Test10(T &&Item, E e)
+      : e(e){}
+};

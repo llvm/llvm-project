@@ -45,6 +45,10 @@ def LLVM_Dialect : Dialect {
     static StringRef getLoopOptionsAttrName() { return "options"; }
     static StringRef getAccessGroupsAttrName() { return "access_groups"; }
     static StringRef getStructAttrsAttrName() { return "llvm.struct_attrs"; }
+    static StringRef getByValAttrName() { return "llvm.byval"; }
+    static StringRef getByRefAttrName() { return "llvm.byref"; }
+    static StringRef getStructRetAttrName() { return "llvm.sret"; }
+    static StringRef getInAllocaAttrName() { return "llvm.inalloca"; }
 
     /// Verifies if the attribute is a well-formed value for "llvm.struct_attrs"
     static LogicalResult verifyStructAttr(
@@ -66,14 +70,18 @@ def LLVM_Dialect : Dialect {
     /// Returns `true` if the given type is compatible with the LLVM dialect.
     static bool isCompatibleType(Type);
 
+    /// Name of the attribute mapped to LLVM's 'readnone' function attribute.
+    /// It is allowed on any FunctionOpInterface operations.
+    static StringRef getReadnoneAttrName() {
+      return "llvm.readnone";
+    }
+
   private:
     /// A cache storing compatible LLVM types that have been verified. This
     /// can save us lots of verification time if there are many occurrences
     /// of some deeply-nested aggregate types in the program.
     ThreadLocalCache<DenseSet<Type>> compatibleTypes;
   }];
-
-  let emitAccessorPrefix = kEmitAccessorPrefix_Prefixed;
 }
 
 //===----------------------------------------------------------------------===//
@@ -294,7 +302,9 @@ def LLVM_IntrPatterns {
 // to be accessed via the LLVMStructType, instead of directly via the result.
 // "opName" contains the name of the operation to be associated with the
 // intrinsic and "enumName" contains the name of the intrinsic as appears in
-// `llvm::Intrinsic` enum; one usually wants these to be related.
+// `llvm::Intrinsic` enum; one usually wants these to be related. Additionally,
+// the base class also defines the "mlirBuilder" field to support the inverse
+// translation starting from an LLVM IR intrinsic.
 class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
                       list<int> overloadedResults, list<int> overloadedOperands,
                       list<Trait> traits, int numResults,
@@ -304,7 +314,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
   string resultPattern = !if(!gt(numResults, 1),
                              LLVM_IntrPatterns.structResult,
                              LLVM_IntrPatterns.result);
-  string llvmEnumName = enumName;                           
+  string llvmEnumName = enumName;
   let llvmBuilder = [{
     llvm::Module *module = builder.GetInsertBlock()->getModule();
     llvm::Function *fn = llvm::Intrinsic::getDeclaration(
@@ -324,6 +334,30 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
       "moduleTranslation.setAliasScopeMetadata(op, inst);",
       "(void) inst;")
     # !if(!gt(numResults, 0), "$res = inst;", "");
+
+  // A builder to construct the MLIR LLVM dialect operation given the matching
+  // LLVM IR intrinsic instruction `callInst`. The following $-variables exist:
+  //   - $name - substituted by the remapped `callInst` argument using the
+  //             the index of the MLIR operation argument with the given name;
+  //   - $_int_attr - substituted by a call to an integer attribute matcher;
+  //   - $_resultType - substituted with the MLIR result type;
+  //   - $_location - substituted with the MLIR location;
+  //   - $_builder - substituted with the MLIR builder;
+  //   - $_qualCppClassName - substitiuted with the MLIR operation class name.
+  // Additionally, `$$` can be used to produce the dollar character.
+  // NOTE: The $name variable resolution assumes the MLIR and LLVM argument
+  // orders match and there are no optional or variadic arguments.
+  string mlirBuilder = [{
+    SmallVector<llvm::Value *> operands(callInst->args());
+    SmallVector<Type> resultTypes =
+    }] # !if(!gt(numResults, 0),
+      "{$_resultType};", "{};") # [{
+    Operation *op = $_builder.create<$_qualCppClassName>(
+      $_location,
+      resultTypes,
+      processValues(operands));
+    }] # !if(!gt(numResults, 0),
+      "instMap[callInst] = op->getResult(0);", "(void)op;");
 }
 
 // Base class for LLVM intrinsic operations, should not be used directly. Places

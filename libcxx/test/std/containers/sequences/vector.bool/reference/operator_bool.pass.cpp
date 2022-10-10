@@ -14,7 +14,9 @@
 #include <type_traits>
 #include <vector>
 
-bool test() {
+#include "test_macros.h"
+
+TEST_CONSTEXPR_CXX20 bool test() {
   std::vector<bool> vec;
   typedef std::vector<bool>::reference Ref;
   static_assert(std::is_convertible<Ref, bool>::value, "");
@@ -33,6 +35,9 @@ bool test() {
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
 
   return 0;
 }

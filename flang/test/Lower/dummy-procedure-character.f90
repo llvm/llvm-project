@@ -168,8 +168,11 @@ subroutine call_explicit_length(bar9)
 ! CHECK:  %[[WAL_1:.*]] = fir.box_addr %[[VAL_4]] : (!fir.boxproc<() -> ()>) -> (() -> ())
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 7 : i64
 ! CHECK:  %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i64) -> index
+! CHECK:  %[[C0:.*]] = arith.constant 0 : index
+! CHECK:  %[[CMPI:.*]]  = arith.cmpi sgt, %[[VAL_6]], %[[C0]] : index
+! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_6]], %[[C0]] : index
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[WAL_1]] : (() -> ()) -> ((!fir.ref<!fir.char<1,7>>, index, !fir.ref<i32>) -> !fir.boxchar<1>)
-! CHECK:  fir.call %[[VAL_8]](%[[VAL_1]], %[[VAL_6]], %{{.*}}) : (!fir.ref<!fir.char<1,7>>, index, !fir.ref<i32>) -> !fir.boxchar<1>
+! CHECK:  fir.call %[[VAL_8]](%[[VAL_1]], %[[SELECT]], %{{.*}}) : (!fir.ref<!fir.char<1,7>>, index, !fir.ref<i32>) -> !fir.boxchar<1>
   call test(bar9(42))
 end subroutine
 
@@ -189,10 +192,13 @@ subroutine call_explicit_length_with_iface(bar10)
 ! CHECK:  %[[WAL_1:.*]] = fir.box_addr %[[VAL_3]] : (!fir.boxproc<() -> ()>) -> (() -> ())
 ! CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_1]] : !fir.ref<i64>
 ! CHECK:  %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (i64) -> index
+! CHECK:  %[[C0:.*]] = arith.constant 0 : index
+! CHECK:  %[[COMPI:.*]] = arith.cmpi sgt, %[[VAL_5]], %[[C0]] : index
+! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_5]], %[[C0]] : index
 ! CHECK:  %[[VAL_6:.*]] = fir.call @llvm.stacksave() : () -> !fir.ref<i8>
-! CHECK:  %[[VAL_7:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_5]] : index) {bindc_name = ".result"}
+! CHECK:  %[[VAL_7:.*]] = fir.alloca !fir.char<1,?>(%[[SELECT]] : index) {bindc_name = ".result"}
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[WAL_1]] : (() -> ()) -> ((!fir.ref<!fir.char<1,?>>, index, !fir.ref<i64>) -> !fir.boxchar<1>)
-! CHECK:  fir.call %[[VAL_8]](%[[VAL_7]], %[[VAL_5]], %[[VAL_1]]) : (!fir.ref<!fir.char<1,?>>, index, !fir.ref<i64>) -> !fir.boxchar<1>
+! CHECK:  fir.call %[[VAL_8]](%[[VAL_7]], %[[SELECT]], %[[VAL_1]]) : (!fir.ref<!fir.char<1,?>>, index, !fir.ref<i64>) -> !fir.boxchar<1>
   call test(bar10(42_8))
 end subroutine
 
@@ -247,8 +253,11 @@ contains
     ! CHECK:  %[[WAL_1:.*]] = fir.box_addr %[[VAL_5]] : (!fir.boxproc<() -> ()>) -> (() -> ())
     ! CHECK:  %[[VAL_6:.*]] = arith.constant 42 : i64
     ! CHECK:  %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (i64) -> index
+    ! CHECK:  %[[C0:.*]] = arith.constant 0 : index
+    ! CHECK:  %[[CMPI:.*]] = arith.cmpi sgt, %[[VAL_7]], %[[C0]] : index
+    ! CHECK:  %[[SELECT:.*]] = arith.select %[[CMPI]], %[[VAL_7]], %[[C0]] : index
     ! CHECK:  %[[VAL_9:.*]] = fir.convert %[[WAL_1]] : (() -> ()) -> ((!fir.ref<!fir.char<1,42>>, index) -> !fir.boxchar<1>)
-    ! CHECK:  fir.call %[[VAL_9]](%[[VAL_1]], %[[VAL_7]]) : (!fir.ref<!fir.char<1,42>>, index) -> !fir.boxchar<1>
+    ! CHECK:  fir.call %[[VAL_9]](%[[VAL_1]], %[[SELECT]]) : (!fir.ref<!fir.char<1,42>>, index) -> !fir.boxchar<1>
     call test(f())
   end subroutine
 end subroutine

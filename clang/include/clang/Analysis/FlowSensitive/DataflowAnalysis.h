@@ -15,11 +15,11 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_DATAFLOWANALYSIS_H
 
 #include <iterator>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Stmt.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
@@ -40,8 +40,9 @@ namespace dataflow {
 ///  must provide the following public members:
 ///   * `LatticeT initialElement()` - returns a lattice element that models the
 ///     initial state of a basic block;
-///   * `void transfer(const Stmt *, LatticeT &, Environment &)` - applies the
-///     analysis transfer function for a given statement and lattice element.
+///   * `void transfer(const CFGElement *, LatticeT &, Environment &)` - applies
+///     the analysis transfer function for a given CFG element and lattice
+///     element.
 ///
 ///  `Derived` can optionally override the following members:
 ///   * `bool merge(QualType, const Value &, const Value &, Value &,
@@ -66,7 +67,9 @@ public:
 
   /// Deprecated. Use the `DataflowAnalysisOptions` constructor instead.
   explicit DataflowAnalysis(ASTContext &Context, bool ApplyBuiltinTransfer)
-      : TypeErasedDataflowAnalysis(ApplyBuiltinTransfer), Context(Context) {}
+      : DataflowAnalysis(Context, {ApplyBuiltinTransfer
+                                       ? TransferOptions{}
+                                       : llvm::Optional<TransferOptions>()}) {}
 
   explicit DataflowAnalysis(ASTContext &Context,
                             DataflowAnalysisOptions Options)
@@ -92,10 +95,10 @@ public:
     return L1 == L2;
   }
 
-  void transferTypeErased(const Stmt *Stmt, TypeErasedLattice &E,
+  void transferTypeErased(const CFGElement *Element, TypeErasedLattice &E,
                           Environment &Env) final {
     Lattice &L = llvm::any_cast<Lattice &>(E.Value);
-    static_cast<Derived *>(this)->transfer(Stmt, L, Env);
+    static_cast<Derived *>(this)->transfer(Element, L, Env);
   }
 
 private:
@@ -116,7 +119,7 @@ template <typename LatticeT> struct DataflowAnalysisState {
 /// returned vector, if any, will have the same size as the number of CFG
 /// blocks, with indices corresponding to basic block IDs. Returns an error if
 /// the dataflow analysis cannot be performed successfully. Otherwise, calls
-/// `PostVisitStmt` on each statement with the final analysis results at that
+/// `PostVisitCFG` on each CFG element with the final analysis results at that
 /// program point.
 template <typename AnalysisT>
 llvm::Expected<std::vector<
@@ -124,24 +127,25 @@ llvm::Expected<std::vector<
 runDataflowAnalysis(
     const ControlFlowContext &CFCtx, AnalysisT &Analysis,
     const Environment &InitEnv,
-    std::function<void(const Stmt *, const DataflowAnalysisState<
-                                         typename AnalysisT::Lattice> &)>
-        PostVisitStmt = nullptr) {
-  std::function<void(const Stmt *, const TypeErasedDataflowAnalysisState &)>
-      PostVisitStmtClosure = nullptr;
-  if (PostVisitStmt != nullptr) {
-    PostVisitStmtClosure = [&PostVisitStmt](
-                               const Stmt *Stmt,
-                               const TypeErasedDataflowAnalysisState &State) {
+    std::function<void(const CFGElement &, const DataflowAnalysisState<
+                                               typename AnalysisT::Lattice> &)>
+        PostVisitCFG = nullptr) {
+  std::function<void(const CFGElement &,
+                     const TypeErasedDataflowAnalysisState &)>
+      PostVisitCFGClosure = nullptr;
+  if (PostVisitCFG) {
+    PostVisitCFGClosure = [&PostVisitCFG](
+                              const CFGElement &Element,
+                              const TypeErasedDataflowAnalysisState &State) {
       auto *Lattice =
           llvm::any_cast<typename AnalysisT::Lattice>(&State.Lattice.Value);
-      PostVisitStmt(Stmt, DataflowAnalysisState<typename AnalysisT::Lattice>{
-                              *Lattice, State.Env});
+      PostVisitCFG(Element, DataflowAnalysisState<typename AnalysisT::Lattice>{
+                                *Lattice, State.Env});
     };
   }
 
   auto TypeErasedBlockStates = runTypeErasedDataflowAnalysis(
-      CFCtx, Analysis, InitEnv, PostVisitStmtClosure);
+      CFCtx, Analysis, InitEnv, PostVisitCFGClosure);
   if (!TypeErasedBlockStates)
     return TypeErasedBlockStates.takeError();
 
@@ -152,7 +156,7 @@ runDataflowAnalysis(
 
   llvm::transform(std::move(*TypeErasedBlockStates),
                   std::back_inserter(BlockStates), [](auto &OptState) {
-                    return std::move(OptState).map([](auto &&State) {
+                    return std::move(OptState).transform([](auto &&State) {
                       return DataflowAnalysisState<typename AnalysisT::Lattice>{
                           llvm::any_cast<typename AnalysisT::Lattice>(
                               std::move(State.Lattice.Value)),
@@ -167,8 +171,8 @@ runDataflowAnalysis(
 /// example, a model may capture a type and its related functions.
 class DataflowModel : public Environment::ValueModel {
 public:
-  /// Return value indicates whether the model processed the `Stmt`.
-  virtual bool transfer(const Stmt *Stmt, Environment &Env) = 0;
+  /// Return value indicates whether the model processed the `Element`.
+  virtual bool transfer(const CFGElement *Element, Environment &Env) = 0;
 };
 
 } // namespace dataflow

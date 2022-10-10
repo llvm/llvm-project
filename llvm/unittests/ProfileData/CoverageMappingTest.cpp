@@ -22,7 +22,7 @@
 using namespace llvm;
 using namespace coverage;
 
-LLVM_NODISCARD static ::testing::AssertionResult
+[[nodiscard]] static ::testing::AssertionResult
 ErrorEquals(coveragemap_error Expected, Error E) {
   coveragemap_error Found;
   std::string FoundMsg;
@@ -292,7 +292,7 @@ TEST_P(CoverageMappingTest, basic_write_read) {
 
 TEST_P(CoverageMappingTest, correct_deserialize_for_more_than_two_files) {
   const char *FileNames[] = {"bar", "baz", "foo"};
-  static const unsigned N = array_lengthof(FileNames);
+  static const unsigned N = std::size(FileNames);
 
   startFunction("func", 0x1234);
   for (unsigned I = 0; I < N; ++I)
@@ -321,7 +321,7 @@ TEST_P(CoverageMappingTest, load_coverage_for_more_than_two_files) {
   ProfileWriter.addRecord({"func", 0x1234, {0}}, Err);
 
   const char *FileNames[] = {"bar", "baz", "foo"};
-  static const unsigned N = array_lengthof(FileNames);
+  static const unsigned N = std::size(FileNames);
 
   startFunction("func", 0x1234);
   for (unsigned I = 0; I < N; ++I)

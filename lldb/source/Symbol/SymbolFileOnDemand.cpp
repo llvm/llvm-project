@@ -375,9 +375,11 @@ void SymbolFileOnDemand::FindFunctions(const RegularExpression &regex,
 }
 
 void SymbolFileOnDemand::FindFunctions(
-    ConstString name, const CompilerDeclContext &parent_decl_ctx,
-    FunctionNameType name_type_mask, bool include_inlines,
+    const Module::LookupInfo &lookup_info,
+    const CompilerDeclContext &parent_decl_ctx, bool include_inlines,
     SymbolContextList &sc_list) {
+  ConstString name = lookup_info.GetLookupName();
+  FunctionNameType name_type_mask = lookup_info.GetNameTypeMask();
   if (!m_debug_info_enabled) {
     Log *log = GetLog();
 
@@ -402,7 +404,7 @@ void SymbolFileOnDemand::FindFunctions(
     // allow the FindFucntions to go through.
     SetLoadDebugInfoEnabled();
   }
-  return m_sym_file_impl->FindFunctions(name, parent_decl_ctx, name_type_mask,
+  return m_sym_file_impl->FindFunctions(lookup_info, parent_decl_ctx,
                                         include_inlines, sc_list);
 }
 

@@ -97,6 +97,14 @@ TYPE_PARSER(construct<OmpScheduleClause>(maybe(Parser<OmpScheduleModifier>{}),
         "RUNTIME" >> pure(OmpScheduleClause::ScheduleType::Runtime),
     maybe("," >> scalarIntExpr)))
 
+// device([ device-modifier :] scalar-integer-expression)
+TYPE_PARSER(construct<OmpDeviceClause>(
+    maybe(
+        ("ANCESTOR" >> pure(OmpDeviceClause::DeviceModifier::Ancestor) ||
+            "DEVICE_NUM" >> pure(OmpDeviceClause::DeviceModifier::Device_Num)) /
+        ":"),
+    scalarIntExpr))
+
 // 2.12 IF (directive-name-modifier: scalar-logical-expr)
 TYPE_PARSER(construct<OmpIfClause>(
     maybe(
@@ -196,7 +204,7 @@ TYPE_PARSER(
     "DEPEND" >> construct<OmpClause>(construct<OmpClause::Depend>(
                     parenthesized(Parser<OmpDependClause>{}))) ||
     "DEVICE" >> construct<OmpClause>(construct<OmpClause::Device>(
-                    parenthesized(scalarIntExpr))) ||
+                    parenthesized(Parser<OmpDeviceClause>{}))) ||
     "DIST_SCHEDULE" >>
         construct<OmpClause>(construct<OmpClause::DistSchedule>(
             parenthesized("STATIC" >> maybe("," >> scalarIntExpr)))) ||

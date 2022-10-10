@@ -257,9 +257,9 @@ IndirectCallPromotion::getCallTargets(BinaryBasicBlock &BB,
       MCSymbol *Entry = JT->Entries[I];
       assert(BF.getBasicBlockForLabel(Entry) ||
              Entry == BF.getFunctionEndLabel() ||
-             Entry == BF.getFunctionColdEndLabel());
+             Entry == BF.getFunctionEndLabel(FragmentNum::cold()));
       if (Entry == BF.getFunctionEndLabel() ||
-          Entry == BF.getFunctionColdEndLabel())
+          Entry == BF.getFunctionEndLabel(FragmentNum::cold()))
         continue;
       const Location To(Entry);
       const BinaryBasicBlock::BinaryBranchInfo &BI = BB.getBranchInfo(Entry);
@@ -416,15 +416,15 @@ IndirectCallPromotion::maybeGetHotJumpTableTargets(BinaryBasicBlock &BB,
 
   ++TotalIndexBasedCandidates;
 
-  auto ErrorOrMemAccesssProfile =
+  auto ErrorOrMemAccessProfile =
       BC.MIB->tryGetAnnotationAs<MemoryAccessProfile>(*MemLocInstr,
                                                       "MemoryAccessProfile");
-  if (!ErrorOrMemAccesssProfile) {
+  if (!ErrorOrMemAccessProfile) {
     DEBUG_VERBOSE(1, dbgs()
                          << "BOLT-INFO: ICP no memory profiling data found\n");
     return JumpTableInfoType();
   }
-  MemoryAccessProfile &MemAccessProfile = ErrorOrMemAccesssProfile.get();
+  MemoryAccessProfile &MemAccessProfile = ErrorOrMemAccessProfile.get();
 
   uint64_t ArrayStart;
   if (DispExpr) {
@@ -670,15 +670,15 @@ IndirectCallPromotion::MethodInfoType IndirectCallPromotion::maybeGetVtableSyms(
   });
 
   // Try to get value profiling data for the method load instruction.
-  auto ErrorOrMemAccesssProfile =
+  auto ErrorOrMemAccessProfile =
       BC.MIB->tryGetAnnotationAs<MemoryAccessProfile>(*MethodFetchInsns.back(),
                                                       "MemoryAccessProfile");
-  if (!ErrorOrMemAccesssProfile) {
+  if (!ErrorOrMemAccessProfile) {
     DEBUG_VERBOSE(1, dbgs()
                          << "BOLT-INFO: ICP no memory profiling data found\n");
     return MethodInfoType();
   }
-  MemoryAccessProfile &MemAccessProfile = ErrorOrMemAccesssProfile.get();
+  MemoryAccessProfile &MemAccessProfile = ErrorOrMemAccessProfile.get();
 
   // Find the vtable that each method belongs to.
   std::map<const MCSymbol *, uint64_t> MethodToVtable;
@@ -1158,8 +1158,7 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
     for (auto &BFIt : BFs) {
       BinaryFunction &Function = BFIt.second;
 
-      if (!Function.isSimple() || Function.isIgnored() ||
-          !Function.hasProfile())
+      if (!shouldOptimize(Function))
         continue;
 
       const bool HasLayout = !Function.getLayout().block_empty();
@@ -1219,7 +1218,7 @@ void IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
   for (BinaryFunction *FuncPtr : Functions) {
     BinaryFunction &Function = *FuncPtr;
 
-    if (!Function.isSimple() || Function.isIgnored() || !Function.hasProfile())
+    if (!shouldOptimize(Function))
       continue;
 
     const bool HasLayout = !Function.getLayout().block_empty();

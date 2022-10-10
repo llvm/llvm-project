@@ -427,7 +427,7 @@ protected:
           switch (type_str[type_str.size() - 1]) {
           case '*':
             ++pointer_count;
-            LLVM_FALLTHROUGH;
+            [[fallthrough]];
           case ' ':
           case '\t':
             type_str.erase(type_str.size() - 1);
@@ -1821,7 +1821,7 @@ protected:
              // When there are non-address bits the last range will not extend
              // to LLDB_INVALID_ADDRESS but to the max virtual address.
              // This prevents us looping forever if that is the case.
-             (abi && (abi->FixAnyAddress(addr) == addr))) {
+             (!abi || (abi->FixAnyAddress(addr) == addr))) {
         lldb_private::MemoryRegionInfo region_info;
         error = process_sp->GetMemoryRegionInfo(addr, region_info);
 
@@ -1830,9 +1830,6 @@ protected:
           addr = region_info.GetRange().GetRangeEnd();
         }
       }
-
-      // Even if we read nothing, don't error for --all
-      error.Clear();
     } else {
       lldb_private::MemoryRegionInfo region_info;
       error = process_sp->GetMemoryRegionInfo(load_addr, region_info);

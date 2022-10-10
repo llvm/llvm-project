@@ -18,7 +18,7 @@ namespace testing {
 
 namespace internal {
 
-extern "C" const char *strerror(int);
+extern "C" char *strerror(int);
 
 template <typename T> class ErrnoSetterMatcher : public Matcher<T> {
   T ExpectedReturn;

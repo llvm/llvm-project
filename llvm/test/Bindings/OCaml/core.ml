@@ -41,6 +41,10 @@ let test_contained_types () =
   insist (i32_type = (Array.get (subtypes ar)) 0);
   insist (i8_type = (Array.get (subtypes ar)) 1)
 
+(*===-- Pointer types  ----------------------------------------------------===*)
+let test_pointer_types () =
+  insist (address_space (pointer_type_in_context context 0) = 0);
+  insist (address_space (pointer_type_in_context context 1) = 1)
 
 (*===-- Conversion --------------------------------------------------------===*)
 
@@ -239,7 +243,6 @@ let test_constants () =
   (* CHECK: @const_neg = global i64 sub
    * CHECK: @const_nsw_neg = global i64 sub nsw
    * CHECK: @const_nuw_neg = global i64 sub nuw
-   * CHECK: @const_fneg = global double fneg
    * CHECK: @const_not = global i64 xor
    * CHECK: @const_add = global i64 add
    * CHECK: @const_nsw_add = global i64 add nsw
@@ -265,7 +268,6 @@ let test_constants () =
   ignore (define_global "const_neg" (const_neg foldbomb) m);
   ignore (define_global "const_nsw_neg" (const_nsw_neg foldbomb) m);
   ignore (define_global "const_nuw_neg" (const_nuw_neg foldbomb) m);
-  ignore (define_global "const_fneg" (const_fneg ffoldbomb) m);
   ignore (define_global "const_not" (const_not foldbomb) m);
   ignore (define_global "const_add" (const_add foldbomb five) m);
   ignore (define_global "const_nsw_add" (const_nsw_add foldbomb five) m);
@@ -1504,6 +1506,7 @@ let test_writer () =
 
 let _ =
   suite "contained types"  test_contained_types;
+  suite "pointer types"    test_pointer_types;
   suite "conversion"       test_conversion;
   suite "target"           test_target;
   suite "constants"        test_constants;

@@ -12,10 +12,10 @@ AllowShortFunctionsOnASingleLine: true
 AllowShortLambdasOnASingleLine: All
 AttributeMacros: ['_LIBCPP_HIDE_FROM_ABI',
                   '_LIBCPP_CONSTEXPR',
-                  '_LIBCPP_CONSTEXPR_AFTER_CXX11',
-                  '_LIBCPP_CONSTEXPR_AFTER_CXX14',
-                  '_LIBCPP_CONSTEXPR_AFTER_CXX17',
-                  '_LIBCPP_CONSTEXPR_AFTER_CXX20',
+                  '_LIBCPP_CONSTEXPR_SINCE_CXX14',
+                  '_LIBCPP_CONSTEXPR_SINCE_CXX17',
+                  '_LIBCPP_CONSTEXPR_SINCE_CXX20',
+                  '_LIBCPP_CONSTEXPR_SINCE_CXX23',
                   '_LIBCPP_ALIGNOF',
                   '_ALIGNAS_TYPE',
                   '_ALIGNAS',
@@ -65,10 +65,9 @@ IndentRequires: true
 InsertTrailingCommas: Wrapped
 KeepEmptyLinesAtTheStartOfBlocks: false
 MaxEmptyLinesToKeep: 1
-NamespaceIndentation: Inner
 PackConstructorInitializers: NextLine
 
-PenaltyIndentedWhitespace: 61
+PenaltyIndentedWhitespace: 2
 
 Language: Cpp
 Standard: c++20

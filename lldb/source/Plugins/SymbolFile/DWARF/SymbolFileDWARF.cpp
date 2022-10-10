@@ -862,6 +862,27 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
   return dwarf_ast->ParseFunctionFromDWARF(comp_unit, die, func_range);
 }
 
+ConstString
+SymbolFileDWARF::ConstructFunctionDemangledName(const DWARFDIE &die) {
+  ASSERT_MODULE_LOCK(this);
+  if (!die.IsValid()) {
+    return ConstString();
+  }
+
+  auto type_system_or_err = GetTypeSystemForLanguage(GetLanguage(*die.GetCU()));
+  if (auto err = type_system_or_err.takeError()) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
+                   "Unable to construct demangled name for function");
+    return ConstString();
+  }
+
+  DWARFASTParser *dwarf_ast = type_system_or_err->GetDWARFParser();
+  if (!dwarf_ast)
+    return ConstString();
+
+  return dwarf_ast->ConstructDemangledNameFromDWARF(die);
+}
+
 lldb::addr_t SymbolFileDWARF::FixupAddress(lldb::addr_t file_addr) {
   SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
   if (debug_map_symfile)
@@ -993,10 +1014,9 @@ bool SymbolFileDWARF::ParseSupportFiles(DWARFUnit &dwarf_cu,
                                   dwarf_cu.GetOffset()))
     return false;
 
+  std::string comp_dir = dwarf_cu.GetCompilationDirectory().GetPath();
   support_files = ParseSupportFilesFromPrologue(
-      module, prologue, dwarf_cu.GetPathStyle(),
-      dwarf_cu.GetCompilationDirectory().GetCString());
-
+      module, prologue, dwarf_cu.GetPathStyle(), comp_dir);
   return true;
 }
 
@@ -1681,14 +1701,13 @@ SymbolFileDWARF::GetDIE(const DIERef &die_ref) {
 }
 
 /// Return the DW_AT_(GNU_)dwo_id.
-/// FIXME: Technically 0 is a valid hash.
-static uint64_t GetDWOId(DWARFCompileUnit &dwarf_cu,
+static llvm::Optional<uint64_t> GetDWOId(DWARFCompileUnit &dwarf_cu,
                          const DWARFDebugInfoEntry &cu_die) {
-  uint64_t dwo_id =
-      cu_die.GetAttributeValueAsUnsigned(&dwarf_cu, DW_AT_GNU_dwo_id, 0);
-  if (!dwo_id)
-    dwo_id = cu_die.GetAttributeValueAsUnsigned(&dwarf_cu, DW_AT_dwo_id, 0);
-  return dwo_id;
+  llvm::Optional<uint64_t> dwo_id =
+      cu_die.GetAttributeValueAsOptionalUnsigned(&dwarf_cu, DW_AT_GNU_dwo_id);
+  if (dwo_id)
+    return dwo_id;
+  return cu_die.GetAttributeValueAsOptionalUnsigned(&dwarf_cu, DW_AT_dwo_id);
 }
 
 llvm::Optional<uint64_t> SymbolFileDWARF::GetDWOId() {
@@ -1696,8 +1715,7 @@ llvm::Optional<uint64_t> SymbolFileDWARF::GetDWOId() {
     if (auto comp_unit = GetCompileUnitAtIndex(0))
       if (DWARFCompileUnit *cu = GetDWARFCompileUnit(comp_unit.get()))
         if (DWARFDebugInfoEntry *cu_die = cu->DIE().GetDIE())
-          if (uint64_t dwo_id = ::GetDWOId(*cu, *cu_die))
-            return dwo_id;
+          return ::GetDWOId(*cu, *cu_die);
   }
   return {};
 }
@@ -1714,24 +1732,34 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     return nullptr;
 
   DWARFCompileUnit *dwarf_cu = llvm::dyn_cast<DWARFCompileUnit>(&unit);
-  // Only compile units can be split into two parts.
-  if (!dwarf_cu)
+  // Only compile units can be split into two parts and we should only
+  // look for a DWO file if there is a valid DWO ID.
+  if (!dwarf_cu || !dwarf_cu->GetDWOId().has_value())
     return nullptr;
 
   const char *dwo_name = GetDWOName(*dwarf_cu, cu_die);
-  if (!dwo_name)
+  if (!dwo_name) {
+    unit.SetDwoError(Status("missing DWO name in skeleton DIE 0x%8.8" PRIx32,
+                            cu_die.GetOffset()));
     return nullptr;
+  }
 
   if (std::shared_ptr<SymbolFileDWARFDwo> dwp_sp = GetDwpSymbolFile())
     return dwp_sp;
 
+  const char *comp_dir = nullptr;
   FileSpec dwo_file(dwo_name);
   FileSystem::Instance().Resolve(dwo_file);
   if (dwo_file.IsRelative()) {
-    const char *comp_dir =
-        cu_die.GetAttributeValueAsString(dwarf_cu, DW_AT_comp_dir, nullptr);
-    if (!comp_dir)
+    comp_dir = cu_die.GetAttributeValueAsString(dwarf_cu, DW_AT_comp_dir,
+                                                nullptr);
+    if (!comp_dir) {
+      unit.SetDwoError(
+          Status("unable to locate relative .dwo debug file \"%s\" for "
+                 "skeleton DIE 0x%8.8" PRIx32 " without valid DW_AT_comp_dir "
+                 "attribute", dwo_name, cu_die.GetOffset()));
       return nullptr;
+    }
 
     dwo_file.SetFile(comp_dir, FileSpec::Style::native);
     if (dwo_file.IsRelative()) {
@@ -1746,6 +1774,11 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
   }
 
   if (!FileSystem::Instance().Exists(dwo_file)) {
+    unit.SetDwoError(
+        Status("unable to locate .dwo debug file \"%s\" for skeleton DIE "
+               "0x%8.8" PRIx32, dwo_file.GetPath().c_str(),
+               cu_die.GetOffset()));
+
     if (m_dwo_warning_issued.test_and_set(std::memory_order_relaxed) == false) {
       GetObjectFile()->GetModule()->ReportWarning(
           "unable to locate separate debug file (dwo, dwp). Debugging will be "
@@ -1761,8 +1794,12 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
       GetObjectFile()->GetModule(), &dwo_file, file_offset,
       FileSystem::Instance().GetByteSize(dwo_file), dwo_file_data_sp,
       dwo_file_data_offset);
-  if (dwo_obj_file == nullptr)
+  if (dwo_obj_file == nullptr) {
+    unit.SetDwoError(
+          Status("unable to load object file for .dwo debug file \"%s\" for "
+                 "unit DIE 0x%8.8" PRIx32, dwo_name, cu_die.GetOffset()));
     return nullptr;
+  }
 
   return std::make_shared<SymbolFileDWARFDwo>(*this, dwo_obj_file,
                                               dwarf_cu->GetID());
@@ -1847,7 +1884,7 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
 
     // Verify the DWO hash.
     // FIXME: Technically "0" is a valid hash.
-    uint64_t dwo_id = ::GetDWOId(*dwarf_cu, *die.GetDIE());
+    llvm::Optional<uint64_t> dwo_id = ::GetDWOId(*dwarf_cu, *die.GetDIE());
     if (!dwo_id)
       continue;
 
@@ -2311,14 +2348,13 @@ bool SymbolFileDWARF::DIEInDeclContext(const CompilerDeclContext &decl_ctx,
   return false;
 }
 
-void SymbolFileDWARF::FindFunctions(ConstString name,
+void SymbolFileDWARF::FindFunctions(const Module::LookupInfo &lookup_info,
                                     const CompilerDeclContext &parent_decl_ctx,
-                                    FunctionNameType name_type_mask,
                                     bool include_inlines,
                                     SymbolContextList &sc_list) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  LLDB_SCOPED_TIMERF("SymbolFileDWARF::FindFunctions (name = '%s')",
-                     name.AsCString());
+  ConstString name = lookup_info.GetLookupName();
+  FunctionNameType name_type_mask = lookup_info.GetNameTypeMask();
 
   // eFunctionNameTypeAuto should be pre-resolved by a call to
   // Module::LookupInfo::LookupInfo()
@@ -2348,12 +2384,11 @@ void SymbolFileDWARF::FindFunctions(ConstString name,
 
   llvm::DenseSet<const DWARFDebugInfoEntry *> resolved_dies;
 
-  m_index->GetFunctions(name, *this, parent_decl_ctx, name_type_mask,
-                        [&](DWARFDIE die) {
-                          if (resolved_dies.insert(die.GetDIE()).second)
-                            ResolveFunction(die, include_inlines, sc_list);
-                          return true;
-                        });
+  m_index->GetFunctions(lookup_info, *this, parent_decl_ctx, [&](DWARFDIE die) {
+    if (resolved_dies.insert(die.GetDIE()).second)
+      ResolveFunction(die, include_inlines, sc_list);
+    return true;
+  });
 
   // Return the number of variable that were appended to the list
   const uint32_t num_matches = sc_list.GetSize() - original_size;
@@ -4102,4 +4137,36 @@ StatsDuration::Duration SymbolFileDWARF::GetDebugInfoIndexTime() {
   if (m_index)
     return m_index->GetIndexTime();
   return {};
+}
+
+Status SymbolFileDWARF::CalculateFrameVariableError(StackFrame &frame) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  CompileUnit *cu = frame.GetSymbolContext(eSymbolContextCompUnit).comp_unit;
+  if (!cu)
+    return Status();
+
+  DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(cu);
+  if (!dwarf_cu)
+    return Status();
+
+  // Check if we have a skeleton compile unit that had issues trying to load
+  // its .dwo/.dwp file. First pares the Unit DIE to make sure we see any .dwo
+  // related errors.
+  dwarf_cu->ExtractUnitDIEIfNeeded();
+  const Status &dwo_error = dwarf_cu->GetDwoError();
+  if (dwo_error.Fail())
+    return dwo_error;
+
+  // Don't return an error for assembly files as they typically don't have
+  // varaible information.
+  if (dwarf_cu->GetDWARFLanguageType() == DW_LANG_Mips_Assembler)
+    return Status();
+
+  // Check if this compile unit has any variable DIEs. If it doesn't then there
+  // is not variable information for the entire compile unit.
+  if (dwarf_cu->HasAny({DW_TAG_variable, DW_TAG_formal_parameter}))
+    return Status();
+
+  return Status("no variable information is available in debug info for this "
+                "compile unit");
 }

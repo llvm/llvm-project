@@ -34,6 +34,7 @@ class TestCase(TestBase):
 
         # Test that minimum and maximum values for each data type are right.
         self.expect_expr("A::char_max == char_max", result_value="true")
+        self.expect_expr("A::schar_max == schar_max", result_value="true")
         self.expect_expr("A::uchar_max == uchar_max", result_value="true")
         self.expect_expr("A::int_max == int_max", result_value="true")
         self.expect_expr("A::uint_max == uint_max", result_value="true")
@@ -43,6 +44,7 @@ class TestCase(TestBase):
         self.expect_expr("A::ulonglong_max == ulonglong_max", result_value="true")
 
         self.expect_expr("A::char_min == char_min", result_value="true")
+        self.expect_expr("A::schar_min == schar_min", result_value="true")
         self.expect_expr("A::uchar_min == uchar_min", result_value="true")
         self.expect_expr("A::int_min == int_min", result_value="true")
         self.expect_expr("A::uint_min == uint_min", result_value="true")
@@ -53,24 +55,19 @@ class TestCase(TestBase):
 
         # Test an unscoped enum.
         self.expect_expr("A::enum_val", result_value="enum_case2")
-        # Test an unscoped enum with an invalid enum case.
-        self.expect_expr("A::invalid_enum_val", result_value="enum_case1 | enum_case2 | 0x4")
 
         # Test a scoped enum.
         self.expect_expr("A::scoped_enum_val", result_value="scoped_enum_case2")
-        # Test an scoped enum with an invalid enum case.
-        self.expect_expr("A::invalid_scoped_enum_val", result_value="scoped_enum_case1 | 0x4")
+        # Test an scoped enum with a value that isn't an enumerator.
+        self.expect_expr("A::not_enumerator_scoped_enum_val", result_value="scoped_enum_case1 | 0x4")
+        # This time with more than one enum value plus the extra.
+        self.expect_expr("A::not_enumerator_scoped_enum_val_2",
+                         result_value="scoped_enum_case1 | scoped_enum_case2 | 0x4")
 
         # Test an enum with fixed underlying type.
         self.expect_expr("A::scoped_char_enum_val", result_value="case2")
         self.expect_expr("A::scoped_ll_enum_val_neg", result_value="case0")
         self.expect_expr("A::scoped_ll_enum_val", result_value="case2")
-
-        # Test an aliased enum with fixed underlying type.
-        self.expect_expr("ClassWithEnumAlias::enum_alias",
-                         result_value="scoped_enum_case2")
-        self.expect_expr("ClassWithEnumAlias::enum_alias_alias",
-                         result_value="scoped_enum_case1")
 
         # Test taking address.
         if lldbplatformutil.getPlatform() == "windows":
@@ -88,6 +85,10 @@ class TestCase(TestBase):
         self.expect_expr("const int *i = &A::int_val_with_address; *i",
                          result_value="2")
 
+        # Printing the whole type takes a slightly different code path. Check that
+        # it does not crash.
+        self.expect("image lookup -t A")
+
     # dsymutil strips the debug info for classes that only have const static
     # data members without a definition namespace scope.
     @expectedFailureAll(debug_info=["dsym"])
@@ -97,7 +98,20 @@ class TestCase(TestBase):
 
         self.expect_expr("ClassWithOnlyConstStatic::member", result_value="3")
 
+    # With older versions of Clang, LLDB fails to evaluate classes with only
+    # constexpr members when dsymutil is enabled
+    @expectedFailureAll(debug_info=["dsym"], compiler=["clang"], compiler_version=["<", "14.0"])
+    def test_class_with_only_constexpr_static(self):
+        self.build()
+        lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
+
         # Test `constexpr static`.
         self.expect_expr("ClassWithConstexprs::member", result_value="2")
         self.expect_expr("ClassWithConstexprs::enum_val", result_value="enum_case2")
         self.expect_expr("ClassWithConstexprs::scoped_enum_val", result_value="scoped_enum_case2")
+
+        # Test an aliased enum with fixed underlying type.
+        self.expect_expr("ClassWithEnumAlias::enum_alias",
+                         result_value="scoped_enum_case2")
+        self.expect_expr("ClassWithEnumAlias::enum_alias_alias",
+                         result_value="scoped_enum_case1")

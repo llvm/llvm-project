@@ -29,7 +29,7 @@ __orc_rt_run_program_wrapper(const char *ArgData, size_t ArgSize) {
       handle(ArgData, ArgSize,
              [](const std::string &JITDylibName,
                 const std::string &EntrySymbolName,
-                const std::vector<string_view> &Args) {
+                const std::vector<std::string_view> &Args) {
                std::vector<std::unique_ptr<char[]>> ArgVStorage;
                ArgVStorage.reserve(Args.size());
                for (auto &Arg : Args) {

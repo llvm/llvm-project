@@ -25,20 +25,21 @@ registers:
 body:             |
   ; CHECK-LABEL: name: test_blockaddress
   ; CHECK: bb.0 (%ir-block.0):
-  ; CHECK:   [[BLOCK_ADDR:%[0-9]+]]:_(p0) = G_BLOCK_ADDR blockaddress(@test_blockaddress, %ir-block.block)
-  ; CHECK:   [[ADRP:%[0-9]+]]:gpr64(p0) = ADRP target-flags(aarch64-page) @addr
-  ; CHECK:   [[ADD_LOW:%[0-9]+]]:_(p0) = G_ADD_LOW [[ADRP]](p0), target-flags(aarch64-pageoff, aarch64-nc) @addr
-  ; CHECK:   G_STORE [[BLOCK_ADDR]](p0), [[ADD_LOW]](p0) :: (store (p0) into @addr)
-  ; CHECK:   G_BRINDIRECT [[BLOCK_ADDR]](p0)
-  ; CHECK: bb.1.block (address-taken):
-  ; CHECK:   RET_ReallyLR
+  ; CHECK-NEXT:   [[BLOCK_ADDR:%[0-9]+]]:_(p0) = G_BLOCK_ADDR blockaddress(@test_blockaddress, %ir-block.block)
+  ; CHECK-NEXT:   [[ADRP:%[0-9]+]]:gpr64(p0) = ADRP target-flags(aarch64-page) @addr
+  ; CHECK-NEXT:   [[ADD_LOW:%[0-9]+]]:_(p0) = G_ADD_LOW [[ADRP]](p0), target-flags(aarch64-pageoff, aarch64-nc) @addr
+  ; CHECK-NEXT:   G_STORE [[BLOCK_ADDR]](p0), [[ADD_LOW]](p0) :: (store (p0) into @addr)
+  ; CHECK-NEXT:   G_BRINDIRECT [[BLOCK_ADDR]](p0)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1.block (ir-block-address-taken %ir-block.block):
+  ; CHECK-NEXT:   RET_ReallyLR
   bb.1 (%ir-block.0):
     %0:_(p0) = G_BLOCK_ADDR blockaddress(@test_blockaddress, %ir-block.block)
     %1:_(p0) = G_GLOBAL_VALUE @addr
     G_STORE %0(p0), %1(p0) :: (store (p0) into @addr)
     G_BRINDIRECT %0(p0)
 
-  bb.2.block (address-taken):
+  bb.2.block (ir-block-address-taken %ir-block.block):
     RET_ReallyLR
 
 ...

@@ -286,7 +286,7 @@ static bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
     return false;
   }
   for (auto &Filter : Cfg.Diagnostics.Includes.IgnoreHeader) {
-    // Convert the path to Unix slashes and try to match aginast the fiilter.
+    // Convert the path to Unix slashes and try to match against the filter.
     llvm::SmallString<64> Path(Inc.Resolved);
     llvm::sys::path::native(Path, llvm::sys::path::Style::posix);
     if (Filter(Inc.Resolved)) {
@@ -475,6 +475,9 @@ std::vector<Diag> issueUnusedIncludesDiagnostics(ParsedAST &AST,
   if (Cfg.Diagnostics.UnusedIncludes != Config::UnusedIncludesPolicy::Strict ||
       Cfg.Diagnostics.SuppressAll ||
       Cfg.Diagnostics.Suppress.contains("unused-includes"))
+    return {};
+  // Interaction is only polished for C/CPP.
+  if (AST.getLangOpts().ObjC)
     return {};
   trace::Span Tracer("IncludeCleaner::issueUnusedIncludesDiagnostics");
   std::vector<Diag> Result;

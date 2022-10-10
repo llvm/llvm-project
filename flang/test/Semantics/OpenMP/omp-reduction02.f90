@@ -8,30 +8,36 @@ program omp_reduction
   integer :: j = 10
 
   !ERROR: 'k' appears in more than one data-sharing clause on the same OpenMP directive
-  !$omp parallel do reduction(+:k), reduction(-:k)
+  !$omp parallel do reduction(+:k), reduction(*:k)
   do i = 1, 10
     k = k + 1
+    k = k * 3
   end do
   !$omp end parallel do
 
   !ERROR: 'k' appears in more than one data-sharing clause on the same OpenMP directive
-  !$omp parallel do reduction(+:k), reduction(-:j), reduction(+:k)
+  !$omp parallel do reduction(+:k), reduction(*:j), reduction(+:k)
   do i = 1, 10
     k = k + 1
+    j = j * 3
   end do
   !$omp end parallel do
 
   !ERROR: 'k' appears in more than one data-sharing clause on the same OpenMP directive
-  !$omp parallel do reduction(+:j), reduction(-:k), reduction(+:k)
+  !$omp parallel do reduction(+:j), reduction(*:k), reduction(+:k)
   do i = 1, 10
+    j = j + 1
     k = k + 1
+    k = k * 3
   end do
   !$omp end parallel do
 
   !ERROR: 'k' appears in more than one data-sharing clause on the same OpenMP directive
-  !$omp parallel do reduction(+:j), reduction(-:k), private(k)
+  !$omp parallel do reduction(+:j), reduction(*:k), private(k)
   do i = 1, 10
+    j = j + 1
     k = k + 1
+    k = k * 3
   end do
   !$omp end parallel do
 end program omp_reduction

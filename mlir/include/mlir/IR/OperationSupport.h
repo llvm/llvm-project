@@ -642,11 +642,11 @@ public:
   OperationState(Location location, OperationName name);
 
   OperationState(Location location, OperationName name, ValueRange operands,
-                 TypeRange types, ArrayRef<NamedAttribute> attributes,
+                 TypeRange types, ArrayRef<NamedAttribute> attributes = {},
                  BlockRange successors = {},
                  MutableArrayRef<std::unique_ptr<Region>> regions = {});
   OperationState(Location location, StringRef name, ValueRange operands,
-                 TypeRange types, ArrayRef<NamedAttribute> attributes,
+                 TypeRange types, ArrayRef<NamedAttribute> attributes = {},
                  BlockRange successors = {},
                  MutableArrayRef<std::unique_ptr<Region>> regions = {});
 

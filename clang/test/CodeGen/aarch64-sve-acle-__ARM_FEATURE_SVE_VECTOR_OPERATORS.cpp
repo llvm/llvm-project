@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=1 -mvscale-max=1  | FileCheck %s -D#VBITS=128  --check-prefixes=CHECK,CHECK128
-// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=2 -mvscale-max=2  | FileCheck %s -D#VBITS=256  --check-prefixes=CHECK,CHECKWIDE
-// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=4 -mvscale-max=4  | FileCheck %s -D#VBITS=512  --check-prefixes=CHECK,CHECKWIDE
-// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=8 -mvscale-max=8 | FileCheck %s -D#VBITS=1024 --check-prefixes=CHECK,CHECKWIDE
-// RUN: %clang_cc1 -no-opaque-pointers -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=16 -mvscale-max=16 | FileCheck %s -D#VBITS=2048 --check-prefixes=CHECK,CHECKWIDE
+// RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=1 -mvscale-max=1  | FileCheck %s -D#VBITS=128  --check-prefixes=CHECK,CHECK128
+// RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=2 -mvscale-max=2  | FileCheck %s -D#VBITS=256  --check-prefixes=CHECK,CHECKWIDE
+// RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=4 -mvscale-max=4  | FileCheck %s -D#VBITS=512  --check-prefixes=CHECK,CHECKWIDE
+// RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=8 -mvscale-max=8 | FileCheck %s -D#VBITS=1024 --check-prefixes=CHECK,CHECKWIDE
+// RUN: %clang_cc1 -x c++ -triple aarch64-none-linux-gnu -target-feature +sve -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=16 -mvscale-max=16 | FileCheck %s -D#VBITS=2048 --check-prefixes=CHECK,CHECKWIDE
 
 // REQUIRES: aarch64-registered-target
 
@@ -73,8 +73,8 @@ typedef svint16_t vec2 __attribute__((arm_sve_vector_bits(N)));
 // CHECK128-NEXT:   ret void
 // CHECKWIDE-NEXT:   [[INDIRECT_ARG_TEMP:%.*]] = alloca <[[#div(VBITS, 16)]] x i16>, align 16
 // CHECKWIDE-NEXT:   [[X:%.*]] = tail call <[[#div(VBITS, 16)]] x i16> @llvm.vector.extract.v[[#div(VBITS, 16)]]i16.nxv8i16(<vscale x 8 x i16> [[X_COERCE:%.*]], i64 0)
-// CHECKWIDE-NEXT:   store <[[#div(VBITS, 16)]] x i16> [[X]], <[[#div(VBITS, 16)]] x i16>* [[INDIRECT_ARG_TEMP]], align 16, [[TBAA6:!tbaa !.*]]
-// CHECKWIDE-NEXT:   call void @_Z1fDv[[#div(VBITS, 16)]]_s(<[[#div(VBITS, 16)]] x i16>* noundef nonnull [[INDIRECT_ARG_TEMP]]) [[ATTR5:#.*]]
+// CHECKWIDE-NEXT:   store <[[#div(VBITS, 16)]] x i16> [[X]], ptr [[INDIRECT_ARG_TEMP]], align 16, [[TBAA6:!tbaa !.*]]
+// CHECKWIDE-NEXT:   call void @_Z1fDv[[#div(VBITS, 16)]]_s(ptr noundef nonnull [[INDIRECT_ARG_TEMP]]) [[ATTR5:#.*]]
 // CHECKWIDE-NEXT:   ret void
 void g(vec2 x) { f(x); } // OK
 #endif

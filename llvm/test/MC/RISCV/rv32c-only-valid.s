@@ -17,7 +17,7 @@
 # CHECK-OBJ: c.jal 0x7fe
 # CHECK-ASM: c.jal 2046
 # CHECK-ASM: encoding: [0xfd,0x2f]
-# CHECK-NO-EXT: error: instruction requires the following: 'C' (Compressed Instructions)
-# CHECK-NO-RV32: error: instruction requires the following: RV32I Base Instruction Set
-# CHECK-NO-RV32-AND-EXT: error: instruction requires the following: 'C' (Compressed Instructions), RV32I Base Instruction Set
+# CHECK-NO-EXT: error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
+# CHECK-NO-RV32: error: instruction requires the following: RV32I Base Instruction Set{{$}}
+# CHECK-NO-RV32-AND-EXT: error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores), RV32I Base Instruction Set{{$}}
 c.jal 2046

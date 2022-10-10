@@ -23,7 +23,7 @@
 
 using namespace llvm;
 
-LLVM_NODISCARD static ::testing::AssertionResult
+[[nodiscard]] static ::testing::AssertionResult
 ErrorEquals(instrprof_error Expected, Error E) {
   instrprof_error Found;
   std::string FoundMsg;
@@ -766,7 +766,8 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1) {
 TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1_saturation) {
   static const char bar[] = "bar";
 
-  const uint64_t Max = std::numeric_limits<uint64_t>::max();
+  const uint64_t MaxValCount = std::numeric_limits<uint64_t>::max();
+  const uint64_t MaxEdgeCount = getInstrMaxCountValue();
 
   instrprof_error Result;
   auto Err = [&](Error E) { Result = InstrProfError::take(std::move(E)); };
@@ -776,7 +777,7 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1_saturation) {
 
   // Verify counter overflow.
   Result = instrprof_error::success;
-  Writer.addRecord({"foo", 0x1234, {Max}}, Err);
+  Writer.addRecord({"foo", 0x1234, {MaxEdgeCount}}, Err);
   ASSERT_EQ(Result, instrprof_error::counter_overflow);
 
   Result = instrprof_error::success;
@@ -794,7 +795,7 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1_saturation) {
   // Verify value data counter overflow.
   NamedInstrProfRecord Record5("baz", 0x5678, {5, 6});
   Record5.reserveSites(IPVK_IndirectCallTarget, 1);
-  InstrProfValueData VD5[] = {{uint64_t(bar), Max}};
+  InstrProfValueData VD5[] = {{uint64_t(bar), MaxValCount}};
   Record5.addValueData(IPVK_IndirectCallTarget, 0, VD5, 1, nullptr);
   Result = instrprof_error::success;
   Writer.addRecord(std::move(Record5), Err);
@@ -807,7 +808,7 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1_saturation) {
   Expected<InstrProfRecord> ReadRecord1 =
       Reader->getInstrProfRecord("foo", 0x1234);
   EXPECT_THAT_ERROR(ReadRecord1.takeError(), Succeeded());
-  ASSERT_EQ(Max, ReadRecord1->Counts[0]);
+  ASSERT_EQ(MaxEdgeCount, ReadRecord1->Counts[0]);
 
   Expected<InstrProfRecord> ReadRecord2 =
       Reader->getInstrProfRecord("baz", 0x5678);
@@ -816,7 +817,7 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1_saturation) {
   std::unique_ptr<InstrProfValueData[]> VD =
       ReadRecord2->getValueForSite(IPVK_IndirectCallTarget, 0);
   ASSERT_EQ(StringRef("bar"), StringRef((const char *)VD[0].Value, 3));
-  ASSERT_EQ(Max, VD[0].Count);
+  ASSERT_EQ(MaxValCount, VD[0].Count);
 }
 
 // This test tests that when there are too many values

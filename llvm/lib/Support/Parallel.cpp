@@ -19,10 +19,18 @@
 
 llvm::ThreadPoolStrategy llvm::parallel::strategy;
 
-#if LLVM_ENABLE_THREADS
-
 namespace llvm {
 namespace parallel {
+#if LLVM_ENABLE_THREADS
+
+#ifdef _WIN32
+static thread_local unsigned threadIndex;
+
+unsigned getThreadIndex() { return threadIndex; }
+#else
+thread_local unsigned threadIndex;
+#endif
+
 namespace detail {
 
 namespace {
@@ -96,6 +104,7 @@ public:
 
 private:
   void work(ThreadPoolStrategy S, unsigned ThreadID) {
+    threadIndex = ThreadID;
     S.apply_thread_strategy(ThreadID);
     while (true) {
       std::unique_lock<std::mutex> Lock(Mutex);
@@ -143,6 +152,8 @@ Executor *Executor::getDefaultExecutor() {
   return Exec.get();
 }
 } // namespace
+} // namespace detail
+#endif
 
 static std::atomic<int> TaskGroupInstances;
 
@@ -159,21 +170,27 @@ TaskGroup::~TaskGroup() {
 }
 
 void TaskGroup::spawn(std::function<void()> F) {
+#if LLVM_ENABLE_THREADS
   if (Parallel) {
     L.inc();
-    Executor::getDefaultExecutor()->add([&, F = std::move(F)] {
+    detail::Executor::getDefaultExecutor()->add([&, F = std::move(F)] {
       F();
       L.dec();
     });
-  } else {
-    F();
+    return;
   }
+#endif
+  F();
 }
 
-} // namespace detail
+void TaskGroup::execute(std::function<void()> F) {
+  if (parallel::strategy.ThreadsRequested == 1)
+    F();
+  else
+    spawn(F);
+}
 } // namespace parallel
 } // namespace llvm
-#endif // LLVM_ENABLE_THREADS
 
 void llvm::parallelFor(size_t Begin, size_t End,
                        llvm::function_ref<void(size_t)> Fn) {
@@ -190,7 +207,7 @@ void llvm::parallelFor(size_t Begin, size_t End,
     if (TaskSize == 0)
       TaskSize = 1;
 
-    parallel::detail::TaskGroup TG;
+    parallel::TaskGroup TG;
     for (; Begin + TaskSize < End; Begin += TaskSize) {
       TG.spawn([=, &Fn] {
         for (size_t I = Begin, E = Begin + TaskSize; I != E; ++I)

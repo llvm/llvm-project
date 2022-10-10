@@ -62,6 +62,8 @@ def enable_stdcall_fixup: F<"enable-stdcall-fixup">,
 defm entry: Eq<"entry", "Name of entry point symbol">, MetaVarName<"<entry>">;
 def exclude_all_symbols: F<"exclude-all-symbols">,
     HelpText<"Don't automatically export any symbols">;
+defm exclude_symbols: Eq<"exclude-symbols",
+    "Exclude symbols from automatic export">, MetaVarName<"<symbol[,symbol,...]>">;
 def export_all_symbols: F<"export-all-symbols">,
     HelpText<"Export all symbols even if a def file or dllexport attributes are used">;
 defm fatal_warnings: B<"fatal-warnings",
@@ -139,6 +141,11 @@ defm pdb: Eq<"pdb", "Output PDB debug info file, chosen implicitly if the argume
 defm thinlto_cache_dir: EqLong<"thinlto-cache-dir",
   "Path to ThinLTO cached object file directory">;
 defm Xlink : Eq<"Xlink", "Pass <arg> to the COFF linker">, MetaVarName<"<arg>">;
+defm guard_cf : B<"guard-cf", "Enable Control Flow Guard" ,
+  "Do not enable Control Flow Guard (default)">;
+defm guard_longjmp : B<"guard-longjmp",
+  "Enable Control Flow Guard long jump hardening (default for --guard-cf)" ,
+  "Do not enable Control Flow Guard long jump hardening">;
 
 // Alias
 def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;

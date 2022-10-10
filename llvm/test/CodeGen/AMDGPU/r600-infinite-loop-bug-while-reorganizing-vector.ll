@@ -15,7 +15,7 @@ main_body:
   %tmp11 = extractelement <4 x float> %tmp9, i32 1
   %tmp12 = extractelement <4 x float> %tmp9, i32 2
   %tmp13 = extractelement <4 x float> %tmp9, i32 3
-  %tmp14 = call float @fabs(float %tmp12)
+  %tmp14 = call float @fabsf(float %tmp12)
   %tmp15 = fdiv float 1.000000e+00, %tmp14
   %tmp16 = fmul float %tmp10, %tmp15
   %tmp17 = fadd float %tmp16, 1.500000e+00
@@ -48,7 +48,7 @@ main_body:
 declare <4 x float> @llvm.r600.cube(<4 x float>) #0
 
 ; Function Attrs: readnone
-declare float @fabs(float) #0
+declare float @fabsf(float) #0
 
 declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 

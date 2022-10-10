@@ -770,18 +770,13 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__iterator/wrap_iter.h>
 #include <__locale>
 #include <__utility/move.h>
+#include <__utility/pair.h>
 #include <__utility/swap.h>
 #include <deque>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
 #include <version>
-
-#ifndef _LIBCPP_REMOVE_TRANSITIVE_INCLUDES
-#  include <iterator>
-#  include <utility>
-#endif
 
 // standard-mandated includes
 
@@ -833,7 +828,7 @@ enum syntax_option_type
     multiline  = 1 << 10
 };
 
-inline _LIBCPP_CONSTEXPR
+_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR
 syntax_option_type __get_grammar(syntax_option_type __g)
 {
 #ifdef _LIBCPP_ABI_REGEX_CONSTANTS_NONZERO
@@ -1006,8 +1001,8 @@ class _LIBCPP_EXCEPTION_ABI regex_error
 public:
     explicit regex_error(regex_constants::error_type __ecode);
     regex_error(const regex_error&) _NOEXCEPT = default;
-    virtual ~regex_error() _NOEXCEPT;
-     _LIBCPP_INLINE_VISIBILITY
+    ~regex_error() _NOEXCEPT override;
+    _LIBCPP_INLINE_VISIBILITY
     regex_constants::error_type code() const {return __code_;}
 };
 
@@ -1355,7 +1350,7 @@ inline _LIBCPP_INLINE_VISIBILITY
 unsigned char __to_lower(unsigned char __c)
 {
 #if defined(__MVS__) && !defined(__NATIVE_ASCII_F)
-    return c & 0xBF;
+    return __c & 0xBF;
 #else
     return __c | 0x20;
 #endif
@@ -1507,7 +1502,7 @@ public:
     explicit __owns_one_state(__node<_CharT>* __s)
         : base(__s) {}
 
-    virtual ~__owns_one_state();
+    ~__owns_one_state() override;
 };
 
 template <class _CharT>
@@ -2196,7 +2191,7 @@ public:
     __match_any_but_newline(__node<_CharT>* __s)
         : base(__s) {}
 
-    virtual void __exec(__state&) const;
+    void __exec(__state&) const override;
 };
 
 template <> _LIBCPP_FUNC_VIS void __match_any_but_newline<char>::__exec(__state&) const;
@@ -5732,7 +5727,7 @@ match_results<_BidirectionalIterator, _Allocator>::swap(match_results& __m)
 }
 
 template <class _BidirectionalIterator, class _Allocator>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 operator==(const match_results<_BidirectionalIterator, _Allocator>& __x,
            const match_results<_BidirectionalIterator, _Allocator>& __y)
 {
@@ -6224,7 +6219,7 @@ regex_search(const basic_string<_Cp, _ST, _SA>&& __s,
 // regex_match
 
 template <class _BidirectionalIterator, class _Allocator, class _CharT, class _Traits>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 regex_match(_BidirectionalIterator __first, _BidirectionalIterator __last,
             match_results<_BidirectionalIterator, _Allocator>& __m,
             const basic_regex<_CharT, _Traits>& __e,
@@ -6737,7 +6732,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++()
 
 template <class _OutputIterator, class _BidirectionalIterator,
           class _Traits, class _CharT>
-_OutputIterator
+_LIBCPP_HIDE_FROM_ABI _OutputIterator
 regex_replace(_OutputIterator __output_iter,
               _BidirectionalIterator __first, _BidirectionalIterator __last,
               const basic_regex<_CharT, _Traits>& __e, const _CharT* __fmt,
@@ -6843,5 +6838,10 @@ regex_replace(const _CharT* __s,
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <iterator>
+#  include <utility>
+#endif
 
 #endif // _LIBCPP_REGEX

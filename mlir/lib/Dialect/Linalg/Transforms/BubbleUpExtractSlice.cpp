@@ -12,9 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -82,7 +81,7 @@ struct BubbleUpExtractSliceOpPattern
     }
 
     OpOperand *outOperand = linalgOp.getOutputOperand(0);
-    AffineMap indexingMap = linalgOp.getTiedIndexingMap(outOperand);
+    AffineMap indexingMap = linalgOp.getMatchingIndexingMap(outOperand);
     if (!indexingMap.isProjectedPermutation()) {
       return rewriter.notifyMatchFailure(
           sliceOp, "expected a projected permutation for output");

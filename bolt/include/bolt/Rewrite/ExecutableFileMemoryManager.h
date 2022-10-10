@@ -10,7 +10,7 @@
 #define BOLT_REWRITE_EXECUTABLE_FILE_MEMORY_MANAGER_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include <cstdint>
 #include <string>
 
@@ -20,13 +20,20 @@ namespace bolt {
 class BinaryContext;
 
 /// Class responsible for allocating and managing code and data sections.
-class ExecutableFileMemoryManager : public SectionMemoryManager {
+class ExecutableFileMemoryManager : public RuntimeDyld::MemoryManager {
 private:
-  uint8_t *allocateSection(intptr_t Size, unsigned Alignment,
+  uint8_t *allocateSection(uintptr_t Size, unsigned Alignment,
                            unsigned SectionID, StringRef SectionName,
                            bool IsCode, bool IsReadOnly);
   BinaryContext &BC;
   bool AllowStubs;
+
+  struct AllocInfo {
+    uint8_t *Address;
+    size_t Size;
+    size_t Alignment;
+  };
+  SmallVector<AllocInfo, 8> AllocatedSections;
 
 public:
   // Our linker's main purpose is to handle a single object file, created
@@ -69,7 +76,16 @@ public:
 
   bool allowStubAllocation() const override { return AllowStubs; }
 
-  bool finalizeMemory(std::string *ErrMsg = nullptr) override;
+  /// Count processed objects and skip memory finalization.
+  bool finalizeMemory(std::string *ErrMsg) override {
+    ++ObjectsLoaded;
+    return false;
+  }
+
+  /// Ignore EH frames.
+  void registerEHFrames(uint8_t *Addr, uint64_t LoadAddr,
+                        size_t Size) override {}
+  void deregisterEHFrames() override {}
 };
 
 } // namespace bolt

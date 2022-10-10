@@ -41,7 +41,13 @@ template<typename ...T> void as_operand_of_cast(int a, T ...t) {
     (int)(t + ... + undeclared_junk) + // expected-error {{undeclared}}
     (int)(... + undeclared_junk) + // expected-error {{undeclared}} expected-error {{does not contain any unexpanded}}
     (int)(undeclared_junk + ...) + // expected-error {{undeclared}}
-    (int)(a + ...); // expected-error {{does not contain any unexpanded}}
+    (int)(a + ...) + // expected-error {{does not contain any unexpanded}}
+    (int)(a, ...) + // expected-error {{does not contain any unexpanded}}
+    (int)(..., a) + // expected-error {{does not contain any unexpanded}}
+    (int)(a, ..., undeclared_junk) + // expected-error {{undeclared}} expected-error {{does not contain any unexpanded}}
+    (int)(t, ...) +
+    (int)(..., t) +
+    (int)(t, ..., a);
 }
 
 // fold-operator can be '>' or '>>'.

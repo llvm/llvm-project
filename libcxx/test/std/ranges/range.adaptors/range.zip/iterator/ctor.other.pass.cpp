@@ -7,10 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr iterator(iterator<!Const> i)
-//       requires Const && (convertible_­to<iterator_t<Views>,
+//       requires Const && (convertible_to<iterator_t<Views>,
 //                                         iterator_t<maybe-const<Const, Views>>> && ...);
 
 #include <ranges>

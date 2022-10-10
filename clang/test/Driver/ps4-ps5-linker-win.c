@@ -1,7 +1,7 @@
 // This test checks that orbis-ld is used for PS4 linker all the time, and
 // prospero-lld is used for PS5 linker. Specifying -fuse-ld causes an error.
 
-// REQUIRES: system-windows, x86-registered-target
+// REQUIRES: system-windows
 
 // RUN: mkdir -p %t
 // RUN: touch %t/orbis-ld.exe

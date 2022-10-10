@@ -4,7 +4,7 @@ include "llvm/Target/Target.td"
 
 def TestTarget : Target;
 
-// CHECK: [[FILE]]:[[@LINE+1]]:1: error: No schedule information for instruction 'TestInst' in SchedMachineModel 'TestSchedModel'
+// CHECK: [[FILE]]:[[@LINE+1]]:5: error: No schedule information for instruction 'TestInst' in SchedMachineModel 'TestSchedModel'
 def TestInst : Instruction {
   let OutOperandList = (outs);
   let InOperandList = (ins);

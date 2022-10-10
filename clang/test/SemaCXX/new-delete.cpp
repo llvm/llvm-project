@@ -1,7 +1,10 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -Wno-new-returns-null
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++98
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++11
 // RUN: %clang_cc1 -fsyntax-only -verify %s -triple=i686-pc-linux-gnu -Wno-new-returns-null -std=c++14
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,cxx17 %s -triple=i686-pc-linux-gnu -Wno-new-returns-null %std_cxx17-
+
+// FIXME Location is (frontend)
+// cxx17-note@*:* {{candidate function not viable: requires 2 arguments, but 3 were provided}}
 
 #include <stddef.h>
 
@@ -422,7 +425,11 @@ namespace PR7810 {
   };
   struct Y {
     // cv is ignored in arguments
+#if __cplusplus < 202002L
     static void operator delete(void *volatile);
+#else
+    static void operator delete(void *);
+#endif
   };
 }
 

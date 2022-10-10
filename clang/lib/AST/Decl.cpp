@@ -187,8 +187,9 @@ static bool usesTypeVisibility(const NamedDecl *D) {
 
 /// Does the given declaration have member specialization information,
 /// and if so, is it an explicit specialization?
-template <class T> static typename
-std::enable_if<!std::is_base_of<RedeclarableTemplateDecl, T>::value, bool>::type
+template <class T>
+static std::enable_if_t<!std::is_base_of<RedeclarableTemplateDecl, T>::value,
+                        bool>
 isExplicitMemberSpecialization(const T *D) {
   if (const MemberSpecializationInfo *member =
         D->getMemberSpecializationInfo()) {
@@ -1527,7 +1528,7 @@ LinkageInfo LinkageComputer::getLVForDecl(const NamedDecl *D,
   // that all other computed linkages match, check that the one we just
   // computed also does.
   NamedDecl *Old = nullptr;
-  for (auto I : D->redecls()) {
+  for (auto *I : D->redecls()) {
     auto *T = cast<NamedDecl>(I);
     if (T == D)
       continue;
@@ -1825,7 +1826,7 @@ bool NamedDecl::declarationReplaces(NamedDecl *OldD, bool IsKnownNewer) const {
     // Check whether this is actually newer than OldD. We want to keep the
     // newer declaration. This loop will usually only iterate once, because
     // OldD is usually the previous declaration.
-    for (auto D : redecls()) {
+    for (auto *D : redecls()) {
       if (D == OldD)
         break;
 
@@ -2273,7 +2274,7 @@ VarDecl *VarDecl::getActingDefinition() {
 
 VarDecl *VarDecl::getDefinition(ASTContext &C) {
   VarDecl *First = getFirstDecl();
-  for (auto I : First->redecls()) {
+  for (auto *I : First->redecls()) {
     if (I->isThisDeclarationADefinition(C) == Definition)
       return I;
   }
@@ -2284,7 +2285,7 @@ VarDecl::DefinitionKind VarDecl::hasDefinition(ASTContext &C) const {
   DefinitionKind Kind = DeclarationOnly;
 
   const VarDecl *First = getFirstDecl();
-  for (auto I : First->redecls()) {
+  for (auto *I : First->redecls()) {
     Kind = std::max(Kind, I->isThisDeclarationADefinition(C));
     if (Kind == Definition)
       break;
@@ -2294,7 +2295,7 @@ VarDecl::DefinitionKind VarDecl::hasDefinition(ASTContext &C) const {
 }
 
 const Expr *VarDecl::getAnyInitializer(const VarDecl *&D) const {
-  for (auto I : redecls()) {
+  for (auto *I : redecls()) {
     if (auto Expr = I->getInit()) {
       D = I;
       return Expr;
@@ -2330,7 +2331,7 @@ Stmt **VarDecl::getInitAddress() {
 
 VarDecl *VarDecl::getInitializingDeclaration() {
   VarDecl *Def = nullptr;
-  for (auto I : redecls()) {
+  for (auto *I : redecls()) {
     if (I->hasInit())
       return I;
 
@@ -2580,7 +2581,7 @@ bool VarDecl::isNonEscapingByref() const {
 
 bool VarDecl::hasDependentAlignment() const {
   QualType T = getType();
-  return T->isDependentType() || T->isUndeducedAutoType() ||
+  return T->isDependentType() || T->isUndeducedType() ||
          llvm::any_of(specific_attrs<AlignedAttr>(), [](const AlignedAttr *AA) {
            return AA->isAlignmentDependent();
          });
@@ -2970,6 +2971,7 @@ FunctionDecl::FunctionDecl(Kind DK, ASTContext &C, DeclContext *DC,
   FunctionDeclBits.IsMultiVersion = false;
   FunctionDeclBits.IsCopyDeductionCandidate = false;
   FunctionDeclBits.HasODRHash = false;
+  FunctionDeclBits.FriendConstraintRefersToEnclosingTemplate = false;
   if (TrailingRequiresClause)
     setTrailingRequiresClause(TrailingRequiresClause);
 }
@@ -3015,7 +3017,7 @@ FunctionDecl::getDefaultedFunctionInfo() const {
 }
 
 bool FunctionDecl::hasBody(const FunctionDecl *&Definition) const {
-  for (auto I : redecls()) {
+  for (auto *I : redecls()) {
     if (I->doesThisDeclarationHaveABody()) {
       Definition = I;
       return true;
@@ -3486,8 +3488,8 @@ unsigned FunctionDecl::getMinRequiredArguments() const {
 bool FunctionDecl::hasOneParamOrDefaultArgs() const {
   return getNumParams() == 1 ||
          (getNumParams() > 1 &&
-          std::all_of(param_begin() + 1, param_end(),
-                      [](ParmVarDecl *P) { return P->hasDefaultArg(); }));
+          llvm::all_of(llvm::drop_begin(parameters()),
+                       [](ParmVarDecl *P) { return P->hasDefaultArg(); }));
 }
 
 /// The combination of the extern and inline keywords under MSVC forces
@@ -3686,7 +3688,7 @@ bool FunctionDecl::isInlineDefinitionExternallyVisible() const {
 
     // If any declaration is 'inline' but not 'extern', then this definition
     // is externally visible.
-    for (auto Redecl : redecls()) {
+    for (auto *Redecl : redecls()) {
       if (Redecl->isInlineSpecified() &&
           Redecl->getStorageClass() != SC_Extern)
         return true;
@@ -3703,7 +3705,7 @@ bool FunctionDecl::isInlineDefinitionExternallyVisible() const {
   //   [...] If all of the file scope declarations for a function in a
   //   translation unit include the inline function specifier without extern,
   //   then the definition in that translation unit is an inline definition.
-  for (auto Redecl : redecls()) {
+  for (auto *Redecl : redecls()) {
     if (RedeclForcesDefC99(Redecl))
       return true;
   }
@@ -4408,7 +4410,7 @@ void TagDecl::startDefinition() {
   if (auto *D = dyn_cast<CXXRecordDecl>(this)) {
     struct CXXRecordDecl::DefinitionData *Data =
       new (getASTContext()) struct CXXRecordDecl::DefinitionData(D);
-    for (auto I : redecls())
+    for (auto *I : redecls())
       cast<CXXRecordDecl>(I)->DefinitionData = Data;
   }
 }
@@ -4441,7 +4443,7 @@ TagDecl *TagDecl::getDefinition() const {
   if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(this))
     return CXXRD->getDefinition();
 
-  for (auto R : redecls())
+  for (auto *R : redecls())
     if (R->isCompleteDefinition())
       return R;
 
@@ -4619,6 +4621,21 @@ SourceRange EnumDecl::getSourceRange() const {
       Res.setEnd(TSI->getTypeLoc().getEndLoc());
   }
   return Res;
+}
+
+void EnumDecl::getValueRange(llvm::APInt &Max, llvm::APInt &Min) const {
+  unsigned Bitwidth = getASTContext().getIntWidth(getIntegerType());
+  unsigned NumNegativeBits = getNumNegativeBits();
+  unsigned NumPositiveBits = getNumPositiveBits();
+
+  if (NumNegativeBits) {
+    unsigned NumBits = std::max(NumNegativeBits, NumPositiveBits + 1);
+    Max = llvm::APInt(Bitwidth, 1) << (NumBits - 1);
+    Min = -Max;
+  } else {
+    Max = llvm::APInt(Bitwidth, 1) << NumPositiveBits;
+    Min = llvm::APInt::getZero(Bitwidth);
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -4968,6 +4985,12 @@ bool ValueDecl::isWeak() const {
          MostRecent->hasAttr<WeakRefAttr>() || isWeakImported();
 }
 
+bool ValueDecl::isInitCapture() const {
+  if (auto *Var = llvm::dyn_cast<VarDecl>(this))
+    return Var->isInitCapture();
+  return false;
+}
+
 void ImplicitParamDecl::anchor() {}
 
 ImplicitParamDecl *ImplicitParamDecl::Create(ASTContext &C, DeclContext *DC,
@@ -5187,6 +5210,40 @@ EmptyDecl *EmptyDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L) {
 
 EmptyDecl *EmptyDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
   return new (C, ID) EmptyDecl(nullptr, SourceLocation());
+}
+
+HLSLBufferDecl::HLSLBufferDecl(DeclContext *DC, bool CBuffer,
+                               SourceLocation KwLoc, IdentifierInfo *ID,
+                               SourceLocation IDLoc, SourceLocation LBrace)
+    : NamedDecl(Decl::Kind::HLSLBuffer, DC, IDLoc, DeclarationName(ID)),
+      DeclContext(Decl::Kind::HLSLBuffer), LBraceLoc(LBrace), KwLoc(KwLoc),
+      IsCBuffer(CBuffer) {}
+
+HLSLBufferDecl *HLSLBufferDecl::Create(ASTContext &C,
+                                       DeclContext *LexicalParent, bool CBuffer,
+                                       SourceLocation KwLoc, IdentifierInfo *ID,
+                                       SourceLocation IDLoc,
+                                       SourceLocation LBrace) {
+  // For hlsl like this
+  // cbuffer A {
+  //     cbuffer B {
+  //     }
+  // }
+  // compiler should treat it as
+  // cbuffer A {
+  // }
+  // cbuffer B {
+  // }
+  // FIXME: support nested buffers if required for back-compat.
+  DeclContext *DC = LexicalParent;
+  HLSLBufferDecl *Result =
+      new (C, DC) HLSLBufferDecl(DC, CBuffer, KwLoc, ID, IDLoc, LBrace);
+  return Result;
+}
+
+HLSLBufferDecl *HLSLBufferDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+  return new (C, ID) HLSLBufferDecl(nullptr, false, SourceLocation(), nullptr,
+                                    SourceLocation(), SourceLocation());
 }
 
 //===----------------------------------------------------------------------===//

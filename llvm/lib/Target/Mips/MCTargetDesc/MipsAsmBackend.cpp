@@ -429,7 +429,7 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_Mips_JALR",                 0,     32,   0 },
     { "fixup_MICROMIPS_JALR",            0,     32,   0 }
   };
-  static_assert(array_lengthof(LittleEndianInfos) == Mips::NumTargetFixupKinds,
+  static_assert(std::size(LittleEndianInfos) == Mips::NumTargetFixupKinds,
                 "Not all MIPS little endian fixup kinds added!");
 
   const static MCFixupKindInfo BigEndianInfos[] = {
@@ -508,7 +508,7 @@ getFixupKindInfo(MCFixupKind Kind) const {
     { "fixup_Mips_JALR",                  0,     32,   0 },
     { "fixup_MICROMIPS_JALR",             0,     32,   0 }
   };
-  static_assert(array_lengthof(BigEndianInfos) == Mips::NumTargetFixupKinds,
+  static_assert(std::size(BigEndianInfos) == Mips::NumTargetFixupKinds,
                 "Not all MIPS big endian fixup kinds added!");
 
   if (Kind >= FirstLiteralRelocationKind)

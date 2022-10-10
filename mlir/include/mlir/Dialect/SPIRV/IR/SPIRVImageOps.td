@@ -19,7 +19,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 // -----
 
-def SPV_ImageDrefGatherOp : SPV_Op<"ImageDrefGather", [NoSideEffect]> {
+def SPIRV_ImageDrefGatherOp : SPIRV_Op<"ImageDrefGather", [NoSideEffect]> {
   let summary = "Gathers the requested depth-comparison from four texels.";
 
   let description = [{
@@ -52,28 +52,28 @@ def SPV_ImageDrefGatherOp : SPV_Op<"ImageDrefGather", [NoSideEffect]> {
     ```
 
     ```mlir
-    %0 = spv.ImageDrefGather %1 : !spv.sampled_image<!spv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %2 : vector<4xf32>, %3 : f32 -> vector<4xi32>
-    %0 = spv.ImageDrefGather %1 : !spv.sampled_image<!spv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %2 : vector<4xf32>, %3 : f32 ["NonPrivateTexel"] : f32, f32 -> vector<4xi32>
+    %0 = spirv.ImageDrefGather %1 : !spirv.sampled_image<!spirv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %2 : vector<4xf32>, %3 : f32 -> vector<4xi32>
+    %0 = spirv.ImageDrefGather %1 : !spirv.sampled_image<!spirv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>, %2 : vector<4xf32>, %3 : f32 ["NonPrivateTexel"] : f32, f32 -> vector<4xi32>
     ```
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_Shader]>
+    Capability<[SPIRV_C_Shader]>
   ];
 
   let arguments = (ins
-    SPV_AnySampledImage:$sampledimage,
-    SPV_ScalarOrVectorOf<SPV_Float>:$coordinate,
-    SPV_Float:$dref,
-    OptionalAttr<SPV_ImageOperandsAttr>:$imageoperands,
-    Variadic<SPV_Type>:$operand_arguments
+    SPIRV_AnySampledImage:$sampledimage,
+    SPIRV_ScalarOrVectorOf<SPIRV_Float>:$coordinate,
+    SPIRV_Float:$dref,
+    OptionalAttr<SPIRV_ImageOperandsAttr>:$imageoperands,
+    Variadic<SPIRV_Type>:$operand_arguments
   );
 
   let results = (outs
-    SPV_Vector:$result
+    SPIRV_Vector:$result
   );
 
   let assemblyFormat = [{$sampledimage `:` type($sampledimage) `,`
@@ -86,7 +86,7 @@ def SPV_ImageDrefGatherOp : SPV_Op<"ImageDrefGather", [NoSideEffect]> {
 
 // -----
 
-def SPV_ImageQuerySizeOp : SPV_Op<"ImageQuerySize", [NoSideEffect]> {
+def SPIRV_ImageQuerySizeOp : SPIRV_Op<"ImageQuerySize", [NoSideEffect]> {
   let summary = "Query the dimensions of Image, with no level of detail.";
 
   let description = [{
@@ -116,26 +116,26 @@ def SPV_ImageQuerySizeOp : SPV_Op<"ImageQuerySize", [NoSideEffect]> {
     #### Example:
 
     ```mlir
-    %3 = spv.ImageQuerySize %0 : !spv.image<i32, Dim1D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown> -> i32
-    %4 = spv.ImageQuerySize %1 : !spv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown> -> vector<2xi32>
-    %5 = spv.ImageQuerySize %2 : !spv.image<i32, Dim2D, NoDepth, Arrayed, SingleSampled, NoSampler, Unknown> -> vector<3xi32>
+    %3 = spirv.ImageQuerySize %0 : !spirv.image<i32, Dim1D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown> -> i32
+    %4 = spirv.ImageQuerySize %1 : !spirv.image<i32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown> -> vector<2xi32>
+    %5 = spirv.ImageQuerySize %2 : !spirv.image<i32, Dim2D, NoDepth, Arrayed, SingleSampled, NoSampler, Unknown> -> vector<3xi32>
     ```
 
   }];
 
   let availability = [
-    MinVersion<SPV_V_1_0>,
-    MaxVersion<SPV_V_1_5>,
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
     Extension<[]>,
-    Capability<[SPV_C_ImageQuery, SPV_C_Kernel]>
+    Capability<[SPIRV_C_ImageQuery, SPIRV_C_Kernel]>
   ];
 
   let arguments = (ins
-    SPV_AnyImage:$image
+    SPIRV_AnyImage:$image
   );
 
   let results = (outs
-    SPV_ScalarOrVectorOf<SPV_Integer>:$result
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$result
   );
 
   let assemblyFormat = "attr-dict $image `:` type($image) `->` type($result)";
@@ -143,7 +143,7 @@ def SPV_ImageQuerySizeOp : SPV_Op<"ImageQuerySize", [NoSideEffect]> {
 
 // -----
 
-def SPV_ImageOp : SPV_Op<"Image",
+def SPIRV_ImageOp : SPIRV_Op<"Image",
     [NoSideEffect,
      TypesMatchWith<"type of 'result' matches image type of 'sampledimage'",
                     "sampledimage", "result",
@@ -161,16 +161,16 @@ def SPV_ImageOp : SPV_Op<"Image",
     #### Example:
 
     ```mlir
-    %0 = spv.Image %1 : !spv.sampled_image<!spv.image<f32, Cube, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>
+    %0 = spirv.Image %1 : !spirv.sampled_image<!spirv.image<f32, Cube, NoDepth, NonArrayed, SingleSampled, NoSampler, Unknown>>
     ```
   }];
 
   let arguments = (ins
-    SPV_AnySampledImage:$sampledimage
+    SPIRV_AnySampledImage:$sampledimage
   );
 
   let results = (outs
-    SPV_AnyImage:$result
+    SPIRV_AnyImage:$result
   );
 
   let assemblyFormat = "attr-dict $sampledimage `:` type($sampledimage)";

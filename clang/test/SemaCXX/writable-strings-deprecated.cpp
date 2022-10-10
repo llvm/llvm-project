@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -DWARNING
+// RUN: %clang_cc1 -fsyntax-only -verify %std_cxx14- %s -DWARNING
 // RUN: %clang_cc1 -fsyntax-only -std=c++98 -verify %s -DWARNING
 // RUN: %clang_cc1 -fsyntax-only -std=c++98 -Wno-deprecated-writable-strings -verify %s
 // RUN: %clang_cc1 -fsyntax-only -std=c++98 -Wno-deprecated -Wdeprecated-increment-bool -verify %s
@@ -29,7 +29,9 @@ char *fun(void)
 #endif
 }
 
+#if __cplusplus < 201703L
 void test(bool b)
 {
   ++b; // expected-warning {{incrementing expression of type bool is deprecated}}
 }
+#endif

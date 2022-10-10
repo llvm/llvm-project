@@ -128,33 +128,38 @@ static DWARFExpression MakeLocationExpressionInternal(lldb::ModuleSP module,
   return result;
 }
 
+static bool MakeRegisterBasedLocationExpressionInternal(
+    Stream &stream, llvm::codeview::RegisterId reg, RegisterKind &register_kind,
+    llvm::Optional<int32_t> relative_offset, lldb::ModuleSP module) {
+  uint32_t reg_num = GetRegisterNumber(module->GetArchitecture().GetMachine(),
+                                       reg, register_kind);
+  if (reg_num == LLDB_INVALID_REGNUM)
+    return false;
+
+  if (reg_num > 31) {
+    llvm::dwarf::LocationAtom base =
+        relative_offset ? llvm::dwarf::DW_OP_bregx : llvm::dwarf::DW_OP_regx;
+    stream.PutHex8(base);
+    stream.PutULEB128(reg_num);
+  } else {
+    llvm::dwarf::LocationAtom base =
+        relative_offset ? llvm::dwarf::DW_OP_breg0 : llvm::dwarf::DW_OP_reg0;
+    stream.PutHex8(base + reg_num);
+  }
+
+  if (relative_offset)
+    stream.PutSLEB128(*relative_offset);
+
+  return true;
+}
+
 static DWARFExpression MakeRegisterBasedLocationExpressionInternal(
     llvm::codeview::RegisterId reg, llvm::Optional<int32_t> relative_offset,
     lldb::ModuleSP module) {
   return MakeLocationExpressionInternal(
       module, [&](Stream &stream, RegisterKind &register_kind) -> bool {
-        uint32_t reg_num = GetRegisterNumber(
-            module->GetArchitecture().GetMachine(), reg, register_kind);
-        if (reg_num == LLDB_INVALID_REGNUM)
-          return false;
-
-        if (reg_num > 31) {
-          llvm::dwarf::LocationAtom base = relative_offset
-                                               ? llvm::dwarf::DW_OP_bregx
-                                               : llvm::dwarf::DW_OP_regx;
-          stream.PutHex8(base);
-          stream.PutULEB128(reg_num);
-        } else {
-          llvm::dwarf::LocationAtom base = relative_offset
-                                               ? llvm::dwarf::DW_OP_breg0
-                                               : llvm::dwarf::DW_OP_reg0;
-          stream.PutHex8(base + reg_num);
-        }
-
-        if (relative_offset)
-          stream.PutSLEB128(*relative_offset);
-
-        return true;
+        return MakeRegisterBasedLocationExpressionInternal(
+            stream, reg, register_kind, relative_offset, module);
       });
 }
 
@@ -251,28 +256,43 @@ DWARFExpression lldb_private::npdb::MakeConstantLocationExpression(
   return result;
 }
 
-DWARFExpression lldb_private::npdb::MakeEnregisteredLocationExpressionForClass(
-    std::map<uint64_t, std::pair<RegisterId, uint32_t>> &members_info,
+DWARFExpression
+lldb_private::npdb::MakeEnregisteredLocationExpressionForComposite(
+    const std::map<uint64_t, MemberValLocation> &offset_to_location,
+    std::map<uint64_t, size_t> &offset_to_size, size_t total_size,
     lldb::ModuleSP module) {
   return MakeLocationExpressionInternal(
       module, [&](Stream &stream, RegisterKind &register_kind) -> bool {
-        for (auto pair : members_info) {
-          std::pair<RegisterId, uint32_t> member_info = pair.second;
-          if (member_info.first != llvm::codeview::RegisterId::NONE) {
-            uint32_t reg_num =
-                GetRegisterNumber(module->GetArchitecture().GetMachine(),
-                                  member_info.first, register_kind);
-            if (reg_num == LLDB_INVALID_REGNUM)
-              return false;
-            if (reg_num > 31) {
-              stream.PutHex8(llvm::dwarf::DW_OP_regx);
-              stream.PutULEB128(reg_num);
-            } else {
-              stream.PutHex8(llvm::dwarf::DW_OP_reg0 + reg_num);
-            }
+        size_t cur_offset = 0;
+        bool is_simple_type = offset_to_size.empty();
+        // Iterate through offset_to_location because offset_to_size might be
+        // empty if the variable is a simple type.
+        for (const auto &offset_loc : offset_to_location) {
+          if (cur_offset < offset_loc.first) {
+            stream.PutHex8(llvm::dwarf::DW_OP_piece);
+            stream.PutULEB128(offset_loc.first - cur_offset);
+            cur_offset = offset_loc.first;
           }
+          MemberValLocation loc = offset_loc.second;
+          llvm::Optional<int32_t> offset =
+              loc.is_at_reg ? llvm::None
+                            : llvm::Optional<int32_t>(loc.reg_offset);
+          if (!MakeRegisterBasedLocationExpressionInternal(
+                  stream, (RegisterId)loc.reg_id, register_kind, offset,
+                  module))
+            return false;
+          if (!is_simple_type) {
+            stream.PutHex8(llvm::dwarf::DW_OP_piece);
+            stream.PutULEB128(offset_to_size[offset_loc.first]);
+            cur_offset = offset_loc.first + offset_to_size[offset_loc.first];
+          }
+        }
+        // For simple type, it specifies the byte size of the value described by
+        // the previous dwarf expr. For udt, it's the remaining byte size at end
+        // of a struct.
+        if (total_size > cur_offset) {
           stream.PutHex8(llvm::dwarf::DW_OP_piece);
-          stream.PutULEB128(member_info.second);
+          stream.PutULEB128(total_size - cur_offset);
         }
         return true;
       });

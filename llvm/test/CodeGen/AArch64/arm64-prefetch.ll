@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=arm64-eabi | FileCheck %s
+; RUN: llc -O0 --global-isel-abort=1 < %s -mtriple=arm64-eabi | FileCheck %s
 
 @a = common global i32* null, align 8
 

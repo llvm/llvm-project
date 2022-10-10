@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_CPP_ATOMIC_H
 #define LLVM_LIBC_SRC_SUPPORT_CPP_ATOMIC_H
 
-#include "TypeTraits.h"
+#include "type_traits.h"
 
 namespace __llvm_libc {
 namespace cpp {
@@ -25,7 +25,7 @@ enum class MemoryOrder : int {
 
 template <typename T> struct Atomic {
   // For now, we will restrict to only arithmetic types.
-  static_assert(IsArithmetic<T>::Value, "Only arithmetic types can be atomic.");
+  static_assert(is_arithmetic_v<T>, "Only arithmetic types can be atomic.");
 
 private:
   // The value stored should be appropriately aligned so that

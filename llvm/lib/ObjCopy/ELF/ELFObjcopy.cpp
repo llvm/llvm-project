@@ -510,7 +510,7 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
             Obj, isCompressable,
             [&Config, &Obj](const SectionBase *S) -> Expected<SectionBase *> {
               return &Obj.addSection<CompressedSection>(
-                  CompressedSection(*S, Config.CompressionType));
+                  CompressedSection(*S, Config.CompressionType, Obj.Is64Bits));
             }))
       return Err;
   } else if (Config.DecompressDebugSections) {

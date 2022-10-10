@@ -80,7 +80,7 @@ std::deque<BinaryFunction *> BinaryFunctionCallGraph::buildTraversalOrder() {
 
 BinaryFunctionCallGraph
 buildCallGraph(BinaryContext &BC, CgFilterFunction Filter, bool CgFromPerfData,
-               bool IncludeColdCalls, bool UseFunctionHotSize,
+               bool IncludeSplitCalls, bool UseFunctionHotSize,
                bool UseSplitHotSize, bool UseEdgeCounts,
                bool IgnoreRecursiveCalls) {
   NamedRegionTimer T1("buildcg", "Callgraph construction", "CG breakdown",
@@ -216,8 +216,8 @@ buildCallGraph(BinaryContext &BC, CgFilterFunction Filter, bool CgFromPerfData,
       }
     } else {
       for (BinaryBasicBlock *BB : Function->getLayout().blocks()) {
-        // Don't count calls from cold blocks unless requested.
-        if (BB->isCold() && !IncludeColdCalls)
+        // Don't count calls from split blocks unless requested.
+        if (BB->isSplit() && !IncludeSplitCalls)
           continue;
 
         // Determine whether the block is included in Function's (hot) size
@@ -225,7 +225,7 @@ buildCallGraph(BinaryContext &BC, CgFilterFunction Filter, bool CgFromPerfData,
         bool BBIncludedInFunctionSize = false;
         if (UseFunctionHotSize && Function->isSplit()) {
           if (UseSplitHotSize)
-            BBIncludedInFunctionSize = !BB->isCold();
+            BBIncludedInFunctionSize = !BB->isSplit();
           else
             BBIncludedInFunctionSize = BB->getKnownExecutionCount() != 0;
         } else {

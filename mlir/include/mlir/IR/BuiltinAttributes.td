@@ -17,6 +17,7 @@
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinDialect.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
+include "mlir/IR/OpAsmInterface.td"
 include "mlir/IR/SubElementInterfaces.td"
 
 // TODO: Currently the attributes defined in this file are prefixed with
@@ -64,7 +65,6 @@ def Builtin_AffineMapAttr : Builtin_Attr<"AffineMap", [
     AffineMap getAffineMap() const { return getValue(); }
   }];
   let skipDefaultBuilders = 1;
-  let typeBuilder = "IndexType::get($_value.getContext())";
 }
 
 //===----------------------------------------------------------------------===//
@@ -140,48 +140,73 @@ def Builtin_ArrayAttr : Builtin_Attr<"Array", [
 }
 
 //===----------------------------------------------------------------------===//
-// DenseIntOrFPElementsAttr
+// DenseArrayAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_DenseArrayBase : Builtin_Attr<
-    "DenseArrayBase", [ElementsAttrInterface]> {
-  let summary = "A dense array of i8, i16, i32, i64, f32, or f64.";
+def Builtin_DenseArrayRawDataParameter : ArrayRefParameter<
+    "char", "64-bit aligned storage for dense array elements"> {
+  let allocator = [{
+    if (!$_self.empty()) {
+      auto *alloc = static_cast<char *>(
+          $_allocator.allocate($_self.size(), alignof(uint64_t)));
+      std::uninitialized_copy($_self.begin(), $_self.end(), alloc);
+      $_dst = ArrayRef<char>(alloc, $_self.size());
+    }
+  }];
+}
+
+def Builtin_DenseArray : Builtin_Attr<
+    "DenseArray", [ElementsAttrInterface, TypedAttrInterface]> {
+  let summary = "A dense array of integer or floating point elements.";
   let description = [{
     A dense array attribute is an attribute that represents a dense array of
     primitive element types. Contrary to DenseIntOrFPElementsAttr this is a
     flat unidimensional array which does not have a storage optimization for
     splat. This allows to expose the raw array through a C++ API as
-    `ArrayRef<T>`. This is the base class attribute, the actual access is
-    intended to be managed through the subclasses `DenseI8ArrayAttr`,
-    `DenseI16ArrayAttr`, `DenseI32ArrayAttr`, `DenseI64ArrayAttr`,
-    `DenseF32ArrayAttr`, and `DenseF64ArrayAttr`.
+    `ArrayRef<T>` for compatible types. The element type must be bool or an
+    integer or float whose bitwidth is a multiple of 8. Bool elements are stored
+    as bytes.
+
+    This is the base class attribute. Access to C++ types is intended to be
+    managed through the subclasses `DenseI8ArrayAttr`, `DenseI16ArrayAttr`,
+    `DenseI32ArrayAttr`, `DenseI64ArrayAttr`, `DenseF32ArrayAttr`,
+    and `DenseF64ArrayAttr`.
 
     Syntax:
 
     ```
-    dense-array-attribute ::= `[` `:` (integer-type | float-type) tensor-literal `]`
+    dense-array-attribute ::= `array` `<` (integer-type | float-type)
+                                          (`:` tensor-literal)? `>`
     ```
     Examples:
 
     ```mlir
-    [:i8]
-    [:i32 10, 42]
-    [:f64 42., 12.]
+    array<i8>
+    array<i32: 10, 42>
+    array<f64: 42., 12.>
     ```
 
-    when a specific subclass is used as argument of an operation, the declarative
-    assembly will omit the type and print directly:
-    ```
+    When a specific subclass is used as argument of an operation, the
+    declarative assembly will omit the type and print directly:
+
+    ```mlir
     [1, 2, 3]
     ```
   }];
-  let parameters = (ins AttributeSelfTypeParameter<"", "ShapedType">:$type,
-                        "DenseArrayBaseAttr::EltType":$eltType,
-                        ArrayRefParameter<"char">:$elements);
-  let extraClassDeclaration = [{
-    // All possible supported element type.
-    enum class EltType { I8, I16, I32, I64, F32, F64 };
 
+  let parameters = (ins
+    AttributeSelfTypeParameter<"", "RankedTensorType">:$type,
+    Builtin_DenseArrayRawDataParameter:$rawData
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "RankedTensorType":$type,
+                                        "ArrayRef<char>":$rawData), [{
+      return $_get(type.getContext(), type, rawData);
+    }]>,
+  ];
+
+  let extraClassDeclaration = [{
     /// Allow implicit conversion to ElementsAttr.
     operator ElementsAttr() const {
       return *this ? cast<ElementsAttr>() : nullptr;
@@ -189,26 +214,24 @@ def Builtin_DenseArrayBase : Builtin_Attr<
 
     /// ElementsAttr implementation.
     using ContiguousIterableTypesT =
-        std::tuple<int8_t, int16_t, int32_t, int64_t, float, double>;
-    const int8_t *value_begin_impl(OverloadToken<int8_t>) const;
-    const int16_t *value_begin_impl(OverloadToken<int16_t>) const;
-    const int32_t *value_begin_impl(OverloadToken<int32_t>) const;
-    const int64_t *value_begin_impl(OverloadToken<int64_t>) const;
-    const float *value_begin_impl(OverloadToken<float>) const;
-    const double *value_begin_impl(OverloadToken<double>) const;
-
-    /// Methods to support type inquiry through isa, cast, and dyn_cast.
-    EltType getElementType() const;
-    /// Printer for the short form: will dispatch to the appropriate subclass.
-    void print(AsmPrinter &printer) const;
-    void print(raw_ostream &os) const;
-    /// Print the short form `42, 100, -1` without any braces or prefix.
-    void printWithoutBraces(raw_ostream &os) const;
+        std::tuple<bool, int8_t, int16_t, int32_t, int64_t, float, double>;
+    FailureOr<const bool *>
+    try_value_begin_impl(OverloadToken<bool>) const;
+    FailureOr<const int8_t *>
+    try_value_begin_impl(OverloadToken<int8_t>) const;
+    FailureOr<const int16_t *>
+    try_value_begin_impl(OverloadToken<int16_t>) const;
+    FailureOr<const int32_t *>
+    try_value_begin_impl(OverloadToken<int32_t>) const;
+    FailureOr<const int64_t *>
+    try_value_begin_impl(OverloadToken<int64_t>) const;
+    FailureOr<const float *>
+    try_value_begin_impl(OverloadToken<float>) const;
+    FailureOr<const double *>
+    try_value_begin_impl(OverloadToken<double>) const;
   }];
-  // Do not generate the storage class, we need to handle custom storage alignment.
-  let genStorageClass = 0;
-  let genAccessors = 0;
-  let skipDefaultBuilders = 1;
+
+  let genVerifyDecl = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -216,7 +239,8 @@ def Builtin_DenseArrayBase : Builtin_Attr<
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
-    "DenseIntOrFPElements", [ElementsAttrInterface], "DenseElementsAttr"
+    "DenseIntOrFPElements", [ElementsAttrInterface, TypedAttrInterface],
+    "DenseElementsAttr"
   > {
   let summary = "An Attribute containing a dense multi-dimensional array of "
                 "integer or floating-point values";
@@ -275,10 +299,11 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
       APFloat, std::complex<APFloat>
     >;
 
-    /// Provide a `value_begin_impl` to enable iteration within ElementsAttr.
+    /// Provide a `try_value_begin_impl` to enable iteration within
+    /// ElementsAttr.
     template <typename T>
-    auto value_begin_impl(OverloadToken<T>) const {
-      return value_begin<T>();
+    auto try_value_begin_impl(OverloadToken<T>) const {
+      return try_value_begin<T>();
     }
 
     /// Convert endianess of input ArrayRef for big-endian(BE) machines. All of
@@ -355,7 +380,8 @@ def Builtin_DenseIntOrFPElementsAttr : Builtin_Attr<
 //===----------------------------------------------------------------------===//
 
 def Builtin_DenseStringElementsAttr : Builtin_Attr<
-    "DenseStringElements", [ElementsAttrInterface], "DenseElementsAttr"
+    "DenseStringElements", [ElementsAttrInterface, TypedAttrInterface],
+    "DenseElementsAttr"
   > {
   let summary = "An Attribute containing a dense multi-dimensional array of "
                 "strings";
@@ -403,10 +429,11 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
     using ContiguousIterableTypesT = std::tuple<StringRef>;
     using NonContiguousIterableTypesT = std::tuple<Attribute>;
 
-    /// Provide a `value_begin_impl` to enable iteration within ElementsAttr.
+    /// Provide a `try_value_begin_impl` to enable iteration within
+    /// ElementsAttr.
     template <typename T>
-    auto value_begin_impl(OverloadToken<T>) const {
-      return value_begin<T>();
+    auto try_value_begin_impl(OverloadToken<T>) const {
+      return try_value_begin<T>();
     }
 
   protected:
@@ -416,6 +443,65 @@ def Builtin_DenseStringElementsAttr : Builtin_Attr<
   }];
   let genAccessors = 0;
   let genStorageClass = 0;
+  let skipDefaultBuilders = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// DenseResourceElementsAttr
+//===----------------------------------------------------------------------===//
+
+def Builtin_DenseResourceElementsAttr : Builtin_Attr<"DenseResourceElements", [
+    ElementsAttrInterface, TypedAttrInterface
+  ]> {
+  let summary = "An Attribute containing a dense multi-dimensional array "
+                "backed by a resource";
+  let description = [{
+    Syntax:
+
+    ```
+    dense-resource-elements-attribute ::=
+      `dense_resource` `<` resource-handle `>` `:` shaped-type
+    ```
+
+    A dense resource elements attribute is an elements attribute backed by a
+    handle to a builtin dialect resource containing a densely packed array of
+    values. This class provides the low-level attribute, which should only be
+    interacted with in very generic terms, actual access to the underlying
+    resource data is intended to be managed through one of the subclasses, such
+    as; `DenseBoolResourceElementsAttr`, `DenseUI64ResourceElementsAttr`,
+    `DenseI32ResourceElementsAttr`, `DenseF32ResourceElementsAttr`,
+    `DenseF64ResourceElementsAttr`, etc.
+
+    Examples:
+
+    ```mlir
+    // A tensor referencing a builtin dialect resource, `resource_1`, with two
+    // unsigned i32 elements.
+    dense_resource<resource_1> : tensor<2xui32>
+    ```
+  }];
+  let parameters = (ins
+    AttributeSelfTypeParameter<"", "ShapedType">:$type,
+    ResourceHandleParameter<"DenseResourceElementsHandle">:$rawHandle
+  );
+  let builders = [
+    AttrBuilderWithInferredContext<(ins
+      "ShapedType":$type, "DenseResourceElementsHandle":$handle
+    )>
+  ];
+  let extraClassDeclaration = [{
+  protected:
+    /// A builder that inserts a new resource into the builtin dialect's blob
+    /// manager using the provided blob. The handle of the inserted blob is used
+    /// when building the attribute. The provided `blobName` is used as a hint
+    /// for the key of the new handle for the `blob` resource, but may be
+    /// changed if necessary to ensure uniqueness during insertion.
+    static DenseResourceElementsAttr get(
+      ShapedType type, StringRef blobName, AsmResourceBlob blob
+    );
+
+  public:
+  }];
   let skipDefaultBuilders = 1;
 }
 
@@ -523,7 +609,7 @@ def Builtin_DictionaryAttr : Builtin_Attr<"Dictionary", [
 // FloatAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_FloatAttr : Builtin_Attr<"Float"> {
+def Builtin_FloatAttr : Builtin_Attr<"Float", [TypedAttrInterface]> {
   let summary = "An Attribute containing a floating-point value";
   let description = [{
     Syntax:
@@ -586,7 +672,7 @@ def Builtin_FloatAttr : Builtin_Attr<"Float"> {
 // IntegerAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_IntegerAttr : Builtin_Attr<"Integer"> {
+def Builtin_IntegerAttr : Builtin_Attr<"Integer", [TypedAttrInterface]> {
   let summary = "An Attribute containing a integer value";
   let description = [{
     Syntax:
@@ -703,7 +789,7 @@ def Builtin_IntegerSetAttr : Builtin_Attr<"IntegerSet"> {
 // OpaqueAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_OpaqueAttr : Builtin_Attr<"Opaque"> {
+def Builtin_OpaqueAttr : Builtin_Attr<"Opaque", [TypedAttrInterface]> {
   let summary = "An opaque representation of another Attribute";
   let description = [{
     Syntax:
@@ -737,73 +823,11 @@ def Builtin_OpaqueAttr : Builtin_Attr<"Opaque"> {
 }
 
 //===----------------------------------------------------------------------===//
-// OpaqueElementsAttr
-//===----------------------------------------------------------------------===//
-
-def Builtin_OpaqueElementsAttr : Builtin_Attr<
-    "OpaqueElements", [ElementsAttrInterface]
-  > {
-  let summary = "An opaque representation of a multi-dimensional array";
-  let description = [{
-    Syntax:
-
-    ```
-    opaque-elements-attribute ::= `opaque` `<` dialect-namespace  `,`
-                                  hex-string-literal `>` `:`
-                                  ( tensor-type | vector-type )
-    ```
-
-    An opaque elements attribute is an elements attribute where the content of
-    the value is opaque. The representation of the constant stored by this
-    elements attribute is only understood, and thus decodable, by the dialect
-    that created it.
-
-    Note: The parsed string literal must be in hexadecimal form.
-
-    Examples:
-
-    ```mlir
-    opaque<"foo_dialect", "0xDEADBEEF"> : tensor<10xi32>
-    ```
-  }];
-
-  // TODO: Provide a way to avoid copying content of large opaque
-  // tensors This will likely require a new reference attribute kind.
-  let parameters = (ins "StringAttr":$dialect,
-                        StringRefParameter<"">:$value,
-                        AttributeSelfTypeParameter<"", "ShapedType">:$type);
-  let builders = [
-    AttrBuilderWithInferredContext<(ins "StringAttr":$dialect,
-                                        "ShapedType":$type,
-                                        "StringRef":$value), [{
-      return $_get(dialect.getContext(), dialect, value, type);
-    }]>,
-    AttrBuilderWithInferredContext<(ins "Dialect *":$dialect,
-                                        "ShapedType":$type,
-                                        "StringRef":$value), [{
-      MLIRContext *ctxt = dialect->getContext();
-      StringAttr dialectName = StringAttr::get(ctxt, dialect->getNamespace());
-      return $_get(ctxt, dialectName, value, type);
-    }]>
-  ];
-  let extraClassDeclaration = [{
-    using ValueType = StringRef;
-
-    /// Decodes the attribute value using dialect-specific decoding hook.
-    /// Returns false if decoding is successful. If not, returns true and leaves
-    /// 'result' argument unspecified.
-    bool decode(ElementsAttr &result);
-  }];
-  let genVerifyDecl = 1;
-  let skipDefaultBuilders = 1;
-}
-
-//===----------------------------------------------------------------------===//
 // SparseElementsAttr
 //===----------------------------------------------------------------------===//
 
 def Builtin_SparseElementsAttr : Builtin_Attr<
-    "SparseElements", [ElementsAttrInterface]
+    "SparseElements", [ElementsAttrInterface, TypedAttrInterface]
   > {
   let summary = "An opaque representation of a multi-dimensional array";
   let description = [{
@@ -876,22 +900,17 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
       StringRef
     >;
     using ElementsAttr::Trait<SparseElementsAttr>::getValues;
-
-    /// Provide a `value_begin_impl` to enable iteration within ElementsAttr.
-    template <typename T>
-    auto value_begin_impl(OverloadToken<T>) const {
-      return value_begin<T>();
-    }
+    using ElementsAttr::Trait<SparseElementsAttr>::value_begin;
 
     template <typename T>
     using iterator =
         llvm::mapped_iterator<typename decltype(llvm::seq<ptrdiff_t>(0, 0))::iterator,
                               std::function<T(ptrdiff_t)>>;
 
-    /// Return the values of this attribute in the form of the given type 'T'.
-    /// 'T'  may be any of Attribute, APInt, APFloat, c++ integer/float types,
-    /// etc.
-    template <typename T> iterator<T> value_begin() const;
+    /// Provide a `try_value_begin_impl` to enable iteration within
+    /// ElementsAttr.
+    template <typename T>
+    FailureOr<iterator<T>> try_value_begin_impl(OverloadToken<T>) const;
 
   private:
     /// Get a zero APFloat for the given sparse attribute.
@@ -907,32 +926,30 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
     /// by the 'iterator' class.
     /// Get a zero for a given attribute type.
     template <typename T>
-    typename std::enable_if<std::is_base_of<Attribute, T>::value, T>::type
+    std::enable_if_t<std::is_base_of<Attribute, T>::value, T>
     getZeroValue() const {
       return getZeroAttr().template cast<T>();
     }
     /// Get a zero for an APInt.
     template <typename T>
-    typename std::enable_if<std::is_same<APInt, T>::value, T>::type
+    std::enable_if_t<std::is_same<APInt, T>::value, T>
     getZeroValue() const {
       return getZeroAPInt();
     }
     template <typename T>
-    typename std::enable_if<std::is_same<std::complex<APInt>, T>::value,
-                            T>::type
+    std::enable_if_t<std::is_same<std::complex<APInt>, T>::value, T>
     getZeroValue() const {
       APInt intZero = getZeroAPInt();
       return {intZero, intZero};
     }
     /// Get a zero for an APFloat.
     template <typename T>
-    typename std::enable_if<std::is_same<APFloat, T>::value, T>::type
+    std::enable_if_t<std::is_same<APFloat, T>::value, T>
     getZeroValue() const {
       return getZeroAPFloat();
     }
     template <typename T>
-    typename std::enable_if<std::is_same<std::complex<APFloat>, T>::value,
-                            T>::type
+    std::enable_if_t<std::is_same<std::complex<APFloat>, T>::value, T>
     getZeroValue() const {
       APFloat floatZero = getZeroAPFloat();
       return {floatZero, floatZero};
@@ -940,14 +957,13 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
 
     /// Get a zero for an C++ integer, float, StringRef, or complex type.
     template <typename T>
-    typename std::enable_if<
-        std::numeric_limits<T>::is_integer ||
-            DenseElementsAttr::is_valid_cpp_fp_type<T>::value ||
-            std::is_same<T, StringRef>::value ||
-            (detail::is_complex_t<T>::value &&
-             !llvm::is_one_of<T, std::complex<APInt>,
-                              std::complex<APFloat>>::value),
-        T>::type
+    std::enable_if_t<std::numeric_limits<T>::is_integer ||
+                         DenseElementsAttr::is_valid_cpp_fp_type<T>::value ||
+                         std::is_same<T, StringRef>::value ||
+                         (detail::is_complex_t<T>::value &&
+                          !llvm::is_one_of<T, std::complex<APInt>,
+                                           std::complex<APFloat>>::value),
+                     T>
     getZeroValue() const {
       return T();
     }
@@ -963,10 +979,64 @@ def Builtin_SparseElementsAttr : Builtin_Attr<
 }
 
 //===----------------------------------------------------------------------===//
+// StridedLayoutAttr
+//===----------------------------------------------------------------------===//
+
+def StridedLayoutAttr : Builtin_Attr<"StridedLayout",
+    [DeclareAttrInterfaceMethods<MemRefLayoutAttrInterface,
+                                 ["verifyLayout"]>]> {
+  let summary = "An Attribute representing a strided layout of a shaped type";
+  let description = [{
+    Syntax:
+
+    ```
+    strided-layout-attribute ::= `strided` `<` `[` stride-list `]`
+                                 (`,` `offset` `:` dimension)? `>`
+    stride-list ::= /*empty*/
+                  | dimension (`,` dimension)*
+    dimension ::= decimal-literal | `?`
+    ```
+
+    A strided layout attribute captures layout information of the memref type in
+    the canonical form. Specifically, it contains a list of _strides_, one for
+    each dimension. A stride is the number of elements in the linear storage
+    one must step over to reflect an increment in the given dimension. For
+    example, a `MxN` row-major contiguous shaped type would have the strides
+    `[N, 1]`. The layout attribute also contains the _offset_ from the base
+    pointer of the shaped type to the first effectively accessed element,
+    expressed in terms of the number of contiguously stored elements.
+
+    Strides must be positive and the offset must be non-negative. Both the
+    strides and the offset may be _dynamic_, i.e. their value may not be known
+    at compile time. This is expressed as a `?` in the assembly syntax and as
+    `ShapedType::kDynamicStrideOrOffset` in the code. Stride and offset values
+    must satisfy the constraints above at runtime, the behavior is undefined
+    otherwise.
+
+    See [Dialects/Builtin.md#memreftype](MemRef type) for more information.
+  }];
+
+  let parameters = (ins
+    "int64_t":$offset,
+    ArrayRefParameter<
+      "int64_t",
+      "array of strides (64-bit integer)"
+    >:$strides
+  );
+  let genVerifyDecl = 1;
+
+  let extraClassDeclaration = [{
+    /// Print the attribute to the given output stream.
+    void print(raw_ostream &os) const;
+  }];
+}
+
+
+//===----------------------------------------------------------------------===//
 // StringAttr
 //===----------------------------------------------------------------------===//
 
-def Builtin_StringAttr : Builtin_Attr<"String"> {
+def Builtin_StringAttr : Builtin_Attr<"String", [TypedAttrInterface]> {
   let summary = "An Attribute containing a string";
   let description = [{
     Syntax:

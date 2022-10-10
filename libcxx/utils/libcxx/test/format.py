@@ -67,6 +67,15 @@ def parseScript(test, preamble):
                                                    initial_value=additionalCompileFlags)
     ]
 
+    # Add conditional parsers for ADDITIONAL_COMPILE_FLAGS. This should be replaced by first
+    # class support for conditional keywords in Lit, which would allow evaluating arbitrary
+    # Lit boolean expressions instead.
+    for feature in test.config.available_features:
+        parser = lit.TestRunner.IntegratedTestKeywordParser('ADDITIONAL_COMPILE_FLAGS({}):'.format(feature),
+                                                            lit.TestRunner.ParserKind.LIST,
+                                                            initial_value=additionalCompileFlags)
+        parsers.append(parser)
+
     scriptInTest = lit.TestRunner.parseIntegratedTestScript(test, additional_parsers=parsers,
                                                             require_script=not preamble)
     if isinstance(scriptInTest, lit.Test.Result):

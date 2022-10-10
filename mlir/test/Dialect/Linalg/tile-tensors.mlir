@@ -37,7 +37,7 @@ func.func @generic_op_tensors(
   %0 = tensor.dim %arg0, %c0 : tensor<?x?x?xf32>
   %1 = tensor.dim %arg0, %c1 : tensor<?x?x?xf32>
   %2 = tensor.dim %arg0, %c2 : tensor<?x?x?xf32>
-  %3 = linalg.init_tensor [%0, %1, %2] : tensor<?x?x?xf32>
+  %3 = tensor.empty(%0, %1, %2) : tensor<?x?x?xf32>
   %4 = linalg.generic
     {indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d1, d2)>,
                       affine_map<(d0, d1, d2) -> (d0, d2, d1)>,
@@ -55,7 +55,7 @@ func.func @generic_op_tensors(
 // CHECK-LABEL: func @generic_op_tensors
 //  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
 //  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?x?x?xf32>
-//       CHECK:   %[[INIT:.+]] = linalg.init_tensor
+//       CHECK:   %[[INIT:.+]] = tensor.empty
 //       CHECK:   %[[TD0:.+]] = scf.for %{{.+}} to %{{.+}} step %{{.+}} iter_args(%[[TC0:.+]] = %[[INIT]]) -> (tensor<?x?x?xf32>) {
 //       CHECK:     %[[TD1:.+]] = scf.for %{{.+}} to %{{.+}} step %{{.+}} iter_args(%[[TC1:.+]] = %[[TC0]]) -> (tensor<?x?x?xf32>) {
 //       CHECK:       %[[TD2:.+]] = scf.for %{{.+}} to %{{.+}} step %{{.+}} iter_args(%[[TC2:.+]] = %[[TC1]]) -> (tensor<?x?x?xf32>) {
@@ -77,8 +77,6 @@ func.func @generic_op_tensors(
 // -----
 
 //  CHECK-DAG:  #[[MAP0:.*]] = affine_map<(d0)[s0] -> (-d0 + s0, 2)>
-//  CHECK-DAG:  #[[MAP1:.*]] = affine_map<(d0) -> (d0 + 3)>
-//  CHECK-DAG:  #[[MAP2:.*]] = affine_map<(d0) -> (d0 + 4)>
 
 //      CHECK:  fold_extract_slice
 // CHECK-SAME:    %[[ARG0:[0-9a-zA-Z]*]]: tensor<?x128xf32>
@@ -93,15 +91,15 @@ func.func @fold_extract_slice(
   %0 = tensor.dim %arg1, %c0 : tensor<?x42xf32>
   %1 = tensor.extract_slice %arg0[3, 4] [%0, 42] [1, 1] : tensor<?x128xf32> to tensor<?x42xf32>
 
+  //      CHECK:   %[[E:.*]] = tensor.extract_slice %[[ARG0]][3, 4] [%[[DIM]], 42] [1, 1] : tensor<?x128xf32> to tensor<?x42xf32>
+
   //      CHECK:    scf.for %[[IV0:[0-9a-zA-Z]*]] =
   //      CHECK:      scf.for %[[IV1:[0-9a-zA-Z]*]] =
 
   // Fold the existing extract slice op into the one created by the tiling.
   //      CHECK:        %[[SIZE0:.*]] = affine.min #[[MAP0]](%[[IV0]])[%[[DIM]]
-  //      CHECK:        %[[OFF0:.*]] = affine.apply #[[MAP1]](%[[IV0]]
-  //      CHECK:        %[[OFF1:.*]] = affine.apply #[[MAP2]](%[[IV1]]
-  //      CHECK:        %[[T0:.*]] = tensor.extract_slice %[[ARG0]]
-  // CHECK-SAME:                                          %[[OFF0]], %[[OFF1]]
+  //      CHECK:        %[[T0:.*]] = tensor.extract_slice %[[E]]
+  // CHECK-SAME:                                          %[[IV0]], %[[IV1]]
   // CHECK-SAME:                                          %[[SIZE0]], 3
   // CHECK-SAME:                                          1, 1
   //      CHECK:        {{.*}} = linalg.generic {{.*}} ins(%[[T0]]

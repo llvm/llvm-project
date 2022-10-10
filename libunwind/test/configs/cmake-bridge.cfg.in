@@ -21,7 +21,6 @@ config.test_source_root = os.path.join('@LIBUNWIND_SOURCE_DIR@', 'test')
 config.test_format = libcxx.test.format.CxxStandardLibraryTest()
 config.recursiveExpansionLimit = 10
 config.test_exec_root = '@CMAKE_BINARY_DIR@'
-config.target_info = "@LIBUNWIND_TARGET_INFO@"
 
 # Add a few features that are common to all the configurations
 if @LIBUNWIND_USES_ARM_EHABI@:

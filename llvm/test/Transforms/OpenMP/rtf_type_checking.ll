@@ -1,6 +1,4 @@
-; RUN: opt -S -openmp-opt-cgscc -stats < %s 2>&1 -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,LPM
 ; RUN: opt -S -passes='devirt<2>(cgscc(openmp-opt-cgscc))' -stats -debug-pass-manager < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NPM
-; RUN: opt -S -attributor -openmp-opt-cgscc -stats < %s 2>&1 -enable-new-pm=0 | FileCheck %s --check-prefixes=CHECK,LPM
 ; RUN: opt -S -passes='attributor,cgscc(devirt<2>(openmp-opt-cgscc))' -stats -debug-pass-manager < %s 2>&1 | FileCheck %s --check-prefixes=CHECK,NPM
 ; REQUIRES: asserts
 
@@ -66,7 +64,6 @@ declare void @omp_get_thread_num()
 ;                         ... Statistics Collected ...
 ; ===-------------------------------------------------------------------------===
 ;
-; LPM: 1 cgscc-passmgr - Maximum CGSCCPassMgr iterations on one SCC
 ; CHECK: 2 openmp-opt{{.*}}Number of OpenMP runtime functions identified
 ;
 ; There are two matches since the pass is run once per function.

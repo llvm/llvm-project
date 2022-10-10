@@ -38,6 +38,7 @@
 #include <algorithm>
 #include <functional>
 #include <iterator>
+#include <numeric>
 #include <unordered_set>
 
 using namespace llvm;
@@ -185,13 +186,9 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
     Large = true;
   unsigned LSDAEncoding =
       Large ? dwarf::DW_EH_PE_absptr : dwarf::DW_EH_PE_udata4;
-  unsigned TTypeEncoding =
-      Large ? dwarf::DW_EH_PE_absptr : dwarf::DW_EH_PE_udata4;
   if (IsPIC) {
     LSDAEncoding = dwarf::DW_EH_PE_pcrel |
                    (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
-    TTypeEncoding = dwarf::DW_EH_PE_indirect | dwarf::DW_EH_PE_pcrel |
-                    (Large ? dwarf::DW_EH_PE_sdata8 : dwarf::DW_EH_PE_sdata4);
   }
 
   std::unique_ptr<MCDisassembler> DisAsm(
@@ -235,7 +232,6 @@ BinaryContext::createBinaryContext(const ObjectFile *File, bool IsPIC,
       std::move(InstructionPrinter), std::move(MIA), nullptr, std::move(MRI),
       std::move(DisAsm));
 
-  BC->TTypeEncoding = TTypeEncoding;
   BC->LSDAEncoding = LSDAEncoding;
 
   BC->MAB = std::unique_ptr<MCAsmBackend>(
@@ -389,6 +385,12 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
     // can pull this constant island and emit it as part of this function
     // too.
     auto IslandIter = AddressToConstantIslandMap.lower_bound(Address);
+
+    if (IslandIter != AddressToConstantIslandMap.begin() &&
+        (IslandIter == AddressToConstantIslandMap.end() ||
+         IslandIter->first > Address))
+      --IslandIter;
+
     if (IslandIter != AddressToConstantIslandMap.end()) {
       if (MCSymbol *IslandSym =
               IslandIter->second->getOrCreateProxyIslandAccess(Address, BF)) {
@@ -538,8 +540,12 @@ bool BinaryContext::analyzeJumpTable(
   if (NextJTAddress)
     UpperBound = std::min(NextJTAddress, UpperBound);
 
-  LLVM_DEBUG(dbgs() << "BOLT-DEBUG: analyzeJumpTable in " << BF.getPrintName()
-                    << '\n');
+  LLVM_DEBUG({
+    using JTT = JumpTable::JumpTableType;
+    dbgs() << formatv("BOLT-DEBUG: analyzeJumpTable @{0:x} in {1}, JTT={2}\n",
+                      Address, BF.getPrintName(),
+                      Type == JTT::JTT_PIC ? "PIC" : "Normal");
+  });
   const uint64_t EntrySize = getJumpTableEntrySize(Type);
   for (uint64_t EntryAddress = Address; EntryAddress <= UpperBound - EntrySize;
        EntryAddress += EntrySize) {
@@ -570,7 +576,7 @@ bool BinaryContext::analyzeJumpTable(
     if (Value == BF.getAddress() + BF.getSize()) {
       addEntryAddress(Value);
       HasUnreachable = true;
-      LLVM_DEBUG(dbgs() << "OK: __builtin_unreachable\n");
+      LLVM_DEBUG(dbgs() << formatv("OK: {0:x} __builtin_unreachable\n", Value));
       continue;
     }
 
@@ -585,12 +591,12 @@ bool BinaryContext::analyzeJumpTable(
           if (TargetBF) {
             dbgs() << "  ! function containing this address: "
                    << TargetBF->getPrintName() << '\n';
-            if (TargetBF->isFragment())
-              dbgs() << "  ! is a fragment\n";
-            for (BinaryFunction *TargetParent : TargetBF->ParentFragments)
-              dbgs() << "  ! its parent is "
-                     << (TargetParent ? TargetParent->getPrintName() : "(none)")
-                     << '\n';
+            if (TargetBF->isFragment()) {
+              dbgs() << "  ! is a fragment";
+              for (BinaryFunction *Parent : TargetBF->ParentFragments)
+                dbgs() << ", parent: " << Parent->getPrintName();
+              dbgs() << '\n';
+            }
           }
         }
         if (Value == BF.getAddress())
@@ -602,11 +608,12 @@ bool BinaryContext::analyzeJumpTable(
     // Check there's an instruction at this offset.
     if (TargetBF->getState() == BinaryFunction::State::Disassembled &&
         !TargetBF->getInstructionAtOffset(Value - TargetBF->getAddress())) {
-      LLVM_DEBUG(dbgs() << "FAIL: no instruction at this offset\n");
+      LLVM_DEBUG(dbgs() << formatv("FAIL: no instruction at {0:x}\n", Value));
       break;
     }
 
     ++NumRealEntries;
+    LLVM_DEBUG(dbgs() << formatv("OK: {0:x} real entry\n", Value));
 
     if (TargetBF != &BF)
       BF.setHasIndirectTargetToSplitFragment(true);
@@ -641,24 +648,14 @@ void BinaryContext::populateJumpTables() {
         analyzeJumpTable(JT->getAddress(), JT->Type, *(JT->Parents[0]),
                          NextJTAddress, &JT->EntriesAsAddress);
     if (!Success) {
-      LLVM_DEBUG(ListSeparator LS;
-                 dbgs() << "failed to analyze jump table in function ";
-                 for (BinaryFunction *Frag
-                      : JT->Parents) dbgs()
-                 << LS << *Frag;
-                 dbgs() << '\n';);
-      JT->print(dbgs());
-      if (NextJTI != JTE) {
-        LLVM_DEBUG(ListSeparator LS;
-                   dbgs() << "next jump table at 0x"
-                          << Twine::utohexstr(NextJTI->second->getAddress())
-                          << " belongs to function ";
-                   for (BinaryFunction *Frag
-                        : NextJTI->second->Parents) dbgs()
-                   << LS << *Frag;
-                   dbgs() << "\n";);
-        NextJTI->second->print(dbgs());
-      }
+      LLVM_DEBUG({
+        dbgs() << "failed to analyze ";
+        JT->print(dbgs());
+        if (NextJTI != JTE) {
+          dbgs() << "next ";
+          NextJTI->second->print(dbgs());
+        }
+      });
       llvm_unreachable("jump table heuristic failure");
     }
     for (BinaryFunction *Frag : JT->Parents) {
@@ -769,6 +766,7 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
   auto isFragmentOf = [](BinaryFunction *Fragment, BinaryFunction *Parent) {
     return (Fragment->isFragment() && Fragment->isParentFragment(Parent));
   };
+  (void)isFragmentOf;
 
   // Two fragments of same function access same jump table
   if (JumpTable *JT = getJumpTableContainingAddress(Address)) {
@@ -778,9 +776,8 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     // Prevent associating a jump table to a specific fragment twice.
     // This simple check arises from the assumption: no more than 2 fragments.
     if (JT->Parents.size() == 1 && JT->Parents[0] != &Function) {
-      bool SameFunction = isFragmentOf(JT->Parents[0], &Function) ||
-                          isFragmentOf(&Function, JT->Parents[0]);
-      assert(SameFunction &&
+      assert((isFragmentOf(JT->Parents[0], &Function) ||
+              isFragmentOf(&Function, JT->Parents[0])) &&
              "cannot re-use jump table of a different function");
       // Duplicate the entry for the parent function for easy access
       JT->Parents.push_back(&Function);
@@ -796,6 +793,7 @@ BinaryContext::getOrCreateJumpTable(BinaryFunction &Function, uint64_t Address,
     }
 
     bool IsJumpTableParent = false;
+    (void)IsJumpTableParent;
     for (BinaryFunction *Frag : JT->Parents)
       if (Frag == &Function)
         IsJumpTableParent = true;
@@ -1651,7 +1649,7 @@ void BinaryContext::preprocessDebugInfo() {
 
     uint16_t DwarfVersion = LineTable->Prologue.getVersion();
     if (DwarfVersion >= 5) {
-      Optional<MD5::MD5Result> Checksum = None;
+      Optional<MD5::MD5Result> Checksum;
       if (LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[0].Checksum;
       Optional<const char *> Name =
@@ -1689,7 +1687,7 @@ void BinaryContext::preprocessDebugInfo() {
       if (Optional<const char *> FName = dwarf::toString(FileNames[I].Name))
         FileName = *FName;
       assert(FileName != "");
-      Optional<MD5::MD5Result> Checksum = None;
+      Optional<MD5::MD5Result> Checksum;
       if (DwarfVersion >= 5 && LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[I].Checksum;
       cantFail(
@@ -2193,27 +2191,31 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   // Create symbols in the LocalCtx so that they get destroyed with it.
   MCSymbol *StartLabel = LocalCtx->createTempSymbol();
   MCSymbol *EndLabel = LocalCtx->createTempSymbol();
-  MCSymbol *ColdStartLabel = LocalCtx->createTempSymbol();
-  MCSymbol *ColdEndLabel = LocalCtx->createTempSymbol();
 
   Streamer->switchSection(Section);
   Streamer->emitLabel(StartLabel);
-  emitFunctionBody(*Streamer, BF, /*EmitColdPart=*/false,
+  emitFunctionBody(*Streamer, BF, BF.getLayout().getMainFragment(),
                    /*EmitCodeOnly=*/true);
   Streamer->emitLabel(EndLabel);
 
-  if (BF.isSplit()) {
-    MCSectionELF *ColdSection =
-        LocalCtx->getELFSection(BF.getColdCodeSectionName(), ELF::SHT_PROGBITS,
-                                ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
-    ColdSection->setHasInstructions(true);
+  using LabelRange = std::pair<const MCSymbol *, const MCSymbol *>;
+  SmallVector<LabelRange> SplitLabels;
+  for (FunctionFragment &FF : BF.getLayout().getSplitFragments()) {
+    MCSymbol *const SplitStartLabel = LocalCtx->createTempSymbol();
+    MCSymbol *const SplitEndLabel = LocalCtx->createTempSymbol();
+    SplitLabels.emplace_back(SplitStartLabel, SplitEndLabel);
 
-    Streamer->switchSection(ColdSection);
-    Streamer->emitLabel(ColdStartLabel);
-    emitFunctionBody(*Streamer, BF, /*EmitColdPart=*/true,
-                     /*EmitCodeOnly=*/true);
-    Streamer->emitLabel(ColdEndLabel);
-    // To avoid calling MCObjectStreamer::flushPendingLabels() which is private
+    MCSectionELF *const SplitSection = LocalCtx->getELFSection(
+        BF.getCodeSectionName(FF.getFragmentNum()), ELF::SHT_PROGBITS,
+        ELF::SHF_EXECINSTR | ELF::SHF_ALLOC);
+    SplitSection->setHasInstructions(true);
+    Streamer->switchSection(SplitSection);
+
+    Streamer->emitLabel(SplitStartLabel);
+    emitFunctionBody(*Streamer, BF, FF, /*EmitCodeOnly=*/true);
+    Streamer->emitLabel(SplitEndLabel);
+    // To avoid calling MCObjectStreamer::flushPendingLabels() which is
+    // private
     Streamer->emitBytes(StringRef(""));
     Streamer->switchSection(Section);
   }
@@ -2229,10 +2231,12 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
 
   const uint64_t HotSize =
       Layout.getSymbolOffset(*EndLabel) - Layout.getSymbolOffset(*StartLabel);
-  const uint64_t ColdSize = BF.isSplit()
-                                ? Layout.getSymbolOffset(*ColdEndLabel) -
-                                      Layout.getSymbolOffset(*ColdStartLabel)
-                                : 0ULL;
+  const uint64_t ColdSize =
+      std::accumulate(SplitLabels.begin(), SplitLabels.end(), 0ULL,
+                      [&](const uint64_t Accu, const LabelRange &Labels) {
+                        return Accu + Layout.getSymbolOffset(*Labels.second) -
+                               Layout.getSymbolOffset(*Labels.first);
+                      });
 
   // Clean-up the effect of the code emission.
   for (const MCSymbol &Symbol : Assembler.symbols()) {

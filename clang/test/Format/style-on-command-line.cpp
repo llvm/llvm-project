@@ -6,7 +6,7 @@
 // RUN: printf "BasedOnStyle: google\nIndentWidth: 5\n" > %t/.clang-format
 // RUN: clang-format -style=file -assume-filename=%t/foo.cpp < %s | FileCheck -strict-whitespace -check-prefix=CHECK5 %s
 // RUN: printf "Invalid:\n" > %t/.clang-format
-// RUN: not clang-format -style=file -fallback-style=webkit -assume-filename=%t/foo.cpp < %s 2>&1 | FileCheck -strict-whitespace -check-prefix=CHECK6 %s
+// RUN: not clang-format -style=file -fallback-style=webkit -assume-filename=%t/foo.cpp < %s 2>&1 | FileCheck -DMSG=%errc_EINVAL -strict-whitespace -check-prefix=CHECK6 %s
 // RUN: rm %t/.clang-format
 // RUN: printf "BasedOnStyle: google\nIndentWidth: 6\n" > %t/_clang-format
 // RUN: clang-format -style=file -assume-filename=%t/foo.cpp < %s | FileCheck -strict-whitespace -check-prefix=CHECK7 %s
@@ -35,7 +35,7 @@ void f() {
 // CHECK4: Error parsing -style: [[MSG]]
 // CHECK5: {{^     int\* i;$}}
 // CHECK6: unknown key 'Invalid'
-// CHECK6: {{^Error reading .*\.clang-format: (I|i)nvalid argument}}
+// CHECK6: {{^Error reading .*\.clang-format:}} [[MSG]]
 // CHECK7: {{^      int\* i;$}}
 // CHECK8: {{^  int\* i;$}}
 // CHECK9: {{^    int \*i;$}}

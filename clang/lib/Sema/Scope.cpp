@@ -156,11 +156,11 @@ void Scope::updateNRVOCandidate(VarDecl *VD) {
 
 void Scope::applyNRVO() {
   // There is no NRVO candidate in the current scope.
-  if (!NRVO.hasValue())
+  if (!NRVO.has_value())
     return;
 
   if (*NRVO && isDeclScope(*NRVO))
-    NRVO.getValue()->setNRVOVariable(true);
+    NRVO.value()->setNRVOVariable(true);
 
   // It's necessary to propagate NRVO candidate to the parent scope for cases
   // when the parent scope doesn't contain a return statement.

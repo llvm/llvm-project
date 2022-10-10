@@ -104,12 +104,9 @@ inline int64_t truncateToSize(int64_t Value, unsigned Bytes) {
 /// Filter iterator.
 template <typename ItrType,
           typename PredType = std::function<bool(const ItrType &)>>
-class FilterIterator
-    : public std::iterator<std::bidirectional_iterator_tag,
-                           typename std::iterator_traits<ItrType>::value_type> {
+class FilterIterator {
+  using inner_traits = std::iterator_traits<ItrType>;
   using Iterator = FilterIterator;
-  using T = typename std::iterator_traits<ItrType>::reference;
-  using PointerT = typename std::iterator_traits<ItrType>::pointer;
 
   PredType Pred;
   ItrType Itr, End;
@@ -128,14 +125,20 @@ class FilterIterator
   }
 
 public:
+  using iterator_category = std::bidirectional_iterator_tag;
+  using value_type = typename inner_traits::value_type;
+  using difference_type = typename inner_traits::difference_type;
+  using pointer = typename inner_traits::pointer;
+  using reference = typename inner_traits::reference;
+
   Iterator &operator++() { next(); return *this; }
   Iterator &operator--() { prev(); return *this; }
   Iterator operator++(int) { auto Tmp(Itr); next(); return Tmp; }
   Iterator operator--(int) { auto Tmp(Itr); prev(); return Tmp; }
   bool operator==(const Iterator &Other) const { return Itr == Other.Itr; }
   bool operator!=(const Iterator &Other) const { return !operator==(Other); }
-  T operator*() { return *Itr; }
-  PointerT operator->() { return &operator*(); }
+  reference operator*() { return *Itr; }
+  pointer operator->() { return &operator*(); }
   FilterIterator(PredType Pred, ItrType Itr, ItrType End)
       : Pred(Pred), Itr(Itr), End(End) {
     nextMatching();
@@ -383,6 +386,8 @@ public:
   }
 
   unsigned getDWARFEncodingSize(unsigned Encoding) {
+    if (Encoding == dwarf::DW_EH_PE_omit)
+      return 0;
     switch (Encoding & 0x0f) {
     default:
       llvm_unreachable("unknown encoding");
@@ -585,6 +590,9 @@ public:
   /// Indicates if relocations are available for usage.
   bool HasRelocations{false};
 
+  /// Indicates if the binary is stripped
+  bool IsStripped{false};
+
   /// Is the binary always loaded at a fixed address. Shared objects and
   /// position-independent executables (PIEs) are examples of binaries that
   /// will have HasFixedLoadAddress set to false.
@@ -606,6 +614,9 @@ public:
 
   /// Number of functions with profile information
   uint64_t NumProfiledFuncs{0};
+
+  /// Number of functions with stale profile information
+  uint64_t NumStaleProfileFuncs{0};
 
   /// Number of objects in profile whose profile was ignored.
   uint64_t NumUnusedProfiledObjects{0};
@@ -663,7 +674,6 @@ public:
 
   /// DWARF encoding. Available encoding types defined in BinaryFormat/Dwarf.h
   /// enum Constants, e.g. DW_EH_PE_omit.
-  unsigned TTypeEncoding = dwarf::DW_EH_PE_omit;
   unsigned LSDAEncoding = dwarf::DW_EH_PE_omit;
 
   BinaryContext(std::unique_ptr<MCContext> Ctx,

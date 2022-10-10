@@ -51,23 +51,20 @@ func.func @test_unary_f32(%arg0 : tensor<4xf32>) -> () {
   // CHECK: "tosa.reciprocal"(%arg0) : (tensor<4xf32>) -> tensor<4xf32>
   %7 = "tosa.reciprocal"(%arg0) : (tensor<4xf32>) -> tensor<*xf32>
 
-  // CHECK: "tosa.reluN"(%arg0) {{.+}} : (tensor<4xf32>) -> tensor<4xf32>
-  %8 = "tosa.reluN"(%arg0) { max_int = 10 : i64, min_int = 0 : i64, min_fp = 0.0 : f32, max_fp = 10.0 : f32 } : (tensor<4xf32>) -> tensor<*xf32>
-
   // CHECK: "tosa.reverse"(%arg0) {axis = 0 : i64} : (tensor<4xf32>) -> tensor<4xf32>
-  %9 = "tosa.reverse"(%arg0) { axis = 0 : i64 } : (tensor<4xf32>) -> tensor<?xf32>
+  %8 = "tosa.reverse"(%arg0) { axis = 0 : i64 } : (tensor<4xf32>) -> tensor<?xf32>
 
   // CHECK: "tosa.rsqrt"(%arg0) : (tensor<4xf32>) -> tensor<4xf32>
-  %10 = "tosa.rsqrt"(%arg0) : (tensor<4xf32>) -> tensor<*xf32>
+  %9 = "tosa.rsqrt"(%arg0) : (tensor<4xf32>) -> tensor<*xf32>
 
   // CHECK: "tosa.tanh"(%arg0) : (tensor<4xf32>) -> tensor<4xf32>
-  %11 = "tosa.tanh"(%arg0) : (tensor<4xf32>) -> tensor<*xf32>
+  %10 = "tosa.tanh"(%arg0) : (tensor<4xf32>) -> tensor<*xf32>
 
   // CHECK: "tosa.sigmoid"(%arg0) : (tensor<4xf32>) -> tensor<4xf32>
-  %12 = "tosa.sigmoid"(%arg0) : (tensor<4xf32>) -> tensor<*xf32>
+  %11 = "tosa.sigmoid"(%arg0) : (tensor<4xf32>) -> tensor<*xf32>
 
   // CHECK: "tosa.cast"(%arg0) : (tensor<4xf32>) -> tensor<4xi32>
-  %13 = "tosa.cast"(%arg0) : (tensor<4xf32>) -> tensor<*xi32>
+  %12 = "tosa.cast"(%arg0) : (tensor<4xf32>) -> tensor<*xi32>
   return
 }
 
@@ -90,26 +87,14 @@ func.func @test_unary_i32(%arg0 : tensor<4xi32>) -> () {
   // CHECK: "tosa.negate"(%arg0) : (tensor<4xi32>) -> tensor<4xi32>
   %4 = "tosa.negate"(%arg0) : (tensor<4xi32>) -> tensor<*xi32>
 
-  // CHECK: "tosa.reluN"(%arg0) {{.+}} : (tensor<4xi32>) -> tensor<4xi32>
-  %5 = "tosa.reluN"(%arg0) { max_int = 10 : i64, min_int = 0 : i64, min_fp = 0.0 : f32, max_fp = 10.0 : f32 } : (tensor<4xi32>) -> tensor<*xi32>
-
   // CHECK: "tosa.reverse"(%arg0) {axis = 0 : i64} : (tensor<4xi32>) -> tensor<4xi32>
-  %6 = "tosa.reverse"(%arg0) { axis = 0 : i64 } : (tensor<4xi32>) -> tensor<?xi32>
+  %5 = "tosa.reverse"(%arg0) { axis = 0 : i64 } : (tensor<4xi32>) -> tensor<?xi32>
 
   // CHECK: "tosa.rescale"(%arg0) {{.+}} : (tensor<4xi32>) -> tensor<4xi16>
-  %7 = "tosa.rescale"(%arg0) {input_zp = 243 : i32, output_zp = 252 : i32, multiplier = [42 : i32, 43 : i32], shift = [14 : i32, 15 : i32], scale32 = false, double_round = false, per_channel = false} : (tensor<4xi32>)  -> (tensor<*xi16>)
+  %6 = "tosa.rescale"(%arg0) {input_zp = 243 : i32, output_zp = 252 : i32, multiplier = [42 : i32, 43 : i32], shift = [14 : i32, 15 : i32], scale32 = false, double_round = false, per_channel = false} : (tensor<4xi32>)  -> (tensor<*xi16>)
 
   // CHECK: "tosa.identity"(%arg0) : (tensor<4xi32>) -> tensor<4xi32>
-  %8 = "tosa.identity"(%arg0) : (tensor<4xi32>) -> tensor<?xi32>
-  return
-}
-
-// -----
-
-// CHECK-LABEL: @test_unary_i1
-func.func @test_unary_i1(%arg0 : tensor<4xi1>) -> () {
-  // CHECK: "tosa.logical_not"(%arg0) : (tensor<4xi1>) -> tensor<4xi1>
-  %0 = "tosa.logical_not"(%arg0) : (tensor<4xi1>) -> tensor<*xi1>
+  %7 = "tosa.identity"(%arg0) : (tensor<4xi32>) -> tensor<?xi32>
   return
 }
 
@@ -979,61 +964,71 @@ func.func @transpose_conv2d_strided(%arg0: tensor<1x5x7x1xf32>, %arg1: tensor<1x
 
 // -----
 
-// CHECK-LABEL: @resize_output_size
-func.func @resize_output_size(%arg0: tensor<2x?x?x3xi32>) {
-  // CHECK: -> tensor<2x4x5x3xi32>
-  %0 = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", offset = [0, 1], offset_fp = [0.000000e+00 : f32, 0.000000e+00 : f32], output_size = [4, 5], shift = 8 : i32, stride = [1, 1], stride_fp = [0.000000e+00 : f32, 0.000000e+00 : f32]} : (tensor<2x?x?x3xi32>) -> tensor<?x?x?x?xi32>
-  return
-}
-
-// -----
-
 // CHECK-LABEL: @resize_int_horizontal
-func.func @resize_int_horizontal(%arg0: tensor<1x2x4x1xi32>) {
-  // CHECK: -> tensor<1x2x7x1xi32>
-  %0 = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", offset = [0, 0], offset_fp = [0.000000e+00 : f32, 0.000000e+00 : f32], output_size = [-1, -1], shift = 8 : i32, stride = [256, 128], stride_fp = [0.000000e+00 : f32, 0.000000e+00 : f32]} : (tensor<1x2x4x1xi32>) -> tensor<?x?x?x?xi32>
+func.func @resize_int_horizontal(%arg0: tensor<1x15x13x1xi8>) {
+  // CHECK: -> tensor<1x23x179x1xi8>
+  %0 = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [11, 7, 89, 6], offset = [0, 0], border = [0, 0]} : (tensor<1x15x13x1xi8>) -> tensor<?x?x?x?xi8>
   return
 }
 
 // -----
 
 // CHECK-LABEL: @resize_int_vertical
-func.func @resize_int_vertical(%arg0: tensor<1x2x4x1xi32>) {
-  // CHECK: -> tensor<1x3x4x1xi32>
-  %0 = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", offset = [0, 0], offset_fp = [0.000000e+00 : f32, 0.000000e+00 : f32], output_size = [-1, -1], shift = 8 : i32, stride = [128, 256], stride_fp = [0.000000e+00 : f32, 0.000000e+00 : f32]} : (tensor<1x2x4x1xi32>) -> tensor<?x?x?x?xi32>
+func.func @resize_int_vertical(%arg0: tensor<1x49x42x1xi16>) {
+  // CHECK: -> tensor<1x112x220x1xi16>
+  %0 = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [37, 16, 219, 41], offset = [0, 0], border = [0, 0]} : (tensor<1x49x42x1xi16>) -> tensor<?x?x?x?xi16>
   return
 }
 
 // -----
 
-// CHECK-LABEL: @resize_int_offsetted
-func.func @resize_int_offsetted(%arg0: tensor<1x2x4x1xi32>) {
-  // CHECK: -> tensor<1x4x6x1xi32>
-  %0 = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", offset = [64, 64], offset_fp = [0.000000e+00 : f32, 0.000000e+00 : f32], output_size = [-1, -1], shift = 8 : i32, stride = [64, 128], stride_fp = [0.000000e+00 : f32, 0.000000e+00 : f32]} : (tensor<1x2x4x1xi32>) -> tensor<?x?x?x?xi32>
+// CHECK-LABEL: @resize_int_power_of_two_upscale
+func.func @resize_int_power_of_two_upscale(%arg0: tensor<1x23x19x1xi8>) {
+  // CHECK: -> tensor<1x353x289x1xi32>
+  %0 = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [16, 1, 16, 1], offset = [0, 0], border = [0, 0]} : (tensor<1x23x19x1xi8>) -> tensor<?x?x?x?xi32>
   return
 }
 
 // -----
 
+// CHECK-LABEL: @resize_int_power_of_two_upscale_offsetted
+func.func @resize_int_power_of_two_upscale_offsetted(%arg0: tensor<1x41x26x1xi16>) {
+  // CHECK: -> tensor<1x328x208x1xi48>
+  %0 = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [16, 2, 16, 2], offset = [-7, -7], border = [7, 7]} : (tensor<1x41x26x1xi16>) -> tensor<?x?x?x?xi48>
+  return
+}
+
+// -----
 // CHECK-LABEL: @resize_fp_horizontal
-func.func @resize_fp_horizontal(%arg0: tensor<1x2x4x1xi32>) {
-  // CHECK: -> tensor<1x2x7x1xi32>
-  %0 = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", offset = [0, 0], offset_fp = [0.000000e+00 : f32, 0.000000e+00 : f32], output_size = [-1, -1], shift = 0 : i32, stride = [0, 0], stride_fp = [1.000000e+00 : f32, 5.000000e-01 : f32]} : (tensor<1x2x4x1xi32>) -> tensor<?x?x?x?xi32>
+func.func @resize_fp_horizontal(%arg0: tensor<1x50x48x1xf32>) {
+  // CHECK: -> tensor<1x106x85x1xf32>
+  %0 = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [15, 7, 84, 47], offset = [0, 0], border = [0, 0]} : (tensor<1x50x48x1xf32>) -> tensor<?x?x?x?xf32>
+  return
+}
+
+// -----
+// CHECK-LABEL: @resize_fp_vertical
+func.func @resize_fp_vertical(%arg0: tensor<1x50x48x1xf32>) {
+  // CHECK: -> tensor<1x128x13x1xf32>
+  %0 = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [127, 49, 12, 47], offset = [0, 0], border = [0, 0]} : (tensor<1x50x48x1xf32>) -> tensor<?x?x?x?xf32>
   return
 }
 
 // -----
 
-// CHECK-LABEL: @resize_fp_vertical
-func.func @resize_fp_vertical(%arg0: tensor<1x2x4x1xi32>) {
-  // CHECK: -> tensor<1x3x4x1xi32>
-  %0 = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", offset = [0, 0], offset_fp = [0.000000e+00 : f32, 0.000000e+00 : f32], output_size = [-1, -1], shift = 0 : i32, stride = [0, 0], stride_fp = [5.000000e-01 : f32, 1.000000e+00 : f32]} : (tensor<1x2x4x1xi32>) -> tensor<?x?x?x?xi32>
+// CHECK-LABEL: @resize_fp_power_of_two_upscale
+func.func @resize_fp_power_of_two_upscale(%arg0: tensor<1x23x23x1xf32>) {
+  // CHECK: -> tensor<1x89x89x1xf32>
+  %0 = "tosa.resize"(%arg0) {mode = "BILINEAR", scale = [4, 1, 4, 1], offset = [0, 0], border = [0, 0]} : (tensor<1x23x23x1xf32>) -> tensor<?x?x?x?xf32>
   return
 }
-// CHECK-LABEL: @resize_fp_offsetted
-func.func @resize_fp_offsetted(%arg0: tensor<1x2x4x1xi32>) {
-  // CHECK: -> tensor<1x4x6x1xi32>
-  %0 = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", offset = [0, 0], offset_fp = [2.500000e-01 : f32, 2.500000e-01 : f32], output_size = [-1, -1], shift = 0 : i32, stride = [0, 0], stride_fp = [2.500000e-01 : f32, 5.000000e-01 : f32]} : (tensor<1x2x4x1xi32>) -> tensor<?x?x?x?xi32>
+
+// -----
+
+// CHECK-LABEL: @resize_fp_power_of_two_upscale_offsetted
+func.func @resize_fp_power_of_two_upscale_offsetted(%arg0: tensor<1x50x48x1xf32>) {
+  // CHECK: -> tensor<1x1600x1536x1xf32>
+  %0 = "tosa.resize"(%arg0) {mode = "NEAREST_NEIGHBOR", scale = [64, 2, 64, 2], offset = [-31, -31], border = [31, 31]} : (tensor<1x50x48x1xf32>) -> tensor<?x?x?x?xf32>
   return
 }
 

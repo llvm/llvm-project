@@ -135,7 +135,7 @@ func.func @conv_slice(%input: tensor<1x225x225x3xf32>, %filter: tensor<3x3x3x32x
   %c0 = arith.constant 0 : index
   %cst = arith.constant 0.0 : f32
 
-  %init = linalg.init_tensor [1, 112, 112, 32] : tensor<1x112x112x32xf32>
+  %init = tensor.empty() : tensor<1x112x112x32xf32>
   %fill = linalg.fill ins(%cst : f32) outs(%init : tensor<1x112x112x32xf32>) -> tensor<1x112x112x32xf32>
 
   %conv = linalg.conv_2d_nhwc_hwcf
@@ -149,7 +149,7 @@ func.func @conv_slice(%input: tensor<1x225x225x3xf32>, %filter: tensor<3x3x3x32x
 }
 
 // CHECK: func @conv_slice
-// CHECK: %[[INIT:.+]] = linalg.init_tensor [1, 112, 112, 32] : tensor<1x112x112x32xf32>
+// CHECK: %[[INIT:.+]] = tensor.empty() : tensor<1x112x112x32xf32>
 // CHECK: %[[SLICE0:.+]] = tensor.extract_slice %arg0[0, 128, 128, 0] [1, 65, 65, 3] [1, 1, 1, 1] : tensor<1x225x225x3xf32> to tensor<1x65x65x3xf32>
 // CHECK: %[[SLICE1:.+]] = tensor.extract_slice %arg1[0, 0, 0, 16] [3, 3, 3, 16] [1, 1, 1, 1] : tensor<3x3x3x32xf32> to tensor<3x3x3x16xf32>
 // CHECK: %[[SLICE2:.+]] = tensor.extract_slice %[[INIT]][0, 64, 64, 16] [1, 32, 32, 16] [1, 1, 1, 1] : tensor<1x112x112x32xf32> to tensor<1x32x32x16xf32>
@@ -162,7 +162,7 @@ func.func @conv_slice(%input: tensor<1x225x225x3xf32>, %filter: tensor<3x3x3x32x
 // The slice is not supposed to be bubbled up when it is rank-reducing.
 func.func @rank_reducing_slice(%width : index) -> tensor<1x1x1x?xf32> {
   %cst = arith.constant 1.000000e+00 : f32
-  %init = linalg.init_tensor [1, %width] : tensor<1x?xf32>
+  %init = tensor.empty(%width) : tensor<1x?xf32>
   %fill = linalg.fill ins(%cst : f32) outs(%init : tensor<1x?xf32>) -> tensor<1x?xf32>
   %slice = tensor.extract_slice %fill[0, 0] [1, %width] [1, 1] : tensor<1x?xf32> to tensor<?xf32>
   %expand = tensor.expand_shape %slice [[0, 1, 2, 3]] : tensor<?xf32> into tensor<1x1x1x?xf32>
@@ -170,7 +170,7 @@ func.func @rank_reducing_slice(%width : index) -> tensor<1x1x1x?xf32> {
 }
 
 // CHECK: func @rank_reducing_slice
-// CHECK: %[[INIT:.+]] = linalg.init_tensor
+// CHECK: %[[INIT:.+]] = tensor.empty
 // CHECK: %[[FILL:.+]] = linalg.fill ins
 // CHECK: %[[SLICE:.+]] = tensor.extract_slice %[[FILL]]
 // CHECK: %[[EXPAND:.+]] = tensor.expand_shape %[[SLICE]]

@@ -441,17 +441,17 @@ public:
     // of enclosing namespaces for friend function declarations.
     friend raw_ostream &operator<<(raw_ostream &OS, const SCC &C) {
       OS << '(';
-      int i = 0;
+      int I = 0;
       for (LazyCallGraph::Node &N : C) {
-        if (i > 0)
+        if (I > 0)
           OS << ", ";
         // Elide the inner elements if there are too many.
-        if (i > 8) {
+        if (I > 8) {
           OS << "..., " << *C.Nodes.back();
           break;
         }
         OS << N;
-        ++i;
+        ++I;
       }
       OS << ')';
       return OS;
@@ -533,6 +533,14 @@ public:
   /// are necessarily within some actual SCC that nests within it. Since
   /// a direct call *is* a reference, there will always be at least one RefSCC
   /// around any SCC.
+  ///
+  /// Spurious ref edges, meaning ref edges that still exist in the call graph
+  /// even though the corresponding IR reference no longer exists, are allowed.
+  /// This is mostly to support argument promotion, which can modify a caller to
+  /// no longer pass a function. The only place that needs to specially handle
+  /// this is deleting a dead function/node, otherwise the dead ref edges are
+  /// automatically removed when visiting the function/node no longer containing
+  /// the ref edge.
   class RefSCC {
     friend class LazyCallGraph;
     friend class LazyCallGraph::Node;
@@ -563,17 +571,17 @@ public:
     // of enclosing namespaces for friend function declarations.
     friend raw_ostream &operator<<(raw_ostream &OS, const RefSCC &RC) {
       OS << '[';
-      int i = 0;
+      int I = 0;
       for (LazyCallGraph::SCC &C : RC) {
-        if (i > 0)
+        if (I > 0)
           OS << ", ";
         // Elide the inner elements if there are too many.
-        if (i > 4) {
+        if (I > 4) {
           OS << "..., " << *RC.SCCs.back();
           break;
         }
         OS << C;
-        ++i;
+        ++I;
       }
       OS << ']';
       return OS;
@@ -823,8 +831,8 @@ public:
     /// effort has been made to minimize the overhead of common cases such as
     /// self-edges and edge removals which result in a spanning tree with no
     /// more cycles.
-    SmallVector<RefSCC *, 1> removeInternalRefEdge(Node &SourceN,
-                                                   ArrayRef<Node *> TargetNs);
+    [[nodiscard]] SmallVector<RefSCC *, 1>
+    removeInternalRefEdge(Node &SourceN, ArrayRef<Node *> TargetNs);
 
     /// A convenience wrapper around the above to handle trivial cases of
     /// inserting a new call edge.
@@ -1156,14 +1164,14 @@ private:
   /// Allocates an SCC and constructs it using the graph allocator.
   ///
   /// The arguments are forwarded to the constructor.
-  template <typename... Ts> SCC *createSCC(Ts &&... Args) {
+  template <typename... Ts> SCC *createSCC(Ts &&...Args) {
     return new (SCCBPA.Allocate()) SCC(std::forward<Ts>(Args)...);
   }
 
   /// Allocates a RefSCC and constructs it using the graph allocator.
   ///
   /// The arguments are forwarded to the constructor.
-  template <typename... Ts> RefSCC *createRefSCC(Ts &&... Args) {
+  template <typename... Ts> RefSCC *createRefSCC(Ts &&...Args) {
     return new (RefSCCBPA.Allocate()) RefSCC(std::forward<Ts>(Args)...);
   }
 

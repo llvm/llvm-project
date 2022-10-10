@@ -509,7 +509,7 @@ TEST_F(GLRTest, PerfectForestNodeSharing) {
   // item `expr := • IDENTIFIER`, and both have different goto states on the
   // nonterminal `expr`.
   build(R"bnf(
-    _ := test
+    _ := test EOF
 
     test := { expr
     test := { IDENTIFIER
@@ -548,7 +548,7 @@ TEST_F(GLRTest, GLRReduceOrder) {
   // foo should be reduced first, so that in step 2 we have completed reduces
   // for test, and form an ambiguous forest node.
   build(R"bnf(
-    _ := test
+    _ := test EOF
 
     test := IDENTIFIER
     test := foo
@@ -575,7 +575,7 @@ TEST_F(GLRTest, RecoveryEndToEnd) {
   //  - multiple possible recovery rules
   //  - recovery from outer scopes is rejected
   build(R"bnf(
-    _ := block
+    _ := block EOF
 
     block := { block [recover=Braces] }
     block := { numbers [recover=Braces] }
@@ -606,14 +606,14 @@ TEST_F(GLRTest, RecoveryEndToEnd) {
 
 TEST_F(GLRTest, RecoverTerminal) {
   build(R"bnf(
-    _ := stmt
+    _ := stmt EOF
 
     stmt := IDENTIFIER ; [recover=Skip]
   )bnf");
   TestLang.Table = LRTable::buildSLR(TestLang.G);
   TestLang.RecoveryStrategies.try_emplace(
       extensionID("Skip"),
-      [](Token::Index Start, const TokenStream &) { return Start + 1; });
+      [](Token::Index Start, const TokenStream &) { return Start; });
   clang::LangOptions LOptions;
   TokenStream Tokens = cook(lex("foo", LOptions), LOptions);
 
@@ -625,10 +625,92 @@ TEST_F(GLRTest, RecoverTerminal) {
             "[  1, end) └─; := <opaque>\n");
 }
 
+TEST_F(GLRTest, RecoverUnrestrictedReduce) {
+  // Here, ! is not in any rule and therefore not in the follow set of `word`.
+  // We would not normally reduce `word := IDENTIFIER`, but do so for recovery.
+
+  build(R"bnf(
+    _ := sentence EOF
+
+    word := IDENTIFIER
+    sentence := word word [recover=AcceptAnyTokenInstead]
+  )bnf");
+
+  clang::LangOptions LOptions;
+  const TokenStream &Tokens = cook(lex("id !", LOptions), LOptions);
+  TestLang.Table = LRTable::buildSLR(TestLang.G);
+  TestLang.RecoveryStrategies.try_emplace(
+      extensionID("AcceptAnyTokenInstead"),
+      [](Token::Index Start, const TokenStream &Stream) { return Start + 1; });
+
+  const ForestNode &Parsed =
+      glrParse({Tokens, Arena, GSStack}, id("sentence"), TestLang);
+  EXPECT_EQ(Parsed.dumpRecursive(TestLang.G),
+            "[  0, end) sentence := word word [recover=AcceptAnyTokenInstead]\n"
+            "[  0,   1) ├─word := IDENTIFIER\n"
+            "[  0,   1) │ └─IDENTIFIER := tok[0]\n"
+            "[  1, end) └─word := <opaque>\n");
+}
+
+TEST_F(GLRTest, RecoveryFromStartOfInput) {
+  build(R"bnf(
+    _ := start [recover=Fallback] EOF
+
+    start := IDENTIFIER
+  )bnf");
+  TestLang.Table = LRTable::buildSLR(TestLang.G);
+  bool fallback_recovered = false;
+  auto fallback = [&](Token::Index Start, const TokenStream & Code) {
+    fallback_recovered = true;
+    return Code.tokens().size();
+  };
+  TestLang.RecoveryStrategies.try_emplace(
+      extensionID("Fallback"),
+      fallback);
+  clang::LangOptions LOptions;
+  TokenStream Tokens = cook(lex("?", LOptions), LOptions);
+
+  const ForestNode &Parsed =
+      glrParse({Tokens, Arena, GSStack}, id("start"), TestLang);
+  EXPECT_TRUE(fallback_recovered);
+  EXPECT_EQ(Parsed.dumpRecursive(TestLang.G),
+            "[  0, end) start := <opaque>\n");
+}
+
+TEST_F(GLRTest, RepeatedRecovery) {
+  // We require multiple steps of recovery at eof and then a reduction in order
+  // to successfully parse.
+  build(R"bnf(
+    _ := function EOF
+    # FIXME: this forces EOF to be in follow(signature).
+    # Remove it once we use unconstrained reduction for recovery.
+    _ := signature EOF
+
+    function := signature body [recover=Skip]
+    signature := IDENTIFIER params [recover=Skip]
+    params := ( )
+    body := { }
+  )bnf");
+  TestLang.Table = LRTable::buildSLR(TestLang.G);
+  TestLang.RecoveryStrategies.try_emplace(
+      extensionID("Skip"),
+      [](Token::Index Start, const TokenStream &) { return Start; });
+  clang::LangOptions LOptions;
+  TokenStream Tokens = cook(lex("main", LOptions), LOptions);
+
+  const ForestNode &Parsed =
+      glrParse({Tokens, Arena, GSStack}, id("function"), TestLang);
+  EXPECT_EQ(Parsed.dumpRecursive(TestLang.G),
+            "[  0, end) function := signature body [recover=Skip]\n"
+            "[  0,   1) ├─signature := IDENTIFIER params [recover=Skip]\n"
+            "[  0,   1) │ ├─IDENTIFIER := tok[0]\n"
+            "[  1,   1) │ └─params := <opaque>\n"
+            "[  1, end) └─body := <opaque>\n");
+}
 
 TEST_F(GLRTest, NoExplicitAccept) {
   build(R"bnf(
-    _ := test
+    _ := test EOF
 
     test := IDENTIFIER test
     test := IDENTIFIER
@@ -651,7 +733,7 @@ TEST_F(GLRTest, NoExplicitAccept) {
 
 TEST_F(GLRTest, GuardExtension) {
   build(R"bnf(
-    _ := start
+    _ := start EOF
 
     start := IDENTIFIER [guard]
   )bnf");

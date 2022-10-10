@@ -1,12 +1,10 @@
 ; RUN: llc -march=hexagon < %s | FileCheck %s
 
-; Test that code is generated for the vector sint_to_fp node. The compiler
-; asserts with a cannot select message if the node is not expanded. When
-; expanded, the generated code is very inefficient, so iwe need to find a more
-; efficient code sequence to generate.
+; Test that code is generated for the vector sint_to_fp node.
 
-; CHECK: convert_w2sf
+; The floor builtin is still scalarized.
 ; CHECK: call floorf
+; CHECK: vmem
 
 target triple = "hexagon"
 

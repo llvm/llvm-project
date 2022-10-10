@@ -39,15 +39,21 @@ jobs:
           - windows-2019
           # We're using a specific version of macOS due to:
           # https://github.com/actions/virtual-environments/issues/5900
-          # We need addtional testing to see if our workaround works for
-          # new macOS builds.
-          - macOS-10.15
+          - macOS-11
     steps:
       - name: Setup Windows
         if: startsWith(matrix.os, 'windows')
         uses: llvm/actions/setup-windows@main
         with:
           arch: amd64
+      # On Windows, starting with win19/20220814.1, cmake choose the 32-bit
+      # python3.10.6 libraries instead of the 64-bit libraries when building
+      # lldb.  Using this setup-python action to make 3.10 the default
+      # python fixes this.
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
       - name: Install Ninja
         uses: llvm/actions/install-ninja@main
       # actions/checkout deletes any existing files in the new git directory,
@@ -74,7 +80,7 @@ jobs:
         env:
           # Workaround for https://github.com/actions/virtual-environments/issues/5900.
           # This should be a no-op for non-mac OSes
-          PKG_CONFIG_PATH: /usr/local/Homebrew/Library/Homebrew/os/mac/pkgconfig//11
+          PKG_CONFIG_PATH: /usr/local/Homebrew/Library/Homebrew/os/mac/pkgconfig//12
         with:
           cmake_args: '-GNinja -DLLVM_ENABLE_PROJECTS="${{ inputs.projects }}" -DCMAKE_BUILD_TYPE=Release -DLLDB_INCLUDE_TESTS=OFF -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache'
           build_target:  '${{ inputs.build_target }}'

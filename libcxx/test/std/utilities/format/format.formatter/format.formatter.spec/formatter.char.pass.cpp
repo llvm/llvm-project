@@ -23,6 +23,7 @@
 #include <concepts>
 #include <type_traits>
 
+#include "test_format_context.h"
 #include "test_macros.h"
 #include "make_string.h"
 
@@ -42,8 +43,8 @@ void test(StringT expected, StringViewT fmt, ArgumentT arg) {
   auto out = std::back_inserter(result);
   using FormatCtxT = std::basic_format_context<decltype(out), CharT>;
 
-  auto format_ctx = std::__format_context_create<decltype(out), CharT>(
-      out, std::make_format_args<FormatCtxT>(arg));
+  FormatCtxT format_ctx =
+      test_format_context_create<decltype(out), CharT>(out, std::make_format_args<FormatCtxT>(arg));
   formatter.format(arg, format_ctx);
   assert(result == expected);
 }

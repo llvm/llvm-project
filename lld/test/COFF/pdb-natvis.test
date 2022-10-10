@@ -14,13 +14,13 @@ RUN:   --check-prefix=CHECK-THIRD %s
 RUN: lld-link /DEBUG %t.obj /nodefaultlib /entry:main /NATVIS:%p/Inputs/test2.natvis \
 RUN:   /OUT:%t.exe /PDB:%t.pdb 2>&1 | FileCheck --check-prefix=CHECK-MISSING %s
 
-CHECK-FIRST:      {{.*}}natvis-1.natvis (16 bytes): obj=<null>, vname={{.*}}natvis-1.natvis, crc=355285096, compression=None
+CHECK-FIRST:      {{.*}}natvis-1.natvis ({{16|17}} bytes): obj=<null>, vname={{.*}}natvis-1.natvis, crc={{355285096|3974675339}}, compression=None
 CHECK-FIRST-NEXT: 1st Natvis Test
 
-CHECK-SECOND:      {{.*}}natvis-2.natvis (19 bytes): obj=<null>, vname={{.*}}natvis-2.natvis, crc=4252640062, compression=None
+CHECK-SECOND:      {{.*}}natvis-2.natvis ({{19|20}} bytes): obj=<null>, vname={{.*}}natvis-2.natvis, crc={{4252640062|1846024273}}, compression=None
 CHECK-SECOND-NEXT: Second Natvis Test
 
-CHECK-THIRD:      {{.*}}natvis-3.natvis (18 bytes): obj=<null>, vname={{.*}}natvis-3.natvis, crc=2069719849, compression=None
+CHECK-THIRD:      {{.*}}natvis-3.natvis ({{18|19}} bytes): obj=<null>, vname={{.*}}natvis-3.natvis, crc={{2069719849|3982342878}}, compression=None
 CHECK-THIRD-NEXT: Third Natvis Test
 
 CHECK-MISSING: Cannot open input file: {{.*}}test2.natvis

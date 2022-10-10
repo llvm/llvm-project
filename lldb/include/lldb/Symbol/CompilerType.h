@@ -121,6 +121,8 @@ public:
 
   bool IsIntegerOrEnumerationType(bool &is_signed) const;
 
+  bool IsBooleanType() const;
+
   bool IsPolymorphicClass() const;
 
   /// \param target_type    Can pass nullptr.
@@ -338,14 +340,28 @@ public:
   GetIndexOfChildMemberWithName(const char *name, bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) const;
 
-  size_t GetNumTemplateArguments() const;
+  /// Return the number of template arguments the type has.
+  /// If expand_pack is true, then variadic argument packs are automatically
+  /// expanded to their supplied arguments. If it is false an argument pack
+  /// will only count as 1 argument.
+  size_t GetNumTemplateArguments(bool expand_pack = false) const;
 
-  lldb::TemplateArgumentKind GetTemplateArgumentKind(size_t idx) const;
-  CompilerType GetTypeTemplateArgument(size_t idx) const;
+  // Return the TemplateArgumentKind of the template argument at index idx.
+  // If expand_pack is true, then variadic argument packs are automatically
+  // expanded to their supplied arguments. With expand_pack set to false, an
+  // arguement pack will count as 1 argument and return a type of Pack.
+  lldb::TemplateArgumentKind
+  GetTemplateArgumentKind(size_t idx, bool expand_pack = false) const;
+  CompilerType GetTypeTemplateArgument(size_t idx,
+                                       bool expand_pack = false) const;
 
   /// Returns the value of the template argument and its type.
+  /// If expand_pack is true, then variadic argument packs are automatically
+  /// expanded to their supplied arguments. With expand_pack set to false, an
+  /// arguement pack will count as 1 argument and it is invalid to call this
+  /// method on the pack argument.
   llvm::Optional<IntegralTemplateArgument>
-  GetIntegralTemplateArgument(size_t idx) const;
+  GetIntegralTemplateArgument(size_t idx, bool expand_pack = false) const;
 
   CompilerType GetTypeForFormatters() const;
 

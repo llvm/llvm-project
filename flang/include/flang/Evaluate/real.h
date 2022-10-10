@@ -170,24 +170,32 @@ public:
   static constexpr int MINEXPONENT{2 - exponentBias};
   Real RRSPACING() const;
   Real SPACING() const;
-  Real SET_EXPONENT(int) const;
+  Real SET_EXPONENT(std::int64_t) const;
   Real FRACTION() const;
 
   // SCALE(); also known as IEEE_SCALB and (in IEEE-754 '08) ScaleB.
   template <typename INT>
   ValueWithRealFlags<Real> SCALE(const INT &by,
       Rounding rounding = TargetCharacteristics::defaultRounding) const {
-    auto expo{exponentBias + by.ToInt64()};
+    // Normalize a fraction with just its LSB set and then multiply.
+    // (Set the LSB, not the MSB, in case the scale factor needs to
+    //  be subnormal.)
+    auto adjust{exponentBias + binaryPrecision - 1};
+    auto expo{adjust + by.ToInt64()};
+    Real twoPow;
+    RealFlags flags;
+    int rMask{1};
     if (IsZero()) {
       expo = exponentBias; // ignore by, don't overflow
     } else if (by > INT{maxExponent}) {
-      expo = maxExponent;
-    } else if (by < INT{-exponentBias}) {
-      expo = -1;
+      expo = maxExponent + binaryPrecision - 1;
+    } else if (by < INT{-adjust}) { // underflow
+      expo = 0;
+      rMask = 0;
+      flags.set(RealFlag::Underflow);
     }
-    Real twoPow;
-    RealFlags flags{
-        twoPow.Normalize(false, static_cast<int>(expo), Fraction::MASKL(1))};
+    flags |=
+        twoPow.Normalize(false, static_cast<int>(expo), Fraction::MASKR(rMask));
     ValueWithRealFlags<Real> result{Multiply(twoPow, rounding)};
     result.flags |= flags;
     return result;

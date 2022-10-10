@@ -437,6 +437,10 @@ def ReturnUndefChecker : Checker<"UndefReturn">,
   HelpText<"Check for uninitialized values being returned to the caller">,
   Documentation<HasDocumentation>;
 
+def UndefinedNewArraySizeChecker : Checker<"NewArraySize">,
+  HelpText<"Check if the size of the array in a new[] expression is undefined">,
+  Documentation<HasDocumentation>;
+
 } // end "core.uninitialized"
 
 //===----------------------------------------------------------------------===//

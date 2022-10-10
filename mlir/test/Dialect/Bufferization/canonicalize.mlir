@@ -46,52 +46,46 @@ func.func @no_fold_buffer_cast_of_tensor_load(%arg0: memref<?xf32, 2>)
 
 // -----
 
-// CHECK-DAG: #[[$OFF_3:[a-z0-9]+]] = affine_map<(d0) -> (d0 + 3)>
-// CHECK-DAG: #[[$OFF_UNK:[a-z0-9]+]] = affine_map<(d0)[s0] -> (d0 + s0)>
-
 // If the memrefs are definitely cast-compatible, canonicalize to
 //            cast.
 // CHECK-LABEL: func @canonicalize_buffer_cast_of_tensor_load(
-//  CHECK-SAME:   %[[M:.*]]: memref<?xf32, #[[$OFF_3]]>)
-//  CHECK-SAME:     -> memref<?xf32, #[[$OFF_UNK]]> {
+//  CHECK-SAME:   %[[M:.*]]: memref<?xf32, strided<[1], offset: 3>>)
+//  CHECK-SAME:     -> memref<?xf32, strided<[1], offset: ?>> {
 //   CHECK-NOT: bufferization.to_tensor
 //   CHECK-NOT: bufferization.to_memref
 //       CHECK: %[[R:.*]] = memref.cast %[[M]]
-//  CHECK-SAME:   memref<?xf32, #[[$OFF_3]]> to memref<?xf32, #[[$OFF_UNK]]>
+//  CHECK-SAME:   memref<?xf32, strided<[1], offset: 3>> to memref<?xf32, strided<[1], offset: ?>>
 //       CHECK: return %[[R]]
 func.func @canonicalize_buffer_cast_of_tensor_load(
-  %arg0: memref<?xf32, offset: 3, strides: [1]>)
-  -> memref<?xf32, offset: ?, strides: [1]>
+  %arg0: memref<?xf32, strided<[1], offset: 3>>)
+  -> memref<?xf32, strided<[1], offset: ?>>
 {
-  %0 = bufferization.to_tensor %arg0 : memref<?xf32, offset: 3, strides: [1]>
-  %1 = bufferization.to_memref %0 : memref<?xf32, offset: ?, strides: [1]>
-  return %1 : memref<?xf32, offset: ?, strides: [1]>
+  %0 = bufferization.to_tensor %arg0 : memref<?xf32, strided<[1], offset: 3>>
+  %1 = bufferization.to_memref %0 : memref<?xf32, strided<[1], offset: ?>>
+  return %1 : memref<?xf32, strided<[1], offset: ?>>
 }
 
 // -----
-
-// CHECK-DAG: #[[$OFF_UNK:[a-z0-9]+]] = affine_map<(d0)[s0] -> (d0 + s0)>
-// CHECK-DAG: #[[$OFF_3:[a-z0-9]+]] = affine_map<(d0) -> (d0 + 3)>
 
 // If the memrefs are potentially cast-compatible, canonicalize to
 //            copy.
 // CHECK-LABEL: func @canonicalize_buffer_cast_of_tensor_load_to_copy(
 func.func @canonicalize_buffer_cast_of_tensor_load_to_copy(
-  %arg0: memref<?xf32, offset: ?, strides: [1]>)
-  -> memref<?xf32, offset: 3, strides: [1]> {
-  %0 = bufferization.to_tensor %arg0 : memref<?xf32, offset: ?, strides: [1]>
-  %1 = bufferization.to_memref %0 : memref<?xf32, offset: 3, strides: [1]>
-  return %1 : memref<?xf32, offset: 3, strides: [1]>
+  %arg0: memref<?xf32, strided<[1], offset: ?>>)
+  -> memref<?xf32, strided<[1], offset: 3>> {
+  %0 = bufferization.to_tensor %arg0 : memref<?xf32, strided<[1], offset: ?>>
+  %1 = bufferization.to_memref %0 : memref<?xf32, strided<[1], offset: 3>>
+  return %1 : memref<?xf32, strided<[1], offset: 3>>
 }
-// CHECK-SAME:   %[[M:.*]]: memref<?xf32, #[[$OFF_UNK]]>)
-// CHECK-SAME:     -> memref<?xf32, #[[$OFF_3]]> {
+// CHECK-SAME:   %[[M:.*]]: memref<?xf32, strided<[1], offset: ?>>)
+// CHECK-SAME:     -> memref<?xf32, strided<[1], offset: 3>> {
 //  CHECK-NOT: bufferization.to_tensor
 //  CHECK-NOT: bufferization.to_memref
 //      CHECK: %[[C0:.*]] = arith.constant 0 : index
-//      CHECK: %[[DIM:.*]] = memref.dim %[[M]], %[[C0]] : memref<?xf32, #[[$OFF_UNK]]>
-//      CHECK: %[[ALLOC:.*]] = memref.alloc(%[[DIM]]) : memref<?xf32, #[[$OFF_3]]>
+//      CHECK: %[[DIM:.*]] = memref.dim %[[M]], %[[C0]] : memref<?xf32, strided<[1], offset: ?>>
+//      CHECK: %[[ALLOC:.*]] = memref.alloc(%[[DIM]]) : memref<?xf32, strided<[1], offset: 3>>
 //      CHECK: memref.copy %[[M]], %[[ALLOC]]
-// CHECK-SAME:   memref<?xf32, #[[$OFF_UNK]]> to memref<?xf32, #[[$OFF_3]]>
+// CHECK-SAME:   memref<?xf32, strided<[1], offset: ?>> to memref<?xf32, strided<[1], offset: 3>>
 //      CHECK: return %[[ALLOC]]
 
 // -----
@@ -256,3 +250,18 @@ func.func @alloc_tensor_canonicalize() -> (tensor<4x5x?xf32>) {
 // CHECK:   %[[T0:.+]] = bufferization.alloc_tensor() : tensor<4x5x6xf32>
 // CHECK:   %[[T1:.+]] = tensor.cast %[[T0]] : tensor<4x5x6xf32> to tensor<4x5x?xf32>
 // CHECK:   return %[[T1]]
+
+// -----
+
+func.func @dealloc_canonicalize_clone_removal(%arg0: memref<?xindex>) -> memref<*xf32> {
+  %c1 = arith.constant 1 : index
+  %0 = memref.alloc(%c1) : memref<?xf32>
+  %1 = memref.reshape %0(%arg0) : (memref<?xf32>, memref<?xindex>) -> memref<*xf32>
+  %2 = bufferization.clone %1 : memref<*xf32> to memref<*xf32>
+  memref.dealloc %0 : memref<?xf32>
+  return %2 : memref<*xf32>
+}
+// CHECK-LABEL: @dealloc_canonicalize_clone_removal
+//   CHECK-NOT:   bufferization.clone
+//   CHECK-NOT:   memref.dealloc
+//       CHECK:   return {{.*}}

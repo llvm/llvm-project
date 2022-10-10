@@ -33,20 +33,20 @@ entry:
 
 
 ; PR4908
-define void @test2(<1 x i16>* nocapture %b, i32* nocapture %c) nounwind ssp {
+define void @test2(ptr nocapture %b, ptr nocapture %c) nounwind ssp {
 entry:
-  %arrayidx = getelementptr inbounds <1 x i16>, <1 x i16>* %b, i64 0 ; <<1 x i16>*>
-  %tmp2 = load <1 x i16>, <1 x i16>* %arrayidx               ; <<1 x i16>> [#uses=1]
+  %arrayidx = getelementptr inbounds <1 x i16>, ptr %b, i64 0 ; <ptr>
+  %tmp2 = load <1 x i16>, ptr %arrayidx               ; <<1 x i16>> [#uses=1]
   %tmp6 = bitcast <1 x i16> %tmp2 to i16          ; <i16> [#uses=1]
   %tmp7 = zext i16 %tmp6 to i32                   ; <i32> [#uses=1]
   %ins = or i32 0, %tmp7                          ; <i32> [#uses=1]
-  %arrayidx20 = getelementptr inbounds i32, i32* %c, i64 0 ; <i32*> [#uses=1]
-  store i32 %ins, i32* %arrayidx20
+  %arrayidx20 = getelementptr inbounds i32, ptr %c, i64 0 ; <ptr> [#uses=1]
+  store i32 %ins, ptr %arrayidx20
   ret void
 }
 
 ; PR5262
-@tmp2 = global i64 0                              ; <i64*> [#uses=1]
+@tmp2 = global i64 0                              ; <ptr> [#uses=1]
 
 declare void @use(i64) nounwind
 
@@ -60,7 +60,7 @@ define void @foo(i1) nounwind align 2 {
 ; <label>:3                                       ; preds = %2, %1
   %4 = phi i8 [ 1, %2 ], [ 0, %1 ]                ; <i8> [#uses=1]
   %5 = icmp eq i8 %4, 0                           ; <i1> [#uses=1]
-  %6 = load i64, i64* @tmp2, align 8                   ; <i64> [#uses=1]
+  %6 = load i64, ptr @tmp2, align 8                   ; <i64> [#uses=1]
   %7 = select i1 %5, i64 0, i64 %6                ; <i64> [#uses=1]
   br label %8
 
@@ -70,19 +70,19 @@ define void @foo(i1) nounwind align 2 {
 }
 
 %t0 = type { i32, i32 }
-%t1 = type { i32, i32, i32, i32, i32* }
+%t1 = type { i32, i32, i32, i32, ptr }
 
-declare %t0* @bar2(i64)
+declare ptr @bar2(i64)
 
 define void @bar3(i1, i1) nounwind align 2 {
 ; <label>:2
   br i1 %1, label %10, label %3
 
 ; <label>:3                                       ; preds = %2
-  %4 = getelementptr inbounds %t0, %t0* null, i64 0, i32 1 ; <i32*> [#uses=0]
-  %5 = getelementptr inbounds %t1, %t1* null, i64 0, i32 4 ; <i32**> [#uses=1]
-  %6 = load i32*, i32** %5, align 8                     ; <i32*> [#uses=1]
-  %7 = icmp ne i32* %6, null                      ; <i1> [#uses=1]
+  %4 = getelementptr inbounds %t0, ptr null, i64 0, i32 1 ; <ptr> [#uses=0]
+  %5 = getelementptr inbounds %t1, ptr null, i64 0, i32 4 ; <ptr> [#uses=1]
+  %6 = load ptr, ptr %5, align 8                     ; <ptr> [#uses=1]
+  %7 = icmp ne ptr %6, null                      ; <i1> [#uses=1]
   %8 = zext i1 %7 to i32                          ; <i32> [#uses=1]
   %9 = add i32 %8, 0                              ; <i32> [#uses=1]
   br label %10
@@ -96,7 +96,7 @@ define void @bar3(i1, i1) nounwind align 2 {
 
 ; <label>:13                                      ; preds = %12, %10
   %14 = zext i32 %11 to i64                       ; <i64> [#uses=1]
-  %15 = tail call %t0* @bar2(i64 %14) nounwind      ; <%0*> [#uses=0]
+  %15 = tail call ptr @bar2(i64 %14) nounwind      ; <ptr> [#uses=0]
   ret void
 }
 
@@ -106,7 +106,7 @@ define void @bar3(i1, i1) nounwind align 2 {
 ; PR5262
 ; Make sure the PHI node gets put in a place where all of its operands dominate
 ; it.
-define i64 @test4(i1 %c, i64* %P) nounwind align 2 {
+define i64 @test4(i1 %c, ptr %P) nounwind align 2 {
 BB0:
   br i1 %c, label %BB1, label %BB2
 
@@ -115,7 +115,7 @@ BB1:
 
 BB2:
   %v5_ = phi i1 [ true, %BB0], [false, %BB1]
-  %v6 = load i64, i64* %P
+  %v6 = load i64, ptr %P
   br label %l8
 
 l8:
@@ -131,11 +131,11 @@ define i32 @test5a() {
        ret i32 0
 }
 
-define void @test5(i1* %ptr) personality i32 (...)* @__gxx_personality_v0 {
-  store i1 true, i1* %ptr
+define void @test5(ptr %ptr) personality ptr @__gxx_personality_v0 {
+  store i1 true, ptr %ptr
   %r = invoke i32 @test5a() to label %exit unwind label %unwind
 unwind:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
           cleanup
   br label %exit
 exit:
@@ -145,82 +145,82 @@ exit:
 
 ; PR5673
 
-@test6g = external global i32*  
+@test6g = external global ptr  
 
-define arm_aapcs_vfpcc i32 @test6(i32 %argc, i8** %argv) nounwind {
+define arm_aapcs_vfpcc i32 @test6(i32 %argc, ptr %argv) nounwind {
 entry:
-  store i32* getelementptr (i32, i32* bitcast (i32 (i32, i8**)* @test6 to i32*), i32 -2048), i32** @test6g, align 4
+  store ptr getelementptr (i32, ptr @test6, i32 -2048), ptr @test6g, align 4
   unreachable
 }
 
 
 ; PR5827
 
-%class.RuleBasedBreakIterator = type { i64 ()* }
-%class.UStack = type { i8** }
+%class.RuleBasedBreakIterator = type { ptr }
+%class.UStack = type { ptr }
 
-define i32 @_ZN22RuleBasedBreakIterator15checkDictionaryEi(%class.RuleBasedBreakIterator* %this, i32 %x) align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @_ZN22RuleBasedBreakIterator15checkDictionaryEi(ptr %this, i32 %x) align 2 personality ptr @__gxx_personality_v0 {
 entry:
-  %breaks = alloca %class.UStack, align 4         ; <%class.UStack*> [#uses=3]
-  call void @_ZN6UStackC1Ei(%class.UStack* %breaks, i32 0)
+  %breaks = alloca %class.UStack, align 4         ; <ptr> [#uses=3]
+  call void @_ZN6UStackC1Ei(ptr %breaks, i32 0)
   %tobool = icmp ne i32 %x, 0                     ; <i1> [#uses=1]
   br i1 %tobool, label %cond.end, label %cond.false
 
 terminate.handler:                                ; preds = %ehcleanup
-  %exc = landingpad { i8*, i32 }
+  %exc = landingpad { ptr, i32 }
            cleanup
   call void @_ZSt9terminatev() noreturn nounwind
   unreachable
 
 ehcleanup:                                        ; preds = %cond.false
-  %exc1 = landingpad { i8*, i32 }
-           catch i8* null
-  invoke void @_ZN6UStackD1Ev(%class.UStack* %breaks)
+  %exc1 = landingpad { ptr, i32 }
+           catch ptr null
+  invoke void @_ZN6UStackD1Ev(ptr %breaks)
           to label %cont unwind label %terminate.handler
 
 cont:                                             ; preds = %ehcleanup
-  resume { i8*, i32 } %exc1
+  resume { ptr, i32 } %exc1
 
 cond.false:                                       ; preds = %entry
-  %tmp4 = getelementptr inbounds %class.RuleBasedBreakIterator, %class.RuleBasedBreakIterator* %this, i32 0, i32 0 ; <i64 ()**> [#uses=1]
-  %tmp5 = load i64 ()*, i64 ()** %tmp4                     ; <i64 ()*> [#uses=1]
+  %tmp4 = getelementptr inbounds %class.RuleBasedBreakIterator, ptr %this, i32 0, i32 0 ; <ptr> [#uses=1]
+  %tmp5 = load ptr, ptr %tmp4                     ; <ptr> [#uses=1]
   %call = invoke i64 %tmp5()
           to label %cond.end unwind label %ehcleanup ; <i64> [#uses=1]
 
 cond.end:                                         ; preds = %cond.false, %entry
   %cond = phi i64 [ 0, %entry ], [ %call, %cond.false ] ; <i64> [#uses=1]
   %conv = trunc i64 %cond to i32                  ; <i32> [#uses=1]
-  call void @_ZN6UStackD1Ev(%class.UStack* %breaks)
+  call void @_ZN6UStackD1Ev(ptr %breaks)
   ret i32 %conv
 }
 
-declare void @_ZN6UStackC1Ei(%class.UStack*, i32)
+declare void @_ZN6UStackC1Ei(ptr, i32)
 
-declare void @_ZN6UStackD1Ev(%class.UStack*)
+declare void @_ZN6UStackD1Ev(ptr)
 
 declare i32 @__gxx_personality_v0(...)
 
 declare void @_ZSt9terminatev()
 
-declare void @_Unwind_Resume_or_Rethrow(i8*)
+declare void @_Unwind_Resume_or_Rethrow(ptr)
 
 
 
 ; rdar://7590304
-define i8* @test10(i8* %self, i8* %tmp3, i1* %ptr1, i1* %ptr2) personality i32 (...)* @__gxx_personality_v0 {
+define ptr @test10(ptr %self, ptr %tmp3, ptr %ptr1, ptr %ptr2) personality ptr @__gxx_personality_v0 {
 entry:
-  store i1 true, i1* %ptr1
-  store i1 true, i1* %ptr2
+  store i1 true, ptr %ptr1
+  store i1 true, ptr %ptr2
   invoke void @test10a()
-          to label %invoke.cont unwind label %try.handler ; <i8*> [#uses=0]
+          to label %invoke.cont unwind label %try.handler ; <ptr> [#uses=0]
 
 invoke.cont:                                      ; preds = %entry
   unreachable
 
 try.handler:                                      ; preds = %entry
-  %exn = landingpad {i8*, i32}
-           catch i8* null
-  ret i8* %self
+  %exn = landingpad {ptr, i32}
+           catch ptr null
+  ret ptr %self
 }
 
 define void @test10a() {
@@ -240,12 +240,12 @@ entry:
 }
 
 ; PR6503
-define void @test12(i32* %A) nounwind {
+define void @test12(ptr %A) nounwind {
 entry:
-  %tmp1 = load i32, i32* %A
+  %tmp1 = load i32, ptr %A
   %cmp = icmp ugt i32 1, %tmp1                    ; <i1> [#uses=1]
   %conv = zext i1 %cmp to i32                     ; <i32> [#uses=1]
-  %tmp2 = load i32, i32* %A
+  %tmp2 = load i32, ptr %A
   %cmp3 = icmp ne i32 %tmp2, 0                    ; <i1> [#uses=1]
   %conv4 = zext i1 %cmp3 to i32                   ; <i32> [#uses=1]
   %or = or i32 %conv, %conv4                      ; <i32> [#uses=1]
@@ -256,45 +256,43 @@ entry:
 
 %s1 = type { %s2, %s2, [6 x %s2], i32, i32, i32, [1 x i32], [0 x i8] }
 %s2 = type { i64 }
-define void @test13(i32* %ptr1, i32* %ptr2, i32* %ptr3) nounwind {
+define void @test13(ptr %ptr1, ptr %ptr2, ptr %ptr3) nounwind {
 entry:
-  %0 = getelementptr inbounds %s1, %s1* null, i64 0, i32 2, i64 0, i32 0
-  %1 = bitcast i64* %0 to i32*
-  %2 = getelementptr inbounds %s1, %s1* null, i64 0, i32 2, i64 1, i32 0
-  %.pre = load i32, i32* %1, align 8
-  %3 = lshr i32 %.pre, 19
+  %0 = getelementptr inbounds %s1, ptr null, i64 0, i32 2, i64 0, i32 0
+  %1 = getelementptr inbounds %s1, ptr null, i64 0, i32 2, i64 1, i32 0
+  %.pre = load i32, ptr %0, align 8
+  %2 = lshr i32 %.pre, 19
   %brmerge = or i1 1, 0
-  %4 = and i32 %3, 3
-  %5 = add nsw i32 %4, 1
-  %6 = shl i32 %5, 19
-  %7 = add i32 %6, 1572864
-  %8 = and i32 %7, 1572864
-  %9 = load i64, i64* %2, align 8
-  %trunc156 = trunc i64 %9 to i32
-  %10 = and i32 %trunc156, -1537
-  %11 = and i32 %10, -6145
-  %12 = or i32 %11, 2048
-  %13 = and i32 %12, -24577
-  %14 = or i32 %13, 16384
-  %15 = or i32 %14, 98304
-  store i32 %15, i32* %ptr1, align 8
-  %16 = and i32 %15, -1572865
-  %17 = or i32 %16, %8
-  store i32 %17, i32* %ptr2, align 8
-  %18 = and i32 %17, -449
-  %19 = or i32 %18, 64
-  store i32 %19, i32* %ptr3, align 8
+  %3 = and i32 %2, 3
+  %4 = add nsw i32 %3, 1
+  %5 = shl i32 %4, 19
+  %6 = add i32 %5, 1572864
+  %7 = and i32 %6, 1572864
+  %8 = load i64, ptr %1, align 8
+  %trunc156 = trunc i64 %8 to i32
+  %9 = and i32 %trunc156, -1537
+  %10 = and i32 %9, -6145
+  %11 = or i32 %10, 2048
+  %12 = and i32 %11, -24577
+  %13 = or i32 %12, 16384
+  %14 = or i32 %13, 98304
+  store i32 %14, ptr %ptr1, align 8
+  %15 = and i32 %14, -1572865
+  %16 = or i32 %15, %7
+  store i32 %16, ptr %ptr2, align 8
+  %17 = and i32 %16, -449
+  %18 = or i32 %17, 64
+  store i32 %18, ptr %ptr3, align 8
   unreachable
 }
 
 
 ; PR8807
-declare i32 @test14f(i8* (i8*)*) nounwind
+declare i32 @test14f(ptr) nounwind
 
-define void @test14(i32* %ptr) nounwind readnone {
+define void @test14(ptr %ptr) nounwind readnone {
 entry:
-  %tmp = bitcast i32 (i8* (i8*)*)* @test14f to i32 (i32*)*
-  %call10 = call i32 %tmp(i32* byval(i32) %ptr)
+  %call10 = call i32 @test14f(ptr byval(i32) %ptr)
   ret void
 }
 
@@ -302,9 +300,9 @@ entry:
 ; PR8896
 @g_54 = external global [7 x i16]
 
-define void @test15(i32* %p_92, i1 %c1) nounwind {
+define void @test15(ptr %p_92, i1 %c1) nounwind {
 entry:
-%0 = load i32, i32* %p_92, align 4
+%0 = load i32, ptr %p_92, align 4
 %1 = icmp ne i32 %0, 0
 %2 = zext i1 %1 to i32
 %3 = call i32 @func_14() nounwind
@@ -347,11 +345,9 @@ define double @test16(i32 %a) nounwind {
 ; PR8983
 %struct.basic_ios = type { i8 }
 
-define %struct.basic_ios *@test17() ssp {
+define ptr@test17() ssp {
 entry:
-  %add.ptr.i = getelementptr i8, i8* null, i64 0
-  %0 = bitcast i8* %add.ptr.i to %struct.basic_ios*
-  ret %struct.basic_ios* %0
+  ret ptr null
 }
 
 ; PR9013
@@ -374,24 +370,22 @@ return:                                           ; No predecessors!
 
 ; PR11275
 declare void @test18b() noreturn
-declare void @test18foo(double**)
+declare void @test18foo(ptr)
 declare void @test18a() noreturn
-define fastcc void @test18x(i8* %t0, i1 %b) uwtable align 2 personality i32 (...)* @__gxx_personality_v0 {
+define fastcc void @test18x(ptr %t0, i1 %b) uwtable align 2 personality ptr @__gxx_personality_v0 {
 entry:
   br i1 %b, label %e1, label %e2
 e1:
-  %t2 = bitcast i8* %t0 to double**
   invoke void @test18b() noreturn
           to label %u unwind label %lpad
 e2:
-  %t4 = bitcast i8* %t0 to double**
   invoke void @test18a() noreturn
           to label %u unwind label %lpad
 lpad:
-  %t5 = phi double** [ %t2, %e1 ], [ %t4, %e2 ]
-  %lpad.nonloopexit262 = landingpad { i8*, i32 }
+  %t5 = phi ptr [ %t0, %e1 ], [ %t0, %e2 ]
+  %lpad.nonloopexit262 = landingpad { ptr, i32 }
           cleanup
-  call void @test18foo(double** %t5)
+  call void @test18foo(ptr %t5)
   unreachable
 u:
   unreachable

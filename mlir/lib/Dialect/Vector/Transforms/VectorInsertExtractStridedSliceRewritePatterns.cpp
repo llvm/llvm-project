@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -286,15 +286,17 @@ public:
 };
 
 void mlir::vector::populateVectorInsertExtractStridedSliceDecompositionPatterns(
-    RewritePatternSet &patterns) {
+    RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<DecomposeDifferentRankInsertStridedSlice,
-               DecomposeNDExtractStridedSlice>(patterns.getContext());
+               DecomposeNDExtractStridedSlice>(patterns.getContext(), benefit);
 }
 
 /// Populate the given list with patterns that convert from Vector to LLVM.
 void mlir::vector::populateVectorInsertExtractStridedSliceTransforms(
-    RewritePatternSet &patterns) {
-  populateVectorInsertExtractStridedSliceDecompositionPatterns(patterns);
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  populateVectorInsertExtractStridedSliceDecompositionPatterns(patterns,
+                                                               benefit);
   patterns.add<ConvertSameRankInsertStridedSliceIntoShuffle,
-               Convert1DExtractStridedSliceIntoShuffle>(patterns.getContext());
+               Convert1DExtractStridedSliceIntoShuffle>(patterns.getContext(),
+                                                        benefit);
 }

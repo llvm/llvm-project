@@ -5,12 +5,12 @@
 # symbol with an index >= the sh_info of the dynamic symbol table section). Such
 # a DSO is very broken, because local symbols should precede all global symbols
 # in the symbol table, and because having a symbol that's both undefined and
-# STB_LOCAL is a nonsensical combination. Nevertheless, we should warn on such
+# STB_LOCAL is a nonsensical combination. Nevertheless, we should error on such
 # input files instead of crashing.
 
 # RUN: yaml2obj %s -o %t.so
-# RUN: ld.lld %t.so -o %t 2>&1 | FileCheck -check-prefix=WARN %s
-# WARN: found local symbol 'foo' in global part of symbol table in file {{.*}}.so
+# RUN: not ld.lld %t.so -o /dev/null 2>&1 | FileCheck %s
+# CHECK: error: {{.*}}.so: invalid local symbol 'foo' in global part of symbol table
 
 --- !ELF
 FileHeader:

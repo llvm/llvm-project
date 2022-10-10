@@ -50,18 +50,18 @@ using SymbolRenameListener = function_ref<void(
 /// For the conflict resolution phase, the following rules are employed to
 /// resolve such conflicts:
 ///
-/// - If 2 spv.func's have the same symbol name, then rename one of the
+/// - If 2 spirv.func's have the same symbol name, then rename one of the
 ///   functions.
-/// - If an spv.func and another op have the same symbol name, then rename the
+/// - If an spirv.func and another op have the same symbol name, then rename the
 ///   other symbol.
-/// - If none of the 2 conflicting ops are spv.func, then rename either.
+/// - If none of the 2 conflicting ops are spirv.func, then rename either.
 ///
 /// For deduplication, the following 3 cases are taken into consideration:
 ///
-/// - If 2 spv.GlobalVariable's have either the same descriptor set + binding
+/// - If 2 spirv.GlobalVariable's have either the same descriptor set + binding
 ///   or the same build_in attribute value, then replace one of them using the
 ///   other.
-/// - If 2 spv.SpecConstant's have the same spec_id attribute value, then
+/// - If 2 spirv.SpecConstant's have the same spec_id attribute value, then
 ///   replace one of them using the other.
 /// - Deduplicating functions are not supported right now.
 ///

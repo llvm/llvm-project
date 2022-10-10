@@ -154,6 +154,12 @@ bool CompilerType::IsIntegerOrEnumerationType(bool &is_signed) const {
   return IsIntegerType(is_signed) || IsEnumerationType(is_signed);
 }
 
+bool CompilerType::IsBooleanType() const {
+  if (IsValid())
+    return m_type_system->IsBooleanType(m_type);
+  return false;
+}
+
 bool CompilerType::IsPointerType(CompilerType *pointee_type) const {
   if (IsValid()) {
     return m_type_system->IsPointerType(m_type, pointee_type);
@@ -659,30 +665,32 @@ size_t CompilerType::GetIndexOfChildMemberWithName(
   return 0;
 }
 
-size_t CompilerType::GetNumTemplateArguments() const {
+size_t CompilerType::GetNumTemplateArguments(bool expand_pack) const {
   if (IsValid()) {
-    return m_type_system->GetNumTemplateArguments(m_type);
+    return m_type_system->GetNumTemplateArguments(m_type, expand_pack);
   }
   return 0;
 }
 
-TemplateArgumentKind CompilerType::GetTemplateArgumentKind(size_t idx) const {
+TemplateArgumentKind
+CompilerType::GetTemplateArgumentKind(size_t idx, bool expand_pack) const {
   if (IsValid())
-    return m_type_system->GetTemplateArgumentKind(m_type, idx);
+    return m_type_system->GetTemplateArgumentKind(m_type, idx, expand_pack);
   return eTemplateArgumentKindNull;
 }
 
-CompilerType CompilerType::GetTypeTemplateArgument(size_t idx) const {
+CompilerType CompilerType::GetTypeTemplateArgument(size_t idx,
+                                                   bool expand_pack) const {
   if (IsValid()) {
-    return m_type_system->GetTypeTemplateArgument(m_type, idx);
+    return m_type_system->GetTypeTemplateArgument(m_type, idx, expand_pack);
   }
   return CompilerType();
 }
 
 llvm::Optional<CompilerType::IntegralTemplateArgument>
-CompilerType::GetIntegralTemplateArgument(size_t idx) const {
+CompilerType::GetIntegralTemplateArgument(size_t idx, bool expand_pack) const {
   if (IsValid())
-    return m_type_system->GetIntegralTemplateArgument(m_type, idx);
+    return m_type_system->GetIntegralTemplateArgument(m_type, idx, expand_pack);
   return llvm::None;
 }
 

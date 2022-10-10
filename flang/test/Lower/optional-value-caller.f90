@@ -281,6 +281,8 @@ subroutine test_dyn_array_from_assumed(i, n)
 ! CHECK:  %[[VAL_5:.*]] = fir.shape %[[VAL_4]] : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_6:.*]] = fir.embox %[[VAL_3]](%[[VAL_5]]) : (!fir.ref<!fir.array<?xi32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xi32>>
 ! CHECK:  %[[VAL_7:.*]] = arith.select %[[VAL_2]], %[[VAL_0]], %[[VAL_6]] : !fir.box<!fir.array<?xi32>>
+! CHECK:  %[[box_none:.*]] = fir.convert %[[VAL_7]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+! CHECK:  %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) : (!fir.box<none>) -> i1
 ! CHECK:  %[[VAL_8:.*]] = fir.if %[[VAL_2]] -> (!fir.heap<!fir.array<?xi32>>) {
 ! CHECK:    %[[VAL_9:.*]] = arith.constant 0 : index
 ! CHECK:    %[[VAL_10:.*]]:3 = fir.box_dims %[[VAL_7]], %[[VAL_9]] : (!fir.box<!fir.array<?xi32>>, index) -> (index, index, index)
@@ -293,9 +295,11 @@ subroutine test_dyn_array_from_assumed(i, n)
 ! CHECK:    %[[VAL_24:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
 ! CHECK:    fir.result %[[VAL_24]] : !fir.heap<!fir.array<?xi32>>
 ! CHECK:  }
+! CHECK:  %[[not_contiguous:.*]] = arith.cmpi eq, %[[is_contiguous]], %false{{.*}} : i1
+! CHECK:  %[[and:.*]] = arith.andi %[[VAL_2]], %[[not_contiguous]] : i1
 ! CHECK:  %[[VAL_25:.*]] = fir.convert %[[VAL_8]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK:  fir.call @_QPdyn_array(%[[VAL_25]], %[[VAL_1]]) : (!fir.ref<!fir.array<?xi32>>, !fir.ref<i64>) -> ()
-! CHECK:  fir.if %[[VAL_2]] {
+! CHECK:  fir.if %[[and]] {
 ! CHECK:    fir.freemem %[[VAL_8]] : !fir.heap<!fir.array<?xi32>>
 ! CHECK:  }
 end subroutine
@@ -313,6 +317,8 @@ subroutine test_array_ptr(i)
 ! CHECK:  %[[VAL_6:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_8:.*]]:3 = fir.box_dims %[[VAL_6]], %[[VAL_7]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
+! CHECK:  %[[box_none:.*]] = fir.convert %[[VAL_6]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.box<none>
+! CHECK:  %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) : (!fir.box<none>) -> i1
 ! CHECK:  %[[VAL_9:.*]] = fir.if %[[VAL_5]] -> (!fir.heap<!fir.array<?xi32>>) {
 ! CHECK:    %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:    %[[VAL_11:.*]]:3 = fir.box_dims %[[VAL_6]], %[[VAL_10]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
@@ -325,9 +331,10 @@ subroutine test_array_ptr(i)
 ! CHECK:    %[[VAL_26:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
 ! CHECK:    fir.result %[[VAL_26]] : !fir.heap<!fir.array<?xi32>>
 ! CHECK:  }
+! CHECK:  %[[not_contiguous:.*]] = arith.cmpi eq, %[[is_contiguous]], %false{{.*}} : i1
+! CHECK:  %[[and:.*]] = arith.andi %[[VAL_5]], %[[not_contiguous]] : i1
 ! CHECK:  %[[VAL_27:.*]] = fir.convert %[[VAL_9]] : (!fir.heap<!fir.array<?xi32>>) -> !fir.ref<!fir.array<100xi32>>
-! CHECK:  fir.call @_QParray(%[[VAL_27]]) : (!fir.ref<!fir.array<100xi32>>) -> ()
-! CHECK:  fir.if %[[VAL_5]] {
+! CHECK:  fir.if %[[and]] {
 ! CHECK:    fir.freemem %[[VAL_9]] : !fir.heap<!fir.array<?xi32>>
 ! CHECK:  }
 end subroutine
@@ -398,6 +405,8 @@ subroutine test_char_array(c)
 ! CHECK:  %[[VAL_6:.*]] = arith.constant 0 : index
 ! CHECK:  %[[VAL_7:.*]] = fir.embox %[[VAL_3]](%[[VAL_5]]) typeparams %[[VAL_6]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:  %[[VAL_8:.*]] = arith.select %[[VAL_2]], %[[VAL_0]], %[[VAL_7]] : !fir.box<!fir.array<?x!fir.char<1,?>>>
+! CHECK:  %[[box_none:.*]] = fir.convert %5 : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<none>
+! CHECK:  %[[is_contiguous:.*]] = fir.call @_FortranAIsContiguous(%[[box_none]]) : (!fir.box<none>) -> i1
 ! CHECK:  %[[VAL_9:.*]] = fir.if %[[VAL_2]] -> (!fir.heap<!fir.array<?x!fir.char<1,?>>>) {
 ! CHECK:    %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:    %[[VAL_11:.*]]:3 = fir.box_dims %[[VAL_8]], %[[VAL_10]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, index) -> (index, index, index)
@@ -413,10 +422,12 @@ subroutine test_char_array(c)
 ! CHECK:    fir.result %[[VAL_45]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:  }
 ! CHECK:  %[[VAL_46:.*]] = fir.box_elesize %[[VAL_8]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
+! CHECK:  %[[not_contiguous:.*]] = arith.cmpi eq, %[[is_contiguous]], %false{{.*}} : i1
+! CHECK:  %[[and:.*]] = arith.andi %[[VAL_2]], %[[not_contiguous]] : i1
 ! CHECK:  %[[VAL_47:.*]] = fir.convert %[[VAL_9]] : (!fir.heap<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK:  %[[VAL_49:.*]] = fir.emboxchar %[[VAL_47]], %[[VAL_46]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
 ! CHECK:  fir.call @_QPdyn_char_array(%[[VAL_49]], %[[VAL_1]]) : (!fir.boxchar<1>, !fir.ref<i64>) -> ()
-! CHECK:  fir.if %[[VAL_2]] {
+! CHECK:  fir.if %[[and]] {
 ! CHECK:    fir.freemem %[[VAL_9]] : !fir.heap<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:  }
 end subroutine

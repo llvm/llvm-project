@@ -34,6 +34,17 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 
+lldb::ValueObjectSP lldb_private::formatters::GetChildMemberWithName(
+    ValueObject &obj, llvm::ArrayRef<ConstString> alternative_names) {
+  for (ConstString name : alternative_names) {
+    lldb::ValueObjectSP child_sp = obj.GetChildMemberWithName(name, true);
+
+    if (child_sp)
+      return child_sp;
+  }
+  return {};
+}
+
 bool lldb_private::formatters::LibcxxOptionalSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());
@@ -538,12 +549,9 @@ lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEndCreator(
 SyntheticChildrenFrontEnd *
 lldb_private::formatters::LibCxxVectorIteratorSyntheticFrontEndCreator(
     CXXSyntheticChildren *, lldb::ValueObjectSP valobj_sp) {
-  static ConstString g_item_name;
-  if (!g_item_name)
-    g_item_name.SetCString("__i");
-  return (valobj_sp
-              ? new VectorIteratorSyntheticFrontEnd(valobj_sp, g_item_name)
-              : nullptr);
+  return (valobj_sp ? new VectorIteratorSyntheticFrontEnd(
+                          valobj_sp, {ConstString("__i_"), ConstString("__i")})
+                    : nullptr);
 }
 
 lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::
@@ -992,11 +1000,10 @@ bool lldb_private::formatters::LibcxxStringSummaryProviderUTF32(
 
 static std::tuple<bool, ValueObjectSP, size_t>
 LibcxxExtractStringViewData(ValueObject& valobj) {
-  ConstString g_data_name("__data");
-  ConstString g_size_name("__size");
-  auto dataobj = valobj.GetChildMemberWithName(g_data_name, true);
-  auto sizeobj = valobj.GetChildMemberWithName(g_size_name, true);
-
+  auto dataobj = GetChildMemberWithName(
+      valobj, {ConstString("__data_"), ConstString("__data")});
+  auto sizeobj = GetChildMemberWithName(
+      valobj, {ConstString("__size_"), ConstString("__size")});
   if (!dataobj || !sizeobj)
     return std::make_tuple<bool,ValueObjectSP,size_t>(false, {}, {});
 

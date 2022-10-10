@@ -83,6 +83,15 @@ void OptionValueDictionary::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
+llvm::json::Value
+OptionValueDictionary::ToJSON(const ExecutionContext *exe_ctx) {
+  llvm::json::Object dict;
+  for (const auto &value : m_values) {
+    dict.try_emplace(value.first.GetCString(), value.second->ToJSON(exe_ctx));
+  }
+  return dict;
+}
+
 size_t OptionValueDictionary::GetArgs(Args &args) const {
   args.Clear();
   collection::const_iterator pos, end = m_values.end();

@@ -69,14 +69,6 @@ Triplet &Triplet::set_stride(Expr<SubscriptInteger> &&expr) {
   return *this;
 }
 
-bool Triplet::IsStrideOne() const {
-  if (auto stride{ToInt64(stride_.value())}) {
-    return stride == 1;
-  } else {
-    return false;
-  }
-}
-
 CoarrayRef::CoarrayRef(SymbolVector &&base, std::vector<Subscript> &&ss,
     std::vector<Expr<SubscriptInteger>> &&css)
     : base_{std::move(base)}, subscript_(std::move(ss)),

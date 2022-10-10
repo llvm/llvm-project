@@ -300,7 +300,7 @@ void emitAppleAccelTableImpl(AsmPrinter *Asm, AccelTableBase &Contents,
 template <typename DataT>
 void emitAppleAccelTable(AsmPrinter *Asm, AccelTable<DataT> &Contents,
                          StringRef Prefix, const MCSymbol *SecBegin) {
-  static_assert(std::is_convertible<DataT *, AppleAccelTableData *>::value, "");
+  static_assert(std::is_convertible<DataT *, AppleAccelTableData *>::value);
   emitAppleAccelTableImpl(Asm, Contents, Prefix, SecBegin, DataT::Atoms);
 }
 

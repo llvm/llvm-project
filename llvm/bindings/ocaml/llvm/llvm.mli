@@ -726,6 +726,11 @@ val pointer_type : lltype -> lltype
     See the method [llvm::PointerType::get]. *)
 val qualified_pointer_type : lltype -> int -> lltype
 
+(** [pointer_type_in_context context as] returns the opaque pointer type
+    referencing objects in address space [as].
+    See the method [llvm::PointerType::get]. *)
+val pointer_type_in_context : llcontext -> int -> lltype
+
 (** [vector_type ty n] returns the array type containing [n] elements of the
     primitive type [ty]. See the method [llvm::ArrayType::get]. *)
 val vector_type : lltype -> int -> lltype
@@ -1076,10 +1081,6 @@ val const_nsw_neg : llvalue -> llvalue
     no unsigned wrapping. The result is undefined if the negation overflows.
     See the method [llvm::ConstantExpr::getNUWNeg]. *)
 val const_nuw_neg : llvalue -> llvalue
-
-(** [const_fneg c] returns the arithmetic negation of the constant float [c].
-    See the method [llvm::ConstantExpr::getFNeg]. *)
-val const_fneg : llvalue -> llvalue
 
 (** [const_not c] returns the bitwise inverse of the constant [c].
     See the method [llvm::ConstantExpr::getNot]. *)

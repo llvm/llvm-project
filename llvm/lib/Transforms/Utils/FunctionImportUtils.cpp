@@ -12,7 +12,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Utils/FunctionImportUtils.h"
+#include "llvm/Support/CommandLine.h"
 using namespace llvm;
+
+/// Uses the "source_filename" instead of a Module hash ID for the suffix of
+/// promoted locals during LTO. NOTE: This requires that the source filename
+/// has a unique name / path to avoid name collisions.
+static cl::opt<bool> UseSourceFilenameForPromotedLocals(
+    "use-source-filename-for-promoted-locals", cl::Hidden,
+    cl::desc("Uses the source file name instead of the Module hash. "
+             "This requires that the source filename has a unique name / "
+             "path to avoid name collisions."));
 
 /// Checks if we should import SGV as a definition, otherwise import as a
 /// declaration.
@@ -94,9 +104,19 @@ bool FunctionImportGlobalProcessing::isNonRenamableLocal(
 std::string
 FunctionImportGlobalProcessing::getPromotedName(const GlobalValue *SGV) {
   assert(SGV->hasLocalLinkage());
+
   // For locals that must be promoted to global scope, ensure that
   // the promoted name uniquely identifies the copy in the original module,
   // using the ID assigned during combined index creation.
+  if (UseSourceFilenameForPromotedLocals &&
+      !SGV->getParent()->getSourceFileName().empty()) {
+    SmallString<256> Suffix(SGV->getParent()->getSourceFileName());
+    std::replace_if(std::begin(Suffix), std::end(Suffix),
+                    [&](char ch) { return !isAlnum(ch); }, '_');
+    return ModuleSummaryIndex::getGlobalNameForLocal(
+        SGV->getName(), Suffix);
+  }
+
   return ModuleSummaryIndex::getGlobalNameForLocal(
       SGV->getName(),
       ImportIndex.getModuleHash(SGV->getParent()->getModuleIdentifier()));
@@ -206,7 +226,7 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
     if (VI && ImportIndex.hasSyntheticEntryCounts()) {
       if (Function *F = dyn_cast<Function>(&GV)) {
         if (!F->isDeclaration()) {
-          for (auto &S : VI.getSummaryList()) {
+          for (const auto &S : VI.getSummaryList()) {
             auto *FS = cast<FunctionSummary>(S->getBaseObject());
             if (FS->modulePath() == M.getModuleIdentifier()) {
               F->setEntryCount(Function::ProfileCount(FS->entryCount(),

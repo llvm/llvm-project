@@ -108,8 +108,9 @@ public:
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__memory/shared_ptr.h>
+#include <__memory/unique_ptr.h>
 #include <__mutex_base>
-#include <memory>
 #include <version>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)

@@ -191,63 +191,63 @@ define <4 x i32> @neg_or_ashr_i32_vec_commute(<4 x i32> %x0) {
 
 ; Extra uses
 
-define i32 @sub_ashr_or_i32_extra_use_sub(i32 %x, i32 %y, i32* %p) {
+define i32 @sub_ashr_or_i32_extra_use_sub(i32 %x, i32 %y, ptr %p) {
 ; CHECK-LABEL: @sub_ashr_or_i32_extra_use_sub(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    store i32 [[SUB]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[SUB]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[Y]], [[X]]
 ; CHECK-NEXT:    [[OR:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[X]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %sub = sub nsw i32 %y, %x
-  store i32 %sub, i32* %p
+  store i32 %sub, ptr %p
   %shr = ashr i32 %sub, 31
   %or = or i32 %shr, %x
   ret i32 %or
 }
 
-define i32 @sub_ashr_or_i32_extra_use_or(i32 %x, i32 %y, i32* %p) {
+define i32 @sub_ashr_or_i32_extra_use_or(i32 %x, i32 %y, ptr %p) {
 ; CHECK-LABEL: @sub_ashr_or_i32_extra_use_or(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[OR:%.*]] = select i1 [[TMP1]], i32 -1, i32 [[X]]
-; CHECK-NEXT:    store i32 [[OR]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[OR]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %sub = sub nsw i32 %y, %x
   %shr = ashr i32 %sub, 31
   %or = or i32 %shr, %x
-  store i32 %or, i32* %p
+  store i32 %or, ptr %p
   ret i32 %or
 }
 
-define i32 @neg_extra_use_or_ashr_i32(i32 %x, i32* %p) {
+define i32 @neg_extra_use_or_ashr_i32(i32 %x, ptr %p) {
 ; CHECK-LABEL: @neg_extra_use_or_ashr_i32(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP1]] to i32
-; CHECK-NEXT:    store i32 [[NEG]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[NEG]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %neg = sub i32 0, %x
   %or = or i32 %neg, %x
   %shr = ashr i32 %or, 31
-  store i32 %neg, i32* %p
+  store i32 %neg, ptr %p
   ret i32 %shr
 }
 
 ; Negative Tests
 
-define i32 @sub_ashr_or_i32_extra_use_ashr(i32 %x, i32 %y, i32* %p) {
+define i32 @sub_ashr_or_i32_extra_use_ashr(i32 %x, i32 %y, ptr %p) {
 ; CHECK-LABEL: @sub_ashr_or_i32_extra_use_ashr(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP1]] to i32
-; CHECK-NEXT:    store i32 [[SHR]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[SHR]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHR]], [[X]]
 ; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %sub = sub nsw i32 %y, %x
   %shr = ashr i32 %sub, 31
-  store i32 %shr, i32* %p
+  store i32 %shr, ptr %p
   %or = or i32 %shr, %x
   ret i32 %or
 }
@@ -265,18 +265,18 @@ define i32 @sub_ashr_or_i32_no_nsw_nuw(i32 %x, i32 %y) {
   ret i32 %or
 }
 
-define i32 @neg_or_extra_use_ashr_i32(i32 %x, i32* %p) {
+define i32 @neg_or_extra_use_ashr_i32(i32 %x, ptr %p) {
 ; CHECK-LABEL: @neg_or_extra_use_ashr_i32(
 ; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[X:%.*]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[NEG]], [[X]]
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[OR]], 31
-; CHECK-NEXT:    store i32 [[OR]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[OR]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %neg = sub i32 0, %x
   %or = or i32 %neg, %x
   %shr = ashr i32 %or, 31
-  store i32 %or, i32* %p
+  store i32 %or, ptr %p
   ret i32 %shr
 }
 

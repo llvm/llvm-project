@@ -88,6 +88,7 @@ unittest("SupportTests") {
     "ThreadLocalTest.cpp",
     "ThreadPool.cpp",
     "Threading.cpp",
+    "TimeProfilerTest.cpp",
     "TimerTest.cpp",
     "ToolOutputFileTest.cpp",
     "TrailingObjectsTest.cpp",

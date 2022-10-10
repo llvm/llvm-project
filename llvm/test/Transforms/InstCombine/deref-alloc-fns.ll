@@ -12,7 +12,8 @@ declare noalias i8* @strdup(i8*)
 declare noalias i8* @aligned_alloc(i64 allocalign, i64) allockind("alloc,uninitialized,aligned") allocsize(1) "alloc-family"="malloc"
 declare noalias align 16 i8* @memalign(i64, i64)
 ; new[](unsigned int, align_val_t)
-declare noalias i8* @_ZnajSt11align_val_t(i64 %size, i64 %align)
+declare noalias i8* @_ZnamSt11align_val_t(i64 %size, i64 %align)
+
 declare i8* @my_malloc(i64) allocsize(0)
 declare i8* @my_calloc(i64, i64) allocsize(0, 1)
 
@@ -317,7 +318,7 @@ define noalias i8* @op_new_constant_zero_size() {
 
 define noalias i8* @strdup_constant_str() {
 ; CHECK-LABEL: @strdup_constant_str(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(6) i8* @strdup(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0))
+; CHECK-NEXT:    [[CALL:%.*]] = tail call noalias dereferenceable_or_null(6) i8* @strdup(i8* nonnull getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0))
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
   %call = tail call noalias i8* @strdup(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str, i64 0, i64 0))
@@ -349,10 +350,10 @@ bb:
 
 define noalias i8* @op_new_align() {
 ; CHECK-LABEL: @op_new_align(
-; CHECK-NEXT:    [[CALL:%.*]] = tail call align 32 dereferenceable_or_null(32) i8* @_ZnajSt11align_val_t(i64 32, i64 32)
+; CHECK-NEXT:    [[CALL:%.*]] = tail call align 32 dereferenceable_or_null(32) i8* @_ZnamSt11align_val_t(i64 32, i64 32)
 ; CHECK-NEXT:    ret i8* [[CALL]]
 ;
-  %call = tail call i8* @_ZnajSt11align_val_t(i64 32, i64 32)
+  %call = tail call i8* @_ZnamSt11align_val_t(i64 32, i64 32)
   ret i8* %call
 }
 

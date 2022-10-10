@@ -1,0 +1,18 @@
+# REQUIRES: host-byteorder-little-endian
+# RUN: yaml2obj %s \
+# RUN:   | llvm-objdump --macho --private-header - 2>&1 \
+# RUN:   | FileCheck %s
+
+# CHECK: magic cputype cpusubtype caps filetype ncmds sizeofcmds flags
+# CHECK-NEXT: MH_MAGIC_64 ARM64 ALL 0x00 FILESET 0 0 0x00000000
+
+--- !mach-o
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      0x0
+  filetype:        0xC
+  ncmds:           0
+  sizeofcmds:      0
+  flags:           0x0
+  reserved:        0x0

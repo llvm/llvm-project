@@ -65,8 +65,10 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "XX::(anonymous namespace)::anon_class::anon_func"},
 
       // Lambda
-      {"main::{lambda()#1}::operator()() const::{lambda()#1}::operator()() const",
-       "main::{lambda()#1}::operator()() const::{lambda()#1}", "operator()", "()", "const",
+      {"main::{lambda()#1}::operator()() const::{lambda()#1}::operator()() "
+       "const",
+       "main::{lambda()#1}::operator()() const::{lambda()#1}", "operator()",
+       "()", "const",
        "main::{lambda()#1}::operator()() const::{lambda()#1}::operator()"},
 
       // Function pointers
@@ -108,7 +110,17 @@ TEST(CPlusPlusLanguage, MethodNameParsing) {
        "llvm", "isUInt<10u>", "(unsigned long)", "", "llvm::isUInt<10u>"},
       {"f<A<operator<(X,Y)::Subclass>, sizeof(B)<sizeof(C)>()", "",
        "f<A<operator<(X,Y)::Subclass>, sizeof(B)<sizeof(C)>", "()", "",
-       "f<A<operator<(X,Y)::Subclass>, sizeof(B)<sizeof(C)>"}};
+       "f<A<operator<(X,Y)::Subclass>, sizeof(B)<sizeof(C)>"},
+      {"llvm::Optional<llvm::MCFixupKind>::operator*() const volatile &&",
+       "llvm::Optional<llvm::MCFixupKind>", "operator*", "()",
+       "const volatile &&", "llvm::Optional<llvm::MCFixupKind>::operator*"},
+
+      // auto return type
+      {"auto std::test_return_auto<int>() const", "std",
+       "test_return_auto<int>", "()", "const", "std::test_return_auto<int>"},
+      {"decltype(auto) std::test_return_auto<int>(int) const", "std",
+       "test_return_auto<int>", "(int)", "const",
+       "std::test_return_auto<int>"}};
 
   for (const auto &test : test_cases) {
     CPlusPlusLanguage::MethodName method(ConstString(test.input));

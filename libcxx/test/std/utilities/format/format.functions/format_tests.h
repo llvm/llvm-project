@@ -84,17 +84,18 @@ struct std::formatter<status, CharT> {
   }
 
   template <class Out>
-  auto format(status s, basic_format_context<Out, CharT>& ctx) -> decltype(ctx.out()) {
+  auto format(status s, basic_format_context<Out, CharT>& ctx) const -> decltype(ctx.out()) {
     const char* names[] = {"foo", "bar", "foobar"};
-    char buffer[6];
-    const char* begin;
-    const char* end;
+    char buffer[7];
+    const char* begin = names[0];
+    const char* end = names[0];
     switch (type) {
     case 0:
       begin = buffer;
       buffer[0] = '0';
       buffer[1] = 'x';
       end = std::to_chars(&buffer[2], std::end(buffer), static_cast<uint16_t>(s), 16).ptr;
+      buffer[6] = '\0';
       break;
 
     case 1:
@@ -102,7 +103,9 @@ struct std::formatter<status, CharT> {
       buffer[0] = '0';
       buffer[1] = 'X';
       end = std::to_chars(&buffer[2], std::end(buffer), static_cast<uint16_t>(s), 16).ptr;
-      std::transform(static_cast<const char*>(&buffer[2]), end, &buffer[2], [](char c) { return std::toupper(c); });
+      std::transform(static_cast<const char*>(&buffer[2]), end, &buffer[2], [](char c) {
+        return static_cast<char>(std::toupper(c)); });
+      buffer[6] = '\0';
       break;
 
     case 2:
@@ -238,6 +241,9 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
   check_exception("A format-spec width field shouldn't have a leading zero", SV("hello {:0}"), world);
 
   // *** width ***
+  // Width 0 allowed, but not useful for string arguments.
+  check.template operator()<"hello {:{}}">(SV("hello world"), world, 0);
+
 #ifdef _LIBCPP_VERSION
   // This limit isn't specified in the Standard.
   static_assert(std::__format::__number_max == 2'147'483'647, "Update the assert and the test.");
@@ -246,7 +252,6 @@ void format_test_string(const W& world, const U& universe, TestFunction check, E
   check_exception("The numeric value of the format-spec is too large", SV("{:10000000000}"), world);
 #endif
 
-  check_exception("A format-spec width field replacement should have a positive value", SV("hello {:{}}"), world, 0);
   check_exception("A format-spec arg-id replacement shouldn't have a negative value", SV("hello {:{}}"), world, -1);
   check_exception("A format-spec arg-id replacement exceeds the maximum supported value", SV("hello {:{}}"), world,
                   unsigned(-1));
@@ -991,8 +996,8 @@ void format_test_char_as_integer(TestFunction check, ExceptionTest check_excepti
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_hex_lower_case(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // Test whether the hexadecimal letters are the proper case.
   // The precision is too large for float, so two tests are used.
@@ -1116,8 +1121,8 @@ void format_test_floating_point_hex_lower_case(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_hex_upper_case(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // Test whether the hexadecimal letters are the proper case.
   // The precision is too large for float, so two tests are used.
@@ -1241,8 +1246,8 @@ void format_test_floating_point_hex_upper_case(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_hex_lower_case_precision(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:14.6a}'">(SV("answer is '   1.000000p-2'"), F(0.25));
@@ -1355,8 +1360,8 @@ void format_test_floating_point_hex_lower_case_precision(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_hex_upper_case_precision(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:14.6A}'">(SV("answer is '   1.000000P-2'"), F(0.25));
@@ -1469,8 +1474,8 @@ void format_test_floating_point_hex_upper_case_precision(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_scientific_lower_case(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:15e}'">(SV("answer is '   2.500000e-01'"), F(0.25));
@@ -1592,8 +1597,8 @@ void format_test_floating_point_scientific_lower_case(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_scientific_upper_case(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:15E}'">(SV("answer is '   2.500000E-01'"), F(0.25));
@@ -1715,8 +1720,8 @@ void format_test_floating_point_scientific_upper_case(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_fixed_lower_case(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:11f}'">(SV("answer is '   0.250000'"), F(0.25));
@@ -1838,8 +1843,8 @@ void format_test_floating_point_fixed_lower_case(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_fixed_upper_case(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:11F}'">(SV("answer is '   0.250000'"), F(0.25));
@@ -1961,8 +1966,8 @@ void format_test_floating_point_fixed_upper_case(TestFunction check) {
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_general_lower_case(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:7g}'">(SV("answer is '   0.25'"), F(0.25));
@@ -2032,8 +2037,8 @@ void format_test_floating_point_general_lower_case(TestFunction check) {
   check.template operator()<"answer is '{:.0g}'">(SV("answer is '0'"), F(0));
   check.template operator()<"answer is '{:#.0g}'">(SV("answer is '0.'"), F(0));
 
-  check.template operator()<"answer is '{:#g}'">(SV("answer is '0.'"), F(0));
-  check.template operator()<"answer is '{:#g}'">(SV("answer is '2.5'"), F(2.5));
+  check.template operator()<"answer is '{:#g}'">(SV("answer is '0.00000'"), F(0));
+  check.template operator()<"answer is '{:#g}'">(SV("answer is '2.50000'"), F(2.5));
 
   check.template operator()<"answer is '{:#g}'">(SV("answer is 'inf'"), std::numeric_limits<F>::infinity());
   check.template operator()<"answer is '{:#g}'">(SV("answer is '-inf'"), -std::numeric_limits<F>::infinity());
@@ -2081,14 +2086,41 @@ void format_test_floating_point_general_lower_case(TestFunction check) {
   check.template operator()<"answer is '{:.5g}'">(SV("answer is '0.03125'"), 0.03125);
   check.template operator()<"answer is '{:.10g}'">(SV("answer is '0.03125'"), 0.03125);
 
+  // *** precision & alternate form ***
+
+  // Output validated with  printf("%#xg")
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.'"), 1.2, 0);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.'"), 1.2, 1);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.2'"), 1.2, 2);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.20'"), 1.2, 3);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.200'"), 1.2, 4);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.2000'"), 1.2, 5);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.20000'"), 1.2, 6);
+
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.e+03'"), 1200.0, 0);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.e+03'"), 1200.0, 1);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.2e+03'"), 1200.0, 2);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.20e+03'"), 1200.0, 3);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1200.'"), 1200.0, 4);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1200.0'"), 1200.0, 5);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1200.00'"), 1200.0, 6);
+
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.e+06'"), 1200000.0, 0);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.e+06'"), 1200000.0, 1);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.2e+06'"), 1200000.0, 2);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.20e+06'"), 1200000.0, 3);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.200e+06'"), 1200000.0, 4);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.2000e+06'"), 1200000.0, 5);
+  check.template operator()<"answer is '{:#.{}g}'">(SV("answer is '1.20000e+06'"), 1200000.0, 6);
+
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
 }
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_general_upper_case(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:7G}'">(SV("answer is '   0.25'"), F(0.25));
@@ -2158,8 +2190,8 @@ void format_test_floating_point_general_upper_case(TestFunction check) {
   check.template operator()<"answer is '{:.0G}'">(SV("answer is '0'"), F(0));
   check.template operator()<"answer is '{:#.0G}'">(SV("answer is '0.'"), F(0));
 
-  check.template operator()<"answer is '{:#G}'">(SV("answer is '0.'"), F(0));
-  check.template operator()<"answer is '{:#G}'">(SV("answer is '2.5'"), F(2.5));
+  check.template operator()<"answer is '{:#G}'">(SV("answer is '0.00000'"), F(0));
+  check.template operator()<"answer is '{:#G}'">(SV("answer is '2.50000'"), F(2.5));
 
   check.template operator()<"answer is '{:#G}'">(SV("answer is 'INF'"), std::numeric_limits<F>::infinity());
   check.template operator()<"answer is '{:#G}'">(SV("answer is '-INF'"), -std::numeric_limits<F>::infinity());
@@ -2207,14 +2239,41 @@ void format_test_floating_point_general_upper_case(TestFunction check) {
   check.template operator()<"answer is '{:.5G}'">(SV("answer is '0.03125'"), 0.03125);
   check.template operator()<"answer is '{:.10G}'">(SV("answer is '0.03125'"), 0.03125);
 
+  // *** precision & alternate form ***
+
+  // Output validated with  printf("%#xg")
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.'"), 1.2, 0);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.'"), 1.2, 1);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.2'"), 1.2, 2);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.20'"), 1.2, 3);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.200'"), 1.2, 4);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.2000'"), 1.2, 5);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.20000'"), 1.2, 6);
+
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.E+03'"), 1200.0, 0);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.E+03'"), 1200.0, 1);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.2E+03'"), 1200.0, 2);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.20E+03'"), 1200.0, 3);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1200.'"), 1200.0, 4);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1200.0'"), 1200.0, 5);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1200.00'"), 1200.0, 6);
+
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.E+06'"), 1200000.0, 0);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.E+06'"), 1200000.0, 1);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.2E+06'"), 1200000.0, 2);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.20E+06'"), 1200000.0, 3);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.200E+06'"), 1200000.0, 4);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.2000E+06'"), 1200000.0, 5);
+  check.template operator()<"answer is '{:#.{}G}'">(SV("answer is '1.20000E+06'"), 1200000.0, 6);
+
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
 }
 
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_default(TestFunction check) {
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:7}'">(SV("answer is '   0.25'"), F(0.25));
@@ -2330,8 +2389,8 @@ void format_test_floating_point_default(TestFunction check) {
 template <class F, class CharT, class TestFunction>
 void format_test_floating_point_default_precision(TestFunction check) {
 
-  auto nan_pos = std::numeric_limits<F>::quiet_NaN(); // "nan"
-  auto nan_neg = std::copysign(nan_pos, -1.0);        // "-nan"
+  auto nan_pos = std::numeric_limits<F>::quiet_NaN();                          // "nan"
+  auto nan_neg = std::copysign(nan_pos, static_cast<decltype(nan_pos)>(-1.0)); // "-nan"
 
   // *** align-fill & width ***
   check.template operator()<"answer is '{:7.6}'">(SV("answer is '   0.25'"), F(0.25));
@@ -2450,6 +2509,32 @@ void format_test_floating_point_default_precision(TestFunction check) {
   check.template operator()<"answer is '{:.5}'">(SV("answer is '0.03125'"), 0.03125);
   check.template operator()<"answer is '{:.10}'">(SV("answer is '0.03125'"), 0.03125);
 
+  // *** precision & alternate form ***
+
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.'"), 1.2, 0);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.'"), 1.2, 1);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2'"), 1.2, 2);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2'"), 1.2, 3);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2'"), 1.2, 4);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2'"), 1.2, 5);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2'"), 1.2, 6);
+
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.e+03'"), 1200.0, 0);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.e+03'"), 1200.0, 1);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2e+03'"), 1200.0, 2);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2e+03'"), 1200.0, 3);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1200.'"), 1200.0, 4);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1200.'"), 1200.0, 5);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1200.'"), 1200.0, 6);
+
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.e+06'"), 1200000.0, 0);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.e+06'"), 1200000.0, 1);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2e+06'"), 1200000.0, 2);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2e+06'"), 1200000.0, 3);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2e+06'"), 1200000.0, 4);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2e+06'"), 1200000.0, 5);
+  check.template operator()<"answer is '{:#.{}}'">(SV("answer is '1.2e+06'"), 1200000.0, 6);
+
   // *** locale-specific form ***
   // See locale-specific_form.pass.cpp
 }
@@ -2552,6 +2637,68 @@ void format_test_pointer(TestFunction check, ExceptionTest check_exception) {
   format_test_pointer<std::nullptr_t, CharT>(check, check_exception);
   format_test_pointer<void*, CharT>(check, check_exception);
   format_test_pointer<const void*, CharT>(check, check_exception);
+}
+
+/// Tests special buffer functions with a "large" input.
+///
+/// This is a test specific for libc++, however the code should behave the same
+/// on all implementations.
+/// In \c __format::__output_buffer there are some special functions to optimize
+/// outputting multiple characters, \c __copy, \c __transform, \c __fill. This
+/// test validates whether the functions behave properly when the output size
+/// doesn't fit in its internal buffer.
+template <class CharT, class TestFunction>
+void format_test_buffer_optimizations(TestFunction check) {
+#ifdef _LIBCPP_VERSION
+  // Used to validate our test sets are the proper size.
+  // To test the chunked operations it needs to be larger than the internal
+  // buffer. Picked a nice looking number.
+  constexpr int minimum = 3 * std::__format::__internal_storage<CharT>::__buffer_size;
+#else
+  constexpr int minimum = 1;
+#endif
+
+  // Copy
+  std::basic_string<CharT> str = STR(
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog."
+      "The quick brown fox jumps over the lazy dog.");
+  assert(str.size() > minimum);
+  check.template operator()<"{}">(std::basic_string_view<CharT>{str}, str);
+
+  // Fill
+  std::basic_string<CharT> fill(minimum, CharT('*'));
+  check.template operator()<"{:*<{}}">(std::basic_string_view<CharT>{str + fill}, str, str.size() + minimum);
+  check.template operator()<"{:*^{}}">(
+      std::basic_string_view<CharT>{fill + str + fill}, str, minimum + str.size() + minimum);
+  check.template operator()<"{:*>{}}">(std::basic_string_view<CharT>{fill + str}, str, minimum + str.size());
 }
 
 template <class CharT, class TestFunction, class ExceptionTest>
@@ -2668,6 +2815,9 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
 
   // *** Test handle formatter argument ***
   format_test_handle<CharT>(check, check_exception);
+
+  // *** Test the interal buffer optimizations ***
+  format_test_buffer_optimizations<CharT>(check);
 }
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS

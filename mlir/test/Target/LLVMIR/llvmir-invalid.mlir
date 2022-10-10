@@ -15,8 +15,15 @@ llvm.func @invalid_noalias(%arg0 : f32 {llvm.noalias}) -> f32 {
 // -----
 
 // expected-error @+1 {{llvm.sret attribute attached to LLVM non-pointer argument}}
-llvm.func @invalid_sret(%arg0 : f32 {llvm.sret}) -> f32 {
+llvm.func @invalid_sret(%arg0 : f32 {llvm.sret = f32}) -> f32 {
   llvm.return %arg0 : f32
+}
+
+// -----
+
+// expected-error @+1 {{llvm.sret attribute attached to LLVM pointer argument of a different type}}
+llvm.func @invalid_sret(%arg0 : !llvm.ptr<f32> {llvm.sret = i32}) -> !llvm.ptr<f32> {
+  llvm.return %arg0 : !llvm.ptr<f32>
 }
 
 // -----
@@ -28,8 +35,43 @@ llvm.func @invalid_nest(%arg0 : f32 {llvm.nest}) -> f32 {
 // -----
 
 // expected-error @+1 {{llvm.byval attribute attached to LLVM non-pointer argument}}
-llvm.func @invalid_byval(%arg0 : f32 {llvm.byval}) -> f32 {
+llvm.func @invalid_byval(%arg0 : f32 {llvm.byval = f32}) -> f32 {
   llvm.return %arg0 : f32
+}
+
+// -----
+
+// expected-error @+1 {{llvm.byval attribute attached to LLVM pointer argument of a different type}}
+llvm.func @invalid_sret(%arg0 : !llvm.ptr<f32> {llvm.byval = i32}) -> !llvm.ptr<f32> {
+  llvm.return %arg0 : !llvm.ptr<f32>
+}
+
+// -----
+
+// expected-error @+1 {{llvm.byref attribute attached to LLVM non-pointer argument}}
+llvm.func @invalid_byval(%arg0 : f32 {llvm.byref = f32}) -> f32 {
+  llvm.return %arg0 : f32
+}
+
+// -----
+
+// expected-error @+1 {{llvm.byref attribute attached to LLVM pointer argument of a different type}}
+llvm.func @invalid_sret(%arg0 : !llvm.ptr<f32> {llvm.byref = i32}) -> !llvm.ptr<f32> {
+  llvm.return %arg0 : !llvm.ptr<f32>
+}
+
+// -----
+
+// expected-error @+1 {{llvm.inalloca attribute attached to LLVM non-pointer argument}}
+llvm.func @invalid_byval(%arg0 : f32 {llvm.inalloca = f32}) -> f32 {
+  llvm.return %arg0 : f32
+}
+
+// -----
+
+// expected-error @+1 {{llvm.inalloca attribute attached to LLVM pointer argument of a different type}}
+llvm.func @invalid_sret(%arg0 : !llvm.ptr<f32> {llvm.inalloca = i32}) -> !llvm.ptr<f32> {
+  llvm.return %arg0 : !llvm.ptr<f32>
 }
 
 // -----

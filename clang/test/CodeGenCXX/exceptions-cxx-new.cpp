@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple i686-pc-win32 -fms-extensions -fexceptions -fcxx-exceptions -emit-llvm -o - -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 %s -triple i686-pc-win32 -fms-extensions -fexceptions -fcxx-exceptions -emit-llvm -o - -std=c++11 | FileCheck %s
 
 int f(int);
 
@@ -20,7 +20,7 @@ void test_catch() {
 // CHECK:   %[[CATCHSWITCHPAD:.*]] = catchswitch within none [label %[[CATCH_INT:.*]], label %[[CATCH_DOUBLE:.*]]] unwind to caller
 
 // CHECK: [[CATCH_INT]]
-// CHECK:   %[[CATCHPAD_INT:.*]] = catchpad within %[[CATCHSWITCHPAD]] [%rtti.TypeDescriptor2* @"??_R0H@8", i32 0, i8* null]
+// CHECK:   %[[CATCHPAD_INT:.*]] = catchpad within %[[CATCHSWITCHPAD]] [ptr @"??_R0H@8", i32 0, ptr null]
 // CHECK:   call noundef i32 @"?f@@YAHH@Z"(i32 noundef 2)
 // CHECK:   catchret from %[[CATCHPAD_INT]] to label %[[LEAVE_INT_CATCH:.*]]
 
@@ -31,7 +31,7 @@ void test_catch() {
 // CHECK:   ret void
 
 // CHECK: [[CATCH_DOUBLE]]
-// CHECK:   %[[CATCHPAD_DOUBLE:.*]] = catchpad within %[[CATCHSWITCHPAD]] [%rtti.TypeDescriptor2* @"??_R0N@8", i32 0, i8* null]
+// CHECK:   %[[CATCHPAD_DOUBLE:.*]] = catchpad within %[[CATCHSWITCHPAD]] [ptr @"??_R0N@8", i32 0, ptr null]
 // CHECK:   call noundef i32 @"?f@@YAHH@Z"(i32 noundef 3)
 // CHECK:   catchret from %[[CATCHPAD_DOUBLE]] to label %[[LEAVE_DOUBLE_CATCH:.*]]
 

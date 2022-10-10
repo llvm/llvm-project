@@ -12,12 +12,14 @@
 
 #include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/Transforms/DialectConversion.h"
 
 using namespace mlir;
@@ -51,7 +53,7 @@ public:
 
 /// This is separate because in Vulkan workgroup size is exposed to shaders via
 /// a constant with WorkgroupSize decoration. So here we cannot generate a
-/// builtin variable; instead the information in the `spv.entry_point_abi`
+/// builtin variable; instead the information in the `spirv.entry_point_abi`
 /// attribute on the surrounding FuncOp is used to replace the gpu::BlockDimOp.
 class WorkGroupSizeConversion : public OpConversionPattern<gpu::BlockDimOp> {
 public:
@@ -63,7 +65,7 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Pattern to convert a kernel function in GPU dialect within a spv.module.
+/// Pattern to convert a kernel function in GPU dialect within a spirv.module.
 class GPUFuncOpConversion final : public OpConversionPattern<gpu::GPUFuncOp> {
 public:
   using OpConversionPattern<gpu::GPUFuncOp>::OpConversionPattern;
@@ -76,7 +78,7 @@ private:
   SmallVector<int32_t, 3> workGroupSizeAsInt32;
 };
 
-/// Pattern to convert a gpu.module to a spv.module.
+/// Pattern to convert a gpu.module to a spirv.module.
 class GPUModuleConversion final : public OpConversionPattern<gpu::GPUModuleOp> {
 public:
   using OpConversionPattern<gpu::GPUModuleOp>::OpConversionPattern;
@@ -110,13 +112,23 @@ public:
                   ConversionPatternRewriter &rewriter) const override;
 };
 
-/// Pattern to convert a gpu.barrier op into a spv.ControlBarrier op.
+/// Pattern to convert a gpu.barrier op into a spirv.ControlBarrier op.
 class GPUBarrierConversion final : public OpConversionPattern<gpu::BarrierOp> {
 public:
   using OpConversionPattern::OpConversionPattern;
 
   LogicalResult
   matchAndRewrite(gpu::BarrierOp barrierOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override;
+};
+
+/// Pattern to convert a gpu.shuffle op into a spirv.GroupNonUniformShuffle op.
+class GPUShuffleConversion final : public OpConversionPattern<gpu::ShuffleOp> {
+public:
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::ShuffleOp shuffleOp, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override;
 };
 
@@ -138,7 +150,7 @@ LogicalResult LaunchConfigConversion<SourceOp, builtin>::matchAndRewrite(
       spirv::getBuiltinVariableValue(op, builtin, indexType, rewriter);
   rewriter.replaceOpWithNewOp<spirv::CompositeExtractOp>(
       op, indexType, spirvBuiltin,
-      rewriter.getI32ArrayAttr({static_cast<int32_t>(op.dimension())}));
+      rewriter.getI32ArrayAttr({static_cast<int32_t>(op.getDimension())}));
   return success();
 }
 
@@ -164,7 +176,7 @@ LogicalResult WorkGroupSizeConversion::matchAndRewrite(
     return failure();
 
   auto val = workGroupSizeAttr
-                 .getValues<int32_t>()[static_cast<int32_t>(op.dimension())];
+                 .getValues<int32_t>()[static_cast<int32_t>(op.getDimension())];
   auto convertedType =
       getTypeConverter()->convertType(op.getResult().getType());
   if (!convertedType)
@@ -204,6 +216,8 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, TypeConverter &typeConverter,
     for (const auto &argType :
          enumerate(funcOp.getFunctionType().getInputs())) {
       auto convertedType = typeConverter.convertType(argType.value());
+      if (!convertedType)
+        return nullptr;
       signatureConverter.addInputs(argType.index(), convertedType);
     }
   }
@@ -235,8 +249,8 @@ lowerAsEntryFunction(gpu::GPUFuncOp funcOp, TypeConverter &typeConverter,
   return newFuncOp;
 }
 
-/// Populates `argABI` with spv.interface_var_abi attributes for lowering
-/// gpu.func to spv.func if no arguments have the attributes set
+/// Populates `argABI` with spirv.interface_var_abi attributes for lowering
+/// gpu.func to spirv.func if no arguments have the attributes set
 /// already. Returns failure if any argument has the ABI attribute set already.
 static LogicalResult
 getDefaultABIAttrs(MLIRContext *context, gpu::GPUFuncOp funcOp,
@@ -274,7 +288,7 @@ LogicalResult GPUFuncOpConversion::matchAndRewrite(
           argIndex, spirv::getInterfaceVarABIAttrName());
       if (!abiAttr) {
         funcOp.emitRemark(
-            "match failure: missing 'spv.interface_var_abi' attribute at "
+            "match failure: missing 'spirv.interface_var_abi' attribute at "
             "argument ")
             << argIndex;
         return failure();
@@ -285,7 +299,8 @@ LogicalResult GPUFuncOpConversion::matchAndRewrite(
 
   auto entryPointAttr = spirv::lookupEntryPointABI(funcOp);
   if (!entryPointAttr) {
-    funcOp.emitRemark("match failure: missing 'spv.entry_point_abi' attribute");
+    funcOp.emitRemark(
+        "match failure: missing 'spirv.entry_point_abi' attribute");
     return failure();
   }
   spirv::FuncOp newFuncOp = lowerAsEntryFunction(
@@ -309,7 +324,7 @@ LogicalResult GPUModuleConversion::matchAndRewrite(
   FailureOr<spirv::MemoryModel> memoryModel = spirv::getMemoryModel(targetEnv);
   if (failed(memoryModel))
     return moduleOp.emitRemark("match failure: could not selected memory model "
-                               "based on 'spv.target_env'");
+                               "based on 'spirv.target_env'");
 
   // Add a keyword to the module name to avoid symbolic conflict.
   std::string spvModuleName = (kSPIRVModule + moduleOp.getName()).str();
@@ -319,9 +334,9 @@ LogicalResult GPUModuleConversion::matchAndRewrite(
 
   // Move the region from the module op into the SPIR-V module.
   Region &spvModuleRegion = spvModule.getRegion();
-  rewriter.inlineRegionBefore(moduleOp.body(), spvModuleRegion,
+  rewriter.inlineRegionBefore(moduleOp.getBodyRegion(), spvModuleRegion,
                               spvModuleRegion.begin());
-  // The spv.module build method adds a block. Remove that.
+  // The spirv.module build method adds a block. Remove that.
   rewriter.eraseBlock(&spvModuleRegion.back());
   rewriter.eraseOp(moduleOp);
   return success();
@@ -361,6 +376,44 @@ LogicalResult GPUBarrierConversion::matchAndRewrite(
 }
 
 //===----------------------------------------------------------------------===//
+// Shuffle
+//===----------------------------------------------------------------------===//
+
+LogicalResult GPUShuffleConversion::matchAndRewrite(
+    gpu::ShuffleOp shuffleOp, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  // Require the shuffle width to be the same as the target's subgroup size,
+  // given that for SPIR-V non-uniform subgroup ops, we cannot select
+  // participating invocations.
+  auto targetEnv = getTypeConverter<SPIRVTypeConverter>()->getTargetEnv();
+  unsigned subgroupSize =
+      targetEnv.getAttr().getResourceLimits().getSubgroupSize();
+  IntegerAttr widthAttr;
+  if (!matchPattern(shuffleOp.getWidth(), m_Constant(&widthAttr)) ||
+      widthAttr.getValue().getZExtValue() != subgroupSize)
+    return rewriter.notifyMatchFailure(
+        shuffleOp, "shuffle width and target subgroup size mismatch");
+
+  Location loc = shuffleOp.getLoc();
+  Value trueVal = spirv::ConstantOp::getOne(rewriter.getI1Type(),
+                                            shuffleOp.getLoc(), rewriter);
+  auto scope = rewriter.getAttr<spirv::ScopeAttr>(spirv::Scope::Subgroup);
+  Value result;
+
+  switch (shuffleOp.getMode()) {
+  case gpu::ShuffleMode::XOR:
+    result = rewriter.create<spirv::GroupNonUniformShuffleXorOp>(
+        loc, scope, adaptor.getValue(), adaptor.getOffset());
+    break;
+  default:
+    return rewriter.notifyMatchFailure(shuffleOp, "unimplemented shuffle mode");
+  }
+
+  rewriter.replaceOp(shuffleOp, {result, trueVal});
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // GPU To SPIRV Patterns.
 //===----------------------------------------------------------------------===//
 
@@ -368,7 +421,7 @@ void mlir::populateGPUToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                       RewritePatternSet &patterns) {
   patterns.add<
       GPUBarrierConversion, GPUFuncOpConversion, GPUModuleConversion,
-      GPUModuleEndConversion, GPUReturnOpConversion,
+      GPUModuleEndConversion, GPUReturnOpConversion, GPUShuffleConversion,
       LaunchConfigConversion<gpu::BlockIdOp, spirv::BuiltIn::WorkgroupId>,
       LaunchConfigConversion<gpu::GridDimOp, spirv::BuiltIn::NumWorkgroups>,
       LaunchConfigConversion<gpu::BlockDimOp, spirv::BuiltIn::WorkgroupSize>,

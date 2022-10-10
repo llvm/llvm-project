@@ -16,5 +16,5 @@ define i32 @foo(i32 %blah) {
         ret i32 %blah
 }
 
-@1 = hidden dllexport global i32 42
+@1 = default dllexport global i32 42
 @2 = dllexport global i32 42

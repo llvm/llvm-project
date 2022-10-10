@@ -171,6 +171,8 @@ static ComparisonTestCasesTy comparisonTestCases{
         std::make_tuple("abc", "def", 3, 3, -1),
         std::make_tuple("ab ", "abc", 3, 2, 0),
         std::make_tuple("abc", "abc", 2, 3, -1),
+        std::make_tuple("ab\xff", "ab ", 3, 2, 1),
+        std::make_tuple("ab ", "ab\xff", 2, 3, -1),
     },
     {
         std::make_tuple(u"abc", u"abc", 3, 3, 0),

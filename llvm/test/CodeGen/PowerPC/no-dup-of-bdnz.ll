@@ -1,4 +1,4 @@
-; RUN: opt -early-cse-memssa -earlycse-debug-hash -loop-rotate -licm -loop-rotate -S %s -o - | FileCheck %s
+; RUN: opt -passes='early-cse<memssa>,loop-mssa(loop-rotate,licm,loop-rotate)' -earlycse-debug-hash -S %s -o - | FileCheck %s
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 source_filename = "bugpoint-output-8903f29.bc"
 target datalayout = "e-m:e-i64:64-n32:64"

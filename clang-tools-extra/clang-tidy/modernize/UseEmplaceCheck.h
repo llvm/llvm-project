@@ -37,6 +37,8 @@ public:
 private:
   const bool IgnoreImplicitConstructors;
   const std::vector<StringRef> ContainersWithPushBack;
+  const std::vector<StringRef> ContainersWithPush;
+  const std::vector<StringRef> ContainersWithPushFront;
   const std::vector<StringRef> SmartPointers;
   const std::vector<StringRef> TupleTypes;
   const std::vector<StringRef> TupleMakeFunctions;

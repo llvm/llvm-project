@@ -73,12 +73,12 @@ ConvertRegReg("ppc-convert-rr-to-ri", cl::Hidden, cl::init(true),
 static cl::opt<bool>
     EnableSExtElimination("ppc-eliminate-signext",
                           cl::desc("enable elimination of sign-extensions"),
-                          cl::init(false), cl::Hidden);
+                          cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableZExtElimination("ppc-eliminate-zeroext",
                           cl::desc("enable elimination of zero-extensions"),
-                          cl::init(false), cl::Hidden);
+                          cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableTrapOptimization("ppc-opt-conditional-trap",
@@ -172,8 +172,10 @@ static MachineInstr *getVRegDefOrNull(MachineOperand *Op,
 
 // This function returns number of known zero bits in output of MI
 // starting from the most significant bit.
-static unsigned
-getKnownLeadingZeroCount(MachineInstr *MI, const PPCInstrInfo *TII) {
+static unsigned getKnownLeadingZeroCount(const unsigned Reg,
+                                         const PPCInstrInfo *TII,
+                                         const MachineRegisterInfo *MRI) {
+  MachineInstr *MI = MRI->getVRegDef(Reg);
   unsigned Opcode = MI->getOpcode();
   if (Opcode == PPC::RLDICL || Opcode == PPC::RLDICL_rec ||
       Opcode == PPC::RLDCL || Opcode == PPC::RLDCL_rec)
@@ -217,7 +219,7 @@ getKnownLeadingZeroCount(MachineInstr *MI, const PPCInstrInfo *TII) {
       Opcode == PPC::LBZU8 || Opcode == PPC::LBZUX8)
     return 56;
 
-  if (TII->isZeroExtended(*MI))
+  if (TII->isZeroExtended(Reg, MRI))
     return 32;
 
   return 0;
@@ -776,28 +778,28 @@ bool PPCMIPeephole::simplifyCode() {
           break;
 
         MachineInstr *SrcMI = MRI->getVRegDef(NarrowReg);
+        unsigned SrcOpcode = SrcMI->getOpcode();
         // If we've used a zero-extending load that we will sign-extend,
         // just do a sign-extending load.
-        if (SrcMI->getOpcode() == PPC::LHZ ||
-            SrcMI->getOpcode() == PPC::LHZX) {
+        if (SrcOpcode == PPC::LHZ || SrcOpcode == PPC::LHZX) {
           if (!MRI->hasOneNonDBGUse(SrcMI->getOperand(0).getReg()))
             break;
-          auto is64Bit = [] (unsigned Opcode) {
-            return Opcode == PPC::EXTSH8;
-          };
-          auto isXForm = [] (unsigned Opcode) {
-            return Opcode == PPC::LHZX;
-          };
-          auto getSextLoadOp = [] (bool is64Bit, bool isXForm) {
-            if (is64Bit)
-              if (isXForm) return PPC::LHAX8;
-              else         return PPC::LHA8;
-            else
-              if (isXForm) return PPC::LHAX;
-              else         return PPC::LHA;
-          };
-          unsigned Opc = getSextLoadOp(is64Bit(MI.getOpcode()),
-                                       isXForm(SrcMI->getOpcode()));
+          // Determine the new opcode. We need to make sure that if the original
+          // instruction has a 64 bit opcode we keep using a 64 bit opcode.
+          // Likewise if the source is X-Form the new opcode should also be
+          // X-Form.
+          unsigned Opc = PPC::LHA;
+          bool SourceIsXForm = SrcOpcode == PPC::LHZX;
+          bool MIIs64Bit = MI.getOpcode() == PPC::EXTSH8 ||
+            MI.getOpcode() == PPC::EXTSH8_32_64;
+
+          if (SourceIsXForm && MIIs64Bit)
+            Opc = PPC::LHAX8;
+          else if (SourceIsXForm && !MIIs64Bit)
+            Opc = PPC::LHAX;
+          else if (MIIs64Bit)
+            Opc = PPC::LHA8;
+
           LLVM_DEBUG(dbgs() << "Zero-extending load\n");
           LLVM_DEBUG(SrcMI->dump());
           LLVM_DEBUG(dbgs() << "and sign-extension\n");
@@ -820,28 +822,48 @@ bool PPCMIPeephole::simplifyCode() {
           break;
 
         MachineInstr *SrcMI = MRI->getVRegDef(NarrowReg);
+        unsigned SrcOpcode = SrcMI->getOpcode();
         // If we've used a zero-extending load that we will sign-extend,
         // just do a sign-extending load.
-        if (SrcMI->getOpcode() == PPC::LWZ ||
-            SrcMI->getOpcode() == PPC::LWZX) {
+        if (SrcOpcode == PPC::LWZ || SrcOpcode == PPC::LWZX) {
           if (!MRI->hasOneNonDBGUse(SrcMI->getOperand(0).getReg()))
             break;
-          auto is64Bit = [] (unsigned Opcode) {
-            return Opcode == PPC::EXTSW || Opcode == PPC::EXTSW_32_64;
-          };
-          auto isXForm = [] (unsigned Opcode) {
-            return Opcode == PPC::LWZX;
-          };
-          auto getSextLoadOp = [] (bool is64Bit, bool isXForm) {
-            if (is64Bit)
-              if (isXForm) return PPC::LWAX;
-              else         return PPC::LWA;
-            else
-              if (isXForm) return PPC::LWAX_32;
-              else         return PPC::LWA_32;
-          };
-          unsigned Opc = getSextLoadOp(is64Bit(MI.getOpcode()),
-                                       isXForm(SrcMI->getOpcode()));
+
+          // The transformation from a zero-extending load to a sign-extending
+          // load is only legal when the displacement is a multiple of 4.
+          // If the displacement is not at least 4 byte aligned, don't perform
+          // the transformation.
+          bool IsWordAligned = false;
+          if (SrcMI->getOperand(1).isGlobal()) {
+            const GlobalObject *GO =
+                dyn_cast<GlobalObject>(SrcMI->getOperand(1).getGlobal());
+            if (GO && GO->getAlignment() >= 4)
+              IsWordAligned = true;
+          } else if (SrcMI->getOperand(1).isImm()) {
+            int64_t Value = SrcMI->getOperand(1).getImm();
+            if (Value % 4 == 0)
+              IsWordAligned = true;
+          }
+
+          // Determine the new opcode. We need to make sure that if the original
+          // instruction has a 64 bit opcode we keep using a 64 bit opcode.
+          // Likewise if the source is X-Form the new opcode should also be
+          // X-Form.
+          unsigned Opc = PPC::LWA_32;
+          bool SourceIsXForm = SrcOpcode == PPC::LWZX;
+          bool MIIs64Bit = MI.getOpcode() == PPC::EXTSW ||
+            MI.getOpcode() == PPC::EXTSW_32_64;
+
+          if (SourceIsXForm && MIIs64Bit)
+            Opc = PPC::LWAX;
+          else if (SourceIsXForm && !MIIs64Bit)
+            Opc = PPC::LWAX_32;
+          else if (MIIs64Bit)
+            Opc = PPC::LWA;
+
+          if (!IsWordAligned && (Opc == PPC::LWA || Opc == PPC::LWA_32))
+            break;
+
           LLVM_DEBUG(dbgs() << "Zero-extending load\n");
           LLVM_DEBUG(SrcMI->dump());
           LLVM_DEBUG(dbgs() << "and sign-extension\n");
@@ -853,7 +875,7 @@ bool PPCMIPeephole::simplifyCode() {
           Simplified = true;
           NumEliminatedSExt++;
         } else if (MI.getOpcode() == PPC::EXTSW_32_64 &&
-                   TII->isSignExtended(*SrcMI)) {
+                   TII->isSignExtended(NarrowReg, MRI)) {
           // We can eliminate EXTSW if the input is known to be already
           // sign-extended.
           LLVM_DEBUG(dbgs() << "Removing redundant sign-extension\n");
@@ -904,8 +926,11 @@ bool PPCMIPeephole::simplifyCode() {
           if (Register::isVirtualRegister(CopyReg))
             SrcMI = MRI->getVRegDef(CopyReg);
         }
+        if (!SrcMI->getOperand(0).isReg())
+          break;
 
-        unsigned KnownZeroCount = getKnownLeadingZeroCount(SrcMI, TII);
+        unsigned KnownZeroCount =
+            getKnownLeadingZeroCount(SrcMI->getOperand(0).getReg(), TII, MRI);
         if (MI.getOperand(3).getImm() <= KnownZeroCount) {
           LLVM_DEBUG(dbgs() << "Removing redundant zero-extension\n");
           BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
@@ -1379,7 +1404,7 @@ bool PPCMIPeephole::eliminateRedundantCompare() {
     bool IsPartiallyRedundant = (MBBtoMoveCmp != nullptr);
 
     // We cannot optimize an unsupported compare opcode or
-    // a mix of 32-bit and 64-bit comaprisons
+    // a mix of 32-bit and 64-bit comparisons
     if (!isSupportedCmpOp(CMPI1->getOpcode()) ||
         !isSupportedCmpOp(CMPI2->getOpcode()) ||
         is64bitCmpOp(CMPI1->getOpcode()) != is64bitCmpOp(CMPI2->getOpcode()))

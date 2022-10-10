@@ -241,10 +241,12 @@ LogicalResult mlir::getIndexSet(MutableArrayRef<Operation *> ops,
                                 FlatAffineValueConstraints *domain) {
   SmallVector<Value, 4> indices;
   SmallVector<AffineForOp, 8> forOps;
-
   for (Operation *op : ops) {
-    assert((isa<AffineForOp, AffineIfOp>(op)) &&
-           "ops should have either AffineForOp or AffineIfOp");
+    if (!isa<AffineForOp, AffineIfOp>(op)) {
+      // TODO: Support affine.parallel ops.
+      LLVM_DEBUG(llvm::dbgs() << "getIndexSet only handles affine.for/if ops");
+      return failure();
+    }
     if (AffineForOp forOp = dyn_cast<AffineForOp>(op))
       forOps.push_back(forOp);
   }
@@ -271,7 +273,7 @@ LogicalResult mlir::getIndexSet(MutableArrayRef<Operation *> ops,
 static LogicalResult getOpIndexSet(Operation *op,
                                    FlatAffineValueConstraints *indexSet) {
   SmallVector<Operation *, 4> ops;
-  getEnclosingAffineForAndIfOps(*op, &ops);
+  getEnclosingAffineOps(*op, &ops);
   return getIndexSet(ops, indexSet);
 }
 
@@ -299,70 +301,56 @@ getNumCommonLoops(const FlatAffineValueConstraints &srcDomain,
   return numCommonLoops;
 }
 
-/// Returns Block common to 'srcAccess.opInst' and 'dstAccess.opInst'.
-static Block *getCommonBlock(const MemRefAccess &srcAccess,
-                             const MemRefAccess &dstAccess,
-                             const FlatAffineValueConstraints &srcDomain,
-                             unsigned numCommonLoops) {
-  // Get the chain of ancestor blocks to the given `MemRefAccess` instance. The
-  // search terminates when either an op with the `AffineScope` trait or
-  // `endBlock` is reached.
-  auto getChainOfAncestorBlocks = [&](const MemRefAccess &access,
-                                      SmallVector<Block *, 4> &ancestorBlocks,
-                                      Block *endBlock = nullptr) {
-    Block *currBlock = access.opInst->getBlock();
-    // Loop terminates when the currBlock is nullptr or equals to the endBlock,
-    // or its parent operation holds an affine scope.
-    while (currBlock && currBlock != endBlock &&
-           !currBlock->getParentOp()->hasTrait<OpTrait::AffineScope>()) {
-      ancestorBlocks.push_back(currBlock);
-      currBlock = currBlock->getParentOp()->getBlock();
-    }
-  };
-
-  if (numCommonLoops == 0) {
-    Block *block = srcAccess.opInst->getBlock();
-    while (!llvm::isa<func::FuncOp>(block->getParentOp())) {
-      block = block->getParentOp()->getBlock();
-    }
-    return block;
-  }
-  Value commonForIV = srcDomain.getValue(numCommonLoops - 1);
-  AffineForOp forOp = getForInductionVarOwner(commonForIV);
-  assert(forOp && "commonForValue was not an induction variable");
+/// Returns the closest surrounding block common to `opA` and `opB`. `opA` and
+/// `opB` should be in the same affine scope and thus such a block is guaranteed
+/// to exist.
+static Block *getCommonBlock(Operation *opA, Operation *opB) {
+  // Get the chain of ancestor blocks for the given `MemRefAccess` instance. The
+  // chain extends up to and includnig an op that starts an affine scope.
+  auto getChainOfAncestorBlocks =
+      [&](Operation *op, SmallVectorImpl<Block *> &ancestorBlocks) {
+        Block *currBlock = op->getBlock();
+        // Loop terminates when the currBlock is nullptr or its parent operation
+        // holds an affine scope.
+        while (currBlock &&
+               !currBlock->getParentOp()->hasTrait<OpTrait::AffineScope>()) {
+          ancestorBlocks.push_back(currBlock);
+          currBlock = currBlock->getParentOp()->getBlock();
+        }
+        assert(currBlock &&
+               "parent op starting an affine scope is always expected");
+        ancestorBlocks.push_back(currBlock);
+      };
 
   // Find the closest common block including those in AffineIf.
   SmallVector<Block *, 4> srcAncestorBlocks, dstAncestorBlocks;
-  getChainOfAncestorBlocks(srcAccess, srcAncestorBlocks, forOp.getBody());
-  getChainOfAncestorBlocks(dstAccess, dstAncestorBlocks, forOp.getBody());
+  getChainOfAncestorBlocks(opA, srcAncestorBlocks);
+  getChainOfAncestorBlocks(opB, dstAncestorBlocks);
 
-  Block *commonBlock = forOp.getBody();
+  Block *commonBlock = nullptr;
   for (int i = srcAncestorBlocks.size() - 1, j = dstAncestorBlocks.size() - 1;
        i >= 0 && j >= 0 && srcAncestorBlocks[i] == dstAncestorBlocks[j];
        i--, j--)
     commonBlock = srcAncestorBlocks[i];
-
+  // This is guaranteed since both ops are from the same affine scope.
+  assert(commonBlock && "ops expected to have a common surrounding block");
   return commonBlock;
 }
 
-// Returns true if the ancestor operation of 'srcAccess' appears before the
-// ancestor operation of 'dstAccess' in the common ancestral block. Returns
-// false otherwise.
-// Note that because 'srcAccess' or 'dstAccess' may be nested in conditionals,
-// the function is named 'srcAppearsBeforeDstInCommonBlock'. Note that
-// 'numCommonLoops' is the number of contiguous surrounding outer loops.
-static bool srcAppearsBeforeDstInAncestralBlock(
-    const MemRefAccess &srcAccess, const MemRefAccess &dstAccess,
-    const FlatAffineValueConstraints &srcDomain, unsigned numCommonLoops) {
+/// Returns true if the ancestor operation of 'srcAccess' appears before the
+/// ancestor operation of 'dstAccess' in their common ancestral block. The
+/// operations for `srcAccess` and `dstAccess` are expected to be in the same
+/// affine scope.
+static bool srcAppearsBeforeDstInAncestralBlock(const MemRefAccess &srcAccess,
+                                                const MemRefAccess &dstAccess) {
   // Get Block common to 'srcAccess.opInst' and 'dstAccess.opInst'.
-  auto *commonBlock =
-      getCommonBlock(srcAccess, dstAccess, srcDomain, numCommonLoops);
+  auto *commonBlock = getCommonBlock(srcAccess.opInst, dstAccess.opInst);
   // Check the dominance relationship between the respective ancestors of the
   // src and dst in the Block of the innermost among the common loops.
   auto *srcInst = commonBlock->findAncestorOpInBlock(*srcAccess.opInst);
-  assert(srcInst != nullptr);
+  assert(srcInst && "src access op must lie in common block");
   auto *dstInst = commonBlock->findAncestorOpInBlock(*dstAccess.opInst);
-  assert(dstInst != nullptr);
+  assert(dstInst && "dest access op must lie in common block");
 
   // Determine whether dstInst comes after srcInst.
   return srcInst->isBeforeInBlock(dstInst);
@@ -442,10 +430,12 @@ static void computeDirectionVector(
   dependenceComponents->resize(numCommonLoops);
   for (unsigned j = 0; j < numCommonLoops; ++j) {
     (*dependenceComponents)[j].op = commonLoops[j].getOperation();
-    auto lbConst = dependenceDomain->getConstantBound(IntegerPolyhedron::LB, j);
+    auto lbConst =
+        dependenceDomain->getConstantBound64(IntegerPolyhedron::LB, j);
     (*dependenceComponents)[j].lb =
         lbConst.value_or(std::numeric_limits<int64_t>::min());
-    auto ubConst = dependenceDomain->getConstantBound(IntegerPolyhedron::UB, j);
+    auto ubConst =
+        dependenceDomain->getConstantBound64(IntegerPolyhedron::UB, j);
     (*dependenceComponents)[j].ub =
         ubConst.value_or(std::numeric_limits<int64_t>::max());
   }
@@ -610,6 +600,10 @@ DependenceResult mlir::checkMemrefAccessDependence(
       !isa<AffineWriteOpInterface>(dstAccess.opInst))
     return DependenceResult::NoDependence;
 
+  // We can't analyze further if the ops lie in different affine scopes.
+  if (getAffineScope(srcAccess.opInst) != getAffineScope(dstAccess.opInst))
+    return DependenceResult::Failure;
+
   // Create access relation from each MemRefAccess.
   FlatAffineRelation srcRel, dstRel;
   if (failed(srcAccess.getAccessRelation(srcRel)))
@@ -628,8 +622,7 @@ DependenceResult mlir::checkMemrefAccessDependence(
   unsigned numCommonLoops = getNumCommonLoops(srcDomain, dstDomain);
   assert(loopDepth <= numCommonLoops + 1);
   if (!allowRAR && loopDepth > numCommonLoops &&
-      !srcAppearsBeforeDstInAncestralBlock(srcAccess, dstAccess, srcDomain,
-                                           numCommonLoops)) {
+      !srcAppearsBeforeDstInAncestralBlock(srcAccess, dstAccess)) {
     return DependenceResult::NoDependence;
   }
 

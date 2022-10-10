@@ -26,7 +26,8 @@ struct A {
   const static int int_val_with_address = 2;
   const static bool bool_val = true;
 
-  const static auto char_max = std::numeric_limits<signed char>::max();
+  const static auto char_max = std::numeric_limits<char>::max();
+  const static auto schar_max = std::numeric_limits<signed char>::max();
   const static auto uchar_max = std::numeric_limits<unsigned char>::max();
   const static auto int_max = std::numeric_limits<int>::max();
   const static auto uint_max = std::numeric_limits<unsigned>::max();
@@ -37,6 +38,7 @@ struct A {
       std::numeric_limits<unsigned long long>::max();
 
   const static auto char_min = std::numeric_limits<char>::min();
+  const static auto schar_min = std::numeric_limits<signed char>::min();
   const static auto uchar_min = std::numeric_limits<unsigned char>::min();
   const static auto int_min = std::numeric_limits<int>::min();
   const static auto uint_min = std::numeric_limits<unsigned>::min();
@@ -47,9 +49,10 @@ struct A {
       std::numeric_limits<unsigned long long>::min();
 
   const static Enum enum_val = enum_case2;
-  const static Enum invalid_enum_val = static_cast<Enum>(enum_case2 + 5);
   const static ScopedEnum scoped_enum_val = ScopedEnum::scoped_enum_case2;
-  const static ScopedEnum invalid_scoped_enum_val = static_cast<ScopedEnum>(5);
+  const static ScopedEnum not_enumerator_scoped_enum_val = static_cast<ScopedEnum>(5);
+  const static ScopedEnum not_enumerator_scoped_enum_val_2 =
+      static_cast<ScopedEnum>(7);
   const static ScopedCharEnum scoped_char_enum_val = ScopedCharEnum::case2;
   const static ScopedLongLongEnum scoped_ll_enum_val_neg =
       ScopedLongLongEnum::case0;
@@ -82,6 +85,7 @@ int main() {
   A a;
 
   auto char_max = A::char_max;
+  auto schar_max = A::schar_max;
   auto uchar_max = A::uchar_max;
   auto int_max = A::int_max;
   auto uint_max = A::uint_max;
@@ -91,6 +95,7 @@ int main() {
   auto ulonglong_max = A::ulonglong_max;
 
   auto char_min = A::char_min;
+  auto schar_min = A::schar_min;
   auto uchar_min = A::uchar_min;
   auto int_min = A::int_min;
   auto uint_min = A::uint_min;
@@ -102,9 +107,8 @@ int main() {
   int member_copy = ClassWithOnlyConstStatic::member;
 
   Enum e = A::enum_val;
-  e = A::invalid_enum_val;
   ScopedEnum se = A::scoped_enum_val;
-  se = A::invalid_scoped_enum_val;
+  se = A::not_enumerator_scoped_enum_val;
   ScopedCharEnum sce = A::scoped_char_enum_val;
   ScopedLongLongEnum sle = A::scoped_ll_enum_val;
 

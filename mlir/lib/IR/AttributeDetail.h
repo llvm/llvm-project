@@ -43,9 +43,10 @@ inline size_t getDenseElementBitWidth(Type eltType) {
 /// An attribute representing a reference to a dense vector or tensor object.
 struct DenseElementsAttributeStorage : public AttributeStorage {
 public:
-  DenseElementsAttributeStorage(ShapedType ty, bool isSplat)
-      : AttributeStorage(ty), isSplat(isSplat) {}
+  DenseElementsAttributeStorage(ShapedType type, bool isSplat)
+      : type(type), isSplat(isSplat) {}
 
+  ShapedType type;
   bool isSplat;
 };
 
@@ -75,22 +76,7 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
 
   /// Compare this storage instance with the provided key.
   bool operator==(const KeyTy &key) const {
-    if (key.type != getType())
-      return false;
-
-    // For boolean splats we need to explicitly check that the first bit is the
-    // same. Boolean values are packed at the bit level, and even though a splat
-    // is detected the rest of the bits in the first byte may differ from the
-    // splat value.
-    if (key.type.getElementType().isInteger(1)) {
-      if (key.isSplat != isSplat)
-        return false;
-      if (isSplat)
-        return (key.data.front() & 1) == data.front();
-    }
-
-    // Otherwise, we can default to just checking the data.
-    return key.data == data;
+    return key.type == type && key.data == data;
   }
 
   /// Construct a key from a shaped type, raw data buffer, and a flag that
@@ -104,8 +90,12 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
 
     // If the data is already known to be a splat, the key hash value is
     // directly the data buffer.
-    if (isKnownSplat)
+    bool isBoolData = ty.getElementType().isInteger(1);
+    if (isKnownSplat) {
+      if (isBoolData)
+        return getKeyForSplatBoolData(ty, data[0] != 0);
       return KeyTy(ty, data, llvm::hash_value(data), isKnownSplat);
+    }
 
     // Otherwise, we need to check if the data corresponds to a splat or not.
 
@@ -114,7 +104,7 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
     assert(numElements != 1 && "splat of 1 element should already be detected");
 
     // Handle boolean values directly as they are packed to 1-bit.
-    if (ty.getElementType().isInteger(1) == 1)
+    if (isBoolData)
       return getKeyForBoolData(ty, data, numElements);
 
     size_t elementWidth = getDenseElementBitWidth(ty.getElementType());
@@ -143,12 +133,9 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
     ArrayRef<char> splatData = data;
     bool splatValue = splatData.front() & 1;
 
-    // Helper functor to generate a KeyTy for a boolean splat value.
-    auto generateSplatKey = [=] {
-      return KeyTy(ty, data.take_front(1),
-                   llvm::hash_value(ArrayRef<char>(splatValue ? 1 : 0)),
-                   /*isSplat=*/true);
-    };
+    // Check the simple case where the data matches the known splat value.
+    if (splatData == ArrayRef<char>(splatValue ? kSplatTrue : kSplatFalse))
+      return getKeyForSplatBoolData(ty, splatValue);
 
     // Handle the case where the potential splat value is 1 and the number of
     // elements is non 8-bit aligned.
@@ -161,15 +148,22 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
 
       // If this is the only element, the data is known to be a splat.
       if (splatData.size() == 1)
-        return generateSplatKey();
+        return getKeyForSplatBoolData(ty, splatValue);
       splatData = splatData.drop_back();
     }
 
     // Check that the data buffer corresponds to a splat of the proper mask.
     char mask = splatValue ? ~0 : 0;
     return llvm::all_of(splatData, [mask](char c) { return c == mask; })
-               ? generateSplatKey()
+               ? getKeyForSplatBoolData(ty, splatValue)
                : KeyTy(ty, data, llvm::hash_value(data));
+  }
+
+  /// Return a key to use for a boolean splat of the given value.
+  static KeyTy getKeyForSplatBoolData(ShapedType type, bool splatValue) {
+    const char &splatData = splatValue ? kSplatTrue : kSplatFalse;
+    return KeyTy(type, splatData, llvm::hash_value(splatData),
+                 /*isSplat=*/true);
   }
 
   /// Hash the key for the storage.
@@ -187,10 +181,6 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
       char *rawData = reinterpret_cast<char *>(
           allocator.allocate(data.size(), alignof(uint64_t)));
       std::memcpy(rawData, data.data(), data.size());
-
-      // If this is a boolean splat, make sure only the first bit is used.
-      if (key.isSplat && key.type.getElementType().isInteger(1))
-        rawData[0] &= 1;
       copy = ArrayRef<char>(rawData, data.size());
     }
 
@@ -199,6 +189,10 @@ struct DenseIntOrFPElementsAttrStorage : public DenseElementsAttributeStorage {
   }
 
   ArrayRef<char> data;
+
+  /// The values used to denote a boolean splat value.
+  static constexpr char kSplatTrue = ~0;
+  static constexpr char kSplatFalse = 0;
 };
 
 /// An attribute representing a reference to a dense vector or tensor object
@@ -228,7 +222,7 @@ struct DenseStringElementsAttrStorage : public DenseElementsAttributeStorage {
 
   /// Compare this storage instance with the provided key.
   bool operator==(const KeyTy &key) const {
-    if (key.type != getType())
+    if (key.type != type)
       return false;
 
     // Otherwise, we can default to just checking the data. StringRefs compare
@@ -324,12 +318,12 @@ struct DenseStringElementsAttrStorage : public DenseElementsAttributeStorage {
 
 struct StringAttrStorage : public AttributeStorage {
   StringAttrStorage(StringRef value, Type type)
-      : AttributeStorage(type), value(value), referencedDialect(nullptr) {}
+      : type(type), value(value), referencedDialect(nullptr) {}
 
   /// The hash key is a tuple of the parameter types.
   using KeyTy = std::pair<StringRef, Type>;
   bool operator==(const KeyTy &key) const {
-    return value == key.first && getType() == key.second;
+    return value == key.first && type == key.second;
   }
   static ::llvm::hash_code hashKey(const KeyTy &key) {
     return DenseMapInfo<KeyTy>::getHashValue(key);
@@ -346,6 +340,8 @@ struct StringAttrStorage : public AttributeStorage {
   /// Initialize the storage given an MLIRContext.
   void initialize(MLIRContext *context);
 
+  /// The type of the string.
+  Type type;
   /// The raw string value.
   StringRef value;
   /// If the string value contains a dialect namespace prefix (e.g.

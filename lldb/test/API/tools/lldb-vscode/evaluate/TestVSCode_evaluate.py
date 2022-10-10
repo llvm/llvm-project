@@ -4,7 +4,6 @@ Test lldb-vscode completions request
 
 
 import lldbvscode_testcase
-import unittest2
 import vscode
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *

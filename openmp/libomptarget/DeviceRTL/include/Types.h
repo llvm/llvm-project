@@ -32,6 +32,10 @@ using int32_t = int;
 using uint32_t = unsigned int;
 using int64_t = long;
 using uint64_t = unsigned long;
+using size_t = decltype(sizeof(char));
+// TODO: Properly implement this
+using intptr_t = int64_t;
+using uintptr_t = uint64_t;
 
 static_assert(sizeof(int8_t) == 1, "type size mismatch");
 static_assert(sizeof(uint8_t) == 1, "type size mismatch");
@@ -208,13 +212,6 @@ enum OMPTgtExecModeFlags : int8_t {
 //       does?
 #define CONSTANT(NAME)                                                         \
   [[clang::address_space(4)]] NAME [[clang::loader_uninitialized]]
-
-// Attribute to keep alive certain definition for the bitcode library.
-#ifdef LIBOMPTARGET_BC_TARGET
-#define KEEP_ALIVE __attribute__((used, retain))
-#else
-#define KEEP_ALIVE
-#endif
 
 ///}
 

@@ -9,11 +9,13 @@
 // This file implements loop unrolling.
 //
 //===----------------------------------------------------------------------===//
-#include "PassDetail.h"
+
+#include "mlir/Dialect/Affine/Passes.h"
+
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/LoopUtils.h"
-#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -21,9 +23,14 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 
-using namespace mlir;
+namespace mlir {
+#define GEN_PASS_DEF_AFFINELOOPUNROLL
+#include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace mlir
 
 #define DEBUG_TYPE "affine-loop-unroll"
+
+using namespace mlir;
 
 namespace {
 
@@ -34,7 +41,7 @@ namespace {
 /// full unroll threshold was specified, in which case, fully unrolls all loops
 /// with trip count less than the specified threshold. The latter is for testing
 /// purposes, especially for testing outer loop unrolling.
-struct LoopUnroll : public AffineLoopUnrollBase<LoopUnroll> {
+struct LoopUnroll : public impl::AffineLoopUnrollBase<LoopUnroll> {
   // Callback to obtain unroll factors; if this has a callable target, takes
   // precedence over command-line argument or passed argument.
   const std::function<unsigned(AffineForOp)> getUnrollFactor;
@@ -122,14 +129,16 @@ void LoopUnroll::runOnOperation() {
 LogicalResult LoopUnroll::runOnAffineForOp(AffineForOp forOp) {
   // Use the function callback if one was provided.
   if (getUnrollFactor)
-    return loopUnrollByFactor(forOp, getUnrollFactor(forOp));
+    return loopUnrollByFactor(forOp, getUnrollFactor(forOp),
+                              /*annotateFn=*/nullptr, cleanUpUnroll);
   // Unroll completely if full loop unroll was specified.
   if (unrollFull)
     return loopUnrollFull(forOp);
   // Otherwise, unroll by the given unroll factor.
   if (unrollUpToFactor)
     return loopUnrollUpToFactor(forOp, unrollFactor);
-  return loopUnrollByFactor(forOp, unrollFactor);
+  return loopUnrollByFactor(forOp, unrollFactor, /*annotateFn=*/nullptr,
+                            cleanUpUnroll);
 }
 
 std::unique_ptr<OperationPass<func::FuncOp>> mlir::createLoopUnrollPass(

@@ -34,9 +34,11 @@ add_subdirectory(inttypes)
 add_subdirectory(math)
 add_subdirectory(string)
 add_subdirectory(stdlib)
+add_subdirectory(stdio)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
   add_subdirectory(fcntl)
+  add_subdirectory(sched)
   add_subdirectory(sys)
   add_subdirectory(unistd)
 endif()
@@ -49,8 +51,7 @@ add_subdirectory(dirent)
 # The signal API is currently disabled as signal.h is incorrect.
 # since assert uses the signal API, we disable assert also.
 # add_subdirectory(assert)
-# add_subdirectory(signal)
-add_subdirectory(stdio)
+add_subdirectory(signal)
 add_subdirectory(time)
 
 if(${LIBC_TARGET_OS} STREQUAL "linux")
@@ -81,7 +82,7 @@ add_custom_command(
 
   DEPENDS ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td ${spec_files}
           libc-prototype-testgen ${TARGET_PUBLIC_HEADERS}
-          llvmlibc
+          ${LIBC_TARGET}
 )
 
 add_executable(
@@ -96,7 +97,7 @@ set_target_properties(
   PROPERTIES
   INCLUDE_DIRECTORIES ""
 )
-target_link_libraries(libc-api-test llvmlibc)
+target_link_libraries(libc-api-test ${LIBC_TARGET})
 
 # Only include we need is the include for cpp::IsSame and our generated
 # public headers.

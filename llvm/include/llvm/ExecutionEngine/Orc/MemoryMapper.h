@@ -14,6 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_MEMORYMAPPER_H
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 #include "llvm/Support/Process.h"
 
 #include <mutex>
@@ -32,7 +33,7 @@ public:
       const char *WorkingMem;
       size_t ContentSize;
       size_t ZeroFillSize;
-      unsigned Prot;
+      AllocGroup AG;
     };
 
     ExecutorAddr MappingBase;
@@ -78,7 +79,7 @@ public:
   virtual ~MemoryMapper();
 };
 
-class InProcessMemoryMapper final : public MemoryMapper {
+class InProcessMemoryMapper : public MemoryMapper {
 public:
   InProcessMemoryMapper(size_t PageSize);
 
@@ -102,6 +103,7 @@ public:
 
 private:
   struct Allocation {
+    size_t Size;
     std::vector<shared::WrapperFunctionCall> DeinitializationActions;
   };
   using AllocationMap = DenseMap<ExecutorAddr, Allocation>;
