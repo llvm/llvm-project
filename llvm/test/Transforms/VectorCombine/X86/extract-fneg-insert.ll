@@ -115,3 +115,16 @@ define <2 x double> @ext1_v2f64_ins0(<2 x double> %x, <2 x double> %y) {
   %r = insertelement <2 x double> %y, double %n, i32 0
   ret <2 x double> %r
 }
+
+define <4 x float> @ext12_v4f32(<4 x float> %x, <4 x float> %y) {
+; CHECK-LABEL: @ext12_v4f32(
+; CHECK-NEXT:    [[E:%.*]] = extractelement <4 x float> [[X:%.*]], i32 12
+; CHECK-NEXT:    [[N:%.*]] = fneg float [[E]]
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> [[Y:%.*]], float [[N]], i32 12
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %e = extractelement <4 x float> %x, i32 12
+  %n = fneg float %e
+  %r = insertelement <4 x float> %y, float %n, i32 12
+  ret <4 x float> %r
+}
