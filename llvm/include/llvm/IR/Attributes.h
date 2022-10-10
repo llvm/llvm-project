@@ -1096,30 +1096,30 @@ public:
   /// invalid if the Kind is not present in the builder.
   Attribute getAttribute(StringRef Kind) const;
 
-  /// Return raw (possibly packed/encoded) value of integer attribute or 0 if
+  /// Return raw (possibly packed/encoded) value of integer attribute or None if
   /// not set.
-  uint64_t getRawIntAttr(Attribute::AttrKind Kind) const;
+  Optional<uint64_t> getRawIntAttr(Attribute::AttrKind Kind) const;
 
   /// Retrieve the alignment attribute, if it exists.
   MaybeAlign getAlignment() const {
-    return MaybeAlign(getRawIntAttr(Attribute::Alignment));
+    return MaybeAlign(getRawIntAttr(Attribute::Alignment).value_or(0));
   }
 
   /// Retrieve the stack alignment attribute, if it exists.
   MaybeAlign getStackAlignment() const {
-    return MaybeAlign(getRawIntAttr(Attribute::StackAlignment));
+    return MaybeAlign(getRawIntAttr(Attribute::StackAlignment).value_or(0));
   }
 
   /// Retrieve the number of dereferenceable bytes, if the
   /// dereferenceable attribute exists (zero is returned otherwise).
   uint64_t getDereferenceableBytes() const {
-    return getRawIntAttr(Attribute::Dereferenceable);
+    return getRawIntAttr(Attribute::Dereferenceable).value_or(0);
   }
 
   /// Retrieve the number of dereferenceable_or_null bytes, if the
   /// dereferenceable_or_null attribute exists (zero is returned otherwise).
   uint64_t getDereferenceableOrNullBytes() const {
-    return getRawIntAttr(Attribute::DereferenceableOrNull);
+    return getRawIntAttr(Attribute::DereferenceableOrNull).value_or(0);
   }
 
   /// Retrieve type for the given type attribute.
