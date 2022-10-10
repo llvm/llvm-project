@@ -14,7 +14,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; GEN-DARWIN-LINKONCE: target triple = "x86_64-apple-darwin"
 
 ; GEN-COMDAT: $__llvm_profile_raw_version = comdat any
-; GEN-COMDAT: @__llvm_profile_raw_version = hidden constant i64 {{[0-9]+}}, comdat
+; GEN-COMDAT: @__llvm_profile_raw_version = constant i64 {{[0-9]+}}, comdat
 ; GEN-LINKONCE: @__llvm_profile_raw_version = linkonce constant i64 {{[0-9]+}}
 ; GEN: @__profn_test_br_1 = private constant [9 x i8] c"test_br_1"
 

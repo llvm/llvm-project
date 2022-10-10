@@ -42,7 +42,7 @@ namespace sparse_tensor {
 
 /// This class abstracts over the information stored in file headers,
 /// as well as providing the buffers and methods for parsing those headers.
-class SparseTensorFile final {
+class SparseTensorReader final {
 public:
   enum class ValueKind : uint8_t {
     // The value before calling `readHeader`.
@@ -56,18 +56,18 @@ public:
     kUndefined = 5
   };
 
-  explicit SparseTensorFile(const char *filename) : filename(filename) {
+  explicit SparseTensorReader(const char *filename) : filename(filename) {
     assert(filename && "Received nullptr for filename");
   }
 
   // Disallows copying, to avoid duplicating the `file` pointer.
-  SparseTensorFile(const SparseTensorFile &) = delete;
-  SparseTensorFile &operator=(const SparseTensorFile &) = delete;
+  SparseTensorReader(const SparseTensorReader &) = delete;
+  SparseTensorReader &operator=(const SparseTensorReader &) = delete;
 
   // This dtor tries to avoid leaking the `file`.  (Though it's better
   // to call `closeFile` explicitly when possible, since there are
   // circumstances where dtors are not called reliably.)
-  ~SparseTensorFile() { closeFile(); }
+  ~SparseTensorReader() { closeFile(); }
 
   /// Opens the file for reading.
   void openFile();
@@ -194,7 +194,7 @@ template <typename V>
 inline SparseTensorCOO<V> *
 openSparseTensorCOO(const char *filename, uint64_t rank, const uint64_t *shape,
                     const uint64_t *perm, PrimaryType valTp) {
-  SparseTensorFile stfile(filename);
+  SparseTensorReader stfile(filename);
   stfile.openFile();
   stfile.readHeader();
   // Check tensor element type against the value type in the input file.

@@ -380,7 +380,7 @@ static GlobalVariable *createIRLevelProfileFlagVar(Module &M, bool IsCS) {
   auto IRLevelVersionVariable = new GlobalVariable(
       M, IntTy64, true, GlobalValue::WeakAnyLinkage,
       Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)), VarName);
-  IRLevelVersionVariable->setVisibility(GlobalValue::HiddenVisibility);
+  IRLevelVersionVariable->setVisibility(GlobalValue::DefaultVisibility);
   Triple TT(M.getTargetTriple());
   if (TT.supportsCOMDAT()) {
     IRLevelVersionVariable->setLinkage(GlobalValue::ExternalLinkage);
