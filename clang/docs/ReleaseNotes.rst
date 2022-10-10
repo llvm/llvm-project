@@ -125,9 +125,9 @@ code bases.
 
   .. code-block:: c++
 
-  void func(void *p) {
-    *p; // Now diagnosed as a warning-as-error.
-  }
+    void func(void *p) {
+      *p; // Now diagnosed as a warning-as-error.
+    }
 
 What's New in Clang |release|?
 ==============================
