@@ -2128,11 +2128,11 @@ public:
 
       switch (short_option) {
       case 'j': {
-        m_json = true;
+        m_dumper_options.json = true;
         break;
       }
       case 'J': {
-        m_pretty_json = true;
+        m_dumper_options.pretty_print_json = true;
         break;
       }
       case 'F': {
@@ -2146,8 +2146,7 @@ public:
     }
 
     void OptionParsingStarting(ExecutionContext *execution_context) override {
-      m_json = false;
-      m_pretty_json = false;
+      m_dumper_options = {};
       m_output_file = llvm::None;
     }
 
@@ -2158,8 +2157,7 @@ public:
     static const size_t kDefaultCount = 20;
 
     // Instance variables to hold the values for command options.
-    bool m_json;
-    bool m_pretty_json;
+    TraceDumperOptions m_dumper_options;
     llvm::Optional<FileSpec> m_output_file;
   };
 
@@ -2187,10 +2185,30 @@ protected:
       result.AppendError("invalid thread\n");
       return false;
     }
-    result.AppendMessageWithFormatv(
-        "json = {0}, pretty_json = {1}, file = {2}, thread = {3}",
-        m_options.m_json, m_options.m_pretty_json, !!m_options.m_output_file,
-        thread_sp->GetID());
+
+    llvm::Expected<TraceCursorSP> cursor_or_error =
+        m_exe_ctx.GetTargetSP()->GetTrace()->CreateNewCursor(*thread_sp);
+
+    if (!cursor_or_error) {
+      result.AppendError(llvm::toString(cursor_or_error.takeError()));
+      return false;
+    }
+    TraceCursorSP &cursor_sp = *cursor_or_error;
+
+    llvm::Optional<StreamFile> out_file;
+    if (m_options.m_output_file) {
+      out_file.emplace(m_options.m_output_file->GetPath().c_str(),
+                       File::eOpenOptionWriteOnly | File::eOpenOptionCanCreate,
+                       lldb::eFilePermissionsFileDefault);
+    }
+
+    m_options.m_dumper_options.forwards = true;
+
+    TraceDumper dumper(std::move(cursor_sp),
+                       out_file ? *out_file : result.GetOutputStream(),
+                       m_options.m_dumper_options);
+
+    dumper.DumpFunctionCalls();
     return true;
   }
 
