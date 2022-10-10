@@ -26,7 +26,8 @@ struct A {
   const static int int_val_with_address = 2;
   const static bool bool_val = true;
 
-  const static auto char_max = std::numeric_limits<signed char>::max();
+  const static auto char_max = std::numeric_limits<char>::max();
+  const static auto schar_max = std::numeric_limits<signed char>::max();
   const static auto uchar_max = std::numeric_limits<unsigned char>::max();
   const static auto int_max = std::numeric_limits<int>::max();
   const static auto uint_max = std::numeric_limits<unsigned>::max();
@@ -37,6 +38,7 @@ struct A {
       std::numeric_limits<unsigned long long>::max();
 
   const static auto char_min = std::numeric_limits<char>::min();
+  const static auto schar_min = std::numeric_limits<signed char>::min();
   const static auto uchar_min = std::numeric_limits<unsigned char>::min();
   const static auto int_min = std::numeric_limits<int>::min();
   const static auto uint_min = std::numeric_limits<unsigned>::min();
@@ -83,6 +85,7 @@ int main() {
   A a;
 
   auto char_max = A::char_max;
+  auto schar_max = A::schar_max;
   auto uchar_max = A::uchar_max;
   auto int_max = A::int_max;
   auto uint_max = A::uint_max;
@@ -92,6 +95,7 @@ int main() {
   auto ulonglong_max = A::ulonglong_max;
 
   auto char_min = A::char_min;
+  auto schar_min = A::schar_min;
   auto uchar_min = A::uchar_min;
   auto int_min = A::int_min;
   auto uint_min = A::uint_min;

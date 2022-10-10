@@ -148,6 +148,18 @@ size_t StringRef::find(StringRef Str, size_t From) const {
 
   const char *Stop = Start + (Size - N + 1);
 
+  if (N == 2) {
+    // Provide a fast path for newline finding (CRLF case) in InclusionRewriter.
+    // Not the most optimized strategy, but getting memcmp inlined should be
+    // good enough.
+    do {
+      if (std::memcmp(Start, Needle, 2) == 0)
+        return Start - Data;
+      ++Start;
+    } while (Start < Stop);
+    return npos;
+  }
+
   // For short haystacks or unsupported needles fall back to the naive algorithm
   if (Size < 16 || N > 255) {
     do {

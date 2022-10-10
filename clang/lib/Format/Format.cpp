@@ -852,6 +852,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("ReferenceAlignment", Style.ReferenceAlignment);
     IO.mapOptional("ReflowComments", Style.ReflowComments);
     IO.mapOptional("RemoveBracesLLVM", Style.RemoveBracesLLVM);
+    IO.mapOptional("RemoveSemicolon", Style.RemoveSemicolon);
     IO.mapOptional("RequiresClausePosition", Style.RequiresClausePosition);
     IO.mapOptional("SeparateDefinitionBlocks", Style.SeparateDefinitionBlocks);
     IO.mapOptional("ShortNamespaceLines", Style.ShortNamespaceLines);
@@ -1297,6 +1298,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.UseTab = FormatStyle::UT_Never;
   LLVMStyle.ReflowComments = true;
   LLVMStyle.RemoveBracesLLVM = false;
+  LLVMStyle.RemoveSemicolon = false;
   LLVMStyle.SpacesInParentheses = false;
   LLVMStyle.SpacesInSquareBrackets = false;
   LLVMStyle.SpaceInEmptyBlock = false;
@@ -1915,7 +1917,59 @@ private:
            Token = Token->Next) {
         if (!Token->Optional)
           continue;
-        assert(Token->isOneOf(tok::l_brace, tok::r_brace));
+        if (!Token->isOneOf(tok::l_brace, tok::r_brace))
+          continue;
+        auto Next = Token->Next;
+        assert(Next || Token == Line->Last);
+        if (!Next && NextLine)
+          Next = NextLine->First;
+        SourceLocation Start;
+        if (Next && Next->NewlinesBefore == 0 && Next->isNot(tok::eof)) {
+          Start = Token->Tok.getLocation();
+          Next->WhitespaceRange = Token->WhitespaceRange;
+        } else {
+          Start = Token->WhitespaceRange.getBegin();
+        }
+        const auto Range =
+            CharSourceRange::getCharRange(Start, Token->Tok.getEndLoc());
+        cantFail(Result.add(tooling::Replacement(SourceMgr, Range, "")));
+      }
+    }
+  }
+};
+
+class SemiRemover : public TokenAnalyzer {
+public:
+  SemiRemover(const Environment &Env, const FormatStyle &Style)
+      : TokenAnalyzer(Env, Style) {}
+
+  std::pair<tooling::Replacements, unsigned>
+  analyze(TokenAnnotator &Annotator,
+          SmallVectorImpl<AnnotatedLine *> &AnnotatedLines,
+          FormatTokenLexer &Tokens) override {
+    AffectedRangeMgr.computeAffectedLines(AnnotatedLines);
+    tooling::Replacements Result;
+    removeSemi(AnnotatedLines, Result);
+    return {Result, 0};
+  }
+
+private:
+  void removeSemi(SmallVectorImpl<AnnotatedLine *> &Lines,
+                  tooling::Replacements &Result) {
+    const auto &SourceMgr = Env.getSourceManager();
+    const auto End = Lines.end();
+    for (auto I = Lines.begin(); I != End; ++I) {
+      const auto Line = *I;
+      removeSemi(Line->Children, Result);
+      if (!Line->Affected)
+        continue;
+      const auto NextLine = I + 1 == End ? nullptr : I[1];
+      for (auto Token = Line->First; Token && !Token->Finalized;
+           Token = Token->Next) {
+        if (!Token->Optional)
+          continue;
+        if (Token->isNot(tok::semi))
+          continue;
         auto Next = Token->Next;
         assert(Next || Token == Line->Last);
         if (!Next && NextLine)
@@ -3277,6 +3331,12 @@ reformat(const FormatStyle &Style, StringRef Code,
     if (Style.RemoveBracesLLVM) {
       Passes.emplace_back([&](const Environment &Env) {
         return BracesRemover(Env, Expanded).process(/*SkipAnnotation=*/true);
+      });
+    }
+
+    if (Style.RemoveSemicolon) {
+      Passes.emplace_back([&](const Environment &Env) {
+        return SemiRemover(Env, Expanded).process(/*SkipAnnotation=*/true);
       });
     }
 

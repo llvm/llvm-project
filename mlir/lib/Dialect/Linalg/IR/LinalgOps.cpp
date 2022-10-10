@@ -1340,20 +1340,12 @@ LogicalResult ReduceOp::verify() {
   auto initType = getInits()[0].getType().cast<ShapedType>();
 
   DenseSet<int64_t> dimensionsToReduce;
-  int64_t lastDimension = -1;
   for (int64_t dimension : dimensionsRef) {
     if (dimension < 0 || dimension >= inputType.getRank()) {
       return emitOpError()
              << "dimensions for reduction should be in the range [0, "
              << inputType.getRank() - 1 << "].";
     }
-    if (dimension <= lastDimension) {
-      return emitOpError()
-             << "reduction dimensions are not in increasing order: "
-             << dimensionsRef;
-    }
-
-    lastDimension = dimension;
     dimensionsToReduce.insert(dimension);
   }
 

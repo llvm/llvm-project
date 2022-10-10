@@ -117,6 +117,18 @@ code bases.
 
   These errors also match MSVC's behavior.
 
+- Clang now diagnoses indirection of ``void *`` in C++ mode as a warning which
+  defaults to an error. This is compatible with ISO C++, GCC, ICC, and MSVC. This
+  is also now a SFINAE error so constraint checking and SFINAE checking can be
+  compatible with other compilers. It is expected that this will be upgraded to
+  an error-only diagnostic in the next Clang release.
+
+  .. code-block:: c++
+
+    void func(void *p) {
+      *p; // Now diagnosed as a warning-as-error.
+    }
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
@@ -479,7 +491,8 @@ OpenMP Support in Clang
 CUDA Support in Clang
 ---------------------
 
-- ...
+- Clang now supports CUDA SDK up to 11.8
+- Added support for targeting sm_{87,89,90} GPUs.
 
 RISC-V Support in Clang
 -----------------------
@@ -524,6 +537,7 @@ AST Matchers
 
 clang-format
 ------------
+- Add `RemoveSemicolon` option for removing `;` after a non-empty function definition.
 
 clang-extdef-mapping
 --------------------

@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -dse -S | FileCheck %s
+; RUN: opt < %s -dse -S | FileCheck %s
 
 declare noalias ptr @malloc(i64) "malloc-like"
 

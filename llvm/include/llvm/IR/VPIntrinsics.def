@@ -196,6 +196,21 @@ HELPER_REGISTER_BINARY_INT_VP(vp_xor, VP_XOR, Xor)
 
 #undef HELPER_REGISTER_BINARY_INT_VP
 
+// llvm.vp.smin(x,y,mask,vlen)
+BEGIN_REGISTER_VP(vp_smin, 2, 3, VP_SMIN, -1)
+END_REGISTER_VP(vp_smin, VP_SMIN)
+
+// llvm.vp.smax(x,y,mask,vlen)
+BEGIN_REGISTER_VP(vp_smax, 2, 3, VP_SMAX, -1)
+END_REGISTER_VP(vp_smax, VP_SMAX)
+
+// llvm.vp.umin(x,y,mask,vlen)
+BEGIN_REGISTER_VP(vp_umin, 2, 3, VP_UMIN, -1)
+END_REGISTER_VP(vp_umin, VP_UMIN)
+
+// llvm.vp.umax(x,y,mask,vlen)
+BEGIN_REGISTER_VP(vp_umax, 2, 3, VP_UMAX, -1)
+END_REGISTER_VP(vp_umax, VP_UMAX)
 ///// } Integer Arithmetic
 
 ///// Floating-Point Arithmetic {

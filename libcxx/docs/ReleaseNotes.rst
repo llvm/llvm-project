@@ -78,6 +78,12 @@ Deprecations and Removals
   reach out to the libc++ developers if you find something missing in the new
   configuration system.
 
+- The functions ``to_chars`` and ``from_chars`` for integral types are
+  available starting with C++17. Libc++ offered these functions in C++11 and
+  C++14 as an undocumented extension. This extension makes it hard to implement
+  the C++23 paper that makes these functions ``constexpr``, therefore the
+  extension has been removed.
+
 Upcoming Deprecations and Removals
 ----------------------------------
 

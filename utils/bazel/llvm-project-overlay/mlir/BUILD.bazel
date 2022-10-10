@@ -7794,6 +7794,7 @@ cc_library(
         ":LinalgTransforms",
         ":PDLDialect",
         ":Parser",
+        ":SCFTransforms",
         ":SideEffectInterfaces",
         ":TilingInterface",
         ":TransformDialect",

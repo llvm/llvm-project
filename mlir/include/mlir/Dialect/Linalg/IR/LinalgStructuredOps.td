@@ -261,7 +261,8 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
     // Output arg
     Variadic<TensorOrMemref>:$inits,
 
-    DenseI64ArrayAttr:$dimensions
+    ConfinedAttr<DenseI64ArrayAttr,
+                 [DenseArrayStrictlySorted<DenseI64ArrayAttr>]>:$dimensions
   );
   let results = (outs Variadic<TensorOrMemref>);
   let regions = (region SizedRegion<1>:$combiner);

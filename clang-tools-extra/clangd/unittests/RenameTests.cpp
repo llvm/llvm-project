@@ -817,6 +817,29 @@ TEST(RenameTest, WithinFileRename) {
           char [[da^ta]];
         } @end
       )cpp",
+
+      // Issue 170: Rename symbol introduced by UsingDecl
+      R"cpp(
+        namespace ns { void [[f^oo]](); } 
+
+        using ns::[[f^oo]];
+
+        void f() {
+            [[f^oo]]();
+            auto p = &[[f^oo]];
+        }
+      )cpp",
+
+      // Issue 170: using decl that imports multiple overloads
+      // -> Only the overload under the cursor is renamed
+      R"cpp(
+        namespace ns { int [[^foo]](int); char foo(char); }
+        using ns::[[foo]];
+        void f() {
+          [[^foo]](42);
+          foo('x');
+        }
+      )cpp",
   };
   llvm::StringRef NewName = "NewName";
   for (llvm::StringRef T : Tests) {
@@ -1062,6 +1085,14 @@ TEST(RenameTest, Renameable) {
         };
       )cpp",
        "no symbol", false},
+
+      {R"cpp(// FIXME we probably want to rename both overloads here,
+             // but renaming currently assumes there's only a 
+             // single canonical declaration.
+        namespace ns { int foo(int); char foo(char); }
+        using ns::^foo;
+      )cpp",
+       "there are multiple symbols at the given location", !HeaderFile},
   };
 
   for (const auto& Case : Cases) {
