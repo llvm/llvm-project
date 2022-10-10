@@ -14,9 +14,7 @@
 #define MLIR_CIR_DIALECT_CIR_ATTRS
 
 include "mlir/IR/BuiltinAttributeInterfaces.td"
-
 include "clang/CIR/Dialect/IR/CIRDialect.td"
-include "clang/CIR/Dialect/IR/CIRTypes.td"
 
 //===----------------------------------------------------------------------===//
 // CIR Attrs
