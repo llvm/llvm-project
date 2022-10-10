@@ -1048,7 +1048,8 @@ private:
           genericOp.getMatchingIndexingMap(outputOpOperand.value());
       auto key = std::make_tuple(outputOpOperand.value()->get(), indexingMap,
                                  yieldOp->getOperand(outputOpOperand.index()));
-      assert(genericOp.getNumOutputs() >= outputOpOperand.index() &&
+      assert(static_cast<std::size_t>(genericOp.getNumOutputs()) >=
+                 outputOpOperand.index() &&
              "Output op idx greater than number of outputs.");
       if (isResultValueDead(genericOp, result)) {
         // Check if the opoperand can be dropped without affecting loop
