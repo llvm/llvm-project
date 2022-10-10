@@ -10,7 +10,7 @@ $foo = comdat any
 
 @bar = global ptr @foo, align 8
 
-; CHECK: @__llvm_profile_raw_version = hidden constant i64 {{[0-9]+}}, comdat
+; CHECK: @__llvm_profile_raw_version = constant i64 {{[0-9]+}}, comdat
 ; CHECK-NOT: __profn__stdin__foo
 ; CHECK: @__profc__stdin__foo.[[#FOO_HASH]] = private global [1 x i64] zeroinitializer, section "__llvm_prf_cnts", comdat, align 8
 ; CHECK: @__profd__stdin__foo.[[#FOO_HASH]] = private global { i64, i64, i64, ptr, ptr, i32, [2 x i16] } { i64 -5640069336071256030, i64 [[#FOO_HASH]], i64 sub (i64 ptrtoint (ptr @__profc__stdin__foo.742261418966908927 to i64), i64 ptrtoint (ptr @__profd__stdin__foo.742261418966908927 to i64)), ptr null

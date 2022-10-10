@@ -12,6 +12,9 @@
 ; FRAME-NEXT: cmdsize
 ; FRAME-NEXT:    name /System/Library/Frameworks/CoreFoundation.framework/CoreFoundation
 
+; RUN: not %lld %t/framework.o -o %t/frame_no_autolink -ignore_auto_link 2>&1 | FileCheck --check-prefix=NO_AUTOLINK %s
+; NO_AUTOLINK: error: undefined symbol: __CFBigNumGetInt128
+
 ; RUN: llvm-as %t/l.ll -o %t/l.o
 ;; The dynamic call to _CFBigNumGetInt128 uses dyld_stub_binder,
 ;; which needs -lSystem from LC_LINKER_OPTION to get resolved.

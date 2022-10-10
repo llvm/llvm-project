@@ -501,7 +501,7 @@ char *getTensorFilename(index_type id) {
 
 void readSparseTensorShape(char *filename, std::vector<uint64_t> *out) {
   assert(out && "Received nullptr for out-parameter");
-  SparseTensorFile stfile(filename);
+  SparseTensorReader stfile(filename);
   stfile.openFile();
   stfile.readHeader();
   stfile.closeFile();

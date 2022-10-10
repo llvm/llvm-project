@@ -386,3 +386,9 @@ def CSR_SVR64_ColdCC_R2_VSRP : CalleeSavedRegs<(add CSR_SVR64_ColdCC_VSRP, X2)>;
 
 def CSR_64_AllRegs_VSRP :
   CalleeSavedRegs<(add CSR_64_AllRegs_VSX, CSR_ALL_VSRP)>;
+
+def CSR_AIX64_VSRP : CalleeSavedRegs<(add CSR_PPC64_Altivec, CSR_VSRP)>;
+
+def CSR_AIX64_R2_VSRP : CalleeSavedRegs<(add CSR_AIX64_VSRP, X2)>;
+
+def CSR_AIX32_VSRP : CalleeSavedRegs<(add CSR_AIX32_Altivec, CSR_VSRP)>;

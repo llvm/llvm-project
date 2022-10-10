@@ -185,6 +185,10 @@ N: Jacques Pienaar
 E: jpienaar@google.com
 D: Lanai Backend
 
+N: Simon Pilgrim
+E: llvm-dev@redking.me.uk
+D: X86 Backend
+
 N: Philip Reames
 E: listmail@philipreames.com
 D: IndVar Simplify, Scalar Evolution
@@ -225,8 +229,8 @@ N: Evgeniy Stepanov
 E: eugenis@google.com
 D: MemorySanitizer (LLVM part)
 
-N: Craig Topper
-E: craig.topper@gmail.com
+N: Phoebe Wang
+E: phoebe.wang@intel.com
 D: X86 Backend
 
 N: Ulrich Weigand

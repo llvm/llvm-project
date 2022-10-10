@@ -14,6 +14,7 @@ add_mlir_dialect_library(MLIRVectorDialect
   MLIRDataLayoutInterfaces
   MLIRDialectUtils
   MLIRIR
+  MLIRMaskingInterfaces
   MLIRMemRefDialect
   MLIRSideEffectInterfaces
   MLIRTensorDialect

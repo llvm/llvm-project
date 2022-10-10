@@ -114,6 +114,9 @@ void LoongArchRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   assert(SPAdj == 0 && "Unexpected non-zero SPAdj value");
 
   MachineInstr &MI = *II;
+  assert(MI.getOperand(FIOperandNum + 1).isImm() &&
+         "Unexpected FI-consuming insn");
+
   MachineBasicBlock &MBB = *MI.getParent();
   MachineFunction &MF = *MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();

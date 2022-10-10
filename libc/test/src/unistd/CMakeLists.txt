@@ -376,3 +376,15 @@ add_libc_unittest(
     libc.include.sys_syscall
     libc.test.errno_setter_matcher
 )
+
+
+add_libc_unittest(
+  sysconf_test
+  SUITE
+    libc_unistd_unittests
+  SRCS
+    sysconf_test.cpp
+  DEPENDS
+    libc.include.unistd
+    libc.src.unistd.sysconf
+)

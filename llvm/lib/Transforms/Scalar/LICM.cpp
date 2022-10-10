@@ -76,6 +76,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -111,6 +112,10 @@ static cl::opt<bool>
 static cl::opt<bool> ControlFlowHoisting(
     "licm-control-flow-hoisting", cl::Hidden, cl::init(false),
     cl::desc("Enable control flow (and PHI) hoisting in LICM"));
+
+static cl::opt<bool>
+    SingleThread("licm-force-thread-model-single", cl::Hidden, cl::init(false),
+                 cl::desc("Force thread model single in LICM pass"));
 
 static cl::opt<uint32_t> MaxNumUsesTraversed(
     "licm-max-num-uses-traversed", cl::Hidden, cl::init(8),
@@ -489,7 +494,8 @@ bool LoopInvariantCodeMotion::runOnLoop(Loop *L, AAResults *AA, LoopInfo *LI,
              collectPromotionCandidates(MSSA, AA, L)) {
           LocalPromoted |= promoteLoopAccessesToScalars(
               PointerMustAliases, ExitBlocks, InsertPts, MSSAInsertPts, PIC, LI,
-              DT, AC, TLI, L, MSSAU, &SafetyInfo, ORE, LicmAllowSpeculation);
+              DT, AC, TLI, TTI, L, MSSAU, &SafetyInfo, ORE,
+              LicmAllowSpeculation);
         }
         Promoted |= LocalPromoted;
       } while (LocalPromoted);
@@ -1911,17 +1917,21 @@ bool isWritableObject(const Value *Object) {
   if (auto *A = dyn_cast<Argument>(Object))
     return A->hasByValAttr();
 
+  if (auto *G = dyn_cast<GlobalVariable>(Object))
+    return !G->isConstant();
+
   // TODO: Noalias has nothing to do with writability, this should check for
   // an allocator function.
   return isNoAliasCall(Object);
 }
 
-bool isThreadLocalObject(const Value *Object, const Loop *L,
-                         DominatorTree *DT) {
+bool isThreadLocalObject(const Value *Object, const Loop *L, DominatorTree *DT,
+                         TargetTransformInfo *TTI) {
   // The object must be function-local to start with, and then not captured
   // before/in the loop.
-  return isIdentifiedFunctionLocal(Object) &&
-         isNotCapturedBeforeOrInLoop(Object, L, DT);
+  return (isIdentifiedFunctionLocal(Object) &&
+          isNotCapturedBeforeOrInLoop(Object, L, DT)) ||
+         (TTI->isSingleThreaded() || SingleThread);
 }
 
 } // namespace
@@ -1937,9 +1947,9 @@ bool llvm::promoteLoopAccessesToScalars(
     SmallVectorImpl<Instruction *> &InsertPts,
     SmallVectorImpl<MemoryAccess *> &MSSAInsertPts, PredIteratorCache &PIC,
     LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
-    const TargetLibraryInfo *TLI, Loop *CurLoop, MemorySSAUpdater &MSSAU,
-    ICFLoopSafetyInfo *SafetyInfo, OptimizationRemarkEmitter *ORE,
-    bool AllowSpeculation) {
+    const TargetLibraryInfo *TLI, TargetTransformInfo *TTI, Loop *CurLoop,
+    MemorySSAUpdater &MSSAU, ICFLoopSafetyInfo *SafetyInfo,
+    OptimizationRemarkEmitter *ORE, bool AllowSpeculation) {
   // Verify inputs.
   assert(LI != nullptr && DT != nullptr && CurLoop != nullptr &&
          SafetyInfo != nullptr &&
@@ -2150,7 +2160,8 @@ bool llvm::promoteLoopAccessesToScalars(
   // violating the memory model.
   if (StoreSafety == StoreSafetyUnknown) {
     Value *Object = getUnderlyingObject(SomePtr);
-    if (isWritableObject(Object) && isThreadLocalObject(Object, CurLoop, DT))
+    if (isWritableObject(Object) &&
+        isThreadLocalObject(Object, CurLoop, DT, TTI))
       StoreSafety = StoreSafe;
   }
 

@@ -60,7 +60,7 @@ extensions that includes an example. Finally, appendix
 
 .. _amdgpu-dwarf-extensions:
 
-1. Extensions
+2. Extensions
 =============
 
 The extensions continue to evolve through collaboration with many individuals and
@@ -626,6 +626,49 @@ offset and a size, and creates a composite that effectively uses the second
 location description as an overlay of the first, positioned according to the
 offset and size. See ``DW_OP_LLVM_overlay`` and ``DW_OP_LLVM_bit_overlay`` in
 :ref:`amdgpu-dwarf-composite-location-description-operations`.
+
+Consider an array that has been partially registerized such that the currently
+processed elements are held in registers, whereas the remainder of the array
+remains in memory. Consider the loop in this C function, for example:
+
+.. code::
+  :number-lines:
+
+  extern void foo(uint32_t dst[], uint32_t src[], int len) {
+    for (int i = 0; i < len; ++i)
+      dst[i] += src[i];
+  }
+
+Inside the loop body, the machine code loads ``src[i]`` and ``dst[i]`` into
+registers, adds them, and stores the result back into ``dst[i]``.
+
+Considering the location of ``dst`` and ``src`` in the loop body, the elements
+``dst[i]`` and ``src[i]`` would be located in registers, all other elements are
+located in memory. Let register ``R0`` contain the base address of ``dst``,
+register ``R1`` contain ``i``, and register ``R2`` contain the registerized
+``dst[i]`` element. We can describe the location of ``dst`` as a memory location
+with a register location overlaid at a runtime offset involving ``i``:
+
+.. code::
+  :number-lines:
+
+  // 1. Memory location description of dst elements located in memory:
+  DW_OP_breg0 0
+
+  // 2. Register location description of element dst[i] is located in R2:
+  DW_OP_reg2
+
+  // 3. Offset of the register within the memory of dst:
+  DW_OP_breg1 0
+  DW_OP_lit4
+  DW_OP_mul
+
+  // 4. The size of the register element:
+  DW_OP_lit4
+
+  // 5. Make a composite location description for dst that is the memory #1 with
+  //    the register #2 positioned as an overlay at offset #3 of size #4:
+  DW_OP_LLVM_overlay
 
 .. _amdgpu-dwarf-changes-relative-to-dwarf-version-5:
 
@@ -2843,7 +2886,7 @@ compatible with the definitions in DWARF Version 5.*
 
     *rbss(L)* is the minimum remaining bit storage size of L which is defined as
     follows. LS is the location storage and LO is the location bit offset
-    specified by a single location descriptions SL of L. The remaining bit
+    specified by a single location description SL of L. The remaining bit
     storage size RBSS of SL is the bit size of LS minus LO. *rbss(L)* is the
     minimum RBSS of each single location description SL of L.
 
@@ -2861,11 +2904,10 @@ compatible with the definitions in DWARF Version 5.*
     overlay starting at the overlay offset BO and covering overlay bit size BS.*
 
     1.  If BO is not 0 then push BL followed by performing the ``DW_OP_bit_piece
-        BO`` operation.
-    2.  Push OL followed by performing the ``DW_OP_bit_piece BS`` operation.
+        BO, 0`` operation.
+    2.  Push OL followed by performing the ``DW_OP_bit_piece BS, 0`` operation.
     3.  If *rbss(BL)* is greater than BO plus BS, push BL followed by performing
-        the ``DW_OP_LLVM_bit_offset (BO + BS); DW_OP_bit_piece (rbss(BL) - BO -
-        BS)`` operations.
+        the ``DW_OP_bit_piece (rbss(BL) - BO - BS), (BO + BS)`` operation.
     4.  Perform the ``DW_OP_LLVM_piece_end`` operation.
 
 .. _amdgpu-dwarf-location-list-expressions:

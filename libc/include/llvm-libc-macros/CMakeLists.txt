@@ -53,6 +53,14 @@ add_header(
 )
 
 add_header(
+  sys_random_macros
+  HDR
+    sys-random-macros.h
+  DEPENDS
+    .linux.sys_random_macros
+)
+
+add_header(
   sys_resource_macros
   HDR
     sys-resource-macros.h

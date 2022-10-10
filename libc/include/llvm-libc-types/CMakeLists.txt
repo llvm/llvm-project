@@ -1,5 +1,6 @@
 add_header(off64_t HDR off64_t.h)
 add_header(size_t HDR size_t.h)
+add_header(__atfork_callback_t HDR __atfork_callback_t.h)
 add_header(__bsearchcompare_t HDR __bsearchcompare_t.h)
 add_header(__call_once_func_t HDR __call_once_func_t.h)
 add_header(__exec_argv_t HDR __exec_argv_t.h)

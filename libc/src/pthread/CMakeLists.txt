@@ -397,3 +397,15 @@ add_entrypoint_object(
     libc.include.pthread
     libc.src.__support.threads.callonce
 )
+
+add_entrypoint_object(
+  pthread_atfork
+  SRCS
+    pthread_atfork.cpp
+  HDRS
+    pthread_atfork.h
+  DEPENDS
+    libc.include.errno
+    libc.include.pthread
+    libc.src.__support.fork_callbacks
+)

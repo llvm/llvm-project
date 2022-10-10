@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/pthread/pthread_atfork.h"
 #include "src/signal/raise.h"
 #include "src/sys/wait/wait.h"
 #include "src/sys/wait/wait4.h"
@@ -105,6 +106,39 @@ void fork_and_waitpid_signal_exit() {
   ASSERT_TRUE(WTERMSIG(status) == SIGUSR1);
 }
 
+static int prepare = 0;
+static int parent = 0;
+static int child = 0;
+static constexpr int DONE = 0x600D;
+
+static void prepare_cb() { prepare = DONE; }
+
+static void parent_cb() { parent = DONE; }
+
+static void child_cb() { child = DONE; }
+
+void fork_with_atfork_callbacks() {
+  ASSERT_EQ(__llvm_libc::pthread_atfork(&prepare_cb, &parent_cb, &child_cb), 0);
+  pid_t pid = __llvm_libc::fork();
+  if (pid == 0) {
+    // Raise a signal from the child if unexpected at-fork
+    // behavior is observed.
+    if (child != DONE || prepare != DONE || parent == DONE)
+      __llvm_libc::raise(SIGUSR1);
+    return;
+  }
+
+  ASSERT_TRUE(pid > 0);
+  int status;
+  pid_t cpid = __llvm_libc::waitpid(pid, &status, 0);
+  ASSERT_TRUE(cpid > 0);
+  ASSERT_EQ(cpid, pid);
+  ASSERT_TRUE(WIFEXITED(status));
+  ASSERT_EQ(prepare, DONE);
+  ASSERT_EQ(parent, DONE);
+  ASSERT_NE(child, DONE);
+}
+
 TEST_MAIN(int argc, char **argv, char **envp) {
   fork_and_wait_normal_exit();
   fork_and_wait4_normal_exit();
@@ -112,5 +146,6 @@ TEST_MAIN(int argc, char **argv, char **envp) {
   fork_and_wait_signal_exit();
   fork_and_wait4_signal_exit();
   fork_and_waitpid_signal_exit();
+  fork_with_atfork_callbacks();
   return 0;
 }

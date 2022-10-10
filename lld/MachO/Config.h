@@ -168,6 +168,7 @@ struct Configuration {
   bool demangle = false;
   bool deadStrip = false;
   bool errorForArchMismatch = false;
+  bool ignoreAutoLink = false;
   PlatformInfo platformInfo;
   llvm::Optional<PlatformInfo> secondaryPlatformInfo;
   NamespaceKind namespaceKind = NamespaceKind::twolevel;
@@ -204,7 +205,7 @@ struct Configuration {
   SymtabPresence localSymbolsPresence = SymtabPresence::All;
   SymbolPatterns localSymbolPatterns;
 
-  bool zeroModTime = false;
+  bool zeroModTime = true;
 
   llvm::StringRef osoPrefix;
 

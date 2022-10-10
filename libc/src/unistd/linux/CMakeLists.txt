@@ -100,6 +100,7 @@ add_entrypoint_object(
     libc.include.errno
     libc.include.unistd
     libc.include.sys_syscall
+    libc.src.__support.fork_callbacks
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.thread
     libc.src.errno.errno
@@ -365,6 +366,17 @@ add_entrypoint_object(
   DEPENDS
     libc.include.unistd
     libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sysconf
+  SRCS
+    sysconf.cpp
+  HDRS
+    ../sysconf.h
+  DEPENDS
+    libc.include.unistd
     libc.src.errno.errno
 )
 
