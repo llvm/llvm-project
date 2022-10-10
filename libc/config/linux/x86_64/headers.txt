@@ -1,7 +1,9 @@
 set(TARGET_PUBLIC_HEADERS
     libc.include.assert_h
     libc.include.ctype
+    libc.include.dirent
     libc.include.errno
+    libc.include.fcntl
     libc.include.fenv
     libc.include.inttypes
     libc.include.math
@@ -11,11 +13,16 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.stdio
     libc.include.stdlib
     libc.include.string
-    libc.include.sys_ioctl
-    libc.include.sys_mman
-    libc.include.sys_random
-    libc.include.sys_syscall
     libc.include.threads
     libc.include.time
     libc.include.unistd
+
+    libc.include.sys_ioctl
+    libc.include.sys_mman
+    libc.include.sys_random
+    libc.include.sys_resource
+    libc.include.sys_stat
+    libc.include.sys_syscall
+    libc.include.sys_utsname
+    libc.include.sys_wait
 )
