@@ -13,6 +13,7 @@
 #ifndef VECTOR_OPS
 #define VECTOR_OPS
 
+include "mlir/Dialect/Vector/Interfaces/MaskingInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/Interfaces/ControlFlowInterfaces.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
@@ -283,6 +284,7 @@ def Vector_ReductionOp :
   Vector_Op<"reduction", [NoSideEffect,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
+     DeclareOpInterfaceMethods<MaskableOpInterface>,
      DeclareOpInterfaceMethods<VectorUnrollOpInterface,
                                ["getShapeForUnroll"]>]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
@@ -360,7 +362,7 @@ def Vector_MultiDimReductionOp :
   }];
   let builders = [
     OpBuilder<(ins "Value":$source, "Value":$acc,
-                   "ArrayRef<bool>":$reductionMask, "CombiningKind":$kind)>                   
+                   "ArrayRef<bool>":$reductionMask, "CombiningKind":$kind)>
   ];
   let extraClassDeclaration = [{
     static StringRef getKindAttrStrName() { return "kind"; }
@@ -1050,6 +1052,7 @@ def Vector_TransferReadOp :
   Vector_Op<"transfer_read", [
       DeclareOpInterfaceMethods<VectorTransferOpInterface>,
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+      DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
       AttrSizedOperandSegments
     ]>,
@@ -1246,6 +1249,12 @@ def Vector_TransferReadOp :
                    "ValueRange":$indices,
                    CArg<"Optional<ArrayRef<bool>>", "::llvm::None">:$inBounds)>,
   ];
+
+  let extraClassDeclaration = [{
+    // MaskableOpInterface methods.
+    bool supportsPassthru() { return true; }
+  }];
+
   let hasCanonicalizer = 1;
   let hasCustomAssemblyFormat = 1;
   let hasFolder = 1;
@@ -1256,6 +1265,7 @@ def Vector_TransferWriteOp :
   Vector_Op<"transfer_write", [
       DeclareOpInterfaceMethods<VectorTransferOpInterface>,
       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+      DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
       AttrSizedOperandSegments
   ]>,
@@ -2118,6 +2128,78 @@ def Vector_CreateMaskOp :
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
   let assemblyFormat = "$operands attr-dict `:` type(results)";
+}
+
+def Vector_MaskOp : Vector_Op<"mask", [
+  SingleBlockImplicitTerminator<"vector::YieldOp">, RecursiveSideEffects,
+  NoRegionArguments
+]> {
+  let summary = "Predicates a maskable vector operation";
+  let description = [{
+    The `vector.mask` operation predicates the execution of another operation.
+    It takes an `i1` vector mask and an optional pass-thru vector as arguments.
+    A `vector.yield`-terminated region encloses the operation to be masked.
+    Values used within the region are captured from above. Only one *maskable*
+    operation can be masked with a `vector.mask` operation at a time. An
+    operation is *maskable* if it implements the `MaskableOpInterface`.
+
+    The vector mask argument holds a bit for each vector lane and determines
+    which vector lanes should execute the maskable operation and which ones
+    should not. The `vector.mask` operation returns the value produced by the
+    masked execution of the nested operation, if any. The masked-off lanes in
+    the result vector are taken from the corresponding lanes of the pass-thru
+    argument, if provided, or left unmodified, otherwise.
+
+    The `vector.mask` operation does not prescribe how a maskable operation
+    should be masked or how a masked operation should be lowered. Masking
+    constraints and some semantic details are provided by each maskable
+    operation through the `MaskableOpInterface`. Lowering of masked operations
+    is implementation defined. For instance, scalarizing the masked operation
+    or executing the operation for the masked-off lanes are valid lowerings as
+    long as the execution of masked-off lanes does not change the observable
+    behavior of the program.
+
+    Examples:
+
+    ```
+      %0 = vector.mask %mask { vector.reduction <add>, %a : vector<8xi32> into i32 } : vector<8xi1> -> i32
+    ```
+
+    ```
+      %0 = vector.mask %mask, %passthru { arith.divsi %a, %b : vector<8xi32> } : vector<8xi1> -> vector<8xi32>
+    ```
+
+    ```
+      vector.mask %mask { vector.transfer_write %val, %t0[%idx] : vector<16xf32>, memref<?xf32> } : vector<16xi1>
+    ```
+  }];
+
+  // TODO: Support multiple results and passthru values.
+  let arguments = (ins VectorOf<[I1]>:$mask,
+                   Optional<AnyType>:$passthru);
+  let results = (outs Optional<AnyType>:$results);
+  let regions = (region SizedRegion<1>:$maskRegion);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "Value":$mask,
+                   CArg<"function_ref<void(OpBuilder &, Location)>",
+                        "buildTerminatedBody">:$maskRegion)>,
+    OpBuilder<(ins "Type":$resultType, "Value":$mask,
+                   CArg<"function_ref<void(OpBuilder &, Location)>",
+                        "buildTerminatedBody">:$maskRegion)>,
+    OpBuilder<(ins "Type":$resultType, "Value":$mask,
+                   "Value":$passthru,
+                   CArg<"function_ref<void(OpBuilder &, Location)>",
+                        "buildTerminatedBody">:$maskRegion)>
+  ];
+
+  let extraClassDeclaration = [{
+    static void ensureTerminator(Region &region, Builder &builder, Location loc);
+  }];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasVerifier = 1;
 }
 
 def Vector_TransposeOp :
