@@ -64,4 +64,6 @@ transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
   // CHECK: cast %{{.*}} : !pdl.operation to !transform.any_op
   %0 = cast %arg0: !pdl.operation to !transform.any_op
+  // CHECK: cast %{{.*}} : !transform.any_op to !transform.op<"builtin.module">
+  %1 = cast %0: !transform.any_op to !transform.op<"builtin.module">
 }

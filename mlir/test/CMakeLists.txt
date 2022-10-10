@@ -70,9 +70,10 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-ir-test
   mlir-capi-llvm-test
   mlir-capi-pass-test
-  mlir-capi-sparse-tensor-test
-  mlir-capi-quant-test
   mlir-capi-pdl-test
+  mlir-capi-quant-test
+  mlir-capi-sparse-tensor-test
+  mlir-capi-transform-test
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
   mlir-pdll-lsp-server

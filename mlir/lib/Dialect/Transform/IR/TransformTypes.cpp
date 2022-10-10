@@ -30,8 +30,31 @@ generatedTypePrinter(Type def, AsmPrinter &printer);
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/Transform/IR/TransformTypes.cpp.inc"
 
+void transform::TransformDialect::initializeTypes() {
+  addTypesChecked<
+#define GET_TYPEDEF_LIST
+#include "mlir/Dialect/Transform/IR/TransformTypes.cpp.inc"
+      >();
+}
+
 DiagnosedSilenceableFailure
 transform::AnyOpType::checkPayload(Location loc,
                                    ArrayRef<Operation *> payload) const {
+  return DiagnosedSilenceableFailure::success();
+}
+
+DiagnosedSilenceableFailure
+transform::OperationType::checkPayload(Location loc,
+                                       ArrayRef<Operation *> payload) const {
+  OperationName opName(getOperationName(), loc.getContext());
+  for (Operation *op : payload) {
+    if (opName != op->getName()) {
+      DiagnosedSilenceableFailure diag =
+          emitSilenceableError(loc) << "incompatible payload operation name";
+      diag.attachNote(op->getLoc()) << "payload operation";
+      return diag;
+    }
+  }
+
   return DiagnosedSilenceableFailure::success();
 }

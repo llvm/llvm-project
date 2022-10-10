@@ -18,6 +18,16 @@ def _get_symbol_ref_attr(value: Union[Attribute, str]):
   return FlatSymbolRefAttr.get(value)
 
 
+class CastOp:
+
+  def __init__(self, result_type: Type, target: Union[Operation, Value], *, loc=None, ip=None):
+    super().__init__(
+      result_type,
+      _get_op_result_or_value(target),
+      loc=loc,
+      ip=ip)
+
+
 class GetClosestIsolatedParentOp:
 
   def __init__(self, result_type: Type, target: Union[Operation, Value], *, loc=None, ip=None):

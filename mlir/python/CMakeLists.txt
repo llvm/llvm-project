@@ -121,6 +121,7 @@ declare_mlir_dialect_python_bindings(
   SOURCES
     dialects/_transform_ops_ext.py
     dialects/transform/__init__.py
+    _mlir_libs/_mlir/dialects/transform/__init__.pyi
   DIALECT_NAME transform)
 
 declare_mlir_dialect_extension_python_bindings(
@@ -351,6 +352,19 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SparseTensor.Pybind
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPISparseTensor
+)
+
+declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Pybind
+  MODULE_NAME _mlirDialectsTransform
+  ADD_TO_PARENT MLIRPythonSources.Dialects.transform
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    DialectTransform.cpp
+  PRIVATE_LINK_LIBS
+    LLVMSupport
+  EMBED_CAPI_LINK_LIBS
+    MLIRCAPIIR
+    MLIRCAPITransformDialect
 )
 
 declare_mlir_python_extension(MLIRPythonExtension.AsyncDialectPasses

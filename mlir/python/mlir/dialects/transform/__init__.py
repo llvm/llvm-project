@@ -18,3 +18,4 @@ class FailurePropagationMode(Enum):
     return 2
 
 from .._transform_ops_gen import *
+from ..._mlir_libs._mlirDialectsTransform import *

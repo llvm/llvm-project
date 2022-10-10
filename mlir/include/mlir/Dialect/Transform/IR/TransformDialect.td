@@ -359,6 +359,8 @@ def Transform_Dialect : Dialect {
       /// mnemonic.
       [[noreturn]] void reportDuplicateTypeRegistration(StringRef mnemonic);
 
+      void initializeTypes();
+
       template <typename, typename...>
       friend class TransformDialectExtension;
 

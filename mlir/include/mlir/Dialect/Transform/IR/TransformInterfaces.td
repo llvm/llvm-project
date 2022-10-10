@@ -104,6 +104,13 @@ def TransformTypeInterface : TypeInterface<"TransformTypeInterface"> {
                          "::mlir::ArrayRef<::mlir::Operation *>":$payload)
     >
   ];
+
+  let extraSharedClassDeclaration = [{
+    DiagnosedSilenceableFailure emitSilenceableError(Location loc) const {
+      Diagnostic diag(loc, DiagnosticSeverity::Error);
+      return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+    }
+  }];
 }
 
 def FunctionalStyleTransformOpTrait
