@@ -206,10 +206,10 @@ void *EHScopeStack::pushCleanup(CleanupKind Kind, size_t Size) {
   if (IsLifetimeMarker)
     Scope->setLifetimeMarker();
 
-  // With Windows -EHa, Invoke llvm.seh.scope.begin() for EHCleanup
-  if (CGF->getLangOpts().EHAsynch && IsEHCleanup && !IsLifetimeMarker &&
-      CGF->getTarget().getCXXABI().isMicrosoft())
-    CGF->EmitSehCppScopeBegin();
+  // // With Windows -EHa, Invoke llvm.seh.scope.begin() for EHCleanup
+  // if (CGF->getLangOpts().EHAsynch && IsEHCleanup && !IsLifetimeMarker &&
+  //     CGF->getTarget().getCXXABI().isMicrosoft())
+  //   CGF->EmitSehCppScopeBegin();
 
   return Scope->getCleanupBuffer();
 }
@@ -782,10 +782,10 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
   if (!RequiresNormalCleanup) {
     // Mark CPP scope end for passed-by-value Arg temp
     //   per Windows ABI which is "normally" Cleanup in callee
-    if (IsEHa && getInvokeDest()) {
-      if (Personality.isMSVCXXPersonality())
-        EmitSehCppScopeEnd();
-    }
+    // if (IsEHa && getInvokeDest()) {
+    //   if (Personality.isMSVCXXPersonality())
+    //     EmitSehCppScopeEnd();
+    // }
     destroyOptimisticNormalEntry(*this, Scope);
     EHStack.popCleanup();
   } else {
@@ -795,12 +795,12 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
         !HasExistingBranches) {
 
       // mark SEH scope end for fall-through flow
-      if (IsEHa && getInvokeDest()) {
-        if (Personality.isMSVCXXPersonality())
-          EmitSehCppScopeEnd();
-        else
-          EmitSehTryScopeEnd();
-      }
+      // if (IsEHa && getInvokeDest()) {
+      //   if (Personality.isMSVCXXPersonality())
+      //     EmitSehCppScopeEnd();
+      //   else
+      //     EmitSehTryScopeEnd();
+      // }
 
       destroyOptimisticNormalEntry(*this, Scope);
       EHStack.popCleanup();
@@ -836,12 +836,12 @@ void CodeGenFunction::PopCleanupBlock(bool FallthroughIsBranchThrough) {
       EmitBlock(NormalEntry);
 
       // intercept normal cleanup to mark SEH scope end
-      if (IsEHa) {
-        if (Personality.isMSVCXXPersonality())
-          EmitSehCppScopeEnd();
-        else
-          EmitSehTryScopeEnd();
-      }
+      // if (IsEHa) {
+      //   if (Personality.isMSVCXXPersonality())
+      //     EmitSehCppScopeEnd();
+      //   else
+      //     EmitSehTryScopeEnd();
+      // }
 
       // III.  Figure out where we're going and build the cleanup
       // epilogue.

@@ -54,6 +54,10 @@ using namespace CodeGen;
 /// markers.
 static bool shouldEmitLifetimeMarkers(const CodeGenOptions &CGOpts,
                                       const LangOptions &LangOpts) {
+  //[SEH] when we enable EHAsynch, we should not emit life time mark
+  if (LangOpts.EHAsynch)
+    return false;
+
   if (CGOpts.DisableLifetimeMarkers)
     return false;
 
@@ -989,9 +993,9 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
   }
 
   // If a custom alignment is used, force realigning to this alignment on
-  // any main function which certainly will need it.
-  if (FD && ((FD->isMain() || FD->isMSVCRTEntryPoint()) &&
-             CGM.getCodeGenOpts().StackAlignment))
+  // any main function which certainly will need it. 
+  // [MSVC Compatibility] Force stackrealign
+  if (FD)
     Fn->addFnAttr("stackrealign");
 
   // "main" doesn't need to zero out call-used registers.

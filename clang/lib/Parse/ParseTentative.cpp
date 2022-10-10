@@ -1652,8 +1652,23 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
   case tok::annot_decltype:
 #define GENERIC_IMAGE_TYPE(ImgType, Id) case tok::kw_##ImgType##_t:
 #include "clang/Basic/OpenCLImageTypes.def"
-    if (NextToken().is(tok::l_paren))
+    if (NextToken().is(tok::l_paren)) {
+      // [MSVC Compatibility]
+      if (Tok.is(tok::annot_typename)) {
+        const Token &NextNextToken = PP.LookAhead(1);
+        if (NextNextToken.isOneOf(tok::kw___stdcall, tok::kw___cdecl,
+                                  tok::kw___fastcall, tok::kw___thiscall,
+                                  tok::kw___regcall, tok::kw___vectorcall)) {
+          const Token &NextToken2 = PP.LookAhead(2);
+          const Token &NextToken3 = PP.LookAhead(3);
+          if (NextToken2.is(tok::r_paren) && NextToken3.is(tok::l_paren)) {
+            return TPResult::True;
+          }
+        }
+      }
       return TPResult::Ambiguous;
+    }
+      
 
     // This is a function-style cast in all cases we disambiguate other than
     // one:

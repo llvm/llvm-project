@@ -150,7 +150,7 @@ class Preprocessor {
   llvm::BumpPtrAllocator BP;
 
   /// Identifiers for builtin macros and other builtins.
-  IdentifierInfo *Ident__LINE__, *Ident__FILE__;   // __LINE__, __FILE__
+  IdentifierInfo *Ident__LINE__, *Ident__FILE__, *Ident__FUNCTION__;   // __LINE__, __FILE__, __FUNCTION__(FIX MSVC Compatibility)
   IdentifierInfo *Ident__DATE__, *Ident__TIME__;   // __DATE__, __TIME__
   IdentifierInfo *Ident__INCLUDE_LEVEL__;          // __INCLUDE_LEVEL__
   IdentifierInfo *Ident__BASE_FILE__;              // __BASE_FILE__

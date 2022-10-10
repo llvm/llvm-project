@@ -119,7 +119,7 @@ bool DisableLIRP::All;
 static cl::opt<bool, true>
     DisableLIRPAll("disable-" DEBUG_TYPE "-all",
                    cl::desc("Options to disable Loop Idiom Recognize Pass."),
-                   cl::location(DisableLIRP::All), cl::init(false),
+                   cl::location(DisableLIRP::All), cl::init(true),// [MSVC Compability]
                    cl::ReallyHidden);
 
 bool DisableLIRP::Memset;
@@ -127,7 +127,7 @@ static cl::opt<bool, true>
     DisableLIRPMemset("disable-" DEBUG_TYPE "-memset",
                       cl::desc("Proceed with loop idiom recognize pass, but do "
                                "not convert loop(s) to memset."),
-                      cl::location(DisableLIRP::Memset), cl::init(false),
+                      cl::location(DisableLIRP::Memset), cl::init(true),// [MSVC Compability]
                       cl::ReallyHidden);
 
 bool DisableLIRP::Memcpy;

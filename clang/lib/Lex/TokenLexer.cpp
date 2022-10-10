@@ -408,7 +408,12 @@ void TokenLexer::ExpandFunctionArguments() {
     bool PasteBefore = I != 0 && Tokens[I-1].is(tok::hashhash);
     bool PasteAfter = I+1 != E && Tokens[I+1].is(tok::hashhash);
     bool RParenAfter = I+1 != E && Tokens[I+1].is(tok::r_paren);
-
+    // [MSVC Compatibility] We allow pre-expand 'major' in (0x##major) 
+#ifdef _WIN32
+    bool NumericConstantBeforeHashHash =
+        (I >= 2) && Tokens[I - 1].is(tok::hashhash) &&
+        Tokens[I - 2].is(tok::numeric_constant);
+#endif
     assert((!NonEmptyPasteBefore || PasteBefore || VCtx.isInVAOpt()) &&
            "unexpected ## in ResultToks");
 
@@ -446,7 +451,16 @@ void TokenLexer::ExpandFunctionArguments() {
     // If it is not the LHS/RHS of a ## operator, we must pre-expand the
     // argument and substitute the expanded tokens into the result.  This is
     // C99 6.10.3.1p1.
-    if (!PasteBefore && !PasteAfter) {
+    // [MSVC Compatibility] We allow pre-expand 'major' in (0x##major) 
+    bool GotoPreExpand = !PasteBefore && !PasteAfter;
+#ifdef _WIN32
+    if (!GotoPreExpand) {
+      if (NumericConstantBeforeHashHash) {
+        GotoPreExpand = true;
+      }
+    }
+#endif
+    if (GotoPreExpand) {
       const Token *ResultArgToks;
 
       // Only preexpand the argument if it could possibly need it.  This
@@ -802,7 +816,12 @@ bool TokenLexer::pasteTokens(Token &LHSTok, ArrayRef<Token> TokenStream,
 
     // Lex the resultant pasted token into Result.
     Token Result;
-
+    // [MSVC Compatibility] Handle '.##identifier' or '->##identifier'
+    if ((LHSTok.is(tok::period) || LHSTok.is(tok::arrow)) &&
+        RHS.isAnyIdentifier()) {
+      // Returns true the caller should immediately return the token.
+      return true;
+    }
     if (LHSTok.isAnyIdentifier() && RHS.isAnyIdentifier()) {
       // Common paste case: identifier+identifier = identifier.  Avoid creating
       // a lexer and other overhead.

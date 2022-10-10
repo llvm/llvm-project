@@ -143,7 +143,7 @@ def err_vla_decl_has_static_storage : Error<
   "variable length array declaration cannot have 'static' storage duration">;
 def err_vla_decl_has_extern_linkage : Error<
   "variable length array declaration cannot have 'extern' linkage">;
-def ext_vla_folded_to_constant : ExtWarn<
+def ext_vla_folded_to_constant : Note<
   "variable length array folded to constant array as an extension">,
   InGroup<GNUFoldingConstant>;
 def err_vla_unsupported : Error<
@@ -325,7 +325,7 @@ def warn_unused_variable : Warning<"unused variable %0">,
   InGroup<UnusedVariable>, DefaultIgnore;
 def warn_unused_but_set_variable : Warning<"variable %0 set but not used">,
   InGroup<UnusedButSetVariable>, DefaultIgnore;
-def warn_unused_local_typedef : Warning<
+def warn_unused_local_typedef : Note<
   "unused %select{typedef|type alias}0 %1">,
   InGroup<UnusedLocalTypedef>, DefaultIgnore;
 def warn_unused_property_backing_ivar :
@@ -992,7 +992,7 @@ def err_super_in_lambda_unsupported : Error<
 
 def err_pragma_expected_file_scope : Error<
   "'#pragma %0' can only appear at file scope">;
-def err_pragma_alloc_text_c_linkage: Error<
+def err_pragma_alloc_text_c_linkage: Warning<
   "'#pragma alloc_text' is applicable only to functions with C linkage">;
 def err_pragma_alloc_text_not_function: Error<
   "'#pragma alloc_text' is applicable only to functions">;
@@ -5724,7 +5724,7 @@ def warn_undefined_inline : Warning<"inline function %q0 is not defined">,
 def err_undefined_inline_var : Error<"inline variable %q0 is not defined">;
 def note_used_here : Note<"used here">;
 
-def err_attribute_missing_on_first_decl : Error<
+def err_attribute_missing_on_first_decl : Warning<
   "%0 attribute does not appear on the first declaration">;
 def warn_internal_linkage_local_storage : Warning<
   "'internal_linkage' attribute on a non-static local variable is ignored">,
@@ -6529,7 +6529,7 @@ def ext_sizeof_alignof_void_type : Extension<
   "invalid application of '%0' to a void type">, InGroup<PointerArith>;
 def err_opencl_sizeof_alignof_type : Error<
   "invalid application of '%0' to a void type">;
-def err_sizeof_alignof_incomplete_or_sizeless_type : Error<
+def err_sizeof_alignof_incomplete_or_sizeless_type : Warning<
   "invalid application of '%0' to %select{an incomplete|sizeless}1 type %2">;
 def err_sizeof_alignof_function_type : Error<
   "invalid application of '%0' to a function type">;
@@ -7412,7 +7412,7 @@ def err_bad_cstyle_cast_overload : Error<
 def err_bad_cxx_cast_generic : Error<
   "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|"
   "C-style cast|functional-style cast|addrspace_cast}0 from %1 to %2 is not allowed">;
-def err_bad_cxx_cast_unrelated_class : Error<
+def err_bad_cxx_cast_unrelated_class : Warning<
   "%select{const_cast|static_cast|reinterpret_cast|dynamic_cast|C-style cast|"
   "functional-style cast|}0 from %1 to %2, which are not related by "
   "inheritance, is not allowed">;

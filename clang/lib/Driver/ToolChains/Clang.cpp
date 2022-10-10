@@ -6567,6 +6567,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Triple.isWindowsMSVCEnvironment() && !D.IsCLMode() &&
       Args.hasArg(options::OPT_fms_runtime_lib_EQ))
     ProcessVSRuntimeLibrary(Args, CmdArgs);
+  
+  // -fprint-arguments (printf clang arguments)
+  if (Args.hasArg(options::OPT_fprint_arguments))
+    CmdArgs.push_back("-fprint-arguments");
+
+  // -fencrypt-string (encrypt your string)
+  if (Args.hasArg(options::OPT_fencrypt_string))
+    CmdArgs.push_back("-fencrypt-string");
 
   // Handle -fgcc-version, if present.
   VersionTuple GNUCVer;
@@ -7634,12 +7642,14 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
 
   // This controls whether or not we emit stack-protector instrumentation.
   // In MSVC, Buffer Security Check (/GS) is on by default.
+  // [HACKY] NO NO NO. We dont need /GS on Windows
+  #ifndef _WIN32
   if (!isNVPTX && Args.hasFlag(options::OPT__SLASH_GS, options::OPT__SLASH_GS_,
-                               /*Default=*/true)) {
-    CmdArgs.push_back("-stack-protector");
-    CmdArgs.push_back(Args.MakeArgString(Twine(LangOptions::SSPStrong)));
+                              /*Default=*/true)) {
+      CmdArgs.push_back("-stack-protector");
+      CmdArgs.push_back(Args.MakeArgString(Twine(LangOptions::SSPStrong)));
   }
-
+  #endif
   // Emit CodeView if -Z7 or -gline-tables-only are present.
   if (Arg *DebugInfoArg = Args.getLastArg(options::OPT__SLASH_Z7,
                                           options::OPT_gline_tables_only)) {
@@ -7791,30 +7801,34 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     CmdArgs.push_back("-fdiagnostics-format");
     CmdArgs.push_back("msvc");
   }
+  
 
   if (Args.hasArg(options::OPT__SLASH_kernel))
     CmdArgs.push_back("-fms-kernel");
 
+  // [HACKY] NO NO NO. We dont need /guard on Windows.
+  #ifndef _WIN32
   if (Arg *A = Args.getLastArg(options::OPT__SLASH_guard)) {
-    StringRef GuardArgs = A->getValue();
-    // The only valid options are "cf", "cf,nochecks", "cf-", "ehcont" and
-    // "ehcont-".
-    if (GuardArgs.equals_insensitive("cf")) {
-      // Emit CFG instrumentation and the table of address-taken functions.
-      CmdArgs.push_back("-cfguard");
-    } else if (GuardArgs.equals_insensitive("cf,nochecks")) {
-      // Emit only the table of address-taken functions.
-      CmdArgs.push_back("-cfguard-no-checks");
-    } else if (GuardArgs.equals_insensitive("ehcont")) {
-      // Emit EH continuation table.
-      CmdArgs.push_back("-ehcontguard");
-    } else if (GuardArgs.equals_insensitive("cf-") ||
-               GuardArgs.equals_insensitive("ehcont-")) {
-      // Do nothing, but we might want to emit a security warning in future.
-    } else {
-      D.Diag(diag::err_drv_invalid_value) << A->getSpelling() << GuardArgs;
-    }
+      StringRef GuardArgs = A->getValue();
+      // The only valid options are "cf", "cf,nochecks", "cf-", "ehcont" and
+      // "ehcont-".
+      if (GuardArgs.equals_insensitive("cf")) {
+          // Emit CFG instrumentation and the table of address-taken functions.
+          CmdArgs.push_back("-cfguard");
+      } else if (GuardArgs.equals_insensitive("cf,nochecks")) {
+          // Emit only the table of address-taken functions.
+          CmdArgs.push_back("-cfguard-no-checks");
+      } else if (GuardArgs.equals_insensitive("ehcont")) {
+          // Emit EH continuation table.
+          CmdArgs.push_back("-ehcontguard");
+      } else if (GuardArgs.equals_insensitive("cf-") ||
+                GuardArgs.equals_insensitive("ehcont-")) {
+          // Do nothing, but we might want to emit a security warning in future.
+      } else {
+          D.Diag(diag::err_drv_invalid_value) << A->getSpelling() << GuardArgs;
+      }
   }
+  #endif
 }
 
 const char *Clang::getBaseInputName(const ArgList &Args,

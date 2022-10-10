@@ -337,7 +337,13 @@ static IdentifierInfo *RegisterBuiltinMacro(Preprocessor &PP, const char *Name){
 /// RegisterBuiltinMacros - Register builtin macros, such as __LINE__ with the
 /// identifier table.
 void Preprocessor::RegisterBuiltinMacros() {
+  //[MSVC Compatibility]
+#ifdef _WIN32
+  Ident__FUNCTION__ = RegisterBuiltinMacro(*this, "__FUNCTION__");
   Ident__LINE__ = RegisterBuiltinMacro(*this, "__LINE__");
+#else
+  Ident__FUNCTION__ = Ident__LINE__ = RegisterBuiltinMacro(*this, "__LINE__");
+#endif
   Ident__FILE__ = RegisterBuiltinMacro(*this, "__FILE__");
   Ident__DATE__ = RegisterBuiltinMacro(*this, "__DATE__");
   Ident__TIME__ = RegisterBuiltinMacro(*this, "__TIME__");
@@ -1515,7 +1521,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     OS << (PLoc.isValid()? PLoc.getLine() : 1);
     Tok.setKind(tok::numeric_constant);
   } else if (II == Ident__FILE__ || II == Ident__BASE_FILE__ ||
-             II == Ident__FILE_NAME__) {
+             II == Ident__FILE_NAME__ || II == Ident__FUNCTION__) {
     // C99 6.10.8: "__FILE__: The presumed name of the current source file (a
     // character string literal)". This can be affected by #line.
     PresumedLoc PLoc = SourceMgr.getPresumedLoc(Tok.getLocation());
@@ -1548,6 +1554,14 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
           FN += PLoc.getFilename();
       } else {
         FN += PLoc.getFilename();
+        //[MSVC Compalibility] Use file name and line to replace '__FUNCTION__'
+#ifdef _WIN32
+        if (II == Ident__FUNCTION__) {
+          FN += "(";
+          FN += Twine(PLoc.getLine()).str();
+          FN += ")";
+        }
+#endif
       }
       processPathForFileMacro(FN, getLangOpts(), getTargetInfo());
       Lexer::Stringify(FN);

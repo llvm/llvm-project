@@ -26,6 +26,7 @@ add_clang_library(clangLex
   ScratchBuffer.cpp
   TokenConcatenation.cpp
   TokenLexer.cpp
+  MacroGuardValidator.cpp
 
   LINK_LIBS
   clangBasic
