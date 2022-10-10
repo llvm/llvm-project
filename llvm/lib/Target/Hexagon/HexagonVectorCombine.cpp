@@ -86,8 +86,8 @@ public:
   VectorType *getHvxTy(Type *ElemTy, bool Pair = false) const;
 
   enum SizeKind {
-    Store,  // Store size
-    Alloc,  // Alloc size
+    Store, // Store size
+    Alloc, // Alloc size
   };
   int getSizeOf(const Value *Val, SizeKind Kind = Store) const;
   int getSizeOf(const Type *Ty, SizeKind Kind = Store) const;
@@ -97,19 +97,21 @@ public:
   Constant *getNullValue(Type *Ty) const;
   Constant *getFullValue(Type *Ty) const;
 
-  Value *insertb(IRBuilder<> &Builder, Value *Dest, Value *Src, int Start,
+  Value *insertb(IRBuilderBase &Builder, Value *Dest, Value *Src, int Start,
                  int Length, int Where) const;
-  Value *vlalignb(IRBuilder<> &Builder, Value *Lo, Value *Hi, Value *Amt) const;
-  Value *vralignb(IRBuilder<> &Builder, Value *Lo, Value *Hi, Value *Amt) const;
-  Value *concat(IRBuilder<> &Builder, ArrayRef<Value *> Vecs) const;
-  Value *vresize(IRBuilder<> &Builder, Value *Val, int NewSize,
+  Value *vlalignb(IRBuilderBase &Builder, Value *Lo, Value *Hi,
+                  Value *Amt) const;
+  Value *vralignb(IRBuilderBase &Builder, Value *Lo, Value *Hi,
+                  Value *Amt) const;
+  Value *concat(IRBuilderBase &Builder, ArrayRef<Value *> Vecs) const;
+  Value *vresize(IRBuilderBase &Builder, Value *Val, int NewSize,
                  Value *Pad) const;
-  Value *rescale(IRBuilder<> &Builder, Value *Mask, Type *FromTy,
+  Value *rescale(IRBuilderBase &Builder, Value *Mask, Type *FromTy,
                  Type *ToTy) const;
-  Value *vlsb(IRBuilder<> &Builder, Value *Val) const;
-  Value *vbytes(IRBuilder<> &Builder, Value *Val) const;
+  Value *vlsb(IRBuilderBase &Builder, Value *Val) const;
+  Value *vbytes(IRBuilderBase &Builder, Value *Val) const;
 
-  Value *createHvxIntrinsic(IRBuilder<> &Builder, Intrinsic::ID IntID,
+  Value *createHvxIntrinsic(IRBuilderBase &Builder, Intrinsic::ID IntID,
                             Type *RetTy, ArrayRef<Value *> Args) const;
 
   std::optional<int> calculatePointerDifference(Value *Ptr0, Value *Ptr1) const;
@@ -131,8 +133,8 @@ public:
   const HexagonSubtarget &HST;
 
 private:
-  Value *getElementRange(IRBuilder<> &Builder, Value *Lo, Value *Hi, int Start,
-                         int Length) const;
+  Value *getElementRange(IRBuilderBase &Builder, Value *Lo, Value *Hi,
+                         int Start, int Length) const;
 };
 
 class AlignVectors {
@@ -238,13 +240,13 @@ private:
   Value *getMask(Value *Val) const;
   Value *getPassThrough(Value *Val) const;
 
-  Value *createAdjustedPointer(IRBuilder<> &Builder, Value *Ptr, Type *ValTy,
+  Value *createAdjustedPointer(IRBuilderBase &Builder, Value *Ptr, Type *ValTy,
                                int Adjust) const;
-  Value *createAlignedPointer(IRBuilder<> &Builder, Value *Ptr, Type *ValTy,
+  Value *createAlignedPointer(IRBuilderBase &Builder, Value *Ptr, Type *ValTy,
                               int Alignment) const;
-  Value *createAlignedLoad(IRBuilder<> &Builder, Type *ValTy, Value *Ptr,
+  Value *createAlignedLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
                            int Alignment, Value *Mask, Value *PassThru) const;
-  Value *createAlignedStore(IRBuilder<> &Builder, Value *Val, Value *Ptr,
+  Value *createAlignedStore(IRBuilderBase &Builder, Value *Val, Value *Ptr,
                             int Alignment, Value *Mask) const;
 
   bool createAddressGroups();
@@ -446,7 +448,7 @@ auto AlignVectors::getPassThrough(Value *Val) const -> Value * {
   return UndefValue::get(getPayload(Val)->getType());
 }
 
-auto AlignVectors::createAdjustedPointer(IRBuilder<> &Builder, Value *Ptr,
+auto AlignVectors::createAdjustedPointer(IRBuilderBase &Builder, Value *Ptr,
                                          Type *ValTy, int Adjust) const
     -> Value * {
   // The adjustment is in bytes, but if it's a multiple of the type size,
@@ -469,7 +471,7 @@ auto AlignVectors::createAdjustedPointer(IRBuilder<> &Builder, Value *Ptr,
   return Builder.CreatePointerCast(Tmp1, ValTy->getPointerTo());
 }
 
-auto AlignVectors::createAlignedPointer(IRBuilder<> &Builder, Value *Ptr,
+auto AlignVectors::createAlignedPointer(IRBuilderBase &Builder, Value *Ptr,
                                         Type *ValTy, int Alignment) const
     -> Value * {
   Value *AsInt = Builder.CreatePtrToInt(Ptr, HVC.getIntTy());
@@ -478,7 +480,7 @@ auto AlignVectors::createAlignedPointer(IRBuilder<> &Builder, Value *Ptr,
   return Builder.CreateIntToPtr(And, ValTy->getPointerTo());
 }
 
-auto AlignVectors::createAlignedLoad(IRBuilder<> &Builder, Type *ValTy,
+auto AlignVectors::createAlignedLoad(IRBuilderBase &Builder, Type *ValTy,
                                      Value *Ptr, int Alignment, Value *Mask,
                                      Value *PassThru) const -> Value * {
   assert(!HVC.isUndef(Mask)); // Should this be allowed?
@@ -489,7 +491,7 @@ auto AlignVectors::createAlignedLoad(IRBuilder<> &Builder, Type *ValTy,
   return Builder.CreateMaskedLoad(ValTy, Ptr, Align(Alignment), Mask, PassThru);
 }
 
-auto AlignVectors::createAlignedStore(IRBuilder<> &Builder, Value *Val,
+auto AlignVectors::createAlignedStore(IRBuilderBase &Builder, Value *Val,
                                       Value *Ptr, int Alignment,
                                       Value *Mask) const -> Value * {
   if (HVC.isZero(Mask) || HVC.isUndef(Val) || HVC.isUndef(Mask))
@@ -844,7 +846,7 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
 
     // Return a vector value corresponding to the input value Val:
     // either <1 x Val> for scalar Val, or Val itself for vector Val.
-    auto MakeVec = [](IRBuilder<> &Builder, Value *Val) -> Value * {
+    auto MakeVec = [](IRBuilderBase &Builder, Value *Val) -> Value * {
       Type *Ty = Val->getType();
       if (Ty->isVectorTy())
         return Val;
@@ -1053,9 +1055,9 @@ auto HexagonVectorCombine::getFullValue(Type *Ty) const -> Constant * {
 }
 
 // Insert bytes [Start..Start+Length) of Src into Dst at byte Where.
-auto HexagonVectorCombine::insertb(IRBuilder<> &Builder, Value *Dst, Value *Src,
-                                   int Start, int Length, int Where) const
-    -> Value * {
+auto HexagonVectorCombine::insertb(IRBuilderBase &Builder, Value *Dst,
+                                   Value *Src, int Start, int Length,
+                                   int Where) const -> Value * {
   assert(isByteVecTy(Dst->getType()) && isByteVecTy(Src->getType()));
   int SrcLen = getSizeOf(Src);
   int DstLen = getSizeOf(Dst);
@@ -1079,8 +1081,8 @@ auto HexagonVectorCombine::insertb(IRBuilder<> &Builder, Value *Dst, Value *Src,
   return vresize(Builder, P2Insert, DstLen, Undef);
 }
 
-auto HexagonVectorCombine::vlalignb(IRBuilder<> &Builder, Value *Lo, Value *Hi,
-                                    Value *Amt) const -> Value * {
+auto HexagonVectorCombine::vlalignb(IRBuilderBase &Builder, Value *Lo,
+                                    Value *Hi, Value *Amt) const -> Value * {
   assert(Lo->getType() == Hi->getType() && "Argument type mismatch");
   if (isZero(Amt))
     return Hi;
@@ -1109,8 +1111,8 @@ auto HexagonVectorCombine::vlalignb(IRBuilder<> &Builder, Value *Lo, Value *Hi,
   llvm_unreachable("Unexpected vector length");
 }
 
-auto HexagonVectorCombine::vralignb(IRBuilder<> &Builder, Value *Lo, Value *Hi,
-                                    Value *Amt) const -> Value * {
+auto HexagonVectorCombine::vralignb(IRBuilderBase &Builder, Value *Lo,
+                                    Value *Hi, Value *Amt) const -> Value * {
   assert(Lo->getType() == Hi->getType() && "Argument type mismatch");
   if (isZero(Amt))
     return Lo;
@@ -1144,7 +1146,7 @@ auto HexagonVectorCombine::vralignb(IRBuilder<> &Builder, Value *Lo, Value *Hi,
 }
 
 // Concatenates a sequence of vectors of the same type.
-auto HexagonVectorCombine::concat(IRBuilder<> &Builder,
+auto HexagonVectorCombine::concat(IRBuilderBase &Builder,
                                   ArrayRef<Value *> Vecs) const -> Value * {
   assert(!Vecs.empty());
   SmallVector<int, 256> SMask;
@@ -1177,7 +1179,7 @@ auto HexagonVectorCombine::concat(IRBuilder<> &Builder,
   return Builder.CreateShuffleVector(Total, SMask);
 }
 
-auto HexagonVectorCombine::vresize(IRBuilder<> &Builder, Value *Val,
+auto HexagonVectorCombine::vresize(IRBuilderBase &Builder, Value *Val,
                                    int NewSize, Value *Pad) const -> Value * {
   assert(isa<VectorType>(Val->getType()));
   auto *ValTy = cast<VectorType>(Val->getType());
@@ -1197,7 +1199,7 @@ auto HexagonVectorCombine::vresize(IRBuilder<> &Builder, Value *Val,
   return Builder.CreateShuffleVector(Val, PadVec, SMask);
 }
 
-auto HexagonVectorCombine::rescale(IRBuilder<> &Builder, Value *Mask,
+auto HexagonVectorCombine::rescale(IRBuilderBase &Builder, Value *Mask,
                                    Type *FromTy, Type *ToTy) const -> Value * {
   // Mask is a vector <N x i1>, where each element corresponds to an
   // element of FromTy. Remap it so that each element will correspond
@@ -1232,7 +1234,7 @@ auto HexagonVectorCombine::rescale(IRBuilder<> &Builder, Value *Mask,
 }
 
 // Bitcast to bytes, and return least significant bits.
-auto HexagonVectorCombine::vlsb(IRBuilder<> &Builder, Value *Val) const
+auto HexagonVectorCombine::vlsb(IRBuilderBase &Builder, Value *Val) const
     -> Value * {
   Type *ScalarTy = Val->getType()->getScalarType();
   if (ScalarTy == getBoolTy())
@@ -1247,7 +1249,7 @@ auto HexagonVectorCombine::vlsb(IRBuilder<> &Builder, Value *Val) const
 }
 
 // Bitcast to bytes for non-bool. For bool, convert i1 -> i8.
-auto HexagonVectorCombine::vbytes(IRBuilder<> &Builder, Value *Val) const
+auto HexagonVectorCombine::vbytes(IRBuilderBase &Builder, Value *Val) const
     -> Value * {
   Type *ScalarTy = Val->getType()->getScalarType();
   if (ScalarTy == getByteTy())
@@ -1261,7 +1263,7 @@ auto HexagonVectorCombine::vbytes(IRBuilder<> &Builder, Value *Val) const
   return Builder.CreateSExt(Val, getByteTy());
 }
 
-auto HexagonVectorCombine::createHvxIntrinsic(IRBuilder<> &Builder,
+auto HexagonVectorCombine::createHvxIntrinsic(IRBuilderBase &Builder,
                                               Intrinsic::ID IntID, Type *RetTy,
                                               ArrayRef<Value *> Args) const
     -> Value * {
@@ -1284,7 +1286,7 @@ auto HexagonVectorCombine::createHvxIntrinsic(IRBuilder<> &Builder,
     return Ty;
   };
 
-  auto getCast = [&](IRBuilder<> &Builder, Value *Val,
+  auto getCast = [&](IRBuilderBase &Builder, Value *Val,
                      Type *DestTy) -> Value * {
     Type *SrcTy = Val->getType();
     if (SrcTy == DestTy)
@@ -1489,7 +1491,7 @@ auto HexagonVectorCombine::isByteVecTy(Type *Ty) const -> bool {
   return false;
 }
 
-auto HexagonVectorCombine::getElementRange(IRBuilder<> &Builder, Value *Lo,
+auto HexagonVectorCombine::getElementRange(IRBuilderBase &Builder, Value *Lo,
                                            Value *Hi, int Start,
                                            int Length) const -> Value * {
   assert(0 <= Start && Start < Length);
