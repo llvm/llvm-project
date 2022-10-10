@@ -1366,6 +1366,10 @@ def HexagonVASL: SDNode<"HexagonISD::VASL", SDTHexagonVShift>;
 def HexagonVASR: SDNode<"HexagonISD::VASR", SDTHexagonVShift>;
 def HexagonVLSR: SDNode<"HexagonISD::VLSR", SDTHexagonVShift>;
 
+// Funnel shifts with the shift amount module element bit width.
+def HexagonMFSHL: SDNode<"HexagonISD::MFSHL", SDTIntShiftDOp>;
+def HexagonMFSHR: SDNode<"HexagonISD::MFSHR", SDTIntShiftDOp>;
+
 def: OpR_RI_pat<S2_asl_i_vw, pf2<HexagonVASL>, v2i32, V2I32, u5_0ImmPred>;
 def: OpR_RI_pat<S2_asl_i_vh, pf2<HexagonVASL>, v4i16, V4I16, u4_0ImmPred>;
 def: OpR_RI_pat<S2_asr_i_vw, pf2<HexagonVASR>, v2i32, V2I32, u5_0ImmPred>;

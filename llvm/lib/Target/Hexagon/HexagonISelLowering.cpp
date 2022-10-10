@@ -1899,6 +1899,8 @@ const char* HexagonTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case HexagonISD::VASL:          return "HexagonISD::VASL";
   case HexagonISD::VASR:          return "HexagonISD::VASR";
   case HexagonISD::VLSR:          return "HexagonISD::VLSR";
+  case HexagonISD::MFSHL:         return "HexagonISD::MFSHL";
+  case HexagonISD::MFSHR:         return "HexagonISD::MFSHR";
   case HexagonISD::SSAT:          return "HexagonISD::SSAT";
   case HexagonISD::USAT:          return "HexagonISD::USAT";
   case HexagonISD::VEXTRACTW:     return "HexagonISD::VEXTRACTW";
@@ -2323,6 +2325,19 @@ HexagonTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG)
   return SDValue();
 }
 
+SDValue
+HexagonTargetLowering::getSplatValue(SDValue Op, SelectionDAG &DAG) const {
+  switch (Op.getOpcode()) {
+    case ISD::BUILD_VECTOR:
+      if (SDValue S = cast<BuildVectorSDNode>(Op)->getSplatValue())
+        return S;
+      break;
+    case ISD::SPLAT_VECTOR:
+      return Op.getOperand(0);
+  }
+  return SDValue();
+}
+
 // Create a Hexagon-specific node for shifting a vector by an integer.
 SDValue
 HexagonTargetLowering::getVectorShiftByInt(SDValue Op, SelectionDAG &DAG)
@@ -2342,18 +2357,8 @@ HexagonTargetLowering::getVectorShiftByInt(SDValue Op, SelectionDAG &DAG)
       llvm_unreachable("Unexpected shift opcode");
   }
 
-  SDValue Op0 = Op.getOperand(0);
-  SDValue Op1 = Op.getOperand(1);
-  const SDLoc &dl(Op);
-
-  switch (Op1.getOpcode()) {
-    case ISD::BUILD_VECTOR:
-      if (SDValue S = cast<BuildVectorSDNode>(Op1)->getSplatValue())
-        return DAG.getNode(NewOpc, dl, ty(Op), Op0, S);
-      break;
-    case ISD::SPLAT_VECTOR:
-      return DAG.getNode(NewOpc, dl, ty(Op), Op0, Op1.getOperand(0));
-  }
+  if (SDValue Sp = getSplatValue(Op.getOperand(1), DAG))
+    return DAG.getNode(NewOpc, SDLoc(Op), ty(Op), Op.getOperand(0), Sp);
   return SDValue();
 }
 
