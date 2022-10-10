@@ -1,4 +1,4 @@
-//===- SparseTensorUtils.cpp - Sparse Tensor Utils for MLIR execution -----===//
+//===- SparseTensorRuntime.cpp - SparseTensor runtime support lib ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -46,7 +46,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/ExecutionEngine/SparseTensorUtils.h"
+#include "mlir/ExecutionEngine/SparseTensorRuntime.h"
 
 #ifdef MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
 
