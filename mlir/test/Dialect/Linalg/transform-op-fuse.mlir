@@ -51,7 +51,8 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.elemwise_binary"]} in %arg1
     %1, %loops:2 = transform.structured.fuse %0 {tile_sizes = [32, 32], tile_interchange = [0, 1]}
-    transform.loop.peel %loops#0
+    %loop = transform.cast %loops#0 : !pdl.operation to !transform.op<"scf.for">
+    transform.loop.peel %loop : (!transform.op<"scf.for">) -> !pdl.operation
   }
 }
 
