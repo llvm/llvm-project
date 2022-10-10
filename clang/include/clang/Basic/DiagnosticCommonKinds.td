@@ -279,6 +279,9 @@ let CategoryName = "Inline Assembly Issue" in {
   def err_asm_invalid_type : Error<
     "invalid type %0 in asm %select{input|output}1">;
 
+  def err_ms_asm_bitfield_unsupported : Error<
+    "an inline asm block cannot have an operand which is a bit-field">;
+
   def warn_stack_clash_protection_inline_asm : Warning<
     "Unable to protect inline asm that clobbers stack pointer against stack clash">,
     InGroup<DiagGroup<"stack-protector">>;

@@ -140,6 +140,25 @@ code bases.
       *p; // Now diagnosed as a warning-as-error.
     }
 
+- Clang now diagnoses use of a bit-field as an instruction operand in Microsoft
+  style inline asm blocks as an error. Previously, a bit-field operand yielded
+  the address of the allocation unit the bit-field was stored within; reads or
+  writes therefore had the potential to read or write nearby bit-fields. This
+  change fixes `issue 57791 <https://github.com/llvm/llvm-project/issues/57791>`_.
+
+  .. code-block:: c++
+
+    typedef struct S {
+      unsigned bf:1;
+    } S;
+    void f(S s) {
+      __asm {
+        mov eax, s.bf // Now diagnosed as an error.
+        mov s.bf, eax // Now diagnosed as an error.
+      }
+    }
+
+
 What's New in Clang |release|?
 ==============================
 Some of the major new features and improvements to Clang are listed
