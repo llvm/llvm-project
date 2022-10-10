@@ -512,6 +512,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<IntType>, ArgSpec<ConstCharPtr>, ArgSpec<IntType>, ArgSpec<ConstCharPtr>]
         >,
         FunctionSpec<
+          "sysconf",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>]
+        >,
+        FunctionSpec<
           "__llvm_libc_syscall",
           RetValSpec<LongType>,
           [ArgSpec<LongType>,ArgSpec<LongType>,ArgSpec<LongType>,ArgSpec<LongType>,ArgSpec<LongType>,ArgSpec<LongType>,ArgSpec<LongType>]

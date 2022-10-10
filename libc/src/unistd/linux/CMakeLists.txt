@@ -370,6 +370,17 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sysconf
+  SRCS
+    sysconf.cpp
+  HDRS
+    ../sysconf.h
+  DEPENDS
+    libc.include.unistd
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   truncate
   SRCS
     truncate.cpp
