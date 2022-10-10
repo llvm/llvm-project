@@ -35,17 +35,13 @@
 
 module {
   //
-  // Utilities for output and releasing memory.
+  // Utility for output.
   //
   func.func @dump(%arg0: tensor<2x3x4xf64>) {
     %c0 = arith.constant 0 : index
     %d0 = arith.constant -1.0 : f64
     %0 = vector.transfer_read %arg0[%c0, %c0, %c0], %d0: tensor<2x3x4xf64>, vector<2x3x4xf64>
     vector.print %0 : vector<2x3x4xf64>
-    return
-  }
-  func.func @dumpAndRelease_234(%arg0: tensor<2x3x4xf64>) {
-    call @dump(%arg0) : (tensor<2x3x4xf64>) -> ()
     return
   }
 
@@ -93,10 +89,10 @@ module {
     //
     // CHECK-COUNT-5: ( ( ( 1, 2, 3, 4 ), ( 5, 6, 7, 8 ), ( 9, 10, 11, 12 ) ), ( ( 13, 14, 15, 16 ), ( 17, 18, 19, 20 ), ( 21, 22, 23, 24 ) ) )
     call @dump(%src) : (tensor<2x3x4xf64>) -> ()
-    call @dumpAndRelease_234(%d13) : (tensor<2x3x4xf64>) -> ()
-    call @dumpAndRelease_234(%d21) : (tensor<2x3x4xf64>) -> ()
-    call @dumpAndRelease_234(%d23) : (tensor<2x3x4xf64>) -> ()
-    call @dumpAndRelease_234(%d31) : (tensor<2x3x4xf64>) -> ()
+    call @dump(%d13) : (tensor<2x3x4xf64>) -> ()
+    call @dump(%d21) : (tensor<2x3x4xf64>) -> ()
+    call @dump(%d23) : (tensor<2x3x4xf64>) -> ()
+    call @dump(%d31) : (tensor<2x3x4xf64>) -> ()
 
     //
     // Release sparse tensors.
@@ -160,12 +156,12 @@ module {
     //
     // CHECK-COUNT-7: ( ( ( 1, 0, 0, 0 ), ( 0, 6, 0, 0 ), ( 0, 0, 11, 0 ) ), ( ( 0, 14, 0, 0 ), ( 0, 0, 0, 20 ), ( 21, 0, 0, 0 ) ) )
     call @dump(%src) : (tensor<2x3x4xf64>) -> ()
-    call @dumpAndRelease_234(%d12) : (tensor<2x3x4xf64>) -> ()
-    call @dumpAndRelease_234(%d13) : (tensor<2x3x4xf64>) -> ()
-    call @dumpAndRelease_234(%d21) : (tensor<2x3x4xf64>) -> ()
-    call @dumpAndRelease_234(%d23) : (tensor<2x3x4xf64>) -> ()
-    call @dumpAndRelease_234(%d31) : (tensor<2x3x4xf64>) -> ()
-    call @dumpAndRelease_234(%d32) : (tensor<2x3x4xf64>) -> ()
+    call @dump(%d12) : (tensor<2x3x4xf64>) -> ()
+    call @dump(%d13) : (tensor<2x3x4xf64>) -> ()
+    call @dump(%d21) : (tensor<2x3x4xf64>) -> ()
+    call @dump(%d23) : (tensor<2x3x4xf64>) -> ()
+    call @dump(%d31) : (tensor<2x3x4xf64>) -> ()
+    call @dump(%d32) : (tensor<2x3x4xf64>) -> ()
 
     //
     // Release sparse tensors.
@@ -176,6 +172,9 @@ module {
     bufferization.dealloc_tensor %t23 : tensor<2x3x4xf64, #SingletonTensor3>
     bufferization.dealloc_tensor %t31 : tensor<2x3x4xf64, #SingletonTensor1>
     bufferization.dealloc_tensor %t32 : tensor<2x3x4xf64, #SingletonTensor2>
+    bufferization.dealloc_tensor %s1 : tensor<2x3x4xf64, #SingletonTensor1>
+    bufferization.dealloc_tensor %s2 : tensor<2x3x4xf64, #SingletonTensor2>
+    bufferization.dealloc_tensor %s3 : tensor<2x3x4xf64, #SingletonTensor3>
 
     return
   }
