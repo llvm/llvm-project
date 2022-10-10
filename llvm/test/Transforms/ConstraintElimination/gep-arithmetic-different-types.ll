@@ -404,3 +404,53 @@ define i1 @gep_add_nsw_positive_index_struct(ptr %A, ptr %upper, i8 %idx) {
 
   ret i1 %res.3
 }
+
+define i1 @gep_constant_positive_index_fixed_vector_ty(ptr %A, ptr %upper) {
+; CHECK-LABEL: @gep_constant_positive_index_fixed_vector_ty(
+; CHECK-NEXT:    [[ADD_I8_4:%.*]] = getelementptr inbounds <4 x i8>, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[C_0:%.*]] = icmp ult ptr [[ADD_I8_4]], [[UPPER:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
+; CHECK-NEXT:    [[ADD_I16_4:%.*]] = getelementptr inbounds <4 x i16>, ptr [[A]], i64 4
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[ADD_I16_4]], [[UPPER]]
+; CHECK-NEXT:    [[ADD_I16_2:%.*]] = getelementptr inbounds <4 x i16>, ptr [[A]], i64 2
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ult ptr [[ADD_I16_2]], [[UPPER]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], true
+; CHECK-NEXT:    ret i1 [[RES_1]]
+;
+  %add.i8.4 = getelementptr inbounds <4 x i8>, ptr %A, i64 4
+  %c.0 = icmp ult ptr %add.i8.4, %upper
+  call void @llvm.assume(i1 %c.0)
+
+  %add.i16.4 = getelementptr inbounds <4 x i16>, ptr %A, i64 4
+  %c.1 = icmp ult ptr %add.i16.4, %upper
+
+  %add.i16.2 = getelementptr inbounds <4 x i16>, ptr %A, i64 2
+  %t.1 = icmp ult ptr %add.i16.2, %upper
+  %res.1 = xor i1 %c.1, %t.1
+  ret i1 %res.1
+}
+
+define i1 @gep_constant_positive_index_scalable_vector_ty(ptr %A, ptr %upper) {
+; CHECK-LABEL: @gep_constant_positive_index_scalable_vector_ty(
+; CHECK-NEXT:    [[ADD_I8_4:%.*]] = getelementptr inbounds <vscale x 4 x i8>, ptr [[A:%.*]], i64 4
+; CHECK-NEXT:    [[C_0:%.*]] = icmp ult ptr [[ADD_I8_4]], [[UPPER:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[C_0]])
+; CHECK-NEXT:    [[ADD_I16_4:%.*]] = getelementptr inbounds <vscale x 4 x i16>, ptr [[A]], i64 4
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult ptr [[ADD_I16_4]], [[UPPER]]
+; CHECK-NEXT:    [[ADD_I16_2:%.*]] = getelementptr inbounds <vscale x 4 x i16>, ptr [[A]], i64 2
+; CHECK-NEXT:    [[T_1:%.*]] = icmp ult ptr [[ADD_I16_2]], [[UPPER]]
+; CHECK-NEXT:    [[RES_1:%.*]] = xor i1 [[C_1]], [[T_1]]
+; CHECK-NEXT:    ret i1 [[RES_1]]
+;
+  %add.i8.4 = getelementptr inbounds <vscale x 4 x i8>, ptr %A, i64 4
+  %c.0 = icmp ult ptr %add.i8.4, %upper
+  call void @llvm.assume(i1 %c.0)
+
+  %add.i16.4 = getelementptr inbounds <vscale x 4 x i16>, ptr %A, i64 4
+  %c.1 = icmp ult ptr %add.i16.4, %upper
+
+  %add.i16.2 = getelementptr inbounds <vscale x 4 x i16>, ptr %A, i64 2
+  %t.1 = icmp ult ptr %add.i16.2, %upper
+  %res.1 = xor i1 %c.1, %t.1
+  ret i1 %res.1
+}
