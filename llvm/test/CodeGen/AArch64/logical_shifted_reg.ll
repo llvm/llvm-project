@@ -289,4 +289,56 @@ ret:
   ret void
 }
 
+define i64 @add_swap_rhs_lhs_i64(i64 %0, i64 %1) {
+; CHECK-LABEL: add_swap_rhs_lhs_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl x8, x1, #3
+; CHECK-NEXT:    add x0, x8, x0, lsl #8
+; CHECK-NEXT:    ret
+  %3 = shl i64 %0, 8
+  %4 = shl i64 %1, 3
+  %5 = add i64 %4, %3
+  ret i64 %5
+}
+
+define i64 @add_swap_no_op_i64(i64 %0, i64 %1, i64* %2) {
+; CHECK-LABEL: add_swap_no_op_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl x8, x1, #3
+; CHECK-NEXT:    add x0, x8, x0, lsl #8
+; CHECK-NEXT:    str x8, [x2]
+; CHECK-NEXT:    ret
+  %4 = shl i64 %0, 8
+  %5 = shl i64 %1, 3
+  store i64 %5, i64* %2
+  %6 = add i64 %5, %4
+  ret i64 %6
+}
+
+define i32 @add_swap_rhs_lhs_i32(i32 %0, i32 %1) {
+; CHECK-LABEL: add_swap_rhs_lhs_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl w8, w1, #3
+; CHECK-NEXT:    add w0, w8, w0, lsl #8
+; CHECK-NEXT:    ret
+  %3 = shl i32 %0, 8
+  %4 = shl i32 %1, 3
+  %5 = add i32 %4, %3
+  ret i32 %5
+}
+
+define i32 @add_swap_no_op_i32(i32 %0, i32 %1, i32* %2) {
+; CHECK-LABEL: add_swap_no_op_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl w8, w1, #3
+; CHECK-NEXT:    add w0, w8, w0, lsl #8
+; CHECK-NEXT:    str w8, [x2]
+; CHECK-NEXT:    ret
+  %4 = shl i32 %0, 8
+  %5 = shl i32 %1, 3
+  store i32 %5, i32* %2
+  %6 = add i32 %5, %4
+  ret i32 %6
+}
+
 !1 = !{!"branch_weights", i32 1, i32 1}
