@@ -48,6 +48,8 @@ def StructTimeSpecPtr : PtrType<StructTimeSpec>;
 def ExecArgvT : NamedType<"__exec_argv_t">;
 def ExecEnvpT : NamedType<"__exec_envp_t">;
 
+def AtForkCallbackT : NamedType<"__atfork_callback_t">;
+
 def POSIX : StandardSpec<"POSIX"> {
   PtrType CharPtr = PtrType<CharType>;
   RestrictedPtrType RestrictedCharPtr = RestrictedPtrType<CharType>;
@@ -510,6 +512,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<IntType>, ArgSpec<ConstCharPtr>, ArgSpec<IntType>, ArgSpec<ConstCharPtr>]
         >,
         FunctionSpec<
+          "sysconf",
+          RetValSpec<IntType>,
+          [ArgSpec<IntType>]
+        >,
+        FunctionSpec<
           "__llvm_libc_syscall",
           RetValSpec<LongType>,
           [ArgSpec<LongType>,ArgSpec<LongType>,ArgSpec<LongType>,ArgSpec<LongType>,ArgSpec<LongType>,ArgSpec<LongType>,ArgSpec<LongType>]
@@ -718,6 +725,7 @@ def POSIX : StandardSpec<"POSIX"> {
     "pthread.h",
     [], // Macros
     [
+        AtForkCallbackT,
         PThreadAttrTType,
         PThreadKeyT,
         PThreadMutexAttrTType,
@@ -730,6 +738,11 @@ def POSIX : StandardSpec<"POSIX"> {
     ], // Types
     [], // Enumerations
     [
+      FunctionSpec<
+          "pthread_atfork",
+          RetValSpec<IntType>,
+          [ArgSpec<AtForkCallbackT>, ArgSpec<AtForkCallbackT>, ArgSpec<AtForkCallbackT>]
+      >,
       FunctionSpec<
           "pthread_attr_init",
           RetValSpec<IntType>,

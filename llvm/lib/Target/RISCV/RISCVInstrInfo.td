@@ -1688,10 +1688,14 @@ def : Pat<(binop_allwusers<srl> (sext_inreg GPR:$rs1, i32), uimm5:$shamt),
 
 // Use binop_allwusers to recover immediates that may have been broken by
 // SimplifyDemandedBits.
-// TODO: This is valid for ADDI/ORI/XORI.
 def : Pat<(binop_allwusers<and> GPR:$rs1, u32simm12:$imm),
           (ANDI GPR:$rs1, u32simm12:$imm)>;
 
+def : Pat<(binop_allwusers<or> GPR:$rs1, u32simm12:$imm),
+          (ORI GPR:$rs1, u32simm12:$imm)>;
+
+def : Pat<(binop_allwusers<xor> GPR:$rs1, u32simm12:$imm),
+          (XORI GPR:$rs1, u32simm12:$imm)>;
 /// Loads
 
 defm : LdPat<sextloadi32, LW, i64>;

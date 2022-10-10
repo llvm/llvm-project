@@ -1660,9 +1660,11 @@ bool Sema::CheckRedeclarationModuleOwnership(NamedDecl *New, NamedDecl *Old) {
 
   // Partitions are part of the module, but a partition could import another
   // module, so verify that the PMIs agree.
-  if (NewM && OldM && (NewM->isModulePartition() || OldM->isModulePartition()))
-    return NewM->getPrimaryModuleInterfaceName() ==
-           OldM->getPrimaryModuleInterfaceName();
+  if (NewM && OldM &&
+      (NewM->isModulePartition() || OldM->isModulePartition()) &&
+      NewM->getPrimaryModuleInterfaceName() ==
+          OldM->getPrimaryModuleInterfaceName())
+    return false;
 
   bool NewIsModuleInterface = NewM && NewM->isModulePurview();
   bool OldIsModuleInterface = OldM && OldM->isModulePurview();

@@ -117,3 +117,32 @@ TEST_F(FIRTypesTest, isUnlimitedPolymorphicTypeTest) {
   EXPECT_FALSE(fir::isUnlimitedPolymorphicType(noneTy));
   EXPECT_FALSE(fir::isUnlimitedPolymorphicType(seqNoneTy));
 }
+
+// Test fir::isBoxedRecordType from flang/Optimizer/Dialect/FIRType.h.
+TEST_F(FIRTypesTest, isBoxedRecordType) {
+  mlir::Type recTy = fir::RecordType::get(&context, "dt");
+  mlir::Type seqRecTy =
+      fir::SequenceType::get({fir::SequenceType::getUnknownExtent()}, recTy);
+  mlir::Type ty = fir::BoxType::get(recTy);
+  EXPECT_TRUE(fir::isBoxedRecordType(ty));
+  EXPECT_TRUE(fir::isBoxedRecordType(fir::ReferenceType::get(ty)));
+
+  // TYPE(T), ALLOCATABLE
+  ty = fir::BoxType::get(fir::HeapType::get(recTy));
+  EXPECT_TRUE(fir::isBoxedRecordType(ty));
+
+  // TYPE(T), POINTER
+  ty = fir::BoxType::get(fir::PointerType::get(recTy));
+  EXPECT_TRUE(fir::isBoxedRecordType(ty));
+
+  // TYPE(T), DIMENSION(10)
+  ty = fir::BoxType::get(fir::SequenceType::get({10}, recTy));
+  EXPECT_TRUE(fir::isBoxedRecordType(ty));
+
+  // TYPE(T), DIMENSION(:)
+  ty = fir::BoxType::get(seqRecTy);
+  EXPECT_TRUE(fir::isBoxedRecordType(ty));
+
+  EXPECT_FALSE(fir::isBoxedRecordType(fir::BoxType::get(
+      fir::ReferenceType::get(mlir::IntegerType::get(&context, 32)))));
+}

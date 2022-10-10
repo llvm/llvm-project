@@ -14041,6 +14041,24 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
       Result = RHS;
     return true;
   }
+
+  case Builtin::BI__builtin_fmin:
+  case Builtin::BI__builtin_fminf:
+  case Builtin::BI__builtin_fminl:
+  case Builtin::BI__builtin_fminf16:
+  case Builtin::BI__builtin_fminf128: {
+    // TODO: Handle sNaN.
+    APFloat RHS(0.);
+    if (!EvaluateFloat(E->getArg(0), Result, Info) ||
+        !EvaluateFloat(E->getArg(1), RHS, Info))
+      return false;
+    // When comparing zeroes, return -0.0 if one of the zeroes is negative.
+    if (Result.isZero() && RHS.isZero() && RHS.isNegative())
+      Result = RHS;
+    else if (Result.isNaN() || RHS < Result)
+      Result = RHS;
+    return true;
+  }
   }
 }
 

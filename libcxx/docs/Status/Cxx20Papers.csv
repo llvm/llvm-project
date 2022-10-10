@@ -108,7 +108,7 @@
 "`P0784R7 <https://wg21.link/P0784R7>`__","CWG","More constexpr containers","Cologne","|Complete|","12.0"
 "`P0980R1 <https://wg21.link/P0980R1>`__","LWG","Making std::string constexpr","Cologne","|Complete|","15.0"
 "`P1004R2 <https://wg21.link/P1004R2>`__","LWG","Making std::vector constexpr","Cologne","|Complete|","15.0"
-"`P1035R7 <https://wg21.link/P1035R7>`__","LWG","Input Range Adaptors","Cologne","|In Progress|",""
+"`P1035R7 <https://wg21.link/P1035R7>`__","LWG","Input Range Adaptors, Todo: elements_view and drop_while_view","Cologne","|In Progress|",""
 "`P1065R2 <https://wg21.link/P1065R2>`__","LWG","Constexpr INVOKE","Cologne","|Complete|","12.0"
 "`P1135R6 <https://wg21.link/P1135R6>`__","LWG","The C++20 Synchronization Library","Cologne","|Complete|","11.0"
 "`P1207R4 <https://wg21.link/P1207R4>`__","LWG","Movability of Single-pass Iterators","Cologne","|Complete|","15.0"
