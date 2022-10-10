@@ -99,6 +99,9 @@ struct TestLinalgElementwiseFusion
                      "fusion patterns that "
                      "collapse the iteration space of the consumer"),
       llvm::cl::init(false)};
+  ListOption<int64_t> collapseDimensions{
+      *this, "collapse-dimensions-control",
+      llvm::cl::desc("Test controlling dimension collapse pattern")};
 
   void runOnOperation() override {
     MLIRContext *context = &this->getContext();
@@ -177,6 +180,20 @@ struct TestLinalgElementwiseFusion
         return true;
       };
       linalg::populateFoldReshapeOpsByCollapsingPatterns(patterns, controlFn);
+      (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
+    }
+
+    if (!collapseDimensions.empty()) {
+      SmallVector<int64_t, 2> dims(collapseDimensions.begin(),
+                                   collapseDimensions.end());
+      linalg::GetCollapsableDimensionsFn collapseFn =
+          [&dims](linalg::GenericOp op) {
+            SmallVector<ReassociationIndices> reassociations;
+            reassociations.emplace_back(dims);
+            return reassociations;
+          };
+      RewritePatternSet patterns(context);
+      linalg::populateCollapseDimensions(patterns, collapseFn);
       (void)applyPatternsAndFoldGreedily(funcOp.getBody(), std::move(patterns));
     }
   }
