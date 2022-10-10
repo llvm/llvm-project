@@ -225,6 +225,8 @@ HexagonTargetLowering::initializeHVXLowering() {
     setOperationAction(ISD::ANY_EXTEND,         T, Custom);
     setOperationAction(ISD::SIGN_EXTEND,        T, Custom);
     setOperationAction(ISD::ZERO_EXTEND,        T, Custom);
+    setOperationAction(ISD::FSHL,               T, Custom);
+    setOperationAction(ISD::FSHR,               T, Custom);
     if (T != ByteV) {
       setOperationAction(ISD::ANY_EXTEND_VECTOR_INREG, T, Custom);
       // HVX only has shifts of words and halfwords.
@@ -299,12 +301,14 @@ HexagonTargetLowering::initializeHVXLowering() {
       // Promote all shuffles to operate on vectors of bytes.
       setPromoteTo(ISD::VECTOR_SHUFFLE, T, ByteW);
     }
+    setOperationAction(ISD::FSHL,     T, Custom);
+    setOperationAction(ISD::FSHR,     T, Custom);
 
     setOperationAction(ISD::SMIN,     T, Custom);
     setOperationAction(ISD::SMAX,     T, Custom);
     if (T.getScalarType() != MVT::i32) {
-      setOperationAction(ISD::UMIN,   T, Custom);
-      setOperationAction(ISD::UMAX,   T, Custom);
+      setOperationAction(ISD::UMIN,     T, Custom);
+      setOperationAction(ISD::UMAX,     T, Custom);
     }
 
     if (Subtarget.useHVXFloatingPoint()) {
@@ -2112,6 +2116,31 @@ HexagonTargetLowering::LowerHvxShift(SDValue Op, SelectionDAG &DAG) const {
 }
 
 SDValue
+HexagonTargetLowering::LowerHvxFunnelShift(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  unsigned Opc = Op.getOpcode();
+  assert(Opc == ISD::FSHL || Opc == ISD::FSHR);
+
+  // Make sure the shift amount is within the range of the bitwidth
+  // of the element type.
+  SDValue A = Op.getOperand(0);
+  SDValue B = Op.getOperand(1);
+  SDValue S = Op.getOperand(2);
+
+  MVT InpTy = ty(A);
+  MVT ElemTy = InpTy.getVectorElementType();
+
+  const SDLoc &dl(Op);
+  unsigned ElemWidth = ElemTy.getSizeInBits();
+  SDValue Mask = DAG.getSplatBuildVector(
+      InpTy, dl, DAG.getConstant(ElemWidth - 1, dl, ElemTy));
+
+  unsigned MOpc = Opc == ISD::FSHL ? HexagonISD::MFSHL : HexagonISD::MFSHR;
+  return DAG.getNode(MOpc, dl, ty(Op),
+                     {A, B, DAG.getNode(ISD::AND, dl, InpTy, {S, Mask})});
+}
+
+SDValue
 HexagonTargetLowering::LowerHvxIntrinsic(SDValue Op, SelectionDAG &DAG) const {
   const SDLoc &dl(Op);
   MVT ResTy = ty(Op);
@@ -2958,6 +2987,8 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
       case ISD::SRA:
       case ISD::SHL:
       case ISD::SRL:
+      case ISD::FSHL:
+      case ISD::FSHR:
       case ISD::SMIN:
       case ISD::SMAX:
       case ISD::UMIN:
@@ -2996,6 +3027,8 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::SRA:
     case ISD::SHL:
     case ISD::SRL:                     return LowerHvxShift(Op, DAG);
+    case ISD::FSHL:
+    case ISD::FSHR:                    return LowerHvxFunnelShift(Op, DAG);
     case ISD::MULHS:
     case ISD::MULHU:                   return LowerHvxMulh(Op, DAG);
     case ISD::ANY_EXTEND_VECTOR_INREG: return LowerHvxExtend(Op, DAG);
