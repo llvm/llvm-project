@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
+#include "mlir/Dialect/SCF/Transforms/TileUsingInterface.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Interfaces/TilingInterface.h"
@@ -99,45 +100,63 @@ transform::DecomposeOp::applyToOne(linalg::LinalgOp target,
   results.assign(1, nullptr);
   return emitDefaultSilenceableFailure(target);
 }
-
 //===----------------------------------------------------------------------===//
 // FuseOp
 //===----------------------------------------------------------------------===//
 
 /// Apply a tiling transformation to all payload ops and store both the
 /// tiled operation as well as the created tile loops.
-static LogicalResult
-applyTilingToAll(Operation *transformOp, ArrayRef<Operation *> payloadOps,
-                 unsigned numLoops,
-                 transform::TransformResults &transformResults,
-                 function_ref<FailureOr<TiledLinalgOp>(LinalgOp)> applyFn) {
+static LogicalResult applyTilingToAll(
+    Operation *transformOp, ArrayRef<Operation *> payloadOps, unsigned numLoops,
+    transform::TransformResults &transformResults,
+    function_ref<FailureOr<scf::SCFTileAndFuseResult>(TilingInterface)>
+        applyFn) {
   SmallVector<Operation *> tiledLinalgOps;
   SmallVector<SmallVector<Operation *>> loopOps(numLoops);
   for (unsigned int i = 0; i < numLoops; ++i)
     loopOps[i].reserve(payloadOps.size());
 
   for (Operation *target : payloadOps) {
-    auto linalgOp = dyn_cast<linalg::LinalgOp>(target);
-    if (!linalgOp)
-      return transformOp->emitError("only LinalgOps are supported");
+    auto tilingInterfaceOp = dyn_cast<TilingInterface>(target);
+    if (!tilingInterfaceOp)
+      return transformOp->emitError("only TilingInterface ops are supported");
 
-    FailureOr<TiledLinalgOp> tiled = applyFn(linalgOp);
-    if (failed(tiled))
+    SimpleRewriter rewriter(target->getContext());
+    rewriter.setInsertionPoint(target);
+    FailureOr<scf::SCFTileAndFuseResult> tiledResults =
+        applyFn(tilingInterfaceOp);
+    if (failed(tiledResults))
       return failure();
 
-    tiledLinalgOps.push_back(tiled->op);
-    if (tiled->loops.size() != numLoops)
-      // Not enough loops were generated. This usually means that the input size
-      // was smaller than the tiling size.
-      // TODO: LinalgTilingPattern should return failure().
-      return failure();
+    // Perform the replacement of tiled and fused values.
+    SmallVector<Operation *> opsToReplace{target};
+    llvm::append_range(opsToReplace, tiledResults->fusedProducers);
+    for (Operation *toReplace : opsToReplace) {
+      SmallVector<Value> replacements;
+      replacements.reserve(toReplace->getNumResults());
+      for (OpResult res : toReplace->getResults()) {
+        auto it = tiledResults->replacements.find(res);
+        if (it == tiledResults->replacements.end())
+          replacements.push_back(res);
+        else
+          replacements.push_back(it->getSecond());
+      }
+      rewriter.replaceOp(toReplace, replacements);
+    }
+
+    // Report back the relevant handles to the transform op.
+    tiledLinalgOps.push_back(tiledResults->tiledAndFusedOps.front());
+    assert(tiledResults->loops.size() == numLoops &&
+           "Mismatched number of loops, tile and fuse transform should have "
+           "failed");
     for (unsigned int i = 0; i < numLoops; ++i)
-      loopOps[i].push_back(tiled->loops[i]);
+      loopOps[i].push_back(tiledResults->loops[i]);
   }
 
   transformResults.set(transformOp->getOpResult(0), tiledLinalgOps);
   for (unsigned int i = 0; i < numLoops; ++i)
     transformResults.set(transformOp->getOpResult(i + 1), loopOps[i]);
+
   return success();
 }
 
@@ -172,27 +191,23 @@ static ParseResult parseTileLikeOp(OpAsmParser &parser, OperationState &result,
 DiagnosedSilenceableFailure
 transform::FuseOp::apply(mlir::transform::TransformResults &transformResults,
                          mlir::transform::TransformState &state) {
-  LinalgTilingAndFusionOptions fusionOptions;
-  fusionOptions.tileSizes = extractFromI64ArrayAttr(getTileSizes());
-  fusionOptions.tileInterchange = extractFromI64ArrayAttr(getTileInterchange());
+  SmallVector<int64_t> tileSizes = extractFromI64ArrayAttr(getTileSizes());
+  SmallVector<int64_t> tileInterchange =
+      extractFromI64ArrayAttr(getTileInterchange());
 
+  scf::SCFTilingOptions tilingOptions;
+  tilingOptions.interchangeVector = tileInterchange;
+  tilingOptions = tilingOptions.setTileSizes(tileSizes);
+  scf::SCFTileAndFuseOptions tileAndFuseOptions;
+  tileAndFuseOptions.tilingOptions = tilingOptions;
   LogicalResult result = applyTilingToAll(
       getOperation(), state.getPayloadOps(getTarget()),
-      fusionOptions.tileSizes.size() - llvm::count(fusionOptions.tileSizes, 0),
-      transformResults, [&](LinalgOp linalgOp) -> FailureOr<TiledLinalgOp> {
-        LinalgTileAndFuseTensorOpsPattern pattern(getContext(), fusionOptions);
+      tileSizes.size() - llvm::count(tileSizes, 0), transformResults,
+      [&](TilingInterface tilingInterfaceOp)
+          -> FailureOr<scf::SCFTileAndFuseResult> {
         SimpleRewriter rewriter(getContext());
-        rewriter.setInsertionPoint(linalgOp);
-        FailureOr<TileLoopNest> tileLoopNest =
-            pattern.returningMatchAndRewrite(linalgOp, rewriter);
-        if (failed(tileLoopNest))
-          return failure();
-
-        TiledLinalgOp tiledLinalgOp;
-        tiledLinalgOp.op = tileLoopNest->getRootOp();
-        tiledLinalgOp.loops = {tileLoopNest->getLoopOps().begin(),
-                               tileLoopNest->getLoopOps().end()};
-        return tiledLinalgOp;
+        return tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
+            rewriter, tilingInterfaceOp, tileAndFuseOptions);
       });
   return DiagnosedSilenceableFailure(result);
 }
