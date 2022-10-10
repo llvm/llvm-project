@@ -460,8 +460,10 @@ TokenBuffer::spelledForExpanded(llvm::ArrayRef<syntax::Token> Expanded) const {
     return llvm::None;
   const syntax::Token *First = &Expanded.front();
   const syntax::Token *Last = &Expanded.back();
-  auto [FirstSpelled, FirstMapping] = spelledForExpandedToken(First);
-  auto [LastSpelled, LastMapping] = spelledForExpandedToken(Last);
+  const syntax::Token *FirstSpelled, *LastSpelled;
+  const TokenBuffer::Mapping *FirstMapping, *LastMapping;
+  std::tie(FirstSpelled, FirstMapping) = spelledForExpandedToken(First);
+  std::tie(LastSpelled, LastMapping) = spelledForExpandedToken(Last);
 
   FileID FID = SourceMgr->getFileID(FirstSpelled->location());
   // FIXME: Handle multi-file changes by trying to map onto a common root.
