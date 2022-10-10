@@ -212,7 +212,11 @@ decompose(Value *V, SmallVector<PreconditionTy, 4> &Preconditions,
     Value *Op0, *Op1;
     ConstantInt *CI;
 
+    // Bail out for scalable vectors for now.
     auto GTI = gep_type_begin(GEP);
+    if (isa<ScalableVectorType>(GTI.getIndexedType()))
+      return {};
+
     int64_t Scale = static_cast<int64_t>(
         DL.getTypeAllocSize(GTI.getIndexedType()).getFixedSize());
     int64_t MulRes;
