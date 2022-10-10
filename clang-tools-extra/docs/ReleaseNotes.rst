@@ -169,7 +169,7 @@ Changes in existing checks
   :doc:`readability-simplify-boolean-expr <clang-tidy/checks/readability/simplify-boolean-expr>`
   when using a C++23 ``if consteval`` statement.
 
-- Improved :doc:`misc-redundant-expression <clang-tidy/checks/misc-redundant-expression>`
+- Improved :doc:`misc-redundant-expression <clang-tidy/checks/misc/redundant-expression>`
   check.
 
   The check now skips concept definitions since redundant expressions still make sense
