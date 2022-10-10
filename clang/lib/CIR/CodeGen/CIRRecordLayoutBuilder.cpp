@@ -5,6 +5,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecordLayout.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -214,7 +215,8 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
       auto baseIdentifier =
           mlir::StringAttr::get(&getMLIRContext(), name + ".base");
       BaseTy = mlir::cir::StructType::get(
-          &getMLIRContext(), baseBuilder.fieldTypes, baseIdentifier);
+          &getMLIRContext(), baseBuilder.fieldTypes, baseIdentifier,
+          mlir::cir::ASTRecordDeclAttr::get(&getMLIRContext(), D));
       // BaseTy and Ty must agree on their packedness for getCIRFieldNo to work
       // on both of them with the same index.
       assert(builder.isPacked == baseBuilder.isPacked &&
@@ -222,8 +224,9 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *D,
     }
   }
 
-  Ty = mlir::cir::StructType::get(&getMLIRContext(), builder.fieldTypes,
-                                  identifier);
+  Ty = mlir::cir::StructType::get(
+      &getMLIRContext(), builder.fieldTypes, identifier,
+      mlir::cir::ASTRecordDeclAttr::get(&getMLIRContext(), D));
 
   auto RL = std::make_unique<CIRGenRecordLayout>(
       Ty, BaseTy, (bool)builder.IsZeroInitializable,
