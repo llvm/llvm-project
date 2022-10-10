@@ -4304,10 +4304,10 @@ std::pair<bool, RValue> CGOpenMPRuntimeGPU::emitFastFPAtomicCall(
   switch (BO) {
   case BO_Sub:
     UpdateFixed = RValue::get(Bld.CreateFNeg(Update.getScalarVal()));
-    IID = llvm::Intrinsic::amdgcn_global_atomic_fadd;
+    IID = llvm::Intrinsic::amdgcn_flat_atomic_fadd;
     break;
   case BO_Add:
-    IID = llvm::Intrinsic::amdgcn_global_atomic_fadd;
+    IID = llvm::Intrinsic::amdgcn_flat_atomic_fadd;
     break;
   default:
     // remaining operations are not supported yet
