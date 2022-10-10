@@ -7,17 +7,17 @@
 ; RUN: %lld %t/test.o -o %t/test
 ; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,NOOBJPATH
 
-; RUN: %lld %t/test.o -o %t/test -object_path_lto %t/lto-temps
+; RUN: ZERO_AR_DATE=0 %lld %t/test.o -o %t/test -object_path_lto %t/lto-temps
 ; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,OBJPATH-DIR -DDIR=%t/lto-temps
 
 ;; Ensure object path is still used if the cache is used
-; RUN: %lld %t/test.o -o %t/test -object_path_lto %t/lto-temps -prune_interval_lto 20 -cache_path_lto %t/cache --thinlto-cache-policy=cache_size_files=1:cache_size_bytes=10
+; RUN: ZERO_AR_DATE=0 %lld %t/test.o -o %t/test -object_path_lto %t/lto-temps -prune_interval_lto 20 -cache_path_lto %t/cache --thinlto-cache-policy=cache_size_files=1:cache_size_bytes=10
 ; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,OBJPATH-DIR -DDIR=%t/lto-temps
 ;; And that dsymutil can read the result
 ; RUN: dsymutil -f -o - %t/test | llvm-dwarfdump - | FileCheck %s --check-prefix=DSYM
 
 ;; Test that the object path hardlinks to the cache when possible
-;; NB: 
+;; NB:
 ;; 1) Need to delete current object path contents or hardlink will fail.
 ;; 2) Note the cache policy is different from the test above (which is crafted
 ;;    to ensure that the cache is pruned immediately; we want the opposite here).
@@ -28,7 +28,7 @@
 
 ;; check that the object path can be an existing file
 ; RUN: touch %t/lto-tmp.o
-; RUN: %lld %t/test.o -o %t/test -object_path_lto %t/lto-tmp.o
+; RUN: ZERO_AR_DATE=0 %lld %t/test.o -o %t/test -object_path_lto %t/lto-tmp.o
 ; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,OBJPATH-FILE -DFILE=%t/lto-tmp.o
 
 

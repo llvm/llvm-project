@@ -8279,6 +8279,26 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     }
     break;
   }
+  case ARM::MVE_VREV64_8:
+  case ARM::MVE_VREV64_16:
+  case ARM::MVE_VREV64_32:
+  case ARM::MVE_VQDMULL_qr_s32bh:
+  case ARM::MVE_VQDMULL_qr_s32th: {
+    if (Operands[3]->getReg() == Operands[4]->getReg()) {
+      return Error (Operands[3]->getStartLoc(),
+                    "Qd register and Qn register can't be identical");
+    }
+    break;
+  }
+  case ARM::MVE_VCADDi32:
+  case ARM::MVE_VCADDf32:
+  case ARM::MVE_VHCADDs32: {
+    if (Operands[3]->getReg() == Operands[5]->getReg()) {
+      return Error (Operands[3]->getStartLoc(),
+                    "Qd register and Qm register can't be identical");
+    }
+    break;
+  }
   case ARM::MVE_VMOV_rr_q: {
     if (Operands[4]->getReg() != Operands[6]->getReg())
       return Error (Operands[4]->getStartLoc(), "Q-registers must be the same");

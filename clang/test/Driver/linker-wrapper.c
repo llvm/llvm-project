@@ -142,6 +142,6 @@
 // RUN: llvm-ar rcs %t.a %t.o
 // RUN: rm -f %t.o
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t-obj.o
-// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run -save-temps \
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run --save-temps \
 // RUN:   --linker-path=/usr/bin/ld -- %t.a %t-obj.o -o a.out
-// RUN: not ls *-device-*
+// RUN: not ls "*-device-*"
