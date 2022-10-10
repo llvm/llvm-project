@@ -57,7 +57,7 @@ func.func @shuffle_rank_mismatch(%arg0: vector<2xf32>, %arg1: vector<4x2xf32>) {
 }
 
 // -----
- 
+
 func.func @shuffle_rank_mismatch_0d(%arg0: vector<f32>, %arg1: vector<1xf32>) {
   // expected-error@+1 {{'vector.shuffle' op rank mismatch}}
   %1 = vector.shuffle %arg0, %arg1 [0, 1] : vector<f32>, vector<1xf32>
@@ -1166,7 +1166,7 @@ func.func @transpose_rank_mismatch(%arg0: vector<4x16x11xf32>) {
 }
 
 // -----
- 
+
 func.func @transpose_length_mismatch_0d(%arg0: vector<f32>) {
   // expected-error@+1 {{'vector.transpose' op transposition length mismatch: 1}}
   %0 = vector.transpose %arg0, [1] : vector<f32> to vector<f32>
@@ -1586,3 +1586,49 @@ func.func @warp_mismatch_rank(%laneid: index) {
   }
   return
 }
+
+// -----
+
+func.func @vector_mask_empty(%m0: vector<16xi1>) -> i32 {
+  // expected-error@+1 {{'vector.mask' op expects an operation to mask}}
+  vector.mask %m0 { } : vector<16xi1>
+}
+
+// -----
+
+func.func @vector_mask_multiple_ops(%t0: tensor<?xf32>, %t1: tensor<?xf32>, %idx: index, %val: vector<16xf32>, %m0: vector<16xi1>) {
+  %ft0 = arith.constant 0.0 : f32
+  // expected-error@+1 {{'vector.mask' op expects only one operation to mask}}
+  vector.mask %m0 {
+    vector.transfer_write %val, %t0[%idx] : vector<16xf32>, tensor<?xf32>
+    vector.transfer_write %val, %t1[%idx] : vector<16xf32>, tensor<?xf32>
+  } : vector<16xi1>
+  return
+}
+
+// -----
+
+func.func @vector_mask_shape_mismatch(%a: vector<8xi32>, %m0: vector<16xi1>) -> i32 {
+  // expected-error@+1 {{'vector.mask' op expects a 'vector<8xi1>' mask for the maskable operation}}
+  %0 = vector.mask %m0 { vector.reduction <add>, %a : vector<8xi32> into i32 } : vector<16xi1> -> i32
+  return %0 : i32
+}
+
+// -----
+
+// expected-note@+1 {{prior use here}}
+func.func @vector_mask_passthru_type_mismatch(%t0: tensor<?xf32>, %idx: index, %m0: vector<16xi1>, %pt0: vector<16xi32>) -> vector<16xf32> {
+  %ft0 = arith.constant 0.0 : f32
+  // expected-error@+1 {{use of value '%pt0' expects different type than prior uses: 'vector<16xf32>' vs 'vector<16xi32>'}}
+  %0 = vector.mask %m0, %pt0 { vector.transfer_read %t0[%idx], %ft0 : tensor<?xf32>, vector<16xf32> } : vector<16xi1> -> vector<16xf32>
+  return %0 : vector<16xf32>
+}
+
+// -----
+
+func.func @vector_mask_passthru_no_return(%val: vector<16xf32>, %t0: tensor<?xf32>, %idx: index, %m0: vector<16xi1>, %pt0: vector<16xf32>) {
+  // expected-error@+1 {{'vector.mask' op expects result type to match maskable operation result type}}
+  vector.mask %m0, %pt0 { vector.transfer_write %val, %t0[%idx] : vector<16xf32>, tensor<?xf32> } : vector<16xi1> -> vector<16xf32>
+  return
+}
+
