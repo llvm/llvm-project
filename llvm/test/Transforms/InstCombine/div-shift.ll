@@ -632,16 +632,16 @@ define i8 @udiv_lshr_mul_nuw(i8 %x, i8 %y, i8 %z) {
   ret i8 %div
 }
 
-define <2 x i4> @udiv_lshr_mul_nuw_commute1(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
-; CHECK-LABEL: @udiv_lshr_mul_nuw_commute1(
+define <2 x i4> @udiv_lshr_mul_nuw_exact_commute1(<2 x i4> %x, <2 x i4> %y, <2 x i4> %z) {
+; CHECK-LABEL: @udiv_lshr_mul_nuw_exact_commute1(
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw <2 x i4> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = lshr <2 x i4> [[M]], [[Z:%.*]]
-; CHECK-NEXT:    [[DIV:%.*]] = udiv <2 x i4> [[S]], [[X]]
+; CHECK-NEXT:    [[S:%.*]] = lshr exact <2 x i4> [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = udiv exact <2 x i4> [[S]], [[X]]
 ; CHECK-NEXT:    ret <2 x i4> [[DIV]]
 ;
   %m = mul nuw <2 x i4> %y, %x
-  %s = lshr <2 x i4> %m, %z
-  %div = udiv <2 x i4> %s, %x
+  %s = lshr exact <2 x i4> %m, %z
+  %div = udiv exact <2 x i4> %s, %x
   ret <2 x i4> %div
 }
 
