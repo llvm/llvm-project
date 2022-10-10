@@ -10,6 +10,7 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/fork_callbacks.h"
 #include "src/__support/threads/thread.h" // For thread self object
 
 #include <errno.h>
@@ -21,6 +22,7 @@ namespace __llvm_libc {
 // functionality and standard compliance in future.
 
 LLVM_LIBC_FUNCTION(pid_t, fork, (void)) {
+  invoke_prepare_callbacks();
 #ifdef SYS_fork
   pid_t ret = __llvm_libc::syscall_impl(SYS_fork);
 #elif defined(SYS_clone)
@@ -34,6 +36,7 @@ LLVM_LIBC_FUNCTION(pid_t, fork, (void)) {
     // copy of parent process' thread which called fork. So, we have to fix up
     // the child process' self object with the new process' tid.
     self.attrib->tid = __llvm_libc::syscall_impl(SYS_gettid);
+    invoke_child_callbacks();
     return 0;
   }
 
@@ -43,6 +46,7 @@ LLVM_LIBC_FUNCTION(pid_t, fork, (void)) {
     return -1;
   }
 
+  invoke_parent_callbacks();
   return ret;
 }
 

@@ -244,6 +244,7 @@ def ThreadsAPI : PublicAPI<"threads.h"> {
 
 def PThreadAPI : PublicAPI<"pthread.h"> {
   let Types = [
+      "__atfork_callback_t",
       "__pthread_once_func_t",
       "__pthread_start_t",
       "__pthread_tss_dtor_t",

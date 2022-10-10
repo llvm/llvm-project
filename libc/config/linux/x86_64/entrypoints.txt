@@ -305,6 +305,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.dirent.readdir
 
     # pthread.h entrypoints
+    libc.src.pthread.pthread_atfork
     libc.src.pthread.pthread_attr_destroy
     libc.src.pthread.pthread_attr_init
     libc.src.pthread.pthread_attr_getdetachstate

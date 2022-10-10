@@ -191,6 +191,7 @@ add_gen_header(
   GEN_HDR pthread.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.__atfork_callback_t
     .llvm-libc-types.__pthread_start_t
     .llvm-libc-types.__pthread_tss_dtor_t
     .llvm-libc-types.pthread_attr_t
