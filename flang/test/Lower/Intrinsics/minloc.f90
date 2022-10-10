@@ -13,7 +13,7 @@ subroutine minloc_test(arr,res)
   ! CHECK-DAG: %[[a8:.*]] = fir.convert %[[c4]] : (index) -> i32
   ! CHECK-DAG: %[[a10:.*]] = fir.convert %[[a1]] : (!fir.box<i1>) -> !fir.box<none>
     res = minloc(arr)
-  ! CHECK: %{{.*}} = fir.call @_FortranAMinloc(%[[a6]], %[[a7]], %[[a8]], %{{.*}}, %{{.*}}, %[[a10]], %false) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  ! CHECK: %{{.*}} = fir.call @_FortranAMinlocInteger4(%[[a6]], %[[a7]], %[[a8]], %{{.*}}, %{{.*}}, %[[a10]], %false) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
   ! CHECK-DAG: %[[a12:.*]] = fir.load %[[a0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
   ! CHECK-DAG: %[[a14:.*]] = fir.box_addr %[[a12]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK-DAG: fir.freemem %[[a14]]
@@ -63,7 +63,7 @@ subroutine minloc_test(arr,res)
   ! CHECK:  }
   ! CHECK:  %[[VAL_29:.*]] = fir.convert %[[VAL_12]] : (!fir.box<!fir.logical<4>>) -> !fir.box<none>
   ! CHECK:  %[[VAL_30:.*]] = fir.convert %[[VAL_14]] : (!fir.logical<4>) -> i1
-  ! CHECK:  fir.call @_FortranAMinloc(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_29]], %[[VAL_30]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  ! CHECK:  fir.call @_FortranAMinlocInteger4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_29]], %[[VAL_30]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
   end subroutine
   
   ! CHECK-LABEL: func @_QPtest_minloc_optional_array_mask(
@@ -85,5 +85,5 @@ subroutine minloc_test(arr,res)
   ! CHECK:  }
   ! CHECK:  %[[VAL_25:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.logical<4>>>) -> !fir.box<none>
   ! CHECK:  %[[VAL_26:.*]] = fir.convert %[[VAL_10]] : (!fir.logical<4>) -> i1
-  ! CHECK:  fir.call @_FortranAMinloc(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_25]], %[[VAL_26]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
+  ! CHECK:  fir.call @_FortranAMinlocInteger4(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %[[VAL_25]], %[[VAL_26]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, !fir.ref<i8>, i32, !fir.box<none>, i1) -> none
   end subroutine
