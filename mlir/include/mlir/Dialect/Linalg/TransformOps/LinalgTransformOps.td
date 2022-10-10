@@ -751,6 +751,63 @@ def TileToForeachThreadOp :
   }];
 }
 
+def TileToScfForOp : Op<Transform_Dialect, "structured.tile_to_scf_for",
+       [DeclareOpInterfaceMethods<TransformOpInterface>,
+        DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let description = [{
+    Indicates that the given `target` op should be tiled with the given sizes.
+    This transform generates a loop nest with a smaller ("tiled") target
+    operation in its body. The target must implement TilingInterface.
+
+    Tile sizes may be known at transformation time, in which case they are
+    expected to be provided in the `static_size` attribute, or not, in which
+    case the tile value must be computed by the payload IR and the handle to the
+    operation computing it must be provided through `dynamic_sizes`. When the
+    sizes are not known statically, the corresponding entry in the
+    `static_sizes` attribute must be set to `ShapedType::kDynamicSize`. Only
+    the dynamic sizes must be provided in `dynamic_sizes`, i.e., there should
+    be as many handles as `ShapedType::kDynamicSize` values in the
+    `static_sizes` attribute. A static size of `0` indicates that the dimension
+    should not be tiled. No loop will be generated for such dimensions. If all
+    tile sizes are `0`, this transform is effectively a no-op.
+
+    This op returns handles to the tiled op (in the generated loop nest) and the
+    generated loops. The number of loops is the number of tile sizes that are
+    statically known to be non-zero.
+
+    #### Return modes
+
+    On success, the resulting handles are associated with co-indexed lists of
+    tiled operations and loops around them.
+
+    This operation only supports TilingInterface ops and produces a silenceable
+    failure if the input contains any non-TilingInterface ops. The ops preceding
+    it in the list associated with the `target` handle will have been tiled.
+
+    This operation produces a silenceable failure if the `dynamic_sizes` handles
+    are associated with lists of payload operations of a size different than
+    that of the list associated with the `target` handle.
+
+    If the internal implementation of tiling for any of the operations fails,
+    produces a definite failure.
+  }];
+
+  let arguments = (ins PDL_Operation:$target,
+                   Variadic<PDL_Operation>:$dynamic_sizes,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$static_sizes,
+                   DefaultValuedAttr<I64ArrayAttr, "{}">:$interchange);
+  let results = (outs PDL_Operation:$tiled_linalg_op,
+                      Variadic<PDL_Operation>:$loops);
+
+  let hasCustomAssemblyFormat = 1;
+
+  let extraClassDeclaration = [{
+    /// Returns the list of tile sizes, which may be static (Attribute) or
+    /// dynamic (Value).
+    SmallVector<OpFoldResult> getMixedSizes();
+  }];
+}
+
 def VectorizeOp : Op<Transform_Dialect, "structured.vectorize",
     [FunctionalStyleTransformOpTrait, MemoryEffectsOpInterface,
      TransformEachOpTrait, TransformOpInterface]> {
