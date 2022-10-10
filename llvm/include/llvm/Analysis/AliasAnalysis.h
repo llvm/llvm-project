@@ -172,31 +172,6 @@ enum class ModRefInfo : uint8_t {
   return static_cast<int>(MRI) & static_cast<int>(ModRefInfo::Ref);
 }
 
-[[deprecated("Use operator | instead")]] [[nodiscard]] inline ModRefInfo
-setMod(const ModRefInfo MRI) {
-  return MRI | ModRefInfo::Mod;
-}
-[[deprecated("Use operator | instead")]] [[nodiscard]] inline ModRefInfo
-setRef(const ModRefInfo MRI) {
-  return MRI | ModRefInfo::Ref;
-}
-[[deprecated("Use operator & instead")]] [[nodiscard]] inline ModRefInfo
-clearMod(const ModRefInfo MRI) {
-  return MRI & ModRefInfo::Ref;
-}
-[[deprecated("Use operator & instead")]] [[nodiscard]] inline ModRefInfo
-clearRef(const ModRefInfo MRI) {
-  return MRI & ModRefInfo::Mod;
-}
-[[deprecated("Use operator | instead")]] [[nodiscard]] inline ModRefInfo
-unionModRef(const ModRefInfo MRI1, const ModRefInfo MRI2) {
-  return MRI1 | MRI2;
-}
-[[deprecated("Use operator & instead")]] [[nodiscard]] inline ModRefInfo
-intersectModRef(const ModRefInfo MRI1, const ModRefInfo MRI2) {
-  return MRI1 & MRI2;
-}
-
 /// Debug print ModRefInfo.
 raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
 

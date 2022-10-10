@@ -495,6 +495,7 @@ set(files
   __ranges/size.h
   __ranges/subrange.h
   __ranges/take_view.h
+  __ranges/take_while_view.h
   __ranges/transform_view.h
   __ranges/view_interface.h
   __ranges/views.h

@@ -696,11 +696,11 @@ handleNonPrevailingComdat(GlobalValue &GV,
   if (!NonPrevailingComdats.count(C))
     return;
 
-  // Additionally need to drop externally visible global values from the comdat
-  // to available_externally, so that there aren't multiply defined linker
-  // errors.
-  if (!GV.hasLocalLinkage())
-    GV.setLinkage(GlobalValue::AvailableExternallyLinkage);
+  // Additionally need to drop all global values from the comdat to
+  // available_externally, to satisfy the COMDAT requirement that all members
+  // are discarded as a unit. The non-local linkage global values avoid
+  // duplicate definition linker errors.
+  GV.setLinkage(GlobalValue::AvailableExternallyLinkage);
 
   if (auto GO = dyn_cast<GlobalObject>(&GV))
     GO->setComdat(nullptr);

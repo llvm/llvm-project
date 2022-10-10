@@ -1753,6 +1753,25 @@ EVT AArch64TargetLowering::getSetCCResultType(const DataLayout &,
   return VT.changeVectorElementTypeToInteger();
 }
 
+// isIntImmediate - This method tests to see if the node is a constant
+// operand. If so Imm will receive the value.
+static bool isIntImmediate(const SDNode *N, uint64_t &Imm) {
+  if (const ConstantSDNode *C = dyn_cast<const ConstantSDNode>(N)) {
+    Imm = C->getZExtValue();
+    return true;
+  }
+  return false;
+}
+
+// isOpcWithIntImmediate - This method tests to see if the node is a specific
+// opcode and that it has a immediate integer right operand.
+// If so Imm will receive the value.
+static bool isOpcWithIntImmediate(const SDNode *N, unsigned Opc,
+                                  uint64_t &Imm) {
+  return N->getOpcode() == Opc &&
+         isIntImmediate(N->getOperand(1).getNode(), Imm);
+}
+
 static bool optimizeLogicalImm(SDValue Op, unsigned Size, uint64_t Imm,
                                const APInt &Demanded,
                                TargetLowering::TargetLoweringOpt &TLO,
@@ -16705,6 +16724,40 @@ static SDValue performBuildVectorCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue performAddCombineForShiftedOperands(SDNode *N,
+                                                   SelectionDAG &DAG) {
+  // NOTE: Swapping LHS and RHS is not done for SUB, since SUB is not
+  // commutative.
+  if (N->getOpcode() != ISD::ADD)
+    return SDValue();
+
+  // Bail out when value type is not one of {i32, i64}, since AArch64 ADD with
+  // shifted register is only available for i32 and i64.
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::i32 && VT != MVT::i64)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  uint64_t LHSImm = 0, RHSImm = 0;
+  // If both operand are shifted by imm and shift amount is not greater than 4
+  // for one operand, swap LHS and RHS to put operand with smaller shift amount
+  // on RHS.
+  //
+  // On many AArch64 processors (Cortex A78, Neoverse N1/N2/V1, etc), ADD with
+  // LSL shift (shift <= 4) has smaller latency and larger throughput than ADD
+  // with LSL (shift > 4). For the rest of processors, this is no-op for
+  // performance or correctness.
+  if (isOpcWithIntImmediate(LHS.getNode(), ISD::SHL, LHSImm) &&
+      isOpcWithIntImmediate(RHS.getNode(), ISD::SHL, RHSImm) && LHSImm <= 4 &&
+      RHSImm > 4 && LHS.hasOneUse())
+    return DAG.getNode(ISD::ADD, DL, VT, RHS, LHS);
+
+  return SDValue();
+}
+
 static SDValue performAddSubCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG) {
@@ -16718,6 +16771,8 @@ static SDValue performAddSubCombine(SDNode *N,
   if (SDValue Val = performNegCSelCombine(N, DAG))
     return Val;
   if (SDValue Val = performVectorAddSubExtCombine(N, DAG))
+    return Val;
+  if (SDValue Val = performAddCombineForShiftedOperands(N, DAG))
     return Val;
 
   return performAddSubLongCombine(N, DCI, DAG);

@@ -51,10 +51,9 @@ declare void @hoge()
 ; Because custom type legalization for i32 is enabled, this resulted in
 ; LowerOperation being called for the amount. This was not expected and
 ; triggered an assert.
-define i32 @crash(i32 %x, i32 %y, i32 %z) {
+define i32 @crash(i32 signext %x, i32 signext %y, i32 signext %z) {
 ; RV64I-LABEL: crash:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    sext.w a0, a0
 ; RV64I-NEXT:    seqz a3, a0
 ; RV64I-NEXT:    addw a0, a1, a2
 ; RV64I-NEXT:    slli a1, a3, 3
