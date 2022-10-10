@@ -3213,6 +3213,7 @@ cc_library(
         ":DialectUtils",
         ":IR",
         ":InferTypeOpInterface",
+        ":MaskingInterfaces",
         ":MemRefDialect",
         ":SideEffectInterfaces",
         ":Support",
@@ -7954,6 +7955,17 @@ cc_library(
     ],
 )
 
+##---------------------------------------------------------------------------##
+# Vector dialect.
+##---------------------------------------------------------------------------##
+
+td_library(
+    name = "MaskingInterfacesTdFiles",
+    srcs = ["include/mlir/Dialect/Vector/Interfaces/MaskingInterfaces.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
 td_library(
     name = "VectorOpsTdFiles",
     srcs = ["include/mlir/Dialect/Vector/IR/VectorOps.td"],
@@ -7961,11 +7973,30 @@ td_library(
     deps = [
         ":ControlFlowInterfacesTdFiles",
         ":InferTypeOpInterfaceTdFiles",
+        ":MaskingInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
         ":VectorInterfacesTdFiles",
         ":ViewLikeInterfaceTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "MaskingInterfacesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-interface-decls"],
+            "include/mlir/Dialect/Vector/Interfaces/MaskingInterfaces.h.inc",
+        ),
+        (
+            ["-gen-op-interface-defs"],
+            "include/mlir/Dialect/Vector/Interfaces/MaskingInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Vector/Interfaces/MaskingInterfaces.td",
+    deps = [":MaskingInterfacesTdFiles"],
 )
 
 gentbl_cc_library(
@@ -8018,6 +8049,19 @@ gentbl_cc_library(
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Vector/IR/VectorOps.td",
     deps = [":VectorOpsTdFiles"],
+)
+
+cc_library(
+    name = "MaskingInterfaces",
+    srcs = ["lib/Dialect/Vector/Interfaces/MaskingInterfaces.cpp"],
+    hdrs = ["include/mlir/Dialect/Vector/Interfaces/MaskingInterfaces.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":MaskingInterfacesIncGen",
+        ":Support",
+        "//llvm:Support",
+    ],
 )
 
 cc_library(
