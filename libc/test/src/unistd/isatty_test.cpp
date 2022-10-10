@@ -38,10 +38,11 @@ TEST(LlvmLibcIsATTYTest, BadFdTest) {
 TEST(LlvmLibcIsATTYTest, DevTTYTest) {
   constexpr const char *TTY_FILE = "/dev/tty";
   int fd = __llvm_libc::open(TTY_FILE, O_RDONLY);
-  ASSERT_EQ(errno, 0);
-  ASSERT_GT(fd, 0);
-  EXPECT_THAT(__llvm_libc::isatty(fd), Succeeds(1));
-  ASSERT_THAT(__llvm_libc::close(fd), Succeeds(0));
+  if (fd > 0) {
+    ASSERT_EQ(errno, 0);
+    EXPECT_THAT(__llvm_libc::isatty(fd), Succeeds(1));
+    ASSERT_THAT(__llvm_libc::close(fd), Succeeds(0));
+  }
 }
 
 TEST(LlvmLibcIsATTYTest, FileTest) {
