@@ -17,6 +17,7 @@ static_library("cppcoreguidelines") {
   ]
   sources = [
     "AvoidConstOrRefDataMembersCheck.cpp",
+    "AvoidDoWhileCheck.cpp",
     "AvoidGotoCheck.cpp",
     "AvoidNonConstGlobalVariablesCheck.cpp",
     "CppCoreGuidelinesTidyModule.cpp",
