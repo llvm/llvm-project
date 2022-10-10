@@ -229,6 +229,17 @@ add_gen_header(
 )
 
 add_gen_header(
+  sys_random
+  DEF_FILE sys/random.h.def
+  GEN_HDR sys/random.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_random_macros
+    .llvm-libc-types.ssize_t
+    .llvm-libc-types.size_t
+)
+
+add_gen_header(
   sys_resource
   DEF_FILE sys/resource.h.def
   GEN_HDR sys/resource.h

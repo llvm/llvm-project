@@ -113,6 +113,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.munmap
     libc.src.sys.mman.posix_madvise
 
+    # sys/random.h entrypoints
+    libc.src.sys.random.getrandom
+
     # sys/resource.h entrypoints
     libc.src.sys.resource.getrlimit
     libc.src.sys.resource.setrlimit
