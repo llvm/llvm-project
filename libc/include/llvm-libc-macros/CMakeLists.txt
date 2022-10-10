@@ -37,6 +37,15 @@ add_header(
 )
 
 add_header(
+  sys_ioctl_macros
+  HDR
+    sys-ioctl-macros.h
+  DEPENDS
+    .linux.sys_ioctl_macros
+)
+
+
+add_header(
   sys_stat_macros
   HDR
     sys-stat-macros.h
