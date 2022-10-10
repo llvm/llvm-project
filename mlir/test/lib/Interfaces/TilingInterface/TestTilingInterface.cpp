@@ -199,7 +199,7 @@ static void addPatternForTiling(MLIRContext *context,
                                 RewritePatternSet &patterns,
                                 StringRef filterName,
                                 ArrayRef<int64_t> tileSizes,
-                                ArrayRef<unsigned> interchange = {}) {
+                                ArrayRef<int64_t> interchange = {}) {
   scf::SCFTilingOptions tilingOptions;
   tilingOptions.setTileSizes(tileSizes).setInterchange(interchange);
   linalg::LinalgTransformationFilter filter(
@@ -211,7 +211,7 @@ static void addPatternForTileAndFuse(MLIRContext *context,
                                      RewritePatternSet &patterns,
                                      StringRef filterName,
                                      ArrayRef<int64_t> tileSizes,
-                                     ArrayRef<unsigned> interchange = {}) {
+                                     ArrayRef<int64_t> interchange = {}) {
   scf::SCFTileAndFuseOptions tileAndFuseOptions;
   tileAndFuseOptions.tilingOptions.setTileSizes(tileSizes).setInterchange(
       interchange);
