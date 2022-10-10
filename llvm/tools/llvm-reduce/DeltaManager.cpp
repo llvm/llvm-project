@@ -48,12 +48,20 @@
 
 using namespace llvm;
 
+using SmallStringSet = SmallSet<StringRef, 8>;
+
 extern cl::OptionCategory LLVMReduceOptions;
-static cl::opt<std::string>
+static cl::list<std::string>
     DeltaPasses("delta-passes",
                 cl::desc("Delta passes to run, separated by commas. By "
                          "default, run all delta passes."),
-                cl::cat(LLVMReduceOptions));
+                cl::cat(LLVMReduceOptions), cl::CommaSeparated);
+
+static cl::list<std::string>
+    SkipDeltaPasses("skip-delta-passes",
+                    cl::desc("Delta passes to not run, separated by commas. By "
+                             "default, run all delta passes."),
+                    cl::cat(LLVMReduceOptions), cl::CommaSeparated);
 
 #define DELTA_PASSES                                                           \
   do {                                                                         \
@@ -97,8 +105,12 @@ static cl::opt<std::string>
     DELTA_PASS("register-masks", reduceRegisterMasksMIRDeltaPass)              \
   } while (false)
 
-static void runAllDeltaPasses(TestRunner &Tester) {
-#define DELTA_PASS(NAME, FUNC) FUNC(Tester);
+static void runAllDeltaPasses(TestRunner &Tester,
+                              const SmallStringSet &SkipPass) {
+#define DELTA_PASS(NAME, FUNC)                                                 \
+  if (!SkipPass.count(NAME)) {                                                 \
+    FUNC(Tester);                                                              \
+  }
   if (Tester.getProgram().isMIR()) {
     DELTA_PASSES_MIR;
   } else {
@@ -119,8 +131,10 @@ static void runDeltaPassName(TestRunner &Tester, StringRef PassName) {
     DELTA_PASSES;
   }
 #undef DELTA_PASS
-  errs() << "unknown pass \"" << PassName << "\"\n";
-  exit(1);
+
+  // We should have errored on unrecognized passes before trying to run
+  // anything.
+  llvm_unreachable("unknown delta pass");
 }
 
 void llvm::printDeltaPasses(raw_ostream &OS) {
@@ -133,19 +147,59 @@ void llvm::printDeltaPasses(raw_ostream &OS) {
 #undef DELTA_PASS
 }
 
+// Built a set of available delta passes.
+static void collectPassNames(const TestRunner &Tester,
+                             SmallStringSet &NameSet) {
+#define DELTA_PASS(NAME, FUNC) NameSet.insert(NAME);
+  if (Tester.getProgram().isMIR()) {
+    DELTA_PASSES_MIR;
+  } else {
+    DELTA_PASSES;
+  }
+#undef DELTA_PASS
+}
+
+/// Verify all requested or skipped passes are valid names, and return them in a
+/// set.
+static SmallStringSet handlePassList(const TestRunner &Tester,
+                                     const cl::list<std::string> &PassList) {
+  SmallStringSet AllPasses;
+  collectPassNames(Tester, AllPasses);
+
+  SmallStringSet PassSet;
+  for (StringRef PassName : PassList) {
+    if (!AllPasses.count(PassName)) {
+      errs() << "unknown pass \"" << PassName << "\"\n";
+      exit(1);
+    }
+
+    PassSet.insert(PassName);
+  }
+
+  return PassSet;
+}
+
 void llvm::runDeltaPasses(TestRunner &Tester, int MaxPassIterations) {
   uint64_t OldComplexity = Tester.getProgram().getComplexityScore();
+
+  SmallStringSet RunPassSet, SkipPassSet;
+
+  if (!DeltaPasses.empty())
+    RunPassSet = handlePassList(Tester, DeltaPasses);
+
+  if (!SkipDeltaPasses.empty())
+    SkipPassSet = handlePassList(Tester, SkipDeltaPasses);
+
   for (int Iter = 0; Iter < MaxPassIterations; ++Iter) {
     if (DeltaPasses.empty()) {
-      runAllDeltaPasses(Tester);
+      runAllDeltaPasses(Tester, SkipPassSet);
     } else {
-      StringRef Passes = DeltaPasses;
-      while (!Passes.empty()) {
-        auto Split = Passes.split(",");
-        runDeltaPassName(Tester, Split.first);
-        Passes = Split.second;
+      for (StringRef PassName : DeltaPasses) {
+        if (!SkipPassSet.count(PassName))
+          runDeltaPassName(Tester, PassName);
       }
     }
+
     uint64_t NewComplexity = Tester.getProgram().getComplexityScore();
     if (NewComplexity >= OldComplexity)
       break;
