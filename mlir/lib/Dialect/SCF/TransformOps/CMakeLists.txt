@@ -11,7 +11,6 @@ add_mlir_dialect_library(MLIRSCFTransformOps
   MLIRAffineDialect
   MLIRFuncDialect
   MLIRIR
-  MLIRPDLDialect
   MLIRSCFDialect
   MLIRSCFTransforms
   MLIRSCFUtils

@@ -23,7 +23,7 @@ transform.with_pdl_patterns {
     // expected-note @below {{invalidated by this transform op that consumes its operand #0}}
     test_consume_operand %1
     // expected-error @below {{op uses a handle invalidated by a previously executed transform op}}
-    test_print_remark_at_operand %0, "remark"
+    test_print_remark_at_operand %0, "remark" : !pdl.operation
   }
 }
 
@@ -57,7 +57,7 @@ transform.with_pdl_patterns {
     %2 = replicate num(%0) %1 : !pdl.operation, !pdl.operation
     // expected-error @below {{a handle passed as operand #0 and consumed by this operation points to a payload operation more than once}}
     test_consume_operand %2
-    test_print_remark_at_operand %0, "remark"
+    test_print_remark_at_operand %0, "remark" : !pdl.operation
   }
 }
 

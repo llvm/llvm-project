@@ -69,10 +69,11 @@ def TestPrintRemarkAtOperandOp
   : Op<Transform_Dialect, "test_print_remark_at_operand",
        [DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let arguments = (ins 
-    Arg<PDL_Operation, "",
+    Arg<TransformTypeInterface, "",
         [TransformMappingRead, PayloadIRRead]>:$operand,
     StrAttr:$message);
-  let assemblyFormat = "$operand `,` $message attr-dict";
+  let assemblyFormat =
+    "$operand `,` $message attr-dict `:` type($operand)";
   let cppNamespace = "::mlir::test";
 }
 
