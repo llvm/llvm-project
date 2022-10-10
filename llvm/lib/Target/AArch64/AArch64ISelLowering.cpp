@@ -13990,6 +13990,13 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 
   auto Mask = SVI->getShuffleMask();
 
+  // Sanity check if all the indices are NOT in range.
+  // If mask is `undef` or `poison`, `Mask` may be a vector of -1s.
+  // If all of them are `undef`, OOB read will happen later.
+  if (llvm::all_of(Mask, [](int Idx) { return Idx == UndefMaskElem; })) {
+    return false;
+  }
+
   Type *PtrTy =
       UseScalable
           ? STVTy->getElementType()->getPointerTo(SI->getPointerAddressSpace())
@@ -14041,9 +14048,9 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
       } else {
         unsigned StartMask = 0;
         for (unsigned j = 1; j < LaneLen; j++) {
-          unsigned IdxJ = StoreCount * LaneLen * Factor + j;
-          if (Mask[IdxJ * Factor + IdxI] >= 0) {
-            StartMask = Mask[IdxJ * Factor + IdxI] - IdxJ;
+          unsigned IdxJ = StoreCount * LaneLen * Factor + j * Factor + i;
+          if (Mask[IdxJ] >= 0) {
+            StartMask = Mask[IdxJ] - j;
             break;
           }
         }
