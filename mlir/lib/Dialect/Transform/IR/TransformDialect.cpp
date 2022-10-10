@@ -60,10 +60,7 @@ void transform::TransformDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Transform/IR/TransformOps.cpp.inc"
       >();
-  addTypesChecked<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/Transform/IR/TransformTypes.cpp.inc"
-      >();
+  initializeTypes();
 
   pdl::OperationType::attachInterface<
       PDLOperationTypeTransformTypeInterfaceImpl>(*getContext());

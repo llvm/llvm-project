@@ -23,4 +23,24 @@ def Transform_AnyOpType : TypeDef<Transform_Dialect, "AnyOp",
   let assemblyFormat = "";
 }
 
+def Transform_OperationType : TypeDef<Transform_Dialect, "Operation",
+    [DeclareTypeInterfaceMethods<TransformTypeInterface>]> {
+  let description = [{
+    Transform IR handle that can be associated with a list of Payload IR
+    operations with the specified operation name.
+  }];
+  let mnemonic = "op";
+  let parameters = (ins
+    StringRefParameter<"Name of the allowed payload operation">:$operation_name
+  );
+  let assemblyFormat = "`<` $operation_name `>`";
+}
+
+class Transform_ConcreteOpType<string opname>
+  : Type<And<[Transform_OperationType.predicate,
+              CPred<"$_self.cast<::mlir::transform::OperationType>()"
+                    ".getOperationName() == \"" # opname # "\"">]>,
+         "Transform IR handle to " # opname # " operations",
+         "::mlir::transform::OperationType">;
+
 #endif  // MLIR_DIALECT_TRANSFORM_IR_TRANSFORMTYPES
