@@ -474,6 +474,11 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
 
   if (auto *I = dyn_cast<Instruction>(SrcVec)) {
     if (auto *IE = dyn_cast<InsertElementInst>(I)) {
+      // If the possibly-variable indices are trivially known to be equal
+      // (because they are the same operand) then use the value that was
+      // inserted directly.
+      if (IE->getOperand(2) == Index)
+        return replaceInstUsesWith(EI, IE->getOperand(1));
       // instsimplify already handled the case where the indices are constants
       // and equal by value, if both are constants, they must not be the same
       // value, extract from the pre-inserted value instead.

@@ -614,7 +614,7 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
 
     operands.push_back(operand);
     indexingMaps.push_back(AffineMap::get(
-        /*dimCount=*/type.getRank(), /*symbolCount=*/0, affineExprs,
+        /*dimCount=*/rank, /*symbolCount=*/0, affineExprs,
         rewriter.getContext()));
   }
 
