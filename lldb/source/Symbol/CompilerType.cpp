@@ -94,6 +94,12 @@ bool CompilerType::IsCompleteType() const {
   return false;
 }
 
+bool CompilerType::IsForcefullyCompleted() const {
+  if (IsValid())
+    return m_type_system->IsForcefullyCompleted(m_type);
+  return false;
+}
+
 bool CompilerType::IsConst() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
