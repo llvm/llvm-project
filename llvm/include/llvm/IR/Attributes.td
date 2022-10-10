@@ -126,6 +126,9 @@ def InReg : EnumAttr<"inreg", [ParamAttr, RetAttr]>;
 /// Build jump-instruction tables and replace refs.
 def JumpTable : EnumAttr<"jumptable", [FnAttr]>;
 
+/// Memory effects of the function.
+def Memory : IntAttr<"memory", [FnAttr]>;
+
 /// Function must be optimized for size first.
 def MinSize : EnumAttr<"minsize", [FnAttr]>;
 
