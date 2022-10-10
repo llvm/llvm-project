@@ -1802,6 +1802,17 @@ bool TypeSystemClang::RecordHasFields(const RecordDecl *record_decl) {
         return true;
     }
   }
+
+  // We always want forcefully completed types to show up so we can print a
+  // message in the summary that indicates that the type is incomplete.
+  // This will help users know when they are running into issues with
+  // -flimit-debug-info instead of just seeing nothing if this is a base class
+  // (since we were hiding empty base classes), or nothing when you turn open
+  // an valiable whose type was incomplete.
+  ClangASTMetadata *meta_data = GetMetadata(record_decl);
+  if (meta_data && meta_data->IsForcefullyCompleted())
+    return true;
+
   return false;
 }
 
@@ -1829,7 +1840,7 @@ CompilerType TypeSystemClang::CreateObjCClass(
   return GetType(ast.getObjCInterfaceType(decl));
 }
 
-static inline bool BaseSpecifierIsEmpty(const CXXBaseSpecifier *b) {
+bool TypeSystemClang::BaseSpecifierIsEmpty(const CXXBaseSpecifier *b) {
   return !TypeSystemClang::RecordHasFields(b->getType()->getAsCXXRecordDecl());
 }
 
@@ -6608,9 +6619,10 @@ CompilerType TypeSystemClang::GetChildCompilerTypeAtIndex(
   return CompilerType();
 }
 
-static uint32_t GetIndexForRecordBase(const clang::RecordDecl *record_decl,
-                                      const clang::CXXBaseSpecifier *base_spec,
-                                      bool omit_empty_base_classes) {
+uint32_t TypeSystemClang::GetIndexForRecordBase(
+    const clang::RecordDecl *record_decl,
+    const clang::CXXBaseSpecifier *base_spec,
+    bool omit_empty_base_classes) {
   uint32_t child_idx = 0;
 
   const clang::CXXRecordDecl *cxx_record_decl =
@@ -6635,9 +6647,9 @@ static uint32_t GetIndexForRecordBase(const clang::RecordDecl *record_decl,
   return UINT32_MAX;
 }
 
-static uint32_t GetIndexForRecordChild(const clang::RecordDecl *record_decl,
-                                       clang::NamedDecl *canonical_decl,
-                                       bool omit_empty_base_classes) {
+uint32_t TypeSystemClang::GetIndexForRecordChild(
+    const clang::RecordDecl *record_decl, clang::NamedDecl *canonical_decl,
+    bool omit_empty_base_classes) {
   uint32_t child_idx = TypeSystemClang::GetNumBaseClasses(
       llvm::dyn_cast<clang::CXXRecordDecl>(record_decl),
       omit_empty_base_classes);
@@ -10033,4 +10045,20 @@ TypeSystemClang &ScratchTypeSystemClang::GetIsolatedAST(
                                               m_triple, CreateASTSource());
   m_isolated_asts.insert({feature, new_ast_sp});
   return *new_ast_sp;
+}
+
+bool TypeSystemClang::IsForcefullyCompleted(lldb::opaque_compiler_type_t type) {
+  if (type) {
+    clang::QualType qual_type(GetQualType(type));
+    const clang::RecordType *record_type =
+        llvm::dyn_cast<clang::RecordType>(qual_type.getTypePtr());
+    if (record_type) {
+      const clang::RecordDecl *record_decl = record_type->getDecl();
+      assert(record_decl);
+      ClangASTMetadata *metadata = GetMetadata(record_decl);
+      if (metadata)
+        return metadata->IsForcefullyCompleted();
+    }
+  }
+  return false;
 }
