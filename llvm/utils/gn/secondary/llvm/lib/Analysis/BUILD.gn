@@ -25,6 +25,7 @@ static_library("Analysis") {
     "BranchProbabilityInfo.cpp",
     "CFG.cpp",
     "CFGPrinter.cpp",
+    "CFGSCCPrinter.cpp",
     "CFLAndersAliasAnalysis.cpp",
     "CFLSteensAliasAnalysis.cpp",
     "CGSCCPassManager.cpp",

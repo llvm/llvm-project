@@ -360,6 +360,7 @@ FUNCTION_PASS("print<stack-safety-local>", StackSafetyPrinterPass(dbgs()))
 FUNCTION_PASS("print<access-info>", LoopAccessInfoPrinterPass(dbgs()))
 // TODO: rename to print<foo> after NPM switch
 FUNCTION_PASS("print-alias-sets", AliasSetsPrinterPass(dbgs()))
+FUNCTION_PASS("print-cfg-sccs", CFGSCCPrinterPass(dbgs()))
 FUNCTION_PASS("print-predicateinfo", PredicateInfoPrinterPass(dbgs()))
 FUNCTION_PASS("print-mustexecute", MustExecutePrinterPass(dbgs()))
 FUNCTION_PASS("print-memderefs", MemDerefPrinterPass(dbgs()))
