@@ -41,16 +41,13 @@ module {
   func.func @dummy2() { return }
   func.func @dummy3() { return }
 
-  transform.with_pdl_patterns {
-  ^bb0(%arg0: !pdl.operation):
-    transform.sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb1(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
-      %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1
+  transform.sequence failures(propagate) {
+  ^bb1(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
+    %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1
 
-      // linalg.fill is tileable. The op is tiled and fused.
-      transform.structured.fuse_into_containing_op %0 into %1
-    }
+    // linalg.fill is tileable. The op is tiled and fused.
+    transform.structured.fuse_into_containing_op %0 into %1
   }
 }
 
@@ -87,16 +84,13 @@ module {
     func.return %2 : tensor<64xf32>
   }
 
-  transform.with_pdl_patterns {
-  ^bb0(%arg0: !pdl.operation):
-    transform.sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb1(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["tensor.empty"]} in %arg1
-      %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1
+  transform.sequence failures(propagate) {
+  ^bb1(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["tensor.empty"]} in %arg1
+    %1 = transform.structured.match ops{["scf.foreach_thread"]} in %arg1
 
-      // tensor.empty is not tileable. The op is cloned and fused.
-      transform.structured.fuse_into_containing_op %0 into %1
-    }
+    // tensor.empty is not tileable. The op is cloned and fused.
+    transform.structured.fuse_into_containing_op %0 into %1
   }
 }
 

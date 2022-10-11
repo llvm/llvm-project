@@ -2,13 +2,10 @@
 
 // CHECK-DAG: #[[$MAP13:.+]] = affine_map<() -> (13)>
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-      transform.structured.multitile_sizes %0 { target_size = 3, dimension = 0 }
-  }
+transform.sequence failures(propagate) {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+    transform.structured.multitile_sizes %0 { target_size = 3, dimension = 0 }
 }
 
 // CHECK-LABEL: @multitile_sizes_static
@@ -29,13 +26,10 @@ func.func @multitile_sizes_static(
 
 // -----
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-      transform.structured.multitile_sizes %0 { target_size = 3, divisor = 2, dimension = 0 }
-  }
+transform.sequence failures(propagate) {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+    transform.structured.multitile_sizes %0 { target_size = 3, divisor = 2, dimension = 0 }
 }
 
 // CHECK: #[[$MAP_A:.+]] = affine_map<()[s0] -> ([[A_IMPL:s0 floordiv 2]])>

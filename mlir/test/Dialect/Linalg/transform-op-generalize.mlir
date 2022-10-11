@@ -10,11 +10,8 @@ func.func @generalize_unary(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> t
   return %0 : tensor<?x?xf32>
 }
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 : !pdl.operation failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.elemwise_unary"]} in %arg1
-    %1 = transform.structured.generalize %0
-  }
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.elemwise_unary"]} in %arg1
+  %1 = transform.structured.generalize %0
 }

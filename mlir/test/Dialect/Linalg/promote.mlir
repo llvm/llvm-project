@@ -66,13 +66,10 @@ func.func @matmul_f32(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //   CHECK-NOT:         memref.dealloc %[[tmpB]] : memref<48xi8>
 //   CHECK-NOT:         memref.dealloc %[[tmpC]] : memref<24xi8>
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-      %1 = transform.structured.promote %0 { use_alloca }
-  }
+transform.sequence failures(propagate) {
+^bb0(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %1 = transform.structured.promote %0 { use_alloca }
 }
 
 // -----
@@ -139,15 +136,11 @@ func.func @matmul_f64(%A: memref<?xi8>, %M: index, %N: index, %K: index) {
 //       CHECK:         memref.dealloc %[[tmpB_f64]] : memref<96xi8>
 //       CHECK:         memref.dealloc %[[tmpC_f64]] : memref<48xi8>
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-      %1 = transform.structured.promote %0
-  }
+transform.sequence failures(propagate) {
+^bb0(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %1 = transform.structured.promote %0
 }
-
 
 // -----
 
@@ -189,11 +182,8 @@ func.func @promote_rank_reducing_subviews(%arg0:  memref<?x?x?x64xf32, strided<[
   return
 }
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match interface{LinalgOp} in %arg1
-      %1 = transform.structured.promote %0
-  }
+transform.sequence failures(propagate) {
+^bb0(%arg1: !pdl.operation):
+  %0 = transform.structured.match interface{LinalgOp} in %arg1
+  %1 = transform.structured.promote %0
 }
