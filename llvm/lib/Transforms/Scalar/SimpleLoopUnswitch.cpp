@@ -135,8 +135,8 @@ static Value *skipTrivialSelect(Value *Cond) {
 /// inputs which are loop invariant. For some operations these can be
 /// re-associated and unswitched out of the loop entirely.
 static TinyPtrVector<Value *>
-collectHomogenousInstGraphLoopInvariants(Loop &L, Instruction &Root,
-                                         LoopInfo &LI) {
+collectHomogenousInstGraphLoopInvariants(const Loop &L, Instruction &Root,
+                                         const LoopInfo &LI) {
   assert(!L.isLoopInvariant(&Root) &&
          "Only need to walk the graph if root itself is not invariant.");
   TinyPtrVector<Value *> Invariants;
@@ -177,7 +177,7 @@ collectHomogenousInstGraphLoopInvariants(Loop &L, Instruction &Root,
   return Invariants;
 }
 
-static void replaceLoopInvariantUses(Loop &L, Value *Invariant,
+static void replaceLoopInvariantUses(const Loop &L, Value *Invariant,
                                      Constant &Replacement) {
   assert(!isa<Constant>(Invariant) && "Why are we unswitching on a constant?");
 
@@ -194,9 +194,10 @@ static void replaceLoopInvariantUses(Loop &L, Value *Invariant,
 
 /// Check that all the LCSSA PHI nodes in the loop exit block have trivial
 /// incoming values along this edge.
-static bool areLoopExitPHIsLoopInvariant(Loop &L, BasicBlock &ExitingBB,
-                                         BasicBlock &ExitBB) {
-  for (Instruction &I : ExitBB) {
+static bool areLoopExitPHIsLoopInvariant(const Loop &L,
+                                         const BasicBlock &ExitingBB,
+                                         const BasicBlock &ExitBB) {
+  for (const Instruction &I : ExitBB) {
     auto *PN = dyn_cast<PHINode>(&I);
     if (!PN)
       // No more PHIs to check.
@@ -216,7 +217,7 @@ static bool areLoopExitPHIsLoopInvariant(Loop &L, BasicBlock &ExitingBB,
 static void buildPartialUnswitchConditionalBranch(
     BasicBlock &BB, ArrayRef<Value *> Invariants, bool Direction,
     BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc, bool InsertFreeze,
-    Instruction *I, AssumptionCache *AC, DominatorTree &DT) {
+    const Instruction *I, AssumptionCache *AC, const DominatorTree &DT) {
   IRBuilder<> IRB(&BB);
 
   SmallVector<Value *> FrozenInvariants;
@@ -420,9 +421,10 @@ static void hoistLoopToNewParent(Loop &L, BasicBlock &Preheader,
 // Return the top-most loop containing ExitBB and having ExitBB as exiting block
 // or the loop containing ExitBB, if there is no parent loop containing ExitBB
 // as exiting block.
-static Loop *getTopMostExitingLoop(BasicBlock *ExitBB, LoopInfo &LI) {
-  Loop *TopMost = LI.getLoopFor(ExitBB);
-  Loop *Current = TopMost;
+static const Loop *getTopMostExitingLoop(const BasicBlock *ExitBB,
+                                         const LoopInfo &LI) {
+  const Loop *TopMost = LI.getLoopFor(ExitBB);
+  const Loop *Current = TopMost;
   while (Current) {
     if (Current->isLoopExiting(ExitBB))
       TopMost = Current;
@@ -523,7 +525,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // loop, the loop containing the exit block and the topmost parent loop
   // exiting via LoopExitBB.
   if (SE) {
-    if (Loop *ExitL = getTopMostExitingLoop(LoopExitBB, LI))
+    if (const Loop *ExitL = getTopMostExitingLoop(LoopExitBB, LI))
       SE->forgetLoop(ExitL);
     else
       // Forget the entire nest as this exits the entire nest.
