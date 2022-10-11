@@ -6951,7 +6951,15 @@ void ResolveNamesVisitor::HandleCall(
   common::visit(
       common::visitors{
           [&](const parser::Name &x) { HandleProcedureName(procFlag, x); },
-          [&](const parser::ProcComponentRef &x) { Walk(x); },
+          [&](const parser::ProcComponentRef &x) {
+            Walk(x);
+            const parser::Name &name{x.v.thing.component};
+            if (Symbol * symbol{name.symbol}) {
+              if (IsProcedure(*symbol)) {
+                SetProcFlag(name, *symbol, procFlag);
+              }
+            }
+          },
       },
       std::get<parser::ProcedureDesignator>(call.t).u);
   Walk(std::get<std::list<parser::ActualArgSpec>>(call.t));
