@@ -980,15 +980,16 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   }
 
   case CK_IntegralToFloating:
-    llvm_unreachable("NYI");
   case CK_FloatingToIntegral:
-    llvm_unreachable("NYI");
   case CK_FloatingCast:
-    llvm_unreachable("NYI");
   case CK_FixedPointToFloating:
-    llvm_unreachable("NYI");
-  case CK_FloatingToFixedPoint:
-    llvm_unreachable("NYI");
+  case CK_FloatingToFixedPoint: {
+    if (Kind != CK_FloatingCast)
+      llvm_unreachable("Only FloatingCast supported so far.");
+    CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(CGF, CE);
+    return buildScalarConversion(Visit(E), E->getType(), DestTy,
+                                 CE->getExprLoc());
+  }
   case CK_BooleanToSignedIntegral:
     llvm_unreachable("NYI");
 

@@ -1049,3 +1049,35 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl GD,
 
   return ResTy;
 }
+
+CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &CGF,
+                                                         const clang::Expr *E)
+    : CGF(CGF) {
+  ConstructorHelper(E->getFPFeaturesInEffect(CGF.getLangOpts()));
+}
+
+CIRGenFunction::CIRGenFPOptionsRAII::CIRGenFPOptionsRAII(CIRGenFunction &CGF,
+                                                         FPOptions FPFeatures)
+    : CGF(CGF) {
+  ConstructorHelper(FPFeatures);
+}
+
+void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
+    FPOptions FPFeatures) {
+  OldFPFeatures = CGF.CurFPFeatures;
+  CGF.CurFPFeatures = FPFeatures;
+
+  OldExcept = CGF.builder.getDefaultConstrainedExcept();
+  OldRounding = CGF.builder.getDefaultConstrainedRounding();
+
+  if (OldFPFeatures == FPFeatures)
+    return;
+
+  llvm_unreachable("NYI");
+}
+
+CIRGenFunction::CIRGenFPOptionsRAII::~CIRGenFPOptionsRAII() {
+  CGF.CurFPFeatures = OldFPFeatures;
+  CGF.builder.setDefaultConstrainedExcept(OldExcept);
+  CGF.builder.setDefaultConstrainedRounding(OldRounding);
+}

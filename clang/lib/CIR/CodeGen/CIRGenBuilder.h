@@ -44,6 +44,16 @@ public:
 #endif
     DefaultConstrainedRounding = NewRounding;
   }
+
+  /// Get the exception handling used with constrained floating point
+  fp::ExceptionBehavior getDefaultConstrainedExcept() {
+    return DefaultConstrainedExcept;
+  }
+
+  /// Get the rounding mode handling used with constrained floating point
+  llvm::RoundingMode getDefaultConstrainedRounding() {
+    return DefaultConstrainedRounding;
+  }
 };
 
 } // namespace cir
