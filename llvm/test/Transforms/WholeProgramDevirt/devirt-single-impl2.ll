@@ -22,13 +22,13 @@ source_filename = "ld-temp.o"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-%struct.A = type { i32 (...)** }
+%struct.A = type { ptr }
 
 $_ZTV1A = comdat any
 
-@_ZTV1A = weak_odr hidden unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI1A to i8*), i8* bitcast (i32 (%struct.A*)* @_ZNK1A1fEv to i8*)] }, comdat, align 8, !type !0, !type !1
-@_ZTI1A = external hidden constant { i8*, i8* }, align 8
-define available_externally hidden i32 @_ZNK1A1fEv(%struct.A* %this) unnamed_addr align 2 {
+@_ZTV1A = weak_odr hidden unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI1A, ptr @_ZNK1A1fEv] }, comdat, align 8, !type !0, !type !1
+@_ZTI1A = external hidden constant { ptr, ptr }, align 8
+define available_externally hidden i32 @_ZNK1A1fEv(ptr %this) unnamed_addr align 2 {
 entry:
   ret i32 3
 }

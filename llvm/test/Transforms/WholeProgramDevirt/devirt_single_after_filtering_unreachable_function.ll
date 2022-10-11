@@ -12,34 +12,31 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 %Derived = type { %Base }
-%Base = type { i32 (...)** }
+%Base = type { ptr }
 
-@_ZTV7Derived = constant { [3 x i8*] } { [3 x i8*] [ i8* null, i8* null, i8* bitcast (void (%Derived*)* @_ZN7DerivedD0Ev to i8*)] }, !type !0, !type !1, !type !2, !type !3
-@_ZTV4Base = constant { [3 x i8*] } { [3 x i8*] [ i8* null, i8* null, i8* bitcast (void (%Base*)* @_ZN4BaseD0Ev to i8*)] }, !type !0, !type !1
+@_ZTV7Derived = constant { [3 x ptr] } { [3 x ptr] [ ptr null, ptr null, ptr @_ZN7DerivedD0Ev] }, !type !0, !type !1, !type !2, !type !3
+@_ZTV4Base = constant { [3 x ptr] } { [3 x ptr] [ ptr null, ptr null, ptr @_ZN4BaseD0Ev] }, !type !0, !type !1
 
-declare i1 @llvm.type.test(i8*, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 
 declare void @llvm.assume(i1)
 
-define i32 @func(%Base* %b) {
+define i32 @func(ptr %b) {
 entry:
-  %0 = bitcast %Base* %b to void (%Base*)***, !dbg !11
-  %vtable = load void (%Base*)**, void (%Base*)*** %0, !dbg !11
-  %1 = bitcast void (%Base*)** %vtable to i8*, !dbg !11
-  %2 = tail call i1 @llvm.type.test(i8* %1, metadata !"_ZTS4Base"), !dbg !11
-  tail call void @llvm.assume(i1 %2), !dbg !11
-  %vfn = getelementptr inbounds void (%Base*)*, void (%Base*)** %vtable, i64 0, !dbg !11
-  %3 = load void (%Base*)*, void (%Base*)** %vfn, !dbg !11
-  tail call void %3(%Base* %b), !dbg !11
+  %vtable = load ptr, ptr %b, !dbg !11
+  %0 = tail call i1 @llvm.type.test(ptr %vtable, metadata !"_ZTS4Base"), !dbg !11
+  tail call void @llvm.assume(i1 %0), !dbg !11
+  %1 = load ptr, ptr %vtable, !dbg !11
+  tail call void %1(ptr %b), !dbg !11
   ret i32 0
 }
 
-define void @_ZN7DerivedD0Ev(%Derived* %this) {
+define void @_ZN7DerivedD0Ev(ptr %this) {
 entry:
   ret void
 }
 
-define void @_ZN4BaseD0Ev(%Base* %this) {
+define void @_ZN4BaseD0Ev(ptr %this) {
 entry:
   tail call void @llvm.trap()
   unreachable
