@@ -6516,9 +6516,6 @@ bool LLParser::parseInvoke(Instruction *&Inst, PerFunctionState &PFS) {
   if (I != E)
     return error(CallLoc, "not enough parameters specified for call");
 
-  if (FnAttrs.hasAlignmentAttr())
-    return error(CallLoc, "invoke instructions may not have an alignment");
-
   // Finish off the Attribute and check them
   AttributeList PAL =
       AttributeList::get(Context, AttributeSet::get(Context, FnAttrs),
@@ -6831,9 +6828,6 @@ bool LLParser::parseCallBr(Instruction *&Inst, PerFunctionState &PFS) {
 
   if (I != E)
     return error(CallLoc, "not enough parameters specified for call");
-
-  if (FnAttrs.hasAlignmentAttr())
-    return error(CallLoc, "callbr instructions may not have an alignment");
 
   // Finish off the Attribute and check them
   AttributeList PAL =
@@ -7229,9 +7223,6 @@ bool LLParser::parseCall(Instruction *&Inst, PerFunctionState &PFS,
 
   if (I != E)
     return error(CallLoc, "not enough parameters specified for call");
-
-  if (FnAttrs.hasAlignmentAttr())
-    return error(CallLoc, "call instructions may not have an alignment");
 
   // Finish off the Attribute and check them
   AttributeList PAL =
