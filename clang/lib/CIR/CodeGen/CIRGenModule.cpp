@@ -69,11 +69,9 @@ using namespace mlir::cir;
 using namespace cir;
 using namespace clang;
 
-using llvm::ArrayRef;
 using llvm::cast;
 using llvm::dyn_cast;
 using llvm::isa;
-using llvm::ScopedHashTableScope;
 using llvm::SmallVector;
 using llvm::StringRef;
 
@@ -92,7 +90,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &context,
                            clang::ASTContext &astctx,
                            const clang::CodeGenOptions &CGO,
                            DiagnosticsEngine &Diags)
-    : builder(&context), astCtx(astctx), langOpts(astctx.getLangOpts()),
+    : builder(context), astCtx(astctx), langOpts(astctx.getLangOpts()),
       codeGenOpts(CGO),
       theModule{mlir::ModuleOp::create(builder.getUnknownLoc())}, Diags(Diags),
       target(astCtx.getTargetInfo()), ABI(createCXXABI(*this)),
