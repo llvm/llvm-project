@@ -212,7 +212,7 @@ void TransformDialect::addTypeIfNotRegistered() {
   auto [it, inserted] = typeParsingHooks.try_emplace(mnemonic, Type::parse);
   if (!inserted) {
     const ExtensionTypeParsingHook &parsingHook = it->getValue();
-    if (*parsingHook.target<mlir::Type (*)(AsmParser &)>() != &Type::parse)
+    if (parsingHook != &Type::parse)
       reportDuplicateTypeRegistration(mnemonic);
     else
       return;
