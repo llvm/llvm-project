@@ -926,6 +926,18 @@ def PseudoLA_PCREL : Pseudo<(outs GPR:$dst), (ins grlenimm:$src), []>;
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 def PseudoLA_GOT : Pseudo<(outs GPR:$dst), (ins grlenimm:$src), []>;
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoLA_TLS_LE : Pseudo<(outs GPR:$dst), (ins grlenimm:$src), []>;
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+def PseudoLA_TLS_IE : Pseudo<(outs GPR:$dst), (ins grlenimm:$src), []>;
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+def PseudoLA_TLS_LD : Pseudo<(outs GPR:$dst), (ins grlenimm:$src), []>;
+
+let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
+def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins grlenimm:$src), []>;
+
 /// BSTRINS and BSTRPICK
 
 let Predicates = [IsLA32] in {
