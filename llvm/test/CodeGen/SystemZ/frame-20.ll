@@ -7,7 +7,7 @@
 ; We need to save and restore 8 of the 16 FPRs, so the frame size
 ; should be exactly 8 * 8 = 64.  The CFA offset is 160
 ; (the caller-allocated part of the frame) + 64.
-define void @f1(double *%ptr) {
+define void @f1(ptr %ptr) {
 ; CHECK-LABEL: f1:
 ; CHECK: aghi %r15, -64
 ; CHECK: .cfi_def_cfa_offset 224
@@ -45,38 +45,38 @@ define void @f1(double *%ptr) {
 ; CHECK: ld %f15, 0(%r15)
 ; CHECK: aghi %r15, 64
 ; CHECK: br %r14
-  %l0 = load volatile double, double *%ptr
-  %l1 = load volatile double, double *%ptr
-  %l2 = load volatile double, double *%ptr
-  %l3 = load volatile double, double *%ptr
-  %l4 = load volatile double, double *%ptr
-  %l5 = load volatile double, double *%ptr
-  %l6 = load volatile double, double *%ptr
-  %l7 = load volatile double, double *%ptr
-  %l8 = load volatile double, double *%ptr
-  %l9 = load volatile double, double *%ptr
-  %l10 = load volatile double, double *%ptr
-  %l11 = load volatile double, double *%ptr
-  %l12 = load volatile double, double *%ptr
-  %l13 = load volatile double, double *%ptr
-  %l14 = load volatile double, double *%ptr
-  %l15 = load volatile double, double *%ptr
-  %l16 = load volatile double, double *%ptr
-  %l17 = load volatile double, double *%ptr
-  %l18 = load volatile double, double *%ptr
-  %l19 = load volatile double, double *%ptr
-  %l20 = load volatile double, double *%ptr
-  %l21 = load volatile double, double *%ptr
-  %l22 = load volatile double, double *%ptr
-  %l23 = load volatile double, double *%ptr
-  %l24 = load volatile double, double *%ptr
-  %l25 = load volatile double, double *%ptr
-  %l26 = load volatile double, double *%ptr
-  %l27 = load volatile double, double *%ptr
-  %l28 = load volatile double, double *%ptr
-  %l29 = load volatile double, double *%ptr
-  %l30 = load volatile double, double *%ptr
-  %l31 = load volatile double, double *%ptr
+  %l0 = load volatile double, ptr %ptr
+  %l1 = load volatile double, ptr %ptr
+  %l2 = load volatile double, ptr %ptr
+  %l3 = load volatile double, ptr %ptr
+  %l4 = load volatile double, ptr %ptr
+  %l5 = load volatile double, ptr %ptr
+  %l6 = load volatile double, ptr %ptr
+  %l7 = load volatile double, ptr %ptr
+  %l8 = load volatile double, ptr %ptr
+  %l9 = load volatile double, ptr %ptr
+  %l10 = load volatile double, ptr %ptr
+  %l11 = load volatile double, ptr %ptr
+  %l12 = load volatile double, ptr %ptr
+  %l13 = load volatile double, ptr %ptr
+  %l14 = load volatile double, ptr %ptr
+  %l15 = load volatile double, ptr %ptr
+  %l16 = load volatile double, ptr %ptr
+  %l17 = load volatile double, ptr %ptr
+  %l18 = load volatile double, ptr %ptr
+  %l19 = load volatile double, ptr %ptr
+  %l20 = load volatile double, ptr %ptr
+  %l21 = load volatile double, ptr %ptr
+  %l22 = load volatile double, ptr %ptr
+  %l23 = load volatile double, ptr %ptr
+  %l24 = load volatile double, ptr %ptr
+  %l25 = load volatile double, ptr %ptr
+  %l26 = load volatile double, ptr %ptr
+  %l27 = load volatile double, ptr %ptr
+  %l28 = load volatile double, ptr %ptr
+  %l29 = load volatile double, ptr %ptr
+  %l30 = load volatile double, ptr %ptr
+  %l31 = load volatile double, ptr %ptr
   %acc0 = fsub double %l0, %l0
   %acc1 = fsub double %l1, %acc0
   %acc2 = fsub double %l2, %acc1
@@ -109,44 +109,44 @@ define void @f1(double *%ptr) {
   %acc29 = fsub double %l29, %acc28
   %acc30 = fsub double %l30, %acc29
   %acc31 = fsub double %l31, %acc30
-  store volatile double %acc0, double *%ptr
-  store volatile double %acc1, double *%ptr
-  store volatile double %acc2, double *%ptr
-  store volatile double %acc3, double *%ptr
-  store volatile double %acc4, double *%ptr
-  store volatile double %acc5, double *%ptr
-  store volatile double %acc6, double *%ptr
-  store volatile double %acc7, double *%ptr
-  store volatile double %acc8, double *%ptr
-  store volatile double %acc9, double *%ptr
-  store volatile double %acc10, double *%ptr
-  store volatile double %acc11, double *%ptr
-  store volatile double %acc12, double *%ptr
-  store volatile double %acc13, double *%ptr
-  store volatile double %acc14, double *%ptr
-  store volatile double %acc15, double *%ptr
-  store volatile double %acc16, double *%ptr
-  store volatile double %acc17, double *%ptr
-  store volatile double %acc18, double *%ptr
-  store volatile double %acc19, double *%ptr
-  store volatile double %acc20, double *%ptr
-  store volatile double %acc21, double *%ptr
-  store volatile double %acc22, double *%ptr
-  store volatile double %acc23, double *%ptr
-  store volatile double %acc24, double *%ptr
-  store volatile double %acc25, double *%ptr
-  store volatile double %acc26, double *%ptr
-  store volatile double %acc27, double *%ptr
-  store volatile double %acc28, double *%ptr
-  store volatile double %acc29, double *%ptr
-  store volatile double %acc30, double *%ptr
-  store volatile double %acc31, double *%ptr
+  store volatile double %acc0, ptr %ptr
+  store volatile double %acc1, ptr %ptr
+  store volatile double %acc2, ptr %ptr
+  store volatile double %acc3, ptr %ptr
+  store volatile double %acc4, ptr %ptr
+  store volatile double %acc5, ptr %ptr
+  store volatile double %acc6, ptr %ptr
+  store volatile double %acc7, ptr %ptr
+  store volatile double %acc8, ptr %ptr
+  store volatile double %acc9, ptr %ptr
+  store volatile double %acc10, ptr %ptr
+  store volatile double %acc11, ptr %ptr
+  store volatile double %acc12, ptr %ptr
+  store volatile double %acc13, ptr %ptr
+  store volatile double %acc14, ptr %ptr
+  store volatile double %acc15, ptr %ptr
+  store volatile double %acc16, ptr %ptr
+  store volatile double %acc17, ptr %ptr
+  store volatile double %acc18, ptr %ptr
+  store volatile double %acc19, ptr %ptr
+  store volatile double %acc20, ptr %ptr
+  store volatile double %acc21, ptr %ptr
+  store volatile double %acc22, ptr %ptr
+  store volatile double %acc23, ptr %ptr
+  store volatile double %acc24, ptr %ptr
+  store volatile double %acc25, ptr %ptr
+  store volatile double %acc26, ptr %ptr
+  store volatile double %acc27, ptr %ptr
+  store volatile double %acc28, ptr %ptr
+  store volatile double %acc29, ptr %ptr
+  store volatile double %acc30, ptr %ptr
+  store volatile double %acc31, ptr %ptr
   ret void
 }
 
 ; Like f1, but requires one fewer FPR.  We allocate in numerical order,
 ; so %f15 is the one that gets dropped.
-define void @f2(double *%ptr) {
+define void @f2(ptr %ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: aghi %r15, -56
 ; CHECK: .cfi_def_cfa_offset 216
@@ -175,37 +175,37 @@ define void @f2(double *%ptr) {
 ; CHECK: ld %f14, 0(%r15)
 ; CHECK: aghi %r15, 56
 ; CHECK: br %r14
-  %l0 = load volatile double, double *%ptr
-  %l1 = load volatile double, double *%ptr
-  %l2 = load volatile double, double *%ptr
-  %l3 = load volatile double, double *%ptr
-  %l4 = load volatile double, double *%ptr
-  %l5 = load volatile double, double *%ptr
-  %l6 = load volatile double, double *%ptr
-  %l7 = load volatile double, double *%ptr
-  %l8 = load volatile double, double *%ptr
-  %l9 = load volatile double, double *%ptr
-  %l10 = load volatile double, double *%ptr
-  %l11 = load volatile double, double *%ptr
-  %l12 = load volatile double, double *%ptr
-  %l13 = load volatile double, double *%ptr
-  %l14 = load volatile double, double *%ptr
-  %l16 = load volatile double, double *%ptr
-  %l17 = load volatile double, double *%ptr
-  %l18 = load volatile double, double *%ptr
-  %l19 = load volatile double, double *%ptr
-  %l20 = load volatile double, double *%ptr
-  %l21 = load volatile double, double *%ptr
-  %l22 = load volatile double, double *%ptr
-  %l23 = load volatile double, double *%ptr
-  %l24 = load volatile double, double *%ptr
-  %l25 = load volatile double, double *%ptr
-  %l26 = load volatile double, double *%ptr
-  %l27 = load volatile double, double *%ptr
-  %l28 = load volatile double, double *%ptr
-  %l29 = load volatile double, double *%ptr
-  %l30 = load volatile double, double *%ptr
-  %l31 = load volatile double, double *%ptr
+  %l0 = load volatile double, ptr %ptr
+  %l1 = load volatile double, ptr %ptr
+  %l2 = load volatile double, ptr %ptr
+  %l3 = load volatile double, ptr %ptr
+  %l4 = load volatile double, ptr %ptr
+  %l5 = load volatile double, ptr %ptr
+  %l6 = load volatile double, ptr %ptr
+  %l7 = load volatile double, ptr %ptr
+  %l8 = load volatile double, ptr %ptr
+  %l9 = load volatile double, ptr %ptr
+  %l10 = load volatile double, ptr %ptr
+  %l11 = load volatile double, ptr %ptr
+  %l12 = load volatile double, ptr %ptr
+  %l13 = load volatile double, ptr %ptr
+  %l14 = load volatile double, ptr %ptr
+  %l16 = load volatile double, ptr %ptr
+  %l17 = load volatile double, ptr %ptr
+  %l18 = load volatile double, ptr %ptr
+  %l19 = load volatile double, ptr %ptr
+  %l20 = load volatile double, ptr %ptr
+  %l21 = load volatile double, ptr %ptr
+  %l22 = load volatile double, ptr %ptr
+  %l23 = load volatile double, ptr %ptr
+  %l24 = load volatile double, ptr %ptr
+  %l25 = load volatile double, ptr %ptr
+  %l26 = load volatile double, ptr %ptr
+  %l27 = load volatile double, ptr %ptr
+  %l28 = load volatile double, ptr %ptr
+  %l29 = load volatile double, ptr %ptr
+  %l30 = load volatile double, ptr %ptr
+  %l31 = load volatile double, ptr %ptr
   %acc0 = fsub double %l0, %l0
   %acc1 = fsub double %l1, %acc0
   %acc2 = fsub double %l2, %acc1
@@ -237,42 +237,42 @@ define void @f2(double *%ptr) {
   %acc29 = fsub double %l29, %acc28
   %acc30 = fsub double %l30, %acc29
   %acc31 = fsub double %l31, %acc30
-  store volatile double %acc0, double *%ptr
-  store volatile double %acc1, double *%ptr
-  store volatile double %acc2, double *%ptr
-  store volatile double %acc3, double *%ptr
-  store volatile double %acc4, double *%ptr
-  store volatile double %acc5, double *%ptr
-  store volatile double %acc6, double *%ptr
-  store volatile double %acc7, double *%ptr
-  store volatile double %acc8, double *%ptr
-  store volatile double %acc9, double *%ptr
-  store volatile double %acc10, double *%ptr
-  store volatile double %acc11, double *%ptr
-  store volatile double %acc12, double *%ptr
-  store volatile double %acc13, double *%ptr
-  store volatile double %acc14, double *%ptr
-  store volatile double %acc16, double *%ptr
-  store volatile double %acc17, double *%ptr
-  store volatile double %acc18, double *%ptr
-  store volatile double %acc19, double *%ptr
-  store volatile double %acc20, double *%ptr
-  store volatile double %acc21, double *%ptr
-  store volatile double %acc22, double *%ptr
-  store volatile double %acc23, double *%ptr
-  store volatile double %acc24, double *%ptr
-  store volatile double %acc25, double *%ptr
-  store volatile double %acc26, double *%ptr
-  store volatile double %acc27, double *%ptr
-  store volatile double %acc28, double *%ptr
-  store volatile double %acc29, double *%ptr
-  store volatile double %acc30, double *%ptr
-  store volatile double %acc31, double *%ptr
+  store volatile double %acc0, ptr %ptr
+  store volatile double %acc1, ptr %ptr
+  store volatile double %acc2, ptr %ptr
+  store volatile double %acc3, ptr %ptr
+  store volatile double %acc4, ptr %ptr
+  store volatile double %acc5, ptr %ptr
+  store volatile double %acc6, ptr %ptr
+  store volatile double %acc7, ptr %ptr
+  store volatile double %acc8, ptr %ptr
+  store volatile double %acc9, ptr %ptr
+  store volatile double %acc10, ptr %ptr
+  store volatile double %acc11, ptr %ptr
+  store volatile double %acc12, ptr %ptr
+  store volatile double %acc13, ptr %ptr
+  store volatile double %acc14, ptr %ptr
+  store volatile double %acc16, ptr %ptr
+  store volatile double %acc17, ptr %ptr
+  store volatile double %acc18, ptr %ptr
+  store volatile double %acc19, ptr %ptr
+  store volatile double %acc20, ptr %ptr
+  store volatile double %acc21, ptr %ptr
+  store volatile double %acc22, ptr %ptr
+  store volatile double %acc23, ptr %ptr
+  store volatile double %acc24, ptr %ptr
+  store volatile double %acc25, ptr %ptr
+  store volatile double %acc26, ptr %ptr
+  store volatile double %acc27, ptr %ptr
+  store volatile double %acc28, ptr %ptr
+  store volatile double %acc29, ptr %ptr
+  store volatile double %acc30, ptr %ptr
+  store volatile double %acc31, ptr %ptr
   ret void
 }
 
 ; Like f1, but should require only one call-saved FPR.
-define void @f3(double *%ptr) {
+define void @f3(ptr %ptr) {
 ; CHECK-LABEL: f3:
 ; CHECK: aghi %r15, -8
 ; CHECK: .cfi_def_cfa_offset 168
@@ -283,31 +283,31 @@ define void @f3(double *%ptr) {
 ; CHECK: ld %f8, 0(%r15)
 ; CHECK: aghi %r15, 8
 ; CHECK: br %r14
-  %l0 = load volatile double, double *%ptr
-  %l1 = load volatile double, double *%ptr
-  %l2 = load volatile double, double *%ptr
-  %l3 = load volatile double, double *%ptr
-  %l4 = load volatile double, double *%ptr
-  %l5 = load volatile double, double *%ptr
-  %l6 = load volatile double, double *%ptr
-  %l7 = load volatile double, double *%ptr
-  %l8 = load volatile double, double *%ptr
-  %l16 = load volatile double, double *%ptr
-  %l17 = load volatile double, double *%ptr
-  %l18 = load volatile double, double *%ptr
-  %l19 = load volatile double, double *%ptr
-  %l20 = load volatile double, double *%ptr
-  %l21 = load volatile double, double *%ptr
-  %l22 = load volatile double, double *%ptr
-  %l23 = load volatile double, double *%ptr
-  %l24 = load volatile double, double *%ptr
-  %l25 = load volatile double, double *%ptr
-  %l26 = load volatile double, double *%ptr
-  %l27 = load volatile double, double *%ptr
-  %l28 = load volatile double, double *%ptr
-  %l29 = load volatile double, double *%ptr
-  %l30 = load volatile double, double *%ptr
-  %l31 = load volatile double, double *%ptr
+  %l0 = load volatile double, ptr %ptr
+  %l1 = load volatile double, ptr %ptr
+  %l2 = load volatile double, ptr %ptr
+  %l3 = load volatile double, ptr %ptr
+  %l4 = load volatile double, ptr %ptr
+  %l5 = load volatile double, ptr %ptr
+  %l6 = load volatile double, ptr %ptr
+  %l7 = load volatile double, ptr %ptr
+  %l8 = load volatile double, ptr %ptr
+  %l16 = load volatile double, ptr %ptr
+  %l17 = load volatile double, ptr %ptr
+  %l18 = load volatile double, ptr %ptr
+  %l19 = load volatile double, ptr %ptr
+  %l20 = load volatile double, ptr %ptr
+  %l21 = load volatile double, ptr %ptr
+  %l22 = load volatile double, ptr %ptr
+  %l23 = load volatile double, ptr %ptr
+  %l24 = load volatile double, ptr %ptr
+  %l25 = load volatile double, ptr %ptr
+  %l26 = load volatile double, ptr %ptr
+  %l27 = load volatile double, ptr %ptr
+  %l28 = load volatile double, ptr %ptr
+  %l29 = load volatile double, ptr %ptr
+  %l30 = load volatile double, ptr %ptr
+  %l31 = load volatile double, ptr %ptr
   %acc0 = fsub double %l0, %l0
   %acc1 = fsub double %l1, %acc0
   %acc2 = fsub double %l2, %acc1
@@ -333,66 +333,66 @@ define void @f3(double *%ptr) {
   %acc29 = fsub double %l29, %acc28
   %acc30 = fsub double %l30, %acc29
   %acc31 = fsub double %l31, %acc30
-  store volatile double %acc0, double *%ptr
-  store volatile double %acc1, double *%ptr
-  store volatile double %acc2, double *%ptr
-  store volatile double %acc3, double *%ptr
-  store volatile double %acc4, double *%ptr
-  store volatile double %acc5, double *%ptr
-  store volatile double %acc6, double *%ptr
-  store volatile double %acc7, double *%ptr
-  store volatile double %acc8, double *%ptr
-  store volatile double %acc16, double *%ptr
-  store volatile double %acc17, double *%ptr
-  store volatile double %acc18, double *%ptr
-  store volatile double %acc19, double *%ptr
-  store volatile double %acc20, double *%ptr
-  store volatile double %acc21, double *%ptr
-  store volatile double %acc22, double *%ptr
-  store volatile double %acc23, double *%ptr
-  store volatile double %acc24, double *%ptr
-  store volatile double %acc25, double *%ptr
-  store volatile double %acc26, double *%ptr
-  store volatile double %acc27, double *%ptr
-  store volatile double %acc28, double *%ptr
-  store volatile double %acc29, double *%ptr
-  store volatile double %acc30, double *%ptr
-  store volatile double %acc31, double *%ptr
+  store volatile double %acc0, ptr %ptr
+  store volatile double %acc1, ptr %ptr
+  store volatile double %acc2, ptr %ptr
+  store volatile double %acc3, ptr %ptr
+  store volatile double %acc4, ptr %ptr
+  store volatile double %acc5, ptr %ptr
+  store volatile double %acc6, ptr %ptr
+  store volatile double %acc7, ptr %ptr
+  store volatile double %acc8, ptr %ptr
+  store volatile double %acc16, ptr %ptr
+  store volatile double %acc17, ptr %ptr
+  store volatile double %acc18, ptr %ptr
+  store volatile double %acc19, ptr %ptr
+  store volatile double %acc20, ptr %ptr
+  store volatile double %acc21, ptr %ptr
+  store volatile double %acc22, ptr %ptr
+  store volatile double %acc23, ptr %ptr
+  store volatile double %acc24, ptr %ptr
+  store volatile double %acc25, ptr %ptr
+  store volatile double %acc26, ptr %ptr
+  store volatile double %acc27, ptr %ptr
+  store volatile double %acc28, ptr %ptr
+  store volatile double %acc29, ptr %ptr
+  store volatile double %acc30, ptr %ptr
+  store volatile double %acc31, ptr %ptr
   ret void
 }
 
 ; This function should use all call-clobbered FPRs and vector registers
 ; but no call-saved ones.  It shouldn't need to create a frame.
-define void @f4(double *%ptr) {
+define void @f4(ptr %ptr) {
 ; CHECK-LABEL: f4:
 ; CHECK-NOT: %r15
 ; CHECK-NOT: {{%[fv][89]}}
 ; CHECK-NOT: {{%[fv]1[0-5]}}
 ; CHECK: br %r14
-  %l0 = load volatile double, double *%ptr
-  %l1 = load volatile double, double *%ptr
-  %l2 = load volatile double, double *%ptr
-  %l3 = load volatile double, double *%ptr
-  %l4 = load volatile double, double *%ptr
-  %l5 = load volatile double, double *%ptr
-  %l6 = load volatile double, double *%ptr
-  %l7 = load volatile double, double *%ptr
-  %l16 = load volatile double, double *%ptr
-  %l17 = load volatile double, double *%ptr
-  %l18 = load volatile double, double *%ptr
-  %l19 = load volatile double, double *%ptr
-  %l20 = load volatile double, double *%ptr
-  %l21 = load volatile double, double *%ptr
-  %l22 = load volatile double, double *%ptr
-  %l23 = load volatile double, double *%ptr
-  %l24 = load volatile double, double *%ptr
-  %l25 = load volatile double, double *%ptr
-  %l26 = load volatile double, double *%ptr
-  %l27 = load volatile double, double *%ptr
-  %l28 = load volatile double, double *%ptr
-  %l29 = load volatile double, double *%ptr
-  %l30 = load volatile double, double *%ptr
-  %l31 = load volatile double, double *%ptr
+  %l0 = load volatile double, ptr %ptr
+  %l1 = load volatile double, ptr %ptr
+  %l2 = load volatile double, ptr %ptr
+  %l3 = load volatile double, ptr %ptr
+  %l4 = load volatile double, ptr %ptr
+  %l5 = load volatile double, ptr %ptr
+  %l6 = load volatile double, ptr %ptr
+  %l7 = load volatile double, ptr %ptr
+  %l16 = load volatile double, ptr %ptr
+  %l17 = load volatile double, ptr %ptr
+  %l18 = load volatile double, ptr %ptr
+  %l19 = load volatile double, ptr %ptr
+  %l20 = load volatile double, ptr %ptr
+  %l21 = load volatile double, ptr %ptr
+  %l22 = load volatile double, ptr %ptr
+  %l23 = load volatile double, ptr %ptr
+  %l24 = load volatile double, ptr %ptr
+  %l25 = load volatile double, ptr %ptr
+  %l26 = load volatile double, ptr %ptr
+  %l27 = load volatile double, ptr %ptr
+  %l28 = load volatile double, ptr %ptr
+  %l29 = load volatile double, ptr %ptr
+  %l30 = load volatile double, ptr %ptr
+  %l31 = load volatile double, ptr %ptr
   %acc0 = fsub double %l0, %l0
   %acc1 = fsub double %l1, %acc0
   %acc2 = fsub double %l2, %acc1
@@ -417,29 +417,29 @@ define void @f4(double *%ptr) {
   %acc29 = fsub double %l29, %acc28
   %acc30 = fsub double %l30, %acc29
   %acc31 = fsub double %l31, %acc30
-  store volatile double %acc0, double *%ptr
-  store volatile double %acc1, double *%ptr
-  store volatile double %acc2, double *%ptr
-  store volatile double %acc3, double *%ptr
-  store volatile double %acc4, double *%ptr
-  store volatile double %acc5, double *%ptr
-  store volatile double %acc6, double *%ptr
-  store volatile double %acc7, double *%ptr
-  store volatile double %acc16, double *%ptr
-  store volatile double %acc17, double *%ptr
-  store volatile double %acc18, double *%ptr
-  store volatile double %acc19, double *%ptr
-  store volatile double %acc20, double *%ptr
-  store volatile double %acc21, double *%ptr
-  store volatile double %acc22, double *%ptr
-  store volatile double %acc23, double *%ptr
-  store volatile double %acc24, double *%ptr
-  store volatile double %acc25, double *%ptr
-  store volatile double %acc26, double *%ptr
-  store volatile double %acc27, double *%ptr
-  store volatile double %acc28, double *%ptr
-  store volatile double %acc29, double *%ptr
-  store volatile double %acc30, double *%ptr
-  store volatile double %acc31, double *%ptr
+  store volatile double %acc0, ptr %ptr
+  store volatile double %acc1, ptr %ptr
+  store volatile double %acc2, ptr %ptr
+  store volatile double %acc3, ptr %ptr
+  store volatile double %acc4, ptr %ptr
+  store volatile double %acc5, ptr %ptr
+  store volatile double %acc6, ptr %ptr
+  store volatile double %acc7, ptr %ptr
+  store volatile double %acc16, ptr %ptr
+  store volatile double %acc17, ptr %ptr
+  store volatile double %acc18, ptr %ptr
+  store volatile double %acc19, ptr %ptr
+  store volatile double %acc20, ptr %ptr
+  store volatile double %acc21, ptr %ptr
+  store volatile double %acc22, ptr %ptr
+  store volatile double %acc23, ptr %ptr
+  store volatile double %acc24, ptr %ptr
+  store volatile double %acc25, ptr %ptr
+  store volatile double %acc26, ptr %ptr
+  store volatile double %acc27, ptr %ptr
+  store volatile double %acc28, ptr %ptr
+  store volatile double %acc29, ptr %ptr
+  store volatile double %acc30, ptr %ptr
+  store volatile double %acc31, ptr %ptr
   ret void
 }

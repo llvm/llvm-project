@@ -62,19 +62,19 @@ define <4 x float> @f4(<4 x float> %dummy, <4 x float> %val1,
 }
 
 ; Test the f128 maxnum intrinsic.
-define void @f5(fp128 *%ptr1, fp128 *%ptr2, fp128 *%dst) #0 {
+define void @f5(ptr %ptr1, ptr %ptr2, ptr %dst) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK-DAG: vl [[REG1:%v[0-9]+]], 0(%r2)
 ; CHECK-DAG: vl [[REG2:%v[0-9]+]], 0(%r3)
 ; CHECK: wfmaxxb [[RES:%v[0-9]+]], [[REG1]], [[REG2]], 4
 ; CHECK: vst [[RES]], 0(%r4)
 ; CHECK: br %r14
-  %val1 = load fp128, fp128* %ptr1
-  %val2 = load fp128, fp128* %ptr2
+  %val1 = load fp128, ptr %ptr1
+  %val2 = load fp128, ptr %ptr2
   %res = call fp128 @llvm.experimental.constrained.maxnum.f128(
                         fp128 %val1, fp128 %val2,
                         metadata !"fpexcept.strict") #0
-  store fp128 %res, fp128* %dst
+  store fp128 %res, ptr %dst
   ret void
 }
 
@@ -125,19 +125,19 @@ define <4 x float> @f14(<4 x float> %dummy, <4 x float> %val1,
 }
 
 ; Test the f128 maximum intrinsic.
-define void @f15(fp128 *%ptr1, fp128 *%ptr2, fp128 *%dst) #0 {
+define void @f15(ptr %ptr1, ptr %ptr2, ptr %dst) #0 {
 ; CHECK-LABEL: f15:
 ; CHECK-DAG: vl [[REG1:%v[0-9]+]], 0(%r2)
 ; CHECK-DAG: vl [[REG2:%v[0-9]+]], 0(%r3)
 ; CHECK: wfmaxxb [[RES:%v[0-9]+]], [[REG1]], [[REG2]], 1
 ; CHECK: vst [[RES]], 0(%r4)
 ; CHECK: br %r14
-  %val1 = load fp128, fp128* %ptr1
-  %val2 = load fp128, fp128* %ptr2
+  %val1 = load fp128, ptr %ptr1
+  %val2 = load fp128, ptr %ptr2
   %res = call fp128 @llvm.experimental.constrained.maximum.f128(
                         fp128 %val1, fp128 %val2,
                         metadata !"fpexcept.strict") #0
-  store fp128 %res, fp128* %dst
+  store fp128 %res, ptr %dst
   ret void
 }
 

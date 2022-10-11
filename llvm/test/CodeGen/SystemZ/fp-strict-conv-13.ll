@@ -34,7 +34,7 @@ define double @f2(i32 %i) #0 {
 }
 
 ; Check i32->f128.
-define void @f3(i32 %i, fp128 *%dst) #0 {
+define void @f3(i32 %i, ptr %dst) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK: cxlfbr %f0, 0, %r2, 0
 ; CHECK-DAG: std %f0, 0(%r3)
@@ -43,7 +43,7 @@ define void @f3(i32 %i, fp128 *%dst) #0 {
   %conv = call fp128 @llvm.experimental.constrained.uitofp.f128.i32(i32 %i,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
-  store fp128 %conv, fp128 *%dst
+  store fp128 %conv, ptr %dst
   ret void
 }
 
@@ -70,7 +70,7 @@ define double @f5(i64 %i) #0 {
 }
 
 ; Check i64->f128.
-define void @f6(i64 %i, fp128 *%dst) #0 {
+define void @f6(i64 %i, ptr %dst) #0 {
 ; CHECK-LABEL: f6:
 ; CHECK: cxlgbr %f0, 0, %r2, 0
 ; CHECK-DAG: std %f0, 0(%r3)
@@ -79,7 +79,7 @@ define void @f6(i64 %i, fp128 *%dst) #0 {
   %conv = call fp128 @llvm.experimental.constrained.uitofp.f128.i64(i64 %i,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
-  store fp128 %conv, fp128 *%dst
+  store fp128 %conv, ptr %dst
   ret void
 }
 

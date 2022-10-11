@@ -8,31 +8,31 @@ declare double @copysign(double, double) readnone
 declare fp128 @copysignl(fp128, fp128) readnone
 
 ; Test f32 copies in which the sign comes from an f128.
-define float @f1(float %a, fp128 *%bptr) {
+define float @f1(float %a, ptr %bptr) {
 ; CHECK-LABEL: f1:
 ; CHECK: vl %v[[REG:[0-9]+]], 0(%r2)
 ; CHECK: cpsdr %f0, %f[[REG]], %f0
 ; CHECK: br %r14
-  %bl = load volatile fp128, fp128 *%bptr
+  %bl = load volatile fp128, ptr %bptr
   %b = fptrunc fp128 %bl to float
   %res = call float @copysignf(float %a, float %b) readnone
   ret float %res
 }
 
 ; Test f64 copies in which the sign comes from an f128.
-define double @f2(double %a, fp128 *%bptr) {
+define double @f2(double %a, ptr %bptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: vl %v[[REG:[0-9]+]], 0(%r2)
 ; CHECK: cpsdr %f0, %f[[REG]], %f0
 ; CHECK: br %r14
-  %bl = load volatile fp128, fp128 *%bptr
+  %bl = load volatile fp128, ptr %bptr
   %b = fptrunc fp128 %bl to double
   %res = call double @copysign(double %a, double %b) readnone
   ret double %res
 }
 
 ; Test f128 copies in which the sign comes from an f32.
-define void @f7(fp128 *%cptr, fp128 *%aptr, float %bf) {
+define void @f7(ptr %cptr, ptr %aptr, float %bf) {
 ; CHECK-LABEL: f7:
 ; CHECK: vl [[REG1:%v[0-7]+]], 0(%r3)
 ; CHECK: tmlh
@@ -40,15 +40,15 @@ define void @f7(fp128 *%cptr, fp128 *%aptr, float %bf) {
 ; CHECK: wflpxb [[REG2]], [[REG1]]
 ; CHECK: vst [[REG2]], 0(%r2)
 ; CHECK: br %r14
-  %a = load volatile fp128, fp128 *%aptr
+  %a = load volatile fp128, ptr %aptr
   %b = fpext float %bf to fp128
   %c = call fp128 @copysignl(fp128 %a, fp128 %b) readnone
-  store fp128 %c, fp128 *%cptr
+  store fp128 %c, ptr %cptr
   ret void
 }
 
 ; As above, but the sign comes from an f64.
-define void @f8(fp128 *%cptr, fp128 *%aptr, double %bd) {
+define void @f8(ptr %cptr, ptr %aptr, double %bd) {
 ; CHECK-LABEL: f8:
 ; CHECK: vl [[REG1:%v[0-7]+]], 0(%r3)
 ; CHECK: tmhh
@@ -56,15 +56,15 @@ define void @f8(fp128 *%cptr, fp128 *%aptr, double %bd) {
 ; CHECK: wflpxb [[REG2]], [[REG1]]
 ; CHECK: vst [[REG2]], 0(%r2)
 ; CHECK: br %r14
-  %a = load volatile fp128, fp128 *%aptr
+  %a = load volatile fp128, ptr %aptr
   %b = fpext double %bd to fp128
   %c = call fp128 @copysignl(fp128 %a, fp128 %b) readnone
-  store fp128 %c, fp128 *%cptr
+  store fp128 %c, ptr %cptr
   ret void
 }
 
 ; As above, but the sign comes from an f128.
-define void @f9(fp128 *%cptr, fp128 *%aptr, fp128 *%bptr) {
+define void @f9(ptr %cptr, ptr %aptr, ptr %bptr) {
 ; CHECK-LABEL: f9:
 ; CHECK: vl [[REG1:%v[0-7]+]], 0(%r3)
 ; CHECK: vl [[REG2:%v[0-7]+]], 0(%r4)
@@ -73,9 +73,9 @@ define void @f9(fp128 *%cptr, fp128 *%aptr, fp128 *%bptr) {
 ; CHECK: wflpxb [[REG1]], [[REG1]]
 ; CHECK: vst [[REG1]], 0(%r2)
 ; CHECK: br %r14
-  %a = load volatile fp128, fp128 *%aptr
-  %b = load volatile fp128, fp128 *%bptr
+  %a = load volatile fp128, ptr %aptr
+  %b = load volatile fp128, ptr %bptr
   %c = call fp128 @copysignl(fp128 %a, fp128 %b) readnone
-  store fp128 %c, fp128 *%cptr
+  store fp128 %c, ptr %cptr
   ret void
 }

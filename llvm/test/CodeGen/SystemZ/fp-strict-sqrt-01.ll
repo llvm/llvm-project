@@ -22,12 +22,12 @@ define float @f1(float %val) #0 {
 }
 
 ; Check the low end of the SQEB range.
-define float @f2(float *%ptr) #0 {
+define float @f2(ptr %ptr) #0 {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sqeb %f0, 0(%r2)
 ; CHECK-NEXT:    br %r14
-  %val = load float, float *%ptr
+  %val = load float, ptr %ptr
   %res = call float @llvm.experimental.constrained.sqrt.f32(
                         float %val,
                         metadata !"round.dynamic",
@@ -36,13 +36,13 @@ define float @f2(float *%ptr) #0 {
 }
 
 ; Check the high end of the aligned SQEB range.
-define float @f3(float *%base) #0 {
+define float @f3(ptr %base) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sqeb %f0, 4092(%r2)
 ; CHECK-NEXT:    br %r14
-  %ptr = getelementptr float, float *%base, i64 1023
-  %val = load float, float *%ptr
+  %ptr = getelementptr float, ptr %base, i64 1023
+  %val = load float, ptr %ptr
   %res = call float @llvm.experimental.constrained.sqrt.f32(
                         float %val,
                         metadata !"round.dynamic",
@@ -52,14 +52,14 @@ define float @f3(float *%base) #0 {
 
 ; Check the next word up, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define float @f4(float *%base) #0 {
+define float @f4(ptr %base) #0 {
 ; CHECK-LABEL: f4:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    aghi %r2, 4096
 ; CHECK-NEXT:    sqeb %f0, 0(%r2)
 ; CHECK-NEXT:    br %r14
-  %ptr = getelementptr float, float *%base, i64 1024
-  %val = load float, float *%ptr
+  %ptr = getelementptr float, ptr %base, i64 1024
+  %val = load float, ptr %ptr
   %res = call float @llvm.experimental.constrained.sqrt.f32(
                         float %val,
                         metadata !"round.dynamic",
@@ -68,14 +68,14 @@ define float @f4(float *%base) #0 {
 }
 
 ; Check negative displacements, which also need separate address logic.
-define float @f5(float *%base) #0 {
+define float @f5(ptr %base) #0 {
 ; CHECK-LABEL: f5:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    aghi %r2, -4
 ; CHECK-NEXT:    sqeb %f0, 0(%r2)
 ; CHECK-NEXT:    br %r14
-  %ptr = getelementptr float, float *%base, i64 -1
-  %val = load float, float *%ptr
+  %ptr = getelementptr float, ptr %base, i64 -1
+  %val = load float, ptr %ptr
   %res = call float @llvm.experimental.constrained.sqrt.f32(
                         float %val,
                         metadata !"round.dynamic",
@@ -84,15 +84,15 @@ define float @f5(float *%base) #0 {
 }
 
 ; Check that SQEB allows indices.
-define float @f6(float *%base, i64 %index) #0 {
+define float @f6(ptr %base, i64 %index) #0 {
 ; CHECK-LABEL: f6:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    sllg %r1, %r3, 2
 ; CHECK-NEXT:    sqeb %f0, 400(%r1,%r2)
 ; CHECK-NEXT:    br %r14
-  %ptr1 = getelementptr float, float *%base, i64 %index
-  %ptr2 = getelementptr float, float *%ptr1, i64 100
-  %val = load float, float *%ptr2
+  %ptr1 = getelementptr float, ptr %base, i64 %index
+  %ptr2 = getelementptr float, ptr %ptr1, i64 100
+  %val = load float, ptr %ptr2
   %res = call float @llvm.experimental.constrained.sqrt.f32(
                         float %val,
                         metadata !"round.dynamic",

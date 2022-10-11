@@ -10,7 +10,7 @@
 ; Test per function attributes and command line arguments that override them.
 
 attributes #1 = { "target-cpu"="z14" "target-features"="+vector" "use-soft-float"="false" }
-define double @fun1(double* %A) #1 {
+define double @fun1(ptr %A) #1 {
 ; CHECK-LABEL: fun1:
 ; DEFAULT:     ld %f0, 0(%r2)
 ; SOFT-FLOAT:  lg %r2, 0(%r2)
@@ -18,12 +18,12 @@ define double @fun1(double* %A) #1 {
 ; NO-VECTOR:   ld %f0, 0(%r2)
 ; CHECK-NEXT:  br %r14
 entry:
-  %0 = load double, double* %A
+  %0 = load double, ptr %A
   ret double %0
 }
 
 attributes #2 = { "target-cpu"="z14" "target-features"="+vector" "use-soft-float"="true" }
-define double @fun2(double* %A) #2 {
+define double @fun2(ptr %A) #2 {
 ; CHECK-LABEL: fun2:
 ; DEFAULT:     lg %r2, 0(%r2)
 ; SOFT-FLOAT:  lg %r2, 0(%r2)
@@ -31,12 +31,12 @@ define double @fun2(double* %A) #2 {
 ; NO-VECTOR:   lg %r2, 0(%r2)
 ; CHECK-NEXT:  br %r14
 entry:
-  %0 = load double, double* %A
+  %0 = load double, ptr %A
   ret double %0
 }
 
 attributes #3 = { "target-cpu"="z14" "target-features"="+vector" "use-soft-float"="false" }
-define <2 x double> @fun3(<2 x double>* %A) #3 {
+define <2 x double> @fun3(ptr %A) #3 {
 ; CHECK-LABEL:     fun3:
 ; DEFAULT:         vl %v24, 0(%r2), 3
 ; SOFT-FLOAT:      lg %r0, 0(%r2)
@@ -47,12 +47,12 @@ define <2 x double> @fun3(<2 x double>* %A) #3 {
 ; NO-VECTOR-NEXT:  ld %f2, 8(%r2)
 ; CHECK-NEXT:      br %r14
 entry:
-  %0 = load <2 x double>, <2 x double>* %A
+  %0 = load <2 x double>, ptr %A
   ret <2 x double> %0
 }
 
 attributes #4 = { "target-cpu"="z14" "target-features"="+vector" "use-soft-float"="true" }
-define <2 x double> @fun4(<2 x double>* %A) #4 {
+define <2 x double> @fun4(ptr %A) #4 {
 ; CHECK-LABEL:     fun4:
 ; DEFAULT:         lg %r0, 0(%r2)
 ; DEFAULT-NEXT:    lg %r3, 8(%r2)
@@ -68,12 +68,12 @@ define <2 x double> @fun4(<2 x double>* %A) #4 {
 ; NO-VECTOR-NEXT:  lgr %r2, %r0
 ; CHECK-NEXT:      br %r14
 entry:
-  %0 = load <2 x double>, <2 x double>* %A
+  %0 = load <2 x double>, ptr %A
   ret <2 x double> %0
 }
 
 attributes #5 = { "target-cpu"="z14" "target-features"="-vector" "use-soft-float"="false" }
-define <2 x double> @fun5(<2 x double>* %A) #5 {
+define <2 x double> @fun5(ptr %A) #5 {
 ; CHECK-LABEL:     fun5:
 ; DEFAULT:         ld %f0, 0(%r2)
 ; DEFAULT-NEXT:    ld %f2, 8(%r2)
@@ -86,12 +86,12 @@ define <2 x double> @fun5(<2 x double>* %A) #5 {
 ; NO-VECTOR-NEXT:  ld %f2, 8(%r2)
 ; CHECK-NEXT:      br %r14
 entry:
-  %0 = load <2 x double>, <2 x double>* %A
+  %0 = load <2 x double>, ptr %A
   ret <2 x double> %0
 }
 
 attributes #6 = { "target-cpu"="zEC12" "use-soft-float"="false" }
-define <2 x double> @fun6(<2 x double>* %A) #6 {
+define <2 x double> @fun6(ptr %A) #6 {
 ; CHECK-LABEL:     fun6:
 ; DEFAULT:         ld %f0, 0(%r2)
 ; DEFAULT-NEXT:    ld %f2, 8(%r2)
@@ -104,12 +104,12 @@ define <2 x double> @fun6(<2 x double>* %A) #6 {
 ; NO-VECTOR-NEXT:  ld %f2, 8(%r2)
 ; CHECK-NEXT:      br %r14
 entry:
-  %0 = load <2 x double>, <2 x double>* %A
+  %0 = load <2 x double>, ptr %A
   ret <2 x double> %0
 }
 
 attributes #7 = { "target-cpu"="zEC12" "target-features"="+vector" "use-soft-float"="false" }
-define <2 x double> @fun7(<2 x double>* %A) #7 {
+define <2 x double> @fun7(ptr %A) #7 {
 ; CHECK-LABEL:     fun7:
 ; DEFAULT:         vl %v24, 0(%r2), 3
 ; SOFT-FLOAT:      lg %r0, 0(%r2)
@@ -120,6 +120,6 @@ define <2 x double> @fun7(<2 x double>* %A) #7 {
 ; NO-VECTOR-NEXT:  ld %f2, 8(%r2)
 ; CHECK-NEXT:      br %r14
 entry:
-  %0 = load <2 x double>, <2 x double>* %A
+  %0 = load <2 x double>, ptr %A
   ret <2 x double> %0
 }
