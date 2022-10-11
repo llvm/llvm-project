@@ -289,3 +289,7 @@ def SysSendfileAPI : PublicAPI<"sys/sendfile.h"> {
 def SysUtsNameAPI : PublicAPI<"sys/utsname.h"> {
   let Types = ["struct utsname"];
 }
+
+def SpawnAPI : PublicAPI<"spawn.h"> {
+  let Types = ["mode_t", "posix_spawn_file_actions_t"];
+}

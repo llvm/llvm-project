@@ -390,6 +390,13 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.signal.sigfillset
     libc.src.signal.signal
 
+    # spawn.h entrypoints
+    libc.src.spawn.posix_spawn_file_actions_addclose
+    libc.src.spawn.posix_spawn_file_actions_adddup2
+    libc.src.spawn.posix_spawn_file_actions_addopen
+    libc.src.spawn.posix_spawn_file_actions_destroy
+    libc.src.spawn.posix_spawn_file_actions_init
+
     # threads.h entrypoints
     libc.src.threads.call_once
     libc.src.threads.cnd_broadcast
