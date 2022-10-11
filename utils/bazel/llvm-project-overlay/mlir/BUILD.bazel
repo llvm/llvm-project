@@ -1952,7 +1952,6 @@ cc_library(
         ":AffineDialect",
         ":FuncDialect",
         ":IR",
-        ":PDLDialect",
         ":SCFDialect",
         ":SCFTransformOpsIncGen",
         ":SCFTransforms",
