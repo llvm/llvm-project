@@ -11,4 +11,3 @@ static_library("grammar") {
     "LRTableBuild.cpp",
   ]
 }
-

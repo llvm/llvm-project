@@ -21,7 +21,7 @@ executable("llvm-dwarfutil") {
     "//llvm/lib/Target:AllTargetsInfos",
   ]
   sources = [
-    "llvm-dwarfutil.cpp",
     "DebugInfoLinker.cpp",
+    "llvm-dwarfutil.cpp",
   ]
 }
