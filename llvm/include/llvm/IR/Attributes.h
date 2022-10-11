@@ -1146,12 +1146,6 @@ public:
   /// doesn't exist, pair(0, 0) is returned.
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
 
-  /// Retrieve the minimum value of 'vscale_range'.
-  unsigned getVScaleRangeMin() const;
-
-  /// Retrieve the maximum value of 'vscale_range' or None when unknown.
-  Optional<unsigned> getVScaleRangeMax() const;
-
   /// Add integer attribute with raw value (packed/encoded if necessary).
   AttrBuilder &addRawIntAttr(Attribute::AttrKind Kind, uint64_t Value);
 
