@@ -850,6 +850,7 @@ if (current_toolchain == default_toolchain) {
       "map",
       "math.h",
       "memory",
+      "memory_resource",
       "mutex",
       "new",
       "numbers",
