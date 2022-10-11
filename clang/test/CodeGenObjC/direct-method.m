@@ -14,6 +14,7 @@ __attribute__((objc_root_class))
 - (int)getInt __attribute__((objc_direct));
 @property(direct, readonly) int intProperty;
 @property(direct, readonly) int intProperty2;
+@property(direct, readonly) id objectProperty;
 @end
 
 @implementation Root
@@ -166,6 +167,15 @@ __attribute__((objc_root_class))
 
 @end
 // CHECK-LABEL: define hidden i32 @"\01-[Root intProperty]"
+
+// Check the synthesized objectProperty calls objc_getProperty(); this also
+// checks that the synthesized method passes undef for the `cmd` argument.
+// CHECK-LABEL: define hidden i8* @"\01-[Root objectProperty]"(
+// CHECK-LABEL: objc_direct_method.cont:
+// CHECK-NEXT: [[SELFVAL:%.*]] = load {{.*}} %self.addr,
+// CHECK-NEXT: [[SELF:%.*]] = bitcast {{.*}} [[SELFVAL]] to i8*
+// CHECK-NEXT: [[IVAR:%.*]] = load {{.*}} @"OBJC_IVAR_$_Root._objectProperty",
+// CHECK-NEXT: call i8* @objc_getProperty(i8* noundef [[SELF]], i8* noundef poison, i64 noundef [[IVAR]], {{.*}})
 
 @interface Foo : Root {
   id __strong _cause_cxx_destruct;
