@@ -227,8 +227,7 @@ public:
   /// dereferenceable_or_null attribute.
   uint64_t getDereferenceableOrNullBytes() const;
 
-  /// Returns the argument numbers for the allocsize attribute (or pair(0, 0)
-  /// if not known).
+  /// Returns the argument numbers for the allocsize attribute.
   std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
 
   /// Returns the minimum value for the vscale_range attribute.
@@ -371,7 +370,7 @@ public:
   Type *getPreallocatedType() const;
   Type *getInAllocaType() const;
   Type *getElementType() const;
-  std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
+  Optional<std::pair<unsigned, Optional<unsigned>>> getAllocSizeArgs() const;
   unsigned getVScaleRangeMin() const;
   Optional<unsigned> getVScaleRangeMax() const;
   UWTableKind getUWTableKind() const;
@@ -1142,9 +1141,8 @@ public:
   /// Retrieve the inalloca type.
   Type *getInAllocaType() const { return getTypeAttr(Attribute::InAlloca); }
 
-  /// Retrieve the allocsize args, if the allocsize attribute exists.  If it
-  /// doesn't exist, pair(0, 0) is returned.
-  std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
+  /// Retrieve the allocsize args, or None if the attribute does not exist.
+  Optional<std::pair<unsigned, Optional<unsigned>>> getAllocSizeArgs() const;
 
   /// Add integer attribute with raw value (packed/encoded if necessary).
   AttrBuilder &addRawIntAttr(Attribute::AttrKind Kind, uint64_t Value);
