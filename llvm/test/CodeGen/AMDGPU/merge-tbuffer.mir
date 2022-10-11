@@ -8,15 +8,15 @@
 
 # GFX9-LABEL: name: gfx9_tbuffer_load_x_xyz
 # GFX9: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 4, 126, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %7.sub0
-# GFX9: %{{[0-9]+}}:vreg_96 = COPY killed %7.sub1_sub2_sub3
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %7.sub0
+# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %7.sub1_sub2_sub3
 name: gfx9_tbuffer_load_x_xyz
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %5:sgpr_128, 0, 8, 125, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
@@ -25,15 +25,15 @@ body:             |
 
 # GFX9-LABEL: name: gfx9_tbuffer_load_xyz_x
 # GFX9: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 4, 126, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_96 = COPY %7.sub0_sub1_sub2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %7.sub3
+# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY %7.sub0_sub1_sub2
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %7.sub3
 name: gfx9_tbuffer_load_xyz_x
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %5:sgpr_128, 0, 4, 125, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 16, 116, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -42,15 +42,15 @@ body:             |
 
 # GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy
 # GFX9: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 4, 126, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_64 = COPY %7.sub0_sub1
-# GFX9: %{{[0-9]+}}:vreg_64 = COPY killed %7.sub2_sub3
+# GFX9: %{{[0-9]+}}:vreg_64 = PRED_COPY %7.sub0_sub1
+# GFX9: %{{[0-9]+}}:vreg_64 = PRED_COPY killed %7.sub2_sub3
 name: gfx9_tbuffer_load_xy_xy
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %5:sgpr_128, 0, 4, 123, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
     %8:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %5:sgpr_128, 0, 12, 123, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
@@ -59,15 +59,15 @@ body:             |
 
 # GFX9-LABEL: name: gfx9_tbuffer_load_x_xy
 # GFX9: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 4, 125, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %7.sub0
-# GFX9: %{{[0-9]+}}:vreg_64 = COPY killed %7.sub1_sub2
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %7.sub0
+# GFX9: %{{[0-9]+}}:vreg_64 = PRED_COPY killed %7.sub1_sub2
 name: gfx9_tbuffer_load_x_xy
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %5:sgpr_128, 0, 8, 123, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
@@ -76,15 +76,15 @@ body:             |
 
 # GFX9-LABEL: name: gfx9_tbuffer_load_xy_x
 # GFX9: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 4, 125, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_64 = COPY %7.sub0_sub1
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %7.sub2
+# GFX9: %{{[0-9]+}}:vreg_64 = PRED_COPY %7.sub0_sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %7.sub2
 name: gfx9_tbuffer_load_xy_x
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %5:sgpr_128, 0, 4, 123, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 12, 116, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -94,16 +94,16 @@ body:             |
 
 # GFX9-LABEL: name: gfx9_tbuffer_load_x_x
 # GFX9: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 123, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %7.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %7.sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %7.sub0
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %7.sub1
 
 name: gfx9_tbuffer_load_x_x
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 116, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -112,16 +112,16 @@ body:             |
 
 # GFX9-LABEL: name: gfx9_tbuffer_load_x_x_format_32_32_32_32
 # GFX9: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 123, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %7.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %7.sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %7.sub0
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %7.sub1
 
 name: gfx9_tbuffer_load_x_x_format_32_32_32_32
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 126, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 126, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -131,28 +131,28 @@ body:             |
 
 # GFX9-LABEL: name: gfx9_tbuffer_load_float_32
 # GFX9: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 123, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %14.sub0
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %14.sub1
 # GFX9: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 126, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
-# GFX9: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
+# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY %17.sub0_sub1_sub2
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %17.sub3
+# GFX9: %{{[0-9]+}}:vreg_64 = PRED_COPY %16.sub0_sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %16.sub2
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %15.sub0
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %15.sub1
 # GFX9: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 125, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
+# GFX9: %{{[0-9]+}}:vreg_64 = PRED_COPY %19.sub0_sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %19.sub2
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %18.sub0
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %18.sub1
 
 name: gfx9_tbuffer_load_float_32
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 116, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -168,28 +168,28 @@ body:             |
 
 # GFX9-LABEL: name: gfx9_tbuffer_load_sint_32
 # GFX9: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 91, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %14.sub0
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %14.sub1
 # GFX9: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 94, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
-# GFX9: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
+# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY %17.sub0_sub1_sub2
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %17.sub3
+# GFX9: %{{[0-9]+}}:vreg_64 = PRED_COPY %16.sub0_sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %16.sub2
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %15.sub0
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %15.sub1
 # GFX9: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 93, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
+# GFX9: %{{[0-9]+}}:vreg_64 = PRED_COPY %19.sub0_sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %19.sub2
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %18.sub0
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %18.sub1
 
 name: gfx9_tbuffer_load_sint_32
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 84, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 84, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -205,28 +205,28 @@ body:             |
 
 # GFX9-LABEL: name: gfx9_tbuffer_load_uint_32
 # GFX9: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 75, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %14.sub0
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %14.sub1
 # GFX9: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 78, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
-# GFX9: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
+# GFX9: %{{[0-9]+}}:vreg_96 = PRED_COPY %17.sub0_sub1_sub2
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %17.sub3
+# GFX9: %{{[0-9]+}}:vreg_64 = PRED_COPY %16.sub0_sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %16.sub2
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %15.sub0
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %15.sub1
 # GFX9: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 77, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-# GFX9: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
+# GFX9: %{{[0-9]+}}:vreg_64 = PRED_COPY %19.sub0_sub1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %19.sub2
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY %18.sub0
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %18.sub1
 
 name: gfx9_tbuffer_load_uint_32
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 68, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 68, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -241,10 +241,10 @@ body:             |
 ---
 
 # GFX9-LABEL: name: gfx9_tbuffer_load_not_merged_data_format_mismatch
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
 # GFX9: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
 # GFX9: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
 # GFX9: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 8, 114, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -260,10 +260,10 @@ body:             |
 name: gfx9_tbuffer_load_not_merged_data_format_mismatch
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 114, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -278,10 +278,10 @@ body:             |
 ---
 
 # GFX9-LABEL: name: gfx9_tbuffer_load_not_merged_num_format_mismatch
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
 # GFX9: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
 # GFX9: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
 # GFX9: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 8, 84, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -295,10 +295,10 @@ body:             |
 name: gfx9_tbuffer_load_not_merged_num_format_mismatch
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 84, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -320,14 +320,14 @@ name: gfx9_tbuffer_store_x_xyz
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %14:vreg_96 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1, %6:vgpr_32, %subreg.sub2
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -345,14 +345,14 @@ name: gfx9_tbuffer_store_xyz_x
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %14:vreg_96 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1, %6:vgpr_32, %subreg.sub2
     TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact %14:vreg_96, %13:sgpr_128, 0, 4, 125, 0, 0, implicit $exec :: (dereferenceable store (s96), align 1, addrspace 4)
@@ -369,14 +369,14 @@ name: gfx9_tbuffer_store_xy_xy
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %14:vreg_64 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1
     %15:vreg_64 = REG_SEQUENCE %6:vgpr_32, %subreg.sub0, %7:vgpr_32, %subreg.sub1
@@ -393,14 +393,14 @@ name: gfx9_tbuffer_store_x_xy
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %14:vreg_64 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -417,14 +417,14 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %14:vreg_64 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1
     TBUFFER_STORE_FORMAT_XY_OFFSET_exact %14:vreg_64, %13:sgpr_128, 0, 4, 123, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
@@ -440,14 +440,14 @@ name: gfx9_tbuffer_store_x_x
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %6:vgpr_32, %13:sgpr_128, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 8, 116, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -461,14 +461,14 @@ name: gfx9_tbuffer_store_x_x_format_32_32_32_32
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %6:vgpr_32, %13:sgpr_128, 0, 4, 126, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 8, 126, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -476,19 +476,19 @@ body:             |
 ---
 
 # GFX9-LABEL: name: gfx9_tbuffer_store_float32
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr8
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr7
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr6
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr5
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr4
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr3
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr2
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr0
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
 # GFX9: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
 # GFX9: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
 # GFX9: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 123, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
@@ -503,19 +503,19 @@ name: gfx9_tbuffer_store_float32
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    %12:vgpr_32 = COPY $vgpr8
-    %11:vgpr_32 = COPY $vgpr7
-    %10:vgpr_32 = COPY $vgpr6
-    %9:vgpr_32 = COPY $vgpr5
-    %8:vgpr_32 = COPY $vgpr4
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %12:vgpr_32 = PRED_COPY $vgpr8
+    %11:vgpr_32 = PRED_COPY $vgpr7
+    %10:vgpr_32 = PRED_COPY $vgpr6
+    %9:vgpr_32 = PRED_COPY $vgpr5
+    %8:vgpr_32 = PRED_COPY $vgpr4
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 116, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -530,19 +530,19 @@ body:             |
 ---
 
 # GFX9-LABEL: name: gfx9_tbuffer_store_sint32
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr8
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr7
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr6
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr5
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr4
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr3
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr2
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr0
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
 # GFX9: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
 # GFX9: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
 # GFX9: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 91, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
@@ -557,19 +557,19 @@ name: gfx9_tbuffer_store_sint32
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    %12:vgpr_32 = COPY $vgpr8
-    %11:vgpr_32 = COPY $vgpr7
-    %10:vgpr_32 = COPY $vgpr6
-    %9:vgpr_32 = COPY $vgpr5
-    %8:vgpr_32 = COPY $vgpr4
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %12:vgpr_32 = PRED_COPY $vgpr8
+    %11:vgpr_32 = PRED_COPY $vgpr7
+    %10:vgpr_32 = PRED_COPY $vgpr6
+    %9:vgpr_32 = PRED_COPY $vgpr5
+    %8:vgpr_32 = PRED_COPY $vgpr4
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 84, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 84, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -584,19 +584,19 @@ body:             |
 ---
 
 # GFX9-LABEL: name: gfx9_tbuffer_store_uint32
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr8
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr7
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr6
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr5
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr4
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr3
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr2
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr0
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
 # GFX9: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
 # GFX9: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
 # GFX9: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 75, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
@@ -611,19 +611,19 @@ name: gfx9_tbuffer_store_uint32
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    %12:vgpr_32 = COPY $vgpr8
-    %11:vgpr_32 = COPY $vgpr7
-    %10:vgpr_32 = COPY $vgpr6
-    %9:vgpr_32 = COPY $vgpr5
-    %8:vgpr_32 = COPY $vgpr4
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %12:vgpr_32 = PRED_COPY $vgpr8
+    %11:vgpr_32 = PRED_COPY $vgpr7
+    %10:vgpr_32 = PRED_COPY $vgpr6
+    %9:vgpr_32 = PRED_COPY $vgpr5
+    %8:vgpr_32 = PRED_COPY $vgpr4
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 68, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 68, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -638,19 +638,19 @@ body:             |
 ---
 
 # GFX9-LABEL: name: gfx9_tbuffer_store_not_merged_data_format_mismatch
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr8
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr7
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr6
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr5
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr4
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr3
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr2
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr0
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
 # GFX9: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
 # GFX9: TBUFFER_STORE_FORMAT_X_OFFSET_exact %8, %13, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
 # GFX9: TBUFFER_STORE_FORMAT_X_OFFSET_exact %7, %13, 0, 8, 84, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -665,19 +665,19 @@ name: gfx9_tbuffer_store_not_merged_data_format_mismatch
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    %12:vgpr_32 = COPY $vgpr8
-    %11:vgpr_32 = COPY $vgpr7
-    %10:vgpr_32 = COPY $vgpr6
-    %9:vgpr_32 = COPY $vgpr5
-    %8:vgpr_32 = COPY $vgpr4
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %12:vgpr_32 = PRED_COPY $vgpr8
+    %11:vgpr_32 = PRED_COPY $vgpr7
+    %10:vgpr_32 = PRED_COPY $vgpr6
+    %9:vgpr_32 = PRED_COPY $vgpr5
+    %8:vgpr_32 = PRED_COPY $vgpr4
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 84, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -692,19 +692,19 @@ body:             |
 ---
 
 # GFX9-LABEL: name: gfx9_tbuffer_store_not_merged_num_format_mismatch
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
-# GFX9: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX9: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr8
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr7
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr6
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr5
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr4
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr3
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr2
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr1
+# GFX9: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr0
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX9: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
 # GFX9: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
 # GFX9: TBUFFER_STORE_FORMAT_X_OFFSET_exact %8, %13, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
 # GFX9: TBUFFER_STORE_FORMAT_X_OFFSET_exact %7, %13, 0, 8, 114, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -719,19 +719,19 @@ name: gfx9_tbuffer_store_not_merged_num_format_mismatch
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    %12:vgpr_32 = COPY $vgpr8
-    %11:vgpr_32 = COPY $vgpr7
-    %10:vgpr_32 = COPY $vgpr6
-    %9:vgpr_32 = COPY $vgpr5
-    %8:vgpr_32 = COPY $vgpr4
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %12:vgpr_32 = PRED_COPY $vgpr8
+    %11:vgpr_32 = PRED_COPY $vgpr7
+    %10:vgpr_32 = PRED_COPY $vgpr6
+    %9:vgpr_32 = PRED_COPY $vgpr5
+    %8:vgpr_32 = PRED_COPY $vgpr4
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 114, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -752,10 +752,10 @@ body:             |
 name: gfx9_tbuffer_load_not_merged_swizzled_0
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 116, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 116, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -769,10 +769,10 @@ body:             |
 name: gfx9_tbuffer_load_not_merged_swizzled_1
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 116, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -786,10 +786,10 @@ body:             |
 name: gfx9_tbuffer_load_merge_across_swizzle
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %4:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %5:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4:sgpr_128, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %6:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4:sgpr_128, 0, 12, 116, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -805,11 +805,11 @@ body:             |
 name: gfx9_tbuffer_load_merge_across_swizzled_store
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
-    %4:vgpr_32 = COPY $vgpr0
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %4:vgpr_32 = PRED_COPY $vgpr0
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %6:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %5:sgpr_128, 0, 6, 116, 0, 1, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -824,15 +824,15 @@ body:             |
 
 # GFX10-LABEL: name: gfx10_tbuffer_load_x_xyz
 # GFX10: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 4, 77, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %7.sub0
-# GFX10: %{{[0-9]+}}:vreg_96 = COPY killed %7.sub1_sub2_sub3
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY %7.sub0
+# GFX10: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %7.sub1_sub2_sub3
 name: gfx10_tbuffer_load_x_xyz
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %5:sgpr_128, 0, 8, 74, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
@@ -841,15 +841,15 @@ body:             |
 
 # GFX10-LABEL: name: gfx10_tbuffer_load_xyz_x
 # GFX10: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 4, 77, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vreg_96 = COPY %7.sub0_sub1_sub2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %7.sub3
+# GFX10: %{{[0-9]+}}:vreg_96 = PRED_COPY %7.sub0_sub1_sub2
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %7.sub3
 name: gfx10_tbuffer_load_xyz_x
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %5:sgpr_128, 0, 4, 74, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 16, 22, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
@@ -858,15 +858,15 @@ body:             |
 
 # GFX10-LABEL: name: gfx10_tbuffer_load_xy_xy
 # GFX10: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 4, 77, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vreg_64 = COPY %7.sub0_sub1
-# GFX10: %{{[0-9]+}}:vreg_64 = COPY killed %7.sub2_sub3
+# GFX10: %{{[0-9]+}}:vreg_64 = PRED_COPY %7.sub0_sub1
+# GFX10: %{{[0-9]+}}:vreg_64 = PRED_COPY killed %7.sub2_sub3
 name: gfx10_tbuffer_load_xy_xy
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %5:sgpr_128, 0, 4, 64, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
     %8:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %5:sgpr_128, 0, 12, 64, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
@@ -875,15 +875,15 @@ body:             |
 
 # GFX10-LABEL: name: gfx10_tbuffer_load_x_xy
 # GFX10: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 4, 74, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %7.sub0
-# GFX10: %{{[0-9]+}}:vreg_64 = COPY killed %7.sub1_sub2
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY %7.sub0
+# GFX10: %{{[0-9]+}}:vreg_64 = PRED_COPY killed %7.sub1_sub2
 name: gfx10_tbuffer_load_x_xy
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %5:sgpr_128, 0, 8, 64, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
@@ -892,15 +892,15 @@ body:             |
 
 # GFX10-LABEL: name: gfx10_tbuffer_load_xy_x
 # GFX10: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 4, 74, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vreg_64 = COPY %7.sub0_sub1
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %7.sub2
+# GFX10: %{{[0-9]+}}:vreg_64 = PRED_COPY %7.sub0_sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %7.sub2
 name: gfx10_tbuffer_load_xy_x
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %5:sgpr_128, 0, 4, 64, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 12, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -910,16 +910,16 @@ body:             |
 
 # GFX10-LABEL: name: gfx10_tbuffer_load_x_x
 # GFX10: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 64, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %7.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %7.sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY %7.sub0
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %7.sub1
 
 name: gfx10_tbuffer_load_x_x
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -928,16 +928,16 @@ body:             |
 
 # GFX10-LABEL: name: gfx10_tbuffer_load_x_x_format_32_32_32_32
 # GFX10: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 64, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %7.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %7.sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY %7.sub0
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %7.sub1
 
 name: gfx10_tbuffer_load_x_x_format_32_32_32_32
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 77, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 77, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -947,28 +947,28 @@ body:             |
 
 # GFX10-LABEL: name: gfx10_tbuffer_load_float_32
 # GFX10: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 64, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY %14.sub0
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %14.sub1
 # GFX10: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 77, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
-# GFX10: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
+# GFX10: %{{[0-9]+}}:vreg_96 = PRED_COPY %17.sub0_sub1_sub2
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %17.sub3
+# GFX10: %{{[0-9]+}}:vreg_64 = PRED_COPY %16.sub0_sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %16.sub2
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY %15.sub0
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %15.sub1
 # GFX10: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 74, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
+# GFX10: %{{[0-9]+}}:vreg_64 = PRED_COPY %19.sub0_sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %19.sub2
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY %18.sub0
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %18.sub1
 
 name: gfx10_tbuffer_load_float_32
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -984,28 +984,28 @@ body:             |
 
 # GFX10-LABEL: name: gfx10_tbuffer_load_sint_32
 # GFX10: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 63, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY %14.sub0
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %14.sub1
 # GFX10: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 76, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
-# GFX10: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
+# GFX10: %{{[0-9]+}}:vreg_96 = PRED_COPY %17.sub0_sub1_sub2
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %17.sub3
+# GFX10: %{{[0-9]+}}:vreg_64 = PRED_COPY %16.sub0_sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %16.sub2
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY %15.sub0
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %15.sub1
 # GFX10: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 73, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
+# GFX10: %{{[0-9]+}}:vreg_64 = PRED_COPY %19.sub0_sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %19.sub2
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY %18.sub0
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %18.sub1
 
 name: gfx10_tbuffer_load_sint_32
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 21, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 21, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1021,28 +1021,28 @@ body:             |
 
 # GFX10-LABEL: name: gfx10_tbuffer_load_uint_32
 # GFX10: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 62, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY %14.sub0
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %14.sub1
 # GFX10: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 75, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
-# GFX10: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
+# GFX10: %{{[0-9]+}}:vreg_96 = PRED_COPY %17.sub0_sub1_sub2
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %17.sub3
+# GFX10: %{{[0-9]+}}:vreg_64 = PRED_COPY %16.sub0_sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %16.sub2
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY %15.sub0
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %15.sub1
 # GFX10: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 72, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-# GFX10: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
+# GFX10: %{{[0-9]+}}:vreg_64 = PRED_COPY %19.sub0_sub1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %19.sub2
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY %18.sub0
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %18.sub1
 
 name: gfx10_tbuffer_load_uint_32
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 20, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 20, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1057,10 +1057,10 @@ body:             |
 ---
 
 # GFX10-LABEL: name: gfx10_tbuffer_load_not_merged_data_format_mismatch
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
 # GFX10: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
 # GFX10: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
 # GFX10: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 8, 13, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1076,10 +1076,10 @@ body:             |
 name: gfx10_tbuffer_load_not_merged_data_format_mismatch
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 13, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1094,10 +1094,10 @@ body:             |
 ---
 
 # GFX10-LABEL: name: gfx10_tbuffer_load_not_merged_num_format_mismatch
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
 # GFX10: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
 # GFX10: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
 # GFX10: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 8, 21, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1111,10 +1111,10 @@ body:             |
 name: gfx10_tbuffer_load_not_merged_num_format_mismatch
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 21, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1138,14 +1138,14 @@ name: gfx10_tbuffer_store_x_xyz
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %14:vreg_96 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1, %6:vgpr_32, %subreg.sub2
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -1162,14 +1162,14 @@ name: gfx10_tbuffer_store_xyz_x
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %14:vreg_96 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1, %6:vgpr_32, %subreg.sub2
     TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact %14:vreg_96, %13:sgpr_128, 0, 4, 74, 0, 0, implicit $exec :: (dereferenceable store (s96), align 1, addrspace 4)
@@ -1186,14 +1186,14 @@ name: gfx10_tbuffer_store_xy_xy
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %14:vreg_64 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1
     %15:vreg_64 = REG_SEQUENCE %6:vgpr_32, %subreg.sub0, %7:vgpr_32, %subreg.sub1
@@ -1210,14 +1210,14 @@ name: gfx10_tbuffer_store_x_xy
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %14:vreg_64 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -1234,14 +1234,14 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %14:vreg_64 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1
     TBUFFER_STORE_FORMAT_XY_OFFSET_exact %14:vreg_64, %13:sgpr_128, 0, 4, 64, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
@@ -1257,14 +1257,14 @@ name: gfx10_tbuffer_store_x_x
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %6:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 8, 22, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -1278,14 +1278,14 @@ name: gfx10_tbuffer_store_x_x_format_32_32_32_32
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %6:vgpr_32, %13:sgpr_128, 0, 4, 77, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 8, 77, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -1293,19 +1293,19 @@ body:             |
 ---
 
 # GFX10-LABEL: name: gfx10_tbuffer_store_float32
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr8
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr7
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr6
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr5
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr4
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr3
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr2
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr0
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
 # GFX10: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
 # GFX10: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
 # GFX10: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 64, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
@@ -1320,19 +1320,19 @@ name: gfx10_tbuffer_store_float32
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    %12:vgpr_32 = COPY $vgpr8
-    %11:vgpr_32 = COPY $vgpr7
-    %10:vgpr_32 = COPY $vgpr6
-    %9:vgpr_32 = COPY $vgpr5
-    %8:vgpr_32 = COPY $vgpr4
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %12:vgpr_32 = PRED_COPY $vgpr8
+    %11:vgpr_32 = PRED_COPY $vgpr7
+    %10:vgpr_32 = PRED_COPY $vgpr6
+    %9:vgpr_32 = PRED_COPY $vgpr5
+    %8:vgpr_32 = PRED_COPY $vgpr4
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 22, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -1347,19 +1347,19 @@ body:             |
 ---
 
 # GFX10-LABEL: name: gfx10_tbuffer_store_sint32
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr8
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr7
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr6
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr5
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr4
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr3
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr2
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr0
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
 # GFX10: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
 # GFX10: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
 # GFX10: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 63, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
@@ -1374,19 +1374,19 @@ name: gfx10_tbuffer_store_sint32
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    %12:vgpr_32 = COPY $vgpr8
-    %11:vgpr_32 = COPY $vgpr7
-    %10:vgpr_32 = COPY $vgpr6
-    %9:vgpr_32 = COPY $vgpr5
-    %8:vgpr_32 = COPY $vgpr4
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %12:vgpr_32 = PRED_COPY $vgpr8
+    %11:vgpr_32 = PRED_COPY $vgpr7
+    %10:vgpr_32 = PRED_COPY $vgpr6
+    %9:vgpr_32 = PRED_COPY $vgpr5
+    %8:vgpr_32 = PRED_COPY $vgpr4
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 21, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 21, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -1401,19 +1401,19 @@ body:             |
 ---
 
 # GFX10-LABEL: name: gfx10_tbuffer_store_uint32
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr8
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr7
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr6
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr5
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr4
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr3
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr2
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr0
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
 # GFX10: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
 # GFX10: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
 # GFX10: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 62, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
@@ -1428,19 +1428,19 @@ name: gfx10_tbuffer_store_uint32
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    %12:vgpr_32 = COPY $vgpr8
-    %11:vgpr_32 = COPY $vgpr7
-    %10:vgpr_32 = COPY $vgpr6
-    %9:vgpr_32 = COPY $vgpr5
-    %8:vgpr_32 = COPY $vgpr4
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %12:vgpr_32 = PRED_COPY $vgpr8
+    %11:vgpr_32 = PRED_COPY $vgpr7
+    %10:vgpr_32 = PRED_COPY $vgpr6
+    %9:vgpr_32 = PRED_COPY $vgpr5
+    %8:vgpr_32 = PRED_COPY $vgpr4
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 20, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 20, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -1455,19 +1455,19 @@ body:             |
 ---
 
 # GFX10-LABEL: name: gfx10_tbuffer_store_not_merged_data_format_mismatch
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr8
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr7
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr6
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr5
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr4
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr3
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr2
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr0
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
 # GFX10: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
 # GFX10: TBUFFER_STORE_FORMAT_X_OFFSET_exact %8, %13, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
 # GFX10: TBUFFER_STORE_FORMAT_X_OFFSET_exact %7, %13, 0, 8, 21, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -1482,19 +1482,19 @@ name: gfx10_tbuffer_store_not_merged_data_format_mismatch
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    %12:vgpr_32 = COPY $vgpr8
-    %11:vgpr_32 = COPY $vgpr7
-    %10:vgpr_32 = COPY $vgpr6
-    %9:vgpr_32 = COPY $vgpr5
-    %8:vgpr_32 = COPY $vgpr4
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %12:vgpr_32 = PRED_COPY $vgpr8
+    %11:vgpr_32 = PRED_COPY $vgpr7
+    %10:vgpr_32 = PRED_COPY $vgpr6
+    %9:vgpr_32 = PRED_COPY $vgpr5
+    %8:vgpr_32 = PRED_COPY $vgpr4
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 21, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -1509,19 +1509,19 @@ body:             |
 ---
 
 # GFX10-LABEL: name: gfx10_tbuffer_store_not_merged_num_format_mismatch
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
-# GFX10: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX10: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr8
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr7
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr6
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr5
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr4
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr3
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr2
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr1
+# GFX10: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr0
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX10: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
 # GFX10: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
 # GFX10: TBUFFER_STORE_FORMAT_X_OFFSET_exact %8, %13, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
 # GFX10: TBUFFER_STORE_FORMAT_X_OFFSET_exact %7, %13, 0, 8, 13, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -1536,19 +1536,19 @@ name: gfx10_tbuffer_store_not_merged_num_format_mismatch
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    %12:vgpr_32 = COPY $vgpr8
-    %11:vgpr_32 = COPY $vgpr7
-    %10:vgpr_32 = COPY $vgpr6
-    %9:vgpr_32 = COPY $vgpr5
-    %8:vgpr_32 = COPY $vgpr4
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %12:vgpr_32 = PRED_COPY $vgpr8
+    %11:vgpr_32 = PRED_COPY $vgpr7
+    %10:vgpr_32 = PRED_COPY $vgpr6
+    %9:vgpr_32 = PRED_COPY $vgpr5
+    %8:vgpr_32 = PRED_COPY $vgpr4
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 13, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -1569,10 +1569,10 @@ body:             |
 name: gfx10_tbuffer_load_not_merged_swizzled_0
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1586,10 +1586,10 @@ body:             |
 name: gfx10_tbuffer_load_not_merged_swizzled_1
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 22, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1603,10 +1603,10 @@ body:             |
 name: gfx10_tbuffer_load_merge_across_swizzle
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %4:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %5:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %6:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4:sgpr_128, 0, 12, 22, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1621,15 +1621,15 @@ body:             |
 
 # GFX11-LABEL: name: gfx11_tbuffer_load_x_xyz
 # GFX11: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 4, 63, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %7.sub0
-# GFX11: %{{[0-9]+}}:vreg_96 = COPY killed %7.sub1_sub2_sub3
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY %7.sub0
+# GFX11: %{{[0-9]+}}:vreg_96 = PRED_COPY killed %7.sub1_sub2_sub3
 name: gfx11_tbuffer_load_x_xyz
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
     %8:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %5:sgpr_128, 0, 8, 60, 0, 0, implicit $exec :: (dereferenceable load 12, align 1, addrspace 4)
@@ -1638,15 +1638,15 @@ body:             |
 
 # GFX11-LABEL: name: gfx11_tbuffer_load_xyz_x
 # GFX11: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 4, 63, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX11: %{{[0-9]+}}:vreg_96 = COPY %7.sub0_sub1_sub2
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %7.sub3
+# GFX11: %{{[0-9]+}}:vreg_96 = PRED_COPY %7.sub0_sub1_sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %7.sub3
 name: gfx11_tbuffer_load_xyz_x
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %5:sgpr_128, 0, 4, 60, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 16, 22, 0, 0, implicit $exec :: (dereferenceable load 12, align 1, addrspace 4)
@@ -1655,15 +1655,15 @@ body:             |
 
 # GFX11-LABEL: name: gfx11_tbuffer_load_xy_xy
 # GFX11: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 4, 63, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX11: %{{[0-9]+}}:vreg_64 = COPY %7.sub0_sub1
-# GFX11: %{{[0-9]+}}:vreg_64 = COPY killed %7.sub2_sub3
+# GFX11: %{{[0-9]+}}:vreg_64 = PRED_COPY %7.sub0_sub1
+# GFX11: %{{[0-9]+}}:vreg_64 = PRED_COPY killed %7.sub2_sub3
 name: gfx11_tbuffer_load_xy_xy
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %5:sgpr_128, 0, 4, 50, 0, 0, implicit $exec :: (dereferenceable load 8, align 1, addrspace 4)
     %8:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %5:sgpr_128, 0, 12, 50, 0, 0, implicit $exec :: (dereferenceable load 8, align 1, addrspace 4)
@@ -1672,15 +1672,15 @@ body:             |
 
 # GFX11-LABEL: name: gfx11_tbuffer_load_x_xy
 # GFX11: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 4, 60, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %7.sub0
-# GFX11: %{{[0-9]+}}:vreg_64 = COPY killed %7.sub1_sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY %7.sub0
+# GFX11: %{{[0-9]+}}:vreg_64 = PRED_COPY killed %7.sub1_sub2
 name: gfx11_tbuffer_load_x_xy
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
     %8:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %5:sgpr_128, 0, 8, 50, 0, 0, implicit $exec :: (dereferenceable load 8, align 1, addrspace 4)
@@ -1689,15 +1689,15 @@ body:             |
 
 # GFX11-LABEL: name: gfx11_tbuffer_load_xy_x
 # GFX11: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 4, 60, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-# GFX11: %{{[0-9]+}}:vreg_64 = COPY %7.sub0_sub1
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %7.sub2
+# GFX11: %{{[0-9]+}}:vreg_64 = PRED_COPY %7.sub0_sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %7.sub2
 name: gfx11_tbuffer_load_xy_x
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %5:sgpr_128, 0, 4, 50, 0, 0, implicit $exec :: (dereferenceable load 8, align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 12, 22, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
@@ -1707,16 +1707,16 @@ body:             |
 
 # GFX11-LABEL: name: gfx11_tbuffer_load_x_x
 # GFX11: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 50, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %7.sub0
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %7.sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY %7.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %7.sub1
 
 name: gfx11_tbuffer_load_x_x
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 22, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
@@ -1725,16 +1725,16 @@ body:             |
 
 # GFX11-LABEL: name: gfx11_tbuffer_load_x_x_format_32_32_32_32
 # GFX11: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 50, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %7.sub0
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %7.sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY %7.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %7.sub1
 
 name: gfx11_tbuffer_load_x_x_format_32_32_32_32
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 63, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 63, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
@@ -1744,28 +1744,28 @@ body:             |
 
 # GFX11-LABEL: name: gfx11_tbuffer_load_float_32
 # GFX11: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 50, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY %14.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %14.sub1
 # GFX11: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 63, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX11: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
-# GFX11: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
+# GFX11: %{{[0-9]+}}:vreg_96 = PRED_COPY %17.sub0_sub1_sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %17.sub3
+# GFX11: %{{[0-9]+}}:vreg_64 = PRED_COPY %16.sub0_sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %16.sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY %15.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %15.sub1
 # GFX11: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 60, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-# GFX11: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
+# GFX11: %{{[0-9]+}}:vreg_64 = PRED_COPY %19.sub0_sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %19.sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY %18.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %18.sub1
 
 name: gfx11_tbuffer_load_float_32
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 22, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
@@ -1781,28 +1781,28 @@ body:             |
 
 # GFX11-LABEL: name: gfx11_tbuffer_load_sint_32
 # GFX11: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 49, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY %14.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %14.sub1
 # GFX11: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 62, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX11: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
-# GFX11: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
+# GFX11: %{{[0-9]+}}:vreg_96 = PRED_COPY %17.sub0_sub1_sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %17.sub3
+# GFX11: %{{[0-9]+}}:vreg_64 = PRED_COPY %16.sub0_sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %16.sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY %15.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %15.sub1
 # GFX11: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 59, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-# GFX11: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
+# GFX11: %{{[0-9]+}}:vreg_64 = PRED_COPY %19.sub0_sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %19.sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY %18.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %18.sub1
 
 name: gfx11_tbuffer_load_sint_32
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 21, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 21, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
@@ -1818,28 +1818,28 @@ body:             |
 
 # GFX11-LABEL: name: gfx11_tbuffer_load_uint_32
 # GFX11: %{{[0-9]+}}:vreg_64 = TBUFFER_LOAD_FORMAT_XY_OFFSET %4, 0, 4, 48, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %14.sub0
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %14.sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY %14.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %14.sub1
 # GFX11: %{{[0-9]+}}:vreg_128 = TBUFFER_LOAD_FORMAT_XYZW_OFFSET %4, 0, 16, 61, 0, 0, implicit $exec :: (dereferenceable load (s128), align 1, addrspace 4)
-# GFX11: %{{[0-9]+}}:vreg_96 = COPY %17.sub0_sub1_sub2
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %17.sub3
-# GFX11: %{{[0-9]+}}:vreg_64 = COPY %16.sub0_sub1
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %16.sub2
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %15.sub0
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %15.sub1
+# GFX11: %{{[0-9]+}}:vreg_96 = PRED_COPY %17.sub0_sub1_sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %17.sub3
+# GFX11: %{{[0-9]+}}:vreg_64 = PRED_COPY %16.sub0_sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %16.sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY %15.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %15.sub1
 # GFX11: %{{[0-9]+}}:vreg_96 = TBUFFER_LOAD_FORMAT_XYZ_OFFSET %4, 0, 36, 58, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-# GFX11: %{{[0-9]+}}:vreg_64 = COPY %19.sub0_sub1
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %19.sub2
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY %18.sub0
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY killed %18.sub1
+# GFX11: %{{[0-9]+}}:vreg_64 = PRED_COPY %19.sub0_sub1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %19.sub2
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY %18.sub0
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY killed %18.sub1
 
 name: gfx11_tbuffer_load_uint_32
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 20, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 20, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
@@ -1854,10 +1854,10 @@ body:             |
 ---
 
 # GFX11-LABEL: name: gfx11_tbuffer_load_not_merged_data_format_mismatch
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
 # GFX11: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
 # GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
 # GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 8, 13, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1873,10 +1873,10 @@ body:             |
 name: gfx11_tbuffer_load_not_merged_data_format_mismatch
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 13, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
@@ -1891,10 +1891,10 @@ body:             |
 ---
 
 # GFX11-LABEL: name: gfx11_tbuffer_load_not_merged_num_format_mismatch
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
 # GFX11: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1, %2, %subreg.sub2, %3, %subreg.sub3
 # GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
 # GFX11: %{{[0-9]+}}:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %4, 0, 8, 21, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
@@ -1908,10 +1908,10 @@ body:             |
 name: gfx11_tbuffer_load_not_merged_num_format_mismatch
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 21, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
@@ -1935,14 +1935,14 @@ name: gfx11_tbuffer_store_x_xyz
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %14:vreg_96 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1, %6:vgpr_32, %subreg.sub2
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
@@ -1959,14 +1959,14 @@ name: gfx11_tbuffer_store_xyz_x
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %14:vreg_96 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1, %6:vgpr_32, %subreg.sub2
     TBUFFER_STORE_FORMAT_XYZ_OFFSET_exact %14:vreg_96, %13:sgpr_128, 0, 4, 60, 0, 0, implicit $exec :: (dereferenceable store 12, align 1, addrspace 4)
@@ -1983,14 +1983,14 @@ name: gfx11_tbuffer_store_xy_xy
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %14:vreg_64 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1
     %15:vreg_64 = REG_SEQUENCE %6:vgpr_32, %subreg.sub0, %7:vgpr_32, %subreg.sub1
@@ -2007,14 +2007,14 @@ name: gfx11_tbuffer_store_x_xy
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %14:vreg_64 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
@@ -2031,14 +2031,14 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %14:vreg_64 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1
     TBUFFER_STORE_FORMAT_XY_OFFSET_exact %14:vreg_64, %13:sgpr_128, 0, 4, 50, 0, 0, implicit $exec :: (dereferenceable store 8, align 1, addrspace 4)
@@ -2054,14 +2054,14 @@ name: gfx11_tbuffer_store_x_x
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %6:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 8, 22, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
@@ -2075,14 +2075,14 @@ name: gfx11_tbuffer_store_x_x_format_32_32_32_32
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %6:vgpr_32, %13:sgpr_128, 0, 4, 63, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 8, 63, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
@@ -2090,19 +2090,19 @@ body:             |
 ---
 
 # GFX11-LABEL: name: gfx11_tbuffer_store_float32
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr8
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr7
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr6
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr5
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr4
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr3
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr2
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr0
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
 # GFX11: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
 # GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
 # GFX11: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 50, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
@@ -2117,19 +2117,19 @@ name: gfx11_tbuffer_store_float32
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    %12:vgpr_32 = COPY $vgpr8
-    %11:vgpr_32 = COPY $vgpr7
-    %10:vgpr_32 = COPY $vgpr6
-    %9:vgpr_32 = COPY $vgpr5
-    %8:vgpr_32 = COPY $vgpr4
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %12:vgpr_32 = PRED_COPY $vgpr8
+    %11:vgpr_32 = PRED_COPY $vgpr7
+    %10:vgpr_32 = PRED_COPY $vgpr6
+    %9:vgpr_32 = PRED_COPY $vgpr5
+    %8:vgpr_32 = PRED_COPY $vgpr4
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 22, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
@@ -2144,19 +2144,19 @@ body:             |
 ---
 
 # GFX11-LABEL: name: gfx11_tbuffer_store_sint32
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr8
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr7
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr6
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr5
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr4
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr3
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr2
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr0
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
 # GFX11: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
 # GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
 # GFX11: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 49, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
@@ -2171,19 +2171,19 @@ name: gfx11_tbuffer_store_sint32
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    %12:vgpr_32 = COPY $vgpr8
-    %11:vgpr_32 = COPY $vgpr7
-    %10:vgpr_32 = COPY $vgpr6
-    %9:vgpr_32 = COPY $vgpr5
-    %8:vgpr_32 = COPY $vgpr4
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %12:vgpr_32 = PRED_COPY $vgpr8
+    %11:vgpr_32 = PRED_COPY $vgpr7
+    %10:vgpr_32 = PRED_COPY $vgpr6
+    %9:vgpr_32 = PRED_COPY $vgpr5
+    %8:vgpr_32 = PRED_COPY $vgpr4
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 21, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 21, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
@@ -2198,19 +2198,19 @@ body:             |
 ---
 
 # GFX11-LABEL: name: gfx11_tbuffer_store_uint32
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr8
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr7
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr6
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr5
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr4
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr3
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr2
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr0
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
 # GFX11: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
 # GFX11: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE %8, %subreg.sub0, %7, %subreg.sub1
 # GFX11: TBUFFER_STORE_FORMAT_XY_OFFSET_exact killed %14, %13, 0, 4, 48, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
@@ -2225,19 +2225,19 @@ name: gfx11_tbuffer_store_uint32
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    %12:vgpr_32 = COPY $vgpr8
-    %11:vgpr_32 = COPY $vgpr7
-    %10:vgpr_32 = COPY $vgpr6
-    %9:vgpr_32 = COPY $vgpr5
-    %8:vgpr_32 = COPY $vgpr4
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %12:vgpr_32 = PRED_COPY $vgpr8
+    %11:vgpr_32 = PRED_COPY $vgpr7
+    %10:vgpr_32 = PRED_COPY $vgpr6
+    %9:vgpr_32 = PRED_COPY $vgpr5
+    %8:vgpr_32 = PRED_COPY $vgpr4
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 20, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 20, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
@@ -2252,19 +2252,19 @@ body:             |
 ---
 
 # GFX11-LABEL: name: gfx11_tbuffer_store_not_merged_data_format_mismatch
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr8
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr7
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr6
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr5
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr4
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr3
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr2
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr0
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
 # GFX11: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
 # GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %8, %13, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
 # GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %7, %13, 0, 8, 21, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -2279,19 +2279,19 @@ name: gfx11_tbuffer_store_not_merged_data_format_mismatch
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    %12:vgpr_32 = COPY $vgpr8
-    %11:vgpr_32 = COPY $vgpr7
-    %10:vgpr_32 = COPY $vgpr6
-    %9:vgpr_32 = COPY $vgpr5
-    %8:vgpr_32 = COPY $vgpr4
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %12:vgpr_32 = PRED_COPY $vgpr8
+    %11:vgpr_32 = PRED_COPY $vgpr7
+    %10:vgpr_32 = PRED_COPY $vgpr6
+    %9:vgpr_32 = PRED_COPY $vgpr5
+    %8:vgpr_32 = PRED_COPY $vgpr4
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 21, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
@@ -2306,19 +2306,19 @@ body:             |
 ---
 
 # GFX11-LABEL: name: gfx11_tbuffer_store_not_merged_num_format_mismatch
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr8
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr7
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr6
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr5
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr4
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr3
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr2
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr1
-# GFX11: %{{[0-9]+}}:vgpr_32 = COPY $vgpr0
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr3
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr2
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr1
-# GFX11: %{{[0-9]+}}:sgpr_32 = COPY $sgpr0
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr8
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr7
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr6
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr5
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr4
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr3
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr2
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr1
+# GFX11: %{{[0-9]+}}:vgpr_32 = PRED_COPY $vgpr0
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr3
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr2
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr1
+# GFX11: %{{[0-9]+}}:sgpr_32 = PRED_COPY $sgpr0
 # GFX11: %{{[0-9]+}}:sgpr_128 = REG_SEQUENCE %12, %subreg.sub0, %11, %subreg.sub1, %10, %subreg.sub2, %9, %subreg.sub3
 # GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %8, %13, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
 # GFX11: TBUFFER_STORE_FORMAT_X_OFFSET_exact %7, %13, 0, 8, 13, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
@@ -2333,19 +2333,19 @@ name: gfx11_tbuffer_store_not_merged_num_format_mismatch
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
-    %12:vgpr_32 = COPY $vgpr8
-    %11:vgpr_32 = COPY $vgpr7
-    %10:vgpr_32 = COPY $vgpr6
-    %9:vgpr_32 = COPY $vgpr5
-    %8:vgpr_32 = COPY $vgpr4
-    %7:vgpr_32 = COPY $vgpr3
-    %6:vgpr_32 = COPY $vgpr2
-    %5:vgpr_32 = COPY $vgpr1
-    %4:vgpr_32 = COPY $vgpr0
-    %3:sgpr_32 = COPY $sgpr3
-    %2:sgpr_32 = COPY $sgpr2
-    %1:sgpr_32 = COPY $sgpr1
-    %0:sgpr_32 = COPY $sgpr0
+    %12:vgpr_32 = PRED_COPY $vgpr8
+    %11:vgpr_32 = PRED_COPY $vgpr7
+    %10:vgpr_32 = PRED_COPY $vgpr6
+    %9:vgpr_32 = PRED_COPY $vgpr5
+    %8:vgpr_32 = PRED_COPY $vgpr4
+    %7:vgpr_32 = PRED_COPY $vgpr3
+    %6:vgpr_32 = PRED_COPY $vgpr2
+    %5:vgpr_32 = PRED_COPY $vgpr1
+    %4:vgpr_32 = PRED_COPY $vgpr0
+    %3:sgpr_32 = PRED_COPY $sgpr3
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %0:sgpr_32 = PRED_COPY $sgpr0
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %4:vgpr_32, %13:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %5:vgpr_32, %13:sgpr_128, 0, 8, 13, 0, 0, implicit $exec :: (dereferenceable store 4, align 1, addrspace 4)
@@ -2366,10 +2366,10 @@ body:             |
 name: gfx11_tbuffer_load_not_merged_swizzled_0
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 1, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 22, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
@@ -2383,10 +2383,10 @@ body:             |
 name: gfx11_tbuffer_load_not_merged_swizzled_1
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 8, 22, 0, 1, implicit $exec :: (dereferenceable load 4, align 1, addrspace 4)
@@ -2400,10 +2400,10 @@ body:             |
 name: gfx11_tbuffer_load_merge_across_swizzle
 body:             |
   bb.0.entry:
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
+    %0:sgpr_32 = PRED_COPY $sgpr0
+    %1:sgpr_32 = PRED_COPY $sgpr1
+    %2:sgpr_32 = PRED_COPY $sgpr2
+    %3:sgpr_32 = PRED_COPY $sgpr3
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 4, 22, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %8:vgpr_32 = TBUFFER_LOAD_FORMAT_X_OFFSET %5:sgpr_128, 0, 12, 22, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)

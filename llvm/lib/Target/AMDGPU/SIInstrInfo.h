@@ -263,7 +263,7 @@ public:
 
   // Returns an opcode that can be used to move a value to a \p DstRC
   // register.  If there is no hardware instruction that can store to \p
-  // DstRC, then AMDGPU::COPY is returned.
+  // DstRC, then getCopyOpcode() is returned.
   unsigned getMovOpcode(const TargetRegisterClass *DstRC) const;
 
   const MCInstrDesc &getIndirectRegWriteMovRelPseudo(unsigned VecSize,

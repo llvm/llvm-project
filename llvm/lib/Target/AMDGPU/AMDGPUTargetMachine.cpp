@@ -352,10 +352,10 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILowerI1CopiesPass(*PR);
   initializeSILowerSGPRSpillsPass(*PR);
   initializeSIFixSGPRCopiesPass(*PR);
-  initializeSIFixVGPRCopiesPass(*PR);
   initializeSIFoldOperandsPass(*PR);
   initializeSIPeepholeSDWAPass(*PR);
   initializeSIShrinkInstructionsPass(*PR);
+  initializeSISimplifyPredicatedCopiesPass(*PR);
   initializeSIOptimizeExecMaskingPreRAPass(*PR);
   initializeSIOptimizeVGPRLiveRangePass(*PR);
   initializeSILoadStoreOptimizerPass(*PR);
@@ -1303,6 +1303,8 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 bool GCNPassConfig::addPreRewrite() {
   if (EnableRegReassign)
     addPass(&GCNNSAReassignID);
+
+  addPass(&SISimplifyPredicatedCopiesID);
   return true;
 }
 
@@ -1353,6 +1355,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(&SILowerSGPRSpillsID);
 
   addPass(createVGPRAllocPass(false));
+  addPass(&SISimplifyPredicatedCopiesID);
   return true;
 }
 
@@ -1380,7 +1383,6 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 }
 
 void GCNPassConfig::addPostRegAlloc() {
-  addPass(&SIFixVGPRCopiesID);
   if (getOptLevel() > CodeGenOpt::None)
     addPass(&SIOptimizeExecMaskingID);
   TargetPassConfig::addPostRegAlloc();

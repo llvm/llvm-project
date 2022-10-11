@@ -4287,8 +4287,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     const auto *CondRC = TRI->getRegClass(AMDGPU::SReg_1_XEXECRegClassID);
     Register SrcCondCopy = MRI.createVirtualRegister(CondRC);
 
-    BuildMI(*BB, MI, DL, TII->get(AMDGPU::COPY), SrcCondCopy)
-      .addReg(SrcCond);
+    BuildMI(*BB, MI, DL, TII->get(TII->getCopyOpcode()), SrcCondCopy)
+        .addReg(SrcCond);
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::V_CNDMASK_B32_e64), DstLo)
       .addImm(0)
       .addReg(Src0, 0, AMDGPU::sub0)
@@ -11842,6 +11842,7 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
 
   MachineSDNode *NewNode = DAG.getMachineNode(NewOpcode, SDLoc(Node),
                                               NewVTList, Ops);
+  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
 
   if (HasChain) {
     // Update chain.
@@ -11851,9 +11852,9 @@ SDNode *SITargetLowering::adjustWritemask(MachineSDNode *&Node,
 
   if (NewChannels == 1) {
     assert(Node->hasNUsesOfValue(1, 0));
-    SDNode *Copy = DAG.getMachineNode(TargetOpcode::COPY,
-                                      SDLoc(Node), Users[Lane]->getValueType(0),
-                                      SDValue(NewNode, 0));
+    SDNode *Copy =
+        DAG.getMachineNode(TII->getCopyOpcode(), SDLoc(Node),
+                           Users[Lane]->getValueType(0), SDValue(NewNode, 0));
     DAG.ReplaceAllUsesWith(Users[Lane], Copy);
     return nullptr;
   }

@@ -9,8 +9,8 @@ define ptr addrspace(7) @no_auto_constfold_gep() {
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 123
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p7) = G_PTR_ADD [[C]], [[C1]](s64)
   ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PTR_ADD]](p7)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[UV]](s32)
+  ; CHECK-NEXT:   $vgpr1 = PRED_COPY [[UV1]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %gep = getelementptr i8, ptr addrspace(7) null, i64 123
   ret ptr addrspace(7) %gep
@@ -25,12 +25,12 @@ define <2 x ptr addrspace(7)> @no_auto_constfold_gep_vector() {
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 123
   ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[C1]](s64), [[C1]](s64)
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(<2 x p7>) = G_PTR_ADD [[BUILD_VECTOR]], [[BUILD_VECTOR1]](<2 x s64>)
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x p7>) = COPY [[PTR_ADD]](<2 x p7>)
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x p7>)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
-  ; CHECK-NEXT:   $vgpr2 = COPY [[UV2]](s32)
-  ; CHECK-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; CHECK-NEXT:   [[PRED_COPY:%[0-9]+]]:_(<2 x p7>) = PRED_COPY [[PTR_ADD]](<2 x p7>)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PRED_COPY]](<2 x p7>)
+  ; CHECK-NEXT:   $vgpr0 = PRED_COPY [[UV]](s32)
+  ; CHECK-NEXT:   $vgpr1 = PRED_COPY [[UV1]](s32)
+  ; CHECK-NEXT:   $vgpr2 = PRED_COPY [[UV2]](s32)
+  ; CHECK-NEXT:   $vgpr3 = PRED_COPY [[UV3]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   %gep = getelementptr i8, <2 x ptr addrspace(7)> zeroinitializer, <2 x i64> <i64 123, i64 123>
   ret <2 x ptr addrspace(7)> %gep

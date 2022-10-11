@@ -1517,7 +1517,7 @@ void SIWholeQuadMode::lowerCopyInstrs() {
         MI->removeOperand(Index);
         Index = MI->findRegisterUseOperandIdx(AMDGPU::EXEC);
       }
-      MI->setDesc(TII->get(AMDGPU::COPY));
+      MI->setDesc(TII->get(TII->getCopyOpcode()));
       LLVM_DEBUG(dbgs() << "  -> " << *MI);
     }
   }
@@ -1535,7 +1535,7 @@ void SIWholeQuadMode::lowerCopyInstrs() {
       assert(MI->getNumExplicitOperands() == 2);
     }
 
-    MI->setDesc(TII->get(AMDGPU::COPY));
+    MI->setDesc(TII->get(TII->getCopyOpcode()));
   }
 }
 
