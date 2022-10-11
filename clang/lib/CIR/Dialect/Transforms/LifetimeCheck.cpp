@@ -89,14 +89,19 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
       Invalid,
       NullPtr,
       Global,
+      // FIXME: currently only supports one level of OwnedBy!
+      OwnedBy,
       LocalValue,
       NumKindsMinusOne = LocalValue
     };
     State() { val.setInt(Invalid); }
     State(DataTy d) { val.setInt(d); }
-    State(mlir::Value v) { val.setPointerAndInt(v, LocalValue); }
+    State(mlir::Value v, DataTy d = LocalValue) {
+      assert((d == LocalValue || d == OwnedBy) && "expected value or owned");
+      val.setPointerAndInt(v, LocalValue);
+    }
 
-    static constexpr int KindBits = 2;
+    static constexpr int KindBits = 3;
     static_assert((1 << KindBits) > NumKindsMinusOne,
                   "Not enough room for kind!");
     llvm::PointerIntPair<mlir::Value, KindBits> val;
@@ -123,6 +128,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
     static State getInvalid() { return {}; }
     static State getNullPtr() { return {NullPtr}; }
     static State getLocalValue(mlir::Value v) { return {v}; }
+    static State getOwnedBy(mlir::Value v) { return {v, State::OwnedBy}; }
   };
 
   using PSetType = llvm::SmallSet<State, 4>;
@@ -138,7 +144,11 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
       llvm::DenseMap<mlir::Value, std::optional<mlir::Location>>;
   PMapNullHistType pmapNullHist;
 
+  // Local pointers
   SmallPtrSet<mlir::Value, 8> ptrs;
+
+  // Local owners
+  SmallPtrSet<mlir::Value, 8> owners;
 
   // Represents the scope context for IR operations (cir.scope, cir.if,
   // then/else regions, etc). Tracks the declaration of variables in the current
@@ -645,7 +655,9 @@ void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
     pmapInvalidHist[addr] = std::make_pair(allocaOp.getLoc(), std::nullopt);
     break;
   case TypeCategory::Owner:
-    llvm_unreachable("NYI");
+    // 2.4.2 - When a local Owner x is declared, add (x, {x__1'}) to pmap.
+    owners.insert(addr);
+    getPmap()[addr].insert(State::getOwnedBy(addr));
     break;
   case TypeCategory::Value: {
     // 2.4.2 - When a local Value x is declared, add (x, {x}) to pmap.
