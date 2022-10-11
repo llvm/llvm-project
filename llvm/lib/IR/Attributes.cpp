@@ -1653,14 +1653,6 @@ std::pair<unsigned, Optional<unsigned>> AttrBuilder::getAllocSizeArgs() const {
   return unpackAllocSizeArgs(getRawIntAttr(Attribute::AllocSize));
 }
 
-unsigned AttrBuilder::getVScaleRangeMin() const {
-  return unpackVScaleRangeArgs(getRawIntAttr(Attribute::VScaleRange)).first;
-}
-
-Optional<unsigned> AttrBuilder::getVScaleRangeMax() const {
-  return unpackVScaleRangeArgs(getRawIntAttr(Attribute::VScaleRange)).second;
-}
-
 AttrBuilder &AttrBuilder::addAlignmentAttr(MaybeAlign Align) {
   if (!Align)
     return *this;
