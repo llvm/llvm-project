@@ -252,6 +252,7 @@ public:
     Constraint_Unknown = 0,
     Constraint_es,
     Constraint_i,
+    Constraint_k,
     Constraint_m,
     Constraint_o,
     Constraint_v,
@@ -269,6 +270,7 @@ public:
     Constraint_Uy,
     Constraint_X,
     Constraint_Z,
+    Constraint_ZB,
     Constraint_ZC,
     Constraint_Zy,
 
@@ -428,6 +430,8 @@ public:
       return "es";
     case InlineAsm::Constraint_i:
       return "i";
+    case InlineAsm::Constraint_k:
+      return "k";
     case InlineAsm::Constraint_m:
       return "m";
     case InlineAsm::Constraint_o:
@@ -460,6 +464,8 @@ public:
       return "X";
     case InlineAsm::Constraint_Z:
       return "Z";
+    case InlineAsm::Constraint_ZB:
+      return "ZB";
     case InlineAsm::Constraint_ZC:
       return "ZC";
     case InlineAsm::Constraint_Zy:
