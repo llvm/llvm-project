@@ -1,0 +1,65 @@
+add_header_library(
+  file_actions
+  HDRS
+    file_actions.h
+  DEPENDS
+    libc.include.spawn
+)
+
+add_entrypoint_object(
+  posix_spawn_file_actions_init
+  SRCS
+    posix_spawn_file_actions_init.cpp
+  HDRS
+    posix_spawn_file_actions_init.h
+  DEPENDS
+    libc.include.spawn
+)
+
+add_entrypoint_object(
+  posix_spawn_file_actions_destroy
+  SRCS
+    posix_spawn_file_actions_destroy.cpp
+  HDRS
+    posix_spawn_file_actions_destroy.h
+  DEPENDS
+    .file_actions
+    libc.include.errno
+    libc.include.spawn
+)
+
+add_entrypoint_object(
+  posix_spawn_file_actions_adddup2
+  SRCS
+    posix_spawn_file_actions_adddup2.cpp
+  HDRS
+    posix_spawn_file_actions_adddup2.h
+  DEPENDS
+    .file_actions
+    libc.include.errno
+    libc.include.spawn
+)
+
+add_entrypoint_object(
+  posix_spawn_file_actions_addopen
+  SRCS
+    posix_spawn_file_actions_addopen.cpp
+  HDRS
+    posix_spawn_file_actions_addopen.h
+  DEPENDS
+    .file_actions
+    libc.include.errno
+    libc.include.spawn
+)
+
+add_entrypoint_object(
+  posix_spawn_file_actions_addclose
+  SRCS
+    posix_spawn_file_actions_addclose.cpp
+  HDRS
+    posix_spawn_file_actions_addclose.h
+  DEPENDS
+    .file_actions
+    libc.include.errno
+    libc.include.spawn
+)

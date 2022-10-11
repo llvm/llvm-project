@@ -7,7 +7,6 @@
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i16 5, ptr @c, align 2
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[V:%.*]] = phi i32 [ 10, [[ENTRY:%.*]] ], [ 0, [[LOOP_LATCH:%.*]] ]
@@ -16,6 +15,7 @@ define void @test() {
 ; CHECK:       loop.cont:
 ; CHECK-NEXT:    br i1 false, label [[LOOP_IRREDUCIBLE:%.*]], label [[LOOP_LATCH]]
 ; CHECK:       loop.irreducible:
+; CHECK-NEXT:    store i16 5, ptr @c, align 2
 ; CHECK-NEXT:    br label [[LOOP_LATCH]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    br i1 false, label [[LOOP_IRREDUCIBLE]], label [[LOOP]]

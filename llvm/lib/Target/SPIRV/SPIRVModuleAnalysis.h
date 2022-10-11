@@ -16,6 +16,7 @@
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "SPIRVGlobalRegistry.h"
+#include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
@@ -150,8 +151,9 @@ struct ModuleAnalysisInfo {
   // The table maps MBB number to SPIR-V unique ID register.
   DenseMap<int, Register> BBNumToRegMap;
 
-  Register getFuncReg(std::string FuncName) {
-    auto FuncReg = FuncNameMap.find(FuncName);
+  Register getFuncReg(const Function *F) {
+    assert(F && "Function is null");
+    auto FuncReg = FuncNameMap.find(getFunctionGlobalIdentifier(F));
     assert(FuncReg != FuncNameMap.end() && "Cannot find function Id");
     return FuncReg->second;
   }
