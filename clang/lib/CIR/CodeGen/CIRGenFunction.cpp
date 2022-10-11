@@ -18,6 +18,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/FPEnv.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
@@ -682,6 +683,22 @@ LValue CIRGenFunction::MakeNaturalAlignPointeeAddrLValue(mlir::Operation *Op,
   return makeAddrLValue(Address(Op->getResult(0), Align), T, BaseInfo);
 }
 
+// Map the LangOption for exception behavior into the corresponding enum in
+// the IR.
+cir::fp::ExceptionBehavior
+ToConstrainedExceptMD(LangOptions::FPExceptionModeKind Kind) {
+  switch (Kind) {
+  case LangOptions::FPE_Ignore:
+    return cir::fp::ebIgnore;
+  case LangOptions::FPE_MayTrap:
+    return cir::fp::ebMayTrap;
+  case LangOptions::FPE_Strict:
+    return cir::fp::ebStrict;
+  default:
+    llvm_unreachable("Unsupported FP Exception Behavior");
+  }
+}
+
 void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
                                    mlir::cir::FuncOp Fn,
                                    const CIRGenFunctionInfo &FnInfo,
@@ -812,7 +829,16 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
            (getLangOpts().CUDA && FD->hasAttr<CUDAGlobalAttr>())))
     ; // TODO: support norecurse attr
 
-  // TODO: rounding mode and strict floating point
+  llvm::RoundingMode RM = getLangOpts().getDefaultRoundingMode();
+  cir::fp::ExceptionBehavior FPExceptionBehavior =
+      ToConstrainedExceptMD(getLangOpts().getDefaultExceptionMode());
+  builder.setDefaultConstrainedRounding(RM);
+  builder.setDefaultConstrainedExcept(FPExceptionBehavior);
+  if ((FD && (FD->UsesFPIntrin() || FD->hasAttr<StrictFPAttr>())) ||
+      (!FD && (FPExceptionBehavior != cir::fp::ebIgnore ||
+               RM != llvm::RoundingMode::NearestTiesToEven))) {
+    llvm_unreachable("NYI");
+  }
 
   // TODO: stackrealign attr
 
