@@ -10,6 +10,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 
@@ -37,6 +38,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkAlloca(AllocaOp op);
   void checkStore(StoreOp op);
   void checkLoad(LoadOp op);
+  void checkCall(CallOp callOp);
 
   struct Options {
     enum : unsigned {
@@ -217,7 +219,10 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   PMapType *currPmap = nullptr;
   PMapType &getPmap() { return *currPmap; }
 
+  ModuleOp theModule;
+
   std::optional<clang::ASTContext *> astCtx;
+
   void setASTContext(clang::ASTContext *c) { astCtx = c; }
 
   void joinPmaps(SmallVectorImpl<PMapType> &pmaps);
@@ -800,8 +805,55 @@ void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
     emitPsetRemark();
 }
 
+const clang::CXXMethodDecl *getMethod(ModuleOp mod, StringRef name) {
+  auto global = mlir::SymbolTable::lookupSymbolIn(mod, name);
+  assert(global && "expected to find symbol");
+  auto method = dyn_cast<FuncOp>(global);
+  if (!method)
+    return nullptr;
+  return dyn_cast<clang::CXXMethodDecl>(method.getAstAttr().getAstDecl());
+}
+
+void LifetimeCheckPass::checkCall(CallOp callOp) {
+  if (callOp.getNumOperands() == 0)
+    return;
+
+  auto methodDecl = getMethod(theModule, callOp.getCallee());
+  if (!methodDecl)
+    return;
+
+  // TODO: only ctor init implemented, assign ops and others needed.
+  auto ctor = dyn_cast<clang::CXXConstructorDecl>(methodDecl);
+  if (!ctor)
+    return;
+
+  // First argument passed is always the alloca for the 'this' ptr.
+  auto addr = callOp.getOperand(0);
+  auto allocaOp = dyn_cast_or_null<AllocaOp>(addr.getDefiningOp());
+
+  // Not interested in block/function arguments or other source ops for now
+  // and Owners don't have interesting initialization.
+  if (!allocaOp || owners.count(addr))
+    return;
+
+  // TODO:
+  // 2.4.2 if the initialization is default initialization or zero
+  // initialization, example:
+  //
+  //    int* p{};
+  //    string_view p;
+  //
+  // both results in pset(p) == {null}
+  //
+  // FIXME: Implementation is simple, but only do it once we add the
+  // relevant testcase. Explode here since this a pretty vital one.
+  if (ctor->isDefaultConstructor())
+    llvm_unreachable("NYI");
+}
+
 void LifetimeCheckPass::checkOperation(Operation *op) {
   if (isa<::mlir::ModuleOp>(op)) {
+    theModule = cast<::mlir::ModuleOp>(op);
     for (Region &region : op->getRegions())
       checkRegion(region);
     return;
@@ -839,6 +891,8 @@ void LifetimeCheckPass::checkOperation(Operation *op) {
     return checkStore(storeOp);
   if (auto loadOp = dyn_cast<LoadOp>(op))
     return checkLoad(loadOp);
+  if (auto callOp = dyn_cast<CallOp>(op))
+    return checkCall(callOp);
 }
 
 void LifetimeCheckPass::runOnOperation() {
