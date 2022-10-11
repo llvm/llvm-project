@@ -40,20 +40,17 @@ module {
     return %7 : tensor<?x?xf32>
   }
 
-  transform.with_pdl_patterns {
-  ^bb0(%arg0: !pdl.operation):
-    transform.sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb1(%arg1: !pdl.operation):
-      // Find the root and all producers.
-      %root = transform.structured.match attributes{"__root__"} in %arg1
-      %producers = transform.structured.match attributes{"__producer__"} in %arg1
+  transform.sequence failures(propagate) {
+  ^bb1(%arg1: !pdl.operation):
+    // Find the root and all producers.
+    %root = transform.structured.match attributes{"__root__"} in %arg1
+    %producers = transform.structured.match attributes{"__producer__"} in %arg1
 
-      // Tile the root.
-      %foreach_thread_op, %tiled_op = transform.structured.tile_to_foreach_thread_op %root num_threads [10, 20]
+    // Tile the root.
+    %foreach_thread_op, %tiled_op = transform.structured.tile_to_foreach_thread_op %root num_threads [10, 20]
 
-      // Fuse all producers.
-      transform.structured.fuse_into_containing_op %producers into %foreach_thread_op
-    }
+    // Fuse all producers.
+    transform.structured.fuse_into_containing_op %producers into %foreach_thread_op
   }
 }
 
@@ -100,20 +97,17 @@ module {
     return %7 : tensor<?x?xf32>
   }
 
-  transform.with_pdl_patterns {
-  ^bb0(%arg0: !pdl.operation):
-    transform.sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb1(%arg1: !pdl.operation):
-      // Find the root and all producers.
-      %root = transform.structured.match attributes{"__root__"} in %arg1
-      %producers = transform.structured.match attributes{"__producer__"} in %arg1
-      %reversed_producers = transform.test_reverse_payload_ops %producers
+  transform.sequence failures(propagate) {
+  ^bb1(%arg1: !pdl.operation):
+    // Find the root and all producers.
+    %root = transform.structured.match attributes{"__root__"} in %arg1
+    %producers = transform.structured.match attributes{"__producer__"} in %arg1
+    %reversed_producers = transform.test_reverse_payload_ops %producers
 
-      // Tile the root.
-      %foreach_thread_op, %tiled_op = transform.structured.tile_to_foreach_thread_op %root num_threads [10, 20]
+    // Tile the root.
+    %foreach_thread_op, %tiled_op = transform.structured.tile_to_foreach_thread_op %root num_threads [10, 20]
 
-      // Fuse all producers.
-      transform.structured.fuse_into_containing_op %reversed_producers into %foreach_thread_op
-    }
+    // Fuse all producers.
+    transform.structured.fuse_into_containing_op %reversed_producers into %foreach_thread_op
   }
 }

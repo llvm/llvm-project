@@ -1,22 +1,19 @@
 // RUN: mlir-opt --test-transform-dialect-interpreter --canonicalize %s | FileCheck %s
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  // This implements a 2D multisize tiling with target sizes [3, 10].
-  transform.sequence %arg0 : !pdl.operation failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
-    %1:3 = transform.structured.multitile_sizes %0 { dimension = 0, target_size = 3}
-    %t:3 = transform.structured.multitile_sizes %0 { dimension = 1, target_size = 10}
-    %2:2 = transform.structured.split %0 after %1#2 { dimension = 0 }
-    %3:2 = transform.structured.tile %2#0 [%1#0]
-    %4:2 = transform.structured.tile %2#1 [%1#1]
-    %5 = merge_handles %3#0, %4#0 : !pdl.operation
-    %tt:3 = replicate num(%5) %t#0, %t#1, %t#2 : !pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation
-    %6:2 = transform.structured.split %5 after %tt#2 { dimension = 1 }
-    transform.structured.tile %6#0 [0, %tt#0]
-    transform.structured.tile %6#1 [0, %tt#1]
-  }
+// This implements a 2D multisize tiling with target sizes [3, 10].
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+  %1:3 = transform.structured.multitile_sizes %0 { dimension = 0, target_size = 3}
+  %t:3 = transform.structured.multitile_sizes %0 { dimension = 1, target_size = 10}
+  %2:2 = transform.structured.split %0 after %1#2 { dimension = 0 }
+  %3:2 = transform.structured.tile %2#0 [%1#0]
+  %4:2 = transform.structured.tile %2#1 [%1#1]
+  %5 = merge_handles %3#0, %4#0 : !pdl.operation
+  %tt:3 = replicate num(%5) %t#0, %t#1, %t#2 : !pdl.operation, !pdl.operation, !pdl.operation, !pdl.operation
+  %6:2 = transform.structured.split %5 after %tt#2 { dimension = 1 }
+  transform.structured.tile %6#0 [0, %tt#0]
+  transform.structured.tile %6#1 [0, %tt#1]
 }
 
 func.func private @elem(%arg0: f32, %arg1: index, %arg2: index) -> f32

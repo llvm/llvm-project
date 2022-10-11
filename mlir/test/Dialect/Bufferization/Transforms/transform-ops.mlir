@@ -2,14 +2,11 @@
 
 // Test One-Shot Bufferize.
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["func.func"]} in %arg1
-      transform.bufferization.one_shot_bufferize %0
-          {target_is_module = false}
-  }
+transform.sequence failures(propagate) {
+^bb0(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1
+  transform.bufferization.one_shot_bufferize %0
+      {target_is_module = false}
 }
 
 // CHECK-LABEL: func @test_function(
@@ -34,14 +31,11 @@ func.func @test_function(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
 
 // Test analysis of One-Shot Bufferize only.
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["func.func"]} in %arg1
-      transform.bufferization.one_shot_bufferize %0
-          {target_is_module = false, test_analysis_only = true}
-  }
+transform.sequence failures(propagate) {
+^bb0(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1
+  transform.bufferization.one_shot_bufferize %0
+      {target_is_module = false, test_analysis_only = true}
 }
 
 // CHECK-LABEL: func @test_function_analysis(
@@ -60,14 +54,11 @@ func.func @test_function_analysis(%A : tensor<?xf32>, %v : vector<4xf32>) -> (te
 // Test One-Shot Bufferize transform failure with an unknown op. This would be
 // allowed with `allow_unknown_ops`.
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["func.func"]} in %arg1
-      // expected-error @+1 {{bufferization failed}}
-      transform.bufferization.one_shot_bufferize %0 {target_is_module = false}
-  }
+transform.sequence failures(propagate) {
+^bb0(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1
+  // expected-error @+1 {{bufferization failed}}
+  transform.bufferization.one_shot_bufferize %0 {target_is_module = false}
 }
 
 func.func @test_unknown_op_failure() -> (tensor<?xf32>) {
@@ -80,13 +71,10 @@ func.func @test_unknown_op_failure() -> (tensor<?xf32>) {
 
 // Test One-Shot Bufferize transform failure with a module op.
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb0(%arg1: !pdl.operation):
-      // %arg1 is the module
-      transform.bufferization.one_shot_bufferize %arg1
-  }
+transform.sequence failures(propagate) {
+^bb0(%arg1: !pdl.operation):
+  // %arg1 is the module
+  transform.bufferization.one_shot_bufferize %arg1
 }
 
 module {
