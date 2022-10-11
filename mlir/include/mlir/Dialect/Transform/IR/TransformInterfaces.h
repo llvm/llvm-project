@@ -12,6 +12,7 @@
 #include "mlir/IR/OpDefinition.h"
 
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ScopeExit.h"
 
 namespace mlir {
@@ -279,13 +280,16 @@ public:
   /// list of operations in the payload IR. The arguments must be defined in
   /// blocks of the currently processed transform IR region, typically after a
   /// region scope is defined.
-  void mapBlockArguments(BlockArgument argument,
-                         ArrayRef<Operation *> operations) {
+  ///
+  /// Returns failure if the payload does not satisfy the conditions associated
+  /// with the type of the handle value.
+  LogicalResult mapBlockArguments(BlockArgument argument,
+                                  ArrayRef<Operation *> operations) {
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
     assert(argument.getParentRegion() == regionStack.back() &&
            "mapping block arguments from a region other than the active one");
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
-    setPayloadOps(argument, operations);
+    return setPayloadOps(argument, operations);
   }
 
   // Forward declarations to support limited visibility.
@@ -478,7 +482,10 @@ private:
   /// is invalid given the transformation "consumes" the handle as expressed
   /// by side effects. Practically, a transformation consuming a handle means
   /// that the associated payload operation may no longer exist.
-  void setPayloadOps(Value value, ArrayRef<Operation *> targets);
+  ///
+  /// Returns failure if the payload does not satisfy the conditions associated
+  /// with the type of the handle value.
+  LogicalResult setPayloadOps(Value value, ArrayRef<Operation *> targets);
 
   /// Forgets the payload IR ops associated with the given transform IR value.
   void removePayloadOps(Value value);
@@ -488,8 +495,12 @@ private:
   /// expected to return the modified operation or nullptr. In the latter case,
   /// the corresponding operation is no longer associated with the transform IR
   /// value.
-  void updatePayloadOps(Value value,
-                        function_ref<Operation *(Operation *)> callback);
+  ///
+  /// Returns failure if the payload does not satisfy the conditions associated
+  /// with the type of the handle value.
+  LogicalResult
+  updatePayloadOps(Value value,
+                   function_ref<Operation *(Operation *)> callback);
 
   /// If the operand is a handle consumed by the operation, i.e. has the "free"
   /// memory effect associated with it, identifies other handles that are
@@ -574,9 +585,9 @@ namespace detail {
 /// Maps the only block argument of the op with PossibleTopLevelTransformOpTrait
 /// to either the list of operations associated with its operand or the root of
 /// the payload IR, depending on what is available in the context.
-void mapPossibleTopLevelTransformOpBlockArguments(TransformState &state,
-                                                  Operation *op,
-                                                  Region &region);
+LogicalResult
+mapPossibleTopLevelTransformOpBlockArguments(TransformState &state,
+                                             Operation *op, Region &region);
 
 /// Verification hook for PossibleTopLevelTransformOpTrait.
 LogicalResult verifyPossibleTopLevelTransformOpTrait(Operation *op);
@@ -613,17 +624,17 @@ public:
   /// Sets up the mapping between the entry block of the given region of this op
   /// and the relevant list of Payload IR operations in the given state. The
   /// state is expected to be already scoped at the region of this operation.
-  void mapBlockArguments(TransformState &state, Region &region) {
+  LogicalResult mapBlockArguments(TransformState &state, Region &region) {
     assert(region.getParentOp() == this->getOperation() &&
            "op comes from the wrong region");
-    detail::mapPossibleTopLevelTransformOpBlockArguments(
+    return detail::mapPossibleTopLevelTransformOpBlockArguments(
         state, this->getOperation(), region);
   }
-  void mapBlockArguments(TransformState &state) {
+  LogicalResult mapBlockArguments(TransformState &state) {
     assert(
         this->getOperation()->getNumRegions() == 1 &&
         "must indicate the region to map if the operation has more than one");
-    mapBlockArguments(state, this->getOperation()->getRegion(0));
+    return mapBlockArguments(state, this->getOperation()->getRegion(0));
   }
 };
 

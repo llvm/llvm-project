@@ -14,11 +14,20 @@
 #ifndef MLIR_TESTTRANSFORMDIALECTEXTENSION_TD
 #define MLIR_TESTTRANSFORMDIALECTEXTENSION_TD
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
+
+def TestTransformTestDialectHandleType
+  : TypeDef<Transform_Dialect, "TestDialectOp",
+      [DeclareTypeInterfaceMethods<TransformTypeInterface>]> {
+  let description = [{Handle pointing to an op from the Test dialect.}];
+  let mnemonic = "test_dialect_op";
+  let assemblyFormat = "";
+}
 
 def TestProduceParamOrForwardOperandOp
   : Op<Transform_Dialect, "test_produce_param_or_forward_operand",

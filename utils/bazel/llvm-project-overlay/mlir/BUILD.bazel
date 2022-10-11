@@ -8396,6 +8396,7 @@ td_library(
     name = "TransformDialectTdFiles",
     srcs = glob(["include/mlir/Dialect/Transform/IR/*.td"]),
     deps = [
+        ":CastInterfacesTdFiles",
         ":ControlFlowInterfacesTdFiles",
         ":OpBaseTdFiles",
         ":PDLDialectTdFiles",
@@ -8440,6 +8441,18 @@ gentbl_cc_library(
                 "-gen-op-interface-defs",
             ],
             "include/mlir/Dialect/Transform/IR/TransformInterfaces.cpp.inc",
+        ),
+        (
+            [
+                "-gen-type-interface-decls",
+            ],
+            "include/mlir/Dialect/Transform/IR/TransformTypeInterfaces.h.inc",
+        ),
+        (
+            [
+                "-gen-type-interface-defs",
+            ],
+            "include/mlir/Dialect/Transform/IR/TransformTypeInterfaces.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
@@ -8487,6 +8500,24 @@ gentbl_cc_library(
     deps = [":TransformDialectTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "TransformTypesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-typedef-decls"],
+            "include/mlir/Dialect/Transform/IR/TransformTypes.h.inc",
+        ),
+        (
+            ["-gen-typedef-defs"],
+            "include/mlir/Dialect/Transform/IR/TransformTypes.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Transform/IR/TransformTypes.td",
+    deps = [":TransformDialectTdFiles"],
+)
+
 cc_library(
     name = "TransformDialect",
     srcs = glob(["lib/Dialect/Transform/IR/*.cpp"]),
@@ -8503,6 +8534,7 @@ cc_library(
         ":TransformDialectIncGen",
         ":TransformDialectInterfacesIncGen",
         ":TransformOpsIncGen",
+        ":TransformTypesIncGen",
         "//llvm:Support",
     ],
 )

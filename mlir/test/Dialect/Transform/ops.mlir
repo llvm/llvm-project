@@ -58,3 +58,10 @@ transform.sequence failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
   }
 }
+
+// CHECK: transform.sequence
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+  // CHECK: cast %{{.*}} : !pdl.operation to !transform.any_op
+  %0 = cast %arg0: !pdl.operation to !transform.any_op
+}
