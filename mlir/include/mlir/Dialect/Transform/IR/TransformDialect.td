@@ -324,8 +324,7 @@ def Transform_Dialect : Dialect {
 
       /// Parser callback for an individual type registered by this dialect or
       /// its extensions.
-      using ExtensionTypeParsingHook =
-          std::function<::mlir::Type (::mlir::AsmParser &)>;
+      using ExtensionTypeParsingHook = ::mlir::Type (*)(::mlir::AsmParser &);
 
       /// Printer callback for an individual type registered by this dialect or
       /// its extensions.
