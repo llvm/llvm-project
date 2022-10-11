@@ -336,9 +336,12 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
     # !if(!gt(numResults, 0), "$res = inst;", "");
 
   // A builder to construct the MLIR LLVM dialect operation given the matching
-  // LLVM IR intrinsic instruction `callInst`. The following $-variables exist:
-  //   - $name - substituted by the remapped `callInst` argument using the
-  //             the index of the MLIR operation argument with the given name;
+  // LLVM IR instruction `inst` and its operands `llvmOperands`. The
+  // following $-variables exist:
+  //   - $name - substituted by the remapped `inst` operand value at the index
+  //             of the MLIR operation argument with the given name, or if the
+  //             name matches the result name, by a reference to store the
+  //             result of the newly created MLIR operation to;
   //   - $_int_attr - substituted by a call to an integer attribute matcher;
   //   - $_resultType - substituted with the MLIR result type;
   //   - $_location - substituted with the MLIR location;
@@ -348,16 +351,13 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
   // NOTE: The $name variable resolution assumes the MLIR and LLVM argument
   // orders match and there are no optional or variadic arguments.
   string mlirBuilder = [{
-    SmallVector<llvm::Value *> operands(callInst->args());
     SmallVector<Type> resultTypes =
-    }] # !if(!gt(numResults, 0),
-      "{$_resultType};", "{};") # [{
+    }] # !if(!gt(numResults, 0), "{$_resultType};", "{};") # [{
     Operation *op = $_builder.create<$_qualCppClassName>(
       $_location,
       resultTypes,
-      processValues(operands));
-    }] # !if(!gt(numResults, 0),
-      "instMap[callInst] = op->getResult(0);", "(void)op;");
+      processValues(llvmOperands));
+    }] # !if(!gt(numResults, 0), "$res = op->getResult(0);", "(void)op;");
 }
 
 // Base class for LLVM intrinsic operations, should not be used directly. Places
