@@ -5239,7 +5239,7 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILToken:
-  case swift::TypeKind::SequenceArchetype:
+  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
@@ -5376,7 +5376,7 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::SILBox:
   case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILToken:
-  case swift::TypeKind::SequenceArchetype:
+  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
     assert(false && "Internal compiler type");
@@ -5868,7 +5868,7 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
   case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
-  case swift::TypeKind::SequenceArchetype:
+  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
@@ -5968,7 +5968,7 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
   case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
-  case swift::TypeKind::SequenceArchetype:
+  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
@@ -6104,7 +6104,7 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
-  case swift::TypeKind::SequenceArchetype:
+  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
@@ -6332,7 +6332,7 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
   case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
-  case swift::TypeKind::SequenceArchetype:
+  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
@@ -6518,7 +6518,7 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
-  case swift::TypeKind::SequenceArchetype:
+  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
@@ -6704,7 +6704,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
-  case swift::TypeKind::SequenceArchetype:
+  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
@@ -7011,7 +7011,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::SILMoveOnlyWrapped:
     case swift::TypeKind::SILFunction:
     case swift::TypeKind::SILToken:
-    case swift::TypeKind::SequenceArchetype:
+    case swift::TypeKind::PackArchetype:
     case swift::TypeKind::TypeVariable:
     case swift::TypeKind::Unresolved:
     case swift::TypeKind::VariadicSequence:
@@ -7392,7 +7392,7 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::SILMoveOnlyWrapped:
   case swift::TypeKind::SILFunction:
   case swift::TypeKind::SILToken:
-  case swift::TypeKind::SequenceArchetype:
+  case swift::TypeKind::PackArchetype:
   case swift::TypeKind::TypeVariable:
   case swift::TypeKind::Unresolved:
   case swift::TypeKind::VariadicSequence:
