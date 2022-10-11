@@ -16,6 +16,20 @@ def run(f):
 
 
 @run
+def testTypes():
+  # CHECK-LABEL: TEST: testTypes
+  # CHECK: !transform.any_op
+  any_op = transform.AnyOpType.get()
+  print(any_op)
+
+  # CHECK: !transform.op<"foo.bar">
+  # CHECK: foo.bar
+  concrete_op = transform.OperationType.get("foo.bar")
+  print(concrete_op)
+  print(concrete_op.operation_name)
+
+
+@run
 def testSequenceOp():
   sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE,
                                   [pdl.OperationType.get()],
