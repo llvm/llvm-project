@@ -2733,17 +2733,13 @@ static int CalculateUnswitchCostMultiplier(
   return CostMultiplier;
 }
 
-static bool unswitchBestCondition(
-    Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
-    AAResults &AA, TargetTransformInfo &TTI,
-    function_ref<void(bool, bool, ArrayRef<Loop *>)> UnswitchCB,
-    ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
-    function_ref<void(Loop &, StringRef)> DestroyLoopCB) {
-  // Collect all invariant conditions within this loop (as opposed to an inner
-  // loop which would be handled when visiting that inner loop).
-  SmallVector<std::pair<Instruction *, TinyPtrVector<Value *>>, 4>
-      UnswitchCandidates;
-
+static bool collectUnswitchCandidates(
+    SmallVectorImpl<std::pair<Instruction *, TinyPtrVector<Value *> > > &
+        UnswitchCandidates,
+    IVConditionInfo &PartialIVInfo, Instruction *&PartialIVCondBranch,
+    const Loop &L, const LoopInfo &LI, AAResults &AA,
+    const MemorySSAUpdater *MSSAU) {
+  assert(UnswitchCandidates.empty() && "Should be!");
   // Whether or not we should also collect guards in the loop.
   bool CollectGuards = false;
   if (UnswitchGuards) {
@@ -2753,7 +2749,6 @@ static bool unswitchBestCondition(
       CollectGuards = true;
   }
 
-  IVConditionInfo PartialIVInfo;
   for (auto *BB : L.blocks()) {
     if (LI.getLoopFor(BB) != &L)
       continue;
@@ -2802,7 +2797,6 @@ static bool unswitchBestCondition(
     }
   }
 
-  Instruction *PartialIVCondBranch = nullptr;
   if (MSSAU && !findOptionMDForLoop(&L, "llvm.loop.unswitch.partial.disable") &&
       !any_of(UnswitchCandidates, [&L](auto &TerminatorAndInvariants) {
         return TerminatorAndInvariants.first == L.getHeader()->getTerminator();
@@ -2820,9 +2814,24 @@ static bool unswitchBestCondition(
           {L.getHeader()->getTerminator(), std::move(ValsToDuplicate)});
     }
   }
+  return !UnswitchCandidates.empty();
+}
 
+static bool unswitchBestCondition(
+    Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
+    AAResults &AA, TargetTransformInfo &TTI,
+    function_ref<void(bool, bool, ArrayRef<Loop *>)> UnswitchCB,
+    ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
+    function_ref<void(Loop &, StringRef)> DestroyLoopCB) {
+  // Collect all invariant conditions within this loop (as opposed to an inner
+  // loop which would be handled when visiting that inner loop).
+  SmallVector<std::pair<Instruction *, TinyPtrVector<Value *> >, 4>
+  UnswitchCandidates;
+  IVConditionInfo PartialIVInfo;
+  Instruction *PartialIVCondBranch = nullptr;
   // If we didn't find any candidates, we're done.
-  if (UnswitchCandidates.empty())
+  if (!collectUnswitchCandidates(UnswitchCandidates, PartialIVInfo,
+                                 PartialIVCondBranch, L, LI, AA, MSSAU))
     return false;
 
   // Check if there are irreducible CFG cycles in this loop. If so, we cannot
