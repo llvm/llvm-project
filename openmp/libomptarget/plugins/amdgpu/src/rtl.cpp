@@ -1487,7 +1487,10 @@ public:
 
   inline hsa_signal_t getSignal() const { return signal; }
 
-  hsa_status_t waitToComplete() {
+  /// @brief Waits for the Async operation to complete
+  /// @param RetrieveToHost If the HstPtr should be written to from the device
+  /// @return hsa_status_t
+  hsa_status_t waitToComplete(bool RetrieveToHost) {
     if (alreadyCompleted)
       return HSA_STATUS_SUCCESS;
     hsa_signal_value_t init = 1;
@@ -1495,9 +1498,18 @@ public:
     hsa_status_t err = wait_for_signal_data(signal, init, success);
     OMPT_IF_TRACING_ENABLED(recordCopyTimingInNs(signal););
 
+#ifdef OMPTARGET_DEBUG
+    // Catch if clients by mistake pass wrong argument
+    if (!RetrieveToHost && HstPtr != HstOrPoolPtr) {
+      assert(memcmp(HstPtr, HstOrPoolPtr, Size) == 0 &&
+             "Allow no-retrievel iff memory contents are equal.");
+    }
+#endif
+
+    // In case we want to retrieve the data back to host
     // Now that the operation is complete, copy data from PoolPtr
     // to HstPtr if applicable
-    if (HstPtr != HstOrPoolPtr) {
+    if (RetrieveToHost && HstPtr != HstOrPoolPtr) {
       assert(HstPtr != nullptr && HstOrPoolPtr != nullptr &&
              "HstPr and PoolPtr both must be non-null");
       DP("Memcpy %lu bytes from PoolPtr %p to HstPtr %p\n", Size, HstOrPoolPtr,
@@ -1734,7 +1746,7 @@ void AMDGPUAsyncInfoQueueTy::waitForMapExiting() {
   if (!hasMapExitingInfo)
     return;
   for (auto &&s : mapExitingInfo)
-    s.waitToComplete();
+    s.waitToComplete(/*RetrieveToHost*/ true);
 }
 
 hsa_status_t AMDGPUAsyncInfoQueueTy::synchronize() {
@@ -1748,7 +1760,7 @@ hsa_status_t AMDGPUAsyncInfoQueueTy::synchronize() {
   // in absence of kernel and map exiting info, only wait for data submit's
   if (!hasKernelLaunchInfo && hasMapEnteringInfo && !hasMapExitingInfo) {
     for(auto &&enter : mapEnteringInfo) {
-      enter.waitToComplete();
+      enter.waitToComplete(/*RetrieveToHost*/ false);
       enter.releaseResources();
     }
     return HSA_STATUS_SUCCESS;
@@ -1757,7 +1769,7 @@ hsa_status_t AMDGPUAsyncInfoQueueTy::synchronize() {
   // in absence of kernel and map entering info's, only wait for data retrieve's
   if (!hasKernelLaunchInfo && !hasMapEnteringInfo && hasMapExitingInfo) {
     for(auto &&exit : mapExitingInfo) {
-      exit.waitToComplete();
+      exit.waitToComplete(/*RetrieveToHost*/ true);
       exit.releaseResources();
     }
     return HSA_STATUS_SUCCESS;
@@ -2592,7 +2604,7 @@ struct DeviceEnvironment {
           return Err;
         AMDGPUAsyncInfoDataTy AsyncInfo(Signal, &HostDeviceEnv, &HostDeviceEnv,
                                         StatePtrSize, UserLocked);
-        Err = AsyncInfo.waitToComplete();
+        Err = AsyncInfo.waitToComplete(/*RetrieveToHost*/ true);
         return Err;
       }
     }
@@ -3312,7 +3324,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
         }
         AMDGPUAsyncInfoDataTy AsyncInfo(Signal, &Ptr, &Ptr, sizeof(void *),
                                         UserLocked);
-        Err = AsyncInfo.waitToComplete();
+        Err = AsyncInfo.waitToComplete(/*RetrieveToHost*/ true);
         if (Err != HSA_STATUS_SUCCESS)
           return NULL;
       }
@@ -3382,7 +3394,7 @@ __tgt_target_table *__tgt_rtl_load_binary_locked(int32_t DeviceId,
 
         AMDGPUAsyncInfoDataTy AsyncInfo(Signal, E->addr, E->addr,
                                         sizeof(void *), UserLocked);
-        AsyncInfo.waitToComplete();
+        AsyncInfo.waitToComplete(/*RetrieveToHost*/ true);
 
         DP("Copy linked variable host address (" DPxMOD ")"
            "to device address (" DPxMOD ")\n",
@@ -3626,7 +3638,7 @@ int32_t __tgt_rtl_data_submit(int DeviceId, void *tgt_ptr, void *hst_ptr,
   if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  AsyncData.waitToComplete();
+  AsyncData.waitToComplete(/*RetrieveToHost*/ false);
   AsyncData.releaseResources();
 
   return rc;
@@ -3656,7 +3668,7 @@ int32_t __tgt_rtl_data_retrieve(int DeviceId, void *hst_ptr, void *tgt_ptr,
   if (rc != OFFLOAD_SUCCESS)
     return OFFLOAD_FAIL;
 
-  AsyncData.waitToComplete();
+  AsyncData.waitToComplete(/*RetrieveToHost*/ true);
   AsyncData.releaseResources();
   return rc;
 }

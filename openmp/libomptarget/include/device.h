@@ -349,6 +349,10 @@ struct DeviceTy {
 
   std::mutex PendingGlobalsMtx, ShadowMtx;
 
+  /// Flag to force synchronous data transfers
+  /// Controlled via environment flag OMPX_FORCE_SYNC_REGIONS
+  bool ForceSynchronousTargetRegions;
+
   DeviceTy(RTLInfoTy *RTL);
   // DeviceTy is not copyable
   DeviceTy(const DeviceTy &D) = delete;

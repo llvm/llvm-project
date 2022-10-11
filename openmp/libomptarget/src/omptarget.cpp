@@ -223,6 +223,17 @@ static int initLibrary(DeviceTy &Device) {
   }
   Device.HasPendingGlobals = false;
 
+  /*
+   * Determine whether all regions should run in synchronous mode
+   */
+  if (const char *FSTEnvVar = std::getenv("OMPX_FORCE_SYNC_REGIONS")) {
+    std::string FST(FSTEnvVar);
+
+    if (!FST.empty() && std::stoi(FST) > 0) {
+      Device.ForceSynchronousTargetRegions = true;
+    }
+  }
+
   return OFFLOAD_SUCCESS;
 }
 
