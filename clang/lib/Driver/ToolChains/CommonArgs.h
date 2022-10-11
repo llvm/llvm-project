@@ -184,7 +184,8 @@ std::string getCPUName(const Driver &D, const llvm::opt::ArgList &Args,
 void getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                        const llvm::opt::ArgList &Args,
                        llvm::opt::ArgStringList &CmdArgs, bool ForAS,
-                       bool IsAux = false);
+                       bool IsAux = false,
+                       const StringRef TcTargetID = StringRef());
 
 /// Iterate \p Args and convert -mxxx to +xxx and -mno-xxx to -xxx and
 /// append it to \p Features.

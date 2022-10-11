@@ -151,6 +151,11 @@ struct __tgt_device_image {
   __tgt_offload_entry *EntriesEnd;   // End of table (non inclusive)
 };
 
+/// This struct contains information about a given image.
+struct __tgt_image_info {
+  const char *Arch;
+};
+
 /// This struct is a record of all the host code that may be offloaded to a
 /// target.
 struct __tgt_bin_desc {
@@ -158,44 +163,6 @@ struct __tgt_bin_desc {
   __tgt_device_image *DeviceImages;  // Array of device images (1 per dev. type)
   __tgt_offload_entry *HostEntriesBegin; // Begin of table with all host entries
   __tgt_offload_entry *HostEntriesEnd;   // End of table (non inclusive)
-};
-
-/// __tgt_image_info:
-///
-/// The information in this struct is provided in the clang-offload-wrapper
-/// as a call to __tgt_register_image_info for each image in the library
-/// of images also created by the clang-offload-wrapper.
-/// __tgt_register_image_info is called for each image BEFORE the single
-/// call to __tgt_register_lib so that image information is available
-/// before they are loaded. clang-offload-wrapper gets this image information
-/// from command line arguments provided by the clang driver when it creates
-/// the call to the __clang-offload-wrapper command.
-/// This architecture allows the binary image (pointed to by ImageStart and
-/// ImageEnd in __tgt_device_image) to remain architecture indenendent.
-/// That is, the architecture independent part of the libomptarget runtime
-/// does not need to peer inside the image to determine if it is loadable
-/// even though in most cases the image is an elf object.
-/// There is one __tgt_image_info for each __tgt_device_image. For backward
-/// compabibility, no changes are allowed to either __tgt_device_image or
-/// __tgt_bin_desc. The absense of __tgt_image_info is the indication that
-/// the runtime is being used on a binary created by an old version of
-/// the compiler.
-///
-struct __tgt_image_info {
-  int32_t version;           // The version of this struct
-  int32_t image_number;      // Image number in image library starting from 0
-  int32_t number_images;     // Number of images, used for initial allocation
-  char *offload_arch;        // e.g. sm_30, sm_70, gfx906, includes features
-  char *compile_opts;        // reserved for future use
-};
-
-/// __tgt_active_offload_env
-///
-/// This structure is created by __tgt_get_active_offload_env and is used
-/// to determine compatibility of the images with the current environment
-/// that is "in play".
-struct __tgt_active_offload_env {
-char *capabilities; // string returned by offload-arch -c
 };
 
 /// This struct contains the offload entries identified by the target runtime

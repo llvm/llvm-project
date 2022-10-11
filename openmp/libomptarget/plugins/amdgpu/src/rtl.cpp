@@ -2841,7 +2841,6 @@ void launchInitFiniKernel(int32_t DeviceId, void *img, const size_t &size,
 }
 } // namespace core
 
-#ifdef newdriver
 static hsa_status_t GetIsaInfo(hsa_isa_t isa, void *data) {
   hsa_status_t err;
   uint32_t name_len;
@@ -2864,7 +2863,6 @@ static hsa_status_t GetIsaInfo(hsa_isa_t isa, void *data) {
   }
   return HSA_STATUS_SUCCESS;
 }
-#endif
 
 extern "C" {
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
@@ -2879,7 +2877,7 @@ int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *image,
                                        __tgt_image_info *info) {
   if (!__tgt_rtl_is_valid_binary(image))
     return false;
-#if FIXME
+
   // A subarchitecture was not specified. Assume it is compatible.
   if (!info->Arch)
     return true;
@@ -2899,7 +2897,7 @@ int32_t __tgt_rtl_is_valid_binary_info(__tgt_device_image *image,
   }
   DP("Image has Target ID compatible with the current environment: %s\n",
      info->Arch);
-#endif
+
   return true;
 }
 

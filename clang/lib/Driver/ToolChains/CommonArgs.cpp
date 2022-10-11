@@ -505,7 +505,8 @@ static void getWebAssemblyTargetFeatures(const ArgList &Args,
 
 void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                               const ArgList &Args, ArgStringList &CmdArgs,
-                              bool ForAS, bool IsAux) {
+                              bool ForAS, bool IsAux,
+                              const StringRef TcTargetID) {
   std::vector<StringRef> Features;
   switch (Triple.getArch()) {
   default:
@@ -558,7 +559,7 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     break;
   case llvm::Triple::r600:
   case llvm::Triple::amdgcn:
-    amdgpu::getAMDGPUTargetFeatures(D, Triple, Args, Features);
+    amdgpu::getAMDGPUTargetFeatures(D, Triple, Args, Features, TcTargetID);
     break;
   case llvm::Triple::nvptx:
   case llvm::Triple::nvptx64:
@@ -2358,7 +2359,7 @@ unsigned tools::getAMDGPUCodeObjectVersion(const Driver &D,
 unsigned tools::getOrCheckAMDGPUCodeObjectVersion(
     const Driver &D, const llvm::opt::ArgList &Args, bool Diagnose) {
   if (Diagnose)
-    checkAMDGPUCodeObjectVersion(D, Args);  
+    checkAMDGPUCodeObjectVersion(D, Args);
   return getAMDGPUCodeObjectVersion(D, Args);
 }
 
@@ -2432,8 +2433,8 @@ void tools::addOpenMPDeviceRTL(const Driver &D,
   StringRef ArchPrefix = Triple.isAMDGCN() ? "amdgpu" : "nvptx";
   std::string LibOmpTargetName =
       Triple.isAMDGCN()
-          ? ("libomptarget-" + ArchPrefix + "-" + BitcodeSuffix + ".bc").str()
-          : ("libomptarget-new-nvptx-" + BitcodeSuffix + ".bc").str();
+          ? ("libomptarget-old-amdgpu-" + BitcodeSuffix + ".bc").str()
+          : ("libomptarget-nvptx-" + BitcodeSuffix + ".bc").str();
 
   // First check whether user specifies bc library
   if (const Arg *A = DriverArgs.getLastArg(LibomptargetBCPathOpt)) {

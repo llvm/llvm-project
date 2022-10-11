@@ -15,6 +15,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "OffloadWrapper.h"
+#include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
@@ -398,17 +399,27 @@ Expected<StringRef> link(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
     return LLDPath.takeError();
 
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
-  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
+  const StringRef TargetID = Args.getLastArgValue(OPT_arch_EQ);
 
   // Create a new file to write the linked device image to.
   auto TempFileOrErr =
       createOutputFile(sys::path::filename(ExecutableName) + "-" +
-                           Triple.getArchName() + "-" + Arch,
+                           Triple.getArchName() + "-" + TargetID,
                        "out");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
-  std::string ArchArg = ("-plugin-opt=mcpu=" + Arch).str();
 
+  llvm::StringMap<bool> FeatureMap;
+  std::string AttrString;
+  const auto GPUArch = clang::parseTargetID(Triple, TargetID, &FeatureMap);
+  for (const auto &feature : FeatureMap) {
+    if (feature.first() == "xnack")
+      AttrString.append(Args.MakeArgString(
+          Twine(!feature.second ? "-xnack" : "+xnack") + ","));
+    if (feature.first() == "sramecc")
+      AttrString.append(Args.MakeArgString(
+          Twine(!feature.second ? "-sramecc" : "+sramecc") + ","));
+  }
   SmallVector<StringRef, 16> CmdArgs;
   CmdArgs.push_back(*LLDPath);
   CmdArgs.push_back("-flavor");
@@ -416,7 +427,10 @@ Expected<StringRef> link(ArrayRef<StringRef> InputFiles, const ArgList &Args) {
   CmdArgs.push_back("--no-undefined");
   CmdArgs.push_back("-shared");
   CmdArgs.push_back("-plugin-opt=-amdgpu-internalize-symbols");
-  CmdArgs.push_back(ArchArg);
+  CmdArgs.push_back(Args.MakeArgString("-plugin-opt=mcpu=" + GPUArch.value()));
+  if (!AttrString.empty())
+    CmdArgs.push_back(Args.MakeArgString(
+        "-plugin-opt=-mattr=" + AttrString.substr(0, AttrString.size() - 1)));
   CmdArgs.push_back("-o");
   CmdArgs.push_back(*TempFileOrErr);
 
@@ -641,14 +655,15 @@ std::unique_ptr<lto::LTO> createLTO(
     const ArgList &Args, const std::vector<std::string> &Features,
     ModuleHook Hook = [](size_t, const Module &) { return true; }) {
   const llvm::Triple Triple(Args.getLastArgValue(OPT_triple_EQ));
-  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
+  StringRef TargetID = Args.getLastArgValue(OPT_arch_EQ);
+  StringRef GPUArch = clang::getProcessorFromTargetID(Triple, TargetID);
   lto::Config Conf;
   lto::ThinBackend Backend;
   // TODO: Handle index-only thin-LTO
   Backend =
       lto::createInProcessThinBackend(llvm::heavyweight_hardware_concurrency());
 
-  Conf.CPU = Arch.str();
+  Conf.CPU = GPUArch.str();
   Conf.Options = codegen::InitTargetOptionsFromCodeGenFlags(Triple);
 
   StringRef OptLevel = Args.getLastArgValue(OPT_opt_level, "O2");
@@ -667,7 +682,7 @@ std::unique_ptr<lto::LTO> createLTO(
 
   if (SaveTemps) {
     std::string TempName = (sys::path::filename(ExecutableName) + "-device-" +
-                            Triple.getTriple() + "-" + Arch)
+                            Triple.getTriple() + "-" + TargetID)
                                .str();
     Conf.PostInternalizeModuleHook = [=](size_t Task, const Module &M) {
       std::string File = !Task ? TempName + ".bc"
@@ -1091,10 +1106,27 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
 
   // Set the subarchitecture and target triple for this compilation.
   const OptTable &Tbl = getOptTable();
-  DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_arch_EQ),
-                   Args.MakeArgString(Input.front().getBinary()->getArch()));
+  StringRef Triple = Input.front().getBinary()->getTriple();
+  std::string AMDGPUFeatures;
+
+  if (llvm::Triple(Triple).isAMDGPU()) {
+    // Extract Features from the binary and append them in arch
+    auto Features = getTargetFeatures(Input);
+    for (auto feature : Features) {
+      AMDGPUFeatures.append(feature.substr(1, feature.size()) +
+                            feature.substr(0, 1) + ":");
+    }
+  }
   DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_triple_EQ),
-                   Args.MakeArgString(Input.front().getBinary()->getTriple()));
+                   Args.MakeArgString(Triple));
+  if (llvm::Triple(Triple).isAMDGPU() && !AMDGPUFeatures.empty())
+    DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_arch_EQ),
+                     Args.MakeArgString(
+                         Input.front().getBinary()->getArch() + ":" +
+                         AMDGPUFeatures.substr(0, AMDGPUFeatures.size() - 1)));
+  else
+    DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_arch_EQ),
+                     Args.MakeArgString(Input.front().getBinary()->getArch()));
 
   // If every input file is bitcode we have whole program visibility as we do
   // only support static linking with bitcode.

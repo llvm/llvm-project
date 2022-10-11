@@ -214,7 +214,7 @@ const char *AMDGCN::OpenMPLinker::constructLLVMLinkCommand(
     }
   }
 
-  BCLibs.push_back(Args.MakeArgString(libpath + "/libomptarget-new-amdgpu-" +
+  BCLibs.push_back(Args.MakeArgString(libpath + "/libomptarget-old-amdgpu-" +
                                       GPUArch + ".bc"));
 
   // Add the generic set of libraries, OpenMP subset only
@@ -564,7 +564,7 @@ void AMDGPUOpenMPToolChain::addClangTargetOptions(
     return;
 
   std::string BitcodeSuffix;
-  BitcodeSuffix = llvm::Twine("new-amdgpu-" + GPUArch).str();
+  BitcodeSuffix = llvm::Twine("old-amdgpu-" + GPUArch).str();
 
   addDirectoryList(DriverArgs, LibraryPaths, "", "HIP_DEVICE_LIB_PATH");
 

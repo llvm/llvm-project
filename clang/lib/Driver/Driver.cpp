@@ -808,37 +808,38 @@ bool GetTargetInfoFromOffloadArch(Compilation &C, const char *OpenMPTarget,
 
 bool Driver::GetTargetInfoFromMarch(Compilation &C,
                                     std::set<std::string> &OffloadArchs) const {
-  StringRef OpenMPTargetArch;
   for (Arg *A : C.getInputArgs()) {
     if (A->getOption().matches(options::OPT_Xopenmp_target_EQ)) {
       for (auto *V : A->getValues()) {
         StringRef VStr = StringRef(V);
-        if (VStr.startswith("-march=") || VStr.startswith("--march=")) {
-          OpenMPTargetArch = VStr.split('=').second;
-          StringRef OpenMPTargetTriple = StringRef(A->getValue(0));
-          llvm::Triple TargetTriple(OpenMPTargetTriple);
-          llvm::StringMap<bool> Features;
-          auto ArchStr =
-              parseTargetID(TargetTriple, OpenMPTargetArch, &Features);
-          if (TargetTriple.isAMDGCN() && !ArchStr) {
-            C.getDriver().Diag(clang::diag::err_drv_bad_target_id)
-                << OpenMPTargetArch;
-            C.setContainsError();
-            return false;
-          }
-          StringRef ArchProc = OpenMPTargetArch.split(":").first;
-          if (ArchProc.empty()) {
-            C.getDriver().Diag(clang::diag::err_drv_cuda_bad_gpu_arch) << VStr;
-            C.setContainsError();
-            return false;
-          }
+        if (VStr.startswith("-march=") || VStr.startswith("--march="))
+          for (StringRef OpenMPTargetArch :
+               llvm::split(VStr.split('=').second, ",")) {
+            StringRef OpenMPTargetTriple = StringRef(A->getValue(0));
+            llvm::Triple TargetTriple(OpenMPTargetTriple);
+            llvm::StringMap<bool> Features;
+            auto ArchStr =
+                parseTargetID(TargetTriple, OpenMPTargetArch, &Features);
+            if (TargetTriple.isAMDGCN() && !ArchStr) {
+              C.getDriver().Diag(clang::diag::err_drv_bad_target_id)
+                  << OpenMPTargetArch;
+              C.setContainsError();
+              return false;
+            }
+            StringRef ArchProc = OpenMPTargetArch.split(":").first;
+            if (ArchProc.empty()) {
+              C.getDriver().Diag(clang::diag::err_drv_cuda_bad_gpu_arch)
+                  << VStr;
+              C.setContainsError();
+              return false;
+            }
 
-          // Append Triple and Arch to form a unique key for each instance of
-          // the ToolChain
-          if (!OpenMPTargetTriple.empty() && !OpenMPTargetArch.empty())
-            OffloadArchs.insert(TargetTriple.normalize().append("^").append(
-                OpenMPTargetArch.str()));
-        }
+            // Append Triple and Arch to form a unique key for each instance of
+            // the ToolChain
+            if (!OpenMPTargetTriple.empty() && !OpenMPTargetArch.empty())
+              OffloadArchs.insert(TargetTriple.normalize().append("^").append(
+                  OpenMPTargetArch.str()));
+          }
         A->claim();
       }
     }
@@ -865,10 +866,12 @@ bool Driver::GetTargetInfoFromOffloadArchOpts(
     if (ArchStr.empty())
       continue;
     else if (A->getOption().matches(options::OPT_offload_arch_EQ)) {
-      auto status =
-          GetTargetInfoFromOffloadArch(C, ArchStr.str().c_str(), OffloadArchs);
-      if (!status)
-        return false;
+      for (StringRef ArchVal : llvm::split(ArchStr, ",")) {
+        auto status = GetTargetInfoFromOffloadArch(C, ArchVal.str().c_str(),
+                                                   OffloadArchs);
+        if (!status)
+          return false;
+      }
     } else if (A->getOption().matches(options::OPT_no_offload_arch_EQ))
       GetTargetInfoFromOffloadArch(C, ArchStr.str().c_str(), OffloadArchs,
                                    /* erase */ true);
@@ -936,7 +939,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     //
     // OpenMP
     //
-    // OpenMP Offloading is active when -offload-arch, -offload-archs, or
+    // OpenMP Offloading is active when -offload-arch or
     // legacy options -fopenmp-targets= are specified. We first build a list
     // of OffloadArchs from command line options.
     //
@@ -1066,7 +1069,7 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
 
         std::string NormalizedName =
             Twine(TT.normalize() + "-" + OpenMPTargetArch).str();
-        
+
         // Make sure we don't have a duplicate triple.
         auto Duplicate = FoundNormalizedTriples.find(NormalizedName);
         if (Duplicate != FoundNormalizedTriples.end()) {
@@ -4395,9 +4398,8 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   handleArguments(C, Args, Inputs, Actions);
 
   bool UseNewOffloadingDriver =
-      false && (C.isOffloadingHostKind(Action::OFK_OpenMP) ||
       Args.hasFlag(options::OPT_offload_new_driver,
-                   options::OPT_no_offload_new_driver, false));
+                   options::OPT_no_offload_new_driver, false);
 
   // Builder to be used to build offloading actions.
   std::unique_ptr<OffloadingActionBuilder> OffloadBuilder =
@@ -4695,6 +4697,12 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
     return KnownArchs.lookup(TC);
 
   llvm::DenseSet<StringRef> Archs;
+
+  if (!TC->getTargetID().empty()) {
+    Archs.insert(TC->getTargetID());
+    return Archs;
+  }
+
   for (auto *Arg : Args) {
     // Extract any '--[no-]offload-arch' arguments intended for this toolchain.
     std::unique_ptr<llvm::opt::Arg> ExtractedArg = nullptr;

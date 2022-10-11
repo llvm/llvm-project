@@ -33,6 +33,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MakeSupport.h"
 #include "clang/Basic/ObjCRuntime.h"
+#include "clang/Basic/TargetID.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
@@ -4511,7 +4512,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   bool IsDeviceOffloadAction = !(JA.isDeviceOffloading(Action::OFK_None) ||
                                  JA.isDeviceOffloading(Action::OFK_Host));
   bool IsHostOffloadingAction =
-      JA.isHostOffloading(Action::OFK_OpenMP) ||
       (JA.isHostOffloading(C.getActiveOffloadKinds()) &&
        Args.hasFlag(options::OPT_offload_new_driver,
                     options::OPT_no_offload_new_driver, false));
@@ -4792,7 +4792,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-emit-llvm-uselists");
 
     if (IsUsingLTO) {
-      if (IsDeviceOffloadAction && !JA.isDeviceOffloading(Action::OFK_OpenMP) &&
+      if (IsDeviceOffloadAction &&
           !Args.hasFlag(options::OPT_offload_new_driver,
                         options::OPT_no_offload_new_driver, false) &&
           !Triple.isAMDGPU()) {
@@ -8543,15 +8543,15 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
 
     ArgStringList Features;
     SmallVector<StringRef> FeatureArgs;
-    getTargetFeatures(TC->getDriver(), TC->getTriple(), TCArgs, Features,
-                      false);
+    getTargetFeatures(TC->getDriver(), TC->getTriple(), TCArgs, Features, false,
+                      false, Arch);
     llvm::copy_if(Features, std::back_inserter(FeatureArgs),
                   [](StringRef Arg) { return !Arg.startswith("-target"); });
 
     SmallVector<std::string> Parts{
         "file=" + File.str(),
         "triple=" + TC->getTripleString(),
-        "arch=" + Arch.str(),
+        "arch=" + getProcessorFromTargetID(TC->getTriple(), Arch).str(),
         "kind=" + Kind.str(),
     };
 
@@ -8587,6 +8587,77 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         if (CudaInstallation.isValid())
           CmdArgs.push_back(Args.MakeArgString(
               "--cuda-path=" + CudaInstallation.getInstallPath()));
+        break;
+      }
+      if (TC->getTriple().isAMDGPU()) {
+        RocmInstallationDetector RocmInstallation(D, TheTriple, Args, true,
+                                                  true);
+        const llvm::Triple triple = TC->getTriple();
+        const auto ArchKind = llvm::AMDGPU::parseArchAMDGCN(TC->getTargetID());
+        const StringRef CanonArch = llvm::AMDGPU::getArchNameAMDGCN(ArchKind);
+        const StringRef LibDeviceFile =
+            RocmInstallation.getLibDeviceFile(CanonArch);
+        auto ABIVer = DeviceLibABIVersion::fromCodeObjectVersion(
+            getAMDGPUCodeObjectVersion(D, Args));
+        if (!RocmInstallation.checkCommonBitcodeLibs(CanonArch, LibDeviceFile,
+                                                     ABIVer))
+          return;
+
+        bool DAZ = Args.hasFlag(
+            options::OPT_fgpu_flush_denormals_to_zero,
+            options::OPT_fno_gpu_flush_denormals_to_zero,
+            toolchains::AMDGPUToolChain::getDefaultDenormsAreZeroForTarget(
+                ArchKind));
+        bool FiniteOnly =
+            Args.hasFlag(options::OPT_ffinite_math_only,
+                         options::OPT_fno_finite_math_only, false);
+        bool UnsafeMathOpt =
+            Args.hasFlag(options::OPT_funsafe_math_optimizations,
+                         options::OPT_fno_unsafe_math_optimizations, false);
+        bool FastRelaxedMath = Args.hasFlag(options::OPT_ffast_math,
+                                            options::OPT_fno_fast_math, false);
+        bool CorrectSqrt = Args.hasFlag(
+            options::OPT_fhip_fp32_correctly_rounded_divide_sqrt,
+            options::OPT_fno_hip_fp32_correctly_rounded_divide_sqrt, true);
+
+        bool Wave64 = toolchains::AMDGPUToolChain::isWave64(Args, ArchKind);
+
+        llvm::SmallVector<std::string, 12> BCLibs =
+            RocmInstallation.getCommonBitcodeLibs(
+                Args, LibDeviceFile, Wave64, DAZ, FiniteOnly, UnsafeMathOpt,
+                FastRelaxedMath, CorrectSqrt, ABIVer, true);
+
+        std::vector<std::vector<std::string>> offloadArchList{
+            Args.getAllArgValues(options::OPT_offload_arch_EQ),
+            Args.getAllArgValues(options::OPT_Xopenmp_target_EQ)};
+
+        std::set<std::string> bitcodeTarget;
+        if (!offloadArchList.empty()) {
+          for (auto itr : offloadArchList[0]) {
+            for (StringRef ArchVal : llvm::split(itr, ",")) {
+              StringRef TargetID(ArchVal);
+              bitcodeTarget.insert(
+                  "openmp-" + triple.str() + "-" +
+                  getProcessorFromTargetID(triple, TargetID).str());
+            }
+          }
+          auto itr = offloadArchList[1].begin();
+          while ((itr = std::find(itr, offloadArchList[1].end(),
+                                  triple.str())) != offloadArchList[1].end()) {
+            StringRef archOpt(*(itr + 1));
+            for (StringRef TargetID :
+                 llvm::split(archOpt.split("=").second, ","))
+              bitcodeTarget.insert(
+                  "openmp-" + triple.str() + "-" +
+                  getProcessorFromTargetID(triple, TargetID).str());
+            itr += 2;
+          }
+        }
+
+        for (StringRef prefix : bitcodeTarget)
+          for (auto BCLib : BCLibs)
+            CmdArgs.push_back(Args.MakeArgString("--bitcode-library=" + prefix +
+                                                 "=" + BCLib));
         break;
       }
     }

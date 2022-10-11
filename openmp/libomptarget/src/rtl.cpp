@@ -226,10 +226,8 @@ void RTLsTy::loadRTLs() {
     // Optional functions
     *((void **)&R.deinit_plugin) =
         DynLibrary->getAddressOfSymbol("__tgt_rtl_deinit_plugin");
-#ifdef fixme
     *((void **)&R.is_valid_binary_info) =
         DynLibrary->getAddressOfSymbol("__tgt_rtl_is_valid_binary_info");
-#endif
     *((void **)&R.deinit_device) =
         DynLibrary->getAddressOfSymbol("__tgt_rtl_deinit_device");
     *((void **)&R.init_requires) =
@@ -497,7 +495,6 @@ static void registerGlobalCtorsDtorsForImage(__tgt_bin_desc *Desc,
   }
 }
 
-#ifdef newdriver
 static __tgt_device_image getExecutableImage(__tgt_device_image *Image) {
   StringRef ImageStr(static_cast<char *>(Image->ImageStart),
                      static_cast<char *>(Image->ImageEnd) -
@@ -525,10 +522,10 @@ static __tgt_image_info getImageInfo(__tgt_device_image *Image) {
       object::OffloadBinary::create(MemoryBufferRef(ImageStr, ""));
   if (!BinaryOrErr) {
     consumeError(BinaryOrErr.takeError());
+    return __tgt_image_info{};
   }
-  return __tgt_image_info{};
+  return __tgt_image_info{(*BinaryOrErr)->getArch().data()};
 }
-#endif
 
 void RTLsTy::registerRequires(int64_t Flags) {
   // TODO: add more elaborate check.
@@ -603,30 +600,6 @@ void RTLsTy::initAllRTLs() {
     initRTLonce(R);
 }
 
-/// Query runtime capabilities of this system by calling offload-arch -c
-/// offload_arch_output_buffer is persistant storage returned by this
-/// __tgt_get_active_offload_env.
-static void
-__tgt_get_active_offload_env(__tgt_active_offload_env *active_env,
-                             char *offload_arch_output_buffer,
-                             size_t offload_arch_output_buffer_size) {
-
-  // If OFFLOAD_ARCH_OVERRIDE env varible is present then use its value instead of
-  // querying it using LLVMOffloadArch library.
-  if (char *OffloadArchEnvVar = getenv("OFFLOAD_ARCH_OVERRIDE")) {
-    if (OffloadArchEnvVar) {
-      active_env->capabilities = OffloadArchEnvVar;
-      return;
-    }
-  }
-  // Qget runtime capabilities of this system with libLLVMOffloadArch.a
-  if (int rc = getRuntimeCapabilities(offload_arch_output_buffer,
-                                      offload_arch_output_buffer_size))
-    return;
-  active_env->capabilities = offload_arch_output_buffer;
-  return;
-}
-
 std::vector<std::string> _splitstrings(char *input, const char *sep) {
   std::vector<std::string> split_strings;
   std::string s(input);
@@ -642,71 +615,34 @@ std::vector<std::string> _splitstrings(char *input, const char *sep) {
   return split_strings;
 }
 
-static bool _ImageIsCompatibleWithEnv(__tgt_image_info *img_info,
-                                      __tgt_active_offload_env *active_env) {
-  // get_image_info will return null if no image information was registered.
-  // If no image information, assume application built with old compiler and
-  // check each image.
-  if (!img_info)
-    return true;
-
-  if (!active_env->capabilities)
-    return false;
-
-  // Each runtime requirement for the compiled image is stored in
-  // the img_info->offload_arch (TargetID) string.
-  // Each runtime capability obtained from "offload-arch -c" is stored in
-  // actvie_env->capabilities (TargetID) string.
-  // If every requirement has a matching capability, then the image
-  // is compatible with active environment
-
-  std::vector<std::string> reqs = _splitstrings(img_info->offload_arch, ":");
-  std::vector<std::string> caps = _splitstrings(active_env->capabilities, ":");
-
-  bool is_compatible = true;
-  for (auto req : reqs) {
-    bool missing_capability = true;
-    for (auto capability : caps)
-      if (capability == req)
-        missing_capability = false;
-    if (missing_capability) {
-      DP("Image requires %s but runtime capability %s is missing.\n",
-         img_info->offload_arch, req.c_str());
-      is_compatible = false;
-    }
-  }
-  return is_compatible;
-}
-
 #define MAX_CAPS_STR_SIZE 1024
 void RTLsTy::registerLib(__tgt_bin_desc *Desc) {
 
-  // Get the current active offload environment
-  __tgt_active_offload_env offload_env = { nullptr };
-  // Need a buffer to hold results of offload-arch -c command
-  size_t offload_arch_output_buffer_size = MAX_CAPS_STR_SIZE;
-  std::vector<char> offload_arch_output_buffer;
-  offload_arch_output_buffer.resize(offload_arch_output_buffer_size);
-  __tgt_get_active_offload_env(&offload_env, offload_arch_output_buffer.data(),
-                               offload_arch_output_buffer_size);
-
-  RTLInfoTy *FoundRTL = NULL;
   PM->RTLsMtx.lock();
-  // Register the images with the RTLs that understand them, if any.
-  for (int32_t I = 0; I < Desc->NumDeviceImages; ++I) {
-    // Obtain the image.
-    __tgt_device_image *Img = &Desc->DeviceImages[I];
 
-    // Get corresponding image info offload_arch and check with runtime
-    __tgt_image_info *img_info = __tgt_get_image_info(I);
-    if (!_ImageIsCompatibleWithEnv(img_info, &offload_env))
-      continue;
-    FoundRTL = NULL;
+  // Extract the exectuable image and extra information if availible.
+  for (int32_t i = 0; i < Desc->NumDeviceImages; ++i)
+    PM->Images.emplace_back(getExecutableImage(&Desc->DeviceImages[i]),
+                            getImageInfo(&Desc->DeviceImages[i]));
+
+  for (auto &ImageAndInfo : PM->Images) {
+    // Obtain the image and information that was previously extracted.
+    __tgt_device_image *Img = &ImageAndInfo.first;
+    __tgt_image_info *Info = &ImageAndInfo.second;
+
+    RTLInfoTy *FoundRTL = nullptr;
+
     // Scan the RTLs that have associated images until we find one that supports
     // the current image.
     for (auto &R : AllRTLs) {
 
-      if (!R.is_valid_binary(Img)) {
+      if (R.is_valid_binary_info) {
+        if (!R.is_valid_binary_info(Img, Info)) {
+          DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
+             DPxPTR(Img->ImageStart), R.RTLName.c_str());
+          continue;
+        }
+      } else if (!R.is_valid_binary(Img)) {
         DP("Image " DPxMOD " is NOT compatible with RTL %s!\n",
            DPxPTR(Img->ImageStart), R.RTLName.c_str());
         continue;
@@ -752,39 +688,6 @@ void RTLsTy::registerLib(__tgt_bin_desc *Desc) {
   }
   PM->RTLsMtx.unlock();
 
-  if (!FoundRTL) {
-    if (PM->TargetOffloadPolicy == tgt_mandatory)
-      fprintf(stderr, "ERROR:\
-	Runtime capabilities do NOT meet any offload image offload_arch\n\
-	and the OMP_TARGET_OFFLOAD policy is mandatory.  Terminating!\n\
-	Runtime capabilities : %s\n",
-              offload_env.capabilities);
-    else if (PM->TargetOffloadPolicy == tgt_disabled)
-      fprintf(stderr, "WARNING: Offloading is disabled.\n");
-    else
-      fprintf(
-          stderr,
-          "WARNING: Runtime capabilities do NOT meet any image offload_arch.\n\
-	 So device offloading is now disabled.\n\
-	Runtime capabilities : %s\n",
-          offload_env.capabilities);
-    if (PM->TargetOffloadPolicy != tgt_disabled) {
-      for (int32_t i = 0; i < Desc->NumDeviceImages; ++i) {
-        __tgt_image_info *img_info = __tgt_get_image_info(i);
-        if (img_info)
-          fprintf(stderr, "\
-	  Image %d offload_arch : %s\n",
-                  i, img_info->offload_arch);
-        else
-          fprintf(stderr, "\
-	  Image %d has no offload_arch. Could be from older compiler\n",
-                  i);
-      }
-    }
-    if (PM->TargetOffloadPolicy == tgt_mandatory)
-      exit(1);
-  }
-
   DP("Done registering entries!\n");
 }
 
@@ -793,9 +696,10 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
 
   PM->RTLsMtx.lock();
   // Find which RTL understands each image, if any.
-  for (int32_t I = 0; I < Desc->NumDeviceImages; ++I) {
-    // Obtain the image.
-    __tgt_device_image *Img = &Desc->DeviceImages[I];
+
+  for (auto &ImageAndInfo : PM->Images) {
+    // Obtain the image and information that was previously extracted.
+    __tgt_device_image *Img = &ImageAndInfo.first;
 
     RTLInfoTy *FoundRTL = NULL;
 
@@ -805,13 +709,9 @@ void RTLsTy::unregisterLib(__tgt_bin_desc *Desc) {
 
       assert(R->IsUsed && "Expecting used RTLs.");
 
-      if (!R->is_valid_binary(Img)) {
-        DP("Image " DPxMOD " is NOT compatible with RTL " DPxMOD "!\n",
-           DPxPTR(Img->ImageStart), DPxPTR(R->LibraryHandler.get()));
+      // Ensure that we do not use any unused images associated with this RTL.
+      if (!R->UsedImages.contains(Img))
         continue;
-      }
-      DP("Image " DPxMOD " is compatible with RTL " DPxMOD "!\n",
-         DPxPTR(Img->ImageStart), DPxPTR(R->LibraryHandler.get()));
 
       FoundRTL = R;
 
