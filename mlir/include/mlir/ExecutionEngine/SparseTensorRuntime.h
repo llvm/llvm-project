@@ -212,6 +212,64 @@ MLIR_SPARSETENSOR_FOREVERY_V(DECL_CONVERTTOMLIRSPARSETENSOR)
 MLIR_SPARSETENSOR_FOREVERY_V(DECL_CONVERTFROMMLIRSPARSETENSOR)
 #undef DECL_CONVERTFROMMLIRSPARSETENSOR
 
+/// Creates a SparseTensorReader for reading a sparse tensor from a file with
+/// the given file name. This opens the file and read the header meta data based
+/// of the sparse tensor format derived from the suffix of the file name.
+MLIR_CRUNNERUTILS_EXPORT void *createSparseTensorReader(char *filename);
+
+/// Returns the rank of the sparse tensor being read.
+MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderRank(void *p);
+
+/// Returns the is_symmetric bit for the sparse tensor being read.
+MLIR_CRUNNERUTILS_EXPORT bool getSparseTensorReaderIsSymmetric(void *p);
+
+/// Returns the number of non-zero values for the sparse tensor being read.
+MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderNNZ(void *p);
+
+/// Returns the size of a dimension for the sparse tensor being read.
+MLIR_CRUNNERUTILS_EXPORT index_type getSparseTensorReaderDimSize(void *p,
+                                                                 index_type d);
+
+/// Returns all dimension sizes for the sparse tensor being read.
+MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_getSparseTensorReaderDimSizes(
+    void *p, StridedMemRefType<index_type, 1> *dref);
+
+/// Releases the SparseTensorReader. This also closes the file associated with
+/// the reader.
+MLIR_CRUNNERUTILS_EXPORT void delSparseTensorReader(void *p);
+
+/// Returns the next element for the sparse tensor being read.
+#define IMPL_GETNEXT(VNAME, V)                                                 \
+  MLIR_CRUNNERUTILS_EXPORT V _mlir_ciface_getSparseTensorReaderNext##VNAME(    \
+      void *p, StridedMemRefType<index_type, 1> *iref);
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_GETNEXT)
+#undef IMPL_GETNEXT
+
+using SparseTensorWriter = std::ostream;
+
+/// Creates a SparseTensorWriter for outputing a sparse tensor to a file with
+/// the given file name. When the file name is empty, std::cout is used.
+//
+// Only the extended FROSTT format is supported currently.
+MLIR_CRUNNERUTILS_EXPORT void *createSparseTensorWriter(char *filename);
+
+/// Finalizes the outputing of a sparse tensor to a file and releases the
+/// SparseTensorWriter.
+MLIR_CRUNNERUTILS_EXPORT void delSparseTensorWriter(void *p);
+
+/// Outputs the sparse tensor rank, nnz and shape.
+MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_outSparseTensorWriterMetaData(
+    void *p, index_type rank, index_type nnz,
+    StridedMemRefType<index_type, 1> *dref);
+
+/// Outputs an element for the sparse tensor.
+#define IMPL_OUTNEXT(VNAME, V)                                                 \
+  MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_outSparseTensorWriterNext##VNAME( \
+      void *p, index_type rank, StridedMemRefType<index_type, 1> *iref,        \
+      V value);
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_OUTNEXT)
+#undef IMPL_OUTNEXT
+
 } // extern "C"
 
 #endif // MLIR_EXECUTIONENGINE_SPARSETENSORRUNTIME_H
