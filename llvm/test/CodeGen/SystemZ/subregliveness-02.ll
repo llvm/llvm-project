@@ -15,7 +15,7 @@ bb:
   %tmp3 = fmul double %tmp2, 2.560000e+02
   %tmp4 = fptosi double %tmp3 to i32
   %tmp5 = trunc i32 %tmp4 to i8
-  store i8 %tmp5, i8* undef, align 1
+  store i8 %tmp5, ptr undef, align 1
   unreachable
 }
 

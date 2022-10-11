@@ -4,7 +4,7 @@
 
 ; We need to allocate a 16-byte spill slot and save the 8 call-saved FPRs.
 ; The frame size should be exactly 160 + 16 + 8 * 8 = 240.
-define void @f1(<16 x i8> *%ptr) {
+define void @f1(ptr %ptr) {
 ; CHECK-LABEL: f1:
 ; CHECK: aghi %r15, -240
 ; CHECK-DAG: std %f8,
@@ -27,78 +27,78 @@ define void @f1(<16 x i8> *%ptr) {
 ; CHECK-DAG: ld %f15,
 ; CHECK: aghi %r15, 240
 ; CHECK: br %r14
-  %v0 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v1 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v2 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v3 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v4 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v5 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v6 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v7 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v8 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v9 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v10 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v11 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v12 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v13 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v14 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v15 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v16 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v17 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v18 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v19 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v20 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v21 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v22 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v23 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v24 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v25 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v26 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v27 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v28 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v29 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v30 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v31 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %vx = load volatile <16 x i8>, <16 x i8> *%ptr
-  store volatile <16 x i8> %vx, <16 x i8> *%ptr
-  store volatile <16 x i8> %v31, <16 x i8> *%ptr
-  store volatile <16 x i8> %v30, <16 x i8> *%ptr
-  store volatile <16 x i8> %v29, <16 x i8> *%ptr
-  store volatile <16 x i8> %v28, <16 x i8> *%ptr
-  store volatile <16 x i8> %v27, <16 x i8> *%ptr
-  store volatile <16 x i8> %v26, <16 x i8> *%ptr
-  store volatile <16 x i8> %v25, <16 x i8> *%ptr
-  store volatile <16 x i8> %v24, <16 x i8> *%ptr
-  store volatile <16 x i8> %v23, <16 x i8> *%ptr
-  store volatile <16 x i8> %v22, <16 x i8> *%ptr
-  store volatile <16 x i8> %v21, <16 x i8> *%ptr
-  store volatile <16 x i8> %v20, <16 x i8> *%ptr
-  store volatile <16 x i8> %v19, <16 x i8> *%ptr
-  store volatile <16 x i8> %v18, <16 x i8> *%ptr
-  store volatile <16 x i8> %v17, <16 x i8> *%ptr
-  store volatile <16 x i8> %v16, <16 x i8> *%ptr
-  store volatile <16 x i8> %v15, <16 x i8> *%ptr
-  store volatile <16 x i8> %v14, <16 x i8> *%ptr
-  store volatile <16 x i8> %v13, <16 x i8> *%ptr
-  store volatile <16 x i8> %v12, <16 x i8> *%ptr
-  store volatile <16 x i8> %v11, <16 x i8> *%ptr
-  store volatile <16 x i8> %v10, <16 x i8> *%ptr
-  store volatile <16 x i8> %v9, <16 x i8> *%ptr
-  store volatile <16 x i8> %v8, <16 x i8> *%ptr
-  store volatile <16 x i8> %v7, <16 x i8> *%ptr
-  store volatile <16 x i8> %v6, <16 x i8> *%ptr
-  store volatile <16 x i8> %v5, <16 x i8> *%ptr
-  store volatile <16 x i8> %v4, <16 x i8> *%ptr
-  store volatile <16 x i8> %v3, <16 x i8> *%ptr
-  store volatile <16 x i8> %v2, <16 x i8> *%ptr
-  store volatile <16 x i8> %v1, <16 x i8> *%ptr
-  store volatile <16 x i8> %v0, <16 x i8> *%ptr
+  %v0 = load volatile <16 x i8>, ptr %ptr
+  %v1 = load volatile <16 x i8>, ptr %ptr
+  %v2 = load volatile <16 x i8>, ptr %ptr
+  %v3 = load volatile <16 x i8>, ptr %ptr
+  %v4 = load volatile <16 x i8>, ptr %ptr
+  %v5 = load volatile <16 x i8>, ptr %ptr
+  %v6 = load volatile <16 x i8>, ptr %ptr
+  %v7 = load volatile <16 x i8>, ptr %ptr
+  %v8 = load volatile <16 x i8>, ptr %ptr
+  %v9 = load volatile <16 x i8>, ptr %ptr
+  %v10 = load volatile <16 x i8>, ptr %ptr
+  %v11 = load volatile <16 x i8>, ptr %ptr
+  %v12 = load volatile <16 x i8>, ptr %ptr
+  %v13 = load volatile <16 x i8>, ptr %ptr
+  %v14 = load volatile <16 x i8>, ptr %ptr
+  %v15 = load volatile <16 x i8>, ptr %ptr
+  %v16 = load volatile <16 x i8>, ptr %ptr
+  %v17 = load volatile <16 x i8>, ptr %ptr
+  %v18 = load volatile <16 x i8>, ptr %ptr
+  %v19 = load volatile <16 x i8>, ptr %ptr
+  %v20 = load volatile <16 x i8>, ptr %ptr
+  %v21 = load volatile <16 x i8>, ptr %ptr
+  %v22 = load volatile <16 x i8>, ptr %ptr
+  %v23 = load volatile <16 x i8>, ptr %ptr
+  %v24 = load volatile <16 x i8>, ptr %ptr
+  %v25 = load volatile <16 x i8>, ptr %ptr
+  %v26 = load volatile <16 x i8>, ptr %ptr
+  %v27 = load volatile <16 x i8>, ptr %ptr
+  %v28 = load volatile <16 x i8>, ptr %ptr
+  %v29 = load volatile <16 x i8>, ptr %ptr
+  %v30 = load volatile <16 x i8>, ptr %ptr
+  %v31 = load volatile <16 x i8>, ptr %ptr
+  %vx = load volatile <16 x i8>, ptr %ptr
+  store volatile <16 x i8> %vx, ptr %ptr
+  store volatile <16 x i8> %v31, ptr %ptr
+  store volatile <16 x i8> %v30, ptr %ptr
+  store volatile <16 x i8> %v29, ptr %ptr
+  store volatile <16 x i8> %v28, ptr %ptr
+  store volatile <16 x i8> %v27, ptr %ptr
+  store volatile <16 x i8> %v26, ptr %ptr
+  store volatile <16 x i8> %v25, ptr %ptr
+  store volatile <16 x i8> %v24, ptr %ptr
+  store volatile <16 x i8> %v23, ptr %ptr
+  store volatile <16 x i8> %v22, ptr %ptr
+  store volatile <16 x i8> %v21, ptr %ptr
+  store volatile <16 x i8> %v20, ptr %ptr
+  store volatile <16 x i8> %v19, ptr %ptr
+  store volatile <16 x i8> %v18, ptr %ptr
+  store volatile <16 x i8> %v17, ptr %ptr
+  store volatile <16 x i8> %v16, ptr %ptr
+  store volatile <16 x i8> %v15, ptr %ptr
+  store volatile <16 x i8> %v14, ptr %ptr
+  store volatile <16 x i8> %v13, ptr %ptr
+  store volatile <16 x i8> %v12, ptr %ptr
+  store volatile <16 x i8> %v11, ptr %ptr
+  store volatile <16 x i8> %v10, ptr %ptr
+  store volatile <16 x i8> %v9, ptr %ptr
+  store volatile <16 x i8> %v8, ptr %ptr
+  store volatile <16 x i8> %v7, ptr %ptr
+  store volatile <16 x i8> %v6, ptr %ptr
+  store volatile <16 x i8> %v5, ptr %ptr
+  store volatile <16 x i8> %v4, ptr %ptr
+  store volatile <16 x i8> %v3, ptr %ptr
+  store volatile <16 x i8> %v2, ptr %ptr
+  store volatile <16 x i8> %v1, ptr %ptr
+  store volatile <16 x i8> %v0, ptr %ptr
   ret void
 }
 
 ; Like f1, but no 16-byte slot should be needed, and no outgoing reg save
 ; area of 160 bytes.
-define void @f2(<16 x i8> *%ptr) {
+define void @f2(ptr %ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: aghi %r15, -64
 ; CHECK-DAG: std %f8,
@@ -121,75 +121,75 @@ define void @f2(<16 x i8> *%ptr) {
 ; CHECK-DAG: ld %f15,
 ; CHECK: aghi %r15, 64
 ; CHECK: br %r14
-  %v0 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v1 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v2 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v3 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v4 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v5 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v6 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v7 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v8 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v9 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v10 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v11 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v12 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v13 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v14 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v15 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v16 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v17 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v18 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v19 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v20 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v21 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v22 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v23 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v24 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v25 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v26 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v27 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v28 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v29 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v30 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v31 = load volatile <16 x i8>, <16 x i8> *%ptr
-  store volatile <16 x i8> %v31, <16 x i8> *%ptr
-  store volatile <16 x i8> %v30, <16 x i8> *%ptr
-  store volatile <16 x i8> %v29, <16 x i8> *%ptr
-  store volatile <16 x i8> %v28, <16 x i8> *%ptr
-  store volatile <16 x i8> %v27, <16 x i8> *%ptr
-  store volatile <16 x i8> %v26, <16 x i8> *%ptr
-  store volatile <16 x i8> %v25, <16 x i8> *%ptr
-  store volatile <16 x i8> %v24, <16 x i8> *%ptr
-  store volatile <16 x i8> %v23, <16 x i8> *%ptr
-  store volatile <16 x i8> %v22, <16 x i8> *%ptr
-  store volatile <16 x i8> %v21, <16 x i8> *%ptr
-  store volatile <16 x i8> %v20, <16 x i8> *%ptr
-  store volatile <16 x i8> %v19, <16 x i8> *%ptr
-  store volatile <16 x i8> %v18, <16 x i8> *%ptr
-  store volatile <16 x i8> %v17, <16 x i8> *%ptr
-  store volatile <16 x i8> %v16, <16 x i8> *%ptr
-  store volatile <16 x i8> %v15, <16 x i8> *%ptr
-  store volatile <16 x i8> %v14, <16 x i8> *%ptr
-  store volatile <16 x i8> %v13, <16 x i8> *%ptr
-  store volatile <16 x i8> %v12, <16 x i8> *%ptr
-  store volatile <16 x i8> %v11, <16 x i8> *%ptr
-  store volatile <16 x i8> %v10, <16 x i8> *%ptr
-  store volatile <16 x i8> %v9, <16 x i8> *%ptr
-  store volatile <16 x i8> %v8, <16 x i8> *%ptr
-  store volatile <16 x i8> %v7, <16 x i8> *%ptr
-  store volatile <16 x i8> %v6, <16 x i8> *%ptr
-  store volatile <16 x i8> %v5, <16 x i8> *%ptr
-  store volatile <16 x i8> %v4, <16 x i8> *%ptr
-  store volatile <16 x i8> %v3, <16 x i8> *%ptr
-  store volatile <16 x i8> %v2, <16 x i8> *%ptr
-  store volatile <16 x i8> %v1, <16 x i8> *%ptr
-  store volatile <16 x i8> %v0, <16 x i8> *%ptr
+  %v0 = load volatile <16 x i8>, ptr %ptr
+  %v1 = load volatile <16 x i8>, ptr %ptr
+  %v2 = load volatile <16 x i8>, ptr %ptr
+  %v3 = load volatile <16 x i8>, ptr %ptr
+  %v4 = load volatile <16 x i8>, ptr %ptr
+  %v5 = load volatile <16 x i8>, ptr %ptr
+  %v6 = load volatile <16 x i8>, ptr %ptr
+  %v7 = load volatile <16 x i8>, ptr %ptr
+  %v8 = load volatile <16 x i8>, ptr %ptr
+  %v9 = load volatile <16 x i8>, ptr %ptr
+  %v10 = load volatile <16 x i8>, ptr %ptr
+  %v11 = load volatile <16 x i8>, ptr %ptr
+  %v12 = load volatile <16 x i8>, ptr %ptr
+  %v13 = load volatile <16 x i8>, ptr %ptr
+  %v14 = load volatile <16 x i8>, ptr %ptr
+  %v15 = load volatile <16 x i8>, ptr %ptr
+  %v16 = load volatile <16 x i8>, ptr %ptr
+  %v17 = load volatile <16 x i8>, ptr %ptr
+  %v18 = load volatile <16 x i8>, ptr %ptr
+  %v19 = load volatile <16 x i8>, ptr %ptr
+  %v20 = load volatile <16 x i8>, ptr %ptr
+  %v21 = load volatile <16 x i8>, ptr %ptr
+  %v22 = load volatile <16 x i8>, ptr %ptr
+  %v23 = load volatile <16 x i8>, ptr %ptr
+  %v24 = load volatile <16 x i8>, ptr %ptr
+  %v25 = load volatile <16 x i8>, ptr %ptr
+  %v26 = load volatile <16 x i8>, ptr %ptr
+  %v27 = load volatile <16 x i8>, ptr %ptr
+  %v28 = load volatile <16 x i8>, ptr %ptr
+  %v29 = load volatile <16 x i8>, ptr %ptr
+  %v30 = load volatile <16 x i8>, ptr %ptr
+  %v31 = load volatile <16 x i8>, ptr %ptr
+  store volatile <16 x i8> %v31, ptr %ptr
+  store volatile <16 x i8> %v30, ptr %ptr
+  store volatile <16 x i8> %v29, ptr %ptr
+  store volatile <16 x i8> %v28, ptr %ptr
+  store volatile <16 x i8> %v27, ptr %ptr
+  store volatile <16 x i8> %v26, ptr %ptr
+  store volatile <16 x i8> %v25, ptr %ptr
+  store volatile <16 x i8> %v24, ptr %ptr
+  store volatile <16 x i8> %v23, ptr %ptr
+  store volatile <16 x i8> %v22, ptr %ptr
+  store volatile <16 x i8> %v21, ptr %ptr
+  store volatile <16 x i8> %v20, ptr %ptr
+  store volatile <16 x i8> %v19, ptr %ptr
+  store volatile <16 x i8> %v18, ptr %ptr
+  store volatile <16 x i8> %v17, ptr %ptr
+  store volatile <16 x i8> %v16, ptr %ptr
+  store volatile <16 x i8> %v15, ptr %ptr
+  store volatile <16 x i8> %v14, ptr %ptr
+  store volatile <16 x i8> %v13, ptr %ptr
+  store volatile <16 x i8> %v12, ptr %ptr
+  store volatile <16 x i8> %v11, ptr %ptr
+  store volatile <16 x i8> %v10, ptr %ptr
+  store volatile <16 x i8> %v9, ptr %ptr
+  store volatile <16 x i8> %v8, ptr %ptr
+  store volatile <16 x i8> %v7, ptr %ptr
+  store volatile <16 x i8> %v6, ptr %ptr
+  store volatile <16 x i8> %v5, ptr %ptr
+  store volatile <16 x i8> %v4, ptr %ptr
+  store volatile <16 x i8> %v3, ptr %ptr
+  store volatile <16 x i8> %v2, ptr %ptr
+  store volatile <16 x i8> %v1, ptr %ptr
+  store volatile <16 x i8> %v0, ptr %ptr
   ret void
 }
 
 ; Like f2, but only %f8 should be saved.
-define void @f3(<16 x i8> *%ptr) {
+define void @f3(ptr %ptr) {
 ; CHECK-LABEL: f3:
 ; CHECK: aghi %r15, -8
 ; CHECK-DAG: std %f8,
@@ -205,111 +205,111 @@ define void @f3(<16 x i8> *%ptr) {
 ; CHECK-DAG: ld %f8,
 ; CHECK: aghi %r15, 8
 ; CHECK: br %r14
-  %v0 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v1 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v2 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v3 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v4 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v5 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v6 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v7 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v8 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v16 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v17 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v18 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v19 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v20 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v21 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v22 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v23 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v24 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v25 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v26 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v27 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v28 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v29 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v30 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v31 = load volatile <16 x i8>, <16 x i8> *%ptr
-  store volatile <16 x i8> %v31, <16 x i8> *%ptr
-  store volatile <16 x i8> %v30, <16 x i8> *%ptr
-  store volatile <16 x i8> %v29, <16 x i8> *%ptr
-  store volatile <16 x i8> %v28, <16 x i8> *%ptr
-  store volatile <16 x i8> %v27, <16 x i8> *%ptr
-  store volatile <16 x i8> %v26, <16 x i8> *%ptr
-  store volatile <16 x i8> %v25, <16 x i8> *%ptr
-  store volatile <16 x i8> %v24, <16 x i8> *%ptr
-  store volatile <16 x i8> %v23, <16 x i8> *%ptr
-  store volatile <16 x i8> %v22, <16 x i8> *%ptr
-  store volatile <16 x i8> %v21, <16 x i8> *%ptr
-  store volatile <16 x i8> %v20, <16 x i8> *%ptr
-  store volatile <16 x i8> %v19, <16 x i8> *%ptr
-  store volatile <16 x i8> %v18, <16 x i8> *%ptr
-  store volatile <16 x i8> %v17, <16 x i8> *%ptr
-  store volatile <16 x i8> %v16, <16 x i8> *%ptr
-  store volatile <16 x i8> %v8, <16 x i8> *%ptr
-  store volatile <16 x i8> %v7, <16 x i8> *%ptr
-  store volatile <16 x i8> %v6, <16 x i8> *%ptr
-  store volatile <16 x i8> %v5, <16 x i8> *%ptr
-  store volatile <16 x i8> %v4, <16 x i8> *%ptr
-  store volatile <16 x i8> %v3, <16 x i8> *%ptr
-  store volatile <16 x i8> %v2, <16 x i8> *%ptr
-  store volatile <16 x i8> %v1, <16 x i8> *%ptr
-  store volatile <16 x i8> %v0, <16 x i8> *%ptr
+  %v0 = load volatile <16 x i8>, ptr %ptr
+  %v1 = load volatile <16 x i8>, ptr %ptr
+  %v2 = load volatile <16 x i8>, ptr %ptr
+  %v3 = load volatile <16 x i8>, ptr %ptr
+  %v4 = load volatile <16 x i8>, ptr %ptr
+  %v5 = load volatile <16 x i8>, ptr %ptr
+  %v6 = load volatile <16 x i8>, ptr %ptr
+  %v7 = load volatile <16 x i8>, ptr %ptr
+  %v8 = load volatile <16 x i8>, ptr %ptr
+  %v16 = load volatile <16 x i8>, ptr %ptr
+  %v17 = load volatile <16 x i8>, ptr %ptr
+  %v18 = load volatile <16 x i8>, ptr %ptr
+  %v19 = load volatile <16 x i8>, ptr %ptr
+  %v20 = load volatile <16 x i8>, ptr %ptr
+  %v21 = load volatile <16 x i8>, ptr %ptr
+  %v22 = load volatile <16 x i8>, ptr %ptr
+  %v23 = load volatile <16 x i8>, ptr %ptr
+  %v24 = load volatile <16 x i8>, ptr %ptr
+  %v25 = load volatile <16 x i8>, ptr %ptr
+  %v26 = load volatile <16 x i8>, ptr %ptr
+  %v27 = load volatile <16 x i8>, ptr %ptr
+  %v28 = load volatile <16 x i8>, ptr %ptr
+  %v29 = load volatile <16 x i8>, ptr %ptr
+  %v30 = load volatile <16 x i8>, ptr %ptr
+  %v31 = load volatile <16 x i8>, ptr %ptr
+  store volatile <16 x i8> %v31, ptr %ptr
+  store volatile <16 x i8> %v30, ptr %ptr
+  store volatile <16 x i8> %v29, ptr %ptr
+  store volatile <16 x i8> %v28, ptr %ptr
+  store volatile <16 x i8> %v27, ptr %ptr
+  store volatile <16 x i8> %v26, ptr %ptr
+  store volatile <16 x i8> %v25, ptr %ptr
+  store volatile <16 x i8> %v24, ptr %ptr
+  store volatile <16 x i8> %v23, ptr %ptr
+  store volatile <16 x i8> %v22, ptr %ptr
+  store volatile <16 x i8> %v21, ptr %ptr
+  store volatile <16 x i8> %v20, ptr %ptr
+  store volatile <16 x i8> %v19, ptr %ptr
+  store volatile <16 x i8> %v18, ptr %ptr
+  store volatile <16 x i8> %v17, ptr %ptr
+  store volatile <16 x i8> %v16, ptr %ptr
+  store volatile <16 x i8> %v8, ptr %ptr
+  store volatile <16 x i8> %v7, ptr %ptr
+  store volatile <16 x i8> %v6, ptr %ptr
+  store volatile <16 x i8> %v5, ptr %ptr
+  store volatile <16 x i8> %v4, ptr %ptr
+  store volatile <16 x i8> %v3, ptr %ptr
+  store volatile <16 x i8> %v2, ptr %ptr
+  store volatile <16 x i8> %v1, ptr %ptr
+  store volatile <16 x i8> %v0, ptr %ptr
   ret void
 }
 
 ; Like f2, but no registers should be saved.
-define void @f4(<16 x i8> *%ptr) {
+define void @f4(ptr %ptr) {
 ; CHECK-LABEL: f4:
 ; CHECK-NOT: %r15
 ; CHECK: br %r14
-  %v0 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v1 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v2 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v3 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v4 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v5 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v6 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v7 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v16 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v17 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v18 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v19 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v20 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v21 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v22 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v23 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v24 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v25 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v26 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v27 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v28 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v29 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v30 = load volatile <16 x i8>, <16 x i8> *%ptr
-  %v31 = load volatile <16 x i8>, <16 x i8> *%ptr
-  store volatile <16 x i8> %v31, <16 x i8> *%ptr
-  store volatile <16 x i8> %v30, <16 x i8> *%ptr
-  store volatile <16 x i8> %v29, <16 x i8> *%ptr
-  store volatile <16 x i8> %v28, <16 x i8> *%ptr
-  store volatile <16 x i8> %v27, <16 x i8> *%ptr
-  store volatile <16 x i8> %v26, <16 x i8> *%ptr
-  store volatile <16 x i8> %v25, <16 x i8> *%ptr
-  store volatile <16 x i8> %v24, <16 x i8> *%ptr
-  store volatile <16 x i8> %v23, <16 x i8> *%ptr
-  store volatile <16 x i8> %v22, <16 x i8> *%ptr
-  store volatile <16 x i8> %v21, <16 x i8> *%ptr
-  store volatile <16 x i8> %v20, <16 x i8> *%ptr
-  store volatile <16 x i8> %v19, <16 x i8> *%ptr
-  store volatile <16 x i8> %v18, <16 x i8> *%ptr
-  store volatile <16 x i8> %v17, <16 x i8> *%ptr
-  store volatile <16 x i8> %v16, <16 x i8> *%ptr
-  store volatile <16 x i8> %v7, <16 x i8> *%ptr
-  store volatile <16 x i8> %v6, <16 x i8> *%ptr
-  store volatile <16 x i8> %v5, <16 x i8> *%ptr
-  store volatile <16 x i8> %v4, <16 x i8> *%ptr
-  store volatile <16 x i8> %v3, <16 x i8> *%ptr
-  store volatile <16 x i8> %v2, <16 x i8> *%ptr
-  store volatile <16 x i8> %v1, <16 x i8> *%ptr
-  store volatile <16 x i8> %v0, <16 x i8> *%ptr
+  %v0 = load volatile <16 x i8>, ptr %ptr
+  %v1 = load volatile <16 x i8>, ptr %ptr
+  %v2 = load volatile <16 x i8>, ptr %ptr
+  %v3 = load volatile <16 x i8>, ptr %ptr
+  %v4 = load volatile <16 x i8>, ptr %ptr
+  %v5 = load volatile <16 x i8>, ptr %ptr
+  %v6 = load volatile <16 x i8>, ptr %ptr
+  %v7 = load volatile <16 x i8>, ptr %ptr
+  %v16 = load volatile <16 x i8>, ptr %ptr
+  %v17 = load volatile <16 x i8>, ptr %ptr
+  %v18 = load volatile <16 x i8>, ptr %ptr
+  %v19 = load volatile <16 x i8>, ptr %ptr
+  %v20 = load volatile <16 x i8>, ptr %ptr
+  %v21 = load volatile <16 x i8>, ptr %ptr
+  %v22 = load volatile <16 x i8>, ptr %ptr
+  %v23 = load volatile <16 x i8>, ptr %ptr
+  %v24 = load volatile <16 x i8>, ptr %ptr
+  %v25 = load volatile <16 x i8>, ptr %ptr
+  %v26 = load volatile <16 x i8>, ptr %ptr
+  %v27 = load volatile <16 x i8>, ptr %ptr
+  %v28 = load volatile <16 x i8>, ptr %ptr
+  %v29 = load volatile <16 x i8>, ptr %ptr
+  %v30 = load volatile <16 x i8>, ptr %ptr
+  %v31 = load volatile <16 x i8>, ptr %ptr
+  store volatile <16 x i8> %v31, ptr %ptr
+  store volatile <16 x i8> %v30, ptr %ptr
+  store volatile <16 x i8> %v29, ptr %ptr
+  store volatile <16 x i8> %v28, ptr %ptr
+  store volatile <16 x i8> %v27, ptr %ptr
+  store volatile <16 x i8> %v26, ptr %ptr
+  store volatile <16 x i8> %v25, ptr %ptr
+  store volatile <16 x i8> %v24, ptr %ptr
+  store volatile <16 x i8> %v23, ptr %ptr
+  store volatile <16 x i8> %v22, ptr %ptr
+  store volatile <16 x i8> %v21, ptr %ptr
+  store volatile <16 x i8> %v20, ptr %ptr
+  store volatile <16 x i8> %v19, ptr %ptr
+  store volatile <16 x i8> %v18, ptr %ptr
+  store volatile <16 x i8> %v17, ptr %ptr
+  store volatile <16 x i8> %v16, ptr %ptr
+  store volatile <16 x i8> %v7, ptr %ptr
+  store volatile <16 x i8> %v6, ptr %ptr
+  store volatile <16 x i8> %v5, ptr %ptr
+  store volatile <16 x i8> %v4, ptr %ptr
+  store volatile <16 x i8> %v3, ptr %ptr
+  store volatile <16 x i8> %v2, ptr %ptr
+  store volatile <16 x i8> %v1, ptr %ptr
+  store volatile <16 x i8> %v0, ptr %ptr
   ret void
 }

@@ -7,7 +7,7 @@
 
 ; Call __tls_get_offset to retrieve the module's TLS base offset.
 ; Add the per-symbol offset and the thread pointer.
-define i32 *@foo() {
+define ptr@foo() {
 ; CHECK-CP: .LCP{{.*}}_0:
 ; CHECK-CP: .quad x@TLSLDM
 ; CHECK-CP: .LCP{{.*}}_1:
@@ -24,5 +24,5 @@ define i32 *@foo() {
 ; CHECK-MAIN: ear [[TP]], %a1
 ; CHECK-MAIN: agr %r2, [[TP]]
 ; CHECK-MAIN: br %r14
-  ret i32 *@x
+  ret ptr@x
 }

@@ -21,13 +21,13 @@ define i32 @f2(double %f) {
 }
 
 ; Test f128->i32.
-define i32 @f3(fp128 *%src) {
+define i32 @f3(ptr %src) {
 ; CHECK-LABEL: f3:
 ; CHECK-DAG: ld %f0, 0(%r2)
 ; CHECK-DAG: ld %f2, 8(%r2)
 ; CHECK: clfxbr %r2, 5, %f0, 0
 ; CHECK: br %r14
-  %f = load fp128, fp128 *%src
+  %f = load fp128, ptr %src
   %conv = fptoui fp128 %f to i32
   ret i32 %conv
 }
@@ -51,13 +51,13 @@ define i64 @f5(double %f) {
 }
 
 ; Test f128->i64.
-define i64 @f6(fp128 *%src) {
+define i64 @f6(ptr %src) {
 ; CHECK-LABEL: f6:
 ; CHECK-DAG: ld %f0, 0(%r2)
 ; CHECK-DAG: ld %f2, 8(%r2)
 ; CHECK: clgxbr %r2, 5, %f0, 0
 ; CHECK: br %r14
-  %f = load fp128, fp128 *%src
+  %f = load fp128, ptr %src
   %conv = fptoui fp128 %f to i64
   ret i64 %conv
 }

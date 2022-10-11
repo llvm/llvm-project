@@ -27,22 +27,22 @@ define void @func0() {
 ; CHECK64: lmg 7, 15, 2072(4)
 ; CHECK64: aghi  4, 160
 ; CHECK64: b 2(7)
-define void @func1(i64 *%ptr) {
-  %l01 = load volatile i64, i64 *%ptr
-  %l02 = load volatile i64, i64 *%ptr
-  %l03 = load volatile i64, i64 *%ptr
-  %l04 = load volatile i64, i64 *%ptr
-  %l05 = load volatile i64, i64 *%ptr
-  %l06 = load volatile i64, i64 *%ptr
-  %l07 = load volatile i64, i64 *%ptr
-  %l08 = load volatile i64, i64 *%ptr
-  %l09 = load volatile i64, i64 *%ptr
-  %l10 = load volatile i64, i64 *%ptr
-  %l11 = load volatile i64, i64 *%ptr
-  %l12 = load volatile i64, i64 *%ptr
-  %l13 = load volatile i64, i64 *%ptr
-  %l14 = load volatile i64, i64 *%ptr
-  %l15 = load volatile i64, i64 *%ptr
+define void @func1(ptr %ptr) {
+  %l01 = load volatile i64, ptr %ptr
+  %l02 = load volatile i64, ptr %ptr
+  %l03 = load volatile i64, ptr %ptr
+  %l04 = load volatile i64, ptr %ptr
+  %l05 = load volatile i64, ptr %ptr
+  %l06 = load volatile i64, ptr %ptr
+  %l07 = load volatile i64, ptr %ptr
+  %l08 = load volatile i64, ptr %ptr
+  %l09 = load volatile i64, ptr %ptr
+  %l10 = load volatile i64, ptr %ptr
+  %l11 = load volatile i64, ptr %ptr
+  %l12 = load volatile i64, ptr %ptr
+  %l13 = load volatile i64, ptr %ptr
+  %l14 = load volatile i64, ptr %ptr
+  %l15 = load volatile i64, ptr %ptr
   %add01 = add i64 %l01, %l01
   %add02 = add i64 %l02, %add01
   %add03 = add i64 %l03, %add02
@@ -58,21 +58,21 @@ define void @func1(i64 *%ptr) {
   %add13 = add i64 %l13, %add12
   %add14 = add i64 %l14, %add13
   %add15 = add i64 %l15, %add14
-  store volatile i64 %add01, i64 *%ptr
-  store volatile i64 %add02, i64 *%ptr
-  store volatile i64 %add03, i64 *%ptr
-  store volatile i64 %add04, i64 *%ptr
-  store volatile i64 %add05, i64 *%ptr
-  store volatile i64 %add06, i64 *%ptr
-  store volatile i64 %add07, i64 *%ptr
-  store volatile i64 %add08, i64 *%ptr
-  store volatile i64 %add09, i64 *%ptr
-  store volatile i64 %add10, i64 *%ptr
-  store volatile i64 %add11, i64 *%ptr
-  store volatile i64 %add12, i64 *%ptr
-  store volatile i64 %add13, i64 *%ptr
-  store volatile i64 %add14, i64 *%ptr
-  store volatile i64 %add15, i64 *%ptr
+  store volatile i64 %add01, ptr %ptr
+  store volatile i64 %add02, ptr %ptr
+  store volatile i64 %add03, ptr %ptr
+  store volatile i64 %add04, ptr %ptr
+  store volatile i64 %add05, ptr %ptr
+  store volatile i64 %add06, ptr %ptr
+  store volatile i64 %add07, ptr %ptr
+  store volatile i64 %add08, ptr %ptr
+  store volatile i64 %add09, ptr %ptr
+  store volatile i64 %add10, ptr %ptr
+  store volatile i64 %add11, ptr %ptr
+  store volatile i64 %add12, ptr %ptr
+  store volatile i64 %add13, ptr %ptr
+  store volatile i64 %add14, ptr %ptr
+  store volatile i64 %add15, ptr %ptr
   ret void
 }
 
@@ -118,23 +118,23 @@ define void @func1(i64 *%ptr) {
 ; CHECK64: aghi  4, 320
 ; CHECK64: b 2(7)
 
-define void @func2(double *%ptr, <2 x i64> *%vec_ptr) {
-  %l00 = load volatile double, double *%ptr
-  %l01 = load volatile double, double *%ptr
-  %l02 = load volatile double, double *%ptr
-  %l03 = load volatile double, double *%ptr
-  %l04 = load volatile double, double *%ptr
-  %l05 = load volatile double, double *%ptr
-  %l06 = load volatile double, double *%ptr
-  %l07 = load volatile double, double *%ptr
-  %l08 = load volatile double, double *%ptr
-  %l09 = load volatile double, double *%ptr
-  %l10 = load volatile double, double *%ptr
-  %l11 = load volatile double, double *%ptr
-  %l12 = load volatile double, double *%ptr
-  %l13 = load volatile double, double *%ptr
-  %l14 = load volatile double, double *%ptr
-  %l15 = load volatile double, double *%ptr
+define void @func2(ptr %ptr, ptr %vec_ptr) {
+  %l00 = load volatile double, ptr %ptr
+  %l01 = load volatile double, ptr %ptr
+  %l02 = load volatile double, ptr %ptr
+  %l03 = load volatile double, ptr %ptr
+  %l04 = load volatile double, ptr %ptr
+  %l05 = load volatile double, ptr %ptr
+  %l06 = load volatile double, ptr %ptr
+  %l07 = load volatile double, ptr %ptr
+  %l08 = load volatile double, ptr %ptr
+  %l09 = load volatile double, ptr %ptr
+  %l10 = load volatile double, ptr %ptr
+  %l11 = load volatile double, ptr %ptr
+  %l12 = load volatile double, ptr %ptr
+  %l13 = load volatile double, ptr %ptr
+  %l14 = load volatile double, ptr %ptr
+  %l15 = load volatile double, ptr %ptr
   %add00 = fadd double %l01, %l00
   %add01 = fadd double %l01, %add00
   %add02 = fadd double %l02, %add01
@@ -151,55 +151,55 @@ define void @func2(double *%ptr, <2 x i64> *%vec_ptr) {
   %add13 = fadd double %l13, %add12
   %add14 = fadd double %l14, %add13
   %add15 = fadd double %l15, %add14
-  store volatile double %add00, double *%ptr
-  store volatile double %add01, double *%ptr
-  store volatile double %add02, double *%ptr
-  store volatile double %add03, double *%ptr
-  store volatile double %add04, double *%ptr
-  store volatile double %add05, double *%ptr
-  store volatile double %add06, double *%ptr
-  store volatile double %add07, double *%ptr
-  store volatile double %add08, double *%ptr
-  store volatile double %add09, double *%ptr
-  store volatile double %add10, double *%ptr
-  store volatile double %add11, double *%ptr
-  store volatile double %add12, double *%ptr
-  store volatile double %add13, double *%ptr
-  store volatile double %add14, double *%ptr
-  store volatile double %add15, double *%ptr
+  store volatile double %add00, ptr %ptr
+  store volatile double %add01, ptr %ptr
+  store volatile double %add02, ptr %ptr
+  store volatile double %add03, ptr %ptr
+  store volatile double %add04, ptr %ptr
+  store volatile double %add05, ptr %ptr
+  store volatile double %add06, ptr %ptr
+  store volatile double %add07, ptr %ptr
+  store volatile double %add08, ptr %ptr
+  store volatile double %add09, ptr %ptr
+  store volatile double %add10, ptr %ptr
+  store volatile double %add11, ptr %ptr
+  store volatile double %add12, ptr %ptr
+  store volatile double %add13, ptr %ptr
+  store volatile double %add14, ptr %ptr
+  store volatile double %add15, ptr %ptr
 
-  %v00 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v01 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v02 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v03 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v04 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v05 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v06 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v07 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v08 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v09 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v10 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v11 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v12 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v13 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v14 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v15 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v16 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v17 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v18 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v19 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v20 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v21 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v22 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v23 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v24 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v25 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v26 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v27 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v28 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v29 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v30 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
-  %v31 = load volatile <2 x i64>, <2 x i64> *%vec_ptr
+  %v00 = load volatile <2 x i64>, ptr %vec_ptr
+  %v01 = load volatile <2 x i64>, ptr %vec_ptr
+  %v02 = load volatile <2 x i64>, ptr %vec_ptr
+  %v03 = load volatile <2 x i64>, ptr %vec_ptr
+  %v04 = load volatile <2 x i64>, ptr %vec_ptr
+  %v05 = load volatile <2 x i64>, ptr %vec_ptr
+  %v06 = load volatile <2 x i64>, ptr %vec_ptr
+  %v07 = load volatile <2 x i64>, ptr %vec_ptr
+  %v08 = load volatile <2 x i64>, ptr %vec_ptr
+  %v09 = load volatile <2 x i64>, ptr %vec_ptr
+  %v10 = load volatile <2 x i64>, ptr %vec_ptr
+  %v11 = load volatile <2 x i64>, ptr %vec_ptr
+  %v12 = load volatile <2 x i64>, ptr %vec_ptr
+  %v13 = load volatile <2 x i64>, ptr %vec_ptr
+  %v14 = load volatile <2 x i64>, ptr %vec_ptr
+  %v15 = load volatile <2 x i64>, ptr %vec_ptr
+  %v16 = load volatile <2 x i64>, ptr %vec_ptr
+  %v17 = load volatile <2 x i64>, ptr %vec_ptr
+  %v18 = load volatile <2 x i64>, ptr %vec_ptr
+  %v19 = load volatile <2 x i64>, ptr %vec_ptr
+  %v20 = load volatile <2 x i64>, ptr %vec_ptr
+  %v21 = load volatile <2 x i64>, ptr %vec_ptr
+  %v22 = load volatile <2 x i64>, ptr %vec_ptr
+  %v23 = load volatile <2 x i64>, ptr %vec_ptr
+  %v24 = load volatile <2 x i64>, ptr %vec_ptr
+  %v25 = load volatile <2 x i64>, ptr %vec_ptr
+  %v26 = load volatile <2 x i64>, ptr %vec_ptr
+  %v27 = load volatile <2 x i64>, ptr %vec_ptr
+  %v28 = load volatile <2 x i64>, ptr %vec_ptr
+  %v29 = load volatile <2 x i64>, ptr %vec_ptr
+  %v30 = load volatile <2 x i64>, ptr %vec_ptr
+  %v31 = load volatile <2 x i64>, ptr %vec_ptr
   %vadd00 = add <2 x i64> %v00, %v00
   %vadd01 = add <2 x i64> %v01, %vadd00
   %vadd02 = add <2 x i64> %v02, %vadd01
@@ -232,38 +232,38 @@ define void @func2(double *%ptr, <2 x i64> *%vec_ptr) {
   %vadd29 = add <2 x i64> %v29, %vadd28
   %vadd30 = add <2 x i64> %v30, %vadd29
   %vadd31 = add <2 x i64> %v31, %vadd30
-  store volatile <2 x i64> %vadd00, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd01, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd02, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd03, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd04, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd05, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd06, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd07, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd08, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd09, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd10, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd11, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd12, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd13, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd14, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd15, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd16, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd17, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd18, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd19, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd20, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd21, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd22, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd23, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd24, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd25, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd26, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd27, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd28, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd29, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd30, <2 x i64> *%vec_ptr
-  store volatile <2 x i64> %vadd31, <2 x i64> *%vec_ptr
+  store volatile <2 x i64> %vadd00, ptr %vec_ptr
+  store volatile <2 x i64> %vadd01, ptr %vec_ptr
+  store volatile <2 x i64> %vadd02, ptr %vec_ptr
+  store volatile <2 x i64> %vadd03, ptr %vec_ptr
+  store volatile <2 x i64> %vadd04, ptr %vec_ptr
+  store volatile <2 x i64> %vadd05, ptr %vec_ptr
+  store volatile <2 x i64> %vadd06, ptr %vec_ptr
+  store volatile <2 x i64> %vadd07, ptr %vec_ptr
+  store volatile <2 x i64> %vadd08, ptr %vec_ptr
+  store volatile <2 x i64> %vadd09, ptr %vec_ptr
+  store volatile <2 x i64> %vadd10, ptr %vec_ptr
+  store volatile <2 x i64> %vadd11, ptr %vec_ptr
+  store volatile <2 x i64> %vadd12, ptr %vec_ptr
+  store volatile <2 x i64> %vadd13, ptr %vec_ptr
+  store volatile <2 x i64> %vadd14, ptr %vec_ptr
+  store volatile <2 x i64> %vadd15, ptr %vec_ptr
+  store volatile <2 x i64> %vadd16, ptr %vec_ptr
+  store volatile <2 x i64> %vadd17, ptr %vec_ptr
+  store volatile <2 x i64> %vadd18, ptr %vec_ptr
+  store volatile <2 x i64> %vadd19, ptr %vec_ptr
+  store volatile <2 x i64> %vadd20, ptr %vec_ptr
+  store volatile <2 x i64> %vadd21, ptr %vec_ptr
+  store volatile <2 x i64> %vadd22, ptr %vec_ptr
+  store volatile <2 x i64> %vadd23, ptr %vec_ptr
+  store volatile <2 x i64> %vadd24, ptr %vec_ptr
+  store volatile <2 x i64> %vadd25, ptr %vec_ptr
+  store volatile <2 x i64> %vadd26, ptr %vec_ptr
+  store volatile <2 x i64> %vadd27, ptr %vec_ptr
+  store volatile <2 x i64> %vadd28, ptr %vec_ptr
+  store volatile <2 x i64> %vadd29, ptr %vec_ptr
+  store volatile <2 x i64> %vadd30, ptr %vec_ptr
+  store volatile <2 x i64> %vadd31, ptr %vec_ptr
   ret void
 }
 
@@ -274,8 +274,7 @@ define void @func2(double *%ptr, <2 x i64> *%vec_ptr) {
 ; CHECK64: agfi  4, 1040768
 define void @func3() {
   %arr = alloca [130070 x i64], align 8
-  %ptr = bitcast [130070 x i64]* %arr to i8*
-  call i64 (i8*) @fun1(i8* %ptr)
+  call i64 (ptr) @fun1(ptr %arr)
   ret void
 }
 
@@ -290,7 +289,7 @@ define void @func3() {
 ; CHECK64: lmg	4, 9, 2048(4)
 define i64 @func4(i64 %n) {
   %vla = alloca i64, i64 %n, align 8
-  %call = call i64 @fun2(i64 %n, i64* nonnull %vla, i64* nonnull %vla)
+  %call = call i64 @fun2(i64 %n, ptr nonnull %vla, ptr nonnull %vla)
   ret i64 %call
 }
 
@@ -307,8 +306,7 @@ define i64 @func4(i64 %n) {
 define i64 @func5(i64 %n) {
   %vla = alloca i64, i64 %n, align 8
   %arr = alloca [130000 x i64], align 8
-  %ptr = bitcast [130000 x i64]* %arr to i64*
-  %call = call i64 @fun2(i64 %n, i64* nonnull %vla, i64* %ptr)
+  %call = call i64 @fun2(i64 %n, ptr nonnull %vla, ptr %arr)
   ret i64 %call
 }
 
@@ -323,8 +321,7 @@ define i64 @func5(i64 %n) {
 ; CHECK64: stmg  6, 7, 2064(4)
 define void @large_stack() {
   %arr = alloca [131072 x i64], align 8
-  %ptr = bitcast [131072 x i64]* %arr to i8*
-  call i64 (i8*) @fun1(i8* %ptr)
+  call i64 (ptr) @fun1(ptr %arr)
   ret void
 }
 
@@ -344,5 +341,5 @@ define i64 @leaf_func0(i64 %a, i64 %b, i64 %c) {
 }
 
 declare i64 @fun(i64 %arg0)
-declare i64 @fun1(i8* %ptr)
-declare i64 @fun2(i64 %n, i64* %arr0, i64* %arr1)
+declare i64 @fun1(ptr %ptr)
+declare i64 @fun2(i64 %n, ptr %arr0, ptr %arr1)

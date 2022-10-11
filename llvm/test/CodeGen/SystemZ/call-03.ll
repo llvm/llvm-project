@@ -62,7 +62,7 @@ define void @f4() {
 
 ; Check an indirect call.  In this case the only acceptable choice for
 ; the target register is %r1.
-define void @f5(void(i32, i32, i32, i32) *%foo) {
+define void @f5(ptr %foo) {
 ; CHECK-LABEL: f5:
 ; CHECK: lgr %r1, %r2
 ; CHECK-DAG: lhi %r2, 1
@@ -76,7 +76,7 @@ define void @f5(void(i32, i32, i32, i32) *%foo) {
 
 ; Check an indirect call that will be forced into a call-saved GPR
 ; (which should be %r13, the highest GPR not used for anything else).
-define void @f6(void(i32) *%foo) {
+define void @f6(ptr %foo) {
 ; CHECK-LABEL: f6:
 ; CHECK: stmg %r13, %r15, 104(%r15)
 ; CHECK: lgr %r13, %r2
