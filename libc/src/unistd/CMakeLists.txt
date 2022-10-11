@@ -115,6 +115,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  isatty
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.isatty
+)
+
+add_entrypoint_object(
   link
   ALIAS
   DEPENDS

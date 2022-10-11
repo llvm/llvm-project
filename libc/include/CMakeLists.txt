@@ -219,6 +219,15 @@ add_gen_header(
 file(MAKE_DIRECTORY "sys")
 
 add_gen_header(
+  sys_ioctl
+  DEF_FILE sys/ioctl.h.def
+  GEN_HDR sys/ioctl.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_ioctl_macros
+)
+
+add_gen_header(
   sys_mman
   DEF_FILE sys/mman.h.def
   GEN_HDR sys/mman.h
