@@ -683,9 +683,15 @@ void LifetimeCheckPass::checkStore(StoreOp storeOp) {
   };
 
   auto data = storeOp.getValue();
+  auto defOp = data.getDefiningOp();
+
+  // Do not handle block arguments just yet.
+  if (!defOp)
+    return;
+
   // 2.4.2 - If the declaration includes an initialization, the
   // initialization is treated as a separate operation
-  if (auto cstOp = dyn_cast<ConstantOp>(data.getDefiningOp())) {
+  if (auto cstOp = dyn_cast<ConstantOp>(defOp)) {
     assert(cstOp.isNullPtr() && "not implemented");
     assert(getPmap().count(addr) && "address should always be valid");
     // 2.4.2 - If the initialization is default initialization or zero
@@ -700,14 +706,14 @@ void LifetimeCheckPass::checkStore(StoreOp storeOp) {
     return;
   }
 
-  if (auto allocaOp = dyn_cast<AllocaOp>(data.getDefiningOp())) {
+  if (auto allocaOp = dyn_cast<AllocaOp>(defOp)) {
     // p = &x;
     getPmap()[addr].clear();
     getPmap()[addr].insert(State::getLocalValue(data));
     return;
   }
 
-  if (auto ptrStrideOp = dyn_cast<PtrStrideOp>(data.getDefiningOp())) {
+  if (auto ptrStrideOp = dyn_cast<PtrStrideOp>(defOp)) {
     // p = &a[0];
     auto array = getArrayFromSubscript(ptrStrideOp);
     if (array) {
