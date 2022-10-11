@@ -14,7 +14,7 @@ define dso_local zeroext i8 @test_char_one() {
 ; CHECK-NEXT:    lbzx 3, 3, var_char@tls
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, i8* @var_char, align 1, !tbaa !4
+  %0 = load i8, ptr @var_char, align 1, !tbaa !4
   ret i8 %0
 }
 
@@ -27,7 +27,7 @@ define dso_local void @test_char_two(i32 signext %a) {
 ; CHECK-NEXT:    blr
 entry:
   %conv = trunc i32 %a to i8
-  store i8 %conv, i8* @var_char, align 1, !tbaa !4
+  store i8 %conv, ptr @var_char, align 1, !tbaa !4
   ret void
 }
 
@@ -42,9 +42,9 @@ define dso_local zeroext i8 @test_char_three(i8 zeroext %a) {
 ; CHECK-NEXT:    stbx 5, 4, var_char@tls
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, i8* @var_char, align 1, !tbaa !4
+  %0 = load i8, ptr @var_char, align 1, !tbaa !4
   %add = add i8 %0, %a
-  store i8 %add, i8* @var_char, align 1, !tbaa !4
+  store i8 %add, ptr @var_char, align 1, !tbaa !4
   ret i8 %add
 }
 
@@ -56,7 +56,7 @@ define dso_local signext i16 @test_short_one() {
 ; CHECK-NEXT:    lhzx 3, 3, var_short@tls
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i16, i16* @var_short, align 2, !tbaa !7
+  %0 = load i16, ptr @var_short, align 2, !tbaa !7
   ret i16 %0
 }
 
@@ -69,7 +69,7 @@ define dso_local void @test_short_two(i32 signext %a) {
 ; CHECK-NEXT:    blr
 entry:
   %conv = trunc i32 %a to i16
-  store i16 %conv, i16* @var_short, align 2, !tbaa !7
+  store i16 %conv, ptr @var_short, align 2, !tbaa !7
   ret void
 }
 
@@ -84,9 +84,9 @@ define dso_local signext i16 @test_short_three(i16 signext %a) {
 ; CHECK-NEXT:    sthx 5, 4, var_short@tls
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i16, i16* @var_short, align 2, !tbaa !7
+  %0 = load i16, ptr @var_short, align 2, !tbaa !7
   %add = add i16 %0, %a
-  store i16 %add, i16* @var_short, align 2, !tbaa !7
+  store i16 %add, ptr @var_short, align 2, !tbaa !7
   ret i16 %add
 }
 
@@ -98,7 +98,7 @@ define dso_local signext i32 @test_int_one() {
 ; CHECK-NEXT:    lwzx 3, 3, var_int@tls
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* @var_int, align 4, !tbaa !9
+  %0 = load i32, ptr @var_int, align 4, !tbaa !9
   ret i32 %0
 }
 
@@ -110,7 +110,7 @@ define dso_local void @test_int_two(i32 signext %a) {
 ; CHECK-NEXT:    stwx 3, 4, var_int@tls
 ; CHECK-NEXT:    blr
 entry:
-  store i32 %a, i32* @var_int, align 4, !tbaa !9
+  store i32 %a, ptr @var_int, align 4, !tbaa !9
   ret void
 }
 
@@ -125,9 +125,9 @@ define dso_local signext i32 @test_int_three(i32 signext %a) {
 ; CHECK-NEXT:    stwx 5, 4, var_int@tls
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* @var_int, align 4, !tbaa !9
+  %0 = load i32, ptr @var_int, align 4, !tbaa !9
   %add = add nsw i32 %0, %a
-  store i32 %add, i32* @var_int, align 4, !tbaa !9
+  store i32 %add, ptr @var_int, align 4, !tbaa !9
   ret i32 %add
 }
 
@@ -139,7 +139,7 @@ define dso_local i64 @test_longlong_one() {
 ; CHECK-NEXT:    ldx 3, 3, var_long_long@tls
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i64, i64* @var_long_long, align 8, !tbaa !11
+  %0 = load i64, ptr @var_long_long, align 8, !tbaa !11
   ret i64 %0
 }
 
@@ -152,7 +152,7 @@ define dso_local void @test_longlong_two(i32 signext %a) {
 ; CHECK-NEXT:    blr
 entry:
   %conv = sext i32 %a to i64
-  store i64 %conv, i64* @var_long_long, align 8, !tbaa !11
+  store i64 %conv, ptr @var_long_long, align 8, !tbaa !11
   ret void
 }
 
@@ -166,9 +166,9 @@ define dso_local i64 @test_longlong_three(i64 %a) {
 ; CHECK-NEXT:    stdx 3, 4, var_long_long@tls
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i64, i64* @var_long_long, align 8, !tbaa !11
+  %0 = load i64, ptr @var_long_long, align 8, !tbaa !11
   %add = add nsw i64 %0, %a
-  store i64 %add, i64* @var_long_long, align 8, !tbaa !11
+  store i64 %add, ptr @var_long_long, align 8, !tbaa !11
   ret i64 %add
 }
 

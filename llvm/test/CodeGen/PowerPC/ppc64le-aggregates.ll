@@ -259,9 +259,9 @@ entry:
 
 define void @caller2() {
 entry:
-  %0 = load [8 x float], [8 x float]* getelementptr inbounds (%struct.float8, %struct.float8* @g8, i64 0, i32 0), align 4
-  %1 = load [5 x float], [5 x float]* getelementptr inbounds (%struct.float5, %struct.float5* @g5, i64 0, i32 0), align 4
-  %2 = load [2 x float], [2 x float]* getelementptr inbounds (%struct.float2, %struct.float2* @g2, i64 0, i32 0), align 4
+  %0 = load [8 x float], ptr @g8, align 4
+  %1 = load [5 x float], ptr @g5, align 4
+  %2 = load [2 x float], ptr @g2, align 4
   tail call void @test2([8 x float] %0, [5 x float] %1, [2 x float] %2)
   ret void
 }
@@ -298,8 +298,8 @@ entry:
 
 define void @caller3(double %d) {
 entry:
-  %0 = load [8 x float], [8 x float]* getelementptr inbounds (%struct.float8, %struct.float8* @g8, i64 0, i32 0), align 4
-  %1 = load [5 x float], [5 x float]* getelementptr inbounds (%struct.float5, %struct.float5* @g5, i64 0, i32 0), align 4
+  %0 = load [8 x float], ptr @g8, align 4
+  %1 = load [5 x float], ptr @g5, align 4
   tail call void @test3([8 x float] %0, [5 x float] %1, double %d)
   ret void
 }
@@ -321,8 +321,8 @@ entry:
 
 define void @caller4(float %f) {
 entry:
-  %0 = load [8 x float], [8 x float]* getelementptr inbounds (%struct.float8, %struct.float8* @g8, i64 0, i32 0), align 4
-  %1 = load [5 x float], [5 x float]* getelementptr inbounds (%struct.float5, %struct.float5* @g5, i64 0, i32 0), align 4
+  %0 = load [8 x float], ptr @g8, align 4
+  %1 = load [5 x float], ptr @g5, align 4
   tail call void @test4([8 x float] %0, [5 x float] %1, float %f)
   ret void
 }

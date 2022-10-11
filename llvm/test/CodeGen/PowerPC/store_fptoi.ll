@@ -9,7 +9,7 @@
 ; ==========================================
 
 ; Function Attrs: norecurse nounwind
-define void @qpConv2sdw(fp128* nocapture readonly %a, i64* nocapture %b) {
+define void @qpConv2sdw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: qpConv2sdw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv 2, 0(3)
@@ -38,16 +38,16 @@ define void @qpConv2sdw(fp128* nocapture readonly %a, i64* nocapture %b) {
 ; CHECK-PWR8-NEXT:    mtlr 0
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %conv = fptosi fp128 %0 to i64
-  store i64 %conv, i64* %b, align 8
+  store i64 %conv, ptr %b, align 8
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @qpConv2sw(fp128* nocapture readonly %a, i32* nocapture %b) {
+define void @qpConv2sw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: qpConv2sw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv 2, 0(3)
@@ -76,16 +76,16 @@ define void @qpConv2sw(fp128* nocapture readonly %a, i32* nocapture %b) {
 ; CHECK-PWR8-NEXT:    mtlr 0
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %conv = fptosi fp128 %0 to i32
-  store i32 %conv, i32* %b, align 4
+  store i32 %conv, ptr %b, align 4
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @qpConv2udw(fp128* nocapture readonly %a, i64* nocapture %b) {
+define void @qpConv2udw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: qpConv2udw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv 2, 0(3)
@@ -114,16 +114,16 @@ define void @qpConv2udw(fp128* nocapture readonly %a, i64* nocapture %b) {
 ; CHECK-PWR8-NEXT:    mtlr 0
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %conv = fptoui fp128 %0 to i64
-  store i64 %conv, i64* %b, align 8
+  store i64 %conv, ptr %b, align 8
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @qpConv2uw(fp128* nocapture readonly %a, i32* nocapture %b) {
+define void @qpConv2uw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: qpConv2uw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv 2, 0(3)
@@ -152,16 +152,16 @@ define void @qpConv2uw(fp128* nocapture readonly %a, i32* nocapture %b) {
 ; CHECK-PWR8-NEXT:    mtlr 0
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* %a, align 16
+  %0 = load fp128, ptr %a, align 16
   %conv = fptoui fp128 %0 to i32
-  store i32 %conv, i32* %b, align 4
+  store i32 %conv, ptr %b, align 4
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2sdw(double* nocapture readonly %a, i64* nocapture %b) {
+define void @dpConv2sdw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: dpConv2sdw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
@@ -176,16 +176,16 @@ define void @dpConv2sdw(double* nocapture readonly %a, i64* nocapture %b) {
 ; CHECK-PWR8-NEXT:    stxsdx 0, 0, 4
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   %conv = fptosi double %0 to i64
-  store i64 %conv, i64* %b, align 8
+  store i64 %conv, ptr %b, align 8
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2sw(double* nocapture readonly %a, i32* nocapture %b) {
+define void @dpConv2sw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: dpConv2sw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
@@ -200,16 +200,16 @@ define void @dpConv2sw(double* nocapture readonly %a, i32* nocapture %b) {
 ; CHECK-PWR8-NEXT:    stfiwx 0, 0, 4
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   %conv = fptosi double %0 to i32
-  store i32 %conv, i32* %b, align 4
+  store i32 %conv, ptr %b, align 4
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2shw(double* nocapture readonly %a, i16* nocapture %b) {
+define void @dpConv2shw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: dpConv2shw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
@@ -225,16 +225,16 @@ define void @dpConv2shw(double* nocapture readonly %a, i16* nocapture %b) {
 ; CHECK-PWR8-NEXT:    sth 3, 0(4)
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   %conv = fptosi double %0 to i16
-  store i16 %conv, i16* %b, align 2
+  store i16 %conv, ptr %b, align 2
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2sb(double* nocapture readonly %a, i8* nocapture %b) {
+define void @dpConv2sb(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: dpConv2sb:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
@@ -250,16 +250,16 @@ define void @dpConv2sb(double* nocapture readonly %a, i8* nocapture %b) {
 ; CHECK-PWR8-NEXT:    stb 3, 0(4)
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   %conv = fptosi double %0 to i8
-  store i8 %conv, i8* %b, align 1
+  store i8 %conv, ptr %b, align 1
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2sdw(float* nocapture readonly %a, i64* nocapture %b) {
+define void @spConv2sdw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: spConv2sdw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
@@ -274,16 +274,16 @@ define void @spConv2sdw(float* nocapture readonly %a, i64* nocapture %b) {
 ; CHECK-PWR8-NEXT:    stxsdx 0, 0, 4
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fptosi float %0 to i64
-  store i64 %conv, i64* %b, align 8
+  store i64 %conv, ptr %b, align 8
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2sw(float* nocapture readonly %a, i32* nocapture %b) {
+define void @spConv2sw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: spConv2sw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
@@ -298,16 +298,16 @@ define void @spConv2sw(float* nocapture readonly %a, i32* nocapture %b) {
 ; CHECK-PWR8-NEXT:    stfiwx 0, 0, 4
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fptosi float %0 to i32
-  store i32 %conv, i32* %b, align 4
+  store i32 %conv, ptr %b, align 4
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2shw(float* nocapture readonly %a, i16* nocapture %b) {
+define void @spConv2shw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: spConv2shw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
@@ -323,16 +323,16 @@ define void @spConv2shw(float* nocapture readonly %a, i16* nocapture %b) {
 ; CHECK-PWR8-NEXT:    sth 3, 0(4)
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fptosi float %0 to i16
-  store i16 %conv, i16* %b, align 2
+  store i16 %conv, ptr %b, align 2
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2sb(float* nocapture readonly %a, i8* nocapture %b) {
+define void @spConv2sb(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: spConv2sb:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
@@ -348,16 +348,16 @@ define void @spConv2sb(float* nocapture readonly %a, i8* nocapture %b) {
 ; CHECK-PWR8-NEXT:    stb 3, 0(4)
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fptosi float %0 to i8
-  store i8 %conv, i8* %b, align 1
+  store i8 %conv, ptr %b, align 1
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2sdw_x(double* nocapture readonly %a, i64* nocapture %b,
+define void @dpConv2sdw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: dpConv2sdw_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
@@ -375,18 +375,18 @@ define void @dpConv2sdw_x(double* nocapture readonly %a, i64* nocapture %b,
 ; CHECK-PWR8-NEXT:    blr
                           i32 signext %idx) {
 entry:
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   %conv = fptosi double %0 to i64
   %idxprom = sext i32 %idx to i64
-  %arrayidx = getelementptr inbounds i64, i64* %b, i64 %idxprom
-  store i64 %conv, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %b, i64 %idxprom
+  store i64 %conv, ptr %arrayidx, align 8
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2sw_x(double* nocapture readonly %a, i32* nocapture %b,
+define void @dpConv2sw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: dpConv2sw_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
@@ -404,18 +404,18 @@ define void @dpConv2sw_x(double* nocapture readonly %a, i32* nocapture %b,
 ; CHECK-PWR8-NEXT:    blr
                           i32 signext %idx) {
 entry:
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   %conv = fptosi double %0 to i32
   %idxprom = sext i32 %idx to i64
-  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %idxprom
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %b, i64 %idxprom
+  store i32 %conv, ptr %arrayidx, align 4
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2shw_x(double* nocapture readonly %a, i16* nocapture %b,
+define void @dpConv2shw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: dpConv2shw_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
@@ -434,18 +434,18 @@ define void @dpConv2shw_x(double* nocapture readonly %a, i16* nocapture %b,
 ; CHECK-PWR8-NEXT:    blr
                           i32 signext %idx) {
 entry:
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   %conv = fptosi double %0 to i16
   %idxprom = sext i32 %idx to i64
-  %arrayidx = getelementptr inbounds i16, i16* %b, i64 %idxprom
-  store i16 %conv, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %b, i64 %idxprom
+  store i16 %conv, ptr %arrayidx, align 2
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2sb_x(double* nocapture readonly %a, i8* nocapture %b,
+define void @dpConv2sb_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: dpConv2sb_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
@@ -462,18 +462,18 @@ define void @dpConv2sb_x(double* nocapture readonly %a, i8* nocapture %b,
 ; CHECK-PWR8-NEXT:    blr
                           i32 signext %idx) {
 entry:
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   %conv = fptosi double %0 to i8
   %idxprom = sext i32 %idx to i64
-  %arrayidx = getelementptr inbounds i8, i8* %b, i64 %idxprom
-  store i8 %conv, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %b, i64 %idxprom
+  store i8 %conv, ptr %arrayidx, align 1
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2sdw_x(float* nocapture readonly %a, i64* nocapture %b,
+define void @spConv2sdw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: spConv2sdw_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
@@ -491,18 +491,18 @@ define void @spConv2sdw_x(float* nocapture readonly %a, i64* nocapture %b,
 ; CHECK-PWR8-NEXT:    blr
                           i32 signext %idx) {
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fptosi float %0 to i64
   %idxprom = sext i32 %idx to i64
-  %arrayidx = getelementptr inbounds i64, i64* %b, i64 %idxprom
-  store i64 %conv, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %b, i64 %idxprom
+  store i64 %conv, ptr %arrayidx, align 8
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2sw_x(float* nocapture readonly %a, i32* nocapture %b,
+define void @spConv2sw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: spConv2sw_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
@@ -520,18 +520,18 @@ define void @spConv2sw_x(float* nocapture readonly %a, i32* nocapture %b,
 ; CHECK-PWR8-NEXT:    blr
                           i32 signext %idx) {
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fptosi float %0 to i32
   %idxprom = sext i32 %idx to i64
-  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %idxprom
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %b, i64 %idxprom
+  store i32 %conv, ptr %arrayidx, align 4
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2shw_x(float* nocapture readonly %a, i16* nocapture %b,
+define void @spConv2shw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: spConv2shw_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
@@ -550,18 +550,18 @@ define void @spConv2shw_x(float* nocapture readonly %a, i16* nocapture %b,
 ; CHECK-PWR8-NEXT:    blr
                           i32 signext %idx) {
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fptosi float %0 to i16
   %idxprom = sext i32 %idx to i64
-  %arrayidx = getelementptr inbounds i16, i16* %b, i64 %idxprom
-  store i16 %conv, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %b, i64 %idxprom
+  store i16 %conv, ptr %arrayidx, align 2
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2sb_x(float* nocapture readonly %a, i8* nocapture %b,
+define void @spConv2sb_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: spConv2sb_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
@@ -578,11 +578,11 @@ define void @spConv2sb_x(float* nocapture readonly %a, i8* nocapture %b,
 ; CHECK-PWR8-NEXT:    blr
                           i32 signext %idx) {
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fptosi float %0 to i8
   %idxprom = sext i32 %idx to i64
-  %arrayidx = getelementptr inbounds i8, i8* %b, i64 %idxprom
-  store i8 %conv, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %b, i64 %idxprom
+  store i8 %conv, ptr %arrayidx, align 1
   ret void
 
 
@@ -593,7 +593,7 @@ entry:
 ; ==========================================
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2udw(double* nocapture readonly %a, i64* nocapture %b) {
+define void @dpConv2udw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: dpConv2udw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
@@ -608,16 +608,16 @@ define void @dpConv2udw(double* nocapture readonly %a, i64* nocapture %b) {
 ; CHECK-PWR8-NEXT:    stxsdx 0, 0, 4
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   %conv = fptoui double %0 to i64
-  store i64 %conv, i64* %b, align 8
+  store i64 %conv, ptr %b, align 8
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2uw(double* nocapture readonly %a, i32* nocapture %b) {
+define void @dpConv2uw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: dpConv2uw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
@@ -632,16 +632,16 @@ define void @dpConv2uw(double* nocapture readonly %a, i32* nocapture %b) {
 ; CHECK-PWR8-NEXT:    stfiwx 0, 0, 4
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   %conv = fptoui double %0 to i32
-  store i32 %conv, i32* %b, align 4
+  store i32 %conv, ptr %b, align 4
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2uhw(double* nocapture readonly %a, i16* nocapture %b) {
+define void @dpConv2uhw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: dpConv2uhw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
@@ -657,16 +657,16 @@ define void @dpConv2uhw(double* nocapture readonly %a, i16* nocapture %b) {
 ; CHECK-PWR8-NEXT:    sth 3, 0(4)
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   %conv = fptoui double %0 to i16
-  store i16 %conv, i16* %b, align 2
+  store i16 %conv, ptr %b, align 2
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2ub(double* nocapture readonly %a, i8* nocapture %b) {
+define void @dpConv2ub(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: dpConv2ub:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
@@ -682,16 +682,16 @@ define void @dpConv2ub(double* nocapture readonly %a, i8* nocapture %b) {
 ; CHECK-PWR8-NEXT:    stb 3, 0(4)
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   %conv = fptoui double %0 to i8
-  store i8 %conv, i8* %b, align 1
+  store i8 %conv, ptr %b, align 1
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2udw(float* nocapture readonly %a, i64* nocapture %b) {
+define void @spConv2udw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: spConv2udw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
@@ -706,16 +706,16 @@ define void @spConv2udw(float* nocapture readonly %a, i64* nocapture %b) {
 ; CHECK-PWR8-NEXT:    stxsdx 0, 0, 4
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fptoui float %0 to i64
-  store i64 %conv, i64* %b, align 8
+  store i64 %conv, ptr %b, align 8
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2uw(float* nocapture readonly %a, i32* nocapture %b) {
+define void @spConv2uw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: spConv2uw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
@@ -730,16 +730,16 @@ define void @spConv2uw(float* nocapture readonly %a, i32* nocapture %b) {
 ; CHECK-PWR8-NEXT:    stfiwx 0, 0, 4
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fptoui float %0 to i32
-  store i32 %conv, i32* %b, align 4
+  store i32 %conv, ptr %b, align 4
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2uhw(float* nocapture readonly %a, i16* nocapture %b) {
+define void @spConv2uhw(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: spConv2uhw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
@@ -755,16 +755,16 @@ define void @spConv2uhw(float* nocapture readonly %a, i16* nocapture %b) {
 ; CHECK-PWR8-NEXT:    sth 3, 0(4)
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fptoui float %0 to i16
-  store i16 %conv, i16* %b, align 2
+  store i16 %conv, ptr %b, align 2
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2ub(float* nocapture readonly %a, i8* nocapture %b) {
+define void @spConv2ub(ptr nocapture readonly %a, ptr nocapture %b) {
 ; CHECK-LABEL: spConv2ub:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
@@ -780,16 +780,16 @@ define void @spConv2ub(float* nocapture readonly %a, i8* nocapture %b) {
 ; CHECK-PWR8-NEXT:    stb 3, 0(4)
 ; CHECK-PWR8-NEXT:    blr
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fptoui float %0 to i8
-  store i8 %conv, i8* %b, align 1
+  store i8 %conv, ptr %b, align 1
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2udw_x(double* nocapture readonly %a, i64* nocapture %b,
+define void @dpConv2udw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: dpConv2udw_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
@@ -807,18 +807,18 @@ define void @dpConv2udw_x(double* nocapture readonly %a, i64* nocapture %b,
 ; CHECK-PWR8-NEXT:    blr
                           i32 zeroext %idx) {
 entry:
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   %conv = fptoui double %0 to i64
   %idxprom = zext i32 %idx to i64
-  %arrayidx = getelementptr inbounds i64, i64* %b, i64 %idxprom
-  store i64 %conv, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %b, i64 %idxprom
+  store i64 %conv, ptr %arrayidx, align 8
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2uw_x(double* nocapture readonly %a, i32* nocapture %b,
+define void @dpConv2uw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: dpConv2uw_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
@@ -836,18 +836,18 @@ define void @dpConv2uw_x(double* nocapture readonly %a, i32* nocapture %b,
 ; CHECK-PWR8-NEXT:    blr
                           i32 zeroext %idx) {
 entry:
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   %conv = fptoui double %0 to i32
   %idxprom = zext i32 %idx to i64
-  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %idxprom
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %b, i64 %idxprom
+  store i32 %conv, ptr %arrayidx, align 4
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2uhw_x(double* nocapture readonly %a, i16* nocapture %b,
+define void @dpConv2uhw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: dpConv2uhw_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
@@ -866,18 +866,18 @@ define void @dpConv2uhw_x(double* nocapture readonly %a, i16* nocapture %b,
 ; CHECK-PWR8-NEXT:    blr
                           i32 zeroext %idx) {
 entry:
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   %conv = fptoui double %0 to i16
   %idxprom = zext i32 %idx to i64
-  %arrayidx = getelementptr inbounds i16, i16* %b, i64 %idxprom
-  store i16 %conv, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %b, i64 %idxprom
+  store i16 %conv, ptr %arrayidx, align 2
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @dpConv2ub_x(double* nocapture readonly %a, i8* nocapture %b,
+define void @dpConv2ub_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: dpConv2ub_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfd 0, 0(3)
@@ -894,18 +894,18 @@ define void @dpConv2ub_x(double* nocapture readonly %a, i8* nocapture %b,
 ; CHECK-PWR8-NEXT:    blr
                           i32 zeroext %idx) {
 entry:
-  %0 = load double, double* %a, align 8
+  %0 = load double, ptr %a, align 8
   %conv = fptoui double %0 to i8
   %idxprom = zext i32 %idx to i64
-  %arrayidx = getelementptr inbounds i8, i8* %b, i64 %idxprom
-  store i8 %conv, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %b, i64 %idxprom
+  store i8 %conv, ptr %arrayidx, align 1
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2udw_x(float* nocapture readonly %a, i64* nocapture %b,
+define void @spConv2udw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: spConv2udw_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
@@ -923,18 +923,18 @@ define void @spConv2udw_x(float* nocapture readonly %a, i64* nocapture %b,
 ; CHECK-PWR8-NEXT:    blr
                           i32 zeroext %idx) {
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fptoui float %0 to i64
   %idxprom = zext i32 %idx to i64
-  %arrayidx = getelementptr inbounds i64, i64* %b, i64 %idxprom
-  store i64 %conv, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %b, i64 %idxprom
+  store i64 %conv, ptr %arrayidx, align 8
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2uw_x(float* nocapture readonly %a, i32* nocapture %b,
+define void @spConv2uw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: spConv2uw_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
@@ -952,18 +952,18 @@ define void @spConv2uw_x(float* nocapture readonly %a, i32* nocapture %b,
 ; CHECK-PWR8-NEXT:    blr
                           i32 zeroext %idx) {
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fptoui float %0 to i32
   %idxprom = zext i32 %idx to i64
-  %arrayidx = getelementptr inbounds i32, i32* %b, i64 %idxprom
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %b, i64 %idxprom
+  store i32 %conv, ptr %arrayidx, align 4
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2uhw_x(float* nocapture readonly %a, i16* nocapture %b,
+define void @spConv2uhw_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: spConv2uhw_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
@@ -982,18 +982,18 @@ define void @spConv2uhw_x(float* nocapture readonly %a, i16* nocapture %b,
 ; CHECK-PWR8-NEXT:    blr
                           i32 zeroext %idx) {
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fptoui float %0 to i16
   %idxprom = zext i32 %idx to i64
-  %arrayidx = getelementptr inbounds i16, i16* %b, i64 %idxprom
-  store i16 %conv, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %b, i64 %idxprom
+  store i16 %conv, ptr %arrayidx, align 2
   ret void
 
 
 }
 
 ; Function Attrs: norecurse nounwind
-define void @spConv2ub_x(float* nocapture readonly %a, i8* nocapture %b,
+define void @spConv2ub_x(ptr nocapture readonly %a, ptr nocapture %b,
 ; CHECK-LABEL: spConv2ub_x:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lfs 0, 0(3)
@@ -1010,11 +1010,11 @@ define void @spConv2ub_x(float* nocapture readonly %a, i8* nocapture %b,
 ; CHECK-PWR8-NEXT:    blr
                           i32 zeroext %idx) {
 entry:
-  %0 = load float, float* %a, align 4
+  %0 = load float, ptr %a, align 4
   %conv = fptoui float %0 to i8
   %idxprom = zext i32 %idx to i64
-  %arrayidx = getelementptr inbounds i8, i8* %b, i64 %idxprom
-  store i8 %conv, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %b, i64 %idxprom
+  store i8 %conv, ptr %arrayidx, align 1
   ret void
 
 

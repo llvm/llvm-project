@@ -20,7 +20,7 @@
 
 define dso_local void @write_int(i32 signext %in) {
   entry:
-    store i32 %in, i32* @i, align 4
+    store i32 %in, ptr @i, align 4
     ret void
 }
 ; CHECK32: name:            write_int
@@ -47,7 +47,7 @@ define dso_local void @write_int(i32 signext %in) {
 
 define dso_local i64 @read_ll() {
   entry:
-    %0 = load i64, i64* @ll, align 8
+    %0 = load i64, ptr @ll, align 8
     ret i64 %0
 }
 ; CHECK32: name:            read_ll
@@ -73,7 +73,7 @@ define dso_local i64 @read_ll() {
 
 define dso_local float @read_float() {
   entry:
-    %0 = load float, float* @f, align 4
+    %0 = load float, ptr @f, align 4
     ret float %0
 }
 ; CHECK32: name:            read_float
@@ -99,7 +99,7 @@ define dso_local float @read_float() {
 
 define dso_local void @write_double(double %in) {
   entry:
-    store double %in, double* @d, align 8
+    store double %in, ptr @d, align 8
     ret void
 }
 ; CHECK32: name:            write_double
@@ -122,9 +122,9 @@ define dso_local void @write_double(double %in) {
 ; TEST64-NEXT:    stfd 1, 0(3)
 
 
-define dso_local nonnull i32* @addr() {
+define dso_local nonnull ptr @addr() {
   entry:
-    ret i32* @i
+    ret ptr @i
 }
 ; CHECK32: name:            addr
 ; CHECK32:       %[[SCRATCH:[0-9]+]]:gprc = ADDItoc @i, $r2

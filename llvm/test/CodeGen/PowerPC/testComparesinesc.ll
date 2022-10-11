@@ -156,7 +156,7 @@ define dso_local void @test_inesc_store(i8 signext %a, i8 signext %b) {
 entry:
   %cmp = icmp ne i8 %a, %b
   %conv3 = zext i1 %cmp to i8
-  store i8 %conv3, i8* @glob, align 1
+  store i8 %conv3, ptr @glob, align 1
   ret void
 }
 
@@ -195,7 +195,7 @@ define dso_local void @test_inesc_sext_store(i8 signext %a, i8 signext %b) {
 entry:
   %cmp = icmp ne i8 %a, %b
   %conv3 = sext i1 %cmp to i8
-  store i8 %conv3, i8* @glob, align 1
+  store i8 %conv3, ptr @glob, align 1
   ret void
 }
 
@@ -228,7 +228,7 @@ define dso_local void @test_inesc_z_store(i8 signext %a) {
 entry:
   %cmp = icmp ne i8 %a, 0
   %conv2 = zext i1 %cmp to i8
-  store i8 %conv2, i8* @glob, align 1
+  store i8 %conv2, ptr @glob, align 1
   ret void
 }
 
@@ -264,6 +264,6 @@ define dso_local void @test_inesc_sext_z_store(i8 signext %a) {
 entry:
   %cmp = icmp ne i8 %a, 0
   %conv2 = sext i1 %cmp to i8
-  store i8 %conv2, i8* @glob, align 1
+  store i8 %conv2, ptr @glob, align 1
   ret void
 }

@@ -26,8 +26,8 @@ define void @lame_encode_buffer_interleaved() local_unnamed_addr {
 
 1:                                                ; preds = %1, %0
   %2 = phi i64 [ 0, %0 ], [ %13, %1 ]
-  %3 = load i16, i16* null, align 2
-  %4 = load i16, i16* undef, align 2
+  %3 = load i16, ptr null, align 2
+  %4 = load i16, ptr undef, align 2
   %5 = sext i16 %3 to i32
   %6 = sext i16 %4 to i32
   %7 = add nsw i32 0, %5
@@ -36,8 +36,8 @@ define void @lame_encode_buffer_interleaved() local_unnamed_addr {
   %10 = sdiv i32 %8, 2
   %11 = trunc i32 %9 to i16
   %12 = trunc i32 %10 to i16
-  store i16 %11, i16* null, align 2
-  store i16 %12, i16* undef, align 2
+  store i16 %11, ptr null, align 2
+  store i16 %12, ptr undef, align 2
   %13 = add i64 %2, 4
   %14 = icmp eq i64 %13, 0
   br i1 %14, label %15, label %1

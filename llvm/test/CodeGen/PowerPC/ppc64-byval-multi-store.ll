@@ -12,7 +12,7 @@
 ; RUN: llc -verify-machineinstrs --mtriple powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names < %s | FileCheck %s --check-prefix=P10BE
 
-define signext i8 @caller_1([1 x i8]* nocapture readonly byval([1 x i8]) %data) #0 {
+define signext i8 @caller_1(ptr nocapture readonly byval([1 x i8]) %data) #0 {
 ; P8LE-LABEL: caller_1:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    mflr r0
@@ -115,15 +115,13 @@ define signext i8 @caller_1([1 x i8]* nocapture readonly byval([1 x i8]) %data) 
 ; P10BE-NEXT:    blr
 entry:
   %_param_data = alloca [1 x i8], align 1
-  %.elt = getelementptr inbounds [1 x i8], [1 x i8]* %data, i64 0, i64 0
-  %.unpack = load i8, i8* %.elt, align 1
-  %.temp.0.gep = getelementptr inbounds [1 x i8], [1 x i8]* %_param_data, i64 0, i64 0
-  store i8 %.unpack, i8* %.temp.0.gep, align 1
-  call void @callee(i8* nonnull %.temp.0.gep)
+  %.unpack = load i8, ptr %data, align 1
+  store i8 %.unpack, ptr %_param_data, align 1
+  call void @callee(ptr nonnull %_param_data)
   ret i8 0
 }
 
-define signext i8 @caller_2([2 x i8]* nocapture readonly byval([2 x i8]) %data) #0 {
+define signext i8 @caller_2(ptr nocapture readonly byval([2 x i8]) %data) #0 {
 ; P8LE-LABEL: caller_2:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    mflr r0
@@ -226,19 +224,17 @@ define signext i8 @caller_2([2 x i8]* nocapture readonly byval([2 x i8]) %data) 
 ; P10BE-NEXT:    blr
 entry:
   %_param_data = alloca [2 x i8], align 1
-  %.elt = getelementptr inbounds [2 x i8], [2 x i8]* %data, i64 0, i64 0
-  %.unpack = load i8, i8* %.elt, align 1
-  %.elt1 = getelementptr inbounds [2 x i8], [2 x i8]* %data, i64 0, i64 1
-  %.unpack2 = load i8, i8* %.elt1, align 1
-  %.temp.0.gep = getelementptr inbounds [2 x i8], [2 x i8]* %_param_data, i64 0, i64 0
-  store i8 %.unpack, i8* %.temp.0.gep, align 1
-  %.temp.1.gep = getelementptr inbounds [2 x i8], [2 x i8]* %_param_data, i64 0, i64 1
-  store i8 %.unpack2, i8* %.temp.1.gep, align 1
-  call void @callee(i8* nonnull %.temp.0.gep)
+  %.unpack = load i8, ptr %data, align 1
+  %.elt1 = getelementptr inbounds [2 x i8], ptr %data, i64 0, i64 1
+  %.unpack2 = load i8, ptr %.elt1, align 1
+  store i8 %.unpack, ptr %_param_data, align 1
+  %.temp.1.gep = getelementptr inbounds [2 x i8], ptr %_param_data, i64 0, i64 1
+  store i8 %.unpack2, ptr %.temp.1.gep, align 1
+  call void @callee(ptr nonnull %_param_data)
   ret i8 0
 }
 
-define signext i8 @caller_3([3 x i8]* nocapture readonly byval([3 x i8]) %data) #0 {
+define signext i8 @caller_3(ptr nocapture readonly byval([3 x i8]) %data) #0 {
 ; P8LE-LABEL: caller_3:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    mflr r0
@@ -365,23 +361,21 @@ define signext i8 @caller_3([3 x i8]* nocapture readonly byval([3 x i8]) %data) 
 ; P10BE-NEXT:    blr
 entry:
   %_param_data = alloca [3 x i8], align 1
-  %.elt = getelementptr inbounds [3 x i8], [3 x i8]* %data, i64 0, i64 0
-  %.unpack = load i8, i8* %.elt, align 1
-  %.elt1 = getelementptr inbounds [3 x i8], [3 x i8]* %data, i64 0, i64 1
-  %.unpack2 = load i8, i8* %.elt1, align 1
-  %.elt3 = getelementptr inbounds [3 x i8], [3 x i8]* %data, i64 0, i64 2
-  %.unpack4 = load i8, i8* %.elt3, align 1
-  %.temp.0.gep = getelementptr inbounds [3 x i8], [3 x i8]* %_param_data, i64 0, i64 0
-  store i8 %.unpack, i8* %.temp.0.gep, align 1
-  %.temp.1.gep = getelementptr inbounds [3 x i8], [3 x i8]* %_param_data, i64 0, i64 1
-  store i8 %.unpack2, i8* %.temp.1.gep, align 1
-  %.temp.2.gep = getelementptr inbounds [3 x i8], [3 x i8]* %_param_data, i64 0, i64 2
-  store i8 %.unpack4, i8* %.temp.2.gep, align 1
-  call void @callee(i8* nonnull %.temp.0.gep)
+  %.unpack = load i8, ptr %data, align 1
+  %.elt1 = getelementptr inbounds [3 x i8], ptr %data, i64 0, i64 1
+  %.unpack2 = load i8, ptr %.elt1, align 1
+  %.elt3 = getelementptr inbounds [3 x i8], ptr %data, i64 0, i64 2
+  %.unpack4 = load i8, ptr %.elt3, align 1
+  store i8 %.unpack, ptr %_param_data, align 1
+  %.temp.1.gep = getelementptr inbounds [3 x i8], ptr %_param_data, i64 0, i64 1
+  store i8 %.unpack2, ptr %.temp.1.gep, align 1
+  %.temp.2.gep = getelementptr inbounds [3 x i8], ptr %_param_data, i64 0, i64 2
+  store i8 %.unpack4, ptr %.temp.2.gep, align 1
+  call void @callee(ptr nonnull %_param_data)
   ret i8 0
 }
 
-define signext i8 @caller_4([4 x i8]* nocapture readonly byval([4 x i8]) %data) #0 {
+define signext i8 @caller_4(ptr nocapture readonly byval([4 x i8]) %data) #0 {
 ; P8LE-LABEL: caller_4:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    mflr r0
@@ -484,27 +478,25 @@ define signext i8 @caller_4([4 x i8]* nocapture readonly byval([4 x i8]) %data) 
 ; P10BE-NEXT:    blr
 entry:
   %_param_data = alloca [4 x i8], align 1
-  %.elt = getelementptr inbounds [4 x i8], [4 x i8]* %data, i64 0, i64 0
-  %.unpack = load i8, i8* %.elt, align 1
-  %.elt1 = getelementptr inbounds [4 x i8], [4 x i8]* %data, i64 0, i64 1
-  %.unpack2 = load i8, i8* %.elt1, align 1
-  %.elt3 = getelementptr inbounds [4 x i8], [4 x i8]* %data, i64 0, i64 2
-  %.unpack4 = load i8, i8* %.elt3, align 1
-  %.elt5 = getelementptr inbounds [4 x i8], [4 x i8]* %data, i64 0, i64 3
-  %.unpack6 = load i8, i8* %.elt5, align 1
-  %.temp.0.gep = getelementptr inbounds [4 x i8], [4 x i8]* %_param_data, i64 0, i64 0
-  store i8 %.unpack, i8* %.temp.0.gep, align 1
-  %.temp.1.gep = getelementptr inbounds [4 x i8], [4 x i8]* %_param_data, i64 0, i64 1
-  store i8 %.unpack2, i8* %.temp.1.gep, align 1
-  %.temp.2.gep = getelementptr inbounds [4 x i8], [4 x i8]* %_param_data, i64 0, i64 2
-  store i8 %.unpack4, i8* %.temp.2.gep, align 1
-  %.temp.3.gep = getelementptr inbounds [4 x i8], [4 x i8]* %_param_data, i64 0, i64 3
-  store i8 %.unpack6, i8* %.temp.3.gep, align 1
-  call void @callee(i8* nonnull %.temp.0.gep)
+  %.unpack = load i8, ptr %data, align 1
+  %.elt1 = getelementptr inbounds [4 x i8], ptr %data, i64 0, i64 1
+  %.unpack2 = load i8, ptr %.elt1, align 1
+  %.elt3 = getelementptr inbounds [4 x i8], ptr %data, i64 0, i64 2
+  %.unpack4 = load i8, ptr %.elt3, align 1
+  %.elt5 = getelementptr inbounds [4 x i8], ptr %data, i64 0, i64 3
+  %.unpack6 = load i8, ptr %.elt5, align 1
+  store i8 %.unpack, ptr %_param_data, align 1
+  %.temp.1.gep = getelementptr inbounds [4 x i8], ptr %_param_data, i64 0, i64 1
+  store i8 %.unpack2, ptr %.temp.1.gep, align 1
+  %.temp.2.gep = getelementptr inbounds [4 x i8], ptr %_param_data, i64 0, i64 2
+  store i8 %.unpack4, ptr %.temp.2.gep, align 1
+  %.temp.3.gep = getelementptr inbounds [4 x i8], ptr %_param_data, i64 0, i64 3
+  store i8 %.unpack6, ptr %.temp.3.gep, align 1
+  call void @callee(ptr nonnull %_param_data)
   ret i8 0
 }
 
-define signext i8 @caller_5([5 x i8]* nocapture readonly byval([5 x i8]) %data) #0 {
+define signext i8 @caller_5(ptr nocapture readonly byval([5 x i8]) %data) #0 {
 ; P8LE-LABEL: caller_5:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    mflr r0
@@ -625,31 +617,29 @@ define signext i8 @caller_5([5 x i8]* nocapture readonly byval([5 x i8]) %data) 
 ; P10BE-NEXT:    blr
 entry:
   %_param_data = alloca [5 x i8], align 1
-  %.elt = getelementptr inbounds [5 x i8], [5 x i8]* %data, i64 0, i64 0
-  %.unpack = load i8, i8* %.elt, align 1
-  %.elt1 = getelementptr inbounds [5 x i8], [5 x i8]* %data, i64 0, i64 1
-  %.unpack2 = load i8, i8* %.elt1, align 1
-  %.elt3 = getelementptr inbounds [5 x i8], [5 x i8]* %data, i64 0, i64 2
-  %.unpack4 = load i8, i8* %.elt3, align 1
-  %.elt5 = getelementptr inbounds [5 x i8], [5 x i8]* %data, i64 0, i64 3
-  %.unpack6 = load i8, i8* %.elt5, align 1
-  %.elt7 = getelementptr inbounds [5 x i8], [5 x i8]* %data, i64 0, i64 4
-  %.unpack8 = load i8, i8* %.elt7, align 1
-  %.temp.0.gep = getelementptr inbounds [5 x i8], [5 x i8]* %_param_data, i64 0, i64 0
-  store i8 %.unpack, i8* %.temp.0.gep, align 1
-  %.temp.1.gep = getelementptr inbounds [5 x i8], [5 x i8]* %_param_data, i64 0, i64 1
-  store i8 %.unpack2, i8* %.temp.1.gep, align 1
-  %.temp.2.gep = getelementptr inbounds [5 x i8], [5 x i8]* %_param_data, i64 0, i64 2
-  store i8 %.unpack4, i8* %.temp.2.gep, align 1
-  %.temp.3.gep = getelementptr inbounds [5 x i8], [5 x i8]* %_param_data, i64 0, i64 3
-  store i8 %.unpack6, i8* %.temp.3.gep, align 1
-  %.temp.4.gep = getelementptr inbounds [5 x i8], [5 x i8]* %_param_data, i64 0, i64 4
-  store i8 %.unpack8, i8* %.temp.4.gep, align 1
-  call void @callee(i8* nonnull %.temp.0.gep)
+  %.unpack = load i8, ptr %data, align 1
+  %.elt1 = getelementptr inbounds [5 x i8], ptr %data, i64 0, i64 1
+  %.unpack2 = load i8, ptr %.elt1, align 1
+  %.elt3 = getelementptr inbounds [5 x i8], ptr %data, i64 0, i64 2
+  %.unpack4 = load i8, ptr %.elt3, align 1
+  %.elt5 = getelementptr inbounds [5 x i8], ptr %data, i64 0, i64 3
+  %.unpack6 = load i8, ptr %.elt5, align 1
+  %.elt7 = getelementptr inbounds [5 x i8], ptr %data, i64 0, i64 4
+  %.unpack8 = load i8, ptr %.elt7, align 1
+  store i8 %.unpack, ptr %_param_data, align 1
+  %.temp.1.gep = getelementptr inbounds [5 x i8], ptr %_param_data, i64 0, i64 1
+  store i8 %.unpack2, ptr %.temp.1.gep, align 1
+  %.temp.2.gep = getelementptr inbounds [5 x i8], ptr %_param_data, i64 0, i64 2
+  store i8 %.unpack4, ptr %.temp.2.gep, align 1
+  %.temp.3.gep = getelementptr inbounds [5 x i8], ptr %_param_data, i64 0, i64 3
+  store i8 %.unpack6, ptr %.temp.3.gep, align 1
+  %.temp.4.gep = getelementptr inbounds [5 x i8], ptr %_param_data, i64 0, i64 4
+  store i8 %.unpack8, ptr %.temp.4.gep, align 1
+  call void @callee(ptr nonnull %_param_data)
   ret i8 0
 }
 
-define signext i8 @caller_6([6 x i8]* nocapture readonly byval([6 x i8]) %data) #0 {
+define signext i8 @caller_6(ptr nocapture readonly byval([6 x i8]) %data) #0 {
 ; P8LE-LABEL: caller_6:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    mflr r0
@@ -776,35 +766,33 @@ define signext i8 @caller_6([6 x i8]* nocapture readonly byval([6 x i8]) %data) 
 ; P10BE-NEXT:    blr
 entry:
   %_param_data = alloca [6 x i8], align 1
-  %.elt = getelementptr inbounds [6 x i8], [6 x i8]* %data, i64 0, i64 0
-  %.unpack = load i8, i8* %.elt, align 1
-  %.elt1 = getelementptr inbounds [6 x i8], [6 x i8]* %data, i64 0, i64 1
-  %.unpack2 = load i8, i8* %.elt1, align 1
-  %.elt3 = getelementptr inbounds [6 x i8], [6 x i8]* %data, i64 0, i64 2
-  %.unpack4 = load i8, i8* %.elt3, align 1
-  %.elt5 = getelementptr inbounds [6 x i8], [6 x i8]* %data, i64 0, i64 3
-  %.unpack6 = load i8, i8* %.elt5, align 1
-  %.elt7 = getelementptr inbounds [6 x i8], [6 x i8]* %data, i64 0, i64 4
-  %.unpack8 = load i8, i8* %.elt7, align 1
-  %.elt9 = getelementptr inbounds [6 x i8], [6 x i8]* %data, i64 0, i64 5
-  %.unpack10 = load i8, i8* %.elt9, align 1
-  %.temp.0.gep = getelementptr inbounds [6 x i8], [6 x i8]* %_param_data, i64 0, i64 0
-  store i8 %.unpack, i8* %.temp.0.gep, align 1
-  %.temp.1.gep = getelementptr inbounds [6 x i8], [6 x i8]* %_param_data, i64 0, i64 1
-  store i8 %.unpack2, i8* %.temp.1.gep, align 1
-  %.temp.2.gep = getelementptr inbounds [6 x i8], [6 x i8]* %_param_data, i64 0, i64 2
-  store i8 %.unpack4, i8* %.temp.2.gep, align 1
-  %.temp.3.gep = getelementptr inbounds [6 x i8], [6 x i8]* %_param_data, i64 0, i64 3
-  store i8 %.unpack6, i8* %.temp.3.gep, align 1
-  %.temp.4.gep = getelementptr inbounds [6 x i8], [6 x i8]* %_param_data, i64 0, i64 4
-  store i8 %.unpack8, i8* %.temp.4.gep, align 1
-  %.temp.5.gep = getelementptr inbounds [6 x i8], [6 x i8]* %_param_data, i64 0, i64 5
-  store i8 %.unpack10, i8* %.temp.5.gep, align 1
-  call void @callee(i8* nonnull %.temp.0.gep)
+  %.unpack = load i8, ptr %data, align 1
+  %.elt1 = getelementptr inbounds [6 x i8], ptr %data, i64 0, i64 1
+  %.unpack2 = load i8, ptr %.elt1, align 1
+  %.elt3 = getelementptr inbounds [6 x i8], ptr %data, i64 0, i64 2
+  %.unpack4 = load i8, ptr %.elt3, align 1
+  %.elt5 = getelementptr inbounds [6 x i8], ptr %data, i64 0, i64 3
+  %.unpack6 = load i8, ptr %.elt5, align 1
+  %.elt7 = getelementptr inbounds [6 x i8], ptr %data, i64 0, i64 4
+  %.unpack8 = load i8, ptr %.elt7, align 1
+  %.elt9 = getelementptr inbounds [6 x i8], ptr %data, i64 0, i64 5
+  %.unpack10 = load i8, ptr %.elt9, align 1
+  store i8 %.unpack, ptr %_param_data, align 1
+  %.temp.1.gep = getelementptr inbounds [6 x i8], ptr %_param_data, i64 0, i64 1
+  store i8 %.unpack2, ptr %.temp.1.gep, align 1
+  %.temp.2.gep = getelementptr inbounds [6 x i8], ptr %_param_data, i64 0, i64 2
+  store i8 %.unpack4, ptr %.temp.2.gep, align 1
+  %.temp.3.gep = getelementptr inbounds [6 x i8], ptr %_param_data, i64 0, i64 3
+  store i8 %.unpack6, ptr %.temp.3.gep, align 1
+  %.temp.4.gep = getelementptr inbounds [6 x i8], ptr %_param_data, i64 0, i64 4
+  store i8 %.unpack8, ptr %.temp.4.gep, align 1
+  %.temp.5.gep = getelementptr inbounds [6 x i8], ptr %_param_data, i64 0, i64 5
+  store i8 %.unpack10, ptr %.temp.5.gep, align 1
+  call void @callee(ptr nonnull %_param_data)
   ret i8 0
 }
 
-define signext i8 @caller_7([7 x i8]* nocapture readonly byval([7 x i8]) %data) #0 {
+define signext i8 @caller_7(ptr nocapture readonly byval([7 x i8]) %data) #0 {
 ; P8LE-LABEL: caller_7:
 ; P8LE:       # %bb.0: # %entry
 ; P8LE-NEXT:    mflr r0
@@ -949,38 +937,36 @@ define signext i8 @caller_7([7 x i8]* nocapture readonly byval([7 x i8]) %data) 
 ; P10BE-NEXT:    blr
 entry:
   %_param_data = alloca [7 x i8], align 1
-  %.elt = getelementptr inbounds [7 x i8], [7 x i8]* %data, i64 0, i64 0
-  %.unpack = load i8, i8* %.elt, align 1
-  %.elt1 = getelementptr inbounds [7 x i8], [7 x i8]* %data, i64 0, i64 1
-  %.unpack2 = load i8, i8* %.elt1, align 1
-  %.elt3 = getelementptr inbounds [7 x i8], [7 x i8]* %data, i64 0, i64 2
-  %.unpack4 = load i8, i8* %.elt3, align 1
-  %.elt5 = getelementptr inbounds [7 x i8], [7 x i8]* %data, i64 0, i64 3
-  %.unpack6 = load i8, i8* %.elt5, align 1
-  %.elt7 = getelementptr inbounds [7 x i8], [7 x i8]* %data, i64 0, i64 4
-  %.unpack8 = load i8, i8* %.elt7, align 1
-  %.elt9 = getelementptr inbounds [7 x i8], [7 x i8]* %data, i64 0, i64 5
-  %.unpack10 = load i8, i8* %.elt9, align 1
-  %.elt11 = getelementptr inbounds [7 x i8], [7 x i8]* %data, i64 0, i64 6
-  %.unpack12 = load i8, i8* %.elt11, align 1
-  %.temp.0.gep = getelementptr inbounds [7 x i8], [7 x i8]* %_param_data, i64 0, i64 0
-  store i8 %.unpack, i8* %.temp.0.gep, align 1
-  %.temp.1.gep = getelementptr inbounds [7 x i8], [7 x i8]* %_param_data, i64 0, i64 1
-  store i8 %.unpack2, i8* %.temp.1.gep, align 1
-  %.temp.2.gep = getelementptr inbounds [7 x i8], [7 x i8]* %_param_data, i64 0, i64 2
-  store i8 %.unpack4, i8* %.temp.2.gep, align 1
-  %.temp.3.gep = getelementptr inbounds [7 x i8], [7 x i8]* %_param_data, i64 0, i64 3
-  store i8 %.unpack6, i8* %.temp.3.gep, align 1
-  %.temp.4.gep = getelementptr inbounds [7 x i8], [7 x i8]* %_param_data, i64 0, i64 4
-  store i8 %.unpack8, i8* %.temp.4.gep, align 1
-  %.temp.5.gep = getelementptr inbounds [7 x i8], [7 x i8]* %_param_data, i64 0, i64 5
-  store i8 %.unpack10, i8* %.temp.5.gep, align 1
-  %.temp.6.gep = getelementptr inbounds [7 x i8], [7 x i8]* %_param_data, i64 0, i64 6
-  store i8 %.unpack12, i8* %.temp.6.gep, align 1
-  call void @callee(i8* nonnull %.temp.0.gep)
+  %.unpack = load i8, ptr %data, align 1
+  %.elt1 = getelementptr inbounds [7 x i8], ptr %data, i64 0, i64 1
+  %.unpack2 = load i8, ptr %.elt1, align 1
+  %.elt3 = getelementptr inbounds [7 x i8], ptr %data, i64 0, i64 2
+  %.unpack4 = load i8, ptr %.elt3, align 1
+  %.elt5 = getelementptr inbounds [7 x i8], ptr %data, i64 0, i64 3
+  %.unpack6 = load i8, ptr %.elt5, align 1
+  %.elt7 = getelementptr inbounds [7 x i8], ptr %data, i64 0, i64 4
+  %.unpack8 = load i8, ptr %.elt7, align 1
+  %.elt9 = getelementptr inbounds [7 x i8], ptr %data, i64 0, i64 5
+  %.unpack10 = load i8, ptr %.elt9, align 1
+  %.elt11 = getelementptr inbounds [7 x i8], ptr %data, i64 0, i64 6
+  %.unpack12 = load i8, ptr %.elt11, align 1
+  store i8 %.unpack, ptr %_param_data, align 1
+  %.temp.1.gep = getelementptr inbounds [7 x i8], ptr %_param_data, i64 0, i64 1
+  store i8 %.unpack2, ptr %.temp.1.gep, align 1
+  %.temp.2.gep = getelementptr inbounds [7 x i8], ptr %_param_data, i64 0, i64 2
+  store i8 %.unpack4, ptr %.temp.2.gep, align 1
+  %.temp.3.gep = getelementptr inbounds [7 x i8], ptr %_param_data, i64 0, i64 3
+  store i8 %.unpack6, ptr %.temp.3.gep, align 1
+  %.temp.4.gep = getelementptr inbounds [7 x i8], ptr %_param_data, i64 0, i64 4
+  store i8 %.unpack8, ptr %.temp.4.gep, align 1
+  %.temp.5.gep = getelementptr inbounds [7 x i8], ptr %_param_data, i64 0, i64 5
+  store i8 %.unpack10, ptr %.temp.5.gep, align 1
+  %.temp.6.gep = getelementptr inbounds [7 x i8], ptr %_param_data, i64 0, i64 6
+  store i8 %.unpack12, ptr %.temp.6.gep, align 1
+  call void @callee(ptr nonnull %_param_data)
   ret i8 0
 }
 
-declare void @callee(i8*) local_unnamed_addr #0
+declare void @callee(ptr) local_unnamed_addr #0
 
 attributes #0 = { nounwind }

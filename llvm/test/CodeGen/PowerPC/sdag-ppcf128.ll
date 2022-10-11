@@ -7,7 +7,7 @@ entry:
   br i1 undef, label %if, label %else
 ; CHECK: cmplwi 3, 0
 if:                                               ; preds = %entry
-  store { ppc_fp128, ppc_fp128 } zeroinitializer, { ppc_fp128, ppc_fp128 }* undef
+  store { ppc_fp128, ppc_fp128 } zeroinitializer, ptr undef
   ret void
 
 else:                                             ; preds = %entry
