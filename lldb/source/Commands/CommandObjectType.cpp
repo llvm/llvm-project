@@ -681,19 +681,17 @@ protected:
         return false;
       }
 
-      ConstString typeCS(arg_entry.ref());
+      FormatterMatchType match_type = eFormatterMatchExact;
       if (m_command_options.m_regex) {
+        match_type = eFormatterMatchRegex;
         RegularExpression typeRX(arg_entry.ref());
         if (!typeRX.IsValid()) {
           result.AppendError(
               "regex format error (maybe this is not really a regex?)");
           return false;
         }
-        category_sp->GetRegexTypeSummariesContainer()->Delete(typeCS);
-        category_sp->GetRegexTypeFormatsContainer()->Add(std::move(typeRX),
-                                                         entry);
-      } else
-        category_sp->GetTypeFormatsContainer()->Add(std::move(typeCS), entry);
+      }
+      category_sp->AddTypeFormat(arg_entry.ref(), match_type, entry);
     }
 
     result.SetStatus(eReturnStatusSuccessFinishNoResult);
@@ -783,27 +781,7 @@ public:
 
     DataVisualization::Categories::ForEach(
         [this, &request](const lldb::TypeCategoryImplSP &category_sp) {
-          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemFormat)) {
-            category_sp->GetTypeFormatsContainer()->AutoComplete(request);
-            category_sp->GetRegexTypeFormatsContainer()->AutoComplete(request);
-          }
-
-          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemSummary)) {
-            category_sp->GetTypeSummariesContainer()->AutoComplete(request);
-            category_sp->GetRegexTypeSummariesContainer()->AutoComplete(
-                request);
-          }
-
-          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemFilter)) {
-            category_sp->GetTypeFiltersContainer()->AutoComplete(request);
-            category_sp->GetRegexTypeFiltersContainer()->AutoComplete(request);
-          }
-
-          if (CHECK_FORMATTER_KIND_MASK(eFormatCategoryItemSynth)) {
-            category_sp->GetTypeSyntheticsContainer()->AutoComplete(request);
-            category_sp->GetRegexTypeSyntheticsContainer()->AutoComplete(
-                request);
-          }
+          category_sp->AutoComplete(request, m_formatter_kind_mask);
           return true;
         });
   }
@@ -1572,6 +1550,15 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
                                              SummaryFormatType type,
                                              std::string category_name,
                                              Status *error) {
+
+  // Named summaries are a special case, they exist in their own map in the
+  // FormatManager, outside of any categories.
+  if (type == eNamedSummary) {
+    // system named summaries do not exist (yet?)
+    DataVisualization::NamedSummaryFormats::Add(type_name, entry);
+    return true;
+  }
+
   lldb::TypeCategoryImplSP category;
   DataVisualization::Categories::GetCategory(ConstString(category_name.c_str()),
                                              category);
@@ -1581,7 +1568,9 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
       type = eRegexSummary;
   }
 
+  FormatterMatchType match_type = eFormatterMatchExact;
   if (type == eRegexSummary) {
+    match_type = eFormatterMatchRegex;
     RegularExpression typeRX(type_name.GetStringRef());
     if (!typeRX.IsValid()) {
       if (error)
@@ -1589,19 +1578,9 @@ bool CommandObjectTypeSummaryAdd::AddSummary(ConstString type_name,
             "regex format error (maybe this is not really a regex?)");
       return false;
     }
-
-    category->GetRegexTypeSummariesContainer()->Delete(type_name);
-    category->GetRegexTypeSummariesContainer()->Add(std::move(typeRX), entry);
-
-    return true;
-  } else if (type == eNamedSummary) {
-    // system named summaries do not exist (yet?)
-    DataVisualization::NamedSummaryFormats::Add(type_name, entry);
-    return true;
-  } else {
-    category->GetTypeSummariesContainer()->Add(std::move(type_name), entry);
-    return true;
   }
+  category->AddTypeSummary(type_name.GetStringRef(), match_type, entry);
+  return true;
 }
 
 // CommandObjectTypeSummaryDelete
@@ -2332,7 +2311,9 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
     }
   }
 
+  FormatterMatchType match_type = eFormatterMatchExact;
   if (type == eRegexSynth) {
+    match_type = eFormatterMatchRegex;
     RegularExpression typeRX(type_name.GetStringRef());
     if (!typeRX.IsValid()) {
       if (error)
@@ -2340,15 +2321,10 @@ bool CommandObjectTypeSynthAdd::AddSynth(ConstString type_name,
             "regex format error (maybe this is not really a regex?)");
       return false;
     }
-
-    category->GetRegexTypeSyntheticsContainer()->Delete(type_name);
-    category->GetRegexTypeSyntheticsContainer()->Add(std::move(typeRX), entry);
-
-    return true;
-  } else {
-    category->GetTypeSyntheticsContainer()->Add(std::move(type_name), entry);
-    return true;
   }
+
+  category->AddTypeSynthetic(type_name.GetStringRef(), match_type, entry);
+  return true;
 }
 
 #endif
@@ -2461,7 +2437,9 @@ private:
       }
     }
 
+    FormatterMatchType match_type = eFormatterMatchExact;
     if (type == eRegexFilter) {
+      match_type = eFormatterMatchRegex;
       RegularExpression typeRX(type_name.GetStringRef());
       if (!typeRX.IsValid()) {
         if (error)
@@ -2469,15 +2447,9 @@ private:
               "regex format error (maybe this is not really a regex?)");
         return false;
       }
-
-      category->GetRegexTypeFiltersContainer()->Delete(type_name);
-      category->GetRegexTypeFiltersContainer()->Add(std::move(typeRX), entry);
-
-      return true;
-    } else {
-      category->GetTypeFiltersContainer()->Add(std::move(type_name), entry);
-      return true;
     }
+    category->AddTypeFilter(type_name.GetStringRef(), match_type, entry);
+    return true;
   }
 
 public:

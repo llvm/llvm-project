@@ -284,12 +284,12 @@ static void LoadObjCFormatters(TypeCategoryImplSP objc_category_sp) {
 
   lldb::TypeSummaryImplSP ObjC_BOOL_summary(new CXXFunctionSummaryFormat(
       objc_flags, lldb_private::formatters::ObjCBOOLSummaryProvider, ""));
-  objc_category_sp->GetTypeSummariesContainer()->Add(ConstString("BOOL"),
-                                                     ObjC_BOOL_summary);
-  objc_category_sp->GetTypeSummariesContainer()->Add(ConstString("BOOL &"),
-                                                     ObjC_BOOL_summary);
-  objc_category_sp->GetTypeSummariesContainer()->Add(ConstString("BOOL *"),
-                                                     ObjC_BOOL_summary);
+  objc_category_sp->AddTypeSummary("BOOL", eFormatterMatchExact,
+                                   ObjC_BOOL_summary);
+  objc_category_sp->AddTypeSummary("BOOL &", eFormatterMatchExact,
+                                   ObjC_BOOL_summary);
+  objc_category_sp->AddTypeSummary("BOOL *", eFormatterMatchExact,
+                                   ObjC_BOOL_summary);
 
   // we need to skip pointers here since we are special casing a SEL* when
   // retrieving its value
