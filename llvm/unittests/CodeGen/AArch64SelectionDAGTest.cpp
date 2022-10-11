@@ -327,10 +327,6 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_SPLAT_VECTOR) {
   APInt UndefElts;
   APInt DemandedElts;
   EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
-
-  // Width=16, Mask=3. These bits should be ignored.
-  DemandedElts = APInt(16, 3);
-  EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
 }
 
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_ADD_of_SPLAT_VECTOR) {
@@ -350,10 +346,6 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_ADD_of_SPLAT_VECTOR) {
 
   APInt UndefElts;
   APInt DemandedElts;
-  EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
-
-  // Width=16, Mask=3. These bits should be ignored.
-  DemandedElts = APInt(16, 3);
   EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
 }
 
