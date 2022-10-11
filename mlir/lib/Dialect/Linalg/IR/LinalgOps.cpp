@@ -1176,6 +1176,10 @@ struct EraseIdentityGenericOp : public OpRewritePattern<GenericOp> {
       return failure();
     }
 
+    // Mixed semantics is not supported yet.
+    if (!genericOp.hasTensorSemantics())
+      return failure();
+
     // Get the argument number of the returned values. That is the operand
     // number to use for replacing uses of this operation.
     SmallVector<Value> returnedArgs;
