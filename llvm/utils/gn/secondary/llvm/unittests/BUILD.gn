@@ -53,8 +53,8 @@ group("unittests") {
     "XRay:XRayTests",
     "tools/llvm-cfi-verify:CFIVerifyTests",
     "tools/llvm-exegesis:LLVMExegesisTests",
-    "tools/llvm-profgen:LLVMProfgenTests",
     "tools/llvm-mca:LLVMMCATests",
+    "tools/llvm-profgen:LLVMProfgenTests",
   ]
 
   # Target-dependent unit tests.
