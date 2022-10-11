@@ -1,4 +1,4 @@
-//===- SparseTensorUtils.h - SparseTensor runtime support lib ---*- C++ -*-===//
+//===- SparseTensorRuntime.h - SparseTensor runtime support lib -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 //
 // This header file provides the enums and functions which comprise the
-// public API of the `ExecutionEngine/SparseTensorUtils.cpp` runtime
+// public API of the `ExecutionEngine/SparseTensorRuntime.cpp` runtime
 // support library for the SparseTensor dialect.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_EXECUTIONENGINE_SPARSETENSORUTILS_H
-#define MLIR_EXECUTIONENGINE_SPARSETENSORUTILS_H
+#ifndef MLIR_EXECUTIONENGINE_SPARSETENSORRUNTIME_H
+#define MLIR_EXECUTIONENGINE_SPARSETENSORRUNTIME_H
 
 #include "mlir/ExecutionEngine/CRunnerUtils.h"
 #include "mlir/ExecutionEngine/SparseTensor/Enums.h"
@@ -214,4 +214,4 @@ MLIR_SPARSETENSOR_FOREVERY_V(DECL_CONVERTFROMMLIRSPARSETENSOR)
 
 } // extern "C"
 
-#endif // MLIR_EXECUTIONENGINE_SPARSETENSORUTILS_H
+#endif // MLIR_EXECUTIONENGINE_SPARSETENSORRUNTIME_H
