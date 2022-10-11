@@ -62,6 +62,18 @@ private:
   bool expandLoadAddressGot(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI,
                             MachineBasicBlock::iterator &NextMBBI);
+  bool expandLoadAddressTLSLE(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI,
+                              MachineBasicBlock::iterator &NextMBBI);
+  bool expandLoadAddressTLSIE(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI,
+                              MachineBasicBlock::iterator &NextMBBI);
+  bool expandLoadAddressTLSLD(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI,
+                              MachineBasicBlock::iterator &NextMBBI);
+  bool expandLoadAddressTLSGD(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI,
+                              MachineBasicBlock::iterator &NextMBBI);
 };
 
 char LoongArchPreRAExpandPseudo::ID = 0;
@@ -96,6 +108,14 @@ bool LoongArchPreRAExpandPseudo::expandMI(
     return expandLoadAddressPcrel(MBB, MBBI, NextMBBI);
   case LoongArch::PseudoLA_GOT:
     return expandLoadAddressGot(MBB, MBBI, NextMBBI);
+  case LoongArch::PseudoLA_TLS_LE:
+    return expandLoadAddressTLSLE(MBB, MBBI, NextMBBI);
+  case LoongArch::PseudoLA_TLS_IE:
+    return expandLoadAddressTLSIE(MBB, MBBI, NextMBBI);
+  case LoongArch::PseudoLA_TLS_LD:
+    return expandLoadAddressTLSLD(MBB, MBBI, NextMBBI);
+  case LoongArch::PseudoLA_TLS_GD:
+    return expandLoadAddressTLSGD(MBB, MBBI, NextMBBI);
   }
   return false;
 }
@@ -151,6 +171,71 @@ bool LoongArchPreRAExpandPseudo::expandLoadAddressGot(
   const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
   unsigned SecondOpcode = STI.is64Bit() ? LoongArch::LD_D : LoongArch::LD_W;
   return expandPcalau12iInstPair(MBB, MBBI, NextMBBI, LoongArchII::MO_GOT_PC_HI,
+                                 SecondOpcode, LoongArchII::MO_GOT_PC_LO);
+}
+
+bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSLE(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
+  // Code Sequence:
+  // lu12i.w $rd, %le_hi20(sym)
+  // ori $rd, $rd, %le_lo12(sym)
+  MachineFunction *MF = MBB.getParent();
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+
+  Register DestReg = MI.getOperand(0).getReg();
+  Register ScratchReg =
+      MF->getRegInfo().createVirtualRegister(&LoongArch::GPRRegClass);
+  MachineOperand &Symbol = MI.getOperand(1);
+
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::LU12I_W), ScratchReg)
+      .addDisp(Symbol, 0, LoongArchII::MO_LE_HI);
+
+  BuildMI(MBB, MBBI, DL, TII->get(LoongArch::ORI), DestReg)
+      .addReg(ScratchReg)
+      .addDisp(Symbol, 0, LoongArchII::MO_LE_LO);
+
+  MI.eraseFromParent();
+  return true;
+}
+
+bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSIE(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
+  // Code Sequence:
+  // pcalau12i $rd, %ie_pc_hi20(sym)
+  // ld.w/d $rd, $rd, %ie_pc_lo12(sym)
+  MachineFunction *MF = MBB.getParent();
+  const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
+  unsigned SecondOpcode = STI.is64Bit() ? LoongArch::LD_D : LoongArch::LD_W;
+  return expandPcalau12iInstPair(MBB, MBBI, NextMBBI, LoongArchII::MO_IE_PC_HI,
+                                 SecondOpcode, LoongArchII::MO_IE_PC_LO);
+}
+
+bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSLD(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
+  // Code Sequence:
+  // pcalau12i $rd, %ld_pc_hi20(sym)
+  // addi.w/d $rd, $rd, %got_pc_lo12(sym)
+  MachineFunction *MF = MBB.getParent();
+  const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
+  unsigned SecondOpcode = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
+  return expandPcalau12iInstPair(MBB, MBBI, NextMBBI, LoongArchII::MO_LD_PC_HI,
+                                 SecondOpcode, LoongArchII::MO_GOT_PC_LO);
+}
+
+bool LoongArchPreRAExpandPseudo::expandLoadAddressTLSGD(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
+  // Code Sequence:
+  // pcalau12i $rd, %gd_pc_hi20(sym)
+  // addi.w/d $rd, $rd, %got_pc_lo12(sym)
+  MachineFunction *MF = MBB.getParent();
+  const auto &STI = MF->getSubtarget<LoongArchSubtarget>();
+  unsigned SecondOpcode = STI.is64Bit() ? LoongArch::ADDI_D : LoongArch::ADDI_W;
+  return expandPcalau12iInstPair(MBB, MBBI, NextMBBI, LoongArchII::MO_GD_PC_HI,
                                  SecondOpcode, LoongArchII::MO_GOT_PC_LO);
 }
 

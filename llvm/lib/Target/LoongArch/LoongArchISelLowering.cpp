@@ -62,6 +62,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
                       ISD::JumpTable},
                      GRLenVT, Custom);
 
+  setOperationAction(ISD::GlobalTLSAddress, GRLenVT, Custom);
+
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::Other, Custom);
 
   setOperationAction(ISD::EH_DWARF_CFA, MVT::i32, Custom);
@@ -193,6 +195,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerEH_DWARF_CFA(Op, DAG);
   case ISD::GlobalAddress:
     return lowerGlobalAddress(Op, DAG);
+  case ISD::GlobalTLSAddress:
+    return lowerGlobalTLSAddress(Op, DAG);
   case ISD::INTRINSIC_WO_CHAIN:
     return lowerINTRINSIC_WO_CHAIN(Op, DAG);
   case ISD::BlockAddress:
@@ -351,6 +355,85 @@ SDValue LoongArchTargetLowering::lowerGlobalAddress(SDValue Op,
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   assert(N->getOffset() == 0 && "unexpected offset in global node");
   return getAddr(N, DAG, N->getGlobal()->isDSOLocal());
+}
+
+SDValue LoongArchTargetLowering::getStaticTLSAddr(GlobalAddressSDNode *N,
+                                                  SelectionDAG &DAG,
+                                                  unsigned Opc) const {
+  SDLoc DL(N);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
+  MVT GRLenVT = Subtarget.getGRLenVT();
+
+  SDValue Addr = DAG.getTargetGlobalAddress(N->getGlobal(), DL, Ty, 0, 0);
+  SDValue Offset = SDValue(DAG.getMachineNode(Opc, DL, Ty, Addr), 0);
+
+  // Add the thread pointer.
+  return DAG.getNode(ISD::ADD, DL, Ty, Offset,
+                     DAG.getRegister(LoongArch::R2, GRLenVT));
+}
+
+SDValue LoongArchTargetLowering::getDynamicTLSAddr(GlobalAddressSDNode *N,
+                                                   SelectionDAG &DAG,
+                                                   unsigned Opc) const {
+  SDLoc DL(N);
+  EVT Ty = getPointerTy(DAG.getDataLayout());
+  IntegerType *CallTy = Type::getIntNTy(*DAG.getContext(), Ty.getSizeInBits());
+
+  // Use a PC-relative addressing mode to access the dynamic GOT address.
+  SDValue Addr = DAG.getTargetGlobalAddress(N->getGlobal(), DL, Ty, 0, 0);
+  SDValue Load = SDValue(DAG.getMachineNode(Opc, DL, Ty, Addr), 0);
+
+  // Prepare argument list to generate call.
+  ArgListTy Args;
+  ArgListEntry Entry;
+  Entry.Node = Load;
+  Entry.Ty = CallTy;
+  Args.push_back(Entry);
+
+  // Setup call to __tls_get_addr.
+  TargetLowering::CallLoweringInfo CLI(DAG);
+  CLI.setDebugLoc(DL)
+      .setChain(DAG.getEntryNode())
+      .setLibCallee(CallingConv::C, CallTy,
+                    DAG.getExternalSymbol("__tls_get_addr", Ty),
+                    std::move(Args));
+
+  return LowerCallTo(CLI).first;
+}
+
+SDValue
+LoongArchTargetLowering::lowerGlobalTLSAddress(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
+  assert(N->getOffset() == 0 && "unexpected offset in global node");
+
+  SDValue Addr;
+  TLSModel::Model Model = getTargetMachine().getTLSModel(N->getGlobal());
+
+  switch (Model) {
+  case TLSModel::GeneralDynamic:
+    // In this model, application code calls the dynamic linker function
+    // __tls_get_addr to locate TLS offsets into the dynamic thread vector at
+    // runtime.
+    Addr = getDynamicTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_GD);
+    break;
+  case TLSModel::LocalDynamic:
+    // Same as GeneralDynamic, except for assembly modifiers and relocation
+    // records.
+    Addr = getDynamicTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_LD);
+    break;
+  case TLSModel::InitialExec:
+    // This model uses the GOT to resolve TLS offsets.
+    Addr = getStaticTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_IE);
+    break;
+  case TLSModel::LocalExec:
+    // This model is used when static linking as the TLS offsets are resolved
+    // during program linking.
+    Addr = getStaticTLSAddr(N, DAG, LoongArch::PseudoLA_TLS_LE);
+    break;
+  }
+
+  return Addr;
 }
 
 SDValue LoongArchTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
