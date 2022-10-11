@@ -432,7 +432,8 @@ function(add_integration_test test_name)
       libc.src.__support.threads.thread
       libc.src.stdlib.atexit
       libc.src.stdlib.exit
-      libc.src.unistd.environ)
+      libc.src.unistd.environ
+      libc.utils.IntegrationTest.test)
   list(REMOVE_DUPLICATES fq_deps_list)
 
   # We don't want memory functions to be dependencies on integration tests.
