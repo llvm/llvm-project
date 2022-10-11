@@ -31,12 +31,9 @@ func.func @gemm(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>
 //      CHECK:       memref.dealloc %[[A0]]
 //      CHECK:       memref.dealloc %[[A1]]
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  sequence %arg0 : !pdl.operation failures(propagate) {
-    ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-      %1, %loops:3 = transform.structured.tile %0 [16, 16, 16]
-      %2 = transform.structured.promote %1 { operands_to_promote = [0, 2], force_full_tiles = [false, false] }
-  }
+transform.sequence failures(propagate) {
+^bb0(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %1, %loops:3 = transform.structured.tile %0 [16, 16, 16]
+  %2 = transform.structured.promote %1 { operands_to_promote = [0, 2], force_full_tiles = [false, false] }
 }
