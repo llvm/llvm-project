@@ -568,6 +568,11 @@
 {'is_defined': True, 'name': '__ZNKSt3__121__basic_string_commonILb1EE20__throw_out_of_rangeEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__123__match_any_but_newlineIcE6__execERNS_7__stateIcEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__123__match_any_but_newlineIwE6__execERNS_7__stateIwEE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__13pmr26synchronized_pool_resource11do_is_equalERKNS0_15memory_resourceE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__13pmr28unsynchronized_pool_resource12__pool_indexEmm', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__13pmr28unsynchronized_pool_resource17__pool_block_sizeEi', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__13pmr28unsynchronized_pool_resource22__log2_pool_block_sizeEi', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNKSt3__13pmr28unsynchronized_pool_resource7optionsEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__14__fs10filesystem18directory_iterator13__dereferenceEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__14__fs10filesystem28recursive_directory_iterator13__dereferenceEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNKSt3__14__fs10filesystem28recursive_directory_iterator5depthEv', 'type': 'FUNC'}
@@ -1527,6 +1532,7 @@
 {'is_defined': True, 'name': '__ZNSt3__121recursive_timed_mutexD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__121recursive_timed_mutexD2Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__121undeclare_no_pointersEPcm', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__122__libcpp_verbose_abortEPKcz', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__123__cxx_atomic_notify_allEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__123__cxx_atomic_notify_allEPVKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__123__cxx_atomic_notify_oneEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEE', 'type': 'FUNC'}
@@ -1534,7 +1540,6 @@
 {'is_defined': True, 'name': '__ZNSt3__123__libcpp_atomic_monitorEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__123__libcpp_atomic_monitorEPVKv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__125notify_all_at_thread_exitERNS_18condition_variableENS_11unique_lockINS_5mutexEEE', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__122__libcpp_verbose_abortEPKcz', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIaaEEPaEEbT0_S5_T_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIccEEPcEEbT0_S5_T_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIddEEPdEEbT0_S5_T_', 'type': 'FUNC'}
@@ -1554,6 +1559,21 @@
 {'is_defined': True, 'name': '__ZNSt3__132__destroy_barrier_algorithm_baseEPNS_24__barrier_algorithm_baseE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__134__construct_barrier_algorithm_baseERl', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__13cinE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZNSt3__13pmr19new_delete_resourceEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__13pmr20get_default_resourceEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__13pmr20null_memory_resourceEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__13pmr20set_default_resourceEPNS0_15memory_resourceE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__13pmr25monotonic_buffer_resource11do_allocateEmm', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__13pmr25monotonic_buffer_resource14__chunk_footer25__try_allocate_from_chunkEmm', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__13pmr25monotonic_buffer_resource20__initial_descriptor25__try_allocate_from_chunkEmm', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__13pmr28unsynchronized_pool_resource11do_allocateEmm', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__13pmr28unsynchronized_pool_resource12__adhoc_pool13__do_allocateEPNS0_15memory_resourceEmm', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__13pmr28unsynchronized_pool_resource12__adhoc_pool13__release_ptrEPNS0_15memory_resourceE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__13pmr28unsynchronized_pool_resource12__adhoc_pool15__do_deallocateEPNS0_15memory_resourceEPvmm', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__13pmr28unsynchronized_pool_resource13do_deallocateEPvmm', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__13pmr28unsynchronized_pool_resource7releaseEv', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__13pmr28unsynchronized_pool_resourceC1ERKNS0_12pool_optionsEPNS0_15memory_resourceE', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__13pmr28unsynchronized_pool_resourceC2ERKNS0_12pool_optionsEPNS0_15memory_resourceE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__14__fs10filesystem10__absoluteERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__14__fs10filesystem10hash_valueERKNS1_4pathE', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__14__fs10filesystem11__canonicalERKNS1_4pathEPNS_10error_codeE', 'type': 'FUNC'}
@@ -2030,6 +2050,12 @@
 {'is_defined': True, 'name': '__ZTINSt3__120__codecvt_utf8_utf16IwEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__120__time_get_c_storageIcEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__120__time_get_c_storageIwEE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTINSt3__13pmr15memory_resourceE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTINSt3__13pmr25monotonic_buffer_resourceE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTINSt3__13pmr26__null_memory_resource_impE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTINSt3__13pmr26synchronized_pool_resourceE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTINSt3__13pmr28unsynchronized_pool_resourceE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTINSt3__13pmr32__new_delete_memory_resource_impE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__14__fs10filesystem16filesystem_errorE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__15ctypeIcEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTINSt3__15ctypeIwEE', 'size': 0, 'type': 'OBJECT'}
@@ -2207,6 +2233,12 @@
 {'is_defined': True, 'name': '__ZTSNSt3__118basic_stringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTSNSt3__13pmr15memory_resourceE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTSNSt3__13pmr25monotonic_buffer_resourceE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTSNSt3__13pmr26__null_memory_resource_impE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTSNSt3__13pmr26synchronized_pool_resourceE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTSNSt3__13pmr28unsynchronized_pool_resourceE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTSNSt3__13pmr32__new_delete_memory_resource_impE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__14__fs10filesystem16filesystem_errorE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__15ctypeIcEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTSNSt3__15ctypeIwEE', 'size': 0, 'type': 'OBJECT'}
@@ -2415,6 +2447,9 @@
 {'is_defined': True, 'name': '__ZTVNSt3__120__codecvt_utf8_utf16IDiEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__120__codecvt_utf8_utf16IDsEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__120__codecvt_utf8_utf16IwEE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTVNSt3__13pmr25monotonic_buffer_resourceE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTVNSt3__13pmr26synchronized_pool_resourceE', 'size': 0, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '__ZTVNSt3__13pmr28unsynchronized_pool_resourceE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__14__fs10filesystem16filesystem_errorE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__15ctypeIcEE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZTVNSt3__15ctypeIwEE', 'size': 0, 'type': 'OBJECT'}

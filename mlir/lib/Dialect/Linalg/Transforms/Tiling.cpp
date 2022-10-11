@@ -732,77 +732,8 @@ void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
       >::insert(patterns);
 }
 
-/// Populate the given list with patterns that apply Linalg tiling.
-static void insertTilingPatterns(RewritePatternSet &patterns,
-                                 const LinalgTilingOptions &options) {
-  auto *ctx = patterns.getContext();
-  LinalgTransformationFilter f(ArrayRef<StringAttr>{},
-                               StringAttr::get(ctx, "tiled"));
-  TilingPatterns<GenericOp,
-#define GET_OP_LIST
-#include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
-                 >::insert(patterns, options, f);
-  patterns.add<PadOpTilingPattern>(ctx, options);
-}
-
 void mlir::linalg::populatePadTensorTilingPatterns(
     RewritePatternSet &patterns, const LinalgTilingOptions &options) {
   auto *ctx = patterns.getContext();
   patterns.add<PadOpTilingPattern>(ctx, options);
-}
-
-static void applyExtractSliceOfPadTensorSwapPattern(func::FuncOp funcOp) {
-  MLIRContext *ctx = funcOp.getContext();
-  RewritePatternSet patterns(ctx);
-  patterns.add<ExtractSliceOfPadTensorSwapPattern>(patterns.getContext());
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-  (void)applyPatternsAndFoldGreedily(
-      funcOp, getLinalgTilingCanonicalizationPatterns(ctx));
-}
-
-namespace {
-struct LinalgTilingPass : public impl::LinalgTilingPassBase<LinalgTilingPass> {
-  LinalgTilingPass() = default;
-  LinalgTilingPass(ArrayRef<int64_t> tileSizes, LinalgTilingLoopType loopType) {
-    this->tileSizes = tileSizes;
-    this->loopType = "";
-    this->loopTypeEnum = loopType;
-  }
-
-  void runOnOperation() override {
-    func::FuncOp funcOp = getOperation();
-    LinalgTilingLoopType type =
-        llvm::StringSwitch<LinalgTilingLoopType>(loopType)
-            .Case("for", LinalgTilingLoopType::Loops)
-            .Case("affine", LinalgTilingLoopType::AffineLoops)
-            .Case("parallel", LinalgTilingLoopType::ParallelLoops)
-            .Default(loopTypeEnum);
-    auto options =
-        LinalgTilingOptions().setTileSizes(tileSizes).setLoopType(type);
-    MLIRContext *ctx = funcOp.getContext();
-    RewritePatternSet patterns(ctx);
-    insertTilingPatterns(patterns, options);
-    scf::populateSCFForLoopCanonicalizationPatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-    (void)applyPatternsAndFoldGreedily(
-        funcOp, getLinalgTilingCanonicalizationPatterns(ctx));
-    // Drop the marker.
-    funcOp.walk([](LinalgOp op) {
-      op->removeAttr(LinalgTransforms::kLinalgTransformMarker);
-    });
-
-    // Apply swap pattern after generating loop nest and running
-    // canonicalizations.
-    applyExtractSliceOfPadTensorSwapPattern(funcOp);
-  }
-
-  LinalgTilingLoopType loopTypeEnum;
-};
-
-} // namespace
-
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createLinalgTilingPass(ArrayRef<int64_t> tileSizes,
-                             linalg::LinalgTilingLoopType loopType) {
-  return std::make_unique<LinalgTilingPass>(tileSizes, loopType);
 }

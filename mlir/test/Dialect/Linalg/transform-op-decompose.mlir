@@ -56,11 +56,8 @@ func.func @depthwise_conv_2d_nhwc_hwc(%input: tensor<1x1x113x96xf32>, %filter: t
   return %0: tensor<1x1x56x96xf32>
 }
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match interface{LinalgOp} in %arg1
-    %1 = transform.structured.decompose %0
-  }
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match interface{LinalgOp} in %arg1
+  %1 = transform.structured.decompose %0
 }

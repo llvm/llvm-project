@@ -9,18 +9,15 @@ func.func @bar() {
   return
 }
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
-    %match_name = transform.structured.match ops{["arith.constant"]} in %arg1
-    transform.test_print_remark_at_operand %match_name, "matched op name"
-    transform.test_consume_operand %match_name
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %match_name = transform.structured.match ops{["arith.constant"]} in %arg1
+  transform.test_print_remark_at_operand %match_name, "matched op name" : !pdl.operation
+  transform.test_consume_operand %match_name
 
-    %match_attr = transform.structured.match ops{["arith.constant"]} attributes{my_attr} in %arg1
-    transform.test_print_remark_at_operand %match_attr, "matched attr name"
-    transform.test_consume_operand %match_attr
-  }
+  %match_attr = transform.structured.match ops{["arith.constant"]} attributes{my_attr} in %arg1
+  transform.test_print_remark_at_operand %match_attr, "matched attr name" : !pdl.operation
+  transform.test_consume_operand %match_attr
 }
 
 // -----
@@ -32,15 +29,12 @@ func.func @by_type() {
   return
 }
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
-    %match_name = transform.structured.match
-      ops{["arith.constant"]} filter_result_type = f32 in %arg1
-    transform.test_print_remark_at_operand %match_name, "matched op name"
-    transform.test_consume_operand %match_name
-  }
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %match_name = transform.structured.match
+    ops{["arith.constant"]} filter_result_type = f32 in %arg1
+  transform.test_print_remark_at_operand %match_name, "matched op name" : !pdl.operation
+  transform.test_consume_operand %match_name
 }
 
 // -----
@@ -61,21 +55,18 @@ func.func @match_complex_attribute(%arg0: tensor<12x128x32xf32>)
   return %1 : tensor<128x12x32xf32>
 }
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
-    %match_attr = transform.structured.match
-        ops{["linalg.generic"]}
-        attributes{iterator_types = ["parallel", "parallel", "parallel"]}
-        in %arg1
-    transform.test_print_remark_at_operand %match_attr, "matched complex attr"
-    transform.test_consume_operand %match_attr
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %match_attr = transform.structured.match
+      ops{["linalg.generic"]}
+      attributes{iterator_types = ["parallel", "parallel", "parallel"]}
+      in %arg1
+  transform.test_print_remark_at_operand %match_attr, "matched complex attr" : !pdl.operation
+  transform.test_consume_operand %match_attr
 
-    %no_match = transform.structured.match
-        attributes{iterator_types = ["parallel", "parallel", "reduction"]}
-        in %arg1
-  // expected-remark @below {{0}}
-    transform.test_print_number_of_associated_payload_ir_ops %no_match
-  }
+  %no_match = transform.structured.match
+      attributes{iterator_types = ["parallel", "parallel", "reduction"]}
+      in %arg1
+// expected-remark @below {{0}}
+  transform.test_print_number_of_associated_payload_ir_ops %no_match
 }

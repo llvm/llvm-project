@@ -213,13 +213,17 @@ static LogicalResult emitOneIntrBuilder(const Record &record, raw_ostream &os) {
     if (succeeded(argIndex)) {
       // Process the argument value assuming the MLIR and LLVM operand orders
       // match and there are no optional or variadic arguments.
-      bs << formatv("processValue(callInst->getArgOperand({0}))", *argIndex);
+      bs << formatv("processValue(llvmOperands[{0}])", *argIndex);
+    } else if (isResultName(op, name)) {
+      assert(op.getNumResults() == 1 &&
+             "expected operation to have one result");
+      bs << formatv("mapValue(inst)");
     } else if (name == "_int_attr") {
       bs << "matchIntegerAttr";
     } else if (name == "_resultType") {
-      bs << "convertType(callInst->getType())";
+      bs << "convertType(inst->getType())";
     } else if (name == "_location") {
-      bs << "translateLoc(callInst->getDebugLoc())";
+      bs << "translateLoc(inst->getDebugLoc())";
     } else if (name == "_builder") {
       bs << "odsBuilder";
     } else if (name == "_qualCppClassName") {
@@ -228,7 +232,7 @@ static LogicalResult emitOneIntrBuilder(const Record &record, raw_ostream &os) {
       bs << '$';
     } else {
       return emitError(name +
-                       " is neither a known keyword nor an argument of " +
+                       " is not a known keyword, argument, or result of " +
                        op.getOperationName());
     }
     // Finally, only keep the untraversed part of the string.

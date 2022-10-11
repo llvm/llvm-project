@@ -1708,9 +1708,9 @@ Value *llvm::addDiffRuntimeChecks(
   return MemoryRuntimeCheck;
 }
 
-Optional<IVConditionInfo> llvm::hasPartialIVCondition(Loop &L,
+Optional<IVConditionInfo> llvm::hasPartialIVCondition(const Loop &L,
                                                       unsigned MSSAThreshold,
-                                                      MemorySSA &MSSA,
+                                                      const MemorySSA &MSSA,
                                                       AAResults &AA) {
   auto *TI = dyn_cast<BranchInst>(L.getHeader()->getTerminator());
   if (!TI || !TI->isConditional())

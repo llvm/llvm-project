@@ -13,6 +13,52 @@ To generate a summary, re-generate the new ABI list using the
 New entries should be added directly below the "Version" header.
 
 ------------
+Version 16.0
+------------
+
+* [libc++] [C++17] Implement <memory_resource>.
+
+  This commit adds <memory_resource> to the shared library.
+
+  All platforms
+  -------------
+  Symbol added: _ZNKSt3__13pmr26synchronized_pool_resource11do_is_equalERKNS0_15memory_resourceE
+  Symbol added: _ZNKSt3__13pmr28unsynchronized_pool_resource12__pool_indexEmm
+  Symbol added: _ZNKSt3__13pmr28unsynchronized_pool_resource17__pool_block_sizeEi
+  Symbol added: _ZNKSt3__13pmr28unsynchronized_pool_resource22__log2_pool_block_sizeEi
+  Symbol added: _ZNKSt3__13pmr28unsynchronized_pool_resource7optionsEv
+  Symbol added: _ZNSt3__13pmr19new_delete_resourceEv
+  Symbol added: _ZNSt3__13pmr20get_default_resourceEv
+  Symbol added: _ZNSt3__13pmr20null_memory_resourceEv
+  Symbol added: _ZNSt3__13pmr20set_default_resourceEPNS0_15memory_resourceE
+  Symbol added: _ZNSt3__13pmr25monotonic_buffer_resource11do_allocateEmm
+  Symbol added: _ZNSt3__13pmr25monotonic_buffer_resource14__chunk_footer25__try_allocate_from_chunkEmm
+  Symbol added: _ZNSt3__13pmr25monotonic_buffer_resource20__initial_descriptor25__try_allocate_from_chunkEmm
+  Symbol added: _ZNSt3__13pmr28unsynchronized_pool_resource11do_allocateEmm
+  Symbol added: _ZNSt3__13pmr28unsynchronized_pool_resource12__adhoc_pool13__do_allocateEPNS0_15memory_resourceEmm
+  Symbol added: _ZNSt3__13pmr28unsynchronized_pool_resource12__adhoc_pool13__release_ptrEPNS0_15memory_resourceE
+  Symbol added: _ZNSt3__13pmr28unsynchronized_pool_resource12__adhoc_pool15__do_deallocateEPNS0_15memory_resourceEPvmm
+  Symbol added: _ZNSt3__13pmr28unsynchronized_pool_resource13do_deallocateEPvmm
+  Symbol added: _ZNSt3__13pmr28unsynchronized_pool_resource7releaseEv
+  Symbol added: _ZNSt3__13pmr28unsynchronized_pool_resourceC1ERKNS0_12pool_optionsEPNS0_15memory_resourceE
+  Symbol added: _ZNSt3__13pmr28unsynchronized_pool_resourceC2ERKNS0_12pool_optionsEPNS0_15memory_resourceE
+  Symbol added: _ZTINSt3__13pmr15memory_resourceE
+  Symbol added: _ZTINSt3__13pmr25monotonic_buffer_resourceE
+  Symbol added: _ZTINSt3__13pmr26__null_memory_resource_impE
+  Symbol added: _ZTINSt3__13pmr26synchronized_pool_resourceE
+  Symbol added: _ZTINSt3__13pmr28unsynchronized_pool_resourceE
+  Symbol added: _ZTINSt3__13pmr32__new_delete_memory_resource_impE
+  Symbol added: _ZTSNSt3__13pmr15memory_resourceE
+  Symbol added: _ZTSNSt3__13pmr25monotonic_buffer_resourceE
+  Symbol added: _ZTSNSt3__13pmr26__null_memory_resource_impE
+  Symbol added: _ZTSNSt3__13pmr26synchronized_pool_resourceE
+  Symbol added: _ZTSNSt3__13pmr28unsynchronized_pool_resourceE
+  Symbol added: _ZTSNSt3__13pmr32__new_delete_memory_resource_impE
+  Symbol added: _ZTVNSt3__13pmr25monotonic_buffer_resourceE
+  Symbol added: _ZTVNSt3__13pmr26synchronized_pool_resourceE
+  Symbol added: _ZTVNSt3__13pmr28unsynchronized_pool_resourceE
+
+------------
 Version 15.0
 ------------
 
