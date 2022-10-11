@@ -1,29 +1,41 @@
 // RUN: mlir-opt %s --test-transform-dialect-interpreter -allow-unregistered-dialect --split-input-file --verify-diagnostics
 
-// expected-remark @below {{applying transformation}}
-transform.test_transform_op
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-remark @below {{applying transformation}}
+  transform.test_transform_op
+}
 
 // -----
 
-%0 = transform.test_produce_param_or_forward_operand 42 { foo = "bar" }
-// expected-remark @below {{succeeded}}
-transform.test_consume_operand_if_matches_param_or_fail %0[42]
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.test_produce_param_or_forward_operand 42 { foo = "bar" }
+  // expected-remark @below {{succeeded}}
+  transform.test_consume_operand_if_matches_param_or_fail %0[42]
+}
 
 // -----
 
-%0 = transform.test_produce_param_or_forward_operand 42 { foo = "bar" }
-// expected-error @below {{expected the operand to be associated with 21 got 42}}
-transform.test_consume_operand_if_matches_param_or_fail %0[21]
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.test_produce_param_or_forward_operand 42 { foo = "bar" }
+  // expected-error @below {{expected the operand to be associated with 21 got 42}}
+  transform.test_consume_operand_if_matches_param_or_fail %0[21]
+}
 
 // -----
 
 // It is okay to have multiple handles to the same payload op as long
 // as only one of them is consumed. The expensive checks mode is necessary
 // to detect double-consumption.
-%0 = transform.test_produce_param_or_forward_operand 42 { foo = "bar" }
-%1 = transform.test_copy_payload %0
-// expected-remark @below {{succeeded}}
-transform.test_consume_operand_if_matches_param_or_fail %0[42]
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.test_produce_param_or_forward_operand 42 { foo = "bar" }
+  %1 = transform.test_copy_payload %0
+  // expected-remark @below {{succeeded}}
+  transform.test_consume_operand_if_matches_param_or_fail %0[42]
+}
 
 // -----
 

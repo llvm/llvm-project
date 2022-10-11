@@ -206,6 +206,16 @@ private:
   bool expensiveChecksEnabled = true;
 };
 
+/// Entry point to the Transform dialect infrastructure. Applies the
+/// transformation specified by `transform` to payload IR contained in
+/// `payloadRoot`. The `transform` operation may contain other operations that
+/// will be executed following the internal logic of the operation. It must
+/// have the `PossibleTopLevelTransformOp` trait and not have any operands.
+/// This function internally keeps track of the transformation state.
+LogicalResult
+applyTransforms(Operation *payloadRoot, TransformOpInterface transform,
+                const TransformOptions &options = TransformOptions());
+
 /// The state maintained across applications of various ops implementing the
 /// TransformOpInterface. The operations implementing this interface and the
 /// surrounding structure are referred to as transform IR. The operations to
@@ -250,15 +260,11 @@ class TransformState {
     TransformOpReverseMapping reverse;
   };
 
-public:
-  /// Creates a state for transform ops living in the given region. The parent
-  /// operation of the region. The second argument points to the root operation
-  /// in the payload IR being transformed, which may or may not contain the
-  /// region with transform ops. Additional options can be provided through the
-  /// trailing configuration object.
-  TransformState(Region &region, Operation *root,
-                 const TransformOptions &options = TransformOptions());
+  friend LogicalResult applyTransforms(Operation *payloadRoot,
+                                       TransformOpInterface transform,
+                                       const TransformOptions &options);
 
+public:
   /// Returns the op at which the transformation state is rooted. This is
   /// typically helpful for transformations that apply globally.
   Operation *getTopLevel() const;
@@ -437,6 +443,13 @@ public:
 private:
   /// Identifier for storing top-level value in the `operations` mapping.
   static constexpr Value kTopLevelValue = Value();
+
+  /// Creates a state for transform ops living in the given region. The second
+  /// argument points to the root operation in the payload IR being transformed,
+  /// which may or may not contain the region with transform ops. Additional
+  /// options can be provided through the trailing configuration object.
+  TransformState(Region *region, Operation *payloadRoot,
+                 const TransformOptions &options = TransformOptions());
 
   /// Returns the mappings frame for the reigon in which the value is defined.
   const Mappings &getMapping(Value value) const {
