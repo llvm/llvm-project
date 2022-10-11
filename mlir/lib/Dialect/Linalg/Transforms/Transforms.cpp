@@ -356,32 +356,12 @@ void mlir::linalg::peelTiledLinalgOp(RewriterBase &rewriter, TiledLinalgOp &res,
   }
 }
 
-/// Linalg tiling pattern.
-mlir::linalg::LinalgTilingPattern::LinalgTilingPattern(
-    MLIRContext *context, LinalgTilingOptions options,
-    LinalgTransformationFilter f, PatternBenefit benefit)
-    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
-      filter(std::move(f)), options(std::move(options)) {}
-
-mlir::linalg::LinalgTilingPattern::LinalgTilingPattern(
-    StringRef opName, MLIRContext *context, LinalgTilingOptions options,
-    LinalgTransformationFilter f, PatternBenefit benefit)
-    : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
-      filter(f.addOpNameFilter(opName)), options(std::move(options)) {}
-
 FailureOr<TiledLinalgOp>
-mlir::linalg::LinalgTilingPattern::returningMatchAndRewrite(
-    LinalgOp op, PatternRewriter &rewriter) const {
-  if (failed(filter.checkAndNotify(rewriter, op)))
-    return failure();
-
+mlir::linalg::tileWithLinalgTilingOptions(RewriterBase &rewriter, LinalgOp op,
+                                          const LinalgTilingOptions &options) {
   FailureOr<TiledLinalgOp> res = tileLinalgOp(rewriter, op, options);
   if (failed(res))
     return failure();
-
-  // Clear filter to stop recursive pattern application.
-  // This must be done here to properly propagate to peeling branches.
-  filter.replaceLinalgTransformationFilter(rewriter, res->op);
 
   // Peel the loops of the TiledLinalgOp.
   peelTiledLinalgOp(rewriter, *res, options.peeledLoops, options.loopType);

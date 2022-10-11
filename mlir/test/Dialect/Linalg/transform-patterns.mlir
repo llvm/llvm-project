@@ -1,20 +1,22 @@
-// RUN: mlir-opt %s -test-linalg-transform-patterns=test-patterns -split-input-file -test-transform-dialect-interpreter | FileCheck %s
+// RUN: mlir-opt %s -test-transform-dialect-interpreter -test-linalg-transform-patterns=test-patterns -split-input-file | FileCheck %s
 
-// Map corresponding to a 2D memory access where the stride along the last dim is known to be 1.
-// CHECK-DAG: #[[$kn:.*]] = affine_map<(d0, d1, d2) -> (d2, d1)>
-// CHECK-DAG: #[[$nm:.*]] = affine_map<(d0, d1, d2) -> (d1, d0)>
-// CHECK-DAG: #[[$km:.*]] = affine_map<(d0, d1, d2) -> (d2, d0)>
+// -----
 
 func.func @dot(%x: memref<?xf32, strided<[1], offset: ?>>,
           %y: memref<?xf32, strided<[1], offset: ?>>,
           %v: memref<f32>) {
-  linalg.dot { __internal_linalg_transform__ = "MEM" }
-    ins(%x, %y: memref<?xf32, strided<[1], offset: ?>>,
-                memref<?xf32, strided<[1], offset: ?>>)
-    outs(%v: memref<f32>)
-
+  linalg.dot ins(%x, %y: memref<?xf32, strided<[1], offset: ?>>,
+                         memref<?xf32, strided<[1], offset: ?>>)
+            outs(%v: memref<f32>)
   return
 }
+
+transform.sequence failures(propagate) {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["linalg.dot"]} in %arg1
+    %1, %loop = transform.structured.tile %0 [8000]
+}
+
 // CHECK-LABEL: func @dot
 // CHECK-DAG:     %[[c0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[c1:.*]] = arith.constant 1 : index
@@ -28,6 +30,8 @@ func.func @dot(%x: memref<?xf32, strided<[1], offset: ?>>,
 // CHECK:               arith.addf
 // CHECK:               store
 
+// -----
+
 func.func @matvec(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
              %x: memref<?xf32, strided<[1], offset: ?>>,
              %y: memref<?xf32, strided<[1], offset: ?>>) {
@@ -37,25 +41,43 @@ func.func @matvec(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
     outs(%y: memref<?xf32, strided<[1], offset: ?>>)
   return
 }
+
+transform.sequence failures(propagate) {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["linalg.matvec"]} in %arg1
+    %1, %loops:2 = transform.structured.tile %0 [5, 6]
+}
+
 // CHECK-LABEL: func @matvec
 // CHECK-DAG:     %[[c0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[c5:.*]] = arith.constant 5 : index
 // CHECK-DAG:     %[[c6:.*]] = arith.constant 6 : index
-// CHECK:         scf.parallel {{.*}} step (%[[c5]])
+// CHECK:         scf.for {{.*}} step %[[c5]]
 // CHECK:           scf.for {{.*}} step %[[c6]]
 // CHECK:             linalg.matvec
 // CHECK:               ins({{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>, memref<?xf32, strided<[1], offset: ?>>)
 // CHECK:              outs({{.*}}: memref<?xf32, strided<[1], offset: ?>>)
 
+// -----
+
 func.func @matmul(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
              %B: memref<?x?xf32, strided<[?, 1], offset: ?>>,
              %C: memref<?x?xf32, strided<[?, 1], offset: ?>>) {
-  linalg.matmul { __internal_linalg_transform__ = "MEM" }
-    ins(%A, %B: memref<?x?xf32, strided<[?, 1], offset: ?>>,
-                memref<?x?xf32, strided<[?, 1], offset: ?>>)
-    outs(%C: memref<?x?xf32, strided<[?, 1], offset: ?>>)
+  linalg.matmul ins(%A, %B: memref<?x?xf32, strided<[?, 1], offset: ?>>,
+                            memref<?x?xf32, strided<[?, 1], offset: ?>>)
+               outs(%C: memref<?x?xf32, strided<[?, 1], offset: ?>>)
   return
 }
+
+transform.sequence failures(propagate) {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+    %1, %loops:3 = transform.structured.tile %0 [2000, 3000, 4000]
+    %2, %loops_2:3 = transform.structured.tile %1 [200, 300, 400]
+    %3, %loops_3:3 = transform.structured.tile %2 [20, 30, 40]
+    %4, %loops_4:3 = transform.structured.tile %3 [2, 3, 4]
+}
+
 // CHECK-LABEL: func @matmul
 // CHECK-DAG:     %[[c0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[c2:.*]] = arith.constant 2 : index
@@ -86,6 +108,13 @@ func.func @matmul(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 // CHECK:                                   ins({{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>, memref<?x?xf32, strided<[?, 1], offset: ?>>)
 // CHECK:                                  outs({{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>)
 
+// -----
+
+// Map corresponding to a 2D memory access where the stride along the last dim is known to be 1.
+// CHECK-DAG: #[[$kn:.*]] = affine_map<(d0, d1, d2) -> (d2, d1)>
+// CHECK-DAG: #[[$nm:.*]] = affine_map<(d0, d1, d2) -> (d1, d0)>
+// CHECK-DAG: #[[$km:.*]] = affine_map<(d0, d1, d2) -> (d2, d0)>
+
 #matmul_accesses = [
   affine_map<(m, n, k) -> (m, k)>,
   affine_map<(m, n, k) -> (k, n)>,
@@ -112,6 +141,7 @@ func.func @permute_generic(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
   }
   return
 }
+
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
   transform.sequence %arg0 failures(propagate) {
@@ -120,6 +150,7 @@ transform.with_pdl_patterns {
     transform.structured.interchange %0 { iterator_interchange = [1, 2, 0]}
   }
 }
+
 // CHECK-LABEL:  func @permute_generic
 // CHECK:        linalg.generic {
 // CHECK-SAME:   indexing_maps = [#[[$kn]], #[[$nm]], #[[$km]]],
@@ -129,15 +160,23 @@ transform.with_pdl_patterns {
 // CHECK-SAME:     memref<?x?xf32, strided<[?, 1], offset: ?>>
 // CHECK-SAME:     memref<?x?xf32, strided<[?, 1], offset: ?>>
 
+// -----
+
 func.func @matvec_perm(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
              %x: memref<?xf32, strided<[1], offset: ?>>,
              %y: memref<?xf32, strided<[1], offset: ?>>) {
-  linalg.matvec {__internal_linalg_transform__ = "__with_perm__"}
-    ins(%A, %x: memref<?x?xf32, strided<[?, 1], offset: ?>>,
-                memref<?xf32, strided<[1], offset: ?>>)
-   outs(%y: memref<?xf32, strided<[1], offset: ?>>)
+  linalg.matvec ins(%A, %x: memref<?x?xf32, strided<[?, 1], offset: ?>>,
+                            memref<?xf32, strided<[1], offset: ?>>)
+               outs(%y: memref<?xf32, strided<[1], offset: ?>>)
   return
 }
+
+transform.sequence failures(propagate) {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["linalg.matvec"]} in %arg1
+    %1, %loops:2 = transform.structured.tile %0 [5, 6] {interchange = [1, 0]}
+}
+
 // CHECK-LABEL: func @matvec_perm
 // CHECK-DAG:     %[[c0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[c5:.*]] = arith.constant 5 : index
@@ -148,15 +187,25 @@ func.func @matvec_perm(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 // CHECK:               ins({{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>, memref<?xf32, strided<[1], offset: ?>>)
 // CHECK:              outs({{.*}}: memref<?xf32, strided<[1], offset: ?>>)
 
+// -----
+
 func.func @matmul_perm(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
              %B: memref<?x?xf32, strided<[?, 1], offset: ?>>,
              %C: memref<?x?xf32, strided<[?, 1], offset: ?>>) {
-  linalg.matmul {__internal_linalg_transform__ = "__with_perm__"}
-    ins(%A, %B: memref<?x?xf32, strided<[?, 1], offset: ?>>,
-                memref<?x?xf32, strided<[?, 1], offset: ?>>)
-   outs(%C : memref<?x?xf32, strided<[?, 1], offset: ?>>)
+  linalg.matmul ins(%A, %B: memref<?x?xf32, strided<[?, 1], offset: ?>>,
+                            memref<?x?xf32, strided<[?, 1], offset: ?>>)
+               outs(%C : memref<?x?xf32, strided<[?, 1], offset: ?>>)
   return
 }
+
+transform.sequence failures(propagate) {
+  ^bb0(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+    %1, %loops:3 = transform.structured.tile %0 [2000, 3000, 4000] {interchange=[1, 2, 0]}
+    %2, %loops_2:3 = transform.structured.tile %1 [200, 300, 400] {interchange=[1, 0, 2]}
+    %3, %loops_3:3 = transform.structured.tile %2 [20, 30, 40]
+}
+
 // CHECK-LABEL: func @matmul_perm
 // CHECK-DAG:     %[[c0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[c20:.*]] = arith.constant 20 : index
@@ -180,26 +229,3 @@ func.func @matmul_perm(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 // CHECK:                                 linalg.matmul
 // CHECK:                                  ins({{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>, memref<?x?xf32, strided<[?, 1], offset: ?>>)
 // CHECK:                                   outs({{.*}}: memref<?x?xf32, strided<[?, 1], offset: ?>>)
-
-func.func @tile_permute_parallel_loop(%arg0: memref<?x?xf32>,
-                                 %arg1: memref<?x?xf32>,
-                                 %arg2: memref<?x?xf32>) {
-  linalg.matmul {__internal_linalg_transform__ = "par__with_perm__"}
-    ins(%arg0, %arg1: memref<?x?xf32>, memref<?x?xf32>)
-   outs(%arg2: memref<?x?xf32>)
-  return
-}
-// CHECK-LABEL: func @tile_permute_parallel_loop
-//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<?x?xf32>
-//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: memref<?x?xf32>
-//  CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: memref<?x?xf32>
-//   CHECK-DAG:   %[[C16:.*]] = arith.constant 16 : index
-//   CHECK-DAG:   %[[C8:.*]] = arith.constant 8 : index
-//   CHECK-DAG:   %[[C4:.*]] = arith.constant 4 : index
-//   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
-//   CHECK-DAG:   %[[D0:.*]] = memref.dim %[[ARG0]], %c0
-//   CHECK-DAG:   %[[D1:.*]] = memref.dim %[[ARG0]], %c1
-//   CHECK-DAG:   %[[D2:.*]] = memref.dim %[[ARG1]], %c1
-//       CHECK:   scf.parallel (%{{.*}}) = (%[[C0]]) to (%[[D2]]) step (%[[C8]])
-//       CHECK:     scf.for %{{.*}} = %[[C0]] to %[[D1]] step %[[C4]]
-//       CHECK:       scf.parallel (%{{.*}}) = (%[[C0]]) to (%[[D0]]) step (%[[C16]])

@@ -102,22 +102,6 @@ def LinalgBufferize : Pass<"linalg-bufferize", "func::FuncOp"> {
   ];
 }
 
-def LinalgTilingPass : Pass<"linalg-tile", "func::FuncOp"> {
-  let summary = "Tile operations in the linalg dialect";
-  let constructor = "mlir::createLinalgTilingPass()";
-  let dependentDialects = [
-    "AffineDialect",
-    "linalg::LinalgDialect",
-    "memref::MemRefDialect",
-    "scf::SCFDialect"
-  ];
-  let options = [
-    ListOption<"tileSizes", "tile-sizes", "int64_t", "Tile sizes">,
-    Option<"loopType", "loop-type", "std::string", /*default=*/"\"for\"",
-           "Specify the type of loops to generate: for, parallel">
-  ];
-}
-
 def LinalgGeneralization : Pass<"linalg-generalize-named-ops", "func::FuncOp"> {
   let summary = "Convert named ops into generic ops";
   let constructor = "mlir::createLinalgGeneralizationPass()";
@@ -159,19 +143,6 @@ def LinalgDetensorize : Pass<"linalg-detensorize", ""> {
            "Detensorize all ops that qualify for detensoring along with branch"
            " operands and basic-block arguments.">
 
-  ];
-}
-
-def LinalgStrategyTilePass
-    : Pass<"linalg-strategy-tile-pass", "func::FuncOp"> {
-  let summary = "Configurable pass to apply pattern-based linalg tiling.";
-  let constructor = "mlir::createLinalgStrategyTilePass()";
-  let dependentDialects = ["linalg::LinalgDialect"];
-  let options = [
-    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
-      "Which func op is the anchor to latch on.">,
-    Option<"anchorOpName", "anchor-op", "std::string", /*default=*/"",
-      "Which linalg op within the func is the anchor to latch on.">,
   ];
 }
 
