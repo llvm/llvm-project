@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline="func.func(convert-vector-to-gpu)" -canonicalize | FileCheck %s
+// RUN: mlir-opt %s -pass-pipeline="func.func(convert-vector-to-gpu),canonicalize" | FileCheck %s
 
 #map0 = affine_map<(d0, d1) -> (d1, d0)>
 #map1 = affine_map<(d0, d1, d2) -> (d0, d2)>
