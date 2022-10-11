@@ -23,7 +23,6 @@ executable("opt") {
     "AnalysisWrappers.cpp",
     "BreakpointPrinter.cpp",
     "NewPMDriver.cpp",
-    "PrintSCC.cpp",
     "opt.cpp",
   ]
 
