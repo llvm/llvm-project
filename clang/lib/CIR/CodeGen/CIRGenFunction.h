@@ -343,7 +343,7 @@ public:
   Address CXXDefaultInitExprThis = Address::invalid();
 
   // CurFuncDecl - Holds the Decl for the current outermost non-closure context
-  const clang::Decl *CurFuncDecl;
+  const clang::Decl *CurFuncDecl = nullptr;
   /// CurCodeDecl - This is the inner-most code context, which includes blocks.
   const clang::Decl *CurCodeDecl;
   const CIRGenFunctionInfo *CurFnInfo;
@@ -366,6 +366,21 @@ public:
 
   /// Sanitizers enabled for this function.
   clang::SanitizerSet SanOpts;
+
+  class CIRGenFPOptionsRAII {
+  public:
+    CIRGenFPOptionsRAII(CIRGenFunction &CGF, FPOptions FPFeatures);
+    CIRGenFPOptionsRAII(CIRGenFunction &CGF, const clang::Expr *E);
+    ~CIRGenFPOptionsRAII();
+
+  private:
+    void ConstructorHelper(clang::FPOptions FPFeatures);
+    CIRGenFunction &CGF;
+    clang::FPOptions OldFPFeatures;
+    fp::ExceptionBehavior OldExcept;
+    llvm::RoundingMode OldRounding;
+  };
+  clang::FPOptions CurFPFeatures;
 
   /// The symbol table maps a variable name to a value in the current scope.
   /// Entering a function creates a new scope, and the function arguments are
@@ -526,21 +541,6 @@ public:
                I);
     }
   };
-
-  class CIRGenFPOptionsRAII {
-  public:
-    CIRGenFPOptionsRAII(CIRGenFunction &CGF, FPOptions FPFeatures);
-    CIRGenFPOptionsRAII(CIRGenFunction &CGF, const clang::Expr *E);
-    ~CIRGenFPOptionsRAII();
-
-  private:
-    void ConstructorHelper(clang::FPOptions FPFeatures);
-    CIRGenFunction &CGF;
-    clang::FPOptions OldFPFeatures;
-    fp::ExceptionBehavior OldExcept;
-    llvm::RoundingMode OldRounding;
-  };
-  clang::FPOptions CurFPFeatures;
 
   RValue convertTempToRValue(Address addr, clang::QualType type,
                              clang::SourceLocation Loc);

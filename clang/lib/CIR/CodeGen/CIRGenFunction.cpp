@@ -28,8 +28,8 @@ using namespace mlir::cir;
 
 CIRGenFunction::CIRGenFunction(CIRGenModule &CGM, CIRGenBuilderTy &builder,
                                bool suppressNewContext)
-    : CGM{CGM}, builder(builder), CurFuncDecl(nullptr),
-      SanOpts(CGM.getLangOpts().Sanitize), ShouldEmitLifetimeMarkers(false) {
+    : CGM{CGM}, builder(builder), SanOpts(CGM.getLangOpts().Sanitize),
+      CurFPFeatures(CGM.getLangOpts()), ShouldEmitLifetimeMarkers(false) {
   if (!suppressNewContext)
     CGM.getCXXABI().getMangleContext().startNewFunction();
   // TODO(CIR): EHStack.setCGF(this);
