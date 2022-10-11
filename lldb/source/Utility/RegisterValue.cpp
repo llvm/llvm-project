@@ -35,21 +35,16 @@ bool RegisterValue::GetData(DataExtractor &data) const {
   return data.SetData(GetBytes(), GetByteSize(), GetByteOrder()) > 0;
 }
 
-uint32_t RegisterValue::GetAsMemoryData(const RegisterInfo *reg_info, void *dst,
+uint32_t RegisterValue::GetAsMemoryData(const RegisterInfo &reg_info, void *dst,
                                         uint32_t dst_len,
                                         lldb::ByteOrder dst_byte_order,
                                         Status &error) const {
-  if (reg_info == nullptr) {
-    error.SetErrorString("invalid register info argument.");
-    return 0;
-  }
-
   // ReadRegister should have already been called on this object prior to
   // calling this.
   if (GetType() == eTypeInvalid) {
     // No value has been read into this object...
     error.SetErrorStringWithFormat(
-        "invalid register value type for register %s", reg_info->name);
+        "invalid register value type for register %s", reg_info.name);
     return 0;
   }
 
@@ -58,7 +53,7 @@ uint32_t RegisterValue::GetAsMemoryData(const RegisterInfo *reg_info, void *dst,
     return 0;
   }
 
-  const uint32_t src_len = reg_info->byte_size;
+  const uint32_t src_len = reg_info.byte_size;
 
   // Extract the register data into a data extractor
   DataExtractor reg_data;
@@ -76,7 +71,7 @@ uint32_t RegisterValue::GetAsMemoryData(const RegisterInfo *reg_info, void *dst,
                                    dst_byte_order); // dst byte order
   if (bytes_copied == 0)
     error.SetErrorStringWithFormat(
-        "failed to copy data for register write of %s", reg_info->name);
+        "failed to copy data for register write of %s", reg_info.name);
 
   return bytes_copied;
 }

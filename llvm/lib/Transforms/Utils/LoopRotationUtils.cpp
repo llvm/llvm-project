@@ -349,7 +349,9 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
       SE->forgetTopmostLoop(L);
       // We may hoist some instructions out of loop. In case if they were cached
       // as "loop variant" or "loop computable", these caches must be dropped.
-      SE->forgetLoopDispositions();
+      // We also may fold basic blocks, so cached block dispositions also need
+      // to be dropped.
+      SE->forgetBlockAndLoopDispositions();
     }
 
     LLVM_DEBUG(dbgs() << "LoopRotation: rotating "; L->dump());

@@ -983,6 +983,26 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
     }
   }
 
+  // With the appropriate no-wrap constraint, remove a multiply by the divisor
+  // after peeking through another divide:
+  // ((Op1 * X) / Y) / Op1 --> X / Y
+  if (match(Op0, m_BinOp(I.getOpcode(), m_c_Mul(m_Specific(Op1), m_Value(X)),
+                         m_Value(Y)))) {
+    auto *InnerDiv = cast<PossiblyExactOperator>(Op0);
+    auto *Mul = cast<OverflowingBinaryOperator>(InnerDiv->getOperand(0));
+    Instruction *NewDiv = nullptr;
+    if (!IsSigned && Mul->hasNoUnsignedWrap())
+      NewDiv = BinaryOperator::CreateUDiv(X, Y);
+    else if (IsSigned && Mul->hasNoSignedWrap())
+      NewDiv = BinaryOperator::CreateSDiv(X, Y);
+
+    // Exact propagates only if both of the original divides are exact.
+    if (NewDiv) {
+      NewDiv->setIsExact(I.isExact() && InnerDiv->isExact());
+      return NewDiv;
+    }
+  }
+
   return nullptr;
 }
 
