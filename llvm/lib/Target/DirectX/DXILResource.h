@@ -52,7 +52,7 @@ protected:
   uint32_t RangeSize;
   ResourceBase(uint32_t I, FrontendResource R);
 
-  void write(LLVMContext &Ctx, MutableArrayRef<Metadata *> Entries);
+  void write(LLVMContext &Ctx, MutableArrayRef<Metadata *> Entries) const;
 
   void print(raw_ostream &O, StringRef IDPrefix, StringRef BindingPrefix) const;
 
@@ -82,7 +82,7 @@ protected:
   };
 
   static StringRef getKindName(Kinds Kind);
-  static void printKind(Kinds Kind, unsigned alignment, raw_ostream &OS,
+  static void printKind(Kinds Kind, unsigned Alignment, raw_ostream &OS,
                         bool SRV = false, bool HasCounter = false,
                         uint32_t SampleCount = 0);
 
@@ -113,7 +113,7 @@ protected:
 
   static StringRef getComponentTypeName(ComponentType CompType);
   static void printComponentType(Kinds Kind, ComponentType CompType,
-                                 unsigned alignment, raw_ostream &OS);
+                                 unsigned Alignment, raw_ostream &OS);
 
 public:
   struct ExtendedProperties {
@@ -128,7 +128,7 @@ public:
       Atomic64Use
     };
 
-    MDNode *write(LLVMContext &Ctx);
+    MDNode *write(LLVMContext &Ctx) const;
   };
 };
 
@@ -144,7 +144,7 @@ class UAVResource : public ResourceBase {
 public:
   UAVResource(uint32_t I, FrontendResource R);
 
-  MDNode *write();
+  MDNode *write() const;
   void print(raw_ostream &O) const;
 };
 
@@ -159,8 +159,7 @@ class Resources {
 
 public:
   void collect(Module &M);
-
-  void write(Module &M);
+  void write(Module &M) const;
   void print(raw_ostream &O) const;
   LLVM_DUMP_METHOD void dump() const;
 };
