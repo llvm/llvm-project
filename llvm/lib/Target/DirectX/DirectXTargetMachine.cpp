@@ -13,6 +13,7 @@
 
 #include "DirectXTargetMachine.h"
 #include "DXILResourceAnalysis.h"
+#include "DXILShaderFlags.h"
 #include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
 #include "DirectXSubtarget.h"
@@ -103,11 +104,16 @@ void DirectXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           PM.addPass(DXILResourcePrinterPass(dbgs()));
           return true;
         }
+        if (PassName == "print-dx-shader-flags") {
+          PM.addPass(dxil::ShaderFlagsAnalysisPrinter(dbgs()));
+          return true;
+        }
         return false;
       });
 
   PB.registerAnalysisRegistrationCallback([](ModuleAnalysisManager &MAM) {
     MAM.registerPass([&] { return DXILResourceAnalysis(); });
+    MAM.registerPass([&] { return dxil::ShaderFlagsAnalysis(); });
   });
 }
 
