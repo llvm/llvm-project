@@ -1944,6 +1944,14 @@ bool LoongArchTargetLowering::shouldInsertFencesForAtomic(
   return false;
 }
 
+EVT LoongArchTargetLowering::getSetCCResultType(const DataLayout &DL,
+                                                LLVMContext &Context,
+                                                EVT VT) const {
+  if (!VT.isVector())
+    return getPointerTy(DL);
+  return VT.changeVectorElementTypeToInteger();
+}
+
 bool LoongArchTargetLowering::hasAndNot(SDValue Y) const {
   // TODO: Support vectors.
   return Y.getValueType().isScalarInteger() && !isa<ConstantSDNode>(Y);
