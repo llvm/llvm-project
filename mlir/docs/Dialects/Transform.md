@@ -10,6 +10,10 @@
 
 [include "Dialects/BufferizationTransformOps.md"]
 
+## GPU Transform Operations
+
+[include "Dialects/GPUTransformOps.md"]
+
 ## Loop (SCF) Transform Operations
 
 [include "Dialects/SCFLoopTransformOps.md"]
