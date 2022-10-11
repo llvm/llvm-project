@@ -94,7 +94,7 @@ define <2 x double> @buildd() {
 ; CHECK-NEXT:    lxvdsx 34, 0, 3
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load double, double* @d, align 8
+  %0 = load double, ptr @d, align 8
   %splat.splatinsert = insertelement <2 x double> undef, double %0, i32 0
   %splat.splat = shufflevector <2 x double> %splat.splatinsert, <2 x double> undef, <2 x i32> zeroinitializer
   ret <2 x double> %splat.splat

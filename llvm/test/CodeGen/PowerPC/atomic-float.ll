@@ -4,7 +4,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc-unknown-unknown \
 ; RUN:   < %s | FileCheck --check-prefix=CHECK-32 %s
 
-define float @test_add(float* %ptr, float %incr) {
+define float @test_add(ptr %ptr, float %incr) {
 ; CHECK-64-LABEL: test_add:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    sync
@@ -78,6 +78,6 @@ define float @test_add(float* %ptr, float %incr) {
 ; CHECK-32-NEXT:    addi 1, 1, 32
 ; CHECK-32-NEXT:    blr
 entry:
-  %r = atomicrmw fadd float* %ptr, float %incr seq_cst
+  %r = atomicrmw fadd ptr %ptr, float %incr seq_cst
   ret float %r
 }

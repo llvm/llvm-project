@@ -4,8 +4,8 @@ target triple = "powerpc64le-unknown-linux-gnu"
 
 define void @_Z1fv() #0 {
 entry:
-  %0 = call i8* @llvm.eh.dwarf.cfa(i32 0)
-  call void @_Z1gPv(i8* %0)
+  %0 = call ptr @llvm.eh.dwarf.cfa(i32 0)
+  call void @_Z1gPv(ptr %0)
   ret void
 
 ; CHECK-LABEL: @_Z1fv
@@ -18,10 +18,10 @@ entry:
 ; CHECK: blr
 }
 
-declare void @_Z1gPv(i8*)
+declare void @_Z1gPv(ptr)
 
 ; Function Attrs: nounwind
-declare i8* @llvm.eh.dwarf.cfa(i32) #1
+declare ptr @llvm.eh.dwarf.cfa(i32) #1
 
 attributes #0 = { "frame-pointer"="all" "target-cpu"="ppc64le" }
 attributes #1 = { nounwind }

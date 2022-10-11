@@ -4,10 +4,10 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff < %s \
 ; RUN:   2>&1 | FileCheck --check-prefix=CHECK-BE %s
 
-%0 = type <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i8*, [8 x i8] }>
-@global.1 = internal global %0 <{ i32 129, i32 2, i32 118, i32 0, i32 5, i32 0, i32 0, i32 0, i32 120, i32 0, i8* getelementptr inbounds ([3 x i8], [3 x i8]* @global.2, i32 0, i32 0), [8 x i8] c"\00\00\00\00\00\00\00\03" }>, align 4
+%0 = type <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, ptr, [8 x i8] }>
+@global.1 = internal global %0 <{ i32 129, i32 2, i32 118, i32 0, i32 5, i32 0, i32 0, i32 0, i32 120, i32 0, ptr @global.2, [8 x i8] c"\00\00\00\00\00\00\00\03" }>, align 4
 @global.2 = internal constant [3 x i8] c"x.c"
-@alias = dso_local alias i32 (), i32 ()* @main
+@alias = dso_local alias i32 (), ptr @main
 
 define dso_local signext i32 @main() nounwind {
 ; CHECK-LE-LABEL: main:
@@ -101,10 +101,9 @@ define dso_local signext i32 @main() nounwind {
 bb:
   %tmp = alloca [2147484000 x i8], align 8
   tail call void @pluto()
-  %tmp6 = tail call i64 @snork(i64 6, i32 257, %0* nonnull @global.1, i64 32768, i8* null, i64 0, i8* null)
-  %tmp7 = getelementptr inbounds [2147484000 x i8], [2147484000 x i8]* %tmp, i64 0, i64 2147483992
-  %tmp8 = bitcast i8* %tmp7 to double*
-  %tmp9 = call i64 @zot(i64 %tmp6, double* nonnull %tmp8, i64 8, i64 8)
+  %tmp6 = tail call i64 @snork(i64 6, i32 257, ptr nonnull @global.1, i64 32768, ptr null, i64 0, ptr null)
+  %tmp7 = getelementptr inbounds [2147484000 x i8], ptr %tmp, i64 0, i64 2147483992
+  %tmp9 = call i64 @zot(i64 %tmp6, ptr nonnull %tmp7, i64 8, i64 8)
   %tmp10 = call i64 @wibble(i64 %tmp6)
   call void @snork.3(i64 0)
   unreachable
@@ -112,9 +111,9 @@ bb:
 
 declare void @pluto()
 
-declare signext i64 @snork(i64, i32, %0*, i64, i8*, i64, i8*)
+declare signext i64 @snork(i64, i32, ptr, i64, ptr, i64, ptr)
 
-declare signext i64 @zot(i64, double*, i64, i64)
+declare signext i64 @zot(i64, ptr, i64, i64)
 
 declare signext i64 @wibble(i64)
 

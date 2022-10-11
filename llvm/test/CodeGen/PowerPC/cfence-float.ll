@@ -4,7 +4,7 @@
 ; RUN: llc -opaque-pointers -mtriple=powerpc64-unknown-unknown \
 ; RUN:   < %s 2>&1 | FileCheck %s
 
-define float @bar(float* %fp) {
+define float @bar(ptr %fp) {
 ; CHECK-LE-LABEL: bar:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    lwz 3, 0(3)
@@ -26,6 +26,6 @@ define float @bar(float* %fp) {
 ; CHECK-NEXT:    lfs 1, -4(1)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load atomic float, float* %fp acquire, align 4
+  %0 = load atomic float, ptr %fp acquire, align 4
   ret float %0
 }

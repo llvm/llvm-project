@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
 
 ; Function Attrs: nounwind
-define dso_local void @test(float* nocapture readonly %Fptr, <4 x float>* nocapture %Vptr) local_unnamed_addr #0 !dbg !10 {
+define dso_local void @test(ptr nocapture readonly %Fptr, ptr nocapture %Vptr) local_unnamed_addr #0 !dbg !10 {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:          #DEBUG_VALUE: test:Fptr <- $x3
@@ -35,9 +35,9 @@ define dso_local void @test(float* nocapture readonly %Fptr, <4 x float>* nocapt
 ; CHECK-NEXT:          .loc    1 4 1 is_stmt 1
 ; CHECK-NEXT:          blr
 entry:
-  call void @llvm.dbg.value(metadata float* %Fptr, metadata !19, metadata !DIExpression()), !dbg !22
-  call void @llvm.dbg.value(metadata <4 x float>* %Vptr, metadata !20, metadata !DIExpression()), !dbg !22
-  %0 = load float, float* %Fptr, align 4, !dbg !23, !tbaa !24
+  call void @llvm.dbg.value(metadata ptr %Fptr, metadata !19, metadata !DIExpression()), !dbg !22
+  call void @llvm.dbg.value(metadata ptr %Vptr, metadata !20, metadata !DIExpression()), !dbg !22
+  %0 = load float, ptr %Fptr, align 4, !dbg !23, !tbaa !24
   %conv = fpext float %0 to double, !dbg !28
   %sub = fsub double 1.000000e+00, %conv, !dbg !29
   %sub1 = fadd double %sub, -4.300000e+00, !dbg !30
@@ -45,7 +45,7 @@ entry:
   call void @llvm.dbg.value(metadata float %conv2, metadata !21, metadata !DIExpression()), !dbg !22
   %vecinit4 = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float poison>, float %conv2, i32 0, !dbg !32
   %vecinit5 = insertelement <4 x float> %vecinit4, float %0, i32 3, !dbg !32
-  store <4 x float> %vecinit5, <4 x float>* %Vptr, align 16, !dbg !33, !tbaa !34
+  store <4 x float> %vecinit5, ptr %Vptr, align 16, !dbg !33, !tbaa !34
   ret void, !dbg !35
 }
 
