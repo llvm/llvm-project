@@ -79,6 +79,9 @@ public:
     }
     return false;
   }
+  void setMaxAtomicWidth() override {
+    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 32;
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY LoongArch64TargetInfo
@@ -99,6 +102,9 @@ public:
       return true;
     }
     return false;
+  }
+  void setMaxAtomicWidth() override {
+    MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   }
 };
 } // end namespace targets
