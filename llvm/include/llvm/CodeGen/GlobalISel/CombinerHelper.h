@@ -768,6 +768,15 @@ public:
   /// to a min/max instruction of some sort.
   bool matchSimplifySelectToMinMax(MachineInstr &MI, BuildFnTy &MatchInfo);
 
+  /// Transform:
+  ///   (X + Y) == X -> Y == 0
+  ///   (X - Y) == X -> Y == 0
+  ///   (X ^ Y) == X -> Y == 0
+  ///   (X + Y) != X -> Y != 0
+  ///   (X - Y) != X -> Y != 0
+  ///   (X ^ Y) != X -> Y != 0
+  bool matchRedundantBinOpInEquality(MachineInstr &MI, BuildFnTy &MatchInfo);
+
 private:
   /// Given a non-indexed load or store instruction \p MI, find an offset that
   /// can be usefully and legally folded into it as a post-indexing operation.
