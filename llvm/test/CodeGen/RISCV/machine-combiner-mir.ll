@@ -95,8 +95,8 @@ define double @test_fmadd(double %a0, double %a1, double %a2) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:fpr64 = COPY $f11_d
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fpr64 = COPY $f10_d
   ; CHECK-NEXT:   [[FMUL_D:%[0-9]+]]:fpr64 = contract nofpexcept FMUL_D [[COPY2]], [[COPY1]], 7, implicit $frm
-  ; CHECK-NEXT:   [[FADD_D:%[0-9]+]]:fpr64 = contract nofpexcept FADD_D [[FMUL_D]], [[COPY]], 7, implicit $frm
-  ; CHECK-NEXT:   [[FDIV_D:%[0-9]+]]:fpr64 = nofpexcept FDIV_D killed [[FADD_D]], [[FMUL_D]], 7, implicit $frm
+  ; CHECK-NEXT:   [[FMADD_D:%[0-9]+]]:fpr64 = contract nofpexcept FMADD_D [[COPY2]], [[COPY1]], [[COPY]], 7, implicit $frm
+  ; CHECK-NEXT:   [[FDIV_D:%[0-9]+]]:fpr64 = nofpexcept FDIV_D killed [[FMADD_D]], [[FMUL_D]], 7, implicit $frm
   ; CHECK-NEXT:   $f10_d = COPY [[FDIV_D]]
   ; CHECK-NEXT:   PseudoRET implicit $f10_d
   %t0 = fmul contract double %a0, %a1
