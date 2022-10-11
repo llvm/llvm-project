@@ -167,3 +167,64 @@ body:             |
     $sgpr0 = COPY %and(s32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 ...
+---
+name:            vector_const_splat_const_splat
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: vector_const_splat_const_splat
+    ; CHECK: %fifteen:_(s16) = G_CONSTANT i16 15
+    ; CHECK-NEXT: %c1:_(<2 x s16>) = G_BUILD_VECTOR %fifteen(s16), %fifteen(s16)
+    ; CHECK-NEXT: $vgpr0 = COPY %c1(<2 x s16>)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
+    %fifteen:_(s16) = G_CONSTANT i16 15
+    %mask:_(s16) = G_CONSTANT i16 255
+    %c1:_(<2 x s16>) = G_BUILD_VECTOR %fifteen, %fifteen
+    %c2:_(<2 x s16>) = G_BUILD_VECTOR %mask, %mask
+    %and:_(<2 x s16>) = G_AND %c1(<2 x s16>), %c2(<2 x s16>)
+    $vgpr0 = COPY %and(<2 x s16>)
+    SI_RETURN_TO_EPILOG implicit $vgpr0
+...
+---
+name:            vector_const_valid_not_splat
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: vector_const_valid_not_splat
+    ; CHECK: %fifteen:_(s16) = G_CONSTANT i16 15
+    ; CHECK-NEXT: %sixteen:_(s16) = G_CONSTANT i16 16
+    ; CHECK-NEXT: %c1:_(<2 x s16>) = G_BUILD_VECTOR %fifteen(s16), %sixteen(s16)
+    ; CHECK-NEXT: $vgpr0 = COPY %c1(<2 x s16>)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
+    %fifteen:_(s16) = G_CONSTANT i16 15
+    %sixteen:_(s16) = G_CONSTANT i16 16
+    %mask:_(s16) = G_CONSTANT i16 255
+    %c1:_(<2 x s16>) = G_BUILD_VECTOR %fifteen, %sixteen
+    %c2:_(<2 x s16>) = G_BUILD_VECTOR %mask, %mask
+    %and:_(<2 x s16>) = G_AND %c1(<2 x s16>), %c2(<2 x s16>)
+    $vgpr0 = COPY %and(<2 x s16>)
+    SI_RETURN_TO_EPILOG implicit $vgpr0
+...
+---
+name:            vector_dont_combine_const_too_wide
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: vector_dont_combine_const_too_wide
+    ; CHECK: %fifteen:_(s16) = G_CONSTANT i16 15
+    ; CHECK-NEXT: %too_wide:_(s16) = G_CONSTANT i16 257
+    ; CHECK-NEXT: %mask:_(s16) = G_CONSTANT i16 255
+    ; CHECK-NEXT: %c1:_(<2 x s16>) = G_BUILD_VECTOR %fifteen(s16), %too_wide(s16)
+    ; CHECK-NEXT: %c2:_(<2 x s16>) = G_BUILD_VECTOR %mask(s16), %mask(s16)
+    ; CHECK-NEXT: %and:_(<2 x s16>) = G_AND %c1, %c2
+    ; CHECK-NEXT: $vgpr0 = COPY %and(<2 x s16>)
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $vgpr0
+    %fifteen:_(s16) = G_CONSTANT i16 15
+    %too_wide:_(s16) = G_CONSTANT i16 257
+    %mask:_(s16) = G_CONSTANT i16 255
+    %c1:_(<2 x s16>) = G_BUILD_VECTOR %fifteen, %too_wide
+    %c2:_(<2 x s16>) = G_BUILD_VECTOR %mask, %mask
+    %and:_(<2 x s16>) = G_AND %c1(<2 x s16>), %c2(<2 x s16>)
+    $vgpr0 = COPY %and(<2 x s16>)
+    SI_RETURN_TO_EPILOG implicit $vgpr0
+...
