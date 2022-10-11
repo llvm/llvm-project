@@ -1347,11 +1347,11 @@ define i1 @udiv_one_icmpne_one(i32 %x) {
   ret i1 %B
 }
 
+; ((X * Y) / Z) / X --> Y / Z
+
 define i8 @udiv_udiv_mul_nuw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_udiv_mul_nuw(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[M]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[D]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %m = mul nuw i8 %x, %y
@@ -1360,11 +1360,11 @@ define i8 @udiv_udiv_mul_nuw(i8 %x, i8 %y, i8 %z) {
   ret i8 %r
 }
 
+; exact propagates and commute is ok
+
 define i8 @udiv_udiv_mul_nuw_exact_exact(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_udiv_mul_nuw_exact_exact(
-; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = udiv exact i8 [[M]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = udiv exact i8 [[D]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = udiv exact i8 [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %m = mul nuw i8 %y, %x
@@ -1373,12 +1373,13 @@ define i8 @udiv_udiv_mul_nuw_exact_exact(i8 %x, i8 %y, i8 %z) {
   ret i8 %r
 }
 
+; extra uses are ok
+
 define i32 @udiv_udiv_mul_nuw_exact_use(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @udiv_udiv_mul_nuw_exact_use(
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[M]])
-; CHECK-NEXT:    [[D:%.*]] = udiv exact i32 [[M]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[D]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[Y]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %m = mul nuw i32 %x, %y
@@ -1387,6 +1388,8 @@ define i32 @udiv_udiv_mul_nuw_exact_use(i32 %x, i32 %y, i32 %z) {
   %r = udiv i32 %d, %x
   ret i32 %r
 }
+
+; negative test - must have nuw
 
 define i8 @udiv_udiv_mul_nsw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_udiv_mul_nsw(
@@ -1401,6 +1404,8 @@ define i8 @udiv_udiv_mul_nsw(i8 %x, i8 %y, i8 %z) {
   ret i8 %r
 }
 
+; negative test - opcode mismatch
+
 define i8 @udiv_sdiv_mul_nuw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_sdiv_mul_nuw(
 ; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[Y:%.*]]
@@ -1414,11 +1419,11 @@ define i8 @udiv_sdiv_mul_nuw(i8 %x, i8 %y, i8 %z) {
   ret i8 %r
 }
 
+; ((Y * X) / Z) / X --> Y / Z
+
 define <2 x i8> @sdiv_sdiv_mul_nsw(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @sdiv_sdiv_mul_nsw(
-; CHECK-NEXT:    [[M:%.*]] = mul nsw <2 x i8> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i8> [[M]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sdiv <2 x i8> [[D]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv <2 x i8> [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %m = mul nsw <2 x i8> %y, %x
@@ -1427,11 +1432,11 @@ define <2 x i8> @sdiv_sdiv_mul_nsw(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
   ret <2 x i8> %r
 }
 
+; exact propagates
+
 define i8 @sdiv_sdiv_mul_nsw_exact_exact(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sdiv_sdiv_mul_nsw_exact_exact(
-; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv exact i8 [[M]], [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = sdiv exact i8 [[D]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv exact i8 [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %m = mul nsw i8 %x, %y
@@ -1440,12 +1445,14 @@ define i8 @sdiv_sdiv_mul_nsw_exact_exact(i8 %x, i8 %y, i8 %z) {
   ret i8 %r
 }
 
+; extra uses are ok
+
 define i32 @sdiv_sdiv_mul_nsw_exact_use(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @sdiv_sdiv_mul_nsw_exact_use(
 ; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use(i32 [[D]])
-; CHECK-NEXT:    [[R:%.*]] = sdiv exact i32 [[D]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[Y]], [[Z]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %m = mul nsw i32 %x, %y
@@ -1454,6 +1461,8 @@ define i32 @sdiv_sdiv_mul_nsw_exact_use(i32 %x, i32 %y, i32 %z) {
   %r = sdiv exact i32 %d, %x
   ret i32 %r
 }
+
+; negative test - must have nsw
 
 define i8 @sdiv_sdiv_mul_nuw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sdiv_sdiv_mul_nuw(
@@ -1467,6 +1476,8 @@ define i8 @sdiv_sdiv_mul_nuw(i8 %x, i8 %y, i8 %z) {
   %r = sdiv i8 %d, %x
   ret i8 %r
 }
+
+; negative test - opcode mismatch
 
 define i8 @sdiv_udiv_mul_nsw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sdiv_udiv_mul_nsw(
