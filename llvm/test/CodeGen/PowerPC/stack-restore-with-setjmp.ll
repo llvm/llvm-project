@@ -8,7 +8,7 @@
 @.str = private unnamed_addr constant [33 x i8] c"Successfully returned from main\0A\00", align 1
 
 ; Function Attrs: nounwind
-define dso_local signext i32 @main(i32 signext %argc, i8** nocapture readnone %argv) local_unnamed_addr #0 {
+define dso_local signext i32 @main(i32 signext %argc, ptr nocapture readnone %argv) local_unnamed_addr #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mfocrf 12, 32
@@ -111,25 +111,22 @@ entry:
   br i1 %cmp, label %return, label %if.end
 
 if.end:                                           ; preds = %entry
-  %0 = bitcast [1 x %struct.__jmp_buf_tag]* %env_buffer to i8*
-  call void @llvm.lifetime.start.p0i8(i64 656, i8* nonnull %0) #5
-  %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %env_buffer, i64 0, i64 0
-  %call = call signext i32 @_setjmp(%struct.__jmp_buf_tag* nonnull %arraydecay) #6
+  call void @llvm.lifetime.start.p0(i64 656, ptr nonnull %env_buffer) #5
+  %call = call signext i32 @_setjmp(ptr nonnull %env_buffer) #6
   %cmp1 = icmp ne i32 %argc, 2
   %cmp2 = icmp eq i32 %call, 0
   %or.cond = and i1 %cmp1, %cmp2
   br i1 %or.cond, label %if.then3, label %if.end5
 
 if.then3:                                         ; preds = %if.end
-  %1 = alloca [8 x i8], align 16
-  %.sub = getelementptr inbounds [8 x i8], [8 x i8]* %1, i64 0, i64 0
-  store i8 -1, i8* %.sub, align 16
-  call void @test(i8* nonnull %.sub, %struct.__jmp_buf_tag* nonnull %arraydecay) #7
+  %0 = alloca [8 x i8], align 16
+  store i8 -1, ptr %0, align 16
+  call void @test(ptr nonnull %0, ptr nonnull %env_buffer) #7
   unreachable
 
 if.end5:                                          ; preds = %if.end
-  %call6 = call signext i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([33 x i8], [33 x i8]* @.str, i64 0, i64 0))
-  call void @llvm.lifetime.end.p0i8(i64 656, i8* nonnull %0) #5
+  %call6 = call signext i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str)
+  call void @llvm.lifetime.end.p0(i64 656, ptr nonnull %env_buffer) #5
   br label %return
 
 return:                                           ; preds = %entry, %if.end5
@@ -138,19 +135,19 @@ return:                                           ; preds = %entry, %if.end5
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: nounwind returns_twice
-declare signext i32 @_setjmp(%struct.__jmp_buf_tag*) local_unnamed_addr
+declare signext i32 @_setjmp(ptr) local_unnamed_addr
 
 ; Function Attrs: noreturn
-declare void @test(i8*, %struct.__jmp_buf_tag*) local_unnamed_addr
+declare void @test(ptr, ptr) local_unnamed_addr
 
 ; Function Attrs: nofree nounwind
-declare noundef signext i32 @printf(i8* nocapture noundef readonly, ...) local_unnamed_addr
+declare noundef signext i32 @printf(ptr nocapture noundef readonly, ...) local_unnamed_addr
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 attributes #0 = { nounwind }
 attributes #6 = { nounwind returns_twice }

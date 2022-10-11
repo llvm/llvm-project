@@ -9,7 +9,7 @@
 ; RUN:     -mcpu=pwr9 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN: FileCheck %s --check-prefix=CHECK-BE
 
-define void @test8(<8 x double>* nocapture %Sink, <8 x i16>* nocapture readonly %SrcPtr) {
+define void @test8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P8-LABEL: test8:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r5, r2, .LCPI0_0@toc@ha
@@ -112,13 +112,13 @@ define void @test8(<8 x double>* nocapture %Sink, <8 x i16>* nocapture readonly 
 ; CHECK-BE-NEXT:    stxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load <8 x i16>, <8 x i16>* %SrcPtr, align 16
+  %0 = load <8 x i16>, ptr %SrcPtr, align 16
   %1 = uitofp <8 x i16> %0 to <8 x double>
-  store <8 x double> %1, <8 x double>* %Sink, align 16
+  store <8 x double> %1, ptr %Sink, align 16
   ret void
 }
 
-define void @test4(<4 x double>* nocapture %Sink, <4 x i16>* nocapture readonly %SrcPtr) {
+define void @test4(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P8-LABEL: test4:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r5, r2, .LCPI1_0@toc@ha
@@ -179,13 +179,13 @@ define void @test4(<4 x double>* nocapture %Sink, <4 x i16>* nocapture readonly 
 ; CHECK-BE-NEXT:    stxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load <4 x i16>, <4 x i16>* %SrcPtr, align 16
+  %0 = load <4 x i16>, ptr %SrcPtr, align 16
   %1 = uitofp <4 x i16> %0 to <4 x double>
-  store <4 x double> %1, <4 x double>* %Sink, align 16
+  store <4 x double> %1, ptr %Sink, align 16
   ret void
 }
 
-define void @test2(<2 x double>* nocapture %Sink, <2 x i16>* nocapture readonly %SrcPtr) {
+define void @test2(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P8-LABEL: test2:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r5, r2, .LCPI2_0@toc@ha
@@ -225,13 +225,13 @@ define void @test2(<2 x double>* nocapture %Sink, <2 x i16>* nocapture readonly 
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load <2 x i16>, <2 x i16>* %SrcPtr, align 16
+  %0 = load <2 x i16>, ptr %SrcPtr, align 16
   %1 = uitofp <2 x i16> %0 to <2 x double>
-  store <2 x double> %1, <2 x double>* %Sink, align 16
+  store <2 x double> %1, ptr %Sink, align 16
   ret void
 }
 
-define void @stest8(<8 x double>* nocapture %Sink, <8 x i16>* nocapture readonly %SrcPtr) {
+define void @stest8(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P8-LABEL: stest8:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r5, r2, .LCPI3_0@toc@ha
@@ -351,13 +351,13 @@ define void @stest8(<8 x double>* nocapture %Sink, <8 x i16>* nocapture readonly
 ; CHECK-BE-NEXT:    stxv vs3, 48(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load <8 x i16>, <8 x i16>* %SrcPtr, align 16
+  %0 = load <8 x i16>, ptr %SrcPtr, align 16
   %1 = sitofp <8 x i16> %0 to <8 x double>
-  store <8 x double> %1, <8 x double>* %Sink, align 16
+  store <8 x double> %1, ptr %Sink, align 16
   ret void
 }
 
-define void @stest4(<4 x double>* nocapture %Sink, <4 x i16>* nocapture readonly %SrcPtr) {
+define void @stest4(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P8-LABEL: stest4:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r5, r2, .LCPI4_0@toc@ha
@@ -427,13 +427,13 @@ define void @stest4(<4 x double>* nocapture %Sink, <4 x i16>* nocapture readonly
 ; CHECK-BE-NEXT:    stxv vs1, 16(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load <4 x i16>, <4 x i16>* %SrcPtr, align 16
+  %0 = load <4 x i16>, ptr %SrcPtr, align 16
   %1 = sitofp <4 x i16> %0 to <4 x double>
-  store <4 x double> %1, <4 x double>* %Sink, align 16
+  store <4 x double> %1, ptr %Sink, align 16
   ret void
 }
 
-define void @stest2(<2 x double>* nocapture %Sink, <2 x i16>* nocapture readonly %SrcPtr) {
+define void @stest2(ptr nocapture %Sink, ptr nocapture readonly %SrcPtr) {
 ; CHECK-P8-LABEL: stest2:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r5, r2, .LCPI5_0@toc@ha
@@ -478,8 +478,8 @@ define void @stest2(<2 x double>* nocapture %Sink, <2 x i16>* nocapture readonly
 ; CHECK-BE-NEXT:    stxv vs0, 0(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load <2 x i16>, <2 x i16>* %SrcPtr, align 16
+  %0 = load <2 x i16>, ptr %SrcPtr, align 16
   %1 = sitofp <2 x i16> %0 to <2 x double>
-  store <2 x double> %1, <2 x double>* %Sink, align 16
+  store <2 x double> %1, ptr %Sink, align 16
   ret void
 }

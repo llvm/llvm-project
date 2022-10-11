@@ -115,6 +115,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  isatty
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.isatty
+)
+
+add_entrypoint_object(
   link
   ALIAS
   DEPENDS
@@ -196,6 +203,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.__llvm_libc_syscall
+)
+
+add_entrypoint_object(
+  sysconf
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sysconf
 )
 
 add_entrypoint_object(

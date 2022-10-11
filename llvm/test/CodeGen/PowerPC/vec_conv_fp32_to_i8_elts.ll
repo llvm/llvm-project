@@ -172,7 +172,7 @@ entry:
   ret i32 %1
 }
 
-define i64 @test8elt(<8 x float>* nocapture readonly) local_unnamed_addr #2 {
+define i64 @test8elt(ptr nocapture readonly) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test8elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
@@ -334,13 +334,13 @@ define i64 @test8elt(<8 x float>* nocapture readonly) local_unnamed_addr #2 {
 ; CHECK-BE-NEXT:    mffprd r3, f0
 ; CHECK-BE-NEXT:    blr
 entry:
-  %a = load <8 x float>, <8 x float>* %0, align 32
+  %a = load <8 x float>, ptr %0, align 32
   %1 = fptoui <8 x float> %a to <8 x i8>
   %2 = bitcast <8 x i8> %1 to i64
   ret i64 %2
 }
 
-define <16 x i8> @test16elt(<16 x float>* nocapture readonly) local_unnamed_addr #3 {
+define <16 x i8> @test16elt(ptr nocapture readonly) local_unnamed_addr #3 {
 ; CHECK-P8-LABEL: test16elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
@@ -644,7 +644,7 @@ define <16 x i8> @test16elt(<16 x float>* nocapture readonly) local_unnamed_addr
 ; CHECK-BE-NEXT:    xxmrghd v2, vs0, vs2
 ; CHECK-BE-NEXT:    blr
 entry:
-  %a = load <16 x float>, <16 x float>* %0, align 64
+  %a = load <16 x float>, ptr %0, align 64
   %1 = fptoui <16 x float> %a to <16 x i8>
   ret <16 x i8> %1
 }
@@ -812,7 +812,7 @@ entry:
   ret i32 %1
 }
 
-define i64 @test8elt_signed(<8 x float>* nocapture readonly) local_unnamed_addr #2 {
+define i64 @test8elt_signed(ptr nocapture readonly) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test8elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
@@ -974,13 +974,13 @@ define i64 @test8elt_signed(<8 x float>* nocapture readonly) local_unnamed_addr 
 ; CHECK-BE-NEXT:    mffprd r3, f0
 ; CHECK-BE-NEXT:    blr
 entry:
-  %a = load <8 x float>, <8 x float>* %0, align 32
+  %a = load <8 x float>, ptr %0, align 32
   %1 = fptosi <8 x float> %a to <8 x i8>
   %2 = bitcast <8 x i8> %1 to i64
   ret i64 %2
 }
 
-define <16 x i8> @test16elt_signed(<16 x float>* nocapture readonly) local_unnamed_addr #3 {
+define <16 x i8> @test16elt_signed(ptr nocapture readonly) local_unnamed_addr #3 {
 ; CHECK-P8-LABEL: test16elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    lxvd2x vs0, 0, r3
@@ -1284,7 +1284,7 @@ define <16 x i8> @test16elt_signed(<16 x float>* nocapture readonly) local_unnam
 ; CHECK-BE-NEXT:    xxmrghd v2, vs0, vs2
 ; CHECK-BE-NEXT:    blr
 entry:
-  %a = load <16 x float>, <16 x float>* %0, align 64
+  %a = load <16 x float>, ptr %0, align 64
   %1 = fptosi <16 x float> %a to <16 x i8>
   ret <16 x i8> %1
 }

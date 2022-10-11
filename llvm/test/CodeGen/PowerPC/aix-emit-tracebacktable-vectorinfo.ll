@@ -26,17 +26,17 @@ entry:
   %vf.addr = alloca <4 x float>, align 16
   %d1.addr = alloca double, align 8
   %vc1.addr = alloca <16 x i8>, align 16
-  store <4 x i32> %vi1, <4 x i32>* %vi1.addr, align 16
-  store i32 %i1, i32* %i1.addr, align 4
-  store i32 %i2, i32* %i2.addr, align 4
-  store float %f1, float* %f1.addr, align 4
-  store <4 x float> %vf, <4 x float>* %vf.addr, align 16
-  store double %d1, double* %d1.addr, align 8
-  store <16 x i8> %vc1, <16 x i8>* %vc1.addr, align 16
-  %0 = load <4 x float>, <4 x float>* %vf.addr, align 16
-  store <4 x float> %0, <4 x float>* %__a.addr.i, align 16
-  %1 = load <4 x float>, <4 x float>* %__a.addr.i, align 16
-  %2 = load <4 x float>, <4 x float>* %__a.addr.i, align 16
+  store <4 x i32> %vi1, ptr %vi1.addr, align 16
+  store i32 %i1, ptr %i1.addr, align 4
+  store i32 %i2, ptr %i2.addr, align 4
+  store float %f1, ptr %f1.addr, align 4
+  store <4 x float> %vf, ptr %vf.addr, align 16
+  store double %d1, ptr %d1.addr, align 8
+  store <16 x i8> %vc1, ptr %vc1.addr, align 16
+  %0 = load <4 x float>, ptr %vf.addr, align 16
+  store <4 x float> %0, ptr %__a.addr.i, align 16
+  %1 = load <4 x float>, ptr %__a.addr.i, align 16
+  %2 = load <4 x float>, ptr %__a.addr.i, align 16
   %3 = call <4 x float> @llvm.fabs.v4f32(<4 x float> %2) #2
   ret <4 x float> %3
 }
@@ -48,31 +48,31 @@ entry:
   %retval = alloca <4 x float>, align 16
   %x.addr = alloca i32, align 4
   %vf = alloca <4 x float>, align 16
-  store i32 %x, i32* %x.addr, align 4
-  store <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, <4 x float>* %vf, align 16
-  %0 = load i32, i32* %x.addr, align 4
+  store i32 %x, ptr %x.addr, align 4
+  store <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, ptr %vf, align 16
+  %0 = load i32, ptr %x.addr, align 4
   %tobool = icmp ne i32 %0, 0
   br i1 %tobool, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %1 = load <4 x float>, <4 x float>* %vf, align 16
-  store <4 x float> %1, <4 x float>* %retval, align 16
+  %1 = load <4 x float>, ptr %vf, align 16
+  store <4 x float> %1, ptr %retval, align 16
   br label %return
 
 if.end:                                           ; preds = %entry
-  %2 = load <4 x float>, <4 x float>* %vf, align 16
-  store <4 x float> %2, <4 x float>* %__a.addr.i, align 16
-  %3 = load <4 x float>, <4 x float>* %__a.addr.i, align 16
+  %2 = load <4 x float>, ptr %vf, align 16
+  store <4 x float> %2, ptr %__a.addr.i, align 16
+  %3 = load <4 x float>, ptr %__a.addr.i, align 16
   %4 = bitcast <4 x float> %3 to <4 x i32>
   %and.i = and <4 x i32> %4, <i32 2147483647, i32 2147483647, i32 2147483647, i32 2147483647>
-  store <4 x i32> %and.i, <4 x i32>* %__res.i, align 16
-  %5 = load <4 x i32>, <4 x i32>* %__res.i, align 16
+  store <4 x i32> %and.i, ptr %__res.i, align 16
+  %5 = load <4 x i32>, ptr %__res.i, align 16
   %6 = bitcast <4 x i32> %5 to <4 x float>
-  store <4 x float> %6, <4 x float>* %retval, align 16
+  store <4 x float> %6, ptr %retval, align 16
   br label %return
 
 return:                                           ; preds = %if.end, %if.then
-  %7 = load <4 x float>, <4 x float>* %retval, align 16
+  %7 = load <4 x float>, ptr %retval, align 16
   ret <4 x float> %7
 }
 

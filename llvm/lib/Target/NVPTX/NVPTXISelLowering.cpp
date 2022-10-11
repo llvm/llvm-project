@@ -1429,22 +1429,8 @@ Align NVPTXTargetLowering::getArgumentAlignment(SDValue Callee,
       // Check if we have call alignment metadata
       if (getAlign(*CI, Idx, Alignment))
         return Align(Alignment);
-
-      const Value *CalleeV = CI->getCalledOperand();
-      // Ignore any bitcast instructions
-      while (isa<ConstantExpr>(CalleeV)) {
-        const ConstantExpr *CE = cast<ConstantExpr>(CalleeV);
-        if (!CE->isCast())
-          break;
-        // Look through the bitcast
-        CalleeV = cast<ConstantExpr>(CalleeV)->getOperand(0);
-      }
-
-      // We have now looked past all of the bitcasts.  Do we finally have a
-      // Function?
-      if (const auto *CalleeF = dyn_cast<Function>(CalleeV))
-        DirectCallee = CalleeF;
     }
+    DirectCallee = getMaybeBitcastedCallee(CB);
   }
 
   // Check for function alignment information if we found that the
@@ -1521,7 +1507,7 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
       // Try to increase alignment to enhance vectorization options.
       ArgAlign = std::max(ArgAlign, getFunctionParamOptimizedAlign(
-                                        CB->getCalledFunction(), ETy, DL));
+                                        getMaybeBitcastedCallee(CB), ETy, DL));
 
       // Enforce minumum alignment of 4 to work around ptxas miscompile
       // for sm_50+. See corresponding alignment adjustment in
@@ -4341,7 +4327,7 @@ Align NVPTXTargetLowering::getFunctionParamOptimizedAlign(
 
   // If a function has linkage different from internal or private, we
   // must use default ABI alignment as external users rely on it.
-  if (!F->hasLocalLinkage())
+  if (!(F && F->hasLocalLinkage()))
     return Align(ABITypeAlign);
 
   assert(!isKernelFunction(*F) && "Expect kernels to have non-local linkage");

@@ -83,9 +83,9 @@ value while applying a runtime shape, shift, or slice to the memory
 reference, and its semantics guarantee immutability.
 
 ```mlir
-%s = fir.shape_shift %lb1, %ex1, %lb2, %ex2 : (index, index, index, index) -> !fir.shape<2>
+%s = fir.shape_shift %lb1, %ex1, %lb2, %ex2 : (index, index, index, index) -> !fir.shapeshift<2>
 // load the entire array 'a'
-%v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.array<?x?xf32>
+%v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
 // a fir.store here into array %a does not change %v
 ```
 

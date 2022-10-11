@@ -46,10 +46,6 @@ namespace fir {
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 } // namespace fir
 
-#define RTNAME_STRINGIFY2(x) #x
-#define RTNAME_STRINGIFY(x) RTNAME_STRINGIFY2(x)
-#define RTNAME_STRING(x) RTNAME_STRINGIFY(RTNAME(x))
-
 #define DEBUG_TYPE "flang-simplify-intrinsics"
 
 namespace {

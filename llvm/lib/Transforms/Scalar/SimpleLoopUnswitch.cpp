@@ -135,8 +135,8 @@ static Value *skipTrivialSelect(Value *Cond) {
 /// inputs which are loop invariant. For some operations these can be
 /// re-associated and unswitched out of the loop entirely.
 static TinyPtrVector<Value *>
-collectHomogenousInstGraphLoopInvariants(Loop &L, Instruction &Root,
-                                         LoopInfo &LI) {
+collectHomogenousInstGraphLoopInvariants(const Loop &L, Instruction &Root,
+                                         const LoopInfo &LI) {
   assert(!L.isLoopInvariant(&Root) &&
          "Only need to walk the graph if root itself is not invariant.");
   TinyPtrVector<Value *> Invariants;
@@ -177,7 +177,7 @@ collectHomogenousInstGraphLoopInvariants(Loop &L, Instruction &Root,
   return Invariants;
 }
 
-static void replaceLoopInvariantUses(Loop &L, Value *Invariant,
+static void replaceLoopInvariantUses(const Loop &L, Value *Invariant,
                                      Constant &Replacement) {
   assert(!isa<Constant>(Invariant) && "Why are we unswitching on a constant?");
 
@@ -194,9 +194,10 @@ static void replaceLoopInvariantUses(Loop &L, Value *Invariant,
 
 /// Check that all the LCSSA PHI nodes in the loop exit block have trivial
 /// incoming values along this edge.
-static bool areLoopExitPHIsLoopInvariant(Loop &L, BasicBlock &ExitingBB,
-                                         BasicBlock &ExitBB) {
-  for (Instruction &I : ExitBB) {
+static bool areLoopExitPHIsLoopInvariant(const Loop &L,
+                                         const BasicBlock &ExitingBB,
+                                         const BasicBlock &ExitBB) {
+  for (const Instruction &I : ExitBB) {
     auto *PN = dyn_cast<PHINode>(&I);
     if (!PN)
       // No more PHIs to check.
@@ -216,7 +217,7 @@ static bool areLoopExitPHIsLoopInvariant(Loop &L, BasicBlock &ExitingBB,
 static void buildPartialUnswitchConditionalBranch(
     BasicBlock &BB, ArrayRef<Value *> Invariants, bool Direction,
     BasicBlock &UnswitchedSucc, BasicBlock &NormalSucc, bool InsertFreeze,
-    Instruction *I, AssumptionCache *AC, DominatorTree &DT) {
+    const Instruction *I, AssumptionCache *AC, const DominatorTree &DT) {
   IRBuilder<> IRB(&BB);
 
   SmallVector<Value *> FrozenInvariants;
@@ -420,9 +421,10 @@ static void hoistLoopToNewParent(Loop &L, BasicBlock &Preheader,
 // Return the top-most loop containing ExitBB and having ExitBB as exiting block
 // or the loop containing ExitBB, if there is no parent loop containing ExitBB
 // as exiting block.
-static Loop *getTopMostExitingLoop(BasicBlock *ExitBB, LoopInfo &LI) {
-  Loop *TopMost = LI.getLoopFor(ExitBB);
-  Loop *Current = TopMost;
+static const Loop *getTopMostExitingLoop(const BasicBlock *ExitBB,
+                                         const LoopInfo &LI) {
+  const Loop *TopMost = LI.getLoopFor(ExitBB);
+  const Loop *Current = TopMost;
   while (Current) {
     if (Current->isLoopExiting(ExitBB))
       TopMost = Current;
@@ -523,7 +525,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
   // loop, the loop containing the exit block and the topmost parent loop
   // exiting via LoopExitBB.
   if (SE) {
-    if (Loop *ExitL = getTopMostExitingLoop(LoopExitBB, LI))
+    if (const Loop *ExitL = getTopMostExitingLoop(LoopExitBB, LI))
       SE->forgetLoop(ExitL);
     else
       // Forget the entire nest as this exits the entire nest.
@@ -2731,17 +2733,13 @@ static int CalculateUnswitchCostMultiplier(
   return CostMultiplier;
 }
 
-static bool unswitchBestCondition(
-    Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
-    AAResults &AA, TargetTransformInfo &TTI,
-    function_ref<void(bool, bool, ArrayRef<Loop *>)> UnswitchCB,
-    ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
-    function_ref<void(Loop &, StringRef)> DestroyLoopCB) {
-  // Collect all invariant conditions within this loop (as opposed to an inner
-  // loop which would be handled when visiting that inner loop).
-  SmallVector<std::pair<Instruction *, TinyPtrVector<Value *>>, 4>
-      UnswitchCandidates;
-
+static bool collectUnswitchCandidates(
+    SmallVectorImpl<std::pair<Instruction *, TinyPtrVector<Value *> > > &
+        UnswitchCandidates,
+    IVConditionInfo &PartialIVInfo, Instruction *&PartialIVCondBranch,
+    const Loop &L, const LoopInfo &LI, AAResults &AA,
+    const MemorySSAUpdater *MSSAU) {
+  assert(UnswitchCandidates.empty() && "Should be!");
   // Whether or not we should also collect guards in the loop.
   bool CollectGuards = false;
   if (UnswitchGuards) {
@@ -2751,7 +2749,6 @@ static bool unswitchBestCondition(
       CollectGuards = true;
   }
 
-  IVConditionInfo PartialIVInfo;
   for (auto *BB : L.blocks()) {
     if (LI.getLoopFor(BB) != &L)
       continue;
@@ -2800,7 +2797,6 @@ static bool unswitchBestCondition(
     }
   }
 
-  Instruction *PartialIVCondBranch = nullptr;
   if (MSSAU && !findOptionMDForLoop(&L, "llvm.loop.unswitch.partial.disable") &&
       !any_of(UnswitchCandidates, [&L](auto &TerminatorAndInvariants) {
         return TerminatorAndInvariants.first == L.getHeader()->getTerminator();
@@ -2818,9 +2814,24 @@ static bool unswitchBestCondition(
           {L.getHeader()->getTerminator(), std::move(ValsToDuplicate)});
     }
   }
+  return !UnswitchCandidates.empty();
+}
 
+static bool unswitchBestCondition(
+    Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
+    AAResults &AA, TargetTransformInfo &TTI,
+    function_ref<void(bool, bool, ArrayRef<Loop *>)> UnswitchCB,
+    ScalarEvolution *SE, MemorySSAUpdater *MSSAU,
+    function_ref<void(Loop &, StringRef)> DestroyLoopCB) {
+  // Collect all invariant conditions within this loop (as opposed to an inner
+  // loop which would be handled when visiting that inner loop).
+  SmallVector<std::pair<Instruction *, TinyPtrVector<Value *> >, 4>
+  UnswitchCandidates;
+  IVConditionInfo PartialIVInfo;
+  Instruction *PartialIVCondBranch = nullptr;
   // If we didn't find any candidates, we're done.
-  if (UnswitchCandidates.empty())
+  if (!collectUnswitchCandidates(UnswitchCandidates, PartialIVInfo,
+                                 PartialIVCondBranch, L, LI, AA, MSSAU))
     return false;
 
   // Check if there are irreducible CFG cycles in this loop. If so, we cannot

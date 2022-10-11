@@ -11,17 +11,17 @@
 %2 = type { %3 }
 %3 = type { %4 }
 %4 = type { %5 }
-%5 = type { i8*, i32, i32 }
+%5 = type { ptr, i32, i32 }
 %6 = type { [160 x i8] }
 %7 = type { %8, i32, %8 }
-%8 = type { i8*, i64 }
+%8 = type { ptr, i64 }
 
 $abc = comdat any
 
 ; This test checks that X-Form load, lxvx, is being produced here instead of
 ; the DQ-Form, lxv. We should not be producing lxv here as the frame index
 ; value is unaligned (not a multiple of 16).
-define void @abc(%0* %arg, [5 x i64] %arg1, [5 x i64] %arg2, [5 x i64] %arg3, [5 x i64] %arg4) local_unnamed_addr #0 comdat {
+define void @abc(ptr %arg, [5 x i64] %arg1, [5 x i64] %arg2, [5 x i64] %arg3, [5 x i64] %arg4) local_unnamed_addr #0 comdat {
 ; CHECK-P9-LE-LABEL: abc:
 ; CHECK-P9-LE:       # %bb.0: # %bb
 ; CHECK-P9-LE-NEXT:    addi r6, r1, 120
@@ -91,31 +91,27 @@ bb:
   %i16 = extractvalue [5 x i64] %arg3, 3
   %i17 = extractvalue [5 x i64] %arg4, 0
   %i18 = extractvalue [5 x i64] %arg4, 4
-  store i64 %i5, i64* undef, align 8
-  store i64 %i6, i64* null, align 8
-  %i19 = getelementptr inbounds [4 x %7], [4 x %7]* %i, i64 0, i64 0, i32 2
-  %i20 = bitcast %8* %i19 to i64*
-  store i64 %i7, i64* %i20, align 8
-  store i64 %i8, i64* undef, align 8
-  store i64 %i9, i64* null, align 8
-  store i64 %i10, i64* undef, align 8
-  %i21 = getelementptr inbounds [4 x %7], [4 x %7]* %i, i64 0, i64 1, i32 2
-  %i22 = bitcast %8* %i21 to i64*
-  store i64 %i11, i64* %i22, align 8
-  %i23 = getelementptr inbounds [4 x %7], [4 x %7]* %i, i64 0, i64 1, i32 2, i32 1
-  store i64 %i12, i64* %i23, align 8
-  %i24 = getelementptr inbounds [4 x %7], [4 x %7]* %i, i64 0, i64 2
-  %i25 = bitcast %7* %i24 to i64*
-  store i64 %i13, i64* %i25, align 8
-  %i26 = getelementptr inbounds [4 x %7], [4 x %7]* %i, i64 0, i64 2, i32 0, i32 1
-  store i64 %i14, i64* %i26, align 8
-  store i64 %i15, i64* undef, align 8
-  store i64 %i16, i64* null, align 8
-  store i64 %i17, i64* undef, align 8
-  store i64 undef, i64* null, align 8
-  store i64 %i18, i64* undef, align 8
-  %i27 = getelementptr inbounds %0, %0* %arg, i64 0, i32 0, i32 0, i32 0
-  %i28 = getelementptr inbounds %3, %3* %i27, i64 1, i32 0
-  store %4* %i28, %4** undef, align 8
+  store i64 %i5, ptr undef, align 8
+  store i64 %i6, ptr null, align 8
+  %i19 = getelementptr inbounds [4 x %7], ptr %i, i64 0, i64 0, i32 2
+  store i64 %i7, ptr %i19, align 8
+  store i64 %i8, ptr undef, align 8
+  store i64 %i9, ptr null, align 8
+  store i64 %i10, ptr undef, align 8
+  %i21 = getelementptr inbounds [4 x %7], ptr %i, i64 0, i64 1, i32 2
+  store i64 %i11, ptr %i21, align 8
+  %i23 = getelementptr inbounds [4 x %7], ptr %i, i64 0, i64 1, i32 2, i32 1
+  store i64 %i12, ptr %i23, align 8
+  %i24 = getelementptr inbounds [4 x %7], ptr %i, i64 0, i64 2
+  store i64 %i13, ptr %i24, align 8
+  %i26 = getelementptr inbounds [4 x %7], ptr %i, i64 0, i64 2, i32 0, i32 1
+  store i64 %i14, ptr %i26, align 8
+  store i64 %i15, ptr undef, align 8
+  store i64 %i16, ptr null, align 8
+  store i64 %i17, ptr undef, align 8
+  store i64 undef, ptr null, align 8
+  store i64 %i18, ptr undef, align 8
+  %i28 = getelementptr inbounds %3, ptr %arg, i64 1, i32 0
+  store ptr %i28, ptr undef, align 8
   ret void
 }

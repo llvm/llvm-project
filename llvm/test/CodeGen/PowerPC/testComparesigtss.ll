@@ -74,7 +74,7 @@ define void @test_igtss_store(i16 signext %a, i16 signext %b) {
 entry:
   %cmp = icmp sgt i16 %a, %b
   %conv3 = zext i1 %cmp to i16
-  store i16 %conv3, i16* @glob, align 2
+  store i16 %conv3, ptr @glob, align 2
   ret void
 }
 
@@ -91,7 +91,7 @@ define void @test_igtss_sext_store(i16 signext %a, i16 signext %b) {
 entry:
   %cmp = icmp sgt i16 %a, %b
   %conv3 = sext i1 %cmp to i16
-  store i16 %conv3, i16* @glob, align 2
+  store i16 %conv3, ptr @glob, align 2
   ret void
 }
 
@@ -109,7 +109,7 @@ define void @test_igtss_z_store(i16 signext %a) {
 entry:
   %cmp = icmp sgt i16 %a, 0
   %conv2 = zext i1 %cmp to i16
-  store i16 %conv2, i16* @glob, align 2
+  store i16 %conv2, ptr @glob, align 2
   ret void
 }
 
@@ -126,6 +126,6 @@ define void @test_igtss_sext_z_store(i16 signext %a) {
 entry:
   %cmp = icmp sgt i16 %a, 0
   %conv2 = sext i1 %cmp to i16
-  store i16 %conv2, i16* @glob, align 2
+  store i16 %conv2, ptr @glob, align 2
   ret void
 }

@@ -1051,7 +1051,6 @@ bool llvm::convertToDeclaration(GlobalValue &GV) {
 void llvm::thinLTOFinalizeInModule(Module &TheModule,
                                    const GVSummaryMapTy &DefinedGlobals,
                                    bool PropagateAttrs) {
-  DenseSet<Comdat *> NonPrevailingComdats;
   auto FinalizeInModule = [&](GlobalValue &GV, bool Propagate = false) {
     // See if the global summary analysis computed a new resolved linkage.
     const auto &GS = DefinedGlobals.find(GV.getGUID());
@@ -1129,10 +1128,8 @@ void llvm::thinLTOFinalizeInModule(Module &TheModule,
     // as this is a declaration for the linker, and will be dropped eventually.
     // It is illegal for comdats to contain declarations.
     auto *GO = dyn_cast_or_null<GlobalObject>(&GV);
-    if (GO && GO->isDeclarationForLinker() && GO->hasComdat()) {
-      NonPrevailingComdats.insert(GO->getComdat());
+    if (GO && GO->isDeclarationForLinker() && GO->hasComdat())
       GO->setComdat(nullptr);
-    }
   };
 
   // Process functions and global now
@@ -1142,19 +1139,6 @@ void llvm::thinLTOFinalizeInModule(Module &TheModule,
     FinalizeInModule(GV);
   for (auto &GV : TheModule.aliases())
     FinalizeInModule(GV);
-
-  // For a non-prevailing comdat, all its members must be available_externally.
-  // FinalizeInModule has handled non-local-linkage GlobalValues. Here we handle
-  // local linkage GlobalValues.
-  if (NonPrevailingComdats.empty())
-    return;
-  for (auto &GO : TheModule.global_objects()) {
-    if (auto *C = GO.getComdat(); C && NonPrevailingComdats.count(C)) {
-      GO.setComdat(nullptr);
-      assert(GO.hasLocalLinkage() && "GO's comdat should have been dropped");
-      GO.setLinkage(GlobalValue::AvailableExternallyLinkage);
-    }
-  }
 }
 
 /// Run internalization on \p TheModule based on symmary analysis.

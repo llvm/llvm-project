@@ -401,7 +401,7 @@ define dso_local fastcc void @P10_Spill_CR_GT() unnamed_addr {
 ; CHECK-BE-NEXT:    bc 4, 4*cr4+eq, .LBB0_34
 ; CHECK-BE-NEXT:    b .LBB0_35
 bb:
-  %tmp = load i32, i32* undef, align 8
+  %tmp = load i32, ptr undef, align 8
   %tmp1 = and i32 %tmp, 16
   %tmp2 = icmp ne i32 %tmp1, 0
   %tmp3 = and i32 %tmp, 32
@@ -411,7 +411,7 @@ bb:
 bb5:                                              ; preds = %bb63, %bb
   %tmp6 = phi i32 [ 0, %bb ], [ %tmp64, %bb63 ]
   %tmp7 = phi i1 [ %tmp4, %bb ], [ undef, %bb63 ]
-  %tmp8 = load i32, i32* undef, align 8
+  %tmp8 = load i32, ptr undef, align 8
   br i1 %tmp2, label %bb9, label %bb10
 
 bb9:                                              ; preds = %bb5
@@ -528,16 +528,16 @@ bb32:                                             ; preds = %bb40, %bb29
   br i1 %tmp7, label %bb33, label %bb36
 
 bb33:                                             ; preds = %bb32
-  %tmp34 = getelementptr inbounds i8, i8* null, i64 -1
-  %tmp35 = select i1 %tmp12, i8* %tmp34, i8* null
-  store i8 0, i8* %tmp35, align 1
+  %tmp34 = getelementptr inbounds i8, ptr null, i64 -1
+  %tmp35 = select i1 %tmp12, ptr %tmp34, ptr null
+  store i8 0, ptr %tmp35, align 1
   br label %bb36
 
 bb36:                                             ; preds = %bb33, %bb32
   br i1 %tmp30, label %bb37, label %bb38
 
 bb37:                                             ; preds = %bb36
-  store i16 undef, i16* null, align 2
+  store i16 undef, ptr null, align 2
   br label %bb38
 
 bb38:                                             ; preds = %bb37, %bb36
@@ -558,9 +558,9 @@ bb42:                                             ; preds = %bb42, %bb41
 
 bb43:                                             ; preds = %bb10, %bb10
   call void @call_1()
-  %tmp44 = getelementptr inbounds i8, i8* null, i64 -1
-  %tmp45 = select i1 %tmp12, i8* %tmp44, i8* null
-  store i8 0, i8* %tmp45, align 1
+  %tmp44 = getelementptr inbounds i8, ptr null, i64 -1
+  %tmp45 = select i1 %tmp12, ptr %tmp44, ptr null
+  store i8 0, ptr %tmp45, align 1
   br label %bb63
 
 bb46:                                             ; preds = %bb46, %bb10

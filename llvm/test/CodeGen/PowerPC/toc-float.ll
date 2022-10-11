@@ -56,7 +56,7 @@ define float @floatConstantArray() local_unnamed_addr  {
 ; CHECK-P8-NEXT:    lfs 1, .LCPI2_0@toc@l(4)
 ; CHECK-P8-NEXT:    xsaddsp 1, 0, 1
 ; CHECK-P8-NEXT:    blr
-  %1 = load float, float* getelementptr inbounds ([10 x float], [10 x float]* @FArr, i64 0, i64 3), align 4
+  %1 = load float, ptr getelementptr inbounds ([10 x float], ptr @FArr, i64 0, i64 3), align 4
   %2 = fadd float %1, 0x400B333340000000
   ret float %2
 }
@@ -98,7 +98,7 @@ define double @doubleConstantArray()  {
 ; CHECK-P8-NEXT:    lfd 1, .LCPI4_0@toc@l(4)
 ; CHECK-P8-NEXT:    xsadddp 1, 0, 1
 ; CHECK-P8-NEXT:    blr
-  %1 = load double, double* getelementptr inbounds ([200 x double], [200 x double]* @d, i64 0, i64 3), align 8
+  %1 = load double, ptr getelementptr inbounds ([200 x double], ptr @d, i64 0, i64 3), align 8
   %2 = fadd double %1, 6.880000e+00
   ret double %2
 }
@@ -130,7 +130,7 @@ define double @doubleLargeConstantArray()  {
 ; CHECK-P8-NEXT:    lfdx 0, 3, 4
 ; CHECK-P8-NEXT:    xsadddp 1, 0, 1
 ; CHECK-P8-NEXT:    blr
-  %1 = load double, double* getelementptr inbounds ([20000 x double], [20000 x double]* @arr, i64 0, i64 4096), align 8
+  %1 = load double, ptr getelementptr inbounds ([20000 x double], ptr @arr, i64 0, i64 4096), align 8
   %2 = fadd double %1, 6.880000e+00
   ret double %2
 }
@@ -154,6 +154,6 @@ define <4 x i32> @vectorArray() #0 {
 ; CHECK-P8-NEXT:    xxswapd 34, 0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load <4 x i32>, <4 x i32>* getelementptr inbounds ([10 x <4 x i32>], [10 x <4 x i32>]* @vec_arr, i64 0, i64 2), align 16
+  %0 = load <4 x i32>, ptr getelementptr inbounds ([10 x <4 x i32>], ptr @vec_arr, i64 0, i64 2), align 16
   ret <4 x i32> %0
 }

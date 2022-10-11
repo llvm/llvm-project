@@ -5,7 +5,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64 \
 ; RUN:     -mcpu=pwr9 < %s | FileCheck %s --check-prefix=64BIT
 
-define dso_local void @foo(i32 %inta, i64* %long_intb) {
+define dso_local void @foo(i32 %inta, ptr %long_intb) {
 ; 32BIT-LABEL: foo:
 ; 32BIT:       # %bb.0: # %entry
 ; 32BIT-NEXT:    srawi 5, 3, 31
@@ -24,6 +24,6 @@ define dso_local void @foo(i32 %inta, i64* %long_intb) {
   entry:
     %conv = sext i32 %inta to i64
     %shl = shl nsw i64 %conv, 8
-    store i64 %shl, i64* %long_intb, align 8
+    store i64 %shl, ptr %long_intb, align 8
     ret void
 }

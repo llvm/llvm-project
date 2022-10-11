@@ -545,12 +545,10 @@ Value *WebAssemblyLowerEmscriptenEHSjLj::wrapInvoke(CallBase *CI) {
     ArgAttributes.push_back(InvokeAL.getParamAttrs(I));
 
   AttrBuilder FnAttrs(CI->getContext(), InvokeAL.getFnAttrs());
-  if (FnAttrs.contains(Attribute::AllocSize)) {
+  if (auto Args = FnAttrs.getAllocSizeArgs()) {
     // The allocsize attribute (if any) referes to parameters by index and needs
     // to be adjusted.
-    unsigned SizeArg;
-    Optional<unsigned> NEltArg;
-    std::tie(SizeArg, NEltArg) = FnAttrs.getAllocSizeArgs();
+    auto [SizeArg, NEltArg] = *Args;
     SizeArg += 1;
     if (NEltArg)
       NEltArg = NEltArg.value() + 1;

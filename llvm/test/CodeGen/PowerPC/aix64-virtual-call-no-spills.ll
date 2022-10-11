@@ -59,8 +59,7 @@ entry:
   store ptr %b, ptr %b.addr, align 8
   %0 = load ptr, ptr %b.addr, align 8
   %vtable = load ptr, ptr %0, align 8
-  %vfn = getelementptr inbounds ptr, ptr %vtable, i64 0
-  %1 = load ptr, ptr %vfn, align 8
+  %1 = load ptr, ptr %vtable, align 8
   %call = call noundef signext i32 %1(ptr noundef nonnull align 8 dereferenceable(8) %0)
   ret i32 %call
 }

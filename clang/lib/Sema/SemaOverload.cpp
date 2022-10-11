@@ -931,7 +931,7 @@ static bool shouldAddReversedEqEq(Sema &S, SourceLocation OpLoc,
   // target.
   DeclarationName NotEqOp = S.Context.DeclarationNames.getCXXOperatorName(
       OverloadedOperatorKind::OO_ExclaimEqual);
-  if (auto *MD = dyn_cast<CXXMethodDecl>(EqFD)) {
+  if (isa<CXXMethodDecl>(EqFD)) {
     // If F is a class member, search scope is class type of first operand.
     QualType RHS = FirstOperand->getType();
     auto *RHSRec = RHS->getAs<RecordType>();

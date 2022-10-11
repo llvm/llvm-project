@@ -68,8 +68,8 @@ define dso_local void @testGlob1PtrPlus0() {
 ; CHECK-NEXT:    stb r3, GlobSt1@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobLd1, i64 0, i64 0), align 1
-  store i8 %0, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobSt1, i64 0, i64 0), align 1
+  %0 = load i8, ptr @GlobLd1, align 1
+  store i8 %0, ptr @GlobSt1, align 1
   ret void
 }
 
@@ -101,8 +101,8 @@ define dso_local void @testGlob1PtrPlus3() {
 ; CHECK-NEXT:    stb r3, 3(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobLd1, i64 0, i64 3), align 1
-  store i8 %0, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobSt1, i64 0, i64 3), align 1
+  %0 = load i8, ptr getelementptr inbounds ([20 x i8], ptr @GlobLd1, i64 0, i64 3), align 1
+  store i8 %0, ptr getelementptr inbounds ([20 x i8], ptr @GlobSt1, i64 0, i64 3), align 1
   ret void
 }
 
@@ -130,8 +130,8 @@ define dso_local void @testGlob1PtrPlus4() {
 ; CHECK-NEXT:    stb r3, GlobSt1@toc@l+4(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobLd1, i64 0, i64 4), align 1
-  store i8 %0, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobSt1, i64 0, i64 4), align 1
+  %0 = load i8, ptr getelementptr inbounds ([20 x i8], ptr @GlobLd1, i64 0, i64 4), align 1
+  store i8 %0, ptr getelementptr inbounds ([20 x i8], ptr @GlobSt1, i64 0, i64 4), align 1
   ret void
 }
 
@@ -159,8 +159,8 @@ define dso_local void @testGlob1PtrPlus16() {
 ; CHECK-NEXT:    stb r3, GlobSt1@toc@l+16(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobLd1, i64 0, i64 16), align 1
-  store i8 %0, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobSt1, i64 0, i64 16), align 1
+  %0 = load i8, ptr getelementptr inbounds ([20 x i8], ptr @GlobLd1, i64 0, i64 16), align 1
+  store i8 %0, ptr getelementptr inbounds ([20 x i8], ptr @GlobSt1, i64 0, i64 16), align 1
   ret void
 }
 
@@ -194,10 +194,10 @@ define dso_local void @testGlob1PtrPlusVar(i64 %Idx) {
 ; CHECK-NEXT:    stbx r4, r5, r3
 ; CHECK-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds [20 x i8], [20 x i8]* @GlobLd1, i64 0, i64 %Idx
-  %0 = load i8, i8* %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds [20 x i8], [20 x i8]* @GlobSt1, i64 0, i64 %Idx
-  store i8 %0, i8* %arrayidx1, align 1
+  %arrayidx = getelementptr inbounds [20 x i8], ptr @GlobLd1, i64 0, i64 %Idx
+  %0 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds [20 x i8], ptr @GlobSt1, i64 0, i64 %Idx
+  store i8 %0, ptr %arrayidx1, align 1
   ret void
 }
 
@@ -225,8 +225,8 @@ define dso_local void @testGlob2PtrPlus0() {
 ; CHECK-NEXT:    stb r3, GlobSt2@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobLd2, i64 0, i64 0), align 1
-  store i8 %0, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobSt2, i64 0, i64 0), align 1
+  %0 = load i8, ptr @GlobLd2, align 1
+  store i8 %0, ptr @GlobSt2, align 1
   ret void
 }
 
@@ -258,8 +258,8 @@ define dso_local void @testGlob2PtrPlus3() {
 ; CHECK-NEXT:    stb r3, 3(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobLd2, i64 0, i64 3), align 1
-  store i8 %0, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobSt2, i64 0, i64 3), align 1
+  %0 = load i8, ptr getelementptr inbounds ([20 x i8], ptr @GlobLd2, i64 0, i64 3), align 1
+  store i8 %0, ptr getelementptr inbounds ([20 x i8], ptr @GlobSt2, i64 0, i64 3), align 1
   ret void
 }
 
@@ -287,8 +287,8 @@ define dso_local void @testGlob2PtrPlus4() {
 ; CHECK-NEXT:    stb r3, GlobSt2@toc@l+4(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobLd2, i64 0, i64 4), align 1
-  store i8 %0, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobSt2, i64 0, i64 4), align 1
+  %0 = load i8, ptr getelementptr inbounds ([20 x i8], ptr @GlobLd2, i64 0, i64 4), align 1
+  store i8 %0, ptr getelementptr inbounds ([20 x i8], ptr @GlobSt2, i64 0, i64 4), align 1
   ret void
 }
 
@@ -316,8 +316,8 @@ define dso_local void @testGlob2PtrPlus16() {
 ; CHECK-NEXT:    stb r3, GlobSt2@toc@l+16(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobLd2, i64 0, i64 16), align 1
-  store i8 %0, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobSt2, i64 0, i64 16), align 1
+  %0 = load i8, ptr getelementptr inbounds ([20 x i8], ptr @GlobLd2, i64 0, i64 16), align 1
+  store i8 %0, ptr getelementptr inbounds ([20 x i8], ptr @GlobSt2, i64 0, i64 16), align 1
   ret void
 }
 
@@ -351,10 +351,10 @@ define dso_local void @testGlob2PtrPlusVar(i64 %Idx) {
 ; CHECK-NEXT:    stbx r4, r5, r3
 ; CHECK-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds [20 x i8], [20 x i8]* @GlobLd2, i64 0, i64 %Idx
-  %0 = load i8, i8* %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds [20 x i8], [20 x i8]* @GlobSt2, i64 0, i64 %Idx
-  store i8 %0, i8* %arrayidx1, align 1
+  %arrayidx = getelementptr inbounds [20 x i8], ptr @GlobLd2, i64 0, i64 %Idx
+  %0 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds [20 x i8], ptr @GlobSt2, i64 0, i64 %Idx
+  store i8 %0, ptr %arrayidx1, align 1
   ret void
 }
 
@@ -382,8 +382,8 @@ define dso_local void @testGlob3PtrPlus0() {
 ; CHECK-NEXT:    sth r3, GlobSt3@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i16, i16* getelementptr inbounds ([20 x i16], [20 x i16]* @GlobLd3, i64 0, i64 0), align 2
-  store i16 %0, i16* getelementptr inbounds ([20 x i16], [20 x i16]* @GlobSt3, i64 0, i64 0), align 2
+  %0 = load i16, ptr @GlobLd3, align 2
+  store i16 %0, ptr @GlobSt3, align 2
   ret void
 }
 
@@ -415,8 +415,8 @@ define dso_local void @testGlob3PtrPlus3() {
 ; CHECK-NEXT:    sth r3, 3(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i16, i16* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x i16]* @GlobLd3 to i8*), i64 3) to i16*), align 2
-  store i16 %0, i16* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x i16]* @GlobSt3 to i8*), i64 3) to i16*), align 2
+  %0 = load i16, ptr getelementptr inbounds (i8, ptr @GlobLd3, i64 3), align 2
+  store i16 %0, ptr getelementptr inbounds (i8, ptr @GlobSt3, i64 3), align 2
   ret void
 }
 
@@ -444,8 +444,8 @@ define dso_local void @testGlob3PtrPlus4() {
 ; CHECK-NEXT:    sth r3, GlobSt3@toc@l+4(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i16, i16* getelementptr inbounds ([20 x i16], [20 x i16]* @GlobLd3, i64 0, i64 2), align 2
-  store i16 %0, i16* getelementptr inbounds ([20 x i16], [20 x i16]* @GlobSt3, i64 0, i64 2), align 2
+  %0 = load i16, ptr getelementptr inbounds ([20 x i16], ptr @GlobLd3, i64 0, i64 2), align 2
+  store i16 %0, ptr getelementptr inbounds ([20 x i16], ptr @GlobSt3, i64 0, i64 2), align 2
   ret void
 }
 
@@ -473,8 +473,8 @@ define dso_local void @testGlob3PtrPlus16() {
 ; CHECK-NEXT:    sth r3, GlobSt3@toc@l+16(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i16, i16* getelementptr inbounds ([20 x i16], [20 x i16]* @GlobLd3, i64 0, i64 8), align 2
-  store i16 %0, i16* getelementptr inbounds ([20 x i16], [20 x i16]* @GlobSt3, i64 0, i64 8), align 2
+  %0 = load i16, ptr getelementptr inbounds ([20 x i16], ptr @GlobLd3, i64 0, i64 8), align 2
+  store i16 %0, ptr getelementptr inbounds ([20 x i16], ptr @GlobSt3, i64 0, i64 8), align 2
   ret void
 }
 
@@ -511,10 +511,10 @@ define dso_local void @testGlob3PtrPlusVar(i64 %Idx) {
 ; CHECK-NEXT:    sthx r4, r5, r3
 ; CHECK-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds [20 x i16], [20 x i16]* @GlobLd3, i64 0, i64 %Idx
-  %0 = load i16, i16* %arrayidx, align 2
-  %arrayidx1 = getelementptr inbounds [20 x i16], [20 x i16]* @GlobSt3, i64 0, i64 %Idx
-  store i16 %0, i16* %arrayidx1, align 2
+  %arrayidx = getelementptr inbounds [20 x i16], ptr @GlobLd3, i64 0, i64 %Idx
+  %0 = load i16, ptr %arrayidx, align 2
+  %arrayidx1 = getelementptr inbounds [20 x i16], ptr @GlobSt3, i64 0, i64 %Idx
+  store i16 %0, ptr %arrayidx1, align 2
   ret void
 }
 
@@ -542,8 +542,8 @@ define dso_local void @testGlob4PtrPlus0() {
 ; CHECK-NEXT:    sth r3, GlobSt4@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i16, i16* getelementptr inbounds ([20 x i16], [20 x i16]* @GlobLd4, i64 0, i64 0), align 2
-  store i16 %0, i16* getelementptr inbounds ([20 x i16], [20 x i16]* @GlobSt4, i64 0, i64 0), align 2
+  %0 = load i16, ptr @GlobLd4, align 2
+  store i16 %0, ptr @GlobSt4, align 2
   ret void
 }
 
@@ -575,8 +575,8 @@ define dso_local void @testGlob4PtrPlus3() {
 ; CHECK-NEXT:    sth r3, 3(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i16, i16* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x i16]* @GlobLd4 to i8*), i64 3) to i16*), align 2
-  store i16 %0, i16* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x i16]* @GlobSt4 to i8*), i64 3) to i16*), align 2
+  %0 = load i16, ptr getelementptr inbounds (i8, ptr @GlobLd4, i64 3), align 2
+  store i16 %0, ptr getelementptr inbounds (i8, ptr @GlobSt4, i64 3), align 2
   ret void
 }
 
@@ -604,8 +604,8 @@ define dso_local void @testGlob4PtrPlus4() {
 ; CHECK-NEXT:    sth r3, GlobSt4@toc@l+4(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i16, i16* getelementptr inbounds ([20 x i16], [20 x i16]* @GlobLd4, i64 0, i64 2), align 2
-  store i16 %0, i16* getelementptr inbounds ([20 x i16], [20 x i16]* @GlobSt4, i64 0, i64 2), align 2
+  %0 = load i16, ptr getelementptr inbounds ([20 x i16], ptr @GlobLd4, i64 0, i64 2), align 2
+  store i16 %0, ptr getelementptr inbounds ([20 x i16], ptr @GlobSt4, i64 0, i64 2), align 2
   ret void
 }
 
@@ -633,8 +633,8 @@ define dso_local void @testGlob4PtrPlus16() {
 ; CHECK-NEXT:    sth r3, GlobSt4@toc@l+16(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i16, i16* getelementptr inbounds ([20 x i16], [20 x i16]* @GlobLd4, i64 0, i64 8), align 2
-  store i16 %0, i16* getelementptr inbounds ([20 x i16], [20 x i16]* @GlobSt4, i64 0, i64 8), align 2
+  %0 = load i16, ptr getelementptr inbounds ([20 x i16], ptr @GlobLd4, i64 0, i64 8), align 2
+  store i16 %0, ptr getelementptr inbounds ([20 x i16], ptr @GlobSt4, i64 0, i64 8), align 2
   ret void
 }
 
@@ -671,10 +671,10 @@ define dso_local void @testGlob4PtrPlusVar(i64 %Idx) {
 ; CHECK-NEXT:    sthx r4, r5, r3
 ; CHECK-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds [20 x i16], [20 x i16]* @GlobLd4, i64 0, i64 %Idx
-  %0 = load i16, i16* %arrayidx, align 2
-  %arrayidx1 = getelementptr inbounds [20 x i16], [20 x i16]* @GlobSt4, i64 0, i64 %Idx
-  store i16 %0, i16* %arrayidx1, align 2
+  %arrayidx = getelementptr inbounds [20 x i16], ptr @GlobLd4, i64 0, i64 %Idx
+  %0 = load i16, ptr %arrayidx, align 2
+  %arrayidx1 = getelementptr inbounds [20 x i16], ptr @GlobSt4, i64 0, i64 %Idx
+  store i16 %0, ptr %arrayidx1, align 2
   ret void
 }
 
@@ -702,8 +702,8 @@ define dso_local void @testGlob5PtrPlus0() {
 ; CHECK-NEXT:    stw r3, GlobSt5@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @GlobLd5, i64 0, i64 0), align 4
-  store i32 %0, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @GlobSt5, i64 0, i64 0), align 4
+  %0 = load i32, ptr @GlobLd5, align 4
+  store i32 %0, ptr @GlobSt5, align 4
   ret void
 }
 
@@ -731,8 +731,8 @@ define dso_local void @testGlob5PtrPlus3() {
 ; CHECK-NEXT:    stw r3, GlobSt5@toc@l+3(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x i32]* @GlobLd5 to i8*), i64 3) to i32*), align 4
-  store i32 %0, i32* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x i32]* @GlobSt5 to i8*), i64 3) to i32*), align 4
+  %0 = load i32, ptr getelementptr inbounds (i8, ptr @GlobLd5, i64 3), align 4
+  store i32 %0, ptr getelementptr inbounds (i8, ptr @GlobSt5, i64 3), align 4
   ret void
 }
 
@@ -760,8 +760,8 @@ define dso_local void @testGlob5PtrPlus4() {
 ; CHECK-NEXT:    stw r3, GlobSt5@toc@l+4(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @GlobLd5, i64 0, i64 1), align 4
-  store i32 %0, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @GlobSt5, i64 0, i64 1), align 4
+  %0 = load i32, ptr getelementptr inbounds ([20 x i32], ptr @GlobLd5, i64 0, i64 1), align 4
+  store i32 %0, ptr getelementptr inbounds ([20 x i32], ptr @GlobSt5, i64 0, i64 1), align 4
   ret void
 }
 
@@ -789,8 +789,8 @@ define dso_local void @testGlob5PtrPlus16() {
 ; CHECK-NEXT:    stw r3, GlobSt5@toc@l+16(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @GlobLd5, i64 0, i64 4), align 4
-  store i32 %0, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @GlobSt5, i64 0, i64 4), align 4
+  %0 = load i32, ptr getelementptr inbounds ([20 x i32], ptr @GlobLd5, i64 0, i64 4), align 4
+  store i32 %0, ptr getelementptr inbounds ([20 x i32], ptr @GlobSt5, i64 0, i64 4), align 4
   ret void
 }
 
@@ -827,10 +827,10 @@ define dso_local void @testGlob5PtrPlusVar(i64 %Idx) {
 ; CHECK-NEXT:    stwx r4, r5, r3
 ; CHECK-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds [20 x i32], [20 x i32]* @GlobLd5, i64 0, i64 %Idx
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds [20 x i32], [20 x i32]* @GlobSt5, i64 0, i64 %Idx
-  store i32 %0, i32* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds [20 x i32], ptr @GlobLd5, i64 0, i64 %Idx
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds [20 x i32], ptr @GlobSt5, i64 0, i64 %Idx
+  store i32 %0, ptr %arrayidx1, align 4
   ret void
 }
 
@@ -858,8 +858,8 @@ define dso_local void @testGlob6PtrPlus0() {
 ; CHECK-NEXT:    stw r3, GlobSt6@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @GlobLd6, i64 0, i64 0), align 4
-  store i32 %0, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @GlobSt6, i64 0, i64 0), align 4
+  %0 = load i32, ptr @GlobLd6, align 4
+  store i32 %0, ptr @GlobSt6, align 4
   ret void
 }
 
@@ -887,8 +887,8 @@ define dso_local void @testGlob6PtrPlus3() {
 ; CHECK-NEXT:    stw r3, GlobSt6@toc@l+3(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x i32]* @GlobLd6 to i8*), i64 3) to i32*), align 4
-  store i32 %0, i32* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x i32]* @GlobSt6 to i8*), i64 3) to i32*), align 4
+  %0 = load i32, ptr getelementptr inbounds (i8, ptr @GlobLd6, i64 3), align 4
+  store i32 %0, ptr getelementptr inbounds (i8, ptr @GlobSt6, i64 3), align 4
   ret void
 }
 
@@ -916,8 +916,8 @@ define dso_local void @testGlob6PtrPlus4() {
 ; CHECK-NEXT:    stw r3, GlobSt6@toc@l+4(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @GlobLd6, i64 0, i64 1), align 4
-  store i32 %0, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @GlobSt6, i64 0, i64 1), align 4
+  %0 = load i32, ptr getelementptr inbounds ([20 x i32], ptr @GlobLd6, i64 0, i64 1), align 4
+  store i32 %0, ptr getelementptr inbounds ([20 x i32], ptr @GlobSt6, i64 0, i64 1), align 4
   ret void
 }
 
@@ -945,8 +945,8 @@ define dso_local void @testGlob6PtrPlus16() {
 ; CHECK-NEXT:    stw r3, GlobSt6@toc@l+16(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @GlobLd6, i64 0, i64 4), align 4
-  store i32 %0, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @GlobSt6, i64 0, i64 4), align 4
+  %0 = load i32, ptr getelementptr inbounds ([20 x i32], ptr @GlobLd6, i64 0, i64 4), align 4
+  store i32 %0, ptr getelementptr inbounds ([20 x i32], ptr @GlobSt6, i64 0, i64 4), align 4
   ret void
 }
 
@@ -983,10 +983,10 @@ define dso_local void @testGlob6PtrPlusVar(i64 %Idx) {
 ; CHECK-NEXT:    stwx r4, r5, r3
 ; CHECK-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds [20 x i32], [20 x i32]* @GlobLd6, i64 0, i64 %Idx
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds [20 x i32], [20 x i32]* @GlobSt6, i64 0, i64 %Idx
-  store i32 %0, i32* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds [20 x i32], ptr @GlobLd6, i64 0, i64 %Idx
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds [20 x i32], ptr @GlobSt6, i64 0, i64 %Idx
+  store i32 %0, ptr %arrayidx1, align 4
   ret void
 }
 
@@ -1022,8 +1022,8 @@ define dso_local void @testGlob7PtrPlus0() {
 ; CHECK-P8-NEXT:    std r3, GlobSt7@toc@l(r4)
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i64, i64* getelementptr inbounds ([20 x i64], [20 x i64]* @GlobLd7, i64 0, i64 0), align 8
-  store i64 %0, i64* getelementptr inbounds ([20 x i64], [20 x i64]* @GlobSt7, i64 0, i64 0), align 8
+  %0 = load i64, ptr @GlobLd7, align 8
+  store i64 %0, ptr @GlobSt7, align 8
   ret void
 }
 
@@ -1056,8 +1056,8 @@ define dso_local void @testGlob7PtrPlus3() {
 ; CHECK-NEXT:    stdx r3, r5, r4
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i64, i64* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x i64]* @GlobLd7 to i8*), i64 3) to i64*), align 8
-  store i64 %0, i64* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x i64]* @GlobSt7 to i8*), i64 3) to i64*), align 8
+  %0 = load i64, ptr getelementptr inbounds (i8, ptr @GlobLd7, i64 3), align 8
+  store i64 %0, ptr getelementptr inbounds (i8, ptr @GlobSt7, i64 3), align 8
   ret void
 }
 
@@ -1093,8 +1093,8 @@ define dso_local void @testGlob7PtrPlus4() {
 ; CHECK-P8-NEXT:    std r3, GlobSt7@toc@l+4(r4)
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i64, i64* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x i64]* @GlobLd7 to i8*), i64 4) to i64*), align 8
-  store i64 %0, i64* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x i64]* @GlobSt7 to i8*), i64 4) to i64*), align 8
+  %0 = load i64, ptr getelementptr inbounds (i8, ptr @GlobLd7, i64 4), align 8
+  store i64 %0, ptr getelementptr inbounds (i8, ptr @GlobSt7, i64 4), align 8
   ret void
 }
 
@@ -1130,8 +1130,8 @@ define dso_local void @testGlob7PtrPlus16() {
 ; CHECK-P8-NEXT:    std r3, GlobSt7@toc@l+16(r4)
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i64, i64* getelementptr inbounds ([20 x i64], [20 x i64]* @GlobLd7, i64 0, i64 2), align 8
-  store i64 %0, i64* getelementptr inbounds ([20 x i64], [20 x i64]* @GlobSt7, i64 0, i64 2), align 8
+  %0 = load i64, ptr getelementptr inbounds ([20 x i64], ptr @GlobLd7, i64 0, i64 2), align 8
+  store i64 %0, ptr getelementptr inbounds ([20 x i64], ptr @GlobSt7, i64 0, i64 2), align 8
   ret void
 }
 
@@ -1168,10 +1168,10 @@ define dso_local void @testGlob7PtrPlusVar(i64 %Idx) {
 ; CHECK-NEXT:    stdx r4, r5, r3
 ; CHECK-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds [20 x i64], [20 x i64]* @GlobLd7, i64 0, i64 %Idx
-  %0 = load i64, i64* %arrayidx, align 8
-  %arrayidx1 = getelementptr inbounds [20 x i64], [20 x i64]* @GlobSt7, i64 0, i64 %Idx
-  store i64 %0, i64* %arrayidx1, align 8
+  %arrayidx = getelementptr inbounds [20 x i64], ptr @GlobLd7, i64 0, i64 %Idx
+  %0 = load i64, ptr %arrayidx, align 8
+  %arrayidx1 = getelementptr inbounds [20 x i64], ptr @GlobSt7, i64 0, i64 %Idx
+  store i64 %0, ptr %arrayidx1, align 8
   ret void
 }
 
@@ -1207,8 +1207,8 @@ define dso_local void @testGlob8PtrPlus0() {
 ; CHECK-P8-NEXT:    std r3, GlobSt8@toc@l(r4)
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i64, i64* getelementptr inbounds ([20 x i64], [20 x i64]* @GlobLd8, i64 0, i64 0), align 8
-  store i64 %0, i64* getelementptr inbounds ([20 x i64], [20 x i64]* @GlobSt8, i64 0, i64 0), align 8
+  %0 = load i64, ptr @GlobLd8, align 8
+  store i64 %0, ptr @GlobSt8, align 8
   ret void
 }
 
@@ -1241,8 +1241,8 @@ define dso_local void @testGlob8PtrPlus3() {
 ; CHECK-NEXT:    stdx r3, r5, r4
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i64, i64* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x i64]* @GlobLd8 to i8*), i64 3) to i64*), align 8
-  store i64 %0, i64* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x i64]* @GlobSt8 to i8*), i64 3) to i64*), align 8
+  %0 = load i64, ptr getelementptr inbounds (i8, ptr @GlobLd8, i64 3), align 8
+  store i64 %0, ptr getelementptr inbounds (i8, ptr @GlobSt8, i64 3), align 8
   ret void
 }
 
@@ -1278,8 +1278,8 @@ define dso_local void @testGlob8PtrPlus4() {
 ; CHECK-P8-NEXT:    std r3, GlobSt8@toc@l+4(r4)
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i64, i64* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x i64]* @GlobLd8 to i8*), i64 4) to i64*), align 8
-  store i64 %0, i64* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x i64]* @GlobSt8 to i8*), i64 4) to i64*), align 8
+  %0 = load i64, ptr getelementptr inbounds (i8, ptr @GlobLd8, i64 4), align 8
+  store i64 %0, ptr getelementptr inbounds (i8, ptr @GlobSt8, i64 4), align 8
   ret void
 }
 
@@ -1315,8 +1315,8 @@ define dso_local void @testGlob8PtrPlus16() {
 ; CHECK-P8-NEXT:    std r3, GlobSt8@toc@l+16(r4)
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load i64, i64* getelementptr inbounds ([20 x i64], [20 x i64]* @GlobLd8, i64 0, i64 2), align 8
-  store i64 %0, i64* getelementptr inbounds ([20 x i64], [20 x i64]* @GlobSt8, i64 0, i64 2), align 8
+  %0 = load i64, ptr getelementptr inbounds ([20 x i64], ptr @GlobLd8, i64 0, i64 2), align 8
+  store i64 %0, ptr getelementptr inbounds ([20 x i64], ptr @GlobSt8, i64 0, i64 2), align 8
   ret void
 }
 
@@ -1353,10 +1353,10 @@ define dso_local void @testGlob8PtrPlusVar(i64 %Idx) {
 ; CHECK-NEXT:    stdx r4, r5, r3
 ; CHECK-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds [20 x i64], [20 x i64]* @GlobLd8, i64 0, i64 %Idx
-  %0 = load i64, i64* %arrayidx, align 8
-  %arrayidx1 = getelementptr inbounds [20 x i64], [20 x i64]* @GlobSt8, i64 0, i64 %Idx
-  store i64 %0, i64* %arrayidx1, align 8
+  %arrayidx = getelementptr inbounds [20 x i64], ptr @GlobLd8, i64 0, i64 %Idx
+  %0 = load i64, ptr %arrayidx, align 8
+  %arrayidx1 = getelementptr inbounds [20 x i64], ptr @GlobSt8, i64 0, i64 %Idx
+  store i64 %0, ptr %arrayidx1, align 8
   ret void
 }
 
@@ -1384,8 +1384,8 @@ define dso_local void @testGlob9PtrPlus0() {
 ; CHECK-NEXT:    stw r3, GlobSt9@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @GlobLd9, i64 0, i64 0), align 4
-  store float %0, float* getelementptr inbounds ([20 x float], [20 x float]* @GlobSt9, i64 0, i64 0), align 4
+  %0 = load float, ptr @GlobLd9, align 4
+  store float %0, ptr @GlobSt9, align 4
   ret void
 }
 
@@ -1413,8 +1413,8 @@ define dso_local void @testGlob9PtrPlus3() {
 ; CHECK-NEXT:    stw r3, GlobSt9@toc@l+3(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load float, float* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x float]* @GlobLd9 to i8*), i64 3) to float*), align 4
-  store float %0, float* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x float]* @GlobSt9 to i8*), i64 3) to float*), align 4
+  %0 = load float, ptr getelementptr inbounds (i8, ptr @GlobLd9, i64 3), align 4
+  store float %0, ptr getelementptr inbounds (i8, ptr @GlobSt9, i64 3), align 4
   ret void
 }
 
@@ -1442,8 +1442,8 @@ define dso_local void @testGlob9PtrPlus4() {
 ; CHECK-NEXT:    stw r3, GlobSt9@toc@l+4(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @GlobLd9, i64 0, i64 1), align 4
-  store float %0, float* getelementptr inbounds ([20 x float], [20 x float]* @GlobSt9, i64 0, i64 1), align 4
+  %0 = load float, ptr getelementptr inbounds ([20 x float], ptr @GlobLd9, i64 0, i64 1), align 4
+  store float %0, ptr getelementptr inbounds ([20 x float], ptr @GlobSt9, i64 0, i64 1), align 4
   ret void
 }
 
@@ -1471,8 +1471,8 @@ define dso_local void @testGlob9PtrPlus16() {
 ; CHECK-NEXT:    stw r3, GlobSt9@toc@l+16(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load float, float* getelementptr inbounds ([20 x float], [20 x float]* @GlobLd9, i64 0, i64 4), align 4
-  store float %0, float* getelementptr inbounds ([20 x float], [20 x float]* @GlobSt9, i64 0, i64 4), align 4
+  %0 = load float, ptr getelementptr inbounds ([20 x float], ptr @GlobLd9, i64 0, i64 4), align 4
+  store float %0, ptr getelementptr inbounds ([20 x float], ptr @GlobSt9, i64 0, i64 4), align 4
   ret void
 }
 
@@ -1509,10 +1509,10 @@ define dso_local void @testGlob9PtrPlusVar(i64 %Idx) {
 ; CHECK-NEXT:    stwx r4, r5, r3
 ; CHECK-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds [20 x float], [20 x float]* @GlobLd9, i64 0, i64 %Idx
-  %0 = load float, float* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds [20 x float], [20 x float]* @GlobSt9, i64 0, i64 %Idx
-  store float %0, float* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds [20 x float], ptr @GlobLd9, i64 0, i64 %Idx
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds [20 x float], ptr @GlobSt9, i64 0, i64 %Idx
+  store float %0, ptr %arrayidx1, align 4
   ret void
 }
 
@@ -1548,8 +1548,8 @@ define dso_local void @testGlob10PtrPlus0() {
 ; CHECK-P8-NEXT:    std r3, GlobSt10@toc@l(r4)
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load double, double* getelementptr inbounds ([20 x double], [20 x double]* @GlobLd10, i64 0, i64 0), align 8
-  store double %0, double* getelementptr inbounds ([20 x double], [20 x double]* @GlobSt10, i64 0, i64 0), align 8
+  %0 = load double, ptr @GlobLd10, align 8
+  store double %0, ptr @GlobSt10, align 8
   ret void
 }
 
@@ -1582,8 +1582,8 @@ define dso_local void @testGlob10PtrPlus3() {
 ; CHECK-NEXT:    stdx r3, r5, r4
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load double, double* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x double]* @GlobLd10 to i8*), i64 3) to double*), align 8
-  store double %0, double* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x double]* @GlobSt10 to i8*), i64 3) to double*), align 8
+  %0 = load double, ptr getelementptr inbounds (i8, ptr @GlobLd10, i64 3), align 8
+  store double %0, ptr getelementptr inbounds (i8, ptr @GlobSt10, i64 3), align 8
   ret void
 }
 
@@ -1619,8 +1619,8 @@ define dso_local void @testGlob10PtrPlus4() {
 ; CHECK-P8-NEXT:    std r3, GlobSt10@toc@l+4(r4)
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load double, double* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x double]* @GlobLd10 to i8*), i64 4) to double*), align 8
-  store double %0, double* bitcast (i8* getelementptr inbounds (i8, i8* bitcast ([20 x double]* @GlobSt10 to i8*), i64 4) to double*), align 8
+  %0 = load double, ptr getelementptr inbounds (i8, ptr @GlobLd10, i64 4), align 8
+  store double %0, ptr getelementptr inbounds (i8, ptr @GlobSt10, i64 4), align 8
   ret void
 }
 
@@ -1656,8 +1656,8 @@ define dso_local void @testGlob10PtrPlus16() {
 ; CHECK-P8-NEXT:    std r3, GlobSt10@toc@l+16(r4)
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load double, double* getelementptr inbounds ([20 x double], [20 x double]* @GlobLd10, i64 0, i64 2), align 8
-  store double %0, double* getelementptr inbounds ([20 x double], [20 x double]* @GlobSt10, i64 0, i64 2), align 8
+  %0 = load double, ptr getelementptr inbounds ([20 x double], ptr @GlobLd10, i64 0, i64 2), align 8
+  store double %0, ptr getelementptr inbounds ([20 x double], ptr @GlobSt10, i64 0, i64 2), align 8
   ret void
 }
 
@@ -1694,10 +1694,10 @@ define dso_local void @testGlob10PtrPlusVar(i64 %Idx) {
 ; CHECK-NEXT:    stdx r4, r5, r3
 ; CHECK-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds [20 x double], [20 x double]* @GlobLd10, i64 0, i64 %Idx
-  %0 = load double, double* %arrayidx, align 8
-  %arrayidx1 = getelementptr inbounds [20 x double], [20 x double]* @GlobSt10, i64 0, i64 %Idx
-  store double %0, double* %arrayidx1, align 8
+  %arrayidx = getelementptr inbounds [20 x double], ptr @GlobLd10, i64 0, i64 %Idx
+  %0 = load double, ptr %arrayidx, align 8
+  %arrayidx1 = getelementptr inbounds [20 x double], ptr @GlobSt10, i64 0, i64 %Idx
+  store double %0, ptr %arrayidx1, align 8
   ret void
 }
 
@@ -1749,8 +1749,8 @@ define dso_local void @testGlob11PtrPlus0() {
 ; CHECK-P8-BE-NEXT:    stxvw4x vs0, 0, r3
 ; CHECK-P8-BE-NEXT:    blr
 entry:
-  %0 = load <16 x i8>, <16 x i8>* getelementptr inbounds ([20 x <16 x i8>], [20 x <16 x i8>]* @GlobLd11, i64 0, i64 0), align 16
-  store <16 x i8> %0, <16 x i8>* getelementptr inbounds ([20 x <16 x i8>], [20 x <16 x i8>]* @GlobSt11, i64 0, i64 0), align 16
+  %0 = load <16 x i8>, ptr @GlobLd11, align 16
+  store <16 x i8> %0, ptr @GlobSt11, align 16
   ret void
 }
 
@@ -1805,8 +1805,8 @@ define dso_local void @testGlob11PtrPlus3() {
 ; CHECK-P8-BE-NEXT:    stxvw4x vs0, r3, r4
 ; CHECK-P8-BE-NEXT:    blr
 entry:
-  %0 = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr ([20 x <16 x i8>], [20 x <16 x i8>]* @GlobLd11, i64 0, i64 0, i64 3) to <16 x i8>*), align 16
-  store <16 x i8> %0, <16 x i8>* bitcast (i8* getelementptr ([20 x <16 x i8>], [20 x <16 x i8>]* @GlobSt11, i64 0, i64 0, i64 3) to <16 x i8>*), align 16
+  %0 = load <16 x i8>, ptr getelementptr ([20 x <16 x i8>], ptr @GlobLd11, i64 0, i64 0, i64 3), align 16
+  store <16 x i8> %0, ptr getelementptr ([20 x <16 x i8>], ptr @GlobSt11, i64 0, i64 0, i64 3), align 16
   ret void
 }
 
@@ -1861,8 +1861,8 @@ define dso_local void @testGlob11PtrPlus4() {
 ; CHECK-P8-BE-NEXT:    stxvw4x vs0, r3, r4
 ; CHECK-P8-BE-NEXT:    blr
 entry:
-  %0 = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr ([20 x <16 x i8>], [20 x <16 x i8>]* @GlobLd11, i64 0, i64 0, i64 4) to <16 x i8>*), align 16
-  store <16 x i8> %0, <16 x i8>* bitcast (i8* getelementptr ([20 x <16 x i8>], [20 x <16 x i8>]* @GlobSt11, i64 0, i64 0, i64 4) to <16 x i8>*), align 16
+  %0 = load <16 x i8>, ptr getelementptr ([20 x <16 x i8>], ptr @GlobLd11, i64 0, i64 0, i64 4), align 16
+  store <16 x i8> %0, ptr getelementptr ([20 x <16 x i8>], ptr @GlobSt11, i64 0, i64 0, i64 4), align 16
   ret void
 }
 
@@ -1916,8 +1916,8 @@ define dso_local void @testGlob11PtrPlus16() {
 ; CHECK-P8-BE-NEXT:    stxvw4x vs0, r3, r4
 ; CHECK-P8-BE-NEXT:    blr
 entry:
-  %0 = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([20 x <16 x i8>], [20 x <16 x i8>]* @GlobLd11, i64 0, i64 1, i64 0) to <16 x i8>*), align 16
-  store <16 x i8> %0, <16 x i8>* bitcast (i8* getelementptr inbounds ([20 x <16 x i8>], [20 x <16 x i8>]* @GlobSt11, i64 0, i64 1, i64 0) to <16 x i8>*), align 16
+  %0 = load <16 x i8>, ptr getelementptr inbounds ([20 x <16 x i8>], ptr @GlobLd11, i64 0, i64 1, i64 0), align 16
+  store <16 x i8> %0, ptr getelementptr inbounds ([20 x <16 x i8>], ptr @GlobSt11, i64 0, i64 1, i64 0), align 16
   ret void
 }
 
@@ -1976,10 +1976,10 @@ define dso_local void @testGlob11PtrPlusVar(i64 %Idx) {
 ; CHECK-P8-BE-NEXT:    stxvw4x vs0, r4, r3
 ; CHECK-P8-BE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds [20 x <16 x i8>], [20 x <16 x i8>]* @GlobLd11, i64 0, i64 %Idx
-  %0 = load <16 x i8>, <16 x i8>* %arrayidx, align 16
-  %arrayidx1 = getelementptr inbounds [20 x <16 x i8>], [20 x <16 x i8>]* @GlobSt11, i64 0, i64 %Idx
-  store <16 x i8> %0, <16 x i8>* %arrayidx1, align 16
+  %arrayidx = getelementptr inbounds [20 x <16 x i8>], ptr @GlobLd11, i64 0, i64 %Idx
+  %0 = load <16 x i8>, ptr %arrayidx, align 16
+  %arrayidx1 = getelementptr inbounds [20 x <16 x i8>], ptr @GlobSt11, i64 0, i64 %Idx
+  store <16 x i8> %0, ptr %arrayidx1, align 16
   ret void
 }
 
@@ -2031,8 +2031,8 @@ define dso_local void @testGlob12PtrPlus0() {
 ; CHECK-P8-BE-NEXT:    stxvw4x vs0, 0, r3
 ; CHECK-P8-BE-NEXT:    blr
 entry:
-  %0 = load <16 x i8>, <16 x i8>* getelementptr inbounds ([20 x <16 x i8>], [20 x <16 x i8>]* @GlobLd12, i64 0, i64 0), align 16
-  store <16 x i8> %0, <16 x i8>* getelementptr inbounds ([20 x <16 x i8>], [20 x <16 x i8>]* @GlobSt12, i64 0, i64 0), align 16
+  %0 = load <16 x i8>, ptr @GlobLd12, align 16
+  store <16 x i8> %0, ptr @GlobSt12, align 16
   ret void
 }
 
@@ -2087,8 +2087,8 @@ define dso_local void @testGlob12PtrPlus3() {
 ; CHECK-P8-BE-NEXT:    stxvw4x vs0, r3, r4
 ; CHECK-P8-BE-NEXT:    blr
 entry:
-  %0 = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr ([20 x <16 x i8>], [20 x <16 x i8>]* @GlobLd12, i64 0, i64 0, i64 3) to <16 x i8>*), align 16
-  store <16 x i8> %0, <16 x i8>* bitcast (i8* getelementptr ([20 x <16 x i8>], [20 x <16 x i8>]* @GlobSt12, i64 0, i64 0, i64 3) to <16 x i8>*), align 16
+  %0 = load <16 x i8>, ptr getelementptr ([20 x <16 x i8>], ptr @GlobLd12, i64 0, i64 0, i64 3), align 16
+  store <16 x i8> %0, ptr getelementptr ([20 x <16 x i8>], ptr @GlobSt12, i64 0, i64 0, i64 3), align 16
   ret void
 }
 
@@ -2143,8 +2143,8 @@ define dso_local void @testGlob12PtrPlus4() {
 ; CHECK-P8-BE-NEXT:    stxvw4x vs0, r3, r4
 ; CHECK-P8-BE-NEXT:    blr
 entry:
-  %0 = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr ([20 x <16 x i8>], [20 x <16 x i8>]* @GlobLd12, i64 0, i64 0, i64 4) to <16 x i8>*), align 16
-  store <16 x i8> %0, <16 x i8>* bitcast (i8* getelementptr ([20 x <16 x i8>], [20 x <16 x i8>]* @GlobSt12, i64 0, i64 0, i64 4) to <16 x i8>*), align 16
+  %0 = load <16 x i8>, ptr getelementptr ([20 x <16 x i8>], ptr @GlobLd12, i64 0, i64 0, i64 4), align 16
+  store <16 x i8> %0, ptr getelementptr ([20 x <16 x i8>], ptr @GlobSt12, i64 0, i64 0, i64 4), align 16
   ret void
 }
 
@@ -2198,8 +2198,8 @@ define dso_local void @testGlob12PtrPlus16() {
 ; CHECK-P8-BE-NEXT:    stxvw4x vs0, r3, r4
 ; CHECK-P8-BE-NEXT:    blr
 entry:
-  %0 = load <16 x i8>, <16 x i8>* bitcast (i8* getelementptr inbounds ([20 x <16 x i8>], [20 x <16 x i8>]* @GlobLd12, i64 0, i64 1, i64 0) to <16 x i8>*), align 16
-  store <16 x i8> %0, <16 x i8>* bitcast (i8* getelementptr inbounds ([20 x <16 x i8>], [20 x <16 x i8>]* @GlobSt12, i64 0, i64 1, i64 0) to <16 x i8>*), align 16
+  %0 = load <16 x i8>, ptr getelementptr inbounds ([20 x <16 x i8>], ptr @GlobLd12, i64 0, i64 1, i64 0), align 16
+  store <16 x i8> %0, ptr getelementptr inbounds ([20 x <16 x i8>], ptr @GlobSt12, i64 0, i64 1, i64 0), align 16
   ret void
 }
 
@@ -2258,10 +2258,10 @@ define dso_local void @testGlob12PtrPlusVar(i64 %Idx) {
 ; CHECK-P8-BE-NEXT:    stxvw4x vs0, r4, r3
 ; CHECK-P8-BE-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds [20 x <16 x i8>], [20 x <16 x i8>]* @GlobLd12, i64 0, i64 %Idx
-  %0 = load <16 x i8>, <16 x i8>* %arrayidx, align 16
-  %arrayidx1 = getelementptr inbounds [20 x <16 x i8>], [20 x <16 x i8>]* @GlobSt12, i64 0, i64 %Idx
-  store <16 x i8> %0, <16 x i8>* %arrayidx1, align 16
+  %arrayidx = getelementptr inbounds [20 x <16 x i8>], ptr @GlobLd12, i64 0, i64 %Idx
+  %0 = load <16 x i8>, ptr %arrayidx, align 16
+  %arrayidx1 = getelementptr inbounds [20 x <16 x i8>], ptr @GlobSt12, i64 0, i64 %Idx
+  store <16 x i8> %0, ptr %arrayidx1, align 16
   ret void
 }
 
@@ -2289,8 +2289,8 @@ define dso_local void @Atomic_LdSt_i8() {
 ; CHECK-NEXT:    stb r3, GlobSt1@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load atomic i8, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobLd1, i64 0, i64 0) monotonic, align 1
-  store atomic i8 %0, i8* getelementptr inbounds ([20 x i8], [20 x i8]* @GlobSt1, i64 0, i64 0) monotonic, align 1
+  %0 = load atomic i8, ptr @GlobLd1 monotonic, align 1
+  store atomic i8 %0, ptr @GlobSt1 monotonic, align 1
   ret void
 }
 
@@ -2318,8 +2318,8 @@ define dso_local void @Atomic_LdSt_i16() {
 ; CHECK-NEXT:    sth r3, GlobSt3@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load atomic i16, i16* getelementptr inbounds ([20 x i16], [20 x i16]* @GlobLd3, i64 0, i64 0) monotonic, align 2
-  store atomic i16 %0, i16* getelementptr inbounds ([20 x i16], [20 x i16]* @GlobSt3, i64 0, i64 0) monotonic, align 2
+  %0 = load atomic i16, ptr @GlobLd3 monotonic, align 2
+  store atomic i16 %0, ptr @GlobSt3 monotonic, align 2
   ret void
 }
 
@@ -2347,8 +2347,8 @@ define dso_local void @Atomic_LdSt_i32() {
 ; CHECK-NEXT:    stw r3, GlobSt5@toc@l(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load atomic i32, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @GlobLd5, i64 0, i64 0) monotonic, align 4
-  store atomic i32 %0, i32* getelementptr inbounds ([20 x i32], [20 x i32]* @GlobSt5, i64 0, i64 0) monotonic, align 4
+  %0 = load atomic i32, ptr @GlobLd5 monotonic, align 4
+  store atomic i32 %0, ptr @GlobSt5 monotonic, align 4
   ret void
 }
 
@@ -2384,8 +2384,8 @@ define dso_local void @Atomic_LdSt_i64() {
 ; CHECK-P8-NEXT:    std r3, GlobSt7@toc@l(r4)
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load atomic i64, i64* getelementptr inbounds ([20 x i64], [20 x i64]* @GlobLd7, i64 0, i64 0) monotonic, align 8
-  store atomic i64 %0, i64* getelementptr inbounds ([20 x i64], [20 x i64]* @GlobSt7, i64 0, i64 0) monotonic, align 8
+  %0 = load atomic i64, ptr @GlobLd7 monotonic, align 8
+  store atomic i64 %0, ptr @GlobSt7 monotonic, align 8
   ret void
 }
 
@@ -2422,7 +2422,7 @@ define dso_local void @store_double_f64_to_uint(double %str) local_unnamed_addr 
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptoui double %str to i64
-  store i64 %conv, i64* bitcast ([20 x double]* @GlobSt10 to i64*), align 8
+  store i64 %conv, ptr @GlobSt10, align 8
   ret void
 }
 
@@ -2459,7 +2459,7 @@ define dso_local void @store_double_f64_to_sint(double %str) local_unnamed_addr 
 ; CHECK-P8-NEXT:    blr
 entry:
   %conv = fptosi double %str to i64
-  store i64 %conv, i64* bitcast ([20 x double]* @GlobSt10 to i64*), align 8
+  store i64 %conv, ptr @GlobSt10, align 8
   ret void
 }
 
@@ -2520,7 +2520,7 @@ define dso_local void @store_f128_to_uint(fp128 %str) local_unnamed_addr #0 {
 ; CHECK-P8-BE-NEXT:    blr
 entry:
   %conv = fptoui fp128 %str to i64
-  store i64 %conv, i64* bitcast ([20 x fp128]* @GlobF128 to i64*), align 16
+  store i64 %conv, ptr @GlobF128, align 16
   ret void
 }
 
@@ -2581,6 +2581,6 @@ define dso_local void @store_f128_to_sint(fp128 %str) local_unnamed_addr #0 {
 ; CHECK-P8-BE-NEXT:    blr
 entry:
   %conv = fptosi fp128 %str to i64
-  store i64 %conv, i64* bitcast ([20 x fp128]* @GlobF128 to i64*), align 16
+  store i64 %conv, ptr @GlobF128, align 16
   ret void
 }

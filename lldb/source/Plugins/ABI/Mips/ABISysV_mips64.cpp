@@ -724,6 +724,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
 
   const RegisterInfo *r2_info = reg_ctx->GetRegisterInfoByName("r2", 0);
   const RegisterInfo *r3_info = reg_ctx->GetRegisterInfoByName("r3", 0);
+  assert(r2_info && r3_info && "Basic registers should always be present.");
 
   if (type_flags & eTypeIsScalar || type_flags & eTypeIsPointer) {
     value.SetValueType(Value::ValueType::Scalar);
@@ -1054,8 +1055,8 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
         reg_ctx->ReadRegister(r2_info, r2_value);
 
         const size_t bytes_copied = r2_value.GetAsMemoryData(
-            r2_info, data_sp->GetBytes(), r2_info->byte_size, target_byte_order,
-            error);
+            *r2_info, data_sp->GetBytes(), r2_info->byte_size,
+            target_byte_order, error);
         if (bytes_copied != r2_info->byte_size)
           return return_valobj_sp;
         sucess = true;
@@ -1063,7 +1064,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
       if (use_r3) {
         reg_ctx->ReadRegister(r3_info, r3_value);
         const size_t bytes_copied = r3_value.GetAsMemoryData(
-            r3_info, data_sp->GetBytes() + r2_info->byte_size,
+            *r3_info, data_sp->GetBytes() + r2_info->byte_size,
             r3_info->byte_size, target_byte_order, error);
 
         if (bytes_copied != r3_info->byte_size)

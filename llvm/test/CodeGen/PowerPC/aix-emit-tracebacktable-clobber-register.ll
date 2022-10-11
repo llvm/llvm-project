@@ -11,17 +11,17 @@ entry:
   %fvalue = alloca float, align 4
   %taken = alloca i32, align 4
   %data = alloca i32, align 4
-  store float 1.000000e+00, float* %fvalue, align 4
-  %0 = load float, float* %fvalue, align 4
+  store float 1.000000e+00, ptr %fvalue, align 4
+  %0 = load float, ptr %fvalue, align 4
   %1 = call float asm "fneg $0,$1\0A\09", "=b,b,~{f31},~{f30},~{f29},~{f28},~{f27}"(float %0)
-  store float %1, float* %fvalue, align 4
-  store i32 123, i32* %data, align 4
-  %2 = load i32, i32* %data, align 4
+  store float %1, ptr %fvalue, align 4
+  store i32 123, ptr %data, align 4
+  %2 = load i32, ptr %data, align 4
   %3 = call i32 asm "cntlzw $0, $1\0A\09", "=b,b,~{r31},~{r30},~{r29},~{r28}"(i32 %2)
-  store i32 %3, i32* %taken, align 4
-  %4 = load i32, i32* %taken, align 4
+  store i32 %3, ptr %taken, align 4
+  %4 = load i32, ptr %taken, align 4
   %conv = sitofp i32 %4 to float
-  %5 = load float, float* %fvalue, align 4
+  %5 = load float, ptr %fvalue, align 4
   %add = fadd float %conv, %5
   ret float %add
 }
@@ -30,9 +30,9 @@ define <4 x i32> @foov() #0 {
 entry:
   %taken = alloca <4 x i32>, align 16
   %data = alloca <4 x i32>, align 16
-  store <4 x i32> <i32 123, i32 0, i32 0, i32 0>, <4 x i32>* %data, align 16
+  store <4 x i32> <i32 123, i32 0, i32 0, i32 0>, ptr %data, align 16
   call void asm sideeffect "", "~{v31},~{v30},~{v29},~{v28}"() 
-  %0 = load <4 x i32>, <4 x i32>* %taken, align 16
+  %0 = load <4 x i32>, ptr %taken, align 16
   ret <4 x i32> %0
 }
 

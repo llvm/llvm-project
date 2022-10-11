@@ -13,10 +13,10 @@
 
 define dso_local signext i32 @ext_fun() section ".ext_fun_sec" {
 entry:
-  %0 = load i32, i32* @ext_const, align 4
-  %1 = load i32, i32* @ext_var, align 4
+  %0 = load i32, ptr @ext_const, align 4
+  %1 = load i32, ptr @ext_var, align 4
   %add = add nsw i32 %0, %1
-  %2 = load i32, i32* @ext_zvar, align 4
+  %2 = load i32, ptr @ext_zvar, align 4
   %add1 = add nsw i32 %add, %2
   ret i32 %add1
 }

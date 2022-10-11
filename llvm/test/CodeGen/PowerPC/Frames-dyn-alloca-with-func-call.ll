@@ -28,9 +28,9 @@
 
 define dso_local signext i32 @foo(i32 %n) {
 entry:
-  %ptr0 = alloca i32*
+  %ptr0 = alloca ptr
   %0 = alloca i32, i32 %n
-  store i32* %0, i32** %ptr0
+  store ptr %0, ptr %ptr0
   %1 = alloca i32, i32 %n
   %2 = alloca i32, i32 %n
   %3 = alloca i32, i32 %n
@@ -39,13 +39,13 @@ entry:
   %6 = alloca i32, i32 %n
   %7 = alloca i32, i32 %n
   %8 = alloca i32, i32 %n
-  %9 = load i32*, i32** %ptr0
+  %9 = load ptr, ptr %ptr0
 
-  %call = call i32 @bar(i32* %1, i32* %2, i32* %3, i32* %4, i32* %5, i32* %6, i32* %7, i32* %8, i32* %9)
+  %call = call i32 @bar(ptr %1, ptr %2, ptr %3, ptr %4, ptr %5, ptr %6, ptr %7, ptr %8, ptr %9)
   ret i32 %call
 }
 
-declare i32 @bar(i32*, i32*, i32*, i32*, i32*, i32*, i32*, i32*, i32*)
+declare i32 @bar(ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; PPC32-LINUX-LABEL: foo
 ; PPC32-LINUX: mflr 0

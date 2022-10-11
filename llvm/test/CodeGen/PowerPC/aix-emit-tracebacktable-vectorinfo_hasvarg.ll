@@ -8,7 +8,7 @@
 define void @f(<4 x float> %vf, ...) #0 {
 entry:
   %vf.addr = alloca <4 x float>, align 16
-  store <4 x float> %vf, <4 x float>* %vf.addr, align 16
+  store <4 x float> %vf, ptr %vf.addr, align 16
   ret void
 }
 

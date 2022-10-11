@@ -704,8 +704,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
   int ImmLitIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::imm);
-  bool isVOP2 = MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP2;
-  if (Res && ImmLitIdx != -1 && (isVOP2 || AMDGPU::isVOPD(MI.getOpcode())))
+  bool IsSOPK = MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::SOPK;
+  if (Res && ImmLitIdx != -1 && !IsSOPK)
     Res = convertFMAanyK(MI, ImmLitIdx);
 
   // if the opcode was not recognized we'll assume a Size of 4 bytes
@@ -2089,8 +2089,9 @@ AMDGPUDisassembler::decodeKernelDescriptorDirective(
                       KERNEL_CODE_PROPERTY_ENABLE_WAVEFRONT_SIZE32);
     }
 
-    PRINT_DIRECTIVE(".amdhsa_uses_dynamic_stack",
-                    KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK);
+    if (AMDGPU::getAmdhsaCodeObjectVersion() >= 5)
+      PRINT_DIRECTIVE(".amdhsa_uses_dynamic_stack",
+                      KERNEL_CODE_PROPERTY_USES_DYNAMIC_STACK);
 
     if (TwoByteBuffer & KERNEL_CODE_PROPERTY_RESERVED1)
       return MCDisassembler::Fail;

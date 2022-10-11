@@ -116,6 +116,15 @@ add_mlir_upstream_c_api_library(MLIRCAPITensor
   MLIRTensorDialect
 )
 
+add_mlir_upstream_c_api_library(MLIRCAPITransformDialect
+  Transform.cpp
+
+  PARTIAL_SOURCES_INTENDED
+  LINK_LIBS PUBLIC
+  MLIRCAPIIR
+  MLIRTransformDialect
+)
+
 add_mlir_upstream_c_api_library(MLIRCAPIQuant
   Quant.cpp
 

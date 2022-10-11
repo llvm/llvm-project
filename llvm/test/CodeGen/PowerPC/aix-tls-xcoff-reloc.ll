@@ -12,15 +12,15 @@
 ; Function Attrs: nofree norecurse nounwind willreturn writeonly
 define void @storesTIUninit(i32 %Val) #0 {
 entry:
-  store i32 %Val, i32* @TIUninit, align 4
+  store i32 %Val, ptr @TIUninit, align 4
   ret void
 }
 
 ; Function Attrs: norecurse nounwind readonly willreturn
 define i32 @loadsTGInit() #1 {
 entry:
-  %0 = load i32, i32* @TGInit, align 4
-  %1 = load i32, i32* @GInit, align 4
+  %0 = load i32, ptr @TGInit, align 4
+  %1 = load i32, ptr @GInit, align 4
   %add = add nsw i32 %1, %0
   ret i32 %add
 }

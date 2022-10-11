@@ -8,7 +8,7 @@
 
 ; Test reduce scalarization in fpext v2f32 to v2f64 from the extract_subvector v4f32 node.
 
-define dso_local void @test(<4 x float>* nocapture readonly %a, <2 x double>* nocapture %b, <2 x double>* nocapture %c) {
+define dso_local void @test(ptr nocapture readonly %a, ptr nocapture %b, ptr nocapture %c) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs0, 0(r3)
@@ -31,19 +31,19 @@ define dso_local void @test(<4 x float>* nocapture readonly %a, <2 x double>* no
 ; CHECK-BE-NEXT:    stxv vs0, 0(r5)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load <4 x float>, <4 x float>* %a, align 16
+  %0 = load <4 x float>, ptr %a, align 16
   %shuffle = shufflevector <4 x float> %0, <4 x float> undef, <2 x i32> <i32 0, i32 1>
   %shuffle1 = shufflevector <4 x float> %0, <4 x float> undef, <2 x i32> <i32 2, i32 3>
   %vecinit4 = fpext <2 x float> %shuffle to <2 x double>
   %vecinit11 = fpext <2 x float> %shuffle1 to <2 x double>
-  store <2 x double> %vecinit4, <2 x double>* %b, align 16
-  store <2 x double> %vecinit11, <2 x double>* %c, align 16
+  store <2 x double> %vecinit4, ptr %b, align 16
+  store <2 x double> %vecinit11, ptr %c, align 16
   ret void
 }
 
 ; Ensure we don't crash for wider types
 
-define dso_local void @test2(<16 x float>* nocapture readonly %a, <2 x double>* nocapture %b, <2 x double>* nocapture %c) {
+define dso_local void @test2(ptr nocapture readonly %a, ptr nocapture %b, ptr nocapture %c) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxv vs0, 0(r3)
@@ -66,12 +66,12 @@ define dso_local void @test2(<16 x float>* nocapture readonly %a, <2 x double>* 
 ; CHECK-BE-NEXT:    stxv vs0, 0(r5)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load <16 x float>, <16 x float>* %a, align 16
+  %0 = load <16 x float>, ptr %a, align 16
   %shuffle = shufflevector <16 x float> %0, <16 x float> undef, <2 x i32> <i32 0, i32 1>
   %shuffle1 = shufflevector <16 x float> %0, <16 x float> undef, <2 x i32> <i32 2, i32 3>
   %vecinit4 = fpext <2 x float> %shuffle to <2 x double>
   %vecinit11 = fpext <2 x float> %shuffle1 to <2 x double>
-  store <2 x double> %vecinit4, <2 x double>* %b, align 16
-  store <2 x double> %vecinit11, <2 x double>* %c, align 16
+  store <2 x double> %vecinit4, ptr %b, align 16
+  store <2 x double> %vecinit11, ptr %c, align 16
   ret void
 }

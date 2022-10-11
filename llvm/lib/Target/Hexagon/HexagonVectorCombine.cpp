@@ -92,7 +92,6 @@ public:
   int getSizeOf(const Value *Val, SizeKind Kind = Store) const;
   int getSizeOf(const Type *Ty, SizeKind Kind = Store) const;
   int getTypeAlignment(Type *Ty) const;
-  size_t length(Value *Val) const;
   size_t length(Type *Ty) const;
 
   Constant *getNullValue(Type *Ty) const;
@@ -1029,10 +1028,6 @@ auto HexagonVectorCombine::getTypeAlignment(Type *Ty) const -> int {
   if (HST.isTypeForHVX(Ty))
     return HST.getVectorLength();
   return DL.getABITypeAlign(Ty).value();
-}
-
-auto HexagonVectorCombine::length(Value *Val) const -> size_t {
-  return length(Val->getType());
 }
 
 auto HexagonVectorCombine::length(Type *Ty) const -> size_t {

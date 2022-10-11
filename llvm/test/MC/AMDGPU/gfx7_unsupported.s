@@ -2594,6 +2594,9 @@ image_sample_d_g16 v[5:6], v[1:3], s[8:15], s[12:15] dmask:0x3
 image_sample_d_o_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
 // CHECK: error: instruction not supported on this GPU
 
+image_gather4h v[251:254], v[1:2], s[8:15], s[12:15] dmask:0x1
+// CHECK: error: instruction not supported on this GPU
+
 v_interp_mov_f32_e64 v255, p10, attr0.x
 // CHECK: error: e64 variant of this instruction is not supported
 

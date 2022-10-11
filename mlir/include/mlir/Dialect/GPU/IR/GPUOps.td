@@ -717,6 +717,30 @@ def GPU_AllReduceOp : GPU_Op<"all_reduce",
   let hasRegionVerifier = 1;
 }
 
+def GPU_SubgroupReduceOp : GPU_Op<"subgroup_reduce",
+    [SameOperandsAndResultType]>,
+    Arguments<(ins AnyType:$value,
+               GPU_AllReduceOperationAttr:$op)>,
+    Results<(outs AnyType)> {
+  let summary = "Reduce values among subgroup.";
+  let description = [{
+    The `subgroup_reduce` op reduces the value of every work item across a
+    subgroup. The result is equal for all work items of a subgroup.
+
+    Example:
+
+    ```mlir
+    %1 = gpu.subgroup_reduce add %0 : (f32) -> (f32)
+    ```
+
+    Either none or all work items of a subgroup need to execute this op
+    in convergence.
+  }];
+  let assemblyFormat = [{ custom<AllReduceOperation>($op) $value attr-dict
+                          `:` functional-type(operands, results) }];
+  let hasVerifier = 1;
+}
+
 def GPU_ShuffleOpXor  : I32EnumAttrCase<"XOR",  0, "xor">;
 def GPU_ShuffleOpDown : I32EnumAttrCase<"DOWN", 1, "down">;
 def GPU_ShuffleOpUp   : I32EnumAttrCase<"UP",   2, "up">;

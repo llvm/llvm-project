@@ -61,10 +61,21 @@ code bases.
   into an error-only diagnostic in the next Clang release. Fixes
   `Issue 50055 <https://github.com/llvm/llvm-project/issues/50055>`_.
 
+- The ``-Wimplicit-function-declaration`` and ``-Wimplicit-int`` warnings
+  now default to an error in C99, C11, and C17. As of C2x,
+  support for implicit function declarations and implicit int has been removed,
+  and the warning options will have no effect. Specifying ``-Wimplicit-int`` in
+  C89 mode will now issue warnings instead of being a noop.
+
+  **NOTE**: We recommend that projects using configure scripts verify that the
+  results do not change before/after setting
+  ``-Werror=implicit-function-declarations`` or ``-Wimplicit-int`` to avoid
+  incompatibility with Clang 16.
+
 - ``-Wincompatible-function-pointer-types`` now defaults to an error in all C
   language modes. It may be downgraded to a warning with
   ``-Wno-error=incompatible-function-pointer-types`` or disabled entirely with
-  ``-Wno-implicit-function-pointer-types``.
+  ``-Wno-incompatible-function-pointer-types``.
 
   **NOTE:** We recommend that projects using configure scripts verify that the
   results do not change before/after setting
@@ -128,6 +139,25 @@ code bases.
     void func(void *p) {
       *p; // Now diagnosed as a warning-as-error.
     }
+
+- Clang now diagnoses use of a bit-field as an instruction operand in Microsoft
+  style inline asm blocks as an error. Previously, a bit-field operand yielded
+  the address of the allocation unit the bit-field was stored within; reads or
+  writes therefore had the potential to read or write nearby bit-fields. This
+  change fixes `issue 57791 <https://github.com/llvm/llvm-project/issues/57791>`_.
+
+  .. code-block:: c++
+
+    typedef struct S {
+      unsigned bf:1;
+    } S;
+    void f(S s) {
+      __asm {
+        mov eax, s.bf // Now diagnosed as an error.
+        mov s.bf, eax // Now diagnosed as an error.
+      }
+    }
+
 
 What's New in Clang |release|?
 ==============================

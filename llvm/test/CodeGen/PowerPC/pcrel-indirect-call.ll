@@ -9,7 +9,7 @@
 ; is passed as a parameter in this test.
 
 ; Function Attrs: noinline
-define dso_local void @IndirectCallExternFuncPtr(void ()* nocapture %ptrfunc) {
+define dso_local void @IndirectCallExternFuncPtr(ptr nocapture %ptrfunc) {
 ; CHECK-LABEL: IndirectCallExternFuncPtr:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mtctr r3
@@ -23,7 +23,7 @@ entry:
 
 define dso_local void @FuncPtrPassAsParam() {
 entry:
-  tail call void @IndirectCallExternFuncPtr(void ()* nonnull @Function)
+  tail call void @IndirectCallExternFuncPtr(ptr nonnull @Function)
   ret void
 }
 

@@ -825,7 +825,8 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R,
   Properties = parseSDPatternOperatorProperties(R);
 
   // Sort the argument attributes for later benefit.
-  llvm::sort(ArgumentAttributes);
+  for (auto &Attrs : ArgumentAttributes)
+    llvm::sort(Attrs);
 }
 
 void CodeGenIntrinsic::setDefaultProperties(
@@ -888,35 +889,35 @@ void CodeGenIntrinsic::setProperty(Record *R) {
     hasSideEffects = true;
   else if (R->isSubClassOf("NoCapture")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, NoCapture, 0);
+    addArgAttribute(ArgNo, NoCapture);
   } else if (R->isSubClassOf("NoAlias")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, NoAlias, 0);
+    addArgAttribute(ArgNo, NoAlias);
   } else if (R->isSubClassOf("NoUndef")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, NoUndef, 0);
+    addArgAttribute(ArgNo, NoUndef);
   } else if (R->isSubClassOf("NonNull")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, NonNull, 0);
+    addArgAttribute(ArgNo, NonNull);
   } else if (R->isSubClassOf("Returned")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, Returned, 0);
+    addArgAttribute(ArgNo, Returned);
   } else if (R->isSubClassOf("ReadOnly")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, ReadOnly, 0);
+    addArgAttribute(ArgNo, ReadOnly);
   } else if (R->isSubClassOf("WriteOnly")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, WriteOnly, 0);
+    addArgAttribute(ArgNo, WriteOnly);
   } else if (R->isSubClassOf("ReadNone")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, ReadNone, 0);
+    addArgAttribute(ArgNo, ReadNone);
   } else if (R->isSubClassOf("ImmArg")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
-    ArgumentAttributes.emplace_back(ArgNo, ImmArg, 0);
+    addArgAttribute(ArgNo, ImmArg);
   } else if (R->isSubClassOf("Align")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     uint64_t Align = R->getValueAsInt("Align");
-    ArgumentAttributes.emplace_back(ArgNo, Alignment, Align);
+    addArgAttribute(ArgNo, Alignment, Align);
   } else
     llvm_unreachable("Unknown property!");
 }
@@ -930,7 +931,17 @@ bool CodeGenIntrinsic::isParamAPointer(unsigned ParamIdx) const {
 
 bool CodeGenIntrinsic::isParamImmArg(unsigned ParamIdx) const {
   // Convert argument index to attribute index starting from `FirstArgIndex`.
-  ArgAttribute Val{ParamIdx + 1, ImmArg, 0};
-  return std::binary_search(ArgumentAttributes.begin(),
-                            ArgumentAttributes.end(), Val);
+  ++ParamIdx;
+  if (ParamIdx >= ArgumentAttributes.size())
+    return false;
+  ArgAttribute Val{ImmArg, 0};
+  return std::binary_search(ArgumentAttributes[ParamIdx].begin(),
+                            ArgumentAttributes[ParamIdx].end(), Val);
+}
+
+void CodeGenIntrinsic::addArgAttribute(unsigned Idx, ArgAttrKind AK,
+                                       uint64_t V) {
+  if (Idx >= ArgumentAttributes.size())
+    ArgumentAttributes.resize(Idx + 1);
+  ArgumentAttributes[Idx].emplace_back(AK, V);
 }

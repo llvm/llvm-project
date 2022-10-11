@@ -14,14 +14,12 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 %struct.empty = type {}
 
-define void @callee(%struct.empty* noalias sret(%struct.empty) %agg.result, %struct.empty* byval(%struct.empty) %a1, %struct.empty* %a2, %struct.empty* byval(%struct.empty) %a3) nounwind {
+define void @callee(ptr noalias sret(%struct.empty) %agg.result, ptr byval(%struct.empty) %a1, ptr %a2, ptr byval(%struct.empty) %a3) nounwind {
 entry:
-  %a2.addr = alloca %struct.empty*, align 8
-  store %struct.empty* %a2, %struct.empty** %a2.addr, align 8
-  %0 = load %struct.empty*, %struct.empty** %a2.addr, align 8
-  %1 = bitcast %struct.empty* %agg.result to i8*
-  %2 = bitcast %struct.empty* %0 to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %1, i8* %2, i64 0, i1 false)
+  %a2.addr = alloca ptr, align 8
+  store ptr %a2, ptr %a2.addr, align 8
+  %0 = load ptr, ptr %a2.addr, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr %agg.result, ptr %0, i64 0, i1 false)
   ret void
 }
 
@@ -31,14 +29,14 @@ entry:
 ; CHECK-NOT: std 6,
 ; CHECK: blr
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
 
-define void @caller(%struct.empty* noalias sret(%struct.empty) %agg.result) nounwind {
+define void @caller(ptr noalias sret(%struct.empty) %agg.result) nounwind {
 entry:
   %e1 = alloca %struct.empty, align 1
   %e2 = alloca %struct.empty, align 1
   %e3 = alloca %struct.empty, align 1
-  call void @callee(%struct.empty* sret(%struct.empty) %agg.result, %struct.empty* byval(%struct.empty) %e1, %struct.empty* %e2, %struct.empty* byval(%struct.empty) %e3)
+  call void @callee(ptr sret(%struct.empty) %agg.result, ptr byval(%struct.empty) %e1, ptr %e2, ptr byval(%struct.empty) %e3)
   ret void
 }
 

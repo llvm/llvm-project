@@ -31,6 +31,7 @@ set(LIBCXX_SOURCES
   include/to_chars_floating_point.h
   legacy_pointer_safety.cpp
   memory.cpp
+  memory_resource.cpp
   mutex.cpp
   mutex_destructor.cpp
   new.cpp

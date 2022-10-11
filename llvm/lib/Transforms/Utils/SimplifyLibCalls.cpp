@@ -2515,8 +2515,7 @@ static bool isTrigLibCall(CallInst *CI) {
   // We can only hope to do anything useful if we can ignore things like errno
   // and floating-point exceptions.
   // We already checked the prototype.
-  return CI->hasFnAttr(Attribute::NoUnwind) &&
-         CI->hasFnAttr(Attribute::ReadNone);
+  return CI->doesNotThrow() && CI->doesNotAccessMemory();
 }
 
 static bool insertSinCosCall(IRBuilderBase &B, Function *OrigCallee, Value *Arg,

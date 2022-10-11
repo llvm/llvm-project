@@ -413,7 +413,7 @@ entry:
 ;; outside of the initial 288 byte volatile program storage region in the
 ;; Protected Zone. However, this restriction will be removed in an upcoming
 ;; revision of the ABI.
-define dso_local zeroext i32 @spill(i32* nocapture readonly %in) #0 {
+define dso_local zeroext i32 @spill(ptr nocapture readonly %in) #0 {
 ; LE-P10-LABEL: spill:
 ; LE-P10:       # %bb.0: # %entry
 ; LE-P10-NEXT:    mflr r0
@@ -2840,21 +2840,20 @@ define dso_local zeroext i32 @spill(i32* nocapture readonly %in) #0 {
 ; BE-P8-PRIV-NEXT:    blr
 entry:
   %local = alloca i32, align 4
-  %0 = bitcast i32* %local to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0)
-  %arrayidx = getelementptr inbounds i32, i32* %in, i64 3
-  %1 = load i32, i32* %arrayidx, align 4
-  store i32 %1, i32* %local, align 4
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %local)
+  %arrayidx = getelementptr inbounds i32, ptr %in, i64 3
+  %0 = load i32, ptr %arrayidx, align 4
+  store i32 %0, ptr %local, align 4
   tail call void asm sideeffect "nop", "~{cr2},~{cr3},~{cr4},~{r0},~{r1},~{r2},~{r3},~{r4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{r16},~{r17},~{r18},~{r19},~{r20},~{r21},~{r22},~{r23},~{r24},~{r25},~{r26},~{r27},~{r28},~{r29},~{r30},~{r31},~{f14},~{f15},~{f16},~{f17},~{f18},~{f19},~{f20},~{f21},~{f22},~{f23},~{f24},~{f25},~{f26},~{f27},~{f28},~{f29},~{f30},~{f31},~{v20},~{v21},~{v22},~{v23},~{v24},~{v25},~{v26},~{v27},~{v28},~{v29},~{v30},~{v31}"()
-  %call = call zeroext i32 @callee2(i32* nonnull %local)
-  %arrayidx1 = getelementptr inbounds i32, i32* %in, i64 4
-  %2 = load i32, i32* %arrayidx1, align 4
-  %add = add i32 %2, %call
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0)
+  %call = call zeroext i32 @callee2(ptr nonnull %local)
+  %arrayidx1 = getelementptr inbounds i32, ptr %in, i64 4
+  %1 = load i32, ptr %arrayidx1, align 4
+  %add = add i32 %1, %call
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %local)
   ret i32 %add
 }
 
-define dso_local zeroext i32 @shrinkwrap(i32* readonly %in) #0 {
+define dso_local zeroext i32 @shrinkwrap(ptr readonly %in) #0 {
 ; LE-P10-LABEL: shrinkwrap:
 ; LE-P10:       # %bb.0: # %entry
 ; LE-P10-NEXT:    cmpldi r3, 0
@@ -3385,20 +3384,19 @@ define dso_local zeroext i32 @shrinkwrap(i32* readonly %in) #0 {
 ; BE-P8-PRIV-NEXT:    blr
 entry:
   %local = alloca i32, align 4
-  %tobool.not = icmp eq i32* %in, null
+  %tobool.not = icmp eq ptr %in, null
   br i1 %tobool.not, label %return, label %if.end
 
 if.end:                                           ; preds = %entry
-  %0 = bitcast i32* %local to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0)
-  %arrayidx = getelementptr inbounds i32, i32* %in, i64 3
-  %1 = load i32, i32* %arrayidx, align 4
-  store i32 %1, i32* %local, align 4
-  %call = call zeroext i32 @callee2(i32* nonnull %local)
-  %arrayidx1 = getelementptr inbounds i32, i32* %in, i64 4
-  %2 = load i32, i32* %arrayidx1, align 4
-  %add = add i32 %2, %call
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0)
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %local)
+  %arrayidx = getelementptr inbounds i32, ptr %in, i64 3
+  %0 = load i32, ptr %arrayidx, align 4
+  store i32 %0, ptr %local, align 4
+  %call = call zeroext i32 @callee2(ptr nonnull %local)
+  %arrayidx1 = getelementptr inbounds i32, ptr %in, i64 4
+  %1 = load i32, ptr %arrayidx1, align 4
+  %add = add i32 %1, %call
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %local)
   br label %return
 
 return:                                           ; preds = %entry, %if.end
@@ -3406,7 +3404,7 @@ return:                                           ; preds = %entry, %if.end
   ret i32 %retval.0
 }
 
-define dso_local zeroext i32 @aligned(i32* nocapture readonly %in) #0 {
+define dso_local zeroext i32 @aligned(ptr nocapture readonly %in) #0 {
 ; LE-P10-LABEL: aligned:
 ; LE-P10:       # %bb.0: # %entry
 ; LE-P10-NEXT:    mflr r0
@@ -4191,35 +4189,32 @@ entry:
   %beforeLocal = alloca i32, align 4
   %local = alloca i32, align 32768
   %afterLocal = alloca i32, align 4
-  %0 = bitcast i32* %beforeLocal to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0)
-  %arrayidx = getelementptr inbounds i32, i32* %in, i64 1
-  %1 = load i32, i32* %arrayidx, align 4
-  store i32 %1, i32* %beforeLocal, align 4
-  %2 = bitcast i32* %local to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %2)
-  %arrayidx1 = getelementptr inbounds i32, i32* %in, i64 3
-  %3 = load i32, i32* %arrayidx1, align 4
-  store i32 %3, i32* %local, align 32768
-  %4 = bitcast i32* %afterLocal to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %4)
-  %arrayidx2 = getelementptr inbounds i32, i32* %in, i64 5
-  %5 = load i32, i32* %arrayidx2, align 4
-  store i32 %5, i32* %afterLocal, align 4
-  %call = call zeroext i32 @callee3(i32* nonnull %local, i32* nonnull %beforeLocal, i32* nonnull %afterLocal)
-  %arrayidx3 = getelementptr inbounds i32, i32* %in, i64 4
-  %6 = load i32, i32* %arrayidx3, align 4
-  %add = add i32 %6, %call
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %4)
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %2)
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0)
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %beforeLocal)
+  %arrayidx = getelementptr inbounds i32, ptr %in, i64 1
+  %0 = load i32, ptr %arrayidx, align 4
+  store i32 %0, ptr %beforeLocal, align 4
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %local)
+  %arrayidx1 = getelementptr inbounds i32, ptr %in, i64 3
+  %1 = load i32, ptr %arrayidx1, align 4
+  store i32 %1, ptr %local, align 32768
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %afterLocal)
+  %arrayidx2 = getelementptr inbounds i32, ptr %in, i64 5
+  %2 = load i32, ptr %arrayidx2, align 4
+  store i32 %2, ptr %afterLocal, align 4
+  %call = call zeroext i32 @callee3(ptr nonnull %local, ptr nonnull %beforeLocal, ptr nonnull %afterLocal)
+  %arrayidx3 = getelementptr inbounds i32, ptr %in, i64 4
+  %3 = load i32, ptr %arrayidx3, align 4
+  %add = add i32 %3, %call
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %afterLocal)
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %local)
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %beforeLocal)
   ret i32 %add
 }
 
 declare zeroext i32 @callee(i32 zeroext) local_unnamed_addr
-declare zeroext i32 @callee2(i32*) local_unnamed_addr
-declare zeroext i32 @callee3(i32*, i32*, i32*) local_unnamed_addr
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare zeroext i32 @callee2(ptr) local_unnamed_addr
+declare zeroext i32 @callee3(ptr, ptr, ptr) local_unnamed_addr
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 attributes #0 = { nounwind }
