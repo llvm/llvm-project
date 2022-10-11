@@ -1496,7 +1496,15 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   // function, including the funclet.
   int64_t NumBytes = IsFunclet ? getWinEHFuncletFrameSize(MF)
                                : MFI.getStackSize();
-  if (!AFI->hasStackFrame() && !windowsRequiresStackProbe(MF, NumBytes)) {
+
+  // Alignment is required for the parent frame, not the funclet
+  const bool NeedsRealignment =
+      NumBytes && !IsFunclet && RegInfo->hasStackRealignment(MF);
+  int64_t RealignmentPadding =
+      NeedsRealignment ? MFI.getMaxAlign().value() - 16 : 0;
+
+  if (!AFI->hasStackFrame() &&
+      !windowsRequiresStackProbe(MF, NumBytes + RealignmentPadding)) {
     assert(!HasFP && "unexpected function without stack frame but with FP");
     assert(!SVEStackSize &&
            "unexpected function without stack frame but with SVE objects");
@@ -1638,8 +1646,8 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   if (EmitCFI)
     emitCalleeSavedGPRLocations(MBB, MBBI);
 
-  if (windowsRequiresStackProbe(MF, NumBytes)) {
-    uint64_t NumWords = NumBytes >> 4;
+  if (windowsRequiresStackProbe(MF, NumBytes + RealignmentPadding)) {
+    uint64_t NumWords = (NumBytes + RealignmentPadding) >> 4;
     if (NeedsWinCFI) {
       HasWinCFI = true;
       // alloc_l can hold at most 256MB, so assume that NumBytes doesn't
@@ -1731,6 +1739,23 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
           .setMIFlag(MachineInstr::FrameSetup);
     }
     NumBytes = 0;
+
+    if (NeedsRealignment) {
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), AArch64::X15)
+          .addReg(AArch64::SP)
+          .addImm(RealignmentPadding)
+          .addImm(0);
+
+      uint64_t AndMask = ~(MFI.getMaxAlign().value() - 1);
+      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ANDXri), AArch64::SP)
+          .addReg(AArch64::X15, RegState::Kill)
+          .addImm(AArch64_AM::encodeLogicalImmediate(AndMask, 64));
+      AFI->setStackRealigned(true);
+
+      // No need for SEH instructions here; if we're realigning the stack,
+      // we've set a frame pointer and already finished the SEH prologue.
+      assert(!NeedsWinCFI);
+    }
   }
 
   StackOffset AllocateBefore = SVEStackSize, AllocateAfter = {};
@@ -1769,9 +1794,6 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
 
   // Allocate space for the rest of the frame.
   if (NumBytes) {
-    // Alignment is required for the parent frame, not the funclet
-    const bool NeedsRealignment =
-        !IsFunclet && RegInfo->hasStackRealignment(MF);
     unsigned scratchSPReg = AArch64::SP;
 
     if (NeedsRealignment) {
