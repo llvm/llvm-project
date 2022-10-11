@@ -34,6 +34,7 @@ class IndexBinaryOp<string mnemonic, list<Trait> traits = []>
   let arguments = (ins Index:$lhs, Index:$rhs);
   let results = (outs Index:$result);
   let assemblyFormat = "$lhs `,` $rhs attr-dict";
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -378,6 +379,7 @@ def Index_CmpOp : IndexOp<"cmp"> {
   let arguments = (ins IndexCmpPredicateAttr:$pred, Index:$lhs, Index:$rhs);
   let results = (outs I1:$result);
   let assemblyFormat = "`` $pred `(` $lhs `,` $rhs `)` attr-dict";
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -422,6 +424,7 @@ def Index_ConstantOp : IndexOp<"constant", [ConstantLike]> {
   let arguments = (ins IndexAttr:$value);
   let results = (outs Index:$result);
   let assemblyFormat = "attr-dict $value";
+  let hasFolder = 1;
 
   let builders = [OpBuilder<(ins "int64_t":$value)>];
 }
@@ -449,6 +452,7 @@ def Index_BoolConstantOp : IndexOp<"bool.constant", [ConstantLike]> {
   let arguments = (ins BoolAttr:$value);
   let results = (outs I1:$result);
   let assemblyFormat = "attr-dict $value";
+  let hasFolder = 1;
 }
 
 #endif // INDEX_OPS
