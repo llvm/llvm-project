@@ -144,7 +144,7 @@ func.func @permute_generic(%A: memref<?x?xf32, strided<[?, 1], offset: ?>>,
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     transform.structured.interchange %0 { iterator_interchange = [1, 2, 0]}

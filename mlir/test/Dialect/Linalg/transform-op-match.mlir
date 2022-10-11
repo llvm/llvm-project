@@ -11,7 +11,7 @@ func.func @bar() {
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %match_name = transform.structured.match ops{["arith.constant"]} in %arg1
     transform.test_print_remark_at_operand %match_name, "matched op name"
@@ -34,7 +34,7 @@ func.func @by_type() {
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %match_name = transform.structured.match
       ops{["arith.constant"]} filter_result_type = f32 in %arg1
@@ -63,7 +63,7 @@ func.func @match_complex_attribute(%arg0: tensor<12x128x32xf32>)
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %match_attr = transform.structured.match
         ops{["linalg.generic"]}

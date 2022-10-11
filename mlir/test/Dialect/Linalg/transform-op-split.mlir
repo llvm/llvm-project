@@ -2,7 +2,7 @@
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1:2 = transform.structured.split %0 after 42 { dimension = 0 }
@@ -76,7 +76,7 @@ func.func @one_d_static_overflow(%arg0: tensor<10xf32>, %arg1: tensor<10xf32>) -
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1 = transform.structured.match ops{["func.call"]} in %arg1
@@ -127,7 +127,7 @@ func.func @dynamic(%arg0: tensor<100xf32>, %arg1: tensor<100xf32>) -> tensor<100
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1:2 = transform.structured.split %0 after 4 { dimension = 0}
@@ -195,7 +195,7 @@ transform.sequence failures(propagate) {
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1 = transform.structured.match ops{["func.call"]} in %arg1
@@ -224,7 +224,7 @@ func.func @dynamic(%arg0: tensor<100xf32>, %arg1: tensor<100xf32>) -> tensor<100
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     %1 = transform.structured.match ops{["func.call"]} in %arg1
@@ -258,7 +258,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %2 with "transform.dialect"
   }
 
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["func.return"]} in %arg1
     // expected-error @below {{only applies to structured ops}}
@@ -282,7 +282,7 @@ transform.with_pdl_patterns {
     pdl.rewrite %2 with "transform.dialect"
   }
 
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
     // expected-error @below {{dimension 1 does not exist in target op}}

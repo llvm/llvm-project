@@ -42,6 +42,17 @@ void transform::detail::checkImplementsTransformTypeInterface(
 }
 #endif // NDEBUG
 
+namespace {
+struct PDLOperationTypeTransformTypeInterfaceImpl
+    : public transform::TransformTypeInterface::ExternalModel<
+          PDLOperationTypeTransformTypeInterfaceImpl, pdl::OperationType> {
+  DiagnosedSilenceableFailure
+  checkPayload(Type type, Location loc, ArrayRef<Operation *> payload) const {
+    return DiagnosedSilenceableFailure::success();
+  }
+};
+} // namespace
+
 void transform::TransformDialect::initialize() {
   // Using the checked versions to enable the same assertions as for the ops
   // from extensions.
@@ -53,6 +64,9 @@ void transform::TransformDialect::initialize() {
 #define GET_TYPEDEF_LIST
 #include "mlir/Dialect/Transform/IR/TransformTypes.cpp.inc"
       >();
+
+  pdl::OperationType::attachInterface<
+      PDLOperationTypeTransformTypeInterfaceImpl>(*getContext());
 }
 
 void transform::TransformDialect::mergeInPDLMatchHooks(

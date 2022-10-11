@@ -2,7 +2,7 @@
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb0(%arg1: !pdl.operation):
       %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
       %1, %loops:3 = transform.structured.tile %0 [4, 4, 4]
@@ -41,7 +41,7 @@ func.func @tile_linalg_matmul(
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
     ^bb0(%arg1: !pdl.operation):
       %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
       %1 = transform.structured.match ops{["func.call"]} in %arg1

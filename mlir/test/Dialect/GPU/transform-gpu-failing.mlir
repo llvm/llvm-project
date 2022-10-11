@@ -46,7 +46,7 @@ func.func @map_nested_foreach_to_threads_excessive_threads(%x: memref<2 x 32 x f
 }
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
     // expected-error @below {{Trying to launch a GPU kernel with gridDim = (1, 1, 1) blockDim = (1200, 9, 1). It is larger than the limits.}}
@@ -90,7 +90,7 @@ func.func @map_nested_foreach_to_threads_fewer_threads(%x: memref<2 x 32 x f32>,
 }
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
     // expected-error @below {{The requested GPU threads are fewer than the number of loop trip counts. Try to tile scf.foreach_thread before mapping or set small blockDim.}}
@@ -119,7 +119,7 @@ func.func @map_nested_foreach_to_threads_dynamic_trip_count(%x: memref<2 x 32 x 
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
     // expected-error @below {{unsupported dynamic blockdim size}}
@@ -147,7 +147,7 @@ func.func @map_nested_foreach_to_threads_4d_loop(%x: memref<2x32x32x32xf32>, %y:
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0
     // expected-error @below {{scf.foreach_thread with rank > 3 does not lower to gpu.thread_id}}
@@ -170,7 +170,7 @@ func.func @map_nested_foreach_to_threads_not_buffer(%x: tensor<32x32xf32>, %y: t
 
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
+  transform.sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg0
     %foreach, %tiled = transform.structured.tile_to_foreach_thread_op %matmul num_threads [10, 20, 30]
