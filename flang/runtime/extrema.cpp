@@ -214,11 +214,13 @@ void RTNAME(MaxlocInteger8)(Descriptor &result, const Descriptor &x, int kind,
   TotalNumericMaxOrMinLoc<TypeCategory::Integer, 8, true>(
       "MAXLOC", result, x, kind, source, line, mask, back);
 }
+#ifdef __SIZEOF_INT128__
 void RTNAME(MaxlocInteger16)(Descriptor &result, const Descriptor &x, int kind,
     const char *source, int line, const Descriptor *mask, bool back) {
   TotalNumericMaxOrMinLoc<TypeCategory::Integer, 16, true>(
       "MAXLOC", result, x, kind, source, line, mask, back);
 }
+#endif
 void RTNAME(MaxlocReal4)(Descriptor &result, const Descriptor &x, int kind,
     const char *source, int line, const Descriptor *mask, bool back) {
   TotalNumericMaxOrMinLoc<TypeCategory::Real, 4, true>(
@@ -268,11 +270,13 @@ void RTNAME(MinlocInteger8)(Descriptor &result, const Descriptor &x, int kind,
   TotalNumericMaxOrMinLoc<TypeCategory::Integer, 8, false>(
       "MINLOC", result, x, kind, source, line, mask, back);
 }
+#ifdef __SIZEOF_INT128__
 void RTNAME(MinlocInteger16)(Descriptor &result, const Descriptor &x, int kind,
     const char *source, int line, const Descriptor *mask, bool back) {
   TotalNumericMaxOrMinLoc<TypeCategory::Integer, 16, false>(
       "MINLOC", result, x, kind, source, line, mask, back);
 }
+#endif
 void RTNAME(MinlocReal4)(Descriptor &result, const Descriptor &x, int kind,
     const char *source, int line, const Descriptor *mask, bool back) {
   TotalNumericMaxOrMinLoc<TypeCategory::Real, 4, false>(
