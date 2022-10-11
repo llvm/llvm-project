@@ -29,37 +29,6 @@ define i128 @i64_zext_sext_i128(i64 %a, i64 %b) {
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    mulq %rsi
 ; CHECK-NEXT:    sarq $63, %rsi
-; CHECK-NEXT:    andq %rdi, %rsi
-; CHECK-NEXT:    subq %rsi, %rdx
-; CHECK-NEXT:    retq
-  %aa = zext i64 %a to i128
-  %bb = sext i64 %b to i128
-  %cc = mul i128 %aa, %bb
-  ret i128 %cc
-}
-
-define i128 @i64_sext_zext_i128(i64 %a, i64 %b) {
-; CHECK-LABEL: i64_sext_zext_i128:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    movq %rdi, %rcx
-; CHECK-NEXT:    sarq $63, %rcx
-; CHECK-NEXT:    mulq %rsi
-; CHECK-NEXT:    andq %rsi, %rcx
-; CHECK-NEXT:    subq %rcx, %rdx
-; CHECK-NEXT:    retq
-  %aa = sext i64 %a to i128
-  %bb = zext i64 %b to i128
-  %cc = mul i128 %aa, %bb
-  ret i128 %cc
-}
-
-define i128 @i64_zext_sext_i128_minsize(i64 %a, i64 %b) minsize {
-; CHECK-LABEL: i64_zext_sext_i128_minsize:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    mulq %rsi
-; CHECK-NEXT:    sarq $63, %rsi
 ; CHECK-NEXT:    imulq %rdi, %rsi
 ; CHECK-NEXT:    addq %rsi, %rdx
 ; CHECK-NEXT:    retq
@@ -69,8 +38,8 @@ define i128 @i64_zext_sext_i128_minsize(i64 %a, i64 %b) minsize {
   ret i128 %cc
 }
 
-define i128 @i64_sext_zext_i128_minsize(i64 %a, i64 %b) minsize {
-; CHECK-LABEL: i64_sext_zext_i128_minsize:
+define i128 @i64_sext_zext_i128(i64 %a, i64 %b) {
+; CHECK-LABEL: i64_sext_zext_i128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movq %rdi, %rcx

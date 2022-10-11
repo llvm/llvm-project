@@ -39,24 +39,21 @@ define i128 @__muloti4(i128 %0, i128 %1, i32* nocapture nonnull writeonly align 
 ; AARCH:       // %bb.0: // %Entry
 ; AARCH-NEXT:    asr x9, x1, #63
 ; AARCH-NEXT:    asr x10, x3, #63
-; AARCH-NEXT:    and x11, x9, x2
-; AARCH-NEXT:    and x14, x10, x1
-; AARCH-NEXT:    umulh x12, x2, x9
-; AARCH-NEXT:    and x9, x9, x3
-; AARCH-NEXT:    umulh x13, x10, x0
-; AARCH-NEXT:    and x10, x10, x0
-; AARCH-NEXT:    sub x12, x12, x11
-; AARCH-NEXT:    neg x11, x11
-; AARCH-NEXT:    sub x13, x13, x14
-; AARCH-NEXT:    sub x9, x12, x9
-; AARCH-NEXT:    sub x12, x13, x10
-; AARCH-NEXT:    neg x10, x10
 ; AARCH-NEXT:    umulh x14, x0, x2
+; AARCH-NEXT:    mov x8, x1
+; AARCH-NEXT:    mul x11, x2, x9
+; AARCH-NEXT:    str wzr, [x4]
+; AARCH-NEXT:    umulh x12, x10, x0
+; AARCH-NEXT:    umulh x13, x2, x9
+; AARCH-NEXT:    madd x12, x10, x1, x12
+; AARCH-NEXT:    add x13, x13, x11
+; AARCH-NEXT:    mul x10, x10, x0
+; AARCH-NEXT:    madd x9, x3, x9, x13
+; AARCH-NEXT:    add x12, x12, x10
 ; AARCH-NEXT:    adds x10, x10, x11
 ; AARCH-NEXT:    mul x11, x1, x2
 ; AARCH-NEXT:    adc x9, x12, x9
 ; AARCH-NEXT:    umulh x13, x1, x2
-; AARCH-NEXT:    mov x8, x1
 ; AARCH-NEXT:    mul x12, x0, x3
 ; AARCH-NEXT:    adds x11, x11, x14
 ; AARCH-NEXT:    umulh x14, x0, x3
@@ -76,7 +73,6 @@ define i128 @__muloti4(i128 %0, i128 %1, i32* nocapture nonnull writeonly align 
 ; AARCH-NEXT:    eor x9, x9, x11
 ; AARCH-NEXT:    eor x10, x10, x11
 ; AARCH-NEXT:    orr x9, x10, x9
-; AARCH-NEXT:    str wzr, [x4]
 ; AARCH-NEXT:    cmp x9, #0
 ; AARCH-NEXT:    cset w9, ne
 ; AARCH-NEXT:    tbz x8, #63, .LBB1_2
