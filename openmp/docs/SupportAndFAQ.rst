@@ -329,3 +329,67 @@ can fail. If this warning is triggered it means that the kernel may run out of
 stack memory during execution and crash. The environment variable
 ``LIBOMPTARGET_STACK_SIZE`` can be used to increase the stack size if this
 occurs.
+
+Q: Can OpenMP offloading compile for multiple architectures?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Since LLVM version 15.0, OpenMP offloading supports offloading to multiple 
+architectures at once. This allows for executables to be run on different 
+targets, such as offloading to AMD and NVIDIA GPUs simultaneously, as well as 
+multiple sub-architectures for the same target. Additionally, static libraries 
+will only extract archive members if an architecture is used, allowing users to 
+create generic libraries.
+
+The architecture can either be specified manually using ``--offload-arch=``. If 
+``--offload-arch=`` is present no ``-fopenmp-targets=`` flag is present then the 
+targets will be inferred from the architectures. Conversely, if 
+``--fopenmp-targets=`` is present with no ``--offload-arch``  then the target 
+architecture will be set to a default value, usually the architecture supported 
+by the system LLVM was built on.
+
+For example, an executable can be built that runs on AMDGPU and NVIDIA hardware 
+given that the necessary build tools are installed for both.
+
+.. code-block:: shell
+
+   clang example.c -fopenmp --offload-arch=gfx90a --offload-arch=sm_80
+
+If just given the architectures we should be able to infer the triples, 
+otherwise we can specify them manually.
+
+.. code-block:: shell
+
+   clang example.c -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa,nvptx64-nvidia-cuda \
+      -Xopenmp-target=amdgcn-amd-amdhsa --offload-arch=gfx90a \
+      -Xopenmp-target=nvptx64-nvidia-cuda --offload-arch=sm_80
+
+When linking against a static library that contains device code for multiple 
+architectures, only the images used by the executable will be extracted.
+
+.. code-block:: shell
+
+   clang example.c -fopenmp --offload-arch=gfx90a,gfx90a,sm_70,sm_80 -c
+   llvm-ar rcs libexample.a example.o
+   clang app.c -fopenmp --offload-arch=gfx90a -o app
+
+The supported device images can be viewed using the ``--offloading`` option with 
+``llvm-objdump``.
+
+.. code-block:: shell
+
+   clang example.c -fopenmp --offload-arch=gfx90a --offload-arch=sm_80 -o example
+   llvm-objdump --offloading example
+
+   a.out:  file format elf64-x86-64
+
+   OFFLOADING IMAGE [0]:
+   kind            elf
+   arch            gfx90a
+   triple          amdgcn-amd-amdhsa
+   producer        openmp
+
+   OFFLOADING IMAGE [1]:
+   kind            elf
+   arch            sm_80
+   triple          nvptx64-nvidia-cuda
+   producer        openmp
