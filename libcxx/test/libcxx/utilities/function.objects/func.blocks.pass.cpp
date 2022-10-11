@@ -14,8 +14,7 @@
 // on Darwin out-of-the-box.
 // REQUIRES: has-fblocks && darwin
 
-// RUN: %{build} -fblocks
-// RUN: %{run}
+// ADDITIONAL_COMPILE_FLAGS: -fblocks
 
 #include <functional>
 #include <cstdlib>
