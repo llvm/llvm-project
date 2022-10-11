@@ -76,7 +76,7 @@ transform.with_pdl_patterns {
   sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb0(%arg1: !pdl.operation):
     %0 = pdl_match @some in %arg1 : (!pdl.operation) -> !pdl.operation
-    test_print_remark_at_operand %0, "matched"
+    test_print_remark_at_operand %0, "matched" : !pdl.operation
   }
 
   pdl.pattern @some : benefit(1) {
@@ -124,7 +124,7 @@ transform.with_pdl_patterns {
     %f = pdl_match @const in %arg1 : (!pdl.operation) -> !pdl.operation
     // CHECK: %{{.+}} = get_closest_isolated_parent %{{.+}}
     %m = get_closest_isolated_parent %f : (!pdl.operation) -> !pdl.operation
-    test_print_remark_at_operand %m, "parent function"
+    test_print_remark_at_operand %m, "parent function" : !pdl.operation
   }
 }
 
@@ -227,7 +227,7 @@ transform.with_pdl_patterns {
     }, {
     ^bb2(%arg2: !pdl.operation):
       %2 = transform.pdl_match @match_call in %arg2 : (!pdl.operation) -> !pdl.operation
-      transform.test_print_remark_at_operand %2, "still here"
+      transform.test_print_remark_at_operand %2, "still here" : !pdl.operation
       // This alternative succeeds.
     }, {
     ^bb2(%arg2: !pdl.operation):
@@ -370,7 +370,7 @@ transform.with_pdl_patterns {
   sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     %0 = transform.pdl_match @match_const in %arg1 : (!pdl.operation) -> !pdl.operation
-    %1 = transform.loop.get_parent_for %0
+    %1 = transform.loop.get_parent_for %0 : (!pdl.operation) -> !pdl.operation
     // expected-error @below {{only isolated-from-above ops can be alternative scopes}}
     alternatives %1 : !pdl.operation {
     ^bb2(%arg2: !pdl.operation):
@@ -541,7 +541,7 @@ transform.with_pdl_patterns {
     %0 = pdl_match @addi in %arg1 : (!pdl.operation) -> !pdl.operation
     %1 = pdl_match @subi in %arg1 : (!pdl.operation) -> !pdl.operation
     %2 = merge_handles %0, %1 : !pdl.operation
-    test_print_remark_at_operand %2, "matched"
+    test_print_remark_at_operand %2, "matched" : !pdl.operation
   }
 }
 
@@ -675,7 +675,7 @@ transform.with_pdl_patterns {
     ^bb2(%arg2: !pdl.operation):
       // expected-remark @below {{1}}
       transform.test_print_number_of_associated_payload_ir_ops %arg2
-      transform.test_print_remark_at_operand %arg2, "transform applied"
+      transform.test_print_remark_at_operand %arg2, "transform applied" : !pdl.operation
     }
   }
 }
@@ -725,7 +725,7 @@ transform.with_pdl_patterns {
 
     // expected-remark @below {{3}}
     transform.test_print_number_of_associated_payload_ir_ops %results
-    transform.test_print_remark_at_operand %results, "transform applied"
+    transform.test_print_remark_at_operand %results, "transform applied" : !pdl.operation
   }
 }
 
@@ -742,7 +742,7 @@ transform.sequence failures(propagate) {
 ^bb1(%arg1: !pdl.operation):
   %addi = transform.structured.match ops{["arith.addi"]} in %arg1
   %muli = get_producer_of_operand %addi[0] : (!pdl.operation) -> !pdl.operation
-  transform.test_print_remark_at_operand %muli, "found muli"
+  transform.test_print_remark_at_operand %muli, "found muli" : !pdl.operation
 }
 
 // -----

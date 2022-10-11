@@ -12,9 +12,11 @@
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
-include "mlir/Dialect/PDL/IR/PDLTypes.td"
+include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
+
+def Transform_ScfForOp : Transform_ConcreteOpType<"scf.for">;
 
 def GetParentForOp : Op<Transform_Dialect, "loop.get_parent_for",
     [NavigationTransformOpTrait, MemoryEffectsOpInterface,
@@ -30,12 +32,13 @@ def GetParentForOp : Op<Transform_Dialect, "loop.get_parent_for",
   }];
 
   let arguments =
-    (ins PDL_Operation:$target,
+    (ins TransformTypeInterface:$target,
          DefaultValuedAttr<ConfinedAttr<I64Attr, [IntPositive]>,
                            "1">:$num_loops);
-  let results = (outs PDL_Operation:$parent);
+  let results = (outs TransformTypeInterface:$parent);
 
-  let assemblyFormat = "$target attr-dict";
+  let assemblyFormat =
+    "$target attr-dict `:` functional-type(operands, results)";
 }
 
 def LoopOutlineOp : Op<Transform_Dialect, "loop.outline",
@@ -55,11 +58,15 @@ def LoopOutlineOp : Op<Transform_Dialect, "loop.outline",
      order as the operand handle.
   }];
 
-  let arguments = (ins PDL_Operation:$target,
+  // Note that despite the name of the transform operation and related utility
+  // functions, the actual implementation does not require the operation to be
+  // a loop.
+  let arguments = (ins TransformTypeInterface:$target,
                    StrAttr:$func_name);
-  let results = (outs PDL_Operation:$transformed);
+  let results = (outs TransformTypeInterface:$transformed);
 
-  let assemblyFormat = "$target attr-dict";
+  let assemblyFormat =
+    "$target attr-dict `:` functional-type(operands, results)";
 }
 
 def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
@@ -90,12 +97,13 @@ def LoopPeelOp : Op<Transform_Dialect, "loop.peel",
   }];
 
   let arguments =
-      (ins PDL_Operation:$target,
+      (ins Transform_ScfForOp:$target,
            DefaultValuedAttr<BoolAttr, "false">:$fail_if_already_divisible);
   // TODO: Return both the peeled loop and the remainder loop.
-  let results = (outs PDL_Operation:$transformed);
+  let results = (outs TransformTypeInterface:$transformed);
 
-  let assemblyFormat = "$target attr-dict";
+  let assemblyFormat =
+    "$target attr-dict `:` functional-type(operands, results)";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -131,12 +139,13 @@ def LoopPipelineOp : Op<Transform_Dialect, "loop.pipeline",
     pipelined loops, which can be empty.
   }];
 
-  let arguments = (ins PDL_Operation:$target,
+  let arguments = (ins Transform_ScfForOp:$target,
                    DefaultValuedAttr<I64Attr, "1">:$iteration_interval,
                    DefaultValuedAttr<I64Attr, "10">:$read_latency);
-  let results = (outs PDL_Operation:$transformed);
+  let results = (outs TransformTypeInterface:$transformed);
 
-  let assemblyFormat = "$target attr-dict";
+  let assemblyFormat =
+    "$target attr-dict `:` functional-type(operands, results)";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
@@ -165,10 +174,10 @@ def LoopUnrollOp : Op<Transform_Dialect, "loop.unroll",
     removed after a full unrolling.
   }];
 
-  let arguments = (ins PDL_Operation:$target,
+  let arguments = (ins Transform_ScfForOp:$target,
                        ConfinedAttr<I64Attr, [IntPositive]>:$factor);
 
-  let assemblyFormat = "$target attr-dict";
+  let assemblyFormat = "$target attr-dict `:` type($target)";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
