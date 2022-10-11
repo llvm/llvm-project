@@ -17,6 +17,7 @@
 #include "lldb/DataFormatters/TypeFormat.h"
 #include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/lldb-enumerations.h"
@@ -73,12 +74,21 @@ public:
     }
   };
 
-  FormattersMatchCandidate(ConstString name, Flags flags)
-      : m_type_name(name), m_flags(flags) {}
+  FormattersMatchCandidate(ConstString name,
+                           ScriptInterpreter *script_interpreter, TypeImpl type,
+                           Flags flags)
+      : m_type_name(name), m_script_interpreter(script_interpreter),
+        m_type(type), m_flags(flags) {}
 
   ~FormattersMatchCandidate() = default;
 
   ConstString GetTypeName() const { return m_type_name; }
+
+  TypeImpl GetType() const { return m_type; }
+
+  ScriptInterpreter *GetScriptInterpreter() const {
+    return m_script_interpreter;
+  }
 
   bool DidStripPointer() const { return m_flags.stripped_pointer; }
 
@@ -101,6 +111,10 @@ public:
 
 private:
   ConstString m_type_name;
+  // If a formatter provides a matching callback function, we need the script
+  // interpreter and the type object (as an argument to the callback).
+  ScriptInterpreter *m_script_interpreter;
+  TypeImpl m_type;
   Flags m_flags;
 };
 

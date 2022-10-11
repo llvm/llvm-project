@@ -835,8 +835,9 @@ enum TemplateArgumentKind {
 enum FormatterMatchType {
   eFormatterMatchExact,
   eFormatterMatchRegex,
+  eFormatterMatchCallback,
 
-  eLastFormatterMatchType = eFormatterMatchRegex,
+  eLastFormatterMatchType = eFormatterMatchCallback,
 };
 
 /// Options that can be set for a formatter to alter its behavior. Not
