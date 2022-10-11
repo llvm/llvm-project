@@ -10,9 +10,9 @@ define void @test(double %s) {
 entry:
   %0 = insertelement <2 x double> undef, double %s, i32 0
   %1 = shufflevector <2 x double> %0, <2 x double> undef, <2 x i32> zeroinitializer
-  %2 = load <2 x double>, <2 x double>* @a, align 16
+  %2 = load <2 x double>, ptr @a, align 16
   %3 = fadd <2 x double> %0, %2
-  store <2 x double> %3, <2 x double>* @b, align 16
+  store <2 x double> %3, ptr @b, align 16
   ret void
 }
 

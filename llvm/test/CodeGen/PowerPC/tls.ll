@@ -18,7 +18,7 @@ entry:
 ;OPT1:          addis [[REG1:[1-9][0-9]*]], 13, a@tprel@ha
 ;OPT1-NEXT:     li [[REG3:[0-9]+]], 42
 ;OPT1:     stw [[REG3]], a@tprel@l([[REG1]])
-  store i32 42, i32* @a, align 4
+  store i32 42, ptr @a, align 4
   ret i32 0
 }
 
@@ -30,8 +30,8 @@ entry:
 define dso_local signext i32 @main2() nounwind {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
-  %0 = load i32, i32* @a2, align 4
+  store i32 0, ptr %retval
+  %0 = load i32, ptr @a2, align 4
   ret i32 %0
 }
 

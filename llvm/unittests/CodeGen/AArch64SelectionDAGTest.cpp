@@ -325,7 +325,7 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_SPLAT_VECTOR) {
   EXPECT_TRUE(DAG->isSplatValue(Op, /*AllowUndefs=*/false));
 
   APInt UndefElts;
-  APInt DemandedElts;
+  APInt DemandedElts(1,1);
   EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
 }
 
@@ -345,7 +345,7 @@ TEST_F(AArch64SelectionDAGTest, isSplatValue_Scalable_ADD_of_SPLAT_VECTOR) {
   EXPECT_TRUE(DAG->isSplatValue(Op, /*AllowUndefs=*/false));
 
   APInt UndefElts;
-  APInt DemandedElts;
+  APInt DemandedElts(1, 1);
   EXPECT_TRUE(DAG->isSplatValue(Op, DemandedElts, UndefElts));
 }
 

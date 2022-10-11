@@ -3,15 +3,15 @@
 ; RUN:   -fast-isel -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN:   FileCheck %s
 
-%struct._IO_FILE = type { i32, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, %struct._IO_marker*, %struct._IO_FILE*, i32, i32, i64, i16, i8, [1 x i8], i8*, i64, i8*, i8*, i8*, i8*, i64, i32, [20 x i8] }
-%struct._IO_marker = type { %struct._IO_marker*, %struct._IO_FILE*, i32 }
+%struct._IO_FILE = type { i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, i64, i16, i8, [1 x i8], ptr, i64, ptr, ptr, ptr, ptr, i64, i32, [20 x i8] }
+%struct._IO_marker = type { ptr, ptr, i32 }
 
 @.str = private unnamed_addr constant [25 x i8] c"Breaking the TOC for FP\0A\00", align 1
 @.str.1 = private unnamed_addr constant [25 x i8] c"Breaking the TOC for GV\0A\00", align 1
-@stdout = external global %struct._IO_FILE*, align 8
+@stdout = external global ptr, align 8
 
 ; Function Attrs: noinline nounwind optnone
-define internal void @loadFP(double* %d) #0 {
+define internal void @loadFP(ptr %d) #0 {
 ; CHECK-LABEL: loadFP:
 ; CHECK:         .localentry loadFP, 1
 ; CHECK-NEXT:  # %bb.0: # %entry
@@ -31,15 +31,15 @@ define internal void @loadFP(double* %d) #0 {
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 entry:
-  %d.addr = alloca double*, align 8
-  store double* %d, double** %d.addr, align 8
-  %call = call signext i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @.str, i64 0, i64 0))
-  %0 = load double*, double** %d.addr, align 8
-  store double 4.990000e+00, double* %0, align 8
+  %d.addr = alloca ptr, align 8
+  store ptr %d, ptr %d.addr, align 8
+  %call = call signext i32 (ptr, ...) @printf(ptr @.str)
+  %0 = load ptr, ptr %d.addr, align 8
+  store double 4.990000e+00, ptr %0, align 8
   ret void
 }
 
-declare signext i32 @printf(i8*, ...)
+declare signext i32 @printf(ptr, ...)
 
 ; Function Attrs: noinline nounwind optnone
 define internal void @loadGV() #0 {
@@ -60,12 +60,12 @@ define internal void @loadGV() #0 {
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 entry:
-  %call = call signext i32 (i8*, ...) @printf(i8* getelementptr inbounds ([25 x i8], [25 x i8]* @.str.1, i64 0, i64 0))
-  %0 = load %struct._IO_FILE*, %struct._IO_FILE** @stdout, align 8
-  %call1 = call signext i32 @_IO_putc(i32 signext 97, %struct._IO_FILE* %0)
+  %call = call signext i32 (ptr, ...) @printf(ptr @.str.1)
+  %0 = load ptr, ptr @stdout, align 8
+  %call1 = call signext i32 @_IO_putc(i32 signext 97, ptr %0)
   ret void
 }
 
-declare signext i32 @_IO_putc(i32 signext, %struct._IO_FILE*)
+declare signext i32 @_IO_putc(i32 signext, ptr)
 
 attributes #0 = { noinline nounwind optnone }

@@ -58,7 +58,7 @@ entry:
   ret i64 %0
 }
 
-define <4 x i32> @test4(i32* nocapture readonly %in) {
+define <4 x i32> @test4(ptr nocapture readonly %in) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvwsx v2, 0, r3
@@ -70,13 +70,13 @@ define <4 x i32> @test4(i32* nocapture readonly %in) {
 ; CHECK-BE-NEXT:    blr
 
 entry:
-  %0 = load i32, i32* %in, align 4
+  %0 = load i32, ptr %in, align 4
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %0, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %splat.splat
 }
 
-define <4 x float> @test5(float* nocapture readonly %in) {
+define <4 x float> @test5(ptr nocapture readonly %in) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxvwsx v2, 0, r3
@@ -88,7 +88,7 @@ define <4 x float> @test5(float* nocapture readonly %in) {
 ; CHECK-BE-NEXT:    blr
 
 entry:
-  %0 = load float, float* %in, align 4
+  %0 = load float, ptr %in, align 4
   %splat.splatinsert = insertelement <4 x float> undef, float %0, i32 0
   %splat.splat = shufflevector <4 x float> %splat.splatinsert, <4 x float> undef, <4 x i32> zeroinitializer
   ret <4 x float> %splat.splat
@@ -110,7 +110,7 @@ define <4 x i32> @test6() {
 ; CHECK-BE-NEXT:    blr
 
 entry:
-  %0 = load i32, i32* @Globi, align 4
+  %0 = load i32, ptr @Globi, align 4
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %0, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   ret <4 x i32> %splat.splat
@@ -132,7 +132,7 @@ define <4 x float> @test7() {
 ; CHECK-BE-NEXT:    blr
 
 entry:
-  %0 = load float, float* @Globf, align 4
+  %0 = load float, ptr @Globf, align 4
   %splat.splatinsert = insertelement <4 x float> undef, float %0, i32 0
   %splat.splat = shufflevector <4 x float> %splat.splatinsert, <4 x float> undef, <4 x i32> zeroinitializer
   ret <4 x float> %splat.splat
@@ -243,7 +243,7 @@ entry:
   ret <16 x i8> <i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200, i8 200>
 }
 
-define <4 x i32> @test14(<4 x i32> %a, i32* nocapture readonly %b) {
+define <4 x i32> @test14(<4 x i32> %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: test14:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz r3, 0(r5)
@@ -263,10 +263,10 @@ define <4 x i32> @test14(<4 x i32> %a, i32* nocapture readonly %b) {
 ; CHECK-BE-NEXT:    blr
 
 entry:
-  %0 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %b, align 4
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %0, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
   %1 = add i32 %0, 5
-  store i32 %1, i32* %b, align 4
+  store i32 %1, ptr %b, align 4
   ret <4 x i32> %splat.splat
 }

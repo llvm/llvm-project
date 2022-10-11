@@ -8,9 +8,9 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc-unknown-aix \
 ; RUN:   -mcpu=pwr7 | FileCheck %s -check-prefix=CHECK-32B-BE
 
-declare i8* @llvm.returnaddress(i32) nounwind readnone
+declare ptr @llvm.returnaddress(i32) nounwind readnone
 
-define i8* @test0() nounwind readnone {
+define ptr @test0() nounwind readnone {
 ; CHECK-64B-LE-LABEL: test0:
 ; CHECK-64B-LE:       # %bb.0: # %entry
 ; CHECK-64B-LE-NEXT:    mflr 0
@@ -44,11 +44,11 @@ define i8* @test0() nounwind readnone {
 ; CHECK-32B-BE-NEXT:    mtlr 0
 ; CHECK-32B-BE-NEXT:    blr
 entry:
-  %0 = tail call i8* @llvm.returnaddress(i32 0);
-  ret i8* %0
+  %0 = tail call ptr @llvm.returnaddress(i32 0);
+  ret ptr %0
 }
 
-define i8* @test1() nounwind readnone {
+define ptr @test1() nounwind readnone {
 ; CHECK-64B-LE-LABEL: test1:
 ; CHECK-64B-LE:       # %bb.0: # %entry
 ; CHECK-64B-LE-NEXT:    mflr 0
@@ -88,11 +88,11 @@ define i8* @test1() nounwind readnone {
 ; CHECK-32B-BE-NEXT:    mtlr 0
 ; CHECK-32B-BE-NEXT:    blr
 entry:
-  %0 = tail call i8* @llvm.returnaddress(i32 1);
-  ret i8* %0
+  %0 = tail call ptr @llvm.returnaddress(i32 1);
+  ret ptr %0
 }
 
-define i8* @test2() nounwind readnone {
+define ptr @test2() nounwind readnone {
 ; CHECK-64B-LE-LABEL: test2:
 ; CHECK-64B-LE:       # %bb.0: # %entry
 ; CHECK-64B-LE-NEXT:    mflr 0
@@ -135,6 +135,6 @@ define i8* @test2() nounwind readnone {
 ; CHECK-32B-BE-NEXT:    mtlr 0
 ; CHECK-32B-BE-NEXT:    blr
 entry:
-  %0 = tail call i8* @llvm.returnaddress(i32 2);
-  ret i8* %0
+  %0 = tail call ptr @llvm.returnaddress(i32 2);
+  ret ptr %0
 }

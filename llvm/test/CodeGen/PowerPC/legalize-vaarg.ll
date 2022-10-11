@@ -35,7 +35,7 @@ define <8 x i32> @test_large_vec_vaarg(i32 %n, ...) {
 ; LE-NEXT:    lxvd2x 1, 0, 4
 ; LE-NEXT:    xxswapd 35, 1
 ; LE-NEXT:    blr
-  %args = alloca i8*, align 4
-  %x = va_arg i8** %args, <8 x i32>
+  %args = alloca ptr, align 4
+  %x = va_arg ptr %args, <8 x i32>
   ret <8 x i32> %x
 }

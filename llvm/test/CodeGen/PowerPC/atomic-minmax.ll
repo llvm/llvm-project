@@ -3,7 +3,7 @@
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
-define void @a32min(i32* nocapture dereferenceable(4) %minimum, i32 %val) #0 {
+define void @a32min(ptr nocapture dereferenceable(4) %minimum, i32 %val) #0 {
 ; CHECK-LABEL: a32min:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .LBB0_1: # %entry
@@ -18,12 +18,12 @@ define void @a32min(i32* nocapture dereferenceable(4) %minimum, i32 %val) #0 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw min i32* %minimum, i32 %val monotonic
+  %0 = atomicrmw min ptr %minimum, i32 %val monotonic
   ret void
 
 }
 
-define void @a32max(i32* nocapture dereferenceable(4) %minimum, i32 %val) #0 {
+define void @a32max(ptr nocapture dereferenceable(4) %minimum, i32 %val) #0 {
 ; CHECK-LABEL: a32max:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .LBB1_1: # %entry
@@ -38,12 +38,12 @@ define void @a32max(i32* nocapture dereferenceable(4) %minimum, i32 %val) #0 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw max i32* %minimum, i32 %val monotonic
+  %0 = atomicrmw max ptr %minimum, i32 %val monotonic
   ret void
 
 }
 
-define void @a32umin(i32* nocapture dereferenceable(4) %minimum, i32 %val) #0 {
+define void @a32umin(ptr nocapture dereferenceable(4) %minimum, i32 %val) #0 {
 ; CHECK-LABEL: a32umin:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .LBB2_1: # %entry
@@ -58,12 +58,12 @@ define void @a32umin(i32* nocapture dereferenceable(4) %minimum, i32 %val) #0 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw umin i32* %minimum, i32 %val monotonic
+  %0 = atomicrmw umin ptr %minimum, i32 %val monotonic
   ret void
 
 }
 
-define void @a32umax(i32* nocapture dereferenceable(4) %minimum, i32 %val) #0 {
+define void @a32umax(ptr nocapture dereferenceable(4) %minimum, i32 %val) #0 {
 ; CHECK-LABEL: a32umax:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .LBB3_1: # %entry
@@ -78,12 +78,12 @@ define void @a32umax(i32* nocapture dereferenceable(4) %minimum, i32 %val) #0 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw umax i32* %minimum, i32 %val monotonic
+  %0 = atomicrmw umax ptr %minimum, i32 %val monotonic
   ret void
 
 }
 
-define void @a16min(i16* nocapture dereferenceable(4) %minimum, i16 %val) #1 {
+define void @a16min(ptr nocapture dereferenceable(4) %minimum, i16 %val) #1 {
 ; CHECK-LABEL: a16min:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    extsh 4, 4
@@ -100,12 +100,12 @@ define void @a16min(i16* nocapture dereferenceable(4) %minimum, i16 %val) #1 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw min i16* %minimum, i16 %val monotonic
+  %0 = atomicrmw min ptr %minimum, i16 %val monotonic
   ret void
 
 }
 
-define void @a16max(i16* nocapture dereferenceable(4) %minimum, i16 %val) #1 {
+define void @a16max(ptr nocapture dereferenceable(4) %minimum, i16 %val) #1 {
 ; CHECK-LABEL: a16max:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    extsh 4, 4
@@ -122,12 +122,12 @@ define void @a16max(i16* nocapture dereferenceable(4) %minimum, i16 %val) #1 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw max i16* %minimum, i16 %val monotonic
+  %0 = atomicrmw max ptr %minimum, i16 %val monotonic
   ret void
 
 }
 
-define void @a16umin(i16* nocapture dereferenceable(4) %minimum, i16 %val) #1 {
+define void @a16umin(ptr nocapture dereferenceable(4) %minimum, i16 %val) #1 {
 ; CHECK-LABEL: a16umin:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .LBB6_1: # %entry
@@ -142,12 +142,12 @@ define void @a16umin(i16* nocapture dereferenceable(4) %minimum, i16 %val) #1 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw umin i16* %minimum, i16 %val monotonic
+  %0 = atomicrmw umin ptr %minimum, i16 %val monotonic
   ret void
 
 }
 
-define void @a16umax(i16* nocapture dereferenceable(4) %minimum, i16 %val) #1 {
+define void @a16umax(ptr nocapture dereferenceable(4) %minimum, i16 %val) #1 {
 ; CHECK-LABEL: a16umax:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .LBB7_1: # %entry
@@ -162,12 +162,12 @@ define void @a16umax(i16* nocapture dereferenceable(4) %minimum, i16 %val) #1 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw umax i16* %minimum, i16 %val monotonic
+  %0 = atomicrmw umax ptr %minimum, i16 %val monotonic
   ret void
 
 }
 
-define void @a8min(i8* nocapture dereferenceable(4) %minimum, i8 %val) #1 {
+define void @a8min(ptr nocapture dereferenceable(4) %minimum, i8 %val) #1 {
 ; CHECK-LABEL: a8min:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    extsb 4, 4
@@ -184,12 +184,12 @@ define void @a8min(i8* nocapture dereferenceable(4) %minimum, i8 %val) #1 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw min i8* %minimum, i8 %val monotonic
+  %0 = atomicrmw min ptr %minimum, i8 %val monotonic
   ret void
 
 }
 
-define void @a8max(i8* nocapture dereferenceable(4) %minimum, i8 %val) #1 {
+define void @a8max(ptr nocapture dereferenceable(4) %minimum, i8 %val) #1 {
 ; CHECK-LABEL: a8max:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    extsb 4, 4
@@ -206,12 +206,12 @@ define void @a8max(i8* nocapture dereferenceable(4) %minimum, i8 %val) #1 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw max i8* %minimum, i8 %val monotonic
+  %0 = atomicrmw max ptr %minimum, i8 %val monotonic
   ret void
 
 }
 
-define void @a8umin(i8* nocapture dereferenceable(4) %minimum, i8 %val) #1 {
+define void @a8umin(ptr nocapture dereferenceable(4) %minimum, i8 %val) #1 {
 ; CHECK-LABEL: a8umin:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .LBB10_1: # %entry
@@ -226,12 +226,12 @@ define void @a8umin(i8* nocapture dereferenceable(4) %minimum, i8 %val) #1 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw umin i8* %minimum, i8 %val monotonic
+  %0 = atomicrmw umin ptr %minimum, i8 %val monotonic
   ret void
 
 }
 
-define void @a8umax(i8* nocapture dereferenceable(4) %minimum, i8 %val) #1 {
+define void @a8umax(ptr nocapture dereferenceable(4) %minimum, i8 %val) #1 {
 ; CHECK-LABEL: a8umax:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .LBB11_1: # %entry
@@ -246,12 +246,12 @@ define void @a8umax(i8* nocapture dereferenceable(4) %minimum, i8 %val) #1 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw umax i8* %minimum, i8 %val monotonic
+  %0 = atomicrmw umax ptr %minimum, i8 %val monotonic
   ret void
 
 }
 
-define void @a64min(i64* nocapture dereferenceable(4) %minimum, i64 %val) #0 {
+define void @a64min(ptr nocapture dereferenceable(4) %minimum, i64 %val) #0 {
 ; CHECK-LABEL: a64min:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .LBB12_1: # %entry
@@ -266,12 +266,12 @@ define void @a64min(i64* nocapture dereferenceable(4) %minimum, i64 %val) #0 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw min i64* %minimum, i64 %val monotonic
+  %0 = atomicrmw min ptr %minimum, i64 %val monotonic
   ret void
 
 }
 
-define void @a64max(i64* nocapture dereferenceable(4) %minimum, i64 %val) #0 {
+define void @a64max(ptr nocapture dereferenceable(4) %minimum, i64 %val) #0 {
 ; CHECK-LABEL: a64max:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .LBB13_1: # %entry
@@ -286,12 +286,12 @@ define void @a64max(i64* nocapture dereferenceable(4) %minimum, i64 %val) #0 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw max i64* %minimum, i64 %val monotonic
+  %0 = atomicrmw max ptr %minimum, i64 %val monotonic
   ret void
 
 }
 
-define void @a64umin(i64* nocapture dereferenceable(4) %minimum, i64 %val) #0 {
+define void @a64umin(ptr nocapture dereferenceable(4) %minimum, i64 %val) #0 {
 ; CHECK-LABEL: a64umin:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .LBB14_1: # %entry
@@ -306,12 +306,12 @@ define void @a64umin(i64* nocapture dereferenceable(4) %minimum, i64 %val) #0 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw umin i64* %minimum, i64 %val monotonic
+  %0 = atomicrmw umin ptr %minimum, i64 %val monotonic
   ret void
 
 }
 
-define void @a64umax(i64* nocapture dereferenceable(4) %minimum, i64 %val) #0 {
+define void @a64umax(ptr nocapture dereferenceable(4) %minimum, i64 %val) #0 {
 ; CHECK-LABEL: a64umax:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:  .LBB15_1: # %entry
@@ -326,12 +326,12 @@ define void @a64umax(i64* nocapture dereferenceable(4) %minimum, i64 %val) #0 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw umax i64* %minimum, i64 %val monotonic
+  %0 = atomicrmw umax ptr %minimum, i64 %val monotonic
   ret void
 
 }
 
-define void @ae16min(i16* nocapture dereferenceable(4) %minimum, i16 %val) #0 {
+define void @ae16min(ptr nocapture dereferenceable(4) %minimum, i16 %val) #0 {
 ; CHECK-LABEL: ae16min:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 5, 0
@@ -359,12 +359,12 @@ define void @ae16min(i16* nocapture dereferenceable(4) %minimum, i16 %val) #0 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw min i16* %minimum, i16 %val monotonic
+  %0 = atomicrmw min ptr %minimum, i16 %val monotonic
   ret void
 
 }
 
-define void @ae16max(i16* nocapture dereferenceable(4) %minimum, i16 %val) #0 {
+define void @ae16max(ptr nocapture dereferenceable(4) %minimum, i16 %val) #0 {
 ; CHECK-LABEL: ae16max:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 5, 0
@@ -392,12 +392,12 @@ define void @ae16max(i16* nocapture dereferenceable(4) %minimum, i16 %val) #0 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw max i16* %minimum, i16 %val monotonic
+  %0 = atomicrmw max ptr %minimum, i16 %val monotonic
   ret void
 
 }
 
-define void @ae16umin(i16* nocapture dereferenceable(4) %minimum, i16 %val) #0 {
+define void @ae16umin(ptr nocapture dereferenceable(4) %minimum, i16 %val) #0 {
 ; CHECK-LABEL: ae16umin:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 5, 0
@@ -423,12 +423,12 @@ define void @ae16umin(i16* nocapture dereferenceable(4) %minimum, i16 %val) #0 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw umin i16* %minimum, i16 %val monotonic
+  %0 = atomicrmw umin ptr %minimum, i16 %val monotonic
   ret void
 
 }
 
-define void @ae16umax(i16* nocapture dereferenceable(4) %minimum, i16 %val) #0 {
+define void @ae16umax(ptr nocapture dereferenceable(4) %minimum, i16 %val) #0 {
 ; CHECK-LABEL: ae16umax:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li 5, 0
@@ -454,12 +454,12 @@ define void @ae16umax(i16* nocapture dereferenceable(4) %minimum, i16 %val) #0 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw umax i16* %minimum, i16 %val monotonic
+  %0 = atomicrmw umax ptr %minimum, i16 %val monotonic
   ret void
 
 }
 
-define void @ae8min(i8* nocapture dereferenceable(4) %minimum, i8 %val) #0 {
+define void @ae8min(ptr nocapture dereferenceable(4) %minimum, i8 %val) #0 {
 ; CHECK-LABEL: ae8min:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    rlwinm 5, 3, 3, 27, 28
@@ -486,12 +486,12 @@ define void @ae8min(i8* nocapture dereferenceable(4) %minimum, i8 %val) #0 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw min i8* %minimum, i8 %val monotonic
+  %0 = atomicrmw min ptr %minimum, i8 %val monotonic
   ret void
 
 }
 
-define void @ae8max(i8* nocapture dereferenceable(4) %minimum, i8 %val) #0 {
+define void @ae8max(ptr nocapture dereferenceable(4) %minimum, i8 %val) #0 {
 ; CHECK-LABEL: ae8max:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    rlwinm 5, 3, 3, 27, 28
@@ -518,12 +518,12 @@ define void @ae8max(i8* nocapture dereferenceable(4) %minimum, i8 %val) #0 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw max i8* %minimum, i8 %val monotonic
+  %0 = atomicrmw max ptr %minimum, i8 %val monotonic
   ret void
 
 }
 
-define void @ae8umin(i8* nocapture dereferenceable(4) %minimum, i8 %val) #0 {
+define void @ae8umin(ptr nocapture dereferenceable(4) %minimum, i8 %val) #0 {
 ; CHECK-LABEL: ae8umin:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    rlwinm 6, 3, 3, 27, 28
@@ -548,12 +548,12 @@ define void @ae8umin(i8* nocapture dereferenceable(4) %minimum, i8 %val) #0 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw umin i8* %minimum, i8 %val monotonic
+  %0 = atomicrmw umin ptr %minimum, i8 %val monotonic
   ret void
 
 }
 
-define void @ae8umax(i8* nocapture dereferenceable(4) %minimum, i8 %val) #0 {
+define void @ae8umax(ptr nocapture dereferenceable(4) %minimum, i8 %val) #0 {
 ; CHECK-LABEL: ae8umax:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    rlwinm 6, 3, 3, 27, 28
@@ -578,7 +578,7 @@ define void @ae8umax(i8* nocapture dereferenceable(4) %minimum, i8 %val) #0 {
 ; CHECK-NEXT:  # %bb.3: # %entry
 ; CHECK-NEXT:    blr
 entry:
-  %0 = atomicrmw umax i8* %minimum, i8 %val monotonic
+  %0 = atomicrmw umax ptr %minimum, i8 %val monotonic
   ret void
 
 }

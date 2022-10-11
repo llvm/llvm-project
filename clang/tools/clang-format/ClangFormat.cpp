@@ -125,9 +125,11 @@ static cl::opt<std::string> QualifierAlignment(
              "determined by the QualifierAlignment style flag"),
     cl::init(""), cl::cat(ClangFormatCategory));
 
-static cl::opt<std::string>
-    Files("files", cl::desc("Provide a list of files to run clang-format"),
-          cl::init(""), cl::cat(ClangFormatCategory));
+static cl::opt<std::string> Files(
+    "files",
+    cl::desc("A file containing a list of files to process, one per line."),
+    cl::value_desc("filename"),
+    cl::init(""), cl::cat(ClangFormatCategory));
 
 static cl::opt<bool>
     Verbose("verbose", cl::desc("If set, shows the list of processed files"),

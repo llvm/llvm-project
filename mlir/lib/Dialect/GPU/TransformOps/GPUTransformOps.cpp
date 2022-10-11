@@ -41,25 +41,25 @@ checkGpuLimits(TransformOpInterface transformOp, Optional<int64_t> gridDimX,
                Optional<int64_t> blockDimX, Optional<int64_t> blockDimY,
                Optional<int64_t> blockDimZ) {
 
-  static constexpr int max_total_blockdim = 1024;
-  static constexpr int max_blockdimx = 1024;
-  static constexpr int max_blockdimy = 1024;
-  static constexpr int max_blockdimz = 64;
-  static constexpr int max_total_griddim = 2147483647;
-  static constexpr int max_griddimx = 2147483647;
-  static constexpr int max_griddimy = 65535;
-  static constexpr int max_griddimz = 65535;
+  static constexpr int maxTotalBlockdim = 1024;
+  static constexpr int maxBlockdimx = 1024;
+  static constexpr int maxBlockdimy = 1024;
+  static constexpr int maxBlockdimz = 64;
+  static constexpr int maxTotalGriddim = 2147483647;
+  static constexpr int maxGriddimx = 2147483647;
+  static constexpr int maxGriddimy = 65535;
+  static constexpr int maxGriddimz = 65535;
 
   if ((blockDimX.value_or(1) * blockDimY.value_or(1) * blockDimZ.value_or(1)) >
-          max_total_blockdim ||
+          maxTotalBlockdim ||
       (gridDimX.value_or(1) * gridDimY.value_or(1) * gridDimZ.value_or(1)) >
-          max_total_griddim ||
-      blockDimX.value_or(1) > max_blockdimx ||
-      blockDimY.value_or(1) > max_blockdimy ||
-      blockDimZ.value_or(1) > max_blockdimz ||
-      gridDimY.value_or(1) > max_griddimy ||
-      gridDimZ.value_or(1) > max_griddimz ||
-      gridDimX.value_or(1) > max_griddimx) {
+          maxTotalGriddim ||
+      blockDimX.value_or(1) > maxBlockdimx ||
+      blockDimY.value_or(1) > maxBlockdimy ||
+      blockDimZ.value_or(1) > maxBlockdimz ||
+      gridDimY.value_or(1) > maxGriddimy ||
+      gridDimZ.value_or(1) > maxGriddimz ||
+      gridDimX.value_or(1) > maxGriddimx) {
     return transformOp.emitSilenceableError()
            << "Trying to launch a GPU kernel with gridDim = ("
            << gridDimX.value_or(1) << ", " << gridDimY.value_or(1) << ", "

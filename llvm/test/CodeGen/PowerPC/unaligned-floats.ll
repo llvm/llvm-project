@@ -20,24 +20,24 @@ define dso_local i32 @main() local_unnamed_addr {
 ; UNALIGN:       lfs f1, 12(r1)
 ; UNALIGN:       blr
 entry:
-  %0 = load i8, i8* getelementptr inbounds (%struct.anon, %struct.anon* @s, i32 0, i32 1, i32 1), align 1
+  %0 = load i8, ptr getelementptr inbounds (%struct.anon, ptr @s, i32 0, i32 1, i32 1), align 1
   %conv = zext i8 %0 to i32
   %shl = shl nuw i32 %conv, 24
-  %1 = load i8, i8* getelementptr inbounds (%struct.anon, %struct.anon* @s, i32 0, i32 1, i32 2), align 2
+  %1 = load i8, ptr getelementptr inbounds (%struct.anon, ptr @s, i32 0, i32 1, i32 2), align 2
   %conv1 = zext i8 %1 to i32
   %shl2 = shl nuw nsw i32 %conv1, 16
   %add = or i32 %shl2, %shl
-  %2 = load i8, i8* getelementptr inbounds (%struct.anon, %struct.anon* @s, i32 0, i32 1, i32 3), align 1
+  %2 = load i8, ptr getelementptr inbounds (%struct.anon, ptr @s, i32 0, i32 1, i32 3), align 1
   %conv3 = zext i8 %2 to i32
   %shl4 = shl nuw nsw i32 %conv3, 8
   %add5 = or i32 %add, %shl4
-  %3 = load i8, i8* getelementptr inbounds (%struct.anon, %struct.anon* @s, i32 0, i32 1, i32 4), align 4
+  %3 = load i8, ptr getelementptr inbounds (%struct.anon, ptr @s, i32 0, i32 1, i32 4), align 4
   %conv6 = zext i8 %3 to i32
   %add7 = or i32 %add5, %conv6
   %4 = bitcast i32 %add7 to float
   %conv8 = fpext float %4 to double
-  %call = tail call i32 (i8*, ...) @printf(i8* nonnull dereferenceable(1) getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), double %conv8)
+  %call = tail call i32 (ptr, ...) @printf(ptr nonnull dereferenceable(1) @.str, double %conv8)
   ret i32 0
 }
 ; Function Attrs: nofree nounwind
-declare i32 @printf(i8* nocapture readonly, ...) local_unnamed_addr
+declare i32 @printf(ptr nocapture readonly, ...) local_unnamed_addr

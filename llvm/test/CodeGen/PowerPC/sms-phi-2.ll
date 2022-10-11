@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -verify-machineinstrs\
 ; RUN:       -mcpu=pwr9 --ppc-enable-pipeliner --pipeliner-force-ii=15 2>&1 | FileCheck %s
 
-define void @phi2(i32, i32, i8*) local_unnamed_addr {
+define void @phi2(i32, i32, ptr) local_unnamed_addr {
 ; CHECK-LABEL: phi2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    divw 8, 3, 4
@@ -59,8 +59,8 @@ define void @phi2(i32, i32, i8*) local_unnamed_addr {
   %12 = trunc i32 %10 to i8
   %13 = select i1 %11, i8 48, i8 55
   %14 = add i8 %13, %12
-  %15 = getelementptr inbounds i8, i8* %2, i64 %7
-  store i8 %14, i8* %15, align 1
+  %15 = getelementptr inbounds i8, ptr %2, i64 %7
+  store i8 %14, ptr %15, align 1
   %16 = icmp sgt i64 %5, 1
   br i1 %16, label %4, label %17
 

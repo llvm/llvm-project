@@ -7,7 +7,7 @@
 
 define void @call_test_vararg() {
 entry:
-  %0 = load float, float* @f1, align 4
+  %0 = load float, ptr @f1, align 4
   %conv = fpext float %0 to double
   call void (i32, ...) @test_vararg(i32 42, double %conv, float %0)
   ret void

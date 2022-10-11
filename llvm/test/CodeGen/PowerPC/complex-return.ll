@@ -7,19 +7,19 @@ define { ppc_fp128, ppc_fp128 } @foo() nounwind {
 entry:
   %retval = alloca { ppc_fp128, ppc_fp128 }, align 16
   %x = alloca { ppc_fp128, ppc_fp128 }, align 16
-  %real = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %x, i32 0, i32 0
-  %imag = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %x, i32 0, i32 1
-  store ppc_fp128 0xM400C0000000000300000000010000000, ppc_fp128* %real
-  store ppc_fp128 0xMC00547AE147AE1483CA47AE147AE147A, ppc_fp128* %imag
-  %x.realp = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %x, i32 0, i32 0
-  %x.real = load ppc_fp128, ppc_fp128* %x.realp
-  %x.imagp = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %x, i32 0, i32 1
-  %x.imag = load ppc_fp128, ppc_fp128* %x.imagp
-  %real1 = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %retval, i32 0, i32 0
-  %imag2 = getelementptr inbounds { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %retval, i32 0, i32 1
-  store ppc_fp128 %x.real, ppc_fp128* %real1
-  store ppc_fp128 %x.imag, ppc_fp128* %imag2
-  %0 = load { ppc_fp128, ppc_fp128 }, { ppc_fp128, ppc_fp128 }* %retval
+  %real = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %x, i32 0, i32 0
+  %imag = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %x, i32 0, i32 1
+  store ppc_fp128 0xM400C0000000000300000000010000000, ptr %real
+  store ppc_fp128 0xMC00547AE147AE1483CA47AE147AE147A, ptr %imag
+  %x.realp = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %x, i32 0, i32 0
+  %x.real = load ppc_fp128, ptr %x.realp
+  %x.imagp = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %x, i32 0, i32 1
+  %x.imag = load ppc_fp128, ptr %x.imagp
+  %real1 = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %retval, i32 0, i32 0
+  %imag2 = getelementptr inbounds { ppc_fp128, ppc_fp128 }, ptr %retval, i32 0, i32 1
+  store ppc_fp128 %x.real, ptr %real1
+  store ppc_fp128 %x.imag, ptr %imag2
+  %0 = load { ppc_fp128, ppc_fp128 }, ptr %retval
   ret { ppc_fp128, ppc_fp128 } %0
 }
 
@@ -33,19 +33,19 @@ define { float, float } @oof() nounwind {
 entry:
   %retval = alloca { float, float }, align 4
   %x = alloca { float, float }, align 4
-  %real = getelementptr inbounds { float, float }, { float, float }* %x, i32 0, i32 0
-  %imag = getelementptr inbounds { float, float }, { float, float }* %x, i32 0, i32 1
-  store float 3.500000e+00, float* %real
-  store float 0xC00547AE20000000, float* %imag
-  %x.realp = getelementptr inbounds { float, float }, { float, float }* %x, i32 0, i32 0
-  %x.real = load float, float* %x.realp
-  %x.imagp = getelementptr inbounds { float, float }, { float, float }* %x, i32 0, i32 1
-  %x.imag = load float, float* %x.imagp
-  %real1 = getelementptr inbounds { float, float }, { float, float }* %retval, i32 0, i32 0
-  %imag2 = getelementptr inbounds { float, float }, { float, float }* %retval, i32 0, i32 1
-  store float %x.real, float* %real1
-  store float %x.imag, float* %imag2
-  %0 = load { float, float }, { float, float }* %retval
+  %real = getelementptr inbounds { float, float }, ptr %x, i32 0, i32 0
+  %imag = getelementptr inbounds { float, float }, ptr %x, i32 0, i32 1
+  store float 3.500000e+00, ptr %real
+  store float 0xC00547AE20000000, ptr %imag
+  %x.realp = getelementptr inbounds { float, float }, ptr %x, i32 0, i32 0
+  %x.real = load float, ptr %x.realp
+  %x.imagp = getelementptr inbounds { float, float }, ptr %x, i32 0, i32 1
+  %x.imag = load float, ptr %x.imagp
+  %real1 = getelementptr inbounds { float, float }, ptr %retval, i32 0, i32 0
+  %imag2 = getelementptr inbounds { float, float }, ptr %retval, i32 0, i32 1
+  store float %x.real, ptr %real1
+  store float %x.imag, ptr %imag2
+  %0 = load { float, float }, ptr %retval
   ret { float, float } %0
 }
 

@@ -14,7 +14,7 @@ define dso_local i32 @test_inlineasm_c_output_template0() {
 ; CHECK: #TEST baz
 @baz = internal global i32 0, align 4
 define dso_local i32 @test_inlineasm_c_output_template1() {
-  tail call void asm sideeffect "#TEST ${0:c}", "i"(i32* nonnull @baz)
+  tail call void asm sideeffect "#TEST ${0:c}", "i"(ptr nonnull @baz)
   ret i32 43
 }
 
@@ -31,7 +31,7 @@ define dso_local i32 @test_inlineasm_c_output_template2() {
 ; CHECK: # 4(5)
 ; PPC64-LABEL: test_inlineasm_L_output_template
 ; PPC64: # 8(4)
-define dso_local void @test_inlineasm_L_output_template(i64 %0, i64* %1) {
-  tail call void asm sideeffect "# ${0:L}", "*m"(i64* elementtype(i64) %1)
+define dso_local void @test_inlineasm_L_output_template(i64 %0, ptr %1) {
+  tail call void asm sideeffect "# ${0:L}", "*m"(ptr elementtype(i64) %1)
   ret void
 }

@@ -12,7 +12,7 @@
 @udwVecMem = global <2 x i64> <i64 88, i64 99>, align 16
 
 ; Function Attrs: norecurse nounwind
-define void @sdwVecConv2qp(fp128* nocapture %a, <2 x i64> %b) {
+define void @sdwVecConv2qp(ptr nocapture %a, <2 x i64> %b) {
 ; CHECK-LABEL: sdwVecConv2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltd v2, v2, 1
@@ -27,12 +27,12 @@ define void @sdwVecConv2qp(fp128* nocapture %a, <2 x i64> %b) {
 entry:
   %vecext = extractelement <2 x i64> %b, i32 0
   %conv = sitofp i64 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sdwVecConv2qp1(fp128* nocapture %a, <2 x i64> %b) {
+define void @sdwVecConv2qp1(ptr nocapture %a, <2 x i64> %b) {
 ; CHECK-LABEL: sdwVecConv2qp1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvsdqp v2, v2
@@ -48,12 +48,12 @@ define void @sdwVecConv2qp1(fp128* nocapture %a, <2 x i64> %b) {
 entry:
   %vecext = extractelement <2 x i64> %b, i32 1
   %conv = sitofp i64 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sdwVecConv2qp_02(fp128* nocapture %a) {
+define void @sdwVecConv2qp_02(ptr nocapture %a) {
 ; CHECK-LABEL: sdwVecConv2qp_02:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC0@toc@ha
@@ -63,15 +63,15 @@ define void @sdwVecConv2qp_02(fp128* nocapture %a) {
 ; CHECK-NEXT:    stxv v2, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @sdwVecMem, align 16
+  %0 = load <2 x i64>, ptr @sdwVecMem, align 16
   %vecext = extractelement <2 x i64> %0, i32 0
   %conv = sitofp i64 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sdwVecConv2qp1_03(fp128* nocapture %a, <2 x i64>* nocapture readonly %b) {
+define void @sdwVecConv2qp1_03(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: sdwVecConv2qp1_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxsd v2, 8(r4)
@@ -79,15 +79,15 @@ define void @sdwVecConv2qp1_03(fp128* nocapture %a, <2 x i64>* nocapture readonl
 ; CHECK-NEXT:    stxv v2, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load <2 x i64>, <2 x i64>* %b, align 16
+  %0 = load <2 x i64>, ptr %b, align 16
   %vecext = extractelement <2 x i64> %0, i32 1
   %conv = sitofp i64 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @udwVecConv2qp(fp128* nocapture %a, <2 x i64> %b) {
+define void @udwVecConv2qp(ptr nocapture %a, <2 x i64> %b) {
 ; CHECK-LABEL: udwVecConv2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxspltd v2, v2, 1
@@ -103,12 +103,12 @@ define void @udwVecConv2qp(fp128* nocapture %a, <2 x i64> %b) {
 entry:
   %vecext = extractelement <2 x i64> %b, i32 0
   %conv = uitofp i64 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @udwVecConv2qp1(fp128* nocapture %a, <2 x i64> %b) {
+define void @udwVecConv2qp1(ptr nocapture %a, <2 x i64> %b) {
 ; CHECK-LABEL: udwVecConv2qp1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvudqp v2, v2
@@ -124,12 +124,12 @@ define void @udwVecConv2qp1(fp128* nocapture %a, <2 x i64> %b) {
 entry:
   %vecext = extractelement <2 x i64> %b, i32 1
   %conv = uitofp i64 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @udwVecConv2qp1_02(fp128* nocapture %a) {
+define void @udwVecConv2qp1_02(ptr nocapture %a) {
 ; CHECK-LABEL: udwVecConv2qp1_02:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r4, r2, .LC1@toc@ha
@@ -139,15 +139,15 @@ define void @udwVecConv2qp1_02(fp128* nocapture %a) {
 ; CHECK-NEXT:    stxv v2, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @udwVecMem, align 16
+  %0 = load <2 x i64>, ptr @udwVecMem, align 16
   %vecext = extractelement <2 x i64> %0, i32 1
   %conv = uitofp i64 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @udwVecConv2qp_03(fp128* nocapture %a, <2 x i64>* nocapture readonly %b) {
+define void @udwVecConv2qp_03(ptr nocapture %a, ptr nocapture readonly %b) {
 ; CHECK-LABEL: udwVecConv2qp_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lxsd v2, 0(r4)
@@ -155,17 +155,17 @@ define void @udwVecConv2qp_03(fp128* nocapture %a, <2 x i64>* nocapture readonly
 ; CHECK-NEXT:    stxv v2, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load <2 x i64>, <2 x i64>* %b, align 16
+  %0 = load <2 x i64>, ptr %b, align 16
   %vecext = extractelement <2 x i64> %0, i32 0
   %conv = uitofp i64 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Vector extract Word and convert to quad precision.
 
 ; Function Attrs: norecurse nounwind
-define void @swVecConv2qp(fp128* nocapture %a, <4 x i32> %b) {
+define void @swVecConv2qp(ptr nocapture %a, <4 x i32> %b) {
 ; CHECK-LABEL: swVecConv2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vspltw v2, v2, 3
@@ -183,12 +183,12 @@ define void @swVecConv2qp(fp128* nocapture %a, <4 x i32> %b) {
 entry:
   %vecext = extractelement <4 x i32> %b, i32 0
   %conv = sitofp i32 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @swVecConv2qp1(fp128* nocapture %a, <4 x i32> %b) {
+define void @swVecConv2qp1(ptr nocapture %a, <4 x i32> %b) {
 ; CHECK-LABEL: swVecConv2qp1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vspltw v2, v2, 2
@@ -205,12 +205,12 @@ define void @swVecConv2qp1(fp128* nocapture %a, <4 x i32> %b) {
 entry:
   %vecext = extractelement <4 x i32> %b, i32 1
   %conv = sitofp i32 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @swVecConv2qp2(fp128* nocapture %a, <4 x i32> %b) {
+define void @swVecConv2qp2(ptr nocapture %a, <4 x i32> %b) {
 ; CHECK-LABEL: swVecConv2qp2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextsw2d v2, v2
@@ -227,12 +227,12 @@ define void @swVecConv2qp2(fp128* nocapture %a, <4 x i32> %b) {
 entry:
   %vecext = extractelement <4 x i32> %b, i32 2
   %conv = sitofp i32 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @swVecConv2qp3(fp128* nocapture %a, <4 x i32> %b) {
+define void @swVecConv2qp3(ptr nocapture %a, <4 x i32> %b) {
 ; CHECK-LABEL: swVecConv2qp3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vspltw v2, v2, 0
@@ -250,12 +250,12 @@ define void @swVecConv2qp3(fp128* nocapture %a, <4 x i32> %b) {
 entry:
   %vecext = extractelement <4 x i32> %b, i32 3
   %conv = sitofp i32 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uwVecConv2qp(fp128* nocapture %a, <4 x i32> %b) {
+define void @uwVecConv2qp(ptr nocapture %a, <4 x i32> %b) {
 ; CHECK-LABEL: uwVecConv2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxextractuw v2, v2, 12
@@ -271,12 +271,12 @@ define void @uwVecConv2qp(fp128* nocapture %a, <4 x i32> %b) {
 entry:
   %vecext = extractelement <4 x i32> %b, i32 0
   %conv = uitofp i32 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uwVecConv2qp1(fp128* nocapture %a, <4 x i32> %b) {
+define void @uwVecConv2qp1(ptr nocapture %a, <4 x i32> %b) {
 ; CHECK-LABEL: uwVecConv2qp1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxextractuw v2, v2, 8
@@ -292,12 +292,12 @@ define void @uwVecConv2qp1(fp128* nocapture %a, <4 x i32> %b) {
 entry:
   %vecext = extractelement <4 x i32> %b, i32 1
   %conv = uitofp i32 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uwVecConv2qp2(fp128* nocapture %a, <4 x i32> %b) {
+define void @uwVecConv2qp2(ptr nocapture %a, <4 x i32> %b) {
 ; CHECK-LABEL: uwVecConv2qp2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxextractuw v2, v2, 4
@@ -313,12 +313,12 @@ define void @uwVecConv2qp2(fp128* nocapture %a, <4 x i32> %b) {
 entry:
   %vecext = extractelement <4 x i32> %b, i32 2
   %conv = uitofp i32 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uwVecConv2qp3(fp128* nocapture %a, <4 x i32> %b) {
+define void @uwVecConv2qp3(ptr nocapture %a, <4 x i32> %b) {
 ; CHECK-LABEL: uwVecConv2qp3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxextractuw v2, v2, 0
@@ -334,14 +334,14 @@ define void @uwVecConv2qp3(fp128* nocapture %a, <4 x i32> %b) {
 entry:
   %vecext = extractelement <4 x i32> %b, i32 3
   %conv = uitofp i32 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Vector extract HWord and convert to quad precision.
 
 ; Function Attrs: norecurse nounwind
-define void @shwVecConv2qp(fp128* nocapture %a, <8 x i16> %b) {
+define void @shwVecConv2qp(ptr nocapture %a, <8 x i16> %b) {
 ; CHECK-LABEL: shwVecConv2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 14
@@ -360,12 +360,12 @@ define void @shwVecConv2qp(fp128* nocapture %a, <8 x i16> %b) {
 entry:
   %vecext = extractelement <8 x i16> %b, i32 0
   %conv = sitofp i16 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @shwVecConv2qp1(fp128* nocapture %a, <8 x i16> %b) {
+define void @shwVecConv2qp1(ptr nocapture %a, <8 x i16> %b) {
 ; CHECK-LABEL: shwVecConv2qp1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 12
@@ -384,12 +384,12 @@ define void @shwVecConv2qp1(fp128* nocapture %a, <8 x i16> %b) {
 entry:
   %vecext = extractelement <8 x i16> %b, i32 1
   %conv = sitofp i16 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @shwVecConv2qp2(fp128* nocapture %a, <8 x i16> %b) {
+define void @shwVecConv2qp2(ptr nocapture %a, <8 x i16> %b) {
 ; CHECK-LABEL: shwVecConv2qp2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 10
@@ -408,12 +408,12 @@ define void @shwVecConv2qp2(fp128* nocapture %a, <8 x i16> %b) {
 entry:
   %vecext = extractelement <8 x i16> %b, i32 2
   %conv = sitofp i16 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @shwVecConv2qp3(fp128* nocapture %a, <8 x i16> %b) {
+define void @shwVecConv2qp3(ptr nocapture %a, <8 x i16> %b) {
 ; CHECK-LABEL: shwVecConv2qp3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 8
@@ -432,12 +432,12 @@ define void @shwVecConv2qp3(fp128* nocapture %a, <8 x i16> %b) {
 entry:
   %vecext = extractelement <8 x i16> %b, i32 3
   %conv = sitofp i16 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @shwVecConv2qp4(fp128* nocapture %a, <8 x i16> %b) {
+define void @shwVecConv2qp4(ptr nocapture %a, <8 x i16> %b) {
 ; CHECK-LABEL: shwVecConv2qp4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 6
@@ -456,12 +456,12 @@ define void @shwVecConv2qp4(fp128* nocapture %a, <8 x i16> %b) {
 entry:
   %vecext = extractelement <8 x i16> %b, i32 4
   %conv = sitofp i16 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @shwVecConv2qp5(fp128* nocapture %a, <8 x i16> %b) {
+define void @shwVecConv2qp5(ptr nocapture %a, <8 x i16> %b) {
 ; CHECK-LABEL: shwVecConv2qp5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 4
@@ -480,12 +480,12 @@ define void @shwVecConv2qp5(fp128* nocapture %a, <8 x i16> %b) {
 entry:
   %vecext = extractelement <8 x i16> %b, i32 5
   %conv = sitofp i16 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @shwVecConv2qp6(fp128* nocapture %a, <8 x i16> %b) {
+define void @shwVecConv2qp6(ptr nocapture %a, <8 x i16> %b) {
 ; CHECK-LABEL: shwVecConv2qp6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 2
@@ -504,12 +504,12 @@ define void @shwVecConv2qp6(fp128* nocapture %a, <8 x i16> %b) {
 entry:
   %vecext = extractelement <8 x i16> %b, i32 6
   %conv = sitofp i16 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @shwVecConv2qp7(fp128* nocapture %a, <8 x i16> %b) {
+define void @shwVecConv2qp7(ptr nocapture %a, <8 x i16> %b) {
 ; CHECK-LABEL: shwVecConv2qp7:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 0
@@ -528,12 +528,12 @@ define void @shwVecConv2qp7(fp128* nocapture %a, <8 x i16> %b) {
 entry:
   %vecext = extractelement <8 x i16> %b, i32 7
   %conv = sitofp i16 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uhwVecConv2qp(fp128* nocapture %a, <8 x i16> %b) {
+define void @uhwVecConv2qp(ptr nocapture %a, <8 x i16> %b) {
 ; CHECK-LABEL: uhwVecConv2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 14
@@ -550,12 +550,12 @@ define void @uhwVecConv2qp(fp128* nocapture %a, <8 x i16> %b) {
 entry:
   %vecext = extractelement <8 x i16> %b, i32 0
   %conv = uitofp i16 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uhwVecConv2qp1(fp128* nocapture %a, <8 x i16> %b) {
+define void @uhwVecConv2qp1(ptr nocapture %a, <8 x i16> %b) {
 ; CHECK-LABEL: uhwVecConv2qp1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 12
@@ -572,12 +572,12 @@ define void @uhwVecConv2qp1(fp128* nocapture %a, <8 x i16> %b) {
 entry:
   %vecext = extractelement <8 x i16> %b, i32 1
   %conv = uitofp i16 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uhwVecConv2qp2(fp128* nocapture %a, <8 x i16> %b) {
+define void @uhwVecConv2qp2(ptr nocapture %a, <8 x i16> %b) {
 ; CHECK-LABEL: uhwVecConv2qp2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 10
@@ -594,12 +594,12 @@ define void @uhwVecConv2qp2(fp128* nocapture %a, <8 x i16> %b) {
 entry:
   %vecext = extractelement <8 x i16> %b, i32 2
   %conv = uitofp i16 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uhwVecConv2qp3(fp128* nocapture %a, <8 x i16> %b) {
+define void @uhwVecConv2qp3(ptr nocapture %a, <8 x i16> %b) {
 ; CHECK-LABEL: uhwVecConv2qp3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 8
@@ -616,12 +616,12 @@ define void @uhwVecConv2qp3(fp128* nocapture %a, <8 x i16> %b) {
 entry:
   %vecext = extractelement <8 x i16> %b, i32 3
   %conv = uitofp i16 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uhwVecConv2qp4(fp128* nocapture %a, <8 x i16> %b) {
+define void @uhwVecConv2qp4(ptr nocapture %a, <8 x i16> %b) {
 ; CHECK-LABEL: uhwVecConv2qp4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 6
@@ -638,12 +638,12 @@ define void @uhwVecConv2qp4(fp128* nocapture %a, <8 x i16> %b) {
 entry:
   %vecext = extractelement <8 x i16> %b, i32 4
   %conv = uitofp i16 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uhwVecConv2qp5(fp128* nocapture %a, <8 x i16> %b) {
+define void @uhwVecConv2qp5(ptr nocapture %a, <8 x i16> %b) {
 ; CHECK-LABEL: uhwVecConv2qp5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 4
@@ -660,12 +660,12 @@ define void @uhwVecConv2qp5(fp128* nocapture %a, <8 x i16> %b) {
 entry:
   %vecext = extractelement <8 x i16> %b, i32 5
   %conv = uitofp i16 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uhwVecConv2qp6(fp128* nocapture %a, <8 x i16> %b) {
+define void @uhwVecConv2qp6(ptr nocapture %a, <8 x i16> %b) {
 ; CHECK-LABEL: uhwVecConv2qp6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 2
@@ -682,12 +682,12 @@ define void @uhwVecConv2qp6(fp128* nocapture %a, <8 x i16> %b) {
 entry:
   %vecext = extractelement <8 x i16> %b, i32 6
   %conv = uitofp i16 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @uhwVecConv2qp7(fp128* nocapture %a, <8 x i16> %b) {
+define void @uhwVecConv2qp7(ptr nocapture %a, <8 x i16> %b) {
 ; CHECK-LABEL: uhwVecConv2qp7:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractuh v2, v2, 0
@@ -704,14 +704,14 @@ define void @uhwVecConv2qp7(fp128* nocapture %a, <8 x i16> %b) {
 entry:
   %vecext = extractelement <8 x i16> %b, i32 7
   %conv = uitofp i16 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Vector extract Byte and convert to quad precision.
 
 ; Function Attrs: norecurse nounwind
-define void @sbVecConv2qp(fp128* nocapture %a, <16 x i8> %b) {
+define void @sbVecConv2qp(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: sbVecConv2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 15
@@ -730,12 +730,12 @@ define void @sbVecConv2qp(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 0
   %conv = sitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sbVecConv2qp1(fp128* nocapture %a, <16 x i8> %b) {
+define void @sbVecConv2qp1(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: sbVecConv2qp1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 14
@@ -754,12 +754,12 @@ define void @sbVecConv2qp1(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 1
   %conv = sitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sbVecConv2qp2(fp128* nocapture %a, <16 x i8> %b) {
+define void @sbVecConv2qp2(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: sbVecConv2qp2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 13
@@ -778,12 +778,12 @@ define void @sbVecConv2qp2(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 2
   %conv = sitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sbVecConv2qp3(fp128* nocapture %a, <16 x i8> %b) {
+define void @sbVecConv2qp3(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: sbVecConv2qp3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 12
@@ -802,12 +802,12 @@ define void @sbVecConv2qp3(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 3
   %conv = sitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sbVecConv2qp4(fp128* nocapture %a, <16 x i8> %b) {
+define void @sbVecConv2qp4(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: sbVecConv2qp4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 11
@@ -826,12 +826,12 @@ define void @sbVecConv2qp4(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 4
   %conv = sitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sbVecConv2qp5(fp128* nocapture %a, <16 x i8> %b) {
+define void @sbVecConv2qp5(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: sbVecConv2qp5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 10
@@ -850,12 +850,12 @@ define void @sbVecConv2qp5(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 5
   %conv = sitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sbVecConv2qp6(fp128* nocapture %a, <16 x i8> %b) {
+define void @sbVecConv2qp6(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: sbVecConv2qp6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 9
@@ -874,12 +874,12 @@ define void @sbVecConv2qp6(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 6
   %conv = sitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sbVecConv2qp7(fp128* nocapture %a, <16 x i8> %b) {
+define void @sbVecConv2qp7(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: sbVecConv2qp7:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 8
@@ -898,12 +898,12 @@ define void @sbVecConv2qp7(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 7
   %conv = sitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sbVecConv2qp8(fp128* nocapture %a, <16 x i8> %b) {
+define void @sbVecConv2qp8(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: sbVecConv2qp8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 7
@@ -922,12 +922,12 @@ define void @sbVecConv2qp8(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 8
   %conv = sitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sbVecConv2qp9(fp128* nocapture %a, <16 x i8> %b) {
+define void @sbVecConv2qp9(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: sbVecConv2qp9:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 6
@@ -946,12 +946,12 @@ define void @sbVecConv2qp9(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 9
   %conv = sitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sbVecConv2qp10(fp128* nocapture %a, <16 x i8> %b) {
+define void @sbVecConv2qp10(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: sbVecConv2qp10:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 5
@@ -970,12 +970,12 @@ define void @sbVecConv2qp10(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 10
   %conv = sitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sbVecConv2qp11(fp128* nocapture %a, <16 x i8> %b) {
+define void @sbVecConv2qp11(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: sbVecConv2qp11:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 4
@@ -994,12 +994,12 @@ define void @sbVecConv2qp11(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 11
   %conv = sitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sbVecConv2qp12(fp128* nocapture %a, <16 x i8> %b) {
+define void @sbVecConv2qp12(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: sbVecConv2qp12:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 3
@@ -1018,12 +1018,12 @@ define void @sbVecConv2qp12(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 12
   %conv = sitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sbVecConv2qp13(fp128* nocapture %a, <16 x i8> %b) {
+define void @sbVecConv2qp13(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: sbVecConv2qp13:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 2
@@ -1042,12 +1042,12 @@ define void @sbVecConv2qp13(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 13
   %conv = sitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sbVecConv2qp14(fp128* nocapture %a, <16 x i8> %b) {
+define void @sbVecConv2qp14(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: sbVecConv2qp14:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 1
@@ -1066,12 +1066,12 @@ define void @sbVecConv2qp14(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 14
   %conv = sitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @sbVecConv2qp15(fp128* nocapture %a, <16 x i8> %b) {
+define void @sbVecConv2qp15(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: sbVecConv2qp15:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 0
@@ -1090,12 +1090,12 @@ define void @sbVecConv2qp15(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 15
   %conv = sitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubVecConv2qp(fp128* nocapture %a, <16 x i8> %b) {
+define void @ubVecConv2qp(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: ubVecConv2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 15
@@ -1112,12 +1112,12 @@ define void @ubVecConv2qp(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 0
   %conv = uitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubVecConv2qp1(fp128* nocapture %a, <16 x i8> %b) {
+define void @ubVecConv2qp1(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: ubVecConv2qp1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 14
@@ -1134,12 +1134,12 @@ define void @ubVecConv2qp1(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 1
   %conv = uitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubVecConv2qp2(fp128* nocapture %a, <16 x i8> %b) {
+define void @ubVecConv2qp2(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: ubVecConv2qp2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 13
@@ -1156,12 +1156,12 @@ define void @ubVecConv2qp2(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 2
   %conv = uitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubVecConv2qp3(fp128* nocapture %a, <16 x i8> %b) {
+define void @ubVecConv2qp3(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: ubVecConv2qp3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 12
@@ -1178,12 +1178,12 @@ define void @ubVecConv2qp3(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 3
   %conv = uitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubVecConv2qp4(fp128* nocapture %a, <16 x i8> %b) {
+define void @ubVecConv2qp4(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: ubVecConv2qp4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 11
@@ -1200,12 +1200,12 @@ define void @ubVecConv2qp4(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 4
   %conv = uitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubVecConv2qp5(fp128* nocapture %a, <16 x i8> %b) {
+define void @ubVecConv2qp5(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: ubVecConv2qp5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 10
@@ -1222,12 +1222,12 @@ define void @ubVecConv2qp5(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 5
   %conv = uitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubVecConv2qp6(fp128* nocapture %a, <16 x i8> %b) {
+define void @ubVecConv2qp6(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: ubVecConv2qp6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 9
@@ -1244,12 +1244,12 @@ define void @ubVecConv2qp6(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 6
   %conv = uitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubVecConv2qp7(fp128* nocapture %a, <16 x i8> %b) {
+define void @ubVecConv2qp7(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: ubVecConv2qp7:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 8
@@ -1266,12 +1266,12 @@ define void @ubVecConv2qp7(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 7
   %conv = uitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubVecConv2qp8(fp128* nocapture %a, <16 x i8> %b) {
+define void @ubVecConv2qp8(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: ubVecConv2qp8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 7
@@ -1288,12 +1288,12 @@ define void @ubVecConv2qp8(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 8
   %conv = uitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubVecConv2qp9(fp128* nocapture %a, <16 x i8> %b) {
+define void @ubVecConv2qp9(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: ubVecConv2qp9:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 6
@@ -1310,12 +1310,12 @@ define void @ubVecConv2qp9(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 9
   %conv = uitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubVecConv2qp10(fp128* nocapture %a, <16 x i8> %b) {
+define void @ubVecConv2qp10(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: ubVecConv2qp10:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 5
@@ -1332,12 +1332,12 @@ define void @ubVecConv2qp10(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 10
   %conv = uitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubVecConv2qp11(fp128* nocapture %a, <16 x i8> %b) {
+define void @ubVecConv2qp11(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: ubVecConv2qp11:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 4
@@ -1354,12 +1354,12 @@ define void @ubVecConv2qp11(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 11
   %conv = uitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubVecConv2qp12(fp128* nocapture %a, <16 x i8> %b) {
+define void @ubVecConv2qp12(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: ubVecConv2qp12:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 3
@@ -1376,12 +1376,12 @@ define void @ubVecConv2qp12(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 12
   %conv = uitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubVecConv2qp13(fp128* nocapture %a, <16 x i8> %b) {
+define void @ubVecConv2qp13(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: ubVecConv2qp13:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 2
@@ -1398,12 +1398,12 @@ define void @ubVecConv2qp13(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 13
   %conv = uitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubVecConv2qp14(fp128* nocapture %a, <16 x i8> %b) {
+define void @ubVecConv2qp14(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: ubVecConv2qp14:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 1
@@ -1420,12 +1420,12 @@ define void @ubVecConv2qp14(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 14
   %conv = uitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }
 
 ; Function Attrs: norecurse nounwind
-define void @ubVecConv2qp15(fp128* nocapture %a, <16 x i8> %b) {
+define void @ubVecConv2qp15(ptr nocapture %a, <16 x i8> %b) {
 ; CHECK-LABEL: ubVecConv2qp15:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vextractub v2, v2, 0
@@ -1442,6 +1442,6 @@ define void @ubVecConv2qp15(fp128* nocapture %a, <16 x i8> %b) {
 entry:
   %vecext = extractelement <16 x i8> %b, i32 15
   %conv = uitofp i8 %vecext to fp128
-  store fp128 %conv, fp128* %a, align 16
+  store fp128 %conv, ptr %a, align 16
   ret void
 }

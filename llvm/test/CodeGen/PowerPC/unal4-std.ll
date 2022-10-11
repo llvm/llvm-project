@@ -4,7 +4,7 @@
 target datalayout = "E-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-f128:128:128-v128:128:128-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
-define void @copy_to_conceal(<8 x i16>* %inp) #0 {
+define void @copy_to_conceal(ptr %inp) #0 {
 ; CHECK-LABEL: copy_to_conceal:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vxor 2, 2, 2
@@ -22,7 +22,7 @@ define void @copy_to_conceal(<8 x i16>* %inp) #0 {
 ; CHECK-VSX-NEXT:    stxvw4x 0, 0, 3
 ; CHECK-VSX-NEXT:    blr
 entry:
-  store <8 x i16> zeroinitializer, <8 x i16>* %inp, align 2
+  store <8 x i16> zeroinitializer, ptr %inp, align 2
   br label %if.end210
 
 if.end210:                                        ; preds = %entry

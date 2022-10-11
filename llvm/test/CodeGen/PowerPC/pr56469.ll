@@ -26,9 +26,9 @@ entry:
   %conv1 = fpext float %j to double
   %conv2 = fpext float %k to double
   %conv3 = fpext float %l to double
-  %call = tail call signext i32 (i8*, ...) @printf(i8*  nonnull dereferenceable(1) getelementptr inbounds ([32 x i8], [32 x i8]* @.str, i64 0, i64 0), double  %conv, double  %conv1, double  %conv2, double  %conv3)
+  %call = tail call signext i32 (ptr, ...) @printf(ptr  nonnull dereferenceable(1) @.str, double  %conv, double  %conv1, double  %conv2, double  %conv3)
   ret void
 }
 
-declare  signext i32 @printf(i8* nocapture  readonly, ...)
+declare  signext i32 @printf(ptr nocapture  readonly, ...)
 

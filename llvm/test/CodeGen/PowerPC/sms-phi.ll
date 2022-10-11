@@ -15,8 +15,8 @@ define dso_local void @sha512() #0 {
   %2 = phi i64 [ 0, %0 ], [ %12, %1 ]
   %3 = phi i64 [ undef, %0 ], [ %11, %1 ]
   %4 = phi i64 [ undef, %0 ], [ %3, %1 ]
-  %5 = getelementptr inbounds [80 x i64], [80 x i64]* null, i64 0, i64 %2
-  %6 = load i64, i64* %5, align 8
+  %5 = getelementptr inbounds [80 x i64], ptr null, i64 0, i64 %2
+  %6 = load i64, ptr %5, align 8
   %7 = add i64 0, %6
   %8 = and i64 %3, %4
   %9 = or i64 0, %8
@@ -28,7 +28,7 @@ define dso_local void @sha512() #0 {
 
 14:                                               ; preds = %1
   %15 = add i64 %4, 0
-  store i64 %15, i64* undef, align 8
+  store i64 %15, ptr undef, align 8
   ret void
 }
 
