@@ -491,8 +491,10 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
     // Does the sequence have unknown shape? (`array<* x T>`)
     bool hasUnknownShape() const { return getShape().empty(); }
 
-    // The value `-1` represents an unknown extent for a dimension
-    static constexpr Extent getUnknownExtent() { return -1; }
+    // The value `kDynamicSize` represents an unknown extent for a dimension
+    static constexpr Extent getUnknownExtent() {
+      return mlir::ShapedType::kDynamicSize;
+    }
   }];
 }
 
