@@ -1795,10 +1795,6 @@ bool AttrBuilder::contains(StringRef A) const {
   return getAttribute(A).isValid();
 }
 
-bool AttrBuilder::hasAlignmentAttr() const {
-  return getRawIntAttr(Attribute::Alignment) != 0;
-}
-
 bool AttrBuilder::operator==(const AttrBuilder &B) const {
   return Attrs == B.Attrs;
 }

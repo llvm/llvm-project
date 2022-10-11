@@ -172,8 +172,8 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
 
       // If the alignment was parsed as an attribute, move to the alignment
       // field.
-      if (FnAttrs.hasAlignmentAttr()) {
-        Fn->setAlignment(FnAttrs.getAlignment());
+      if (MaybeAlign A = FnAttrs.getAlignment()) {
+        Fn->setAlignment(A);
         FnAttrs.removeAttribute(Attribute::Alignment);
       }
 
@@ -5731,8 +5731,8 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine) {
     return error(BuiltinLoc, "'builtin' attribute not valid on function");
 
   // If the alignment was parsed as an attribute, move to the alignment field.
-  if (FuncAttrs.hasAlignmentAttr()) {
-    Alignment = FuncAttrs.getAlignment();
+  if (MaybeAlign A = FuncAttrs.getAlignment()) {
+    Alignment = A;
     FuncAttrs.removeAttribute(Attribute::Alignment);
   }
 

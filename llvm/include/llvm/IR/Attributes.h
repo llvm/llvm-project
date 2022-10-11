@@ -1088,9 +1088,6 @@ public:
   /// Return true if the builder has IR-level attributes.
   bool hasAttributes() const { return !Attrs.empty(); }
 
-  /// Return true if the builder has an alignment attribute.
-  bool hasAlignmentAttr() const;
-
   /// Return Attribute with the given Kind. The returned attribute will be
   /// invalid if the Kind is not present in the builder.
   Attribute getAttribute(Attribute::AttrKind Kind) const;
