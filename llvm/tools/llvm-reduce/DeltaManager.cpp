@@ -32,6 +32,7 @@
 #include "deltas/ReduceInstructionsMIR.h"
 #include "deltas/ReduceMetadata.h"
 #include "deltas/ReduceModuleData.h"
+#include "deltas/ReduceOpcodes.h"
 #include "deltas/ReduceOperandBundles.h"
 #include "deltas/ReduceOperands.h"
 #include "deltas/ReduceOperandsSkip.h"
@@ -89,6 +90,7 @@ static cl::list<std::string>
     DELTA_PASS("simplify-cfg", reduceUsingSimplifyCFGDeltaPass)                \
     DELTA_PASS("attributes", reduceAttributesDeltaPass)                        \
     DELTA_PASS("module-data", reduceModuleDataDeltaPass)                       \
+    DELTA_PASS("opcodes", reduceOpcodesDeltaPass)                              \
   } while (false)
 
 #define DELTA_PASSES_MIR                                                       \
