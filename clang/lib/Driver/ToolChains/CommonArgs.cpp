@@ -1863,10 +1863,14 @@ bool tools::GetSDLFromOffloadArchive(
   llvm::Triple Triple(D.getTargetTriple());
   bool IsMSVC = Triple.isWindowsMSVCEnvironment();
   auto Ext = IsMSVC ? ".lib" : ".a";
-  if (!Lib.startswith(":") && llvm::sys::fs::exists(Lib)) {
-    ArchiveOfBundles = Lib;
-    FoundAOB = true;
+  if (!Lib.startswith(":") && !Lib.startswith("-l")) {
+    if (llvm::sys::fs::exists(Lib)) {
+      ArchiveOfBundles = Lib;
+      FoundAOB = true;
+    }
   } else {
+    if (Lib.startswith("-l"))
+      Lib = Lib.drop_front(2);
     for (auto LPath : LibraryPaths) {
       ArchiveOfBundles.clear();
       SmallVector<std::string, 2> AOBFileNames;
@@ -2036,7 +2040,7 @@ void tools::AddStaticDeviceLibs(Compilation *C, const Tool *T,
       "omp", "cudart", "m", "gcc", "gcc_s", "pthread", "hip_hcc"};
   for (auto SDLName : DriverArgs.getAllArgValues(options::OPT_l)) {
     if (!HostOnlyArchives->contains(SDLName)) {
-      SDLNames.insert(SDLName);
+      SDLNames.insert(std::string("-l") + SDLName);
     }
   }
 
