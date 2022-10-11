@@ -234,8 +234,8 @@ template <class, class _Compare, class _RandomAccessIterator>
 inline _LIBCPP_HIDE_FROM_ABI __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>::value, void>
 __sort3_maybe_branchless(_RandomAccessIterator __x1, _RandomAccessIterator __x2, _RandomAccessIterator __x3,
                          _Compare __c) {
-  _VSTD::__cond_swap<_Compare>(__x2, __x3, __c);
-  _VSTD::__partially_sorted_swap<_Compare>(__x1, __x2, __x3, __c);
+  std::__cond_swap<_Compare>(__x2, __x3, __c);
+  std::__partially_sorted_swap<_Compare>(__x1, __x2, __x3, __c);
 }
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
@@ -249,11 +249,11 @@ template <class, class _Compare, class _RandomAccessIterator>
 inline _LIBCPP_HIDE_FROM_ABI __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>::value, void>
 __sort4_maybe_branchless(_RandomAccessIterator __x1, _RandomAccessIterator __x2, _RandomAccessIterator __x3,
                          _RandomAccessIterator __x4, _Compare __c) {
-  _VSTD::__cond_swap<_Compare>(__x1, __x3, __c);
-  _VSTD::__cond_swap<_Compare>(__x2, __x4, __c);
-  _VSTD::__cond_swap<_Compare>(__x1, __x2, __c);
-  _VSTD::__cond_swap<_Compare>(__x3, __x4, __c);
-  _VSTD::__cond_swap<_Compare>(__x2, __x3, __c);
+  std::__cond_swap<_Compare>(__x1, __x3, __c);
+  std::__cond_swap<_Compare>(__x2, __x4, __c);
+  std::__cond_swap<_Compare>(__x1, __x2, __c);
+  std::__cond_swap<_Compare>(__x3, __x4, __c);
+  std::__cond_swap<_Compare>(__x2, __x3, __c);
 }
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
@@ -267,12 +267,12 @@ template <class, class _Compare, class _RandomAccessIterator>
 inline _LIBCPP_HIDE_FROM_ABI __enable_if_t<__use_branchless_sort<_Compare, _RandomAccessIterator>::value, void>
 __sort5_maybe_branchless(_RandomAccessIterator __x1, _RandomAccessIterator __x2, _RandomAccessIterator __x3,
                          _RandomAccessIterator __x4, _RandomAccessIterator __x5, _Compare __c) {
-  _VSTD::__cond_swap<_Compare>(__x1, __x2, __c);
-  _VSTD::__cond_swap<_Compare>(__x4, __x5, __c);
-  _VSTD::__partially_sorted_swap<_Compare>(__x3, __x4, __x5, __c);
-  _VSTD::__cond_swap<_Compare>(__x2, __x5, __c);
-  _VSTD::__partially_sorted_swap<_Compare>(__x1, __x3, __x4, __c);
-  _VSTD::__partially_sorted_swap<_Compare>(__x2, __x3, __x4, __c);
+  std::__cond_swap<_Compare>(__x1, __x2, __c);
+  std::__cond_swap<_Compare>(__x4, __x5, __c);
+  std::__partially_sorted_swap<_Compare>(__x3, __x4, __x5, __c);
+  std::__cond_swap<_Compare>(__x2, __x5, __c);
+  std::__partially_sorted_swap<_Compare>(__x1, __x3, __x4, __c);
+  std::__partially_sorted_swap<_Compare>(__x2, __x3, __x4, __c);
 }
 
 template <class _AlgPolicy, class _Compare, class _RandomAccessIterator>
@@ -308,7 +308,7 @@ void __insertion_sort(_BidirectionalIterator __first, _BidirectionalIterator __l
       value_type __t(_Ops::__iter_move(__j));
       for (_BidirectionalIterator __k = __i; __k != __first && __comp(__t, *--__k); --__j)
         *__j = _Ops::__iter_move(__k);
-      *__j = _VSTD::move(__t);
+      *__j = std::move(__t);
     }
   }
 }
@@ -331,7 +331,7 @@ void __insertion_sort_3(_RandomAccessIterator __first, _RandomAccessIterator __l
         *__j = _Ops::__iter_move(__k);
         __j = __k;
       } while (__j != __first && __comp(__t, *--__k));
-      *__j = _VSTD::move(__t);
+      *__j = std::move(__t);
     }
     __j = __i;
   }
@@ -383,7 +383,7 @@ _LIBCPP_HIDDEN bool __insertion_sort_incomplete(
         *__j = _Ops::__iter_move(__k);
         __j = __k;
       } while (__j != __first && __comp(__t, *--__k));
-      *__j = _VSTD::move(__t);
+      *__j = std::move(__t);
       if (++__count == __limit)
         return ++__i == __last;
     }
@@ -533,7 +533,7 @@ void __introsort(_RandomAccessIterator __first, _RandomAccessIterator __last, _C
           }
           // [__first, __i) == *__first and *__first < [__i, __last)
           // The first part is sorted, sort the second part
-          // _VSTD::__sort<_Compare>(__i, __last, __comp);
+          // std::__sort<_Compare>(__i, __last, __comp);
           __first = __i;
           goto __restart;
         }
