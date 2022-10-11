@@ -2543,13 +2543,16 @@ bool SelectionDAG::MaskedValueIsAllOnes(SDValue V, const APInt &Mask,
 
 /// isSplatValue - Return true if the vector V has the same value
 /// across all DemandedElts. For scalable vectors it does not make
-/// sense to specify which elements are demanded or undefined, therefore
-/// they are simply ignored.
+/// sense to specify which elements are demanded, therefore they are
+/// simply ignored.  For undef elts this means either all lanes are
+/// undef, or no lanes are known undef.
 bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
                                 APInt &UndefElts, unsigned Depth) const {
   unsigned Opcode = V.getOpcode();
   EVT VT = V.getValueType();
   assert(VT.isVector() && "Vector type expected");
+  assert((!VT.isScalableVector() || DemandedElts.getBitWidth() == 1) &&
+         "scalable demanded bits are ignored");
 
   if (!VT.isScalableVector() && !DemandedElts)
     return false; // No demanded elts, better to assume we don't know anything.
