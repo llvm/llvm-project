@@ -81,6 +81,7 @@ def IndexDialect : Dialect {
     void registerOperations();
   }];
 
+  let hasConstantMaterializer = 1;
   let useDefaultAttributePrinterParser = 1;
 }
 
