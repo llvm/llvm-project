@@ -368,37 +368,41 @@ Status RegisterContext::ReadRegisterValueFromMemory(
 Status RegisterContext::WriteRegisterValueToMemory(
     const RegisterInfo *reg_info, lldb::addr_t dst_addr, uint32_t dst_len,
     const RegisterValue &reg_value) {
-  uint8_t dst[RegisterValue::kMaxRegisterByteSize];
-
   Status error;
-
   ProcessSP process_sp(m_thread.GetProcess());
-  if (process_sp) {
 
-    // TODO: we might need to add a parameter to this function in case the byte
-    // order of the memory data doesn't match the process. For now we are
-    // assuming they are the same.
+  if (!process_sp) {
+    error.SetErrorString("invalid process");
+    return error;
+  }
 
-    const uint32_t bytes_copied = reg_value.GetAsMemoryData(
-        reg_info, dst, dst_len, process_sp->GetByteOrder(), error);
+  if (reg_info == nullptr) {
+    error.SetErrorString("Invalid register info argument.");
+    return error;
+  }
 
-    if (error.Success()) {
-      if (bytes_copied == 0) {
-        error.SetErrorString("byte copy failed.");
-      } else {
-        const uint32_t bytes_written =
-            process_sp->WriteMemory(dst_addr, dst, bytes_copied, error);
-        if (bytes_written != bytes_copied) {
-          if (error.Success()) {
-            // This might happen if we read _some_ bytes but not all
-            error.SetErrorStringWithFormat("only wrote %u of %u bytes",
-                                           bytes_written, bytes_copied);
-          }
+  // TODO: we might need to add a parameter to this function in case the byte
+  // order of the memory data doesn't match the process. For now we are
+  // assuming they are the same.
+  uint8_t dst[RegisterValue::kMaxRegisterByteSize];
+  const uint32_t bytes_copied = reg_value.GetAsMemoryData(
+      *reg_info, dst, dst_len, process_sp->GetByteOrder(), error);
+
+  if (error.Success()) {
+    if (bytes_copied == 0) {
+      error.SetErrorString("byte copy failed.");
+    } else {
+      const uint32_t bytes_written =
+          process_sp->WriteMemory(dst_addr, dst, bytes_copied, error);
+      if (bytes_written != bytes_copied) {
+        if (error.Success()) {
+          // This might happen if we read _some_ bytes but not all
+          error.SetErrorStringWithFormat("only wrote %u of %u bytes",
+                                         bytes_written, bytes_copied);
         }
       }
     }
-  } else
-    error.SetErrorString("invalid process");
+  }
 
   return error;
 }
