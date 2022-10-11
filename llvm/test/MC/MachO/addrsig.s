@@ -1,3 +1,4 @@
+# REQUIRES: aarch64-registered-target
 # RUN: llvm-mc -filetype=obj -triple arm64-apple-darwin %s -o %t
 # RUN: llvm-readobj -r -s %t | FileCheck %s
 
