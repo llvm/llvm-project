@@ -3577,6 +3577,7 @@ Code object V5 metadata is the same as
      ".uses_dynamic_stack" boolean                  Indicates if the generated machine code
                                                     is using a dynamically sized stack.
      ===================== ============= ========== =======================================
+
 ..
 
   .. table:: AMDHSA Code Object V5 Kernel Argument Metadata Map Additions and Changes
