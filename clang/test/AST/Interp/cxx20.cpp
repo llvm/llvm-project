@@ -77,4 +77,12 @@ constexpr int initializedLocal() {
   return a;
 }
 static_assert(initializedLocal() == 20);
+
+/// Similar here, but the uninitialized local is passed as a function parameter.
+constexpr int inc(int a) { return a + 1; }
+constexpr int f() {
+    int i;
+    return inc(i);
+}
+static_assert(f());
 #endif
