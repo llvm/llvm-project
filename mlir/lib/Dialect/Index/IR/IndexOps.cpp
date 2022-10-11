@@ -7,7 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Index/IR/IndexOps.h"
+#include "mlir/Dialect/Index/IR/IndexAttrs.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/OpImplementation.h"
 
 using namespace mlir;
 using namespace mlir::index;
@@ -21,6 +24,22 @@ void IndexDialect::registerOperations() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Index/IR/IndexOps.cpp.inc"
       >();
+}
+
+//===----------------------------------------------------------------------===//
+// CastSOp
+//===----------------------------------------------------------------------===//
+
+bool CastSOp::areCastCompatible(TypeRange lhsTypes, TypeRange rhsTypes) {
+  return lhsTypes.front().isa<IndexType>() != rhsTypes.front().isa<IndexType>();
+}
+
+//===----------------------------------------------------------------------===//
+// CastUOp
+//===----------------------------------------------------------------------===//
+
+bool CastUOp::areCastCompatible(TypeRange lhsTypes, TypeRange rhsTypes) {
+  return lhsTypes.front().isa<IndexType>() != rhsTypes.front().isa<IndexType>();
 }
 
 //===----------------------------------------------------------------------===//
