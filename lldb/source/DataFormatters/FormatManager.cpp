@@ -707,16 +707,14 @@ void FormatManager::LoadSystemFormatters() {
   lldb::TypeSummaryImplSP string_array_format(
       new StringSummaryFormat(string_array_flags, "${var%char[]}"));
 
-  RegularExpression any_size_char_arr(R"(^((un)?signed )?char ?\[[0-9]+\]$)");
-
   TypeCategoryImpl::SharedPointer sys_category_sp =
       GetCategory(m_system_category_name);
 
-  sys_category_sp->GetRegexTypeSummariesContainer()->Add(
-      RegularExpression(R"(^(unsigned )?char ?(\*|\[\])$)"), string_format);
+  sys_category_sp->AddTypeSummary(R"(^(unsigned )?char ?(\*|\[\])$)",
+                                  eFormatterMatchRegex, string_format);
 
-  sys_category_sp->GetRegexTypeSummariesContainer()->Add(
-      std::move(any_size_char_arr), string_array_format);
+  sys_category_sp->AddTypeSummary(R"(^((un)?signed )?char ?\[[0-9]+\]$)",
+                                  eFormatterMatchRegex, string_array_format);
 
   lldb::TypeSummaryImplSP ostype_summary(
       new StringSummaryFormat(TypeSummaryImpl::Flags()
@@ -729,8 +727,8 @@ void FormatManager::LoadSystemFormatters() {
                                   .SetHideItemNames(false),
                               "${var%O}"));
 
-  sys_category_sp->GetTypeSummariesContainer()->Add(ConstString("OSType"),
-                                                    ostype_summary);
+  sys_category_sp->AddTypeSummary("OSType", eFormatterMatchExact,
+                                  ostype_summary);
 
   TypeFormatImpl::Flags fourchar_flags;
   fourchar_flags.SetCascades(true).SetSkipPointers(true).SetSkipReferences(

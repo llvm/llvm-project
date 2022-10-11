@@ -45,14 +45,10 @@ public:
       sc = std::make_shared<Subcontainer>(change_listener);
   }
 
-  /// Returns the subcontainer containing formatters for exact matching.
-  std::shared_ptr<Subcontainer> GetExactMatch() const {
-    return m_subcontainers[lldb::eFormatterMatchExact];
-  }
-
-  /// Returns the subcontainer containing formatters for regex matching.
-  std::shared_ptr<Subcontainer> GetRegexMatch() const {
-    return m_subcontainers[lldb::eFormatterMatchRegex];
+  /// Clears all subcontainers.
+  void Clear() {
+    for (auto sc : m_subcontainers)
+      sc->Clear();
   }
 
   /// Adds a formatter to the right subcontainer depending on the matching type
@@ -67,6 +63,15 @@ public:
   bool Delete(lldb::TypeNameSpecifierImplSP type_sp) {
     return m_subcontainers[type_sp->GetMatchType()]->Delete(
         TypeMatcher(type_sp));
+  }
+
+  /// Deletes all formatters registered with the string `name`, in all
+  /// subcontainers.
+  bool Delete(ConstString name) {
+    bool success = false;
+    for (auto sc : m_subcontainers)
+      success = sc->Delete(name) || success;
+    return success;
   }
 
   /// Returns the total count of elements across all subcontainers.
@@ -95,6 +100,15 @@ public:
            std::shared_ptr<FormatterImpl> &entry) {
     for (auto sc : m_subcontainers) {
       if (sc->Get(candidates, entry))
+        return true;
+    }
+    return false;
+  }
+
+  bool AnyMatches(ConstString type_name) {
+    std::shared_ptr<FormatterImpl> entry;
+    for (auto sc : m_subcontainers) {
+      if (sc->Get(type_name, entry))
         return true;
     }
     return false;
@@ -138,6 +152,11 @@ public:
     for (auto sc : m_subcontainers) {
       sc->ForEach(callback);
     }
+  }
+
+  void AutoComplete(CompletionRequest &request) {
+    for (auto sc: m_subcontainers)
+      sc->AutoComplete(request);
   }
 
  private:
@@ -188,36 +207,6 @@ public:
     m_synth_cont.ForEach(callback.callback);
   }
 
-  FormatContainer::SubcontainerSP GetTypeFormatsContainer() {
-    return m_format_cont.GetExactMatch();
-  }
-
-  FormatContainer::SubcontainerSP GetRegexTypeFormatsContainer() {
-    return m_format_cont.GetRegexMatch();
-  }
-
-  FormatContainer &GetFormatContainer() { return m_format_cont; }
-
-  SummaryContainer::SubcontainerSP GetTypeSummariesContainer() {
-    return m_summary_cont.GetExactMatch();
-  }
-
-  SummaryContainer::SubcontainerSP GetRegexTypeSummariesContainer() {
-    return m_summary_cont.GetRegexMatch();
-  }
-
-  SummaryContainer &GetSummaryContainer() { return m_summary_cont; }
-
-  FilterContainer::SubcontainerSP GetTypeFiltersContainer() {
-    return m_filter_cont.GetExactMatch();
-  }
-
-  FilterContainer::SubcontainerSP GetRegexTypeFiltersContainer() {
-    return m_filter_cont.GetRegexMatch();
-  }
-
-  FilterContainer &GetFilterContainer() { return m_filter_cont; }
-
   FormatContainer::MapValueType
   GetFormatForType(lldb::TypeNameSpecifierImplSP type_sp);
 
@@ -235,9 +224,23 @@ public:
     m_format_cont.Add(type_sp, format_sp);
   }
 
+  void AddTypeFormat(llvm::StringRef name, lldb::FormatterMatchType match_type,
+                     lldb::TypeFormatImplSP format_sp) {
+    AddTypeFormat(
+        std::make_shared<lldb_private::TypeNameSpecifierImpl>(name, match_type),
+        format_sp);
+  }
+
   void AddTypeSummary(lldb::TypeNameSpecifierImplSP type_sp,
                       lldb::TypeSummaryImplSP summary_sp) {
     m_summary_cont.Add(type_sp, summary_sp);
+  }
+
+  void AddTypeSummary(llvm::StringRef name, lldb::FormatterMatchType match_type,
+                      lldb::TypeSummaryImplSP summary_sp) {
+    AddTypeSummary(
+        std::make_shared<lldb_private::TypeNameSpecifierImpl>(name, match_type),
+        summary_sp);
   }
 
   void AddTypeFilter(lldb::TypeNameSpecifierImplSP type_sp,
@@ -245,9 +248,24 @@ public:
     m_filter_cont.Add(type_sp, filter_sp);
   }
 
+  void AddTypeFilter(llvm::StringRef name, lldb::FormatterMatchType match_type,
+                     lldb::TypeFilterImplSP filter_sp) {
+    AddTypeFilter(
+        std::make_shared<lldb_private::TypeNameSpecifierImpl>(name, match_type),
+        filter_sp);
+  }
+
   void AddTypeSynthetic(lldb::TypeNameSpecifierImplSP type_sp,
                         lldb::SyntheticChildrenSP synth_sp) {
     m_synth_cont.Add(type_sp, synth_sp);
+  }
+
+  void AddTypeSynthetic(llvm::StringRef name,
+                        lldb::FormatterMatchType match_type,
+                        lldb::SyntheticChildrenSP synth_sp) {
+    AddTypeSynthetic(
+        std::make_shared<lldb_private::TypeNameSpecifierImpl>(name, match_type),
+        synth_sp);
   }
 
   bool DeleteTypeFormat(lldb::TypeNameSpecifierImplSP type_sp) {
@@ -294,17 +312,6 @@ public:
 
   SynthContainer::MapValueType GetSyntheticAtIndex(size_t index);
 
-  SynthContainer::SubcontainerSP GetTypeSyntheticsContainer() {
-    return m_synth_cont.GetExactMatch();
-  }
-
-  SynthContainer::SubcontainerSP GetRegexTypeSyntheticsContainer() {
-    return m_synth_cont.GetRegexMatch();
-  }
-
-  SynthContainer &GetSyntheticsContainer() { return m_synth_cont; }
-
-
   bool IsEnabled() const { return m_enabled; }
 
   uint32_t GetEnabledPosition() {
@@ -344,6 +351,8 @@ public:
                   bool only_enabled = true,
                   const char **matching_category = nullptr,
                   FormatCategoryItems *matching_type = nullptr);
+
+  void AutoComplete(CompletionRequest &request, FormatCategoryItems items);
 
   typedef std::shared_ptr<TypeCategoryImpl> SharedPointer;
 

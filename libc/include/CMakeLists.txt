@@ -213,10 +213,29 @@ add_gen_header(
     .llvm-libc-macros.sched_macros
 )
 
+add_gen_header(
+  spawn
+  DEF_FILE spawn.h.def
+  GEN_HDR spawn.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-types.mode_t
+    .llvm-libc-types.posix_spawn_file_actions_t
+)
+
 # TODO: Not all platforms will have a include/sys directory. Add the sys
 # directory and the targets for sys/*.h files conditional to the OS requiring
 # them.
 file(MAKE_DIRECTORY "sys")
+
+add_gen_header(
+  sys_ioctl
+  DEF_FILE sys/ioctl.h.def
+  GEN_HDR sys/ioctl.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_ioctl_macros
+)
 
 add_gen_header(
   sys_mman

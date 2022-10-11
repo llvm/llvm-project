@@ -208,6 +208,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  isatty
+  SRCS
+    isatty.cpp
+  HDRS
+    ../isatty.h
+  DEPENDS
+    libc.include.unistd
+    libc.include.errno
+    libc.include.sys_syscall
+    libc.src.__support.OSUtil.osutil
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   link
   SRCS
     link.cpp
