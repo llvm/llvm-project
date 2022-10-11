@@ -192,6 +192,11 @@ public:
     ScanInstance.getFrontendOpts().ModulesShareFileManager = false;
 
     ScanInstance.setFileManager(FileMgr);
+    // Support for virtual file system overlays.
+    FileMgr->setVirtualFileSystem(createVFSFromCompilerInvocation(
+        ScanInstance.getInvocation(), ScanInstance.getDiagnostics(),
+        FileMgr->getVirtualFileSystemPtr()));
+
     ScanInstance.createSourceManager(*FileMgr);
 
     llvm::StringSet<> PrebuiltModulesInputFiles;
@@ -206,12 +211,6 @@ public:
 
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {
-      // Support for virtual file system overlays on top of the caching
-      // filesystem.
-      FileMgr->setVirtualFileSystem(createVFSFromCompilerInvocation(
-          ScanInstance.getInvocation(), ScanInstance.getDiagnostics(),
-          FileMgr->getVirtualFileSystemPtr()));
-
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> LocalDepFS =
           DepFS;
       ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
