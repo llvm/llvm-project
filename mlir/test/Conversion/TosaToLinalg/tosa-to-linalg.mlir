@@ -1990,3 +1990,18 @@ func.func @resize_dyn(%input: tensor<?x2x2x1xi8>) -> () {
   %output = "tosa.resize"(%input) { scale = [4, 2, 4, 2], offset = [-1, -1], border = [1, 1], mode = "BILINEAR" } : (tensor<?x2x2x1xi8>)  -> (tensor<?x4x4x1xi32>)
   return
 }
+
+// -----
+
+// Regression test for using the wrong rank.
+
+// CHECK-DAG: affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
+// CHECK-DAG: affine_map<(d0, d1, d2, d3) -> (d0, d1, d2, d3)>
+// CHECK-DAG: affine_map<(d0, d1, d2, d3) -> ()>
+// CHECK-LABEL: @select_fp32
+func.func @select_fp32(%arg0: tensor<1x1x5x5xi1>, %arg1: tensor<1x12x5x5xf32>, %arg2: tensor<f32>) -> tensor<1x12x5x5xf32> {
+  // CHECK: linalg.generic
+  %0 = "tosa.select"(%arg0, %arg1, %arg2) : (tensor<1x1x5x5xi1>, tensor<1x12x5x5xf32>, tensor<f32>) -> tensor<1x12x5x5xf32>
+  return %0 : tensor<1x12x5x5xf32>
+}
+

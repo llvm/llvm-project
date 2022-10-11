@@ -11,15 +11,21 @@ add_header(
 )
 
 add_header(
+  sys_ioctl_macros
+  HDR
+    sys-ioctl-macros.h
+)
+
+add_header(
   sys_mman_macros
   HDR
     sys-mman-macros.h
 )
 
 add_header(
-  sys_stat_macros
+  sys_random_macros
   HDR
-    sys-stat-macros.h
+    sys-random-macros.h
 )
 
 add_header(
@@ -38,6 +44,12 @@ add_header(
   sys_resource_macros
   HDR
     sys-resource-macros.h
+)
+
+add_header(
+  sys_stat_macros
+  HDR
+    sys-stat-macros.h
 )
 
 add_header(

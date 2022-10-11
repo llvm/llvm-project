@@ -74,7 +74,7 @@ TEST(Reductions, DoubleMaxMinNorm2) {
   EXPECT_LE(norm2Error, 0.000001 * naiveNorm2);
   StaticDescriptor<2, true> statDesc;
   Descriptor &loc{statDesc.descriptor()};
-  RTNAME(Maxloc)
+  RTNAME(MaxlocReal8)
   (loc, *array, /*KIND=*/8, __FILE__, __LINE__, /*MASK=*/nullptr,
       /*BACK=*/false);
   EXPECT_EQ(loc.rank(), 1);
@@ -88,7 +88,7 @@ TEST(Reductions, DoubleMaxMinNorm2) {
   EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int64_t>(1), 4);
   EXPECT_EQ(*loc.ZeroBasedIndexedElement<std::int64_t>(2), 2);
   loc.Destroy();
-  RTNAME(Maxloc)
+  RTNAME(MaxlocReal8)
   (loc, *array, /*KIND=*/8, __FILE__, __LINE__, /*MASK=*/nullptr,
       /*BACK=*/true);
   EXPECT_EQ(loc.rank(), 1);
@@ -264,7 +264,7 @@ TEST(Reductions, Character) {
   EXPECT_EQ(res.type().raw(), (TypeCode{TypeCategory::Character, 1}.raw()));
   EXPECT_EQ(std::memcmp(res.OffsetElement<char>(), "abc", 3), 0);
   res.Destroy();
-  RTNAME(Maxloc)
+  RTNAME(MaxlocCharacter)
   (res, *array, /*KIND=*/4, __FILE__, __LINE__, /*MASK=*/nullptr,
       /*BACK=*/false);
   EXPECT_EQ(res.rank(), 1);
@@ -276,7 +276,7 @@ TEST(Reductions, Character) {
   res.Destroy();
   auto mask{MakeArray<TypeCategory::Logical, 1>(
       shape, std::vector<bool>{false, true, false, true, false, true})};
-  RTNAME(Maxloc)
+  RTNAME(MaxlocCharacter)
   (res, *array, /*KIND=*/4, __FILE__, __LINE__, /*MASK=*/&*mask,
       /*BACK=*/false);
   EXPECT_EQ(res.rank(), 1);
@@ -286,7 +286,7 @@ TEST(Reductions, Character) {
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(0), 2);
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(1), 2);
   res.Destroy();
-  RTNAME(Minloc)
+  RTNAME(MinlocCharacter)
   (res, *array, /*KIND=*/4, __FILE__, __LINE__, /*MASK=*/nullptr,
       /*BACK=*/false);
   EXPECT_EQ(res.rank(), 1);
@@ -296,7 +296,7 @@ TEST(Reductions, Character) {
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(0), 1);
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(1), 1);
   res.Destroy();
-  RTNAME(Minloc)
+  RTNAME(MinlocCharacter)
   (res, *array, /*KIND=*/4, __FILE__, __LINE__, /*MASK=*/nullptr,
       /*BACK=*/true);
   EXPECT_EQ(res.rank(), 1);
@@ -306,7 +306,7 @@ TEST(Reductions, Character) {
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(0), 2);
   EXPECT_EQ(*res.ZeroBasedIndexedElement<std::int32_t>(1), 3);
   res.Destroy();
-  RTNAME(Minloc)
+  RTNAME(MinlocCharacter)
   (res, *array, /*KIND=*/4, __FILE__, __LINE__, /*MASK=*/&*mask,
       /*BACK=*/true);
   EXPECT_EQ(res.rank(), 1);

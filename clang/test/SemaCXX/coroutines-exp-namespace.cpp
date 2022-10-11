@@ -334,21 +334,26 @@ class type_info;
 
 void unevaluated() {
   decltype(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
-                        // expected-warning@-1 {{declaration does not declare anything}}
-  sizeof(co_await a);   // expected-error {{'co_await' cannot be used in an unevaluated context}}
-                        // expected-error@-1 {{invalid application of 'sizeof' to an incomplete type 'void'}}
-                        // expected-warning@-2 {{expression with side effects has no effect in an unevaluated context}}
-  typeid(co_await a);   // expected-error {{'co_await' cannot be used in an unevaluated context}}
-                        // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
-                        // expected-warning@-2 {{expression result unused}}
+}
+
+void unevaluated2() {
+  sizeof(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
+}
+
+void unevaluated3() {
+  typeid(co_await a); // expected-error {{'co_await' cannot be used in an unevaluated context}}
+}
+
+void unevaluated4() {
   decltype(co_yield 1); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
-                        // expected-warning@-1 {{declaration does not declare anything}}
-  sizeof(co_yield 2);   // expected-error {{'co_yield' cannot be used in an unevaluated context}}
-                        // expected-error@-1 {{invalid application of 'sizeof' to an incomplete type 'void'}}
-                        // expected-warning@-2 {{expression with side effects has no effect in an unevaluated context}}
-  typeid(co_yield 3);   // expected-error {{'co_yield' cannot be used in an unevaluated context}}
-                        // expected-warning@-1 {{expression with side effects has no effect in an unevaluated context}}
-                        // expected-warning@-2 {{expression result unused}}
+}
+
+void unevaluated5() {
+  sizeof(co_yield 2); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
+}
+
+void unevaluated6() {
+  typeid(co_yield 3); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
 }
 
 // [expr.await]p2: "An await-expression shall not appear in a default argument."

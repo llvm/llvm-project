@@ -916,7 +916,8 @@ mlir::LogicalResult fir::ConvertOp::verify() {
       (isPointerCompatible(inType) && isIntegerCompatible(outType)) ||
       (inType.isa<fir::BoxType>() && outType.isa<fir::BoxType>()) ||
       (inType.isa<fir::BoxProcType>() && outType.isa<fir::BoxProcType>()) ||
-      (fir::isa_complex(inType) && fir::isa_complex(outType)))
+      (fir::isa_complex(inType) && fir::isa_complex(outType)) ||
+      (fir::isBoxedRecordType(inType) && fir::isPolymorphicType(outType)))
     return mlir::success();
   return emitOpError("invalid type conversion");
 }

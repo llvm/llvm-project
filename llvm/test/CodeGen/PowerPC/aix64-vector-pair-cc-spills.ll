@@ -3,32 +3,20 @@
 ; RUN: llc -O0 -mtriple=powerpc64-ibm-aix-xcoff -mcpu=pwr10 -vec-extabi -stop-after=prologepilog -verify-machineinstrs < %s | \
 ; RUN: FileCheck --check-prefix=CHECK-VEXT %s
 
-; Error pattern will be fixed in https://reviews.llvm.org/D133466
 ; CHECK-LABEL: name: foo
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v31'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v30'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v29'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v28'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v27'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v26'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v25'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v24'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v23'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v22'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v21'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v20'
+; CHECK-NOT: spill-slot
+; CHECK-NOT: callee-saved-register: '$v31'
+; CHECK-NOT: callee-saved-register: '$v30'
+; CHECK-NOT: callee-saved-register: '$v29'
+; CHECK-NOT: callee-saved-register: '$v28'
+; CHECK-NOT: callee-saved-register: '$v27'
+; CHECK-NOT: callee-saved-register: '$v26'
+; CHECK-NOT: callee-saved-register: '$v25'
+; CHECK-NOT: callee-saved-register: '$v24'
+; CHECK-NOT: callee-saved-register: '$v23'
+; CHECK-NOT: callee-saved-register: '$v22'
+; CHECK-NOT: callee-saved-register: '$v21'
+; CHECK-NOT: callee-saved-register: '$v20'
 
 ; CHECK-VEXT-LABEL: name: foo
 ; CHECK-VEXT-NOT: spill-slot
@@ -50,32 +38,20 @@ entry:
   ret void
 }
 
-; Error pattern will be fixed in https://reviews.llvm.org/D133466
 ; CHECK-LABEL: name: spill
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v31'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v30'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v29'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v28'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v27'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v26'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v25'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v24'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v23'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v22'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v21'
-; CHECK: spill-slot
-; CHECK-NEXT: callee-saved-register: '$v20'
+; CHECK-NOT: spill-slot
+; CHECK-NOT: callee-saved-register: '$v31'
+; CHECK-NOT: callee-saved-register: '$v30'
+; CHECK-NOT: callee-saved-register: '$v29'
+; CHECK-NOT: callee-saved-register: '$v28'
+; CHECK-NOT: callee-saved-register: '$v27'
+; CHECK-NOT: callee-saved-register: '$v26'
+; CHECK-NOT: callee-saved-register: '$v25'
+; CHECK-NOT: callee-saved-register: '$v24'
+; CHECK-NOT: callee-saved-register: '$v23'
+; CHECK-NOT: callee-saved-register: '$v22'
+; CHECK-NOT: callee-saved-register: '$v21'
+; CHECK-NOT: callee-saved-register: '$v20'
 
 ; CHECK-VEXT-LABEL: name: spill
 ; CHECK-VEXT: spill-slot

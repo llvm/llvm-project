@@ -15,6 +15,9 @@
 #define W_OK 2
 #define R_OK 4
 
+#define _SC_PAGESIZE 1
+#define _SC_PAGE_SIZE _SC_PAGESIZE
+
 // Macro to set up the call to the __llvm_libc_syscall function
 // This is to prevent the call from having fewer than 6 arguments, since six
 // arguments are always passed to the syscall. Unnecessary arguments are

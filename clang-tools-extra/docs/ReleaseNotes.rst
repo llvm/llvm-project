@@ -110,6 +110,11 @@ New checks
 
   Warns when a struct or class uses const or reference (lvalue or rvalue) data members.
 
+- New :doc:`cppcoreguidelines-avoid-do-while
+  <clang-tidy/checks/cppcoreguidelines/avoid-do-while>` check.
+
+  Warns when using ``do-while`` loops.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
@@ -163,6 +168,12 @@ Changes in existing checks
   <clang-tidy/checks/readability/braces-around-statements>` and
   :doc:`readability-simplify-boolean-expr <clang-tidy/checks/readability/simplify-boolean-expr>`
   when using a C++23 ``if consteval`` statement.
+
+- Improved :doc:`misc-redundant-expression <clang-tidy/checks/misc/redundant-expression>`
+  check.
+
+  The check now skips concept definitions since redundant expressions still make sense
+  inside them.
 
 Removed checks
 ^^^^^^^^^^^^^^

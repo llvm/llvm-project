@@ -279,6 +279,21 @@ TEST_F(TargetDeclTest, UsingDecl) {
   )cpp";
   EXPECT_DECLS("UnresolvedUsingTypeLoc",
                {"using typename Foo<T>::foo", Rel::Alias});
+
+  // Using enum.
+  Flags.push_back("-std=c++20");
+  Code = R"cpp(
+    namespace ns { enum class A { X }; }
+    [[using enum ns::A]];
+  )cpp";
+  EXPECT_DECLS("UsingEnumDecl", "enum class A : int");
+
+  Code = R"cpp(
+    namespace ns { enum class A { X }; }
+    using enum ns::A;
+    auto m = [[X]];
+  )cpp";
+  EXPECT_DECLS("DeclRefExpr", "X");
 }
 
 TEST_F(TargetDeclTest, BaseSpecifier) {

@@ -614,7 +614,7 @@ elementwiseMatchAndRewriteHelper(Operation *operation,
 
     operands.push_back(operand);
     indexingMaps.push_back(AffineMap::get(
-        /*dimCount=*/type.getRank(), /*symbolCount=*/0, affineExprs,
+        /*dimCount=*/rank, /*symbolCount=*/0, affineExprs,
         rewriter.getContext()));
   }
 
@@ -1451,11 +1451,11 @@ public:
       iy = rewriter.create<arith::DivUIOp>(loc, y, yScaleN);
       ix = rewriter.create<arith::DivUIOp>(loc, x, xScaleN);
 
-      Value temp_y = rewriter.create<arith::MulIOp>(loc, iy, yScaleN);
-      Value temp_x = rewriter.create<arith::MulIOp>(loc, ix, xScaleN);
+      Value tempY = rewriter.create<arith::MulIOp>(loc, iy, yScaleN);
+      Value tempX = rewriter.create<arith::MulIOp>(loc, ix, xScaleN);
 
-      dy = rewriter.create<arith::SubIOp>(loc, y, temp_y);
-      dx = rewriter.create<arith::SubIOp>(loc, x, temp_x);
+      dy = rewriter.create<arith::SubIOp>(loc, y, tempY);
+      dx = rewriter.create<arith::SubIOp>(loc, x, tempX);
     }
 
     if (op.getMode() == "NEAREST_NEIGHBOR") {
@@ -1563,16 +1563,16 @@ public:
 
         rewriter.create<linalg::YieldOp>(loc, result);
         return success();
-      } else {
-        y0x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x0);
-        y0x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x1);
-        y1x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x0);
-        y1x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x1);
+      }
+      y0x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x0);
+      y0x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y0x1);
+      y1x0 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x0);
+      y1x1 = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, y1x1);
 
-        if (resultElementTy.getIntOrFloatBitWidth() > 32) {
-          dx = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dx);
-          dy = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dy);
-        }
+      if (resultElementTy.getIntOrFloatBitWidth() > 32) {
+        dx = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dx);
+        dy = rewriter.create<arith::ExtSIOp>(loc, resultElementTy, dy);
+      }
 
         Value rightPart = dx;
         Value leftPart = rewriter.create<arith::SubIOp>(loc, xScaleN, dx);
@@ -1593,7 +1593,6 @@ public:
 
         rewriter.create<linalg::YieldOp>(loc, result);
         return success();
-      }
     }
 
     return failure();

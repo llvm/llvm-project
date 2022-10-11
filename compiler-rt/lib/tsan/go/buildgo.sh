@@ -59,7 +59,7 @@ if [ "`uname -a | grep Linux`" != "" ]; then
 		ARCHCFLAGS="-m64 -mcpu=power8 -fno-function-sections"
 	elif [ "`uname -a | grep x86_64`" != "" ]; then
 		SUFFIX="linux_amd64"
-		if [ "$GOAMD64" == "v3" ]; then
+		if [ "$GOAMD64" = "v3" ]; then
 			ARCHCFLAGS="-m64 -msse4.2"
 		else
 			ARCHCFLAGS="-m64 -msse3"

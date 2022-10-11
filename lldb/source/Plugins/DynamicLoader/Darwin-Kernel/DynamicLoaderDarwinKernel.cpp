@@ -152,7 +152,8 @@ DynamicLoader *DynamicLoaderDarwinKernel::CreateInstance(Process *process,
   if (!force) {
     // If the user provided an executable binary and it is not a kernel, this
     // plugin should not create an instance.
-    if (!is_kernel(process->GetTarget().GetExecutableModulePointer()))
+    Module *exec = process->GetTarget().GetExecutableModulePointer();
+    if (exec && !is_kernel(exec))
       return nullptr;
 
     // If the target's architecture does not look like an Apple environment,

@@ -237,24 +237,12 @@ Constant *AA::getInitialValueForObj(Value &Obj, Type &Ty,
   if (!GV->hasInitializer())
     return UndefValue::get(&Ty);
 
-  // Handle constant initializers by extracting the relevant parts for
-  // aggregates.
-  Constant *C = GV->getInitializer();
-  if (OASPtr && !OASPtr->offsetOrSizeAreUnknown() &&
-      isa<ConstantAggregate>(C)) {
-    Type *CTy = C->getType();
+  if (OASPtr && !OASPtr->offsetOrSizeAreUnknown()) {
     APInt Offset = APInt(64, OASPtr->getOffset());
-    Optional<APInt> Idx = DL.getGEPIndexForOffset(CTy, Offset);
-    // Check if the indexing worked out properly.
-    // TODO: Handle partial accesses, e.g., Offset is > 0 or Size < CTy.size().
-    if (Idx && Offset.isZero() &&
-        DL.getTypeSizeInBits(CTy) == uint64_t(OASPtr->getSize() * 8)) {
-      if (auto *Folded =
-              ConstantFoldExtractValueInstruction(C, Idx->getZExtValue()))
-        C = Folded;
-    }
+    return ConstantFoldLoadFromConst(GV->getInitializer(), &Ty, Offset, DL);
   }
-  return dyn_cast_or_null<Constant>(getWithType(*C, Ty));
+
+  return ConstantFoldLoadFromUniformValue(GV->getInitializer(), &Ty);
 }
 
 bool AA::isValidInScope(const Value &V, const Function *Scope) {

@@ -149,7 +149,7 @@ define i1 @sge_neg_1_sge_0_known(i8 %a) {
 ; CHECK-NEXT:    [[A_NE_0:%.*]] = icmp sge i16 [[EXT]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[A_NE_0]])
 ; CHECK-NEXT:    [[T:%.*]] = icmp sge i16 [[EXT]], -1
-; CHECK-NEXT:    ret i1 [[T]]
+; CHECK-NEXT:    ret i1 true
 ;
   %ext = zext i8 %a to i16
   %a.ne.0 = icmp sge i16 %ext, 0
