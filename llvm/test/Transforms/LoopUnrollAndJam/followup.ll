@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -tbaa -loop-unroll-and-jam -allow-unroll-and-jam -unroll-and-jam-count=4 -unroll-remainder < %s -S | FileCheck %s
+; RUN: opt -loop-unroll-and-jam -allow-unroll-and-jam -unroll-and-jam-count=4 -unroll-remainder < %s -S | FileCheck %s
 ;
 ; Check that followup attributes are set in the new loops.
 ;

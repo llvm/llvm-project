@@ -360,6 +360,7 @@ opt<bool> Test{
     cat(Misc),
     desc("Abbreviation for -input-style=delimited -pretty -sync "
          "-enable-test-scheme -enable-config=0 -log=verbose -crash-pragmas. "
+         "Also sets config options: Index.StandardLibrary=false. "
          "Intended to simplify lit tests"),
     init(false),
     Hidden,
@@ -697,6 +698,9 @@ public:
         C.Index.Background = *BGPolicy;
       if (AllScopesCompletion.getNumOccurrences())
         C.Completion.AllScopes = AllScopesCompletion;
+
+      if (Test)
+        C.Index.StandardLibrary = false;
       return true;
     };
   }

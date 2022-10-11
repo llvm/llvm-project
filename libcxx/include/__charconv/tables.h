@@ -19,7 +19,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#ifndef _LIBCPP_CXX03_LANG
+#if _LIBCPP_STD_VER > 14
 
 namespace __itoa {
 
@@ -173,7 +173,7 @@ const char __table<_Tp>::__digits_base_10[200] = {
 
 } // namespace __itoa
 
-#endif // _LIBCPP_CXX03_LANG
+#endif // _LIBCPP_STD_VER > 14
 
 _LIBCPP_END_NAMESPACE_STD
 

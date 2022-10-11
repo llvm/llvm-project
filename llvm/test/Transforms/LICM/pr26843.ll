@@ -1,4 +1,4 @@
-; RUN: opt -S -basic-aa -licm < %s | FileCheck %s
+; RUN: opt -S -licm < %s | FileCheck %s
 
 target datalayout = "e-m:x-p:32:32-i64:64-f80:32-n8:16:32-a:0:32-S32"
 target triple = "i686-pc-windows-msvc18.0.0"

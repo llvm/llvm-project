@@ -1215,8 +1215,10 @@ struct DSEState {
       if (GEP->hasAllConstantIndices())
         Ptr = GEP->getPointerOperand()->stripPointerCasts();
 
-    if (auto *I = dyn_cast<Instruction>(Ptr))
-      return I->getParent()->isEntryBlock();
+    if (auto *I = dyn_cast<Instruction>(Ptr)) {
+      return I->getParent()->isEntryBlock() ||
+             (!ContainsIrreducibleLoops && !LI.getLoopFor(I->getParent()));
+    }
     return true;
   }
 

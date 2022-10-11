@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -function-attrs -S < %s | FileCheck %s
+; RUN: opt -function-attrs -S < %s | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes=function-attrs -S < %s | FileCheck %s
 
 ; Atomic load/store to local doesn't affect whether a function is

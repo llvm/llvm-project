@@ -323,6 +323,64 @@ TEST_F(AArch64GISelMITest, MatchFCmp) {
   EXPECT_EQ(Copies[1], Reg1);
 }
 
+TEST_F(AArch64GISelMITest, MatcCommutativeICmp) {
+  setUp();
+  if (!TM)
+    return;
+  const LLT s1 = LLT::scalar(1);
+  Register LHS = Copies[0];
+  Register RHS = Copies[1];
+  CmpInst::Predicate MatchedPred;
+  bool Match = false;
+  for (unsigned P = CmpInst::Predicate::FIRST_ICMP_PREDICATE;
+       P < CmpInst::Predicate::LAST_ICMP_PREDICATE; ++P) {
+    auto CurrPred = static_cast<CmpInst::Predicate>(P);
+    auto Cmp = B.buildICmp(CurrPred, s1, LHS, RHS);
+    // Basic matching.
+    Match = mi_match(
+        Cmp.getReg(0), *MRI,
+        m_c_GICmp(m_Pred(MatchedPred), m_SpecificReg(LHS), m_SpecificReg(RHS)));
+    EXPECT_TRUE(Match);
+    EXPECT_EQ(MatchedPred, CurrPred);
+    // Commuting operands should still match, but the predicate should be
+    // swapped.
+    Match = mi_match(
+        Cmp.getReg(0), *MRI,
+        m_c_GICmp(m_Pred(MatchedPred), m_SpecificReg(RHS), m_SpecificReg(LHS)));
+    EXPECT_TRUE(Match);
+    EXPECT_EQ(MatchedPred, CmpInst::getSwappedPredicate(CurrPred));
+  }
+}
+
+TEST_F(AArch64GISelMITest, MatcCommutativeFCmp) {
+  setUp();
+  if (!TM)
+    return;
+  const LLT s1 = LLT::scalar(1);
+  Register LHS = Copies[0];
+  Register RHS = Copies[1];
+  CmpInst::Predicate MatchedPred;
+  bool Match = false;
+  for (unsigned P = CmpInst::Predicate::FIRST_FCMP_PREDICATE;
+       P < CmpInst::Predicate::LAST_FCMP_PREDICATE; ++P) {
+    auto CurrPred = static_cast<CmpInst::Predicate>(P);
+    auto Cmp = B.buildFCmp(CurrPred, s1, LHS, RHS);
+    // Basic matching.
+    Match = mi_match(
+        Cmp.getReg(0), *MRI,
+        m_c_GFCmp(m_Pred(MatchedPred), m_SpecificReg(LHS), m_SpecificReg(RHS)));
+    EXPECT_TRUE(Match);
+    EXPECT_EQ(MatchedPred, CurrPred);
+    // Commuting operands should still match, but the predicate should be
+    // swapped.
+    Match = mi_match(
+        Cmp.getReg(0), *MRI,
+        m_c_GFCmp(m_Pred(MatchedPred), m_SpecificReg(RHS), m_SpecificReg(LHS)));
+    EXPECT_TRUE(Match);
+    EXPECT_EQ(MatchedPred, CmpInst::getSwappedPredicate(CurrPred));
+  }
+}
+
 TEST_F(AArch64GISelMITest, MatchFPUnaryOp) {
   setUp();
   if (!TM)

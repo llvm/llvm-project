@@ -221,7 +221,9 @@ bool AMDGPUPostLegalizerCombinerHelper::matchRcpSqrtToRsq(
 
   auto getSqrtSrc = [=](const MachineInstr &MI) {
     MachineInstr *SqrtSrcMI = nullptr;
-    mi_match(MI.getOperand(0).getReg(), MRI, m_GFSqrt(m_MInstr(SqrtSrcMI)));
+    auto Match =
+        mi_match(MI.getOperand(0).getReg(), MRI, m_GFSqrt(m_MInstr(SqrtSrcMI)));
+    (void)Match;
     return SqrtSrcMI;
   };
 
@@ -254,11 +256,11 @@ bool AMDGPUPostLegalizerCombinerHelper::matchCvtF32UByteN(
   Register SrcReg = MI.getOperand(1).getReg();
 
   // Look through G_ZEXT.
-  mi_match(SrcReg, MRI, m_GZExt(m_Reg(SrcReg)));
+  bool IsShr = mi_match(SrcReg, MRI, m_GZExt(m_Reg(SrcReg)));
 
   Register Src0;
   int64_t ShiftAmt;
-  bool IsShr = mi_match(SrcReg, MRI, m_GLShr(m_Reg(Src0), m_ICst(ShiftAmt)));
+  IsShr = mi_match(SrcReg, MRI, m_GLShr(m_Reg(Src0), m_ICst(ShiftAmt)));
   if (IsShr || mi_match(SrcReg, MRI, m_GShl(m_Reg(Src0), m_ICst(ShiftAmt)))) {
     const unsigned Offset = MI.getOpcode() - AMDGPU::G_AMDGPU_CVT_F32_UBYTE0;
 

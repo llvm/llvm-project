@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -licm -S | FileCheck %s
+; RUN: opt < %s -licm -S | FileCheck %s
 ; PR9630
 
 @g_39 = external global i16, align 2

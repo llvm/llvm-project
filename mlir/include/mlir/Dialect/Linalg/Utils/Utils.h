@@ -445,14 +445,6 @@ private:
   DenseMap<Operation *, SmallVector<int64_t>> tiledRootAndFusedOpsLoops;
 };
 
-/// Tiles `consumerOp` and fuses its dependencies if possible. Uses the
-/// `tileSizes`, `tileInterchange`, and `tileDistribution` parameters to control
-/// the tiling.
-FailureOr<TileLoopNest> tileConsumerAndFuseProducers(
-    OpBuilder &b, LinalgOp consumerOp, ArrayRef<int64_t> tileSizes,
-    ArrayRef<int64_t> tileInterchange,
-    const Optional<LinalgLoopDistributionOptions> &tileDistribution);
-
 //===----------------------------------------------------------------------===//
 // Generic op region utilities
 //===----------------------------------------------------------------------===//

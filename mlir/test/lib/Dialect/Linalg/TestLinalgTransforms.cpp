@@ -65,10 +65,6 @@ struct TestLinalgTransforms
       *this, "test-tile-and-distribute-options",
       llvm::cl::desc("Test tile and distribute options"),
       llvm::cl::init(false)};
-  Option<bool> testTileFuseAndDistributionOptions{
-      *this, "test-tile-fuse-and-distribute-options",
-      llvm::cl::desc("Test tile, fuse and distribute options"),
-      llvm::cl::init(false)};
   Option<bool> testVectorTransferForwardingPatterns{
       *this, "test-vector-transfer-forwarding-patterns",
       llvm::cl::desc(
@@ -415,27 +411,6 @@ static void fillTileAndDistributePatterns(MLIRContext *context,
   }
 }
 
-static void fillTileFuseAndDistributePatterns(MLIRContext *context,
-                                              RewritePatternSet &patterns) {
-  LinalgLoopDistributionOptions cyclicNprocsEqNiters;
-  SmallVector<linalg::DistributionMethod> distributionMethod = {
-      DistributionMethod::Cyclic, DistributionMethod::Cyclic};
-  cyclicNprocsEqNiters.procInfo =
-      [distributionMethod](OpBuilder &b, Location loc,
-                           ArrayRef<Range> parallelLoopRanges) {
-        return getGpuProcIds<gpu::BlockIdOp, gpu::GridDimOp>(
-            b, loc, parallelLoopRanges, distributionMethod);
-      };
-  patterns.add<LinalgTileAndFuseTensorOpsPattern>(
-      MatmulOp::getOperationName(), context,
-      LinalgTilingAndFusionOptions()
-          .setTileSizes({8, 8, 4})
-          .setDistributionOptions(cyclicNprocsEqNiters),
-      LinalgTransformationFilter(
-          StringAttr::get(context, "tensors_fuse_distribute1"),
-          StringAttr::get(context, "tensors_after_fuse_distribute1")));
-}
-
 static void applyVectorTransferForwardingPatterns(func::FuncOp funcOp) {
   RewritePatternSet forwardPattern(funcOp.getContext());
   forwardPattern.add<LinalgCopyVTRForwardingPattern>(funcOp.getContext());
@@ -549,12 +524,6 @@ void TestLinalgTransforms::runOnOperation() {
   if (testTileAndDistributionOptions) {
     RewritePatternSet patterns(&getContext());
     fillTileAndDistributePatterns(&getContext(), patterns);
-    (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
-    return;
-  }
-  if (testTileFuseAndDistributionOptions) {
-    RewritePatternSet patterns(&getContext());
-    fillTileFuseAndDistributePatterns(&getContext(), patterns);
     (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
     return;
   }

@@ -3758,6 +3758,23 @@ the configuration (without a prefix: ``Auto``).
       }
     }
 
+**RemoveSemicolon** (``Boolean``) :versionbadge:`clang-format 16`
+  Remove semicolons after the closing brace of a non-empty function.
+
+  .. warning:: 
+
+   Setting this option to `true` could lead to incorrect code formatting due
+   to clang-format's lack of complete semantic information. As such, extra
+   care should be taken to review code changes made by this option.
+
+  .. code-block:: c++
+
+    false:                                     true:
+
+    int max(int a, int b) {                    int max(int a, int b) {
+      return a > b ? a : b;                      return a > b ? a : b;
+    };                                         }
+
 **RequiresClausePosition** (``RequiresClausePositionStyle``) :versionbadge:`clang-format 15`
   The position of the ``requires`` clause.
 

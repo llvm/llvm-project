@@ -41,27 +41,11 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
 
   PTXVersion = 32;
   for (const StringRef Feature : Opts.FeaturesAsWritten) {
-    if (!Feature.startswith("+ptx"))
+    int PTXV;
+    if (!Feature.startswith("+ptx") ||
+        Feature.drop_front(4).getAsInteger(10, PTXV))
       continue;
-    PTXVersion = llvm::StringSwitch<unsigned>(Feature)
-                     .Case("+ptx75", 75)
-                     .Case("+ptx74", 74)
-                     .Case("+ptx73", 73)
-                     .Case("+ptx72", 72)
-                     .Case("+ptx71", 71)
-                     .Case("+ptx70", 70)
-                     .Case("+ptx65", 65)
-                     .Case("+ptx64", 64)
-                     .Case("+ptx63", 63)
-                     .Case("+ptx61", 61)
-                     .Case("+ptx60", 60)
-                     .Case("+ptx50", 50)
-                     .Case("+ptx43", 43)
-                     .Case("+ptx42", 42)
-                     .Case("+ptx41", 41)
-                     .Case("+ptx40", 40)
-                     .Case("+ptx32", 32)
-                     .Default(32);
+    PTXVersion = PTXV; // TODO: should it be max(PTXVersion, PTXV)?
   }
 
   TLSSupported = false;
@@ -262,6 +246,12 @@ void NVPTXTargetInfo::getTargetDefines(const LangOptions &Opts,
         return "800";
       case CudaArch::SM_86:
         return "860";
+      case CudaArch::SM_87:
+        return "870";
+      case CudaArch::SM_89:
+        return "890";
+      case CudaArch::SM_90:
+        return "900";
       }
       llvm_unreachable("unhandled CudaArch");
     }();

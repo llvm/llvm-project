@@ -9,6 +9,7 @@
 #include "CPlusPlusNameParser.h"
 
 #include "clang/Basic/IdentifierTable.h"
+#include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Threading.h"
 
@@ -106,7 +107,7 @@ CPlusPlusNameParser::ParseFunctionImpl(bool expect_return_type) {
   Bookmark start_position = SetBookmark();
   if (expect_return_type) {
     // Consume return type if it's expected.
-    if (!ConsumeTypename())
+    if (!ConsumeToken(tok::kw_auto) && !ConsumeTypename())
       return None;
   }
 

@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -dse -S < %s | FileCheck %s
+; RUN: opt -dse -S < %s | FileCheck %s
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 %t = type { i32 }

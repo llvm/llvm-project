@@ -1,4 +1,4 @@
-; RUN: opt < %s -basic-aa -dse -S | FileCheck %s
+; RUN: opt < %s -dse -S | FileCheck %s
 
 declare noalias ptr @calloc(i64, i64) inaccessiblememonly allockind("alloc,zeroed")
 

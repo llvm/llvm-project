@@ -162,18 +162,6 @@ def LinalgDetensorize : Pass<"linalg-detensorize", ""> {
   ];
 }
 
-def LinalgStrategyTileAndFusePass
-    : Pass<"linalg-strategy-tile-and-fuse-pass", "func::FuncOp"> {
-  let summary = "Configurable pass to apply pattern-based tiling and fusion.";
-  let constructor = "mlir::createLinalgStrategyTileAndFusePass()";
-  let options = [
-    Option<"anchorFuncName", "anchor-func", "std::string", /*default=*/"",
-      "Which func op is the anchor to latch on.">,
-    Option<"anchorOpName", "anchor-op", "std::string", /*default=*/"",
-      "Which linalg op within the func is the anchor to latch on.">,
-  ];
-}
-
 def LinalgStrategyTilePass
     : Pass<"linalg-strategy-tile-pass", "func::FuncOp"> {
   let summary = "Configurable pass to apply pattern-based linalg tiling.";

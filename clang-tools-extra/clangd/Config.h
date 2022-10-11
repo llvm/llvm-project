@@ -85,7 +85,7 @@ struct Config {
     /// Whether this TU should be background-indexed.
     BackgroundPolicy Background = BackgroundPolicy::Build;
     ExternalIndexSpec External;
-    bool StandardLibrary = false;
+    bool StandardLibrary = true;
   } Index;
 
   enum UnusedIncludesPolicy { Strict, None };
