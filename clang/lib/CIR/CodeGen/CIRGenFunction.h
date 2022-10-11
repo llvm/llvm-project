@@ -527,6 +527,21 @@ public:
     }
   };
 
+  class CIRGenFPOptionsRAII {
+  public:
+    CIRGenFPOptionsRAII(CIRGenFunction &CGF, FPOptions FPFeatures);
+    CIRGenFPOptionsRAII(CIRGenFunction &CGF, const clang::Expr *E);
+    ~CIRGenFPOptionsRAII();
+
+  private:
+    void ConstructorHelper(clang::FPOptions FPFeatures);
+    CIRGenFunction &CGF;
+    clang::FPOptions OldFPFeatures;
+    fp::ExceptionBehavior OldExcept;
+    llvm::RoundingMode OldRounding;
+  };
+  clang::FPOptions CurFPFeatures;
+
   RValue convertTempToRValue(Address addr, clang::QualType type,
                              clang::SourceLocation Loc);
 
