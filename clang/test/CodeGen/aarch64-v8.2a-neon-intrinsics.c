@@ -1486,18 +1486,18 @@ float16x4_t test_vfma_n_f16(float16x4_t a, float16x4_t b, float16_t c) {
 // CHECK-LABEL: define {{[^@]+}}@test_vfmaq_n_f16
 // CHECK-SAME: (<8 x half> noundef [[A:%.*]], <8 x half> noundef [[B:%.*]], half noundef [[C:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x half> undef, half [[C]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <8 x half> [[VECINIT_I]], half [[C]], i32 1
-// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <8 x half> [[VECINIT1_I]], half [[C]], i32 2
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <8 x half> [[VECINIT2_I]], half [[C]], i32 3
-// CHECK-NEXT:    [[VECINIT4_I:%.*]] = insertelement <8 x half> [[VECINIT3_I]], half [[C]], i32 4
-// CHECK-NEXT:    [[VECINIT5_I:%.*]] = insertelement <8 x half> [[VECINIT4_I]], half [[C]], i32 5
-// CHECK-NEXT:    [[VECINIT6_I:%.*]] = insertelement <8 x half> [[VECINIT5_I]], half [[C]], i32 6
-// CHECK-NEXT:    [[VECINIT7_I:%.*]] = insertelement <8 x half> [[VECINIT6_I]], half [[C]], i32 7
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[C]], i32 0
+// CHECK-NEXT:    [[VECINIT1:%.*]] = insertelement <8 x half> [[VECINIT]], half [[C]], i32 1
+// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <8 x half> [[VECINIT1]], half [[C]], i32 2
+// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <8 x half> [[VECINIT2]], half [[C]], i32 3
+// CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <8 x half> [[VECINIT3]], half [[C]], i32 4
+// CHECK-NEXT:    [[VECINIT5:%.*]] = insertelement <8 x half> [[VECINIT4]], half [[C]], i32 5
+// CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <8 x half> [[VECINIT5]], half [[C]], i32 6
+// CHECK-NEXT:    [[VECINIT7:%.*]] = insertelement <8 x half> [[VECINIT6]], half [[C]], i32 7
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <16 x i8>
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[B]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x half> [[VECINIT7_I]] to <16 x i8>
-// CHECK-NEXT:    [[TMP3:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[B]], <8 x half> [[VECINIT7_I]], <8 x half> [[A]])
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x half> [[VECINIT7]] to <16 x i8>
+// CHECK-NEXT:    [[TMP3:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[B]], <8 x half> [[VECINIT7]], <8 x half> [[A]])
 // CHECK-NEXT:    ret <8 x half> [[TMP3]]
 //
 float16x8_t test_vfmaq_n_f16(float16x8_t a, float16x8_t b, float16_t c) {
@@ -1601,15 +1601,15 @@ float16x8_t test_vfmsq_laneq_f16(float16x8_t a, float16x8_t b, float16x8_t c) {
 // CHECK-LABEL: define {{[^@]+}}@test_vfms_n_f16
 // CHECK-SAME: (<4 x half> noundef [[A:%.*]], <4 x half> noundef [[B:%.*]], half noundef [[C:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[FNEG_I:%.*]] = fneg <4 x half> [[B]]
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x half> undef, half [[C]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x half> [[VECINIT_I]], half [[C]], i32 1
-// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x half> [[VECINIT1_I]], half [[C]], i32 2
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x half> [[VECINIT2_I]], half [[C]], i32 3
+// CHECK-NEXT:    [[FNEG:%.*]] = fneg <4 x half> [[B]]
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[C]], i32 0
+// CHECK-NEXT:    [[VECINIT1:%.*]] = insertelement <4 x half> [[VECINIT]], half [[C]], i32 1
+// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x half> [[VECINIT1]], half [[C]], i32 2
+// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <4 x half> [[VECINIT2]], half [[C]], i32 3
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[FNEG_I]] to <8 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x half> [[VECINIT3_I]] to <8 x i8>
-// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[FNEG_I]], <4 x half> [[VECINIT3_I]], <4 x half> [[A]])
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[FNEG]] to <8 x i8>
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x half> [[VECINIT3]] to <8 x i8>
+// CHECK-NEXT:    [[TMP3:%.*]] = call <4 x half> @llvm.fma.v4f16(<4 x half> [[FNEG]], <4 x half> [[VECINIT3]], <4 x half> [[A]])
 // CHECK-NEXT:    ret <4 x half> [[TMP3]]
 //
 float16x4_t test_vfms_n_f16(float16x4_t a, float16x4_t b, float16_t c) {
@@ -1619,19 +1619,19 @@ float16x4_t test_vfms_n_f16(float16x4_t a, float16x4_t b, float16_t c) {
 // CHECK-LABEL: define {{[^@]+}}@test_vfmsq_n_f16
 // CHECK-SAME: (<8 x half> noundef [[A:%.*]], <8 x half> noundef [[B:%.*]], half noundef [[C:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[FNEG_I:%.*]] = fneg <8 x half> [[B]]
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x half> undef, half [[C]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <8 x half> [[VECINIT_I]], half [[C]], i32 1
-// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <8 x half> [[VECINIT1_I]], half [[C]], i32 2
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <8 x half> [[VECINIT2_I]], half [[C]], i32 3
-// CHECK-NEXT:    [[VECINIT4_I:%.*]] = insertelement <8 x half> [[VECINIT3_I]], half [[C]], i32 4
-// CHECK-NEXT:    [[VECINIT5_I:%.*]] = insertelement <8 x half> [[VECINIT4_I]], half [[C]], i32 5
-// CHECK-NEXT:    [[VECINIT6_I:%.*]] = insertelement <8 x half> [[VECINIT5_I]], half [[C]], i32 6
-// CHECK-NEXT:    [[VECINIT7_I:%.*]] = insertelement <8 x half> [[VECINIT6_I]], half [[C]], i32 7
+// CHECK-NEXT:    [[FNEG:%.*]] = fneg <8 x half> [[B]]
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[C]], i32 0
+// CHECK-NEXT:    [[VECINIT1:%.*]] = insertelement <8 x half> [[VECINIT]], half [[C]], i32 1
+// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <8 x half> [[VECINIT1]], half [[C]], i32 2
+// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <8 x half> [[VECINIT2]], half [[C]], i32 3
+// CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <8 x half> [[VECINIT3]], half [[C]], i32 4
+// CHECK-NEXT:    [[VECINIT5:%.*]] = insertelement <8 x half> [[VECINIT4]], half [[C]], i32 5
+// CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <8 x half> [[VECINIT5]], half [[C]], i32 6
+// CHECK-NEXT:    [[VECINIT7:%.*]] = insertelement <8 x half> [[VECINIT6]], half [[C]], i32 7
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[FNEG_I]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x half> [[VECINIT7_I]] to <16 x i8>
-// CHECK-NEXT:    [[TMP3:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[FNEG_I]], <8 x half> [[VECINIT7_I]], <8 x half> [[A]])
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[FNEG]] to <16 x i8>
+// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x half> [[VECINIT7]] to <16 x i8>
+// CHECK-NEXT:    [[TMP3:%.*]] = call <8 x half> @llvm.fma.v8f16(<8 x half> [[FNEG]], <8 x half> [[VECINIT7]], <8 x half> [[A]])
 // CHECK-NEXT:    ret <8 x half> [[TMP3]]
 //
 float16x8_t test_vfmsq_n_f16(float16x8_t a, float16x8_t b, float16_t c) {
@@ -1721,12 +1721,12 @@ float16x8_t test_vmulq_laneq_f16(float16x8_t a, float16x8_t b) {
 // CHECK-LABEL: define {{[^@]+}}@test_vmul_n_f16
 // CHECK-SAME: (<4 x half> noundef [[A:%.*]], half noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x half> undef, half [[B]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x half> [[VECINIT_I]], half [[B]], i32 1
-// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x half> [[VECINIT1_I]], half [[B]], i32 2
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x half> [[VECINIT2_I]], half [[B]], i32 3
-// CHECK-NEXT:    [[MUL_I:%.*]] = fmul <4 x half> [[A]], [[VECINIT3_I]]
-// CHECK-NEXT:    ret <4 x half> [[MUL_I]]
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[B]], i32 0
+// CHECK-NEXT:    [[VECINIT1:%.*]] = insertelement <4 x half> [[VECINIT]], half [[B]], i32 1
+// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x half> [[VECINIT1]], half [[B]], i32 2
+// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <4 x half> [[VECINIT2]], half [[B]], i32 3
+// CHECK-NEXT:    [[MUL:%.*]] = fmul <4 x half> [[A]], [[VECINIT3]]
+// CHECK-NEXT:    ret <4 x half> [[MUL]]
 //
 float16x4_t test_vmul_n_f16(float16x4_t a, float16_t b) {
   return vmul_n_f16(a, b);
@@ -1735,16 +1735,16 @@ float16x4_t test_vmul_n_f16(float16x4_t a, float16_t b) {
 // CHECK-LABEL: define {{[^@]+}}@test_vmulq_n_f16
 // CHECK-SAME: (<8 x half> noundef [[A:%.*]], half noundef [[B:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x half> undef, half [[B]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <8 x half> [[VECINIT_I]], half [[B]], i32 1
-// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <8 x half> [[VECINIT1_I]], half [[B]], i32 2
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <8 x half> [[VECINIT2_I]], half [[B]], i32 3
-// CHECK-NEXT:    [[VECINIT4_I:%.*]] = insertelement <8 x half> [[VECINIT3_I]], half [[B]], i32 4
-// CHECK-NEXT:    [[VECINIT5_I:%.*]] = insertelement <8 x half> [[VECINIT4_I]], half [[B]], i32 5
-// CHECK-NEXT:    [[VECINIT6_I:%.*]] = insertelement <8 x half> [[VECINIT5_I]], half [[B]], i32 6
-// CHECK-NEXT:    [[VECINIT7_I:%.*]] = insertelement <8 x half> [[VECINIT6_I]], half [[B]], i32 7
-// CHECK-NEXT:    [[MUL_I:%.*]] = fmul <8 x half> [[A]], [[VECINIT7_I]]
-// CHECK-NEXT:    ret <8 x half> [[MUL_I]]
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[B]], i32 0
+// CHECK-NEXT:    [[VECINIT1:%.*]] = insertelement <8 x half> [[VECINIT]], half [[B]], i32 1
+// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <8 x half> [[VECINIT1]], half [[B]], i32 2
+// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <8 x half> [[VECINIT2]], half [[B]], i32 3
+// CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <8 x half> [[VECINIT3]], half [[B]], i32 4
+// CHECK-NEXT:    [[VECINIT5:%.*]] = insertelement <8 x half> [[VECINIT4]], half [[B]], i32 5
+// CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <8 x half> [[VECINIT5]], half [[B]], i32 6
+// CHECK-NEXT:    [[VECINIT7:%.*]] = insertelement <8 x half> [[VECINIT6]], half [[B]], i32 7
+// CHECK-NEXT:    [[MUL:%.*]] = fmul <8 x half> [[A]], [[VECINIT7]]
+// CHECK-NEXT:    ret <8 x half> [[MUL]]
 //
 float16x8_t test_vmulq_n_f16(float16x8_t a, float16_t b) {
   return vmulq_n_f16(a, b);
@@ -1758,14 +1758,14 @@ float16x8_t test_vmulq_n_f16(float16x8_t a, float16_t b) {
 // CHECK-NEXT:    [[__REINT1_847:%.*]] = alloca i16, align 2
 // CHECK-NEXT:    [[CONV:%.*]] = fpext half [[A]] to float
 // CHECK-NEXT:    store <4 x half> [[B]], ptr [[__REINT_847]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[__REINT_847]], align 8
-// CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP1]], i32 3
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[__REINT_847]], align 8
+// CHECK-NEXT:    [[VGET_LANE:%.*]] = extractelement <4 x i16> [[TMP0]], i32 3
 // CHECK-NEXT:    store i16 [[VGET_LANE]], ptr [[__REINT1_847]], align 2
-// CHECK-NEXT:    [[TMP3:%.*]] = load half, ptr [[__REINT1_847]], align 2
-// CHECK-NEXT:    [[CONV2:%.*]] = fpext half [[TMP3]] to float
+// CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_847]], align 2
+// CHECK-NEXT:    [[CONV2:%.*]] = fpext half [[TMP1]] to float
 // CHECK-NEXT:    [[MUL:%.*]] = fmul float [[CONV]], [[CONV2]]
-// CHECK-NEXT:    [[TMP4:%.*]] = fptrunc float [[MUL]] to half
-// CHECK-NEXT:    ret half [[TMP4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = fptrunc float [[MUL]] to half
+// CHECK-NEXT:    ret half [[TMP2]]
 //
 float16_t test_vmulh_lane_f16(float16_t a, float16x4_t b) {
   return vmulh_lane_f16(a, b, 3);
@@ -1778,14 +1778,14 @@ float16_t test_vmulh_lane_f16(float16_t a, float16x4_t b) {
 // CHECK-NEXT:    [[__REINT1_850:%.*]] = alloca i16, align 2
 // CHECK-NEXT:    [[CONV:%.*]] = fpext half [[A]] to float
 // CHECK-NEXT:    store <8 x half> [[B]], ptr [[__REINT_850]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[__REINT_850]], align 16
-// CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP1]], i32 7
+// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[__REINT_850]], align 16
+// CHECK-NEXT:    [[VGETQ_LANE:%.*]] = extractelement <8 x i16> [[TMP0]], i32 7
 // CHECK-NEXT:    store i16 [[VGETQ_LANE]], ptr [[__REINT1_850]], align 2
-// CHECK-NEXT:    [[TMP3:%.*]] = load half, ptr [[__REINT1_850]], align 2
-// CHECK-NEXT:    [[CONV2:%.*]] = fpext half [[TMP3]] to float
+// CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[__REINT1_850]], align 2
+// CHECK-NEXT:    [[CONV2:%.*]] = fpext half [[TMP1]] to float
 // CHECK-NEXT:    [[MUL:%.*]] = fmul float [[CONV]], [[CONV2]]
-// CHECK-NEXT:    [[TMP4:%.*]] = fptrunc float [[MUL]] to half
-// CHECK-NEXT:    ret half [[TMP4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = fptrunc float [[MUL]] to half
+// CHECK-NEXT:    ret half [[TMP2]]
 //
 float16_t test_vmulh_laneq_f16(float16_t a, float16x8_t b) {
   return vmulh_laneq_f16(a, b, 7);
@@ -1854,14 +1854,14 @@ float16x8_t test_vmulxq_laneq_f16(float16x8_t a, float16x8_t b) {
 // CHECK-LABEL: define {{[^@]+}}@test_vmulx_n_f16
 // CHECK-SAME: (<4 x half> noundef [[A:%.*]], half noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x half> undef, half [[B]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x half> [[VECINIT_I]], half [[B]], i32 1
-// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x half> [[VECINIT1_I]], half [[B]], i32 2
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x half> [[VECINIT2_I]], half [[B]], i32 3
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[B]], i32 0
+// CHECK-NEXT:    [[VECINIT1:%.*]] = insertelement <4 x half> [[VECINIT]], half [[B]], i32 1
+// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x half> [[VECINIT1]], half [[B]], i32 2
+// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <4 x half> [[VECINIT2]], half [[B]], i32 3
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[VECINIT3_I]] to <8 x i8>
-// CHECK-NEXT:    [[VMULX2_I_I:%.*]] = call <4 x half> @llvm.aarch64.neon.fmulx.v4f16(<4 x half> [[A]], <4 x half> [[VECINIT3_I]])
-// CHECK-NEXT:    ret <4 x half> [[VMULX2_I_I]]
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[VECINIT3]] to <8 x i8>
+// CHECK-NEXT:    [[VMULX2_I:%.*]] = call <4 x half> @llvm.aarch64.neon.fmulx.v4f16(<4 x half> [[A]], <4 x half> [[VECINIT3]])
+// CHECK-NEXT:    ret <4 x half> [[VMULX2_I]]
 //
 float16x4_t test_vmulx_n_f16(float16x4_t a, float16_t b) {
   return vmulx_n_f16(a, b);
@@ -1870,18 +1870,18 @@ float16x4_t test_vmulx_n_f16(float16x4_t a, float16_t b) {
 // CHECK-LABEL: define {{[^@]+}}@test_vmulxq_n_f16
 // CHECK-SAME: (<8 x half> noundef [[A:%.*]], half noundef [[B:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x half> undef, half [[B]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <8 x half> [[VECINIT_I]], half [[B]], i32 1
-// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <8 x half> [[VECINIT1_I]], half [[B]], i32 2
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <8 x half> [[VECINIT2_I]], half [[B]], i32 3
-// CHECK-NEXT:    [[VECINIT4_I:%.*]] = insertelement <8 x half> [[VECINIT3_I]], half [[B]], i32 4
-// CHECK-NEXT:    [[VECINIT5_I:%.*]] = insertelement <8 x half> [[VECINIT4_I]], half [[B]], i32 5
-// CHECK-NEXT:    [[VECINIT6_I:%.*]] = insertelement <8 x half> [[VECINIT5_I]], half [[B]], i32 6
-// CHECK-NEXT:    [[VECINIT7_I:%.*]] = insertelement <8 x half> [[VECINIT6_I]], half [[B]], i32 7
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[B]], i32 0
+// CHECK-NEXT:    [[VECINIT1:%.*]] = insertelement <8 x half> [[VECINIT]], half [[B]], i32 1
+// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <8 x half> [[VECINIT1]], half [[B]], i32 2
+// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <8 x half> [[VECINIT2]], half [[B]], i32 3
+// CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <8 x half> [[VECINIT3]], half [[B]], i32 4
+// CHECK-NEXT:    [[VECINIT5:%.*]] = insertelement <8 x half> [[VECINIT4]], half [[B]], i32 5
+// CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <8 x half> [[VECINIT5]], half [[B]], i32 6
+// CHECK-NEXT:    [[VECINIT7:%.*]] = insertelement <8 x half> [[VECINIT6]], half [[B]], i32 7
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[VECINIT7_I]] to <16 x i8>
-// CHECK-NEXT:    [[VMULX2_I_I:%.*]] = call <8 x half> @llvm.aarch64.neon.fmulx.v8f16(<8 x half> [[A]], <8 x half> [[VECINIT7_I]])
-// CHECK-NEXT:    ret <8 x half> [[VMULX2_I_I]]
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[VECINIT7]] to <16 x i8>
+// CHECK-NEXT:    [[VMULX2_I:%.*]] = call <8 x half> @llvm.aarch64.neon.fmulx.v8f16(<8 x half> [[A]], <8 x half> [[VECINIT7]])
+// CHECK-NEXT:    ret <8 x half> [[VMULX2_I]]
 //
 float16x8_t test_vmulxq_n_f16(float16x8_t a, float16_t b) {
   return vmulxq_n_f16(a, b);
@@ -1913,8 +1913,9 @@ float16_t test_vmulxh_laneq_f16(float16_t a, float16x8_t b) {
 // CHECK-SAME: (<4 x half> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[VMAXV1_I:%.*]] = call half @llvm.aarch64.neon.fmaxv.f16.v4f16(<4 x half> [[A]])
-// CHECK-NEXT:    ret half [[VMAXV1_I]]
+// CHECK-NEXT:    [[VMAXV:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x half>
+// CHECK-NEXT:    [[VMAXV1:%.*]] = call half @llvm.aarch64.neon.fmaxv.f16.v4f16(<4 x half> [[VMAXV]])
+// CHECK-NEXT:    ret half [[VMAXV1]]
 //
 float16_t test_vmaxv_f16(float16x4_t a) {
   return vmaxv_f16(a);
@@ -1924,8 +1925,9 @@ float16_t test_vmaxv_f16(float16x4_t a) {
 // CHECK-SAME: (<8 x half> noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[VMAXV1_I:%.*]] = call half @llvm.aarch64.neon.fmaxv.f16.v8f16(<8 x half> [[A]])
-// CHECK-NEXT:    ret half [[VMAXV1_I]]
+// CHECK-NEXT:    [[VMAXV:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x half>
+// CHECK-NEXT:    [[VMAXV1:%.*]] = call half @llvm.aarch64.neon.fmaxv.f16.v8f16(<8 x half> [[VMAXV]])
+// CHECK-NEXT:    ret half [[VMAXV1]]
 //
 float16_t test_vmaxvq_f16(float16x8_t a) {
   return vmaxvq_f16(a);
@@ -1935,8 +1937,9 @@ float16_t test_vmaxvq_f16(float16x8_t a) {
 // CHECK-SAME: (<4 x half> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[VMINV1_I:%.*]] = call half @llvm.aarch64.neon.fminv.f16.v4f16(<4 x half> [[A]])
-// CHECK-NEXT:    ret half [[VMINV1_I]]
+// CHECK-NEXT:    [[VMINV:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x half>
+// CHECK-NEXT:    [[VMINV1:%.*]] = call half @llvm.aarch64.neon.fminv.f16.v4f16(<4 x half> [[VMINV]])
+// CHECK-NEXT:    ret half [[VMINV1]]
 //
 float16_t test_vminv_f16(float16x4_t a) {
   return vminv_f16(a);
@@ -1946,8 +1949,9 @@ float16_t test_vminv_f16(float16x4_t a) {
 // CHECK-SAME: (<8 x half> noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[VMINV1_I:%.*]] = call half @llvm.aarch64.neon.fminv.f16.v8f16(<8 x half> [[A]])
-// CHECK-NEXT:    ret half [[VMINV1_I]]
+// CHECK-NEXT:    [[VMINV:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x half>
+// CHECK-NEXT:    [[VMINV1:%.*]] = call half @llvm.aarch64.neon.fminv.f16.v8f16(<8 x half> [[VMINV]])
+// CHECK-NEXT:    ret half [[VMINV1]]
 //
 float16_t test_vminvq_f16(float16x8_t a) {
   return vminvq_f16(a);
@@ -1957,8 +1961,9 @@ float16_t test_vminvq_f16(float16x8_t a) {
 // CHECK-SAME: (<4 x half> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[VMAXNMV1_I:%.*]] = call half @llvm.aarch64.neon.fmaxnmv.f16.v4f16(<4 x half> [[A]])
-// CHECK-NEXT:    ret half [[VMAXNMV1_I]]
+// CHECK-NEXT:    [[VMAXNMV:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x half>
+// CHECK-NEXT:    [[VMAXNMV1:%.*]] = call half @llvm.aarch64.neon.fmaxnmv.f16.v4f16(<4 x half> [[VMAXNMV]])
+// CHECK-NEXT:    ret half [[VMAXNMV1]]
 //
 float16_t test_vmaxnmv_f16(float16x4_t a) {
   return vmaxnmv_f16(a);
@@ -1968,8 +1973,9 @@ float16_t test_vmaxnmv_f16(float16x4_t a) {
 // CHECK-SAME: (<8 x half> noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[VMAXNMV1_I:%.*]] = call half @llvm.aarch64.neon.fmaxnmv.f16.v8f16(<8 x half> [[A]])
-// CHECK-NEXT:    ret half [[VMAXNMV1_I]]
+// CHECK-NEXT:    [[VMAXNMV:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x half>
+// CHECK-NEXT:    [[VMAXNMV1:%.*]] = call half @llvm.aarch64.neon.fmaxnmv.f16.v8f16(<8 x half> [[VMAXNMV]])
+// CHECK-NEXT:    ret half [[VMAXNMV1]]
 //
 float16_t test_vmaxnmvq_f16(float16x8_t a) {
   return vmaxnmvq_f16(a);
@@ -1979,8 +1985,9 @@ float16_t test_vmaxnmvq_f16(float16x8_t a) {
 // CHECK-SAME: (<4 x half> noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[VMINNMV1_I:%.*]] = call half @llvm.aarch64.neon.fminnmv.f16.v4f16(<4 x half> [[A]])
-// CHECK-NEXT:    ret half [[VMINNMV1_I]]
+// CHECK-NEXT:    [[VMINNMV:%.*]] = bitcast <8 x i8> [[TMP0]] to <4 x half>
+// CHECK-NEXT:    [[VMINNMV1:%.*]] = call half @llvm.aarch64.neon.fminnmv.f16.v4f16(<4 x half> [[VMINNMV]])
+// CHECK-NEXT:    ret half [[VMINNMV1]]
 //
 float16_t test_vminnmv_f16(float16x4_t a) {
   return vminnmv_f16(a);
@@ -1990,8 +1997,9 @@ float16_t test_vminnmv_f16(float16x4_t a) {
 // CHECK-SAME: (<8 x half> noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[VMINNMV1_I:%.*]] = call half @llvm.aarch64.neon.fminnmv.f16.v8f16(<8 x half> [[A]])
-// CHECK-NEXT:    ret half [[VMINNMV1_I]]
+// CHECK-NEXT:    [[VMINNMV:%.*]] = bitcast <16 x i8> [[TMP0]] to <8 x half>
+// CHECK-NEXT:    [[VMINNMV1:%.*]] = call half @llvm.aarch64.neon.fminnmv.f16.v8f16(<8 x half> [[VMINNMV]])
+// CHECK-NEXT:    ret half [[VMINNMV1]]
 //
 float16_t test_vminnmvq_f16(float16x8_t a) {
   return vminnmvq_f16(a);
@@ -2040,19 +2048,19 @@ float16x8_t test_vbslq_f16(uint16x8_t a, float16x8_t b, float16x8_t c) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca [[STRUCT_FLOAT16X4X2_T:%.*]], align 8
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_FLOAT16X4X2_T]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x half> [[B]] to <8 x i8>
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <8 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[B]] to <8 x i8>
 // CHECK-NEXT:    [[VZIP_I:%.*]] = shufflevector <4 x half> [[A]], <4 x half> [[B]], <4 x i32> <i32 0, i32 4, i32 1, i32 5>
 // CHECK-NEXT:    store <4 x half> [[VZIP_I]], ptr [[RETVAL_I]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <4 x half>, ptr [[RETVAL_I]], i32 1
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x half>, ptr [[RETVAL_I]], i32 1
 // CHECK-NEXT:    [[VZIP1_I:%.*]] = shufflevector <4 x half> [[A]], <4 x half> [[B]], <4 x i32> <i32 2, i32 6, i32 3, i32 7>
-// CHECK-NEXT:    store <4 x half> [[VZIP1_I]], ptr [[TMP4]], align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL_I]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue [[STRUCT_FLOAT16X4X2_T]] [[TMP5]], 0
-// CHECK-NEXT:    store [2 x <4 x half>] [[TMP7]], ptr [[TMP6]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], align 8
-// CHECK-NEXT:    ret [[STRUCT_FLOAT16X4X2_T]] [[TMP8]]
+// CHECK-NEXT:    store <4 x half> [[VZIP1_I]], ptr [[TMP2]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL_I]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[STRUCT_FLOAT16X4X2_T]] [[TMP3]], 0
+// CHECK-NEXT:    store [2 x <4 x half>] [[TMP5]], ptr [[TMP4]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], align 8
+// CHECK-NEXT:    ret [[STRUCT_FLOAT16X4X2_T]] [[TMP6]]
 //
 float16x4x2_t test_vzip_f16(float16x4_t a, float16x4_t b) {
   return vzip_f16(a, b);
@@ -2063,19 +2071,19 @@ float16x4x2_t test_vzip_f16(float16x4_t a, float16x4_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca [[STRUCT_FLOAT16X8X2_T:%.*]], align 16
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_FLOAT16X8X2_T]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x half> [[B]] to <16 x i8>
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <16 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[B]] to <16 x i8>
 // CHECK-NEXT:    [[VZIP_I:%.*]] = shufflevector <8 x half> [[A]], <8 x half> [[B]], <8 x i32> <i32 0, i32 8, i32 1, i32 9, i32 2, i32 10, i32 3, i32 11>
 // CHECK-NEXT:    store <8 x half> [[VZIP_I]], ptr [[RETVAL_I]], align 16
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <8 x half>, ptr [[RETVAL_I]], i32 1
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x half>, ptr [[RETVAL_I]], i32 1
 // CHECK-NEXT:    [[VZIP1_I:%.*]] = shufflevector <8 x half> [[A]], <8 x half> [[B]], <8 x i32> <i32 4, i32 12, i32 5, i32 13, i32 6, i32 14, i32 7, i32 15>
-// CHECK-NEXT:    store <8 x half> [[VZIP1_I]], ptr [[TMP4]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL_I]], align 16
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue [[STRUCT_FLOAT16X8X2_T]] [[TMP5]], 0
-// CHECK-NEXT:    store [2 x <8 x half>] [[TMP7]], ptr [[TMP6]], align 16
-// CHECK-NEXT:    [[TMP8:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret [[STRUCT_FLOAT16X8X2_T]] [[TMP8]]
+// CHECK-NEXT:    store <8 x half> [[VZIP1_I]], ptr [[TMP2]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL_I]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[STRUCT_FLOAT16X8X2_T]] [[TMP3]], 0
+// CHECK-NEXT:    store [2 x <8 x half>] [[TMP5]], ptr [[TMP4]], align 16
+// CHECK-NEXT:    [[TMP6:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], align 16
+// CHECK-NEXT:    ret [[STRUCT_FLOAT16X8X2_T]] [[TMP6]]
 //
 float16x8x2_t test_vzipq_f16(float16x8_t a, float16x8_t b) {
   return vzipq_f16(a, b);
@@ -2086,19 +2094,19 @@ float16x8x2_t test_vzipq_f16(float16x8_t a, float16x8_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca [[STRUCT_FLOAT16X4X2_T:%.*]], align 8
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_FLOAT16X4X2_T]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x half> [[B]] to <8 x i8>
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <8 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[B]] to <8 x i8>
 // CHECK-NEXT:    [[VUZP_I:%.*]] = shufflevector <4 x half> [[A]], <4 x half> [[B]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 // CHECK-NEXT:    store <4 x half> [[VUZP_I]], ptr [[RETVAL_I]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <4 x half>, ptr [[RETVAL_I]], i32 1
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x half>, ptr [[RETVAL_I]], i32 1
 // CHECK-NEXT:    [[VUZP1_I:%.*]] = shufflevector <4 x half> [[A]], <4 x half> [[B]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-// CHECK-NEXT:    store <4 x half> [[VUZP1_I]], ptr [[TMP4]], align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL_I]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue [[STRUCT_FLOAT16X4X2_T]] [[TMP5]], 0
-// CHECK-NEXT:    store [2 x <4 x half>] [[TMP7]], ptr [[TMP6]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], align 8
-// CHECK-NEXT:    ret [[STRUCT_FLOAT16X4X2_T]] [[TMP8]]
+// CHECK-NEXT:    store <4 x half> [[VUZP1_I]], ptr [[TMP2]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL_I]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[STRUCT_FLOAT16X4X2_T]] [[TMP3]], 0
+// CHECK-NEXT:    store [2 x <4 x half>] [[TMP5]], ptr [[TMP4]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], align 8
+// CHECK-NEXT:    ret [[STRUCT_FLOAT16X4X2_T]] [[TMP6]]
 //
 float16x4x2_t test_vuzp_f16(float16x4_t a, float16x4_t b) {
   return vuzp_f16(a, b);
@@ -2109,19 +2117,19 @@ float16x4x2_t test_vuzp_f16(float16x4_t a, float16x4_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca [[STRUCT_FLOAT16X8X2_T:%.*]], align 16
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_FLOAT16X8X2_T]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x half> [[B]] to <16 x i8>
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <16 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[B]] to <16 x i8>
 // CHECK-NEXT:    [[VUZP_I:%.*]] = shufflevector <8 x half> [[A]], <8 x half> [[B]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 // CHECK-NEXT:    store <8 x half> [[VUZP_I]], ptr [[RETVAL_I]], align 16
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <8 x half>, ptr [[RETVAL_I]], i32 1
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x half>, ptr [[RETVAL_I]], i32 1
 // CHECK-NEXT:    [[VUZP1_I:%.*]] = shufflevector <8 x half> [[A]], <8 x half> [[B]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
-// CHECK-NEXT:    store <8 x half> [[VUZP1_I]], ptr [[TMP4]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL_I]], align 16
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue [[STRUCT_FLOAT16X8X2_T]] [[TMP5]], 0
-// CHECK-NEXT:    store [2 x <8 x half>] [[TMP7]], ptr [[TMP6]], align 16
-// CHECK-NEXT:    [[TMP8:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret [[STRUCT_FLOAT16X8X2_T]] [[TMP8]]
+// CHECK-NEXT:    store <8 x half> [[VUZP1_I]], ptr [[TMP2]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL_I]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[STRUCT_FLOAT16X8X2_T]] [[TMP3]], 0
+// CHECK-NEXT:    store [2 x <8 x half>] [[TMP5]], ptr [[TMP4]], align 16
+// CHECK-NEXT:    [[TMP6:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], align 16
+// CHECK-NEXT:    ret [[STRUCT_FLOAT16X8X2_T]] [[TMP6]]
 //
 float16x8x2_t test_vuzpq_f16(float16x8_t a, float16x8_t b) {
   return vuzpq_f16(a, b);
@@ -2132,19 +2140,19 @@ float16x8x2_t test_vuzpq_f16(float16x8_t a, float16x8_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca [[STRUCT_FLOAT16X4X2_T:%.*]], align 8
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_FLOAT16X4X2_T]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[A]] to <8 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x half> [[B]] to <8 x i8>
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x half> [[A]] to <8 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x half> [[B]] to <8 x i8>
 // CHECK-NEXT:    [[VTRN_I:%.*]] = shufflevector <4 x half> [[A]], <4 x half> [[B]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
 // CHECK-NEXT:    store <4 x half> [[VTRN_I]], ptr [[RETVAL_I]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <4 x half>, ptr [[RETVAL_I]], i32 1
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <4 x half>, ptr [[RETVAL_I]], i32 1
 // CHECK-NEXT:    [[VTRN1_I:%.*]] = shufflevector <4 x half> [[A]], <4 x half> [[B]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
-// CHECK-NEXT:    store <4 x half> [[VTRN1_I]], ptr [[TMP4]], align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL_I]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue [[STRUCT_FLOAT16X4X2_T]] [[TMP5]], 0
-// CHECK-NEXT:    store [2 x <4 x half>] [[TMP7]], ptr [[TMP6]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], align 8
-// CHECK-NEXT:    ret [[STRUCT_FLOAT16X4X2_T]] [[TMP8]]
+// CHECK-NEXT:    store <4 x half> [[VTRN1_I]], ptr [[TMP2]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL_I]], align 8
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[STRUCT_FLOAT16X4X2_T]] [[TMP3]], 0
+// CHECK-NEXT:    store [2 x <4 x half>] [[TMP5]], ptr [[TMP4]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load [[STRUCT_FLOAT16X4X2_T]], ptr [[RETVAL]], align 8
+// CHECK-NEXT:    ret [[STRUCT_FLOAT16X4X2_T]] [[TMP6]]
 //
 float16x4x2_t test_vtrn_f16(float16x4_t a, float16x4_t b) {
   return vtrn_f16(a, b);
@@ -2155,19 +2163,19 @@ float16x4x2_t test_vtrn_f16(float16x4_t a, float16x4_t b) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL_I:%.*]] = alloca [[STRUCT_FLOAT16X8X2_T:%.*]], align 16
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca [[STRUCT_FLOAT16X8X2_T]], align 16
-// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[A]] to <16 x i8>
-// CHECK-NEXT:    [[TMP2:%.*]] = bitcast <8 x half> [[B]] to <16 x i8>
+// CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x half> [[A]] to <16 x i8>
+// CHECK-NEXT:    [[TMP1:%.*]] = bitcast <8 x half> [[B]] to <16 x i8>
 // CHECK-NEXT:    [[VTRN_I:%.*]] = shufflevector <8 x half> [[A]], <8 x half> [[B]], <8 x i32> <i32 0, i32 8, i32 2, i32 10, i32 4, i32 12, i32 6, i32 14>
 // CHECK-NEXT:    store <8 x half> [[VTRN_I]], ptr [[RETVAL_I]], align 16
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds <8 x half>, ptr [[RETVAL_I]], i32 1
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds <8 x half>, ptr [[RETVAL_I]], i32 1
 // CHECK-NEXT:    [[VTRN1_I:%.*]] = shufflevector <8 x half> [[A]], <8 x half> [[B]], <8 x i32> <i32 1, i32 9, i32 3, i32 11, i32 5, i32 13, i32 7, i32 15>
-// CHECK-NEXT:    store <8 x half> [[VTRN1_I]], ptr [[TMP4]], align 16
-// CHECK-NEXT:    [[TMP5:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL_I]], align 16
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue [[STRUCT_FLOAT16X8X2_T]] [[TMP5]], 0
-// CHECK-NEXT:    store [2 x <8 x half>] [[TMP7]], ptr [[TMP6]], align 16
-// CHECK-NEXT:    [[TMP8:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], align 16
-// CHECK-NEXT:    ret [[STRUCT_FLOAT16X8X2_T]] [[TMP8]]
+// CHECK-NEXT:    store <8 x half> [[VTRN1_I]], ptr [[TMP2]], align 16
+// CHECK-NEXT:    [[TMP3:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL_I]], align 16
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], i32 0, i32 0
+// CHECK-NEXT:    [[TMP5:%.*]] = extractvalue [[STRUCT_FLOAT16X8X2_T]] [[TMP3]], 0
+// CHECK-NEXT:    store [2 x <8 x half>] [[TMP5]], ptr [[TMP4]], align 16
+// CHECK-NEXT:    [[TMP6:%.*]] = load [[STRUCT_FLOAT16X8X2_T]], ptr [[RETVAL]], align 16
+// CHECK-NEXT:    ret [[STRUCT_FLOAT16X8X2_T]] [[TMP6]]
 //
 float16x8x2_t test_vtrnq_f16(float16x8_t a, float16x8_t b) {
   return vtrnq_f16(a, b);
@@ -2176,11 +2184,11 @@ float16x8x2_t test_vtrnq_f16(float16x8_t a, float16x8_t b) {
 // CHECK-LABEL: define {{[^@]+}}@test_vmov_n_f16
 // CHECK-SAME: (half noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x half> undef, half [[A]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x half> [[VECINIT_I]], half [[A]], i32 1
-// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x half> [[VECINIT1_I]], half [[A]], i32 2
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x half> [[VECINIT2_I]], half [[A]], i32 3
-// CHECK-NEXT:    ret <4 x half> [[VECINIT3_I]]
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[A]], i32 0
+// CHECK-NEXT:    [[VECINIT1:%.*]] = insertelement <4 x half> [[VECINIT]], half [[A]], i32 1
+// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x half> [[VECINIT1]], half [[A]], i32 2
+// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <4 x half> [[VECINIT2]], half [[A]], i32 3
+// CHECK-NEXT:    ret <4 x half> [[VECINIT3]]
 //
 float16x4_t test_vmov_n_f16(float16_t a) {
   return vmov_n_f16(a);
@@ -2189,15 +2197,15 @@ float16x4_t test_vmov_n_f16(float16_t a) {
 // CHECK-LABEL: define {{[^@]+}}@test_vmovq_n_f16
 // CHECK-SAME: (half noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x half> undef, half [[A]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <8 x half> [[VECINIT_I]], half [[A]], i32 1
-// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <8 x half> [[VECINIT1_I]], half [[A]], i32 2
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <8 x half> [[VECINIT2_I]], half [[A]], i32 3
-// CHECK-NEXT:    [[VECINIT4_I:%.*]] = insertelement <8 x half> [[VECINIT3_I]], half [[A]], i32 4
-// CHECK-NEXT:    [[VECINIT5_I:%.*]] = insertelement <8 x half> [[VECINIT4_I]], half [[A]], i32 5
-// CHECK-NEXT:    [[VECINIT6_I:%.*]] = insertelement <8 x half> [[VECINIT5_I]], half [[A]], i32 6
-// CHECK-NEXT:    [[VECINIT7_I:%.*]] = insertelement <8 x half> [[VECINIT6_I]], half [[A]], i32 7
-// CHECK-NEXT:    ret <8 x half> [[VECINIT7_I]]
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[A]], i32 0
+// CHECK-NEXT:    [[VECINIT1:%.*]] = insertelement <8 x half> [[VECINIT]], half [[A]], i32 1
+// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <8 x half> [[VECINIT1]], half [[A]], i32 2
+// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <8 x half> [[VECINIT2]], half [[A]], i32 3
+// CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <8 x half> [[VECINIT3]], half [[A]], i32 4
+// CHECK-NEXT:    [[VECINIT5:%.*]] = insertelement <8 x half> [[VECINIT4]], half [[A]], i32 5
+// CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <8 x half> [[VECINIT5]], half [[A]], i32 6
+// CHECK-NEXT:    [[VECINIT7:%.*]] = insertelement <8 x half> [[VECINIT6]], half [[A]], i32 7
+// CHECK-NEXT:    ret <8 x half> [[VECINIT7]]
 //
 float16x8_t test_vmovq_n_f16(float16_t a) {
   return vmovq_n_f16(a);
@@ -2206,11 +2214,11 @@ float16x8_t test_vmovq_n_f16(float16_t a) {
 // CHECK-LABEL: define {{[^@]+}}@test_vdup_n_f16
 // CHECK-SAME: (half noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <4 x half> undef, half [[A]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <4 x half> [[VECINIT_I]], half [[A]], i32 1
-// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <4 x half> [[VECINIT1_I]], half [[A]], i32 2
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <4 x half> [[VECINIT2_I]], half [[A]], i32 3
-// CHECK-NEXT:    ret <4 x half> [[VECINIT3_I]]
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x half> undef, half [[A]], i32 0
+// CHECK-NEXT:    [[VECINIT1:%.*]] = insertelement <4 x half> [[VECINIT]], half [[A]], i32 1
+// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x half> [[VECINIT1]], half [[A]], i32 2
+// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <4 x half> [[VECINIT2]], half [[A]], i32 3
+// CHECK-NEXT:    ret <4 x half> [[VECINIT3]]
 //
 float16x4_t test_vdup_n_f16(float16_t a) {
   return vdup_n_f16(a);
@@ -2219,15 +2227,15 @@ float16x4_t test_vdup_n_f16(float16_t a) {
 // CHECK-LABEL: define {{[^@]+}}@test_vdupq_n_f16
 // CHECK-SAME: (half noundef [[A:%.*]]) #[[ATTR1]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VECINIT_I:%.*]] = insertelement <8 x half> undef, half [[A]], i32 0
-// CHECK-NEXT:    [[VECINIT1_I:%.*]] = insertelement <8 x half> [[VECINIT_I]], half [[A]], i32 1
-// CHECK-NEXT:    [[VECINIT2_I:%.*]] = insertelement <8 x half> [[VECINIT1_I]], half [[A]], i32 2
-// CHECK-NEXT:    [[VECINIT3_I:%.*]] = insertelement <8 x half> [[VECINIT2_I]], half [[A]], i32 3
-// CHECK-NEXT:    [[VECINIT4_I:%.*]] = insertelement <8 x half> [[VECINIT3_I]], half [[A]], i32 4
-// CHECK-NEXT:    [[VECINIT5_I:%.*]] = insertelement <8 x half> [[VECINIT4_I]], half [[A]], i32 5
-// CHECK-NEXT:    [[VECINIT6_I:%.*]] = insertelement <8 x half> [[VECINIT5_I]], half [[A]], i32 6
-// CHECK-NEXT:    [[VECINIT7_I:%.*]] = insertelement <8 x half> [[VECINIT6_I]], half [[A]], i32 7
-// CHECK-NEXT:    ret <8 x half> [[VECINIT7_I]]
+// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <8 x half> undef, half [[A]], i32 0
+// CHECK-NEXT:    [[VECINIT1:%.*]] = insertelement <8 x half> [[VECINIT]], half [[A]], i32 1
+// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <8 x half> [[VECINIT1]], half [[A]], i32 2
+// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <8 x half> [[VECINIT2]], half [[A]], i32 3
+// CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <8 x half> [[VECINIT3]], half [[A]], i32 4
+// CHECK-NEXT:    [[VECINIT5:%.*]] = insertelement <8 x half> [[VECINIT4]], half [[A]], i32 5
+// CHECK-NEXT:    [[VECINIT6:%.*]] = insertelement <8 x half> [[VECINIT5]], half [[A]], i32 6
+// CHECK-NEXT:    [[VECINIT7:%.*]] = insertelement <8 x half> [[VECINIT6]], half [[A]], i32 7
+// CHECK-NEXT:    ret <8 x half> [[VECINIT7]]
 //
 float16x8_t test_vdupq_n_f16(float16_t a) {
   return vdupq_n_f16(a);
