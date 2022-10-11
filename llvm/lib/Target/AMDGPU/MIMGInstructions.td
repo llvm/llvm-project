@@ -97,7 +97,7 @@ def MIMG {
 class mimgopc <int gfx11, int gfx10m, int vi = gfx10m, int si = gfx10m> {
   field bits<8> GFX11 = gfx11;
   field bits<8> GFX10M = gfx10m; // GFX10minus for all but atomics
-  field bits<8> VI = vi; // VI is only used for atomic instructions
+  field bits<8> VI = vi; // VI is only used for atomic/sampler/gather instructions
   field bits<8> SI = si; // SI is only used for atomic instructions
   bit HAS_GFX11 = !ne(gfx11, MIMG.NOP);
   bit HAS_GFX10M = !ne(gfx10m, MIMG.NOP);
@@ -872,7 +872,7 @@ multiclass MIMG_Atomic <mimgopc op, string asm, bit isCmpSwap = 0, bit isFP = 0>
 
 class MIMG_Sampler_Helper <mimgopc op, string asm, RegisterClass dst_rc,
                            RegisterClass src_rc, string dns="">
-  : MIMG_gfx6789 <op.GFX10M, (outs dst_rc:$vdata), dns> {
+  : MIMG_gfx6789 <op.VI, (outs dst_rc:$vdata), dns> {
   let InOperandList = !con((ins src_rc:$vaddr, SReg_256:$srsrc, SReg_128:$ssamp,
                                 DMask:$dmask, UNorm:$unorm, CPol:$cpol,
                                 R128A16:$r128, TFE:$tfe, LWE:$lwe, DA:$da),
@@ -1329,7 +1329,9 @@ defm IMAGE_GATHER4_C_L_O        : MIMG_Gather <mimgopc<MIMG.NOP, 0x5c>, AMDGPUSa
 defm IMAGE_GATHER4_C_B_O        : MIMG_Gather_WQM <mimgopc<MIMG.NOP, 0x5d>, AMDGPUSample_c_b_o>;
 defm IMAGE_GATHER4_C_B_CL_O     : MIMG_Gather_WQM <mimgopc<MIMG.NOP, 0x5e>, AMDGPUSample_c_b_cl_o>;
 defm IMAGE_GATHER4_C_LZ_O       : MIMG_Gather <mimgopc<0x37, 0x5f>, AMDGPUSample_c_lz_o>;
-defm IMAGE_GATHER4H             : MIMG_Gather <mimgopc<0x90, 0x61>, AMDGPUSample, 1, "image_gather4h">;
+
+let SubtargetPredicate = isGFX9Plus in
+defm IMAGE_GATHER4H             : MIMG_Gather <mimgopc<0x90, 0x61, 0x42>, AMDGPUSample, 1, "image_gather4h">;
 
 defm IMAGE_GET_LOD              : MIMG_Sampler <mimgopc<0x38, 0x60>, AMDGPUSample, 1, 0, 1, "image_get_lod">;
 
