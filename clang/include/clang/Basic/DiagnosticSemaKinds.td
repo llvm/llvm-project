@@ -147,7 +147,7 @@ def ext_vla_folded_to_constant : ExtWarn<
   "variable length array folded to constant array as an extension">,
   InGroup<GNUFoldingConstant>;
 def err_vla_unsupported : Error<
-  "variable length arrays are not supported for the current target">;
+  "variable length arrays are not supported for %select{the current target|'%1'}0">;
 def note_vla_unsupported : Note<
   "variable length arrays are not supported for the current target">;
 
