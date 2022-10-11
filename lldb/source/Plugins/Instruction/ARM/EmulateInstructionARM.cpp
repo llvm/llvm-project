@@ -2620,7 +2620,7 @@ bool EmulateInstructionARM::EmulateVPUSH(const uint32_t opcode,
           GetRegisterInfo(eRegisterKindDWARF, start_reg + d + i);
       context.SetRegisterToRegisterPlusOffset(*dwarf_reg, *sp_reg, addr - sp);
       // uint64_t to accommodate 64-bit registers.
-      uint64_t reg_value = ReadRegisterUnsigned(&(*dwarf_reg), 0, &success);
+      uint64_t reg_value = ReadRegisterUnsigned(*dwarf_reg, 0, &success);
       if (!success)
         return false;
       if (!MemAWrite(context, addr, reg_value, reg_byte_size))
