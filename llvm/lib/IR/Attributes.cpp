@@ -745,9 +745,11 @@ Type *AttributeSet::getElementType() const {
   return SetNode ? SetNode->getAttributeType(Attribute::ElementType) : nullptr;
 }
 
-std::pair<unsigned, Optional<unsigned>> AttributeSet::getAllocSizeArgs() const {
-  return SetNode ? SetNode->getAllocSizeArgs()
-                 : std::pair<unsigned, Optional<unsigned>>(0, 0);
+Optional<std::pair<unsigned, Optional<unsigned>>>
+AttributeSet::getAllocSizeArgs() const {
+  if (SetNode)
+    return SetNode->getAllocSizeArgs();
+  return None;
 }
 
 unsigned AttributeSet::getVScaleRangeMin() const {
@@ -913,11 +915,11 @@ uint64_t AttributeSetNode::getDereferenceableOrNullBytes() const {
   return 0;
 }
 
-std::pair<unsigned, Optional<unsigned>>
+Optional<std::pair<unsigned, Optional<unsigned>>>
 AttributeSetNode::getAllocSizeArgs() const {
   if (auto A = findEnumAttribute(Attribute::AllocSize))
     return A->getAllocSizeArgs();
-  return std::make_pair(0, 0);
+  return None;
 }
 
 unsigned AttributeSetNode::getVScaleRangeMin() const {
@@ -1653,8 +1655,12 @@ AttrBuilder &AttrBuilder::addRawIntAttr(Attribute::AttrKind Kind,
   return addAttribute(Attribute::get(Ctx, Kind, Value));
 }
 
-std::pair<unsigned, Optional<unsigned>> AttrBuilder::getAllocSizeArgs() const {
-  return unpackAllocSizeArgs(getRawIntAttr(Attribute::AllocSize).value_or(0));
+Optional<std::pair<unsigned, Optional<unsigned>>>
+AttrBuilder::getAllocSizeArgs() const {
+  Attribute A = getAttribute(Attribute::AllocSize);
+  if (A.isValid())
+    return A.getAllocSizeArgs();
+  return None;
 }
 
 AttrBuilder &AttrBuilder::addAlignmentAttr(MaybeAlign Align) {

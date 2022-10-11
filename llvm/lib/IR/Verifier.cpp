@@ -2083,10 +2083,7 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
           "Attribute 'jumptable' requires 'unnamed_addr'", V);
   }
 
-  if (Attrs.hasFnAttr(Attribute::AllocSize)) {
-    std::pair<unsigned, Optional<unsigned>> Args =
-        Attrs.getFnAttrs().getAllocSizeArgs();
-
+  if (auto Args = Attrs.getFnAttrs().getAllocSizeArgs()) {
     auto CheckParam = [&](StringRef Name, unsigned ParamNo) {
       if (ParamNo >= FT->getNumParams()) {
         CheckFailed("'allocsize' " + Name + " argument is out of bounds", V);
@@ -2103,10 +2100,10 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       return true;
     };
 
-    if (!CheckParam("element size", Args.first))
+    if (!CheckParam("element size", Args->first))
       return;
 
-    if (Args.second && !CheckParam("number of elements", *Args.second))
+    if (Args->second && !CheckParam("number of elements", *Args->second))
       return;
   }
 

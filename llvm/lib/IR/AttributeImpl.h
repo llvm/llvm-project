@@ -258,7 +258,7 @@ public:
   MaybeAlign getStackAlignment() const;
   uint64_t getDereferenceableBytes() const;
   uint64_t getDereferenceableOrNullBytes() const;
-  std::pair<unsigned, Optional<unsigned>> getAllocSizeArgs() const;
+  Optional<std::pair<unsigned, Optional<unsigned>>> getAllocSizeArgs() const;
   unsigned getVScaleRangeMin() const;
   Optional<unsigned> getVScaleRangeMax() const;
   UWTableKind getUWTableKind() const;
