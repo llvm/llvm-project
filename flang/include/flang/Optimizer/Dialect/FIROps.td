@@ -2533,12 +2533,13 @@ def fir_AddrOfOp : fir_OneResultOp<"address_of", [NoSideEffect]> {
 }
 
 def fir_ConvertOp : fir_OneResultOp<"convert", [NoSideEffect]> {
-  let summary = "encapsulates all Fortran scalar type conversions";
+  let summary = "encapsulates all Fortran entity type conversions";
 
   let description = [{
     Generalized type conversion. Convert the ssa value from type T to type U.
     Not all pairs of types have conversions. When types T and U are the same
-    type, this instruction is a NOP and may be folded away.
+    type, this instruction is a NOP and may be folded away. This also supports
+    integer to pointer conversion and pointer to integer conversion.
 
     ```mlir
       %v = ... : i64
