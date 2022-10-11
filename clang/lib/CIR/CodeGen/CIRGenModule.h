@@ -398,7 +398,8 @@ private:
   // Effectively create the CIR instruction, properly handling insertion
   // points.
   mlir::cir::FuncOp createCIRFunction(mlir::Location loc, StringRef name,
-                                      mlir::FunctionType Ty);
+                                      mlir::FunctionType Ty,
+                                      const clang::FunctionDecl *FD);
 
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> MangledDeclNames;
