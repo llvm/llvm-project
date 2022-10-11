@@ -11,15 +11,15 @@
 ; Function Attrs: nofree norecurse nounwind willreturn writeonly
 define void @storesTIInit(i64 %Val) #0 {
 entry:
-  store i64 %Val, i64* @TIInit, align 8
+  store i64 %Val, ptr @TIInit, align 8
   ret void
 }
 
 ; Function Attrs: norecurse nounwind readonly willreturn
 define double @loadsTWInit() #1 {
 entry:
-  %0 = load double, double* @TWInit, align 8
-  %1 = load double, double* @GInit, align 8
+  %0 = load double, ptr @TWInit, align 8
+  %1 = load double, ptr @GInit, align 8
   %add = fadd double %0, %1
   ret double %add
 }

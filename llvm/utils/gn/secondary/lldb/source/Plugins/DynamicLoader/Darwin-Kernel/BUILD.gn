@@ -22,6 +22,7 @@ static_library("Darwin-Kernel") {
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",
+
     # "//lldb/source/Plugins/Platform/MacOSX", # Dependency cycle
     "//llvm/lib/Support",
   ]

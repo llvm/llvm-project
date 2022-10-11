@@ -18,7 +18,7 @@ def run(f):
 
 @run
 def testDecompose():
-  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
   with InsertionPoint(sequence.body):
     structured.DecomposeOp(sequence.bodyTarget)
     transform.YieldOp()
@@ -29,7 +29,7 @@ def testDecompose():
 
 @run
 def testGeneralize():
-  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
   with InsertionPoint(sequence.body):
     structured.GeneralizeOp(sequence.bodyTarget)
     transform.YieldOp()
@@ -40,7 +40,7 @@ def testGeneralize():
 
 @run
 def testInterchange():
-  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
   with InsertionPoint(sequence.body):
     structured.InterchangeOp(
         sequence.bodyTarget,
@@ -56,7 +56,7 @@ def testInterchange():
 
 @run
 def testMultitileSizes():
-  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
   with InsertionPoint(sequence.body):
     structured.MultiTileSizesOp(
         sequence.bodyTarget, dimension=1, target_size=42)
@@ -70,7 +70,7 @@ def testMultitileSizes():
 
 @run
 def testPad():
-  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
   with InsertionPoint(sequence.body):
     structured.PadOp(
         sequence.bodyTarget,
@@ -90,7 +90,7 @@ def testPad():
 
 @run
 def testScalarize():
-  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
   with InsertionPoint(sequence.body):
     structured.ScalarizeOp(sequence.bodyTarget)
     transform.YieldOp()
@@ -100,7 +100,7 @@ def testScalarize():
 
 @run
 def testSplit():
-  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
   with InsertionPoint(sequence.body):
     split = structured.SplitOp(sequence.bodyTarget, dimension=1, split_point=42)
     structured.SplitOp(
@@ -113,7 +113,7 @@ def testSplit():
 
 @run
 def testTileCompact():
-  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
   with InsertionPoint(sequence.body):
     structured.TileOp(sequence.bodyTarget, sizes=[4, 8], interchange=[0, 1])
     transform.YieldOp()
@@ -125,7 +125,7 @@ def testTileCompact():
 
 @run
 def testTileAttributes():
-  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
   attr = ArrayAttr.get(
       [IntegerAttr.get(IntegerType.get_signless(64), x) for x in [4, 8]])
   ichange = ArrayAttr.get(
@@ -141,7 +141,7 @@ def testTileAttributes():
 
 @run
 def testTileZero():
-  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
   with InsertionPoint(sequence.body):
     structured.TileOp(
         sequence.bodyTarget, sizes=[4, 0, 2, 0], interchange=[0, 1, 2, 3])
@@ -154,13 +154,13 @@ def testTileZero():
 
 @run
 def testTileDynamic():
-  with_pdl = transform.WithPDLPatternsOp()
+  with_pdl = transform.WithPDLPatternsOp(pdl.OperationType.get())
   with InsertionPoint(with_pdl.body):
-    sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE,
+    sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [],
                                     with_pdl.bodyTarget)
     with InsertionPoint(sequence.body):
-      m1 = transform.PDLMatchOp(sequence.bodyTarget, "first")
-      m2 = transform.PDLMatchOp(sequence.bodyTarget, "second")
+      m1 = transform.PDLMatchOp(pdl.OperationType.get(), sequence.bodyTarget, "first")
+      m2 = transform.PDLMatchOp(pdl.OperationType.get(), sequence.bodyTarget, "second")
       structured.TileOp(sequence.bodyTarget, sizes=[m1, 3, m2, 0])
       transform.YieldOp()
   # CHECK-LABEL: TEST: testTileDynamic
@@ -171,7 +171,7 @@ def testTileDynamic():
 
 @run
 def testVectorize():
-  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE)
+  sequence = transform.SequenceOp(transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get())
   with InsertionPoint(sequence.body):
     structured.VectorizeOp(sequence.bodyTarget, vectorize_padding=True)
     transform.YieldOp()

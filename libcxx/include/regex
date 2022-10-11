@@ -769,6 +769,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__iterator/back_insert_iterator.h>
 #include <__iterator/wrap_iter.h>
 #include <__locale>
+#include <__memory_resource/polymorphic_allocator.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
@@ -6836,6 +6837,20 @@ regex_replace(const _CharT* __s,
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if _LIBCPP_STD_VER > 14
+_LIBCPP_BEGIN_NAMESPACE_STD
+namespace pmr {
+template <class _BidirT>
+using match_results = std::match_results<_BidirT, polymorphic_allocator<std::sub_match<_BidirT>>>;
+
+using cmatch  = match_results<const char*>;
+using wcmatch = match_results<const wchar_t*>;
+using smatch  = match_results<std::pmr::string::const_iterator>;
+using wsmatch = match_results<std::pmr::wstring::const_iterator>;
+} // namespace pmr
+_LIBCPP_END_NAMESPACE_STD
+#endif
 
 _LIBCPP_POP_MACROS
 

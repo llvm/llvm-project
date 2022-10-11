@@ -551,6 +551,7 @@ basic_string<char32_t> operator "" s( const char32_t *str, size_t len );        
 #include <__memory/construct_at.h>
 #include <__memory/pointer_traits.h>
 #include <__memory/swap_allocator.h>
+#include <__memory_resource/polymorphic_allocator.h>
 #include <__string/char_traits.h>
 #include <__string/extern_template_lists.h>
 #include <__type_traits/is_allocator.h>
@@ -684,6 +685,10 @@ public:
                   "traits_type::char_type must be the same type as CharT");
     static_assert(( is_same<typename allocator_type::value_type, value_type>::value),
                   "Allocator::value_type must be same type as value_type");
+
+    static_assert(is_same<allocator_type, __rebind_alloc<__alloc_traits, value_type> >::value,
+                  "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
+                  "original allocator");
 
     typedef __wrap_iter<pointer>                         iterator;
     typedef __wrap_iter<const_pointer>                   const_iterator;
@@ -4668,6 +4673,20 @@ inline constexpr bool __format::__enable_insertable<std::basic_string<wchar_t>> 
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if _LIBCPP_STD_VER > 14
+_LIBCPP_BEGIN_NAMESPACE_STD
+namespace pmr {
+template <class _CharT, class _TraitsT = std::char_traits<_CharT>>
+using basic_string = std::basic_string<_CharT, _TraitsT, polymorphic_allocator<_CharT>>;
+
+using string    = basic_string<char>;
+using u16string = basic_string<char16_t>;
+using u32string = basic_string<char32_t>;
+using wstring   = basic_string<wchar_t>;
+} // namespace pmr
+_LIBCPP_END_NAMESPACE_STD
+#endif
 
 _LIBCPP_POP_MACROS
 

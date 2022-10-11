@@ -203,7 +203,7 @@ define i32 @test_memory_constraint(i32 addrspace(3)* %a) nounwind {
   ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-  ; CHECK-NEXT:   INLINEASM &"ds_read_b32 $0, $1", 8 /* mayload attdialect */, 1966090 /* regdef:VGPR_32 */, def %1, 196622 /* mem:m */, [[COPY]](p3)
+  ; CHECK-NEXT:   INLINEASM &"ds_read_b32 $0, $1", 8 /* mayload attdialect */, 1966090 /* regdef:VGPR_32 */, def %1, 262158 /* mem:m */, [[COPY]](p3)
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY %1
   ; CHECK-NEXT:   $vgpr0 = COPY [[COPY1]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0

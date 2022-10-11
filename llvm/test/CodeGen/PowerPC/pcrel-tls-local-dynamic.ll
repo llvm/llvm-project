@@ -9,7 +9,7 @@
 
 @x = hidden thread_local global i32 0, align 4
 
-define nonnull i32* @LocalDynamicAddressLoad() {
+define nonnull ptr @LocalDynamicAddressLoad() {
   ; CHECK-S-LABEL: LocalDynamicAddressLoad:
   ; CHECK-S:         paddi r3, 0, x@got@tlsld@pcrel, 1
   ; CHECK-S-NEXT:    bl __tls_get_addr@notoc(x@tlsld)
@@ -27,7 +27,7 @@ define nonnull i32* @LocalDynamicAddressLoad() {
   ; CHECK-O-NEXT:    18: paddi 3, 3, 0, 0
   ; CHECK-O-NEXT:    0000000000000018: R_PPC64_DTPREL34 x
   entry:
-    ret i32* @x
+    ret ptr @x
 }
 
 define i32 @LocalDynamicValueLoad() {
@@ -50,6 +50,6 @@ define i32 @LocalDynamicValueLoad() {
   ; CHECK-O-NEXT:    0000000000000058: R_PPC64_DTPREL34 x
   ; CHECK-O-NEXT:    60: lwz 3, 0(3)
   entry:
-    %0 = load i32, i32* @x, align 4
+    %0 = load i32, ptr @x, align 4
     ret i32 %0
 }

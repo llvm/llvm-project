@@ -15,15 +15,15 @@ transform.with_pdl_patterns {
     rewrite %2 with "transform.dialect"
   }
 
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     // expected-note @below {{handle to invalidated ops}}
-    %0 = pdl_match @return in %arg1
-    %1 = get_closest_isolated_parent %0
+    %0 = pdl_match @return in %arg1 : (!pdl.operation) -> !pdl.operation
+    %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
     // expected-note @below {{invalidated by this transform op that consumes its operand #0}}
     test_consume_operand %1
     // expected-error @below {{op uses a handle invalidated by a previously executed transform op}}
-    test_print_remark_at_operand %0, "remark"
+    test_print_remark_at_operand %0, "remark" : !pdl.operation
   }
 }
 
@@ -50,14 +50,14 @@ transform.with_pdl_patterns {
     rewrite %2 with "transform.dialect"
   }
 
-  sequence %arg0 failures(propagate) {
+  sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
-    %0 = pdl_match @func in %arg1
-    %1 = pdl_match @return in %arg1
-    %2 = replicate num(%0) %1
+    %0 = pdl_match @func in %arg1 : (!pdl.operation) -> !pdl.operation
+    %1 = pdl_match @return in %arg1 : (!pdl.operation) -> !pdl.operation
+    %2 = replicate num(%0) %1 : !pdl.operation, !pdl.operation
     // expected-error @below {{a handle passed as operand #0 and consumed by this operation points to a payload operation more than once}}
     test_consume_operand %2
-    test_print_remark_at_operand %0, "remark"
+    test_print_remark_at_operand %0, "remark" : !pdl.operation
   }
 }
 

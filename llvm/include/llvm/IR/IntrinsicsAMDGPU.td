@@ -1930,7 +1930,7 @@ class AMDGPUGlobalLoadLDS : Intrinsic <
                                        //                                   bit 2 = dlc on gfx10+))
                                        //                                   bit 4 = scc/nt on gfx90a+))
   [IntrWillReturn, NoCapture<ArgIndex<0>>, NoCapture<ArgIndex<1>>,
-   ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>],
+   ImmArg<ArgIndex<2>>, ImmArg<ArgIndex<3>>, ImmArg<ArgIndex<4>>],
   "", [SDNPMemOperand]>;
 def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS;
 

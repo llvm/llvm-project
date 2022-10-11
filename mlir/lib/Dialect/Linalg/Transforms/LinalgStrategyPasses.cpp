@@ -51,40 +51,6 @@ using namespace linalg;
 
 namespace {
 
-/// Configurable pass to apply pattern-based linalg tiling.
-struct LinalgStrategyTilePass
-    : public impl::LinalgStrategyTilePassBase<LinalgStrategyTilePass> {
-
-  LinalgStrategyTilePass() = default;
-
-  LinalgStrategyTilePass(StringRef opName,
-                         mlir::linalg::LinalgTilingOptions opt,
-                         LinalgTransformationFilter filt)
-      : options(std::move(opt)), filter(std::move(filt)) {
-    this->anchorOpName.setValue(opName.str());
-  }
-
-  void runOnOperation() override {
-    auto funcOp = getOperation();
-    if (!anchorFuncName.empty() && funcOp.getName() != anchorFuncName)
-      return;
-
-    MLIRContext *ctx = funcOp.getContext();
-    RewritePatternSet tilingPattern(ctx);
-    if (!anchorOpName.empty())
-      tilingPattern.add<LinalgTilingPattern>(anchorOpName, ctx, options,
-                                             filter);
-    else
-      tilingPattern.add<LinalgTilingPattern>(ctx, options, filter);
-    if (anchorOpName == tensor::PadOp::getOperationName())
-      populatePadTensorTilingPatterns(tilingPattern, options);
-    (void)applyPatternsAndFoldGreedily(funcOp, std::move(tilingPattern));
-  }
-
-  mlir::linalg::LinalgTilingOptions options;
-  LinalgTransformationFilter filter;
-};
-
 /// Configurable pass to lower vector operations.
 struct LinalgStrategyRemoveMarkersPass
     : public impl::LinalgStrategyRemoveMarkersPassBase<
@@ -100,14 +66,6 @@ struct LinalgStrategyRemoveMarkersPass
   }
 };
 } // namespace
-
-/// Create a LinalgStrategyTilePass.
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createLinalgStrategyTilePass(StringRef opName,
-                                   const LinalgTilingOptions &opt,
-                                   const LinalgTransformationFilter &filter) {
-  return std::make_unique<LinalgStrategyTilePass>(opName, opt, filter);
-}
 
 /// Create a LinalgStrategyRemoveMarkersPass.
 std::unique_ptr<OperationPass<func::FuncOp>>

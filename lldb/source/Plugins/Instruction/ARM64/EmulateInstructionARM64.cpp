@@ -824,22 +824,21 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
     context_t2.SetRegisterToRegisterPlusOffset(*reg_info_Rt2, *reg_info_base,
                                                size);
 
-    if (!ReadRegister(&(*reg_info_Rt), data_Rt))
+    if (!ReadRegister(*reg_info_Rt, data_Rt))
       return false;
 
-    if (data_Rt.GetAsMemoryData(&(*reg_info_Rt), buffer, reg_info_Rt->byte_size,
+    if (data_Rt.GetAsMemoryData(*reg_info_Rt, buffer, reg_info_Rt->byte_size,
                                 eByteOrderLittle, error) == 0)
       return false;
 
     if (!WriteMemory(context_t, address + 0, buffer, reg_info_Rt->byte_size))
       return false;
 
-    if (!ReadRegister(&(*reg_info_Rt2), data_Rt2))
+    if (!ReadRegister(*reg_info_Rt2, data_Rt2))
       return false;
 
-    if (data_Rt2.GetAsMemoryData(&(*reg_info_Rt2), buffer,
-                                 reg_info_Rt2->byte_size, eByteOrderLittle,
-                                 error) == 0)
+    if (data_Rt2.GetAsMemoryData(*reg_info_Rt2, buffer, reg_info_Rt2->byte_size,
+                                 eByteOrderLittle, error) == 0)
       return false;
 
     if (!WriteMemory(context_t2, address + size, buffer,
@@ -876,7 +875,7 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
     if (!vector && is_signed && !data_Rt.SignExtend(datasize))
       return false;
 
-    if (!WriteRegister(context_t, &(*reg_info_Rt), data_Rt))
+    if (!WriteRegister(context_t, *reg_info_Rt, data_Rt))
       return false;
 
     if (!rt_unknown) {
@@ -893,7 +892,7 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
     if (!vector && is_signed && !data_Rt2.SignExtend(datasize))
       return false;
 
-    if (!WriteRegister(context_t2, &(*reg_info_Rt2), data_Rt2))
+    if (!WriteRegister(context_t2, *reg_info_Rt2, data_Rt2))
       return false;
   } break;
 
@@ -910,7 +909,7 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
       context.type = eContextAdjustStackPointer;
     else
       context.type = eContextAdjustBaseRegister;
-    WriteRegisterUnsigned(context, &(*reg_info_base), wb_address);
+    WriteRegisterUnsigned(context, *reg_info_base, wb_address);
   }
   return true;
 }
@@ -995,10 +994,10 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
     context.SetRegisterToRegisterPlusOffset(*reg_info_Rt, *reg_info_base,
                                             postindex ? 0 : offset);
 
-    if (!ReadRegister(&(*reg_info_Rt), data_Rt))
+    if (!ReadRegister(*reg_info_Rt, data_Rt))
       return false;
 
-    if (data_Rt.GetAsMemoryData(&(*reg_info_Rt), buffer, reg_info_Rt->byte_size,
+    if (data_Rt.GetAsMemoryData(*reg_info_Rt, buffer, reg_info_Rt->byte_size,
                                 eByteOrderLittle, error) == 0)
       return false;
 
@@ -1023,7 +1022,7 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
                                   error) == 0)
       return false;
 
-    if (!WriteRegister(context, &(*reg_info_Rt), data_Rt))
+    if (!WriteRegister(context, *reg_info_Rt, data_Rt))
       return false;
     break;
   default:
@@ -1040,7 +1039,7 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
       context.type = eContextAdjustBaseRegister;
     context.SetImmediateSigned(offset);
 
-    if (!WriteRegisterUnsigned(context, &(*reg_info_base), address))
+    if (!WriteRegisterUnsigned(context, *reg_info_base, address))
       return false;
   }
   return true;

@@ -9,14 +9,12 @@ target triple = "powerpc-fsl-linux"
 
 %struct.teststruct = type { [12 x i32], i32 }
 
-define void @copy(%struct.teststruct* noalias nocapture sret(%struct.teststruct) %agg.result, %struct.teststruct* nocapture %in) nounwind {
+define void @copy(ptr noalias nocapture sret(%struct.teststruct) %agg.result, ptr nocapture %in) nounwind {
 entry:
 ; CHECK: @copy
 ; CHECK-NOT: bl memcpy
-  %0 = bitcast %struct.teststruct* %agg.result to i8*
-  %1 = bitcast %struct.teststruct* %in to i8*
-  tail call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 4 %0, i8* align 4 %1, i32 52, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i32(ptr align 4 %agg.result, ptr align 4 %in, i32 52, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind

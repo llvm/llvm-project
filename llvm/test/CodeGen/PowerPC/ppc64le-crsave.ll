@@ -2,9 +2,9 @@
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
 
-@_ZTIi = external constant i8*
-declare i8* @__cxa_allocate_exception(i64)
-declare void @__cxa_throw(i8*, i8*, i8*)
+@_ZTIi = external constant ptr
+declare ptr @__cxa_allocate_exception(i64)
+declare void @__cxa_throw(ptr, ptr, ptr)
 
 define void @crsave() {
 entry:
@@ -12,10 +12,9 @@ entry:
   call void asm sideeffect "", "~{cr3}"()
   call void asm sideeffect "", "~{cr4}"()
 
-  %exception = call i8* @__cxa_allocate_exception(i64 4)
-  %0 = bitcast i8* %exception to i32*
-  store i32 0, i32* %0
-  call void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null)
+  %exception = call ptr @__cxa_allocate_exception(i64 4)
+  store i32 0, ptr %exception
+  call void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null)
   unreachable
 
 return:                                           ; No predecessors!

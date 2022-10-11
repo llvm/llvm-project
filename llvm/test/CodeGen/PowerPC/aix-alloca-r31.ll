@@ -87,10 +87,9 @@ define i32 @varalloca() local_unnamed_addr {
 ; CHECK-ASM64-NEXT:    	.byte	0x1f                            # AllocaUsed
 ; CHECK-ASM64-NEXT:                                            # -- End function
 entry:
-  %0 = load i32, i32* @var
+  %0 = load i32, ptr @var
   %1 = alloca i8, i32 %0
-  %2 = bitcast i8* %1 to i32*
-  %3 = load i32, i32* %2
-  ret i32 %3
+  %2 = load i32, ptr %1
+  ret i32 %2
 }
 

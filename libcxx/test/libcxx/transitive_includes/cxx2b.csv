@@ -181,6 +181,7 @@ deque iosfwd
 deque limits
 deque new
 deque stdexcept
+deque tuple
 deque type_traits
 deque typeinfo
 deque version
@@ -317,6 +318,7 @@ forward_list iosfwd
 forward_list limits
 forward_list new
 forward_list stdexcept
+forward_list tuple
 forward_list type_traits
 forward_list typeinfo
 forward_list version
@@ -431,6 +433,7 @@ list iosfwd
 list limits
 list new
 list stdexcept
+list tuple
 list type_traits
 list typeinfo
 list version
@@ -483,6 +486,14 @@ memory tuple
 memory type_traits
 memory typeinfo
 memory version
+memory_resource cstddef
+memory_resource cstdint
+memory_resource limits
+memory_resource mutex
+memory_resource new
+memory_resource stdexcept
+memory_resource tuple
+memory_resource version
 mutex atomic
 mutex concepts
 mutex cstddef
@@ -621,6 +632,7 @@ set limits
 set new
 set optional
 set stdexcept
+set tuple
 set type_traits
 set version
 shared_mutex ctime
@@ -672,6 +684,7 @@ string limits
 string new
 string stdexcept
 string string_view
+string tuple
 string type_traits
 string version
 string_view compare
@@ -756,6 +769,7 @@ unordered_set limits
 unordered_set new
 unordered_set optional
 unordered_set stdexcept
+unordered_set tuple
 unordered_set type_traits
 unordered_set version
 utility compare
@@ -800,6 +814,7 @@ vector iosfwd
 vector limits
 vector new
 vector stdexcept
+vector tuple
 vector type_traits
 vector typeinfo
 vector version

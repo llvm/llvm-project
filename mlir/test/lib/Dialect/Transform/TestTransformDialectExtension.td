@@ -14,11 +14,20 @@
 #ifndef MLIR_TESTTRANSFORMDIALECTEXTENSION_TD
 #define MLIR_TESTTRANSFORMDIALECTEXTENSION_TD
 
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformEffects.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Dialect/PDL/IR/PDLTypes.td"
+
+def TestTransformTestDialectHandleType
+  : TypeDef<Transform_Dialect, "TestDialectOp",
+      [DeclareTypeInterfaceMethods<TransformTypeInterface>]> {
+  let description = [{Handle pointing to an op from the Test dialect.}];
+  let mnemonic = "test_dialect_op";
+  let assemblyFormat = "";
+}
 
 def TestProduceParamOrForwardOperandOp
   : Op<Transform_Dialect, "test_produce_param_or_forward_operand",
@@ -60,10 +69,11 @@ def TestPrintRemarkAtOperandOp
   : Op<Transform_Dialect, "test_print_remark_at_operand",
        [DeclareOpInterfaceMethods<TransformOpInterface>]> {
   let arguments = (ins 
-    Arg<PDL_Operation, "",
+    Arg<TransformTypeInterface, "",
         [TransformMappingRead, PayloadIRRead]>:$operand,
     StrAttr:$message);
-  let assemblyFormat = "$operand `,` $message attr-dict";
+  let assemblyFormat =
+    "$operand `,` $message attr-dict `:` type($operand)";
   let cppNamespace = "::mlir::test";
 }
 

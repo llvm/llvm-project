@@ -12,9 +12,9 @@
 %"class.G" = type { [2 x i32] }
 %"class.H" = type { %"struct.A" }
 %"struct.A" = type { %"struct.B" }
-%"struct.B" = type { i32*, i32*, i32* }
+%"struct.B" = type { ptr, ptr, ptr }
 
-define dso_local i1 @t(%class.A* %this, i32 %color, i32 %vertex) local_unnamed_addr {
+define dso_local i1 @t(ptr %this, i32 %color, i32 %vertex) local_unnamed_addr {
 ; CHECK-P9-LABEL: t:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    li r5, 1
@@ -48,8 +48,8 @@ lor.lhs.false:                                    ; preds = %entry
   br i1 %or.cond, label %cleanup16, label %for.inc
 
 for.inc:                                          ; preds = %lor.lhs.false, %land.lhs.true
-  %arrayidx.i31.1 = getelementptr inbounds %class.A, %class.A* %this, i64 0, i32 8, i32 0, i64 undef
-  %0 = load i16, i16* %arrayidx.i31.1, align 2
+  %arrayidx.i31.1 = getelementptr inbounds %class.A, ptr %this, i64 0, i32 8, i32 0, i64 undef
+  %0 = load i16, ptr %arrayidx.i31.1, align 2
   %cmp8.1 = icmp ult i16 %0, 2
   br i1 %cmp8.1, label %land.lhs.true.1, label %lor.lhs.false.1
 

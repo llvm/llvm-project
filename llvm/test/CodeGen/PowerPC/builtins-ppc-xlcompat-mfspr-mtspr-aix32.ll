@@ -65,7 +65,7 @@ define dso_local void @test_mtxer() {
 ; CHECK-NEXT:    mtxer 3
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* @ula, align 8
+  %0 = load i32, ptr @ula, align 8
   tail call void @llvm.ppc.mtspr.i32(i32 1, i32 %0)
   ret void
 }
@@ -78,7 +78,7 @@ define dso_local void @test_mtlr() {
 ; CHECK-NEXT:    mtspr 8, 3
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* @ula, align 8
+  %0 = load i32, ptr @ula, align 8
   tail call void @llvm.ppc.mtspr.i32(i32 8, i32 %0)
   ret void
 }
@@ -91,7 +91,7 @@ define dso_local void @test_mtctr() {
 ; CHECK-NEXT:    mtspr 9, 3
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* @ula, align 8
+  %0 = load i32, ptr @ula, align 8
   tail call void @llvm.ppc.mtspr.i32(i32 9, i32 %0)
   ret void
 }
@@ -104,7 +104,7 @@ define dso_local void @test_mtppr() {
 ; CHECK-NEXT:    mtspr 896, 3
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* @ula, align 8
+  %0 = load i32, ptr @ula, align 8
   tail call void @llvm.ppc.mtspr.i32(i32 896, i32 %0)
   ret void
 }
@@ -117,7 +117,7 @@ define dso_local void @test_mtppr32() {
 ; CHECK-NEXT:    mtspr 898, 3
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* @ula, align 8
+  %0 = load i32, ptr @ula, align 8
   tail call void @llvm.ppc.mtspr.i32(i32 898, i32 %0)
   ret void
 }

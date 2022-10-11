@@ -15,7 +15,7 @@ if.then:                                          ; preds = %entry
   %astype5.i.i.80.i = bitcast <4 x i32> %or.i.i.79.i to <4 x float>
   %1 = shufflevector <4 x float> %astype5.i.i.80.i, <4 x float> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   %2 = shufflevector <8 x float> undef, <8 x float> %1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
-  store <8 x float> %2, <8 x float>* undef, align 32
+  store <8 x float> %2, ptr undef, align 32
   br label %if.end
 
 ; CHECK-LABEL: @acosh_float8

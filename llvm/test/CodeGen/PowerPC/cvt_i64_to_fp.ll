@@ -2,7 +2,7 @@
 ; RUN:  llc --verify-machineinstrs -mtriple powerpc-unknown-freebsd \
 ; RUN:      -mcpu=pwr4 < %s | FileCheck %s
 
-define double @postinctodbl(i64* nocapture %llp) #0 {
+define double @postinctodbl(ptr nocapture %llp) #0 {
 ; CHECK-LABEL: postinctodbl:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stwu 1, -16(1)
@@ -20,9 +20,9 @@ define double @postinctodbl(i64* nocapture %llp) #0 {
 ; CHECK-NEXT:    addi 1, 1, 16
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i64, i64* %llp, align 8
+  %0 = load i64, ptr %llp, align 8
   %inc = add nsw i64 %0, 1
-  store i64 %inc, i64* %llp, align 8
+  store i64 %inc, ptr %llp, align 8
   %conv = sitofp i64 %0 to double
   ret double %conv
 }

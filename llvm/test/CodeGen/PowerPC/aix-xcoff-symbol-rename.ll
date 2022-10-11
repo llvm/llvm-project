@@ -23,7 +23,7 @@
 
 define internal i32 @f$o() {
 entry:
-  %call = call i32 bitcast (i32 (...)* @"f\40o" to i32 ()*)()
+  %call = call i32 @"f\40o"()
   ret i32 %call
 }
 
@@ -31,15 +31,15 @@ entry:
 define i32 @"f\26o"() {
 entry:
   %tmp = call i32 @f$o()
-  %tmp1 = load i32, i32* @"f\3do"
+  %tmp1 = load i32, ptr @"f\3do"
   %tmp2 = add i32 %tmp, %tmp1
   ret i32 %tmp2
 }
 
 ; This is f&_o
-define i32 (...)* @"f\26_o"() {
+define ptr @"f\26_o"() {
 entry:
-  ret i32 (...)* @"f\40o"
+  ret ptr @"f\40o"
 }
 
 ; This is f@o

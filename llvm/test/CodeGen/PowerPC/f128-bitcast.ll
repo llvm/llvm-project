@@ -55,7 +55,7 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readnone
-define i64 @checkBitcast(fp128 %in, <2 x i64> %in2, <2 x i64> *%out) local_unnamed_addr {
+define i64 @checkBitcast(fp128 %in, <2 x i64> %in2, ptr %out) local_unnamed_addr {
 ; CHECK-LABEL: checkBitcast:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mfvsrld r3, v2
@@ -82,7 +82,7 @@ entry:
   %0 = bitcast fp128 %in to <2 x i64>
   %1 = extractelement <2 x i64> %0, i64 0
   %2 = add <2 x i64> %0, %in2
-  store <2 x i64> %2, <2 x i64> *%out, align 16
+  store <2 x i64> %2, ptr %out, align 16
   ret i64 %1
 }
 

@@ -209,6 +209,8 @@ TEST_MACROS();
 TEST_MACROS();
 #include <memory>
 TEST_MACROS();
+#include <memory_resource>
+TEST_MACROS();
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 #   include <mutex>
 TEST_MACROS();

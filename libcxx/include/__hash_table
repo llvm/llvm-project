@@ -898,7 +898,7 @@ public:
     // Create __node
 
     typedef typename _NodeTypes::__node_type __node;
-    typedef typename __rebind_alloc_helper<__alloc_traits, __node>::type __node_allocator;
+    typedef __rebind_alloc<__alloc_traits, __node>   __node_allocator;
     typedef allocator_traits<__node_allocator>       __node_traits;
     typedef typename _NodeTypes::__void_pointer      __void_pointer;
     typedef typename _NodeTypes::__node_pointer      __node_pointer;
@@ -913,15 +913,14 @@ private:
     // the pointer using 'pointer_traits'.
     static_assert((is_same<__node_pointer, typename __node_traits::pointer>::value),
                   "Allocator does not rebind pointers in a sane manner.");
-    typedef typename __rebind_alloc_helper<__node_traits, __first_node>::type
-        __node_base_allocator;
+    typedef __rebind_alloc<__node_traits, __first_node> __node_base_allocator;
     typedef allocator_traits<__node_base_allocator> __node_base_traits;
     static_assert((is_same<__node_base_pointer, typename __node_base_traits::pointer>::value),
                  "Allocator does not rebind pointers in a sane manner.");
 
 private:
 
-    typedef typename __rebind_alloc_helper<__node_traits, __next_pointer>::type __pointer_allocator;
+    typedef __rebind_alloc<__node_traits, __next_pointer>  __pointer_allocator;
     typedef __bucket_list_deallocator<__pointer_allocator> __bucket_list_deleter;
     typedef unique_ptr<__next_pointer[], __bucket_list_deleter> __bucket_list;
     typedef allocator_traits<__pointer_allocator>          __pointer_alloc_traits;

@@ -7,7 +7,7 @@
 %f4 = type <4 x float>
 %i4 = type <4 x i32>
 
-define void @splat(%f4* %P, %f4* %Q, float %X) nounwind {
+define void @splat(ptr %P, ptr %Q, float %X) nounwind {
 ; G3-LABEL: splat:
 ; G3:       # %bb.0:
 ; G3-NEXT:    lfs 0, 12(4)
@@ -40,13 +40,13 @@ define void @splat(%f4* %P, %f4* %Q, float %X) nounwind {
   %tmp2 = insertelement %f4 %tmp, float %X, i32 1   ; <%f4> [#uses=1]
   %tmp4 = insertelement %f4 %tmp2, float %X, i32 2    ; <%f4> [#uses=1]
   %tmp6 = insertelement %f4 %tmp4, float %X, i32 3    ; <%f4> [#uses=1]
-  %q = load %f4, %f4* %Q         ; <%f4> [#uses=1]
+  %q = load %f4, ptr %Q         ; <%f4> [#uses=1]
   %R = fadd %f4 %q, %tmp6    ; <%f4> [#uses=1]
-  store %f4 %R, %f4* %P
+  store %f4 %R, ptr %P
   ret void
 }
 
-define void @splat_i4(%i4* %P, %i4* %Q, i32 %X) nounwind {
+define void @splat_i4(ptr %P, ptr %Q, i32 %X) nounwind {
 ; G3-LABEL: splat_i4:
 ; G3:       # %bb.0:
 ; G3-NEXT:    lwz 6, 12(4)
@@ -79,13 +79,13 @@ define void @splat_i4(%i4* %P, %i4* %Q, i32 %X) nounwind {
   %tmp2 = insertelement %i4 %tmp, i32 %X, i32 1     ; <%i4> [#uses=1]
   %tmp4 = insertelement %i4 %tmp2, i32 %X, i32 2    ; <%i4> [#uses=1]
   %tmp6 = insertelement %i4 %tmp4, i32 %X, i32 3    ; <%i4> [#uses=1]
-  %q = load %i4, %i4* %Q         ; <%i4> [#uses=1]
+  %q = load %i4, ptr %Q         ; <%i4> [#uses=1]
   %R = add %i4 %q, %tmp6    ; <%i4> [#uses=1]
-  store %i4 %R, %i4* %P
+  store %i4 %R, ptr %P
   ret void
 }
 
-define void @splat_imm_i32(%i4* %P, %i4* %Q, i32 %X) nounwind {
+define void @splat_imm_i32(ptr %P, ptr %Q, i32 %X) nounwind {
 ; G3-LABEL: splat_imm_i32:
 ; G3:       # %bb.0:
 ; G3-NEXT:    lwz 5, 12(4)
@@ -109,13 +109,13 @@ define void @splat_imm_i32(%i4* %P, %i4* %Q, i32 %X) nounwind {
 ; G5-NEXT:    vadduwm 2, 2, 3
 ; G5-NEXT:    stvx 2, 0, 3
 ; G5-NEXT:    blr
-  %q = load %i4, %i4* %Q         ; <%i4> [#uses=1]
+  %q = load %i4, ptr %Q         ; <%i4> [#uses=1]
   %R = add %i4 %q, < i32 -1, i32 -1, i32 -1, i32 -1 >       ; <%i4> [#uses=1]
-  store %i4 %R, %i4* %P
+  store %i4 %R, ptr %P
   ret void
 }
 
-define void @splat_imm_i16(%i4* %P, %i4* %Q, i32 %X) nounwind {
+define void @splat_imm_i16(ptr %P, ptr %Q, i32 %X) nounwind {
 ; G3-LABEL: splat_imm_i16:
 ; G3:       # %bb.0:
 ; G3-NEXT:    lwz 5, 8(4)
@@ -143,13 +143,13 @@ define void @splat_imm_i16(%i4* %P, %i4* %Q, i32 %X) nounwind {
 ; G5-NEXT:    vadduwm 2, 2, 3
 ; G5-NEXT:    stvx 2, 0, 3
 ; G5-NEXT:    blr
-  %q = load %i4, %i4* %Q         ; <%i4> [#uses=1]
+  %q = load %i4, ptr %Q         ; <%i4> [#uses=1]
   %R = add %i4 %q, < i32 65537, i32 65537, i32 65537, i32 65537 >   ; <%i4> [#uses=1]
-  store %i4 %R, %i4* %P
+  store %i4 %R, ptr %P
   ret void
 }
 
-define void @splat_h(i16 %tmp, <16 x i8>* %dst) nounwind {
+define void @splat_h(i16 %tmp, ptr %dst) nounwind {
 ; G3-LABEL: splat_h:
 ; G3:       # %bb.0:
 ; G3-NEXT:    sth 3, 14(4)
@@ -181,11 +181,11 @@ define void @splat_h(i16 %tmp, <16 x i8>* %dst) nounwind {
   %tmp77 = insertelement <8 x i16> %tmp76, i16 %tmp, i32 6
   %tmp78 = insertelement <8 x i16> %tmp77, i16 %tmp, i32 7
   %tmp78.upgrd.2 = bitcast <8 x i16> %tmp78 to <16 x i8>
-  store <16 x i8> %tmp78.upgrd.2, <16 x i8>* %dst
+  store <16 x i8> %tmp78.upgrd.2, ptr %dst
   ret void
 }
 
-define void @spltish(<16 x i8>* %A, <16 x i8>* %B) nounwind {
+define void @spltish(ptr %A, ptr %B) nounwind {
 ; G3-LABEL: spltish:
 ; G3:       # %bb.0:
 ; G3-NEXT:    stwu 1, -48(1)
@@ -253,11 +253,11 @@ define void @spltish(<16 x i8>* %A, <16 x i8>* %B) nounwind {
 ; G5-NEXT:    vsububm 2, 2, 3
 ; G5-NEXT:    stvx 2, 0, 3
 ; G5-NEXT:    blr
-  %tmp = load <16 x i8>, <16 x i8>* %B         ; <<16 x i8>> [#uses=1]
+  %tmp = load <16 x i8>, ptr %B         ; <<16 x i8>> [#uses=1]
   %tmp.s = bitcast <16 x i8> %tmp to <16 x i8>      ; <<16 x i8>> [#uses=1]
   %tmp4 = sub <16 x i8> %tmp.s, bitcast (<8 x i16> < i16 15, i16 15, i16 15, i16 15, i16 15, i16
  15, i16 15, i16 15 > to <16 x i8>)       ; <<16 x i8>> [#uses=1]
   %tmp4.u = bitcast <16 x i8> %tmp4 to <16 x i8>    ; <<16 x i8>> [#uses=1]
-  store <16 x i8> %tmp4.u, <16 x i8>* %A
+  store <16 x i8> %tmp4.u, ptr %A
   ret void
 }

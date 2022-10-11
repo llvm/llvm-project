@@ -8,7 +8,7 @@
 ; RUN: llc -mcpu=pwr8 -verify-machineinstrs -ppc-vsr-nums-as-vr -ppc-asm-full-reg-names \
 ; RUN:    -mtriple=powerpc64-unknown-linux-gnu < %s | FileCheck %s --check-prefix=P8BE
 
-define void @test_liwzx1(<1 x float>* %A, <1 x float>* %B, <1 x float>* %C) {
+define void @test_liwzx1(ptr %A, ptr %B, ptr %C) {
 ; P9LE-LABEL: test_liwzx1:
 ; P9LE:       # %bb.0:
 ; P9LE-NEXT:    lfs f0, 0(r3)
@@ -43,14 +43,14 @@ define void @test_liwzx1(<1 x float>* %A, <1 x float>* %B, <1 x float>* %C) {
 
 
 
-  %a = load <1 x float>, <1 x float>* %A
-  %b = load <1 x float>, <1 x float>* %B
+  %a = load <1 x float>, ptr %A
+  %b = load <1 x float>, ptr %B
   %X = fadd <1 x float> %a, %b
-  store <1 x float> %X, <1 x float>* %C
+  store <1 x float> %X, ptr %C
   ret void
 }
 
-define <1 x float>* @test_liwzx2(<1 x float>* %A, <1 x float>* %B, <1 x float>* %C) {
+define ptr @test_liwzx2(ptr %A, ptr %B, ptr %C) {
 ; P9LE-LABEL: test_liwzx2:
 ; P9LE:       # %bb.0:
 ; P9LE-NEXT:    lfs f0, 0(r3)
@@ -91,9 +91,9 @@ define <1 x float>* @test_liwzx2(<1 x float>* %A, <1 x float>* %B, <1 x float>* 
 
 
 
-  %a = load <1 x float>, <1 x float>* %A
-  %b = load <1 x float>, <1 x float>* %B
+  %a = load <1 x float>, ptr %A
+  %b = load <1 x float>, ptr %B
   %X = fsub <1 x float> %a, %b
-  store <1 x float> %X, <1 x float>* %C
-  ret <1 x float>* %C
+  store <1 x float> %X, ptr %C
+  ret ptr %C
 }

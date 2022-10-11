@@ -2,9 +2,9 @@
 target datalayout = "E-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v128:128:128-n32"
 target triple = "powerpc-montavista-linux-gnuspe"
 
-%struct.__va_list_tag.0.9.18.23.32.41.48.55.62.67.72.77.82.87.90.93.96.101.105 = type { i8, i8, i16, i8*, i8* }
+%struct.__va_list_tag.0.9.18.23.32.41.48.55.62.67.72.77.82.87.90.93.96.101.105 = type { i8, i8, i16, ptr, ptr }
 
-define fastcc void @test1(%struct.__va_list_tag.0.9.18.23.32.41.48.55.62.67.72.77.82.87.90.93.96.101.105* %args) {
+define fastcc void @test1(ptr %args) {
 entry:
   br i1 undef, label %repeat, label %maxlen_reached
 
@@ -30,7 +30,7 @@ sw.bb321:                                         ; preds = %repeat
   unreachable
 
 sw.bb323:                                         ; preds = %repeat
-  %0 = va_arg %struct.__va_list_tag.0.9.18.23.32.41.48.55.62.67.72.77.82.87.90.93.96.101.105* %args, i32
+  %0 = va_arg ptr %args, i32
   unreachable
 
 sw.bb326:                                         ; preds = %repeat

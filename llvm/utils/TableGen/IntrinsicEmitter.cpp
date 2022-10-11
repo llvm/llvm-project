@@ -699,76 +699,74 @@ void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
     // Keep track of the number of attributes we're writing out.
     unsigned numAttrs = 0;
 
-    // The argument attributes are alreadys sorted by argument index.
-    assert(is_sorted(Intrinsic.ArgumentAttributes) &&
-           "Argument attributes are not sorted");
+    for (const auto &[AttrIdx, Attrs] :
+         enumerate(Intrinsic.ArgumentAttributes)) {
+      if (Attrs.empty())
+        continue;
 
-    unsigned Ai = 0, Ae = Intrinsic.ArgumentAttributes.size();
-    if (Ae) {
-      while (Ai != Ae) {
-        unsigned AttrIdx = Intrinsic.ArgumentAttributes[Ai].Index;
-        OS << "      const Attribute::AttrKind AttrParam" << AttrIdx << "[]= {";
-        ListSeparator LS(",");
+      // The argument attributes are alreadys sorted by argument kind.
+      assert(is_sorted(Attrs) &&
+             "Argument attributes are not sorted");
 
-        bool AllValuesAreZero = true;
-        SmallVector<uint64_t, 8> Values;
-        do {
-          switch (Intrinsic.ArgumentAttributes[Ai].Kind) {
-          case CodeGenIntrinsic::NoCapture:
-            OS << LS << "Attribute::NoCapture";
-            break;
-          case CodeGenIntrinsic::NoAlias:
-            OS << LS << "Attribute::NoAlias";
-            break;
-          case CodeGenIntrinsic::NoUndef:
-            OS << LS << "Attribute::NoUndef";
-            break;
-          case CodeGenIntrinsic::NonNull:
-            OS << LS << "Attribute::NonNull";
-            break;
-          case CodeGenIntrinsic::Returned:
-            OS << LS << "Attribute::Returned";
-            break;
-          case CodeGenIntrinsic::ReadOnly:
-            OS << LS << "Attribute::ReadOnly";
-            break;
-          case CodeGenIntrinsic::WriteOnly:
-            OS << LS << "Attribute::WriteOnly";
-            break;
-          case CodeGenIntrinsic::ReadNone:
-            OS << LS << "Attribute::ReadNone";
-            break;
-          case CodeGenIntrinsic::ImmArg:
-            OS << LS << "Attribute::ImmArg";
-            break;
-          case CodeGenIntrinsic::Alignment:
-            OS << LS << "Attribute::Alignment";
-            break;
-          }
-          uint64_t V = Intrinsic.ArgumentAttributes[Ai].Value;
-          Values.push_back(V);
-          AllValuesAreZero &= (V == 0);
-
-          ++Ai;
-        } while (Ai != Ae && Intrinsic.ArgumentAttributes[Ai].Index == AttrIdx);
-        OS << "};\n";
-
-        // Generate attribute value array if not all attribute values are zero.
-        if (!AllValuesAreZero) {
-          OS << "      const uint64_t AttrValParam" << AttrIdx << "[]= {";
-          ListSeparator LSV(",");
-          for (const auto V : Values)
-            OS << LSV << V;
-          OS << "};\n";
+      OS << "      const Attribute::AttrKind AttrParam" << AttrIdx << "[] = {";
+      ListSeparator LS(",");
+      bool AllValuesAreZero = true;
+      SmallVector<uint64_t, 8> Values;
+      for (const CodeGenIntrinsic::ArgAttribute &Attr : Attrs) {
+        switch (Attr.Kind) {
+        case CodeGenIntrinsic::NoCapture:
+          OS << LS << "Attribute::NoCapture";
+          break;
+        case CodeGenIntrinsic::NoAlias:
+          OS << LS << "Attribute::NoAlias";
+          break;
+        case CodeGenIntrinsic::NoUndef:
+          OS << LS << "Attribute::NoUndef";
+          break;
+        case CodeGenIntrinsic::NonNull:
+          OS << LS << "Attribute::NonNull";
+          break;
+        case CodeGenIntrinsic::Returned:
+          OS << LS << "Attribute::Returned";
+          break;
+        case CodeGenIntrinsic::ReadOnly:
+          OS << LS << "Attribute::ReadOnly";
+          break;
+        case CodeGenIntrinsic::WriteOnly:
+          OS << LS << "Attribute::WriteOnly";
+          break;
+        case CodeGenIntrinsic::ReadNone:
+          OS << LS << "Attribute::ReadNone";
+          break;
+        case CodeGenIntrinsic::ImmArg:
+          OS << LS << "Attribute::ImmArg";
+          break;
+        case CodeGenIntrinsic::Alignment:
+          OS << LS << "Attribute::Alignment";
+          break;
         }
-        // AttributeList::ReturnIndex = 0, AttrParam0 corresponds to return
-        // value.
-        OS << "      AS[" << numAttrs++ << "] = AttributeList::get(C, "
-           << AttrIdx << ", AttrParam" << AttrIdx;
-        if (!AllValuesAreZero)
-          OS << ", AttrValParam" << AttrIdx;
-        OS << ");\n";
+
+        Values.push_back(Attr.Value);
+        AllValuesAreZero &= (Attr.Value == 0);
       }
+
+      OS << "};\n";
+
+      // Generate attribute value array if not all attribute values are zero.
+      if (!AllValuesAreZero) {
+        OS << "      const uint64_t AttrValParam" << AttrIdx << "[]= {";
+        ListSeparator LSV(",");
+        for (const auto V : Values)
+          OS << LSV << V;
+        OS << "};\n";
+      }
+      // AttributeList::ReturnIndex = 0, AttrParam0 corresponds to return
+      // value.
+      OS << "      AS[" << numAttrs++ << "] = AttributeList::get(C, "
+         << AttrIdx << ", AttrParam" << AttrIdx;
+      if (!AllValuesAreZero)
+        OS << ", AttrValParam" << AttrIdx;
+      OS << ");\n";
     }
 
     if (!Intrinsic.canThrow ||

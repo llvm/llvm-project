@@ -295,6 +295,7 @@ erase_if(vector<T, Allocator>& c, Predicate pred);    // C++20
 #include <__memory/swap_allocator.h>
 #include <__memory/temp_value.h>
 #include <__memory/uninitialized_algorithms.h>
+#include <__memory_resource/polymorphic_allocator.h>
 #include <__split_buffer>
 #include <__type_traits/is_allocator.h>
 #include <__type_traits/noexcept_move_assign_container.h>
@@ -356,6 +357,10 @@ public:
 
     static_assert((is_same<typename allocator_type::value_type, value_type>::value),
                   "Allocator::value_type must be same type as value_type");
+
+    static_assert(is_same<allocator_type, __rebind_alloc<__alloc_traits, value_type> >::value,
+                  "[allocator.requirements] states that rebinding an allocator to the same type should result in the "
+                  "original allocator");
 
     _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
     vector() _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
@@ -2008,7 +2013,7 @@ public:
     typedef std::reverse_iterator<const_iterator>   const_reverse_iterator;
 
 private:
-    typedef typename __rebind_alloc_helper<__alloc_traits, __storage_type>::type __storage_allocator;
+    typedef __rebind_alloc<__alloc_traits, __storage_type> __storage_allocator;
     typedef allocator_traits<__storage_allocator>    __storage_traits;
     typedef typename __storage_traits::pointer       __storage_pointer;
     typedef typename __storage_traits::const_pointer __const_storage_pointer;
@@ -3262,6 +3267,15 @@ inline constexpr bool __format::__enable_insertable<std::vector<wchar_t>> = true
 #endif // _LIBCPP_STD_VER > 17
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if _LIBCPP_STD_VER > 14
+_LIBCPP_BEGIN_NAMESPACE_STD
+namespace pmr {
+template <class _ValueT>
+using vector = std::vector<_ValueT, polymorphic_allocator<_ValueT>>;
+} // namespace pmr
+_LIBCPP_END_NAMESPACE_STD
+#endif
 
 _LIBCPP_POP_MACROS
 

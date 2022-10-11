@@ -14,7 +14,7 @@ declare dso_local void @callee() local_unnamed_addr
 
 define dso_local void @test_xxsplti32dx() local_unnamed_addr {
 entry:
-  %i1 = load double, double* undef, align 8
+  %i1 = load double, ptr undef, align 8
   br label %for.body124
 
 for.body124:
@@ -22,8 +22,8 @@ for.body124:
   br i1 undef, label %for.body919.preheader, label %for.end1072
 
 for.body919.preheader:
-  %i4 = load double, double* null, align 8
-  %i5 = load double, double* null, align 8
+  %i4 = load double, ptr null, align 8
+  %i5 = load double, ptr null, align 8
   %i15 = insertelement <2 x double> poison, double %i5, i32 0
   %i23 = insertelement <2 x double> undef, double %i4, i32 1
   %i24 = insertelement <2 x double> %i15, double 0x3FC5555555555555, i32 1
@@ -36,6 +36,6 @@ for.end1072:
   %E1 = phi double [ %E0, %for.body124 ], [ %sub994, %for.body919.preheader ]
   %i28 = phi <2 x double> [ zeroinitializer, %for.body124 ], [ %i15, %for.body919.preheader ]
   tail call void @callee()
-  store <2 x double> %i28, <2 x double>* undef, align 8
+  store <2 x double> %i28, ptr undef, align 8
   br label %for.body124
 }

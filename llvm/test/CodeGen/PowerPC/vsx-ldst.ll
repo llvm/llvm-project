@@ -39,17 +39,17 @@
 ; Function Attrs: nounwind
 define void @test1() {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @vsi, align 16
-  %1 = load <4 x i32>, <4 x i32>* @vui, align 16
-  %2 = load <4 x i32>, <4 x i32>* bitcast (<4 x float>* @vf to <4 x i32>*), align 16
-  %3 = load <2 x double>, <2 x double>* bitcast (<2 x i64>* @vsll to <2 x double>*), align 16
-  %4 = load <2 x double>, <2 x double>* bitcast (<2 x i64>* @vull to <2 x double>*), align 16
-  %5 = load <2 x double>, <2 x double>* @vd, align 16
-  store <4 x i32> %0, <4 x i32>* @res_vsi, align 16
-  store <4 x i32> %1, <4 x i32>* @res_vui, align 16
-  store <4 x i32> %2, <4 x i32>* bitcast (<4 x float>* @res_vf to <4 x i32>*), align 16
-  store <2 x double> %3, <2 x double>* bitcast (<2 x i64>* @res_vsll to <2 x double>*), align 16
-  store <2 x double> %4, <2 x double>* bitcast (<2 x i64>* @res_vull to <2 x double>*), align 16
-  store <2 x double> %5, <2 x double>* @res_vd, align 16
+  %0 = load <4 x i32>, ptr @vsi, align 16
+  %1 = load <4 x i32>, ptr @vui, align 16
+  %2 = load <4 x i32>, ptr @vf, align 16
+  %3 = load <2 x double>, ptr @vsll, align 16
+  %4 = load <2 x double>, ptr @vull, align 16
+  %5 = load <2 x double>, ptr @vd, align 16
+  store <4 x i32> %0, ptr @res_vsi, align 16
+  store <4 x i32> %1, ptr @res_vui, align 16
+  store <4 x i32> %2, ptr @res_vf, align 16
+  store <2 x double> %3, ptr @res_vsll, align 16
+  store <2 x double> %4, ptr @res_vull, align 16
+  store <2 x double> %5, ptr @res_vd, align 16
   ret void
 }

@@ -621,7 +621,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
             if (reg_ctx->ReadRegister(altivec_reg, reg_value)) {
               Status error;
               if (reg_value.GetAsMemoryData(
-                      altivec_reg, heap_data_up->GetBytes(),
+                      *altivec_reg, heap_data_up->GetBytes(),
                       heap_data_up->GetByteSize(), byte_order, error)) {
                 DataExtractor data(DataBufferSP(heap_data_up.release()),
                                    byte_order,

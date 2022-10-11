@@ -2,7 +2,7 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-- | FileCheck %s
 ; https://bugs.llvm.org/show_bug.cgi?id=50608
 
-define dso_local signext i32 @main(i32 signext %argc, i8** %argv) {
+define dso_local signext i32 @main(i32 signext %argc, ptr %argv) {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stw 3, -4(1)

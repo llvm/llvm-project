@@ -5,7 +5,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 @.str = private unnamed_addr constant [23 x i8] c"Sum(Array[%d,%d] = %d\0A\00", align 1
 
-define i32 @SumArray([100 x i32]* nocapture %Array, i32 %NumI, i32 %NumJ) nounwind readonly {
+define i32 @SumArray(ptr nocapture %Array, i32 %NumI, i32 %NumJ) nounwind readonly {
 entry:
   %cmp12 = icmp eq i32 %NumI, 0
   br i1 %cmp12, label %for.end8, label %for.cond1.preheader.lr.ph
@@ -23,8 +23,8 @@ for.inc6.us:                                      ; preds = %for.body3.us
 for.body3.us:                                     ; preds = %for.body3.us, %for.body3.lr.ph.us
   %indvars.iv = phi i64 [ 0, %for.body3.lr.ph.us ], [ %indvars.iv.next, %for.body3.us ]
   %Result.111.us = phi i32 [ %Result.014.us, %for.body3.lr.ph.us ], [ %add.us, %for.body3.us ]
-  %arrayidx5.us = getelementptr inbounds [100 x i32], [100 x i32]* %Array, i64 %indvars.iv16, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx5.us, align 4
+  %arrayidx5.us = getelementptr inbounds [100 x i32], ptr %Array, i64 %indvars.iv16, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx5.us, align 4
   %add.us = add nsw i32 %0, %Result.111.us
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
@@ -59,8 +59,8 @@ for.body:                                         ; preds = %for.body, %entry
   %indvars.iv33 = phi i64 [ 0, %entry ], [ %indvars.iv.next34, %for.body ]
   %0 = trunc i64 %indvars.iv33 to i32
   %sub = sub i32 0, %0
-  %arrayidx2 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* %Array, i64 0, i64 %indvars.iv33, i64 %indvars.iv33
-  store i32 %sub, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds [100 x [100 x i32]], ptr %Array, i64 0, i64 %indvars.iv33, i64 %indvars.iv33
+  store i32 %sub, ptr %arrayidx2, align 4
   %indvars.iv.next34 = add i64 %indvars.iv33, 1
   %lftr.wideiv35 = trunc i64 %indvars.iv.next34 to i32
   %exitcond36 = icmp eq i32 %lftr.wideiv35, 100
@@ -79,9 +79,9 @@ for.body8:                                        ; preds = %for.inc14, %for.con
 
 if.then:                                          ; preds = %for.body8
   %3 = add i64 %indvars.iv, %indvars.iv29
-  %arrayidx13 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* %Array, i64 0, i64 %indvars.iv29, i64 %indvars.iv
+  %arrayidx13 = getelementptr inbounds [100 x [100 x i32]], ptr %Array, i64 0, i64 %indvars.iv29, i64 %indvars.iv
   %4 = trunc i64 %3 to i32
-  store i32 %4, i32* %arrayidx13, align 4
+  store i32 %4, ptr %arrayidx13, align 4
   br label %for.inc14
 
 for.inc14:                                        ; preds = %for.body8, %if.then
@@ -105,8 +105,8 @@ for.inc6.us.i:                                    ; preds = %for.body3.us.i
 for.body3.us.i:                                   ; preds = %for.body3.lr.ph.us.i, %for.body3.us.i
   %indvars.iv.i = phi i64 [ 0, %for.body3.lr.ph.us.i ], [ %indvars.iv.next.i, %for.body3.us.i ]
   %Result.111.us.i = phi i32 [ %Result.014.us.i, %for.body3.lr.ph.us.i ], [ %add.us.i, %for.body3.us.i ]
-  %arrayidx5.us.i = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* %Array, i64 0, i64 %indvars.iv16.i, i64 %indvars.iv.i
-  %5 = load i32, i32* %arrayidx5.us.i, align 4
+  %arrayidx5.us.i = getelementptr inbounds [100 x [100 x i32]], ptr %Array, i64 0, i64 %indvars.iv16.i, i64 %indvars.iv.i
+  %5 = load i32, ptr %arrayidx5.us.i, align 4
   %add.us.i = add nsw i32 %5, %Result.111.us.i
   %indvars.iv.next.i = add i64 %indvars.iv.i, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next.i to i32
@@ -119,7 +119,7 @@ for.body3.lr.ph.us.i:                             ; preds = %for.inc17, %for.inc
   br label %for.body3.us.i
 
 SumArray.exit:                                    ; preds = %for.inc6.us.i
-  %call20 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i64 0, i64 0), i32 100, i32 100, i32 %add.us.i) nounwind
+  %call20 = call i32 (ptr, ...) @printf(ptr @.str, i32 100, i32 100, i32 %add.us.i) nounwind
   ret i32 0
 
 ; CHECK: @main
@@ -127,4 +127,4 @@ SumArray.exit:                                    ; preds = %for.inc6.us.i
 ; CHECK: bdnz
 }
 
-declare i32 @printf(i8* nocapture, ...) nounwind
+declare i32 @printf(ptr nocapture, ...) nounwind

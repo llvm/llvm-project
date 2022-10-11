@@ -32,13 +32,10 @@ module {
     return %0 : tensor<?x?xf32>
   }
 
-  transform.with_pdl_patterns {
-  ^bb0(%arg0: !pdl.operation):
-    transform.sequence %arg0 failures(propagate) {
-    ^bb1(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-      %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [10, 20] (mapped to dims [1, 0])
-    }
+  transform.sequence failures(propagate) {
+  ^bb1(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+    %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [10, 20] (mapped to dims [1, 0])
   }
 }
 
@@ -76,13 +73,10 @@ func.func @matmul_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf32>, %C: t
   return %0 : tensor<100x300xf32>
 }
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-    %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [10, 21]
-  }
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [10, 21]
 }
 
 
@@ -99,13 +93,13 @@ transform.with_pdl_patterns {
 //  CHECK-SAME:   %[[A:[0-9a-z]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[B:[0-9a-z]+]]: tensor<?x?xf32>
 //  CHECK-SAME:   %[[C:[0-9a-z]+]]: tensor<?x?xf32>
-func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>) -> tensor<?x?xf32> {  
+func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C: tensor<?x?xf32>) -> tensor<?x?xf32> {
   //      CHECK: %[[M:.+]] = tensor.dim %[[A]], %c0 :
-  //      CHECK: %[[N:.+]] = tensor.dim %[[B]], %c1 : 
+  //      CHECK: %[[N:.+]] = tensor.dim %[[B]], %c1 :
   //      CHECK: %[[NT0:.+]] = affine.apply #map0()[%[[M]]]
   //      CHECK: %[[NT1:.+]] = affine.apply #map1()[%[[N]]]
   //      CHECK: scf.foreach_thread (%[[IV0:.+]], %[[IV1:.+]]) in (%[[NT0]], %[[NT1]]) shared_outs(%[[C_BLK:.*]] = %[[C]])
-  //      CHECK:   %[[TS0:.+]] = affine.min #[[$map2]](%[[IV0]])[%[[M]]]  
+  //      CHECK:   %[[TS0:.+]] = affine.min #[[$map2]](%[[IV0]])[%[[M]]]
   //      CHECK:   %[[TS1:.+]] = affine.min #[[$map4]](%[[IV1]])[%[[N]]]
   //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map5]](%[[IV0]])
   //      CHECK:   %[[LB1:.+]] = affine.apply #[[$map6]](%[[IV1]])
@@ -120,13 +114,10 @@ func.func @matmul_tile_size_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?xf32>, %C
   return %0 : tensor<?x?xf32>
 }
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):    
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-    %1:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes [10, 20]
-  }
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %1:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes [10, 20]
 }
 
 // -----
@@ -145,7 +136,7 @@ func.func @matmul_tile_size_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf
   //  CHECK-DAG: %[[c10:.+]] = arith.constant 10 :
   //  CHECK-DAG: %[[c15:.+]] = arith.constant 15 :
   //      CHECK: scf.foreach_thread (%[[IV0:.+]], %[[IV1:.+]]) in (%[[c10]], %[[c15]]) shared_outs(%[[C_BLK:.*]] = %[[C]])
-  //      CHECK:   %[[TS:.+]] = affine.min #[[$map0]](%[[IV1]])  
+  //      CHECK:   %[[TS:.+]] = affine.min #[[$map0]](%[[IV1]])
   //  CHECK-NOT:   affine.max
   //  CHECK-NOT:   affine.min
   //      CHECK:   %[[LB0:.+]] = affine.apply #[[$map2]](%[[IV0]])
@@ -161,13 +152,10 @@ func.func @matmul_tile_size_static(%A: tensor<100x200xf32>, %B: tensor<200x300xf
   return %0 : tensor<100x300xf32>
 }
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-    %1:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes [10, 21]
-  }
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %1:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes [10, 21]
 }
 
 // -----
@@ -186,13 +174,10 @@ module {
     return %result : tensor<4xf32>
   }
 
-  transform.with_pdl_patterns {
-  ^bb0(%arg0: !pdl.operation):
-    transform.sequence %arg0 failures(propagate) {
-    ^bb1(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
-      %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [2] (mapped to dims [0])
-    }
+  transform.sequence failures(propagate) {
+  ^bb1(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+    %1:2 = transform.structured.tile_to_foreach_thread_op %0 num_threads [2] (mapped to dims [0])
   }
 }
 // CHECK-DAG: #[[$map0:.+]] = affine_map<(d0) -> (d0 * 2)>
@@ -240,14 +225,11 @@ func.func @matmul_tile_size_dynamic_dynamic(%A: tensor<?x?xf32>, %B: tensor<?x?x
   return %0 : tensor<?x?xf32>
 }
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  transform.sequence %arg0 failures(propagate) {
-  ^bb1(%arg1: !pdl.operation):
-    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-    %sz = transform.structured.match ops{["test.dummy"]} in %arg1
-    %1:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes [%sz, 20]
-  }
+transform.sequence failures(propagate) {
+^bb1(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %sz = transform.structured.match ops{["test.dummy"]} in %arg1
+  %1:2 = transform.structured.tile_to_foreach_thread_op %0 tile_sizes [%sz, 20]
 }
 
 // -----
@@ -262,7 +244,7 @@ transform.with_pdl_patterns {
 //  CHECK-SAME:   %[[IN2:[0-9a-z]+]]: tensor<100xf32>
 //  CHECK-SAME:   %[[ORGOUT1:[0-9a-z]+]]: tensor<100xf32>
 //  CHECK-SAME:   %[[ORGOUT2:[0-9a-z]+]]: tensor<100xf32>
-  func.func @tile_output_multi_1d_static(%IN1: tensor<100xf32>, %IN2: tensor<100xf32>, 
+  func.func @tile_output_multi_1d_static(%IN1: tensor<100xf32>, %IN2: tensor<100xf32>,
                                          %OUT1: tensor<100xf32>, %OUT2: tensor<100xf32>)
                                          -> (tensor<100xf32>, tensor<100xf32>) {
 //  CHECK-DAG: %[[c0:.+]] = arith.constant 7 :
@@ -288,7 +270,7 @@ transform.with_pdl_patterns {
                        affine_map<(d0) -> (d0)>],
       iterator_types = ["parallel"]
     } ins(%IN1, %IN2 : tensor<100xf32>, tensor<100xf32>)
-      outs(%OUT1, %OUT2 : tensor<100xf32>, tensor<100xf32>) 
+      outs(%OUT1, %OUT2 : tensor<100xf32>, tensor<100xf32>)
     {
       ^bb0(%a1: f32, %a2: f32, %a3: f32, %a4: f32):
         %1 = arith.addf %a1, %a3 : f32
@@ -298,13 +280,10 @@ transform.with_pdl_patterns {
     return %res1, %res2 : tensor<100xf32>, tensor<100xf32>
   }
 
-  transform.with_pdl_patterns {
-    ^bb0(%arg0: !pdl.operation):
-    transform.sequence %arg0 failures(propagate) {
-      ^bb1(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
-      %foreach_thread, %tiled_generic = transform.structured.tile_to_foreach_thread_op %0 num_threads [7]
-    }
+  transform.sequence failures(propagate) {
+  ^bb1(%arg1: !pdl.operation):
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1
+    %foreach_thread, %tiled_generic = transform.structured.tile_to_foreach_thread_op %0 num_threads [7]
   }
 
 // -----
@@ -321,7 +300,7 @@ transform.with_pdl_patterns {
 //  CHECK-SAME:   %[[IN3:[0-9a-z]+]]: tensor<300xf32>
 //  CHECK-SAME:   %[[ORGOUT1:[0-9a-z]+]]: tensor<300x100xf32>
 //  CHECK-SAME:   %[[ORGOUT2:[0-9a-z]+]]: tensor<300xf32>
-  func.func @tile_output_multi_1d2d_static(%IN1: tensor<100xf32>, %IN2: tensor<100x300xf32>, %IN3: tensor<300xf32>,                     
+  func.func @tile_output_multi_1d2d_static(%IN1: tensor<100xf32>, %IN2: tensor<100x300xf32>, %IN3: tensor<300xf32>,
                      %OUT1: tensor<300x100xf32>, %OUT2: tensor<300xf32>)
                      -> (tensor<300x100xf32>, tensor<300xf32>) {
 //  CHECK-DAG: %[[c0:.+]] = arith.constant 4 :
@@ -336,11 +315,11 @@ transform.with_pdl_patterns {
 // CHECK-NEXT:    tensor.parallel_insert_slice %[[RES1]]#0 into %[[OUT1]][%[[LB]], 0] [75, 100]
 // CHECK-NEXT:    tensor.parallel_insert_slice %[[RES1]]#1 into %[[OUT2]][%[[LB]]] [75]
     %res2, %res3 = linalg.generic {
-      indexing_maps = [affine_map<(d0,d1) -> (d1)>,   
+      indexing_maps = [affine_map<(d0,d1) -> (d1)>,
                        affine_map<(d0,d1) -> (d1,d0)>,
-                       affine_map<(d0,d1) -> (d0)>,   
+                       affine_map<(d0,d1) -> (d0)>,
                        affine_map<(d0,d1) -> (d0,d1)>,
-                       affine_map<(d0,d1) -> (d0)>    
+                       affine_map<(d0,d1) -> (d0)>
                        ],
       iterator_types = ["parallel", "parallel"]
     } ins(%IN1, %IN2, %IN3 : tensor<100xf32>, tensor<100x300xf32>, tensor<300xf32>)
@@ -351,18 +330,13 @@ transform.with_pdl_patterns {
         %3 = arith.addf %i3, %2 : f32
         linalg.yield %3, %i3 : f32, f32
     } -> (tensor<300x100xf32>, tensor<300xf32>)
-    
+
     return %res2, %res3 : tensor<300x100xf32>, tensor<300xf32>
   }
 
-  transform.with_pdl_patterns {
-    ^bb0(%IN_MAT1: !pdl.operation):
-    transform.sequence %IN_MAT1 failures(propagate) {
-      ^bb1(%IN_MAT2: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.generic"]} in %IN_MAT2
-      %foreach_thread, %tiled_generic = transform.structured.tile_to_foreach_thread_op %0 num_threads [4]
-    }
+  transform.sequence failures(propagate) {
+  ^bb1(%IN_MAT2: !pdl.operation):
+    %0 = transform.structured.match ops{["linalg.generic"]} in %IN_MAT2
+    %foreach_thread, %tiled_generic = transform.structured.tile_to_foreach_thread_op %0 num_threads [4]
   }
-
-
 

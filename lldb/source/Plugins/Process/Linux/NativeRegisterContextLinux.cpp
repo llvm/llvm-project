@@ -42,6 +42,7 @@ NativeRegisterContextLinux::WriteRegisterRaw(uint32_t reg_index,
 
   // Check if this is a subregister of a full register.
   const RegisterInfo *reg_info = GetRegisterInfoAtIndex(reg_index);
+  assert(reg_info && "Expected valid register info for reg_index.");
   if (reg_info->invalidate_regs &&
       (reg_info->invalidate_regs[0] != LLDB_INVALID_REGNUM)) {
     Status error;
@@ -52,21 +53,23 @@ NativeRegisterContextLinux::WriteRegisterRaw(uint32_t reg_index,
 
     // Read the full register.
     error = ReadRegister(full_reg_info, full_value);
-    if (error.Fail())
+    if (error.Fail()) {
+      // full_reg_info was nullptr, or we couldn't read the register.
       return error;
+    }
 
     lldb::ByteOrder byte_order = GetByteOrder();
     uint8_t dst[RegisterValue::kMaxRegisterByteSize];
 
     // Get the bytes for the full register.
     const uint32_t dest_size = full_value.GetAsMemoryData(
-        full_reg_info, dst, sizeof(dst), byte_order, error);
+        *full_reg_info, dst, sizeof(dst), byte_order, error);
     if (error.Success() && dest_size) {
       uint8_t src[RegisterValue::kMaxRegisterByteSize];
 
       // Get the bytes for the source data.
       const uint32_t src_size = reg_value.GetAsMemoryData(
-          reg_info, src, sizeof(src), byte_order, error);
+          *reg_info, src, sizeof(src), byte_order, error);
       if (error.Success() && src_size && (src_size < dest_size)) {
         // Copy the src bytes to the destination.
         memcpy(dst + (reg_info->byte_offset & 0x1), src, src_size);
