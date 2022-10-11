@@ -59,16 +59,12 @@ public:
     // Build a plain extract_strided_metadata(memref) from
     // extract_strided_metadata(subview(memref)).
     Location origLoc = op.getLoc();
-    IndexType indexType = rewriter.getIndexType();
     Value source = subview.getSource();
     auto sourceType = source.getType().cast<MemRefType>();
     unsigned sourceRank = sourceType.getRank();
-    SmallVector<Type> sizeStrideTypes(sourceRank, indexType);
 
     auto newExtractStridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(
-            origLoc, op.getBaseBuffer().getType(), indexType, sizeStrideTypes,
-            sizeStrideTypes, source);
+        rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
 
     SmallVector<int64_t> sourceStrides;
     int64_t sourceOffset;
@@ -486,16 +482,12 @@ public:
     // Build a plain extract_strided_metadata(memref) from
     // extract_strided_metadata(reassociative_reshape_like(memref)).
     Location origLoc = op.getLoc();
-    IndexType indexType = rewriter.getIndexType();
     Value source = reshape.getSrc();
     auto sourceType = source.getType().cast<MemRefType>();
     unsigned sourceRank = sourceType.getRank();
-    SmallVector<Type> sizeStrideTypes(sourceRank, indexType);
 
     auto newExtractStridedMetadata =
-        rewriter.create<memref::ExtractStridedMetadataOp>(
-            origLoc, op.getBaseBuffer().getType(), indexType, sizeStrideTypes,
-            sizeStrideTypes, source);
+        rewriter.create<memref::ExtractStridedMetadataOp>(origLoc, source);
 
     // Collect statically known information.
     SmallVector<int64_t> strides;
