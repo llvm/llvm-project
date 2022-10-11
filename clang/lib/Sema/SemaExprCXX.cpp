@@ -4760,11 +4760,14 @@ static bool CheckUnaryTypeTraitTypeCompleteness(Sema &S, TypeTrait UTT,
   case UTT_IsArray:
   case UTT_IsBoundedArray:
   case UTT_IsPointer:
+  case UTT_IsNullPointer:
+  case UTT_IsReferenceable:
   case UTT_IsLvalueReference:
   case UTT_IsRvalueReference:
   case UTT_IsMemberFunctionPointer:
   case UTT_IsMemberObjectPointer:
   case UTT_IsEnum:
+  case UTT_IsScopedEnum:
   case UTT_IsUnion:
   case UTT_IsClass:
   case UTT_IsFunction:
@@ -4923,6 +4926,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return false;
   case UTT_IsPointer:
     return T->isAnyPointerType();
+  case UTT_IsNullPointer:
+    return T->isNullPtrType();
   case UTT_IsLvalueReference:
     return T->isLValueReferenceType();
   case UTT_IsRvalueReference:
@@ -4933,6 +4938,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return T->isMemberDataPointerType();
   case UTT_IsEnum:
     return T->isEnumeralType();
+  case UTT_IsScopedEnum:
+    return T->isScopedEnumeralType();
   case UTT_IsUnion:
     return T->isUnionType();
   case UTT_IsClass:
@@ -5304,6 +5311,8 @@ static bool EvaluateUnaryTypeTrait(Sema &Self, TypeTrait UTT,
     return C.hasUniqueObjectRepresentations(T);
   case UTT_IsTriviallyRelocatable:
     return T.isTriviallyRelocatableType(C);
+  case UTT_IsReferenceable:
+    return T.isReferenceable();
   }
 }
 
