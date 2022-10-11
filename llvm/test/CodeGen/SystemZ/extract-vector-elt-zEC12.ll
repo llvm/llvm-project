@@ -2,10 +2,10 @@
 ;
 ; Test that <1 x i8> is legalized properly without vector support.
 
-define void @autogen_SD18500(i8*) {
+define void @autogen_SD18500(ptr) {
 ; CHECK: .text
 BB:
-  %L5 = load i8, i8* %0
+  %L5 = load i8, ptr %0
   %I22 = insertelement <1 x i8> undef, i8 %L5, i32 0
   %Cmp53 = icmp ule i1 undef, undef
   br label %CF244

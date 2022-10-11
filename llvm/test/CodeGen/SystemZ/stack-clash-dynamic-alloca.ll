@@ -37,9 +37,9 @@ define i32 @fun0(i32 %n) #0 {
 ; CHECK-NEXT:    br %r14
 
   %a = alloca i32, i32 %n
-  %b = getelementptr inbounds i32, i32* %a, i64 1198
-  store volatile i32 1, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i64 1198
+  store volatile i32 1, ptr %b
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 
@@ -79,9 +79,9 @@ define i32 @fun1(i32 %n) #0 "stack-probe-size"="1250" {
 ; CHECK-NEXT:    lmg %r11, %r15, 248(%r11)
 ; CHECK-NEXT:    br %r14
   %a = alloca i32, i32 %n
-  %b = getelementptr inbounds i32, i32* %a, i64 1198
-  store volatile i32 1, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i64 1198
+  store volatile i32 1, ptr %b
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 
@@ -127,9 +127,9 @@ define i32 @fun2(i32 %n) #0 "stack-probe-size"="4" {
 ; CHECK-NEXT:    lmg %r11, %r15, 248(%r11)
 ; CHECK-NEXT:    br %r14
   %a = alloca i32, i32 %n
-  %b = getelementptr inbounds i32, i32* %a, i64 1198
-  store volatile i32 1, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i64 1198
+  store volatile i32 1, ptr %b
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 

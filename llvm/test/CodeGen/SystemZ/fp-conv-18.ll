@@ -11,24 +11,24 @@
 
 define void @fun1() #0 {
 bb:
-%tmp = load <4 x float>, <4 x float>* undef, align 16
+%tmp = load <4 x float>, ptr undef, align 16
 %tmp1 = extractelement <4 x float> %tmp, i32 0
 %tmp2 = fpext float %tmp1 to double
 %tmp3 = extractelement <4 x float> %tmp, i32 2
 %tmp4 = fpext float %tmp3 to double
-tail call void (i8*, ...) @printf(i8* getelementptr inbounds ([21 x i8], [21 x i8]* @.str, i64 0, i64 0), double %tmp2, double undef, double %tmp4, double undef)
+tail call void (ptr, ...) @printf(ptr @.str, double %tmp2, double undef, double %tmp4, double undef)
 ret void
 }
 
 define void @fun2() #0 {
 bb:
-%tmp = load <2 x double>, <2 x double>* undef, align 16
+%tmp = load <2 x double>, ptr undef, align 16
 %tmp1 = extractelement <2 x double> %tmp, i32 0
 %tmp2 = fptrunc double %tmp1 to float
 %tmp3 = extractelement <2 x double> %tmp, i32 1
 %tmp4 = fptrunc double %tmp3 to float
-tail call void (i8*, ...) @printf(i8* getelementptr inbounds ([21 x i8], [21 x i8]* @.str, i64 0, i64 0), float %tmp2, float undef, float %tmp4, float undef)
+tail call void (ptr, ...) @printf(ptr @.str, float %tmp2, float undef, float %tmp4, float undef)
 ret void
 }
 
-declare dso_local void @printf(i8*, ...) #0
+declare dso_local void @printf(ptr, ...) #0

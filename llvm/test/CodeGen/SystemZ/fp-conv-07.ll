@@ -21,13 +21,13 @@ define double @f2(i64 %i) {
 }
 
 ; Test i64->f128.
-define void @f3(i64 %i, fp128 *%dst) {
+define void @f3(i64 %i, ptr %dst) {
 ; CHECK-LABEL: f3:
 ; CHECK: cxgbr %f0, %r2
 ; CHECK: std %f0, 0(%r3)
 ; CHECK: std %f2, 8(%r3)
 ; CHECK: br %r14
   %conv = sitofp i64 %i to fp128
-  store fp128 %conv, fp128 *%dst
+  store fp128 %conv, ptr %dst
   ret void
 }

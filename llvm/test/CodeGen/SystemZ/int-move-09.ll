@@ -20,7 +20,7 @@ define dso_local i64 @f1() {
 ; CHECK-LABEL: f1:
 ; CHECK: lghrl %r2, gsrc16
 ; CHECK: br %r14
-  %val = load i16, i16 *@gsrc16
+  %val = load i16, ptr@gsrc16
   %ext = sext i16 %val to i64
   ret i64 %ext
 }
@@ -30,7 +30,7 @@ define dso_local i64 @f2() {
 ; CHECK-LABEL: f2:
 ; CHECK: llghrl %r2, gsrc16
 ; CHECK: br %r14
-  %val = load i16, i16 *@gsrc16
+  %val = load i16, ptr@gsrc16
   %ext = zext i16 %val to i64
   ret i64 %ext
 }
@@ -40,7 +40,7 @@ define dso_local i64 @f3() {
 ; CHECK-LABEL: f3:
 ; CHECK: lgfrl %r2, gsrc32
 ; CHECK: br %r14
-  %val = load i32, i32 *@gsrc32
+  %val = load i32, ptr@gsrc32
   %ext = sext i32 %val to i64
   ret i64 %ext
 }
@@ -50,7 +50,7 @@ define dso_local i64 @f4() {
 ; CHECK-LABEL: f4:
 ; CHECK: llgfrl %r2, gsrc32
 ; CHECK: br %r14
-  %val = load i32, i32 *@gsrc32
+  %val = load i32, ptr@gsrc32
   %ext = zext i32 %val to i64
   ret i64 %ext
 }
@@ -61,7 +61,7 @@ define dso_local void @f5(i64 %val) {
 ; CHECK: sthrl %r2, gdst16
 ; CHECK: br %r14
   %half = trunc i64 %val to i16
-  store i16 %half, i16 *@gdst16
+  store i16 %half, ptr@gdst16
   ret void
 }
 
@@ -71,7 +71,7 @@ define dso_local void @f6(i64 %val) {
 ; CHECK: strl %r2, gdst32
 ; CHECK: br %r14
   %word = trunc i64 %val to i32
-  store i32 %word, i32 *@gdst32
+  store i32 %word, ptr@gdst32
   ret void
 }
 
@@ -81,8 +81,8 @@ define dso_local void @f7() {
 ; CHECK: lgrl %r0, gsrc64
 ; CHECK: stgrl %r0, gdst64
 ; CHECK: br %r14
-  %val = load i64, i64 *@gsrc64
-  store i64 %val, i64 *@gdst64
+  %val = load i64, ptr@gsrc64
+  store i64 %val, ptr@gdst64
   ret void
 }
 
@@ -92,7 +92,7 @@ define dso_local i64 @f8() {
 ; CHECK: lgrl [[REG:%r[0-5]]], gsrc16u@GOT
 ; CHECK: lgh %r2, 0([[REG]])
 ; CHECK: br %r14
-  %val = load i16, i16 *@gsrc16u, align 1
+  %val = load i16, ptr@gsrc16u, align 1
   %ext = sext i16 %val to i64
   ret i64 %ext
 }
@@ -103,7 +103,7 @@ define dso_local i64 @f9() {
 ; CHECK: lgrl [[REG:%r[0-5]]], gsrc16u@GOT
 ; CHECK: llgh %r2, 0([[REG]])
 ; CHECK: br %r14
-  %val = load i16, i16 *@gsrc16u, align 1
+  %val = load i16, ptr@gsrc16u, align 1
   %ext = zext i16 %val to i64
   ret i64 %ext
 }
@@ -114,7 +114,7 @@ define dso_local i64 @f10() {
 ; CHECK: larl [[REG:%r[0-5]]], gsrc32u
 ; CHECK: lgf %r2, 0([[REG]])
 ; CHECK: br %r14
-  %val = load i32, i32 *@gsrc32u, align 2
+  %val = load i32, ptr@gsrc32u, align 2
   %ext = sext i32 %val to i64
   ret i64 %ext
 }
@@ -125,7 +125,7 @@ define dso_local i64 @f11() {
 ; CHECK: larl [[REG:%r[0-5]]], gsrc32u
 ; CHECK: llgf %r2, 0([[REG]])
 ; CHECK: br %r14
-  %val = load i32, i32 *@gsrc32u, align 2
+  %val = load i32, ptr@gsrc32u, align 2
   %ext = zext i32 %val to i64
   ret i64 %ext
 }
@@ -137,7 +137,7 @@ define dso_local void @f12(i64 %val) {
 ; CHECK: sth %r2, 0([[REG]])
 ; CHECK: br %r14
   %half = trunc i64 %val to i16
-  store i16 %half, i16 *@gdst16u, align 1
+  store i16 %half, ptr@gdst16u, align 1
   ret void
 }
 
@@ -148,7 +148,7 @@ define dso_local void @f13(i64 %val) {
 ; CHECK: st %r2, 0([[REG]])
 ; CHECK: br %r14
   %word = trunc i64 %val to i32
-  store i32 %word, i32 *@gdst32u, align 2
+  store i32 %word, ptr@gdst32u, align 2
   ret void
 }
 
@@ -160,7 +160,7 @@ define dso_local void @f14() {
 ; CHECK: larl [[REG:%r[0-5]]], gdst64u
 ; CHECK: stg [[VAL]], 0([[REG]])
 ; CHECK: br %r14
-  %val = load i64, i64 *@gsrc64u, align 4
-  store i64 %val, i64 *@gdst64u, align 4
+  %val = load i64, ptr@gsrc64u, align 4
+  store i64 %val, ptr@gdst64u, align 4
   ret void
 }

@@ -61,7 +61,7 @@ define i64 @f2(double %f) #0 {
 }
 
 ; Test f128->i64.
-define i64 @f3(fp128 *%src) #0 {
+define i64 @f3(ptr %src) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld %f0, 0(%r2)
@@ -81,7 +81,7 @@ define i64 @f3(fp128 *%src) #0 {
 ; CHECK-NEXT:    cgxbr %r2, 5, %f0
 ; CHECK-NEXT:    xgr %r2, %r0
 ; CHECK-NEXT:    br %r14
-  %f = load fp128, fp128 *%src
+  %f = load fp128, ptr %src
   %conv = call i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128 %f,
                                                metadata !"fpexcept.strict") #0
   ret i64 %conv
