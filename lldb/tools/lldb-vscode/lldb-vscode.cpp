@@ -1444,8 +1444,15 @@ void request_initialize(const llvm::json::Object &request) {
   auto log_cb = [](const char *buf, void *baton) -> void {
     g_vsc.SendOutput(OutputType::Console, llvm::StringRef{buf});
   };
+
+  auto arguments = request.getObject("arguments");
+  // sourceInitFile option is not from formal DAP specification. It is only
+  // used by unit tests to prevent sourcing .lldbinit files from environment
+  // which may affect the outcome of tests.
+  bool source_init_file = GetBoolean(arguments, "sourceInitFile", true);
+
   g_vsc.debugger =
-      lldb::SBDebugger::Create(true /*source_init_files*/, log_cb, nullptr);
+      lldb::SBDebugger::Create(source_init_file, log_cb, nullptr);
   g_vsc.progress_event_thread = std::thread(ProgressEventThreadFunction);
 
   // Start our event thread so we can receive events from the debugger, target,
