@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CIR_CIRGENFUNCTION_H
 #define LLVM_CLANG_LIB_CIR_CIRGENFUNCTION_H
 
+#include "CIRGenBuilder.h"
 #include "CIRGenCall.h"
 #include "CIRGenModule.h"
 #include "CIRGenValue.h"
@@ -58,7 +59,7 @@ private:
   /// The builder is a helper class to create IR inside a function. The
   /// builder is stateful, in particular it keeps an "insertion point": this
   /// is where the next operations will be introduced.
-  mlir::OpBuilder &builder;
+  CIRGenBuilderTy &builder;
 
   /// -------
   /// Goto
@@ -409,7 +410,7 @@ public:
     return getEvaluationKind(T) == TEK_Aggregate;
   }
 
-  CIRGenFunction(CIRGenModule &CGM, mlir::OpBuilder &builder,
+  CIRGenFunction(CIRGenModule &CGM, CIRGenBuilderTy &builder,
                  bool suppressNewContext = false);
 
   CIRGenTypes &getTypes() const { return CGM.getTypes(); }

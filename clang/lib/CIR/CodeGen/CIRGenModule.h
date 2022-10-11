@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_LIB_CODEGEN_CIRGENMODULE_H
 #define LLVM_CLANG_LIB_CODEGEN_CIRGENMODULE_H
 
+#include "CIRGenBuilder.h"
 #include "CIRGenTypes.h"
 #include "CIRGenValue.h"
 #include "UnimplementedFeatureGuarding.h"
@@ -70,7 +71,7 @@ private:
   /// The builder is a helper class to create IR inside a function. The
   /// builder is stateful, in particular it keeps an "insertion point": this
   /// is where the next operations will be introduced.
-  mlir::OpBuilder builder;
+  CIRGenBuilderTy builder;
 
   /// Hold Clang AST information.
   clang::ASTContext &astCtx;
@@ -114,7 +115,7 @@ private:
 
 public:
   mlir::ModuleOp getModule() const { return theModule; }
-  mlir::OpBuilder &getBuilder() { return builder; }
+  CIRGenBuilderTy &getBuilder() { return builder; }
   clang::ASTContext &getASTContext() const { return astCtx; }
   const clang::TargetInfo &getTarget() const { return target; }
   const clang::CodeGenOptions &getCodeGenOpts() const { return codeGenOpts; }
