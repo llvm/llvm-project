@@ -82,6 +82,12 @@ public:
         &TraverseStateless<std::reference_wrapper<const F>>,
         &FunctorRef);
   }
+  static std::string fromCXString(CXString cx_string) {
+    std::string string{clang_getCString(cx_string)};
+    clang_disposeString(cx_string);
+    return string;
+  };
+
 private:
   template<typename TState>
   static CXChildVisitResult TraverseStateless(CXCursor cx, CXCursor parent,
