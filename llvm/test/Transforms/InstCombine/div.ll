@@ -581,8 +581,8 @@ define <2 x i32> @test35vec(<2 x i32> %A) {
 define i32 @test36(i32 %A) {
 ; CHECK-LABEL: @test36(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 2147483647
-; CHECK-NEXT:    [[MUL1:%.*]] = lshr exact i32 [[AND]], [[A]]
-; CHECK-NEXT:    ret i32 [[MUL1]]
+; CHECK-NEXT:    [[MUL:%.*]] = lshr exact i32 [[AND]], [[A]]
+; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %and = and i32 %A, 2147483647
   %shl = shl nsw i32 1, %A
@@ -593,8 +593,8 @@ define i32 @test36(i32 %A) {
 define <2 x i32> @test36vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test36vec(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[A:%.*]], <i32 2147483647, i32 2147483647>
-; CHECK-NEXT:    [[MUL1:%.*]] = lshr exact <2 x i32> [[AND]], [[A]]
-; CHECK-NEXT:    ret <2 x i32> [[MUL1]]
+; CHECK-NEXT:    [[MUL:%.*]] = lshr exact <2 x i32> [[AND]], [[A]]
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %and = and <2 x i32> %A, <i32 2147483647, i32 2147483647>
   %shl = shl nsw <2 x i32> <i32 1, i32 1>, %A
@@ -1345,4 +1345,138 @@ define i1 @udiv_one_icmpne_one(i32 %x) {
   %A = udiv i32 1, %x
   %B = icmp ne i32 %A, 1
   ret i1 %B
+}
+
+define i8 @udiv_udiv_mul_nuw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_udiv_mul_nuw(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[D]], [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul nuw i8 %x, %y
+  %d = udiv i8 %m, %z
+  %r = udiv i8 %d, %x
+  ret i8 %r
+}
+
+define i8 @udiv_udiv_mul_nuw_exact_exact(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_udiv_mul_nuw_exact_exact(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv exact i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = udiv exact i8 [[D]], [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul nuw i8 %y, %x
+  %d = udiv exact i8 %m, %z
+  %r = udiv exact i8 %d, %x
+  ret i8 %r
+}
+
+define i32 @udiv_udiv_mul_nuw_exact_use(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @udiv_udiv_mul_nuw_exact_use(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[M]])
+; CHECK-NEXT:    [[D:%.*]] = udiv exact i32 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[D]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul nuw i32 %x, %y
+  call void @use(i32 %m)
+  %d = udiv exact i32 %m, %z
+  %r = udiv i32 %d, %x
+  ret i32 %r
+}
+
+define i8 @udiv_udiv_mul_nsw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_udiv_mul_nsw(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[D]], [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul nsw i8 %x, %y
+  %d = udiv i8 %m, %z
+  %r = udiv i8 %d, %x
+  ret i8 %r
+}
+
+define i8 @udiv_sdiv_mul_nuw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_sdiv_mul_nuw(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[D]], [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul nuw i8 %x, %y
+  %d = sdiv i8 %m, %z
+  %r = udiv i8 %d, %x
+  ret i8 %r
+}
+
+define <2 x i8> @sdiv_sdiv_mul_nsw(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
+; CHECK-LABEL: @sdiv_sdiv_mul_nsw(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw <2 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i8> [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv <2 x i8> [[D]], [[X]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %m = mul nsw <2 x i8> %y, %x
+  %d = sdiv <2 x i8> %m, %z
+  %r = sdiv <2 x i8> %d, %x
+  ret <2 x i8> %r
+}
+
+define i8 @sdiv_sdiv_mul_nsw_exact_exact(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sdiv_sdiv_mul_nsw_exact_exact(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv exact i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv exact i8 [[D]], [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul nsw i8 %x, %y
+  %d = sdiv exact i8 %m, %z
+  %r = sdiv exact i8 %d, %x
+  ret i8 %r
+}
+
+define i32 @sdiv_sdiv_mul_nsw_exact_use(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @sdiv_sdiv_mul_nsw_exact_use(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[D]])
+; CHECK-NEXT:    [[R:%.*]] = sdiv exact i32 [[D]], [[X]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul nsw i32 %x, %y
+  %d = sdiv i32 %m, %z
+  call void @use(i32 %d)
+  %r = sdiv exact i32 %d, %x
+  ret i32 %r
+}
+
+define i8 @sdiv_sdiv_mul_nuw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sdiv_sdiv_mul_nuw(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[D]], [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul nuw i8 %x, %y
+  %d = sdiv i8 %m, %z
+  %r = sdiv i8 %d, %x
+  ret i8 %r
+}
+
+define i8 @sdiv_udiv_mul_nsw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sdiv_udiv_mul_nsw(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[D]], [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul nsw i8 %x, %y
+  %d = udiv i8 %m, %z
+  %r = sdiv i8 %d, %x
+  ret i8 %r
 }
