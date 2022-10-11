@@ -13,6 +13,9 @@
 // CHECK_ERROR_4: does not refer to a registered pass or pass pipeline
 // CHECK_ERROR_5:  Can't add pass '{{.*}}TestModulePass' restricted to 'builtin.module' on a PassManager intended to run on 'func.func', did you intend to nest?
 
+// RUN: not mlir-opt %s -pass-pipeline='' -cse 2>&1 | FileCheck --check-prefix=CHECK_ERROR_6 %s
+// CHECK_ERROR_6: '-pass-pipeline' option can't be used with individual pass options
+
 func.func @foo() {
   return
 }
