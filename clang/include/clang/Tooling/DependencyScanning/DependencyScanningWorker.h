@@ -91,14 +91,13 @@ public:
 
 private:
   std::shared_ptr<PCHContainerOperations> PCHContainerOps;
-
-  /// The physical filesystem overlaid by `InMemoryFS`.
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> RealFS;
-  /// The in-memory filesystem laid on top the physical filesystem in `RealFS`.
-  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFS;
-  /// The file system that is used by each worker when scanning for
-  /// dependencies. This filesystem persists across multiple compiler
-  /// invocations.
+  /// The file system to be used during the scan.
+  /// This is either \c FS passed in the constructor (when performing canonical
+  /// preprocessing), or \c DepFS (when performing dependency directives scan).
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS;
+  /// When performing dependency directives scan, this is the caching (and
+  /// dependency-directives-extracting) filesystem overlaid on top of \c FS
+  /// (passed in the constructor).
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   ScanningOutputFormat Format;
   /// Whether to optimize the modules' command-line arguments.
