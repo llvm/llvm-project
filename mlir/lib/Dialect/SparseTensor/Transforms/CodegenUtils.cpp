@@ -550,3 +550,36 @@ void mlir::sparse_tensor::translateIndicesArray(
   }
   assert(dstIndices.size() == dstRank);
 }
+
+FlatSymbolRefAttr mlir::sparse_tensor::getFunc(ModuleOp module, StringRef name,
+                                               TypeRange resultType,
+                                               ValueRange operands,
+                                               EmitCInterface emitCInterface) {
+  MLIRContext *context = module.getContext();
+  auto result = SymbolRefAttr::get(context, name);
+  auto func = module.lookupSymbol<func::FuncOp>(result.getAttr());
+  if (!func) {
+    OpBuilder moduleBuilder(module.getBodyRegion());
+    func = moduleBuilder.create<func::FuncOp>(
+        module.getLoc(), name,
+        FunctionType::get(context, operands.getTypes(), resultType));
+    func.setPrivate();
+    if (static_cast<bool>(emitCInterface))
+      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                    UnitAttr::get(context));
+  }
+  return result;
+}
+
+func::CallOp mlir::sparse_tensor::createFuncCall(
+    OpBuilder &builder, Location loc, StringRef name, TypeRange resultType,
+    ValueRange operands, EmitCInterface emitCInterface) {
+  auto module = builder.getBlock()->getParentOp()->getParentOfType<ModuleOp>();
+  FlatSymbolRefAttr fn =
+      getFunc(module, name, resultType, operands, emitCInterface);
+  return builder.create<func::CallOp>(loc, resultType, fn, operands);
+}
+
+Type mlir::sparse_tensor::getOpaquePointerType(OpBuilder &builder) {
+  return LLVM::LLVMPointerType::get(builder.getI8Type());
+}
