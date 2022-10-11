@@ -6,9 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03
-// UNSUPPORTED: !stdlib=libc++ && c++11
-// UNSUPPORTED: !stdlib=libc++ && c++14
+// UNSUPPORTED: c++03, c++11, c++14
 
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=12712420
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=12712420

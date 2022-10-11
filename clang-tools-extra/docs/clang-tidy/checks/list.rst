@@ -178,6 +178,7 @@ Clang-Tidy Checks
    `concurrency-mt-unsafe <concurrency/mt-unsafe.html>`_,
    `concurrency-thread-canceltype-asynchronous <concurrency/thread-canceltype-asynchronous.html>`_,
    `cppcoreguidelines-avoid-const-or-ref-data-members <cppcoreguidelines/avoid-const-or-ref-data-members.html>`_,
+   `cppcoreguidelines-avoid-do-while <cppcoreguidelines/avoid-do-while.html>`_,
    `cppcoreguidelines-avoid-goto <cppcoreguidelines/avoid-goto.html>`_,
    `cppcoreguidelines-avoid-non-const-global-variables <cppcoreguidelines/avoid-non-const-global-variables.html>`_,
    `cppcoreguidelines-init-variables <cppcoreguidelines/init-variables.html>`_, "Yes"

@@ -191,6 +191,7 @@ add_gen_header(
   GEN_HDR pthread.h
   DEPENDS
     .llvm_libc_common_h
+    .llvm-libc-types.__atfork_callback_t
     .llvm-libc-types.__pthread_start_t
     .llvm-libc-types.__pthread_tss_dtor_t
     .llvm-libc-types.pthread_attr_t
@@ -226,6 +227,17 @@ add_gen_header(
     .llvm-libc-types.off_t
     .llvm-libc-types.ssize_t
     .llvm-libc-macros.sys_mman_macros
+)
+
+add_gen_header(
+  sys_random
+  DEF_FILE sys/random.h.def
+  GEN_HDR sys/random.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_random_macros
+    .llvm-libc-types.ssize_t
+    .llvm-libc-types.size_t
 )
 
 add_gen_header(

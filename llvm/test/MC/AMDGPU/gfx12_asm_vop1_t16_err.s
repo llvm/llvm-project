@@ -180,6 +180,9 @@ v_rsq_f16_e32 v255, v1
 v_rsq_f16_e32 v5, v199
 // GFX12: error: operands are not valid for this GPU or mode
 
+v_sat_pk_u8_i16_e32 v199, v5
+// GFX12: error: operands are not valid for this GPU or mode
+
 v_sin_f16_e32 v128, 0xfe0b
 // GFX12: error: operands are not valid for this GPU or mode
 
@@ -333,6 +336,9 @@ v_rsq_f16_e32 v255, v1 quad_perm:[3,2,1,0]
 v_rsq_f16_e32 v5, v199 quad_perm:[3,2,1,0]
 // GFX12: error: invalid operand for instruction
 
+v_sat_pk_u8_i16_e32 v199, v5 quad_perm:[3,2,1,0]
+// GFX12: error: invalid operand for instruction
+
 v_sin_f16_e32 v255, v1 quad_perm:[3,2,1,0]
 // GFX12: error: invalid operand for instruction
 
@@ -475,6 +481,9 @@ v_rsq_f16_e32 v255, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: error: invalid operand for instruction
 
 v_rsq_f16_e32 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: error: invalid operand for instruction
+
+v_sat_pk_u8_i16_e32 v199, v5 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: error: invalid operand for instruction
 
 v_sin_f16_e32 v255, v1 dpp8:[7,6,5,4,3,2,1,0]

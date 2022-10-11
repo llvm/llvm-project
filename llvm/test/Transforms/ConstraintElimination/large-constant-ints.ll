@@ -303,3 +303,28 @@ define i1 @add_minus_one_decomp_recursive() {
   %cmp = icmp uge i64 %add, 10
   ret i1 %cmp
 }
+
+define i1 @gep_decomp_large_index(ptr %a) {
+; CHECK-LABEL: @gep_decomp_large_index(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr inbounds i64, ptr [[A:%.*]], i64 2147483646
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 2147483647
+; CHECK-NEXT:    [[NE:%.*]] = icmp ne ptr [[GEP_1]], [[GEP_2]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
+; CHECK-NEXT:    [[CMP_ULE:%.*]] = icmp ule ptr [[GEP_1]], [[GEP_2]]
+; CHECK-NEXT:    [[CMP_UGE:%.*]] = icmp uge ptr [[GEP_1]], [[GEP_2]]
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 true, false
+; CHECK-NEXT:    ret i1 [[RES]]
+;
+entry:
+  %gep.1 = getelementptr inbounds i64, ptr %a, i64 2147483646
+  %gep.2 = getelementptr inbounds i64, ptr %a, i64 2147483647
+  %ne = icmp ne ptr %gep.1, %gep.2
+  call void @llvm.assume(i1 %ne)
+  %cmp.ule = icmp ule ptr %gep.1, %gep.2
+  %cmp.uge = icmp uge ptr %gep.1, %gep.2
+  %res = xor i1 true, false
+  ret i1 %res
+}
+
+declare void @llvm.assume(i1)

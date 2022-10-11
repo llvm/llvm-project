@@ -426,7 +426,7 @@ func.func @reduce_dimensions_out_of_range(%input: tensor<16x32x64xf32>,
 
 func.func @reduce_duplicate_dimensions(%input: tensor<16x32x64xf32>,
     %init: tensor<16xf32>)  -> tensor<16xf32> {
-  // expected-error @+1 {{'linalg.reduce' op reduction dimensions are not in increasing order: 1, 1}}
+  // expected-error @+1 {{'linalg.reduce' op attribute 'dimensions' failed to satisfy constraint: i64 dense array attribute should be in increasing order}}
   %reduce = linalg.reduce
       ins(%input:tensor<16x32x64xf32>)
       outs(%init:tensor<16xf32>)
@@ -442,7 +442,7 @@ func.func @reduce_duplicate_dimensions(%input: tensor<16x32x64xf32>,
 
 func.func @reduce_non_increasing_dimensions(%input: tensor<16x32x64xf32>,
     %init: tensor<16xf32>)  -> tensor<16xf32> {
-  // expected-error @+1 {{'linalg.reduce' op reduction dimensions are not in increasing order: 2, 1}}
+  // expected-error @+1 {{'linalg.reduce' op attribute 'dimensions' failed to satisfy constraint: i64 dense array attribute should be in increasing order}}
   %reduce = linalg.reduce
       ins(%input:tensor<16x32x64xf32>)
       outs(%init:tensor<16xf32>)

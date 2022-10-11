@@ -23,10 +23,10 @@ Contact: libfuzzer(#)googlegroups.com
 Status
 ======
 
-The original authors of libFuzzer have stopped active work on it
-and switched to working on another fuzzing engine, Centipede_.
-LibFuzzer is still fully supported in a sence that important bugs will get fixed.
-However please do not expect major new features or code reviews, other than for bug fixes.
+The original authors of libFuzzer have stopped active work on it and switched
+to working on another fuzzing engine, Centipede_. LibFuzzer is still fully
+supported in that important bugs will get fixed. However, please do not expect
+major new features or code reviews, other than for bug fixes.
 
 Versions
 ========

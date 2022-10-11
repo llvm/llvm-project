@@ -918,6 +918,9 @@ v_rsq_f16 v255, vcc_lo
 v_rsq_f16 v5, v199
 // GFX12: v_rsq_f16_e64
 
+v_sat_pk_u8_i16 v199, v5
+// GFX12: v_sat_pk_u8_i16_e64
+
 v_sin_f16 v128, 0xfe0b
 // GFX12: v_sin_f16_e64
 
@@ -1239,6 +1242,9 @@ v_rsq_f16 v255, v127 quad_perm:[3,2,1,0]
 v_rsq_f16 v5, v199 quad_perm:[3,2,1,0]
 // GFX12: v_rsq_f16_e64
 
+v_sat_pk_u8_i16 v199, v5 quad_perm:[3,2,1,0]
+// GFX12: v_sat_pk_u8_i16_e64
+
 v_sin_f16 v255, v1 quad_perm:[3,2,1,0]
 // GFX12: v_sin_f16_e64
 
@@ -1442,6 +1448,9 @@ v_rsq_f16 v255, v127 dpp8:[7,6,5,4,3,2,1,0]
 
 v_rsq_f16 v5, v199 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: v_rsq_f16_e64
+
+v_sat_pk_u8_i16 v199, v5 dpp8:[7,6,5,4,3,2,1,0]
+// GFX12: v_sat_pk_u8_i16_e64
 
 v_sin_f16 v255, v1 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: v_sin_f16_e64

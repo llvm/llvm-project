@@ -392,19 +392,17 @@ exit:
   ret i32 %l
 }
 
-declare i1 @cond() readnone
+declare i1 @cond() readnone nounwind
 
-; TODO: We can eliminate the store in for.header, but we currently hit a MemoryPhi.
 define void @loop_multiple_def_uses(ptr noalias %P) {
 ; CHECK-LABEL: @loop_multiple_def_uses(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_HEADER:%.*]]
 ; CHECK:       for.header:
-; CHECK-NEXT:    store i32 1, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[FOR_BODY:%.*]], label [[END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    store i32 2, ptr [[P]], align 4
+; CHECK-NEXT:    store i32 2, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[FOR_HEADER]]
 ; CHECK:       end:
@@ -436,11 +434,10 @@ define void @loop_multiple_def_uses_partial_write(ptr noalias %p) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_HEADER:%.*]]
 ; CHECK:       for.header:
-; CHECK-NEXT:    store i32 1239491, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 1239297, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[C1:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C1]], label [[FOR_BODY:%.*]], label [[END:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    store i8 1, ptr [[P]], align 4
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[FOR_HEADER]]
 ; CHECK:       end:
@@ -614,6 +611,32 @@ B:
 
 exit:
   store i16 1, ptr %arrayidx, align 1
+  ret i16 0
+}
+
+define i16 @irreducible_entryblock_def(i1 %c) {
+; CHECK-LABEL: @irreducible_entryblock_def(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[A:%.*]], label [[B:%.*]]
+; CHECK:       A:
+; CHECK-NEXT:    br label [[B]]
+; CHECK:       B:
+; CHECK-NEXT:    br i1 [[C]], label [[EXIT:%.*]], label [[A]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i16 0
+;
+entry:
+  %obj = alloca i32, align 4
+  br i1 %c, label %A, label %B
+
+A:
+  store i32 1, ptr %obj, align 4
+  br label %B
+
+B:
+  br i1 %c, label %exit, label %A
+
+exit:
   ret i16 0
 }
 
@@ -846,7 +869,6 @@ define i16 @partial_override_overloop(i1 %c, i32 %i) {
 ; CHECK-NEXT:    br label [[FIRST:%.*]]
 ; CHECK:       first:
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x i16], ptr @x, i16 0, i32 [[I:%.*]]
-; CHECK-NEXT:    store i16 1, ptr [[ARRAYIDX]], align 1
 ; CHECK-NEXT:    br label [[DO_BODY:%.*]]
 ; CHECK:       do.body:
 ; CHECK-NEXT:    [[I_0:%.*]] = phi i16 [ 0, [[FIRST]] ], [ [[INC:%.*]], [[DO_BODY]] ]

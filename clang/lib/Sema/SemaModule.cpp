@@ -561,11 +561,6 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
     Diag(ExportLoc, diag::err_export_not_in_module_interface)
         << (!ModuleScopes.empty() &&
             !ModuleScopes.back().ImplicitGlobalModuleFragment);
-  } else if (getLangOpts().isCompilingModule()) {
-    Module *ThisModule = PP.getHeaderSearchInfo().lookupModule(
-        getLangOpts().CurrentModule, ExportLoc, false, false);
-    (void)ThisModule;
-    assert(ThisModule && "was expecting a module if building one");
   }
 
   // In some cases we need to know if an entity was present in a directly-

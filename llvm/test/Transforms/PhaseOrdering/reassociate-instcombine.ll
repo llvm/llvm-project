@@ -37,8 +37,8 @@ define i32 @not_reassociate_or_or_not(i32 %a, i32 %b, i32 %c, i32 %d) {
   ret i32 %b3
 }
 
-define i32 @PR58137(i32 %a, i32 %b) {
-; CHECK-LABEL: @PR58137(
+define i32 @PR58137_sdiv(i32 %a, i32 %b) {
+; CHECK-LABEL: @PR58137_sdiv(
 ; CHECK-NEXT:    ret i32 [[B:%.*]]
 ;
   %mul = mul nsw i32 2, %b
@@ -46,4 +46,25 @@ define i32 @PR58137(i32 %a, i32 %b) {
   %mul2 = mul nsw i32 2, %a
   %div = sdiv i32 %mul1, %mul2
   ret i32 %div
+}
+
+define i32 @PR58137_udiv(i32 %x, i32 %y) {
+; CHECK-LABEL: @PR58137_udiv(
+; CHECK-NEXT:    [[ZX:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[ZY:%.*]] = zext i32 [[Y:%.*]] to i64
+; CHECK-NEXT:    [[M1:%.*]] = shl nuw nsw i64 [[ZX]], 2
+; CHECK-NEXT:    [[M2:%.*]] = mul i64 [[M1]], [[ZY]]
+; CHECK-NEXT:    [[M3:%.*]] = shl nuw nsw i64 [[ZY]], 2
+; CHECK-NEXT:    [[D:%.*]] = udiv i64 [[M2]], [[M3]]
+; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[D]] to i32
+; CHECK-NEXT:    ret i32 [[T]]
+;
+  %zx = zext i32 %x to i64
+  %zy = zext i32 %y to i64
+  %m1 = mul nuw i64 %zx, %zy
+  %m2 = mul nuw i64 4, %m1
+  %m3 = mul nuw i64 4, %zy
+  %d = udiv i64 %m2, %m3
+  %t = trunc i64 %d to i32
+  ret i32 %t
 }

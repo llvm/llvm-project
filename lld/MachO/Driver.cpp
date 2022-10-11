@@ -463,6 +463,9 @@ static void addFramework(StringRef name, bool isNeeded, bool isWeak,
 // flags. This directly parses the flags instead of using the standard argument
 // parser to improve performance.
 void macho::parseLCLinkerOption(InputFile *f, unsigned argc, StringRef data) {
+  if (config->ignoreAutoLink)
+    return;
+
   SmallVector<StringRef, 4> argv;
   size_t offset = 0;
   for (unsigned i = 0; i < argc && offset < data.size(); ++i) {
@@ -1539,6 +1542,7 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->forceExactCpuSubtypeMatch =
       getenv("LD_DYLIB_CPU_SUBTYPES_MUST_MATCH");
   config->objcStubsMode = getObjCStubsMode(args);
+  config->ignoreAutoLink = args.hasArg(OPT_ignore_auto_link);
 
   for (const Arg *arg : args.filtered(OPT_alias)) {
     config->aliasedSymbols.push_back(
@@ -1546,7 +1550,8 @@ bool macho::link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   }
 
   // FIXME: Add a commandline flag for this too.
-  config->zeroModTime = getenv("ZERO_AR_DATE");
+  if (const char *zero = getenv("ZERO_AR_DATE"))
+    config->zeroModTime = strcmp(zero, "0") != 0;
 
   std::array<PlatformType, 3> encryptablePlatforms{
       PLATFORM_IOS, PLATFORM_WATCHOS, PLATFORM_TVOS};

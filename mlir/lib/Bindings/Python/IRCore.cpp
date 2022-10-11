@@ -1029,7 +1029,7 @@ void PyOperationBase::print(py::object fileObject, bool binary,
   mlirOpPrintingFlagsDestroy(flags);
 }
 
-void PyOperationBase::writeBytecode(py::object fileObject) {
+void PyOperationBase::writeBytecode(const py::object &fileObject) {
   PyOperation &operation = getOperation();
   operation.checkValid();
   PyFileAccumulator accum(fileObject, /*binary=*/true);

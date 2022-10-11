@@ -13,7 +13,7 @@
 // SCP-armv7: argument unused during compilation: '-fstack-clash-protection'
 
 // RUN: %clang -target x86_64-unknown-linux -fstack-clash-protection -S -emit-llvm -o %t.ll %s 2>&1 | FileCheck %s -check-prefix=SCP-warn
-// SCP-warn: warning: Unable to protect inline asm that clobbers stack pointer against stack clash
+// SCP-warn: warning: unable to protect inline asm that clobbers stack pointer against stack clash
 
 // RUN: %clang -target x86_64-pc-unknown-linux -fstack-clash-protection -S -emit-llvm -o- %s | FileCheck %s -check-prefix=SCP-ll-linux64
 // SCP-ll-linux64: attributes {{.*}} "probe-stack"="inline-asm"

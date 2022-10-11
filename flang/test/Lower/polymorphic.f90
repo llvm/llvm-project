@@ -6,6 +6,8 @@ module polymorphic_test
   type p1
     integer :: a
     integer :: b
+  contains
+    procedure :: print
   end type
 
   type, extends(p1) :: p2
@@ -27,4 +29,25 @@ module polymorphic_test
 ! CHECK: %[[LOAD:.*]] = fir.load %[[COORD]] : !fir.ref<i32>
 ! CHECK: %{{.*}} = fir.call @_FortranAioOutputInteger32(%{{.*}}, %[[LOAD]]) : (!fir.ref<i8>, i32) -> i1
 
+  subroutine print(this)
+    class(p1) :: this
+  end subroutine
+
+  ! Test passing fir.convert accept fir.box<DT> -> fir.class<DT>
+  subroutine check()
+    type(p1) :: t1
+    type(p2) :: t2
+    call t1%print()
+    call t2%print()
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMpolymorphic_testPcheck()
+! CHECK: %[[DT1:.*]] = fir.alloca !fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}> {bindc_name = "t1", uniq_name = "_QMpolymorphic_testFcheckEt1"}
+! CHECK: %[[DT2:.*]] = fir.alloca !fir.type<_QMpolymorphic_testTp2{a:i32,b:i32,c:f32}> {bindc_name = "t2", uniq_name = "_QMpolymorphic_testFcheckEt2"}
+! CHECK: %[[BOX1:.*]] = fir.embox %[[DT1]] : (!fir.ref<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK: %[[CLASS1:.*]] = fir.convert %[[BOX1]] : (!fir.box<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK: fir.call @_QMpolymorphic_testPprint(%[[CLASS1]]) : (!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> ()
+! CHECK: %[[BOX2:.*]] = fir.embox %[[DT2]] : (!fir.ref<!fir.type<_QMpolymorphic_testTp2{a:i32,b:i32,c:f32}>>) -> !fir.box<!fir.type<_QMpolymorphic_testTp2{a:i32,b:i32,c:f32}>>
+! CHECK: %[[CLASS2:.*]] = fir.convert %[[BOX2]] : (!fir.box<!fir.type<_QMpolymorphic_testTp2{a:i32,b:i32,c:f32}>>) -> !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>
+! CHECK: fir.call @_QMpolymorphic_testPprint(%[[CLASS2]]) : (!fir.class<!fir.type<_QMpolymorphic_testTp1{a:i32,b:i32}>>) -> ()
 end module

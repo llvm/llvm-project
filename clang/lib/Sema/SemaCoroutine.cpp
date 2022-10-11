@@ -768,26 +768,33 @@ static bool isWithinCatchScope(Scope *S) {
 // function-body *outside of a handler* [...] A context within a function
 // where an await-expression can appear is called a suspension context of the
 // function."
-static void checkSuspensionContext(Sema &S, SourceLocation Loc,
+static bool checkSuspensionContext(Sema &S, SourceLocation Loc,
                                    StringRef Keyword) {
   // First emphasis of [expr.await]p2: must be a potentially evaluated context.
   // That is, 'co_await' and 'co_yield' cannot appear in subexpressions of
   // \c sizeof.
-  if (S.isUnevaluatedContext())
+  if (S.isUnevaluatedContext()) {
     S.Diag(Loc, diag::err_coroutine_unevaluated_context) << Keyword;
+    return false;
+  }
 
   // Second emphasis of [expr.await]p2: must be outside of an exception handler.
-  if (isWithinCatchScope(S.getCurScope()))
+  if (isWithinCatchScope(S.getCurScope())) {
     S.Diag(Loc, diag::err_coroutine_within_handler) << Keyword;
+    return false;
+  }
+
+  return true;
 }
 
 ExprResult Sema::ActOnCoawaitExpr(Scope *S, SourceLocation Loc, Expr *E) {
+  if (!checkSuspensionContext(*this, Loc, "co_await"))
+    return ExprError();
+
   if (!ActOnCoroutineBodyStart(S, Loc, "co_await")) {
     CorrectDelayedTyposInExpr(E);
     return ExprError();
   }
-
-  checkSuspensionContext(*this, Loc, "co_await");
 
   if (E->hasPlaceholderType()) {
     ExprResult R = CheckPlaceholderExpr(E);
@@ -905,12 +912,13 @@ ExprResult Sema::BuildResolvedCoawaitExpr(SourceLocation Loc, Expr *Operand,
 }
 
 ExprResult Sema::ActOnCoyieldExpr(Scope *S, SourceLocation Loc, Expr *E) {
+  if (!checkSuspensionContext(*this, Loc, "co_yield"))
+    return ExprError();
+
   if (!ActOnCoroutineBodyStart(S, Loc, "co_yield")) {
     CorrectDelayedTyposInExpr(E);
     return ExprError();
   }
-
-  checkSuspensionContext(*this, Loc, "co_yield");
 
   // Build yield_value call.
   ExprResult Awaitable = buildPromiseCall(
