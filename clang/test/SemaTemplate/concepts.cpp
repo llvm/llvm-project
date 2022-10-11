@@ -708,3 +708,60 @@ Container<5>::var_templ<int> inst_fail;
 // expected-note@#CMVT_REQ{{because 'sizeof(int) == arity' (4 == 5) evaluated to false}}
 } // namespace ConstrainedMemberVarTemplate 
 
+// These should not diagnose, where we were unintentionally doing so before by
+// checking trailing requires clause twice, yet not having the ability to the
+// 2nd time, since it was no longer a dependent variant.
+namespace InheritedFromPartialSpec {
+template<class C>
+constexpr bool Check = true;
+
+template<typename T>
+struct Foo {
+  template<typename U>
+    Foo(U&&) requires (Check<U>){}
+  template<typename U>
+    void MemFunc(U&&) requires (Check<U>){}
+  template<typename U>
+    static void StaticMemFunc(U&&) requires (Check<U>){}
+  ~Foo() requires (Check<T>){}
+};
+
+template<>
+  struct Foo<void> : Foo<int> {
+    using Foo<int>::Foo;
+    using Foo<int>::MemFunc;
+    using Foo<int>::StaticMemFunc;
+  };
+
+void use() {
+  Foo<void> F {1.1};
+  F.MemFunc(1.1);
+  Foo<void>::StaticMemFunc(1.1);
+}
+
+template<typename T>
+struct counted_iterator {
+  constexpr auto operator->() const noexcept requires false {
+    return T::Invalid;
+  };
+};
+
+template<class _Ip>
+concept __has_member_pointer = requires { typename _Ip::pointer; };
+
+template<class>
+struct __iterator_traits_member_pointer_or_arrow_or_void { using type = void; };
+template<__has_member_pointer _Ip>
+struct __iterator_traits_member_pointer_or_arrow_or_void<_Ip> { using type = typename _Ip::pointer; };
+
+template<class _Ip>
+  requires requires(_Ip& __i) { __i.operator->(); } && (!__has_member_pointer<_Ip>)
+struct __iterator_traits_member_pointer_or_arrow_or_void<_Ip> {
+  using type = decltype(declval<_Ip&>().operator->());
+};
+
+
+void use2() {
+  __iterator_traits_member_pointer_or_arrow_or_void<counted_iterator<int>> f;
+}
+}// namespace InheritedFromPartialSpec 
