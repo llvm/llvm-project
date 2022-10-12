@@ -13,7 +13,7 @@ mlir_tablegen(TransformTypes.h.inc -gen-typedef-decls)
 mlir_tablegen(TransformTypes.cpp.inc -gen-typedef-defs)
 add_public_tablegen_target(MLIRTransformTypesIncGen)
 add_dependencies(mlir-headers MLIRTransformTypesIncGen)
-add_mlir_doc(TransformTypes TransformTypes Dialects/ -gen-typedef-docs)
+add_mlir_doc(TransformTypes TransformTypes Dialects/ -gen-typedef-doc)
 
 set(LLVM_TARGET_DEFINITIONS TransformAttrs.td)
 mlir_tablegen(TransformDialectEnums.h.inc -gen-enum-decls)
