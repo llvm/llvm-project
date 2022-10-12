@@ -34,7 +34,7 @@ class Affine_Op<string mnemonic, list<Trait> traits = []> :
 def ImplicitAffineTerminator
     : SingleBlockImplicitTerminator<"AffineYieldOp">;
 
-def AffineApplyOp : Affine_Op<"apply", [NoSideEffect]> {
+def AffineApplyOp : Affine_Op<"apply", [Pure]> {
   let summary = "affine apply operation";
   let description = [{
     The affine.apply operation applies an [affine mapping](#affine-expressions)
@@ -105,8 +105,8 @@ def AffineApplyOp : Affine_Op<"apply", [NoSideEffect]> {
 }
 
 def AffineForOp : Affine_Op<"for",
-    [AutomaticAllocationScope, ImplicitAffineTerminator, RecursiveSideEffects,
-     DeclareOpInterfaceMethods<LoopLikeOpInterface,
+    [AutomaticAllocationScope, ImplicitAffineTerminator, RecursivelySpeculatable,
+     RecursiveMemoryEffects, DeclareOpInterfaceMethods<LoopLikeOpInterface,
      ["getSingleInductionVar", "getSingleLowerBound", "getSingleStep",
       "getSingleUpperBound"]>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface,
@@ -349,8 +349,8 @@ def AffineForOp : Affine_Op<"for",
 }
 
 def AffineIfOp : Affine_Op<"if",
-                           [ImplicitAffineTerminator, RecursiveSideEffects,
-                            NoRegionArguments]> {
+                           [ImplicitAffineTerminator, RecursivelySpeculatable,
+                            RecursiveMemoryEffects, NoRegionArguments]> {
   let summary = "if-then-else operation";
   let description = [{
     Syntax:
@@ -571,7 +571,7 @@ class AffineMinMaxOpBase<string mnemonic, list<Trait> traits = []> :
   let hasVerifier = 1;
 }
 
-def AffineMinOp : AffineMinMaxOpBase<"min", [NoSideEffect]> {
+def AffineMinOp : AffineMinMaxOpBase<"min", [Pure]> {
   let summary = "min operation";
   let description = [{
     Syntax:
@@ -595,7 +595,7 @@ def AffineMinOp : AffineMinMaxOpBase<"min", [NoSideEffect]> {
   }];
 }
 
-def AffineMaxOp : AffineMinMaxOpBase<"max", [NoSideEffect]> {
+def AffineMaxOp : AffineMinMaxOpBase<"max", [Pure]> {
   let summary = "max operation";
   let description = [{
     The "max" operation computes the maximum value result from a multi-result
@@ -610,8 +610,9 @@ def AffineMaxOp : AffineMinMaxOpBase<"max", [NoSideEffect]> {
 }
 
 def AffineParallelOp : Affine_Op<"parallel",
-    [AutomaticAllocationScope, ImplicitAffineTerminator, RecursiveSideEffects,
-     DeclareOpInterfaceMethods<LoopLikeOpInterface>, MemRefsNormalizable]> {
+    [AutomaticAllocationScope, ImplicitAffineTerminator, RecursivelySpeculatable,
+     RecursiveMemoryEffects, DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+     MemRefsNormalizable]> {
   let summary = "multi-index parallel band operation";
   let description = [{
     The "affine.parallel" operation represents a hyper-rectangular affine
@@ -902,7 +903,7 @@ def AffineStoreOp : AffineStoreOpBase<"store"> {
   let hasVerifier = 1;
 }
 
-def AffineYieldOp : Affine_Op<"yield", [NoSideEffect, Terminator, ReturnLike,
+def AffineYieldOp : Affine_Op<"yield", [Pure, Terminator, ReturnLike,
     MemRefsNormalizable]> {
   let summary = "Yield values to parent operation";
   let description = [{
@@ -1064,7 +1065,7 @@ def AffineVectorStoreOp : AffineStoreOpBase<"vector_store"> {
 //===----------------------------------------------------------------------===//
 
 def AffineDelinearizeIndexOp : Affine_Op<"delinearize_index",
-    [NoSideEffect]> {
+    [Pure]> {
   let summary = "delinearize an index";
   let description = [{
     The `affine.delinearize_index` operation takes a single index value and

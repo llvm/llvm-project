@@ -98,7 +98,7 @@ def NVGPU_LdMatrixOp : NVGPU_Op<"ldmatrix", [
 }
 
 def NVGPU_MmaSyncOp : NVGPU_Op<"mma.sync", [
-                               NoSideEffect,
+                               Pure,
                                PredOpTrait<"matrixA and matrixB have same element type", 
                                            TCopVTEtIsSameAs<0, 1>>]> {
   let description = [{

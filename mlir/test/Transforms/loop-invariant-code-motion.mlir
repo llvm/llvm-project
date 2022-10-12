@@ -426,3 +426,80 @@ func.func @test_invariant_cycle_not_hoisted() {
   } : () -> ()
   return
 }
+
+// -----
+
+// CHECK-LABEL: test_always_speculatable_op
+func.func @test_always_speculatable_op(%lb: index, %ub: index, %step: index) {
+  // CHECK: test.always_speculatable_op
+  // CHECK-NEXT: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %val = "test.always_speculatable_op"() : () -> i32
+  }
+
+  return
+}
+
+// CHECK-LABEL: test_never_speculatable_op
+func.func @test_never_speculatable_op(%lb: index, %ub: index, %step: index) {
+  // CHECK: scf.for
+  // CHECK-NEXT: test.never_speculatable_op
+  scf.for %i = %lb to %ub step %step {
+    %val = "test.never_speculatable_op"() : () -> i32
+  }
+
+  return
+}
+
+// CHECK-LABEL: test_conditionally_speculatable_op_success
+func.func @test_conditionally_speculatable_op_success(%lb: index, %ub: index, %step: index) {
+  // CHECK: test.conditionally_speculatable_op
+  // CHECK-NEXT: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %const_val = arith.constant 5 : i32
+    %val = "test.conditionally_speculatable_op"(%const_val) : (i32) -> i32
+  }
+
+  return
+}
+
+// CHECK-LABEL: test_conditionally_speculatable_op_failure
+func.func @test_conditionally_speculatable_op_failure(%lb: index, %ub: index, %step: index, %arg: i32) {
+  // CHECK: scf.for
+  // CHECK-NEXT: test.conditionally_speculatable_op
+  %const_5 = arith.constant 5 : i32
+  %non_const = arith.addi %arg, %const_5 : i32
+  scf.for %i = %lb to %ub step %step {
+    %val = "test.conditionally_speculatable_op"(%non_const) : (i32) -> i32
+  }
+
+  return
+}
+
+// CHECK-LABEL: test_recursively_speculatable_op_success
+func.func @test_recursively_speculatable_op_success(%lb: index, %ub: index, %step: index, %arg: i32) {
+  // CHECK: test.recursively_speculatable_op
+  // CHECK: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %val = "test.recursively_speculatable_op"()({
+      %result = arith.addi %arg, %arg : i32
+      test.region_yield %result : i32
+    }) : () -> i32
+  }
+
+  return
+}
+
+// CHECK-LABEL: test_recursively_speculatable_op_failure
+func.func @test_recursively_speculatable_op_failure(%lb: index, %ub: index, %step: index, %arg: i32) {
+  // CHECK: scf.for
+  // CHECK-NEXT: test.recursively_speculatable_op
+  scf.for %i = %lb to %ub step %step {
+    %val = "test.recursively_speculatable_op"()({
+      %result = "test.never_speculatable_op"() : () -> i32
+      test.region_yield %result : i32
+    }) : () -> i32
+  }
+
+  return
+}

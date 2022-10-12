@@ -83,7 +83,7 @@ def IteratorTypeArrayAttr : TypedArrayAttrBase<IteratorTypeEnum,
 // than the current set: {*, +}.
 def Vector_ContractionOp :
   Vector_Op<"contract", [
-      NoSideEffect,
+      Pure,
       PredOpTrait<"lhs and rhs have same element type", TCopVTEtIsSameAs<0, 1>>,
       PredOpTrait<"third operand acc and result have same element type",
                   TCresVTEtIsSameAsOpBase<0, 2>>,
@@ -281,7 +281,7 @@ def Vector_ContractionOp :
 }
 
 def Vector_ReductionOp :
-  Vector_Op<"reduction", [NoSideEffect,
+  Vector_Op<"reduction", [Pure,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      DeclareOpInterfaceMethods<MaskableOpInterface>,
@@ -332,7 +332,7 @@ def Vector_ReductionOp :
 }
 
 def Vector_MultiDimReductionOp :
-  Vector_Op<"multi_reduction", [NoSideEffect,
+  Vector_Op<"multi_reduction", [Pure,
      AllTypesMatch<["dest", "acc"]>,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
@@ -403,7 +403,7 @@ def Vector_MultiDimReductionOp :
 }
 
 def Vector_BroadcastOp :
-  Vector_Op<"broadcast", [NoSideEffect,
+  Vector_Op<"broadcast", [Pure,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
     Arguments<(ins AnyType:$source)>,
@@ -451,7 +451,7 @@ def Vector_BroadcastOp :
 }
 
 def Vector_ShuffleOp :
-  Vector_Op<"shuffle", [NoSideEffect,
+  Vector_Op<"shuffle", [Pure,
      PredOpTrait<"first operand v1 and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      PredOpTrait<"second operand v2 and result have same element type",
@@ -517,7 +517,7 @@ def Vector_ShuffleOp :
 }
 
 def Vector_ExtractElementOp :
-  Vector_Op<"extractelement", [NoSideEffect,
+  Vector_Op<"extractelement", [Pure,
      TypesMatchWith<"result type matches element type of vector operand",
                     "vector", "result",
                     "$_self.cast<ShapedType>().getElementType()">]>,
@@ -565,7 +565,7 @@ def Vector_ExtractElementOp :
 }
 
 def Vector_ExtractOp :
-  Vector_Op<"extract", [NoSideEffect,
+  Vector_Op<"extract", [Pure,
      PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      DeclareOpInterfaceMethods<InferTypeOpInterface>]>,
@@ -604,7 +604,7 @@ def Vector_ExtractOp :
 
 def Vector_FMAOp :
   Op<Vector_Dialect, "fma", [
-       NoSideEffect, AllTypesMatch<["lhs", "rhs", "acc", "result"]>,
+       Pure, AllTypesMatch<["lhs", "rhs", "acc", "result"]>,
        DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
      ] # ElementwiseMappable.traits>,
     Arguments<(ins AnyVectorOfAnyRank:$lhs,
@@ -634,7 +634,7 @@ def Vector_FMAOp :
 }
 
 def Vector_InsertElementOp :
-  Vector_Op<"insertelement", [NoSideEffect,
+  Vector_Op<"insertelement", [Pure,
      TypesMatchWith<"source operand type matches element type of result",
                     "result", "source",
                     "$_self.cast<ShapedType>().getElementType()">,
@@ -682,7 +682,7 @@ def Vector_InsertElementOp :
 }
 
 def Vector_InsertOp :
-  Vector_Op<"insert", [NoSideEffect,
+  Vector_Op<"insert", [Pure,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      AllTypesMatch<["dest", "res"]>]>,
@@ -725,7 +725,7 @@ def Vector_InsertOp :
 }
 
 def Vector_InsertStridedSliceOp :
-  Vector_Op<"insert_strided_slice", [NoSideEffect,
+  Vector_Op<"insert_strided_slice", [Pure,
     PredOpTrait<"operand #0 and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
     AllTypesMatch<["dest", "res"]>]>,
@@ -784,7 +784,7 @@ def Vector_InsertStridedSliceOp :
 }
 
 def Vector_OuterProductOp :
-  Vector_Op<"outerproduct", [NoSideEffect,
+  Vector_Op<"outerproduct", [Pure,
     PredOpTrait<"lhs operand and result have same element type",
                 TCresVTEtIsSameAsOpBase<0, 0>>,
     PredOpTrait<"rhs operand and result have same element type",
@@ -875,7 +875,7 @@ def Vector_OuterProductOp :
 // TODO: Add transformation which decomposes ReshapeOp into an optimized
 // sequence of vector rotate/shuffle/select operations.
 def Vector_ReshapeOp :
-  Vector_Op<"reshape", [AttrSizedOperandSegments, NoSideEffect]>,
+  Vector_Op<"reshape", [AttrSizedOperandSegments, Pure]>,
     Arguments<(ins AnyVector:$vector, Variadic<Index>:$input_shape,
                Variadic<Index>:$output_shape,
                I64ArrayAttr:$fixed_vector_sizes)>,
@@ -995,7 +995,7 @@ def Vector_ReshapeOp :
 }
 
 def Vector_ExtractStridedSliceOp :
-  Vector_Op<"extract_strided_slice", [NoSideEffect,
+  Vector_Op<"extract_strided_slice", [Pure,
     PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
     Arguments<(ins AnyVector:$vector, I64ArrayAttr:$offsets,
@@ -1911,7 +1911,7 @@ def Vector_CompressStoreOp :
 }
 
 def Vector_ShapeCastOp :
-  Vector_Op<"shape_cast", [NoSideEffect]>,
+  Vector_Op<"shape_cast", [Pure]>,
     Arguments<(ins AnyVector:$source)>,
     Results<(outs AnyVector:$result)> {
   let summary = "shape_cast casts between vector shapes";
@@ -1963,7 +1963,7 @@ def Vector_ShapeCastOp :
 }
 
 def Vector_BitCastOp :
-  Vector_Op<"bitcast", [NoSideEffect, AllRanksMatch<["source", "result"]>]>,
+  Vector_Op<"bitcast", [Pure, AllRanksMatch<["source", "result"]>]>,
     Arguments<(ins AnyVectorOfAnyRank:$source)>,
     Results<(outs AnyVectorOfAnyRank:$result)>{
   let summary = "bitcast casts between vectors";
@@ -2003,7 +2003,7 @@ def Vector_BitCastOp :
 }
 
 def Vector_TypeCastOp :
-  Vector_Op<"type_cast", [NoSideEffect, ViewLikeOpInterface]>,
+  Vector_Op<"type_cast", [Pure, ViewLikeOpInterface]>,
     Arguments<(ins StaticShapeMemRefOf<[AnyType]>:$memref)>,
     Results<(outs AnyMemRef:$result)> {
   let summary = "type_cast op converts a scalar memref to a vector memref";
@@ -2050,7 +2050,7 @@ def Vector_TypeCastOp :
 }
 
 def Vector_ConstantMaskOp :
-  Vector_Op<"constant_mask", [NoSideEffect]>,
+  Vector_Op<"constant_mask", [Pure]>,
     Arguments<(ins I64ArrayAttr:$mask_dim_sizes)>,
     Results<(outs VectorOfAnyRankOf<[I1]>)> {
   let summary = "creates a constant vector mask";
@@ -2092,7 +2092,7 @@ def Vector_ConstantMaskOp :
 }
 
 def Vector_CreateMaskOp :
-  Vector_Op<"create_mask", [NoSideEffect]>,
+  Vector_Op<"create_mask", [Pure]>,
     Arguments<(ins Variadic<Index>:$operands)>,
     Results<(outs VectorOfAnyRankOf<[I1]>)> {
   let summary = "creates a vector mask";
@@ -2131,7 +2131,7 @@ def Vector_CreateMaskOp :
 }
 
 def Vector_MaskOp : Vector_Op<"mask", [
-  SingleBlockImplicitTerminator<"vector::YieldOp">, RecursiveSideEffects,
+  SingleBlockImplicitTerminator<"vector::YieldOp">, RecursiveMemoryEffects,
   NoRegionArguments
 ]> {
   let summary = "Predicates a maskable vector operation";
@@ -2203,7 +2203,7 @@ def Vector_MaskOp : Vector_Op<"mask", [
 }
 
 def Vector_TransposeOp :
-  Vector_Op<"transpose", [NoSideEffect,
+  Vector_Op<"transpose", [Pure,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
     PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
@@ -2300,7 +2300,7 @@ def Vector_PrintOp :
 /// This may seem redundant with vector.contract but it serves the purposes of
 /// more progressive lowering and localized type conversion on the path:
 ///   `vector<...x...xf32> -> vector<...xf32> -> !llvm<... x float>`.
-def Vector_MatmulOp : Vector_Op<"matrix_multiply", [NoSideEffect,
+def Vector_MatmulOp : Vector_Op<"matrix_multiply", [Pure,
         PredOpTrait<"lhs operand and result have same element type",
                     TCresVTEtIsSameAsOpBase<0, 0>>,
         PredOpTrait<"rhs operand and result have same element type",
@@ -2364,7 +2364,7 @@ def Vector_MatmulOp : Vector_Op<"matrix_multiply", [NoSideEffect,
 /// This may seem redundant with vector.transpose but it serves the purposes of
 /// more progressive lowering and localized type conversion on the path:
 ///   `vector<...x...xf32> -> vector<...xf32> -> !llvm<... x float>`.
-def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [NoSideEffect,
+def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [Pure,
   PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
     Arguments<(
@@ -2407,7 +2407,7 @@ def Vector_FlatTransposeOp : Vector_Op<"flat_transpose", [NoSideEffect,
 //===----------------------------------------------------------------------===//
 
 def Vector_SplatOp : Vector_Op<"splat", [
-    NoSideEffect,
+    Pure,
     TypesMatchWith<"operand type matches element type of result",
                    "aggregate", "input",
                    "$_self.cast<VectorType>().getElementType()">
@@ -2450,7 +2450,7 @@ def Vector_SplatOp : Vector_Op<"splat", [
 //       call to the function. For that, it might be useful to have a
 //       'vector.scale.global' and a 'vector.scale.local' operation.
 def VectorScaleOp : Vector_Op<"vscale",
-                 [NoSideEffect]> {
+                 [Pure]> {
   let summary = "Load vector scale size";
   let description = [{
     The `vscale` op returns the scale of the scalable vectors, a positive
@@ -2473,7 +2473,7 @@ def VectorScaleOp : Vector_Op<"vscale",
 //===----------------------------------------------------------------------===//
 
 def Vector_ScanOp :
-  Vector_Op<"scan", [NoSideEffect,
+  Vector_Op<"scan", [Pure,
     AllTypesMatch<["source", "dest"]>,
     AllTypesMatch<["initial_value", "accumulated_value"]> ]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
@@ -2528,7 +2528,7 @@ def Vector_ScanOp :
 }
 
 def Vector_YieldOp : Vector_Op<"yield", [
-    NoSideEffect, ReturnLike, Terminator]> {
+    Pure, ReturnLike, Terminator]> {
   let summary = "Terminates and yields values from vector regions.";
   let description = [{
     "vector.yield" yields an SSA value from the Vector dialect op region and
@@ -2552,7 +2552,7 @@ def Vector_YieldOp : Vector_Op<"yield", [
 def Vector_WarpExecuteOnLane0Op : Vector_Op<"warp_execute_on_lane_0",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface, ["areTypesCompatible"]>,
        SingleBlockImplicitTerminator<"vector::YieldOp">,
-       RecursiveSideEffects]> {
+       RecursiveMemoryEffects]> {
   let summary = "Executes operations in the associated region on thread #0 of a"
                 "SPMD program";
   let description = [{

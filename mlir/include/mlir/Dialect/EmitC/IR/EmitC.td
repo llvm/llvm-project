@@ -148,7 +148,7 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
 }
 
 def EmitC_IncludeOp
-    : EmitC_Op<"include", [NoSideEffect, HasParent<"ModuleOp">]> {
+    : EmitC_Op<"include", [Pure, HasParent<"ModuleOp">]> {
   let summary = "Include operation";
   let description = [{
     The `include` operation allows to define a source file inclusion via the

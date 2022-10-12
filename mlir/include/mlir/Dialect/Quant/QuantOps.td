@@ -47,7 +47,7 @@ class quant_Op<string mnemonic, list<Trait> traits> :
 // (where the operand and result type are not quantized) at all points where
 // it is legal to use a quantized representation (but is not known to be
 // acceptable).
-def quant_QuantizeCastOp : quant_Op<"qcast", [NoSideEffect]> {
+def quant_QuantizeCastOp : quant_Op<"qcast", [Pure]> {
   let arguments = (ins quant_RealValueType:$arg);
   let results = (outs quant_RealValueType);
 }
@@ -62,7 +62,7 @@ def quant_QuantizeCastOp : quant_Op<"qcast", [NoSideEffect]> {
 // Especially early in transformation, it is common to have dcasts on
 // all operands to ops that must operate with the expressed type (typically
 // math ops prior to lowering to target-specific, quantized kernels).
-def quant_DequantizeCastOp : quant_Op<"dcast", [NoSideEffect]> {
+def quant_DequantizeCastOp : quant_Op<"dcast", [Pure]> {
   let arguments = (ins quant_RealValueType:$arg);
   let results = (outs quant_RealValueType);
 }
@@ -78,7 +78,7 @@ def quant_DequantizeCastOp : quant_Op<"dcast", [NoSideEffect]> {
 //   i8 -> !quant<"uniform[i8:f32]{1.0}">
 //   tensor<4xi8> -> tensor<4x!quant<"uniform[i8:f32]{1.0}">>
 //   vector<4xi8> -> vector<4x!quant<"uniform[i8:f32]{1.0}">>
-def quant_StorageCastOp : quant_Op<"scast", [NoSideEffect]> {
+def quant_StorageCastOp : quant_Op<"scast", [Pure]> {
   let arguments = (ins quant_RealOrStorageValueType:$arg);
   let results = (outs quant_RealOrStorageValueType);
   let hasFolder = 1;
