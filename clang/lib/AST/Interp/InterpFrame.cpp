@@ -24,19 +24,22 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func,
     : Caller(Caller), S(S), Func(Func), RetPC(RetPC),
       ArgSize(Func ? Func->getArgSize() : 0),
       Args(static_cast<char *>(S.Stk.top())), FrameOffset(S.Stk.size()) {
-  if (Func) {
-    if (unsigned FrameSize = Func->getFrameSize()) {
-      Locals = std::make_unique<char[]>(FrameSize);
-      for (auto &Scope : Func->scopes()) {
-        for (auto &Local : Scope.locals()) {
-          Block *B = new (localBlock(Local.Offset)) Block(Local.Desc);
-          B->invokeCtor();
-          InlineDescriptor *ID = localInlineDesc(Local.Offset);
-          ID->Desc = Local.Desc;
-          ID->IsActive = true;
-          ID->Offset = sizeof(InlineDescriptor);
-        }
-      }
+  if (!Func)
+    return;
+
+  unsigned FrameSize = Func->getFrameSize();
+  if (FrameSize == 0)
+    return;
+
+  Locals = std::make_unique<char[]>(FrameSize);
+  for (auto &Scope : Func->scopes()) {
+    for (auto &Local : Scope.locals()) {
+      Block *B = new (localBlock(Local.Offset)) Block(Local.Desc);
+      B->invokeCtor();
+      InlineDescriptor *ID = localInlineDesc(Local.Offset);
+      ID->Desc = Local.Desc;
+      ID->IsActive = true;
+      ID->Offset = sizeof(InlineDescriptor);
     }
   }
 }
