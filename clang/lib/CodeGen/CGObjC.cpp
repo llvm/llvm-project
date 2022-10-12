@@ -25,6 +25,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
 using namespace clang;
@@ -1111,6 +1112,25 @@ static void emitCPPObjectAtomicGetterCall(CodeGenFunction &CGF,
                callee, ReturnValueSlot(), args);
 }
 
+// emitCmdValueForGetterSetterBody - Handle emitting the load necessary for
+// the `_cmd` selector argument for getter/setter bodies. For direct methods,
+// this returns an undefined/poison value; this matches behavior prior to `_cmd`
+// being removed from the direct method ABI as the getter/setter caller would
+// never load one. For non-direct methods, this emits a load of the implicit
+// `_cmd` storage.
+static llvm::Value *emitCmdValueForGetterSetterBody(CodeGenFunction &CGF,
+                                                   ObjCMethodDecl *MD) {
+  if (MD->isDirectMethod()) {
+    // Direct methods do not have a `_cmd` argument. Emit an undefined/poison
+    // value. This will be passed to objc_getProperty/objc_setProperty, which
+    // has not appeared bothered by the `_cmd` argument being undefined before.
+    llvm::Type *selType = CGF.ConvertType(CGF.getContext().getObjCSelType());
+    return llvm::PoisonValue::get(selType);
+  }
+
+  return CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(MD->getCmdDecl()), "cmd");
+}
+
 void
 CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
                                         const ObjCPropertyImplDecl *propImpl,
@@ -1189,8 +1209,7 @@ CodeGenFunction::generateObjCGetterBody(const ObjCImplementationDecl *classImpl,
     // Return (ivar-type) objc_getProperty((id) self, _cmd, offset, true).
     // FIXME: Can't this be simpler? This might even be worse than the
     // corresponding gcc code.
-    llvm::Value *cmd =
-      Builder.CreateLoad(GetAddrOfLocalVar(getterMethod->getCmdDecl()), "cmd");
+    llvm::Value *cmd = emitCmdValueForGetterSetterBody(*this, getterMethod);
     llvm::Value *self = Builder.CreateBitCast(LoadObjCSelf(), VoidPtrTy);
     llvm::Value *ivarOffset =
       EmitIvarOffset(classImpl->getClassInterface(), ivar);
@@ -1475,8 +1494,7 @@ CodeGenFunction::generateObjCSetterBody(const ObjCImplementationDecl *classImpl,
 
     // Emit objc_setProperty((id) self, _cmd, offset, arg,
     //                       <is-atomic>, <is-copy>).
-    llvm::Value *cmd =
-      Builder.CreateLoad(GetAddrOfLocalVar(setterMethod->getCmdDecl()));
+    llvm::Value *cmd = emitCmdValueForGetterSetterBody(*this, setterMethod);
     llvm::Value *self =
       Builder.CreateBitCast(LoadObjCSelf(), VoidPtrTy);
     llvm::Value *ivarOffset =
