@@ -29,8 +29,8 @@ define dso_local signext i32 @test_comm() nounwind {
 ; STATIC-NEXT:    stw 5, comm_glob@toc@l(4)
 ; STATIC-NEXT:    blr
 entry:
-  %0 = load i32, i32* @comm_glob, align 4
+  %0 = load i32, ptr @comm_glob, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* @comm_glob, align 4
+  store i32 %inc, ptr @comm_glob, align 4
   ret i32 %0
 }

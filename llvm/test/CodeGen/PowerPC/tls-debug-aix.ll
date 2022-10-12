@@ -26,8 +26,8 @@
 define i32 @foo() !dbg !12 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  %0 = load i32, i32* @i, align 4, !dbg !16
+  store i32 0, ptr %retval, align 4
+  %0 = load i32, ptr @i, align 4, !dbg !16
   ret i32 %0, !dbg !16
 }
 

@@ -11,9 +11,9 @@
 @i = external global i32, align 4  #0
 
 ; Function Attrs: noinline nounwind optnone
-define i32* @get() {
+define ptr @get() {
   entry:
-    ret i32* @i
+    ret ptr @i
 }
 
 ; CHECK:        la 3, i[TD](2)

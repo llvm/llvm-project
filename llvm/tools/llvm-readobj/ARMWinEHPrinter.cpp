@@ -172,6 +172,7 @@ const Decoder::RingEntry Decoder::Ring64[] = {
     {0xff, 0xe9, 1, &Decoder::opcode_machine_frame},
     {0xff, 0xea, 1, &Decoder::opcode_context},
     {0xff, 0xec, 1, &Decoder::opcode_clear_unwound_to_call},
+    {0xff, 0xfc, 1, &Decoder::opcode_pac_sign_return_address},
 };
 
 static void printRange(raw_ostream &OS, ListSeparator &LS, unsigned First,
@@ -976,6 +977,17 @@ bool Decoder::opcode_clear_unwound_to_call(const uint8_t *OC, unsigned &Offset,
   return false;
 }
 
+bool Decoder::opcode_pac_sign_return_address(const uint8_t *OC,
+                                             unsigned &Offset, unsigned Length,
+                                             bool Prologue) {
+  if (Prologue)
+    SW.startLine() << format("0x%02x                ; pacibsp\n", OC[Offset]);
+  else
+    SW.startLine() << format("0x%02x                ; autibsp\n", OC[Offset]);
+  ++Offset;
+  return false;
+}
+
 void Decoder::decodeOpcodes(ArrayRef<uint8_t> Opcodes, unsigned Offset,
                             bool Prologue) {
   assert((!Prologue || Offset == 0) && "prologue should always use offset 0");
@@ -1333,7 +1345,7 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
   int SavSZ = (IntSZ + FpSZ + 8 * 8 * RF.H() + 0xf) & ~0xf;
   int LocSZ = (RF.FrameSize() << 4) - SavSZ;
 
-  if (RF.CR() == 3) {
+  if (RF.CR() == 2 || RF.CR() == 3) {
     SW.startLine() << "mov x29, sp\n";
     if (LocSZ <= 512) {
       SW.startLine() << format("stp x29, lr, [sp, #-%d]!\n", LocSZ);
@@ -1344,7 +1356,7 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
   if (LocSZ > 4080) {
     SW.startLine() << format("sub sp, sp, #%d\n", LocSZ - 4080);
     SW.startLine() << "sub sp, sp, #4080\n";
-  } else if ((RF.CR() != 3 && LocSZ > 0) || LocSZ > 512) {
+  } else if ((RF.CR() != 3 && RF.CR() != 2 && LocSZ > 0) || LocSZ > 512) {
     SW.startLine() << format("sub sp, sp, #%d\n", LocSZ);
   }
   if (RF.H()) {
@@ -1406,6 +1418,11 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
                                19 + 2 * I + 1, 16 * I);
     }
   }
+  // CR=2 is yet undocumented, see
+  // https://github.com/MicrosoftDocs/cpp-docs/pull/4202 for upstream
+  // progress on getting it documented.
+  if (RF.CR() == 2)
+    SW.startLine() << "pacibsp\n";
   SW.startLine() << "end\n";
 
   return true;

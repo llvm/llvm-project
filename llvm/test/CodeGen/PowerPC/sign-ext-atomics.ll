@@ -26,10 +26,9 @@ define i16 @SEXTParam(i16 signext %0) #0 {
 ; CHECK-NEXT:    blr
 top:
   %1 = alloca i16, align 4
-  %2 = bitcast i16* %1 to i8*
-  store i16 0, i16* %1, align 4
-  %rv.i = atomicrmw min i16* %1, i16 %0 acq_rel
-  %rv.i2 = load atomic i16, i16* %1 acquire, align 16
+  store i16 0, ptr %1, align 4
+  %rv.i = atomicrmw min ptr %1, i16 %0 acq_rel
+  %rv.i2 = load atomic i16, ptr %1 acquire, align 16
   ret i16 %rv.i2
 }
 
@@ -60,14 +59,13 @@ define i16 @noSEXTParam(i16 %0) #0 {
 ; CHECK-NEXT:    blr
 top:
   %1 = alloca i16, align 4
-  %2 = bitcast i16* %1 to i8*
-  store i16 0, i16* %1, align 4
-  %rv.i = atomicrmw min i16* %1, i16 %0 acq_rel
-  %rv.i2 = load atomic i16, i16* %1 acquire, align 16
+  store i16 0, ptr %1, align 4
+  %rv.i = atomicrmw min ptr %1, i16 %0 acq_rel
+  %rv.i2 = load atomic i16, ptr %1 acquire, align 16
   ret i16 %rv.i2
 }
 
-define i16 @noSEXTLoad(i16 *%p) #0 {
+define i16 @noSEXTLoad(ptr %p) #0 {
 ; CHECK-LABEL: noSEXTLoad:
 ; CHECK:       # %bb.0: # %top
 ; CHECK-NEXT:    lha 3, 0(3)
@@ -93,12 +91,11 @@ define i16 @noSEXTLoad(i16 *%p) #0 {
 ; CHECK-NEXT:    isync
 ; CHECK-NEXT:    blr
 top:
-  %0 = load i16, i16* %p, align 2
+  %0 = load i16, ptr %p, align 2
   %1 = alloca i16, align 4
-  %2 = bitcast i16* %1 to i8*
-  store i16 0, i16* %1, align 4
-  %rv.i = atomicrmw min i16* %1, i16 %0 acq_rel
-  %rv.i2 = load atomic i16, i16* %1 acquire, align 16
+  store i16 0, ptr %1, align 4
+  %rv.i = atomicrmw min ptr %1, i16 %0 acq_rel
+  %rv.i2 = load atomic i16, ptr %1 acquire, align 16
   ret i16 %rv.i2
 }
 attributes #0 = { nounwind }

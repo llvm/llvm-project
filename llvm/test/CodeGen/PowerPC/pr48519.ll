@@ -56,7 +56,7 @@ define void @julia__typed_vcat_20() #0 {
 ; CHECK-P9-NEXT:    xscvdphp f0, f0
 ; CHECK-P9-NEXT:    stxsihx f0, 0, r3
 bb:
-  %i = load i64, i64 addrspace(11)* null, align 8
+  %i = load i64, ptr addrspace(11) null, align 8
   %i1 = call { i64, i1 } @llvm.ssub.with.overflow.i64(i64 %i, i64 0)
   %i2 = extractvalue { i64, i1 } %i1, 0
   br label %bb3
@@ -67,7 +67,7 @@ bb3:                                              ; preds = %bb3, %bb
   %i6 = add nsw i64 %i5, -1
   %i7 = add i64 %i6, 0
   %i8 = sitofp i64 %i7 to half
-  store half %i8, half addrspace(13)* undef, align 2
+  store half %i8, ptr addrspace(13) undef, align 2
   %i9 = icmp eq i64 %i4, 0
   %i10 = add i64 %i4, 1
   br i1 %i9, label %bb11, label %bb3
@@ -133,7 +133,7 @@ bb1:                                              ; preds = %bb3, %bb
 
 bb3:                                              ; preds = %bb1
   %i4 = add nuw nsw i64 %i, 1
-  %i5 = load half, half* null, align 2
+  %i5 = load half, ptr null, align 2
   %i6 = fpext half %i5 to float
   %i7 = fcmp uno float %i6, 0.000000e+00
   %i8 = or i1 %i7, false
@@ -213,8 +213,8 @@ define void @func_48786() #0 {
 ; CHECK-P9-NEXT:    b .LBB2_1
 ; CHECK-P9-NEXT:  .LBB2_5: # %bb15
 bb:
-  %i = load i64, i64 addrspace(11)* undef, align 8
-  %i1 = load i64, i64 addrspace(11)* undef, align 8
+  %i = load i64, ptr addrspace(11) undef, align 8
+  %i1 = load i64, ptr addrspace(11) undef, align 8
   br label %bb2
 
 bb2:                                              ; preds = %bb12, %bb
@@ -228,12 +228,12 @@ bb4:                                              ; preds = %bb2
   ]
 
 bb5:                                              ; preds = %bb4, %bb4
-  %i6 = load half, half addrspace(13)* undef, align 2
+  %i6 = load half, ptr addrspace(13) undef, align 2
   %i7 = icmp ult i64 0, %i1
   br i1 %i7, label %bb8, label %bb15
 
 bb8:                                              ; preds = %bb5
-  store half %i6, half addrspace(13)* null, align 2
+  store half %i6, ptr addrspace(13) null, align 2
   br label %bb10
 
 bb9:                                              ; preds = %bb4
@@ -298,8 +298,8 @@ bb:
 
 bb1:                                              ; preds = %bb1, %bb
   %i = phi i64 [ 0, %bb ], [ %i3, %bb1 ]
-  %i2 = getelementptr inbounds half, half addrspace(13)* null, i64 %i
-  store half %arg, half addrspace(13)* %i2, align 2
+  %i2 = getelementptr inbounds half, ptr addrspace(13) null, i64 %i
+  store half %arg, ptr addrspace(13) %i2, align 2
   %i3 = add i64 %i, 12
   %i4 = icmp eq i64 %i3, 0
   br i1 %i4, label %bb5, label %bb1

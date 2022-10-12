@@ -17,10 +17,10 @@ define void @test() local_unnamed_addr #0 comdat align 2 {
 ; CHECK-NEXT:    bltlr+ 0
 ; CHECK-NEXT:  # %bb.1: # %for.body.i.i.i.i.i.i.i
 entry:
-  %0 = load float*, float** undef, align 8
-  %1 = load i64, i64* undef, align 8
-  %add.ptr.i.i.i.i = getelementptr inbounds float, float* %0, i64 undef
-  %2 = ptrtoint float* %add.ptr.i.i.i.i to i64
+  %0 = load ptr, ptr undef, align 8
+  %1 = load i64, ptr undef, align 8
+  %add.ptr.i.i.i.i = getelementptr inbounds float, ptr %0, i64 undef
+  %2 = ptrtoint ptr %add.ptr.i.i.i.i to i64
   %and.i.i.i.i.i.i.i = and i64 %2, 3
   %tobool.i.i.i.i.i.i.i = icmp eq i64 %and.i.i.i.i.i.i.i, 0
   %cmp.i.i.i.i.i.i.i = icmp slt i64 0, %1

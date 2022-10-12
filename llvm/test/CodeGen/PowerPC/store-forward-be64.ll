@@ -14,7 +14,7 @@ target triple = "powerpc64-ibm-aix7.2.0.0"
 %struct.ULST = type { i64, i64 }
 
 ; Function Attrs: nounwind
-define zeroext i32 @ustc1(%struct.USST* noundef byval(%struct.USST) align 8 %s) {
+define zeroext i32 @ustc1(ptr noundef byval(%struct.USST) align 8 %s) {
 ; CHECK-LABEL: ustc1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 4, 3
@@ -22,15 +22,14 @@ define zeroext i32 @ustc1(%struct.USST* noundef byval(%struct.USST) align 8 %s) 
 ; CHECK-NEXT:    std 4, 48(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.USST, %struct.USST* %s, i32 0, i32 0
-  %0 = load i16, i16* %a, align 8
+  %0 = load i16, ptr %s, align 8
   %conv = zext i16 %0 to i32
   %shr = ashr i32 %conv, 8
   ret i32 %shr
 }
 
 ; Function Attrs: nounwind
-define zeroext i32 @ustc2(%struct.USST* noundef byval(%struct.USST) align 8 %s) {
+define zeroext i32 @ustc2(ptr noundef byval(%struct.USST) align 8 %s) {
 ; CHECK-LABEL: ustc2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 4, 3
@@ -38,14 +37,13 @@ define zeroext i32 @ustc2(%struct.USST* noundef byval(%struct.USST) align 8 %s) 
 ; CHECK-NEXT:    std 4, 48(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.USST, %struct.USST* %s, i32 0, i32 0
-  %0 = load i16, i16* %a, align 8
+  %0 = load i16, ptr %s, align 8
   %conv = zext i16 %0 to i32
   ret i32 %conv
 }
 
 ; Function Attrs: nounwind
-define signext i32 @stc1(%struct.SST* noundef byval(%struct.SST) align 8 %s) {
+define signext i32 @stc1(ptr noundef byval(%struct.SST) align 8 %s) {
 ; CHECK-LABEL: stc1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 4, 3
@@ -55,15 +53,14 @@ define signext i32 @stc1(%struct.SST* noundef byval(%struct.SST) align 8 %s) {
 ; CHECK-NEXT:    srawi 3, 3, 8
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.SST, %struct.SST* %s, i32 0, i32 0
-  %0 = load i16, i16* %a, align 8
+  %0 = load i16, ptr %s, align 8
   %conv = sext i16 %0 to i32
   %shr = ashr i32 %conv, 8
   ret i32 %shr
 }
 
 ; Function Attrs: nounwind
-define signext i32 @stc2(%struct.SST* noundef byval(%struct.SST) align 8 %s) {
+define signext i32 @stc2(ptr noundef byval(%struct.SST) align 8 %s) {
 ; CHECK-LABEL: stc2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 4, 3
@@ -71,14 +68,13 @@ define signext i32 @stc2(%struct.SST* noundef byval(%struct.SST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 48(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.SST, %struct.SST* %s, i32 0, i32 0
-  %0 = load i16, i16* %a, align 8
+  %0 = load i16, ptr %s, align 8
   %conv = sext i16 %0 to i32
   ret i32 %conv
 }
 
 ; Function Attrs: nounwind
-define signext i32 @ctc(%struct.CST* noundef byval(%struct.CST) align 8 %s) {
+define signext i32 @ctc(ptr noundef byval(%struct.CST) align 8 %s) {
 ; CHECK-LABEL: ctc:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 4, 3
@@ -86,14 +82,13 @@ define signext i32 @ctc(%struct.CST* noundef byval(%struct.CST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 48(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.CST, %struct.CST* %s, i32 0, i32 0
-  %0 = load i8, i8* %a, align 8
+  %0 = load i8, ptr %s, align 8
   %conv = zext i8 %0 to i32
   ret i32 %conv
 }
 
 ; Function Attrs: nounwind
-define signext i32 @sctc(%struct.SCST* noundef byval(%struct.SCST) align 8 %s) {
+define signext i32 @sctc(ptr noundef byval(%struct.SCST) align 8 %s) {
 ; CHECK-LABEL: sctc:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 4, 3
@@ -101,14 +96,13 @@ define signext i32 @sctc(%struct.SCST* noundef byval(%struct.SCST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 48(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.SCST, %struct.SCST* %s, i32 0, i32 0
-  %0 = load i8, i8* %a, align 8
+  %0 = load i8, ptr %s, align 8
   %conv = sext i8 %0 to i32
   ret i32 %conv
 }
 
 ; Function Attrs: nounwind
-define signext i32 @tc44(%struct.ST* noundef byval(%struct.ST) align 8 %s) {
+define signext i32 @tc44(ptr noundef byval(%struct.ST) align 8 %s) {
 ; CHECK-LABEL: tc44:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 4, 3
@@ -116,13 +110,12 @@ define signext i32 @tc44(%struct.ST* noundef byval(%struct.ST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 48(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.ST, %struct.ST* %s, i32 0, i32 0
-  %0 = load i32, i32* %a, align 8
+  %0 = load i32, ptr %s, align 8
   ret i32 %0
 }
 
 ; Function Attrs: nounwind
-define signext i32 @tc41(%struct.ST* noundef byval(%struct.ST) align 8 %s) {
+define signext i32 @tc41(ptr noundef byval(%struct.ST) align 8 %s) {
 ; CHECK-LABEL: tc41:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 4, 3
@@ -130,14 +123,13 @@ define signext i32 @tc41(%struct.ST* noundef byval(%struct.ST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 48(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.ST, %struct.ST* %s, i32 0, i32 0
-  %0 = load i32, i32* %a, align 8
+  %0 = load i32, ptr %s, align 8
   %shr = ashr i32 %0, 24
   ret i32 %shr
 }
 
 ; Function Attrs: nounwind
-define signext i32 @tc42(%struct.ST* noundef byval(%struct.ST) align 8 %s) {
+define signext i32 @tc42(ptr noundef byval(%struct.ST) align 8 %s) {
 ; CHECK-LABEL: tc42:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 4, 3
@@ -145,14 +137,13 @@ define signext i32 @tc42(%struct.ST* noundef byval(%struct.ST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 48(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.ST, %struct.ST* %s, i32 0, i32 0
-  %0 = load i32, i32* %a, align 8
+  %0 = load i32, ptr %s, align 8
   %shr = ashr i32 %0, 16
   ret i32 %shr
 }
 
 ; Function Attrs: nounwind
-define signext i32 @tc43(%struct.ST* noundef byval(%struct.ST) align 8 %s) {
+define signext i32 @tc43(ptr noundef byval(%struct.ST) align 8 %s) {
 ; CHECK-LABEL: tc43:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 4, 3
@@ -160,14 +151,13 @@ define signext i32 @tc43(%struct.ST* noundef byval(%struct.ST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 48(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.ST, %struct.ST* %s, i32 0, i32 0
-  %0 = load i32, i32* %a, align 8
+  %0 = load i32, ptr %s, align 8
   %shr = ashr i32 %0, 8
   ret i32 %shr
 }
 
 ; Function Attrs: nounwind
-define zeroext i32 @utc44(%struct.UST* noundef byval(%struct.UST) align 8 %s) #0 {
+define zeroext i32 @utc44(ptr noundef byval(%struct.UST) align 8 %s) #0 {
 ; CHECK-LABEL: utc44:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 4, 3
@@ -175,13 +165,12 @@ define zeroext i32 @utc44(%struct.UST* noundef byval(%struct.UST) align 8 %s) #0
 ; CHECK-NEXT:    std 4, 48(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.UST, %struct.UST* %s, i32 0, i32 0
-  %0 = load i32, i32* %a, align 8
+  %0 = load i32, ptr %s, align 8
   ret i32 %0
 }
 
 ; Function Attrs: nounwind
-define zeroext i32 @utc41(%struct.UST* noundef byval(%struct.UST) align 8 %s) {
+define zeroext i32 @utc41(ptr noundef byval(%struct.UST) align 8 %s) {
 ; CHECK-LABEL: utc41:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 4, 3
@@ -189,14 +178,13 @@ define zeroext i32 @utc41(%struct.UST* noundef byval(%struct.UST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 48(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.UST, %struct.UST* %s, i32 0, i32 0
-  %0 = load i32, i32* %a, align 8
+  %0 = load i32, ptr %s, align 8
   %shr = lshr i32 %0, 24
   ret i32 %shr
 }
 
 ; Function Attrs: nounwind
-define zeroext i32 @utc42(%struct.UST* noundef byval(%struct.UST) align 8 %s) {
+define zeroext i32 @utc42(ptr noundef byval(%struct.UST) align 8 %s) {
 ; CHECK-LABEL: utc42:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 4, 3
@@ -204,14 +192,13 @@ define zeroext i32 @utc42(%struct.UST* noundef byval(%struct.UST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 48(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.UST, %struct.UST* %s, i32 0, i32 0
-  %0 = load i32, i32* %a, align 8
+  %0 = load i32, ptr %s, align 8
   %shr = lshr i32 %0, 16
   ret i32 %shr
 }
 
 ; Function Attrs: nounwind
-define zeroext i32 @utc43(%struct.UST* noundef byval(%struct.UST) align 8 %s) {
+define zeroext i32 @utc43(ptr noundef byval(%struct.UST) align 8 %s) {
 ; CHECK-LABEL: utc43:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 4, 3
@@ -219,14 +206,13 @@ define zeroext i32 @utc43(%struct.UST* noundef byval(%struct.UST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 48(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.UST, %struct.UST* %s, i32 0, i32 0
-  %0 = load i32, i32* %a, align 8
+  %0 = load i32, ptr %s, align 8
   %shr = lshr i32 %0, 8
   ret i32 %shr
 }
 
 ; Function Attrs: nounwind
-define i64 @ltc88(%struct.LST* noundef byval(%struct.LST) align 8 %s) {
+define i64 @ltc88(ptr noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-LABEL: ltc88:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 5, 3
@@ -235,14 +221,13 @@ define i64 @ltc88(%struct.LST* noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 56(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.LST, %struct.LST* %s, i32 0, i32 0
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %s, align 8
   %shr = ashr i64 %0, 8
   ret i64 %shr
 }
 
 ; Function Attrs: nounwind
-define i64 @ltc86(%struct.LST* noundef byval(%struct.LST) align 8 %s) {
+define i64 @ltc86(ptr noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-LABEL: ltc86:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 5, 3
@@ -251,14 +236,13 @@ define i64 @ltc86(%struct.LST* noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 56(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.LST, %struct.LST* %s, i32 0, i32 0
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %s, align 8
   %shr = ashr i64 %0, 16
   ret i64 %shr
 }
 
 ; Function Attrs: nounwind
-define i64 @ltc85(%struct.LST* noundef byval(%struct.LST) align 8 %s) {
+define i64 @ltc85(ptr noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-LABEL: ltc85:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 5, 3
@@ -267,14 +251,13 @@ define i64 @ltc85(%struct.LST* noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 56(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.LST, %struct.LST* %s, i32 0, i32 0
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %s, align 8
   %shr = ashr i64 %0, 24
   ret i64 %shr
 }
 
 ; Function Attrs: nounwind
-define i64 @ltc84(%struct.LST* noundef byval(%struct.LST) align 8 %s) {
+define i64 @ltc84(ptr noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-LABEL: ltc84:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 5, 3
@@ -283,14 +266,13 @@ define i64 @ltc84(%struct.LST* noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 56(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.LST, %struct.LST* %s, i32 0, i32 0
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %s, align 8
   %shr = ashr i64 %0, 32
   ret i64 %shr
 }
 
 ; Function Attrs: nounwind
-define i64 @ltc83(%struct.LST* noundef byval(%struct.LST) align 8 %s) {
+define i64 @ltc83(ptr noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-LABEL: ltc83:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 5, 3
@@ -299,14 +281,13 @@ define i64 @ltc83(%struct.LST* noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 56(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.LST, %struct.LST* %s, i32 0, i32 0
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %s, align 8
   %shr = ashr i64 %0, 40
   ret i64 %shr
 }
 
 ; Function Attrs: nounwind
-define i64 @ltc82(%struct.LST* noundef byval(%struct.LST) align 8 %s) {
+define i64 @ltc82(ptr noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-LABEL: ltc82:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 5, 3
@@ -315,14 +296,13 @@ define i64 @ltc82(%struct.LST* noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 56(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.LST, %struct.LST* %s, i32 0, i32 0
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %s, align 8
   %shr = ashr i64 %0, 48
   ret i64 %shr
 }
 
 ; Function Attrs: nounwind
-define i64 @ltc81(%struct.LST* noundef byval(%struct.LST) align 8 %s) {
+define i64 @ltc81(ptr noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-LABEL: ltc81:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 5, 3
@@ -331,27 +311,25 @@ define i64 @ltc81(%struct.LST* noundef byval(%struct.LST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 56(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.LST, %struct.LST* %s, i32 0, i32 0
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %s, align 8
   %shr = ashr i64 %0, 56
   ret i64 %shr
 }
 
 ; Function Attrs: nounwind
-define i64 @ultc88(%struct.ULST* noundef byval(%struct.ULST) align 8 %s) {
+define i64 @ultc88(ptr noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-LABEL: ultc88:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    std 3, 48(1)
 ; CHECK-NEXT:    std 4, 56(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.ULST, %struct.ULST* %s, i32 0, i32 0
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %s, align 8
   ret i64 %0
 }
 
 ; Function Attrs: nounwind
-define i64 @ultc87(%struct.ULST* noundef byval(%struct.ULST) align 8 %s) {
+define i64 @ultc87(ptr noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-LABEL: ultc87:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 5, 3
@@ -360,14 +338,13 @@ define i64 @ultc87(%struct.ULST* noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 56(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.ULST, %struct.ULST* %s, i32 0, i32 0
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %s, align 8
   %shr = lshr i64 %0, 8
   ret i64 %shr
 }
 
 ; Function Attrs: nounwind
-define i64 @ultc86(%struct.ULST* noundef byval(%struct.ULST) align 8 %s) {
+define i64 @ultc86(ptr noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-LABEL: ultc86:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 5, 3
@@ -376,14 +353,13 @@ define i64 @ultc86(%struct.ULST* noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 56(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.ULST, %struct.ULST* %s, i32 0, i32 0
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %s, align 8
   %shr = lshr i64 %0, 16
   ret i64 %shr
 }
 
 ; Function Attrs: nounwind
-define i64 @ultc85(%struct.ULST* noundef byval(%struct.ULST) align 8 %s) {
+define i64 @ultc85(ptr noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-LABEL: ultc85:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 5, 3
@@ -392,14 +368,13 @@ define i64 @ultc85(%struct.ULST* noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 56(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.ULST, %struct.ULST* %s, i32 0, i32 0
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %s, align 8
   %shr = lshr i64 %0, 24
   ret i64 %shr
 }
 
 ; Function Attrs: nounwind
-define i64 @ultc84(%struct.ULST* noundef byval(%struct.ULST) align 8 %s) {
+define i64 @ultc84(ptr noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-LABEL: ultc84:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 5, 3
@@ -408,14 +383,13 @@ define i64 @ultc84(%struct.ULST* noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 56(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.ULST, %struct.ULST* %s, i32 0, i32 0
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %s, align 8
   %shr = lshr i64 %0, 32
   ret i64 %shr
 }
 
 ; Function Attrs: nounwind
-define i64 @ultc83(%struct.ULST* noundef byval(%struct.ULST) align 8 %s) {
+define i64 @ultc83(ptr noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-LABEL: ultc83:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 5, 3
@@ -424,14 +398,13 @@ define i64 @ultc83(%struct.ULST* noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 56(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.ULST, %struct.ULST* %s, i32 0, i32 0
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %s, align 8
   %shr = lshr i64 %0, 40
   ret i64 %shr
 }
 
 ; Function Attrs: nounwind
-define i64 @ultc82(%struct.ULST* noundef byval(%struct.ULST) align 8 %s) {
+define i64 @ultc82(ptr noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-LABEL: ultc82:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 5, 3
@@ -440,14 +413,13 @@ define i64 @ultc82(%struct.ULST* noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 56(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.ULST, %struct.ULST* %s, i32 0, i32 0
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %s, align 8
   %shr = lshr i64 %0, 48
   ret i64 %shr
 }
 
 ; Function Attrs: nounwind
-define i64 @ultc81(%struct.ULST* noundef byval(%struct.ULST) align 8 %s) {
+define i64 @ultc81(ptr noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-LABEL: ultc81:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mr 5, 3
@@ -456,8 +428,7 @@ define i64 @ultc81(%struct.ULST* noundef byval(%struct.ULST) align 8 %s) {
 ; CHECK-NEXT:    std 4, 56(1)
 ; CHECK-NEXT:    blr
 entry:
-  %a = getelementptr inbounds %struct.ULST, %struct.ULST* %s, i32 0, i32 0
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %s, align 8
   %shr = lshr i64 %0, 56
   ret i64 %shr
 }

@@ -81,6 +81,38 @@ def TransformOpInterface : OpInterface<"TransformOpInterface"> {
   }];
 }
 
+def TransformTypeInterface : TypeInterface<"TransformTypeInterface"> {
+  let description = [{
+    Types that can be used for Transform dialect handle values. Such types
+    define the properties of Payload IR operations associated with the handle.
+    A user of such a handle can assume that these properties have been verified
+    for any Payload IR operation associated with it.
+  }];
+
+  let cppNamespace = "::mlir::transform";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Checks if the given list of associated Payload IR operations satisfy
+        the conditions defined by this type. If not, produces a silenceable
+        error at the specified location.
+      }],
+      /*returnType=*/"::mlir::DiagnosedSilenceableFailure",
+      /*name=*/"checkPayload",
+      /*arguments=*/(ins "::mlir::Location":$loc,
+                         "::mlir::ArrayRef<::mlir::Operation *>":$payload)
+    >
+  ];
+
+  let extraSharedClassDeclaration = [{
+    DiagnosedSilenceableFailure emitSilenceableError(Location loc) const {
+      Diagnostic diag(loc, DiagnosticSeverity::Error);
+      return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+    }
+  }];
+}
+
 def FunctionalStyleTransformOpTrait
     : NativeOpTrait<"FunctionalStyleTransformOpTrait"> {
   let cppNamespace = "::mlir::transform";

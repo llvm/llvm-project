@@ -28,7 +28,7 @@ define void @phi5() unnamed_addr {
   ]
 
 1:                                                ; preds = %0, %0, %0, %0
-  %2 = load i16, i16* undef, align 2
+  %2 = load i16, ptr undef, align 2
   br label %3
 
 3:                                                ; preds = %3, %1

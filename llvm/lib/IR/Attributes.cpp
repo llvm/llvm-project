@@ -89,15 +89,17 @@ unpackVScaleRangeArgs(uint64_t Value) {
 
 Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
                          uint64_t Val) {
-  if (Val)
-    assert(Attribute::isIntAttrKind(Kind) && "Not an int attribute");
-  else
-    assert(Attribute::isEnumAttrKind(Kind) && "Not an enum attribute");
+  bool IsIntAttr = Attribute::isIntAttrKind(Kind);
+  assert((IsIntAttr || Attribute::isEnumAttrKind(Kind)) &&
+         "Not an enum or int attribute");
 
   LLVMContextImpl *pImpl = Context.pImpl;
   FoldingSetNodeID ID;
   ID.AddInteger(Kind);
-  if (Val) ID.AddInteger(Val);
+  if (IsIntAttr)
+    ID.AddInteger(Val);
+  else
+    assert(Val == 0 && "Value must be zero for enum attributes");
 
   void *InsertPoint;
   AttributeImpl *PA = pImpl->AttrsSet.FindNodeOrInsertPos(ID, InsertPoint);
@@ -105,7 +107,7 @@ Attribute Attribute::get(LLVMContext &Context, Attribute::AttrKind Kind,
   if (!PA) {
     // If we didn't find any existing attributes of the same shape then create a
     // new one and insert it.
-    if (!Val)
+    if (!IsIntAttr)
       PA = new (pImpl->Alloc) EnumAttributeImpl(Kind);
     else
       PA = new (pImpl->Alloc) IntAttributeImpl(Kind, Val);
@@ -743,9 +745,11 @@ Type *AttributeSet::getElementType() const {
   return SetNode ? SetNode->getAttributeType(Attribute::ElementType) : nullptr;
 }
 
-std::pair<unsigned, Optional<unsigned>> AttributeSet::getAllocSizeArgs() const {
-  return SetNode ? SetNode->getAllocSizeArgs()
-                 : std::pair<unsigned, Optional<unsigned>>(0, 0);
+Optional<std::pair<unsigned, Optional<unsigned>>>
+AttributeSet::getAllocSizeArgs() const {
+  if (SetNode)
+    return SetNode->getAllocSizeArgs();
+  return None;
 }
 
 unsigned AttributeSet::getVScaleRangeMin() const {
@@ -911,11 +915,11 @@ uint64_t AttributeSetNode::getDereferenceableOrNullBytes() const {
   return 0;
 }
 
-std::pair<unsigned, Optional<unsigned>>
+Optional<std::pair<unsigned, Optional<unsigned>>>
 AttributeSetNode::getAllocSizeArgs() const {
   if (auto A = findEnumAttribute(Attribute::AllocSize))
     return A->getAllocSizeArgs();
-  return std::make_pair(0, 0);
+  return None;
 }
 
 unsigned AttributeSetNode::getVScaleRangeMin() const {
@@ -1638,10 +1642,12 @@ AttrBuilder &AttrBuilder::removeAttribute(StringRef A) {
   return *this;
 }
 
-uint64_t AttrBuilder::getRawIntAttr(Attribute::AttrKind Kind) const {
+Optional<uint64_t> AttrBuilder::getRawIntAttr(Attribute::AttrKind Kind) const {
   assert(Attribute::isIntAttrKind(Kind) && "Not an int attribute");
   Attribute A = getAttribute(Kind);
-  return A.isValid() ? A.getValueAsInt() : 0;
+  if (A.isValid())
+    return A.getValueAsInt();
+  return None;
 }
 
 AttrBuilder &AttrBuilder::addRawIntAttr(Attribute::AttrKind Kind,
@@ -1649,16 +1655,12 @@ AttrBuilder &AttrBuilder::addRawIntAttr(Attribute::AttrKind Kind,
   return addAttribute(Attribute::get(Ctx, Kind, Value));
 }
 
-std::pair<unsigned, Optional<unsigned>> AttrBuilder::getAllocSizeArgs() const {
-  return unpackAllocSizeArgs(getRawIntAttr(Attribute::AllocSize));
-}
-
-unsigned AttrBuilder::getVScaleRangeMin() const {
-  return unpackVScaleRangeArgs(getRawIntAttr(Attribute::VScaleRange)).first;
-}
-
-Optional<unsigned> AttrBuilder::getVScaleRangeMax() const {
-  return unpackVScaleRangeArgs(getRawIntAttr(Attribute::VScaleRange)).second;
+Optional<std::pair<unsigned, Optional<unsigned>>>
+AttrBuilder::getAllocSizeArgs() const {
+  Attribute A = getAttribute(Attribute::AllocSize);
+  if (A.isValid())
+    return A.getAllocSizeArgs();
+  return None;
 }
 
 AttrBuilder &AttrBuilder::addAlignmentAttr(MaybeAlign Align) {
@@ -1793,10 +1795,6 @@ bool AttrBuilder::contains(Attribute::AttrKind A) const {
 
 bool AttrBuilder::contains(StringRef A) const {
   return getAttribute(A).isValid();
-}
-
-bool AttrBuilder::hasAlignmentAttr() const {
-  return getRawIntAttr(Attribute::Alignment) != 0;
 }
 
 bool AttrBuilder::operator==(const AttrBuilder &B) const {

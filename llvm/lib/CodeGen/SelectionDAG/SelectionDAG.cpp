@@ -2542,16 +2542,19 @@ bool SelectionDAG::MaskedValueIsAllOnes(SDValue V, const APInt &Mask,
 }
 
 /// isSplatValue - Return true if the vector V has the same value
-/// across all DemandedElts. For scalable vectors it does not make
-/// sense to specify which elements are demanded or undefined, therefore
-/// they are simply ignored.
+/// across all DemandedElts. For scalable vectors, we don't know the
+/// number of lanes at compile time.  Instead, we use a 1 bit APInt
+/// to represent a conservative value for all lanes; that is, that
+/// one bit value is implicitly splatted across all lanes.
 bool SelectionDAG::isSplatValue(SDValue V, const APInt &DemandedElts,
                                 APInt &UndefElts, unsigned Depth) const {
   unsigned Opcode = V.getOpcode();
   EVT VT = V.getValueType();
   assert(VT.isVector() && "Vector type expected");
+  assert((!VT.isScalableVector() || DemandedElts.getBitWidth() == 1) &&
+         "scalable demanded bits are ignored");
 
-  if (!VT.isScalableVector() && !DemandedElts)
+  if (!DemandedElts)
     return false; // No demanded elts, better to assume we don't know anything.
 
   if (Depth >= MaxRecursionDepth)
@@ -2733,11 +2736,11 @@ bool SelectionDAG::isSplatValue(SDValue V, bool AllowUndefs) const {
   assert(VT.isVector() && "Vector type expected");
 
   APInt UndefElts;
-  APInt DemandedElts;
-
-  // For now we don't support this with scalable vectors.
-  if (!VT.isScalableVector())
-    DemandedElts = APInt::getAllOnes(VT.getVectorNumElements());
+  // Since the number of lanes in a scalable vector is unknown at compile time,
+  // we track one bit which is implicitly broadcast to all lanes.  This means
+  // that all lanes in a scalable vector are considered demanded.
+  APInt DemandedElts
+    = APInt::getAllOnes(VT.isScalableVector() ? 1 : VT.getVectorNumElements());
   return isSplatValue(V, DemandedElts, UndefElts) &&
          (AllowUndefs || !UndefElts);
 }
@@ -2750,10 +2753,11 @@ SDValue SelectionDAG::getSplatSourceVector(SDValue V, int &SplatIdx) {
   switch (Opcode) {
   default: {
     APInt UndefElts;
-    APInt DemandedElts;
-
-    if (!VT.isScalableVector())
-      DemandedElts = APInt::getAllOnes(VT.getVectorNumElements());
+    // Since the number of lanes in a scalable vector is unknown at compile time,
+    // we track one bit which is implicitly broadcast to all lanes.  This means
+    // that all lanes in a scalable vector are considered demanded.
+    APInt DemandedElts
+      = APInt::getAllOnes(VT.isScalableVector() ? 1 : VT.getVectorNumElements());
 
     if (isSplatValue(V, DemandedElts, UndefElts)) {
       if (VT.isScalableVector()) {

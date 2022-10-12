@@ -483,8 +483,7 @@ private:
     typedef std::pair<key_type, mapped_type>                    __value_type;
     typedef __hash_map_hasher<__value_type, hasher>   __hasher;
     typedef __hash_map_equal<__value_type, key_equal> __key_equal;
-    typedef typename std::__rebind_alloc_helper<
-        std::allocator_traits<allocator_type>, __value_type>::type __allocator_type;
+    typedef std::__rebind_alloc<std::allocator_traits<allocator_type>, __value_type> __allocator_type;
 
     typedef std::__hash_table<__value_type, __hasher,
                          __key_equal,  __allocator_type>   __table;
@@ -757,7 +756,7 @@ private:
     typedef std::pair<key_type, mapped_type>               __value_type;
     typedef __hash_map_hasher<__value_type, hasher>   __hasher;
     typedef __hash_map_equal<__value_type, key_equal> __key_equal;
-    typedef typename std::__rebind_alloc_helper<std::allocator_traits<allocator_type>, __value_type>::type __allocator_type;
+    typedef std::__rebind_alloc<std::allocator_traits<allocator_type>, __value_type> __allocator_type;
 
     typedef std::__hash_table<__value_type, __hasher,
                          __key_equal,  __allocator_type>   __table;

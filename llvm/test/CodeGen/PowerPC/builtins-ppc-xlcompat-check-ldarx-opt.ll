@@ -53,30 +53,29 @@ define dso_local signext i32 @main() local_unnamed_addr {
 ; CHECK-AIX-NEXT:    blr
 entry:
   %x64 = alloca i64, align 8
-  %0 = bitcast i64* %x64 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0)
-  store i64 -1, i64* %x64, align 8
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %x64)
+  store i64 -1, ptr %x64, align 8
   br label %do.body
 
 do.body:                                          ; preds = %do.body, %entry
-  %1 = call i64 asm sideeffect "ldarx $0, ${1:y}", "=r,*Z,~{memory}"(i64* elementtype(i64) nonnull %x64)
-  %2 = call i32 @llvm.ppc.stdcx(i8* nonnull %0, i64 0)
-  %tobool.not = icmp eq i32 %2, 0
+  %0 = call i64 asm sideeffect "ldarx $0, ${1:y}", "=r,*Z,~{memory}"(ptr elementtype(i64) nonnull %x64)
+  %1 = call i32 @llvm.ppc.stdcx(ptr nonnull %x64, i64 0)
+  %tobool.not = icmp eq i32 %1, 0
   br i1 %tobool.not, label %do.body, label %do.end
 
 do.end:                                           ; preds = %do.body
-  %3 = load i64, i64* %x64, align 8
-  %cmp = icmp eq i64 %3, 0
+  %2 = load i64, ptr %x64, align 8
+  %cmp = icmp eq i64 %2, 0
   %. = select i1 %cmp, i32 55, i32 66
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %0)
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %x64)
   ret i32 %.
 }
 
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
 ; Function Attrs: nounwind writeonly
-declare i32 @llvm.ppc.stdcx(i8*, i64)
+declare i32 @llvm.ppc.stdcx(ptr, i64)
 
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)

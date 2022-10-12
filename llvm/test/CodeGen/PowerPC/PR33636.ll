@@ -9,7 +9,7 @@ define void @main(i1 %arg) {
   %constexpr5 = trunc i32 %constexpr4 to i8
   %constexpr6 = icmp ne i8 %constexpr5, 0
   %constexpr8 = zext i1 %constexpr6 to i16
-  store i16 %constexpr8, i16* null, align 2
+  store i16 %constexpr8, ptr null, align 2
   ret void
 }
 

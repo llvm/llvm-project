@@ -16,7 +16,7 @@
 ; RUN:   -filetype=obj -o %t64.o < %s
 ; RUN: llvm-readobj --symbols %t64.o | FileCheck --check-prefixes=CHECKSYM,CHECKSYM64 %s
 
-@bar_p = global i32 (...)* @bar_ref, align 4
+@bar_p = global ptr @bar_ref, align 4
 @b_e = external global i32, align 4
 
 ; Function Attrs: noinline nounwind optnone
@@ -30,16 +30,15 @@ declare i32 @bar_ref(...)
 ; Function Attrs: noinline nounwind optnone
 define i32 @main() {
 entry:
-  %call = call i32 @bar_extern(i32* @b_e)
+  %call = call i32 @bar_extern(ptr @b_e)
   call void @foo()
-  %0 = load i32 (...)*, i32 (...)** @bar_p, align 4
-  %callee.knr.cast = bitcast i32 (...)* %0 to i32 ()*
-  %call1 = call i32 %callee.knr.cast()
-  %call2 = call i32 bitcast (i32 (...)* @bar_ref to i32 ()*)()
+  %0 = load ptr, ptr @bar_p, align 4
+  %call1 = call i32 %0()
+  %call2 = call i32 @bar_ref()
   ret i32 0
 }
 
-declare i32 @bar_extern(i32*)
+declare i32 @bar_extern(ptr)
 
 
 ; COMMON:           .globl	foo[DS]                 # -- Begin function foo

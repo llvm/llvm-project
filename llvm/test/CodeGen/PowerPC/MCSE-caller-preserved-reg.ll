@@ -9,11 +9,11 @@
 
 %"struct.CC::TT" = type { i64, i32 }
 %class.CC = type { %struct.SS }
-%struct.SS = type { void ()* }
+%struct.SS = type { ptr }
 
 @_ZN2CC2ccE = external thread_local global %"struct.CC::TT", align 8
 
-define noalias i8* @_ZN2CC3funEv(%class.CC* %this) nounwind {
+define noalias ptr @_ZN2CC3funEv(ptr %this) nounwind {
 ; CHECK-LABEL: _ZN2CC3funEv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
@@ -46,19 +46,18 @@ define noalias i8* @_ZN2CC3funEv(%class.CC* %this) nounwind {
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 entry:
-  %foo = getelementptr inbounds %class.CC, %class.CC* %this, i64 0, i32 0, i32 0
-  %0 = load void ()*, void ()** %foo, align 8
+  %0 = load ptr, ptr %this, align 8
   tail call void %0()
-  %1 = load i64, i64* getelementptr inbounds (%"struct.CC::TT", %"struct.CC::TT"* @_ZN2CC2ccE, i64 0, i32 0)
+  %1 = load i64, ptr @_ZN2CC2ccE
   %tobool = icmp eq i64 %1, 0
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:
-  tail call void @_ZN2CC3barEPi(%class.CC* nonnull %this, i32* getelementptr inbounds (%"struct.CC::TT", %"struct.CC::TT"* @_ZN2CC2ccE, i64 0, i32 1))
+  tail call void @_ZN2CC3barEPi(ptr nonnull %this, ptr getelementptr inbounds (%"struct.CC::TT", ptr @_ZN2CC2ccE, i64 0, i32 1))
   br label %if.end
 
 if.end:
-  ret i8* null
+  ret ptr null
 }
 
-declare void @_ZN2CC3barEPi(%class.CC*, i32*)
+declare void @_ZN2CC3barEPi(ptr, ptr)

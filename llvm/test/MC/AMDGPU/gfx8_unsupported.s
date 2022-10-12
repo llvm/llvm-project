@@ -52,6 +52,9 @@ image_sample_d_g16 v[5:6], v[1:3], s[8:15], s[12:15] dmask:0x3
 image_sample_d_o_g16 v[5:6], v[1:4], s[8:15], s[12:15] dmask:0x3
 // CHECK: error: instruction not supported on this GPU
 
+image_gather4h v[251:254], v[1:2], s[8:15], s[12:15] dmask:0x1
+// CHECK: error: instruction not supported on this GPU
+
 buffer_atomic_add_f32 v255, off, s[8:11], s3 offset:4095
 // CHECK: error: instruction not supported on this GPU
 

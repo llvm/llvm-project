@@ -1,12 +1,9 @@
 // RUN: mlir-opt --test-transform-dialect-interpreter --split-input-file %s | FileCheck %s
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
-    ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-      %1, %loops:3 = transform.structured.tile %0 [4, 4, 4]
-  }
+transform.sequence failures(propagate) {
+^bb0(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %1, %loops:3 = transform.structured.tile %0 [4, 4, 4]
 }
 
 // CHECK-LABEL: func @tile_linalg_matmul(
@@ -39,14 +36,11 @@ func.func @tile_linalg_matmul(
 
 // -----
 
-transform.with_pdl_patterns {
-^bb0(%arg0: !pdl.operation):
-  sequence %arg0 failures(propagate) {
-    ^bb0(%arg1: !pdl.operation):
-      %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
-      %1 = transform.structured.match ops{["func.call"]} in %arg1
-      %2, %loops:3 = transform.structured.tile %0 [%1, %1, 4]
-  }
+transform.sequence failures(propagate) {
+^bb0(%arg1: !pdl.operation):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+  %1 = transform.structured.match ops{["func.call"]} in %arg1
+  %2, %loops:3 = transform.structured.tile %0 [%1, %1, 4]
 }
 
 func.func private @get_dynamic_tile_size() -> index

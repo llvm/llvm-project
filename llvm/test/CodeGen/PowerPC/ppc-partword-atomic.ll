@@ -52,9 +52,9 @@ define dso_local zeroext i32 @testI8(i8 zeroext %val) local_unnamed_addr #0 {
 ; PWR9-NEXT:    li 3, 55
 ; PWR9-NEXT:    blr
 entry:
-  %0 = atomicrmw xchg i8* getelementptr inbounds ({ i8 }, { i8 }* @value8, i64 0, i32 0), i8 %val seq_cst, align 1
+  %0 = atomicrmw xchg ptr @value8, i8 %val seq_cst, align 1
   %conv = zext i8 %0 to i32
-  store i32 %conv, i32* @global_int, align 4
+  store i32 %conv, ptr @global_int, align 4
   ret i32 55
 }
 
@@ -105,9 +105,9 @@ define dso_local zeroext i32 @testI16(i16 zeroext %val) local_unnamed_addr #0 {
 ; PWR9-NEXT:    li 3, 55
 ; PWR9-NEXT:    blr
 entry:
-  %0 = atomicrmw xchg i16* getelementptr inbounds ({ i16 }, { i16 }* @value16, i64 0, i32 0), i16 %val seq_cst, align 2
+  %0 = atomicrmw xchg ptr @value16, i16 %val seq_cst, align 2
   %conv = zext i16 %0 to i32
-  store i32 %conv, i32* @global_int, align 4
+  store i32 %conv, ptr @global_int, align 4
   ret i32 55
 }
 

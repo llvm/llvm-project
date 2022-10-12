@@ -2,9 +2,9 @@
 ; RUN: llc -mcpu=pwr9 -mtriple=powerpc64-unknown-unknown < %s | FileCheck %s \
 ; RUN:   --check-prefix=CHECK-BE
 ; Function Attrs: norecurse nounwind readonly
-define <16 x i8> @vecucuc(i8* nocapture readonly %ptr) {
+define <16 x i8> @vecucuc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %splat.splatinsert = insertelement <16 x i8> undef, i8 %0, i32 0
   %splat.splat = shufflevector <16 x i8> %splat.splatinsert, <16 x i8> undef, <16 x i32> zeroinitializer
   ret <16 x i8> %splat.splat
@@ -17,9 +17,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <8 x i16> @vecusuc(i8* nocapture readonly %ptr) {
+define <8 x i16> @vecusuc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = zext i8 %0 to i16
   %splat.splatinsert = insertelement <8 x i16> undef, i16 %conv, i32 0
   %splat.splat = shufflevector <8 x i16> %splat.splatinsert, <8 x i16> undef, <8 x i32> zeroinitializer
@@ -33,9 +33,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x i32> @vecuiuc(i8* nocapture readonly %ptr) {
+define <4 x i32> @vecuiuc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = zext i8 %0 to i32
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %conv, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -49,9 +49,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x i64> @veculuc(i8* nocapture readonly %ptr) {
+define <2 x i64> @veculuc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = zext i8 %0 to i64
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %conv, i32 0
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -65,9 +65,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <16 x i8> @vecscuc(i8* nocapture readonly %ptr) {
+define <16 x i8> @vecscuc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %splat.splatinsert = insertelement <16 x i8> undef, i8 %0, i32 0
   %splat.splat = shufflevector <16 x i8> %splat.splatinsert, <16 x i8> undef, <16 x i32> zeroinitializer
   ret <16 x i8> %splat.splat
@@ -80,9 +80,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <8 x i16> @vecssuc(i8* nocapture readonly %ptr) {
+define <8 x i16> @vecssuc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = zext i8 %0 to i16
   %splat.splatinsert = insertelement <8 x i16> undef, i16 %conv, i32 0
   %splat.splat = shufflevector <8 x i16> %splat.splatinsert, <8 x i16> undef, <8 x i32> zeroinitializer
@@ -96,9 +96,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x i32> @vecsiuc(i8* nocapture readonly %ptr) {
+define <4 x i32> @vecsiuc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = zext i8 %0 to i32
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %conv, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -112,9 +112,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x i64> @vecsluc(i8* nocapture readonly %ptr) {
+define <2 x i64> @vecsluc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = zext i8 %0 to i64
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %conv, i32 0
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -128,9 +128,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x float> @vecfuc(i8* nocapture readonly %ptr) {
+define <4 x float> @vecfuc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = uitofp i8 %0 to float
   %splat.splatinsert = insertelement <4 x float> undef, float %conv, i32 0
   %splat.splat = shufflevector <4 x float> %splat.splatinsert, <4 x float> undef, <4 x i32> zeroinitializer
@@ -148,9 +148,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x double> @vecduc(i8* nocapture readonly %ptr) {
+define <2 x double> @vecduc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = uitofp i8 %0 to double
   %splat.splatinsert = insertelement <2 x double> undef, double %conv, i32 0
   %splat.splat = shufflevector <2 x double> %splat.splatinsert, <2 x double> undef, <2 x i32> zeroinitializer
@@ -166,9 +166,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <16 x i8> @vecucsc(i8* nocapture readonly %ptr) {
+define <16 x i8> @vecucsc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %splat.splatinsert = insertelement <16 x i8> undef, i8 %0, i32 0
   %splat.splat = shufflevector <16 x i8> %splat.splatinsert, <16 x i8> undef, <16 x i32> zeroinitializer
   ret <16 x i8> %splat.splat
@@ -181,9 +181,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x i32> @vecuisc(i8* nocapture readonly %ptr) {
+define <4 x i32> @vecuisc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = sext i8 %0 to i32
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %conv, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -199,9 +199,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x i64> @veculsc(i8* nocapture readonly %ptr) {
+define <2 x i64> @veculsc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = sext i8 %0 to i64
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %conv, i32 0
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -217,9 +217,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <16 x i8> @vecscsc(i8* nocapture readonly %ptr) {
+define <16 x i8> @vecscsc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %splat.splatinsert = insertelement <16 x i8> undef, i8 %0, i32 0
   %splat.splat = shufflevector <16 x i8> %splat.splatinsert, <16 x i8> undef, <16 x i32> zeroinitializer
   ret <16 x i8> %splat.splat
@@ -232,9 +232,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x i32> @vecsisc(i8* nocapture readonly %ptr) {
+define <4 x i32> @vecsisc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = sext i8 %0 to i32
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %conv, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -250,9 +250,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x i64> @vecslsc(i8* nocapture readonly %ptr) {
+define <2 x i64> @vecslsc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = sext i8 %0 to i64
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %conv, i32 0
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -268,9 +268,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x float> @vecfsc(i8* nocapture readonly %ptr) {
+define <4 x float> @vecfsc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = sitofp i8 %0 to float
   %splat.splatinsert = insertelement <4 x float> undef, float %conv, i32 0
   %splat.splat = shufflevector <4 x float> %splat.splatinsert, <4 x float> undef, <4 x i32> zeroinitializer
@@ -290,9 +290,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x double> @vecdsc(i8* nocapture readonly %ptr) {
+define <2 x double> @vecdsc(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = sitofp i8 %0 to double
   %splat.splatinsert = insertelement <2 x double> undef, double %conv, i32 0
   %splat.splat = shufflevector <2 x double> %splat.splatinsert, <2 x double> undef, <2 x i32> zeroinitializer
@@ -310,9 +310,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <16 x i8> @vecucus(i16* nocapture readonly %ptr) {
+define <16 x i8> @vecucus(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = trunc i16 %0 to i8
   %splat.splatinsert = insertelement <16 x i8> undef, i8 %conv, i32 0
   %splat.splat = shufflevector <16 x i8> %splat.splatinsert, <16 x i8> undef, <16 x i32> zeroinitializer
@@ -327,9 +327,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <8 x i16> @vecusus(i16* nocapture readonly %ptr) {
+define <8 x i16> @vecusus(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %splat.splatinsert = insertelement <8 x i16> undef, i16 %0, i32 0
   %splat.splat = shufflevector <8 x i16> %splat.splatinsert, <8 x i16> undef, <8 x i32> zeroinitializer
   ret <8 x i16> %splat.splat
@@ -342,9 +342,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x i32> @vecuius(i16* nocapture readonly %ptr) {
+define <4 x i32> @vecuius(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = zext i16 %0 to i32
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %conv, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -358,9 +358,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x i64> @veculus(i16* nocapture readonly %ptr) {
+define <2 x i64> @veculus(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = zext i16 %0 to i64
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %conv, i32 0
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -374,9 +374,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <16 x i8> @vecscus(i16* nocapture readonly %ptr) {
+define <16 x i8> @vecscus(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = trunc i16 %0 to i8
   %splat.splatinsert = insertelement <16 x i8> undef, i8 %conv, i32 0
   %splat.splat = shufflevector <16 x i8> %splat.splatinsert, <16 x i8> undef, <16 x i32> zeroinitializer
@@ -391,9 +391,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <8 x i16> @vecssus(i16* nocapture readonly %ptr) {
+define <8 x i16> @vecssus(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %splat.splatinsert = insertelement <8 x i16> undef, i16 %0, i32 0
   %splat.splat = shufflevector <8 x i16> %splat.splatinsert, <8 x i16> undef, <8 x i32> zeroinitializer
   ret <8 x i16> %splat.splat
@@ -406,9 +406,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x i32> @vecsius(i16* nocapture readonly %ptr) {
+define <4 x i32> @vecsius(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = zext i16 %0 to i32
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %conv, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -422,9 +422,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x i64> @vecslus(i16* nocapture readonly %ptr) {
+define <2 x i64> @vecslus(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = zext i16 %0 to i64
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %conv, i32 0
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -438,9 +438,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x float> @vecfus(i16* nocapture readonly %ptr) {
+define <4 x float> @vecfus(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = uitofp i16 %0 to float
   %splat.splatinsert = insertelement <4 x float> undef, float %conv, i32 0
   %splat.splat = shufflevector <4 x float> %splat.splatinsert, <4 x float> undef, <4 x i32> zeroinitializer
@@ -458,9 +458,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x double> @vecdus(i16* nocapture readonly %ptr) {
+define <2 x double> @vecdus(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = uitofp i16 %0 to double
   %splat.splatinsert = insertelement <2 x double> undef, double %conv, i32 0
   %splat.splat = shufflevector <2 x double> %splat.splatinsert, <2 x double> undef, <2 x i32> zeroinitializer
@@ -476,9 +476,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <16 x i8> @vecucss(i16* nocapture readonly %ptr) {
+define <16 x i8> @vecucss(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = trunc i16 %0 to i8
   %splat.splatinsert = insertelement <16 x i8> undef, i8 %conv, i32 0
   %splat.splat = shufflevector <16 x i8> %splat.splatinsert, <16 x i8> undef, <16 x i32> zeroinitializer
@@ -493,9 +493,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x i32> @vecuiss(i16* nocapture readonly %ptr) {
+define <4 x i32> @vecuiss(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = sext i16 %0 to i32
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %conv, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -511,9 +511,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x i64> @veculss(i16* nocapture readonly %ptr) {
+define <2 x i64> @veculss(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = sext i16 %0 to i64
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %conv, i32 0
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -529,9 +529,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <16 x i8> @vecscss(i16* nocapture readonly %ptr) {
+define <16 x i8> @vecscss(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = trunc i16 %0 to i8
   %splat.splatinsert = insertelement <16 x i8> undef, i8 %conv, i32 0
   %splat.splat = shufflevector <16 x i8> %splat.splatinsert, <16 x i8> undef, <16 x i32> zeroinitializer
@@ -546,9 +546,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x i32> @vecsiss(i16* nocapture readonly %ptr) {
+define <4 x i32> @vecsiss(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = sext i16 %0 to i32
   %splat.splatinsert = insertelement <4 x i32> undef, i32 %conv, i32 0
   %splat.splat = shufflevector <4 x i32> %splat.splatinsert, <4 x i32> undef, <4 x i32> zeroinitializer
@@ -564,9 +564,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x i64> @vecslss(i16* nocapture readonly %ptr) {
+define <2 x i64> @vecslss(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = sext i16 %0 to i64
   %splat.splatinsert = insertelement <2 x i64> undef, i64 %conv, i32 0
   %splat.splat = shufflevector <2 x i64> %splat.splatinsert, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -582,9 +582,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <4 x float> @vecfss(i16* nocapture readonly %ptr) {
+define <4 x float> @vecfss(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = sitofp i16 %0 to float
   %splat.splatinsert = insertelement <4 x float> undef, float %conv, i32 0
   %splat.splat = shufflevector <4 x float> %splat.splatinsert, <4 x float> undef, <4 x i32> zeroinitializer
@@ -604,9 +604,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define <2 x double> @vecdss(i16* nocapture readonly %ptr) {
+define <2 x double> @vecdss(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = sitofp i16 %0 to double
   %splat.splatinsert = insertelement <2 x double> undef, double %conv, i32 0
   %splat.splat = shufflevector <2 x double> %splat.splatinsert, <2 x double> undef, <2 x i32> zeroinitializer
@@ -624,10 +624,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storefsc(float %f, i8* nocapture %ptr) {
+define void @storefsc(float %f, ptr nocapture %ptr) {
 entry:
   %conv = fptosi float %f to i8
-  store i8 %conv, i8* %ptr, align 1
+  store i8 %conv, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storefsc
 ; CHECK: xscvdpsxws 0, 1
@@ -638,10 +638,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storedsc(double %d, i8* nocapture %ptr) {
+define void @storedsc(double %d, ptr nocapture %ptr) {
 entry:
   %conv = fptosi double %d to i8
-  store i8 %conv, i8* %ptr, align 1
+  store i8 %conv, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storedsc
 ; CHECK: xscvdpsxws 0, 1
@@ -652,10 +652,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevcsc0(<16 x i8> %v, i8* nocapture %ptr) {
+define void @storevcsc0(<16 x i8> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <16 x i8> %v, i32 0
-  store i8 %vecext, i8* %ptr, align 1
+  store i8 %vecext, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storevcsc0
 ; CHECK: vsldoi 2, 2, 2, 8
@@ -666,10 +666,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevcsc1(<16 x i8> %v, i8* nocapture %ptr) {
+define void @storevcsc1(<16 x i8> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <16 x i8> %v, i32 1
-  store i8 %vecext, i8* %ptr, align 1
+  store i8 %vecext, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storevcsc1
 ; CHECK: vsldoi 2, 2, 2, 7
@@ -680,10 +680,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevcsc2(<16 x i8> %v, i8* nocapture %ptr) {
+define void @storevcsc2(<16 x i8> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <16 x i8> %v, i32 2
-  store i8 %vecext, i8* %ptr, align 1
+  store i8 %vecext, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storevcsc2
 ; CHECK: vsldoi 2, 2, 2, 6
@@ -694,10 +694,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevcsc3(<16 x i8> %v, i8* nocapture %ptr) {
+define void @storevcsc3(<16 x i8> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <16 x i8> %v, i32 3
-  store i8 %vecext, i8* %ptr, align 1
+  store i8 %vecext, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storevcsc3
 ; CHECK: vsldoi 2, 2, 2, 5
@@ -708,10 +708,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevcsc4(<16 x i8> %v, i8* nocapture %ptr) {
+define void @storevcsc4(<16 x i8> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <16 x i8> %v, i32 4
-  store i8 %vecext, i8* %ptr, align 1
+  store i8 %vecext, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storevcsc4
 ; CHECK: vsldoi 2, 2, 2, 4
@@ -722,10 +722,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevcsc5(<16 x i8> %v, i8* nocapture %ptr) {
+define void @storevcsc5(<16 x i8> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <16 x i8> %v, i32 5
-  store i8 %vecext, i8* %ptr, align 1
+  store i8 %vecext, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storevcsc5
 ; CHECK: vsldoi 2, 2, 2, 3
@@ -736,10 +736,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevcsc6(<16 x i8> %v, i8* nocapture %ptr) {
+define void @storevcsc6(<16 x i8> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <16 x i8> %v, i32 6
-  store i8 %vecext, i8* %ptr, align 1
+  store i8 %vecext, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storevcsc6
 ; CHECK: vsldoi 2, 2, 2, 2
@@ -750,10 +750,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevcsc7(<16 x i8> %v, i8* nocapture %ptr) {
+define void @storevcsc7(<16 x i8> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <16 x i8> %v, i32 7
-  store i8 %vecext, i8* %ptr, align 1
+  store i8 %vecext, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storevcsc7
 ; CHECK: vsldoi 2, 2, 2, 1
@@ -763,10 +763,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevcsc8(<16 x i8> %v, i8* nocapture %ptr) {
+define void @storevcsc8(<16 x i8> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <16 x i8> %v, i32 8
-  store i8 %vecext, i8* %ptr, align 1
+  store i8 %vecext, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storevcsc8
 ; CHECK: stxsibx 34, 0, 5
@@ -776,10 +776,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevcsc9(<16 x i8> %v, i8* nocapture %ptr) {
+define void @storevcsc9(<16 x i8> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <16 x i8> %v, i32 9
-  store i8 %vecext, i8* %ptr, align 1
+  store i8 %vecext, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storevcsc9
 ; CHECK: vsldoi 2, 2, 2, 15
@@ -790,10 +790,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevcsc10(<16 x i8> %v, i8* nocapture %ptr) {
+define void @storevcsc10(<16 x i8> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <16 x i8> %v, i32 10
-  store i8 %vecext, i8* %ptr, align 1
+  store i8 %vecext, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storevcsc10
 ; CHECK: vsldoi 2, 2, 2, 14
@@ -804,10 +804,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevcsc11(<16 x i8> %v, i8* nocapture %ptr) {
+define void @storevcsc11(<16 x i8> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <16 x i8> %v, i32 11
-  store i8 %vecext, i8* %ptr, align 1
+  store i8 %vecext, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storevcsc11
 ; CHECK: vsldoi 2, 2, 2, 13
@@ -818,10 +818,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevcsc12(<16 x i8> %v, i8* nocapture %ptr) {
+define void @storevcsc12(<16 x i8> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <16 x i8> %v, i32 12
-  store i8 %vecext, i8* %ptr, align 1
+  store i8 %vecext, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storevcsc12
 ; CHECK: vsldoi 2, 2, 2, 12
@@ -832,10 +832,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevcsc13(<16 x i8> %v, i8* nocapture %ptr) {
+define void @storevcsc13(<16 x i8> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <16 x i8> %v, i32 13
-  store i8 %vecext, i8* %ptr, align 1
+  store i8 %vecext, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storevcsc13
 ; CHECK: vsldoi 2, 2, 2, 11
@@ -846,10 +846,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevcsc14(<16 x i8> %v, i8* nocapture %ptr) {
+define void @storevcsc14(<16 x i8> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <16 x i8> %v, i32 14
-  store i8 %vecext, i8* %ptr, align 1
+  store i8 %vecext, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storevcsc14
 ; CHECK: vsldoi 2, 2, 2, 10
@@ -860,10 +860,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevcsc15(<16 x i8> %v, i8* nocapture %ptr) {
+define void @storevcsc15(<16 x i8> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <16 x i8> %v, i32 15
-  store i8 %vecext, i8* %ptr, align 1
+  store i8 %vecext, ptr %ptr, align 1
   ret void
 ; CHECK-LABEL: storevcsc15
 ; CHECK: vsldoi 2, 2, 2, 9
@@ -874,10 +874,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storefss(float %f, i16* nocapture %ptr) {
+define void @storefss(float %f, ptr nocapture %ptr) {
 entry:
   %conv = fptosi float %f to i16
-  store i16 %conv, i16* %ptr, align 2
+  store i16 %conv, ptr %ptr, align 2
   ret void
 ; CHECK-LABEL: storefss
 ; CHECK: xscvdpsxws 0, 1
@@ -888,10 +888,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storedss(double %d, i16* nocapture %ptr) {
+define void @storedss(double %d, ptr nocapture %ptr) {
 entry:
   %conv = fptosi double %d to i16
-  store i16 %conv, i16* %ptr, align 2
+  store i16 %conv, ptr %ptr, align 2
   ret void
 ; CHECK-LABEL: storedss
 ; CHECK: xscvdpsxws 0, 1
@@ -902,10 +902,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevsss0(<8 x i16> %v, i16* nocapture %ptr) {
+define void @storevsss0(<8 x i16> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <8 x i16> %v, i32 0
-  store i16 %vecext, i16* %ptr, align 2
+  store i16 %vecext, ptr %ptr, align 2
   ret void
 ; CHECK-LABEL: storevsss0
 ; CHECK: vsldoi 2, 2, 2, 8
@@ -916,10 +916,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevsss1(<8 x i16> %v, i16* nocapture %ptr) {
+define void @storevsss1(<8 x i16> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <8 x i16> %v, i32 1
-  store i16 %vecext, i16* %ptr, align 2
+  store i16 %vecext, ptr %ptr, align 2
   ret void
 ; CHECK-LABEL: storevsss1
 ; CHECK: vsldoi 2, 2, 2, 6
@@ -930,10 +930,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevsss2(<8 x i16> %v, i16* nocapture %ptr) {
+define void @storevsss2(<8 x i16> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <8 x i16> %v, i32 2
-  store i16 %vecext, i16* %ptr, align 2
+  store i16 %vecext, ptr %ptr, align 2
   ret void
 ; CHECK-LABEL: storevsss2
 ; CHECK: vsldoi 2, 2, 2, 4
@@ -944,10 +944,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevsss3(<8 x i16> %v, i16* nocapture %ptr) {
+define void @storevsss3(<8 x i16> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <8 x i16> %v, i32 3
-  store i16 %vecext, i16* %ptr, align 2
+  store i16 %vecext, ptr %ptr, align 2
   ret void
 ; CHECK-LABEL: storevsss3
 ; CHECK: vsldoi 2, 2, 2, 2
@@ -957,10 +957,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevsss4(<8 x i16> %v, i16* nocapture %ptr) {
+define void @storevsss4(<8 x i16> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <8 x i16> %v, i32 4
-  store i16 %vecext, i16* %ptr, align 2
+  store i16 %vecext, ptr %ptr, align 2
   ret void
 ; CHECK-LABEL: storevsss4
 ; CHECK: stxsihx 34, 0, 5
@@ -970,10 +970,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevsss5(<8 x i16> %v, i16* nocapture %ptr) {
+define void @storevsss5(<8 x i16> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <8 x i16> %v, i32 5
-  store i16 %vecext, i16* %ptr, align 2
+  store i16 %vecext, ptr %ptr, align 2
   ret void
 ; CHECK-LABEL: storevsss5
 ; CHECK: vsldoi 2, 2, 2, 14
@@ -984,10 +984,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevsss6(<8 x i16> %v, i16* nocapture %ptr) {
+define void @storevsss6(<8 x i16> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <8 x i16> %v, i32 6
-  store i16 %vecext, i16* %ptr, align 2
+  store i16 %vecext, ptr %ptr, align 2
   ret void
 ; CHECK-LABEL: storevsss6
 ; CHECK: vsldoi 2, 2, 2, 12
@@ -998,10 +998,10 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind
-define void @storevsss7(<8 x i16> %v, i16* nocapture %ptr) {
+define void @storevsss7(<8 x i16> %v, ptr nocapture %ptr) {
 entry:
   %vecext = extractelement <8 x i16> %v, i32 7
-  store i16 %vecext, i16* %ptr, align 2
+  store i16 %vecext, ptr %ptr, align 2
   ret void
 ; CHECK-LABEL: storevsss7
 ; CHECK: vsldoi 2, 2, 2, 10
@@ -1012,9 +1012,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define float @convscf(i8* nocapture readonly %ptr) {
+define float @convscf(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = sitofp i8 %0 to float
   ret float %conv
 ; CHECK-LABEL: convscf
@@ -1028,9 +1028,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define float @convucf(i8* nocapture readonly %ptr) {
+define float @convucf(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = uitofp i8 %0 to float
   ret float %conv
 ; CHECK-LABEL: convucf
@@ -1042,9 +1042,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define double @convscd(i8* nocapture readonly %ptr) {
+define double @convscd(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = sitofp i8 %0 to double
 ; CHECK-LABEL: convscd
 ; CHECK: lxsibzx 34, 0, 3
@@ -1058,9 +1058,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define double @convucd(i8* nocapture readonly %ptr) {
+define double @convucd(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i8, i8* %ptr, align 1
+  %0 = load i8, ptr %ptr, align 1
   %conv = uitofp i8 %0 to double
   ret double %conv
 ; CHECK-LABEL: convucd
@@ -1072,9 +1072,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define float @convssf(i16* nocapture readonly %ptr) {
+define float @convssf(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = sitofp i16 %0 to float
   ret float %conv
 ; CHECK-LABEL: convssf
@@ -1088,9 +1088,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define float @convusf(i16* nocapture readonly %ptr) {
+define float @convusf(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = uitofp i16 %0 to float
   ret float %conv
 ; CHECK-LABEL: convusf
@@ -1102,9 +1102,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define double @convssd(i16* nocapture readonly %ptr) {
+define double @convssd(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = sitofp i16 %0 to double
   ret double %conv
 ; CHECK-LABEL: convssd
@@ -1118,9 +1118,9 @@ entry:
 }
 
 ; Function Attrs: norecurse nounwind readonly
-define double @convusd(i16* nocapture readonly %ptr) {
+define double @convusd(ptr nocapture readonly %ptr) {
 entry:
-  %0 = load i16, i16* %ptr, align 2
+  %0 = load i16, ptr %ptr, align 2
   %conv = uitofp i16 %0 to double
   ret double %conv
 ; CHECK-LABEL: convusd

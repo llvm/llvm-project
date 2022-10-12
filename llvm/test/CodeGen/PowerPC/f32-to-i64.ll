@@ -6,8 +6,8 @@ target triple = "powerpc-unknown-unknown"
 define i64 @testullf(float %arg) #0 {
 entry:
   %arg.addr = alloca float, align 4
-  store float %arg, float* %arg.addr, align 4
-  %0 = load float, float* %arg.addr, align 4
+  store float %arg, ptr %arg.addr, align 4
+  %0 = load float, ptr %arg.addr, align 4
   %conv = fptoui float %0 to i64
   ret i64 %conv
 

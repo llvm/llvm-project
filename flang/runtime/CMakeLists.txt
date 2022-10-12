@@ -76,6 +76,7 @@ add_flang_library(FortranRuntime
   assign.cpp
   buffer.cpp
   command.cpp
+  complex-powi.cpp
   complex-reduction.c
   copy.cpp
   character.cpp

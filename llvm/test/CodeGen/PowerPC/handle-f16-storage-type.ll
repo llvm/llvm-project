@@ -10,7 +10,7 @@
 
 ; Tests for various operations on half precison float. Much of the test is
 ; copied from test/CodeGen/X86/half.ll.
-define dso_local double @loadd(i16* nocapture readonly %a) local_unnamed_addr #0 {
+define dso_local double @loadd(ptr nocapture readonly %a) local_unnamed_addr #0 {
 ; P8-LABEL: loadd:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    mflr r0
@@ -46,15 +46,15 @@ define dso_local double @loadd(i16* nocapture readonly %a) local_unnamed_addr #0
 ; SOFT-NEXT:    mtlr r0
 ; SOFT-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds i16, i16* %a, i64 1
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %a, i64 1
+  %0 = load i16, ptr %arrayidx, align 2
   %1 = tail call double @llvm.convert.from.fp16.f64(i16 %0)
   ret double %1
 }
 
 declare double @llvm.convert.from.fp16.f64(i16)
 
-define dso_local float @loadf(i16* nocapture readonly %a) local_unnamed_addr #0 {
+define dso_local float @loadf(ptr nocapture readonly %a) local_unnamed_addr #0 {
 ; P8-LABEL: loadf:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    mflr r0
@@ -88,15 +88,15 @@ define dso_local float @loadf(i16* nocapture readonly %a) local_unnamed_addr #0 
 ; SOFT-NEXT:    mtlr r0
 ; SOFT-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds i16, i16* %a, i64 1
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %a, i64 1
+  %0 = load i16, ptr %arrayidx, align 2
   %1 = tail call float @llvm.convert.from.fp16.f32(i16 %0)
   ret float %1
 }
 
 declare float @llvm.convert.from.fp16.f32(i16)
 
-define dso_local void @stored(i16* nocapture %a, double %b) local_unnamed_addr #0 {
+define dso_local void @stored(ptr nocapture %a, double %b) local_unnamed_addr #0 {
 ; P8-LABEL: stored:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    mflr r0
@@ -142,13 +142,13 @@ define dso_local void @stored(i16* nocapture %a, double %b) local_unnamed_addr #
 ; SOFT-NEXT:    blr
 entry:
   %0 = tail call i16 @llvm.convert.to.fp16.f64(double %b)
-  store i16 %0, i16* %a, align 2
+  store i16 %0, ptr %a, align 2
   ret void
 }
 
 declare i16 @llvm.convert.to.fp16.f64(double)
 
-define dso_local void @storef(i16* nocapture %a, float %b) local_unnamed_addr #0 {
+define dso_local void @storef(ptr nocapture %a, float %b) local_unnamed_addr #0 {
 ; P8-LABEL: storef:
 ; P8:       # %bb.0: # %entry
 ; P8-NEXT:    mflr r0
@@ -194,12 +194,12 @@ define dso_local void @storef(i16* nocapture %a, float %b) local_unnamed_addr #0
 ; SOFT-NEXT:    blr
 entry:
   %0 = tail call i16 @llvm.convert.to.fp16.f32(float %b)
-  store i16 %0, i16* %a, align 2
+  store i16 %0, ptr %a, align 2
   ret void
 }
 
 declare i16 @llvm.convert.to.fp16.f32(float)
-define void @test_load_store(half* %in, half* %out) #0 {
+define void @test_load_store(ptr %in, ptr %out) #0 {
 ; P8-LABEL: test_load_store:
 ; P8:       # %bb.0:
 ; P8-NEXT:    lhz r3, 0(r3)
@@ -230,11 +230,11 @@ define void @test_load_store(half* %in, half* %out) #0 {
 ; SOFT-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
 ; SOFT-NEXT:    mtlr r0
 ; SOFT-NEXT:    blr
-  %val = load half, half* %in
-  store half %val, half* %out
+  %val = load half, ptr %in
+  store half %val, ptr %out
   ret void
 }
-define i16 @test_bitcast_from_half(half* %addr) #0 {
+define i16 @test_bitcast_from_half(ptr %addr) #0 {
 ; P8-LABEL: test_bitcast_from_half:
 ; P8:       # %bb.0:
 ; P8-NEXT:    lhz r3, 0(r3)
@@ -249,11 +249,11 @@ define i16 @test_bitcast_from_half(half* %addr) #0 {
 ; SOFT:       # %bb.0:
 ; SOFT-NEXT:    lhz r3, 0(r3)
 ; SOFT-NEXT:    blr
-  %val = load half, half* %addr
+  %val = load half, ptr %addr
   %val_int = bitcast half %val to i16
   ret i16 %val_int
 }
-define void @test_bitcast_to_half(half* %addr, i16 %in) #0 {
+define void @test_bitcast_to_half(ptr %addr, i16 %in) #0 {
 ; P8-LABEL: test_bitcast_to_half:
 ; P8:       # %bb.0:
 ; P8-NEXT:    sth r4, 0(r3)
@@ -269,10 +269,10 @@ define void @test_bitcast_to_half(half* %addr, i16 %in) #0 {
 ; SOFT-NEXT:    sth r4, 0(r3)
 ; SOFT-NEXT:    blr
   %val_fp = bitcast i16 %in to half
-  store half %val_fp, half* %addr
+  store half %val_fp, ptr %addr
   ret void
 }
-define float @test_extend32(half* %addr) #0 {
+define float @test_extend32(ptr %addr) #0 {
 ; P8-LABEL: test_extend32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
@@ -304,11 +304,11 @@ define float @test_extend32(half* %addr) #0 {
 ; SOFT-NEXT:    ld r0, 16(r1)
 ; SOFT-NEXT:    mtlr r0
 ; SOFT-NEXT:    blr
-  %val16 = load half, half* %addr
+  %val16 = load half, ptr %addr
   %val32 = fpext half %val16 to float
   ret float %val32
 }
-define double @test_extend64(half* %addr) #0 {
+define double @test_extend64(ptr %addr) #0 {
 ; P8-LABEL: test_extend64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
@@ -342,11 +342,11 @@ define double @test_extend64(half* %addr) #0 {
 ; SOFT-NEXT:    ld r0, 16(r1)
 ; SOFT-NEXT:    mtlr r0
 ; SOFT-NEXT:    blr
-  %val16 = load half, half* %addr
+  %val16 = load half, ptr %addr
   %val32 = fpext half %val16 to double
   ret double %val32
 }
-define void @test_trunc32(float %in, half* %addr) #0 {
+define void @test_trunc32(float %in, ptr %addr) #0 {
 ; P8-LABEL: test_trunc32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
@@ -391,10 +391,10 @@ define void @test_trunc32(float %in, half* %addr) #0 {
 ; SOFT-NEXT:    mtlr r0
 ; SOFT-NEXT:    blr
   %val16 = fptrunc float %in to half
-  store half %val16, half* %addr
+  store half %val16, ptr %addr
   ret void
 }
-define void @test_trunc64(double %in, half* %addr) #0 {
+define void @test_trunc64(double %in, ptr %addr) #0 {
 ; P8-LABEL: test_trunc64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
@@ -438,10 +438,10 @@ define void @test_trunc64(double %in, half* %addr) #0 {
 ; SOFT-NEXT:    mtlr r0
 ; SOFT-NEXT:    blr
   %val16 = fptrunc double %in to half
-  store half %val16, half* %addr
+  store half %val16, ptr %addr
   ret void
 }
-define i64 @test_fptosi_i64(half* %p) #0 {
+define i64 @test_fptosi_i64(ptr %p) #0 {
 ; P8-LABEL: test_fptosi_i64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
@@ -480,11 +480,11 @@ define i64 @test_fptosi_i64(half* %p) #0 {
 ; SOFT-NEXT:    ld r0, 16(r1)
 ; SOFT-NEXT:    mtlr r0
 ; SOFT-NEXT:    blr
-  %a = load half, half* %p, align 2
+  %a = load half, ptr %p, align 2
   %r = fptosi half %a to i64
   ret i64 %r
 }
-define void @test_sitofp_i64(i64 %a, half* %p) #0 {
+define void @test_sitofp_i64(i64 %a, ptr %p) #0 {
 ; P8-LABEL: test_sitofp_i64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
@@ -536,10 +536,10 @@ define void @test_sitofp_i64(i64 %a, half* %p) #0 {
 ; SOFT-NEXT:    mtlr r0
 ; SOFT-NEXT:    blr
   %r = sitofp i64 %a to half
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
-define i64 @test_fptoui_i64(half* %p) #0 {
+define i64 @test_fptoui_i64(ptr %p) #0 {
 ; P8-LABEL: test_fptoui_i64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
@@ -578,11 +578,11 @@ define i64 @test_fptoui_i64(half* %p) #0 {
 ; SOFT-NEXT:    ld r0, 16(r1)
 ; SOFT-NEXT:    mtlr r0
 ; SOFT-NEXT:    blr
-  %a = load half, half* %p, align 2
+  %a = load half, ptr %p, align 2
   %r = fptoui half %a to i64
   ret i64 %r
 }
-define void @test_uitofp_i64(i64 %a, half* %p) #0 {
+define void @test_uitofp_i64(i64 %a, ptr %p) #0 {
 ; P8-LABEL: test_uitofp_i64:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
@@ -633,10 +633,10 @@ define void @test_uitofp_i64(i64 %a, half* %p) #0 {
 ; SOFT-NEXT:    mtlr r0
 ; SOFT-NEXT:    blr
   %r = uitofp i64 %a to half
-  store half %r, half* %p
+  store half %r, ptr %p
   ret void
 }
-define <4 x float> @test_extend32_vec4(<4 x half>* %p) #0 {
+define <4 x float> @test_extend32_vec4(ptr %p) #0 {
 ; P8-LABEL: test_extend32_vec4:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
@@ -741,11 +741,11 @@ define <4 x float> @test_extend32_vec4(<4 x half>* %p) #0 {
 ; SOFT-NEXT:    mtlr r0
 ; SOFT-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
 ; SOFT-NEXT:    blr
-  %a = load <4 x half>, <4 x half>* %p, align 8
+  %a = load <4 x half>, ptr %p, align 8
   %b = fpext <4 x half> %a to <4 x float>
   ret <4 x float> %b
 }
-define <4 x double> @test_extend64_vec4(<4 x half>* %p) #0 {
+define <4 x double> @test_extend64_vec4(ptr %p) #0 {
 ; P8-LABEL: test_extend64_vec4:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
@@ -852,11 +852,11 @@ define <4 x double> @test_extend64_vec4(<4 x half>* %p) #0 {
 ; SOFT-NEXT:    mtlr r0
 ; SOFT-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
 ; SOFT-NEXT:    blr
-  %a = load <4 x half>, <4 x half>* %p, align 8
+  %a = load <4 x half>, ptr %p, align 8
   %b = fpext <4 x half> %a to <4 x double>
   ret <4 x double> %b
 }
-define void @test_trunc32_vec4(<4 x float> %a, <4 x half>* %p) #0 {
+define void @test_trunc32_vec4(<4 x float> %a, ptr %p) #0 {
 ; P8-LABEL: test_trunc32_vec4:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
@@ -995,10 +995,10 @@ define void @test_trunc32_vec4(<4 x float> %a, <4 x half>* %p) #0 {
 ; SOFT-NEXT:    ld r26, -48(r1) # 8-byte Folded Reload
 ; SOFT-NEXT:    blr
   %v = fptrunc <4 x float> %a to <4 x half>
-  store <4 x half> %v, <4 x half>* %p
+  store <4 x half> %v, ptr %p
   ret void
 }
-define void @test_trunc64_vec4(<4 x double> %a, <4 x half>* %p) #0 {
+define void @test_trunc64_vec4(<4 x double> %a, ptr %p) #0 {
 ; P8-LABEL: test_trunc64_vec4:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
@@ -1136,10 +1136,10 @@ define void @test_trunc64_vec4(<4 x double> %a, <4 x half>* %p) #0 {
 ; SOFT-NEXT:    ld r26, -48(r1) # 8-byte Folded Reload
 ; SOFT-NEXT:    blr
   %v = fptrunc <4 x double> %a to <4 x half>
-  store <4 x half> %v, <4 x half>* %p
+  store <4 x half> %v, ptr %p
   ret void
 }
-define float @test_sitofp_fadd_i32(i32 %a, half* %b) #0 {
+define float @test_sitofp_fadd_i32(i32 %a, ptr %b) #0 {
 ; P8-LABEL: test_sitofp_fadd_i32:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
@@ -1213,7 +1213,7 @@ define float @test_sitofp_fadd_i32(i32 %a, half* %b) #0 {
 ; SOFT-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
 ; SOFT-NEXT:    mtlr r0
 ; SOFT-NEXT:    blr
-  %tmp0 = load half, half* %b
+  %tmp0 = load half, ptr %b
   %tmp1 = sitofp i32 %a to half
   %tmp2 = fadd half %tmp0, %tmp1
   %tmp3 = fpext half %tmp2 to float
