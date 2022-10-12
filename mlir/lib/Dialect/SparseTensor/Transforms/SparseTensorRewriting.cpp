@@ -584,7 +584,7 @@ struct NewRewriter : public OpRewritePattern<NewOp> {
                                  {reader, indices}, EmitCInterface::On)
                       .getResult(0);
     SmallVector<Value, 4> indicesArray;
-    for (int64_t i = 0; i < rank; i++) {
+    for (uint64_t i = 0; i < rank; i++) {
       indicesArray.push_back(rewriter.create<memref::LoadOp>(
           loc, indices, constantIndex(rewriter, loc, i)));
     }

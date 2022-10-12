@@ -147,6 +147,10 @@ if (LIBCXX_CONFIGURE_IDE)
   endif()
 endif()
 
+if(NOT LIBCXX_INSTALL_LIBRARY)
+  set(exclude_from_all EXCLUDE_FROM_ALL)
+endif()
+
 if (LIBCXX_GENERATE_COVERAGE AND NOT LIBCXX_COVERAGE_LIBRARY)
   find_compiler_rt_library(profile LIBCXX_COVERAGE_LIBRARY)
 endif()
@@ -191,146 +195,139 @@ endfunction()
 split_list(LIBCXX_COMPILE_FLAGS)
 split_list(LIBCXX_LINK_FLAGS)
 
-#
 # Build the shared library.
-#
-add_library(cxx_shared SHARED $<$<NOT:$<BOOL:LIBCXX_ENABLE_SHARED>>:EXCLUDE_FROM_ALL> ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
-target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(cxx_shared PUBLIC cxx-headers
-                                 PRIVATE ${LIBCXX_LIBRARIES})
-set_target_properties(cxx_shared
-  PROPERTIES
-    COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
-    LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
-    OUTPUT_NAME   "${LIBCXX_SHARED_OUTPUT_NAME}"
-    VERSION       "${LIBCXX_LIBRARY_VERSION}"
-    SOVERSION     "${LIBCXX_ABI_VERSION}"
-    DEFINE_SYMBOL ""
-)
-cxx_add_common_build_flags(cxx_shared)
-cxx_set_common_defines(cxx_shared)
-
-if(ZOS)
-  add_custom_command(TARGET cxx_shared POST_BUILD
-    COMMAND
-      ${LIBCXX_SOURCE_DIR}/utils/zos_rename_dll_side_deck.sh
-      $<TARGET_LINKER_FILE_NAME:cxx_shared> $<TARGET_FILE_NAME:cxx_shared> "${LIBCXX_DLL_NAME}"
-    COMMENT "Rename dll name inside the side deck file"
-    WORKING_DIRECTORY $<TARGET_FILE_DIR:cxx_shared>
+if (LIBCXX_ENABLE_SHARED)
+  add_library(cxx_shared SHARED ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+  target_include_directories(cxx_shared PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  target_link_libraries(cxx_shared PUBLIC cxx-headers
+                                   PRIVATE ${LIBCXX_LIBRARIES})
+  set_target_properties(cxx_shared
+    PROPERTIES
+      COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
+      LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
+      OUTPUT_NAME   "${LIBCXX_SHARED_OUTPUT_NAME}"
+      VERSION       "${LIBCXX_LIBRARY_VERSION}"
+      SOVERSION     "${LIBCXX_ABI_VERSION}"
+      DEFINE_SYMBOL ""
   )
-endif()
+  cxx_add_common_build_flags(cxx_shared)
+  cxx_set_common_defines(cxx_shared)
 
-# Link against libc++abi
-if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
-  target_link_libraries(cxx_shared PRIVATE libcxx-abi-shared-objects)
-else()
-  target_link_libraries(cxx_shared PUBLIC libcxx-abi-shared)
-endif()
-
-# Maybe re-export symbols from libc++abi
-# In particular, we don't re-export the symbols if libc++abi is merged statically
-# into libc++ because in that case there's no dylib to re-export from.
-if (APPLE AND LIBCXX_CXX_ABI STREQUAL "libcxxabi"
-          AND NOT DEFINED LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS
-          AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
-  set(LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS ON)
-endif()
-
-if (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
-  target_link_libraries(cxx_shared PRIVATE
-    "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++unexp.exp"
-    "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi.exp"
-    "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
-    "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
-
-  target_link_libraries(cxx_shared PRIVATE $<TARGET_NAME_IF_EXISTS:cxxabi-reexports>)
-endif()
-
-# Generate a linker script in place of a libc++.so symlink.
-if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
-  set(link_libraries)
-
-  set(imported_libname "$<TARGET_PROPERTY:libcxx-abi-shared,IMPORTED_LIBNAME>")
-  set(output_name "$<TARGET_PROPERTY:libcxx-abi-shared,OUTPUT_NAME>")
-  string(APPEND link_libraries "${CMAKE_LINK_LIBRARY_FLAG}$<IF:$<BOOL:${imported_libname}>,${imported_libname},${output_name}>")
-
-  # TODO: Move to the same approach as above for the unwind library
-  if (LIBCXXABI_USE_LLVM_UNWINDER)
-    if (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY)
-      # libunwind is already included in libc++abi
-    elseif (TARGET unwind_shared OR HAVE_LIBUNWIND)
-      string(APPEND link_libraries " ${CMAKE_LINK_LIBRARY_FLAG}$<TARGET_PROPERTY:unwind_shared,OUTPUT_NAME>")
-    else()
-      string(APPEND link_libraries " ${CMAKE_LINK_LIBRARY_FLAG}unwind")
-    endif()
+  if(ZOS)
+    add_custom_command(TARGET cxx_shared POST_BUILD
+      COMMAND
+        ${LIBCXX_SOURCE_DIR}/utils/zos_rename_dll_side_deck.sh
+        $<TARGET_LINKER_FILE_NAME:cxx_shared> $<TARGET_FILE_NAME:cxx_shared> "${LIBCXX_DLL_NAME}"
+      COMMENT "Rename dll name inside the side deck file"
+      WORKING_DIRECTORY $<TARGET_FILE_DIR:cxx_shared>
+    )
   endif()
 
-  set(linker_script "INPUT($<TARGET_SONAME_FILE_NAME:cxx_shared> ${link_libraries})")
-  add_custom_command(TARGET cxx_shared POST_BUILD
-    COMMAND "${CMAKE_COMMAND}" -E remove "$<TARGET_LINKER_FILE:cxx_shared>"
-    COMMAND "${CMAKE_COMMAND}" -E echo "${linker_script}" > "$<TARGET_LINKER_FILE:cxx_shared>"
-    COMMENT "Generating linker script: '${linker_script}' as file $<TARGET_LINKER_FILE:cxx_shared>"
-    VERBATIM
-  )
-endif()
+  # Link against libc++abi
+  if (LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
+    target_link_libraries(cxx_shared PRIVATE libcxx-abi-shared-objects)
+  else()
+    target_link_libraries(cxx_shared PUBLIC libcxx-abi-shared)
+  endif()
 
-if (LIBCXX_ENABLE_SHARED)
+  # Maybe re-export symbols from libc++abi
+  # In particular, we don't re-export the symbols if libc++abi is merged statically
+  # into libc++ because in that case there's no dylib to re-export from.
+  if (APPLE AND LIBCXX_CXX_ABI STREQUAL "libcxxabi"
+            AND NOT DEFINED LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS
+            AND NOT LIBCXX_STATICALLY_LINK_ABI_IN_SHARED_LIBRARY)
+    set(LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS ON)
+  endif()
+
+  if (LIBCXX_OSX_REEXPORT_LIBCXXABI_SYMBOLS)
+    target_link_libraries(cxx_shared PRIVATE
+      "-Wl,-unexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++unexp.exp"
+      "-Wl,-reexported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/libc++abi.exp"
+      "-Wl,-force_symbols_not_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/notweak.exp"
+      "-Wl,-force_symbols_weak_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/weak.exp")
+
+    target_link_libraries(cxx_shared PRIVATE $<TARGET_NAME_IF_EXISTS:cxxabi-reexports>)
+  endif()
+
+  # Generate a linker script in place of a libc++.so symlink.
+  if (LIBCXX_ENABLE_ABI_LINKER_SCRIPT)
+    set(link_libraries)
+
+    set(imported_libname "$<TARGET_PROPERTY:libcxx-abi-shared,IMPORTED_LIBNAME>")
+    set(output_name "$<TARGET_PROPERTY:libcxx-abi-shared,OUTPUT_NAME>")
+    string(APPEND link_libraries "${CMAKE_LINK_LIBRARY_FLAG}$<IF:$<BOOL:${imported_libname}>,${imported_libname},${output_name}>")
+
+    # TODO: Move to the same approach as above for the unwind library
+    if (LIBCXXABI_USE_LLVM_UNWINDER)
+      if (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY)
+        # libunwind is already included in libc++abi
+      elseif (TARGET unwind_shared OR HAVE_LIBUNWIND)
+        string(APPEND link_libraries " ${CMAKE_LINK_LIBRARY_FLAG}$<TARGET_PROPERTY:unwind_shared,OUTPUT_NAME>")
+      else()
+        string(APPEND link_libraries " ${CMAKE_LINK_LIBRARY_FLAG}unwind")
+      endif()
+    endif()
+
+    set(linker_script "INPUT($<TARGET_SONAME_FILE_NAME:cxx_shared> ${link_libraries})")
+    add_custom_command(TARGET cxx_shared POST_BUILD
+      COMMAND "${CMAKE_COMMAND}" -E remove "$<TARGET_LINKER_FILE:cxx_shared>"
+      COMMAND "${CMAKE_COMMAND}" -E echo "${linker_script}" > "$<TARGET_LINKER_FILE:cxx_shared>"
+      COMMENT "Generating linker script: '${linker_script}' as file $<TARGET_LINKER_FILE:cxx_shared>"
+      VERBATIM
+    )
+  endif()
+
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_shared")
-endif()
-if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
-  # Since we most likely do not have a mt.exe replacement, disable the
-  # manifest bundling.  This allows a normal cmake invocation to pass which
-  # will attempt to use the manifest tool to generate the bundled manifest
-  set_target_properties(cxx_shared PROPERTIES
-                        APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
+  if(WIN32 AND NOT MINGW AND NOT "${CMAKE_HOST_SYSTEM_NAME}" STREQUAL "Windows")
+    # Since we most likely do not have a mt.exe replacement, disable the
+    # manifest bundling.  This allows a normal cmake invocation to pass which
+    # will attempt to use the manifest tool to generate the bundled manifest
+    set_target_properties(cxx_shared PROPERTIES
+                          APPEND_STRING PROPERTY LINK_FLAGS " /MANIFEST:NO")
+  endif()
 endif()
 
 set(CMAKE_STATIC_LIBRARY_PREFIX "lib")
 
-#
 # Build the static library.
-#
-add_library(cxx_static STATIC $<$<NOT:$<BOOL:LIBCXX_ENABLE_STATIC>>:EXCLUDE_FROM_ALL> ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
-target_include_directories(cxx_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(cxx_static PUBLIC cxx-headers
-                                 PRIVATE ${LIBCXX_LIBRARIES}
-                                 PRIVATE libcxx-abi-static)
-set_target_properties(cxx_static
-  PROPERTIES
-    COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
-    LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
-    OUTPUT_NAME   "${LIBCXX_STATIC_OUTPUT_NAME}"
-)
-cxx_add_common_build_flags(cxx_static)
-cxx_set_common_defines(cxx_static)
-
-if (LIBCXX_HERMETIC_STATIC_LIBRARY)
-  # If the hermetic library doesn't define the operator new/delete functions
-  # then its code shouldn't declare them with hidden visibility.  They might
-  # actually be provided by a shared library at link time.
-  if (LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
-    append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
-  endif()
-  target_compile_options(cxx_static PRIVATE ${CXX_STATIC_LIBRARY_FLAGS})
-  # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in __config_site
-  # too. Define it in the same way here, to avoid redefinition conflicts.
-  target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
-endif()
-
 if (LIBCXX_ENABLE_STATIC)
+  add_library(cxx_static STATIC ${exclude_from_all} ${LIBCXX_SOURCES} ${LIBCXX_HEADERS})
+  target_include_directories(cxx_static PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+  target_link_libraries(cxx_static PUBLIC cxx-headers
+                                   PRIVATE ${LIBCXX_LIBRARIES}
+                                   PRIVATE libcxx-abi-static)
+  set_target_properties(cxx_static
+    PROPERTIES
+      COMPILE_FLAGS "${LIBCXX_COMPILE_FLAGS}"
+      LINK_FLAGS    "${LIBCXX_LINK_FLAGS}"
+      OUTPUT_NAME   "${LIBCXX_STATIC_OUTPUT_NAME}"
+  )
+  cxx_add_common_build_flags(cxx_static)
+  cxx_set_common_defines(cxx_static)
+
+  if (LIBCXX_HERMETIC_STATIC_LIBRARY)
+    # If the hermetic library doesn't define the operator new/delete functions
+    # then its code shouldn't declare them with hidden visibility.  They might
+    # actually be provided by a shared library at link time.
+    if (LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS)
+      append_flags_if_supported(CXX_STATIC_LIBRARY_FLAGS -fvisibility-global-new-delete-hidden)
+    endif()
+    target_compile_options(cxx_static PRIVATE ${CXX_STATIC_LIBRARY_FLAGS})
+    # _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS can be defined in __config_site
+    # too. Define it in the same way here, to avoid redefinition conflicts.
+    target_compile_definitions(cxx_static PRIVATE _LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS=)
+  endif()
+
   list(APPEND LIBCXX_BUILD_TARGETS "cxx_static")
-endif()
-# Attempt to merge the libc++.a archive and the ABI library archive into one.
-if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
-  target_link_libraries(cxx_static PRIVATE libcxx-abi-static-objects)
+  # Attempt to merge the libc++.a archive and the ABI library archive into one.
+  if (LIBCXX_STATICALLY_LINK_ABI_IN_STATIC_LIBRARY)
+    target_link_libraries(cxx_static PRIVATE libcxx-abi-static-objects)
+  endif()
 endif()
 
 # Add a meta-target for both libraries.
 add_custom_target(cxx DEPENDS ${LIBCXX_BUILD_TARGETS})
 
-#
-# Build the experimental static library
-#
 set(LIBCXX_EXPERIMENTAL_SOURCES
   experimental/memory_resource.cpp
   format.cpp
