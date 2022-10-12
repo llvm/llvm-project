@@ -827,7 +827,7 @@ void LifetimeCheckPass::checkCtor(CallOp callOp,
   if (!allocaOp || owners.count(addr))
     return;
 
-  // TODO:
+  // TODO: zero init
   // 2.4.2 if the initialization is default initialization or zero
   // initialization, example:
   //
@@ -835,11 +835,11 @@ void LifetimeCheckPass::checkCtor(CallOp callOp,
   //    string_view p;
   //
   // both results in pset(p) == {null}
-  //
-  // FIXME: Implementation is simple, but only do it once we add the
-  // relevant testcase. Explode here since this a pretty vital one.
-  if (ctor->isDefaultConstructor())
-    llvm_unreachable("NYI");
+  if (ctor->isDefaultConstructor()) {
+    getPmap()[addr].clear();
+    getPmap()[addr].insert(State::getNullPtr());
+    pmapNullHist[addr] = callOp.getLoc();
+  }
 }
 
 void LifetimeCheckPass::checkCall(CallOp callOp) {
