@@ -227,13 +227,6 @@ define i32* @f3() {
   ret i32* bitcast (double* @g2 to i32*)
 }
 
-; CHECK-LABEL: llvm.func @f4() -> !llvm.ptr<i32>
-define i32* @f4() {
-; CHECK: %[[b:[0-9]+]] = llvm.mlir.null : !llvm.ptr<i32>
-; CHECK: llvm.return %[[b]] : !llvm.ptr<i32>
-  ret i32* bitcast (double* null to i32*)
-}
-
 ; CHECK-LABEL: llvm.func @f5
 define void @f5(i32 %d) {
 ; FIXME: icmp should return i1.
@@ -261,39 +254,6 @@ define void @f6(void (i16) *%fn) {
 ; CHECK: %[[c:[0-9]+]] = llvm.mlir.constant(0 : i16) : i16
 ; CHECK: llvm.call %arg0(%[[c]])
   call void %fn(i16 0)
-  ret void
-}
-
-; CHECK-LABEL: llvm.func @FPArithmetic(%arg0: f32, %arg1: f32, %arg2: f64, %arg3: f64)
-define void @FPArithmetic(float %a, float %b, double %c, double %d) {
-  ; CHECK: %[[a1:[0-9]+]] = llvm.mlir.constant(3.030000e+01 : f64) : f64
-  ; CHECK: %[[a2:[0-9]+]] = llvm.mlir.constant(3.030000e+01 : f32) : f32
-  ; CHECK: %[[a3:[0-9]+]] = llvm.fadd %[[a2]], %arg0 : f32
-  %1 = fadd float 0x403E4CCCC0000000, %a
-  ; CHECK: %[[a4:[0-9]+]] = llvm.fadd %arg0, %arg1 : f32
-  %2 = fadd float %a, %b
-  ; CHECK: %[[a5:[0-9]+]] = llvm.fadd %[[a1]], %arg2 : f64
-  %3 = fadd double 3.030000e+01, %c
-  ; CHECK: %[[a6:[0-9]+]] = llvm.fsub %arg0, %arg1 : f32
-  %4 = fsub float %a, %b
-  ; CHECK: %[[a7:[0-9]+]] = llvm.fsub %arg2, %arg3 : f64
-  %5 = fsub double %c, %d
-  ; CHECK: %[[a8:[0-9]+]] = llvm.fmul %arg0, %arg1 : f32
-  %6 = fmul float %a, %b
-  ; CHECK: %[[a9:[0-9]+]] = llvm.fmul %arg2, %arg3 : f64
-  %7 = fmul double %c, %d
-  ; CHECK: %[[a10:[0-9]+]] = llvm.fdiv %arg0, %arg1 : f32
-  %8 = fdiv float %a, %b
-  ; CHECK: %[[a12:[0-9]+]] = llvm.fdiv %arg2, %arg3 : f64
-  %9 = fdiv double %c, %d
-  ; CHECK: %[[a11:[0-9]+]] = llvm.frem %arg0, %arg1 : f32
-  %10 = frem float %a, %b
-  ; CHECK: %[[a13:[0-9]+]] = llvm.frem %arg2, %arg3 : f64
-  %11 = frem double %c, %d
-  ; CHECK: %{{.+}} = llvm.fneg %{{.+}} : f32
-  %12 = fneg float %a
-  ; CHECK: %{{.+}} = llvm.fneg %{{.+}} : f64
-  %13 = fneg double %c
   ret void
 }
 
@@ -438,17 +398,6 @@ define i32 @useFreezeOp(i32 %x) {
   ;CHECK: %{{[0-9]+}} = llvm.freeze %{{[0-9]+}} : i8
   %3 = freeze i8 %2
   %poison = add nsw i1 0, undef
-  ret i32 0
-}
-
-;CHECK-LABEL: @useFenceInst
-define i32 @useFenceInst() {
-  ;CHECK: llvm.fence syncscope("agent") seq_cst
-  fence syncscope("agent") seq_cst
-  ;CHECK: llvm.fence release
-  fence release
-  ;CHECK: llvm.fence seq_cst
-  fence syncscope("") seq_cst
   ret i32 0
 }
 
@@ -598,43 +547,6 @@ define <4 x half> @shuffle_vec(<4 x half>* %arg0, <4 x half>* %arg1) {
   ; CHECK: llvm.shufflevector %[[V0]], %[[V1]] [2, 3, -1, -1] : vector<4xf16>
   %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
   ret <4 x half> %shuffle
-}
-
-; ExtractElement
-; CHECK-LABEL: llvm.func @extract_element
-define half @extract_element(<4 x half>* %vec, i32 %idx) {
-  ; CHECK: %[[V0:.+]] = llvm.load %{{.+}} : !llvm.ptr<vector<4xf16>>
-  %val0 = load <4 x half>, <4 x half>* %vec
-  ; CHECK: %[[V1:.+]] = llvm.extractelement %[[V0]][%{{.+}} : i32] : vector<4xf16>
-  %r = extractelement <4 x half> %val0, i32 %idx
-  ; CHECK: llvm.return %[[V1]]
-  ret half %r
-}
-
-; InsertElement
-; CHECK-LABEL: llvm.func @insert_element
-define <4 x half> @insert_element(<4 x half>* %vec, half %v, i32 %idx) {
-  ; CHECK: %[[V0:.+]] = llvm.load %{{.+}} : !llvm.ptr<vector<4xf16>>
-  %val0 = load <4 x half>, <4 x half>* %vec
-  ; CHECK: %[[V1:.+]] = llvm.insertelement %{{.+}}, %[[V0]][%{{.+}} : i32] : vector<4xf16>
-  %r = insertelement <4 x half> %val0, half %v, i32 %idx
-  ; CHECK: llvm.return %[[V1]]
-  ret <4 x half> %r
-}
-
-; Select
-; CHECK-LABEL: llvm.func @select_inst
-define void @select_inst(i32 %arg0, i32 %arg1, i1 %pred) {
-  ; CHECK: %{{.+}} = llvm.select %{{.+}}, %{{.+}}, %{{.+}} : i1, i32
-  %1 = select i1 %pred, i32 %arg0, i32 %arg1
-  ret void
-}
-
-; Unreachable
-; CHECK-LABEL: llvm.func @unreachable_inst
-define void @unreachable_inst() {
-  ; CHECK: llvm.unreachable
-  unreachable
 }
 
 ; Varadic function definition
