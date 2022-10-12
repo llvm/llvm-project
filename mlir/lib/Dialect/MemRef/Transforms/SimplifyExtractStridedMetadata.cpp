@@ -658,6 +658,72 @@ class RewriteExtractAlignedPointerAsIndexOfViewLikeOp
   }
 };
 
+/// Replace `base, offset, sizes, strides =
+///              extract_strided_metadata(
+///                 reinterpret_cast(src, srcOffset, srcSizes, srcStrides))`
+/// With
+/// ```
+/// base, ... = extract_strided_metadata(src)
+/// offset = srcOffset
+/// sizes = srcSizes
+/// strides = srcStrides
+/// ```
+///
+/// In other words, consume the `reinterpret_cast` and apply its effects
+/// on the offset, sizes, and strides.
+class ExtractStridedMetadataOpReinterpretCastFolder
+    : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult
+  matchAndRewrite(memref::ExtractStridedMetadataOp extractStridedMetadataOp,
+                  PatternRewriter &rewriter) const override {
+    auto reinterpretCastOp = extractStridedMetadataOp.getSource()
+                                 .getDefiningOp<memref::ReinterpretCastOp>();
+    if (!reinterpretCastOp)
+      return failure();
+
+    Location loc = extractStridedMetadataOp.getLoc();
+    // Check if the source is suitable for extract_strided_metadata.
+    SmallVector<Type> inferredReturnTypes;
+    if (failed(extractStridedMetadataOp.inferReturnTypes(
+            rewriter.getContext(), loc, {reinterpretCastOp.getSource()},
+            /*attributes=*/{}, /*regions=*/{}, inferredReturnTypes)))
+      return rewriter.notifyMatchFailure(
+          reinterpretCastOp, "reinterpret_cast source's type is incompatible");
+
+    auto memrefType =
+        reinterpretCastOp.getResult().getType().cast<MemRefType>();
+    unsigned rank = memrefType.getRank();
+    SmallVector<OpFoldResult> results;
+    results.resize_for_overwrite(rank * 2 + 2);
+
+    auto newExtractStridedMetadata =
+        rewriter.create<memref::ExtractStridedMetadataOp>(
+            loc, reinterpretCastOp.getSource());
+
+    // Register the base_buffer.
+    results[0] = newExtractStridedMetadata.getBaseBuffer();
+
+    // Register the new offset.
+    results[1] = getValueOrCreateConstantIndexOp(
+        rewriter, loc, reinterpretCastOp.getMixedOffsets()[0]);
+
+    const unsigned sizeStartIdx = 2;
+    const unsigned strideStartIdx = sizeStartIdx + rank;
+
+    SmallVector<OpFoldResult> sizes = reinterpretCastOp.getMixedSizes();
+    SmallVector<OpFoldResult> strides = reinterpretCastOp.getMixedStrides();
+    for (unsigned i = 0; i < rank; ++i) {
+      results[sizeStartIdx + i] = sizes[i];
+      results[strideStartIdx + i] = strides[i];
+    }
+    rewriter.replaceOp(extractStridedMetadataOp,
+                       getValueOrCreateConstantIndexOp(rewriter, loc, results));
+    return success();
+  }
+};
+
 /// Replace `base, offset =
 ///            extract_strided_metadata(extract_strided_metadata(src)#0)`
 /// With
@@ -698,6 +764,7 @@ void memref::populateSimplifyExtractStridedMetadataOpPatterns(
            ExtractStridedMetadataOpAllocFolder<memref::AllocOp>,
            ExtractStridedMetadataOpAllocFolder<memref::AllocaOp>,
            RewriteExtractAlignedPointerAsIndexOfViewLikeOp,
+           ExtractStridedMetadataOpReinterpretCastFolder,
            ExtractStridedMetadataOpExtractStridedMetadataFolder>(
           patterns.getContext());
 }
