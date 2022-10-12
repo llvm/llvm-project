@@ -454,24 +454,22 @@ define <vscale x 16 x double> @vpload_nxv16f64(<vscale x 16 x double>* %ptr, <vs
 ; CHECK-LABEL: vpload_nxv16f64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v8, v0
-; CHECK-NEXT:    li a3, 0
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    srli a5, a2, 3
-; CHECK-NEXT:    vsetvli a4, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    sub a4, a1, a2
-; CHECK-NEXT:    vslidedown.vx v0, v0, a5
-; CHECK-NEXT:    bltu a1, a4, .LBB37_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a3, a4
-; CHECK-NEXT:  .LBB37_2:
+; CHECK-NEXT:    sub a3, a1, a2
+; CHECK-NEXT:    sltu a4, a1, a3
+; CHECK-NEXT:    addi a4, a4, -1
+; CHECK-NEXT:    and a3, a4, a3
+; CHECK-NEXT:    srli a4, a2, 3
+; CHECK-NEXT:    vsetvli a5, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v0, a4
 ; CHECK-NEXT:    slli a4, a2, 3
 ; CHECK-NEXT:    add a4, a0, a4
 ; CHECK-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
 ; CHECK-NEXT:    vle64.v v16, (a4), v0.t
-; CHECK-NEXT:    bltu a1, a2, .LBB37_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    bltu a1, a2, .LBB37_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a1, a2
-; CHECK-NEXT:  .LBB37_4:
+; CHECK-NEXT:  .LBB37_2:
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
@@ -502,40 +500,36 @@ define <vscale x 16 x double> @vpload_nxv17f64(<vscale x 17 x double>* %ptr, <vs
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a4, a5
 ; CHECK-NEXT:  .LBB38_2:
-; CHECK-NEXT:    sub a7, a4, a3
-; CHECK-NEXT:    li a6, 0
-; CHECK-NEXT:    bltu a4, a7, .LBB38_4
-; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    mv a6, a7
-; CHECK-NEXT:  .LBB38_4:
-; CHECK-NEXT:    li a7, 0
-; CHECK-NEXT:    srli t0, a3, 3
-; CHECK-NEXT:    vsetvli t1, zero, e8, mf4, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v8, t0
-; CHECK-NEXT:    slli t0, a3, 3
-; CHECK-NEXT:    add t0, a0, t0
+; CHECK-NEXT:    sub a6, a4, a3
+; CHECK-NEXT:    sltu a7, a4, a6
+; CHECK-NEXT:    addi a7, a7, -1
+; CHECK-NEXT:    and a6, a7, a6
+; CHECK-NEXT:    srli a7, a3, 3
+; CHECK-NEXT:    vsetvli t0, zero, e8, mf4, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v8, a7
+; CHECK-NEXT:    slli a7, a3, 3
+; CHECK-NEXT:    add a7, a0, a7
 ; CHECK-NEXT:    vsetvli zero, a6, e64, m8, ta, ma
-; CHECK-NEXT:    vle64.v v16, (t0), v0.t
-; CHECK-NEXT:    srli a6, a3, 2
-; CHECK-NEXT:    sub t0, a2, a5
+; CHECK-NEXT:    vle64.v v16, (a7), v0.t
+; CHECK-NEXT:    sub a5, a2, a5
+; CHECK-NEXT:    sltu a2, a2, a5
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    and a2, a2, a5
+; CHECK-NEXT:    bltu a2, a3, .LBB38_4
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    mv a2, a3
+; CHECK-NEXT:  .LBB38_4:
+; CHECK-NEXT:    srli a5, a3, 2
+; CHECK-NEXT:    vsetvli a6, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v8, a5
 ; CHECK-NEXT:    slli a5, a3, 4
-; CHECK-NEXT:    bltu a2, t0, .LBB38_6
+; CHECK-NEXT:    add a5, a0, a5
+; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
+; CHECK-NEXT:    vle64.v v24, (a5), v0.t
+; CHECK-NEXT:    bltu a4, a3, .LBB38_6
 ; CHECK-NEXT:  # %bb.5:
-; CHECK-NEXT:    mv a7, t0
-; CHECK-NEXT:  .LBB38_6:
-; CHECK-NEXT:    vsetvli a2, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslidedown.vx v0, v8, a6
-; CHECK-NEXT:    add a2, a0, a5
-; CHECK-NEXT:    bltu a7, a3, .LBB38_8
-; CHECK-NEXT:  # %bb.7:
-; CHECK-NEXT:    mv a7, a3
-; CHECK-NEXT:  .LBB38_8:
-; CHECK-NEXT:    vsetvli zero, a7, e64, m8, ta, ma
-; CHECK-NEXT:    vle64.v v24, (a2), v0.t
-; CHECK-NEXT:    bltu a4, a3, .LBB38_10
-; CHECK-NEXT:  # %bb.9:
 ; CHECK-NEXT:    mv a4, a3
-; CHECK-NEXT:  .LBB38_10:
+; CHECK-NEXT:  .LBB38_6:
 ; CHECK-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
