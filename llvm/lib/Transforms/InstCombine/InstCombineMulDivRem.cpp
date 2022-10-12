@@ -862,7 +862,11 @@ static Instruction *foldIDivShl(BinaryOperator &I,
     if (!IsSigned && Shl0->hasNoUnsignedWrap() && Shl1->hasNoUnsignedWrap())
       Ret = BinaryOperator::CreateUDiv(X, Y);
 
-    // TODO: Handle sdiv.
+    // For signed div, we need 'nsw' on both shifts + 'nuw' on the divisor.
+    // (X << Z) / (Y << Z) --> X / Y
+    if (IsSigned && Shl0->hasNoSignedWrap() && Shl1->hasNoSignedWrap() &&
+        Shl1->hasNoUnsignedWrap())
+      Ret = BinaryOperator::CreateSDiv(X, Y);
   }
 
   if (!Ret)
