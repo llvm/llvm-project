@@ -6313,7 +6313,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   // epilogue.
   if (IsWin64) {
     for (unsigned I = 0, E = Ins.size(); I != E; ++I) {
-      if (Ins[I].Flags.isInReg()) {
+      if (Ins[I].Flags.isInReg() && Ins[I].Flags.isSRet()) {
         assert(!FuncInfo->getSRetReturnReg());
 
         MVT PtrTy = getPointerTy(DAG.getDataLayout());
