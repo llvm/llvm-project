@@ -16,19 +16,18 @@ def Transform_Dialect : Dialect {
   let description = [{
     ## Disclaimer
 
-    ** Proceed with care: not ready for general use. **
+    **This dialect is actively developed and may change frequently.**
 
-    This dialect is evolving rapidly and may change on a very short notice. To
-    decrease the maintenance burden and churn, only a few in-tree use cases are
-    currently supported in the main tree:
+    To decrease the maintenance burden and churn, please post a description of
+    the intended use case on the MLIR forum. A few in-tree use cases are
+    currently supported:
 
       - high-level transformations on "structured ops" (i.e. ops that operate on
         chunks of data in a way that can be decomposed into operations on
         smaller chunks of data and control flow) in Linalg, Tensor and Vector
-        dialects.
-
-    *Please post a description of the intended use case on the MLIR forum and
-    wait for confirmation.*
+        dialects;
+      - loop transformations in the SCF dialect.
+      
 
     ## Overview
 
@@ -78,6 +77,18 @@ def Transform_Dialect : Dialect {
     transformations one by one and fails if any of them fails. Such ops are
     expected to have the `PossibleTopLevelTransformOpTrait` and may be used
     without arguments.
+
+    A program transformation expressed using the Transform dialect can be
+    programmatically triggered by calling:
+
+    ```c++
+    LogicalResult transform::applyTransforms(Operation *payloadRoot,
+                                             TransformOpInterface transform,
+                                             const TransformOptions &options);
+    ```
+
+    that applies the transformations specified by the top-level `transform` to
+    payload IR contained in `payloadRoot`.
 
     ## Dialect Extension Mechanism
 

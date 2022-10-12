@@ -12,6 +12,7 @@
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "transform-dialect"
 #define DEBUG_PRINT_AFTER_ALL "transform-dialect-print-top-level-after-all"
@@ -25,14 +26,15 @@ using namespace mlir;
 
 constexpr const Value transform::TransformState::kTopLevelValue;
 
-transform::TransformState::TransformState(Region &region, Operation *root,
+transform::TransformState::TransformState(Region *region,
+                                          Operation *payloadRoot,
                                           const TransformOptions &options)
-    : topLevel(root), options(options) {
-  auto result = mappings.try_emplace(&region);
+    : topLevel(payloadRoot), options(options) {
+  auto result = mappings.try_emplace(region);
   assert(result.second && "the region scope is already present");
   (void)result;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  regionStack.push_back(&region);
+  regionStack.push_back(region);
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 }
 
@@ -445,6 +447,27 @@ void transform::modifiesPayload(
 void transform::onlyReadsPayload(
     SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
   effects.emplace_back(MemoryEffects::Read::get(), PayloadIRResource::get());
+}
+
+//===----------------------------------------------------------------------===//
+// Entry point.
+//===----------------------------------------------------------------------===//
+
+LogicalResult transform::applyTransforms(Operation *payloadRoot,
+                                         TransformOpInterface transform,
+                                         const TransformOptions &options) {
+#ifndef NDEBUG
+  if (!transform->hasTrait<PossibleTopLevelTransformOpTrait>() ||
+      transform->getNumOperands() != 0) {
+    transform->emitError()
+        << "expected transform to start at the top-level transform op";
+    llvm::report_fatal_error("could not run transforms",
+                             /*gen_crash_diag=*/false);
+  }
+#endif // NDEBUG
+
+  TransformState state(transform->getParentRegion(), payloadRoot, options);
+  return state.applyTransform(transform).checkAndReport();
 }
 
 //===----------------------------------------------------------------------===//
