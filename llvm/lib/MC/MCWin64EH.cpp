@@ -377,6 +377,9 @@ static uint32_t ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
     case Win64EH::UOP_ClearUnwoundToCall:
       Count += 1;
       break;
+    case Win64EH::UOP_PACSignReturnAddress:
+      Count += 1;
+      break;
     }
   }
   return Count;
@@ -541,6 +544,10 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer,
     break;
   case Win64EH::UOP_ClearUnwoundToCall:
     b = 0xEC;
+    streamer.emitInt8(b);
+    break;
+  case Win64EH::UOP_PACSignReturnAddress:
+    b = 0xFC;
     streamer.emitInt8(b);
     break;
   }
