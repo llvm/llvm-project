@@ -4266,6 +4266,10 @@ gentbl_cc_library(
             ["-gen-enum-from-llvmir-conversions"],
             "include/mlir/Dialect/LLVMIR/LLVMConversionEnumsFromLLVM.inc",
         ),
+        (
+            ["-gen-op-from-llvmir-conversions"],
+            "include/mlir/Dialect/LLVMIR/LLVMOpFromLLVMIRConversions.inc",
+        ),
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/LLVMIR/LLVMOps.td",
