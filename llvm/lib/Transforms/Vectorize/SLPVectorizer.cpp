@@ -321,36 +321,51 @@ static Optional<unsigned> getInsertIndex(const Value *InsertInst,
 /// Checks if the given value is actually an undefined constant vector.
 /// Also, if the\p ShuffleMask is not empty, tries to check if the non-masked
 /// elements actually mask the insertelement buildvector, if any.
-static bool isUndefVector(const Value *V, ArrayRef<int> ShuffleMask = None) {
-  if (isa<UndefValue>(V))
-    return true;
+template <bool IsPoisonOnly = false>
+static SmallBitVector isUndefVector(const Value *V,
+                                    ArrayRef<int> ShuffleMask = None) {
+  SmallBitVector Res(ShuffleMask.empty() ? 1 : ShuffleMask.size(), true);
+  using T =
+      typename std::conditional<IsPoisonOnly, PoisonValue, UndefValue>::type;
+  if (isa<T>(V))
+    return Res;
   auto *VecTy = dyn_cast<FixedVectorType>(V->getType());
   if (!VecTy)
-    return false;
+    return Res.reset();
   auto *C = dyn_cast<Constant>(V);
   if (!C) {
     if (!ShuffleMask.empty()) {
       const Value *Base = V;
       while (auto *II = dyn_cast<InsertElementInst>(Base)) {
+        if (isa<T>(II->getOperand(1)))
+          continue;
         Base = II->getOperand(0);
         Optional<unsigned> Idx = getInsertIndex(II);
         if (!Idx)
           continue;
         if (*Idx < ShuffleMask.size() && ShuffleMask[*Idx] == UndefMaskElem)
-          return false;
+          Res.reset(*Idx);
       }
-      return V != Base && isUndefVector(Base);
+      // TODO: Add analysis for shuffles here too.
+      if (V == Base) {
+        Res.reset();
+      } else {
+        SmallVector<int> SubMask(ShuffleMask.size(), UndefMaskElem);
+        Res &= isUndefVector<IsPoisonOnly>(Base, SubMask);
+      }
+    } else {
+      Res.reset();
     }
-    return false;
+    return Res;
   }
   for (unsigned I = 0, E = VecTy->getNumElements(); I != E; ++I) {
     if (Constant *Elem = C->getAggregateElement(I))
-      if (!isa<UndefValue>(Elem) &&
+      if (!isa<T>(Elem) &&
           (ShuffleMask.empty() ||
            (I < ShuffleMask.size() && ShuffleMask[I] == UndefMaskElem)))
-        return false;
+        Res.reset(I);
   }
-  return true;
+  return Res;
 }
 
 /// Checks if the vector of instructions can be represented as a shuffle, like:
@@ -420,7 +435,7 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask) {
       return None;
     auto *Vec = EI->getVectorOperand();
     // We can extractelement from undef or poison vector.
-    if (isUndefVector(Vec))
+    if (isUndefVector(Vec).all())
       continue;
     // All vector operands must have the same number of vector elements.
     if (cast<FixedVectorType>(Vec->getType())->getNumElements() != Size)
@@ -1196,7 +1211,7 @@ public:
           // Undefs are always profitable for extractelements.
           if (!Ex2Idx)
             return LookAheadHeuristics::ScoreConsecutiveExtracts;
-          if (isUndefVector(EV2) && EV2->getType() == EV1->getType())
+          if (isUndefVector(EV2).all() && EV2->getType() == EV1->getType())
             return LookAheadHeuristics::ScoreConsecutiveExtracts;
           if (EV2 == EV1) {
             int Idx1 = Ex1Idx->getZExtValue();
@@ -4612,7 +4627,7 @@ static std::pair<size_t, size_t> generateKeySubkey(
     if (isa<ExtractElementInst, UndefValue>(V))
       Key = hash_value(Value::UndefValueVal + 1);
     if (auto *EI = dyn_cast<ExtractElementInst>(V)) {
-      if (!isUndefVector(EI->getVectorOperand()) &&
+      if (!isUndefVector(EI->getVectorOperand()).all() &&
           !isa<UndefValue>(EI->getIndexOperand()))
         SubKey = hash_value(EI->getVectorOperand());
     }
@@ -6425,8 +6440,9 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
       // initial vector or inserting a subvector.
       // TODO: Implement the analysis of the FirstInsert->getOperand(0)
       // subvector of ActualVecTy.
-      if (!isUndefVector(FirstInsert->getOperand(0), InsertMask) &&
-          NumScalars != NumElts && !IsWholeSubvector) {
+      SmallBitVector InMask =
+          isUndefVector(FirstInsert->getOperand(0), InsertMask);
+      if (!InMask.all() && NumScalars != NumElts && !IsWholeSubvector) {
         if (InsertVecSz != VecSz) {
           auto *ActualVecTy =
               FixedVectorType::get(SrcVecTy->getElementType(), VecSz);
@@ -6435,13 +6451,13 @@ InstructionCost BoUpSLP::getEntryCost(const TreeEntry *E,
                                   CostKind, OffsetBeg - Offset, InsertVecTy);
         } else {
           for (unsigned I = 0, End = OffsetBeg - Offset; I < End; ++I)
-            Mask[I] = I;
+            Mask[I] = InMask.test(I) ? UndefMaskElem : I;
           for (unsigned I = OffsetBeg - Offset, End = OffsetEnd - Offset;
                I <= End; ++I)
             if (Mask[I] != UndefMaskElem)
               Mask[I] = I + VecSz;
           for (unsigned I = OffsetEnd + 1 - Offset; I < VecSz; ++I)
-            Mask[I] = I;
+            Mask[I] = InMask.test(I) ? UndefMaskElem : I;
           Cost += TTI->getShuffleCost(TTI::SK_PermuteTwoSrc, InsertVecTy, Mask);
         }
       }
@@ -7117,14 +7133,15 @@ static T *performExtractsShuffleAction(
   SmallVector<int> Mask(ShuffleMask.begin()->second);
   auto VMIt = std::next(ShuffleMask.begin());
   T *Prev = nullptr;
-  bool IsBaseNotUndef = !isUndefVector(Base, Mask);
-  if (IsBaseNotUndef) {
+  SmallBitVector IsBaseUndef = isUndefVector(Base, Mask);
+  if (!IsBaseUndef.all()) {
     // Base is not undef, need to combine it with the next subvectors.
     std::pair<T *, bool> Res =
         ResizeAction(ShuffleMask.begin()->first, Mask, /*ForSingleMask=*/false);
+    SmallBitVector IsBasePoison = isUndefVector<true>(Base, Mask);
     for (unsigned Idx = 0, VF = Mask.size(); Idx < VF; ++Idx) {
       if (Mask[Idx] == UndefMaskElem)
-        Mask[Idx] = Idx;
+        Mask[Idx] = IsBasePoison.test(Idx) ? UndefMaskElem : Idx;
       else
         Mask[Idx] = (Res.second ? Idx : Mask[Idx]) + VF;
     }
@@ -7180,6 +7197,7 @@ static T *performExtractsShuffleAction(
     }
     VMIt = std::next(VMIt);
   }
+  bool IsBaseNotUndef = !IsBaseUndef.all();
   // Perform requested actions for the remaining masks/vectors.
   for (auto E = ShuffleMask.end(); VMIt != E; ++VMIt) {
     // Shuffle other input vectors, if any.
@@ -8184,25 +8202,36 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         if (Mask[I] != UndefMaskElem)
           InsertMask[Offset + I] = I;
       }
-      bool IsFirstUndef = isUndefVector(FirstInsert->getOperand(0), InsertMask);
-      if ((!IsIdentity || Offset != 0 || !IsFirstUndef) &&
+      SmallBitVector IsFirstUndef =
+          isUndefVector(FirstInsert->getOperand(0), InsertMask);
+      if ((!IsIdentity || Offset != 0 || !IsFirstUndef.all()) &&
           NumElts != NumScalars) {
-        if (IsFirstUndef) {
+        if (IsFirstUndef.all()) {
           if (!ShuffleVectorInst::isIdentityMask(InsertMask)) {
+            SmallBitVector IsFirstPoison =
+              isUndefVector<true>(FirstInsert->getOperand(0), InsertMask);
+            if (!IsFirstPoison.all()) {
+              for (unsigned I = 0; I < NumElts; I++) {
+                if (InsertMask[I] == UndefMaskElem && !IsFirstPoison.test(I))
+                  InsertMask[I] = I + NumElts;
+              }
+            }
             V = Builder.CreateShuffleVector(
-                V, InsertMask, cast<Instruction>(E->Scalars.back())->getName());
+                V,
+                IsFirstPoison.all() ? PoisonValue::get(V->getType())
+                                    : FirstInsert->getOperand(0),
+                InsertMask, cast<Instruction>(E->Scalars.back())->getName());
             if (auto *I = dyn_cast<Instruction>(V)) {
               GatherShuffleExtractSeq.insert(I);
               CSEBlocks.insert(I->getParent());
             }
-            // Create freeze for undef values.
-            if (!isa<PoisonValue>(FirstInsert->getOperand(0)))
-              V = Builder.CreateFreeze(V);
           }
         } else {
+          SmallBitVector IsFirstPoison =
+              isUndefVector<true>(FirstInsert->getOperand(0), InsertMask);
           for (unsigned I = 0; I < NumElts; I++) {
             if (InsertMask[I] == UndefMaskElem)
-              InsertMask[I] = I;
+              InsertMask[I] = IsFirstPoison.test(I) ? UndefMaskElem : I;
             else
               InsertMask[I] += NumElts;
           }
@@ -8885,8 +8914,8 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
           if (IsIdentityMask(Mask, cast<FixedVectorType>(SV->getType())) ||
               SV->isZeroEltSplat())
             break;
-          bool IsOp1Undef = isUndefVector(SV->getOperand(0), Mask);
-          bool IsOp2Undef = isUndefVector(SV->getOperand(1), Mask);
+          bool IsOp1Undef = isUndefVector(SV->getOperand(0), Mask).all();
+          bool IsOp2Undef = isUndefVector(SV->getOperand(1), Mask).all();
           if (!IsOp1Undef && !IsOp2Undef)
             break;
           SmallVector<int> ShuffleMask(SV->getShuffleMask().begin(),
@@ -8906,7 +8935,7 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
                           &CombineMasks](Value *V1, Value *V2,
                                          ArrayRef<int> Mask) -> Value * {
     assert(V1 && "Expected at least one vector value.");
-    if (V2 && !isUndefVector(V2, Mask)) {
+    if (V2 && !isUndefVector(V2, Mask).all()) {
       // Peek through shuffles.
       Value *Op1 = V1;
       Value *Op2 = V2;
@@ -8934,8 +8963,8 @@ BoUpSLP::vectorizeTree(ExtraValueToDebugLocsMap &ExternallyUsedValues) {
             if (SV1->getOperand(0)->getType() ==
                     SV2->getOperand(0)->getType() &&
                 SV1->getOperand(0)->getType() != SV1->getType() &&
-                isUndefVector(SV1->getOperand(1), CombinedMask1) &&
-                isUndefVector(SV2->getOperand(1), CombinedMask2)) {
+                isUndefVector(SV1->getOperand(1), CombinedMask1).all() &&
+                isUndefVector(SV2->getOperand(1), CombinedMask2).all()) {
               Op1 = SV1->getOperand(0);
               Op2 = SV2->getOperand(0);
               SmallVector<int> ShuffleMask1(SV1->getShuffleMask().begin(),
