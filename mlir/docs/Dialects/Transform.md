@@ -2,8 +2,6 @@
 
 [TOC]
 
-[include "Dialects/TransformTypes.md"]
-
 [include "Dialects/TransformOps.md"]
 
 ## Bufferization Transform Operations

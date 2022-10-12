@@ -27,7 +27,6 @@ def Transform_Dialect : Dialect {
         smaller chunks of data and control flow) in Linalg, Tensor and Vector
         dialects;
       - loop transformations in the SCF dialect.
-      
 
     ## Overview
 
@@ -52,24 +51,48 @@ def Transform_Dialect : Dialect {
     may look like:
 
     ```mlir
-    %0 = transform.loop.find { size > 42 }
-    %1:2 = transform.loop.tile { tile_sizes = [2,3,4] }
-    transform.loop.unroll %1#1
+    %0 = transform.loop.find { size > 42 } : !transform.interface<tileable>
+    %1:2 = transform.loop.tile %0 { tile_sizes = [2,3,4] }
+         : (!transform.interface<tileable>)
+        -> (!transform.op<loop>, !transform.op<loop>)
+    transform.loop.unroll %1#1 : !transform.op<loop>
     ```
 
-    The values defined by operations in this dialect correspond to (groups of)
-    operations in the payload IR. In the example above, `%0` corresponds to the
-    set of loops found in the payload IR that satisfy the condition, and `%1`
-    correspond to groups of outer and inner loops, respectively, produced by
-    the tiling transformation.
+    The values used in the Transform dialect, also referred to as *handles*,
+    correspond to (groups of) operations in the payload IR. In the example
+    above, `%0` corresponds to the set of loops found in the payload IR that
+    satisfy the condition, and `%1` correspond to groups of outer and inner
+    loops, respectively, produced by the tiling transformation.
 
-    A Transform IR value such as `%0` may be associated with multiple payload
+    A transform handle such as `%0` may be associated with multiple payload
     operations. This is conceptually a set of operations and no assumptions
     should be made about the order of ops unless specified otherwise by the
     operation. Most Transform IR ops support operand values that are mapped to
     multiple operations. They usually apply the respective transformation for
     every mapped op ("batched execution"). Deviations from this convention are
     described in the documentation of Transform IR ops.
+
+    The handle values have transform IR types. These types describe properties
+    of payload IR operations associated with the value that are known to the
+    transform dialect, for example, all associated payload operations implement
+    a "TileableOp" interface, or have a specific "loop" kind. These properties
+    are used to statically indicate pre- and post-conditions of a
+    transformation connected to a Transform dialect operation. The conditions
+    are verified when payload IR operations are first associated with a
+    transform handle. By convention, Transform dialect operations are expected
+    to indicate narrow preconditions for their operands by enforcing operand
+    type constraints in the their definitions and verifiers. On the contrary,
+    operations are expected to have few constraints on their results. Specific
+    instances of a transform operation can then be created with a more
+    restricted result type than the constraint in the operation (e.g., the
+    "find" operation only constrains the result type to be a transform IR type
+    while its concrete instance can have a type with stricter constraints such
+    as implementing the "tilable" interface). The verification will then happen
+    at transform execution time. This approach allows one to capture payload IR
+    operation properties in the transform IR without resorting to excessive
+    use of type casts or coupling dialect extensions between themselves. It is
+    a trade-off between verbosity/complexity and static hardening, which can
+    be revised in the future.
 
     Overall, Transform IR ops are expected to be contained in a single top-level
     op. Such top-level ops specify how to apply the transformations described
@@ -310,6 +333,10 @@ def Transform_Dialect : Dialect {
     For the sake of reusability, transformations should be implemented as
     utility functions that are called from the interface methods of transform
     ops rather than having the methods directly act on the payload IR.
+
+    ## Type Definitions
+    
+    [include "Dialects/TransformTypes.md"]
   }];
 
   let name = "transform";
