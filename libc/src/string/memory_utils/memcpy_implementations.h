@@ -11,8 +11,7 @@
 
 #include "src/__support/architectures.h"
 #include "src/__support/common.h"
-#include "src/string/memory_utils/op_builtin.h"
-#include "src/string/memory_utils/op_x86.h"
+#include "src/string/memory_utils/elements.h"
 #include "src/string/memory_utils/utils.h"
 
 #include <stddef.h> // size_t
@@ -46,49 +45,58 @@ static inline void inline_memcpy(char *__restrict dst,
   // LLVM_LIBC_ARCH_X86
   /////////////////////////////////////////////////////////////////////////////
 
-  // Whether to use rep;movsb exclusively, not at all, or only above a certain
-  // threshold.
-  // TODO: Use only a single preprocessor definition to simplify the code.
-#ifndef LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
-#define LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE -1
+  // Whether to use only rep;movsb.
+  constexpr bool USE_ONLY_REP_MOVSB =
+      LLVM_LIBC_IS_DEFINED(LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB);
+
+  // kRepMovsBSize == -1 : Only CopyAligned is used.
+  // kRepMovsBSize ==  0 : Only RepMovsb is used.
+  // else CopyAligned is used up to kRepMovsBSize and then RepMovsb.
+  constexpr size_t REP_MOVS_B_SIZE =
+#if defined(LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE)
+      LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE;
+#else
+      -1;
+#endif // LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
+
+  // Whether target supports AVX instructions.
+  constexpr bool HAS_AVX = LLVM_LIBC_IS_DEFINED(__AVX__);
+
+#if defined(__AVX__)
+  using LoopBlockSize = _64;
+#else
+  using LoopBlockSize = _32;
 #endif
 
-  static constexpr bool kUseOnlyRepMovsb =
-      LLVM_LIBC_IS_DEFINED(LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB);
-  static constexpr size_t kRepMovsbThreshold =
-      LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE;
-
-  if constexpr (kUseOnlyRepMovsb)
-    return x86::Memcpy::repmovsb(dst, src, count);
+  if (USE_ONLY_REP_MOVSB)
+    return copy<x86::Accelerator>(dst, src, count);
 
   if (count == 0)
     return;
   if (count == 1)
-    return Memcpy<1>::block(dst, src);
+    return copy<_1>(dst, src);
   if (count == 2)
-    return Memcpy<2>::block(dst, src);
+    return copy<_2>(dst, src);
   if (count == 3)
-    return Memcpy<3>::block(dst, src);
+    return copy<_3>(dst, src);
   if (count == 4)
-    return Memcpy<4>::block(dst, src);
+    return copy<_4>(dst, src);
   if (count < 8)
-    return Memcpy<4>::head_tail(dst, src, count);
+    return copy<HeadTail<_4>>(dst, src, count);
   if (count < 16)
-    return Memcpy<8>::head_tail(dst, src, count);
+    return copy<HeadTail<_8>>(dst, src, count);
   if (count < 32)
-    return Memcpy<16>::head_tail(dst, src, count);
+    return copy<HeadTail<_16>>(dst, src, count);
   if (count < 64)
-    return Memcpy<32>::head_tail(dst, src, count);
+    return copy<HeadTail<_32>>(dst, src, count);
   if (count < 128)
-    return Memcpy<64>::head_tail(dst, src, count);
-  if (x86::kAvx && count < 256)
-    return Memcpy<128>::head_tail(dst, src, count);
-  if (count <= kRepMovsbThreshold) {
-    Memcpy<32>::block(dst, src);
-    align_to_next_boundary<32, Arg::Dst>(dst, src, count);
-    return Memcpy < x86::kAvx ? 64 : 32 > ::loop_and_tail(dst, src, count);
-  }
-  return x86::Memcpy::repmovsb(dst, src, count);
+    return copy<HeadTail<_64>>(dst, src, count);
+  if (HAS_AVX && count < 256)
+    return copy<HeadTail<_128>>(dst, src, count);
+  if (count <= REP_MOVS_B_SIZE)
+    return copy<Align<_32, Arg::Dst>::Then<Loop<LoopBlockSize>>>(dst, src,
+                                                                 count);
+  return copy<x86::Accelerator>(dst, src, count);
 #elif defined(LLVM_LIBC_ARCH_AARCH64)
   /////////////////////////////////////////////////////////////////////////////
   // LLVM_LIBC_ARCH_AARCH64
@@ -96,26 +104,24 @@ static inline void inline_memcpy(char *__restrict dst,
   if (count == 0)
     return;
   if (count == 1)
-    return Memcpy<1>::block(dst, src);
+    return copy<_1>(dst, src);
   if (count == 2)
-    return Memcpy<2>::block(dst, src);
+    return copy<_2>(dst, src);
   if (count == 3)
-    return Memcpy<3>::block(dst, src);
+    return copy<_3>(dst, src);
   if (count == 4)
-    return Memcpy<4>::block(dst, src);
+    return copy<_4>(dst, src);
   if (count < 8)
-    return Memcpy<4>::head_tail(dst, src, count);
+    return copy<HeadTail<_4>>(dst, src, count);
   if (count < 16)
-    return Memcpy<8>::head_tail(dst, src, count);
+    return copy<HeadTail<_8>>(dst, src, count);
   if (count < 32)
-    return Memcpy<16>::head_tail(dst, src, count);
+    return copy<HeadTail<_16>>(dst, src, count);
   if (count < 64)
-    return Memcpy<32>::head_tail(dst, src, count);
+    return copy<HeadTail<_32>>(dst, src, count);
   if (count < 128)
-    return Memcpy<64>::head_tail(dst, src, count);
-  Memcpy<16>::block(dst, src);
-  align_to_next_boundary<16, Arg::Src>(dst, src, count);
-  return Memcpy<64>::loop_and_tail(dst, src, count);
+    return copy<HeadTail<_64>>(dst, src, count);
+  return copy<Align<_16, Arg::Src>::Then<Loop<_64>>>(dst, src, count);
 #else
   /////////////////////////////////////////////////////////////////////////////
   // Default
@@ -123,26 +129,24 @@ static inline void inline_memcpy(char *__restrict dst,
   if (count == 0)
     return;
   if (count == 1)
-    return Memcpy<1>::block(dst, src);
+    return copy<_1>(dst, src);
   if (count == 2)
-    return Memcpy<2>::block(dst, src);
+    return copy<_2>(dst, src);
   if (count == 3)
-    return Memcpy<3>::block(dst, src);
+    return copy<_3>(dst, src);
   if (count == 4)
-    return Memcpy<4>::block(dst, src);
+    return copy<_4>(dst, src);
   if (count < 8)
-    return Memcpy<4>::head_tail(dst, src, count);
+    return copy<HeadTail<_4>>(dst, src, count);
   if (count < 16)
-    return Memcpy<8>::head_tail(dst, src, count);
+    return copy<HeadTail<_8>>(dst, src, count);
   if (count < 32)
-    return Memcpy<16>::head_tail(dst, src, count);
+    return copy<HeadTail<_16>>(dst, src, count);
   if (count < 64)
-    return Memcpy<32>::head_tail(dst, src, count);
+    return copy<HeadTail<_32>>(dst, src, count);
   if (count < 128)
-    return Memcpy<64>::head_tail(dst, src, count);
-  Memcpy<32>::block(dst, src);
-  align_to_next_boundary<32, Arg::Src>(dst, src, count);
-  return Memcpy<32>::loop_and_tail(dst, src, count);
+    return copy<HeadTail<_64>>(dst, src, count);
+  return copy<Align<_32, Arg::Src>::Then<Loop<_32>>>(dst, src, count);
 #endif
 }
 
