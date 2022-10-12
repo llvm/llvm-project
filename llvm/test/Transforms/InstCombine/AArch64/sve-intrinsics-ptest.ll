@@ -32,6 +32,29 @@ define i1 @ptest_any2(<vscale x 4 x i1> %a) #0 {
   ret i1 %out
 }
 
+; Rewrite PTEST_ANY(X=OP(PG,...), X) -> PTEST_ANY(PG, X)).
+define i1 @ptest_any_brkb_z(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a) {
+; CHECK-LABEL: @ptest_any_brkb_z(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brkb.z.nxv16i1(<vscale x 16 x i1> [[PG:%.*]], <vscale x 16 x i1> [[A:%.*]])
+; CHECK-NEXT:    [[OUT:%.*]] = call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> [[PG]], <vscale x 16 x i1> [[TMP1]])
+; CHECK-NEXT:    ret i1 [[OUT]]
+;
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brkb.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a)
+  %out = call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> %1, <vscale x 16 x i1> %1)
+  ret i1 %out
+}
+
+define i1 @ptest_any_rdffr_z(<vscale x 16 x i1> %pg) {
+; CHECK-LABEL: @ptest_any_rdffr_z(
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.rdffr.z(<vscale x 16 x i1> [[PG:%.*]])
+; CHECK-NEXT:    [[OUT:%.*]] = call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> [[PG]], <vscale x 16 x i1> [[TMP1]])
+; CHECK-NEXT:    ret i1 [[OUT]]
+;
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.rdffr.z(<vscale x 16 x i1> %pg)
+  %out = call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> %1, <vscale x 16 x i1> %1)
+  ret i1 %out
+}
+
 define i1 @ptest_first(<vscale x 4 x i1> %a) #0 {
 ; CHECK-LABEL: @ptest_first(
 ; CHECK-NEXT:    [[MASK:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 0)
@@ -80,5 +103,8 @@ declare i1 @llvm.aarch64.sve.ptest.last.nxv16i1(<vscale x 16 x i1>, <vscale x 16
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1>)
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1>)
 declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1>)
+
+declare <vscale x 16 x i1> @llvm.aarch64.sve.brkb.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
+declare <vscale x 16 x i1> @llvm.aarch64.sve.rdffr.z(<vscale x 16 x i1>)
 
 attributes #0 = { "target-features"="+sve" }
