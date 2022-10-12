@@ -135,9 +135,7 @@ set_property(SOURCE ${LIBUNWIND_C_SOURCES}
 # ease, but does not rely on C++ at runtime.
 set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
 
-#
 # Build the shared library.
-#
 add_library(unwind_shared_objects OBJECT EXCLUDE_FROM_ALL ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
 if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
   target_compile_options(unwind_shared_objects PRIVATE /GR-)
@@ -156,27 +154,25 @@ if (CMAKE_POSITION_INDEPENDENT_CODE OR NOT DEFINED CMAKE_POSITION_INDEPENDENT_CO
   set_target_properties(unwind_shared_objects PROPERTIES POSITION_INDEPENDENT_CODE ON) # must set manually because it's an object library
 endif()
 
-add_library(unwind_shared SHARED $<$<NOT:$<BOOL:LIBUNWIND_ENABLE_SHARED>>:EXCLUDE_FROM_ALL>)
-target_link_libraries(unwind_shared PUBLIC unwind_shared_objects)
-set_target_properties(unwind_shared
-  PROPERTIES
-    LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
-    LINKER_LANGUAGE C
-    OUTPUT_NAME "${LIBUNWIND_SHARED_OUTPUT_NAME}"
-    VERSION "1.0"
-    SOVERSION "1"
-)
-
 if (LIBUNWIND_ENABLE_SHARED)
+  add_library(unwind_shared SHARED)
+  target_link_libraries(unwind_shared PUBLIC unwind_shared_objects)
+  set_target_properties(unwind_shared
+    PROPERTIES
+      LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
+      LINKER_LANGUAGE C
+      OUTPUT_NAME "${LIBUNWIND_SHARED_OUTPUT_NAME}"
+      VERSION "1.0"
+      SOVERSION "1"
+  )
+
   list(APPEND LIBUNWIND_BUILD_TARGETS "unwind_shared")
-endif()
-if (LIBUNWIND_INSTALL_SHARED_LIBRARY)
-  list(APPEND LIBUNWIND_INSTALL_TARGETS "unwind_shared")
+  if (LIBUNWIND_INSTALL_SHARED_LIBRARY)
+    list(APPEND LIBUNWIND_INSTALL_TARGETS "unwind_shared")
+  endif()
 endif()
 
-#
 # Build the static library.
-#
 add_library(unwind_static_objects OBJECT EXCLUDE_FROM_ALL ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
 if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
   target_compile_options(unwind_static_objects PRIVATE /GR-)
@@ -198,20 +194,20 @@ if(LIBUNWIND_HIDE_SYMBOLS)
   target_compile_definitions(unwind_static_objects PRIVATE _LIBUNWIND_HIDE_SYMBOLS)
 endif()
 
-add_library(unwind_static STATIC $<$<NOT:$<BOOL:LIBUNWIND_ENABLE_STATIC>>:EXCLUDE_FROM_ALL>)
-target_link_libraries(unwind_static PUBLIC unwind_static_objects)
-set_target_properties(unwind_static
-  PROPERTIES
-    LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
-    LINKER_LANGUAGE C
-    OUTPUT_NAME "${LIBUNWIND_STATIC_OUTPUT_NAME}"
-)
-
 if (LIBUNWIND_ENABLE_STATIC)
+  add_library(unwind_static STATIC)
+  target_link_libraries(unwind_static PUBLIC unwind_static_objects)
+  set_target_properties(unwind_static
+    PROPERTIES
+      LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
+      LINKER_LANGUAGE C
+      OUTPUT_NAME "${LIBUNWIND_STATIC_OUTPUT_NAME}"
+  )
+
   list(APPEND LIBUNWIND_BUILD_TARGETS "unwind_static")
-endif()
-if (LIBUNWIND_INSTALL_STATIC_LIBRARY)
-  list(APPEND LIBUNWIND_INSTALL_TARGETS "unwind_static")
+  if (LIBUNWIND_INSTALL_STATIC_LIBRARY)
+    list(APPEND LIBUNWIND_INSTALL_TARGETS "unwind_static")
+  endif()
 endif()
 
 # Add a meta-target for both libraries.
