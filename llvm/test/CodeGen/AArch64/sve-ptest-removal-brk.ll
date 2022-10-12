@@ -30,12 +30,26 @@ define i32 @brkb(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a) {
 define i32 @brkn(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: brkn:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    brkns p2.b, p0/z, p1.b, p2.b
+; CHECK-NEXT:    brkn p2.b, p0/z, p1.b, p2.b
+; CHECK-NEXT:    ptest p0, p2.b
 ; CHECK-NEXT:    cset w0, ne
 ; CHECK-NEXT:    ret
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brkn.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
   %2 = tail call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %1)
   %conv = zext i1 %2 to i32
+  ret i32 %conv
+}
+
+define i32 @brkn_all_active(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
+; CHECK-LABEL: brkn_all_active:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    brkns p2.b, p0/z, p1.b, p2.b
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
+  %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.brkn.z.nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b)
+  %2 = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+  %3 = tail call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> %2, <vscale x 16 x i1> %1)
+  %conv = zext i1 %3 to i32
   ret i32 %conv
 }
 
@@ -84,3 +98,4 @@ declare <vscale x 16 x i1> @llvm.aarch64.sve.brkpb.z.nxv16i1(<vscale x 16 x i1>,
 declare <vscale x 16 x i1> @llvm.aarch64.sve.brkb.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
 declare <vscale x 16 x i1> @llvm.aarch64.sve.brkn.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>)
 declare i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
+declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32)
