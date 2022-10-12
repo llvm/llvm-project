@@ -86,8 +86,8 @@ void LinalgGeneralizationPass::runOnOperation() {
 }
 
 void mlir::linalg::populateLinalgNamedOpsGeneralizationPatterns(
-    RewritePatternSet &patterns, const LinalgTransformationFilter &marker) {
-  patterns.add<LinalgGeneralizationPattern>(patterns.getContext(), marker);
+    RewritePatternSet &patterns) {
+  patterns.add<LinalgGeneralizationPattern>(patterns.getContext());
 }
 
 std::unique_ptr<OperationPass<func::FuncOp>>
