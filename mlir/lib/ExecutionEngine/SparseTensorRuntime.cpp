@@ -578,6 +578,107 @@ MLIR_SPARSETENSOR_FOREVERY_V(IMPL_CONVERTTOMLIRSPARSETENSOR)
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_CONVERTFROMMLIRSPARSETENSOR)
 #undef IMPL_CONVERTFROMMLIRSPARSETENSOR
 
+void *createSparseTensorReader(char *filename) {
+  SparseTensorReader *stfile = new SparseTensorReader(filename);
+  stfile->openFile();
+  stfile->readHeader();
+  return static_cast<void *>(stfile);
+}
+
+index_type getSparseTensorReaderRank(void *p) {
+  return static_cast<SparseTensorReader *>(p)->getRank();
+}
+
+bool getSparseTensorReaderIsSymmetric(void *p) {
+  return static_cast<SparseTensorReader *>(p)->isSymmetric();
+}
+
+index_type getSparseTensorReaderNNZ(void *p) {
+  return static_cast<SparseTensorReader *>(p)->getNNZ();
+}
+
+index_type getSparseTensorReaderDimSize(void *p, index_type d) {
+  return static_cast<SparseTensorReader *>(p)->getDimSize(d);
+}
+
+void _mlir_ciface_getSparseTensorReaderDimSizes(
+    void *p, StridedMemRefType<index_type, 1> *dref) {
+  assert(p && dref);
+  assert(dref->strides[0] == 1);
+  index_type *dimSizes = dref->data + dref->offset;
+  SparseTensorReader &file = *static_cast<SparseTensorReader *>(p);
+  const index_type *sizes = file.getDimSizes();
+  index_type rank = file.getRank();
+  for (uint64_t r = 0; r < rank; ++r)
+    dimSizes[r] = sizes[r];
+}
+
+void delSparseTensorReader(void *p) {
+  delete static_cast<SparseTensorReader *>(p);
+}
+
+#define IMPL_GETNEXT(VNAME, V)                                                 \
+  V _mlir_ciface_getSparseTensorReaderNext##VNAME(                             \
+      void *p, StridedMemRefType<index_type, 1> *iref) {                       \
+    assert(p &&iref);                                                          \
+    assert(iref->strides[0] == 1);                                             \
+    index_type *indices = iref->data + iref->offset;                           \
+    SparseTensorReader *stfile = static_cast<SparseTensorReader *>(p);         \
+    index_type rank = stfile->getRank();                                       \
+    char *linePtr = stfile->readLine();                                        \
+    for (index_type r = 0; r < rank; ++r) {                                    \
+      uint64_t idx = strtoul(linePtr, &linePtr, 10);                           \
+      indices[r] = idx - 1;                                                    \
+    }                                                                          \
+    return detail::readCOOValue<V>(&linePtr, stfile->isPattern());             \
+  }
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_GETNEXT)
+#undef IMPL_GETNEXT
+
+void *createSparseTensorWriter(char *filename) {
+  SparseTensorWriter *file =
+      (filename[0] == 0) ? &std::cout : new std::ofstream(filename);
+  *file << "# extended FROSTT format\n";
+  return static_cast<void *>(file);
+}
+
+void delSparseTensorWriter(void *p) {
+  SparseTensorWriter *file = static_cast<SparseTensorWriter *>(p);
+  file->flush();
+  assert(file->good());
+  if (file != &std::cout)
+    delete file;
+}
+
+void _mlir_ciface_outSparseTensorWriterMetaData(
+    void *p, index_type rank, index_type nnz,
+    StridedMemRefType<index_type, 1> *dref) {
+  assert(p && dref);
+  assert(dref->strides[0] == 1);
+  assert(rank != 0);
+  index_type *dimSizes = dref->data + dref->offset;
+  SparseTensorWriter &file = *static_cast<SparseTensorWriter *>(p);
+  file << rank << " " << nnz << std::endl;
+  for (index_type r = 0; r < rank - 1; ++r)
+    file << dimSizes[r] << " ";
+  file << dimSizes[rank - 1] << std::endl;
+}
+
+#define IMPL_OUTNEXT(VNAME, V)                                                 \
+  void _mlir_ciface_outSparseTensorWriterNext##VNAME(                          \
+      void *p, index_type rank, StridedMemRefType<index_type, 1> *iref,        \
+      V value) {                                                               \
+    assert(p &&iref);                                                          \
+    assert(iref->strides[0] == 1);                                             \
+    index_type *indices = iref->data + iref->offset;                           \
+    SparseTensorWriter &file = *static_cast<SparseTensorWriter *>(p);          \
+    for (uint64_t r = 0; r < rank; ++r)                                        \
+      file << (indices[r] + 1) << " ";                                         \
+    file << value << std::endl;                                                \
+  }
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_OUTNEXT)
+#undef IMPL_OUTNEXT
+
 } // extern "C"
 
 #endif // MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
