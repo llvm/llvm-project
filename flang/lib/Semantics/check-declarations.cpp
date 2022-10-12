@@ -970,6 +970,11 @@ void CheckHelper::CheckSubprogram(
       }
     }
   }
+  if (details.isInterface() && !details.isDummy() && details.isFunction() &&
+      IsAssumedLengthCharacter(details.result())) { // C721
+    messages_.Say(details.result().name(),
+        "A function interface may not declare an assumed-length CHARACTER(*) result"_err_en_US);
+  }
 }
 
 void CheckHelper::CheckDerivedType(
@@ -1297,6 +1302,12 @@ bool CheckHelper::CheckDefinedOperator(SourceName opName, GenericKind kind,
   } else if (!proc.functionResult.has_value()) {
     msg = "%s procedure '%s' must be a function"_err_en_US;
   } else if (proc.functionResult->IsAssumedLengthCharacter()) {
+    const auto *subpDetails{specific.detailsIf<SubprogramDetails>()};
+    if (subpDetails && !subpDetails->isDummy() && subpDetails->isInterface()) {
+      // Error is caught by more general test for interfaces with
+      // assumed-length character function results
+      return true;
+    }
     msg = "%s function '%s' may not have assumed-length CHARACTER(*)"
           " result"_err_en_US;
   } else if (auto m{CheckNumberOfArgs(kind, proc.dummyArguments.size())}) {
