@@ -99,8 +99,15 @@ ModuleDepCollector::makeInvocationForModuleBuildWithoutOutputs(
   CI.getFrontendOpts().OutputFile.clear();
   // FIXME: a build system may want to provide a new path.
   CI.getFrontendOpts().IndexUnitOutputPath.clear();
+
+  // TODO: Figure out better way to set options to their default value.
   CI.getCodeGenOpts().MainFileName.clear();
   CI.getCodeGenOpts().DwarfDebugFlags.clear();
+  if (!CI.getLangOpts()->ModulesCodegen) {
+    CI.getCodeGenOpts().DebugCompilationDir.clear();
+    CI.getCodeGenOpts().CoverageCompilationDir.clear();
+  }
+
   // Map output paths that affect behaviour to "-" so their existence is in the
   // context hash. The final path will be computed in addOutputPaths.
   if (!CI.getDiagnosticOpts().DiagnosticSerializationFile.empty())
