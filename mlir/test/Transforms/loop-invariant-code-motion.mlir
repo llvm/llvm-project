@@ -503,3 +503,107 @@ func.func @test_recursively_speculatable_op_failure(%lb: index, %ub: index, %ste
 
   return
 }
+
+// -----
+
+func.func @speculate_tensor_dim_unknown_rank_unknown_dim(
+// CHECK-LABEL: @speculate_tensor_dim_unknown_rank_unknown_dim
+    %t: tensor<*xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
+  // CHECK: scf.for
+  // CHECK-NEXT: tensor.dim
+  scf.for %i = %lb to %ub step %step {
+    %val = tensor.dim %t, %dim_idx : tensor<*xf32>
+  }
+
+  return
+}
+
+func.func @speculate_tensor_dim_known_rank_unknown_dim(
+// CHECK-LABEL: @speculate_tensor_dim_known_rank_unknown_dim
+    %t: tensor<?x?x?x?xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
+  // CHECK: scf.for
+  // CHECK-NEXT: tensor.dim
+  scf.for %i = %lb to %ub step %step {
+    %val = tensor.dim %t, %dim_idx : tensor<?x?x?x?xf32>
+  }
+
+  return
+}
+
+func.func @speculate_tensor_dim_unknown_rank_known_dim(
+// CHECK-LABEL: @speculate_tensor_dim_unknown_rank_known_dim
+    %t: tensor<*xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
+  %c0 = arith.constant 0 : index
+  // CHECK: scf.for
+  // CHECK-NEXT: tensor.dim
+  scf.for %i = %lb to %ub step %step {
+    %val = tensor.dim %t, %c0 : tensor<*xf32>
+  }
+
+  return
+}
+
+func.func @speculate_tensor_dim_known_rank_known_dim_inbounds(
+// CHECK-LABEL: @speculate_tensor_dim_known_rank_known_dim_inbounds
+    %t: tensor<?x?x?x?xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
+  %c1 = arith.constant 1 : index
+  // CHECK: tensor.dim
+  // CHECK-NEXT: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %val = tensor.dim %t, %c1 : tensor<?x?x?x?xf32>
+  }
+
+  return
+}
+
+// -----
+
+func.func @speculate_memref_dim_unknown_rank_unknown_dim(
+// CHECK-LABEL: @speculate_memref_dim_unknown_rank_unknown_dim
+    %t: memref<*xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
+  // CHECK: scf.for
+  // CHECK-NEXT: memref.dim
+  scf.for %i = %lb to %ub step %step {
+    %val = memref.dim %t, %dim_idx : memref<*xf32>
+  }
+
+  return
+}
+
+func.func @speculate_memref_dim_known_rank_unknown_dim(
+// CHECK-LABEL: @speculate_memref_dim_known_rank_unknown_dim
+    %t: memref<?x?x?x?xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
+  // CHECK: scf.for
+  // CHECK-NEXT: memref.dim
+  scf.for %i = %lb to %ub step %step {
+    %val = memref.dim %t, %dim_idx : memref<?x?x?x?xf32>
+  }
+
+  return
+}
+
+func.func @speculate_memref_dim_unknown_rank_known_dim(
+// CHECK-LABEL: @speculate_memref_dim_unknown_rank_known_dim
+    %t: memref<*xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
+  %c0 = arith.constant 0 : index
+  // CHECK: scf.for
+  // CHECK-NEXT: memref.dim
+  scf.for %i = %lb to %ub step %step {
+    %val = memref.dim %t, %c0 : memref<*xf32>
+  }
+
+  return
+}
+
+func.func @speculate_memref_dim_known_rank_known_dim_inbounds(
+// CHECK-LABEL: @speculate_memref_dim_known_rank_known_dim_inbounds
+    %t: memref<?x?x?x?xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
+  %c1 = arith.constant 1 : index
+  // CHECK: memref.dim
+  // CHECK-NEXT: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %val = memref.dim %t, %c1 : memref<?x?x?x?xf32>
+  }
+
+  return
+}
