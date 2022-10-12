@@ -7198,6 +7198,7 @@ static T *performExtractsShuffleAction(
     VMIt = std::next(VMIt);
   }
   bool IsBaseNotUndef = !IsBaseUndef.all();
+  (void)IsBaseNotUndef;
   // Perform requested actions for the remaining masks/vectors.
   for (auto E = ShuffleMask.end(); VMIt != E; ++VMIt) {
     // Shuffle other input vectors, if any.
