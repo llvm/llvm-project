@@ -1,4 +1,4 @@
-// RUN: mlir-translate -test-spirv-roundtrip -split-input-file %s | FileCheck %s
+// RUN: mlir-translate -no-implicit-module -test-spirv-roundtrip -split-input-file %s | FileCheck %s
 
 // Selection with both then and else branches
 
