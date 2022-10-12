@@ -21,7 +21,7 @@ using enum Bob::Foo;
 // CHECK-NEXT: `-EnumConstantDecl {{.*}} Foo_b 'Bob::Foo'
 
 // CHECK-LABEL: Dumping Foo:
-// CHECK-NEXT: UsingEnumDecl {{.*}} Enum {{.*}} 'Foo'
+// CHECK-NEXT: UsingEnumDecl {{.*}} <{{.*}}:16:1, col:17> {{.*}} Enum {{.*}} 'Foo'
 
 // CHECK-LABEL: Dumping Foo_a:
 // CHECK-NEXT: UsingShadowDecl {{.*}} implicit EnumConstant {{.*}} 'Foo_a' 'Bob::Foo'

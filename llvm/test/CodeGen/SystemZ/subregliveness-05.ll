@@ -14,7 +14,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb
-  %tmp = load i32, i32* @g_65, align 4
+  %tmp = load i32, ptr @g_65, align 4
   %tmp2 = sext i32 %tmp to i64
   %tmp3 = shl i32 %tmp, 16
   %tmp4 = ashr exact i32 %tmp3, 16

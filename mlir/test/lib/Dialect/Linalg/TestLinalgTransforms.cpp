@@ -84,14 +84,6 @@ struct TestLinalgTransforms
       llvm::cl::desc("Test rewrite of subtensor(tensor.pad) into "
                      "tensor.pad(subtensor)"),
       llvm::cl::init(false)};
-  Option<bool> testSplitReduction{
-      *this, "test-split-reduction",
-      llvm::cl::desc("Test split reduction transformation"),
-      llvm::cl::init(false)};
-  Option<bool> testSplitReductionInnerParallel{
-      *this, "test-split-reduction-inner-parallel",
-      llvm::cl::desc("Test split reduction with inner parallel transformation"),
-      llvm::cl::init(false)};
   ListOption<int64_t> peeledLoops{
       *this, "peeled-loops",
       llvm::cl::desc("Loops to be peeled when test-tile-pattern")};
@@ -125,13 +117,6 @@ static void applyPatterns(func::FuncOp funcOp) {
   RewritePatternSet patterns(ctx);
 
   //===--------------------------------------------------------------------===//
-  // Linalg to loops patterns.
-  //===--------------------------------------------------------------------===//
-  patterns.add<LinalgLoweringPattern<DotOp>>(
-      ctx,
-      /*loweringType=*/LinalgLoweringType::Loops);
-
-  //===--------------------------------------------------------------------===//
   // Linalg distribution patterns.
   //===--------------------------------------------------------------------===//
   LinalgLoopDistributionOptions distributionOptions;
@@ -142,11 +127,6 @@ static void applyPatterns(func::FuncOp funcOp) {
   patterns.add<CopyVectorizationPattern>(ctx);
 
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-
-  // Drop the marker.
-  funcOp.walk([](LinalgOp op) {
-    op->removeAttr(LinalgTransforms::kLinalgTransformMarker);
-  });
 }
 
 static void applyVectorTransferForwardingPatterns(func::FuncOp funcOp) {
@@ -183,34 +163,6 @@ static void applyExtractSliceOfPadTensorSwapPattern(func::FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applySplitReduction(func::FuncOp funcOp) {
-  RewritePatternSet patterns(funcOp.getContext());
-  linalg::populateSplitReductionPattern(
-      patterns,
-      [](LinalgOp op) {
-        unsigned insertDimIndex = op.getNumLoops() - 1;
-        return SplitReductionOptions{4, insertDimIndex, false};
-      },
-      LinalgTransformationFilter(
-          ArrayRef<StringAttr>{},
-          StringAttr::get(funcOp.getContext(), "SPLIT")));
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-}
-
-static void applySplitReductionInnerParallel(func::FuncOp funcOp) {
-  RewritePatternSet patterns(funcOp.getContext());
-  linalg::populateSplitReductionPattern(
-      patterns,
-      [](LinalgOp op) {
-        unsigned insertDimIndex = op.getNumLoops() - 1;
-        return SplitReductionOptions{4, insertDimIndex, true};
-      },
-      LinalgTransformationFilter(
-          ArrayRef<StringAttr>{},
-          StringAttr::get(funcOp.getContext(), "SPLIT")));
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-}
-
 static void applyBubbleUpExtractSliceOpPattern(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   populateBubbleUpExtractSliceOpPatterns(patterns);
@@ -225,13 +177,6 @@ static void applySwapExtractSliceWithFillPattern(func::FuncOp funcOp) {
 
 /// Apply transformations specified as patterns.
 void TestLinalgTransforms::runOnOperation() {
-  auto lambda = [&](void *) {
-    getOperation().walk([](LinalgOp op) {
-      op->removeAttr(LinalgTransforms::kLinalgTransformMarker);
-    });
-  };
-  std::unique_ptr<void, decltype(lambda)> cleanupGuard{(void *)1, lambda};
-
   if (testPatterns)
     return applyPatterns(getOperation());
   if (testVectorTransferForwardingPatterns)
@@ -244,10 +189,6 @@ void TestLinalgTransforms::runOnOperation() {
     return applyGeneralizePadTensorPatterns(getOperation());
   if (testSwapSubTensorPadTensor)
     return applyExtractSliceOfPadTensorSwapPattern(getOperation());
-  if (testSplitReduction)
-    return applySplitReduction(getOperation());
-  if (testSplitReductionInnerParallel)
-    return applySplitReductionInnerParallel(getOperation());
   if (testBubbleUpExtractSliceOpPattern)
     return applyBubbleUpExtractSliceOpPattern(getOperation());
   if (testSwapExtractSliceWithFill)

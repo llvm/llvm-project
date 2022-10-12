@@ -22,7 +22,7 @@ class SPIRV_LogicalBinaryOp<string mnemonic, Type operandsType,
       // Result type is SPIRV_Bool.
       SPIRV_BinaryOp<mnemonic, SPIRV_Bool, operandsType,
                    !listconcat(traits, [
-                     NoSideEffect, SameTypeOperands,
+                     Pure, SameTypeOperands,
                      SameOperandsAndResultShape,
                      TypesMatchWith<"type of result to correspond to the `i1` "
                                     "equivalent of the operand",
@@ -42,7 +42,7 @@ class SPIRV_LogicalUnaryOp<string mnemonic, Type operandType,
       // Result type is SPIRV_Bool.
       SPIRV_UnaryOp<mnemonic, SPIRV_Bool, operandType,
                   !listconcat(traits, [
-                     NoSideEffect, SameTypeOperands, SameOperandsAndResultShape,
+                     Pure, SameTypeOperands, SameOperandsAndResultShape,
                      TypesMatchWith<"type of result to correspond to the `i1` "
                                     "equivalent of the operand",
                                     "operand", "result",
@@ -952,7 +952,7 @@ def SPIRV_SLessThanEqualOp : SPIRV_LogicalBinaryOp<"SLessThanEqual",
 // -----
 
 def SPIRV_SelectOp : SPIRV_Op<"Select",
-    [NoSideEffect,
+    [Pure,
      AllTypesMatch<["true_value", "false_value", "result"]>,
      UsableInSpecConstantOp]> {
   let summary = [{

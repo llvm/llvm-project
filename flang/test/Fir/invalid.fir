@@ -20,7 +20,7 @@
 func.func @bad_rebox_1(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
   %c10 = arith.constant 10 : index
   %0 = fir.shape %c10 : (index) -> !fir.shape<1>
-  // expected-error@+1{{op operand #0 must be The type of a Fortran descriptor, but got '!fir.ref<!fir.array<?x?xf32>>'}}
+  // expected-error@+1{{op operand #0 must be box or class, but got '!fir.ref<!fir.array<?x?xf32>>'}}
   %1 = fir.rebox %arg0(%0) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
   return
 }
@@ -30,7 +30,7 @@ func.func @bad_rebox_1(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
 func.func @bad_rebox_2(%arg0: !fir.box<!fir.array<?x?xf32>>) {
   %c10 = arith.constant 10 : index
   %0 = fir.shape %c10 : (index) -> !fir.shape<1>
-  // expected-error@+1{{op result #0 must be The type of a Fortran descriptor, but got '!fir.ref<!fir.array<?xf32>>'}}
+  // expected-error@+1{{op result #0 must be box or class, but got '!fir.ref<!fir.array<?xf32>>'}}
   %1 = fir.rebox %arg0(%0) : (!fir.box<!fir.array<?x?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
   return
 }

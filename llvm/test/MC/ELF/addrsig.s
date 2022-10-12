@@ -62,6 +62,7 @@
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {
 // CHECK-NEXT:   Name: g3
+// CHECK-NOT:  Symbol {
 
 // CHECK:      Addrsig [
 // CHECK-NEXT:   Sym: g1 (3)
@@ -69,6 +70,8 @@
 // CHECK-NEXT:   Sym: local (2)
 // CHECK-NEXT:   Sym:  (1)
 // CHECK-NEXT: ]
+
+.globl g1
 
 // ASM:      .addrsig
 // ASM-NEXT: .addrsig_sym g1
@@ -78,11 +81,17 @@
 // ASM:      .addrsig_sym g3
 // ASM-NEXT: .addrsig_sym local
 // ASM-NEXT: .addrsig_sym .Llocal
+// ASM-NEXT: .addrsig_sym .Lunseen
+// ASM-NEXT: .addrsig_sym unseen
 .addrsig_sym g3
 .addrsig_sym local
 .addrsig_sym .Llocal
+.addrsig_sym .Lunseen
+.addrsig_sym unseen
 
 local:
 .Llocal:
+
+.globl g3
 
 // DWO-NOT: .llvm_addrsig

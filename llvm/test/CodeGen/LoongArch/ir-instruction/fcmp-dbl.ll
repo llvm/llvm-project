@@ -256,3 +256,120 @@ define i1 @fcmp_true(double %a, double %b) {
   %cmp = fcmp true double %a, %b
   ret i1 %cmp
 }
+
+define i1 @fcmp_fast_olt(double %a, double %b, i1 %c) nounwind {
+; LA32-LABEL: fcmp_fast_olt:
+; LA32:       # %bb.0:
+; LA32-NEXT:    movgr2fr.w $fa1, $zero
+; LA32-NEXT:    movgr2frh.w $fa1, $zero
+; LA32-NEXT:    fcmp.cle.d $fcc0, $fa1, $fa0
+; LA32-NEXT:    movcf2gr $a1, $fcc0
+; LA32-NEXT:    bnez $a1, .LBB16_2
+; LA32-NEXT:  # %bb.1: # %if.then
+; LA32-NEXT:    ret
+; LA32-NEXT:  .LBB16_2: # %if.else
+; LA32-NEXT:    movgr2fr.w $fa1, $zero
+; LA32-NEXT:    movgr2frh.w $fa1, $zero
+; LA32-NEXT:    fcmp.clt.d $fcc0, $fa0, $fa1
+; LA32-NEXT:    movcf2gr $a0, $fcc0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: fcmp_fast_olt:
+; LA64:       # %bb.0:
+; LA64-NEXT:    movgr2fr.d $fa1, $zero
+; LA64-NEXT:    fcmp.cle.d $fcc0, $fa1, $fa0
+; LA64-NEXT:    movcf2gr $a1, $fcc0
+; LA64-NEXT:    bnez $a1, .LBB16_2
+; LA64-NEXT:  # %bb.1: # %if.then
+; LA64-NEXT:    ret
+; LA64-NEXT:  .LBB16_2: # %if.else
+; LA64-NEXT:    fcmp.clt.d $fcc0, $fa0, $fa1
+; LA64-NEXT:    movcf2gr $a0, $fcc0
+; LA64-NEXT:    ret
+  %cmp = fcmp fast olt double %a, 0.000000e+00
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  ret i1 %c
+
+if.else:
+  ret i1 %cmp
+}
+
+define i1 @fcmp_fast_oeq(double %a, double %b, i1 %c) nounwind {
+; LA32-LABEL: fcmp_fast_oeq:
+; LA32:       # %bb.0:
+; LA32-NEXT:    movgr2fr.w $fa1, $zero
+; LA32-NEXT:    movgr2frh.w $fa1, $zero
+; LA32-NEXT:    fcmp.ceq.d $fcc0, $fa0, $fa1
+; LA32-NEXT:    movcf2gr $a1, $fcc0
+; LA32-NEXT:    xori $a1, $a1, 1
+; LA32-NEXT:    bnez $a1, .LBB17_2
+; LA32-NEXT:  # %bb.1: # %if.then
+; LA32-NEXT:    ret
+; LA32-NEXT:  .LBB17_2: # %if.else
+; LA32-NEXT:    movgr2fr.w $fa1, $zero
+; LA32-NEXT:    movgr2frh.w $fa1, $zero
+; LA32-NEXT:    fcmp.ceq.d $fcc0, $fa0, $fa1
+; LA32-NEXT:    movcf2gr $a0, $fcc0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: fcmp_fast_oeq:
+; LA64:       # %bb.0:
+; LA64-NEXT:    movgr2fr.d $fa1, $zero
+; LA64-NEXT:    fcmp.ceq.d $fcc0, $fa0, $fa1
+; LA64-NEXT:    movcf2gr $a1, $fcc0
+; LA64-NEXT:    xori $a1, $a1, 1
+; LA64-NEXT:    bnez $a1, .LBB17_2
+; LA64-NEXT:  # %bb.1: # %if.then
+; LA64-NEXT:    ret
+; LA64-NEXT:  .LBB17_2: # %if.else
+; LA64-NEXT:    fcmp.ceq.d $fcc0, $fa0, $fa1
+; LA64-NEXT:    movcf2gr $a0, $fcc0
+; LA64-NEXT:    ret
+  %cmp = fcmp fast oeq double %a, 0.000000e+00
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  ret i1 %c
+
+if.else:
+  ret i1 %cmp
+}
+
+define i1 @fcmp_fast_ole(double %a, double %b, i1 %c) nounwind {
+; LA32-LABEL: fcmp_fast_ole:
+; LA32:       # %bb.0:
+; LA32-NEXT:    movgr2fr.w $fa1, $zero
+; LA32-NEXT:    movgr2frh.w $fa1, $zero
+; LA32-NEXT:    fcmp.clt.d $fcc0, $fa1, $fa0
+; LA32-NEXT:    bcnez $fcc0, .LBB18_2
+; LA32-NEXT:  # %bb.1: # %if.then
+; LA32-NEXT:    ret
+; LA32-NEXT:  .LBB18_2: # %if.else
+; LA32-NEXT:    movgr2fr.w $fa1, $zero
+; LA32-NEXT:    movgr2frh.w $fa1, $zero
+; LA32-NEXT:    fcmp.cle.d $fcc0, $fa0, $fa1
+; LA32-NEXT:    movcf2gr $a0, $fcc0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: fcmp_fast_ole:
+; LA64:       # %bb.0:
+; LA64-NEXT:    movgr2fr.d $fa1, $zero
+; LA64-NEXT:    fcmp.clt.d $fcc0, $fa1, $fa0
+; LA64-NEXT:    bcnez $fcc0, .LBB18_2
+; LA64-NEXT:  # %bb.1: # %if.then
+; LA64-NEXT:    ret
+; LA64-NEXT:  .LBB18_2: # %if.else
+; LA64-NEXT:    fcmp.cle.d $fcc0, $fa0, $fa1
+; LA64-NEXT:    movcf2gr $a0, $fcc0
+; LA64-NEXT:    ret
+  %cmp = fcmp fast ole double %a, 0.000000e+00
+  br i1 %cmp, label %if.then, label %if.else
+
+if.then:
+  ret i1 %c
+
+if.else:
+  ret i1 %cmp
+}

@@ -13,7 +13,7 @@ define <8 x i7> @vsrl_vv_v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 zeroex
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vand.vx v9, v9, a1
 ; CHECK-NEXT:    vand.vx v8, v8, a1
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x i7> @llvm.vp.lshr.v8i7(<8 x i7> %va, <8 x i7> %b, <8 x i1> %m, i32 %evl)
@@ -25,7 +25,7 @@ declare <2 x i8> @llvm.vp.lshr.v2i8(<2 x i8>, <2 x i8>, <2 x i1>, i32)
 define <2 x i8> @vsrl_vv_v2i8(<2 x i8> %va, <2 x i8> %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x i8> @llvm.vp.lshr.v2i8(<2 x i8> %va, <2 x i8> %b, <2 x i1> %m, i32 %evl)
@@ -47,7 +47,7 @@ define <2 x i8> @vsrl_vv_v2i8_unmasked(<2 x i8> %va, <2 x i8> %b, i32 zeroext %e
 define <2 x i8> @vsrl_vx_v2i8(<2 x i8> %va, i8 %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vx_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i8> poison, i8 %b, i32 0
@@ -73,7 +73,7 @@ define <2 x i8> @vsrl_vx_v2i8_unmasked(<2 x i8> %va, i8 %b, i32 zeroext %evl) {
 define <2 x i8> @vsrl_vi_v2i8(<2 x i8> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vi_v2i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf8, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i8> poison, i8 4, i32 0
@@ -101,7 +101,7 @@ declare <4 x i8> @llvm.vp.lshr.v4i8(<4 x i8>, <4 x i8>, <4 x i1>, i32)
 define <4 x i8> @vsrl_vv_v4i8(<4 x i8> %va, <4 x i8> %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x i8> @llvm.vp.lshr.v4i8(<4 x i8> %va, <4 x i8> %b, <4 x i1> %m, i32 %evl)
@@ -123,7 +123,7 @@ define <4 x i8> @vsrl_vv_v4i8_unmasked(<4 x i8> %va, <4 x i8> %b, i32 zeroext %e
 define <4 x i8> @vsrl_vx_v4i8(<4 x i8> %va, i8 %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vx_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i8> poison, i8 %b, i32 0
@@ -149,7 +149,7 @@ define <4 x i8> @vsrl_vx_v4i8_unmasked(<4 x i8> %va, i8 %b, i32 zeroext %evl) {
 define <4 x i8> @vsrl_vi_v4i8(<4 x i8> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vi_v4i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i8> poison, i8 4, i32 0
@@ -177,7 +177,7 @@ declare <7 x i8> @llvm.vp.lshr.v7i8(<7 x i8>, <7 x i8>, <7 x i1>, i32)
 define <7 x i8> @vsrl_vv_v7i8(<7 x i8> %va, <7 x i8> %b, <7 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v7i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <7 x i8> @llvm.vp.lshr.v7i8(<7 x i8> %va, <7 x i8> %b, <7 x i1> %m, i32 %evl)
@@ -189,7 +189,7 @@ declare <8 x i8> @llvm.vp.lshr.v8i8(<8 x i8>, <8 x i8>, <8 x i1>, i32)
 define <8 x i8> @vsrl_vv_v8i8(<8 x i8> %va, <8 x i8> %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x i8> @llvm.vp.lshr.v8i8(<8 x i8> %va, <8 x i8> %b, <8 x i1> %m, i32 %evl)
@@ -211,7 +211,7 @@ define <8 x i8> @vsrl_vv_v8i8_unmasked(<8 x i8> %va, <8 x i8> %b, i32 zeroext %e
 define <8 x i8> @vsrl_vx_v8i8(<8 x i8> %va, i8 %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vx_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i8> poison, i8 %b, i32 0
@@ -237,7 +237,7 @@ define <8 x i8> @vsrl_vx_v8i8_unmasked(<8 x i8> %va, i8 %b, i32 zeroext %evl) {
 define <8 x i8> @vsrl_vi_v8i8(<8 x i8> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vi_v8i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf2, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i8> poison, i8 4, i32 0
@@ -265,7 +265,7 @@ declare <16 x i8> @llvm.vp.lshr.v16i8(<16 x i8>, <16 x i8>, <16 x i1>, i32)
 define <16 x i8> @vsrl_vv_v16i8(<16 x i8> %va, <16 x i8> %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <16 x i8> @llvm.vp.lshr.v16i8(<16 x i8> %va, <16 x i8> %b, <16 x i1> %m, i32 %evl)
@@ -287,7 +287,7 @@ define <16 x i8> @vsrl_vv_v16i8_unmasked(<16 x i8> %va, <16 x i8> %b, i32 zeroex
 define <16 x i8> @vsrl_vx_v16i8(<16 x i8> %va, i8 %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vx_v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e8, m1, ta, ma
 ; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x i8> poison, i8 %b, i32 0
@@ -313,7 +313,7 @@ define <16 x i8> @vsrl_vx_v16i8_unmasked(<16 x i8> %va, i8 %b, i32 zeroext %evl)
 define <16 x i8> @vsrl_vi_v16i8(<16 x i8> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vi_v16i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x i8> poison, i8 4, i32 0
@@ -341,7 +341,7 @@ declare <2 x i16> @llvm.vp.lshr.v2i16(<2 x i16>, <2 x i16>, <2 x i1>, i32)
 define <2 x i16> @vsrl_vv_v2i16(<2 x i16> %va, <2 x i16> %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x i16> @llvm.vp.lshr.v2i16(<2 x i16> %va, <2 x i16> %b, <2 x i1> %m, i32 %evl)
@@ -363,7 +363,7 @@ define <2 x i16> @vsrl_vv_v2i16_unmasked(<2 x i16> %va, <2 x i16> %b, i32 zeroex
 define <2 x i16> @vsrl_vx_v2i16(<2 x i16> %va, i16 %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vx_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i16> poison, i16 %b, i32 0
@@ -389,7 +389,7 @@ define <2 x i16> @vsrl_vx_v2i16_unmasked(<2 x i16> %va, i16 %b, i32 zeroext %evl
 define <2 x i16> @vsrl_vi_v2i16(<2 x i16> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vi_v2i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i16> poison, i16 4, i32 0
@@ -417,7 +417,7 @@ declare <4 x i16> @llvm.vp.lshr.v4i16(<4 x i16>, <4 x i16>, <4 x i1>, i32)
 define <4 x i16> @vsrl_vv_v4i16(<4 x i16> %va, <4 x i16> %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x i16> @llvm.vp.lshr.v4i16(<4 x i16> %va, <4 x i16> %b, <4 x i1> %m, i32 %evl)
@@ -439,7 +439,7 @@ define <4 x i16> @vsrl_vv_v4i16_unmasked(<4 x i16> %va, <4 x i16> %b, i32 zeroex
 define <4 x i16> @vsrl_vx_v4i16(<4 x i16> %va, i16 %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vx_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i16> poison, i16 %b, i32 0
@@ -465,7 +465,7 @@ define <4 x i16> @vsrl_vx_v4i16_unmasked(<4 x i16> %va, i16 %b, i32 zeroext %evl
 define <4 x i16> @vsrl_vi_v4i16(<4 x i16> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vi_v4i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i16> poison, i16 4, i32 0
@@ -493,7 +493,7 @@ declare <8 x i16> @llvm.vp.lshr.v8i16(<8 x i16>, <8 x i16>, <8 x i1>, i32)
 define <8 x i16> @vsrl_vv_v8i16(<8 x i16> %va, <8 x i16> %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x i16> @llvm.vp.lshr.v8i16(<8 x i16> %va, <8 x i16> %b, <8 x i1> %m, i32 %evl)
@@ -515,7 +515,7 @@ define <8 x i16> @vsrl_vv_v8i16_unmasked(<8 x i16> %va, <8 x i16> %b, i32 zeroex
 define <8 x i16> @vsrl_vx_v8i16(<8 x i16> %va, i16 %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vx_v8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m1, ta, ma
 ; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i16> poison, i16 %b, i32 0
@@ -541,7 +541,7 @@ define <8 x i16> @vsrl_vx_v8i16_unmasked(<8 x i16> %va, i16 %b, i32 zeroext %evl
 define <8 x i16> @vsrl_vi_v8i16(<8 x i16> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vi_v8i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m1, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i16> poison, i16 4, i32 0
@@ -569,7 +569,7 @@ declare <16 x i16> @llvm.vp.lshr.v16i16(<16 x i16>, <16 x i16>, <16 x i1>, i32)
 define <16 x i16> @vsrl_vv_v16i16(<16 x i16> %va, <16 x i16> %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %v = call <16 x i16> @llvm.vp.lshr.v16i16(<16 x i16> %va, <16 x i16> %b, <16 x i1> %m, i32 %evl)
@@ -591,7 +591,7 @@ define <16 x i16> @vsrl_vv_v16i16_unmasked(<16 x i16> %va, <16 x i16> %b, i32 ze
 define <16 x i16> @vsrl_vx_v16i16(<16 x i16> %va, i16 %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vx_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e16, m2, ta, ma
 ; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x i16> poison, i16 %b, i32 0
@@ -617,7 +617,7 @@ define <16 x i16> @vsrl_vx_v16i16_unmasked(<16 x i16> %va, i16 %b, i32 zeroext %
 define <16 x i16> @vsrl_vi_v16i16(<16 x i16> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vi_v16i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x i16> poison, i16 4, i32 0
@@ -645,7 +645,7 @@ declare <2 x i32> @llvm.vp.lshr.v2i32(<2 x i32>, <2 x i32>, <2 x i1>, i32)
 define <2 x i32> @vsrl_vv_v2i32(<2 x i32> %va, <2 x i32> %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x i32> @llvm.vp.lshr.v2i32(<2 x i32> %va, <2 x i32> %b, <2 x i1> %m, i32 %evl)
@@ -667,7 +667,7 @@ define <2 x i32> @vsrl_vv_v2i32_unmasked(<2 x i32> %va, <2 x i32> %b, i32 zeroex
 define <2 x i32> @vsrl_vx_v2i32(<2 x i32> %va, i32 %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vx_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i32> poison, i32 %b, i32 0
@@ -693,7 +693,7 @@ define <2 x i32> @vsrl_vx_v2i32_unmasked(<2 x i32> %va, i32 %b, i32 zeroext %evl
 define <2 x i32> @vsrl_vi_v2i32(<2 x i32> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vi_v2i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i32> poison, i32 4, i32 0
@@ -721,7 +721,7 @@ declare <4 x i32> @llvm.vp.lshr.v4i32(<4 x i32>, <4 x i32>, <4 x i1>, i32)
 define <4 x i32> @vsrl_vv_v4i32(<4 x i32> %va, <4 x i32> %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x i32> @llvm.vp.lshr.v4i32(<4 x i32> %va, <4 x i32> %b, <4 x i1> %m, i32 %evl)
@@ -743,7 +743,7 @@ define <4 x i32> @vsrl_vv_v4i32_unmasked(<4 x i32> %va, <4 x i32> %b, i32 zeroex
 define <4 x i32> @vsrl_vx_v4i32(<4 x i32> %va, i32 %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vx_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i32> poison, i32 %b, i32 0
@@ -769,7 +769,7 @@ define <4 x i32> @vsrl_vx_v4i32_unmasked(<4 x i32> %va, i32 %b, i32 zeroext %evl
 define <4 x i32> @vsrl_vi_v4i32(<4 x i32> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vi_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i32> poison, i32 4, i32 0
@@ -797,7 +797,7 @@ declare <8 x i32> @llvm.vp.lshr.v8i32(<8 x i32>, <8 x i32>, <8 x i1>, i32)
 define <8 x i32> @vsrl_vv_v8i32(<8 x i32> %va, <8 x i32> %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x i32> @llvm.vp.lshr.v8i32(<8 x i32> %va, <8 x i32> %b, <8 x i1> %m, i32 %evl)
@@ -819,7 +819,7 @@ define <8 x i32> @vsrl_vv_v8i32_unmasked(<8 x i32> %va, <8 x i32> %b, i32 zeroex
 define <8 x i32> @vsrl_vx_v8i32(<8 x i32> %va, i32 %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vx_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m2, ta, ma
 ; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i32> poison, i32 %b, i32 0
@@ -845,7 +845,7 @@ define <8 x i32> @vsrl_vx_v8i32_unmasked(<8 x i32> %va, i32 %b, i32 zeroext %evl
 define <8 x i32> @vsrl_vi_v8i32(<8 x i32> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vi_v8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i32> poison, i32 4, i32 0
@@ -873,7 +873,7 @@ declare <16 x i32> @llvm.vp.lshr.v16i32(<16 x i32>, <16 x i32>, <16 x i1>, i32)
 define <16 x i32> @vsrl_vv_v16i32(<16 x i32> %va, <16 x i32> %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v16i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
   %v = call <16 x i32> @llvm.vp.lshr.v16i32(<16 x i32> %va, <16 x i32> %b, <16 x i1> %m, i32 %evl)
@@ -895,7 +895,7 @@ define <16 x i32> @vsrl_vv_v16i32_unmasked(<16 x i32> %va, <16 x i32> %b, i32 ze
 define <16 x i32> @vsrl_vx_v16i32(<16 x i32> %va, i32 %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vx_v16i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m4, ta, ma
 ; CHECK-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x i32> poison, i32 %b, i32 0
@@ -921,7 +921,7 @@ define <16 x i32> @vsrl_vx_v16i32_unmasked(<16 x i32> %va, i32 %b, i32 zeroext %
 define <16 x i32> @vsrl_vi_v16i32(<16 x i32> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vi_v16i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x i32> poison, i32 4, i32 0
@@ -949,7 +949,7 @@ declare <2 x i64> @llvm.vp.lshr.v2i64(<2 x i64>, <2 x i64>, <2 x i1>, i32)
 define <2 x i64> @vsrl_vv_v2i64(<2 x i64> %va, <2 x i64> %b, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %v = call <2 x i64> @llvm.vp.lshr.v2i64(<2 x i64> %va, <2 x i64> %b, <2 x i1> %m, i32 %evl)
@@ -971,13 +971,13 @@ define <2 x i64> @vsrl_vv_v2i64_unmasked(<2 x i64> %va, <2 x i64> %b, i32 zeroex
 define <2 x i64> @vsrl_vx_v2i64(<2 x i64> %va, i64 %b, <2 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vsrl_vx_v2i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; RV32-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; RV32-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsrl_vx_v2i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a1, e64, m1, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
   %elt.head = insertelement <2 x i64> poison, i64 %b, i32 0
@@ -1009,7 +1009,7 @@ define <2 x i64> @vsrl_vx_v2i64_unmasked(<2 x i64> %va, i64 %b, i32 zeroext %evl
 define <2 x i64> @vsrl_vi_v2i64(<2 x i64> %va, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vi_v2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <2 x i64> poison, i64 4, i32 0
@@ -1037,7 +1037,7 @@ declare <4 x i64> @llvm.vp.lshr.v4i64(<4 x i64>, <4 x i64>, <4 x i1>, i32)
 define <4 x i64> @vsrl_vv_v4i64(<4 x i64> %va, <4 x i64> %b, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %v = call <4 x i64> @llvm.vp.lshr.v4i64(<4 x i64> %va, <4 x i64> %b, <4 x i1> %m, i32 %evl)
@@ -1059,13 +1059,13 @@ define <4 x i64> @vsrl_vv_v4i64_unmasked(<4 x i64> %va, <4 x i64> %b, i32 zeroex
 define <4 x i64> @vsrl_vx_v4i64(<4 x i64> %va, i64 %b, <4 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vsrl_vx_v4i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, mu
+; RV32-NEXT:    vsetvli zero, a2, e64, m2, ta, ma
 ; RV32-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsrl_vx_v4i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a1, e64, m2, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m2, ta, ma
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
   %elt.head = insertelement <4 x i64> poison, i64 %b, i32 0
@@ -1097,7 +1097,7 @@ define <4 x i64> @vsrl_vx_v4i64_unmasked(<4 x i64> %va, i64 %b, i32 zeroext %evl
 define <4 x i64> @vsrl_vi_v4i64(<4 x i64> %va, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vi_v4i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <4 x i64> poison, i64 4, i32 0
@@ -1125,7 +1125,7 @@ declare <8 x i64> @llvm.vp.lshr.v8i64(<8 x i64>, <8 x i64>, <8 x i1>, i32)
 define <8 x i64> @vsrl_vv_v8i64(<8 x i64> %va, <8 x i64> %b, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v8i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
   %v = call <8 x i64> @llvm.vp.lshr.v8i64(<8 x i64> %va, <8 x i64> %b, <8 x i1> %m, i32 %evl)
@@ -1147,13 +1147,13 @@ define <8 x i64> @vsrl_vv_v8i64_unmasked(<8 x i64> %va, <8 x i64> %b, i32 zeroex
 define <8 x i64> @vsrl_vx_v8i64(<8 x i64> %va, i64 %b, <8 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vsrl_vx_v8i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, mu
+; RV32-NEXT:    vsetvli zero, a2, e64, m4, ta, ma
 ; RV32-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsrl_vx_v8i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m4, ta, ma
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
   %elt.head = insertelement <8 x i64> poison, i64 %b, i32 0
@@ -1185,7 +1185,7 @@ define <8 x i64> @vsrl_vx_v8i64_unmasked(<8 x i64> %va, i64 %b, i32 zeroext %evl
 define <8 x i64> @vsrl_vi_v8i64(<8 x i64> %va, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vi_v8i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <8 x i64> poison, i64 4, i32 0
@@ -1213,7 +1213,7 @@ declare <16 x i64> @llvm.vp.lshr.v16i64(<16 x i64>, <16 x i64>, <16 x i1>, i32)
 define <16 x i64> @vsrl_vv_v16i64(<16 x i64> %va, <16 x i64> %b, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vv_v16i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vsrl.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    ret
   %v = call <16 x i64> @llvm.vp.lshr.v16i64(<16 x i64> %va, <16 x i64> %b, <16 x i1> %m, i32 %evl)
@@ -1235,13 +1235,13 @@ define <16 x i64> @vsrl_vv_v16i64_unmasked(<16 x i64> %va, <16 x i64> %b, i32 ze
 define <16 x i64> @vsrl_vx_v16i64(<16 x i64> %va, i64 %b, <16 x i1> %m, i32 zeroext %evl) {
 ; RV32-LABEL: vsrl_vx_v16i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, mu
+; RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; RV32-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vsrl_vx_v16i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, mu
+; RV64-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; RV64-NEXT:    vsrl.vx v8, v8, a0, v0.t
 ; RV64-NEXT:    ret
   %elt.head = insertelement <16 x i64> poison, i64 %b, i32 0
@@ -1273,7 +1273,7 @@ define <16 x i64> @vsrl_vx_v16i64_unmasked(<16 x i64> %va, i64 %b, i32 zeroext %
 define <16 x i64> @vsrl_vi_v16i64(<16 x i64> %va, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vsrl_vi_v16i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vsrl.vi v8, v8, 4, v0.t
 ; CHECK-NEXT:    ret
   %elt.head = insertelement <16 x i64> poison, i64 4, i32 0

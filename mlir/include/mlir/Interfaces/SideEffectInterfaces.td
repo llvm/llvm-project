@@ -77,9 +77,59 @@ def MemWrite : MemWrite<DefaultResource>;
 // Effect Traits
 //===----------------------------------------------------------------------===//
 
-// Op has no side effect.
-def NoSideEffect : MemoryEffects<[]>;
+// Op has no effect on memory but may have undefined behavior.
+def NoMemoryEffect : MemoryEffects<[]>;
+
 // Op has recursively computed side effects.
-def RecursiveSideEffects : NativeOpTrait<"HasRecursiveSideEffects">;
+def RecursiveMemoryEffects : NativeOpTrait<"HasRecursiveMemoryEffects">;
+
+//===----------------------------------------------------------------------===//
+// Speculation
+//===----------------------------------------------------------------------===//
+
+// Used to inject an implementation of getSpeculatability.  Users should not use
+// this directly.
+def RecursivelySpeculatableImplTrait
+  : NativeOpTrait<"RecursivelySpeculatableImplTrait">;
+
+// Used to inject an implementation of getSpeculatability.  Users should not use
+// this directly.
+def AlwaysSpeculatableImplTrait
+  : NativeOpTrait<"AlwaysSpeculatableImplTrait">;
+
+// This op interface enables Op authors to inject custom logic to determine
+// whether an Operation can be speculatively executed.  Ops that implement this
+// interface need to implement the custom logic in the `getSpeculatability` method.
+// For instance, the `getSpeculatability` for a specific op may check the attributes
+// or input types to determine whether that specific Operation is speculatable.
+def ConditionallySpeculatable : OpInterface<"ConditionallySpeculatable"> {
+  let description = [{
+    An interface used to query information about the speculability of an
+    operation.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods = [
+    InterfaceMethod<[{
+        Returns value indicating whether the specific operation in question can
+        be speculatively executed.  Please see the documentation on the
+        Speculatability enum to know how to interpret the return value.
+      }],
+      "::mlir::Speculation::Speculatability", "getSpeculatability", (ins)>
+  ];
+}
+
+// Marks an Operation as always speculatable.
+def AlwaysSpeculatable : TraitList<[
+    ConditionallySpeculatable, AlwaysSpeculatableImplTrait]>;
+
+// Marks an Operation as speculatable only if all the operations in all attached
+// regions are also speculatable.
+def RecursivelySpeculatable : TraitList<[
+    ConditionallySpeculatable, RecursivelySpeculatableImplTrait]>;
+
+// Always speculatable operation that does not touch memory.  These operations
+// are always legal to hoist or sink.
+def Pure : TraitList<[AlwaysSpeculatable, NoMemoryEffect]>;
 
 #endif // MLIR_INTERFACES_SIDEEFFECTS

@@ -75,7 +75,7 @@ struct SCFTilingResult {
 /// `scf.for` for iterating over the tiles.
 FailureOr<SCFTilingResult> tileUsingSCFForOp(RewriterBase &rewriter,
                                              TilingInterface op,
-                                             SCFTilingOptions options);
+                                             const SCFTilingOptions &options);
 
 /// Options used to control tile + fuse.
 struct SCFTileAndFuseOptions {
@@ -127,9 +127,9 @@ struct SCFTileAndFuseResult {
 /// }
 /// ```
 FailureOr<SCFTileAndFuseResult>
-tileConsumerAndFuseProducerGreedilyUsingSCFForOp(RewriterBase &rewriter,
-                                                 TilingInterface consumer,
-                                                 SCFTileAndFuseOptions options);
+tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
+    RewriterBase &rewriter, TilingInterface consumer,
+    const SCFTileAndFuseOptions &options);
 
 /// Method to lower an `op` that implements the `TilingInterface` to
 /// loops/scalars.

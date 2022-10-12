@@ -1,4 +1,4 @@
-//===- SparseTensorUtils.cpp - Sparse Tensor Utils for MLIR execution -----===//
+//===- SparseTensorRuntime.cpp - SparseTensor runtime support lib ---------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -46,7 +46,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/ExecutionEngine/SparseTensorUtils.h"
+#include "mlir/ExecutionEngine/SparseTensorRuntime.h"
 
 #ifdef MLIR_CRUNNERUTILS_DEFINE_FUNCTIONS
 
@@ -67,6 +67,44 @@ using namespace mlir::sparse_tensor;
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+/// Wrapper class to avoid memory leakage issues.  The `SparseTensorCOO<V>`
+/// class provides a standard C++ iterator interface, where the iterator
+/// is implemented as per `std::vector`'s iterator.  However, for MLIR's
+/// usage we need to have an iterator which also holds onto the underlying
+/// `SparseTensorCOO<V>` so that it can be freed whenever the iterator
+/// is freed.
+//
+// We name this `SparseTensorIterator` rather than `SparseTensorCOOIterator`
+// for future-proofing, since the use of `SparseTensorCOO` is an
+// implementation detail that we eventually want to change (e.g., to
+// use `SparseTensorEnumerator` directly, rather than constructing the
+// intermediate `SparseTensorCOO` at all).
+template <typename V>
+class SparseTensorIterator final {
+public:
+  /// This ctor requires `coo` to be a non-null pointer to a dynamically
+  /// allocated object, and takes ownership of that object.  Therefore,
+  /// callers must not free the underlying COO object, since the iterator's
+  /// dtor will do so.
+  explicit SparseTensorIterator(const SparseTensorCOO<V> *coo)
+      : coo(coo), it(coo->begin()), end(coo->end()) {}
+
+  ~SparseTensorIterator() { delete coo; }
+
+  // Disable copy-ctor and copy-assignment, to prevent double-free.
+  SparseTensorIterator(const SparseTensorIterator<V> &) = delete;
+  SparseTensorIterator<V> &operator=(const SparseTensorIterator<V> &) = delete;
+
+  /// Gets the next element.  If there are no remaining elements, then
+  /// returns nullptr.
+  const Element<V> *getNext() { return it < end ? &*it++ : nullptr; }
+
+private:
+  const SparseTensorCOO<V> *const coo; // Owning pointer.
+  typename SparseTensorCOO<V>::const_iterator it;
+  const typename SparseTensorCOO<V>::const_iterator end;
+};
 
 /// Initializes sparse tensor from an external COO-flavored format.
 /// Used by `IMPL_CONVERTTOMLIRSPARSETENSOR`.
@@ -194,7 +232,7 @@ extern "C" {
       return SparseTensorCOO<V>::newSparseTensorCOO(rank, shape, perm);        \
     coo = static_cast<SparseTensorStorage<P, I, V> *>(ptr)->toCOO(perm);       \
     if (action == Action::kToIterator) {                                       \
-      coo->startIterator();                                                    \
+      return new SparseTensorIterator<V>(coo);                                 \
     } else {                                                                   \
       assert(action == Action::kToCOO);                                        \
     }                                                                          \
@@ -398,16 +436,16 @@ MLIR_SPARSETENSOR_FOREVERY_V(IMPL_ADDELT)
 #undef IMPL_ADDELT
 
 #define IMPL_GETNEXT(VNAME, V)                                                 \
-  bool _mlir_ciface_getNext##VNAME(void *coo,                                  \
+  bool _mlir_ciface_getNext##VNAME(void *iter,                                 \
                                    StridedMemRefType<index_type, 1> *iref,     \
                                    StridedMemRefType<V, 0> *vref) {            \
-    assert(coo &&iref &&vref);                                                 \
+    assert(iter &&iref &&vref);                                                \
     assert(iref->strides[0] == 1);                                             \
     index_type *indx = iref->data + iref->offset;                              \
     V *value = vref->data + vref->offset;                                      \
     const uint64_t isize = iref->sizes[0];                                     \
     const Element<V> *elem =                                                   \
-        static_cast<SparseTensorCOO<V> *>(coo)->getNext();                     \
+        static_cast<SparseTensorIterator<V> *>(iter)->getNext();               \
     if (elem == nullptr)                                                       \
       return false;                                                            \
     for (uint64_t r = 0; r < isize; r++)                                       \
@@ -490,6 +528,13 @@ void delSparseTensor(void *tensor) {
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_DELCOO)
 #undef IMPL_DELCOO
 
+#define IMPL_DELITER(VNAME, V)                                                 \
+  void delSparseTensorIterator##VNAME(void *iter) {                            \
+    delete static_cast<SparseTensorIterator<V> *>(iter);                       \
+  }
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_DELITER)
+#undef IMPL_DELITER
+
 char *getTensorFilename(index_type id) {
   char var[80];
   sprintf(var, "TENSOR%" PRIu64, id);
@@ -532,6 +577,107 @@ MLIR_SPARSETENSOR_FOREVERY_V(IMPL_CONVERTTOMLIRSPARSETENSOR)
   }
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_CONVERTFROMMLIRSPARSETENSOR)
 #undef IMPL_CONVERTFROMMLIRSPARSETENSOR
+
+void *createSparseTensorReader(char *filename) {
+  SparseTensorReader *stfile = new SparseTensorReader(filename);
+  stfile->openFile();
+  stfile->readHeader();
+  return static_cast<void *>(stfile);
+}
+
+index_type getSparseTensorReaderRank(void *p) {
+  return static_cast<SparseTensorReader *>(p)->getRank();
+}
+
+bool getSparseTensorReaderIsSymmetric(void *p) {
+  return static_cast<SparseTensorReader *>(p)->isSymmetric();
+}
+
+index_type getSparseTensorReaderNNZ(void *p) {
+  return static_cast<SparseTensorReader *>(p)->getNNZ();
+}
+
+index_type getSparseTensorReaderDimSize(void *p, index_type d) {
+  return static_cast<SparseTensorReader *>(p)->getDimSize(d);
+}
+
+void _mlir_ciface_getSparseTensorReaderDimSizes(
+    void *p, StridedMemRefType<index_type, 1> *dref) {
+  assert(p && dref);
+  assert(dref->strides[0] == 1);
+  index_type *dimSizes = dref->data + dref->offset;
+  SparseTensorReader &file = *static_cast<SparseTensorReader *>(p);
+  const index_type *sizes = file.getDimSizes();
+  index_type rank = file.getRank();
+  for (uint64_t r = 0; r < rank; ++r)
+    dimSizes[r] = sizes[r];
+}
+
+void delSparseTensorReader(void *p) {
+  delete static_cast<SparseTensorReader *>(p);
+}
+
+#define IMPL_GETNEXT(VNAME, V)                                                 \
+  V _mlir_ciface_getSparseTensorReaderNext##VNAME(                             \
+      void *p, StridedMemRefType<index_type, 1> *iref) {                       \
+    assert(p &&iref);                                                          \
+    assert(iref->strides[0] == 1);                                             \
+    index_type *indices = iref->data + iref->offset;                           \
+    SparseTensorReader *stfile = static_cast<SparseTensorReader *>(p);         \
+    index_type rank = stfile->getRank();                                       \
+    char *linePtr = stfile->readLine();                                        \
+    for (index_type r = 0; r < rank; ++r) {                                    \
+      uint64_t idx = strtoul(linePtr, &linePtr, 10);                           \
+      indices[r] = idx - 1;                                                    \
+    }                                                                          \
+    return detail::readCOOValue<V>(&linePtr, stfile->isPattern());             \
+  }
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_GETNEXT)
+#undef IMPL_GETNEXT
+
+void *createSparseTensorWriter(char *filename) {
+  SparseTensorWriter *file =
+      (filename[0] == 0) ? &std::cout : new std::ofstream(filename);
+  *file << "# extended FROSTT format\n";
+  return static_cast<void *>(file);
+}
+
+void delSparseTensorWriter(void *p) {
+  SparseTensorWriter *file = static_cast<SparseTensorWriter *>(p);
+  file->flush();
+  assert(file->good());
+  if (file != &std::cout)
+    delete file;
+}
+
+void _mlir_ciface_outSparseTensorWriterMetaData(
+    void *p, index_type rank, index_type nnz,
+    StridedMemRefType<index_type, 1> *dref) {
+  assert(p && dref);
+  assert(dref->strides[0] == 1);
+  assert(rank != 0);
+  index_type *dimSizes = dref->data + dref->offset;
+  SparseTensorWriter &file = *static_cast<SparseTensorWriter *>(p);
+  file << rank << " " << nnz << std::endl;
+  for (index_type r = 0; r < rank - 1; ++r)
+    file << dimSizes[r] << " ";
+  file << dimSizes[rank - 1] << std::endl;
+}
+
+#define IMPL_OUTNEXT(VNAME, V)                                                 \
+  void _mlir_ciface_outSparseTensorWriterNext##VNAME(                          \
+      void *p, index_type rank, StridedMemRefType<index_type, 1> *iref,        \
+      V value) {                                                               \
+    assert(p &&iref);                                                          \
+    assert(iref->strides[0] == 1);                                             \
+    index_type *indices = iref->data + iref->offset;                           \
+    SparseTensorWriter &file = *static_cast<SparseTensorWriter *>(p);          \
+    for (uint64_t r = 0; r < rank; ++r)                                        \
+      file << (indices[r] + 1) << " ";                                         \
+    file << value << std::endl;                                                \
+  }
+MLIR_SPARSETENSOR_FOREVERY_V(IMPL_OUTNEXT)
+#undef IMPL_OUTNEXT
 
 } // extern "C"
 

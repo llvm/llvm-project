@@ -158,6 +158,8 @@ public:
   // Should we expand the build vector with shuffles?
   bool shouldExpandBuildVectorWithShuffles(EVT VT,
       unsigned DefinedValues) const override;
+  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
+      unsigned Index) const override;
 
   bool isShuffleMaskLegal(ArrayRef<int> Mask, EVT VT) const override;
   TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(MVT VT)

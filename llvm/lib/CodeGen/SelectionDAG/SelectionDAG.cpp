@@ -660,7 +660,7 @@ static void AddNodeIDOperands(FoldingSetNodeID &ID,
   }
 }
 
-static void AddNodeIDNode(FoldingSetNodeID &ID, unsigned short OpC,
+static void AddNodeIDNode(FoldingSetNodeID &ID, unsigned OpC,
                           SDVTList VTList, ArrayRef<SDValue> OpList) {
   AddNodeIDOpcode(ID, OpC);
   AddNodeIDValueTypes(ID, VTList);

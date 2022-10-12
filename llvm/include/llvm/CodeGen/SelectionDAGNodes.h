@@ -462,12 +462,19 @@ public:
 class SDNode : public FoldingSetNode, public ilist_node<SDNode> {
 private:
   /// The operation that this node performs.
-  int16_t NodeType;
+  int32_t NodeType;
+
+public:
+  /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
+  /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
+  /// intentionally because it adds unneeded complexity without noticeable
+  /// benefits (see discussion with @thakis in D120714).
+  uint16_t PersistentId;
 
 protected:
   // We define a set of mini-helper classes to help us interpret the bits in our
   // SubclassData.  These are designed to fit within a uint16_t so they pack
-  // with NodeType.
+  // with PersistentId.
 
 #if defined(_AIX) && (!defined(__GNUC__) || defined(__clang__))
 // Except for GCC; by default, AIX compilers store bit-fields in 4-byte words
@@ -625,12 +632,6 @@ private:
   uint32_t CFIType = 0;
 
 public:
-  /// Unique and persistent id per SDNode in the DAG. Used for debug printing.
-  /// We do not place that under `#if LLVM_ENABLE_ABI_BREAKING_CHECKS`
-  /// intentionally because it adds unneeded complexity without noticeable
-  /// benefits (see discussion with @thakis in D120714).
-  uint16_t PersistentId;
-
   //===--------------------------------------------------------------------===//
   //  Accessors
   //
@@ -639,7 +640,7 @@ public:
   /// pre-isel nodes (those for which isMachineOpcode returns false), these
   /// are the opcode values in the ISD and <target>ISD namespaces. For
   /// post-isel opcodes, see getMachineOpcode.
-  unsigned getOpcode()  const { return (unsigned short)NodeType; }
+  unsigned getOpcode()  const { return (unsigned)NodeType; }
 
   /// Test if this node has a target-specific opcode (in the
   /// \<target\>ISD namespace).

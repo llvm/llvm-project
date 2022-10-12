@@ -25,7 +25,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/SCCIterator.h"
-#include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
@@ -44,31 +43,11 @@ namespace {
       AU.setPreservesAll();
     }
   };
-
-  struct CallGraphSCC : public ModulePass {
-    static char ID;  // Pass identification, replacement for typeid
-    CallGraphSCC() : ModulePass(ID) {}
-
-    // run - Print out SCCs in the call graph for the specified module.
-    bool runOnModule(Module &M) override;
-
-    void print(raw_ostream &O, const Module* = nullptr) const override { }
-
-    // getAnalysisUsage - This pass requires the CallGraph.
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesAll();
-      AU.addRequired<CallGraphWrapperPass>();
-    }
-  };
 }
 
 char CFGSCC::ID = 0;
 static RegisterPass<CFGSCC>
 Y("print-cfg-sccs", "Print SCCs of each function CFG");
-
-char CallGraphSCC::ID = 0;
-static RegisterPass<CallGraphSCC>
-Z("print-callgraph-sccs", "Print SCCs of the Call Graph");
 
 bool CFGSCC::runOnFunction(Function &F) {
   unsigned sccNum = 0;
@@ -80,28 +59,6 @@ bool CFGSCC::runOnFunction(Function &F) {
       BB->printAsOperand(errs(), false);
       errs() << ", ";
     }
-    if (nextSCC.size() == 1 && SCCI.hasCycle())
-      errs() << " (Has self-loop).";
-  }
-  errs() << "\n";
-
-  return true;
-}
-
-
-// run - Print out SCCs in the call graph for the specified module.
-bool CallGraphSCC::runOnModule(Module &M) {
-  CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
-  unsigned sccNum = 0;
-  errs() << "SCCs for the program in PostOrder:";
-  for (scc_iterator<CallGraph*> SCCI = scc_begin(&CG); !SCCI.isAtEnd();
-       ++SCCI) {
-    const std::vector<CallGraphNode*> &nextSCC = *SCCI;
-    errs() << "\nSCC #" << ++sccNum << " : ";
-    for (std::vector<CallGraphNode*>::const_iterator I = nextSCC.begin(),
-           E = nextSCC.end(); I != E; ++I)
-      errs() << ((*I)->getFunction() ? (*I)->getFunction()->getName()
-                                     : "external node") << ", ";
     if (nextSCC.size() == 1 && SCCI.hasCycle())
       errs() << " (Has self-loop).";
   }

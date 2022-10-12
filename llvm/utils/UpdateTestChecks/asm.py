@@ -47,6 +47,13 @@ ASM_FUNCTION_AMDGPU_RE = re.compile(
     r'^\s*(\.Lfunc_end[0-9]+:\n|\.section)',
     flags=(re.M | re.S))
 
+ASM_FUNCTION_BPF_RE = re.compile(
+    r'^_?(?P<func>[^:]+):[ \t]*#+[ \t]*@"?(?P=func)"?\n'
+    r'(?:[ \t]+.cfi_startproc\n|.seh_proc[^\n]+\n)?'  # drop optional cfi
+    r'(?P<body>.*?)\s*'
+    r'.Lfunc_end[0-9]+:\n',
+    flags=(re.M | re.S))
+
 ASM_FUNCTION_HEXAGON_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*//[ \t]*@"?(?P=func)"?\n[^:]*?'
     r'(?P<body>.*?)\n' # (body of the function)
@@ -292,6 +299,16 @@ def scrub_asm_arm_eabi(asm, args):
   asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
   return asm
 
+def scrub_asm_bpf(asm, args):
+  # Scrub runs of whitespace out of the assembly, but leave the leading
+  # whitespace in place.
+  asm = common.SCRUB_WHITESPACE_RE.sub(r' ', asm)
+  # Expand the tabs used for indentation.
+  asm = string.expandtabs(asm, 2)
+  # Strip trailing whitespace.
+  asm = common.SCRUB_TRAILING_WHITESPACE_RE.sub(r'', asm)
+  return asm
+
 def scrub_asm_hexagon(asm, args):
   # Scrub runs of whitespace out of the assembly, but leave the leading
   # whitespace in place.
@@ -461,6 +478,9 @@ def get_run_handler(triple):
       'aarch64': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
       'aarch64-apple-darwin': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
       'aarch64-apple-ios': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
+      'bpf': (scrub_asm_bpf, ASM_FUNCTION_BPF_RE),
+      'bpfel': (scrub_asm_bpf, ASM_FUNCTION_BPF_RE),
+      'bpfeb': (scrub_asm_bpf, ASM_FUNCTION_BPF_RE),
       'hexagon': (scrub_asm_hexagon, ASM_FUNCTION_HEXAGON_RE),
       'r600': (scrub_asm_amdgpu, ASM_FUNCTION_AMDGPU_RE),
       'amdgcn': (scrub_asm_amdgpu, ASM_FUNCTION_AMDGPU_RE),
