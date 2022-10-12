@@ -469,6 +469,13 @@ static void readConfigs(opt::InputArgList &args) {
       config->features->push_back(std::string(s));
   }
 
+  if (auto *arg = args.getLastArg(OPT_extra_features)) {
+    config->extraFeatures =
+        llvm::Optional<std::vector<std::string>>(std::vector<std::string>());
+    for (StringRef s : arg->getValues())
+      config->extraFeatures->push_back(std::string(s));
+  }
+
   // Legacy --allow-undefined flag which is equivalent to
   // --unresolve-symbols=ignore + --import-undefined
   if (args.hasArg(OPT_allow_undefined)) {

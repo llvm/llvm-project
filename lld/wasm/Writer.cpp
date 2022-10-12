@@ -445,6 +445,11 @@ void Writer::populateTargetFeatures() {
     allowed.insert("mutable-globals");
   }
 
+  if (config->extraFeatures.has_value()) {
+    auto &extraFeatures = config->extraFeatures.value();
+    allowed.insert(extraFeatures.begin(), extraFeatures.end());
+  }
+
   // Only infer used features if user did not specify features
   bool inferFeatures = !config->features.has_value();
 
