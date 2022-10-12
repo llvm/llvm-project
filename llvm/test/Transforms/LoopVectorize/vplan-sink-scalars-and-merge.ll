@@ -1141,7 +1141,7 @@ define void @ptr_induction_remove_dead_recipe(i8* %start, i8* %end) {
 ; CHECK-NEXT:   vector.body:
 ; CHECK-NEXT:     EMIT vp<[[CAN_IV:%.+]]> = CANONICAL-INDUCTION
 ; CHECK-NEXT:     EMIT ir<%ptr.iv> = WIDEN-POINTER-INDUCTION ir<%start>, -1
-; CHECK-NEXT:     REPLICATE ir<%ptr.iv.next> = getelementptr ir<%ptr.iv>, ir<-1>
+; CHECK-NEXT:     CLONE ir<%ptr.iv.next> = getelementptr ir<%ptr.iv>, ir<-1>
 ; CHECK-NEXT:     WIDEN ir<%l> = load ir<%ptr.iv.next>
 ; CHECK-NEXT:     WIDEN ir<%c.1> = icmp ir<%l>, ir<0>
 ; CHECK-NEXT:   Successor(s): if.then
@@ -1156,6 +1156,7 @@ define void @ptr_induction_remove_dead_recipe(i8* %start, i8* %end) {
 ; CHECK-NEXT:     Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:     pred.store.if:
+; CHECK-NEXT:       REPLICATE ir<%ptr.iv.next> = getelementptr ir<%ptr.iv>, ir<-1>
 ; CHECK-NEXT:       REPLICATE store ir<95>, ir<%ptr.iv.next>
 ; CHECK-NEXT:     Successor(s): pred.store.continue
 ; CHECK-EMPTY:
