@@ -1663,8 +1663,8 @@ static size_t LookupTypeInModule(Target *target,
         typedef_type_sp = typedefed_type_sp;
         typedefed_type_sp = typedef_type_sp->GetTypedefType();
       }
+      strm.EOL();
     }
-    strm.EOL();
   }
   return type_list.GetSize();
 }
