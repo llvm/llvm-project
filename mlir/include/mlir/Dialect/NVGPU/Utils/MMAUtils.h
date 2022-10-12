@@ -13,24 +13,21 @@
 #ifndef MLIR_DIALECT_NVGPU_UTILS_MMAUTILS_H
 #define MLIR_DIALECT_NVGPU_UTILS_MMAUTILS_H
 
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Types.h"
 
 namespace mlir {
-namespace vector {
-enum class IteratorType : uint32_t;
-class ContractionOp;
-} // namespace vector
-
-namespace NVVM {
-enum class MMALayout : uint32_t;
-} // namespace NVVM
-
 namespace nvgpu {
 
 /// Represents the role of an operand in an MMA instruction:
 /// `result := matmul(A, B) + C`
 enum class MatMulOperandRole : int32_t { A = 0, B, C };
+
+/// Returns the first user of the `op` that is vector.contract. If no
+/// vector.contract user exists, return failure.
+FailureOr<vector::ContractionOp> getUserContract(Operation *op);
 
 /// Collects information about a warp-level matrix operand represented by a
 /// VectorType.
