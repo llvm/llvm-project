@@ -33,6 +33,7 @@ set(LLVM_TARGET_DEFINITIONS LLVMOps.td)
 mlir_tablegen(LLVMConversions.inc -gen-llvmir-conversions)
 mlir_tablegen(LLVMConversionEnumsToLLVM.inc -gen-enum-to-llvmir-conversions)
 mlir_tablegen(LLVMConversionEnumsFromLLVM.inc -gen-enum-from-llvmir-conversions)
+mlir_tablegen(LLVMOpFromLLVMIRConversions.inc -gen-op-from-llvmir-conversions)
 add_public_tablegen_target(MLIRLLVMConversionsIncGen)
 
 set(LLVM_TARGET_DEFINITIONS LLVMIntrinsicOps.td)
