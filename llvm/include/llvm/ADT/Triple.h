@@ -249,6 +249,9 @@ public:
     MacABI, // Mac Catalyst variant of Apple's iOS deployment target.
     
     // Shader Stages
+    // The order of these values matters, and must be kept in sync with the
+    // language options enum in Clang. The ordering is enforced in
+    // static_asserts in Triple.cpp and in Clang.
     Pixel,
     Vertex,
     Geometry,
