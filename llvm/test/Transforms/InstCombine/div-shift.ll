@@ -311,15 +311,15 @@ define i5 @sdiv_mul_shl_nsw(i5 %x, i5 %y, i5 %z) {
 
 ; (Y * Z) s/ (X << Z) --> Y s/ (1 << Z)
 
-define i5 @sdiv_mul_shl_nsw_commute1(i5 %x, i5 %y, i5 %z) {
-; CHECK-LABEL: @sdiv_mul_shl_nsw_commute1(
+define i5 @sdiv_mul_shl_nsw_exact_commute1(i5 %x, i5 %y, i5 %z) {
+; CHECK-LABEL: @sdiv_mul_shl_nsw_exact_commute1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i5 1, [[Z:%.*]]
 ; CHECK-NEXT:    [[D:%.*]] = sdiv i5 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i5 [[D]]
 ;
   %m1 = mul nsw i5 %y, %x
   %m2 = shl nsw i5 %x, %z
-  %d = sdiv i5 %m1, %m2
+  %d = sdiv exact i5 %m1, %m2
   ret i5 %d
 }
 
@@ -451,14 +451,14 @@ define i5 @udiv_mul_shl_nuw(i5 %x, i5 %y, i5 %z) {
 
 ; (Y * X) u/ (X << Z) --> Y u>> Z
 
-define i5 @udiv_mul_shl_nuw_commute1(i5 %x, i5 %y, i5 %z) {
-; CHECK-LABEL: @udiv_mul_shl_nuw_commute1(
+define i5 @udiv_mul_shl_nuw_exact_commute1(i5 %x, i5 %y, i5 %z) {
+; CHECK-LABEL: @udiv_mul_shl_nuw_exact_commute1(
 ; CHECK-NEXT:    [[D:%.*]] = lshr i5 [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i5 [[D]]
 ;
   %m1 = mul nuw i5 %y, %x
   %m2 = shl nuw i5 %x, %z
-  %d = udiv i5 %m1, %m2
+  %d = udiv exact i5 %m1, %m2
   ret i5 %d
 }
 
