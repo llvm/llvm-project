@@ -827,28 +827,34 @@ static Instruction *foldIDivShl(BinaryOperator &I,
   Type *Ty = I.getType();
 
   // With appropriate no-wrap constraints, remove a common factor in the
-  // dividend and divisor that is disguised as a left-shift.
+  // dividend and divisor that is disguised as a left-shifted value.
   Value *X, *Y, *Z;
-  if (match(Op1, m_Shl(m_Value(X), m_Value(Z))) &&
-      match(Op0, m_c_Mul(m_Specific(X), m_Value(Y)))) {
-    // Both operands must have the matching no-wrap for this kind of division.
-    auto *Mul = cast<OverflowingBinaryOperator>(Op0);
-    auto *Shl = cast<OverflowingBinaryOperator>(Op1);
-    bool HasNUW = Mul->hasNoUnsignedWrap() && Shl->hasNoUnsignedWrap();
-    bool HasNSW = Mul->hasNoSignedWrap() && Shl->hasNoSignedWrap();
+  if (!match(Op1, m_Shl(m_Value(X), m_Value(Z))) ||
+      !match(Op0, m_c_Mul(m_Specific(X), m_Value(Y))))
+    return nullptr;
 
-    // (X * Y) u/ (X << Z) --> Y u>> Z
-    if (!IsSigned && HasNUW)
-      return BinaryOperator::CreateLShr(Y, Z);
+  // Both operands must have the matching no-wrap for this kind of division.
+  Instruction *Ret = nullptr;
+  auto *Mul = cast<OverflowingBinaryOperator>(Op0);
+  auto *Shl = cast<OverflowingBinaryOperator>(Op1);
+  bool HasNUW = Mul->hasNoUnsignedWrap() && Shl->hasNoUnsignedWrap();
+  bool HasNSW = Mul->hasNoSignedWrap() && Shl->hasNoSignedWrap();
 
-    // (X * Y) s/ (X << Z) --> Y s/ (1 << Z)
-    if (IsSigned && HasNSW && (Op0->hasOneUse() || Op1->hasOneUse())) {
-      Value *Shl = Builder.CreateShl(ConstantInt::get(Ty, 1), Z);
-      return BinaryOperator::CreateSDiv(Y, Shl);
-    }
+  // (X * Y) u/ (X << Z) --> Y u>> Z
+  if (!IsSigned && HasNUW)
+    Ret = BinaryOperator::CreateLShr(Y, Z);
+
+  // (X * Y) s/ (X << Z) --> Y s/ (1 << Z)
+  if (IsSigned && HasNSW && (Op0->hasOneUse() || Op1->hasOneUse())) {
+    Value *Shl = Builder.CreateShl(ConstantInt::get(Ty, 1), Z);
+    Ret = BinaryOperator::CreateSDiv(Y, Shl);
   }
 
-  return nullptr;
+  if (!Ret)
+    return nullptr;
+
+  Ret->setIsExact(I.isExact());
+  return Ret;
 }
 
 /// This function implements the transforms common to both integer division

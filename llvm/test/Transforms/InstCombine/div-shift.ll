@@ -314,7 +314,7 @@ define i5 @sdiv_mul_shl_nsw(i5 %x, i5 %y, i5 %z) {
 define i5 @sdiv_mul_shl_nsw_exact_commute1(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @sdiv_mul_shl_nsw_exact_commute1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i5 1, [[Z:%.*]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv i5 [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv exact i5 [[Y:%.*]], [[TMP1]]
 ; CHECK-NEXT:    ret i5 [[D]]
 ;
   %m1 = mul nsw i5 %y, %x
@@ -453,7 +453,7 @@ define i5 @udiv_mul_shl_nuw(i5 %x, i5 %y, i5 %z) {
 
 define i5 @udiv_mul_shl_nuw_exact_commute1(i5 %x, i5 %y, i5 %z) {
 ; CHECK-LABEL: @udiv_mul_shl_nuw_exact_commute1(
-; CHECK-NEXT:    [[D:%.*]] = lshr i5 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = lshr exact i5 [[Y:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    ret i5 [[D]]
 ;
   %m1 = mul nuw i5 %y, %x
