@@ -84,14 +84,6 @@ struct TestLinalgTransforms
       llvm::cl::desc("Test rewrite of subtensor(tensor.pad) into "
                      "tensor.pad(subtensor)"),
       llvm::cl::init(false)};
-  Option<bool> testSplitReduction{
-      *this, "test-split-reduction",
-      llvm::cl::desc("Test split reduction transformation"),
-      llvm::cl::init(false)};
-  Option<bool> testSplitReductionInnerParallel{
-      *this, "test-split-reduction-inner-parallel",
-      llvm::cl::desc("Test split reduction with inner parallel transformation"),
-      llvm::cl::init(false)};
   ListOption<int64_t> peeledLoops{
       *this, "peeled-loops",
       llvm::cl::desc("Loops to be peeled when test-tile-pattern")};
@@ -176,34 +168,6 @@ static void applyExtractSliceOfPadTensorSwapPattern(func::FuncOp funcOp) {
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
 }
 
-static void applySplitReduction(func::FuncOp funcOp) {
-  RewritePatternSet patterns(funcOp.getContext());
-  linalg::populateSplitReductionPattern(
-      patterns,
-      [](LinalgOp op) {
-        unsigned insertDimIndex = op.getNumLoops() - 1;
-        return SplitReductionOptions{4, insertDimIndex, false};
-      },
-      LinalgTransformationFilter(
-          ArrayRef<StringAttr>{},
-          StringAttr::get(funcOp.getContext(), "SPLIT")));
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-}
-
-static void applySplitReductionInnerParallel(func::FuncOp funcOp) {
-  RewritePatternSet patterns(funcOp.getContext());
-  linalg::populateSplitReductionPattern(
-      patterns,
-      [](LinalgOp op) {
-        unsigned insertDimIndex = op.getNumLoops() - 1;
-        return SplitReductionOptions{4, insertDimIndex, true};
-      },
-      LinalgTransformationFilter(
-          ArrayRef<StringAttr>{},
-          StringAttr::get(funcOp.getContext(), "SPLIT")));
-  (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-}
-
 static void applyBubbleUpExtractSliceOpPattern(func::FuncOp funcOp) {
   RewritePatternSet patterns(funcOp.getContext());
   populateBubbleUpExtractSliceOpPatterns(patterns);
@@ -237,10 +201,6 @@ void TestLinalgTransforms::runOnOperation() {
     return applyGeneralizePadTensorPatterns(getOperation());
   if (testSwapSubTensorPadTensor)
     return applyExtractSliceOfPadTensorSwapPattern(getOperation());
-  if (testSplitReduction)
-    return applySplitReduction(getOperation());
-  if (testSplitReductionInnerParallel)
-    return applySplitReductionInnerParallel(getOperation());
   if (testBubbleUpExtractSliceOpPattern)
     return applyBubbleUpExtractSliceOpPattern(getOperation());
   if (testSwapExtractSliceWithFill)
