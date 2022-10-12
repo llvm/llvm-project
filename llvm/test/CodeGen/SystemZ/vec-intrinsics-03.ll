@@ -52,7 +52,7 @@ define <16 x i8> @test_vsrd_7(<16 x i8> %a, <16 x i8> %b) {
 
 ; VSTRSB.
 define <16 x i8> @test_vstrsb(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c,
-                              i32 *%ccptr) {
+                              ptr %ccptr) {
 ; CHECK-LABEL: test_vstrsb:
 ; CHECK: vstrsb %v24, %v24, %v26, %v28, 0
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -63,13 +63,13 @@ define <16 x i8> @test_vstrsb(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c,
                                                   <16 x i8> %c)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 
 ; VSTRSH.
 define <16 x i8> @test_vstrsh(<8 x i16> %a, <8 x i16> %b, <16 x i8> %c,
-                              i32 *%ccptr) {
+                              ptr %ccptr) {
 ; CHECK-LABEL: test_vstrsh:
 ; CHECK: vstrsh %v24, %v24, %v26, %v28, 0
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -80,13 +80,13 @@ define <16 x i8> @test_vstrsh(<8 x i16> %a, <8 x i16> %b, <16 x i8> %c,
                                                   <16 x i8> %c)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 
 ; VSTRSFS.
 define <16 x i8> @test_vstrsf(<4 x i32> %a, <4 x i32> %b, <16 x i8> %c,
-                              i32 *%ccptr) {
+                              ptr %ccptr) {
 ; CHECK-LABEL: test_vstrsf:
 ; CHECK: vstrsf %v24, %v24, %v26, %v28, 0
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -97,13 +97,13 @@ define <16 x i8> @test_vstrsf(<4 x i32> %a, <4 x i32> %b, <16 x i8> %c,
                                                   <16 x i8> %c)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 
 ; VSTRSZB.
 define <16 x i8> @test_vstrszb(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c,
-                              i32 *%ccptr) {
+                              ptr %ccptr) {
 ; CHECK-LABEL: test_vstrszb:
 ; CHECK: vstrszb %v24, %v24, %v26, %v28
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -114,13 +114,13 @@ define <16 x i8> @test_vstrszb(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c,
                                                    <16 x i8> %c)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 
 ; VSTRSZH.
 define <16 x i8> @test_vstrszh(<8 x i16> %a, <8 x i16> %b, <16 x i8> %c,
-                              i32 *%ccptr) {
+                              ptr %ccptr) {
 ; CHECK-LABEL: test_vstrszh:
 ; CHECK: vstrszh %v24, %v24, %v26, %v28
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -131,13 +131,13 @@ define <16 x i8> @test_vstrszh(<8 x i16> %a, <8 x i16> %b, <16 x i8> %c,
                                                    <16 x i8> %c)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 
 ; VSTRSZF.
 define <16 x i8> @test_vstrszf(<4 x i32> %a, <4 x i32> %b, <16 x i8> %c,
-                              i32 *%ccptr) {
+                              ptr %ccptr) {
 ; CHECK-LABEL: test_vstrszf:
 ; CHECK: vstrszf %v24, %v24, %v26, %v28
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -148,7 +148,7 @@ define <16 x i8> @test_vstrszf(<4 x i32> %a, <4 x i32> %b, <16 x i8> %c,
                                                    <16 x i8> %c)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 

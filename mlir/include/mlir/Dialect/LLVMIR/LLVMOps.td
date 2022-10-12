@@ -206,24 +206,28 @@ class LLVM_TerminatorOp<string mnemonic, list<Trait> traits = []> :
 
 // Class for arithmetic binary operations.
 class LLVM_ArithmeticOpBase<Type type, string mnemonic,
-                            string builderFunc, list<Trait> traits = []> :
+                            string instName, list<Trait> traits = []> :
     LLVM_Op<mnemonic,
            !listconcat([NoSideEffect, SameOperandsAndResultType], traits)>,
-    LLVM_Builder<"$res = builder." # builderFunc # "($lhs, $rhs);"> {
+    LLVM_Builder<"$res = builder.Create" # instName # "($lhs, $rhs);"> {
   dag commonArgs = (ins LLVM_ScalarOrVectorOf<type>:$lhs,
                     LLVM_ScalarOrVectorOf<type>:$rhs);
   let results = (outs LLVM_ScalarOrVectorOf<type>:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "$lhs `,` $rhs custom<LLVMOpAttrs>(attr-dict) `:` type($res)";
+  string llvmInstName = instName;
+  string mlirBuilder = [{
+    $res = $_builder.create<$_qualCppClassName>($_location, $lhs, $rhs);
+  }];
 }
-class LLVM_IntArithmeticOp<string mnemonic, string builderFunc,
+class LLVM_IntArithmeticOp<string mnemonic, string instName,
                            list<Trait> traits = []> :
-    LLVM_ArithmeticOpBase<AnyInteger, mnemonic, builderFunc, traits> {
+    LLVM_ArithmeticOpBase<AnyInteger, mnemonic, instName, traits> {
   let arguments = commonArgs;
 }
-class LLVM_FloatArithmeticOp<string mnemonic, string builderFunc,
+class LLVM_FloatArithmeticOp<string mnemonic, string instName,
                              list<Trait> traits = []> :
-    LLVM_ArithmeticOpBase<LLVM_AnyFloat, mnemonic, builderFunc,
+    LLVM_ArithmeticOpBase<LLVM_AnyFloat, mnemonic, instName,
     !listconcat([DeclareOpInterfaceMethods<FastmathFlagsInterface>], traits)> {
   dag fmfArg = (ins DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
   let arguments = !con(commonArgs, fmfArg);
@@ -231,30 +235,34 @@ class LLVM_FloatArithmeticOp<string mnemonic, string builderFunc,
 
 // Class for arithmetic unary operations.
 class LLVM_UnaryFloatArithmeticOp<Type type, string mnemonic,
-                             string builderFunc, list<Trait> traits = []> :
+                                  string instName, list<Trait> traits = []> :
     LLVM_Op<mnemonic,
            !listconcat([NoSideEffect, SameOperandsAndResultType, DeclareOpInterfaceMethods<FastmathFlagsInterface>], traits)>,
-    LLVM_Builder<"$res = builder." # builderFunc # "($operand);"> {
+    LLVM_Builder<"$res = builder.Create" # instName # "($operand);"> {
   let arguments = (ins type:$operand, DefaultValuedAttr<LLVM_FMFAttr, "{}">:$fastmathFlags);
   let results = (outs type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "$operand custom<LLVMOpAttrs>(attr-dict) `:` type($res)";
+  string llvmInstName = instName;
+  string mlirBuilder = [{
+    $res = $_builder.create<$_qualCppClassName>($_location, $operand);
+  }];
 }
 
 // Integer binary operations.
-def LLVM_AddOp : LLVM_IntArithmeticOp<"add", "CreateAdd", [Commutative]>;
-def LLVM_SubOp : LLVM_IntArithmeticOp<"sub", "CreateSub">;
-def LLVM_MulOp : LLVM_IntArithmeticOp<"mul", "CreateMul", [Commutative]>;
-def LLVM_UDivOp : LLVM_IntArithmeticOp<"udiv", "CreateUDiv">;
-def LLVM_SDivOp : LLVM_IntArithmeticOp<"sdiv", "CreateSDiv">;
-def LLVM_URemOp : LLVM_IntArithmeticOp<"urem", "CreateURem">;
-def LLVM_SRemOp : LLVM_IntArithmeticOp<"srem", "CreateSRem">;
-def LLVM_AndOp : LLVM_IntArithmeticOp<"and", "CreateAnd">;
-def LLVM_OrOp : LLVM_IntArithmeticOp<"or", "CreateOr">;
-def LLVM_XOrOp : LLVM_IntArithmeticOp<"xor", "CreateXor">;
-def LLVM_ShlOp : LLVM_IntArithmeticOp<"shl", "CreateShl">;
-def LLVM_LShrOp : LLVM_IntArithmeticOp<"lshr", "CreateLShr">;
-def LLVM_AShrOp : LLVM_IntArithmeticOp<"ashr", "CreateAShr">;
+def LLVM_AddOp : LLVM_IntArithmeticOp<"add", "Add", [Commutative]>;
+def LLVM_SubOp : LLVM_IntArithmeticOp<"sub", "Sub">;
+def LLVM_MulOp : LLVM_IntArithmeticOp<"mul", "Mul", [Commutative]>;
+def LLVM_UDivOp : LLVM_IntArithmeticOp<"udiv", "UDiv">;
+def LLVM_SDivOp : LLVM_IntArithmeticOp<"sdiv", "SDiv">;
+def LLVM_URemOp : LLVM_IntArithmeticOp<"urem", "URem">;
+def LLVM_SRemOp : LLVM_IntArithmeticOp<"srem", "SRem">;
+def LLVM_AndOp : LLVM_IntArithmeticOp<"and", "And">;
+def LLVM_OrOp : LLVM_IntArithmeticOp<"or", "Or">;
+def LLVM_XOrOp : LLVM_IntArithmeticOp<"xor", "Xor">;
+def LLVM_ShlOp : LLVM_IntArithmeticOp<"shl", "Shl">;
+def LLVM_LShrOp : LLVM_IntArithmeticOp<"lshr", "LShr">;
+def LLVM_AShrOp : LLVM_IntArithmeticOp<"ashr", "AShr">;
 
 // Predicate for integer comparisons.
 def ICmpPredicateEQ  : I64EnumAttrCase<"eq", 0>;
@@ -335,13 +343,13 @@ def LLVM_FCmpOp : LLVM_Op<"fcmp", [
 }
 
 // Floating point binary operations.
-def LLVM_FAddOp : LLVM_FloatArithmeticOp<"fadd", "CreateFAdd">;
-def LLVM_FSubOp : LLVM_FloatArithmeticOp<"fsub", "CreateFSub">;
-def LLVM_FMulOp : LLVM_FloatArithmeticOp<"fmul", "CreateFMul">;
-def LLVM_FDivOp : LLVM_FloatArithmeticOp<"fdiv", "CreateFDiv">;
-def LLVM_FRemOp : LLVM_FloatArithmeticOp<"frem", "CreateFRem">;
+def LLVM_FAddOp : LLVM_FloatArithmeticOp<"fadd", "FAdd">;
+def LLVM_FSubOp : LLVM_FloatArithmeticOp<"fsub", "FSub">;
+def LLVM_FMulOp : LLVM_FloatArithmeticOp<"fmul", "FMul">;
+def LLVM_FDivOp : LLVM_FloatArithmeticOp<"fdiv", "FDiv">;
+def LLVM_FRemOp : LLVM_FloatArithmeticOp<"frem", "FRem">;
 def LLVM_FNegOp : LLVM_UnaryFloatArithmeticOp<
-  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>, "fneg", "CreateFNeg">;
+  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>, "fneg", "FNeg">;
 
 // Common code definition that is used to verify and set the alignment attribute
 // of LLVM ops that accept such an attribute.
@@ -383,6 +391,7 @@ def LLVM_AllocaOp : LLVM_Op<"alloca">, MemoryOpWithAlignmentBase {
                    OptionalAttr<TypeAttr>:$elem_type);
   let results = (outs Res<LLVM_AnyPointer, "",
                           [MemAlloc<AutomaticAllocationScopeResource>]>:$res);
+  string llvmInstName = "Alloca";
   string llvmBuilder = [{
     auto addrSpace = $_resultType->getPointerAddressSpace();
     llvm::Type *elementType = moduleTranslation.convertType(
@@ -391,6 +400,14 @@ def LLVM_AllocaOp : LLVM_Op<"alloca">, MemoryOpWithAlignmentBase {
     auto *inst = builder.CreateAlloca(elementType, addrSpace, $arraySize);
     }] # setAlignmentCode # [{
     $res = inst;
+  }];
+  // FIXME: Import attributes.
+  string mlirBuilder = [{
+    auto *allocaInst = cast<llvm::AllocaInst>(inst);
+    Type allocatedType = convertType(allocaInst->getAllocatedType());
+    unsigned alignment = allocaInst->getAlign().value();
+    $res = $_builder.create<LLVM::AllocaOp>(
+      $_location, $_resultType, allocatedType, $arraySize, alignment);
   }];
   let builders = [
     OpBuilder<(ins "Type":$resultType, "Value":$arraySize,
@@ -505,6 +522,7 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
                    OptionalAttr<I64Attr>:$alignment, UnitAttr:$volatile_,
                    UnitAttr:$nontemporal);
   let results = (outs LLVM_LoadableType:$res);
+  string llvmInstName = "Load";
   string llvmBuilder = [{
     auto *inst = builder.CreateLoad($_resultType, $addr, $volatile_);
   }] # setAlignmentCode
@@ -513,6 +531,10 @@ def LLVM_LoadOp : LLVM_Op<"load">, MemoryOpWithAlignmentAndAttributes {
      # setAliasScopeMetadataCode
      # [{
     $res = inst;
+  }];
+  // FIXME: Import attributes.
+  string mlirBuilder = [{
+    $res = $_builder.create<LLVM::LoadOp>($_location, $_resultType, $addr);
   }];
   let builders = [
     OpBuilder<(ins "Value":$addr, CArg<"unsigned", "0">:$alignment,
@@ -538,12 +560,17 @@ def LLVM_StoreOp : LLVM_Op<"store">, MemoryOpWithAlignmentAndAttributes {
                    OptionalAttr<SymbolRefArrayAttr>:$noalias_scopes,
                    OptionalAttr<I64Attr>:$alignment, UnitAttr:$volatile_,
                    UnitAttr:$nontemporal);
+  string llvmInstName = "Store";
   string llvmBuilder = [{
     auto *inst = builder.CreateStore($value, $addr, $volatile_);
   }] # setAlignmentCode
      # setNonTemporalMetadataCode
      # setAccessGroupsMetadataCode
      # setAliasScopeMetadataCode;
+  // FIXME: Import attributes.
+  string mlirBuilder = [{
+    $_builder.create<LLVM::StoreOp>($_location, $value, $addr);
+  }];
   let builders = [
     OpBuilder<(ins "Value":$value, "Value":$addr,
       CArg<"unsigned", "0">:$alignment, CArg<"bool", "false">:$isVolatile,
@@ -554,55 +581,60 @@ def LLVM_StoreOp : LLVM_Op<"store">, MemoryOpWithAlignmentAndAttributes {
 }
 
 // Casts.
-class LLVM_CastOp<string mnemonic, string builderFunc, Type type,
+class LLVM_CastOp<string mnemonic, string instName, Type type,
                   Type resultType, list<Trait> traits = []> :
     LLVM_Op<mnemonic, !listconcat([NoSideEffect], traits)>,
-    LLVM_Builder<"$res = builder." # builderFunc # "($arg, $_resultType);"> {
+    LLVM_Builder<"$res = builder.Create" # instName # "($arg, $_resultType);"> {
   let arguments = (ins type:$arg);
   let results = (outs resultType:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "$arg attr-dict `:` type($arg) `to` type($res)";
+  string llvmInstName = instName;
+  string mlirBuilder = [{
+    $res = $_builder.create<$_qualCppClassName>(
+      $_location, $_resultType, $arg);
+  }];
 }
-def LLVM_BitcastOp : LLVM_CastOp<"bitcast", "CreateBitCast",
+def LLVM_BitcastOp : LLVM_CastOp<"bitcast", "BitCast",
                                  LLVM_AnyNonAggregate, LLVM_AnyNonAggregate> {
   let hasFolder = 1;
 }
-def LLVM_AddrSpaceCastOp : LLVM_CastOp<"addrspacecast", "CreateAddrSpaceCast",
+def LLVM_AddrSpaceCastOp : LLVM_CastOp<"addrspacecast", "AddrSpaceCast",
                                        LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
                                        LLVM_ScalarOrVectorOf<LLVM_AnyPointer>> {
   let hasFolder = 1;
 }
-def LLVM_IntToPtrOp : LLVM_CastOp<"inttoptr", "CreateIntToPtr",
+def LLVM_IntToPtrOp : LLVM_CastOp<"inttoptr", "IntToPtr",
                                   LLVM_ScalarOrVectorOf<AnyInteger>,
                                   LLVM_ScalarOrVectorOf<LLVM_AnyPointer>>;
-def LLVM_PtrToIntOp : LLVM_CastOp<"ptrtoint", "CreatePtrToInt",
+def LLVM_PtrToIntOp : LLVM_CastOp<"ptrtoint", "PtrToInt",
                                   LLVM_ScalarOrVectorOf<LLVM_AnyPointer>,
                                   LLVM_ScalarOrVectorOf<AnyInteger>>;
-def LLVM_SExtOp : LLVM_CastOp<"sext", "CreateSExt",
+def LLVM_SExtOp : LLVM_CastOp<"sext", "SExt",
                               LLVM_ScalarOrVectorOf<AnyInteger>,
                               LLVM_ScalarOrVectorOf<AnyInteger>>;
-def LLVM_ZExtOp : LLVM_CastOp<"zext", "CreateZExt",
+def LLVM_ZExtOp : LLVM_CastOp<"zext", "ZExt",
                               LLVM_ScalarOrVectorOf<AnyInteger>,
                               LLVM_ScalarOrVectorOf<AnyInteger>>;
-def LLVM_TruncOp : LLVM_CastOp<"trunc", "CreateTrunc",
+def LLVM_TruncOp : LLVM_CastOp<"trunc", "Trunc",
                                LLVM_ScalarOrVectorOf<AnyInteger>,
                                LLVM_ScalarOrVectorOf<AnyInteger>>;
-def LLVM_SIToFPOp : LLVM_CastOp<"sitofp", "CreateSIToFP",
+def LLVM_SIToFPOp : LLVM_CastOp<"sitofp", "SIToFP",
                                 LLVM_ScalarOrVectorOf<AnyInteger>,
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
-def LLVM_UIToFPOp : LLVM_CastOp<"uitofp", "CreateUIToFP",
+def LLVM_UIToFPOp : LLVM_CastOp<"uitofp", "UIToFP",
                                 LLVM_ScalarOrVectorOf<AnyInteger>,
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
-def LLVM_FPToSIOp : LLVM_CastOp<"fptosi", "CreateFPToSI",
+def LLVM_FPToSIOp : LLVM_CastOp<"fptosi", "FPToSI",
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                 LLVM_ScalarOrVectorOf<AnyInteger>>;
-def LLVM_FPToUIOp : LLVM_CastOp<"fptoui", "CreateFPToUI",
+def LLVM_FPToUIOp : LLVM_CastOp<"fptoui", "FPToUI",
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                 LLVM_ScalarOrVectorOf<AnyInteger>>;
-def LLVM_FPExtOp : LLVM_CastOp<"fpext", "CreateFPExt",
+def LLVM_FPExtOp : LLVM_CastOp<"fpext", "FPExt",
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                 LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
-def LLVM_FPTruncOp : LLVM_CastOp<"fptrunc", "CreateFPTrunc",
+def LLVM_FPTruncOp : LLVM_CastOp<"fptrunc", "FPTrunc",
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>,
                                  LLVM_ScalarOrVectorOf<LLVM_AnyFloat>>;
 
@@ -718,8 +750,13 @@ def LLVM_ExtractElementOp : LLVM_Op<"extractelement", [NoSideEffect,
     $vector `[` $position `:` type($position) `]` attr-dict `:` type($vector)
   }];
 
+  string llvmInstName = "ExtractElement";
   string llvmBuilder = [{
     $res = builder.CreateExtractElement($vector, $position);
+  }];
+  string mlirBuilder = [{
+    $res = $_builder.create<LLVM::ExtractElementOp>(
+      $_location, $vector, $position);
   }];
 }
 
@@ -772,8 +809,13 @@ def LLVM_InsertElementOp : LLVM_Op<"insertelement", [NoSideEffect,
     type($vector)
   }];
 
+  string llvmInstName = "InsertElement";
   string llvmBuilder = [{
     $res = builder.CreateInsertElement($vector, $value, $position);
+  }];
+  string mlirBuilder = [{
+    $res = $_builder.create<LLVM::InsertElementOp>(
+      $_location, $vector, $value, $position);
   }];
 }
 
@@ -843,13 +885,22 @@ def LLVM_SelectOp
                    LLVM_Type:$trueValue, LLVM_Type:$falseValue);
   let results = (outs LLVM_Type:$res);
   let assemblyFormat = "operands attr-dict `:` type($condition) `,` type($res)";
+  string llvmInstName = "Select";
+  string mlirBuilder = [{
+    $res = $_builder.create<LLVM::SelectOp>(
+      $_location, $_resultType, $condition, $trueValue, $falseValue);
+  }];
 }
 def LLVM_FreezeOp : LLVM_Op<"freeze", [SameOperandsAndResultType]> {
   let arguments = (ins LLVM_Type:$val);
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
   let assemblyFormat = "$val attr-dict `:` type($val)";
+  string llvmInstName = "Freeze";
   string llvmBuilder = "builder.CreateFreeze($val);";
+  string mlirBuilder = [{
+    $res = $_builder.create<LLVM::FreezeOp>($_location, $val);
+  }];
 }
 
 // Terminators.
@@ -916,23 +967,35 @@ def LLVM_ReturnOp : LLVM_TerminatorOp<"return", [NoSideEffect]> {
 
   let hasVerifier = 1;
 
+  string llvmInstName = "Ret";
   string llvmBuilder = [{
     if ($_numOperands != 0)
       builder.CreateRet($arg[0]);
     else
       builder.CreateRetVoid();
   }];
+  string mlirBuilder = [{
+    $_builder.create<LLVM::ReturnOp>($_location, processValues(llvmOperands));
+  }];
 }
 
 def LLVM_ResumeOp : LLVM_TerminatorOp<"resume"> {
   let arguments = (ins LLVM_Type:$value);
-  string llvmBuilder = [{ builder.CreateResume($value); }];
   let assemblyFormat = "$value attr-dict `:` type($value)";
   let hasVerifier = 1;
+  string llvmInstName = "Resume";
+  string llvmBuilder = [{ builder.CreateResume($value); }];
+  string mlirBuilder = [{
+    $_builder.create<LLVM::ResumeOp>($_location, $value);
+  }];
 }
 def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable"> {
-  string llvmBuilder = [{ builder.CreateUnreachable(); }];
   let assemblyFormat = "attr-dict";
+  string llvmInstName = "Unreachable";
+  string llvmBuilder = [{ builder.CreateUnreachable(); }];
+  string mlirBuilder = [{
+    $_builder.create<LLVM::UnreachableOp>($_location);
+  }];
 }
 
 def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
@@ -1714,10 +1777,18 @@ def LLVM_AtomicCmpXchgOp : LLVM_Op<"cmpxchg"> {
 def LLVM_FenceOp : LLVM_Op<"fence"> {
   let arguments = (ins AtomicOrdering:$ordering, StrAttr:$syncscope);
   let builders = [LLVM_VoidResultTypeOpBuilder, LLVM_ZeroResultOpBuilder];
+  string llvmInstName = "Fence";
   let llvmBuilder = [{
     llvm::LLVMContext &llvmContext = builder.getContext();
     builder.CreateFence(getLLVMAtomicOrdering($ordering),
       llvmContext.getOrInsertSyncScopeID($syncscope));
+  }];
+  string mlirBuilder = [{
+    llvm::FenceInst *fenceInst = cast<llvm::FenceInst>(inst);
+    $_builder.create<LLVM::FenceOp>(
+      $_location,
+      getLLVMAtomicOrdering(fenceInst->getOrdering()),
+      getLLVMSyncScope(fenceInst));
   }];
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;

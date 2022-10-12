@@ -13,7 +13,7 @@ define dso_local i64 @f1(i64 %src1) {
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
-  %src2 = load i64, i64 *@g
+  %src2 = load i64, ptr@g
   %cond = icmp slt i64 %src1, %src2
   br i1 %cond, label %exit, label %mulb
 mulb:
@@ -31,7 +31,7 @@ define dso_local i64 @f2(i64 %src1) {
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
-  %src2 = load i64, i64 *@g
+  %src2 = load i64, ptr@g
   %cond = icmp ult i64 %src1, %src2
   br i1 %cond, label %exit, label %mulb
 mulb:
@@ -49,7 +49,7 @@ define dso_local i64 @f3(i64 %src1) {
 ; CHECK-NEXT: ber %r14
 ; CHECK: br %r14
 entry:
-  %src2 = load i64, i64 *@g
+  %src2 = load i64, ptr@g
   %cond = icmp eq i64 %src1, %src2
   br i1 %cond, label %exit, label %mulb
 mulb:
@@ -67,7 +67,7 @@ define dso_local i64 @f4(i64 %src1) {
 ; CHECK-NEXT: blhr %r14
 ; CHECK: br %r14
 entry:
-  %src2 = load i64, i64 *@g
+  %src2 = load i64, ptr@g
   %cond = icmp ne i64 %src1, %src2
   br i1 %cond, label %exit, label %mulb
 mulb:
@@ -86,7 +86,7 @@ define dso_local i64 @f5(i64 %src1) {
 ; CHECK-NEXT: blr %r14
 ; CHECK: br %r14
 entry:
-  %src2 = load i64, i64 *@h, align 4
+  %src2 = load i64, ptr@h, align 4
   %cond = icmp slt i64 %src1, %src2
   br i1 %cond, label %exit, label %mulb
 mulb:
@@ -104,7 +104,7 @@ define dso_local i64 @f6(i64 %src2) {
 ; CHECK-NEXT: bhr %r14
 ; CHECK: br %r14
 entry:
-  %src1 = load i64, i64 *@g
+  %src1 = load i64, ptr@g
   %cond = icmp slt i64 %src1, %src2
   br i1 %cond, label %exit, label %mulb
 mulb:

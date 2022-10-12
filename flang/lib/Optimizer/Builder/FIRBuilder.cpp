@@ -460,7 +460,7 @@ mlir::Value fir::FirOpBuilder::createSlice(mlir::Location loc,
 mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
                                          const fir::ExtendedValue &exv) {
   mlir::Value itemAddr = fir::getBase(exv);
-  if (itemAddr.getType().isa<fir::BoxType>())
+  if (itemAddr.getType().isa<fir::BaseBoxType>())
     return itemAddr;
   auto elementType = fir::dyn_cast_ptrEleTy(itemAddr.getType());
   if (!elementType) {
@@ -741,7 +741,7 @@ static llvm::SmallVector<mlir::Value> getFromBox(mlir::Location loc,
                                                  fir::FirOpBuilder &builder,
                                                  mlir::Type valTy,
                                                  mlir::Value boxVal) {
-  if (auto boxTy = valTy.dyn_cast<fir::BoxType>()) {
+  if (auto boxTy = valTy.dyn_cast<fir::BaseBoxType>()) {
     auto eleTy = fir::unwrapAllRefAndSeqType(boxTy.getEleTy());
     if (auto recTy = eleTy.dyn_cast<fir::RecordType>()) {
       if (recTy.getNumLenParams() > 0) {
@@ -795,7 +795,7 @@ llvm::SmallVector<mlir::Value>
 fir::factory::getTypeParams(mlir::Location loc, fir::FirOpBuilder &builder,
                             fir::ArrayLoadOp load) {
   mlir::Type memTy = load.getMemref().getType();
-  if (auto boxTy = memTy.dyn_cast<fir::BoxType>())
+  if (auto boxTy = memTy.dyn_cast<fir::BaseBoxType>())
     return getFromBox(loc, builder, boxTy, load.getMemref());
   return load.getTypeparams();
 }

@@ -4,16 +4,16 @@
 
 
 @var = global i32 1;
-@fun_a = global void()* null;
-@fun_b = global void()* null;
-@fun_c = global void(i32)* null;
+@fun_a = global ptr null;
+@fun_b = global ptr null;
+@fun_c = global ptr null;
 
 ; Check a conditional sibling call.
 define void @f1(i32 %val1, i32 %val2) {
 ; CHECK-LABEL: f1:
 ; CHECK: crbl %r2, %r3, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp slt i32 %val1, %val2;
   br i1 %cond, label %a, label %b;
 
@@ -22,7 +22,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -31,8 +31,8 @@ define void @f2(i32 %val1, i32 %val2) {
 ; CHECK-LABEL: f2:
 ; CHECK: crbl %r2, %r3, 0(%r1)
 ; CHECK: br %r1
-  %fun_a = load volatile void() *, void()** @fun_a;
-  %fun_b = load volatile void() *, void()** @fun_b;
+  %fun_a = load volatile ptr, ptr @fun_a;
+  %fun_b = load volatile ptr, ptr @fun_b;
   %cond = icmp slt i32 %val1, %val2;
   br i1 %cond, label %a, label %b;
 
@@ -51,7 +51,7 @@ define void @f3(i32 %val1, i32 %val2) {
 ; CHECK: crjhe %r2, %r3
 ; CHECK: br %r1
 ; CHECK: br %r14
-  %fun_c = load volatile void(i32) *, void(i32)** @fun_c;
+  %fun_c = load volatile ptr, ptr @fun_c;
   %cond = icmp slt i32 %val1, %val2;
   br i1 %cond, label %a, label %b;
 
@@ -60,7 +60,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -69,7 +69,7 @@ define void @f4(i32 %val1, i32 %val2) {
 ; CHECK-LABEL: f4:
 ; CHECK: clrbl %r2, %r3, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp ult i32 %val1, %val2;
   br i1 %cond, label %a, label %b;
 
@@ -78,7 +78,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -87,7 +87,7 @@ define void @f5(i64 %val1, i64 %val2) {
 ; CHECK-LABEL: f5:
 ; CHECK: cgrbl %r2, %r3, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp slt i64 %val1, %val2;
   br i1 %cond, label %a, label %b;
 
@@ -96,7 +96,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -105,7 +105,7 @@ define void @f6(i64 %val1, i64 %val2) {
 ; CHECK-LABEL: f6:
 ; CHECK: clgrbl %r2, %r3, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp ult i64 %val1, %val2;
   br i1 %cond, label %a, label %b;
 
@@ -114,7 +114,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -123,7 +123,7 @@ define void @f7(i32 %val1, i32 %val2) {
 ; CHECK-LABEL: f7:
 ; CHECK: crble %r2, %r3, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp sle i32 %val1, %val2;
   br i1 %cond, label %a, label %b;
 
@@ -132,7 +132,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -141,7 +141,7 @@ define void @f8(i32 %val1, i32 %val2) {
 ; CHECK-LABEL: f8:
 ; CHECK: crbh %r2, %r3, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp sgt i32 %val1, %val2;
   br i1 %cond, label %a, label %b;
 
@@ -150,7 +150,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -159,7 +159,7 @@ define void @f9(i32 %val1, i32 %val2) {
 ; CHECK-LABEL: f9:
 ; CHECK: crbhe %r2, %r3, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp sge i32 %val1, %val2;
   br i1 %cond, label %a, label %b;
 
@@ -168,7 +168,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -177,7 +177,7 @@ define void @f10(i32 %val1, i32 %val2) {
 ; CHECK-LABEL: f10:
 ; CHECK: crbe %r2, %r3, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp eq i32 %val1, %val2;
   br i1 %cond, label %a, label %b;
 
@@ -186,7 +186,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -195,7 +195,7 @@ define void @f11(i32 %val1, i32 %val2) {
 ; CHECK-LABEL: f11:
 ; CHECK: crblh %r2, %r3, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp ne i32 %val1, %val2;
   br i1 %cond, label %a, label %b;
 
@@ -204,7 +204,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -213,7 +213,7 @@ define void @f12(i32 %val1) {
 ; CHECK-LABEL: f12:
 ; CHECK: cible %r2, 4, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp slt i32 %val1, 5;
   br i1 %cond, label %a, label %b;
 
@@ -222,7 +222,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -231,7 +231,7 @@ define void @f13(i32 %val1) {
 ; CHECK-LABEL: f13:
 ; CHECK: cible %r2, 5, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp sle i32 %val1, 5;
   br i1 %cond, label %a, label %b;
 
@@ -240,7 +240,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -249,7 +249,7 @@ define void @f14(i32 %val1) {
 ; CHECK-LABEL: f14:
 ; CHECK: cibhe %r2, 6, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp sgt i32 %val1, 5;
   br i1 %cond, label %a, label %b;
 
@@ -258,7 +258,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -267,7 +267,7 @@ define void @f15(i32 %val1) {
 ; CHECK-LABEL: f15:
 ; CHECK: cibhe %r2, 5, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp sge i32 %val1, 5;
   br i1 %cond, label %a, label %b;
 
@@ -276,7 +276,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -285,7 +285,7 @@ define void @f16(i32 %val1) {
 ; CHECK-LABEL: f16:
 ; CHECK: cibe %r2, 5, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp eq i32 %val1, 5;
   br i1 %cond, label %a, label %b;
 
@@ -294,7 +294,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -303,7 +303,7 @@ define void @f17(i32 %val1) {
 ; CHECK-LABEL: f17:
 ; CHECK: ciblh %r2, 5, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp ne i32 %val1, 5;
   br i1 %cond, label %a, label %b;
 
@@ -312,7 +312,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -321,7 +321,7 @@ define void @f18(i32 %val1) {
 ; CHECK-LABEL: f18:
 ; CHECK: clible %r2, 4, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp ult i32 %val1, 5;
   br i1 %cond, label %a, label %b;
 
@@ -330,7 +330,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -339,7 +339,7 @@ define void @f19(i64 %val1) {
 ; CHECK-LABEL: f19:
 ; CHECK: cgible %r2, 4, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp slt i64 %val1, 5;
   br i1 %cond, label %a, label %b;
 
@@ -348,7 +348,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -357,7 +357,7 @@ define void @f20(i64 %val1) {
 ; CHECK-LABEL: f20:
 ; CHECK: clgible %r2, 4, 0(%r1)
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = icmp ult i64 %val1, 5;
   br i1 %cond, label %a, label %b;
 
@@ -366,13 +366,13 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
 ; Check a conditional sibling call to an argument - will fail due to
 ; intervening lgr.
-define void @f21(i32 %val1, i32 %val2, void()* %fun) {
+define void @f21(i32 %val1, i32 %val2, ptr %fun) {
 ; CHECK-LABEL: f21:
 ; CHECK: crjhe %r2, %r3
 ; CHECK: lgr %r1, %r4
@@ -386,7 +386,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -396,7 +396,7 @@ define void @f22(float %val1, float %val2) {
 ; CHECK: cebr %f0, %f2
 ; CHECK: blr %r1
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = fcmp olt float %val1, %val2;
   br i1 %cond, label %a, label %b;
 
@@ -405,7 +405,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -415,7 +415,7 @@ define void @f23(float %val1, float %val2) {
 ; CHECK: cebr %f0, %f2
 ; CHECK: bnher %r1
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = fcmp ult float %val1, %val2;
   br i1 %cond, label %a, label %b;
 
@@ -424,7 +424,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -434,7 +434,7 @@ define void @f24(float %val1, float %val2) {
 ; CHECK: cebr %f0, %f2
 ; CHECK: bnor %r1
 ; CHECK: br %r14
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = fcmp ord float %val1, %val2;
   br i1 %cond, label %a, label %b;
 
@@ -443,7 +443,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -454,7 +454,7 @@ define void @f25(float %val1, float %val2) {
 ; CHECK: jo
 ; CHECK: br %r14
 ; CHECK: br %r1
-  %fun_a = load volatile void() *, void()** @fun_a;
+  %fun_a = load volatile ptr, ptr @fun_a;
   %cond = fcmp uno float %val1, %val2;
   br i1 %cond, label %a, label %b;
 
@@ -463,6 +463,6 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }

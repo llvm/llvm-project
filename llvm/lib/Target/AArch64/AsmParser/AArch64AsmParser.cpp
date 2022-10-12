@@ -218,6 +218,7 @@ private:
   bool parseDirectiveSEHMachineFrame(SMLoc L);
   bool parseDirectiveSEHContext(SMLoc L);
   bool parseDirectiveSEHClearUnwoundToCall(SMLoc L);
+  bool parseDirectiveSEHPACSignReturnAddress(SMLoc L);
 
   bool validateInstruction(MCInst &Inst, SMLoc &IDLoc,
                            SmallVectorImpl<SMLoc> &Loc);
@@ -6099,6 +6100,8 @@ bool AArch64AsmParser::ParseDirective(AsmToken DirectiveID) {
       parseDirectiveSEHContext(Loc);
     else if (IDVal == ".seh_clear_unwound_to_call")
       parseDirectiveSEHClearUnwoundToCall(Loc);
+    else if (IDVal == ".seh_pac_sign_return_address")
+      parseDirectiveSEHPACSignReturnAddress(Loc);
     else
       return true;
   } else
@@ -6772,6 +6775,13 @@ bool AArch64AsmParser::parseDirectiveSEHContext(SMLoc L) {
 /// ::= .seh_clear_unwound_to_call
 bool AArch64AsmParser::parseDirectiveSEHClearUnwoundToCall(SMLoc L) {
   getTargetStreamer().emitARM64WinCFIClearUnwoundToCall();
+  return false;
+}
+
+/// parseDirectiveSEHPACSignReturnAddress
+/// ::= .seh_pac_sign_return_address
+bool AArch64AsmParser::parseDirectiveSEHPACSignReturnAddress(SMLoc L) {
+  getTargetStreamer().emitARM64WinCFIPACSignReturnAddress();
   return false;
 }
 

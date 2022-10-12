@@ -16,8 +16,7 @@ define void @fun0() #0 {
 
 entry:
   %b = alloca [16 x i8], align 1
-  %0 = getelementptr inbounds [16 x i8], [16 x i8]* %b, i64 0, i64 0
-  call void asm "stcke $0", "=*Q"([16 x i8]* elementtype([16 x i8]) nonnull %b) #2
+  call void asm "stcke $0", "=*Q"(ptr elementtype([16 x i8]) nonnull %b) #2
   ret void
 }
 

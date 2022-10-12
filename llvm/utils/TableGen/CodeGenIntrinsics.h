@@ -219,6 +219,8 @@ public:
 
   bool empty() const { return Intrinsics.empty(); }
   size_t size() const { return Intrinsics.size(); }
+  auto begin() const { return Intrinsics.begin(); }
+  auto end() const { return Intrinsics.end(); }
   CodeGenIntrinsic &operator[](size_t Pos) { return Intrinsics[Pos]; }
   const CodeGenIntrinsic &operator[](size_t Pos) const {
     return Intrinsics[Pos];

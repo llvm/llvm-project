@@ -284,7 +284,7 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
     return Status("failed - register wasn't recognized to be a GPR or an FPR, "
                   "write strategy unknown");
 
-  reg_value.SetFromMemoryData(reg_info, src, reg_info->byte_size,
+  reg_value.SetFromMemoryData(*reg_info, src, reg_info->byte_size,
                               eByteOrderLittle, error);
 
   return error;

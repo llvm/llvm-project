@@ -22,7 +22,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -58,7 +58,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -76,7 +76,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -94,7 +94,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -112,7 +112,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -130,7 +130,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -148,7 +148,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -166,7 +166,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -184,7 +184,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -202,7 +202,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -220,7 +220,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -238,7 +238,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -256,7 +256,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -274,7 +274,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -292,7 +292,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -310,7 +310,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -328,7 +328,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -346,7 +346,7 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }
 
@@ -364,6 +364,6 @@ a:
   ret void
 
 b:
-  store i32 1, i32 *@var;
+  store i32 1, ptr@var;
   ret void
 }

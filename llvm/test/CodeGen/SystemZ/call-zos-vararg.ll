@@ -229,21 +229,18 @@ entry:
 ; CHECK: stg     0, 2200(4)
 define hidden i64 @pass_vararg(i64 %x, ...) {
 entry:
-  %va = alloca i8*, align 8
-  %va1 = bitcast i8** %va to i8*
-  call void @llvm.va_start(i8* %va1)
-  %argp.cur = load i8*, i8** %va, align 8
-  %argp.next = getelementptr inbounds i8, i8* %argp.cur, i64 8
-  store i8* %argp.next, i8** %va, align 8
-  %0 = bitcast i8* %argp.cur to i64*
-  %ret = load i64, i64* %0, align 8
-  %va2 = bitcast i8** %va to i8*
-  call void @llvm.va_end(i8* %va2)
+  %va = alloca ptr, align 8
+  call void @llvm.va_start(ptr %va)
+  %argp.cur = load ptr, ptr %va, align 8
+  %argp.next = getelementptr inbounds i8, ptr %argp.cur, i64 8
+  store ptr %argp.next, ptr %va, align 8
+  %ret = load i64, ptr %argp.cur, align 8
+  call void @llvm.va_end(ptr %va)
   ret i64 %ret
 }
 
-declare void @llvm.va_start(i8*)
-declare void @llvm.va_end(i8*)
+declare void @llvm.va_start(ptr)
+declare void @llvm.va_end(ptr)
 
 declare i64 @pass_vararg0(i64 %arg0, i64 %arg1, ...)
 declare i64 @pass_vararg1(fp128 %arg0, ...)

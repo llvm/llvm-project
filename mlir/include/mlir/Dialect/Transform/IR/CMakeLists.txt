@@ -13,7 +13,7 @@ mlir_tablegen(TransformTypes.h.inc -gen-typedef-decls)
 mlir_tablegen(TransformTypes.cpp.inc -gen-typedef-defs)
 add_public_tablegen_target(MLIRTransformTypesIncGen)
 add_dependencies(mlir-headers MLIRTransformTypesIncGen)
-add_mlir_doc(TransformTypes TransformTypes Dialects/ -gen-typedef-docs)
+add_mlir_doc(TransformTypes TransformTypes Dialects/ -gen-typedef-doc)
 
 set(LLVM_TARGET_DEFINITIONS TransformAttrs.td)
 mlir_tablegen(TransformDialectEnums.h.inc -gen-enum-decls)
@@ -22,7 +22,7 @@ add_public_tablegen_target(MLIRTransformDialectEnumIncGen)
 add_dependencies(mlir-headers MLIRTransformDialectEnumIncGen)
 
 add_mlir_dialect(TransformOps transform)
-add_mlir_doc(TransformOps TransformOps Dialects/ -gen-dialect-doc -dialect=transform)
+add_mlir_doc(TransformOps TransformOps Dialects/ -gen-op-doc -dialect=transform)
 
 # Contrary to what the name claims, this only produces the _op_ interface.
 add_mlir_interface(TransformInterfaces)

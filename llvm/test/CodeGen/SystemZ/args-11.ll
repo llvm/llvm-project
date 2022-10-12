@@ -22,9 +22,9 @@ define i32 @fn2() {
 ; CHECK-NEXT:    lmg %r14, %r15, 296(%r15)
 ; CHECK-NEXT:    br %r14
   %1 = alloca i32
-  store i32 -1, i32* %1
+  store i32 -1, ptr %1
   call void @fn1(i96 0)
-  %2 = load i32, i32* %1
+  %2 = load i32, ptr %1
   ret i32 %2
 }
 
@@ -47,8 +47,8 @@ define i32 @fn4() {
 ; CHECK-NEXT:    lmg %r14, %r15, 304(%r15)
 ; CHECK-NEXT:    br %r14
   %1 = alloca i32
-  store i32 -1, i32* %1
+  store i32 -1, ptr %1
   call void @fn3(i136 0)
-  %2 = load i32, i32* %1
+  %2 = load i32, ptr %1
   ret i32 %2
 }

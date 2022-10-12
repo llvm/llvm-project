@@ -5,7 +5,7 @@
 declare i32 @foo()
 
 ; Check subtraction of 1.
-define zeroext i1 @f1(i32 %dummy, i32 %a, i32 *%res) {
+define zeroext i1 @f1(i32 %dummy, i32 %a, ptr %res) {
 ; CHECK-LABEL: f1:
 ; CHECK: slfi %r3, 1
 ; CHECK-DAG: st %r3, 0(%r4)
@@ -16,12 +16,12 @@ define zeroext i1 @f1(i32 %dummy, i32 %a, i32 *%res) {
   %t = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 1)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the high end of the SLFI range.
-define zeroext i1 @f2(i32 %dummy, i32 %a, i32 *%res) {
+define zeroext i1 @f2(i32 %dummy, i32 %a, ptr %res) {
 ; CHECK-LABEL: f2:
 ; CHECK: slfi %r3, 4294967295
 ; CHECK-DAG: st %r3, 0(%r4)
@@ -32,12 +32,12 @@ define zeroext i1 @f2(i32 %dummy, i32 %a, i32 *%res) {
   %t = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 4294967295)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check that negative values are treated as unsigned
-define zeroext i1 @f3(i32 %dummy, i32 %a, i32 *%res) {
+define zeroext i1 @f3(i32 %dummy, i32 %a, ptr %res) {
 ; CHECK-LABEL: f3:
 ; CHECK: slfi %r3, 4294967295
 ; CHECK-DAG: st %r3, 0(%r4)
@@ -48,12 +48,12 @@ define zeroext i1 @f3(i32 %dummy, i32 %a, i32 *%res) {
   %t = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 -1)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check using the overflow result for a branch.
-define void @f4(i32 %dummy, i32 %a, i32 *%res) {
+define void @f4(i32 %dummy, i32 %a, ptr %res) {
 ; CHECK-LABEL: f4:
 ; CHECK: slfi %r3, 1
 ; CHECK: st %r3, 0(%r4)
@@ -62,7 +62,7 @@ define void @f4(i32 %dummy, i32 %a, i32 *%res) {
   %t = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 1)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   br i1 %obit, label %call, label %exit
 
 call:
@@ -74,7 +74,7 @@ exit:
 }
 
 ; ... and the same with the inverted direction.
-define void @f5(i32 %dummy, i32 %a, i32 *%res) {
+define void @f5(i32 %dummy, i32 %a, ptr %res) {
 ; CHECK-LABEL: f5:
 ; CHECK: slfi %r3, 1
 ; CHECK: st %r3, 0(%r4)
@@ -83,7 +83,7 @@ define void @f5(i32 %dummy, i32 %a, i32 *%res) {
   %t = call {i32, i1} @llvm.usub.with.overflow.i32(i32 %a, i32 1)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   br i1 %obit, label %exit, label %call
 
 call:

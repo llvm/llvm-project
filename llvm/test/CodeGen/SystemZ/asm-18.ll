@@ -5,7 +5,7 @@
 ; RUN:   -no-integrated-as | FileCheck %s
 
 ; Test loads and stores involving mixtures of high and low registers.
-define void @f1(i32 *%ptr1, i32 *%ptr2) {
+define void @f1(ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: f1:
 ; CHECK-DAG: lfh [[REG1:%r[0-5]]], 0(%r2)
 ; CHECK-DAG: l [[REG2:%r[0-5]]], 0(%r3)
@@ -17,22 +17,22 @@ define void @f1(i32 *%ptr1, i32 *%ptr2) {
 ; CHECK-DAG: stfh [[REG3]], 4096(%r2)
 ; CHECK-DAG: sty [[REG4]], 524284(%r3)
 ; CHECK: br %r14
-  %ptr3 = getelementptr i32, i32 *%ptr1, i64 1024
-  %ptr4 = getelementptr i32, i32 *%ptr2, i64 131071
-  %old1 = load i32, i32 *%ptr1
-  %old2 = load i32, i32 *%ptr2
-  %old3 = load i32, i32 *%ptr3
-  %old4 = load i32, i32 *%ptr4
+  %ptr3 = getelementptr i32, ptr %ptr1, i64 1024
+  %ptr4 = getelementptr i32, ptr %ptr2, i64 131071
+  %old1 = load i32, ptr %ptr1
+  %old2 = load i32, ptr %ptr2
+  %old3 = load i32, ptr %ptr3
+  %old4 = load i32, ptr %ptr4
   %res = call { i32, i32, i32, i32 } asm "blah $0, $1, $2, $3",
               "=h,=r,=h,=r,0,1,2,3"(i32 %old1, i32 %old2, i32 %old3, i32 %old4)
   %new1 = extractvalue { i32, i32, i32, i32 } %res, 0
   %new2 = extractvalue { i32, i32, i32, i32 } %res, 1
   %new3 = extractvalue { i32, i32, i32, i32 } %res, 2
   %new4 = extractvalue { i32, i32, i32, i32 } %res, 3
-  store i32 %new1, i32 *%ptr1
-  store i32 %new2, i32 *%ptr2
-  store i32 %new3, i32 *%ptr3
-  store i32 %new4, i32 *%ptr4
+  store i32 %new1, ptr %ptr1
+  store i32 %new2, ptr %ptr2
+  store i32 %new3, ptr %ptr3
+  store i32 %new4, ptr %ptr4
   ret void
 }
 
@@ -53,7 +53,7 @@ define i32 @f2(i32 %old) {
 }
 
 ; Test sign-extending 8-bit loads into mixtures of high and low registers.
-define void @f3(i8 *%ptr1, i8 *%ptr2) {
+define void @f3(ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: f3:
 ; CHECK-DAG: lbh [[REG1:%r[0-5]]], 0(%r2)
 ; CHECK-DAG: lb [[REG2:%r[0-5]]], 0(%r3)
@@ -61,12 +61,12 @@ define void @f3(i8 *%ptr1, i8 *%ptr2) {
 ; CHECK-DAG: lb [[REG4:%r[0-5]]], 524287(%r3)
 ; CHECK: blah [[REG1]], [[REG2]]
 ; CHECK: br %r14
-  %ptr3 = getelementptr i8, i8 *%ptr1, i64 4096
-  %ptr4 = getelementptr i8, i8 *%ptr2, i64 524287
-  %val1 = load i8, i8 *%ptr1
-  %val2 = load i8, i8 *%ptr2
-  %val3 = load i8, i8 *%ptr3
-  %val4 = load i8, i8 *%ptr4
+  %ptr3 = getelementptr i8, ptr %ptr1, i64 4096
+  %ptr4 = getelementptr i8, ptr %ptr2, i64 524287
+  %val1 = load i8, ptr %ptr1
+  %val2 = load i8, ptr %ptr2
+  %val3 = load i8, ptr %ptr3
+  %val4 = load i8, ptr %ptr4
   %ext1 = sext i8 %val1 to i32
   %ext2 = sext i8 %val2 to i32
   %ext3 = sext i8 %val3 to i32
@@ -77,7 +77,7 @@ define void @f3(i8 *%ptr1, i8 *%ptr2) {
 }
 
 ; Test sign-extending 16-bit loads into mixtures of high and low registers.
-define void @f4(i16 *%ptr1, i16 *%ptr2) {
+define void @f4(ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: f4:
 ; CHECK-DAG: lhh [[REG1:%r[0-5]]], 0(%r2)
 ; CHECK-DAG: lh [[REG2:%r[0-5]]], 0(%r3)
@@ -85,12 +85,12 @@ define void @f4(i16 *%ptr1, i16 *%ptr2) {
 ; CHECK-DAG: lhy [[REG4:%r[0-5]]], 524286(%r3)
 ; CHECK: blah [[REG1]], [[REG2]]
 ; CHECK: br %r14
-  %ptr3 = getelementptr i16, i16 *%ptr1, i64 2048
-  %ptr4 = getelementptr i16, i16 *%ptr2, i64 262143
-  %val1 = load i16, i16 *%ptr1
-  %val2 = load i16, i16 *%ptr2
-  %val3 = load i16, i16 *%ptr3
-  %val4 = load i16, i16 *%ptr4
+  %ptr3 = getelementptr i16, ptr %ptr1, i64 2048
+  %ptr4 = getelementptr i16, ptr %ptr2, i64 262143
+  %val1 = load i16, ptr %ptr1
+  %val2 = load i16, ptr %ptr2
+  %val3 = load i16, ptr %ptr3
+  %val4 = load i16, ptr %ptr4
   %ext1 = sext i16 %val1 to i32
   %ext2 = sext i16 %val2 to i32
   %ext3 = sext i16 %val3 to i32
@@ -101,7 +101,7 @@ define void @f4(i16 *%ptr1, i16 *%ptr2) {
 }
 
 ; Test zero-extending 8-bit loads into mixtures of high and low registers.
-define void @f5(i8 *%ptr1, i8 *%ptr2) {
+define void @f5(ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: f5:
 ; CHECK-DAG: llch [[REG1:%r[0-5]]], 0(%r2)
 ; CHECK-DAG: llc [[REG2:%r[0-5]]], 0(%r3)
@@ -109,12 +109,12 @@ define void @f5(i8 *%ptr1, i8 *%ptr2) {
 ; CHECK-DAG: llc [[REG4:%r[0-5]]], 524287(%r3)
 ; CHECK: blah [[REG1]], [[REG2]]
 ; CHECK: br %r14
-  %ptr3 = getelementptr i8, i8 *%ptr1, i64 4096
-  %ptr4 = getelementptr i8, i8 *%ptr2, i64 524287
-  %val1 = load i8, i8 *%ptr1
-  %val2 = load i8, i8 *%ptr2
-  %val3 = load i8, i8 *%ptr3
-  %val4 = load i8, i8 *%ptr4
+  %ptr3 = getelementptr i8, ptr %ptr1, i64 4096
+  %ptr4 = getelementptr i8, ptr %ptr2, i64 524287
+  %val1 = load i8, ptr %ptr1
+  %val2 = load i8, ptr %ptr2
+  %val3 = load i8, ptr %ptr3
+  %val4 = load i8, ptr %ptr4
   %ext1 = zext i8 %val1 to i32
   %ext2 = zext i8 %val2 to i32
   %ext3 = zext i8 %val3 to i32
@@ -125,7 +125,7 @@ define void @f5(i8 *%ptr1, i8 *%ptr2) {
 }
 
 ; Test zero-extending 16-bit loads into mixtures of high and low registers.
-define void @f6(i16 *%ptr1, i16 *%ptr2) {
+define void @f6(ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: f6:
 ; CHECK-DAG: llhh [[REG1:%r[0-5]]], 0(%r2)
 ; CHECK-DAG: llh [[REG2:%r[0-5]]], 0(%r3)
@@ -133,12 +133,12 @@ define void @f6(i16 *%ptr1, i16 *%ptr2) {
 ; CHECK-DAG: llh [[REG4:%r[0-5]]], 524286(%r3)
 ; CHECK: blah [[REG1]], [[REG2]]
 ; CHECK: br %r14
-  %ptr3 = getelementptr i16, i16 *%ptr1, i64 2048
-  %ptr4 = getelementptr i16, i16 *%ptr2, i64 262143
-  %val1 = load i16, i16 *%ptr1
-  %val2 = load i16, i16 *%ptr2
-  %val3 = load i16, i16 *%ptr3
-  %val4 = load i16, i16 *%ptr4
+  %ptr3 = getelementptr i16, ptr %ptr1, i64 2048
+  %ptr4 = getelementptr i16, ptr %ptr2, i64 262143
+  %val1 = load i16, ptr %ptr1
+  %val2 = load i16, ptr %ptr2
+  %val3 = load i16, ptr %ptr3
+  %val4 = load i16, ptr %ptr4
   %ext1 = zext i16 %val1 to i32
   %ext2 = zext i16 %val2 to i32
   %ext3 = zext i16 %val3 to i32
@@ -149,7 +149,7 @@ define void @f6(i16 *%ptr1, i16 *%ptr2) {
 }
 
 ; Test truncating stores of high and low registers into 8-bit memory.
-define void @f7(i8 *%ptr1, i8 *%ptr2) {
+define void @f7(ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: f7:
 ; CHECK: blah [[REG1:%r[0-5]]], [[REG2:%r[0-5]]]
 ; CHECK-DAG: stch [[REG1]], 0(%r2)
@@ -162,17 +162,17 @@ define void @f7(i8 *%ptr1, i8 *%ptr2) {
   %res2 = extractvalue { i32, i32 } %res, 1
   %trunc1 = trunc i32 %res1 to i8
   %trunc2 = trunc i32 %res2 to i8
-  %ptr3 = getelementptr i8, i8 *%ptr1, i64 4096
-  %ptr4 = getelementptr i8, i8 *%ptr2, i64 524287
-  store i8 %trunc1, i8 *%ptr1
-  store i8 %trunc2, i8 *%ptr2
-  store i8 %trunc1, i8 *%ptr3
-  store i8 %trunc2, i8 *%ptr4
+  %ptr3 = getelementptr i8, ptr %ptr1, i64 4096
+  %ptr4 = getelementptr i8, ptr %ptr2, i64 524287
+  store i8 %trunc1, ptr %ptr1
+  store i8 %trunc2, ptr %ptr2
+  store i8 %trunc1, ptr %ptr3
+  store i8 %trunc2, ptr %ptr4
   ret void
 }
 
 ; Test truncating stores of high and low registers into 16-bit memory.
-define void @f8(i16 *%ptr1, i16 *%ptr2) {
+define void @f8(ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: f8:
 ; CHECK: blah [[REG1:%r[0-5]]], [[REG2:%r[0-5]]]
 ; CHECK-DAG: sthh [[REG1]], 0(%r2)
@@ -185,12 +185,12 @@ define void @f8(i16 *%ptr1, i16 *%ptr2) {
   %res2 = extractvalue { i32, i32 } %res, 1
   %trunc1 = trunc i32 %res1 to i16
   %trunc2 = trunc i32 %res2 to i16
-  %ptr3 = getelementptr i16, i16 *%ptr1, i64 2048
-  %ptr4 = getelementptr i16, i16 *%ptr2, i64 262143
-  store i16 %trunc1, i16 *%ptr1
-  store i16 %trunc2, i16 *%ptr2
-  store i16 %trunc1, i16 *%ptr3
-  store i16 %trunc2, i16 *%ptr4
+  %ptr3 = getelementptr i16, ptr %ptr1, i64 2048
+  %ptr4 = getelementptr i16, ptr %ptr2, i64 262143
+  store i16 %trunc1, ptr %ptr1
+  store i16 %trunc2, ptr %ptr2
+  store i16 %trunc1, ptr %ptr3
+  store i16 %trunc2, ptr %ptr4
   ret void
 }
 
@@ -710,7 +710,7 @@ define i32 @f32() {
 }
 
 ; Test memory comparison involving high registers.
-define void @f33(i32 *%ptr1, i32 *%ptr2) {
+define void @f33(ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: f33:
 ; CHECK: stepa [[REG1:%r[0-5]]]
 ; CHECK: chf [[REG1]], 0(%r2)
@@ -718,19 +718,19 @@ define void @f33(i32 *%ptr1, i32 *%ptr2) {
 ; CHECK: clhf [[REG2]], 0(%r3)
 ; CHECK: br %r14
   %res1 = call i32 asm "stepa $0", "=h"()
-  %load1 = load i32, i32 *%ptr1
+  %load1 = load i32, ptr %ptr1
   %cmp1 = icmp sle i32 %res1, %load1
   %sel1 = select i1 %cmp1, i32 0, i32 1
   %res2 = call i32 asm "stepb $0, $1", "=h,r"(i32 %sel1)
-  %load2 = load i32, i32 *%ptr2
+  %load2 = load i32, ptr %ptr2
   %cmp2 = icmp ule i32 %res2, %load2
   %sel2 = select i1 %cmp2, i32 0, i32 1
-  store i32 %sel2, i32 *%ptr1
+  store i32 %sel2, ptr %ptr1
   ret void
 }
 
 ; Test memory comparison involving low registers.
-define void @f34(i32 *%ptr1, i32 *%ptr2) {
+define void @f34(ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: f34:
 ; CHECK: stepa [[REG1:%r[0-5]]]
 ; CHECK: c [[REG1]], 0(%r2)
@@ -738,14 +738,14 @@ define void @f34(i32 *%ptr1, i32 *%ptr2) {
 ; CHECK: cl [[REG2]], 0(%r3)
 ; CHECK: br %r14
   %res1 = call i32 asm "stepa $0", "=r"()
-  %load1 = load i32, i32 *%ptr1
+  %load1 = load i32, ptr %ptr1
   %cmp1 = icmp sle i32 %res1, %load1
   %sel1 = select i1 %cmp1, i32 0, i32 1
   %res2 = call i32 asm "stepb $0, $1", "=r,r"(i32 %sel1)
-  %load2 = load i32, i32 *%ptr2
+  %load2 = load i32, ptr %ptr2
   %cmp2 = icmp ule i32 %res2, %load2
   %sel2 = select i1 %cmp2, i32 0, i32 1
-  store i32 %sel2, i32 *%ptr1
+  store i32 %sel2, ptr %ptr1
   ret void
 }
 

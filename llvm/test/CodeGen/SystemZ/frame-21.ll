@@ -9,8 +9,7 @@ define void @f1(i64 %x) {
 ; CHECK: stg %r2, 160(%r15)
 ; CHECK: br %r14
   %y = alloca [471 x i64], align 8
-  %ptr = getelementptr inbounds [471 x i64], [471 x i64]* %y, i64 0, i64 0
-  store volatile i64 %x, i64* %ptr
+  store volatile i64 %x, ptr %y
   ret void
 }
 
@@ -21,8 +20,7 @@ define void @f2(i64 %x) {
 ; CHECK: stg %r2, 176(%r15)
 ; CHECK: br %r14
   %y = alloca [472 x i64], align 8
-  %ptr = getelementptr inbounds [472 x i64], [472 x i64]* %y, i64 0, i64 0
-  store volatile i64 %x, i64* %ptr
+  store volatile i64 %x, ptr %y
   ret void
 }
 
@@ -35,8 +33,7 @@ define void @f3(i64 %x, i64 %r3, i64 %r4, i64 %r5, i64 %r6, i64 %stack) {
 ; CHECK: stg %r2, 160(%r15)
 ; CHECK: br %r14
   %y = alloca [470 x i64], align 8
-  %ptr = getelementptr inbounds [470 x i64], [470 x i64]* %y, i64 0, i64 0
-  store volatile i64 %x, i64* %ptr
+  store volatile i64 %x, ptr %y
   ret void
 }
 
@@ -46,8 +43,7 @@ define void @f4(i64 %x, i64 %r3, i64 %r4, i64 %r5, i64 %r6, i64 %stack) {
 ; CHECK: stg %r2, 176(%r15)
 ; CHECK: br %r14
   %y = alloca [471 x i64], align 8
-  %ptr = getelementptr inbounds [471 x i64], [471 x i64]* %y, i64 0, i64 0
-  store volatile i64 %x, i64* %ptr
+  store volatile i64 %x, ptr %y
   ret void
 }
 
@@ -58,8 +54,7 @@ define void @f5(i64 %x, i64 %r3, i64 %r4, i64 %r5, i64 %r6, i64 %stack1, i64 %st
 ; CHECK: stg %r2, 160(%r15)
 ; CHECK: br %r14
   %y = alloca [469 x i64], align 8
-  %ptr = getelementptr inbounds [469 x i64], [469 x i64]* %y, i64 0, i64 0
-  store volatile i64 %x, i64* %ptr
+  store volatile i64 %x, ptr %y
   ret void
 }
 
@@ -69,8 +64,7 @@ define void @f6(i64 %x, i64 %r3, i64 %r4, i64 %r5, i64 %r6, i64 %stack1, i64 %st
 ; CHECK: stg %r2, 176(%r15)
 ; CHECK: br %r14
   %y = alloca [470 x i64], align 8
-  %ptr = getelementptr inbounds [470 x i64], [470 x i64]* %y, i64 0, i64 0
-  store volatile i64 %x, i64* %ptr
+  store volatile i64 %x, ptr %y
   ret void
 }
 

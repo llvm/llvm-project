@@ -128,11 +128,11 @@ FailureOr<memref::AllocOp> mlir::memref::multiBuffer(memref::AllocOp allocOp,
   auto getAffineExpr = [&](OpFoldResult e) -> AffineExpr {
     if (Optional<int64_t> constValue = getConstantIntValue(e)) {
       return getAffineConstantExpr(*constValue, allocOp.getContext());
-    } else {
-      auto value = getOrCreateValue(e, builder, candidateLoop->getLoc());
-      operands.push_back(value);
-      return getAffineDimExpr(dimCount++, allocOp.getContext());
     }
+    auto value = getOrCreateValue(e, builder, candidateLoop->getLoc());
+    operands.push_back(value);
+    return getAffineDimExpr(dimCount++, allocOp.getContext());
+   
   };
   auto init = getAffineExpr(*lowerBound);
   auto step = getAffineExpr(*singleStep);
