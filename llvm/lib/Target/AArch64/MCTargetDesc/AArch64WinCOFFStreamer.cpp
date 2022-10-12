@@ -221,8 +221,8 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinCFIClearUnwoundToCall() {
   emitARM64WinUnwindCode(Win64EH::UOP_ClearUnwoundToCall, -1, 0);
 }
 
-void AArch64TargetWinCOFFStreamer::emitARM64WinCFIPACSignReturnAddress() {
-  emitARM64WinUnwindCode(Win64EH::UOP_PACSignReturnAddress, -1, 0);
+void AArch64TargetWinCOFFStreamer::emitARM64WinCFIPACSignLR() {
+  emitARM64WinUnwindCode(Win64EH::UOP_PACSignLR, -1, 0);
 }
 
 MCWinCOFFStreamer *llvm::createAArch64WinCOFFStreamer(
