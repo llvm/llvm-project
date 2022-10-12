@@ -30,9 +30,7 @@ namespace memref {
 using namespace mlir;
 
 namespace {
-/// Replace `baseBuffer, offset, sizes, strides =
-///              extract_strided_metadata(subview(memref, subOffset,
-///                                               subSizes, subStrides))`
+/// Replace `dst = subview(memref, subOffset, subSizes, subStrides))`
 /// With
 ///
 /// \verbatim
@@ -41,24 +39,19 @@ namespace {
 /// strides#i = baseStrides#i * subSizes#i
 /// offset = baseOffset + sum(subOffset#i * baseStrides#i)
 /// sizes = subSizes
+/// dst = reinterpret_cast baseBuffer, offset, sizes, strides
 /// \endverbatim
 ///
 /// In other words, get rid of the subview in that expression and canonicalize
 /// on its effects on the offset, the sizes, and the strides using affine.apply.
-struct ExtractStridedMetadataOpSubviewFolder
-    : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
+struct SubviewFolder : public OpRewritePattern<memref::SubViewOp> {
 public:
-  using OpRewritePattern<memref::ExtractStridedMetadataOp>::OpRewritePattern;
+  using OpRewritePattern<memref::SubViewOp>::OpRewritePattern;
 
-  LogicalResult matchAndRewrite(memref::ExtractStridedMetadataOp op,
+  LogicalResult matchAndRewrite(memref::SubViewOp subview,
                                 PatternRewriter &rewriter) const override {
-    auto subview = op.getSource().getDefiningOp<memref::SubViewOp>();
-    if (!subview)
-      return failure();
-
-    // Build a plain extract_strided_metadata(memref) from
-    // extract_strided_metadata(subview(memref)).
-    Location origLoc = op.getLoc();
+    // Build a plain extract_strided_metadata(memref) from subview(memref).
+    Location origLoc = subview.getLoc();
     Value source = subview.getSource();
     auto sourceType = source.getType().cast<MemRefType>();
     unsigned sourceRank = sourceType.getRank();
@@ -117,20 +110,11 @@ public:
     OpFoldResult finalOffset =
         makeComposedFoldedAffineApply(rewriter, origLoc, expr, values);
 
-    SmallVector<Value> results;
     // The final result is  <baseBuffer, offset, sizes, strides>.
     // Thus we need 1 + 1 + subview.getRank() + subview.getRank(), to hold all
     // the values.
     auto subType = subview.getType().cast<MemRefType>();
     unsigned subRank = subType.getRank();
-    // Properly size the array so that we can do random insertions
-    // at the right indices.
-    // We do that to populate the non-dropped sizes and strides in one go.
-    results.resize_for_overwrite(subRank * 2 + 2);
-
-    results[0] = newExtractStridedMetadata.getBaseBuffer();
-    results[1] =
-        getValueOrCreateConstantIndexOp(rewriter, origLoc, finalOffset);
 
     // The sizes of the final type are defined directly by the input sizes of
     // the subview.
@@ -139,24 +123,30 @@ public:
     // replacing.
     // Do the filtering here.
     SmallVector<OpFoldResult> subSizes = subview.getMixedSizes();
-    const unsigned sizeStartIdx = 2;
-    const unsigned strideStartIdx = sizeStartIdx + subRank;
-    unsigned insertedDims = 0;
     llvm::SmallBitVector droppedDims = subview.getDroppedDims();
+
+    SmallVector<OpFoldResult> finalSizes;
+    finalSizes.reserve(subRank);
+
+    SmallVector<OpFoldResult> finalStrides;
+    finalStrides.reserve(subRank);
+
     for (unsigned i = 0; i < sourceRank; ++i) {
       if (droppedDims.test(i))
         continue;
 
-      results[sizeStartIdx + insertedDims] =
-          getValueOrCreateConstantIndexOp(rewriter, origLoc, subSizes[i]);
-      results[strideStartIdx + insertedDims] =
-          getValueOrCreateConstantIndexOp(rewriter, origLoc, strides[i]);
-      ++insertedDims;
+      finalSizes.push_back(subSizes[i]);
+      finalStrides.push_back(strides[i]);
     }
-    assert(insertedDims == subRank &&
+    assert(finalSizes.size() == subRank &&
            "Should have populated all the values at this point");
 
-    rewriter.replaceOp(op, results);
+    auto memrefDesc = rewriter.create<memref::ReinterpretCastOp>(
+        origLoc, subType, newExtractStridedMetadata.getBaseBuffer(),
+        finalOffset,
+        /*sizes=*/finalSizes,
+        /*strides=*/finalStrides);
+    rewriter.replaceOp(subview, memrefDesc.getResult());
     return success();
   }
 };
@@ -756,7 +746,7 @@ class ExtractStridedMetadataOpExtractStridedMetadataFolder
 void memref::populateSimplifyExtractStridedMetadataOpPatterns(
     RewritePatternSet &patterns) {
   patterns
-      .add<ExtractStridedMetadataOpSubviewFolder,
+      .add<SubviewFolder,
            ExtractStridedMetadataOpReshapeFolder<
                memref::ExpandShapeOp, getExpandedSizes, getExpandedStrides>,
            ExtractStridedMetadataOpReshapeFolder<

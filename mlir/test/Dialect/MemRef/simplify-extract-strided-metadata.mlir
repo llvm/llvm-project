@@ -21,6 +21,57 @@ func.func @extract_strided_metadata_constants(%base: memref<5x4xf32, strided<[4,
 
 // -----
 
+// Check that we simplify subview(src) into:
+// base, offset, sizes, strides xtract_strided_metadata src
+// final_sizes = subSizes
+// final_strides = <some math> strides
+// final_offset = <some math> offset
+// reinterpret_cast base to final_offset, final_sizes, final_ strides
+//
+// Orig strides: [s0, s1, s2]
+// Sub strides: [subS0, subS1, subS2]
+// => New strides: [s0 * subS0, s1 * subS1, s2 * subS2]
+// ==> 1 affine map (used for each stride) with two values.
+//
+// Orig offset: origOff
+// Sub offsets: [subO0, subO1, subO2]
+// => Final offset: s0 * * subO0 + ... + s2 * * subO2 + origOff
+// ==> 1 affine map with (rank * 2 + 1) symbols
+//
+// CHECK-DAG: #[[$STRIDE_MAP:.*]] = affine_map<()[s0, s1] -> (s0 * s1)>
+// CHECK-DAG: #[[$OFFSET_MAP:.*]] = affine_map<()[s0, s1, s2, s3, s4, s5, s6] -> (s0 + s1 * s2 + s3 * s4 + s5 * s6)>
+// CHECK-LABEL: func @simplify_subview_all_dynamic
+//  CHECK-SAME: (%[[ARG:.*]]: memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>, %[[DYN_OFFSET0:.*]]: index, %[[DYN_OFFSET1:.*]]: index, %[[DYN_OFFSET2:.*]]: index, %[[DYN_SIZE0:.*]]: index, %[[DYN_SIZE1:.*]]: index, %[[DYN_SIZE2:.*]]: index, %[[DYN_STRIDE0:.*]]: index, %[[DYN_STRIDE1:.*]]: index, %[[DYN_STRIDE2:.*]]: index)
+//
+//   CHECK-DAG: %[[BASE:.*]], %[[OFFSET:.*]], %[[SIZES:.*]]:3, %[[STRIDES:.*]]:3 = memref.extract_strided_metadata %[[ARG]]
+//
+//  CHECK-DAG: %[[FINAL_STRIDE0:.*]] = affine.apply #[[$STRIDE_MAP]]()[%[[DYN_STRIDE0]], %[[STRIDES]]#0]
+//  CHECK-DAG: %[[FINAL_STRIDE1:.*]] = affine.apply #[[$STRIDE_MAP]]()[%[[DYN_STRIDE1]], %[[STRIDES]]#1]
+//  CHECK-DAG: %[[FINAL_STRIDE2:.*]] = affine.apply #[[$STRIDE_MAP]]()[%[[DYN_STRIDE2]], %[[STRIDES]]#2]
+//
+//  CHECK-DAG: %[[FINAL_OFFSET:.*]] = affine.apply #[[$OFFSET_MAP]]()[%[[OFFSET]], %[[DYN_OFFSET0]], %[[STRIDES]]#0, %[[DYN_OFFSET1]], %[[STRIDES]]#1, %[[DYN_OFFSET2]], %[[STRIDES]]#2]
+//
+//      CHECK: %[[RES:.*]] = memref.reinterpret_cast %[[BASE]] to offset: [%[[FINAL_OFFSET]]], sizes: [%[[DYN_SIZE0]], %[[DYN_SIZE1]], %[[DYN_SIZE2]]], strides: [%[[FINAL_STRIDE0]], %[[FINAL_STRIDE1]], %[[FINAL_STRIDE2]]]
+//
+//       CHECK: return %[[RES]]
+func.func @simplify_subview_all_dynamic(
+    %base: memref<?x?x?xf32, strided<[?,?,?], offset:?>>,
+    %offset0: index, %offset1: index, %offset2: index,
+    %size0: index, %size1: index, %size2: index,
+    %stride0: index, %stride1: index, %stride2: index)
+    -> memref<?x?x?xf32, strided<[?,?,?], offset:?>> {
+
+  %subview = memref.subview %base[%offset0, %offset1, %offset2]
+                                 [%size0, %size1, %size2]
+                                 [%stride0, %stride1, %stride2] :
+    memref<?x?x?xf32, strided<[?,?,?], offset: ?>> to
+      memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+
+  return %subview : memref<?x?x?xf32, strided<[?, ?, ?], offset: ?>>
+}
+
+// -----
+
 // Check that we simplify extract_strided_metadata of subview to
 // base_buf, base_offset, base_sizes, base_strides = extract_strided_metadata
 // strides = base_stride_i * subview_stride_i
