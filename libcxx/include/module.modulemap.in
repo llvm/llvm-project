@@ -988,6 +988,7 @@ module std [system] {
 
     module __memory_resource {
       module memory_resource              { private header "__memory_resource/memory_resource.h" }
+      module memory_resource_fwd          { private header "__fwd/memory_resource.h" }
       module monotonic_buffer_resource    { private header "__memory_resource/monotonic_buffer_resource.h" }
       module polymorphic_allocator        { private header "__memory_resource/polymorphic_allocator.h" }
       module pool_options                 { private header "__memory_resource/pool_options.h" }
@@ -1218,6 +1219,7 @@ module std [system] {
     module __string {
       module char_traits           { private header "__string/char_traits.h" }
       module extern_template_lists { private header "__string/extern_template_lists.h" }
+      module string_fwd            { private header "__fwd/string.h" }
     }
     export *
   }
