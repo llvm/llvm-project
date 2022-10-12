@@ -125,13 +125,6 @@ static void applyPatterns(func::FuncOp funcOp) {
   RewritePatternSet patterns(ctx);
 
   //===--------------------------------------------------------------------===//
-  // Linalg to loops patterns.
-  //===--------------------------------------------------------------------===//
-  patterns.add<LinalgLoweringPattern<DotOp>>(
-      ctx,
-      /*loweringType=*/LinalgLoweringType::Loops);
-
-  //===--------------------------------------------------------------------===//
   // Linalg distribution patterns.
   //===--------------------------------------------------------------------===//
   LinalgLoopDistributionOptions distributionOptions;

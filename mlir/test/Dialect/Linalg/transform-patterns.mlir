@@ -19,16 +19,9 @@ transform.sequence failures(propagate) {
 
 // CHECK-LABEL: func @dot
 // CHECK-DAG:     %[[c0:.*]] = arith.constant 0 : index
-// CHECK-DAG:     %[[c1:.*]] = arith.constant 1 : index
 // CHECK-DAG:     %[[c8000:.*]] = arith.constant 8000 : index
 // CHECK:         scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c8000]] {
-// CHECK:             scf.for {{.*}} = %[[c0]] to {{.*}} step %[[c1]] {
-// CHECK:               load
-// CHECK:               load
-// CHECK:               load
-// CHECK:               arith.mulf
-// CHECK:               arith.addf
-// CHECK:               store
+// CHECK:           linalg.dot
 
 // -----
 
