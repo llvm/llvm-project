@@ -67,7 +67,7 @@ public:
   virtual void emitARM64WinCFIMachineFrame() {}
   virtual void emitARM64WinCFIContext() {}
   virtual void emitARM64WinCFIClearUnwoundToCall() {}
-  virtual void emitARM64WinCFIPACSignReturnAddress() {}
+  virtual void emitARM64WinCFIPACSignLR() {}
 
 private:
   std::unique_ptr<AssemblerConstantPools> ConstantPools;
@@ -121,7 +121,7 @@ public:
   void emitARM64WinCFIMachineFrame() override;
   void emitARM64WinCFIContext() override;
   void emitARM64WinCFIClearUnwoundToCall() override;
-  void emitARM64WinCFIPACSignReturnAddress() override;
+  void emitARM64WinCFIPACSignLR() override;
 
 private:
   void emitARM64WinUnwindCode(unsigned UnwindCode, int Reg, int Offset);

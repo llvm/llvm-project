@@ -35,7 +35,7 @@ class SPIRV_GLOp<string mnemonic, int opcode, list<Trait> traits = []> :
 // Base class for GL unary ops.
 class SPIRV_GLUnaryOp<string mnemonic, int opcode, Type resultType,
                       Type operandType, list<Trait> traits = []> :
-  SPIRV_GLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+  SPIRV_GLOp<mnemonic, opcode, !listconcat([Pure], traits)> {
 
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<operandType>:$operand
@@ -60,7 +60,7 @@ class SPIRV_GLUnaryArithmeticOp<string mnemonic, int opcode, Type type,
 // Base class for GL binary ops.
 class SPIRV_GLBinaryOp<string mnemonic, int opcode, Type resultType,
                         Type operandType, list<Trait> traits = []> :
-  SPIRV_GLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+  SPIRV_GLOp<mnemonic, opcode, !listconcat([Pure], traits)> {
 
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<operandType>:$lhs,
@@ -86,7 +86,7 @@ class SPIRV_GLBinaryArithmeticOp<string mnemonic, int opcode, Type type,
 // Base class for GL ternary ops.
 class SPIRV_GLTernaryArithmeticOp<string mnemonic, int opcode, Type type,
                         list<Trait> traits = []> :
-  SPIRV_GLOp<mnemonic, opcode, !listconcat([NoSideEffect], traits)> {
+  SPIRV_GLOp<mnemonic, opcode, !listconcat([Pure], traits)> {
 
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<type>:$x,
@@ -1077,7 +1077,7 @@ def SPIRV_GLFmaOp : SPIRV_GLTernaryArithmeticOp<"Fma", 50, SPIRV_Float> {
 
 // ----
 
-def SPIRV_GLFrexpStructOp : SPIRV_GLOp<"FrexpStruct", 52, [NoSideEffect]> {
+def SPIRV_GLFrexpStructOp : SPIRV_GLOp<"FrexpStruct", 52, [Pure]> {
   let summary = "Splits x into two components such that x = significand * 2^exponent";
 
   let description = [{
@@ -1132,7 +1132,7 @@ def SPIRV_GLFrexpStructOp : SPIRV_GLOp<"FrexpStruct", 52, [NoSideEffect]> {
 
 def SPIRV_GLLdexpOp :
   SPIRV_GLOp<"Ldexp", 53, [
-      NoSideEffect, AllTypesMatch<["x", "y"]>]> {
+      Pure, AllTypesMatch<["x", "y"]>]> {
   let summary = "Builds y such that y = significand * 2^exponent";
 
   let description = [{
@@ -1184,7 +1184,7 @@ def SPIRV_GLLdexpOp :
 
 def SPIRV_GLFMixOp :
   SPIRV_GLOp<"FMix", 46, [
-      NoSideEffect, AllTypesMatch<["x", "y", "a", "result"]>]> {
+      Pure, AllTypesMatch<["x", "y", "a", "result"]>]> {
   let summary = "Builds the linear blend of x and y";
 
   let description = [{

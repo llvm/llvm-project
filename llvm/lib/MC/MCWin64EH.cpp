@@ -377,7 +377,7 @@ static uint32_t ARM64CountOfUnwindCodes(ArrayRef<WinEH::Instruction> Insns) {
     case Win64EH::UOP_ClearUnwoundToCall:
       Count += 1;
       break;
-    case Win64EH::UOP_PACSignReturnAddress:
+    case Win64EH::UOP_PACSignLR:
       Count += 1;
       break;
     }
@@ -546,7 +546,7 @@ static void ARM64EmitUnwindCode(MCStreamer &streamer,
     b = 0xEC;
     streamer.emitInt8(b);
     break;
-  case Win64EH::UOP_PACSignReturnAddress:
+  case Win64EH::UOP_PACSignLR:
     b = 0xFC;
     streamer.emitInt8(b);
     break;
@@ -759,7 +759,7 @@ static bool tryARM64PackedUnwind(WinEH::FrameInfo *info, uint32_t FuncLength,
         return false;
       Location = Start2;
       break;
-    case Win64EH::UOP_PACSignReturnAddress:
+    case Win64EH::UOP_PACSignLR:
       if (Location != Start2)
         return false;
       PAC = true;

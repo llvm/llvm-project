@@ -828,6 +828,14 @@ sizeof...($TemplateParameter[[Elements]]);
         typedef int $Primitive_decl[[MyTypedef]];
         enum $Enum_decl[[MyEnum]] : $Primitive[[MyTypedef]] {};
       )cpp",
+      // Using enum
+      R"cpp(
+      enum class $Enum_decl[[Color]] { $EnumConstant_decl_readonly[[Black]] };
+      namespace $Namespace_decl[[ns]] {
+        using enum $Enum[[Color]];
+        $Enum[[Color]] $Variable_decl[[ModelT]] = $EnumConstant[[Black]];
+      }
+      )cpp",
       // Issue 1096
       R"cpp(
         void $Function_decl[[Foo]]();

@@ -1016,6 +1016,7 @@ bool AArch64InstrInfo::isSEHInstruction(const MachineInstr &MI) {
     case AArch64::SEH_PrologEnd:
     case AArch64::SEH_EpilogStart:
     case AArch64::SEH_EpilogEnd:
+    case AArch64::SEH_PACSignLR:
       return true;
   }
 }

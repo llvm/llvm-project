@@ -348,7 +348,7 @@ AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
 
 ModRefResult LocalAliasAnalysis::getModRef(Operation *op, Value location) {
   // Check to see if this operation relies on nested side effects.
-  if (op->hasTrait<OpTrait::HasRecursiveSideEffects>()) {
+  if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
     // TODO: To check recursive operations we need to check all of the nested
     // operations, which can result in a quadratic number of queries. We should
     // introduce some caching of some kind to help alleviate this, especially as

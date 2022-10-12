@@ -729,7 +729,7 @@ func15:
 func16:
     .seh_proc func16
     pacibsp
-    .seh_pac_sign_return_address
+    .seh_pac_sign_lr
     stp x29, lr,  [sp, #-32]!
     .seh_save_fplr_x 32
     mov x29, sp
@@ -740,7 +740,7 @@ func16:
     ldp x29, lr, [sp], #32
     .seh_save_fplr_x 32
     autibsp
-    .seh_pac_sign_return_address
+    .seh_pac_sign_lr
     .seh_endepilogue
     ret
     .seh_endproc
@@ -748,7 +748,7 @@ func16:
 func17:
     .seh_proc func17
     pacibsp
-    .seh_pac_sign_return_address
+    .seh_pac_sign_lr
     stp x19, x20, [sp, #-16]!
     .seh_save_r19r20_x 16
     stp x29, lr,  [sp, #-32]!
@@ -765,7 +765,7 @@ func17:
     ldp x19, x20, [sp], #16
     .seh_save_r19r20_x 16
     autibsp
-    .seh_pac_sign_return_address
+    .seh_pac_sign_lr
     .seh_endepilogue
     ret
     .seh_endproc
@@ -773,7 +773,7 @@ func17:
 func18:
     .seh_proc func18
     pacibsp
-    .seh_pac_sign_return_address
+    .seh_pac_sign_lr
     stp x19, x20, [sp, #-16]!
     .seh_save_r19r20_x 16
     sub sp,  sp,  #4080
@@ -798,7 +798,7 @@ func18:
     ldp x19, x20, [sp], #16
     .seh_save_r19r20_x 16
     autibsp
-    .seh_pac_sign_return_address
+    .seh_pac_sign_lr
     .seh_endepilogue
     ret
     .seh_endproc
@@ -1075,7 +1075,7 @@ nonpacked14:
     // Can't be packed; a signed return address can only be expressed if
     // we save both x29 and lr on the stack.
     pacibsp
-    .seh_pac_sign_return_address
+    .seh_pac_sign_lr
     str lr,       [sp, #-32]!
     .seh_save_reg_x lr, 32
     .seh_endprologue
@@ -1084,7 +1084,7 @@ nonpacked14:
     ldr lr,       [sp], #32
     .seh_save_reg_x lr, 32
     autibsp
-    .seh_pac_sign_return_address
+    .seh_pac_sign_lr
     .seh_endepilogue
     ret
     .seh_endproc
@@ -1094,7 +1094,7 @@ nonpacked15:
     // Can't be packed; a signed return address can only be expressed if
     // we save both x29 and lr on the stack.
     pacibsp
-    .seh_pac_sign_return_address
+    .seh_pac_sign_lr
     stp x19, x20, [sp, #-32]!
     .seh_save_r19r20_x 32
     stp x21, lr,  [sp, #16]
@@ -1111,7 +1111,7 @@ nonpacked15:
     ldp x19, x20, [sp], #32
     .seh_save_r19r20_x 32
     autibsp
-    .seh_pac_sign_return_address
+    .seh_pac_sign_lr
     .seh_endepilogue
     ret
     .seh_endproc

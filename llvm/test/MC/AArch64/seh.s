@@ -153,7 +153,7 @@ func:
     nop
     .seh_clear_unwound_to_call
     pacibsp
-    .seh_pac_sign_return_address
+    .seh_pac_sign_lr
     .seh_endprologue
     nop
     .seh_startepilogue

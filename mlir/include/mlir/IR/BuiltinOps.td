@@ -99,7 +99,7 @@ def ModuleOp : Builtin_Op<"module", [
 //===----------------------------------------------------------------------===//
 
 def UnrealizedConversionCastOp : Builtin_Op<"unrealized_conversion_cast", [
-    DeclareOpInterfaceMethods<CastOpInterface>, NoSideEffect
+    DeclareOpInterfaceMethods<CastOpInterface>, Pure
   ]> {
   let summary = "An unrealized conversion from one set of types to another";
   let description = [{

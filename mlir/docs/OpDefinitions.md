@@ -106,7 +106,7 @@ An operation is defined by specializing the `Op` class with concrete contents
 for all the fields it requires. For example, `tf.AvgPool` is defined as
 
 ```tablegen
-def TF_AvgPoolOp : TF_Op<"AvgPool", [NoSideEffect]> {
+def TF_AvgPoolOp : TF_Op<"AvgPool", [NoMemoryEffect]> {
   let summary = "Performs average pooling on the input.";
 
   let description = [{
