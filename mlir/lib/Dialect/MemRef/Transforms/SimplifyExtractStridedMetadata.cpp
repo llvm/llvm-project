@@ -718,6 +718,34 @@ class RewriteExtractAlignedPointerAsIndexOfViewLikeOp
     return success();
   }
 };
+
+/// Replace `base, offset =
+///            extract_strided_metadata(extract_strided_metadata(src)#0)`
+/// With
+/// ```
+/// base, ... = extract_strided_metadata(src)
+/// offset = 0
+/// ```
+class ExtractStridedMetadataOpExtractStridedMetadataFolder
+    : public OpRewritePattern<memref::ExtractStridedMetadataOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult
+  matchAndRewrite(memref::ExtractStridedMetadataOp extractStridedMetadataOp,
+                  PatternRewriter &rewriter) const override {
+    auto sourceExtractStridedMetadataOp =
+        extractStridedMetadataOp.getSource()
+            .getDefiningOp<memref::ExtractStridedMetadataOp>();
+    if (!sourceExtractStridedMetadataOp)
+      return failure();
+    Location loc = extractStridedMetadataOp.getLoc();
+    rewriter.replaceOp(extractStridedMetadataOp,
+                       {sourceExtractStridedMetadataOp.getBaseBuffer(),
+                        getValueOrCreateConstantIndexOp(
+                            rewriter, loc, rewriter.getIndexAttr(0))});
+    return success();
+  }
+};
 } // namespace
 
 void memref::populateSimplifyExtractStridedMetadataOpPatterns(
@@ -731,7 +759,8 @@ void memref::populateSimplifyExtractStridedMetadataOpPatterns(
            ForwardStaticMetadata,
            ExtractStridedMetadataOpAllocFolder<memref::AllocOp>,
            ExtractStridedMetadataOpAllocFolder<memref::AllocaOp>,
-           RewriteExtractAlignedPointerAsIndexOfViewLikeOp>(
+           RewriteExtractAlignedPointerAsIndexOfViewLikeOp,
+           ExtractStridedMetadataOpExtractStridedMetadataFolder>(
           patterns.getContext());
 }
 
