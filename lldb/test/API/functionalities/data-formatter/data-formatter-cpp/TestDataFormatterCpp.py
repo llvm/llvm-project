@@ -116,7 +116,7 @@ class CppDataFormatterTestCase(TestBase):
             substrs=[
                 '(char *) $',
                 ' = ptr = ',
-                ' "1234567890123456789012345678901234567890123456789012345678901234ABC"'])
+                '"1234567890123456789012345678901234567890123456789012345678901234ABC"'])
 
         self.runCmd("type summary add -c TestPoint")
 
