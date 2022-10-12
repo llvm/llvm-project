@@ -1,4 +1,4 @@
-// RUN: %clang %s -o %t -mmacosx-version-min=10.6 -framework CoreFoundation -DMAJOR=%macos_version_major -DMINOR=%macos_version_minor -DSUBMINOR=%macos_version_subminor
+// RUN: %clang %s -o %t -mmacosx-version-min=10.7 -framework CoreFoundation -DMAJOR=%macos_version_major -DMINOR=%macos_version_minor -DSUBMINOR=%macos_version_subminor
 // RUN: %run %t
 
 int __isOSVersionAtLeast(int Major, int Minor, int Subminor);
