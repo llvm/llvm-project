@@ -9,52 +9,36 @@
 #include "src/string/memmove.h"
 
 #include "src/__support/common.h"
-#include "src/string/memory_utils/op_aarch64.h"
-#include "src/string/memory_utils/op_generic.h"
-#include "src/string/memory_utils/op_x86.h"
+#include "src/__support/integer_operations.h"
+#include "src/string/memory_utils/elements.h"
 #include <stddef.h> // size_t, ptrdiff_t
-
-#include <stdio.h>
 
 namespace __llvm_libc {
 
 static inline void inline_memmove(char *dst, const char *src, size_t count) {
-#if defined(LLVM_LIBC_ARCH_X86)
-  static constexpr size_t kMaxSize = x86::kAvx512F ? 64
-                                     : x86::kAvx   ? 32
-                                     : x86::kSse2  ? 16
-                                                   : 8;
-#elif defined(LLVM_LIBC_ARCH_AARCH64)
-  static constexpr size_t kMaxSize = aarch64::kNeon ? 16 : 8;
-#else
-  static constexpr size_t kMaxSize = 8;
-#endif
+  using namespace __llvm_libc::scalar;
   if (count == 0)
     return;
   if (count == 1)
-    return generic::Memmove<1, kMaxSize>::block(dst, src);
+    return move<_1>(dst, src);
   if (count <= 4)
-    return generic::Memmove<2, kMaxSize>::head_tail(dst, src, count);
+    return move<HeadTail<_2>>(dst, src, count);
   if (count <= 8)
-    return generic::Memmove<4, kMaxSize>::head_tail(dst, src, count);
+    return move<HeadTail<_4>>(dst, src, count);
   if (count <= 16)
-    return generic::Memmove<8, kMaxSize>::head_tail(dst, src, count);
+    return move<HeadTail<_8>>(dst, src, count);
   if (count <= 32)
-    return generic::Memmove<16, kMaxSize>::head_tail(dst, src, count);
+    return move<HeadTail<_16>>(dst, src, count);
   if (count <= 64)
-    return generic::Memmove<32, kMaxSize>::head_tail(dst, src, count);
+    return move<HeadTail<_32>>(dst, src, count);
   if (count <= 128)
-    return generic::Memmove<64, kMaxSize>::head_tail(dst, src, count);
+    return move<HeadTail<_64>>(dst, src, count);
 
-  if (dst < src) {
-    generic::Memmove<32, kMaxSize>::align_forward<Arg::Src>(dst, src, count);
-    return generic::Memmove<64, kMaxSize>::loop_and_tail_forward(dst, src,
-                                                                 count);
-  } else {
-    generic::Memmove<32, kMaxSize>::align_backward<Arg::Src>(dst, src, count);
-    return generic::Memmove<64, kMaxSize>::loop_and_tail_backward(dst, src,
-                                                                  count);
-  }
+  using AlignedMoveLoop = Align<_16, Arg::Src>::Then<Loop<_64>>;
+  if (dst < src)
+    return move<AlignedMoveLoop>(dst, src, count);
+  else if (dst > src)
+    return move_backward<AlignedMoveLoop>(dst, src, count);
 }
 
 LLVM_LIBC_FUNCTION(void *, memmove,
