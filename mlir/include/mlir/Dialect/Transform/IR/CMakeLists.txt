@@ -22,7 +22,7 @@ add_public_tablegen_target(MLIRTransformDialectEnumIncGen)
 add_dependencies(mlir-headers MLIRTransformDialectEnumIncGen)
 
 add_mlir_dialect(TransformOps transform)
-add_mlir_doc(TransformOps TransformOps Dialects/ -gen-dialect-doc -dialect=transform)
+add_mlir_doc(TransformOps TransformOps Dialects/ -gen-op-doc -dialect=transform)
 
 # Contrary to what the name claims, this only produces the _op_ interface.
 add_mlir_interface(TransformInterfaces)
