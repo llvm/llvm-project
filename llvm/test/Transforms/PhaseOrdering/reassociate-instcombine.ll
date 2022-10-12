@@ -50,14 +50,7 @@ define i32 @PR58137_sdiv(i32 %a, i32 %b) {
 
 define i32 @PR58137_udiv(i32 %x, i32 %y) {
 ; CHECK-LABEL: @PR58137_udiv(
-; CHECK-NEXT:    [[ZX:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[ZY:%.*]] = zext i32 [[Y:%.*]] to i64
-; CHECK-NEXT:    [[M1:%.*]] = shl nuw nsw i64 [[ZX]], 2
-; CHECK-NEXT:    [[M2:%.*]] = mul i64 [[M1]], [[ZY]]
-; CHECK-NEXT:    [[M3:%.*]] = shl nuw nsw i64 [[ZY]], 2
-; CHECK-NEXT:    [[D:%.*]] = udiv i64 [[M2]], [[M3]]
-; CHECK-NEXT:    [[T:%.*]] = trunc i64 [[D]] to i32
-; CHECK-NEXT:    ret i32 [[T]]
+; CHECK-NEXT:    ret i32 [[X:%.*]]
 ;
   %zx = zext i32 %x to i64
   %zy = zext i32 %y to i64
