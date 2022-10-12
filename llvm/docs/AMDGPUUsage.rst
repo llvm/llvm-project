@@ -3219,9 +3219,6 @@ same *vendor-name*.
                                                                   arguments in the
                                                                   kernarg segment. Must
                                                                   be a power of 2.
-     ".uses_dynamic_stack"               boolean                  Indicates if the generated
-                                                                  machine code is using a
-                                                                  dynamically sized stack.
      ".wavefront_size"                   integer        Required  Wavefront size. Must
                                                                   be a power of 2.
      ".sgpr_count"                       integer        Required  Number of scalar
@@ -3553,7 +3550,8 @@ Code Object V5 Metadata
 
 Code object V5 metadata is the same as
 :ref:`amdgpu-amdhsa-code-object-metadata-v4` with the changes defined in table
-:ref:`amdgpu-amdhsa-code-object-metadata-map-table-v5` and table
+:ref:`amdgpu-amdhsa-code-object-metadata-map-table-v5`, table
+:ref:`amdgpu-amdhsa-code-object-kernel-metadata-map-table-v5` and table
 :ref:`amdgpu-amdhsa-code-object-kernel-argument-metadata-map-table-v5`.
 
   .. table:: AMDHSA Code Object V5 Metadata Map Changes
@@ -3567,6 +3565,18 @@ Code object V5 metadata is the same as
                                                 - The second integer is the minor
                                                   version. Currently 2.
      ================= ============== ========= =======================================
+
+..
+
+  .. table:: AMDHSA Code Object V5 Kernel Metadata Map Additions
+     :name: amdgpu-amdhsa-code-object-kernel-metadata-map-table-v5
+
+     ===================== ============= ========== =======================================
+     String Key            Value Type     Required? Description
+     ===================== ============= ========== =======================================
+     ".uses_dynamic_stack" boolean                  Indicates if the generated machine code
+                                                    is using a dynamically sized stack.
+     ===================== ============= ========== =======================================
 
 ..
 
@@ -4004,6 +4014,8 @@ The fields used by CP for code objects before V3 also match those specified in
      459     1 bit   USES_DYNAMIC_STACK              Indicates if the generated
                                                      machine code is using a
                                                      dynamically sized stack.
+                                                     This is only set in code
+                                                     object v5 and later.
      463:460 1 bit                                   Reserved, must be 0.
      464     1 bit   RESERVED_464                    Deprecated, must be 0.
      467:465 3 bits                                  Reserved, must be 0.
