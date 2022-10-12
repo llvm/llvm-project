@@ -265,7 +265,7 @@ updateDestinationOperandsForTiledOp(OpBuilder &builder,
 /// `TilingInterface` using `scf.for` to iterate over the tiles.
 FailureOr<scf::SCFTilingResult>
 mlir::scf::tileUsingSCFForOp(RewriterBase &rewriter, TilingInterface op,
-                             scf::SCFTilingOptions options) {
+                             const scf::SCFTilingOptions &options) {
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointAfter(op);
 
@@ -433,7 +433,7 @@ getUntiledProducerFromSliceSource(OpOperand *source,
 FailureOr<scf::SCFTileAndFuseResult>
 mlir::scf::tileConsumerAndFuseProducerGreedilyUsingSCFForOp(
     RewriterBase &rewriter, TilingInterface consumer,
-    scf::SCFTileAndFuseOptions options) {
+    const scf::SCFTileAndFuseOptions &options) {
   // This transformation is only valid for ops that return values (i.e. not
   // valid to use with operations that have memref operands).
   if (!consumer->getNumResults()) {
