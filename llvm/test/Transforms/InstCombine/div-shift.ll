@@ -892,3 +892,17 @@ define i8 @udiv_shl_shl_nuw_nsw2(i8 %x, i8 %y, i8 %z) {
   %d = udiv i8 %xz, %yz
   ret i8 %d
 }
+
+; TODO: X / (Y << Z) --> (X >> Z) / Y
+; https://alive2.llvm.org/ce/z/FjoN_A
+
+define i8 @udiv_shl_nuw_divisor(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_shl_nuw_divisor(
+; CHECK-NEXT:    [[S:%.*]] = shl nuw i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[S]]
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %s = shl nuw i8 %y, %z
+  %d = udiv i8 %x, %s
+  ret i8 %d
+}
