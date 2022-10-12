@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 ; Test indvars' ability to hoist new sext created by WidenIV.
 ; From ffbench.
 
