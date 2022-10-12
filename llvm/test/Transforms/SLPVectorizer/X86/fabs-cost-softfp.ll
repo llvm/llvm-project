@@ -4,7 +4,7 @@
 ; On plaforms where fp128 lowers to an integer type (soft-fp) we
 ; shouldn't be calling isFAbsFree() on the legalized type.
 
-; RUN: opt -slp-vectorizer -slp-threshold=-10 -S %s | FileCheck %s
+; RUN: opt -passes=slp-vectorizer -slp-threshold=-10 -S %s | FileCheck %s
 
 target triple = "i686-unknown-linux-gnu"
 
