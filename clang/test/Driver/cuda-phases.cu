@@ -318,3 +318,16 @@
 // LTO-NEXT: 14: offload, "host-cuda (powerpc64le-ibm-linux-gnu)" {2}, "device-cuda (powerpc64le-ibm-linux-gnu)" {13}, ir
 // LTO-NEXT: 15: backend, {14}, assembler, (host-cuda)
 // LTO-NEXT: 16: assembler, {15}, object, (host-cuda)
+
+//
+// Test that the new driver does not create actions for invalid architectures.
+//
+// RUN: %clang -### -target powerpc64le-ibm-linux-gnu --offload-new-driver \
+// RUN:        -ccc-print-phases --offload-arch=sm_999 -fgpu-rdc -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix=INVALID-ARCH %s
+//      INVALID-ARCH: error: unsupported CUDA gpu architecture: sm_999
+// INVALID-ARCH-NEXT: 0: input, "[[INPUT:.+]]", cuda, (host-cuda)
+// INVALID-ARCH-NEXT: 1: preprocessor, {0}, cuda-cpp-output, (host-cuda)
+// INVALID-ARCH-NEXT: 2: compiler, {1}, ir, (host-cuda)
+// INVALID-ARCH-NEXT: 3: backend, {2}, assembler, (host-cuda)
+// INVALID-ARCH-NEXT: 4: assembler, {3}, object, (host-cuda)
