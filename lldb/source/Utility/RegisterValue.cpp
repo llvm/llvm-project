@@ -115,7 +115,7 @@ uint32_t RegisterValue::SetFromMemoryData(const RegisterInfo &reg_info,
   // register value
   DataExtractor src_data(src, src_len, src_byte_order, 4);
 
-  error = SetValueFromData(&reg_info, src_data, 0, true);
+  error = SetValueFromData(reg_info, src_data, 0, true);
   if (error.Fail())
     return 0;
 
@@ -150,16 +150,20 @@ bool RegisterValue::GetScalarValue(Scalar &scalar) const {
 void RegisterValue::Clear() { m_type = eTypeInvalid; }
 
 RegisterValue::Type RegisterValue::SetType(const RegisterInfo *reg_info) {
+  assert(reg_info && "Expected non null reg_info.");
   // To change the type, we simply copy the data in again, using the new format
   RegisterValue copy;
   DataExtractor copy_data;
-  if (copy.CopyValue(*this) && copy.GetData(copy_data))
-    SetValueFromData(reg_info, copy_data, 0, true);
+  if (copy.CopyValue(*this) && copy.GetData(copy_data)) {
+    Status error = SetValueFromData(*reg_info, copy_data, 0, true);
+    assert(error.Success() && "Expected SetValueFromData to succeed.");
+    UNUSED_IF_ASSERT_DISABLED(error);
+  }
 
   return m_type;
 }
 
-Status RegisterValue::SetValueFromData(const RegisterInfo *reg_info,
+Status RegisterValue::SetValueFromData(const RegisterInfo &reg_info,
                                        DataExtractor &src,
                                        lldb::offset_t src_offset,
                                        bool partial_data_ok) {
@@ -170,22 +174,22 @@ Status RegisterValue::SetValueFromData(const RegisterInfo *reg_info,
     return error;
   }
 
-  if (reg_info->byte_size == 0) {
+  if (reg_info.byte_size == 0) {
     error.SetErrorString("invalid register info.");
     return error;
   }
 
   uint32_t src_len = src.GetByteSize() - src_offset;
 
-  if (!partial_data_ok && (src_len < reg_info->byte_size)) {
+  if (!partial_data_ok && (src_len < reg_info.byte_size)) {
     error.SetErrorString("not enough data.");
     return error;
   }
 
   // Cap the data length if there is more than enough bytes for this register
   // value
-  if (src_len > reg_info->byte_size)
-    src_len = reg_info->byte_size;
+  if (src_len > reg_info.byte_size)
+    src_len = reg_info.byte_size;
 
   // Zero out the value in case we get partial data...
   memset(buffer.bytes, 0, sizeof(buffer.bytes));
@@ -193,20 +197,20 @@ Status RegisterValue::SetValueFromData(const RegisterInfo *reg_info,
   type128 int128;
 
   m_type = eTypeInvalid;
-  switch (reg_info->encoding) {
+  switch (reg_info.encoding) {
   case eEncodingInvalid:
     break;
   case eEncodingUint:
   case eEncodingSint:
-    if (reg_info->byte_size == 1)
+    if (reg_info.byte_size == 1)
       SetUInt8(src.GetMaxU32(&src_offset, src_len));
-    else if (reg_info->byte_size <= 2)
+    else if (reg_info.byte_size <= 2)
       SetUInt16(src.GetMaxU32(&src_offset, src_len));
-    else if (reg_info->byte_size <= 4)
+    else if (reg_info.byte_size <= 4)
       SetUInt32(src.GetMaxU32(&src_offset, src_len));
-    else if (reg_info->byte_size <= 8)
+    else if (reg_info.byte_size <= 8)
       SetUInt64(src.GetMaxU64(&src_offset, src_len));
-    else if (reg_info->byte_size <= 16) {
+    else if (reg_info.byte_size <= 16) {
       uint64_t data1 = src.GetU64(&src_offset);
       uint64_t data2 = src.GetU64(&src_offset);
       if (src.GetByteSize() == eByteOrderBig) {
@@ -220,16 +224,16 @@ Status RegisterValue::SetValueFromData(const RegisterInfo *reg_info,
     }
     break;
   case eEncodingIEEE754:
-    if (reg_info->byte_size == sizeof(float))
+    if (reg_info.byte_size == sizeof(float))
       SetFloat(src.GetFloat(&src_offset));
-    else if (reg_info->byte_size == sizeof(double))
+    else if (reg_info.byte_size == sizeof(double))
       SetDouble(src.GetDouble(&src_offset));
-    else if (reg_info->byte_size == sizeof(long double))
+    else if (reg_info.byte_size == sizeof(long double))
       SetLongDouble(src.GetLongDouble(&src_offset));
     break;
   case eEncodingVector: {
     m_type = eTypeBytes;
-    buffer.length = reg_info->byte_size;
+    buffer.length = reg_info.byte_size;
     buffer.byte_order = src.GetByteOrder();
     assert(buffer.length <= kMaxRegisterByteSize);
     if (buffer.length > kMaxRegisterByteSize)
@@ -242,7 +246,7 @@ Status RegisterValue::SetValueFromData(const RegisterInfo *reg_info,
             buffer.byte_order) == 0) // dst byte order
     {
       error.SetErrorStringWithFormat(
-          "failed to copy data for register write of %s", reg_info->name);
+          "failed to copy data for register write of %s", reg_info.name);
       return error;
     }
   }
@@ -250,7 +254,7 @@ Status RegisterValue::SetValueFromData(const RegisterInfo *reg_info,
 
   if (m_type == eTypeInvalid)
     error.SetErrorStringWithFormat(
-        "invalid register value type for register %s", reg_info->name);
+        "invalid register value type for register %s", reg_info.name);
   return error;
 }
 
