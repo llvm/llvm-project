@@ -6161,7 +6161,8 @@ public:
   NamedDecl *BuildUsingEnumDeclaration(Scope *S, AccessSpecifier AS,
                                        SourceLocation UsingLoc,
                                        SourceLocation EnumLoc,
-                                       SourceLocation NameLoc, EnumDecl *ED);
+                                       SourceLocation NameLoc,
+                                       TypeSourceInfo *EnumType, EnumDecl *ED);
   NamedDecl *BuildUsingPackDecl(NamedDecl *InstantiatedFrom,
                                 ArrayRef<NamedDecl *> Expansions);
 

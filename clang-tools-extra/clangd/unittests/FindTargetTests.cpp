@@ -1267,6 +1267,15 @@ TEST_F(FindExplicitReferencesTest, All) {
         )cpp",
         "0: targets = {ns}\n"
         "1: targets = {ns::global}, qualifier = 'ns::'\n"},
+       // Using enum declarations.
+       {R"cpp(
+          namespace ns { enum class A {}; }
+          void foo() {
+            using enum $0^ns::$1^A;
+          }
+        )cpp",
+        "0: targets = {ns}\n"
+        "1: targets = {ns::A}, qualifier = 'ns::'\n"},
        // Simple types.
        {R"cpp(
          struct Struct { int a; };

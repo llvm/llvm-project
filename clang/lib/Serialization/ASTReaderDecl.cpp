@@ -1775,7 +1775,7 @@ void ASTDeclReader::VisitUsingEnumDecl(UsingEnumDecl *D) {
   VisitNamedDecl(D);
   D->setUsingLoc(readSourceLocation());
   D->setEnumLoc(readSourceLocation());
-  D->Enum = readDeclAs<EnumDecl>();
+  D->setEnumType(Record.readTypeSourceInfo());
   D->FirstUsingShadow.setPointer(readDeclAs<UsingShadowDecl>());
   if (auto *Pattern = readDeclAs<UsingEnumDecl>())
     Reader.getContext().setInstantiatedFromUsingEnumDecl(D, Pattern);
