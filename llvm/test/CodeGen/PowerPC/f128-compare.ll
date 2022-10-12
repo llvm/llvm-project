@@ -49,8 +49,8 @@ define dso_local signext i32 @greater_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp ogt fp128 %0, %1
   %conv = zext i1 %cmp to i32
   ret i32 %conv
@@ -95,8 +95,8 @@ define dso_local signext i32 @less_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp olt fp128 %0, %1
   %conv = zext i1 %cmp to i32
   ret i32 %conv
@@ -142,8 +142,8 @@ define dso_local signext i32 @greater_eq_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp oge fp128 %0, %1
   %conv = zext i1 %cmp to i32
   ret i32 %conv
@@ -191,8 +191,8 @@ define dso_local signext i32 @less_eq_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp ole fp128 %0, %1
   %conv = zext i1 %cmp to i32
   ret i32 %conv
@@ -238,8 +238,8 @@ define dso_local signext i32 @equal_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp oeq fp128 %0, %1
   %conv = zext i1 %cmp to i32
   ret i32 %conv
@@ -286,8 +286,8 @@ define dso_local signext i32 @not_greater_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp ogt fp128 %0, %1
   %lnot = xor i1 %cmp, true
   %lnot.ext = zext i1 %lnot to i32
@@ -333,8 +333,8 @@ define dso_local signext i32 @not_less_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp olt fp128 %0, %1
   %lnot = xor i1 %cmp, true
   %lnot.ext = zext i1 %lnot to i32
@@ -380,8 +380,8 @@ define dso_local signext i32 @not_greater_eq_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp oge fp128 %0, %1
   %lnot = xor i1 %cmp, true
   %lnot.ext = zext i1 %lnot to i32
@@ -429,8 +429,8 @@ define dso_local signext i32 @not_less_eq_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp ole fp128 %0, %1
   %lnot = xor i1 %cmp, true
   %lnot.ext = zext i1 %lnot to i32
@@ -477,8 +477,8 @@ define dso_local signext i32 @not_equal_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp une fp128 %0, %1
   %conv = zext i1 %cmp to i32
   ret i32 %conv
@@ -540,8 +540,8 @@ define fp128 @greater_sel_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp ogt fp128 %0, %1
   %cond = select i1 %cmp, fp128 %0, fp128 %1
   ret fp128 %cond
@@ -603,8 +603,8 @@ define fp128 @less_sel_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp olt fp128 %0, %1
   %cond = select i1 %cmp, fp128 %0, fp128 %1
   ret fp128 %cond
@@ -667,8 +667,8 @@ define fp128 @greater_eq_sel_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp oge fp128 %0, %1
   %cond = select i1 %cmp, fp128 %0, fp128 %1
   ret fp128 %cond
@@ -731,8 +731,8 @@ define fp128 @less_eq_sel_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp ole fp128 %0, %1
   %cond = select i1 %cmp, fp128 %0, fp128 %1
   ret fp128 %cond
@@ -794,8 +794,8 @@ define fp128 @equal_sel_qp() {
 ; CHECK-P8-NEXT:    mtlr r0
 ; CHECK-P8-NEXT:    blr
 entry:
-  %0 = load fp128, fp128* @a_qp, align 16
-  %1 = load fp128, fp128* @b_qp, align 16
+  %0 = load fp128, ptr @a_qp, align 16
+  %1 = load fp128, ptr @b_qp, align 16
   %cmp = fcmp oeq fp128 %0, %1
   %cond = select i1 %cmp, fp128 %0, fp128 %1
   ret fp128 %cond

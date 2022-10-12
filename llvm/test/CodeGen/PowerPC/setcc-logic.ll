@@ -110,7 +110,7 @@ define zeroext i1 @any_sign_bits_clear(i32 %P, i32 %Q)  {
 }
 
 ; PR3351 - (P == 0) & (Q == 0) -> (P|Q) == 0
-define i32 @all_bits_clear_branch(i32* %P, i32* %Q)  {
+define i32 @all_bits_clear_branch(ptr %P, ptr %Q)  {
 ; CHECK-LABEL: all_bits_clear_branch:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    or. 3, 3, 4
@@ -122,8 +122,8 @@ define i32 @all_bits_clear_branch(i32* %P, i32* %Q)  {
 ; CHECK-NEXT:    li 3, 192
 ; CHECK-NEXT:    blr
 entry:
-  %a = icmp eq i32* %P, null
-  %b = icmp eq i32* %Q, null
+  %a = icmp eq ptr %P, null
+  %b = icmp eq ptr %Q, null
   %c = and i1 %a, %b
   br i1 %c, label %bb1, label %return
 
@@ -210,7 +210,7 @@ return:
 }
 
 ; PR3351 - (P != 0) | (Q != 0) -> (P|Q) != 0
-define i32 @any_bits_set_branch(i32* %P, i32* %Q)  {
+define i32 @any_bits_set_branch(ptr %P, ptr %Q)  {
 ; CHECK-LABEL: any_bits_set_branch:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    or. 3, 3, 4
@@ -222,8 +222,8 @@ define i32 @any_bits_set_branch(i32* %P, i32* %Q)  {
 ; CHECK-NEXT:    li 3, 192
 ; CHECK-NEXT:    blr
 entry:
-  %a = icmp ne i32* %P, null
-  %b = icmp ne i32* %Q, null
+  %a = icmp ne ptr %P, null
+  %b = icmp ne ptr %Q, null
   %c = or i1 %a, %b
   br i1 %c, label %bb1, label %return
 

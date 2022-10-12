@@ -4,7 +4,7 @@
 %struct.poly2 = type { [11 x i64] }
 
 ; Function Attrs: nofree norecurse nounwind
-define dso_local void @poly2_lshift1(%struct.poly2* nocapture %p) local_unnamed_addr #0 {
+define dso_local void @poly2_lshift1(ptr nocapture %p) local_unnamed_addr #0 {
 ; CHECK-LABEL: poly2_lshift1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li r4, 72
@@ -62,50 +62,47 @@ define dso_local void @poly2_lshift1(%struct.poly2* nocapture %p) local_unnamed_
 ; CHECK-NEXT:    stxvd2x vs0, r3, r4
 ; CHECK-NEXT:    blr
 entry:
-  %arrayidx = getelementptr inbounds %struct.poly2, %struct.poly2* %p, i64 0, i32 0, i64 0
-  %0 = load i64, i64* %arrayidx, align 8
+  %0 = load i64, ptr %p, align 8
   %shl = shl i64 %0, 1
-  store i64 %shl, i64* %arrayidx, align 8
-  %arrayidx.1 = getelementptr inbounds %struct.poly2, %struct.poly2* %p, i64 0, i32 0, i64 1
-  %1 = load i64, i64* %arrayidx.1, align 8
+  store i64 %shl, ptr %p, align 8
+  %arrayidx.1 = getelementptr inbounds %struct.poly2, ptr %p, i64 0, i32 0, i64 1
+  %1 = load i64, ptr %arrayidx.1, align 8
   %or.1 = call i64 @llvm.fshl.i64(i64 %1, i64 %0, i64 1)
-  store i64 %or.1, i64* %arrayidx.1, align 8
-  %arrayidx.2 = getelementptr inbounds %struct.poly2, %struct.poly2* %p, i64 0, i32 0, i64 2
-  %2 = load i64, i64* %arrayidx.2, align 8
+  store i64 %or.1, ptr %arrayidx.1, align 8
+  %arrayidx.2 = getelementptr inbounds %struct.poly2, ptr %p, i64 0, i32 0, i64 2
+  %2 = load i64, ptr %arrayidx.2, align 8
   %or.2 = call i64 @llvm.fshl.i64(i64 %2, i64 %1, i64 1)
-  store i64 %or.2, i64* %arrayidx.2, align 8
-  %arrayidx.3 = getelementptr inbounds %struct.poly2, %struct.poly2* %p, i64 0, i32 0, i64 3
-  %3 = load i64, i64* %arrayidx.3, align 8
+  store i64 %or.2, ptr %arrayidx.2, align 8
+  %arrayidx.3 = getelementptr inbounds %struct.poly2, ptr %p, i64 0, i32 0, i64 3
+  %3 = load i64, ptr %arrayidx.3, align 8
   %or.3 = call i64 @llvm.fshl.i64(i64 %3, i64 %2, i64 1)
-  store i64 %or.3, i64* %arrayidx.3, align 8
-  %arrayidx.4 = getelementptr inbounds %struct.poly2, %struct.poly2* %p, i64 0, i32 0, i64 4
-  %4 = load i64, i64* %arrayidx.4, align 8
+  store i64 %or.3, ptr %arrayidx.3, align 8
+  %arrayidx.4 = getelementptr inbounds %struct.poly2, ptr %p, i64 0, i32 0, i64 4
+  %4 = load i64, ptr %arrayidx.4, align 8
   %or.4 = call i64 @llvm.fshl.i64(i64 %4, i64 %3, i64 1)
-  store i64 %or.4, i64* %arrayidx.4, align 8
-  %arrayidx.5 = getelementptr inbounds %struct.poly2, %struct.poly2* %p, i64 0, i32 0, i64 5
-  %5 = load i64, i64* %arrayidx.5, align 8
+  store i64 %or.4, ptr %arrayidx.4, align 8
+  %arrayidx.5 = getelementptr inbounds %struct.poly2, ptr %p, i64 0, i32 0, i64 5
+  %5 = load i64, ptr %arrayidx.5, align 8
   %or.5 = call i64 @llvm.fshl.i64(i64 %5, i64 %4, i64 1)
-  store i64 %or.5, i64* %arrayidx.5, align 8
-  %arrayidx.6 = getelementptr inbounds %struct.poly2, %struct.poly2* %p, i64 0, i32 0, i64 6
-  %6 = load i64, i64* %arrayidx.6, align 8
+  store i64 %or.5, ptr %arrayidx.5, align 8
+  %arrayidx.6 = getelementptr inbounds %struct.poly2, ptr %p, i64 0, i32 0, i64 6
+  %6 = load i64, ptr %arrayidx.6, align 8
   %or.6 = call i64 @llvm.fshl.i64(i64 %6, i64 %5, i64 1)
-  store i64 %or.6, i64* %arrayidx.6, align 8
-  %arrayidx.7 = getelementptr inbounds %struct.poly2, %struct.poly2* %p, i64 0, i32 0, i64 7
-  %7 = load i64, i64* %arrayidx.7, align 8
+  store i64 %or.6, ptr %arrayidx.6, align 8
+  %arrayidx.7 = getelementptr inbounds %struct.poly2, ptr %p, i64 0, i32 0, i64 7
+  %7 = load i64, ptr %arrayidx.7, align 8
   %or.7 = call i64 @llvm.fshl.i64(i64 %7, i64 %6, i64 1)
-  store i64 %or.7, i64* %arrayidx.7, align 8
-  %arrayidx.8 = getelementptr inbounds %struct.poly2, %struct.poly2* %p, i64 0, i32 0, i64 8
-  %8 = load i64, i64* %arrayidx.8, align 8
+  store i64 %or.7, ptr %arrayidx.7, align 8
+  %arrayidx.8 = getelementptr inbounds %struct.poly2, ptr %p, i64 0, i32 0, i64 8
+  %8 = load i64, ptr %arrayidx.8, align 8
   %or.8 = call i64 @llvm.fshl.i64(i64 %8, i64 %7, i64 1)
-  store i64 %or.8, i64* %arrayidx.8, align 8
-  %arrayidx.9 = getelementptr inbounds %struct.poly2, %struct.poly2* %p, i64 0, i32 0, i64 9
-  %9 = bitcast i64* %arrayidx.9 to <2 x i64>*
-  %10 = load <2 x i64>, <2 x i64>* %9, align 8
-  %11 = insertelement <2 x i64> undef, i64 %8, i32 0
-  %12 = shufflevector <2 x i64> %11, <2 x i64> %10, <2 x i32> <i32 0, i32 2>
-  %13 = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %10, <2 x i64> %12, <2 x i64> <i64 1, i64 1>)
-  %14 = bitcast i64* %arrayidx.9 to <2 x i64>*
-  store <2 x i64> %13, <2 x i64>* %14, align 8
+  store i64 %or.8, ptr %arrayidx.8, align 8
+  %arrayidx.9 = getelementptr inbounds %struct.poly2, ptr %p, i64 0, i32 0, i64 9
+  %9 = load <2 x i64>, ptr %arrayidx.9, align 8
+  %10 = insertelement <2 x i64> undef, i64 %8, i32 0
+  %11 = shufflevector <2 x i64> %10, <2 x i64> %9, <2 x i32> <i32 0, i32 2>
+  %12 = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %9, <2 x i64> %11, <2 x i64> <i64 1, i64 1>)
+  store <2 x i64> %12, ptr %arrayidx.9, align 8
   ret void
 }
 

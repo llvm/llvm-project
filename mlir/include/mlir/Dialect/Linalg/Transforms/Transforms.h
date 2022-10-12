@@ -696,57 +696,26 @@ struct LinalgTilingOptions {
 RewritePatternSet getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx);
 void populateLinalgTilingCanonicalizationPatterns(RewritePatternSet &patterns);
 
-///
-/// Linalg tiling pattern.
-///
-/// Apply the `tiling` transformation as a pattern.
-/// `filter` controls LinalgTransformMarker matching and update when specified.
-/// See `tiling` for more details.
-// TODO: TiledOpInterface
-struct LinalgTilingPattern : public OpInterfaceRewritePattern<LinalgOp> {
-  /// Construct a generic pattern applied to all LinalgOp that verify `filter`.
-  LinalgTilingPattern(
-      MLIRContext *context, LinalgTilingOptions options,
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      PatternBenefit benefit = 1);
-
-  /// Construct a pattern specifically applied to `opName`.
-  LinalgTilingPattern(
-      StringRef opName, MLIRContext *context, LinalgTilingOptions options,
-      LinalgTransformationFilter f = LinalgTransformationFilter(),
-      PatternBenefit benefit = 1);
-
-  /// `matchAndRewrite` implementation that returns the significant transformed
-  /// pieces of IR.
-  FailureOr<TiledLinalgOp>
-  returningMatchAndRewrite(LinalgOp op, PatternRewriter &rewriter) const;
-
-  LogicalResult matchAndRewrite(LinalgOp op,
-                                PatternRewriter &rewriter) const override {
-    return returningMatchAndRewrite(op, rewriter);
-  }
-
-private:
-  /// LinalgTransformMarker handles special attribute manipulations.
-  LinalgTransformationFilter filter;
-  /// Options to control tiling;
-  LinalgTilingOptions options;
-};
+/// Perform tiling using LinalgTilingOptions.
+/// Note: this is on a path to deprecation that only works on LinalgOp.
+/// Clients should favor using `tileUsingSCFForOp`  that more generally works on
+/// TilingInterface.
+FailureOr<TiledLinalgOp>
+tileWithLinalgTilingOptions(RewriterBase &rewriter, LinalgOp op,
+                            const LinalgTilingOptions &options);
 
 ///
 /// Linalg padding pattern.
 ///
 /// Apply the `padding` transformation as a pattern.
-/// `filter` controls LinalgTransformMarker matching and update when specified.
 /// See `padding` for more details.
 struct LinalgPaddingPattern : public OpInterfaceRewritePattern<LinalgOp> {
-  /// Construct a generic pattern applied to all LinalgOp that verify `filter`.
   LinalgPaddingPattern(MLIRContext *context,
                        LinalgPaddingOptions options = LinalgPaddingOptions(),
                        PatternBenefit benefit = 1);
 
-  /// `matchAndRewrite` implementation that returns the significant transformed
-  /// pieces of IR.
+  /// `matchAndRewrite` implementation that returns the significant
+  /// transformed pieces of IR.
   FailureOr<LinalgOp> returningMatchAndRewrite(LinalgOp op,
                                                PatternRewriter &rewriter) const;
 
@@ -954,9 +923,9 @@ void populateLinalgNamedOpsGeneralizationPatterns(
 
 /// Linalg decompose convolutions patterns
 
-/// Populates patterns to decompose high-D convolution ops into low-D ones. This
-/// is a step in progressive lowering for convolution ops, afterwards we can
-/// vectorize the low-D convolution ops.
+/// Populates patterns to decompose high-D convolution ops into low-D ones.
+/// This is a step in progressive lowering for convolution ops, afterwards we
+/// can vectorize the low-D convolution ops.
 void populateDecomposeConvolutionPatterns(RewritePatternSet &patterns,
                                           PatternBenefit benefit = 1);
 
@@ -977,8 +946,8 @@ struct PadOpTransformationPattern : public OpRewritePattern<tensor::PadOp> {
 /// a static bounding box. Use `paddingValues` and `packPaddings` to set padding
 /// value and nofold attribute of the created tensor::PadOps, respectively.
 /// Update `paddedOp` to the cloned operation with statically shaped
-/// `paddingDimensions` and return the extracted dynamically shaped results. If
-/// padding fails, return failure.
+/// `paddingDimensions` and return the extracted dynamically shaped results.
+/// If padding fails, return failure.
 FailureOr<SmallVector<Value>>
 rewriteAsPaddedOp(OpBuilder &b, LinalgOp opToPad,
                   ArrayRef<int64_t> paddingDimensions,
@@ -1132,29 +1101,6 @@ public:
                      const LinalgTransformationFilter &f) {}
 };
 
-template <typename... OpTypes>
-class TilingPatterns;
-
-template <>
-class TilingPatterns<> {
-public:
-  static void insert(RewritePatternSet &patterns,
-                     const LinalgTilingOptions &options,
-                     const LinalgTransformationFilter &f) {}
-};
-
-template <typename OpTy, typename... OpTypes>
-class TilingPatterns<OpTy, OpTypes...> {
-public:
-  static void insert(RewritePatternSet &patterns,
-                     const LinalgTilingOptions &options,
-                     const LinalgTransformationFilter &f) {
-    patterns.add<LinalgTilingPattern>(OpTy::getOperationName(),
-                                      patterns.getContext(), options, f);
-    TilingPatterns<OpTypes...>::insert(patterns, options, f);
-  }
-};
-
 /// Split Reduction options.
 struct SplitReductionOptions {
   // Ratio used to split the reduction dimension.  If the ratio is <= 1, nothing
@@ -1181,8 +1127,10 @@ void populateSplitReductionPattern(
 
 /// Apply transformation to split the single linalg op reduction into a parallel
 /// and reduction dimension. Then create a new linalg.generic op doing the rest
-/// of the reduction. Return the new linalg op with an extra parallel dimension
-/// or failure if the transformation didn't happen.
+/// of the reduction.
+/// Return the new linalg op with an extra parallel dimension or failure if the
+/// transformation didn't happen.
+///
 /// Example:
 /// ```
 ///  %r = linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>,
@@ -1265,7 +1213,7 @@ splitReduction(PatternRewriter &b, LinalgOp op,
 ///  %3 = linalg.generic {indexing_maps = [#map0, #map1, #map2, #map3],
 ///    iterator_types = ["parallel", "parallel", "parallel", "reduction"]}
 ///    ins(%A, %B, %2 : tensor<16x256xf32>, tensor<256x32xf32>, tensor<64x4xi1>)
-///    outs(%1 : tensor<16x32x64xf32>) {
+///   outs(%1 : tensor<16x32x64xf32>) {
 ///      ^bb0(%arg3: f32, %arg4: f32, %arg5: i1, %arg6: f32):
 ///        %5 = arith.mulf %arg3, %arg4 : f32
 ///        %6 = arith.addf %arg6, %5 : f32

@@ -101,7 +101,7 @@ entry:
   ret <4 x float> %1
 }
 
-define void @test8elt(<8 x float>* noalias nocapture sret(<8 x float>) %agg.result, i64 %a.coerce) local_unnamed_addr #2 {
+define void @test8elt(ptr noalias nocapture sret(<8 x float>) %agg.result, i64 %a.coerce) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test8elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r5, r2, .LCPI2_0@toc@ha
@@ -163,11 +163,11 @@ define void @test8elt(<8 x float>* noalias nocapture sret(<8 x float>) %agg.resu
 entry:
   %0 = bitcast i64 %a.coerce to <8 x i8>
   %1 = uitofp <8 x i8> %0 to <8 x float>
-  store <8 x float> %1, <8 x float>* %agg.result, align 32
+  store <8 x float> %1, ptr %agg.result, align 32
   ret void
 }
 
-define void @test16elt(<16 x float>* noalias nocapture sret(<16 x float>) %agg.result, <16 x i8> %a) local_unnamed_addr #3 {
+define void @test16elt(ptr noalias nocapture sret(<16 x float>) %agg.result, <16 x i8> %a) local_unnamed_addr #3 {
 ; CHECK-P8-LABEL: test16elt:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r4, r2, .LCPI3_0@toc@ha
@@ -267,7 +267,7 @@ define void @test16elt(<16 x float>* noalias nocapture sret(<16 x float>) %agg.r
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = uitofp <16 x i8> %a to <16 x float>
-  store <16 x float> %0, <16 x float>* %agg.result, align 64
+  store <16 x float> %0, ptr %agg.result, align 64
   ret void
 }
 
@@ -370,7 +370,7 @@ entry:
   ret <4 x float> %1
 }
 
-define void @test8elt_signed(<8 x float>* noalias nocapture sret(<8 x float>) %agg.result, i64 %a.coerce) local_unnamed_addr #2 {
+define void @test8elt_signed(ptr noalias nocapture sret(<8 x float>) %agg.result, i64 %a.coerce) local_unnamed_addr #2 {
 ; CHECK-P8-LABEL: test8elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r5, r2, .LCPI6_0@toc@ha
@@ -439,11 +439,11 @@ define void @test8elt_signed(<8 x float>* noalias nocapture sret(<8 x float>) %a
 entry:
   %0 = bitcast i64 %a.coerce to <8 x i8>
   %1 = sitofp <8 x i8> %0 to <8 x float>
-  store <8 x float> %1, <8 x float>* %agg.result, align 32
+  store <8 x float> %1, ptr %agg.result, align 32
   ret void
 }
 
-define void @test16elt_signed(<16 x float>* noalias nocapture sret(<16 x float>) %agg.result, <16 x i8> %a) local_unnamed_addr #3 {
+define void @test16elt_signed(ptr noalias nocapture sret(<16 x float>) %agg.result, <16 x i8> %a) local_unnamed_addr #3 {
 ; CHECK-P8-LABEL: test16elt_signed:
 ; CHECK-P8:       # %bb.0: # %entry
 ; CHECK-P8-NEXT:    addis r4, r2, .LCPI7_0@toc@ha
@@ -558,6 +558,6 @@ define void @test16elt_signed(<16 x float>* noalias nocapture sret(<16 x float>)
 ; CHECK-BE-NEXT:    blr
 entry:
   %0 = sitofp <16 x i8> %a to <16 x float>
-  store <16 x float> %0, <16 x float>* %agg.result, align 64
+  store <16 x float> %0, ptr %agg.result, align 64
   ret void
 }

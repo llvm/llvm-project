@@ -347,14 +347,13 @@ struct _LIBCPP_TEMPLATE_VIS allocator_traits
     }
 };
 
-template <class _Traits, class _Tp>
-struct __rebind_alloc_helper {
 #ifndef _LIBCPP_CXX03_LANG
-    using type _LIBCPP_NODEBUG = typename _Traits::template rebind_alloc<_Tp>;
+template <class _Traits, class _Tp>
+using __rebind_alloc _LIBCPP_NODEBUG = typename _Traits::template rebind_alloc<_Tp>;
 #else
-    using type = typename _Traits::template rebind_alloc<_Tp>::other;
+template <class _Traits, class _Tp>
+using __rebind_alloc = typename _Traits::template rebind_alloc<_Tp>::other;
 #endif
-};
 
 // __is_default_allocator
 template <class _Tp>

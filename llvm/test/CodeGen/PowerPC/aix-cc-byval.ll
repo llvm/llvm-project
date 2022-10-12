@@ -22,7 +22,7 @@
 define void @call_test_byval_1Byte() {
 entry:
   %s0 = alloca %struct.S0, align 8
-  %call = call zeroext i8 @test_byval_1Byte(%struct.S0* byval(%struct.S0) align 1 %s0, %struct.S1* byval(%struct.S1) align 1 @gS1)
+  %call = call zeroext i8 @test_byval_1Byte(ptr byval(%struct.S0) align 1 %s0, ptr byval(%struct.S1) align 1 @gS1)
   ret void
 }
 
@@ -63,10 +63,9 @@ entry:
 ; ASM64-NEXT:  addi 1, 1, 128
 
 
-define zeroext i8 @test_byval_1Byte(%struct.S0* byval(%struct.S0) align 1 %s0, %struct.S1* byval(%struct.S1) align 1 %s) {
+define zeroext i8 @test_byval_1Byte(ptr byval(%struct.S0) align 1 %s0, ptr byval(%struct.S1) align 1 %s) {
 entry:
-  %arrayidx = getelementptr inbounds %struct.S1, %struct.S1* %s, i32 0, i32 0, i32 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %s, align 1
   ret i8 %0
 }
 
@@ -118,8 +117,8 @@ entry:
 
 define void @call_test_byval_2Byte() {
 entry:
-  %0 = load float, float* @f, align 4
-  %call = call zeroext i8 @test_byval_2Byte(i32 signext 42, float %0, %struct.S2* byval(%struct.S2) align 1 @gS2, float %0, i32 signext 43)
+  %0 = load float, ptr @f, align 4
+  %call = call zeroext i8 @test_byval_2Byte(i32 signext 42, float %0, ptr byval(%struct.S2) align 1 @gS2, float %0, i32 signext 43)
   ret void
 }
 
@@ -182,10 +181,10 @@ entry:
 ; ASM64-NEXT:  nop
 ; ASM64-NEXT:  addi 1, 1, 112
 
-define zeroext i8 @test_byval_2Byte(i32, float, %struct.S2* byval(%struct.S2) align 1 %s, float, i32) {
+define zeroext i8 @test_byval_2Byte(i32, float, ptr byval(%struct.S2) align 1 %s, float, i32) {
 entry:
-  %arrayidx = getelementptr inbounds %struct.S2, %struct.S2* %s, i32 0, i32 0, i32 1
-  %4 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds %struct.S2, ptr %s, i32 0, i32 0, i32 1
+  %4 = load i8, ptr %arrayidx, align 1
   ret i8 %4
 }
 
@@ -222,7 +221,7 @@ entry:
 
 define void @call_test_byval_3Byte() {
 entry:
-  %call = call zeroext i16 @test_byval_3Byte(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, %struct.S3* byval(%struct.S3) align 1 @gS3, i32 42)
+  %call = call zeroext i16 @test_byval_3Byte(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, ptr byval(%struct.S3) align 1 @gS3, i32 42)
   ret void
 }
 
@@ -307,10 +306,10 @@ entry:
 ; ASM64-NEXT:  nop
 
 
-define zeroext i16 @test_byval_3Byte(i32, i32, i32, i32, i32, i32, i32, %struct.S3* byval(%struct.S3) align 1 %s, i32) {
+define zeroext i16 @test_byval_3Byte(i32, i32, i32, i32, i32, i32, i32, ptr byval(%struct.S3) align 1 %s, i32) {
 entry:
-  %gep = getelementptr inbounds %struct.S3, %struct.S3* %s, i32 0, i32 1
-  %8 = load i16, i16* %gep, align 1
+  %gep = getelementptr inbounds %struct.S3, ptr %s, i32 0, i32 1
+  %8 = load i16, ptr %gep, align 1
   ret i16 %8
 }
 
@@ -354,7 +353,7 @@ define void @call_test_byval_4Byte() {
 entry:
   %s0 = alloca %struct.S0, align 8
   %s4a = alloca %struct.S4A, align 4
-  %call = call signext i32 @test_byval_4Byte(%struct.S4* byval(%struct.S4) align 1 @gS4, %struct.S0* byval(%struct.S0) align 1 %s0, %struct.S4A* byval(%struct.S4A) align 4 %s4a)
+  %call = call signext i32 @test_byval_4Byte(ptr byval(%struct.S4) align 1 @gS4, ptr byval(%struct.S0) align 1 %s0, ptr byval(%struct.S4A) align 4 %s4a)
   ret void
 }
 
@@ -397,12 +396,11 @@ entry:
 ; ASM64-NEXT:  addi 1, 1, 128
 
 
-define signext i32 @test_byval_4Byte(%struct.S4* byval(%struct.S4) align 1 %s, %struct.S0* byval(%struct.S0) align 1, %struct.S4A* byval(%struct.S4A) align 4 %s4a) {
+define signext i32 @test_byval_4Byte(ptr byval(%struct.S4) align 1 %s, ptr byval(%struct.S0) align 1, ptr byval(%struct.S4A) align 4 %s4a) {
 entry:
-  %arrayidx = getelementptr inbounds %struct.S4, %struct.S4* %s, i32 0, i32 0, i32 3
-  %gep = getelementptr inbounds %struct.S4A, %struct.S4A* %s4a, i32 0, i32 0
-  %1 = load i8, i8* %arrayidx, align 1
-  %2 = load i32, i32* %gep, align 4
+  %arrayidx = getelementptr inbounds %struct.S4, ptr %s, i32 0, i32 0, i32 3
+  %1 = load i8, ptr %arrayidx, align 1
+  %2 = load i32, ptr %s4a, align 4
   %conv = zext i8 %1 to i32
   %add = add nsw i32 %2, %conv
   ret i32 %add
@@ -467,11 +465,11 @@ entry:
 
 define void @call_test_byval_5Byte() {
 entry:
-  %call = call zeroext i8 @test_byval_5Byte(%struct.S5* byval(%struct.S5) align 1 @gS5)
+  %call = call zeroext i8 @test_byval_5Byte(ptr byval(%struct.S5) align 1 @gS5)
   ret void
 }
 
-declare zeroext i8 @test_byval_5Byte(%struct.S5* byval(%struct.S5) align 1)
+declare zeroext i8 @test_byval_5Byte(ptr byval(%struct.S5) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_5Byte{{.*}}
 
@@ -522,11 +520,11 @@ declare zeroext i8 @test_byval_5Byte(%struct.S5* byval(%struct.S5) align 1)
 
 define void @call_test_byval_6Byte() {
 entry:
-  %call = call zeroext i8 @test_byval_6Byte(%struct.S6* byval(%struct.S6) align 1 @gS6)
+  %call = call zeroext i8 @test_byval_6Byte(ptr byval(%struct.S6) align 1 @gS6)
   ret void
 }
 
-declare zeroext i8 @test_byval_6Byte(%struct.S6* byval(%struct.S6) align 1)
+declare zeroext i8 @test_byval_6Byte(ptr byval(%struct.S6) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_6Byte{{.*}}
 
@@ -577,11 +575,11 @@ declare zeroext i8 @test_byval_6Byte(%struct.S6* byval(%struct.S6) align 1)
 
 define void @call_test_byval_7Byte() {
 entry:
-  %call = call zeroext i8 @test_byval_7Byte(%struct.S7* byval(%struct.S7) align 1 @gS7)
+  %call = call zeroext i8 @test_byval_7Byte(ptr byval(%struct.S7) align 1 @gS7)
   ret void
 }
 
-declare zeroext i8 @test_byval_7Byte(%struct.S7* byval(%struct.S7) align 1)
+declare zeroext i8 @test_byval_7Byte(ptr byval(%struct.S7) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_7Byte{{.*}}
 
@@ -640,11 +638,11 @@ declare zeroext i8 @test_byval_7Byte(%struct.S7* byval(%struct.S7) align 1)
 
 define void @call_test_byval_8Byte() {
 entry:
-  %call = call zeroext i8 @test_byval_8Byte(%struct.S8* byval(%struct.S8) align 1 @gS8)
+  %call = call zeroext i8 @test_byval_8Byte(ptr byval(%struct.S8) align 1 @gS8)
   ret void
 }
 
-declare zeroext i8 @test_byval_8Byte(%struct.S8* byval(%struct.S8) align 1)
+declare zeroext i8 @test_byval_8Byte(ptr byval(%struct.S8) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_8Byte{{.*}}
 
@@ -685,7 +683,7 @@ declare zeroext i8 @test_byval_8Byte(%struct.S8* byval(%struct.S8) align 1)
 
 define void @call_test_byval_32Byte() {
 entry:
-  %call = call zeroext i8 @test_byval_32Byte(%struct.S32* byval(%struct.S32) align 1 @gS32)
+  %call = call zeroext i8 @test_byval_32Byte(ptr byval(%struct.S32) align 1 @gS32)
   ret void
 }
 
@@ -740,10 +738,10 @@ entry:
 ; ASM64-NEXT:  bl .test_byval_32Byte
 ; ASM64-NEXT:  nop
 
-define zeroext i8 @test_byval_32Byte(%struct.S32* byval(%struct.S32) align 1 %s) {
+define zeroext i8 @test_byval_32Byte(ptr byval(%struct.S32) align 1 %s) {
 entry:
-  %arrayidx = getelementptr inbounds %struct.S32, %struct.S32* %s, i32 0, i32 0, i32 21
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds %struct.S32, ptr %s, i32 0, i32 0, i32 21
+  %0 = load i8, ptr %arrayidx, align 1
   ret i8 %0
 }
 
@@ -808,7 +806,7 @@ entry:
 
 define void @call_test_byval_31Byte() {
 entry:
-  %call = call double @test_byval_31Byte(%struct.S31* byval(%struct.S31) align 1 @gS31)
+  %call = call double @test_byval_31Byte(ptr byval(%struct.S31) align 1 @gS31)
   ret void
 }
 
@@ -882,10 +880,10 @@ entry:
 
 
 
-define double @test_byval_31Byte(%struct.S31* byval(%struct.S31) align 1 %s) {
+define double @test_byval_31Byte(ptr byval(%struct.S31) align 1 %s) {
 entry:
-  %gep = getelementptr inbounds %struct.S31, %struct.S31* %s, i32 0, i32 3
-  %load = load double, double* %gep, align 1
+  %gep = getelementptr inbounds %struct.S31, ptr %s, i32 0, i32 3
+  %load = load double, ptr %gep, align 1
   ret double %load
 }
 
@@ -946,15 +944,14 @@ entry:
 define i32 @call_test_byval_homogeneous_float_struct() {
 entry:
   %s = alloca %struct.F, align 4
-  %0 = bitcast %struct.F* %s to i8*
-  call void @llvm.memset.p0i8.i32(i8* align 4 %0, i8 0, i32 12, i1 false)
-  %call = call i32 @test_byval_homogeneous_float_struct(%struct.F* byval(%struct.F) align 4 %s)
+  call void @llvm.memset.p0.i32(ptr align 4 %s, i8 0, i32 12, i1 false)
+  %call = call i32 @test_byval_homogeneous_float_struct(ptr byval(%struct.F) align 4 %s)
   ret i32 %call
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg)
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
 
-declare i32 @test_byval_homogeneous_float_struct(%struct.F* byval(%struct.F) align 4)
+declare i32 @test_byval_homogeneous_float_struct(ptr byval(%struct.F) align 4)
 
 ; CHECK-LABEL: name: call_test_byval_homogeneous_float_struct{{.*}}
 

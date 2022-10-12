@@ -1021,7 +1021,7 @@ public:
     typedef typename _NodeTypes::__parent_pointer      __parent_pointer;
     typedef typename _NodeTypes::__iter_pointer        __iter_pointer;
 
-    typedef typename __rebind_alloc_helper<__alloc_traits, __node>::type __node_allocator;
+    typedef __rebind_alloc<__alloc_traits, __node> __node_allocator;
     typedef allocator_traits<__node_allocator>         __node_traits;
 
 private:
@@ -1030,8 +1030,7 @@ private:
     // the pointer using 'pointer_traits'.
     static_assert((is_same<__node_pointer, typename __node_traits::pointer>::value),
                   "Allocator does not rebind pointers in a sane manner.");
-    typedef typename __rebind_alloc_helper<__node_traits, __node_base>::type
-        __node_base_allocator;
+    typedef __rebind_alloc<__node_traits, __node_base> __node_base_allocator;
     typedef allocator_traits<__node_base_allocator> __node_base_traits;
     static_assert((is_same<__node_base_pointer, typename __node_base_traits::pointer>::value),
                  "Allocator does not rebind pointers in a sane manner.");

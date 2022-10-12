@@ -67,7 +67,7 @@ body:             |
   ; CHECK-NEXT:   CALL64pcrel32 target-flags(x86-plt) @foo, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp
   ; CHECK-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gr64 = COPY [[MOV64rm]]
-  ; CHECK-NEXT:   INLINEASM_BR &"", 9 /* sideeffect mayload attdialect */, 196654 /* mem:m */, killed [[MOV64rm]], 1, $noreg, 0, $noreg, 13 /* imm */, blockaddress(@test1, %ir-block.loop)
+  ; CHECK-NEXT:   INLINEASM_BR &"", 9 /* sideeffect mayload attdialect */, 262190 /* mem:m */, killed [[MOV64rm]], 1, $noreg, 0, $noreg, 13 /* imm */, blockaddress(@test1, %ir-block.loop)
   ; CHECK-NEXT:   JMP_1 %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.end:
@@ -87,7 +87,7 @@ body:             |
     $rdi = COPY killed %0
     CALL64pcrel32 target-flags(x86-plt) @foo, csr_64, implicit $rsp, implicit $ssp, implicit killed $rdi, implicit-def $rsp, implicit-def $ssp
     ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    INLINEASM_BR &"", 9 /* sideeffect mayload attdialect */, 196654 /* mem:m */, %1, 1, $noreg, 0, $noreg, 13 /* imm */, blockaddress(@test1, %ir-block.loop)
+    INLINEASM_BR &"", 9 /* sideeffect mayload attdialect */, 262190 /* mem:m */, %1, 1, $noreg, 0, $noreg, 13 /* imm */, blockaddress(@test1, %ir-block.loop)
     JMP_1 %bb.2
 
   bb.2.end:

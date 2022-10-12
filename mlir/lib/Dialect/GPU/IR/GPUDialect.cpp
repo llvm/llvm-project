@@ -309,6 +309,17 @@ static void printAsyncDependencies(OpAsmPrinter &printer, Operation *op,
 // AllReduceOp
 //===----------------------------------------------------------------------===//
 
+static bool verifyReduceOpAndType(gpu::AllReduceOperation opName,
+                                  Type resType) {
+  if ((opName == gpu::AllReduceOperation::AND ||
+       opName == gpu::AllReduceOperation::OR ||
+       opName == gpu::AllReduceOperation::XOR) &&
+      !resType.isa<IntegerType>())
+    return false;
+
+  return true;
+}
+
 LogicalResult gpu::AllReduceOp::verifyRegions() {
   if (getBody().empty() != getOp().has_value())
     return emitError("expected either an op attribute or a non-empty body");
@@ -333,10 +344,7 @@ LogicalResult gpu::AllReduceOp::verifyRegions() {
       return emitError("expected gpu.yield op in region");
   } else {
     gpu::AllReduceOperation opName = *getOp();
-    if ((opName == gpu::AllReduceOperation::AND ||
-         opName == gpu::AllReduceOperation::OR ||
-         opName == gpu::AllReduceOperation::XOR) &&
-        !getType().isa<IntegerType>()) {
+    if (!verifyReduceOpAndType(opName, getType())) {
       return emitError()
              << '`' << gpu::stringifyAllReduceOperation(opName)
              << "` accumulator is only compatible with Integer type";
@@ -362,6 +370,19 @@ static void printAllReduceOperation(AsmPrinter &printer, Operation *op,
                                     AllReduceOperationAttr attr) {
   if (attr)
     attr.print(printer);
+}
+
+//===----------------------------------------------------------------------===//
+// SubgroupReduceOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult gpu::SubgroupReduceOp::verify() {
+  gpu::AllReduceOperation opName = getOp();
+  if (!verifyReduceOpAndType(opName, getType())) {
+    return emitError() << '`' << gpu::stringifyAllReduceOperation(opName)
+                       << "` accumulator is only compatible with Integer type";
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

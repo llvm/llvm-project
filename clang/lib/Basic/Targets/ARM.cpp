@@ -630,7 +630,8 @@ bool ARMTargetInfo::hasFeature(StringRef Feature) const {
 }
 
 bool ARMTargetInfo::hasBFloat16Type() const {
-  return HasBFloat16 && !SoftFloat;
+  // The __bf16 type is generally available so long as we have any fp registers.
+  return HasBFloat16 || (FPU && !SoftFloat);
 }
 
 bool ARMTargetInfo::isValidCPUName(StringRef Name) const {
@@ -973,6 +974,8 @@ const Builtin::Info ARMTargetInfo::BuiltinInfo[] = {
   {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
 #define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
   {#ID, TYPE, ATTRS, HEADER, ALL_LANGUAGES, nullptr},
+#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
+  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE},
 #include "clang/Basic/BuiltinsNEON.def"
 
 #define BUILTIN(ID, TYPE, ATTRS)                                               \

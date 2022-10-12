@@ -6,15 +6,15 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; Test back-to-back stores of TLS variables to ensure call sequences no
 ; longer overlap.
 
-@__once_callable = external thread_local global i8**
-@__once_call = external thread_local global void ()*
+@__once_callable = external thread_local global ptr
+@__once_call = external thread_local global ptr
 
-define i64 @call_once(i64 %flag, i8* %ptr) {
+define i64 @call_once(i64 %flag, ptr %ptr) {
 entry:
-  %var = alloca i8*, align 8
-  store i8* %ptr, i8** %var, align 8
-  store i8** %var, i8*** @__once_callable, align 8
-  store void ()* @__once_call_impl, void ()** @__once_call, align 8
+  %var = alloca ptr, align 8
+  store ptr %ptr, ptr %var, align 8
+  store ptr %var, ptr @__once_callable, align 8
+  store ptr @__once_call_impl, ptr @__once_call, align 8
   ret i64 %flag
 }
 

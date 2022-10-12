@@ -16,7 +16,7 @@ entry:
 	%fmul = fmul ppc_fp128 0xM00000000000000000000000000000000, 0xM00000000000000000000000000000000
 	%fadd = fadd ppc_fp128 %2, %fmul
 	%tmpi = fadd ppc_fp128 %fadd, 0xM00000000000000000000000000000000
-	store ppc_fp128 %tmpi, ppc_fp128* null, align 16
+	store ppc_fp128 %tmpi, ptr null, align 16
 	ret i256 0
 }
 

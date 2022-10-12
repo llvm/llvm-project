@@ -79,7 +79,7 @@ define void @storesTGUninit(double %Val) #0 {
 ; LARGE64-NEXT:    mtlr 0
 ; LARGE64-NEXT:    blr
 entry:
-  store double %Val, double* @TGUninit, align 8
+  store double %Val, ptr @TGUninit, align 8
   ret void
 }
 
@@ -145,7 +145,7 @@ define void @storesTGInit(double %Val) #0 {
 ; LARGE64-NEXT:    mtlr 0
 ; LARGE64-NEXT:    blr
 entry:
-  store double %Val, double* @TGInit, align 8
+  store double %Val, ptr @TGInit, align 8
   ret void
 }
 
@@ -211,7 +211,7 @@ define void @storesTIInit(double %Val) #0 {
 ; LARGE64-NEXT:    mtlr 0
 ; LARGE64-NEXT:    blr
 entry:
-  store double %Val, double* @TIInit, align 8
+  store double %Val, ptr @TIInit, align 8
   ret void
 }
 
@@ -277,7 +277,7 @@ define void @storesTWInit(double %Val) #0 {
 ; LARGE64-NEXT:    mtlr 0
 ; LARGE64-NEXT:    blr
 entry:
-  store double %Val, double* @TWInit, align 8
+  store double %Val, ptr @TWInit, align 8
   ret void
 }
 
@@ -357,8 +357,8 @@ define double @loadsTGUninit() #1 {
 ; LARGE64-NEXT:    mtlr 0
 ; LARGE64-NEXT:    blr
 entry:
-  %0 = load double, double* @TGUninit, align 8
-  %1 = load double, double* @GInit, align 8
+  %0 = load double, ptr @TGUninit, align 8
+  %1 = load double, ptr @GInit, align 8
   %add = fadd double %0, %1
   ret double %add
 }
@@ -439,8 +439,8 @@ define double @loadsTGInit() #1 {
 ; LARGE64-NEXT:    mtlr 0
 ; LARGE64-NEXT:    blr
 entry:
-  %0 = load double, double* @TGInit, align 8
-  %1 = load double, double* @GInit, align 8
+  %0 = load double, ptr @TGInit, align 8
+  %1 = load double, ptr @GInit, align 8
   %add = fadd double %0, %1
   ret double %add
 }
@@ -521,8 +521,8 @@ define double @loadsTIInit() #1 {
 ; LARGE64-NEXT:    mtlr 0
 ; LARGE64-NEXT:    blr
 entry:
-  %0 = load double, double* @TIInit, align 8
-  %1 = load double, double* @GInit, align 8
+  %0 = load double, ptr @TIInit, align 8
+  %1 = load double, ptr @GInit, align 8
   %add = fadd double %0, %1
   ret double %add
 }
@@ -603,8 +603,8 @@ define double @loadsTWInit() #1 {
 ; LARGE64-NEXT:    mtlr 0
 ; LARGE64-NEXT:    blr
 entry:
-  %0 = load double, double* @TWInit, align 8
-  %1 = load double, double* @GInit, align 8
+  %0 = load double, ptr @TWInit, align 8
+  %1 = load double, ptr @GInit, align 8
   %add = fadd double %0, %1
   ret double %add
 }

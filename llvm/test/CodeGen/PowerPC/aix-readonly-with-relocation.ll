@@ -4,7 +4,7 @@
 ; RUN:     --relocation-model=pic -data-sections=false < %s | FileCheck --check-prefix=CHECK64 %s
 
 @a = common global i32 0
-@b = constant i32* @a
+@b = constant ptr @a
 
 ;CHECK:         .comm   a[RW],4,2
 ;CHECK-NEXT:    .csect .data[RW],2

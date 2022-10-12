@@ -11,9 +11,9 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define signext i32 @test_tentative() nounwind {
 entry:
-  %0 = load i32, i32* @ti, align 4
+  %0 = load i32, ptr @ti, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* @ti, align 4
+  store i32 %inc, ptr @ti, align 4
   ret i32 %0
 }
 

@@ -67,13 +67,18 @@ bool LoongArchTargetInfo::validateAsmConstraint(
     const char *&Name, TargetInfo::ConstraintInfo &Info) const {
   // See the GCC definitions here:
   // https://gcc.gnu.org/onlinedocs/gccint/Machine-Constraints.html
+  // Note that the 'm' constraint is handled in TargetInfo.
   switch (*Name) {
-  // TODO: handle 'k', 'm', "ZB", "ZC".
   default:
     return false;
   case 'f':
     // A floating-point register (if available).
     Info.setAllowsRegister();
+    return true;
+  case 'k':
+    // A memory operand whose address is formed by a base register and
+    // (optionally scaled) index register.
+    Info.setAllowsMemory();
     return true;
   case 'l':
     // A signed 16-bit constant.
@@ -87,7 +92,36 @@ bool LoongArchTargetInfo::validateAsmConstraint(
     // An unsigned 12-bit constant (for logic instructions).
     Info.setRequiresImmediate(0, 4095);
     return true;
+  case 'Z':
+    // ZB: An address that is held in a general-purpose register. The offset is
+    //     zero.
+    // ZC: A memory operand whose address is formed by a base register
+    //     and offset that is suitable for use in instructions with the same
+    //     addressing mode as ll.w and sc.w.
+    if (Name[1] == 'C' || Name[1] == 'B') {
+      Info.setAllowsMemory();
+      ++Name; // Skip over 'Z'.
+      return true;
+    }
+    return false;
   }
+}
+
+std::string
+LoongArchTargetInfo::convertConstraint(const char *&Constraint) const {
+  std::string R;
+  switch (*Constraint) {
+  case 'Z':
+    // "ZC"/"ZB" are two-character constraints; add "^" hint for later
+    // parsing.
+    R = "^" + std::string(Constraint, 2);
+    ++Constraint;
+    break;
+  default:
+    R = TargetInfo::convertConstraint(Constraint);
+    break;
+  }
+  return R;
 }
 
 void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,

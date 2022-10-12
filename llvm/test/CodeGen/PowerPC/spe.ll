@@ -100,13 +100,13 @@ define i32 @test_fcmpgt(float %a, float %b) #0 {
   %c = fcmp ogt float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -137,13 +137,13 @@ define i32 @test_fcmpugt(float %a, float %b) #0 {
   %c = fcmp ugt float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -174,13 +174,13 @@ define i32 @test_fcmple(float %a, float %b) #0 {
   %c = fcmp ole float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -205,13 +205,13 @@ define i32 @test_fcmpule(float %a, float %b) #0 {
   %c = fcmp ule float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -237,13 +237,13 @@ define i32 @test_fcmpeq(float %a, float %b) #0 {
   %c = fcmp oeq float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -345,13 +345,13 @@ define i32 @test_fcmpune(float %a, float %b) #0 {
   %c = fcmp une float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -376,13 +376,13 @@ define i32 @test_fcmplt(float %a, float %b) #0 {
   %c = fcmp olt float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -434,13 +434,13 @@ define i32 @test_fcmpge(float %a, float %b) #0 {
   %c = fcmp oge float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -465,13 +465,13 @@ define i32 @test_fcmpuge(float %a, float %b) #0 {
   %c = fcmp uge float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -526,8 +526,8 @@ define i32 @test_fasmconst(float %x) #0 {
 ; CHECK-NEXT:    blr
 entry:
   %x.addr = alloca float, align 8
-  store float %x, float* %x.addr, align 8
-  %0 = load float, float* %x.addr, align 8
+  store float %x, ptr %x.addr, align 8
+  %0 = load float, ptr %x.addr, align 8
   %1 = call i32 asm sideeffect "efsctsi $0, $1", "=f,f"(float %0)
   ret i32 %1
 ; Check that it's not loading a double
@@ -559,7 +559,7 @@ define float @test_dtos(double %a) #0 {
   ret float %v
 }
 
-define void @test_double_abs(double * %aa) #0 {
+define void @test_double_abs(ptr %aa) #0 {
 ; SPE-LABEL: test_double_abs:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    evldd 4, 0(3)
@@ -574,16 +574,16 @@ define void @test_double_abs(double * %aa) #0 {
 ; EFPU2-NEXT:    stw 4, 0(3)
 ; EFPU2-NEXT:    blr
   entry:
-    %0 = load double, double * %aa
+    %0 = load double, ptr %aa
     %1 = tail call double @llvm.fabs.f64(double %0) #2
-    store double %1, double * %aa
+    store double %1, ptr %aa
     ret void
 }
 
 ; Function Attrs: nounwind readnone
 declare double @llvm.fabs.f64(double) #1
 
-define void @test_dnabs(double * %aa) #0 {
+define void @test_dnabs(ptr %aa) #0 {
 ; SPE-LABEL: test_dnabs:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    evldd 4, 0(3)
@@ -598,10 +598,10 @@ define void @test_dnabs(double * %aa) #0 {
 ; EFPU2-NEXT:    stw 4, 0(3)
 ; EFPU2-NEXT:    blr
   entry:
-    %0 = load double, double * %aa
+    %0 = load double, ptr %aa
     %1 = tail call double @llvm.fabs.f64(double %0) #2
     %sub = fsub double -0.000000e+00, %1
-    store double %sub, double * %aa
+    store double %sub, ptr %aa
     ret void
 }
 
@@ -867,13 +867,13 @@ define i32 @test_dcmpgt(double %a, double %b) #0 {
   %c = fcmp ogt double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -927,13 +927,13 @@ define i32 @test_dcmpugt(double %a, double %b) #0 {
   %c = fcmp ugt double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -981,13 +981,13 @@ define i32 @test_dcmple(double %a, double %b) #0 {
   %c = fcmp ule double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -1035,13 +1035,13 @@ define i32 @test_dcmpule(double %a, double %b) #0 {
   %c = fcmp ule double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -1090,13 +1090,13 @@ define i32 @test_dcmpeq(double %a, double %b) #0 {
   %c = fcmp oeq double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -1171,13 +1171,13 @@ define i32 @test_dcmpueq(double %a, double %b) #0 {
   %c = fcmp ueq double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -1289,13 +1289,13 @@ define i32 @test_dcmpune(double %a, double %b) #0 {
   %c = fcmp une double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -1343,13 +1343,13 @@ define i32 @test_dcmplt(double %a, double %b) #0 {
   %c = fcmp olt double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -1403,13 +1403,13 @@ define i32 @test_dcmpult(double %a, double %b) #0 {
   %c = fcmp ult double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -1493,13 +1493,13 @@ define i32 @test_dcmpuge(double %a, double %b) #0 {
   %c = fcmp uge double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -1632,9 +1632,9 @@ entry:
   ret void
 }
 
-declare void @test_memset(i8* nocapture writeonly, i8, i32, i1)
+declare void @test_memset(ptr nocapture writeonly, i8, i32, i1)
 @global_var1 = global i32 0, align 4
-define double @test_spill(double %a, i32 %a1, i64 %a2, i8 * %a3, i32 *%a4, i32* %a5) #0 {
+define double @test_spill(double %a, i32 %a1, i64 %a2, ptr %a3, ptr %a4, ptr %a5) #0 {
 ; SPE-LABEL: test_spill:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    mflr 0
@@ -1763,12 +1763,10 @@ entry:
   %0 = fadd double %a, %a
   call void asm sideeffect "","~{s0},~{s3},~{s4},~{s5},~{s6},~{s7},~{s8},~{s9},~{s10},~{s11},~{s12},~{s13},~{s14},~{s15},~{s16},~{s17},~{s18},~{s19},~{s20},~{s21},~{s22},~{s23},~{s24},~{s25},~{s26},~{s27},~{s28},~{s29},~{s30},~{s31}"() nounwind
   %1 = fadd double %0, 3.14159
-  %2 = bitcast [13 x i32]* %v1 to i8*
-  call void @test_memset(i8* align 4 %2, i8 0, i32 24, i1 true)
-  store i32 0, i32* %a5, align 4
+  call void @test_memset(ptr align 4 %v1, i8 0, i32 24, i1 true)
+  store i32 0, ptr %a5, align 4
   call void @test_func2()
-  %3 = bitcast [11 x i32]* %v2 to i8*
-  call void @test_memset(i8* align 4 %3, i8 0, i32 20, i1 true)
+  call void @test_memset(ptr align 4 %v2, i8 0, i32 20, i1 true)
   br label %return
 
 return:
@@ -1837,7 +1835,7 @@ attributes #1 = { nounwind readnone speculatable willreturn }
 
 declare i32 @foo(double)
 
-define void @d(%struct.a* %e, %struct.a* %f) #0 {
+define void @d(ptr %e, ptr %f) #0 {
 ; SPE-LABEL: d:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    mflr 0
@@ -1914,17 +1912,16 @@ define void @d(%struct.a* %e, %struct.a* %f) #0 {
 ; EFPU2-NEXT:    mtlr 0
 ; EFPU2-NEXT:    blr
 entry:
-  %0 = getelementptr %struct.a, %struct.a* %f, i32 0, i32 0
-  %1 = load float, float* undef
-  %conv = fpext float %1 to double
-  %2 = load float, float* %0
-  %g = fpext float %2 to double
-  %3 = call i32 @foo(double %g)
+  %0 = load float, ptr undef
+  %conv = fpext float %0 to double
+  %1 = load float, ptr %f
+  %g = fpext float %1 to double
+  %2 = call i32 @foo(double %g)
   %h = call i32 @foo(double %conv)
-  %n = sitofp i32 %3 to double
+  %n = sitofp i32 %2 to double
   %k = fmul double %g, %n
   %l = fptrunc double %k to float
-  store float %l, float* undef
+  store float %l, ptr undef
   ret void
 }
 attributes #0 = { nounwind }

@@ -20,7 +20,7 @@
 ; CHECK-O-NEXT: R_PPC64_REL24_NOTOC callee
 define dso_local signext i32 @caller() local_unnamed_addr {
 entry:
-  %call = tail call signext i32 bitcast (i32 (...)* @callee to i32 ()*)()
+  %call = tail call signext i32 @callee()
   ret i32 %call
 }
 
@@ -34,13 +34,13 @@ declare signext i32 @callee(...) local_unnamed_addr
 ; CHECK-O-LABEL: ExternalSymbol
 ; CHECK-O: b
 ; CHECK-O-NEXT: R_PPC64_REL24_NOTOC memcpy
-define dso_local void @ExternalSymbol(i8* nocapture %out, i8* nocapture readonly %in, i64 %num) local_unnamed_addr {
+define dso_local void @ExternalSymbol(ptr nocapture %out, ptr nocapture readonly %in, i64 %num) local_unnamed_addr {
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 1 %out, i8* align 1 %in, i64 %num, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr align 1 %out, ptr align 1 %in, i64 %num, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg)
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
 
 
 ; CHECK-S-LABEL: callerNoTail
@@ -60,8 +60,8 @@ declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noa
 ; CHECK-O:      blr
 define dso_local signext i32 @callerNoTail() local_unnamed_addr {
 entry:
-  %call1 = tail call signext i32 bitcast (i32 (...)* @callee to i32 ()*)()
-  %call2 = tail call signext i32 bitcast (i32 (...)* @callee to i32 ()*)()
+  %call1 = tail call signext i32 @callee()
+  %call2 = tail call signext i32 @callee()
   %add = add i32 %call1, %call2
   ret i32 %add
 }

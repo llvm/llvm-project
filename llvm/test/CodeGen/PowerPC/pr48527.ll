@@ -46,7 +46,7 @@ define void @_ZNK1q1rEv() local_unnamed_addr #0 align 2 {
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* undef, align 4
+  %0 = load i32, ptr undef, align 4
   br label %monotonic.i
 
 for.cond.i:                                       ; preds = %monotonic.i
@@ -55,15 +55,15 @@ for.cond.i:                                       ; preds = %monotonic.i
 
 monotonic.i:                                      ; preds = %for.cond.i, %entry
   %i.018.i = phi i32 [ %inc.i, %for.cond.i ], [ 0, %entry ]
-  %1 = load atomic i32, i32* getelementptr inbounds (%struct.e.0.12.28.44.104.108.112.188, %struct.e.0.12.28.44.104.108.112.188* @g, i64 0, i32 0) monotonic, align 4
+  %1 = load atomic i32, ptr @g monotonic, align 4
   %conv.i = trunc i32 %1 to i8
   %tobool.not.i = icmp eq i8 %conv.i, 0
   %inc.i = add nuw nsw i32 %i.018.i, 1
   br i1 %tobool.not.i, label %for.cond.i, label %if.end
 
 if.end:                                           ; preds = %monotonic.i, %for.cond.i
-  %.sink = phi i64* [ getelementptr inbounds (%struct.t.1.13.29.45.105.109.113.189, %struct.t.1.13.29.45.105.109.113.189* @aj, i64 0, i32 1), %monotonic.i ], [ getelementptr inbounds (%struct.t.1.13.29.45.105.109.113.189, %struct.t.1.13.29.45.105.109.113.189* @aj, i64 0, i32 0), %for.cond.i ]
-  store i64 1, i64* %.sink, align 8
+  %.sink = phi ptr [ getelementptr inbounds (%struct.t.1.13.29.45.105.109.113.189, ptr @aj, i64 0, i32 1), %monotonic.i ], [ @aj, %for.cond.i ]
+  store i64 1, ptr %.sink, align 8
   ret void
 }
 

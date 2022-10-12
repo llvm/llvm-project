@@ -3,10 +3,10 @@
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec -mtriple powerpc64-ibm-aix-xcoff \
 ; RUN:     -data-sections=false < %s | FileCheck --check-prefix=CHECK64 %s
 
-@foo_ptr = global void (...)* @foo
+@foo_ptr = global ptr @foo
 declare void @foo(...)
 
-@bar_ptr1 = global void (...)* bitcast (void ()* @bar to void (...)*)
+@bar_ptr1 = global ptr @bar
 define void @bar() {
 entry:
   ret void

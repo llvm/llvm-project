@@ -1266,12 +1266,11 @@ bool EmulateInstructionMIPS::Emulate_SW(llvm::MCInst &insn) {
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
     Status error;
 
-    if (!ReadRegister(&(*reg_info_base), data_src))
+    if (!ReadRegister(*reg_info_base, data_src))
       return false;
 
-    if (data_src.GetAsMemoryData(&(*reg_info_src), buffer,
-                                 reg_info_src->byte_size, eByteOrderLittle,
-                                 error) == 0)
+    if (data_src.GetAsMemoryData(*reg_info_src, buffer, reg_info_src->byte_size,
+                                 eByteOrderLittle, error) == 0)
       return false;
 
     if (!WriteMemory(context, address, buffer, reg_info_src->byte_size))
@@ -1321,7 +1320,7 @@ bool EmulateInstructionMIPS::Emulate_LW(llvm::MCInst &insn) {
     context.type = eContextPopRegisterOffStack;
     context.SetAddress(address);
 
-    return WriteRegister(context, &(*reg_info_src), data_src);
+    return WriteRegister(context, *reg_info_src, data_src);
   }
 
   return false;
@@ -1526,10 +1525,10 @@ bool EmulateInstructionMIPS::Emulate_SWSP(llvm::MCInst &insn) {
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
     Status error;
 
-    if (!ReadRegister(&(*reg_info_base), data_src))
+    if (!ReadRegister(*reg_info_base, data_src))
       return false;
 
-    if (data_src.GetAsMemoryData(&reg_info_src, buffer, reg_info_src.byte_size,
+    if (data_src.GetAsMemoryData(reg_info_src, buffer, reg_info_src.byte_size,
                                  eByteOrderLittle, error) == 0)
       return false;
 
@@ -1608,12 +1607,11 @@ bool EmulateInstructionMIPS::Emulate_SWM16_32(llvm::MCInst &insn) {
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
     Status error;
 
-    if (!ReadRegister(&(*reg_info_base), data_src))
+    if (!ReadRegister(*reg_info_base, data_src))
       return false;
 
-    if (data_src.GetAsMemoryData(&(*reg_info_src), buffer,
-                                 reg_info_src->byte_size, eByteOrderLittle,
-                                 error) == 0)
+    if (data_src.GetAsMemoryData(*reg_info_src, buffer, reg_info_src->byte_size,
+                                 eByteOrderLittle, error) == 0)
       return false;
 
     if (!WriteMemory(context, base_address, buffer, reg_info_src->byte_size))
@@ -1661,7 +1659,7 @@ bool EmulateInstructionMIPS::Emulate_LWSP(llvm::MCInst &insn) {
     context.type = eContextPopRegisterOffStack;
     context.SetAddress(base_address);
 
-    return WriteRegister(context, &(*reg_info_src), data_src);
+    return WriteRegister(context, *reg_info_src, data_src);
   }
 
   return false;
@@ -1723,7 +1721,7 @@ bool EmulateInstructionMIPS::Emulate_LWM16_32(llvm::MCInst &insn) {
     context.type = eContextPopRegisterOffStack;
     context.SetAddress(base_address + (i * 4));
 
-    if (!WriteRegister(context, &(*reg_info_dst), data_dst))
+    if (!WriteRegister(context, *reg_info_dst, data_dst))
       return false;
   }
 

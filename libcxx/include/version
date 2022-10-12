@@ -265,7 +265,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 # define __cpp_lib_make_from_tuple                      201606L
 # define __cpp_lib_map_try_emplace                      201411L
 // # define __cpp_lib_math_special_functions               201603L
-// # define __cpp_lib_memory_resource                      201603L
+# define __cpp_lib_memory_resource                      201603L
 # define __cpp_lib_node_extract                         201606L
 # define __cpp_lib_nonmember_container_access           201411L
 # define __cpp_lib_not_fn                               201603L
