@@ -1351,8 +1351,9 @@ bool AArch64InstrInfo::optimizePTestInstr(
       break;
     }
     case AArch64::BRKN_PPzP: {
-      auto *PredMask = MRI->getUniqueVRegDef(Pred->getOperand(1).getReg());
-      if (Mask != PredMask)
+      // PTEST(PTRUE_B(31), BRKN(PG, A, B)) -> BRKNS(PG, A, B).
+      if ((MaskOpcode != AArch64::PTRUE_B) ||
+          (Mask->getOperand(1).getImm() != 31))
         return false;
 
       NewOp = AArch64::BRKNS_PPzP;
