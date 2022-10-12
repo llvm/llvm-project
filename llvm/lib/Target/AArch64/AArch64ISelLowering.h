@@ -471,7 +471,6 @@ enum NodeType : unsigned {
 
   LDP,
   LDNP,
-  LDNP128,
   STP,
   STNP,
 
