@@ -2,8 +2,8 @@
 
 This framework has been designed to evaluate and compare relative performance of memory function implementations on a particular machine.
 
-It relies on two tools:
- - `libc-benchmark-main` a C++ benchmarking utility producing raw measurements,
+It relies on:
+ - `libc.src.string.<mem_function>_benchmark` to run the benchmarks for the particular `<mem_function>`.
  - `libc-benchmark-analysis.py3` a tool to process the measurements into reports.
 
 ## Benchmarking tool
@@ -12,8 +12,8 @@ It relies on two tools:
 
 ```shell
 cd llvm-project
-cmake -B/tmp/build -Sllvm -DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;libc' -DCMAKE_BUILD_TYPE=Release -G Ninja
-ninja -C /tmp/build libc-benchmark-main
+cmake -B/tmp/build -Sllvm -DLLVM_ENABLE_PROJECTS='clang;clang-tools-extra;libc' -DCMAKE_BUILD_TYPE=Release -DLIBC_INCLUDE_BENCHMARKS=Yes -G Ninja
+ninja -C /tmp/build libc.src.string.<mem_function>_benchmark
 ```
 
 > Note: The machine should run in `performance` mode. This is achieved by running:
@@ -23,29 +23,23 @@ cpupower frequency-set --governor performance
 
 ### Usage
 
-`libc-benchmark-main` can run in two modes:
- - **stochastic mode** returns the average time per call for a particular size distribution,
+The benchmark can run in two modes:
+ - **stochastic mode** returns the average time per call for a particular size distribution, this is the default,
  - **sweep mode** returns the average time per size over a range of sizes.
 
-The tool requires the following flags to be set:
- - `--study-name`: a name to identify a run and provide label during analysis,
- - `--function`: the name of the function under test.
+Each benchmark requires the `--study-name` to be set, this is a name to identify a run and provide label during analysis.  If **stochastic mode** is being used, you must also provide `--size-distribution-name` to pick one of the available MemorySizeDistribution's.
 
 It also provides optional flags:
  - `--num-trials`: repeats the benchmark more times, the analysis tool can take this into account and give confidence intervals.
  - `--output`: specifies a file to write the report - or standard output if not set.
- - `--aligned-access`: The alignment to use when accessing the buffers, default is unaligned, 0 disables address randomization.
-
-> Note: `--function` takes a generic function name like `memcpy` or `memset` but the actual function being tested is the llvm-libc implementation (e.g. `__llvm_libc::memcpy`).
 
 ### Stochastic mode
 
 This is the preferred mode to use. The function parameters are randomized and the branch predictor is less likely to kick in.
 
 ```shell
-/tmp/build/bin/libc-benchmark-main \
+/tmp/build/bin/libc.src.string.memcpy_benchmark \
     --study-name="new memcpy" \
-    --function=memcpy \
     --size-distribution-name="memcpy Google A" \
     --num-trials=30 \
     --output=/tmp/benchmark_result.json
@@ -72,9 +66,8 @@ the number of bytes until the first difference._
 This mode is used to measure call latency per size for a certain range of sizes. Because it exercises the same size over and over again the branch predictor can kick in. It can still be useful to compare strength and weaknesses of particular implementations.
 
 ```shell
-/tmp/build/bin/libc-benchmark-main \
+/tmp/build/bin/libc.src.string.memcpy_benchmark \
     --study-name="new memcpy" \
-    --function=memcpy \
     --sweep-mode \
     --sweep-max-size=128 \
     --output=/tmp/benchmark_result.json
