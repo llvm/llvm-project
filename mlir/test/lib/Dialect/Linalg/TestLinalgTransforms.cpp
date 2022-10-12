@@ -127,11 +127,6 @@ static void applyPatterns(func::FuncOp funcOp) {
   patterns.add<CopyVectorizationPattern>(ctx);
 
   (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
-
-  // Drop the marker.
-  funcOp.walk([](LinalgOp op) {
-    op->removeAttr(LinalgTransforms::kLinalgTransformMarker);
-  });
 }
 
 static void applyVectorTransferForwardingPatterns(func::FuncOp funcOp) {
@@ -182,13 +177,6 @@ static void applySwapExtractSliceWithFillPattern(func::FuncOp funcOp) {
 
 /// Apply transformations specified as patterns.
 void TestLinalgTransforms::runOnOperation() {
-  auto lambda = [&](void *) {
-    getOperation().walk([](LinalgOp op) {
-      op->removeAttr(LinalgTransforms::kLinalgTransformMarker);
-    });
-  };
-  std::unique_ptr<void, decltype(lambda)> cleanupGuard{(void *)1, lambda};
-
   if (testPatterns)
     return applyPatterns(getOperation());
   if (testVectorTransferForwardingPatterns)
