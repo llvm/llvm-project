@@ -149,13 +149,12 @@ bool RegisterValue::GetScalarValue(Scalar &scalar) const {
 
 void RegisterValue::Clear() { m_type = eTypeInvalid; }
 
-RegisterValue::Type RegisterValue::SetType(const RegisterInfo *reg_info) {
-  assert(reg_info && "Expected non null reg_info.");
+RegisterValue::Type RegisterValue::SetType(const RegisterInfo &reg_info) {
   // To change the type, we simply copy the data in again, using the new format
   RegisterValue copy;
   DataExtractor copy_data;
   if (copy.CopyValue(*this) && copy.GetData(copy_data)) {
-    Status error = SetValueFromData(*reg_info, copy_data, 0, true);
+    Status error = SetValueFromData(reg_info, copy_data, 0, true);
     assert(error.Success() && "Expected SetValueFromData to succeed.");
     UNUSED_IF_ASSERT_DISABLED(error);
   }

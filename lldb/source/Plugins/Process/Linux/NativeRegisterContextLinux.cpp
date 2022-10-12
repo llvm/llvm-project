@@ -75,7 +75,7 @@ NativeRegisterContextLinux::WriteRegisterRaw(uint32_t reg_index,
         memcpy(dst + (reg_info->byte_offset & 0x1), src, src_size);
         // Set this full register as the value to write.
         value_to_write.SetBytes(dst, full_value.GetByteSize(), byte_order);
-        value_to_write.SetType(full_reg_info);
+        value_to_write.SetType(*full_reg_info);
         reg_to_write = full_reg;
       }
     }
