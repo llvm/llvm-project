@@ -675,7 +675,7 @@ void Writer::scanRelocations() {
     }
   }
 
-  in.unwindInfo->prepareRelocations();
+  in.unwindInfo->prepare();
 }
 
 void Writer::scanSymbols() {
