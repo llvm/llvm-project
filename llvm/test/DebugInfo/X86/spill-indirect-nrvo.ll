@@ -46,19 +46,19 @@ target triple = "x86_64--linux"
 %struct.string = type { i32 }
 
 ; Function Attrs: uwtable
-define void @_Z10get_stringv(%struct.string* noalias sret(%struct.string) %agg.result) #0 !dbg !7 {
+define void @_Z10get_stringv(ptr noalias sret(%struct.string) %agg.result) #0 !dbg !7 {
 entry:
   %nrvo = alloca i1, align 1
-  store i1 false, i1* %nrvo, align 1, !dbg !24
-  call void @llvm.dbg.declare(metadata %struct.string* %agg.result, metadata !23, metadata !DIExpression()), !dbg !25
-  call void @_ZN6stringC1Ei(%struct.string* %agg.result, i32 3), !dbg !26
+  store i1 false, ptr %nrvo, align 1, !dbg !24
+  call void @llvm.dbg.declare(metadata ptr %agg.result, metadata !23, metadata !DIExpression()), !dbg !25
+  call void @_ZN6stringC1Ei(ptr %agg.result, i32 3), !dbg !26
   call void asm sideeffect "", "~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{rbp},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{dirflag},~{fpsr},~{flags}"() #3, !dbg !27, !srcloc !28
-  store i1 true, i1* %nrvo, align 1, !dbg !29
-  %nrvo.val = load i1, i1* %nrvo, align 1, !dbg !30
+  store i1 true, ptr %nrvo, align 1, !dbg !29
+  %nrvo.val = load i1, ptr %nrvo, align 1, !dbg !30
   br i1 %nrvo.val, label %nrvo.skipdtor, label %nrvo.unused, !dbg !30
 
 nrvo.unused:                                      ; preds = %entry
-  call void @_ZN6stringD1Ev(%struct.string* %agg.result), !dbg !30
+  call void @_ZN6stringD1Ev(ptr %agg.result), !dbg !30
   br label %nrvo.skipdtor, !dbg !30
 
 nrvo.skipdtor:                                    ; preds = %nrvo.unused, %entry
@@ -68,9 +68,9 @@ nrvo.skipdtor:                                    ; preds = %nrvo.unused, %entry
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-declare void @_ZN6stringC1Ei(%struct.string*, i32) unnamed_addr
+declare void @_ZN6stringC1Ei(ptr, i32) unnamed_addr
 
-declare void @_ZN6stringD1Ev(%struct.string*) unnamed_addr
+declare void @_ZN6stringD1Ev(ptr) unnamed_addr
 
 attributes #0 = { uwtable }
 attributes #1 = { nounwind readnone speculatable }

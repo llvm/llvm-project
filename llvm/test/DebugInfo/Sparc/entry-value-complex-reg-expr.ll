@@ -46,7 +46,7 @@ target triple = "sparc64"
 define signext i32 @foo(fp128 %p) #0 !dbg !12 {
 entry:
   call void @llvm.dbg.value(metadata fp128 %p, metadata !17, metadata !DIExpression()), !dbg !18
-  store volatile fp128 %p, fp128* @global, align 16, !dbg !19
+  store volatile fp128 %p, ptr @global, align 16, !dbg !19
   tail call void @clobber(), !dbg !20
   ret i32 123, !dbg !21
 }
