@@ -150,7 +150,7 @@ class UnwindInfoSectionImpl final : public UnwindInfoSection {
 public:
   UnwindInfoSectionImpl() : cuOffsets(target->wordSize) {}
   uint64_t getSize() const override { return unwindInfoSize; }
-  void prepareRelocations() override;
+  void prepare() override;
   void finalize() override;
   void writeTo(uint8_t *buf) const override;
 
@@ -158,6 +158,7 @@ private:
   void prepareRelocations(ConcatInputSection *);
   void relocateCompactUnwind(std::vector<CompactUnwindEntry> &);
   void encodePersonalities();
+  Symbol *canonicalizePersonality(Symbol *);
 
   uint64_t unwindInfoSize = 0;
   std::vector<decltype(symbols)::value_type> symbolsVec;
@@ -210,14 +211,24 @@ void UnwindInfoSection::addSymbol(const Defined *d) {
   }
 }
 
-void UnwindInfoSectionImpl::prepareRelocations() {
+void UnwindInfoSectionImpl::prepare() {
   // This iteration needs to be deterministic, since prepareRelocations may add
   // entries to the GOT. Hence the use of a MapVector for
   // UnwindInfoSection::symbols.
   for (const Defined *d : make_second_range(symbols))
-    if (d->unwindEntry &&
-        d->unwindEntry->getName() == section_names::compactUnwind)
-      prepareRelocations(d->unwindEntry);
+    if (d->unwindEntry) {
+      if (d->unwindEntry->getName() == section_names::compactUnwind) {
+        prepareRelocations(d->unwindEntry);
+      } else {
+        // We don't have to add entries to the GOT here because FDEs have
+        // explicit GOT relocations, so Writer::scanRelocations() will add those
+        // GOT entries. However, we still need to canonicalize the personality
+        // pointers (like prepareRelocations() does for CU entries) in order
+        // to avoid overflowing the 3-personality limit.
+        FDE &fde = cast<ObjFile>(d->getFile())->fdes[d->unwindEntry];
+        fde.personality = canonicalizePersonality(fde.personality);
+      }
+    }
 }
 
 // Compact unwind relocations have different semantics, so we handle them in a
@@ -271,6 +282,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
           continue;
       }
 
+      // Similar to canonicalizePersonality(), but we also register a GOT entry.
       if (auto *defined = dyn_cast<Defined>(s)) {
         // Check if we have created a synthetic symbol at the same address.
         Symbol *&personality =
@@ -283,6 +295,7 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
         }
         continue;
       }
+
       assert(isa<DylibSymbol>(s));
       in.got->addEntry(s);
       continue;
@@ -310,6 +323,18 @@ void UnwindInfoSectionImpl::prepareRelocations(ConcatInputSection *isec) {
       r.addend = 0;
     }
   }
+}
+
+Symbol *UnwindInfoSectionImpl::canonicalizePersonality(Symbol *personality) {
+  if (auto *defined = dyn_cast_or_null<Defined>(personality)) {
+    // Check if we have created a synthetic symbol at the same address.
+    Symbol *&synth = personalityTable[{defined->isec, defined->value}];
+    if (synth == nullptr)
+      synth = defined;
+    else if (synth != defined)
+      return synth;
+  }
+  return personality;
 }
 
 // We need to apply the relocations to the pre-link compact unwind section
