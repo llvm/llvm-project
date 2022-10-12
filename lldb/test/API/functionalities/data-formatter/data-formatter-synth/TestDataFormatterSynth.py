@@ -172,8 +172,8 @@ class SynthDataFormatterTestCase(TestBase):
         # check flat printing with synthetic children
         self.expect('frame variable plenty_of_stuff --flat',
                     substrs=['plenty_of_stuff.bitfield = 17',
-                             '*(plenty_of_stuff.array) = 5',
-                             '*(plenty_of_stuff.array) = 3'])
+                             '*plenty_of_stuff.array = 5',
+                             '*plenty_of_stuff.array = 3'])
 
         # check that we do not lose location information for our children
         self.expect('frame variable plenty_of_stuff --location',
