@@ -54,7 +54,7 @@ class AVX512_IntrOverloadedOp<string mnemonic,
 // MaskCompressOp
 //----------------------------------------------------------------------------//
 
-def MaskCompressOp : AVX512_Op<"mask.compress", [NoSideEffect,
+def MaskCompressOp : AVX512_Op<"mask.compress", [Pure,
   // TODO: Support optional arguments in `AllTypesMatch`. "type($src)" could
   // then be removed from assemblyFormat.
   AllTypesMatch<["a", "dst"]>,
@@ -91,7 +91,7 @@ def MaskCompressOp : AVX512_Op<"mask.compress", [NoSideEffect,
 }
 
 def MaskCompressIntrOp : AVX512_IntrOverloadedOp<"mask.compress", [
-  NoSideEffect,
+  Pure,
   AllTypesMatch<["a", "src", "res"]>,
   TypesMatchWith<"`k` has the same number of bits as elements in `res`",
                  "res", "k",
@@ -109,7 +109,7 @@ def MaskCompressIntrOp : AVX512_IntrOverloadedOp<"mask.compress", [
 // MaskRndScaleOp
 //----------------------------------------------------------------------------//
 
-def MaskRndScaleOp : AVX512_Op<"mask.rndscale", [NoSideEffect,
+def MaskRndScaleOp : AVX512_Op<"mask.rndscale", [Pure,
   AllTypesMatch<["src", "a", "dst"]>,
   TypesMatchWith<"imm has the same number of bits as elements in dst",
                  "dst", "imm",
@@ -142,7 +142,7 @@ def MaskRndScaleOp : AVX512_Op<"mask.rndscale", [NoSideEffect,
 }
 
 def MaskRndScalePSIntrOp : AVX512_IntrOp<"mask.rndscale.ps.512", 1, [
-  NoSideEffect,
+  Pure,
   AllTypesMatch<["src", "a", "res"]>]> {
   let arguments = (ins VectorOfLengthAndType<[16], [F32]>:$src,
                    I32:$k,
@@ -152,7 +152,7 @@ def MaskRndScalePSIntrOp : AVX512_IntrOp<"mask.rndscale.ps.512", 1, [
 }
 
 def MaskRndScalePDIntrOp : AVX512_IntrOp<"mask.rndscale.pd.512", 1, [
-  NoSideEffect,
+  Pure,
   AllTypesMatch<["src", "a", "res"]>]> {
   let arguments = (ins VectorOfLengthAndType<[8], [F64]>:$src,
                    I32:$k,
@@ -165,7 +165,7 @@ def MaskRndScalePDIntrOp : AVX512_IntrOp<"mask.rndscale.pd.512", 1, [
 // MaskScaleFOp
 //----------------------------------------------------------------------------//
 
-def MaskScaleFOp : AVX512_Op<"mask.scalef", [NoSideEffect,
+def MaskScaleFOp : AVX512_Op<"mask.scalef", [Pure,
   AllTypesMatch<["src", "a", "b", "dst"]>,
   TypesMatchWith<"k has the same number of bits as elements in dst",
                  "dst", "k",
@@ -199,7 +199,7 @@ def MaskScaleFOp : AVX512_Op<"mask.scalef", [NoSideEffect,
 }
 
 def MaskScaleFPSIntrOp : AVX512_IntrOp<"mask.scalef.ps.512", 1, [
-  NoSideEffect,
+  Pure,
   AllTypesMatch<["src", "a", "b", "res"]>]> {
   let arguments = (ins VectorOfLengthAndType<[16], [F32]>:$src,
                    VectorOfLengthAndType<[16], [F32]>:$a,
@@ -209,7 +209,7 @@ def MaskScaleFPSIntrOp : AVX512_IntrOp<"mask.scalef.ps.512", 1, [
 }
 
 def MaskScaleFPDIntrOp : AVX512_IntrOp<"mask.scalef.pd.512", 1, [
-  NoSideEffect,
+  Pure,
   AllTypesMatch<["src", "a", "b", "res"]>]> {
   let arguments = (ins VectorOfLengthAndType<[8], [F64]>:$src,
                    VectorOfLengthAndType<[8], [F64]>:$a,
@@ -222,7 +222,7 @@ def MaskScaleFPDIntrOp : AVX512_IntrOp<"mask.scalef.pd.512", 1, [
 // Vp2IntersectOp
 //----------------------------------------------------------------------------//
 
-def Vp2IntersectOp : AVX512_Op<"vp2intersect", [NoSideEffect,
+def Vp2IntersectOp : AVX512_Op<"vp2intersect", [Pure,
   AllTypesMatch<["a", "b"]>,
   TypesMatchWith<"k1 has the same number of bits as elements in a",
                  "a", "k1",
@@ -260,13 +260,13 @@ def Vp2IntersectOp : AVX512_Op<"vp2intersect", [NoSideEffect,
 }
 
 def Vp2IntersectDIntrOp : AVX512_IntrOp<"vp2intersect.d.512", 2, [
-  NoSideEffect]> {
+  Pure]> {
   let arguments = (ins VectorOfLengthAndType<[16], [I32]>:$a,
                    VectorOfLengthAndType<[16], [I32]>:$b);
 }
 
 def Vp2IntersectQIntrOp : AVX512_IntrOp<"vp2intersect.q.512", 2, [
-  NoSideEffect]> {
+  Pure]> {
   let arguments = (ins VectorOfLengthAndType<[8], [I64]>:$a,
                    VectorOfLengthAndType<[8], [I64]>:$b);
 }
@@ -295,14 +295,14 @@ class AVX_IntrOp<string mnemonic, int numResults, list<Trait> traits = []> :
 // AVX Rsqrt
 //----------------------------------------------------------------------------//
 
-def RsqrtOp : AVX_Op<"rsqrt", [NoSideEffect, SameOperandsAndResultType]> {
+def RsqrtOp : AVX_Op<"rsqrt", [Pure, SameOperandsAndResultType]> {
   let summary = "Rsqrt";
   let arguments = (ins VectorOfLengthAndType<[8], [F32]>:$a);
   let results = (outs VectorOfLengthAndType<[8], [F32]>:$b);
   let assemblyFormat = "$a attr-dict `:` type($a)";
 }
 
-def RsqrtIntrOp : AVX_IntrOp<"rsqrt.ps.256", 1, [NoSideEffect,
+def RsqrtIntrOp : AVX_IntrOp<"rsqrt.ps.256", 1, [Pure,
   SameOperandsAndResultType]> {
   let arguments = (ins VectorOfLengthAndType<[8], [F32]>:$a);
 }
@@ -311,7 +311,7 @@ def RsqrtIntrOp : AVX_IntrOp<"rsqrt.ps.256", 1, [NoSideEffect,
 // AVX Dot
 //----------------------------------------------------------------------------//
 
-def DotOp : AVX_LowOp<"dot", [NoSideEffect, SameOperandsAndResultType]> {
+def DotOp : AVX_LowOp<"dot", [Pure, SameOperandsAndResultType]> {
   let summary = "Dot";
   let description = [{
     Computes the 4-way dot products of the lower and higher parts of the source
@@ -335,7 +335,7 @@ def DotOp : AVX_LowOp<"dot", [NoSideEffect, SameOperandsAndResultType]> {
   let assemblyFormat = "$a `,` $b attr-dict `:` type($res)";
 }
 
-def DotIntrOp : AVX_IntrOp<"dp.ps.256", 1, [NoSideEffect,
+def DotIntrOp : AVX_IntrOp<"dp.ps.256", 1, [Pure,
     AllTypesMatch<["a", "b", "res"]>]> {
   let arguments = (ins VectorOfLengthAndType<[8], [F32]>:$a,
                        VectorOfLengthAndType<[8], [F32]>:$b, I8:$c);

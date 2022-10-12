@@ -521,7 +521,7 @@ bool RegisterContextMinidump_ARM::ReadRegister(const RegisterInfo *reg_info,
                                                RegisterValue &reg_value) {
   Status error;
   reg_value.SetFromMemoryData(
-      reg_info, (const uint8_t *)&m_regs + reg_info->byte_offset,
+      *reg_info, (const uint8_t *)&m_regs + reg_info->byte_offset,
       reg_info->byte_size, lldb::eByteOrderLittle, error);
   return error.Success();
 }

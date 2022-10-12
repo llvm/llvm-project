@@ -253,7 +253,7 @@ class VSCodeTestCaseBase(TestBase):
                initCommands=None, preRunCommands=None, stopCommands=None,
                exitCommands=None, attachCommands=None, coreFile=None,
                disconnectAutomatically=True, terminateCommands=None,
-               postRunCommands=None, sourceMap=None):
+               postRunCommands=None, sourceMap=None, sourceInitFile=False):
         '''Build the default Makefile target, create the VSCode debug adaptor,
            and attach to the process.
         '''
@@ -267,7 +267,7 @@ class VSCodeTestCaseBase(TestBase):
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
         # Initialize and launch the program
-        self.vscode.request_initialize()
+        self.vscode.request_initialize(sourceInitFile)
         response = self.vscode.request_attach(
             program=program, pid=pid, waitFor=waitFor, trace=trace,
             initCommands=initCommands, preRunCommands=preRunCommands,
@@ -284,7 +284,7 @@ class VSCodeTestCaseBase(TestBase):
                disableSTDIO=False, shellExpandArguments=False,
                trace=False, initCommands=None, preRunCommands=None,
                stopCommands=None, exitCommands=None, terminateCommands=None,
-               sourcePath=None, debuggerRoot=None, launchCommands=None,
+               sourcePath=None, debuggerRoot=None, sourceInitFile=False, launchCommands=None,
                sourceMap=None, disconnectAutomatically=True, runInTerminal=False,
                expectFailure=False, postRunCommands=None):
         '''Sending launch request to vscode
@@ -301,7 +301,7 @@ class VSCodeTestCaseBase(TestBase):
         self.addTearDownHook(cleanup)
 
         # Initialize and launch the program
-        self.vscode.request_initialize()
+        self.vscode.request_initialize(sourceInitFile)
         response = self.vscode.request_launch(
             program,
             args=args,
@@ -344,7 +344,7 @@ class VSCodeTestCaseBase(TestBase):
                          trace=False, initCommands=None, preRunCommands=None,
                          stopCommands=None, exitCommands=None,
                          terminateCommands=None, sourcePath=None,
-                         debuggerRoot=None, runInTerminal=False,
+                         debuggerRoot=None, sourceInitFile=False, runInTerminal=False,
                          disconnectAutomatically=True, postRunCommands=None,
                          lldbVSCodeEnv=None):
         '''Build the default Makefile target, create the VSCode debug adaptor,
@@ -356,6 +356,7 @@ class VSCodeTestCaseBase(TestBase):
         return self.launch(program, args, cwd, env, stopOnEntry, disableASLR,
                     disableSTDIO, shellExpandArguments, trace,
                     initCommands, preRunCommands, stopCommands, exitCommands,
-                    terminateCommands, sourcePath, debuggerRoot, runInTerminal=runInTerminal,
+                    terminateCommands, sourcePath, debuggerRoot, sourceInitFile,
+                    runInTerminal=runInTerminal,
                     disconnectAutomatically=disconnectAutomatically,
                     postRunCommands=postRunCommands)

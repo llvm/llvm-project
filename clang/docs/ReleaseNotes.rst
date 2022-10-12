@@ -338,6 +338,10 @@ Non-comprehensive list of changes in this release
   is the target triple and `driver` first tries the canonical name
   for the driver (respecting ``--driver-mode=``), and then the name found
   in the executable.
+- If the environment variable ``SOURCE_DATE_EPOCH`` is set, it specifies a UNIX
+  timestamp to be used in replacement of the current date and time in
+  the ``__DATE__``, ``__TIME__``, and ``__TIMESTAMP__`` macros. See
+  `<https://reproducible-builds.org/docs/source-date-epoch/>`_.
 
 New Compiler Flags
 ------------------

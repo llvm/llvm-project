@@ -27,7 +27,7 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 
 def SPIRV_AddressOfOp : SPIRV_Op<"mlir.addressof",
     [DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-     InFunctionScope, NoSideEffect]> {
+     InFunctionScope, Pure]> {
   let summary = "Get the address of a global variable.";
 
   let description = [{
@@ -75,7 +75,7 @@ def SPIRV_AddressOfOp : SPIRV_Op<"mlir.addressof",
 def SPIRV_ConstantOp : SPIRV_Op<"Constant",
     [ConstantLike,
      DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-     NoSideEffect]> {
+     Pure]> {
   let summary = [{
     Declare a new integer-type or floating-point-type scalar constant.
   }];
@@ -520,7 +520,7 @@ def SPIRV_ModuleOp : SPIRV_Op<"module",
 
 // -----
 
-def SPIRV_ReferenceOfOp : SPIRV_Op<"mlir.referenceof", [NoSideEffect]> {
+def SPIRV_ReferenceOfOp : SPIRV_Op<"mlir.referenceof", [Pure]> {
   let summary = "Reference a specialization constant.";
 
   let description = [{
@@ -669,7 +669,7 @@ def SPIRV_SpecConstantCompositeOp : SPIRV_Op<"SpecConstantComposite", [
 // -----
 
 def SPIRV_SpecConstantOperationOp : SPIRV_Op<"SpecConstantOperation", [
-       NoSideEffect, InFunctionScope,
+       Pure, InFunctionScope,
        SingleBlockImplicitTerminator<"YieldOp">]> {
   let summary = [{
     Declare a new specialization constant that results from doing an operation.
@@ -760,7 +760,7 @@ def SPIRV_SpecConstantOperationOp : SPIRV_Op<"SpecConstantOperation", [
 // -----
 
 def SPIRV_YieldOp : SPIRV_Op<"mlir.yield", [
-    HasParent<"SpecConstantOperationOp">, NoSideEffect, Terminator]> {
+    HasParent<"SpecConstantOperationOp">, Pure, Terminator]> {
   let summary = [{
     Yields the result computed in `spirv.SpecConstantOperation`'s
     region back to the parent op.

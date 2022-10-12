@@ -219,6 +219,10 @@ feature_test_macros = [ add_version_header(x) for x in [
     "values": { "c++2b": 202207 },
     "headers": ["bitset"],
   }, {
+    "name": "__cpp_lib_constexpr_charconv",
+    "values": { "c++2b": 202207 },
+    "headers": ["charconv"],
+  }, {
     "name": "__cpp_lib_constexpr_cmath",
     "values": { "c++2b": 202202 },
     "headers": ["cmath", "cstdlib"],

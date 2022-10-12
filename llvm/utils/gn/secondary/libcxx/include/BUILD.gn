@@ -47,7 +47,7 @@ if (current_toolchain == default_toolchain) {
     if (libcxx_abi_namespace != "") {
       values += [ "_LIBCPP_ABI_NAMESPACE=$libcxx_abi_namespace" ]
     } else {
-      values += [ "_LIBCPP_ABI_NAMESPACE=" ]
+      values += [ "_LIBCPP_ABI_NAMESPACE=__" + libcxx_abi_version ]
     }
   }
 

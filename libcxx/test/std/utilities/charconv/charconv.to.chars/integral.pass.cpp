@@ -9,38 +9,38 @@
 // UNSUPPORTED: c++03, c++11, c++14
 
 // ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=12712420
-// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=12712420
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=50000000
 
 // <charconv>
 
-// to_chars_result to_chars(char* first, char* last, Integral value,
-//                          int base = 10)
+// constexpr to_chars_result to_chars(char* first, char* last, Integral value,
+//                                    int base = 10)
 
 #include <charconv>
 #include "test_macros.h"
 #include "charconv_test_helpers.h"
 
 #ifndef TEST_HAS_NO_INT128
-__uint128_t make_u128(__uint128_t a, uint64_t b) {
+TEST_CONSTEXPR_CXX23 __uint128_t make_u128(__uint128_t a, uint64_t b) {
   a *= 1000000000000000000UL;
   a *= 10;
   return a + b;
 }
 
-__uint128_t make_u128(__uint128_t a, uint64_t b, uint64_t c) {
+TEST_CONSTEXPR_CXX23 __uint128_t make_u128(__uint128_t a, uint64_t b, uint64_t c) {
   a *= 10000000000000ULL;
   a += b;
   a *= 10000000000000ULL;
   return a + c;
 }
 
-__int128_t make_i128(__int128_t a, int64_t b) {
+TEST_CONSTEXPR_CXX23 __int128_t make_i128(__int128_t a, int64_t b) {
   if (a < 0)
     return -make_u128(-a, b);
   return make_u128(a, b);
 }
 
-__int128_t make_i128(__int128_t a, __int128_t b, int64_t c) {
+TEST_CONSTEXPR_CXX23 __int128_t make_i128(__int128_t a, __int128_t b, int64_t c) {
   if (a < 0)
     return -make_u128(-a, b, c);
   return make_u128(a, b, c);
@@ -53,7 +53,7 @@ struct test_basics : to_chars_test_base<T>
     using to_chars_test_base<T>::test;
     using to_chars_test_base<T>::test_value;
 
-    void operator()()
+    TEST_CONSTEXPR_CXX23 void operator()()
     {
         test(0, "0");
         test(42, "42");
@@ -175,7 +175,7 @@ struct test_signed : to_chars_test_base<T>
     using to_chars_test_base<T>::test;
     using to_chars_test_base<T>::test_value;
 
-    void operator()()
+    TEST_CONSTEXPR_CXX23 void operator()()
     {
         test(-1, "-1");
         test(-12, "-12");
@@ -289,10 +289,20 @@ struct test_signed : to_chars_test_base<T>
     }
 };
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX23 bool test()
 {
     run<test_basics>(integrals);
     run<test_signed>(all_signed);
+
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER > 20
+    static_assert(test());
+#endif
 
   return 0;
 }

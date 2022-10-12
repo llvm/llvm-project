@@ -101,7 +101,7 @@ def Async_ExecuteOp :
 
 def Async_YieldOp :
     Async_Op<"yield", [
-      HasParent<"ExecuteOp">, NoSideEffect, Terminator,
+      HasParent<"ExecuteOp">, Pure, Terminator,
       DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>]> {
   let summary = "terminator for Async execute operation";
   let description = [{
@@ -156,7 +156,7 @@ def Async_AwaitOp : Async_Op<"await"> {
   }];
 }
 
-def Async_CreateGroupOp : Async_Op<"create_group", [NoSideEffect]> {
+def Async_CreateGroupOp : Async_Op<"create_group", [Pure]> {
   let summary = "creates an empty async group";
   let description = [{
     The `async.create_group` allocates an empty async group. Async tokens or

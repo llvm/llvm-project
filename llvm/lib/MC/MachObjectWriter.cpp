@@ -758,6 +758,8 @@ void MachObjectWriter::populateAddrSigSection(MCAssembler &Asm) {
       Asm.getContext().getObjectFileInfo()->getAddrSigSection();
   unsigned Log2Size = is64Bit() ? 3 : 2;
   for (const MCSymbol *S : getAddrsigSyms()) {
+    if (!S->isRegistered())
+      continue;
     MachO::any_relocation_info MRE;
     MRE.r_word0 = 0;
     MRE.r_word1 = (Log2Size << 25) | (MachO::GENERIC_RELOC_VANILLA << 28);

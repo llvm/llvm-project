@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=s390x-linux-gnu -mcpu=z13 < %s  | FileCheck %s
 
 ; Store a <4 x i31> vector.
-define void @fun0(<4 x i31> %src, <4 x i31>* %p)
+define void @fun0(<4 x i31> %src, ptr %p)
 ; CHECK-LABEL: fun0:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vlgvf %r1, %v24, 0
@@ -19,7 +19,7 @@ define void @fun0(<4 x i31> %src, <4 x i31>* %p)
 ; CHECK-NEXT:    stg %r0, 8(%r2)
 ; CHECK-NEXT:    br %r14
 {
-  store <4 x i31> %src, <4 x i31>* %p
+  store <4 x i31> %src, ptr %p
   ret void
 }
 
@@ -70,7 +70,7 @@ define i16 @fun1(<16 x i1> %src)
 }
 
 ; Truncate a <8 x i32> vector to <8 x i31> and store it (test splitting).
-define void @fun2(<8 x i32> %src, <8 x i31>* %p)
+define void @fun2(<8 x i32> %src, ptr %p)
 ; CHECK-LABEL: fun2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    stmg %r14, %r15, 112(%r15)
@@ -116,12 +116,12 @@ define void @fun2(<8 x i32> %src, <8 x i31>* %p)
 ; CHECK-NEXT:    br %r14
 {
   %tmp = trunc <8 x i32> %src to <8 x i31>
-  store <8 x i31> %tmp, <8 x i31>* %p
+  store <8 x i31> %tmp, ptr %p
   ret void
 }
 
 ; Load and store a <3 x i31> vector (test widening).
-define void @fun3(<3 x i31>* %src, <3 x i31>* %p)
+define void @fun3(ptr %src, ptr %p)
 ; CHECK-LABEL: fun3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    llgf %r0, 8(%r2)
@@ -130,7 +130,7 @@ define void @fun3(<3 x i31>* %src, <3 x i31>* %p)
 ; CHECK-NEXT:    st %r0, 8(%r3)
 ; CHECK-NEXT:    br %r14
 {
-  %tmp = load <3 x i31>, <3 x i31>* %src
-  store <3 x i31> %tmp, <3 x i31>* %p
+  %tmp = load <3 x i31>, ptr %src
+  store <3 x i31> %tmp, ptr %p
   ret void
 }

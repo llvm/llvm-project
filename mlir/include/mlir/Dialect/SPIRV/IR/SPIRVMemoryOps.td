@@ -18,7 +18,7 @@ include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
 
 // -----
 
-def SPIRV_AccessChainOp : SPIRV_Op<"AccessChain", [NoSideEffect]> {
+def SPIRV_AccessChainOp : SPIRV_Op<"AccessChain", [Pure]> {
   let summary = "Create a pointer into a composite object.";
 
   let description = [{
@@ -132,7 +132,7 @@ def SPIRV_CopyMemoryOp : SPIRV_Op<"CopyMemory", []> {
 
 // -----
 
-def SPIRV_InBoundsPtrAccessChainOp : SPIRV_Op<"InBoundsPtrAccessChain", [NoSideEffect]> {
+def SPIRV_InBoundsPtrAccessChainOp : SPIRV_Op<"InBoundsPtrAccessChain", [Pure]> {
   let summary = [{
     Has the same semantics as OpPtrAccessChain, with the addition that the
     resulting pointer is known to point within the base object.
@@ -235,7 +235,7 @@ def SPIRV_LoadOp : SPIRV_Op<"Load", []> {
 
 // -----
 
-def SPIRV_PtrAccessChainOp : SPIRV_Op<"PtrAccessChain", [NoSideEffect]> {
+def SPIRV_PtrAccessChainOp : SPIRV_Op<"PtrAccessChain", [Pure]> {
   let summary = [{
     Has the same semantics as OpAccessChain, with the addition of the
     Element operand.

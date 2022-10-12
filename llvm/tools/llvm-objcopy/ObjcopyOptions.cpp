@@ -993,11 +993,6 @@ objcopy::parseObjcopyOptions(ArrayRef<const char *> RawArgsArr,
         "--decompress-debug-sections");
   }
 
-  if (Config.DecompressDebugSections && !compression::zlib::isAvailable())
-    return createStringError(
-        errc::invalid_argument,
-        "LLVM was not compiled with LLVM_ENABLE_ZLIB: cannot decompress");
-
   if (Config.ExtractPartition && Config.ExtractMainPartition)
     return createStringError(errc::invalid_argument,
                              "cannot specify --extract-partition together with "

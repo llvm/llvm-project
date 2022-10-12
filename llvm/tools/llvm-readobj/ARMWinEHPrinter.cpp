@@ -172,7 +172,7 @@ const Decoder::RingEntry Decoder::Ring64[] = {
     {0xff, 0xe9, 1, &Decoder::opcode_machine_frame},
     {0xff, 0xea, 1, &Decoder::opcode_context},
     {0xff, 0xec, 1, &Decoder::opcode_clear_unwound_to_call},
-    {0xff, 0xfc, 1, &Decoder::opcode_pac_sign_return_address},
+    {0xff, 0xfc, 1, &Decoder::opcode_pac_sign_lr},
 };
 
 static void printRange(raw_ostream &OS, ListSeparator &LS, unsigned First,
@@ -977,9 +977,8 @@ bool Decoder::opcode_clear_unwound_to_call(const uint8_t *OC, unsigned &Offset,
   return false;
 }
 
-bool Decoder::opcode_pac_sign_return_address(const uint8_t *OC,
-                                             unsigned &Offset, unsigned Length,
-                                             bool Prologue) {
+bool Decoder::opcode_pac_sign_lr(const uint8_t *OC, unsigned &Offset,
+                                 unsigned Length, bool Prologue) {
   if (Prologue)
     SW.startLine() << format("0x%02x                ; pacibsp\n", OC[Offset]);
   else

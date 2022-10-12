@@ -1518,6 +1518,7 @@ static void fillInStridesForCollapsedMemDescriptor(
     ConversionPatternRewriter &rewriter, Location loc, Operation *op,
     TypeConverter *typeConverter, MemRefType srcType, MemRefDescriptor &srcDesc,
     MemRefDescriptor &dstDesc, ArrayRef<ReassociationIndices> reassociation) {
+  auto llvmIndexType = typeConverter->convertType(rewriter.getIndexType());
   // See comments for computeCollapsedLayoutMap for details on how the strides
   // are calculated.
   auto srcShape = srcType.getShape();
@@ -1579,8 +1580,8 @@ static void fillInStridesForCollapsedMemDescriptor(
           rewriter.create<LLVM::BrOp>(loc, srcStride, continueBlock);
           break;
         }
-        Value one = rewriter.create<LLVM::ConstantOp>(
-            loc, rewriter.getI64Type(), rewriter.getI32IntegerAttr(1));
+        Value one = rewriter.create<LLVM::ConstantOp>(loc, llvmIndexType,
+                                                      rewriter.getIndexAttr(1));
         Value predNeOne = rewriter.create<LLVM::ICmpOp>(
             loc, LLVM::ICmpPredicate::ne, srcDesc.size(rewriter, loc, srcIndex),
             one);

@@ -142,7 +142,7 @@ def fir_ClassType : FIR_Type<"Class", "class", [], "BaseBoxType"> {
   let summary = "Class type";
 
   let description = [{
-    Class type is used to model the Fortran CLASS instrinsic type. A class type
+    Class type is used to model the Fortran CLASS intrinsic type. A class type
     is equivalent to a fir.box type with a dynamic type.
   }];
 
@@ -426,15 +426,6 @@ def fir_ShiftType : FIR_Type<"Shift", "shift"> {
 
   let parameters = (ins "unsigned":$rank);
   let hasCustomAssemblyFormat = 1;
-
-  let extraClassDeclaration = [{
-    using KindTy = unsigned;
-
-    // a !fir.boxchar<k> always wraps a !fir.char<k, ?>
-    CharacterType getElementType(mlir::MLIRContext *context) const;
-
-    CharacterType getEleTy() const;
-  }];
 }
 
 def fir_SequenceType : FIR_Type<"Sequence", "array"> {
@@ -491,8 +482,10 @@ def fir_SequenceType : FIR_Type<"Sequence", "array"> {
     // Does the sequence have unknown shape? (`array<* x T>`)
     bool hasUnknownShape() const { return getShape().empty(); }
 
-    // The value `-1` represents an unknown extent for a dimension
-    static constexpr Extent getUnknownExtent() { return -1; }
+    // The value `kDynamicSize` represents an unknown extent for a dimension
+    static constexpr Extent getUnknownExtent() {
+      return mlir::ShapedType::kDynamicSize;
+    }
   }];
 }
 
@@ -536,7 +529,7 @@ def fir_VectorType : FIR_Type<"Vector", "vector"> {
 
   let description = [{
     Replacement for the builtin vector type.
-    The FIR vector type is always rank one. It's size is always a constant.
+    The FIR vector type is always rank one. Its size is always a constant.
     A vector's element type must be real or integer.
   }];
 

@@ -64,16 +64,16 @@ define double @f5(i64 %a) {
 
 ; Test 128-bit moves from GPRs to FPRs.  i128 isn't a legitimate type,
 ; so this goes through memory.
-define void @f6(fp128 *%a, i128 *%b) {
+define void @f6(ptr %a, ptr %b) {
 ; CHECK-LABEL: f6:
 ; CHECK: lg
 ; CHECK: lg
 ; CHECK: stg
 ; CHECK: stg
 ; CHECK: br %r14
-  %val = load i128, i128 *%b
+  %val = load i128, ptr %b
   %res = bitcast i128 %val to fp128
-  store fp128 %res, fp128 *%a
+  store fp128 %res, ptr %a
   ret void
 }
 
@@ -96,15 +96,15 @@ define i64 @f8(double %a) {
 }
 
 ; Test 128-bit moves from FPRs to GPRs, with the same restriction as f6.
-define void @f9(fp128 *%a, i128 *%b) {
+define void @f9(ptr %a, ptr %b) {
 ; CHECK-LABEL: f9:
 ; CHECK: ld
 ; CHECK: ld
 ; CHECK: std
 ; CHECK: std
-  %val = load fp128, fp128 *%a
+  %val = load fp128, ptr %a
   %res = bitcast fp128 %val to i128
-  store i128 %res, i128 *%b
+  store i128 %res, ptr %b
   ret void
 }
 
@@ -119,34 +119,34 @@ define void @f10(double %extra) {
 ; CHECK: %exit
 ; CHECK: br %r14
 entry:
-  %double0 = load volatile double, double *@dptr
+  %double0 = load volatile double, ptr@dptr
   %biased0 = fadd double %double0, %extra
   %int0 = bitcast double %biased0 to i64
-  %double1 = load volatile double, double *@dptr
+  %double1 = load volatile double, ptr@dptr
   %biased1 = fadd double %double1, %extra
   %int1 = bitcast double %biased1 to i64
-  %double2 = load volatile double, double *@dptr
+  %double2 = load volatile double, ptr@dptr
   %biased2 = fadd double %double2, %extra
   %int2 = bitcast double %biased2 to i64
-  %double3 = load volatile double, double *@dptr
+  %double3 = load volatile double, ptr@dptr
   %biased3 = fadd double %double3, %extra
   %int3 = bitcast double %biased3 to i64
-  %double4 = load volatile double, double *@dptr
+  %double4 = load volatile double, ptr@dptr
   %biased4 = fadd double %double4, %extra
   %int4 = bitcast double %biased4 to i64
-  %double5 = load volatile double, double *@dptr
+  %double5 = load volatile double, ptr@dptr
   %biased5 = fadd double %double5, %extra
   %int5 = bitcast double %biased5 to i64
-  %double6 = load volatile double, double *@dptr
+  %double6 = load volatile double, ptr@dptr
   %biased6 = fadd double %double6, %extra
   %int6 = bitcast double %biased6 to i64
-  %double7 = load volatile double, double *@dptr
+  %double7 = load volatile double, ptr@dptr
   %biased7 = fadd double %double7, %extra
   %int7 = bitcast double %biased7 to i64
-  %double8 = load volatile double, double *@dptr
+  %double8 = load volatile double, ptr@dptr
   %biased8 = fadd double %double8, %extra
   %int8 = bitcast double %biased8 to i64
-  %double9 = load volatile double, double *@dptr
+  %double9 = load volatile double, ptr@dptr
   %biased9 = fadd double %double9, %extra
   %int9 = bitcast double %biased9 to i64
   br label %loop
@@ -163,7 +163,7 @@ loop:
   %or7 = or i64 %or6, %int7
   %or8 = or i64 %or7, %int8
   %or9 = or i64 %or8, %int9
-  store i64 %or9, i64 *@iptr
+  store i64 %or9, ptr@iptr
   %cont = icmp ne i64 %start, 1
   br i1 %cont, label %loop, label %exit
 
@@ -181,34 +181,34 @@ define void @f11(i64 %mask) {
 ; CHECK: %exit
 ; CHECK: br %r14
 entry:
-  %int0 = load volatile i64, i64 *@iptr
+  %int0 = load volatile i64, ptr@iptr
   %masked0 = and i64 %int0, %mask
   %double0 = bitcast i64 %masked0 to double
-  %int1 = load volatile i64, i64 *@iptr
+  %int1 = load volatile i64, ptr@iptr
   %masked1 = and i64 %int1, %mask
   %double1 = bitcast i64 %masked1 to double
-  %int2 = load volatile i64, i64 *@iptr
+  %int2 = load volatile i64, ptr@iptr
   %masked2 = and i64 %int2, %mask
   %double2 = bitcast i64 %masked2 to double
-  %int3 = load volatile i64, i64 *@iptr
+  %int3 = load volatile i64, ptr@iptr
   %masked3 = and i64 %int3, %mask
   %double3 = bitcast i64 %masked3 to double
-  %int4 = load volatile i64, i64 *@iptr
+  %int4 = load volatile i64, ptr@iptr
   %masked4 = and i64 %int4, %mask
   %double4 = bitcast i64 %masked4 to double
-  %int5 = load volatile i64, i64 *@iptr
+  %int5 = load volatile i64, ptr@iptr
   %masked5 = and i64 %int5, %mask
   %double5 = bitcast i64 %masked5 to double
-  %int6 = load volatile i64, i64 *@iptr
+  %int6 = load volatile i64, ptr@iptr
   %masked6 = and i64 %int6, %mask
   %double6 = bitcast i64 %masked6 to double
-  %int7 = load volatile i64, i64 *@iptr
+  %int7 = load volatile i64, ptr@iptr
   %masked7 = and i64 %int7, %mask
   %double7 = bitcast i64 %masked7 to double
-  %int8 = load volatile i64, i64 *@iptr
+  %int8 = load volatile i64, ptr@iptr
   %masked8 = and i64 %int8, %mask
   %double8 = bitcast i64 %masked8 to double
-  %int9 = load volatile i64, i64 *@iptr
+  %int9 = load volatile i64, ptr@iptr
   %masked9 = and i64 %int9, %mask
   %double9 = bitcast i64 %masked9 to double
   br label %loop
@@ -225,7 +225,7 @@ loop:
   %add7 = fadd double %add6, %double7
   %add8 = fadd double %add7, %double8
   %add9 = fadd double %add8, %double9
-  store double %add9, double *@dptr
+  store double %add9, ptr@dptr
   %cont = fcmp one double %start, 1.0
   br i1 %cont, label %loop, label %exit
 
@@ -275,38 +275,38 @@ loop:
 
 exit:
   %unused1 = call i64 @foo()
-  %factor = load volatile double, double *@dptr
+  %factor = load volatile double, ptr@dptr
 
   %conv0 = bitcast i64 %add0 to double
   %mul0 = fmul double %conv0, %factor
-  store volatile double %mul0, double *@dptr
+  store volatile double %mul0, ptr@dptr
   %conv1 = bitcast i64 %add1 to double
   %mul1 = fmul double %conv1, %factor
-  store volatile double %mul1, double *@dptr
+  store volatile double %mul1, ptr@dptr
   %conv2 = bitcast i64 %add2 to double
   %mul2 = fmul double %conv2, %factor
-  store volatile double %mul2, double *@dptr
+  store volatile double %mul2, ptr@dptr
   %conv3 = bitcast i64 %add3 to double
   %mul3 = fmul double %conv3, %factor
-  store volatile double %mul3, double *@dptr
+  store volatile double %mul3, ptr@dptr
   %conv4 = bitcast i64 %add4 to double
   %mul4 = fmul double %conv4, %factor
-  store volatile double %mul4, double *@dptr
+  store volatile double %mul4, ptr@dptr
   %conv5 = bitcast i64 %add5 to double
   %mul5 = fmul double %conv5, %factor
-  store volatile double %mul5, double *@dptr
+  store volatile double %mul5, ptr@dptr
   %conv6 = bitcast i64 %add6 to double
   %mul6 = fmul double %conv6, %factor
-  store volatile double %mul6, double *@dptr
+  store volatile double %mul6, ptr@dptr
   %conv7 = bitcast i64 %add7 to double
   %mul7 = fmul double %conv7, %factor
-  store volatile double %mul7, double *@dptr
+  store volatile double %mul7, ptr@dptr
   %conv8 = bitcast i64 %add8 to double
   %mul8 = fmul double %conv8, %factor
-  store volatile double %mul8, double *@dptr
+  store volatile double %mul8, ptr@dptr
   %conv9 = bitcast i64 %add9 to double
   %mul9 = fmul double %conv9, %factor
-  store volatile double %mul9, double *@dptr
+  store volatile double %mul9, ptr@dptr
 
   %unused2 = call i64 @foo()
 
@@ -354,38 +354,38 @@ loop:
 
 exit:
   %unused1 = call i64 @foo()
-  %bias = load volatile i64, i64 *@iptr
+  %bias = load volatile i64, ptr@iptr
 
   %conv0 = bitcast double %mul0 to i64
   %add0 = add i64 %conv0, %bias
-  store volatile i64 %add0, i64 *@iptr
+  store volatile i64 %add0, ptr@iptr
   %conv1 = bitcast double %mul1 to i64
   %add1 = add i64 %conv1, %bias
-  store volatile i64 %add1, i64 *@iptr
+  store volatile i64 %add1, ptr@iptr
   %conv2 = bitcast double %mul2 to i64
   %add2 = add i64 %conv2, %bias
-  store volatile i64 %add2, i64 *@iptr
+  store volatile i64 %add2, ptr@iptr
   %conv3 = bitcast double %mul3 to i64
   %add3 = add i64 %conv3, %bias
-  store volatile i64 %add3, i64 *@iptr
+  store volatile i64 %add3, ptr@iptr
   %conv4 = bitcast double %mul4 to i64
   %add4 = add i64 %conv4, %bias
-  store volatile i64 %add4, i64 *@iptr
+  store volatile i64 %add4, ptr@iptr
   %conv5 = bitcast double %mul5 to i64
   %add5 = add i64 %conv5, %bias
-  store volatile i64 %add5, i64 *@iptr
+  store volatile i64 %add5, ptr@iptr
   %conv6 = bitcast double %mul6 to i64
   %add6 = add i64 %conv6, %bias
-  store volatile i64 %add6, i64 *@iptr
+  store volatile i64 %add6, ptr@iptr
   %conv7 = bitcast double %mul7 to i64
   %add7 = add i64 %conv7, %bias
-  store volatile i64 %add7, i64 *@iptr
+  store volatile i64 %add7, ptr@iptr
   %conv8 = bitcast double %mul8 to i64
   %add8 = add i64 %conv8, %bias
-  store volatile i64 %add8, i64 *@iptr
+  store volatile i64 %add8, ptr@iptr
   %conv9 = bitcast double %mul9 to i64
   %add9 = add i64 %conv9, %bias
-  store volatile i64 %add9, i64 *@iptr
+  store volatile i64 %add9, ptr@iptr
 
   %unused2 = call i64 @foo()
 

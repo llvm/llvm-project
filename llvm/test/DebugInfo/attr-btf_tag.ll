@@ -22,14 +22,13 @@
 @g1 = dso_local global i32 0, align 4, !dbg !0
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i32 @foo(%struct.t1* %arg) #0 !dbg !16 {
+define dso_local i32 @foo(ptr %arg) #0 !dbg !16 {
 entry:
-  %arg.addr = alloca %struct.t1*, align 8
-  store %struct.t1* %arg, %struct.t1** %arg.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.t1** %arg.addr, metadata !23, metadata !DIExpression()), !dbg !24
-  %0 = load %struct.t1*, %struct.t1** %arg.addr, align 8, !dbg !25
-  %a = getelementptr inbounds %struct.t1, %struct.t1* %0, i32 0, i32 0, !dbg !26
-  %1 = load i32, i32* %a, align 4, !dbg !26
+  %arg.addr = alloca ptr, align 8
+  store ptr %arg, ptr %arg.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !23, metadata !DIExpression()), !dbg !24
+  %0 = load ptr, ptr %arg.addr, align 8, !dbg !25
+  %1 = load i32, ptr %0, align 4, !dbg !26
   ret i32 %1, !dbg !27
 }
 

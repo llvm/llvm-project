@@ -388,7 +388,7 @@ public:
                                        uint32_t reg_num, std::string &reg_name);
 
   // RegisterInfo variants
-  bool ReadRegister(const RegisterInfo &reg_info, RegisterValue &reg_value);
+  llvm::Optional<RegisterValue> ReadRegister(const RegisterInfo &reg_info);
 
   uint64_t ReadRegisterUnsigned(const RegisterInfo &reg_info,
                                 uint64_t fail_value, bool *success_ptr);

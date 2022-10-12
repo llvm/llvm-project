@@ -72,20 +72,29 @@ EmulateInstruction::FindPlugin(const ArchSpec &arch,
 
 EmulateInstruction::EmulateInstruction(const ArchSpec &arch) : m_arch(arch) {}
 
-bool EmulateInstruction::ReadRegister(const RegisterInfo &reg_info,
-                                      RegisterValue &reg_value) {
-  if (m_read_reg_callback != nullptr)
-    return m_read_reg_callback(this, m_baton, &reg_info, reg_value);
-  return false;
+llvm::Optional<RegisterValue>
+EmulateInstruction::ReadRegister(const RegisterInfo &reg_info) {
+  if (m_read_reg_callback == nullptr)
+    return {};
+
+  RegisterValue reg_value;
+  bool success = m_read_reg_callback(this, m_baton, &reg_info, reg_value);
+  if (success)
+    return reg_value;
+  return {};
 }
 
 bool EmulateInstruction::ReadRegister(lldb::RegisterKind reg_kind,
                                       uint32_t reg_num,
                                       RegisterValue &reg_value) {
   llvm::Optional<RegisterInfo> reg_info = GetRegisterInfo(reg_kind, reg_num);
-  if (reg_info)
-    return ReadRegister(*reg_info, reg_value);
-  return false;
+  if (!reg_info)
+    return false;
+
+  llvm::Optional<RegisterValue> value = ReadRegister(*reg_info);
+  if (value)
+    reg_value = *value;
+  return value.has_value();
 }
 
 uint64_t EmulateInstruction::ReadRegisterUnsigned(lldb::RegisterKind reg_kind,
@@ -103,12 +112,14 @@ uint64_t EmulateInstruction::ReadRegisterUnsigned(lldb::RegisterKind reg_kind,
 uint64_t EmulateInstruction::ReadRegisterUnsigned(const RegisterInfo &reg_info,
                                                   uint64_t fail_value,
                                                   bool *success_ptr) {
-  RegisterValue reg_value;
-  if (ReadRegister(reg_info, reg_value))
-    return reg_value.GetAsUInt64(fail_value, success_ptr);
-  if (success_ptr)
-    *success_ptr = false;
-  return fail_value;
+  llvm::Optional<RegisterValue> reg_value = ReadRegister(reg_info);
+  if (!reg_value) {
+    if (success_ptr)
+      *success_ptr = false;
+    return fail_value;
+  }
+
+  return reg_value->GetAsUInt64(fail_value, success_ptr);
 }
 
 bool EmulateInstruction::WriteRegister(const Context &context,
