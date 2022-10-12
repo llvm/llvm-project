@@ -14,24 +14,24 @@
 
 %struct.foo = type { i8 }
 
-define void @_Z3zedP3foo(%struct.foo* %x) uwtable !dbg !5 {
+define void @_Z3zedP3foo(ptr %x) uwtable !dbg !5 {
 entry:
-  %x.addr = alloca %struct.foo*, align 8
-  store %struct.foo* %x, %struct.foo** %x.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.foo** %x.addr, metadata !23, metadata !DIExpression()), !dbg !24
-  %0 = load %struct.foo*, %struct.foo** %x.addr, align 8, !dbg !25
-  call void @_ZN3foo3barEv(%struct.foo* %0), !dbg !25
+  %x.addr = alloca ptr, align 8
+  store ptr %x, ptr %x.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !23, metadata !DIExpression()), !dbg !24
+  %0 = load ptr, ptr %x.addr, align 8, !dbg !25
+  call void @_ZN3foo3barEv(ptr %0), !dbg !25
   ret void, !dbg !27
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
-define linkonce_odr void @_ZN3foo3barEv(%struct.foo* %this) nounwind uwtable align 2 !dbg !20 {
+define linkonce_odr void @_ZN3foo3barEv(ptr %this) nounwind uwtable align 2 !dbg !20 {
 entry:
-  %this.addr = alloca %struct.foo*, align 8
-  store %struct.foo* %this, %struct.foo** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.foo** %this.addr, metadata !28, metadata !DIExpression()), !dbg !29
-  %this1 = load %struct.foo*, %struct.foo** %this.addr
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !28, metadata !DIExpression()), !dbg !29
+  %this1 = load ptr, ptr %this.addr
   ret void, !dbg !30
 }
 

@@ -54,8 +54,8 @@ define dso_local void @_Z2f3v() !dbg !19 {
 entry:
   %n = alloca %struct.S, align 1
   %n2 = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata %struct.S* %n, metadata !22, metadata !DIExpression()), !dbg !24
-  call void @llvm.dbg.declare(metadata i32* %n2, metadata !25, metadata !DIExpression()), !dbg !27
+  call void @llvm.dbg.declare(metadata ptr %n, metadata !22, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.declare(metadata ptr %n2, metadata !25, metadata !DIExpression()), !dbg !27
   ret void, !dbg !28
 }
 
