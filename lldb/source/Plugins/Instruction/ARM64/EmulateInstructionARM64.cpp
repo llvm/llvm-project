@@ -867,9 +867,8 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
         return false;
     }
 
-    if (data_Rt.SetFromMemoryData(&(*reg_info_Rt), buffer,
-                                  reg_info_Rt->byte_size, eByteOrderLittle,
-                                  error) == 0)
+    if (data_Rt.SetFromMemoryData(*reg_info_Rt, buffer, reg_info_Rt->byte_size,
+                                  eByteOrderLittle, error) == 0)
       return false;
 
     if (!vector && is_signed && !data_Rt.SignExtend(datasize))
@@ -884,7 +883,7 @@ bool EmulateInstructionARM64::EmulateLDPSTP(const uint32_t opcode) {
         return false;
     }
 
-    if (data_Rt2.SetFromMemoryData(&(*reg_info_Rt2), buffer,
+    if (data_Rt2.SetFromMemoryData(*reg_info_Rt2, buffer,
                                    reg_info_Rt2->byte_size, eByteOrderLittle,
                                    error) == 0)
       return false;
@@ -1017,9 +1016,8 @@ bool EmulateInstructionARM64::EmulateLDRSTRImm(const uint32_t opcode) {
     if (!ReadMemory(context, address, buffer, reg_info_Rt->byte_size))
       return false;
 
-    if (data_Rt.SetFromMemoryData(&(*reg_info_Rt), buffer,
-                                  reg_info_Rt->byte_size, eByteOrderLittle,
-                                  error) == 0)
+    if (data_Rt.SetFromMemoryData(*reg_info_Rt, buffer, reg_info_Rt->byte_size,
+                                  eByteOrderLittle, error) == 0)
       return false;
 
     if (!WriteRegister(context, *reg_info_Rt, data_Rt))
