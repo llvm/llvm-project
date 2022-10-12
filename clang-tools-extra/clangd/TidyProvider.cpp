@@ -212,8 +212,14 @@ TidyProvider disableUnusableChecks(llvm::ArrayRef<std::string> ExtraBadChecks) {
                        // code, which is often the case when clangd
                        // tries to build an AST.
                        "-bugprone-use-after-move",
-                       // Alias for bugprone-use-after-moe.
-                       "-hicpp-invalid-access-moved");
+                       // Alias for bugprone-use-after-move.
+                       "-hicpp-invalid-access-moved",
+
+                       // ----- Performance problems -----
+
+                       // This check runs expensive analysis for each variable.
+                       // It has been observed to increase reparse time by 10x.
+                       "-misc-const-correctness");
 
   size_t Size = BadChecks.size();
   for (const std::string &Str : ExtraBadChecks) {
