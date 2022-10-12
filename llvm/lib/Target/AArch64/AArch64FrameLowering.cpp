@@ -1814,24 +1814,18 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
               StackOffset::getFixed((int64_t)MFI.getStackSize() - NumBytes));
     }
     if (NeedsRealignment) {
-      const unsigned NrBitsToZero = Log2(MFI.getMaxAlign());
-      assert(NrBitsToZero > 1);
+      assert(MFI.getMaxAlign() > Align(1));
       assert(scratchSPReg != AArch64::SP);
 
       // SUB X9, SP, NumBytes
       //   -- X9 is temporary register, so shouldn't contain any live data here,
       //   -- free to use. This is already produced by emitFrameOffset above.
       // AND SP, X9, 0b11111...0000
-      // The logical immediates have a non-trivial encoding. The following
-      // formula computes the encoded immediate with all ones but
-      // NrBitsToZero zero bits as least significant bits.
-      uint32_t andMaskEncoded = (1 << 12)                         // = N
-                                | ((64 - NrBitsToZero) << 6)      // immr
-                                | ((64 - NrBitsToZero - 1) << 0); // imms
+      uint64_t AndMask = ~(MFI.getMaxAlign().value() - 1);
 
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::ANDXri), AArch64::SP)
           .addReg(scratchSPReg, RegState::Kill)
-          .addImm(andMaskEncoded);
+          .addImm(AArch64_AM::encodeLogicalImmediate(AndMask, 64));
       AFI->setStackRealigned(true);
 
       // No need for SEH instructions here; if we're realigning the stack,
