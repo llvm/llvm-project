@@ -193,10 +193,10 @@ func.func @extract_strided_metadata_of_rank_reduced_subview_w_variable_strides(
     -> (memref<f32>, index, index, index, index, index) {
 
   %subview = memref.subview %base[3, 4, 2][1, 6, 3][1, %stride, 1] :
-    memref<8x16x4xf32> to memref<6x3xf32, strided<[4, 1], offset: 210>>
+    memref<8x16x4xf32> to memref<6x3xf32, strided<[?, 1], offset: 210>>
 
   %base_buffer, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %subview :
-    memref<6x3xf32, strided<[4, 1], offset: 210>>
+    memref<6x3xf32, strided<[?, 1], offset: 210>>
     -> memref<f32>, index, index, index, index, index
 
   return %base_buffer, %offset, %sizes#0, %sizes#1, %strides#0, %strides#1 :
