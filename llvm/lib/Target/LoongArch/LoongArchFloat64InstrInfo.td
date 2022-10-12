@@ -168,10 +168,13 @@ def : Pat<(fcanonicalize FPR64:$fj), (FMAX_D $fj, $fj)>;
 
 // Match non-signaling comparison
 
-// SETOGT/SETOGE/SETUGT/SETUGE will expand into SETOLT/SETOLE/SETULT/SETULE.
+// SETOGT/SETOGE/SETUGT/SETUGE/SETGE/SETNE/SETGT will expand into
+// SETOLT/SETOLE/SETULT/SETULE/SETLE/SETEQ/SETLT.
 def : PatFPSetcc<SETOEQ, FCMP_CEQ_D,  FPR64>;
+def : PatFPSetcc<SETEQ,  FCMP_CEQ_D,  FPR64>;
 def : PatFPSetcc<SETOLT, FCMP_CLT_D,  FPR64>;
 def : PatFPSetcc<SETOLE, FCMP_CLE_D,  FPR64>;
+def : PatFPSetcc<SETLE,  FCMP_CLE_D,  FPR64>;
 def : PatFPSetcc<SETONE, FCMP_CNE_D,  FPR64>;
 def : PatFPSetcc<SETO,   FCMP_COR_D,  FPR64>;
 def : PatFPSetcc<SETUEQ, FCMP_CUEQ_D, FPR64>;
