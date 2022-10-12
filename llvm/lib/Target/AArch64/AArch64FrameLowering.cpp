@@ -1833,12 +1833,10 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
           .addReg(scratchSPReg, RegState::Kill)
           .addImm(andMaskEncoded);
       AFI->setStackRealigned(true);
-      if (NeedsWinCFI) {
-        HasWinCFI = true;
-        BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_StackAlloc))
-            .addImm(NumBytes & andMaskEncoded)
-            .setMIFlag(MachineInstr::FrameSetup);
-      }
+
+      // No need for SEH instructions here; if we're realigning the stack,
+      // we've set a frame pointer and already finished the SEH prologue.
+      assert(!NeedsWinCFI);
     }
   }
 
