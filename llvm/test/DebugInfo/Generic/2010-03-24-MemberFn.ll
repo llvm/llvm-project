@@ -4,33 +4,33 @@
 
 define i32 @_Z3barv() nounwind ssp !dbg !3 {
 entry:
-  %retval = alloca i32                            ; <i32*> [#uses=2]
-  %0 = alloca i32                                 ; <i32*> [#uses=2]
-  %s1 = alloca %struct.S                          ; <%struct.S*> [#uses=1]
+  %retval = alloca i32                            ; <ptr> [#uses=2]
+  %0 = alloca i32                                 ; <ptr> [#uses=2]
+  %s1 = alloca %struct.S                          ; <ptr> [#uses=1]
   %"alloca point" = bitcast i32 0 to i32          ; <i32> [#uses=0]
-  call void @llvm.dbg.declare(metadata %struct.S* %s1, metadata !0, metadata !DIExpression()), !dbg !16
-  %1 = call i32 @_ZN1S3fooEv(%struct.S* %s1) nounwind, !dbg !17 ; <i32> [#uses=1]
-  store i32 %1, i32* %0, align 4, !dbg !17
-  %2 = load i32, i32* %0, align 4, !dbg !17            ; <i32> [#uses=1]
-  store i32 %2, i32* %retval, align 4, !dbg !17
+  call void @llvm.dbg.declare(metadata ptr %s1, metadata !0, metadata !DIExpression()), !dbg !16
+  %1 = call i32 @_ZN1S3fooEv(ptr %s1) nounwind, !dbg !17 ; <i32> [#uses=1]
+  store i32 %1, ptr %0, align 4, !dbg !17
+  %2 = load i32, ptr %0, align 4, !dbg !17            ; <i32> [#uses=1]
+  store i32 %2, ptr %retval, align 4, !dbg !17
   br label %return, !dbg !17
 
 return:                                           ; preds = %entry
-  %retval1 = load i32, i32* %retval, !dbg !17          ; <i32> [#uses=1]
+  %retval1 = load i32, ptr %retval, !dbg !17          ; <i32> [#uses=1]
   ret i32 %retval1, !dbg !16
 }
 
-define linkonce_odr i32 @_ZN1S3fooEv(%struct.S* %this) nounwind ssp align 2 !dbg !12 {
+define linkonce_odr i32 @_ZN1S3fooEv(ptr %this) nounwind ssp align 2 !dbg !12 {
 entry:
-  %this_addr = alloca %struct.S*                  ; <%struct.S**> [#uses=1]
-  %retval = alloca i32                            ; <i32*> [#uses=1]
+  %this_addr = alloca ptr                  ; <ptr> [#uses=1]
+  %retval = alloca i32                            ; <ptr> [#uses=1]
   %"alloca point" = bitcast i32 0 to i32          ; <i32> [#uses=0]
-  call void @llvm.dbg.declare(metadata %struct.S** %this_addr, metadata !18, metadata !DIExpression(DW_OP_deref)), !dbg !21
-  store %struct.S* %this, %struct.S** %this_addr
+  call void @llvm.dbg.declare(metadata ptr %this_addr, metadata !18, metadata !DIExpression(DW_OP_deref)), !dbg !21
+  store ptr %this, ptr %this_addr
   br label %return, !dbg !21
 
 return:                                           ; preds = %entry
-  %retval1 = load i32, i32* %retval, !dbg !21          ; <i32> [#uses=1]
+  %retval1 = load i32, ptr %retval, !dbg !21          ; <i32> [#uses=1]
   ret i32 %retval1, !dbg !22
 }
 

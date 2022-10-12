@@ -5,7 +5,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 define void @foo() {
 entry:
-  call void @llvm.dbg.declare(metadata i32* undef, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
+  call void @llvm.dbg.declare(metadata ptr undef, metadata !0, metadata !DIExpression()), !dbg !DILocation(scope: !1)
   ret void
 }
 

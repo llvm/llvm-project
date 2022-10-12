@@ -1,7 +1,7 @@
 ; RUN: opt -instcombine -S -o - < %s | FileCheck %s
 
-; CHECK-LABEL: %4 = load i32, i32* %i1_311
-; CHECK: call void @llvm.dbg.value(metadata i32 %4
+; CHECK-LABEL: %3 = load i32, ptr %i1_311
+; CHECK: call void @llvm.dbg.value(metadata i32 %3
 ; Next instruction should not be duplicate dbg.value intrinsic.
 ; CHECK-NEXT: @f90io_sc_i_ldw
 
@@ -43,14 +43,14 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @MAIN_() local_unnamed_addr !dbg !2 {
 L.entry:
-  call void (i8*, ...) bitcast (void (...)* @fort_init to void (i8*, ...)*)(i8* bitcast (i32* @.C283_MAIN_ to i8*)), !dbg !16
+  call void (ptr, ...) @fort_init(ptr @.C283_MAIN_), !dbg !16
   %0 = call fastcc i32 @main_mfun(), !dbg !18
-  store i32 %0, i32* bitcast (%struct.BSS1* @.BSS1 to i32*), align 32, !dbg !18
-  call void (i8*, i8*, i64, ...) bitcast (void (...)* @f90io_src_info03a to void (i8*, i8*, i64, ...)*)(i8* bitcast (i32* @.C302_MAIN_ to i8*), i8* getelementptr inbounds ([22 x i8], [22 x i8]* @.C300_MAIN_, i64 0, i64 0), i64 22), !dbg !23
-  %1 = call i32 (i8*, i8*, i8*, i8*, ...) bitcast (i32 (...)* @f90io_print_init to i32 (i8*, i8*, i8*, i8*, ...)*)(i8* bitcast (i32* @.C303_MAIN_ to i8*), i8* null, i8* bitcast (i32* @.C283_MAIN_ to i8*), i8* bitcast (i32* @.C283_MAIN_ to i8*)), !dbg !23
+  store i32 %0, ptr @.BSS1, align 32, !dbg !18
+  call void (ptr, ptr, i64, ...) @f90io_src_info03a(ptr @.C302_MAIN_, ptr @.C300_MAIN_, i64 22), !dbg !23
+  %1 = call i32 (ptr, ptr, ptr, ptr, ...) @f90io_print_init(ptr @.C303_MAIN_, ptr null, ptr @.C283_MAIN_, ptr @.C283_MAIN_), !dbg !23
   call void @llvm.dbg.value(metadata i32 %1, metadata !24, metadata !DIExpression()), !dbg !25
-  %2 = load i32, i32* bitcast (%struct.BSS1* @.BSS1 to i32*), align 32, !dbg !23
-  %3 = call i32 (i32, i32, ...) bitcast (i32 (...)* @f90io_sc_i_ldw to i32 (i32, i32, ...)*)(i32 %2, i32 25), !dbg !23
+  %2 = load i32, ptr @.BSS1, align 32, !dbg !23
+  %3 = call i32 (i32, i32, ...) @f90io_sc_i_ldw(i32 %2, i32 25), !dbg !23
   call void @llvm.dbg.value(metadata i32 %3, metadata !24, metadata !DIExpression()), !dbg !25
   %4 = call i32 (...) @f90io_ldw_end(), !dbg !23
   call void @llvm.dbg.value(metadata i32 %4, metadata !24, metadata !DIExpression()), !dbg !25
@@ -60,32 +60,30 @@ L.entry:
 define internal fastcc signext i32 @main_mfun() unnamed_addr !dbg !27 {
 L.entry:
   %i1_311 = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i64* undef, metadata !31, metadata !DIExpression()), !dbg !33
-  call void @llvm.dbg.declare(metadata i32* %i1_311, metadata !35, metadata !DIExpression()), !dbg !33
-  store i32 5, i32* %i1_311, align 4, !dbg !36
-  %0 = bitcast i32* %i1_311 to i64*, !dbg !41
-  %1 = call fastcc float @main_fun(i64* %0), !dbg !41
-  %2 = fptosi float %1 to i32, !dbg !41
-  call void (i8*, i8*, i64, ...) bitcast (void (...)* @f90io_src_info03a to void (i8*, i8*, i64, ...)*)(i8* bitcast (i32* @.C313_main_mfun to i8*), i8* getelementptr inbounds ([22 x i8], [22 x i8]* @.C300_main_mfun, i32 0, i32 0), i64 22), !dbg !42
-  %3 = call i32 (i8*, i8*, i8*, i8*, ...) bitcast (i32 (...)* @f90io_print_init to i32 (i8*, i8*, i8*, i8*, ...)*)(i8* bitcast (i32* @.C302_main_mfun to i8*), i8* null, i8* bitcast (i32* @.C283_main_mfun to i8*), i8* bitcast (i32* @.C283_main_mfun to i8*)), !dbg !42
-  call void @llvm.dbg.value(metadata i32 %3, metadata !43, metadata !DIExpression()), !dbg !33
-  %4 = load i32, i32* %i1_311, align 4, !dbg !42
-  call void @llvm.dbg.value(metadata i32 %4, metadata !35, metadata !DIExpression()), !dbg !33
-  %5 = call i32 (i32, i32, ...) bitcast (i32 (...)* @f90io_sc_i_ldw to i32 (i32, i32, ...)*)(i32 %4, i32 25), !dbg !42
+  call void @llvm.dbg.declare(metadata ptr undef, metadata !31, metadata !DIExpression()), !dbg !33
+  call void @llvm.dbg.declare(metadata ptr %i1_311, metadata !35, metadata !DIExpression()), !dbg !33
+  store i32 5, ptr %i1_311, align 4, !dbg !36
+  %0 = call fastcc float @main_fun(ptr %i1_311), !dbg !41
+  %1 = fptosi float %0 to i32, !dbg !41
+  call void (ptr, ptr, i64, ...) @f90io_src_info03a(ptr @.C313_main_mfun, ptr @.C300_main_mfun, i64 22), !dbg !42
+  %2 = call i32 (ptr, ptr, ptr, ptr, ...) @f90io_print_init(ptr @.C302_main_mfun, ptr null, ptr @.C283_main_mfun, ptr @.C283_main_mfun), !dbg !42
+  call void @llvm.dbg.value(metadata i32 %2, metadata !43, metadata !DIExpression()), !dbg !33
+  %3 = load i32, ptr %i1_311, align 4, !dbg !42
+  call void @llvm.dbg.value(metadata i32 %3, metadata !35, metadata !DIExpression()), !dbg !33
+  %4 = call i32 (i32, i32, ...) @f90io_sc_i_ldw(i32 %3, i32 25), !dbg !42
+  call void @llvm.dbg.value(metadata i32 %4, metadata !43, metadata !DIExpression()), !dbg !33
+  %5 = call i32 (...) @f90io_ldw_end(), !dbg !42
   call void @llvm.dbg.value(metadata i32 %5, metadata !43, metadata !DIExpression()), !dbg !33
-  %6 = call i32 (...) @f90io_ldw_end(), !dbg !42
-  call void @llvm.dbg.value(metadata i32 %6, metadata !43, metadata !DIExpression()), !dbg !33
-  ret i32 %2, !dbg !44
+  ret i32 %1, !dbg !44
 }
 
-define internal fastcc float @main_fun(i64* noalias %a) unnamed_addr !dbg !45 {
+define internal fastcc float @main_fun(ptr noalias %a) unnamed_addr !dbg !45 {
 L.entry:
-  call void @llvm.dbg.declare(metadata i64* %a, metadata !50, metadata !DIExpression()), !dbg !51
-  call void @llvm.dbg.declare(metadata i64* undef, metadata !53, metadata !DIExpression()), !dbg !51
-  %0 = bitcast i64* %a to i32*, !dbg !54
-  %1 = load i32, i32* %0, align 4, !dbg !54
-  %2 = sitofp i32 %1 to float, !dbg !54
-  ret float %2, !dbg !59
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !50, metadata !DIExpression()), !dbg !51
+  call void @llvm.dbg.declare(metadata ptr undef, metadata !53, metadata !DIExpression()), !dbg !51
+  %0 = load i32, ptr %a, align 4, !dbg !54
+  %1 = sitofp i32 %0 to float, !dbg !54
+  ret float %1, !dbg !59
 }
 
 declare signext i32 @f90io_ldw_end(...) local_unnamed_addr
