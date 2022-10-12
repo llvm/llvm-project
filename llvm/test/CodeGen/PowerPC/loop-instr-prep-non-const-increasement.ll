@@ -14,7 +14,7 @@
 ;   return sum;
 ; }
 
-define i64 @foo(i8* %p, i32 signext %n, i32 signext %count) {
+define i64 @foo(ptr %p, i32 signext %n, i32 signext %count) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpwi r4, 0
@@ -56,15 +56,13 @@ for.body:                                         ; preds = %for.body.preheader,
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %i.019 = phi i32 [ 0, %for.body.preheader ], [ %inc, %for.body ]
   %sum.018 = phi i64 [ 0, %for.body.preheader ], [ %add5, %for.body ]
-  %add.ptr = getelementptr inbounds i8, i8* %p, i64 %indvars.iv
-  %add.ptr1 = getelementptr inbounds i8, i8* %add.ptr, i64 5
-  %1 = bitcast i8* %add.ptr1 to i64*
-  %2 = load i64, i64* %1, align 8
-  %add = add i64 %2, %sum.018
-  %add.ptr4 = getelementptr inbounds i8, i8* %add.ptr, i64 9
-  %3 = bitcast i8* %add.ptr4 to i64*
-  %4 = load i64, i64* %3, align 8
-  %add5 = add i64 %add, %4
+  %add.ptr = getelementptr inbounds i8, ptr %p, i64 %indvars.iv
+  %add.ptr1 = getelementptr inbounds i8, ptr %add.ptr, i64 5
+  %1 = load i64, ptr %add.ptr1, align 8
+  %add = add i64 %1, %sum.018
+  %add.ptr4 = getelementptr inbounds i8, ptr %add.ptr, i64 9
+  %2 = load i64, ptr %add.ptr4, align 8
+  %add5 = add i64 %add, %2
   %indvars.iv.next = add nsw i64 %indvars.iv, %0
   %inc = add nuw nsw i32 %i.019, 1
   %exitcond.not = icmp eq i32 %inc, %n
@@ -81,7 +79,7 @@ for.body:                                         ; preds = %for.body.preheader,
 ;   return sum;
 ; }
 
-define zeroext i8 @foo1(i8* %p, i32 signext %n, i32 signext %count) {
+define zeroext i8 @foo1(ptr %p, i32 signext %n, i32 signext %count) {
 ; CHECK-LABEL: foo1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpwi r4, 0
@@ -112,7 +110,7 @@ entry:
 
 for.body.preheader:                               ; preds = %entry
   %0 = sext i32 %count to i64
-  %add.ptr = getelementptr inbounds i8, i8* %p, i64 1000
+  %add.ptr = getelementptr inbounds i8, ptr %p, i64 1000
   br label %for.body
 
 for.cond.cleanup:                                 ; preds = %for.body, %entry
@@ -123,8 +121,8 @@ for.body:                                         ; preds = %for.body.preheader,
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
   %i.013 = phi i32 [ 0, %for.body.preheader ], [ %inc, %for.body ]
   %sum.012 = phi i8 [ 0, %for.body.preheader ], [ %add, %for.body ]
-  %add.ptr1 = getelementptr inbounds i8, i8* %add.ptr, i64 %indvars.iv
-  %1 = load i8, i8* %add.ptr1, align 1
+  %add.ptr1 = getelementptr inbounds i8, ptr %add.ptr, i64 %indvars.iv
+  %1 = load i8, ptr %add.ptr1, align 1
   %add = add i8 %1, %sum.012
   %indvars.iv.next = add nsw i64 %indvars.iv, %0
   %inc = add nuw nsw i32 %i.013, 1

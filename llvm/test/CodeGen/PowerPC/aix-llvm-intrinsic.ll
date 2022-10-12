@@ -20,14 +20,14 @@
 
 define void @bar() {
 entry:
-  %0 = load i32, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 1), align 4
+  %0 = load i32, ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 1), align 4
   %1 = trunc i32 %0 to i8
-  %2 = load i32, i32* getelementptr inbounds (%struct.S, %struct.S* @s, i32 0, i32 1), align 4
-  call void @llvm.memset.p0i8.i32(i8* align 4 bitcast (%struct.S* @s to i8*), i8 %1, i32 %2, i1 false)
+  %2 = load i32, ptr getelementptr inbounds (%struct.S, ptr @s, i32 0, i32 1), align 4
+  call void @llvm.memset.p0.i32(ptr align 4 @s, i8 %1, i32 %2, i1 false)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg)
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
 
 ; CHECK-LABEL: .bar:
 ; CHECK-NEXT: # %bb.0:                                # %entry

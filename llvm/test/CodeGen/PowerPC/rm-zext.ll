@@ -43,9 +43,9 @@ entry:
 declare i32 @llvm.bswap.i32(i32) #0
 
 ; Function Attrs: nounwind readonly
-define zeroext i32 @bs32(i32* nocapture readonly %x) #1 {
+define zeroext i32 @bs32(ptr nocapture readonly %x) #1 {
 entry:
-  %0 = load i32, i32* %x, align 4
+  %0 = load i32, ptr %x, align 4
   %1 = tail call i32 @llvm.bswap.i32(i32 %0)
   ret i32 %1
 
@@ -55,9 +55,9 @@ entry:
 }
 
 ; Function Attrs: nounwind readonly
-define zeroext i16 @bs16(i16* nocapture readonly %x) #1 {
+define zeroext i16 @bs16(ptr nocapture readonly %x) #1 {
 entry:
-  %0 = load i16, i16* %x, align 2
+  %0 = load i16, ptr %x, align 2
   %1 = tail call i16 @llvm.bswap.i16(i16 %0)
   ret i16 %1
 

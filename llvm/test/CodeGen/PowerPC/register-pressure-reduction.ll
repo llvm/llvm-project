@@ -130,6 +130,6 @@ define float @foo_float_reuse_const(float %0, float %1, float %2, float %3) {
   %7 = fmul contract reassoc nsz float %6, 0x3DB2533FE0000000
   %8 = fadd contract reassoc nsz float %7, %5
   %9 = fmul contract reassoc nsz float %1, 0xBDB2533FE0000000
-  store float %9, float* @global_val, align 4
+  store float %9, ptr @global_val, align 4
   ret float %8
 }

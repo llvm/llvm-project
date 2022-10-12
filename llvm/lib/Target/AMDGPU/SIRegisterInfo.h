@@ -403,6 +403,12 @@ public:
   /// of the subtarget.
   ArrayRef<MCPhysReg> getAllSGPR32(const MachineFunction &MF) const;
 
+  bool buildLdsSpillLoadStore(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MI,
+                              const DebugLoc &DL, bool IsLoad, int Index,
+                              Register ValueReg, bool ValueIsKill,
+                              int64_t InstrOffset,
+                              MachineMemOperand *MMO) const;
   // Insert spill or restore instructions.
   // When lowering spill pseudos, the RegScavenger should be set.
   // For creating spill instructions during frame lowering, where no scavenger

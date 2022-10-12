@@ -3,7 +3,7 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- | not grep ori
 
 define float @test() {
-        %tmp.i = load float, float* inttoptr (i32 186018016 to float*)         ; <float> [#uses=1]
+        %tmp.i = load float, ptr inttoptr (i32 186018016 to ptr)         ; <float> [#uses=1]
         ret float %tmp.i
 }
 

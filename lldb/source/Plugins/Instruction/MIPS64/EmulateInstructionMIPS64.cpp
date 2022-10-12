@@ -1160,12 +1160,11 @@ bool EmulateInstructionMIPS64::Emulate_SD(llvm::MCInst &insn) {
     uint8_t buffer[RegisterValue::kMaxRegisterByteSize];
     Status error;
 
-    if (!ReadRegister(&(*reg_info_base), data_src))
+    if (!ReadRegister(*reg_info_base, data_src))
       return false;
 
-    if (data_src.GetAsMemoryData(&(*reg_info_src), buffer,
-                                 reg_info_src->byte_size, eByteOrderLittle,
-                                 error) == 0)
+    if (data_src.GetAsMemoryData(*reg_info_src, buffer, reg_info_src->byte_size,
+                                 eByteOrderLittle, error) == 0)
       return false;
 
     if (!WriteMemory(context, address, buffer, reg_info_src->byte_size))
@@ -1217,7 +1216,7 @@ bool EmulateInstructionMIPS64::Emulate_LD(llvm::MCInst &insn) {
     Context context;
     context.type = eContextRegisterLoad;
 
-    return WriteRegister(context, &(*reg_info_src), data_src);
+    return WriteRegister(context, *reg_info_src, data_src);
   }
 
   return false;

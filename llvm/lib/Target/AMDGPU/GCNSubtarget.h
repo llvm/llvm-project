@@ -1089,6 +1089,8 @@ public:
   // hasGFX90AInsts is also true.
   bool hasGFX940Insts() const { return GFX940Insts; }
 
+  bool hasDSAddTid() const { return getGeneration() >= GFX9; }
+
   /// Return the maximum number of waves per SIMD for kernels using \p SGPRs
   /// SGPRs
   unsigned getOccupancyWithNumSGPRs(unsigned SGPRs) const;
@@ -1252,6 +1254,11 @@ public:
   /// subtarget's specifications, or does not meet number of waves per execution
   /// unit requirement.
   unsigned getMaxNumVGPRs(const MachineFunction &MF) const;
+
+  /// \returns Maximum amount of LDS space to be used for spilling explicitly
+  /// requested using "amdgpu-lds-spill-limit-dwords attribute attached to
+  /// function \p F.
+  unsigned getLdsSpillLimitDwords(const MachineFunction &MF) const;
 
   void getPostRAMutations(
       std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations)

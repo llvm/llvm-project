@@ -1,58 +1,58 @@
 ; RUN: llc -mtriple=ppc64le -relocation-model=pic < %s | FileCheck %s
 
 @default = global i32 55
-define dso_local i32* @get_default_global() {
+define dso_local ptr @get_default_global() {
 ; CHECK-LABEL: get_default_global:
 ; CHECK:         addis 3, 2, .LC{{.*}}@toc@ha
 ; CHECK-NEXT:    ld 3, .LC{{.*}}@toc@l(3)
 ; CHECK-NEXT:    blr
-  ret i32* @default
+  ret ptr @default
 }
 
 @local_global = dso_local global i32 55
-define dso_local i32* @get_local_global() {
+define dso_local ptr @get_local_global() {
 ; CHECK-LABEL: get_local_global:
 ; CHECK:         addis 3, 2, local_global@toc@ha
 ; CHECK-NEXT:    addi 3, 3, local_global@toc@l
 ; CHECK-NEXT:    blr
-  ret i32* @local_global
+  ret ptr @local_global
 }
 
 @preemptable_global = dso_preemptable global i32 42
-define dso_local i32* @get_preemptable_global() {
+define dso_local ptr @get_preemptable_global() {
 ; CHECK-LABEL: get_preemptable_global:
 ; CHECK:         addis 3, 2, .LC{{.*}}@toc@ha
 ; CHECK-NEXT:    ld 3, .LC{{.*}}@toc@l(3)
 ; CHECK-NEXT:    blr
-  ret i32* @preemptable_global
+  ret ptr @preemptable_global
 }
 
 
 @external_default_global = external global i32
-define dso_local i32* @get_external_default_global() {
+define dso_local ptr @get_external_default_global() {
 ; CHECK-LABEL: get_external_default_global:
 ; CHECK:         addis 3, 2, .LC{{.*}}@toc@ha
 ; CHECK-NEXT:    ld 3, .LC{{.*}}@toc@l(3)
 ; CHECK-NEXT:    blr
-  ret i32* @external_default_global
+  ret ptr @external_default_global
 }
 
 @external_local_global = external dso_local global i32
-define dso_local i32* @get_external_local_global() {
+define dso_local ptr @get_external_local_global() {
 ; CHECK-LABEL: get_external_local_global:
 ; CHECK:       addis 3, 2, external_local_global@toc@ha
 ; CHECK:       addi 3, 3, external_local_global@toc@l
 ; CHECK:       blr
-  ret i32* @external_local_global
+  ret ptr @external_local_global
 }
 
 @external_preemptable_global = external dso_preemptable global i32
-define dso_local i32* @get_external_preemptable_global() {
+define dso_local ptr @get_external_preemptable_global() {
 ; CHECK-LABEL: get_external_preemptable_global:
 ; CHECK:         addis 3, 2, .LC{{.*}}@toc@ha
 ; CHECK-NEXT:    ld 3, .LC{{.*}}@toc@l(3)
 ; CHECK-NEXT:    blr
-  ret i32* @external_preemptable_global
+  ret ptr @external_preemptable_global
 }
 
 

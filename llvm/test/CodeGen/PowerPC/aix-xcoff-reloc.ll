@@ -17,14 +17,14 @@
 @globalA = global i32 1, align 4
 @globalB = global i32 2, align 4
 @arr = global <{ i32, [9 x i32] }> <{ i32 3, [9 x i32] zeroinitializer }>, align 4
-@p = global i32* bitcast (i8* getelementptr (i8, i8* bitcast (<{ i32, [9 x i32] }>* @arr to i8*), i64 16) to i32*), align 4
+@p = global ptr getelementptr (i8, ptr @arr, i64 16), align 4
 
 define i32 @foo() {
 entry:
   %call = call i32 @bar(i32 1)
-  %0 = load i32, i32* @globalA, align 4
+  %0 = load i32, ptr @globalA, align 4
   %add = add nsw i32 %call, %0
-  %1 = load i32, i32* @globalB, align 4
+  %1 = load i32, ptr @globalB, align 4
   %add1 = add nsw i32 %add, %1
   ret i32 %add1
 }

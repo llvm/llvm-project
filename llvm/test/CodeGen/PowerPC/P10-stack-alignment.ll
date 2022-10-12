@@ -76,14 +76,12 @@ define dso_local signext i32 @test_32byte_vector() nounwind {
 ; CHECK-BE-NEXT:    blr
 entry:
   %a = alloca <8 x i32>, align 32
-  %0 = bitcast <8 x i32>* %a to i8*
-  call void @llvm.lifetime.start.p0i8(i64 32, i8* %0)
-  store <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>, <8 x i32>* %a, align 32
-  call void @test(<8 x i32>* %a)
-  %1 = load <8 x i32>, <8 x i32>* %a, align 32
-  %vecext = extractelement <8 x i32> %1, i32 0
-  %2 = bitcast <8 x i32>* %a to i8*
-  call void @llvm.lifetime.end.p0i8(i64 32, i8* %2)
+  call void @llvm.lifetime.start.p0(i64 32, ptr %a)
+  store <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8>, ptr %a, align 32
+  call void @test(ptr %a)
+  %0 = load <8 x i32>, ptr %a, align 32
+  %vecext = extractelement <8 x i32> %0, i32 0
+  call void @llvm.lifetime.end.p0(i64 32, ptr %a)
   ret i32 %vecext
 }
 
@@ -139,14 +137,12 @@ define dso_local signext i32 @test_32byte_aligned_vector() nounwind {
 ; CHECK-BE-NEXT:    blr
 entry:
   %a = alloca <4 x i32>, align 32
-  %0 = bitcast <4 x i32>* %a to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* %0)
-  store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32>* %a, align 32
-  call void @test1(<4 x i32>* %a)
-  %1 = load <4 x i32>, <4 x i32>* %a, align 32
-  %vecext = extractelement <4 x i32> %1, i32 0
-  %2 = bitcast <4 x i32>* %a to i8*
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* %2)
+  call void @llvm.lifetime.start.p0(i64 16, ptr %a)
+  store <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr %a, align 32
+  call void @test1(ptr %a)
+  %0 = load <4 x i32>, ptr %a, align 32
+  %vecext = extractelement <4 x i32> %0, i32 0
+  call void @llvm.lifetime.end.p0(i64 16, ptr %a)
   ret i32 %vecext
 }
 
@@ -157,7 +153,7 @@ define dso_local void @test_Array() nounwind {
 ; CHECK-OPT-LABEL: @test_Array(
 ; CHECK-OPT-NEXT: entry:
 ; CHECK-OPT-NEXT: %Arr2 = alloca [64 x i16], align 2
-; CHECK-OPT: store <16 x i16> [[TMP0:%.*]], <16 x i16>* [[TMP0:%.*]], align 2
+; CHECK-OPT: store <16 x i16> [[TMP0:%.*]], ptr [[TMP0:%.*]], align 2
 ; CHECK-LE-LABEL: test_Array:
 ; CHECK-LE:       # %bb.0: # %entry
 ; CHECK-LE-NEXT:    mflr r0
@@ -224,53 +220,48 @@ define dso_local void @test_Array() nounwind {
 entry:
   %Arr2 = alloca [64 x i16], align 2
   %i = alloca i32, align 4
-  %0 = bitcast [64 x i16]* %Arr2 to i8*
-  call void @llvm.lifetime.start.p0i8(i64 128, i8* %0)
-  %1 = bitcast i32* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %1)
-  store i32 0, i32* %i, align 4
+  call void @llvm.lifetime.start.p0(i64 128, ptr %Arr2)
+  call void @llvm.lifetime.start.p0(i64 4, ptr %i)
+  store i32 0, ptr %i, align 4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %2 = load i32, i32* %i, align 4
-  %cmp = icmp slt i32 %2, 64
+  %0 = load i32, ptr %i, align 4
+  %cmp = icmp slt i32 %0, 64
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  %3 = bitcast i32* %i to i8*
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %3)
+  call void @llvm.lifetime.end.p0(i64 4, ptr %i)
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %4 = load i32, i32* %i, align 4
-  %idxprom = sext i32 %4 to i64
-  %arrayidx = getelementptr inbounds [64 x i8], [64 x i8]* @Arr1, i64 0, i64 %idxprom
-  %5 = load i8, i8* %arrayidx, align 1
-  %conv = zext i8 %5 to i16
-  %6 = load i32, i32* %i, align 4
-  %idxprom1 = sext i32 %6 to i64
-  %arrayidx2 = getelementptr inbounds [64 x i16], [64 x i16]* %Arr2, i64 0, i64 %idxprom1
-  store i16 %conv, i16* %arrayidx2, align 2
+  %1 = load i32, ptr %i, align 4
+  %idxprom = sext i32 %1 to i64
+  %arrayidx = getelementptr inbounds [64 x i8], ptr @Arr1, i64 0, i64 %idxprom
+  %2 = load i8, ptr %arrayidx, align 1
+  %conv = zext i8 %2 to i16
+  %3 = load i32, ptr %i, align 4
+  %idxprom1 = sext i32 %3 to i64
+  %arrayidx2 = getelementptr inbounds [64 x i16], ptr %Arr2, i64 0, i64 %idxprom1
+  store i16 %conv, ptr %arrayidx2, align 2
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
-  %7 = load i32, i32* %i, align 4
-  %inc = add nsw i32 %7, 1
-  store i32 %inc, i32* %i, align 4
+  %4 = load i32, ptr %i, align 4
+  %inc = add nsw i32 %4, 1
+  store i32 %inc, ptr %i, align 4
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond.cleanup
-  %arraydecay = getelementptr inbounds [64 x i16], [64 x i16]* %Arr2, i64 0, i64 0
-  call void @test_arr(i16* %arraydecay)
-  %8 = bitcast [64 x i16]* %Arr2 to i8*
-  call void @llvm.lifetime.end.p0i8(i64 128, i8* %8)
+  call void @test_arr(ptr %Arr2)
+  call void @llvm.lifetime.end.p0(i64 128, ptr %Arr2)
   ret void
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) nounwind
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) nounwind
 
-declare void @test(<8 x i32>*) nounwind
-declare void @test1(<4 x i32>*) nounwind
-declare void @test_arr(i16*)
+declare void @test(ptr) nounwind
+declare void @test1(ptr) nounwind
+declare void @test_arr(ptr)
 
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) nounwind
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) nounwind

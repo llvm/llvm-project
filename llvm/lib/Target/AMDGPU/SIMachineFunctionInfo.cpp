@@ -735,3 +735,18 @@ bool SIMachineFunctionInfo::usesAGPRs(const MachineFunction &MF) const {
   UsesAGPRs = false;
   return false;
 }
+
+bool SIMachineFunctionInfo::ldsSpillingEnabled(
+    const MachineFunction &MF) const {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  if (!ST.hasDSAddTid())
+    return false;
+
+  if (MF.getFrameInfo().hasCalls())
+    return false;
+
+  if (ST.getLdsSpillLimitDwords(MF) == 0)
+    return false;
+
+  return true;
+}

@@ -29,14 +29,16 @@
 #include "test_macros.h"
 #include "format_tests.h"
 #include "string_literal.h"
+#include "test_format_string.h"
 
-auto test = []<string_literal fmt, class CharT, class... Args>(std::basic_string_view<CharT> expected,
-                                                               const Args&... args) constexpr {
-  size_t size = std::formatted_size(std::locale(), fmt.template sv<CharT>(), args...);
-  assert(size == expected.size());
-};
+auto test =
+    []<class CharT, class... Args>(
+        std::basic_string_view<CharT> expected, test_format_string<CharT, Args...> fmt, Args&&... args) constexpr {
+      size_t size = std::formatted_size(std::locale(), fmt, std::forward<Args>(args)...);
+      assert(size == expected.size());
+    };
 
-auto test_exception = []<class CharT, class... Args>(std::string_view, std::basic_string_view<CharT>, const Args&...) {
+auto test_exception = []<class CharT, class... Args>(std::string_view, std::basic_string_view<CharT>, Args&&...) {
   // After P2216 most exceptions thrown by std::formatted_siz3 become ill-formed.
   // Therefore this tests does nothing.
   // A basic ill-formed test is done in formatted_size.locale.verify.cpp

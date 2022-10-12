@@ -400,6 +400,157 @@ static unsigned getScratchScaleFactor(const GCNSubtarget &ST) {
   return ST.enableFlatScratch() ? 1 : ST.getWavefrontSize();
 }
 
+// Determine which stack objects should be spilled to LDS, set up
+// SIMachineFunctionInfo::LdsSpill structure and initialize
+// m0 for LDS spilling if possible.
+void SIFrameLowering::setupLDSSpilling(MachineFunction &MF,
+                                       MachineBasicBlock &MBB,
+                                       MachineBasicBlock::iterator I,
+                                       const DebugLoc &DL) const {
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo *TRI = &TII->getRegisterInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const Function &F = MF.getFunction();
+  MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+  unsigned WorkGroupSize = ST.getFlatWorkGroupSizes(F).second;
+
+  assert(MFI->isEntryFunction());
+
+  int LDSSpillLimitInBytes = ST.getLdsSpillLimitDwords(MF) * 4;
+  LDSSpillLimitInBytes =
+      std::max(0, LDSSpillLimitInBytes - (int)MFI->getLDSSize());
+
+  // Go through the stack slots starting from the end and assign them to LDS
+  // as long as they fit in the remaining size.
+  SmallVector<int> LdsOffsets(FrameInfo.getObjectIndexEnd(), -1);
+  bool AllStackSlotsHandled = true;
+  int TotalSize = 0;
+  int RemainingSize = LDSSpillLimitInBytes;
+  for (int i = FrameInfo.getObjectIndexEnd() - 1; i >= 0; --i) {
+    if (FrameInfo.isDeadObjectIndex(i)) {
+      continue;
+    }
+    if (FrameInfo.isObjectPreAllocated(i)) {
+      AllStackSlotsHandled = false;
+      break;
+    }
+    int ObjSize = FrameInfo.getObjectSize(i);
+    assert(ObjSize > 0);
+    int ObjSizeForAllThreads = ObjSize * WorkGroupSize;
+
+    if (ObjSizeForAllThreads <= RemainingSize) {
+      RemainingSize -= ObjSizeForAllThreads;
+      LdsOffsets[i] = TotalSize;
+
+      TotalSize += ObjSize;
+    } else {
+      AllStackSlotsHandled = false;
+      break;
+    }
+  }
+
+  // No stack slots will use LDS - exit early.
+  if (TotalSize == 0)
+    return;
+
+  // Register to use for m0 save/restore for each spill, or NoRegister if the
+  // save/restore is not needed, and the initialization takes place here once.
+  Register M0SaveRestoreReg;
+  if (MRI.isPhysRegUsed(AMDGPU::M0)) {
+    if (requiresStackPointerReference(MF)) {
+      unsigned NumPreloaded = MFI->getNumPreloadedSGPRs();
+      ArrayRef<MCPhysReg> AllSGPRs = TRI->getAllSGPR32(MF);
+      AllSGPRs = AllSGPRs.slice(
+          std::min(static_cast<unsigned>(AllSGPRs.size()), NumPreloaded));
+      for (MCPhysReg Reg : AllSGPRs) {
+        if (!MRI.isPhysRegUsed(Reg) && MRI.isAllocatable(Reg)) {
+          M0SaveRestoreReg = Reg;
+          break;
+        }
+      }
+    } else {
+      assert(!requiresStackPointerReference(MF));
+      M0SaveRestoreReg = MFI->getStackPtrOffsetReg();
+    }
+    // Could not find a free SGPR for M0 init so exit early.
+    if (M0SaveRestoreReg == AMDGPU::NoRegister)
+      return;
+  }
+
+  Register M0InitVal;
+  // The addtid addressing is as follows:
+  // LDS_Addr = LDS_BASE + {Inst_offset1, Inst_offset0} + TID(0..63)*4 + M0
+  // If the workgroup size is not larger than the wave size we can safely init
+  // m0 with 0. Otherwise, we need to make sure that the lds addresses do not
+  // override data for other slots so we initialize m0 to
+  // current_wave_id_in_group * wave size.
+  if (WorkGroupSize > ST.getWavefrontSize()) {
+    Register PreloadedWorkgroupInfoReg = MFI->getWorkgroupInfoReg();
+    if (!PreloadedWorkgroupInfoReg) {
+      // This should never happen, but it depends on how front-end sets up
+      // input sgprs, so it is safer to make it an early out rather than assert.
+      return;
+    }
+
+    if (!MRI.isPhysRegUsed(PreloadedWorkgroupInfoReg)) {
+      M0InitVal = PreloadedWorkgroupInfoReg;
+    } else {
+
+      unsigned NumPreloaded = MFI->getNumPreloadedSGPRs();
+      ArrayRef<MCPhysReg> AllSGPRs = TRI->getAllSGPR32(MF);
+      AllSGPRs = AllSGPRs.slice(
+          std::min(static_cast<unsigned>(AllSGPRs.size()), NumPreloaded));
+      for (MCPhysReg Reg : AllSGPRs) {
+        if (!MRI.isPhysRegUsed(Reg) && MRI.isAllocatable(Reg)) {
+          M0InitVal = Reg;
+          break;
+        }
+      }
+    }
+
+    // Could not find a free SGPR for M0 init so exit early.
+    // FIXME: We could also check some of the preloads to see if one of them
+    // could be re-used.
+    if (M0InitVal == AMDGPU::NoRegister)
+      return;
+
+    // Load ordered_append_term to get the current wave id in a group.
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_BFE_U32), M0InitVal)
+        .addReg(PreloadedWorkgroupInfoReg)
+        .addImm(0xc0006);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MUL_I32), M0InitVal)
+        .addReg(M0InitVal)
+        .addImm(ST.getWavefrontSize() * 4);
+  }
+
+  // If save/restore is not needed we can init m0 here and be done with it.
+  if (M0SaveRestoreReg == AMDGPU::NoRegister) {
+    if (M0InitVal == AMDGPU::NoRegister)
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0).addImm(0);
+    else
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+          .addReg(M0InitVal);
+  }
+
+  SIMachineFunctionInfo::LdsSpill LdsSpillInfo;
+  LdsSpillInfo.M0InitVal = M0InitVal;
+  LdsSpillInfo.M0SaveRestoreReg = M0SaveRestoreReg;
+  LdsSpillInfo.LdsOffsets = LdsOffsets;
+  LdsSpillInfo.TotalSize = TotalSize;
+  MFI->setLdsSpill(LdsSpillInfo);
+
+  // Earlier we set ScavengeFI based on the fact that there were stack accesses.
+  // In the event no slots will use stack, we can safely remove it.
+  if (AllStackSlotsHandled) {
+    int ScavengeFI = MFI->getScavengeFI(FrameInfo, *TRI);
+    FrameInfo.setStackSize(FrameInfo.getStackSize() -
+                           FrameInfo.getObjectSize(ScavengeFI));
+    FrameInfo.RemoveStackObject(ScavengeFI);
+  }
+}
+
 void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
                                                 MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
@@ -424,6 +575,14 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   MachineFrameInfo &FrameInfo = MF.getFrameInfo();
 
   assert(MFI->isEntryFunction());
+
+  // Debug location must be unknown since the first debug location is used to
+  // determine the end of the prologue.
+  DebugLoc DL;
+  MachineBasicBlock::iterator I = MBB.begin();
+
+  if (FrameInfo.getStackSize() > 0 && MFI->ldsSpillingEnabled(MF))
+    setupLDSSpilling(MF, MBB, I, DL);
 
   Register PreloadedScratchWaveOffsetReg = MFI->getPreloadedReg(
       AMDGPUFunctionArgInfo::PRIVATE_SEGMENT_WAVE_BYTE_OFFSET);
@@ -460,11 +619,6 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
       MBB.addLiveIn(PreloadedScratchRsrcReg);
     }
   }
-
-  // Debug location must be unknown since the first debug location is used to
-  // determine the end of the prologue.
-  DebugLoc DL;
-  MachineBasicBlock::iterator I = MBB.begin();
 
   // We found the SRSRC first because it needs four registers and has an
   // alignment requirement. If the SRSRC that we found is clobbering with

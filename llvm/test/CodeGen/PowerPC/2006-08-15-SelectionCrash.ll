@@ -6,7 +6,7 @@
 
 define fastcc void @immed_double_const(i32 %i0, i32 %i1) {
 entry:
-	%tmp1 = load i32, i32* null		; <i32> [#uses=1]
+	%tmp1 = load i32, ptr null		; <i32> [#uses=1]
 	switch i32 %tmp1, label %bb103 [
 		 i32 1, label %bb
 		 i32 3, label %bb

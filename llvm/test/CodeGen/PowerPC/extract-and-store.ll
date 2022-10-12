@@ -11,7 +11,7 @@
 ; RUN:   -ppc-asm-full-reg-names -verify-machineinstrs -O2 < %s | FileCheck %s \
 ; RUN:   --check-prefix=CHECK-P9-BE
 
-define <2 x i64> @testllv(<2 x i64> returned %a, <2 x i64> %b, i64* nocapture %ap, i64 %Idx) local_unnamed_addr #0 {
+define <2 x i64> @testllv(<2 x i64> returned %a, <2 x i64> %b, ptr nocapture %ap, i64 %Idx) local_unnamed_addr #0 {
 ; CHECK-LABEL: testllv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxswapd vs0, vs34
@@ -39,12 +39,12 @@ define <2 x i64> @testllv(<2 x i64> returned %a, <2 x i64> %b, i64* nocapture %a
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <2 x i64> %a, i32 0
-  %arrayidx = getelementptr inbounds i64, i64* %ap, i64 %Idx
-  store i64 %vecext, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %ap, i64 %Idx
+  store i64 %vecext, ptr %arrayidx, align 8
   ret <2 x i64> %a
 }
 
-define <2 x i64> @testll0(<2 x i64> returned %a, <2 x i64> %b, i64* nocapture %ap) local_unnamed_addr #0 {
+define <2 x i64> @testll0(<2 x i64> returned %a, <2 x i64> %b, ptr nocapture %ap) local_unnamed_addr #0 {
 ; CHECK-LABEL: testll0:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxswapd vs0, vs34
@@ -69,13 +69,13 @@ define <2 x i64> @testll0(<2 x i64> returned %a, <2 x i64> %b, i64* nocapture %a
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <2 x i64> %a, i32 0
-  %arrayidx = getelementptr inbounds i64, i64* %ap, i64 3
-  store i64 %vecext, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %ap, i64 3
+  store i64 %vecext, ptr %arrayidx, align 8
   ret <2 x i64> %a
 }
 
 ; Function Attrs: norecurse nounwind writeonly
-define <2 x i64> @testll1(<2 x i64> returned %a, i64 %b, i64* nocapture %ap) local_unnamed_addr #0 {
+define <2 x i64> @testll1(<2 x i64> returned %a, i64 %b, ptr nocapture %ap) local_unnamed_addr #0 {
 ; CHECK-LABEL: testll1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi r3, r6, 24
@@ -100,12 +100,12 @@ define <2 x i64> @testll1(<2 x i64> returned %a, i64 %b, i64* nocapture %ap) loc
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <2 x i64> %a, i32 1
-  %arrayidx = getelementptr inbounds i64, i64* %ap, i64 3
-  store i64 %vecext, i64* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds i64, ptr %ap, i64 3
+  store i64 %vecext, ptr %arrayidx, align 8
   ret <2 x i64> %a
 }
 
-define <2 x double> @testdv(<2 x double> returned %a, <2 x double> %b, double* nocapture %ap, i64 %Idx) local_unnamed_addr #0 {
+define <2 x double> @testdv(<2 x double> returned %a, <2 x double> %b, ptr nocapture %ap, i64 %Idx) local_unnamed_addr #0 {
 ; CHECK-LABEL: testdv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxswapd vs0, vs34
@@ -133,12 +133,12 @@ define <2 x double> @testdv(<2 x double> returned %a, <2 x double> %b, double* n
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <2 x double> %a, i32 0
-  %arrayidx = getelementptr inbounds double, double* %ap, i64 %Idx
-  store double %vecext, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %ap, i64 %Idx
+  store double %vecext, ptr %arrayidx, align 8
   ret <2 x double> %a
 }
 
-define <2 x double> @testd0(<2 x double> returned %a, <2 x double> %b, double* nocapture %ap) local_unnamed_addr #0 {
+define <2 x double> @testd0(<2 x double> returned %a, <2 x double> %b, ptr nocapture %ap) local_unnamed_addr #0 {
 ; CHECK-LABEL: testd0:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxswapd vs0, vs34
@@ -163,13 +163,13 @@ define <2 x double> @testd0(<2 x double> returned %a, <2 x double> %b, double* n
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <2 x double> %a, i32 0
-  %arrayidx = getelementptr inbounds double, double* %ap, i64 3
-  store double %vecext, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %ap, i64 3
+  store double %vecext, ptr %arrayidx, align 8
   ret <2 x double> %a
 }
 
 ; Function Attrs: norecurse nounwind writeonly
-define <2 x double> @testd1(<2 x double> returned %a, <2 x double> %b, double* nocapture %ap) local_unnamed_addr #0 {
+define <2 x double> @testd1(<2 x double> returned %a, <2 x double> %b, ptr nocapture %ap) local_unnamed_addr #0 {
 ; CHECK-LABEL: testd1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi r3, r7, 24
@@ -194,13 +194,13 @@ define <2 x double> @testd1(<2 x double> returned %a, <2 x double> %b, double* n
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <2 x double> %a, i32 1
-  %arrayidx = getelementptr inbounds double, double* %ap, i64 3
-  store double %vecext, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %ap, i64 3
+  store double %vecext, ptr %arrayidx, align 8
   ret <2 x double> %a
 }
 
 ; Function Attrs: norecurse nounwind writeonly
-define <4 x float> @testf0(<4 x float> returned %a, <4 x float> %b, float* nocapture %ap) local_unnamed_addr #0 {
+define <4 x float> @testf0(<4 x float> returned %a, <4 x float> %b, ptr nocapture %ap) local_unnamed_addr #0 {
 ; CHECK-LABEL: testf0:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsldwi vs0, vs34, vs34, 2
@@ -230,13 +230,13 @@ define <4 x float> @testf0(<4 x float> returned %a, <4 x float> %b, float* nocap
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <4 x float> %a, i32 0
-  %arrayidx = getelementptr inbounds float, float* %ap, i64 3
-  store float %vecext, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %ap, i64 3
+  store float %vecext, ptr %arrayidx, align 4
   ret <4 x float> %a
 }
 
 ; Function Attrs: norecurse nounwind writeonly
-define <4 x float> @testf1(<4 x float> returned %a, <4 x float> %b, float* nocapture %ap) local_unnamed_addr #0 {
+define <4 x float> @testf1(<4 x float> returned %a, <4 x float> %b, ptr nocapture %ap) local_unnamed_addr #0 {
 ; CHECK-LABEL: testf1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsldwi vs0, vs34, vs34, 1
@@ -264,13 +264,13 @@ define <4 x float> @testf1(<4 x float> returned %a, <4 x float> %b, float* nocap
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <4 x float> %a, i32 1
-  %arrayidx = getelementptr inbounds float, float* %ap, i64 3
-  store float %vecext, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %ap, i64 3
+  store float %vecext, ptr %arrayidx, align 4
   ret <4 x float> %a
 }
 
 ; Function Attrs: norecurse nounwind writeonly
-define <4 x float> @testf2(<4 x float> returned %a, <4 x float> %b, float* nocapture %ap) local_unnamed_addr #0 {
+define <4 x float> @testf2(<4 x float> returned %a, <4 x float> %b, ptr nocapture %ap) local_unnamed_addr #0 {
 ; CHECK-LABEL: testf2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi r3, r7, 12
@@ -298,13 +298,13 @@ define <4 x float> @testf2(<4 x float> returned %a, <4 x float> %b, float* nocap
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <4 x float> %a, i32 2
-  %arrayidx = getelementptr inbounds float, float* %ap, i64 3
-  store float %vecext, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %ap, i64 3
+  store float %vecext, ptr %arrayidx, align 4
   ret <4 x float> %a
 }
 
 ; Function Attrs: norecurse nounwind writeonly
-define <4 x float> @testf3(<4 x float> returned %a, <4 x float> %b, float* nocapture %ap) local_unnamed_addr #0 {
+define <4 x float> @testf3(<4 x float> returned %a, <4 x float> %b, ptr nocapture %ap) local_unnamed_addr #0 {
 ; CHECK-LABEL: testf3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsldwi vs0, vs34, vs34, 3
@@ -334,13 +334,13 @@ define <4 x float> @testf3(<4 x float> returned %a, <4 x float> %b, float* nocap
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <4 x float> %a, i32 3
-  %arrayidx = getelementptr inbounds float, float* %ap, i64 3
-  store float %vecext, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %ap, i64 3
+  store float %vecext, ptr %arrayidx, align 4
   ret <4 x float> %a
 }
 
 ; Function Attrs: norecurse nounwind writeonly
-define <4 x i32> @testi0(<4 x i32> returned %a, <4 x i32> %b, i32* nocapture %ap) local_unnamed_addr #0 {
+define <4 x i32> @testi0(<4 x i32> returned %a, <4 x i32> %b, ptr nocapture %ap) local_unnamed_addr #0 {
 ; CHECK-LABEL: testi0:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsldwi vs0, vs34, vs34, 2
@@ -370,13 +370,13 @@ define <4 x i32> @testi0(<4 x i32> returned %a, <4 x i32> %b, i32* nocapture %ap
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <4 x i32> %a, i32 0
-  %arrayidx = getelementptr inbounds i32, i32* %ap, i64 3
-  store i32 %vecext, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %ap, i64 3
+  store i32 %vecext, ptr %arrayidx, align 4
   ret <4 x i32> %a
 }
 
 ; Function Attrs: norecurse nounwind writeonly
-define <4 x i32> @testi1(<4 x i32> returned %a, <4 x i32> %b, i32* nocapture %ap) local_unnamed_addr #0 {
+define <4 x i32> @testi1(<4 x i32> returned %a, <4 x i32> %b, ptr nocapture %ap) local_unnamed_addr #0 {
 ; CHECK-LABEL: testi1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsldwi vs0, vs34, vs34, 1
@@ -404,13 +404,13 @@ define <4 x i32> @testi1(<4 x i32> returned %a, <4 x i32> %b, i32* nocapture %ap
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <4 x i32> %a, i32 1
-  %arrayidx = getelementptr inbounds i32, i32* %ap, i64 3
-  store i32 %vecext, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %ap, i64 3
+  store i32 %vecext, ptr %arrayidx, align 4
   ret <4 x i32> %a
 }
 
 ; Function Attrs: norecurse nounwind writeonly
-define <4 x i32> @testi2(<4 x i32> returned %a, <4 x i32> %b, i32* nocapture %ap) local_unnamed_addr #0 {
+define <4 x i32> @testi2(<4 x i32> returned %a, <4 x i32> %b, ptr nocapture %ap) local_unnamed_addr #0 {
 ; CHECK-LABEL: testi2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addi r3, r7, 12
@@ -438,13 +438,13 @@ define <4 x i32> @testi2(<4 x i32> returned %a, <4 x i32> %b, i32* nocapture %ap
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <4 x i32> %a, i32 2
-  %arrayidx = getelementptr inbounds i32, i32* %ap, i64 3
-  store i32 %vecext, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %ap, i64 3
+  store i32 %vecext, ptr %arrayidx, align 4
   ret <4 x i32> %a
 }
 
 ; Function Attrs: norecurse nounwind writeonly
-define <4 x i32> @testi3(<4 x i32> returned %a, <4 x i32> %b, i32* nocapture %ap) local_unnamed_addr #0 {
+define <4 x i32> @testi3(<4 x i32> returned %a, <4 x i32> %b, ptr nocapture %ap) local_unnamed_addr #0 {
 ; CHECK-LABEL: testi3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsldwi vs0, vs34, vs34, 3
@@ -474,12 +474,12 @@ define <4 x i32> @testi3(<4 x i32> returned %a, <4 x i32> %b, i32* nocapture %ap
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <4 x i32> %a, i32 3
-  %arrayidx = getelementptr inbounds i32, i32* %ap, i64 3
-  store i32 %vecext, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %ap, i64 3
+  store i32 %vecext, ptr %arrayidx, align 4
   ret <4 x i32> %a
 }
 
-define dso_local void @test_consecutive_i32(<4 x i32> %a, i32* nocapture %b) local_unnamed_addr #0 {
+define dso_local void @test_consecutive_i32(<4 x i32> %a, ptr nocapture %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_consecutive_i32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsldwi vs0, vs34, vs34, 2
@@ -516,14 +516,14 @@ define dso_local void @test_consecutive_i32(<4 x i32> %a, i32* nocapture %b) loc
 entry:
 
   %vecext = extractelement <4 x i32> %a, i32 0
-  store i32 %vecext, i32* %b, align 4
+  store i32 %vecext, ptr %b, align 4
   %vecext1 = extractelement <4 x i32> %a, i32 2
-  %arrayidx2 = getelementptr inbounds i32, i32* %b, i64 1
-  store i32 %vecext1, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %b, i64 1
+  store i32 %vecext1, ptr %arrayidx2, align 4
   ret void
 }
 
-define dso_local void @test_consecutive_float(<4 x float> %a, float* nocapture %b) local_unnamed_addr #0 {
+define dso_local void @test_consecutive_float(<4 x float> %a, ptr nocapture %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_consecutive_float:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsldwi vs0, vs34, vs34, 1
@@ -559,14 +559,14 @@ define dso_local void @test_consecutive_float(<4 x float> %a, float* nocapture %
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <4 x float> %a, i32 1
-  store float %vecext, float* %b, align 4
+  store float %vecext, ptr %b, align 4
   %vecext1 = extractelement <4 x float> %a, i32 3
-  %arrayidx2 = getelementptr inbounds float, float* %b, i64 1
-  store float %vecext1, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %b, i64 1
+  store float %vecext1, ptr %arrayidx2, align 4
   ret void
 }
 
-define dso_local void @test_stores_exceed_vec_size(<4 x i32> %a, i32* nocapture %b) local_unnamed_addr #0 {
+define dso_local void @test_stores_exceed_vec_size(<4 x i32> %a, ptr nocapture %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_stores_exceed_vec_size:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addis r3, r2, .LCPI16_0@toc@ha
@@ -626,24 +626,24 @@ define dso_local void @test_stores_exceed_vec_size(<4 x i32> %a, i32* nocapture 
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <4 x i32> %a, i32 2
-  store i32 %vecext, i32* %b, align 4
+  store i32 %vecext, ptr %b, align 4
   %vecext1 = extractelement <4 x i32> %a, i32 3
-  %arrayidx2 = getelementptr inbounds i32, i32* %b, i64 1
-  store i32 %vecext1, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %b, i64 1
+  store i32 %vecext1, ptr %arrayidx2, align 4
   %vecext3 = extractelement <4 x i32> %a, i32 0
-  %arrayidx4 = getelementptr inbounds i32, i32* %b, i64 2
-  store i32 %vecext3, i32* %arrayidx4, align 4
-  %arrayidx6 = getelementptr inbounds i32, i32* %b, i64 3
-  store i32 %vecext3, i32* %arrayidx6, align 4
+  %arrayidx4 = getelementptr inbounds i32, ptr %b, i64 2
+  store i32 %vecext3, ptr %arrayidx4, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %b, i64 3
+  store i32 %vecext3, ptr %arrayidx6, align 4
   %vecext7 = extractelement <4 x i32> %a, i32 1
-  %arrayidx8 = getelementptr inbounds i32, i32* %b, i64 4
-  store i32 %vecext7, i32* %arrayidx8, align 4
-  %arrayidx10 = getelementptr inbounds i32, i32* %b, i64 5
-  store i32 %vecext, i32* %arrayidx10, align 4
+  %arrayidx8 = getelementptr inbounds i32, ptr %b, i64 4
+  store i32 %vecext7, ptr %arrayidx8, align 4
+  %arrayidx10 = getelementptr inbounds i32, ptr %b, i64 5
+  store i32 %vecext, ptr %arrayidx10, align 4
   ret void
 }
 
-define void @test_5_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b) local_unnamed_addr #0 {
+define void @test_5_consecutive_stores_of_bytes(<16 x i8> %a, ptr nocapture %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_5_consecutive_stores_of_bytes:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxswapd vs0, vs34
@@ -714,23 +714,23 @@ define void @test_5_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b) 
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <16 x i8> %a, i32 4
-  store i8 %vecext, i8* %b, align 1
+  store i8 %vecext, ptr %b, align 1
   %vecext1 = extractelement <16 x i8> %a, i32 12
-  %arrayidx2 = getelementptr inbounds i8, i8* %b, i64 1
-  store i8 %vecext1, i8* %arrayidx2, align 1
+  %arrayidx2 = getelementptr inbounds i8, ptr %b, i64 1
+  store i8 %vecext1, ptr %arrayidx2, align 1
   %vecext3 = extractelement <16 x i8> %a, i32 9
-  %arrayidx4 = getelementptr inbounds i8, i8* %b, i64 2
-  store i8 %vecext3, i8* %arrayidx4, align 1
+  %arrayidx4 = getelementptr inbounds i8, ptr %b, i64 2
+  store i8 %vecext3, ptr %arrayidx4, align 1
   %vecext5 = extractelement <16 x i8> %a, i32 7
-  %arrayidx6 = getelementptr inbounds i8, i8* %b, i64 3
-  store i8 %vecext5, i8* %arrayidx6, align 1
+  %arrayidx6 = getelementptr inbounds i8, ptr %b, i64 3
+  store i8 %vecext5, ptr %arrayidx6, align 1
   %vecext7 = extractelement <16 x i8> %a, i32 6
-  %arrayidx8 = getelementptr inbounds i8, i8* %b, i64 4
-  store i8 %vecext7, i8* %arrayidx8, align 1
+  %arrayidx8 = getelementptr inbounds i8, ptr %b, i64 4
+  store i8 %vecext7, ptr %arrayidx8, align 1
   ret void
 }
 
-define void @test_13_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b) local_unnamed_addr #0 {
+define void @test_13_consecutive_stores_of_bytes(<16 x i8> %a, ptr nocapture %b) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_13_consecutive_stores_of_bytes:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxswapd vs0, vs34
@@ -881,47 +881,47 @@ define void @test_13_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b)
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <16 x i8> %a, i32 4
-  store i8 %vecext, i8* %b, align 1
+  store i8 %vecext, ptr %b, align 1
   %vecext1 = extractelement <16 x i8> %a, i32 12
-  %arrayidx2 = getelementptr inbounds i8, i8* %b, i64 1
-  store i8 %vecext1, i8* %arrayidx2, align 1
+  %arrayidx2 = getelementptr inbounds i8, ptr %b, i64 1
+  store i8 %vecext1, ptr %arrayidx2, align 1
   %vecext3 = extractelement <16 x i8> %a, i32 9
-  %arrayidx4 = getelementptr inbounds i8, i8* %b, i64 2
-  store i8 %vecext3, i8* %arrayidx4, align 1
+  %arrayidx4 = getelementptr inbounds i8, ptr %b, i64 2
+  store i8 %vecext3, ptr %arrayidx4, align 1
   %vecext5 = extractelement <16 x i8> %a, i32 7
-  %arrayidx6 = getelementptr inbounds i8, i8* %b, i64 3
-  store i8 %vecext5, i8* %arrayidx6, align 1
+  %arrayidx6 = getelementptr inbounds i8, ptr %b, i64 3
+  store i8 %vecext5, ptr %arrayidx6, align 1
   %vecext7 = extractelement <16 x i8> %a, i32 6
-  %arrayidx8 = getelementptr inbounds i8, i8* %b, i64 4
-  store i8 %vecext7, i8* %arrayidx8, align 1
+  %arrayidx8 = getelementptr inbounds i8, ptr %b, i64 4
+  store i8 %vecext7, ptr %arrayidx8, align 1
   %vecext9 = extractelement <16 x i8> %a, i32 0
-  %arrayidx10 = getelementptr inbounds i8, i8* %b, i64 5
-  store i8 %vecext9, i8* %arrayidx10, align 1
+  %arrayidx10 = getelementptr inbounds i8, ptr %b, i64 5
+  store i8 %vecext9, ptr %arrayidx10, align 1
   %vecext11 = extractelement <16 x i8> %a, i32 11
-  %arrayidx12 = getelementptr inbounds i8, i8* %b, i64 6
-  store i8 %vecext11, i8* %arrayidx12, align 1
+  %arrayidx12 = getelementptr inbounds i8, ptr %b, i64 6
+  store i8 %vecext11, ptr %arrayidx12, align 1
   %vecext13 = extractelement <16 x i8> %a, i32 13
-  %arrayidx14 = getelementptr inbounds i8, i8* %b, i64 7
-  store i8 %vecext13, i8* %arrayidx14, align 1
+  %arrayidx14 = getelementptr inbounds i8, ptr %b, i64 7
+  store i8 %vecext13, ptr %arrayidx14, align 1
   %vecext15 = extractelement <16 x i8> %a, i32 2
-  %arrayidx16 = getelementptr inbounds i8, i8* %b, i64 8
-  store i8 %vecext15, i8* %arrayidx16, align 1
+  %arrayidx16 = getelementptr inbounds i8, ptr %b, i64 8
+  store i8 %vecext15, ptr %arrayidx16, align 1
   %vecext17 = extractelement <16 x i8> %a, i32 15
-  %arrayidx18 = getelementptr inbounds i8, i8* %b, i64 9
-  store i8 %vecext17, i8* %arrayidx18, align 1
+  %arrayidx18 = getelementptr inbounds i8, ptr %b, i64 9
+  store i8 %vecext17, ptr %arrayidx18, align 1
   %vecext19 = extractelement <16 x i8> %a, i32 1
-  %arrayidx20 = getelementptr inbounds i8, i8* %b, i64 10
-  store i8 %vecext19, i8* %arrayidx20, align 1
+  %arrayidx20 = getelementptr inbounds i8, ptr %b, i64 10
+  store i8 %vecext19, ptr %arrayidx20, align 1
   %vecext21 = extractelement <16 x i8> %a, i32 5
-  %arrayidx22 = getelementptr inbounds i8, i8* %b, i64 11
-  store i8 %vecext21, i8* %arrayidx22, align 1
+  %arrayidx22 = getelementptr inbounds i8, ptr %b, i64 11
+  store i8 %vecext21, ptr %arrayidx22, align 1
   %vecext23 = extractelement <16 x i8> %a, i32 14
-  %arrayidx24 = getelementptr inbounds i8, i8* %b, i64 12
-  store i8 %vecext23, i8* %arrayidx24, align 1
+  %arrayidx24 = getelementptr inbounds i8, ptr %b, i64 12
+  store i8 %vecext23, ptr %arrayidx24, align 1
   ret void
 }
 
-define void @test_elements_from_two_vec(<4 x i32> %a, <4 x i32> %b, i32* nocapture %c) local_unnamed_addr #0 {
+define void @test_elements_from_two_vec(<4 x i32> %a, <4 x i32> %b, ptr nocapture %c) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_elements_from_two_vec:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsldwi vs0, vs34, vs34, 2
@@ -957,14 +957,14 @@ define void @test_elements_from_two_vec(<4 x i32> %a, <4 x i32> %b, i32* nocaptu
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <4 x i32> %a, i32 0
-  %arrayidx = getelementptr inbounds i32, i32* %c, i64 1
-  store i32 %vecext, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %c, i64 1
+  store i32 %vecext, ptr %arrayidx, align 4
   %vecext1 = extractelement <4 x i32> %b, i32 1
-  store i32 %vecext1, i32* %c, align 4
+  store i32 %vecext1, ptr %c, align 4
   ret void
 }
 
-define dso_local void @test_elements_from_three_vec(<4 x float> %a, <4 x float> %b, <4 x float> %c, float* nocapture %d) local_unnamed_addr #0 {
+define dso_local void @test_elements_from_three_vec(<4 x float> %a, <4 x float> %b, <4 x float> %c, ptr nocapture %d) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_elements_from_three_vec:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xxsldwi vs0, vs34, vs34, 3
@@ -1010,12 +1010,12 @@ define dso_local void @test_elements_from_three_vec(<4 x float> %a, <4 x float> 
 ; CHECK-P9-BE-NEXT:    blr
 entry:
   %vecext = extractelement <4 x float> %a, i32 3
-  store float %vecext, float* %d, align 4
+  store float %vecext, ptr %d, align 4
   %vecext1 = extractelement <4 x float> %b, i32 2
-  %arrayidx2 = getelementptr inbounds float, float* %d, i64 1
-  store float %vecext1, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %d, i64 1
+  store float %vecext1, ptr %arrayidx2, align 4
   %vecext3 = extractelement <4 x float> %c, i32 1
-  %arrayidx4 = getelementptr inbounds float, float* %d, i64 2
-  store float %vecext3, float* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %d, i64 2
+  store float %vecext3, ptr %arrayidx4, align 4
   ret void
 }

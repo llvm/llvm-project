@@ -2575,6 +2575,31 @@ SDValue SITargetLowering::LowerFormalArguments(
     InVals.push_back(Val);
   }
 
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  if (MFI->ldsSpillingEnabled(MF) &&
+      ST.getFlatWorkGroupSizes(Fn).second > ST.getWavefrontSize()) {
+
+    int WorkGroupInfoSgprNo =
+        AMDGPU::getIntegerAttribute(Fn, "amdgpu-work-group-info-arg-no", -1);
+    if (WorkGroupInfoSgprNo != -1)
+      for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
+        const ISD::InputArg &Arg = Ins[i];
+        if (Arg.getOrigArgIndex() == (unsigned)WorkGroupInfoSgprNo) {
+
+          CCValAssign &VA = ArgLocs[i];
+          Register WorkGroupInfoReg = VA.getLocReg();
+          assert(AMDGPU::SGPR_32RegClass.contains(WorkGroupInfoReg));
+
+          Info->setWorkgroupInfoReg(WorkGroupInfoReg);
+          MF.addLiveIn(WorkGroupInfoReg, &AMDGPU::SGPR_32RegClass);
+          MF.front().addLiveIn(WorkGroupInfoReg, &AMDGPU::SGPR_32RegClass);
+
+          break;
+        }
+      }
+  }
+
   // Start adding system SGPRs.
   if (IsEntryFunc) {
     allocateSystemSGPRs(CCInfo, MF, *Info, CallConv, IsGraphics);

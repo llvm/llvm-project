@@ -882,6 +882,19 @@ module std [system] {
       module voidify                         { private header "__memory/voidify.h" }
     }
   }
+  module memory_resource {
+    header "memory_resource"
+    export *
+
+    module __memory_resource {
+      module memory_resource              { private header "__memory_resource/memory_resource.h" }
+      module monotonic_buffer_resource    { private header "__memory_resource/monotonic_buffer_resource.h" }
+      module polymorphic_allocator        { private header "__memory_resource/polymorphic_allocator.h" }
+      module pool_options                 { private header "__memory_resource/pool_options.h" }
+      module synchronized_pool_resource   { private header "__memory_resource/synchronized_pool_resource.h" }
+      module unsynchronized_pool_resource { private header "__memory_resource/unsynchronized_pool_resource.h" }
+    }
+  }
   module mutex {
     @requires_LIBCXX_ENABLE_THREADS@
     header "mutex"

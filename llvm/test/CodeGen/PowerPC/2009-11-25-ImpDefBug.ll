@@ -18,7 +18,7 @@ bb16:                                             ; preds = %bb15
 
 bb17:                                             ; preds = %bb16, %bb15
   %0 = fcmp olt float undef, 0.000000e+00         ; <i1> [#uses=2]
-  %eTop.eMaj = select i1 %0, %struct..0EdgeT* undef, %struct..0EdgeT* null ; <%struct..0EdgeT*> [#uses=1]
+  %eTop.eMaj = select i1 %0, ptr undef, ptr null ; <ptr> [#uses=1]
   br label %bb69
 
 bb24:                                             ; preds = %bb69
@@ -40,7 +40,7 @@ bb34:                                             ; preds = %bb33
   br label %bb38
 
 bb38:                                             ; preds = %bb34, %bb33, %bb32
-  %eRight.08 = phi %struct..0EdgeT* [ %eTop.eMaj, %bb32 ], [ undef, %bb34 ], [ undef, %bb33 ] ; <%struct..0EdgeT*> [#uses=0]
+  %eRight.08 = phi ptr [ %eTop.eMaj, %bb32 ], [ undef, %bb34 ], [ undef, %bb33 ] ; <ptr> [#uses=0]
   %fdgOuter.0 = phi i32 [ %fdgOuter.1, %bb32 ], [ undef, %bb34 ], [ %fdgOuter.1, %bb33 ] ; <i32> [#uses=1]
   %fz.3 = phi i32 [ %fz.2, %bb32 ], [ 2147483647, %bb34 ], [ %fz.2, %bb33 ] ; <i32> [#uses=1]
   %1 = add i32 undef, 1                           ; <i32> [#uses=0]

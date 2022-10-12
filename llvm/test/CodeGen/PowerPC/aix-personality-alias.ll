@@ -5,16 +5,16 @@
 ; RUN: llc  -verify-machineinstrs -mcpu=pwr7 -mattr=-altivec \
 ; RUN:      -mtriple powerpc64-ibm-aix-xcoff < %s | FileCheck %s --check-prefixes=SYM,SYM64
 
-@__xlcxx_personality_v1 = alias i32 (), i32 ()* @__gxx_personality_v0
+@__xlcxx_personality_v1 = alias i32 (), ptr @__gxx_personality_v0
 define i32 @__gxx_personality_v0() {
 entry:
   ret i32 1
 }
 
-define dso_local signext i32 @_Z3foov() #0 personality i8* bitcast (i32 ()* @__xlcxx_personality_v1 to i8*) {
+define dso_local signext i32 @_Z3foov() #0 personality ptr @__xlcxx_personality_v1 {
 entry:
   %retval = alloca i32, align 4
-  %exn.slot = alloca i8*, align 8
+  %exn.slot = alloca ptr, align 8
   %ehselector.slot = alloca i32, align 4
   invoke void @_Z3barv()
           to label %invoke.cont unwind label %lpad
@@ -23,20 +23,20 @@ invoke.cont:                                      ; preds = %entry
   br label %try.cont
 
 lpad:                                             ; preds = %entry
-  %0 = landingpad { i8*, i32 }
-          catch i8* null
-  %1 = extractvalue { i8*, i32 } %0, 0
-  store i8* %1, i8** %exn.slot, align 8
-  %2 = extractvalue { i8*, i32 } %0, 1
-  store i32 %2, i32* %ehselector.slot, align 4
+  %0 = landingpad { ptr, i32 }
+          catch ptr null
+  %1 = extractvalue { ptr, i32 } %0, 0
+  store ptr %1, ptr %exn.slot, align 8
+  %2 = extractvalue { ptr, i32 } %0, 1
+  store i32 %2, ptr %ehselector.slot, align 4
   br label %catch
 
 catch:                                            ; preds = %lpad
-  %exn = load i8*, i8** %exn.slot, align 8
+  %exn = load ptr, ptr %exn.slot, align 8
   br label %return
 
 try.cont:                                         ; preds = %invoke.cont
-  store i32 2, i32* %retval, align 4
+  store i32 2, ptr %retval, align 4
   br label %return
 
 return:                                           ; preds = %try.cont, %catch

@@ -5,7 +5,6 @@
 try:
   from ..ir import *
   from ._ods_common import get_op_result_or_value as _get_op_result_or_value, get_op_results_or_values as _get_op_results_or_values
-  from ..dialects import pdl
 except ImportError as e:
   raise RuntimeError("Error loading imports from extension module") from e
 
@@ -19,11 +18,21 @@ def _get_symbol_ref_attr(value: Union[Attribute, str]):
   return FlatSymbolRefAttr.get(value)
 
 
+class CastOp:
+
+  def __init__(self, result_type: Type, target: Union[Operation, Value], *, loc=None, ip=None):
+    super().__init__(
+      result_type,
+      _get_op_result_or_value(target),
+      loc=loc,
+      ip=ip)
+
+
 class GetClosestIsolatedParentOp:
 
-  def __init__(self, target: Union[Operation, Value], *, loc=None, ip=None):
+  def __init__(self, result_type: Type, target: Union[Operation, Value], *, loc=None, ip=None):
     super().__init__(
-        pdl.OperationType.get(),
+        result_type,
         _get_op_result_or_value(target),
         loc=loc,
         ip=ip)
@@ -38,7 +47,7 @@ class MergeHandlesOp:
                loc=None,
                ip=None):
     super().__init__(
-        pdl.OperationType.get(), [_get_op_result_or_value(h) for h in handles],
+        [_get_op_result_or_value(h) for h in handles],
         deduplicate=deduplicate,
         loc=loc,
         ip=ip)
@@ -47,13 +56,14 @@ class MergeHandlesOp:
 class PDLMatchOp:
 
   def __init__(self,
+               result_type: Type,
                target: Union[Operation, Value],
                pattern_name: Union[Attribute, str],
                *,
                loc=None,
                ip=None):
     super().__init__(
-        pdl.OperationType.get(),
+        result_type,
         _get_op_result_or_value(target),
         _get_symbol_ref_attr(pattern_name),
         loc=loc,
@@ -69,7 +79,7 @@ class ReplicateOp:
                loc=None,
                ip=None):
     super().__init__(
-        [pdl.OperationType.get()] * len(handles),
+        [_get_op_result_or_value(h).type for h in handles],
         _get_op_result_or_value(pattern),
         [_get_op_result_or_value(h) for h in handles],
         loc=loc,
@@ -78,24 +88,11 @@ class ReplicateOp:
 
 class SequenceOp:
 
-  @overload
-  def __init__(self, failure_propagation_mode,
-               resultsOrRoot: Sequence[Type],
-               optionalRoot: Optional[Union[Operation, Value]]):
-    ...
-
-  @overload
-  def __init__(self, failure_propagation_mode,
-               resultsOrRoot: Optional[Union[Operation,
-                                             Value]], optionalRoot: NoneType):
-    ...
-
-  def __init__(self, failure_propagation_mode, resultsOrRoot=None, optionalRoot=None):
-    results = resultsOrRoot if isinstance(resultsOrRoot, Sequence) else []
-    root = (
-        resultsOrRoot
-        if not isinstance(resultsOrRoot, Sequence) else optionalRoot)
-    root = _get_op_result_or_value(root) if root else None
+  def __init__(self, failure_propagation_mode, results: Sequence[Type],
+               target: Union[Operation, Value, Type]):
+    root = _get_op_result_or_value(target) if isinstance(
+        target, (Operation, Value)) else None
+    root_type = root.type if not isinstance(target, Type) else target
     if not isinstance(failure_propagation_mode, Attribute):
       failure_propagation_mode_attr = IntegerAttr.get(
           IntegerType.get_signless(32), failure_propagation_mode._as_int())
@@ -104,7 +101,7 @@ class SequenceOp:
     super().__init__(results_=results,
                      failure_propagation_mode=failure_propagation_mode_attr,
                      root=root)
-    self.regions[0].blocks.append(pdl.OperationType.get())
+    self.regions[0].blocks.append(root_type)
 
   @property
   def body(self) -> Block:
@@ -118,15 +115,18 @@ class SequenceOp:
 class WithPDLPatternsOp:
 
   def __init__(self,
-               target: Optional[Union[Operation, Value]] = None,
+               target: Union[Operation, Value, Type],
                *,
                loc=None,
                ip=None):
+    root = _get_op_result_or_value(target) if not isinstance(target,
+                                                             Type) else None
+    root_type = target if isinstance(target, Type) else root.type
     super().__init__(
-        root=_get_op_result_or_value(target) if target else None,
+        root=root,
         loc=loc,
         ip=ip)
-    self.regions[0].blocks.append(pdl.OperationType.get())
+    self.regions[0].blocks.append(root_type)
 
   @property
   def body(self) -> Block:

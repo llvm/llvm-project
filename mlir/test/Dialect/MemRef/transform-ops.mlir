@@ -33,5 +33,5 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["memref.alloc"]} in %arg1
   %1 = transform.memref.multibuffer %0 {factor = 2 : i64}
   // Verify that the returned handle is usable.
-  transform.test_print_remark_at_operand %1, "transformed"
+  transform.test_print_remark_at_operand %1, "transformed" : !pdl.operation
 }

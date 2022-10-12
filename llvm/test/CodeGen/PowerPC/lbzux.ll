@@ -4,7 +4,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define fastcc void @allocateSpace(i1 %cond1, i1 %cond2, i32 %offset) nounwind {
 entry:
-  %0 = load i8*, i8** undef, align 8
+  %0 = load ptr, ptr undef, align 8
   br i1 undef, label %return, label %lor.lhs.false
 
 lor.lhs.false:                                    ; preds = %entry
@@ -18,7 +18,7 @@ if.then15:                                        ; preds = %if.end7
 
 while.cond:                                       ; preds = %while.body, %if.then15
   %idxprom17 = sext i32 0 to i64
-  %arrayidx18 = getelementptr inbounds i8, i8* %0, i64 %idxprom17
+  %arrayidx18 = getelementptr inbounds i8, ptr %0, i64 %idxprom17
   br i1 %cond1, label %if.end71, label %while.body
 
 while.body:                                       ; preds = %while.cond
@@ -26,11 +26,9 @@ while.body:                                       ; preds = %while.cond
 
 if.then45:                                        ; preds = %while.body
   %idxprom48139 = zext i32 %offset to i64
-  %arrayidx49 = getelementptr inbounds i8, i8* %0, i64 %idxprom48139
-  %1 = bitcast i8* %arrayidx49 to i16*
-  %2 = bitcast i8* %arrayidx18 to i16*
-  %3 = load i16, i16* %1, align 1
-  store i16 %3, i16* %2, align 1
+  %arrayidx49 = getelementptr inbounds i8, ptr %0, i64 %idxprom48139
+  %1 = load i16, ptr %arrayidx49, align 1
+  store i16 %1, ptr %arrayidx18, align 1
   br label %return
 
 if.end71:                                         ; preds = %while.cond, %if.end7

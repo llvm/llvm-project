@@ -34,6 +34,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Support/FatalError.h"
+#include "flang/Runtime/entry-names.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "llvm/Support/CommandLine.h"
@@ -1215,6 +1216,14 @@ static mlir::FunctionType genF64ComplexFuncType(mlir::MLIRContext *context) {
   return mlir::FunctionType::get(context, {ctype}, {ftype});
 }
 
+template <int Kind, int Bits>
+static mlir::FunctionType
+genComplexComplexIntFuncType(mlir::MLIRContext *context) {
+  auto ctype = fir::ComplexType::get(context, Kind);
+  auto itype = mlir::IntegerType::get(context, Bits);
+  return mlir::FunctionType::get(context, {ctype, itype}, {ctype});
+}
+
 /// Callback type for generating lowering for a math operation.
 using MathGeneratorTy = mlir::Value (*)(fir::FirOpBuilder &, mlir::Location,
                                         llvm::StringRef, mlir::FunctionType,
@@ -1410,6 +1419,14 @@ static constexpr MathOperation mathOperations[] = {
     // TODO: add PowIOp in math and complex dialects.
     {"pow", "llvm.powi.f32.i32", genF32F32IntFuncType<32>, genLibCall},
     {"pow", "llvm.powi.f64.i32", genF64F64IntFuncType<32>, genLibCall},
+    {"pow", RTNAME_STRING(cpowi), genComplexComplexIntFuncType<4, 32>,
+     genLibCall},
+    {"pow", RTNAME_STRING(zpowi), genComplexComplexIntFuncType<8, 32>,
+     genLibCall},
+    {"pow", RTNAME_STRING(cpowk), genComplexComplexIntFuncType<4, 64>,
+     genLibCall},
+    {"pow", RTNAME_STRING(zpowk), genComplexComplexIntFuncType<8, 64>,
+     genLibCall},
     {"sign", "copysignf", genF32F32F32FuncType,
      genMathOp<mlir::math::CopySignOp>},
     {"sign", "copysign", genF64F64F64FuncType,
