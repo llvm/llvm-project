@@ -401,6 +401,9 @@ public:
     StringRef Name = Decl->getName();
     if (Name.empty())
       Name = getTypedefName(Decl);
+    if (Name.empty())
+      return true;
+
     StringRef USR = API.recordUSR(Decl);
     PresumedLoc Loc =
         Context.getSourceManager().getPresumedLoc(Decl->getLocation());
