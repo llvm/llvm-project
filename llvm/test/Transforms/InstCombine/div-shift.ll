@@ -742,11 +742,11 @@ define i8 @sdiv_lshr_mul_nsw(i8 %x, i8 %y, i8 %z) {
   ret i8 %div
 }
 
+; (X << Z) / (Y << Z) --> X / Y
+
 define i8 @sdiv_shl_shl_nsw2_nuw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sdiv_shl_shl_nsw2_nuw(
-; CHECK-NEXT:    [[XZ:%.*]] = shl nsw i8 [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[YZ:%.*]] = shl nuw nsw i8 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[XZ]], [[YZ]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %xz = shl nsw i8 %x, %z
@@ -755,12 +755,13 @@ define i8 @sdiv_shl_shl_nsw2_nuw(i8 %x, i8 %y, i8 %z) {
   ret i8 %d
 }
 
+; extra uses are ok and 'exact' propagates
+
 define i8 @sdiv_shl_shl_nsw2_nuw_exact_use(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sdiv_shl_shl_nsw2_nuw_exact_use(
 ; CHECK-NEXT:    [[XZ:%.*]] = shl nsw i8 [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[XZ]])
-; CHECK-NEXT:    [[YZ:%.*]] = shl nuw nsw i8 [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[D:%.*]] = sdiv exact i8 [[XZ]], [[YZ]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv exact i8 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %xz = shl nsw i8 %x, %z
@@ -769,6 +770,8 @@ define i8 @sdiv_shl_shl_nsw2_nuw_exact_use(i8 %x, i8 %y, i8 %z) {
   %d = sdiv exact i8 %xz, %yz
   ret i8 %d
 }
+
+; negative test - wrong wrap
 
 define i8 @sdiv_shl_shl_nsw_nuw2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sdiv_shl_shl_nsw_nuw2(
@@ -783,6 +786,8 @@ define i8 @sdiv_shl_shl_nsw_nuw2(i8 %x, i8 %y, i8 %z) {
   ret i8 %d
 }
 
+; negative test - wrong wrap
+
 define i8 @sdiv_shl_shl_nsw_nuw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sdiv_shl_shl_nsw_nuw(
 ; CHECK-NEXT:    [[XZ:%.*]] = shl nsw i8 [[X:%.*]], [[Z:%.*]]
@@ -795,6 +800,8 @@ define i8 @sdiv_shl_shl_nsw_nuw(i8 %x, i8 %y, i8 %z) {
   %d = sdiv i8 %xz, %yz
   ret i8 %d
 }
+
+; negative test - wrong wrap
 
 define i8 @sdiv_shl_shl_nuw_nsw2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @sdiv_shl_shl_nuw_nsw2(
@@ -809,11 +816,11 @@ define i8 @sdiv_shl_shl_nuw_nsw2(i8 %x, i8 %y, i8 %z) {
   ret i8 %d
 }
 
+; (X << Z) / (Y << Z) --> X / Y
+
 define <2 x i8> @udiv_shl_shl_nuw2(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
 ; CHECK-LABEL: @udiv_shl_shl_nuw2(
-; CHECK-NEXT:    [[XZ:%.*]] = shl nuw <2 x i8> [[X:%.*]], [[Z:%.*]]
-; CHECK-NEXT:    [[YZ:%.*]] = shl nuw <2 x i8> [[Y:%.*]], [[Z]]
-; CHECK-NEXT:    [[D:%.*]] = udiv <2 x i8> [[XZ]], [[YZ]]
+; CHECK-NEXT:    [[D:%.*]] = udiv <2 x i8> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret <2 x i8> [[D]]
 ;
   %xz = shl nuw <2 x i8> %x, %z
@@ -822,13 +829,15 @@ define <2 x i8> @udiv_shl_shl_nuw2(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
   ret <2 x i8> %d
 }
 
+; extra uses are ok and 'exact' propagates
+
 define i8 @udiv_shl_shl_nuw2_exact_use2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_shl_shl_nuw2_exact_use2(
 ; CHECK-NEXT:    [[XZ:%.*]] = shl nuw i8 [[X:%.*]], [[Z:%.*]]
 ; CHECK-NEXT:    call void @use(i8 [[XZ]])
 ; CHECK-NEXT:    [[YZ:%.*]] = shl nuw i8 [[Y:%.*]], [[Z]]
 ; CHECK-NEXT:    call void @use(i8 [[YZ]])
-; CHECK-NEXT:    [[D:%.*]] = udiv exact i8 [[XZ]], [[YZ]]
+; CHECK-NEXT:    [[D:%.*]] = udiv exact i8 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[D]]
 ;
   %xz = shl nuw i8 %x, %z
@@ -838,6 +847,8 @@ define i8 @udiv_shl_shl_nuw2_exact_use2(i8 %x, i8 %y, i8 %z) {
   %d = udiv exact i8 %xz, %yz
   ret i8 %d
 }
+
+; negative test - wrong wrap
 
 define i8 @udiv_shl_shl_nuw_nsw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_shl_shl_nuw_nsw(
@@ -852,6 +863,8 @@ define i8 @udiv_shl_shl_nuw_nsw(i8 %x, i8 %y, i8 %z) {
   ret i8 %d
 }
 
+; negative test - wrong wrap
+
 define i8 @udiv_shl_shl_nsw_nuw(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_shl_shl_nsw_nuw(
 ; CHECK-NEXT:    [[XZ:%.*]] = shl nsw i8 [[X:%.*]], [[Z:%.*]]
@@ -865,6 +878,8 @@ define i8 @udiv_shl_shl_nsw_nuw(i8 %x, i8 %y, i8 %z) {
   ret i8 %d
 }
 
+; TODO: This could fold.
+
 define i8 @udiv_shl_shl_nuw_nsw2(i8 %x, i8 %y, i8 %z) {
 ; CHECK-LABEL: @udiv_shl_shl_nuw_nsw2(
 ; CHECK-NEXT:    [[XZ:%.*]] = shl nuw nsw i8 [[X:%.*]], [[Z:%.*]]
@@ -875,5 +890,19 @@ define i8 @udiv_shl_shl_nuw_nsw2(i8 %x, i8 %y, i8 %z) {
   %xz = shl nuw nsw i8 %x, %z
   %yz = shl nsw i8 %y, %z
   %d = udiv i8 %xz, %yz
+  ret i8 %d
+}
+
+; TODO: X / (Y << Z) --> (X >> Z) / Y
+; https://alive2.llvm.org/ce/z/FjoN_A
+
+define i8 @udiv_shl_nuw_divisor(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_shl_nuw_divisor(
+; CHECK-NEXT:    [[S:%.*]] = shl nuw i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[X:%.*]], [[S]]
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %s = shl nuw i8 %y, %z
+  %d = udiv i8 %x, %s
   ret i8 %d
 }

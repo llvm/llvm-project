@@ -325,6 +325,11 @@ fir::FirOpBuilder::convertWithSemantics(mlir::Location loc, mlir::Type toTy,
     return create<fir::BoxAddrOp>(loc, toTy, val);
   }
 
+  if (fir::isPolymorphicType(fromTy) && fir::isPolymorphicType(toTy)) {
+    return create<fir::ReboxOp>(loc, toTy, val, mlir::Value{},
+                                /*slice=*/mlir::Value{});
+  }
+
   return createConvert(loc, toTy, val);
 }
 

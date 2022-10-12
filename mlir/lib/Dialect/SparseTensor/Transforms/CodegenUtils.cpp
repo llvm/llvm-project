@@ -471,7 +471,7 @@ void mlir::sparse_tensor::genReshapeDstShape(
   unsigned start = 0;
   // Expand the i-th dimension in srcShape.
   for (unsigned i = 0, size = srcShape.size(); i < size; i++) {
-    auto map = reassociation[i];
+    const auto &map = reassociation[i];
     auto srcDim = srcShape[i];
     // Iterate through dimensions expanded from the i-th dimension.
     for (unsigned j = start; j < start + map.size(); j++) {
