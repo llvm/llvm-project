@@ -37,10 +37,10 @@
 # CHECK-NEXT: 0x[[#%X,BSS]]   0x{{[0-9a-f]+}}   __DATA   __common
 
 # CHECK-NEXT: # Symbols:
-# CHECK-NEXT: # Address           File   Name
-# CHECK-NEXT: 0x[[#%X,MAIN]]      [  1]  _main
-# CHECK-NEXT: 0x[[#%X,FOO]]       [  2]  _foo
-# CHECK-NEXT: 0x[[#%X,NUMBER]]    [  1]  _number
+# CHECK-NEXT: # Address           Size        File   Name
+# CHECK-NEXT: 0x[[#%X,MAIN]]      0x00000001  [  1]  _main
+# CHECK-NEXT: 0x[[#%X,FOO]]       0x00000000  [  2]  _foo
+# CHECK-NEXT: 0x[[#%X,NUMBER]]    0x00000000  [  1]  _number
 
 # RUN: %lld -map %t/c-string-literal-map %t/c-string-literal.o -o %t/c-string-literal-out
 # RUN: FileCheck --check-prefix=CSTRING %s < %t/c-string-literal-map
@@ -56,10 +56,10 @@
 
 ## C-string literals should be printed as "literal string: <C string literal>"
 # DEADCSTRING-LABEL: Symbols:
-# DEADCSTRING-DAG: _main
-# DEADCSTRING-DAG: literal string: Hello world!\n
+# DEADCSTRING-DAG:   0x0000001D [  1] _main
+# DEADCSTRING-DAG:   0x0000000E [  1] literal string: Hello world!\n
 # DEADCSTRING-LABEL: Dead Stripped Symbols:
-# DEADCSTRING-DAG: literal string: Hello, it's me
+# DEADCSTRING-DAG:   <<dead>> 0x0000000F [  1] literal string: Hello, it's me
 
 # MAPFILE: "name":"Total Write map file"
 
