@@ -133,13 +133,27 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
   if (!ThisBody)
     return OrigMRB;
 
-  // Scan the function body for instructions that may read or write memory.
   FunctionModRefBehavior MRB = FunctionModRefBehavior::none();
-  // Returns true if Ptr is not based on a function argument.
-  auto IsArgumentOrAlloca = [](const Value *Ptr) {
+  // Inalloca and preallocated arguments are always clobbered by the call.
+  if (F.getAttributes().hasAttrSomewhere(Attribute::InAlloca) ||
+      F.getAttributes().hasAttrSomewhere(Attribute::Preallocated))
+    MRB |= FunctionModRefBehavior::argMemOnly(ModRefInfo::ModRef);
+
+  auto AddPtrAccess = [&](const Value *Ptr, ModRefInfo MR) {
     const Value *UO = getUnderlyingObject(Ptr);
-    return isa<Argument>(UO) || isa<AllocaInst>(UO);
+    if (isa<AllocaInst>(UO))
+      return;
+    if (isa<Argument>(UO)) {
+      MRB |= FunctionModRefBehavior::argMemOnly(MR);
+      return;
+    }
+    // If it's not an identified object, it might be an argument.
+    if (!isIdentifiedObject(UO))
+      MRB |= FunctionModRefBehavior::argMemOnly(MR);
+    MRB |= FunctionModRefBehavior(FunctionModRefBehavior::Other, MR);
+    return;
   };
+  // Scan the function body for instructions that may read or write memory.
   for (Instruction &I : instructions(F)) {
     // Some instructions can be ignored even if they read or write memory.
     // Detect these now, skipping to the next instruction if one is found.
@@ -166,6 +180,12 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
 
       MRB |= CallMRB.getWithoutLoc(FunctionModRefBehavior::ArgMem);
 
+      // If the call accesses captured memory (currently part of "other") and
+      // an argument is captured (currently not tracked), then it may also
+      // access argument memory.
+      ModRefInfo OtherMR = CallMRB.getModRef(FunctionModRefBehavior::Other);
+      MRB |= FunctionModRefBehavior::argMemOnly(OtherMR);
+
       // Check whether all pointer arguments point to local memory, and
       // ignore calls that only access local memory.
       ModRefInfo ArgMR = CallMRB.getModRef(FunctionModRefBehavior::ArgMem);
@@ -182,9 +202,7 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
           if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
             continue;
 
-          MRB |= FunctionModRefBehavior::argMemOnly(ArgMR);
-          if (!IsArgumentOrAlloca(Loc.Ptr))
-            MRB |= FunctionModRefBehavior(FunctionModRefBehavior::Other, ArgMR);
+          AddPtrAccess(Loc.Ptr, ArgMR);
         }
       }
       continue;
@@ -210,11 +228,7 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
     if (!I.isVolatile() && AAR.pointsToConstantMemory(*Loc, /*OrLocal=*/true))
       continue;
 
-    // The accessed location can be either only argument memory, or
-    // argument & other memory, but never inaccessible memory.
-    MRB |= FunctionModRefBehavior::argMemOnly(MR);
-    if (!IsArgumentOrAlloca(Loc->Ptr))
-      MRB |= FunctionModRefBehavior(FunctionModRefBehavior::Other, MR);
+    AddPtrAccess(Loc->Ptr, MR);
   }
 
   return OrigMRB & MRB;

@@ -325,7 +325,9 @@ fir::FirOpBuilder::convertWithSemantics(mlir::Location loc, mlir::Type toTy,
     return create<fir::BoxAddrOp>(loc, toTy, val);
   }
 
-  if (fir::isPolymorphicType(fromTy) && fir::isPolymorphicType(toTy)) {
+  if (fir::isPolymorphicType(fromTy) &&
+      (fir::isAllocatableType(fromTy) || fir::isPointerType(fromTy)) &&
+      fir::isPolymorphicType(toTy)) {
     return create<fir::ReboxOp>(loc, toTy, val, mlir::Value{},
                                 /*slice=*/mlir::Value{});
   }
@@ -463,7 +465,8 @@ mlir::Value fir::FirOpBuilder::createSlice(mlir::Location loc,
 }
 
 mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
-                                         const fir::ExtendedValue &exv) {
+                                         const fir::ExtendedValue &exv,
+                                         bool isPolymorphic) {
   mlir::Value itemAddr = fir::getBase(exv);
   if (itemAddr.getType().isa<fir::BaseBoxType>())
     return itemAddr;
@@ -474,6 +477,8 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
     llvm_unreachable("not a memory reference type");
   }
   mlir::Type boxTy = fir::BoxType::get(elementType);
+  if (isPolymorphic)
+    boxTy = fir::ClassType::get(elementType);
   return exv.match(
       [&](const fir::ArrayBoxValue &box) -> mlir::Value {
         mlir::Value s = createShape(loc, exv);
