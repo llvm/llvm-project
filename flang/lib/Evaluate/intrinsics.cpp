@@ -2787,14 +2787,28 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
           "Argument of LOC() must be an object or procedure"_err_en_US);
     }
   } else if (name == "move_alloc") {
-    bool fromOk{
-        CheckForCoindexedObject(context, call.arguments[0], name, "from")};
-    bool toOk{CheckForCoindexedObject(context, call.arguments[1], name, "to")};
-    bool statOk{
-        CheckForCoindexedObject(context, call.arguments[2], name, "stat")};
-    bool errmsgOk{
-        CheckForCoindexedObject(context, call.arguments[3], name, "errmsg")};
-    ok = fromOk && toOk && statOk && errmsgOk;
+    ok &= CheckForCoindexedObject(context, call.arguments[0], name, "from");
+    ok &= CheckForCoindexedObject(context, call.arguments[1], name, "to");
+    ok &= CheckForCoindexedObject(context, call.arguments[2], name, "stat");
+    ok &= CheckForCoindexedObject(context, call.arguments[3], name, "errmsg");
+    if (call.arguments[0] && call.arguments[1]) {
+      for (int j{0}; j < 2; ++j) {
+        if (const Symbol * last{GetLastSymbol(call.arguments[j])};
+            last && !IsAllocatable(last->GetUltimate())) {
+          context.messages().Say(call.arguments[j]->sourceLocation(),
+              "Argument #%d to MOVE_ALLOC must be allocatable"_err_en_US,
+              j + 1);
+          ok = false;
+        }
+      }
+      auto type0{call.arguments[0]->GetType()};
+      auto type1{call.arguments[1]->GetType()};
+      if (type0 && type1 && type0->IsPolymorphic() && !type1->IsPolymorphic()) {
+        context.messages().Say(call.arguments[1]->sourceLocation(),
+            "When MOVE_ALLOC(FROM=) is polymorphic, TO= must also be polymorphic"_err_en_US);
+        ok = false;
+      }
+    }
   } else if (name == "present") {
     const auto &arg{call.arguments[0]};
     if (arg) {
