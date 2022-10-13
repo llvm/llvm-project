@@ -360,6 +360,11 @@ def POSIX : StandardSpec<"POSIX"> {
           [ArgSpec<IntType>]
         >,
         FunctionSpec<
+          "getcwd",
+          RetValSpec<CharPtr>,
+          [ArgSpec<CharPtr>, ArgSpec<SizeTType>]
+        >,
+        FunctionSpec<
           "close",
           RetValSpec<IntType>,
           [ArgSpec<IntType>]
