@@ -464,6 +464,16 @@ FunctionPass *createStraightLineStrengthReducePass();
 
 //===----------------------------------------------------------------------===//
 //
+// PlaceSafepoints - Rewrite any IR calls to gc.statepoints and insert any
+// safepoint polls (method entry, backedge) that might be required.  This pass
+// does not generate explicit relocation sequences - that's handled by
+// RewriteStatepointsForGC which can be run at an arbitrary point in the pass
+// order following this pass.
+//
+FunctionPass *createPlaceSafepointsPass();
+
+//===----------------------------------------------------------------------===//
+//
 // RewriteStatepointsForGC - Rewrite any gc.statepoints which do not yet have
 // explicit relocations to include explicit relocations.
 //
