@@ -2,6 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 declare void @use(i8)
+declare void @use1(i1)
 
 define i32 @foo(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @foo(
@@ -927,4 +928,72 @@ define i8 @sext_cond_extra_uses(i1 %cmp, i8 %a, i8 %b) {
   %and2 = and i8 %sext2, %b
   %or = or i8 %and1, %and2
   ret i8 %or
+}
+
+define i1 @xor_commute0(i1 %x, i1 %y) {
+; CHECK-LABEL: @xor_commute0(
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[X:%.*]], i1 [[Y:%.*]], i1 false
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[X]], i1 true, i1 [[Y]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor i1 [[AND]], true
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[NAND]], i1 [[OR]], i1 false
+; CHECK-NEXT:    ret i1 [[AND2]]
+;
+  %and = select i1 %x, i1 %y, i1 false
+  %or = select i1 %x, i1 true, i1 %y
+  %nand = xor i1 %and, true
+  %and2 = select i1 %nand, i1 %or, i1 false
+  ret i1 %and2
+}
+
+define i1 @xor_commute1(i1 %x, i1 %y) {
+; CHECK-LABEL: @xor_commute1(
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[X:%.*]], i1 [[Y:%.*]], i1 false
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[Y]], i1 true, i1 [[X]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor i1 [[AND]], true
+; CHECK-NEXT:    call void @use1(i1 [[NAND]])
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[NAND]], i1 [[OR]], i1 false
+; CHECK-NEXT:    ret i1 [[AND2]]
+;
+  %and = select i1 %x, i1 %y, i1 false
+  %or = select i1 %y, i1 true, i1 %x
+  %nand = xor i1 %and, true
+  call void @use1(i1 %nand)
+  %and2 = select i1 %nand, i1 %or, i1 false
+  ret i1 %and2
+}
+
+define i1 @xor_commute2(i1 %x, i1 %y) {
+; CHECK-LABEL: @xor_commute2(
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[X:%.*]], i1 [[Y:%.*]], i1 false
+; CHECK-NEXT:    call void @use1(i1 [[AND]])
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[X]], i1 true, i1 [[Y]]
+; CHECK-NEXT:    call void @use1(i1 [[OR]])
+; CHECK-NEXT:    [[NAND:%.*]] = xor i1 [[AND]], true
+; CHECK-NEXT:    call void @use1(i1 [[NAND]])
+; CHECK-NEXT:    [[AND2:%.*]] = select i1 [[OR]], i1 [[NAND]], i1 false
+; CHECK-NEXT:    ret i1 [[AND2]]
+;
+  %and = select i1 %x, i1 %y, i1 false
+  call void @use1(i1 %and)
+  %or = select i1 %x, i1 true, i1 %y
+  call void @use1(i1 %or)
+  %nand = xor i1 %and, true
+  call void @use1(i1 %nand)
+  %and2 = select i1 %or, i1 %nand, i1 false
+  ret i1 %and2
+}
+
+define <2 x i1> @xor_commute3(<2 x i1> %x, <2 x i1> %y) {
+; CHECK-LABEL: @xor_commute3(
+; CHECK-NEXT:    [[AND:%.*]] = select <2 x i1> [[X:%.*]], <2 x i1> [[Y:%.*]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[OR:%.*]] = select <2 x i1> [[Y]], <2 x i1> <i1 true, i1 true>, <2 x i1> [[X]]
+; CHECK-NEXT:    [[NAND:%.*]] = xor <2 x i1> [[AND]], <i1 true, i1 true>
+; CHECK-NEXT:    [[AND2:%.*]] = select <2 x i1> [[OR]], <2 x i1> [[NAND]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[AND2]]
+;
+  %and = select <2 x i1> %x, <2 x i1> %y, <2 x i1> <i1 false, i1 false>
+  %or = select <2 x i1> %y, <2 x i1> <i1 true, i1 true>, <2 x i1> %x
+  %nand = xor <2 x i1> %and, <i1 true, i1 true>
+  %and2 = select <2 x i1> %or, <2 x i1> %nand, <2 x i1> <i1 false, i1 false>
+  ret <2 x i1> %and2
 }
