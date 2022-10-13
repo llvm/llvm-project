@@ -8,10 +8,11 @@
 # CHECK-NEXT:     Version: 0
 # CHECK-NEXT:     ExceptionData: No
 # CHECK-NEXT:     EpiloguePacked: Yes
-# CHECK-NEXT:     EpilogueOffset: 10
-# CHECK-NEXT:     ByteCodeLength: 20
+# CHECK-NEXT:     EpilogueOffset: 11
+# CHECK-NEXT:     ByteCodeLength: 24
 # CHECK-NEXT:     Prologue [
 # CHECK-NEXT:       0xe002dac9          ; sub sp, #2993296
+# CHECK-NEXT:       0xe3                ; nop
 # CHECK-NEXT:       0xe3                ; nop
 # CHECK-NEXT:       0xe3                ; nop
 # CHECK-NEXT:       0x42                ; stp x29, x30, [sp, #16]
@@ -158,7 +159,9 @@ body:             |
     frame-setup SEH_SaveReg_X 28, -256
     frame-setup STPXi killed $fp, killed $lr, $sp, 2 :: (store (s64) into %stack.7), (store (s64) into %stack.8)
     frame-setup SEH_SaveFPLR 16
-    $x15 = frame-setup MOVi64imm 187081
+    $x15 = frame-setup MOVZXi 56009, 0
+    frame-setup SEH_Nop
+    $x15 = frame-setup MOVKXi $x15, 2, 16
     frame-setup SEH_Nop
     frame-setup BL &__chkstk, implicit-def $lr, implicit $sp, implicit $x15
     frame-setup SEH_Nop

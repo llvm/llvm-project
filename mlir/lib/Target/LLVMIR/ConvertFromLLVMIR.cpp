@@ -804,36 +804,6 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
 
   // Convert all special instructions that do not provide an MLIR builder.
   Location loc = translateLoc(inst->getDebugLoc());
-  if (inst->getOpcode() == llvm::Instruction::ICmp) {
-    Value lhs = processValue(inst->getOperand(0));
-    Value rhs = processValue(inst->getOperand(1));
-    Value res = b.create<ICmpOp>(
-        loc, getICmpPredicate(cast<llvm::ICmpInst>(inst)->getPredicate()), lhs,
-        rhs);
-    mapValue(inst, res);
-    return success();
-  }
-  if (inst->getOpcode() == llvm::Instruction::FCmp) {
-    Value lhs = processValue(inst->getOperand(0));
-    Value rhs = processValue(inst->getOperand(1));
-
-    if (lhs.getType() != rhs.getType())
-      return failure();
-
-    Type boolType = b.getI1Type();
-    Type resType = boolType;
-    if (LLVM::isCompatibleVectorType(lhs.getType())) {
-      unsigned numElements =
-          LLVM::getVectorNumElements(lhs.getType()).getFixedValue();
-      resType = VectorType::get({numElements}, boolType);
-    }
-
-    Value res = b.create<FCmpOp>(
-        loc, resType,
-        getFCmpPredicate(cast<llvm::FCmpInst>(inst)->getPredicate()), lhs, rhs);
-    mapValue(inst, res);
-    return success();
-  }
   if (inst->getOpcode() == llvm::Instruction::Br) {
     auto *brInst = cast<llvm::BranchInst>(inst);
     OperationState state(loc,

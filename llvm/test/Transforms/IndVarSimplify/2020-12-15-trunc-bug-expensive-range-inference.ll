@@ -1,4 +1,3 @@
-; RUN: opt < %s -indvars -S -scalar-evolution-use-expensive-range-sharpening | FileCheck %s
 ; RUN: opt < %s -passes=indvars -S -scalar-evolution-use-expensive-range-sharpening | FileCheck %s
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128-ni:1-p2:32:8:8:32-ni:2"

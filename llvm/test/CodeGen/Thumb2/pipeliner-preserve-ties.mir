@@ -188,16 +188,16 @@ body:             |
   ; CHECK-NEXT:   t2STRHi12 [[t2MLS]], [[t2LDRSH_PRE1]], 14, 14 /* CC::al */, $noreg :: (store (s16) into %ir.uglygep4, !tbaa !7)
   ; CHECK-NEXT:   [[t2LDRHi12_:%[0-9]+]]:gprnopc = t2LDRHi12 [[t2LDRSH_PRE1]], 4, 14 /* CC::al */, $noreg :: (load (s16) from %ir.uglygep5, !tbaa !8)
   ; CHECK-NEXT:   t2CMPrr [[t2LDRHi12_]], [[t2UXTH]], 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK-NEXT:   [[t2ADDri:%[0-9]+]]:rgpr = t2ADDri [[COPY]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[COPY]]
+  ; CHECK-NEXT:   [[t2ADDri:%[0-9]+]]:rgpr = t2ADDri [[COPY]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[COPY]](tied-def 0)
   ; CHECK-NEXT:   [[t2LDRHi12_1:%[0-9]+]]:gprnopc = t2LDRHi12 [[t2LDRSH_PRE1]], 6, 14 /* CC::al */, $noreg :: (load (s16) from %ir.uglygep6, !tbaa !9)
   ; CHECK-NEXT:   t2CMPrr [[t2LDRHi12_1]], [[t2UXTH1]], 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK-NEXT:   [[t2ADDri1:%[0-9]+]]:rgpr = t2ADDri [[t2ADDri]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[t2ADDri]]
+  ; CHECK-NEXT:   [[t2ADDri1:%[0-9]+]]:rgpr = t2ADDri [[t2ADDri]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[t2ADDri]](tied-def 0)
   ; CHECK-NEXT:   [[t2LDRHi12_2:%[0-9]+]]:gprnopc = t2LDRHi12 [[t2LDRSH_PRE1]], 8, 14 /* CC::al */, $noreg :: (load (s16) from %ir.uglygep7, !tbaa !10)
   ; CHECK-NEXT:   t2CMPrr [[t2LDRHi12_2]], [[t2UXTH]], 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK-NEXT:   [[t2ADDri2:%[0-9]+]]:rgpr = t2ADDri [[t2ADDri1]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[t2ADDri1]]
+  ; CHECK-NEXT:   [[t2ADDri2:%[0-9]+]]:rgpr = t2ADDri [[t2ADDri1]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[t2ADDri1]](tied-def 0)
   ; CHECK-NEXT:   [[t2LDRHi12_3:%[0-9]+]]:gprnopc = t2LDRHi12 [[t2LDRSH_PRE1]], 10, 14 /* CC::al */, $noreg :: (load (s16) from %ir.uglygep8, !tbaa !11)
   ; CHECK-NEXT:   t2CMPrr [[t2LDRHi12_3]], [[t2UXTH1]], 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK-NEXT:   [[t2ADDri3:%[0-9]+]]:rgpr = t2ADDri [[t2ADDri2]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[t2ADDri2]]
+  ; CHECK-NEXT:   [[t2ADDri3:%[0-9]+]]:rgpr = t2ADDri [[t2ADDri2]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[t2ADDri2]](tied-def 0)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr = COPY [[t2ADDri3]]
   ; CHECK-NEXT:   [[t2LDRHi12_4:%[0-9]+]]:gprnopc = t2LDRHi12 [[t2LDRSH_PRE1]], 18, 14 /* CC::al */, $noreg :: (load (s16) from %ir.uglygep9, !tbaa !5)
   ; CHECK-NEXT:   t2CMPri [[t2LDRHi12_4]], 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
@@ -224,13 +224,13 @@ body:             |
   ; CHECK-NEXT:   [[t2LDRHi12_9:%[0-9]+]]:gprnopc = t2LDRHi12 [[t2LDRSH_PRE3]], 6, 14 /* CC::al */, $noreg :: (load unknown-size from %ir.uglygep6, align 2, !tbaa !9)
   ; CHECK-NEXT:   t2CMPrr [[t2LDRHi12_8]], [[t2UXTH2]], 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK-NEXT:   [[t2UXTH3:%[0-9]+]]:rgpr = t2UXTH [[t2MLS1]], 0, 14 /* CC::al */, $noreg
-  ; CHECK-NEXT:   [[t2ADDri4:%[0-9]+]]:rgpr = t2ADDri [[PHI1]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[PHI1]]
+  ; CHECK-NEXT:   [[t2ADDri4:%[0-9]+]]:rgpr = t2ADDri [[PHI1]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[PHI1]](tied-def 0)
   ; CHECK-NEXT:   t2CMPrr [[t2LDRHi12_9]], [[t2UXTH3]], 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK-NEXT:   [[t2ADDri5:%[0-9]+]]:rgpr = t2ADDri [[t2ADDri4]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[t2ADDri4]]
+  ; CHECK-NEXT:   [[t2ADDri5:%[0-9]+]]:rgpr = t2ADDri [[t2ADDri4]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[t2ADDri4]](tied-def 0)
   ; CHECK-NEXT:   t2CMPrr [[t2LDRHi12_6]], [[t2UXTH2]], 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK-NEXT:   [[t2ADDri6:%[0-9]+]]:rgpr = t2ADDri [[t2ADDri5]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[t2ADDri5]]
+  ; CHECK-NEXT:   [[t2ADDri6:%[0-9]+]]:rgpr = t2ADDri [[t2ADDri5]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[t2ADDri5]](tied-def 0)
   ; CHECK-NEXT:   t2CMPrr [[t2LDRHi12_7]], [[t2UXTH3]], 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK-NEXT:   [[t2ADDri7:%[0-9]+]]:rgpr = t2ADDri [[t2ADDri6]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[t2ADDri6]]
+  ; CHECK-NEXT:   [[t2ADDri7:%[0-9]+]]:rgpr = t2ADDri [[t2ADDri6]], 1, 1 /* CC::ne */, $cpsr, $noreg, implicit [[t2ADDri6]](tied-def 0)
   ; CHECK-NEXT:   t2CMPri [[t2LDRHi12_5]], 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:gpr = COPY [[t2ADDri7]]
   ; CHECK-NEXT:   t2STRHi12 [[t2MLS1]], [[t2LDRSH_PRE3]], 14, 14 /* CC::al */, $noreg :: (store unknown-size into %ir.uglygep4, align 2, !tbaa !7)

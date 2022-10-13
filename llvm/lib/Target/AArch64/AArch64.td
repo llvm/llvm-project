@@ -473,6 +473,9 @@ def FeatureSMEF64 : SubtargetFeature<"sme-f64", "HasSMEF64", "true",
 def FeatureSMEI64 : SubtargetFeature<"sme-i64", "HasSMEI64", "true",
   "Enable Scalable Matrix Extension (SME) I16I64 instructions (FEAT_SME_I16I64)", [FeatureSME]>;
 
+def FeatureSME2 : SubtargetFeature<"sme2", "HasSME2", "true",
+  "Enable Scalable Matrix Extension 2 (SME2) instructions", [FeatureSME]>;
+
 def FeatureAppleA7SysReg  : SubtargetFeature<"apple-a7-sysreg", "HasAppleA7SysReg", "true",
   "Apple A7 (the CPU formerly known as Cyclone)">;
 
@@ -642,7 +645,7 @@ def PAUnsupported : AArch64Unsupported {
 }
 
 def SMEUnsupported : AArch64Unsupported {
-  let F = [HasSME, HasSMEF64, HasSMEI64];
+  let F = [HasSME, HasSMEF64, HasSMEI64, HasSME2];
 }
 
 include "AArch64SchedA53.td"

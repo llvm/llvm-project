@@ -372,6 +372,10 @@ static void getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   case llvm::Triple::csky:
     csky::getCSKYTargetFeatures(D, Triple, Args, CmdArgs, Features);
     break;
+  case llvm::Triple::loongarch32:
+  case llvm::Triple::loongarch64:
+    loongarch::getLoongArchTargetFeatures(D, Triple, Args, Features);
+    break;
   }
 
   for (auto Feature : unifyTargetFeatures(Features)) {

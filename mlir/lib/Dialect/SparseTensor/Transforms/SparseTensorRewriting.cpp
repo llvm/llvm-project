@@ -250,7 +250,7 @@ public:
     // Fuse producer and consumer into a new generic op.
     auto fusedOp = rewriter.create<GenericOp>(
         loc, op.getResult(0).getType(), inputOps, outputOps,
-        rewriter.getAffineMapArrayAttr(fusedIndexMaps), prod.iterator_types(),
+        rewriter.getAffineMapArrayAttr(fusedIndexMaps), prod.getIteratorTypes(),
         /*doc=*/nullptr, /*library_call=*/nullptr);
     Block &prodBlock = prod.getRegion().front();
     Block &consBlock = op.getRegion().front();

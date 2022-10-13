@@ -998,17 +998,6 @@ MachineInstr *ModuloScheduleExpander::cloneInstr(MachineInstr *OldMI,
                                                  unsigned CurStageNum,
                                                  unsigned InstStageNum) {
   MachineInstr *NewMI = MF.CloneMachineInstr(OldMI);
-  // Check for tied operands in inline asm instructions. This should be handled
-  // elsewhere, but I'm not sure of the best solution.
-  if (OldMI->isInlineAsm())
-    for (unsigned i = 0, e = OldMI->getNumOperands(); i != e; ++i) {
-      const auto &MO = OldMI->getOperand(i);
-      if (MO.isReg() && MO.isUse())
-        break;
-      unsigned UseIdx;
-      if (OldMI->isRegTiedToUseOperand(i, &UseIdx))
-        NewMI->tieOperands(i, UseIdx);
-    }
   updateMemOperands(*NewMI, *OldMI, CurStageNum - InstStageNum);
   return NewMI;
 }
