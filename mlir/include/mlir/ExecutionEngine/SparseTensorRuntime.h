@@ -240,8 +240,9 @@ MLIR_CRUNNERUTILS_EXPORT void delSparseTensorReader(void *p);
 
 /// Returns the next element for the sparse tensor being read.
 #define IMPL_GETNEXT(VNAME, V)                                                 \
-  MLIR_CRUNNERUTILS_EXPORT V _mlir_ciface_getSparseTensorReaderNext##VNAME(    \
-      void *p, StridedMemRefType<index_type, 1> *iref);
+  MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_getSparseTensorReaderNext##VNAME( \
+      void *p, StridedMemRefType<index_type, 1> *iref,                         \
+      StridedMemRefType<V, 0> *vref);
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_GETNEXT)
 #undef IMPL_GETNEXT
 
@@ -266,7 +267,7 @@ MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_outSparseTensorWriterMetaData(
 #define IMPL_OUTNEXT(VNAME, V)                                                 \
   MLIR_CRUNNERUTILS_EXPORT void _mlir_ciface_outSparseTensorWriterNext##VNAME( \
       void *p, index_type rank, StridedMemRefType<index_type, 1> *iref,        \
-      V value);
+      StridedMemRefType<V, 0> *vref);
 MLIR_SPARSETENSOR_FOREVERY_V(IMPL_OUTNEXT)
 #undef IMPL_OUTNEXT
 

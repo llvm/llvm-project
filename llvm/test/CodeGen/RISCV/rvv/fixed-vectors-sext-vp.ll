@@ -154,23 +154,21 @@ define <32 x i64> @vsext_v32i64_v32i32(<32 x i32> %va, <32 x i1> %m, i32 zeroext
 ; CHECK-LABEL: vsext_v32i64_v32i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v1, v0
-; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    addi a2, a0, -16
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
-; CHECK-NEXT:    bltu a0, a2, .LBB12_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a1, a2
-; CHECK-NEXT:  .LBB12_2:
+; CHECK-NEXT:    addi a1, a0, -16
+; CHECK-NEXT:    sltu a2, a0, a1
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    and a1, a2, a1
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v24, v8, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    vsext.vf2 v16, v24, v0.t
-; CHECK-NEXT:    bltu a0, a1, .LBB12_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    bltu a0, a1, .LBB12_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:  .LBB12_4:
+; CHECK-NEXT:  .LBB12_2:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v1
 ; CHECK-NEXT:    vsext.vf2 v24, v8, v0.t
@@ -183,21 +181,19 @@ define <32 x i64> @vsext_v32i64_v32i32(<32 x i32> %va, <32 x i1> %m, i32 zeroext
 define <32 x i64> @vsext_v32i64_v32i32_unmasked(<32 x i32> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vsext_v32i64_v32i32_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a2, a0, -16
-; CHECK-NEXT:    li a1, 0
-; CHECK-NEXT:    bltu a0, a2, .LBB13_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a1, a2
-; CHECK-NEXT:  .LBB13_2:
+; CHECK-NEXT:    addi a1, a0, -16
+; CHECK-NEXT:    sltu a2, a0, a1
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    and a1, a2, a1
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m8, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v24, v8, 16
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    vsext.vf2 v16, v24
-; CHECK-NEXT:    bltu a0, a1, .LBB13_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    bltu a0, a1, .LBB13_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:  .LBB13_4:
+; CHECK-NEXT:  .LBB13_2:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vsext.vf2 v24, v8
 ; CHECK-NEXT:    vmv.v.v v8, v24

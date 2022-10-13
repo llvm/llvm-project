@@ -57,6 +57,13 @@ option(COMPILER_RT_BUILD_GWP_ASAN "Build GWP-ASan, and link it into SCUDO" ON)
 mark_as_advanced(COMPILER_RT_BUILD_GWP_ASAN)
 option(COMPILER_RT_ENABLE_CET "Build Compiler RT with CET enabled" OFF)
 
+option(COMPILER_RT_SCUDO_STANDALONE_SYSROOT_PATH "Set custom sysroot for building SCUDO standalone" OFF)
+mark_as_advanced(COMPILER_RT_SCUDO_STANDALONE_SYSROOT_PATH)
+option(COMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED "Build SCUDO standalone for shared libraries" ON)
+mark_as_advanced(COMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED)
+option(COMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC "Build SCUDO standalone with LLVM's libc headers" OFF)
+mark_as_advanced(COMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC)
+
 if(FUCHSIA)
   set(COMPILER_RT_HWASAN_WITH_INTERCEPTORS_DEFAULT OFF)
 else()
