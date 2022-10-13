@@ -92,7 +92,7 @@ transform::TransformState::setPayloadOps(Value value,
 void transform::TransformState::dropReverseMapping(Mappings &mappings,
                                                    Operation *op, Value value) {
   auto it = mappings.reverse.find(op);
-  if (it != mappings.reverse.end())
+  if (it == mappings.reverse.end())
     return;
 
   llvm::erase_value(it->getSecond(), value);
