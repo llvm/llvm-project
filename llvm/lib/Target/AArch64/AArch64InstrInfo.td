@@ -142,6 +142,8 @@ def HasSMEF64        : Predicate<"Subtarget->hasSMEF64()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEF64), "sme-f64">;
 def HasSMEI64        : Predicate<"Subtarget->hasSMEI64()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSMEI64), "sme-i64">;
+def HasSME2          : Predicate<"Subtarget->hasSME2()">,
+                                 AssemblerPredicate<(all_of FeatureSME2), "sme2">;
 // A subset of SVE(2) instructions are legal in Streaming SVE execution mode,
 // they should be enabled if either has been specified.
 def HasSVEorSME
