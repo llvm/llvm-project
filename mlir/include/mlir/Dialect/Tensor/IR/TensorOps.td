@@ -87,7 +87,7 @@ def Tensor_CastOp : Tensor_Op<"cast", [
 
 def Tensor_DimOp : Tensor_Op<"dim", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    Pure,
+    ConditionallySpeculatable, NoMemoryEffect,
     ShapedDimOpInterface]> {
   let summary = "dimension index operation";
   let description = [{
@@ -135,6 +135,9 @@ def Tensor_DimOp : Tensor_Op<"dim", [
 
     /// Interface method of ShapedDimOpInterface: Return the dimension.
     OpFoldResult getDimension() { return getIndex(); }
+
+    /// Interface method for ConditionallySpeculatable.
+    Speculation::Speculatability getSpeculatability();
   }];
 
   let hasCanonicalizer = 1;

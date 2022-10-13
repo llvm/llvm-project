@@ -819,6 +819,20 @@ Optional<int64_t> DimOp::getConstantIndex() {
   return {};
 }
 
+Speculation::Speculatability DimOp::getSpeculatability() {
+  auto constantIndex = getConstantIndex();
+  if (!constantIndex)
+    return Speculation::NotSpeculatable;
+
+  auto rankedSourceType = dyn_cast<MemRefType>(getSource().getType());
+  if (!rankedSourceType)
+    return Speculation::NotSpeculatable;
+
+  // The verifier rejects operations that violate this assertion.
+  assert(constantIndex < rankedSourceType.getRank());
+  return Speculation::Speculatable;
+}
+
 LogicalResult DimOp::verify() {
   // Assume unknown index to be in range.
   Optional<int64_t> index = getConstantIndex();
