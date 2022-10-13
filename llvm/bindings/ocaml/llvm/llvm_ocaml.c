@@ -571,7 +571,7 @@ LLVMTypeRef llvm_array_type(LLVMTypeRef ElementTy, value Count) {
 }
 
 /* llcontext -> lltype */
-LLVMTypeRef llvm_pointer_type(LLVMContextRef C, value AddressSpace) {
+LLVMTypeRef llvm_pointer_type(LLVMContextRef C) {
   return LLVMPointerTypeInContext(C, 0);
 }
 
