@@ -391,7 +391,8 @@ static void ProcessThreadRegistry(Frontier *frontier) {
 
 // Scans thread data (stacks and TLS) for heap pointers.
 static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
-                           Frontier *frontier) {
+                           Frontier *frontier, tid_t caller_tid,
+                           uptr caller_sp) {
   InternalMmapVector<uptr> registers;
   for (uptr i = 0; i < suspended_threads.ThreadCount(); i++) {
     tid_t os_id = static_cast<tid_t>(suspended_threads.GetThreadID(i));
@@ -417,6 +418,9 @@ static void ProcessThreads(SuspendedThreadsList const &suspended_threads,
       if (have_registers == REGISTERS_UNAVAILABLE_FATAL)
         continue;
       sp = stack_begin;
+    }
+    if (suspended_threads.GetThreadID(i) == caller_tid) {
+      sp = caller_sp;
     }
 
     if (flags()->use_registers && have_registers) {
@@ -598,7 +602,8 @@ static void CollectIgnoredCb(uptr chunk, void *arg) {
 
 // Sets the appropriate tag on each chunk.
 static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads,
-                              Frontier *frontier) {
+                              Frontier *frontier, tid_t caller_tid,
+                              uptr caller_sp) {
   const InternalMmapVector<u32> &suppressed_stacks =
       GetSuppressionContext()->GetSortedSuppressedStacks();
   if (!suppressed_stacks.empty()) {
@@ -607,7 +612,7 @@ static void ClassifyAllChunks(SuspendedThreadsList const &suspended_threads,
   }
   ForEachChunk(CollectIgnoredCb, frontier);
   ProcessGlobalRegions(frontier);
-  ProcessThreads(suspended_threads, frontier);
+  ProcessThreads(suspended_threads, frontier, caller_tid, caller_sp);
   ProcessRootRegions(frontier);
   FloodFillTag(frontier, kReachable);
 
@@ -703,7 +708,8 @@ static void CheckForLeaksCallback(const SuspendedThreadsList &suspended_threads,
   CHECK(param);
   CHECK(!param->success);
   ReportUnsuspendedThreads(suspended_threads);
-  ClassifyAllChunks(suspended_threads, &param->frontier);
+  ClassifyAllChunks(suspended_threads, &param->frontier, param->caller_tid,
+                    param->caller_sp);
   ForEachChunk(CollectLeaksCb, &param->leaks);
   // Clean up for subsequent leak checks. This assumes we did not overwrite any
   // kIgnored tags.
@@ -742,6 +748,12 @@ static bool CheckForLeaks() {
   for (int i = 0;; ++i) {
     EnsureMainThreadIDIsCorrect();
     CheckForLeaksParam param;
+    // Capture calling thread's stack pointer early, to avoid false negatives.
+    // Old frame with dead pointers might be overlapped by new frame inside
+    // CheckForLeaks which does not use bytes with pointers before the
+    // threads are suspended and stack pointers captured.
+    param.caller_tid = GetTid();
+    param.caller_sp = reinterpret_cast<uptr>(__builtin_frame_address(0));
     LockStuffAndStopTheWorld(CheckForLeaksCallback, &param);
     if (!param.success) {
       Report("LeakSanitizer has encountered a fatal error.\n");

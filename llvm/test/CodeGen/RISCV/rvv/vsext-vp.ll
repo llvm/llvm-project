@@ -152,23 +152,21 @@ define <vscale x 32 x i32> @vsext_nxv32i8_nxv32i32(<vscale x 32 x i8> %a, <vscal
 ; CHECK-LABEL: vsext_nxv32i8_nxv32i32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v12, v0
-; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a4, a1, 2
+; CHECK-NEXT:    srli a2, a1, 2
 ; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    sub a3, a0, a1
-; CHECK-NEXT:    vslidedown.vx v0, v0, a4
-; CHECK-NEXT:    bltu a0, a3, .LBB12_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a2, a3
-; CHECK-NEXT:  .LBB12_2:
+; CHECK-NEXT:    sub a2, a0, a1
+; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; CHECK-NEXT:    vsext.vf4 v16, v10, v0.t
-; CHECK-NEXT:    bltu a0, a1, .LBB12_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    bltu a0, a1, .LBB12_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:  .LBB12_4:
+; CHECK-NEXT:  .LBB12_2:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    vsext.vf4 v24, v8, v0.t
@@ -183,22 +181,19 @@ define <vscale x 32 x i32> @vsext_nxv32i8_nxv32i32_unmasked(<vscale x 32 x i8> %
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    mv a2, a0
+; CHECK-NEXT:    sub a2, a0, a1
+; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    and a2, a3, a2
+; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
+; CHECK-NEXT:    vsext.vf4 v16, v10
 ; CHECK-NEXT:    bltu a0, a1, .LBB13_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a2, a1
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:  .LBB13_2:
-; CHECK-NEXT:    li a3, 0
-; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
-; CHECK-NEXT:    sub a1, a0, a1
+; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vsext.vf4 v24, v8
-; CHECK-NEXT:    bltu a0, a1, .LBB13_4
-; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    mv a3, a1
-; CHECK-NEXT:  .LBB13_4:
-; CHECK-NEXT:    vsetvli zero, a3, e32, m8, ta, ma
-; CHECK-NEXT:    vsext.vf4 v16, v10
-; CHECK-NEXT:    vmv8r.v v8, v24
+; CHECK-NEXT:    vmv.v.v v8, v24
 ; CHECK-NEXT:    ret
   %v = call <vscale x 32 x i32> @llvm.vp.sext.nxv32i32.nxv32i8(<vscale x 32 x i8> %a, <vscale x 32 x i1> shufflevector (<vscale x 32 x i1> insertelement (<vscale x 32 x i1> undef, i1 true, i32 0), <vscale x 32 x i1> undef, <vscale x 32 x i32> zeroinitializer), i32 %vl)
   ret <vscale x 32 x i32> %v

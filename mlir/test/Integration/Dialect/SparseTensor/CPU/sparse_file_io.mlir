@@ -19,17 +19,17 @@ module {
   func.func private @getSparseTensorReaderRank(!TensorReader) -> (index)
   func.func private @getSparseTensorReaderNNZ(!TensorReader) -> (index)
   func.func private @getSparseTensorReaderIsSymmetric(!TensorReader) -> (i1)
-  func.func private @getSparseTensorReaderDimSizes(!TensorReader, memref<?xindex>)
-    -> () attributes { llvm.emit_c_interface }
-  func.func private @getSparseTensorReaderNextF32(!TensorReader, memref<?xindex>)
-    -> (f32) attributes { llvm.emit_c_interface }
+  func.func private @getSparseTensorReaderDimSizes(!TensorReader,
+    memref<?xindex>) -> () attributes { llvm.emit_c_interface }
+  func.func private @getSparseTensorReaderNextF32(!TensorReader,
+    memref<?xindex>, memref<f32>) -> () attributes { llvm.emit_c_interface }
 
   func.func private @createSparseTensorWriter(!Filename) -> (!TensorWriter)
   func.func private @delSparseTensorWriter(!TensorWriter)
   func.func private @outSparseTensorWriterMetaData(!TensorWriter, index, index,
     memref<?xindex>) -> () attributes { llvm.emit_c_interface }
   func.func private @outSparseTensorWriterNextF32(!TensorWriter, index,
-    memref<?xindex>, f32) -> () attributes { llvm.emit_c_interface }
+    memref<?xindex>, memref<f32>) -> () attributes { llvm.emit_c_interface }
 
   func.func @dumpi(%arg0: memref<?xindex>) {
     %c0 = arith.constant 0 : index
@@ -60,9 +60,13 @@ module {
     %x1s = memref.alloc(%nnz) : memref<?xindex>
     %vs = memref.alloc(%nnz) : memref<?xf32>
     %indices = memref.alloc(%rank) : memref<?xindex>
+    %value = memref.alloca() : memref<f32>
     scf.for %i = %c0 to %nnz step %c1 {
-      %v = func.call @getSparseTensorReaderNextF32(%tensor, %indices)
-        : (!TensorReader, memref<?xindex>) -> f32
+      func.call @getSparseTensorReaderNextF32(%tensor, %indices, %value)
+        : (!TensorReader, memref<?xindex>, memref<f32>) -> ()
+      // TODO: can we use memref.subview to avoid the need for the %value
+      //       buffer?
+      %v = memref.load %value[] : memref<f32>
       memref.store %v, %vs[%i] : memref<?xf32>
       %i0 = memref.load %indices[%c0] : memref<?xindex>
       memref.store %i0, %x0s[%i] : memref<?xindex>
@@ -129,11 +133,12 @@ module {
     //TODO: handle isSymmetric.
     // Assume rank == 2.
     %indices = memref.alloc(%rank) : memref<?xindex>
+    %value = memref.alloca() : memref<f32>
     scf.for %i = %c0 to %nnz step %c1 {
-      %v = func.call @getSparseTensorReaderNextF32(%tensor0, %indices)
-        : (!TensorReader, memref<?xindex>) -> f32
-      func.call @outSparseTensorWriterNextF32(%tensor1, %rank, %indices, %v)
-        : (!TensorWriter, index, memref<?xindex>, f32) -> ()
+      func.call @getSparseTensorReaderNextF32(%tensor0, %indices, %value)
+        : (!TensorReader, memref<?xindex>, memref<f32>) -> ()
+      func.call @outSparseTensorWriterNextF32(%tensor1, %rank, %indices, %value)
+        : (!TensorWriter, index, memref<?xindex>, memref<f32>) -> ()
     }
 
     // Release the resources.

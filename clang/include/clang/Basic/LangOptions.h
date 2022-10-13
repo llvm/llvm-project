@@ -54,6 +54,9 @@ protected:
 enum class MSVtorDispMode { Never, ForVBaseOverride, ForVFTable };
 
 /// Shader programs run in specific pipeline stages.
+/// The order of these values matters, and must be kept in sync with the
+/// Triple Environment enum in llvm::Triple. The ordering is enforced in
+///  static_asserts in Triple.cpp and in clang/Basic/HLSLRuntime.h.
 enum class ShaderStage {
   Pixel = 0,
   Vertex,

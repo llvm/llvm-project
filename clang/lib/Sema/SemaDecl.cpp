@@ -27,6 +27,7 @@
 #include "clang/AST/Randstruct.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/PartialDiagnostic.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
@@ -10117,10 +10118,11 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
         S->getDepth() == 0) {
       CheckHLSLEntryPoint(NewFD);
       if (!NewFD->isInvalidDecl()) {
-        auto TripleShaderType = TargetInfo.getTriple().getEnvironment();
+        auto Env = TargetInfo.getTriple().getEnvironment();
         AttributeCommonInfo AL(NewFD->getBeginLoc());
-        HLSLShaderAttr::ShaderType ShaderType = (HLSLShaderAttr::ShaderType)(
-            TripleShaderType - (uint32_t)llvm::Triple::Pixel);
+        HLSLShaderAttr::ShaderType ShaderType =
+            static_cast<HLSLShaderAttr::ShaderType>(
+                hlsl::getStageFromEnvironment(Env));
         // To share code with HLSLShaderAttr, add HLSLShaderAttr to entry
         // function.
         if (HLSLShaderAttr *Attr = mergeHLSLShaderAttr(NewFD, AL, ShaderType))

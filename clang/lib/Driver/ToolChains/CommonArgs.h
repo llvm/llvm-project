@@ -190,7 +190,8 @@ void addMultilibFlag(bool Enabled, const char *const Flag,
                      Multilib::flags_list &Flags);
 
 void addX86AlignBranchArgs(const Driver &D, const llvm::opt::ArgList &Args,
-                           llvm::opt::ArgStringList &CmdArgs, bool IsLTO);
+                           llvm::opt::ArgStringList &CmdArgs, bool IsLTO,
+                           const StringRef PluginOptPrefix = "");
 
 void checkAMDGPUCodeObjectVersion(const Driver &D,
                                   const llvm::opt::ArgList &Args);
@@ -203,7 +204,8 @@ bool haveAMDGPUCodeObjectVersionArgument(const Driver &D,
 
 void addMachineOutlinerArgs(const Driver &D, const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs,
-                            const llvm::Triple &Triple, bool IsLTO);
+                            const llvm::Triple &Triple, bool IsLTO,
+                            const StringRef PluginOptPrefix = "");
 
 void addOpenMPDeviceRTL(const Driver &D, const llvm::opt::ArgList &DriverArgs,
                         llvm::opt::ArgStringList &CC1Args,
