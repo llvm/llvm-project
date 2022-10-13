@@ -126,7 +126,4 @@
 /* Define to 1 if you have the DIA SDK installed, and to 0 if you don't. */
 #cmakedefine01 LLVM_ENABLE_DIA_SDK
 
-/* Define to 1 if OnDiskCAS is enabled. */
-#cmakedefine01 LLVM_ENABLE_ONDISK_CAS
-
 #endif
