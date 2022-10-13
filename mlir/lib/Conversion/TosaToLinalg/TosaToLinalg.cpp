@@ -825,9 +825,12 @@ static LogicalResult reduceMatchAndRewriteHelper(Operation *op, uint64_t axis,
     int32_t dimToPush = i > axis ? i + 1 : i;
     reassociationMap[i].push_back(rewriter.getAffineDimExpr(dimToPush));
   }
-  int32_t expandedDim = axis < expandInputRank ? axis : expandInputRank - 1;
-  reassociationMap[expandedDim].push_back(
-      rewriter.getAffineDimExpr(expandedDim + 1));
+
+  if (expandInputRank != 0) {
+    int32_t expandedDim = axis < expandInputRank ? axis : expandInputRank - 1;
+    reassociationMap[expandedDim].push_back(
+        rewriter.getAffineDimExpr(expandedDim + 1));
+  }
 
   rewriter.replaceOpWithNewOp<tensor::ExpandShapeOp>(
       op, resultTy, linalgOp.getResults()[0], reassociationMap);
