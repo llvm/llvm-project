@@ -269,9 +269,21 @@ std::string CPlusPlusLanguage::MethodName::GetScopeQualifiedName() {
   return res;
 }
 
+llvm::StringRef
+CPlusPlusLanguage::MethodName::GetBasenameNoTemplateParameters() {
+  llvm::StringRef basename = GetBasename();
+  size_t arg_start, arg_end;
+  llvm::StringRef parens("<>", 2);
+  if (ReverseFindMatchingChars(basename, parens, arg_start, arg_end))
+    return basename.substr(0, arg_start);
+
+  return basename;
+}
+
 bool CPlusPlusLanguage::MethodName::ContainsPath(llvm::StringRef path) {
   if (!m_parsed)
     Parse();
+
   // If we can't parse the incoming name, then just check that it contains path.
   if (m_parse_error)
     return m_full.GetStringRef().contains(path);
@@ -286,8 +298,23 @@ bool CPlusPlusLanguage::MethodName::ContainsPath(llvm::StringRef path) {
   if (!success)
     return m_full.GetStringRef().contains(path);
 
-  if (identifier != GetBasename())
+  // Basename may include template arguments.
+  // E.g.,
+  // GetBaseName(): func<int>
+  // identifier   : func
+  //
+  // ...but we still want to account for identifiers with template parameter
+  // lists, e.g., when users set breakpoints on template specializations.
+  //
+  // E.g.,
+  // GetBaseName(): func<uint32_t>
+  // identifier   : func<int32_t*>
+  //
+  // Try to match the basename with or without template parameters.
+  if (GetBasename() != identifier &&
+      GetBasenameNoTemplateParameters() != identifier)
     return false;
+
   // Incoming path only had an identifier, so we match.
   if (context.empty())
     return true;
