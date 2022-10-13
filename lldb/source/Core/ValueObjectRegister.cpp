@@ -282,7 +282,7 @@ bool ValueObjectRegister::SetValueFromCString(const char *value_str,
 }
 
 bool ValueObjectRegister::SetData(DataExtractor &data, Status &error) {
-  error = m_reg_value.SetValueFromData(&m_reg_info, data, 0, false);
+  error = m_reg_value.SetValueFromData(m_reg_info, data, 0, false);
   if (!error.Success())
     return false;
 

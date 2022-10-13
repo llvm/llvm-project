@@ -47,7 +47,8 @@ static bool wouldOpBeTriviallyDeadImpl(Operation *rootOp) {
 
     // If the operation has recursive effects, push all of the nested operations
     // on to the stack to consider.
-    bool hasRecursiveEffects = op->hasTrait<OpTrait::HasRecursiveSideEffects>();
+    bool hasRecursiveEffects =
+        op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
     if (hasRecursiveEffects) {
       for (Region &region : op->getRegions()) {
         for (auto &block : region) {

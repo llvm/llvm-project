@@ -17,11 +17,6 @@ declare dso_local void @other(ptr noundef)
 ; CHECK-NEXT: .seh_save_fplr_x 16
 ; CHECK-NEXT: mov x29, sp
 ; CHECK-NEXT: .seh_set_fp
-; CHECK-NEXT: sub x9, sp, #80
-; CHECK-NEXT: .seh_nop
-; CHECK-NEXT: and sp, x9, #0xffffffffffffffe0
-; CHECK-NEXT: .seh_stackalloc 80
 ; CHECK-NEXT: .seh_endprologue
-
-; FIXME: Ideally, the SEH prologue wouldn't include the stack realigning
-; instructions at all, but it's enough to end the prologue after .seh_set_fp.
+; CHECK-NEXT: sub x9, sp, #80
+; CHECK-NEXT: and sp, x9, #0xffffffffffffffe0

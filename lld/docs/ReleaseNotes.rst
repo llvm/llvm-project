@@ -31,6 +31,9 @@ ELF Improvements
 * ``--compress-debug-sections=zstd`` is now available to compress debug
   sections with zstd (``ELFCOMPRESS_ZSTD``).
   (`D133548 <https://reviews.llvm.org/D133548>`_)
+* ``--no-undefined-version`` is now the default; symbols named in version
+  scripts that have no matching symbol in the output will be reported. Use
+  ``--undefined-version`` to revert to the old behavior.
 
 Breaking changes
 ----------------

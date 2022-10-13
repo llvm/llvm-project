@@ -8,13 +8,13 @@
 ; CHECK-NOT:  vlvgf   %v24, %r0, 1
 ; CHECK-NOT:  vlvgf   %v24, %r0, 2
 
-define <4 x i32> @fun(i32 %arg, i32* %dst) {
-  %tmp = load i32, i32* undef
+define <4 x i32> @fun(i32 %arg, ptr %dst) {
+  %tmp = load i32, ptr undef
   %tmp8 = insertelement <4 x i32> undef, i32 %tmp, i32 0
   %tmp9 = insertelement <4 x i32> %tmp8, i32 %tmp, i32 1
   %tmp10 = insertelement <4 x i32> %tmp9, i32 %tmp, i32 2
   %tmp11 = insertelement <4 x i32> %tmp10, i32 %arg, i32 3
-  store i32 %tmp, i32* %dst
+  store i32 %tmp, ptr %dst
   ret <4 x i32> %tmp11
 }
 

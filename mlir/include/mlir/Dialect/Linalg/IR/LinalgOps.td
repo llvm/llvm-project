@@ -24,7 +24,7 @@ include "mlir/Interfaces/ViewLikeInterface.td"
 class Linalg_Op<string mnemonic, list<Trait> traits = []> :
     Op<Linalg_Dialect, mnemonic, traits>;
 
-def Linalg_YieldOp : Linalg_Op<"yield", [NoSideEffect, ReturnLike, Terminator]>,
+def Linalg_YieldOp : Linalg_Op<"yield", [Pure, ReturnLike, Terminator]>,
     Arguments<(ins Variadic<AnyType>:$values)> {
   let summary = "Linalg yield operation";
   let description = [{
@@ -43,7 +43,7 @@ def Linalg_YieldOp : Linalg_Op<"yield", [NoSideEffect, ReturnLike, Terminator]>,
   let hasVerifier = 1;
 }
 
-def Linalg_IndexOp : Linalg_Op<"index", [NoSideEffect]>,
+def Linalg_IndexOp : Linalg_Op<"index", [Pure]>,
     Arguments<(ins ConfinedAttr<I64Attr, [IntMinValue<0>]>:$dim)>,
     Results<(outs Index:$result)> {
   let summary = "linalg index operation";

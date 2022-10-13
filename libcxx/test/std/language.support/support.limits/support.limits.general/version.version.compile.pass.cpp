@@ -53,6 +53,7 @@
     __cpp_lib_concepts                             202002L [C++20]
     __cpp_lib_constexpr_algorithms                 201806L [C++20]
     __cpp_lib_constexpr_bitset                     202207L [C++2b]
+    __cpp_lib_constexpr_charconv                   202207L [C++2b]
     __cpp_lib_constexpr_cmath                      202202L [C++2b]
     __cpp_lib_constexpr_complex                    201711L [C++20]
     __cpp_lib_constexpr_dynamic_alloc              201907L [C++20]
@@ -329,6 +330,10 @@
 
 # ifdef __cpp_lib_constexpr_bitset
 #   error "__cpp_lib_constexpr_bitset should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_constexpr_charconv
+#   error "__cpp_lib_constexpr_charconv should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_constexpr_cmath
@@ -965,6 +970,10 @@
 
 # ifdef __cpp_lib_constexpr_bitset
 #   error "__cpp_lib_constexpr_bitset should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_constexpr_charconv
+#   error "__cpp_lib_constexpr_charconv should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_constexpr_cmath
@@ -1697,6 +1706,10 @@
 
 # ifdef __cpp_lib_constexpr_bitset
 #   error "__cpp_lib_constexpr_bitset should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_constexpr_charconv
+#   error "__cpp_lib_constexpr_charconv should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_constexpr_cmath
@@ -2669,6 +2682,10 @@
 
 # ifdef __cpp_lib_constexpr_bitset
 #   error "__cpp_lib_constexpr_bitset should not be defined before c++2b"
+# endif
+
+# ifdef __cpp_lib_constexpr_charconv
+#   error "__cpp_lib_constexpr_charconv should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_constexpr_cmath
@@ -3887,6 +3904,13 @@
 # endif
 # if __cpp_lib_constexpr_bitset != 202207L
 #   error "__cpp_lib_constexpr_bitset should have the value 202207L in c++2b"
+# endif
+
+# ifndef __cpp_lib_constexpr_charconv
+#   error "__cpp_lib_constexpr_charconv should be defined in c++2b"
+# endif
+# if __cpp_lib_constexpr_charconv != 202207L
+#   error "__cpp_lib_constexpr_charconv should have the value 202207L in c++2b"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

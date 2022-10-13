@@ -85,8 +85,6 @@
 
 ; UNWIND: Function: ?func@@YAHXZ (0x0)
 ; UNWIND: Prologue [
-; UNWIND-NEXT: ; nop
-; UNWIND-NEXT: ; sub sp, #624
 ; UNWIND-NEXT: ; add fp, sp, #32
 ; UNWIND-NEXT: ; stp x29, x30, [sp, #32]
 ; UNWIND-NEXT: ; str x28, [sp, #24]

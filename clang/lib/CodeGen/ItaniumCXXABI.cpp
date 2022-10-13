@@ -2428,54 +2428,61 @@ void ItaniumCXXABI::EmitGuardedInit(CodeGenFunction &CGF,
   //         __cxa_guard_release (&obj_guard);
   //       }
   //     }
-
-  // Load the first byte of the guard variable.
-  llvm::LoadInst *LI =
-      Builder.CreateLoad(Builder.CreateElementBitCast(guardAddr, CGM.Int8Ty));
-
-  // Itanium ABI:
-  //   An implementation supporting thread-safety on multiprocessor
-  //   systems must also guarantee that references to the initialized
-  //   object do not occur before the load of the initialization flag.
   //
-  // In LLVM, we do this by marking the load Acquire.
-  if (threadsafe)
-    LI->setAtomic(llvm::AtomicOrdering::Acquire);
+  // If threadsafe statics are enabled, but we don't have inline atomics, just
+  // call __cxa_guard_acquire unconditionally.  The "inline" check isn't
+  // actually inline, and the user might not expect calls to __atomic libcalls.
 
-  // For ARM, we should only check the first bit, rather than the entire byte:
-  //
-  // ARM C++ ABI 3.2.3.1:
-  //   To support the potential use of initialization guard variables
-  //   as semaphores that are the target of ARM SWP and LDREX/STREX
-  //   synchronizing instructions we define a static initialization
-  //   guard variable to be a 4-byte aligned, 4-byte word with the
-  //   following inline access protocol.
-  //     #define INITIALIZED 1
-  //     if ((obj_guard & INITIALIZED) != INITIALIZED) {
-  //       if (__cxa_guard_acquire(&obj_guard))
-  //         ...
-  //     }
-  //
-  // and similarly for ARM64:
-  //
-  // ARM64 C++ ABI 3.2.2:
-  //   This ABI instead only specifies the value bit 0 of the static guard
-  //   variable; all other bits are platform defined. Bit 0 shall be 0 when the
-  //   variable is not initialized and 1 when it is.
-  llvm::Value *V =
-      (UseARMGuardVarABI && !useInt8GuardVariable)
-          ? Builder.CreateAnd(LI, llvm::ConstantInt::get(CGM.Int8Ty, 1))
-          : LI;
-  llvm::Value *NeedsInit = Builder.CreateIsNull(V, "guard.uninitialized");
-
-  llvm::BasicBlock *InitCheckBlock = CGF.createBasicBlock("init.check");
+  unsigned MaxInlineWidthInBits = CGF.getTarget().getMaxAtomicInlineWidth();
   llvm::BasicBlock *EndBlock = CGF.createBasicBlock("init.end");
+  if (!threadsafe || MaxInlineWidthInBits) {
+    // Load the first byte of the guard variable.
+    llvm::LoadInst *LI =
+        Builder.CreateLoad(Builder.CreateElementBitCast(guardAddr, CGM.Int8Ty));
 
-  // Check if the first byte of the guard variable is zero.
-  CGF.EmitCXXGuardedInitBranch(NeedsInit, InitCheckBlock, EndBlock,
-                               CodeGenFunction::GuardKind::VariableGuard, &D);
+    // Itanium ABI:
+    //   An implementation supporting thread-safety on multiprocessor
+    //   systems must also guarantee that references to the initialized
+    //   object do not occur before the load of the initialization flag.
+    //
+    // In LLVM, we do this by marking the load Acquire.
+    if (threadsafe)
+      LI->setAtomic(llvm::AtomicOrdering::Acquire);
 
-  CGF.EmitBlock(InitCheckBlock);
+    // For ARM, we should only check the first bit, rather than the entire byte:
+    //
+    // ARM C++ ABI 3.2.3.1:
+    //   To support the potential use of initialization guard variables
+    //   as semaphores that are the target of ARM SWP and LDREX/STREX
+    //   synchronizing instructions we define a static initialization
+    //   guard variable to be a 4-byte aligned, 4-byte word with the
+    //   following inline access protocol.
+    //     #define INITIALIZED 1
+    //     if ((obj_guard & INITIALIZED) != INITIALIZED) {
+    //       if (__cxa_guard_acquire(&obj_guard))
+    //         ...
+    //     }
+    //
+    // and similarly for ARM64:
+    //
+    // ARM64 C++ ABI 3.2.2:
+    //   This ABI instead only specifies the value bit 0 of the static guard
+    //   variable; all other bits are platform defined. Bit 0 shall be 0 when the
+    //   variable is not initialized and 1 when it is.
+    llvm::Value *V =
+        (UseARMGuardVarABI && !useInt8GuardVariable)
+            ? Builder.CreateAnd(LI, llvm::ConstantInt::get(CGM.Int8Ty, 1))
+            : LI;
+    llvm::Value *NeedsInit = Builder.CreateIsNull(V, "guard.uninitialized");
+
+    llvm::BasicBlock *InitCheckBlock = CGF.createBasicBlock("init.check");
+
+    // Check if the first byte of the guard variable is zero.
+    CGF.EmitCXXGuardedInitBranch(NeedsInit, InitCheckBlock, EndBlock,
+                                 CodeGenFunction::GuardKind::VariableGuard, &D);
+
+    CGF.EmitBlock(InitCheckBlock);
+  }
 
   // Variables used when coping with thread-safe statics and exceptions.
   if (threadsafe) {

@@ -7,9 +7,8 @@
 # CHECK-NEXT: frame-setup SEH_SaveFPLR_X -16
 # CHECK-NEXT: $fp = frame-setup ADDXri $sp, 0, 0
 # CHECK-NEXT: frame-setup SEH_SetFP
-# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 32, 0
-# CHECK-NEXT: frame-setup SEH_StackAlloc 32
 # CHECK-NEXT: frame-setup SEH_PrologEnd
+# CHECK-NEXT: $sp = frame-setup SUBXri $sp, 32, 0
 # CHECK:      frame-destroy SEH_EpilogStart
 # CHECK-NEXT: $sp = frame-destroy ADDXri $fp, 0, 0
 # CHECK-NEXT: frame-destroy SEH_SetFP

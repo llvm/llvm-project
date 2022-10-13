@@ -345,7 +345,7 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
     BufferizableOpInterface,
     SameOperandsAndResultShape,
     SameOperandsAndResultElementType,
-    NoSideEffect,
+    Pure,
     TypesMatchWith<"type of 'tensor' is the tensor equivalent of 'memref'",
                    "memref", "tensor",
                    "memref::getTensorTypeFromMemRefType($_self)">

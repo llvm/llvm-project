@@ -13,7 +13,7 @@
 ;
 ; Use a different address for the final store, so that we can check that
 ; %r15 isn't referenced again until after that.
-define void @f1(i32 *%ptr) {
+define void @f1(ptr %ptr) {
 ; CHECK-LABEL: f1:
 ; CHECK: stmg %r6, %r15, 48(%r15)
 ; CHECK-NOT: %r15
@@ -32,20 +32,20 @@ define void @f1(i32 *%ptr) {
 ; CHECK: st {{.*}}, 4(%r2)
 ; CHECK: lmg %r6, %r15, 48(%r15)
 ; CHECK: br %r14
-  %l0 = load volatile i32, i32 *%ptr
-  %l1 = load volatile i32, i32 *%ptr
-  %l3 = load volatile i32, i32 *%ptr
-  %l4 = load volatile i32, i32 *%ptr
-  %l5 = load volatile i32, i32 *%ptr
-  %l6 = load volatile i32, i32 *%ptr
-  %l7 = load volatile i32, i32 *%ptr
-  %l8 = load volatile i32, i32 *%ptr
-  %l9 = load volatile i32, i32 *%ptr
-  %l10 = load volatile i32, i32 *%ptr
-  %l11 = load volatile i32, i32 *%ptr
-  %l12 = load volatile i32, i32 *%ptr
-  %l13 = load volatile i32, i32 *%ptr
-  %l14 = load volatile i32, i32 *%ptr
+  %l0 = load volatile i32, ptr %ptr
+  %l1 = load volatile i32, ptr %ptr
+  %l3 = load volatile i32, ptr %ptr
+  %l4 = load volatile i32, ptr %ptr
+  %l5 = load volatile i32, ptr %ptr
+  %l6 = load volatile i32, ptr %ptr
+  %l7 = load volatile i32, ptr %ptr
+  %l8 = load volatile i32, ptr %ptr
+  %l9 = load volatile i32, ptr %ptr
+  %l10 = load volatile i32, ptr %ptr
+  %l11 = load volatile i32, ptr %ptr
+  %l12 = load volatile i32, ptr %ptr
+  %l13 = load volatile i32, ptr %ptr
+  %l14 = load volatile i32, ptr %ptr
   %add0 = add i32 %l0, %l0
   %add1 = add i32 %l1, %add0
   %add3 = add i32 %l3, %add1
@@ -60,28 +60,28 @@ define void @f1(i32 *%ptr) {
   %add12 = add i32 %l12, %add11
   %add13 = add i32 %l13, %add12
   %add14 = add i32 %l14, %add13
-  store volatile i32 %add0, i32 *%ptr
-  store volatile i32 %add1, i32 *%ptr
-  store volatile i32 %add3, i32 *%ptr
-  store volatile i32 %add4, i32 *%ptr
-  store volatile i32 %add5, i32 *%ptr
-  store volatile i32 %add6, i32 *%ptr
-  store volatile i32 %add7, i32 *%ptr
-  store volatile i32 %add8, i32 *%ptr
-  store volatile i32 %add9, i32 *%ptr
-  store volatile i32 %add10, i32 *%ptr
-  store volatile i32 %add11, i32 *%ptr
-  store volatile i32 %add12, i32 *%ptr
-  store volatile i32 %add13, i32 *%ptr
-  %final = getelementptr i32, i32 *%ptr, i32 1
-  store volatile i32 %add14, i32 *%final
+  store volatile i32 %add0, ptr %ptr
+  store volatile i32 %add1, ptr %ptr
+  store volatile i32 %add3, ptr %ptr
+  store volatile i32 %add4, ptr %ptr
+  store volatile i32 %add5, ptr %ptr
+  store volatile i32 %add6, ptr %ptr
+  store volatile i32 %add7, ptr %ptr
+  store volatile i32 %add8, ptr %ptr
+  store volatile i32 %add9, ptr %ptr
+  store volatile i32 %add10, ptr %ptr
+  store volatile i32 %add11, ptr %ptr
+  store volatile i32 %add12, ptr %ptr
+  store volatile i32 %add13, ptr %ptr
+  %final = getelementptr i32, ptr %ptr, i32 1
+  store volatile i32 %add14, ptr %final
   ret void
 }
 
 ; Like f1, but requires one fewer GPR.  We allocate the call-saved GPRs
 ; from %r14 down, so that the STMG/LMG sequences aren't any longer than
 ; they need to be.
-define void @f2(i32 *%ptr) {
+define void @f2(ptr %ptr) {
 ; CHECK-LABEL: f2:
 ; CHECK: stmg %r7, %r15, 56(%r15)
 ; CHECK-NOT: %r15
@@ -100,19 +100,19 @@ define void @f2(i32 *%ptr) {
 ; CHECK: st {{.*}}, 4(%r2)
 ; CHECK: lmg %r7, %r15, 56(%r15)
 ; CHECK: br %r14
-  %l0 = load volatile i32, i32 *%ptr
-  %l1 = load volatile i32, i32 *%ptr
-  %l3 = load volatile i32, i32 *%ptr
-  %l4 = load volatile i32, i32 *%ptr
-  %l5 = load volatile i32, i32 *%ptr
-  %l7 = load volatile i32, i32 *%ptr
-  %l8 = load volatile i32, i32 *%ptr
-  %l9 = load volatile i32, i32 *%ptr
-  %l10 = load volatile i32, i32 *%ptr
-  %l11 = load volatile i32, i32 *%ptr
-  %l12 = load volatile i32, i32 *%ptr
-  %l13 = load volatile i32, i32 *%ptr
-  %l14 = load volatile i32, i32 *%ptr
+  %l0 = load volatile i32, ptr %ptr
+  %l1 = load volatile i32, ptr %ptr
+  %l3 = load volatile i32, ptr %ptr
+  %l4 = load volatile i32, ptr %ptr
+  %l5 = load volatile i32, ptr %ptr
+  %l7 = load volatile i32, ptr %ptr
+  %l8 = load volatile i32, ptr %ptr
+  %l9 = load volatile i32, ptr %ptr
+  %l10 = load volatile i32, ptr %ptr
+  %l11 = load volatile i32, ptr %ptr
+  %l12 = load volatile i32, ptr %ptr
+  %l13 = load volatile i32, ptr %ptr
+  %l14 = load volatile i32, ptr %ptr
   %add0 = add i32 %l0, %l0
   %add1 = add i32 %l1, %add0
   %add3 = add i32 %l3, %add1
@@ -126,25 +126,25 @@ define void @f2(i32 *%ptr) {
   %add12 = add i32 %l12, %add11
   %add13 = add i32 %l13, %add12
   %add14 = add i32 %l14, %add13
-  store volatile i32 %add0, i32 *%ptr
-  store volatile i32 %add1, i32 *%ptr
-  store volatile i32 %add3, i32 *%ptr
-  store volatile i32 %add4, i32 *%ptr
-  store volatile i32 %add5, i32 *%ptr
-  store volatile i32 %add7, i32 *%ptr
-  store volatile i32 %add8, i32 *%ptr
-  store volatile i32 %add9, i32 *%ptr
-  store volatile i32 %add10, i32 *%ptr
-  store volatile i32 %add11, i32 *%ptr
-  store volatile i32 %add12, i32 *%ptr
-  store volatile i32 %add13, i32 *%ptr
-  %final = getelementptr i32, i32 *%ptr, i32 1
-  store volatile i32 %add14, i32 *%final
+  store volatile i32 %add0, ptr %ptr
+  store volatile i32 %add1, ptr %ptr
+  store volatile i32 %add3, ptr %ptr
+  store volatile i32 %add4, ptr %ptr
+  store volatile i32 %add5, ptr %ptr
+  store volatile i32 %add7, ptr %ptr
+  store volatile i32 %add8, ptr %ptr
+  store volatile i32 %add9, ptr %ptr
+  store volatile i32 %add10, ptr %ptr
+  store volatile i32 %add11, ptr %ptr
+  store volatile i32 %add12, ptr %ptr
+  store volatile i32 %add13, ptr %ptr
+  %final = getelementptr i32, ptr %ptr, i32 1
+  store volatile i32 %add14, ptr %final
   ret void
 }
 
 ; Like f1, but only needs one call-saved GPR, which ought to be %r14.
-define void @f3(i32 *%ptr) {
+define void @f3(ptr %ptr) {
 ; CHECK-LABEL: f3:
 ; CHECK: stmg %r14, %r15, 112(%r15)
 ; CHECK-NOT: %r15
@@ -163,31 +163,31 @@ define void @f3(i32 *%ptr) {
 ; CHECK: st {{.*}}, 4(%r2)
 ; CHECK: lmg %r14, %r15, 112(%r15)
 ; CHECK: br %r14
-  %l0 = load volatile i32, i32 *%ptr
-  %l1 = load volatile i32, i32 *%ptr
-  %l3 = load volatile i32, i32 *%ptr
-  %l4 = load volatile i32, i32 *%ptr
-  %l5 = load volatile i32, i32 *%ptr
-  %l14 = load volatile i32, i32 *%ptr
+  %l0 = load volatile i32, ptr %ptr
+  %l1 = load volatile i32, ptr %ptr
+  %l3 = load volatile i32, ptr %ptr
+  %l4 = load volatile i32, ptr %ptr
+  %l5 = load volatile i32, ptr %ptr
+  %l14 = load volatile i32, ptr %ptr
   %add0 = add i32 %l0, %l0
   %add1 = add i32 %l1, %add0
   %add3 = add i32 %l3, %add1
   %add4 = add i32 %l4, %add3
   %add5 = add i32 %l5, %add4
   %add14 = add i32 %l14, %add5
-  store volatile i32 %add0, i32 *%ptr
-  store volatile i32 %add1, i32 *%ptr
-  store volatile i32 %add3, i32 *%ptr
-  store volatile i32 %add4, i32 *%ptr
-  store volatile i32 %add5, i32 *%ptr
-  %final = getelementptr i32, i32 *%ptr, i32 1
-  store volatile i32 %add14, i32 *%final
+  store volatile i32 %add0, ptr %ptr
+  store volatile i32 %add1, ptr %ptr
+  store volatile i32 %add3, ptr %ptr
+  store volatile i32 %add4, ptr %ptr
+  store volatile i32 %add5, ptr %ptr
+  %final = getelementptr i32, ptr %ptr, i32 1
+  store volatile i32 %add14, ptr %final
   ret void
 }
 
 ; This function should use all call-clobbered GPRs but no call-saved ones.
 ; It shouldn't need to touch the stack at all.
-define void @f4(i32 *%ptr) {
+define void @f4(ptr %ptr) {
 ; CHECK-LABEL: f4:
 ; CHECK-NOT: %r15
 ; CHECK-NOT: %r6
@@ -199,21 +199,21 @@ define void @f4(i32 *%ptr) {
 ; CHECK-NOT: %r12
 ; CHECK-NOT: %r13
 ; CHECK: br %r14
-  %l0 = load volatile i32, i32 *%ptr
-  %l1 = load volatile i32, i32 *%ptr
-  %l3 = load volatile i32, i32 *%ptr
-  %l4 = load volatile i32, i32 *%ptr
-  %l5 = load volatile i32, i32 *%ptr
+  %l0 = load volatile i32, ptr %ptr
+  %l1 = load volatile i32, ptr %ptr
+  %l3 = load volatile i32, ptr %ptr
+  %l4 = load volatile i32, ptr %ptr
+  %l5 = load volatile i32, ptr %ptr
   %add0 = add i32 %l0, %l0
   %add1 = add i32 %l1, %add0
   %add3 = add i32 %l3, %add1
   %add4 = add i32 %l4, %add3
   %add5 = add i32 %l5, %add4
-  store volatile i32 %add0, i32 *%ptr
-  store volatile i32 %add1, i32 *%ptr
-  store volatile i32 %add3, i32 *%ptr
-  store volatile i32 %add4, i32 *%ptr
-  %final = getelementptr i32, i32 *%ptr, i32 1
-  store volatile i32 %add5, i32 *%final
+  store volatile i32 %add0, ptr %ptr
+  store volatile i32 %add1, ptr %ptr
+  store volatile i32 %add3, ptr %ptr
+  store volatile i32 %add4, ptr %ptr
+  %final = getelementptr i32, ptr %ptr, i32 1
+  store volatile i32 %add5, ptr %final
   ret void
 }

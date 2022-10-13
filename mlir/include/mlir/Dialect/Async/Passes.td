@@ -51,7 +51,7 @@ def AsyncToAsyncRuntime : Pass<"async-to-async-runtime", "ModuleOp"> {
            "Rewrite functions with blocking async.runtime.await as coroutines "
            "with async.runtime.await_and_resume.">,
   ];
-  let dependentDialects = ["async::AsyncDialect"];
+  let dependentDialects = ["async::AsyncDialect", "func::FuncDialect"];
 }
 
 def AsyncRuntimeRefCounting : Pass<"async-runtime-ref-counting"> {

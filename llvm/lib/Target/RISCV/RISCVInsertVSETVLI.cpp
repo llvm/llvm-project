@@ -768,28 +768,25 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
                                        const MachineRegisterInfo *MRI) {
   VSETVLIInfo InstrInfo;
 
-  // If the instruction has policy argument, use the argument.
-  // If there is no policy argument, default to tail agnostic unless the
-  // destination is tied to a source. Unless the source is undef. In that case
-  // the user would have some control over the policy values.
-  bool TailAgnostic = true;
-  bool MaskAgnostic = true;
+  bool TailAgnostic, MaskAgnostic;
   unsigned UseOpIdx;
-  if (RISCVII::hasVecPolicyOp(TSFlags)) {
-    const MachineOperand &Op = MI.getOperand(MI.getNumExplicitOperands() - 1);
-    uint64_t Policy = Op.getImm();
-    assert(Policy <= (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC) &&
-           "Invalid Policy Value");
-    // Although in some cases, mismatched passthru/maskedoff with policy value
-    // does not make sense (ex. tied operand is IMPLICIT_DEF with non-TAMA
-    // policy, or tied operand is not IMPLICIT_DEF with TAMA policy), but users
-    // have set the policy value explicitly, so compiler would not fix it.
-    TailAgnostic = Policy & RISCVII::TAIL_AGNOSTIC;
-    MaskAgnostic = Policy & RISCVII::MASK_AGNOSTIC;
-  } else if (MI.isRegTiedToUseOperand(0, &UseOpIdx)) {
+  if (MI.isRegTiedToUseOperand(0, &UseOpIdx)) {
+    // Start with undisturbed.
     TailAgnostic = false;
     MaskAgnostic = false;
-    // If the tied operand is an IMPLICIT_DEF we can keep TailAgnostic.
+
+    // If there is a policy operand, use it.
+    if (RISCVII::hasVecPolicyOp(TSFlags)) {
+      const MachineOperand &Op = MI.getOperand(MI.getNumExplicitOperands() - 1);
+      uint64_t Policy = Op.getImm();
+      assert(Policy <= (RISCVII::TAIL_AGNOSTIC | RISCVII::MASK_AGNOSTIC) &&
+             "Invalid Policy Value");
+      TailAgnostic = Policy & RISCVII::TAIL_AGNOSTIC;
+      MaskAgnostic = Policy & RISCVII::MASK_AGNOSTIC;
+    }
+
+    // If the tied operand is an IMPLICIT_DEF we can use TailAgnostic and
+    // MaskAgnostic.
     const MachineOperand &UseMO = MI.getOperand(UseOpIdx);
     MachineInstr *UseMI = MRI->getVRegDef(UseMO.getReg());
     if (UseMI && UseMI->isImplicitDef()) {
@@ -800,10 +797,16 @@ static VSETVLIInfo computeInfoForInstr(const MachineInstr &MI, uint64_t TSFlags,
     // tied def.
     if (RISCVII::doesForceTailAgnostic(TSFlags))
       TailAgnostic = true;
-  }
 
-  if (!RISCVII::usesMaskPolicy(TSFlags))
+    if (!RISCVII::usesMaskPolicy(TSFlags))
+      MaskAgnostic = true;
+  } else {
+    // If there is no tied operand,, there shouldn't be a policy operand.
+    assert(!RISCVII::hasVecPolicyOp(TSFlags) && "Unexpected policy operand");
+    // No tied operand use agnostic policies.
+    TailAgnostic = true;
     MaskAgnostic = true;
+  }
 
   RISCVII::VLMUL VLMul = RISCVII::getLMul(TSFlags);
 

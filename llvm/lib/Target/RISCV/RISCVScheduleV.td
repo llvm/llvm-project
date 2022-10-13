@@ -212,7 +212,6 @@ def WriteVFMovV       : SchedWrite;
 // 13.17. Single-Width Floating-Point/Integer Type-Convert Instructions
 def WriteVFCvtIToFV   : SchedWrite;
 def WriteVFCvtFToIV   : SchedWrite;
-def WriteVFCvtFToFV   : SchedWrite;
 // 13.18. Widening Floating-Point/Integer Type-Convert Instructions
 def WriteVFWCvtIToFV  : SchedWrite;
 def WriteVFWCvtFToIV  : SchedWrite;
@@ -665,7 +664,6 @@ def : WriteRes<WriteVFMergeV, []>;
 def : WriteRes<WriteVFMovV, []>;
 def : WriteRes<WriteVFCvtIToFV, []>;
 def : WriteRes<WriteVFCvtFToIV, []>;
-def : WriteRes<WriteVFCvtFToFV, []>;
 def : WriteRes<WriteVFWCvtIToFV, []>;
 def : WriteRes<WriteVFWCvtFToIV, []>;
 def : WriteRes<WriteVFWCvtFToFV, []>;

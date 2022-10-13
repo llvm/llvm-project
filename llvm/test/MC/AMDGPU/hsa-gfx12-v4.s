@@ -34,7 +34,7 @@
 // OBJDUMP-NEXT: 0040 01000000 01000000 08000000 00000000
 // OBJDUMP-NEXT: 0050 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0060 00000000 00000000 00000000 01000000
-// OBJDUMP-NEXT: 0070 015001e4 1f0f007f 5e0c0000 00000000
+// OBJDUMP-NEXT: 0070 015001e4 1f0f007f 5e040000 00000000
 // special_sgpr
 // OBJDUMP-NEXT: 0080 00000000 00000000 00000000 00000000
 // OBJDUMP-NEXT: 0090 00000000 00000000 00000000 00000000
@@ -101,7 +101,6 @@ disabled_user_sgpr:
   .amdhsa_user_sgpr_dispatch_id 1
   .amdhsa_user_sgpr_private_segment_size 1
   .amdhsa_wavefront_size32 1
-  .amdhsa_uses_dynamic_stack 1
   .amdhsa_enable_private_segment 1
   .amdhsa_system_sgpr_workgroup_id_x 0
   .amdhsa_system_sgpr_workgroup_id_y 1
@@ -140,7 +139,6 @@ disabled_user_sgpr:
 // ASM-NEXT: .amdhsa_user_sgpr_dispatch_id 1
 // ASM-NEXT: .amdhsa_user_sgpr_private_segment_size 1
 // ASM-NEXT: .amdhsa_wavefront_size32 1
-// ASM-NEXT: .amdhsa_uses_dynamic_stack 1
 // ASM-NEXT: .amdhsa_enable_private_segment 1
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_x 0
 // ASM-NEXT: .amdhsa_system_sgpr_workgroup_id_y 1
@@ -249,7 +247,6 @@ v_mov_b32_e32 v16, s3
       .kernarg_segment_size: 8
       .group_segment_fixed_size: 16
       .private_segment_fixed_size: 32
-      .uses_dynamic_stack: true
       .kernarg_segment_align: 64
       .wavefront_size: 128
       .sgpr_count: 14
@@ -259,7 +256,6 @@ v_mov_b32_e32 v16, s3
       .symbol: amd_kernel_code_t_minimal@kd
       .kernarg_segment_size: 8
       .group_segment_fixed_size: 16
-      .uses_dynamic_stack: true
       .private_segment_fixed_size: 32
       .kernarg_segment_align: 64
       .wavefront_size: 128
@@ -278,7 +274,6 @@ v_mov_b32_e32 v16, s3
 // ASM:          .private_segment_fixed_size: 32
 // ASM:          .sgpr_count:     14
 // ASM:          .symbol:         'amd_kernel_code_t_test_all@kd'
-// ASM:          .uses_dynamic_stack: true
 // ASM:          .vgpr_count:     40
 // ASM:          .wavefront_size: 128
 // ASM:        - .group_segment_fixed_size: 16
@@ -289,7 +284,6 @@ v_mov_b32_e32 v16, s3
 // ASM:          .private_segment_fixed_size: 32
 // ASM:          .sgpr_count:     14
 // ASM:          .symbol:         'amd_kernel_code_t_minimal@kd'
-// ASM:          .uses_dynamic_stack: true
 // ASM:          .vgpr_count:     40
 // ASM:          .wavefront_size: 128
 // ASM:      amdhsa.version:

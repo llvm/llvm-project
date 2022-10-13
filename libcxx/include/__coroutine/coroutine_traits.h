@@ -16,7 +16,7 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CXX20_COROUTINES)
+#if _LIBCPP_STD_VER > 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -48,6 +48,6 @@ struct coroutine_traits
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // __LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_CXX20_COROUTINES)
+#endif // __LIBCPP_STD_VER > 17
 
 #endif // _LIBCPP___COROUTINE_COROUTINE_TRAITS_H

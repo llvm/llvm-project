@@ -985,7 +985,7 @@ TokenLexer::getExpansionLocForMacroDefLoc(SourceLocation loc) const {
 /// \arg begin_tokens will be updated to a position past all the found
 /// consecutive tokens.
 static void updateConsecutiveMacroArgTokens(SourceManager &SM,
-                                            SourceLocation InstLoc,
+                                            SourceLocation ExpandLoc,
                                             Token *&begin_tokens,
                                             Token * end_tokens) {
   assert(begin_tokens + 1 < end_tokens);
@@ -1021,7 +1021,7 @@ static void updateConsecutiveMacroArgTokens(SourceManager &SM,
       Partition.front().getLocation().getRawEncoding();
   // Create a macro expansion SLocEntry that will "contain" all of the tokens.
   SourceLocation Expansion =
-      SM.createMacroArgExpansionLoc(BeginLoc, InstLoc, FullLength);
+      SM.createMacroArgExpansionLoc(BeginLoc, ExpandLoc, FullLength);
 
 #ifdef EXPENSIVE_CHECKS
   assert(llvm::all_of(Partition.drop_front(),
@@ -1051,7 +1051,7 @@ void TokenLexer::updateLocForMacroArgTokens(SourceLocation ArgIdSpellLoc,
                                             Token *end_tokens) {
   SourceManager &SM = PP.getSourceManager();
 
-  SourceLocation InstLoc =
+  SourceLocation ExpandLoc =
       getExpansionLocForMacroDefLoc(ArgIdSpellLoc);
 
   while (begin_tokens < end_tokens) {
@@ -1059,12 +1059,12 @@ void TokenLexer::updateLocForMacroArgTokens(SourceLocation ArgIdSpellLoc,
     if (end_tokens - begin_tokens == 1) {
       Token &Tok = *begin_tokens;
       Tok.setLocation(SM.createMacroArgExpansionLoc(Tok.getLocation(),
-                                                    InstLoc,
+                                                    ExpandLoc,
                                                     Tok.getLength()));
       return;
     }
 
-    updateConsecutiveMacroArgTokens(SM, InstLoc, begin_tokens, end_tokens);
+    updateConsecutiveMacroArgTokens(SM, ExpandLoc, begin_tokens, end_tokens);
   }
 }
 

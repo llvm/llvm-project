@@ -58,26 +58,6 @@ static Attribute getNeutralElement(Operation *op) {
   return Attribute();
 }
 
-FailureOr<LinalgOp> mlir::linalg::splitReduction(
-    PatternRewriter &b, LinalgOp op,
-    const ControlSplitReductionFn &controlSplitReductionFn,
-    const LinalgTransformationFilter &filter, bool useAlloc) {
-  if (failed(filter.checkAndNotify(b, op)) || !op.hasTensorSemantics() ||
-      op.getNumReductionLoops() != 1 || op.getNumOutputs() != 1 ||
-      !op.hasOnlyProjectedPermutations())
-    return b.notifyMatchFailure(op, "precondition not met");
-
-  FailureOr<SplitReductionResult> res =
-      splitReduction(b, op, controlSplitReductionFn, useAlloc);
-  if (failed(res))
-    return failure();
-
-  filter.replaceLinalgTransformationFilter(b, res->splitLinalgOp);
-  filter.replaceLinalgTransformationFilter(b, res->resultCombiningLinalgOp);
-
-  return res->splitLinalgOp;
-}
-
 FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
     PatternRewriter &b, LinalgOp op,
     const ControlSplitReductionFn &controlSplitReductionFn, bool useAlloc) {
@@ -481,30 +461,26 @@ struct LinalgSplitReduction : public OpInterfaceRewritePattern<LinalgOp> {
   /// Construct a generic pattern applied to all LinalgOp that verify `filter`.
   LinalgSplitReduction(MLIRContext *context,
                        ControlSplitReductionFn controlSplitReductionFn,
-                       LinalgTransformationFilter f, bool useAlloc = false,
-                       PatternBenefit benefit = 1)
+                       bool useAlloc = false, PatternBenefit benefit = 1)
       : OpInterfaceRewritePattern<LinalgOp>(context, benefit),
         controlSplitReductionFn(std::move(controlSplitReductionFn)),
-        useAlloc(useAlloc), filter(std::move(f)) {}
+        useAlloc(useAlloc) {}
 
   LogicalResult matchAndRewrite(LinalgOp op,
                                 PatternRewriter &rewriter) const override {
-    return splitReduction(rewriter, op, controlSplitReductionFn, filter,
-                          useAlloc);
+    return splitReduction(rewriter, op, controlSplitReductionFn, useAlloc);
   }
 
 private:
   ControlSplitReductionFn controlSplitReductionFn;
   bool useAlloc;
-  LinalgTransformationFilter filter;
 };
 
 } // namespace
 
 void linalg::populateSplitReductionPattern(
     RewritePatternSet &patterns,
-    const ControlSplitReductionFn &controlSplitReductionFn,
-    const LinalgTransformationFilter &f, bool useAlloc) {
+    const ControlSplitReductionFn &controlSplitReductionFn, bool useAlloc) {
   patterns.add<LinalgSplitReduction>(patterns.getContext(),
-                                     controlSplitReductionFn, f, useAlloc);
+                                     controlSplitReductionFn, useAlloc);
 }

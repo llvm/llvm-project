@@ -21,13 +21,13 @@ class SPIRV_BitBinaryOp<string mnemonic, list<Trait> traits = []> :
       // All the operands type used in bit instructions are SPIRV_Integer.
       SPIRV_BinaryOp<mnemonic, SPIRV_Integer, SPIRV_Integer,
                    !listconcat(traits,
-                               [NoSideEffect, SameOperandsAndResultType])> {
+                               [Pure, SameOperandsAndResultType])> {
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
 class SPIRV_BitFieldExtractOp<string mnemonic, list<Trait> traits = []> :
       SPIRV_Op<mnemonic, !listconcat(traits,
-             [NoSideEffect, AllTypesMatch<["base", "result"]>])> {
+             [Pure, AllTypesMatch<["base", "result"]>])> {
   let arguments = (ins
     SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$base,
     SPIRV_Integer:$offset,
@@ -48,12 +48,12 @@ class SPIRV_BitFieldExtractOp<string mnemonic, list<Trait> traits = []> :
 class SPIRV_BitUnaryOp<string mnemonic, list<Trait> traits = []> :
       SPIRV_UnaryOp<mnemonic, SPIRV_Integer, SPIRV_Integer,
                    !listconcat(traits,
-                               [NoSideEffect, SameOperandsAndResultType])>;
+                               [Pure, SameOperandsAndResultType])>;
 
 class SPIRV_ShiftOp<string mnemonic, list<Trait> traits = []> :
       SPIRV_BinaryOp<mnemonic, SPIRV_Integer, SPIRV_Integer,
                    !listconcat(traits,
-                               [NoSideEffect, SameOperandsAndResultShape,
+                               [Pure, SameOperandsAndResultShape,
                                 AllTypesMatch<["operand1", "result"]>])> {
   let assemblyFormat = [{
     operands attr-dict `:` type($operand1) `,` type($operand2)
@@ -101,7 +101,7 @@ def SPIRV_BitCountOp : SPIRV_BitUnaryOp<"BitCount", []> {
 // -----
 
 def SPIRV_BitFieldInsertOp : SPIRV_Op<"BitFieldInsert",
-    [NoSideEffect, AllTypesMatch<["base", "insert", "result"]>]> {
+    [Pure, AllTypesMatch<["base", "insert", "result"]>]> {
   let summary = [{
     Make a copy of an object, with a modified bit field that comes from
     another object.

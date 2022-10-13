@@ -95,23 +95,21 @@ define <vscale x 32 x float> @vfpext_nxv32f16_nxv32f32(<vscale x 32 x half> %a, 
 ; CHECK-LABEL: vfpext_nxv32f16_nxv32f32:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    li a2, 0
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    srli a4, a1, 2
+; CHECK-NEXT:    srli a2, a1, 2
 ; CHECK-NEXT:    vsetvli a3, zero, e8, mf2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v0, v0, a2
 ; CHECK-NEXT:    slli a1, a1, 1
-; CHECK-NEXT:    sub a3, a0, a1
-; CHECK-NEXT:    vslidedown.vx v0, v0, a4
-; CHECK-NEXT:    bltu a0, a3, .LBB7_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a2, a3
-; CHECK-NEXT:  .LBB7_2:
+; CHECK-NEXT:    sub a2, a0, a1
+; CHECK-NEXT:    sltu a3, a0, a2
+; CHECK-NEXT:    addi a3, a3, -1
+; CHECK-NEXT:    and a2, a3, a2
 ; CHECK-NEXT:    vsetvli zero, a2, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v16, v12, v0.t
-; CHECK-NEXT:    bltu a0, a1, .LBB7_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    bltu a0, a1, .LBB7_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:  .LBB7_4:
+; CHECK-NEXT:  .LBB7_2:
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vfwcvt.f.f.v v24, v8, v0.t

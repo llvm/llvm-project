@@ -2639,12 +2639,11 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         // so we verify all input files.  Otherwise, verify only user input
         // files.
 
-        unsigned N = NumUserInputs;
-        if (ValidateSystemInputs ||
-            (HSOpts.ModulesValidateOncePerBuildSession &&
-             F.InputFilesValidationTimestamp <= HSOpts.BuildSessionTimestamp &&
-             F.Kind == MK_ImplicitModule))
-          N = NumInputs;
+        unsigned N = ValidateSystemInputs ? NumInputs : NumUserInputs;
+        if (HSOpts.ModulesValidateOncePerBuildSession &&
+            F.InputFilesValidationTimestamp > HSOpts.BuildSessionTimestamp &&
+            F.Kind == MK_ImplicitModule)
+          N = NumUserInputs;
 
         for (unsigned I = 0; I < N; ++I) {
           InputFile IF = getInputFile(F, I+1, Complain);

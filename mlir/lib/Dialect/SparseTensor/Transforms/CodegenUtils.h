@@ -15,6 +15,8 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/ExecutionEngine/SparseTensor/Enums.h"
@@ -27,6 +29,10 @@ class Type;
 class Value;
 
 namespace sparse_tensor {
+
+/// Shorthand aliases for the `emitCInterface` argument to `getFunc()`,
+/// `createFuncCall()`, and `replaceOpWithFuncCall()`.
+enum class EmitCInterface : bool { Off = false, On = true };
 
 //===----------------------------------------------------------------------===//
 // SparseTensorLoopEmiter class, manages sparse tensors and helps to generate
@@ -224,6 +230,23 @@ void translateIndicesArray(OpBuilder &builder, Location loc,
                            ValueRange srcIndices, ArrayRef<Value> srcShape,
                            ArrayRef<Value> dstShape,
                            SmallVectorImpl<Value> &dstIndices);
+
+/// Returns a function reference (first hit also inserts into module). Sets
+/// the "_emit_c_interface" on the function declaration when requested,
+/// so that LLVM lowering generates a wrapper function that takes care
+/// of ABI complications with passing in and returning MemRefs to C functions.
+FlatSymbolRefAttr getFunc(ModuleOp module, StringRef name, TypeRange resultType,
+                          ValueRange operands, EmitCInterface emitCInterface);
+
+/// Creates a `CallOp` to the function reference returned by `getFunc()` in
+/// the builder's module.
+func::CallOp createFuncCall(OpBuilder &builder, Location loc, StringRef name,
+                            TypeRange resultType, ValueRange operands,
+                            EmitCInterface emitCInterface);
+
+/// Returns the equivalent of `void*` for opaque arguments to the
+/// execution engine.
+Type getOpaquePointerType(OpBuilder &builder);
 
 //===----------------------------------------------------------------------===//
 // Inlined constant generators.

@@ -198,7 +198,8 @@ class LLVM_ScalarOrVectorOf<Type element> :
     AnyTypeOf<[element, LLVM_VectorOf<element>]>;
 
 // Base class for LLVM operations. Defines the interface to the llvm::IRBuilder
-// used to translate to LLVM IR proper.
+// used to translate to proper LLVM IR and the interface to the mlir::OpBuilder
+// used to import from LLVM IR.
 class LLVM_OpBase<Dialect dialect, string mnemonic, list<Trait> traits = []> :
     Op<dialect, mnemonic, traits> {
   // A pattern for constructing the LLVM IR Instruction (or other Value) that
@@ -213,6 +214,23 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<Trait> traits = []> :
   //   - $_location - mlir::Location object of the instruction.
   // Additionally, `$$` can be used to produce the dollar character.
   string llvmBuilder = "";
+
+  // A builder to construct the MLIR LLVM dialect operation given the matching
+  // LLVM IR instruction `inst` and its operands `llvmOperands`. The
+  // following $-variables exist:
+  //   - $name - substituted by the remapped `inst` operand value at the index
+  //             of the MLIR operation argument with the given name, or if the
+  //             name matches the result name, by a reference to store the
+  //             result of the newly created MLIR operation to;
+  //   - $_int_attr - substituted by a call to an integer attribute matcher;
+  //   - $_resultType - substituted with the MLIR result type;
+  //   - $_location - substituted with the MLIR location;
+  //   - $_builder - substituted with the MLIR builder;
+  //   - $_qualCppClassName - substitiuted with the MLIR operation class name.
+  // Additionally, `$$` can be used to produce the dollar character.
+  // NOTE: The $name variable resolution assumes the MLIR and LLVM argument
+  // orders match and there are no optional or variadic arguments.
+  string mlirBuilder = "";
 }
 
 //===----------------------------------------------------------------------===//
@@ -335,21 +353,6 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
       "(void) inst;")
     # !if(!gt(numResults, 0), "$res = inst;", "");
 
-  // A builder to construct the MLIR LLVM dialect operation given the matching
-  // LLVM IR instruction `inst` and its operands `llvmOperands`. The
-  // following $-variables exist:
-  //   - $name - substituted by the remapped `inst` operand value at the index
-  //             of the MLIR operation argument with the given name, or if the
-  //             name matches the result name, by a reference to store the
-  //             result of the newly created MLIR operation to;
-  //   - $_int_attr - substituted by a call to an integer attribute matcher;
-  //   - $_resultType - substituted with the MLIR result type;
-  //   - $_location - substituted with the MLIR location;
-  //   - $_builder - substituted with the MLIR builder;
-  //   - $_qualCppClassName - substitiuted with the MLIR operation class name.
-  // Additionally, `$$` can be used to produce the dollar character.
-  // NOTE: The $name variable resolution assumes the MLIR and LLVM argument
-  // orders match and there are no optional or variadic arguments.
   string mlirBuilder = [{
     SmallVector<Type> resultTypes =
     }] # !if(!gt(numResults, 0), "{$_resultType};", "{};") # [{
@@ -375,7 +378,7 @@ class LLVM_IntrOp<string mnem, list<int> overloadedResults,
 //
 // Sample use: derive an entry from this class and populate the fields.
 //
-//    def LLVM_Name : LLVM_ZeroResultIntrOp<"name", [0], [NoSideEffect]>,
+//    def LLVM_Name : LLVM_ZeroResultIntrOp<"name", [0], [Pure]>,
 //                    Arguments<(ins LLVM_Type, LLVM_Type)>;
 //
 // The mnemonic will be prefixed with "llvm.intr.", where the "llvm." part comes
@@ -402,14 +405,14 @@ class LLVM_OneResultIntrOp<string mnem, list<int> overloadedResults = [],
 // LLVM vector reduction over a single vector.
 class LLVM_VectorReduction<string mnem>
     : LLVM_OneResultIntrOp<"vector.reduce." # mnem,
-                           [], [0], [NoSideEffect]>,
+                           [], [0], [Pure]>,
       Arguments<(ins LLVM_Type)>;
 
 // LLVM vector reduction over a single vector, with an initial value,
 // and with permission to reassociate the reduction operations.
 class LLVM_VectorReductionAcc<string mnem>
     : LLVM_OpBase<LLVM_Dialect, "intr.vector.reduce." # mnem,
-                  [NoSideEffect]>,
+                  [Pure]>,
       Results<(outs LLVM_Type:$res)>,
       Arguments<(ins LLVM_Type, LLVM_Type,
                  DefaultValuedAttr<BoolAttr, "false">:$reassoc)> {
