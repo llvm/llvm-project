@@ -53,15 +53,6 @@ static bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
   return true;
 }
 
-static bool CallVoid(InterpState &S, CodePtr &PC, const Function *Func) {
-  APValue VoidResult;
-  S.Current = new InterpFrame(S, const_cast<Function *>(Func), PC);
-  bool Success = Interpret(S, VoidResult);
-  assert(VoidResult.isAbsent());
-
-  return Success;
-}
-
 static bool RetVoid(InterpState &S, CodePtr &PC, APValue &Result) {
   S.CallStackDepth--;
 
