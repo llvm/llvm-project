@@ -242,12 +242,16 @@ void Writer::layoutMemory() {
     if (config->relocatable || config->isPic)
       return;
     memoryPtr = alignTo(memoryPtr, stackAlignment);
+    if (WasmSym::stackLow)
+      WasmSym::stackLow->setVA(memoryPtr);
     if (config->zStackSize != alignTo(config->zStackSize, stackAlignment))
       error("stack size must be " + Twine(stackAlignment) + "-byte aligned");
     log("mem: stack size  = " + Twine(config->zStackSize));
     log("mem: stack base  = " + Twine(memoryPtr));
     memoryPtr += config->zStackSize;
     setGlobalPtr(cast<DefinedGlobal>(WasmSym::stackPointer), memoryPtr);
+    if (WasmSym::stackHigh)
+      WasmSym::stackHigh->setVA(memoryPtr);
     log("mem: stack top   = " + Twine(memoryPtr));
   };
 

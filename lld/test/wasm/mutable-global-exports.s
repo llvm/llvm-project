@@ -80,18 +80,24 @@ _start:
 # CHECK-ALL-NEXT:      - Name:            __data_end
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           3
-# CHECK-ALL-NEXT:      - Name:            __global_base
+# CHECK-ALL-NEXT:      - Name:            __stack_low
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           4
-# CHECK-ALL-NEXT:      - Name:            __heap_base
+# CHECK-ALL-NEXT:      - Name:            __stack_high
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           5
-# CHECK-ALL-NEXT:      - Name:            __memory_base
+# CHECK-ALL-NEXT:      - Name:            __global_base
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           6
-# CHECK-ALL-NEXT:      - Name:            __table_base
+# CHECK-ALL-NEXT:      - Name:            __heap_base
 # CHECK-ALL-NEXT:        Kind:            GLOBAL
 # CHECK-ALL-NEXT:        Index:           7
+# CHECK-ALL-NEXT:      - Name:            __memory_base
+# CHECK-ALL-NEXT:        Kind:            GLOBAL
+# CHECK-ALL-NEXT:        Index:           8
+# CHECK-ALL-NEXT:      - Name:            __table_base
+# CHECK-ALL-NEXT:        Kind:            GLOBAL
+# CHECK-ALL-NEXT:        Index:           9
 # CHECK-ALL-NEXT:  - Type:            CODE
 
 # CHECK-ALL:         Name:            target_features

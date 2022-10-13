@@ -516,10 +516,13 @@ struct WasmSym {
   // Symbol marking the start of the global section.
   static DefinedData *globalBase;
 
-  // __stack_pointer
-  // Global that holds the address of the top of the explicit value stack in
-  // linear memory.
+  // __stack_pointer/__stack_low/__stack_high
+  // Global that holds current value of stack pointer and data symbols marking
+  // the start and end of the stack region.  stackPointer is initialized to
+  // stackHigh and grows downwards towards stackLow
   static GlobalSymbol *stackPointer;
+  static DefinedData *stackLow;
+  static DefinedData *stackHigh;
 
   // __tls_base
   // Global that holds the address of the base of the current thread's
