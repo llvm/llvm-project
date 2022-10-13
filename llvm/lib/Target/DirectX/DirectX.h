@@ -14,6 +14,7 @@
 namespace llvm {
 class ModulePass;
 class PassRegistry;
+class raw_ostream;
 
 /// Initializer for dxil writer pass
 void initializeWriteDXILPassPass(PassRegistry &);
@@ -41,6 +42,12 @@ ModulePass *createDXILTranslateMetadataPass();
 
 /// Initializer for DXILTranslateMetadata.
 void initializeDXILResourceWrapperPass(PassRegistry &);
+
+/// Pass to pretty print DXIL metadata.
+ModulePass *createDXILPrettyPrinterPass(raw_ostream &OS);
+
+/// Initializer for DXILPrettyPrinter.
+void initializeDXILPrettyPrinterPass(PassRegistry &);
 
 } // namespace llvm
 
