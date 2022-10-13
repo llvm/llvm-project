@@ -41,22 +41,49 @@ private:
   MapPlatformData *Data = nullptr;
 };
 
-// A packed array of Counters. Each counter occupies 2^N bits, enough to store
-// counter's MaxValue. Ctor will try to use a static buffer first, and if that
-// fails (the buffer is too small or already locked), will allocate the
+// A Region page map is used to record the usage of pages in the regions. It
+// implements a packed array of Counters. Each counter occupies 2^N bits, enough
+// to store counter's MaxValue. Ctor will try to use a static buffer first, and
+// if that fails (the buffer is too small or already locked), will allocate the
 // required Buffer via map(). The caller is expected to check whether the
 // initialization was successful by checking isAllocated() result. For
 // performance sake, none of the accessors check the validity of the arguments,
 // It is assumed that Index is always in [0, N) range and the value is not
 // incremented past MaxValue.
-class PackedCounterArray {
+class RegionPageMap {
 public:
-  PackedCounterArray(uptr NumberOfRegions, uptr CountersPerRegion,
-                     uptr MaxValue)
-      : Regions(NumberOfRegions), NumCounters(CountersPerRegion) {
-    DCHECK_GT(Regions, 0);
-    DCHECK_GT(NumCounters, 0);
+  RegionPageMap()
+      : Regions(0),
+        NumCounters(0),
+        CounterSizeBitsLog(0),
+        CounterMask(0),
+        PackingRatioLog(0),
+        BitOffsetMask(0),
+        SizePerRegion(0),
+        BufferSize(0),
+        Buffer(nullptr) {}
+  RegionPageMap(uptr NumberOfRegions, uptr CountersPerRegion, uptr MaxValue) {
+    reset(NumberOfRegions, CountersPerRegion, MaxValue);
+  }
+  ~RegionPageMap() {
+    if (!isAllocated())
+      return;
+    if (Buffer == &StaticBuffer[0])
+      Mutex.unlock();
+    else
+      unmap(reinterpret_cast<void *>(Buffer),
+            roundUpTo(BufferSize, getPageSizeCached()));
+    Buffer = nullptr;
+  }
+
+  void reset(uptr NumberOfRegion, uptr CountersPerRegion, uptr MaxValue) {
+    DCHECK_GT(NumberOfRegion, 0);
+    DCHECK_GT(CountersPerRegion, 0);
     DCHECK_GT(MaxValue, 0);
+
+    Regions = NumberOfRegion;
+    NumCounters = CountersPerRegion;
+
     constexpr uptr MaxCounterBits = sizeof(*Buffer) * 8UL;
     // Rounding counter storage size up to the power of two allows for using
     // bit shifts calculating particular counter's Index and offset.
@@ -85,15 +112,6 @@ public:
               "scudo:counters", MAP_ALLOWNOMEM, &MapData));
     }
   }
-  ~PackedCounterArray() {
-    if (!isAllocated())
-      return;
-    if (Buffer == &StaticBuffer[0])
-      Mutex.unlock();
-    else
-      unmap(reinterpret_cast<void *>(Buffer),
-            roundUpTo(BufferSize, getPageSizeCached()), 0, &MapData);
-  }
 
   bool isAllocated() const { return !!Buffer; }
 
@@ -112,6 +130,7 @@ public:
     const uptr Index = I >> PackingRatioLog;
     const uptr BitOffset = (I & BitOffsetMask) << CounterSizeBitsLog;
     DCHECK_LT(BitOffset, SCUDO_WORDSIZE);
+    DCHECK_EQ(isAllCounted(Region, I), false);
     Buffer[Region * SizePerRegion + Index] += static_cast<uptr>(1U)
                                               << BitOffset;
   }
@@ -123,13 +142,28 @@ public:
       inc(Region, I);
   }
 
+  // Set the counter to the max value. Note that the max number of blocks in a
+  // page may vary. To provide an easier way to tell if all the blocks are
+  // counted for different pages, set to the same max value to denote the
+  // all-counted status.
+  void setAsAllCounted(uptr Region, uptr I) const {
+    DCHECK_LE(get(Region, I), CounterMask);
+    const uptr Index = I >> PackingRatioLog;
+    const uptr BitOffset = (I & BitOffsetMask) << CounterSizeBitsLog;
+    DCHECK_LT(BitOffset, SCUDO_WORDSIZE);
+    Buffer[Region * SizePerRegion + Index] |= CounterMask << BitOffset;
+  }
+  bool isAllCounted(uptr Region, uptr I) const {
+    return get(Region, I) == CounterMask;
+  }
+
   uptr getBufferSize() const { return BufferSize; }
 
   static const uptr StaticBufferCount = 2048U;
 
 private:
-  const uptr Regions;
-  const uptr NumCounters;
+  uptr Regions;
+  uptr NumCounters;
   uptr CounterSizeBitsLog;
   uptr CounterMask;
   uptr PackingRatioLog;
@@ -146,11 +180,11 @@ private:
 
 template <class ReleaseRecorderT> class FreePagesRangeTracker {
 public:
-  explicit FreePagesRangeTracker(ReleaseRecorderT *Recorder)
+  explicit FreePagesRangeTracker(ReleaseRecorderT &Recorder)
       : Recorder(Recorder), PageSizeLog(getLog2(getPageSizeCached())) {}
 
-  void processNextPage(bool Freed) {
-    if (Freed) {
+  void processNextPage(bool Released) {
+    if (Released) {
       if (!InRange) {
         CurrentRangeStatePage = CurrentPage;
         InRange = true;
@@ -171,112 +205,137 @@ public:
 private:
   void closeOpenedRange() {
     if (InRange) {
-      Recorder->releasePageRangeToOS((CurrentRangeStatePage << PageSizeLog),
-                                     (CurrentPage << PageSizeLog));
+      Recorder.releasePageRangeToOS((CurrentRangeStatePage << PageSizeLog),
+                                    (CurrentPage << PageSizeLog));
       InRange = false;
     }
   }
 
-  ReleaseRecorderT *const Recorder;
+  ReleaseRecorderT &Recorder;
   const uptr PageSizeLog;
   bool InRange = false;
   uptr CurrentPage = 0;
   uptr CurrentRangeStatePage = 0;
 };
 
-template <class TransferBatchT, class ReleaseRecorderT, typename DecompactPtrT,
-          typename SkipRegionT>
-NOINLINE void
-releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList,
-                      uptr RegionSize, uptr NumberOfRegions, uptr BlockSize,
-                      ReleaseRecorderT *Recorder, DecompactPtrT DecompactPtr,
-                      SkipRegionT SkipRegion) {
-  const uptr PageSize = getPageSizeCached();
-
-  // Figure out the number of chunks per page and whether we can take a fast
-  // path (the number of chunks per page is the same for all pages).
-  uptr FullPagesBlockCountMax;
-  bool SameBlockCountPerPage;
-  if (BlockSize <= PageSize) {
-    if (PageSize % BlockSize == 0) {
-      // Same number of chunks per page, no cross overs.
-      FullPagesBlockCountMax = PageSize / BlockSize;
-      SameBlockCountPerPage = true;
-    } else if (BlockSize % (PageSize % BlockSize) == 0) {
-      // Some chunks are crossing page boundaries, which means that the page
-      // contains one or two partial chunks, but all pages contain the same
-      // number of chunks.
-      FullPagesBlockCountMax = PageSize / BlockSize + 1;
-      SameBlockCountPerPage = true;
+struct PageReleaseContext {
+  PageReleaseContext(uptr BlockSize, uptr RegionSize, uptr NumberOfRegions) :
+      BlockSize(BlockSize),
+      RegionSize(RegionSize),
+      NumberOfRegions(NumberOfRegions) {
+    PageSize = getPageSizeCached();
+    if (BlockSize <= PageSize) {
+      if (PageSize % BlockSize == 0) {
+        // Same number of chunks per page, no cross overs.
+        FullPagesBlockCountMax = PageSize / BlockSize;
+        SameBlockCountPerPage = true;
+      } else if (BlockSize % (PageSize % BlockSize) == 0) {
+        // Some chunks are crossing page boundaries, which means that the page
+        // contains one or two partial chunks, but all pages contain the same
+        // number of chunks.
+        FullPagesBlockCountMax = PageSize / BlockSize + 1;
+        SameBlockCountPerPage = true;
+      } else {
+        // Some chunks are crossing page boundaries, which means that the page
+        // contains one or two partial chunks.
+        FullPagesBlockCountMax = PageSize / BlockSize + 2;
+        SameBlockCountPerPage = false;
+      }
     } else {
-      // Some chunks are crossing page boundaries, which means that the page
-      // contains one or two partial chunks.
-      FullPagesBlockCountMax = PageSize / BlockSize + 2;
-      SameBlockCountPerPage = false;
-    }
-  } else {
-    if (BlockSize % PageSize == 0) {
-      // One chunk covers multiple pages, no cross overs.
-      FullPagesBlockCountMax = 1;
-      SameBlockCountPerPage = true;
-    } else {
-      // One chunk covers multiple pages, Some chunks are crossing page
-      // boundaries. Some pages contain one chunk, some contain two.
-      FullPagesBlockCountMax = 2;
-      SameBlockCountPerPage = false;
-    }
-  }
-
-  const uptr PagesCount = roundUpTo(RegionSize, PageSize) / PageSize;
-  PackedCounterArray Counters(NumberOfRegions, PagesCount,
-                              FullPagesBlockCountMax);
-  if (!Counters.isAllocated())
-    return;
-
-  const uptr PageSizeLog = getLog2(PageSize);
-  const uptr RoundedRegionSize = PagesCount << PageSizeLog;
-  const uptr RoundedSize = NumberOfRegions * RoundedRegionSize;
-
-  // Iterate over free chunks and count how many free chunks affect each
-  // allocated page.
-  if (BlockSize <= PageSize && PageSize % BlockSize == 0) {
-    // Each chunk affects one page only.
-    for (const auto &It : FreeList) {
-      for (u16 I = 0; I < It.getCount(); I++) {
-        const uptr P = DecompactPtr(It.get(I)) - Recorder->getBase();
-        if (P >= RoundedSize)
-          continue;
-        const uptr RegionIndex = NumberOfRegions == 1U ? 0 : P / RegionSize;
-        const uptr PInRegion = P - RegionIndex * RegionSize;
-        Counters.inc(RegionIndex, PInRegion >> PageSizeLog);
+      if (BlockSize % PageSize == 0) {
+        // One chunk covers multiple pages, no cross overs.
+        FullPagesBlockCountMax = 1;
+        SameBlockCountPerPage = true;
+      } else {
+        // One chunk covers multiple pages, Some chunks are crossing page
+        // boundaries. Some pages contain one chunk, some contain two.
+        FullPagesBlockCountMax = 2;
+        SameBlockCountPerPage = false;
       }
     }
-  } else {
-    // In all other cases chunks might affect more than one page.
-    DCHECK_GE(RegionSize, BlockSize);
-    const uptr LastBlockInRegion = ((RegionSize / BlockSize) - 1U) * BlockSize;
-    for (const auto &It : FreeList) {
-      for (u16 I = 0; I < It.getCount(); I++) {
-        const uptr P = DecompactPtr(It.get(I)) - Recorder->getBase();
-        if (P >= RoundedSize)
-          continue;
-        const uptr RegionIndex = NumberOfRegions == 1U ? 0 : P / RegionSize;
-        uptr PInRegion = P - RegionIndex * RegionSize;
-        Counters.incRange(RegionIndex, PInRegion >> PageSizeLog,
-                          (PInRegion + BlockSize - 1) >> PageSizeLog);
-        // The last block in a region might straddle a page, so if it's
-        // free, we mark the following "pretend" memory block(s) as free.
-        if (PInRegion == LastBlockInRegion) {
-          PInRegion += BlockSize;
-          while (PInRegion < RoundedRegionSize) {
-            Counters.incRange(RegionIndex, PInRegion >> PageSizeLog,
-                              (PInRegion + BlockSize - 1) >> PageSizeLog);
+
+    PagesCount = roundUpTo(RegionSize, PageSize) / PageSize;
+    PageSizeLog = getLog2(PageSize);
+    RoundedRegionSize = PagesCount << PageSizeLog;
+    RoundedSize = NumberOfRegions * RoundedRegionSize;
+
+    PageMap.reset(NumberOfRegions, PagesCount, FullPagesBlockCountMax);
+    DCHECK(PageMap.isAllocated());
+  }
+
+  template<class TransferBatchT, typename DecompactPtrT>
+  void markFreeBlocks(const IntrusiveList<TransferBatchT> &FreeList,
+                      DecompactPtrT DecompactPtr, uptr Base) {
+    // Iterate over free chunks and count how many free chunks affect each
+    // allocated page.
+    if (BlockSize <= PageSize && PageSize % BlockSize == 0) {
+      // Each chunk affects one page only.
+      for (const auto &It : FreeList) {
+        for (u16 I = 0; I < It.getCount(); I++) {
+          const uptr P = DecompactPtr(It.get(I)) - Base;
+          if (P >= RoundedSize)
+            continue;
+          const uptr RegionIndex = NumberOfRegions == 1U ? 0 : P / RegionSize;
+          const uptr PInRegion = P - RegionIndex * RegionSize;
+          PageMap.inc(RegionIndex, PInRegion >> PageSizeLog);
+        }
+      }
+    } else {
+      // In all other cases chunks might affect more than one page.
+      DCHECK_GE(RegionSize, BlockSize);
+      const uptr LastBlockInRegion =
+          ((RegionSize / BlockSize) - 1U) * BlockSize;
+      for (const auto &It : FreeList) {
+        for (u16 I = 0; I < It.getCount(); I++) {
+          const uptr P = DecompactPtr(It.get(I)) - Base;
+          if (P >= RoundedSize)
+            continue;
+          const uptr RegionIndex = NumberOfRegions == 1U ? 0 : P / RegionSize;
+          uptr PInRegion = P - RegionIndex * RegionSize;
+          PageMap.incRange(RegionIndex, PInRegion >> PageSizeLog,
+                            (PInRegion + BlockSize - 1) >> PageSizeLog);
+          // The last block in a region might straddle a page, so if it's
+          // free, we mark the following "pretend" memory block(s) as free.
+          if (PInRegion == LastBlockInRegion) {
             PInRegion += BlockSize;
+            while (PInRegion < RoundedRegionSize) {
+              PageMap.incRange(RegionIndex, PInRegion >> PageSizeLog,
+                                (PInRegion + BlockSize - 1) >> PageSizeLog);
+              PInRegion += BlockSize;
+            }
           }
         }
       }
     }
   }
+
+  uptr BlockSize;
+  uptr RegionSize;
+  uptr NumberOfRegions;
+  uptr PageSize;
+  uptr PagesCount;
+  uptr PageSizeLog;
+  uptr RoundedRegionSize;
+  uptr RoundedSize;
+  uptr FullPagesBlockCountMax;
+  bool SameBlockCountPerPage;
+  RegionPageMap PageMap;
+};
+
+// Try to release the page which doesn't have any in-used block, i.e., they are
+// all free blocks. The `PageMap` will record the number of free blocks in each
+// page.
+template <class ReleaseRecorderT, typename SkipRegionT>
+NOINLINE void
+releaseFreeMemoryToOS(PageReleaseContext &Context,
+                      ReleaseRecorderT &Recorder, SkipRegionT SkipRegion) {
+  const uptr PageSize = Context.PageSize;
+  const uptr BlockSize = Context.BlockSize;
+  const uptr PagesCount = Context.PagesCount;
+  const uptr NumberOfRegions = Context.NumberOfRegions;
+  const uptr FullPagesBlockCountMax = Context.FullPagesBlockCountMax;
+  const bool SameBlockCountPerPage = Context.SameBlockCountPerPage;
+  RegionPageMap &PageMap = Context.PageMap;
 
   // Iterate over pages detecting ranges of pages with chunk Counters equal
   // to the expected number of chunks for the particular page.
@@ -288,9 +347,12 @@ releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList,
         RangeTracker.skipPages(PagesCount);
         continue;
       }
-      for (uptr J = 0; J < PagesCount; J++)
-        RangeTracker.processNextPage(Counters.get(I, J) ==
-                                     FullPagesBlockCountMax);
+      for (uptr J = 0; J < PagesCount; J++) {
+        const bool CanRelease = PageMap.get(I, J) == FullPagesBlockCountMax;
+        if (CanRelease)
+          PageMap.setAsAllCounted(I, J);
+        RangeTracker.processNextPage(CanRelease);
+      }
     }
   } else {
     // Slow path, go through the pages keeping count how many chunks affect
@@ -322,11 +384,28 @@ releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList,
           }
         }
         PrevPageBoundary = PageBoundary;
-        RangeTracker.processNextPage(Counters.get(I, J) == BlocksPerPage);
+        const bool CanRelease = PageMap.get(I, J) == BlocksPerPage;
+        if (CanRelease)
+          PageMap.setAsAllCounted(I, J);
+        RangeTracker.processNextPage(CanRelease);
       }
     }
   }
   RangeTracker.finish();
+}
+
+// An overload releaseFreeMemoryToOS which doesn't require the page usage
+// information after releasing.
+template <class TransferBatchT, class ReleaseRecorderT, typename DecompactPtrT,
+          typename SkipRegionT>
+NOINLINE void
+releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList,
+                      uptr RegionSize, uptr NumberOfRegions, uptr BlockSize,
+                      ReleaseRecorderT &Recorder, DecompactPtrT DecompactPtr,
+                      SkipRegionT SkipRegion) {
+  PageReleaseContext Context(BlockSize, RegionSize, NumberOfRegions);
+  Context.markFreeBlocks(FreeList, DecompactPtr, Recorder.getBase());
+  releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
 }
 
 } // namespace scudo

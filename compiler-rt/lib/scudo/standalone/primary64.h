@@ -474,7 +474,7 @@ private:
     };
     auto SkipRegion = [](UNUSED uptr RegionIndex) { return false; };
     releaseFreeMemoryToOS(Region->FreeList, Region->AllocatedUser, 1U,
-                          BlockSize, &Recorder, DecompactPtr, SkipRegion);
+                          BlockSize, Recorder, DecompactPtr, SkipRegion);
 
     if (Recorder.getReleasedRangesCount() > 0) {
       Region->ReleaseInfo.PushedBlocksAtLastRelease =
