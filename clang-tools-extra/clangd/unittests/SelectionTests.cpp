@@ -531,6 +531,33 @@ TEST(SelectionTest, CommonAncestor) {
         void func() { [[__^func__]]; }
         )cpp",
        "PredefinedExpr"},
+
+      // using enum
+      {R"cpp(
+        namespace ns { enum class A {}; };
+        using enum ns::[[^A]];
+        )cpp",
+       "EnumTypeLoc"},
+      {R"cpp(
+        namespace ns { enum class A {}; using B = A; };
+        using enum ns::[[^B]];
+        )cpp",
+       "TypedefTypeLoc"},
+      {R"cpp(
+        namespace ns { enum class A {}; };
+        using enum [[^ns::]]A;
+        )cpp",
+       "NestedNameSpecifierLoc"},
+      {R"cpp(
+        namespace ns { enum class A {}; };
+        [[using ^enum ns::A]];
+        )cpp",
+       "UsingEnumDecl"},
+      {R"cpp(
+        namespace ns { enum class A {}; };
+        [[^using enum ns::A]];
+        )cpp",
+       "UsingEnumDecl"},
   };
 
   for (const Case &C : Cases) {
@@ -541,6 +568,7 @@ TEST(SelectionTest, CommonAncestor) {
     TU.Code = std::string(Test.code());
 
     TU.ExtraArgs.push_back("-xobjective-c++");
+    TU.ExtraArgs.push_back("-std=c++20");
 
     auto AST = TU.build();
     auto T = makeSelectionTree(C.Code, AST);

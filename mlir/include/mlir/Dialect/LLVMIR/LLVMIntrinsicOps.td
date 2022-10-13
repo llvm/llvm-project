@@ -12,35 +12,35 @@ include "mlir/Interfaces/InferTypeOpInterface.td"
 
 class LLVM_UnaryIntrinsicOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
-           !listconcat([NoSideEffect, SameOperandsAndResultType], traits)> {
+           !listconcat([Pure, SameOperandsAndResultType], traits)> {
   let arguments = (ins LLVM_Type:$in);
 }
 
 class LLVM_BinarySameArgsIntrinsicOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
-           !listconcat([NoSideEffect, SameOperandsAndResultType], traits)> {
+           !listconcat([Pure, SameOperandsAndResultType], traits)> {
   let arguments = (ins LLVM_Type:$a, LLVM_Type:$b);
 }
 
 class LLVM_BinaryIntrinsicOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0,1],
-           !listconcat([NoSideEffect], traits)> {
+           !listconcat([Pure], traits)> {
   let arguments = (ins LLVM_Type:$a, LLVM_Type:$b);
 }
 
 class LLVM_TernarySameArgsIntrinsicOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
-           !listconcat([NoSideEffect, SameOperandsAndResultType], traits)> {
+           !listconcat([Pure, SameOperandsAndResultType], traits)> {
   let arguments = (ins LLVM_Type:$a, LLVM_Type:$b, LLVM_Type:$c);
 }
 
 class LLVM_CountZerosIntrinsicOp<string func, list<Trait> traits = []> :
     LLVM_OneResultIntrOp<func, [], [0],
-           !listconcat([NoSideEffect], traits)> {
+           !listconcat([Pure], traits)> {
   let arguments = (ins LLVM_Type:$in, I1:$zero_undefined);
 }
 
-def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [NoSideEffect]> {
+def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure]> {
   let arguments = (ins LLVM_Type:$in, I1:$is_int_min_poison);
 }
 
@@ -389,7 +389,7 @@ def LLVM_MatrixTransposeOp : LLVM_Op<"intr.matrix.transpose"> {
 
 /// Create a llvm.get.active.lane.mask to set a mask up to a given position.
 def LLVM_GetActiveLaneMaskOp
-    : LLVM_OneResultIntrOp<"get.active.lane.mask", [0], [0], [NoSideEffect]> {
+    : LLVM_OneResultIntrOp<"get.active.lane.mask", [0], [0], [Pure]> {
   let arguments = (ins LLVM_Type:$base, LLVM_Type:$n);
   let assemblyFormat = "$base `,` $n attr-dict `:` "
     "type($base) `,` type($n) `to` type($res)";
@@ -468,7 +468,7 @@ def LLVM_vscale : LLVM_IntrOp<"vscale", [0], [], [], 1>;
 
 /// Create a call to stepvector intrinsic.
 def LLVM_StepVectorOp
-    : LLVM_IntrOp<"experimental.stepvector", [0], [], [NoSideEffect], 1> {
+    : LLVM_IntrOp<"experimental.stepvector", [0], [], [Pure], 1> {
   let arguments = (ins);
   let results = (outs LLVM_Type:$res);
   let assemblyFormat = "attr-dict `:` type($res)";
@@ -477,7 +477,7 @@ def LLVM_StepVectorOp
 /// Create a call to vector.insert intrinsic
 def LLVM_vector_insert
     : LLVM_Op<"intr.vector.insert",
-                 [NoSideEffect, AllTypesMatch<["dstvec", "res"]>,
+                 [Pure, AllTypesMatch<["dstvec", "res"]>,
                   PredOpTrait<"vectors are not bigger than 2^17 bits.", And<[
                     CPred<"getSrcVectorBitWidth() <= 131072">,
                     CPred<"getDstVectorBitWidth() <= 131072">
@@ -512,7 +512,7 @@ def LLVM_vector_insert
 /// Create a call to vector.extract intrinsic
 def LLVM_vector_extract
     : LLVM_Op<"intr.vector.extract",
-                 [NoSideEffect,
+                 [Pure,
                   PredOpTrait<"vectors are not bigger than 2^17 bits.", And<[
                     CPred<"getSrcVectorBitWidth() <= 131072">,
                     CPred<"getResVectorBitWidth() <= 131072">
@@ -548,7 +548,7 @@ def LLVM_vector_extract
 //
 
 class LLVM_VPBinaryBase<string mnem, Type element>
-    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [], [NoSideEffect]>,
+    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [], [Pure]>,
       Arguments<(ins LLVM_VectorOf<element>:$lhs, LLVM_VectorOf<element>:$rhs,
                      LLVM_VectorOf<I1>:$mask, I32:$evl)>;
 
@@ -557,14 +557,14 @@ class LLVM_VPBinaryI<string mnem> : LLVM_VPBinaryBase<mnem, AnyInteger>;
 class LLVM_VPBinaryF<string mnem> : LLVM_VPBinaryBase<mnem, AnyFloat>;
 
 class LLVM_VPUnaryBase<string mnem, Type element>
-    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [], [NoSideEffect]>,
+    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [], [Pure]>,
       Arguments<(ins LLVM_VectorOf<element>:$op,
                      LLVM_VectorOf<I1>:$mask, I32:$evl)>;
 
 class LLVM_VPUnaryF<string mnem> : LLVM_VPUnaryBase<mnem, AnyFloat>;
 
 class LLVM_VPTernaryBase<string mnem, Type element>
-    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [], [NoSideEffect]>,
+    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [], [Pure]>,
       Arguments<(ins LLVM_VectorOf<element>:$op1, LLVM_VectorOf<element>:$op2,
                      LLVM_VectorOf<element>:$op3, LLVM_VectorOf<I1>:$mask,
                      I32:$evl)>;
@@ -572,7 +572,7 @@ class LLVM_VPTernaryBase<string mnem, Type element>
 class LLVM_VPTernaryF<string mnem> : LLVM_VPTernaryBase<mnem, AnyFloat>;
 
 class LLVM_VPReductionBase<string mnem, Type element>
-    : LLVM_OneResultIntrOp<"vp.reduce." # mnem, [], [1], [NoSideEffect]>,
+    : LLVM_OneResultIntrOp<"vp.reduce." # mnem, [], [1], [Pure]>,
       Arguments<(ins element:$satrt_value, LLVM_VectorOf<element>:$val,
                      LLVM_VectorOf<I1>:$mask, I32:$evl)>;
 
@@ -581,12 +581,12 @@ class LLVM_VPReductionI<string mnem> : LLVM_VPReductionBase<mnem, AnyInteger>;
 class LLVM_VPReductionF<string mnem> : LLVM_VPReductionBase<mnem, AnyFloat>;
 
 class LLVM_VPSelectBase<string mnem>
-    : LLVM_OneResultIntrOp<"vp." # mnem, [], [1], [NoSideEffect]>,
+    : LLVM_OneResultIntrOp<"vp." # mnem, [], [1], [Pure]>,
       Arguments<(ins LLVM_VectorOf<I1>:$cond, LLVM_AnyVector:$true_val,
                      LLVM_AnyVector:$false_val, I32:$evl)>;
 
 class LLVM_VPCastBase<string mnem, Type element>
-    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [0], [NoSideEffect]>,
+    : LLVM_OneResultIntrOp<"vp." # mnem, [0], [0], [Pure]>,
       Arguments<(ins LLVM_VectorOf<element>:$src,
                      LLVM_VectorOf<I1>:$mask, I32:$evl)>;
 

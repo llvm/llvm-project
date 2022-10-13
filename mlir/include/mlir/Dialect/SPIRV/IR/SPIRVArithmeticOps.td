@@ -23,7 +23,7 @@ class SPIRV_ArithmeticBinaryOp<string mnemonic, Type type,
       // Operands type same as result type.
       SPIRV_BinaryOp<mnemonic, type, type,
                    !listconcat(traits,
-                               [NoSideEffect, SameOperandsAndResultType])> {
+                               [Pure, SameOperandsAndResultType])> {
   // In addition to normal types arithmetic instructions can support cooperative
   // matrix.
   let arguments = (ins
@@ -42,7 +42,7 @@ class SPIRV_ArithmeticUnaryOp<string mnemonic, Type type,
       // Operand type same as result type.
       SPIRV_UnaryOp<mnemonic, type, type,
                    !listconcat(traits,
-                               [NoSideEffect, SameOperandsAndResultType])>;
+                               [Pure, SameOperandsAndResultType])>;
 
 // -----
 
@@ -312,7 +312,7 @@ def SPIRV_IAddOp : SPIRV_ArithmeticBinaryOp<"IAdd",
 
 def SPIRV_IAddCarryOp : SPIRV_BinaryOp<"IAddCarry",
                                    SPIRV_AnyStruct, SPIRV_Integer,
-                                   [Commutative, NoSideEffect]> {
+                                   [Commutative, Pure]> {
   let summary = [{
     Integer addition of Operand 1 and Operand 2, including the carry.
   }];
@@ -448,7 +448,7 @@ def SPIRV_ISubOp : SPIRV_ArithmeticBinaryOp<"ISub",
 // -----
 
 def SPIRV_ISubBorrowOp : SPIRV_BinaryOp<"ISubBorrow", SPIRV_AnyStruct, SPIRV_Integer,
-                                    [NoSideEffect]> {
+                                    [Pure]> {
   let summary = [{
     Result is the unsigned integer subtraction of Operand 2 from Operand 1,
     and what it needed to borrow.
@@ -680,7 +680,7 @@ def SPIRV_UDivOp : SPIRV_ArithmeticBinaryOp<"UDiv",
 
 // -----
 
-def SPIRV_VectorTimesScalarOp : SPIRV_Op<"VectorTimesScalar", [NoSideEffect]> {
+def SPIRV_VectorTimesScalarOp : SPIRV_Op<"VectorTimesScalar", [Pure]> {
   let summary = "Scale a floating-point vector.";
 
   let description = [{

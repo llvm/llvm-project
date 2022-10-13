@@ -175,6 +175,23 @@ ArrayRef<uint64_t> TestExtern1DI64ElementsAttr::getElements() const {
 }
 
 //===----------------------------------------------------------------------===//
+// TestCustomAnchorAttr
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseTrueFalse(AsmParser &p,
+                                  FailureOr<Optional<int>> &result) {
+  bool b;
+  if (p.parseInteger(b))
+    return failure();
+  result = Optional<int>(b);
+  return success();
+}
+
+static void printTrueFalse(AsmPrinter &p, Optional<int> result) {
+  p << (*result ? "true" : "false");
+}
+
+//===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 

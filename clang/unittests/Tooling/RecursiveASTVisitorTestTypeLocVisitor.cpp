@@ -88,4 +88,12 @@ TEST(RecursiveASTVisitor, VisitInvalidType) {
       TypeLocVisitor::Lang_C));
 }
 
+TEST(RecursiveASTVisitor, VisitsUsingEnumType) {
+  TypeLocVisitor Visitor;
+  Visitor.ExpectMatch("::A", 2, 12);
+  EXPECT_TRUE(Visitor.runOver("enum class A {}; \n"
+                              "using enum ::A;\n",
+                              TypeLocVisitor::Lang_CXX2a));
+}
+
 } // end anonymous namespace

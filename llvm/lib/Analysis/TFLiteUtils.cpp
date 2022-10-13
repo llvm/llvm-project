@@ -121,8 +121,21 @@ TFModelEvaluatorImpl::TFModelEvaluatorImpl(
   tflite::InterpreterBuilder Builder(*Model, Resolver);
   Builder(&Interpreter);
 
-  if (!Interpreter ||
-      Interpreter->AllocateTensors() != TfLiteStatus::kTfLiteOk) {
+  if (!Interpreter) {
+    invalidate();
+    return;
+  }
+
+  // We assume the input buffers are valid for the lifetime of the interpreter.
+  // By default, tflite allocates memory in an arena and will periodically take
+  // away memory and reallocate it in a different location after evaluations in
+  // order to improve utilization of the buffers owned in the arena. So, we
+  // explicitly mark our input buffers as persistent to avoid this behavior.
+  for (size_t I = 0; I < Interpreter->inputs().size(); ++I)
+    Interpreter->tensor(I)->allocation_type =
+        TfLiteAllocationType::kTfLiteArenaRwPersistent;
+
+  if (Interpreter->AllocateTensors() != TfLiteStatus::kTfLiteOk) {
     invalidate();
     return;
   }

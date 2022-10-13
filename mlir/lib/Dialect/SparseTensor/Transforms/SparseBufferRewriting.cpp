@@ -42,8 +42,8 @@ static constexpr const char kSortNonstableFuncNamePrefix[] =
 static constexpr const char kSortStableFuncNamePrefix[] =
     "_sparse_sort_stable_";
 
-typedef function_ref<void(OpBuilder &, ModuleOp, func::FuncOp, size_t)>
-    FuncGeneratorType;
+using FuncGeneratorType =
+    function_ref<void(OpBuilder &, ModuleOp, func::FuncOp, size_t)>;
 
 /// Constructs a function name with this format to facilitate quick sort:
 ///   <namePrefix><dim>_<x type>_<y0 type>..._<yn type>
@@ -569,9 +569,9 @@ public:
       for (Value v : values) {
         auto mtp = v.getType().cast<MemRefType>();
         if (!mtp.isDynamicDim(0)) {
-          auto new_mtp =
+          auto newMtp =
               MemRefType::get({ShapedType::kDynamicSize}, mtp.getElementType());
-          v = rewriter.create<memref::CastOp>(loc, new_mtp, v);
+          v = rewriter.create<memref::CastOp>(loc, newMtp, v);
         }
         operands.push_back(v);
       }

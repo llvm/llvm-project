@@ -5,6 +5,6 @@
 
 // RUN: %clang -fuse-ld= -arch arm64 -mlinker-version=520 -isysroot %t/MacOSX12.sdk/does-not-exist -### %t/f.o 2>&1 | FileCheck %s
 
-// CHECK: "-platform_version" "macos" "[[NUMBER:[0-9]+]].0.0" "[[NUMBER]].0"
+// CHECK: "-platform_version" "macos" "{{[0-9]+}}.0.0" "{{[0-9]+}}.{{[0-9]+}}"
 
 // REQUIRES: system-darwin

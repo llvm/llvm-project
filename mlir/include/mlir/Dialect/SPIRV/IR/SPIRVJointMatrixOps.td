@@ -16,7 +16,7 @@
 // -----
 
 def SPIRV_INTELJointMatrixWorkItemLengthOp : SPIRV_IntelVendorOp<"JointMatrixWorkItemLength",
-  [NoSideEffect]> {
+  [Pure]> {
   let summary = "See extension SPV_INTEL_joint_matrix";
 
   let description = [{
@@ -120,7 +120,7 @@ def SPIRV_INTELJointMatrixLoadOp : SPIRV_IntelVendorOp<"JointMatrixLoad", []> {
 // -----
 
 def SPIRV_INTELJointMatrixMadOp : SPIRV_IntelVendorOp<"JointMatrixMad",
-  [NoSideEffect, AllTypesMatch<["c", "result"]>]> {
+  [Pure, AllTypesMatch<["c", "result"]>]> {
   let summary = "See extension SPV_INTEL_joint_matrix";
 
   let description = [{

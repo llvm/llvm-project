@@ -4,7 +4,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
 @b = common local_unnamed_addr global i32 0, align 4, !dbg !0
-@a = common local_unnamed_addr global i32* null, align 8, !dbg !6
+@a = common local_unnamed_addr global ptr null, align 8, !dbg !6
 
 ; Test that loop remainder unrolling doesn't corrupt debuginfo. This example
 ; used to cause an assert, but also test that the unrolled backwards branches
@@ -14,11 +14,11 @@ define i32 @func_c() local_unnamed_addr #0 !dbg !14 {
 ;
 ; CHECK-LABEL: @func_c(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[DOTPR:%.*]] = load i32, i32* @b, align 4, !dbg [[DBG17:![0-9]+]], !tbaa [[TBAA20:![0-9]+]]
+; CHECK-NEXT:    [[DOTPR:%.*]] = load i32, ptr @b, align 4, !dbg [[DBG17:![0-9]+]], !tbaa [[TBAA20:![0-9]+]]
 ; CHECK-NEXT:    [[TOBOOL1:%.*]] = icmp eq i32 [[DOTPR]], 0, !dbg [[DBG24:![0-9]+]]
 ; CHECK-NEXT:    br i1 [[TOBOOL1]], label [[FOR_END:%.*]], label [[FOR_BODY_LR_PH:%.*]], !dbg [[DBG24]]
 ; CHECK:       for.body.lr.ph:
-; CHECK-NEXT:    [[A_PROMOTED:%.*]] = load i32*, i32** @a, align 8, !dbg [[DBG25:![0-9]+]], !tbaa [[TBAA26:![0-9]+]]
+; CHECK-NEXT:    [[A_PROMOTED:%.*]] = load ptr, ptr @a, align 8, !dbg [[DBG25:![0-9]+]], !tbaa [[TBAA26:![0-9]+]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 -2, [[DOTPR]], !dbg [[DBG24]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], -2, !dbg [[DBG24]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[DOTPR]], [[TMP1]], !dbg [[DBG24]]
@@ -30,105 +30,105 @@ define i32 @func_c() local_unnamed_addr #0 !dbg !14 {
 ; CHECK:       for.body.prol.preheader:
 ; CHECK-NEXT:    br label [[FOR_BODY_PROL:%.*]], !dbg [[DBG24]]
 ; CHECK:       for.body.prol:
-; CHECK-NEXT:    [[ARRAYIDX_PROL:%.*]] = getelementptr inbounds i32, i32* [[A_PROMOTED]], i64 1, !dbg [[DBG28:![0-9]+]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i32, i32* [[ARRAYIDX_PROL]], align 4, !dbg [[DBG28]], !tbaa [[TBAA20]]
+; CHECK-NEXT:    [[ARRAYIDX_PROL:%.*]] = getelementptr inbounds i32, ptr [[A_PROMOTED]], i64 1, !dbg [[DBG28:![0-9]+]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[ARRAYIDX_PROL]], align 4, !dbg [[DBG28]], !tbaa [[TBAA20]]
 ; CHECK-NEXT:    [[CONV_PROL:%.*]] = sext i32 [[TMP5]] to i64, !dbg [[DBG28]]
-; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[CONV_PROL]] to i32*, !dbg [[DBG28]]
+; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[CONV_PROL]] to ptr, !dbg [[DBG28]]
 ; CHECK-NEXT:    [[ADD_PROL:%.*]] = add nsw i32 [[DOTPR]], 2, !dbg [[DBG29:![0-9]+]]
 ; CHECK-NEXT:    [[PROL_ITER_CMP:%.*]] = icmp ne i32 1, [[XTRAITER]], !dbg [[DBG24]]
 ; CHECK-NEXT:    br i1 [[PROL_ITER_CMP]], label [[FOR_BODY_PROL_1:%.*]], label [[FOR_BODY_PROL_LOOPEXIT_UNR_LCSSA:%.*]], !dbg [[DBG24]]
 ; CHECK:       for.body.prol.1:
-; CHECK-NEXT:    [[ARRAYIDX_PROL_1:%.*]] = getelementptr inbounds i32, i32* [[TMP6]], i64 1, !dbg [[DBG28]]
-; CHECK-NEXT:    [[TMP7:%.*]] = load i32, i32* [[ARRAYIDX_PROL_1]], align 4, !dbg [[DBG28]], !tbaa [[TBAA20]]
+; CHECK-NEXT:    [[ARRAYIDX_PROL_1:%.*]] = getelementptr inbounds i32, ptr [[TMP6]], i64 1, !dbg [[DBG28]]
+; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[ARRAYIDX_PROL_1]], align 4, !dbg [[DBG28]], !tbaa [[TBAA20]]
 ; CHECK-NEXT:    [[CONV_PROL_1:%.*]] = sext i32 [[TMP7]] to i64, !dbg [[DBG28]]
-; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[CONV_PROL_1]] to i32*, !dbg [[DBG28]]
+; CHECK-NEXT:    [[TMP8:%.*]] = inttoptr i64 [[CONV_PROL_1]] to ptr, !dbg [[DBG28]]
 ; CHECK-NEXT:    [[ADD_PROL_1:%.*]] = add nsw i32 [[ADD_PROL]], 2, !dbg [[DBG29]]
 ; CHECK-NEXT:    [[PROL_ITER_CMP_1:%.*]] = icmp ne i32 2, [[XTRAITER]], !dbg [[DBG24]]
 ; CHECK-NEXT:    br i1 [[PROL_ITER_CMP_1]], label [[FOR_BODY_PROL_2:%.*]], label [[FOR_BODY_PROL_LOOPEXIT_UNR_LCSSA]], !dbg [[DBG24]]
 ; CHECK:       for.body.prol.2:
-; CHECK-NEXT:    [[ARRAYIDX_PROL_2:%.*]] = getelementptr inbounds i32, i32* [[TMP8]], i64 1, !dbg [[DBG28]]
-; CHECK-NEXT:    [[TMP9:%.*]] = load i32, i32* [[ARRAYIDX_PROL_2]], align 4, !dbg [[DBG28]], !tbaa [[TBAA20]]
+; CHECK-NEXT:    [[ARRAYIDX_PROL_2:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 1, !dbg [[DBG28]]
+; CHECK-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX_PROL_2]], align 4, !dbg [[DBG28]], !tbaa [[TBAA20]]
 ; CHECK-NEXT:    [[CONV_PROL_2:%.*]] = sext i32 [[TMP9]] to i64, !dbg [[DBG28]]
-; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[CONV_PROL_2]] to i32*, !dbg [[DBG28]]
+; CHECK-NEXT:    [[TMP10:%.*]] = inttoptr i64 [[CONV_PROL_2]] to ptr, !dbg [[DBG28]]
 ; CHECK-NEXT:    [[ADD_PROL_2:%.*]] = add nsw i32 [[ADD_PROL_1]], 2, !dbg [[DBG29]]
 ; CHECK-NEXT:    br label [[FOR_BODY_PROL_LOOPEXIT_UNR_LCSSA]]
 ; CHECK:       for.body.prol.loopexit.unr-lcssa:
-; CHECK-NEXT:    [[DOTLCSSA_UNR_PH:%.*]] = phi i32* [ [[TMP6]], [[FOR_BODY_PROL]] ], [ [[TMP8]], [[FOR_BODY_PROL_1]] ], [ [[TMP10]], [[FOR_BODY_PROL_2]] ]
-; CHECK-NEXT:    [[DOTUNR_PH:%.*]] = phi i32* [ [[TMP6]], [[FOR_BODY_PROL]] ], [ [[TMP8]], [[FOR_BODY_PROL_1]] ], [ [[TMP10]], [[FOR_BODY_PROL_2]] ]
+; CHECK-NEXT:    [[DOTLCSSA_UNR_PH:%.*]] = phi ptr [ [[TMP6]], [[FOR_BODY_PROL]] ], [ [[TMP8]], [[FOR_BODY_PROL_1]] ], [ [[TMP10]], [[FOR_BODY_PROL_2]] ]
+; CHECK-NEXT:    [[DOTUNR_PH:%.*]] = phi ptr [ [[TMP6]], [[FOR_BODY_PROL]] ], [ [[TMP8]], [[FOR_BODY_PROL_1]] ], [ [[TMP10]], [[FOR_BODY_PROL_2]] ]
 ; CHECK-NEXT:    [[DOTUNR1_PH:%.*]] = phi i32 [ [[ADD_PROL]], [[FOR_BODY_PROL]] ], [ [[ADD_PROL_1]], [[FOR_BODY_PROL_1]] ], [ [[ADD_PROL_2]], [[FOR_BODY_PROL_2]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY_PROL_LOOPEXIT]], !dbg [[DBG24]]
 ; CHECK:       for.body.prol.loopexit:
-; CHECK-NEXT:    [[DOTLCSSA_UNR:%.*]] = phi i32* [ undef, [[FOR_BODY_LR_PH]] ], [ [[DOTLCSSA_UNR_PH]], [[FOR_BODY_PROL_LOOPEXIT_UNR_LCSSA]] ]
-; CHECK-NEXT:    [[DOTUNR:%.*]] = phi i32* [ [[A_PROMOTED]], [[FOR_BODY_LR_PH]] ], [ [[DOTUNR_PH]], [[FOR_BODY_PROL_LOOPEXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[DOTLCSSA_UNR:%.*]] = phi ptr [ undef, [[FOR_BODY_LR_PH]] ], [ [[DOTLCSSA_UNR_PH]], [[FOR_BODY_PROL_LOOPEXIT_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[DOTUNR:%.*]] = phi ptr [ [[A_PROMOTED]], [[FOR_BODY_LR_PH]] ], [ [[DOTUNR_PH]], [[FOR_BODY_PROL_LOOPEXIT_UNR_LCSSA]] ]
 ; CHECK-NEXT:    [[DOTUNR1:%.*]] = phi i32 [ [[DOTPR]], [[FOR_BODY_LR_PH]] ], [ [[DOTUNR1_PH]], [[FOR_BODY_PROL_LOOPEXIT_UNR_LCSSA]] ]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp ult i32 [[TMP3]], 3, !dbg [[DBG24]]
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[FOR_COND_FOR_END_CRIT_EDGE:%.*]], label [[FOR_BODY_LR_PH_NEW:%.*]], !dbg [[DBG24]]
 ; CHECK:       for.body.lr.ph.new:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]], !dbg [[DBG24]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi i32* [ [[DOTUNR]], [[FOR_BODY_LR_PH_NEW]] ], [ [[TMP21:%.*]], [[FOR_BODY]] ], !dbg [[DBG28]]
+; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[DOTUNR]], [[FOR_BODY_LR_PH_NEW]] ], [ [[TMP21:%.*]], [[FOR_BODY]] ], !dbg [[DBG28]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = phi i32 [ [[DOTUNR1]], [[FOR_BODY_LR_PH_NEW]] ], [ [[ADD_3:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, i32* [[TMP12]], i64 1, !dbg [[DBG28]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load i32, i32* [[ARRAYIDX]], align 4, !dbg [[DBG28]], !tbaa [[TBAA20]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[TMP12]], i64 1, !dbg [[DBG28]]
+; CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[ARRAYIDX]], align 4, !dbg [[DBG28]], !tbaa [[TBAA20]]
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[TMP14]] to i64, !dbg [[DBG28]]
-; CHECK-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[CONV]] to i32*, !dbg [[DBG28]]
+; CHECK-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[CONV]] to ptr, !dbg [[DBG28]]
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP13]], 2, !dbg [[DBG29]]
-; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, i32* [[TMP15]], i64 1, !dbg [[DBG28]]
-; CHECK-NEXT:    [[TMP16:%.*]] = load i32, i32* [[ARRAYIDX_1]], align 4, !dbg [[DBG28]], !tbaa [[TBAA20]]
+; CHECK-NEXT:    [[ARRAYIDX_1:%.*]] = getelementptr inbounds i32, ptr [[TMP15]], i64 1, !dbg [[DBG28]]
+; CHECK-NEXT:    [[TMP16:%.*]] = load i32, ptr [[ARRAYIDX_1]], align 4, !dbg [[DBG28]], !tbaa [[TBAA20]]
 ; CHECK-NEXT:    [[CONV_1:%.*]] = sext i32 [[TMP16]] to i64, !dbg [[DBG28]]
-; CHECK-NEXT:    [[TMP17:%.*]] = inttoptr i64 [[CONV_1]] to i32*, !dbg [[DBG28]]
+; CHECK-NEXT:    [[TMP17:%.*]] = inttoptr i64 [[CONV_1]] to ptr, !dbg [[DBG28]]
 ; CHECK-NEXT:    [[ADD_1:%.*]] = add nsw i32 [[ADD]], 2, !dbg [[DBG29]]
-; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, i32* [[TMP17]], i64 1, !dbg [[DBG28]]
-; CHECK-NEXT:    [[TMP18:%.*]] = load i32, i32* [[ARRAYIDX_2]], align 4, !dbg [[DBG28]], !tbaa [[TBAA20]]
+; CHECK-NEXT:    [[ARRAYIDX_2:%.*]] = getelementptr inbounds i32, ptr [[TMP17]], i64 1, !dbg [[DBG28]]
+; CHECK-NEXT:    [[TMP18:%.*]] = load i32, ptr [[ARRAYIDX_2]], align 4, !dbg [[DBG28]], !tbaa [[TBAA20]]
 ; CHECK-NEXT:    [[CONV_2:%.*]] = sext i32 [[TMP18]] to i64, !dbg [[DBG28]]
-; CHECK-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[CONV_2]] to i32*, !dbg [[DBG28]]
+; CHECK-NEXT:    [[TMP19:%.*]] = inttoptr i64 [[CONV_2]] to ptr, !dbg [[DBG28]]
 ; CHECK-NEXT:    [[ADD_2:%.*]] = add nsw i32 [[ADD_1]], 2, !dbg [[DBG29]]
-; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, i32* [[TMP19]], i64 1, !dbg [[DBG28]]
-; CHECK-NEXT:    [[TMP20:%.*]] = load i32, i32* [[ARRAYIDX_3]], align 4, !dbg [[DBG28]], !tbaa [[TBAA20]]
+; CHECK-NEXT:    [[ARRAYIDX_3:%.*]] = getelementptr inbounds i32, ptr [[TMP19]], i64 1, !dbg [[DBG28]]
+; CHECK-NEXT:    [[TMP20:%.*]] = load i32, ptr [[ARRAYIDX_3]], align 4, !dbg [[DBG28]], !tbaa [[TBAA20]]
 ; CHECK-NEXT:    [[CONV_3:%.*]] = sext i32 [[TMP20]] to i64, !dbg [[DBG28]]
-; CHECK-NEXT:    [[TMP21]] = inttoptr i64 [[CONV_3]] to i32*, !dbg [[DBG28]]
+; CHECK-NEXT:    [[TMP21]] = inttoptr i64 [[CONV_3]] to ptr, !dbg [[DBG28]]
 ; CHECK-NEXT:    [[ADD_3]] = add nsw i32 [[ADD_2]], 2, !dbg [[DBG29]]
 ; CHECK-NEXT:    [[TOBOOL_3:%.*]] = icmp eq i32 [[ADD_3]], 0, !dbg [[DBG24]]
 ; CHECK-NEXT:    br i1 [[TOBOOL_3]], label [[FOR_COND_FOR_END_CRIT_EDGE_UNR_LCSSA:%.*]], label [[FOR_BODY]], !dbg [[DBG24]], !llvm.loop [[LOOP30:![0-9]+]]
 ; CHECK:       for.cond.for.end_crit_edge.unr-lcssa:
-; CHECK-NEXT:    [[DOTLCSSA_PH:%.*]] = phi i32* [ [[TMP21]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[DOTLCSSA_PH:%.*]] = phi ptr [ [[TMP21]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    br label [[FOR_COND_FOR_END_CRIT_EDGE]], !dbg [[DBG24]]
 ; CHECK:       for.cond.for.end_crit_edge:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi i32* [ [[DOTLCSSA_UNR]], [[FOR_BODY_PROL_LOOPEXIT]] ], [ [[DOTLCSSA_PH]], [[FOR_COND_FOR_END_CRIT_EDGE_UNR_LCSSA]] ], !dbg [[DBG28]]
+; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi ptr [ [[DOTLCSSA_UNR]], [[FOR_BODY_PROL_LOOPEXIT]] ], [ [[DOTLCSSA_PH]], [[FOR_COND_FOR_END_CRIT_EDGE_UNR_LCSSA]] ], !dbg [[DBG28]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = add i32 [[TMP2]], 2, !dbg [[DBG24]]
-; CHECK-NEXT:    store i32* [[DOTLCSSA]], i32** @a, align 8, !dbg [[DBG25]], !tbaa [[TBAA26]]
-; CHECK-NEXT:    store i32 [[TMP22]], i32* @b, align 4, !dbg [[DBG33:![0-9]+]], !tbaa [[TBAA20]]
+; CHECK-NEXT:    store ptr [[DOTLCSSA]], ptr @a, align 8, !dbg [[DBG25]], !tbaa [[TBAA26]]
+; CHECK-NEXT:    store i32 [[TMP22]], ptr @b, align 4, !dbg [[DBG33:![0-9]+]], !tbaa [[TBAA20]]
 ; CHECK-NEXT:    br label [[FOR_END]], !dbg [[DBG24]]
 ; CHECK:       for.end:
 ; CHECK-NEXT:    ret i32 undef, !dbg [[DBG34:![0-9]+]]
 ;
 entry:
-  %.pr = load i32, i32* @b, align 4, !dbg !17, !tbaa !20
+  %.pr = load i32, ptr @b, align 4, !dbg !17, !tbaa !20
   %tobool1 = icmp eq i32 %.pr, 0, !dbg !24
   br i1 %tobool1, label %for.end, label %for.body.lr.ph, !dbg !24
 
 for.body.lr.ph:
-  %a.promoted = load i32*, i32** @a, align 8, !dbg !25, !tbaa !26
+  %a.promoted = load ptr, ptr @a, align 8, !dbg !25, !tbaa !26
   %0 = sub i32 -2, %.pr, !dbg !24
   %1 = and i32 %0, -2, !dbg !24
   %2 = add i32 %.pr, %1, !dbg !24
   br label %for.body, !dbg !24
 
 for.body:
-  %3 = phi i32* [ %a.promoted, %for.body.lr.ph ], [ %6, %for.body ], !dbg !28
+  %3 = phi ptr [ %a.promoted, %for.body.lr.ph ], [ %6, %for.body ], !dbg !28
   %4 = phi i32 [ %.pr, %for.body.lr.ph ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %3, i64 1, !dbg !28
-  %5 = load i32, i32* %arrayidx, align 4, !dbg !28, !tbaa !20
+  %arrayidx = getelementptr inbounds i32, ptr %3, i64 1, !dbg !28
+  %5 = load i32, ptr %arrayidx, align 4, !dbg !28, !tbaa !20
   %conv = sext i32 %5 to i64, !dbg !28
-  %6 = inttoptr i64 %conv to i32*, !dbg !28
+  %6 = inttoptr i64 %conv to ptr, !dbg !28
   %add = add nsw i32 %4, 2, !dbg !29
   %tobool = icmp eq i32 %add, 0, !dbg !24
   br i1 %tobool, label %for.cond.for.end_crit_edge, label %for.body, !dbg !24, !llvm.loop !30
 
 for.cond.for.end_crit_edge:
   %7 = add i32 %2, 2, !dbg !24
-  store i32* %6, i32** @a, align 8, !dbg !25, !tbaa !26
-  store i32 %7, i32* @b, align 4, !dbg !32, !tbaa !20
+  store ptr %6, ptr @a, align 8, !dbg !25, !tbaa !26
+  store i32 %7, ptr @b, align 4, !dbg !32, !tbaa !20
   br label %for.end, !dbg !24
 
 for.end:

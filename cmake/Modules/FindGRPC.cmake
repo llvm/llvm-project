@@ -108,7 +108,7 @@ endif()
 # If the "GRPC" argument is given, services are also generated.
 # The DEPENDS list should name *.proto source files that are imported.
 # They may be relative to the source dir or absolute (for generated protos).
-function(generate_protos LibraryName ProtoFile)
+function(generate_proto_sources GeneratedSource ProtoFile)
   cmake_parse_arguments(PARSE_ARGV 2 PROTO "GRPC" "" "DEPENDS")
   get_filename_component(ProtoSourceAbsolutePath "${CMAKE_CURRENT_SOURCE_DIR}/${ProtoFile}" ABSOLUTE)
   get_filename_component(ProtoSourcePath ${ProtoSourceAbsolutePath} PATH)
@@ -132,9 +132,7 @@ function(generate_protos LibraryName ProtoFile)
         ARGS ${Flags} "${ProtoSourceAbsolutePath}"
         DEPENDS "${ProtoSourceAbsolutePath}")
 
-  add_llvm_library(${LibraryName} ${GeneratedProtoSource}
-    PARTIAL_SOURCES_INTENDED
-    LINK_LIBS PUBLIC grpc++ protobuf)
+  set(${GeneratedSource} ${GeneratedProtoSource} PARENT_SCOPE)
 
   # Ensure dependency headers are generated before dependent protos are built.
   # DEPENDS arg is a list of "Foo.proto". While they're logically relative to

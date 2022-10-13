@@ -18,7 +18,7 @@
 #endif
 
 // Provide a default implementation of __libcpp_verbose_abort if we know that neither the built
-// library not the user is providing one. Otherwise, just declare it and use the one from the
+// library nor the user is providing one. Otherwise, just declare it and use the one from the
 // built library or the one provided by the user.
 //
 // We can't provide a great implementation because it needs to be pretty much

@@ -34,7 +34,7 @@ public:
   using ValueType = void;
   using AbstractTy = AbstractAttribute;
 
-  constexpr Attribute() {}
+  constexpr Attribute() = default;
   /* implicit */ Attribute(const ImplType *impl)
       : impl(const_cast<ImplType *>(impl)) {}
 

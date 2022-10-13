@@ -35,8 +35,8 @@ target triple = "x86_64-pc-linux"
 %class.a = type { i8 }
 
 ; Function Attrs: nounwind readnone uwtable
-define i32 @_ZN1a1bEv(%class.a* nocapture readnone) local_unnamed_addr #0 align 2 !dbg !8 {
-  tail call void @llvm.dbg.value(metadata %class.a* %0, metadata !17, metadata !DIExpression()), !dbg !19
+define i32 @_ZN1a1bEv(ptr nocapture readnone) local_unnamed_addr #0 align 2 !dbg !8 {
+  tail call void @llvm.dbg.value(metadata ptr %0, metadata !17, metadata !DIExpression()), !dbg !19
   br label %2, !dbg !20
 
 ; <label>:2:                                      ; preds = %2, %1

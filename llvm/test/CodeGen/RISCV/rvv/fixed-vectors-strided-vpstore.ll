@@ -503,19 +503,17 @@ define void @strided_store_v32f64(<32 x double> %v, double* %ptr, i32 signext %s
 ; CHECK-RV32-NEXT:  # %bb.1:
 ; CHECK-RV32-NEXT:    li a3, 16
 ; CHECK-RV32-NEXT:  .LBB27_2:
-; CHECK-RV32-NEXT:    li a4, 0
 ; CHECK-RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
-; CHECK-RV32-NEXT:    addi a5, a2, -16
 ; CHECK-RV32-NEXT:    vsse64.v v8, (a0), a1, v0.t
-; CHECK-RV32-NEXT:    bltu a2, a5, .LBB27_4
-; CHECK-RV32-NEXT:  # %bb.3:
-; CHECK-RV32-NEXT:    mv a4, a5
-; CHECK-RV32-NEXT:  .LBB27_4:
-; CHECK-RV32-NEXT:    mul a2, a3, a1
-; CHECK-RV32-NEXT:    add a0, a0, a2
+; CHECK-RV32-NEXT:    mul a3, a3, a1
+; CHECK-RV32-NEXT:    add a0, a0, a3
+; CHECK-RV32-NEXT:    addi a3, a2, -16
+; CHECK-RV32-NEXT:    sltu a2, a2, a3
+; CHECK-RV32-NEXT:    addi a2, a2, -1
+; CHECK-RV32-NEXT:    and a2, a2, a3
 ; CHECK-RV32-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-RV32-NEXT:    vslidedown.vi v0, v0, 2
-; CHECK-RV32-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vsse64.v v16, (a0), a1, v0.t
 ; CHECK-RV32-NEXT:    ret
 ;
@@ -527,19 +525,17 @@ define void @strided_store_v32f64(<32 x double> %v, double* %ptr, i32 signext %s
 ; CHECK-RV64-NEXT:  # %bb.1:
 ; CHECK-RV64-NEXT:    li a3, 16
 ; CHECK-RV64-NEXT:  .LBB27_2:
-; CHECK-RV64-NEXT:    li a4, 0
 ; CHECK-RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
-; CHECK-RV64-NEXT:    addi a5, a2, -16
 ; CHECK-RV64-NEXT:    vsse64.v v8, (a0), a1, v0.t
-; CHECK-RV64-NEXT:    bltu a2, a5, .LBB27_4
-; CHECK-RV64-NEXT:  # %bb.3:
-; CHECK-RV64-NEXT:    mv a4, a5
-; CHECK-RV64-NEXT:  .LBB27_4:
-; CHECK-RV64-NEXT:    mul a2, a3, a1
-; CHECK-RV64-NEXT:    add a0, a0, a2
+; CHECK-RV64-NEXT:    mul a3, a3, a1
+; CHECK-RV64-NEXT:    add a0, a0, a3
+; CHECK-RV64-NEXT:    addi a3, a2, -16
+; CHECK-RV64-NEXT:    sltu a2, a2, a3
+; CHECK-RV64-NEXT:    addi a2, a2, -1
+; CHECK-RV64-NEXT:    and a2, a2, a3
 ; CHECK-RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; CHECK-RV64-NEXT:    vslidedown.vi v0, v0, 2
-; CHECK-RV64-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vsse64.v v16, (a0), a1, v0.t
 ; CHECK-RV64-NEXT:    ret
   call void @llvm.experimental.vp.strided.store.v32f64.p0f64.i32(<32 x double> %v, double* %ptr, i32 %stride, <32 x i1> %mask, i32 %evl)
@@ -555,17 +551,15 @@ define void @strided_store_v32f64_allones_mask(<32 x double> %v, double *%ptr, i
 ; CHECK-RV32-NEXT:  # %bb.1:
 ; CHECK-RV32-NEXT:    li a3, 16
 ; CHECK-RV32-NEXT:  .LBB28_2:
-; CHECK-RV32-NEXT:    li a4, 0
 ; CHECK-RV32-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
-; CHECK-RV32-NEXT:    addi a5, a2, -16
 ; CHECK-RV32-NEXT:    vsse64.v v8, (a0), a1
-; CHECK-RV32-NEXT:    bltu a2, a5, .LBB28_4
-; CHECK-RV32-NEXT:  # %bb.3:
-; CHECK-RV32-NEXT:    mv a4, a5
-; CHECK-RV32-NEXT:  .LBB28_4:
-; CHECK-RV32-NEXT:    mul a2, a3, a1
-; CHECK-RV32-NEXT:    add a0, a0, a2
-; CHECK-RV32-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
+; CHECK-RV32-NEXT:    mul a3, a3, a1
+; CHECK-RV32-NEXT:    add a0, a0, a3
+; CHECK-RV32-NEXT:    addi a3, a2, -16
+; CHECK-RV32-NEXT:    sltu a2, a2, a3
+; CHECK-RV32-NEXT:    addi a2, a2, -1
+; CHECK-RV32-NEXT:    and a2, a2, a3
+; CHECK-RV32-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-RV32-NEXT:    vsse64.v v16, (a0), a1
 ; CHECK-RV32-NEXT:    ret
 ;
@@ -577,17 +571,15 @@ define void @strided_store_v32f64_allones_mask(<32 x double> %v, double *%ptr, i
 ; CHECK-RV64-NEXT:  # %bb.1:
 ; CHECK-RV64-NEXT:    li a3, 16
 ; CHECK-RV64-NEXT:  .LBB28_2:
-; CHECK-RV64-NEXT:    li a4, 0
 ; CHECK-RV64-NEXT:    vsetvli zero, a3, e64, m8, ta, ma
-; CHECK-RV64-NEXT:    addi a5, a2, -16
 ; CHECK-RV64-NEXT:    vsse64.v v8, (a0), a1
-; CHECK-RV64-NEXT:    bltu a2, a5, .LBB28_4
-; CHECK-RV64-NEXT:  # %bb.3:
-; CHECK-RV64-NEXT:    mv a4, a5
-; CHECK-RV64-NEXT:  .LBB28_4:
-; CHECK-RV64-NEXT:    mul a2, a3, a1
-; CHECK-RV64-NEXT:    add a0, a0, a2
-; CHECK-RV64-NEXT:    vsetvli zero, a4, e64, m8, ta, ma
+; CHECK-RV64-NEXT:    mul a3, a3, a1
+; CHECK-RV64-NEXT:    add a0, a0, a3
+; CHECK-RV64-NEXT:    addi a3, a2, -16
+; CHECK-RV64-NEXT:    sltu a2, a2, a3
+; CHECK-RV64-NEXT:    addi a2, a2, -1
+; CHECK-RV64-NEXT:    and a2, a2, a3
+; CHECK-RV64-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-RV64-NEXT:    vsse64.v v16, (a0), a1
 ; CHECK-RV64-NEXT:    ret
   %one = insertelement <32 x i1> poison, i1 true, i32 0

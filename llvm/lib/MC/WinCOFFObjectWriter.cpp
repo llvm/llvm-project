@@ -1098,6 +1098,8 @@ uint64_t WinCOFFObjectWriter::writeObject(MCAssembler &Asm,
     Frag->setLayoutOrder(0);
     raw_svector_ostream OS(Frag->getContents());
     for (const MCSymbol *S : AddrsigSyms) {
+      if (!S->isRegistered())
+        continue;
       if (!S->isTemporary()) {
         encodeULEB128(S->getIndex(), OS);
         continue;

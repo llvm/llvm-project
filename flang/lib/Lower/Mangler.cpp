@@ -155,6 +155,10 @@ Fortran::lower::mangle::mangleName(const Fortran::semantics::Symbol &symbol,
             llvm::report_fatal_error(
                 "only derived type instances can be mangled");
           },
+          [&](const Fortran::semantics::ProcBindingDetails &procBinding)
+              -> std::string {
+            return mangleName(procBinding.symbol(), keepExternalInScope);
+          },
           [](const auto &) -> std::string { TODO_NOLOC("symbol mangling"); },
       },
       ultimateSymbol.details());

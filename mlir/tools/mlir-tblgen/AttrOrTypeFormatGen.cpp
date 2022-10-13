@@ -849,9 +849,18 @@ void DefFormat::genOptionalGroupPrinter(OptionalElement *el, FmtContext &ctx,
     guardOnAny(ctx, os, llvm::makeArrayRef(param), el->isInverted());
   } else if (auto *params = dyn_cast<ParamsDirective>(anchor)) {
     guardOnAny(ctx, os, params->getParams(), el->isInverted());
-  } else {
-    auto *strct = cast<StructDirective>(anchor);
+  } else if (auto *strct = dyn_cast<StructDirective>(anchor)) {
     guardOnAny(ctx, os, strct->getParams(), el->isInverted());
+  } else {
+    auto *custom = cast<CustomDirective>(anchor);
+    guardOnAny(ctx, os,
+               llvm::make_filter_range(
+                   llvm::map_range(custom->getArguments(),
+                                   [](FormatElement *el) {
+                                     return dyn_cast<ParameterElement>(el);
+                                   }),
+                   [](ParameterElement *param) { return !!param; }),
+               el->isInverted());
   }
   // Generate the printer for the contained elements.
   {
@@ -994,13 +1003,34 @@ DefFormatParser::verifyOptionalGroupElements(llvm::SMLoc loc,
         return emitError(loc, "`struct` is only allowed in an optional group "
                               "if all captured parameters are optional");
       }
+    } else if (auto *custom = dyn_cast<CustomDirective>(el)) {
+      for (FormatElement *el : custom->getArguments()) {
+        // If the custom argument is a variable, then it must be optional.
+        if (auto param = dyn_cast<ParameterElement>(el))
+          if (!param->isOptional())
+            return emitError(loc,
+                             "`custom` is only allowed in an optional group if "
+                             "all captured parameters are optional");
+      }
     }
   }
   // The anchor must be a parameter or one of the aforementioned directives.
-  if (anchor &&
-      !isa<ParameterElement, ParamsDirective, StructDirective>(anchor)) {
-    return emitError(loc,
-                     "optional group anchor must be a parameter or directive");
+  if (anchor) {
+    if (!isa<ParameterElement, ParamsDirective, StructDirective,
+             CustomDirective>(anchor)) {
+      return emitError(
+          loc, "optional group anchor must be a parameter or directive");
+    }
+    // If the anchor is a custom directive, make sure at least one of its
+    // arguments is a bound parameter.
+    if (auto custom = dyn_cast<CustomDirective>(anchor)) {
+      auto bound = llvm::find_if(custom->getArguments(), [](FormatElement *el) {
+        return isa<ParameterElement>(el);
+      });
+      if (bound == custom->getArguments().end())
+        return emitError(loc, "`custom` directive with no bound parameters "
+                              "cannot be used as optional group anchor");
+    }
   }
   return success();
 }

@@ -107,6 +107,9 @@ class AArch64TargetAsmStreamer : public AArch64TargetStreamer {
   void emitARM64WinCFIClearUnwoundToCall() override {
     OS << "\t.seh_clear_unwound_to_call\n";
   }
+  void emitARM64WinCFIPACSignLR() override {
+    OS << "\t.seh_pac_sign_lr\n";
+  }
 
 public:
   AArch64TargetAsmStreamer(MCStreamer &S, formatted_raw_ostream &OS);

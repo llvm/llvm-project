@@ -18,18 +18,18 @@ define void @f2(float %Arg) {
 ; CHECK: stey %f0, 4172(%r15)
 bb:
   %i = alloca [1000 x float]
-  %i2 = getelementptr inbounds [1000 x float], [1000 x float]* %i, i64 0, i64 999
+  %i2 = getelementptr inbounds [1000 x float], ptr %i, i64 0, i64 999
   br i1 undef, label %bb3, label %bb2
 
 bb2:
-  store float %Arg , float* %i2
+  store float %Arg , ptr %i2
   br label %bb3
 
 bb3:
   ret void
 }
 
-define void @f3(double* %Dst) {
+define void @f3(ptr %Dst) {
 ; CHECK-LABEL: f3:
 ; CHECK-NOT: lay
 ; CHECK: ldy %f0, 4168(%r15)
@@ -38,17 +38,17 @@ bb:
   br i1 undef, label %bb3, label %bb2
 
 bb2:
-  %i12 = getelementptr inbounds [500 x double], [500 x double]* %i, i64 0, i64 499
-  %i13 = load double, double* %i12
+  %i12 = getelementptr inbounds [500 x double], ptr %i, i64 0, i64 499
+  %i13 = load double, ptr %i12
   %i14 = fdiv double %i13, 0.000000e+00
-  store double %i14, double* %Dst
+  store double %i14, ptr %Dst
   br label %bb3
 
 bb3:
   ret void
 }
 
-define void @f4(float* %Dst) {
+define void @f4(ptr %Dst) {
 ; CHECK-LABEL: f4:
 ; CHECK-NOT: lay
 ; CHECK: ley %f0, 4172(%r15)
@@ -57,10 +57,10 @@ bb:
   br i1 undef, label %bb3, label %bb2
 
 bb2:
-  %i12 = getelementptr inbounds [1000 x float], [1000 x float]* %i, i64 0, i64 999
-  %i13 = load float, float* %i12
+  %i12 = getelementptr inbounds [1000 x float], ptr %i, i64 0, i64 999
+  %i13 = load float, ptr %i12
   %i14 = fdiv float %i13, 0.000000e+00
-  store float %i14, float* %Dst
+  store float %i14, ptr %Dst
   br label %bb3
 
 bb3:

@@ -10,12 +10,14 @@
 #include "CommonArgs.h"
 #include "clang/Basic/TargetID.h"
 #include "clang/Driver/Compilation.h"
+#include "clang/Driver/Distro.h"
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/Host.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -306,6 +308,14 @@ RocmInstallationDetector::getInstallationPathCandidates() {
     ROCmSearchDirs.emplace_back(D.SysRoot + "/opt/" + LatestROCm,
                                 /*StrictChecking=*/true);
 
+  Distro Dist(D.getVFS(), llvm::Triple(llvm::sys::getProcessTriple()));
+  if (Dist.IsDebian() || Dist.IsRedhat()) {
+    ROCmSearchDirs.emplace_back(D.SysRoot + "/usr/local",
+                                /*StrictChecking=*/true);
+    ROCmSearchDirs.emplace_back(D.SysRoot + "/usr",
+                                /*StrictChecking=*/true);
+  }
+
   DoPrintROCmSearchDirs();
   return ROCmSearchDirs;
 }
@@ -461,18 +471,30 @@ void RocmInstallationDetector::detectHIPRuntime() {
     llvm::sys::path::append(IncludePath, "include");
     LibPath = InstallPath;
     llvm::sys::path::append(LibPath, "lib");
+    SharePath = InstallPath;
+    llvm::sys::path::append(SharePath, "share");
 
-    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> VersionFile =
-        FS.getBufferForFile(BinPath + "/.hipVersion");
-    if (!VersionFile && Candidate.StrictChecking)
-      continue;
-
-    if (HIPVersionArg.empty() && VersionFile)
-      if (parseHIPVersionFile((*VersionFile)->getBuffer()))
+    // If HIP version file can be found and parsed, use HIP version from there.
+    for (const auto &VersionFilePath :
+         {std::string(SharePath) + "/hip/version",
+          std::string(BinPath) + "/.hipVersion"}) {
+      llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> VersionFile =
+          FS.getBufferForFile(VersionFilePath);
+      if (!VersionFile)
         continue;
+      if (HIPVersionArg.empty() && VersionFile)
+        if (parseHIPVersionFile((*VersionFile)->getBuffer()))
+          continue;
 
-    HasHIPRuntime = true;
-    return;
+      HasHIPRuntime = true;
+      return;
+    }
+    // Otherwise, if -rocm-path is specified (no strict checking), use the
+    // default HIP version or specified by --hip-version.
+    if (!Candidate.StrictChecking) {
+      HasHIPRuntime = true;
+      return;
+    }
   }
   HasHIPRuntime = false;
 }

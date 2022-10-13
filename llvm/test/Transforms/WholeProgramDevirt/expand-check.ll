@@ -6,37 +6,32 @@
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-@vt1 = constant [1 x i8*] [i8* bitcast (void (i8*)* @vf1 to i8*)], !type !0
-@vt2 = constant [1 x i8*] [i8* bitcast (void (i8*)* @vf2 to i8*)], !type !0
+@vt1 = constant [1 x ptr] [ptr @vf1], !type !0
+@vt2 = constant [1 x ptr] [ptr @vf2], !type !0
 
-define void @vf1(i8* %this) {
+define void @vf1(ptr %this) {
   ret void
 }
 
-define void @vf2(i8* %this) {
+define void @vf2(ptr %this) {
   ret void
 }
 
 ; CHECK: define void @call
-define void @call(i8* %obj) {
-  %vtableptr = bitcast i8* %obj to [1 x i8*]**
-  %vtable = load [1 x i8*]*, [1 x i8*]** %vtableptr
-  %vtablei8 = bitcast [1 x i8*]* %vtable to i8*
-  %pair = call {i8*, i1} @llvm.type.checked.load(i8* %vtablei8, i32 0, metadata !"typeid")
-  %p = extractvalue {i8*, i1} %pair, 1
-  ; CHECK: [[TT:%[^ ]*]] = call i1 @llvm.type.test(i8* [[VT:%[^,]*]], metadata !"typeid")
+define void @call(ptr %obj) {
+  %vtable = load ptr, ptr %obj
+  %pair = call {ptr, i1} @llvm.type.checked.load(ptr %vtable, i32 0, metadata !"typeid")
+  %p = extractvalue {ptr, i1} %pair, 1
+  ; CHECK: [[TT:%[^ ]*]] = call i1 @llvm.type.test(ptr [[VT:%[^,]*]], metadata !"typeid")
   ; CHECK: br i1 [[TT]],
   br i1 %p, label %cont, label %trap
 
 cont:
-  ; CHECK: [[GEP:%[^ ]*]] = getelementptr i8, i8* [[VT]], i32 0
-  ; CHECK: [[BC:%[^ ]*]] = bitcast i8* [[GEP]] to i8**
-  ; CHECK: [[LOAD:%[^ ]*]] = load i8*, i8** [[BC]]
-  ; CHECK: [[FPC:%[^ ]*]] = bitcast i8* [[LOAD]] to void (i8*)*
-  ; CHECK: call void [[FPC]]
-  %fptr = extractvalue {i8*, i1} %pair, 0
-  %fptr_casted = bitcast i8* %fptr to void (i8*)*
-  call void %fptr_casted(i8* %obj)
+  ; CHECK: [[GEP:%[^ ]*]] = getelementptr i8, ptr [[VT]], i32 0
+  ; CHECK: [[LOAD:%[^ ]*]] = load ptr, ptr [[GEP]]
+  ; CHECK: call void [[LOAD]]
+  %fptr = extractvalue {ptr, i1} %pair, 0
+  call void %fptr(ptr %obj)
   ret void
 
 trap:
@@ -44,20 +39,19 @@ trap:
   unreachable
 }
 
-; CHECK: define { i8*, i1 } @ret
-define {i8*, i1} @ret(i8* %vtablei8) {
-  ; CHECK: [[GEP2:%[^ ]*]] = getelementptr i8, i8* [[VT2:%[^,]*]], i32 1
-  ; CHECK: [[BC2:%[^ ]*]] = bitcast i8* [[GEP2]] to i8**
-  ; CHECK: [[LOAD2:%[^ ]*]] = load i8*, i8** [[BC2]]
-  ; CHECK: [[TT2:%[^ ]*]] = call i1 @llvm.type.test(i8* [[VT2]], metadata !"typeid")
-  ; CHECK: [[I1:%[^ ]*]] = insertvalue { i8*, i1 } poison, i8* [[LOAD2]], 0
-  ; CHECK: [[I2:%[^ ]*]] = insertvalue { i8*, i1 } %5, i1 [[TT2]], 1
-  %pair = call {i8*, i1} @llvm.type.checked.load(i8* %vtablei8, i32 1, metadata !"typeid")
-  ; CHECK: ret { i8*, i1 } [[I2]]
-  ret {i8*, i1} %pair
+; CHECK: define { ptr, i1 } @ret
+define {ptr, i1} @ret(ptr %vtablei8) {
+  ; CHECK: [[GEP2:%[^ ]*]] = getelementptr i8, ptr [[VT2:%[^,]*]], i32 1
+  ; CHECK: [[LOAD2:%[^ ]*]] = load ptr, ptr [[GEP2]]
+  ; CHECK: [[TT2:%[^ ]*]] = call i1 @llvm.type.test(ptr %vtablei8, metadata !"typeid")
+  ; CHECK: [[I1:%[^ ]*]] = insertvalue { ptr, i1 } poison, ptr [[LOAD2]], 0
+  ; CHECK: [[I2:%[^ ]*]] = insertvalue { ptr, i1 } [[I1]], i1 [[TT2]], 1
+  %pair = call {ptr, i1} @llvm.type.checked.load(ptr %vtablei8, i32 1, metadata !"typeid")
+  ; CHECK: ret { ptr, i1 } [[I2]]
+  ret {ptr, i1} %pair
 }
 
-declare {i8*, i1} @llvm.type.checked.load(i8*, i32, metadata)
+declare {ptr, i1} @llvm.type.checked.load(ptr, i32, metadata)
 declare void @llvm.trap()
 
 !0 = !{i32 0, !"typeid"}

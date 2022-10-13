@@ -44,7 +44,7 @@
 %struct.S_vx = type { i8, <2 x i64> }
 %struct.S_novx = type { i8, [15 x i8], <2 x i64> }
 
-define void @fun_vx(%struct.S_vx* %s) nounwind {
+define void @fun_vx(ptr %s) nounwind {
 ; CHECK-LABEL: @fun_vx
 ;
 ; CHECK-VECTOR: vl %v0, 8(%r2)
@@ -52,14 +52,14 @@ define void @fun_vx(%struct.S_vx* %s) nounwind {
 ;
 ; CHECK-NOVECTOR-DAG: agsi 16(%r2), 1
 ; CHECK-NOVECTOR-DAG: agsi 8(%r2), 1
-  %ptr = getelementptr %struct.S_vx, %struct.S_vx* %s, i64 0, i32 1
-  %vec = load <2 x i64>, <2 x i64>* %ptr
+  %ptr = getelementptr %struct.S_vx, ptr %s, i64 0, i32 1
+  %vec = load <2 x i64>, ptr %ptr
   %add = add <2 x i64> %vec, <i64 1, i64 1>
-  store <2 x i64> %add, <2 x i64>* %ptr
+  store <2 x i64> %add, ptr %ptr
   ret void
 }
 
-define void @fun_novx(%struct.S_novx* %s) nounwind {
+define void @fun_novx(ptr %s) nounwind {
 ; CHECK-LABEL: @fun_novx
 ;
 ; CHECK-VECTOR: vl  %v0, 16(%r2), 3
@@ -67,10 +67,10 @@ define void @fun_novx(%struct.S_novx* %s) nounwind {
 ;
 ; CHECK-NOVECTOR-DAG: agsi 16(%r2), 1
 ; CHECK-NOVECTOR-DAG: agsi 24(%r2), 1
-  %ptr = getelementptr %struct.S_novx, %struct.S_novx* %s, i64 0, i32 2
-  %vec = load <2 x i64>, <2 x i64>* %ptr
+  %ptr = getelementptr %struct.S_novx, ptr %s, i64 0, i32 2
+  %vec = load <2 x i64>, ptr %ptr
   %add = add <2 x i64> %vec, <i64 1, i64 1>
-  store <2 x i64> %add, <2 x i64>* %ptr
+  store <2 x i64> %add, ptr %ptr
   ret void
 }
 

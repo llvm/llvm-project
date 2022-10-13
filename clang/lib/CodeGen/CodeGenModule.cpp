@@ -6451,6 +6451,10 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
         DI->EmitAndRetainType(getContext().getEnumType(cast<EnumDecl>(D)));
     break;
 
+  case Decl::HLSLBuffer:
+    getHLSLRuntime().addBuffer(cast<HLSLBufferDecl>(D));
+    break;
+
   default:
     // Make sure we handled everything we should, every other kind is a
     // non-top-level decl.  FIXME: Would be nice to have an isTopLevelDeclKind
