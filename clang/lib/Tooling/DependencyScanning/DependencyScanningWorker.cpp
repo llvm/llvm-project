@@ -270,6 +270,11 @@ public:
     ScanInstance.getFrontendOpts().ModulesShareFileManager = false;
 
     ScanInstance.setFileManager(FileMgr);
+    // Support for virtual file system overlays.
+    FileMgr->setVirtualFileSystem(createVFSFromCompilerInvocation(
+        ScanInstance.getInvocation(), ScanInstance.getDiagnostics(),
+        FileMgr->getVirtualFileSystemPtr()));
+
     ScanInstance.createSourceManager(*FileMgr);
 
     llvm::StringSet<> PrebuiltModulesInputFiles;
@@ -285,11 +290,6 @@ public:
 
     // Use the dependency scanning optimized file system if requested to do so.
     if (DepFS) {
-      // Support for virtual file system overlays on top of the caching
-      // filesystem.
-      FileMgr->setVirtualFileSystem(createVFSFromCompilerInvocation(
-          ScanInstance.getInvocation(), ScanInstance.getDiagnostics(), DepFS));
-
       llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> LocalDepFS =
           DepFS;
       ScanInstance.getPreprocessorOpts().DependencyDirectivesForFile =
@@ -458,31 +458,29 @@ DependencyScanningWorker::DependencyScanningWorker(
   PCHContainerOps->registerWriter(
       std::make_unique<ObjectFilePCHContainerWriter>());
 
-  if (!Service.useCASScanning()) {
-    auto OverlayFS =
-        llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(std::move(FS));
-    InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-    OverlayFS->pushOverlay(InMemoryFS);
-    RealFS = OverlayFS;
-  } else {
-    // FIXME: Need to teach CachingFileSystem to understand overlay.
+  if (Service.useCASScanning()) {
     CacheFS = Service.getSharedFS().createProxyFS();
-    RealFS = CacheFS;
+    DepCASFS = new DependencyScanningCASFilesystem(CacheFS, Service.getCache());
+    BaseFS = DepCASFS;
+    return;
   }
 
-  if (Service.getMode() == ScanningMode::DependencyDirectivesScan) {
-    if (Service.useCASScanning())
-      DepCASFS =
-          new DependencyScanningCASFilesystem(CacheFS, Service.getCache());
-    else
-      DepFS = new DependencyScanningWorkerFilesystem(Service.getSharedCache(),
-                                                     RealFS);
+  switch (Service.getMode()) {
+  case ScanningMode::DependencyDirectivesScan:
+    DepFS =
+        new DependencyScanningWorkerFilesystem(Service.getSharedCache(), FS);
+    BaseFS = DepFS;
+    break;
+  case ScanningMode::CanonicalPreprocessing:
+    DepFS = nullptr;
+    BaseFS = FS;
+    break;
   }
 }
 
 llvm::IntrusiveRefCntPtr<FileManager>
 DependencyScanningWorker::getOrCreateFileManager() const {
-  return new FileManager(FileSystemOptions(), RealFS);
+  return new FileManager(FileSystemOptions(), BaseFS);
 }
 
 llvm::Error DependencyScanningWorker::computeDependencies(
@@ -536,21 +534,31 @@ bool DependencyScanningWorker::computeDependencies(
     DependencyConsumer &Consumer, DiagnosticConsumer &DC,
     llvm::Optional<StringRef> ModuleName) {
   // Reset what might have been modified in the previous worker invocation.
-  RealFS->setCurrentWorkingDirectory(WorkingDirectory);
-
-  FileSystemOptions FSOpts;
-  FSOpts.WorkingDir = WorkingDirectory.str();
-  auto FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(FSOpts, RealFS);
+  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
   Optional<std::vector<std::string>> ModifiedCommandLine;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> ModifiedFS;
   if (ModuleName) {
     ModifiedCommandLine = CommandLine;
-    InMemoryFS->addFile(*ModuleName, 0, llvm::MemoryBuffer::getMemBuffer(""));
     ModifiedCommandLine->emplace_back(*ModuleName);
+
+    auto OverlayFS = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+        std::move(BaseFS));
+    auto InMemoryFS =
+        llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+    InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
+    InMemoryFS->addFile(*ModuleName, 0, llvm::MemoryBuffer::getMemBuffer(""));
+    OverlayFS->pushOverlay(InMemoryFS);
+    ModifiedFS = OverlayFS;
   }
 
   const std::vector<std::string> &FinalCommandLine =
       ModifiedCommandLine ? *ModifiedCommandLine : CommandLine;
+
+  FileSystemOptions FSOpts;
+  FSOpts.WorkingDir = WorkingDirectory.str();
+  auto FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(
+      FSOpts, ModifiedFS ? ModifiedFS : BaseFS);
 
   std::vector<const char *> FinalCCommandLine(CommandLine.size(), nullptr);
   llvm::transform(CommandLine, FinalCCommandLine.begin(),
@@ -619,7 +627,7 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
     DependencyConsumer &DepsConsumer, RemapPathCallback RemapPath,
     DiagnosticConsumer &DiagsConsumer, raw_ostream *VerboseOS,
     bool DiagGenerationAsCompilation) {
-  RealFS->setCurrentWorkingDirectory(WorkingDirectory);
+  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
   // Adjust the invocation.
   auto &Frontend = Invocation->getFrontendOpts();
@@ -655,7 +663,7 @@ void DependencyScanningWorker::computeDependenciesFromCompilerInvocation(
   //
   // FIXME: will clients other than -cc1scand care?
   IntrusiveRefCntPtr<FileManager> ActiveFiles =
-      new FileManager(Invocation->getFileSystemOpts(), RealFS);
+      new FileManager(Invocation->getFileSystemOpts(), BaseFS);
   (void)Action.runInvocation(std::move(Invocation), ActiveFiles.get(),
                              PCHContainerOps, &DiagsConsumer);
 }
