@@ -640,10 +640,9 @@ GlobalOp Importer::processGlobal(llvm::GlobalVariable *gv) {
     b.create<ReturnOp>(op.getLoc(), ArrayRef<Value>({v}));
   }
   if (gv->hasAtLeastLocalUnnamedAddr())
-    op.setUnnamedAddrAttr(UnnamedAddrAttr::get(
-        context, convertUnnamedAddrFromLLVM(gv->getUnnamedAddr())));
+    op.setUnnamedAddr(convertUnnamedAddrFromLLVM(gv->getUnnamedAddr()));
   if (gv->hasSection())
-    op.setSectionAttr(b.getStringAttr(gv->getSection()));
+    op.setSection(gv->getSection());
 
   return globals[gv] = op;
 }
@@ -1046,13 +1045,13 @@ LogicalResult Importer::processFunction(llvm::Function *f) {
   }
 
   if (FlatSymbolRefAttr personality = getPersonalityAsAttr(f))
-    fop->setAttr(b.getStringAttr("personality"), personality);
+    fop.setPersonalityAttr(personality);
   else if (f->hasPersonalityFn())
     emitWarning(UnknownLoc::get(context),
                 "could not deduce personality, skipping it");
 
   if (f->hasGC())
-    fop.setGarbageCollectorAttr(b.getStringAttr(f->getGC()));
+    fop.setGarbageCollector(StringRef(f->getGC()));
 
   // Handle Function attributes.
   processFunctionAttributes(f, fop);

@@ -718,7 +718,6 @@ def AffineParallelOp : Affine_Op<"parallel",
 
     /// Sets elements of the loop lower bound.
     void setLowerBounds(ValueRange operands, AffineMap map);
-    void setLowerBoundsMap(AffineMap map);
 
     /// Returns elements of the loop upper bound.
     AffineMap getUpperBoundMap(unsigned pos);
@@ -727,7 +726,6 @@ def AffineParallelOp : Affine_Op<"parallel",
 
     /// Sets elements fo the loop upper bound.
     void setUpperBounds(ValueRange operands, AffineMap map);
-    void setUpperBoundsMap(AffineMap map);
 
     void setSteps(ArrayRef<int64_t> newSteps);
 
