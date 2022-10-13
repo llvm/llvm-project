@@ -171,6 +171,12 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
 
       MRB |= CallMRB.getWithoutLoc(FunctionModRefBehavior::ArgMem);
 
+      // If the call accesses captured memory (currently part of "other") and
+      // an argument is captured (currently not tracked), then it may also
+      // access argument memory.
+      ModRefInfo OtherMR = CallMRB.getModRef(FunctionModRefBehavior::Other);
+      MRB |= FunctionModRefBehavior::argMemOnly(OtherMR);
+
       // Check whether all pointer arguments point to local memory, and
       // ignore calls that only access local memory.
       ModRefInfo ArgMR = CallMRB.getModRef(FunctionModRefBehavior::ArgMem);
