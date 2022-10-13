@@ -264,7 +264,7 @@ def MapOp : LinalgStructuredBase_Op<"map", [
 
   let extraClassDeclaration = structuredOpsBaseDecls # [{
     // Implement functions necessary for LinalgStructuredInterface.
-    ArrayAttr getIteratorTypes();
+    SmallVector<StringRef> getIteratorTypesArray();
     ArrayAttr getIndexingMaps();
     std::string getLibraryCallName() {
       return "op_has_no_registered_library_name";
@@ -334,7 +334,7 @@ def ReduceOp : LinalgStructuredBase_Op<"reduce", [
 
   let extraClassDeclaration = structuredOpsBaseDecls # [{
     // Declare functions necessary for LinalgStructuredInterface.
-    ArrayAttr getIteratorTypes();
+    SmallVector<StringRef> getIteratorTypesArray();
     ArrayAttr getIndexingMaps();
     std::string getLibraryCallName() {
       return "op_has_no_registered_library_name";
