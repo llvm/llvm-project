@@ -11,6 +11,7 @@ program main
   end type
   class(t), allocatable :: t1
   type(t), allocatable :: t2
+  character, allocatable :: ca*2, cb*3
 
   ! standards conforming
   allocate(a(3)[*])
@@ -62,5 +63,8 @@ program main
   !ERROR: When MOVE_ALLOC(FROM=) is polymorphic, TO= must also be polymorphic
   call move_alloc(t1, t2)
   call move_alloc(t2, t1) ! ok
+
+  !ERROR: Actual argument for 'to=' has bad type or kind 'CHARACTER(KIND=1,LEN=3_8)'
+  call move_alloc(ca, cb)
 
 end program main
