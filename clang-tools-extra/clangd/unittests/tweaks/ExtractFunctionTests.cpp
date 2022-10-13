@@ -182,6 +182,7 @@ F (extracted();)
 
   // Shouldn't crash.
   EXPECT_EQ(apply("void f([[int a]]);"), "unavailable");
+  EXPECT_EQ(apply("void f(int a = [[1]]);"), "unavailable");
   // Don't extract if we select the entire function body (CompoundStmt).
   std::string CompoundFailInput = R"cpp(
     void f() [[{

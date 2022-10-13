@@ -248,6 +248,8 @@ const FunctionDecl *findEnclosingFunction(const Node *CommonAnc) {
       // FIXME: Support extraction from templated functions.
       if (Func->isTemplated())
         return nullptr;
+      if (!Func->getBody())
+        return nullptr;
       for (const auto *S : Func->getBody()->children()) {
         // During apply phase, we perform semantic analysis (e.g. figure out
         // what variables requires hoisting). We cannot perform those when the
