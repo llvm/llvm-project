@@ -311,10 +311,7 @@ TEST_F(NoreturnDestructorTest, ConditionalOperatorNestedBranchReturns) {
 }
 
 // Models an analysis that uses flow conditions.
-//
-// FIXME: Here and below: change class to final and final methods to override,
-// since we're marking them all as final.
-class SpecialBoolAnalysis
+class SpecialBoolAnalysis final
     : public DataflowAnalysis<SpecialBoolAnalysis, NoopLattice> {
 public:
   explicit SpecialBoolAnalysis(ASTContext &Context)
@@ -356,7 +353,7 @@ public:
 
   bool compareEquivalent(QualType Type, const Value &Val1,
                          const Environment &Env1, const Value &Val2,
-                         const Environment &Env2) final {
+                         const Environment &Env2) override {
     const auto *Decl = Type->getAsCXXRecordDecl();
     if (Decl == nullptr || Decl->getIdentifier() == nullptr ||
         Decl->getName() != "SpecialBool")
@@ -377,7 +374,7 @@ public:
   // Always returns `true` to accept the `MergedVal`.
   bool merge(QualType Type, const Value &Val1, const Environment &Env1,
              const Value &Val2, const Environment &Env2, Value &MergedVal,
-             Environment &MergedEnv) final {
+             Environment &MergedEnv) override {
     const auto *Decl = Type->getAsCXXRecordDecl();
     if (Decl == nullptr || Decl->getIdentifier() == nullptr ||
         Decl->getName() != "SpecialBool")
@@ -469,7 +466,7 @@ TEST_F(JoinFlowConditionsTest, JoinDistinctButProvablyEquivalentValues) {
       });
 }
 
-class OptionalIntAnalysis
+class OptionalIntAnalysis final
     : public DataflowAnalysis<OptionalIntAnalysis, NoopLattice> {
 public:
   explicit OptionalIntAnalysis(ASTContext &Context)
@@ -514,7 +511,7 @@ public:
 
   bool compareEquivalent(QualType Type, const Value &Val1,
                          const Environment &Env1, const Value &Val2,
-                         const Environment &Env2) final {
+                         const Environment &Env2) override {
     // Nothing to say about a value that does not model an `OptionalInt`.
     if (!Type->isRecordType() ||
         Type->getAsCXXRecordDecl()->getQualifiedNameAsString() != "OptionalInt")
@@ -529,7 +526,7 @@ public:
 
   bool merge(QualType Type, const Value &Val1, const Environment &Env1,
              const Value &Val2, const Environment &Env2, Value &MergedVal,
-             Environment &MergedEnv) final {
+             Environment &MergedEnv) override {
     // Nothing to say about a value that does not model an `OptionalInt`.
     if (!Type->isRecordType() ||
         Type->getAsCXXRecordDecl()->getQualifiedNameAsString() != "OptionalInt")
