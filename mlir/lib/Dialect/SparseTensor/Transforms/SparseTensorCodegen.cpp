@@ -114,7 +114,7 @@ convertSparseTensorType(Type type, SmallVectorImpl<Type> &fields) {
   if (!enc)
     return llvm::None;
   // Construct the basic types.
-  auto context = type.getContext();
+  auto *context = type.getContext();
   unsigned idxWidth = enc.getIndexBitWidth();
   unsigned ptrWidth = enc.getPointerBitWidth();
   RankedTensorType rType = type.cast<RankedTensorType>();
