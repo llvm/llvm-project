@@ -3,6 +3,8 @@ module m
   abstract interface
     subroutine foo
     end subroutine
+    subroutine foo2
+    end subroutine
   end interface
 
   procedure() :: a
@@ -70,9 +72,9 @@ contains
   subroutine bar
   end subroutine
   subroutine test
-    !ERROR: Abstract interface 'foo' may not be called
-    call foo()
-    !ERROR: Abstract interface 'f' may not be called
+    !ERROR: Abstract procedure interface 'foo2' may not be referenced
+    call foo2()
+    !ERROR: Abstract procedure interface 'f' may not be referenced
     x = f()
   end subroutine
 end module
