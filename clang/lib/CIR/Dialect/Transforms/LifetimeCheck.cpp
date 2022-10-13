@@ -41,6 +41,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void checkCall(CallOp callOp);
 
   void checkCtor(CallOp callOp, const clang::CXXConstructorDecl *ctor);
+  void checkMoveAssignment(CallOp callOp, const clang::CXXMethodDecl *m);
 
   struct Options {
     enum : unsigned {
@@ -816,6 +817,12 @@ const clang::CXXMethodDecl *getMethod(ModuleOp mod, StringRef name) {
   return dyn_cast<clang::CXXMethodDecl>(method.getAstAttr().getAstDecl());
 }
 
+void LifetimeCheckPass::checkMoveAssignment(CallOp callOp,
+                                            const clang::CXXMethodDecl *m) {
+  // auto srcObj = callOp.getOperand(0);
+  llvm_unreachable("NYI");
+}
+
 void LifetimeCheckPass::checkCtor(CallOp callOp,
                                   const clang::CXXConstructorDecl *ctor) {
   // First argument passed is always the alloca for the 'this' ptr.
@@ -853,6 +860,8 @@ void LifetimeCheckPass::checkCall(CallOp callOp) {
   // TODO: only ctor init implemented, assign ops and others needed.
   if (auto ctor = dyn_cast<clang::CXXConstructorDecl>(methodDecl))
     return checkCtor(callOp, ctor);
+  if (methodDecl->isMoveAssignmentOperator())
+    return checkMoveAssignment(callOp, methodDecl);
 }
 
 void LifetimeCheckPass::checkOperation(Operation *op) {
