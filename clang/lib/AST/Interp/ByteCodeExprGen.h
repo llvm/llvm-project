@@ -64,6 +64,7 @@ public:
   bool VisitIntegerLiteral(const IntegerLiteral *E);
   bool VisitParenExpr(const ParenExpr *E);
   bool VisitBinaryOperator(const BinaryOperator *E);
+  bool VisitPointerArithBinOp(const BinaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
   bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *E);
