@@ -330,16 +330,8 @@ static void EmitInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
 void AsmPrinter::emitInlineAsm(const MachineInstr *MI) const {
   assert(MI->isInlineAsm() && "printInlineAsm only works on inline asms");
 
-  // Count the number of register definitions to find the asm string.
-  unsigned NumDefs = 0;
-  for (; MI->getOperand(NumDefs).isReg() && MI->getOperand(NumDefs).isDef();
-       ++NumDefs)
-    assert(NumDefs != MI->getNumOperands()-2 && "No asm string?");
-
-  assert(MI->getOperand(NumDefs).isSymbol() && "No asm string?");
-
   // Disassemble the AsmStr, printing out the literal pieces, the operands, etc.
-  const char *AsmStr = MI->getOperand(NumDefs).getSymbolName();
+  const char *AsmStr = MI->getOperand(0).getSymbolName();
 
   // If this asmstr is empty, just print the #APP/#NOAPP markers.
   // These are useful to see where empty asm's wound up.
