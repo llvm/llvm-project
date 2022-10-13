@@ -358,7 +358,8 @@ void ForEachExtraStackRangeCb(uptr begin, uptr end, void *arg) {
 #  if SANITIZER_FUCHSIA
 
 // Fuchsia handles all threads together with its own callback.
-static void ProcessThreads(SuspendedThreadsList const &, Frontier *) {}
+static void ProcessThreads(SuspendedThreadsList const &, Frontier *, tid_t,
+                           uptr) {}
 
 #  else
 
