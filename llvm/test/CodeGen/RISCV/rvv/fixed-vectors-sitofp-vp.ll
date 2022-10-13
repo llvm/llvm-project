@@ -309,21 +309,19 @@ define <32 x double> @vsitofp_v32f64_v32i64(<32 x i64> %va, <32 x i1> %m, i32 ze
 ; CHECK-LABEL: vsitofp_v32f64_v32i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmv1r.v v24, v0
-; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; CHECK-NEXT:    addi a2, a0, -16
 ; CHECK-NEXT:    vslidedown.vi v0, v0, 2
-; CHECK-NEXT:    bltu a0, a2, .LBB25_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a1, a2
-; CHECK-NEXT:  .LBB25_2:
+; CHECK-NEXT:    addi a1, a0, -16
+; CHECK-NEXT:    sltu a2, a0, a1
+; CHECK-NEXT:    addi a2, a2, -1
+; CHECK-NEXT:    and a1, a2, a1
 ; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    vfcvt.f.x.v v16, v16, v0.t
-; CHECK-NEXT:    bltu a0, a1, .LBB25_4
-; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    bltu a0, a1, .LBB25_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:  .LBB25_4:
+; CHECK-NEXT:  .LBB25_2:
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vfcvt.f.x.v v8, v8, v0.t
@@ -335,21 +333,20 @@ define <32 x double> @vsitofp_v32f64_v32i64(<32 x i64> %va, <32 x i1> %m, i32 ze
 define <32 x double> @vsitofp_v32f64_v32i64_unmasked(<32 x i64> %va, i32 zeroext %evl) {
 ; CHECK-LABEL: vsitofp_v32f64_v32i64_unmasked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a1, a0, -16
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    bltu a0, a1, .LBB26_2
+; CHECK-NEXT:    li a2, 16
+; CHECK-NEXT:    mv a1, a0
+; CHECK-NEXT:    bltu a0, a2, .LBB26_2
 ; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:  .LBB26_2:
-; CHECK-NEXT:    vsetvli zero, a2, e64, m8, ta, ma
 ; CHECK-NEXT:    li a1, 16
-; CHECK-NEXT:    vfcvt.f.x.v v16, v16
-; CHECK-NEXT:    bltu a0, a1, .LBB26_4
-; CHECK-NEXT:  # %bb.3:
-; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:  .LBB26_4:
-; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:  .LBB26_2:
+; CHECK-NEXT:    vsetvli zero, a1, e64, m8, ta, ma
 ; CHECK-NEXT:    vfcvt.f.x.v v8, v8
+; CHECK-NEXT:    addi a1, a0, -16
+; CHECK-NEXT:    sltu a0, a0, a1
+; CHECK-NEXT:    addi a0, a0, -1
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
+; CHECK-NEXT:    vfcvt.f.x.v v16, v16
 ; CHECK-NEXT:    ret
   %v = call <32 x double> @llvm.vp.sitofp.v32f64.v32i64(<32 x i64> %va, <32 x i1> shufflevector (<32 x i1> insertelement (<32 x i1> undef, i1 true, i32 0), <32 x i1> undef, <32 x i32> zeroinitializer), i32 %evl)
   ret <32 x double> %v
