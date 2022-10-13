@@ -11,92 +11,125 @@
 
 #include "src/__support/architectures.h"
 #include "src/__support/common.h"
-#include "src/string/memory_utils/elements.h"
+#include "src/string/memory_utils/op_builtin.h"
+#include "src/string/memory_utils/op_x86.h"
+#include "src/string/memory_utils/utils.h"
 
 #include <stddef.h> // size_t
 
 namespace __llvm_libc {
 
-static inline int inline_memcmp(const char *lhs, const char *rhs,
-                                size_t count) {
-#if defined(LLVM_LIBC_ARCH_X86)
-  /////////////////////////////////////////////////////////////////////////////
-  // LLVM_LIBC_ARCH_X86
-  /////////////////////////////////////////////////////////////////////////////
-  using namespace __llvm_libc::x86;
-  if (count == 0)
-    return 0;
-  if (count == 1)
-    return three_way_compare<_1>(lhs, rhs);
-  if (count == 2)
-    return three_way_compare<_2>(lhs, rhs);
-  if (count == 3)
-    return three_way_compare<_3>(lhs, rhs);
-  if (count <= 8)
-    return three_way_compare<HeadTail<_4>>(lhs, rhs, count);
-  if (count <= 16)
-    return three_way_compare<HeadTail<_8>>(lhs, rhs, count);
-  if (count <= 32)
-    return three_way_compare<HeadTail<_16>>(lhs, rhs, count);
-  if (count <= 64)
-    return three_way_compare<HeadTail<_32>>(lhs, rhs, count);
-  if (count <= 128)
-    return three_way_compare<HeadTail<_64>>(lhs, rhs, count);
-  return three_way_compare<Align<_32>::Then<Loop<_32>>>(lhs, rhs, count);
-#elif defined(LLVM_LIBC_ARCH_AARCH64)
-  /////////////////////////////////////////////////////////////////////////////
-  // LLVM_LIBC_ARCH_AARCH64
-  /////////////////////////////////////////////////////////////////////////////
-  using namespace ::__llvm_libc::aarch64;
-  if (count == 0) // [0, 0]
-    return 0;
-  if (count == 1) // [1, 1]
-    return three_way_compare<_1>(lhs, rhs);
-  if (count == 2) // [2, 2]
-    return three_way_compare<_2>(lhs, rhs);
-  if (count == 3) // [3, 3]
-    return three_way_compare<_3>(lhs, rhs);
-  if (count < 8) // [4, 7]
-    return three_way_compare<HeadTail<_4>>(lhs, rhs, count);
-  if (count < 16) // [8, 15]
-    return three_way_compare<HeadTail<_8>>(lhs, rhs, count);
-  if (unlikely(count >= 128)) // [128, ∞]
-    return three_way_compare<Align<_16>::Then<Loop<_32>>>(lhs, rhs, count);
-  if (!equals<_16>(lhs, rhs)) // [16, 16]
-    return three_way_compare<_16>(lhs, rhs);
-  if (count < 32) // [17, 31]
-    return three_way_compare<Tail<_16>>(lhs, rhs, count);
-  if (!equals<Skip<16>::Then<_16>>(lhs, rhs)) // [32, 32]
-    return three_way_compare<Skip<16>::Then<_16>>(lhs, rhs);
-  if (count < 64) // [33, 63]
-    return three_way_compare<Tail<_32>>(lhs, rhs, count);
-  // [64, 127]
-  return three_way_compare<Skip<32>::Then<Loop<_16>>>(lhs, rhs, count);
-#else
-  /////////////////////////////////////////////////////////////////////////////
-  // Default
-  /////////////////////////////////////////////////////////////////////////////
-  using namespace ::__llvm_libc::scalar;
+#if defined(LLVM_LIBC_ARCH_X86) || defined(LLVM_LIBC_ARCH_AARCH64)
+static inline MemcmpReturnType inline_memcmp_generic_gt16(CPtr p1, CPtr p2,
+                                                          size_t count) {
+  if (unlikely(count >= 384)) {
+    if (auto value = generic::Memcmp<16>::block(p1, p2))
+      return value;
+    align_to_next_boundary<16, Arg::P1>(p1, p2, count);
+  }
+  return generic::Memcmp<16>::loop_and_tail(p1, p2, count);
+}
+#endif // defined(LLVM_LIBC_ARCH_X86) || defined(LLVM_LIBC_ARCH_AARCH64)
 
-  if (count == 0)
-    return 0;
-  if (count == 1)
-    return three_way_compare<_1>(lhs, rhs);
-  if (count == 2)
-    return three_way_compare<_2>(lhs, rhs);
-  if (count == 3)
-    return three_way_compare<_3>(lhs, rhs);
-  if (count <= 8)
-    return three_way_compare<HeadTail<_4>>(lhs, rhs, count);
-  if (count <= 16)
-    return three_way_compare<HeadTail<_8>>(lhs, rhs, count);
+#if defined(LLVM_LIBC_ARCH_X86)
+static inline MemcmpReturnType inline_memcmp_x86_sse2_gt16(CPtr p1, CPtr p2,
+                                                           size_t count) {
+  if (unlikely(count >= 384)) {
+    if (auto value = x86::sse2::Memcmp<16>::block(p1, p2))
+      return value;
+    align_to_next_boundary<16, Arg::P1>(p1, p2, count);
+  }
+  return x86::sse2::Memcmp<16>::loop_and_tail(p1, p2, count);
+}
+
+static inline MemcmpReturnType inline_memcmp_x86_avx2_gt16(CPtr p1, CPtr p2,
+                                                           size_t count) {
   if (count <= 32)
-    return three_way_compare<HeadTail<_16>>(lhs, rhs, count);
+    return x86::sse2::Memcmp<16>::head_tail(p1, p2, count);
   if (count <= 64)
-    return three_way_compare<HeadTail<_32>>(lhs, rhs, count);
+    return x86::avx2::Memcmp<32>::head_tail(p1, p2, count);
   if (count <= 128)
-    return three_way_compare<HeadTail<_64>>(lhs, rhs, count);
-  return three_way_compare<Align<_32>::Then<Loop<_32>>>(lhs, rhs, count);
+    return x86::avx2::Memcmp<64>::head_tail(p1, p2, count);
+  if (unlikely(count >= 384)) {
+    if (auto value = x86::avx2::Memcmp<32>::block(p1, p2))
+      return value;
+    align_to_next_boundary<32, Arg::P1>(p1, p2, count);
+  }
+  return x86::avx2::Memcmp<32>::loop_and_tail(p1, p2, count);
+}
+
+static inline MemcmpReturnType inline_memcmp_x86_avx512bw_gt16(CPtr p1, CPtr p2,
+                                                               size_t count) {
+  if (count <= 32)
+    return x86::sse2::Memcmp<16>::head_tail(p1, p2, count);
+  if (count <= 64)
+    return x86::avx2::Memcmp<32>::head_tail(p1, p2, count);
+  if (count <= 128)
+    return x86::avx512bw::Memcmp<64>::head_tail(p1, p2, count);
+  if (unlikely(count >= 384)) {
+    if (auto value = x86::avx512bw::Memcmp<64>::block(p1, p2))
+      return value;
+    align_to_next_boundary<64, Arg::P1>(p1, p2, count);
+  }
+  return x86::avx512bw::Memcmp<64>::loop_and_tail(p1, p2, count);
+}
+#endif // defined(LLVM_LIBC_ARCH_X86)
+
+#if defined(LLVM_LIBC_ARCH_AARCH64)
+static inline MemcmpReturnType inline_memcmp_aarch64_neon_gt16(CPtr p1, CPtr p2,
+                                                               size_t count) {
+  if (unlikely(count >= 128)) { // [128, ∞]
+    if (auto value = generic::Memcmp<16>::block(p1, p2))
+      return value;
+    align_to_next_boundary<16, Arg::P1>(p1, p2, count);
+    return generic::Memcmp<32>::loop_and_tail(p1, p2, count);
+  }
+  if (count < 32) // [17, 31]
+    return generic::Memcmp<16>::tail(p1, p2, count);
+  if (generic::Bcmp<16>::block(p1 + 16, p2 + 16)) // [32, 32]
+    return generic::Memcmp<16>::block(p1 + 16, p2 + 16);
+  if (count < 64) // [33, 63]
+    return generic::Memcmp<32>::tail(p1, p2, count);
+  // [64, 127]
+  return generic::Memcmp<16>::loop_and_tail(p1 + 32, p2 + 32, count - 32);
+}
+#endif // defined(LLVM_LIBC_ARCH_AARCH64)
+
+static inline MemcmpReturnType inline_memcmp(CPtr p1, CPtr p2, size_t count) {
+#if defined(LLVM_LIBC_ARCH_X86) || defined(LLVM_LIBC_ARCH_AARCH64)
+  if (count == 0)
+    return MemcmpReturnType::ZERO();
+  if (count == 1)
+    return generic::Memcmp<1>::block(p1, p2);
+  if (count == 2)
+    return generic::Memcmp<2>::block(p1, p2);
+  if (count == 3)
+    return generic::Memcmp<3>::block(p1, p2);
+  if (count <= 8)
+    return generic::Memcmp<4>::head_tail(p1, p2, count);
+  if (count <= 16)
+    return generic::Memcmp<8>::head_tail(p1, p2, count);
+#if defined(LLVM_LIBC_ARCH_X86)
+  if constexpr (x86::kAvx512BW)
+    return inline_memcmp_x86_avx512bw_gt16(p1, p2, count);
+  else if constexpr (x86::kAvx2)
+    return inline_memcmp_x86_avx2_gt16(p1, p2, count);
+  else if constexpr (x86::kSse2)
+    return inline_memcmp_x86_sse2_gt16(p1, p2, count);
+  else
+    return inline_memcmp_generic_gt16(p1, p2, count);
+#elif defined(LLVM_LIBC_ARCH_AARCH64)
+  if constexpr (aarch64::kNeon)
+    return inline_memcmp_aarch64_neon_gt16(p1, p2, count);
+  else
+    return inline_memcmp_generic_gt16(p1, p2, count);
+#endif
+#elif defined(LLVM_LIBC_ARCH_ARM)
+  if (count == 0)
+    return MemcmpReturnType::ZERO();
+  return generic::Memcmp<1>::loop(p1, p2, count);
+#else
+#error "Unsupported platform"
 #endif
 }
 
