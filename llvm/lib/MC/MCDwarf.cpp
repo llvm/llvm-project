@@ -1804,10 +1804,10 @@ struct CIEKey {
 
   bool operator<(const CIEKey &Other) const {
     return std::make_tuple(PersonalityName(), PersonalityEncoding, LsdaEncoding,
-                           IsSignalFrame, IsSimple, RAReg) <
+                           IsSignalFrame, IsSimple, RAReg, IsBKeyFrame) <
            std::make_tuple(Other.PersonalityName(), Other.PersonalityEncoding,
                            Other.LsdaEncoding, Other.IsSignalFrame,
-                           Other.IsSimple, Other.RAReg);
+                           Other.IsSimple, Other.RAReg, Other.IsBKeyFrame);
   }
 
   const MCSymbol *Personality;
