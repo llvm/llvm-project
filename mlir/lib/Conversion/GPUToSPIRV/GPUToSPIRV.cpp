@@ -338,6 +338,15 @@ LogicalResult GPUModuleConversion::matchAndRewrite(
                               spvModuleRegion.begin());
   // The spirv.module build method adds a block. Remove that.
   rewriter.eraseBlock(&spvModuleRegion.back());
+
+  // Some of the patterns call `lookupTargetEnv` during conversion and they
+  // will fail if called after GPUModuleConversion and we don't preserve
+  // `TargetEnv` attribute.
+  // Copy TargetEnvAttr only if it is attached directly to the GPUModuleOp.
+  if (auto attr = moduleOp->getAttrOfType<spirv::TargetEnvAttr>(
+          spirv::getTargetEnvAttrName()))
+    spvModule->setAttr(spirv::getTargetEnvAttrName(), attr);
+
   rewriter.eraseOp(moduleOp);
   return success();
 }
