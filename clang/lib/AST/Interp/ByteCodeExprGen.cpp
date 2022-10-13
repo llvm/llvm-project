@@ -190,67 +190,120 @@ bool ByteCodeExprGen<Emitter>::VisitBinaryOperator(const BinaryOperator *BO) {
   // Typecheck the args.
   Optional<PrimType> LT = classify(LHS->getType());
   Optional<PrimType> RT = classify(RHS->getType());
-  if (!LT || !RT) {
+  Optional<PrimType> T = classify(BO->getType());
+  if (!LT || !RT || !T) {
     return this->bail(BO);
   }
 
-  if (Optional<PrimType> T = classify(BO->getType())) {
-    if (!visit(LHS))
+  auto Discard = [this, T, BO](bool Result) {
+    if (!Result)
       return false;
-    if (!visit(RHS))
-      return false;
+    return DiscardResult ? this->emitPop(*T, BO) : true;
+  };
 
-    auto Discard = [this, T, BO](bool Result) {
-      if (!Result)
-        return false;
-      return DiscardResult ? this->emitPop(*T, BO) : true;
-    };
-
-    switch (BO->getOpcode()) {
-    case BO_EQ:
-      return Discard(this->emitEQ(*LT, BO));
-    case BO_NE:
-      return Discard(this->emitNE(*LT, BO));
-    case BO_LT:
-      return Discard(this->emitLT(*LT, BO));
-    case BO_LE:
-      return Discard(this->emitLE(*LT, BO));
-    case BO_GT:
-      return Discard(this->emitGT(*LT, BO));
-    case BO_GE:
-      return Discard(this->emitGE(*LT, BO));
-    case BO_Sub:
-      return Discard(this->emitSub(*T, BO));
-    case BO_Add:
-      return Discard(this->emitAdd(*T, BO));
-    case BO_Mul:
-      return Discard(this->emitMul(*T, BO));
-    case BO_Rem:
-      return Discard(this->emitRem(*T, BO));
-    case BO_Div:
-      return Discard(this->emitDiv(*T, BO));
-    case BO_Assign:
-      if (!this->emitStore(*T, BO))
-        return false;
-      return DiscardResult ? this->emitPopPtr(BO) : true;
-    case BO_And:
-      return Discard(this->emitBitAnd(*T, BO));
-    case BO_Or:
-      return Discard(this->emitBitOr(*T, BO));
-    case BO_Shl:
-      return Discard(this->emitShl(*LT, *RT, BO));
-    case BO_Shr:
-      return Discard(this->emitShr(*LT, *RT, BO));
-    case BO_Xor:
-      return Discard(this->emitBitXor(*T, BO));
-    case BO_LAnd:
-    case BO_LOr:
-    default:
-      return this->bail(BO);
-    }
+  // Pointer arithmetic special case.
+  if (BO->getOpcode() == BO_Add || BO->getOpcode() == BO_Sub) {
+    if (*T == PT_Ptr || (*LT == PT_Ptr && *RT == PT_Ptr))
+      return this->VisitPointerArithBinOp(BO);
   }
 
-  return this->bail(BO);
+  if (!visit(LHS) || !visit(RHS))
+    return false;
+
+  switch (BO->getOpcode()) {
+  case BO_EQ:
+    return Discard(this->emitEQ(*LT, BO));
+  case BO_NE:
+    return Discard(this->emitNE(*LT, BO));
+  case BO_LT:
+    return Discard(this->emitLT(*LT, BO));
+  case BO_LE:
+    return Discard(this->emitLE(*LT, BO));
+  case BO_GT:
+    return Discard(this->emitGT(*LT, BO));
+  case BO_GE:
+    return Discard(this->emitGE(*LT, BO));
+  case BO_Sub:
+    return Discard(this->emitSub(*T, BO));
+  case BO_Add:
+    return Discard(this->emitAdd(*T, BO));
+  case BO_Mul:
+    return Discard(this->emitMul(*T, BO));
+  case BO_Rem:
+    return Discard(this->emitRem(*T, BO));
+  case BO_Div:
+    return Discard(this->emitDiv(*T, BO));
+  case BO_Assign:
+    if (!this->emitStore(*T, BO))
+      return false;
+    return DiscardResult ? this->emitPopPtr(BO) : true;
+  case BO_And:
+    return Discard(this->emitBitAnd(*T, BO));
+  case BO_Or:
+    return Discard(this->emitBitOr(*T, BO));
+  case BO_Shl:
+    return Discard(this->emitShl(*LT, *RT, BO));
+  case BO_Shr:
+    return Discard(this->emitShr(*LT, *RT, BO));
+  case BO_Xor:
+    return Discard(this->emitBitXor(*T, BO));
+  case BO_LAnd:
+  case BO_LOr:
+  default:
+    return this->bail(BO);
+  }
+
+  llvm_unreachable("Unhandled binary op");
+}
+
+/// Perform addition/subtraction of a pointer and an integer or
+/// subtraction of two pointers.
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitPointerArithBinOp(const BinaryOperator *E) {
+  BinaryOperatorKind Op = E->getOpcode();
+  const Expr *LHS = E->getLHS();
+  const Expr *RHS = E->getRHS();
+
+  if ((Op != BO_Add && Op != BO_Sub) ||
+      (!LHS->getType()->isPointerType() && !RHS->getType()->isPointerType()))
+    return false;
+
+  Optional<PrimType> LT = classify(LHS);
+  Optional<PrimType> RT = classify(RHS);
+
+  if (!LT || !RT)
+    return false;
+
+  if (LHS->getType()->isPointerType() && RHS->getType()->isPointerType()) {
+    if (Op != BO_Sub)
+      return false;
+
+    assert(E->getType()->isIntegerType());
+    if (!visit(RHS) || !visit(LHS))
+      return false;
+
+    return this->emitSubPtr(classifyPrim(E->getType()), E);
+  }
+
+  PrimType OffsetType;
+  if (LHS->getType()->isIntegerType()) {
+    if (!visit(RHS) || !visit(LHS))
+      return false;
+    OffsetType = *LT;
+  } else if (RHS->getType()->isIntegerType()) {
+    if (!visit(LHS) || !visit(RHS))
+      return false;
+    OffsetType = *RT;
+  } else {
+    return false;
+  }
+
+  if (Op == BO_Add)
+    return this->emitAddOffset(OffsetType, E);
+  else if (Op == BO_Sub)
+    return this->emitSubOffset(OffsetType, E);
+
+  return this->bail(E);
 }
 
 template <class Emitter>
