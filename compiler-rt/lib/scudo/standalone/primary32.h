@@ -351,7 +351,7 @@ private:
     }
 
     const uptr Size = getSizeByClassId(ClassId);
-    const u32 MaxCount = TransferBatch::getMaxCached(Size);
+    const u16 MaxCount = TransferBatch::getMaxCached(Size);
     DCHECK_GT(MaxCount, 0U);
     // The maximum number of blocks we should carve in the region is dictated
     // by the maximum number of batches we want to fill, and the amount of
@@ -382,7 +382,8 @@ private:
           C->createBatch(ClassId, reinterpret_cast<void *>(ShuffleArray[I]));
       if (UNLIKELY(!B))
         return nullptr;
-      const u32 N = Min(MaxCount, NumberOfBlocks - I);
+      // `MaxCount` is u16 so the result will also fit in u16.
+      const u16 N = static_cast<u16>(Min<u32>(MaxCount, NumberOfBlocks - I));
       B->setFromArray(&ShuffleArray[I], N);
       Sci->FreeList.push_back(B);
       I += N;

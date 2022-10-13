@@ -10,6 +10,7 @@
 #define SCUDO_LOCAL_CACHE_H_
 
 #include "internal_defs.h"
+#include "platform.h"
 #include "report.h"
 #include "stats.h"
 
@@ -20,8 +21,8 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
   typedef typename SizeClassAllocator::CompactPtrT CompactPtrT;
 
   struct TransferBatch {
-    static const u32 MaxNumCached = SizeClassMap::MaxNumCachedHint;
-    void setFromArray(CompactPtrT *Array, u32 N) {
+    static const u16 MaxNumCached = SizeClassMap::MaxNumCachedHint;
+    void setFromArray(CompactPtrT *Array, u16 N) {
       DCHECK_LE(N, MaxNumCached);
       Count = N;
       memcpy(Batch, Array, sizeof(Batch[0]) * Count);
@@ -34,19 +35,19 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     void copyToArray(CompactPtrT *Array) const {
       memcpy(Array, Batch, sizeof(Batch[0]) * Count);
     }
-    u32 getCount() const { return Count; }
-    CompactPtrT get(u32 I) const {
+    u16 getCount() const { return Count; }
+    CompactPtrT get(u16 I) const {
       DCHECK_LE(I, Count);
       return Batch[I];
     }
-    static u32 getMaxCached(uptr Size) {
+    static u16 getMaxCached(uptr Size) {
       return Min(MaxNumCached, SizeClassMap::getMaxCachedHint(Size));
     }
     TransferBatch *Next;
 
   private:
-    u32 Count;
     CompactPtrT Batch[MaxNumCached];
+    u16 Count;
   };
 
   void init(GlobalStats *S, SizeClassAllocator *A) {
@@ -128,9 +129,9 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
 private:
   static const uptr NumClasses = SizeClassMap::NumClasses;
   static const uptr BatchClassId = SizeClassMap::BatchClassId;
-  struct PerClass {
-    u32 Count;
-    u32 MaxCount;
+  struct alignas(SCUDO_CACHE_LINE_SIZE) PerClass {
+    u16 Count;
+    u16 MaxCount;
     // Note: ClassSize is zero for the transfer batch.
     uptr ClassSize;
     CompactPtrT Chunks[2 * TransferBatch::MaxNumCached];
@@ -180,7 +181,7 @@ private:
   }
 
   NOINLINE void drain(PerClass *C, uptr ClassId) {
-    const u32 Count = Min(C->MaxCount / 2, C->Count);
+    const u16 Count = Min(static_cast<u16>(C->MaxCount / 2), C->Count);
     TransferBatch *B =
         createBatch(ClassId, Allocator->decompactPtr(ClassId, C->Chunks[0]));
     if (UNLIKELY(!B))
