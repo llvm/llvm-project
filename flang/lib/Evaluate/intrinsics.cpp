@@ -82,8 +82,8 @@ ENUM_CLASS(KindCode, none, defaultIntegerKind,
     // match any kind, but all "same" kinds must be equal. For characters, also
     // implies that lengths must be equal.
     same,
-    // for character results, take "same" argument kind but not length
-    sameKindButNotLength,
+    // for characters that only require the same kind, not length
+    sameKind,
     operand, // match any kind, with promotion (non-standard)
     typeless, // BOZ literals are INTEGER with this kind
     teamType, // TEAM_TYPE from module ISO_FORTRAN_ENV (for coarrays)
@@ -157,8 +157,7 @@ static constexpr TypePattern SameComplex{ComplexType, KindCode::same};
 static constexpr TypePattern SameFloating{FloatingType, KindCode::same};
 static constexpr TypePattern SameNumeric{NumericType, KindCode::same};
 static constexpr TypePattern SameChar{CharType, KindCode::same};
-static constexpr TypePattern SameCharNewLen{
-    CharType, KindCode::sameKindButNotLength};
+static constexpr TypePattern SameCharNoLen{CharType, KindCode::sameKind};
 static constexpr TypePattern SameLogical{LogicalType, KindCode::same};
 static constexpr TypePattern SameRelatable{RelatableType, KindCode::same};
 static constexpr TypePattern SameIntrinsic{IntrinsicType, KindCode::same};
@@ -471,13 +470,15 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"back", AnyLogical, Rank::scalar, Optionality::optional}},
         KINDInt, Rank::vector, IntrinsicClass::transformationalFunction},
     {"findloc",
-        {{"array", SameChar, Rank::array}, {"value", SameChar, Rank::scalar},
-            RequiredDIM, OptionalMASK, SizeDefaultKIND,
+        {{"array", SameCharNoLen, Rank::array},
+            {"value", SameCharNoLen, Rank::scalar}, RequiredDIM, OptionalMASK,
+            SizeDefaultKIND,
             {"back", AnyLogical, Rank::scalar, Optionality::optional}},
         KINDInt, Rank::locReduced, IntrinsicClass::transformationalFunction},
     {"findloc",
-        {{"array", SameChar, Rank::array}, {"value", SameChar, Rank::scalar},
-            MissingDIM, OptionalMASK, SizeDefaultKIND,
+        {{"array", SameCharNoLen, Rank::array},
+            {"value", SameCharNoLen, Rank::scalar}, MissingDIM, OptionalMASK,
+            SizeDefaultKIND,
             {"back", AnyLogical, Rank::scalar, Optionality::optional}},
         KINDInt, Rank::vector, IntrinsicClass::transformationalFunction},
     {"findloc",
@@ -525,7 +526,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"ieor", {{"i", BOZ}, {"j", SameInt}}, SameInt},
     {"image_status", {{"image", SameInt}, OptionalTEAM}, DefaultInt},
     {"index",
-        {{"string", SameChar}, {"substring", SameChar},
+        {{"string", SameCharNoLen}, {"substring", SameCharNoLen},
             {"back", AnyLogical, Rank::elemental, Optionality::optional},
             DefaultingKIND},
         KINDInt},
@@ -565,10 +566,14 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             DefaultingKIND},
         KINDInt, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"len_trim", {{"string", AnyChar}, DefaultingKIND}, KINDInt},
-    {"lge", {{"string_a", SameChar}, {"string_b", SameChar}}, DefaultLogical},
-    {"lgt", {{"string_a", SameChar}, {"string_b", SameChar}}, DefaultLogical},
-    {"lle", {{"string_a", SameChar}, {"string_b", SameChar}}, DefaultLogical},
-    {"llt", {{"string_a", SameChar}, {"string_b", SameChar}}, DefaultLogical},
+    {"lge", {{"string_a", SameCharNoLen}, {"string_b", SameCharNoLen}},
+        DefaultLogical},
+    {"lgt", {{"string_a", SameCharNoLen}, {"string_b", SameCharNoLen}},
+        DefaultLogical},
+    {"lle", {{"string_a", SameCharNoLen}, {"string_b", SameCharNoLen}},
+        DefaultLogical},
+    {"llt", {{"string_a", SameCharNoLen}, {"string_b", SameCharNoLen}},
+        DefaultLogical},
     {"loc", {{"loc_argument", Addressable, Rank::anyOrAssumedRank}},
         SubscriptInt, Rank::scalar},
     {"log", {{"x", SameFloating}}, SameFloating},
@@ -606,9 +611,9 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"a3", OperandIntOrReal, Rank::elemental, Optionality::repeats}},
         OperandIntOrReal},
     {"max",
-        {{"a1", SameChar}, {"a2", SameChar},
-            {"a3", SameChar, Rank::elemental, Optionality::repeats}},
-        SameChar},
+        {{"a1", SameCharNoLen}, {"a2", SameCharNoLen},
+            {"a3", SameCharNoLen, Rank::elemental, Optionality::repeats}},
+        SameCharNoLen},
     {"maxexponent",
         {{"x", AnyReal, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In, {ArgFlag::canBeNull}}},
@@ -645,9 +650,9 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"a3", OperandIntOrReal, Rank::elemental, Optionality::repeats}},
         OperandIntOrReal},
     {"min",
-        {{"a1", SameChar}, {"a2", SameChar},
-            {"a3", SameChar, Rank::elemental, Optionality::repeats}},
-        SameChar},
+        {{"a1", SameCharNoLen}, {"a2", SameCharNoLen},
+            {"a3", SameCharNoLen, Rank::elemental, Optionality::repeats}},
+        SameCharNoLen},
     {"minexponent",
         {{"x", AnyReal, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In, {ArgFlag::canBeNull}}},
@@ -675,9 +680,9 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         OperandIntOrReal},
     {"nearest", {{"x", SameReal}, {"s", AnyReal}}, SameReal},
     {"new_line",
-        {{"a", SameChar, Rank::anyOrAssumedRank, Optionality::required,
+        {{"a", SameCharNoLen, Rank::anyOrAssumedRank, Optionality::required,
             common::Intent::In, {ArgFlag::canBeNull}}},
-        SameChar, Rank::scalar, IntrinsicClass::inquiryFunction},
+        SameCharNoLen, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"nint", {{"a", AnyReal}, DefaultingKIND}, KINDInt},
     {"norm2", {{"x", SameReal, Rank::array}, OptionalDIM}, SameReal,
         Rank::dimReduced, IntrinsicClass::transformationalFunction},
@@ -748,8 +753,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"identity", SameType, Rank::scalar, Optionality::optional},
             {"ordered", AnyLogical, Rank::scalar, Optionality::optional}},
         SameType, Rank::scalar, IntrinsicClass::transformationalFunction},
-    {"repeat", {{"string", SameChar, Rank::scalar}, {"ncopies", AnyInt}},
-        SameCharNewLen, Rank::scalar, IntrinsicClass::transformationalFunction},
+    {"repeat", {{"string", SameCharNoLen, Rank::scalar}, {"ncopies", AnyInt}},
+        SameCharNoLen, Rank::scalar, IntrinsicClass::transformationalFunction},
     {"reshape",
         {{"source", SameType, Rank::array}, {"shape", AnyInt, Rank::shape},
             {"pad", SameType, Rank::array, Optionality::optional},
@@ -762,7 +767,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         DefaultLogical, Rank::scalar, IntrinsicClass::inquiryFunction},
     {"scale", {{"x", SameReal}, {"i", AnyInt}}, SameReal}, // == IEEE_SCALB()
     {"scan",
-        {{"string", SameChar}, {"set", SameChar},
+        {{"string", SameCharNoLen}, {"set", SameCharNoLen},
             {"back", AnyLogical, Rank::elemental, Optionality::optional},
             DefaultingKIND},
         KINDInt},
@@ -851,8 +856,8 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         SameType, Rank::vector, IntrinsicClass::transformationalFunction},
     {"transpose", {{"matrix", SameType, Rank::matrix}}, SameType, Rank::matrix,
         IntrinsicClass::transformationalFunction},
-    {"trim", {{"string", SameChar, Rank::scalar}}, SameCharNewLen, Rank::scalar,
-        IntrinsicClass::transformationalFunction},
+    {"trim", {{"string", SameCharNoLen, Rank::scalar}}, SameCharNoLen,
+        Rank::scalar, IntrinsicClass::transformationalFunction},
     {"ubound",
         {{"array", AnyData, Rank::anyOrAssumedRank}, RequiredDIM,
             SizeDefaultKIND},
@@ -867,7 +872,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"field", SameType, Rank::conformable}},
         SameType, Rank::conformable, IntrinsicClass::transformationalFunction},
     {"verify",
-        {{"string", SameChar}, {"set", SameChar},
+        {{"string", SameCharNoLen}, {"set", SameCharNoLen},
             {"back", AnyLogical, Rank::elemental, Optionality::optional},
             DefaultingKIND},
         KINDInt},
@@ -1690,6 +1695,12 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
       if (!sameArg) {
         sameArg = arg;
       }
+      argOk = type->IsTkLenCompatibleWith(sameArg->GetType().value());
+      break;
+    case KindCode::sameKind:
+      if (!sameArg) {
+        sameArg = arg;
+      }
       argOk = type->IsTkCompatibleWith(sameArg->GetType().value());
       break;
     case KindCode::operand:
@@ -1958,7 +1969,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
         }
       }
       break;
-    case KindCode::sameKindButNotLength:
+    case KindCode::sameKind:
       CHECK(sameArg);
       if (std::optional<DynamicType> aType{sameArg->GetType()}) {
         resultType = DynamicType{*category, aType->kind()};
@@ -2868,7 +2879,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
         context.messages().Say(at,
             "OPERATION= argument of REDUCE() must be a scalar function"_err_en_US);
       } else if (result->type().IsPolymorphic() ||
-          !arrayType->IsTkCompatibleWith(result->type())) {
+          !arrayType->IsTkLenCompatibleWith(result->type())) {
         ok = false;
         context.messages().Say(at,
             "OPERATION= argument of REDUCE() must have the same type as ARRAY="_err_en_US);
