@@ -48,7 +48,7 @@
 
 # MAP: _main
 # MAP-LABEL: Dead Stripped Symbols
-# MAP: <<dead>> 0x00000000 [ 1] _unref_com
+# MAP: <<dead>> 0x00000001 [ 1] _unref_com
 # MAP: <<dead>> 0x00000008 [ 1] _unref_data
 # MAP: <<dead>> 0x00000006 [ 1] _unref_extern
 # MAP: <<dead>> 0x00000001 [ 1] _unref_local
