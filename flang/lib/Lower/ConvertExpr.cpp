@@ -3410,8 +3410,10 @@ public:
           // actually a variable.
           mlir::Value box =
               Fortran::evaluate::IsVariable(*expr)
-                  ? builder.createBox(loc, genBoxArg(*expr))
-                  : builder.createBox(getLoc(), genTempExtAddr(*expr));
+                  ? builder.createBox(loc, genBoxArg(*expr),
+                                      fir::isPolymorphicType(argTy))
+                  : builder.createBox(getLoc(), genTempExtAddr(*expr),
+                                      fir::isPolymorphicType(argTy));
           caller.placeInput(arg, box);
         }
       } else if (arg.passBy == PassBy::AddressAndLength) {
