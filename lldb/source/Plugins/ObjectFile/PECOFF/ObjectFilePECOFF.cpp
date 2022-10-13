@@ -100,12 +100,12 @@ public:
   }
 };
 
+} // namespace
+
 static PluginProperties &GetGlobalPluginProperties() {
   static PluginProperties g_settings;
   return g_settings;
 }
-
-} // namespace
 
 static bool GetDebugLinkContents(const llvm::object::COFFObjectFile &coff_obj,
                                  std::string &gnu_debuglink_file,

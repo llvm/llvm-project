@@ -477,8 +477,23 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
     llvm_unreachable("not a memory reference type");
   }
   mlir::Type boxTy = fir::BoxType::get(elementType);
-  if (isPolymorphic)
+  mlir::Value tdesc;
+  if (isPolymorphic) {
     boxTy = fir::ClassType::get(elementType);
+
+    // Look for the original tdesc for the new box.
+    if (auto *op = itemAddr.getDefiningOp()) {
+      if (auto coordOp = mlir::dyn_cast<fir::CoordinateOp>(op)) {
+        if (fir::isPolymorphicType(coordOp.getBaseType())) {
+          mlir::Type resultType = coordOp.getResult().getType();
+          mlir::Type tdescType =
+              fir::TypeDescType::get(fir::unwrapRefType(resultType));
+          tdesc = create<fir::BoxTypeDescOp>(loc, tdescType, coordOp.getRef());
+        }
+      }
+    }
+  }
+
   return exv.match(
       [&](const fir::ArrayBoxValue &box) -> mlir::Value {
         mlir::Value s = createShape(loc, exv);
@@ -507,7 +522,10 @@ mlir::Value fir::FirOpBuilder::createBox(mlir::Location loc,
             loc, fir::factory::getMutableIRBox(*this, loc, x));
       },
       [&](const auto &) -> mlir::Value {
-        return create<fir::EmboxOp>(loc, boxTy, itemAddr);
+        mlir::Value empty;
+        mlir::ValueRange emptyRange;
+        return create<fir::EmboxOp>(loc, boxTy, itemAddr, empty, empty,
+                                    emptyRange, tdesc);
       });
 }
 

@@ -227,70 +227,11 @@ define i32* @f3() {
   ret i32* bitcast (double* @g2 to i32*)
 }
 
-; CHECK-LABEL: llvm.func @f5
-define void @f5(i32 %d) {
-; FIXME: icmp should return i1.
-; CHECK: = llvm.icmp "eq"
-  %1 = icmp eq i32 %d, 2
-; CHECK: = llvm.icmp "slt"
-  %2 = icmp slt i32 %d, 2
-; CHECK: = llvm.icmp "sle"
-  %3 = icmp sle i32 %d, 2
-; CHECK: = llvm.icmp "sgt"
-  %4 = icmp sgt i32 %d, 2
-; CHECK: = llvm.icmp "sge"
-  %5 = icmp sge i32 %d, 2
-; CHECK: = llvm.icmp "ult"
-  %6 = icmp ult i32 %d, 2
-; CHECK: = llvm.icmp "ule"
-  %7 = icmp ule i32 %d, 2
-; CHECK: = llvm.icmp "ugt"
-  %8 = icmp ugt i32 %d, 2
-  ret void
-}
-
 ; CHECK-LABEL: llvm.func @f6(%arg0: !llvm.ptr<func<void (i16)>>)
 define void @f6(void (i16) *%fn) {
 ; CHECK: %[[c:[0-9]+]] = llvm.mlir.constant(0 : i16) : i16
 ; CHECK: llvm.call %arg0(%[[c]])
   call void %fn(i16 0)
-  ret void
-}
-
-; CHECK-LABEL: llvm.func @FPComparison(%arg0: f32, %arg1: f32)
-define void @FPComparison(float %a, float %b) {
-  ; CHECK: llvm.fcmp "_false" %arg0, %arg1
-  %1 = fcmp false float %a, %b
-  ; CHECK: llvm.fcmp "oeq" %arg0, %arg1
-  %2 = fcmp oeq float %a, %b
-  ; CHECK: llvm.fcmp "ogt" %arg0, %arg1
-  %3 = fcmp ogt float %a, %b
-  ; CHECK: llvm.fcmp "oge" %arg0, %arg1
-  %4 = fcmp oge float %a, %b
-  ; CHECK: llvm.fcmp "olt" %arg0, %arg1
-  %5 = fcmp olt float %a, %b
-  ; CHECK: llvm.fcmp "ole" %arg0, %arg1
-  %6 = fcmp ole float %a, %b
-  ; CHECK: llvm.fcmp "one" %arg0, %arg1
-  %7 = fcmp one float %a, %b
-  ; CHECK: llvm.fcmp "ord" %arg0, %arg1
-  %8 = fcmp ord float %a, %b
-  ; CHECK: llvm.fcmp "ueq" %arg0, %arg1
-  %9 = fcmp ueq float %a, %b
-  ; CHECK: llvm.fcmp "ugt" %arg0, %arg1
-  %10 = fcmp ugt float %a, %b
-  ; CHECK: llvm.fcmp "uge" %arg0, %arg1
-  %11 = fcmp uge float %a, %b
-  ; CHECK: llvm.fcmp "ult" %arg0, %arg1
-  %12 = fcmp ult float %a, %b
-  ; CHECK: llvm.fcmp "ule" %arg0, %arg1
-  %13 = fcmp ule float %a, %b
-  ; CHECK: llvm.fcmp "une" %arg0, %arg1
-  %14 = fcmp une float %a, %b
-  ; CHECK: llvm.fcmp "uno" %arg0, %arg1
-  %15 = fcmp uno float %a, %b
-  ; CHECK: llvm.fcmp "_true" %arg0, %arg1
-  %16 = fcmp true float %a, %b
   ret void
 }
 
