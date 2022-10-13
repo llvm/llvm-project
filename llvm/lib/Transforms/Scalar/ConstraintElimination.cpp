@@ -189,6 +189,13 @@ static bool canUseSExt(ConstantInt *CI) {
   return Val.sgt(MinSignedConstraintValue) && Val.slt(MaxConstraintValue);
 }
 
+// A helper to multiply 2 signed integers where overflowing is allowed.
+static int64_t multiplyWithOverflow(int64_t A, int64_t B) {
+  int64_t Result;
+  MulOverflow(A, B, Result);
+  return Result;
+}
+
 static SmallVector<DecompEntry, 4>
 decomposeGEP(GetElementPtrInst &GEP,
              SmallVector<PreconditionTy, 4> &Preconditions, bool IsSigned,
@@ -214,7 +221,7 @@ decomposeGEP(GetElementPtrInst &GEP,
       isa<ConstantInt>(GEP.getOperand(1))) {
     APInt Offset = cast<ConstantInt>(GEP.getOperand(1))->getValue();
     auto Result = decompose(InnerGEP, Preconditions, IsSigned, DL);
-    Result[0].Coefficient += Scale * Offset.getSExtValue();
+    Result[0].Coefficient += multiplyWithOverflow(Scale, Offset.getSExtValue());
     if (Offset.isNegative()) {
       // Add pre-condition ensuring the GEP is increasing monotonically and
       // can be de-composed.
@@ -233,10 +240,12 @@ decomposeGEP(GetElementPtrInst &GEP,
     if (match(Op0, m_NUWShl(m_Value(Op1), m_ConstantInt(CI))) && canUseSExt(CI))
       return {{0, nullptr},
               {1, GEP.getPointerOperand()},
-              {Scale * int64_t(std::pow(int64_t(2), CI->getSExtValue())), Op1}};
+              {multiplyWithOverflow(
+                   Scale, int64_t(std::pow(int64_t(2), CI->getSExtValue()))),
+               Op1}};
     if (match(Op0, m_NSWAdd(m_Value(Op1), m_ConstantInt(CI))) &&
         canUseSExt(CI) && match(Op0, m_NUWAdd(m_Value(), m_Value())))
-      return {{Scale * CI->getSExtValue(), nullptr},
+      return {{multiplyWithOverflow(Scale, CI->getSExtValue()), nullptr},
               {1, GEP.getPointerOperand()},
               {Scale, Op1}};
 
@@ -245,7 +254,7 @@ decomposeGEP(GetElementPtrInst &GEP,
 
   if (match(GEP.getOperand(GEP.getNumOperands() - 1), m_ConstantInt(CI)) &&
       !CI->isNegative() && canUseSExt(CI))
-    return {{Scale * CI->getSExtValue(), nullptr},
+    return {{multiplyWithOverflow(Scale, CI->getSExtValue()), nullptr},
             {1, GEP.getPointerOperand()}};
 
   SmallVector<DecompEntry, 4> Result;
@@ -254,11 +263,13 @@ decomposeGEP(GetElementPtrInst &GEP,
       canUseSExt(CI))
     Result = {{0, nullptr},
               {1, GEP.getPointerOperand()},
-              {Scale * int64_t(std::pow(int64_t(2), CI->getSExtValue())), Op0}};
+              {multiplyWithOverflow(
+                   Scale, int64_t(std::pow(int64_t(2), CI->getSExtValue()))),
+               Op0}};
   else if (match(GEP.getOperand(GEP.getNumOperands() - 1),
                  m_NSWAdd(m_Value(Op0), m_ConstantInt(CI))) &&
            canUseSExt(CI))
-    Result = {{Scale * CI->getSExtValue(), nullptr},
+    Result = {{multiplyWithOverflow(Scale, CI->getSExtValue()), nullptr},
               {1, GEP.getPointerOperand()},
               {Scale, Op0}};
   else {
