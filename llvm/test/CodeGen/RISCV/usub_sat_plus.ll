@@ -63,7 +63,6 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; RV32I-NEXT:  .LBB1_2:
 ; RV32I-NEXT:    sltu a0, a0, a3
 ; RV32I-NEXT:  .LBB1_3:
-; RV32I-NEXT:    snez a0, a0
 ; RV32I-NEXT:    addi a1, a0, -1
 ; RV32I-NEXT:    and a0, a1, a3
 ; RV32I-NEXT:    and a1, a1, a2
@@ -90,7 +89,6 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; RV32IZbb-NEXT:  .LBB1_2:
 ; RV32IZbb-NEXT:    sltu a0, a0, a3
 ; RV32IZbb-NEXT:  .LBB1_3:
-; RV32IZbb-NEXT:    snez a0, a0
 ; RV32IZbb-NEXT:    addi a1, a0, -1
 ; RV32IZbb-NEXT:    and a0, a1, a3
 ; RV32IZbb-NEXT:    and a1, a1, a2

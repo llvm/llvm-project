@@ -497,10 +497,10 @@ define signext i32 @ffs_i32(i32 signext %a) nounwind {
 ; RV64I-NEXT:    add a0, a1, a0
 ; RV64I-NEXT:    lbu a1, 0(a0)
 ; RV64I-NEXT:  .LBB9_2:
-; RV64I-NEXT:    addi a0, a1, 1
-; RV64I-NEXT:    seqz a1, s0
-; RV64I-NEXT:    addi a1, a1, -1
-; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    seqz a0, s0
+; RV64I-NEXT:    addi a1, a1, 1
+; RV64I-NEXT:    addi a0, a0, -1
+; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
