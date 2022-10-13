@@ -34,6 +34,14 @@ namespace scudo {
 //   typedef SizeClassAllocator64<ExampleConfig> Primary;
 //   // Log2 of the size of a size class region, as used by the Primary.
 //   static const uptr PrimaryRegionSizeLog = 30U;
+//   // Log2 of the size of block group, as used by the Primary. Each group
+//   // contains a range of memory addresses, blocks in the range will belong to
+//   // the same group. In general, single region may have 1 or 2MB group size.
+//   // Multiple regions will have the group size equal to the region size
+//   // because the region size is usually smaller than 1 MB.
+//   // Smaller value gives fine-grained control of memory usage but the trade
+//   // off is that it may take longer time of deallocation.
+//   static const uptr PrimaryGroupSizeLog = 20U;
 //   // Defines the type and scale of a compact pointer. A compact pointer can
 //   // be understood as the offset of a pointer within the region it belongs
 //   // to, in increments of a power-of-2 scale.
@@ -65,6 +73,7 @@ struct DefaultConfig {
 #if SCUDO_CAN_USE_PRIMARY64
   typedef SizeClassAllocator64<DefaultConfig> Primary;
   static const uptr PrimaryRegionSizeLog = 32U;
+  static const uptr PrimaryGroupSizeLog = 21U;
   typedef uptr PrimaryCompactPtrT;
   static const uptr PrimaryCompactPtrScale = 0;
   static const bool PrimaryEnableRandomOffset = true;
@@ -72,6 +81,7 @@ struct DefaultConfig {
 #else
   typedef SizeClassAllocator32<DefaultConfig> Primary;
   static const uptr PrimaryRegionSizeLog = 19U;
+  static const uptr PrimaryGroupSizeLog = 19U;
   typedef uptr PrimaryCompactPtrT;
 #endif
   static const s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
@@ -96,11 +106,13 @@ struct AndroidConfig {
   static const uptr PrimaryRegionSizeLog = 28U;
   typedef u32 PrimaryCompactPtrT;
   static const uptr PrimaryCompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
+  static const uptr PrimaryGroupSizeLog = 20U;
   static const bool PrimaryEnableRandomOffset = true;
   static const uptr PrimaryMapSizeIncrement = 1UL << 18;
 #else
   typedef SizeClassAllocator32<AndroidConfig> Primary;
   static const uptr PrimaryRegionSizeLog = 18U;
+  static const uptr PrimaryGroupSizeLog = 18U;
   typedef uptr PrimaryCompactPtrT;
 #endif
   static const s32 PrimaryMinReleaseToOsIntervalMs = 1000;
@@ -127,11 +139,13 @@ struct AndroidSvelteConfig {
   static const uptr PrimaryRegionSizeLog = 27U;
   typedef u32 PrimaryCompactPtrT;
   static const uptr PrimaryCompactPtrScale = SCUDO_MIN_ALIGNMENT_LOG;
+  static const uptr PrimaryGroupSizeLog = 18U;
   static const bool PrimaryEnableRandomOffset = true;
   static const uptr PrimaryMapSizeIncrement = 1UL << 18;
 #else
   typedef SizeClassAllocator32<AndroidSvelteConfig> Primary;
   static const uptr PrimaryRegionSizeLog = 16U;
+  static const uptr PrimaryGroupSizeLog = 16U;
   typedef uptr PrimaryCompactPtrT;
 #endif
   static const s32 PrimaryMinReleaseToOsIntervalMs = 1000;
@@ -156,6 +170,7 @@ struct FuchsiaConfig {
 
   typedef SizeClassAllocator64<FuchsiaConfig> Primary;
   static const uptr PrimaryRegionSizeLog = 30U;
+  static const uptr PrimaryGroupSizeLog = 30U;
   typedef u32 PrimaryCompactPtrT;
   static const bool PrimaryEnableRandomOffset = true;
   static const uptr PrimaryMapSizeIncrement = 1UL << 18;
@@ -175,6 +190,7 @@ struct TrustyConfig {
   typedef SizeClassAllocator64<TrustyConfig> Primary;
   // Some apps have 1 page of heap total so small regions are necessary.
   static const uptr PrimaryRegionSizeLog = 10U;
+  static const uptr PrimaryGroupSizeLog = 10U;
   typedef u32 PrimaryCompactPtrT;
   static const bool PrimaryEnableRandomOffset = false;
   // Trusty is extremely memory-constrained so minimally round up map calls.

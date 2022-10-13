@@ -12,8 +12,11 @@
 #include "primary64.h"
 #include "size_class_map.h"
 
+#include <algorithm>
+#include <chrono>
 #include <condition_variable>
 #include <mutex>
+#include <random>
 #include <stdlib.h>
 #include <thread>
 #include <vector>
@@ -24,6 +27,7 @@
 
 struct TestConfig1 {
   static const scudo::uptr PrimaryRegionSizeLog = 18U;
+  static const scudo::uptr PrimaryGroupSizeLog = 18U;
   static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
   static const bool MaySupportMemoryTagging = false;
@@ -40,6 +44,7 @@ struct TestConfig2 {
 #else
   static const scudo::uptr PrimaryRegionSizeLog = 24U;
 #endif
+  static const scudo::uptr PrimaryGroupSizeLog = 20U;
   static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
   static const bool MaySupportMemoryTagging = false;
@@ -56,11 +61,29 @@ struct TestConfig3 {
 #else
   static const scudo::uptr PrimaryRegionSizeLog = 24U;
 #endif
+  static const scudo::uptr PrimaryGroupSizeLog = 20U;
   static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
   static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
   static const bool MaySupportMemoryTagging = true;
   typedef scudo::uptr PrimaryCompactPtrT;
   static const scudo::uptr PrimaryCompactPtrScale = 0;
+  static const bool PrimaryEnableRandomOffset = true;
+  static const scudo::uptr PrimaryMapSizeIncrement = 1UL << 18;
+};
+
+struct TestConfig4 {
+#if defined(__mips__)
+  // Unable to allocate greater size on QEMU-user.
+  static const scudo::uptr PrimaryRegionSizeLog = 23U;
+#else
+  static const scudo::uptr PrimaryRegionSizeLog = 24U;
+#endif
+  static const scudo::s32 PrimaryMinReleaseToOsIntervalMs = INT32_MIN;
+  static const scudo::s32 PrimaryMaxReleaseToOsIntervalMs = INT32_MAX;
+  static const bool MaySupportMemoryTagging = true;
+  static const scudo::uptr PrimaryCompactPtrScale = 3U;
+  static const scudo::uptr PrimaryGroupSizeLog = 20U;
+  typedef scudo::u32 PrimaryCompactPtrT;
   static const bool PrimaryEnableRandomOffset = true;
   static const scudo::uptr PrimaryMapSizeIncrement = 1UL << 18;
 };
@@ -100,7 +123,8 @@ template <class BaseConfig> struct ScudoPrimaryTest : public Test {};
 #define SCUDO_TYPED_TEST_ALL_TYPES(FIXTURE, NAME)                              \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig1)                            \
   SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig2)                            \
-  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig3)
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig3)                            \
+  SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TestConfig4)
 #endif
 
 #define SCUDO_TYPED_TEST_TYPE(FIXTURE, NAME, TYPE)                             \
@@ -153,6 +177,7 @@ struct SmallRegionsConfig {
   static const scudo::uptr PrimaryCompactPtrScale = 0;
   static const bool PrimaryEnableRandomOffset = true;
   static const scudo::uptr PrimaryMapSizeIncrement = 1UL << 18;
+  static const scudo::uptr PrimaryGroupSizeLog = 20U;
 };
 
 // The 64-bit SizeClassAllocator can be easily OOM'd with small region sizes.
@@ -170,6 +195,8 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
   std::vector<TransferBatch *> Batches;
   const scudo::uptr ClassId = Primary::SizeClassMap::LargestClassId;
   const scudo::uptr Size = Primary::getSizeByClassId(ClassId);
+  typename Primary::CacheT::CompactPtrT Blocks[TransferBatch::MaxNumCached];
+
   for (scudo::uptr I = 0; I < 10000U; I++) {
     TransferBatch *B = Allocator.popBatch(&Cache, ClassId);
     if (!B) {
@@ -181,8 +208,11 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
     Batches.push_back(B);
   }
   while (!Batches.empty()) {
-    Allocator.pushBatch(ClassId, Batches.back());
+    TransferBatch *B = Batches.back();
     Batches.pop_back();
+    B->copyToArray(Blocks);
+    Allocator.pushBlocks(&Cache, ClassId, Blocks, B->getCount());
+    Cache.deallocate(Primary::SizeClassMap::BatchClassId, B);
   }
   Cache.destroy(nullptr);
   Allocator.releaseToOS();
@@ -293,4 +323,47 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, ReleaseToOS) {
   Cache.deallocate(ClassId, P);
   Cache.destroy(nullptr);
   EXPECT_GT(Allocator->releaseToOS(), 0U);
+}
+
+SCUDO_TYPED_TEST(ScudoPrimaryTest, MemoryGroup) {
+  using Primary = TestAllocator<TypeParam, scudo::DefaultSizeClassMap>;
+  std::unique_ptr<Primary> Allocator(new Primary);
+  Allocator->init(/*ReleaseToOsInterval=*/-1);
+  typename Primary::CacheT Cache;
+  Cache.init(nullptr, Allocator.get());
+  const scudo::uptr Size = 32U;
+  const scudo::uptr ClassId = Primary::SizeClassMap::getClassIdBySize(Size);
+
+  // We will allocate 4 times the group size memory and release all of them. We
+  // expect the free blocks will be classified with groups. Then we will
+  // allocate the same amount of memory as group size and expect the blocks will
+  // have the max address difference smaller or equal to 2 times the group size.
+  // Note that it isn't necessary to be in the range of single group size
+  // because the way we get the group id is doing compact pointer shifting.
+  // According to configuration, the compact pointer may not align to group
+  // size. As a result, the blocks can cross two groups at most.
+  const scudo::uptr GroupSizeMem = (1ULL << Primary::GroupSizeLog);
+  const scudo::uptr PeakAllocationMem = 4 * GroupSizeMem;
+  const scudo::uptr PeakNumberOfAllocations = PeakAllocationMem / Size;
+  const scudo::uptr FinalNumberOfAllocations = GroupSizeMem / Size;
+  std::vector<scudo::uptr> Blocks;
+  std::mt19937 R;
+
+  for (scudo::uptr I = 0; I < PeakNumberOfAllocations; ++I)
+    Blocks.push_back(reinterpret_cast<scudo::uptr>(Cache.allocate(ClassId)));
+
+  std::shuffle(Blocks.begin(), Blocks.end(), R);
+
+  // Release all the allocated blocks, including those held by local cache.
+  while (!Blocks.empty()) {
+    Cache.deallocate(ClassId, reinterpret_cast<void *>(Blocks.back()));
+    Blocks.pop_back();
+  }
+  Cache.drain();
+
+  for (scudo::uptr I = 0; I < FinalNumberOfAllocations; ++I)
+    Blocks.push_back(reinterpret_cast<scudo::uptr>(Cache.allocate(ClassId)));
+
+  EXPECT_LE(*std::max_element(Blocks.begin(), Blocks.end()) -
+            *std::min_element(Blocks.begin(), Blocks.end()), GroupSizeMem * 2);
 }
