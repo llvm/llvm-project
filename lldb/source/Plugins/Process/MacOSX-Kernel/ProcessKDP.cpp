@@ -83,12 +83,12 @@ public:
   }
 };
 
+} // namespace
+
 static PluginProperties &GetGlobalPluginProperties() {
   static PluginProperties g_settings;
   return g_settings;
 }
-
-} // anonymous namespace end
 
 static const lldb::tid_t g_kernel_tid = 1;
 
