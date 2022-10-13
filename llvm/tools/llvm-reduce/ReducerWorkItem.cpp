@@ -18,7 +18,10 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -525,16 +528,6 @@ void ReducerWorkItem::print(raw_ostream &ROS, void *p) const {
   }
 }
 
-// FIXME: We might want to use a different metric than "number of
-// bytes in serialized IR" to detect non-progress of the main delta
-// loop
-uint64_t ReducerWorkItem::getIRSize() const {
-  std::string Str;
-  raw_string_ostream SS(Str);
-  print(SS, /*AnnotationWriter=*/nullptr);
-  return Str.length();
-}
-
 /// Try to produce some number that indicates a function is getting smaller /
 /// simpler.
 static uint64_t computeMIRComplexityScoreImpl(const MachineFunction &MF) {
@@ -604,6 +597,123 @@ uint64_t ReducerWorkItem::computeMIRComplexityScore() const {
     if (auto *MF = MMI->getMachineFunction(F))
       Score += computeMIRComplexityScoreImpl(*MF);
   }
+
+  return Score;
+}
+
+// FIXME: ReduceOperandsSkip has similar function, except it uses larger numbers
+// for more reduced.
+static unsigned classifyReductivePower(const Value *V) {
+  if (auto *C = dyn_cast<ConstantData>(V)) {
+    if (C->isNullValue())
+      return 0;
+    if (C->isOneValue())
+      return 1;
+    if (isa<UndefValue>(V))
+      return 2;
+    return 3;
+  }
+
+  if (isa<GlobalValue>(V))
+    return 4;
+
+  // TODO: Account for expression size
+  if (isa<ConstantExpr>(V))
+    return 5;
+
+  if (isa<Constant>(V))
+    return 1;
+
+  if (isa<Argument>(V))
+    return 6;
+
+  if (isa<Instruction>(V))
+    return 7;
+
+  return 0;
+}
+
+// TODO: Additional flags and attributes may be complexity reducing. If we start
+// adding flags and attributes, they could have negative cost.
+static uint64_t computeIRComplexityScoreImpl(const Function &F) {
+  uint64_t Score = 1; // Count the function itself
+  SmallVector<std::pair<unsigned, MDNode *>> MDs;
+
+  AttributeList Attrs = F.getAttributes();
+  for (AttributeSet AttrSet : Attrs)
+    Score += AttrSet.getNumAttributes();
+
+  for (const BasicBlock &BB : F) {
+    ++Score;
+
+    for (const Instruction &I : BB) {
+      ++Score;
+
+      if (const auto *OverflowOp = dyn_cast<OverflowingBinaryOperator>(&I)) {
+        if (OverflowOp->hasNoUnsignedWrap())
+          ++Score;
+        if (OverflowOp->hasNoSignedWrap())
+          ++Score;
+      } else if (const auto *GEP = dyn_cast<GEPOperator>(&I)) {
+        if (GEP->isInBounds())
+          ++Score;
+      } else if (const auto *ExactOp = dyn_cast<PossiblyExactOperator>(&I)) {
+        if (ExactOp->isExact())
+          ++Score;
+      } else if (const auto *FPOp = dyn_cast<FPMathOperator>(&I)) {
+        FastMathFlags FMF = FPOp->getFastMathFlags();
+        if (FMF.allowReassoc())
+          ++Score;
+        if (FMF.noNaNs())
+          ++Score;
+        if (FMF.noInfs())
+          ++Score;
+        if (FMF.noSignedZeros())
+          ++Score;
+        if (FMF.allowReciprocal())
+          ++Score;
+        if (FMF.allowContract())
+          ++Score;
+        if (FMF.approxFunc())
+          ++Score;
+      }
+
+      for (const Value *Operand : I.operands()) {
+        ++Score;
+        Score += classifyReductivePower(Operand);
+      }
+
+      I.getAllMetadata(MDs);
+      Score += MDs.size();
+      MDs.clear();
+    }
+  }
+
+  return Score;
+}
+
+uint64_t ReducerWorkItem::computeIRComplexityScore() const {
+  uint64_t Score = 0;
+
+  const Module &M = getModule();
+  Score += M.named_metadata_size();
+
+  SmallVector<std::pair<unsigned, MDNode *>, 32> GlobalMetadata;
+  for (const GlobalVariable &GV : M.globals()) {
+    ++Score;
+
+    if (GV.hasInitializer())
+      ++Score;
+
+    // TODO: Account for linkage?
+
+    GV.getAllMetadata(GlobalMetadata);
+    Score += GlobalMetadata.size();
+    GlobalMetadata.clear();
+  }
+
+  for (const Function &F : M)
+    Score += computeIRComplexityScoreImpl(F);
 
   return Score;
 }

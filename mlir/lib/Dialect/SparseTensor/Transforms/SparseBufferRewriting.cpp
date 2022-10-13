@@ -569,9 +569,9 @@ public:
       for (Value v : values) {
         auto mtp = v.getType().cast<MemRefType>();
         if (!mtp.isDynamicDim(0)) {
-          auto new_mtp =
+          auto newMtp =
               MemRefType::get({ShapedType::kDynamicSize}, mtp.getElementType());
-          v = rewriter.create<memref::CastOp>(loc, new_mtp, v);
+          v = rewriter.create<memref::CastOp>(loc, newMtp, v);
         }
         operands.push_back(v);
       }

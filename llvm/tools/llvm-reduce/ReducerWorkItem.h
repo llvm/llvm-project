@@ -33,12 +33,12 @@ public:
 
   /// Return a number to indicate whether there was any reduction progress.
   uint64_t getComplexityScore() const {
-    return isMIR() ? computeMIRComplexityScore() : getIRSize();
+    return isMIR() ? computeMIRComplexityScore() : computeIRComplexityScore();
   }
 
 private:
+  uint64_t computeIRComplexityScore() const;
   uint64_t computeMIRComplexityScore() const;
-  uint64_t getIRSize() const;
 };
 
 std::unique_ptr<ReducerWorkItem>

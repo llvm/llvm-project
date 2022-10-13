@@ -46,20 +46,20 @@ enum class DiagnosticLevelMask : unsigned {
 };
 
 inline DiagnosticLevelMask operator~(DiagnosticLevelMask M) {
-  using UT = std::underlying_type<DiagnosticLevelMask>::type;
+  using UT = std::underlying_type_t<DiagnosticLevelMask>;
   return static_cast<DiagnosticLevelMask>(~static_cast<UT>(M));
 }
 
 inline DiagnosticLevelMask operator|(DiagnosticLevelMask LHS,
                                      DiagnosticLevelMask RHS) {
-  using UT = std::underlying_type<DiagnosticLevelMask>::type;
+  using UT = std::underlying_type_t<DiagnosticLevelMask>;
   return static_cast<DiagnosticLevelMask>(
     static_cast<UT>(LHS) | static_cast<UT>(RHS));
 }
 
 inline DiagnosticLevelMask operator&(DiagnosticLevelMask LHS,
                                      DiagnosticLevelMask RHS) {
-  using UT = std::underlying_type<DiagnosticLevelMask>::type;
+  using UT = std::underlying_type_t<DiagnosticLevelMask>;
   return static_cast<DiagnosticLevelMask>(
     static_cast<UT>(LHS) & static_cast<UT>(RHS));
 }

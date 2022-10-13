@@ -13,6 +13,10 @@
 ! CHECK-LABEL: func @_QQmain() {
 ! CHECK-NEXT:  return
 ! CHECK-NEXT: }
+! CHECK-NEXT: fir.global @_QQEnvironmentDefaults constant : !fir.ref<tuple<i[[int_size:.*]], !fir.ref<!fir.array<0xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>> {
+! CHECK-NEXT:  %[[VAL_0:.*]] = fir.zero_bits !fir.ref<tuple<i[[int_size]], !fir.ref<!fir.array<0xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>>
+! CHECK-NEXT: fir.has_value  %[[VAL_0]] : !fir.ref<tuple<i[[int_size]], !fir.ref<!fir.array<0xtuple<!fir.ref<i8>, !fir.ref<i8>>>>>>
+! CHECK-NEXT: }
 ! CHECK-NEXT: }
 
 end program

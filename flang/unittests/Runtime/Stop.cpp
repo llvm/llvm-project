@@ -26,7 +26,8 @@ TEST(TestProgramEnd, StopTest) {
 
 TEST(TestProgramEnd, StopTestNoStopMessage) {
   putenv(const_cast<char *>("NO_STOP_MESSAGE=1"));
-  Fortran::runtime::executionEnvironment.Configure(0, nullptr, nullptr);
+  Fortran::runtime::executionEnvironment.Configure(
+      0, nullptr, nullptr, nullptr);
   EXPECT_EXIT(
       RTNAME(StopStatement)(), testing::ExitedWithCode(EXIT_SUCCESS), "");
 }
@@ -52,7 +53,8 @@ TEST(TestProgramEnd, StopMessageTest) {
 
 TEST(TestProgramEnd, NoStopMessageTest) {
   putenv(const_cast<char *>("NO_STOP_MESSAGE=1"));
-  Fortran::runtime::executionEnvironment.Configure(0, nullptr, nullptr);
+  Fortran::runtime::executionEnvironment.Configure(
+      0, nullptr, nullptr, nullptr);
   static const char *message{"bye bye"};
   EXPECT_EXIT(RTNAME(StopStatementText)(message, std::strlen(message),
                   /*isErrorStop=*/false, /*quiet=*/false),
