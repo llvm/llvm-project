@@ -100,6 +100,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
   case Decl::ObjCTypeParam:
   case Decl::Binding:
   case Decl::UnresolvedUsingIfExists:
+  case Decl::HLSLBuffer:
     llvm_unreachable("Declaration should not be in declstmts!");
   case Decl::Record:    // struct/union/class X;
   case Decl::CXXRecord: // struct/union/class X; [C++]
@@ -179,9 +180,6 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
       EmitVariablyModifiedType(Ty);
     return;
   }
-  case Decl::HLSLBuffer:
-    // FIXME: add codegen for HLSLBuffer.
-    return;
   }
 }
 
