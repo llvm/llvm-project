@@ -706,6 +706,62 @@ void State::addInfoFor(BasicBlock &BB) {
     WorkList.emplace_back(DT.getNode(Br->getSuccessor(1)), CmpI, true);
 }
 
+static bool checkAndReplaceCondition(CmpInst *Cmp, ConstraintInfo &Info) {
+  LLVM_DEBUG(dbgs() << "Checking " << *Cmp << "\n");
+  CmpInst::Predicate Pred = Cmp->getPredicate();
+  Value *A = Cmp->getOperand(0);
+  Value *B = Cmp->getOperand(1);
+
+  auto R = Info.getConstraintForSolving(Pred, A, B);
+  if (R.empty() || !R.isValid(Info))
+    return false;
+
+  auto &CSToUse = Info.getCS(R.IsSigned);
+
+  // If there was extra information collected during decomposition, apply
+  // it now and remove it immediately once we are done with reasoning
+  // about the constraint.
+  for (auto &Row : R.ExtraInfo)
+    CSToUse.addVariableRow(Row);
+  auto InfoRestorer = make_scope_exit([&]() {
+    for (unsigned I = 0; I < R.ExtraInfo.size(); ++I)
+      CSToUse.popLastConstraint();
+  });
+
+  bool Changed = false;
+  LLVMContext &Ctx = Cmp->getModule()->getContext();
+  if (CSToUse.isConditionImplied(R.Coefficients)) {
+    if (!DebugCounter::shouldExecute(EliminatedCounter))
+      return false;
+
+    LLVM_DEBUG({
+      dbgs() << "Condition " << *Cmp << " implied by dominating constraints\n";
+      dumpWithNames(CSToUse, Info.getValue2Index(R.IsSigned));
+    });
+    Cmp->replaceUsesWithIf(ConstantInt::getTrue(Ctx), [](Use &U) {
+      // Conditions in an assume trivially simplify to true. Skip uses
+      // in assume calls to not destroy the available information.
+      auto *II = dyn_cast<IntrinsicInst>(U.getUser());
+      return !II || II->getIntrinsicID() != Intrinsic::assume;
+    });
+    NumCondsRemoved++;
+    Changed = true;
+  }
+  if (CSToUse.isConditionImplied(ConstraintSystem::negate(R.Coefficients))) {
+    if (!DebugCounter::shouldExecute(EliminatedCounter))
+      return false;
+
+    LLVM_DEBUG({
+      dbgs() << "Condition !" << *Cmp << " implied by dominating constraints\n";
+      dumpWithNames(CSToUse, Info.getValue2Index(R.IsSigned));
+    });
+    Cmp->replaceAllUsesWith(ConstantInt::getFalse(Ctx));
+    NumCondsRemoved++;
+    Changed = true;
+  }
+  return Changed;
+}
+
 void ConstraintInfo::addFact(CmpInst::Predicate Pred, Value *A, Value *B,
                              unsigned NumIn, unsigned NumOut,
                              SmallVectorImpl<StackEntry> &DFSInStack) {
@@ -895,58 +951,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT) {
         if (!Cmp)
           continue;
 
-        LLVM_DEBUG(dbgs() << "Checking " << *Cmp << "\n");
-        auto R = Info.getConstraintForSolving(
-            Cmp->getPredicate(), Cmp->getOperand(0), Cmp->getOperand(1));
-        if (R.empty() || !R.isValid(Info))
-          continue;
-
-        auto &CSToUse = Info.getCS(R.IsSigned);
-
-        // If there was extra information collected during decomposition, apply
-        // it now and remove it immediately once we are done with reasoning
-        // about the constraint.
-        for (auto &Row : R.ExtraInfo)
-          CSToUse.addVariableRow(Row);
-        auto InfoRestorer = make_scope_exit([&]() {
-          for (unsigned I = 0; I < R.ExtraInfo.size(); ++I)
-            CSToUse.popLastConstraint();
-        });
-
-        if (CSToUse.isConditionImplied(R.Coefficients)) {
-          if (!DebugCounter::shouldExecute(EliminatedCounter))
-            continue;
-
-          LLVM_DEBUG({
-            dbgs() << "Condition " << *Cmp
-                   << " implied by dominating constraints\n";
-            dumpWithNames(CSToUse, Info.getValue2Index(R.IsSigned));
-          });
-          Cmp->replaceUsesWithIf(
-              ConstantInt::getTrue(F.getParent()->getContext()), [](Use &U) {
-                // Conditions in an assume trivially simplify to true. Skip uses
-                // in assume calls to not destroy the available information.
-                auto *II = dyn_cast<IntrinsicInst>(U.getUser());
-                return !II || II->getIntrinsicID() != Intrinsic::assume;
-              });
-          NumCondsRemoved++;
-          Changed = true;
-        }
-        if (CSToUse.isConditionImplied(
-                ConstraintSystem::negate(R.Coefficients))) {
-          if (!DebugCounter::shouldExecute(EliminatedCounter))
-            continue;
-
-          LLVM_DEBUG({
-            dbgs() << "Condition !" << *Cmp
-                   << " implied by dominating constraints\n";
-            dumpWithNames(CSToUse, Info.getValue2Index(R.IsSigned));
-          });
-          Cmp->replaceAllUsesWith(
-              ConstantInt::getFalse(F.getParent()->getContext()));
-          NumCondsRemoved++;
-          Changed = true;
-        }
+        Changed |= checkAndReplaceCondition(Cmp, Info);
       }
       continue;
     }
