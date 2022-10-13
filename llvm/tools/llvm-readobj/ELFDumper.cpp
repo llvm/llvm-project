@@ -1649,12 +1649,11 @@ const EnumEntry<unsigned> ElfHeaderAVRFlags[] = {
 };
 
 const EnumEntry<unsigned> ElfHeaderLoongArchFlags[] = {
-  ENUM_ENT(EF_LOONGARCH_BASE_ABI_ILP32S, "ILP32, SOFT-FLOAT"),
-  ENUM_ENT(EF_LOONGARCH_BASE_ABI_ILP32F, "ILP32, SINGLE-FLOAT"),
-  ENUM_ENT(EF_LOONGARCH_BASE_ABI_ILP32D, "ILP32, DOUBLE-FLOAT"),
-  ENUM_ENT(EF_LOONGARCH_BASE_ABI_LP64S, "LP64, SOFT-FLOAT"),
-  ENUM_ENT(EF_LOONGARCH_BASE_ABI_LP64F, "LP64, SINGLE-FLOAT"),
-  ENUM_ENT(EF_LOONGARCH_BASE_ABI_LP64D, "LP64, DOUBLE-FLOAT"),
+  ENUM_ENT(EF_LOONGARCH_ABI_SOFT_FLOAT, "SOFT-FLOAT"),
+  ENUM_ENT(EF_LOONGARCH_ABI_SINGLE_FLOAT, "SINGLE-FLOAT"),
+  ENUM_ENT(EF_LOONGARCH_ABI_DOUBLE_FLOAT, "DOUBLE-FLOAT"),
+  ENUM_ENT(EF_LOONGARCH_OBJABI_V0, "OBJ-v0"),
+  ENUM_ENT(EF_LOONGARCH_OBJABI_V1, "OBJ-v1"),
 };
 
 
@@ -3368,7 +3367,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printFileHeaders() {
                           unsigned(ELF::EF_AVR_ARCH_MASK));
   else if (e.e_machine == EM_LOONGARCH)
     ElfFlags = printFlags(e.e_flags, makeArrayRef(ElfHeaderLoongArchFlags),
-                          unsigned(ELF::EF_LOONGARCH_BASE_ABI_MASK));
+                          unsigned(ELF::EF_LOONGARCH_ABI_MODIFIER_MASK),
+                          unsigned(ELF::EF_LOONGARCH_OBJABI_MASK));
   Str = "0x" + utohexstr(e.e_flags);
   if (!ElfFlags.empty())
     Str = Str + ", " + ElfFlags;
@@ -6546,7 +6546,8 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printFileHeaders() {
                    unsigned(ELF::EF_AVR_ARCH_MASK));
     else if (E.e_machine == EM_LOONGARCH)
       W.printFlags("Flags", E.e_flags, makeArrayRef(ElfHeaderLoongArchFlags),
-                   unsigned(ELF::EF_LOONGARCH_BASE_ABI_MASK));
+                   unsigned(ELF::EF_LOONGARCH_ABI_MODIFIER_MASK),
+                   unsigned(ELF::EF_LOONGARCH_OBJABI_MASK));
     else
       W.printFlags("Flags", E.e_flags);
     W.printNumber("HeaderSize", E.e_ehsize);
