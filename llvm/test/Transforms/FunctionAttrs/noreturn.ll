@@ -80,10 +80,10 @@ define void @unreachable() {
 ; CHECK-NOT: Function Attrs: {{.*}}noreturn
 ; CHECK: @coro
 define void @coro() presplitcoroutine {
-  call token @llvm.coro.id.retcon.once(i32 0, i32 0, i8* null, i8* bitcast(void() *@coro to i8*), i8* null, i8* null)
-  call i1 @llvm.coro.end(i8* null, i1 false)
+  call token @llvm.coro.id.retcon.once(i32 0, i32 0, ptr null, ptr @coro, ptr null, ptr null)
+  call i1 @llvm.coro.end(ptr null, i1 false)
   unreachable
 }
 
-declare token @llvm.coro.id.retcon.once(i32 %size, i32 %align, i8* %buffer, i8* %prototype, i8* %alloc, i8* %free)
-declare i1 @llvm.coro.end(i8*, i1)
+declare token @llvm.coro.id.retcon.once(i32 %size, i32 %align, ptr %buffer, ptr %prototype, ptr %alloc, ptr %free)
+declare i1 @llvm.coro.end(ptr, i1)

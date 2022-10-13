@@ -903,22 +903,20 @@ enum {
 
 // LoongArch Specific e_flags
 enum : unsigned {
-  // Reference: https://github.com/loongson/LoongArch-Documentation.
-  // The last commit hash (main branch) is
-  // 99016636af64d02dee05e39974d4c1e55875c45b.
-  // Note that there is an open PR
-  // https://github.com/loongson/LoongArch-Documentation/pull/47
-  // talking about using 0x1, 0x2, 0x3 for ILP32S/F/D and use EI_CLASS to
-  // distinguish LP64 and ILP32. If this PR get merged, we will update
-  // the definition here.
-  // Base ABI Types.
-  EF_LOONGARCH_BASE_ABI_LP64S = 0x1,  // LP64 soft-float ABI
-  EF_LOONGARCH_BASE_ABI_LP64F = 0x2,  // LP64 single-float ABI
-  EF_LOONGARCH_BASE_ABI_LP64D = 0x3,  // LP64 double-float ABI
-  EF_LOONGARCH_BASE_ABI_ILP32S = 0x5, // ILP32 soft-float ABI
-  EF_LOONGARCH_BASE_ABI_ILP32F = 0x6, // ILP32 single-float ABI
-  EF_LOONGARCH_BASE_ABI_ILP32D = 0x7, // ILP32 double-float ABI
-  EF_LOONGARCH_BASE_ABI_MASK = 0x7,   // Mask for selecting base ABI
+  // Definitions from LoongArch ELF psABI v2.01.
+  // Reference: https://github.com/loongson/LoongArch-Documentation
+  // (commit hash 296de4def055c871809068e0816325a4ac04eb12)
+
+  // Base ABI Modifiers
+  EF_LOONGARCH_ABI_SOFT_FLOAT    = 0x1,
+  EF_LOONGARCH_ABI_SINGLE_FLOAT  = 0x2,
+  EF_LOONGARCH_ABI_DOUBLE_FLOAT  = 0x3,
+  EF_LOONGARCH_ABI_MODIFIER_MASK = 0x7,
+
+  // Object file ABI versions
+  EF_LOONGARCH_OBJABI_V0   = 0x0,
+  EF_LOONGARCH_OBJABI_V1   = 0x40,
+  EF_LOONGARCH_OBJABI_MASK = 0xC0,
 };
 
 // ELF Relocation types for LoongArch

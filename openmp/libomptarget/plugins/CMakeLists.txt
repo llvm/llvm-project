@@ -38,12 +38,13 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "${tmachine}$")
       ${LIBOMPTARGET_INCLUDE_DIR}
       ${LIBOMPTARGET_DEP_LIBFFI_INCLUDE_DIR}
 
-        LINK_LIBS 
-        PRIVATE
-        elf_common
-        ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
-        ${OPENMP_PTHREAD_LIB}
-        "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
+      LINK_LIBS 
+      PRIVATE
+      elf_common
+      ${LIBOMPTARGET_DEP_LIBFFI_LIBRARIES}
+      ${OPENMP_PTHREAD_LIB}
+      "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../exports"
+      "-Wl,--undefined-version"
 
       NO_INSTALL_RPATH
     )

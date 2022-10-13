@@ -1,59 +1,95 @@
-## Check llvm-readobj is able to decode all possible LoongArch e_flags field values.
+## Check llvm-readobj's ability to decode all possible LoongArch e_flags field
+## values.
 
-# RUN: yaml2obj %s -o %t-lp64s -DCLASS=64 -DFLAG=LP64S
-# RUN: llvm-readobj -h %t-lp64s | FileCheck --check-prefix=READOBJ-LP64S %s
-# RUN: llvm-readelf -h %t-lp64s | FileCheck --check-prefix=READELF-LP64S --match-full-lines %s
+## Not all combinations covered here exist in reality (such as the v0 ILP32*
+## objects) but they are included nevertheless for completeness.
 
-# RUN: yaml2obj %s -o %t-lp64f -DCLASS=64 -DFLAG=LP64F
-# RUN: llvm-readobj -h %t-lp64f | FileCheck --check-prefix=READOBJ-LP64F %s
-# RUN: llvm-readelf -h %t-lp64f | FileCheck --check-prefix=READELF-LP64F --match-full-lines %s
+# RUN: yaml2obj %s -o %t-lp64s -DCLASS=64 -DABI_MODIFIER=SOFT -DOBJABI_VER=0
+# RUN: llvm-readobj -h %t-lp64s | FileCheck --check-prefixes=READOBJ-LP64,READOBJ-SOFT-V0 %s
+# RUN: llvm-readelf -h %t-lp64s | FileCheck --check-prefixes=READELF-LP64,READELF-SOFT-V0 --match-full-lines %s
 
-# RUN: yaml2obj %s -o %t-lp64d -DCLASS=64 -DFLAG=LP64D
-# RUN: llvm-readobj -h %t-lp64d | FileCheck --check-prefix=READOBJ-LP64D %s
-# RUN: llvm-readelf -h %t-lp64d | FileCheck --check-prefix=READELF-LP64D --match-full-lines %s
+# RUN: yaml2obj %s -o %t-lp64f -DCLASS=64 -DABI_MODIFIER=SINGLE -DOBJABI_VER=0
+# RUN: llvm-readobj -h %t-lp64f | FileCheck --check-prefixes=READOBJ-LP64,READOBJ-SINGLE-V0 %s
+# RUN: llvm-readelf -h %t-lp64f | FileCheck --check-prefixes=READELF-LP64,READELF-SINGLE-V0 --match-full-lines %s
 
-# RUN: yaml2obj %s -o %t-ilp32s -DCLASS=32 -DFLAG=ILP32S
-# RUN: llvm-readobj -h %t-ilp32s | FileCheck --check-prefix=READOBJ-ILP32S %s
-# RUN: llvm-readelf -h %t-ilp32s | FileCheck --check-prefix=READELF-ILP32S --match-full-lines %s
+# RUN: yaml2obj %s -o %t-lp64d -DCLASS=64 -DABI_MODIFIER=DOUBLE -DOBJABI_VER=0
+# RUN: llvm-readobj -h %t-lp64d | FileCheck --check-prefixes=READOBJ-LP64,READOBJ-DOUBLE-V0 %s
+# RUN: llvm-readelf -h %t-lp64d | FileCheck --check-prefixes=READELF-LP64,READELF-DOUBLE-V0 --match-full-lines %s
 
-# RUN: yaml2obj %s -o %t-ilp32f -DCLASS=32 -DFLAG=ILP32F
-# RUN: llvm-readobj -h %t-ilp32f | FileCheck --check-prefix=READOBJ-ILP32F %s
-# RUN: llvm-readelf -h %t-ilp32f | FileCheck --check-prefix=READELF-ILP32F --match-full-lines %s
+# RUN: yaml2obj %s -o %t-ilp32s -DCLASS=32 -DABI_MODIFIER=SOFT -DOBJABI_VER=0
+# RUN: llvm-readobj -h %t-ilp32s | FileCheck --check-prefixes=READOBJ-ILP32,READOBJ-SOFT-V0 %s
+# RUN: llvm-readelf -h %t-ilp32s | FileCheck --check-prefixes=READELF-ILP32,READELF-SOFT-V0 --match-full-lines %s
 
-# RUN: yaml2obj %s -o %t-ilp32d -DCLASS=32 -DFLAG=ILP32D
-# RUN: llvm-readobj -h %t-ilp32d | FileCheck --check-prefix=READOBJ-ILP32D %s
-# RUN: llvm-readelf -h %t-ilp32d | FileCheck --check-prefix=READELF-ILP32D --match-full-lines %s
+# RUN: yaml2obj %s -o %t-ilp32f -DCLASS=32 -DABI_MODIFIER=SINGLE -DOBJABI_VER=0
+# RUN: llvm-readobj -h %t-ilp32f | FileCheck --check-prefixes=READOBJ-ILP32,READOBJ-SINGLE-V0 %s
+# RUN: llvm-readelf -h %t-ilp32f | FileCheck --check-prefixes=READELF-ILP32,READELF-SINGLE-V0 --match-full-lines %s
 
-# READOBJ-LP64S:      Flags [ (0x1)
-# READOBJ-LP64S-NEXT:   EF_LOONGARCH_BASE_ABI_LP64S (0x1)
-# READOBJ-LP64S-NEXT: ]
+# RUN: yaml2obj %s -o %t-ilp32d -DCLASS=32 -DABI_MODIFIER=DOUBLE -DOBJABI_VER=0
+# RUN: llvm-readobj -h %t-ilp32d | FileCheck --check-prefixes=READOBJ-ILP32,READOBJ-DOUBLE-V0 %s
+# RUN: llvm-readelf -h %t-ilp32d | FileCheck --check-prefixes=READELF-ILP32,READELF-DOUBLE-V0 --match-full-lines %s
 
-# READOBJ-LP64F:      Flags [ (0x2)
-# READOBJ-LP64F-NEXT:   EF_LOONGARCH_BASE_ABI_LP64F (0x2)
-# READOBJ-LP64F-NEXT: ]
+# RUN: yaml2obj %s -o %t-lp64s -DCLASS=64 -DABI_MODIFIER=SOFT -DOBJABI_VER=1
+# RUN: llvm-readobj -h %t-lp64s | FileCheck --check-prefixes=READOBJ-LP64,READOBJ-SOFT-V1 %s
+# RUN: llvm-readelf -h %t-lp64s | FileCheck --check-prefixes=READELF-LP64,READELF-SOFT-V1 --match-full-lines %s
 
-# READOBJ-LP64D:      Flags [ (0x3)
-# READOBJ-LP64D-NEXT:   EF_LOONGARCH_BASE_ABI_LP64D (0x3)
-# READOBJ-LP64D-NEXT: ]
+# RUN: yaml2obj %s -o %t-lp64f -DCLASS=64 -DABI_MODIFIER=SINGLE -DOBJABI_VER=1
+# RUN: llvm-readobj -h %t-lp64f | FileCheck --check-prefixes=READOBJ-LP64,READOBJ-SINGLE-V1 %s
+# RUN: llvm-readelf -h %t-lp64f | FileCheck --check-prefixes=READELF-LP64,READELF-SINGLE-V1 --match-full-lines %s
 
-# READOBJ-ILP32S:     Flags [ (0x5)
-# READOBJ-ILP32S-NEXT:  EF_LOONGARCH_BASE_ABI_ILP32S (0x5)
-# READOBJ-ILP32S-NEXT: ]
+# RUN: yaml2obj %s -o %t-lp64d -DCLASS=64 -DABI_MODIFIER=DOUBLE -DOBJABI_VER=1
+# RUN: llvm-readobj -h %t-lp64d | FileCheck --check-prefixes=READOBJ-LP64,READOBJ-DOUBLE-V1 %s
+# RUN: llvm-readelf -h %t-lp64d | FileCheck --check-prefixes=READELF-LP64,READELF-DOUBLE-V1 --match-full-lines %s
 
-# READOBJ-ILP32F:      Flags [ (0x6)
-# READOBJ-ILP32F-NEXT:   EF_LOONGARCH_BASE_ABI_ILP32F (0x6)
-# READOBJ-ILP32F-NEXT: ]
+# RUN: yaml2obj %s -o %t-ilp32s -DCLASS=32 -DABI_MODIFIER=SOFT -DOBJABI_VER=1
+# RUN: llvm-readobj -h %t-ilp32s | FileCheck --check-prefixes=READOBJ-ILP32,READOBJ-SOFT-V1 %s
+# RUN: llvm-readelf -h %t-ilp32s | FileCheck --check-prefixes=READELF-ILP32,READELF-SOFT-V1 --match-full-lines %s
 
-# READOBJ-ILP32D:      Flags [ (0x7)
-# READOBJ-ILP32D-NEXT:   EF_LOONGARCH_BASE_ABI_ILP32D (0x7)
-# READOBJ-ILP32D-NEXT: ]
+# RUN: yaml2obj %s -o %t-ilp32f -DCLASS=32 -DABI_MODIFIER=SINGLE -DOBJABI_VER=1
+# RUN: llvm-readobj -h %t-ilp32f | FileCheck --check-prefixes=READOBJ-ILP32,READOBJ-SINGLE-V1 %s
+# RUN: llvm-readelf -h %t-ilp32f | FileCheck --check-prefixes=READELF-ILP32,READELF-SINGLE-V1 --match-full-lines %s
 
-# READELF-LP64S: Flags: 0x1, LP64, SOFT-FLOAT
-# READELF-LP64F: Flags: 0x2, LP64, SINGLE-FLOAT
-# READELF-LP64D: Flags: 0x3, LP64, DOUBLE-FLOAT
-# READELF-ILP32S: Flags: 0x5, ILP32, SOFT-FLOAT
-# READELF-ILP32F: Flags: 0x6, ILP32, SINGLE-FLOAT
-# READELF-ILP32D: Flags: 0x7, ILP32, DOUBLE-FLOAT
+# RUN: yaml2obj %s -o %t-ilp32d -DCLASS=32 -DABI_MODIFIER=DOUBLE -DOBJABI_VER=1
+# RUN: llvm-readobj -h %t-ilp32d | FileCheck --check-prefixes=READOBJ-ILP32,READOBJ-DOUBLE-V1 %s
+# RUN: llvm-readelf -h %t-ilp32d | FileCheck --check-prefixes=READELF-ILP32,READELF-DOUBLE-V1 --match-full-lines %s
+
+# READOBJ-LP64: Class: 64-bit (0x2)
+# READELF-LP64: Class: ELF64
+# READOBJ-ILP32: Class: 32-bit (0x1)
+# READELF-ILP32: Class: ELF32
+
+# READOBJ-SOFT-V0:      Flags [ (0x1)
+# READOBJ-SOFT-V0-NEXT:   EF_LOONGARCH_ABI_SOFT_FLOAT (0x1)
+# READOBJ-SOFT-V0-NEXT: ]
+
+# READOBJ-SINGLE-V0:      Flags [ (0x2)
+# READOBJ-SINGLE-V0-NEXT:   EF_LOONGARCH_ABI_SINGLE_FLOAT (0x2)
+# READOBJ-SINGLE-V0-NEXT: ]
+
+# READOBJ-DOUBLE-V0:      Flags [ (0x3)
+# READOBJ-DOUBLE-V0-NEXT:   EF_LOONGARCH_ABI_DOUBLE_FLOAT (0x3)
+# READOBJ-DOUBLE-V0-NEXT: ]
+
+# READOBJ-SOFT-V1:      Flags [ (0x41)
+# READOBJ-SOFT-V1-NEXT:   EF_LOONGARCH_ABI_SOFT_FLOAT (0x1)
+# READOBJ-SOFT-V1-NEXT:   EF_LOONGARCH_OBJABI_V1 (0x40)
+# READOBJ-SOFT-V1-NEXT: ]
+
+# READOBJ-SINGLE-V1:      Flags [ (0x42)
+# READOBJ-SINGLE-V1-NEXT:   EF_LOONGARCH_ABI_SINGLE_FLOAT (0x2)
+# READOBJ-SINGLE-V1-NEXT:   EF_LOONGARCH_OBJABI_V1 (0x40)
+# READOBJ-SINGLE-V1-NEXT: ]
+
+# READOBJ-DOUBLE-V1:      Flags [ (0x43)
+# READOBJ-DOUBLE-V1-NEXT:   EF_LOONGARCH_ABI_DOUBLE_FLOAT (0x3)
+# READOBJ-DOUBLE-V1-NEXT:   EF_LOONGARCH_OBJABI_V1 (0x40)
+# READOBJ-DOUBLE-V1-NEXT: ]
+
+# READELF-SOFT-V0: Flags: 0x1, SOFT-FLOAT
+# READELF-SINGLE-V0: Flags: 0x2, SINGLE-FLOAT
+# READELF-DOUBLE-V0: Flags: 0x3, DOUBLE-FLOAT
+# READELF-SOFT-V1: Flags: 0x41, SOFT-FLOAT, OBJ-v1
+# READELF-SINGLE-V1: Flags: 0x42, SINGLE-FLOAT, OBJ-v1
+# READELF-DOUBLE-V1: Flags: 0x43, DOUBLE-FLOAT, OBJ-v1
 
 --- !ELF
 FileHeader:
@@ -61,4 +97,7 @@ FileHeader:
   Data:            ELFDATA2LSB
   Type:            ET_EXEC
   Machine:         EM_LOONGARCH
-  Flags:           [ EF_LOONGARCH_BASE_ABI_[[FLAG]] ]
+  Flags: [
+    EF_LOONGARCH_ABI_[[ABI_MODIFIER]]_FLOAT,
+    EF_LOONGARCH_OBJABI_V[[OBJABI_VER]],
+  ]

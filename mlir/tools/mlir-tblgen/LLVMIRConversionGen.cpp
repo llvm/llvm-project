@@ -17,6 +17,7 @@
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
 
+#include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -203,6 +204,19 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
   if (builderStrRef.empty())
     return success();
 
+  // Access the argument index array that maps argument indices to LLVM IR
+  // operand indices. If the operation defines no custom mapping, set the array
+  // to the identity permutation.
+  std::vector<int64_t> llvmArgIndices =
+      record.getValueAsListOfInts("llvmArgIndices");
+  if (llvmArgIndices.empty())
+    append_range(llvmArgIndices, seq<int64_t>(0, op.getNumArgs()));
+  if (llvmArgIndices.size() != static_cast<size_t>(op.getNumArgs())) {
+    return emitError(
+        "'llvmArgIndices' does not match the number of arguments for op " +
+        op.getOperationName());
+  }
+
   // Progressively create the builder string by replacing $-variables. Keep only
   // the not-yet-traversed part of the builder pattern to avoid re-traversing
   // the string multiple times.
@@ -215,9 +229,13 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
     // Then, rewrite the name based on its kind.
     FailureOr<int> argIndex = getArgumentIndex(op, name);
     if (succeeded(argIndex)) {
-      // Process the argument value assuming the MLIR and LLVM operand orders
-      // match and there are no optional or variadic arguments.
-      bs << formatv("processValue(llvmOperands[{0}])", *argIndex);
+      // Access the LLVM IR operand that maps to the given argument index using
+      // the provided argument indices mapping.
+      // FIXME: support trailing variadic arguments.
+      int64_t operandIdx = llvmArgIndices[*argIndex];
+      assert(operandIdx >= 0 && "expected argument to have a mapping");
+      assert(!isVariadicOperandName(op, name) && "unexpected variadic operand");
+      bs << formatv("processValue(llvmOperands[{0}])", operandIdx);
     } else if (isResultName(op, name)) {
       assert(op.getNumResults() == 1 &&
              "expected operation to have one result");

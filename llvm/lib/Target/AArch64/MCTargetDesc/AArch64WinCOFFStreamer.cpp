@@ -202,6 +202,8 @@ void AArch64TargetWinCOFFStreamer::emitARM64WinCFIEpilogEnd() {
   WinEH::Instruction Inst =
       WinEH::Instruction(Win64EH::UOP_End, /*Label=*/nullptr, -1, 0);
   CurFrame->EpilogMap[CurrentEpilog].Instructions.push_back(Inst);
+  MCSymbol *Label = S.emitCFILabel();
+  CurFrame->EpilogMap[CurrentEpilog].End = Label;
   CurrentEpilog = nullptr;
 }
 

@@ -8,26 +8,26 @@ define i32 @test1(i32 %x) uwtable ssp {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X_ADDR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    store atomic i32 [[X:%.*]], i32* [[X_ADDR]] seq_cst, align 4
-; CHECK-NEXT:    [[R:%.*]] = load atomic i32, i32* [[X_ADDR]] seq_cst, align 4
+; CHECK-NEXT:    store atomic i32 [[X:%.*]], ptr [[X_ADDR]] seq_cst, align 4
+; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[X_ADDR]] seq_cst, align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
   %x.addr = alloca i32, align 4
-  store atomic i32 %x, i32* %x.addr seq_cst, align 4
-  %r = load atomic i32, i32* %x.addr seq_cst, align 4
+  store atomic i32 %x, ptr %x.addr seq_cst, align 4
+  %r = load atomic i32, ptr %x.addr seq_cst, align 4
   ret i32 %r
 }
 
 ; A function with an Acquire load is not readonly.
-define i32 @test2(i32* %x) uwtable ssp {
+define i32 @test2(ptr %x) uwtable ssp {
 ; CHECK: Function Attrs: argmemonly mustprogress nofree norecurse nounwind ssp willreturn uwtable
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = load atomic i32, i32* [[X:%.*]] seq_cst, align 4
+; CHECK-NEXT:    [[R:%.*]] = load atomic i32, ptr [[X:%.*]] seq_cst, align 4
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
 entry:
-  %r = load atomic i32, i32* %x seq_cst, align 4
+  %r = load atomic i32, ptr %x seq_cst, align 4
   ret i32 %r
 }

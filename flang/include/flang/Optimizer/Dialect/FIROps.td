@@ -758,6 +758,7 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
     Optional<AnyShapeType>:$shape,
     Optional<fir_SliceType>:$slice,
     Variadic<AnyIntegerType>:$typeparams,
+    Optional<fir_TypeDescType>:$tdesc,
     OptionalAttr<AffineMapAttr>:$accessMap
   );
 
@@ -767,14 +768,16 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments]> {
     OpBuilder<(ins "llvm::ArrayRef<mlir::Type>":$resultTypes,
       "mlir::Value":$memref, CArg<"mlir::Value", "{}">:$shape,
       CArg<"mlir::Value", "{}">:$slice,
-      CArg<"mlir::ValueRange", "{}">:$typeparams),
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"mlir::Value", "{}">:$tdesc),
     [{ return build($_builder, $_state, resultTypes, memref, shape, slice,
-                    typeparams, mlir::AffineMapAttr{}); }]>
+                    typeparams, tdesc, mlir::AffineMapAttr{}); }]>
   ];
 
   let assemblyFormat = [{
     $memref (`(` $shape^ `)`)? (`[` $slice^ `]`)? (`typeparams` $typeparams^)?
-      (`map` $accessMap^)? attr-dict `:` functional-type(operands, results)
+      (`tdesc` $tdesc^)? (`map` $accessMap^)? attr-dict `:`
+      functional-type(operands, results)
   }];
 
   let hasVerifier = 1;
@@ -1006,7 +1009,7 @@ def fir_BoxDimsOp : fir_Op<"box_dims", [NoMemoryEffect]> {
     are the values encoded in a standard descriptor.
   }];
 
-  let arguments = (ins fir_BoxType:$val, AnyIntegerLike:$dim);
+  let arguments = (ins BoxOrClassType:$val, AnyIntegerLike:$dim);
 
   let results = (outs Index, Index, Index);
 
@@ -1160,7 +1163,7 @@ def fir_BoxTypeDescOp : fir_SimpleOneResultOp<"box_tdesc", [NoMemoryEffect]> {
     ```
   }];
 
-  let arguments = (ins fir_BoxType:$val);
+  let arguments = (ins BoxOrClassType:$val);
 
   let results = (outs fir_TypeDescType);
 }
