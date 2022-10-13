@@ -242,7 +242,7 @@ releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList,
   if (BlockSize <= PageSize && PageSize % BlockSize == 0) {
     // Each chunk affects one page only.
     for (const auto &It : FreeList) {
-      for (u32 I = 0; I < It.getCount(); I++) {
+      for (u16 I = 0; I < It.getCount(); I++) {
         const uptr P = DecompactPtr(It.get(I)) - Recorder->getBase();
         if (P >= RoundedSize)
           continue;
@@ -256,7 +256,7 @@ releaseFreeMemoryToOS(const IntrusiveList<TransferBatchT> &FreeList,
     DCHECK_GE(RegionSize, BlockSize);
     const uptr LastBlockInRegion = ((RegionSize / BlockSize) - 1U) * BlockSize;
     for (const auto &It : FreeList) {
-      for (u32 I = 0; I < It.getCount(); I++) {
+      for (u16 I = 0; I < It.getCount(); I++) {
         const uptr P = DecompactPtr(It.get(I)) - Recorder->getBase();
         if (P >= RoundedSize)
           continue;

@@ -130,22 +130,22 @@ public:
 
 // Simplified version of a TransferBatch.
 template <class SizeClassMap> struct FreeBatch {
-  static const scudo::u32 MaxCount = SizeClassMap::MaxNumCachedHint;
+  static const scudo::u16 MaxCount = SizeClassMap::MaxNumCachedHint;
   void clear() { Count = 0; }
   void add(scudo::uptr P) {
     DCHECK_LT(Count, MaxCount);
     Batch[Count++] = P;
   }
-  scudo::u32 getCount() const { return Count; }
-  scudo::uptr get(scudo::u32 I) const {
+  scudo::u16 getCount() const { return Count; }
+  scudo::uptr get(scudo::u16 I) const {
     DCHECK_LE(I, Count);
     return Batch[I];
   }
   FreeBatch *Next;
 
 private:
-  scudo::u32 Count;
   scudo::uptr Batch[MaxCount];
+  scudo::u16 Count;
 };
 
 template <class SizeClassMap> void testReleaseFreeMemoryToOS() {

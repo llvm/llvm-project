@@ -176,7 +176,7 @@ TEST(ScudoPrimaryTest, Primary64OOM) {
       AllocationFailed = true;
       break;
     }
-    for (scudo::u32 J = 0; J < B->getCount(); J++)
+    for (scudo::u16 J = 0; J < B->getCount(); J++)
       memset(Allocator.decompactPtr(ClassId, B->get(J)), 'B', Size);
     Batches.push_back(B);
   }
