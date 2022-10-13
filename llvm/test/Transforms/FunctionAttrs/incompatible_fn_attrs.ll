@@ -5,24 +5,24 @@
 ; function attributes when we derive readnone.
 
 ; Function Attrs: argmemonly
-define i32* @given_argmem_infer_readnone(i32* %p) #0 {
-; CHECK: define i32* @given_argmem_infer_readnone(i32* readnone returned %p) #0 {
+define ptr @given_argmem_infer_readnone(ptr %p) #0 {
+; CHECK: define ptr @given_argmem_infer_readnone(ptr readnone returned %p) #0 {
 entry:
-  ret i32* %p
+  ret ptr %p
 }
 
 ; Function Attrs: inaccessiblememonly
-define i32* @given_inaccessible_infer_readnone(i32* %p) #1 {
-; CHECK: define i32* @given_inaccessible_infer_readnone(i32* readnone returned %p) #0 {
+define ptr @given_inaccessible_infer_readnone(ptr %p) #1 {
+; CHECK: define ptr @given_inaccessible_infer_readnone(ptr readnone returned %p) #0 {
 entry:
-  ret i32* %p
+  ret ptr %p
 }
 
 ; Function Attrs: inaccessiblemem_or_argmemonly
-define i32* @given_inaccessible_or_argmem_infer_readnone(i32* %p) #2 {
-; CHECK: define i32* @given_inaccessible_or_argmem_infer_readnone(i32* readnone returned %p) #0 {
+define ptr @given_inaccessible_or_argmem_infer_readnone(ptr %p) #2 {
+; CHECK: define ptr @given_inaccessible_or_argmem_infer_readnone(ptr readnone returned %p) #0 {
 entry:
-  ret i32* %p
+  ret ptr %p
 }
 
 attributes #0 = { argmemonly }

@@ -7,9 +7,9 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; We use FIXME's to indicate problems and missing attributes.
 
 ; Free functions
-declare void @free(i8* nocapture) local_unnamed_addr #1
-declare noalias i8* @realloc(i8* nocapture, i64) local_unnamed_addr #0
-declare void @_ZdaPv(i8*) local_unnamed_addr #2
+declare void @free(ptr nocapture) local_unnamed_addr #1
+declare noalias ptr @realloc(ptr nocapture, i64) local_unnamed_addr #0
+declare void @_ZdaPv(ptr) local_unnamed_addr #2
 
 
 ; TEST 1 (positive case)
@@ -29,14 +29,14 @@ define void @only_return() #0 {
 ;    free(p);
 ; }
 
-define void @only_free(i8* nocapture %0) local_unnamed_addr #0 {
+define void @only_free(ptr nocapture %0) local_unnamed_addr #0 {
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@only_free
-; FNATTR-SAME: (i8* nocapture [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
-; FNATTR-NEXT:    tail call void @free(i8* [[TMP0]]) #[[ATTR0:[0-9]+]]
+; FNATTR-SAME: (ptr nocapture [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; FNATTR-NEXT:    tail call void @free(ptr [[TMP0]]) #[[ATTR0:[0-9]+]]
 ; FNATTR-NEXT:    ret void
 ;
-  tail call void @free(i8* %0) #1
+  tail call void @free(ptr %0) #1
   ret void
 }
 
@@ -51,39 +51,39 @@ define void @only_free(i8* nocapture %0) local_unnamed_addr #0 {
 ;    free(p);
 ; }
 
-define void @free_in_scc1(i8* nocapture %0) local_unnamed_addr #0 {
+define void @free_in_scc1(ptr nocapture %0) local_unnamed_addr #0 {
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@free_in_scc1
-; FNATTR-SAME: (i8* nocapture [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
-; FNATTR-NEXT:    tail call void @free_in_scc2(i8* [[TMP0]]) #[[ATTR0]]
+; FNATTR-SAME: (ptr nocapture [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; FNATTR-NEXT:    tail call void @free_in_scc2(ptr [[TMP0]]) #[[ATTR0]]
 ; FNATTR-NEXT:    ret void
 ;
-  tail call void @free_in_scc2(i8* %0) #1
+  tail call void @free_in_scc2(ptr %0) #1
   ret void
 }
 
-define void @free_in_scc2(i8* nocapture %0) local_unnamed_addr #0 {
+define void @free_in_scc2(ptr nocapture %0) local_unnamed_addr #0 {
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@free_in_scc2
-; FNATTR-SAME: (i8* nocapture [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
-; FNATTR-NEXT:    [[CMP:%.*]] = icmp eq i8* [[TMP0]], null
+; FNATTR-SAME: (ptr nocapture [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; FNATTR-NEXT:    [[CMP:%.*]] = icmp eq ptr [[TMP0]], null
 ; FNATTR-NEXT:    br i1 [[CMP]], label [[REC:%.*]], label [[CALL:%.*]]
 ; FNATTR:       call:
-; FNATTR-NEXT:    tail call void @free(i8* [[TMP0]]) #[[ATTR0]]
+; FNATTR-NEXT:    tail call void @free(ptr [[TMP0]]) #[[ATTR0]]
 ; FNATTR-NEXT:    br label [[END:%.*]]
 ; FNATTR:       rec:
-; FNATTR-NEXT:    tail call void @free_in_scc1(i8* [[TMP0]])
+; FNATTR-NEXT:    tail call void @free_in_scc1(ptr [[TMP0]])
 ; FNATTR-NEXT:    br label [[END]]
 ; FNATTR:       end:
 ; FNATTR-NEXT:    ret void
 ;
-  %cmp = icmp eq i8* %0, null
+  %cmp = icmp eq ptr %0, null
   br i1 %cmp, label %rec, label %call
 call:
-  tail call void @free(i8* %0) #1
+  tail call void @free(ptr %0) #1
   br label %end
 rec:
-  tail call void @free_in_scc1(i8* %0)
+  tail call void @free_in_scc1(ptr %0)
   br label %end
 end:
   ret void
@@ -129,23 +129,23 @@ define void @mutual_recursion2() #0 {
 ;     delete [] p;
 ; }
 
-define void @_Z9delete_opPc(i8* %0) local_unnamed_addr #0 {
+define void @_Z9delete_opPc(ptr %0) local_unnamed_addr #0 {
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@_Z9delete_opPc
-; FNATTR-SAME: (i8* [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
-; FNATTR-NEXT:    [[TMP2:%.*]] = icmp eq i8* [[TMP0]], null
+; FNATTR-SAME: (ptr [[TMP0:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; FNATTR-NEXT:    [[TMP2:%.*]] = icmp eq ptr [[TMP0]], null
 ; FNATTR-NEXT:    br i1 [[TMP2]], label [[TMP4:%.*]], label [[TMP3:%.*]]
 ; FNATTR:       3:
-; FNATTR-NEXT:    tail call void @_ZdaPv(i8* nonnull [[TMP0]]) #[[ATTR2:[0-9]+]]
+; FNATTR-NEXT:    tail call void @_ZdaPv(ptr nonnull [[TMP0]]) #[[ATTR2:[0-9]+]]
 ; FNATTR-NEXT:    br label [[TMP4]]
 ; FNATTR:       4:
 ; FNATTR-NEXT:    ret void
 ;
-  %2 = icmp eq i8* %0, null
+  %2 = icmp eq ptr %0, null
   br i1 %2, label %4, label %3
 
 ; <label>:3:                                      ; preds = %1
-  tail call void @_ZdaPv(i8* nonnull %0) #2
+  tail call void @_ZdaPv(ptr nonnull %0) #2
   br label %4
 
 ; <label>:4:                                      ; preds = %3, %1
@@ -155,15 +155,15 @@ define void @_Z9delete_opPc(i8* %0) local_unnamed_addr #0 {
 
 ; TEST 6 (negative case)
 ; Call realloc
-define noalias i8* @call_realloc(i8* nocapture %0, i64 %1) local_unnamed_addr #0 {
+define noalias ptr @call_realloc(ptr nocapture %0, i64 %1) local_unnamed_addr #0 {
 ; FNATTR: Function Attrs: noinline nounwind uwtable
 ; FNATTR-LABEL: define {{[^@]+}}@call_realloc
-; FNATTR-SAME: (i8* nocapture [[TMP0:%.*]], i64 [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
-; FNATTR-NEXT:    [[RET:%.*]] = tail call i8* @realloc(i8* [[TMP0]], i64 [[TMP1]]) #[[ATTR2]]
-; FNATTR-NEXT:    ret i8* [[RET]]
+; FNATTR-SAME: (ptr nocapture [[TMP0:%.*]], i64 [[TMP1:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; FNATTR-NEXT:    [[RET:%.*]] = tail call ptr @realloc(ptr [[TMP0]], i64 [[TMP1]]) #[[ATTR2]]
+; FNATTR-NEXT:    ret ptr [[RET]]
 ;
-  %ret = tail call i8* @realloc(i8* %0, i64 %1) #2
-  ret i8* %ret
+  %ret = tail call ptr @realloc(ptr %0, i64 %1) #2
+  ret ptr %ret
 }
 
 
@@ -261,7 +261,7 @@ define void @f2() #0 {
 }
 
 
-declare noalias i8* @malloc(i64)
+declare noalias ptr @malloc(i64)
 
 attributes #0 = { nounwind uwtable noinline }
 attributes #1 = { nounwind }

@@ -6,9 +6,9 @@
 define i8 @f() {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: @f(
-; CHECK-NEXT:    [[TMP:%.*]] = load i8, i8* @s, align 1
+; CHECK-NEXT:    [[TMP:%.*]] = load i8, ptr @s, align 1
 ; CHECK-NEXT:    ret i8 [[TMP]]
 ;
-  %tmp = load i8, i8* @s
+  %tmp = load i8, ptr @s
   ret i8 %tmp
 }

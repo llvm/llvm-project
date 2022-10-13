@@ -47,10 +47,10 @@ define i32 @extern_non_convergent_call() convergent {
   ret i32 %a
 }
 
-define i32 @indirect_convergent_call(i32 ()* %f) convergent {
+define i32 @indirect_convergent_call(ptr %f) convergent {
 ; CHECK: Function Attrs: convergent
 ; CHECK-LABEL: define {{[^@]+}}@indirect_convergent_call
-; CHECK-SAME: (i32 ()* nocapture readonly [[F:%.*]]) #[[ATTR1]] {
+; CHECK-SAME: (ptr nocapture readonly [[F:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[A:%.*]] = call i32 [[F]]() #[[ATTR1]]
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
@@ -59,10 +59,10 @@ define i32 @indirect_convergent_call(i32 ()* %f) convergent {
 }
 ; Give indirect_non_convergent_call the norecurse attribute so we get a
 ; "Function Attrs" comment in the output.
-define i32 @indirect_non_convergent_call(i32 ()* %f) convergent norecurse {
+define i32 @indirect_non_convergent_call(ptr %f) convergent norecurse {
 ; CHECK: Function Attrs: norecurse
 ; CHECK-LABEL: define {{[^@]+}}@indirect_non_convergent_call
-; CHECK-SAME: (i32 ()* nocapture readonly [[F:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-SAME: (ptr nocapture readonly [[F:%.*]]) #[[ATTR2:[0-9]+]] {
 ; CHECK-NEXT:    [[A:%.*]] = call i32 [[F]]()
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
