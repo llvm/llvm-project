@@ -40,7 +40,7 @@
 # CHECK-NEXT: # Address           Size        File   Name
 # CHECK-NEXT: 0x[[#%X,MAIN]]      0x00000001  [  1]  _main
 # CHECK-NEXT: 0x[[#%X,FOO]]       0x00000000  [  2]  _foo
-# CHECK-NEXT: 0x[[#%X,NUMBER]]    0x00000000  [  1]  _number
+# CHECK-NEXT: 0x[[#%X,NUMBER]]    0x00000001  [  1]  _number
 
 # RUN: %lld -map %t/c-string-literal-map %t/c-string-literal.o -o %t/c-string-literal-out
 # RUN: FileCheck --check-prefix=CSTRING %s < %t/c-string-literal-map
