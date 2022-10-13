@@ -1,14 +1,23 @@
 # REQUIRES: x86
-# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %s -o %t.o
+
+# RUN: rm -rf %t && split-file %s %t
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/test.s -o %t/test.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/bcde-abcd-abde.s -o %t/bcde-abcd-abde.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/bbcde-abcdd.s -o %t/bbcde-abcdd.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/aabcde-abcdee.s -o %t/aabcde-abcdee.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/bacde.s -o %t/bacde.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/__Z3fooPi.s -o %t/__Z3fooPi.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/__Z3fooPKi-__Z3fooPi.s -o %t/__Z3fooPKi-__Z3fooPi.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/__Z3FOOPKi.s -o %t/__Z3FOOPKi.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos %t/__Z3fooPKi-__Z3FOOPKi.s -o %t/__Z3fooPKi-__Z3FOOPKi.o
 
 ## Insert a character.
 ## The spell corrector is enabled for the first two "undefined symbol" diagnostics.
-# RUN: echo 'call bcde; call abcd; call abde' | llvm-mc -filetype=obj -triple=x86_64-apple-macos - -o %t1.o
-# RUN: not %lld %t.o %t1.o -o /dev/null 2>&1 | FileCheck --check-prefix=INSERT %s -DFILE=%t.o
+# RUN: not %lld %t/test.o %t/bcde-abcd-abde.o -o /dev/null 2>&1 | FileCheck --check-prefix=INSERT %s -DFILE=%t/test.o
 
 ## Symbols defined in DSO can be suggested.
-# RUN: %lld %t.o -dylib -o %t.dylib
-# RUN: not %lld %t.dylib %t1.o -o /dev/null 2>&1 | FileCheck --check-prefix=INSERT %s -DFILE=%t.dylib
+# RUN: %lld %t/test.o -dylib -o %t.dylib
+# RUN: not %lld %t.dylib %t/bcde-abcd-abde.o -o /dev/null 2>&1 | FileCheck --check-prefix=INSERT %s -DFILE=%t.dylib
 
 # INSERT:      error: undefined symbol: abde
 # INSERT-NEXT: >>> referenced by {{.*}}
@@ -23,8 +32,7 @@
 # INSERT-NOT:  >>>
 
 ## Substitute a character.
-# RUN: echo 'call bbcde; call abcdd' | llvm-mc -filetype=obj -triple=x86_64-apple-macos - -o %t1.o
-# RUN: not %lld %t.o %t1.o -o /dev/null 2>&1 | FileCheck --check-prefix=SUBST %s
+# RUN: not %lld %t/test.o %t/bbcde-abcdd.o -o /dev/null 2>&1 | FileCheck --check-prefix=SUBST %s
 
 # SUBST:      error: undefined symbol: abcdd
 # SUBST-NEXT: >>> referenced by {{.*}}
@@ -34,8 +42,7 @@
 # SUBST-NEXT: >>> did you mean: abcde
 
 ## Delete a character.
-# RUN: echo 'call aabcde; call abcdee' | llvm-mc -filetype=obj -triple=x86_64-apple-macos - -o %t1.o
-# RUN: not %lld %t.o %t1.o -o /dev/null 2>&1 | FileCheck --check-prefix=DELETE %s
+# RUN: not %lld %t/test.o %t/aabcde-abcdee.o -o /dev/null 2>&1 | FileCheck --check-prefix=DELETE %s
 
 # DELETE:      error: undefined symbol: abcdee
 # DELETE-NEXT: >>> referenced by {{.*}}
@@ -45,35 +52,59 @@
 # DELETE-NEXT: >>> did you mean: abcde
 
 ## Transpose.
-# RUN: echo 'call bacde' | llvm-mc -filetype=obj -triple=x86_64-apple-macos - -o %t1.o
-# RUN: not %lld %t.o %t1.o -o /dev/null 2>&1 | FileCheck --check-prefix=TRANSPOSE %s
+# RUN: not %lld %t/test.o %t/bacde.o -o /dev/null 2>&1 | FileCheck --check-prefix=TRANSPOSE %s
 
 # TRANSPOSE:      error: undefined symbol: bacde
 # TRANSPOSE-NEXT: >>> referenced by {{.*}}
 # TRANSPOSE-NEXT: >>> did you mean: abcde
 
 ## Missing const qualifier.
-# RUN: echo 'call __Z3fooPi' | llvm-mc -filetype=obj -triple=x86_64-apple-macos - -o %t1.o
-# RUN: not %lld %t.o %t1.o -demangle -o /dev/null 2>&1 | FileCheck --check-prefix=CONST %s
+# RUN: not %lld %t/test.o %t/__Z3fooPi.o -demangle -o /dev/null 2>&1 | FileCheck --check-prefix=CONST %s
 ## Local defined symbols.
-# RUN: echo '__Z3fooPKi: call __Z3fooPi' | llvm-mc -filetype=obj -triple=x86_64-apple-macos - -o %t1.o
-# RUN: not %lld %t1.o -demangle -o /dev/null 2>&1 | FileCheck --check-prefix=CONST %s
+# RUN: not %lld %t/__Z3fooPKi-__Z3fooPi.o -demangle -o /dev/null 2>&1 | FileCheck --check-prefix=CONST %s
 
 # CONST:      error: undefined symbol: foo(int*)
 # CONST-NEXT: >>> referenced by {{.*}}
 # CONST-NEXT: >>> did you mean: foo(int const*)
 
 ## Case mismatch.
-# RUN: echo 'call __Z3FOOPKi' | llvm-mc -filetype=obj -triple=x86_64-apple-macos - -o %t1.o
-# RUN: not %lld %t.o %t1.o -demangle -o /dev/null 2>&1 | FileCheck --check-prefix=CASE %s
-# RUN: echo '__Z3fooPKi: call __Z3FOOPKi' | llvm-mc -filetype=obj -triple=x86_64-apple-macos - -o %t1.o
-# RUN: not %lld %t1.o -demangle -o /dev/null 2>&1 | FileCheck --check-prefix=CASE %s
+# RUN: not %lld %t/test.o %t/__Z3FOOPKi.o -demangle -o /dev/null 2>&1 | FileCheck --check-prefix=CASE %s
+# RUN: not %lld %t/__Z3fooPKi-__Z3FOOPKi.o -demangle -o /dev/null 2>&1 | FileCheck --check-prefix=CASE %s
 
 # CASE:      error: undefined symbol: FOO(int const*)
 # CASE-NEXT: >>> referenced by {{.*}}
 # CASE-NEXT: >>> did you mean: foo(int const*)
 
+#--- test.s
 .globl _main, abcde, __Z3fooPKi
 _main:
 abcde:
 __Z3fooPKi:
+
+#--- bcde-abcd-abde.s
+call bcde
+call abcd
+call abde
+
+#--- bbcde-abcdd.s
+call bbcde
+call abcdd
+
+#--- aabcde-abcdee.s
+call aabcde
+call abcdee
+
+#--- bacde.s
+call bacde
+
+#--- __Z3fooPi.s
+call __Z3fooPi
+
+#--- __Z3fooPKi-__Z3fooPi.s
+__Z3fooPKi: call __Z3fooPi
+
+#--- __Z3FOOPKi.s
+call __Z3FOOPKi
+
+#--- __Z3fooPKi-__Z3FOOPKi.s
+__Z3fooPKi: call __Z3FOOPKi
