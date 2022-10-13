@@ -65,6 +65,13 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     uptr GroupId;
     // Cache value of TransferBatch::getMaxCached()
     u16 MaxCachedPerBatch;
+    // Number of blocks pushed into this group. This is an increment-only
+    // counter.
+    uptr PushedBlocks;
+    // This is used to track how many blocks are pushed since last time we
+    // checked `PushedBlocks`. It's useful for page releasing to determine the
+    // usage of a BatchGroup.
+    uptr PushedBlocksAtLastCheckpoint;
     // Blocks are managed by TransferBatch in a list.
     SinglyLinkedList<TransferBatch> Batches;
   };
