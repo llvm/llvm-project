@@ -30,25 +30,47 @@ struct TestTopologicalSortAnalysisPass
     Operation *op = getOperation();
     OpBuilder builder(op->getContext());
 
-    op->walk([&](Operation *root) {
+    WalkResult result = op->walk([&](Operation *root) {
       if (!root->hasAttr("root"))
         return WalkResult::advance();
 
-      assert(root->getNumRegions() == 1 && root->getRegion(0).hasOneBlock() &&
-             "expected one block");
-      Block *block = &root->getRegion(0).front();
       SmallVector<Operation *> selectedOps;
-      block->walk([&](Operation *op) {
-        if (op->hasAttr("selected"))
-          selectedOps.push_back(op);
+      root->walk([&](Operation *selected) {
+        if (!selected->hasAttr("selected"))
+          return WalkResult::advance();
+        if (root->hasAttr("ordered")) {
+          // If the root has an "ordered" attribute, we fill the selectedOps
+          // vector in a certain order.
+          int64_t pos =
+              selected->getAttr("selected").cast<IntegerAttr>().getInt();
+          if (pos >= static_cast<int64_t>(selectedOps.size()))
+            selectedOps.append(pos + 1 - selectedOps.size(), nullptr);
+          selectedOps[pos] = selected;
+        } else {
+          selectedOps.push_back(selected);
+        }
+        return WalkResult::advance();
       });
 
-      computeTopologicalSorting(block, selectedOps);
+      if (llvm::find(selectedOps, nullptr) != selectedOps.end()) {
+        root->emitError("invalid test case: some indices are missing among the "
+                        "selected ops");
+        return WalkResult::skip();
+      }
+
+      if (!computeTopologicalSorting(selectedOps)) {
+        root->emitError("could not schedule all ops");
+        return WalkResult::skip();
+      }
+
       for (const auto &it : llvm::enumerate(selectedOps))
         it.value()->setAttr("pos", builder.getIndexAttr(it.index()));
 
       return WalkResult::advance();
     });
+
+    if (result.wasSkipped())
+      signalPassFailure();
   }
 };
 } // namespace

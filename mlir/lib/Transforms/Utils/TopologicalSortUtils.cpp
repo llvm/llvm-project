@@ -12,12 +12,11 @@
 using namespace mlir;
 
 /// Return `true` if the given operation is ready to be scheduled.
-static bool isOpReady(Block *block, Operation *op,
-                      DenseSet<Operation *> &unscheduledOps,
+static bool isOpReady(Operation *op, DenseSet<Operation *> &unscheduledOps,
                       function_ref<bool(Value, Operation *)> isOperandReady) {
   // An operation is ready to be scheduled if all its operands are ready. An
   // operation is ready if:
-  const auto isReady = [&](Value value, Operation *top) {
+  const auto isReady = [&](Value value) {
     // - the user-provided callback marks it as ready,
     if (isOperandReady && isOperandReady(value, op))
       return true;
@@ -25,22 +24,24 @@ static bool isOpReady(Block *block, Operation *op,
     // - it is a block argument,
     if (!parent)
       return true;
-    Operation *ancestor = block->findAncestorOpInBlock(*parent);
-    // - it is an implicit capture,
-    if (!ancestor)
-      return true;
-    // - it is defined in a nested region, or
-    if (ancestor == op)
-      return true;
-    // - its ancestor in the block is scheduled.
-    return !unscheduledOps.contains(ancestor);
+    // - or it is not defined by an unscheduled op (and also not nested within
+    //   an unscheduled op).
+    do {
+      // Stop traversal when op under examination is reached.
+      if (parent == op)
+        return true;
+      if (unscheduledOps.contains(parent))
+        return false;
+    } while ((parent = parent->getParentOp()));
+    // No unscheduled op found.
+    return true;
   };
 
   // An operation is recursively ready to be scheduled of it and its nested
   // operations are ready.
   WalkResult readyToSchedule = op->walk([&](Operation *nestedOp) {
     return llvm::all_of(nestedOp->getOperands(),
-                        [&](Value operand) { return isReady(operand, op); })
+                        [&](Value operand) { return isReady(operand); })
                ? WalkResult::advance()
                : WalkResult::interrupt();
   });
@@ -71,7 +72,7 @@ bool mlir::sortTopologically(
     // set, and "schedule" it (move it before the `nextScheduledOp`).
     for (Operation &op :
          llvm::make_early_inc_range(llvm::make_range(nextScheduledOp, end))) {
-      if (!isOpReady(block, &op, unscheduledOps, isOperandReady))
+      if (!isOpReady(&op, unscheduledOps, isOperandReady))
         continue;
 
       // Schedule the operation by moving it to the start.
@@ -104,7 +105,7 @@ bool mlir::sortTopologically(
 }
 
 bool mlir::computeTopologicalSorting(
-    Block *block, MutableArrayRef<Operation *> ops,
+    MutableArrayRef<Operation *> ops,
     function_ref<bool(Value, Operation *)> isOperandReady) {
   if (ops.empty())
     return true;
@@ -113,10 +114,8 @@ bool mlir::computeTopologicalSorting(
   DenseSet<Operation *> unscheduledOps;
 
   // Mark all operations as unscheduled.
-  for (Operation *op : ops) {
-    assert(op->getBlock() == block && "op must belong to block");
+  for (Operation *op : ops)
     unscheduledOps.insert(op);
-  }
 
   unsigned nextScheduledOp = 0;
 
@@ -128,7 +127,7 @@ bool mlir::computeTopologicalSorting(
     // i.e. the ones for which there aren't any operand produced by an op in the
     // set, and "schedule" it (swap it with the op at `nextScheduledOp`).
     for (unsigned i = nextScheduledOp; i < ops.size(); ++i) {
-      if (!isOpReady(block, ops[i], unscheduledOps, isOperandReady))
+      if (!isOpReady(ops[i], unscheduledOps, isOperandReady))
         continue;
 
       // Schedule the operation by moving it to the start.

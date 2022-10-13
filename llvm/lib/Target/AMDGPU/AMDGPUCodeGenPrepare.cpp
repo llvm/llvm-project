@@ -468,8 +468,10 @@ static void extractValues(IRBuilder<> &Builder,
 static Value *insertValues(IRBuilder<> &Builder,
                            Type *Ty,
                            SmallVectorImpl<Value *> &Values) {
-  if (Values.size() == 1)
+  if (!Ty->isVectorTy()) {
+    assert(Values.size() == 1);
     return Values[0];
+  }
 
   Value *NewVal = UndefValue::get(Ty);
   for (int I = 0, E = Values.size(); I != E; ++I)
