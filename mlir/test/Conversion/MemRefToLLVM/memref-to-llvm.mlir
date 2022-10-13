@@ -1138,6 +1138,7 @@ func.func @memref_copy_unranked() {
   // CHECK: [[UNDEF:%.*]] = llvm.mlir.undef : !llvm.struct<(i64, ptr<i8>)>
   // CHECK: [[INSERT:%.*]] = llvm.insertvalue [[RANK]], [[UNDEF]][0] : !llvm.struct<(i64, ptr<i8>)>
   // CHECK: [[INSERT2:%.*]] = llvm.insertvalue [[BITCAST]], [[INSERT]][1] : !llvm.struct<(i64, ptr<i8>)>
+  // CHECK: [[STACKSAVE:%.*]] = llvm.intr.stacksave : !llvm.ptr<i8>
   // CHECK: [[RANK2:%.*]] = llvm.mlir.constant(1 : index) : i64
   // CHECK: [[ALLOCA2:%.*]] = llvm.alloca [[RANK2]] x !llvm.struct<(i64, ptr<i8>)> : (i64) -> !llvm.ptr<struct<(i64, ptr<i8>)>>
   // CHECK: llvm.store {{%.*}}, [[ALLOCA2]] : !llvm.ptr<struct<(i64, ptr<i8>)>>
@@ -1145,6 +1146,7 @@ func.func @memref_copy_unranked() {
   // CHECK: llvm.store [[INSERT2]], [[ALLOCA3]] : !llvm.ptr<struct<(i64, ptr<i8>)>>
   // CHECK: [[SIZE:%.*]] = llvm.mlir.constant(1 : index) : i64
   // CHECK: llvm.call @memrefCopy([[SIZE]], [[ALLOCA2]], [[ALLOCA3]]) : (i64, !llvm.ptr<struct<(i64, ptr<i8>)>>, !llvm.ptr<struct<(i64, ptr<i8>)>>) -> ()
+  // CHECK: llvm.intr.stackrestore [[STACKSAVE]]
   return
 }
 
