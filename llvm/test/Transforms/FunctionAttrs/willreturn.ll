@@ -11,7 +11,7 @@ while.body:
   br label %while.body
 }
 
-define i32 @mustprogress_load(i32* %ptr) mustprogress {
+define i32 @mustprogress_load(ptr %ptr) mustprogress {
 ; CHECK:      Function Attrs: {{.*}} readonly willreturn
 ; CHECK-NEXT: define i32 @mustprogress_load(
 ;
@@ -19,11 +19,11 @@ entry:
   br label %while.body
 
 while.body:
-  %r = load i32, i32* %ptr
+  %r = load i32, ptr %ptr
   br label %while.body
 }
 
-define void @mustprogress_store(i32* %ptr) mustprogress {
+define void @mustprogress_store(ptr %ptr) mustprogress {
 ; CHECK-NOT: Function Attrs: {{.*}} willreturn
 ; CHECK: define void @mustprogress_store(
 ;
@@ -31,7 +31,7 @@ entry:
   br label %while.body
 
 while.body:
-  store i32 0, i32* %ptr
+  store i32 0, ptr %ptr
   br label %while.body
 }
 
@@ -45,18 +45,18 @@ define void @mustprogress_call_unknown_fn() mustprogress {
   ret void
 }
 
-define i32 @mustprogress_call_known_functions(i32* %ptr) mustprogress {
+define i32 @mustprogress_call_known_functions(ptr %ptr) mustprogress {
 ; CHECK:      Function Attrs: {{.*}} readonly willreturn
 ; CHECK-NEXT: define i32 @mustprogress_call_known_functions(
 ;
   call void @mustprogress_readnone()
-  %r = call i32 @mustprogress_load(i32* %ptr)
+  %r = call i32 @mustprogress_load(ptr %ptr)
   ret i32 %r
 }
 
 declare i32 @__gxx_personality_v0(...)
 
-define i64 @mustprogress_mayunwind() mustprogress personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i64 @mustprogress_mayunwind() mustprogress personality ptr @__gxx_personality_v0 {
 ; CHECK:      Function Attrs: {{.*}} readnone willreturn
 ; CHECK-NEXT: define i64 @mustprogress_mayunwind(
 ;
@@ -66,25 +66,25 @@ A:
   ret i64 10
 
 B:
-  %val = landingpad { i8*, i32 }
-           catch i8* null
+  %val = landingpad { ptr, i32 }
+           catch ptr null
   ret i64 0
 }
 
 ; Function without loops or non-willreturn calls will return.
-define void @willreturn_no_loop(i1 %c, i32* %p) {
+define void @willreturn_no_loop(i1 %c, ptr %p) {
 ; CHECK: Function Attrs: mustprogress willreturn
 ; CHECK-NEXT: define void @willreturn_no_loop(
 ;
   br i1 %c, label %if, label %else
 
 if:
-  load atomic i32, i32* %p seq_cst, align 4
+  load atomic i32, ptr %p seq_cst, align 4
   call void @fn_willreturn()
   br label %end
 
 else:
-  store atomic i32 0, i32* %p seq_cst, align 4
+  store atomic i32 0, ptr %p seq_cst, align 4
   br label %end
 
 end:
@@ -92,7 +92,7 @@ end:
 }
 
 ; Calls a function that is not guaranteed to return, not willreturn.
-define void @willreturn_non_returning_function(i1 %c, i32* %p) {
+define void @willreturn_non_returning_function(i1 %c, ptr %p) {
 ; CHECK-NOT: Function Attrs: {{.*}}willreturn
 ; CHECK: define void @willreturn_non_returning_function(
 ;

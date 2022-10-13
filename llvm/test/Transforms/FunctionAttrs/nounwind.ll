@@ -66,7 +66,7 @@ declare void @__cxa_rethrow()
 ; }
 
 ; CHECK: define i32 @catch_thing()
-define i32 @catch_thing() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @catch_thing() personality ptr @__gxx_personality_v0 {
   invoke void @__cxa_rethrow() #1
           to label %1 unwind label %2
 
@@ -74,10 +74,10 @@ define i32 @catch_thing() personality i8* bitcast (i32 (...)* @__gxx_personality
   unreachable
 
 2:                                                ; preds = %0
-  %3 = landingpad { i8*, i32 }
-          catch i8* null
-  %4 = extractvalue { i8*, i32 } %3, 0
-  %5 = tail call i8* @__cxa_begin_catch(i8* %4) #2
+  %3 = landingpad { ptr, i32 }
+          catch ptr null
+  %4 = extractvalue { ptr, i32 } %3, 0
+  %5 = tail call ptr @__cxa_begin_catch(ptr %4) #2
   tail call void @__cxa_end_catch()
   ret i32 -1
 }
@@ -90,6 +90,6 @@ define i32 @catch_thing_user() {
 
 declare i32 @__gxx_personality_v0(...)
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
