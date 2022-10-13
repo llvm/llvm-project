@@ -12,25 +12,25 @@
 TEST(LlvmLibcBcmpTest, CmpZeroByte) {
   const char *lhs = "ab";
   const char *rhs = "bc";
-  ASSERT_EQ(__llvm_libc::bcmp(lhs, rhs, 0), 0);
+  EXPECT_EQ(__llvm_libc::bcmp(lhs, rhs, 0), 0);
 }
 
 TEST(LlvmLibcBcmpTest, LhsRhsAreTheSame) {
   const char *lhs = "ab";
   const char *rhs = "ab";
-  ASSERT_EQ(__llvm_libc::bcmp(lhs, rhs, 2), 0);
+  EXPECT_EQ(__llvm_libc::bcmp(lhs, rhs, 2), 0);
 }
 
 TEST(LlvmLibcBcmpTest, LhsBeforeRhsLexically) {
   const char *lhs = "ab";
   const char *rhs = "ac";
-  ASSERT_NE(__llvm_libc::bcmp(lhs, rhs, 2), 0);
+  EXPECT_NE(__llvm_libc::bcmp(lhs, rhs, 2), 0);
 }
 
 TEST(LlvmLibcBcmpTest, LhsAfterRhsLexically) {
   const char *lhs = "ac";
   const char *rhs = "ab";
-  ASSERT_NE(__llvm_libc::bcmp(lhs, rhs, 2), 0);
+  EXPECT_NE(__llvm_libc::bcmp(lhs, rhs, 2), 0);
 }
 
 TEST(LlvmLibcBcmpTest, Sweep) {
@@ -46,13 +46,13 @@ TEST(LlvmLibcBcmpTest, Sweep) {
   reset(lhs);
   reset(rhs);
   for (size_t i = 0; i < K_MAX_SIZE; ++i)
-    ASSERT_EQ(__llvm_libc::bcmp(lhs, rhs, i), 0);
+    EXPECT_EQ(__llvm_libc::bcmp(lhs, rhs, i), 0);
 
   reset(lhs);
   reset(rhs);
   for (size_t i = 0; i < K_MAX_SIZE; ++i) {
     rhs[i] = 'b';
-    ASSERT_NE(__llvm_libc::bcmp(lhs, rhs, K_MAX_SIZE), 0);
+    EXPECT_NE(__llvm_libc::bcmp(lhs, rhs, K_MAX_SIZE), 0);
     rhs[i] = 'a';
   }
 }
