@@ -1631,9 +1631,26 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const TargetRegisterClass *G8RC = &PPC::G8RCRegClass;
   const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;
   const TargetRegisterClass *RC = is64Bit ? G8RC : GPRC;
-  Register SRegHi = MF.getRegInfo().createVirtualRegister(RC),
-           SReg = MF.getRegInfo().createVirtualRegister(RC);
   unsigned NewOpcode = 0u;
+  bool ScavengingFailed = RS && RS->getRegsAvailable(RC).none() &&
+                          RS->getRegsAvailable(&PPC::VSFRCRegClass).any();
+  Register SRegHi, SReg, VSReg;
+
+  // The register scavenger is unable to get a GPR but can get a VSR. We
+  // need to stash a GPR into a VSR so that we can free one up.
+  if (ScavengingFailed && Subtarget.hasDirectMove()) {
+    // Pick a volatile register and if we are spilling/restoring that
+    // particular one, pick the next one.
+    SRegHi = SReg = is64Bit ? PPC::X4 : PPC::R4;
+    if (MI.getOperand(0).getReg() == SReg)
+      SRegHi = SReg = SReg + 1;
+    VSReg = MF.getRegInfo().createVirtualRegister(&PPC::VSFRCRegClass);
+    BuildMI(MBB, II, dl, TII.get(is64Bit ? PPC::MTVSRD : PPC::MTVSRWZ), VSReg)
+        .addReg(SReg);
+  } else {
+    SRegHi = MF.getRegInfo().createVirtualRegister(RC);
+    SReg = MF.getRegInfo().createVirtualRegister(RC);
+  }
 
   // Insert a set of rA with the full offset value before the ld, st, or add
   if (isInt<16>(Offset))
@@ -1672,6 +1689,12 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   Register StackReg = MI.getOperand(FIOperandNum).getReg();
   MI.getOperand(OperandBase).ChangeToRegister(StackReg, false);
   MI.getOperand(OperandBase + 1).ChangeToRegister(SReg, false, false, true);
+
+  // If we stashed a value from a GPR into a VSR, we need to get it back after
+  // spilling the register.
+  if (ScavengingFailed && Subtarget.hasDirectMove())
+    BuildMI(MBB, ++II, dl, TII.get(is64Bit ? PPC::MFVSRD : PPC::MFVSRWZ), SReg)
+        .addReg(VSReg);
 
   // Since these are not real X-Form instructions, we must
   // add the registers and access 0(NewReg) rather than
