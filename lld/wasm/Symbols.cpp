@@ -85,6 +85,8 @@ DefinedData *WasmSym::globalBase;
 DefinedData *WasmSym::heapBase;
 DefinedData *WasmSym::initMemoryFlag;
 GlobalSymbol *WasmSym::stackPointer;
+DefinedData *WasmSym::stackLow;
+DefinedData *WasmSym::stackHigh;
 GlobalSymbol *WasmSym::tlsBase;
 GlobalSymbol *WasmSym::tlsSize;
 GlobalSymbol *WasmSym::tlsAlign;
