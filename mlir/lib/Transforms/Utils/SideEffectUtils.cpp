@@ -55,4 +55,6 @@ bool mlir::isSpeculatable(Operation *op) {
   case Speculation::NotSpeculatable:
     return false;
   }
+
+  llvm_unreachable("Unhandled enum in mlir::isSpeculatable!");
 }
