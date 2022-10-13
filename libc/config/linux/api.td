@@ -210,6 +210,7 @@ def SignalAPI : PublicAPI<"signal.h"> {
     "struct sigaction",
     "union sigval",
     "siginfo_t",
+    "stack_t",
     "pid_t",
   ];
 }

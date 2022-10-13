@@ -70,6 +70,21 @@
 #define SA_SIGINFO 0x00000004
 #define SA_RESTART 0x10000000
 #define SA_RESTORER 0x04000000
+#define SA_ONSTACK 0x08000000
+
+// Signal stack flags
+#define SS_ONSTACK 0x1
+#define SS_DISABLE 0x2
+
+#ifdef __x86_64__
+#define MINSIGSTKSZ 2048
+#define SIGSTKSZ 8192
+#elif defined(__aarch64__)
+#define MINSIGSTKSZ 5120
+#define SIGSTKSZ 16384
+#else
+#error "Signal stack sizes not defined for your platform."
+#endif
 
 #define SIG_DFL ((__sighandler_t)0)
 #define SIG_IGN ((__sighandler_t)1)
