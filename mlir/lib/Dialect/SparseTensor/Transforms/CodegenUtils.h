@@ -248,6 +248,20 @@ func::CallOp createFuncCall(OpBuilder &builder, Location loc, StringRef name,
 /// execution engine.
 Type getOpaquePointerType(OpBuilder &builder);
 
+/// Generates an uninitialized temporary buffer of the given size and
+/// type, but returns it as type `memref<? x $tp>` (rather than as type
+/// `memref<$sz x $tp>`).
+Value genAlloca(OpBuilder &builder, Location loc, Value sz, Type tp);
+
+/// Generates an uninitialized temporary buffer of the given size and
+/// type, but returns it as type `memref<? x $tp>` (rather than as type
+/// `memref<$sz x $tp>`).
+Value genAlloca(OpBuilder &builder, Location loc, unsigned sz, Type tp);
+
+/// Generates an uninitialized temporary buffer with room for one value
+/// of the given type, and returns the `memref<$tp>`.
+Value genAllocaScalar(OpBuilder &builder, Location loc, Type tp);
+
 //===----------------------------------------------------------------------===//
 // Inlined constant generators.
 //
