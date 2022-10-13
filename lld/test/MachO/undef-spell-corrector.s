@@ -86,6 +86,13 @@ call bcde
 call abcd
 call abde
 
+# Creates a nullptr entry in ObjFile::symbols, to test we don't crash on that.
+.section  __DWARF,__debug_aranges,regular,debug
+ltmp1:
+  .byte 0
+
+.subsections_via_symbols
+
 #--- bbcde-abcdd.s
 call bbcde
 call abcdd
