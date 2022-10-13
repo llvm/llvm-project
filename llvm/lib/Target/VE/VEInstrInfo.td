@@ -446,6 +446,11 @@ def retflag       : SDNode<"VEISD::RET_FLAG", SDTNone,
 
 def getGOT        : Operand<iPTR>;
 
+// res = cmov cmp, t, f, cond
+def SDT_Cmov      : SDTypeProfile<1, 4, [SDTCisSameAs<0, 2>, SDTCisSameAs<2, 3>,
+                                  SDTCisVT<4, i32>]>;
+def cmov          : SDNode<"VEISD::CMOV", SDT_Cmov>;
+
 def VEeh_sjlj_setjmp: SDNode<"VEISD::EH_SJLJ_SETJMP",
                              SDTypeProfile<1, 1, [SDTCisInt<0>,
                                                   SDTCisPtrTy<1>]>,
@@ -715,21 +720,31 @@ multiclass RRSWPm<string opcStr, bits<8>opc,
 //   e.g. CMOVL, CMOVW, CMOVD, and etc.
 let Constraints = "$sx = $sd", DisableEncoding = "$sd", hasSideEffects = 0,
     cfw = ? in
-multiclass RRCMOVm<string opcStr, bits<8>opc, RegisterClass RC> {
+multiclass RRCMOVm<string opcStr, bits<8>opc, RegisterClass RC, ValueType Ty,
+                   SDPatternOperator OpNode = null_frag,
+                   Operand immOp = simm7> {
   def rr : RR<opc, (outs I64:$sx), (ins CCOp:$cfw, RC:$sy, I64:$sz, I64:$sd),
-              !strconcat(opcStr, " $sx, $sz, $sy")>;
+              !strconcat(opcStr, " $sx, $sz, $sy"),
+              [(set i64:$sx, (OpNode Ty:$sy, i64:$sz, i64:$sd,
+                                     (i32 CCOp:$cfw)))]>;
   let cy = 0 in
   def ir : RR<opc, (outs I64:$sx),
-              (ins CCOp:$cfw, simm7:$sy, I64:$sz, I64:$sd),
-              !strconcat(opcStr, " $sx, $sz, $sy")>;
+              (ins CCOp:$cfw, immOp:$sy, I64:$sz, I64:$sd),
+              !strconcat(opcStr, " $sx, $sz, $sy"),
+              [(set i64:$sx, (OpNode (Ty immOp:$sy), i64:$sz, i64:$sd,
+                                     (i32 CCOp:$cfw)))]>;
   let cz = 0 in
   def rm : RR<opc, (outs I64:$sx),
               (ins CCOp:$cfw, RC:$sy, mimm:$sz, I64:$sd),
-              !strconcat(opcStr, " $sx, $sz, $sy")>;
+              !strconcat(opcStr, " $sx, $sz, $sy"),
+              [(set i64:$sx, (OpNode Ty:$sy, (i64 mimm:$sz), i64:$sd,
+                                     (i32 CCOp:$cfw)))]>;
   let cy = 0, cz = 0 in
   def im : RR<opc, (outs I64:$sx),
-              (ins CCOp:$cfw, simm7:$sy, mimm:$sz, I64:$sd),
-              !strconcat(opcStr, " $sx, $sz, $sy")>;
+              (ins CCOp:$cfw, immOp:$sy, mimm:$sz, I64:$sd),
+              !strconcat(opcStr, " $sx, $sz, $sy"),
+              [(set i64:$sx, (OpNode (Ty immOp:$sy), (i64 mimm:$sz), i64:$sd,
+                                     (i32 CCOp:$cfw)))]>;
 }
 
 // Multiclass for floating point conversion instructions.
@@ -1307,10 +1322,16 @@ def : Pat<(i32 (bswap (i32 mimm:$src))),
           (EXTRACT_SUBREG (BSWPmi (MIMM $src), 1), sub_i32)>;
 
 // Section 8.5.11 - CMOV (Conditional Move)
-let cw = 0, cw2 = 0 in defm CMOVL : RRCMOVm<"cmov.l.${cfw}", 0x3B, I64>;
-let cw = 1, cw2 = 0 in defm CMOVW : RRCMOVm<"cmov.w.${cfw}", 0x3B, I32>;
-let cw = 0, cw2 = 1 in defm CMOVD : RRCMOVm<"cmov.d.${cfw}", 0x3B, I64>;
-let cw = 1, cw2 = 1 in defm CMOVS : RRCMOVm<"cmov.s.${cfw}", 0x3B, F32>;
+let isReMaterializable = 1 in {
+let cw = 0, cw2 = 0 in
+defm CMOVL : RRCMOVm<"cmov.l.${cfw}", 0x3B, I64, i64, cmov>;
+let cw = 1, cw2 = 0 in
+defm CMOVW : RRCMOVm<"cmov.w.${cfw}", 0x3B, I32, i32, cmov>;
+let cw = 0, cw2 = 1 in
+defm CMOVD : RRCMOVm<"cmov.d.${cfw}", 0x3B, I64, f64, cmov, simm7fp>;
+let cw = 1, cw2 = 1 in
+defm CMOVS : RRCMOVm<"cmov.s.${cfw}", 0x3B, F32, f32, cmov, simm7fp>;
+}
 def : MnemonicAlias<"cmov.l", "cmov.l.at">;
 def : MnemonicAlias<"cmov.w", "cmov.w.at">;
 def : MnemonicAlias<"cmov.d", "cmov.d.at">;
@@ -2182,41 +2203,80 @@ def : Pat<(f128 (selectcc f64:$l, f64:$r, f128:$t, f128:$f, cond:$cond)),
 def : Pat<(f128 (selectcc f128:$l, f128:$r, f128:$t, f128:$f, cond:$cond)),
           (cmov128rr<CMOVDrr> (fcond2cc $cond), (FCMPQrr $l, $r), $t, $f)>;
 
-// Generic SELECT pattern matches
-// Use cmov.w for all cases since %pred holds i32.
-//
-//   CMOV.w.ne %res, %tval, %tmp  ; set tval if %tmp is true
+// Generic CMOV pattern matches
+//   CMOV accepts i64 $t, $f, and result.  So, we extend it to support
+//   i32/f32/f64/f128 $t, $f, and result.
 
-def : Pat<(i32 (select i32:$pred, i32:$t, i32:$f)),
-          (cmov32rr<CMOVWrr, sub_i32> CC_INE, $pred, $t, $f)>;
-def : Pat<(i32 (select i32:$pred, (i32 mimm:$t), i32:$f)),
-          (cmov32rm<CMOVWrm, sub_i32> CC_INE, $pred, $t, $f)>;
-def : Pat<(i32 (select i32:$pred, i32:$t, (i32 mimm:$f))),
-          (cmov32rm<CMOVWrm, sub_i32> CC_IEQ, $pred, $f, $t)>;
+// CMOV for i32
+multiclass CMOVI32m<ValueType TY, string Insn> {
+  def : Pat<(i32 (cmov TY:$cmp, i32:$t, i32:$f, (i32 CCOp:$cond))),
+            (EXTRACT_SUBREG
+                (!cast<Instruction>(Insn#"rr") (CCOP $cond), $cmp,
+                           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $t, sub_i32),
+                           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $f, sub_i32)),
+                sub_i32)>;
+  def : Pat<(i32 (cmov TY:$cmp, (i32 mimm:$t), i32:$f, (i32 CCOp:$cond))),
+            (EXTRACT_SUBREG
+                (!cast<Instruction>(Insn#"rm") (CCOP $cond), $cmp,
+                           (MIMM $t),
+                           (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $f, sub_i32)),
+                sub_i32)>;
+}
+defm : CMOVI32m<i64, "CMOVL">;
+defm : CMOVI32m<i32, "CMOVW">;
+defm : CMOVI32m<f64, "CMOVD">;
+defm : CMOVI32m<f32, "CMOVS">;
 
-def : Pat<(i64 (select i32:$pred, i64:$t, i64:$f)),
-          (cmovrr<CMOVWrr> CC_INE, $pred, $t, $f)>;
-def : Pat<(i64 (select i32:$pred, (i64 mimm:$t), i64:$f)),
-          (cmovrm<CMOVWrm, MIMM> CC_INE, $pred, $t, $f)>;
-def : Pat<(i64 (select i32:$pred, i64:$t, (i64 mimm:$f))),
-          (cmovrm<CMOVWrm, MIMM> CC_IEQ, $pred, $f, $t)>;
+// CMOV for f32
+multiclass CMOVF32m<ValueType TY, string Insn> {
+  def : Pat<(f32 (cmov TY:$cmp, f32:$t, f32:$f, (i32 CCOp:$cond))),
+            (EXTRACT_SUBREG
+                (!cast<Instruction>(Insn#"rr")
+                    (CCOP $cond), $cmp,
+                    (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $t, sub_f32),
+                    (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $f, sub_f32)),
+                sub_f32)>;
+  def : Pat<(f32 (cmov TY:$cmp, (f32 mimmfp:$t), f32:$f, (i32 CCOp:$cond))),
+            (EXTRACT_SUBREG
+                (!cast<Instruction>(Insn#"rm")
+                    (CCOP $cond), $cmp, (MIMMFP $t),
+                    (INSERT_SUBREG (i64 (IMPLICIT_DEF)), $f, sub_f32)),
+                sub_f32)>;
+}
+defm : CMOVF32m<i64, "CMOVL">;
+defm : CMOVF32m<i32, "CMOVW">;
+defm : CMOVF32m<f64, "CMOVD">;
+defm : CMOVF32m<f32, "CMOVS">;
 
-def : Pat<(f32 (select i32:$pred, f32:$t, f32:$f)),
-          (cmov32rr<CMOVWrr, sub_f32> CC_INE, $pred, $t, $f)>;
-def : Pat<(f32 (select i32:$pred, (f32 mimmfp:$t), f32:$f)),
-          (cmov32rm<CMOVWrm, sub_f32, MIMMFP> CC_INE, $pred, $t, $f)>;
-def : Pat<(f32 (select i32:$pred, f32:$t, (f32 mimmfp:$f))),
-          (cmov32rm<CMOVWrm, sub_f32, MIMMFP> CC_IEQ, $pred, $f, $t)>;
+// CMOV for f64
+multiclass CMOVF64m<ValueType TY, string Insn> {
+  def : Pat<(f64 (cmov TY:$cmp, f64:$t, f64:$f, (i32 CCOp:$cond))),
+            (!cast<Instruction>(Insn#"rr") (CCOP $cond), $cmp, $t, $f)>;
+  def : Pat<(f64 (cmov TY:$cmp, (f64 mimmfp:$t), f64:$f, (i32 CCOp:$cond))),
+            (!cast<Instruction>(Insn#"rm") (CCOP $cond), $cmp, (MIMMFP $t),
+                                           $f)>;
+}
+defm : CMOVF64m<i64, "CMOVL">;
+defm : CMOVF64m<i32, "CMOVW">;
+defm : CMOVF64m<f64, "CMOVD">;
+defm : CMOVF64m<f32, "CMOVS">;
 
-def : Pat<(f64 (select i32:$pred, f64:$t, f64:$f)),
-          (cmovrr<CMOVWrr> CC_INE, $pred, $t, $f)>;
-def : Pat<(f64 (select i32:$pred, (f64 mimmfp:$t), f64:$f)),
-          (cmovrm<CMOVWrm, MIMMFP> CC_INE, $pred, $t, $f)>;
-def : Pat<(f64 (select i32:$pred, f64:$t, (f64 mimmfp:$f))),
-          (cmovrm<CMOVWrm, MIMMFP> CC_IEQ, $pred, $f, $t)>;
-
-def : Pat<(f128 (select i32:$pred, f128:$t, f128:$f)),
-          (cmov128rr<CMOVWrr> CC_INE, $pred, $t, $f)>;
+// CMOV for f128
+multiclass CMOVF128m<ValueType TY, string Insn> {
+  def : Pat<(f128 (cmov TY:$cmp, f128:$t, f128:$f, (i32 CCOp:$cond))),
+            (INSERT_SUBREG
+              (INSERT_SUBREG (f128 (IMPLICIT_DEF)),
+                (!cast<Instruction>(Insn#"rr") (CCOP $cond), $cmp,
+                  (EXTRACT_SUBREG $t, sub_odd),
+                  (EXTRACT_SUBREG $f, sub_odd)), sub_odd),
+              (!cast<Instruction>(Insn#"rr") (CCOP $cond), $cmp,
+                (EXTRACT_SUBREG $t, sub_even),
+                (EXTRACT_SUBREG $f, sub_even)), sub_even)>;
+}
+defm : CMOVF128m<i64, "CMOVL">;
+defm : CMOVF128m<i32, "CMOVW">;
+defm : CMOVF128m<f64, "CMOVD">;
+defm : CMOVF128m<f32, "CMOVS">;
 
 // bitconvert
 def : Pat<(f64 (bitconvert i64:$src)), (COPY_TO_REGCLASS $src, I64)>;
