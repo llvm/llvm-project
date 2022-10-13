@@ -2141,6 +2141,20 @@ bool HexagonTargetLowering::shouldExpandBuildVectorWithShuffles(EVT VT,
   return false;
 }
 
+bool HexagonTargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
+      unsigned Index) const {
+  assert(ResVT.getVectorElementType() == SrcVT.getVectorElementType());
+  if (!ResVT.isSimple() || !SrcVT.isSimple())
+    return false;
+
+  MVT ResTy = ResVT.getSimpleVT(), SrcTy = SrcVT.getSimpleVT();
+  if (ResTy.getVectorElementType() != MVT::i1)
+    return true;
+
+  // Non-HVX bool vectors are relatively cheap.
+  return SrcTy.getVectorNumElements() <= 8;
+}
+
 bool HexagonTargetLowering::isShuffleMaskLegal(ArrayRef<int> Mask,
                                                EVT VT) const {
   return true;
