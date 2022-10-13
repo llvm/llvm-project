@@ -18,19 +18,19 @@
 #include <random>
 #include <set>
 
-TEST(ScudoReleaseTest, PackedCounterArray) {
+TEST(ScudoReleaseTest, RegionPageMap) {
   for (scudo::uptr I = 0; I < SCUDO_WORDSIZE; I++) {
     // Various valid counter's max values packed into one word.
-    scudo::PackedCounterArray Counters2N(1U, 1U, 1UL << I);
-    EXPECT_EQ(sizeof(scudo::uptr), Counters2N.getBufferSize());
+    scudo::RegionPageMap PageMap2N(1U, 1U, 1UL << I);
+    EXPECT_EQ(sizeof(scudo::uptr), PageMap2N.getBufferSize());
     // Check the "all bit set" values too.
-    scudo::PackedCounterArray Counters2N1_1(1U, 1U, ~0UL >> I);
-    EXPECT_EQ(sizeof(scudo::uptr), Counters2N1_1.getBufferSize());
+    scudo::RegionPageMap PageMap2N1_1(1U, 1U, ~0UL >> I);
+    EXPECT_EQ(sizeof(scudo::uptr), PageMap2N1_1.getBufferSize());
     // Verify the packing ratio, the counter is Expected to be packed into the
     // closest power of 2 bits.
-    scudo::PackedCounterArray Counters(1U, SCUDO_WORDSIZE, 1UL << I);
+    scudo::RegionPageMap PageMap(1U, SCUDO_WORDSIZE, 1UL << I);
     EXPECT_EQ(sizeof(scudo::uptr) * scudo::roundUpToPowerOfTwo(I + 1),
-              Counters.getBufferSize());
+              PageMap.getBufferSize());
   }
 
   // Go through 1, 2, 4, 8, .. {32,64} bits per counter.
@@ -38,20 +38,20 @@ TEST(ScudoReleaseTest, PackedCounterArray) {
     // Make sure counters request one memory page for the buffer.
     const scudo::uptr NumCounters =
         (scudo::getPageSizeCached() / 8) * (SCUDO_WORDSIZE >> I);
-    scudo::PackedCounterArray Counters(1U, NumCounters,
+    scudo::RegionPageMap PageMap(1U, NumCounters,
                                        1UL << ((1UL << I) - 1));
-    Counters.inc(0U, 0U);
+    PageMap.inc(0U, 0U);
     for (scudo::uptr C = 1; C < NumCounters - 1; C++) {
-      EXPECT_EQ(0UL, Counters.get(0U, C));
-      Counters.inc(0U, C);
-      EXPECT_EQ(1UL, Counters.get(0U, C - 1));
+      EXPECT_EQ(0UL, PageMap.get(0U, C));
+      PageMap.inc(0U, C);
+      EXPECT_EQ(1UL, PageMap.get(0U, C - 1));
     }
-    EXPECT_EQ(0UL, Counters.get(0U, NumCounters - 1));
-    Counters.inc(0U, NumCounters - 1);
+    EXPECT_EQ(0UL, PageMap.get(0U, NumCounters - 1));
+    PageMap.inc(0U, NumCounters - 1);
     if (I > 0) {
-      Counters.incRange(0u, 0U, NumCounters - 1);
+      PageMap.incRange(0u, 0U, NumCounters - 1);
       for (scudo::uptr C = 0; C < NumCounters; C++)
-        EXPECT_EQ(2UL, Counters.get(0U, C));
+        EXPECT_EQ(2UL, PageMap.get(0U, C));
     }
   }
 }
@@ -102,7 +102,7 @@ TEST(ScudoReleaseTest, FreePagesRangeTracker) {
 
   for (auto TestCase : TestCases) {
     StringRangeRecorder Recorder;
-    RangeTracker Tracker(&Recorder);
+    RangeTracker Tracker(Recorder);
     for (scudo::uptr I = 0; TestCase[I] != 0; I++)
       Tracker.processNextPage(TestCase[I] == 'x');
     Tracker.finish();
@@ -152,6 +152,7 @@ template <class SizeClassMap> void testReleaseFreeMemoryToOS() {
   typedef FreeBatch<SizeClassMap> Batch;
   const scudo::uptr PagesCount = 1024;
   const scudo::uptr PageSize = scudo::getPageSizeCached();
+  const scudo::uptr PageSizeLog = scudo::getLog2(PageSize);
   std::mt19937 R;
   scudo::u32 RandState = 42;
 
@@ -195,8 +196,12 @@ template <class SizeClassMap> void testReleaseFreeMemoryToOS() {
     auto SkipRegion = [](UNUSED scudo::uptr RegionIndex) { return false; };
     auto DecompactPtr = [](scudo::uptr P) { return P; };
     ReleasedPagesRecorder Recorder;
-    releaseFreeMemoryToOS(FreeList, MaxBlocks * BlockSize, 1U, BlockSize,
-                          &Recorder, DecompactPtr, SkipRegion);
+    scudo::PageReleaseContext Context(BlockSize,
+                                      /*RegionSize=*/MaxBlocks * BlockSize,
+                                      /*NumberOfRegions=*/1U);
+    Context.markFreeBlocks(FreeList, DecompactPtr, Recorder.getBase());
+    releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
+    scudo::RegionPageMap &PageMap = Context.PageMap;
 
     // Verify that there are no released pages touched by used chunks and all
     // ranges of free chunks big enough to contain the entire memory pages had
@@ -223,6 +228,8 @@ template <class SizeClassMap> void testReleaseFreeMemoryToOS() {
           const bool PageReleased = Recorder.ReportedPages.find(J * PageSize) !=
                                     Recorder.ReportedPages.end();
           EXPECT_EQ(false, PageReleased);
+          EXPECT_EQ(false,
+                    PageMap.isAllCounted(0, (J * PageSize) >> PageSizeLog));
         }
 
         if (InFreeRange) {
@@ -234,6 +241,7 @@ template <class SizeClassMap> void testReleaseFreeMemoryToOS() {
             const bool PageReleased =
                 Recorder.ReportedPages.find(P) != Recorder.ReportedPages.end();
             EXPECT_EQ(true, PageReleased);
+            EXPECT_EQ(true, PageMap.isAllCounted(0, P >> PageSizeLog));
             VerifiedReleasedPages++;
             P += PageSize;
           }
@@ -251,6 +259,7 @@ template <class SizeClassMap> void testReleaseFreeMemoryToOS() {
         const bool PageReleased =
             Recorder.ReportedPages.find(P) != Recorder.ReportedPages.end();
         EXPECT_EQ(true, PageReleased);
+        EXPECT_EQ(true, PageMap.isAllCounted(0, P >> PageSizeLog));
         VerifiedReleasedPages++;
         P += PageSize;
       }

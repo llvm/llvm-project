@@ -478,7 +478,7 @@ private:
       return reinterpret_cast<uptr>(CompactPtr);
     };
     releaseFreeMemoryToOS(Sci->FreeList, RegionSize, NumberOfRegions, BlockSize,
-                          &Recorder, DecompactPtr, SkipRegion);
+                          Recorder, DecompactPtr, SkipRegion);
     if (Recorder.getReleasedRangesCount() > 0) {
       Sci->ReleaseInfo.PushedBlocksAtLastRelease = Sci->Stats.PushedBlocks;
       Sci->ReleaseInfo.RangesReleased += Recorder.getReleasedRangesCount();
