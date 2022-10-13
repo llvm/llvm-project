@@ -13,8 +13,8 @@ define float @foo1(double* %x0, double* %x1, double* %x2) nounwind {
 ; CHECK-NEXT:    addvl sp, sp, #-4
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fmov s0, #1.00000000
-; CHECK-NEXT:    ld4d { z1.d, z2.d, z3.d, z4.d }, p0/z, [x0]
-; CHECK-NEXT:    ld4d { z16.d, z17.d, z18.d, z19.d }, p0/z, [x1]
+; CHECK-NEXT:    ld4d { z1.d - z4.d }, p0/z, [x0]
+; CHECK-NEXT:    ld4d { z16.d - z19.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1d { z5.d }, p0/z, [x2]
 ; CHECK-NEXT:    mov x0, sp
 ; CHECK-NEXT:    ptrue p0.d
@@ -60,8 +60,8 @@ define float @foo2(double* %x0, double* %x1) nounwind {
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    add x9, sp, #16
-; CHECK-NEXT:    ld4d { z1.d, z2.d, z3.d, z4.d }, p0/z, [x0]
-; CHECK-NEXT:    ld4d { z16.d, z17.d, z18.d, z19.d }, p0/z, [x1]
+; CHECK-NEXT:    ld4d { z1.d - z4.d }, p0/z, [x0]
+; CHECK-NEXT:    ld4d { z16.d - z19.d }, p0/z, [x1]
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    add x8, sp, #16
 ; CHECK-NEXT:    fmov s0, #1.00000000
@@ -118,8 +118,8 @@ define float @foo3(double* %x0, double* %x1, double* %x2) nounwind {
 ; CHECK-NEXT:    addvl sp, sp, #-3
 ; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    fmov s0, #1.00000000
-; CHECK-NEXT:    ld4d { z2.d, z3.d, z4.d, z5.d }, p0/z, [x0]
-; CHECK-NEXT:    ld3d { z16.d, z17.d, z18.d }, p0/z, [x1]
+; CHECK-NEXT:    ld4d { z2.d - z5.d }, p0/z, [x0]
+; CHECK-NEXT:    ld3d { z16.d - z18.d }, p0/z, [x1]
 ; CHECK-NEXT:    ld1d { z6.d }, p0/z, [x2]
 ; CHECK-NEXT:    fmov s1, #2.00000000
 ; CHECK-NEXT:    mov x0, sp
@@ -234,7 +234,7 @@ entry:
   ret double %x0
 }
 
-; Use AAVPCS, SVE register in z0-z7 used
+; Use AAVPCS, SVE register in z0 - z7 used
 
 define void @aavpcs1(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32 %s6, <vscale x 4 x i32> %s7, <vscale x 4 x i32> %s8, <vscale x 4 x i32> %s9, <vscale x 4 x i32> %s10, <vscale x 4 x i32> %s11, <vscale x 4 x i32> %s12, <vscale x 4 x i32> %s13, <vscale x 4 x i32> %s14, <vscale x 4 x i32> %s15, <vscale x 4 x i32> %s16, i32 * %ptr) nounwind {
 ; CHECK-LABEL: aavpcs1:
@@ -267,7 +267,7 @@ entry:
   ret void
 }
 
-; Use AAVPCS, SVE register in z0-z7 used
+; Use AAVPCS, SVE register in z0 - z7 used
 
 define void @aavpcs2(float %s0, float %s1, float %s2, float %s3, float %s4, float %s5, float %s6, <vscale x 4 x float> %s7, <vscale x 4 x float> %s8, <vscale x 4 x float> %s9, <vscale x 4 x float> %s10, <vscale x 4 x float> %s11, <vscale x 4 x float> %s12,<vscale x 4 x float> %s13,<vscale x 4 x float> %s14,<vscale x 4 x float> %s15,<vscale x 4 x float> %s16,float * %ptr) nounwind {
 ; CHECK-LABEL: aavpcs2:
@@ -306,7 +306,7 @@ entry:
   ret void
 }
 
-; Use AAVPCS, no SVE register in z0-z7 used (floats occupy z0-z7) but predicate arg is used
+; Use AAVPCS, no SVE register in z0 - z7 used (floats occupy z0 - z7) but predicate arg is used
 
 define void @aavpcs3(float %s0, float %s1, float %s2, float %s3, float %s4, float %s5, float %s6, float %s7, <vscale x 4 x float> %s8, <vscale x 4 x float> %s9, <vscale x 4 x float> %s10, <vscale x 4 x float> %s11, <vscale x 4 x float> %s12, <vscale x 4 x float> %s13, <vscale x 4 x float> %s14, <vscale x 4 x float> %s15, <vscale x 4 x float> %s16, <vscale x 4 x float> %s17, <vscale x 16 x i1> %p0, float * %ptr) nounwind {
 ; CHECK-LABEL: aavpcs3:
@@ -347,7 +347,7 @@ entry:
   ret void
 }
 
-; use AAVPCS, SVE register in z0-z7 used (i32s dont occupy z0-z7)
+; use AAVPCS, SVE register in z0 - z7 used (i32s dont occupy z0 - z7)
 
 define void @aavpcs4(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, i32 %s6, i32 %s7, <vscale x 4 x i32> %s8, <vscale x 4 x i32> %s9, <vscale x 4 x i32> %s10, <vscale x 4 x i32> %s11, <vscale x 4 x i32> %s12, <vscale x 4 x i32> %s13, <vscale x 4 x i32> %s14, <vscale x 4 x i32> %s15, <vscale x 4 x i32> %s16, <vscale x 4 x i32> %s17, i32 * %ptr) nounwind {
 ; CHECK-LABEL: aavpcs4:
