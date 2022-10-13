@@ -3683,6 +3683,11 @@ bool HexagonTargetLowering::shouldReduceLoadWidth(SDNode *Load,
   return true;
 }
 
+void HexagonTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
+      SDNode *Node) const {
+  AdjustHvxInstrPostInstrSelection(MI, Node);
+}
+
 Value *HexagonTargetLowering::emitLoadLinked(IRBuilderBase &Builder,
                                              Type *ValueTy, Value *Addr,
                                              AtomicOrdering Ord) const {

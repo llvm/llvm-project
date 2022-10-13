@@ -10,6 +10,12 @@
 #include "HexagonRegisterInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
 #include "llvm/Support/CommandLine.h"
 
@@ -562,6 +568,116 @@ bool HexagonTargetLowering::allowsHvxMisalignedMemoryAccesses(
   if (Fast)
     *Fast = true;
   return true;
+}
+
+void HexagonTargetLowering::AdjustHvxInstrPostInstrSelection(
+    MachineInstr &MI, SDNode *Node) const {
+  unsigned Opc = MI.getOpcode();
+  const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
+  MachineBasicBlock &MB = *MI.getParent();
+  MachineFunction &MF = *MB.getParent();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  DebugLoc DL = MI.getDebugLoc();
+  auto At = MI.getIterator();
+
+  switch (Opc) {
+  case Hexagon::PS_vsplatib:
+    if (Subtarget.useHVXV62Ops()) {
+      // SplatV = A2_tfrsi #imm
+      // OutV = V6_lvsplatb SplatV
+      Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      BuildMI(MB, At, DL, TII.get(Hexagon::A2_tfrsi), SplatV)
+        .add(MI.getOperand(1));
+      Register OutV = MI.getOperand(0).getReg();
+      BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatb), OutV)
+        .addReg(SplatV);
+    } else {
+      // SplatV = A2_tfrsi #imm:#imm:#imm:#imm
+      // OutV = V6_lvsplatw SplatV
+      Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      const MachineOperand &InpOp = MI.getOperand(1);
+      assert(InpOp.isImm());
+      uint32_t V = InpOp.getImm() & 0xFF;
+      BuildMI(MB, At, DL, TII.get(Hexagon::A2_tfrsi), SplatV)
+          .addImm(V << 24 | V << 16 | V << 8 | V);
+      Register OutV = MI.getOperand(0).getReg();
+      BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatw), OutV).addReg(SplatV);
+    }
+    MB.erase(At);
+    break;
+  case Hexagon::PS_vsplatrb:
+    if (Subtarget.useHVXV62Ops()) {
+      // OutV = V6_lvsplatb Inp
+      Register OutV = MI.getOperand(0).getReg();
+      BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatb), OutV)
+        .add(MI.getOperand(1));
+    } else {
+      Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      const MachineOperand &InpOp = MI.getOperand(1);
+      BuildMI(MB, At, DL, TII.get(Hexagon::S2_vsplatrb), SplatV)
+          .addReg(InpOp.getReg(), 0, InpOp.getSubReg());
+      Register OutV = MI.getOperand(0).getReg();
+      BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatw), OutV)
+          .addReg(SplatV);
+    }
+    MB.erase(At);
+    break;
+  case Hexagon::PS_vsplatih:
+    if (Subtarget.useHVXV62Ops()) {
+      // SplatV = A2_tfrsi #imm
+      // OutV = V6_lvsplath SplatV
+      Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      BuildMI(MB, At, DL, TII.get(Hexagon::A2_tfrsi), SplatV)
+        .add(MI.getOperand(1));
+      Register OutV = MI.getOperand(0).getReg();
+      BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplath), OutV)
+        .addReg(SplatV);
+    } else {
+      // SplatV = A2_tfrsi #imm:#imm
+      // OutV = V6_lvsplatw SplatV
+      Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      const MachineOperand &InpOp = MI.getOperand(1);
+      assert(InpOp.isImm());
+      uint32_t V = InpOp.getImm() & 0xFFFF;
+      BuildMI(MB, At, DL, TII.get(Hexagon::A2_tfrsi), SplatV)
+          .addImm(V << 16 | V);
+      Register OutV = MI.getOperand(0).getReg();
+      BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatw), OutV).addReg(SplatV);
+    }
+    MB.erase(At);
+    break;
+  case Hexagon::PS_vsplatrh:
+    if (Subtarget.useHVXV62Ops()) {
+      // OutV = V6_lvsplath Inp
+      Register OutV = MI.getOperand(0).getReg();
+      BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplath), OutV)
+        .add(MI.getOperand(1));
+    } else {
+      // SplatV = A2_combine_ll Inp, Inp
+      // OutV = V6_lvsplatw SplatV
+      Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      const MachineOperand &InpOp = MI.getOperand(1);
+      BuildMI(MB, At, DL, TII.get(Hexagon::A2_combine_ll), SplatV)
+          .addReg(InpOp.getReg(), 0, InpOp.getSubReg())
+          .addReg(InpOp.getReg(), 0, InpOp.getSubReg());
+      Register OutV = MI.getOperand(0).getReg();
+      BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatw), OutV).addReg(SplatV);
+    }
+    MB.erase(At);
+    break;
+  case Hexagon::PS_vsplatiw:
+  case Hexagon::PS_vsplatrw:
+    if (Opc == Hexagon::PS_vsplatiw) {
+      // SplatV = A2_tfrsi #imm
+      Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      BuildMI(MB, At, DL, TII.get(Hexagon::A2_tfrsi), SplatV)
+        .add(MI.getOperand(1));
+      MI.getOperand(1).ChangeToRegister(SplatV, false);
+    }
+    // OutV = V6_lvsplatw SplatV/Inp
+    MI.setDesc(TII.get(Hexagon::V6_lvsplatw));
+    break;
+  }
 }
 
 SDValue
