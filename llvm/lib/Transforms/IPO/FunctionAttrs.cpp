@@ -217,8 +217,12 @@ static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
       continue;
     }
 
-    // Ignore non-volatile accesses from local memory. (Atomic is okay here.)
-    if (!I.isVolatile() && AAR.pointsToConstantMemory(*Loc, /*OrLocal=*/true))
+    // Volatile operations may access inaccessible memory.
+    if (I.isVolatile())
+      ME |= MemoryEffects::inaccessibleMemOnly(MR);
+
+    // Ignore accesses to local memory.
+    if (AAR.pointsToConstantMemory(*Loc, /*OrLocal=*/true))
       continue;
 
     // The accessed location can be either only argument memory, or
