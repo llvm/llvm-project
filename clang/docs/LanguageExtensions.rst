@@ -1549,7 +1549,7 @@ ASM Goto with Output Constraints
 .. note::
 
   Clang's implementation of ASM goto differs from `GCC's
-  implementation<https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html>`_ in
+  implementation <https://gcc.gnu.org/onlinedocs/gcc/Extended-Asm.html>`_ in
   that Clang doesn't yet support outputs on the indirect branch. Use of an
   output on the indirect branch may result in undefined behavior and should be
   avoided. E.g., in the following `z` isn't valid when used and may have
