@@ -1897,7 +1897,8 @@ public:
   /// instrinsic functions
   virtual std::pair<bool, RValue> emitFastFPAtomicCall(CodeGenFunction &CGF,
                                                        LValue X, RValue Update,
-                                                       BinaryOperatorKind BO) {
+                                                       BinaryOperatorKind BO,
+                                                       bool IsXBinopExpr) {
     return std::make_pair(false, RValue::get(nullptr));
   }
 };

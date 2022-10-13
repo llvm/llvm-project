@@ -211,7 +211,8 @@ public:
   // Emit call to fast FP intrinsics
   std::pair<bool, RValue> emitFastFPAtomicCall(CodeGenFunction &CGF, LValue X,
                                                RValue Update,
-                                               BinaryOperatorKind BO) override;
+                                               BinaryOperatorKind BO,
+                                               bool IsXBinopExpr) override;
 
   /// Emit call to void __kmpc_push_proc_bind(ident_t *loc, kmp_int32
   /// global_tid, int proc_bind) to generate code for 'proc_bind' clause.

@@ -4296,8 +4296,10 @@ bool CGOpenMPRuntimeGPU::supportFastFPAtomics() {
     return false;
 }
 
-std::pair<bool, RValue> CGOpenMPRuntimeGPU::emitFastFPAtomicCall(
-    CodeGenFunction &CGF, LValue X, RValue Update, BinaryOperatorKind BO) {
+std::pair<bool, RValue>
+CGOpenMPRuntimeGPU::emitFastFPAtomicCall(CodeGenFunction &CGF, LValue X,
+                                         RValue Update, BinaryOperatorKind BO,
+                                         bool IsXBinopExpr) {
   CGBuilderTy &Bld = CGF.Builder;
   unsigned int IID = -1;
   RValue UpdateFixed = Update;
@@ -4308,6 +4310,14 @@ std::pair<bool, RValue> CGOpenMPRuntimeGPU::emitFastFPAtomicCall(
     break;
   case BO_Add:
     IID = llvm::Intrinsic::amdgcn_flat_atomic_fadd;
+    break;
+  case BO_LT:
+    IID = IsXBinopExpr ? llvm::Intrinsic::amdgcn_flat_atomic_fmax
+                       : llvm::Intrinsic::amdgcn_flat_atomic_fmin;
+    break;
+  case BO_GT:
+    IID = IsXBinopExpr ? llvm::Intrinsic::amdgcn_flat_atomic_fmin
+                       : llvm::Intrinsic::amdgcn_flat_atomic_fmax;
     break;
   default:
     // remaining operations are not supported yet
