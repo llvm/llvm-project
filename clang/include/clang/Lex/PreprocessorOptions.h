@@ -235,6 +235,9 @@ public:
   /// Should diagnose caching related issues.
   CachingDiagKind CachingDiagOption = CachingDiagKind::None;
 
+  /// If set, the UNIX timestamp specified by SOURCE_DATE_EPOCH.
+  Optional<uint64_t> SourceDateEpoch;
+
 public:
   PreprocessorOptions() : PrecompiledPreambleBytes(0, false) {}
 

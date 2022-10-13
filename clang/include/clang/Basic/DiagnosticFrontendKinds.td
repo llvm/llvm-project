@@ -131,6 +131,8 @@ def err_fe_invalid_exception_model
 def warn_fe_concepts_ts_flag : Warning<
   "-fconcepts-ts is deprecated - use '-std=c++20' for Concepts support">,
   InGroup<Deprecated>;
+def err_fe_invalid_source_date_epoch : Error<
+    "environment variable 'SOURCE_DATE_EPOCH' ('%0') must be a non-negative decimal integer <= %1">;
 
 def err_fe_incompatible_option_with_remote_cache : Error<
   "'%0' is incompatible with remote caching backend">;
