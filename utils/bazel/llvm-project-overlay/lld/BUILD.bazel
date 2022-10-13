@@ -2,6 +2,7 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("//llvm:tblgen.bzl", "gentbl")
 
 package(
@@ -240,12 +241,21 @@ cc_library(
     ],
 )
 
+expand_template(
+    name = "lld_main",
+    out = "lld-driver.cpp",
+    substitutions = {
+        "@TOOL_NAME@": "lld",
+    },
+    template = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
+)
+
 cc_binary(
     name = "lld",
     srcs = glob([
         "tools/lld/*.cpp",
         "tools/lld/*.h",
-    ]),
+    ]) + ["lld-driver.cpp"],
     deps = [
         ":COFF",
         ":Common",

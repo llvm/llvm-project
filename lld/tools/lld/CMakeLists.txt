@@ -6,10 +6,18 @@ add_lld_tool(lld
   lld.cpp
 
   SUPPORT_PLUGINS
+  GENERATE_DRIVER
   )
 export_executable_symbols_for_plugins(lld)
 
-target_link_libraries(lld
+function(lld_target_link_libraries target type)
+  target_link_libraries(${target} ${type} ${ARGN})
+  if (TARGET obj.${target})
+    target_link_libraries(obj.${target} ${ARGN})
+  endif()
+endfunction()
+
+lld_target_link_libraries(lld
   PRIVATE
   lldCommon
   lldCOFF
