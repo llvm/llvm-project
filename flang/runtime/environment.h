@@ -12,6 +12,8 @@
 #include "flang/Decimal/decimal.h"
 #include <optional>
 
+struct EnvironmentDefaultList;
+
 namespace Fortran::runtime {
 
 class Terminator;
@@ -31,13 +33,14 @@ std::optional<Convert> GetConvertFromString(const char *, std::size_t);
 
 struct ExecutionEnvironment {
   constexpr ExecutionEnvironment(){};
-  void Configure(int argc, const char *argv[], const char *envp[]);
+  void Configure(int argc, const char *argv[], const char *envp[],
+      const EnvironmentDefaultList *envDefaults);
   const char *GetEnv(
       const char *name, std::size_t name_length, const Terminator &terminator);
 
   int argc{0};
   const char **argv{nullptr};
-  const char **envp{nullptr};
+  char **envp{nullptr};
 
   int listDirectedOutputLineLengthLimit{79}; // FORT_FMT_RECL
   enum decimal::FortranRounding defaultOutputRoundingMode{
