@@ -29,4 +29,5 @@ target_link_libraries(openmp-offloading-server
         absl::synchronization
         ${OPENMP_PTHREAD_LIB}
         omp
-        "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../../exports")
+        "-Wl,--version-script=${CMAKE_CURRENT_SOURCE_DIR}/../../exports"
+        "-Wl,--undefined-version")
