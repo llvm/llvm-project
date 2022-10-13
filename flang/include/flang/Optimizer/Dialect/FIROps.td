@@ -1009,7 +1009,7 @@ def fir_BoxDimsOp : fir_Op<"box_dims", [NoMemoryEffect]> {
     are the values encoded in a standard descriptor.
   }];
 
-  let arguments = (ins fir_BoxType:$val, AnyIntegerLike:$dim);
+  let arguments = (ins BoxOrClassType:$val, AnyIntegerLike:$dim);
 
   let results = (outs Index, Index, Index);
 
