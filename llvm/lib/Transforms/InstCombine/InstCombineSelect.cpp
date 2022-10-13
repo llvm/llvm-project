@@ -2774,6 +2774,11 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         match(TrueVal, m_Specific(B)) && match(FalseVal, m_Zero()))
       return replaceOperand(SI, 0, A);
 
+    // ~(A & B) & (A | B) --> A ^ B
+    if (match(&SI, m_c_LogicalAnd(m_Not(m_LogicalAnd(m_Value(A), m_Value(B))),
+                                  m_c_LogicalOr(m_Deferred(A), m_Deferred(B)))))
+      return BinaryOperator::CreateXor(A, B);
+
     Value *C;
     // select (~a | c), a, b -> and a, (or c, freeze(b))
     if (match(CondVal, m_c_Or(m_Not(m_Specific(TrueVal)), m_Value(C))) &&
