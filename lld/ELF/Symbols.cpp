@@ -15,7 +15,7 @@
 #include "Target.h"
 #include "Writer.h"
 #include "lld/Common/ErrorHandler.h"
-#include "lld/Common/Strings.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Compiler.h"
 #include <cstring>
 
@@ -43,9 +43,16 @@ LLVM_ATTRIBUTE_UNUSED static inline void assertSymbols() {
   AssertSymbol<LazyObject>();
 }
 
+// Returns a symbol for an error message.
+static std::string maybeDemangleSymbol(StringRef symName) {
+  if (elf::config->demangle)
+    return demangle(symName.str());
+  return symName.str();
+}
+
 std::string lld::toString(const elf::Symbol &sym) {
   StringRef name = sym.getName();
-  std::string ret = demangle(name, config->demangle);
+  std::string ret = maybeDemangleSymbol(name);
 
   const char *suffix = sym.getVersionSuffix();
   if (*suffix == '@')

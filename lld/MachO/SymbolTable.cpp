@@ -15,6 +15,7 @@
 #include "SyntheticSections.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
+#include "llvm/Demangle/Demangle.h"
 
 using namespace llvm;
 using namespace lld;
