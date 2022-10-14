@@ -914,8 +914,15 @@ def LLVM_ShuffleVectorOp : LLVM_Op<"shufflevector",
 
   let hasVerifier = 1;
 
+  string llvmInstName = "ShuffleVector";
   string llvmBuilder = [{
     $res = builder.CreateShuffleVector($v1, $v2, $mask);
+  }];
+  string mlirBuilder = [{
+    auto *svInst = cast<llvm::ShuffleVectorInst>(inst);
+    SmallVector<int32_t> mask(svInst->getShuffleMask());
+    $res = $_builder.create<LLVM::ShuffleVectorOp>(
+      $_location, $v1, $v2, mask);
   }];
 }
 

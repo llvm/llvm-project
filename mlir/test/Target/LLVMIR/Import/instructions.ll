@@ -323,6 +323,17 @@ define void @select(i32 %arg0, i32 %arg1, i1 %cond) {
 
 ; // -----
 
+; CHECK-LABEL: func @shuffle_vec
+; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
+; CHECK-SAME:  %[[ARG2:[a-zA-Z0-9]+]]
+define <4 x half> @shuffle_vec(<4 x half> %arg1, <4 x half> %arg2) {
+  ; CHECK:  llvm.shufflevector %[[ARG1]], %[[ARG2]] [2, 3, -1, -1] : vector<4xf16>
+  %1 = shufflevector <4 x half> %arg1, <4 x half> %arg2, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  ret <4 x half> %1
+}
+
+; // -----
+
 ; CHECK-LABEL: @alloca
 ; CHECK-SAME:  %[[SIZE:[a-zA-Z0-9]+]]
 define double* @alloca(i64 %size) {
