@@ -2,17 +2,13 @@
 add_header_library(
   memory_utils
   HDRS
+    utils.h
+    elements.h
     bcmp_implementations.h
     bzero_implementations.h
     memcmp_implementations.h
     memcpy_implementations.h
     memset_implementations.h
-    op_aarch64.h
-    op_higher_order.h
-    op_builtin.h
-    op_generic.h
-    op_x86.h
-    utils.h
   DEPS
     libc.src.__support.CPP.bit
 )
