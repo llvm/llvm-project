@@ -123,7 +123,8 @@ public:
   /// Classify a global function reference for the current subtarget.
   unsigned char classifyGlobalFunctionReference(const GlobalValue *GV,
                                                 const Module &M) const;
-  unsigned char classifyGlobalFunctionReference(const GlobalValue *GV) const;
+  unsigned char
+  classifyGlobalFunctionReference(const GlobalValue *GV) const override;
 
   /// Classify a blockaddress reference for the current subtarget according to
   /// how we should reference it in a non-pcrel context.
