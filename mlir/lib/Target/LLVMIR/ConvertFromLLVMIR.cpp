@@ -993,16 +993,6 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
     mapValue(inst, res);
     return success();
   }
-  if (inst->getOpcode() == llvm::Instruction::ShuffleVector) {
-    auto *svInst = cast<llvm::ShuffleVectorInst>(inst);
-    Value vec1 = processValue(svInst->getOperand(0));
-    Value vec2 = processValue(svInst->getOperand(1));
-
-    SmallVector<int32_t> mask(svInst->getShuffleMask());
-    Value res = b.create<ShuffleVectorOp>(loc, vec1, vec2, mask);
-    mapValue(inst, res);
-    return success();
-  }
 
   return emitError(loc) << "unknown instruction: " << diag(*inst);
 }
