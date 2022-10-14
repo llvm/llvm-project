@@ -1,6 +1,6 @@
 ; XFAIL: *
 
-; RUN: opt -S -dse < %s | FileCheck %s
+; RUN: opt -S -passes=dse < %s | FileCheck %s
 
 ; We DSE stack alloc'ed and byval locations, in the presence of fences.
 ; Fence does not make an otherwise thread local store visible.
