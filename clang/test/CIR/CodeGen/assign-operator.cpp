@@ -73,13 +73,11 @@ int main() {
 // CHECK:     cir.scope {
 // CHECK:       %3 = cir.alloca !_22struct2EString22, cir.ptr <!_22struct2EString22>, ["s"] {alignment = 8 : i64}
 // CHECK:       %4 = cir.alloca !_22struct2EStringView22, cir.ptr <!_22struct2EStringView22>, ["ref.tmp"] {alignment = 8 : i64}
-// CHECK:       %5 = cir.alloca !_22struct2EStringView22, cir.ptr <!_22struct2EStringView22>, ["ref.tmp"] {alignment = 8 : i64}
-// CHECK:       %6 = cir.get_global @".str" : cir.ptr <!cir.array<i8 x 3>>
-// CHECK:       %7 = cir.cast(array_to_ptrdecay, %6 : !cir.ptr<!cir.array<i8 x 3>>), !cir.ptr<i8>
-// CHECK:       cir.call @_ZN6StringC2EPKc(%3, %7) : (!cir.ptr<!_22struct2EString22>, !cir.ptr<i8>) -> ()
+// CHECK:       %5 = cir.get_global @".str" : cir.ptr <!cir.array<i8 x 3>>
+// CHECK:       %6 = cir.cast(array_to_ptrdecay, %5 : !cir.ptr<!cir.array<i8 x 3>>), !cir.ptr<i8>
+// CHECK:       cir.call @_ZN6StringC2EPKc(%3, %6) : (!cir.ptr<!_22struct2EString22>, !cir.ptr<i8>) -> ()
 // CHECK:       cir.call @_ZN10StringViewC2ERK6String(%4, %3) : (!cir.ptr<!_22struct2EStringView22>, !cir.ptr<!_22struct2EString22>) -> ()
-// CHECK:       cir.call @_ZN10StringViewC2ERK6String(%5, %3) : (!cir.ptr<!_22struct2EStringView22>, !cir.ptr<!_22struct2EString22>) -> ()
-// CHECK:       %8 = cir.call @_ZN10StringViewaSEOS_(%1, %5) : (!cir.ptr<!_22struct2EStringView22>, !cir.ptr<!_22struct2EStringView22>) -> !cir.ptr<!_22struct2EStringView22>
+// CHECK:       %7 = cir.call @_ZN10StringViewaSEOS_(%1, %4) : (!cir.ptr<!_22struct2EStringView22>, !cir.ptr<!_22struct2EStringView22>) -> !cir.ptr<!_22struct2EStringView22>
 // CHECK:     }
 // CHECK:     %2 = cir.load %0 : cir.ptr <i32>, i32
 // CHECK:     cir.return %2 : i32

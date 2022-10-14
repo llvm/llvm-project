@@ -174,6 +174,14 @@ public:
   void add(RValue rvalue, clang::QualType type) {
     push_back(CallArg(rvalue, type));
   }
+
+  /// Add all the arguments from another CallArgList to this one. After doing
+  /// this, the old CallArgList retains its list of arguments, but must not
+  /// be used to emit a call.
+  void addFrom(const CallArgList &other) {
+    insert(end(), other.begin(), other.end());
+    // TODO: Writebacks, CleanupsToDeactivate, StackBase???
+  }
 };
 
 /// FunctionArgList - Type for representing both the decl and type of parameters
