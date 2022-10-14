@@ -623,7 +623,10 @@ protected:
   }
 
   void printLiteralPtr(const LiteralPtr *E, StreamType &SS) {
-    SS << E->clangDecl()->getNameAsString();
+    if (const NamedDecl *D = E->clangDecl())
+      SS << D->getNameAsString();
+    else
+      SS << "<temporary>";
   }
 
   void printVariable(const Variable *V, StreamType &SS, bool IsVarDecl=false) {
