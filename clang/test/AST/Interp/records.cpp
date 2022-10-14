@@ -1,7 +1,6 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify %s
 // RUN: %clang_cc1 -verify=ref %s
 
-// ref-no-diagnostics
 // expected-no-diagnostics
 
 struct BoolPair {
@@ -38,7 +37,6 @@ static_assert(ints2.a == -20, "");
 static_assert(ints2.b == -30, "");
 static_assert(!ints2.c, "");
 
-#if 0
 constexpr Ints getInts() {
   return {64, 128, true};
 }
@@ -46,7 +44,6 @@ constexpr Ints ints3 = getInts();
 static_assert(ints3.a == 64, "");
 static_assert(ints3.b == 128, "");
 static_assert(ints3.c, "");
-#endif
 
 constexpr Ints ints4 = {
   .a = 40 * 50,
@@ -103,3 +100,38 @@ constexpr const C* getPointer() {
   return &c;
 }
 static_assert(getPointer()->a == 100, "");
+
+constexpr C RVOAndParams(const C *c) {
+  return C();
+}
+constexpr C RVOAndParamsResult = RVOAndParams(&c);
+
+constexpr int locals() {
+  C c;
+  c.a = 10;
+
+  // Assignment, not an initializer.
+  // c = C(); FIXME
+  c.a = 10;
+
+
+  // Assignment, not an initializer.
+  //c = RVOAndParams(&c); FIXME
+
+  return c.a;
+}
+static_assert(locals() == 10, "");
+
+namespace thisPointer {
+  struct S {
+    constexpr int get12() { return 12; }
+  };
+
+  constexpr int foo() { // ref-error {{never produces a constant expression}}
+    S *s = nullptr;
+    return s->get12(); // ref-note 2{{member call on dereferenced null pointer}}
+  }
+  // FIXME: The new interpreter doesn't reject this currently.
+  static_assert(foo() == 12, ""); // ref-error {{not an integral constant expression}} \
+                                  // ref-note {{in call to 'foo()'}}
+};

@@ -71,9 +71,11 @@ public:
   bool VisitBinaryOperator(const BinaryOperator *E);
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E);
   bool VisitCallExpr(const CallExpr *E);
+  bool VisitCXXMemberCallExpr(const CXXMemberCallExpr *E);
   bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E);
   bool VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E);
   bool VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *E);
+  bool VisitCXXThisExpr(const CXXThisExpr *E);
   bool VisitUnaryOperator(const UnaryOperator *E);
   bool VisitDeclRefExpr(const DeclRefExpr *E);
   bool VisitImplicitValueInitExpr(const ImplicitValueInitExpr *E);
@@ -98,6 +100,10 @@ protected:
   /// Returns a record from a record or pointer type.
   Record *getRecord(QualType Ty);
   Record *getRecord(const RecordDecl *RD);
+
+  // Returns a function for the given FunctionDecl.
+  // If the function does not exist yet, it is compiled.
+  const Function *getFunction(const FunctionDecl *FD);
 
   /// Returns the size int bits of an integer.
   unsigned getIntWidth(QualType Ty) {

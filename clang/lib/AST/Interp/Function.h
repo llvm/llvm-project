@@ -56,6 +56,21 @@ private:
 ///
 /// Contains links to the bytecode of the function, as well as metadata
 /// describing all arguments and stack-local variables.
+///
+/// # Calling Convention
+///
+/// When calling a function, all argument values must be on the stack.
+///
+/// If the function has a This pointer (i.e. hasThisPointer() returns true,
+/// the argument values need to be preceeded by a Pointer for the This object.
+///
+/// If the function uses Return Value Optimization, the arguments (and
+/// potentially the This pointer) need to be proceeded by a Pointer pointing
+/// to the location to construct the returned value.
+///
+/// After the function has been called, it will remove all arguments,
+/// including RVO and This pointer, from the stack.
+///
 class Function final {
 public:
   using ParamDescriptor = std::pair<PrimType, Descriptor *>;
@@ -84,7 +99,7 @@ public:
   ParamDescriptor getParamDescriptor(unsigned Offset) const;
 
   /// Checks if the first argument is a RVO pointer.
-  bool hasRVO() const { return ParamTypes.size() != Params.size(); }
+  bool hasRVO() const { return HasRVO; }
 
   /// Range over the scope blocks.
   llvm::iterator_range<llvm::SmallVector<Scope, 2>::iterator> scopes() {
@@ -115,11 +130,16 @@ public:
   /// Checks if the function is fully done compiling.
   bool isFullyCompiled() const { return IsFullyCompiled; }
 
+  bool hasThisPointer() const { return HasThisPointer; }
+
+  unsigned getNumParams() const { return ParamTypes.size(); }
+
 private:
   /// Construct a function representing an actual function.
   Function(Program &P, const FunctionDecl *F, unsigned ArgSize,
            llvm::SmallVector<PrimType, 8> &&ParamTypes,
-           llvm::DenseMap<unsigned, ParamDescriptor> &&Params);
+           llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
+           bool HasThisPointer, bool HasRVO);
 
   /// Sets the code of a function.
   void setCode(unsigned NewFrameSize, std::vector<char> &&NewCode, SourceMap &&NewSrcMap,
@@ -162,6 +182,13 @@ private:
   /// Flag to indicate if the function is done being
   /// compiled to bytecode.
   bool IsFullyCompiled = false;
+  /// Flag indicating if this function takes the this pointer
+  /// as the first implicit argument
+  bool HasThisPointer = false;
+  /// Whether this function has Return Value Optimization, i.e.
+  /// the return value is constructed in the caller's stack frame.
+  /// This is done for functions that return non-primive values.
+  bool HasRVO = false;
 
 public:
   /// Dumps the disassembled bytecode to \c llvm::errs().
