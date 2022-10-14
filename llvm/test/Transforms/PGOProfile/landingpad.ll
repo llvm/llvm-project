@@ -11,7 +11,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @val = global i32 0, align 4
 @_ZTIi = external constant ptr
 ; GEN: $__llvm_profile_raw_version = comdat any
-; GEN: @__llvm_profile_raw_version = hidden constant i64 {{[0-9]+}}, comdat
+; GEN: @__llvm_profile_raw_version = constant i64 {{[0-9]+}}, comdat
 ; GEN: @__profn_bar = private constant [3 x i8] c"bar"
 ; GEN: @__profn_foo = private constant [3 x i8] c"foo"
 
