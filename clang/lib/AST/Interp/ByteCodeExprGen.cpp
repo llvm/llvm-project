@@ -330,7 +330,9 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitArrayInitIndexExpr(
     const ArrayInitIndexExpr *E) {
   assert(ArrayIndex);
-  return this->emitConstUint64(*ArrayIndex, E);
+  QualType IndexType = E->getType();
+  APInt Value(getIntWidth(IndexType), *ArrayIndex);
+  return this->emitConst(classifyPrim(IndexType), 0, Value, E);
 }
 
 template <class Emitter>
