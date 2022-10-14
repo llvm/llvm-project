@@ -18,6 +18,14 @@ llvm.func @intrinsics(%arg0: f32, %arg1: f32, %arg2: vector<8xf32>, %arg3: !llvm
   llvm.return
 }
 
+// CHECK-LABEL: @fpclass_test
+llvm.func @fpclass_test(%arg0: f32) -> i1 {
+  %checkNan = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: call i1 @llvm.is.fpclass
+  %0 = "llvm.intr.is.fpclass"(%arg0, %checkNan) : (f32, i32) -> i1
+  llvm.return %0 : i1
+}
+
 // CHECK-LABEL: @exp_test
 llvm.func @exp_test(%arg0: f32, %arg1: vector<8xf32>) {
   // CHECK: call float @llvm.exp.f32
