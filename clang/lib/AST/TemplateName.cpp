@@ -304,7 +304,7 @@ void TemplateName::print(raw_ostream &OS, const PrintingPolicy &Policy,
   } else {
     assert(getKind() == TemplateName::OverloadedTemplate);
     OverloadedTemplateStorage *OTS = getAsOverloadedTemplate();
-    (*OTS->begin())->printName(OS);
+    (*OTS->begin())->printName(OS, Policy);
   }
 }
 
