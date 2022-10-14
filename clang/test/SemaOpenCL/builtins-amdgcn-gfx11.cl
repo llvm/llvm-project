@@ -13,4 +13,6 @@ void test(global uint* out1, global ulong* out2, int x) {
 #if __has_builtin(__builtin_amdgcn_s_sendmsg_rtnl)
   *out2 = __builtin_amdgcn_s_sendmsg_rtnl(x); // GFX11-error {{argument to '__builtin_amdgcn_s_sendmsg_rtnl' must be a constant integer}}
 #endif
+
+  *out1 = __builtin_amdgcn_permlane64(x); // GFX10-error {{'__builtin_amdgcn_permlane64' needs target feature gfx11-insts}}
 }
