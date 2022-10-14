@@ -102,10 +102,9 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
     for (const auto *Init : Ctor->inits()) {
       const FieldDecl *Member = Init->getMember();
       const Expr *InitExpr = Init->getInit();
+      const Record::Field *F = R->getField(Member);
 
       if (Optional<PrimType> T = this->classify(InitExpr->getType())) {
-        const Record::Field *F = R->getField(Member);
-
         if (!this->emitDupPtr(InitExpr))
           return false;
 
@@ -115,7 +114,19 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
         if (!this->emitInitField(*T, F->Offset, InitExpr))
           return false;
       } else {
-        assert(false && "Handle initializer for non-primitive values");
+        // Non-primitive case. Get a pointer to the field-to-initialize
+        // on the stack and call visitInitialzer() for it.
+        if (!this->emitDupPtr(InitExpr))
+          return false;
+
+        if (!this->emitGetPtrField(F->Offset, InitExpr))
+          return false;
+
+        if (!this->visitInitializer(InitExpr))
+          return false;
+
+        if (!this->emitPopPtr(InitExpr))
+          return false;
       }
     }
   }
