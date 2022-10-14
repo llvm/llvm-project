@@ -33,7 +33,7 @@ void StringWriter::write(char new_char, size_t len) {
     len = available_capacity;
 
   if (len > 0) {
-    inline_memset(cur_buffer, new_char, len);
+    inline_memset(cur_buffer, static_cast<uint8_t>(new_char), len);
     cur_buffer += len;
     available_capacity -= len;
   }
