@@ -1158,6 +1158,20 @@ def PseudoAtomicLoadAnd32 : PseudoAM;
 def PseudoAtomicLoadOr32 : PseudoAM;
 def PseudoAtomicLoadXor32 : PseudoAM;
 
+
+class PseudoMaskedAMUMinUMax
+    : Pseudo<(outs GPR:$res, GPR:$scratch1, GPR:$scratch2),
+             (ins GPR:$addr, GPR:$incr, GPR:$mask, grlenimm:$ordering), []> {
+  let Constraints = "@earlyclobber $res,@earlyclobber $scratch1,"
+                    "@earlyclobber $scratch2";
+  let mayLoad = 1;
+  let mayStore = 1;
+  let hasSideEffects = 0;
+}
+
+def PseudoMaskedAtomicLoadUMax32 : PseudoMaskedAMUMinUMax;
+def PseudoMaskedAtomicLoadUMin32 : PseudoMaskedAMUMinUMax;
+
 class AtomicPat<Intrinsic intrin, Pseudo AMInst>
     : Pat<(intrin GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering),
           (AMInst GPR:$addr, GPR:$incr, GPR:$mask, timm:$ordering)>;
@@ -1197,6 +1211,20 @@ def : Pat<(atomic_load_xor_32 GPR:$rj, GPR:$rk),
           (AMXOR_DB_W GPR:$rk, GPR:$rj)>;
 def : Pat<(atomic_load_xor_64 GPR:$rj, GPR:$rk),
           (AMXOR_DB_D GPR:$rk, GPR:$rj)>;
+
+def : Pat<(atomic_load_umin_32 GPR:$rj, GPR:$rk),
+          (AMMIN_DB_WU GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_umin_64 GPR:$rj, GPR:$rk),
+          (AMMIN_DB_DU GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_umax_32 GPR:$rj, GPR:$rk),
+          (AMMAX_DB_WU GPR:$rk, GPR:$rj)>;
+def : Pat<(atomic_load_umax_64 GPR:$rj, GPR:$rk),
+          (AMMAX_DB_DU GPR:$rk, GPR:$rj)>;
+
+def : AtomicPat<int_loongarch_masked_atomicrmw_umax_i64,
+                PseudoMaskedAtomicLoadUMax32>;
+def : AtomicPat<int_loongarch_masked_atomicrmw_umin_i64,
+                PseudoMaskedAtomicLoadUMin32>;
 } // Predicates = [IsLA64]
 
 def : Pat<(atomic_load_nand_32 GPR:$rj, GPR:$rk),
