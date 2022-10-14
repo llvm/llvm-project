@@ -421,6 +421,8 @@ private:
 
       BG->GroupId = GroupId;
       BG->Batches.push_front(TB);
+      BG->PushedBlocks = 0;
+      BG->PushedBlocksAtLastCheckpoint = 0;
       BG->MaxCachedPerBatch =
           TransferBatch::getMaxCached(getSizeByClassId(ClassId));
 
@@ -446,6 +448,8 @@ private:
         CurBatch->appendFromArray(&Array[I], AppendSize);
         I += AppendSize;
       }
+
+      BG->PushedBlocks += Size;
     };
 
     BatchGroup *Cur = Sci->FreeList.front();
@@ -652,15 +656,12 @@ private:
     if (BytesPushed < PageSize)
       return 0; // Nothing new to release.
 
+    const bool CheckDensity = BlockSize < PageSize / 16U;
     // Releasing smaller blocks is expensive, so we want to make sure that a
     // significant amount of bytes are free, and that there has been a good
     // amount of batches pushed to the freelist before attempting to release.
-    if (BlockSize < PageSize / 16U) {
+    if (CheckDensity) {
       if (!Force && BytesPushed < Sci->AllocatedUser / 16U)
-        return 0;
-      // We want 8x% to 9x% free bytes (the larger the block, the lower the %).
-      if ((BytesInFreeList * 100U) / Sci->AllocatedUser <
-          (100U - 1U - BlockSize / 16U))
         return 0;
     }
 
@@ -682,17 +683,47 @@ private:
     uptr TotalReleasedBytes = 0;
     const uptr Base = First * RegionSize;
     const uptr NumberOfRegions = Last - First + 1U;
+    const uptr GroupSize = (1U << GroupSizeLog);
+    const uptr CurRegionGroupId =
+        compactPtrGroup(compactPtr(ClassId, Sci->CurrentRegion));
+
     ReleaseRecorder Recorder(Base);
-    auto SkipRegion = [this, First, ClassId](uptr RegionIndex) {
-      return (PossibleRegions[First + RegionIndex] - 1U) != ClassId;
-    };
+    PageReleaseContext Context(BlockSize, RegionSize, NumberOfRegions);
+
     auto DecompactPtr = [](CompactPtrT CompactPtr) {
       return reinterpret_cast<uptr>(CompactPtr);
     };
-    PageReleaseContext Context(BlockSize, RegionSize, NumberOfRegions);
-    for (BatchGroup &BG : Sci->FreeList)
-      Context.markFreeBlocks(BG.Batches, DecompactPtr, Base);
+    for (BatchGroup &BG : Sci->FreeList) {
+      const uptr PushedBytesDelta =
+          BG.PushedBlocks - BG.PushedBlocksAtLastCheckpoint;
+      if (PushedBytesDelta * BlockSize < PageSize)
+        continue;
 
+      uptr AllocatedGroupSize =
+          BG.GroupId == CurRegionGroupId ? Sci->CurrentRegionAllocated :
+                                           GroupSize;
+      if (AllocatedGroupSize == 0) continue;
+
+      const uptr NumBlocks = (BG.Batches.size() - 1) * BG.MaxCachedPerBatch +
+          BG.Batches.back()->getCount();
+      const uptr BytesInBG = NumBlocks * BlockSize;
+      // Given the randomness property, we try to release the pages only if the
+      // bytes used by free blocks exceed certain proportion of allocated
+      // spaces.
+      if (CheckDensity && (BytesInBG * 100U) / AllocatedGroupSize <
+          (100U - 1U - BlockSize / 16U)) {
+        continue;
+      }
+
+      BG.PushedBlocksAtLastCheckpoint = BG.PushedBlocks;
+      // Note that we don't always visit blocks in each BatchGroup so that we
+      // may miss the chance of releasing certain pages that cross BatchGroups.
+      Context.markFreeBlocks(BG.Batches, DecompactPtr, Base);
+    }
+
+    auto SkipRegion = [this, First, ClassId](uptr RegionIndex) {
+      return (PossibleRegions[First + RegionIndex] - 1U) != ClassId;
+    };
     releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
 
     if (Recorder.getReleasedRangesCount() > 0) {

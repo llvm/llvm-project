@@ -370,6 +370,9 @@ private:
   static uptr compactPtrGroup(CompactPtrT CompactPtr) {
     return CompactPtr >> (GroupSizeLog - CompactPtrScale);
   }
+  static uptr batchGroupBase(uptr Base, uptr GroupId) {
+    return (GroupId << GroupSizeLog) + Base;
+  }
 
   // Push the blocks to their batch group. The layout will be like,
   //
@@ -424,6 +427,8 @@ private:
 
       BG->GroupId = GroupId;
       BG->Batches.push_front(TB);
+      BG->PushedBlocks = 0;
+      BG->PushedBlocksAtLastCheckpoint = 0;
       BG->MaxCachedPerBatch =
           TransferBatch::getMaxCached(getSizeByClassId(ClassId));
 
@@ -450,6 +455,8 @@ private:
         CurBatch->appendFromArray(&Array[I], AppendSize);
         I += AppendSize;
       }
+
+      BG->PushedBlocks += Size;
     };
 
     BatchGroup *Cur = Region->FreeList.front();
@@ -661,15 +668,12 @@ private:
     if (BytesPushed < PageSize)
       return 0; // Nothing new to release.
 
+    bool CheckDensity = BlockSize < PageSize / 16U;
     // Releasing smaller blocks is expensive, so we want to make sure that a
     // significant amount of bytes are free, and that there has been a good
     // amount of batches pushed to the freelist before attempting to release.
-    if (BlockSize < PageSize / 16U) {
+    if (CheckDensity) {
       if (!Force && BytesPushed < Region->AllocatedUser / 16U)
-        return 0;
-      // We want 8x% to 9x% free bytes (the larger the block, the lower the %).
-      if ((BytesInFreeList * 100U) / Region->AllocatedUser <
-          (100U - 1U - BlockSize / 16U))
         return 0;
     }
 
@@ -684,16 +688,46 @@ private:
       }
     }
 
+    const uptr GroupSize = (1U << GroupSizeLog);
+    const uptr AllocatedUserEnd = Region->AllocatedUser + Region->RegionBeg;
     ReleaseRecorder Recorder(Region->RegionBeg, &Region->Data);
+    PageReleaseContext Context(BlockSize, RegionSize, /*NumberOfRegions=*/1U);
+
     const uptr CompactPtrBase = getCompactPtrBaseByClassId(ClassId);
     auto DecompactPtr = [CompactPtrBase](CompactPtrT CompactPtr) {
       return decompactPtrInternal(CompactPtrBase, CompactPtr);
     };
-    auto SkipRegion = [](UNUSED uptr RegionIndex) { return false; };
-    PageReleaseContext Context(BlockSize, RegionSize, /*NumberOfRegions=*/1U);
-    for (BatchGroup &BG : Region->FreeList)
-      Context.markFreeBlocks(BG.Batches, DecompactPtr, Region->RegionBeg);
+    for (BatchGroup &BG : Region->FreeList) {
+      const uptr PushedBytesDelta =
+          BG.PushedBlocks - BG.PushedBlocksAtLastCheckpoint;
+      if (PushedBytesDelta * BlockSize < PageSize)
+        continue;
+      const uptr BatchGroupEnd =
+          batchGroupBase(BG.GroupId, CompactPtrBase) + GroupSize;
+      const uptr AllocatedGroupSize =
+          AllocatedUserEnd >= BatchGroupEnd ? GroupSize :
+                                              AllocatedUserEnd - BatchGroupEnd;
+      if (AllocatedGroupSize == 0) continue;
 
+      const uptr NumBlocks = (BG.Batches.size() - 1) * BG.MaxCachedPerBatch +
+          BG.Batches.back()->getCount();
+      const uptr BytesInBG = NumBlocks * BlockSize;
+      // Given the randomness property, we try to release the pages only if the
+      // bytes used by free blocks exceed certain proportion of group size. Note
+      // that this heuristic only applies when all the spaces in a BatchGroup
+      // are allocated.
+      if (CheckDensity && (BytesInBG * 100U) / AllocatedGroupSize <
+          (100U - 1U - BlockSize / 16U)) {
+        continue;
+      }
+
+      BG.PushedBlocksAtLastCheckpoint = BG.PushedBlocks;
+      // Note that we don't always visit blocks in each BatchGroup so that we
+      // may miss the chance of releasing certain pages that cross BatchGroups.
+      Context.markFreeBlocks(BG.Batches, DecompactPtr, Region->RegionBeg);
+    }
+
+    auto SkipRegion = [](UNUSED uptr RegionIndex) { return false; };
     releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
 
     if (Recorder.getReleasedRangesCount() > 0) {
