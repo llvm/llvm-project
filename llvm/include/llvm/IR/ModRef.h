@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Definitions of ModRefInfo and FunctionModRefBehavior, which are used to
+// Definitions of ModRefInfo and MemoryEffects, which are used to
 // describe the memory effects of instructions.
 //
 //===----------------------------------------------------------------------===//
@@ -60,7 +60,7 @@ raw_ostream &operator<<(raw_ostream &OS, ModRefInfo MR);
 /// Loads from constant globals are not considered memory accesses for this
 /// interface. Also, functions may freely modify stack space local to their
 /// invocation without having to report it through these interfaces.
-class FunctionModRefBehavior {
+class MemoryEffects {
 public:
   /// The locations at which a function might access memory.
   enum Location {
@@ -87,61 +87,60 @@ private:
                               force_iteration_on_noniterable_enum);
   }
 
-  FunctionModRefBehavior(uint32_t Data) : Data(Data) {}
+  MemoryEffects(uint32_t Data) : Data(Data) {}
 
   void setModRef(Location Loc, ModRefInfo MR) {
     Data &= ~(LocMask << getLocationPos(Loc));
     Data |= static_cast<uint32_t>(MR) << getLocationPos(Loc);
   }
 
-  friend raw_ostream &operator<<(raw_ostream &OS, FunctionModRefBehavior RMRB);
+  friend raw_ostream &operator<<(raw_ostream &OS, MemoryEffects RMRB);
 
 public:
-  /// Create FunctionModRefBehavior that can access only the given location
-  /// with the given ModRefInfo.
-  FunctionModRefBehavior(Location Loc, ModRefInfo MR) { setModRef(Loc, MR); }
-
-  /// Create FunctionModRefBehavior that can access any location with the
+  /// Create MemoryEffects that can access only the given location with the
   /// given ModRefInfo.
-  explicit FunctionModRefBehavior(ModRefInfo MR) {
+  MemoryEffects(Location Loc, ModRefInfo MR) { setModRef(Loc, MR); }
+
+  /// Create MemoryEffects that can access any location with the given
+  /// ModRefInfo.
+  explicit MemoryEffects(ModRefInfo MR) {
     for (Location Loc : locations())
       setModRef(Loc, MR);
   }
 
-  /// Create FunctionModRefBehavior that can read and write any memory.
-  static FunctionModRefBehavior unknown() {
-    return FunctionModRefBehavior(ModRefInfo::ModRef);
+  /// Create MemoryEffects that can read and write any memory.
+  static MemoryEffects unknown() {
+    return MemoryEffects(ModRefInfo::ModRef);
   }
 
-  /// Create FunctionModRefBehavior that cannot read or write any memory.
-  static FunctionModRefBehavior none() {
-    return FunctionModRefBehavior(ModRefInfo::NoModRef);
+  /// Create MemoryEffects that cannot read or write any memory.
+  static MemoryEffects none() {
+    return MemoryEffects(ModRefInfo::NoModRef);
   }
 
-  /// Create FunctionModRefBehavior that can read any memory.
-  static FunctionModRefBehavior readOnly() {
-    return FunctionModRefBehavior(ModRefInfo::Ref);
+  /// Create MemoryEffects that can read any memory.
+  static MemoryEffects readOnly() {
+    return MemoryEffects(ModRefInfo::Ref);
   }
 
-  /// Create FunctionModRefBehavior that can write any memory.
-  static FunctionModRefBehavior writeOnly() {
-    return FunctionModRefBehavior(ModRefInfo::Mod);
+  /// Create MemoryEffects that can write any memory.
+  static MemoryEffects writeOnly() {
+    return MemoryEffects(ModRefInfo::Mod);
   }
 
-  /// Create FunctionModRefBehavior that can only access argument memory.
-  static FunctionModRefBehavior argMemOnly(ModRefInfo MR) {
-    return FunctionModRefBehavior(ArgMem, MR);
+  /// Create MemoryEffects that can only access argument memory.
+  static MemoryEffects argMemOnly(ModRefInfo MR) {
+    return MemoryEffects(ArgMem, MR);
   }
 
-  /// Create FunctionModRefBehavior that can only access inaccessible memory.
-  static FunctionModRefBehavior inaccessibleMemOnly(ModRefInfo MR) {
-    return FunctionModRefBehavior(InaccessibleMem, MR);
+  /// Create MemoryEffects that can only access inaccessible memory.
+  static MemoryEffects inaccessibleMemOnly(ModRefInfo MR) {
+    return MemoryEffects(InaccessibleMem, MR);
   }
 
-  /// Create FunctionModRefBehavior that can only access inaccessible or
-  /// argument memory.
-  static FunctionModRefBehavior inaccessibleOrArgMemOnly(ModRefInfo MR) {
-    FunctionModRefBehavior FRMB = none();
+  /// Create MemoryEffects that can only access inaccessible or argument memory.
+  static MemoryEffects inaccessibleOrArgMemOnly(ModRefInfo MR) {
+    MemoryEffects FRMB = none();
     FRMB.setModRef(ArgMem, MR);
     FRMB.setModRef(InaccessibleMem, MR);
     return FRMB;
@@ -152,18 +151,18 @@ public:
     return ModRefInfo((Data >> getLocationPos(Loc)) & LocMask);
   }
 
-  /// Get new FunctionModRefBehavior with modified ModRefInfo for Loc.
-  FunctionModRefBehavior getWithModRef(Location Loc, ModRefInfo MR) const {
-    FunctionModRefBehavior FMRB = *this;
-    FMRB.setModRef(Loc, MR);
-    return FMRB;
+  /// Get new MemoryEffects with modified ModRefInfo for Loc.
+  MemoryEffects getWithModRef(Location Loc, ModRefInfo MR) const {
+    MemoryEffects ME = *this;
+    ME.setModRef(Loc, MR);
+    return ME;
   }
 
-  /// Get new FunctionModRefBehavior with NoModRef on the given Loc.
-  FunctionModRefBehavior getWithoutLoc(Location Loc) const {
-    FunctionModRefBehavior FMRB = *this;
-    FMRB.setModRef(Loc, ModRefInfo::NoModRef);
-    return FMRB;
+  /// Get new MemoryEffects with NoModRef on the given Loc.
+  MemoryEffects getWithoutLoc(Location Loc) const {
+    MemoryEffects ME = *this;
+    ME.setModRef(Loc, ModRefInfo::NoModRef);
+    return ME;
   }
 
   /// Get ModRefInfo for any location.
@@ -204,41 +203,44 @@ public:
     return isNoModRef(getModRef(Other));
   }
 
-  /// Intersect with another FunctionModRefBehavior.
-  FunctionModRefBehavior operator&(FunctionModRefBehavior Other) const {
-    return FunctionModRefBehavior(Data & Other.Data);
+  /// Intersect with other MemoryEffects.
+  MemoryEffects operator&(MemoryEffects Other) const {
+    return MemoryEffects(Data & Other.Data);
   }
 
-  /// Intersect (in-place) with another FunctionModRefBehavior.
-  FunctionModRefBehavior &operator&=(FunctionModRefBehavior Other) {
+  /// Intersect (in-place) with other MemoryEffects.
+  MemoryEffects &operator&=(MemoryEffects Other) {
     Data &= Other.Data;
     return *this;
   }
 
-  /// Union with another FunctionModRefBehavior.
-  FunctionModRefBehavior operator|(FunctionModRefBehavior Other) const {
-    return FunctionModRefBehavior(Data | Other.Data);
+  /// Union with other MemoryEffects.
+  MemoryEffects operator|(MemoryEffects Other) const {
+    return MemoryEffects(Data | Other.Data);
   }
 
-  /// Union (in-place) with another FunctionModRefBehavior.
-  FunctionModRefBehavior &operator|=(FunctionModRefBehavior Other) {
+  /// Union (in-place) with other MemoryEffects.
+  MemoryEffects &operator|=(MemoryEffects Other) {
     Data |= Other.Data;
     return *this;
   }
 
-  /// Check whether this is the same as another FunctionModRefBehavior.
-  bool operator==(FunctionModRefBehavior Other) const {
+  /// Check whether this is the same as other MemoryEffects.
+  bool operator==(MemoryEffects Other) const {
     return Data == Other.Data;
   }
 
-  /// Check whether this is different from another FunctionModRefBehavior.
-  bool operator!=(FunctionModRefBehavior Other) const {
+  /// Check whether this is different from other MemoryEffects.
+  bool operator!=(MemoryEffects Other) const {
     return !operator==(Other);
   }
 };
 
-/// Debug print FunctionModRefBehavior.
-raw_ostream &operator<<(raw_ostream &OS, FunctionModRefBehavior RMRB);
+/// Debug print MemoryEffects.
+raw_ostream &operator<<(raw_ostream &OS, MemoryEffects RMRB);
+
+// Legacy alias.
+using FunctionModRefBehavior = MemoryEffects;
 
 } // namespace llvm
 
