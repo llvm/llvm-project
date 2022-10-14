@@ -434,6 +434,8 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     ```
 
     Example with thread_dim_mapping attribute:
+    
+    ```mlir
     //
     // Sequential context.
     //
@@ -451,8 +453,11 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
     // Implicit synchronization point.
     // Sequential context.
     //
+    ```
 
     Example with privatized tensors:
+    
+    ```mlir
     %t0 = ...
     %t1 = ...
     %r = scf.foreach_thread ... shared_outs(%o = t0) -> tensor<?xf32> {
@@ -464,6 +469,7 @@ def ForeachThreadOp : SCF_Op<"foreach_thread", [
       "some_use"(%t0)
       "some_use"(%t1)
     }
+    ```
   }];
   let arguments = (ins Variadic<Index>:$num_threads,
                        Variadic<AnyRankedTensor>:$outputs,
