@@ -973,10 +973,9 @@ no_sanitize_features = [
 cc_library(
     name = "string_memory_utils",
     hdrs = [
-        "src/string/memory_utils/op_aarch64.h",
-        "src/string/memory_utils/op_builtin.h",
-        "src/string/memory_utils/op_generic.h",
-        "src/string/memory_utils/op_x86.h",
+        "src/string/memory_utils/elements.h",
+        "src/string/memory_utils/elements_aarch64.h",
+        "src/string/memory_utils/elements_x86.h",
         "src/string/memory_utils/utils.h",
     ],
     textual_hdrs = [
@@ -989,8 +988,6 @@ cc_library(
     deps = [
         ":__support_common",
         ":__support_cpp_bit",
-        ":__support_cpp_type_traits",
-        ":__support_cpp_array",
         ":libc_root",
     ],
 )
