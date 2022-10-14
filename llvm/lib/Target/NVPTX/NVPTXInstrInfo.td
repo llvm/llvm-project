@@ -922,6 +922,19 @@ defm FNEG  : F2<"neg", fneg>;
 defm FSQRT : F2<"sqrt.rn", fsqrt>;
 
 //
+// F16 NEG
+//
+class FNEG_F16_F16X2<string OpcStr, RegisterClass RC, Predicate Pred> :
+      NVPTXInst<(outs RC:$dst), (ins RC:$src),
+                !strconcat(OpcStr, " \t$dst, $src;"),
+                [(set RC:$dst, (fneg RC:$src))]>,
+                Requires<[useFP16Math, hasPTX60, hasSM53, Pred]>;
+def FNEG16_ftz   : FNEG_F16_F16X2<"neg.ftz.f16", Float16Regs, doF32FTZ>;
+def FNEG16       : FNEG_F16_F16X2<"neg.f16", Float16Regs, True>;
+def FNEG16x2_ftz : FNEG_F16_F16X2<"neg.ftz.f16x2", Float16x2Regs, doF32FTZ>;
+def FNEG16x2     : FNEG_F16_F16X2<"neg.f16x2", Float16x2Regs, True>;
+
+//
 // F64 division
 //
 def FDIV641r :
