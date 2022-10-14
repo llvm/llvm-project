@@ -801,11 +801,12 @@ void BinaryEmitter::emitJumpTable(const JumpTable &JT, MCSection *HotSection,
   for (MCSymbol *Entry : JT.Entries) {
     auto LI = JT.Labels.find(Offset);
     if (LI != JT.Labels.end()) {
-      LLVM_DEBUG(dbgs() << "BOLT-DEBUG: emitting jump table "
-                        << LI->second->getName()
-                        << " (originally was at address 0x"
-                        << Twine::utohexstr(JT.getAddress() + Offset)
-                        << (Offset ? "as part of larger jump table\n" : "\n"));
+      LLVM_DEBUG({
+        dbgs() << "BOLT-DEBUG: emitting jump table " << LI->second->getName()
+               << " (originally was at address 0x"
+               << Twine::utohexstr(JT.getAddress() + Offset)
+               << (Offset ? ") as part of larger jump table\n" : ")\n");
+      });
       if (!LabelCounts.empty()) {
         LLVM_DEBUG(dbgs() << "BOLT-DEBUG: jump table count: "
                           << LabelCounts[LI->second] << '\n');
@@ -1156,14 +1157,11 @@ void BinaryEmitter::emitDebugLineInfoForUnprocessedCUs() {
 
 void BinaryEmitter::emitDataSections(StringRef OrgSecPrefix) {
   for (BinarySection &Section : BC.sections()) {
-    if (!Section.hasRelocations() || !Section.hasSectionRef())
+    if (!Section.hasRelocations())
       continue;
 
-    StringRef SectionName = Section.getName();
-    std::string EmitName = Section.isReordered()
-                               ? std::string(Section.getOutputName())
-                               : OrgSecPrefix.str() + std::string(SectionName);
-    Section.emitAsData(Streamer, EmitName);
+    StringRef Prefix = Section.hasSectionRef() ? OrgSecPrefix : "";
+    Section.emitAsData(Streamer, Prefix + Section.getName());
     Section.clearRelocations();
   }
 }
