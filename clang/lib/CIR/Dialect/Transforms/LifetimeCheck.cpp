@@ -819,21 +819,24 @@ const clang::CXXMethodDecl *getMethod(ModuleOp mod, StringRef name) {
 
 void LifetimeCheckPass::checkMoveAssignment(CallOp callOp,
                                             const clang::CXXMethodDecl *m) {
-  // auto srcObj = callOp.getOperand(0);
-  llvm_unreachable("NYI");
+  // MyIntPointer::operator=(MyIntPointer&&)(%dst, %src)
+  auto dst = callOp.getOperand(0);
+  auto src = callOp.getOperand(1);
+
+  // Currently only handle move assignments between pointer categories.
+  if (!(ptrs.count(dst) && ptrs.count(src)))
+    return;
+
+  // Note that the current pattern here usually comes from a xvalue in src
+  // where all the initialization is done, and this move assignment is
+  // where we finally materialize it back to the original pointer category.
+  // TODO: should CIR ops retain xvalue information somehow?
+  getPmap()[dst] = getPmap()[src];
+  getPmap()[src].clear(); // TODO: should we add null to 'src' pset?
 }
 
 void LifetimeCheckPass::checkCtor(CallOp callOp,
                                   const clang::CXXConstructorDecl *ctor) {
-  // First argument passed is always the alloca for the 'this' ptr.
-  auto addr = callOp.getOperand(0);
-  auto allocaOp = dyn_cast_or_null<AllocaOp>(addr.getDefiningOp());
-
-  // Not interested in block/function arguments or other source ops for now
-  // and Owners don't have interesting initialization.
-  if (!allocaOp || owners.count(addr))
-    return;
-
   // TODO: zero init
   // 2.4.2 if the initialization is default initialization or zero
   // initialization, example:
@@ -843,9 +846,40 @@ void LifetimeCheckPass::checkCtor(CallOp callOp,
   //
   // both results in pset(p) == {null}
   if (ctor->isDefaultConstructor()) {
+    // First argument passed is always the alloca for the 'this' ptr.
+    auto addr = callOp.getOperand(0);
+
+    // Currently two possible actions:
+    // 1. Skip Owner category initialization.
+    // 2. Initialize Pointer categories.
+    if (owners.count(addr))
+      return;
+
+    if (!ptrs.count(addr))
+      return;
+
+    // Not interested in block/function arguments or any indirect
+    // provided alloca address.
+    if (!dyn_cast_or_null<AllocaOp>(addr.getDefiningOp()))
+      return;
+
     getPmap()[addr].clear();
     getPmap()[addr].insert(State::getNullPtr());
     pmapNullHist[addr] = callOp.getLoc();
+    return;
+  }
+
+  // Copy ctor call that initializes a pointer type from an owner
+  // Example:
+  //  MyIntPointer::MyIntPointer(MyIntOwner const&)(%5, %4)
+  if (ctor->isCopyConstructor()) {
+    auto addr = callOp.getOperand(0);
+    auto owner = callOp.getOperand(1);
+
+    if (ptrs.count(addr) && owners.count(owner)) {
+      getPmap()[addr].clear();
+      getPmap()[addr].insert(State::getOwnedBy(owner));
+    }
   }
 }
 
