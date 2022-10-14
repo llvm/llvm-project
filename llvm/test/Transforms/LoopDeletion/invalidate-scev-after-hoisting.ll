@@ -9,8 +9,8 @@
 ; CHECK-NEXT: Loop %inner: max backedge-taken count is 405
 ; CHECK-NEXT: Loop %inner: Predicated backedge-taken count is (405 + %invar)<nuw><nsw>
 
-define void @test() {
-; CHECK-LABEL: @test(
+define void @test_pr57837() {
+; CHECK-LABEL: @test_pr57837(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
 ; CHECK:       outer.header:
@@ -125,4 +125,38 @@ inner.3:
 outer.latch:
   %outer.iv.next = add nsw i32 %l, %trunc
   br label %outer.header
+}
+
+define void @test_pr58314() {
+; CHECK-LABEL: @test_pr58314(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[OUTER_HEADER:%.*]]
+; CHECK:       outer.header:
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i16 0, 0
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i1 false, i1 true
+; CHECK-NEXT:    br label [[INNER:%.*]]
+; CHECK:       inner:
+; CHECK-NEXT:    br i1 true, label [[INNER]], label [[OUTER_LATCH:%.*]]
+; CHECK:       outer.latch:
+; CHECK-NEXT:    [[SEL_LCSSA:%.*]] = phi i1 [ [[SEL]], [[INNER]] ]
+; CHECK-NEXT:    br i1 [[SEL_LCSSA]], label [[OUTER_HEADER]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  br label %inner
+
+inner:
+  %c = icmp ne i16 0, 0
+  %sel = select i1 %c, i1 false, i1 true
+  br i1 true, label %inner, label %outer.latch
+
+outer.latch:
+  br i1 %sel, label %outer.header, label %exit
+
+exit:
+  ret void
 }

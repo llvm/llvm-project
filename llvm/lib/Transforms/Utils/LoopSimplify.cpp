@@ -647,19 +647,12 @@ ReprocessLoop:
         Instruction *Inst = &*I++;
         if (Inst == CI)
           continue;
-        bool InstInvariant = false;
         if (!L->makeLoopInvariant(
-                Inst, InstInvariant,
-                Preheader ? Preheader->getTerminator() : nullptr, MSSAU)) {
+                Inst, AnyInvariant,
+                Preheader ? Preheader->getTerminator() : nullptr, MSSAU, SE)) {
           AllInvariant = false;
           break;
         }
-        if (InstInvariant && SE) {
-          // The loop disposition of all SCEV expressions that depend on any
-          // hoisted values have also changed.
-          SE->forgetBlockAndLoopDispositions(Inst);
-        }
-        AnyInvariant |= InstInvariant;
       }
       if (AnyInvariant)
         Changed = true;
