@@ -2481,12 +2481,16 @@ def CRNOR  : XLForm_1<19, 33, (outs crbitrc:$CRD),
                               (ins crbitrc:$CRA, crbitrc:$CRB),
                       "crnor $CRD, $CRA, $CRB", IIC_BrCR,
                       [(set i1:$CRD, (not (or i1:$CRA, i1:$CRB)))]>;
-
 def CREQV  : XLForm_1<19, 289, (outs crbitrc:$CRD),
                                (ins crbitrc:$CRA, crbitrc:$CRB),
                       "creqv $CRD, $CRA, $CRB", IIC_BrCR,
                       [(set i1:$CRD, (not (xor i1:$CRA, i1:$CRB)))]>;
 } // isCommutable
+
+let isCodeGenOnly = 1 in
+def CRNOT  : XLForm_1s<19, 33, (outs crbitrc:$CRD), (ins crbitrc:$CRA),
+                       "crnot $CRD, $CRA", IIC_BrCR,
+                       [(set i1:$CRD, (not i1:$CRA))]>;
 
 def CRANDC : XLForm_1<19, 129, (outs crbitrc:$CRD),
                                (ins crbitrc:$CRA, crbitrc:$CRB),
@@ -3267,7 +3271,7 @@ include "PPCInstrVSX.td"
 include "PPCInstrHTM.td"
 
 def crnot : OutPatFrag<(ops node:$in),
-                       (CRNOR $in, $in)>;
+                       (CRNOT $in)>;
 def       : Pat<(not i1:$in),
                 (crnot $in)>;
 

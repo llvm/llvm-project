@@ -1540,11 +1540,8 @@ define i32 @fcmp_ole_f128(fp128 %a, fp128 %b) #0 {
 ; P9-LABEL: fcmp_ole_f128:
 ; P9:       # %bb.0:
 ; P9-NEXT:    xscmpuqp cr0, v2, v3
-; P9-NEXT:    xscmpuqp cr1, v2, v3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    crnor 4*cr5+lt, un, 4*cr1+un
-; P9-NEXT:    crnor 4*cr5+gt, gt, 4*cr1+gt
-; P9-NEXT:    crnand 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    cror 4*cr5+lt, un, gt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
@@ -1629,11 +1626,8 @@ define i32 @fcmp_oge_f128(fp128 %a, fp128 %b) #0 {
 ; P9-LABEL: fcmp_oge_f128:
 ; P9:       # %bb.0:
 ; P9-NEXT:    xscmpuqp cr0, v2, v3
-; P9-NEXT:    xscmpuqp cr1, v2, v3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    crnor 4*cr5+lt, un, 4*cr1+un
-; P9-NEXT:    crnor 4*cr5+gt, lt, 4*cr1+lt
-; P9-NEXT:    crnand 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    cror 4*cr5+lt, un, lt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
@@ -1734,11 +1728,8 @@ define i32 @fcmp_one_f128(fp128 %a, fp128 %b) #0 {
 ; P9-LABEL: fcmp_one_f128:
 ; P9:       # %bb.0:
 ; P9-NEXT:    xscmpuqp cr0, v2, v3
-; P9-NEXT:    xscmpuqp cr1, v2, v3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    crnor 4*cr5+lt, un, 4*cr1+un
-; P9-NEXT:    crnor 4*cr5+gt, eq, 4*cr1+eq
-; P9-NEXT:    crnand 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    cror 4*cr5+lt, un, eq
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
@@ -2136,11 +2127,8 @@ define i32 @fcmps_ole_f128(fp128 %a, fp128 %b) #0 {
 ; P9-LABEL: fcmps_ole_f128:
 ; P9:       # %bb.0:
 ; P9-NEXT:    xscmpoqp cr0, v2, v3
-; P9-NEXT:    xscmpoqp cr1, v2, v3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    crnor 4*cr5+lt, un, 4*cr1+un
-; P9-NEXT:    crnor 4*cr5+gt, gt, 4*cr1+gt
-; P9-NEXT:    crnand 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    cror 4*cr5+lt, un, gt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
@@ -2225,11 +2213,8 @@ define i32 @fcmps_oge_f128(fp128 %a, fp128 %b) #0 {
 ; P9-LABEL: fcmps_oge_f128:
 ; P9:       # %bb.0:
 ; P9-NEXT:    xscmpoqp cr0, v2, v3
-; P9-NEXT:    xscmpoqp cr1, v2, v3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    crnor 4*cr5+lt, un, 4*cr1+un
-; P9-NEXT:    crnor 4*cr5+gt, lt, 4*cr1+lt
-; P9-NEXT:    crnand 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    cror 4*cr5+lt, un, lt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
@@ -2330,11 +2315,8 @@ define i32 @fcmps_one_f128(fp128 %a, fp128 %b) #0 {
 ; P9-LABEL: fcmps_one_f128:
 ; P9:       # %bb.0:
 ; P9-NEXT:    xscmpoqp cr0, v2, v3
-; P9-NEXT:    xscmpoqp cr1, v2, v3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    crnor 4*cr5+lt, un, 4*cr1+un
-; P9-NEXT:    crnor 4*cr5+gt, eq, 4*cr1+eq
-; P9-NEXT:    crnand 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    cror 4*cr5+lt, un, eq
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
