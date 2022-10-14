@@ -941,37 +941,6 @@ LogicalResult Importer::processInstruction(llvm::Instruction *inst) {
       mapValue(inst, op->getResult(0));
     return success();
   }
-  if (inst->getOpcode() == llvm::Instruction::AtomicRMW) {
-    auto *atomicInst = cast<llvm::AtomicRMWInst>(inst);
-    Value ptr = processValue(atomicInst->getPointerOperand());
-    Value val = processValue(atomicInst->getValOperand());
-
-    LLVM::AtomicBinOp binOp = getLLVMAtomicBinOp(atomicInst->getOperation());
-    LLVM::AtomicOrdering ordering =
-        getLLVMAtomicOrdering(atomicInst->getOrdering());
-
-    Type type = convertType(inst->getType());
-    Value res = b.create<AtomicRMWOp>(loc, type, binOp, ptr, val, ordering);
-    mapValue(inst, res);
-    return success();
-  }
-  if (inst->getOpcode() == llvm::Instruction::AtomicCmpXchg) {
-    auto *cmpXchgInst = cast<llvm::AtomicCmpXchgInst>(inst);
-    Value ptr = processValue(cmpXchgInst->getPointerOperand());
-    Value cmpVal = processValue(cmpXchgInst->getCompareOperand());
-    Value newVal = processValue(cmpXchgInst->getNewValOperand());
-
-    LLVM::AtomicOrdering ordering =
-        getLLVMAtomicOrdering(cmpXchgInst->getSuccessOrdering());
-    LLVM::AtomicOrdering failOrdering =
-        getLLVMAtomicOrdering(cmpXchgInst->getFailureOrdering());
-
-    Type type = convertType(inst->getType());
-    Value res = b.create<AtomicCmpXchgOp>(loc, type, ptr, cmpVal, newVal,
-                                          ordering, failOrdering);
-    mapValue(inst, res);
-    return success();
-  }
   if (inst->getOpcode() == llvm::Instruction::GetElementPtr) {
     // FIXME: Support inbounds GEPs.
     llvm::GetElementPtrInst *gep = cast<llvm::GetElementPtrInst>(inst);
