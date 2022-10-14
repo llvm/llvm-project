@@ -4,9 +4,9 @@
 ; performCallSlotOptzn in MemCpy should not exchange the calls to
 ; @llvm.lifetime.start and @llvm.memcpy.
 
-declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) #1
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 define void @call_slot(ptr nocapture dereferenceable(16) %arg1) {
 ; CHECK-LABEL: @call_slot(
@@ -49,4 +49,71 @@ define void @memcpy_memcpy_across_lifetime(ptr noalias %p1, ptr noalias %p2, ptr
   ret void
 }
 
-attributes #1 = { argmemonly nounwind }
+declare void @call(ptr)
+
+define i32 @call_slot_move_lifetime_start() {
+; CHECK-LABEL: @call_slot_move_lifetime_start(
+; CHECK-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[DST:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @call(ptr [[TMP]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[DST]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DST]], ptr align 4 [[TMP]], i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[DST]])
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[DST]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  %tmp = alloca i32
+  %dst = alloca i32
+  call void @call(ptr %tmp)
+  call void @llvm.lifetime.start.p0(i64 4, ptr %dst)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dst, ptr align 4 %tmp, i64 4, i1 false)
+  call void @llvm.lifetime.end.p0(i64 4, ptr %dst)
+  %v = load i32, ptr %dst
+  ret i32 %v
+}
+
+define i32 @call_slot_two_lifetime_starts() {
+; CHECK-LABEL: @call_slot_two_lifetime_starts(
+; CHECK-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[DST:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @call(ptr [[TMP]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[DST]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[DST]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DST]], ptr align 4 [[TMP]], i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[DST]])
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[DST]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  %tmp = alloca i32
+  %dst = alloca i32
+  call void @call(ptr %tmp)
+  call void @llvm.lifetime.start.p0(i64 4, ptr %dst)
+  call void @llvm.lifetime.start.p0(i64 4, ptr %dst)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dst, ptr align 4 %tmp, i64 4, i1 false)
+  call void @llvm.lifetime.end.p0(i64 4, ptr %dst)
+  %v = load i32, ptr %dst
+  ret i32 %v
+}
+
+define i32 @call_slot_clobber_before_lifetime_start() {
+; CHECK-LABEL: @call_slot_clobber_before_lifetime_start(
+; CHECK-NEXT:    [[TMP:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    [[DST:%.*]] = alloca i32, align 4
+; CHECK-NEXT:    call void @call(ptr [[TMP]])
+; CHECK-NEXT:    store i32 0, ptr [[DST]], align 4
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[DST]])
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[DST]], ptr align 4 [[TMP]], i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[DST]])
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[DST]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  %tmp = alloca i32
+  %dst = alloca i32
+  call void @call(ptr %tmp)
+  store i32 0, ptr %dst
+  call void @llvm.lifetime.start.p0(i64 4, ptr %dst)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %dst, ptr align 4 %tmp, i64 4, i1 false)
+  call void @llvm.lifetime.end.p0(i64 4, ptr %dst)
+  %v = load i32, ptr %dst
+  ret i32 %v
+}
