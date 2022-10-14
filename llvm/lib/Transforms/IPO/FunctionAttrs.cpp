@@ -139,10 +139,19 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
       F.getAttributes().hasAttrSomewhere(Attribute::Preallocated))
     MRB |= FunctionModRefBehavior::argMemOnly(ModRefInfo::ModRef);
 
-  // Returns true if Ptr is not based on a function argument.
-  auto IsArgumentOrAlloca = [](const Value *Ptr) {
+  auto AddPtrAccess = [&](const Value *Ptr, ModRefInfo MR) {
     const Value *UO = getUnderlyingObject(Ptr);
-    return isa<Argument>(UO) || isa<AllocaInst>(UO);
+    if (isa<AllocaInst>(UO))
+      return;
+    if (isa<Argument>(UO)) {
+      MRB |= FunctionModRefBehavior::argMemOnly(MR);
+      return;
+    }
+    // If it's not an identified object, it might be an argument.
+    if (!isIdentifiedObject(UO))
+      MRB |= FunctionModRefBehavior::argMemOnly(MR);
+    MRB |= FunctionModRefBehavior(FunctionModRefBehavior::Other, MR);
+    return;
   };
   // Scan the function body for instructions that may read or write memory.
   for (Instruction &I : instructions(F)) {
@@ -193,9 +202,7 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
           if (AAR.pointsToConstantMemory(Loc, /*OrLocal=*/true))
             continue;
 
-          MRB |= FunctionModRefBehavior::argMemOnly(ArgMR);
-          if (!IsArgumentOrAlloca(Loc.Ptr))
-            MRB |= FunctionModRefBehavior(FunctionModRefBehavior::Other, ArgMR);
+          AddPtrAccess(Loc.Ptr, ArgMR);
         }
       }
       continue;
@@ -221,11 +228,7 @@ checkFunctionMemoryAccess(Function &F, bool ThisBody, AAResults &AAR,
     if (!I.isVolatile() && AAR.pointsToConstantMemory(*Loc, /*OrLocal=*/true))
       continue;
 
-    // The accessed location can be either only argument memory, or
-    // argument & other memory, but never inaccessible memory.
-    MRB |= FunctionModRefBehavior::argMemOnly(MR);
-    if (!IsArgumentOrAlloca(Loc->Ptr))
-      MRB |= FunctionModRefBehavior(FunctionModRefBehavior::Other, MR);
+    AddPtrAccess(Loc->Ptr, MR);
   }
 
   return OrigMRB & MRB;
