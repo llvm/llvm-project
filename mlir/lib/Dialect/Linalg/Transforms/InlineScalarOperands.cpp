@@ -43,7 +43,7 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
     SmallVector<Value> newOperands;
     for (OpOperand *opOperand : genericOp.getInputOperands()) {
       AffineMap map = genericOp.getMatchingIndexingMap(opOperand);
-      if (genericOp.isInputTensor(opOperand) && map.isConstant()) {
+      if (genericOp.isInput(opOperand) && map.isConstant()) {
         scalarOperands.emplace_back(opOperand->getOperandNumber());
       } else {
         newIndexingMaps.emplace_back(map);
@@ -58,7 +58,7 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
       newIndexingMaps.emplace_back(genericOp.getMatchingIndexingMap(opOperand));
 
     Location loc = genericOp->getLoc();
-    SmallVector<Value> outputOperands = genericOp.getOutputOperands();
+    SmallVector<Value> outputOperands = genericOp.getOutputs();
     auto newOp = rewriter.create<GenericOp>(
         loc, genericOp->getResultTypes(), newOperands, outputOperands,
         newIndexingMaps, genericOp.getIteratorTypesArray());

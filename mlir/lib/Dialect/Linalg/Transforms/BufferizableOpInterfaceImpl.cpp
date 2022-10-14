@@ -118,7 +118,7 @@ struct LinalgOpInterface
     auto genericOp = cast<linalg::DestinationStyleOpInterface>(op);
 
     // The i-th "out" tensor may alias with the i-th OpResult.
-    if (genericOp.isOutputTensor(&opOperand))
+    if (genericOp.isOutput(&opOperand))
       return {genericOp.getTiedOpResult(&opOperand)};
     return {};
   }

@@ -161,7 +161,7 @@ static LinalgOp getTiledProducer(OpBuilder &b, OpResult producerResult,
     allIvs[tiledProducerLoop] = tileIvs[tiledProducerLoop];
   }
   erase_value(tileIvs, OpFoldResult());
-  SmallVector<Value> tiledOperands = producerOp.getInputAndOutputOperands();
+  SmallVector<Value> tiledOperands = producerOp->getOperands();
   tiledOperands = makeTiledShapes(b, loc, producerOp, tiledOperands, tileIvs,
                                   tileSizes, producerLoopBounds,
                                   /**omitPartialTileCheck=*/false);
