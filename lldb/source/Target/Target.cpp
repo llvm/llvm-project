@@ -26,6 +26,7 @@
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/REPL.h"
@@ -2528,6 +2529,10 @@ ExpressionResults Target::EvaluateExpression(
     execution_results = UserExpression::Evaluate(exe_ctx, options, expr, prefix,
                                                  result_valobj_sp, error,
                                                  fixed_expression, ctx_obj);
+    // Pass up the error by wrapping it inside an error result.
+    if (error.Fail() && !result_valobj_sp)
+      result_valobj_sp = ValueObjectConstResult::Create(
+          exe_ctx.GetBestExecutionContextScope(), error);
   }
 
   if (execution_results == eExpressionCompleted)
