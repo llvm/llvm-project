@@ -104,6 +104,51 @@ LLVM has a code-review policy. Code review is one way to increase the quality of
 software. Please see :doc:`CodeReview` for more information on LLVM's code-review
 process.
 
+.. _breaking:
+
+Making Potentially Breaking Changes
+-----------------------------------
+
+Please help notify users and vendors of potential disruptions when upgrading to
+a newer version of a tool. For example, deprecating a feature that is expected
+to be removed in the future, removing an already-deprecated feature, upgrading a
+diagnostic from a warning to an error, switching important default behavior, or
+any other potentially disruptive situation thought to be worth raising
+awareness of. For such changes, the following should be done:
+
+* When performing the code review for the change, please add any applicable
+  "vendors" group to the review for their awareness. The purpose of these
+  groups is to give vendors early notice that potentially disruptive changes
+  are being considered but have not yet been accepted. Vendors can give early
+  testing feedback on the changes to alert us to unacceptable breakages. The
+  current list of vendor groups is:
+
+  * `Clang vendors <https://reviews.llvm.org/project/members/113/>`_
+  * `libc++ vendors <https://reviews.llvm.org/project/members/109/>`_
+
+  People interested in joining the vendors group can do so by clicking the
+  "Join Project" link on the vendor's "Members" page in Phabricator.
+
+* When committing the change to the repository, add appropriate information
+  about the potentially breaking changes to the ``Potentially Breaking Changes``
+  section of the project's release notes. The release note should have
+  information about what the change is, what is potentially disruptive about
+  it, as well as any code examples, links, and motivation that is appropriate
+  to share with users. This helps users to learn about potential issues with
+  upgrading to that release.
+
+* After the change has been committed to the repository, the potentially
+  disruptive changes described in the release notes should be posted to the
+  `Announcements <https://discourse.llvm.org/c/announce/>`_ channel on
+  Discourse. The post should be tagged with the ``potentially-breaking`` label
+  and a label specific to the project (such as ``clang``, ``llvm``, etc). This
+  is another mechanism by which we can give pre-release notice to users about
+  potentially disruptive changes. It is a lower-traffic alternative to the
+  joining "vendors" group. To automatically be notified of new announcements
+  with the ``potentially-breaking`` label, go to your user preferences page in
+  Discourse, and add the label to one of the watch categories under
+  ``Notifications->Tags``.
+
 .. _code owners:
 
 Code Owners
@@ -181,7 +226,12 @@ exhaustive):
   programming paradigms.
 * Modifying a C stable API.
 * Notifying users about a potentially disruptive change expected to be made in
-  a future release, such as removal of a deprecated feature.
+  a future release, such as removal of a deprecated feature. In this case, the
+  release note should be added to a ``Potentially Breaking Changes`` section of
+  the notes with sufficient information and examples to demonstrate the
+  potential disruption. Additionally, any new entries to this section should be
+  announced in the `Announcements <https://discourse.llvm.org/c/announce/>`_
+  channel on Discourse. See :ref:`breaking` for more details.
 
 Code reviewers are encouraged to request a release note if they think one is
 warranted when performing a code review.
