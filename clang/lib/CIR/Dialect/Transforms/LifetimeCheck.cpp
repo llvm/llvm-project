@@ -44,6 +44,7 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
 
   void checkCtor(CallOp callOp, const clang::CXXConstructorDecl *ctor);
   void checkMoveAssignment(CallOp callOp, const clang::CXXMethodDecl *m);
+  void checkOperatorStar(CallOp callOp);
 
   struct Options {
     enum : unsigned {
@@ -668,6 +669,7 @@ void LifetimeCheckPass::checkAlloca(AllocaOp allocaOp) {
     // 2.4.2 - When a local Owner x is declared, add (x, {x__1'}) to pmap.
     owners.insert(addr);
     getPmap()[addr].insert(State::getOwnedBy(addr));
+    currScope->localValues.push_back(addr);
     break;
   case TypeCategory::Value: {
     // 2.4.2 - When a local Value x is declared, add (x, {x}) to pmap.
@@ -890,6 +892,20 @@ void LifetimeCheckPass::checkCtor(CallOp callOp,
   }
 }
 
+static bool isOperatorStar(const clang::CXXMethodDecl *m) {
+  if (!m->isOverloadedOperator())
+    return false;
+  return m->getOverloadedOperator() == clang::OverloadedOperatorKind::OO_Star;
+}
+
+void LifetimeCheckPass::checkOperatorStar(CallOp callOp) {
+  auto addr = callOp.getOperand(0);
+  if (!ptrs.count(addr))
+    return;
+
+  checkPointerDeref(addr, callOp.getLoc());
+}
+
 void LifetimeCheckPass::checkCall(CallOp callOp) {
   if (callOp.getNumOperands() == 0)
     return;
@@ -903,6 +919,8 @@ void LifetimeCheckPass::checkCall(CallOp callOp) {
     return checkCtor(callOp, ctor);
   if (methodDecl->isMoveAssignmentOperator())
     return checkMoveAssignment(callOp, methodDecl);
+  if (isOperatorStar(methodDecl))
+    return checkOperatorStar(callOp);
 }
 
 void LifetimeCheckPass::checkOperation(Operation *op) {
