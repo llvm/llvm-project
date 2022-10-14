@@ -22,6 +22,8 @@ define void @icmp() {
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 36 for instruction: %v2i64 = icmp slt <2 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 72 for instruction: %v4i64 = icmp slt <4 x i64> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 144 for instruction: %v8i64 = icmp slt <8 x i64> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 68 for instruction: %v2i128 = icmp slt <2 x i128> undef, undef
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 136 for instruction: %v4i128 = icmp slt <4 x i128> undef, undef
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %v2i8 = icmp slt <2 x i8> undef, undef
@@ -43,6 +45,9 @@ define void @icmp() {
   %v2i64 = icmp slt <2 x i64> undef, undef
   %v4i64 = icmp slt <4 x i64> undef, undef
   %v8i64 = icmp slt <8 x i64> undef, undef
+
+  %v2i128 = icmp slt <2 x i128> undef, undef
+  %v4i128 = icmp slt <4 x i128> undef, undef
 
   ret void
 }
