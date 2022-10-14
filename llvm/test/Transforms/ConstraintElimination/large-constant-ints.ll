@@ -336,7 +336,7 @@ define i1 @gep_decomp_large_index_63_bits(ptr %a) {
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[NE]])
 ; CHECK-NEXT:    [[CMP_ULE:%.*]] = icmp ule ptr [[GEP_1]], [[GEP_2]]
 ; CHECK-NEXT:    [[CMP_UGE:%.*]] = icmp uge ptr [[GEP_1]], [[GEP_2]]
-; CHECK-NEXT:    [[RES:%.*]] = xor i1 [[CMP_ULE]], [[CMP_ULE]]
+; CHECK-NEXT:    [[RES:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
 entry:

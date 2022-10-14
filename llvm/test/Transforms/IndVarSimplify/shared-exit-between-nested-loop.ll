@@ -1,4 +1,4 @@
-; RUN: opt -indvars -S < %s | FileCheck %s
+; RUN: opt -passes=indvars -S < %s | FileCheck %s
 
 @__const.e.f = private unnamed_addr constant <{ <{ [2 x i32], [2 x i32], [8 x [2 x i32]] }>, [10 x [2 x i32]] }> <{ <{ [2 x i32], [2 x i32], [8 x [2 x i32]] }> <{ [2 x i32] [i32 4, i32 8], [2 x i32] [i32 3, i32 10], [8 x [2 x i32]] zeroinitializer }>, [10 x [2 x i32]] [[2 x i32] zeroinitializer, [2 x i32] zeroinitializer, [2 x i32] [i32 1, i32 5], [2 x i32] [i32 2080555007, i32 0], [2 x i32] zeroinitializer, [2 x i32] zeroinitializer, [2 x i32] zeroinitializer, [2 x i32] zeroinitializer, [2 x i32] zeroinitializer, [2 x i32] zeroinitializer] }>, align 4
 

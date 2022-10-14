@@ -129,6 +129,14 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
   for (const MachineOperand &MO : MI.operands())
     addOperand(MF, MO);
 
+  // Replicate ties between the operands, which addOperand was not
+  // able to do reliably.
+  for (unsigned i = 0, e = getNumOperands(); i < e; ++i) {
+    MachineOperand &NewMO = getOperand(i);
+    const MachineOperand &OrigMO = MI.getOperand(i);
+    NewMO.TiedTo = OrigMO.TiedTo;
+  }
+
   // Copy all the sensible flags.
   setFlags(MI.Flags);
 }

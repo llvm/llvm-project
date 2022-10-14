@@ -26,9 +26,9 @@ define i32 @g() readonly {
 define i32 @h() readnone {
 ; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind readnone willreturn
 ; CHECK-LABEL: @h(
-; CHECK-NEXT:    [[TMP:%.*]] = load i32, i32* @x, align 4
+; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr @x, align 4
 ; CHECK-NEXT:    ret i32 [[TMP]]
 ;
-  %tmp = load i32, i32* @x
+  %tmp = load i32, ptr @x
   ret i32 %tmp
 }
