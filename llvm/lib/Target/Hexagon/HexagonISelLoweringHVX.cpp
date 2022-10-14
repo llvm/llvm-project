@@ -2154,6 +2154,37 @@ HexagonTargetLowering::LowerHvxFunnelShift(SDValue Op,
 
   const SDLoc &dl(Op);
   unsigned ElemWidth = ElemTy.getSizeInBits();
+  bool IsLeft = Opc == ISD::FSHL;
+
+  // The expansion into regular shifts produces worse code for i8 and for
+  // right shift of i32 on v65+.
+  bool UseShifts = ElemTy != MVT::i8;
+  if (Subtarget.useHVXV65Ops() && ElemTy == MVT::i32)
+    UseShifts = false;
+
+  if (SDValue SplatV = getSplatValue(S, DAG); SplatV && UseShifts) {
+    // If this is a funnel shift by a scalar, lower it into regular shifts.
+    SDValue Mask = DAG.getConstant(ElemWidth - 1, dl, MVT::i32);
+    SDValue ModS =
+        DAG.getNode(ISD::AND, dl, MVT::i32,
+                    {DAG.getZExtOrTrunc(SplatV, dl, MVT::i32), Mask});
+    SDValue NegS =
+        DAG.getNode(ISD::SUB, dl, MVT::i32,
+                    {DAG.getConstant(ElemWidth, dl, MVT::i32), ModS});
+    SDValue IsZero =
+        DAG.getSetCC(dl, MVT::i1, ModS, getZero(dl, MVT::i32, DAG), ISD::SETEQ);
+    // FSHL A, B  =>  A <<  | B >>n
+    // FSHR A, B  =>  A <<n | B >>
+    SDValue Part1 =
+        DAG.getNode(HexagonISD::VASL, dl, InpTy, {A, IsLeft ? ModS : NegS});
+    SDValue Part2 =
+        DAG.getNode(HexagonISD::VLSR, dl, InpTy, {B, IsLeft ? NegS : ModS});
+    SDValue Or = DAG.getNode(ISD::OR, dl, InpTy, {Part1, Part2});
+    // If the shift amount was 0, pick A or B, depending on the direction.
+    // The opposite shift will also be by 0, so the "Or" will be incorrect.
+    return DAG.getNode(ISD::SELECT, dl, InpTy, {IsZero, (IsLeft ? A : B), Or});
+  }
+
   SDValue Mask = DAG.getSplatBuildVector(
       InpTy, dl, DAG.getConstant(ElemWidth - 1, dl, ElemTy));
 
