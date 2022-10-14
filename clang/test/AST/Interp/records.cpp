@@ -32,6 +32,9 @@ static_assert(ints.a == 20, "");
 static_assert(ints.b == 30, "");
 static_assert(ints.c, "");
 static_assert(ints.getTen() == 10, "");
+static_assert(ints.numbers[0] == 1, "");
+static_assert(ints.numbers[1] == 2, "");
+static_assert(ints.numbers[2] == 3, "");
 
 constexpr const BoolPair &BP = ints.bp;
 static_assert(BP.first, "");
@@ -62,11 +65,17 @@ constexpr Ints ints4 = {
 static_assert(ints4.a == (40 * 50), "");
 static_assert(ints4.b == 0, "");
 static_assert(ints4.c, "");
+static_assert(ints4.numbers[0] == 1, "");
+static_assert(ints4.numbers[1] == 2, "");
+static_assert(ints4.numbers[2] == 3, "");
 
-
-// FIXME: Implement initialization by DeclRefExpr.
-//constexpr Ints ints4 = ints3;  TODO
-
+constexpr Ints ints5 = ints4;
+static_assert(ints5.a == (40 * 50), "");
+static_assert(ints5.b == 0, "");
+static_assert(ints5.c, "");
+static_assert(ints5.numbers[0] == 1, "");
+static_assert(ints5.numbers[1] == 2, "");
+static_assert(ints5.numbers[2] == 3, "");
 
 
 struct Ints2 {
