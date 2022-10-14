@@ -89,8 +89,7 @@ define i128 @func_umin_var_u128(i128 noundef %0, i128 noundef %1) {
 ; CHECK-NEXT:    cmov.l.lt %s4, %s0, %s5
 ; CHECK-NEXT:    cmpu.l %s6, %s0, %s2
 ; CHECK-NEXT:    cmov.l.lt %s2, %s0, %s6
-; CHECK-NEXT:    cmps.l %s0, %s1, %s3
-; CHECK-NEXT:    cmov.l.eq %s4, %s2, %s0
+; CHECK-NEXT:    cmov.l.eq %s4, %s2, %s5
 ; CHECK-NEXT:    cmov.l.lt %s3, %s1, %s5
 ; CHECK-NEXT:    or %s0, 0, %s4
 ; CHECK-NEXT:    or %s1, 0, %s3
@@ -240,10 +239,9 @@ define zeroext i16 @func_umin_fore_const_u16(i16 noundef zeroext %0) {
 define zeroext i32 @func_umin_fore_const_u32(i32 noundef zeroext %0) {
 ; CHECK-LABEL: func_umin_fore_const_u32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s1, 255
-; CHECK-NEXT:    cmpu.w %s2, %s0, %s1
-; CHECK-NEXT:    cmov.w.lt %s1, %s0, %s2
-; CHECK-NEXT:    adds.w.zx %s0, %s1, (0)1
+; CHECK-NEXT:    cmpu.w %s1, %s0, (56)0
+; CHECK-NEXT:    cmov.w.ge %s0, (56)0, %s1
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = tail call i32 @llvm.umin.i32(i32 %0, i32 255)
   ret i32 %2
@@ -253,10 +251,8 @@ define zeroext i32 @func_umin_fore_const_u32(i32 noundef zeroext %0) {
 define i64 @func_umin_fore_const_u64(i64 noundef %0) {
 ; CHECK-LABEL: func_umin_fore_const_u64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s1, 255
-; CHECK-NEXT:    cmpu.l %s2, %s0, (56)0
-; CHECK-NEXT:    cmov.l.lt %s1, %s0, %s2
-; CHECK-NEXT:    or %s0, 0, %s1
+; CHECK-NEXT:    cmpu.l %s1, %s0, (56)0
+; CHECK-NEXT:    cmov.l.ge %s0, (56)0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = tail call i64 @llvm.umin.i64(i64 %0, i64 255)
   ret i64 %2
@@ -266,14 +262,10 @@ define i64 @func_umin_fore_const_u64(i64 noundef %0) {
 define i128 @func_umin_fore_const_u128(i128 noundef %0) {
 ; CHECK-LABEL: func_umin_fore_const_u128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s2, 255
-; CHECK-NEXT:    cmpu.l %s3, %s0, (56)0
-; CHECK-NEXT:    lea %s4, 255
-; CHECK-NEXT:    cmov.l.lt %s4, %s0, %s3
-; CHECK-NEXT:    cmps.l %s0, %s1, (0)1
-; CHECK-NEXT:    cmov.l.eq %s2, %s4, %s0
+; CHECK-NEXT:    cmpu.l %s2, %s0, (56)0
+; CHECK-NEXT:    cmov.l.ge %s0, (56)0, %s2
+; CHECK-NEXT:    cmov.l.ne %s0, (56)0, %s1
 ; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = tail call i128 @llvm.umin.i128(i128 %0, i128 255)
   ret i128 %2
@@ -310,10 +302,9 @@ define zeroext i16 @func_umin_back_const_u16(i16 noundef zeroext %0) {
 define zeroext i32 @func_umin_back_const_u32(i32 noundef zeroext %0) {
 ; CHECK-LABEL: func_umin_back_const_u32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s1, 255
-; CHECK-NEXT:    cmpu.w %s2, %s0, %s1
-; CHECK-NEXT:    cmov.w.lt %s1, %s0, %s2
-; CHECK-NEXT:    adds.w.zx %s0, %s1, (0)1
+; CHECK-NEXT:    cmpu.w %s1, %s0, (56)0
+; CHECK-NEXT:    cmov.w.ge %s0, (56)0, %s1
+; CHECK-NEXT:    adds.w.zx %s0, %s0, (0)1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = tail call i32 @llvm.umin.i32(i32 %0, i32 255)
   ret i32 %2
@@ -323,10 +314,8 @@ define zeroext i32 @func_umin_back_const_u32(i32 noundef zeroext %0) {
 define i64 @func_umin_back_const_u64(i64 noundef %0) {
 ; CHECK-LABEL: func_umin_back_const_u64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s1, 255
-; CHECK-NEXT:    cmpu.l %s2, %s0, (56)0
-; CHECK-NEXT:    cmov.l.lt %s1, %s0, %s2
-; CHECK-NEXT:    or %s0, 0, %s1
+; CHECK-NEXT:    cmpu.l %s1, %s0, (56)0
+; CHECK-NEXT:    cmov.l.ge %s0, (56)0, %s1
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = tail call i64 @llvm.umin.i64(i64 %0, i64 255)
   ret i64 %2
@@ -336,14 +325,10 @@ define i64 @func_umin_back_const_u64(i64 noundef %0) {
 define i128 @func_umin_back_const_u128(i128 noundef %0) {
 ; CHECK-LABEL: func_umin_back_const_u128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lea %s2, 255
-; CHECK-NEXT:    cmpu.l %s3, %s0, (56)0
-; CHECK-NEXT:    lea %s4, 255
-; CHECK-NEXT:    cmov.l.lt %s4, %s0, %s3
-; CHECK-NEXT:    cmps.l %s0, %s1, (0)1
-; CHECK-NEXT:    cmov.l.eq %s2, %s4, %s0
+; CHECK-NEXT:    cmpu.l %s2, %s0, (56)0
+; CHECK-NEXT:    cmov.l.ge %s0, (56)0, %s2
+; CHECK-NEXT:    cmov.l.ne %s0, (56)0, %s1
 ; CHECK-NEXT:    or %s1, 0, (0)1
-; CHECK-NEXT:    or %s0, 0, %s2
 ; CHECK-NEXT:    b.l.t (, %s10)
   %2 = tail call i128 @llvm.umin.i128(i128 %0, i128 255)
   ret i128 %2
