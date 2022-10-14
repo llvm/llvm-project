@@ -1162,7 +1162,6 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
 #endif
     llvm_unreachable("This target-independent node should have been selected!");
   case ISD::EntryToken:
-    llvm_unreachable("EntryToken should have been excluded from the schedule!");
   case ISD::MERGE_VALUES:
   case ISD::TokenFactor: // fall thru
     break;

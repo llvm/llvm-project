@@ -6037,6 +6037,13 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     (void)Res;
   }
 
+  SMEAttrs Attrs(MF.getFunction());
+  bool IsLocallyStreaming =
+      !Attrs.hasStreamingInterface() && Attrs.hasStreamingBody();
+  assert(Chain.getOpcode() == ISD::EntryToken && "Unexpected Chain value");
+  SDValue Glue = Chain.getValue(1);
+
+  SmallVector<SDValue, 16> ArgValues;
   unsigned ExtraArgLocs = 0;
   for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i - ExtraArgLocs];
@@ -6091,7 +6098,22 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
 
       // Transform the arguments in physical registers into virtual ones.
       Register Reg = MF.addLiveIn(VA.getLocReg(), RC);
-      ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT);
+
+      if (IsLocallyStreaming) {
+        // LocallyStreamingFunctions must insert the SMSTART in the correct
+        // position, so we use Glue to ensure no instructions can be scheduled
+        // between the chain of:
+        //        t0: ch,glue = EntryNode
+        //      t1:  res,ch,glue = CopyFromReg
+        //     ...
+        //   tn: res,ch,glue = CopyFromReg t(n-1), ..
+        // t(n+1): ch, glue = SMSTART t0:0, ...., tn:2
+        // ^^^^^^
+        // This will be the new Chain/Root node.
+        ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT, Glue);
+        Glue = ArgValue.getValue(2);
+      } else
+        ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegVT);
 
       // If this is an 8, 16 or 32-bit value, it is really passed promoted
       // to 64 bits.  Insert an assert[sz]ext to capture this, then
@@ -6244,6 +6266,27 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
     }
   }
   assert((ArgLocs.size() + ExtraArgLocs) == Ins.size());
+
+  // Insert the SMSTART if this is a locally streaming function and
+  // make sure it is Glued to the last CopyFromReg value.
+  if (IsLocallyStreaming) {
+    const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
+    Chain = DAG.getNode(
+        AArch64ISD::SMSTART, DL, DAG.getVTList(MVT::Other, MVT::Glue),
+        {DAG.getRoot(),
+          DAG.getTargetConstant((int32_t)AArch64SVCR::SVCRSM, DL, MVT::i32),
+         DAG.getConstant(0, DL, MVT::i64), DAG.getConstant(1, DL, MVT::i64),
+         DAG.getRegisterMask(TRI->getSMStartStopCallPreservedMask()), Glue});
+    // Ensure that the SMSTART happens after the CopyWithChain such that its
+    // chain result is used.
+    for (unsigned I=0; I<InVals.size(); ++I) {
+      Register Reg = MF.getRegInfo().createVirtualRegister(
+          getRegClassFor(InVals[I].getValueType().getSimpleVT()));
+      SDValue X = DAG.getCopyToReg(Chain, DL, Reg, InVals[I]);
+      InVals[I] = DAG.getCopyFromReg(X, DL, Reg,
+                                     InVals[I].getValueType());
+    }
+  }
 
   // varargs
   if (isVarArg) {
@@ -7485,6 +7528,19 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     }
   }
 
+  const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
+
+  // Emit SMSTOP before returning from a locally streaming function
+  SMEAttrs FuncAttrs(MF.getFunction());
+  if (FuncAttrs.hasStreamingBody() && !FuncAttrs.hasStreamingInterface()) {
+    Chain = DAG.getNode(
+        AArch64ISD::SMSTOP, DL, DAG.getVTList(MVT::Other, MVT::Glue), Chain,
+        DAG.getTargetConstant((int32_t)AArch64SVCR::SVCRSM, DL, MVT::i32),
+        DAG.getConstant(1, DL, MVT::i64), DAG.getConstant(0, DL, MVT::i64),
+        DAG.getRegisterMask(TRI->getSMStartStopCallPreservedMask()));
+    Flag = Chain.getValue(1);
+  }
+
   SmallVector<SDValue, 4> RetOps(1, Chain);
   for (auto &RetVal : RetVals) {
     Chain = DAG.getCopyToReg(Chain, DL, RetVal.first, RetVal.second, Flag);
@@ -7509,7 +7565,6 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       DAG.getRegister(RetValReg, getPointerTy(DAG.getDataLayout())));
   }
 
-  const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
   const MCPhysReg *I = TRI->getCalleeSavedRegsViaCopy(&MF);
   if (I) {
     for (; *I; ++I) {
