@@ -5,14 +5,14 @@
 
 define void @foo() {
 ; CHECK-LABEL: define void @foo() #0 {
-  store i32 1, i32* @i
+  store i32 1, ptr @i
   call void @bar()
   ret void
 }
 
 define void @bar() {
 ; CHECK-LABEL: define void @bar() #0 {
-  %i = load i32, i32* @i
+  %i = load i32, ptr @i
   call void @foo()
   ret void
 }
