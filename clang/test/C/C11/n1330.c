@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify %s
+// RUN: %clang_cc1 -verify -Wgnu-folding-constant %s
 
 /* WG14 N1330: Yes
  * Static assertions
@@ -55,7 +55,7 @@ void test(void) {
 
   // Ensure that only an integer constant expression can be used as the
   // controlling expression.
-  _Static_assert(1.0f, "this should not compile"); // expected-error {{static assertion expression is not an integral constant expression}}
+  _Static_assert(1.0f, "this should not compile"); // expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
 }
 
 // FIXME: This is using the placeholder date Clang produces for the macro in

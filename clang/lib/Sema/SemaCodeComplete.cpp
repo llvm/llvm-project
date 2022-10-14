@@ -2645,6 +2645,13 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
       Results.AddResult(Result(Builder.TakeString()));
     }
 
+    if (SemaRef.getLangOpts().C2x) {
+      // nullptr
+      Builder.AddResultTypeChunk("nullptr_t");
+      Builder.AddTypedTextChunk("nullptr");
+      Results.AddResult(Result(Builder.TakeString()));
+    }
+
     // sizeof expression
     Builder.AddResultTypeChunk("size_t");
     Builder.AddTypedTextChunk("sizeof");
