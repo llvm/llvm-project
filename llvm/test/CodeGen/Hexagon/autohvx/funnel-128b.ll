@@ -115,46 +115,25 @@ define <64 x i16> @f1(<64 x i16> %a0, <64 x i16> %a1, i16 %a2) #0 {
 ; V60-LABEL: f1:
 ; V60:       // %bb.0:
 ; V60-NEXT:    {
-; V60-NEXT:     r0 = combine(r0.l,r0.l)
+; V60-NEXT:     r1 = and(r0,#15)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     r1 = ##983055
+; V60-NEXT:     p0 = bitsclr(r0,#15)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     r2 = ##1048592
+; V60-NEXT:     v2.h = vasl(v0.h,r1)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v4 = vxor(v4,v4)
+; V60-NEXT:     r1 = sub(#16,r1)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v2 = vsplat(r0)
+; V60-NEXT:     v1.uh = vlsr(v1.uh,r1)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v3 = vsplat(r1)
+; V60-NEXT:     v1 = vor(v2,v1)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v2 = vand(v2,v3)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v30 = vsplat(r2)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v3.h = vsub(v30.h,v2.h)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     q0 = vcmp.eq(v2.h,v4.h)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v31.h = vasl(v0.h,v2.h)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v1.h = vlsr(v1.h,v3.h)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v1 = vor(v31,v1)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v0 = vmux(q0,v0,v1)
+; V60-NEXT:     if (!p0) v0 = v1
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     jumpr r31
@@ -163,31 +142,25 @@ define <64 x i16> @f1(<64 x i16> %a0, <64 x i16> %a1, i16 %a2) #0 {
 ; V62-LABEL: f1:
 ; V62:       // %bb.0:
 ; V62-NEXT:    {
-; V62-NEXT:     r3:2 = combine(#16,#15)
+; V62-NEXT:     r1 = and(r0,#15)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v2.h = vsplat(r0)
+; V62-NEXT:     p0 = bitsclr(r0,#15)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v3.h = vsplat(r2)
+; V62-NEXT:     v2.h = vasl(v0.h,r1)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v4.h = vsplat(r3)
+; V62-NEXT:     r1 = sub(#16,r1)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v2 = vand(v2,v3)
+; V62-NEXT:     v1.uh = vlsr(v1.uh,r1)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v3.h = vsub(v4.h,v2.h)
+; V62-NEXT:     v1 = vor(v2,v1)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v0.h = vasl(v0.h,v2.h)
-; V62-NEXT:    }
-; V62-NEXT:    {
-; V62-NEXT:     v1.h = vlsr(v1.h,v3.h)
-; V62-NEXT:    }
-; V62-NEXT:    {
-; V62-NEXT:     v0 = vor(v0,v1)
+; V62-NEXT:     if (!p0) v0 = v1
 ; V62-NEXT:    }
 ; V62-NEXT:    {
 ; V62-NEXT:     jumpr r31
@@ -196,31 +169,25 @@ define <64 x i16> @f1(<64 x i16> %a0, <64 x i16> %a1, i16 %a2) #0 {
 ; V66-LABEL: f1:
 ; V66:       // %bb.0:
 ; V66-NEXT:    {
-; V66-NEXT:     r3:2 = combine(#16,#15)
+; V66-NEXT:     r1 = and(r0,#15)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v2.h = vsplat(r0)
+; V66-NEXT:     p0 = bitsclr(r0,#15)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v3.h = vsplat(r2)
+; V66-NEXT:     v2.h = vasl(v0.h,r1)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v4.h = vsplat(r3)
+; V66-NEXT:     r1 = sub(#16,r1)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v2 = vand(v2,v3)
+; V66-NEXT:     v1.uh = vlsr(v1.uh,r1)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v3.h = vsub(v4.h,v2.h)
+; V66-NEXT:     v1 = vor(v2,v1)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v0.h = vasl(v0.h,v2.h)
-; V66-NEXT:    }
-; V66-NEXT:    {
-; V66-NEXT:     v1.h = vlsr(v1.h,v3.h)
-; V66-NEXT:    }
-; V66-NEXT:    {
-; V66-NEXT:     v0 = vor(v0,v1)
+; V66-NEXT:     if (!p0) v0 = v1
 ; V66-NEXT:    }
 ; V66-NEXT:    {
 ; V66-NEXT:     jumpr r31
@@ -235,43 +202,25 @@ define <32 x i32> @f2(<32 x i32> %a0, <32 x i32> %a1, i32 %a2) #0 {
 ; V60-LABEL: f2:
 ; V60:       // %bb.0:
 ; V60-NEXT:    {
-; V60-NEXT:     r3:2 = combine(#31,#32)
+; V60-NEXT:     r1 = and(r0,#31)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     r0 = and(r0,#31)
+; V60-NEXT:     p0 = bitsclr(r0,#31)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v2 = vxor(v2,v2)
+; V60-NEXT:     v2.w = vasl(v0.w,r1)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v3 = vsplat(r0)
+; V60-NEXT:     r1 = sub(#32,r1)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v4 = vsplat(r2)
+; V60-NEXT:     v1.uw = vlsr(v1.uw,r1)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v4.w = vsub(v4.w,v3.w)
+; V60-NEXT:     v1 = vor(v2,v1)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v5 = vsplat(r3)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v31 = vand(v3,v5)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v3.w = vasl(v0.w,v3.w)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v1.w = vlsr(v1.w,v4.w)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     q0 = vcmp.eq(v31.w,v2.w)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v1 = vor(v3,v1)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v0 = vmux(q0,v0,v1)
+; V60-NEXT:     if (!p0) v0 = v1
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     jumpr r31
@@ -280,28 +229,25 @@ define <32 x i32> @f2(<32 x i32> %a0, <32 x i32> %a1, i32 %a2) #0 {
 ; V62-LABEL: f2:
 ; V62:       // %bb.0:
 ; V62-NEXT:    {
-; V62-NEXT:     r0 = and(r0,#31)
+; V62-NEXT:     r1 = and(r0,#31)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     r1 = #32
+; V62-NEXT:     p0 = bitsclr(r0,#31)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v2 = vsplat(r0)
+; V62-NEXT:     v2.w = vasl(v0.w,r1)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v3 = vsplat(r1)
+; V62-NEXT:     r1 = sub(#32,r1)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v3.w = vsub(v3.w,v2.w)
+; V62-NEXT:     v1.uw = vlsr(v1.uw,r1)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v0.w = vasl(v0.w,v2.w)
+; V62-NEXT:     v1 = vor(v2,v1)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v1.w = vlsr(v1.w,v3.w)
-; V62-NEXT:    }
-; V62-NEXT:    {
-; V62-NEXT:     v0 = vor(v0,v1)
+; V62-NEXT:     if (!p0) v0 = v1
 ; V62-NEXT:    }
 ; V62-NEXT:    {
 ; V62-NEXT:     jumpr r31
@@ -460,46 +406,25 @@ define <64 x i16> @f4(<64 x i16> %a0, <64 x i16> %a1, i16 %a2) #0 {
 ; V60-LABEL: f4:
 ; V60:       // %bb.0:
 ; V60-NEXT:    {
-; V60-NEXT:     r0 = combine(r0.l,r0.l)
+; V60-NEXT:     r1 = and(r0,#15)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     r1 = ##983055
+; V60-NEXT:     p0 = bitsclr(r0,#15)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     r2 = ##1048592
+; V60-NEXT:     v2.uh = vlsr(v1.uh,r1)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v4 = vxor(v4,v4)
+; V60-NEXT:     r1 = sub(#16,r1)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v2 = vsplat(r0)
+; V60-NEXT:     v0.h = vasl(v0.h,r1)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v3 = vsplat(r1)
+; V60-NEXT:     v0 = vor(v0,v2)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v2 = vand(v2,v3)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v30 = vsplat(r2)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v3.h = vsub(v30.h,v2.h)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     q0 = vcmp.eq(v2.h,v4.h)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v31.h = vlsr(v1.h,v2.h)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v0.h = vasl(v0.h,v3.h)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v0 = vor(v0,v31)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v0 = vmux(q0,v1,v0)
+; V60-NEXT:     if (p0) v0 = v1
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     jumpr r31
@@ -508,31 +433,25 @@ define <64 x i16> @f4(<64 x i16> %a0, <64 x i16> %a1, i16 %a2) #0 {
 ; V62-LABEL: f4:
 ; V62:       // %bb.0:
 ; V62-NEXT:    {
-; V62-NEXT:     r3:2 = combine(#16,#15)
+; V62-NEXT:     r1 = and(r0,#15)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v2.h = vsplat(r0)
+; V62-NEXT:     p0 = bitsclr(r0,#15)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v3.h = vsplat(r2)
+; V62-NEXT:     v2.uh = vlsr(v1.uh,r1)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v4.h = vsplat(r3)
+; V62-NEXT:     r1 = sub(#16,r1)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v2 = vand(v2,v3)
+; V62-NEXT:     v0.h = vasl(v0.h,r1)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v3.h = vsub(v2.h,v4.h)
+; V62-NEXT:     v0 = vor(v0,v2)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v1.h = vlsr(v1.h,v2.h)
-; V62-NEXT:    }
-; V62-NEXT:    {
-; V62-NEXT:     v0.h = vlsr(v0.h,v3.h)
-; V62-NEXT:    }
-; V62-NEXT:    {
-; V62-NEXT:     v0 = vor(v0,v1)
+; V62-NEXT:     if (p0) v0 = v1
 ; V62-NEXT:    }
 ; V62-NEXT:    {
 ; V62-NEXT:     jumpr r31
@@ -541,31 +460,25 @@ define <64 x i16> @f4(<64 x i16> %a0, <64 x i16> %a1, i16 %a2) #0 {
 ; V66-LABEL: f4:
 ; V66:       // %bb.0:
 ; V66-NEXT:    {
-; V66-NEXT:     r3:2 = combine(#16,#15)
+; V66-NEXT:     r1 = and(r0,#15)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v2.h = vsplat(r0)
+; V66-NEXT:     p0 = bitsclr(r0,#15)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v3.h = vsplat(r2)
+; V66-NEXT:     v2.uh = vlsr(v1.uh,r1)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v4.h = vsplat(r3)
+; V66-NEXT:     r1 = sub(#16,r1)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v2 = vand(v2,v3)
+; V66-NEXT:     v0.h = vasl(v0.h,r1)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v3.h = vsub(v2.h,v4.h)
+; V66-NEXT:     v0 = vor(v0,v2)
 ; V66-NEXT:    }
 ; V66-NEXT:    {
-; V66-NEXT:     v1.h = vlsr(v1.h,v2.h)
-; V66-NEXT:    }
-; V66-NEXT:    {
-; V66-NEXT:     v0.h = vlsr(v0.h,v3.h)
-; V66-NEXT:    }
-; V66-NEXT:    {
-; V66-NEXT:     v0 = vor(v0,v1)
+; V66-NEXT:     if (p0) v0 = v1
 ; V66-NEXT:    }
 ; V66-NEXT:    {
 ; V66-NEXT:     jumpr r31
@@ -580,37 +493,25 @@ define <32 x i32> @f5(<32 x i32> %a0, <32 x i32> %a1, i32 %a2) #0 {
 ; V60-LABEL: f5:
 ; V60:       // %bb.0:
 ; V60-NEXT:    {
-; V60-NEXT:     r0 = and(r0,#31)
+; V60-NEXT:     r1 = and(r0,#31)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     r1 = #32
+; V60-NEXT:     p0 = bitsclr(r0,#31)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v2 = vxor(v2,v2)
+; V60-NEXT:     v2.uw = vlsr(v1.uw,r1)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v3 = vsplat(r0)
+; V60-NEXT:     r1 = sub(#32,r1)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v4 = vsplat(r1)
+; V60-NEXT:     v0.w = vasl(v0.w,r1)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v4.w = vsub(v4.w,v3.w)
+; V60-NEXT:     v0 = vor(v0,v2)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     q0 = vcmp.eq(v3.w,v2.w)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v31.w = vlsr(v1.w,v3.w)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v0.w = vasl(v0.w,v4.w)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v0 = vor(v0,v31)
-; V60-NEXT:    }
-; V60-NEXT:    {
-; V60-NEXT:     v0 = vmux(q0,v1,v0)
+; V60-NEXT:     if (p0) v0 = v1
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     jumpr r31
@@ -619,28 +520,25 @@ define <32 x i32> @f5(<32 x i32> %a0, <32 x i32> %a1, i32 %a2) #0 {
 ; V62-LABEL: f5:
 ; V62:       // %bb.0:
 ; V62-NEXT:    {
-; V62-NEXT:     r0 = and(r0,#31)
+; V62-NEXT:     r1 = and(r0,#31)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     r1 = #32
+; V62-NEXT:     p0 = bitsclr(r0,#31)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v2 = vsplat(r0)
+; V62-NEXT:     v2.uw = vlsr(v1.uw,r1)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v3 = vsplat(r1)
+; V62-NEXT:     r1 = sub(#32,r1)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v3.w = vsub(v2.w,v3.w)
+; V62-NEXT:     v0.w = vasl(v0.w,r1)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v1.w = vlsr(v1.w,v2.w)
+; V62-NEXT:     v0 = vor(v0,v2)
 ; V62-NEXT:    }
 ; V62-NEXT:    {
-; V62-NEXT:     v0.w = vlsr(v0.w,v3.w)
-; V62-NEXT:    }
-; V62-NEXT:    {
-; V62-NEXT:     v0 = vor(v0,v1)
+; V62-NEXT:     if (p0) v0 = v1
 ; V62-NEXT:    }
 ; V62-NEXT:    {
 ; V62-NEXT:     jumpr r31
